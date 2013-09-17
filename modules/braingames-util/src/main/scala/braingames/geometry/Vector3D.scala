@@ -26,6 +26,8 @@ case class Vector3D(x: Double = 0, y: Double = 0, z: Double = 0) {
     else
       this
   }
+  
+  def neg = Vector3D(-x, -y, -z)
 
   def dx(d: Double) =
     Vector3D(x + d, y, z)
@@ -100,11 +102,11 @@ object Vector3D {
   implicit object Vector3DReads extends Format[Vector3D] {
     def reads(json: JsValue) = json match {
       case JsArray(ts) if ts.size == 3 =>
-        ts.map(fromJson[Double](_)) match {
+        ts.toList.map(fromJson[Double](_)) match {
           case JsSuccess(a, _) :: JsSuccess(b, _) :: JsSuccess(c, _) :: _ =>
             JsSuccess(Vector3D(a, b, c))
-          case _ =>
-            JsError(Seq(JsPath() -> Seq(ValidationError("validate.error.array.invalidContent"))))
+          case x =>
+            JsError("Invalid array content: " + x)
         }
       case _ =>
         JsError(Seq(JsPath() -> Seq(ValidationError("validate.error.listExpected"))))

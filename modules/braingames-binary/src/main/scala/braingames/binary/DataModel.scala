@@ -36,9 +36,9 @@ abstract class DataModel {
 
       @inline
       def coordinateTransformer(px: Double, py: Double, pz: Double) = {
-        f(matrix(0) * px + matrix(4) * py + matrix(8) * pz + matrix(12),
-          matrix(1) * px + matrix(5) * py + matrix(9) * pz + matrix(13),
-          matrix(2) * px + matrix(6) * py + matrix(10) * pz + matrix(14))
+        f(matrix(0) * px + matrix(1) * py + matrix(2) * pz + matrix(3),
+          matrix(4) * px + matrix(5) * py + matrix(6) * pz + matrix(7),
+          matrix(8) * px + matrix(9) * py + matrix(10) * pz + matrix(11))
       }
 
       coordinates(coordinateTransformer)
@@ -95,7 +95,7 @@ case class Cuboid(
     topLeft.dz(depth - 1).dx(width - 1),
     topLeft.dz(depth - 1).dy(height - 1),
     topLeft.dz(depth - 1).dx(width - 1).dy(height - 1)))
-
+  
   val maxCorner = corners.foldLeft((0.0, 0.0, 0.0))((b, e) => (
     math.max(b._1, e.x), math.max(b._2, e.y), math.max(b._3, e.z)))
 

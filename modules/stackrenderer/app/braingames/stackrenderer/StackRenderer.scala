@@ -11,11 +11,8 @@ import scala.collection.JavaConversions._
 import play.api._
 import play.api.Configuration._
 import views._
-import models.knowledge._
 import scala.sys.process._
-import java.io.{ File, PrintWriter }
-import scala.util.{ Try, Success, Failure }
-import braingames.levelcreator.CreateStack
+import java.io.{File, PrintWriter}
 import models.knowledge.Stack
 import java.io.FileOutputStream
 import java.io.FileInputStream
@@ -26,12 +23,15 @@ import javax.imageio.ImageIO
 import scala.concurrent.Await
 import scala.concurrent.Future
 import play.api.libs.concurrent.Execution.Implicits._
+import braingames.util.JsonHelper
+import java.awt.image.BufferedImage
+import net.liftweb.common._
 
 case class RenderStack(stack: Stack)
 
 case class ExecLogger(var messages: List[String] = Nil,
-                      var error: List[String] = Nil)
-    extends ProcessLogger {
+  var error: List[String] = Nil)
+  extends ProcessLogger {
   def out(s: => String) {
     messages ::= s
     Logger.trace(s)
@@ -51,84 +51,138 @@ class StackRenderer(useLevelUrl: String, binaryDataUrl: String) extends Actor {
 
   val conf = Play.current.configuration
 
-  val imagesPerRow = conf.getInt("stackrenderer.imagesPerRow") getOrElse 10
   val phantomTimeout = (conf.getInt("stackrenderer.phantom.timeout") getOrElse 30) minutes
+
+  val maxSpriteSheetHeight = 2048
+  val maxSpriteSheetWidth = 2048
 
   def receive = {
     case RenderStack(stack) =>
-      if (renderStack(stack))
-        sender ! FinishedStack(stack)
-      else
-        sender ! FailedStack(stack)
+      renderStack(stack) match {
+        case Full(_) =>
+          sender ! RenderingFinished(stack)
+        case f: Failure =>
+          sender ! RenderingFailed(stack, f)
+        case Empty =>
+          sender ! RenderingFailed(stack, Failure("Rendering returned Empty result"))
+      }
 
   }
 
-  def produceStackFrames(stack: Stack, levelUrl: String, binaryDataUrl: String) = {
-    val js = html.stackrenderer.phantom(
-      stack,
-      levelUrl,
-      binaryDataUrl).body
+  def withProcess[A](process: Process)(f: Process => A): A = {
+    val r = f(process)
+    process.destroy()
+    r
+  }
+
+  def produceStackFrames(stack: Stack, levelUrl: String, binaryDataUrl: String): Box[Int] = {
+    val js = html.stackrenderer.phantom(stack, levelUrl, binaryDataUrl).body
 
     val jsFile = FileIO.createTempFile(js, ".js")
-    Logger.info("phantomjs " + jsFile.getAbsolutePath())
-    val process = ("phantomjs" :: jsFile.getAbsolutePath :: Nil).run(logger, false)
-    val exitValue = Await.result(
-      Future {
-        process.exitValue()
-      }.recover {
-        case e =>
-          Logger.warn("Phantom execution threw: " + e)
-          -1
-      }, phantomTimeout)
-    process.destroy()
-    Logger.debug("Finished phantomjs. ExitValue: " + exitValue)
-    exitValue == 0
-  }
-
-  def renderStack(stack: Stack): Boolean = {
-    val success = produceStackFrames(stack, useLevelUrl.format(stack.level.id, stack.mission.id), binaryDataUrl)
-
-    if (stack.isProduced && success) {
-      createStackImage(stack)
-      tarStack(stack)
-      true
-    } else {
-      Logger.error(s"stack $stack was not properly produced")
-      false
+    val phantomCMD = "phantomjs":: "--web-security=false" :: jsFile.getAbsolutePath :: Nil
+    Logger.info(phantomCMD.mkString(" "))
+    withProcess(phantomCMD.run(logger, false)) {
+      process =>
+        Await.result(
+          Future {
+            val e = process.exitValue()
+            Logger.debug("Finished phantomjs. ExitValue: " + e)
+            if (e == 0)
+              Full(e)
+            else
+              Failure(s"Phantom execution failed with code $e")
+          }.recover {
+            case e =>
+              Failure("Phantom execution threw: " + e)
+          }, phantomTimeout)
     }
   }
 
-  def createStackImage(stack: Stack) {
+  def renderStack(stack: Stack): Box[Boolean] = {
+    for {
+      _ <- produceStackFrames(stack, useLevelUrl.format(stack.level.id, stack.mission.id), binaryDataUrl)
+      stackImages <- createStackImages(stack)
+      result <- tarStack(stack, (stack.metaFile :: stack.xmlAtlas :: stackImages))
+    } yield {
+      result
+    }
+  }
+
+  def createStackImages(stack: Stack): Box[List[File]] = {
     val images = stack.frames.map(ImageIO.read)
     val params = ImageCreatorParameters(
       bytesPerElement = 1,
       slideWidth = stack.level.width,
       slideHeight = stack.level.height,
-      imagesPerRow = imagesPerRow)
-    ImageCreator.createSpriteSheet(images, params, ImageCreator.defaultTargetType).map { combinedImage =>
-      new PNGWriter().writeToFile(combinedImage.image, stack.image)
-      XmlAtlas.writeToFile(combinedImage.info, stack.image.getName, stack.xmlAtlas)
-    }
+      imagesPerRow = maxSpriteSheetWidth / stack.level.width,
+      imagesPerColumn = maxSpriteSheetHeight / stack.level.height)
 
+    Box(ImageCreator.createSpriteSheet(images, params, BufferedImage.TYPE_4BYTE_ABGR)).flatMap {
+      combinedImage =>
+        val files = combinedImage.pages.map {
+          p =>
+            new PNGWriter().writeToFile(p.image, new File(stack.path + "/" + p.pageInfo.name))
+        }
+        XmlAtlas.writeToFile(combinedImage, stack.xmlAtlas)
+        completeMetaFileInformation(stack, combinedImage.pages).map(_ =>
+          files
+        )
+    }
   }
 
-  def tarStack(stack: Stack) {
+  def tarStack(stack: Stack, files: List[File]) = {
     def createTarName(file: File) = s"${stack.mission.id}/${file.getName}"
-    (Try {
-      val output =
-        new FileOutputStream(stack.tarFile)
-      val inputs =
-        (stack.metaFile :: stack.image :: stack.xmlAtlas :: Nil).map { f =>
-          f -> createTarName(f)
-        }
+    try {
+      val output = new FileOutputStream(stack.tarFile)
+      val inputs = files.map(f => f -> createTarName(f))
+
       TarIO.tar(inputs, output)
-    }) match {
-      case Success(_) =>
-        Logger.debug("Finished taring")
-      case Failure(exception) =>
+      Logger.debug("Finished taring")
+      Full(true)
+    } catch {
+      case e: Exception =>
         Logger.error(s"failed to create tar for stack: $stack")
-        Logger.error(s"$exception")
-        None
+        Logger.error(s"$e")
+        Failure("Failed to tar stack: " + e)
+    }
+  }
+
+  def completeMetaFileInformation(stack: Stack, pages: List[CombinedPage]): Box[File] = {
+    val additionalInformation = Json.obj(
+      "levelName" -> stack.level.levelId.name,
+      "levelVersion" -> stack.level.levelId.version,
+      "levelId" -> stack.level.id,
+      "stackId" -> stack.mission.id,
+      "missionId" -> stack.mission.missionId,
+      "sprites" -> pages.map {
+        p =>
+          Json.obj(
+            "name" -> p.pageInfo.name,
+            "start" -> p.pageInfo.start,
+            "count" -> p.pageInfo.number)
+      })
+    appendToMetaFile(additionalInformation, stack.metaFile)
+  }
+
+  def appendToMetaFile(json: JsObject, metaFile: File): Box[File] = {
+    if (metaFile.exists) {
+      val metaJson = JsonHelper.JsonFromFile(metaFile).as[JsObject]
+      printToFile(metaFile)(_.println((metaJson ++ json).toString))
+    } else {
+      Failure("Couldn't find meta file after phantom generation")
+    }
+  }
+
+  def printToFile(f: java.io.File)(op: java.io.PrintWriter => Unit): Box[File] = {
+    val p = new java.io.PrintWriter(f)
+    try {
+      op(p)
+      Full(f)
+    } catch {
+      case e: Exception =>
+        Failure("PrintToFile failed: " + e.toString)
+    } finally {
+      p.close()
     }
   }
 }

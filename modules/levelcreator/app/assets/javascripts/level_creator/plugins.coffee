@@ -18,7 +18,10 @@
 ./plugins/apply_segments_static_display : ApplySegmentsStaticDisplay
 ./plugins/set_segments_static_display : SetSegmentsStaticDisplay
 ./plugins/filter_random_segments : FilterRandomSegments
-./plugins/write_path_to_meta_file : WritePathToMetaFile
+./plugins/write_meta_data : WriteMetaData
+./plugins/write_para_data : WriteParaData
+./plugins/get_meta_values : GetMetaValues
+./plugins/filter_unlikely_end_segments : FilterUnlikelyEndSegments
 ###
 
 
@@ -45,4 +48,7 @@ class Plugins
     @applySegmentsStaticDisplay = new ApplySegmentsStaticDisplay()
     @setSegmentsStaticDisplay = new SetSegmentsStaticDisplay()
     @filterRandomSegments = new FilterRandomSegments()
-    @writePathToMetaFile = new WritePathToMetaFile()
+    @writeMetaData = new WriteMetaData()
+    @writeParaData = new WriteParaData()
+    @getMetaValues = new GetMetaValues()
+    @filterUnlikelyEndSegments = new FilterUnlikelyEndSegments()

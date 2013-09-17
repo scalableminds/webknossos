@@ -14,6 +14,7 @@ class FilterEndSegmentation
       mission: "{}"
       dimensions : "[]"
     mode: "\"in\", \"out\""
+    maxCount : "Number"
   EXAMPLES : [
       { description : "Cloudify the end Segmentation", lines :
         [ "time(start : 0, end : 30) ->"
@@ -34,15 +35,19 @@ class FilterEndSegmentation
 
   execute : (options) ->
 
-    { input: { rgba, segmentation, segments, mission, dimensions }, mode } = options
+    { input: { rgba, segmentation, segments, mission, dimensions }, mode, maxCount } = options
 
     width = dimensions[0]
     height = dimensions[1]
+    maxCount = Infinity unless maxCount?
 
     values = []
     endValues = []
 
-    for possibleEnd in mission.possibleEnds
+    #endSegments = _.sortBy(segments, (s) -> -s.probability).slice(0, Math.min(segments.length, maxCount))
+
+    possibleEnds = _.sortBy(mission.possibleEnds, (s) -> -s.probability).slice(0, Math.min(mission.possibleEnds.length, maxCount))
+    for possibleEnd in possibleEnds
       endValues.push possibleEnd.id
 
     if mode is "in"

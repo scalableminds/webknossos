@@ -4,38 +4,86 @@ underscore : _
 libs/toast : Toast
 libs/keyboard : KeyboardJS
 routes : routes
+../level_creator : LevelCreator
+../stack_viewer : StackViewer
 ###
 
 $ ->
 
   route = (routes) ->
 
-    javaTemplate = $("#main-container").data("template")
+    optionalParam = /\((.*?)\)/g
+    namedParam    = /(\(\?)?:\w+/g
+    splatParam    = /\*\w+/g
+    escapeRegExp  = /[\-{}\[\]+?.,\\\^$|#\s]/g
 
-    javaTemplate = javaTemplate.match(/views\.html\.(.*)\$/)[1]
+    routeToRegExp = (route) ->
+      route = route
+        .replace(escapeRegExp, '\\$&')
+        .replace(optionalParam, '(?:$1)?')
+        .replace(namedParam, (match, optional) ->
+          if optional then match else '([^\/]+)'
+        )
+        .replace(splatParam, '(.*?)')
+      new RegExp('^' + route + '$')
 
-    if routes[javaTemplate]?
-      routes[javaTemplate].call($("#main-container")[0])
-    return
+    url = window.location.pathname
+    for route, script of routes
+      if routeToRegExp(route).test(url)
+        script.call($("#main-container")[0])
+        return
 
+  activateProduceStacksLink = ->
+
+    $(document).on "click", ".produce-stacks", (event) ->
+
+      event.preventDefault()
+      $this = $(this)
+
+      $row = $this.parents("tr").first()
+      levelId = $this.data("levelid")
+      count = parseInt(prompt("How many stacks to produce?", "3"))
+
+      return if _.isNaN(count)
+
+      $.ajax(
+        _.extend(
+          dataType : "json"
+          beforeSend : (xhr) -> console.log xhr
+          routes.controllers.levelcreator.StackController.produce(levelId, count)
+        )
+      ).then(
+
+        ( { messages } ) -> Toast.message(messages)
+        (jqxhr) -> Toast.error(jqxhr.responseText || "Connection error.")
+
+      )
+
+      return
 
   route
 
-    "levelcreator.levelCreator" : ->
+    "/levels/:levelId(/missions/:missionId)" : ->
 
-      require ["./level_creator"], (LevelCreator) ->
-
-        window.levelCreator = new LevelCreator()
+      window.levelCreator = new LevelCreator()
 
 
-    "levelcreator.stackList" : ->
+    "/levels/:levelId/stacks" : ->
 
-      require ["./stack_viewer"], (StackViewer) ->
+      window.stackViewer = new StackViewer()
 
-        window.stackViewer = new StackViewer()
+      activateProduceStacksLink()
 
 
-    "levelcreator.levelList" : ->
+    "/" : ->
+
+      # set ship it
+      $("#level-list .ship-stacks-poopover").popover()
+      
+      $("#level-list .ship-stacks-poopover").on "click", (event) ->
+
+        event.preventDefault()
+
 
       $(document).on "click", "[data-prompt]", (event) ->
 
@@ -71,22 +119,32 @@ $ ->
         else
           sendAutoRender()
 
+      activateProduceStacksLink()
 
-
-      $(document).on "click", "#level-list .produce-stacks", (event) -> 
+      $(document).on "click", ".ship-stacks", (event) -> 
 
         event.preventDefault()
         $this = $(this)
       
         $row = $this.parents("tr").first()
-        levelId = $row.data("levelid")
-        count = parseInt(prompt("How many stacks to produce?", "3"))
+        levelId = $this.attr("data-level-id")
+        autoShip = $this.attr("data-autoship")
+
+        json = JSON.stringify({
+          "shouldAutoRender": autoShip is "true",
+          "shouldBeShipped": true
+        })
         
+
         $.ajax(
           _.extend(
-            dataType : "json"
-            beforeSend : (xhr) -> console.log xhr
-            routes.controllers.levelcreator.StackController.produce(levelId, count)
+            type : "POST"
+            dataType: "json"
+            data: json
+            headers: { 
+               Accept : "application/json",
+               "Content-Type": "application/json; charset=UTF-8" }
+            routes.controllers.levelcreator.LevelCreator.updateRenderSettings(levelId)
           )
         ).then(
 
@@ -94,5 +152,5 @@ $ ->
           (jqxhr) -> Toast.error(jqxhr.responseText || "Connection error.")
 
         )
-
+        
         return

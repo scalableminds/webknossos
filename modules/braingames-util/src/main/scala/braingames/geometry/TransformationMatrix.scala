@@ -25,15 +25,31 @@ object TransformationMatrix {
       0, 1, 0, 0,
       0, 0, 1, 0,
       0, 0, 0, 1))
+
+  private def orthonormalBasis(direction: Vector3D):Tuple3[Vector3D, Vector3D, Vector3D] = {
+    val nz = direction.normalize
+    
+    if(nz == Vector3D(0, 1, 0))
+      (Vector3D(0,-1,0), Vector3D(0,0,1), Vector3D(1,0,0))
+    else if ( nz == Vector3D(0, -1, 0))
+      (Vector3D(0,-1,0), Vector3D(0,0,-1), Vector3D(1,0,0))
+    else {
+      val y = Vector3D(0, 1, 0)
+      val nx = (nz x y).normalize
+      val ny = (nz x nx).normalize
+    
+      (nx, ny, nz)
+    }
+  }
   
   def apply(pos: Vector3D, direction: Vector3D): TransformationMatrix = {
+    
+    val (nx, ny, nz) = orthonormalBasis(direction)
 
-    val nz = direction.normalize
-    val x = Vector3D(1, 0, 0)
-    val nx = (x - nz * (nz ° x)).normalize
-    val y = Vector3D(0, 1, 0)
-    val ny = (y - nz * (nz ° y) - nx * (nx ° y)).normalize
-
-    TransformationMatrix(Array(nx.x, nx.y, nx.z, 0, ny.x, ny.y, ny.z, 0, nz.x, nz.y, nz.z, 0, pos.x, pos.y, pos.z, 1).map(_.toFloat))
+    TransformationMatrix(Array(
+      nx.x, nx.y, nx.z, pos.x,
+      ny.x, ny.y, ny.z, pos.y,
+      nz.x * 11.24 / 28, nz.y * 11.24 / 28, nz.z * 11.24 / 28, pos.z,
+      0, 0, 0, 1).map(_.toFloat))
   }
 }

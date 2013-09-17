@@ -78,6 +78,7 @@ class DataRequestActor(
 
   def receive = {
     case dataRequest: DataRequest =>
+      val t = System.currentTimeMillis()
       val s = sender
       // This construct results in a parallel execution and catches all the errors
       Future.successful().flatMap{ _ =>

@@ -62,7 +62,7 @@ class Model
               for supportedLayer in supportedDataLayers
                 if layer.typ == supportedLayer.name
                   @binary[layer.typ] = new Binary(@user, tracing.content.dataSet, constants.TEXTURE_SIZE_P, supportedLayer)
-              zoomStepCount = Math.min(zoomStepCount, @binary[layer.typ].cube.ZOOM_STEP_COUNT - 1)
+                  zoomStepCount = Math.min(zoomStepCount, @binary[layer.typ].cube.ZOOM_STEP_COUNT - 1)
 
             @flycam = new Flycam2d(constants.PLANE_WIDTH, @scaleInfo, zoomStepCount, @user)      
             @flycam3d = new Flycam3d(constants.DISTANCE_3D, tracing.content.dataSet.scale)

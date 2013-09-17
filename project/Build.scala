@@ -81,7 +81,7 @@ object ApplicationBuild extends Build {
     organization := "com.scalableminds",
     scalaVersion := "2.10.0",
     offline := true,
-    version := "0.2"
+    version := "0.3.1"
   )
 
   lazy val braingamesBinary: Project = Project("braingames-binary", file("modules") / "braingames-binary").settings(

@@ -2,4 +2,4 @@ organization := "com.scalableminds"
 
 name := "braingames-util"
 
-version := "0.2"
+version := "0.3.1"

@@ -23,7 +23,7 @@ object ApplicationBuild extends Build {
     "org.mongodb" %% "casbah-core" % "2.5.0",
     "org.mongodb" %% "casbah-query" % "2.5.0",
     "org.mongodb" %% "casbah-gridfs" % "2.5.0",
-    "com.novus" %% "salat-core" % "1.9.2-SNAPSHOT",
+    "com.novus" %% "salat-core" % "1.9.2",
     "com.restfb" % "restfb" % "1.6.11",
     "commons-io" % "commons-io" % "1.3.2",
     "commons-io" % "commons-io" % "1.3.2",

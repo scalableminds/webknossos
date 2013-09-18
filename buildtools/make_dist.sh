@@ -16,7 +16,7 @@ pushd `dirname $0`/..
 
 #1 modulename (oxalis/levelcreator/stackrenderer)
 
-sbt "project $PROJECT" dist || (echo "error creating packages: (maybe bad project name)"; exit 1)
+sbt "project $PROJECT" clean compile dist || (echo "error creating packages: (maybe bad project name)"; exit 1)
 
 DIST_DIR=""
 if [ $PROJECT = oxalis ]; then

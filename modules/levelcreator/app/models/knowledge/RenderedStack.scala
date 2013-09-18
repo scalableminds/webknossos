@@ -12,6 +12,7 @@ import scala.concurrent.Future
 import net.liftweb.common.{Full, Failure}
 import scala.util.Success
 import reactivemongo.api.indexes.{IndexType, Index}
+import braingames.json.GeoPoint
 
 case class MissionInfo(_id: BSONObjectID, key: String) {
   def id = _id.stringify
@@ -28,7 +29,7 @@ case class RenderedStack(
   isActive: Boolean,
   isControl: Boolean,
   paraInfo: JsObject, // = JsObject,
-  random: Double = Math.random(),
+  random: GeoPoint = GeoPoint.random,
   _id: BSONObjectID = BSONObjectID.generate) {
 
   lazy val id = _id.stringify

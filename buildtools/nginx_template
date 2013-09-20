@@ -23,7 +23,7 @@ server {
 {% if mode == "prod" %}
 server {
   listen 443;
-  server_name  ~^{{url_regex}}$;
+  server_name  {{url_regex}};
   access_log  /var/log/nginx/{{name}}.access.log;
 
   proxy_read_timeout 480s;

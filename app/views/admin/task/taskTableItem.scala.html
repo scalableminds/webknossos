@@ -20,7 +20,9 @@
   </td>
   <td> @task.annotationBase.map(_.dataSetName) </td>
   <td> @task.annotationBase.flatMap(_.content.map(_.editPosition)) </td>
-  <td> <span class="label"> @task.neededExperience </span> </td>
+  <td> 
+    @if(task.neededExperience.toString() != ""){<span class="label"> @task.neededExperience </span>}
+  </td>
   <td> @task.priority </td>
   <td> @formatDate(task.created) </td>
   <td> @defining(task.status){ status =>

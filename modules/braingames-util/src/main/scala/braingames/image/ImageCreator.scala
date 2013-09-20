@@ -86,7 +86,7 @@ object ImageCreator {
               val h = idx / params.imagesPerRow * params.slideHeight
               finalImage.createGraphics().drawImage(
                 image,  w, h, null)
-              ImagePartInfo(page, w, h, subpartWidth, subpartHeight)
+              ImagePartInfo(page, w, h, subpartHeight, subpartWidth)
           }
           CombinedPage(finalImage, info, PageInfo(page, page*imagesPerPage, pageImages.size))
       }.toList

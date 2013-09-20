@@ -24,6 +24,7 @@ class ImageWriter(imageType: String, imageExt: String) {
     val image = new IIOImage(buffered, null, null)
     writer.write(null, image, iwp)
     writer.reset()
+    output.close()
     file
   }
 }

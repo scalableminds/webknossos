@@ -41,6 +41,8 @@ CLASSPATH_REF="\$scriptdir/${JAR}"
 sed -i "s#:$CLASSPATH_REF##g" start
 #add ref to the beginning
 sed -i "s#^classpath=\"#classpath=\"$CLASSPATH_REF:#g" start
+# make the process fork
+sed -ri 's/(exec.*$)/\1 \&/g' start
 
 chmod +x start
 

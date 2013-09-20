@@ -79,7 +79,7 @@ class StackRenderer(useLevelUrl: String, binaryDataUrl: String) extends Actor {
     val js = html.stackrenderer.phantom(stack, levelUrl, binaryDataUrl).body
 
     val jsFile = FileIO.createTempFile(js, ".js")
-    val phantomCMD = "phantomjs":: "--web-security=false" :: jsFile.getAbsolutePath :: Nil
+    val phantomCMD = "phantomjs" :: "--web-security=false" :: jsFile.getAbsolutePath :: Nil
     Logger.info(phantomCMD.mkString(" "))
     withProcess(phantomCMD.run(logger, false)) {
       process =>
@@ -132,10 +132,9 @@ class StackRenderer(useLevelUrl: String, binaryDataUrl: String) extends Actor {
 
   def tarStack(stack: Stack, files: List[File]) = {
     def createTarName(file: File) = s"${stack.mission.id}/${file.getName}"
+    val output = new FileOutputStream(stack.tarFile)
+    val inputs = files.map(f => f -> createTarName(f))
     try {
-      val output = new FileOutputStream(stack.tarFile)
-      val inputs = files.map(f => f -> createTarName(f))
-
       TarIO.tar(inputs, output)
       Logger.debug("Finished taring")
       Full(true)
@@ -144,6 +143,8 @@ class StackRenderer(useLevelUrl: String, binaryDataUrl: String) extends Actor {
         Logger.error(s"failed to create tar for stack: $stack")
         Logger.error(s"$e")
         Failure("Failed to tar stack: " + e)
+    } finally {
+      output.close()
     }
   }
 

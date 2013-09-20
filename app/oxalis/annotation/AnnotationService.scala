@@ -51,6 +51,7 @@ trait AnnotationFileService {
       try {
         out.transferFrom(ch, 0, in.available)
       } finally {
+        in.close()
         ch.close()
         out.close()
       }

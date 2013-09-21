@@ -3,6 +3,8 @@ package braingames.util
 import java.nio.ByteBuffer
 import scala.math._
 import scala.reflect.ClassTag
+import play.api.libs.ws.WS.WSRequestHolder
+import com.ning.http.client.Realm.AuthScheme
 
 object ExtendedTypes {
 
@@ -168,6 +170,17 @@ object ExtendedTypes {
         case f: Failure =>
           Future.successful(f)
       }
+    }
+  }
+
+  case class Auth(isEnabled: Boolean, username: String = "", password: String = "")
+
+  implicit class ExtendedWSRequestHolder(r: WSRequestHolder) {
+    def withAuth(a: Auth) = {
+      if (a.isEnabled)
+        r.withAuth(a.username, a.password, AuthScheme.BASIC)
+      else
+        r
     }
   }
 }

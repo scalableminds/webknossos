@@ -1,6 +1,6 @@
 package controllers.levelcreator
 
-import braingames.mvc.Controller
+import braingames.mvc.ExtendedController
 import play.api.mvc._
 import models.knowledge._
 import play.api.libs.json.{JsArray, Json}
@@ -15,7 +15,7 @@ import play.api.Logger
  * Date: 20.08.13
  * Time: 20:37
  */
-object SolutionApi extends Controller with UnAuthedDBAccess{
+object SolutionApi extends ExtendedController with Controller with UnAuthedDBAccess{
 
   def createMissionJsonFlatWriter(renderedStacks: List[RenderedStack], solutions: List[MissionSolution]) = {
     import MissionSolutionDAO._

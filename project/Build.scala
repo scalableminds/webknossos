@@ -25,8 +25,9 @@ object ApplicationBuild extends Build {
     "org.mongodb" %% "casbah-gridfs" % "2.5.0",
     "com.novus" %% "salat-core" % "1.9.2",
     "com.restfb" % "restfb" % "1.6.11",
-    "commons-io" % "commons-io" % "1.3.2",
-    "commons-io" % "commons-io" % "1.3.2",
+    "commons-io" % "commons-io" % "2.4",
+    "org.apache.commons" % "commons-email" % "1.3.1",
+    "org.apache.commons" % "commons-lang3" % "3.1",
     "com.typesafe.akka" %% "akka-testkit" % "2.1.0",
     "com.typesafe.akka" %% "akka-agent" % "2.1.0",
     "com.typesafe.akka" %% "akka-remote" % "2.1.0",
@@ -35,7 +36,9 @@ object ApplicationBuild extends Build {
     "com.sun.jersey" % "jersey-core" % "1.8",
     "org.reactivemongo" %% "play2-reactivemongo" % "0.9",
     "org.reactivemongo" %% "reactivemongo-bson-macros" % "0.9",
-    "org.scala-lang" % "scala-reflect" % "2.10.0")
+    "org.scala-lang" % "scala-reflect" % "2.10.0",
+    "com.scalableminds" %% "braingames-binary" % "0.3.5",
+    "com.scalableminds" %% "braingames-util" % "0.3.5")
 
   val dependencyResolvers = Seq(
     "repo.novus rels" at "http://repo.novus.com/releases/",
@@ -45,7 +48,9 @@ object ApplicationBuild extends Build {
     "sgodbillon" at "https://bitbucket.org/sgodbillon/repository/raw/master/snapshots/",
     "mandubian" at "https://github.com/mandubian/mandubian-mvn/raw/master/snapshots/",
     "typesafe" at "http://repo.typesafe.com/typesafe/releases",
-    Resolver.url("Scalableminds REL Repo", url("http://scalableminds.github.com/releases/"))(Resolver.ivyStylePatterns)
+    Resolver.url("Scalableminds REL Repo", url("http://scalableminds.github.com/releases/"))(Resolver.ivyStylePatterns),
+    Resolver.sftp("scm.io intern releases repo", "scm.io", 44144, "/srv/maven/releases/") as("maven", "5MwEuHWH6tRPL6yfNadQ"),
+    Resolver.sftp("scm.io intern snapshots repo", "scm.io", 44144, "/srv/maven/snapshots/") as("maven", "5MwEuHWH6tRPL6yfNadQ")
   )
 
   val stackrendererDependencies = Seq(
@@ -62,62 +67,39 @@ object ApplicationBuild extends Build {
 
   lazy val levelcreatorDependencies = Seq(
     "org.reactivemongo" %% "reactivemongo-bson-macros" % "0.9",
-    "org.reactivemongo" %% "play2-reactivemongo" % "0.9"
-  )
-
-  lazy val braingamesDependencies = Seq(
-    "play" %% "play" % "2.1.2-SCM",
-    "commons-io" % "commons-io" % "1.3.2",
-    "org.reactivemongo" %% "reactivemongo-bson-macros" % "0.9",
     "org.reactivemongo" %% "play2-reactivemongo" % "0.9",
-    "com.typesafe.akka" %% "akka-agent" % "2.1.0",
-    "org.apache.commons" % "commons-email" % "1.3.1",
-    "org.apache.commons" % "commons-lang3" % "3.1",
-    "com.typesafe.akka" %% "akka-remote" % "2.1.0")
-
-  lazy val braingamesUtil: Project = Project("braingames-util", file("modules") / "braingames-util").settings(
-    libraryDependencies ++= braingamesDependencies,
-    resolvers ++= dependencyResolvers,
-    organization := "com.scalableminds",
-    scalaVersion := "2.10.0",
-    offline := true,
-    version := "0.3.2"
+    "com.scalableminds" %% "braingames-binary" % "0.3.5",
+    "com.scalableminds" %% "braingames-util" % "0.3.5"
   )
-
-  lazy val braingamesBinary: Project = Project("braingames-binary", file("modules") / "braingames-binary").settings(
-    libraryDependencies ++= braingamesDependencies,
-    resolvers ++= dependencyResolvers,
-    scalaVersion := "2.10.0",
-    offline := true
-  ).dependsOn(braingamesUtil).aggregate(braingamesUtil)
 
   lazy val oxalis: Project = play.Project(appName, appVersion, oxalisDependencies).settings(
     templatesImport += "oxalis.view.helpers._",
     templatesImport += "oxalis.view._",
     coffeescriptOptions := Seq(/*"minify",*/ "native", coffeeCmd),
+    scalaVersion := "2.10.2",
     //requireJs := Seq("main"),
     //requireJsShim += "main.js",
     resolvers ++= dependencyResolvers,
     offline := true
     //playAssetsDirectories += file("data")
-  ).dependsOn(braingamesUtil, braingamesBinary).aggregate(braingamesUtil, braingamesBinary)
+  )
 
   lazy val datastore: Project = Project("datastore", file("modules") / "datastore", dependencies = Seq(oxalis)).settings(
     libraryDependencies ++= dataStoreDependencies,
     resolvers ++= dependencyResolvers,
     coffeescriptOptions := Seq("native", coffeeCmd),
-    scalaVersion := "2.10.0"
+    scalaVersion := "2.10.2"
   ).aggregate(oxalis)
 
   lazy val levelcreator = play.Project("levelcreator", "0.1", levelcreatorDependencies, path = file("modules") / "levelcreator").settings(
     resolvers ++= dependencyResolvers,
     // offline := true,
     coffeescriptOptions := Seq("native", coffeeCmd)
-  ).dependsOn(braingamesUtil, braingamesBinary, oxalis).aggregate(braingamesUtil, braingamesBinary, oxalis)
+  ).dependsOn(oxalis).aggregate(oxalis)
 
   lazy val stackrenderer = play.Project("stackrenderer", "0.1", stackrendererDependencies, path = file("modules") / "stackrenderer").settings(
     resolvers ++= dependencyResolvers
-  ).dependsOn(braingamesUtil, braingamesBinary, oxalis, levelcreator).aggregate(braingamesUtil, braingamesBinary, oxalis, levelcreator)
+  ).dependsOn(oxalis, levelcreator).aggregate(oxalis, levelcreator)
 
   lazy val isoshader = play.Project("isoshader", "0.1", isoshaderDependencies, path = file("modules") / "isoshader").settings(
     templatesImport += "oxalis.view.helpers._",

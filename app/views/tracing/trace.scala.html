@@ -11,7 +11,7 @@
         @if(annotation.restrictions.allowUpdate(session.user)){
           <a href="#" class="btn btn-primary" id="trace-save-button">Save</a>
         } else {
-          <button class="btn btn-primary disabled">Read only</button> 
+          <button class="btn btn-primary disabled">Read only</button>
         }
         <div id="buttonbar" class="btn-group inline-block">
           <a href="@controllers.routes.AnnotationController.finishWithRedirect(annotation.typ, annotation.id)" class="btn btn-small" id="trace-finish-button"><i class="icon-ok-circle"></i> Finish</a>
@@ -27,7 +27,8 @@
         </div>
         <div id="zoomFactor">
         </div>
-        <div class="tabbable">
+
+        <div class="tabbable" id="lefttabbar">
           @defining(annotation.task){ task =>
             <ul class="nav nav-tabs">
               @if(task.isDefined) {
@@ -122,7 +123,7 @@
               <div>
                 <ul id="tree-list"></ul>
               </div>
-            </div>  
+            </div>
           </div>
           <div class="tab-pane" id="tab-comments">
             <div class="input-prepend input-append" id="comment-navbar">
@@ -136,7 +137,6 @@
           </div>
         </div>
       </div>
-    </div>   
   </div> <!--! end of #container -->
   <!-- JavaScript at the bottom for fast page loading -->
 

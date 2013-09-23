@@ -4,6 +4,7 @@ import models.user.User
 import models.security.Role
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
+
 /**
  * Company: scalableminds
  * User: tmbo
@@ -12,21 +13,30 @@ import play.api.libs.json._
  */
 
 class AnnotationRestrictions {
-  def allowAccess(user: User): Boolean = false
+  def allowAccess(user: Option[User]): Boolean = false
 
-  def allowUpdate(user: User): Boolean = false
+  def allowUpdate(user: Option[User]): Boolean = false
 
-  def allowFinish(user: User): Boolean = false
+  def allowFinish(user: Option[User]): Boolean = false
 
-  def allowDownload(user: User): Boolean = false
+  def allowDownload(user: Option[User]): Boolean = false
+
+  def allowAccess(user: User): Boolean = allowAccess(Some(user))
+
+  def allowUpdate(user: User): Boolean = allowUpdate(Some(user))
+
+  def allowFinish(user: User): Boolean = allowFinish(Some(user))
+
+  def allowDownload(user: User): Boolean = allowDownload(Some(user))
+
 }
 
 object AnnotationRestrictions {
-  def writeFor(u: User): Writes[AnnotationRestrictions] =
-    ((__ \'allowAccess).write[Boolean] and
-    (__ \'allowUpdate).write[Boolean] and
-    (__ \'allowFinish).write[Boolean] and
-    (__ \'allowDownload).write[Boolean])( ar =>
+  def writeFor(u: Option[User]): Writes[AnnotationRestrictions] =
+    ((__ \ 'allowAccess).write[Boolean] and
+      (__ \ 'allowUpdate).write[Boolean] and
+      (__ \ 'allowFinish).write[Boolean] and
+      (__ \ 'allowDownload).write[Boolean])(ar =>
       (ar.allowAccess(u), ar.allowUpdate(u), ar.allowFinish(u), ar.allowDownload(u)))
 
   def restrictEverything =
@@ -34,20 +44,32 @@ object AnnotationRestrictions {
 
   def defaultAnnotationRestrictions(annotation: AnnotationLike) =
     new AnnotationRestrictions {
-      override def allowAccess(user: User) = {
-        annotation._user == user._id || (Role.Admin.map(user.hasRole) getOrElse false)
+      override def allowAccess(user: Option[User]) = {
+        user.map {
+          user =>
+            annotation._user == user._id || (Role.Admin.map(user.hasRole) getOrElse false)
+        } getOrElse false
       }
 
-      override def allowUpdate(user: User) = {
-        annotation._user == user._id && !annotation.state.isFinished
+      override def allowUpdate(user: Option[User]) = {
+        user.map {
+          user =>
+            annotation._user == user._id && !annotation.state.isFinished
+        } getOrElse false
       }
 
-      override def allowFinish(user: User) = {
-        (annotation._user == user._id || (Role.Admin.map(user.hasRole) getOrElse false))  && !annotation.state.isFinished
+      override def allowFinish(user: Option[User]) = {
+        user.map {
+          user =>
+            (annotation._user == user._id || (Role.Admin.map(user.hasRole) getOrElse false)) && !annotation.state.isFinished
+        } getOrElse false
       }
 
-      override def allowDownload(user: User) = {
-        !annotation.isTrainingsAnnotation() && allowAccess(user)
+      override def allowDownload(user: Option[User]) = {
+        user.map {
+          user =>
+            !annotation.isTrainingsAnnotation() && allowAccess(user)
+        } getOrElse false
       }
     }
 }

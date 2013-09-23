@@ -27,7 +27,7 @@ object TreeLike{
 
     def writes(t: TreeLike) =
       for{
-        nodes <- Xml.toXML(t.nodes.toSeq)
+        nodes <- Xml.toXML(t.nodes.toSeq.sortBy(_.id))
         edges <- Xml.toXML(t.edges.toSeq)
       } yield {
         <thing id={ t.treeId.toString } color.r={ t.color.r.toString } color.g={ t.color.g.toString } color.b={ t.color.b.toString } color.a={ t.color.a.toString } name={t.name}>

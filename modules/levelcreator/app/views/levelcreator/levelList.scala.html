@@ -1,36 +1,51 @@
-@(levels: List[models.knowledge.Level], form: Form[models.knowledge.Level], dataSets: List[braingames.binary.models.DataSet], stacksInQueue: Map[models.knowledge.LevelId, Int], stacksInGeneration: Map[models.knowledge.LevelId, Int], activeRenderers: Option[Int])(implicit session: oxalis.view.UnAuthedSessionData)
+@(shippedLevels: List[models.knowledge.Level], latestLevels: List[models.knowledge.Level], form: Form[models.knowledge.Level], dataSets: List[braingames.binary.models.DataSet], games: List[models.knowledge.Game], stacksInProgress: Map[models.knowledge.LevelId, Int], stacksInQueue: Map[models.knowledge.LevelId, Int], activeRenderers: Option[Int])(implicit request: RequestHeader)
 
-@main(activeRenderers){
+@main(){
   <div class="container">
-    <h3>Levels</h3>
-    <div> Active renderers: @activeRenderers.getOrElse("<Unknown>")</div>
-    <div class="well">
-      @helper.form(controllers.levelcreator.routes.LevelCreator.create, 'class -> "form-horizontal") {
-        @helper.inputText(form("name"))
-        @helper.inputText(form("width"), 'type -> "number")
-        @helper.inputText(form("height"), 'type -> "number")
-        @helper.inputText(form("slides before problem"), 'type -> "number")
-        @helper.inputText(form("slides after problem"), 'type -> "number")
-        @helper.select(form("dataset"), options = dataSets.map(d => (d.name, d.name)))
-        <div class="form-actions">
-          <button type="submit" class="btn btn-primary">Create</button>
-        </div>
-      }
+    <div class="clearfix">
+      <h3 class="pull-left">Levels</h3>
+      <p class="pull-right">Active renderers: @activeRenderers.getOrElse("<Unknown>")</p>
     </div>
+    @levelForm(form, dataSets, games)
 
+    <h4>Shipped Levels</h4>
     <table class="table table-striped" id="level-list">
       <thead>
         <tr>
+          <th> Game </th>
           <th> Name </th>
+          <th> Version </th>
           <th> Dimensions </th>
           <th> DataSet </th>
+          <th> Rotated?</th>
           <th> Generation </th>
           <th> </th>
         </tr>
       </thead>
       <tbody>
-      @levels.sortBy(_.levelId.name).map{ level => 
-        @levelTableItem(level, stacksInQueue.get(level.levelId), stacksInGeneration.get(level.levelId))
+      @shippedLevels.sortBy(l => l.levelId.name.toLowerCase + "#" + l.levelId.name.toLowerCase).map{ level =>
+        @levelTableItem(level, stacksInProgress.get(level.levelId), stacksInQueue.get(level.levelId), true)
+      }
+      </tbody>
+    </table>
+
+    <h4>Latest Levels</h4>
+    <table class="table table-striped" id="level-list">
+      <thead>
+        <tr>
+          <th> Game </th>
+          <th> Name </th>
+          <th> Version </th>
+          <th> Dimensions </th>
+          <th> DataSet </th>
+          <th> Rotated?</th>
+          <th> Generation </th>
+          <th> </th>
+        </tr>
+      </thead>
+      <tbody>
+      @latestLevels.sortBy(l => l.levelId.name.toLowerCase + "#" + l.levelId.name.toLowerCase).map{ level =>
+        @levelTableItem(level, stacksInProgress.get(level.levelId), stacksInQueue.get(level.levelId), false)
       }
       </tbody>
     </table>

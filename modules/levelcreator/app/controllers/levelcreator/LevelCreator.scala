@@ -1,11 +1,10 @@
 package controllers.levelcreator
 
-import braingames.mvc.Controller
-import views._
+import views.html
 import braingames.mvc._
 import models.knowledge._
 import play.api.Play.current
-import play.api.mvc.Action
+import play.api.mvc.{RequestHeader, Action}
 import play.api.data._
 import play.api.data.Forms._
 import play.api.i18n.Messages
@@ -18,15 +17,24 @@ import braingames.util.ExtendedTypes.ExtendedString
 import play.api.libs.concurrent.Execution.Implicits._
 import scala.concurrent.Future
 import play.api.templates.Html
-import braingames.reactivemongo.GlobalDBAccess
+import braingames.reactivemongo.{UnAuthedDBAccess, GlobalDBAccess}
+import play.api.i18n.Messages.Message
+import play.api.libs.concurrent.Akka
+import akka.pattern.ask
+import scala.concurrent.duration._
+import braingames.levelcreator.{QueueStatus, QueueStatusRequest, StackWorkDistributor}
+import akka.util.Timeout
+import net.liftweb.common.Full
 
-object LevelCreator extends LevelCreatorController with GlobalDBAccess {
+object LevelCreator extends LevelCreatorController with UnAuthedDBAccess {
+
+  lazy val stackWorkDistributor = Akka.system.actorFor(s"user/${StackWorkDistributor.name}")
 
   val levelForm = Form(
     mapping(
-      "name" -> text
-        .verifying("level.invalidName", Level.isValidLevelName _)
-        .verifying("level.alreadyInUse", name => Level.findByName(name).isEmpty),
+      "name" -> text.verifying("level.invalidName", Level.isValidLevelName _),
+      "game" -> optional(text),
+      "isRotated" -> boolean,
       "width" -> number,
       "height" -> number,
       "slides before problem" -> number,
@@ -34,43 +42,66 @@ object LevelCreator extends LevelCreatorController with GlobalDBAccess {
       "dataset" -> text)(
       Level.fromForm)(Level.toForm)).fill(Level.empty)
 
+  def useRandom(levelId: String) = ActionWithValidLevel(levelId) {
+    implicit request =>
+      Async {
+        for {
+          mission <- MissionDAO.randomByDataSetName(request.level.dataSetName) ?~> Messages("mission.notFound")
+        } yield {
+          Ok(html.levelcreator.levelCreator(request.level, mission))
+        }
+      }
+  }
+
   def use(levelId: String, missionId: String) = ActionWithValidLevel(levelId) {
     implicit request =>
-      val missionOpt = Mission.findOneById(missionId) orElse
-        Mission.randomByDataSetName(request.level.dataSetName)
-      for {
-        mission <- missionOpt ?~ Messages("mission.notFound")
-      } yield {
-        Ok(html.levelcreator.levelCreator(request.level, mission))
+      Async {
+        for {
+          mission <- MissionDAO.findOneById(missionId) ?~> Messages("mission.notFound")
+        } yield {
+          Ok(html.levelcreator.levelCreator(request.level, mission))
+        }
       }
   }
 
   def delete(levelId: String) = ActionWithValidLevel(levelId) {
     implicit request =>
-      Level.remove(request.level)
-      JsonOk(Messages("level.removed"))
+      Async {
+        LevelDAO.markAsDeleted(request.level.levelId.name).map {
+          e =>
+            ActiveLevelDAO.removeActiveLevel(request.level.levelId.name)
+            if (e.ok)
+              JsonOk(Messages("level.removed"))
+            else
+              JsonOk(Messages("level.remove.failed"))
+        }
+      }
   }
 
   def submitCode(levelId: String) = ActionWithValidLevel(levelId, parse.urlFormEncoded) {
     implicit request =>
-      for {
-        code <- postParameter("code") ?~ Messages("level.code.notSupplied")
-      } yield {
-        val n = Level.createNewVersion(request.level, code)
-        JsonOk(
-          Json.obj(
-            "newId" -> n.id,
-            "newName" -> n.levelId.toBeautifiedString), "level.code.saved")
+      Async {
+        for {
+          code <- postParameter("code") ?~> Messages("level.code.notSupplied")
+          updatedLevel <- LevelDAO.createNewVersion(request.level, code)
+        } yield {
+          JsonOk(
+            Json.obj(
+              "newId" -> updatedLevel.id,
+              "newName" -> updatedLevel.levelId.toBeautifiedString), "level.code.saved")
+        }
       }
   }
 
   def uploadAsset(levelId: String) = ActionWithValidLevel(levelId, parse.multipartFormData) {
     implicit request =>
-      for {
-        assetFile <- request.body.file("asset") ?~ Messages("level.assets.notSupplied")
-      } yield {
-        request.level.update(_.addAsset(assetFile.filename, assetFile.ref.file))
-        JsonOk(Messages("level.assets.uploaded"))
+      Async {
+        for {
+          assetFile <- request.body.file("asset") ?~> Messages("level.assets.notSupplied")
+          _ <- LevelDAO.addAssetToLevel(request.level, assetFile.filename, assetFile.ref.file) ?~> Messages("level.assets.uploadFailed")
+        } yield {
+          JsonOk(Messages("level.assets.uploaded"))
+        }
       }
   }
 
@@ -90,8 +121,13 @@ object LevelCreator extends LevelCreatorController with GlobalDBAccess {
 
   def deleteAsset(levelId: String, asset: String) = ActionWithValidLevel(levelId) {
     implicit request =>
-      request.level.update(_.deleteAsset(asset))
-      JsonOk(Messages("level.assets.deleted"))
+      Async {
+        for {
+          _ <- LevelDAO.removeAssetFromLevel(request.level, asset) ?~> Messages("level.assets.deleteFailed")
+        } yield {
+          JsonOk(Messages("level.assets.deleted"))
+        }
+      }
   }
 
   def create = Action(parse.urlFormEncoded) {
@@ -100,50 +136,93 @@ object LevelCreator extends LevelCreatorController with GlobalDBAccess {
         levelForm.bindFromRequest.fold(
           formWithErrors =>
             generateLevelList(formWithErrors).map(BadRequest.apply[Html]), //((taskCreateHTML(taskFromTracingForm, formWithErrors)), {
-          t =>
-            DataSetDAO.findOneByName(t.dataSetName).flatMap {
-              dataSet =>
-                Level.insertOne(t)
-                generateLevelList(levelForm).map(Ok.apply[Html])
-            }
+          t => {
+            (for {
+              dataSet <- DataSetDAO.findOneByName(t.dataSetName) ?~> Messages("dataSet.notFound")
+              existingLevelWithSameName <- LevelDAO.createLevel(t) ?~> Messages("level.create.failed")
+              form <- generateLevelList(levelForm)
+            } yield {
+              Ok(form)
+            }).map(s => s)
+          }
         )
       }
   }
 
-  def progress(levelId: String) = ActionWithValidLevel(levelId) {
-    implicit request =>
-      val queued = StacksQueued.findFor(request.level.levelId).size
-      val inProgress = StacksInProgress.findFor(request.level.levelId).size
-      Ok(html.levelcreator.levelGenerationProgress(request.level, queued, inProgress))
+  def requestQueueStatus() = {
+    implicit val timeout = Timeout(5 seconds)
+    (stackWorkDistributor ? QueueStatusRequest).mapTo[QueueStatus].map {
+      queueStatus =>
+        queueStatus.levelStats
+    }
   }
 
-  def setAsActiveVersion(levelId: String) = ActionWithValidLevel(levelId) {
-    implicit request =>
-      Level.setAsActiveVersion(request.level)
-      JsonOk(Messages("level.render.setAsActiveVersion"))
+  def requestQueueStatusFor(levelId: LevelId) = {
+    requestQueueStatus().map(_.get(levelId).getOrElse(0))
   }
 
-  def autoRender(levelId: String, isEnabled: Boolean) = ActionWithValidLevel(levelId) {
+  def progress(levelName: String) = Action {
     implicit request =>
-      request.level.update(_.copy(autoRender = isEnabled))
-      if (isEnabled)
-        JsonOk(Messages("level.render.autoRenderEnabled"))
-      else
-        JsonOk(Messages("level.render.autoRenderDisabled"))
+      Async {
+        for {
+          level <- LevelDAO.findLatestOneByName(levelName) ?~> Messages("level.notFound")
+          stacksInQueued <- requestQueueStatusFor(level.levelId)
+          stacksInProgress <- StackInProgressDAO.countFor(level.levelId)
+        } yield {
+          Ok(html.levelcreator.levelGenerationProgress(level.numberOfActiveStacks, stacksInQueued, stacksInProgress))
+        }
+      }
   }
 
-  def generateLevelList(levelForm: Form[Level])(implicit session: oxalis.view.UnAuthedSessionData): Future[Html] = {
+  def updateRenderSettings(levelId: String) = ActionWithValidLevel(levelId, parser = parse.json) {
+    implicit request =>
+      Async {
+        request.level.game match {
+          case Some(game) =>
+            for {
+              settings <- request.body.asOpt[RenderSettings] ?~> Messages("level.render.invalidSettings")
+              _ <- LevelDAO.updateRenderSettings(request.level, settings)
+            } yield {
+
+              if (settings.shouldBeShipped) {
+                ActiveLevelDAO.addActiveLevel(game, request.level.levelId)
+              } else {
+                ActiveLevelDAO.removeActiveLevel(game, request.level.levelId)
+              }
+
+              val shippingMessage =
+                if (settings.shouldBeShipped)
+                  Messages("level.render.shippingActive")
+                else
+                  Messages("level.render.shippingInactive")
+
+              val autoRenderMessage =
+                if (settings.shouldAutoRender)
+                  Messages("level.render.autoRenderActive")
+                else
+                  Messages("level.render.autoRenderInactive")
+
+              JsonOk(shippingMessage + " " + autoRenderMessage)
+            }
+          case _ =>
+            Future.successful(JsonOk("Can't ship levels without a game"))
+        }
+      }
+  }
+
+  def generateLevelList(levelForm: Form[Level])(implicit request: RequestHeader): Future[Html] = {
     WorkController.countActiveRenderers.flatMap {
       rendererCount =>
-        val stacksInQueue =
-          StacksQueued.findAll.groupBy(_.level.levelId).mapValues(_.size)
-
-        val stacksInGeneration =
-          StacksInProgress.findAll.groupBy(_._level).mapValues(_.size)
         for {
-          dataSets <- DataSetDAO.findAll(ctx)
+          dataSets <- DataSetDAO.findWithTyp("segmentation")(ctx)
+          games <- GameDAO.findAll(ctx)
+          latestLevels <- LevelDAO.findAllLatest
+          shippedLevels <- LevelDAO.findAllShipped
+          levels = latestLevels ::: shippedLevels
+          stacksInQueue <- requestQueueStatus()
+          stacksInProgress <- StackInProgressDAO.findAll.map(_.groupBy(_.levelId).mapValues(_.size))
         } yield {
-          html.levelcreator.levelList(Level.findAllLatest, levelForm, dataSets, stacksInQueue, stacksInGeneration, rendererCount)
+          html.levelcreator.levelList(shippedLevels, latestLevels, levelForm, dataSets, games, stacksInProgress, stacksInQueue, rendererCount)
         }
     }
   }

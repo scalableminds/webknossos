@@ -23,7 +23,7 @@ class Controller
   allowedModes : []
   
 
-  constructor : ->
+  constructor : (@controlMode) ->
 
     _.extend(@, new EventMixin())
 
@@ -32,11 +32,13 @@ class Controller
 
     @model = new Model()
 
-    @model.initialize(constants.TEXTURE_SIZE_P, constants.PLANE_WIDTH, constants.DISTANCE_3D).done ([restrictions, settings]) =>
+    @model.initialize().done (tracingState) =>
 
       # Do not continue, when there was an error and we got no settings from the server
-      unless settings
+      if tracingState.error
         return
+
+      [restrictions, settings] = [tracingState.restrictions, tracingState.settings]
 
       unless restrictions.allowAccess
         Toast.Error "You are not allowed to access this tracing"
@@ -59,9 +61,9 @@ class Controller
 
       @gui = @createGui(restrictions, settings)
 
-      @sceneController = new SceneController(@model.binary.cube.upperBoundary, @model.flycam, @model)
+      @sceneController = new SceneController(@model.binary["color"].cube.upperBoundary, @model.flycam, @model)
 
-      @planeController = new PlaneController(@model, stats, @gui, @view.renderer, @view.scene, @sceneController)
+      @planeController = new PlaneController(@model, stats, @gui, @view.renderer, @view.scene, @sceneController, @controlMode)
 
       @arbitraryController = new ArbitraryController(@model, stats, @gui, @view.renderer, @view.scene, @sceneController)
 
@@ -71,7 +73,11 @@ class Controller
       @initKeyboard()
 
       @setMode(constants.MODE_PLANE_TRACING)
-      @setMode(constants.MODE_VOLUME)
+      #@setMode(constants.MODE_VOLUME)
+
+      for binaryName of @model.binary
+        @model.binary[binaryName].cube.on "bucketLoaded" : =>
+          @model.flycam.update()
 
       if constants.MODE_PLANE_TRACING not in @allowedModes
         if constants.MODE_ARBITRARY in @allowedModes
@@ -127,6 +133,19 @@ class Controller
         event.preventDefault()
         @model.user.setValue("sortTreesByName", ($(event.currentTarget).data("sort") == "name"))
 
+      if @controlMode == constants.CONTROL_MODE_VIEW
+        $('#alpha-slider').slider().on "slide", (event) =>
+
+          alpha = event.value
+          if (alpha == 0)
+            @model.binary["volume"].pingStop()
+          if (alpha == 100)
+            @model.binary["color"].pingStop()
+          @sceneController.setSegmentationAlpha( alpha )
+
+      # initial trigger
+      @sceneController.setSegmentationAlpha($('#alpha-slider').data("slider-value") or constants.DEFAULT_SEG_ALPHA)
+
 
   initMouse : ->
 
@@ -150,46 +169,39 @@ class Controller
       event.preventDefault() if (event.which == 32 or event.which == 18 or 37 <= event.which <= 40) and !$(":focus").length
       return
 
-
-
-    new Input.KeyboardNoLoop(
-
-      "5" : =>
-        start = new Date().getTime()
-        @sceneController.showAllShapes([50,50,0], [150,150,30])
-        console.log( "Rendering Time: " + ( new Date().getTime() - start ))
-        @model.flycam.hasChanged = true
-
-      #View
-      "t" : => 
-        @view.toggleTheme()       
-        @abstractTreeController.drawTree()
-
+    keyboardControls = {
       "q" : => @toggleFullScreen()
-      
-      #Set Mode, outcomment for release
-      "shift + 1" : =>
-        @setMode(constants.MODE_PLANE_TRACING)
-      "shift + 2" : =>
-        @setMode(constants.MODE_ARBITRARY)
-      "shift + 3" : =>
-        @setMode(constants.MODE_VOLUME)
+    }
 
-      "m" : => # toggle between plane tracing and arbitrary tracing
-
-        if @mode == constants.MODE_PLANE_TRACING
-          @setMode(constants.MODE_ARBITRARY)
-        else if @mode == constants.MODE_ARBITRARY
+    if @controlMode == constants.CONTROL_MODE_TRACE
+      _.extend( keyboardControls, {
+        #Set Mode, outcomment for release
+        "shift + 1" : =>
           @setMode(constants.MODE_PLANE_TRACING)
+        "shift + 2" : =>
+          @setMode(constants.MODE_ARBITRARY)
+        "shift + 3" : =>
+          @setMode(constants.MODE_VOLUME)
+          
+        "t" : => 
+          @view.toggleTheme()       
+          @abstractTreeController.drawTree()
 
-      "super + s, ctrl + s" : (event) =>
+        "m" : => # toggle between plane tracing and arbitrary tracing
 
-        event.preventDefault()
-        event.stopPropagation()
-        @gui.saveNow()
+          if @mode == constants.MODE_PLANE_TRACING
+            @setMode(constants.MODE_ARBITRARY)
+          else if @mode == constants.MODE_ARBITRARY
+            @setMode(constants.MODE_PLANE_TRACING)
 
-    )
+        "super + s, ctrl + s" : (event) =>
 
+          event.preventDefault()
+          event.stopPropagation()
+          @gui.saveNow()
+      } )
+
+    new Input.KeyboardNoLoop( keyboardControls )
 
   setMode : (newMode) ->
 
@@ -231,8 +243,8 @@ class Controller
     gui = new Gui($("#optionswindow"), model, restrictions, settings)
     gui.update()  
 
-    model.binary.queue.set4Bit(model.user.fourBit)
-    model.binary.updateContrastCurve(gui.settings.brightness, gui.settings.contrast)
+    model.binary["color"].queue.set4Bit(model.user.fourBit)
+    model.binary["color"].updateContrastCurve(gui.settings.brightness, gui.settings.contrast)
 
     gui.on
       deleteActiveNode : =>

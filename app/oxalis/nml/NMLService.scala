@@ -24,10 +24,10 @@ object NMLService {
   }
 
   def extractFromNML(file: File) =
-    new NMLParser(file).parse
+    NMLParser.parse(file)
 
   def extractFromZip(file: File): List[NML] =
-    ZipIO.unzip(file).map(nml => (new NMLParser(nml)).parse).flatten
+    ZipIO.unzip(file).map(nml => NMLParser.parse(nml)).flatten
 
   def extractFromFile(file: File, fileName: String): List[NML] = {
     if (fileName.endsWith(".zip")) {

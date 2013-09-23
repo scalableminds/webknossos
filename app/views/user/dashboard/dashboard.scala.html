@@ -1,8 +1,6 @@
-@( explorativeAnnotations: List[models.annotation.Annotation], userTasks: List[(models.task.Task, models.annotation.Annotation)], trackedTimeOpt: Option[Map[models.user.PaymentInterval, scala.concurrent.duration.Duration]], dataSets: List[braingames.binary.models.DataSet], hasAnOpenTask: Boolean)(implicit session: oxalis.view.AuthedSessionData)
+@( userOpt: Option[models.user.User], explorativeAnnotations: List[models.annotation.Annotation], userTasks: List[(models.task.Task, models.annotation.Annotation)], trackedTime: Map[models.user.PaymentInterval, scala.concurrent.duration.Duration], dataSets: List[braingames.binary.models.DataSet], hasAnOpenTask: Boolean)(implicit session: oxalis.view.AuthedSessionData)
 
-@main(){
-  <div class="container" id="dashboard">
-    <div class="tabbable" id="tabbable-dashboard">
+		<div class="tabbable" id="tabbable-dashboard">
       <ul class="nav nav-tabs">
         <li class="active"><a href="#tab-tasks" data-toggle="tab">Tasks</a></li>
         <li><a href="#tab-explorative" data-toggle="tab">Explorative Tracings</a></li>
@@ -14,7 +12,11 @@
 
           <h3>Tasks</h3>
           <br />
-          <a href="@controllers.routes.TaskController.request" class="btn btn-success"  data-ajax="add-row=#dashboard-tasks@if(hasAnOpenTask){,confirm=@Messages("task.requestAnother")}" id="new-task-button">Get a new task</a>
+          @userOpt.map{ user =>
+	          <a href="@controllers.admin.routes.NMLIO.userDownload(user.id)" title="download all finished tracings"><i class="icon-download"></i> download </a>
+          }.getOrElse {
+	          <a href="@controllers.routes.TaskController.request" class="btn btn-success"  data-ajax="add-row=#dashboard-tasks@if(hasAnOpenTask){,confirm=@Messages("task.requestAnother")}" id="new-task-button">Get a new task</a>
+          }
           
           <div class="divider-vertical"></div>
           <a href="#" id="toggle-finished">Show finished tasks</a>
@@ -42,28 +44,30 @@
         
           <h3>Explorative Tracings</h3>
           <br />
-          <div>
-            @helper.form(action = controllers.admin.routes.NMLIO.upload, 'enctype -> "multipart/form-data", 'id -> "nml-explore-form", 'class -> "form-inline inline-block"){
-              <button type="submit" class="btn"><i class="icon-upload"></i> Upload NML & explore</button>
-            }
-            <div class="divider-vertical"></div>
-            @helper.form(action = controllers.routes.AnnotationController.createExplorational, 'class -> "form-inline inline-block") {
-              <select name="dataSetName">
-                @dataSets.map{ d =>
-                  <option value="@d.name"> @d.name </option>
-                }
-              </select>
-              <label class="radio inline hide">
-                <input type="radio" name="contentType" value="skeletonTracing" checked>
-                Skeleton
-              </label>
-              <label class="radio inline hide">
-                <input type="radio" name="contentType" value="volumeTracing">
-                Volume
-              </label>
-              <button type="submit" class="btn"><i class="icon-search"></i> Explore data set</button>
-            }
-          </div>
+        	@if(userOpt.isEmpty) {
+	          <div>
+	            @helper.form(action = controllers.admin.routes.NMLIO.upload, 'enctype -> "multipart/form-data", 'id -> "nml-explore-form", 'class -> "form-inline inline-block"){
+	              <button type="submit" class="btn"><i class="icon-upload"></i> Upload NML & explore</button>
+	            }
+	            <div class="divider-vertical"></div>
+	            @helper.form(action = controllers.routes.AnnotationController.createExplorational, 'class -> "form-inline inline-block") {
+	              <select name="dataSetName">
+	                @dataSets.map{ d =>
+	                  <option value="@d.name"> @d.name </option>
+	                }
+	              </select>
+	              <label class="radio inline hide">
+	                <input type="radio" name="contentType" value="skeletonTracing" checked>
+	                Skeleton
+	              </label>
+	              <label class="radio inline hide">
+	                <input type="radio" name="contentType" value="volumeTracing">
+	                Volume
+	              </label>
+	              <button type="submit" class="btn"><i class="icon-search"></i> Explore data set</button>
+		          }
+	          </div>
+	        }
 
           <table class="table table-striped table-hover" id="explorative-tasks">
             <thead>
@@ -88,7 +92,6 @@
         <div class="tab-pane" id="tab-tracked-time">
 
           <h3>Tracked Time</h3>
-          @trackedTimeOpt.map{ trackedTime =>
             <table class="table table-striped">
               <thead>
                 <tr>
@@ -98,7 +101,7 @@
                 </tr>
               </thead>
               <tbody>
-              @trackedTime.map{ case (interval, time) => 
+              @trackedTime.toList.sortBy({ case (interval, time) => interval }).map{ case (interval, time) => 
                 <tr>
                   <td> @interval </td>
                   <td> @formatTimeHumanReadable(time) </td>
@@ -110,7 +113,3 @@
         </div>
       </div>
     </div>
-    }
-  </div>
-  @credits()
-}

@@ -4,7 +4,6 @@ import akka.actor._
 import java.io.File
 import scala.concurrent.duration._
 import play.api._
-import models.knowledge._
 import com.amazonaws.services.s3.model._
 import com.amazonaws.auth.BasicAWSCredentials
 import com.amazonaws.services.s3.AmazonS3Client
@@ -12,6 +11,7 @@ import braingames.util.ZipIO
 import scala.util.Try
 import scala.util.Success
 import scala.util.Failure
+import models.knowledge.Stack
 
 case class UploadStack(stacks: Stack)
 
@@ -23,12 +23,12 @@ class S3Uploader(s3Config: S3Config) extends Actor {
 
   def receive = {
     case UploadStack(stack) =>
-      uploadStack(stack) match{
+      uploadStack(stack) match {
         case Success(downloadUrls) =>
-        sender ! FinishedUpload(stack, downloadUrls)
+          sender ! UploadFinished(stack, downloadUrls)
         case Failure(f) =>
           Logger.error("An error occoured during upload: " + f)
-          sender ! FailedUpload(stack)
+          sender ! UploadFailed(stack, net.liftweb.common.Failure("Uploda failed: " + f))
       }
   }
 
@@ -39,8 +39,8 @@ class S3Uploader(s3Config: S3Config) extends Actor {
   }
 
   def uploadStack(stack: Stack): Try[List[String]] = {
-    Try{
-      if (s3Config.isEnabled){
+    Try {
+      if (s3Config.isEnabled) {
         for {
           (file, key) <- buildUploadPairs(stack)
         } yield {
@@ -58,9 +58,9 @@ class S3Uploader(s3Config: S3Config) extends Actor {
   }
 
   def buildUploadPairs(stack: Stack): List[Tuple2[File, String]] = {
-    val filesToUpload = stack.tarFile :: stack.metaFile :: stack.image :: Nil
+    val filesToUpload = stack.tarFile :: stack.metaFile :: Nil
 
-    val stackFilePrefix = s"${s3Config.branchName}/${stack.level.levelId}/${stack.mission.id}"
+    val stackFilePrefix = s"${s3Config.branchName}/${stack.level.levelId}/${stack.mission.key}"
 
     filesToUpload.zip(filesToUpload.map(f =>
       s"$stackFilePrefix/${f.getName}"))

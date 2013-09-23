@@ -1,7 +1,7 @@
 package controllers
 
 import play.api._
-import play.api.mvc.Action
+import play.api.mvc.{Request, Action}
 import play.api.data._
 import play.api.Play.current
 import play.api.libs.concurrent._
@@ -21,8 +21,9 @@ import play.api.i18n.Messages
 import braingames.mvc.Controller
 import oxalis.mail.DefaultMails
 import models.tracing.skeleton.SkeletonTracing
+import oxalis.view.{ProvidesUnauthorizedSessionData, UnAuthedSessionData}
 
-object Authentication extends Controller with Secured {
+object Authentication extends Controller with Secured with ProvidesUnauthorizedSessionData{
   // -- Authentication
   override def DefaultAccessRole = None
 
@@ -75,7 +76,7 @@ object Authentication extends Controller with Secured {
               Application.Mailer ! Send(
                 DefaultMails.registerAdminNotifyerMail(user.name, email, brainDBresult))
               if (autoVerify) {
-                Redirect(controllers.routes.AnnotationController.index)
+                Redirect(controllers.routes.Application.index)
                   .withSession(Secured.createSession(user))
               } else {
                 Redirect(controllers.routes.Authentication.login)
@@ -114,7 +115,7 @@ object Authentication extends Controller with Secured {
         {
           case (email, password) =>
             val user = User.findLocalByEmail(email.toLowerCase).get
-            Redirect(controllers.routes.AnnotationController.index)
+            Redirect(controllers.routes.Application.index)
               .withSession(Secured.createSession(user))
         })
   }

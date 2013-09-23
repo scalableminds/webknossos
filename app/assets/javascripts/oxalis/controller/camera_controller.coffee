@@ -46,7 +46,8 @@ class CameraController
     # CORRECTION: You're telling lies, you need to use the up vector...
 
     camera = @cameras[constants.TDView]
-    b = @model.scaleInfo.voxelToNm(@model.binary.cube.upperBoundary)
+    b = @model.scaleInfo.voxelToNm(@model.binary["color"].cube.upperBoundary)
+    
     pos = @model.scaleInfo.voxelToNm(@model.flycam.getPosition())
     time = 800
     to = {}

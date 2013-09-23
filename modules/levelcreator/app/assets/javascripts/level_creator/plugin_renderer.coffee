@@ -3,6 +3,7 @@ underscore : _
 coffee-script : CoffeeScript
 routes : Routes
 libs/event_mixin : EventMixin
+libs/key_value_store : KeyValueStore
 ./plugins : Plugins
 ./buffer_utils : BufferUtils
 ###
@@ -12,9 +13,11 @@ class PluginRenderer
   plugins : null
 
 
-  constructor : (@dimensions, @assetHandler, @dataHandler) ->
+  constructor : (@dimensions, @slidesBeforeProblem, @slidesAfterProblem, @assetHandler, @dataHandler) ->
 
     [ @width, @height, @depth ] = dimensions
+
+    @state = new KeyValueStore()
 
     @plugins = new Plugins(@assetHandler)
     @createSidebar()
@@ -39,43 +42,95 @@ class PluginRenderer
     )
 
 
-  getLength : ->
+  getRange : ->
+
+    console.log "range"
+
+    return { start: 0, end: 0 } unless @dataHandler.deferred("initialized").state() == "resolved"
 
     func = @compile()
 
-    length = 0
+    inputData = @getInitialInputData()
+
+    range = { start: Infinity, end: 0 }
 
     _plugins =
 
       time : (options) ->
+        start = Math.min(options.start, range.start)
+        end = Math.max(options.end, range.end)
+        range = { start, end }
 
-        length = Math.max(options.end + 1, length)
         (cb) -> cb()
 
       importSlides : ->
 
-    (_plugins[key] = ->) for key of @plugins
+      unsafe : (isRangeSafe, callback) ->
+
+        if _.isFunction(callback) and isRangeSafe
+          callback(inputData)
+
+      exit : ->
+        _plugins.time = -> (->)
+        range = { start: 0, end: 0 }
+        return
+
+      state : @state
+
+
+    for key, plugin of @plugins
+      do (plugin) ->
+        if plugin.IS_RANGE_SAFE
+
+          _plugins[key] = (options) ->
+            options = {} unless options? #if plugin has no options
+
+            _.extend( options, input : inputData )
+            _.extend( options, exit : _plugins.exit )
+            plugin.execute(options)
+
+        else
+          _plugins[key] = ->
 
     func(_plugins)
 
-    length
+    range
+
+
+  getInitialInputData : ->
+    
+    initialInputData = 
+      state : @state
+      dimensions : @dimensions
+      slidesBeforeProblem : @slidesBeforeProblem
+      slidesAfterProblem : @slidesAfterProblem
+      mission : @dataHandler.getMissionData()
+
 
 
   render : (t) ->
 
+    t = +t
+
+    exited = false
     pixelCount = @width * @height
     frameBuffer = new Uint8Array( 4 * pixelCount )
-    frameData = null
-    return { frameBuffer, frameData } unless @dataHandler.deferred("initialized").state() == "resolved"
+    metaFrameData = null
+    paraFrameData = null
+    return { frameBuffer, metaFrameData, paraFrameData } unless @dataHandler.deferred("initialized").state() == "resolved"
 
     func = @compile()
 
     startFrame = 0
     endFrame = 0
 
-    inputData = null
+    initialInputData = @getInitialInputData()
+              
+    inputData = _.clone(initialInputData)
+
 
     _plugins =
+
 
       time : (options) =>
 
@@ -83,28 +138,33 @@ class PluginRenderer
         startFrame = options.start
         endFrame = options.end
 
-
         if startFrame <= t <= endFrame
           (callback) =>
-            inputData =
+            _.extend(inputData,
               rgba : new Uint8Array( 4 * pixelCount )
               segmentation : new Uint16Array( pixelCount )
-              dimensions : @dimensions
-              relativeTime : (t - startFrame) / (endFrame - startFrame)
+              relativeTime : if endFrame - startFrame > 0 then (t - startFrame) / (endFrame - startFrame) else 0
               absoluteTime : t
-              mission : @dataHandler.getMissionData()
-              writeFrameData : (key, payload) ->
-                frameData = frameData ? {}
-                frameData[key] = payload
+              writeMetaFrameData : (key, payload) ->
+                metaFrameData = metaFrameData ? {}
+                metaFrameData[key] = payload
+              writeParaFrameData : (key, payload) ->
+                paraFrameData = paraFrameData ? {}
+                paraFrameData[key] = payload                
+            )
+
             callback()
             BufferUtils.alphaBlendBuffer(frameBuffer, inputData.rgba, options.alpha)
-            inputData = null
+            
+            inputData = _.clone(initialInputData)
+
         else
           ->
 
       importSlides : (options) =>
 
         _.defaults(options, scale : "auto")
+
 
         if options.scale == "auto"
           if endFrame - startFrame > 0
@@ -116,10 +176,24 @@ class PluginRenderer
         _.extend(inputData,
           rgba : @dataHandler.getRGBASlide( slideOffset )
           segmentation : @dataHandler.getSegmentationSlide( slideOffset )
-          dimensions : @dimensions
         )
 
         @plugins.segmentImporter.execute(input : inputData, slideOffset)
+
+
+      state : @state
+
+      unsafe : (isRangeSafe, callback) -> 
+
+        if _.isFunction(isRangeSafe)
+          callback = isRangeSafe
+
+        callback(inputData)
+
+
+      exit : -> exited = true; return
+
+
 
 
     for key, plugin of @plugins
@@ -129,11 +203,15 @@ class PluginRenderer
           options = {} unless options? #if plugin has no options
 
           _.extend( options, input : inputData )
+          _.extend( options, exit : _plugins.exit )
           plugin.execute(options)
 
     func(_plugins)
 
-    { frameBuffer, frameData }
+    if exited
+      null
+    else
+      { frameBuffer, metaFrameData, paraFrameData }
 
 
 
@@ -188,5 +266,4 @@ class PluginRenderer
       $(containerName).append(
         @pluginDocTemplate { i, plugin, containerName, bodyId : "collapseBody#{i}" }
       )
-
 

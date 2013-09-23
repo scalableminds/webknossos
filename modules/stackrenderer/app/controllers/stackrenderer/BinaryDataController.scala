@@ -1,6 +1,5 @@
 package controllers.stackrenderer
 
-import braingames.mvc.Controller
 import models.stackrenderer.TemporaryStores._
 import play.api.mvc.Action
 import play.api.i18n.Messages
@@ -8,8 +7,10 @@ import play.api.libs.concurrent.Execution.Implicits._
 import scala.concurrent.Future
 import play.api.mvc.Result
 import controllers.levelcreator.BinaryDataRequestHandler
+import braingames.mvc.ExtendedController
+import play.api.mvc.Controller
 
-object BinaryDataController extends Controller with BinaryDataRequestHandler {
+object BinaryDataController extends ExtendedController with Controller with BinaryDataRequestHandler {
   override val binaryDataService = braingames.stackrenderer.BinaryDataService
 
   def viaAjax(dataSetName: String, levelId: String, missionId: String, dataLayerName: String) =

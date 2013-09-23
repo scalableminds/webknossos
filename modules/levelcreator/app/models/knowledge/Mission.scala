@@ -1,73 +1,135 @@
 package models.knowledge
 
-import models.basics.DAOCaseClass
-import models.basics.BasicDAO
 import braingames.geometry.Point3D
-import org.bson.types.ObjectId
-import com.mongodb.casbah.commons.MongoDBObject
 import play.api.libs.json._
 import play.api.libs.functional.syntax._
-import com.novus.salat._
-import models.context._
-import scala.util.Random
+import models.knowledge.basics.BasicReactiveDAO
+import scala.concurrent.Future
+import reactivemongo.api.indexes.{IndexType, Index}
+import reactivemongo.bson.BSONObjectID
+import braingames.reactivemongo.DBAccessContext
+import play.api.libs.concurrent.Execution.Implicits._
+import play.modules.reactivemongo.json.BSONFormats.BSONObjectIDFormat
+import play.api.Logger
 
-case class ContextFreeMission(missionId: Int, start: MissionStart, errorCenter: Point3D, possibleEnds: List[PossibleEnd], difficulty: Double) {
-  def addContext(dataSetName: String, batchId: Int) = Mission(dataSetName, missionId, batchId, start, errorCenter, possibleEnds, difficulty: Double)
+case class ContextFreeMission(missionId: Int, start: StartSegment, errorCenter: Point3D, end: SimpleSegment, isControl: Option[Boolean], possibleEnds: List[EndSegment], difficulty: Double) {
+  def addContext(dataSetName: String, batchId: Int) = Mission(dataSetName, missionId, batchId, start, errorCenter, end, isControl getOrElse false, possibleEnds, difficulty)
 }
 
-object ContextFreeMission extends Function5[Int, MissionStart, Point3D, List[PossibleEnd], Double, ContextFreeMission] {
+object ContextFreeMission {
+  //} extends Function5[Int, StartSegment, Point3D, List[EndSegment], Double, ContextFreeMission] {
   implicit val ContextFreeMissionReader: Reads[ContextFreeMission] = Json.reads[ContextFreeMission]
 }
 
 case class Mission(dataSetName: String,
-                   missionId: Int,
-                   batchId: Int,
-                   start: MissionStart,
-                   errorCenter: Point3D,
-                   possibleEnds: List[PossibleEnd],
-                   difficulty: Double,
-                   _id: ObjectId = new ObjectId) extends DAOCaseClass[Mission] {
+  missionId: Int,
+  batchId: Int,
+  start: StartSegment,
+  errorCenter: Point3D,
+  end: SimpleSegment,
+  isControl: Boolean,
+  possibleEnds: List[EndSegment],
+  difficulty: Double,
+  missionStatus: MissionStatus = MissionStatus.initial,
+  random: Double = Math.random(),
+  isFinished: Boolean = false,
+  _id: BSONObjectID = BSONObjectID.generate) {
 
-  val key: String = dataSetName.toString + "_" + missionId.toString
+  val id = _id.stringify
 
-  val dao = Mission
-  lazy val id = _id.toString
+  val key: String = Mission.keyForMissionInfo(dataSetName, batchId, missionId.toString)
 
-  def withDataSetName(newDataSetName: String) = copy(dataSetName = newDataSetName)
-
-  def batchId(newBatchId: Int) = copy(batchId = newBatchId)
+  def stringify = s"Mission(mid = $missionId, bid = $batchId, ds = $dataSetName)"
 }
 
-trait MissionFormats extends CommonFormats {
-  implicit val missionFormat: Format[Mission] = Json.format[Mission]
+object Mission {
+  def keyForMissionInfo(dataSetName: String, batchId: Int, missionId: String) = dataSetName + "__" + batchId + "__" + missionId
 }
 
-object Mission extends BasicDAO[Mission]("missions") with MissionFormats with Function8[String, Int, Int, MissionStart, Point3D, List[PossibleEnd], Double, ObjectId, Mission] {
 
-  def findByDataSetName(dataSetName: String) = find(MongoDBObject("dataSetName" -> dataSetName)).toList
+trait MissionFormats {
+  implicit val formatter: OFormat[Mission] = Json.format[Mission]
+}
 
-  def findOneByMissionId(missionId: Int) = findOne(MongoDBObject("missionId" -> missionId))
+object MissionDAO extends BasicReactiveDAO[Mission] with MissionFormats {
 
-  def randomByDataSetName(dataSetName: String) = {
-    val missions = findByDataSetName(dataSetName)
-    if (!missions.isEmpty)
-      Some(missions(Random.nextInt(missions.size)))
-    else None
+  val collectionName = "missions"
+
+  collection.indexesManager.ensure(Index(Seq("random" -> IndexType.Ascending)))
+  collection.indexesManager.ensure(Index(Seq("batchId" -> IndexType.Ascending)))
+  collection.indexesManager.ensure(Index(Seq("renderStatus.numberOfRenderedStacks" -> IndexType.Ascending)))
+
+
+  def findByDataSetNameQ(dataSetName: String) =
+    Json.obj("dataSetName" -> dataSetName)
+
+  def findByBatch(dataSetName: String, batchId: Int)(implicit ctx: DBAccessContext) =
+    collectionFind(Json.obj("dataSetName" -> dataSetName, "batchId" -> batchId)).cursor[Mission].toList
+
+  def findByDataSetName(dataSetName: String)(implicit ctx: DBAccessContext) =
+    collectionFind(findByDataSetNameQ(dataSetName)).cursor[Mission].enumerate()
+
+  def findNotRenderedFor(levelId: String)(implicit ctx: DBAccessContext) =
+    collectionFind(Json.obj(
+      "missionStatus.renderStatus.renderedFor" -> Json.obj("$ne" -> levelId),
+      "missionStatus.renderStatus.abortedFor" -> Json.obj("$ne" -> levelId)
+    )).cursor[Mission].enumerate()
+
+  def findOneByMissionId(missionId: Int)(implicit ctx: DBAccessContext) =
+    findOne(Json.obj("missionId" -> missionId))
+
+  def findRandomOne(q: JsObject)(implicit ctx: DBAccessContext): Future[Option[Mission]] = {
+    val rand = Math.random()
+    collectionFind(q ++ Json.obj("random" -> Json.obj("$gte" -> rand))).one[Mission].flatMap {
+      case Some(r) => Future.successful(Some(r))
+      case _ => collectionFind(q ++ Json.obj("random" -> Json.obj("$lte" -> rand))).one[Mission]
+    }
   }
 
-  def updateOrCreate(m: Mission) =
-    findOne(MongoDBObject(
-      "dataSetName" -> m.dataSetName,
-      "missionId" -> m.missionId)) match {
-      case Some(stored) =>
-        stored.update(_ => m.copy(_id = stored._id))
-        stored._id
-      case _ =>
-        insertOne(m)
-        m._id
-    }
+  def successfullyRendered(level: Level, mission: Mission)(implicit ctx: DBAccessContext) = {
+    collectionUpdate(
+      Json.obj("_id" -> mission._id),
+      Json.obj("$push" -> Json.obj("missionStatus.renderStatus.renderedFor" -> level.levelId)))
+  }
 
-  def deleteAllForDataSetExcept(dataSetName: String, missions: List[Mission]) = {
+  def deleteRendered(levelId: LevelId, _mission: BSONObjectID)(implicit ctx: DBAccessContext) = {
+    collectionUpdate(
+      Json.obj("_id" -> _mission),
+      Json.obj(
+        "$pull" -> Json.obj("missionStatus.renderStatus.renderedFor" -> levelId),
+        "$pull" -> Json.obj("missionStatus.renderStatus.abortedFor.levelId" -> levelId)))
+  }
+
+  def failedToRender(level: Level, mission: Mission, reason: String)(implicit ctx: DBAccessContext) = {
+    val aborted = AbortedRendering(level.levelId, reason)
+    collectionUpdate(
+      Json.obj("_id" -> mission._id),
+      Json.obj("$addToSet" -> Json.obj("missionStatus.renderStatus.abortedFor" -> aborted)))
+  }
+
+  def randomByDataSetName(dataSetName: String)(implicit ctx: DBAccessContext) = {
+    findRandomOne(findByDataSetNameQ(dataSetName))
+  }
+
+  def updateOrCreate(m: Mission)(implicit ctx: DBAccessContext) = {
+    collectionFind(Json.obj(
+      "dataSetName" -> m.dataSetName,
+      "batchId" -> m.batchId,
+      "missionId" -> m.missionId)).one[Mission].map {
+      case Some(m) => Future.successful(m)
+      case _ => insert(m).map(_ => m)
+    }
+  }
+
+
+  def findLeastRenderedUnFinished()(implicit ctx: DBAccessContext) = {
+    collectionFind(Json.obj("isFinished" -> false))
+      .sort(Json.obj("renderStatus.numberOfRenderedStacks" -> 1))
+      .cursor[Mission].enumerate()
+  }
+
+  // TODO: This is horribly inefficient, we definitly need another way to delete missions
+  /*def deleteAllForBatchExcept(dataSetName: String, missions: List[Mission]) = {
     val obsoleteMissions =
       findByDataSetName(dataSetName)
         .filterNot(m =>
@@ -75,6 +137,6 @@ object Mission extends BasicDAO[Mission]("missions") with MissionFormats with Fu
 
     removeByIds(obsoleteMissions.map(_._id))
     obsoleteMissions.map(_.id)
-  }
+  } */
 
 }

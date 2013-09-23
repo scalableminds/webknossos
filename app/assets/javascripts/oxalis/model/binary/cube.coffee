@@ -40,12 +40,12 @@ class Cube
   # It is then removed from the cube.
 
 
-  constructor : (@upperBoundary, @ZOOM_STEP_COUNT) ->
+  constructor : (@upperBoundary, @ZOOM_STEP_COUNT, @BIT_DEPTH) ->
 
     _.extend(@, new EventMixin())
 
     @LOOKUP_DEPTH_UP = @ZOOM_STEP_COUNT - 1
-    @BUCKET_LENGTH = 1 << @BUCKET_SIZE_P * 3
+    @BUCKET_LENGTH = (1 << @BUCKET_SIZE_P * 3) * (@BIT_DEPTH >> 3)
 
     @cubes = []
     @buckets = new Array(@MAXIMUM_BUCKET_COUNT)
@@ -112,6 +112,9 @@ class Cube
 
   getDataBucketByZoomedAddress : (address) ->
 
+    if address[3] >= @ZOOM_STEP_COUNT
+      return null
+
     cube = @cubes[address[3]].data
     bucketIndex = @getBucketIndexByZoomedAddress(address)
 
@@ -122,6 +125,9 @@ class Cube
 
 
   getVolumeBucketByZoomedAddress : (address) ->
+
+    if address[3] >= @ZOOM_STEP_COUNT
+      return null
 
     cube = @cubes[address[3]].volume
     bucketIndex = @getBucketIndexByZoomedAddress(address)
@@ -141,6 +147,9 @@ class Cube
 
 
   isBucketRequestedByZoomedAddress : (address) ->
+
+    if address[3] >= @ZOOM_STEP_COUNT
+      return true
 
     cube = @cubes[address[3]].data
     bucketIndex = @getBucketIndexByZoomedAddress(address)
@@ -288,6 +297,7 @@ class Cube
 
     @trigger("volumeLabled")
 
+
   labelVoxels : (iterator, label) ->
 
     while iterator.hasNext
@@ -295,6 +305,7 @@ class Cube
       @labelVoxel(voxel, label)
 
     @trigger("volumeLabled")
+
 
   labelVoxel : (voxel, label) ->
 
@@ -317,29 +328,47 @@ class Cube
           voxel[2] >> 1
         ]
 
+
   getLabel : ( voxel ) ->
 
     { bucket, voxelIndex } = @getBucketAndVoxelIndex( voxel, 0 )
     return bucket[voxelIndex]
 
-  getBucketAndVoxelIndex : ([x, y, z], zoomStep) ->
 
-    address = [
-      x >> @BUCKET_SIZE_P
-      y >> @BUCKET_SIZE_P
-      z >> @BUCKET_SIZE_P
-      zoomStep
-    ]
+  getDataValue : ( voxel ) ->
 
-    voxelOffset = [
-      x & 0b11111
-      y & 0b11111
-      z & 0b11111
-    ]
+    byteOffset = (@BIT_DEPTH >> 3)
+    address    = @positionToZoomedAddress( voxel, 0 )
+    voxelIndex = byteOffset * @getVoxelIndexByVoxelOffset( @getVoxelOffset( voxel ) )
+    bucket     = @getDataBucketByZoomedAddress( address )
+
+    if bucket?
+      result = 0
+      # Assuming little endian byte order
+      for i in [0...byteOffset]
+        result += (1 << (8 * i)) * bucket[ voxelIndex + i]
+      return result
+
+    return null
+
+
+  getBucketAndVoxelIndex : (voxel, zoomStep ) ->
+
+    address = @positionToZoomedAddress( voxel, zoomStep )
+    voxelOffset = @getVoxelOffset( voxel )
 
     return {
       bucket : @getOrCreateVolumeBucketByZoomedAddress(address)
       voxelIndex : @getVoxelIndexByVoxelOffset(voxelOffset) }
+
+
+  getVoxelOffset : ( [x, y, z] ) ->
+
+    return [
+      x & 0b11111
+      y & 0b11111
+      z & 0b11111
+    ]
     
 
   positionToZoomedAddress : ([x, y, z], zoomStep) ->

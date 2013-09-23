@@ -8,12 +8,14 @@ import net.liftweb.common.Box
 import play.api.Logger
 import models.annotation.AnnotationLike
 import oxalis.annotation.handler.AnnotationInformationHandler
+import braingames.reactivemongo.DBAccessContext
+import braingames.util.Fox
 
 case class AnnotationIdentifier(annotationType: String, identifier: String)
 
-case class RequestAnnotation(id: AnnotationIdentifier)
+case class RequestAnnotation(id: AnnotationIdentifier, implicit val ctx: DBAccessContext)
 
-case class StoredResult(result: Future[Box[AnnotationLike]], timestamp: Long = System.currentTimeMillis)
+case class StoredResult(result: Fox[AnnotationLike], timestamp: Long = System.currentTimeMillis)
 
 class AnnotationStore extends Actor {
   implicit val system = context.system
@@ -38,31 +40,41 @@ class AnnotationStore extends Actor {
   }
 
   def receive = {
-    case RequestAnnotation(id: AnnotationIdentifier) =>
+    case RequestAnnotation(id, ctx) =>
       val s = sender
       cachedAnnotations()
         .get(id)
         .filterNot(isExpired(maxCacheTime))
         .map(_.result)
-        .getOrElse(requestAnnotation(id))
+        .getOrElse(requestAnnotation(id)(ctx))
+        .futureBox
         .map {
         result =>
           s ! result
+      }.recover {
+        case e =>
+          Logger.error("AnnotationStore ERROR: " + e)
+          e.printStackTrace()
       }
   }
 
   def isExpired(maxAge: Duration)(result: StoredResult) =
     System.currentTimeMillis - result.timestamp > maxAge.toMillis
 
-  def requestAnnotation(id: AnnotationIdentifier) = {
-    val handler = AnnotationInformationHandler.informationHandlers(id.annotationType)
-    val f: Future[Box[AnnotationLike]] = Future {
-      handler.provideAnnotation(id.identifier)
+  def requestAnnotation(id: AnnotationIdentifier)(implicit ctx: DBAccessContext) = {
+    try {
+      val handler = AnnotationInformationHandler.informationHandlers(id.annotationType)
+      val f: Fox[AnnotationLike] =
+        handler.provideAnnotation(id.identifier)
+      if (handler.cache) {
+        val stored = StoredResult(f)
+        cachedAnnotations.send(_ + (id -> stored))
+      }
+      f
+    } catch {
+      case e =>
+        Logger.error("Request Annotaton in AnnotationStore failed: " + e)
+        throw e
     }
-    if (handler.cache) {
-      val stored = StoredResult(f)
-      cachedAnnotations.send(_ + (id -> stored))
-    }
-    f
   }
 }

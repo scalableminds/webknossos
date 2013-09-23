@@ -1,4 +1,4 @@
-@(stacks: List[(models.knowledge.Level, List[models.knowledge.RenderedStack])])(implicit session: oxalis.view.UnAuthedSessionData)
+@(stacks: List[(models.knowledge.Level, List[models.knowledge.RenderedStack])])(implicit request: RequestHeader)
 @main(){
   <div id="stack-list" class="container wide">
     @stacks.sortBy(-_._1.levelId.version).map{ case(level, stacks) =>
@@ -16,8 +16,8 @@
               </a>
             </p>
             <p>
-              <a href="@controllers.levelcreator.routes.LevelCreator.setAsActiveVersion(level.id)" data-ajax>
-                <i class="icon-star"></i> Set as active version
+              <a href="@controllers.levelcreator.routes.StackController.produce(level.id)" class="produce-stacks" data-levelid="@level.id">
+                <i class="icon-retweet"></i> produce Stacks
               </a>
             </p>
             <p>
@@ -66,13 +66,13 @@
             <p>#@level.id</p>
 
             <p>
-              <a href="@controllers.levelcreator.routes.LevelCreator.use(level.id)">
+              <a href="@controllers.levelcreator.routes.LevelCreator.useRandom(level.id)">
                 <i class="icon-pencil"></i> Edit
               </a>
             </p>
             <p>
-              <a href="@controllers.levelcreator.routes.LevelCreator.setAsActiveVersion(level.id)" data-ajax>
-                <i class="icon-star"></i> Set as active version
+              <a href="@controllers.levelcreator.routes.StackController.produce(level.id)" class="produce-stacks" data-levelid="@level.id">
+                <i class="icon-retweet"></i> produce Stacks
               </a>
             </p>
           </header>

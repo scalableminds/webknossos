@@ -28,7 +28,13 @@ case class TimeEntry(time: Long, timestamp: Long, note: Option[String] = None, a
   }
 }
 
-case class PaymentInterval(month: Int, year: Int) {
+case class PaymentInterval(month: Int, year: Int) extends Ordered[PaymentInterval] {
+  def compare(p: PaymentInterval) : Int = +1 * (12 * (year - p.year) + (month - p.month))
+  override def <(that: PaymentInterval): Boolean = (this compare that) < 0
+  override def >(that: PaymentInterval): Boolean = (this compare that) > 0
+  override def <=(that: PaymentInterval): Boolean = (this compare that) <= 0
+  override def >=(that: PaymentInterval): Boolean = (this compare that) >= 0
+
   override def toString = "%d/%d".format(month, year)
 }
 
@@ -67,7 +73,7 @@ object TimeTracking extends BasicDAO[TimeTracking]("timeTracking") {
   def emptyTracking(user: User) = TimeTracking(user._id, Nil)
 
   def loggedTime(user: User) = {
-    findOneByUser(user).map(_.splitIntoMonths)
+    findOneByUser(user).map(_.splitIntoMonths).getOrElse(Map.empty)
   }
 
   def logTime(user: User, time: Long, note: String) = {

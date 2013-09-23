@@ -24,7 +24,7 @@ object WorkController extends LevelCreatorController {
   implicit val requestWorkTimeout = Timeout(5 seconds)
   
   def countActiveRenderers = {
-    (stackWorkDistributor ? CountActiveRenderers()).mapTo[Int].map(Some.apply).recover {
+    (stackWorkDistributor ? CountActiveRenderers).mapTo[Int].map(Some.apply).recover {
       case e => 
         Logger.warn("Couldn't cound renderers because of: " + e)
         None
@@ -49,14 +49,13 @@ object WorkController extends LevelCreatorController {
     }
   }
 
-  def finished(key: String) = Action(parse.text) { implicit request =>
-    val downloadUrls = request.body.split(" ").toList
-    stackWorkDistributor ! FinishedWork(key, downloadUrls)
+  def finished(key: String) = Action(parse.json) { implicit request =>
+    stackWorkDistributor ! FinishedWork(key, request.body)
     Ok
   }
 
-  def failed(key: String) = Action { implicit request =>
-    stackWorkDistributor ! FailedWork(key)
+  def failed(key: String, reason: String) = Action { implicit request =>
+    stackWorkDistributor ! FailedWork(key, reason)
     Ok
   }
 }

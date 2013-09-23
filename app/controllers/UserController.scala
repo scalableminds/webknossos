@@ -40,7 +40,7 @@ object UserController extends Controller with Secured {
         DataSetDAO.findAll.map {
           dataSets =>
 
-            Ok(html.user.dashboard.dashboard(
+            Ok(html.user.dashboard.userDashboard(
               explorationalAnnotations,
               userTasks,
               loggedTime,
@@ -63,9 +63,15 @@ object UserController extends Controller with Secured {
       } ?~ Messages("user.settings.invalid")
   }
 
-  def showSettings = Authenticated {
+  def showSettings = UserAwareAction {
     implicit request =>
-      Ok(toJson(request.user.configuration.settingsOrDefaults))
+      val configuration = request.userOpt match {
+        case Some(user) =>
+          user.configuration.settingsOrDefaults
+        case _ =>
+          UserConfiguration.defaultConfiguration.settings
+      }
+      Ok(toJson(configuration))
   }
 
   def defaultSettings = Authenticated {

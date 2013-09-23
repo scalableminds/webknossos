@@ -98,7 +98,7 @@ class PlaneView
     # ATTENTION: this limits the FPS to 30 FPS (depending on the keypress update frequence)
 
     modelChanged = false
-    for plane in @model.binary.planes
+    for plane in @model.binary["color"].planes
       modelChanged |= plane.hasChanged()
 
     if @flycam.hasChanged or @flycam.hasNewTextures() or modelChanged

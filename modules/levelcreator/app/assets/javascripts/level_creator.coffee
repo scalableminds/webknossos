@@ -28,15 +28,18 @@ class LevelCreator
     @taskId = $("#level-creator").data("level-task-id")
     @dataSetName = $("#level-creator").data("level-dataset-name")
 
+    @slidesBeforeProblem = parseInt $("#level-creator").data("level-slidesbeforeproblem") 
+    @slidesAfterProblem = parseInt $("#level-creator").data("level-slidesafterproblem")
+
     @dimensions = [
       parseInt( $("#level-creator").data("level-width")  )
       parseInt( $("#level-creator").data("level-height") )
-      parseInt( $("#level-creator").data("level-slidesbeforeproblem") + $("#level-creator").data("level-slidesafterproblem") )
+      @slidesBeforeProblem + @slidesAfterProblem
     ]
 
     @dataHandler = new DataHandler(@dimensions, @levelId, @taskId, @dataSetName)
     @assetHandler = new AssetHandler(@levelId)
-    @pluginRenderer = new PluginRenderer(@dimensions, @assetHandler, @dataHandler)
+    @pluginRenderer = new PluginRenderer(@dimensions, @slidesBeforeProblem, @slidesAfterProblem, @assetHandler, @dataHandler)
 
     #### code editor
 
@@ -45,6 +48,7 @@ class LevelCreator
     @editor.setTheme("ace/theme/twilight")
     @editor.getSession().setMode("ace/mode/coffee")
     @editor.getSession().setNewLineMode("unix")
+    @editor.getSession().setTabSize(2)
 
     @$form = $("#save-form")
     @$saveCodeButton = @$form.find("[type=submit]")
@@ -117,6 +121,15 @@ class LevelCreator
     @canvas.width = @dimensions[0]
     @canvas.height = @dimensions[1]
 
+
+    #### clear state
+
+    $("#clear-state").click (event) =>
+
+      event.preventDefault()
+      @pluginRenderer.state.clear()
+      @updatePreview()
+
     
     #### resource init
 
@@ -136,7 +149,7 @@ class LevelCreator
         @dataHandler.deferred("initialized")
       ).then(
         => @prepareHeadlessRendering()
-        -> window.callPhantom( message : "fatalError" )
+        (error) -> window.callPhantom( { message : "fatalError", error } )
       )
 
 
@@ -161,14 +174,23 @@ class LevelCreator
     
     try
 
-      { frameBuffer } = @pluginRenderer.render(sliderValue)
-      imageData.data.set(frameBuffer)
-      @context.putImageData(imageData, 0, 0)
+      renderResult = @pluginRenderer.render(sliderValue)
 
-      @$slider.prop( max : @pluginRenderer.getLength() )
+      if renderResult
 
-      $("#preview-error").html("")
+        imageData.data.set(renderResult.frameBuffer)
+        @context.putImageData(imageData, 0, 0)
+        range = @pluginRenderer.getRange()
+        @$slider.prop( min: range.start, max : range.end )
+
+        $("#preview-error").html("")
+
+      else
+
+        $("#preview-error").html("""<i class="icon-thumbs-down"></i> Exited.""")
+      
       @$saveCodeButton.removeClass("disabled").popover("destroy")
+
 
     catch error
 
@@ -181,7 +203,7 @@ class LevelCreator
           trigger : "hover"
         )
 
-      $("#preview-error").html("<i class=\"icon-warning-sign\"></i> #{error}")
+      $("#preview-error").html("""<i class="icon-warning-sign"></i> #{error}""")
 
     @processing = false
 
@@ -210,11 +232,16 @@ class LevelCreator
       .css(backgroundColor : "transparent")
       .children().filter(":not(#preview-canvas)").hide()
 
+    range = @pluginRenderer.getRange()
     window.callPhantom( 
       message : "initialized"
-      length : @pluginRenderer.getLength()
+      length : range.end - range.start + 1
+      start : range.start
+      end : range.end
       width : @canvas.width
       height : @canvas.height
+      slidesBeforeProblem : @slidesBeforeProblem
+      slidesAfterProblem : @slidesAfterProblem
     )
 
 
@@ -222,16 +249,22 @@ class LevelCreator
 
     imageData = @context.getImageData( 0, 0, @canvas.width, @canvas.height )
     imageDataData = imageData.data
-    { frameBuffer, frameData } = @pluginRenderer.render(t)
-    # HACK Phantom doesn't support Uint8ClampedArray yet
-    for i in [0...frameBuffer.length] by 1
-      imageDataData[i] = frameBuffer[i]
-    @context.putImageData(imageData, 0, 0)
+    renderResult = @pluginRenderer.render(t)
+    { frameBuffer, metaFrameData, paraFrameData } = renderResult
 
-    if frameData?
-      window.callPhantom({ message : "rendered", frameData })
+    if renderResult
+      # HACK Phantom doesn't support Uint8ClampedArray yet
+      for i in [0...frameBuffer.length] by 1
+        imageDataData[i] = frameBuffer[i]
+      @context.putImageData(imageData, 0, 0)
+
+      #if metaFrameData?
+      window.callPhantom({ message : "rendered", metaFrameData, paraFrameData })
+      #else
+      #  window.callPhantom( message : "rendered" )
     else
-      window.callPhantom( message : "rendered" )
+      window.callPhantom( message : "exited" )
+
 
 
 

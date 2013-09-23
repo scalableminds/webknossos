@@ -1,20 +1,25 @@
 package controllers.levelcreator
 
-import braingames.mvc._
-import models.knowledge.Level
+import models.knowledge.{LevelDAO, Level}
 import play.api.mvc.{Action, Request, WrappedRequest, BodyParser, Result, BodyParsers}
 import play.api.i18n.Messages
+import play.api.libs.concurrent.Execution.Implicits._
+import braingames.reactivemongo.{UnAuthedDBAccess, GlobalDBAccess}
+import braingames.mvc.ExtendedController
+import play.api.mvc._
 
 case class LevelRequest[T](val level: Level, val request: Request[T]) extends WrappedRequest(request)
-  
-class LevelCreatorController extends braingames.mvc.Controller {
+
+class LevelCreatorController extends ExtendedController with Controller with UnAuthedDBAccess {
   def ActionWithValidLevel[T](levelId: String, parser: BodyParser[T] = BodyParsers.parse.anyContent)
-  (f: LevelRequest[T] => Result) = Action(parser){ 
-    implicit request => 
-    for {
-      level <- Level.findOneById(levelId) ?~ Messages("level.notFound")
-    } yield {
-      f(LevelRequest(level, request))
-    }
+    (f: LevelRequest[T] => Result) = Action(parser) {
+    implicit request =>
+      Async {
+        for {
+          level <- LevelDAO.findOneById(levelId) ?~> Messages("level.notFound")
+        } yield {
+          f(LevelRequest(level, request))
+        }
+      }
   }
 }

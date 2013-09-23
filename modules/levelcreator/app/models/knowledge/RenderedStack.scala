@@ -1,78 +1,96 @@
 package models.knowledge
 
-import models.basics.DAOCaseClass
-import models.basics.BasicDAO
-import braingames.geometry.Point3D
-import org.bson.types.ObjectId
-import com.mongodb.casbah.commons.MongoDBObject
 import play.api.libs.json._
 import play.api.libs.functional.syntax._
-import com.novus.salat._
-import models.context._
-import scala.util.Random
-import com.mongodb.WriteResult
+import reactivemongo.bson.BSONObjectID
+import models.knowledge.basics.BasicReactiveDAO
+import play.modules.reactivemongo.json.BSONFormats._
+import reactivemongo.core.commands.Count
+import braingames.reactivemongo.DBAccessContext
+import play.api.libs.concurrent.Execution.Implicits._
+import scala.concurrent.Future
+import net.liftweb.common.{Full, Failure}
+import scala.util.Success
+import reactivemongo.api.indexes.{IndexType, Index}
+import braingames.json.GeoPoint
 
-case class MissionInfo(_id: ObjectId, key: String, possibleEnds: List[PossibleEnd]) {
-  def id = _id.toString
+case class MissionInfo(_id: BSONObjectID, key: String) {
+  def id = _id.stringify
+}
+
+object MissionInfo{
+  implicit val missionInfoFormat: Format[MissionInfo] = Json.format[MissionInfo]
 }
 
 case class RenderedStack(
-    _level: LevelId,
-    mission: MissionInfo,
-    downloadUrls: List[String],
-    _id: ObjectId = new ObjectId) extends DAOCaseClass[RenderedStack] {
+  levelId: LevelId,
+  mission: MissionInfo,
+  downloadUrls: List[String],
+  isActive: Boolean,
+  isControl: Boolean,
+  paraInfo: JsObject, // = JsObject,
+  random: GeoPoint = GeoPoint.random,
+  _id: BSONObjectID = BSONObjectID.generate) {
 
-  val dao = RenderedStack
-  lazy val id = _id.toString
+  lazy val id = _id.stringify
 
 }
 
-object RenderedStack extends BasicDAO[RenderedStack]("renderedStacks") with CommonFormats with Function4[LevelId, MissionInfo, List[String], ObjectId, RenderedStack] {
-  import Level.levelIdFormat
-  implicit val missionInfoFormat: Format[MissionInfo] = Json.format[MissionInfo]
-  implicit val renderedStackFormat: Format[RenderedStack] = Json.format[RenderedStack]
+object RenderedStackDAO extends BasicReactiveDAO[RenderedStack] {
+  val collectionName = "renderedStacks"
 
-  def findFor(levelId: LevelId) = {
-    find(MongoDBObject(
-      "_level.name" -> levelId.name,
-      "_level.version" -> levelId.version)).toList
+  collection.indexesManager.ensure(Index(Seq("mission.key" -> IndexType.Ascending)))
+
+  import LevelDAO.levelIdFormat
+  implicit val formatter: OFormat[RenderedStack] = Json.format[RenderedStack]
+
+  def findFor(levelId: LevelId)(implicit ctx: DBAccessContext) = {
+    collectionFind(Json.obj(
+      "levelId.name" -> levelId.name,
+      "levelId.version" -> levelId.version)).cursor[RenderedStack].toList
   }
 
-  def countFor(levelId: LevelId) = {
-    count(MongoDBObject(
-      "_level.name" -> levelId.name,
-      "_level.version" -> levelId.version))
+  def countFor(levelName: String)(implicit ctx: DBAccessContext) = {
+    count(Json.obj("levelId.name" -> levelName))
   }
 
-  def remove(levelId: LevelId, missionOId: String) {
-    if (ObjectId.isValid(missionOId))
-      remove(MongoDBObject(
-        "_level.name" -> levelId.name,
-        "_level.version" -> levelId.version,
-        "mission._id" -> new ObjectId(missionOId)))
+  def findByMissionKeyRx(missionKeyRx: String)(implicit ctx: DBAccessContext) =
+    collectionFind(Json.obj("mission.key" -> Json.obj("$regex" -> missionKeyRx))).cursor[RenderedStack].toList
+
+  def countAll(levels: List[Level])(implicit ctx: DBAccessContext) = {
+    Future.traverse(levels)(l => countFor(l.levelId.name).map(l.levelId.name -> _)).map(_.toMap)
   }
 
-  def removeAllOfMission(missionOId: String) = {
-    if (ObjectId.isValid(missionOId))
-      remove(MongoDBObject("mission._id" -> new ObjectId(missionOId)))
-  }
-
-  def removeAllOf(levelId: LevelId): WriteResult = {
-    remove(MongoDBObject(
-      "_level.name" -> levelId.name,
-      "_level.version" -> levelId.version))
-  }
-
-  def updateOrCreate(r: RenderedStack) =
-    findOne(MongoDBObject(
-      "_level.name" -> r._level.name,
-      "_level.version" -> r._level.version,
-      "mission.key" -> r.mission.key)) match {
-      case Some(stored) =>
-        stored.update(_ => r.copy(_id = stored._id))
-        stored._id
+  def remove(levelId: LevelId, missionOId: String)(implicit ctx: DBAccessContext) = {
+    BSONObjectID.parse(missionOId) match {
+      case Success(id) =>
+        collectionRemove(Json.obj(
+          "levelId.name" -> levelId.name,
+          "levelId.version" -> levelId.version,
+          "mission._id" -> id)).map( r => Full(r))
       case _ =>
-        insertOne(r)
-        r._id
+        Future.successful(Failure("Couldn't decode missionOId"))
     }
+  }
+
+  def removeAllOfMission(missionOId: String)(implicit ctx: DBAccessContext) = {
+    BSONObjectID.parse(missionOId).map {
+      id =>
+        collectionRemove(Json.obj("mission._id" -> id))
+    }
+  }
+
+  def removeAllOf(levelId: LevelId)(implicit ctx: DBAccessContext) = {
+    collectionRemove(Json.obj(
+      "levelId.name" -> levelId.name,
+      "levelId.version" -> levelId.version))
+  }
+
+  def updateOrCreate(r: RenderedStack)(implicit ctx: DBAccessContext) = {
+    val json = Json.toJson(r).transform(removeId).get
+    collectionUpdate(Json.obj(
+      "levelId.name" -> r.levelId.name,
+      "levelId.version" -> r.levelId.version,
+      "mission.key" -> r.mission.key), Json.obj("$set" -> json), upsert = true)
+  }
 }

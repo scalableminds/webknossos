@@ -1,6 +1,7 @@
 ### define 
 underscore : _
-../libs/jenkins: Jenkins
+libs/jenkins: Jenkins
+../data_utils : DataUtils
 ###
 
 class SegmentImporter
@@ -43,8 +44,6 @@ class SegmentImporter
   ]
 
 
-  Z_FACTOR : 2
-
   directions : [ 
     {x: -1,  y:  0} 
     {x:  0,  y:  1}
@@ -59,7 +58,7 @@ class SegmentImporter
 
     z = Math.round(z)
 
-    { segmentation } = input
+    { slidesBeforeProblem, slidesAfterProblem, segmentation } = input
 
     cacheSegments = @cache[z]
     if cacheSegments?
@@ -88,6 +87,8 @@ class SegmentImporter
     @setRandomColor(segments)
     @setRandomColor2(segments)
     @setRandomColor3(segments)
+    @setMissionDataToSegments(segments, input.mission, slidesBeforeProblem)
+
 
     #for segment in segments
     #  @setArtPath(segment, width, height)
@@ -488,3 +489,25 @@ class SegmentImporter
             if _.contains(baseSegment.neighbours, downValue) is false
               baseSegment.neighbours.push(downValue)
             break   
+
+
+
+  setMissionDataToSegments: (segments, mission, slidesBeforeProblem) ->
+
+    for segment in segments
+      es = _.find(mission.possibleEnds, (m) => m.id is segment.value)
+      if es?
+        segment.probability = es.probability
+        segment.isEndSegment = true
+        segment.firstSlide = DataUtils.nmToSlide(es.firstFrame, slidesBeforeProblem)
+        segment.lastSlide = DataUtils.nmToSlide(es.lastFrame, slidesBeforeProblem)        
+      else
+        segment.isEndSegment = false
+
+
+      if segment.value is mission.start.id
+        segment.isStartSegment = true
+        segment.firstSlide = DataUtils.nmToSlide(mission.start.firstFrame, slidesBeforeProblem)
+        segment.lastSlide = DataUtils.nmToSlide(mission.start.lastFrame, slidesBeforeProblem)
+      else
+        segment.isStartSegment = false

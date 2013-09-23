@@ -11,12 +11,12 @@ import play.api.libs.concurrent.Execution.Implicits._
 import braingames.binary.models.{DataLayer, DataSet}
 import braingames.util.FileRegExFilter
 import models.knowledge._
-import models.binary._
 import braingames.util.JsonHelper._
 import braingames.util.ExtendedTypes._
 import braingames.util.StartableActor
 import models.knowledge.DataSetDAO
 import braingames.reactivemongo.GlobalDBAccess
+import scala.concurrent.Future
 
 case class StartWatchingForMissions()
 
@@ -61,42 +61,40 @@ class MissionWatcher extends Actor with GlobalDBAccess {
     } getOrElse Nil
   }
 
-  def extractLayerId(missionFile: File) = {
+  /**
+   * TODO: this should be put into the missions file #error-prone
+   * @param missionFile
+   * @return
+   */
+  def extractSectionId(missionFile: File) = {
     missionFile.getParentFile.getName.replaceFirst("layer", "").toIntOpt getOrElse 0
   }
 
-  def insertMissionsIntoDB(missions: List[Mission]) = {
-    missions.map(Mission.updateOrCreate)
+  def insertMissionsIntoDB(missions: Iterable[Mission]) = {
+    missions.map(MissionDAO.updateOrCreate)
   }
 
   def lookForMissions() = {
     DataSetDAO.findAll.map {
       _.foreach {
         dataSet =>
-          val missions = readMissionsFromFile(getMissionFiles(dataSet), dataSet.name)
-          val insertedMissions = insertMissionsIntoDB(missions)
-          val removedMissions = Mission.deleteAllForDataSetExcept(dataSet.name, missions)
-
-          Level.findActiveAutoRenderByDataSetName(dataSet.name).foreach {
-            level =>
-              Level.ensureMissions(level, insertedMissions)
-          }
-
-          removedMissions.map(RenderedStack.removeAllOfMission)
-
-          Logger.info(s"Found ${missions.size} missions for dataset ${dataSet.name}")
+          processMissionFiles(getMissionFiles(dataSet), dataSet.name)
       }
     }
   }
 
-  def readMissionsFromFile(missionFiles: List[File], dataSetName: String): List[Mission] = {
+  def processMissionFiles(missionFiles: List[File], dataSetName: String): Unit = {
     Logger.debug(s"processing $missionFiles for $dataSetName")
-    (missionFiles.flatMap {
+    missionFiles.foreach {
       missionFile =>
-        JsonFromFile(missionFile)
+        val sectionId = extractSectionId(missionFile)
+        val missions = JsonFromFile(missionFile)
           .asOpt[List[ContextFreeMission]]
-          .map(_.map(_.addContext(dataSetName, extractLayerId(missionFile))))
-    }).flatten
+          .map(_.map(_.addContext(dataSetName, sectionId))) getOrElse Nil
+        Future.sequence(insertMissionsIntoDB(missions)).map{ _ =>
+          Logger.info(s"Found ${missions.size} missions for dataset ${dataSetName}")
+        }
+    }
   }
 }
 

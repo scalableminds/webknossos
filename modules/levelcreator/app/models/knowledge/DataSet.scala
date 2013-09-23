@@ -2,9 +2,9 @@ package models.knowledge
 
 import braingames.binary.models.{DataSetRepository => AbstractDataSetRepository, DataSet}
 import play.api.libs.json.Json
-import braingames.reactivemongo.{DBAccessContext, GlobalDBAccess, SecuredMongoDAO}
+import braingames.reactivemongo.{DBAccessContext, GlobalDBAccess}
 import models.knowledge.basics.BasicReactiveDAO
-
+import play.api.libs.concurrent.Execution.Implicits._
 
 object DataSetRepository extends AbstractDataSetRepository with GlobalDBAccess{
 
@@ -26,7 +26,7 @@ object DataSetDAO extends BasicReactiveDAO[DataSet] {
 
   import braingames.binary.models.DataLayer.dataLayerFormat
 
-  val formatter = Json.format[DataSet]
+  implicit val formatter = Json.format[DataSet]
 
   def default()(implicit ctx: DBAccessContext) =
     findMaxBy("priority")
@@ -47,4 +47,6 @@ object DataSetDAO extends BasicReactiveDAO[DataSet] {
   def removeByName(name: String)(implicit ctx: DBAccessContext) =
     remove("name", name)
 
+  def findWithTyp(t: String)(implicit ctx: DBAccessContext) =
+    collectionFind(Json.obj("dataLayers.typ" -> t)).cursor[DataSet].toList
 }

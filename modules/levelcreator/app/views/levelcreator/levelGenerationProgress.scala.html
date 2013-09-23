@@ -1,33 +1,27 @@
 @* levelGenerationProgress Template File *@
-@(level: models.knowledge.Level, stacksInQueue: Int, stacksInProgress: Int)
+@(rendered: Int, stacksInProgress: Int, stacksInQueue: Int)
 
-@calculateProgress(n: Long, p: Int, q: Int) = @{ 
-  val d = (n + p + q).toFloat
-  if(d == 0) 100 -> 0
-  else n*100 / d -> p*100 / d
+@calculateProgress(n: Long, p: Int, q: Int) = @{
+    val d = (n + p + q).toFloat
+    if(d == 0) 100 -> 0
+    else n * 100 / d -> p * 100 / d
 }
 
-@progressBar(n: Long)  = {
-  @defining(calculateProgress(n, stacksInProgress, stacksInQueue)){ progress =>
-    <div class="progress progress-striped">
-      <div class="bar bar-success" style="width: @progress._1%;"></div>
-      <div class="bar bar-warning" style="width: @progress._2%;"></div>
-    </div>
-  }
+@defining(calculateProgress(rendered, stacksInProgress, stacksInQueue)) { progress =>
+  <div class="progress progress-striped">
+    <div class="bar bar-success" style="width : @progress._1% ;"></div>
+    <div class="bar bar-warning" style="width : @progress._2% ;"></div>
+  </div>
 }
-
-@defining(level.numberOfRenderedStacks){ n =>
-  @progressBar(n)
-  <span title="Finished">
-    <i class="icon-ok"></i>
-    @n
-  </span>
-  <span title="in Progress">
-    <i class="icon-retweet"></i>
-    @stacksInProgress
-  </span>
-  <span title="in Queue">
-    <i class="icon-inbox"></i>
-    @stacksInQueue
-  </span>
-}
+<span title="Finished">
+  <i class="icon-ok"></i>
+  @rendered
+</span>
+<span title="in Progress">
+  <i class="icon-retweet"></i>
+  @stacksInProgress
+</span>
+<span title="in Queue">
+  <i class="icon-inbox"></i>
+  @stacksInQueue
+</span>

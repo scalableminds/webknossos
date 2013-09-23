@@ -11,9 +11,9 @@ class VolumeTracingController
 
     @mouseControls =
       
-      leftDownMove : (delta, pos, ctrlPressed) =>
+      leftDownMove : (delta, pos, event) =>
 
-        if ctrlPressed
+        if event.ctrlKey
           @move [
             delta.x * @model.user.getMouseInversionX() / @view.scaleFactor
             delta.y * @model.user.getMouseInversionY() / @view.scaleFactor
@@ -22,33 +22,33 @@ class VolumeTracingController
         else
           @model.volumeTracing.addToLayer( @calculateGlobalPos(pos))
       
-      leftMouseDown : (pos, shiftPressed, altPressed, id) =>
+      leftMouseDown : (pos, plane, event) =>
 
-        @enterDeleteMode( shiftPressed )
-        @model.volumeTracing.startEditing(id)
+        @enterDeleteMode( event.shiftKey )
+        @model.volumeTracing.startEditing(plane)
       
       leftMouseUp : =>
 
         @model.volumeTracing.finishLayer()
         @restoreAfterDeleteMode()
       
-      rightDownMove : (delta, pos, ctrlPressed, id) =>
+      rightDownMove : (delta, pos, plane, event) =>
 
         @model.volumeTracing.addToLayer( @calculateGlobalPos(pos))
       
-      rightMouseDown : (pos, shiftPressed, altPressed, id) =>
+      rightMouseDown : (pos, plane, event) =>
 
         @enterDeleteMode()
-        @model.volumeTracing.startEditing(id)
+        @model.volumeTracing.startEditing(plane)
       
       rightMouseUp : =>
 
         @model.volumeTracing.finishLayer()
         @restoreAfterDeleteMode()
 
-      leftClick : (pos, shiftPressed, altPressed, id) =>
+      leftClick : (pos, plane, event) =>
 
-        cell = @model.binary.cube.getLabel(
+        cell = @model.binary["color"].cube.getLabel(
                   @calculateGlobalPos( pos ))
 
         if cell > 0

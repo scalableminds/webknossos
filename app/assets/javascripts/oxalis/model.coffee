@@ -75,7 +75,8 @@ class Model
                 @flycam3d.setPositionSilent(position)
                 
             @cellTracing = new CellTracing(tracing, @scaleInfo, @flycam, @flycam3d, @user)
-            @volumeTracing = new VolumeTracing(@flycam, @binary["color"].cube)
+            if @binary["segmentation"]?
+              @volumeTracing = new VolumeTracing(@flycam, @binary["segmentation"].cube)
             
             {"restrictions": tracing.restrictions, "settings": tracing.content.settings}
             

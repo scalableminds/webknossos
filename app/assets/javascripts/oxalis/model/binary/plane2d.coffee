@@ -75,8 +75,8 @@ class Plane2D
 
     @cube.on "volumeLabled", =>
 
-      @volumeTexture.tiles = new Array(@BUCKETS_PER_ROW * @BUCKETS_PER_ROW)
-      @volumeTexture.ready = false
+      @dataTexture.tiles = new Array(@BUCKETS_PER_ROW * @BUCKETS_PER_ROW)
+      @dataTexture.ready = false
 
 
   updateContrastCurves : (@contrastCurves) ->
@@ -97,7 +97,7 @@ class Plane2D
 
   getImpl : (position, zoomStep, area) ->
 
-    [@getTexture(@dataTexture, position, zoomStep, area), @getTexture(@volumeTexture, position, zoomStep, area)]
+    [@getTexture(@dataTexture, position, zoomStep, area), null] #@getTexture(@volumeTexture, position, zoomStep, area)]
 
 
   getTexture : (texture, position, zoomStep, area) ->
@@ -269,7 +269,7 @@ class Plane2D
 
       sourceOffset = (sourceOffsets[0] << @DELTA[@U]) + (sourceOffsets[1] << @DELTA[@V]) + (sourceOffsets[2] << @DELTA[@W])
 
-      bucketData = @cube.getDataBucketByZoomedAddress(bucket)
+      bucketData = @cube.getBucketDataByZoomedAddress(bucket)
       @cube.accessBuckets([bucket])
 
       @renderToBuffer(

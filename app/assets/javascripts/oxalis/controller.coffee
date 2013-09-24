@@ -138,7 +138,7 @@ class Controller
 
           alpha = event.value
           if (alpha == 0)
-            @model.binary["volume"].pingStop()
+            @model.binary["segmentation"].pingStop()
           if (alpha == 100)
             @model.binary["color"].pingStop()
           @sceneController.setSegmentationAlpha( alpha )

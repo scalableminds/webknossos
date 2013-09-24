@@ -64,6 +64,11 @@ class Model
                   @binary[layer.typ] = new Binary(@user, tracing.content.dataSet, constants.TEXTURE_SIZE_P, supportedLayer)
                   zoomStepCount = Math.min(zoomStepCount, @binary[layer.typ].cube.ZOOM_STEP_COUNT - 1)
 
+            # if "volume" layer still used, change name to segmentation
+            if @binary["volume"]?
+              @binary["segmentation"] = @binary["volume"]
+              delete @binary["volume"]
+
             @flycam = new Flycam2d(constants.PLANE_WIDTH, @scaleInfo, zoomStepCount, @user)      
             @flycam3d = new Flycam3d(constants.DISTANCE_3D, tracing.content.dataSet.scale)
 

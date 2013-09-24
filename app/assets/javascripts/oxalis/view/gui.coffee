@@ -189,9 +189,6 @@ class Gui
       moveValue3dChanged : => @updateMoveValue3d()
       particleSizeChanged : => @updateParticleSize()
 
-    @model.binary["volume"]?.cube.on
-      bucketLoaded : => @updateSegmentID()
-
     @model.binary["segmentation"]?.cube.on
       bucketLoaded : => @updateSegmentID()
 
@@ -289,10 +286,8 @@ class Gui
 
   updateSegmentID : ->
 
-    segmentationBinary = @model.binary["volume"] || @model.binary["segmentation"]
-
-    if segmentationBinary
-      segmentID = segmentationBinary.cube.getDataValue( @model.flycam.getPosition() )
+    if @model.binary["segmentation"]?
+      segmentID = @model.binary["segmentation"].cube.getDataValue( @model.flycam.getPosition() )
       if segmentID?
         $("#segment-id").html("<p>Segment ID: " + segmentID + "</p>")
       else

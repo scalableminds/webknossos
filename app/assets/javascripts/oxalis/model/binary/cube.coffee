@@ -300,8 +300,9 @@ class Cube
 
         { bucket, voxelIndex } = @getBucketAndVoxelIndex( voxel, zoomStep, true )
 
-        break if bucket[voxelIndex] == label
-        bucket[voxelIndex] = label
+        # Write label in little endian order
+        for i in [0...@BYTE_OFFSET]
+          bucket[voxelIndex + i] = (label >> (i * 8) ) & 0xff
 
         voxel = [
           voxel[0] >> 1

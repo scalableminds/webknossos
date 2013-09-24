@@ -24,9 +24,12 @@ class VolumeTracing
     window.setSmoothLength = (v) -> Drawing.setSmoothLength(v)
 
 
-  createCell : ->
+  createCell : (id) ->
 
-    @cells.push( newCell = new VolumeCell(@idCount++) )
+    unless id?
+      id = @idCount++
+
+    @cells.push( newCell = new VolumeCell(id) )
     @setActiveCell( newCell.id )
     @currentLayer = null
 
@@ -82,6 +85,9 @@ class VolumeTracing
     @activeCell = null
     for cell in @cells
       if cell.id == id then @activeCell = cell
+
+    if not @activeCell? and id > 0
+      @createCell(id)
 
     console.log @getActiveCellId()
     @trigger "newActiveCell"

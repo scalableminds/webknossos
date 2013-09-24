@@ -109,7 +109,7 @@ class Cube
     z * (1 << @BUCKET_SIZE_P * 2)
 
 
-  getBucketDataByZoomedAddress : (address, createIfNull = false) ->
+  getBucketDataByZoomedAddress : (address, createIfUndefined = false) ->
 
     if address[3] >= @ZOOM_STEP_COUNT
       return null
@@ -121,7 +121,7 @@ class Cube
       bucket = cube[bucketIndex]
       if bucket? and bucket != @LOADING_PLACEHOLDER
         return bucket
-      else if createIfNull
+      else if createIfUndefined
         return cube[bucketIndex] = new Uint8Array(@BUCKET_LENGTH)
 
     return null
@@ -298,7 +298,7 @@ class Cube
       
       for zoomStep in [0...@ZOOM_STEP_COUNT]
 
-        { bucket, voxelIndex } = @getBucketAndVoxelIndex( voxel, zoomStep )
+        { bucket, voxelIndex } = @getBucketAndVoxelIndex( voxel, zoomStep, true )
 
         break if bucket[voxelIndex] == label
         bucket[voxelIndex] = label
@@ -324,13 +324,13 @@ class Cube
     return null
 
 
-  getBucketAndVoxelIndex : (voxel, zoomStep ) ->
+  getBucketAndVoxelIndex : (voxel, zoomStep, createBucketIfUndefined = false ) ->
 
     address     = @positionToZoomedAddress( voxel, zoomStep )
     voxelOffset = @getVoxelOffset( voxel )
 
     return {
-      bucket : @getBucketDataByZoomedAddress(address, true)
+      bucket : @getBucketDataByZoomedAddress(address, createBucketIfUndefined)
       voxelIndex : @BYTE_OFFSET * @getVoxelIndexByVoxelOffset(voxelOffset) }
 
 

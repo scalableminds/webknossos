@@ -58,7 +58,11 @@
           </td>
           <td class="nowrap">
             <a href="controllers.admin.routes.TaskAdministration.edit"><i class="icon-pencil"></i> edit </a><br>
-            <a href="@controllers.routes.AnnotationController.trace(AnnotationType.CompoundTask, "")" title="view all finished tracings"><i class="icon-random"></i> view </a><br>
+            <a href="controllers.routes.AnnotationController.trace(AnnotationType_CompoundTask, "")" title="view all finished tracings"><i class="icon-random"></i> view </a><br>
+            <!--
+              http://localhost:9000/annotations/CompoundTask/
+                                   /annotations/$typ<[^/]+>/$id<[^/]+>
+            -->
             <a href="controllers.admin.routes.NMLIO.taskDownload" title="download all finished tracings"><i class="icon-download"></i> download </a><br>
             <a href="controllers.admin.routes.TrainingsTaskAdministration.create"><i class="icon-road"></i> use for Training </a><br>
             <a href="controllers.admin.routes.TaskAdministration.delete" data-ajax="delete-row,confirm"><i class="icon-trash"></i> delete </a>

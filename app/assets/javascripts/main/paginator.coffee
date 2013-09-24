@@ -161,15 +161,26 @@ class Paginator
         currentObject = jsRoutes
         for currentProperty in properties
           unless currentProperty == "routes"
+            pos = currentProperty.indexOf("(")
+            if pos > -1
+              currentProperty = currentProperty.slice(0, pos)
+
             currentObject = currentObject[currentProperty]
 
         pathProvider = currentObject
-        url = pathProvider(element.id).url
+
+        # TODO remove hacky hack
+        if properties[properties.length-1].indexOf("trace") == 0
+          url = pathProvider("CompoundTask", element.id).url
+        else  
+          url = pathProvider(element.id).url
+
         return 'href="' + url + '"'
 
       catch e
         # href="" isn't a very precise selector; wont work for data-href etc.
         # so, ignore failing route access
+        console.log "caught error in resolving routes", e
         return match
     )
 

@@ -11,7 +11,7 @@ class VolumeTracingController
 
     @mouseControls =
       
-      leftDownMove : (delta, pos, event) =>
+      leftDownMove : (delta, pos, plane, event) =>
 
         if event.ctrlKey
           @move [

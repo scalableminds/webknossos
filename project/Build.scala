@@ -69,8 +69,9 @@ object ApplicationBuild extends Build {
     "org.reactivemongo" %% "reactivemongo-bson-macros" % "0.9",
     "org.reactivemongo" %% "play2-reactivemongo" % "0.9",
     "com.scalableminds" %% "braingames-binary" % "0.3.5",
-    "com.scalableminds" %% "braingames-util" % "0.3.5"
-  )
+    "com.scalableminds" %% "braingames-util" % "0.3.5",
+    "commons-io" % "commons-io" % "2.4",
+    "com.typesafe.akka" %% "akka-agent" % "2.1.0")
 
   lazy val oxalis: Project = play.Project(appName, appVersion, oxalisDependencies).settings(
     templatesImport += "oxalis.view.helpers._",
@@ -95,7 +96,7 @@ object ApplicationBuild extends Build {
     resolvers ++= dependencyResolvers,
     // offline := true,
     coffeescriptOptions := Seq("native", coffeeCmd)
-  ).dependsOn(oxalis).aggregate(oxalis)
+  )
 
   lazy val stackrenderer = play.Project("stackrenderer", "0.1", stackrendererDependencies, path = file("modules") / "stackrenderer").settings(
     resolvers ++= dependencyResolvers

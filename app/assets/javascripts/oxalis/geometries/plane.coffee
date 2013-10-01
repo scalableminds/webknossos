@@ -174,21 +174,17 @@ class Plane
       tPos = @flycam.getTexturePosition(@planeID).slice()
       if @model?
         for dataLayerName of @model.binary
-          @model.binary[dataLayerName].planes[@planeID].get(@flycam.getTexturePosition(@planeID), { zoomStep : @flycam.getIntegerZoomStep(), area : @flycam.getArea(@planeID) }).done ([dataBuffer, volumeBuffer]) =>
+          @model.binary[dataLayerName].planes[@planeID].get(@flycam.getTexturePosition(@planeID), { zoomStep : @flycam.getIntegerZoomStep(), area : @flycam.getArea(@planeID) }).done ( dataBuffer ) =>
             if dataBuffer
               if dataLayerName == "color"
                 @plane.texture.image.data.set(dataBuffer)
               if dataLayerName == "segmentation"
+                # Generate test pattern
+                #for i in [0...512]
+                #  for j in [0...512]
+                #    id = Math.floor(i / 32) * 16 + Math.floor(j / 32)
+                #    dataBuffer[i * 512 + j] = id
                 @plane.volumeTexture.image.data.set(dataBuffer)
-              @flycam.hasNewTexture[@planeID] = true
-
-            if volumeBuffer and not @model.binary["segmentation"]?
-              # Generate test pattern
-              #for i in [0...512]
-              #  for j in [0...512]
-              #    id = Math.floor(i / 32) * 16 + Math.floor(j / 32)
-              #    volumeBuffer[i * 512 + j] = id
-              @plane.volumeTexture.image.data.set(volumeBuffer)
               @flycam.hasNewTexture[@planeID] = true
   
       if !(@flycam.hasNewTexture[@planeID] or @flycam.hasChanged)

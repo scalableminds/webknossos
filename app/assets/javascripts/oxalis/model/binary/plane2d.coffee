@@ -40,7 +40,6 @@ class Plane2D
   contrastCurves : null
   
   dataTexture : null
-  volumeTexture : null
 
 
   constructor : (index, @cube, @queue, @TEXTURE_SIZE_P, @DATA_BIT_DEPTH) ->
@@ -56,7 +55,6 @@ class Plane2D
     [@U, @V, @W] = Dimensions.getIndices(index)
 
     @dataTexture = { renderTile: @renderDataTile }
-    @volumeTexture = { renderTile: @renderVolumeTile }
 
     @cube.on "bucketLoaded", (bucket) =>
 
@@ -92,12 +90,12 @@ class Plane2D
 
   hasChanged : ->
 
-    not (@dataTexture.ready and @volumeTexture.ready)
+    not @dataTexture.ready
 
 
   getImpl : (position, zoomStep, area) ->
 
-    [@getTexture(@dataTexture, position, zoomStep, area), null] #@getTexture(@volumeTexture, position, zoomStep, area)]
+    @getTexture(@dataTexture, position, zoomStep, area)
 
 
   getTexture : (texture, position, zoomStep, area) ->

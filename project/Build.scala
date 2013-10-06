@@ -53,10 +53,6 @@ object ApplicationBuild extends Build {
     Resolver.sftp("scm.io intern snapshots repo", "scm.io", 44144, "/srv/maven/snapshots/") as("maven", "5MwEuHWH6tRPL6yfNadQ")
   )
 
-  val stackrendererDependencies = Seq(
-    "org.kamranzafar" % "jtar" % "2.2",
-    "com.amazonaws" % "aws-java-sdk" % "1.3.32")
-
   val isoshaderDependencies = Seq()
 
   lazy val dataStoreDependencies = Seq(
@@ -64,14 +60,6 @@ object ApplicationBuild extends Build {
     "com.sun.jersey" % "jersey-client" % "1.8",
     "com.sun.jersey" % "jersey-core" % "1.8",
     "com.typesafe.akka" %% "akka-remote" % "2.1.0")
-
-  lazy val levelcreatorDependencies = Seq(
-    "org.reactivemongo" %% "reactivemongo-bson-macros" % "0.9",
-    "org.reactivemongo" %% "play2-reactivemongo" % "0.9",
-    "com.scalableminds" %% "braingames-binary" % "0.3.5",
-    "com.scalableminds" %% "braingames-util" % "0.3.5",
-    "commons-io" % "commons-io" % "2.4",
-    "com.typesafe.akka" %% "akka-agent" % "2.1.0")
 
   lazy val oxalis: Project = play.Project(appName, appVersion, oxalisDependencies).settings(
     templatesImport += "oxalis.view.helpers._",
@@ -91,16 +79,6 @@ object ApplicationBuild extends Build {
     coffeescriptOptions := Seq("native", coffeeCmd),
     scalaVersion := "2.10.2"
   ).aggregate(oxalis)
-
-  lazy val levelcreator = play.Project("levelcreator", "0.1", levelcreatorDependencies, path = file("modules") / "levelcreator").settings(
-    resolvers ++= dependencyResolvers,
-    // offline := true,
-    coffeescriptOptions := Seq("native", coffeeCmd)
-  )
-
-  lazy val stackrenderer = play.Project("stackrenderer", "0.1", stackrendererDependencies, path = file("modules") / "stackrenderer").settings(
-    resolvers ++= dependencyResolvers
-  ).dependsOn(oxalis, levelcreator).aggregate(oxalis, levelcreator)
 
   lazy val isoshader = play.Project("isoshader", "0.1", isoshaderDependencies, path = file("modules") / "isoshader").settings(
     templatesImport += "oxalis.view.helpers._",

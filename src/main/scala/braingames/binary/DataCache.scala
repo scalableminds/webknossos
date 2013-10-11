@@ -23,7 +23,7 @@ object CachedBlock {
   def from(b: LoadBlock) =
     CachedBlock(
       b.dataSet.name,
-      b.dataLayerSection.sectionId getOrElse "",
+      b.dataLayerSection.sectionId,
       b.dataLayer.typ,
       b.resolution,
       b.block.x,

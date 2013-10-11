@@ -156,7 +156,7 @@ class DataRequestActor(
 
     val sections = Stream(layer.sections.filter {
       section =>
-        requestedLayer.section.isEmpty || requestedLayer.section == section.sectionId
+        requestedLayer.section.map( _ == section.sectionId) getOrElse true
     }: _*).append {
       Await.result(layer.fallback.map(dataSetRepository.findByName).getOrElse(Future.successful(None)).map(_.flatMap {
         d =>

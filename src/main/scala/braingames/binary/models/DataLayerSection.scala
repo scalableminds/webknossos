@@ -13,14 +13,14 @@ import braingames.geometry.{Point3D, BoundingBox}
 
 case class DataLayerSection(
   baseDir: String,
-  sectionId: Option[String],
+  sectionId: String,
   resolutions: List[Int],
   hull: BoundingBox) extends DataLayerSectionLike
 
 trait DataLayerSectionLike {
   val hull: BoundingBox
   val baseDir: String
-  val sectionId: Option[String]
+  val sectionId: String
 
   /**
    * Checks if a point is inside the whole data set boundary.
@@ -29,6 +29,6 @@ trait DataLayerSectionLike {
     hull.contains(point.scale((v, _) => v * blockLength))
 }
 
-object DataLayerSection extends Function4[String, Option[String], List[Int], BoundingBox, DataLayerSection]{
+object DataLayerSection{
   implicit val dataLayerSectionFormat = Json.format[DataLayerSection]
 }

@@ -89,21 +89,21 @@ class DataSetChangeHandler(dataSetRepository: DataSetRepository)
     sectionSettingsMap.map {
       case (path, settings) =>
         DataLayerSection(
-          path.replace(dataSetPath, ""),
-          settings.sectionId.map(_.toString),
+          path.getAbsolutePath().replace(dataSetPath, ""),
+          settings.sectionId.map(_.toString) getOrElse path.getName,
           settings.resolutions,
           BoundingBox.createFrom(settings.bbox))
     }
   }
 
-  def extractSectionSettings(base: File): Map[String, DataLayerSectionSettings] = {
+  def extractSectionSettings(base: File): Map[File, DataLayerSectionSettings] = {
     val basePath = base.getAbsolutePath()
 
-    def extract(path: File, depth: Int = 0): List[Option[(String, DataLayerSectionSettings)]] = {
+    def extract(path: File, depth: Int = 0): List[Option[(File, DataLayerSectionSettings)]] = {
       if (depth > maxRecursiveLayerDepth) {
         List()
       } else {
-        DataLayerSectionSettings.fromFile(path).map(path.getAbsolutePath() -> _) ::
+        DataLayerSectionSettings.fromFile(path).map(path -> _) ::
           listDirectories(path).toList.flatMap(d => extract(d, depth + 1))
       }
     }

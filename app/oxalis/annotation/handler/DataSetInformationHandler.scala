@@ -42,7 +42,7 @@ object DataSetInformationHandler extends AnnotationInformationHandler with FoxIm
         Nil,
         System.currentTimeMillis(),
         Some(0),
-        Point3D(0, 0, 0)
+        Point3D(5500, 3500, 2800) // make this dynamic!
       )
       TemporaryAnnotation(
         dataSetName,

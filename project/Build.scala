@@ -37,8 +37,8 @@ object ApplicationBuild extends Build {
     "org.reactivemongo" %% "play2-reactivemongo" % "0.9",
     "org.reactivemongo" %% "reactivemongo-bson-macros" % "0.9",
     "org.scala-lang" % "scala-reflect" % "2.10.0",
-    "com.scalableminds" %% "braingames-binary" % "0.4-SNAPSHOT",
-    "com.scalableminds" %% "braingames-util" % "0.4-SNAPSHOT")
+    "com.scalableminds" %% "braingames-binary" % "0.4",
+    "com.scalableminds" %% "braingames-util" % "0.4")
 
   val dependencyResolvers = Seq(
     "repo.novus rels" at "http://repo.novus.com/releases/",
@@ -68,8 +68,7 @@ object ApplicationBuild extends Build {
     scalaVersion := "2.10.2",
     //requireJs := Seq("main"),
     //requireJsShim += "main.js",
-    resolvers ++= dependencyResolvers,
-    offline := true
+    resolvers ++= dependencyResolvers
     //playAssetsDirectories += file("data")
   )
 

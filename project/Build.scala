@@ -37,8 +37,8 @@ object ApplicationBuild extends Build {
     "org.reactivemongo" %% "play2-reactivemongo" % "0.9",
     "org.reactivemongo" %% "reactivemongo-bson-macros" % "0.9",
     "org.scala-lang" % "scala-reflect" % "2.10.0",
-    "com.scalableminds" %% "braingames-binary" % "0.3.5",
-    "com.scalableminds" %% "braingames-util" % "0.3.5")
+    "com.scalableminds" %% "braingames-binary" % "0.4-SNAPSHOT",
+    "com.scalableminds" %% "braingames-util" % "0.4-SNAPSHOT")
 
   val dependencyResolvers = Seq(
     "repo.novus rels" at "http://repo.novus.com/releases/",

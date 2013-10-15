@@ -92,7 +92,8 @@ class DataSetChangeHandler(dataSetRepository: DataSetRepository)
           path.getAbsolutePath().replace(dataSetPath, ""),
           settings.sectionId.map(_.toString) getOrElse path.getName,
           settings.resolutions,
-          BoundingBox.createFrom(settings.bbox))
+          BoundingBox.createFrom(settings.bboxSmall),
+          BoundingBox.createFrom(settings.bboxBig))
     }
   }
 

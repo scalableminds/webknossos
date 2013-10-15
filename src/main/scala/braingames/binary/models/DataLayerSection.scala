@@ -15,10 +15,12 @@ case class DataLayerSection(
   baseDir: String,
   sectionId: String,
   resolutions: List[Int],
-  hull: BoundingBox) extends DataLayerSectionLike
+  bboxSmall: BoundingBox,
+  bboxBig: BoundingBox) extends DataLayerSectionLike
 
 trait DataLayerSectionLike {
-  val hull: BoundingBox
+  val bboxBig: BoundingBox
+  val bboxSmall: BoundingBox
   val baseDir: String
   val sectionId: String
 
@@ -26,7 +28,7 @@ trait DataLayerSectionLike {
    * Checks if a point is inside the whole data set boundary.
    */
   def doesContainBlock(point: Point3D, blockLength: Int) =
-    hull.contains(point.scale((v, _) => v * blockLength))
+    bboxBig.contains(point.scale((v, _) => v * blockLength))
 }
 
 object DataLayerSection{

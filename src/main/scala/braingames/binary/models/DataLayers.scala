@@ -43,7 +43,7 @@ case class DataLayer(
 
   val resolutions = sections.flatMap(_.resolutions).distinct
 
-  val maxCoordinates = BoundingBox.hull(sections.map(_.hull))
+  val maxCoordinates = BoundingBox.hull(sections.map(_.bboxBig))
 }
 
 

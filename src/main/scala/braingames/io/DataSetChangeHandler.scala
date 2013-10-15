@@ -90,7 +90,7 @@ class DataSetChangeHandler(dataSetRepository: DataSetRepository)
       case (path, settings) =>
         DataLayerSection(
           path.getAbsolutePath().replace(dataSetPath, ""),
-          settings.sectionId.map(_.toString) getOrElse path.getName,
+          settings.sectionId getOrElse path.getName,
           settings.resolutions,
           BoundingBox.createFrom(settings.bboxSmall),
           BoundingBox.createFrom(settings.bboxBig))

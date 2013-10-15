@@ -11,7 +11,7 @@ import java.io.File
  */
 
 case class DataLayerSectionSettings(
-  sectionId: Option[Int],
+  sectionId: Option[String],
   bboxSmall: List[List[Int]],
   bboxBig: List[List[Int]],
   resolutions: List[Int])

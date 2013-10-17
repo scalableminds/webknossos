@@ -268,6 +268,7 @@ class Plane2D
       sourceOffset = (sourceOffsets[0] << @DELTA[@U]) + (sourceOffsets[1] << @DELTA[@V]) + (sourceOffsets[2] << @DELTA[@W])
 
       bucketData = @cube.getBucketDataByZoomedAddress(bucket)
+      mapping    = @cube.getMappingByZoomedAddress(bucket)
       @cube.accessBuckets([bucket])
 
       @renderToBuffer(
@@ -279,6 +280,7 @@ class Plane2D
         }
         {
           buffer: bucketData
+          mapping: mapping
           offset: sourceOffset
           pixelDelta: 1 << (@DELTA[@U] + skipP)
           rowDelta: 1 << (@DELTA[@V] + skipP)
@@ -389,6 +391,9 @@ class Plane2D
     source.nextPixelMask = (1 << source.pixelRepeatP) - 1
     source.nextRowMask = (1 << destination.widthP + source.rowRepeatP) - 1
 
+    mapping = source.mapping
+
+    # TODO differntiate between raw and mapped data
     bytesSrc  = @DATA_BIT_DEPTH >> 3
     bytesDest = @TEXTURE_BIT_DEPTH >> 3
 
@@ -396,13 +401,18 @@ class Plane2D
       dest = destination.offset++ * bytesDest
       src = source.offset * bytesSrc
 
+      sourceValue = 0
+      for b in [0...bytesSrc]
+        sourceValue += (1 << (b * 8)) * source.buffer[ src + b ]
+      if mapping?
+        sourceValue = mapping[ sourceValue ]
+
       # use the first none-zero byte unless all are zero
       # assuming little endian order
       for b in [0...bytesSrc]
-        if (value = source.buffer[src + b]) or b == bytesSrc - 1
+        if (value = (sourceValue >> (b*8)) % 256 ) or b == bytesSrc - 1
           destination.buffer[dest++] = if contrastCurve? then contrastCurve[value] else value
           break
-      src += bytesSrc
 
       if (i & source.nextPixelMask) == 0
         source.offset += source.pixelDelta

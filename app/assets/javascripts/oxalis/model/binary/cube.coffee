@@ -6,6 +6,8 @@ class Cube
 
   # Constants
   BUCKET_SIZE_P : 5
+  CUBE_SIZE_P   : 7
+  LOCAL_ID_SIZE_P : 16
   BUCKET_LENGTH : 0
   ZOOM_STEP_COUNT : 0
   LOOKUP_DEPTH_UP : 0
@@ -57,6 +59,14 @@ class Cube
       @upperBoundary[2] >> @BUCKET_SIZE_P
     ]
 
+    mappingBoundary = [
+      @upperBoundary[0] >> @CUBE_SIZE_P
+      @upperBoundary[1] >> @CUBE_SIZE_P
+      @upperBoundary[2] >> @CUBE_SIZE_P
+    ]
+    @mappings = new Array( mappingBoundary[0] * mappingBoundary[1] * mappingBoundary[2])
+    @mappings.boundary = mappingBoundary
+
     @arbitraryCube = new Array(cubeBoundary[0] * cubeBoundary[1] * cubeBoundary[2])
     @arbitraryCube.boundary = cubeBoundary.slice()
 
@@ -78,24 +88,40 @@ class Cube
     @arbitraryCube
 
 
-  getBucketIndexByZoomedAddress : ([bucket_x, bucket_y, bucket_z, zoomStep]) ->
+  getBucketIndexByZoomedAddress : ( address ) ->
     
-    $.assertNotIs(@cubes[zoomStep], "undefined", "Cube for given zoomStep does not exist"
+    $.assertNotIs(@cubes[address[3]], "undefined", "Cube for given zoomStep does not exist"
       cubeCount: @cubes.length
-      zoomStep: zoomStep
+      zoomStep: address[3]
       zoomStepCount: @ZOOM_STEP_COUNT
     )
 
-    boundary = @cubes[zoomStep].boundary
+    return @getIndexFromZoomedAddress( address, @cubes[address[3]].boundary )
 
-    if bucket_x >= 0 and bucket_x < boundary[0] and
-    bucket_y >= 0 and bucket_y < boundary[1] and
-    bucket_z >= 0 and bucket_z < boundary[2] and
+
+  getMappingIndexByZoomedAddress : ( [x, y, z, zoomStep] ) ->
+
+    bucketToCubeP = @CUBE_SIZE_P - @BUCKET_SIZE_P
+    address = [
+      (x << zoomStep) >> bucketToCubeP 
+      (y << zoomStep) >> bucketToCubeP 
+      (z << zoomStep) >> bucketToCubeP
+      0
+    ]
+
+    return @getIndexFromZoomedAddress( address, @mappings.boundary )
+
+
+  getIndexFromZoomedAddress : ([x, y, z, zoomStep], boundary) ->
+
+    if x >= 0 and x < boundary[0] and
+    y >= 0 and y < boundary[1] and
+    z >= 0 and z < boundary[2] and
     zoomStep >= 0 and zoomStep < @ZOOM_STEP_COUNT
 
-      bucket_x * boundary[2] * boundary[1] +
-      bucket_y * boundary[2] +
-      bucket_z
+      x * boundary[2] * boundary[1] +
+      y * boundary[2] +
+      z
 
     else
 
@@ -124,6 +150,13 @@ class Cube
       else if createIfUndefined
         return cube[bucketIndex] = new Uint8Array(@BUCKET_LENGTH)
 
+    return null
+
+
+  getMappingByZoomedAddress : ( address ) ->
+
+    if (mappingIndex = @getMappingIndexByZoomedAddress(address))?
+      return @mappings[mappingIndex]
     return null
 
 
@@ -168,6 +201,14 @@ class Cube
       bucketData.zoomStep = address[3]
 
       cube[bucketIndex] = bucketData
+
+      # Generate dummy mapping
+      mappingIndex = @getMappingIndexByZoomedAddress(address)
+      if not @mappings[mappingIndex]?
+        mapping = new Array( 1 << @LOCAL_ID_SIZE_P )
+        for i in [0...mapping.length]
+          mapping[i] = i + (mappingIndex % 23)
+        @mappings[mappingIndex] = mapping
 
       @setArbitraryBucketByZoomedAddress(address, bucketData) if address[3] <= @ARBITRARY_MAX_ZOOMSTEP
       @trigger("bucketLoaded", address)

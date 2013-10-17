@@ -73,6 +73,11 @@ class Cube
       ]
 
 
+  setPushQueue : (pushQueue) ->
+
+    @pushQueue = pushQueue
+
+
   getArbitraryCube : ->
 
     @arbitraryCube
@@ -296,19 +301,22 @@ class Cube
 
     if voxelInCube
       
+      currentAddress = voxel.slice()
       for zoomStep in [0...@ZOOM_STEP_COUNT]
 
-        { bucket, voxelIndex } = @getBucketAndVoxelIndex( voxel, zoomStep, true )
+        { bucket, voxelIndex } = @getBucketAndVoxelIndex( currentAddress, zoomStep, true )
 
         # Write label in little endian order
         for i in [0...@BYTE_OFFSET]
           bucket[voxelIndex + i] = (label >> (i * 8) ) & 0xff
 
-        voxel = [
-          voxel[0] >> 1
-          voxel[1] >> 1
-          voxel[2] >> 1
+        currentAddress = [
+          currentAddress[0] >> 1
+          currentAddress[1] >> 1
+          currentAddress[2] >> 1
         ]
+
+      @pushQueue.insert( voxel )
 
 
   getDataValue : ( voxel ) ->

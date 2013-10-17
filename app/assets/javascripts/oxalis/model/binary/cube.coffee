@@ -160,6 +160,12 @@ class Cube
     return null
 
 
+  getMappingByPosition : ( position ) ->
+
+    return @getMappingByZoomedAddress(
+      @positionToZoomedAddress( position ))
+
+
   isBucketRequestedByZoomedAddress : (address) ->
 
     if address[3] >= @ZOOM_STEP_COUNT
@@ -357,10 +363,16 @@ class Cube
     { bucket, voxelIndex} = @getBucketAndVoxelIndex( voxel, 0 )
 
     if bucket?
+      
       result = 0
       # Assuming little endian byte order
       for i in [0...@BYTE_OFFSET]
         result += (1 << (8 * i)) * bucket[ voxelIndex + i]
+
+      mapping = @getMappingByPosition( voxel )
+      if mapping?
+        return mapping[result]
+
       return result
 
     return null
@@ -385,7 +397,7 @@ class Cube
     ]
     
 
-  positionToZoomedAddress : ([x, y, z], zoomStep) ->
+  positionToZoomedAddress : ([x, y, z], zoomStep = 0) ->
     # return the bucket a given voxel lies in
 
     [

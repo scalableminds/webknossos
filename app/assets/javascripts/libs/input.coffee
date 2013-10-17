@@ -269,7 +269,7 @@ class Input.Mouse
 
   mouseEnter : (event) =>
 
-    if event.which == 0
+    if not @isButtonPressed(event)
       @isMouseOver = true
       @trigger("over")
     return
@@ -277,10 +277,19 @@ class Input.Mouse
 
   mouseLeave : (event) =>
 
-    if event.which == 0
+    if not @isButtonPressed(event)
       @isMouseOver = false
       @trigger("out")
     return
+
+
+  isButtonPressed : (event) ->
+
+    # Workaround for Firefox: event.which is not set properly
+
+    if (b = event.originalEvent?.buttons)?
+      return b != 0
+    return event.which != 0
 
 
   mouseWheel : (event, delta) =>

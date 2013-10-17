@@ -30,17 +30,17 @@ import models.annotation.{AnnotationType, AnnotationDAO, AnnotationSettings}
 case class CompletionStatus(open: Int, inProgress: Int, completed: Int)
 
 case class Task(
-    seedIdHeidelberg: Int,
-    _taskType: ObjectId,
-    neededExperience: Experience = Experience.empty,
-    priority: Int = 100,
-    instances: Int = 1,
-    assignedInstances: Int = 0,
-    tracingTime: Option[Long] = None,
-    created: Date = new Date,
-    _project: Option[String] = None,
-    training: Option[Training] = None,
-    _id: ObjectId = new ObjectId) extends DAOCaseClass[Task] {
+  seedIdHeidelberg: Int,
+  _taskType: ObjectId,
+  neededExperience: Experience = Experience.empty,
+  priority: Int = 100,
+  instances: Int = 1,
+  assignedInstances: Int = 0,
+  tracingTime: Option[Long] = None,
+  created: Date = new Date,
+  _project: Option[String] = None,
+  training: Option[Training] = None,
+  _id: ObjectId = new ObjectId) extends DAOCaseClass[Task] {
 
   val dao = Task
 
@@ -134,12 +134,13 @@ object Task extends BasicDAO[Task]("tasks") {
     val task = insertOne(source.copy(_id = new ObjectId))
     AnnotationDAO
       .findByTaskId(source._id)
-      .foreach { annotation =>
+      .foreach {
+      annotation =>
         if (includeUserTracings || AnnotationType.isSystemTracing(annotation)) {
           println("Copying: " + annotation.id)
           AnnotationDAO.copyDeepAndInsert(annotation.copy(_task = Some(task._id)))
         }
-      }
+    }
     task
   }
 
@@ -152,8 +153,14 @@ object Task extends BasicDAO[Task]("tasks") {
     } getOrElse null
 
   def hasEnoughExperience(user: User, task: Task) = {
-    val XP = user.experiences.get(task.neededExperience.domain) getOrElse -1
-    XP >= task.neededExperience.value
+    if (task.neededExperience.isEmpty) {
+      true
+    } else {
+      user.experiences
+        .get(task.neededExperience.domain)
+        .map(_ >= task.neededExperience.value)
+        .getOrElse(false)
+    }
   }
 
   def nextTaskForUser(user: User): Future[Option[Task]] = {
@@ -170,21 +177,21 @@ object Task extends BasicDAO[Task]("tasks") {
 
       (jsExecutionActor ? JS(TaskSelectionAlgorithm.current.js, params))
         .mapTo[Future[Try[Task]]].flatMap(_.map {
-          case Failure(f) =>
-            Logger.error("JS Execution error: " + f)
-            None
-          case Success(s) =>
-            Some(s)
-        })
+        case Failure(f) =>
+          Logger.error("JS Execution error: " + f)
+          None
+        case Success(s) =>
+          Some(s)
+      })
         .recover {
-          case e: AskTimeoutException =>
-            Logger.warn("JS Execution actor didn't return in time!")
-            None
-          case e: Exception =>
-            Logger.error("JS Execution catched exception: " + e.toString())
-            e.printStackTrace()
-            None
-        }
+        case e: AskTimeoutException =>
+          Logger.warn("JS Execution actor didn't return in time!")
+          None
+        case e: Exception =>
+          Logger.error("JS Execution catched exception: " + e.toString())
+          e.printStackTrace()
+          None
+      }
     }
   }
 
@@ -226,8 +233,9 @@ object Task extends BasicDAO[Task]("tasks") {
       case Some(task) =>
         Some(task -> (tasks + (task._id -> task.copy(assignedInstances = task.assignedInstances + 1))))
       case _ =>
-        Training.findAssignableFor(user).headOption.map { training =>
-          training -> tasks
+        Training.findAssignableFor(user).headOption.map {
+          training =>
+            training -> tasks
         }
     }
   }

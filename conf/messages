@@ -147,32 +147,7 @@ taskAlgorithm.notFound=Couldn''t find algorithm
 taskAlgorithm.invalid=Invalid algorithm code
 taskAlgorithm.use.notSupplied=You need to specify if the algorithm should be used
 
-level.invalidName=Invalid level name
-level.notFound=Couldn''t find level
-level.removed=Level got removed
-level.code.saved=Code saved
-level.code.notSupplied=No code supplied
-level.assets.notSupplied=No asset supplied
-level.assets.uploaded=Asset successfully uploaded 
-level.assets.uploadFailed=Asset upload failed
-level.assets.notFound=Asset not found
-level.assets.deleted=Asset got removed
-level.assets.deleteFailed=Couldn''t delete asset
-level.creation.inProgress=Level creation in progress
-level.stack.removed=Removed stack
-level.stack.removedAll=Removed all stacks
-level.stack.creationTimeout=Stack creation timed out
-level.stack.created=Stacks created
-level.render.shippingActive=The level is going to get shipped to the game
-level.render.shippingInactive=The level is not going to get shipped any more.
-level.render.autoRenderActive=Auto-render is ACTIVATED
-level.render.autoRenderInactive=Auto-render is DEACTIVATED
-level.render.invalidSettings=The provided render settings are invalid
-
 game.notFound=Specified game couldn''t be found
-
-mission.notFound=No mission found
-mission.startId.missing=Missing missionStartId parameter
 
 time.invalidFormat=Time couldn''t get parsed.
 point.invalidFormat=Invalid format. Use something like: 4, 63, 24

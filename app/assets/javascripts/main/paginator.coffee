@@ -155,7 +155,7 @@ class Paginator
       
       try
         # remove href=" and "
-        propertyChain = match.slice(6, match.length - 1)
+        propertyChain = match.slice(6, -1)
         properties = propertyChain.split(".")
 
         currentObject = jsRoutes
@@ -177,7 +177,7 @@ class Paginator
     filledTemplate = filledTemplate.replace( /(#\{[^}]*\})/g, (match) ->
       
       # remove #{ and }
-      propertyChain = match.slice(2, match.length - 1)
+      propertyChain = match.slice(2, -1)
 
       properties = propertyChain.split(".")
 
@@ -188,4 +188,8 @@ class Paginator
       return currentObject
     )
 
+    filledTemplate = filledTemplate.replace "&lt;", "<"
+    filledTemplate = filledTemplate.replace "&gt;", ">"
+
+    filledTemplate = _.template(filledTemplate, {controllers : jsRoutes.controllers, element : element})
     return filledTemplate

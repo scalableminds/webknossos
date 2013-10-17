@@ -42,7 +42,7 @@ class Plane2D
   dataTexture : null
 
 
-  constructor : (index, @cube, @queue, @TEXTURE_SIZE_P, @DATA_BIT_DEPTH) ->
+  constructor : (index, @cube, @queue, @TEXTURE_SIZE_P, @DATA_BIT_DEPTH, @MAPPED_DATA_BIT_DEPTH) ->
 
     _.extend(@, new EventMixin())
 
@@ -393,9 +393,9 @@ class Plane2D
 
     mapping = source.mapping
 
-    # TODO differntiate between raw and mapped data
-    bytesSrc  = @DATA_BIT_DEPTH >> 3
-    bytesDest = @TEXTURE_BIT_DEPTH >> 3
+    bytesSrc       = @DATA_BIT_DEPTH >> 3
+    bytesSrcMapped = if mapping? then @MAPPED_DATA_BIT_DEPTH >> 3 else bytesSrc
+    bytesDest      = @TEXTURE_BIT_DEPTH >> 3
 
     while i--
       dest = destination.offset++ * bytesDest
@@ -409,8 +409,8 @@ class Plane2D
 
       # use the first none-zero byte unless all are zero
       # assuming little endian order
-      for b in [0...bytesSrc]
-        if (value = (sourceValue >> (b*8)) % 256 ) or b == bytesSrc - 1
+      for b in [0...bytesSrcMapped]
+        if (value = (sourceValue >> (b*8)) % 256 ) or b == bytesSrcMapped - 1
           destination.buffer[dest++] = if contrastCurve? then contrastCurve[value] else value
           break
 

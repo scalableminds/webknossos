@@ -213,7 +213,7 @@ class Cube
       if not @mappings[mappingIndex]?
         mapping = new Array( 1 << @LOCAL_ID_SIZE_P )
         for i in [0...mapping.length]
-          mapping[i] = i + (mappingIndex % 23)
+          mapping[i] = (i + (mappingIndex % 23)) << 16
         @mappings[mappingIndex] = mapping
 
       @setArbitraryBucketByZoomedAddress(address, bucketData) if address[3] <= @ARBITRARY_MAX_ZOOMSTEP

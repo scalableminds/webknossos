@@ -45,9 +45,9 @@ class Binary
     @pingStrategies3d = [new PingStrategy3d.DslSlow()]
 
     @planes = []
-    @planes[Dimensions.PLANE_XY] = new Plane2D(Dimensions.PLANE_XY, @cube, @queue, @TEXTURE_SIZE_P, @layer.bitDepth)
-    @planes[Dimensions.PLANE_XZ] = new Plane2D(Dimensions.PLANE_XZ, @cube, @queue, @TEXTURE_SIZE_P, @layer.bitDepth)
-    @planes[Dimensions.PLANE_YZ] = new Plane2D(Dimensions.PLANE_YZ, @cube, @queue, @TEXTURE_SIZE_P, @layer.bitDepth)
+    @planes[Dimensions.PLANE_XY] = new Plane2D(Dimensions.PLANE_XY, @cube, @queue, @TEXTURE_SIZE_P, @layer.bitDepth, 32)
+    @planes[Dimensions.PLANE_XZ] = new Plane2D(Dimensions.PLANE_XZ, @cube, @queue, @TEXTURE_SIZE_P, @layer.bitDepth, 32)
+    @planes[Dimensions.PLANE_YZ] = new Plane2D(Dimensions.PLANE_YZ, @cube, @queue, @TEXTURE_SIZE_P, @layer.bitDepth, 32)
 
     if @layer.allowManipulation
       # assume zoom step count to be at least 1

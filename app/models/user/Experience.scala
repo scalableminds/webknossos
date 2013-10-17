@@ -5,11 +5,14 @@ import models.task._
 case class Experience(domain: String, value: Int) {
 
   override def toString = {
-    if (domain == "" && value == 0)
+    if (isEmpty)
       ""
     else
       s"$domain: $value"
   }
+
+  def isEmpty =
+    domain == "" && value == 0
 }
 
 object Experience {

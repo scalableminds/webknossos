@@ -26,7 +26,7 @@ class SceneController
     @planeShift       = [0, 0, 0]
     @showSkeleton     = true
     @pingBinary       = true
-    @pingBinarySeg    = false
+    @pingBinarySeg    = true
 
     @polygonFactory = new PolygonFactory( @model.binary["color"].cube )
     @volumeMeshes   = []
@@ -188,7 +188,6 @@ class SceneController
 
     for plane in @planes
       plane.setSegmentationAlpha( alpha )
-    @pingBinary = alpha != 100
     @pingBinarySeg = alpha != 0
     #console.log "pingValues:", @pingBinary, @pingBinarySeg
 

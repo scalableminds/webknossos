@@ -75,6 +75,10 @@ class Controller
       @setMode(constants.MODE_PLANE_TRACING)
       #@setMode(constants.MODE_VOLUME)
 
+      for binaryName of @model.binary
+        @model.binary[binaryName].cube.on "bucketLoaded" : =>
+          @model.flycam.update()
+
       if constants.MODE_PLANE_TRACING not in @allowedModes
         if constants.MODE_ARBITRARY in @allowedModes
           @setMode(constants.MODE_ARBITRARY)
@@ -134,9 +138,7 @@ class Controller
 
           alpha = event.value
           if (alpha == 0)
-            @model.binary["volume"].pingStop()
-          if (alpha == 100)
-            @model.binary["color"].pingStop()
+            @model.binary["segmentation"].pingStop()
           @sceneController.setSegmentationAlpha( alpha )
 
       # initial trigger

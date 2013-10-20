@@ -53,7 +53,7 @@ class VolumeLayer
 
     setMap = (x, y) ->
 
-      x = Math.round(x); y = Math.round(y)
+      x = Math.floor(x); y = Math.floor(y)
       map[x - minCoord2d[0]][y - minCoord2d[1]] = true
 
 

@@ -136,8 +136,9 @@ object BinaryData extends Controller with Secured {
         params = ImageCreatorParameters(dataLayer.bytesPerElement, width, height, imagesPerRow)
         data <- requestData(dataSetName, dataLayerName, Point3D(x, y, z), width, height, depth, resolution, settings) ?~> Messages("binary.data.notFound")
         spriteSheet <- ImageCreator.spriteSheetFor(data, params) ?~> Messages("image.create.failed")
+        firstSheet <- spriteSheet.pages.headOption ?~> "Couldn'T create spritesheet"
       } yield {
-        val file = new JPEGWriter().writeToFile(spriteSheet.image)
+        val file = new JPEGWriter().writeToFile(firstSheet.image)
         Ok.sendFile(file, true, _ => "test.jpg").withHeaders(
           CONTENT_TYPE -> "image/jpeg")
       }

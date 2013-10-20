@@ -77,5 +77,4 @@ object DataSetDAO extends BasicReactiveDAO[DataSet] {
 
   def removeByName(name: String)(implicit ctx: DBAccessContext) =
     remove("name", name)
-
 }

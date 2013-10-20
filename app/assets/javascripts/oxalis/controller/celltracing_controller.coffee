@@ -20,16 +20,16 @@ class CellTacingController
         ]
       
 
-      leftClick : (pos, shiftPressed, altPressed, plane) =>
+      leftClick : (pos, plane, event) =>
         
         if @inTraceMode
-          @onClick(pos, shiftPressed, altPressed, plane)
+          @onClick(pos, event.shiftKey, event.altKey, plane)
 
 
-      rightClick : (pos, ctrlPressed) =>
+      rightClick : (pos, plane, event) =>
         
         if @inTraceMode
-          @setWaypoint(@calculateGlobalPos( pos ), ctrlPressed)
+          @setWaypoint(@calculateGlobalPos( pos ), event.ctrlKey)
 
 
     @keyboardControls =

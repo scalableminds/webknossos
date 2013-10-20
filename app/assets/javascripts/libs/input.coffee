@@ -142,11 +142,12 @@ class Input.Mouse
 
   class MouseButton
 
+    MOVE_DELTA_THRESHOLD : 30
 
     constructor : (@name, @which, @mouse, @id) ->
       @down  = false
       @drag  = false
-      @moved = false
+      @moveDelta = 0
 
 
     handleMouseDown : (event) ->
@@ -155,24 +156,24 @@ class Input.Mouse
         $(":focus").blur() # see OX-159
 
         @down  = true
-        @moved = false
-        @mouse.trigger(@name + "MouseDown", @mouse.lastPosition, event.shiftKey, event.altKey, @id)
+        @moveDelta = 0
+        @mouse.trigger(@name + "MouseDown", @mouse.lastPosition, @id, event)
 
 
     handleMouseUp : (event) ->
 
       if event.which == @which and @down
-        @mouse.trigger(@name + "MouseUp")
-        if not @moved
-          @mouse.trigger(@name + "Click", @mouse.lastPosition, event.shiftKey, event.altKey, @id)
+        @mouse.trigger(@name + "MouseUp", event)
+        if @moveDelta <= @MOVE_DELTA_THRESHOLD
+          @mouse.trigger(@name + "Click", @mouse.lastPosition, @id, event)
         @down = false
 
 
     handleMouseMove : (event, delta) ->
 
       if @down
-        @moved = true
-        @mouse.trigger(@name + "DownMove", delta, @mouse.position, event.ctrlKey, @id)
+        @moveDelta += Math.abs( delta.x ) + Math.abs( delta.y )
+        @mouse.trigger(@name + "DownMove", delta, @mouse.position, @id, event)
 
 
   constructor : (@$target, initialBindings, @id) ->
@@ -268,7 +269,7 @@ class Input.Mouse
 
   mouseEnter : (event) =>
 
-    if event.which == 0
+    if not @isButtonPressed(event)
       @isMouseOver = true
       @trigger("over")
     return
@@ -276,10 +277,19 @@ class Input.Mouse
 
   mouseLeave : (event) =>
 
-    if event.which == 0
+    if not @isButtonPressed(event)
       @isMouseOver = false
       @trigger("out")
     return
+
+
+  isButtonPressed : (event) ->
+
+    # Workaround for Firefox: event.which is not set properly
+
+    if (b = event.originalEvent?.buttons)?
+      return b != 0
+    return event.which != 0
 
 
   mouseWheel : (event, delta) =>

@@ -397,9 +397,14 @@ class Plane2D
     while i--
       dest = destination.offset++ * bytesDest
       src = source.offset * bytesSrc
-      for t in [1..bytesDest]
-        value = source.buffer[src++]
-        destination.buffer[dest++] = if contrastCurve? then contrastCurve[value] else value
+
+      # use the first none-zero byte unless all are zero
+      # assuming little endian order
+      for b in [0...bytesSrc]
+        if (value = source.buffer[src + b]) or b == bytesSrc - 1
+          destination.buffer[dest++] = if contrastCurve? then contrastCurve[value] else value
+          break
+      src += bytesSrc
 
       if (i & source.nextPixelMask) == 0
         source.offset += source.pixelDelta

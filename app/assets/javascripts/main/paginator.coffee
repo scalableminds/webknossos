@@ -43,7 +43,7 @@ class Paginator
 
       (responseData) =>
         
-        @allElements = @elementsToShow = responseData
+        @allElements = @elementsToShow = responseData.data
 
         pageCount = Math.ceil(@allElements.length / @rowsPerPage)
         

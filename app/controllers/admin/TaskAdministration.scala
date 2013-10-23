@@ -31,7 +31,7 @@ import models.annotation.Annotation
 import models.annotation.{AnnotationDAO, AnnotationType}
 import scala.concurrent.Future
 import oxalis.nml.NMLService
-import play.api.libs.json.JsArray
+import play.api.libs.json.{JsObject, JsArray}
 
 object TaskAdministration extends Controller with Secured {
 
@@ -75,7 +75,11 @@ object TaskAdministration extends Controller with Secured {
     implicit request =>
       render{
         case Accepts.Html() => Ok(html.admin.task.taskList())
-        case Accepts.Json() => JsonOk(JsArray(Task.findAllNonTrainings.map(Task.transformToJson)))
+        case Accepts.Json() => JsonOk(
+            JsObject(
+              List("data" -> JsArray(Task.findAllNonTrainings.map(Task.transformToJson)))
+            )
+          )
       }
   }
 

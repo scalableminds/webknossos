@@ -39,7 +39,7 @@ class Binary
     ]
 
     @cube = new Cube(upperBoundary, dataLayer.resolutions.length, @layer.bitDepth)
-    @queue = new PullQueue(@dataSetName, @cube, @layer.name, @testData)
+    @queue = new PullQueue(@dataSetName, @cube, @layer.name, @testData, not dataLayer.noData )
 
     @pingStrategies = [new PingStrategy.DslSlow(@cube, @TEXTURE_SIZE_P)]
     @pingStrategies3d = [new PingStrategy3d.DslSlow()]

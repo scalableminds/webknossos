@@ -290,6 +290,7 @@ class Cube
       voxel = iterator.getNext()
       @labelVoxel(voxel, label)
 
+    @pushQueue.print()
     @trigger("volumeLabled")
 
 
@@ -316,7 +317,7 @@ class Cube
           currentAddress[2] >> 1
         ]
 
-      @pushQueue.insert( voxel )
+      @pushQueue.insert( @positionToZoomedAddress( voxel, 0 ))
 
 
   getDataValue : ( voxel ) ->

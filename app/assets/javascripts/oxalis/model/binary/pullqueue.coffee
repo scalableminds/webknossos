@@ -20,7 +20,7 @@ class PullQueue
   roundTripTime : 0
 
   
-  constructor : (@dataSetName, @cube, @dataLayerName, @testData) ->
+  constructor : (@dataSetName, @cube, @dataLayerName, @testData, @requestData = true ) ->
 
     @queue = []
 
@@ -87,6 +87,8 @@ class PullQueue
 
   pull : ->
     # Starting to download some buckets
+    unless @requestData
+      return
 
     while @batchCount < @BATCH_LIMIT and @queue.length
       

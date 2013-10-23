@@ -40,7 +40,7 @@ class Binary
     ]
 
     @cube = new Cube(upperBoundary, dataLayer.resolutions.length, @layer.bitDepth)
-    @pullQueue = new PullQueue(@dataSetName, @cube, @layer.name, @testData)
+    @pullQueue = new PullQueue(@dataSetName, @cube, @layer.name, @testData, not dataLayer.noData )
     @pushQueue = new PushQueue(@dataSetName, @cube, @layer.name)
     @cube.setPushQueue( @pushQueue )
 

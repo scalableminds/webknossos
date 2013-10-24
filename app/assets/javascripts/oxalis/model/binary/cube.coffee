@@ -213,12 +213,12 @@ class Cube
 
       cube[bucketIndex] = bucketData
 
-      # Generate dummy mapping
+      # Generate identity mapping
       mappingIndex = @getMappingIndexByZoomedAddress(address)
       if not @mappings[mappingIndex]?
         mapping = new Array( 1 << @LOCAL_ID_SIZE_P )
         for i in [0...mapping.length]
-          mapping[i] = (i + (mappingIndex % 23)) << 16
+          mapping[i] = i
         @mappings[mappingIndex] = mapping
 
       @setArbitraryBucketByZoomedAddress(address, bucketData) if address[3] <= @ARBITRARY_MAX_ZOOMSTEP
@@ -364,7 +364,7 @@ class Cube
           currentAddress[2] >> 1
         ]
 
-      @pushQueue.insert( @positionToZoomedAddress( voxel, 0 ))
+      @pushQueue.insert( @positionToZoomedAddress( voxel ))
 
 
   getDataValue : ( voxel ) ->

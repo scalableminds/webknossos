@@ -31,7 +31,7 @@
       </thead>
       <tbody class="hide">
         <tr id="<%= element.id %>">
-          <td class="details-toggle" href="controllers.admin.routes.AnnotationAdministration.annotationsForTask" data-ajax="add-row=#<%= element.id %> + tr"> <i class="caret-right"></i> <i class="caret-down"></i> </td>
+          <td class="details-toggle" href="<%= controllers.admin.AnnotationAdministration.annotationsForTask(element.id).url %>" data-ajax="add-row=#<%= element.id %> + tr"> <i class="caret-right"></i> <i class="caret-down"></i> </td>
           <td> <%= element.formattedHash %> </td>
           <td> <%= element.seedIdHeidelberg %> </td>
           <td> 

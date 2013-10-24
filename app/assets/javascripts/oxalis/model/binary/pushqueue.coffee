@@ -1,12 +1,17 @@
 ### define
+../../../libs/array_buffer_socket : ArrayBufferSocket
 ###
 
 class PushQueue
 
+  BATCH_LIMIT : 6
+  BATCH_SIZE : 3
 
-  constructor : (@dataSetName, @cube, @dataLayerName) ->
+
+  constructor : (@dataSetName, @cube, @dataLayerName, @sendData = true) ->
 
     @queue = []
+    @batchCount = 0
 
 
   insert : (bucket) ->
@@ -36,25 +41,70 @@ class PushQueue
       
       return (x1 - x2) || (y1 - y2) || (z1 - z2)
 
-
-  test : ->
-
-    @clear()
-
-    @insert( [1, 2, 3] )
-    @insert( [1, 2, 2] )
-    @insert( [1, 2, 4] )
-    @insert( [1, 2, 3] ) #d
-    @insert( [1, 3, 3] )
-    @insert( [1, 1, 3] )
-    @insert( [2, 2, 3] )
-    @insert( [0, 2, 3] )
-    @insert( [2, 2, 3] ) # d
-
-    @print()
-    
- 
+      
   print : ->
 
     for e in @queue
       console.log(e)
+
+
+  push : ->
+
+    unless @sendData
+      return
+
+    while @batchCount < @BATCH_LIMIT and @queue.length
+      
+      batch = []
+
+      while batch.length < @BATCH_SIZE and @queue.length
+        
+        bucket = @queue.splice(0, 1)[0]
+        batch.push bucket
+        #console.log "sent: ", bucket
+
+      @pushBatch(batch) if batch.length > 0
+
+
+  pushBatch : (batch) ->
+
+    @batchCount++
+
+    transmitBuffer = []
+    for bucket in batch
+      zoomStep = bucket[3]
+      # TODO: define transmit buffer
+      transmitBuffer.push(
+        zoomStep
+        if @fourBit and zoomStep == 0 then 1 else 0
+        bucket[0] << (zoomStep + @cube.BUCKET_SIZE_P)
+        bucket[1] << (zoomStep + @cube.BUCKET_SIZE_P)
+        bucket[2] << (zoomStep + @cube.BUCKET_SIZE_P)
+      )
+
+    @getSendSocket().send(transmitBuffer)
+      .pipe(
+
+        (responseBuffer) =>
+
+          # TODO: define action
+
+        =>
+          
+          # TODO: define action
+    
+    ).always =>
+
+      @batchCount--
+      @push()
+
+
+  getSendSocket : ->
+
+    if @socket? then @socket else @socket = new ArrayBufferSocket(
+      senders : [
+        new ArrayBufferSocket.XmlHttpRequest("/datasets/#{@dataSetName}/layers/#{@dataLayerName}/data?cubeSize=#{1 << @cube.BUCKET_SIZE_P}", "PUT")
+      ]
+      requestBufferType : Uint8Array
+      responseBufferType : Uint8Array
+    )

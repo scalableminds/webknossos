@@ -290,7 +290,7 @@ class Cube
       voxel = iterator.getNext()
       @labelVoxel(voxel, label)
 
-    @pushQueue.print()
+    @pushQueue.push()
     @trigger("volumeLabled")
 
 

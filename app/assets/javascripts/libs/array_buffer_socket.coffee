@@ -293,7 +293,7 @@ class ArrayBufferSocket.XmlHttpRequest
 
   MESSAGE_TIMEOUT : 10000
 
-  constructor : (@url) ->
+  constructor : (@url, @type = "GET") ->
 
   open : ({ @responseBufferType, @requestBufferType }) ->
 
@@ -305,6 +305,7 @@ class ArrayBufferSocket.XmlHttpRequest
       url : @url
       dataType : 'arraybuffer'
       timeout : @MESSAGE_TIMEOUT
+      type : @type
     ).pipe (buffer) =>
 
       if buffer

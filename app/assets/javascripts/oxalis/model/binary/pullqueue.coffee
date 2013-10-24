@@ -20,7 +20,7 @@ class PullQueue
   roundTripTime : 0
 
   
-  constructor : (@dataSetName, @cube, @dataLayerName, @testData) ->
+  constructor : (@dataSetName, @cube, @dataLayerName, @testData, @requestData = true ) ->
 
     @queue = []
 
@@ -86,8 +86,11 @@ class PullQueue
 
 
   pull : ->
-    # Starting to download some buckets
 
+    unless @requestData
+      return
+
+    # Starting to download some buckets
     while @batchCount < @BATCH_LIMIT and @queue.length
       
       batch = []
@@ -122,7 +125,7 @@ class PullQueue
     # Measuring the time until response arrives to select appropriate preloading strategy 
     roundTripBeginTime = new Date()
 
-    @getLoadSocket(@dataLayerName).send(transmitBuffer)
+    @getLoadSocket().send(transmitBuffer)
       .pipe(
 
         (responseBuffer) =>

@@ -25,7 +25,10 @@ class Paginator
 
   extractTemplate : ->
     
-    @template = @tbody.html()
+    templateSource = _.unescape(@tbody.html())
+    # compile
+    @template = _.template(templateSource)
+
     @tbody.html("")
     @tbody.removeClass("hide")
 
@@ -49,7 +52,7 @@ class Paginator
         
         pageSelectionHandler = (event, number) =>
           index = number - 1
-          json = @getElementsForPage index
+          json = @getElementsForPage(index)
           @displayJSON json
         
         @pageSelectionDiv.bootpag(
@@ -112,7 +115,7 @@ class Paginator
         @elementsToShow = @allElements
      
       @updatePageCount()
-      @displayJSON(@getElementsForPage 0)
+      @displayJSON(@getElementsForPage(0))
       
 
   displayJSON : (jsonArray) ->
@@ -120,8 +123,7 @@ class Paginator
     htmlArray = []
     
     for element in jsonArray
-      htmlArray.push @generateHTML(element)
-    
+      htmlArray.push(@generateHTML(element))
 
     @tbody.html(htmlArray.join(""))
 
@@ -148,59 +150,5 @@ class Paginator
 
   generateHTML : (element) ->
     
-    filledTemplate = @template    
+    return @template({controllers : jsRoutes.controllers, element : element})
 
-    # resolve routes
-    filledTemplate = filledTemplate.replace( /href="[^\"]*"/g, (match) ->
-      
-      try
-        # remove href=" and "
-        propertyChain = match.slice(6, -1)
-        properties = propertyChain.split(".")
-
-        currentObject = jsRoutes
-        for currentProperty in properties
-          unless currentProperty == "routes"
-            pos = currentProperty.indexOf("(")
-            if pos > -1
-              currentProperty = currentProperty.slice(0, pos)
-
-            currentObject = currentObject[currentProperty]
-
-        pathProvider = currentObject
-
-        # TODO remove hacky hack
-        if properties[properties.length-1].indexOf("trace") == 0
-          url = pathProvider("CompoundTask", element.id).url
-        else  
-          url = pathProvider(element.id).url
-
-        return 'href="' + url + '"'
-
-      catch e
-        # href="" isn't a very precise selector; wont work for data-href etc.
-        # so, ignore failing route access
-        console.log "caught error in resolving routes", e
-        return match
-    )
-
-    # resolve #{pseudo string interpolation}
-    filledTemplate = filledTemplate.replace( /(#\{[^}]*\})/g, (match) ->
-      
-      # remove #{ and }
-      propertyChain = match.slice(2, -1)
-
-      properties = propertyChain.split(".")
-
-      currentObject = element
-      for currentProperty in properties
-        currentObject = currentObject[currentProperty]
-
-      return currentObject
-    )
-
-    filledTemplate = filledTemplate.replace "&lt;", "<"
-    filledTemplate = filledTemplate.replace "&gt;", ">"
-
-    filledTemplate = _.template(filledTemplate, {controllers : jsRoutes.controllers, element : element})
-    return filledTemplate

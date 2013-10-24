@@ -30,44 +30,42 @@
         </tr>
       </thead>
       <tbody class="hide">
-        <tr id="#{id}">
-          <td class="details-toggle" href="controllers.admin.routes.AnnotationAdministration.annotationsForTask" data-ajax="add-row=##{id} + tr"> <i class="caret-right"></i> <i class="caret-down"></i> </td>
-          <td> #{formattedHash} </td>
-          <td> #{seedIdHeidelberg} </td>
+        <tr id="<%= element.id %>">
+          <td class="details-toggle" href="controllers.admin.routes.AnnotationAdministration.annotationsForTask" data-ajax="add-row=#<%= element.id %> + tr"> <i class="caret-right"></i> <i class="caret-down"></i> </td>
+          <td> <%= element.formattedHash %> </td>
+          <td> <%= element.seedIdHeidelberg %> </td>
           <td> 
-              <a href="@controllers.admin.routes.ProjectAdministration.list##{projectName}">
-                #{projectName}
+              <a href="@controllers.admin.routes.ProjectAdministration.list#<%= element.projectName %>">
+                <%= element.projectName %>
               </a>
           </td>
           <td> 
-            <a href="@controllers.admin.routes.TaskTypeAdministration.list##{type}">
-              #{type}
+            <a href="@controllers.admin.routes.TaskTypeAdministration.list#<%= element.type %>">
+              <%= element.type %>
             </a>
           </td>
-          <td> #{dataSet} </td>
-          <td> (#{editPosition}) </td>
-
-
-          if task.neededExperience.toString() != "" (<span class="label"> task.neededExperience </span>)
-
-          <td> <span class="label"> #{neededExperience.domain}: #{neededExperience.value} </span> </td>
-          <td> #{priority} </td>
-          <td> #{created} </td>
+          <td> <%= element.dataSet %> </td>
+          <td> (<%= element.editPosition %>) </td>
           <td>
-              <i class="icon-play-circle"></i> #{status.open}
+            <% if (element.neededExperience.domain != "" || element.neededExperience.value > 0) { %>
+                <span class="label"> <%= element.neededExperience.domain %> : <%= element.neededExperience.value %> </span>
+            <% } %>
+          </td>
+          <td> <%= element.priority %> </td>
+          <td> <%= element.created %> </td>
+          <td>
+              <i class="icon-play-circle"></i> <%= element.status.open %>
               <br>
-              <i class="icon-random"></i> #{status.inProgress}
+              <i class="icon-random"></i> <%= element.status.inProgress %>
               <br>
-              <i class="icon-ok-circle"></i> #{status.completed}
+              <i class="icon-ok-circle"></i> <%= element.status.completed %>
           </td>
           <td class="nowrap">
-            <a href="controllers.admin.routes.TaskAdministration.edit"><i class="icon-pencil"></i> edit </a><br>
-            <!-- <a href="controllers.routes.AnnotationController.trace(AnnotationType_CompoundTask, "")" title="view all finished tracings"><i class="icon-random"></i> view </a><br> -->
-
+            <a href="<%= controllers.admin.TaskAdministration.edit(element.id).url %>"><i class="icon-pencil"></i> edit </a><br>
             <a href="<%= controllers.AnnotationController.trace('CompoundTask', element.id).url %>" title="view all finished tracings"><i class="icon-random"></i> view </a><br>
-            <a href="controllers.admin.routes.NMLIO.taskDownload" title="download all finished tracings"><i class="icon-download"></i> download </a><br>
-            <a href="controllers.admin.routes.TrainingsTaskAdministration.create"><i class="icon-road"></i> use for Training </a><br>
-            <a href="controllers.admin.routes.TaskAdministration.delete" data-ajax="delete-row,confirm"><i class="icon-trash"></i> delete </a>
+            <a href="<%= controllers.admin.NMLIO.taskDownload(element.id).url %>" title="download all finished tracings"><i class="icon-download"></i> download </a><br>
+            <a href="<%= controllers.admin.TrainingsTaskAdministration.create(element.id).url %>"><i class="icon-road"></i> use for Training </a><br>
+            <a href="<%= controllers.admin.TaskAdministration.delete(element.id).url %>" data-ajax="delete-row,confirm"><i class="icon-trash"></i> delete </a>
           </td>
         </tr>
 
@@ -84,4 +82,4 @@
       </tbody>
     </table>
   </div>
-}
+ }

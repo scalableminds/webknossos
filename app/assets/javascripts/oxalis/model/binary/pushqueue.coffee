@@ -70,6 +70,8 @@ class PushQueue
 
     @batchCount++
 
+    console.log "Pushing batch", batch
+
     transmitBuffer = []
     for bucket in batch
       zoomStep = bucket[3]
@@ -91,7 +93,8 @@ class PushQueue
 
         =>
           
-          # TODO: define action
+          for bucket in batch
+            @insert(bucket)
     
     ).always =>
 

@@ -6,6 +6,9 @@ libs/drawing : Drawing
 
 
 class VolumeLayer
+
+  MIN_DISTANCE : 2
+  GRID_SIZE : 10
   
   constructor : (@plane, @thirdDimensionValue) ->
     
@@ -14,6 +17,17 @@ class VolumeLayer
     @minCoord    = null
 
   addContour : (pos) ->
+
+    # If the distance to the last point is larger than MIN_DISTANCE,
+    # interpolate so that the winding number alg. used in contains2dCoordinate
+    # has enough points to be accurate
+    if @contourList.length > 0
+      last = @contourList[@contourList.length - 1]
+      step = Math.min(@MIN_DISTANCE / @calculateDistance(last, pos), 1)
+      for f in [step...1] by step
+        hpos = @interpolatePositions( last, pos, f)
+        @contourList.push(hpos)
+        @updateArea(hpos)
     
     @contourList.push(pos)
     @updateArea(pos)
@@ -40,6 +54,8 @@ class VolumeLayer
     unless @minCoord
       return { hasNext : false }
 
+    @addContour( @contourList[0] )
+
     minCoord2d = @get2DCoordinate(@minCoord)
     maxCoord2d = @get2DCoordinate(@maxCoord)
     width      = maxCoord2d[0] - minCoord2d[0] + 1
@@ -56,10 +72,14 @@ class VolumeLayer
       x = Math.floor(x); y = Math.floor(y)
       map[x - minCoord2d[0]][y - minCoord2d[1]] = true
 
+    to2DCoordinate = (x, y) ->
+
+      return [x + minCoord2d[0] + 0.5, y + minCoord2d[1] + 0.5]
+
 
     @drawOutlineVoxels(setMap)
 
-    @fillOutline(map, width, height)
+    @fillOutline(map, width, height, to2DCoordinate)
 
     iterator = {
       hasNext : true
@@ -94,19 +114,19 @@ class VolumeLayer
       Drawing.drawLine2d(p1[0], p1[1], p2[0], p2[1], setMap)
 
 
-  fillOutline : (map, width, height) ->
+  fillOutline : (map, width, height, to2DCoordinate) ->
 
     setMap = (x, y) ->
       map[x][y] = true
     isEmpty = (x, y) ->
       return map[x][y] != true
 
-    y = Math.round(height / 2)
-    for x in [1...width]
-      if not isEmpty(x-1, y) and isEmpty(x, y)
-        break
-
-    Drawing.fillArea(x, y, width, height, false, isEmpty, setMap)
+    # Use a grid of points within the bounding box to flood fill
+    # the area.
+    for x in [0..(width - 1)] by Math.round(width / @GRID_SIZE)
+      for y in [0..(height - 1)] by Math.round(height / @GRID_SIZE)
+        if isEmpty(x, y) and @contains2dCoordinate( to2DCoordinate( x, y ))
+          Drawing.fillArea(x, y, width, height, false, isEmpty, setMap)
 
 
   get2DCoordinate : (coord3d) ->
@@ -132,3 +152,56 @@ class VolumeLayer
         res[i] = @thirdDimensionValue
 
     return res
+
+
+  contains2dCoordinate : (point, list = @contourList) ->
+    
+    # Algorithm described in OX-322
+    totalDiff = 0
+
+    for contour in list
+
+      contour2d = @get2DCoordinate(contour)
+      newQuadrant = @getQuadrantWithRespectToPoint(contour2d, point)
+      prevQuadrant = if quadrant? then quadrant else newQuadrant
+      quadrant = newQuadrant
+      
+      if Math.abs(prevQuadrant - quadrant) == 2 or quadrant == 0
+        # point is on the edge, considered within the polygon
+        #console.log "Point is ON the edge", prevQuadrant, quadrant
+        return true
+      diff = quadrant - prevQuadrant
+      # special cases if quadrants are 4 and 1
+      if diff ==  3 then diff = -1
+      if diff == -3 then diff =  1
+      totalDiff -= diff
+
+    return totalDiff != 0
+
+
+  getQuadrantWithRespectToPoint : (vertex, point) ->
+    xDiff = vertex[0] - point[0]
+    yDiff = vertex[1] - point[1]
+
+    if xDiff == 0 and yDiff == 0
+      # Vertex and point have the same coordinates
+      return 0
+    
+    switch
+      when xDiff <= 0 and yDiff >  0 then return 1
+      when xDiff <= 0 and yDiff <= 0 then return 2
+      when xDiff >  0 and yDiff <= 0 then return 3
+      when xDiff >  0 and yDiff >  0 then return 4
+
+
+  calculateDistance : (p1, p2) ->
+
+    diff = [p1[0] - p2[0], p1[1] - p2[1], p1[2] - p2[2]]
+    return Math.sqrt( diff[0] * diff[0] + diff[1] * diff[1] + diff[2] * diff[2])
+
+
+  interpolatePositions : (pos1, pos2, f) ->
+
+    sPos1 = [pos1[0] * (1 - f), pos1[1] * (1 - f), pos1[2] * (1 - f)]
+    sPos2 = [pos2[0] * f, pos2[1] * f, pos2[2] * f]
+    return [sPos1[0] + sPos2[0], sPos1[1] + sPos2[1], sPos1[2] + sPos2[2]]

@@ -2,6 +2,8 @@
 jquery : $
 underscore : _
 ../libs/toast : Toast
+./paginator : Paginator
+../libs/jquery.bootpag.min : Bootpag
 ###
 
 $ ->
@@ -27,10 +29,10 @@ $ ->
       $(".hover-hide", this).show()
 
 
-  dataAjaxHandler = (event) ->
-
+  dataAjaxHandler = (event, element=null) ->
     event.preventDefault()
-    $this = $(this)
+    
+    $this = element or $(this)
     $form = if $this.is("form") then $this else $this.parents("form").first()
 
     options = {}
@@ -39,7 +41,7 @@ $ ->
       options[key] = value ? true
 
     ajaxOptions =
-      url : if $this.is("form") then this.action else this.href
+      url : if $this.is("form") then $this.attr("action") else $this.attr("href")
       dataType : "json"
 
     if options["confirm"]
@@ -140,6 +142,11 @@ $ ->
   $(document).on "submit", "form[data-ajax]", dataAjaxHandler
 
 
+  $(".page-selection").each ->
+
+        new Paginator $(this)
+
+
   $(document).on "change", "table input.select-all-rows", ->
 
     $this = $(this)
@@ -197,9 +204,14 @@ $ ->
 
     $table.find(".details-row").addClass("hide")
 
-    $table.find(".details-toggle").click ->
-
+    $table.on "click", ".details-toggle", (event) ->
       $toggle = $(this)
+
+      alreadyFetched = $toggle.data("alreadyFetched")
+      unless alreadyFetched
+        dataAjaxHandler(event, $toggle)
+        $toggle.data("alreadyFetched", true)
+
       newState = !$toggle.hasClass("open")
 
       $toggle.parents("tr").next().toggleClass("hide", !newState)
@@ -211,9 +223,7 @@ $ ->
       $toggle = $(this)
       newState = !$toggle.hasClass("open")
 
-      $table.find(".details-row").toggleClass("hide", !newState)
-      $table.find(".details-toggle").toggleClass("open", newState)
-      $toggle.toggleClass("open", newState)
+      $table.find(".details-toggle").click()
 
 
   highlightToasts = ->

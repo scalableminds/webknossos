@@ -15,7 +15,7 @@ import views.html
 import net.liftweb.common._
 import braingames.mvc.Controller
 import braingames.util.ExtendedTypes.ExtendedString
-import models.annotation.AnnotationDAO
+import models.annotation.{AnnotationType, AnnotationDAO}
 import models.tracing.skeleton.SkeletonTracing
 import play.api.Logger
 import models.team.{TeamPath, TeamMembership}
@@ -28,9 +28,34 @@ object UserAdministration extends Controller with Secured {
 
   def allUsers = User.findAll.sortBy(_.lastName.capitalize)
 
+  def show(userId: String) = Authenticated { implicit request =>
+    for {
+      user <- User.findOneById(userId) ?~ Messages("user.notFound")
+    } yield {
+      val annotations = AnnotationDAO.findFor(user).filter(t => !AnnotationType.isSystemTracing(t))
+      val (taskTracings, allExplorationalAnnotations) =
+        annotations.partition(_.typ == AnnotationType.Task)
+
+      val explorationalAnnotations =
+        allExplorationalAnnotations
+          .filter(!_.state.isFinished)
+          .sortBy(a => - a.content.map(_.timestamp).getOrElse(0L))
+
+      val userTasks = taskTracings.flatMap(e => e.task.map(_ -> e))
+
+      val loggedTime = TimeTracking.loggedTime(user)
+
+      Ok(html.admin.user.user(
+        user,
+        explorationalAnnotations,
+        userTasks,
+        loggedTime))
+    }
+  }
+
   def index = Authenticated {
     implicit request =>
-      Ok(html.admin.user.userAdministration(allUsers, Role.findAll.sortBy(_.name), Experience.findAllDomains, request.user.adminTeams))
+      Ok(html.admin.user.userList(allUsers, Role.findAll.sortBy(_.name), Experience.findAllDomains, request.user.adminTeams))
   }
 
   def logTime(userId: String, time: String, note: String) = Authenticated {

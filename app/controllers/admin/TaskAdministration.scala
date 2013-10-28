@@ -16,7 +16,6 @@ import models.task.TaskType
 import play.api.data.Form
 import play.api.data.Forms._
 import views.html
-import braingames.mvc.Controller
 import play.api.i18n.Messages
 import play.api.libs.concurrent._
 import play.api.libs.concurrent.Execution.Implicits._
@@ -26,7 +25,7 @@ import play.api.Logger
 import play.api.mvc.Result
 import play.api.templates.Html
 import oxalis.annotation._
-import controllers.Application
+import controllers.{Controller, Application}
 import models.annotation.Annotation
 import models.annotation.{AnnotationDAO, AnnotationType}
 import scala.concurrent.Future

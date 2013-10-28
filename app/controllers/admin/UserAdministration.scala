@@ -13,7 +13,6 @@ import models.user.Experience
 import play.api.i18n.Messages
 import views.html
 import net.liftweb.common._
-import braingames.mvc.Controller
 import braingames.util.ExtendedTypes.ExtendedString
 import models.annotation.AnnotationDAO
 import models.tracing.skeleton.SkeletonTracing
@@ -21,6 +20,10 @@ import play.api.Logger
 import models.team.{TeamPath, TeamMembership}
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.mvc.Request
+import braingames.mail.Send
+import net.liftweb.common.Full
+import models.security.Permission
+import scala.Some
 
 object UserAdministration extends Controller with Secured {
 

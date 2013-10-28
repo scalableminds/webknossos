@@ -1,7 +1,6 @@
 package controllers
 
 import play.api._
-import braingames.mvc.{Controller}
 import play.api.mvc.{WebSocket, AsyncResult}
 import play.api.Play.current
 import play.api.libs.iteratee._

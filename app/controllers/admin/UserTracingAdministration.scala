@@ -13,11 +13,11 @@ import models.user.Experience
 import play.api.i18n.Messages
 import views.html
 import net.liftweb.common._
-import braingames.mvc.Controller
 import braingames.util.ExtendedTypes.ExtendedString
 import braingames.binary.models.DataSet
 import models.annotation.{AnnotationType, AnnotationDAO}
 import models.tracing.skeleton.SkeletonTracing
+import scala.Some
 
 object UserTracingAdministration extends Controller with Secured {
 

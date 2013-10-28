@@ -4,7 +4,6 @@ import play.api.libs.json._
 import oxalis.security.{UserAwareRequest, Secured, AuthenticatedRequest}
 import models.security._
 import net.liftweb.common._
-import braingames.mvc.Controller
 import scala.concurrent.Future
 import scala.concurrent.duration._
 import oxalis.annotation.{RequestAnnotation, AnnotationIdentifier}
@@ -15,6 +14,7 @@ import models.annotation.AnnotationLike
 import models.annotation.AnnotationType._
 import oxalis.annotation.handler.AnnotationInformationHandler
 import braingames.util.{FoxImplicits, Fox}
+import controllers.Controller
 
 object TracingController extends Controller with Secured with TracingInformationProvider {
   override val DefaultAccessRole = Role.User

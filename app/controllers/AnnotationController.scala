@@ -1,6 +1,5 @@
 package controllers
 
-import braingames.mvc.Controller
 import oxalis.security.{AuthenticatedRequest, Secured}
 import models.security.Role
 import models.user.{User, TimeTracking, UsedAnnotation}

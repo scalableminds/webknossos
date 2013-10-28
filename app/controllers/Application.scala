@@ -12,7 +12,6 @@ import scala.concurrent.Future
 import models.user.UsedAnnotation
 import models.basics.Implicits._
 import play.api.libs.concurrent.Execution.Implicits._
-import braingames.mvc.Controller
 
 object Application extends Controller with Secured {
   override val DefaultAccessRole = None

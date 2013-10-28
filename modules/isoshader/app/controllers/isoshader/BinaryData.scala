@@ -14,7 +14,6 @@ import play.api.Play.current
 import models.binary._
 import akka.util.Timeout
 import oxalis.binary._
-import braingames.mvc.Controller
 import play.api.i18n.Messages
 import braingames.geometry._
 import akka.pattern.ask
@@ -24,8 +23,10 @@ import play.api.libs.concurrent.Execution.Implicits._
 import braingames.binary.DataRequestSettings
 import braingames.image.{JPEGWriter, ImageCreator, ImageCreatorParameters}
 import braingames.reactivemongo.GlobalDBAccess
+import controllers.Controller
+import play.api.mvc.Controller
 
-object BinaryData extends Controller with GlobalDBAccess{
+object BinaryData extends controllers.Controller with GlobalDBAccess{
   val conf = Play.current.configuration
   implicit val timeout = Timeout((conf.getInt("actor.defaultTimeout") getOrElse 20) seconds) // needed for `?` bel
 

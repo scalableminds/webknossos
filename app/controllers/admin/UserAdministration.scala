@@ -13,7 +13,7 @@ import play.api.i18n.Messages
 import views.html
 import net.liftweb.common._
 import braingames.util.ExtendedTypes.ExtendedString
-import models.annotation.AnnotationDAO
+import models.annotation.{AnnotationType, AnnotationDAO}
 import models.tracing.skeleton.SkeletonTracing
 import play.api.Logger
 import models.team.{TeamPath, TeamMembership}
@@ -31,9 +31,40 @@ object UserAdministration extends Controller with Secured {
 
   def allUsers = User.findAll.sortBy(_.lastName.capitalize)
 
+  def show(userId: String) = Authenticated {
+    implicit request =>
+      Async {
+        for {
+          user <- User.findOneById(userId) ?~ Messages("user.notFound")
+        } yield {
+          val annotations = AnnotationDAO.findFor(user).filter(t => !AnnotationType.isSystemTracing(t))
+          val (taskTracings, allExplorationalAnnotations) =
+            annotations.partition(_.typ == AnnotationType.Task)
+
+          val explorationalAnnotations =
+            allExplorationalAnnotations
+              .filter(!_.state.isFinished)
+              .sortBy(a => -a.content.map(_.timestamp).getOrElse(0L))
+
+          val userTasks = taskTracings.flatMap(e => e.task.map(_ -> e))
+
+          for {
+            loggedTime <- TimeTrackingService.loggedTime(user)
+          } yield {
+            Ok(html.admin.user.user(
+              user,
+              explorationalAnnotations,
+              userTasks,
+              loggedTime))
+
+          }
+        }
+      }
+  }
+
   def index = Authenticated {
     implicit request =>
-      Ok(html.admin.user.userAdministration(allUsers, Role.findAll.sortBy(_.name), Experience.findAllDomains, request.user.adminTeams))
+      Ok(html.admin.user.userList(allUsers, Role.findAll.sortBy(_.name), Experience.findAllDomains, request.user.adminTeams))
   }
 
   def logTime(userId: String, time: String, note: String) = Authenticated {
@@ -75,8 +106,9 @@ object UserAdministration extends Controller with Secured {
   }
 
   def extractTeamsFromRequest(request: Request[Map[String, Seq[String]]]) = {
-    request.body.get("teams").getOrElse(Nil).map{
-      t => TeamMembership(TeamPath.fromString(t), TeamMembership.Member)}
+    request.body.get("teams").getOrElse(Nil).map {
+      t => TeamMembership(TeamPath.fromString(t), TeamMembership.Member)
+    }
   }
 
   def verify(userId: String) = Authenticated(parser = parse.urlFormEncoded) {

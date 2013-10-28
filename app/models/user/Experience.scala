@@ -2,6 +2,7 @@ package models.user
 
 import models.task._
 import scala.collection.breakOut
+import play.api.libs.json.Json
 
 /**
  * Experience a user needs to hold to acquire a task. The task itself defines the minimum experience needed.
@@ -16,6 +17,7 @@ case class Experience(domain: String, value: Int) {
 }
 
 object Experience {
+  implicit val experienceFormat = Json.format[Experience]
 
   type Experiences = Map[String, Int]
 

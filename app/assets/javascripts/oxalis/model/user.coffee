@@ -93,7 +93,7 @@ class User
       data     : data
     ).fail( =>
       
-      console.log "could'nt save userdata"
+      console.log "couldn't save userdata"
 
     ).always(-> deferred.resolve())
     

@@ -7,7 +7,6 @@ import oxalis.security.AuthenticatedRequest
 import oxalis.security.Secured
 import controllers._
 import models.security._
-import models.user.TimeTracking
 import models.user.User
 import models.user.Experience
 import play.api.i18n.Messages
@@ -24,6 +23,7 @@ import braingames.mail.Send
 import net.liftweb.common.Full
 import models.security.Permission
 import scala.Some
+import models.user.time.{TimeTrackingService, TimeTracking}
 
 object UserAdministration extends Controller with Secured {
 
@@ -42,7 +42,7 @@ object UserAdministration extends Controller with Secured {
         user <- User.findOneById(userId) ?~ Messages("user.notFound")
         time <- TimeTracking.parseTime(time) ?~ Messages("time.invalidFormat")
       } yield {
-        TimeTracking.logTime(user, time, note)
+        TimeTrackingService.logTime(user, time, note)
         JsonOk
       }
   }

@@ -1,4 +1,5 @@
-@( user: models.user.User, explorativeAnnotations: List[models.annotation.Annotation], userTasks: List[(models.task.Task, models.annotation.Annotation)], trackedTime: Map[models.user.PaymentInterval, scala.concurrent.duration.Duration])(implicit session: oxalis.view.AuthedSessionData)
+@( user: models.user.User, explorativeAnnotations: List[models.annotation.Annotation], userTasks: List[(models.task.Task, models.annotation.Annotation)], trackedTime: Map[models.user.time.PaymentInterval, scala.concurrent.duration.Duration])(implicit session: oxalis.view.AuthedSessionData)
+@import models.user.time.PaymentInterval
 
 @import views.html.user.dashboard.dashboard
 

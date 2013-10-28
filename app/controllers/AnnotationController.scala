@@ -2,7 +2,7 @@ package controllers
 
 import oxalis.security.{AuthenticatedRequest, Secured}
 import models.security.Role
-import models.user.{User, TimeTracking, UsedAnnotation}
+import models.user.{User, UsedAnnotation}
 import play.api.i18n.Messages
 import play.api.libs.json.{JsObject, JsValue, Json, JsArray}
 import play.api.Logger
@@ -21,6 +21,7 @@ import play.api.libs.iteratee.Enumerator
 import models.binary.DataSetDAO
 import play.api.libs.iteratee.Input.EOF
 import scala.concurrent.Future
+import models.user.time.{TimeTrackingService, TimeTracking}
 
 /**
  * Company: scalableminds
@@ -110,7 +111,7 @@ object AnnotationController extends Controller with Secured with TracingInformat
               case JsArray(jsUpdates) =>
                 AnnotationDAO.updateFromJson(jsUpdates, oldAnnotation) match {
                   case Some(annotation) =>
-                    TimeTracking.logUserAction(request.user, annotation)
+                    TimeTrackingService.logUserAction(request.user, annotation)
                     JsonOk(Json.obj("version" -> version), "tracing.saved")
                   case _ =>
                     JsonBadRequest("Invalid update Json")

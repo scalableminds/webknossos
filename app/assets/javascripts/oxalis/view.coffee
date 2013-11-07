@@ -221,7 +221,7 @@ class View
       if treeId != lastTreeId
         newContent.appendChild((
           $('<li>').append($('<i>', {"class": "icon-sitemap"}),
-          $('<span>', {"data-treeid": treeId, "text": @model.cellTracing.getTree(treeId).name})))[0])
+          $('<span>', {"data-treeid": treeId, "text": @model.cellTracing.getTree(treeId)?.name})))[0])
         lastTreeId = treeId
       newContent.appendChild((
         $('<li>').append($('<i>', {"class": "icon-angle-right"}), 

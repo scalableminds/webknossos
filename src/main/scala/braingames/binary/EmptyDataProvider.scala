@@ -4,6 +4,7 @@ import akka.agent.Agent
 import akka.actor.ActorSystem
 import braingames.binary.models.DataLayer
 import braingames.binary.models.DataSet
+import scala.concurrent.ExecutionContext.Implicits._
 
 trait EmptyDataProvider {
   implicit val sys: ActorSystem

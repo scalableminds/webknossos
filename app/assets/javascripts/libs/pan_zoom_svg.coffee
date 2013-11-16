@@ -34,7 +34,16 @@ class PanZoomSVG
     @svgRoot = $el[0]
 
   mouseUpHandler : => @mouseDown = false; return
+
+
   mouseDownHandler : (event) =>
+
+    @mouseDown = true
+    @startMouse = @mouseToSVGLocalCoordinates(event)
+    @startMatrix = @svgElement.getCTM()
+
+
+  mouseWheelHandler : (event) =>
 
     @mouseDown = true
     @startMouse = @mouseToSVGLocalCoordinates(event)
@@ -58,6 +67,8 @@ class PanZoomSVG
 
     @zoom = @clamp( @zoom )
     # unless -BUFFER_THRESHOLD < buffer < BUFFER_THRESHOLD
+
+    #   if wheelDeltaY < 0
 
     #   if wheelDeltaY < 0
     #     wheelDelta = Math.ceil(buffer / BUFFER_THRESHOLD)

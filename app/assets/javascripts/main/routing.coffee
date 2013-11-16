@@ -115,14 +115,14 @@ $ ->
                 content: user.tooltip
               )
 
-	    #reset some attributes before invoking panZoom plugin
-	    $svg = $(".graph.well").find("svg")
-	    $svg[0].removeAttribute("viewBox") #get rid of the troublemaker. messes up transformations
-	    $svg[0].setAttribute("width", "#{$(window).width() - 100}px")
-	    $svg[0].setAttribute("height", "#{$(window).height() - 50 - $svg.offset().top}px" )
-	    $svg.css("max-width", "100%")
+            #reset some attributes before invoking panZoom plugin
+            $svg = $(".graph.well").find("svg")
+            $svg[0].removeAttribute("viewBox") #get rid of the troublemaker. messes up transformations
+            $svg[0].setAttribute("width", "#{$(window).width() - 100}px")
+            $svg[0].setAttribute("height", "#{$(window).height() - 50 - $svg.offset().top}px" )
+            $svg.css("max-width", "100%")
 
-	    new PanZoomSVG($svg)
+            new PanZoomSVG($svg)
 
           (error) ->
             $(".graph").html("<i class=\"icon-warning-sign\"></i> #{error.replace(/\n/g,"<br>")}")

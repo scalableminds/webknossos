@@ -107,14 +107,14 @@ class PanZoomSVG
     if position
 
       mouse =
-	x: position.x - @offset.left
-	y: position.y - @offset.top
+        x: position.x - @offset.left
+        y: position.y - @offset.top
 
     else
 
       mouse =
-	x: $el.width() / 2
-	y: $el.height() / 2
+        x: $el.width() / 2
+        y: $el.height() / 2
 
     scale = zoomLevel / @oldZoomLevel
 

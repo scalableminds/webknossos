@@ -3,6 +3,7 @@ jquery : $
 underscore : _
 libs/toast : Toast
 libs/keyboard : KeyboardJS
+libs/pan_zoom_svg : PanZoomSVG
 main/routing_utils : RoutingUtils
 oxalis/constants : constants
 ###
@@ -88,7 +89,7 @@ $ ->
 
     "admin.task.taskOverview" : ->
 
-      require [ "worker!libs/viz", "svgpan" ], (VizWorker, svgPan) ->
+      require [ "worker!libs/viz" ], (VizWorker) ->
 
         graphSource = $("#graphData").html().replace( /"[^"]+"/gm, (a) -> a.replace(" "," ") )
         userData = JSON.parse($("#userData").html())
@@ -116,12 +117,12 @@ $ ->
 
             #reset some attributes before invoking panZoom plugin
             $svg = $(".graph.well").find("svg")
-            $svg[0].setAttribute("viewBox", "0 0 0 0")
-            $svg[0].setAttribute("width", "100%")
-            $svg[0].setAttribute("height", "100%")
+            $svg[0].removeAttribute("viewBox") #get rid of the troublemaker. messes up transformations
+            $svg[0].setAttribute("width", "#{$(window).width() - 100}px")
+            $svg[0].setAttribute("height", "#{$(window).height() - 50 - $svg.offset().top}px" )
             $svg.css("max-width", "100%")
 
-            $svg.svgPan("graph1")
+            new PanZoomSVG($svg)
 
           (error) ->
             $(".graph").html("<i class=\"icon-warning-sign\"></i> #{error.replace(/\n/g,"<br>")}")

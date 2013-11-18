@@ -5,7 +5,7 @@ import oxalis.security.Secured
 import views.html
 import models.user._
 import oxalis.nml._
-import models.security.Role
+import models.security.{RoleDAO, Role}
 import oxalis.nml.NMLParser
 import braingames.xml.Xml
 import play.api.Logger
@@ -30,19 +30,22 @@ import org.apache.commons.io.IOUtils
 import net.liftweb.common._
 import java.io.FileInputStream
 import java.nio.channels.Channels
-import models.annotation.{AnnotationSettings, AnnotationDAO, Annotation, AnnotationType}
+import models.annotation._
 import models.annotation.AnnotationType._
 import models.tracing.skeleton.{SkeletonTracing, SkeletonTracingLike}
 import oxalis.annotation.handler.SavedTracingInformationHandler
 import play.api.libs.concurrent.Execution.Implicits._
 import scala.concurrent.Future
 import play.api.Play
-import org.bson.types.ObjectId
-import oxalis.annotation.AnnotationService
 import controllers.Controller
+import net.liftweb.common.Full
+import oxalis.nml.NML
+import models.annotation.AnnotationType
+import models.annotation.Annotation
+import org.bson.types.ObjectId
 
 object NMLIO extends Controller with Secured with TextUtils {
-  override val DefaultAccessRole = Role.User
+  override val DefaultAccessRole = RoleDAO.User
 
 
   def uploadForm = Authenticated {
@@ -72,7 +75,7 @@ object NMLIO extends Controller with Secured with TextUtils {
     SkeletonTracing.createFrom(nmls, AnnotationSettings.default).map {
       content =>
         AnnotationDAO.createFrom(
-          user._id,
+          new ObjectId(user._id.stringify),
           content,
           typ,
           name)
@@ -118,15 +121,15 @@ object NMLIO extends Controller with Secured with TextUtils {
   }
 
   def zipTracings(annotations: List[Annotation], zipFileName: String) = {
-    Future.sequence(annotations.par.flatMap(AnnotationService.loadAnnotationContent).seq).map {
+    Future.sequence(annotations.par.map(AnnotationService.loadAnnotationContent(_).futureBox).seq).map {
       zipStreams =>
         val zipped = TemporaryFile("annotationZips", normalize(zipFileName))
-        ZipIO.zip(zipStreams, new BufferedOutputStream(new FileOutputStream(zipped.file)))
+        ZipIO.zip(zipStreams.flatten, new BufferedOutputStream(new FileOutputStream(zipped.file)))
         zipped
     }
   }
 
-  def projectDownload(projectName: String) = Authenticated(role = Role.Admin) {
+  def projectDownload(projectName: String) = Authenticated(role = RoleDAO.Admin) {
     implicit request =>
       Async {
         for {
@@ -146,7 +149,7 @@ object NMLIO extends Controller with Secured with TextUtils {
       }
   }
 
-  def taskDownload(taskId: String) = Authenticated(role = Role.Admin) {
+  def taskDownload(taskId: String) = Authenticated(role = RoleDAO.Admin) {
     implicit request =>
       Async {
         for {
@@ -161,17 +164,15 @@ object NMLIO extends Controller with Secured with TextUtils {
       }
   }
 
-  def userDownload(userId: String) = Authenticated(role = Role.Admin) {
+  def userDownload(userId: String) = Authenticated(role = RoleDAO.Admin) {
     implicit request =>
       Async {
         for {
-          user <- User.findOneById(userId) ?~ Messages("user.notFound")
+          user <- UserService.findOneById(userId, useCache = true) ?~> Messages("user.notFound")
+          annotations = AnnotationDAO.findFor(user, AnnotationType.Task).filter(_.state.isFinished)
+          zipped <- zipTracings(annotations, normalize(user.abreviatedName + "_nmls.zip"))
         } yield {
-          val annotations = AnnotationDAO.findFor(user, AnnotationType.Task).filter(_.state.isFinished)
-          zipTracings(annotations, normalize(user.abreviatedName + "_nmls.zip")).map {
-            zipped =>
-              Ok.sendFile(zipped.file)
-          }
+          Ok.sendFile(zipped.file)
         }
       }
   }

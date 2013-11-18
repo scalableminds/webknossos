@@ -33,8 +33,8 @@ trait AnnotationInformationHandler {
     withAnnotation(identifier)(nameForAnnotation)
   } */
 
-  def nameForAnnotation(t: AnnotationLike): String = {
-    t.id
+  def nameForAnnotation(t: AnnotationLike): Future[String] = {
+    Future.successful(t.id)
   }
 
   def withAnnotation[A](identifier: String)(f: AType => A)(implicit request: AuthenticatedRequest[_]): Fox[A] = {

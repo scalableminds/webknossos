@@ -9,6 +9,7 @@ import play.api.libs.functional.syntax._
 import scala.concurrent.Future
 import play.api.libs.concurrent.Execution.Implicits._
 import braingames.reactivemongo.DBAccessContext
+import braingames.util.{FoxImplicits, Fox}
 
 /**
  * Company: scalableminds
@@ -19,9 +20,9 @@ import braingames.reactivemongo.DBAccessContext
 trait AnnotationLike {
   def _name: Option[String]
 
-  def user: Option[User]
+  def user: Future[Option[User]]
 
-  def content: Option[AnnotationContent]
+  def content: Fox[AnnotationContent]
 
   def _user: ObjectId
 
@@ -45,16 +46,16 @@ trait AnnotationLike {
     this.task.map(_.isTraining) getOrElse false
   }
 
-  def annotationInfo(user: Option[User])(implicit ctx: DBAccessContext): Future[JsObject] =
+  def annotationInfo(user: Option[User])(implicit ctx: DBAccessContext): Fox[JsObject] =
     AnnotationLike.annotationLikeInfoWrites(this, user)
 }
 
-object AnnotationLike {
+object AnnotationLike extends FoxImplicits{
 
   import models.annotation.AnnotationContent._
 
-  def annotationLikeInfoWrites(a: AnnotationLike, user: Option[User])(implicit ctx: DBAccessContext): Future[JsObject] = {
-    a.content.map(writeAnnotationContent).getOrElse(Future.successful(Json.obj())).map {
+  def annotationLikeInfoWrites(a: AnnotationLike, user: Option[User])(implicit ctx: DBAccessContext): Fox[JsObject] = {
+    a.content.flatMap(writeAnnotationContent(_)).getOrElse(Json.obj()).map {
       js =>
         ((__ \ 'version).write[Int] and
           (__ \ 'id).write[String] and

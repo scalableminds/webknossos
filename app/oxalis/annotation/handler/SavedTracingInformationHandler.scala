@@ -17,14 +17,18 @@ object SavedTracingInformationHandler extends AnnotationInformationHandler with 
 
   override val cache = false
 
-  override def nameForAnnotation(a: AnnotationLike): String = a match {
+  override def nameForAnnotation(a: AnnotationLike): Future[String] = a match {
     case annotation: Annotation =>
-      val task = annotation.task.map(_.id) getOrElse ("explorational")
-      val user = annotation.user.map(_.abreviatedName) getOrElse ""
-      val id = oxalis.view.helpers.formatHash(annotation.id)
-      normalize(s"${annotation.dataSetName}__${task}__${user}__${id}")
+      for{
+        user <- annotation.user
+      } yield {
+        val userName = user.map(_.abreviatedName) getOrElse ""
+        val task = annotation.task.map(_.id) getOrElse ("explorational")
+        val id = oxalis.view.helpers.formatHash(annotation.id)
+        normalize(s"${annotation.dataSetName}__${task}__${userName}__${id}")
+      }
     case a =>
-      a.id
+      Future.successful(a.id)
   }
 
   def provideAnnotation(annotationId: String)(implicit ctx: DBAccessContext): Fox[Annotation] = {

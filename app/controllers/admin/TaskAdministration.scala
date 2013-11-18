@@ -7,12 +7,11 @@ import oxalis.security.Secured
 import braingames.util.ExtendedTypes.ExtendedString
 import braingames.geometry.Point3D
 import braingames.binary.models.DataSet
-import models.security.Role
+import models.security.{RoleDAO, Role}
 import models.tracing._
-import models.task.Task
-import models.user.{UsedAnnotation, User, Experience}
+import models.task.{TaskService, Task, TaskType, Project}
+import models.user.{UserService, UsedAnnotation, User, Experience}
 import models.binary.DataSetDAO
-import models.task.TaskType
 import play.api.data.Form
 import play.api.data.Forms._
 import views.html
@@ -20,21 +19,18 @@ import play.api.i18n.Messages
 import play.api.libs.concurrent._
 import play.api.libs.concurrent.Execution.Implicits._
 import java.lang.Cloneable
-import models.task.Project
 import play.api.Logger
 import play.api.mvc.Result
 import play.api.templates.Html
 import oxalis.annotation._
 import controllers.{Controller, Application}
-import models.annotation.Annotation
-import models.annotation.{AnnotationDAO, AnnotationType}
+import models.annotation.{AnnotationService, Annotation, AnnotationDAO, AnnotationType}
 import scala.concurrent.Future
 import oxalis.nml.NMLService
-import play.api.libs.json.{JsObject, JsArray}
+import play.api.libs.json.{Json, JsObject, JsArray}
+import org.bson.types.ObjectId
 
-object TaskAdministration extends Controller with Secured {
-
-  override val DefaultAccessRole = Role.Admin
+object TaskAdministration extends AdminController {
 
   val taskFromNMLForm = basicTaskForm(minTaskInstances = 1)
 
@@ -50,7 +46,7 @@ object TaskAdministration extends Controller with Secured {
         taskInstances => taskInstances >= minTaskInstances),
       "project" -> text.verifying("project.notFound",
         project => project == "" || Project.findOneByName(project).isDefined)))
-    .fill(("", Experience.empty, 100, 10, ""))
+                                             .fill(("", Experience.empty, 100, 10, ""))
 
   val taskMapping = tuple(
     "dataSet" -> text,
@@ -70,21 +66,25 @@ object TaskAdministration extends Controller with Secured {
   val taskForm = Form(
     taskMapping).fill("", "", Point3D(0, 0, 0), Experience.empty, 100, 10, "")
 
-  def list = Authenticated{
+  def list = Authenticated {
     implicit request =>
-      render{
+      render {
         case Accepts.Html() => Ok(html.admin.task.taskList())
-        case Accepts.Json() => JsonOk(
-            JsObject(
-              List("data" -> JsArray(Task.findAllNonTrainings.map(Task.transformToJson)))
-            )
-          )
+        case Accepts.Json() =>
+          Async {
+            for {
+              js <- Future.traverse(Task.findAllNonTrainings)(Task.transformToJson)
+            } yield {
+              JsonOk(Json.obj("data" -> js))
+            }
+          }
       }
   }
 
   def taskCreateHTML(
-    taskFromNMLForm: Form[(String, Experience, Int, Int, String)],
-    taskForm: Form[(String, String, Point3D, Experience, Int, Int, String)])(implicit request: AuthenticatedRequest[_]) =
+                      taskFromNMLForm: Form[(String, Experience, Int, Int, String)],
+                      taskForm: Form[(String, String, Point3D, Experience, Int, Int, String)]
+                    )(implicit request: AuthenticatedRequest[_]) =
     for {
       dataSets <- DataSetDAO.findAll
     } yield {
@@ -140,11 +140,11 @@ object TaskAdministration extends Controller with Secured {
                 priority,
                 instances,
                 _project = project.map(_.name)))
-              AnnotationDAO.createAnnotationBase(task, request.user._id, task.settings, dataSetName, start)
+              AnnotationDAO.createAnnotationBase(task, new ObjectId(request.user._id.stringify), task.settings, dataSetName, start)
               Redirect(routes.TaskAdministration.list)
-                .flashing(
+              .flashing(
                 FlashSuccess(Messages("task.createSuccess")))
-                .highlighting(task.id)
+              .highlighting(task.id)
             }
         })
       }
@@ -188,9 +188,9 @@ object TaskAdministration extends Controller with Secured {
               }
               AnnotationDAO.updateAllUsingNewTaskType(task, taskType)
               Redirect(routes.TaskAdministration.list)
-                .flashing(
+              .flashing(
                 FlashSuccess(Messages("task.editSuccess")))
-                .highlighting(task.id)
+              .highlighting(task.id)
             }
         })
         result
@@ -201,31 +201,31 @@ object TaskAdministration extends Controller with Secured {
     implicit request =>
       Async {
         taskFromNMLForm.bindFromRequest.fold(
-          formWithErrors => taskCreateHTML(formWithErrors, taskForm).map(html => BadRequest(html)), {
-            case (taskTypeId, experience, priority, instances, projectName) =>
-              Future.successful(
-                for {
-                  nmlFile <- request.body.file("nmlFile") ?~ Messages("nml.file.notFound")
-                  taskType <- TaskType.findOneById(taskTypeId)
-                } yield {
-                  val nmls = NMLService.extractFromFile(nmlFile.ref.file, nmlFile.filename)
-                  val project = Project.findOneByName(projectName)
-                  val baseTask = Task(
-                    0,
-                    taskType._id,
-                    experience,
-                    priority,
-                    instances,
-                    _project = project.map(_.name))
-                  nmls.foreach {
-                    nml =>
-                      val task = Task.copyDeepAndInsert(baseTask)
-                      AnnotationDAO.createAnnotationBase(task, request.user._id, task.settings, nml)
-                  }
-                  Redirect(routes.TaskAdministration.list).flashing(
-                    FlashSuccess(Messages("task.bulk.createSuccess", nmls.size)))
-                })
-          })
+        formWithErrors => taskCreateHTML(formWithErrors, taskForm).map(html => BadRequest(html)), {
+          case (taskTypeId, experience, priority, instances, projectName) =>
+            Future.successful(
+              for {
+                nmlFile <- request.body.file("nmlFile") ?~ Messages("nml.file.notFound")
+                taskType <- TaskType.findOneById(taskTypeId)
+              } yield {
+                val nmls = NMLService.extractFromFile(nmlFile.ref.file, nmlFile.filename)
+                val project = Project.findOneByName(projectName)
+                val baseTask = Task(
+                  0,
+                  taskType._id,
+                  experience,
+                  priority,
+                  instances,
+                  _project = project.map(_.name))
+                nmls.foreach {
+                  nml =>
+                    val task = Task.copyDeepAndInsert(baseTask)
+                    AnnotationDAO.createAnnotationBase(task, new ObjectId(request.user._id.stringify), task.settings, nml)
+                }
+                Redirect(routes.TaskAdministration.list).flashing(
+                  FlashSuccess(Messages("task.bulk.createSuccess", nmls.size)))
+              })
+        })
       }
   }
 
@@ -235,10 +235,10 @@ object TaskAdministration extends Controller with Secured {
         data <- postParameter("data") ?~ Messages("task.bulk.notSupplied")
       } yield {
         val inserted = data
-          .split("\n")
-          .map(_.split(" ").map(_.trim))
-          .filter(_.length >= 9)
-          .flatMap {
+                       .split("\n")
+                       .map(_.split(" ").map(_.trim))
+                       .filter(_.length >= 9)
+                       .flatMap {
           params =>
             for {
               experienceValue <- params(3).toIntOpt
@@ -260,55 +260,60 @@ object TaskAdministration extends Controller with Secured {
                 priority,
                 instances,
                 _project = project))
-              AnnotationDAO.createAnnotationBase(task, request.user._id, task.settings, dataSetName, Point3D(x, y, z))
+              AnnotationDAO.createAnnotationBase(task, new ObjectId(request.user._id.stringify), task.settings, dataSetName, Point3D(x, y, z))
               task
             }
         }
         Redirect(routes.TaskAdministration.list)
-          .flashing(
+        .flashing(
           FlashSuccess(Messages("task.bulk.createSuccess", inserted.size.toString)))
       }
   }
 
-  def tasksForProject(projectName: String) = Authenticated { implicit request =>
-    for {
-      project <- Project.findOneByName(projectName) ?~ Messages("project.notFound")
-    } yield {
-      val result = project.tasks.foldLeft(Html.empty) {
-        case (h, e) => h += html.admin.task.simpleTask(e)
+  def tasksForProject(projectName: String) = Authenticated {
+    implicit request =>
+      for {
+        project <- Project.findOneByName(projectName) ?~ Messages("project.notFound")
+      } yield {
+        val result = project.tasks.foldLeft(Html.empty) {
+          case (h, e) => h += html.admin.task.simpleTask(e)
+        }
+        Ok(result)
       }
-      Ok(result)
-    }
   }
 
-  def tasksForType(taskTypeId: String) = Authenticated { implicit request =>
-    for {
-      taskType <- TaskType.findOneById(taskTypeId) ?~ Messages("taskType.notFound")
-    } yield {
-      val result = Task.findAllByTaskType(taskType).foldLeft(Html.empty) {
-        case (h, e) => h += html.admin.task.simpleTask(e)
+  def tasksForType(taskTypeId: String) = Authenticated {
+    implicit request =>
+      for {
+        taskType <- TaskType.findOneById(taskTypeId) ?~ Messages("taskType.notFound")
+      } yield {
+        val result = Task.findAllByTaskType(taskType).foldLeft(Html.empty) {
+          case (h, e) => h += html.admin.task.simpleTask(e)
+        }
+        Ok(result)
       }
-      Ok(result)
-    }
   }
 
   def overview = Authenticated {
     implicit request =>
       Async {
-        play.api.templates.Html
-        val allUsers = User.findAll
-        val allTaskTypes = TaskType.findAll
-        val usersWithTasks =
-          (for {
-            user <- allUsers
-            annotation <- AnnotationDAO.findOpenAnnotationsFor(user, AnnotationType.Task)
+        def combineUsersWithTasks(users: List[User]) = {
+          for {
+            user <- users
+            annotation <- AnnotationService.openTasksFor(user)
             task <- annotation.task
             taskType <- task.taskType
-          } yield (user -> taskType))
-        Task.simulateTaskAssignment(allUsers).map {
-          futureTasks =>
-            val futureTaskTypes = futureTasks.flatMap(e => e._2.taskType.map(e._1 -> _))
-            Ok(html.admin.task.taskOverview(allUsers, allTaskTypes, usersWithTasks.distinct, futureTaskTypes))
+          } yield (user -> taskType)
+        }
+
+        for {
+          users <- UserService.findAll
+          allTaskTypes = TaskType.findAll
+          usersWithTasks = combineUsersWithTasks(users)
+          futureTasks <- TaskService.simulateTaskAssignment(users)
+        } yield {
+          val futureTaskTypes = futureTasks.flatMap(e => e._2.taskType.map(e._1 -> _))
+          Ok(html.admin.task.taskOverview(users, allTaskTypes, usersWithTasks.distinct, futureTaskTypes))
         }
       }
   }

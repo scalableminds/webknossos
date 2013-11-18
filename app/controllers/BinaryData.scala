@@ -8,7 +8,7 @@ import Input.EOF
 import play.api.libs.concurrent._
 import play.api.libs.json.JsValue
 import play.libs.Akka._
-import models.security.Role
+import _root_.models.security.{RoleDAO, Role}
 import models.binary._
 import oxalis.security.{UserAwareRequest, AuthenticatedRequest, Secured}
 import scala.concurrent.Future
@@ -42,7 +42,7 @@ import braingames.util.Fox
 //import scala.concurrent.ExecutionContext.Implicits.global
 
 object BinaryData extends Controller with Secured {
-  override val DefaultAccessRole = Role.User
+  override val DefaultAccessRole = RoleDAO.User
 
   val conf = Play.configuration
 

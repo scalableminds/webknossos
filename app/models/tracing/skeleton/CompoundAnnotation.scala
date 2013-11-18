@@ -15,9 +15,11 @@ import models.annotation.Annotation
 import models.annotation.AnnotationType._
 import models.user.User
 import org.bson.types.ObjectId
+import scala.concurrent.Future
+import play.api.libs.concurrent.Execution.Implicits._
+import braingames.util.{FoxImplicits, Fox}
 
-
-object CompoundAnnotation extends Formatter {
+object CompoundAnnotation extends Formatter with FoxImplicits{
 
   def treePrefix(tracing: SkeletonTracingLike, user: Option[User], taskId: Option[ObjectId]) = {
     val userName = user.map(_.abreviatedName) getOrElse ""
@@ -64,18 +66,23 @@ object CompoundAnnotation extends Formatter {
   def createFromAnnotations(annotations: List[Annotation], id: String, typ: AnnotationType): Option[TemporaryAnnotation] = {
     val as = annotations.filter(filterAnnotation)
 
-    def createContent() = {
-      lazy val ts: List[AnnotationContent] = as.flatMap(annotation => annotation.content.map {
-        case t: SkeletonTracing =>
-          renameTreesOfTracing(t, annotation.user, annotation._task)
-        case e =>
-          e
+    def annotationContent(): Fox[TemporarySkeletonTracing] = {
+      val annotationsWithContent =
+        Future.traverse(as)(a => a.content.map(a ->_).futureBox).map(_.flatten)
 
-      })
-      createFromTracings(ts, id)
+      annotationsWithContent.flatMap( Future.traverse(_){
+        case (annotation, skeleton: SkeletonTracing) =>
+          annotation.user.map {
+            userOpt =>
+              renameTreesOfTracing(skeleton, userOpt, annotation._task)
+          }
+        case (annotation, content) =>
+          Future.successful(content)
+      }).map {
+        tracings =>
+          createFromTracings(tracings, id)
+      }
     }
-
-    val annotationContent = createContent
 
     as match {
       case head :: _ =>
@@ -88,6 +95,7 @@ object CompoundAnnotation extends Formatter {
         None
     }
   }
+
 
   def createFromTracings(tracings: List[AnnotationContent], id: String): Option[TemporarySkeletonTracing] = {
     def mergeThem(tracings: List[AnnotationContent]): Option[TemporarySkeletonTracing] = {

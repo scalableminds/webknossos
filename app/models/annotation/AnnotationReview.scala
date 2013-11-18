@@ -6,7 +6,7 @@ import models.context._
 import com.novus.salat.annotations._
 import com.novus.salat.dao.SalatDAO
 import models.basics.BasicDAO
-import models.user.User
+import models.user.{UserService, User}
 import java.util.Date
 
 case class AnnotationReview(
@@ -16,7 +16,7 @@ case class AnnotationReview(
     comment: Option[String] = None,
     _id: ObjectId = new ObjectId) {
 
-  def reviewer = User.findOneById(_reviewer)
+  def reviewer = UserService.findOneById(_reviewer.toString, useCache = true)
   
   val date = new Date(timestamp)
 }

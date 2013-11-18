@@ -5,7 +5,7 @@ import models.task.Project
 import play.api.i18n.Messages
 import models.user.User
 import models.annotation.{AnnotationRestrictions, TemporaryAnnotation}
-import models.security.Role
+import models.security.{RoleDAO, Role}
 import models.tracing.skeleton.CompoundAnnotation
 import braingames.reactivemongo.DBAccessContext
 import scala.concurrent.Future
@@ -23,7 +23,7 @@ object ProjectInformationHandler extends AnnotationInformationHandler with FoxIm
       override def allowAccess(user: Option[User]) =
         user.flatMap {
           user =>
-            Role.Admin.map(user.hasRole)
+            RoleDAO.Admin.map(user.hasRole)
         } getOrElse false
     }
 

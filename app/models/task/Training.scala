@@ -24,6 +24,6 @@ object Training extends BasicDAOFormats{
     Training(domain, gain, loss, null)
 
   def findAssignableFor(user: User) = {
-    Task.findAssignableFor(user, shouldBeTraining = true)
+    TaskService.findAssignableFor(user, shouldBeTraining = true)
   }
 }

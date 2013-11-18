@@ -43,7 +43,7 @@ object Global extends GlobalSettings {
     startActors(conf.underlying)
 
     if (conf.getBoolean("application.insertInitialData") getOrElse false) {
-      InitialData.insertRoles()
+
       InitialData.insertUsers()
       InitialData.insertTaskAlgorithms()
       InitialData.insertTeams()
@@ -59,7 +59,7 @@ object Global extends GlobalSettings {
       Logger.info("Directory start completed")
     })
 
-    Role.ensureImportantRoles()
+    RoleService.ensureImportantRoles()
   }
 
   override def onStop(app: Application) {
@@ -81,32 +81,22 @@ object Global extends GlobalSettings {
  */
 object InitialData extends GlobalDBAccess {
 
-  def insertRoles() = {
-    if (Role.findAll.isEmpty) {
-      Role.insertOne(Role("user", Nil, Color(0.2274F, 0.5294F, 0.6784F, 1)))
-      Role.insertOne(Role("admin", Permission("admin.*", "*" :: Nil) :: Nil, Color(0.2F, 0.2F, 0.2F, 1)))
-      Role.insertOne(Role("reviewer",
-        Permission("admin.review.*", "*" :: Nil) ::
-          Permission("admin.menu", "*" :: Nil) :: Nil,
-        Color(0.2745F, 0.5333F, 0.2784F, 1)))
-    }
-  }
-
   def insertUsers() = {
-    if (User.findOneByEmail("scmboy@scalableminds.com").isEmpty) {
-      println("inserted")
-      User.insertOne(User(
-        "scmboy@scalableminds.com",
-        "SCM",
-        "Boy",
-        true,
-        braingames.security.SCrypt.hashPassword("secret"),
-        List(TeamMembership(
-          TeamPath("Structure of Neocortical Circuits Group" :: Nil),
-          TeamMembership.Admin)),
-        "local",
-        UserConfiguration.defaultConfiguration,
-        Set("user", "admin")))
+    UserDAO.findOneByEmail("scmboy@scalableminds.com").map {
+      case None =>
+        println("inserted")
+        UserDAO.insert(User(
+          "scmboy@scalableminds.com",
+          "SCM",
+          "Boy",
+          true,
+          braingames.security.SCrypt.hashPassword("secret"),
+          List(TeamMembership(
+            TeamPath("Structure of Neocortical Circuits Group" :: Nil),
+            TeamMembership.Admin)),
+          UserSettings.defaultSettings,
+          Set("user", "admin")))
+      case _ =>
     }
   }
 

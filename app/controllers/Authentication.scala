@@ -21,9 +21,9 @@ import play.api.i18n.Messages
 import oxalis.mail.DefaultMails
 import models.tracing.skeleton.SkeletonTracing
 import oxalis.view.{ProvidesUnauthorizedSessionData, UnAuthedSessionData}
-import controllers.Controller
+import scala.concurrent.Future
 
-object Authentication extends Controller with Secured with ProvidesUnauthorizedSessionData{
+object Authentication extends Controller with Secured with ProvidesUnauthorizedSessionData {
   // -- Authentication
   override def DefaultAccessRole = None
 
@@ -47,9 +47,7 @@ object Authentication extends Controller with Secured with ProvidesUnauthorizedS
         "email" -> email,
         "firstName" -> nonEmptyText(1, 30),
         "lastName" -> nonEmptyText(1, 30),
-        "password" -> passwordField)(registerFormApply)(registerFormUnapply)
-        .verifying("user.email.alreadyInUse", 
-          user => User.findLocalByEmail(user._1).isEmpty))
+        "password" -> passwordField)(registerFormApply)(registerFormUnapply))
   }
 
   def register = Action {
@@ -60,41 +58,43 @@ object Authentication extends Controller with Secured with ProvidesUnauthorizedS
   /**
    * Handle registration form submission.
    */
-  def registrate = Action { implicit request =>
-    Async {
-      registerForm.bindFromRequest.fold(
+  def registrate = Action {
+    implicit request =>
+      Async {
+        registerForm.bindFromRequest.fold(
         formWithErrors =>
-          Promise.pure(BadRequest(html.user.register(formWithErrors))),
-        {
+          Future.successful(BadRequest(html.user.register(formWithErrors))), {
           case (email, firstName, lastName, password) => {
-            val user =
-              User.create(email, firstName, lastName, password, autoVerify)
-
-            BrainTracing.register(user, password).map { brainDBresult =>
-              Application.Mailer ! Send(
-                DefaultMails.registerMail(user.name, email, brainDBresult))
-              Application.Mailer ! Send(
-                DefaultMails.registerAdminNotifyerMail(user.name, email, brainDBresult))
-              if (autoVerify) {
-                Redirect(controllers.routes.Application.index)
-                  .withSession(Secured.createSession(user))
-              } else {
-                Redirect(controllers.routes.Authentication.login)
-                  .flashing("modal" -> "An account has been created. An administrator is going to unlock you soon.")
-              }
+            UserService.findOneByEmail(email).flatMap {
+              case None =>
+                for {
+                  user <- UserService.insert(email, firstName, lastName, password, autoVerify)
+                  brainDBResult <- BrainTracing.register(user, password)
+                } yield {
+                  Application.Mailer ! Send(
+                    DefaultMails.registerMail(user.name, email, brainDBResult))
+                  Application.Mailer ! Send(
+                    DefaultMails.registerAdminNotifyerMail(user.name, email, brainDBResult))
+                  if (autoVerify) {
+                    Redirect(controllers.routes.Application.index)
+                      .withSession(Secured.createSession(user))
+                  } else {
+                    Redirect(controllers.routes.Authentication.login)
+                      .flashing("modal" -> "An account has been created. An administrator is going to unlock you soon.")
+                  }
+                }
+              case Some(_) =>
+                Future.successful(JsonBadRequest(Messages("user.email.alreadyInUse")))
             }
           }
         })
-    }
+      }
   }
 
   val loginForm = Form(
     tuple(
       "email" -> text,
-      "password" -> text) verifying ("user.login.failed", result => result match {
-        case (email, password) =>
-          User.auth(email.toLowerCase, password).isDefined
-      }))
+      "password" -> text))
 
   /**
    * Login page.
@@ -109,15 +109,19 @@ object Authentication extends Controller with Secured with ProvidesUnauthorizedS
    */
   def authenticate = Action {
     implicit request =>
-      loginForm.bindFromRequest.fold(
+      Async {
+        loginForm.bindFromRequest.fold(
         formWithErrors =>
-          BadRequest(html.user.login(formWithErrors)),
-        {
+          Future.successful(BadRequest(html.user.login(formWithErrors))), {
           case (email, password) =>
-            val user = User.findLocalByEmail(email.toLowerCase).get
-            Redirect(controllers.routes.Application.index)
-              .withSession(Secured.createSession(user))
+            for {
+              user <- UserService.auth(email.toLowerCase, password) ?~> Messages("user.login.failed")
+            } yield {
+              Redirect(controllers.routes.Application.index)
+                .withSession(Secured.createSession(user))
+            }
         })
+      }
   }
 
   /**

@@ -7,22 +7,14 @@ package models.annotation
  * Time: 03:05
  */
 
-import oxalis.nml.TreeLike
-import oxalis.nml.BranchPoint
-import braingames.geometry.Scale
-import braingames.geometry.Point3D
-import oxalis.nml.Comment
-import oxalis.nml.NML
-import models.user.User
-import models.user.User
-import models.task.Task
 import models.annotation.AnnotationType._
 import org.bson.types.ObjectId
-import models.tracing.skeleton.{SkeletonTracingLike, TemporarySkeletonTracing}
+import scala.concurrent.Future
+import braingames.util.Fox
 
 case class TemporaryAnnotation(
                                 id: String,
-                                _content: () => Option[AnnotationContent],
+                                _content: () => Fox[AnnotationContent],
                                 typ: AnnotationType = AnnotationType.CompoundProject,
                                 restrictions: AnnotationRestrictions = AnnotationRestrictions.restrictEverything,
                                 state: AnnotationState = AnnotationState.Finished,
@@ -31,7 +23,7 @@ case class TemporaryAnnotation(
 
   def _user = new ObjectId
 
-  def user = None
+  def user = Future.successful(None)
 
   def incrementVersion = this.copy(version = version + 1)
 

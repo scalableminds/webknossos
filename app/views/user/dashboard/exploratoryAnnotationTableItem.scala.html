@@ -11,7 +11,7 @@
         </div>
       </form>
     </td>
-    <td> @annotation.content.map(_.dataSetName) </td>
+    <td> @annotation.content.map(_.dataSetName).getOrElse("") </td>
     @defining(models.annotation.AnnotationDAO.statisticsForAnnotation(annotation)){ statsOpt =>
       @statsOpt.map{stats =>
       <td> 

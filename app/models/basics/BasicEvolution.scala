@@ -10,7 +10,7 @@ import models.tracing._
 import models.tracing.skeleton.SkeletonTracing
 
 object BasicEvolution {
-  val watchedClasses: List[BasicDAO[_]] = List(Role, User, Task, SkeletonTracing, UsedAnnotation)
+  val watchedClasses: List[BasicDAO[_]] = List(Task, SkeletonTracing)
 
   def runDBEvolution() {
     val fakeObjectId = new ObjectId

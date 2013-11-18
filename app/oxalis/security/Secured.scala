@@ -1,6 +1,6 @@
 package oxalis.security
 
-import models.user.User
+import models.user.{UserService, User}
 import play.api.mvc._
 import play.api.mvc.BodyParsers
 import play.api.mvc.Results._
@@ -20,11 +20,12 @@ import play.api.libs.iteratee.Iteratee
 import play.api.libs.iteratee.Concurrent
 import play.api.libs.concurrent.Akka
 import akka.actor.Props
-import oxalis.user.ActivityMonitor
-import oxalis.user.UserActivity
+import oxalis.user.{ActivityMonitor, UserActivity}
 import oxalis.view.AuthedSessionData
 import scala.concurrent.Future
-
+import braingames.util.{FoxImplicits, Fox}
+import net.liftweb.common.{Full, Empty}
+import play.api.libs.concurrent.Execution.Implicits._
 
 class AuthenticatedRequest[A](
   val user: User, override val request: Request[A]) extends UserAwareRequest(Some(user), request)
@@ -51,17 +52,14 @@ object Secured {
 /**
  * Provide security features
  */
-trait Secured {
+trait Secured extends FoxImplicits {
   /**
    * Defines the access role which is used if no role is passed to an
    * authenticated action
    */
-  val defaultUserName = "scmboy@scalableminds.com"
-  lazy val defaultUser = User.findLocalByEmail(defaultUserName)
-
   def DefaultAccessRole: Option[Role]
 
-  val userService = oxalis.user.UserService
+  val userService = models.user.UserService
 
   /**
    * Defines the default permission used for authenticated actions if not
@@ -72,28 +70,24 @@ trait Secured {
   /**
    * Tries to extract the user from a request
    */
-  def maybeUser(implicit request: RequestHeader): Option[User] = {
-    for {
-      userId <- userId(request)
-      user <- userService.findOneById(userId)
-    } yield user
+  def maybeUser(implicit request: RequestHeader): Fox[User] =
+    userFromSession orElse autoLoginUser
+
+  private def autoLoginUser = {
+    // development setting: if the key is set, one gets logged in automatically
+    if (Play.configuration.getBoolean("application.enableAutoLogin").get)
+      UserService.defaultUser
+    else
+      Future.successful(None)
   }
 
-  /**
-   * Retrieve the connected users email address.
-   */
-  private def userId(request: RequestHeader) = {
+  private def userFromSession(implicit request: RequestHeader): Fox[User] =
     request.session.get(Secured.SessionInformationKey) match {
       case Some(id) =>
-        Some(id)
-      case _ if Play.configuration.getBoolean("application.enableAutoLogin").get =>
-        // development setting: if the above key is set, one gets logged in 
-        // automatically
-        defaultUser.map(_.id)
+        userService.findOneById(id, useCache = true)
       case _ =>
-        None
+        Empty
     }
-  }
 
   /**
    * Awesome construct to create an authenticated action. It uses the helper
@@ -114,18 +108,22 @@ trait Secured {
     permission: Option[Permission] = DefaultAccessPermission)(f: AuthenticatedRequest[A] => Result) = {
     Action(parser) {
       request =>
-        maybeUser(request).map {
-          user =>
-            Secured.ActivityMonitor ! UserActivity(user, System.currentTimeMillis)
-            if (user.verified) {
-              if (hasAccess(user, role, permission))
-                f(new AuthenticatedRequest(user, request))
-              else
-                Forbidden(views.html.error.defaultError(Messages("user.noPermission"), true)(AuthedSessionData(user, request.flash)))
-            } else {
-              Forbidden(views.html.error.defaultError(Messages("user.notVerified"), false)(AuthedSessionData(user, request.flash)))
-            }
-        }.getOrElse(onUnauthorized(request))
+        Async {
+          maybeUser(request).map {
+            user =>
+              Secured.ActivityMonitor ! UserActivity(user, System.currentTimeMillis)
+              if (user.verified) {
+                hasAccess(user, role, permission) match {
+                  case true =>
+                    f(new AuthenticatedRequest(user, request))
+                  case false =>
+                    Forbidden(views.html.error.defaultError(Messages("user.noPermission"), true)(AuthedSessionData(user, request.flash)))
+                }
+              } else {
+                Forbidden(views.html.error.defaultError(Messages("user.notVerified"), false)(AuthedSessionData(user, request.flash)))
+              }
+          } getOrElse onUnauthorized(request)
+        }
     }
   }
 
@@ -133,12 +131,14 @@ trait Secured {
     parser: BodyParser[A] = BodyParsers.parse.anyContent)(f: UserAwareRequest[A] => Result) = {
     Action(parser) {
       request =>
-        maybeUser(request).filter(_.verified).map {
-          user =>
-            Secured.ActivityMonitor ! UserActivity(user, System.currentTimeMillis)
-            f(new AuthenticatedRequest(user, request))
-        }.getOrElse{
-          f(new UserAwareRequest(None, request))
+        Async {
+          maybeUser(request).filter(_.verified).map {
+            user =>
+              Secured.ActivityMonitor ! UserActivity(user, System.currentTimeMillis)
+              f(new AuthenticatedRequest(user, request))
+          }.getOrElse {
+            f(new UserAwareRequest(None, request))
+          }
         }
     }
   }
@@ -159,21 +159,24 @@ trait Secured {
         (for {
           user <- maybeUser(request)
           if (hasAccess(user, role, permission))
+          webSocket <- f(user)(request)
         } yield {
-          f(user)(request)
+          webSocket
         }).getOrElse {
           val iteratee = Done[A, Unit]((), Input.EOF)
           // Send an error and close the socket
           val (enumerator, channel) = Concurrent.broadcast[A]
           channel.eofAndEnd
 
-          Future.successful((iteratee -> enumerator))
+          (iteratee -> enumerator)
         }
     }
 
-  def hasAccess(user: User, role: Option[Role], permission: Option[Permission]) =
-    (role.isEmpty || user.hasRole(role.get)) &&
-      (permission.isEmpty || user.hasPermission(permission.get))
+  def hasAccess(user: User, role: Option[Role], permission: Option[Permission]): Boolean =
+    if (role.isEmpty || user.hasRole(role.get))
+      permission.map(user.hasPermission) getOrElse true
+    else
+      false
 
   /**
    * Redirect to login if the user in not authorized.
@@ -185,11 +188,12 @@ trait Secured {
 
   /**
    * Action for authenticated users.
-   */
+
   def IsAuthenticated(f: => String => Request[AnyContent] => Result) =
     Security.Authenticated(userId, onUnauthorized) {
       user =>
         Action(request => f(user)(request))
     }
+   */
 
 }

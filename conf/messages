@@ -14,6 +14,8 @@ password.validation=Password (again)
 firstName=First Name
 lastName=Last Name
 
+format.json.invalid=Invalid Json format
+
 image.create.failed=Failed to create image
 
 user.verified={0} has been verified
@@ -31,6 +33,7 @@ user.login.failed=Invalid email or password
 user.login.success=You are now logged in
 user.logout.success=You have successfully logged out
 user.settings.invalid=Couldn''t parse settings
+user.settings.updated=You settings got updated
 user.experience.increased=Increased experience of {0}
 user.experience.set=Set experience of {0}
 user.experience.removed=Removed experience from {0}

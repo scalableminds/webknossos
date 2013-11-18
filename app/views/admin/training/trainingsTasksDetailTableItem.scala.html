@@ -1,5 +1,7 @@
 @(user: models.user.User, annotation: models.annotation.Annotation)
 
+@import play.api.libs.concurrent.Execution.Implicits._
+
 @reviewLink() = {
   <a href=@controllers.admin.routes.TrainingsTracingAdministration.startReview(annotation.id) data-ajax="replace-row"><i class="icon-eye-open"></i> start review </a>
 }
@@ -21,17 +23,16 @@
 }
 
 @finishedLabel(reviews: List[models.annotation.AnnotationReview]) = {
-  <i class="icon-ok"></i><span> finished @reviews.headOption.flatMap(_.reviewer).map{user =>
-    (reviewed by @user.name)
-  }</span>
+  <i class="icon-ok"></i><span> finished @{reviews.headOption.map(_.reviewer.map(_.map( "(reviewed by" + _.name)))}
+  </span>
 }
 
 @alreadyInReviewLabel(review: models.annotation.AnnotationReview) = {
-  <i class="icon-eye-open"></i><span> Already getting reviewed by @review.reviewer.map( _.name) .</span>
+  <i class="icon-eye-open"></i><span> Already getting reviewed by @review.reviewer.map( _.map(_.name)) .</span>
 }
 
 <tr>
-  <td> @annotation.user.map(_.name).getOrElse("<Maik>") </td>
+  <td> @annotation.user.map(_.map(_.name).getOrElse("<Maik>")) </td>
   <td> @annotation.content.map(c => formatDate(c.date)) </td>
   <td class="nowrap">
   @{annotation.review match{

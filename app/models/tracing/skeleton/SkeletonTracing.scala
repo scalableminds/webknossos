@@ -5,7 +5,7 @@ import com.mongodb.casbah.commons.MongoDBObject
 import org.bson.types.ObjectId
 import play.api.libs.json._
 import models.binary.DataSetDAO
-import models.user.UsedAnnotation
+import models.user.{UsedAnnotationDAO, UsedAnnotation}
 import braingames.geometry.Scale
 import braingames.image.Color
 import models.basics._
@@ -16,6 +16,9 @@ import models.tracing.CommonTracingDAO
 import scala.Some
 import braingames.binary.models.DataSet
 import oxalis.nml.NML
+import braingames.reactivemongo.DBAccessContext
+import scala.tools.nsc.Global
+import braingames.reactivemongo.GlobalAccessContext
 
 case class SkeletonTracing(
   dataSetName: String,
@@ -171,7 +174,8 @@ object SkeletonTracing extends BasicDAO[SkeletonTracing]("skeletons") with Annot
   }
 
   override def removeById(tracing: ObjectId, wc: com.mongodb.WriteConcern = defaultWriteConcern) = {
-    UsedAnnotation.removeAll(tracing.toString)
+    // TODO: remove GlobalAccessContext
+    UsedAnnotationDAO.removeAll(tracing.toString)(GlobalAccessContext)
     DBTree.removeAllWithTracingId(tracing)
     super.removeById(tracing, wc)
   }

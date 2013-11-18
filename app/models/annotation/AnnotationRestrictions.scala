@@ -1,7 +1,7 @@
 package models.annotation
 
 import models.user.User
-import models.security.Role
+import models.security.{RoleDAO, Role}
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
 
@@ -47,7 +47,7 @@ object AnnotationRestrictions {
       override def allowAccess(user: Option[User]) = {
         user.map {
           user =>
-            annotation._user == user._id || (Role.Admin.map(user.hasRole) getOrElse false)
+            annotation._user == user._id || (RoleDAO.Admin.map(user.hasRole) getOrElse false)
         } getOrElse false
       }
 
@@ -61,7 +61,7 @@ object AnnotationRestrictions {
       override def allowFinish(user: Option[User]) = {
         user.map {
           user =>
-            (annotation._user == user._id || (Role.Admin.map(user.hasRole) getOrElse false)) && !annotation.state.isFinished
+            (annotation._user == user._id || (RoleDAO.Admin.map(user.hasRole) getOrElse false)) && !annotation.state.isFinished
         } getOrElse false
       }
 

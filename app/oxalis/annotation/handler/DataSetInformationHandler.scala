@@ -13,6 +13,7 @@ import play.api.libs.concurrent.Execution.Implicits._
 import braingames.geometry.Point3D
 import play.api.Logger
 import braingames.util.{FoxImplicits, Fox}
+import scala.concurrent.Future
 
 /**
  * Company: scalableminds
@@ -46,7 +47,7 @@ object DataSetInformationHandler extends AnnotationInformationHandler with FoxIm
       )
       TemporaryAnnotation(
         dataSetName,
-        () => Some(content),
+        () => Future.successful(Some(content)),
         AnnotationType.View,
         dataSetRestrictions())
     }

@@ -3,7 +3,7 @@ package controllers
 import play.api.libs.json.Json._
 import play.api.libs.json._
 import oxalis.security.Secured
-import models.security.Role
+import models.security.{RoleDAO, Role}
 import play.api.mvc._
 import play.api.Logger
 import models.user.User
@@ -21,10 +21,9 @@ import play.api.i18n.Messages
 import oxalis.mail.DefaultMails
 import braingames.mail.Send
 import models.tracing.skeleton.SkeletonTracing
-import controllers.Controller
 
 object Jira extends Controller with Secured {
-  override val DefaultAccessRole = Role.User
+  override val DefaultAccessRole = RoleDAO.User
   
   val jiraUrl = "https://jira.scm.io"
   val issueTypes = Map("bug" -> "Bug", "feature" -> "New Feature", "unrelated" -> "")

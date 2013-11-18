@@ -2,7 +2,7 @@ package controllers.admin
 
 import play.mvc.Security.Authenticated
 import oxalis.security.Secured
-import models.security.Role
+import models.security.{RoleDAO, Role}
 import oxalis.annotation._
 import views._
 import models.task.TaskType
@@ -16,9 +16,7 @@ import play.api.templates.Html
 import controllers.{Controller, Application}
 import models.annotation.AnnotationDAO
 
-object TaskTypeAdministration extends Controller with Secured{
-
-  override val DefaultAccessRole = Role.Admin
+object TaskTypeAdministration extends AdminController{
 
   val taskTypeForm = Form(
     mapping(

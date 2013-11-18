@@ -32,7 +32,7 @@ object DataSetRepository extends AbstractDataSetRepository with GlobalDBAccess{
     DataSetDAO.findOneByName(name)
 }
 
-object DataSetDAO extends BasicReactiveDAO[DataSet] {
+object DataSetDAO extends SecuredBaseDAO[DataSet] {
   val collectionName = "dataSets"
 
   // Security

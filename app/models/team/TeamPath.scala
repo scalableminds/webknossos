@@ -14,6 +14,7 @@ import java.util.regex.Pattern
  * Time: 21:19
  */
 case class TeamPath(elements: List[String]) {
+
   override def toString = TeamPath.pathStringFor(elements)
 
   def toStringWithWhiteSpace = TeamPath.prettyfiedPathStringFor(elements)
@@ -42,14 +43,14 @@ case class TeamPath(elements: List[String]) {
   }
 }
 
-object TeamPath extends Function1[List[String], TeamPath]{
+object TeamPath{
 
   val TeamSeparator = "/"
 
   val All = "*"
 
-  val teamPathFormat = {
-    val r = (__ \ 'elements).read(list[String]).map(TeamPath.apply)
+  implicit val teamPathFormat = {
+    val r = (__ \ 'elements).read(list[String]).map(TeamPath.apply _)
     val w = (__ \ 'elements).write[List[String]].contramap{ t: TeamPath => t.elements}
     Format(r, w)
   }

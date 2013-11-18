@@ -1,16 +1,14 @@
 package controllers.admin
 
 import oxalis.security.Secured
-import models.security.Role
+import models.security.{RoleDAO, Role}
 import models.task.TaskSelectionAlgorithm
 import play.api.libs.json.Json
 import views.html
 import play.api.i18n.Messages
 import controllers.Controller
 
-object TaskAlgorithm extends Controller with Secured {
-
-  override val DefaultAccessRole = Role.Admin
+object TaskAlgorithm extends AdminController {
 
   def testAlgorithm = Authenticated(parser = parse.urlFormEncoded) { implicit request =>
     (for {

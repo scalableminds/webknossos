@@ -25,9 +25,11 @@ import models.user.Experience
 import models.tracing._
 import oxalis.nml.Tree
 import scala.util._
-import models.annotation.{AnnotationType, AnnotationDAO, AnnotationSettings}
+import models.annotation.{AnnotationService, AnnotationType, AnnotationDAO, AnnotationSettings}
 import play.api.libs.json.{Json, JsObject}
 import braingames.format.Formatter
+import scala.concurrent.duration._
+import braingames.util.FoxImplicits
 
 case class CompletionStatus(open: Int, inProgress: Int, completed: Int)
 
@@ -78,68 +80,87 @@ case class Task(
       inProgress = inProgress,
       completed = assignedInstances - inProgress)
   }
+
+  def hasEnoughExperience(user: User) = {
+    if (this.neededExperience.isEmpty) {
+      true
+    } else {
+      user.experiences
+        .get(this.neededExperience.domain)
+        .map(_ >= this.neededExperience.value)
+        .getOrElse(false)
+    }
+  }
 }
 
-object Task extends BasicDAO[Task]("tasks") {
-  this.collection.ensureIndex("_project")
-  this.collection.ensureIndex("_taskType")
+object TaskService extends TaskAssignmentSimulation with TaskAssignment{
+  def findAllTrainings = Task.findAllTrainings
+  def findAllAssignableNonTrainings = Task.findAllAssignableNonTrainings
 
-  val jsExecutionActor = Akka.system.actorOf(Props[JsExecutionActor])
+
+}
+
+trait TaskAssignmentSimulation extends TaskAssignment{
+  def simulateFinishOfCurrentTask(user: User): User = {
+    AnnotationService.openTasksFor(user).foldLeft(user){
+      case (u, annotation) =>
+        (for {
+          task <- annotation.task
+          if (task.isTraining)
+          training <- task.training
+        } yield {
+          u.increaseExperience(training.domain, training.gain)
+        }) getOrElse u
+    }
+  }
+
+  def simulateTaskAssignment(users: List[User]) = {
+    val preparedUsers = users.map(simulateFinishOfCurrentTask)
+    def f(users: List[User], tasks: Map[ObjectId, Task], result: Map[User, Task]): Future[Map[User, Task]] = {
+      users match {
+        case user :: tail =>
+          simulateTaskAssignments(user, tasks).flatMap {
+            case Some((task, alertedtasks)) =>
+              f(tail, alertedtasks, result + (user -> task))
+            case _ =>
+              f(tail, tasks, result)
+          }
+        case _ =>
+          Future.successful(result)
+      }
+    }
+    val nonTrainings = findAllAssignableNonTrainings.map(t => t._id -> t).toMap
+    f(preparedUsers, nonTrainings, Map.empty)
+  }
+
+  def simulateTaskAssignments(user: User, tasks: Map[ObjectId, Task]) = {
+    val doneTasks = AnnotationDAO.findFor(user, AnnotationType.Task).flatMap(_._task)
+    val tasksAvailable = tasks.values.filter(t =>
+      t.hasEnoughExperience(user) && !doneTasks.contains(t._id) && !t.isFullyAssigned)
+    nextTaskForUser(user, tasksAvailable.toArray).map {
+      case Some(task) =>
+        Some(task -> (tasks + (task._id -> task.copy(assignedInstances = task.assignedInstances + 1))))
+      case _ =>
+        Training.findAssignableFor(user).headOption.map {
+          training =>
+            training -> tasks
+        }
+    }
+  }
+}
+
+trait TaskAssignment{
+  def findAllTrainings: List[Task]
+  def findAllAssignableNonTrainings: List[Task]
+
   val conf = current.configuration
 
-  implicit val taskFormat = Json.format[Task]
-  
   implicit val timeout = Timeout((conf.getInt("js.defaultTimeout") getOrElse 5) seconds) // needed for `?` below
 
-  override def removeById(t: ObjectId, wc: com.mongodb.WriteConcern = defaultWriteConcern) = {
-    AnnotationDAO.removeAllWithTaskId(t)
-    super.removeById(t, wc)
-  }
-
-  def transformToJson(task: Task) : JsObject = {
-   Json.obj (
-      "id" -> task.id,
-      "formattedHash" -> Formatter.formatHash(task.id),
-      "seedIdHeidelberg" -> task.seedIdHeidelberg,
-      "projectName" -> task._project.getOrElse("").toString,
-      "type" -> task.taskType.map(_.summary).getOrElse("<deleted>").toString ,
-      "dataSet" -> task.annotationBase.map(_.dataSetName),
-      "editPosition" -> task.annotationBase.flatMap(_.content.map(_.editPosition)),
-      "neededExperience" -> task.neededExperience,
-      "priority" -> task.priority,
-      "created" -> Formatter.formatDate(task.created),
-      "status" -> task.status
-    )
-  }
-
-  def findAllOfOneType(isTraining: Boolean) =
-    find(MongoDBObject("training" -> MongoDBObject("$exists" -> isTraining)))
-      .toList
-
-  def findAllByTaskType(taskType: TaskType) =
-    find(MongoDBObject("_taskType" -> taskType._id))
-      .toList
-
-  def findAllByProject(project: String) =
-    find(MongoDBObject("_project" -> project))
-      .toList
-
-  def findAllTrainings =
-    findAllOfOneType(isTraining = true)
-
-  def findAllNonTrainings =
-    findAllOfOneType(isTraining = false)
-
-  def findAllAssignableNonTrainings = {
-    findAllNonTrainings.filter(!_.isFullyAssigned)
-  }
+  val jsExecutionActor = Akka.system.actorOf(Props[JsExecutionActor])
 
   def findAssignableTasksFor(user: User) = {
     findAssignableFor(user, shouldBeTraining = false)
-  }
-
-  def logTime(time: Long, task: Task) = {
-    update(MongoDBObject("_id" -> task._id), MongoDBObject("$inc" -> MongoDBObject("tracingTime" -> time)))
   }
 
   def findAssignableFor(user: User, shouldBeTraining: Boolean) = {
@@ -151,49 +172,10 @@ object Task extends BasicDAO[Task]("tasks") {
         findAllAssignableNonTrainings
 
     availableTasks.filter(t =>
-      !finishedTasks.contains(t._id) && hasEnoughExperience(user, t))
+      !finishedTasks.contains(t._id) && t.hasEnoughExperience(user))
   }
 
-  def copyDeepAndInsert(source: Task, includeUserTracings: Boolean = true) = {
-    val task = insertOne(source.copy(_id = new ObjectId))
-    AnnotationDAO
-      .findByTaskId(source._id)
-      .foreach {
-      annotation =>
-        if (includeUserTracings || AnnotationType.isSystemTracing(annotation)) {
-          println("Copying: " + annotation.id)
-          AnnotationDAO.copyDeepAndInsert(annotation.copy(_task = Some(task._id)))
-        }
-    }
-    task
-  }
-
-  def toTrainingForm(t: Task): Option[(String, Training)] =
-    Some((t.id, (t.training getOrElse Training.empty)))
-
-  def fromTrainingForm(taskId: String, training: Training) =
-    Task.findOneById(taskId) map {
-      _.copy(training = Some(training))
-    } getOrElse null
-
-  def hasEnoughExperience(user: User, task: Task) = {
-    if (task.neededExperience.isEmpty) {
-      true
-    } else {
-      user.experiences
-        .get(task.neededExperience.domain)
-        .map(_ >= task.neededExperience.value)
-        .getOrElse(false)
-    }
-  }
-
-  def nextTaskForUser(user: User): Future[Option[Task]] = {
-    nextTaskForUser(
-      user,
-      findAssignableTasksFor(user).toArray)
-  }
-
-  private def nextTaskForUser(user: User, tasks: Array[Task]): Future[Option[Task]] = {
+  protected def nextTaskForUser(user: User, tasks: Array[Task]): Future[Option[Task]] = {
     if (tasks.isEmpty) {
       Future.successful(None)
     } else {
@@ -219,48 +201,90 @@ object Task extends BasicDAO[Task]("tasks") {
     }
   }
 
-  def simulateFinishOfCurrentTask(user: User) = {
-    (for {
-      annotation <- AnnotationDAO.findOpenAnnotationFor(user, AnnotationType.Task)
-      task <- annotation.task
-      if (task.isTraining)
-      training <- task.training
+  def nextTaskForUser(user: User): Future[Option[Task]] = {
+    nextTaskForUser(
+      user,
+      findAssignableTasksFor(user).toArray)
+  }
+}
+
+object Task extends BasicDAO[Task]("tasks") with FoxImplicits {
+  this.collection.ensureIndex("_project")
+  this.collection.ensureIndex("_taskType")
+
+  implicit val taskFormat = Json.format[Task]
+
+  override def removeById(t: ObjectId, wc: com.mongodb.WriteConcern = defaultWriteConcern) = {
+    AnnotationDAO.removeAllWithTaskId(t)
+    super.removeById(t, wc)
+  }
+
+  def transformToJson(task: Task): Future[JsObject] = {
+    for{
+      dataSetName <- task.annotationBase.toFox.flatMap(_.dataSetName) getOrElse ""
+      editPosition <- task.annotationBase.toFox.flatMap(_.content.map(_.editPosition)) getOrElse Point3D(1,1,1)
     } yield {
-      user.increaseExperience(training.domain, training.gain)
-    }) getOrElse user
-  }
-
-  def simulateTaskAssignment(users: List[User]) = {
-    val preparedUsers = users.map(simulateFinishOfCurrentTask)
-    def f(users: List[User], tasks: Map[ObjectId, Task], result: Map[User, Task]): Future[Map[User, Task]] = {
-      users match {
-        case user :: tail =>
-          simulateTaskAssignments(user, tasks).flatMap {
-            case Some((task, alertedtasks)) =>
-              f(tail, alertedtasks, result + (user -> task))
-            case _ =>
-              f(tail, tasks, result)
-          }
-        case _ =>
-          Future.successful(result)
-      }
+      Json.obj (
+        "id" -> task.id,
+        "formattedHash" -> Formatter.formatHash(task.id),
+        "seedIdHeidelberg" -> task.seedIdHeidelberg,
+        "projectName" -> task._project.getOrElse("").toString,
+        "type" -> task.taskType.map(_.summary).getOrElse("<deleted>").toString,
+        "dataSet" -> dataSetName,
+        "editPosition" -> editPosition,
+        "neededExperience" -> task.neededExperience,
+        "priority" -> task.priority,
+        "created" -> Formatter.formatDate(task.created),
+        "status" -> task.status
+      )
     }
-    val nonTrainings = findAllAssignableNonTrainings.map(t => t._id -> t).toMap
-    f(preparedUsers, nonTrainings, Map.empty)
   }
 
-  def simulateTaskAssignments(user: User, tasks: Map[ObjectId, Task]) = {
-    val doneTasks = AnnotationDAO.findFor(user, AnnotationType.Task).flatMap(_._task)
-    val tasksAvailable = tasks.values.filter(t =>
-      hasEnoughExperience(user, t) && !doneTasks.contains(t._id) && !t.isFullyAssigned)
-    nextTaskForUser(user, tasksAvailable.toArray).map {
-      case Some(task) =>
-        Some(task -> (tasks + (task._id -> task.copy(assignedInstances = task.assignedInstances + 1))))
-      case _ =>
-        Training.findAssignableFor(user).headOption.map {
-          training =>
-            training -> tasks
+  def findAllOfOneType(isTraining: Boolean) =
+    find(MongoDBObject("training" -> MongoDBObject("$exists" -> isTraining)))
+      .toList
+
+  def findAllByTaskType(taskType: TaskType) =
+    find(MongoDBObject("_taskType" -> taskType._id))
+      .toList
+
+  def findAllByProject(project: String) =
+    find(MongoDBObject("_project" -> project))
+      .toList
+
+  def findAllTrainings =
+    findAllOfOneType(isTraining = true)
+
+  def findAllNonTrainings =
+    findAllOfOneType(isTraining = false)
+
+  def findAllAssignableNonTrainings = {
+    findAllNonTrainings.filter(!_.isFullyAssigned)
+  }
+
+  def logTime(time: Long, task: Task) = {
+    update(MongoDBObject("_id" -> task._id), MongoDBObject("$inc" -> MongoDBObject("tracingTime" -> time)))
+  }
+
+  def copyDeepAndInsert(source: Task, includeUserTracings: Boolean = true) = {
+    val task = insertOne(source.copy(_id = new ObjectId))
+    AnnotationDAO
+      .findByTaskId(source._id)
+      .foreach {
+      annotation =>
+        if (includeUserTracings || AnnotationType.isSystemTracing(annotation)) {
+          println("Copying: " + annotation.id)
+          AnnotationDAO.copyDeepAndInsert(annotation.copy(_task = Some(task._id)))
         }
     }
+    task
   }
+
+  def toTrainingForm(t: Task): Option[(String, Training)] =
+    Some((t.id, (t.training getOrElse Training.empty)))
+
+  def fromTrainingForm(taskId: String, training: Training) =
+    Task.findOneById(taskId) map {
+      _.copy(training = Some(training))
+    } getOrElse null
 }

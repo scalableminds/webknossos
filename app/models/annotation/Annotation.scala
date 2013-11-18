@@ -3,7 +3,7 @@ package models.annotation
 import org.bson.types.ObjectId
 import models.basics._
 import models.task.{TaskType, Task}
-import models.user.User
+import models.user.{UserService, UserDAO, User}
 import models.security.Role
 import com.mongodb.casbah.commons.{MongoDBList, MongoDBObject}
 import AnnotationType._
@@ -14,19 +14,24 @@ import java.util.Date
 import play.api.libs.json.JsValue
 import play.api.Logger
 import models.tracing.skeleton.{AnnotationStatistics, SkeletonTracing, TemporarySkeletonTracing}
+import models.basics.Implicits._
+import braingames.util.{Fox, FoxImplicits}
+import play.api.libs.concurrent.Execution.Implicits._
+import scala.concurrent.Future
 
 case class Annotation(
-  _user: ObjectId,
-  _content: ContentReference,
-  _task: Option[ObjectId] = None,
-  state: AnnotationState = AnnotationState.InProgress,
-  typ: String = AnnotationType.Explorational,
-  version: Int = 0,
-  _name: Option[String] = None,
-  override val review: List[AnnotationReview] = Nil,
-  _id: ObjectId = new ObjectId)
+                       _user: ObjectId,
+                       _content: ContentReference,
+                       _task: Option[ObjectId] = None,
+                       state: AnnotationState = AnnotationState.InProgress,
+                       typ: String = AnnotationType.Explorational,
+                       version: Int = 0,
+                       _name: Option[String] = None,
+                       override val review: List[AnnotationReview] = Nil,
+                       _id: ObjectId = new ObjectId
+                     )
 
-  extends DAOCaseClass[Annotation] with AnnotationLike {
+  extends DAOCaseClass[Annotation] with AnnotationLike with FoxImplicits {
 
   lazy val id = _id.toString
 
@@ -41,9 +46,9 @@ case class Annotation(
 
   lazy val task = _task flatMap Task.findOneById
 
-  lazy val user = User.findOneById(_user)
+  lazy val user = UserService.findOneById(_user.toString, useCache = true)
 
-  lazy val content: Option[AnnotationContent] = _content.resolveAs[AnnotationContent]
+  lazy val content = _content.resolveAs[AnnotationContent].toFox
 
   lazy val dataSetName = content.map(_.dataSetName) getOrElse ""
 
@@ -53,9 +58,13 @@ case class Annotation(
 
   def isReadyToBeFinished = {
     // TODO: RF - rework
-    val nodesInBase =
-      task.flatMap(_.annotationBase.flatMap(SkeletonTracing.statisticsForAnnotation).map(_.numberOfNodes)).getOrElse(1L)
-    SkeletonTracing.statisticsForAnnotation(this).map(_.numberOfNodes > nodesInBase) getOrElse true
+    task
+    .toFox
+    .flatMap(_.annotationBase.toFox.flatMap(SkeletonTracing.statisticsForAnnotation).map(_.numberOfNodes))
+    .getOrElse(1L)
+    .flatMap { nodesInBase =>
+      SkeletonTracing.statisticsForAnnotation(this).map(_.numberOfNodes > nodesInBase) getOrElse true
+    }
   }
 
   def unassignReviewer =
@@ -93,7 +102,7 @@ case class Annotation(
     this.copy(
       state = AnnotationState.InReview,
       review = AnnotationReview(
-        user._id,
+        new ObjectId(user._id.stringify),
         reviewAnnotation._id,
         System.currentTimeMillis()) :: this.review)
 
@@ -106,7 +115,12 @@ case class Annotation(
   }
 }
 
-object AnnotationDAO extends BasicDAO[Annotation]("annotations") with AnnotationStatistics with AnnotationContentProviders {
+object AnnotationDAO
+  extends BasicDAO[Annotation]("annotations")
+  with AnnotationStatistics
+  with AnnotationContentProviders
+  with FoxImplicits {
+
   this.collection.ensureIndex("_task")
   this.collection.ensureIndex("_user")
 
@@ -116,29 +130,36 @@ object AnnotationDAO extends BasicDAO[Annotation]("annotations") with Annotation
         findOne(MongoDBObject("review.reviewAnnotation" -> id))
     }
 
-  def countOpenAnnotations(user: User, annotationType: AnnotationType) =
-    findOpenAnnotationsFor(user, annotationType).size
+  def countOpenAnnotations(userId: ObjectId, annotationType: AnnotationType) =
+    findOpenAnnotationsFor(userId, annotationType).size
 
-  def hasAnOpenAnnotation(user: User, annotationType: AnnotationType) =
-    countOpenAnnotations(user, annotationType) > 0
+  def hasAnOpenAnnotation(userId: ObjectId, annotationType: AnnotationType) =
+    countOpenAnnotations(userId, annotationType) > 0
 
-  def findFor(u: User) =
+  def findFor(user: User) =
     find(MongoDBObject(
-      "_user" -> u._id,
+      "_user" -> user._id,
       "state.isAssigned" -> true)).toList
 
-  def findFor(u: User, annotationType: AnnotationType) =
+  def findFor(user: User, annotationType: AnnotationType) =
     find(MongoDBObject(
-      "_user" -> u._id,
+      "_user" -> user._id,
       "state.isAssigned" -> true,
       "typ" -> annotationType)).toList
 
-  def findOpenAnnotationFor(user: User, annotationType: AnnotationType) =
-    findOpenAnnotationsFor(user, annotationType).headOption
-
-  def findOpenAnnotationsFor(user: User, annotationType: AnnotationType) =
+  def findForWithTypeOtherThan(userId: ObjectId, annotationTypes: List[AnnotationType]) =
     find(MongoDBObject(
-      "_user" -> user._id,
+      "_user" -> userId,
+      "state.isFinished" -> false,
+      "state.isAssigned" -> true,
+      "typ" -> MongoDBObject("$nin" -> annotationTypes))).toList
+
+  def findOpenAnnotationFor(userId: ObjectId, annotationType: AnnotationType) =
+    findOpenAnnotationsFor(userId, annotationType).headOption
+
+  def findOpenAnnotationsFor(userId: ObjectId, annotationType: AnnotationType) =
+    find(MongoDBObject(
+      "_user" -> userId,
       "state.isFinished" -> false,
       "state.isAssigned" -> true,
       "typ" -> annotationType)).toList
@@ -169,8 +190,8 @@ object AnnotationDAO extends BasicDAO[Annotation]("annotations") with Annotation
       "_user" -> userId,
       "state.isFinished" -> false,
       "typ" -> AnnotationType.Task.toString))
-      .toList
-      .foreach(_.update(_.cancel))
+    .toList
+    .foreach(_.update(_.cancel))
 
     update(
       MongoDBObject(
@@ -191,7 +212,7 @@ object AnnotationDAO extends BasicDAO[Annotation]("annotations") with Annotation
     }
   }
 
-  def createSample(annotation: Annotation, taskId: ObjectId): Annotation = {
+  def createSample(annotation: Annotation, taskId: ObjectId): Future[Annotation] = {
     copyDeepAndInsert(annotation.copy(
       typ = AnnotationType.Sample,
       _task = Some(taskId)))
@@ -206,9 +227,10 @@ object AnnotationDAO extends BasicDAO[Annotation]("annotations") with Annotation
   }
 
   def createAnnotationBase(task: Task, userId: ObjectId, settings: AnnotationSettings, nml: NML) = {
-    SkeletonTracing.createFrom(nml, settings).map{tracing =>
-      val content = ContentReference.createFor(tracing)
-      insertOne(Annotation(userId, content, typ = AnnotationType.TracingBase, _task = Some(task._id)))
+    SkeletonTracing.createFrom(nml, settings).map {
+      tracing =>
+        val content = ContentReference.createFor(tracing)
+        insertOne(Annotation(userId, content, typ = AnnotationType.TracingBase, _task = Some(task._id)))
     }
   }
 
@@ -220,10 +242,13 @@ object AnnotationDAO extends BasicDAO[Annotation]("annotations") with Annotation
 
   def copyDeepAndInsert(source: Annotation) = {
     val content = source.content.map(_.copyDeepAndInsert)
-    val contentId = content.map(_.id) getOrElse source._content._id
-    insertOne(source.copy(
-      _id = new ObjectId,
-      _content = source._content.copy(_id = contentId)))
+    content
+    .map(_.id)
+    .getOrElse(source._content._id)
+    .map(contentId =>
+      insertOne(source.copy(
+        _id = new ObjectId,
+        _content = source._content.copy(_id = contentId))))
   }
 
   def createReviewFor(sample: Annotation, training: Annotation, user: User) = {
@@ -234,7 +259,7 @@ object AnnotationDAO extends BasicDAO[Annotation]("annotations") with Annotation
       reviewContent.mergeWith(sampleContent)
       insertOne(training.copy(
         _id = new ObjectId,
-        _user = user._id,
+        _user = new ObjectId(user._id.stringify),
         state = AnnotationState.Assigned,
         typ = AnnotationType.Review,
         _content = training._content.copy(_id = reviewContent.id)
@@ -242,15 +267,19 @@ object AnnotationDAO extends BasicDAO[Annotation]("annotations") with Annotation
     }
   }
 
-  def createAnnotationFor(user: User, task: Task) = {
-    task.annotationBase.map {
-      annotationBase =>
-        task.update(_.assigneOnce)
+  def createAnnotationFor(user: User, task: Task): Fox[Annotation] = {
+    def useAsTemplateAndInsert(annotation: Annotation) =
+      copyDeepAndInsert(annotation.copy(
+        _user = new ObjectId(user._id.stringify),
+        state = AnnotationState.InProgress,
+        typ = AnnotationType.Task))
 
-        copyDeepAndInsert(annotationBase.copy(
-          _user = user._id,
-          state = AnnotationState.InProgress,
-          typ = AnnotationType.Task))
+    for {
+      annotationBase <- task.annotationBase.toFox
+      _ = task.update(t => t.assigneOnce)
+      result <- useAsTemplateAndInsert(annotationBase)
+    } yield {
+      result
     }
   }
 
@@ -259,7 +288,7 @@ object AnnotationDAO extends BasicDAO[Annotation]("annotations") with Annotation
       provider =>
         val content = provider.createFrom(dataSet)
         insertOne(Annotation(
-          user._id,
+          new ObjectId(user._id.stringify),
           ContentReference.createFor(content),
           typ = AnnotationType.Explorational,
           state = AnnotationState.InProgress
@@ -269,13 +298,13 @@ object AnnotationDAO extends BasicDAO[Annotation]("annotations") with Annotation
 
   def resetToBase(annotation: Annotation) = {
     for {
-      task <- annotation.task
+      task <- annotation.task.toFox
       annotationContent <- annotation.content
-      tracingBase <- task.annotationBase.flatMap(_.content)
+      tracingBase <- task.annotationBase.toFox.flatMap(_.content)
     } yield {
-      val resetted = tracingBase.copyDeepAndInsert
+      val reseted = tracingBase.copyDeepAndInsert
       annotation.update(
-        _.copy(_content = ContentReference.createFor(resetted))
+        _.copy(_content = ContentReference.createFor(reseted))
       )
       annotationContent.clearTracingData()
       annotation
@@ -287,11 +316,11 @@ object AnnotationDAO extends BasicDAO[Annotation]("annotations") with Annotation
       annotation.incrementVersion)
   }
 
-  def assignReviewer(training: Annotation, user: User): Option[Annotation] = {
+  def assignReviewer(training: Annotation, user: User): Fox[Annotation] = {
     for {
-      task <- training.task
-      sampleId <- task.training.map(_.sample)
-      sample <- AnnotationDAO.findOneById(sampleId)
+      task <- training.task.toFox
+      sampleId <- task.training.map(_.sample).toFox
+      sample <- AnnotationDAO.findOneById(sampleId).toFox
       reviewAnnotation <- createReviewFor(sample, training, user)
     } yield {
       training.update(_.assignReviewer(user, reviewAnnotation))

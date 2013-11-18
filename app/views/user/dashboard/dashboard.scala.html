@@ -1,22 +1,28 @@
-@( userOpt: Option[models.user.User], explorativeAnnotations: List[models.annotation.Annotation], userTasks: List[(models.task.Task, models.annotation.Annotation)], trackedTime: Map[models.user.time.PaymentInterval, scala.concurrent.duration.Duration], dataSets: List[braingames.binary.models.DataSet], hasAnOpenTask: Boolean)(implicit session: oxalis.view.AuthedSessionData)
-@import models.user.time.PaymentInterval
+@(dashboardInfo: controllers.DashboardInfo, isAdminView: Boolean)(implicit session: oxalis.view.AuthedSessionData)
 
+@import models.user.time.PaymentInterval
+@import scala.concurrent.ExecutionContext.Implicits._
 <div class="tabbable" id="tabbable-dashboard">
       <ul class="nav nav-tabs">
         <li class="active"><a href="#tab-tasks" data-toggle="tab">Tasks</a></li>
         <li><a href="#tab-explorative" data-toggle="tab">Explorative Tracings</a></li>
         <li><a href="#tab-tracked-time" data-toggle="tab">Tracked Time</a></li>
       </ul>
+      @scala.concurrent.Future("test")
 
       <div class="tab-content">
         <div class="tab-pane active" id="tab-tasks">
 
           <h3>Tasks</h3>
           <br />
-          @userOpt.map{ user =>
-	          <a href="@controllers.admin.routes.NMLIO.userDownload(user.id)" title="download all finished tracings"><i class="icon-download"></i> download </a>
-          }.getOrElse {
-	          <a href="@controllers.routes.TaskController.request" class="btn btn-success"  data-ajax="add-row=#dashboard-tasks@if(hasAnOpenTask){,confirm=@Messages("task.requestAnother")}" id="new-task-button">Get a new task</a>
+          @if(isAdminView){
+	          <a href="@controllers.admin.routes.NMLIO.userDownload(dashboardInfo.user.id)" title="download all finished tracings">
+              <i class="icon-download"></i> download
+            </a>
+          } else {
+	          <a href="@controllers.routes.TaskController.request" class="btn btn-success"  data-ajax="add-row=#dashboard-tasks@if(dashboardInfo.hasAnOpenTask){,confirm=@Messages("task.requestAnother")}" id="new-task-button">
+              Get a new task
+            </a>
           }
           
           <div class="divider-vertical"></div>
@@ -34,7 +40,7 @@
               </tr>
             </thead>
             <tbody>
-            @userTasks.map{ case (task, annotation) => 
+            @dashboardInfo.tasks.map{ case (task, annotation) =>
               @taskAnnotationTableItem(task, annotation)
             }
             </tbody>
@@ -45,7 +51,7 @@
         
           <h3>Explorative Tracings</h3>
           <br />
-        	@if(userOpt.isEmpty) {
+        	@if(!isAdminView) {
 	          <div>
 	            @helper.form(action = controllers.admin.routes.NMLIO.upload, 'enctype -> "multipart/form-data", 'id -> "nml-explore-form", 'class -> "form-inline inline-block"){
 	              <button type="submit" class="btn"><i class="icon-upload"></i> Upload NML & explore</button>
@@ -53,7 +59,7 @@
 	            <div class="divider-vertical"></div>
 	            @helper.form(action = controllers.routes.AnnotationController.createExplorational, 'class -> "form-inline inline-block") {
 	              <select name="dataSetName">
-	                @dataSets.map{ d =>
+	                @dashboardInfo.dataSets.map{ d =>
 	                  <option value="@d.name"> @d.name </option>
 	                }
 	              </select>
@@ -83,8 +89,8 @@
               </tr>
             </thead>
             <tbody>
-            @explorativeAnnotations.map{ annotation => 
-              @explorativeAnnotationTableItem(annotation)
+            @dashboardInfo.exploratory.map{ annotation =>
+              @exploratoryAnnotationTableItem(annotation)
             }
             </tbody>
           </table>
@@ -101,7 +107,7 @@
                 </tr>
               </thead>
               <tbody>
-              @trackedTime.toList.sortBy({ case (interval, time) => interval }).map{ case (interval, time) => 
+              @dashboardInfo.loggedTime.toList.sortBy({ case (interval, time) => interval }).map{ case (interval, time) =>
                 <tr>
                   <td> @interval </td>
                   <td> @formatTimeHumanReadable(time) </td>

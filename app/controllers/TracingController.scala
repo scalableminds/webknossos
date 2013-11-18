@@ -14,10 +14,9 @@ import models.annotation.AnnotationLike
 import models.annotation.AnnotationType._
 import oxalis.annotation.handler.AnnotationInformationHandler
 import braingames.util.{FoxImplicits, Fox}
-import controllers.Controller
 
 object TracingController extends Controller with Secured with TracingInformationProvider {
-  override val DefaultAccessRole = Role.User
+  override val DefaultAccessRole = RoleDAO.User
 }
 
 trait TracingInformationProvider extends play.api.http.Status with FoxImplicits with models.basics.Implicits {
@@ -47,7 +46,7 @@ trait TracingInformationProvider extends play.api.http.Status with FoxImplicits 
     f.mapTo[Box[AnnotationLike]]
   }
 
-  def nameAnnotation(annotation: AnnotationLike)(implicit request: AuthenticatedRequest[_]) = Box.legacyNullTest[String] {
+  def nameAnnotation(annotation: AnnotationLike)(implicit request: AuthenticatedRequest[_]) = Box.legacyNullTest[Future[String]] {
     withInformationHandler(annotation.typ) {
       handler =>
         handler.nameForAnnotation(annotation)
@@ -57,7 +56,7 @@ trait TracingInformationProvider extends play.api.http.Status with FoxImplicits 
   def respondWithTracingInformation(annotationId: AnnotationIdentifier)(implicit request: UserAwareRequest[_]): Fox[JsValue] = {
     withAnnotation(annotationId) {
       annotation =>
-        annotation.annotationInfo(request.userOpt).map(js => Full(js))
+        annotation.annotationInfo(request.userOpt)
     }
   }
 }

@@ -1,41 +1,67 @@
 import sbt._
 import Keys._
-import com.typesafe.config._
-import PlayProject._
+import play.Project._
+
+object Dependencies{
+    val akkaVersion = "2.2.0"
+    val reactiveVersion = "0.10.0-SNAPSHOT"
+    val braingamesVersion = "1.1.0"
+
+    val casbahCommons = "org.mongodb" %% "casbah-commons" % "2.5.0"
+    val casbahCore = "org.mongodb" %% "casbah-core" % "2.5.0"
+    val casbahQuery = "org.mongodb" %% "casbah-query" % "2.5.0"
+    val casbahGridfs = "org.mongodb" %% "casbah-gridfs" % "2.5.0"
+    val salatCore = "com.novus" %% "salat-core" % "1.9.2"
+    val restFb = "com.restfb" % "restfb" % "1.6.11"
+    val commonsIo = "commons-io" % "commons-io" % "2.4"
+    val commonsEmail = "org.apache.commons" % "commons-email" % "1.3.1"
+    val commonsLang = "org.apache.commons" % "commons-lang3" % "3.1"
+    val akkaTest = "com.typesafe.akka" %% "akka-testkit" % akkaVersion
+    val akkaAgent = "com.typesafe.akka" %% "akka-agent" % akkaVersion
+    val akkaRemote = "com.typesafe.akka" %% "akka-remote" % akkaVersion
+    // Jira integration
+    val jerseyClient = "com.sun.jersey" % "jersey-client" % "1.8"
+    val jerseyCore = "com.sun.jersey" % "jersey-core" % "1.8"
+    val reactivePlay = "org.reactivemongo" %% "play2-reactivemongo" % reactiveVersion
+    val reactiveBson = "org.reactivemongo" %% "reactivemongo-bson-macros" % reactiveVersion
+    val scalaReflect = "org.scala-lang" % "scala-reflect" % "2.10.0"
+    val braingamesBinary = "com.scalableminds" %% "braingames-binary" % braingamesVersion
+    val braingamesUtil = "com.scalableminds" %% "braingames-util" % braingamesVersion
+}
 
 object ApplicationBuild extends Build {
+  import Dependencies._
+
   val coffeeCmd = 
     if(System.getProperty("os.name").startsWith("Windows")) 
       "cmd /C coffee -p"
     else
       "coffee -p"
 
-  val conf = ConfigFactory.parseFile(new File("conf/application.conf"))
-
-  val appName = conf.getString("application.name").toLowerCase
+  val appName =  "oxalis"
   val appVersion = scala.io.Source.fromFile("version").mkString.trim
 
   val oxalisDependencies = Seq(
-    "org.mongodb" %% "casbah-commons" % "2.5.0",
-    "org.mongodb" %% "casbah-core" % "2.5.0",
-    "org.mongodb" %% "casbah-query" % "2.5.0",
-    "org.mongodb" %% "casbah-gridfs" % "2.5.0",
-    "com.novus" %% "salat-core" % "1.9.2",
-    "com.restfb" % "restfb" % "1.6.11",
-    "commons-io" % "commons-io" % "2.4",
-    "org.apache.commons" % "commons-email" % "1.3.1",
-    "org.apache.commons" % "commons-lang3" % "3.1",
-    "com.typesafe.akka" %% "akka-testkit" % "2.1.0",
-    "com.typesafe.akka" %% "akka-agent" % "2.1.0",
-    "com.typesafe.akka" %% "akka-remote" % "2.1.0",
-    // Jira integration
-    "com.sun.jersey" % "jersey-client" % "1.8",
-    "com.sun.jersey" % "jersey-core" % "1.8",
-    "org.reactivemongo" %% "play2-reactivemongo" % "0.9",
-    "org.reactivemongo" %% "reactivemongo-bson-macros" % "0.9",
-    "org.scala-lang" % "scala-reflect" % "2.10.0",
-    "com.scalableminds" %% "braingames-binary" % "0.6.2",
-    "com.scalableminds" %% "braingames-util" % "0.6.2")
+    casbahCommons,
+    casbahCore,
+    casbahQuery,
+    casbahGridfs,
+    salatCore,
+    restFb,
+    commonsIo,
+    commonsEmail,
+    commonsLang,
+    akkaTest,
+    akkaAgent,
+    akkaRemote,
+    jerseyClient,
+    jerseyCore,
+    reactiveBson,
+    reactivePlay,
+    scalaReflect,
+    braingamesUtil,
+    braingamesBinary,
+    cache)
 
   val dependencyResolvers = Seq(
     "repo.novus rels" at "http://repo.novus.com/releases/",
@@ -53,10 +79,10 @@ object ApplicationBuild extends Build {
   val isoshaderDependencies = Seq()
 
   lazy val dataStoreDependencies = Seq(
-    "org.scala-lang" % "scala-reflect" % "2.10.0",
-    "com.sun.jersey" % "jersey-client" % "1.8",
-    "com.sun.jersey" % "jersey-core" % "1.8",
-    "com.typesafe.akka" %% "akka-remote" % "2.1.0")
+    scalaReflect,
+    jerseyCore,
+    jerseyClient,
+    akkaRemote)
 
   lazy val oxalis: Project = play.Project(appName, appVersion, oxalisDependencies).settings(
     templatesImport += "oxalis.view.helpers._",

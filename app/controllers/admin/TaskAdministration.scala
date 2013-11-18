@@ -22,7 +22,7 @@ import play.api.libs.concurrent.Execution.Implicits._
 import java.lang.Cloneable
 import models.task.Project
 import play.api.Logger
-import play.api.mvc.Result
+import play.api.mvc.{SimpleResult, Result}
 import play.api.templates.Html
 import oxalis.annotation._
 import controllers.{Controller, Application}
@@ -31,6 +31,7 @@ import models.annotation.{AnnotationDAO, AnnotationType}
 import scala.concurrent.Future
 import oxalis.nml.NMLService
 import play.api.libs.json.{JsObject, JsArray}
+import braingames.util.Fox
 
 object TaskAdministration extends Controller with Secured {
 
@@ -141,6 +142,7 @@ object TaskAdministration extends Controller with Secured {
                 instances,
                 _project = project.map(_.name)))
               AnnotationDAO.createAnnotationBase(task, request.user._id, task.settings, dataSetName, start)
+
               Redirect(routes.TaskAdministration.list)
                 .flashing(
                 FlashSuccess(Messages("task.createSuccess")))

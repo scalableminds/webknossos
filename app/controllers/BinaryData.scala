@@ -17,7 +17,6 @@ import akka.pattern.AskTimeoutException
 import play.api.libs.iteratee.Concurrent.Channel
 import scala.collection.mutable.ArrayBuffer
 import akka.routing.RoundRobinRouter
-import play.api.libs.concurrent.Execution.Implicits._
 import scala.concurrent.Future
 import play.api.i18n.Messages
 import braingames.image._
@@ -38,8 +37,6 @@ import braingames.image.ImageCreatorParameters
 import braingames.binary.ParsedRequestCollection
 import braingames.reactivemongo.DBAccessContext
 import braingames.util.Fox
-
-//import scala.concurrent.ExecutionContext.Implicits.global
 
 object BinaryData extends Controller with Secured {
   override val DefaultAccessRole = Role.User
@@ -165,39 +162,39 @@ object BinaryData extends Controller with Secured {
    *
    */
 
-  def requestViaWebsocket(dataSetName: String, dataLayerName: String, cubeSize: Int): WebSocket[Array[Byte]] =
-    AuthenticatedWebSocket[Array[Byte]]() {
-      user =>
-        request =>
-          val dataLayer = DataLayerId(dataLayerName)
-
-          DataSetDAO.findOneByName(dataSetName)(user).map {
-            dataSetOpt =>
-              var channelOpt: Option[Channel[Array[Byte]]] = None
-
-              val output = Concurrent.unicast[Array[Byte]](
-              {
-                c => channelOpt = Some(c)
-              }, {
-                Logger.debug("Data websocket completed")
-              }, {
-                case (e, i) => Logger.error("An error ocourd on websocket stream: " + e)
-              })
-
-              val input = Iteratee.foreach[Array[Byte]](in => {
-                for {
-                  dataSet <- dataSetOpt
-                  channel <- channelOpt
-                  requests <- BinaryProtocol.parse(in, containsHandle = true)
-                  dataRequestCollection = createDataRequestCollection(dataSet, dataLayerName, cubeSize, requests)
-                  dataOpt <- BinaryDataService.handleDataRequest(dataRequestCollection)
-                  data <- dataOpt
-                } {
-                  val resultWithHandle = Seq(data, requests.handle.getOrElse(Array())).appendArrays
-                  channel.push(resultWithHandle)
-                }
-              })
-              (input, output)
-          }
-    }
+//  def requestViaWebsocket(dataSetName: String, dataLayerName: String, cubeSize: Int): WebSocket[Array[Byte]] =
+//    AuthenticatedWebSocket[Array[Byte]]() {
+//      user =>
+//        request =>
+//          val dataLayer = DataLayerId(dataLayerName)
+//
+//          DataSetDAO.findOneByName(dataSetName)(user).map {
+//            dataSetOpt =>
+//              var channelOpt: Option[Channel[Array[Byte]]] = None
+//
+//              val output = Concurrent.unicast[Array[Byte]](
+//              {
+//                c => channelOpt = Some(c)
+//              }, {
+//                Logger.debug("Data websocket completed")
+//              }, {
+//                case (e, i) => Logger.error("An error ocourd on websocket stream: " + e)
+//              })
+//
+//              val input = Iteratee.foreach[Array[Byte]](in => {
+//                for {
+//                  dataSet <- dataSetOpt
+//                  channel <- channelOpt
+//                  requests <- BinaryProtocol.parse(in, containsHandle = true)
+//                  dataRequestCollection = createDataRequestCollection(dataSet, dataLayerName, cubeSize, requests)
+//                  dataOpt <- BinaryDataService.handleDataRequest(dataRequestCollection)
+//                  data <- dataOpt
+//                } {
+//                  val resultWithHandle = Seq(data, requests.handle.getOrElse(Array())).appendArrays
+//                  channel.push(resultWithHandle)
+//                }
+//              })
+//              (input, output)
+//          }
+//    }
 }

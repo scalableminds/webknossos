@@ -34,66 +34,59 @@ object AnnotationController extends Controller with Secured with TracingInformat
 
   implicit val timeout = Timeout(5 seconds)
 
-  def info(typ: String, id: String) = UserAwareAction {
+  def info(typ: String, id: String) = UserAwareAction.async {
     implicit request =>
-      Async {
-        val annotationId = AnnotationIdentifier(typ, id)
-        respondWithTracingInformation(annotationId).map {
-          js =>
-            request.userOpt.map{ user =>
+      val annotationId = AnnotationIdentifier(typ, id)
+      respondWithTracingInformation(annotationId).map {
+        js =>
+          request.userOpt.map {
+            user =>
               UsedAnnotation.use(user, annotationId)
-            }
-            Ok(js)
-        }
+          }
+          Ok(js)
       }
   }
 
-  def trace(typ: String, id: String) = Authenticated {
+  def trace(typ: String, id: String) = Authenticated().async {
     implicit request =>
-      Async {
-        withAnnotation(typ, id) {
-          annotation =>
-            if (annotation.restrictions.allowAccess(request.user)) {
-              // TODO: RF -allow all modes
-              Full(Ok(htmlForAnnotation(annotation)))
-            } else
-              Failure(Messages("notAllowed")) ~> 403
-        }
+      withAnnotation(typ, id) {
+        annotation =>
+          if (annotation.restrictions.allowAccess(request.user)) {
+            // TODO: RF -allow all modes
+            Full(Ok(htmlForAnnotation(annotation)))
+          } else
+            Failure(Messages("notAllowed")) ~> 403
       }
   }
 
-  def download(typ: String, id: String) = Authenticated {
+  def download(typ: String, id: String) = Authenticated().async {
     implicit request =>
-      Async {
-        withAnnotation(AnnotationIdentifier(typ, id)) {
-          annotation =>
-            (for {
-              annotationName <- nameAnnotation(annotation) ?~> Messages("annotation.name.impossible")
-              if annotation.restrictions.allowDownload(request.user)
-              content <- annotation.content ?~> Messages("annotation.content.empty")
-              stream <- content.toDownloadStream
-            } yield {
-              Ok.stream(Enumerator.fromStream(stream).andThen(Enumerator.eof[Array[Byte]])).withHeaders(
-                CONTENT_TYPE ->
-                  "application/octet-stream",
-                CONTENT_DISPOSITION ->
-                  s"filename=${annotationName + content.downloadFileExtension}")
-            }) ?~> Messages("annotation.download.notAllowed")
-        }
+      withAnnotation(AnnotationIdentifier(typ, id)) {
+        annotation =>
+          (for {
+            annotationName <- nameAnnotation(annotation) ?~> Messages("annotation.name.impossible")
+            if annotation.restrictions.allowDownload(request.user)
+            content <- annotation.content ?~> Messages("annotation.content.empty")
+            stream <- content.toDownloadStream
+          } yield {
+            Ok.stream(Enumerator.fromStream(stream).andThen(Enumerator.eof[Array[Byte]])).withHeaders(
+              CONTENT_TYPE ->
+                "application/octet-stream",
+              CONTENT_DISPOSITION ->
+                s"filename=${annotationName + content.downloadFileExtension}")
+          }) ?~> Messages("annotation.download.notAllowed")
       }
   }
 
-  def createExplorational = Authenticated(parser = parse.urlFormEncoded) {
+  def createExplorational = Authenticated().async(parser = parse.urlFormEncoded) {
     implicit request =>
-      Async {
-        for {
-          dataSetName <- postParameter("dataSetName") ?~> Messages("dataSet.notSupplied")
-          dataSet <- DataSetDAO.findOneByName(dataSetName) ?~> Messages("dataSet.notFound")
-          contentType <- postParameter("contentType") ?~> Messages("annotation.contentType.notSupplied")
-          annotation <- AnnotationDAO.createExplorationalFor(request.user, dataSet, contentType) ?~> Messages("annotation.create.failed")
-        } yield {
-          Redirect(routes.AnnotationController.trace(annotation.typ, annotation.id))
-        }
+      for {
+        dataSetName <- postParameter("dataSetName") ?~> Messages("dataSet.notSupplied")
+        dataSet <- DataSetDAO.findOneByName(dataSetName) ?~> Messages("dataSet.notFound")
+        contentType <- postParameter("contentType") ?~> Messages("annotation.contentType.notSupplied")
+        annotation <- AnnotationDAO.createExplorationalFor(request.user, dataSet, contentType) ?~> Messages("annotation.create.failed")
+      } yield {
+        Redirect(routes.AnnotationController.trace(annotation.typ, annotation.id))
       }
   }
 
@@ -161,7 +154,7 @@ object AnnotationController extends Controller with Secured with TracingInformat
         oldAnnotation <- AnnotationDAO.findOneById(id) ?~ Messages("annotation.notFound")
         (annotation, message) <- finishAnnotation(request.user, oldAnnotation)
       } yield {
-        if(annotation.typ != AnnotationType.Task)
+        if (annotation.typ != AnnotationType.Task)
           JsonOk(message)
         else
           (for {

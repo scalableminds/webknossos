@@ -1,3 +1,0 @@
-#!/bin/bash
-
-sbt "project levelcreator" "run 9091"

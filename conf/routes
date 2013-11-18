@@ -32,7 +32,7 @@ GET           /user/tasks/request                                         contro
 # DataSets
 GET           /datasets                                                   controllers.DataSetController.list
 GET           /datasets/:dataSetName/view                                 controllers.DataSetController.view(dataSetName: String)
-GET           /datasets/:dataSetName/layers/:dataLayerName/ws_data        controllers.BinaryData.requestViaWebsocket( dataSetName: String, dataLayerName: String, cubeSize: Int )
+# GET           /datasets/:dataSetName/layers/:dataLayerName/ws_data        controllers.BinaryData.requestViaWebsocket( dataSetName: String, dataLayerName: String, cubeSize: Int )
 POST          /datasets/:dataSetName/layers/:dataLayerName/data           controllers.BinaryData.requestViaAjax( dataSetName: String, dataLayerName: String, cubeSize: Int )
 GET           /datasets/:dataSetName/layers/:dataLayerName/data           controllers.BinaryData.requestViaAjaxDebug( dataSetName: String, dataLayerName: String, cubeSize: Int, x: Int, y: Int, z: Int, resolution: Int )
 GET           /datasets/:dataSetName/layers/:dataLayerName/sprite         controllers.BinaryData.requestSpriteSheet( dataSetName: String, dataLayerName: String, cubeSize: Int ?=128, imagesPerRow: Int ?= 8, x: Int, y: Int, z: Int, resolution: Int )

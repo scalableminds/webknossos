@@ -15,7 +15,6 @@ import oxalis.user.UserCache
 import models.annotation.{AnnotationType, AnnotationDAO}
 import play.api.libs.concurrent.Execution.Implicits._
 import views._
-import controllers.Controller
 import models.user.time.{TimeTrackingService, TimeTrackingDAO, TimeTracking}
 
 object UserController extends Controller with Secured {

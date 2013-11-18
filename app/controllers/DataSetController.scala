@@ -6,7 +6,6 @@ import models.binary.DataSetDAO
 import play.api.i18n.Messages
 import views.html
 import play.api.libs.concurrent.Execution.Implicits._
-import controllers.Controller
 
 /**
  * Company: scalableminds

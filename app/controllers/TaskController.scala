@@ -14,7 +14,6 @@ import play.api.i18n.Messages
 import models.annotation.{AnnotationDAO, AnnotationType}
 import play.api.Play.current
 import models.tracing.skeleton.SkeletonTracing
-import controllers.Controller
 
 object TaskController extends Controller with Secured {
   override val DefaultAccessRole = Role.User

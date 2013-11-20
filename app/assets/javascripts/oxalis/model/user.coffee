@@ -1,6 +1,7 @@
 ### define
 ../../libs/request : Request
 libs/event_mixin : EventMixin
+underscore : _
 ###
 
 class User
@@ -39,7 +40,7 @@ class User
   firstVisToggle : null
   particleSize : null
   sortTreesByName : null
-
+  push_throttle_time : 500
 
   constructor : (user) ->
 
@@ -73,8 +74,15 @@ class User
     $.when(@pushImpl())
 
 
+  pushThrottled : ->
+
+    saveFkt = @pushImpl
+    @pushThrottled = _.throttle(_.mutexDeferred( saveFkt, -1), @push_throttle_time)
+    @pushThrottled()
+
+
   pushImpl : ->
-    
+
     deferred = $.Deferred()
 
     data = {}

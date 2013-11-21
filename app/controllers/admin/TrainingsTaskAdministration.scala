@@ -79,7 +79,7 @@ object TrainingsTaskAdministration extends AdminController {
             annotation <- AnnotationDAO.findOneById(annotationId) ?~> Messages("annotation.notFound")
             trainingsTask <- TaskService.copyDeepAndInsert(task.copy(
               instances = Integer.MAX_VALUE,
-              created = new Date),
+              created = System.currentTimeMillis),
               includeUserTracings = false)
             sample <- AnnotationDAO.createSample(annotation, trainingsTask._id)
             _ <- TaskService.setTraining(trainingsTask, training, sample)

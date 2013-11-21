@@ -37,6 +37,7 @@ object AssertionController extends Controller with Secured {
   }
 
   def view(assertionId: String) = Authenticated(role = RoleDAO.Admin).async { implicit request =>
+    request
     for {
       assertion <- AssertionDAO.findOneById(assertionId) ?~> "Assertion not found."
     } yield {

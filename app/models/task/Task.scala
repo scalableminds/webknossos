@@ -25,7 +25,7 @@ case class Task(
                  instances: Int = 1,
                  assignedInstances: Int = 0,
                  tracingTime: Option[Long] = None,
-                 created: Date = new Date,
+                 created: Long = System.currentTimeMillis,
                  _project: Option[String] = None,
                  training: Option[Training] = None,
                  _id: BSONObjectID = BSONObjectID.generate

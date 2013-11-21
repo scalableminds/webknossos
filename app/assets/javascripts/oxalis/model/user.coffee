@@ -71,13 +71,14 @@ class User
 
   push : ->
 
-    $.when(@pushImpl())
+    $.when(@pushThrottled())
 
 
   pushThrottled : ->
 
     saveFkt = @pushImpl
     @pushThrottled = _.throttle(_.mutexDeferred( saveFkt, -1), @push_throttle_time)
+    # @pushThrottled = _.throttle(saveFkt, @push_throttle_time)
     @pushThrottled()
 
 

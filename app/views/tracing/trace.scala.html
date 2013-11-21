@@ -1,7 +1,9 @@
 @(annotation: models.annotation.AnnotationLike)(additionalHtml: Html)(implicit session: oxalis.view.AuthedSessionData)
 
 @import models.task.Task
-    @import models.annotation.AnnotationType
+@import models.annotation.AnnotationType
+@import scala.async.Async._
+@import play.api.libs.concurrent.Execution.Implicits._
 
 @main( ){
   <div id="loader"><div id="loader-icon"><i class="icon-spinner icon-spin icon-4x"></i><br>Loading</div></div>
@@ -15,8 +17,10 @@
         }
         <div id="buttonbar" class="btn-group inline-block">
           <a href="@controllers.routes.AnnotationController.finishWithRedirect(annotation.typ, annotation.id)" class="btn btn-small" id="trace-finish-button"><i class="icon-ok-circle"></i> Finish</a>
-          @if(!annotation.isTrainingsAnnotation()){
-            <a href="@controllers.routes.AnnotationController.download(annotation.typ, annotation.id)" class="btn btn-small" id="trace-download-button"><i class="icon-download"></i> NML</a>
+          @async{
+            if(!await(annotation.isTrainingsAnnotation())){
+              <a href="@controllers.routes.AnnotationController.download(annotation.typ, annotation.id)" class="btn btn-small" id="trace-download-button"><i class="icon-download"></i> NML</a>
+            }
           }
           <a href="#help-modal" class="btn btn-small" data-toggle="modal"><i class="icon-question-sign"></i> Help</a>
         </div>
@@ -29,7 +33,7 @@
         </div>
 
         <div class="tabbable" id="lefttabbar">
-          @defining(annotation.task){ task =>
+          @annotation.task.futureBox.map{ task =>
             <ul class="nav nav-tabs">
               @if(task.isDefined) {
                 <li><a href="#tab0" data-toggle="tab">Task</a></li>

@@ -61,7 +61,7 @@ object AnnotationContent {
       (__ \ 'dataLayers).write[List[DataLayer]])(d =>
       (d.name, d.scale, d.dataLayers))
 
-  def writeAnnotationContent(ac: AnnotationContent)(implicit ctx: DBAccessContext) = {
+  def writeAsJson(ac: AnnotationContent)(implicit ctx: DBAccessContext) = {
     ac.dataSet.map {
       dataSet =>
         ((__ \ 'settings).write[AnnotationSettings] and

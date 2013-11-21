@@ -4,7 +4,7 @@ import braingames.geometry.Scale
 import braingames.geometry.Point3D
 import oxalis.nml._
 import oxalis.nml.utils._
-import models.task.{TaskType, Task, Project}
+import models.task.{TaskDAO, TaskType, Task, Project}
 import play.api.Logger
 import braingames.util.TimeLogger._
 import braingames.format.Formatter
@@ -18,8 +18,9 @@ import org.bson.types.ObjectId
 import scala.concurrent.Future
 import play.api.libs.concurrent.Execution.Implicits._
 import braingames.util.{FoxImplicits, Fox}
+import braingames.reactivemongo.DBAccessContext
 
-object CompoundAnnotation extends Formatter with FoxImplicits{
+object CompoundAnnotation extends Formatter with FoxImplicits {
 
   def treePrefix(tracing: SkeletonTracingLike, user: Option[User], taskId: Option[ObjectId]) = {
     val userName = user.map(_.abreviatedName) getOrElse ""
@@ -41,25 +42,30 @@ object CompoundAnnotation extends Formatter with FoxImplicits{
   def filterAnnotation(a: Annotation) =
     a.state.isFinished
 
-  def createFromProject(project: Project) = {
+  def createFromProject(project: Project)(implicit ctx: DBAccessContext) = {
     logTime("project composition", Logger.debug) {
-      createFromAnnotations(Task
-        .findAllByProject(project.name)
-        .flatMap(_.annotations), project.name, AnnotationType.CompoundProject)
+      for {
+        tasks <- TaskDAO.findAllByProject(project.name)
+      } yield {
+        createFromAnnotations(tasks.flatMap(_.annotations), project.name, AnnotationType.CompoundProject)
+      }
     }
   }
 
-  def createFromTask(task: Task) = {
+  def createFromTask(task: Task)(implicit ctx: DBAccessContext) = {
     logTime("task composition", Logger.debug) {
       createFromAnnotations(
         task.annotations, task.id, AnnotationType.CompoundTask)
     }
   }
 
-  def createFromTaskType(taskType: TaskType) = {
+  def createFromTaskType(taskType: TaskType)(implicit ctx: DBAccessContext) = {
     logTime("taskType composition", Logger.debug) {
-      createFromAnnotations(Task.findAllByTaskType(taskType)
-        .flatMap(_.annotations), taskType.id, AnnotationType.CompoundTaskType)
+      for {
+        tasks <- TaskDAO.findAllByTaskType(taskType)
+      } yield {
+        createFromAnnotations(tasks.flatMap(_.annotations), taskType.id, AnnotationType.CompoundTaskType)
+      }
     }
   }
 
@@ -68,9 +74,9 @@ object CompoundAnnotation extends Formatter with FoxImplicits{
 
     def annotationContent(): Fox[TemporarySkeletonTracing] = {
       val annotationsWithContent =
-        Future.traverse(as)(a => a.content.map(a ->_).futureBox).map(_.flatten)
+        Future.traverse(as)(a => a.content.map(a -> _).futureBox).map(_.flatten)
 
-      annotationsWithContent.flatMap( Future.traverse(_){
+      annotationsWithContent.flatMap(Future.traverse(_) {
         case (annotation, skeleton: SkeletonTracing) =>
           annotation.user.map {
             userOpt =>

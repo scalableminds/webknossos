@@ -12,8 +12,7 @@ import play.api.Logger
 import scala.xml.PrettyPrinter
 import models.tracing._
 import play.api.i18n.Messages
-import models.task.Project
-import models.task.Task
+import models.task.{TaskDAO, ProjectDAO, Project, Task}
 import java.io.BufferedOutputStream
 import java.io.ByteArrayOutputStream
 import java.util.zip.ZipOutputStream
@@ -48,9 +47,8 @@ object NMLIO extends Controller with Secured with TextUtils {
   override val DefaultAccessRole = RoleDAO.User
 
 
-  def uploadForm = Authenticated {
-    implicit request =>
-      Ok(html.admin.nml.nmlupload())
+  def uploadForm = Authenticated() { implicit request =>
+    Ok(html.admin.nml.nmlupload())
   }
 
   private def nameForNMLs(fileNames: Seq[String]) =
@@ -82,42 +80,41 @@ object NMLIO extends Controller with Secured with TextUtils {
     }
   }
 
-  def upload = Authenticated(parse.multipartFormData) {
-    implicit request =>
-      val parseResult = request.body.files.map(f => f.filename -> NMLService.extractFromNML(f.ref.file))
-      val (parseFailed, parseSuccess) = splitResult(parseResult)
-      if (parseFailed.size > 0) {
-        val errors = parseFailed.map {
-          fileName =>
-            "error" -> Messages("nml.file.invalid", fileName)
-        }
-        Redirect(controllers.routes.UserController.dashboard)
-          .flashing(
-          errors: _*)
-      } else if (parseSuccess.size == 0) {
-        Redirect(controllers.routes.UserController.dashboard)
-          .flashing(
-          "error" -> Messages("nml.file.noFile"))
-      } else {
-        val tracingName = nameForNMLs(parseSuccess.map {
-          case (fileName, _) => fileName
-        })
-        val nmls = parseSuccess.map {
-          case (_, nml) => nml
-        }
-
-        createAnnotationFrom(request.user, nmls, AnnotationType.Explorational, tracingName)
-          .map {
-          annotation =>
-            Redirect(controllers.routes.AnnotationController.trace(annotation.typ, annotation.id))
-              .flashing(
-              "success" -> Messages("nml.file.uploadSuccess"))
-        }
-          .getOrElse(
-          Redirect(controllers.routes.UserController.dashboard)
-            .flashing(
-            "error" -> Messages("nml.file.invalid")))
+  def upload = Authenticated()(parse.multipartFormData) { implicit request =>
+    val parseResult = request.body.files.map(f => f.filename -> NMLService.extractFromNML(f.ref.file))
+    val (parseFailed, parseSuccess) = splitResult(parseResult)
+    if (parseFailed.size > 0) {
+      val errors = parseFailed.map {
+        fileName =>
+          "error" -> Messages("nml.file.invalid", fileName)
       }
+      Redirect(controllers.routes.UserController.dashboard)
+      .flashing(
+        errors: _*)
+    } else if (parseSuccess.size == 0) {
+      Redirect(controllers.routes.UserController.dashboard)
+      .flashing(
+        "error" -> Messages("nml.file.noFile"))
+    } else {
+      val tracingName = nameForNMLs(parseSuccess.map {
+        case (fileName, _) => fileName
+      })
+      val nmls = parseSuccess.map {
+        case (_, nml) => nml
+      }
+
+      createAnnotationFrom(request.user, nmls, AnnotationType.Explorational, tracingName)
+      .map {
+        annotation =>
+          Redirect(controllers.routes.AnnotationController.trace(annotation.typ, annotation.id))
+          .flashing(
+            "success" -> Messages("nml.file.uploadSuccess"))
+      }
+      .getOrElse(
+        Redirect(controllers.routes.UserController.dashboard)
+        .flashing(
+          "error" -> Messages("nml.file.invalid")))
+    }
   }
 
   def zipTracings(annotations: List[Annotation], zipFileName: String) = {
@@ -129,51 +126,41 @@ object NMLIO extends Controller with Secured with TextUtils {
     }
   }
 
-  def projectDownload(projectName: String) = Authenticated(role = RoleDAO.Admin) {
-    implicit request =>
-      Async {
-        for {
-          project <- Project.findOneByName(projectName) ?~ Messages("project.notFound")
-        } yield {
-          val t = System.currentTimeMillis()
-          val tracings = Task
-            .findAllByProject(project.name)
-            .flatMap(_.annotations.filter(_.state.isFinished))
+  def projectDownload(projectName: String) = Authenticated(role = RoleDAO.Admin).async { implicit request =>
+    def createProjectZip(project: Project) =
+      for{
+        tasks <- TaskDAO.findAllByProject(project.name)
+        tracings <- Future.successful(tasks.flatMap(_.annotations.filter(_.state.isFinished)))
+        zip <- zipTracings(tracings, normalize(projectName + "_nmls.zip"))
+      } yield zip
 
-          zipTracings(tracings, normalize(projectName + "_nmls.zip")).map {
-            zipped =>
-              Logger.debug(s"Zipping took: ${System.currentTimeMillis - t} ms")
-              Ok.sendFile(zipped.file)
-          }
-        }
-      }
+    for {
+      project <- ProjectDAO.findOneByName(projectName) ?~> Messages("project.notFound")
+      zip <- createProjectZip(project)
+    } yield {
+      Ok.sendFile(zip.file)
+    }
   }
 
-  def taskDownload(taskId: String) = Authenticated(role = RoleDAO.Admin) {
-    implicit request =>
-      Async {
-        for {
-          task <- Task.findOneById(taskId) ?~ Messages("task.notFound")
-        } yield {
-          val annotations = task.annotations.filter(_.state.isFinished)
-          zipTracings(annotations, normalize(task.id + "_nmls.zip")).map {
-            zipped =>
-              Ok.sendFile(zipped.file)
-          }
-        }
-      }
+  def taskDownload(taskId: String) = Authenticated(role = RoleDAO.Admin).async { implicit request =>
+    def createTaskZip(task: Task) = {
+      val annotations = task.annotations.filter(_.state.isFinished)
+      zipTracings(annotations, normalize(task.id + "_nmls.zip"))
+    }
+
+    for {
+      task <- TaskDAO.findOneById(taskId) ?~> Messages("task.notFound")
+      zip <- createTaskZip(task)
+    } yield Ok.sendFile(zip.file)
   }
 
-  def userDownload(userId: String) = Authenticated(role = RoleDAO.Admin) {
-    implicit request =>
-      Async {
-        for {
-          user <- UserService.findOneById(userId, useCache = true) ?~> Messages("user.notFound")
-          annotations = AnnotationDAO.findFor(user, AnnotationType.Task).filter(_.state.isFinished)
-          zipped <- zipTracings(annotations, normalize(user.abreviatedName + "_nmls.zip"))
-        } yield {
-          Ok.sendFile(zipped.file)
-        }
-      }
+  def userDownload(userId: String) = Authenticated(role = RoleDAO.Admin).async { implicit request =>
+    for {
+      user <- UserService.findOneById(userId, useCache = true) ?~> Messages("user.notFound")
+      annotations = AnnotationDAO.findFor(user, AnnotationType.Task).filter(_.state.isFinished)
+      zipped <- zipTracings(annotations, normalize(user.abreviatedName + "_nmls.zip"))
+    } yield {
+      Ok.sendFile(zipped.file)
+    }
   }
 }

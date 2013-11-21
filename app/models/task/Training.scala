@@ -4,6 +4,8 @@ import com.mongodb.casbah.Imports._
 import models.user.User
 import play.api.libs.json.Json
 import models.basics.BasicDAOFormats
+import scala.concurrent.Future
+import braingames.reactivemongo.DBAccessContext
 
 case class Training(
     domain: String,
@@ -23,7 +25,7 @@ object Training extends BasicDAOFormats{
   def fromForm(domain: String, gain: Int, loss: Int) =
     Training(domain, gain, loss, null)
 
-  def findAssignableFor(user: User) = {
+  def findAssignableFor(user: User)(implicit ctx: DBAccessContext): Future[List[Task]] = {
     TaskService.findAssignableFor(user, shouldBeTraining = true)
   }
 }

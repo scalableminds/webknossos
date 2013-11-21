@@ -58,37 +58,35 @@ object Authentication extends Controller with Secured with ProvidesUnauthorizedS
   /**
    * Handle registration form submission.
    */
-  def registrate = Action {
+  def registrate = Action.async {
     implicit request =>
-      Async {
-        registerForm.bindFromRequest.fold(
-        formWithErrors =>
-          Future.successful(BadRequest(html.user.register(formWithErrors))), {
-          case (email, firstName, lastName, password) => {
-            UserService.findOneByEmail(email).flatMap {
-              case None =>
-                for {
-                  user <- UserService.insert(email, firstName, lastName, password, autoVerify)
-                  brainDBResult <- BrainTracing.register(user, password)
-                } yield {
-                  Application.Mailer ! Send(
-                    DefaultMails.registerMail(user.name, email, brainDBResult))
-                  Application.Mailer ! Send(
-                    DefaultMails.registerAdminNotifyerMail(user.name, email, brainDBResult))
-                  if (autoVerify) {
-                    Redirect(controllers.routes.Application.index)
-                      .withSession(Secured.createSession(user))
-                  } else {
-                    Redirect(controllers.routes.Authentication.login)
-                      .flashing("modal" -> "An account has been created. An administrator is going to unlock you soon.")
-                  }
+      registerForm.bindFromRequest.fold(
+      formWithErrors =>
+        Future.successful(BadRequest(html.user.register(formWithErrors))), {
+        case (email, firstName, lastName, password) => {
+          UserService.findOneByEmail(email).flatMap {
+            case None =>
+              for {
+                user <- UserService.insert(email, firstName, lastName, password, autoVerify)
+                brainDBResult <- BrainTracing.register(user, password)
+              } yield {
+                Application.Mailer ! Send(
+                  DefaultMails.registerMail(user.name, email, brainDBResult))
+                Application.Mailer ! Send(
+                  DefaultMails.registerAdminNotifyerMail(user.name, email, brainDBResult))
+                if (autoVerify) {
+                  Redirect(controllers.routes.Application.index)
+                    .withSession(Secured.createSession(user))
+                } else {
+                  Redirect(controllers.routes.Authentication.login)
+                    .flashing("modal" -> "An account has been created. An administrator is going to unlock you soon.")
                 }
-              case Some(_) =>
-                Future.successful(JsonBadRequest(Messages("user.email.alreadyInUse")))
-            }
+              }
+            case Some(_) =>
+              Future.successful(JsonBadRequest(Messages("user.email.alreadyInUse")))
           }
-        })
-      }
+        }
+      })
   }
 
   val loginForm = Form(
@@ -107,21 +105,19 @@ object Authentication extends Controller with Secured with ProvidesUnauthorizedS
   /**
    * Handle login form submission.
    */
-  def authenticate = Action {
+  def authenticate = Action.async{
     implicit request =>
-      Async {
-        loginForm.bindFromRequest.fold(
-        formWithErrors =>
-          Future.successful(BadRequest(html.user.login(formWithErrors))), {
-          case (email, password) =>
-            for {
-              user <- UserService.auth(email.toLowerCase, password) ?~> Messages("user.login.failed")
-            } yield {
-              Redirect(controllers.routes.Application.index)
-                .withSession(Secured.createSession(user))
-            }
-        })
-      }
+      loginForm.bindFromRequest.fold(
+      formWithErrors =>
+        Future.successful(BadRequest(html.user.login(formWithErrors))), {
+        case (email, password) =>
+          for {
+            user <- UserService.auth(email.toLowerCase, password) ?~> Messages("user.login.failed")
+          } yield {
+            Redirect(controllers.routes.Application.index)
+              .withSession(Secured.createSession(user))
+          }
+      })
   }
 
   /**

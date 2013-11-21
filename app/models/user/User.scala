@@ -44,7 +44,7 @@ case class User(
 
   val abreviatedName = (firstName.take(1) + lastName) toLowerCase
 
-  lazy val id = _id.toString
+  lazy val id = _id.stringify
 
   val ruleSet: List[Implyable] = permissions ++ _roles
 

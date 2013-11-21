@@ -30,7 +30,7 @@ trait AnnotationLike {
 
   def typ: AnnotationType
 
-  def task: Option[Task]
+  def task: Fox[Task]
 
   def state: AnnotationState
 
@@ -50,23 +50,21 @@ trait AnnotationLike {
     AnnotationLike.annotationLikeInfoWrites(this, user)
 }
 
-object AnnotationLike extends FoxImplicits{
-
-  import models.annotation.AnnotationContent._
+object AnnotationLike extends FoxImplicits {
 
   def annotationLikeInfoWrites(a: AnnotationLike, user: Option[User])(implicit ctx: DBAccessContext): Fox[JsObject] = {
-    a.content.flatMap(writeAnnotationContent(_)).getOrElse(Json.obj()).map {
-      js =>
-        ((__ \ 'version).write[Int] and
-          (__ \ 'id).write[String] and
-          (__ \ 'name).write[String] and
-          (__ \ 'typ).write[String] and
-          (__ \ 'content).write[JsObject] and
-          (__ \ 'restrictions).write[AnnotationRestrictions](
-            AnnotationRestrictions.writeFor(user)))
-          .tupled
-          .writes(
-          (a.version, a.id, a._name getOrElse "", a.typ, js, a.restrictions))
+    for {
+      contentJs <- a.content.flatMap(AnnotationContent.writeAsJson(_))
+      restrictionsJs <- AnnotationRestrictions.writeAsJson(a.restrictions, user).toFox
+      name = a._name.getOrElse("")
+    } yield {
+      Json.obj(
+        "version" -> a.version,
+        "id" -> a.id,
+        "name" -> name,
+        "typ" -> a.typ,
+        "content" -> contentJs,
+        "restrictions" -> restrictionsJs)
     }
   }
 

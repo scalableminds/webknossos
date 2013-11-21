@@ -2,7 +2,7 @@ package controllers.admin
 
 import scala.concurrent.duration._
 import views._
-import models.task.Project
+import models.task.{ProjectService, ProjectDAO, Project}
 import play.api.data.Form._
 import play.api.data.Form
 import play.api.data.Forms._
@@ -12,57 +12,68 @@ import play.api.templates.Html
 import braingames.reactivemongo.DBAccessContext
 import play.api.libs.concurrent.Execution.Implicits._
 import org.bson.types.ObjectId
+import play.api.mvc.Request
+import oxalis.security.AuthenticatedRequest
 
 object ProjectAdministration extends AdminController {
 
   val projectForm = Form(tuple(
-    "projectName" -> nonEmptyText(1, 100)
-      .verifying("project.nameAlreadyInUse", name => Project.findOneByName(name).isEmpty),
+    "projectName" -> nonEmptyText(1, 100),
     "owner" -> nonEmptyText(1, 100)))
 
   def sortedUsers(implicit ctx: DBAccessContext) = UserService.findAll.map(_.sortBy(_.name))
 
-  def list = Authenticated {
-    implicit request =>
-      Async {
-        sortedUsers.map {
-          users =>
-            Ok(html.admin.project.projectList(
-              Project.findAll,
-              projectForm.fill("", request.user.id),
-              users))
-        }
-      }
+  def projectListWithForm(form: Form[(String, String)])(implicit request: AuthenticatedRequest[_]) =
+    for {
+      users <- sortedUsers
+      projects <- ProjectDAO.findAll
+    } yield {
+      html.admin.project.projectList(projects, form, users)
+    }
+
+  def list = Authenticated().async { implicit request =>
+    for {
+      html <- projectListWithForm(projectForm.fill("", request.user.id))
+    } yield {
+      Ok(html)
+    }
   }
 
-  def delete(projectName: String) = Authenticated {
-    implicit request =>
+  def delete(projectName: String) = Authenticated().async { implicit request =>
+    for {
+      project <- ProjectDAO.findOneByName(projectName) ?~> Messages("project.notFound")
+    } yield {
+      ProjectService.remove(project)
+      JsonOk(Messages("project.removed"))
+    }
+  }
+
+  def create = Authenticated().async(parse.urlFormEncoded) { implicit request =>
+    projectForm.bindFromRequest.fold(
+    formWithErrors =>
       for {
-        project <- Project.findOneByName(projectName) ?~ Messages("project.notFound")
+        html <- projectListWithForm(formWithErrors)
       } yield {
-        Project.remove(project)
-        JsonOk(Messages("project.removed"))
-      }
-  }
-
-  def create = Authenticated(parser = parse.urlFormEncoded) {
-    implicit request =>
-      Async {
-        projectForm.bindFromRequest.fold(
-        formWithErrors =>
-          sortedUsers.map {
-            users =>
-              BadRequest(html.admin.project.projectList(Project.findAll, formWithErrors, users))
-          }, {
-          case (name, ownerId) =>
+        BadRequest(html)
+      }, {
+      case (name, ownerId) =>
+        ProjectDAO.findOneByName(name).flatMap {
+          case Some(_) =>
+            for {
+              html <- projectListWithForm(projectForm.bindFromRequest.withError("projectName", Messages("project.nameAlreadyInUse")))
+            } yield {
+              BadRequest(html)
+            }
+          case _ =>
             for {
               owner <- UserService.findOneById(ownerId, useCache = true) ?~> Messages("user.notFound")
             } yield {
-              Project.insertOne(Project(name, new ObjectId(owner._id.stringify)))
+              ProjectService.insert(name, owner)
               Redirect(routes.ProjectAdministration.list).flashing(
                 FlashSuccess(Messages("project.createSuccess")))
             }
-        })
-      }
+        }
+
+    })
   }
 }

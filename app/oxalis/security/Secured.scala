@@ -28,10 +28,12 @@ import net.liftweb.common.{Full, Empty}
 import play.api.libs.concurrent.Execution.Implicits._
 
 class AuthenticatedRequest[A](
-  val user: User, override val request: Request[A]) extends UserAwareRequest(Some(user), request)
+                               val user: User, override val request: Request[A]
+                             ) extends UserAwareRequest(Some(user), request)
 
 class UserAwareRequest[A](
-  val userOpt: Option[User], val request: Request[A]) extends WrappedRequest(request)
+                           val userOpt: Option[User], val request: Request[A]
+                         ) extends WrappedRequest(request)
 
 
 object Secured {
@@ -102,75 +104,56 @@ trait Secured extends FoxImplicits {
    *
    */
 
-  def Authenticated[A](
-    parser: BodyParser[A] = BodyParsers.parse.anyContent,
-    role: Option[Role] = DefaultAccessRole,
-    permission: Option[Permission] = DefaultAccessPermission)(f: AuthenticatedRequest[A] => Result) = {
-    Action(parser) {
-      request =>
-        Async {
-          maybeUser(request).map {
-            user =>
-              Secured.ActivityMonitor ! UserActivity(user, System.currentTimeMillis)
-              if (user.verified) {
-                hasAccess(user, role, permission) match {
-                  case true =>
-                    f(new AuthenticatedRequest(user, request))
-                  case false =>
-                    Forbidden(views.html.error.defaultError(Messages("user.noPermission"), true)(AuthedSessionData(user, request.flash)))
-                }
-              } else {
-                Forbidden(views.html.error.defaultError(Messages("user.notVerified"), false)(AuthedSessionData(user, request.flash)))
-              }
-          } getOrElse onUnauthorized(request)
-        }
-    }
-  }
-
-  def UserAwareAction[A](
-    parser: BodyParser[A] = BodyParsers.parse.anyContent)(f: UserAwareRequest[A] => Result) = {
-    Action(parser) {
-      request =>
-        Async {
-          maybeUser(request).filter(_.verified).map {
-            user =>
-              Secured.ActivityMonitor ! UserActivity(user, System.currentTimeMillis)
-              f(new AuthenticatedRequest(user, request))
-          }.getOrElse {
-            f(new UserAwareRequest(None, request))
+  def Authenticated(role: Option[Role] = DefaultAccessRole, permission: Option[Permission] = DefaultAccessPermission) =
+    new ActionBuilder[AuthenticatedRequest] {
+      def invokeBlock[A](request: Request[A], block: (AuthenticatedRequest[A]) => Future[SimpleResult]) = {
+        maybeUser(request).flatMap { user =>
+          Secured.ActivityMonitor ! UserActivity(user, System.currentTimeMillis)
+          if (user.verified) {
+            if (hasAccess(user, role, permission))
+              block(new AuthenticatedRequest(user, request))
+            else
+              Future.successful(Forbidden(views.html.error.defaultError(Messages("user.noPermission"), true)(AuthedSessionData(user, request.flash))))
+          } else {
+            Future.successful(Forbidden(views.html.error.defaultError(Messages("user.notVerified"), false)(AuthedSessionData(user, request.flash))))
           }
-        }
+        }.getOrElse(onUnauthorized(request))
+      }
+    }
+
+  object UserAwareAction extends ActionBuilder[UserAwareRequest] {
+    def invokeBlock[A](request: Request[A], block: (UserAwareRequest[A]) => Future[SimpleResult]) = {
+      maybeUser(request).filter(_.verified).futureBox.flatMap {
+        case Full(user) =>
+          Secured.ActivityMonitor ! UserActivity(user, System.currentTimeMillis)
+          block(new AuthenticatedRequest(user, request))
+        case _ =>
+          block(new UserAwareRequest(None, request))
+      }
     }
   }
 
-  def UserAwareAction(f: UserAwareRequest[AnyContent] => Result): Action[AnyContent] = {
-    UserAwareAction(BodyParsers.parse.anyContent)(f)
-  }
 
-  def Authenticated(f: AuthenticatedRequest[AnyContent] => Result): Action[AnyContent] = {
-    Authenticated(BodyParsers.parse.anyContent)(f)
-  }
-
-  def AuthenticatedWebSocket[A](
-    role: Option[Role] = DefaultAccessRole,
-    permission: Option[Permission] = DefaultAccessPermission)(f: => User => RequestHeader => Future[(Iteratee[A, _], Enumerator[A])])(implicit formatter: FrameFormatter[A]) =
-    WebSocket.async[A] {
-      request =>
-        (for {
-          user <- maybeUser(request)
-          if (hasAccess(user, role, permission))
-          webSocket <- f(user)(request)
-        } yield {
-          webSocket
-        }).getOrElse {
-          val iteratee = Done[A, Unit]((), Input.EOF)
-          // Send an error and close the socket
-          val (enumerator, channel) = Concurrent.broadcast[A]
-          channel.eofAndEnd
-
-          (iteratee -> enumerator)
-        }
-    }
+  //  def AuthenticatedWebSocket[A](
+  //                                 role: Option[Role] = DefaultAccessRole,
+  //                                 permission: Option[Permission] = DefaultAccessPermission)(f: => User => RequestHeader => Future[(Iteratee[A, _], Enumerator[A])])(implicit formatter: FrameFormatter[A]) =
+  //    WebSocket.async[A] {
+  //      request =>
+  //        (for {
+  //          user <- maybeUser(request)
+  //          if (hasAccess(user, role, permission))
+  //          webSocket <- f(user)(request)
+  //        } yield {
+  //          webSocket
+  //        }).getOrElse {
+  //          val iteratee = Done[A, Unit]((), Input.EOF)
+  //          // Send an error and close the socket
+  //          val (enumerator, channel) = Concurrent.broadcast[A]
+  //          channel.eofAndEnd
+  //
+  //          (iteratee -> enumerator)
+  //        }
+  //    }
 
   def hasAccess(user: User, role: Option[Role], permission: Option[Permission]): Boolean =
     if (role.isEmpty || user.hasRole(role.get))

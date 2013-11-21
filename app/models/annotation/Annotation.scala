@@ -2,7 +2,7 @@ package models.annotation
 
 import org.bson.types.ObjectId
 import models.basics._
-import models.task.{TaskType, Task}
+import models.task.{TaskService, TaskDAO, TaskType, Task}
 import models.user.{UserService, UserDAO, User}
 import models.security.Role
 import com.mongodb.casbah.commons.{MongoDBList, MongoDBObject}
@@ -11,13 +11,15 @@ import oxalis.nml.NML
 import braingames.binary.models.DataSet
 import braingames.geometry.Point3D
 import java.util.Date
-import play.api.libs.json.JsValue
+import play.api.libs.json.{Json, JsValue}
 import play.api.Logger
 import models.tracing.skeleton.{AnnotationStatistics, SkeletonTracing, TemporarySkeletonTracing}
 import models.basics.Implicits._
 import braingames.util.{Fox, FoxImplicits}
 import play.api.libs.concurrent.Execution.Implicits._
 import scala.concurrent.Future
+import reactivemongo.bson.BSONObjectID
+import braingames.reactivemongo.{DBAccessContext, GlobalAccessContext}
 
 case class Annotation(
                        _user: ObjectId,
@@ -44,7 +46,7 @@ case class Annotation(
 
   val name = _name getOrElse ""
 
-  lazy val task = _task flatMap Task.findOneById
+  lazy val task = _task.toFox.flatMap(id => TaskDAO.findOneById(BSONObjectID.parse(id.toString).get)(GlobalAccessContext))
 
   lazy val user = UserService.findOneById(_user.toString, useCache = true)
 
@@ -59,7 +61,6 @@ case class Annotation(
   def isReadyToBeFinished = {
     // TODO: RF - rework
     task
-    .toFox
     .flatMap(_.annotationBase.toFox.flatMap(SkeletonTracing.statisticsForAnnotation).map(_.numberOfNodes))
     .getOrElse(1L)
     .flatMap { nodesInBase =>
@@ -84,11 +85,6 @@ case class Annotation(
 
   def incrementVersion =
     this.update(_.copy(version = version + 1))
-
-  def cancel = {
-    task.map(_.update(_.unassigneOnce))
-    this.copy(state = AnnotationState.Unassigned)
-  }
 
   def finish = {
     this.copy(state = AnnotationState.Finished)
@@ -185,14 +181,7 @@ object AnnotationDAO
         "state.isAssigned" -> true,
         "state.isFinished" -> true))).toList
 
-  def freeAnnotationsOfUser(userId: ObjectId) = {
-    find(MongoDBObject(
-      "_user" -> userId,
-      "state.isFinished" -> false,
-      "typ" -> AnnotationType.Task.toString))
-    .toList
-    .foreach(_.update(_.cancel))
-
+  def unassignAnnotationsOfUser(userId: ObjectId) = {
     update(
       MongoDBObject(
         "_user" -> userId,
@@ -202,13 +191,21 @@ object AnnotationDAO
           "state.isAssigned" -> false)))
   }
 
+  def updateState(annotation: Annotation, state: AnnotationState)(implicit ctx: DBAccessContext) = {
+    // TODO: uncomment
 
-  def updateAllUsingNewTaskType(task: Task, taskType: TaskType) = {
+    //collectionUpdate(
+    //  Json.obj("_id" -> annotation._id),
+    //  Json.obj("$set" -> Json.obj("state" -> state)))
+    Future(List.empty)
+  }
+
+  def updateAllUsingNewTaskType(task: Task, settings: AnnotationSettings) = {
     find(
       MongoDBObject(
         "_task" -> task._id)).map {
       annotation =>
-        annotation._content.dao.updateSettings(task.settings, annotation._content._id)
+        annotation._content.dao.updateSettings(settings, annotation._content._id)
     }
   }
 
@@ -224,20 +221,6 @@ object AnnotationDAO
       ContentReference.createFor(content),
       _name = name,
       typ = annotationType))
-  }
-
-  def createAnnotationBase(task: Task, userId: ObjectId, settings: AnnotationSettings, nml: NML) = {
-    SkeletonTracing.createFrom(nml, settings).map {
-      tracing =>
-        val content = ContentReference.createFor(tracing)
-        insertOne(Annotation(userId, content, typ = AnnotationType.TracingBase, _task = Some(task._id)))
-    }
-  }
-
-  def createAnnotationBase(task: Task, userId: ObjectId, settings: AnnotationSettings, dataSetName: String, start: Point3D) = {
-    val tracing = SkeletonTracing.createFrom(dataSetName, start, true, settings)
-    val content = ContentReference.createFor(tracing)
-    insertOne(Annotation(userId, content, typ = AnnotationType.TracingBase, _task = Some(task._id)))
   }
 
   def copyDeepAndInsert(source: Annotation) = {
@@ -264,22 +247,6 @@ object AnnotationDAO
         typ = AnnotationType.Review,
         _content = training._content.copy(_id = reviewContent.id)
       ))
-    }
-  }
-
-  def createAnnotationFor(user: User, task: Task): Fox[Annotation] = {
-    def useAsTemplateAndInsert(annotation: Annotation) =
-      copyDeepAndInsert(annotation.copy(
-        _user = new ObjectId(user._id.stringify),
-        state = AnnotationState.InProgress,
-        typ = AnnotationType.Task))
-
-    for {
-      annotationBase <- task.annotationBase.toFox
-      _ = task.update(t => t.assigneOnce)
-      result <- useAsTemplateAndInsert(annotationBase)
-    } yield {
-      result
     }
   }
 

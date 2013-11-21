@@ -15,6 +15,7 @@ import play.api.libs.concurrent.Akka
 import models.annotation.{AnnotationLike, AnnotationDAO}
 import models.tracing.skeleton.SkeletonTracing
 import models.user.time.TimeEntry
+import braingames.reactivemongo.GlobalAccessContext
 
 object BrainTracing {
   val URL = "http://braintracing.org/"
@@ -32,41 +33,47 @@ object BrainTracing {
     if (isActive) {
       val result = Promise[String]()
       WS
-        .url(CREATE_URL)
-        .withAuth(USER, PW, AuthScheme.BASIC)
-        .withQueryString(
-          "license" -> LICENSE,
-          "firstname" -> user.firstName,
-          "lastname" -> user.lastName,
-          "email" -> user.email,
-          "pword" -> pwHash)
-        .get()
-        .map { response =>
-          result complete (response.status match {
-            case 200 =>
-              Success("braintracing.new")
-            case 304 =>
-              Success("braintracing.exists")
-            case _ =>
-              Success("braintraceing.error")
-          })
-          Logger.trace(s"Creation of account ${user.email} returned Status: ${response.status} Body: ${response.body}")
-        }
+      .url(CREATE_URL)
+      .withAuth(USER, PW, AuthScheme.BASIC)
+      .withQueryString(
+        "license" -> LICENSE,
+        "firstname" -> user.firstName,
+        "lastname" -> user.lastName,
+        "email" -> user.email,
+        "pword" -> pwHash)
+      .get()
+      .map { response =>
+        result complete (response.status match {
+          case 200 =>
+            Success("braintracing.new")
+          case 304 =>
+            Success("braintracing.exists")
+          case _ =>
+            Success("braintraceing.error")
+        })
+        Logger.trace(s"Creation of account ${user.email} returned Status: ${response.status} Body: ${response.body}")
+      }
       result.future
     } else {
       Future.successful("braintracing.new")
     }
   }
 
-  def logTime(user: User, time: Long, annotation: Option[AnnotationLike]) = {
-    if (isActive) {
-      val task = annotation.flatMap(_.task)
-      val taskType = task.flatMap(_.taskType)
-      val project = task.flatMap(_.project)
-      if (logTimeForExplorative || task.isDefined) {
-        val hours = time / (1000.0 * 60 * 60)
+  private def inHours(millis: Long) =
+    millis / (1000.0 * 60 * 60)
 
-        WS
+  def logTime(user: User, time: Long, annotation: Option[AnnotationLike]): Unit = {
+    import scala.async.Async._
+    if (isActive) {
+      async {
+        val task = await(annotation.toFox.flatMap(_.task).futureBox)
+        val taskTypeFox = task.toFox.flatMap(_.taskType)
+        val project = task.toFox.flatMap(_.project)
+        if (logTimeForExplorative || task.isDefined) {
+          val hours = inHours(time)
+          val projectName = await(project.map(_.name).getOrElse(""))
+          val taskType = await(taskTypeFox.futureBox)
+          WS
           .url(LOGTIME_URL)
           .withAuth(USER, PW, AuthScheme.BASIC)
           .withQueryString(
@@ -76,7 +83,7 @@ object BrainTracing {
             "tasktype_id" -> taskType.map(_.id).getOrElse(""),
             "tasktype_summary" -> taskType.map(_.summary).getOrElse(""),
             "task_id" -> task.map(_.id).getOrElse(""),
-            "project_name" -> project.map(_.name).getOrElse("")
+            "project_name" -> projectName
           )
           .get()
           .map { response =>
@@ -87,6 +94,7 @@ object BrainTracing {
                 Logger.error(s"Time logging failed! Code $code User: ${user.email} Time: $hours")
             }
           }
+        }
       }
     }
   }

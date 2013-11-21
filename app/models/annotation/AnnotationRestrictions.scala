@@ -4,6 +4,9 @@ import models.user.User
 import models.security.{RoleDAO, Role}
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
+import scala.async.Async._
+import scala.concurrent.Future
+import play.api.libs.concurrent.Execution.Implicits._
 
 /**
  * Company: scalableminds
@@ -19,7 +22,7 @@ class AnnotationRestrictions {
 
   def allowFinish(user: Option[User]): Boolean = false
 
-  def allowDownload(user: Option[User]): Boolean = false
+  def allowDownload(user: Option[User]): Future[Boolean] = Future.successful(false)
 
   def allowAccess(user: User): Boolean = allowAccess(Some(user))
 
@@ -27,17 +30,22 @@ class AnnotationRestrictions {
 
   def allowFinish(user: User): Boolean = allowFinish(Some(user))
 
-  def allowDownload(user: User): Boolean = allowDownload(Some(user))
+  def allowDownload(user: User): Future[Boolean] = allowDownload(Some(user))
 
 }
 
 object AnnotationRestrictions {
-  def writeFor(u: Option[User]): Writes[AnnotationRestrictions] =
-    ((__ \ 'allowAccess).write[Boolean] and
-      (__ \ 'allowUpdate).write[Boolean] and
-      (__ \ 'allowFinish).write[Boolean] and
-      (__ \ 'allowDownload).write[Boolean])(ar =>
-      (ar.allowAccess(u), ar.allowUpdate(u), ar.allowFinish(u), ar.allowDownload(u)))
+  def writeAsJson(ar: AnnotationRestrictions, u: Option[User]): Future[JsObject] =
+    for {
+      isDownloadAllowed <- ar.allowDownload(u)
+    } yield {
+      Json.obj(
+        "allowAccess" -> ar.allowAccess(u),
+        "allowUpdate" -> ar.allowUpdate(u),
+        "allowFinish" -> ar.allowFinish(u),
+        "allowDownload" -> isDownloadAllowed
+      )
+    }
 
   def restrictEverything =
     new AnnotationRestrictions()
@@ -65,10 +73,11 @@ object AnnotationRestrictions {
         } getOrElse false
       }
 
-      override def allowDownload(user: Option[User]) = {
+      override def allowDownload(user: Option[User]) = async {
+        val isTraining = await(annotation.isTrainingsAnnotation())
         user.map {
           user =>
-            !annotation.isTrainingsAnnotation() && allowAccess(user)
+            !isTraining && allowAccess(user)
         } getOrElse false
       }
     }

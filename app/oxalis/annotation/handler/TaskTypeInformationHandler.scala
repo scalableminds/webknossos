@@ -1,7 +1,7 @@
 package oxalis.annotation.handler
 
 import net.liftweb.common.Box
-import models.task.TaskType
+import models.task.{TaskTypeDAO, TaskType}
 import play.api.i18n.Messages
 import models.annotation.{AnnotationRestrictions, TemporaryAnnotation}
 import models.user.User
@@ -12,7 +12,7 @@ import scala.concurrent.Future
 import play.api.libs.concurrent.Execution.Implicits._
 import braingames.util.{FoxImplicits, Fox}
 
-object TaskTypeInformationHandler extends AnnotationInformationHandler with FoxImplicits{
+object TaskTypeInformationHandler extends AnnotationInformationHandler with FoxImplicits {
 
   import braingames.mvc.BoxImplicits._
 
@@ -28,12 +28,11 @@ object TaskTypeInformationHandler extends AnnotationInformationHandler with FoxI
     }
 
   def provideAnnotation(taskTypeId: String)(implicit ctx: DBAccessContext): Fox[TemporaryAnnotation] = {
-    Future.successful(
-      for {
-        taskType <- TaskType.findOneById(taskTypeId) ?~ Messages("taskType.notFound")
-        annotation <- CompoundAnnotation.createFromTaskType(taskType) ?~ Messages("taskType.noAnnotations")
-      } yield {
-        annotation.copy(restrictions = taskTypeAnnotationRestrictions(taskType))
-      })
+    for {
+      taskType <- TaskTypeDAO.findOneById(taskTypeId) ?~> Messages("taskType.notFound")
+      annotation <- CompoundAnnotation.createFromTaskType(taskType) ?~> Messages("taskType.noAnnotations")
+    } yield {
+      annotation.copy(restrictions = taskTypeAnnotationRestrictions(taskType))
+    }
   }
 }

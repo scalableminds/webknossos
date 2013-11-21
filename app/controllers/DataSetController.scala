@@ -17,24 +17,20 @@ object DataSetController extends Controller with Secured {
   override val DefaultAccessRole = RoleDAO.User
 
 
-  def view(dataSetName: String) = UserAwareAction {
+  def view(dataSetName: String) = UserAwareAction.async {
     implicit request =>
-      Async {
-        for {
-          dataSet <- DataSetDAO.findOneByName(dataSetName) ?~> Messages("dataSet.notFound")
-        } yield {
-          Ok(html.tracing.view(dataSet))
-        }
+      for {
+        dataSet <- DataSetDAO.findOneByName(dataSetName) ?~> Messages("dataSet.notFound")
+      } yield {
+        Ok(html.tracing.view(dataSet))
       }
   }
 
-  def list = UserAwareAction {
+  def list = UserAwareAction.async {
     implicit request =>
-      Async {
-        DataSetDAO.findAll.map {
-          dataSets =>
-            Ok(html.dataSets(dataSets))
-        }
+      DataSetDAO.findAll.map {
+        dataSets =>
+          Ok(html.dataSets(dataSets))
       }
   }
 }

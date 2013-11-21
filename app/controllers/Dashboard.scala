@@ -11,6 +11,7 @@ import braingames.util.ExtendedTypes.ExtendedList
 import play.api.libs.concurrent.Execution.Implicits._
 import braingames.reactivemongo.DBAccessContext
 import play.api.Logger
+import braingames.util.Fox
 
 /**
  * Company: scalableminds
@@ -28,20 +29,25 @@ case class DashboardInfo(
                         )
 
 trait Dashboard {
-  def dashboardInfo(user: User)(implicit ctx: DBAccessContext) = {
+  private def userWithTasks(user: User)(implicit ctx: DBAccessContext) = {
     val taskAnnotations = AnnotationService.findTasksOf(user)
+    Fox.sequence(taskAnnotations.map(a => a.task.map(_ -> a))).map(_.flatten)
+  }
+
+  private def exploratorySortedByTime(exploratoryAnnotations: List[Annotation]) =
+    exploratoryAnnotations.futureSort(_.content.map(-_.timestamp).getOrElse(0L))
+
+  private def hasOpenTask(tasksAndAnnotations: List[(Task, Annotation)]) =
+    tasksAndAnnotations.exists { case (_, annotation) => !annotation.state.isFinished }
+
+  def dashboardInfo(user: User)(implicit ctx: DBAccessContext) = {
     val exploratoryAnnotations = AnnotationService.findExploratoryOf(user)
 
-    Logger.error("exploratory annotations: " + exploratoryAnnotations.size)
-
-    val annotationsF = exploratoryAnnotations.futureSort(_.content.map(-_.timestamp).getOrElse(0L))
-
     for {
-      exploratoryAnnotations <- annotationsF
-      userTasks = taskAnnotations.flatMap(a => a.task.map(_ -> a))
-      hasAnOpenTask = userTasks.find(!_._2.state.isFinished).isDefined
-      loggedTime <- TimeTrackingService.loggedTime(user)
       dataSets <- DataSetDAO.findAll
+      loggedTime <- TimeTrackingService.loggedTime(user)
+      exploratoryAnnotations <- exploratorySortedByTime(exploratoryAnnotations)
+      userTasks <- userWithTasks(user)
     } yield {
       DashboardInfo(
         user,
@@ -49,7 +55,7 @@ trait Dashboard {
         userTasks,
         loggedTime,
         dataSets,
-        hasAnOpenTask)
+        hasOpenTask(userTasks))
     }
   }
 }

@@ -30,7 +30,7 @@ object UsedAnnotationDAO extends SecuredBaseDAO[UsedAnnotation] {
   }
 
   def by(user: User)(implicit ctx: DBAccessContext) =
-    find("user", user._id).toList.map(_.map(_.annotationId))
+    find("user", user._id).collect[List]().map(_.map(_.annotationId))
 
   def oneBy(user: User)(implicit ctx: DBAccessContext) =
     findOne("user", user._id).map(_.map(_.annotationId))

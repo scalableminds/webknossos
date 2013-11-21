@@ -33,7 +33,7 @@ object TeamTreeDAO extends SecuredBaseDAO[TeamTree] {
     !name.contains(TeamPath.TeamSeparator) && !name.contains(TeamPath.All)
 
   def findAllTeams(teams: List[String])(implicit ctx: DBAccessContext) = {
-    find(Json.obj("root.name" -> Json.obj("$in" -> teams))).toList
+    find(Json.obj("root.name" -> Json.obj("$in" -> teams))).collect[List]()
   }
 
   def findByTeamName(name: String)(implicit ctx: DBAccessContext) =

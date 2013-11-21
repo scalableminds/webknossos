@@ -1,7 +1,7 @@
 package oxalis.annotation.handler
 
 import net.liftweb.common.Box
-import models.task.Project
+import models.task.{ProjectDAO, Project}
 import play.api.i18n.Messages
 import models.user.User
 import models.annotation.{AnnotationRestrictions, TemporaryAnnotation}
@@ -12,7 +12,7 @@ import scala.concurrent.Future
 import play.api.libs.concurrent.Execution.Implicits._
 import braingames.util.{FoxImplicits, Fox}
 
-object ProjectInformationHandler extends AnnotationInformationHandler with FoxImplicits{
+object ProjectInformationHandler extends AnnotationInformationHandler with FoxImplicits {
 
   import braingames.mvc.BoxImplicits._
 
@@ -28,12 +28,11 @@ object ProjectInformationHandler extends AnnotationInformationHandler with FoxIm
     }
 
   def provideAnnotation(projectName: String)(implicit ctx: DBAccessContext): Fox[TemporaryAnnotation] = {
-    Future.successful(
-      for {
-        project <- Project.findOneByName(projectName) ?~ Messages("project.notFound")
-        annotation <- CompoundAnnotation.createFromProject(project) ?~ Messages("project.noAnnotations")
-      } yield {
-        annotation.copy(restrictions = projectAnnotationRestrictions(project))
-      })
+    for {
+      project <- ProjectDAO.findOneByName(projectName) ?~> Messages("project.notFound")
+      annotation <- CompoundAnnotation.createFromProject(project) ?~> Messages("project.noAnnotations")
+    } yield {
+      annotation.copy(restrictions = projectAnnotationRestrictions(project))
+    }
   }
 }

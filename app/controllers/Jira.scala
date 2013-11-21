@@ -30,7 +30,7 @@ object Jira extends Controller with Secured {
   val conf = Play.configuration
   val branchName = conf.getString("branchname") getOrElse "master"
 
-  def index = Authenticated { implicit request =>
+  def index = Authenticated() { implicit request =>
     Ok(html.jira.index())
   }
 
@@ -73,7 +73,7 @@ object Jira extends Controller with Secured {
     Application.Mailer ! Send(mail)
   }
 
-  def submit = Authenticated(parser = parse.urlFormEncoded) { implicit request =>
+  def submit = Authenticated()(parse.urlFormEncoded) { implicit request =>
     for {
       summary <- postParameter("summary") ?~ Messages("jira.summary.notSupplied")
       description <- postParameter("description") ?~ Messages("jira.description.notSupplied")

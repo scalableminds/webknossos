@@ -1,5 +1,7 @@
 package models.annotation
 
+import play.api.libs.concurrent.Execution.Implicits._
+
 /**
  * Company: scalableminds
  * User: tmbo
@@ -19,7 +21,8 @@ case class TemporaryAnnotation(
                                 restrictions: AnnotationRestrictions = AnnotationRestrictions.restrictEverything,
                                 state: AnnotationState = AnnotationState.Finished,
                                 _name: Option[String] = None,
-                                version: Int = 0) extends AnnotationLike {
+                                version: Int = 0
+                              ) extends AnnotationLike {
 
   def _user = new ObjectId
 

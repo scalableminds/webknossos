@@ -17,6 +17,8 @@ object Application extends Controller with Secured {
   override val DefaultAccessRole = None
   lazy val app = play.api.Play.current
 
+  lazy val version = scala.io.Source.fromFile("version").mkString.trim
+
   lazy val Mailer =
     Akka.system(app).actorFor("/user/mailActor")
 
@@ -25,40 +27,35 @@ object Application extends Controller with Secured {
 
   // -- Javascript routing
 
-  def javascriptRoutes = Action {
-    implicit request =>
-      Ok(
-        Routes.javascriptRouter("jsRoutes")(//fill in stuff which should be able to be called from js
-          controllers.admin.routes.javascript.NMLIO.upload,
-          controllers.admin.routes.javascript.AnnotationAdministration.annotationsForTask,
-          controllers.admin.routes.javascript.TaskAdministration.edit,
-          controllers.routes.javascript.AnnotationController.trace,
-          controllers.admin.routes.javascript.NMLIO.taskDownload,
-          controllers.admin.routes.javascript.TrainingsTaskAdministration.create,
-          controllers.admin.routes.javascript.TaskAdministration.delete
+  def javascriptRoutes = Action { implicit request =>
+    Ok(
+      Routes.javascriptRouter("jsRoutes")(//fill in stuff which should be able to be called from js
+        controllers.admin.routes.javascript.NMLIO.upload,
+        controllers.admin.routes.javascript.AnnotationAdministration.annotationsForTask,
+        controllers.admin.routes.javascript.TaskAdministration.edit,
+        controllers.routes.javascript.AnnotationController.trace,
+        controllers.admin.routes.javascript.NMLIO.taskDownload,
+        controllers.admin.routes.javascript.TrainingsTaskAdministration.create,
+        controllers.admin.routes.javascript.TaskAdministration.delete
 
-        )).as("text/javascript")
+      )).as("text/javascript")
   }
 
-  def index() = UserAwareAction {
-    implicit request =>
-      request.userOpt match {
-        case Some(user) =>
-          Async {
-            UsedAnnotationDAO.oneBy(user).map {
-              case Some(annotationId) =>
-                Redirect(routes.AnnotationController.trace(annotationId.annotationType, annotationId.identifier))
-              case _ =>
-                Redirect(routes.UserController.dashboard)
-            }
-          }
-        case _ =>
-          Redirect(routes.DataSetController.list)
-      }
+  def index() = UserAwareAction.async { implicit request =>
+    request.userOpt match {
+      case Some(user) =>
+        UsedAnnotationDAO.oneBy(user).map {
+          case Some(annotationId) =>
+            Redirect(routes.AnnotationController.trace(annotationId.annotationType, annotationId.identifier))
+          case _ =>
+            Redirect(routes.UserController.dashboard)
+        }
+      case _ =>
+        Future.successful(Redirect(routes.DataSetController.list))
+    }
   }
 
-  def impressum = UserAwareAction {
-    implicit request =>
-      Ok(views.html.impressum())
+  def impressum = UserAwareAction { implicit request =>
+    Ok(views.html.impressum())
   }
 }

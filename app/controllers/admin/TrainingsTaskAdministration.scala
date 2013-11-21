@@ -19,6 +19,7 @@ import controllers.Controller
 import play.api.libs.concurrent.Execution.Implicits._
 import scala.concurrent.Future
 import scala.Some
+import org.joda.time.DateTime
 
 object TrainingsTaskAdministration extends AdminController {
 
@@ -79,7 +80,7 @@ object TrainingsTaskAdministration extends AdminController {
             annotation <- AnnotationDAO.findOneById(annotationId) ?~> Messages("annotation.notFound")
             trainingsTask <- TaskService.copyDeepAndInsert(task.copy(
               instances = Integer.MAX_VALUE,
-              created = System.currentTimeMillis),
+              created = DateTime.now()),
               includeUserTracings = false)
             sample <- AnnotationDAO.createSample(annotation, trainingsTask._id)
             _ <- TaskService.setTraining(trainingsTask, training, sample)

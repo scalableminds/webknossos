@@ -40,7 +40,8 @@ class User
   firstVisToggle : null
   particleSize : null
   sortTreesByName : null
-  push_throttle_time : 500
+
+  # DON'T add additional instance variables, this will result in a bad request!
 
   constructor : (user) ->
 
@@ -54,9 +55,11 @@ class User
     @trigger(name + "Changed", value)
     @push()
 
+
   getMouseInversionX : ->
 
     return if @inverseX then 1 else -1
+
 
   getMouseInversionY : ->
 
@@ -77,8 +80,7 @@ class User
   pushThrottled : ->
 
     saveFkt = @pushImpl
-    @pushThrottled = _.throttle(_.mutexDeferred( saveFkt, -1), @push_throttle_time)
-    # @pushThrottled = _.throttle(saveFkt, @push_throttle_time)
+    @pushThrottled = _.throttle(_.mutexDeferred( saveFkt, -1), 10000)
     @pushThrottled()
 
 

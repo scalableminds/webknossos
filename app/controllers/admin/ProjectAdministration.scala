@@ -14,6 +14,8 @@ import play.api.libs.concurrent.Execution.Implicits._
 
 import play.api.mvc.Request
 import oxalis.security.AuthenticatedRequest
+import scala.concurrent.Future
+import play.api.libs.json.{Json, JsObject, JsArray}
 
 object ProjectAdministration extends AdminController {
 
@@ -28,14 +30,21 @@ object ProjectAdministration extends AdminController {
       users <- sortedUsers
       projects <- ProjectDAO.findAll
     } yield {
-      html.admin.project.projectList(projects, form, users)
+      // html.admin.project.projectList(projects, form, users)
+      html.admin.project.projectList()
     }
 
   def list = Authenticated().async { implicit request =>
-    for {
-      html <- projectListWithForm(projectForm.fill("", request.user.id))
-    } yield {
-      Ok(html)
+    render.async {
+      case Accepts.Html() =>
+        // projectListWithForm(projectForm.fill("", request.user.id))
+        Future.successful(Ok(html.admin.project.projectList()))
+      case Accepts.Json() =>
+        for {
+          js <- ProjectDAO.findAll
+        } yield {
+          JsonOk(Json.obj("data" -> js))
+        }
     }
   }
 

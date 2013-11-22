@@ -35,8 +35,11 @@ object Application extends Controller with Secured {
         controllers.admin.routes.javascript.TaskAdministration.edit,
         controllers.routes.javascript.AnnotationController.trace,
         controllers.admin.routes.javascript.NMLIO.taskDownload,
+        controllers.admin.routes.javascript.NMLIO.projectDownload,
         controllers.admin.routes.javascript.TrainingsTaskAdministration.create,
-        controllers.admin.routes.javascript.TaskAdministration.delete
+        controllers.admin.routes.javascript.TaskAdministration.delete,
+        controllers.admin.routes.javascript.ProjectAdministration.create,
+        controllers.admin.routes.javascript.ProjectAdministration.delete
 
       )).as("text/javascript")
   }

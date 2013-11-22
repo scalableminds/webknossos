@@ -19,6 +19,6 @@ case class AnnotationReview(
   val date = new Date(timestamp)
 }
 
-object AnnotationReview{
-  implicit val annotationReviewFormat = Json.format[AnnotationReview]
+object AnnotationReview {
+	implicit val annotationReviewFormat = Json.format[AnnotationReview]
 }

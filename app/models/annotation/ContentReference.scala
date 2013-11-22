@@ -1,10 +1,10 @@
 package models.annotation
 
-import play.api.libs.json.Json
 import braingames.reactivemongo.DBAccessContext
 import play.api.Logger
 import scala.concurrent.Future
 import play.api.libs.concurrent.Execution.Implicits._
+import play.api.libs.json.Json
 
 /**
  * Company: scalableminds

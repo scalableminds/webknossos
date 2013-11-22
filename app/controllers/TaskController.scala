@@ -34,7 +34,7 @@ object TaskController extends Controller with Secured {
       else
         Messages("task.assigned")
 
-      JsonOk(html.user.dashboard.taskAnnotationTableItem(task, annotation), message)
+      JsonOk(Json.obj("tasks" -> task, "annotations" -> annotation))
     }) ?~> Messages("task.tooManyOpenOnes")
   }
 }

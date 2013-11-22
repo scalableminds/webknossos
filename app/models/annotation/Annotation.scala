@@ -1,6 +1,7 @@
 package models.annotation
 
 import models.basics._
+import models.basics.BasicDAOFormats.ObjectIdFormat
 import models.task.{TaskService, TaskDAO, TaskType, Task}
 import models.user.{UserService, UserDAO, User}
 import models.security.Role

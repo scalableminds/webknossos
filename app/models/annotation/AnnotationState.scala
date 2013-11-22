@@ -10,6 +10,7 @@ case class AnnotationState(
   isInProgress: Boolean = false)
 
 object AnnotationState{
+
   implicit val annotationStateFormat = Json.format[AnnotationState]
 
   val Assigned = AnnotationState(isAssigned = true)

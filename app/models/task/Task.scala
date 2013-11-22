@@ -16,6 +16,11 @@ import braingames.util.FoxImplicits
 import braingames.reactivemongo.{GlobalAccessContext, DBAccessContext}
 import reactivemongo.bson.BSONObjectID
 import play.modules.reactivemongo.json.BSONFormats._
+import org.joda.time.DateTime
+import java.text.SimpleDateFormat
+import oxalis.security.Secured
+import oxalis.security.AuthenticatedRequest
+
 
 case class Task(
                  seedIdHeidelberg: Int,
@@ -25,7 +30,7 @@ case class Task(
                  instances: Int = 1,
                  assignedInstances: Int = 0,
                  tracingTime: Option[Long] = None,
-                 created: Date = new Date,
+                 created: DateTime = DateTime.now(),
                  _project: Option[String] = None,
                  training: Option[Training] = None,
                  _id: BSONObjectID = BSONObjectID.generate
@@ -33,7 +38,7 @@ case class Task(
 
   lazy val id = _id.stringify
 
-  def taskType = TaskTypeDAO.findOneById(BSONObjectID.apply(_taskType.toString))(GlobalAccessContext).toFox
+  def taskType = TaskTypeDAO.findOneById(_taskType)(GlobalAccessContext).toFox
 
   def project = _project.toFox.flatMap(name => ProjectDAO.findOneByName(name)(GlobalAccessContext))
 
@@ -77,18 +82,19 @@ object Task extends FoxImplicits {
     for {
       dataSetName <- task.annotationBase.toFox.flatMap(_.dataSetName) getOrElse ""
       editPosition <- task.annotationBase.toFox.flatMap(_.content.map(_.editPosition)) getOrElse Point3D(1, 1, 1)
+      taskType <- task.taskType.map(_.summary).getOrElse("<deleted>")
     } yield {
       Json.obj(
         "id" -> task.id,
         "formattedHash" -> Formatter.formatHash(task.id),
         "seedIdHeidelberg" -> task.seedIdHeidelberg,
         "projectName" -> task._project.getOrElse("").toString,
-        "type" -> task.taskType.map(_.summary).getOrElse("<deleted>").toString,
+        "type" -> taskType.toString,
         "dataSet" -> dataSetName,
         "editPosition" -> editPosition,
         "neededExperience" -> task.neededExperience,
         "priority" -> task.priority,
-        "created" -> Formatter.formatDate(task.created),
+        "created" -> task.created.formatted("yyyy-MM-dd HH:mm"),
         "status" -> task.status
       )
     }

@@ -10,7 +10,7 @@
   @task.training.map{ training =>
   	<td> @training.domain (+@training.gain, -@training.loss) </td>
   }.getOrElse( <td></td> )
-  <td> @formatDate(task.created) </td>
+  <td> @task.created.formatted("yyyy-MM-dd HH:mm") </td>
 
   <td>  
     <a href="@controllers.admin.routes.TrainingsTaskAdministration.delete(task.id)" data-ajax="delete-row,confirm"><i class="icon-trash"></i> delete </a>

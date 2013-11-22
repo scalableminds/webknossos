@@ -30,9 +30,10 @@ import oxalis.nml.NMLService
 import play.api.libs.json.{Json, JsObject, JsArray}
 import org.bson.types.ObjectId
 import net.liftweb.common.Full
-import net.liftweb.common.Full
 import braingames.util.Fox
 import play.api.mvc.SimpleResult
+import play.api.mvc.Request
+import play.api.mvc.AnyContent
 
 object TaskAdministration extends AdminController {
 

@@ -17,6 +17,7 @@ import braingames.reactivemongo.{GlobalAccessContext, DBAccessContext}
 import reactivemongo.bson.BSONObjectID
 import play.modules.reactivemongo.json.BSONFormats._
 import org.joda.time.DateTime
+import org.joda.time.format.DateTimeFormat
 import java.text.SimpleDateFormat
 import play.api.libs.json.JsObject
 import scala.async.Async._
@@ -102,7 +103,7 @@ object Task extends FoxImplicits {
         "editPosition" -> editPosition,
         "neededExperience" -> task.neededExperience,
         "priority" -> task.priority,
-        "created" -> task.created.formatted("yyyy-MM-dd HH:mm"),
+        "created" -> DateTimeFormat.forPattern("yyyy-MM-dd HH:mm").print(task.created),
         "status" -> status
       )
     }

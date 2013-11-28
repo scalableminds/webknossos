@@ -12,6 +12,7 @@ import play.api.libs.concurrent.Execution.Implicits._
 import braingames.reactivemongo.DBAccessContext
 import play.api.Logger
 import braingames.util.Fox
+import play.api.libs.json._
 
 /**
  * Company: scalableminds
@@ -27,6 +28,10 @@ case class DashboardInfo(
                           dataSets: List[DataSet],
                           hasAnOpenTask: Boolean
                         )
+
+object DashboardInfo {
+  // implicit val dashboardInfoFormat = Json.format[DashboardInfo]
+}
 
 trait Dashboard {
   private def userWithTasks(user: User)(implicit ctx: DBAccessContext) = {

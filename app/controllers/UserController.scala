@@ -11,17 +11,107 @@ import play.api.libs.concurrent.Execution.Implicits._
 import views._
 import braingames.util.ExtendedTypes.ExtendedList
 import braingames.util.ExtendedTypes.ExtendedBoolean
+import play.api.Logger
+import braingames.binary.models.DataSet
+import scala.concurrent.Future
+import braingames.util.{Fox, FoxImplicits}
 
 object UserController extends Controller with Secured with Dashboard {
   override val DefaultAccessRole = RoleDAO.User
 
   def dashboard = Authenticated().async {
-    implicit request =>
+    implicit request => {
       dashboardInfo(request.user).map { info =>
+        Logger.error("##########     dashboardInfo      ################" +  info.toString)
         Ok(html.user.dashboard.userDashboard(info))
       }
+    }
   }
 
+  def getDashboardInfo = Authenticated().async {
+    implicit request => {
+      val futures = dashboardInfo(request.user).map { info =>
+
+        // TODO: move dataSetFormat into braingames-libs and bump the necessary version
+        implicit val dataSetFormat = Json.format[DataSet]
+
+        val tasks = info.tasks.map { case (task, annotation) =>
+          Json.obj("task" -> task, "annotation" -> annotation)
+        }
+
+        val loggedTime = info.loggedTime.map { case(paymentInterval, duration) =>
+          // formatTimeHumanReadable(duration) ?
+          Json.obj("paymentInterval" -> paymentInterval, "duration" -> duration.toString)
+        }
+
+        
+        val contentFoxes = info.tasks.map { case(task, annotation) => annotation.content }
+      
+        val myFox = for {
+          content <- Fox.sequence(contentFoxes)
+        } yield {
+          // JsonOk(Json.obj("html" -> content.toString))
+          JsonOk(Json.obj("html" -> content.toString))
+        }
+
+        // for {
+        //   unpackedFox <- myFox
+        // } yield
+        //   unpackedFox
+
+        
+        JsonOk( Json.obj(
+          "user" -> info.user,
+          "exploratory" -> info.exploratory,
+          "tasks" -> tasks,
+          "loggedTime" -> loggedTime,
+          "dataSets" -> info.dataSets,
+          "hasAnOpenTask" -> info.hasAnOpenTask
+
+        ) )
+
+
+      }
+
+      futures //.flatMap { outerFuture => outerFuture }
+
+      // Ok("test")
+
+      // for {
+      //   future <- Future.traverse(futures)
+      // } yield
+      //   future
+
+    }
+  }
+
+// 
+  // def TODOREMOVETHISoverview = Authenticated().async { implicit request =>
+  //   def combineUsersWithCurrentTasks(users: List[User]) = {
+  //     Fox.sequence(for {
+  //       user <- users
+  //       annotation <- AnnotationService.openTasksFor(user)
+  //     } yield {
+  //       for {
+  //         task <- annotation.task.toFox
+  //         taskType <- task.taskType
+  //       } yield {
+  //         user -> taskType
+  //       }
+  //     })
+  //   }
+
+  //   for {
+  //     users <- UserService.findAll
+  //     allTaskTypes <- TaskTypeDAO.findAll
+  //     usersWithTasks <- combineUsersWithCurrentTasks(users)
+  //     futureUserTaskAssignment <- TaskService.simulateTaskAssignment(users)
+  //     futureTaskTypes <- Fox.sequence(futureUserTaskAssignment.map(e => e._2.taskType.map(e._1 -> _)).toList)
+  //   } yield {
+  //     Ok(html.admin.task.taskOverview(users, allTaskTypes, usersWithTasks.flatten.distinct, futureTaskTypes.flatten.toMap))
+  //   }
+  // }
+// 
   def saveSettings = Authenticated().async(parse.json(maxLength = 2048)) { implicit request =>
     (for {
       settings <- request.body.asOpt[JsObject] ?~> Messages("user.settings.invalid")

@@ -51,6 +51,7 @@ case class TimeTracking(user: BSONObjectID, timeEntries: List[TimeEntry], _id: B
 }
 
 object TimeTracking {
+
   type LoggedPerPaymentInterval = Map[PaymentInterval, Duration]
 
   val timeRx = "(([0-9]+)d)?(\\s*([0-9]+)h)?(\\s*([0-9]+)m)?".r

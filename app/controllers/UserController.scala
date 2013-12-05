@@ -35,52 +35,35 @@ object UserController extends Controller with Secured with Dashboard {
         // TODO: move dataSetFormat into braingames-libs and bump the necessary version
         implicit val dataSetFormat = Json.format[DataSet]
 
-        val tasks = info.tasks.map { case (task, annotation) =>
-          Json.obj("task" -> task, "annotation" -> annotation)
-        }
-
         val loggedTime = info.loggedTime.map { case(paymentInterval, duration) =>
-          // formatTimeHumanReadable(duration) ?
+          // TODO make formatTimeHumanReadable(duration) (?) work
           Json.obj("paymentInterval" -> paymentInterval, "duration" -> duration.toString)
         }
 
-        
-        val contentFoxes = info.tasks.map { case(task, annotation) => annotation.content }
-      
-        val myFox = for {
-          content <- Fox.sequence(contentFoxes)
+        val futureOfList = Future.traverse(info.tasks)( {
+            case(task, annotation) => annotation.content.map(
+              foxContent => Json.obj("task" -> task, "annotation" -> foxContent.toString)
+            ).getOrElse(Json.obj("data" -> "data"))
+          }
+        )
+
+        for {
+          aList <- futureOfList
         } yield {
-          // JsonOk(Json.obj("html" -> content.toString))
-          JsonOk(Json.obj("html" -> content.toString))
+          Json.obj(
+            "user" -> info.user,
+            "exploratory" -> info.exploratory,
+            "loggedTime" -> loggedTime,
+            "dataSets" -> info.dataSets,
+            "hasAnOpenTask" -> info.hasAnOpenTask,
+            "tasks" -> Json.toJson(aList)
+          )
         }
-
-        // for {
-        //   unpackedFox <- myFox
-        // } yield
-        //   unpackedFox
-
-        
-        JsonOk( Json.obj(
-          "user" -> info.user,
-          "exploratory" -> info.exploratory,
-          "tasks" -> tasks,
-          "loggedTime" -> loggedTime,
-          "dataSets" -> info.dataSets,
-          "hasAnOpenTask" -> info.hasAnOpenTask
-
-        ) )
-
-
       }
 
-      futures //.flatMap { outerFuture => outerFuture }
-
-      // Ok("test")
-
-      // for {
-      //   future <- Future.traverse(futures)
-      // } yield
-      //   future
+      futures.flatMap { f =>
+        f.map { content => JsonOk(Json.obj("data" -> content)) }
+      }
 
     }
   }

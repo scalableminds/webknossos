@@ -91,20 +91,21 @@ object Task extends FoxImplicits {
       dataSetName <- task.annotationBase.toFox.flatMap(_.dataSetName) getOrElse ""
       editPosition <- task.annotationBase.toFox.flatMap(_.content.map(_.editPosition)) getOrElse Point3D(1, 1, 1)
       status <- task.status
-      taskType <- task.taskType.map(_.summary).getOrElse("<deleted>")
+      taskType <- task.taskType.futureBox
     } yield {
       Json.obj(
         "id" -> task.id,
         "formattedHash" -> Formatter.formatHash(task.id),
         "seedIdHeidelberg" -> task.seedIdHeidelberg,
         "projectName" -> task._project.getOrElse("").toString,
-        "type" -> taskType,
+        "type" -> taskType.toOption,
         "dataSet" -> dataSetName,
         "editPosition" -> editPosition,
         "neededExperience" -> task.neededExperience,
         "priority" -> task.priority,
         "created" -> DateTimeFormat.forPattern("yyyy-MM-dd HH:mm").print(task.created),
-        "status" -> status
+        "status" -> status,
+        "isTraining" -> task.isTraining
       )
     }
   }

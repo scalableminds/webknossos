@@ -67,7 +67,17 @@ $ ->
         "stats"
       ], (Controller) ->
 
-        oxalis = window.oxalis = new Controller(constants.CONTROL_MODE_TRACE)
+        leftTabBar = $("#main")
+        dataUrl = leftTabBar.data("url")
+
+        $.get(dataUrl).done( (task) ->
+
+          templateSource = _.unescape(leftTabBar.html())
+          templateOutput = _.template(templateSource)({task : task})
+          leftTabBar.html(templateOutput)
+
+          oxalis = window.oxalis = new Controller(constants.CONTROL_MODE_TRACE)
+        )
 
         return
 

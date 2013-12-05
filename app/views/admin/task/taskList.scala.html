@@ -40,8 +40,8 @@
               </a>
           </td>
           <td> 
-            <a href="@controllers.admin.routes.TaskTypeAdministration.list#<%= element.type %>">
-              <%= element.type %>
+            <a href="@controllers.admin.routes.TaskTypeAdministration.list#<% if(element.type) { print(element.type.summary)  } else { print('<deleted>') } %>">
+              <% if(element.type) { print(element.type.summary)  } else { print("<deleted>") } %>
             </a>
           </td>
           <td> <%= element.dataSet %> </td>

@@ -52,6 +52,7 @@ GET           /annotations/:typ/:id/finishAndRedirect                    control
 GET           /annotations/:typ/:id/finish                               controllers.AnnotationController.finish(typ: String, id: String)
 
 GET           /annotations/:typ/:id                                      controllers.AnnotationController.trace(typ: String, id: String)
+GET 					/annotations/:typ/:id/data 																 controllers.AnnotationController.traceJSON(typ: String, id: String)
 GET           /annotations/:typ/:id/info                                 controllers.AnnotationController.info(typ: String, id: String)
 GET           /annotations/:typ/:id/download                             controllers.AnnotationController.download(typ: String, id: String)
 

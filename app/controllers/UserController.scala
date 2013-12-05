@@ -40,7 +40,7 @@ object UserController extends Controller with Secured with Dashboard {
           Json.obj("paymentInterval" -> paymentInterval, "duration" -> duration.toString)
         }
 
-        val futureOfList = Future.traverse(info.tasks)( {
+        val futureList = Future.traverse(info.tasks)( {
             case(task, annotation) => annotation.content.map(
               foxContent => Json.obj("task" -> task, "annotation" -> foxContent.toString)
             ).getOrElse(Json.obj("data" -> "data"))
@@ -48,7 +48,7 @@ object UserController extends Controller with Secured with Dashboard {
         )
 
         for {
-          aList <- futureOfList
+          aList <- futureList
         } yield {
           Json.obj(
             "user" -> info.user,

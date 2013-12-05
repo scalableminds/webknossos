@@ -229,4 +229,37 @@ object AnnotationController extends Controller with Secured with TracingInformat
       html.tracing.trace(annotation)(additionalHtml)
     }
   }
+
+
+  def traceJSON(typ: String, id: String) = Authenticated().async {
+    implicit request => {
+      val fox = withAnnotation(typ, id) {
+        annotation =>
+          if (annotation.restrictions.allowAccess(request.user)) {
+            // TODO: RF -allow all modes
+            Full(jsonForAnnotation(annotation))
+          } else
+            Failure(Messages("notAllowed")) ~> 403
+      }
+
+      for {
+        future <- fox
+        futureContent <- future
+      } yield {
+        futureContent
+      }
+
+    }
+  }
+
+  // returns Future[SimpleResult]
+  def jsonForAnnotation(annotation: AnnotationLike)(implicit request: AuthenticatedRequest[_]) = {
+    
+    for {
+      taskContent <- annotation.task.futureBox
+    } yield {
+      JsonOk(taskContent.toString)
+    }
+    
+  }
 }

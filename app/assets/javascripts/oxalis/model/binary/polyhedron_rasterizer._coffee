@@ -9,6 +9,24 @@ Int32_MIN = -2147483648
 Int32_MAX = 2147483647
 
 # Macros
+swapMacro = (a, b) ->
+  __tmp = a
+  a = b
+  b = __tmp
+
+
+crossMacro = (o0, o1, a0, a1, b0, b1) ->
+  (a0 - o0) * (b1 - o1) - (a1 - o1) * (b0 - o0)
+
+
+drawMacro = (x, y, z) ->
+
+  __index_y = (z << shift_z) + (y << 1)
+
+  buffer[__index_y]     = x if x < buffer[__index_y]
+  buffer[__index_y + 1] = x if x > buffer[__index_y + 1]
+
+
 # Returns the index of the next free bit.
 # Example: 5 = 0000 0101 => 3
 nextFreeBit = (x) ->
@@ -146,15 +164,7 @@ class PolyhedronRasterizer
   draw : (x, y, z) ->
     
     { buffer, shift_z } = @
-
-
-    __index_y = (z << shift_z) + (y << 1)
-
-    buffer[__index_y]     = x if x < buffer[__index_y]
-    buffer[__index_y + 1] = x if x > buffer[__index_y + 1]
-
-
-
+    drawMacro(x, y, z)
 
     return
 
@@ -191,15 +201,7 @@ class PolyhedronRasterizer
     y_inc = if (dy = y1 - y) < 0 then -1 else 1
     z_inc = if (dz = z1 - z) < 0 then -1 else 1
     
-
-
-    __index_y = (z << shift_z) + (y << 1)
-
-    buffer[__index_y]     = x if x < buffer[__index_y]
-    buffer[__index_y + 1] = x if x > buffer[__index_y + 1]
-
-
-
+    drawMacro(x, y, z)
     
     dx = if dx < 0 then -dx else dx
     dy = if dy < 0 then -dy else dy
@@ -217,52 +219,16 @@ class PolyhedronRasterizer
 
     else if dy >= dz
 
-
-      __tmp = y
-      y = x
-      x = __tmp
-
-
-
-
-      __tmp = y_inc
-      y_inc = x_inc
-      x_inc = __tmp
-
-
-
-
-      __tmp = dy2
-      dy2 = dx2
-      dx2 = __tmp
-
-
-
+      swapMacro(y, x)
+      swapMacro(y_inc, x_inc)
+      swapMacro(dy2, dx2)
       d = dy
       mode = 1
 
     else 
-
-      __tmp = z
-      z = x
-      x = __tmp
-
-
-
-
-      __tmp = z_inc
-      z_inc = x_inc
-      x_inc = __tmp
-
-
-
-
-      __tmp = dz2
-      dz2 = dx2
-      dx2 = __tmp
-
-
-
+      swapMacro(z, x)
+      swapMacro(z_inc, x_inc)
+      swapMacro(dz2, dx2)
       d = dz
       mode = 2
 
@@ -284,35 +250,11 @@ class PolyhedronRasterizer
       
       switch mode
         when 0 
-      
-
-    __index_y = (z << shift_z) + (y << 1)
-
-    buffer[__index_y]     = x if x < buffer[__index_y]
-    buffer[__index_y + 1] = x if x > buffer[__index_y + 1]
-
-
-
+          drawMacro(x, y, z)
         when 1 
-
-
-          __index_y = (z << shift_z) + (x << 1)
-
-          buffer[__index_y]     = y if y < buffer[__index_y]
-          buffer[__index_y + 1] = y if y > buffer[__index_y + 1]
-
-
-
+          drawMacro(y, x, z)
         else
-
-
-          __index_y = (x << shift_z) + (y << 1)
-
-          buffer[__index_y]     = z if z < buffer[__index_y]
-          buffer[__index_y + 1] = z if z > buffer[__index_y + 1]
-
-
-
+          drawMacro(z, y, x)
 
     return
 
@@ -330,15 +272,7 @@ class PolyhedronRasterizer
     dx2 = dx << 1
     dy2 = dy << 1
 
-
-
-    __index_y = (z << shift_z) + (y << 1)
-
-    buffer[__index_y]     = x if x < buffer[__index_y]
-    buffer[__index_y + 1] = x if x > buffer[__index_y + 1]
-
-
-    
+    drawMacro(x, y, z)    
 
     if dx >= dy
 
@@ -347,27 +281,9 @@ class PolyhedronRasterizer
 
     else
 
-
-      __tmp = y
-      y = x
-      x = __tmp
-
-
-
-
-      __tmp = y_inc
-      y_inc = x_inc
-      x_inc = __tmp
-
-
-
-
-      __tmp = dy2
-      dy2 = dx2
-      dx2 = __tmp
-
-
-
+      swapMacro(y, x)
+      swapMacro(y_inc, x_inc)
+      swapMacro(dy2, dx2)
       d = dy
       mode = 1
 
@@ -383,25 +299,9 @@ class PolyhedronRasterizer
       x   += x_inc
       
       if mode
-
-
-        __index_y = (z << shift_z) + (x << 1)
-
-        buffer[__index_y]     = y if y < buffer[__index_y]
-        buffer[__index_y + 1] = y if y > buffer[__index_y + 1]
-
-
-
+        drawMacro(y, x, z)
       else
-    
-
-    __index_y = (z << shift_z) + (y << 1)
-
-    buffer[__index_y]     = x if x < buffer[__index_y]
-    buffer[__index_y + 1] = x if x > buffer[__index_y + 1]
-
-
-
+        drawMacro(x, y, z)
 
     return
 
@@ -580,4 +480,3 @@ class PolyhedronRasterizer.Master
 
 
 PolyhedronRasterizer
-

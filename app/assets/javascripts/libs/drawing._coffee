@@ -4,6 +4,13 @@
 # lines and filling polygons
 
 # Macros
+swapMacro = (a, b) ->
+
+  __tmp = a
+  a = b
+  b = __tmp
+
+
 # Constants
 SMOOTH_LENGTH = 4
 SMOOTH_ALPHA  = 0.2
@@ -31,30 +38,9 @@ Drawing =
 
     else
 
-
-
-      __tmp = y
-      y = x
-      x = __tmp
-
-
-
-
-
-      __tmp = y_inc
-      y_inc = x_inc
-      x_inc = __tmp
-
-
-
-
-
-      __tmp = dy2
-      dy2 = dx2
-      dx2 = __tmp
-
-
-
+      swapMacro(y, x)
+      swapMacro(y_inc, x_inc)
+      swapMacro(dy2, dx2)
       d = dy
       mode = 1
 

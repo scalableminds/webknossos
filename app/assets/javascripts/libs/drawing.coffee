@@ -31,29 +31,20 @@ Drawing =
 
     else
 
-
-
+      #swapMacro(y, x)
       __tmp = y
       y = x
       x = __tmp
-
-
-
-
-
+      
+      #swapMacro(y_inc, x_inc)
       __tmp = y_inc
       y_inc = x_inc
       x_inc = __tmp
-
-
-
-
-
+      
+      #swapMacro(dy2, dx2)
       __tmp = dy2
       dy2 = dx2
       dx2 = __tmp
-
-
 
       d = dy
       mode = 1

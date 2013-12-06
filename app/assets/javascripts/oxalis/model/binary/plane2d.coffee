@@ -6,6 +6,21 @@
 ###
 
 # Macros
+# should work as normal functions, as well
+tileIndexByTileMacro = (tile) ->
+
+  tile[0] * (1 << @TEXTURE_SIZE_P - @cube.BUCKET_SIZE_P) + tile[1]
+
+
+subTileMacro = (tile, index) ->
+
+  [(tile[0] << 1) + (index % 2), (tile[1] << 1) + (index >> 1)]
+
+
+bufferOffsetByTileMacro = (tile, tileSize) ->
+
+  tile[0] * (1 << tileSize) + tile[1] * (1 << tileSize) * (1 << @TEXTURE_SIZE_P)
+
 
 class Plane2D
 
@@ -55,12 +70,7 @@ class Plane2D
         # If the tile is part of the texture, mark it as changed
         if u in [0...@BUCKETS_PER_ROW] and v in [0...@BUCKETS_PER_ROW]
           tile = [u, v]
-          @dataTexture.tiles[
-
-tile[0] * (1 << @TEXTURE_SIZE_P - @cube.BUCKET_SIZE_P) + tile[1]
-
-
-] = false
+          @dataTexture.tiles[tileIndexByTileMacro(tile)] = false
           @dataTexture.ready &= not (u in [@dataTexture.area[0]..@dataTexture.area[2]] and v in [@dataTexture.area[1]..@dataTexture.area[3]])
 
     @cube.on "volumeLabled", =>
@@ -162,18 +172,8 @@ tile[0] * (1 << @TEXTURE_SIZE_P - @cube.BUCKET_SIZE_P) + tile[1]
           oldTile = [oldOffset[0] + du, oldOffset[1] + dv]
           newTile = [newOffset[0] + du, newOffset[1] + dv]
 
-          oldTileIndex =
-
- oldTile[0] * (1 << @TEXTURE_SIZE_P - @cube.BUCKET_SIZE_P) + oldTile[1]
-
-
-
-          newTileIndex =
-
- newTile[0] * (1 << @TEXTURE_SIZE_P - @cube.BUCKET_SIZE_P) + newTile[1]
-
-
-
+          oldTileIndex = tileIndexByTileMacro(oldTile)
+          newTileIndex = tileIndexByTileMacro(newTile)
 
           #if oldTiles[oldTileIndex]
           #  @copyTile(newTile, oldTile, texture.buffer, oldBuffer)
@@ -190,12 +190,7 @@ tile[0] * (1 << @TEXTURE_SIZE_P - @cube.BUCKET_SIZE_P) + tile[1]
         for v in [area[3]..area[1]] by -1
           
           tile = [u, v]
-          tileIndex = 
-
-tile[0] * (1 << @TEXTURE_SIZE_P - @cube.BUCKET_SIZE_P) + tile[1]
-
-
-
+          tileIndex = tileIndexByTileMacro(tile)
 
           # Render tile if necessary and mark it as rendered
           unless texture.tiles[tileIndex]
@@ -251,12 +246,7 @@ tile[0] * (1 << @TEXTURE_SIZE_P - @cube.BUCKET_SIZE_P) + tile[1]
     if map[mapIndex] == @RECURSION_PLACEHOLDER
 
       for i in [0..3] by 1
-        subTile =
-
- [(tile[0] << 1) + (i % 2), (tile[1] << 1) + (i >> 1)]
-
-
-
+        subTile = subTileMacro(tile, i)
         @renderSubTile(map, (mapIndex << 2) + 1 + i, subTile, tileZoomStep - 1)
 
     else
@@ -266,12 +256,7 @@ tile[0] * (1 << @TEXTURE_SIZE_P - @cube.BUCKET_SIZE_P) + tile[1]
       tileSizeP = @cube.BUCKET_SIZE_P - (@dataTexture.zoomStep - tileZoomStep)
       skipP = Math.max(@dataTexture.zoomStep - bucketZoomStep, 0)
       repeatP = Math.max(bucketZoomStep - @dataTexture.zoomStep, 0)
-      destOffset =
-
- tile[0] * (1 << tileSizeP) + tile[1] * (1 << tileSizeP) * (1 << @TEXTURE_SIZE_P)
-
-
-
+      destOffset = bufferOffsetByTileMacro(tile, tileSizeP)
 
       offsetMask = (1 << bucketZoomStep - tileZoomStep) - 1;
       scaleFactorP = @cube.BUCKET_SIZE_P - (bucketZoomStep - tileZoomStep)
@@ -432,4 +417,3 @@ tile[0] * (1 << @TEXTURE_SIZE_P - @cube.BUCKET_SIZE_P) + tile[1]
         source.offset += source.rowDelta
 
     return
-

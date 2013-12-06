@@ -109,10 +109,12 @@ tracing.reset.success=Reseted tracing to base
 tracing.reset.failed=Couldn't reset tracing to base
 annotation.reopened=Tracing got reopened
 
-jira.summary.notSupplied=No summary supplied
-jira.description.notSupplied=No description supplied
-jira.type.notSupplied=No issue type supplied
-jira.type.invalid=Invalid issue type
+issue.summary.notSupplied=No summary supplied
+issue.description.notSupplied=No description supplied
+issue.type.notSupplied=No issue type supplied
+issue.type.invalid=Invalid issue type
+issue.submit.success=Successfully submitted issue.
+issue.submit.failure=Failed to submit issue
 
 task.createSuccess=Task successfully created
 task.finished=Task is finished

@@ -31,9 +31,6 @@ object ApplicationBuild extends Build {
     "com.typesafe.akka" %% "akka-testkit" % "2.1.0",
     "com.typesafe.akka" %% "akka-agent" % "2.1.0",
     "com.typesafe.akka" %% "akka-remote" % "2.1.0",
-    // Jira integration
-    "com.sun.jersey" % "jersey-client" % "1.8",
-    "com.sun.jersey" % "jersey-core" % "1.8",
     "org.reactivemongo" %% "play2-reactivemongo" % "0.9",
     "org.reactivemongo" %% "reactivemongo-bson-macros" % "0.9",
     "org.scala-lang" % "scala-reflect" % "2.10.0",

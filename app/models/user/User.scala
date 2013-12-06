@@ -55,7 +55,9 @@ case class User(
     _roles.find(_.name == role.name).isDefined
 
   def adminTeams =
-    teams.filter(_.role == TeamMembership.Admin).map(_.teamPath)
+    // TODO: FIX it is not possible to make someone an admin of a team, therefore we need to skip the 
+    // filter for now
+    teams/*.filter(_.role == TeamMembership.Admin)*/.map(_.teamPath)
 
   def hasPermission(permission: Permission) =
     ruleSet.find(_.implies(permission)).isDefined

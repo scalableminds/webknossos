@@ -31,8 +31,8 @@ linkText = {true: "Review failed", false: "Review successful"}
     <% } else if (annotations.state.isInReview || annotations.state.isReadyForReview) { %>
       <i class="icon-eye-open"></i><span> In Review</span>
     <% } else { %>
-      <a href="<%= jsRoutes.controllers.AnnotationController.trace(annotations.typ, annotations._id.$oid) %>"><i class="icon-random"></i> trace</a><br/>
-      <a href="<%= jsRoutes.controllers.AnnotationController.finish(annotations.typ, annotations._id.$oid) %>" class="trace-finish" data-ajax="replace-row,confirm=AT Messages("annotations.finish.confirm")" ><i class="icon-ok-circle"></i> finish</a>
+      <a href="<%= jsRoutes.controllers.AnnotationController.trace(annotations.typ, annotations._id.$oid).url %>"><i class="icon-random"></i> trace</a><br/>
+      <a href="<%= jsRoutes.controllers.AnnotationController.finish(annotations.typ, annotations._id.$oid).url %>" class="trace-finish" data-ajax="replace-row,confirm=@Messages("annotation.finish.confirm")" ><i class="icon-ok-circle"></i> finish</a>
       
       AT displayComments(true, annotations.review.flatMap( _.comment ))
     <% } %>

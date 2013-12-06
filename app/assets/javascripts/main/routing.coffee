@@ -78,15 +78,26 @@ $ ->
         leftTabBar = $("#main")
         dataUrl = leftTabBar.data("url")
 
-        $.get(dataUrl).done( (task) ->
-
+        populateTemplate = (data) ->
           templateSource = _.unescape(leftTabBar.html())
-          templateOutput = _.template(templateSource)({task : task})
+          templateOutput = _.template(templateSource)(data)
           leftTabBar.html(templateOutput)
 
-          oxalis = window.oxalis = new Controller(constants.CONTROL_MODE_TRACE)
-        )
+        $.ajax(
+          url: dataUrl
+          type: 'GET'
+          success: (task) ->
 
+            populateTemplate({task : task})
+
+          error: ->
+
+            populateTemplate({task : null})
+
+          complete: (task) ->
+
+            oxalis = window.oxalis = new Controller(constants.CONTROL_MODE_TRACE)
+        )
         return
 
     "tracing.view" : ->

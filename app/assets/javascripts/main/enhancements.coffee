@@ -102,8 +102,6 @@ $ ->
             templateSource = _.unescape($table.data("tr-template"))
             templateOutput = _.template(templateSource)(responseData)
             $tbody.append(templateOutput)
-            console.log("templateOutput: ", templateOutput)
-
 
         if options["replace"]
           $(options["replace"]).replaceWith(html)

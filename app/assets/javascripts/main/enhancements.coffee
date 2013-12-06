@@ -93,7 +93,17 @@ $ ->
           $this.parents("tr").first().remove()
 
         if options["add-row"]
-          $(options["add-row"]).find("tbody").append(html)
+          $table = $(options["add-row"])
+          $tbody = $table.find("tbody")
+          
+          if html
+            $tbody.append(html)
+          else if $table.data("tr-template") != null
+            templateSource = _.unescape($table.data("tr-template"))
+            templateOutput = _.template(templateSource)(responseData)
+            $tbody.append(templateOutput)
+            console.log("templateOutput: ", templateOutput)
+
 
         if options["replace"]
           $(options["replace"]).replaceWith(html)

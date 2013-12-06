@@ -168,9 +168,12 @@ object AnnotationController extends Controller with Secured with TracingInformat
             hasOpen <- AnnotationService.hasAnOpenTask(request.user)
           } yield {
             JsonOk(
-              html.user.dashboard.taskAnnotationTableItem(task, annotation),
-              Json.obj("hasAnOpenTask" -> hasOpen),
-              message)
+              // html.user.dashboard.taskAnnotationTableItem(task, annotation),
+              Json.obj(
+                "task" -> task,
+                "annotation" -> annotation,
+                "hasAnOpenTask" -> hasOpen),
+                message)
           }
       }
 

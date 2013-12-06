@@ -34,6 +34,7 @@ object Application extends Controller with Secured {
         controllers.admin.routes.javascript.AnnotationAdministration.annotationsForTask,
         controllers.admin.routes.javascript.TaskAdministration.edit,
         controllers.routes.javascript.AnnotationController.trace,
+        controllers.routes.javascript.AnnotationController.finish,
         controllers.admin.routes.javascript.NMLIO.taskDownload,
         controllers.admin.routes.javascript.NMLIO.projectDownload,
         controllers.admin.routes.javascript.TrainingsTaskAdministration.create,

@@ -24,6 +24,14 @@ $ ->
 
     "user.dashboard.userDashboard" : ->
 
+      # tasks
+
+      $dashboardTasks = $("#dashboard-tasks")
+      $dashboardTasksBody = $dashboardTasks.find("tbody")
+      taskTRTemplate = $dashboardTasksBody.html()
+      $dashboardTasks.data("tr-template", taskTRTemplate)
+      $dashboardTasksBody.empty()
+
       RoutingUtils.maskFinishedTasks()
 
       $("#nml-explore-form").each ->

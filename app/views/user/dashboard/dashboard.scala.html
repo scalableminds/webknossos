@@ -39,9 +39,9 @@
               </tr>
             </thead>
             <tbody>
-            AT dashboardInfo.tasks.map{ case (task, annotation) =>
-              AT taskAnnotationTableItem(task, annotation)
-            }
+            AT dashboardInfo.tasks.map case (task, annotation) =>
+              AT @taskAnnotationTableItem()
+            
             </tbody>
           </table>
         </div>

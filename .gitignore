@@ -38,3 +38,4 @@ public/levelStacks
 aws.conf
 aws.conf.disabled
 /knowledge
+conf/github.conf

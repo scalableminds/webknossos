@@ -8,7 +8,7 @@ import scala.concurrent.Future
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.Logger
 import models.user.{User, Experience}
-import models.annotation.{AnnotationService, AnnotationType, AnnotationDAO, AnnotationSettings}
+import models.annotation._
 import play.api.libs.json.{Json, JsObject}
 import braingames.format.Formatter
 import scala.concurrent.duration._
@@ -18,6 +18,8 @@ import reactivemongo.bson.BSONObjectID
 import play.modules.reactivemongo.json.BSONFormats._
 import org.joda.time.DateTime
 import java.text.SimpleDateFormat
+import play.api.libs.json.JsObject
+import scala.async.Async._
 
 case class Task(
                  seedIdHeidelberg: Int,
@@ -35,25 +37,31 @@ case class Task(
 
   lazy val id = _id.stringify
 
-  def taskType = TaskTypeDAO.findOneById(BSONObjectID.apply(_taskType.toString))(GlobalAccessContext).toFox
+  def taskType(implicit ctx: DBAccessContext) =
+    TaskTypeDAO.findOneById(BSONObjectID.apply(_taskType.toString)).toFox
 
-  def project = _project.toFox.flatMap(name => ProjectDAO.findOneByName(name)(GlobalAccessContext))
+  def project(implicit ctx: DBAccessContext) =
+    _project.toFox.flatMap(name => ProjectDAO.findOneByName(name))
 
-  def annotations =
-    AnnotationDAO.findByTaskIdAndType(new ObjectId(_id.stringify), AnnotationType.Task)
+  def isFullyAssigned =
+    instances <= assignedInstances
 
-  def isFullyAssigned = instances <= assignedInstances
+  def annotations(implicit ctx: DBAccessContext) =
+    AnnotationService.annotationsFor(this)
 
-  def settings = taskType.map(_.settings) getOrElse AnnotationSettings.default
+  def settings(implicit ctx: DBAccessContext) =
+    taskType.map(_.settings) getOrElse AnnotationSettings.default
 
-  def isTraining = training.isDefined
+  def isTraining =
+    training.isDefined
 
-  def annotationBase = AnnotationDAO.findByTaskIdAndType(new ObjectId(_id.stringify), AnnotationType.TracingBase).headOption
+  def annotationBase(implicit ctx: DBAccessContext) =
+    AnnotationService.baseFor(this)
 
   def unassigneOnce = this.copy(assignedInstances = assignedInstances - 1)
 
-  def status = {
-    val inProgress = annotations.filter(!_.state.isFinished).size
+  def status(implicit ctx: DBAccessContext) = async{
+    val inProgress = await(annotations).filter(!_.state.isFinished).size
     CompletionStatus(
       open = instances - assignedInstances,
       inProgress = inProgress,
@@ -75,10 +83,11 @@ case class Task(
 object Task extends FoxImplicits {
   implicit val taskFormat = Json.format[Task]
 
-  def transformToJson(task: Task): Future[JsObject] = {
+  def transformToJson(task: Task)(implicit ctx: DBAccessContext): Future[JsObject] = {
     for {
       dataSetName <- task.annotationBase.toFox.flatMap(_.dataSetName) getOrElse ""
       editPosition <- task.annotationBase.toFox.flatMap(_.content.map(_.editPosition)) getOrElse Point3D(1, 1, 1)
+      status <- task.status
     } yield {
       Json.obj(
         "id" -> task.id,
@@ -91,7 +100,7 @@ object Task extends FoxImplicits {
         "neededExperience" -> task.neededExperience,
         "priority" -> task.priority,
         "created" -> task.created.formatted("yyyy-MM-dd HH:mm"),
-        "status" -> task.status
+        "status" -> status
       )
     }
   }

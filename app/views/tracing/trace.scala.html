@@ -1,4 +1,5 @@
 @(annotation: models.annotation.AnnotationLike)(additionalHtml: Html)(implicit session: oxalis.view.AuthedSessionData)
+@import braingames.reactivemongo.GlobalAccessContext
 
 @import models.task.Task
 @import models.annotation.AnnotationType
@@ -49,8 +50,8 @@
             <div class="tab-content">
               @if(task.isDefined) {
                 <div class="tab-pane" id="tab0">
-                  <h5>@task.map(_.taskType.map(_.summary))</h5>
-                  @task.map(_.taskType.map(_.description))
+                  <h5>@task.map(_.taskType(GlobalAccessContext).map(_.summary))</h5>
+                  @task.map(_.taskType(GlobalAccessContext).map(_.description))
                 </div>
               }
               @if(additionalHtml.body != ""){

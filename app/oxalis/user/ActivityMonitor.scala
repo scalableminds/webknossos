@@ -9,6 +9,7 @@ import play.api.Play.current
 import org.bson.types.ObjectId
 import play.api.libs.concurrent.Execution.Implicits._
 import reactivemongo.bson.BSONObjectID
+import braingames.reactivemongo.GlobalAccessContext
 
 
 case class FlushActivities()
@@ -36,7 +37,7 @@ class ActivityMonitor extends Actor {
         activities =>
           for {
             (userId, time) <- activities
-            Some(user) <- UserService.findOneById(userId.toString, useCache = true)
+            Some(user) <- UserService.findOneById(userId.toString, useCache = true)(GlobalAccessContext)
           } {
             UserService.logActivity(user, time)
           }

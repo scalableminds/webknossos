@@ -6,7 +6,7 @@ import play.api.libs.json.{Json, JsObject}
 import braingames.util.FoxImplicits
 import play.api.libs.concurrent.Execution.Implicits._
 import reactivemongo.bson.BSONObjectID
-import braingames.reactivemongo.DBAccessContext
+import braingames.reactivemongo.{GlobalAccessContext, DBAccessContext}
 import play.modules.reactivemongo.json.BSONFormats._
 
 case class Assertion(
@@ -23,7 +23,7 @@ case class Assertion(
 
   def id = _id.stringify
 
-  def user = _user.toFox.flatMap(id => UserService.findOneById(id.stringify, useCache = true))
+  def user = _user.toFox.flatMap(id => UserService.findOneById(id.stringify, useCache = true)(GlobalAccessContext))
 }
 
 object Assertion {

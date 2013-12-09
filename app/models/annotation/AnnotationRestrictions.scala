@@ -7,6 +7,7 @@ import play.api.libs.json._
 import scala.async.Async._
 import scala.concurrent.Future
 import play.api.libs.concurrent.Execution.Implicits._
+import braingames.reactivemongo.GlobalAccessContext
 
 /**
  * Company: scalableminds

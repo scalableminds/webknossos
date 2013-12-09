@@ -9,7 +9,7 @@ import scala.concurrent.Future
 import play.api.libs.concurrent.Execution.Implicits._
 import braingames.util.{FoxImplicits, Fox}
 
-object SavedTracingInformationHandler extends AnnotationInformationHandler with FoxImplicits{
+object SavedTracingInformationHandler extends AnnotationInformationHandler with FoxImplicits {
 
   import braingames.mvc.BoxImplicits._
 
@@ -17,9 +17,9 @@ object SavedTracingInformationHandler extends AnnotationInformationHandler with 
 
   override val cache = false
 
-  override def nameForAnnotation(a: AnnotationLike): Future[String] = a match {
+  override def nameForAnnotation(a: AnnotationLike)(implicit ctx: DBAccessContext): Future[String] = a match {
     case annotation: Annotation =>
-      for{
+      for {
         user <- annotation.user
       } yield {
         val userName = user.map(_.abreviatedName) getOrElse ""
@@ -32,12 +32,11 @@ object SavedTracingInformationHandler extends AnnotationInformationHandler with 
   }
 
   def provideAnnotation(annotationId: String)(implicit ctx: DBAccessContext): Fox[Annotation] = {
-    Future.successful(
-      for {
-        annotation <- AnnotationDAO.findOneById(annotationId) ?~ Messages("annotation.notFound")
-      } yield {
-        annotation
-      })
+    for {
+      annotation <- AnnotationDAO.findOneById(annotationId) ?~> Messages("annotation.notFound")
+    } yield {
+      annotation
+    }
   }
 
 }

@@ -1,22 +1,24 @@
 package models.annotation
 
-import org.bson.types.ObjectId
-import com.mongodb.casbah.Imports._
-import models.context._
-import com.novus.salat.annotations._
-import com.novus.salat.dao.SalatDAO
-import models.basics.BasicDAO
 import models.user.{UserService, User}
 import java.util.Date
+import play.api.libs.json.Json
+import play.modules.reactivemongo.json.BSONFormats._
+import reactivemongo.bson.BSONObjectID
+import braingames.reactivemongo.GlobalAccessContext
 
 case class AnnotationReview(
-    _reviewer: ObjectId,
-    reviewAnnotation: ObjectId,
+    _reviewer: BSONObjectID,
+    reviewAnnotation: BSONObjectID,
     timestamp: Long,
     comment: Option[String] = None,
-    _id: ObjectId = new ObjectId) {
+    _id: BSONObjectID = BSONObjectID.generate) {
 
-  def reviewer = UserService.findOneById(_reviewer.toString, useCache = true)
+  def reviewer = UserService.findOneById(_reviewer.toString, useCache = true)(GlobalAccessContext)
   
   val date = new Date(timestamp)
+}
+
+object AnnotationReview{
+  implicit val annotationReviewFormat = Json.format[AnnotationReview]
 }

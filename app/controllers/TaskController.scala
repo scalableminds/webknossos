@@ -18,29 +18,23 @@ import scala.concurrent.Future
 
 object TaskController extends Controller with Secured {
   override val DefaultAccessRole = RoleDAO.User
-  
+
   val MAX_OPEN_TASKS = current.configuration.getInt("oxalis.tasks.maxOpenPerUser") getOrElse 5
 
-  def request = Authenticated().async{ implicit request =>
+  def request = Authenticated().async { implicit request =>
     val user = request.user
-    if (AnnotationService.countOpenTasks(request.user) < MAX_OPEN_TASKS) {
-      TaskService.nextTaskForUser(request.user).flatMap {
-        case Some(task) =>
-          for {
-            annotation <- AnnotationService.createAnnotationFor(user, task) ?~> Messages("annotation.creationFailed")
-          } yield {
-            JsonOk(html.user.dashboard.taskAnnotationTableItem(task, annotation), Messages("task.assigned"))
-          }
-        case _ =>
-          for {
-            task <- Training.findAssignableFor(user).map(_.headOption) ?~> Messages("task.unavailable")
-            annotation <- AnnotationService.createAnnotationFor(user, task) ?~> Messages("annotation.creationFailed")
-          } yield {
-            JsonOk(html.user.dashboard.taskAnnotationTableItem(task, annotation), Messages("task.training.assigned"))
-          }
-      }
-    } else{
-      Future.successful(JsonBadRequest(Messages("task.tooManyOpenOnes")))
-    }
+    (for {
+      numberOfOpen <- AnnotationService.countOpenTasks(request.user)
+      if (numberOfOpen < MAX_OPEN_TASKS)
+      task <- TaskService.nextTaskForUser(request.user) orElse (Training.findAssignableFor(user).map(_.headOption))
+      annotation <- AnnotationService.createAnnotationFor(user, task) ?~> Messages("annotation.creationFailed")
+    } yield {
+      val message = if (task.isTraining)
+        Messages("task.training.assigned")
+      else
+        Messages("task.assigned")
+
+      JsonOk(html.user.dashboard.taskAnnotationTableItem(task, annotation), message)
+    }) ?~> Messages("task.tooManyOpenOnes")
   }
 }

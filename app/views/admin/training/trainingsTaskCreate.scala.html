@@ -1,4 +1,5 @@
 @(tasks: List[models.task.Task], annotations: List[models.annotation.Annotation], experiences: Seq[String], tracingForm: Form[(String, String, models.task.Training)])(implicit session: oxalis.view.AuthedSessionData)
+@import braingames.reactivemongo.GlobalAccessContext
 
 @import play.api.libs.json.Json
 
@@ -21,7 +22,7 @@
       @helper.form(controllers.admin.routes.TrainingsTaskAdministration.createFromForm, 'class -> "form-horizontal", 'enctype -> "multipart/form-data") {
         
         @helper.select(tracingForm("task"), tasks.map { task =>
-          task.id -> (s"${task.taskType.map(_.summary).getOrElse("")} ${task.id}")
+          task.id -> (s"${task.taskType(GlobalAccessContext).map(_.summary).getOrElse("")} ${task.id}")
         }, Symbol("help-inline") -> taskHelpLink)
 
         @helper.select(tracingForm("tracing"), annotations.map { a =>

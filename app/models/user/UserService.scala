@@ -28,11 +28,11 @@ object UserService extends FoxImplicits {
   def findAll()(implicit ctx: DBAccessContext) =
     UserDAO.findAll
 
-  def findOneById(id: String, useCache: Boolean): Future[Option[User]] = {
+  def findOneById(id: String, useCache: Boolean)(implicit ctx: DBAccessContext): Future[Option[User]] = {
     if (useCache)
       UserCache.findUser(id)
     else
-      UserCache.store(id, UserDAO.findOneById(id)(GlobalAccessContext))
+      UserCache.store(id, UserDAO.findOneById(id))
   }
 
   def logActivity(user: User, lastActivity: Long)  {

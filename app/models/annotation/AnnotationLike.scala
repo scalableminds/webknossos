@@ -1,7 +1,6 @@
 package models.annotation
 
 import models.user.User
-import org.bson.types.ObjectId
 import models.task.Task
 import models.annotation.AnnotationType._
 import play.api.libs.json._
@@ -10,6 +9,7 @@ import scala.concurrent.Future
 import play.api.libs.concurrent.Execution.Implicits._
 import braingames.reactivemongo.DBAccessContext
 import braingames.util.{FoxImplicits, Fox}
+import reactivemongo.bson.BSONObjectID
 
 /**
  * Company: scalableminds
@@ -24,7 +24,7 @@ trait AnnotationLike {
 
   def content: Fox[AnnotationContent]
 
-  def _user: ObjectId
+  def _user: BSONObjectID
 
   def id: String
 
@@ -40,7 +40,7 @@ trait AnnotationLike {
 
   def version: Int
 
-  def incrementVersion: AnnotationLike
+ // def incrementVersion: AnnotationLike
 
   def isTrainingsAnnotation() = {
     this.task.map(_.isTraining) getOrElse false

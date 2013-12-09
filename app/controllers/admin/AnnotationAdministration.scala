@@ -18,8 +18,9 @@ object AnnotationAdministration extends AdminController {
   def annotationsForTask(taskId: String) = Authenticated().async { implicit request =>
     for {
       task <- TaskDAO.findOneById(taskId) ?~> Messages("task.notFound")
+      annotations <- task.annotations
     } yield {
-      JsonOk(task.annotations.foldLeft(Html.empty) {
+      JsonOk(annotations.foldLeft(Html.empty) {
         case (h, e) =>
           h += html.admin.annotation.simpleAnnotation(e)
       })
@@ -46,24 +47,13 @@ object AnnotationAdministration extends AdminController {
     }
   }
 
-  def reopenAnnotation(annotation: Annotation): Option[Annotation] = {
-    if (annotation.typ == AnnotationType.Task)
-      Some(annotation.update(_.reopen))
-    else
-      None
-  }
-
   def reopen(annotationId: String) = Authenticated().async { implicit request =>
     for {
       annotation <- AnnotationDAO.findOneById(annotationId) ?~> Messages("annotation.notFound")
       task <- annotation.task ?~> Messages("task.notFound")
+      reopenedAnnotation <- AnnotationService.reopen(annotation) ?~> Messages("annotation.invalid")
     } yield {
-      reopenAnnotation(annotation) match {
-        case Some(updated) =>
-          JsonOk(html.admin.annotation.simpleAnnotation(updated), Messages("annotation.reopened"))
-        case _ =>
-          JsonOk(Messages("annotation.invalid"))
-      }
+      JsonOk(html.admin.annotation.simpleAnnotation(reopenedAnnotation), Messages("annotation.reopened"))
     }
   }
 
@@ -72,8 +62,10 @@ object AnnotationAdministration extends AdminController {
       annotation <- AnnotationDAO.findOneById(annotationId) ?~> Messages("annotation.notFound")
       task <- annotation.task ?~> Messages("task.notFound")
       (updated, message) <- AnnotationService.finishAnnotation(request.user, annotation)
+      taskType <- task.taskType.futureBox
+      project <- task.project.futureBox
     } yield {
-      JsonOk(html.admin.annotation.extendedAnnotation(task, updated), Messages("annotation.finished"))
+      JsonOk(html.admin.annotation.extendedAnnotation(task, updated, taskType, project), Messages("annotation.finished"))
     }
   }
 
@@ -81,9 +73,11 @@ object AnnotationAdministration extends AdminController {
     for {
       annotation <- AnnotationDAO.findOneById(annotationId) ?~> Messages("annotation.notFound")
       task <- annotation.task ?~> Messages("task.notFound")
-      resetted <- AnnotationDAO.resetToBase(annotation) ?~> Messages("annotation.reset.failed")
+      resetted <- AnnotationService.resetToBase(annotation) ?~> Messages("annotation.reset.failed")
+      taskType <- task.taskType.futureBox
+      project <- task.project.futureBox
     } yield {
-      JsonOk(html.admin.annotation.extendedAnnotation(task, resetted), Messages("annotation.reset.success"))
+      JsonOk(html.admin.annotation.extendedAnnotation(task, resetted, taskType, project), Messages("annotation.reset.success"))
     }
   }
 }

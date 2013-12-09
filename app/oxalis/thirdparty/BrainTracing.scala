@@ -15,7 +15,7 @@ import play.api.libs.concurrent.Akka
 import models.annotation.{AnnotationLike, AnnotationDAO}
 import models.tracing.skeleton.SkeletonTracing
 import models.user.time.TimeEntry
-import braingames.reactivemongo.GlobalAccessContext
+import braingames.reactivemongo.{DBAccessContext, GlobalAccessContext}
 
 object BrainTracing {
   val URL = "http://braintracing.org/"
@@ -62,7 +62,7 @@ object BrainTracing {
   private def inHours(millis: Long) =
     millis / (1000.0 * 60 * 60)
 
-  def logTime(user: User, time: Long, annotation: Option[AnnotationLike]): Unit = {
+  def logTime(user: User, time: Long, annotation: Option[AnnotationLike])(implicit ctx: DBAccessContext): Unit = {
     import scala.async.Async._
     if (isActive) {
       async {

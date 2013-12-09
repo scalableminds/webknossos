@@ -1,11 +1,9 @@
 package models.annotation
 
-import org.bson.types.ObjectId
 import models.basics._
 import models.task.{TaskService, TaskDAO, TaskType, Task}
 import models.user.{UserService, UserDAO, User}
 import models.security.Role
-import com.mongodb.casbah.commons.{MongoDBList, MongoDBObject}
 import AnnotationType._
 import oxalis.nml.NML
 import braingames.binary.models.DataSet
@@ -20,25 +18,23 @@ import play.api.libs.concurrent.Execution.Implicits._
 import scala.concurrent.Future
 import reactivemongo.bson.BSONObjectID
 import braingames.reactivemongo.{DBAccessContext, GlobalAccessContext}
+import play.modules.reactivemongo.json.BSONFormats._
 
 case class Annotation(
-                       _user: ObjectId,
+                       _user: BSONObjectID,
                        _content: ContentReference,
-                       _task: Option[ObjectId] = None,
+                       _task: Option[BSONObjectID] = None,
                        state: AnnotationState = AnnotationState.InProgress,
                        typ: String = AnnotationType.Explorational,
                        version: Int = 0,
                        _name: Option[String] = None,
                        override val review: List[AnnotationReview] = Nil,
-                       _id: ObjectId = new ObjectId
+                       _id: BSONObjectID = BSONObjectID.generate
                      )
 
-  extends DAOCaseClass[Annotation] with AnnotationLike with FoxImplicits {
+  extends AnnotationLike with FoxImplicits {
 
-  lazy val id = _id.toString
-
-  val dao = AnnotationDAO
-
+  lazy val id = _id.stringify
 
   /**
    * Easy access methods
@@ -46,19 +42,19 @@ case class Annotation(
 
   val name = _name getOrElse ""
 
-  lazy val task = _task.toFox.flatMap(id => TaskDAO.findOneById(BSONObjectID.parse(id.toString).get)(GlobalAccessContext))
+  def task = _task.toFox.flatMap(id => TaskDAO.findOneById(BSONObjectID.parse(id.toString).get)(GlobalAccessContext))
 
-  lazy val user = UserService.findOneById(_user.toString, useCache = true)
+  def user = UserService.findOneById(_user.toString, useCache = true)(GlobalAccessContext)
 
-  lazy val content = _content.resolveAs[AnnotationContent].toFox
+  def content = _content.resolveAs[AnnotationContent].toFox
 
-  lazy val dataSetName = content.map(_.dataSetName) getOrElse ""
+  def dataSetName = content.map(_.dataSetName) getOrElse ""
 
-  lazy val contentType = _content.contentType
+  val contentType = _content.contentType
 
   val restrictions = AnnotationRestrictions.defaultAnnotationRestrictions(this)
 
-  def isReadyToBeFinished = {
+  def isReadyToBeFinished(implicit ctx: DBAccessContext) = {
     // TODO: RF - rework
     task
     .flatMap(_.annotationBase.toFox.flatMap(SkeletonTracing.statisticsForAnnotation).map(_.numberOfNodes))
@@ -67,11 +63,6 @@ case class Annotation(
       SkeletonTracing.statisticsForAnnotation(this).map(_.numberOfNodes > nodesInBase) getOrElse true
     }
   }
-
-  def unassignReviewer =
-    this.copy(
-      state = AnnotationState.ReadyForReview,
-      review = if (this.review.isEmpty) Nil else review.tail)
 
   def finishReview(comment: String) = {
     val alteredReview = this.review match {
@@ -83,214 +74,172 @@ case class Annotation(
     this.copy(review = alteredReview)
   }
 
-  def incrementVersion =
-    this.update(_.copy(version = version + 1))
-
-  def finish = {
-    this.copy(state = AnnotationState.Finished)
-  }
-
-  def passToReview = {
-    this.copy(state = AnnotationState.ReadyForReview)
-  }
-
-  def assignReviewer(user: User, reviewAnnotation: Annotation) =
-    this.copy(
-      state = AnnotationState.InReview,
-      review = AnnotationReview(
-        new ObjectId(user._id.stringify),
-        reviewAnnotation._id,
-        System.currentTimeMillis()) :: this.review)
-
-  def reopen = {
-    this.copy(state = AnnotationState.InProgress)
-  }
-
   def removeTask = {
     this.copy(_task = None, typ = AnnotationType.Orphan)
   }
 }
 
+object Annotation {
+  implicit val annotationFormat = Json.format[Annotation]
+}
+
 object AnnotationDAO
-  extends BasicDAO[Annotation]("annotations")
+  extends SecuredBaseDAO[Annotation]
   with AnnotationStatistics
-  with AnnotationContentProviders
   with FoxImplicits {
 
-  this.collection.ensureIndex("_task")
-  this.collection.ensureIndex("_user")
+  val collectionName = "annotations"
 
-  def findTrainingForReviewAnnotation(annotation: AnnotationLike) =
+  val formatter = Annotation.annotationFormat
+
+  // TODO: create index!
+  // this.collection.ensureIndex("_task")
+  // this.collection.ensureIndex("_user")
+
+  def findTrainingForReviewAnnotation(annotation: AnnotationLike)(implicit ctx: DBAccessContext) =
     withValidId(annotation.id) {
       id =>
-        findOne(MongoDBObject("review.reviewAnnotation" -> id))
+        findOne("review.reviewAnnotation", id)
     }
 
-  def countOpenAnnotations(userId: ObjectId, annotationType: AnnotationType) =
-    findOpenAnnotationsFor(userId, annotationType).size
+  def defaultFindForUserQ(_user: BSONObjectID, annotationType: AnnotationType) = Json.obj(
+    "_user" -> _user,
+    "state.isFinished" -> false,
+    "state.isAssigned" -> true,
+    "typ" -> annotationType)
 
-  def hasAnOpenAnnotation(userId: ObjectId, annotationType: AnnotationType) =
-    countOpenAnnotations(userId, annotationType) > 0
+  def hasAnOpenAnnotation(_user: BSONObjectID, annotationType: AnnotationType)(implicit ctx: DBAccessContext) =
+    countOpenAnnotations(_user, annotationType).map(_ > 0)
 
-  def findFor(user: User) =
-    find(MongoDBObject(
-      "_user" -> user._id,
-      "state.isAssigned" -> true)).toList
+  def findFor(_user: BSONObjectID)(implicit ctx: DBAccessContext) =
+    collectionFind(Json.obj(
+      "_user" -> _user,
+      "state.isAssigned" -> true)).cursor[Annotation].collect[List]()
 
-  def findFor(user: User, annotationType: AnnotationType) =
-    find(MongoDBObject(
-      "_user" -> user._id,
+  def findFor(_user: BSONObjectID, annotationType: AnnotationType)(implicit ctx: DBAccessContext) =
+    collectionFind(Json.obj(
+      "_user" -> _user,
       "state.isAssigned" -> true,
-      "typ" -> annotationType)).toList
+      "typ" -> annotationType)).cursor[Annotation].collect[List]()
 
-  def findForWithTypeOtherThan(userId: ObjectId, annotationTypes: List[AnnotationType]) =
-    find(MongoDBObject(
-      "_user" -> userId,
+
+  def findForWithTypeOtherThan(_user: BSONObjectID, annotationTypes: List[AnnotationType])(implicit ctx: DBAccessContext) =
+    collectionFind(Json.obj(
+      "_user" -> _user,
       "state.isFinished" -> false,
       "state.isAssigned" -> true,
-      "typ" -> MongoDBObject("$nin" -> annotationTypes))).toList
+      "typ" -> Json.obj("$nin" -> annotationTypes))).cursor[Annotation].collect[List]()
 
-  def findOpenAnnotationFor(userId: ObjectId, annotationType: AnnotationType) =
-    findOpenAnnotationsFor(userId, annotationType).headOption
+  def findOpenAnnotationFor(_user: BSONObjectID, annotationType: AnnotationType)(implicit ctx: DBAccessContext) =
+    collectionFind(defaultFindForUserQ(_user, annotationType)).one[Annotation]
 
-  def findOpenAnnotationsFor(userId: ObjectId, annotationType: AnnotationType) =
-    find(MongoDBObject(
-      "_user" -> userId,
+  def findOpenAnnotationsFor(_user: BSONObjectID, annotationType: AnnotationType)(implicit ctx: DBAccessContext) =
+    collectionFind(defaultFindForUserQ(_user, annotationType)).cursor[Annotation]
+
+  def countOpenAnnotations(_user: BSONObjectID, annotationType: AnnotationType)(implicit ctx: DBAccessContext) =
+    count(defaultFindForUserQ(_user, annotationType))
+
+  def findOpen(annotationType: AnnotationType)(implicit ctx: DBAccessContext) =
+    collectionFind(Json.obj(
       "state.isFinished" -> false,
       "state.isAssigned" -> true,
-      "typ" -> annotationType)).toList
+      "typ" -> annotationType)).cursor[Annotation].collect[List]()
 
-  def findOpen(annotationType: AnnotationType) =
-    find(MongoDBObject(
-      "state.isFinished" -> false,
-      "state.isAssigned" -> true,
-      "typ" -> annotationType)).toList
+  def removeAllWithTaskId(_task: BSONObjectID)(implicit ctx: DBAccessContext) =
+    collectionRemove(Json.obj("_task" -> _task))
 
+  def incrementVersion(_annotation: BSONObjectID)(implicit ctx: DBAccessContext) =
+    findAndModify(
+      Json.obj("_id" -> _annotation),
+      Json.obj("$inc" -> Json.obj("version" -> 1)),
+      true)
 
-  def removeAllWithTaskId(tid: ObjectId) =
-    remove(MongoDBObject("_task" -> tid))
+  def findByTaskId(_task: BSONObjectID)(implicit ctx: DBAccessContext) =
+    find("_task", _task).collect[List]()
 
-  def findByTaskId(tid: ObjectId) =
-    find(MongoDBObject("_task" -> tid)).toList
-
-  def findByTaskIdAndType(tid: ObjectId, annotationType: AnnotationType) =
-    find(MongoDBObject(
-      "_task" -> tid,
+  def findByTaskIdAndType(_task: BSONObjectID, annotationType: AnnotationType)(implicit ctx: DBAccessContext) =
+    collectionFind(Json.obj(
+      "_task" -> _task,
       "typ" -> annotationType,
-      "$or" -> MongoDBList(
-        "state.isAssigned" -> true,
-        "state.isFinished" -> true))).toList
+      "$or" -> Json.arr(
+        Json.obj("state.isAssigned" -> true),
+        Json.obj("state.isFinished" -> true))))
 
-  def unassignAnnotationsOfUser(userId: ObjectId) = {
-    update(
-      MongoDBObject(
-        "_user" -> userId,
-        "typ" -> MongoDBObject("$in" -> AnnotationType.UserTracings)),
-      MongoDBObject(
-        "$set" -> MongoDBObject(
+  def unassignAnnotationsOfUser(_user: BSONObjectID)(implicit ctx: DBAccessContext) =
+    collectionUpdate(
+      Json.obj(
+        "_user" -> _user,
+        "typ" -> Json.obj("$in" -> AnnotationType.UserTracings)),
+      Json.obj(
+        "$set" -> Json.obj(
           "state.isAssigned" -> false)))
-  }
 
-  def updateState(annotation: Annotation, state: AnnotationState)(implicit ctx: DBAccessContext) = {
-    // TODO: uncomment
+  def updateState(annotation: Annotation, state: AnnotationState)(implicit ctx: DBAccessContext) =
+    collectionUpdate(
+      Json.obj("_id" -> annotation._id),
+      Json.obj("$set" -> Json.obj("state" -> state)))
 
-    //collectionUpdate(
-    //  Json.obj("_id" -> annotation._id),
-    //  Json.obj("$set" -> Json.obj("state" -> state)))
-    Future(List.empty)
-  }
-
-  def updateAllUsingNewTaskType(task: Task, settings: AnnotationSettings) = {
-    find(
-      MongoDBObject(
-        "_task" -> task._id)).map {
-      annotation =>
+  def updateAllUsingNewTaskType(task: Task, settings: AnnotationSettings)(implicit ctx: DBAccessContext) = {
+    collectionFind(
+      Json.obj(
+        "_task" -> task._id)).one[Annotation].map {
+      case Some(annotation) =>
         annotation._content.dao.updateSettings(settings, annotation._content._id)
+      case _ =>
     }
   }
 
-  def createSample(annotation: Annotation, taskId: ObjectId): Future[Annotation] = {
-    copyDeepAndInsert(annotation.copy(
-      typ = AnnotationType.Sample,
-      _task = Some(taskId)))
-  }
+  def finish(_annotation: BSONObjectID)(implicit ctx: DBAccessContext) =
+    findAndModify(
+      Json.obj("_id" -> _annotation),
+      Json.obj("$set" -> Json.obj("state" -> AnnotationState.Finished)),
+      true)
 
-  def createFrom(userId: ObjectId, content: AnnotationContent, annotationType: AnnotationType, name: Option[String]) = {
-    insertOne(Annotation(
-      userId,
-      ContentReference.createFor(content),
-      _name = name,
-      typ = annotationType))
-  }
+  def rename(_annotation: BSONObjectID, name: String)(implicit ctx: DBAccessContext) =
+    findAndModify(
+      Json.obj("_id" -> _annotation),
+      Json.obj("$set" -> Json.obj("_name" -> name)),
+      true)
 
-  def copyDeepAndInsert(source: Annotation) = {
-    val content = source.content.map(_.copyDeepAndInsert)
-    content
-    .map(_.id)
-    .getOrElse(source._content._id)
-    .map(contentId =>
-      insertOne(source.copy(
-        _id = new ObjectId,
-        _content = source._content.copy(_id = contentId))))
-  }
+  def reopen(_annotation: BSONObjectID)(implicit ctx: DBAccessContext) =
+    updateState(_annotation, AnnotationState.InProgress)
 
-  def createReviewFor(sample: Annotation, training: Annotation, user: User) = {
-    for {
-      reviewContent <- training.content.map(_.copyDeepAndInsert)
-      sampleContent <- sample.content
-    } yield {
-      reviewContent.mergeWith(sampleContent)
-      insertOne(training.copy(
-        _id = new ObjectId,
-        _user = new ObjectId(user._id.stringify),
-        state = AnnotationState.Assigned,
-        typ = AnnotationType.Review,
-        _content = training._content.copy(_id = reviewContent.id)
-      ))
-    }
-  }
+  def passToReview(_annotation: BSONObjectID)(implicit ctx: DBAccessContext) =
+    updateState(_annotation, AnnotationState.InReview)
 
-  def createExplorationalFor(user: User, dataSet: DataSet, contentType: String) = {
-    withProviderForContentType(contentType) {
-      provider =>
-        val content = provider.createFrom(dataSet)
-        insertOne(Annotation(
-          new ObjectId(user._id.stringify),
-          ContentReference.createFor(content),
-          typ = AnnotationType.Explorational,
-          state = AnnotationState.InProgress
-        ))
-    }
-  }
+  def updateState(_annotation: BSONObjectID, state: AnnotationState)(implicit ctx: DBAccessContext) =
+    findAndModify(
+      Json.obj("_id" -> _annotation),
+      Json.obj("$set" -> Json.obj("state" -> state)),
+      true)
 
-  def resetToBase(annotation: Annotation) = {
-    for {
-      task <- annotation.task.toFox
-      annotationContent <- annotation.content
-      tracingBase <- task.annotationBase.toFox.flatMap(_.content)
-    } yield {
-      val reseted = tracingBase.copyDeepAndInsert
-      annotation.update(
-        _.copy(_content = ContentReference.createFor(reseted))
-      )
-      annotationContent.clearTracingData()
-      annotation
-    }
-  }
+  def assignReviewer(_annotation: BSONObjectID, annotationReview: AnnotationReview)(implicit ctx: DBAccessContext) =
+    findAndModify(
+      Json.obj("_id" -> _annotation),
+      Json.obj("$set" -> Json.obj(
+        "state" -> AnnotationState.InReview,
+        "review.-1" -> annotationReview)),
+      true)
 
-  def updateFromJson(js: Seq[JsValue], annotation: AnnotationLike) = {
-    annotation.content.flatMap(_.updateFromJson(js)).map(_ =>
-      annotation.incrementVersion)
-  }
+  def addReviewComment(_annotation: BSONObjectID, comment: String)(implicit ctx: DBAccessContext) =
+    findAndModify(
+      Json.obj("_id" -> _annotation),
+      Json.obj("$set" -> Json.obj(
+        "review.0.comment" -> comment)),
+      true)
 
-  def assignReviewer(training: Annotation, user: User): Fox[Annotation] = {
-    for {
-      task <- training.task.toFox
-      sampleId <- task.training.map(_.sample).toFox
-      sample <- AnnotationDAO.findOneById(sampleId).toFox
-      reviewAnnotation <- createReviewFor(sample, training, user)
-    } yield {
-      training.update(_.assignReviewer(user, reviewAnnotation))
-    }
-  }
+  def updateContent(_annotation: BSONObjectID, content: ContentReference)(implicit ctx: DBAccessContext) =
+    findAndModify(
+      Json.obj("_id" -> _annotation),
+      Json.obj("$set" -> Json.obj(
+        "_content" -> content)),
+      true)
+
+  def unassignReviewer(_annotation: BSONObjectID)(implicit ctx: DBAccessContext) =
+    findAndModify(
+      Json.obj("_id" -> _annotation),
+      Json.obj("$set" -> Json.obj(
+        "state" -> AnnotationState.ReadyForReview),
+        "$pop" -> Json.obj("review" -> -1)),
+      true)
 }

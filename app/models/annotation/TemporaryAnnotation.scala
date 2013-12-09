@@ -1,6 +1,7 @@
 package models.annotation
 
 import play.api.libs.concurrent.Execution.Implicits._
+import reactivemongo.bson.BSONObjectID
 
 /**
  * Company: scalableminds
@@ -24,7 +25,7 @@ case class TemporaryAnnotation(
                                 version: Int = 0
                               ) extends AnnotationLike {
 
-  def _user = new ObjectId
+  def _user = BSONObjectID.generate
 
   def user = Future.successful(None)
 

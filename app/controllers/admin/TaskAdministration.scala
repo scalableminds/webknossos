@@ -217,7 +217,7 @@ object TaskAdministration extends AdminController {
               _project = project.map(_.name))
             nmls.foreach {
               nml =>
-                TaskService.copyDeepAndInsert(baseTask).map{ task =>
+                TaskService.copyDeepAndInsert(baseTask).map { task =>
                   AnnotationService.createAnnotationBase(task, new ObjectId(request.user.id), taskType.settings, nml)
                 }
             }
@@ -305,19 +305,14 @@ object TaskAdministration extends AdminController {
   }
 
   def overview = Authenticated().async { implicit request =>
-    def combineUsersWithCurrentTasks(users: List[User]) = {
-      Fox.sequence(for {
-        user <- users
-        annotation <- AnnotationService.openTasksFor(user)
+    def combineUsersWithCurrentTasks(users: List[User]) = Future.traverse(users)(user =>
+      for {
+        annotations <- AnnotationService.openTasksFor(user)
+        tasks <- Fox.sequence(annotations.map(_.task)).map(_.flatten)
+        taskTypes <- Fox.sequence(tasks.map(_.taskType)).map(_.flatten)
       } yield {
-        for {
-          task <- annotation.task.toFox
-          taskType <- task.taskType
-        } yield {
-          user -> taskType
-        }
+        user -> taskTypes.distinct
       })
-    }
 
     for {
       users <- UserService.findAll
@@ -326,7 +321,7 @@ object TaskAdministration extends AdminController {
       futureUserTaskAssignment <- TaskService.simulateTaskAssignment(users)
       futureTaskTypes <- Fox.sequence(futureUserTaskAssignment.map(e => e._2.taskType.map(e._1 -> _)).toList)
     } yield {
-      Ok(html.admin.task.taskOverview(users, allTaskTypes, usersWithTasks.flatten.distinct, futureTaskTypes.flatten.toMap))
+      Ok(html.admin.task.taskOverview(users, allTaskTypes, usersWithTasks.toMap, futureTaskTypes.flatten.toMap))
     }
   }
 }

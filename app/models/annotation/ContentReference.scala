@@ -1,5 +1,7 @@
 package models.annotation
 
+import play.api.libs.json.Json
+
 /**
  * Company: scalableminds
  * User: tmbo
@@ -22,6 +24,8 @@ case class ContentReference(contentType: String, _id: String) {
 }
 
 object ContentReference extends AnnotationContentProviders {
+  implicit val contentReferenceFormat = Json.format[ContentReference]
+
   def createFor(a: AnnotationContent) = {
     ContentReference(a.contentType, a.id)
   }

@@ -1,12 +1,13 @@
 package models.task
 
-import models.annotation.{Annotation, AnnotationType, AnnotationDAO}
+import models.annotation.{AnnotationService, Annotation, AnnotationType, AnnotationDAO}
 import braingames.reactivemongo.DBAccessContext
 import reactivemongo.bson.BSONObjectID
 import org.bson.types.ObjectId
 import braingames.util.FoxImplicits
 import play.api.libs.concurrent.Execution.Implicits._
 import models.user.Experience
+import scala.concurrent.Future
 
 /**
  * Company: scalableminds
@@ -22,7 +23,7 @@ object TaskService extends TaskAssignmentSimulation with TaskAssignment with Fox
   def findAllNonTrainings(implicit ctx: DBAccessContext) = TaskDAO.findAllNonTrainings
 
   def remove(_task: BSONObjectID)(implicit ctx: DBAccessContext) = {
-    AnnotationDAO.removeAllWithTaskId(new ObjectId(_task.stringify))
+    AnnotationDAO.removeAllWithTaskId(_task)
     TaskDAO.removeById(_task)
   }
 
@@ -52,18 +53,19 @@ object TaskService extends TaskAssignmentSimulation with TaskAssignment with Fox
 
   def copyDeepAndInsert(source: Task, includeUserTracings: Boolean = true)(implicit ctx: DBAccessContext) = {
     val task = source.copy(_id = BSONObjectID.generate)
+
+    def copy(annotations: List[Annotation]) = Future.traverse(annotations) { annotation =>
+      if (includeUserTracings || AnnotationType.isSystemTracing(annotation))
+        AnnotationService.copyDeepAndInsert(annotation.copy(_task = Some(task._id)))
+      else
+        Future.successful(None)
+    }
+
     for {
       _ <- TaskDAO.insert(task)
-
+      annotations <- AnnotationDAO.findByTaskId(source._id)
+      _ <- copy(annotations)
     } yield {
-      AnnotationDAO
-      .findByTaskId(new ObjectId(source.id))
-      .foreach { annotation =>
-        if (includeUserTracings || AnnotationType.isSystemTracing(annotation)) {
-          println("Copying: " + annotation.id)
-          AnnotationDAO.copyDeepAndInsert(annotation.copy(_task = Some(new ObjectId(task.id))))
-        }
-      }
       task
     }
   }

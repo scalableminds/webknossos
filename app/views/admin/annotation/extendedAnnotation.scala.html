@@ -1,4 +1,4 @@
-@(task: models.task.Task, annotation: models.annotation.Annotation)
+@(task: models.task.Task, annotation: models.annotation.Annotation, taskType: net.liftweb.common.Box[models.task.TaskType], project: net.liftweb.common.Box[models.task.Project])
 
 @import models.annotation.AnnotationDAO
 
@@ -24,15 +24,13 @@
 
 <tr class="@if(annotation.state.isFinished){finished}else{unfinished}">
   <td> @formatHash(task.id) </td>
-  @defining(task.taskType){ taskType =>
-    <td> @taskType.map(_.summary).getOrElse("<deleted>") - @annotation.typ</td>
-    <td> @task.project.map(_.name) </td>
-    <td>
-      @taskType.map(_.settings.allowedModes.map{ mode =>
-        <span class="label"> @mode.capitalize </span>
-      })
-    </td>
-  }
+  <td> @taskType.map(_.summary).getOrElse("<deleted>") - @annotation.typ</td>
+  <td> @project.map(_.name) </td>
+  <td>
+    @taskType.map(_.settings.allowedModes.map{ mode =>
+      <span class="label"> @mode.capitalize </span>
+    })
+  </td>
   <td> @annotation.dataSetName </td>
   @defining(AnnotationDAO.statisticsForAnnotation(annotation)){ statsOpt =>
     @statsOpt.map{ stats =>

@@ -39,15 +39,20 @@ trait TaskAssignment {
   }
 
   def findAssignableFor(user: User, shouldBeTraining: Boolean)(implicit ctx: DBAccessContext) = {
-    val finishedTasks = AnnotationDAO.findFor(user, AnnotationType.Task).flatMap(_._task)
+    val finishedTasks = AnnotationDAO.findFor(user._id, AnnotationType.Task).map(_.flatMap(_._task))
     val availableTasks =
       if (shouldBeTraining)
         findAllTrainings
       else
         findAllAssignableNonTrainings
 
-    availableTasks.map(_.filter(t =>
-      !finishedTasks.contains(t._id) && t.hasEnoughExperience(user)))
+    for {
+      available <- availableTasks
+      finished <- finishedTasks
+    } yield {
+      available.filter(t =>
+        !finished.contains(t._id) && t.hasEnoughExperience(user))
+    }
   }
 
   import scala.async.Async._
@@ -67,14 +72,14 @@ trait TaskAssignment {
         case Success(s) =>
           Some(s)
       }.recover {
-         case e: AskTimeoutException =>
-           Logger.warn("JS Execution actor didn't return in time!")
-           None
-         case e: Exception =>
-           Logger.error("JS Execution catched exception: " + e.toString())
-           e.printStackTrace()
-           None
-       })
+        case e: AskTimeoutException =>
+          Logger.warn("JS Execution actor didn't return in time!")
+          None
+        case e: Exception =>
+          Logger.error("JS Execution catched exception: " + e.toString())
+          e.printStackTrace()
+          None
+      })
       await(assignment)
     }
   }

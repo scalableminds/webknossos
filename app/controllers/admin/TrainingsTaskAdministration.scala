@@ -51,10 +51,11 @@ object TrainingsTaskAdministration extends AdminController {
     for {
       nonTrainings <- TaskService.findAllNonTrainings
       experiences <- ExperienceService.findAllDomains
+      annotations <- AnnotationService.openExplorationalFor(request.user).collect[List]()
     } yield {
       html.admin.training.trainingsTaskCreate(
         nonTrainings,
-        AnnotationService.openExplorationalFor(request.user),
+        annotations,
         experiences.toList,
         taskForm)
     }
@@ -81,8 +82,8 @@ object TrainingsTaskAdministration extends AdminController {
             trainingsTask <- TaskService.copyDeepAndInsert(task.copy(
               instances = Integer.MAX_VALUE,
               created = DateTime.now()),
-              includeUserTracings = false)
-            sample <- AnnotationDAO.createSample(annotation, trainingsTask._id)
+              includeUserTracings = false).toFox
+            sample <- AnnotationService.createSample(annotation, trainingsTask._id).toFox
             _ <- TaskService.setTraining(trainingsTask, training, sample)
             trainings <- TaskDAO.findAllTrainings
           } yield {

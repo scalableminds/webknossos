@@ -5,7 +5,7 @@ import play.Project._
 object Dependencies{
   val akkaVersion = "2.2.0"
   val reactiveVersion = "0.10.0-SNAPSHOT"
-  val braingamesVersion = "1.2.3"
+  val braingamesVersion = "1.3.0"
 
   val casbahCommons = "org.mongodb" %% "casbah-commons" % "2.5.0"
   val casbahCore = "org.mongodb" %% "casbah-core" % "2.5.0"

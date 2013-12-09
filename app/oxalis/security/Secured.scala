@@ -26,6 +26,7 @@ import scala.concurrent.Future
 import braingames.util.{FoxImplicits, Fox}
 import net.liftweb.common.{Full, Empty}
 import play.api.libs.concurrent.Execution.Implicits._
+import braingames.reactivemongo.GlobalAccessContext
 
 class AuthenticatedRequest[A](
                                val user: User, override val request: Request[A]
@@ -86,7 +87,7 @@ trait Secured extends FoxImplicits {
   private def userFromSession(implicit request: RequestHeader): Fox[User] =
     request.session.get(Secured.SessionInformationKey) match {
       case Some(id) =>
-        userService.findOneById(id, useCache = true)
+        userService.findOneById(id, useCache = true)(GlobalAccessContext)
       case _ =>
         Empty
     }

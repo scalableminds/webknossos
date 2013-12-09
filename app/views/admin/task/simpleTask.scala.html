@@ -1,7 +1,9 @@
 @* taskDetailTableItem Template File *@
 @(task: models.task.Task)
+@import braingames.reactivemongo.GlobalAccessContext
 
 @import scala.concurrent.duration._
+@import play.api.libs.concurrent.Execution.Implicits._
 
 <tr>
   <td> 
@@ -10,14 +12,14 @@
     </a>
   </td>
   <td>
-    <a href="@controllers.admin.routes.TaskTypeAdministration.list#@task.taskType.map(_.id)">
-      @task.taskType.map(_.summary)
+    <a href="@controllers.admin.routes.TaskTypeAdministration.list#@task.taskType(GlobalAccessContext).map(_.id)">
+      @task.taskType(GlobalAccessContext).map(_.summary)
     </a>
   </td>
   <td>
-    @task.annotationBase.map(_.dataSetName)
+    @task.annotationBase(GlobalAccessContext).map(_.dataSetName)
   </td>
-  <td> @defining(task.status){ status =>
+  <td> @task.status(GlobalAccessContext).map{ status =>
       <span title="Unassigned"> 
         <i class="icon-play-circle"></i> @status.open open
       </span>

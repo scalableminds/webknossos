@@ -13,7 +13,7 @@ import net.liftweb.common.Full
 import play.api.libs.concurrent.Execution.Implicits._
 
 case class Project(@Key("name") name: String, _owner: BSONObjectID) {
-  def owner = UserService.findOneById(_owner.stringify, useCache = true)
+  def owner = UserService.findOneById(_owner.stringify, useCache = true)(GlobalAccessContext)
 
   lazy val tasks = TaskDAO.findAllByProject(name)(GlobalAccessContext)
 }

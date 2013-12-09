@@ -4,6 +4,8 @@ import braingames.binary.models.DataSet
 import play.api.Logger
 import models.tracing.skeleton.SkeletonTracing
 import models.tracing.volume.VolumeTracing
+import scala.concurrent.Future
+import play.api.libs.concurrent.Execution.Implicits._
 
 /**
  * Company: scalableminds
@@ -32,13 +34,13 @@ trait AnnotationContentProviders {
 
   val providerList = contentProviders.keys
 
-  def withProviderForContentType[T](contentType: String)(f: AnnotationContentDAO => T): Option[T] = {
+  def withProviderForContentType[T](contentType: String)(f: AnnotationContentDAO => Future[T]): Future[Option[T]] = {
     contentProviders.get(contentType) match {
       case Some(p) =>
-        Some(f(p))
+        f(p).map(result => Some(result))
       case _ =>
         Logger.warn(s"Couldn't find content provider for $contentType")
-        None
+        Future.successful(None)
     }
   }
 }

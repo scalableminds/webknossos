@@ -30,8 +30,9 @@ case class DashboardInfo(
 
 trait Dashboard {
   private def userWithTasks(user: User)(implicit ctx: DBAccessContext) = {
-    val taskAnnotations = AnnotationService.findTasksOf(user)
-    Fox.sequence(taskAnnotations.map(a => a.task.map(_ -> a))).map(_.flatten)
+    AnnotationService.findTasksOf(user).flatMap{ taskAnnotations =>
+      Fox.sequence(taskAnnotations.map(a => a.task.map(_ -> a))).map(_.flatten)
+    }
   }
 
   private def exploratorySortedByTime(exploratoryAnnotations: List[Annotation]) =
@@ -41,9 +42,8 @@ trait Dashboard {
     tasksAndAnnotations.exists { case (_, annotation) => !annotation.state.isFinished }
 
   def dashboardInfo(user: User)(implicit ctx: DBAccessContext) = {
-    val exploratoryAnnotations = AnnotationService.findExploratoryOf(user)
-
     for {
+      exploratoryAnnotations <- AnnotationService.findExploratoryOf(user)
       dataSets <- DataSetDAO.findAll
       loggedTime <- TimeTrackingService.loggedTime(user)
       exploratoryAnnotations <- exploratorySortedByTime(exploratoryAnnotations)

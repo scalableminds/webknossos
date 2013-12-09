@@ -33,7 +33,7 @@ trait AnnotationInformationHandler {
     withAnnotation(identifier)(nameForAnnotation)
   } */
 
-  def nameForAnnotation(t: AnnotationLike): Future[String] = {
+  def nameForAnnotation(t: AnnotationLike)(implicit ctx: DBAccessContext): Future[String] = {
     Future.successful(t.id)
   }
 

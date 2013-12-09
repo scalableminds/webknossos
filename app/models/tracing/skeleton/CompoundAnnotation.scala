@@ -46,16 +46,20 @@ object CompoundAnnotation extends Formatter with FoxImplicits {
     logTime("project composition", Logger.debug) {
       for {
         tasks <- TaskDAO.findAllByProject(project.name)
+        annotations <- Future.traverse(tasks)(_.annotations).map(_.flatten)
       } yield {
-        createFromAnnotations(tasks.flatMap(_.annotations), project.name, AnnotationType.CompoundProject)
+        createFromAnnotations(annotations, project.name, AnnotationType.CompoundProject)
       }
     }
   }
 
   def createFromTask(task: Task)(implicit ctx: DBAccessContext) = {
     logTime("task composition", Logger.debug) {
-      createFromAnnotations(
-        task.annotations, task.id, AnnotationType.CompoundTask)
+      for {
+        annotations <- task.annotations
+      } yield {
+        createFromAnnotations(annotations, task.id, AnnotationType.CompoundTask)
+      }
     }
   }
 
@@ -63,13 +67,14 @@ object CompoundAnnotation extends Formatter with FoxImplicits {
     logTime("taskType composition", Logger.debug) {
       for {
         tasks <- TaskDAO.findAllByTaskType(taskType)
+        annotations <- Future.traverse(tasks)(_.annotations).map(_.flatten)
       } yield {
-        createFromAnnotations(tasks.flatMap(_.annotations), taskType.id, AnnotationType.CompoundTaskType)
+        createFromAnnotations(annotations, taskType.id, AnnotationType.CompoundTaskType)
       }
     }
   }
 
-  def createFromAnnotations(annotations: List[Annotation], id: String, typ: AnnotationType): Option[TemporaryAnnotation] = {
+  def createFromAnnotations(annotations: List[Annotation], id: String, typ: AnnotationType)(implicit ctx: DBAccessContext): Option[TemporaryAnnotation] = {
     val as = annotations.filter(filterAnnotation)
 
     def annotationContent(): Fox[TemporarySkeletonTracing] = {
@@ -80,7 +85,7 @@ object CompoundAnnotation extends Formatter with FoxImplicits {
         case (annotation, skeleton: SkeletonTracing) =>
           annotation.user.map {
             userOpt =>
-              renameTreesOfTracing(skeleton, userOpt, annotation._task)
+              renameTreesOfTracing(skeleton, userOpt, annotation._task.map(id => new ObjectId(id.stringify)))
           }
         case (annotation, content) =>
           Future.successful(content)

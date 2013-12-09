@@ -1,19 +1,20 @@
 package models.task
 
-import com.mongodb.casbah.Imports._
 import models.user.User
 import play.api.libs.json.Json
 import models.basics.BasicDAOFormats
 import scala.concurrent.Future
 import braingames.reactivemongo.DBAccessContext
+import reactivemongo.bson.BSONObjectID
+import play.modules.reactivemongo.json.BSONFormats._
 
 case class Training(
     domain: String,
     gain: Int,
     loss: Int,
-    sample: ObjectId)
+    sample: BSONObjectID)
 
-object Training extends BasicDAOFormats{
+object Training{
 
   implicit val trainingFormat = Json.format[Training]
   

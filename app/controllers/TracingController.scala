@@ -27,8 +27,8 @@ trait TracingInformationProvider extends play.api.http.Status with FoxImplicits 
     f(informationHandlers(tracingType))
   }
 
-  def withAnnotation[T](typ: AnnotationType, id: String)(f: AnnotationLike => Box[T])(implicit request: UserAwareRequest[_]): Fox[T] = {
-    withAnnotation(AnnotationIdentifier(typ, id))(a => Future.successful(f(a)))
+  def withAnnotation[T](typ: AnnotationType, id: String)(f: AnnotationLike => Fox[T])(implicit request: UserAwareRequest[_]): Fox[T] = {
+    withAnnotation(AnnotationIdentifier(typ, id))(a => f(a))
   }
 
   def withAnnotation[T](annotationId: AnnotationIdentifier)(f: AnnotationLike => Fox[T])(implicit request: UserAwareRequest[_]): Fox[T] = {

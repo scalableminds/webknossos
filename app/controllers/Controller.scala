@@ -1,9 +1,10 @@
-package braingames.mvc
+package controllers
 
 import play.api.mvc.{Controller => PlayController}
 import oxalis.security.AuthenticatedRequest
 import oxalis.view.ProvidesSessionData
 import play.api.mvc.Request
+import braingames.mvc.ExtendedController
 
 class Controller extends PlayController
 with ExtendedController

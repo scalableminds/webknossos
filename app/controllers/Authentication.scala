@@ -18,10 +18,10 @@ import controllers.admin._
 import oxalis.thirdparty.BrainTracing
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.i18n.Messages
-import braingames.mvc.Controller
 import oxalis.mail.DefaultMails
 import models.tracing.skeleton.SkeletonTracing
 import oxalis.view.{ProvidesUnauthorizedSessionData, UnAuthedSessionData}
+import controllers.Controller
 
 object Authentication extends Controller with Secured with ProvidesUnauthorizedSessionData{
   // -- Authentication

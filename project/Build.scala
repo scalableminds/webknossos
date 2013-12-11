@@ -13,10 +13,7 @@ object ApplicationBuild extends Build {
   val conf = ConfigFactory.parseFile(new File("conf/application.conf"))
 
   val appName = conf.getString("application.name").toLowerCase
-  val appVersion = "%s.%s.%s".format(
-    conf.getString("application.major"),
-    conf.getString("application.minor"),
-    conf.getString("application.revision"))
+  val appVersion = scala.io.Source.fromFile("version").mkString.trim
 
   val oxalisDependencies = Seq(
     "org.mongodb" %% "casbah-commons" % "2.5.0",
@@ -31,14 +28,11 @@ object ApplicationBuild extends Build {
     "com.typesafe.akka" %% "akka-testkit" % "2.1.0",
     "com.typesafe.akka" %% "akka-agent" % "2.1.0",
     "com.typesafe.akka" %% "akka-remote" % "2.1.0",
-    // Jira integration
-    "com.sun.jersey" % "jersey-client" % "1.8",
-    "com.sun.jersey" % "jersey-core" % "1.8",
     "org.reactivemongo" %% "play2-reactivemongo" % "0.9",
     "org.reactivemongo" %% "reactivemongo-bson-macros" % "0.9",
     "org.scala-lang" % "scala-reflect" % "2.10.0",
-    "com.scalableminds" %% "braingames-binary" % "0.4",
-    "com.scalableminds" %% "braingames-util" % "0.4")
+    "com.scalableminds" %% "braingames-binary" % "0.6.2",
+    "com.scalableminds" %% "braingames-util" % "0.6.2")
 
   val dependencyResolvers = Seq(
     "repo.novus rels" at "http://repo.novus.com/releases/",

@@ -1,4 +1,5 @@
-@( explorativeAnnotations: List[models.annotation.Annotation], userTasks: List[(models.task.Task, models.annotation.Annotation)], trackedTime: Map[models.user.PaymentInterval, scala.concurrent.duration.Duration], dataSets: List[braingames.binary.models.DataSet], hasAnOpenTask: Boolean)(implicit session: oxalis.view.AuthedSessionData)
+@( explorativeAnnotations: List[models.annotation.Annotation], userTasks: List[(models.task.Task, models.annotation.Annotation)], trackedTime: Map[models.user.time.PaymentInterval, scala.concurrent.duration.Duration], dataSets: List[braingames.binary.models.DataSet], hasAnOpenTask: Boolean)(implicit session: oxalis.view.AuthedSessionData)
+@import models.user.time.PaymentInterval
 
 @main(){
   <div class="container" id="dashboard">

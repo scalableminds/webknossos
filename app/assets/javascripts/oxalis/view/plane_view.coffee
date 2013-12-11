@@ -107,14 +107,16 @@ class PlaneView
       
       # update postion and FPS displays
       @stats.update()
-      
+
+      # scale for retina displays
+      f = window.devicePixelRatio || 1
       viewport = [[0, @curWidth+20], [@curWidth+20, @curWidth+20], [0, 0], [@curWidth+20, 0]]
       @renderer.autoClear = true
       
       for i in constants.ALL_VIEWPORTS
         @trigger "renderCam", i
-        @renderer.setViewport(viewport[i][0], viewport[i][1], @curWidth, @curWidth)
-        @renderer.setScissor(viewport[i][0], viewport[i][1], @curWidth, @curWidth)
+        @renderer.setViewport(viewport[i][0] * f, viewport[i][1] * f, @curWidth * f, @curWidth * f)
+        @renderer.setScissor(viewport[i][0] * f, viewport[i][1] * f, @curWidth * f, @curWidth * f)
         @renderer.enableScissorTest(true)
         @renderer.setClearColorHex(constants.PLANE_COLORS[i], 1);
         @renderer.render @scene, @camera[i]

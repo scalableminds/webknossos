@@ -73,6 +73,9 @@ class Model
                   @binary[layer.typ] = new Binary(@user, dataSet, constants.TEXTURE_SIZE_P, supportedLayer)
                   zoomStepCount = Math.min(zoomStepCount, @binary[layer.typ].cube.ZOOM_STEP_COUNT - 1)
 
+            unless @binary["color"]?
+              Toast.error("No data available! Something seems to be wrong with the dataset.")
+
             # if "volume" layer still used, change name to segmentation
             if @binary["volume"]?
               @binary["segmentation"] = @binary["volume"]

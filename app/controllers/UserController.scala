@@ -11,11 +11,12 @@ import play.api.Logger
 import models.tracing._
 import models.binary._
 import play.api.i18n.Messages
-import braingames.mvc.Controller
 import oxalis.user.UserCache
 import models.annotation.{AnnotationType, AnnotationDAO}
 import play.api.libs.concurrent.Execution.Implicits._
 import views._
+import controllers.Controller
+import models.user.time.{TimeTrackingService, TimeTrackingDAO, TimeTracking}
 
 object UserController extends Controller with Secured {
   override val DefaultAccessRole = Role.User
@@ -35,17 +36,17 @@ object UserController extends Controller with Secured {
 
         val userTasks = taskAnnotations.flatMap(a => a.task.map(_ -> a))
 
-        val loggedTime = TimeTracking.loggedTime(user)
+        for {
+          loggedTime <- TimeTrackingService.loggedTime(user)
+          dataSets <- DataSetDAO.findAll
+        } yield {
+          Ok(html.user.dashboard.userDashboard(
+            explorationalAnnotations,
+            userTasks,
+            loggedTime,
+            dataSets,
+            userTasks.find(!_._2.state.isFinished).isDefined))
 
-        DataSetDAO.findAll.map {
-          dataSets =>
-
-            Ok(html.user.dashboard.userDashboard(
-              explorationalAnnotations,
-              userTasks,
-              loggedTime,
-              dataSets,
-              userTasks.find(!_._2.state.isFinished).isDefined))
         }
       }
   }

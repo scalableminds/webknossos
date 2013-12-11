@@ -37,8 +37,7 @@ case class Task(
 
   lazy val id = _id.stringify
 
-  def taskType(implicit ctx: DBAccessContext) =
-    TaskTypeDAO.findOneById(BSONObjectID.apply(_taskType.toString)).toFox
+  def taskType(implicit ctx: DBAccessContext) = TaskTypeDAO.findOneById(_taskType)(GlobalAccessContext).toFox
 
   def project(implicit ctx: DBAccessContext) =
     _project.toFox.flatMap(name => ProjectDAO.findOneByName(name))
@@ -88,13 +87,14 @@ object Task extends FoxImplicits {
       dataSetName <- task.annotationBase.toFox.flatMap(_.dataSetName) getOrElse ""
       editPosition <- task.annotationBase.toFox.flatMap(_.content.map(_.editPosition)) getOrElse Point3D(1, 1, 1)
       status <- task.status
+      taskType <- task.taskType.map(_.summary).getOrElse("<deleted>")
     } yield {
       Json.obj(
         "id" -> task.id,
         "formattedHash" -> Formatter.formatHash(task.id),
         "seedIdHeidelberg" -> task.seedIdHeidelberg,
         "projectName" -> task._project.getOrElse("").toString,
-        "type" -> task.taskType.map(_.summary).getOrElse("<deleted>").toString,
+        "type" -> taskType,
         "dataSet" -> dataSetName,
         "editPosition" -> editPosition,
         "neededExperience" -> task.neededExperience,

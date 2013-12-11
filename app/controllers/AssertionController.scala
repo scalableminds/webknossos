@@ -6,7 +6,7 @@ import models.assertion.{AssertionDAO, Assertion}
 import views.html
 import play.api.libs.json.Json
 import oxalis.security._
-import org.bson.types.ObjectId
+
 import play.api.libs.concurrent.Execution.Implicits._
 
 object AssertionController extends Controller with Secured {
@@ -22,7 +22,7 @@ object AssertionController extends Controller with Secured {
       stacktrace <- postParameter("stacktrace") ?~ "stacktrace is missing"
       title <- postParameter("title") ?~ "title is missing"
     } yield {
-      val a = Assertion(request.userOpt.map(u => new ObjectId(u._id.stringify)), System.currentTimeMillis(), value, title, message, stacktrace, globalContext, localContext)
+      val a = Assertion(request.userOpt.map(_._id), System.currentTimeMillis(), value, title, message, stacktrace, globalContext, localContext)
       AssertionDAO.insert(a)
       Ok
     }

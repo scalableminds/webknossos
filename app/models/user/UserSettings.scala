@@ -1,10 +1,7 @@
 package models.user
 
 import play.api.Play.current
-import com.mongodb.casbah.Imports._
 import models.context._
-import com.novus.salat.annotations._
-import com.novus.salat.dao.SalatDAO
 import braingames.security.SCrypt._
 import scala.collection.mutable.Stack
 import play.api.libs.json.JsValue

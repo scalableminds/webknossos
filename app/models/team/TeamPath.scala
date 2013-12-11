@@ -1,6 +1,5 @@
 package models.team
 
-import org.json4s.JsonAST.JString
 import play.api.libs.json._
 import play.api.libs.json.Json._
 import play.api.libs.json.Reads._

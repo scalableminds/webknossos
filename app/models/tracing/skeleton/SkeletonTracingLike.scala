@@ -15,7 +15,7 @@ import controllers.admin.NMLIO
 import org.apache.commons.io.IOUtils
 import play.api.libs.concurrent.Execution.Implicits._
 import scala.concurrent.Future
-import org.bson.types.ObjectId
+
 import models.annotation.AnnotationType._
 import scala.Some
 import oxalis.nml.NML

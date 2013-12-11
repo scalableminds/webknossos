@@ -46,7 +46,6 @@ object Global extends GlobalSettings {
 
   override def onStop(app: Application) {
     BinaryDataService.stop()
-    models.context.db.close()
   }
 
   def startActors(conf: Config) {

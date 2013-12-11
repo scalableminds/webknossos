@@ -1,7 +1,7 @@
 package models.tracing
 
 import models.annotation.AnnotationSettings
-import models.basics.{SecuredBaseDAO, BasicDAO}
+import models.basics.SecuredBaseDAO
 import play.api.libs.json.Json
 import braingames.util.{Fox, FoxImplicits}
 import play.modules.reactivemongo.json.BSONFormats._

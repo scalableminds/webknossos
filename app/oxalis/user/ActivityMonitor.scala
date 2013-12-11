@@ -6,7 +6,6 @@ import models.user.{UserService, User}
 import akka.agent.Agent
 import play.api.libs.concurrent.Akka
 import play.api.Play.current
-import org.bson.types.ObjectId
 import play.api.libs.concurrent.Execution.Implicits._
 import reactivemongo.bson.BSONObjectID
 import braingames.reactivemongo.GlobalAccessContext

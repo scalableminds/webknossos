@@ -8,7 +8,7 @@ import oxalis.nml.Comment
 import oxalis.nml.NML
 import models.annotation._
 import play.api.libs.json.JsValue
-import org.bson.types.ObjectId
+
 import models.annotation.AnnotationType._
 import scala.Some
 import oxalis.nml.NML

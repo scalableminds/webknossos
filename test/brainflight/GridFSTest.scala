@@ -3,8 +3,6 @@ package brainflight
 import org.specs2.mutable._
 import play.api.test._
 import play.api.test.Helpers._
-import com.mongodb.casbah.Imports._
-import com.mongodb.casbah.gridfs.Imports._
 import java.io._
 import play.Logger
 import oxalis.binary.{ FileDataStore }

@@ -7,11 +7,6 @@ object Dependencies{
   val reactiveVersion = "0.10.0-SNAPSHOT"
   val braingamesVersion = "1.3.0"
 
-  val casbahCommons = "org.mongodb" %% "casbah-commons" % "2.5.0"
-  val casbahCore = "org.mongodb" %% "casbah-core" % "2.5.0"
-  val casbahQuery = "org.mongodb" %% "casbah-query" % "2.5.0"
-  val casbahGridfs = "org.mongodb" %% "casbah-gridfs" % "2.5.0"
-  val salatCore = "com.novus" %% "salat-core" % "1.9.2"
   val restFb = "com.restfb" % "restfb" % "1.6.11"
   val commonsIo = "commons-io" % "commons-io" % "2.4"
   val commonsEmail = "org.apache.commons" % "commons-email" % "1.3.1"
@@ -57,11 +52,6 @@ object ApplicationBuild extends Build {
   val appVersion = scala.io.Source.fromFile("version").mkString.trim
 
   val oxalisDependencies = Seq(
-    casbahCommons,
-    casbahCore,
-    casbahQuery,
-    casbahGridfs,
-    salatCore,
     restFb,
     commonsIo,
     commonsEmail,

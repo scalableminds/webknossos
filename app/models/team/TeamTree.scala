@@ -1,6 +1,6 @@
 package models.team
 
-import models.basics.{SecuredBaseDAO, BasicDAO}
+import models.basics.SecuredBaseDAO
 import reactivemongo.bson.BSONObjectID
 import play.api.libs.json.Json
 import scala.concurrent.Future

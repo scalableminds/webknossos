@@ -3,7 +3,7 @@ package models.task
 import models.annotation.{AnnotationService, Annotation, AnnotationType, AnnotationDAO}
 import braingames.reactivemongo.DBAccessContext
 import reactivemongo.bson.BSONObjectID
-import org.bson.types.ObjectId
+
 import braingames.util.FoxImplicits
 import play.api.libs.concurrent.Execution.Implicits._
 import models.user.Experience

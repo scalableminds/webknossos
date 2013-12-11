@@ -1,6 +1,5 @@
 package models.task
 
-import com.mongodb.casbah.Imports._
 import models.basics.SecuredBaseDAO
 import java.util.Date
 import play.api.libs.json.Writes

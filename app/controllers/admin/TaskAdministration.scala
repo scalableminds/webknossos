@@ -28,7 +28,7 @@ import models.annotation.{AnnotationService, Annotation, AnnotationDAO, Annotati
 import scala.concurrent.Future
 import oxalis.nml.NMLService
 import play.api.libs.json.{Json, JsObject, JsArray}
-import org.bson.types.ObjectId
+
 import net.liftweb.common.Full
 import net.liftweb.common.Full
 import braingames.util.Fox
@@ -139,7 +139,7 @@ object TaskAdministration extends AdminController {
           task = Task(0, taskType._id, experience, priority, instances, _project = project.map(_.name))
           _ <- TaskDAO.insert(task)
         } yield {
-          AnnotationService.createAnnotationBase(task, new ObjectId(request.user._id.stringify), taskType.settings, dataSetName, start)
+          AnnotationService.createAnnotationBase(task, request.user._id, taskType.settings, dataSetName, start)
           Redirect(routes.TaskAdministration.list)
           .flashing(
             FlashSuccess(Messages("task.createSuccess")))
@@ -218,7 +218,7 @@ object TaskAdministration extends AdminController {
             nmls.foreach {
               nml =>
                 TaskService.copyDeepAndInsert(baseTask).map { task =>
-                  AnnotationService.createAnnotationBase(task, new ObjectId(request.user.id), taskType.settings, nml)
+                  AnnotationService.createAnnotationBase(task, request.user._id, taskType.settings, nml)
                 }
             }
             Redirect(routes.TaskAdministration.list).flashing(
@@ -266,7 +266,7 @@ object TaskAdministration extends AdminController {
         results.flatMap(_.map {
           case (dataSetName, position, taskType, task) =>
             TaskDAO.insert(task)
-            AnnotationService.createAnnotationBase(task, new ObjectId(request.user._id.stringify), taskType.settings, dataSetName, position)
+            AnnotationService.createAnnotationBase(task, request.user._id, taskType.settings, dataSetName, position)
             task
         })
       }

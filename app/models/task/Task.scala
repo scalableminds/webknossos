@@ -3,7 +3,7 @@ package models.task
 import models.basics._
 import java.util.Date
 import braingames.geometry.Point3D
-import org.bson.types.ObjectId
+
 import scala.concurrent.Future
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.Logger

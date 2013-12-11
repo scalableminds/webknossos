@@ -2,7 +2,7 @@ package models.task
 
 import models.user.User
 import models.annotation.{Annotation, AnnotationType, AnnotationDAO, AnnotationService}
-import org.bson.types.ObjectId
+
 import scala.concurrent.Future
 import braingames.util.FoxImplicits
 import reactivemongo.bson.BSONObjectID

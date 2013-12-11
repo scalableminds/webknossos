@@ -16,7 +16,7 @@ import org.apache.commons.io.IOUtils
 import play.api.libs.concurrent.Execution.Implicits._
 import models.basics.Implicits._
 import models.task.{Training, Task, TaskService}
-import org.bson.types.ObjectId
+
 import scala.async.Async._
 import braingames.geometry.Point3D
 import braingames.binary.models.DataSet
@@ -192,7 +192,7 @@ object AnnotationService extends AnnotationFileService with AnnotationContentPro
   def createAnnotationFor(user: User, task: Task)(implicit ctx: DBAccessContext): Fox[Annotation] = {
     def useAsTemplateAndInsert(annotation: Annotation) =
       copyDeepAndInsert(annotation.copy(
-        _user = new ObjectId(user._id.stringify),
+        _user = user._id,
         state = AnnotationState.InProgress,
         typ = AnnotationType.Task))
 
@@ -208,7 +208,7 @@ object AnnotationService extends AnnotationFileService with AnnotationContentPro
   def incrementVersion(annotation: Annotation)(implicit ctx: DBAccessContext) =
     AnnotationDAO.incrementVersion(annotation._id)
 
-  def createAnnotationBase(task: Task, userId: ObjectId, settings: AnnotationSettings, dataSetName: String, start: Point3D)(implicit ctx: DBAccessContext) = {
+  def createAnnotationBase(task: Task, userId: BSONObjectID, settings: AnnotationSettings, dataSetName: String, start: Point3D)(implicit ctx: DBAccessContext) = {
     for {
       tracing <- SkeletonTracingService.createFrom(dataSetName, start, true, settings)
       content = ContentReference.createFor(tracing)
@@ -216,7 +216,7 @@ object AnnotationService extends AnnotationFileService with AnnotationContentPro
     } yield tracing
   }
 
-  def createAnnotationBase(task: Task, userId: ObjectId, settings: AnnotationSettings, nml: NML)(implicit ctx: DBAccessContext) = {
+  def createAnnotationBase(task: Task, userId: BSONObjectID, settings: AnnotationSettings, nml: NML)(implicit ctx: DBAccessContext) = {
     SkeletonTracingService.createFrom(nml, settings).toFox.map {
       tracing =>
         val content = ContentReference.createFor(tracing)

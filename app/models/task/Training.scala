@@ -2,7 +2,6 @@ package models.task
 
 import models.user.User
 import play.api.libs.json.Json
-import models.basics.BasicDAOFormats
 import scala.concurrent.Future
 import braingames.reactivemongo.DBAccessContext
 import reactivemongo.bson.BSONObjectID

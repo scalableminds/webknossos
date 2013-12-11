@@ -11,7 +11,7 @@ import reactivemongo.bson.BSONObjectID
  */
 
 import models.annotation.AnnotationType._
-import org.bson.types.ObjectId
+
 import scala.concurrent.Future
 import braingames.util.Fox
 

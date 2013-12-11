@@ -1,6 +1,5 @@
 package models.user.time
 
-import com.mongodb.casbah.Imports._
 import java.util.Date
 import java.util.Calendar
 import scala.concurrent.duration._

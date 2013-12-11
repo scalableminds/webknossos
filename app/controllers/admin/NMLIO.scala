@@ -41,7 +41,7 @@ import net.liftweb.common.Full
 import oxalis.nml.NML
 import models.annotation.AnnotationType
 import models.annotation.Annotation
-import org.bson.types.ObjectId
+
 import net.liftweb.common.Full
 import oxalis.nml.NML
 
@@ -75,7 +75,7 @@ object NMLIO extends Controller with Secured with TextUtils {
     SkeletonTracingService.createFrom(nmls, AnnotationSettings.default).toFox.flatMap {
       content =>
         AnnotationService.createFrom(
-          new ObjectId(user._id.stringify),
+          user._id,
           content,
           typ,
           name)

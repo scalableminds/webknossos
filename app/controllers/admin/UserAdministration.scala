@@ -27,7 +27,7 @@ import reactivemongo.bson.BSONObjectID
 import braingames.util.Fox
 import scala.concurrent.Future
 import braingames.reactivemongo.DBAccessContext
-import org.bson.types.ObjectId
+
 import net.liftweb.common.Full
 import scala.Some
 

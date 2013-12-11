@@ -3,10 +3,8 @@ package models.basics
 import braingames.reactivemongo.{UnsecuredMongoDAO, SecuredMongoDAO}
 import play.modules.reactivemongo.ReactiveMongoPlugin
 import play.api.Play
-import com.mongodb.casbah.Imports.ObjectId
 import reactivemongo.bson.BSONObjectID
-import org.bson.types.ObjectId
-import com.mongodb.casbah.commons.TypeImports.ObjectId
+
 import braingames.util.Fox
 import scala.util.Success
 import scala.concurrent.Future

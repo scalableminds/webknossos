@@ -14,20 +14,21 @@ import scala.Some
 import models.annotation.Annotation
 import models.annotation.AnnotationType._
 import models.user.User
-import org.bson.types.ObjectId
+
 import scala.concurrent.Future
 import play.api.libs.concurrent.Execution.Implicits._
 import braingames.util.{FoxImplicits, Fox}
 import braingames.reactivemongo.DBAccessContext
+import reactivemongo.bson.BSONObjectID
 
 object CompoundAnnotation extends Formatter with FoxImplicits {
 
-  def treePrefix(tracing: SkeletonTracingLike, user: Option[User], taskId: Option[ObjectId]) = {
+  def treePrefix(tracing: SkeletonTracingLike, user: Option[User], taskId: Option[BSONObjectID]) = {
     val userName = user.map(_.abreviatedName) getOrElse ""
-    s"${formatHash(taskId.map(_.toString).getOrElse(""))}_${userName}_"
+    s"${formatHash(taskId.map(_.stringify).getOrElse(""))}_${userName}_"
   }
 
-  def renameTreesOfTracing(tracing: SkeletonTracing, user: Option[User], taskId: Option[ObjectId])(implicit ctx: DBAccessContext) = {
+  def renameTreesOfTracing(tracing: SkeletonTracing, user: Option[User], taskId: Option[BSONObjectID])(implicit ctx: DBAccessContext) = {
     def renameTrees(prefix: String, trees: List[TreeLike]) = {
       trees.zipWithIndex.map {
         case (tree, index) =>
@@ -86,7 +87,7 @@ object CompoundAnnotation extends Formatter with FoxImplicits {
         case (annotation, skeleton: SkeletonTracing) =>
           annotation.user.flatMap {
             userOpt =>
-              renameTreesOfTracing(skeleton, userOpt, annotation._task.map(id => new ObjectId(id.stringify)))
+              renameTreesOfTracing(skeleton, userOpt, annotation._task)
           }
         case (annotation, content) =>
           Future.successful(content)

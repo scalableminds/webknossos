@@ -1,7 +1,6 @@
 package oxalis.nml
 
 import braingames.geometry.Point3D
-import com.novus.salat.annotations._
 import play.api.libs.json._
 import braingames.xml.{SynchronousXMLWrites, XMLWrites}
 

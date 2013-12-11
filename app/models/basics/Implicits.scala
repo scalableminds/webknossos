@@ -1,11 +1,9 @@
 package models.basics
 
-import oxalis.security.{UserAwareRequest, AuthenticatedRequest}
+import oxalis.security.UserAwareRequest
 import models.user.User
-import braingames.reactivemongo.{DBAccessContext, AuthedAccessContext}
-import com.mongodb.casbah.Imports._
+import braingames.reactivemongo.DBAccessContext
 import braingames.reactivemongo.AuthedAccessContext
-import reactivemongo.bson.BSONObjectID
 
 /**
  * Company: scalableminds
@@ -23,10 +21,4 @@ trait Implicits {
   implicit def userToDBAccess(user: User): DBAccessContext = {
     AuthedAccessContext(user)
   }
-
-  implicit def toBSONObjectID(o: ObjectId) =
-    BSONObjectID(o.toString)
-
-  implicit def toObjectID(o: BSONObjectID) =
-    new ObjectId(o.stringify)
 }

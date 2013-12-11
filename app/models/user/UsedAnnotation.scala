@@ -1,9 +1,7 @@
 package models.user
 
-import com.mongodb.casbah.Imports._
 import models.context._
-import com.novus.salat.annotations._
-import models.basics.{SecuredBaseDAO, BasicDAO}
+import models.basics.SecuredBaseDAO
 import oxalis.annotation.AnnotationIdentifier
 import reactivemongo.bson.BSONObjectID
 import play.api.libs.json.Json

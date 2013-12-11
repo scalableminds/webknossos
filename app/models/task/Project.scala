@@ -1,7 +1,6 @@
 package models.task
 
 import models.basics._
-import com.novus.salat.annotations._
 import models.user.{UserService, User}
 import play.api.libs.json.Json
 import braingames.reactivemongo.{GlobalAccessContext, DBAccessContext}
@@ -12,7 +11,7 @@ import scala.concurrent.Future
 import net.liftweb.common.Full
 import play.api.libs.concurrent.Execution.Implicits._
 
-case class Project(@Key("name") name: String, _owner: BSONObjectID) {
+case class Project(name: String, _owner: BSONObjectID) {
   def owner = UserService.findOneById(_owner.stringify, useCache = true)(GlobalAccessContext)
 
   lazy val tasks = TaskDAO.findAllByProject(name)(GlobalAccessContext)
@@ -43,6 +42,8 @@ object ProjectDAO extends SecuredBaseDAO[Project] {
   val collectionName = "projects"
 
   val formatter = Project.projectFormat
+
+  // TODO: index on name
 
   def findOneByName(name: String)(implicit ctx: DBAccessContext) = {
     findOne("name", name)

@@ -27,16 +27,17 @@ object CompoundAnnotation extends Formatter with FoxImplicits {
     s"${formatHash(taskId.map(_.toString).getOrElse(""))}_${userName}_"
   }
 
-  def renameTreesOfTracing(tracing: SkeletonTracing, user: Option[User], taskId: Option[ObjectId]) = {
+  def renameTreesOfTracing(tracing: SkeletonTracing, user: Option[User], taskId: Option[ObjectId])(implicit ctx: DBAccessContext) = {
     def renameTrees(prefix: String, trees: List[TreeLike]) = {
       trees.zipWithIndex.map {
         case (tree, index) =>
           tree.changeName(s"${prefix}tree%03d".format(index + 1))
       }
     }
-    val temp = TemporarySkeletonTracing.createFrom(tracing, "")
-    temp.copy(
-      trees = renameTrees(treePrefix(tracing, user, taskId), temp.trees))
+    TemporarySkeletonTracingService.createFrom(tracing, "").map{ temp =>
+      temp.copy(
+        _trees = renameTrees(treePrefix(tracing, user, taskId), temp._trees))
+    }
   }
 
   def filterAnnotation(a: Annotation) =
@@ -83,13 +84,13 @@ object CompoundAnnotation extends Formatter with FoxImplicits {
 
       annotationsWithContent.flatMap(Future.traverse(_) {
         case (annotation, skeleton: SkeletonTracing) =>
-          annotation.user.map {
+          annotation.user.flatMap {
             userOpt =>
               renameTreesOfTracing(skeleton, userOpt, annotation._task.map(id => new ObjectId(id.stringify)))
           }
         case (annotation, content) =>
           Future.successful(content)
-      }).map {
+      }).flatMap {
         tracings =>
           createFromTracings(tracings, id)
       }
@@ -108,24 +109,24 @@ object CompoundAnnotation extends Formatter with FoxImplicits {
   }
 
 
-  def createFromTracings(tracings: List[AnnotationContent], id: String): Option[TemporarySkeletonTracing] = {
-    def mergeThem(tracings: List[AnnotationContent]): Option[TemporarySkeletonTracing] = {
+  def createFromTracings(tracings: List[AnnotationContent], id: String)(implicit ctx: DBAccessContext): Future[Option[TemporarySkeletonTracing]] = {
+    def mergeThem(tracings: List[AnnotationContent]): Future[Option[TemporarySkeletonTracing]] = {
       tracings match {
         case head :: tail =>
           head match {
             case t: SkeletonTracingLike =>
-              val base = TemporarySkeletonTracing.createFrom(t, id)
-              Some(tail.foldLeft(base) {
-                case (result, tracing) =>
-                  result.mergeWith(tracing)
-              })
+              val base = TemporarySkeletonTracingService.createFrom(t, id)
+              tail.foldLeft(base) {
+                case (resultF, tracing) =>
+                  resultF.flatMap(result => result.mergeWith(tracing))
+              }.map(r => Some(r))
             case _ =>
               mergeThem(tail)
           }
         case _ =>
-          None
+          Future.successful(None)
       }
     }
-    mergeThem(tracings.sliding(50, 50).toSeq.par.flatMap(mergeThem).toList)
+    mergeThem(tracings)
   }
 }

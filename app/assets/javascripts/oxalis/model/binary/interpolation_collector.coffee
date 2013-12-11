@@ -46,7 +46,7 @@ subPointMacro = (output, xd, yd, zd) ->
       # The point seems to be at the right border.
       bucketIndex++
       # Bound checking.
-      continue if bucketIndex % sizeZ == 0
+      return if bucketIndex % sizeZ == 0
   
   # `992   = 00000 11111 00000`
   if yd
@@ -55,7 +55,7 @@ subPointMacro = (output, xd, yd, zd) ->
       # The point is to at the bottom border.
       bucketIndex += sizeZ
       # Bound checking.
-      continue if bucketIndex % sizeZY == 0
+      return if bucketIndex % sizeZY == 0
     
   # `31744 = 11111 00000 00000`
   if xd
@@ -91,7 +91,7 @@ subPointMacro = (output, xd, yd, zd) ->
     output = bucket[pointIndex]
 
   else
-    continue
+    return
 
 # Trilinear interpolation (Point is in a cube)
 trilinearMacro = (p000, p100, p010, p110, p001, p101, p011, p111, d0, d1, d2) ->
@@ -114,7 +114,7 @@ collectLoopMacro = (x, y, z, buffer, j, cube, min_x, min_y, min_z, max_x, max_y,
 
   # Cube bound checking is necessary.
   if x < min_x or y < min_y or z < min_z or x > max_x or y > max_y or z > max_z
-    continue
+    return
 
   # Bitwise operations provide fast rounding of numbers.
   x0 = x >> 0; xd = x - x0     

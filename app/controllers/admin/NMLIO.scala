@@ -31,7 +31,7 @@ import java.io.FileInputStream
 import java.nio.channels.Channels
 import models.annotation._
 import models.annotation.AnnotationType._
-import models.tracing.skeleton.{SkeletonTracing, SkeletonTracingLike}
+import models.tracing.skeleton.{SkeletonTracingService, SkeletonTracing, SkeletonTracingLike}
 import oxalis.annotation.handler.SavedTracingInformationHandler
 import play.api.libs.concurrent.Execution.Implicits._
 import scala.concurrent.Future
@@ -72,14 +72,14 @@ object NMLIO extends Controller with Secured with TextUtils {
   }
 
   def createAnnotationFrom(user: User, nmls: List[NML], typ: AnnotationType, name: Option[String])(implicit request: AuthenticatedRequest[_]): Fox[Annotation] = {
-    SkeletonTracing.createFrom(nmls, AnnotationSettings.default).map {
+    SkeletonTracingService.createFrom(nmls, AnnotationSettings.default).toFox.flatMap {
       content =>
         AnnotationService.createFrom(
           new ObjectId(user._id.stringify),
           content,
           typ,
           name)
-    }.getOrElse(Future.successful(None)).toFox
+    }
   }
 
   def upload = Authenticated().async(parse.multipartFormData) { implicit request =>

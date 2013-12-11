@@ -10,6 +10,7 @@ import play.api.libs.concurrent.Execution.Implicits._
 import braingames.reactivemongo.DBAccessContext
 import braingames.util.{FoxImplicits, Fox}
 import reactivemongo.bson.BSONObjectID
+import play.api.Logger
 
 /**
  * Company: scalableminds
@@ -56,8 +57,8 @@ object AnnotationLike extends FoxImplicits {
     for {
       contentJs <- a.content.flatMap(AnnotationContent.writeAsJson(_))
       restrictionsJs <- AnnotationRestrictions.writeAsJson(a.restrictions, user).toFox
-      name = a._name.getOrElse("")
     } yield {
+      val name = a._name.getOrElse("")
       Json.obj(
         "version" -> a.version,
         "id" -> a.id,

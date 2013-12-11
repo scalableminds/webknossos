@@ -1,8 +1,13 @@
 package models.tracing
 
 import models.annotation.AnnotationSettings
-import com.mongodb.casbah.commons.MongoDBObject
-import models.basics.BasicDAO
+import models.basics.{SecuredBaseDAO, BasicDAO}
+import play.api.libs.json.Json
+import braingames.util.{Fox, FoxImplicits}
+import play.modules.reactivemongo.json.BSONFormats._
+import braingames.reactivemongo.DBAccessContext
+import play.api.libs.concurrent.Execution.Implicits._
+import reactivemongo.core.commands.LastError
 
 /**
  * Company: scalableminds
@@ -10,18 +15,18 @@ import models.basics.BasicDAO
  * Date: 02.06.13
  * Time: 11:36
  */
-trait CommonTracingDAO {
-  this: BasicDAO[_] =>
+trait CommonTracingService extends FoxImplicits {
+  def dao: SecuredBaseDAO[_]
 
-  def updateSettings(settings: AnnotationSettings, tracingId: String) {
-    withValidId(tracingId) {
+  def updateSettings(settings: AnnotationSettings, tracingId: String)(implicit ctx: DBAccessContext): Unit = {
+    dao.withValidId(tracingId) {
       id =>
-        Some(update(
-          MongoDBObject("_id" -> id),
-          MongoDBObject("settings" -> settings),
-          false,
-          false
-        ))
+        dao.collectionUpdate(
+          Json.obj("_id" -> id),
+          Json.obj("$set" -> Json.obj("settings" -> settings)),
+          upsert = false,
+          multi = false
+        )
     }
   }
 

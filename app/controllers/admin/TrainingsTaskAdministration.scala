@@ -13,7 +13,7 @@ import oxalis.nml._
 import play.api.i18n.Messages
 import java.util.Date
 import models.annotation.{AnnotationService, AnnotationType, AnnotationDAO}
-import models.tracing.skeleton.SkeletonTracing
+import models.tracing.skeleton.{SkeletonTracingService, SkeletonTracing}
 import views._
 import controllers.Controller
 import play.api.libs.concurrent.Execution.Implicits._
@@ -28,7 +28,7 @@ object TrainingsTaskAdministration extends AdminController {
   val trainingsTaskForm = Form(
     tuple(
       "task" -> text,
-      "tracing" -> text.verifying("tracing.notFound", exp => SkeletonTracing.findOneById(exp).isDefined),
+      "tracing" -> text,
       "training" -> mapping(
         "domain" -> nonEmptyText(1, 50),
         "gain" -> number,

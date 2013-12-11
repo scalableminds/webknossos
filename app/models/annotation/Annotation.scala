@@ -11,7 +11,7 @@ import braingames.geometry.Point3D
 import java.util.Date
 import play.api.libs.json.{Json, JsValue}
 import play.api.Logger
-import models.tracing.skeleton.{AnnotationStatistics, SkeletonTracing, TemporarySkeletonTracing}
+import models.tracing.skeleton.{SkeletonTracingService, AnnotationStatistics, SkeletonTracing, TemporarySkeletonTracing}
 import models.basics.Implicits._
 import braingames.util.{Fox, FoxImplicits}
 import play.api.libs.concurrent.Execution.Implicits._
@@ -46,7 +46,7 @@ case class Annotation(
 
   def user = UserService.findOneById(_user.toString, useCache = true)(GlobalAccessContext)
 
-  def content = _content.resolveAs[AnnotationContent].toFox
+  def content = _content.resolveAs[AnnotationContent](GlobalAccessContext).toFox
 
   def dataSetName = content.map(_.dataSetName) getOrElse ""
 
@@ -57,10 +57,10 @@ case class Annotation(
   def isReadyToBeFinished(implicit ctx: DBAccessContext) = {
     // TODO: RF - rework
     task
-    .flatMap(_.annotationBase.toFox.flatMap(SkeletonTracing.statisticsForAnnotation).map(_.numberOfNodes))
+    .flatMap(_.annotationBase.toFox.flatMap(SkeletonTracingService.statisticsForAnnotation).map(_.numberOfNodes))
     .getOrElse(1L)
     .flatMap { nodesInBase =>
-      SkeletonTracing.statisticsForAnnotation(this).map(_.numberOfNodes > nodesInBase) getOrElse true
+      SkeletonTracingService.statisticsForAnnotation(this).map(_.numberOfNodes > nodesInBase) getOrElse true
     }
   }
 
@@ -184,7 +184,7 @@ object AnnotationDAO
       Json.obj(
         "_task" -> task._id)).one[Annotation].map {
       case Some(annotation) =>
-        annotation._content.dao.updateSettings(settings, annotation._content._id)
+        annotation._content.service.updateSettings(settings, annotation._content._id)
       case _ =>
     }
   }

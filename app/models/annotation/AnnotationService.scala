@@ -10,7 +10,7 @@ import java.nio.channels.Channels
 import scala.concurrent.Future
 import braingames.util.{FoxImplicits, Fox, NamedFileStream}
 import oxalis.annotation.handler.SavedTracingInformationHandler
-import models.tracing.skeleton.{SkeletonTracing, SkeletonTracingLike}
+import models.tracing.skeleton.{SkeletonTracingService, SkeletonTracing, SkeletonTracingLike}
 import oxalis.nml.{NML, NMLService}
 import org.apache.commons.io.IOUtils
 import play.api.libs.concurrent.Execution.Implicits._
@@ -149,16 +149,17 @@ object AnnotationService extends AnnotationFileService with AnnotationContentPro
 
   def createExplorationalFor(user: User, dataSet: DataSet, contentType: String)(implicit ctx: DBAccessContext) =
     withProviderForContentType(contentType) { provider =>
-      val content = provider.createFrom(dataSet)
-      val annotation = Annotation(
-        user._id,
-        ContentReference.createFor(content),
-        typ = AnnotationType.Explorational,
-        state = AnnotationState.InProgress
-      )
-      AnnotationDAO.insert(annotation).map { _ =>
-        annotation
-      }
+      for {
+        content <- provider.createFrom(dataSet)
+        contentReference = ContentReference.createFor(content)
+        annotation = Annotation(
+          user._id,
+          contentReference,
+          typ = AnnotationType.Explorational,
+          state = AnnotationState.InProgress
+        )
+        _ <- AnnotationDAO.insert(annotation)
+      } yield annotation
     }
 
   def freeAnnotationsOfUser(user: User)(implicit ctx: DBAccessContext) = {
@@ -208,13 +209,15 @@ object AnnotationService extends AnnotationFileService with AnnotationContentPro
     AnnotationDAO.incrementVersion(annotation._id)
 
   def createAnnotationBase(task: Task, userId: ObjectId, settings: AnnotationSettings, dataSetName: String, start: Point3D)(implicit ctx: DBAccessContext) = {
-    val tracing = SkeletonTracing.createFrom(dataSetName, start, true, settings)
-    val content = ContentReference.createFor(tracing)
-    AnnotationDAO.insert(Annotation(userId, content, typ = AnnotationType.TracingBase, _task = Some(task._id)))
+    for {
+      tracing <- SkeletonTracingService.createFrom(dataSetName, start, true, settings)
+      content = ContentReference.createFor(tracing)
+      _ <- AnnotationDAO.insert(Annotation(userId, content, typ = AnnotationType.TracingBase, _task = Some(task._id)))
+    } yield tracing
   }
 
   def createAnnotationBase(task: Task, userId: ObjectId, settings: AnnotationSettings, nml: NML)(implicit ctx: DBAccessContext) = {
-    SkeletonTracing.createFrom(nml, settings).map {
+    SkeletonTracingService.createFrom(nml, settings).toFox.map {
       tracing =>
         val content = ContentReference.createFor(tracing)
         AnnotationDAO.insert(Annotation(userId, content, typ = AnnotationType.TracingBase, _task = Some(task._id)))
@@ -240,7 +243,7 @@ object AnnotationService extends AnnotationFileService with AnnotationContentPro
   }
 
   def copyDeepAndInsert(source: Annotation)(implicit ctx: DBAccessContext): Future[Option[Annotation]] = {
-    val copied = source.content.map(content => content.copyDeepAndInsert)
+    val copied = source.content.flatMap(content => content.copyDeepAndInsert)
     copied
     .map(_.id)
     .getOrElse(source._content._id)
@@ -255,7 +258,8 @@ object AnnotationService extends AnnotationFileService with AnnotationContentPro
 
   def createReviewFor(sample: Annotation, training: Annotation, user: User)(implicit ctx: DBAccessContext) = {
     for {
-      reviewContent <- training.content.map(_.copyDeepAndInsert)
+      content <- training.content
+      reviewContent <- content.copyDeepAndInsert.toFox
       sampleContent <- sample.content
     } yield {
       reviewContent.mergeWith(sampleContent)
@@ -276,12 +280,11 @@ object AnnotationService extends AnnotationFileService with AnnotationContentPro
       task <- annotation.task.toFox
       annotationContent <- annotation.content
       tracingBase <- task.annotationBase.flatMap(_.content)
-      reseted = tracingBase.copyDeepAndInsert
-      _ = annotationContent.clearTracingData()
+      reseted <- tracingBase.copyDeepAndInsert.toFox
+      _ <- annotationContent.service.clearTracingData(annotationContent.id)
       updatedAnnotation <- AnnotationDAO.updateContent(annotation._id, ContentReference.createFor(reseted))
-    } yield {
-      updatedAnnotation
-    }
+    } yield updatedAnnotation
+
   }
 
   def updateFromJson(js: Seq[JsValue], annotation: Annotation)(implicit ctx: DBAccessContext) = {

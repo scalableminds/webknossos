@@ -2,27 +2,39 @@ package models.tracing.skeleton
 
 import models.annotation.Annotation
 import play.api.Logger
+import scala.concurrent.Future
+import braingames.util.{FoxImplicits, Fox}
+import play.api.libs.concurrent.Execution.Implicits._
 
-trait AnnotationStatistics {
+trait AnnotationStatistics extends FoxImplicits {
   def statisticsForAnnotation(annotation: Annotation) = {
-    annotation.content.map {
+    annotation.content.flatMap {
       case t: SkeletonTracing =>
-        val trees = t.dbtrees
-        val numberOfTrees = trees.size
-        val (numberOfNodes, numberOfEdges) = trees.foldLeft((0l, 0l)) {
-          case ((numberOfNodes, numberOfEdges), tree) =>
-            (numberOfNodes + tree.numberOfNodes,
-              numberOfEdges + tree.numberOfEdges)
+        for {
+          trees <- t.dbtrees.toFox
+          numberOfTrees = trees.size
+          (numberOfNodes, numberOfEdges) <- trees.foldLeft(Future.successful((0l, 0l))) {
+            case (f, tree) =>
+              for {
+                (numberOfNodes, numberOfEdges) <- f
+                nNodes <- tree.numberOfNodes
+                nEdges <- tree.numberOfEdges
+              } yield {
+                (numberOfNodes + nNodes, numberOfEdges + nEdges)
+              }
+          }
+        } yield {
+          SkeletonTracingStatistic(numberOfNodes, numberOfEdges, numberOfTrees)
         }
-        SkeletonTracingStatistic(numberOfNodes, numberOfEdges, numberOfTrees)
       case _ =>
         Logger.warn("No statistics available for content")
-        SkeletonTracingStatistic(0, 0, 0)
+        Fox.successful(SkeletonTracingStatistic(0, 0, 0))
     }
   }
 }
 
 case class SkeletonTracingStatistic(
-                             numberOfNodes: Long,
-                             numberOfEdges: Long,
-                             numberOfTrees: Long)
+                                     numberOfNodes: Long,
+                                     numberOfEdges: Long,
+                                     numberOfTrees: Long
+                                   )

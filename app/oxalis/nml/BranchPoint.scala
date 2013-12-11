@@ -11,19 +11,8 @@ case class BranchPoint(id: Int)
 object BranchPoint {
   val ID = "id"
   val TREE_ID = "treeId"
-  implicit object BranchPointReads extends Reads[BranchPoint] {
-    // TODO: rewrite
-    def reads(json: JsValue) = (json \ ID) match {
-      case JsNumber(n) => JsSuccess(BranchPoint(n.toInt))
-      case _           => JsError(Seq(JsPath() -> Seq(ValidationError("validate.error.expected.jsnumber"))))
-    }
-  }
 
-  implicit object BranchPointJsonWrites extends Writes[BranchPoint] {
-
-    def writes(b: BranchPoint) = Json.obj(
-      ID -> b.id)
-  }
+  implicit val branchPointFormat = Json.format[BranchPoint]
 
   implicit object BranchPointXMLWrites extends SynchronousXMLWrites[BranchPoint] {
     def synchronousWrites(b: BranchPoint) =

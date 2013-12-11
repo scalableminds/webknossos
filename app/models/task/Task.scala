@@ -20,6 +20,9 @@ import org.joda.time.DateTime
 import java.text.SimpleDateFormat
 import play.api.libs.json.JsObject
 import scala.async.Async._
+import akka.actor.Props
+import akka.routing.RoundRobinRouter
+import reactivemongo.api.indexes.{IndexType, Index}
 
 case class Task(
                  seedIdHeidelberg: Int,
@@ -112,9 +115,8 @@ object TaskDAO extends SecuredBaseDAO[Task] with FoxImplicits {
 
   val formatter = Task.taskFormat
 
-  // TODO: ensure index!
-  // this.collection.ensureIndex("_project")
-  // this.collection.ensureIndex("_taskType")
+  collection.indexesManager.ensure(Index(Seq("_project" -> IndexType.Ascending)))
+  collection.indexesManager.ensure(Index(Seq("_taskType" -> IndexType.Ascending)))
 
   @deprecated(message = "This mehtod shouldn't be used. Use TaskService.remove instead", "2.0")
   override def removeById(bson: BSONObjectID)(implicit ctx: DBAccessContext) = {

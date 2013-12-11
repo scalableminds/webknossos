@@ -10,6 +10,7 @@ import braingames.util.{FoxImplicits, Fox}
 import scala.concurrent.Future
 import net.liftweb.common.Full
 import play.api.libs.concurrent.Execution.Implicits._
+import reactivemongo.api.indexes.{IndexType, Index}
 
 case class Project(name: String, _owner: BSONObjectID) {
   def owner = UserService.findOneById(_owner.stringify, useCache = true)(GlobalAccessContext)
@@ -43,7 +44,7 @@ object ProjectDAO extends SecuredBaseDAO[Project] {
 
   val formatter = Project.projectFormat
 
-  // TODO: index on name
+  collection.indexesManager.ensure(Index(Seq("name" -> IndexType.Ascending)))
 
   def findOneByName(name: String)(implicit ctx: DBAccessContext) = {
     findOne("name", name)

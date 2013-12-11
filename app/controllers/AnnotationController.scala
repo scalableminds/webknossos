@@ -158,7 +158,6 @@ object AnnotationController extends Controller with Secured with TracingInformat
 
   def finish(typ: String, id: String) = Authenticated().async {
     implicit request =>
-    // TODO: RF - user Store
       def generateJsonResult(annotation: Annotation, message: String) = {
         if (annotation.typ != AnnotationType.Task)
           Fox.successful((JsonOk(message)))
@@ -185,7 +184,6 @@ object AnnotationController extends Controller with Secured with TracingInformat
 
   def finishWithRedirect(typ: String, id: String) = Authenticated().async {
     implicit request =>
-    // TODO: RF - user store
       for {
         annotation <- AnnotationDAO.findOneById(id) ?~> Messages("annotation.notFound")
         finished <- AnnotationService.finishAnnotation(request.user, annotation).futureBox
@@ -203,7 +201,6 @@ object AnnotationController extends Controller with Secured with TracingInformat
 
   def nameExplorativeAnnotation(typ: String, id: String) = Authenticated().async(parse.urlFormEncoded) {
     implicit request =>
-    // TODO: RF - user store
       for {
         annotation <- AnnotationDAO.findOneById(id) ?~> Messages("annotation.notFound")
         name <- postParameter("name") ?~> Messages("tracing.invalidName")

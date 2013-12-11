@@ -19,6 +19,7 @@ import scala.concurrent.Future
 import reactivemongo.bson.BSONObjectID
 import braingames.reactivemongo.{DBAccessContext, GlobalAccessContext}
 import play.modules.reactivemongo.json.BSONFormats._
+import reactivemongo.api.indexes.{IndexType, Index}
 
 case class Annotation(
                        _user: BSONObjectID,
@@ -92,9 +93,8 @@ object AnnotationDAO
 
   val formatter = Annotation.annotationFormat
 
-  // TODO: create index!
-  // this.collection.ensureIndex("_task")
-  // this.collection.ensureIndex("_user")
+  collection.indexesManager.ensure(Index(Seq("_task" -> IndexType.Ascending)))
+  collection.indexesManager.ensure(Index(Seq("_user" -> IndexType.Ascending)))
 
   def findTrainingForReviewAnnotation(annotation: AnnotationLike)(implicit ctx: DBAccessContext) =
     withValidId(annotation.id) {

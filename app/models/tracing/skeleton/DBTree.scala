@@ -11,6 +11,7 @@ import scala.concurrent.Future
 import braingames.reactivemongo.{GlobalAccessContext, DBAccessContext}
 import scala.async.Async._
 import play.api.libs.concurrent.Execution.Implicits._
+import reactivemongo.api.indexes.{IndexType, Index}
 
 case class DBTree(_tracing: BSONObjectID, treeId: Int, color: Color, timestamp: Long = System.currentTimeMillis, name: String = "", _id: BSONObjectID = BSONObjectID.generate) {
   val dao = DBTree
@@ -105,8 +106,7 @@ object DBTreeDAO extends SecuredBaseDAO[DBTree] {
 
   val formatter = DBTree.dbTreeFormat
 
-  // TODO: ensure index
-  // this.collection.ensureIndex("_tracing")
+  collection.indexesManager.ensure(Index(Seq("_tracing" -> IndexType.Ascending)))
 
   /*def createAndInsertDeepCopy(t: DBTree): DBTree = {
     createAndInsertDeepCopy(t, t._tracing, 0)

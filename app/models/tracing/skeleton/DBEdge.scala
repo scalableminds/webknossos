@@ -8,6 +8,7 @@ import braingames.reactivemongo.DBAccessContext
 import scala.concurrent.Future
 import play.modules.reactivemongo.json.BSONFormats._
 import play.api.libs.concurrent.Execution.Implicits._
+import reactivemongo.api.indexes.{IndexType, Index}
 
 case class DBEdge(edge: Edge, _treeId: BSONObjectID, _id: BSONObjectID = BSONObjectID.generate)
 
@@ -17,12 +18,11 @@ object DBEdge {
 
 object DBEdgeDAO extends SecuredBaseDAO[DBEdge] {
 
-  // TODO: ensure index!
-  // c.collection.ensureIndex("_treeId")
-
   val collectionName = "edges"
 
   val formatter = DBEdge.dbEdgeFormat
+
+  collection.indexesManager.ensure(Index(Seq("_treeId" -> IndexType.Ascending)))
 
   def remove(edge: Edge, _tree: BSONObjectID)(implicit ctx: DBAccessContext) =
     collectionRemove(Json.obj("_treeId" -> _tree, "edge.source" -> edge.source, "edge.target" -> edge.target))

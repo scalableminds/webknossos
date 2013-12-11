@@ -88,8 +88,8 @@ object Task extends FoxImplicits {
 
   def transformToJson(task: Task)(implicit ctx: DBAccessContext): Future[JsObject] = {
     for {
-      dataSetName <- task.annotationBase.toFox.flatMap(_.dataSetName) getOrElse ""
-      editPosition <- task.annotationBase.toFox.flatMap(_.content.map(_.editPosition)) getOrElse Point3D(1, 1, 1)
+      dataSetName <- task.annotationBase.flatMap(_.dataSetName) getOrElse ""
+      editPosition <- task.annotationBase.flatMap(_.content.map(_.editPosition)) getOrElse Point3D(1, 1, 1)
       status <- task.status
       taskType <- task.taskType.futureBox
     } yield {

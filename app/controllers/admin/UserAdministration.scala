@@ -7,8 +7,7 @@ import oxalis.security.AuthenticatedRequest
 import oxalis.security.Secured
 import controllers._
 import models.security._
-import models.user.User
-import models.user.Experience
+import models.user.{User, Experience, Domain}
 import play.api.i18n.Messages
 import views.html
 import net.liftweb.common._
@@ -64,7 +63,7 @@ object UserAdministration extends Controller with Secured {
 
   def index = Authenticated {
     implicit request =>
-      Ok(html.admin.user.userList(allUsers, Role.findAll.sortBy(_.name), Experience.findAllDomains, request.user.adminTeams))
+      Ok(html.admin.user.userList(allUsers, Role.findAll.sortBy(_.name), Domain.findAllDistinct, request.user.adminTeams))
   }
 
   def logTime(userId: String, time: String, note: String) = Authenticated {

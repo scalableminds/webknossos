@@ -3,7 +3,7 @@ package models.user
 import models.task._
 import scala.collection.breakOut
 import play.api.libs.json.Json
-
+import play.api._
 /**
  * Experience a user needs to hold to acquire a task. The task itself defines the minimum experience needed.
  * @param domain Domain of the experience
@@ -29,7 +29,4 @@ object Experience {
   def empty = Experience("", 0)
 
   def fromForm(domain: String, value: Int) = Experience(domain.trim, value)
-
-  // TODO: don't use tasks to find domain strings 
-  def findAllDomains = Task.findAll.flatMap(_.training.map(_.domain)).toSet.toList
 }

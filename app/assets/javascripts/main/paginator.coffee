@@ -8,8 +8,9 @@ routes : jsRoutes
 class Paginator
   
 
-  constructor: (@pageSelectionDiv) ->
+  constructor: (@pageSelectionDiv, data=null) ->
     
+    @rowsPerPage = 100
     @allElements = null
     @elementsToShow = null
         
@@ -17,7 +18,11 @@ class Paginator
     @tbody = $("#"+tableID).find("tbody")
 
     @extractTemplate()
-    @retrieveData()
+    
+    if data
+      @handleData(data)
+    else
+      @retrieveData()
     
     searchboxElement = @pageSelectionDiv.find(".pagination-searchbox")
     @addSearchboxListener(searchboxElement)
@@ -34,41 +39,40 @@ class Paginator
 
 
   retrieveData : ->
-    
-    @rowsPerPage = 100
-    
+       
     ajaxOptions =
       url : @pageSelectionDiv.data("url")
       dataType : "json"
       type : "get"
 
-    $.ajax(ajaxOptions).then(
+    $.ajax(ajaxOptions).then(@handleData)
 
-      (responseData) =>
-        
-        @allElements = @elementsToShow = responseData.data
 
-        pageCount = Math.ceil(@allElements.length / @rowsPerPage)
-        
-        pageSelectionHandler = (event, number) =>
-          index = number - 1
-          json = @getElementsForPage(index)
-          @displayJSON json
-        
-        @pageSelectionDiv.bootpag(
-          total: pageCount
-          page: 1
-          maxVisible: 20
-          leaps: true
-        ).on "page", pageSelectionHandler
+  handleData: (responseData) =>
+    
+    @allElements = @elementsToShow = responseData.data
 
-        # activate the first page
-        pageSelectionHandler null, 1
+    pageCount = Math.ceil(@allElements.length / @rowsPerPage)
+    
+    pageSelectionHandler = (event, number) =>
+      index = number - 1
+      json = @getElementsForPage(index)
+      @displayJSON(json)
+    
+    @pageSelectionDiv.bootpag(
+      total: pageCount
+      page: 1
+      maxVisible: 20
+      leaps: true
+    ).on("page", pageSelectionHandler)
 
-        @hideLoader()
+    # activate the first page
+    pageSelectionHandler(null, 1)
 
-        return
-    )
+    @hideLoader()
+
+    return
+
 
   hideLoader : ->
 

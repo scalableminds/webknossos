@@ -150,9 +150,11 @@ $ ->
   $(document).on "submit", "form[data-ajax]", dataAjaxHandler
 
 
-  $(".page-selection").each ->
+  $(".page-selection").each( ->
 
-        new Paginator $(this)
+    unless $(this).data("disable-auto-pagination")
+      new Paginator $(this)
+  )
 
 
   $(document).on "change", "table input.select-all-rows", ->

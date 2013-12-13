@@ -5,6 +5,7 @@ libs/toast : Toast
 libs/keyboard : KeyboardJS
 main/routing_utils : RoutingUtils
 oxalis/constants : constants
+./paginator : Paginator
 ###
 
 $ ->
@@ -314,3 +315,39 @@ $ ->
       require ["./level_creator"], (LevelCreator) ->
 
         window.levelCreator = new LevelCreator()
+
+    "admin.project.projectList" : ->
+
+      preparePaginationData = (projects, users) ->
+
+        for aProject, index in projects
+          
+          id = aProject._owner.$oid
+          owner = _.find(users, (u) -> u._id.$oid == id)
+
+          if owner
+            ownerName = owner.firstName + " " + owner.lastName
+          else
+            ownerName = "<deleted>"
+
+          projects[index].owner = ownerName
+
+        return {"data" : projects }
+
+      $owner = $("#owner")
+      $pageSelection = $(".page-selection")
+      
+      ajaxOptions =
+        url : $pageSelection.data("url")
+        dataType : "json"
+        type : "get"
+
+      $.ajax(ajaxOptions).done((response) ->
+
+        paginationData = preparePaginationData(response.projects, response.users)
+
+        new Paginator( $pageSelection, paginationData)
+
+        for aUser in response.users
+          $owner.append("<option value='#{aUser._id.$oid}' selected=''>#{aUser.firstName} #{aUser.lastName}</option>")
+      )

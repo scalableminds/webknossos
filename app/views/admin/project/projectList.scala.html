@@ -4,7 +4,6 @@
   <div class="container">
     <h3>Projects</h3>
     <div class="well">
-
         <form action="@controllers.admin.routes.ProjectAdministration.create" method="POST" class="form-horizontal">
           <div class=" control-group">
             <label class="control-label" for="projectName">Project Name</label>
@@ -16,10 +15,7 @@
           <div class=" control-group">
             <label class="control-label" for="owner">Owner</label>
             <div class="controls">
-                <select id="owner" name="owner">
-                    <option value="5268fc75133cf01b63970cc4" selected="">SCM Boy</option>
-                    <option value="5268fc75133cf01b63970cc4" selected="">TODO set option-value to user id and this text to user.name </option>
-                </select>
+                <select id="owner" name="owner"></select>
                 <span class="help-inline errors"></span>
             </div>
           </div>
@@ -27,16 +23,13 @@
             <button type="submit" class="btn btn-primary">Create</button>
           </div>
         </form>
-
-      <!-- end -->
-        
-
     </div>
 
 
     <div class="page-selection"
       data-url="@controllers.admin.routes.ProjectAdministration.list()"
-      data-paged-table-id="projectlist-table">
+      data-paged-table-id="projectlist-table"
+      data-disable-auto-pagination="true">
       <input type="text" class="search-query pagination-searchbox" placeholder="Search">
     </div>
 
@@ -45,15 +38,15 @@
         <tr>
           <th class="details-toggle-all"> <i class="caret-right"></i> <i class="caret-down"></i> </th>
           <th> Name</th>
-          <th> Owner</th>      
+          <th> Owner</th>
           <th> </th>
         </tr>
       </thead>
-      <tbody>
+      <tbody class="hide">
         <tr id="<%= element.name %>">
           <td class="details-toggle"> <i class="caret-right"></i> <i class="caret-down"></i> </td>
           <td> <%= element.name %> </td>
-          <td> <%= element.owner %>.map(_.map(_.name).getOrElse("<deleted>")) </td>
+          <td> <%= element.owner %> </td>
           <td class="nowrap">  
             <a href="<%= controllers.AnnotationController.trace('CompoundProject', element.name).url %>" title="view all finished tracings"><i class="icon-random"></i> view</a><br />
             <a href="<%= controllers.admin.NMLIO.projectDownload(element.name).url %>" title="download all finished tracings"><i class="icon-download"></i> download</a><br />

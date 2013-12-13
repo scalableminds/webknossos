@@ -30,20 +30,19 @@ object ProjectAdministration extends AdminController {
       users <- sortedUsers
       projects <- ProjectDAO.findAll
     } yield {
-      // html.admin.project.projectList(projects, form, users)
       html.admin.project.projectList()
     }
 
   def list = Authenticated().async { implicit request =>
     render.async {
       case Accepts.Html() =>
-        // projectListWithForm(projectForm.fill("", request.user.id))
         Future.successful(Ok(html.admin.project.projectList()))
       case Accepts.Json() =>
         for {
-          js <- ProjectDAO.findAll
+          projects <- ProjectDAO.findAll
+          users <- sortedUsers
         } yield {
-          JsonOk(Json.obj("data" -> js))
+          JsonOk(Json.obj("projects" -> projects, "users" -> users))
         }
     }
   }
@@ -73,7 +72,7 @@ object ProjectAdministration extends AdminController {
             } yield {
               BadRequest(html)
             }
-          case _ =>
+          case _ => {
             for {
               owner <- UserService.findOneById(ownerId, useCache = true) ?~> Messages("user.notFound")
             } yield {
@@ -81,6 +80,7 @@ object ProjectAdministration extends AdminController {
               Redirect(routes.ProjectAdministration.list).flashing(
                 FlashSuccess(Messages("project.createSuccess")))
             }
+          }
         }
 
     })

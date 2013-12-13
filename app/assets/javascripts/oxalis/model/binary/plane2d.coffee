@@ -9,7 +9,7 @@
 # should work as normal functions, as well
 tileIndexByTileMacro = (_this, tile) ->
 
-  tile[0] * (1 << @TEXTURE_SIZE_P - _this.cube.BUCKET_SIZE_P) + tile[1]
+  tile[0] * (1 << _this.TEXTURE_SIZE_P - _this.cube.BUCKET_SIZE_P) + tile[1]
 
 
 subTileMacro = (tile, index) ->

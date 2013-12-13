@@ -164,7 +164,7 @@ object SkeletonTracingLike {
         "trees" -> trees,
         "activeNode" -> t.activeNodeId,
         "branchPoints" -> t.branchPoints,
-        "comment" -> t.comments
+        "comments" -> t.comments
       )
     }
 }

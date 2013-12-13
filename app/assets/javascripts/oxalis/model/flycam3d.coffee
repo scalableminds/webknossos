@@ -10,11 +10,11 @@ updateMacro = (_this) ->
   _this.hasChanged = true
 
 
-transformationWithDistanceMacro = (_this, transformation) ->
+transformationWithDistanceMacro = (_this, transformationFn, transformationArg1, transformationArg2) ->
   
   { currentMatrix } = _this
   M4x4.translate(_this.distanceVecNegative, currentMatrix, currentMatrix)
-  transformation
+  transformationFn(transformationArg1, transformationArg2)
   M4x4.translate(_this.distanceVecPositive, currentMatrix, currentMatrix)
   updateMacro(_this)
   
@@ -152,7 +152,7 @@ class Flycam3d
 
   yawDistance : (angle) ->
 
-    transformationWithDistanceMacro(@, @yawSilent(angle)) 
+    transformationWithDistanceMacro(@, @yawSilent, angle) 
 
 
   roll : (angle) ->
@@ -168,7 +168,7 @@ class Flycam3d
 
   rollDistance : (angle) ->
 
-    transformationWithDistanceMacro(@, @rollSilent(angle))
+    transformationWithDistanceMacro(@, @rollSilent, angle)
 
 
   pitch : (angle) ->
@@ -184,7 +184,7 @@ class Flycam3d
 
   pitchDistance : (angle) ->
 
-    transformationWithDistanceMacro(@, @pitchSilent(angle))
+    transformationWithDistanceMacro(@, @pitchSilent, angle)
 
 
   rotateOnAxis : (angle, axis) ->
@@ -200,7 +200,7 @@ class Flycam3d
 
   rotateOnAxisDistance : (angle, axis) ->
 
-    transformationWithDistanceMacro(@, @rotateOnAxisSilent(angle, axis))
+    transformationWithDistanceMacro(@, @rotateOnAxisSilent, angle, axis)
 
 
   toString : ->

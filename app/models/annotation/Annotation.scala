@@ -43,7 +43,7 @@ case class Annotation(
 
   val name = _name getOrElse ""
 
-  def task = _task.toFox.flatMap(id => TaskDAO.findOneById(BSONObjectID.parse(id.toString).get)(GlobalAccessContext))
+  def task = _task.toFox.flatMap(id => TaskDAO.findOneById(id)(GlobalAccessContext))
 
   def user = UserService.findOneById(_user.toString, useCache = true)(GlobalAccessContext)
 

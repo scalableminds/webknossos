@@ -22,7 +22,6 @@ object UserController extends Controller with Secured with Dashboard {
   def dashboard = Authenticated().async {
     implicit request => {
       dashboardInfo(request.user).map { info =>
-        Logger.error("##########     dashboardInfo      ################" +  info.toString)
         Ok(html.user.dashboard.userDashboard(info))
       }
     }

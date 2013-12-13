@@ -141,6 +141,20 @@ class Controller
             @model.binary["segmentation"].pingStop()
           @sceneController.setSegmentationAlpha( alpha )
 
+      _controller = this
+      for button in $("#view-mode").children()
+        $(button).on "click", ->
+
+          for b in $("#view-mode").children()
+            $(b).removeClass("btn-primary")
+          $(this).addClass("btn-primary")
+
+          switch $(this).attr("id")
+            when "view-mode-3planes" then _controller.setMode(constants.MODE_PLANE_TRACING);
+            when "view-mode-sphere"  then _controller.setMode(constants.MODE_ARBITRARY);
+            when "view-mode-arbitraryplane"
+              _controller.setMode(constants.MODE_ARBITRARY);
+
       # initial trigger
       @sceneController.setSegmentationAlpha($('#alpha-slider').data("slider-value") or constants.DEFAULT_SEG_ALPHA)
 

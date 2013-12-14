@@ -7,6 +7,7 @@ import play.api.data.Form
 import play.api.data.Forms._
 import oxalis.security.AuthenticatedRequest
 import models.task._
+import models.annotation._
 import braingames.binary.models.DataSet
 import models.user.{ExperienceService, Experience}
 import oxalis.nml._
@@ -20,6 +21,7 @@ import play.api.libs.concurrent.Execution.Implicits._
 import scala.concurrent.Future
 import scala.Some
 import org.joda.time.DateTime
+import play.api.libs.json._
 
 object TrainingsTaskAdministration extends AdminController {
 
@@ -44,6 +46,21 @@ object TrainingsTaskAdministration extends AdminController {
       trainings <- TaskDAO.findAllTrainings
     } yield {
       Ok(html.admin.training.trainingsTaskList(trainings))
+    }
+  }
+
+  def getData = Authenticated().async { implicit request =>
+    for {
+      _nonTrainings <- TaskService.findAllNonTrainings
+      nonTrainings <- Future.traverse(_nonTrainings)(Task.transformToJson)
+      experiences <- ExperienceService.findAllDomains
+      annotations <- AnnotationService.openExplorationalFor(request.user).collect[List]()
+      annotationJSON <- Future.traverse(annotations)(Annotation.transformToJson)
+    } yield {
+      JsonOk(Json.obj(
+        "tasks" -> nonTrainings,
+        "annotations" -> annotationJSON,
+        "experiences" -> experiences))
     }
   }
 

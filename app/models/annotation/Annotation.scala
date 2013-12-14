@@ -2,9 +2,12 @@ package models.annotation
 
 import models.basics._
 import models.task.{TaskService, TaskDAO, TaskType, Task}
+import play.api.libs.json.{Json, JsObject}
 import models.user.{UserService, UserDAO, User}
 import models.security.Role
 import AnnotationType._
+import org.joda.time.format.DateTimeFormat
+import org.joda.time.DateTime
 import oxalis.nml.NML
 import braingames.binary.models.DataSet
 import braingames.geometry.Point3D
@@ -82,7 +85,26 @@ case class Annotation(
 
 object Annotation {
   implicit val annotationFormat = Json.format[Annotation]
+
+  def transformToJson(annotation: Annotation)(implicit ctx: DBAccessContext): Future[JsObject] = {
+    for {
+      dataSetName <- annotation.dataSetName
+      task <- annotation.task.futureBox
+      user <- annotation.user
+      content <- annotation.content.futureBox
+    } yield {
+      Json.obj(
+        "created" -> content.map(annotationContent => DateTimeFormat.forPattern("yyyy-MM-dd HH:mm").print(DateTime.now())).toOption,
+        "dataSetName" -> dataSetName,
+        "state" -> annotation.state,
+        "typ" -> annotation.typ,
+        "name" -> annotation.name,
+        "id" -> annotation.id
+      )
+    }
+  }
 }
+
 
 object AnnotationDAO
   extends SecuredBaseDAO[Annotation]

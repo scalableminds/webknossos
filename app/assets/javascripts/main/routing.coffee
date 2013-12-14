@@ -351,3 +351,27 @@ $ ->
         for aUser in response.users
           $owner.append("<option value='#{aUser._id.$oid}' selected=''>#{aUser.firstName} #{aUser.lastName}</option>")
       )
+
+    "admin.training.trainingsTaskCreate" : ->
+      
+      url = $("#form-well").data("url")
+
+      $.get(url).done((response) ->
+
+        $selectTask = $("#task")
+        $selectTracing = $("#tracing")
+        
+        # set autocompletion source for tracings domain input
+        $("#training_domain").data("source", response.experiences)
+
+        for aTask in response.tasks
+          summary = aTask.type.summary || ""
+          id = aTask.id
+          $selectTask.append("<option value='#{id}'>#{summary} #{id}</option>")
+
+        for aTracing in response.annotations
+          id = aTracing.id
+          optionString = aTracing.typ + " " + aTracing.dataSetName + " " + aTracing.created
+          $selectTracing.append("<option value='#{id}'>#{optionString}</option>")          
+        
+      )

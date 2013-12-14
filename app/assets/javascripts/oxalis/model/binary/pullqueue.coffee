@@ -23,6 +23,8 @@ class PullQueue
   constructor : (@dataSetName, @cube, @dataLayerName, @testData) ->
 
     @queue = []
+    @loadedBuckets = 0
+    @loadedBytes = 0
 
 
   swap : (a, b) ->
@@ -127,7 +129,7 @@ class PullQueue
 
         (responseBuffer) =>
 
-          @updateConnectionInfo(new Date() - roundTripBeginTime, batch.length)
+          @updateConnectionInfo(new Date() - roundTripBeginTime, batch.length, responseBuffer.length)
 
           offset = 0
 
@@ -156,17 +158,15 @@ class PullQueue
       @pull()
 
 
-  updateConnectionInfo : (roundTripTime, bucketCount) ->
+  updateConnectionInfo : (roundTripTime, bucketCount, byteCount) ->
 
-    if @roundTripTime? and @bucketTime?
+    if @roundTripTime?
       @roundTripTime = (1 - @ROUND_TRIP_TIME_SMOOTHER) * @roundTripTime + @ROUND_TRIP_TIME_SMOOTHER * roundTripTime
-      @bucketTime = (1 - @BUCKET_TIME_SMOOTHER) * @bucketTime + @BUCKET_TIME_SMOOTHER * (new Date() - @lastReceiveTime) / bucketCount
     else
       @roundTripTime = roundTripTime
-      @bucketTime = roundTripTime / bucketCount
 
-    @bucketsPerSecond = 1000 / @bucketTime
-    @lastReceiveTime = new Date()
+    @loadedBuckets += bucketCount
+    @loadedBytes += byteCount
 
 
   decode : (colors) ->

@@ -105,7 +105,8 @@ object Task extends FoxImplicits {
         "priority" -> task.priority,
         "created" -> DateTimeFormat.forPattern("yyyy-MM-dd HH:mm").print(task.created),
         "status" -> status,
-        "isTraining" -> task.isTraining
+        "isTraining" -> task.isTraining,
+        "training" -> task.training
       )
     }
   }

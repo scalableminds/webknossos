@@ -42,10 +42,21 @@ object TrainingsTaskAdministration extends AdminController {
   }
 
   def list = Authenticated().async { implicit request =>
-    for {
-      trainings <- TaskDAO.findAllTrainings
-    } yield {
-      Ok(html.admin.training.trainingsTaskList(trainings))
+    render.async {
+      case Accepts.Html() =>
+        // TODO remove unpacking of trainings for html
+        for {
+          trainings <- TaskDAO.findAllTrainings
+        } yield {
+          Ok(html.admin.training.trainingsTaskList(trainings))
+        }
+      case Accepts.Json() =>
+        for {
+          trainings <- TaskDAO.findAllTrainings
+          trainingsJSON <- Future.traverse(trainings)(Task.transformToJson)
+        } yield {
+          JsonOk(Json.obj("data" -> trainingsJSON))
+        }
     }
   }
 

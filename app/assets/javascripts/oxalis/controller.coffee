@@ -51,6 +51,7 @@ class Controller
 
       # FIXME: only for developing
       @allowedModes.push(constants.MODE_VOLUME)
+      @allowedModes.push(constants.MODE_ARBITRARY_PLANE)
 
       # FPS stats
       stats = new Stats()
@@ -152,8 +153,7 @@ class Controller
           switch $(this).attr("id")
             when "view-mode-3planes" then _controller.setMode(constants.MODE_PLANE_TRACING);
             when "view-mode-sphere"  then _controller.setMode(constants.MODE_ARBITRARY);
-            when "view-mode-arbitraryplane"
-              _controller.setMode(constants.MODE_ARBITRARY);
+            when "view-mode-arbitraryplane" then _controller.setMode(constants.MODE_ARBITRARY_PLANE);
 
       # initial trigger
       @sceneController.setSegmentationAlpha($('#alpha-slider').data("slider-value") or constants.DEFAULT_SEG_ALPHA)
@@ -193,6 +193,8 @@ class Controller
         "shift + 2" : =>
           @setMode(constants.MODE_ARBITRARY)
         "shift + 3" : =>
+          @setMode(constants.MODE_ARBITRARY_PLANE)
+        "shift + 4" : =>
           @setMode(constants.MODE_VOLUME)
           
         "t" : => 
@@ -204,7 +206,9 @@ class Controller
           if @mode == constants.MODE_PLANE_TRACING
             @setMode(constants.MODE_ARBITRARY)
           else if @mode == constants.MODE_ARBITRARY
-            @setMode(constants.MODE_PLANE_TRACING)
+            @setMode(constants.constants.MODE_ARBITRARY_PLANE)
+          else if @mode == constants.MODE_ARBITRARY_PLANE
+            @setMode(constants.constants.MODE_PLANE_TRACING)
 
         "super + s, ctrl + s" : (event) =>
 
@@ -217,9 +221,9 @@ class Controller
 
   setMode : (newMode) ->
 
-    if newMode == constants.MODE_ARBITRARY and newMode in @allowedModes
+    if (newMode == constants.MODE_ARBITRARY or newMode == constants.MODE_ARBITRARY_PLANE) and newMode in @allowedModes
       @planeController.stop()
-      @arbitraryController.start()
+      @arbitraryController.start(newMode)
 
     else if (newMode == constants.MODE_PLANE_TRACING or newMode == constants.MODE_VOLUME) and newMode in @allowedModes
       @arbitraryController.stop()

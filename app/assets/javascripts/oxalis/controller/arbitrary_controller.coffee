@@ -195,9 +195,14 @@ class ArbitraryController
       @setClippingDistance(value)
 
 
-  start : ->
+  start : (mode) ->
 
     @stop()
+
+    if mode == constants.MODE_ARBITRARY
+      @plane.queryVertices = @plane.queryVerticesSphere
+    else if mode == constants.MODE_ARBITRARY_PLANE
+      @plane.queryVertices = @plane.queryVerticesPlane
 
     @initKeyboard()
     @initMouse()

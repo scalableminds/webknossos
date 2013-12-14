@@ -33,6 +33,37 @@ $ ->
       $dashboardTasks.data("tr-template", taskTRTemplate)
       $dashboardTasksBody.empty()
 
+
+      $tabbableDashboard = $("tabbable-dashboard")
+
+      populateTemplate = (data) ->
+        templateSource = _.unescape($dashboardTasks.data("tr-template"))
+        templateFn = _.template(templateSource)
+        
+        outputHTML = []
+
+        for el in data
+          outputHTML.push(templateFn(
+            annotations: el.annotation
+            tasks: el.tasks
+          ))
+
+        $dashboardTasksBody.removeClass("hide").html(outputHTML.join(""))
+
+
+      # TODO replace with route
+      # not working currently?
+      # url = $tabbableDashboard.data("url")
+
+      url = "/getDashboardInfo"
+
+      $.get(url).done((response) ->
+
+        console.log("dashboardinfo", response)
+        populateTemplate(response.data.tasks)
+
+      )
+
       RoutingUtils.maskFinishedTasks()
 
       $("#nml-explore-form").each ->

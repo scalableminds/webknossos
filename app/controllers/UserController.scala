@@ -2,6 +2,8 @@ package controllers
 
 import oxalis.security.Secured
 import models.user._
+import models.task._
+import models.annotation._
 import play.api.libs.json.Json._
 import play.api.libs.json._
 import models.security.{RoleDAO, Role}
@@ -39,15 +41,15 @@ object UserController extends Controller with Secured with Dashboard {
           Json.obj("paymentInterval" -> paymentInterval, "duration" -> duration.toString)
         }
 
-        val futureList = Future.traverse(info.tasks)( {
-            case(task, annotation) => annotation.content.map(
-              foxContent => Json.obj("task" -> task, "annotation" -> foxContent.toString)
-            ).getOrElse(Json.obj("data" -> "data"))
-          }
-        )
-
         for {
-          aList <- futureList
+          aList <- Future.traverse(info.tasks)( {
+                      case(task, annotation) =>
+                        for {
+                          tasks <- Task.transformToJson(task)
+                          annotations <- Annotation.transformToJson(annotation)
+                        } yield (tasks, annotations)
+                      }
+                   )
         } yield {
           Json.obj(
             "user" -> info.user,
@@ -55,7 +57,7 @@ object UserController extends Controller with Secured with Dashboard {
             "loggedTime" -> loggedTime,
             "dataSets" -> info.dataSets,
             "hasAnOpenTask" -> info.hasAnOpenTask,
-            "tasks" -> Json.toJson(aList)
+            "tasks" -> Json.toJson(aList.map(tuple => Json.obj("tasks" -> tuple._1, "annotation" -> tuple._2)))
           )
         }
       }
@@ -67,33 +69,6 @@ object UserController extends Controller with Secured with Dashboard {
     }
   }
 
-// 
-  // def TODOREMOVETHISoverview = Authenticated().async { implicit request =>
-  //   def combineUsersWithCurrentTasks(users: List[User]) = {
-  //     Fox.sequence(for {
-  //       user <- users
-  //       annotation <- AnnotationService.openTasksFor(user)
-  //     } yield {
-  //       for {
-  //         task <- annotation.task.toFox
-  //         taskType <- task.taskType
-  //       } yield {
-  //         user -> taskType
-  //       }
-  //     })
-  //   }
-
-  //   for {
-  //     users <- UserService.findAll
-  //     allTaskTypes <- TaskTypeDAO.findAll
-  //     usersWithTasks <- combineUsersWithCurrentTasks(users)
-  //     futureUserTaskAssignment <- TaskService.simulateTaskAssignment(users)
-  //     futureTaskTypes <- Fox.sequence(futureUserTaskAssignment.map(e => e._2.taskType.map(e._1 -> _)).toList)
-  //   } yield {
-  //     Ok(html.admin.task.taskOverview(users, allTaskTypes, usersWithTasks.flatten.distinct, futureTaskTypes.flatten.toMap))
-  //   }
-  // }
-// 
   def saveSettings = Authenticated().async(parse.json(maxLength = 2048)) { implicit request =>
     (for {
       settings <- request.body.asOpt[JsObject] ?~> Messages("user.settings.invalid")

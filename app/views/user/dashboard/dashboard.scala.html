@@ -2,8 +2,8 @@
 
 @import models.user.time.PaymentInterval
 @import scala.concurrent.ExecutionContext.Implicits._
-<div class="tabbable" id="tabbable-dashboard">
-      <ul class="nav nav-tabs">
+<div class="tabbable" id="tabbable-dashboard" data-url="@controllers.routes.UserController.getDashboardInfo"
+>      <ul class="nav nav-tabs">
         <li class="active"><a href="#tab-tasks" data-toggle="tab">Tasks</a></li>
         <li><a href="#tab-explorative" data-toggle="tab">Explorative Tracings</a></li>
         <li><a href="#tab-tracked-time" data-toggle="tab">Tracked Time</a></li>
@@ -38,10 +38,8 @@
                 <th> </th>
               </tr>
             </thead>
-            <tbody>
-            AT dashboardInfo.tasks.map case (task, annotation) =>
-              AT @taskAnnotationTableItem()
-            
+            <tbody class="hide">
+              @taskAnnotationTableItem()
             </tbody>
           </table>
         </div>

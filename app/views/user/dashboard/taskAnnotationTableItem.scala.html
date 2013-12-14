@@ -15,14 +15,13 @@ linkText = {true: "Review failed", false: "Review successful"}
   }
 
 } -->
-
 <tr class="<%if(annotations.state.isFinished){print('finished')}else{print('unfinished')}%>">
-  <td> <%= tasks._id.$oid %> </td>
-    <td> <%= (tasks._taskType.summary || ("<deleted>" + " is summary existent in data?")) + "-" + annotations.typ%></td>
-    <td> tasks.project.name </td>
-    <td> <%= (tasks._taskType.description || ("" + "is description existent in data?"))%></td>
+  <td> <%= tasks.id %> </td>
+    <td> <%= (tasks.type.summary || ("<deleted>" + " is summary existent in data?")) + "-" + annotations.typ%></td>
+    <td> <%= tasks.projectName %> </td>
+    <td> <%= (tasks.type.description || ("" + "is description existent in data?"))%></td>
     <td>
-      <span class="label"> tasks._taskType.settings.allowedModes.mode.capitalize </span>
+      <span class="label"> <%= tasks.type.settings.allowedModes %></span>  .mode.capitalize? 
     </td>
   <td class="nowrap"> 
     <% if (annotations.state.isFinished) { %>
@@ -31,8 +30,8 @@ linkText = {true: "Review failed", false: "Review successful"}
     <% } else if (annotations.state.isInReview || annotations.state.isReadyForReview) { %>
       <i class="icon-eye-open"></i><span> In Review</span>
     <% } else { %>
-      <a href="<%= jsRoutes.controllers.AnnotationController.trace(annotations.typ, annotations._id.$oid).url %>"><i class="icon-random"></i> trace</a><br/>
-      <a href="<%= jsRoutes.controllers.AnnotationController.finish(annotations.typ, annotations._id.$oid).url %>" class="trace-finish" data-ajax="replace-row,confirm=@Messages("annotation.finish.confirm")" ><i class="icon-ok-circle"></i> finish</a>
+      <a href="<%= jsRoutes.controllers.AnnotationController.trace(annotations.typ, annotations.id).url %>"><i class="icon-random"></i> trace</a><br/>
+      <a href="<%= jsRoutes.controllers.AnnotationController.finish(annotations.typ, annotations.id).url %>" class="trace-finish" data-ajax="replace-row,confirm=@Messages("annotation.finish.confirm")" ><i class="icon-ok-circle"></i> finish</a>
       
       AT displayComments(true, annotations.review.flatMap( _.comment ))
     <% } %>

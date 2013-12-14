@@ -7,6 +7,7 @@ import models.security.{RoleDAO, Role}
 import play.api.Logger
 import models.user._
 import models.task._
+import models.annotation._
 import views._
 import play.api.libs.concurrent._
 import play.api.libs.concurrent.Execution.Implicits._
@@ -27,14 +28,16 @@ object TaskController extends Controller with Secured {
       numberOfOpen <- AnnotationService.countOpenTasks(request.user)
       if (numberOfOpen < MAX_OPEN_TASKS)
       task <- TaskService.nextTaskForUser(request.user) orElse (Training.findAssignableFor(user).map(_.headOption))
+      taskJSON <- Task.transformToJson(task)
       annotation <- AnnotationService.createAnnotationFor(user, task) ?~> Messages("annotation.creationFailed")
+      annotationJSON <- Annotation.transformToJson(annotation)
     } yield {
       val message = if (task.isTraining)
         Messages("task.training.assigned")
       else
         Messages("task.assigned")
 
-      JsonOk(Json.obj("tasks" -> task, "annotations" -> annotation))
+      JsonOk(Json.obj("tasks" -> taskJSON, "annotations" -> annotationJSON))
     }) ?~> Messages("task.tooManyOpenOnes")
   }
 }

@@ -208,9 +208,9 @@ class Controller
           if @mode == constants.MODE_PLANE_TRACING
             @setMode(constants.MODE_ARBITRARY)
           else if @mode == constants.MODE_ARBITRARY
-            @setMode(constants.constants.MODE_ARBITRARY_PLANE)
+            @setMode(constants.MODE_ARBITRARY_PLANE)
           else if @mode == constants.MODE_ARBITRARY_PLANE
-            @setMode(constants.constants.MODE_PLANE_TRACING)
+            @setMode(constants.MODE_PLANE_TRACING)
 
         "super + s, ctrl + s" : (event) =>
 

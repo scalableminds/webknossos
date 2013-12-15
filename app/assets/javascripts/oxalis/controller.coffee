@@ -73,9 +73,6 @@ class Controller
       @initMouse()
       @initKeyboard()
 
-      @setMode(constants.MODE_PLANE_TRACING)
-      #@setMode(constants.MODE_VOLUME)
-
       for binaryName of @model.binary
         @model.binary[binaryName].cube.on "bucketLoaded" : =>
           @model.flycam.update()
@@ -142,18 +139,23 @@ class Controller
             @model.binary["segmentation"].pingStop()
           @sceneController.setSegmentationAlpha( alpha )
 
+      @modeMapping =
+        "view-mode-3planes"        : constants.MODE_PLANE_TRACING
+        "view-mode-sphere"         : constants.MODE_ARBITRARY
+        "view-mode-arbitraryplane" : constants.MODE_ARBITRARY_PLANE
+
       _controller = this
       for button in $("#view-mode").children()
-        $(button).on "click", ->
+        
+        id = @modeMapping[ $(button).attr("id") ]
+        do (id) ->
+          $(button).on "click", ->
+            _controller.setMode( id )
 
-          for b in $("#view-mode").children()
-            $(b).removeClass("btn-primary")
-          $(this).addClass("btn-primary")
+        if not (id in @allowedModes)
+          $(button).attr("disabled", "disabled")
 
-          switch $(this).attr("id")
-            when "view-mode-3planes" then _controller.setMode(constants.MODE_PLANE_TRACING);
-            when "view-mode-sphere"  then _controller.setMode(constants.MODE_ARBITRARY);
-            when "view-mode-arbitraryplane" then _controller.setMode(constants.MODE_ARBITRARY_PLANE);
+      @setMode(constants.MODE_PLANE_TRACING)
 
       # initial trigger
       @sceneController.setSegmentationAlpha($('#alpha-slider').data("slider-value") or constants.DEFAULT_SEG_ALPHA)
@@ -231,6 +233,13 @@ class Controller
 
     else # newMode not allowed or invalid
       return
+
+
+    for button in $("#view-mode").children()
+
+      $(button).removeClass("btn-primary")
+      if newMode == @modeMapping[$(button).attr("id")]
+        $(button).addClass("btn-primary")
 
     @mode = newMode
     @gui.setMode(newMode)

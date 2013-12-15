@@ -203,12 +203,13 @@ class ArbitraryController
       @plane.queryVertices = @plane.queryVerticesSphere
     else if mode == constants.MODE_ARBITRARY_PLANE
       @plane.queryVertices = @plane.queryVerticesPlane
+    @plane.isDirty = true
 
     @initKeyboard()
     @initMouse()
     @view.start()
     @init()
-    @view.draw()    
+    @view.draw()   
 
     @isStarted = true 
  

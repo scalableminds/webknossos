@@ -80,12 +80,14 @@ class ArbitraryController
     @input.mouse = new Input.Mouse(
       @canvas
       leftDownMove : (delta) =>
-        @cam.yawDistance(
-          -delta.x * @model.user.getMouseInversionX() * @model.user.mouseRotateValue
-        );
-        @cam.pitchDistance(
-          delta.y * @model.user.getMouseInversionY() * @model.user.mouseRotateValue
-        )
+        if @mode == constants.MODE_ARBITRARY
+          @cam.yawDistance(
+            -delta.x * @model.user.getMouseInversionX() * @model.user.mouseRotateValue )
+          @cam.pitchDistance(
+            delta.y * @model.user.getMouseInversionY() * @model.user.mouseRotateValue )
+        else if @mode == constants.MODE_ARBITRARY_PLANE
+          f = @cam.getZoomStep() / (@view.width / @WIDTH)
+          @cam.move [delta.x * f, delta.y * f, 0]
       scroll : @scroll
     )
 
@@ -195,13 +197,13 @@ class ArbitraryController
       @setClippingDistance(value)
 
 
-  start : (mode) ->
+  start : (@mode) ->
 
     @stop()
 
-    if mode == constants.MODE_ARBITRARY
+    if @mode == constants.MODE_ARBITRARY
       @plane.queryVertices = @plane.queryVerticesSphere
-    else if mode == constants.MODE_ARBITRARY_PLANE
+    else if @mode == constants.MODE_ARBITRARY_PLANE
       @plane.queryVertices = @plane.queryVerticesPlane
     @plane.isDirty = true
 

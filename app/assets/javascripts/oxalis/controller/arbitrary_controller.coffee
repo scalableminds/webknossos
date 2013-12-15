@@ -81,10 +81,12 @@ class ArbitraryController
       @canvas
       leftDownMove : (delta) =>
         if @mode == constants.MODE_ARBITRARY
-          @cam.yawDistance(
-            -delta.x * @model.user.getMouseInversionX() * @model.user.mouseRotateValue )
-          @cam.pitchDistance(
-            delta.y * @model.user.getMouseInversionY() * @model.user.mouseRotateValue )
+          @cam.yaw(
+            -delta.x * @model.user.getMouseInversionX() * @model.user.mouseRotateValue,
+            true )
+          @cam.pitch(
+            delta.y * @model.user.getMouseInversionY() * @model.user.mouseRotateValue,
+            true )
         else if @mode == constants.MODE_ARBITRARY_PLANE
           f = @cam.getZoomStep() / (@view.width / @WIDTH)
           @cam.move [delta.x * f, delta.y * f, 0]
@@ -116,10 +118,10 @@ class ArbitraryController
       "alt + space"   : (timeFactor) => @cam.move [0, 0, -getVoxelOffset(timeFactor)]
       
       #Rotate in distance
-      "left"          : (timeFactor) => @cam.yawDistance @model.user.rotateValue * timeFactor
-      "right"         : (timeFactor) => @cam.yawDistance -@model.user.rotateValue * timeFactor
-      "up"            : (timeFactor) => @cam.pitchDistance -@model.user.rotateValue * timeFactor
-      "down"          : (timeFactor) => @cam.pitchDistance @model.user.rotateValue * timeFactor
+      "left"          : (timeFactor) => @cam.yaw @model.user.rotateValue * timeFactor, @mode == constants.MODE_ARBITRARY
+      "right"         : (timeFactor) => @cam.yaw -@model.user.rotateValue * timeFactor, @mode == constants.MODE_ARBITRARY
+      "up"            : (timeFactor) => @cam.pitch -@model.user.rotateValue * timeFactor, @mode == constants.MODE_ARBITRARY
+      "down"          : (timeFactor) => @cam.pitch @model.user.rotateValue * timeFactor, @mode == constants.MODE_ARBITRARY
       
       #Rotate at centre
       "shift + left"  : (timeFactor) => @cam.yaw @model.user.rotateValue * timeFactor

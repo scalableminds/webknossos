@@ -1,6 +1,5 @@
 package controllers.admin;
 
-import braingames.mvc.Controller
 import oxalis.security.Secured
 import models.security.Role
 import scala.concurrent.duration._
@@ -12,7 +11,7 @@ import play.api.data.Forms._
 import models.user.User
 import play.api.i18n.Messages
 import play.api.templates.Html
-import controllers.Application
+import controllers.{Controller, Application}
 
 
 object ProjectAdministration extends Controller with Secured{

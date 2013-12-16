@@ -1,9 +1,0 @@
-# Routes
-# This file defines all application routes (Higher priority routes first)
-# ~~~~
-
-# Home page
-GET        /datasets/:dataSetName/layers/:layer/data        controllers.stackrenderer.BinaryDataController.viaAjax(dataSetName: String, levelId: String, missionId: String, layer: String)
-
-# Map static resources from the /public folder to the /assets URL path
-#GET     /assets/*file               controllers.Assets.at(path="/public", file)

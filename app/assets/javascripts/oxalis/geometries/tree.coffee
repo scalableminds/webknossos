@@ -94,13 +94,13 @@ class Tree
     for i in [0...@edgesBuffer.getLength()]
       found = true
       for j in [0..5]
-        found &= Math.abs(@edges.geometry.__vertexArray[6 * i + j] - edgeArray[j]) < 0.01
+        found &= Math.abs(@edges.geometry.__vertexArray[6 * i + j] - edgeArray[j]) < 0.5
       if found
         edgesIndex = i
         break
 
     $.assert(found,
-      "No edge found.", found)
+      "No edge found.", found, edgeArray, nodesIndex)
 
     swapLast( @edgesBuffer, edgesIndex )
 

@@ -1,0 +1,11 @@
+@( user: models.user.User, explorativeAnnotations: List[models.annotation.Annotation], userTasks: List[(models.task.Task, models.annotation.Annotation)], trackedTime: Map[models.user.time.PaymentInterval, scala.concurrent.duration.Duration])(implicit session: oxalis.view.AuthedSessionData)
+@import models.user.time.PaymentInterval
+
+@import views.html.user.dashboard.dashboard
+
+@main(){
+  <div class="container wide" id="userDetails">
+    <h3>User: @user.name</h3>
+    @dashboard(Some(user), explorativeAnnotations, userTasks, trackedTime, Nil, false)
+  </div>
+}

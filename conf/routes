@@ -64,10 +64,12 @@ GET           /admin/tasks/algorithm                                      contro
 POST          /admin/tasks/algorithm                                      controllers.admin.TaskAlgorithm.submitAlgorithm
 GET           /admin/tasks/algorithm/:id?use=true                         controllers.admin.TaskAlgorithm.useAlgorithm(id: String)
 
+
 GET           /admin/taskTypes                                            controllers.admin.TaskTypeAdministration.list
 POST          /admin/taskTypes/create                                     controllers.admin.TaskTypeAdministration.create
 GET           /admin/taskTypes/:id/delete                                 controllers.admin.TaskTypeAdministration.delete(id: String)
 GET           /admin/taskTypes/:id/edit                                   controllers.admin.TaskTypeAdministration.edit(id: String)
+GET           /admin/taskTypes/:id/tasks                                  controllers.admin.TaskAdministration.tasksForType(id: String)
 POST          /admin/taskTypes/:id                                        controllers.admin.TaskTypeAdministration.editTaskTypeForm(id: String)
 
 GET           /admin/projects                                             controllers.admin.ProjectAdministration.list
@@ -75,6 +77,7 @@ POST          /admin/projects/create                                      contro
 GET           /admin/projects/:name/delete                                controllers.admin.ProjectAdministration.delete(name: String)
 GET           /admin/projects/:name/download                              controllers.admin.NMLIO.projectDownload(name: String)
 GET           /admin/projects/:name/download                              controllers.admin.NMLIO.projectDownload(name: String)
+GET           /admin/projects/:name/tasks                                 controllers.admin.TaskAdministration.tasksForProject(name: String)
 
 GET           /admin/tasks                                                controllers.admin.TaskAdministration.list
 GET           /admin/tasks/create                                         controllers.admin.TaskAdministration.create
@@ -82,10 +85,11 @@ POST          /admin/tasks/createBulk                                     contro
 POST          /admin/tasks/createFromNML                                  controllers.admin.TaskAdministration.createFromNML
 POST          /admin/tasks/createFromForm                                 controllers.admin.TaskAdministration.createFromForm
 GET           /admin/tasks/overview                                       controllers.admin.TaskAdministration.overview
-GET           /admin/tracings/:tracingId/cancel                           controllers.admin.TaskAdministration.cancelTracing( tracingId: String )
+GET           /admin/tracings/:tracingId/cancel                           controllers.admin.AnnotationAdministration.cancel( tracingId: String )
 GET           /admin/tasks/:id/download                                   controllers.admin.NMLIO.taskDownload(id: String)
 GET           /admin/tasks/:id/delete                                     controllers.admin.TaskAdministration.delete(id: String)
 GET           /admin/tasks/:id/edit                                       controllers.admin.TaskAdministration.edit(id: String)
+GET           /admin/tasks/:id/annotations                                controllers.admin.AnnotationAdministration.annotationsForTask(id: String)
 POST          /admin/tasks/:id                                            controllers.admin.TaskAdministration.editTaskForm(id: String)
 
 GET           /admin/trainingsTasks                                       controllers.admin.TrainingsTaskAdministration.list
@@ -106,10 +110,10 @@ POST          /admin/users/delete                                         contro
 POST          /admin/users/:id/verify                                     controllers.admin.UserAdministration.verify(id: String)
 GET           /admin/users/:id/delete                                     controllers.admin.UserAdministration.delete(id: String)
 GET           /admin/users/:id/loginAs                                    controllers.admin.UserAdministration.loginAsUser(id: String)
-GET           /admin/users/:id/details                                    controllers.admin.UserTracingAdministration.show(id: String)
-GET           /admin/users/:id/details/tracing/:id/reopen                 controllers.admin.UserTracingAdministration.reopen(id: String)
-GET           /admin/users/:id/details/tracing/:id/finish                 controllers.admin.UserTracingAdministration.finish(id: String)
-GET           /admin/users/:id/details/tracing/:id/reset                  controllers.admin.UserTracingAdministration.reset(id: String)
+GET           /admin/users/:id/details                                    controllers.admin.UserAdministration.show(id: String)
+GET           /admin/users/:id/details/tracing/:id/reopen                 controllers.admin.AnnotationAdministration.reopen(id: String)
+GET           /admin/users/:id/details/tracing/:id/finish                 controllers.admin.AnnotationAdministration.finish(id: String)
+GET           /admin/users/:id/details/tracing/:id/reset                  controllers.admin.AnnotationAdministration.reset(id: String)
 GET           /admin/users/:id/download                                   controllers.admin.NMLIO.userDownload(id: String)
 POST          /admin/users/role                                           controllers.admin.UserAdministration.addRoleBulk
 DELETE        /admin/users/role                                           controllers.admin.UserAdministration.deleteRoleBulk
@@ -118,7 +122,7 @@ DELETE        /admin/users/experience                                     contro
 POST          /admin/users/experience/increase                            controllers.admin.UserAdministration.increaseExperienceBulk
 
 GET           /admin/tracings/:id/review                                  controllers.admin.TrainingsTracingAdministration.oxalisReview(id: String)
-GET           /admin/tracings/:id/reopen                                  controllers.admin.TaskAdministration.reopen( id: String )
+GET           /admin/tracings/:id/reopen                                  controllers.admin.AnnotationAdministration.reopen( id: String )
 
 # Binary Administration
 GET           /admin/datasets                                             controllers.admin.BinaryDataAdministration.list

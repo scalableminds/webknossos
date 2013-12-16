@@ -1,6 +1,5 @@
 package controllers
 
-import braingames.mvc.Controller
 import oxalis.security.Secured
 import models.security.Role
 import models.assertion.Assertion

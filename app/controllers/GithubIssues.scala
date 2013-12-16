@@ -11,7 +11,6 @@ import views.html
 import play.api.Play
 import play.api.Play.current
 import play.api.i18n.Messages
-import braingames.mvc.Controller
 import oxalis.mail.DefaultMails
 import braingames.mail.Send
 import play.api.libs.ws.WS

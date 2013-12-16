@@ -103,8 +103,9 @@ class ArbitraryView
       camera.matrix.translate(@cameraPosition)
       camera.matrixWorldNeedsUpdate = true
 
-      renderer.setViewport(0, 0, @width, @height)
-      renderer.setScissor(0, 0, @width, @height)
+      f = window.devicePixelRatio || 1
+      renderer.setViewport(0, 0, @width * f, @height * f)
+      renderer.setScissor(0, 0, @width * f, @height * f)
       renderer.enableScissorTest(true)
       renderer.setClearColorHex(0xFFFFFF, 1);
 

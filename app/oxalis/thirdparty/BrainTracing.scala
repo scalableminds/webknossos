@@ -12,9 +12,9 @@ import scala.concurrent.Promise
 import scala.concurrent.Future
 import scala.util._
 import play.api.libs.concurrent.Akka
-import models.user.TimeEntry
-import models.annotation.AnnotationDAO
+import models.annotation.{AnnotationLike, AnnotationDAO}
 import models.tracing.skeleton.SkeletonTracing
+import models.user.time.TimeEntry
 
 object BrainTracing {
   val URL = "http://braintracing.org/"
@@ -58,14 +58,13 @@ object BrainTracing {
     }
   }
 
-  def logTime(user: User, timeEntry: TimeEntry) = {
+  def logTime(user: User, time: Long, annotation: Option[AnnotationLike]) = {
     if (isActive) {
-      val annotation = timeEntry.annotation.flatMap(AnnotationDAO.findOneById)
       val task = annotation.flatMap(_.task)
       val taskType = task.flatMap(_.taskType)
       val project = task.flatMap(_.project)
       if (logTimeForExplorative || task.isDefined) {
-        val hours = timeEntry.time / (1000.0 * 60 * 60)
+        val hours = time / (1000.0 * 60 * 60)
 
         WS
           .url(LOGTIME_URL)

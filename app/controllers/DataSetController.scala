@@ -1,12 +1,12 @@
 package controllers
 
-import braingames.mvc.Controller
 import oxalis.security.Secured
 import models.security.Role
 import models.binary.DataSetDAO
 import play.api.i18n.Messages
 import views.html
 import play.api.libs.concurrent.Execution.Implicits._
+import controllers.Controller
 
 /**
  * Company: scalableminds

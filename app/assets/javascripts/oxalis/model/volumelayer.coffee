@@ -6,9 +6,6 @@ libs/drawing : Drawing
 
 
 class VolumeLayer
-
-  MIN_DISTANCE : 2
-  GRID_SIZE : 10
   
   constructor : (@plane, @thirdDimensionValue) ->
     
@@ -17,17 +14,6 @@ class VolumeLayer
     @minCoord    = null
 
   addContour : (pos) ->
-
-    # If the distance to the last point is larger than MIN_DISTANCE,
-    # interpolate so that the winding number alg. used in contains2dCoordinate
-    # has enough points to be accurate
-    if @contourList.length > 0
-      last = @contourList[@contourList.length - 1]
-      step = Math.min(@MIN_DISTANCE / @calculateDistance(last, pos), 1)
-      for f in [step...1] by step
-        hpos = @interpolatePositions( last, pos, f)
-        @contourList.push(hpos)
-        @updateArea(hpos)
     
     @contourList.push(pos)
     @updateArea(pos)
@@ -58,28 +44,37 @@ class VolumeLayer
 
     minCoord2d = @get2DCoordinate(@minCoord)
     maxCoord2d = @get2DCoordinate(@maxCoord)
-    width      = maxCoord2d[0] - minCoord2d[0] + 1
-    height     = maxCoord2d[1] - minCoord2d[1] + 1
+
+    # There should be a clear 1-pixel line at each side
+    width      = maxCoord2d[0] - minCoord2d[0] + 1 + 2
+    height     = maxCoord2d[1] - minCoord2d[1] + 1 + 2
     
     map = new Array(width)
     for x in [0...width]
       map[x] = new Array(height)
       for y in [0...height]
-        map[x][y] = false
+        map[x][y] = true
 
-    setMap = (x, y) ->
+    setMap = (x, y, value = true) ->
 
       x = Math.floor(x); y = Math.floor(y)
-      map[x - minCoord2d[0]][y - minCoord2d[1]] = true
-
-    to2DCoordinate = (x, y) ->
-
-      return [x + minCoord2d[0] + 0.5, y + minCoord2d[1] + 0.5]
+      map[x - minCoord2d[0] + 1][y - minCoord2d[1] + 1] = value
 
 
+    # The approach is to initialize the map to true, then
+    # draw the outline with false, then fill everything
+    # outside the cell with false and then repaint the outline
+    # with true.
+    #
+    # Reason:
+    # Unless the shape is something like a ring, the area
+    # outside the cell will be in one piece, unlike the inner
+    # area if you consider narrow shapes.
+    # Also, it will be very clear where to start the filling
+    # algorithm.
+    @drawOutlineVoxels( (x, y) -> setMap(x, y, false) )
+    @fillOutsideArea(map, width, height)
     @drawOutlineVoxels(setMap)
-
-    @fillOutline(map, width, height, to2DCoordinate)
 
     iterator = {
       hasNext : true
@@ -114,19 +109,15 @@ class VolumeLayer
       Drawing.drawLine2d(p1[0], p1[1], p2[0], p2[1], setMap)
 
 
-  fillOutline : (map, width, height, to2DCoordinate) ->
+  fillOutsideArea : (map, width, height) ->
 
     setMap = (x, y) ->
-      map[x][y] = true
+      map[x][y] = false
     isEmpty = (x, y) ->
-      return map[x][y] != true
+      return map[x][y] == true
 
-    # Use a grid of points within the bounding box to flood fill
-    # the area.
-    for x in [0..(width - 1)] by Math.round(width / @GRID_SIZE)
-      for y in [0..(height - 1)] by Math.round(height / @GRID_SIZE)
-        if isEmpty(x, y) and @contains2dCoordinate( to2DCoordinate( x, y ))
-          Drawing.fillArea(x, y, width, height, false, isEmpty, setMap)
+    # Fill everything BUT the cell
+    Drawing.fillArea(0, 0, width, height, false, isEmpty, setMap)
 
 
   get2DCoordinate : (coord3d) ->

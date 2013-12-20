@@ -5,6 +5,10 @@
 
 class VolumeTracingController
 
+  MERGE_MODE_NORMAL : 0
+  MERGE_MODE_CELL1  : 1
+  MERGE_MODE_CELL2  : 2
+
   constructor : ( { @model, @view, @sceneController, @cameraController, @move, @calculateGlobalPos } ) ->
 
     @inDeleteMode = false
@@ -48,17 +52,63 @@ class VolumeTracingController
 
       leftClick : (pos, plane, event) =>
 
-        cell = @model.binary["segmentation"].cube.getDataValue(
+        cellId = @model.binary["segmentation"].cube.getDataValue(
                   @calculateGlobalPos( pos ))
 
-        if cell > 0
-          @model.volumeTracing.setActiveCell( cell )
+        if cellId > 0
+          if      @mergeMode == @MERGE_MODE_NORMAL
+            @model.volumeTracing.setActiveCell( cellId )
+          else if @mergeMode == @MERGE_MODE_CELL1
+            $("#merge-cell1").val(cellId)
+            $("#merge-cell2").focus()
+          else if @mergeMode == @MERGE_MODE_CELL2
+            $("#merge-cell2").val(cellId)
+            @merge()
           
 
     @keyboardControls =
 
       "c" : =>
         @model.volumeTracing.createCell()
+
+
+    # Merging
+
+    @mergeMode = @MERGE_MODE_NORMAL
+    isMergeVisible = ->
+      return $("#merge").css("visibility") == "visible"
+
+    $("#btn-merge").on "click", ->
+      $("#merge").css
+        visibility : if isMergeVisible() then "hidden" else "visible"
+      if isMergeVisible()
+        $("#merge-cell1").focus()
+
+    inputModeMapping =
+      "#merge-cell1" : @MERGE_MODE_CELL1
+      "#merge-cell2" : @MERGE_MODE_CELL2
+
+    for input of inputModeMapping
+
+      do (input) =>
+        $(input).on "focus", =>
+          @mergeMode = inputModeMapping[input]
+          console.log @mergeMode
+        $(input).keypress (event) =>
+          if event.which == 13
+            @merge()
+
+
+  merge : ->
+
+    inputs = [ $("#merge-cell1"), $("#merge-cell2") ]
+    $("#merge").css( visibility: "hidden")
+    console.log "Merge:", $("#merge-cell1").val(), $("#merge-cell2").val()
+
+    for input in inputs
+      input.blur()
+      input.val("")
+
 
 
   enterDeleteMode : (enter = true) ->

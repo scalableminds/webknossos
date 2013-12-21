@@ -1,5 +1,5 @@
 import akka.actor.Props
-import braingames.reactivemongo.{GlobalAccessContext, GlobalDBAccess}
+import braingames.reactivemongo.GlobalDBAccess
 import models.annotation.AnnotationDAO
 import models.security.Permission
 import models.task.TimeSpan
@@ -42,8 +42,6 @@ object Global extends GlobalSettings {
   override def onStart(app: Application) {
     val conf = Play.current.configuration
 
-    cleanTracingData()
-
     startActors(conf.underlying)
 
     if (conf.getBoolean("application.insertInitialData") getOrElse false) {
@@ -76,41 +74,6 @@ object Global extends GlobalSettings {
       Props(new AnnotationStore()),
       name = "annotationStore")
     Akka.system.actorOf(Props(new Mailer(conf)), name = "mailActor")
-  }
-
-  def cleanTracingData() = {
-    import models.user.time._
-    TimeTrackingDAO.findAll(GlobalAccessContext).map { timers =>
-      Logger.warn("cleaning time tracking for " + timers.size + " entries")
-      timers.map { timer =>
-        Logger.warn("Starting cleaning")
-        val updatedEntries = timer.timeEntries match {
-          case head :: tail => tail.foldLeft((List(head), 0L)) {
-            case ((list@head :: tail, additionalTime), e) =>
-              if (math.abs(e.timestamp - head.timestamp) < TimeTrackingDAO.MaxTracingPause && head.annotationEquals(e.annotation)){
-                (e.copy(time = e.time + head.time) :: tail, additionalTime + math.abs(e.timestamp - head.timestamp))
-              } else {
-                val updatedHead =
-                  if (additionalTime != 0) {
-                    Logger.info(s"Logged additional time ($additionalTime, ${timer._id.stringify}, ${head.timestamp})")
-
-                    for{
-                      user <- User.findOneById(timer.user.stringify)
-                    } {
-                      Logger.info(s"Logged time to braintracing: (${user.email}, ${additionalTime})")
-                      BrainTracing.logTime(user, additionalTime, head.annotation.flatMap(AnnotationDAO.findOneById))
-                    }
-                    head.copy(time = head.time + additionalTime)
-                  } else head
-                (e :: updatedHead :: tail, 0L)
-              }
-          }._1
-          case _ => List[TimeEntry]()
-        }
-        Logger.warn(s"Cleaning finished. ${timer.timeEntries.size} vs ${updatedEntries.size}")
-        models.user.time.TimeTrackingDAO.setTimeEntries(timer, updatedEntries.sortBy(-_.timestamp))(GlobalAccessContext)
-      }
-    }
   }
 }
 

@@ -392,15 +392,14 @@ class Gui
     @setFolderElementVisibility( @clippingControllerArbitrary, false )
     @setFolderElementVisibility( @clippingController, true )
 
-    switch mode 
-      when constants.MODE_PLANE_TRACING
-        @hideFolders( [ @fFlightcontrols, @fCells ] )
-        @user.triggerAll()
-      when constants.MODE_ARBITRARY
-        @hideFolders( [ @fViewportcontrols, @fTDView, @fCells ] )
-        @setFolderElementVisibility( @clippingControllerArbitrary, true )
-        @setFolderElementVisibility( @clippingController, false )
-        @user.triggerAll()
-      when constants.MODE_VOLUME
-        @hideFolders( [ @fTrees, @fNodes, @fFlightcontrols ] )
+    if      mode == constants.MODE_PLANE_TRACING
+      @hideFolders( [ @fFlightcontrols, @fCells ] )
+      @user.triggerAll()
+    else if mode == constants.MODE_ARBITRARY or mode == constants.MODE_ARBITRARY_PLANE
+      @hideFolders( [ @fViewportcontrols, @fTDView, @fCells ] )
+      @setFolderElementVisibility( @clippingControllerArbitrary, true )
+      @setFolderElementVisibility( @clippingController, false )
+      @user.triggerAll()
+    else if mode == constants.MODE_VOLUME
+      @hideFolders( [ @fTrees, @fNodes, @fFlightcontrols ] )
 

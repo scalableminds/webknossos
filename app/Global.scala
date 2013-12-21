@@ -6,6 +6,7 @@ import models.task.TimeSpan
 import models.team._
 import models.team.TeamTree
 import models.user.time.TimeEntry
+import oxalis.thirdparty.BrainTracing
 import play.api._
 import play.api.Play.current
 import play.api.libs.concurrent._
@@ -86,12 +87,19 @@ object Global extends GlobalSettings {
         val updatedEntries = timer.timeEntries match {
           case head :: tail => tail.foldLeft((List(head), 0L)) {
             case ((list@head :: tail, additionalTime), e) =>
-              if (math.abs(e.timestamp - head.timestamp) < TimeTrackingDAO.MaxTracingPause){
+              if (math.abs(e.timestamp - head.timestamp) < TimeTrackingDAO.MaxTracingPause && head.annotationEquals(e.annotation)){
                 (e.copy(time = e.time + head.time) :: tail, additionalTime + math.abs(e.timestamp - head.timestamp))
               } else {
                 val updatedHead =
                   if (additionalTime != 0) {
                     Logger.info(s"Logged additional time ($additionalTime, ${timer._id.stringify}, ${head.timestamp})")
+
+                    for{
+                      user <- User.findOneById(timer.user.stringify)
+                    } {
+                      Logger.info(s"Logged time to braintracing: (${user.email}, ${additionalTime})")
+                      BrainTracing.logTime(user, additionalTime, head.annotation.flatMap(AnnotationDAO.findOneById))
+                    }
                     head.copy(time = head.time + additionalTime)
                   } else head
                 (e :: updatedHead :: tail, 0L)

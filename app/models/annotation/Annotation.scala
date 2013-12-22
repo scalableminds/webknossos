@@ -8,6 +8,7 @@ import models.security.Role
 import AnnotationType._
 import org.joda.time.format.DateTimeFormat
 import org.joda.time.DateTime
+import braingames.format.Formatter
 import oxalis.nml.NML
 import braingames.binary.models.DataSet
 import braingames.geometry.Point3D
@@ -92,14 +93,20 @@ object Annotation {
       task <- annotation.task.futureBox
       user <- annotation.user
       content <- annotation.content.futureBox
+      stats <- models.annotation.AnnotationDAO.statisticsForAnnotation(annotation).futureBox
     } yield {
       Json.obj(
-        "created" -> content.map(annotationContent => DateTimeFormat.forPattern("yyyy-MM-dd HH:mm").print(DateTime.now())).toOption,
+        "created" -> content.map(annotationContent => DateTimeFormat.forPattern("yyyy-MM-dd HH:mm").print(annotationContent.timestamp)).toOption,
+        "contentType" -> content.map(_.contentType).getOrElse("").toString,
         "dataSetName" -> dataSetName,
         "state" -> annotation.state,
         "typ" -> annotation.typ,
         "name" -> annotation.name,
-        "id" -> annotation.id
+        "id" -> annotation.id,
+        "formattedHash" -> Formatter.formatHash(annotation.id),
+        "review" -> annotation.review,
+        "stats" -> stats.toOption
+
       )
     }
   }

@@ -211,7 +211,7 @@ object AnnotationController extends Controller with Secured with TracingInformat
         renamed <- AnnotationService.rename(annotation, name).toFox
       } yield {
         JsonOk(
-          html.user.dashboard.exploratoryAnnotationTableItem(renamed),
+          Json.obj("TODO" -> "html.user.dashboard.exploratoryAnnotationTableItem(renamed)"),
           Messages("tracing.setName"))
       }
   }

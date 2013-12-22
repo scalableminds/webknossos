@@ -42,22 +42,23 @@ object UserController extends Controller with Secured with Dashboard {
         }
 
         for {
-          aList <- Future.traverse(info.tasks)( {
-                      case(task, annotation) =>
-                        for {
-                          tasks <- Task.transformToJson(task)
-                          annotations <- Annotation.transformToJson(annotation)
-                        } yield (tasks, annotations)
+          taskList <- Future.traverse(info.tasks)( {
+                        case(task, annotation) =>
+                          for {
+                            tasks <- Task.transformToJson(task)
+                            annotations <- Annotation.transformToJson(annotation)
+                          } yield (tasks, annotations)
                       }
                    )
+          exploratoryList <- Future.traverse(info.exploratory)(Annotation.transformToJson(_))
         } yield {
           Json.obj(
             "user" -> info.user,
-            "exploratory" -> info.exploratory,
             "loggedTime" -> loggedTime,
             "dataSets" -> info.dataSets,
             "hasAnOpenTask" -> info.hasAnOpenTask,
-            "tasks" -> Json.toJson(aList.map(tuple => Json.obj("tasks" -> tuple._1, "annotation" -> tuple._2)))
+            "exploratory" -> Json.toJson(exploratoryList),
+            "tasks" -> Json.toJson(taskList.map(tuple => Json.obj("tasks" -> tuple._1, "annotation" -> tuple._2)))
           )
         }
       }

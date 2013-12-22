@@ -27,30 +27,34 @@ $ ->
 
       # tasks
 
+      extractTemplate = (table) ->
+
+        $tableBody = table.find("tbody")
+        taskTRTemplate = $tableBody.html()
+        table.data("tr-template", taskTRTemplate)
+        $tableBody.empty()
+
       $dashboardTasks = $("#dashboard-tasks")
-      $dashboardTasksBody = $dashboardTasks.find("tbody")
-      taskTRTemplate = $dashboardTasksBody.html()
-      $dashboardTasks.data("tr-template", taskTRTemplate)
-      $dashboardTasksBody.empty()
+      $explorativeTasks = $("#explorative-tasks")
 
+      for aTable in [$dashboardTasks, $explorativeTasks]
+        extractTemplate(aTable)
 
-      $tabbableDashboard = $("tabbable-dashboard")
+      populateTemplate = (data, table, contextProvider) ->
 
-      populateTemplate = (data) ->
-        templateSource = _.unescape($dashboardTasks.data("tr-template"))
+        $tableBody = table.find("tbody")
+        templateSource = _.unescape(table.data("tr-template"))
         templateFn = _.template(templateSource)
         
         outputHTML = []
 
         for el in data
-          outputHTML.push(templateFn(
-            annotations: el.annotation
-            tasks: el.tasks
-          ))
+          outputHTML.push(templateFn(contextProvider(el)))
 
-        $dashboardTasksBody.removeClass("hide").html(outputHTML.join(""))
+        $tableBody.removeClass("hide").html(outputHTML.join(""))
 
 
+      $tabbableDashboard = $("tabbable-dashboard")
       # TODO replace with route
       # not working currently?
       # url = $tabbableDashboard.data("url")
@@ -59,8 +63,18 @@ $ ->
 
       $.get(url).done((response) ->
 
-        console.log("dashboardinfo", response)
-        populateTemplate(response.data.tasks)
+        # tasks
+        populateTemplate(response.data.tasks, $dashboardTasks, (el) ->
+          return {
+            annotations: el.annotation,
+            tasks: el.tasks
+          }
+        )
+
+        populateTemplate(response.data.exploratory, $explorativeTasks, (el) ->
+          el.content = "TODO"
+          return { annotations: el }
+        )
 
       )
 

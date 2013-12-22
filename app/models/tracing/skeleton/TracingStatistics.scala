@@ -5,6 +5,7 @@ import play.api.Logger
 import scala.concurrent.Future
 import braingames.util.{FoxImplicits, Fox}
 import play.api.libs.concurrent.Execution.Implicits._
+import play.api.libs.json.{Json, JsObject}
 
 trait AnnotationStatistics extends FoxImplicits {
   def statisticsForAnnotation(annotation: Annotation) = {
@@ -38,3 +39,7 @@ case class SkeletonTracingStatistic(
                                      numberOfEdges: Long,
                                      numberOfTrees: Long
                                    )
+
+object SkeletonTracingStatistic {
+  implicit val skeletonTracingStatisticFormat = Json.format[SkeletonTracingStatistic]
+}

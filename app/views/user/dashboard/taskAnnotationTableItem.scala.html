@@ -1,40 +1,36 @@
 @()
-<!-- task, annotation >
 
-linkText = {true: "Review failed", false: "Review successful"}
-
-@displayComments(failed: Boolean, comments: List[String]) = {
-  @comments match{
-    case head :: tail => {
-      <br />
-      <a href="#" rel="popover" data-placement="bottom" data-title="Comment from Reviewer" data-html="true" data-content="@org.apache.commons.lang3.StringEscapeUtils.escapeHtml4(head).replaceAll("\n", "<br /><br />")"><i class="icon-eye-open"></i> AT linkText(failed)<span class="caret-down"></span></a>    
-    }
-    case _ => {
-
-    }
-  }
-
-} -->
 <tr class="<%if(annotations.state.isFinished){print('finished')}else{print('unfinished')}%>">
-  <td> <%= tasks.id %> </td>
-    <td> <%= (tasks.type.summary || ("<deleted>" + " is summary existent in data?")) + "-" + annotations.typ%></td>
-    <td> <%= tasks.projectName %> </td>
-    <td> <%= (tasks.type.description || ("" + "is description existent in data?"))%></td>
-    <td>
-      <span class="label"> <%= tasks.type.settings.allowedModes %></span>  .mode.capitalize? 
-    </td>
+  <td> <%= tasks.formattedHash %> </td>
+  <td> <%= (tasks.type.summary || "<deleted>") + " - " + annotations.typ %></td>
+  <td> <%= tasks.projectName %> </td>
+  <td> <%= tasks.type.description || "" %></td>
+  <td>
+    <span class="label"> <%= tasks.type.settings.allowedModes %></span>
+  </td>
   <td class="nowrap"> 
     <% if (annotations.state.isFinished) { %>
-      <i class="icon-ok"></i><span> Finisnmhed</span><br />
-      AT displayComments(false, annotations.review.flatMap( _.comment ))
+      <i class="icon-ok"></i><span> Finished</span><br />
+        <% if (annotations.review.comments && annotations.review.comments.length > 0) { %>
+          <br />
+          <a href="#" rel="popover" data-placement="bottom" data-title="Comment from Reviewer" data-html="true"
+             data-content="<%= annotations.review.comments[0].replace(/\n/g, '<br /><br />')%>)">
+              <i class="icon-eye-open"></i> Review successful<span class="caret-down"></span>
+          </a>
+        <% } %>
     <% } else if (annotations.state.isInReview || annotations.state.isReadyForReview) { %>
       <i class="icon-eye-open"></i><span> In Review</span>
     <% } else { %>
       <a href="<%= jsRoutes.controllers.AnnotationController.trace(annotations.typ, annotations.id).url %>"><i class="icon-random"></i> trace</a><br/>
       <a href="<%= jsRoutes.controllers.AnnotationController.finish(annotations.typ, annotations.id).url %>" class="trace-finish" data-ajax="replace-row,confirm=@Messages("annotation.finish.confirm")" ><i class="icon-ok-circle"></i> finish</a>
       
-      AT displayComments(true, annotations.review.flatMap( _.comment ))
+      <% if (annotations.review.comments && annotations.review.comments.length > 0) { %>
+        <br />
+        <a href="#" rel="popover" data-placement="bottom" data-title="Comment from Reviewer" data-html="true"
+           data-content="<%= annotations.review.comments[0].replace(/\n/g, '<br /><br />')%>)">
+            <i class="icon-eye-open"></i> Review failed<span class="caret-down"></span>
+        </a>
+      <% } %>
     <% } %>
-    
   </td>
 </tr>

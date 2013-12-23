@@ -281,13 +281,21 @@ object TaskAdministration extends AdminController {
     }
   }
 
+  // currently not used?
   def tasksForProject(projectName: String) = Authenticated().async { implicit request =>
     for {
       project <- ProjectDAO.findOneByName(projectName) ?~> Messages("project.notFound")
+      
       tasks <- project.tasks
+      dataSetNames <- Future.traverse(tasks)(_.annotationBase.flatMap(_.dataSetName getOrElse "").futureBox.map(_.toOption))
+      statuses <- Future.traverse(tasks)(_.status)
+      taskTypes <- Future.traverse(tasks)(_.taskType.futureBox)
+
+      val zipped = (tasks zip dataSetNames, statuses zip taskTypes).zipped.toList
+
     } yield {
-      val result = tasks.foldLeft(Html.empty) {
-        case (h, e) => h += html.admin.task.simpleTask(e)
+      val result = zipped.foldLeft(Html.empty) {
+        case (h, ((t, d), (s, tt))) => h += html.admin.task.simpleTask(t, d.getOrElse(""), s, tt.toOption)
       }
       Ok(result)
     }
@@ -296,12 +304,18 @@ object TaskAdministration extends AdminController {
   def tasksForType(taskTypeId: String) = Authenticated().async { implicit request =>
     for {
       taskType <- TaskTypeDAO.findOneById(taskTypeId) ?~> Messages("taskType.notFound")
+      
       tasks <- TaskDAO.findAllByTaskType(taskType)
+      dataSetNames <- Future.traverse(tasks)(_.annotationBase.flatMap(_.dataSetName getOrElse "").futureBox.map(_.toOption))
+      statuses <- Future.traverse(tasks)(_.status)
+      
+      val zipped = (tasks, dataSetNames, statuses).zipped.toList
+
     } yield {
-      val result = tasks.foldLeft(Html.empty) {
-        case (h, e) => h += html.admin.task.simpleTask(e)
+      val result = zipped.foldLeft(Html.empty) {
+        case (h, (t, d, s)) => h += html.admin.task.simpleTask(t, d.getOrElse(""), s, Some(taskType))
       }
-      Ok(result)
+      JsonOk(result)
     }
   }
 

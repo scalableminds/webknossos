@@ -36,6 +36,10 @@ $ ->
 
       return
 
+    "admin.taskType.taskTypes" : ->
+
+      
+
     "tracing.trace" : ->
 
       require [
@@ -126,10 +130,12 @@ $ ->
             $(".graph").html("<i class=\"icon-warning-sign\"></i> #{error.replace(/\n/g,"<br>")}")
         )
 
-    "admin.user.userList" : ->
 
-      
     # "admin.user.userAdministration" : ->
+      # TODO: does "admin.user.userAdministration" still exist or has it been replaced by "userList" ?
+
+    "admin.user.userList" : ->
+      
 
       require ["multiselect"], ->
 

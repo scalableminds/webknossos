@@ -57,6 +57,21 @@ object TaskTypeAdministration extends AdminController {
     }
   }
 
+  // TODO: 
+  // def list = Authenticated().async { implicit request =>
+  //   render.async {
+  //     case Accepts.Html() =>
+  //       TaskTypeDAO.findAll
+  //     case Accepts.Json() =>
+  //       //for {
+  //       //  tasks <- TaskService.findAllNonTrainings
+  //       //  js <- Future.traverse(tasks)(Task.transformToJson)
+  //       //} yield {
+  //       // JsonOk(Json.obj("data" -> js))
+  //       //}
+  //   }
+  // }
+
   def edit(taskTypeId: String) = Authenticated().async { implicit request =>
     for {
       taskType <- TaskTypeDAO.findOneById(taskTypeId) ?~> Messages("taskType.notFound")

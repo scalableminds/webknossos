@@ -12,6 +12,7 @@ import models.user.{UsedAnnotationDAO, UsedAnnotation}
 import play.api.libs.concurrent.Execution.Implicits._
 import scala.async.Async._
 import net.liftweb.common.Full
+import scala.concurrent.Future
 
 object AnnotationAdministration extends AdminController {
 
@@ -19,10 +20,13 @@ object AnnotationAdministration extends AdminController {
     for {
       task <- TaskDAO.findOneById(taskId) ?~> Messages("task.notFound")
       annotations <- task.annotations
+      users <- Future.traverse(annotations)(_.user)
+      contents <- Future.traverse(annotations)(_.content.futureBox)
+      val zipped = (annotations, users, contents).zipped.toList
     } yield {
-      JsonOk(annotations.foldLeft(Html.empty) {
-        case (h, e) =>
-          h += html.admin.annotation.simpleAnnotation(e)
+      JsonOk(zipped.foldLeft(Html.empty) {
+        case (h, (a, u, c)) =>
+          h += html.admin.annotation.simpleAnnotation(a, u, c)
       })
     }
   }
@@ -52,8 +56,10 @@ object AnnotationAdministration extends AdminController {
       annotation <- AnnotationDAO.findOneById(annotationId) ?~> Messages("annotation.notFound")
       task <- annotation.task ?~> Messages("task.notFound")
       reopenedAnnotation <- AnnotationService.reopen(annotation) ?~> Messages("annotation.invalid")
+      user <- reopenedAnnotation.user
+      content <- reopenedAnnotation.content.futureBox
     } yield {
-      JsonOk(html.admin.annotation.simpleAnnotation(reopenedAnnotation), Messages("annotation.reopened"))
+      JsonOk(html.admin.annotation.simpleAnnotation(reopenedAnnotation, user, content), Messages("annotation.reopened"))
     }
   }
 

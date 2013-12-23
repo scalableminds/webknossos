@@ -1,12 +1,13 @@
 @* simpleTracing Template File *@
-@(annotation: models.annotation.Annotation)
+@(annotation: models.annotation.Annotation, user: Option[models.user.User],
+	content : net.liftweb.common.Box[models.annotation.AnnotationContent])
 @import braingames.reactivemongo.GlobalAccessContext
 
 @import play.api.libs.concurrent.Execution.Implicits._
 
 <tr>
-  <td> @annotation.user.map(_.map(_.name).getOrElse("<deleted>")) </td>
-  <td> @annotation.content.map(a => formatDate(a.date)) </td>
+  <td> @user.map(_.name).getOrElse("<deleted>") </td>
+  <td> @content.map(a => formatDate(a.date)).getOrElse("") </td>
   <td> @if(annotation.state.isFinished){ <i class="icon-ok-circle"></i> Finished } else { <i class="icon-random"></i> In Progress } </td>
   <td class="nowrap"> 
     @annotationLinks(annotation)

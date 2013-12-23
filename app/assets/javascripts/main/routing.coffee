@@ -31,8 +31,9 @@ $ ->
 
         $tableBody = table.find("tbody")
         taskTRTemplate = $tableBody.html()
-        table.data("tr-template", taskTRTemplate)
         $tableBody.empty()
+        
+        table.data("tr-template", taskTRTemplate)
 
       $dashboardTasks = $("#dashboard-tasks")
       $explorativeTasks = $("#explorative-tasks")
@@ -72,7 +73,6 @@ $ ->
         )
 
         populateTemplate(response.data.exploratory, $explorativeTasks, (el) ->
-          el.content = "TODO"
           return { annotations: el }
         )
 
@@ -100,15 +100,19 @@ $ ->
       $("a[rel=popover]").popover()
 
       # confirm new task, when there already is an open one
-      $("#new-task-button").on "ajax-after", (event) ->
+      $("#new-task-button").on("ajax-after", (event) ->
 
         $(this).data("ajax", "add-row=#dashboard-tasks,confirm=Do you really want another task?")
+      
+      )
 
       # remove confirmation, when there is no open task left
-      $("#dashboard-tasks").on "ajax-success", ".trace-finish", (event, responseData) ->
+      $("#dashboard-tasks").on("ajax-success", ".trace-finish", (event, responseData) ->
 
         if responseData["hasAnOpenTask"] == false
           $("#new-task-button").data("ajax", "add-row=#dashboard-tasks")
+
+      )
 
       return
 

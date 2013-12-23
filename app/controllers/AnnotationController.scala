@@ -209,9 +209,10 @@ object AnnotationController extends Controller with Secured with TracingInformat
         annotation <- AnnotationDAO.findOneById(id) ?~> Messages("annotation.notFound")
         name <- postParameter("name") ?~> Messages("tracing.invalidName")
         renamed <- AnnotationService.rename(annotation, name).toFox
+        renamedJSON <- Annotation.transformToJson(renamed)
       } yield {
         JsonOk(
-          Json.obj("TODO" -> "html.user.dashboard.exploratoryAnnotationTableItem(renamed)"),
+          Json.obj("annotations" -> renamedJSON),
           Messages("tracing.setName"))
       }
   }

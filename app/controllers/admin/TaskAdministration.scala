@@ -281,12 +281,14 @@ object TaskAdministration extends AdminController {
     }
   }
 
+
   // currently not used?
   def tasksForProject(projectName: String) = Authenticated().async { implicit request =>
     for {
       project <- ProjectDAO.findOneByName(projectName) ?~> Messages("project.notFound")
       
       tasks <- project.tasks
+      // how can this be written more elegant?
       dataSetNames <- Future.traverse(tasks)(_.annotationBase.flatMap(_.dataSetName getOrElse "").futureBox.map(_.toOption))
       statuses <- Future.traverse(tasks)(_.status)
       taskTypes <- Future.traverse(tasks)(_.taskType.futureBox)

@@ -70,8 +70,14 @@ object AnnotationAdministration extends AdminController {
       (updated, message) <- AnnotationService.finishAnnotation(request.user, annotation)
       taskType <- task.taskType.futureBox
       project <- task.project.futureBox
+
+      dataSetName <- annotation.dataSetName
+      stats <- models.annotation.AnnotationDAO.statisticsForAnnotation(annotation).futureBox
+      content <- annotation.content.futureBox
     } yield {
-      JsonOk(html.admin.annotation.extendedAnnotation(task, updated, taskType, project), Messages("annotation.finished"))
+      JsonOk(
+        html.admin.annotation.extendedAnnotation(task, updated, taskType, project, dataSetName, stats.toOption, content),
+        Messages("annotation.finished"))
     }
   }
 
@@ -82,8 +88,17 @@ object AnnotationAdministration extends AdminController {
       resetted <- AnnotationService.resetToBase(annotation) ?~> Messages("annotation.reset.failed")
       taskType <- task.taskType.futureBox
       project <- task.project.futureBox
+
+      dataSetName <- annotation.dataSetName
+      stats <- models.annotation.AnnotationDAO.statisticsForAnnotation(annotation).futureBox
+      content <- annotation.content.futureBox
+
     } yield {
-      JsonOk(html.admin.annotation.extendedAnnotation(task, resetted, taskType, project), Messages("annotation.reset.success"))
+      JsonOk(
+        html.admin.annotation.extendedAnnotation(task, resetted, taskType, project, dataSetName, stats.toOption, content),
+        Messages("annotation.reset.success"))
+
+
     }
   }
 }

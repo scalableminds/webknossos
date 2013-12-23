@@ -1,4 +1,11 @@
-@(task: models.task.Task, annotation: models.annotation.Annotation, taskType: net.liftweb.common.Box[models.task.TaskType], project: net.liftweb.common.Box[models.task.Project])
+@(task: models.task.Task,
+  annotation: models.annotation.Annotation,
+  taskType: net.liftweb.common.Box[models.task.TaskType],
+  project: net.liftweb.common.Box[models.task.Project],
+  dataSetName: String,
+  statsOpt: Option[models.tracing.skeleton.SkeletonTracingStatistic],
+  content: net.liftweb.common.Box[models.annotation.AnnotationContent]
+  )
 
 @import models.annotation.AnnotationDAO
 
@@ -25,24 +32,26 @@
 <tr class="@if(annotation.state.isFinished){finished}else{unfinished}">
   <td> @formatHash(task.id) </td>
   <td> @taskType.map(_.summary).getOrElse("<deleted>") - @annotation.typ</td>
-  <td> @project.map(_.name) </td>
+  <td> @project.map(_.name).getOrElse("") </td>
   <td>
-    @taskType.map(_.settings.allowedModes.map{ mode =>
-      <span class="label"> @mode.capitalize </span>
-    })
+    
+    @taskType.map( _.settings.allowedModes.map{ mode => {
+        mode.capitalize
+    }}).getOrElse(List(""))
+    
   </td>
-  <td> @annotation.dataSetName </td>
-  @defining(AnnotationDAO.statisticsForAnnotation(annotation)){ statsOpt =>
-    @statsOpt.map{ stats =>
-    <td> 
-      <span title="Trees"><i class="icon-sitemap"></i> @stats.numberOfTrees &nbsp;</span>
-      <span title="Nodes">&bull; @stats.numberOfNodes &nbsp;</span>
-      <span title="Edges"><i class="icon-resize-horizontal"></i> @stats.numberOfEdges</span>
-    </td>
-    }.getOrElse(<td />)
-  }
+  <td> @dataSetName </td>
+  
+  @statsOpt.map{ stats =>
+  <td> 
+    <span title="Trees"><i class="icon-sitemap"></i> @stats.numberOfTrees &nbsp;</span>
+    <span title="Nodes">&bull; @stats.numberOfNodes &nbsp;</span>
+    <span title="Edges"><i class="icon-resize-horizontal"></i> @stats.numberOfEdges</span>
+  </td>
+  }.getOrElse(<td />)
+
   <td>
-    @annotation.content.map(e => formatDate(e.timestamp))
+    @content.map(e => formatDate(e.timestamp)).getOrElse("")
   </td>
   <td> 
     @annotation.state match{

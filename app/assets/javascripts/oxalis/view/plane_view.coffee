@@ -23,6 +23,7 @@ class PlaneView
     # Create a 4x4 grid
     @curWidth = WIDTH = HEIGHT = constants.VIEWPORT_WIDTH
     @scaleFactor = 1
+    @deviceScaleFactor = window.devicePixelRatio || 1
 
     # Initialize main THREE.js components
     @camera   = new Array(4)
@@ -109,7 +110,7 @@ class PlaneView
       @stats.update()
 
       # scale for retina displays
-      f = window.devicePixelRatio || 1
+      f = @deviceScaleFactor
       viewport = [[0, @curWidth+20], [@curWidth+20, @curWidth+20], [0, 0], [@curWidth+20, 0]]
       @renderer.autoClear = true
       

@@ -5,6 +5,8 @@ import models.security.Permission
 import models.task.TimeSpan
 import models.team._
 import models.team.TeamTree
+import models.user.time.TimeEntry
+import oxalis.thirdparty.BrainTracing
 import play.api._
 import play.api.Play.current
 import play.api.libs.concurrent._

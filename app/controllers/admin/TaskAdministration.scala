@@ -277,7 +277,7 @@ object TaskAdministration extends Controller with Secured {
       val result = project.tasks.foldLeft(Html.empty) {
         case (h, e) => h += html.admin.task.simpleTask(e)
       }
-      Ok(result)
+      JsonOk(result)
     }
   }
 

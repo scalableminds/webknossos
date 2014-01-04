@@ -74,6 +74,9 @@ class VolumeTracingController
 
     # Merging
 
+    # no merging for now
+    $("#btn-merge").hide()
+
     @mergeMode = @MERGE_MODE_NORMAL
     isMergeVisible = ->
       return $("#merge").css("visibility") == "visible"

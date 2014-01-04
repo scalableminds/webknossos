@@ -96,6 +96,9 @@ class View
       sortTreesByNameChanged : =>
         @updateTreesSortButton()
         @updateTrees()
+      sortCommentsAscChanged : =>
+        @updateCommentsSortButton()
+        @updateComments()
 
     @model.cellTracing.stateLogger.on
       pushFailed       : (critical) =>
@@ -119,6 +122,7 @@ class View
     @updateComments()
     @updateTrees()
     @updateTreesSortButton()
+    @updateCommentsSortButton()
 
     # disable loader, show oxalis
     $("#loader").css("display" : "none")
@@ -208,7 +212,7 @@ class View
 
   updateComments : ->
     
-    comments = @model.cellTracing.getComments()
+    comments = @model.cellTracing.getComments( @model.user.sortCommentsAsc )
     commentList = $("#comment-list")
     commentList.empty()
 
@@ -322,12 +326,28 @@ class View
 
   updateTreesSortButton : ->
 
-    if @model.user.sortTreesByName
-      $("#sort-name-icon").show()
-      $("#sort-id-icon").hide()
+    @toggleIconVisibility(
+      @model.user.sortTreesByName,
+      $("#sort-name-icon"),
+      $("#sort-id-icon"))
+
+
+  updateCommentsSortButton : ->
+
+    @toggleIconVisibility(
+      @model.user.sortCommentsAsc,
+      $("#sort-asc-icon"),
+      $("#sort-desc-icon"))
+
+
+  toggleIconVisibility : (isFirst, firstIcon, secondIcon) ->
+
+    if isFirst
+      firstIcon.show()
+      secondIcon.hide()
     else
-      $("#sort-name-icon").hide()
-      $("#sort-id-icon").show()
+      firstIcon.hide()
+      secondIcon.show()
 
 
   webGlSupported : ->

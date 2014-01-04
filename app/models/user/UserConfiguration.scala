@@ -55,6 +55,7 @@ object UserConfiguration extends BasicSettings{
       "motionsensorActive" -> JsBoolean(false),
       "firstVisToggle" -> JsBoolean(true),
       "particleSize" -> JsNumber(5),
-      "sortTreesByName" -> JsBoolean(false)))
+      "sortTreesByName" -> JsBoolean(false),
+      "sortCommentsAsc" -> JsBoolean(true)))
 
 }

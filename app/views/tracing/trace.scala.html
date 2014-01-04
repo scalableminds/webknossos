@@ -28,6 +28,10 @@
         <div id="zoomFactor">
         </div>
 
+        <div id="volume-actions">
+          <button class="btn" id="btn-merge">Merge cells</button>
+        </div>
+
         <div class="tabbable" id="lefttabbar">
           @defining(annotation.task){ task =>
             <ul class="nav nav-tabs">
@@ -66,6 +70,19 @@
           }
         </div>
       </div>
+
+      <div id="merge">
+        <p>Please enter the IDs of the cells to merge or select them in the viewport:</p>
+        <div class="input-prepend">
+          <span class="add-on">Cell 1</span>
+          <input id="merge-cell1" type="text">
+        </div>
+        <div class="input-prepend">
+          <span class="add-on">Cell 2</span>
+          <input id="merge-cell2" type="text">
+        </div>
+      </div>
+
       <div id="tracing">
         <div id="render">
           <div id="help-modal" class="modal hide fade"></div>

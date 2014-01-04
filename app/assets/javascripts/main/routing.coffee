@@ -134,7 +134,7 @@ $ ->
 
       return
 
-    "admin.user.userAdministration" : ->
+    "admin.user.userList" : ->
       require ["multiselect"], ->
 
         $popovers = $("a[rel=popover]")

@@ -49,9 +49,11 @@ class Controller
           when "oxalis" then constants.MODE_PLANE_TRACING
           when "arbitrary" then constants.MODE_ARBITRARY
 
+      if constants.MODE_ARBITRARY in @allowedModes
+        @allowedModes.push(constants.MODE_ARBITRARY_PLANE)
+
       # FIXME: only for developing
-      @allowedModes.push(constants.MODE_VOLUME)
-      @allowedModes.push(constants.MODE_ARBITRARY_PLANE)
+      #@allowedModes.push(constants.MODE_VOLUME)
 
       # FPS stats
       stats = new Stats()
@@ -76,12 +78,6 @@ class Controller
       for binaryName of @model.binary
         @model.binary[binaryName].cube.on "bucketLoaded" : =>
           @model.flycam.update()
-
-      if constants.MODE_PLANE_TRACING not in @allowedModes
-        if constants.MODE_ARBITRARY in @allowedModes
-          @setMode(constants.MODE_ARBITRARY)
-        else
-          Toast.error("There was no valid allowed tracing mode specified.")
 
       @abstractTreeController.view.on 
         nodeClick : (id) => @setActiveNode(id, true, false)
@@ -145,7 +141,7 @@ class Controller
         "view-mode-arbitraryplane" : constants.MODE_ARBITRARY_PLANE
 
       _controller = this
-      for button in $("#view-mode").children()
+      for button in $("#view-mode .btn-group").children()
         
         id = @modeMapping[ $(button).attr("id") ]
         do (id) ->
@@ -155,7 +151,15 @@ class Controller
         if not (id in @allowedModes)
           $(button).attr("disabled", "disabled")
 
-      @setMode(constants.MODE_PLANE_TRACING)
+      if @allowedModes.length == 1
+        $("#view-mode").hide()
+
+      @allowedModes.sort()
+      @setMode( constants.MODE_PLANE_TRACING, true )
+      if @allowedModes.length == 0
+        Toast.error("There was no valid allowed tracing mode specified.")
+      else
+        @setMode( @allowedModes[0] )
 
       # initial trigger
       @sceneController.setSegmentationAlpha($('#alpha-slider').data("slider-value") or constants.DEFAULT_SEG_ALPHA)
@@ -203,14 +207,10 @@ class Controller
           @view.toggleTheme()       
           @abstractTreeController.drawTree()
 
-        "m" : => # toggle between plane tracing and arbitrary tracing
+        "m" : => # rotate allowed modes
 
-          if @mode == constants.MODE_PLANE_TRACING
-            @setMode(constants.MODE_ARBITRARY)
-          else if @mode == constants.MODE_ARBITRARY
-            @setMode(constants.MODE_ARBITRARY_PLANE)
-          else if @mode == constants.MODE_ARBITRARY_PLANE
-            @setMode(constants.MODE_PLANE_TRACING)
+          index = (@allowedModes.indexOf(@mode) + 1) % @allowedModes.length
+          @setMode( @allowedModes[index] )
 
         "super + s, ctrl + s" : (event) =>
 
@@ -221,13 +221,13 @@ class Controller
 
     new Input.KeyboardNoLoop( keyboardControls )
 
-  setMode : (newMode) ->
+  setMode : (newMode, force = false) ->
 
-    if (newMode == constants.MODE_ARBITRARY or newMode == constants.MODE_ARBITRARY_PLANE) and newMode in @allowedModes
+    if (newMode == constants.MODE_ARBITRARY or newMode == constants.MODE_ARBITRARY_PLANE) and (newMode in @allowedModes or force)
       @planeController.stop()
       @arbitraryController.start(newMode)
 
-    else if (newMode == constants.MODE_PLANE_TRACING or newMode == constants.MODE_VOLUME) and newMode in @allowedModes
+    else if (newMode == constants.MODE_PLANE_TRACING or newMode == constants.MODE_VOLUME) and (newMode in @allowedModes or force)
       @arbitraryController.stop()
       @planeController.start(newMode)
 
@@ -235,7 +235,7 @@ class Controller
       return
 
 
-    for button in $("#view-mode").children()
+    for button in $("#view-mode .btn-group").children()
 
       $(button).removeClass("btn-primary")
       if newMode == @modeMapping[$(button).attr("id")]

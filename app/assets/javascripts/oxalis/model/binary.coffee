@@ -26,6 +26,7 @@ class Binary
   constructor : (@user, dataSet, @TEXTURE_SIZE_P, @layer, @testData = false) ->
 
     @dataSetName = dataSet.name
+    @lastPingTime = new Date()
 
     for layer in dataSet.dataLayers
       if layer.typ == @layer.name
@@ -81,12 +82,28 @@ class Binary
       plane.updateContrastCurves(@contrastCurves)
 
 
+  printConnectionInfo : ->
+
+    interval = new Date() - @lastPingTime
+    @lastPingTime = new Date() 
+
+    kbPerSecond = @queue.loadedBytes / interval
+    bucketsPerSocond = @queue.loadedBuckets * 1000 / interval
+    
+    console.log "PING - latency: ", @queue.roundTripTime, "ms, connection: ", kbPerSecond, "KByte/s, ", bucketsPerSocond, "buckets/s" 
+    
+    @queue.loadedBytes = 0
+    @queue.loadedBuckets = 0
+
+
   pingStop : ->
 
     @queue.clear()
 
 
   pingImpl : (position, {zoomStep, area, activePlane}) ->
+
+    @printConnectionInfo()
 
     if @lastPosition?
       
@@ -101,8 +118,6 @@ class Binary
       @lastPosition = position.slice()
       @lastZoomStep = zoomStep
       @lastArea     = area.slice()
-
-      # console.log "ping", @queue.roundTripTime, @queue.bucketsPerSecond, @cube.bucketCount
 
       for strategy in @pingStrategies 
         if strategy.inVelocityRange(1) and strategy.inRoundTripTimeRange(@queue.roundTripTime)

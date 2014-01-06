@@ -30,6 +30,12 @@ object AssertionController extends Controller with Secured {
     Ok(html.admin.assertion.assertionList(Assertion.findAll.sortBy(-_.timestamp)))
   }
 
+  def listSliced(from: Int, number: Int) = Authenticated(role = Role.Admin) { implicit request =>
+    
+    val assertions = Assertion.findAll.sortBy(-_.timestamp).drop(from).take(number)
+    Ok(html.admin.assertion.assertionList(assertions))
+  }
+
   def view(assertionId: String) = Authenticated(role = Role.Admin) { implicit request =>
     for {
       assertion <- Assertion.findOneById(assertionId) ?~ "Assertion not found."

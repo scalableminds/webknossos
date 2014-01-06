@@ -42,6 +42,7 @@ GET           /datasets/:dataSetName/layers/:dataLayerName/image          contro
 GET           /assert/:assertionId                                        controllers.AssertionController.view(assertionId: String)
 POST          /assert                                                     controllers.AssertionController.log
 GET           /assert                                                     controllers.AssertionController.list
+GET           /assert/:from/:number                                      	controllers.AssertionController.listSliced(from: Int, number: Int)
 
 # SkeletonTracing Stuff
 POST          /annotations/createExplorational                            controllers.AnnotationController.createExplorational

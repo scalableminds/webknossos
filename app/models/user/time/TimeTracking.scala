@@ -90,7 +90,7 @@ object TimeTrackingDAO extends BasicReactiveDAO[TimeTracking] {
   def findOneByUser(user: User)(implicit ctx: DBAccessContext) = findOne("user", toBSONObjectID(user._id))
 
   def addTimeEntry(timeTracker: TimeTracking, entry: TimeEntry)(implicit ctx: DBAccessContext) =
-    collectionUpdate(Json.obj("_id" -> timeTracker._id), Json.obj("$push" -> Json.obj("timeEntries" -> entry)))
+    collectionUpdate(Json.obj("_id" -> timeTracker._id), Json.obj("$set" -> Json.obj("timeEntries.-1" -> entry)))
 
   def setTimeEntries(timeTracker: TimeTracking, entries: List[TimeEntry])(implicit ctx: DBAccessContext) =
     collectionUpdate(Json.obj("_id" -> timeTracker._id), Json.obj("$set" -> Json.obj("timeEntries" -> entries)))

@@ -100,7 +100,7 @@ class Tree
         break
 
     $.assert(found,
-      "No edge found.", found, edgeArray, nodesIndex)
+      "No edge found.", { found, edgeArray, nodesIndex })
 
     swapLast( @edgesBuffer, edgesIndex )
 

@@ -24,7 +24,7 @@ case class SkeletonTracing(
   activeNodeId: Option[Int],
   editPosition: Point3D,
   comments: List[Comment] = Nil,
-  settings: AnnotationSettings = AnnotationSettings.default,
+  settings: AnnotationSettings = AnnotationSettings.skeletonDefault,
   _id: ObjectId = new ObjectId)
   extends DAOCaseClass[SkeletonTracing] with SkeletonTracingLike with AnnotationContent {
 

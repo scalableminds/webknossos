@@ -19,6 +19,11 @@ class Binary
   queue : null
   planes : []
 
+  timestamps: []
+  latencies: []
+  bucketPerSec: []
+  kbPerSec: []
+
   dataSetName : ""
   direction : [0, 0, 0]
 
@@ -90,6 +95,11 @@ class Binary
     kbPerSecond = @queue.loadedBytes / interval
     bucketsPerSocond = @queue.loadedBuckets * 1000 / interval
     
+    @timestamps.push(new Date().getTime())
+    @latencies.push(@queue.roundTripTime)
+    @kbPerSec.push(kbPerSecond)
+    @bucketPerSec.push(bucketsPerSocond)
+
     console.log "PING - latency: ", @queue.roundTripTime, "ms, connection: ", kbPerSecond, "KByte/s, ", bucketsPerSocond, "buckets/s" 
     
     @queue.loadedBytes = 0

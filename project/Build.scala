@@ -4,7 +4,8 @@ import play.Project._
 
 object Dependencies{
   val akkaVersion = "2.2.0"
-  val reactiveVersion = "0.10.0-SNAPSHOT"
+  val reactiveVersion = "0.10.0"
+  val reactivePlayVersion = "0.10.2"
   val braingamesVersion = "1.3.0"
 
   val restFb = "com.restfb" % "restfb" % "1.6.11"
@@ -17,7 +18,7 @@ object Dependencies{
   // Jira integration
   val jerseyClient = "com.sun.jersey" % "jersey-client" % "1.8"
   val jerseyCore = "com.sun.jersey" % "jersey-core" % "1.8"
-  val reactivePlay = "org.reactivemongo" %% "play2-reactivemongo" % reactiveVersion
+  val reactivePlay = "org.reactivemongo" %% "play2-reactivemongo" % reactivePlayVersion
   val reactiveBson = "org.reactivemongo" %% "reactivemongo-bson-macros" % reactiveVersion
   val scalaReflect = "org.scala-lang" % "scala-reflect" % "2.10.0"
   val braingamesBinary = "com.scalableminds" %% "braingames-binary" % braingamesVersion

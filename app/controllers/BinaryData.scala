@@ -164,8 +164,6 @@ object BinaryData extends Controller with Secured {
   //    AuthenticatedWebSocket[Array[Byte]]() {
   //      user =>
   //        request =>
-  //          val dataLayer = DataLayerId(dataLayerName)
-  //
   //          DataSetDAO.findOneByName(dataSetName)(user).map {
   //            dataSetOpt =>
   //              var channelOpt: Option[Channel[Array[Byte]]] = None
@@ -182,9 +180,10 @@ object BinaryData extends Controller with Secured {
   //              val input = Iteratee.foreach[Array[Byte]](in => {
   //                for {
   //                  dataSet <- dataSetOpt
+  //                  dataLayer: DataLayer <- dataSet.dataLayer(dataLayerTyp) ?~> Messages("dataLayer.notFound")              
   //                  channel <- channelOpt
   //                  requests <- BinaryProtocol.parse(in, containsHandle = true)
-  //                  dataRequestCollection = createDataRequestCollection(dataSet, dataLayerTyp, cubeSize, requests)
+  //                  dataRequestCollection = createDataRequestCollection(dataSet, dataLayer, cubeSize, requests)
   //                  dataOpt <- BinaryDataService.handleDataRequest(dataRequestCollection)
   //                  data <- dataOpt
   //                } {

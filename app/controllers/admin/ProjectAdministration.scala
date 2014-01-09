@@ -1,57 +1,88 @@
-package controllers.admin;
+package controllers.admin
 
-import oxalis.security.Secured
-import models.security.Role
 import scala.concurrent.duration._
 import views._
-import models.task.Project
+import models.task.{ProjectService, ProjectDAO, Project}
 import play.api.data.Form._
 import play.api.data.Form
 import play.api.data.Forms._
-import models.user.User
+import models.user.{UserService, User}
 import play.api.i18n.Messages
 import play.api.templates.Html
-import controllers.{Controller, Application}
+import braingames.reactivemongo.DBAccessContext
+import play.api.libs.concurrent.Execution.Implicits._
 
+import play.api.mvc.Request
+import oxalis.security.AuthenticatedRequest
+import scala.concurrent.Future
+import play.api.libs.json.{Json, JsObject, JsArray}
 
-object ProjectAdministration extends Controller with Secured{
-
-  override val DefaultAccessRole = Role.Admin
+object ProjectAdministration extends AdminController {
 
   val projectForm = Form(tuple(
-    "projectName" -> nonEmptyText(1, 100)
-      .verifying("project.nameAlreadyInUse", name => Project.findOneByName(name).isEmpty),
-    "owner" -> nonEmptyText(1, 100)
-      .verifying("user.notFound", userId => User.findOneById(userId).isDefined)))
+    "projectName" -> nonEmptyText(1, 100),
+    "owner" -> nonEmptyText(1, 100)))
 
-  def list = Authenticated { implicit request =>
-    Ok(html.admin.project.projectList(
-      Project.findAll,
-      projectForm.fill("", request.user.id),
-      User.findAll.sortBy(_.name)))
+  def sortedUsers(implicit ctx: DBAccessContext) = UserService.findAll.map(_.sortBy(_.name))
+
+  def projectListWithForm(form: Form[(String, String)])(implicit request: AuthenticatedRequest[_]) =
+    for {
+      users <- sortedUsers
+      projects <- ProjectDAO.findAll
+    } yield {
+      html.admin.project.projectList()
+    }
+
+  def list = Authenticated().async { implicit request =>
+    render.async {
+      case Accepts.Html() =>
+        Future.successful(Ok(html.admin.project.projectList()))
+      case Accepts.Json() =>
+        for {
+          projects <- ProjectDAO.findAll
+          users <- sortedUsers
+        } yield {
+          JsonOk(Json.obj("projects" -> projects, "users" -> users))
+        }
+    }
   }
 
-  def delete(projectName: String) = Authenticated { implicit request =>
+  def delete(projectName: String) = Authenticated().async { implicit request =>
     for {
-      project <- Project.findOneByName(projectName) ?~ Messages("project.notFound")
+      project <- ProjectDAO.findOneByName(projectName) ?~> Messages("project.notFound")
     } yield {
-      Project.remove(project)
+      ProjectService.remove(project)
       JsonOk(Messages("project.removed"))
     }
   }
 
-  def create = Authenticated(parser = parse.urlFormEncoded) { implicit request =>
+  def create = Authenticated().async(parse.urlFormEncoded) { implicit request =>
     projectForm.bindFromRequest.fold(
-      formWithErrors => BadRequest(html.admin.project.projectList(Project.findAll, formWithErrors, User.findAll)),
-      {
-        case (name, ownerId) =>
-          for {
-            owner <- User.findOneById(ownerId) ?~ Messages("user.notFound")
-          } yield {
-            Project.insertOne(Project(name, owner._id))
-            Redirect(routes.ProjectAdministration.list).flashing(
-              FlashSuccess(Messages("project.createSuccess")))
+    formWithErrors =>
+      for {
+        html <- projectListWithForm(formWithErrors)
+      } yield {
+        BadRequest(html)
+      }, {
+      case (name, ownerId) =>
+        ProjectDAO.findOneByName(name).flatMap {
+          case Some(_) =>
+            for {
+              html <- projectListWithForm(projectForm.bindFromRequest.withError("projectName", Messages("project.nameAlreadyInUse")))
+            } yield {
+              BadRequest(html)
+            }
+          case _ => {
+            for {
+              owner <- UserService.findOneById(ownerId, useCache = true) ?~> Messages("user.notFound")
+            } yield {
+              ProjectService.insert(name, owner)
+              Redirect(routes.ProjectAdministration.list).flashing(
+                FlashSuccess(Messages("project.createSuccess")))
+            }
           }
-      })
+        }
+
+    })
   }
 }

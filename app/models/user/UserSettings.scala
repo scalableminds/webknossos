@@ -1,10 +1,7 @@
 package models.user
 
 import play.api.Play.current
-import com.mongodb.casbah.Imports._
 import models.context._
-import com.novus.salat.annotations._
-import com.novus.salat.dao.SalatDAO
 import braingames.security.SCrypt._
 import scala.collection.mutable.Stack
 import play.api.libs.json.JsValue
@@ -12,17 +9,18 @@ import play.api.libs.json.JsBoolean
 import play.api.libs.json._
 import models.basics.BasicSettings
 
-case class UserConfiguration(
+case class UserSettings(
     settings: Map[String, JsValue]) {
 
   def settingsOrDefaults = {
-    UserConfiguration.defaultConfiguration.settings ++ settings
+    UserSettings.defaultSettings.settings ++ settings
   }
 }
 
-object UserConfiguration extends BasicSettings{
+object UserSettings extends BasicSettings{
+  implicit val userConfigurationFormat = Json.format[UserSettings]
 
-  val defaultConfiguration = UserConfiguration(
+  val defaultSettings = UserSettings(
     Map(
       "moveValue" -> JsNumber(300),
       "moveValue3d" -> JsNumber(300),

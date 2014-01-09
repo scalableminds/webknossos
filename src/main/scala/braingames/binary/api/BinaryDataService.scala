@@ -23,17 +23,14 @@ import braingames.io.StartWatching
 import scala.util.Success
 import scala.util.Failure
 import com.typesafe.config.Config
-import braingames.binary.models.DataLayerId
 import net.liftweb.common.Box
 import braingames.io.StopWatching
-import braingames.binary.models.DataLayerId
 import scala.util.Failure
 import scala.Some
 import scala.util.Success
 import braingames.binary.models.DataSet
 import braingames.io.StartWatching
 import braingames.io.StopWatching
-import braingames.binary.models.DataLayerId
 import scala.util.Failure
 import scala.Some
 import braingames.binary.DataRequest

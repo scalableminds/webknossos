@@ -30,26 +30,34 @@ trait DataSetService {
 
   def createUserDataSet(baseDataSet: DataSet): DataSet = {
     val name = userDataSetName()
-    val segmentationLayer = DataLayer(
+/*    val segmentationLayer = DataLayer(
       DataLayer.SEGMENTATION.name,
+      userDataSetFolder(name),
       None,
       DataLayer.SEGMENTATION.defaultElementClass,
       fallback = Some(baseDataSet.name))
 
     val dataSet = DataSet(
       name = name,
-      baseDir = userDataSetFolder(name),
       scale = baseDataSet.scale,
       dataLayers = List(segmentationLayer),
       owningTeam = baseDataSet.owningTeam,
       allowedTeams = baseDataSet.allowedTeams
     )
-    val baseFolder = new File(dataSet.baseDir)
+    val baseFolder = new File(segmentationLayer.baseDir)
     baseFolder.mkdirs()
     DataSetSettings.writeToFolder(dataSet, baseFolder)
     dataSetRepository.updateOrCreate(dataSet)
     dataSet
-  }
+  */
+  DataSet(
+      name = name,
+      baseDir = userDataSetFolder(name),
+      scale = baseDataSet.scale,
+      dataLayers = Nil,
+      owningTeam = baseDataSet.owningTeam,
+      allowedTeams = baseDataSet.allowedTeams
+    )}
 
   def writeToDataSet(dataSet: DataSet, block: Point3D, content: File) = {
 

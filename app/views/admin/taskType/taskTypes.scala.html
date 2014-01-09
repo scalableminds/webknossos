@@ -13,7 +13,15 @@
         </div>
       }
     </div>
-    <table class="table table-double-striped table-details">
+
+<!-- TODO: pagination
+     <div class="page-selection"
+      data-url="@controllers.admin.routes.TaskTypeAdministration.list()"
+      data-paged-table-id="tasktype-table">
+      <input type="text" class="search-query pagination-searchbox" placeholder="Search">
+    </div> -->
+
+    <table class="table table-double-striped table-details" id="tasktype-table">
       <thead>
         <tr>
           <th class="details-toggle-all"> <i class="caret-right"></i> <i class="caret-down"></i> </th>

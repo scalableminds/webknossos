@@ -7,13 +7,12 @@ import oxalis.security.AuthenticatedRequest
 import oxalis.security.Secured
 import controllers._
 import models.security._
-import models.user.User
-import models.user.Experience
+import models.user._
 import play.api.i18n.Messages
 import views.html
 import net.liftweb.common._
 import braingames.util.ExtendedTypes.ExtendedString
-import models.annotation.{AnnotationType, AnnotationDAO}
+import models.annotation.{AnnotationService, AnnotationType, AnnotationDAO}
 import models.tracing.skeleton.SkeletonTracing
 import play.api.Logger
 import models.team.{TeamPath, TeamMembership}
@@ -24,84 +23,59 @@ import net.liftweb.common.Full
 import models.security.Permission
 import scala.Some
 import models.user.time.{TimeTrackingService, TimeTracking}
+import reactivemongo.bson.BSONObjectID
+import braingames.util.Fox
+import scala.concurrent.Future
+import braingames.reactivemongo.DBAccessContext
 
-object UserAdministration extends Controller with Secured {
+import net.liftweb.common.Full
+import scala.Some
 
-  override val DefaultAccessRole = Role.Admin
+object UserAdministration extends AdminController with Dashboard {
 
-  def allUsers = User.findAll.sortBy(_.lastName.capitalize)
+  def sortedUsers(implicit ctx: DBAccessContext) = UserDAO.findAll.map(_.sortBy(_.lastName.capitalize))
 
-  def show(userId: String) = Authenticated {
-    implicit request =>
-      Async {
-        for {
-          user <- User.findOneById(userId) ?~ Messages("user.notFound")
-        } yield {
-          val annotations = AnnotationDAO.findFor(user).filter(t => !AnnotationType.isSystemTracing(t))
-          val (taskTracings, allExplorationalAnnotations) =
-            annotations.partition(_.typ == AnnotationType.Task)
-
-          val explorationalAnnotations =
-            allExplorationalAnnotations
-              .filter(!_.state.isFinished)
-              .sortBy(a => -a.content.map(_.timestamp).getOrElse(0L))
-
-          val userTasks = taskTracings.flatMap(e => e.task.map(_ -> e))
-
-          for {
-            loggedTime <- TimeTrackingService.loggedTime(user)
-          } yield {
-            Ok(html.admin.user.user(
-              user,
-              explorationalAnnotations,
-              userTasks,
-              loggedTime))
-
-          }
-        }
+  def bulkOperation(operation: BSONObjectID => Fox[String], successMessage: String => String)(implicit request: AuthenticatedRequest[Map[String, Seq[String]]]) = {
+    def executeOperation(_user: String) =
+      BSONObjectID.parse(_user).toOption.toFox.flatMap(operation).futureBox.map {
+        case Full(userName) => jsonSuccess -> successMessage(userName)
+        case Failure(msg, _, _) => jsonError -> msg
+        case Empty => jsonError -> (Messages("user.bulk.failedFor", _user))
       }
-  }
 
-  def index = Authenticated {
-    implicit request =>
-      Ok(html.admin.user.userList(allUsers, Role.findAll.sortBy(_.name), Experience.findAllDomains, request.user.adminTeams))
-  }
-
-  def logTime(userId: String, time: String, note: String) = Authenticated {
-    implicit request =>
-      for {
-        user <- User.findOneById(userId) ?~ Messages("user.notFound")
-        time <- TimeTracking.parseTime(time) ?~ Messages("time.invalidFormat")
-      } yield {
-        TimeTrackingService.logTime(user, time, note)
-        JsonOk
-      }
-  }
-
-  def bulkOperation(operation: String => Box[User])(successMessage: User => String)(implicit request: AuthenticatedRequest[Map[String, Seq[String]]]) = {
-    (for {
-      ids <- request.body.get("id") ?~ Messages("user.bulk.empty")
-    } yield {
-      val results = ids.map {
-        userId =>
-          operation(userId) match {
-            case Full(user) => jsonSuccess -> successMessage(user)
-            case Failure(msg, _, _) => jsonError -> msg
-            case Empty => jsonError -> (Messages("user.bulk.failedFor", userId))
-          }
-      }
-      JsonOk(html.admin.user.userTable(allUsers), results)
-    }).asResult
-  }
-
-  private def verifyUser(teams: Seq[TeamMembership])(userId: String)(implicit issuingUser: User): Box[User] = {
     for {
-      user <- User.findOneById(userId) ?~ Messages("user.notFound")
-      if (!user.verified)
+      ids <- request.body.get("id") ?~> Messages("user.bulk.empty")
+      results <- Future.traverse(ids)(executeOperation)
+      users <- sortedUsers
     } yield {
-      assignToTeams(teams, issuingUser)(userId)
-      Application.Mailer ! Send(DefaultMails.verifiedMail(user.name, user.email))
-      user.update(_.verify.copy(teams = teams.toList))
+      JsonOk(html.admin.user.userTable(users), results)
+    }
+  }
+
+  def show(userId: String) = Authenticated().async { implicit request =>
+    for {
+      user <- UserDAO.findOneById(userId) ?~> Messages("user.notFound")
+      loggedTime <- TimeTrackingService.loggedTime(user)
+      info <- dashboardInfo(user)
+    } yield Ok(html.admin.user.user(info))
+  }
+
+  def index = Authenticated().async { implicit request =>
+    for {
+      users <- sortedUsers
+      experiences <- ExperienceService.findAllDomains
+    } yield {
+      Ok(html.admin.user.userList(users, RoleDAO.findAll.sortBy(_.name), experiences.toList, request.user.adminTeams))
+    }
+  }
+
+  def logTime(userId: String, time: String, note: String) = Authenticated().async { implicit request =>
+    for {
+      user <- UserDAO.findOneById(userId) ?~> Messages("user.notFound")
+      time <- TimeTracking.parseTime(time) ?~> Messages("time.invalidFormat")
+    } yield {
+      TimeTrackingService.logTime(user, time, note)
+      JsonOk
     }
   }
 
@@ -111,165 +85,155 @@ object UserAdministration extends Controller with Secured {
     }
   }
 
-  def verify(userId: String) = Authenticated(parser = parse.urlFormEncoded) {
-    implicit request =>
-      implicit val issuingUser = request.user
-      val teams = extractTeamsFromRequest(request)
-      for {
-        user <- verifyUser(teams)(userId) ?~ Messages("user.verifyFailed")
-      } yield {
-
-        JsonOk(html.admin.user.userTableItem(user), Messages("user.verified", user.name))
-      }
-  }
-
-  def verifyBulk = Authenticated(parser = parse.urlFormEncoded) {
-    implicit request =>
-      implicit val issuingUser = request.user
-      val teams = extractTeamsFromRequest(request)
-      bulkOperation(verifyUser(teams))(user => Messages("user.verified", user.name))
-  }
-
-  def userIsAllowedToAssignTeam(teamMembership: TeamMembership, user: User) = {
-    user.teams.exists(t => t.teamPath.implies(teamMembership.teamPath)
-      && t.role == TeamMembership.Admin)
-  }
-
-  private def assignToTeams(teamMemberships: Seq[TeamMembership], assigningUser: User)(userId: String) = {
-    teamMemberships.map(t => assignToTeam(t, assigningUser)(userId))
-  }
-
-  private def assignToTeam(teamMembership: TeamMembership, assigningUser: User)(userId: String) = {
-    (for {
-      user <- User.findOneById(userId) ?~ Messages("user.notFound")
-      if userIsAllowedToAssignTeam(teamMembership, assigningUser)
-    } yield {
-      Logger.warn("Added TeamMembership: " + teamMembership)
-      user.update(_.addTeamMembership(teamMembership))
-    }) ?~ Messages("team.assign.notAllowed")
-  }
-
-  private def deleteUser(userId: String) = {
+  def verifyAndAssign(_user: BSONObjectID, teams: Seq[TeamMembership], issuingUser: User)(implicit ctx: DBAccessContext): Fox[String] = {
     for {
-      user <- User.findOneById(userId) ?~ Messages("user.notFound")
+      userName <- UserService.verify(_user) ?~> Messages("user.verifyFailed")
+      _ <- UserService.assignToTeams(teams, issuingUser)(_user)
     } yield {
-      User.removeById(user._id)
-      AnnotationDAO.freeAnnotationsOfUser(user._id)
-      user
+      userName
     }
   }
 
-  def delete(userId: String) = Authenticated {
-    implicit request =>
-      deleteUser(userId).map {
-        user =>
-          JsonOk(Messages("user.deleted", user.name))
-      }
-  }
-
-  def deleteBulk = Authenticated(parser = parse.urlFormEncoded) {
-    implicit request =>
-      bulkOperation(deleteUser)(user => Messages("user.deleted", user.name))
-  }
-
-  private def addRole(roleName: String)(userId: String) = {
+  def verify(userId: String) = Authenticated().async(parse.urlFormEncoded) { implicit request =>
     for {
-      user <- User.findOneById(userId) ?~ Messages("user.notFound")
+      id <- BSONObjectID.parse(userId).toOption ?~> Messages("objectId.parseFailed")
+      _ <- verifyAndAssign(id, extractTeamsFromRequest(request), request.user)
+      user <- UserDAO.findOneById(userId) ?~> Messages("user.notFound")
     } yield {
-      Logger.warn("Added role: " + roleName)
-      user.update(_.addRole(roleName))
+      JsonOk(html.admin.user.userTableItem(user), Messages("user.verified", user.name))
     }
   }
 
-  private def deleteRole(roleName: String)(userId: String) = {
+  def verifyBulk = Authenticated().async(parse.urlFormEncoded) { implicit request =>
+    implicit val issuingUser = request.user
+    val teams = extractTeamsFromRequest(request)
+    bulkOperation(verifyAndAssign(_, teams, issuingUser), Messages("user.verified", _))
+  }
+
+  private def deleteUser(_user: BSONObjectID)(implicit ctx: DBAccessContext) = {
     for {
-      user <- User.findOneById(userId) ?~ Messages("user.notFound")
+      user <- UserDAO.findOneById(_user) ?~> Messages("user.notFound")
+      _ <- UserDAO.removeById(user._id)
+      _ <- Future.successful(AnnotationService.freeAnnotationsOfUser(user))
     } yield {
-      user.update(_.deleteRole(roleName))
+      user.name
     }
   }
 
-  def loginAsUser(userId: String) = Authenticated(permission = Some(Permission("admin.ghost"))) {
-    implicit request =>
-      for {
-        user <- User.findOneById(userId) ?~ Messages("user.notFound")
-      } yield {
-        Redirect(controllers.routes.UserController.dashboard)
-          .withSession(Secured.createSession(user))
-      }
-  }
-
-  def deleteRoleBulk = Authenticated(parser = parse.urlFormEncoded) {
-    implicit request =>
-      for {
-        roleName <- postParameter("role") ?~ Messages("role.invalid")
-      } yield {
-        bulkOperation(deleteRole(roleName))(
-          user => Messages("role.removed", user.name))
-      }
-  }
-
-  def addRoleBulk = Authenticated(parser = parse.urlFormEncoded) {
-    implicit request =>
-      for {
-        roleName <- postParameter("role") ?~ Messages("role.invalid")
-      } yield {
-        bulkOperation(addRole(roleName))(
-          user => Messages("role.added", user.name))
-      }
-  }
-
-  def increaseExperience(domain: String, value: Int)(userId: String) = {
-    User.findOneById(userId) map {
-      user =>
-        user.update(_.increaseExperience(domain, value))
+  def delete(userId: String) = Authenticated().async { implicit request =>
+    for {
+      id <- BSONObjectID.parse(userId).toOption ?~> Messages("objectId.parseFailed")
+      name <- deleteUser(id)
+    } yield {
+      JsonOk(Messages("user.deleted", name))
     }
   }
 
-  def setExperience(domain: String, value: Int)(userId: String) = {
-    User.findOneById(userId) map {
-      user =>
-        user.update(_.setExperience(domain, value))
+  def deleteBulk = Authenticated().async(parse.urlFormEncoded) {
+    implicit request =>
+      bulkOperation(deleteUser, Messages("user.deleted", _))
+  }
+
+  private def addRole(_user: BSONObjectID, roleName: String)(implicit ctx: DBAccessContext) = {
+    for {
+      user <- UserDAO.findOneById(_user) ?~> Messages("user.notFound")
+      _ <- UserService.addRole(_user, roleName)
+    } yield {
+      Logger.info("Added role: " + roleName)
+      user.name
     }
   }
 
-  def deleteExperience(domain: String)(userId: String) = {
-    User.findOneById(userId) map {
-      user =>
-        user.update(_.deleteExperience(domain))
+  private def deleteRole(_user: BSONObjectID, roleName: String)(implicit ctx: DBAccessContext) = {
+    for {
+      user <- UserDAO.findOneById(_user) ?~> Messages("user.notFound")
+      _ <- UserService.deleteRole(_user, roleName)
+    } yield {
+      user.name
     }
   }
 
-  def increaseExperienceBulk = Authenticated(parser = parse.urlFormEncoded) {
-    implicit request =>
-      for {
-        domain <- postParameter("experience-domain") ?~ Messages("experience.domain.invalid")
-        value <- postParameter("experience-value").flatMap(_.toIntOpt) ?~ Messages("experience.value.invalid")
-      } yield {
-        bulkOperation(increaseExperience(domain, value))(
-          user => Messages("user.experience.increased", user.name))
-      }
+  def loginAsUser(userId: String) = Authenticated(permission = Some(Permission("admin.ghost"))).async { implicit request =>
+    for {
+      user <- UserDAO.findOneById(userId) ?~> Messages("user.notFound")
+    } yield {
+      Redirect(controllers.routes.UserController.dashboard)
+      .withSession(Secured.createSession(user))
+    }
   }
 
-  def setExperienceBulk = Authenticated(parser = parse.urlFormEncoded) {
-    implicit request =>
-      for {
-        domain <- postParameter("experience-domain") ?~ Messages("experience.domain.invalid")
-        value <- postParameter("experience-value").flatMap(_.toIntOpt) ?~ Messages("experience.value.invalid")
-      } yield {
-        bulkOperation(setExperience(domain, value))(
-          user => Messages("user.experience.set", user.name))
-      }
+  def deleteRoleBulk = Authenticated().async(parse.urlFormEncoded) { implicit request =>
+    for {
+      roleName <- postParameter("role") ?~> Messages("role.invalid")
+      result <- bulkOperation(deleteRole(_, roleName), Messages("role.removed", _))
+    } yield {
+      result
+    }
   }
 
-  def deleteExperienceBulk = Authenticated(parser = parse.urlFormEncoded) {
-    implicit request =>
-      for {
-        domain <- postParameter("experience-domain") ?~ Messages("experience.domain.invalid")
-      } yield {
-        bulkOperation(deleteExperience(domain))(
-          user => Messages("user.experience.removed", user.name))
-      }
+  def addRoleBulk = Authenticated().async(parse.urlFormEncoded) { implicit request =>
+    for {
+      roleName <- postParameter("role") ?~> Messages("role.invalid")
+      result <- bulkOperation(addRole(_, roleName), Messages("role.added", _))
+    } yield {
+      result
+    }
+  }
+
+  private def increaseExp(_user: BSONObjectID, domain: String, value: Int)(implicit ctx: DBAccessContext) = {
+    for {
+      user <- UserDAO.findOneById(_user) ?~> Messages("user.notFound")
+      _ <- UserService.increaseExperience(_user, domain, value)
+    } yield {
+      user.name
+    }
+  }
+
+  private def setExp(_user: BSONObjectID, domain: String, value: Int)(implicit ctx: DBAccessContext) = {
+    for {
+      user <- UserDAO.findOneById(_user) ?~> Messages("user.notFound")
+      _ <- UserService.setExperience(_user, domain, value)
+    } yield {
+      user.name
+    }
+  }
+
+  private def deleteExp(_user: BSONObjectID, domain: String)(implicit ctx: DBAccessContext) = {
+    for {
+      user <- UserDAO.findOneById(_user) ?~> Messages("user.notFound")
+      _ <- UserService.deleteExperience(_user, domain)
+    } yield {
+      user.name
+    }
+  }
+
+  def increaseExperienceBulk = Authenticated().async(parse.urlFormEncoded) { implicit request =>
+    for {
+      domain <- postParameter("experience-domain") ?~> Messages("experience.domain.invalid")
+      value <- postParameter("experience-value").flatMap(_.toIntOpt) ?~> Messages("experience.value.invalid")
+      result <- bulkOperation(increaseExp(_, domain, value), Messages("user.experience.increased", _))
+    } yield {
+      result
+    }
+  }
+
+  def setExperienceBulk = Authenticated().async(parse.urlFormEncoded) { implicit request =>
+    for {
+      domain <- postParameter("experience-domain") ?~> Messages("experience.domain.invalid")
+      value <- postParameter("experience-value").flatMap(_.toIntOpt) ?~> Messages("experience.value.invalid")
+      result <- bulkOperation(setExp(_, domain, value), Messages("user.experience.set", _))
+    } yield {
+      result
+    }
+  }
+
+  def deleteExperienceBulk = Authenticated().async(parse.urlFormEncoded) { implicit request =>
+    for {
+      domain <- postParameter("experience-domain") ?~> Messages("experience.domain.invalid")
+      result <- bulkOperation(deleteExp(_, domain), Messages("user.experience.removed", _))
+    } yield {
+      result
+    }
   }
 
 }

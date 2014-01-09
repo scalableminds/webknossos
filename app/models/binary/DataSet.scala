@@ -1,9 +1,6 @@
 package models.binary
 
-import com.mongodb.casbah.Imports._
 import models.context._
-import com.novus.salat.annotations._
-import com.novus.salat.dao.SalatDAO
 import braingames.geometry.Point3D
 import play.api.libs.functional.syntax._
 import models.basics._
@@ -11,7 +8,6 @@ import play.api.libs.json._
 import braingames.binary.models.DataSet
 import braingames.binary.models.{DataSetRepository => AbstractDataSetRepository}
 import scala.concurrent.Future
-import com.novus.salat._
 import braingames.binary.models.DataSet
 import models.user.User
 import braingames.reactivemongo.{DBAccessContext, GlobalDBAccess, SecuredMongoDAO}
@@ -32,7 +28,7 @@ object DataSetRepository extends AbstractDataSetRepository with GlobalDBAccess{
     DataSetDAO.findOneByName(name)
 }
 
-object DataSetDAO extends BasicReactiveDAO[DataSet] {
+object DataSetDAO extends SecuredBaseDAO[DataSet] {
   val collectionName = "dataSets"
 
   // Security

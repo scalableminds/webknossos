@@ -25,7 +25,7 @@ case class TimeEntry(time: Long, timestamp: Long, note: Option[String] = None, a
 }
 
 object TimeEntry {
-  implicit val timeEntryFormatter = Json.format[TimeEntry]
+  implicit val timeEntryFormat = Json.format[TimeEntry]
 
   def create(timestamp: Long, annotation: Option[AnnotationLike]) =
     TimeEntry(0, timestamp, annotation = annotation.map(_.id))

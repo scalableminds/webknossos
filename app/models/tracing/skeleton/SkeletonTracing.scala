@@ -1,71 +1,63 @@
 package models.tracing.skeleton
 
 import braingames.geometry.Point3D
-import com.mongodb.casbah.commons.MongoDBObject
-import org.bson.types.ObjectId
 import play.api.libs.json._
 import models.binary.DataSetDAO
-import models.user.UsedAnnotation
+import models.user.{UsedAnnotationDAO, UsedAnnotation}
 import braingames.geometry.Scale
 import braingames.image.Color
 import models.basics._
 import oxalis.nml._
 import braingames.binary.models.DataSet
-import models.annotation.{AnnotationContentDAO, AnnotationSettings, AnnotationContent}
-import models.tracing.CommonTracingDAO
+import models.annotation.{AnnotationState, AnnotationContentService, AnnotationSettings, AnnotationContent}
+import models.tracing.CommonTracingService
 import scala.Some
 import braingames.binary.models.DataSet
 import oxalis.nml.NML
+import braingames.reactivemongo.DBAccessContext
+import scala.tools.nsc.Global
+import braingames.reactivemongo.GlobalAccessContext
+import reactivemongo.bson.BSONObjectID
+import scala.concurrent.Future
+import play.api.libs.concurrent.Execution.Implicits._
+import play.modules.reactivemongo.json.BSONFormats._
+import braingames.util.{FoxImplicits, Fox}
+import net.liftweb.common.Empty
+import play.api.Logger
 
 case class SkeletonTracing(
-  dataSetName: String,
-  branchPoints: List[BranchPoint],
-  timestamp: Long,
-  activeNodeId: Option[Int],
-  editPosition: Point3D,
-  comments: List[Comment] = Nil,
-  settings: AnnotationSettings = AnnotationSettings.default,
-  _id: ObjectId = new ObjectId)
-  extends DAOCaseClass[SkeletonTracing] with SkeletonTracingLike with AnnotationContent {
+                            dataSetName: String,
+                            branchPoints: List[BranchPoint],
+                            timestamp: Long,
+                            activeNodeId: Option[Int],
+                            editPosition: Point3D,
+                            comments: List[Comment] = Nil,
+                            settings: AnnotationSettings = AnnotationSettings.default,
+                            _id: BSONObjectID = BSONObjectID.generate
+                          )
+  extends SkeletonTracingLike with AnnotationContent with SkeletonManipulations {
 
-  def id = _id.toString
+  def id = _id.stringify
 
   type Self = SkeletonTracing
 
-  def dao = SkeletonTracing
+  def service = SkeletonTracingService
 
   def allowAllModes =
     this.copy(settings = settings.copy(allowedModes = AnnotationSettings.ALL_MODES))
 
-
   /**
    * Tree modification
    */
-  def trees = dbtrees.map(_.toTree)
+  def trees: Future[List[TreeLike]] = dbtrees.flatMap(ts => Future.traverse(ts)(t => t.toTree))
 
-  def dbtrees = DBTree.findAllWithTracingId(_id).toList
+  def dbtrees = DBTreeDAO.findByTracing(_id)(GlobalAccessContext)
 
-  def insertTree[Tracing](t: TreeLike) = {
-    DBTree.insertOne(_id, t)
-    this.asInstanceOf[Tracing]
-  }
+  def tree(treeId: Int) = DBTreeDAO.findOneByTreeId(_id, treeId)(GlobalAccessContext)
 
-  def insertBranchPoint[Tracing](bp: BranchPoint) =
-    this.copy(branchPoints = bp :: this.branchPoints).asInstanceOf[Tracing]
+  def maxNodeId = this.trees.map(oxalis.nml.utils.maxNodeId)
 
-  def insertComment[Tracing](c: Comment) =
-    this.copy(comments = c :: this.comments).asInstanceOf[Tracing]
-
-  def tree(treeId: Int) = DBTree.findOneWithTreeId(_id, treeId)
-
-  def maxNodeId = oxalis.nml.utils.maxNodeId(this.trees)
-
-  def clearTracingData() = {
-    DBTree.removeAllWithTracingId(_id)
-    this.update(_.copy(branchPoints = Nil, comments = Nil))
-  }
-
-  override def mergeWith(c: AnnotationContent): SkeletonTracing = {
+  override def mergeWith(c: AnnotationContent): Future[SkeletonTracing] = {
     c match {
       case c: SkeletonTracingLike =>
         super.mergeWith(c)
@@ -73,37 +65,63 @@ case class SkeletonTracing(
         throw new Exception("Can't merge SkeletonTracing with: " + e)
     }
   }
+}
 
-  def copyDeepAndInsert = {
-    val tracing = SkeletonTracing.insertOne(this.copy(
-      _id = new ObjectId,
-      branchPoints = Nil,
-      comments = Nil))
-    SkeletonTracing.mergeWith(this, tracing)
-  }
+trait SkeletonManipulations extends FoxImplicits {
+  this: SkeletonTracing =>
 
-  def updateFromJson(jsUpdates: Seq[JsValue]): Option[SkeletonTracing] = {
-    val updates = jsUpdates.flatMap {
-      TracingUpdater.createUpdateFromJson
+  def insertTree[Tracing](t: TreeLike): Future[Tracing] =
+    DBTreeService.insert(this._id, t)(GlobalAccessContext).map { _ => this.asInstanceOf[Tracing] }
+
+  def insertBranchPoint[Tracing](bp: BranchPoint): Future[Tracing] =
+    SkeletonTracingDAO.addBranchPoint(this._id, bp)(GlobalAccessContext).map(_.getOrElse(this)).asInstanceOf[Future[Tracing]]
+
+  def insertComment[Tracing](c: Comment): Future[Tracing] =
+    SkeletonTracingDAO.addComment(this._id, c)(GlobalAccessContext).map(_.getOrElse(this)).asInstanceOf[Future[Tracing]]
+
+  def updateFromJson(jsUpdates: Seq[JsValue])(implicit ctx: DBAccessContext): Fox[SkeletonTracing] = {
+    val updates = jsUpdates.flatMap { json =>
+      TracingUpdater.createUpdateFromJson(json)
     }
     if (jsUpdates.size == updates.size) {
-      val updatedTracing = updates.foldLeft(this) {
-        case (tracing, updater) => updater.update(tracing)
-      }
-      SkeletonTracing.save(updatedTracing.copy(timestamp = System.currentTimeMillis))
-      Some(updatedTracing)
+      for {
+        updatedTracing <- updates.foldLeft(Fox.successful(this)) {
+          case (f, updater) => f.flatMap(tracing => updater.update(tracing))
+        }
+        _ <- SkeletonTracingDAO.update(updatedTracing._id, updatedTracing.copy(timestamp = System.currentTimeMillis))(GlobalAccessContext)
+      } yield Some(updatedTracing)
     } else {
-      None
+      Future.successful(Empty)
     }
+  }
+
+  def copyDeepAndInsert() = {
+    val copied = this.copy(
+      _id = BSONObjectID.generate,
+      branchPoints = Nil,
+      comments = Nil)
+    for {
+      _ <- SkeletonTracingDAO.insert(copied)(GlobalAccessContext)
+      result <- SkeletonTracingService.mergeWith(this, copied)(GlobalAccessContext)
+    } yield result
   }
 }
 
-object SkeletonTracing extends BasicDAO[SkeletonTracing]("skeletons") with AnnotationStatistics with AnnotationContentDAO with CommonTracingDAO {
-  type AType = SkeletonTracing
+object SkeletonTracing {
+  implicit val skeletonTracingFormat = Json.format[SkeletonTracing]
 
   val contentType = "skeletonTracing"
 
-  private def skeletonFromSkeletonLike(t: SkeletonTracingLike) = {
+  def from(settings: AnnotationSettings, dataSetName: String): SkeletonTracing =
+    SkeletonTracing(
+      dataSetName,
+      Nil,
+      System.currentTimeMillis,
+      None,
+      Point3D(0, 0, 0),
+      settings = settings)
+
+  def from(t: SkeletonTracingLike) =
     SkeletonTracing(
       t.dataSetName,
       t.branchPoints,
@@ -113,21 +131,17 @@ object SkeletonTracing extends BasicDAO[SkeletonTracing]("skeletons") with Annot
       t.comments,
       t.settings
     )
-  }
+}
 
-  def tracingBase(settings: AnnotationSettings, dataSetName: String): SkeletonTracing =
-    SkeletonTracing(
-      dataSetName,
-      Nil,
-      System.currentTimeMillis,
-      None,
-      Point3D(0, 0, 0),
-      settings = settings)
+object SkeletonTracingService extends AnnotationContentService with CommonTracingService with AnnotationStatistics {
+  val dao = SkeletonTracingDAO
 
-  def createFrom(dataSetName: String, start: Point3D, insertStartAsNode: Boolean, settings: AnnotationSettings = AnnotationSettings.default): SkeletonTracing = {
+  type AType = SkeletonTracing
+
+  def createFrom(dataSetName: String, start: Point3D, insertStartAsNode: Boolean, settings: AnnotationSettings = AnnotationSettings.default)(implicit ctx: DBAccessContext): Future[SkeletonTracing] = {
     val trees =
-      if(insertStartAsNode)
-         List(Tree.createFrom(start))
+      if (insertStartAsNode)
+        List(Tree.createFrom(start))
       else
         Nil
 
@@ -144,35 +158,88 @@ object SkeletonTracing extends BasicDAO[SkeletonTracing]("skeletons") with Annot
         settings))
   }
 
-  def createFrom(tracingLike: SkeletonTracingLike): SkeletonTracing = {
-    val tracing = insertOne(skeletonFromSkeletonLike(tracingLike))
-
-    tracingLike.trees.map(tree => DBTree.insertOne(tracing._id, tree))
-    tracing
-  }
-
-  def createFrom(nmls: List[NML], settings: AnnotationSettings): Option[SkeletonTracing] = {
-    TemporarySkeletonTracing.createFrom(nmls, settings).map {
-      temporary =>
-        createFrom(temporary)
+  def clearTracingData(tracingId: String)(implicit ctx: DBAccessContext) = {
+    SkeletonTracingDAO.withValidId(tracingId) { _tracing =>
+      for {
+        _ <- DBTreeService.removeByTracing(_tracing)
+        - <- SkeletonTracingDAO.resetBranchPoints(_tracing)
+        - <- SkeletonTracingDAO.resetComments(_tracing)
+        tracing <- SkeletonTracingDAO.findOneById(_tracing)
+      } yield tracing
     }
   }
 
-  def createFrom(nml: NML, settings: AnnotationSettings): Option[SkeletonTracing] = {
+  def createFrom(tracingLike: SkeletonTracingLike)(implicit ctx: DBAccessContext): Future[SkeletonTracing] = {
+    val tracing = SkeletonTracing.from(tracingLike)
+    for {
+      _ <- SkeletonTracingDAO.insert(tracing)
+      trees <- tracingLike.trees
+      - <- Future.traverse(trees)(tree => DBTreeService.insert(tracing._id, tree))
+    } yield tracing
+  }
+
+  def createFrom(nmls: List[NML], settings: AnnotationSettings)(implicit ctx: DBAccessContext): Future[Option[SkeletonTracing]] = {
+    TemporarySkeletonTracingService.createFrom(nmls, settings).flatMap {
+      case Some(temporary) =>
+        createFrom(temporary).map(t => Some(t))
+      case _ =>
+        Future.successful(None)
+    }
+  }
+
+  def createFrom(nml: NML, settings: AnnotationSettings)(implicit ctx: DBAccessContext): Future[Option[SkeletonTracing]] = {
     createFrom(List(nml), settings)
   }
 
-  def mergeWith(source: SkeletonTracing, target: SkeletonTracing) = {
-    target.update(t => t.mergeWith(source))
+  def createFrom(dataSet: DataSet)(implicit ctx: DBAccessContext): Future[SkeletonTracing] =
+    createFrom(dataSet.name, Point3D(0, 0, 0), false)
+
+  def mergeWith(source: SkeletonTracing, target: SkeletonTracing)(implicit ctx: DBAccessContext): Future[SkeletonTracing] = {
+    target.mergeWith(source).flatMap { merged =>
+      SkeletonTracingDAO.update(target._id, merged).map { _ => merged }
+    }
   }
 
-  def createFrom(dataSet: DataSet) = {
-    createFrom(dataSet.name, Point3D(0,0,0), false)
+  def removeById(_skeleton: BSONObjectID)(implicit ctx: DBAccessContext) =
+    for {
+      _ <- UsedAnnotationDAO.removeAll(_skeleton.stringify)
+      _ <- DBTreeService.removeByTracing(_skeleton)
+      _ <- SkeletonTracingDAO.removeById(_skeleton)
+    } yield true
+
+
+  def findOneById(tracingId: String)(implicit ctx: DBAccessContext) =
+    SkeletonTracingDAO.findOneById(tracingId)
+}
+
+object SkeletonTracingDAO extends SecuredBaseDAO[SkeletonTracing] with FoxImplicits {
+
+  val collectionName = "skeletons"
+
+  val formatter = SkeletonTracing.skeletonTracingFormat
+
+  @deprecated(":D", "2.2")
+  override def removeById(tracing: BSONObjectID)(implicit ctx: DBAccessContext) = {
+    super.removeById(tracing)
   }
 
-  override def removeById(tracing: ObjectId, wc: com.mongodb.WriteConcern = defaultWriteConcern) = {
-    UsedAnnotation.removeAll(tracing.toString)
-    DBTree.removeAllWithTracingId(tracing)
-    super.removeById(tracing, wc)
-  }
+  def resetComments(_tracing: BSONObjectID)(implicit ctx: DBAccessContext) =
+    collectionUpdate(Json.obj("_id" -> _tracing), Json.obj("$set" -> Json.obj("comments" -> Json.arr())))
+
+  def resetBranchPoints(_tracing: BSONObjectID)(implicit ctx: DBAccessContext) =
+    collectionUpdate(Json.obj("_id" -> _tracing), Json.obj("$set" -> Json.obj("branchPoints" -> Json.arr())))
+
+  def addBranchPoint(_tracing: BSONObjectID, bp: BranchPoint)(implicit ctx: DBAccessContext) =
+    findAndModify(
+      Json.obj("_id" -> _tracing),
+      Json.obj("$set" -> Json.obj(
+        "branchPoints.-1" -> bp)),
+      true)
+
+  def addComment(_tracing: BSONObjectID, comment: Comment)(implicit ctx: DBAccessContext) =
+    findAndModify(
+      Json.obj("_id" -> _tracing),
+      Json.obj("$set" -> Json.obj(
+        "comments.-1" -> comment)),
+      true)
 }

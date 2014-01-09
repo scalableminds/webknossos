@@ -4,19 +4,19 @@ m4x4 : M4x4
 underscore : _
 ###
 
-updateMacro = (a) ->
+updateMacro = (_this) ->
 
-  @trigger("changed", @currentMatrix)
-  @hasChanged = true
+  _this.trigger("changed", _this.currentMatrix)
+  _this.hasChanged = true
 
 
-transformationWithDistanceMacro = (transformation) ->
+transformationWithDistanceMacro = (_this, transformationFn, transformationArg1, transformationArg2) ->
   
-  { currentMatrix } = @
-  M4x4.translate(@distanceVecNegative, currentMatrix, currentMatrix)
-  transformation
-  M4x4.translate(@distanceVecPositive, currentMatrix, currentMatrix)
-  updateMacro()
+  { currentMatrix } = _this
+  M4x4.translate(_this.distanceVecNegative, currentMatrix, currentMatrix)
+  transformationFn(transformationArg1, transformationArg2)
+  M4x4.translate(_this.distanceVecPositive, currentMatrix, currentMatrix)
+  updateMacro(_this)
   
 
 class Flycam3d
@@ -63,7 +63,7 @@ class Flycam3d
     M4x4.scale(scale, m, m)
     @currentMatrix = m
 
-    updateMacro()
+    updateMacro(@)
 
 
   resetRotation : ->
@@ -77,12 +77,12 @@ class Flycam3d
     @reset()
     @setPosition([x, y, z])
 
-    updateMacro()
+    updateMacro(@)
 
 
   update : -> 
 
-    updateMacro()
+    updateMacro(@)
 
 
   flush : ->
@@ -97,13 +97,13 @@ class Flycam3d
   zoomIn : ->
     
     @zoomStep = Math.max(@zoomStep / @ZOOM_STEP_INTERVAL, @ZOOM_STEP_MIN)
-    updateMacro()
+    updateMacro(@)
 
 
   zoomOut : ->
     
     @zoomStep = Math.min(@zoomStep * @ZOOM_STEP_INTERVAL, @ZOOM_STEP_MAX)
-    updateMacro()
+    updateMacro(@)
 
 
   getZoomStep : -> 
@@ -125,13 +125,13 @@ class Flycam3d
   setMatrix : (matrix) ->
 
     @currentMatrix = M4x4.clone(matrix)
-    updateMacro()
+    updateMacro(@)
 
 
   move : (vector) ->
 
     M4x4.translate(vector, @currentMatrix, @currentMatrix)
-    updateMacro()
+    updateMacro(@)
 
 
   getCameraMatrix : (vector) ->
@@ -142,7 +142,7 @@ class Flycam3d
   yaw : (angle) ->
 
     @yawSilent(angle)
-    updateMacro()
+    updateMacro(@)
 
 
   yawSilent : (angle) ->
@@ -152,13 +152,13 @@ class Flycam3d
 
   yawDistance : (angle) ->
 
-    transformationWithDistanceMacro(@yawSilent(angle)) 
+    transformationWithDistanceMacro(@, @yawSilent, angle) 
 
 
   roll : (angle) ->
 
     @rollSilent(angle)
-    updateMacro()
+    updateMacro(@)
 
 
   rollSilent : (angle) ->
@@ -168,13 +168,13 @@ class Flycam3d
 
   rollDistance : (angle) ->
 
-    transformationWithDistanceMacro(@rollSilent(angle))
+    transformationWithDistanceMacro(@, @rollSilent, angle)
 
 
   pitch : (angle) ->
 
     @pitchSilent(angle)
-    updateMacro()
+    updateMacro(@)
 
 
   pitchSilent : (angle) ->
@@ -184,13 +184,13 @@ class Flycam3d
 
   pitchDistance : (angle) ->
 
-    transformationWithDistanceMacro(@pitchSilent(angle))
+    transformationWithDistanceMacro(@, @pitchSilent, angle)
 
 
   rotateOnAxis : (angle, axis) ->
 
     @rotateOnAxisSilent(angle, axis)
-    updateMacro()
+    updateMacro(@)
 
 
   rotateOnAxisSilent : (angle, axis) ->
@@ -200,7 +200,7 @@ class Flycam3d
 
   rotateOnAxisDistance : (angle, axis) ->
 
-    transformationWithDistanceMacro(@rotateOnAxisSilent(angle, axis))
+    transformationWithDistanceMacro(@, @rotateOnAxisSilent, angle, axis)
 
 
   toString : ->
@@ -229,7 +229,7 @@ class Flycam3d
   setPosition : (p) ->
 
     @setPositionSilent(p)
-    updateMacro()
+    updateMacro(@)
 
 
   getDirection : ->
@@ -256,7 +256,7 @@ class Flycam3d
     M4x4.scale(@scale, matrix2, matrix2)
 
     @currentMatrix = M4x4.mul(matrix2, m)
-    updateMacro()
+    updateMacro(@)
 
 
   getUp : ->

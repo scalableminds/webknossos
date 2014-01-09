@@ -1,7 +1,13 @@
 @* taskDetailTableItem Template File *@
-@(task: models.task.Task)
+@(task: models.task.Task,
+  dataSetName : String,
+  status : models.task.CompletionStatus,
+  taskType : Option[models.task.TaskType])
+
+@import braingames.reactivemongo.GlobalAccessContext
 
 @import scala.concurrent.duration._
+@import play.api.libs.concurrent.Execution.Implicits._
 
 <tr>
   <td> 
@@ -10,14 +16,14 @@
     </a>
   </td>
   <td>
-    <a href="@controllers.admin.routes.TaskTypeAdministration.list#@task.taskType.map(_.id)">
-      @task.taskType.map(_.summary)
+    <a href="@controllers.admin.routes.TaskTypeAdministration.list#@taskType.map(_.id)">
+      @taskType.map(_.summary)
     </a>
   </td>
   <td>
-    @task.annotationBase.map(_.dataSetName)
+    @dataSetName
   </td>
-  <td> @defining(task.status){ status =>
+  <td>
       <span title="Unassigned"> 
         <i class="icon-play-circle"></i> @status.open open
       </span>
@@ -29,7 +35,7 @@
       <span title="Completed">
         <i class="icon-ok-circle"></i> @status.completed done
       </span>
-    }
+    
   </td>
   <td>
       Tracked Time: @task.tracingTime.map(t => formatTimeHumanReadable(t millis)).getOrElse("-")

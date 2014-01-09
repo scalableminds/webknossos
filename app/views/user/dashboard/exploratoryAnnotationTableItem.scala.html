@@ -1,0 +1,35 @@
+@()
+
+<tr class="hover-dynamic">
+    <td> <%= annotations.formattedHash %> </td>
+    <td class="explorative-name-column">
+      <span class="hover-hide" id="explorative-tracing-name"> <%= annotations.name %> </span>
+      <form action="<%= jsRoutes.controllers.AnnotationController.nameExplorativeAnnotation(annotations.typ, annotations.id).url %>"
+        method="POST" data-ajax="submit,replace-row" class="hover-show hide">
+        <div class="input-append">
+          <input class="input-medium hover-input" name="name" id="explorative-name-input" maxlength="50" type="text" value="<%= annotations.name %>" autocomplete="off">
+            <a href="<%= jsRoutes.controllers.AnnotationController.nameExplorativeAnnotation(annotations.typ, annotations.id).url %>"
+              data-ajax="submit,replace-row" id="explorative-name-submit" class="btn"><i class="icon-ok"></i></a>
+        </div>
+      </form>
+    </td>
+    <td> <%= annotations.dataSetName || "" %> </td>
+
+    <td>
+      <% if (annotations.stats) { %>
+        <span title="Trees"><i class="icon-sitemap"></i> <%= annotations.stats.numberOfTrees %> &nbsp;</span><br />
+        <span title="Nodes"><i class="icon-bull"></i> <%= annotations.stats.numberOfNodes %> &nbsp;</span><br />
+        <span title="Edges"><i class="icon-resize-horizontal"></i> <%= annotations.stats.numberOfEdges %></span>
+      <% } %>
+    </td>
+
+    <td> <%= annotations.contentType + " - " + annotations.typ %> </td>
+    <td> <%= annotations.created %> </td>
+    <td class="nowrap"> 
+      <a href="<%= jsRoutes.controllers.AnnotationController.trace(annotations.typ, annotations.id).url %>"><i class="icon-random"></i> trace</a><br />
+      <a href="<%= jsRoutes.controllers.AnnotationController.download(annotations.typ, annotations.id).url %>"><i class="icon-download"></i> download</a><br />
+      <% if (annotations.typ == "Explorational"){ %>
+        <a href="<%= jsRoutes.controllers.AnnotationController.finish(annotations.typ, annotations.id).url %>" data-ajax="delete-row,confirm=@Messages("annotation.finish.confirm")"><i class="icon-trash"></i> delete</a>
+      <% } %>
+    </td>
+  </tr>

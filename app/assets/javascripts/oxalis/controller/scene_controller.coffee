@@ -43,7 +43,7 @@ class SceneController
       showCrossSections : true })
     @bb = new Cube(@model, {
       max : [0, 0, 0]
-      color : 0xff0000
+      color : 0xffaa00
       showCrossSections : true })
 
     # TODO: Implement text 

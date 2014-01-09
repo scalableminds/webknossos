@@ -31,7 +31,7 @@ object ApplicationBuild extends Build {
     "org.reactivemongo" %% "play2-reactivemongo" % "0.9",
     "org.reactivemongo" %% "reactivemongo-bson-macros" % "0.9",
     "org.scala-lang" % "scala-reflect" % "2.10.0",
-    "com.scalableminds" %% "braingames-binary" % "0.6.2",
+    "com.scalableminds" %% "braingames-binary" % "0.11.0-SNAPSHOT",
     "com.scalableminds" %% "braingames-util" % "0.6.2")
 
   val dependencyResolvers = Seq(

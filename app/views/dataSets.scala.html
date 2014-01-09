@@ -1,0 +1,48 @@
+@(datasets: List[braingames.binary.models.DataSet])(implicit session: oxalis.view.SessionData)
+
+@import braingames.util.Reflect
+
+@main() {
+
+  <div id="dataset-list" class="container">
+    <div id="oxalis-header">
+      <img src="@controllers.routes.Assets.at("images/oxalis.svg")">
+      <div><p>Oxalis</p></div>
+    </div>
+    @datasets.groupBy(_.owningTeam).map{ case (team, ds) =>
+
+      @ds.map{ dataSet =>
+        <div class="dataset img-polaroid">
+          <header class="clearfix">
+            <h4>@dataSet.name</h4>
+            <div class="dataset-buttons">
+              <!--<a href="/levels/512c70a6e4b004e525ec5635?missionId=51f90698e4b02ee135a87368" class="edit-button">
+                <i class="icon-pencil"></i>
+              </a>-->
+            </div>
+          </header>
+          <div class="dataset-display clearfix" style="height: 220px;">
+            @dataSet.dataLayer("color").map{ colorLayer =>
+              <img src="@controllers.routes.BinaryData.requestImage(dataSet.name, "color", 200, 200, 200, 200, 0, math.log(colorLayer.resolutions.max).toInt)" />
+            }
+            <a href="@controllers.routes.DataSetController.view(dataSet.name)">
+              <i class="icon-play"></i>
+            </a>
+          </div>
+            <!--FIXME-->
+          <div class="dataset-description clearfix">
+            <h3>Max-Planck Institute for Medical Research</h3>
+            <h4>Original data and segmentation</h4>
+            <p>
+              Connectomic reconstruction of the inner plexiform layer in the mouse retina.<br/>
+              Helmstaedter M, Briggman KL, Turaga SC, Jain V, Seung HS, Denk W.<br/>
+              Nature. 2013 Aug 8;500(7461):168-74. doi: 10.1038/nature12346.<br/>
+            </p>
+          </div>
+        </div>
+      }
+    }
+  </div>
+  @credits()
+}
+

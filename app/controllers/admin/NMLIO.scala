@@ -1,6 +1,5 @@
 package controllers.admin
 
-import braingames.mvc.Controller
 import play.api.mvc.Action
 import oxalis.security.Secured
 import views.html
@@ -40,6 +39,7 @@ import scala.concurrent.Future
 import play.api.Play
 import org.bson.types.ObjectId
 import oxalis.annotation.AnnotationService
+import controllers.Controller
 
 object NMLIO extends Controller with Secured with TextUtils {
   override val DefaultAccessRole = Role.User
@@ -120,7 +120,7 @@ object NMLIO extends Controller with Secured with TextUtils {
   def zipTracings(annotations: List[Annotation], zipFileName: String) = {
     Future.sequence(annotations.par.flatMap(AnnotationService.loadAnnotationContent).seq).map {
       zipStreams =>
-        val zipped = new TemporaryFile(new File(normalize(zipFileName)))
+        val zipped = TemporaryFile("annotationZips", normalize(zipFileName))
         ZipIO.zip(zipStreams, new BufferedOutputStream(new FileOutputStream(zipped.file)))
         zipped
     }

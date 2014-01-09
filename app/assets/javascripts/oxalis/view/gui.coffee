@@ -20,7 +20,7 @@ class Gui
     @user = @model.user
     @qualityArray = ["high", "medium", "low"]
 
-    @datasetPostfix = _.last(@model.binary.dataSetName.split("_"))
+    @datasetPostfix = _.last(@model.binary["color"].dataSetName.split("_"))
     @datasetPosition = @initDatasetPosition(@user.briConNames)
 
     somaClickingAllowed = @tracingSettings.somaClickingAllowed
@@ -131,7 +131,7 @@ class Gui
     @fNodes.open()
     @fCells.open()
 
-    $("#dataset-name").text(@model.binary.dataSetName)
+    $("#dataset-name").text(@model.binary["color"].dataSetName)
 
     $("#trace-position-input").on "change", (event) => 
 
@@ -191,6 +191,9 @@ class Gui
       moveValueChanged : => @updateMoveValue()
       moveValue3dChanged : => @updateMoveValue3d()
       particleSizeChanged : => @updateParticleSize()
+
+    @model.binary["segmentation"]?.cube.on
+      bucketLoaded : => @updateSegmentID()
 
     @createTooltips()
 
@@ -317,6 +320,16 @@ class Gui
 
     stringPos = Math.floor(globalPos[0]) + ", " + Math.floor(globalPos[1]) + ", " + Math.floor(globalPos[2])
     $("#trace-position-input").val(stringPos)
+    @updateSegmentID()
+
+  updateSegmentID : ->
+
+    if @model.binary["segmentation"]?
+      segmentID = @model.binary["segmentation"].cube.getDataValue( @model.flycam.getPosition() )
+      if segmentID?
+        $("#segment-id").html("<p>Segment ID: " + segmentID + "</p>")
+      else
+        $("#segment-id").html("<p>Segment ID: -</p>")
 
 
   set : (name, value, type) =>
@@ -325,8 +338,8 @@ class Gui
 
 
   setBrightnessAndContrast : =>
-
-    @model.binary.updateContrastCurve(@settings.brightness, @settings.contrast)
+    @model.binary["color"].updateContrastCurve(@settings.brightness, @settings.contrast)
+    
     @user.brightness[@datasetPosition] = (Number) @settings.brightness
     @user.contrast[@datasetPosition] = (Number) @settings.contrast
     @user.push()

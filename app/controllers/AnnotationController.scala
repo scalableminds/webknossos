@@ -1,9 +1,8 @@
 package controllers
 
-import braingames.mvc.Controller
 import oxalis.security.{AuthenticatedRequest, Secured}
 import models.security.Role
-import models.user.{User, TimeTracking, UsedAnnotation}
+import models.user.{User, UsedAnnotation}
 import play.api.i18n.Messages
 import play.api.libs.json.{JsObject, JsValue, Json, JsArray}
 import play.api.Logger
@@ -22,6 +21,7 @@ import play.api.libs.iteratee.Enumerator
 import models.binary.DataSetDAO
 import play.api.libs.iteratee.Input.EOF
 import scala.concurrent.Future
+import models.user.time.{TimeTrackingService, TimeTracking}
 
 /**
  * Company: scalableminds
@@ -34,24 +34,15 @@ object AnnotationController extends Controller with Secured with TracingInformat
 
   implicit val timeout = Timeout(5 seconds)
 
-  def index = Authenticated {
-    implicit request =>
-      UsedAnnotation
-        .oneBy(request.user)
-        .map(annotationId =>
-        Redirect(routes.AnnotationController.trace(annotationId.annotationType, annotationId.identifier)))
-        .getOrElse {
-        Redirect(routes.UserController.dashboard)
-      }
-  }
-
-  def info(typ: String, id: String) = Authenticated {
+  def info(typ: String, id: String) = UserAwareAction {
     implicit request =>
       Async {
         val annotationId = AnnotationIdentifier(typ, id)
         respondWithTracingInformation(annotationId).map {
           js =>
-            UsedAnnotation.use(request.user, annotationId)
+            request.userOpt.map{ user =>
+              UsedAnnotation.use(user, annotationId)
+            }
             Ok(js)
         }
       }
@@ -112,7 +103,7 @@ object AnnotationController extends Controller with Secured with TracingInformat
       Async {
         (for {
           oldAnnotation <- findAnnotation(typ, id)
-          oldJs <- oldAnnotation.annotationInfo(request.user)
+          oldJs <- oldAnnotation.annotationInfo(Some(request.user))
           if (oldAnnotation.restrictions.allowUpdate(request.user))
         } yield {
           if (version == oldAnnotation.version + 1) {
@@ -120,7 +111,7 @@ object AnnotationController extends Controller with Secured with TracingInformat
               case JsArray(jsUpdates) =>
                 AnnotationDAO.updateFromJson(jsUpdates, oldAnnotation) match {
                   case Some(annotation) =>
-                    TimeTracking.logUserAction(request.user, annotation)
+                    TimeTrackingService.logUserAction(request.user, annotation)
                     JsonOk(Json.obj("version" -> version), "tracing.saved")
                   case _ =>
                     JsonBadRequest("Invalid update Json")

@@ -1,6 +1,7 @@
-@( userOpt: Option[models.user.User], explorativeAnnotations: List[models.annotation.Annotation], userTasks: List[(models.task.Task, models.annotation.Annotation)], trackedTime: Map[models.user.PaymentInterval, scala.concurrent.duration.Duration], dataSets: List[braingames.binary.models.DataSet], hasAnOpenTask: Boolean)(implicit session: oxalis.view.AuthedSessionData)
+@( userOpt: Option[models.user.User], explorativeAnnotations: List[models.annotation.Annotation], userTasks: List[(models.task.Task, models.annotation.Annotation)], trackedTime: Map[models.user.time.PaymentInterval, scala.concurrent.duration.Duration], dataSets: List[braingames.binary.models.DataSet], hasAnOpenTask: Boolean)(implicit session: oxalis.view.AuthedSessionData)
+@import models.user.time.PaymentInterval
 
-		<div class="tabbable" id="tabbable-dashboard">
+<div class="tabbable" id="tabbable-dashboard">
       <ul class="nav nav-tabs">
         <li class="active"><a href="#tab-tasks" data-toggle="tab">Tasks</a></li>
         <li><a href="#tab-explorative" data-toggle="tab">Explorative Tracings</a></li>
@@ -75,8 +76,8 @@
                 <th> # </th>
                 <th> Name </th>
                 <th> DataSet </th>
-                <th> Stats </th>
-                <th> Type </th>
+                <th> SkeletonTracing Stats </th>
+                <th> SkeletonTracing-Type </th>
                 <th> Last edited </th>
                 <th> </th>
               </tr>
@@ -97,7 +98,6 @@
                 <tr>
                   <th> Month </th>
                   <th> Worked </th>
-                  <th> Payed </th>
                 </tr>
               </thead>
               <tbody>
@@ -105,7 +105,6 @@
                 <tr>
                   <td> @interval </td>
                   <td> @formatTimeHumanReadable(time) </td>
-                  <td> </td>
                 </tr>
               }
               </tbody>
@@ -113,5 +112,3 @@
         </div>
       </div>
     </div>
-    
-  @credits()

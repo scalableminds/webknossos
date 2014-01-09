@@ -21,12 +21,14 @@ class SceneController
 
     _.extend(@, new EventMixin())
 
-    @current        = 0
-    @displayPlane   = [true, true, true]
-    @planeShift     = [0, 0, 0]
-    @showSkeleton   = true
+    @current          = 0
+    @displayPlane     = [true, true, true]
+    @planeShift       = [0, 0, 0]
+    @showSkeleton     = true
+    @pingBinary       = true
+    @pingBinarySeg    = true
 
-    @polygonFactory = new PolygonFactory( @model.binary.cube )
+    @polygonFactory = new PolygonFactory( @model.binary["color"].cube )
     @volumeMeshes   = []
 
     @createMeshes()
@@ -192,6 +194,20 @@ class SceneController
 
     @bb.setCorners([bbArray[0], bbArray[1], bbArray[2]],
                     [bbArray[3], bbArray[4], bbArray[5]])
+
+
+  setSegmentationAlpha : (alpha) ->
+
+    for plane in @planes
+      plane.setSegmentationAlpha( alpha )
+    @pingBinarySeg = alpha != 0
+    #console.log "pingValues:", @pingBinary, @pingBinarySeg
+
+  pingDataLayer : (dataLayerName) ->
+
+    if dataLayerName == "color" then return @pingBinary
+    if dataLayerName == "segmentation" then return @pingBinarySeg
+    false
 
 
   stop : ->

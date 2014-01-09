@@ -1,6 +1,5 @@
 package controllers
 
-import braingames.mvc.Controller
 import oxalis.security.Secured
 import models.security.Role
 import models.assertion.Assertion
@@ -12,7 +11,7 @@ object AssertionController extends Controller with Secured {
 
   val DefaultAccessRole = Role.User
 
-  def log = Authenticated(parser = parse.urlFormEncoded) { implicit request =>
+  def log = UserAwareAction(parser = parse.urlFormEncoded) { implicit request =>
     for {
       value <- postParameter("value") ?~ "Value is missing"
       globalContext <- postParameter("globalContext") ?~ "globalContext is missing"
@@ -21,7 +20,7 @@ object AssertionController extends Controller with Secured {
       stacktrace <- postParameter("stacktrace") ?~ "stacktrace is missing"
       title <- postParameter("title") ?~ "title is missing"
     } yield {
-      val a = Assertion(request.user._id, System.currentTimeMillis(), value, title, message, stacktrace, globalContext, localContext)
+      val a = Assertion(request.userOpt.map(_._id), System.currentTimeMillis(), value, title, message, stacktrace, globalContext, localContext)
       Assertion.insert(a)
       Ok
     }
@@ -29,6 +28,12 @@ object AssertionController extends Controller with Secured {
 
   def list = Authenticated(role = Role.Admin) { implicit request =>
     Ok(html.admin.assertion.assertionList(Assertion.findAll.sortBy(-_.timestamp)))
+  }
+
+  def listSliced(from: Int, number: Int) = Authenticated(role = Role.Admin) { implicit request =>
+    
+    val assertions = Assertion.findAll.sortBy(-_.timestamp).drop(from).take(number)
+    Ok(html.admin.assertion.assertionList(assertions))
   }
 
   def view(assertionId: String) = Authenticated(role = Role.Admin) { implicit request =>

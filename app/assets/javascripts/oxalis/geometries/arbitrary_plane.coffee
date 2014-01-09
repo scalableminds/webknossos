@@ -51,7 +51,7 @@ class ArbitraryPlane
     @model.flycam.on "positionChanged", => 
       @isDirty = true      
 
-    @model.binary.cube.on "bucketLoaded", => 
+    @model.binary["color"].cube.on "bucketLoaded", => 
       @isDirty = true
 
     throw "width needs to be a power of 2" unless Math.log(width) / Math.LN2 % 1 != 1
@@ -72,7 +72,7 @@ class ArbitraryPlane
       matrix = cam.getZoomedMatrix()
 
       newVertices = M4x4.transformPointsAffine matrix, @queryVertices
-      newColors = @model.binary.getByVerticesSync(newVertices)
+      newColors = @model.binary["color"].getByVerticesSync(newVertices)
  
       mesh.texture.image.data.set(newColors)
       mesh.texture.needsUpdate = true

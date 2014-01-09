@@ -2,12 +2,11 @@ package controllers.admin
 
 import oxalis.security.Secured
 import models.security.Role
-import braingames.mvc.Controller
 import models.user.User
 import play.api.data._
 import play.api.data.Forms._
 import play.api.i18n.Messages
-import controllers.Application
+import controllers.{Controller, Application}
 import braingames.mail.Send
 import oxalis.mail.DefaultMails
 import models.annotation.{AnnotationType, AnnotationDAO}

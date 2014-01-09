@@ -1,6 +1,6 @@
 package models.basics
 
-import oxalis.security.AuthenticatedRequest
+import oxalis.security.{UserAwareRequest, AuthenticatedRequest}
 import models.user.User
 import braingames.reactivemongo.{DBAccessContext, AuthedAccessContext}
 
@@ -13,8 +13,8 @@ import braingames.reactivemongo.{DBAccessContext, AuthedAccessContext}
 object Implicits extends Implicits
 
 trait Implicits {
-  implicit def authedRequestToDBAccess(implicit request: AuthenticatedRequest[_]): DBAccessContext = {
-    AuthedAccessContext(request.user)
+  implicit def authedRequestToDBAccess(implicit request: UserAwareRequest[_]): DBAccessContext = {
+    DBAccessContext(request.userOpt)
   }
 
   implicit def userToDBAccess(user: User): DBAccessContext = {

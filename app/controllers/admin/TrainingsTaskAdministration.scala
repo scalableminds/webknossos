@@ -1,6 +1,5 @@
 package controllers.admin
 
-import braingames.mvc.Controller
 import play.mvc.Security.Authenticated
 import oxalis.security.Secured
 import models.security._
@@ -19,6 +18,7 @@ import java.util.Date
 import models.annotation.{AnnotationType, AnnotationDAO}
 import models.tracing.skeleton.SkeletonTracing
 import views._
+import controllers.Controller
 
 object TrainingsTaskAdministration extends Controller with Secured {
 

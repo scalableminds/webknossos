@@ -5,7 +5,8 @@ require.config
   paths :
     "jquery" : "libs/jquery-1.8.3.min"
     "multiselect" : "libs/bootstrap-multiselect"
-    "underscore" : "libs/lodash-1.0.0-rc.2.min"
+    "slider" : "libs/bootstrap-slider"
+    "underscore" : "libs/lodash-1.3.1"
     "bootstrap" : "libs/bootstrap.min"
     "worker" : "libs/worker_plugin"
     "three": "libs/threejs/three"
@@ -17,13 +18,13 @@ require.config
     "dat" : "libs/dat.gui.min"
     "coffee-script" : "libs/coffee-script-1.4.0.min"
     "qassert" : "libs/qassert"
-    "svgpan" : "http://talos.github.com/jquery-svgpan/jquery-svgpan"
 
   shim :
     "underscore" :
       exports : "_"
     "bootstrap" : [ "jquery" ]
     "multiselect" : [ "bootstrap" ]
+    "slider" : [ "bootstrap" ]
     "libs/viz" :
       exports : "Viz"
     "routes" :

@@ -45,7 +45,7 @@ trait AnnotationLike {
     this.task.map(_.isTraining) getOrElse false
   }
 
-  def annotationInfo(user: User)(implicit ctx: DBAccessContext): Future[JsObject] =
+  def annotationInfo(user: Option[User])(implicit ctx: DBAccessContext): Future[JsObject] =
     AnnotationLike.annotationLikeInfoWrites(this, user)
 }
 
@@ -53,7 +53,7 @@ object AnnotationLike {
 
   import models.annotation.AnnotationContent._
 
-  def annotationLikeInfoWrites(a: AnnotationLike, user: User)(implicit ctx: DBAccessContext): Future[JsObject] = {
+  def annotationLikeInfoWrites(a: AnnotationLike, user: Option[User])(implicit ctx: DBAccessContext): Future[JsObject] = {
     a.content.map(writeAnnotationContent).getOrElse(Future.successful(Json.obj())).map {
       js =>
         ((__ \ 'version).write[Int] and

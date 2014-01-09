@@ -11,21 +11,7 @@ If you are not blessed with a good OS try the steps below and fail ;)
 - install nodejs + coffee + less and make sure PATH is set to find them 
 
 ## Play setup:
-```bash
-git submodule init
-git submodule update
-cd playframework/framework
-./build publish-local
-```
--> done!
-
-To run play type 
-
-```bash
-playframework/play run
-```
-
-in the project root directory.
+You do not need to install / build play on your own computer any more. Play is getting shipped as a dependency via sbt.
 
 ## Mongodb
 - install Mongodb (get the production release from mongodb.org). Unpack:

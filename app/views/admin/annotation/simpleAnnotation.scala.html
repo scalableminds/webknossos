@@ -1,0 +1,10 @@
+@* simpleTracing Template File *@
+@(annotation: models.annotation.Annotation)
+<tr>
+  <td> @annotation.user.map(_.name).getOrElse("<deleted>") </td>
+  <td> @annotation.content.map(a => formatDate(a.date)) </td>
+  <td> @if(annotation.state.isFinished){ <i class="icon-ok-circle"></i> Finished } else { <i class="icon-random"></i> In Progress } </td>
+  <td class="nowrap"> 
+    @annotationLinks(annotation)
+  </td>
+</tr>

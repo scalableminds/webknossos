@@ -3,7 +3,10 @@
 
 
 <tr id="@project.name">
-  <td class="details-toggle"> <i class="caret-right"></i> <i class="caret-down"></i> </td>
+  <td class="details-toggle"
+    href="@controllers.admin.routes.TaskAdministration.tasksForProject(project.name)"
+    data-ajax="add-row=#@project.name+tr">
+    <i class="caret-right"></i> <i class="caret-down"></i> </td>
   <td> @project.name </td>
   <td> @project.owner.map(_.name).getOrElse("<deleted>") </td>
   <td class="nowrap">  
@@ -16,9 +19,7 @@
   <td colspan="12">
     <table class="table table-condensed table-nohead">
       <tbody>
-        @project.tasks.map{ task =>
-            @views.html.admin.task.taskDetailTableItem(task)
-        }
+       <!-- TAKS NEED TO BE LOADED INTO THIS TABLE -->
       </tbody>
     </table>
   </td>

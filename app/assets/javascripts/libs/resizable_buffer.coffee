@@ -27,6 +27,12 @@ class ResizableBuffer
 
   getAllElements : -> @buffer.subarray(0, @length)
 
+  get : (i) -> @buffer[i]
+
+  set : (element, i) ->
+
+    @buffer.set(element, i * @elementLength)
+
 
   push : (element) ->
 

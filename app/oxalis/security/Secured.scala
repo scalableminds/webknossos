@@ -25,8 +25,13 @@ import oxalis.user.UserActivity
 import oxalis.view.AuthedSessionData
 import scala.concurrent.Future
 
-case class AuthenticatedRequest[A](
-  val user: User, request: Request[A]) extends WrappedRequest(request)
+
+class AuthenticatedRequest[A](
+  val user: User, override val request: Request[A]) extends UserAwareRequest(Some(user), request)
+
+class UserAwareRequest[A](
+  val userOpt: Option[User], val request: Request[A]) extends WrappedRequest(request)
+
 
 object Secured {
   /**
@@ -114,7 +119,7 @@ trait Secured {
             Secured.ActivityMonitor ! UserActivity(user, System.currentTimeMillis)
             if (user.verified) {
               if (hasAccess(user, role, permission))
-                f(AuthenticatedRequest(user, request))
+                f(new AuthenticatedRequest(user, request))
               else
                 Forbidden(views.html.error.defaultError(Messages("user.noPermission"), true)(AuthedSessionData(user, request.flash)))
             } else {
@@ -122,6 +127,24 @@ trait Secured {
             }
         }.getOrElse(onUnauthorized(request))
     }
+  }
+
+  def UserAwareAction[A](
+    parser: BodyParser[A] = BodyParsers.parse.anyContent)(f: UserAwareRequest[A] => Result) = {
+    Action(parser) {
+      request =>
+        maybeUser(request).filter(_.verified).map {
+          user =>
+            Secured.ActivityMonitor ! UserActivity(user, System.currentTimeMillis)
+            f(new AuthenticatedRequest(user, request))
+        }.getOrElse{
+          f(new UserAwareRequest(None, request))
+        }
+    }
+  }
+
+  def UserAwareAction(f: UserAwareRequest[AnyContent] => Result): Action[AnyContent] = {
+    UserAwareAction(BodyParsers.parse.anyContent)(f)
   }
 
   def Authenticated(f: AuthenticatedRequest[AnyContent] => Result): Action[AnyContent] = {

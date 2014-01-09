@@ -5,7 +5,9 @@
 
 class CellTacingController
 
-  constructor : ( { @model, @view, @sceneController, @cameraController, @move, @calculateGlobalPos } ) ->
+  constructor : ( { @model, @view, @sceneController, @cameraController, @move, @calculateGlobalPos }, controlMode ) ->
+
+    @inTraceMode = controlMode == constants.CONTROL_MODE_TRACE
 
     @mouseControls = 
 
@@ -18,14 +20,16 @@ class CellTacingController
         ]
       
 
-      leftClick : (pos, shiftPressed, altPressed, plane) =>
+      leftClick : (pos, plane, event) =>
+        
+        if @inTraceMode
+          @onClick(pos, event.shiftKey, event.altKey, plane)
 
-        @onClick(pos, shiftPressed, altPressed, plane)
 
-
-      rightClick : (pos, ctrlPressed) =>
-
-        @setWaypoint(@calculateGlobalPos( pos ), ctrlPressed)
+      rightClick : (pos, plane, event) =>
+        
+        if @inTraceMode
+          @setWaypoint(@calculateGlobalPos( pos ), event.ctrlKey)
 
 
     @keyboardControls =
@@ -47,12 +51,9 @@ class CellTacingController
       "n" : => @setActiveNode(@model.cellTracing.nextCommentNodeID(false), true)
       "p" : => @setActiveNode(@model.cellTracing.nextCommentNodeID(true), true)
 
-
-  setNodeRadius : (delta) =>
-
-    lastRadius = @model.cellTracing.getActiveNodeRadius()
-    radius = lastRadius + (lastRadius/20 * delta) #achieve logarithmic change behaviour
-    @model.cellTracing.setActiveNodeRadius(radius)
+    # For data viewer, no keyboard controls
+    if not @inTraceMode
+      @keyboardControls = {}
 
 
   setParticleSize : (delta) =>
@@ -120,7 +121,7 @@ class CellTacingController
     raycaster.ray.__scalingFactors = @model.scaleInfo.nmPerVoxel
  
     # identify clicked object
-    intersects = raycaster.intersectObjects(@sceneController.skeleton.nodes)
+    intersects = raycaster.intersectObjects(@sceneController.skeleton.getAllNodes())
     
     for intersect in intersects
 

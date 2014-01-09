@@ -23,6 +23,7 @@ class PlaneView
     # Create a 4x4 grid
     @curWidth = WIDTH = HEIGHT = constants.VIEWPORT_WIDTH
     @scaleFactor = 1
+    @deviceScaleFactor = window.devicePixelRatio || 1
 
     # Initialize main THREE.js components
     @camera   = new Array(4)
@@ -98,7 +99,7 @@ class PlaneView
     # ATTENTION: this limits the FPS to 30 FPS (depending on the keypress update frequence)
 
     modelChanged = false
-    for plane in @model.binary.planes
+    for plane in @model.binary["color"].planes
       modelChanged |= plane.hasChanged()
 
     if @flycam.hasChanged or @flycam.hasNewTextures() or modelChanged
@@ -107,14 +108,16 @@ class PlaneView
       
       # update postion and FPS displays
       @stats.update()
-      
+
+      # scale for retina displays
+      f = @deviceScaleFactor
       viewport = [[0, @curWidth+20], [@curWidth+20, @curWidth+20], [0, 0], [@curWidth+20, 0]]
       @renderer.autoClear = true
       
       for i in constants.ALL_VIEWPORTS
         @trigger "renderCam", i
-        @renderer.setViewport(viewport[i][0], viewport[i][1], @curWidth, @curWidth)
-        @renderer.setScissor(viewport[i][0], viewport[i][1], @curWidth, @curWidth)
+        @renderer.setViewport(viewport[i][0] * f, viewport[i][1] * f, @curWidth * f, @curWidth * f)
+        @renderer.setScissor(viewport[i][0] * f, viewport[i][1] * f, @curWidth * f, @curWidth * f)
         @renderer.enableScissorTest(true)
         @renderer.setClearColorHex(constants.PLANE_COLORS[i], 1);
         @renderer.render @scene, @camera[i]

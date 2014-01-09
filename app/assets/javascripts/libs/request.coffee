@@ -18,7 +18,7 @@ Request =
       _.defaults(options, type: "GET", data: null)
 
       options.type = "POST" if options.type == "GET" and options.data
-
+      
       xhr = new XMLHttpRequest()
       xhr.open options.type, options.url, true
       xhr.responseType = options.dataType if options.dataType?

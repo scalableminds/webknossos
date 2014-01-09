@@ -16,7 +16,6 @@ import models.task.TaskType
 import play.api.data.Form
 import play.api.data.Forms._
 import views.html
-import braingames.mvc.Controller
 import play.api.i18n.Messages
 import play.api.libs.concurrent._
 import play.api.libs.concurrent.Execution.Implicits._
@@ -26,11 +25,12 @@ import play.api.Logger
 import play.api.mvc.Result
 import play.api.templates.Html
 import oxalis.annotation._
-import controllers.Application
+import controllers.{Controller, Application}
 import models.annotation.Annotation
 import models.annotation.{AnnotationDAO, AnnotationType}
 import scala.concurrent.Future
 import oxalis.nml.NMLService
+import play.api.libs.json.{JsObject, JsArray}
 
 object TaskAdministration extends Controller with Secured {
 
@@ -70,9 +70,16 @@ object TaskAdministration extends Controller with Secured {
   val taskForm = Form(
     taskMapping).fill("", "", Point3D(0, 0, 0), Experience.empty, 100, 10, "")
 
-  def list = Authenticated {
+  def list = Authenticated{
     implicit request =>
-      Ok(html.admin.task.taskList(Task.findAllNonTrainings))
+      render{
+        case Accepts.Html() => Ok(html.admin.task.taskList())
+        case Accepts.Json() => JsonOk(
+            JsObject(
+              List("data" -> JsArray(Task.findAllNonTrainings.map(Task.transformToJson)))
+            )
+          )
+      }
   }
 
   def taskCreateHTML(
@@ -112,20 +119,6 @@ object TaskAdministration extends Controller with Secured {
       } yield {
         Task.removeById(task._id)
         JsonOk(Messages("task.removed"))
-      }
-  }
-
-  def cancelTracing(annotationId: String) = Authenticated {
-    implicit request =>
-      for {
-        annotation <- AnnotationDAO.findOneById(annotationId) ?~ Messages("annotation.notFound")
-      } yield {
-        UsedAnnotation.removeAll(annotation.id)
-        annotation match {
-          case t if t.typ == AnnotationType.Task =>
-            annotation.update(_.cancel)
-            JsonOk(Messages("task.cancelled"))
-        }
       }
   }
 
@@ -277,26 +270,26 @@ object TaskAdministration extends Controller with Secured {
       }
   }
 
-  def reopenAnnotation(annotation: Annotation): Option[Annotation] = {
-    if (annotation.typ == AnnotationType.Task)
-      Some(annotation.update(_.reopen))
-    else
-      None
+  def tasksForProject(projectName: String) = Authenticated { implicit request =>
+    for {
+      project <- Project.findOneByName(projectName) ?~ Messages("project.notFound")
+    } yield {
+      val result = project.tasks.foldLeft(Html.empty) {
+        case (h, e) => h += html.admin.task.simpleTask(e)
+      }
+      JsonOk(result)
+    }
   }
 
-  def reopen(annotationId: String) = Authenticated {
-    implicit request =>
-      for {
-        annotation <- AnnotationDAO.findOneById(annotationId) ?~ Messages("annotation.notFound")
-        task <- annotation.task ?~ Messages("task.notFound")
-      } yield {
-        reopenAnnotation(annotation) match {
-          case Some(updated) =>
-            JsonOk(html.admin.task.taskAnnotationDetailTableItem(updated), Messages("annotation.reopened"))
-          case _ =>
-            JsonOk(Messages("annotation.invalid"))
-        }
+  def tasksForType(taskTypeId: String) = Authenticated { implicit request =>
+    for {
+      taskType <- TaskType.findOneById(taskTypeId) ?~ Messages("taskType.notFound")
+    } yield {
+      val result = Task.findAllByTaskType(taskType).foldLeft(Html.empty) {
+        case (h, e) => h += html.admin.task.simpleTask(e)
       }
+      Ok(result)
+    }
   }
 
   def overview = Authenticated {

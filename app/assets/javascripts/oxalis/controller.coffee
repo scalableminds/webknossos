@@ -133,6 +133,10 @@ class Controller
         event.preventDefault()
         @model.user.setValue("sortTreesByName", ($(event.currentTarget).data("sort") == "name"))
 
+      $("#comment-sort").on "click", "a[data-sort]", (event) =>
+        event.preventDefault()
+        @model.user.setValue("sortCommentsAsc", ($(event.currentTarget).data("sort") == "asc"))
+
       if @controlMode == constants.CONTROL_MODE_VIEW
         $('#alpha-slider').slider().on "slide", (event) =>
 

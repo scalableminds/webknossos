@@ -371,10 +371,13 @@ class CellTracing
     return @comments[0].node.id
 
 
-  getComments : =>
+  getComments : (ascendingOrder = true) =>
 
     @comments.sort(@compareNodes)
-
+    if not ascendingOrder
+      return @comments.reverse()
+    return @comments
+    
 
   getPlainComments : =>
 

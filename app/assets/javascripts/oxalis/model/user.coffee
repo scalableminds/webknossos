@@ -40,6 +40,7 @@ class User
   firstVisToggle : null
   particleSize : null
   sortTreesByName : null
+  sortCommentsAsc : null
 
   # DON'T add additional instance variables, this will result in a bad request!
 

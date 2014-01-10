@@ -173,15 +173,15 @@ class PlaneController
 
     getMoveValue  = (timeFactor) =>
       if @activeViewport in [0..2]
-        return @model.user.moveValue * timeFactor / @model.scaleInfo.baseVoxel / constants.FPS
+        return @model.user.get("moveValue") * timeFactor / @model.scaleInfo.baseVoxel / constants.FPS
       else
         return constants.TDView_MOVE_SPEED * timeFactor / constants.FPS
 
     @input.keyboard = new Input.Keyboard(
 
       #ScaleTrianglesPlane
-      "l" : (timeFactor) => @scaleTrianglesPlane(-@model.user.scaleValue * timeFactor )
-      "k" : (timeFactor) => @scaleTrianglesPlane( @model.user.scaleValue * timeFactor )
+      "l" : (timeFactor) => @scaleTrianglesPlane(-@model.user.get("scaleValue") * timeFactor )
+      "k" : (timeFactor) => @scaleTrianglesPlane( @model.user.get("scaleValue") * timeFactor )
 
       #Move
       "left"  : (timeFactor) => @moveX(-getMoveValue(timeFactor))
@@ -202,7 +202,7 @@ class PlaneController
       "shift + space" : (timeFactor, first) => @moveZ(-getMoveValue(timeFactor)    , first)
       "ctrl + space"  : (timeFactor, first) => @moveZ(-getMoveValue(timeFactor)    , first)
     
-    , @model.user.keyboardDelay)
+    , @model.user.get("keyboardDelay"))
 
     @model.user.on({
       keyboardDelayChanged : (value) => @input.keyboardLoopDelayed.delay = value
@@ -222,8 +222,8 @@ class PlaneController
 
   init : ->
 
-    @cameraController.setClippingDistance @model.user.clippingDistance
-    @sceneController.setClippingDistance @model.user.clippingDistance
+    @cameraController.setClippingDistance @model.user.get("clippingDistance")
+    @sceneController.setClippingDistance @model.user.get("clippingDistance")
 
 
   start : (newMode) ->
@@ -379,7 +379,7 @@ class PlaneController
 
   changeMoveValue : (delta) ->
 
-    moveValue = @model.user.moveValue + delta
+    moveValue = @model.user.get("moveValue") + delta
     moveValue = Math.min(constants.MAX_MOVE_VALUE, moveValue)
     moveValue = Math.max(constants.MIN_MOVE_VALUE, moveValue)
 
@@ -388,7 +388,7 @@ class PlaneController
 
   scaleTrianglesPlane : (delta) ->
 
-    scale = @model.user.scale + delta
+    scale = @model.user.get("scale") + delta
     scale = Math.min(constants.MAX_SCALE, scale)
     scale = Math.max(constants.MIN_SCALE, scale)
 

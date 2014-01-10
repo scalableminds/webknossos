@@ -60,7 +60,7 @@ class ArbitraryController
 
     @input = _.extend({}, @input)
 
-    @crosshair = new Crosshair(@cam, model.user.crosshairSize)
+    @crosshair = new Crosshair(@cam, model.user.get("crosshairSize"))
     @view.addGeometry(@crosshair)
 
     @bind()
@@ -81,10 +81,10 @@ class ArbitraryController
       @canvas
       leftDownMove : (delta) =>
         @cam.yawDistance(
-          -delta.x * @model.user.getMouseInversionX() * @model.user.mouseRotateValue
+          -delta.x * @model.user.getMouseInversionX() * @model.user.get("mouseRotateValue")
         );
         @cam.pitchDistance(
-          delta.y * @model.user.getMouseInversionY() * @model.user.mouseRotateValue
+          delta.y * @model.user.getMouseInversionY() * @model.user.get("mouseRotateValue")
         )
       scroll : @scroll
     )
@@ -94,14 +94,14 @@ class ArbitraryController
 
     getVoxelOffset  = (timeFactor) =>
 
-      return @model.user.moveValue3d * timeFactor / @model.scaleInfo.baseVoxel / constants.FPS
+      return @model.user.get("moveValue3d") * timeFactor / @model.scaleInfo.baseVoxel / constants.FPS
     
     
     @input.keyboard = new Input.Keyboard(
  
       #Scale plane
-      "l"             : (timeFactor) => @view.applyScale -@model.user.scaleValue
-      "k"             : (timeFactor) => @view.applyScale  @model.user.scaleValue
+      "l"             : (timeFactor) => @view.applyScale -@model.user.get("scaleValue")
+      "k"             : (timeFactor) => @view.applyScale  @model.user.get("scaleValue")
 
       #Move   
       "w"             : (timeFactor) => @cam.move [0, getVoxelOffset(timeFactor), 0]
@@ -114,16 +114,16 @@ class ArbitraryController
       "alt + space"   : (timeFactor) => @cam.move [0, 0, -getVoxelOffset(timeFactor)]
       
       #Rotate in distance
-      "left"          : (timeFactor) => @cam.yawDistance @model.user.rotateValue * timeFactor
-      "right"         : (timeFactor) => @cam.yawDistance -@model.user.rotateValue * timeFactor
-      "up"            : (timeFactor) => @cam.pitchDistance -@model.user.rotateValue * timeFactor
-      "down"          : (timeFactor) => @cam.pitchDistance @model.user.rotateValue * timeFactor
+      "left"          : (timeFactor) => @cam.yawDistance @model.user.get("rotateValue") * timeFactor
+      "right"         : (timeFactor) => @cam.yawDistance -@model.user.get("rotateValue") * timeFactor
+      "up"            : (timeFactor) => @cam.pitchDistance -@model.user.get("rotateValue") * timeFactor
+      "down"          : (timeFactor) => @cam.pitchDistance @model.user.get("rotateValue") * timeFactor
       
       #Rotate at centre
-      "shift + left"  : (timeFactor) => @cam.yaw @model.user.rotateValue * timeFactor
-      "shift + right" : (timeFactor) => @cam.yaw -@model.user.rotateValue * timeFactor
-      "shift + up"    : (timeFactor) => @cam.pitch @model.user.rotateValue * timeFactor
-      "shift + down"  : (timeFactor) => @cam.pitch -@model.user.rotateValue * timeFactor
+      "shift + left"  : (timeFactor) => @cam.yaw @model.user.get("rotateValue") * timeFactor
+      "shift + right" : (timeFactor) => @cam.yaw -@model.user.get("rotateValue") * timeFactor
+      "shift + up"    : (timeFactor) => @cam.pitch @model.user.get("rotateValue") * timeFactor
+      "shift + down"  : (timeFactor) => @cam.pitch -@model.user.get("rotateValue") * timeFactor
 
       #Zoom in/out
       "i"             : (timeFactor) => @cam.zoomIn()
@@ -177,7 +177,7 @@ class ArbitraryController
 
   init : ->
 
-    @setClippingDistance @model.user.clippingDistance
+    @setClippingDistance @model.user.get("clippingDistance")
     @view.applyScale(0)
 
 
@@ -241,7 +241,7 @@ class ArbitraryController
 
   changeMoveValue : (delta) ->
 
-    moveValue = @model.user.moveValue3d + delta
+    moveValue = @model.user.get("moveValue3d") + delta
     moveValue = Math.min(constants.MAX_MOVE_VALUE, moveValue)
     moveValue = Math.max(constants.MIN_MOVE_VALUE, moveValue)
 
@@ -250,7 +250,7 @@ class ArbitraryController
 
   setParticleSize : (delta) =>
 
-    particleSize = @model.user.particleSize + delta
+    particleSize = @model.user.get("particleSize") + delta
     particleSize = Math.min(constants.MAX_PARTICLE_SIZE, particleSize)
     particleSize = Math.max(constants.MIN_PARTICLE_SIZE, particleSize)
 

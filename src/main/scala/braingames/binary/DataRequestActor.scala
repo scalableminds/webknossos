@@ -17,7 +17,6 @@ import java.util.UUID
 import com.typesafe.config.Config
 import braingames.binary.models.DataLayer
 import braingames.binary.models.DataSet
-import braingames.binary.models.DataLayerId
 import store._
 import braingames.binary.models.DataSetRepository
 import scala.concurrent.Await
@@ -136,7 +135,7 @@ class DataRequestActor(
     }
   }
 
-  def loadFromSomewhere(dataSet: DataSet, layer: DataLayer, requestedLayer: DataLayerId, resolution: Int, block: Point3D): Future[Array[Byte]] = {
+  def loadFromSomewhere(dataSet: DataSet, layer: DataLayer, requestedSection: Option[String], resolution: Int, block: Point3D): Future[Array[Byte]] = {
 
     def loadFromSections(sections: Stream[DataLayerSection]): Future[Array[Byte]] = sections match {
       case section #:: tail =>
@@ -156,11 +155,11 @@ class DataRequestActor(
 
     val sections = Stream(layer.sections.filter {
       section =>
-        requestedLayer.section.map( _ == section.sectionId) getOrElse true
+        requestedSection.map( _ == section.sectionId) getOrElse true
     }: _*).append {
       Await.result(layer.fallback.map(dataSetRepository.findByName).getOrElse(Future.successful(None)).map(_.flatMap {
         d =>
-          d.dataLayer(requestedLayer.typ).map {
+          d.dataLayer(layer.typ).map {
             fallbackLayer =>
               if (layer.isCompatibleWith(fallbackLayer))
                 fallbackLayer.sections
@@ -175,7 +174,6 @@ class DataRequestActor(
     loadFromSections(sections)
   }
 
-
   def loadBlocks(minBlock: Point3D, maxBlock: Point3D, dataRequest: DataRequest, layer: DataLayer) = {
     val blockIdxs = for {
       x <- minBlock.x to maxBlock.x
@@ -188,7 +186,7 @@ class DataRequestActor(
         loadFromSomewhere(
           dataRequest.dataSet,
           layer,
-          dataRequest.dataLayer,
+          dataRequest.dataSection,
           dataRequest.resolution,
           p)
     }
@@ -198,6 +196,8 @@ class DataRequestActor(
     val cube = dataRequest.cuboid
 
     val dataSet = dataRequest.dataSet
+
+    val layer = dataRequest.dataLayer
 
     val maxCorner = cube.maxCorner
 
@@ -214,24 +214,19 @@ class DataRequestActor(
 
     val pointOffset = minBlock.scale(dataSet.blockLength)
 
-    dataSet.dataLayer(dataRequest.dataLayer.typ) match {
-      case Some(layer) =>
-        loadBlocks(minBlock, maxBlock, dataRequest, layer)
-          .map {
-          blocks =>
-            BlockedArray3D(
-              blocks.toVector,
-              dataSet.blockLength, dataSet.blockLength, dataSet.blockLength,
-              maxBlock.x - minBlock.x + 1, maxBlock.y - minBlock.y + 1, maxBlock.z - minBlock.z + 1,
-              layer.bytesPerElement,
-              0.toByte)
-        }
-          .map {
-          block =>
-            new DataBlockCutter(block, dataRequest, layer, pointOffset).cutOutRequestedData
-        }
-      case _ =>
-        Future.failed(new NoSuchElementException("Invalid dataLayer type"))
+    loadBlocks(minBlock, maxBlock, dataRequest, layer)
+      .map {
+      blocks =>
+        BlockedArray3D(
+          blocks.toVector,
+          dataSet.blockLength, dataSet.blockLength, dataSet.blockLength,
+          maxBlock.x - minBlock.x + 1, maxBlock.y - minBlock.y + 1, maxBlock.z - minBlock.z + 1,
+          layer.bytesPerElement,
+          0.toByte)
+    }
+      .map {
+      block =>
+        new DataBlockCutter(block, dataRequest, layer, pointOffset).cutOutRequestedData
     }
   }
 }

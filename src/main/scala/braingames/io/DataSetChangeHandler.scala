@@ -84,12 +84,12 @@ class DataSetChangeHandler(dataSetRepository: DataSetRepository)
     }
   }
 
-  def extractSections(base: File, dataSetPath: String): Iterable[DataLayerSection] = {
+  def extractSections(base: File, dataLayerPath: String): Iterable[DataLayerSection] = {
     val sectionSettingsMap = extractSectionSettings(base)
     sectionSettingsMap.map {
       case (path, settings) =>
         DataLayerSection(
-          path.getAbsolutePath().replace(dataSetPath, ""),
+          path.getAbsolutePath().replace(dataLayerPath, ""),
           settings.sectionId getOrElse path.getName,
           settings.resolutions,
           BoundingBox.createFrom(settings.bboxSmall),
@@ -118,8 +118,9 @@ class DataSetChangeHandler(dataSetRepository: DataSetRepository)
       settings <- DataLayerSettings.fromFile(layer)
     } yield {
       println("Found Layer: " + settings)
-      val sections = extractSections(layer, dataSetPath).toList
-      DataLayer(settings.typ, settings.flags, settings.`class`, settings.fallback, sections)
+      val dataLayerPath = layer.getAbsolutePath()
+      val sections = extractSections(layer, dataLayerPath).toList
+      DataLayer(settings.typ, dataLayerPath, settings.flags, settings.`class`, settings.fallback, sections)
     }
   }
 

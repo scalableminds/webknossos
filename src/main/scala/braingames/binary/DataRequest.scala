@@ -6,7 +6,8 @@ trait AbstractDataRequest
 
 case class DataRequest(
   dataSet: DataSet,
-  dataLayer: DataLayerId,
+  dataLayer: DataLayer,
+  dataSection: Option[String],
   resolution: Int,
   cuboid: Cuboid,
   settings: DataRequestSettings) extends AbstractDataRequest

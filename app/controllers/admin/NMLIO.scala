@@ -72,7 +72,7 @@ object NMLIO extends Controller with Secured with TextUtils {
   }
 
   def createAnnotationFrom(user: User, nmls: List[NML], typ: AnnotationType, name: Option[String])(implicit request: AuthenticatedRequest[_]): Fox[Annotation] = {
-    SkeletonTracingService.createFrom(nmls, AnnotationSettings.default).toFox.flatMap {
+    SkeletonTracingService.createFrom(nmls, AnnotationSettings.skeletonDefault).toFox.flatMap {
       content =>
         AnnotationService.createFrom(
           user._id,

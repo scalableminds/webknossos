@@ -3,6 +3,7 @@ package models.tracing.volume
 import braingames.geometry.Point3D
 import models.annotation.{AnnotationContentService, AnnotationContent, AnnotationSettings}
 import models.basics.SecuredBaseDAO
+import models.binary.UserDataLayerDAO
 import braingames.binary.models.DataSet
 import java.io.InputStream
 import play.api.libs.json.{Json, JsValue}
@@ -23,9 +24,10 @@ import play.api.Logger
  */
 case class VolumeTracing(
   dataSetName: String,
+  userDataLayerName: String,
   timestamp: Long,
   editPosition: Point3D,
-  settings: AnnotationSettings = AnnotationSettings.default,
+  settings: AnnotationSettings = AnnotationSettings.volumeDefault,
   _id: BSONObjectID = BSONObjectID.generate)
   extends AnnotationContent {
 
@@ -41,7 +43,7 @@ case class VolumeTracing(
 
   def mergeWith(source: AnnotationContent) = ???
 
-  def contentType: String =  VolumeTracing.contentType
+  def contentType: String = VolumeTracing.contentType
 
   def toDownloadStream: Future[InputStream] = ???
 
@@ -59,8 +61,9 @@ object VolumeTracingService extends AnnotationContentService{
     VolumeTracingDAO.findOneById(id)
 
   def createFrom(baseDataSet: DataSet)(implicit ctx: DBAccessContext) = {
-    val dataSet = BinaryDataService.createUserDataSet(baseDataSet)
-    val volumeTracing = VolumeTracing(dataSet.name, System.currentTimeMillis(), Point3D(0,0,0))
+    val userDataLayer = BinaryDataService.createUserDataLayer(baseDataSet)
+    val volumeTracing = VolumeTracing(baseDataSet.name, userDataLayer.name, System.currentTimeMillis(), Point3D(0,0,0))
+    UserDataLayerDAO.insert(userDataLayer)
     VolumeTracingDAO.insert(volumeTracing).map{ _ =>
       volumeTracing
     }
@@ -79,5 +82,4 @@ object VolumeTracingDAO extends SecuredBaseDAO[VolumeTracing] {
   val collectionName = "volumes"
 
   val formatter = VolumeTracing.volumeTracingFormat
-
 }

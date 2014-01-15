@@ -53,7 +53,7 @@ case class Task(
     AnnotationService.annotationsFor(this)
 
   def settings(implicit ctx: DBAccessContext) =
-    taskType.map(_.settings) getOrElse AnnotationSettings.default
+    taskType.map(_.settings) getOrElse AnnotationSettings.skeletonDefault
 
   def isTraining =
     training.isDefined

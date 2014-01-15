@@ -31,7 +31,7 @@ case class TemporarySkeletonTracing(
                                      activeNodeId: Option[Int],
                                      editPosition: Point3D,
                                      comments: List[Comment] = Nil,
-                                     settings: AnnotationSettings = AnnotationSettings.default
+                                     settings: AnnotationSettings = AnnotationSettings.skeletonDefault
                                    ) extends SkeletonTracingLike with AnnotationContent {
 
   type Self = TemporarySkeletonTracing
@@ -43,7 +43,7 @@ case class TemporarySkeletonTracing(
   def trees = Future.successful(_trees)
 
   def allowAllModes =
-    this.copy(settings = settings.copy(allowedModes = AnnotationSettings.ALL_MODES))
+    this.copy(settings = settings.copy(allowedModes = AnnotationSettings.SKELETON_MODES))
 
   def insertTree[TemporaryTracing](tree: TreeLike) = {
     Future.successful(this.copy(_trees = tree :: _trees).asInstanceOf[TemporaryTracing])

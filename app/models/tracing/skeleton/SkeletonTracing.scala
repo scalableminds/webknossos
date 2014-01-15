@@ -32,7 +32,7 @@ case class SkeletonTracing(
                             activeNodeId: Option[Int],
                             editPosition: Point3D,
                             comments: List[Comment] = Nil,
-                            settings: AnnotationSettings = AnnotationSettings.default,
+                            settings: AnnotationSettings = AnnotationSettings.skeletonDefault,
                             _id: BSONObjectID = BSONObjectID.generate
                           )
   extends SkeletonTracingLike with AnnotationContent with SkeletonManipulations {
@@ -44,7 +44,7 @@ case class SkeletonTracing(
   def service = SkeletonTracingService
 
   def allowAllModes =
-    this.copy(settings = settings.copy(allowedModes = AnnotationSettings.ALL_MODES))
+    this.copy(settings = settings.copy(allowedModes = AnnotationSettings.SKELETON_MODES))
 
   /**
    * Tree modification

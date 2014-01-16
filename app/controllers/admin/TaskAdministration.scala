@@ -154,7 +154,7 @@ object TaskAdministration extends AdminController {
       task <- TaskDAO.findOneById(taskId) ?~> Messages("task.notFound")
       projectName <- task.project.map(_.name) getOrElse ""
       form = basicTaskForm(task.assignedInstances).fill(
-        (task._taskType.toString,
+        (task._taskType.stringify,
           task.neededExperience,
           task.priority,
           task.instances,

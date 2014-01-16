@@ -40,7 +40,7 @@ object TrainingsTracingAdministration extends AdminController {
       annotation <- AnnotationDAO.findOneById(training) ?~> Messages("annotation.notFound")
       review <- annotation.review.headOption ?~> Messages("annotation.review.notFound")
     } yield {
-      Redirect(controllers.routes.AnnotationController.trace(AnnotationType.Review, review.reviewAnnotation.toString))
+      Redirect(controllers.routes.AnnotationController.trace(AnnotationType.Review, review.reviewAnnotation.stringify))
     }
   }
 

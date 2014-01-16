@@ -49,7 +49,7 @@ case class Annotation(
 
   def task = _task.toFox.flatMap(id => TaskDAO.findOneById(id)(GlobalAccessContext))
 
-  def user = UserService.findOneById(_user.toString, useCache = true)(GlobalAccessContext)
+  def user = UserService.findOneById(_user.stringify, useCache = true)(GlobalAccessContext)
 
   def content = _content.resolveAs[AnnotationContent](GlobalAccessContext).toFox
 
@@ -93,11 +93,12 @@ object Annotation {
       task <- annotation.task.futureBox
       user <- annotation.user
       content <- annotation.content.futureBox
+      contentType = content.map(_.contentType).getOrElse("")
       stats <- models.annotation.AnnotationDAO.statisticsForAnnotation(annotation).futureBox
     } yield {
       Json.obj(
         "created" -> content.map(annotationContent => DateTimeFormat.forPattern("yyyy-MM-dd HH:mm").print(annotationContent.timestamp)).toOption,
-        "contentType" -> content.map(_.contentType).getOrElse("").toString,
+        "contentType" -> contentType,
         "dataSetName" -> dataSetName,
         "state" -> annotation.state,
         "typ" -> annotation.typ,

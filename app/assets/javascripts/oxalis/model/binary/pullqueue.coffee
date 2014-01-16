@@ -20,7 +20,7 @@ class PullQueue
   roundTripTime : 0
 
   
-  constructor : (@dataSetName, @cube, @dataLayerName, @testData, @requestData = true ) ->
+  constructor : (@dataSetName, @cube, @dataLayerName, { @tracingId, @tracingTyp } ) ->
 
     @queue = []
 
@@ -87,9 +87,6 @@ class PullQueue
 
   pull : ->
 
-    unless @requestData
-      return
-
     # Starting to download some buckets
     while @batchCount < @BATCH_LIMIT and @queue.length
       
@@ -140,10 +137,6 @@ class PullQueue
               bucketData = @decode(responseBuffer.subarray(offset, offset += (@cube.BUCKET_LENGTH >> 1)))
             else
               bucketData = responseBuffer.subarray(offset, offset += @cube.BUCKET_LENGTH)
-            if @testData
-              id = bucket[0] + bucket[1] * 100 + bucket[2] * 10000
-              for i in [0...bucketData.length]
-                bucketData[i] = (id >> (8 * ((@cube.BIT_DEPTH >> 3) - 1 - (i % (@cube.BIT_DEPTH >> 3))))) % 256
             @cube.setBucketByZoomedAddress(bucket, bucketData)
 
         =>
@@ -197,7 +190,7 @@ class PullQueue
       senders : [
         # new ArrayBufferSocket.WebWorker("ws://#{document.location.host}/binary/ws?dataSetName=#{@dataSetName}&cubeSize=#{1 << @cube.BUCKET_SIZE_P}")
         # new ArrayBufferSocket.WebSocket("ws://#{document.location.host}/binary/ws?dataSetName=#{@dataSetName}&cubeSize=#{1 << @cube.BUCKET_SIZE_P}")
-        new ArrayBufferSocket.XmlHttpRequest("/datasets/#{@dataSetName}/layers/#{@dataLayerName}/data?cubeSize=#{1 << @cube.BUCKET_SIZE_P}")
+        new ArrayBufferSocket.XmlHttpRequest("/datasets/#{@dataSetName}/layers/#{@dataLayerName}/data?cubeSize=#{1 << @cube.BUCKET_SIZE_P}&annotationTyp=#{@tracingType}&annotationId=#{@tracingId}")
       ]
       requestBufferType : Float32Array
       responseBufferType : Uint8Array

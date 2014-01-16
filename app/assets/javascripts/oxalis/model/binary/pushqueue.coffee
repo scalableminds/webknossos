@@ -8,7 +8,7 @@ class PushQueue
   BATCH_SIZE : 3
 
 
-  constructor : (@dataSetName, @cube, @dataLayerName, @sendData = true) ->
+  constructor : (@dataSetName, @cube, @dataLayerName, { @tracingId, @tracingTyp }, @sendData = true) ->
 
     @queue = []
     @batchCount = 0
@@ -106,7 +106,7 @@ class PushQueue
 
     if @socket? then @socket else @socket = new ArrayBufferSocket(
       senders : [
-        new ArrayBufferSocket.XmlHttpRequest("/datasets/#{@dataSetName}/layers/#{@dataLayerName}/data?cubeSize=#{1 << @cube.BUCKET_SIZE_P}", "PUT")
+        new ArrayBufferSocket.XmlHttpRequest("/datasets/#{@dataSetName}/layers/#{@dataLayerName}/data?cubeSize=#{1 << @cube.BUCKET_SIZE_P}&annotationTyp=#{@tracingType}&annotationId=#{@tracingId}", "POST")
       ]
       requestBufferType : Uint8Array
       responseBufferType : Uint8Array

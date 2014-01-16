@@ -70,6 +70,7 @@ projectName=Project Name
 project.removed=Project got removed
 project.notFound=Project couldn''t be found
 project.nameAlreadyInUse=Name already used
+project.nameNoSpaces=Project names can''t contain spaces
 project.createSuccess=Project successfully created
 
 role.invalid=Invalid role

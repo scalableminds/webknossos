@@ -81,6 +81,16 @@ class TracingParser
 
   parse : ->
 
+    unless @data?
+      return {
+        idCount : 0
+        treeIdCount : 0
+        trees : []
+        comments : []
+        activeNode : null
+        activeTree : null
+      }
+
     @buildTrees()
     
     nodeList = []

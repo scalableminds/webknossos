@@ -90,7 +90,7 @@ class Model
             @flycam.on
               "positionChanged" : (position) =>
                 @flycam3d.setPositionSilent(position)
-                
+            
             @cellTracing = new CellTracing(tracing, @scaleInfo, @flycam, @flycam3d, @user)
             if @binary["segmentation"]?
               @volumeTracing = new VolumeTracing(@flycam, @binary["segmentation"].cube)

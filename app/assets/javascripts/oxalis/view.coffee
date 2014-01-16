@@ -193,7 +193,7 @@ class View
     html += generalKeys
     if mode == constants.MODE_PLANE_TRACING 
       html += viewportKeys + TDViewKeys
-    else if mode == constants.MODE_ARBITRARY
+    else if mode == constants.MODE_ARBITRARY or mode == constants.MODE_ARBITRARY_PLANE
       html += arbitraryKeys
     else if mode == constants.MODE_VOLUME
       html += volumeKeys

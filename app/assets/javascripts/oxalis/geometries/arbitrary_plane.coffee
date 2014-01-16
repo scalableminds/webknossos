@@ -42,8 +42,9 @@ class ArbitraryPlane
   constructor : (@cam, @model, @width = 128, @height = 128) ->
 
     @sphericalCapRadius = @cam.distance
-    @queryVertices = @calculateQueryVertices()
     @mesh = @createMesh()
+    @queryVerticesSphere = @calculateSphereVertices()
+    @queryVerticesPlane = @calculatePlaneVertices()
 
     @cam.on "changed", => 
       @isDirty = true
@@ -90,7 +91,7 @@ class ArbitraryPlane
       @isDirty = false
 
 
-  calculateQueryVertices : ->
+  calculateSphereVertices : ->
 
     { width, height, sphericalCapRadius } = this
 
@@ -120,6 +121,25 @@ class ArbitraryPlane
         queryVertices[currentIndex++] = centerVertex[0] + vector[0]
         queryVertices[currentIndex++] = centerVertex[1] + vector[1]
         queryVertices[currentIndex++] = centerVertex[2] + vector[2]
+
+    queryVertices
+
+
+  calculatePlaneVertices : ->
+
+    { width, height } = this
+
+    queryVertices = new Float32Array(width * height * 3)
+
+    # so we have Point [0, 0, 0] centered
+    currentIndex = 0
+
+    for y in [0...height] by 1
+      for x in [0...width] by 1
+
+        queryVertices[currentIndex++] = x - (Math.floor width/2)
+        queryVertices[currentIndex++] = y - (Math.floor height/2)
+        queryVertices[currentIndex++] = 0
 
     queryVertices
 

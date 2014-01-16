@@ -9,7 +9,7 @@ import oxalis.security.AuthenticatedRequest
 import models.task.TaskType
 import braingames.binary.models.DataSet
 import models.task.Task
-import models.user.Experience
+import models.user.Domain
 import models.task.Training
 import oxalis.nml._
 import play.api.i18n.Messages
@@ -46,7 +46,7 @@ object TrainingsTaskAdministration extends Controller with Secured {
     html.admin.training.trainingsTaskCreate(
       Task.findAllNonTrainings,
       AnnotationDAO.findOpenAnnotationsFor(request.user, AnnotationType.Explorational),
-      Experience.findAllDomains,
+      Domain.findAllDistinct,
       taskForm)
   }
 

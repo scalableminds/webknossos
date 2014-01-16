@@ -10,7 +10,7 @@ import braingames.binary.models.DataSet
 import models.security.Role
 import models.tracing._
 import models.task.Task
-import models.user.{UsedAnnotation, User, Experience}
+import models.user.{UsedAnnotation, User, Experience, Domain}
 import models.binary.DataSetDAO
 import models.task.TaskType
 import play.api.data.Form
@@ -91,7 +91,7 @@ object TaskAdministration extends Controller with Secured {
       html.admin.task.taskCreate(
         TaskType.findAll,
         dataSets,
-        Experience.findAllDomains,
+        Domain.findAllDistinct,
         Project.findAll,
         taskFromNMLForm,
         taskForm)
@@ -101,7 +101,7 @@ object TaskAdministration extends Controller with Secured {
     html.admin.task.taskEdit(
       taskId,
       TaskType.findAll,
-      Experience.findAllDomains,
+      Domain.findAllDistinct,
       Project.findAll,
       taskForm)
 

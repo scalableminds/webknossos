@@ -25,6 +25,7 @@ import models.user.Experience
 import models.tracing._
 import oxalis.nml.Tree
 import scala.util._
+import models.user.Domain
 import models.annotation.{AnnotationType, AnnotationDAO, AnnotationSettings}
 import play.api.libs.json.{Json, JsObject}
 import braingames.format.Formatter
@@ -110,6 +111,11 @@ object Task extends BasicDAO[Task]("tasks") {
       "created" -> Formatter.formatDate(task.created),
       "status" -> task.status
     )
+  }
+
+  override def insertOne(task: Task) = {
+    Domain.findOrCreate(task.neededExperience.domain)
+    super.insertOne(task)
   }
 
   def findAllOfOneType(isTraining: Boolean) =

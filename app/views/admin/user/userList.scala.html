@@ -129,7 +129,7 @@
         <div class="control-group">
           <label class="control-label" for="experience-domain">Domain</label>
           <div class="controls">
-            <input type="text" class="input-small" name="experience-domain" data-source='@Json.stringify(Json.toJson(experiences))' data-provide="typeahead" autocomplete="off" required data-invalid-message="Please enter a experience domain.">
+            <input type="text" class="input-small" name="experience-domain" data-source='@Html(Json.stringify(Json.toJson(experiences)))' data-provide="typeahead" autocomplete="off" required data-invalid-message="Please enter a experience domain.">
           </div>
         </div>
 

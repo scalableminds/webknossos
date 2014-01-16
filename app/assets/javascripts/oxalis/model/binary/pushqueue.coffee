@@ -8,7 +8,7 @@ class PushQueue
   BATCH_SIZE : 3
 
 
-  constructor : (@dataSetName, @cube, @dataLayerName, { @tracingId, @tracingTyp }, @sendData = true) ->
+  constructor : (@dataSetName, @cube, @dataLayerName, { @tracingId, @tracingType }, @sendData = true) ->
 
     @queue = []
     @batchCount = 0

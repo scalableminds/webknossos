@@ -26,6 +26,16 @@ class Paginator
     
     searchboxElement = @pageSelectionDiv.find(".pagination-searchbox")
     @addSearchboxListener(searchboxElement)
+    @addHashListener(searchboxElement)
+
+
+  addHashListener : (searchboxElement) ->
+
+    if hash = window.location.hash.slice(1)
+      searchboxElement.val(hash).trigger("keyup")
+
+    window.onhashchange = ->
+      searchboxElement.val(window.location.hash.slice(1)).trigger("keyup")
 
 
   extractTemplate : ->
@@ -99,27 +109,29 @@ class Paginator
     currentQuery = null
 
     searchboxElement.keyup (event) =>
-      newQuery = $(event.currentTarget).val().toLowerCase()
+      @dataRetrievalPromise.done( =>
+        newQuery = $(event.currentTarget).val().toLowerCase()
 
-      if newQuery == currentQuery
-        return
+        if newQuery == currentQuery
+          return
 
-      currentQuery = currentQuery
-      lastQuery = currentQuery
-      currentQuery = newQuery
+        currentQuery = currentQuery
+        lastQuery = currentQuery
+        currentQuery = newQuery
 
-      if currentQuery.length > 0
-        @elementsToShow = []
+        if currentQuery.length > 0
+          @elementsToShow = []
 
-        i = 0
-        for task in @allElements
-          if @JSONcontains task, currentQuery
-            @elementsToShow.push task
-      else
-        @elementsToShow = @allElements
-     
-      @updatePageCount()
-      @displayJSON(@getElementsForPage(0))
+          i = 0
+          for task in @allElements
+            if @JSONcontains task, currentQuery
+              @elementsToShow.push task
+        else
+          @elementsToShow = @allElements
+       
+        @updatePageCount()
+        @displayJSON(@getElementsForPage(0))
+      )
       
 
   displayJSON : (jsonArray) ->

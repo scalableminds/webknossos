@@ -132,16 +132,14 @@ class Flycam3d
 
     M4x4.translate(vector, @currentMatrix, @currentMatrix)
     updateMacro(@)
-
-
-  getCameraMatrix : (vector) ->
-
-    M4x4.translate( @distanceVecPositive, @currentMatrix )
     
 
-  yaw : (angle) ->
+  yaw : (angle, regardDistance = false) ->
 
-    @yawSilent(angle)
+    if regardDistance
+      transformationWithDistanceMacro(@, @yawSilent, angle)
+    else
+      @yawSilent(angle)
     updateMacro(@)
 
 
@@ -150,14 +148,12 @@ class Flycam3d
     @rotateOnAxisSilent(angle, [ 0, 1, 0 ])
 
 
-  yawDistance : (angle) ->
+  roll : (angle, regardDistance = false) ->
 
-    transformationWithDistanceMacro(@, @yawSilent, angle) 
-
-
-  roll : (angle) ->
-
-    @rollSilent(angle)
+    if regardDistance
+      transformationWithDistanceMacro(@, @rollSilent, angle)
+    else
+      @rollSilent(angle)
     updateMacro(@)
 
 
@@ -166,25 +162,18 @@ class Flycam3d
     @rotateOnAxisSilent(angle, [ 0, 0, 1 ])
 
 
-  rollDistance : (angle) ->
+  pitch : (angle, regardDistance = false) ->
 
-    transformationWithDistanceMacro(@, @rollSilent, angle)
-
-
-  pitch : (angle) ->
-
-    @pitchSilent(angle)
+    if regardDistance
+      transformationWithDistanceMacro(@, @pitchSilent, angle)
+    else
+      @pitchSilent(angle)
     updateMacro(@)
 
 
   pitchSilent : (angle) ->
 
     @rotateOnAxisSilent(angle, [ 1, 0, 0 ])
-
-
-  pitchDistance : (angle) ->
-
-    transformationWithDistanceMacro(@, @pitchSilent, angle)
 
 
   rotateOnAxis : (angle, axis) ->

@@ -48,9 +48,10 @@ class Controller
         @allowedModes.push switch allowedMode
           when "oxalis" then constants.MODE_PLANE_TRACING
           when "arbitrary" then constants.MODE_ARBITRARY
+          when "volume" then constants.MODE_VOLUME
 
-      # FIXME: only for developing
-      @allowedModes.push(constants.MODE_VOLUME)
+      if constants.MODE_ARBITRARY in @allowedModes
+        @allowedModes.push(constants.MODE_ARBITRARY_PLANE)
 
       # FPS stats
       stats = new Stats()
@@ -72,18 +73,9 @@ class Controller
       @initMouse()
       @initKeyboard()
 
-      @setMode(constants.MODE_PLANE_TRACING)
-      #@setMode(constants.MODE_VOLUME)
-
       for binaryName of @model.binary
         @model.binary[binaryName].cube.on "bucketLoaded" : =>
           @model.flycam.update()
-
-      if constants.MODE_PLANE_TRACING not in @allowedModes
-        if constants.MODE_ARBITRARY in @allowedModes
-          @setMode(constants.MODE_ARBITRARY)
-        else
-          Toast.error("There was no valid allowed tracing mode specified.")
 
       @abstractTreeController.view.on 
         nodeClick : (id) => @setActiveNode(id, true, false)
@@ -133,6 +125,10 @@ class Controller
         event.preventDefault()
         @model.user.setValue("sortTreesByName", ($(event.currentTarget).data("sort") == "name"))
 
+      $("#comment-sort").on "click", "a[data-sort]", (event) =>
+        event.preventDefault()
+        @model.user.setValue("sortCommentsAsc", ($(event.currentTarget).data("sort") == "asc"))
+
       if @controlMode == constants.CONTROL_MODE_VIEW
         $('#alpha-slider').slider().on "slide", (event) =>
 
@@ -140,6 +136,32 @@ class Controller
           if (alpha == 0)
             @model.binary["segmentation"].pingStop()
           @sceneController.setSegmentationAlpha( alpha )
+
+      @modeMapping =
+        "view-mode-3planes"        : constants.MODE_PLANE_TRACING
+        "view-mode-sphere"         : constants.MODE_ARBITRARY
+        "view-mode-arbitraryplane" : constants.MODE_ARBITRARY_PLANE
+
+      _controller = this
+      for button in $("#view-mode .btn-group").children()
+        
+        id = @modeMapping[ $(button).attr("id") ]
+        do (id) ->
+          $(button).on "click", ->
+            _controller.setMode( id )
+
+        if not (id in @allowedModes)
+          $(button).attr("disabled", "disabled")
+
+      if @allowedModes.length == 1
+        $("#view-mode").hide()
+
+      @allowedModes.sort()
+      @setMode( constants.MODE_PLANE_TRACING, true )
+      if @allowedModes.length == 0
+        Toast.error("There was no valid allowed tracing mode specified.")
+      else
+        @setMode( @allowedModes[0] )
 
       # initial trigger
       @sceneController.setSegmentationAlpha($('#alpha-slider').data("slider-value") or constants.DEFAULT_SEG_ALPHA)
@@ -179,18 +201,18 @@ class Controller
         "shift + 2" : =>
           @setMode(constants.MODE_ARBITRARY)
         "shift + 3" : =>
+          @setMode(constants.MODE_ARBITRARY_PLANE)
+        "shift + 4" : =>
           @setMode(constants.MODE_VOLUME)
           
         "t" : => 
           @view.toggleTheme()       
           @abstractTreeController.drawTree()
 
-        "m" : => # toggle between plane tracing and arbitrary tracing
+        "m" : => # rotate allowed modes
 
-          if @mode == constants.MODE_PLANE_TRACING
-            @setMode(constants.MODE_ARBITRARY)
-          else if @mode == constants.MODE_ARBITRARY
-            @setMode(constants.MODE_PLANE_TRACING)
+          index = (@allowedModes.indexOf(@mode) + 1) % @allowedModes.length
+          @setMode( @allowedModes[index] )
 
         "super + s, ctrl + s" : (event) =>
 
@@ -201,18 +223,25 @@ class Controller
 
     new Input.KeyboardNoLoop( keyboardControls )
 
-  setMode : (newMode) ->
+  setMode : (newMode, force = false) ->
 
-    if newMode == constants.MODE_ARBITRARY and newMode in @allowedModes
+    if (newMode == constants.MODE_ARBITRARY or newMode == constants.MODE_ARBITRARY_PLANE) and (newMode in @allowedModes or force)
       @planeController.stop()
-      @arbitraryController.start()
+      @arbitraryController.start(newMode)
 
-    else if (newMode == constants.MODE_PLANE_TRACING or newMode == constants.MODE_VOLUME) and newMode in @allowedModes
+    else if (newMode == constants.MODE_PLANE_TRACING or newMode == constants.MODE_VOLUME) and (newMode in @allowedModes or force)
       @arbitraryController.stop()
       @planeController.start(newMode)
 
     else # newMode not allowed or invalid
       return
+
+
+    for button in $("#view-mode .btn-group").children()
+
+      $(button).removeClass("btn-primary")
+      if newMode == @modeMapping[$(button).attr("id")]
+        $(button).addClass("btn-primary")
 
     @mode = newMode
     @gui.setMode(newMode)
@@ -251,6 +280,7 @@ class Controller
       setActiveNode : (id) => @setActiveNode(id, false) # not centered
       setActiveCell : (id) => @model.volumeTracing.setActiveCell(id)
       createNewCell : => @model.volumeTracing.createCell()
+      newBoundingBox : (bb) => @sceneController.setBoundingBox(bb)
 
     gui
 

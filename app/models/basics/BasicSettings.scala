@@ -1,5 +1,5 @@
 package models.basics
-
+import play.api.Logger
 import play.api.libs.json._
 
 trait BasicSettings{

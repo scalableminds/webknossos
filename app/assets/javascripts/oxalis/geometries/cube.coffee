@@ -71,6 +71,7 @@ class Cube
 
     @initialized = true
     @updatePosition(@model.flycam.getPosition())
+    @model.flycam.update()
 
   updatePosition : (position) ->
 

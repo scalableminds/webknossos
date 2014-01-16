@@ -36,6 +36,14 @@ object AssertionController extends Controller with Secured {
     }
   }
 
+  def listSliced(from: Int, number: Int) = Authenticated(role = RoleDAO.Admin)async { implicit request =>
+    for {
+      assertions <- AssertionDAO.findAllSortedByTimestamp()
+    } yield {
+      Ok(html.admin.assertion.assertionList(assertions.drop(from).take(number)))
+    }
+  }
+
   def view(assertionId: String) = Authenticated(role = RoleDAO.Admin).async { implicit request =>
     for {
       assertion <- AssertionDAO.findOneById(assertionId) ?~> "Assertion not found."

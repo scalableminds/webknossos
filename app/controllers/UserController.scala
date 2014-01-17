@@ -33,23 +33,22 @@ object UserController extends Controller with Secured with Dashboard {
     implicit request => {
       val futures = dashboardInfo(request.user).map { info =>
 
-        // TODO: move dataSetFormat into braingames-libs and bump the necessary version
+      // TODO: move dataSetFormat into braingames-libs and bump the necessary version
         implicit val dataSetFormat = Json.format[DataSet]
 
-        val loggedTime = info.loggedTime.map { case(paymentInterval, duration) =>
+        val loggedTime = info.loggedTime.map { case (paymentInterval, duration) =>
           // TODO make formatTimeHumanReadable(duration) (?) work
           Json.obj("paymentInterval" -> paymentInterval, "duration" -> duration.toString)
         }
 
         for {
-          taskList <- Future.traverse(info.tasks)( {
-                        case(task, annotation) =>
-                          for {
-                            tasks <- Task.transformToJson(task)
-                            annotations <- Annotation.transformToJson(annotation)
-                          } yield (tasks, annotations)
-                      }
-                   )
+          taskList <- Future.traverse(info.tasks)({
+            case (task, annotation) =>
+              for {
+                tasks <- Task.transformToJson(task)
+                annotations <- Annotation.transformToJson(annotation)
+              } yield (tasks, annotations)
+          })
           exploratoryList <- Future.traverse(info.exploratory)(Annotation.transformToJson(_))
         } yield {
           Json.obj(
@@ -73,7 +72,7 @@ object UserController extends Controller with Secured with Dashboard {
   def saveSettings = Authenticated().async(parse.json(maxLength = 2048)) { implicit request =>
     (for {
       settings <- request.body.asOpt[JsObject] ?~> Messages("user.settings.invalid")
-      if(UserSettings.isValid(settings))
+      if (UserSettings.isValid(settings))
       _ <- UserService.updateSettings(request.user, UserSettings(settings.fields.toMap))
     } yield {
       UserCache.invalidateUser(request.user.id)

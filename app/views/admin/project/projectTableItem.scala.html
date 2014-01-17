@@ -6,7 +6,10 @@
 <!-- TODO: delete this file  -->
 
 <tr id="@project.name">
-  <td class="details-toggle"> <i class="caret-right"></i> <i class="caret-down"></i> </td>
+  <td class="details-toggle"
+    href="@controllers.admin.routes.TaskAdministration.tasksForProject(project.name)"
+    data-ajax="add-row=#@project.name+tr">
+    <i class="caret-right"></i> <i class="caret-down"></i> </td>
   <td> @project.name </td>
   <td> @project.owner.map(_.map(_.name).getOrElse("<deleted>")) </td>
   <td class="nowrap">  

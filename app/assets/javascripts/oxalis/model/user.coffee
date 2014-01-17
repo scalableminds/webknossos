@@ -1,6 +1,7 @@
 ### define
 ../../libs/request : Request
 libs/event_mixin : EventMixin
+underscore : _
 ###
 
 class User
@@ -40,6 +41,7 @@ class User
   particleSize : null
   sortTreesByName : null
 
+  # DON'T add additional instance variables, this will result in a bad request!
 
   constructor : (user) ->
 
@@ -53,9 +55,11 @@ class User
     @trigger(name + "Changed", value)
     @push()
 
+
   getMouseInversionX : ->
 
     return if @inverseX then 1 else -1
+
 
   getMouseInversionY : ->
 
@@ -70,11 +74,18 @@ class User
 
   push : ->
 
-    $.when(@pushImpl())
+    $.when(@pushThrottled())
+
+
+  pushThrottled : ->
+
+    saveFkt = @pushImpl
+    @pushThrottled = _.throttle(_.mutexDeferred( saveFkt, -1), 10000)
+    @pushThrottled()
 
 
   pushImpl : ->
-    
+
     deferred = $.Deferred()
 
     data = {}

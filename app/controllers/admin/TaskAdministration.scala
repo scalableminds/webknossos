@@ -299,7 +299,7 @@ object TaskAdministration extends AdminController {
       val result = zipped.foldLeft(Html.empty) {
         case (h, ((t, d), (s, tt))) => h += html.admin.task.simpleTask(t, d.getOrElse(""), s, tt.toOption)
       }
-      Ok(result)
+      JsonOk(result)
     }
   }
 

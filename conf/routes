@@ -11,8 +11,8 @@ GET           /impressum                                                 control
 # Tasks
 
 # Jira integration
-GET           /jira                                                      controllers.Jira.index
-POST          /jira                                                      controllers.Jira.submit
+GET           /issues                                                    controllers.GithubIssues.index
+POST          /issues                                                    controllers.GithubIssues.submit
 
 # Authentication
 GET           /login                                                     controllers.Authentication.login

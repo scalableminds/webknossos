@@ -8,13 +8,13 @@ trait BasicSettings{
   def MaxSettings = defaultSettings.settings.size
   
   def isValid(js: JsObject) = {
-    js
+    /*js
       .fields
       .filter {
         case (s, _) =>
           defaultSettings.settings.find(_._1 == s).isEmpty
       }
-      .isEmpty
+      .isEmpty*/ true
   }
 
   def isValidSetting(field: Tuple2[String, JsValue]) = {

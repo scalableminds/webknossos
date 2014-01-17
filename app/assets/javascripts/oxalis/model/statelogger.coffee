@@ -193,16 +193,16 @@ class StateLogger
 
     if @allowUpdate
       @committedCurrentState = false
-      @pushDebounced()
+      @pushThrottled()
 
 
-  pushDebounced : ->
+  pushThrottled : ->
     # Pushes the buffered cellTracing to the server. Pushing happens at most 
     # every 30 seconds.
 
     saveFkt = => @pushImpl(true)
-    @pushDebounced = _.throttle(_.mutexDeferred( saveFkt, -1), @PUSH_THROTTLE_TIME)
-    @pushDebounced()
+    @pushThrottled = _.throttle(_.mutexDeferred( saveFkt, -1), @PUSH_THROTTLE_TIME)
+    @pushThrottled()
 
 
   pushNow : ->   # Interface for view & controller 

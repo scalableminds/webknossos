@@ -138,7 +138,7 @@ class DataRequestActor(
   def loadFromSomewhere(dataSet: DataSet, layer: DataLayer, requestedSection: Option[String], resolution: Int, block: Point3D): Future[Array[Byte]] = {
 
     def loadFromSections(sections: Stream[DataLayerSection]): Future[Array[Byte]] = sections match {
-      case section #:: tail =>
+      case (section, layer) #:: tail =>
         val loadBlock = LoadBlock(dataSet, layer, section, resolution, block)
         loadFromLayer(loadBlock).flatMap {
           case Full(byteArray) =>
@@ -153,16 +153,16 @@ class DataRequestActor(
         Future.successful(loadNullBlock(dataSet, layer))
     }
 
-    val sections = Stream(layer.sections.filter {
+    val sections = Stream(layer.sections.map {(_, layer)}.filter {
       section =>
-        requestedSection.map( _ == section.sectionId) getOrElse true
+        requestedSection.map( _ == section._1.sectionId) getOrElse true
     }: _*).append {
       Await.result(layer.fallback.map(dataSetRepository.findByName).getOrElse(Future.successful(None)).map(_.flatMap {
         d =>
           d.dataLayer(layer.typ).map {
             fallbackLayer =>
               if (layer.isCompatibleWith(fallbackLayer))
-                fallbackLayer.sections
+                fallbackLayer.sections.map {(_, fallbackLayer)}
               else {
                 System.err.println("Incompatible fallback layer!")
                 Nil

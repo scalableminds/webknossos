@@ -170,7 +170,6 @@ class DataRequestActor(
           }
       }.getOrElse(Nil)), 5 seconds)
     }
-
     loadFromSections(sections)
   }
 
@@ -193,6 +192,7 @@ class DataRequestActor(
   }
 
   def load(dataRequest: DataRequest): Future[Array[Byte]] = {
+
     val cube = dataRequest.cuboid
 
     val dataSet = dataRequest.dataSet

@@ -32,13 +32,10 @@ trait DataLayerLike {
 
 case class DataLayer(
   typ: String,
-  baseDir: String,
   flags: Option[List[String]],
   elementClass: String = "uint8",
   fallback: Option[String] = None,
   sections: List[DataLayerSection] = Nil) extends DataLayerLike {
-
-  def relativeBaseDir(binaryBase: String) = baseDir.replace(binaryBase, "")
 
   val interpolator = DataLayer.interpolationFromString(typ)
 
@@ -47,16 +44,15 @@ case class DataLayer(
   val maxCoordinates = BoundingBox.hull(sections.map(_.bboxBig))
 }
 
-
 case class DataLayerType(name: String, interpolation: Interpolation, defaultElementClass: String = "uint8")
 
-object DataLayer extends Function6[String, String, Option[List[String]], String, Option[String], List[DataLayerSection], DataLayer]{
+object DataLayer extends Function5[String, Option[List[String]], String, Option[String], List[DataLayerSection], DataLayer]{
   val COLOR =
     DataLayerType("color", TrilerpInterpolation)
   val SEGMENTATION =
-    DataLayerType("segmentation", NearestNeighborInterpolation)
+    DataLayerType("segmentation", NearestNeighborInterpolation, "uint16")
   val CLASSIFICATION =
-    DataLayerType("classification", NearestNeighborInterpolation)
+    DataLayerType("classification", NearestNeighborInterpolation, "uint16")
 
   implicit val dataLayerFormat = Json.format[DataLayer]
 
@@ -75,4 +71,10 @@ object DataLayer extends Function6[String, String, Option[List[String]], String,
       defaultInterpolation
     }
   }
+}
+
+case class UserDataLayer(name: String, dataSetName: String, dataLayer: DataLayer)
+
+object UserDataLayer {
+  implicit val userDataLayerFormat = Json.format[UserDataLayer]
 }

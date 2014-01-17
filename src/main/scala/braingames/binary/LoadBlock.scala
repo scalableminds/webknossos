@@ -7,7 +7,6 @@ import braingames.binary.models.DataLayerSection
 
 case class LoadBlock(
   dataSet: DataSet,
-  dataLayer: DataLayer,
   dataLayerSection: DataLayerSection,
   resolution: Int,
   block: Point3D) 

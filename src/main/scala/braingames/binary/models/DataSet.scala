@@ -16,7 +16,6 @@ case class DataSetSettings(
 
 case class DataSet(
   name: String,
-  baseDir: String,
   priority: Int = 0,
   scale: Scale,
   dataLayers: List[DataLayer] = Nil,
@@ -26,8 +25,6 @@ case class DataSet(
 
   def dataLayer(typ: String) =
     dataLayers.find(_.typ == typ)
-
-  def relativeBaseDir(binaryBase: String) = baseDir.replace(binaryBase, "")
 
   val blockLength = 128
 

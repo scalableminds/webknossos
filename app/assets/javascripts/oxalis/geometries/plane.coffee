@@ -33,6 +33,15 @@ class Plane
     @createMeshes(planeWidth, textureWidth)
 
 
+  createDataTexture : (width, bytes, format) ->
+    return new THREE.DataTexture(
+      new Uint8Array(bytes * width * width), width, width,
+      format, THREE.UnsignedByteType,
+      new THREE.UVMapping(),
+      THREE.ClampToEdgeWrapping, THREE.ClampToEdgeWrapping,
+      THREE.LinearMipmapLinearFilter, THREE.LinearMipmapLinearFilter )
+
+
   createMeshes : (pWidth, tWidth) ->
 
     # create plane
@@ -40,9 +49,14 @@ class Plane
     volumePlaneGeo = new THREE.PlaneGeometry(pWidth, pWidth, 1, 1)
 
     # create texture
-    texture             = new THREE.DataTexture(new Uint8Array(tWidth*tWidth), tWidth, tWidth, THREE.LuminanceFormat, THREE.UnsignedByteType, new THREE.UVMapping(), THREE.ClampToEdgeWrapping , THREE.ClampToEdgeWrapping, THREE.LinearMipmapLinearFilter, THREE.LinearMipmapLinearFilter )
+    bytes = @model.binary["color"].bitDepth >> 3
+    if @model.binary["color"].isRGB
+      texture = @createDataTexture(tWidth, bytes, THREE.RGBFormat)
+    else
+      texture = @createDataTexture(tWidth, bytes, THREE.LuminanceFormat)
     texture.needsUpdate = true
-    volumeTexture       = new THREE.DataTexture(new Uint8Array(tWidth*tWidth), tWidth, tWidth, THREE.LuminanceFormat, THREE.UnsignedByteType, new THREE.UVMapping(), THREE.ClampToEdgeWrapping , THREE.ClampToEdgeWrapping, THREE.LinearMipmapLinearFilter, THREE.LinearMipmapLinearFilter )
+    
+    volumeTexture = @createDataTexture(tWidth, 1, THREE.LuminanceFormat)
     
     offset = new THREE.Vector2(0, 0)
     repeat = new THREE.Vector2(0, 0)
@@ -180,15 +194,6 @@ class Plane
                 @plane.texture.image.data.set(dataBuffer)
               if dataLayerName == "segmentation"
                 @plane.volumeTexture.image.data.set(dataBuffer)
-              @flycam.hasNewTexture[@planeID] = true
-
-            if volumeBuffer and not @model.binary["segmentation"]?
-              # Generate test pattern
-              #for i in [0...512]
-              #  for j in [0...512]
-              #    id = Math.floor(i / 32) * 16 + Math.floor(j / 32)
-              #    volumeBuffer[i * 512 + j] = id
-              @plane.volumeTexture.image.data.set(volumeBuffer)
               @flycam.hasNewTexture[@planeID] = true
   
       if !(@flycam.hasNewTexture[@planeID] or @flycam.hasChanged)

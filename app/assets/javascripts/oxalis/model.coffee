@@ -52,7 +52,8 @@ class Model
             @user = new User(user)
             @scaleInfo = new ScaleInfo(tracing.content.dataSet.scale)
 
-            supportedDataLayers = [{name: "color", bitDepth: 8, allowManipulation : true},
+            # TODO: Define color bit depth
+            supportedDataLayers = [{name: "color", bitDepth: 24, allowManipulation : true, isRGB : true},
                                     {name: "volume", bitDepth: 16, allowManipulation : false},
                                     {name: "segmentation", bitDepth: 16, allowManipulation : false}]            
 

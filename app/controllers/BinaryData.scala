@@ -10,6 +10,9 @@ import play.api.libs.json.JsValue
 import play.libs.Akka._
 import _root_.models.security.{RoleDAO, Role}
 import models.binary._
+import models.user.User
+import models.annotation.AnnotationDAO
+import models.tracing.volume.VolumeTracing
 import oxalis.security.{UserAwareRequest, AuthenticatedRequest, Secured}
 import scala.concurrent.Future
 import braingames.geometry.Point3D
@@ -59,7 +62,7 @@ object BinaryData extends Controller with Secured {
                  )(implicit ctx: DBAccessContext): Fox[Array[Byte]] = {
     for {
       dataSet <- DataSetDAO.findOneByName(dataSetName) ?~> Messages("dataSet.notFound")
-      dataLayer <- dataSet.dataLayer(dataLayerTyp) ?~> Messages("dataLayer.notFound")
+      dataLayer <- getDataLayer(dataSet, dataLayerTyp, None, None)//dataSet.dataLayer(dataLayerTyp) ?~> Messages("dataLayer.notFound")
       dataRequestCollection = createDataRequestCollection(dataSet, dataLayer, cubeSize, parsedRequest)
       data <- BinaryDataService.handleDataRequest(dataRequestCollection) ?~> "Data request couldn't get handled"
     } yield {
@@ -107,6 +110,29 @@ object BinaryData extends Controller with Secured {
       }
   }
 
+  def tryGetUserDataLayer(dataSet: DataSet, dataLayerTyp: String, annotationId: Option[String], userOpt: Option[User])(implicit ctx: DBAccessContext): Fox[DataLayer] = {
+    for {
+      id <- annotationId.toFox
+      annotation <- AnnotationDAO.findOneById(id).toFox
+      if annotation.restrictions.allowAccess(userOpt)
+      VolumeTracing(_, userDataLayerName, _, _, _, _) <- annotation.content
+      userDataLayer <- UserDataLayerDAO.findOneByName(userDataLayerName).toFox
+      if userDataLayer.dataSetName == dataSet.name && userDataLayer.dataLayer.typ == dataLayerTyp
+    } yield {
+      userDataLayer.dataLayer
+    }
+  }
+
+  def getDataLayer(dataSet: DataSet, dataLayerTyp: String, annotationId: Option[String], userOpt: Option[User])(implicit ctx: DBAccessContext): Fox[DataLayer] = {
+    tryGetUserDataLayer(dataSet, dataLayerTyp, annotationId, userOpt).orElse(
+      for {
+        dataLayer <- dataSet.dataLayer(dataLayerTyp)
+      } yield {
+        dataLayer
+      }
+    )
+  }
+
   /**
    * Handles a request for binary data via a HTTP POST. The content of the
    * POST body is specified in the BinaryProtokoll.parseAjax functions.
@@ -121,6 +147,11 @@ object BinaryData extends Controller with Secured {
       } yield {
         Ok(data)
       }
+  }
+
+  def requestTest(dataSetName: String, dataLayerTyp: String, cubeSize: Int, annotationId: Option[String]) = UserAwareAction.async(parse.raw) {
+    implicit request =>
+      Future.successful(Ok)      
   }
 
   def respondWithSpriteSheet(dataSetName: String, dataLayerTyp: String, width: Int, height: Int, depth: Int, imagesPerRow: Int, x: Int, y: Int, z: Int, resolution: Int)(implicit request: UserAwareRequest[_]): Future[SimpleResult] = {

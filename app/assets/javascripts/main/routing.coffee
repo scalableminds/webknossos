@@ -137,8 +137,6 @@ $ ->
       # TODO: does "admin.user.userAdministration" still exist or has it been replaced by "userList" ?
 
     "admin.user.userList" : ->
-      
-
       require ["multiselect"], ->
 
         $popovers = $("a[rel=popover]")

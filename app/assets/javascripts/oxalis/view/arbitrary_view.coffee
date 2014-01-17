@@ -33,6 +33,7 @@ class ArbitraryView
     @container = $(canvas)
     @width  = @container.width()
     @height = @container.height()
+    @deviceScaleFactor = window.devicePixelRatio || 1
 
     # Initialize main THREE.js components
 
@@ -103,7 +104,7 @@ class ArbitraryView
       camera.matrix.translate(@cameraPosition)
       camera.matrixWorldNeedsUpdate = true
 
-      f = window.devicePixelRatio || 1
+      f = @deviceScaleFactor
       renderer.setViewport(0, 0, @width * f, @height * f)
       renderer.setScissor(0, 0, @width * f, @height * f)
       renderer.enableScissorTest(true)

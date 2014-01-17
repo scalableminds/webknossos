@@ -154,7 +154,7 @@ class Skeleton
   deleteNode : (node, treeId) ->
 
     $.assert(node.neighbors.length == 1,
-      "Node needs to have exactly 1 neighbor.", 0)
+      "Node needs to have exactly 1 neighbor.")
 
     treeGeometry = @getTreeGeometry(treeId)
     treeGeometry.deleteNode(node)

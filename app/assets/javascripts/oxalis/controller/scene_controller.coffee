@@ -41,6 +41,10 @@ class SceneController
       max : @upperBoundary
       color : @CUBE_COLOR
       showCrossSections : true })
+    @bb = new Cube(@model, {
+      max : [0, 0, 0]
+      color : 0xffaa00
+      showCrossSections : true })
 
     # TODO: Implement text 
 
@@ -77,6 +81,7 @@ class SceneController
     # things have to be changed for each cam.
 
     @cube.updateForCam(id)
+    @bb.updateForCam(id)
 
     if id in constants.ALL_PLANES
       unless @showSkeleton
@@ -169,6 +174,7 @@ class SceneController
     result = result.concat(@skeleton.getMeshes())
                     .concat(@contour.getMeshes())
                     .concat(@cube.getMeshes())
+                    .concat(@bb.getMeshes())
     
     return result
 
@@ -182,6 +188,12 @@ class SceneController
   toggleInactiveTreeVisibility : ->
 
     @skeleton.toggleInactiveTreeVisibility()
+
+
+  setBoundingBox : (bbArray) ->
+
+    @bb.setCorners([bbArray[0], bbArray[1], bbArray[2]],
+                    [bbArray[3], bbArray[4], bbArray[5]])
 
 
   setSegmentationAlpha : (alpha) ->
@@ -203,6 +215,7 @@ class SceneController
     for plane in @planes
       plane.setVisible(false)
     @cube.setVisibility( false )
+    @bb.setVisibility( false )
 
     @skeleton.setVisibility(@showSkeleton)
     @skeleton.setSizeAttenuation(true)
@@ -213,6 +226,7 @@ class SceneController
     for plane in @planes
       plane.setVisible(true)
     @cube.setVisibility( true )
+    @bb.setVisibility( true )
 
     @skeleton.setSizeAttenuation(false)
 

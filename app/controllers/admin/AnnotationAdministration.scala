@@ -22,8 +22,8 @@ object AnnotationAdministration extends AdminController {
       annotations <- task.annotations
       users <- Future.traverse(annotations)(_.user)
       contents <- Future.traverse(annotations)(_.content.futureBox)
-      val zipped = (annotations, users, contents).zipped.toList
     } yield {
+      val zipped = (annotations, users, contents).zipped.toList
       JsonOk(zipped.foldLeft(Html.empty) {
         case (h, (a, u, c)) =>
           h += html.admin.annotation.simpleAnnotation(a, u, c)

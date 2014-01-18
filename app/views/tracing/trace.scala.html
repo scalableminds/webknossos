@@ -9,7 +9,7 @@
 @main( ){
   <div id="loader"><div id="loader-icon"><i class="icon-spinner icon-spin icon-4x"></i><br>Loading</div></div>
   <div id="container" data-tracing-type="@annotation.typ" data-tracing-id="@annotation.id" class="clearfix">
-    <div id="main" role="main" data-url="@controllers.routes.AnnotationController.traceJSON(annotation.typ, annotation.id)">
+    <div id="main" role="main" @if(annotation.typ != "Explorational") { data-url="@controllers.routes.AnnotationController.traceJSON(annotation.typ, annotation.id)" }>
       <div id="overlay">
         @if(annotation.restrictions.allowUpdate(session.user)){
           <a href="#" class="btn btn-primary" id="trace-save-button">Save</a>
@@ -45,7 +45,7 @@
               }
               <a href="#tab2" data-toggle="tab">Options</a></li>
             </ul>
-            
+
             <div class="tab-content">
               <% if(task) { %>
                 <div class="tab-pane" id="tab0">
@@ -67,7 +67,7 @@
                 <div id="optionswindow"></div>
               </div>
             </div>
-          
+
         </div>
       </div>
       <div id="tracing">

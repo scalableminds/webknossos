@@ -3,10 +3,9 @@
 @import models.annotation.AnnotationType
 
 @main(){
-  <div id="loader"><div id="loader-icon"><i class="icon-spinner icon-spin icon-4x"></i><br>Loading</div></div>
   <div class="container wide">
     <h3>Tasks</h3>
-  
+
     <div class="page-selection"
       data-url="@controllers.admin.routes.TaskAdministration.list()"
       data-paged-table-id="tasklist-table">
@@ -34,12 +33,12 @@
           <td class="details-toggle" href="<%= controllers.admin.AnnotationAdministration.annotationsForTask(element.id).url %>" data-ajax="add-row=#<%= element.id %> + tr"> <i class="caret-right"></i> <i class="caret-down"></i> </td>
           <td> <%= element.formattedHash %> </td>
           <td> <%= element.seedIdHeidelberg %> </td>
-          <td> 
+          <td>
               <a href="@controllers.admin.routes.ProjectAdministration.list#<%= element.projectName %>">
                 <%= element.projectName %>
               </a>
           </td>
-          <td> 
+          <td>
             <a href="@controllers.admin.routes.TaskTypeAdministration.list#<% if(element.type) { print(element.type.summary)  } else { print('<deleted>') } %>">
               <% if(element.type) { print(element.type.summary)  } else { print("<deleted>") } %>
             </a>
@@ -73,7 +72,7 @@
           <td colspan="12">
             <table class="table table-condensed table-nohead">
               <tbody>
-                
+
               </tbody>
             </table>
           </td>

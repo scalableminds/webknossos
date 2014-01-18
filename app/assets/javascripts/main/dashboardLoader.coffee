@@ -31,7 +31,7 @@ DashboardLoader =
     $("#new-task-button").on("ajax-after", (event) ->
 
       $(this).data("ajax", "add-row=#dashboard-tasks,confirm=Do you really want another task?")
-    
+
     )
 
     # remove confirmation, when there is no open task left
@@ -51,7 +51,7 @@ DashboardLoader =
       $tableBody = table.find("tbody")
       taskTRTemplate = $tableBody.html()
       $tableBody.empty()
-      
+
       table.data("tr-template", taskTRTemplate)
 
     $dashboardTasks = $("#dashboard-tasks")
@@ -65,7 +65,7 @@ DashboardLoader =
       $tableBody = table.find("tbody")
       templateSource = _.unescape(table.data("tr-template"))
       templateFn = _.template(templateSource)
-      
+
       outputHTML = []
 
       for el in data
@@ -81,7 +81,7 @@ DashboardLoader =
 
     url = "/getDashboardInfo"
 
-    $.get(url).done((response) ->
+    $.get(url).done((response) =>
 
       # tasks
       populateTemplate(response.data.tasks, $dashboardTasks, (el) ->
@@ -95,4 +95,10 @@ DashboardLoader =
         return { annotations: el }
       )
 
+      @hideLoading()
+
     )
+
+  hideLoading : ->
+
+    $("#loader").css("display" : "none")

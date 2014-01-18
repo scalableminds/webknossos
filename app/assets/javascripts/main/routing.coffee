@@ -20,7 +20,14 @@ $ ->
 
     if routes[javaTemplate]?
       routes[javaTemplate].call($("#main-container")[0])
+    else
+      hideLoading()
+
     return
+
+  hideLoading = ->
+
+    $("#loader").css("display" : "none")
 
 
   route
@@ -40,7 +47,7 @@ $ ->
 
     "admin.taskType.taskTypes" : ->
 
-
+      hideLoading()
 
     "tracing.trace" : ->
 
@@ -133,6 +140,8 @@ $ ->
 
             new PanZoomSVG($svg)
 
+            hideLoading()
+
           (error) ->
             $(".graph").html("<i class=\"icon-warning-sign\"></i> #{error.replace(/\n/g,"<br>")}")
         )
@@ -206,6 +215,7 @@ $ ->
             $(this).parents("table").find("input[type=checkbox]").attr('checked', false)
             $(this).parents("tr").find("input[type=checkbox]").attr('checked', true)
 
+        hideLoading()
       return
 
 
@@ -287,12 +297,14 @@ $ ->
           event.preventDefault()
           save()
 
+        hideLoading()
 
     "levelcreator.levelCreator" : ->
 
       require ["./level_creator"], (LevelCreator) ->
 
         window.levelCreator = new LevelCreator()
+        hideLoading()
 
     "admin.project.projectList" : ->
 
@@ -352,4 +364,6 @@ $ ->
           optionString = aTracing.typ + " " + aTracing.dataSetName + " " + aTracing.created
           $selectTracing.append("<option value='#{id}'>#{optionString}</option>")
 
+
+        hideLoading()
       )

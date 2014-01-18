@@ -7,7 +7,6 @@
 @import play.api.libs.concurrent.Execution.Implicits._
 
 @main( ){
-  <div id="loader"><div id="loader-icon"><i class="icon-spinner icon-spin icon-4x"></i><br>Loading</div></div>
   <div id="container" data-tracing-type="@annotation.typ" data-tracing-id="@annotation.id" class="clearfix">
     <div id="main" role="main" @if(annotation.typ != "Explorational") { data-url="@controllers.routes.AnnotationController.traceJSON(annotation.typ, annotation.id)" }>
       <div id="overlay">

@@ -58,11 +58,13 @@ object BinaryData extends Controller with Secured {
                    dataSetName: String,
                    dataLayerTyp: String,
                    cubeSize: Int,
-                   parsedRequest: ParsedRequestCollection
+                   parsedRequest: ParsedRequestCollection,
+                   annotationId: Option[String],
+                   userOpt: Option[User]
                  )(implicit ctx: DBAccessContext): Fox[Array[Byte]] = {
     for {
       dataSet <- DataSetDAO.findOneByName(dataSetName) ?~> Messages("dataSet.notFound")
-      dataLayer <- getDataLayer(dataSet, dataLayerTyp, None, None)//dataSet.dataLayer(dataLayerTyp) ?~> Messages("dataLayer.notFound")
+      dataLayer <- getDataLayer(dataSet, dataLayerTyp, annotationId, userOpt) ?~> Messages("dataLayer.notFound")
       dataRequestCollection = createDataRequestCollection(dataSet, dataLayer, cubeSize, parsedRequest)
       data <- BinaryDataService.handleDataRequest(dataRequestCollection) ?~> "Data request couldn't get handled"
     } yield {
@@ -78,11 +80,13 @@ object BinaryData extends Controller with Secured {
                    height: Int,
                    depth: Int,
                    resolutionExponent: Int,
-                   settings: DataRequestSettings
+                   settings: DataRequestSettings,
+                   annotationId: Option[String] = None,
+                   userOpt: Option[User] = None
                  )(implicit ctx: DBAccessContext): Fox[Array[Byte]] = {
     for {
       dataSet <- DataSetDAO.findOneByName(dataSetName) ?~> Messages("dataSet.notFound")
-      dataLayer <- dataSet.dataLayer(dataLayerTyp) ?~> Messages("dataLayer.notFound")
+      dataLayer <- getDataLayer(dataSet, dataLayerTyp, annotationId, userOpt) ?~> Messages("dataLayer.notFound")
 
       dataRequestCollection = BinaryDataService.createDataRequest(
         dataSet,
@@ -100,11 +104,11 @@ object BinaryData extends Controller with Secured {
     }
   }
 
-  def requestViaAjaxDebug(dataSetName: String, dataLayerTyp: String, cubeSize: Int, x: Int, y: Int, z: Int, resolution: Int) = Authenticated().async {
+  def requestViaAjaxDebug(dataSetName: String, dataLayerTyp: String, cubeSize: Int, x: Int, y: Int, z: Int, resolution: Int, annotationId: Option[String]) = Authenticated().async {
     implicit request =>
       val dataRequests = ParsedRequestCollection(Array(ParsedRequest(resolution, Point3D(x, y, z), false)))
       for {
-        data <- requestData(dataSetName, dataLayerTyp, cubeSize, dataRequests)
+        data <- requestData(dataSetName, dataLayerTyp, cubeSize, dataRequests, annotationId, Some(request.user))
       } yield {
         Ok(data)
       }
@@ -138,20 +142,15 @@ object BinaryData extends Controller with Secured {
    * POST body is specified in the BinaryProtokoll.parseAjax functions.
    */
 
-  def requestViaAjax(dataSetName: String, dataLayerTyp: String, cubeSize: Int) = UserAwareAction.async(parse.raw) {
+  def requestViaAjax(dataSetName: String, dataLayerTyp: String, cubeSize: Int, annotationId: Option[String]) = UserAwareAction.async(parse.raw) {
     implicit request =>
       for {
         payload <- request.body.asBytes() ?~> Messages("binary.payload.notSupplied")
         requests <- BinaryProtocol.parse(payload, containsHandle = false) ?~> Messages("binary.payload.invalid")
-        data <- requestData(dataSetName, dataLayerTyp, cubeSize, requests) ?~> Messages("binary.data.notFound")
+        data <- requestData(dataSetName, dataLayerTyp, cubeSize, requests, annotationId, request.userOpt) ?~> Messages("binary.data.notFound")
       } yield {
         Ok(data)
       }
-  }
-
-  def requestTest(dataSetName: String, dataLayerTyp: String, cubeSize: Int, annotationId: Option[String]) = UserAwareAction.async(parse.raw) {
-    implicit request =>
-      Future.successful(Ok)      
   }
 
   def respondWithSpriteSheet(dataSetName: String, dataLayerTyp: String, width: Int, height: Int, depth: Int, imagesPerRow: Int, x: Int, y: Int, z: Int, resolution: Int)(implicit request: UserAwareRequest[_]): Future[SimpleResult] = {

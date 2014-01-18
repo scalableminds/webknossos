@@ -20,7 +20,7 @@ class PullQueue
   roundTripTime : 0
 
   
-  constructor : (@dataSetName, @cube, @dataLayerName, { @tracingId, @tracingType } ) ->
+  constructor : (@dataSetName, @cube, @dataLayerName, @tracingId ) ->
 
     @queue = []
 
@@ -104,20 +104,34 @@ class PullQueue
 
 
   pullBatch : (batch) ->
+
+    if @alreadyRequested? or @dataLayerName == "color"
+      return
+
+    @alreadyRequested = true
+    transmitBuffer = []
+    transmitBuffer.push(
+      0
+      0
+      5376
+      5376
+      1408
+    )
+
     # Loading a bunch of buckets
 
-    @batchCount++
+#    @batchCount++
 
-    transmitBuffer = []
-    for bucket in batch
-      zoomStep = bucket[3]
-      transmitBuffer.push(
-        zoomStep
-        if @fourBit and zoomStep == 0 then 1 else 0
-        bucket[0] << (zoomStep + @cube.BUCKET_SIZE_P)
-        bucket[1] << (zoomStep + @cube.BUCKET_SIZE_P)
-        bucket[2] << (zoomStep + @cube.BUCKET_SIZE_P)
-      )
+#    transmitBuffer = []
+#    for bucket in batch
+#      zoomStep = bucket[3]
+#      transmitBuffer.push(
+#        zoomStep
+ #       if @fourBit and zoomStep == 0 then 1 else 0
+#        bucket[0] << (zoomStep + @cube.BUCKET_SIZE_P)
+  #      bucket[1] << (zoomStep + @cube.BUCKET_SIZE_P)
+   #     bucket[2] << (zoomStep + @cube.BUCKET_SIZE_P)
+    #  )
 
     # Measuring the time until response arrives to select appropriate preloading strategy 
     roundTripBeginTime = new Date()
@@ -190,7 +204,7 @@ class PullQueue
       senders : [
         # new ArrayBufferSocket.WebWorker("ws://#{document.location.host}/binary/ws?dataSetName=#{@dataSetName}&cubeSize=#{1 << @cube.BUCKET_SIZE_P}")
         # new ArrayBufferSocket.WebSocket("ws://#{document.location.host}/binary/ws?dataSetName=#{@dataSetName}&cubeSize=#{1 << @cube.BUCKET_SIZE_P}")
-        new ArrayBufferSocket.XmlHttpRequest("/datasets/#{@dataSetName}/layers/#{@dataLayerName}/data?cubeSize=#{1 << @cube.BUCKET_SIZE_P}&annotationTyp=#{@tracingType}&annotationId=#{@tracingId}")
+        new ArrayBufferSocket.XmlHttpRequest("/datasets/#{@dataSetName}/layers/#{@dataLayerName}/data?cubeSize=#{1 << @cube.BUCKET_SIZE_P}&annotationId=#{@tracingId}")
       ]
       requestBufferType : Float32Array
       responseBufferType : Uint8Array

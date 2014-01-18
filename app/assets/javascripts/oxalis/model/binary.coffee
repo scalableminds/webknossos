@@ -24,7 +24,7 @@ class Binary
   direction : [0, 0, 0]
 
 
-  constructor : (@user, dataSet, @TEXTURE_SIZE_P, @layer, tracingInfo) ->
+  constructor : (@user, dataSet, @TEXTURE_SIZE_P, @layer, tracingId) ->
 
     @dataSetName = dataSet.name
 
@@ -40,8 +40,8 @@ class Binary
     ]
 
     @cube = new Cube(upperBoundary, dataLayer.resolutions.length, @layer.bitDepth)
-    @pullQueue = new PullQueue(@dataSetName, @cube, @layer.name, tracingInfo )
-    @pushQueue = new PushQueue(@dataSetName, @cube, @layer.name, tracingInfo, false)
+    @pullQueue = new PullQueue(@dataSetName, @cube, @layer.name, tracingId )
+    @pushQueue = new PushQueue(@dataSetName, @cube, @layer.name, tracingId, false)
     @cube.setPushQueue( @pushQueue )
 
     @pingStrategies = [new PingStrategy.DslSlow(@cube, @TEXTURE_SIZE_P)]

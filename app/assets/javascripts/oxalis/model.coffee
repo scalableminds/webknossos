@@ -92,8 +92,12 @@ class Model
               "positionChanged" : (position) =>
                 @flycam3d.setPositionSilent(position)
             
-            @cellTracing = new CellTracing(tracing, @scaleInfo, @flycam, @flycam3d, @user)
-            if @binary["segmentation"]?
+            @isSkeletonTracing = tracing.content.settings.allowedModes.indexOf("volume") == -1
+            if @isSkeletonTracing
+              @cellTracing = new CellTracing(tracing, @scaleInfo, @flycam, @flycam3d, @user)
+            else
+              $.assert( @binary["segmentation"]?,
+                "Volume is allowed, but segmentation does not exist" )
               @volumeTracing = new VolumeTracing(@flycam, @binary["segmentation"].cube)
             
             {"restrictions": tracing.restrictions, "settings": tracing.content.settings}

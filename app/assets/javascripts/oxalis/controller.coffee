@@ -32,13 +32,11 @@ class Controller
 
     @model = new Model()
 
-    @model.initialize().done (tracingState) =>
+    @model.initialize().done ({restrictions, settings, error}) =>
 
       # Do not continue, when there was an error and we got no settings from the server
-      if tracingState.error
+      if error
         return
-
-      [restrictions, settings] = [tracingState.restrictions, tracingState.settings]
 
       unless restrictions.allowAccess
         Toast.Error "You are not allowed to access this tracing"

@@ -19,7 +19,7 @@ class View
     @setTheme(constants.THEME_BRIGHT)
     @createKeyboardCommandOverlay()
 
-    @model.cellTracing.on({
+    @model.cellTracing?.on({
       emptyBranchStack : =>
 
         Toast.error("No more branchpoints", false)
@@ -100,7 +100,7 @@ class View
         @updateCommentsSortButton()
         @updateComments()
 
-    @model.cellTracing.stateLogger.on
+    @model.cellTracing?.stateLogger.on
       pushFailed       : (critical) =>
         if not critical or @reloadDenied
           Toast.error("Auto-Save failed!")
@@ -211,6 +211,8 @@ class View
 
 
   updateComments : ->
+
+    return unless @model.cellTracing?
     
     comments = @model.cellTracing.getComments( @model.user.sortCommentsAsc )
     commentList = $("#comment-list")
@@ -302,6 +304,8 @@ class View
 
 
   updateTrees : ->
+
+    return unless @model.cellTracing?
 
     trees = @model.cellTracing.getTreesSorted()
 

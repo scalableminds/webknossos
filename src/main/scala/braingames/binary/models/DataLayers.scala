@@ -32,10 +32,13 @@ trait DataLayerLike {
 
 case class DataLayer(
   typ: String,
+  baseDir: String,
   flags: Option[List[String]],
   elementClass: String = "uint8",
   fallback: Option[String] = None,
   sections: List[DataLayerSection] = Nil) extends DataLayerLike {
+
+  def relativeBaseDir(binaryBase: String) = baseDir.replace(binaryBase, "")
 
   val interpolator = DataLayer.interpolationFromString(typ)
 
@@ -46,7 +49,7 @@ case class DataLayer(
 
 case class DataLayerType(name: String, interpolation: Interpolation, defaultElementClass: String = "uint8")
 
-object DataLayer extends Function5[String, Option[List[String]], String, Option[String], List[DataLayerSection], DataLayer]{
+object DataLayer extends Function6[String, String, Option[List[String]], String, Option[String], List[DataLayerSection], DataLayer]{
   val COLOR =
     DataLayerType("color", TrilerpInterpolation)
   val SEGMENTATION =

@@ -30,14 +30,16 @@ trait DataSetService {
 
   def createUserDataLayer(baseDataSet: DataSet): UserDataLayer = {
     val name = userDataSetName()
+    val baseFolder = new File(userDataSetFolder(name))
+    val sections = baseDataSet.dataLayer(DataLayer.SEGMENTATION.name).map(_.sections).getOrElse(Nil)
     val dataLayer = DataLayer(
       DataLayer.SEGMENTATION.name,
-      userDataSetFolder(name),
+      baseFolder.getAbsolutePath(),
       None,
       DataLayer.SEGMENTATION.defaultElementClass,
-      fallback = Some(baseDataSet.name))
+      Some(baseDataSet.name),
+      sections)
 
-    val baseFolder = new File(dataLayer.baseDir)
     baseFolder.mkdirs()
     UserDataLayer(name, baseDataSet.name, dataLayer)
   }

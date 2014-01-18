@@ -105,7 +105,6 @@ class DataRequestActor(
 
   def loadFromLayer(loadBlock: LoadBlock): Future[Box[Array[Byte]]] = {
     if (loadBlock.dataLayerSection.doesContainBlock(loadBlock.block, loadBlock.dataSet.blockLength)) {
-
       def loadFromStore(dataStores: List[ActorRef]): Future[Box[Array[Byte]]] = dataStores match {
         case a :: tail =>
           (a ? loadBlock)
@@ -137,7 +136,7 @@ class DataRequestActor(
 
   def loadFromSomewhere(dataSet: DataSet, layer: DataLayer, requestedSection: Option[String], resolution: Int, block: Point3D): Future[Array[Byte]] = {
 
-    def loadFromSections(sections: Stream[DataLayerSection]): Future[Array[Byte]] = sections match {
+    def loadFromSections(sections: Stream[(DataLayerSection, DataLayer)]): Future[Array[Byte]] = sections match {
       case (section, layer) #:: tail =>
         val loadBlock = LoadBlock(dataSet, layer, section, resolution, block)
         loadFromLayer(loadBlock).flatMap {
@@ -170,6 +169,7 @@ class DataRequestActor(
           }
       }.getOrElse(Nil)), 5 seconds)
     }
+
     loadFromSections(sections)
   }
 

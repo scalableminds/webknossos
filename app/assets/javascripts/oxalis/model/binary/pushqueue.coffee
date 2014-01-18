@@ -111,7 +111,7 @@ class PushQueue
 
     if @socket? then @socket else @socket = new ArrayBufferSocket(
       senders : [
-        new ArrayBufferSocket.XmlHttpRequest("/datasets/#{@dataSetName}/layers/#{@dataLayerName}/data?cubeSize=#{1 << @cube.BUCKET_SIZE_P}&annotationId=#{@tracingId}", "POST")
+        new ArrayBufferSocket.XmlHttpRequest("/datasets/#{@dataSetName}/layers/#{@dataLayerName}/data?cubeSize=#{1 << @cube.BUCKET_SIZE_P}&annotationId=#{@tracingId}", "PUT")
       ]
       requestBufferType : Uint8Array
       responseBufferType : Uint8Array

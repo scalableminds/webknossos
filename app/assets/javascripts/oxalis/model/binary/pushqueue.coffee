@@ -68,6 +68,19 @@ class PushQueue
 
   pushBatch : (batch) ->
 
+    if @alreadyPushed?
+      return
+
+    @alreadyPushed = true
+    transmitBuffer = []
+    transmitBuffer.push(
+      0
+      0
+      5376
+      5376
+      1408
+    )
+
     @batchCount++
 
     console.log "Pushing batch", batch
@@ -106,7 +119,7 @@ class PushQueue
 
     if @socket? then @socket else @socket = new ArrayBufferSocket(
       senders : [
-        new ArrayBufferSocket.XmlHttpRequest("/datasets/#{@dataSetName}/layers/#{@dataLayerName}/data?cubeSize=#{1 << @cube.BUCKET_SIZE_P}&annotationId=#{@tracingId}", "POST")
+        new ArrayBufferSocket.XmlHttpRequest("/datasets/#{@dataSetName}/layers/#{@dataLayerName}/data?cubeSize=#{1 << @cube.BUCKET_SIZE_P}&annotationId=#{@tracingId}", "PUT")
       ]
       requestBufferType : Uint8Array
       responseBufferType : Uint8Array

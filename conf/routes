@@ -39,6 +39,8 @@ GET           /datasets/:dataSetName/layers/:dataLayerName/data          control
 GET           /datasets/:dataSetName/layers/:dataLayerName/sprite        controllers.BinaryData.requestSpriteSheet(dataSetName: String, dataLayerName: String, cubeSize: Int ?=128, imagesPerRow: Int ?= 8, x: Int, y: Int, z: Int, resolution: Int)
 GET           /datasets/:dataSetName/layers/:dataLayerName/image         controllers.BinaryData.requestImage(dataSetName: String, dataLayerName: String, width: Int, height: Int, x: Int, y: Int, z: Int, resolution: Int)
 
+PUT           /datasets/:dataSetName/layers/:dataLayerName/data          controllers.BinaryData.writeViaAjax(dataSetName: String, dataLayerName: String, cubeSize: Int, annotationId: String)
+
 # Assertions
 GET           /assert/:assertionId                                        controllers.AssertionController.view(assertionId: String)
 POST          /assert                                                     controllers.AssertionController.log

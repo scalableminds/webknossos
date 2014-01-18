@@ -224,4 +224,9 @@ object BinaryData extends Controller with Secured {
   //              (input, output)
   //          }
   //    }
+
+  def writeViaAjax(dataSetName: String, dataLayerName: String, cubeSize: Int, annotationId: String) = Authenticated().async {
+    implicit request =>
+      Future.successful(Ok)
+  }
 }

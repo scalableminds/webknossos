@@ -104,7 +104,6 @@ class PullQueue
 
 
   pullBatch : (batch) ->
-
     # Loading a bunch of buckets
 
     @batchCount++

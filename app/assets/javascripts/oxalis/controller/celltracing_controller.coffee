@@ -18,9 +18,6 @@ class CellTacingController
         @model.cellTracing.deleteActiveNode()
       setActiveTree : (id) => @setActiveTree(id, false)
       setActiveNode : (id) => @setActiveNode(id, false)
-      setActiveCell : (id) => @model.volumeTracing.setActiveCell(id)
-      createNewCell : => @model.volumeTracing.createCell()
-      newBoundingBox : (bb) => @sceneController.setBoundingBox(bb)
 
     @mouseControls = 
 

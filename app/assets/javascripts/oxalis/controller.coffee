@@ -222,6 +222,7 @@ class Controller
     gui.update()  
 
     model.binary["color"].pullQueue.set4Bit(model.user.fourBit)
-    model.binary["color"].updateContrastCurve(gui.settings.brightness, gui.settings.contrast)
+    model.binary["color"].updateContrastCurve(
+      gui.settingsGeneral.brightness, gui.settingsGeneral.contrast)
 
     return gui

@@ -57,6 +57,9 @@ class PlaneController
     @TDViewControls = $('#TDViewControls')
     @TDViewControls.addClass("btn-group")
 
+    @gui.on
+      newBoundingBox : (bb) => @sceneController.setBoundingBox(bb)
+
     buttons = [
         name : "3D"
         callback : @cameraController.changeTDViewDiagonal

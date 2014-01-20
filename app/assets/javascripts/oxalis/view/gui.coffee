@@ -25,7 +25,7 @@ class Gui
 
     somaClickingAllowed = @tracingSettings.somaClickingAllowed
     
-    @settings = 
+    @settingsGeneral = 
 
       boundingBox : "0, 0, 0, 0, 0, 0"
       fourBit : @user.fourBit
@@ -34,18 +34,23 @@ class Gui
       resetBrightnessAndContrast : => @resetBrightnessAndContrast()
       quality : @qualityArray[@user.quality]
 
-      activeTreeID : @model.cellTracing.getActiveTreeId()
-      activeNodeID : @model.cellTracing.getActiveNodeId() or -1
-      activeCellID : @model.volumeTracing.getActiveCellId()
-      newNodeNewTree : if somaClickingAllowed then @user.newNodeNewTree else false
-      deleteActiveNode : => @trigger "deleteActiveNode"
-      createNewCell : => @trigger "createNewCell"
+    if @model.cellTracing?
+      @settingsSkeleton =
+        activeTreeID : @model.cellTracing.getActiveTreeId()
+        activeNodeID : @model.cellTracing.getActiveNodeId() or -1
+        newNodeNewTree : if somaClickingAllowed then @user.newNodeNewTree else false
+        deleteActiveNode : => @trigger "deleteActiveNode"
+
+    if @model.volumeTracing
+      @settingsVolume =
+        activeCellID : @model.volumeTracing.getActiveCellId()
+        createNewCell : => @trigger "createNewCell"
 
     if @datasetPosition == 0
       # add new dataset to settings
       @user.briConNames.push(@datasetPostfix)
-      @user.brightness.push(@settings.brightness)
-      @user.contrast.push(@settings.contrast)
+      @user.brightness.push(@settingsGeneral.brightness)
+      @user.contrast.push(@settingsGeneral.contrast)
       @datasetPosition = @user.briConNames.length - 1
 
 
@@ -81,24 +86,24 @@ class Gui
       0.05, 0.5, 0.01, "Crosshair size")
 
     @folders.push( @fView = @gui.addFolder("View") )
-    bbController = @fView.add(@settings, "boundingBox").name("Bounding Box").onChange(@setBoundingBox)
+    bbController = @fView.add(@settingsGeneral, "boundingBox").name("Bounding Box").onChange(@setBoundingBox)
     @addTooltip(bbController, "Format: minX, minY, minZ, maxX, maxY, maxZ")
-    @addCheckbox(@fView, @settings, "fourBit", "4 Bit")
+    @addCheckbox(@fView, @settingsGeneral, "fourBit", "4 Bit")
     @addCheckbox(@fView, @user, "interpolation", "Interpolation")
     @brightnessController =
-      @addSlider(@fView, @settings, "brightness",
+      @addSlider(@fView, @settingsGeneral, "brightness",
         -256, 256, 5, "Brightness", @setBrightnessAndContrast)
     @contrastController =
-      @addSlider(@fView, @settings, "contrast",
+      @addSlider(@fView, @settingsGeneral, "contrast",
         0.5, 5, 0.1, "Contrast", @setBrightnessAndContrast)
-    @addFunction(@fView, @settings, "resetBrightnessAndContrast",
+    @addFunction(@fView, @settingsGeneral, "resetBrightnessAndContrast",
       "Reset B/C")
     @clippingController = @addSlider(@fView, @user, "clippingDistance",
       1, 1000 * @model.scaleInfo.baseVoxel, 1, "Clipping Distance")
     @clippingControllerArbitrary = @addSlider(@fView, @user, "clippingDistanceArbitrary",
       1, 127, 1, "Clipping Distance")
     @addCheckbox(@fView, @user, "displayCrosshair", "Show Crosshairs")
-    (@fView.add @settings, "quality", @qualityArray)
+    (@fView.add @settingsGeneral, "quality", @qualityArray)
                           .name("Quality")
                           .onChange((v) => @setQuality(v))
 
@@ -107,29 +112,33 @@ class Gui
     @addCheckbox(@fTDView, @user, "displayTDViewYZ", "Display YZ-Plane")
     @addCheckbox(@fTDView, @user, "displayTDViewXZ", "Display XZ-Plane")
 
-    @folders.push( @fTrees = @gui.addFolder("Trees") )
-    @activeTreeIdController = @addNumber(@fTrees, @settings, "activeTreeID",
-      1, 1, "Active Tree ID", (value) => @trigger( "setActiveTree", value))
-    if somaClickingAllowed
-      @addCheckbox(@fTrees, @settings, "newNodeNewTree", "Soma clicking mode")
-    else
-      @set("newNodeNewTree", false, Boolean)
+    if @settingsSkeleton?
 
-    @folders.push( @fNodes = @gui.addFolder("Nodes") )
-    @activeNodeIdController = @addNumber(@fNodes, @settings, "activeNodeID",
-      1, 1, "Active Node ID", (value) => @trigger( "setActiveNode", value))
-    @particleSizeController = @addSlider(@fNodes, @user, "particleSize",
-      constants.MIN_PARTICLE_SIZE, constants.MAX_PARTICLE_SIZE, 1, "Node size")
-    @addFunction(@fNodes, @settings, "deleteActiveNode", "Delete Active Node")
+      @folders.push( @fTrees = @gui.addFolder("Trees") )
+      @activeTreeIdController = @addNumber(@fTrees, @settingsSkeleton, "activeTreeID",
+        1, 1, "Active Tree ID", (value) => @trigger( "setActiveTree", value))
+      if somaClickingAllowed
+        @addCheckbox(@fTrees, @settingsSkeleton, "newNodeNewTree", "Soma clicking mode")
+      else
+        @set("newNodeNewTree", false, Boolean)
 
-    @folders.push( @fCells = @gui.addFolder("Cells") )
-    @activeCellIdController = @addNumber(@fCells, @settings, "activeCellID",
-      0, 1, "Active Cell ID", (value) => @trigger( "setActiveCell", value))
-    @addFunction(@fCells, @settings, "createNewCell", "Create new Cell")
+      @folders.push( @fNodes = @gui.addFolder("Nodes") )
+      @activeNodeIdController = @addNumber(@fNodes, @settingsSkeleton, "activeNodeID",
+        1, 1, "Active Node ID", (value) => @trigger( "setActiveNode", value))
+      @particleSizeController = @addSlider(@fNodes, @user, "particleSize",
+        constants.MIN_PARTICLE_SIZE, constants.MAX_PARTICLE_SIZE, 1, "Node size")
+      @addFunction(@fNodes, @settingsSkeleton, "deleteActiveNode", "Delete Active Node")
 
-    @fTrees.open()
-    @fNodes.open()
-    @fCells.open()
+    if @settingsVolume?
+
+      @folders.push( @fCells = @gui.addFolder("Cells") )
+      @activeCellIdController = @addNumber(@fCells, @settingsVolume, "activeCellID",
+        0, 1, "Active Cell ID", (value) => @trigger( "setActiveCell", value))
+      @addFunction(@fCells, @settingsVolume, "createNewCell", "Create new Cell")
+
+    @fTrees?.open()
+    @fNodes?.open()
+    @fCells?.open()
 
     $("#dataset-name").text(@model.binary["color"].dataSetName)
 
@@ -171,7 +180,7 @@ class Gui
         else
           $("#zoomFactor").html("<p>Viewport width: " + (nm / 1000000).toFixed(1) + " mm</p>")
 
-    @model.cellTracing.on
+    @model.cellTracing?.on
       newActiveNode    : => @update()
       newActiveTree    : => @update()
       deleteActiveTree : => @update()
@@ -180,7 +189,7 @@ class Gui
       newNode          : => @update()
       newTree          : => @update()
 
-    @model.volumeTracing.on
+    @model.volumeTracing?.on
       newActiveCell    : =>
         console.log "newActiveCell!"
         @update()
@@ -338,10 +347,10 @@ class Gui
 
 
   setBrightnessAndContrast : =>
-    @model.binary["color"].updateContrastCurve(@settings.brightness, @settings.contrast)
+    @model.binary["color"].updateContrastCurve(@settingsGeneral.brightness, @settingsGeneral.contrast)
     
-    @user.brightness[@datasetPosition] = (Number) @settings.brightness
-    @user.contrast[@datasetPosition] = (Number) @settings.contrast
+    @user.brightness[@datasetPosition] = (Number) @settingsGeneral.brightness
+    @user.contrast[@datasetPosition] = (Number) @settingsGeneral.contrast
     @user.push()
 
 
@@ -353,8 +362,8 @@ class Gui
     ).done (defaultData) =>
       defaultDatasetPosition = @initDatasetPosition(defaultData.briConNames)
 
-      @settings.brightness = defaultData.brightness[defaultDatasetPosition]
-      @settings.contrast = defaultData.contrast[defaultDatasetPosition]
+      @settingsGeneral.brightness = defaultData.brightness[defaultDatasetPosition]
+      @settingsGeneral.contrast = defaultData.contrast[defaultDatasetPosition]
       @setBrightnessAndContrast()
       @brightnessController.updateDisplay()
       @contrastController.updateDisplay()
@@ -397,12 +406,14 @@ class Gui
 
     # Helper method to combine common update methods
     # called when value user switch to different active node
-    @settings.activeNodeID = @model.cellTracing.getActiveNodeId() or -1
-    @settings.activeTreeID = @model.cellTracing.getActiveTreeId()
-    @settings.activeCellID = @model.volumeTracing.getActiveCellId()
-    @activeNodeIdController.updateDisplay()
-    @activeTreeIdController.updateDisplay()
-    @activeCellIdController.updateDisplay()
+    if @settingsSkeleton?
+      @settingsSkeleton.activeNodeID = @model.cellTracing.getActiveNodeId() or -1
+      @settingsSkeleton.activeTreeID = @model.cellTracing.getActiveTreeId()
+      @activeNodeIdController.updateDisplay()
+      @activeTreeIdController.updateDisplay()
+    if @settingsVolume?
+      @settingsVolume.activeCellID = @model.volumeTracing.getActiveCellId()
+      @activeCellIdController.updateDisplay()
 
 
   setFolderVisibility : (folder, visible) ->

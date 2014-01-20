@@ -9,9 +9,13 @@ class VolumeTracingController
   MERGE_MODE_CELL1  : 1
   MERGE_MODE_CELL2  : 2
 
-  constructor : ( { @model, @view, @sceneController, @cameraController, @move, @calculateGlobalPos } ) ->
+  constructor : ( { @model, @view, @sceneController, @cameraController, @move, @calculateGlobalPos, @gui } ) ->
 
     @inDeleteMode = false
+
+    @gui.on
+      setActiveCell : (id) => @model.volumeTracing.setActiveCell(id)
+      createNewCell : => @model.volumeTracing.createCell()
 
     @mouseControls =
       

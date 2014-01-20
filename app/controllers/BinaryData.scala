@@ -225,8 +225,24 @@ object BinaryData extends Controller with Secured {
   //          }
   //    }
 
-  def writeViaAjax(dataSetName: String, dataLayerName: String, cubeSize: Int, annotationId: String) = Authenticated().async {
+  def writeData(
+                  dataSetName: String,
+                  dataLayerTyp: String,
+                  cubeSize: Int,
+                  parsedRequest: ParsedRequestCollection,
+                  annotationId: Option[String],
+                  userOpt: Option[User]
+                )(implicit ctx: DBAccessContext) = {
+  }
+
+  def writeViaAjax(dataSetName: String, dataLayerTyp: String, cubeSize: Int, annotationId: String) = UserAwareAction.async(parse.raw) {
     implicit request =>
-      Future.successful(Ok)
+      //for {
+        //payload <- request.body.asBytes() ?~> Messages("binary.payload.notSupplied")
+        //requests <- BinaryProtocol.parseWrite(payload, containsHandle = false) ?~> Messages("binary.payload.invalid")
+        //data <- writeData(dataSetName, dataLayerTyp, cubeSize, requests, annotationId, request.user) ?~> Messages("binary.data.notSaved")
+      //} yield {
+        Future.successful(Ok)
+      //}
   }
 }

@@ -6,6 +6,7 @@ notAllowed=None of your business
 binary.payload.notSupplied=No valid payload supplied
 binary.payload.invalid=Couldn''t parse payload
 binary.data.notFound=Couldn''t find the requested data
+binary.data.notSaved=Couldn''t save the data
 
 email=Email
 password=Password

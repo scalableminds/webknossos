@@ -72,30 +72,29 @@ class PushQueue
       return
 
     @alreadyPushed = true
-    transmitBuffer = []
-    transmitBuffer.push(
-      0
-      0
-      5376
-      5376
-      1408
-    )
+    transmitBuffer = [0, 0, 0, 0, 0, 0, 0, 67, 0, 0, 0, 67, 0, 0, 0, 0]
 
-    @batchCount++
+    for x in [0...32]
+      for y in [0...32]
+        for z in [0...32]
+          transmitBuffer.push(x, y)
 
-    console.log "Pushing batch", batch
+    console.log transmitBuffer
+#    @batchCount++
 
-    transmitBuffer = []
-    for bucket in batch
-      zoomStep = bucket[3]
+ #   console.log "Pushing batch", batch
+
+  #  transmitBuffer = []
+   # for bucket in batch
+    #  zoomStep = bucket[3]
       # TODO: define transmit buffer
-      transmitBuffer.push(
-        zoomStep
-        if @fourBit and zoomStep == 0 then 1 else 0
-        bucket[0] << (zoomStep + @cube.BUCKET_SIZE_P)
-        bucket[1] << (zoomStep + @cube.BUCKET_SIZE_P)
-        bucket[2] << (zoomStep + @cube.BUCKET_SIZE_P)
-      )
+     # transmitBuffer.push(
+      #  zoomStep
+       # if @fourBit and zoomStep == 0 then 1 else 0
+        #bucket[0] << (zoomStep + @cube.BUCKET_SIZE_P)
+        #bucket[1] << (zoomStep + @cube.BUCKET_SIZE_P)
+        #bucket[2] << (zoomStep + @cube.BUCKET_SIZE_P)
+      #)
 
     @getSendSocket().send(transmitBuffer)
       .pipe(

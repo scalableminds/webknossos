@@ -5,9 +5,22 @@
 
 class CellTacingController
 
-  constructor : ( { @model, @view, @sceneController, @cameraController, @move, @calculateGlobalPos }, controlMode ) ->
+  constructor : ( { @model, @view, @sceneController, @cameraController, @move, @calculateGlobalPos, @gui }, controlMode ) ->
 
     @inTraceMode = controlMode == constants.CONTROL_MODE_TRACE
+
+    @abstractTreeController = new AbstractTreeController(@model)
+    @abstractTreeController.view.on 
+      nodeClick : (id) => @setActiveNode(id, true, false)
+
+    @gui.on
+      deleteActiveNode : =>
+        @model.cellTracing.deleteActiveNode()
+      setActiveTree : (id) => @setActiveTree(id, false)
+      setActiveNode : (id) => @setActiveNode(id, false)
+      setActiveCell : (id) => @model.volumeTracing.setActiveCell(id)
+      createNewCell : => @model.volumeTracing.createCell()
+      newBoundingBox : (bb) => @sceneController.setBoundingBox(bb)
 
     @mouseControls = 
 
@@ -54,6 +67,56 @@ class CellTacingController
     # For data viewer, no keyboard controls
     if not @inTraceMode
       @keyboardControls = {}
+
+    # Mange side bar input
+    $("#comment-input").on "change", (event) => 
+      @model.cellTracing.setComment(event.target.value)
+      $("#comment-input").blur()
+
+    $("#comment-previous").click =>
+      @prevComment()
+
+    $("#comment-next").click =>
+      @nextComment()
+
+    $("#tab-comments").on "click", "a[data-nodeid]", (event) =>
+      event.preventDefault()
+      @setActiveNode($(event.target).data("nodeid"), true, false)
+
+    $("#tree-name-submit").click (event) =>
+      @model.cellTracing.setTreeName($("#tree-name-input").val())
+
+    $("#tree-name-input").keypress (event) =>
+      if event.which == 13
+        $("#tree-name-submit").click()
+        $("#tree-name-input").blur()
+
+    $("#tree-prev-button").click (event) =>
+      @selectNextTree(false)
+
+    $("#tree-next-button").click (event) =>
+      @selectNextTree(true)
+
+    $("#tree-create-button").click =>
+      @model.cellTracing.createNewTree()
+
+    $("#tree-delete-button").click =>
+      @model.cellTracing.deleteTree(true)
+
+    $("#tree-list").on "click", "a[data-treeid]", (event) =>
+      event.preventDefault()
+      @setActiveTree($(event.currentTarget).data("treeid"), true)
+
+    $("#tree-color-shuffle").click =>
+      @model.cellTracing.shuffleActiveTreeColor()
+
+    $("#tree-sort").on "click", "a[data-sort]", (event) =>
+      event.preventDefault()
+      @model.user.setValue("sortTreesByName", ($(event.currentTarget).data("sort") == "name"))
+
+    $("#comment-sort").on "click", "a[data-sort]", (event) =>
+      event.preventDefault()
+      @model.user.setValue("sortCommentsAsc", ($(event.currentTarget).data("sort") == "asc"))
 
 
   setParticleSize : (delta) =>
@@ -196,5 +259,45 @@ class CellTacingController
   createNewTree : =>
 
     @model.cellTracing.createNewTree()
+
+
+  setActiveTree : (treeId, centered) ->
+
+    @model.cellTracing.setActiveTree(treeId)
+    if centered
+      @centerActiveNode()
+
+
+  selectNextTree : (next) ->
+
+    @model.cellTracing.selectNextTree(next)
+    @centerActiveNode()
+
+
+  setActiveNode : (nodeId, centered, mergeTree) ->
+
+    @model.cellTracing.setActiveNode(nodeId, mergeTree)
+    if centered
+      @centerActiveNode()
+
+
+  centerActiveNode : ->
+
+    if @mode is constants.MODE_PLANE_TRACING
+      @planeController.centerActiveNode()
+    else
+      @arbitraryController.centerActiveNode()
+
+
+  # Comments
+
+  prevComment : =>
+
+    @setActiveNode(@model.cellTracing.nextCommentNodeID(false), true)
+
+
+  nextComment : =>
+
+    @setActiveNode(@model.cellTracing.nextCommentNodeID(true), true)
 
     

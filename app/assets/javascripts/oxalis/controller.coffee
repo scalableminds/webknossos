@@ -64,13 +64,14 @@ class Controller
 
       @gui = @createGui(restrictions, settings)
 
-      @sceneController = new SceneController(@model.binary["color"].cube.upperBoundary, @model.flycam, @model)
+      @sceneController = new SceneController(
+        @model.binary["color"].cube.upperBoundary,@model.flycam, @model)
 
-      @planeController = new PlaneController(@model, stats, @gui, @view.renderer, @view.scene, @sceneController, @controlMode)
+      @planeController = new PlaneController(
+        @model, stats, @gui, @view.renderer, @view.scene, @sceneController, @controlMode)
 
-      @arbitraryController = new ArbitraryController(@model, stats, @gui, @view.renderer, @view.scene, @sceneController)
-
-      @abstractTreeController = new AbstractTreeController(@model)
+      @arbitraryController = new ArbitraryController(
+        @model, stats, @gui, @view.renderer, @view.scene, @sceneController)
 
       @initMouse()
       @initKeyboard()
@@ -78,58 +79,6 @@ class Controller
       for binaryName of @model.binary
         @model.binary[binaryName].cube.on "bucketLoaded" : =>
           @model.flycam.update()
-
-      @abstractTreeController.view.on 
-        nodeClick : (id) => @setActiveNode(id, true, false)
-
-      $("#comment-input").on "change", (event) => 
-        @model.cellTracing.setComment(event.target.value)
-        $("#comment-input").blur()
-
-      $("#comment-previous").click =>
-        @prevComment()
-
-      $("#comment-next").click =>
-        @nextComment()
-
-      $("#tab-comments").on "click", "a[data-nodeid]", (event) =>
-        event.preventDefault()
-        @setActiveNode($(event.target).data("nodeid"), true, false)
-
-      $("#tree-name-submit").click (event) =>
-        @model.cellTracing.setTreeName($("#tree-name-input").val())
-
-      $("#tree-name-input").keypress (event) =>
-        if event.which == 13
-          $("#tree-name-submit").click()
-          $("#tree-name-input").blur()
-
-      $("#tree-prev-button").click (event) =>
-        @selectNextTree(false)
-
-      $("#tree-next-button").click (event) =>
-        @selectNextTree(true)
-
-      $("#tree-create-button").click =>
-        @model.cellTracing.createNewTree()
-
-      $("#tree-delete-button").click =>
-        @model.cellTracing.deleteTree(true)
-
-      $("#tree-list").on "click", "a[data-treeid]", (event) =>
-        event.preventDefault()
-        @setActiveTree($(event.currentTarget).data("treeid"), true)
-
-      $("#tree-color-shuffle").click =>
-        @model.cellTracing.shuffleActiveTreeColor()
-
-      $("#tree-sort").on "click", "a[data-sort]", (event) =>
-        event.preventDefault()
-        @model.user.setValue("sortTreesByName", ($(event.currentTarget).data("sort") == "name"))
-
-      $("#comment-sort").on "click", "a[data-sort]", (event) =>
-        event.preventDefault()
-        @model.user.setValue("sortCommentsAsc", ($(event.currentTarget).data("sort") == "asc"))
 
       if @controlMode == constants.CONTROL_MODE_VIEW
         $('#alpha-slider').slider().on "slide", (event) =>
@@ -275,51 +224,4 @@ class Controller
     model.binary["color"].pullQueue.set4Bit(model.user.fourBit)
     model.binary["color"].updateContrastCurve(gui.settings.brightness, gui.settings.contrast)
 
-    gui.on
-      deleteActiveNode : =>
-        @model.cellTracing.deleteActiveNode()
-      setActiveTree : (id) => @setActiveTree(id, false)
-      setActiveNode : (id) => @setActiveNode(id, false) # not centered
-      setActiveCell : (id) => @model.volumeTracing.setActiveCell(id)
-      createNewCell : => @model.volumeTracing.createCell()
-      newBoundingBox : (bb) => @sceneController.setBoundingBox(bb)
-
-    gui
-
-
-  setActiveTree : (treeId, centered) ->
-
-    @model.cellTracing.setActiveTree(treeId)
-    if centered
-      @centerActiveNode()
-
-
-  selectNextTree : (next) ->
-
-    @model.cellTracing.selectNextTree(next)
-    @centerActiveNode()
-
-
-  setActiveNode : (nodeId, centered, mergeTree) ->
-
-    @model.cellTracing.setActiveNode(nodeId, mergeTree)
-    if centered
-      @centerActiveNode()
-
-
-  centerActiveNode : ->
-
-    if @mode is constants.MODE_PLANE_TRACING
-      @planeController.centerActiveNode()
-    else
-      @arbitraryController.centerActiveNode()
-
-
-  prevComment : =>
-
-    @setActiveNode(@model.cellTracing.nextCommentNodeID(false), true)
-
-
-  nextComment : =>
-
-    @setActiveNode(@model.cellTracing.nextCommentNodeID(true), true)
+    return gui

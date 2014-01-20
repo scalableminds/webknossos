@@ -69,20 +69,19 @@ class PushQueue
 
   pushBatch : (batch) ->
 
-### Used for testing
-    if @alreadyPushed?
-      return
+#    Used for testing
+#    if @alreadyPushed?
+#      return
 
-    @alreadyPushed = true
-    transmitBuffer = [0, 0, 0, 0, 0, 0, 0, 67, 0, 0, 0, 67, 0, 0, 0, 0]
+#    @alreadyPushed = true
+#    transmitBuffer = [0, 0, 0, 0, 0, 0, 0, 67, 0, 0, 0, 67, 0, 0, 0, 0]
 
-    for x in [0...32]
-      for y in [0...32]
-        for z in [0...32]
-          transmitBuffer.push(x, y)
+#    for x in [0...32]
+#      for y in [0...32]
+#        for z in [0...32]
+#          transmitBuffer.push(x, y)
 
-    console.log transmitBuffer
-###
+#    console.log transmitBuffer
 
     @batchCount++
 

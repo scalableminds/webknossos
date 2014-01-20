@@ -7,6 +7,7 @@ underscore : _
 ./controller/scene_controller : SceneController
 ./model : Model
 ./view : View
+./view/skeleton_tracing_view : SkeletonTracingView
 ../libs/event_mixin : EventMixin
 ../libs/input : Input
 ./view/gui : Gui
@@ -56,7 +57,10 @@ class Controller
       stats.getDomElement().id = "stats"
       $("body").append stats.getDomElement() 
 
-      @view = new View(@model)
+      if @model.cellTracing?
+        @view = new SkeletonTracingView(@model)
+      else
+        @view = new View(@model)
 
       @gui = @createGui(restrictions, settings)
 

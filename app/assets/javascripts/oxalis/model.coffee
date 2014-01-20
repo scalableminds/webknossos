@@ -92,8 +92,8 @@ class Model
               "positionChanged" : (position) =>
                 @flycam3d.setPositionSilent(position)
             
-            @isSkeletonTracing = tracing.content.settings.allowedModes.indexOf("volume") == -1
-            if @isSkeletonTracing
+            isSkeletonTracing = tracing.content.settings.allowedModes.indexOf("volume") == -1
+            if isSkeletonTracing
               @cellTracing = new CellTracing(tracing, @scaleInfo, @flycam, @flycam3d, @user)
             else
               $.assert( @binary["segmentation"]?,

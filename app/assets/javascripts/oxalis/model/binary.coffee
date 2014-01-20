@@ -32,6 +32,7 @@ class Binary
 
     @dataSetName = dataSet.name
     @lastPingTime = new Date()
+    @queueStatus = 0
 
     for layer in dataSet.dataLayers
       if layer.typ == @layer.name
@@ -90,6 +91,9 @@ class Binary
   printConnectionInfo : ->
 
     interval = new Date() - @lastPingTime
+    if @queue.queue and @queue.queue.length > 0
+      console.log interval, @queueStatus - @queue.queue.length, @queue.queue[0].priority
+    @queueStatus = @queue.queue.length
     @lastPingTime = new Date() 
 
     kbPerSecond = @queue.loadedBytes / interval
@@ -100,7 +104,7 @@ class Binary
     @kbPerSec.push(kbPerSecond)
     @bucketPerSec.push(bucketsPerSocond)
 
-    console.log "PING - latency: ", @queue.roundTripTime, "ms, connection: ", kbPerSecond, "KByte/s, ", bucketsPerSocond, "buckets/s" 
+    #console.log "PING - latency: ", @queue.roundTripTime, "ms, connection: ", kbPerSecond, "KByte/s, ", bucketsPerSocond, "buckets/s" 
     
     @queue.loadedBytes = 0
     @queue.loadedBuckets = 0
@@ -139,6 +143,7 @@ class Binary
 
           break
 
+      @queueStatus
       @queue.pull()
 
 

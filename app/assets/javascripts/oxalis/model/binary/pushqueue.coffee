@@ -1,5 +1,6 @@
 ### define
 ../../../libs/array_buffer_socket : ArrayBufferSocket
+../../../libs/unit8array_builder : Uint8ArrayBuilder
 ###
 
 class PushQueue
@@ -8,7 +9,7 @@ class PushQueue
   BATCH_SIZE : 3
 
 
-  constructor : (@dataSetName, @cube, @dataLayerName, { @tracingId, @tracingType }, @sendData = true) ->
+  constructor : (@dataSetName, @cube, @dataLayerName, @tracingId, @sendData = true) ->
 
     @queue = []
     @batchCount = 0
@@ -68,23 +69,47 @@ class PushQueue
 
   pushBatch : (batch) ->
 
+#    Used for testing
+#    if @alreadyPushed?
+#      return
+
+#    @alreadyPushed = true
+#    transmitBuffer = []
+
+#    for i in [0...2]
+#      transmitBuffer.push(0, 0, 0, 0, 0, 0, 0, 67, 0, 0, 0, 67, 0, 0, 0, 0)
+
+#      for x in [0...32]
+#        for y in [0...32]
+#          for z in [0...32]
+#            transmitBuffer.push(x, y)
+
+#    console.log transmitBuffer
+
+#    @getSendSocket().send(transmitBuffer)
+#    return
+
     @batchCount++
 
     console.log "Pushing batch", batch
 
-    transmitBuffer = []
+    transmitBufferBuilder = new Uint8ArrayBuilder()
     for bucket in batch
       zoomStep = bucket[3]
-      # TODO: define transmit buffer
-      transmitBuffer.push(
-        zoomStep
-        if @fourBit and zoomStep == 0 then 1 else 0
-        bucket[0] << (zoomStep + @cube.BUCKET_SIZE_P)
-        bucket[1] << (zoomStep + @cube.BUCKET_SIZE_P)
-        bucket[2] << (zoomStep + @cube.BUCKET_SIZE_P)
+      transmitBufferBuilder.push(
+        new Float32Array([
+          zoomStep
+          bucket[0] << (zoomStep + @cube.BUCKET_SIZE_P)
+          bucket[1] << (zoomStep + @cube.BUCKET_SIZE_P)
+          bucket[2] << (zoomStep + @cube.BUCKET_SIZE_P)
+        ])
       )
+      transmitBufferBuilder.push(
+        @cube.getBucketDataByZoomedAddress( bucket ))
 
-    @getSendSocket().send(transmitBuffer)
+    console.log( "transmitBuffer:", transmitBufferBuilder.build() )
+
+    @getSendSocket().send(transmitBufferBuilder.build())
       .pipe(
 
         (responseBuffer) =>
@@ -93,8 +118,8 @@ class PushQueue
 
         =>
           
-          for bucket in batch
-            @insert(bucket)
+          #for bucket in batch
+          #  @insert(bucket)
     
     ).always =>
 
@@ -106,7 +131,7 @@ class PushQueue
 
     if @socket? then @socket else @socket = new ArrayBufferSocket(
       senders : [
-        new ArrayBufferSocket.XmlHttpRequest("/datasets/#{@dataSetName}/layers/#{@dataLayerName}/data?cubeSize=#{1 << @cube.BUCKET_SIZE_P}&annotationTyp=#{@tracingType}&annotationId=#{@tracingId}", "POST")
+        new ArrayBufferSocket.XmlHttpRequest("/datasets/#{@dataSetName}/layers/#{@dataLayerName}/data?cubeSize=#{1 << @cube.BUCKET_SIZE_P}&annotationId=#{@tracingId}", "PUT")
       ]
       requestBufferType : Uint8Array
       responseBufferType : Uint8Array

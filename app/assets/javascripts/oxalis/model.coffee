@@ -52,7 +52,6 @@ class Model
             dataSet = tracing.content.dataSet
             @user = new User(user)
             @scaleInfo = new ScaleInfo(dataSet.scale)
-            tracingInfo = { tracingId, tracingType }
 
             supportedDataLayers = [{name: "color", bitDepth: 8, allowManipulation : true},
                                     {name: "volume", bitDepth: 16, allowManipulation : false},
@@ -71,7 +70,7 @@ class Model
             for layer in dataSet.dataLayers
               for supportedLayer in supportedDataLayers
                 if layer.typ == supportedLayer.name
-                  @binary[layer.typ] = new Binary(@user, dataSet, constants.TEXTURE_SIZE_P, supportedLayer, tracingInfo)
+                  @binary[layer.typ] = new Binary(@user, dataSet, constants.TEXTURE_SIZE_P, supportedLayer, tracingId)
                   zoomStepCount = Math.min(zoomStepCount, @binary[layer.typ].cube.ZOOM_STEP_COUNT - 1)
 
             unless @binary["color"]?

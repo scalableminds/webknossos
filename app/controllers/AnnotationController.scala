@@ -22,7 +22,7 @@ import play.api.libs.iteratee.Input.EOF
 import scala.concurrent.Future
 import models.user.time.{TimeTrackingService, TimeTracking}
 import braingames.reactivemongo.DBAccessContext
-import oxalis.annotation.AnnotationIdentifier
+
 import net.liftweb.common.Full
 import scala.Some
 import play.api.i18n.Messages.Message

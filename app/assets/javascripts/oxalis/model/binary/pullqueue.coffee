@@ -20,7 +20,7 @@ class PullQueue
   roundTripTime : 0
 
   
-  constructor : (@dataSetName, @cube, @dataLayerName, { @tracingId, @tracingType } ) ->
+  constructor : (@dataSetName, @cube, @dataLayerName, @tracingId ) ->
 
     @queue = []
 
@@ -190,7 +190,7 @@ class PullQueue
       senders : [
         # new ArrayBufferSocket.WebWorker("ws://#{document.location.host}/binary/ws?dataSetName=#{@dataSetName}&cubeSize=#{1 << @cube.BUCKET_SIZE_P}")
         # new ArrayBufferSocket.WebSocket("ws://#{document.location.host}/binary/ws?dataSetName=#{@dataSetName}&cubeSize=#{1 << @cube.BUCKET_SIZE_P}")
-        new ArrayBufferSocket.XmlHttpRequest("/datasets/#{@dataSetName}/layers/#{@dataLayerName}/data?cubeSize=#{1 << @cube.BUCKET_SIZE_P}&annotationTyp=#{@tracingType}&annotationId=#{@tracingId}")
+        new ArrayBufferSocket.XmlHttpRequest("/datasets/#{@dataSetName}/layers/#{@dataLayerName}/data?cubeSize=#{1 << @cube.BUCKET_SIZE_P}&annotationId=#{@tracingId}")
       ]
       requestBufferType : Float32Array
       responseBufferType : Uint8Array

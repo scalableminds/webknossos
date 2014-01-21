@@ -37,7 +37,7 @@ case class VolumeTracing(
 
   def service = VolumeTracingService
 
-  def updateFromJson(jsUpdates: Seq[JsValue])(implicit ctx: DBAccessContext) = ???
+  def updateFromJson(jsUpdates: Seq[JsValue])(implicit ctx: DBAccessContext) = {Fox.successful(this)}
 
   def copyDeepAndInsert = ???
 

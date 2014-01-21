@@ -202,6 +202,21 @@ object BinaryData extends Controller with Secured {
       respondWithImage(dataSetName, dataLayerTyp, width, height, x, y, z, resolution)
   }
 
+  // TODO: Move maxContentLength to config 
+  def writeViaAjax(dataSetName: String, dataLayerTyp: String, cubeSize: Int, annotationId: String) = UserAwareAction.async(parse.raw(1048576)) {
+    implicit request =>
+      for {
+        dataSet <- DataSetDAO.findOneByName(dataSetName).toFox ?~> Messages("dataSet.notFound")
+        dataLayer <- tryGetUserDataLayer(dataSet, dataLayerTyp, Some(annotationId), request.userOpt) ?~> Messages("dataLayer.notFound") 
+        payloadBodySize = cubeSize * cubeSize * cubeSize * dataLayer.bytesPerElement
+        payload <- request.body.asBytes() ?~> Messages("binary.payload.notSupplied")
+        requests <- BinaryProtocol.parseDataWriteRequests(payload, payloadBodySize, containsHandle = false) ?~> Messages("binary.payload.invalid")
+      } yield {
+        writeData(dataSet, dataLayer, cubeSize, requests, annotationId, request.userOpt)
+      }
+  }
+}
+
   /**
    * Handles a request for binary data via websockets. The content of a websocket
    * message is defined in the BinaryProtokoll.parseWebsocket function.
@@ -243,17 +258,3 @@ object BinaryData extends Controller with Secured {
   //              (input, output)
   //          }
   //    }
-
-  def writeViaAjax(dataSetName: String, dataLayerTyp: String, cubeSize: Int, annotationId: String) = UserAwareAction.async(parse.raw) {
-    implicit request =>
-      for {
-        dataSet <- DataSetDAO.findOneByName(dataSetName).toFox ?~> Messages("dataSet.notFound")
-        dataLayer <- tryGetUserDataLayer(dataSet, dataLayerTyp, Some(annotationId), request.userOpt) ?~> Messages("dataLayer.notFound") 
-        payloadBodySize = cubeSize * cubeSize * cubeSize * dataLayer.bytesPerElement
-        payload <- request.body.asBytes() ?~> Messages("binary.payload.notSupplied")
-        requests <- BinaryProtocol.parseDataWriteRequests(payload, payloadBodySize, containsHandle = false) ?~> Messages("binary.payload.invalid")
-      } yield {
-        writeData(dataSet, dataLayer, cubeSize, requests, annotationId, request.userOpt)
-      }
-  }
-}

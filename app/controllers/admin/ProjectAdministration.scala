@@ -20,7 +20,8 @@ object ProjectAdministration extends Controller with Secured{
 
   val projectForm = Form(tuple(
     "projectName" -> nonEmptyText(1, 100)
-      .verifying("project.nameAlreadyInUse", name => Project.findOneByName(name).isEmpty),
+      .verifying("project.nameAlreadyInUse", name => Project.findOneByName(name).isEmpty)
+      .verifying("project.nameInvalid", name => name.matches("^[a-zA-Z0-9_-]*$")),
     "owner" -> nonEmptyText(1, 100)
       .verifying("user.notFound", userId => User.findOneById(userId).isDefined)))
 

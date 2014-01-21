@@ -70,6 +70,7 @@ projectName=Project Name
 project.removed=Project got removed
 project.notFound=Project couldn''t be found
 project.nameAlreadyInUse=Name already used
+project.nameInvalid=Project names can only contain alphanumeric characters, _ and -
 project.createSuccess=Project successfully created
 
 role.invalid=Invalid role

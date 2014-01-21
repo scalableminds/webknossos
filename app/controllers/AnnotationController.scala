@@ -230,13 +230,13 @@ object AnnotationController extends Controller with Secured with TracingInformat
         else
           for {
             task <- annotation.task ?~> Messages("tracing.task.notFound")
+            taskJSON <- Task.transformToJson(task)
             hasOpen <- AnnotationService.hasAnOpenTask(request.user)
           } yield {
             JsonOk(
-              // html.user.dashboard.taskAnnotationTableItem(task, annotation),
               Json.obj(
-                "task" -> task,
-                "annotation" -> annotation,
+                "tasks" -> taskJSON,
+                "annotations" -> annotation,
                 "hasAnOpenTask" -> hasOpen),
                 message)
           }

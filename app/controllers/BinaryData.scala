@@ -31,12 +31,10 @@ import oxalis.binary.BinaryDataService
 import net.liftweb.common._
 import braingames.util.ExtendedTypes.ExtendedFutureBox
 import braingames.util.ExtendedTypes.ExtendedArraySeq
-import braingames.binary.{ParsedDataRequest, ParsedDataWriteRequest}
+import braingames.binary.{ParsedDataReadRequest, ParsedDataWriteRequest, ParsedRequestCollection, DataRequestSettings}
 import oxalis.security.AuthenticatedRequest
 import scala.Some
-import braingames.binary.DataRequestSettings
 import braingames.image.ImageCreatorParameters
-import braingames.binary.ParsedRequestCollection
 import braingames.reactivemongo.DBAccessContext
 import braingames.util.Fox
 
@@ -48,7 +46,7 @@ object BinaryData extends Controller with Secured {
   implicit val dispatcher = Akka.system.dispatcher
   val scaleFactors = Array(1, 1, 1)
 
-  def createDataRequestCollection(dataSet: DataSet, dataLayer: DataLayer, cubeSize: Int, parsedRequest: ParsedRequestCollection[ParsedDataRequest]) = {
+  def createDataRequestCollection(dataSet: DataSet, dataLayer: DataLayer, cubeSize: Int, parsedRequest: ParsedRequestCollection[ParsedDataReadRequest]) = {
     val dataRequests = parsedRequest.requests.map(r =>
       BinaryDataService.createDataReadRequest(dataSet, dataLayer, None, cubeSize, r))
     DataRequestCollection(dataRequests)
@@ -58,7 +56,7 @@ object BinaryData extends Controller with Secured {
                    dataSetName: String,
                    dataLayerTyp: String,
                    cubeSize: Int,
-                   parsedRequest: ParsedRequestCollection[ParsedDataRequest],
+                   parsedRequest: ParsedRequestCollection[ParsedDataReadRequest],
                    annotationId: Option[String],
                    userOpt: Option[User]
                  )(implicit ctx: DBAccessContext): Fox[Array[Byte]] = {
@@ -125,7 +123,7 @@ object BinaryData extends Controller with Secured {
 
   def requestViaAjaxDebug(dataSetName: String, dataLayerTyp: String, cubeSize: Int, x: Int, y: Int, z: Int, resolution: Int, annotationId: Option[String]) = Authenticated().async {
     implicit request =>
-      val dataRequests = ParsedRequestCollection(Array(ParsedDataRequest(resolution, Point3D(x, y, z), false)))
+      val dataRequests = ParsedRequestCollection(Array(ParsedDataReadRequest(resolution, Point3D(x, y, z), false)))
       for {
         data <- requestData(dataSetName, dataLayerTyp, cubeSize, dataRequests, annotationId, Some(request.user))
       } yield {
@@ -165,7 +163,7 @@ object BinaryData extends Controller with Secured {
     implicit request =>
       for {
         payload <- request.body.asBytes() ?~> Messages("binary.payload.notSupplied")
-        requests <- BinaryProtocol.parseDataRequests(payload, containsHandle = false) ?~> Messages("binary.payload.invalid")
+        requests <- BinaryProtocol.parseDataReadRequests(payload, containsHandle = false) ?~> Messages("binary.payload.invalid")
         data <- requestData(dataSetName, dataLayerTyp, cubeSize, requests, annotationId, request.userOpt) ?~> Messages("binary.data.notFound")
       } yield {
         Ok(data)

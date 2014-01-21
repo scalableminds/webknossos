@@ -418,7 +418,7 @@ class Gui
 
   setFolderVisibility : (folder, visible) ->
 
-    $element = $(folder.domElement)
+    $element = $(folder?.domElement)
     if visible then $element.show() else $element.hide()
 
 

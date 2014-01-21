@@ -220,7 +220,7 @@ class Skeleton
   setVisibility : (@isVisible) ->
 
 
-  restoreVisibilty : ->
+  restoreVisibility : ->
 
     @setVisibilityTemporary( @isVisible )
 

@@ -274,14 +274,6 @@ class CellTacingController
       @centerActiveNode()
 
 
-  centerActiveNode : ->
-
-    if @mode is constants.MODE_PLANE_TRACING
-      @planeController.centerActiveNode()
-    else
-      @arbitraryController.centerActiveNode()
-
-
   # Comments
 
   prevComment : =>

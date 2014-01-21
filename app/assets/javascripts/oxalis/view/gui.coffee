@@ -379,27 +379,27 @@ class Gui
 
   updateParticleSize : =>
 
-    @particleSizeController.updateDisplay()
+    @particleSizeController?.updateDisplay()
 
 
   updateMoveValue : =>
 
-    @moveValueController.updateDisplay()
+    @moveValueController?.updateDisplay()
 
 
   updateMoveValue3d : =>
 
-    @moveValue3dController.updateDisplay()
+    @moveValue3dController?.updateDisplay()
 
 
   updateScale : =>
 
-    @scaleController.updateDisplay()
+    @scaleController?.updateDisplay()
 
 
   updateZoom : =>
 
-    @zoomController.updateDisplay()
+    @zoomController?.updateDisplay()
 
 
   update : ->

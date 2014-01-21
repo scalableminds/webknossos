@@ -107,7 +107,7 @@ class Controller
         $("#view-mode").hide()
 
       @allowedModes.sort()
-      @setMode( constants.MODE_PLANE_TRACING, true )
+      #@setMode( constants.MODE_PLANE_TRACING, true )
       if @allowedModes.length == 0
         Toast.error("There was no valid allowed tracing mode specified.")
       else

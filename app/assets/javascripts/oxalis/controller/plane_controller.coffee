@@ -86,8 +86,10 @@ class PlaneController
       )
 
     objects = { @model, @view, @sceneController, @cameraController, @move, @calculateGlobalPos, @gui }
-    @cellTracingController = new CellTracingController( objects, @controlMode )
-    @volumeTracingController = new VolumeTracingController( objects )
+    if @model.cellTracing?
+      @cellTracingController = new CellTracingController( objects, @controlMode )
+    if @model.volumeTracing?
+      @volumeTracingController = new VolumeTracingController( objects )
 
     meshes = @sceneController.getMeshes()
     
@@ -121,7 +123,7 @@ class PlaneController
       leftDownMove : (delta) => @moveTDView(delta)
       scroll : (value) => @zoomTDView(value, true)
       leftClick : (position, plane, event) =>
-        @cellTracingController.onClick(position, event.shiftKey, event.altKey, constants.TDView)
+        @cellTracingController?.onClick(position, event.shiftKey, event.altKey, constants.TDView)
       over : => @view.setActiveViewport( @activeViewport = constants.TDView ),
     constants.TDView
     ) )
@@ -262,7 +264,7 @@ class PlaneController
 
     @view.on
       render : => @render()
-      finishedRender : => @model.cellTracing.rendered()
+      finishedRender : => @model.cellTracing?.rendered()
       renderCam : (id, event) => @sceneController.updateSceneForCam(id)
 
     @sceneController.on
@@ -272,7 +274,7 @@ class PlaneController
       removeGeometries : (list, event) =>
         for geometry in list
           @view.removeGeometry(geometry)   
-    @sceneController.skeleton.on
+    @sceneController.skeleton?.on
       newGeometries : (list, event) =>
         for geometry in list
           @view.addGeometry(geometry)
@@ -291,7 +293,6 @@ class PlaneController
           activePlane:  @activeViewport
         })
 
-    @model.cellTracing.globalPosition = @flycam.getPosition()
     @cameraController.update()
     @sceneController.update()
 
@@ -402,7 +403,7 @@ class PlaneController
 
     switch type
       when null then @moveZ(delta)
-      when "shift" then @cellTracingController.setParticleSize(delta)
+      when "shift" then @cellTracingController?.setParticleSize(delta)
       when "alt"
         @zoomPlanes(delta, true)
 

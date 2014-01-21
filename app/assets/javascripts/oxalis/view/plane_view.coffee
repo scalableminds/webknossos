@@ -218,7 +218,7 @@ class PlaneView
 
   bind : ->
 
-    @model.cellTracing.on({
+    @model.cellTracing?.on({
       doubleBranch         : (callback) => @showBranchModal(callback)      
       mergeDifferentTrees  : ->
         Toast.error("You can't merge nodes within the same tree", false) })

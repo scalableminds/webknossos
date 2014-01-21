@@ -2,6 +2,10 @@ package models.annotation
 
 import play.api.libs.concurrent.Execution.Implicits._
 import reactivemongo.bson.BSONObjectID
+import braingames.reactivemongo.DBAccessContext
+import play.api.libs.json.JsValue
+import oxalis.view.ResourceActionCollection
+import models.user.User
 
 /**
  * Company: scalableminds
@@ -13,7 +17,7 @@ import reactivemongo.bson.BSONObjectID
 import models.annotation.AnnotationType._
 
 import scala.concurrent.Future
-import braingames.util.Fox
+import braingames.util.{NamedFileStream, Fox}
 
 case class TemporaryAnnotation(
                                 id: String,
@@ -36,4 +40,24 @@ case class TemporaryAnnotation(
   lazy val content = _content()
 
   def task = None
+
+  def muta = new TemporaryAnnotationMutations(this)
+
+  def actions(user: Option[User]) = ResourceActionCollection()
+}
+
+class TemporaryAnnotationMutations(annotation: TemporaryAnnotation) extends AnnotationMutationsLike{
+  type AType = TemporaryAnnotation
+
+  def resetToBase()(implicit ctx: DBAccessContext): Fox[TemporaryAnnotationMutations#AType] = ???
+
+  def reopen()(implicit ctx: DBAccessContext): Fox[TemporaryAnnotationMutations#AType] = ???
+
+  def updateFromJson(js: Seq[JsValue])(implicit ctx: DBAccessContext): Fox[TemporaryAnnotationMutations#AType] = ???
+
+  def cancelTask()(implicit ctx: DBAccessContext): Fox[TemporaryAnnotationMutations#AType] = ???
+
+  def loadAnnotationContent()(implicit ctx: DBAccessContext): Fox[NamedFileStream] = ???
+
+  def unassignReviewer()(implicit ctx: DBAccessContext): Fox[TemporaryAnnotationMutations#AType] = ???
 }

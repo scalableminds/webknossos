@@ -44,7 +44,7 @@
       </thead>
       <tbody class="hide">
         <tr id="<%= element.name %>">
-          <td class="details-toggle"> <i class="caret-right"></i> <i class="caret-down"></i> </td>
+          <td class="details-toggle" href="<%= controllers.admin.TaskAdministration.tasksForProject(element.name).url %>" data-ajax="add-row=#<%= element.name %> + tr"> <i class="caret-right"></i> <i class="caret-down"></i> </td>
           <td> <%= element.name %> </td>
           <td> <%= element.owner %> </td>
           <td class="nowrap">  

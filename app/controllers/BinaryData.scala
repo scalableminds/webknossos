@@ -150,47 +150,4 @@ object BinaryData extends Controller with Secured {
     implicit request =>
       respondWithImage(dataSetName, dataLayerName, width, height, x, y, z, resolution)
   }
-
-  /**
-   * Handles a request for binary data via websockets. The content of a websocket
-   * message is defined in the BinaryProtokoll.parseWebsocket function.
-   * If the message is valid the result is posted onto the websocket.
-   *
-   */
-
-  //  def requestViaWebsocket(dataSetName: String, dataLayerName: String, cubeSize: Int): WebSocket[Array[Byte]] =
-  //    AuthenticatedWebSocket[Array[Byte]]() {
-  //      user =>
-  //        request =>
-  //          val dataLayer = DataLayerId(dataLayerName)
-  //
-  //          DataSetDAO.findOneByName(dataSetName)(user).map {
-  //            dataSetOpt =>
-  //              var channelOpt: Option[Channel[Array[Byte]]] = None
-  //
-  //              val output = Concurrent.unicast[Array[Byte]](
-  //              {
-  //                c => channelOpt = Some(c)
-  //              }, {
-  //                Logger.debug("Data websocket completed")
-  //              }, {
-  //                case (e, i) => Logger.error("An error ocourd on websocket stream: " + e)
-  //              })
-  //
-  //              val input = Iteratee.foreach[Array[Byte]](in => {
-  //                for {
-  //                  dataSet <- dataSetOpt
-  //                  channel <- channelOpt
-  //                  requests <- BinaryProtocol.parse(in, containsHandle = true)
-  //                  dataRequestCollection = createDataRequestCollection(dataSet, dataLayerName, cubeSize, requests)
-  //                  dataOpt <- BinaryDataService.handleDataRequest(dataRequestCollection)
-  //                  data <- dataOpt
-  //                } {
-  //                  val resultWithHandle = Seq(data, requests.handle.getOrElse(Array())).appendArrays
-  //                  channel.push(resultWithHandle)
-  //                }
-  //              })
-  //              (input, output)
-  //          }
-  //    }
 }

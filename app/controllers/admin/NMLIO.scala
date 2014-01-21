@@ -118,7 +118,7 @@ object NMLIO extends Controller with Secured with TextUtils {
   }
 
   def zipTracings(annotations: List[Annotation], zipFileName: String)(implicit request: AuthenticatedRequest[_]) = {
-    Future.sequence(annotations.par.map(AnnotationService.loadAnnotationContent(_).futureBox).seq).map {
+    Future.sequence(annotations.par.map(_.muta.loadAnnotationContent().futureBox).seq).map {
       zipStreams =>
         val zipped = TemporaryFile("annotationZips", normalize(zipFileName))
         ZipIO.zip(zipStreams.flatten, new BufferedOutputStream(new FileOutputStream(zipped.file)))

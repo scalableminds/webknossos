@@ -24,15 +24,16 @@ object TrainingsTracingAdministration extends AdminController {
       "comment" -> text))
 
   def startReview(training: String) = Authenticated().async { implicit request =>
-    (for {
+    for {
       annotation <- AnnotationDAO.findOneById(training) ?~> Messages("annotation.notFound")
-      if (annotation.state.isReadyForReview)
-      altered <- AnnotationService.assignReviewer(annotation, request.user) ?~> Messages("annotation.review.assignFailed")
+      _ <- annotation.state.isReadyForReview.failIfFalse(Messages("annotation.review.notReady")).toFox
+      updated <- annotation.muta.assignReviewer(request.user) ?~> Messages("annotation.review.assignFailed")
+      content <- updated.content.futureBox
     } yield {
       JsonOk(
-        html.admin.training.trainingsTasksDetailTableItem(request.user, altered),
+        html.admin.annotation.simpleAnnotation(updated, Some(request.user), content),
         Messages("annotation.review.assigned"))
-    }) ~> Messages("annotation.review.notReady")
+    }
   }
 
   def oxalisReview(training: String) = Authenticated().async { implicit request =>
@@ -46,11 +47,12 @@ object TrainingsTracingAdministration extends AdminController {
 
   def abortReview(trainingsId: String) = Authenticated().async { implicit request =>
     for {
-      training <- AnnotationDAO.findOneById(trainingsId) ?~> Messages("annotation.review.notFound")
-      updated <- AnnotationService.unassignReviewer(training) ?~> Messages("annotation.update.failed")
+      annotation <- AnnotationDAO.findOneById(trainingsId) ?~> Messages("annotation.review.notFound")
+      updated <- annotation.muta.unassignReviewer() ?~> Messages("annotation.update.failed")
+      content <- updated.content.futureBox
     } yield {
       JsonOk(
-        html.admin.training.trainingsTasksDetailTableItem(request.user, updated),
+        html.admin.annotation.simpleAnnotation(updated, Some(request.user), content),
         Messages("annotation.review.unassigned"))
     }
   }
@@ -80,7 +82,7 @@ object TrainingsTracingAdministration extends AdminController {
           if (annotation.state.isInReview)
           review <- annotation.review.headOption ?~> Messages("annotation.review.notFound")
           if (isUserReviewer(review))
-          _ <- AnnotationService.finishReview(annotation, review, passed, comment)
+          _ <- annotation.muta.finishReview(review, passed, comment)
         } yield {
           JsonOk(Messages("annotation.review.finished"))
         }) ~> Messages("annotation.review.finishFailed")

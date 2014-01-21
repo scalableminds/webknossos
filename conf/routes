@@ -51,11 +51,15 @@ PUT           /annotations/:typ/:id                                      control
 POST          /annotations/:typ/:id/name                                 controllers.AnnotationController.nameExplorativeAnnotation(typ: String, id: String)
 GET           /annotations/:typ/:id/finishAndRedirect                    controllers.AnnotationController.finishWithRedirect(typ: String, id: String)
 GET           /annotations/:typ/:id/finish                               controllers.AnnotationController.finish(typ: String, id: String)
+GET           /annotations/:typ/:id/reopen                               controllers.AnnotationController.reopen(typ: String, id: String)
+GET           /annotations/:typ/:id/reset                                controllers.AnnotationController.reset(typ: String, id: String)
 
 GET           /annotations/:typ/:id                                      controllers.AnnotationController.trace(typ: String, id: String)
 GET 					/annotations/:typ/:id/data 																 controllers.AnnotationController.traceJSON(typ: String, id: String)
 GET           /annotations/:typ/:id/info                                 controllers.AnnotationController.info(typ: String, id: String)
 GET           /annotations/:typ/:id/download                             controllers.AnnotationController.download(typ: String, id: String)
+GET           /annotations/:typ/:id/reopen                               controllers.AnnotationController.reopen(typ: String, id: String)
+GET           /annotations/:typ/:id/cancel                               controllers.AnnotationController.cancel(typ: String, id: String)
 
 #Admin pages
 GET           /admin/nml/upload                                          controllers.admin.NMLIO.uploadForm
@@ -79,11 +83,11 @@ GET           /admin/tasks/overview                                      control
 GET           /admin/tasks/:id/download                                  controllers.admin.NMLIO.taskDownload(id: String)
 GET           /admin/tasks/:id/delete                                    controllers.admin.TaskAdministration.delete(id: String)
 GET           /admin/tasks/:id/edit                                      controllers.admin.TaskAdministration.edit(id: String)
-GET           /admin/tasks/:id/annotations                               controllers.admin.AnnotationAdministration.annotationsForTask(id: String)
+GET           /admin/tasks/:id/annotations                               controllers.AnnotationController.annotationsForTask(id: String)
 POST          /admin/tasks/:id                                           controllers.admin.TaskAdministration.editTaskForm(id: String)
 
 GET           /admin/taskTypes                                           controllers.admin.TaskTypeAdministration.list
-POST          /admin/taskTypes/create                                    controllers.admin.TaskTypeAdministration.create
+POST          /admin/taskTypes                                           controllers.admin.TaskTypeAdministration.create
 GET           /admin/taskTypes/:id/delete                                controllers.admin.TaskTypeAdministration.delete(id: String)
 GET           /admin/taskTypes/:id/edit                                  controllers.admin.TaskTypeAdministration.edit(id: String)
 GET           /admin/taskTypes/:id/tasks                                 controllers.admin.TaskAdministration.tasksForType(id: String)
@@ -97,8 +101,6 @@ GET           /admin/projects/:name/tasks                                control
 
 
 GET           /admin/tracings/:id/review                                 controllers.admin.TrainingsTracingAdministration.oxalisReview(id: String)
-GET           /admin/tracings/:id/reopen                                 controllers.admin.AnnotationAdministration.reopen(id: String)
-GET           /admin/tracings/:id/cancel                                 controllers.admin.AnnotationAdministration.cancel(id: String)
 
 GET           /admin/trainingsTasks                                      controllers.admin.TrainingsTaskAdministration.list
 GET           /admin/trainingsTasks/create/data                          controllers.admin.TrainingsTaskAdministration.getData
@@ -120,9 +122,6 @@ POST          /admin/users/:id/verify                                    control
 GET           /admin/users/:id/delete                                    controllers.admin.UserAdministration.delete(id: String)
 GET           /admin/users/:id/loginAs                                   controllers.admin.UserAdministration.loginAsUser(id: String)
 GET           /admin/users/:id/details                                   controllers.admin.UserAdministration.show(id: String)
-GET           /admin/users/:id/details/tracing/:id/reopen                controllers.admin.AnnotationAdministration.reopen(id: String)
-GET           /admin/users/:id/details/tracing/:id/finish                controllers.admin.AnnotationAdministration.finish(id: String)
-GET           /admin/users/:id/details/tracing/:id/reset                 controllers.admin.AnnotationAdministration.reset(id: String)
 GET           /admin/users/:id/download                                  controllers.admin.NMLIO.userDownload(id: String)
 POST          /admin/users/role                                          controllers.admin.UserAdministration.addRoleBulk
 DELETE        /admin/users/role                                          controllers.admin.UserAdministration.deleteRoleBulk

@@ -225,13 +225,19 @@ class DataRequestActor(
           0.toByte)
     }
       .map {
-      block =>
-        new DataBlockCutter(block, dataRequest, layer, pointOffset).cutOutRequestedData
+        block =>
+          dataRequest match {
+            case request: DataReadRequest =>
+              new DataBlockCutter(block, request, layer, pointOffset).cutOutRequestedData
+            case request: DataWriteRequest =>
+              new DataBlockWriter(block, request, layer, pointOffset).writeSuppliedData
+              Array[Byte]()
+          }
     }
   }
 }
 
-class DataBlockCutter(block: BlockedArray3D[Byte], dataRequest: DataRequest, layer: DataLayer, offset: Point3D) {
+class DataBlockCutter(block: BlockedArray3D[Byte], dataRequest: DataReadRequest, layer: DataLayer, offset: Point3D) {
   val dataSet = dataRequest.dataSet
 
   val resolution = dataRequest.resolution
@@ -239,7 +245,7 @@ class DataBlockCutter(block: BlockedArray3D[Byte], dataRequest: DataRequest, lay
   val cube = dataRequest.cuboid
 
   @inline
-  def interpolatedData(px: Double, py: Double, pz: Double) = {
+  def interpolatedData(px: Double, py: Double, pz: Double, idx: Int) = {
     if (dataRequest.settings.skipInterpolation)
       byteLoader(Point3D(px.castToInt, py.castToInt, pz.castToInt))
     else
@@ -282,4 +288,30 @@ class DataBlockCutter(block: BlockedArray3D[Byte], dataRequest: DataRequest, lay
 
   def nullValue(bytesPerElement: Int) =
     new Array[Byte](bytesPerElement)
+}
+
+class DataBlockWriter(block: BlockedArray3D[Byte], dataRequest: DataWriteRequest, layer: DataLayer, offset: Point3D) {
+  val dataSet = dataRequest.dataSet
+
+  val resolution = dataRequest.resolution
+
+  val cube = dataRequest.cuboid
+
+  @inline
+  def writeData(px: Double, py: Double, pz: Double, idx: Int) = {
+    byteWriter(Point3D(px.castToInt, py.castToInt, pz.castToInt), dataRequest.data.slice(idx, idx + layer.bytesPerElement))
+    Array[Byte]()
+  }
+
+  def writeSuppliedData = {
+    cube.withContainingCoordinates(extendArrayBy = layer.bytesPerElement)(writeData)
+  }
+
+  def calculatePositionInLoadedBlock(globalPoint: Point3D) = {
+    dataSet.applyResolution(globalPoint, resolution).move(offset.negate)
+  }
+
+  def byteWriter(globalPoint: Point3D, data: Array[Byte]) = {
+    block(calculatePositionInLoadedBlock(globalPoint), data)
+  }
 }

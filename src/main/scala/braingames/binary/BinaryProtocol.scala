@@ -2,12 +2,15 @@ package braingames.binary
 
 import braingames.geometry.Point3D
 import braingames.util.ExtendedTypes.ExtendedByteArray
+import scala.collection.mutable.ArraySeq
 
 abstract class BinaryMessage
 
-case class ParsedRequest(resolutionExponent: Int, position: Point3D, useHalfByte: Boolean)
+case class ParsedDataReadRequest(resolutionExponent: Int, position: Point3D, useHalfByte: Boolean)
 
-case class ParsedRequestCollection(requests: Array[ParsedRequest], handle: Option[Array[Byte]] = None) extends BinaryMessage
+case class ParsedDataWriteRequest(resolutionExponent: Int, position: Point3D, data: Array[Byte])
+
+case class ParsedRequestCollection[T](requests: Array[T], handle: Option[Array[Byte]] = None) extends BinaryMessage
 
 object BinaryProtocol {
   /**
@@ -18,82 +21,112 @@ object BinaryProtocol {
   val ResolutionLength = FloatByteSize
   val UseHalfByteLength = FloatByteSize
   val CoordinatesLength = 3 * FloatByteSize
+  val SingleReadPayloadSize = ResolutionLength + UseHalfByteLength + CoordinatesLength
+  val SingleWritePayloadHeaderSize = ResolutionLength + CoordinatesLength
 
-  val SinglePayloadSize = ResolutionLength + UseHalfByteLength + CoordinatesLength
+  private def hasValidLength(b: Array[Byte], containsHandle: Boolean, singlePayloadSize: Int) =
+    if (containsHandle)
+      b.length >= (singlePayloadSize + HandleLength)
+    else
+      b.length >= singlePayloadSize
+
+  private def isFloatArray(b: Array[Byte]) = b.length % 4 == 0
+
+  private def isValidReadPlayload(in: Array[Byte], containsHandle: Boolean) =
+    hasValidLength(in, containsHandle, SingleReadPayloadSize) && isFloatArray(in)
+
+  private def isValidWritePlayload(in: Array[Byte], containsHandle: Boolean, playloadBodySize: Int) =
+    hasValidLength(in, containsHandle, SingleWritePayloadHeaderSize + playloadBodySize)
 
   private def parsePosition(b: Array[Byte]) = {
     val positionArray = b.subDivide(FloatByteSize).map(_.reverse.toIntFromFloat)
     Point3D.fromArray(positionArray)
   }
 
-  private def parseSingleRequestPayload(singleRequestPayload: Array[Byte]) = {
-    if (singleRequestPayload.length == SinglePayloadSize) {
-      val (binResolution, tail) = singleRequestPayload.splitAt(FloatByteSize)
-      val (binUseHalfByte, binPosition) = tail.splitAt(FloatByteSize)
-
-      parsePosition(binPosition).map {
-        position =>
-          val resolutionExponent = binResolution.reverse.toIntFromFloat
-          val useHalfByte = binUseHalfByte.reverse.toBooleanFromFloat
-          ParsedRequest(resolutionExponent, position, useHalfByte)
-      }
-    } else {
-      None
-    }
-  }
-
-  private def parsePayload(multipleRequestPayload: Array[Byte]): Array[ParsedRequest] = {
-    multipleRequestPayload.subDivide(SinglePayloadSize) flatMap {
-      parseSingleRequestPayload
-    }
-  }
-
-  def isFloatArray(b: Array[Byte]) = b.length % 4 == 0
-
-  private def hasValidLength(b: Array[Byte], containsHandle: Boolean) =
-    if (containsHandle)
-      b.length >= (SinglePayloadSize + HandleLength)
-    else
-      b.length >= SinglePayloadSize
-
-  private def splitBeforeHandle(b: Array[Byte]) = {
-    b.splitAt(b.length - 1)
-  }
-
   /**
-   * Parses a message sent on a websocket. The message must have the following
+   * Parses a message sent as a data request. The message must have the following
    * structure:
    *
-   * | resolution: Float | halfByte: Float | xPos: Float | yPos: Float | zPos: Float | handle: Float |
+   * | resolution: Float | halfByte: Float | xPos: Float | yPos: Float | zPos: Float |
    *
    * Each float consists of 4 bytes.
    */
-  private def parseWithHandle(in: Array[Byte]) = {
-    val (payload, handle) = splitBeforeHandle(in)
-    val requests = parsePayload(payload)
 
-    ParsedRequestCollection(requests, Some(handle))
+  private def parseDataReadRequestPayload(singleRequestPayload: Array[Byte]) = {
+    val (binResolution, tail) = singleRequestPayload.splitAt(ResolutionLength)
+    val (binUseHalfByte, binPosition) = tail.splitAt(UseHalfByteLength)
+
+    parsePosition(binPosition).map {
+      position =>
+        val resolutionExponent = binResolution.reverse.toIntFromFloat
+        val useHalfByte = binUseHalfByte.reverse.toBooleanFromFloat
+        ParsedDataReadRequest(resolutionExponent, position, useHalfByte)
+    }
   }
 
   /**
-   * Parses a message sent via HTTP POST. The message must have the same
-   * structure as a websocket message, but doesn't contain the handle field.
+   * Parses a message sent as a data set request. The message must have the following
+   * structure:
+   *
+   * | resolution: Float | xPos: Float | yPos: Float | zPos: Float | data Array[Byte]
+   *
+   * Each float consists of 4 bytes.
    */
-  private def parseWithoutHandle(in: Array[Byte]) = {
-    val requests = parsePayload(in)
-    ParsedRequestCollection(requests)
+
+  private def parseDataWriteRequestPayload(singleRequestPayload: Array[Byte]) = {
+    val (binResolution, tail) = singleRequestPayload.splitAt(ResolutionLength)
+    val (binPosition, data) = tail.splitAt(CoordinatesLength)
+
+    parsePosition(binPosition).map {
+      position =>
+        val resolutionExponent = binResolution.reverse.toIntFromFloat
+        ParsedDataWriteRequest(resolutionExponent, position, data)
+    }
   }
 
-  def parse(in: Array[Byte], containsHandle: Boolean) = {
-    if (hasValidLength(in, containsHandle) && isFloatArray(in)) {
-      val parseResult =
-        if (containsHandle)
-          parseWithHandle(in)
+  /**
+   * Parses the handle of a message sent via websocket.
+   */
+
+  private def parseHandle(b: Array[Byte], containsHandle: Boolean) = {
+    if (containsHandle) {
+      val t = b.splitAt(b.length - 1)
+      (t._1, Some(t._2))
+    } else
+      (b, None)
+  }
+
+  private def parsePayload[T](
+                            multipleRequestPayload: Array[Byte],
+                            singlePayloadSize: Int,
+                            parseFunction: Array[Byte] => Option[T]
+                          ): ArraySeq[T] = {
+    multipleRequestPayload.subDivide(singlePayloadSize) flatMap {
+      payload =>
+        if (payload.length == singlePayloadSize)
+          parseFunction(payload)
         else
-          parseWithoutHandle(in)
-      Some(parseResult)
-    } else {
-      None
+          None
     }
+  }
+
+  def parse[T: ClassManifest](in: Array[Byte], containsHandle: Boolean, singlePayloadSize: Int, parseFunction: Array[Byte] => Option[T]): ParsedRequestCollection[T] = {
+    val (payload, handle) = parseHandle(in, containsHandle)
+    val requests = parsePayload(in, singlePayloadSize, parseFunction)
+    ParsedRequestCollection(requests.toArray, handle)
+  }
+
+  def parseDataReadRequests(in: Array[Byte], containsHandle: Boolean) = {
+    if (isValidReadPlayload(in, containsHandle))
+      Some(parse(in, containsHandle, SingleReadPayloadSize, parseDataReadRequestPayload))
+    else
+      None
+  }
+
+  def parseDataWriteRequests(in: Array[Byte], payloadBodySize: Int, containsHandle: Boolean) = {
+    if (isValidWritePlayload(in, containsHandle, payloadBodySize)) {
+      Some(parse(in, containsHandle, SingleWritePayloadHeaderSize + payloadBodySize, parseDataWriteRequestPayload))
+    } else
+      None
   }
 }

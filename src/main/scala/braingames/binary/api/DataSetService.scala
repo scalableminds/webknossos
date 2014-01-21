@@ -43,8 +43,4 @@ trait DataSetService {
     baseFolder.mkdirs()
     UserDataLayer(name, baseDataSet.name, dataLayer)
   }
-
-  def writeToDataSet(dataSet: DataSet, block: Point3D, content: File) = {
-
-  }
 }

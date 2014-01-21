@@ -40,7 +40,7 @@ import braingames.binary.models.DataSet
 import braingames.io.StartWatching
 import java.io.File
 
-trait BinaryDataService extends DataSetService with BinaryDataHelpers{
+trait BinaryDataService extends DataSetService with BinaryDataHelpers {
   implicit def system: ActorSystem
 
   lazy implicit val executor = system.dispatcher
@@ -106,4 +106,5 @@ trait BinaryDataService extends DataSetService with BinaryDataHelpers{
 
     future.mapTo[Option[Array[Byte]]]
   }
+
 }

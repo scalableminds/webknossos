@@ -16,17 +16,17 @@ abstract class DataModel {
     moveVector: (Double, Double, Double),
     rotationBase: Option[MatrixBase3D],
     coordinates: Array[Vector3D]): Array[Vector3D] = {
-    def ff(f: (Double, Double, Double) => Array[Vector3D]): Array[Vector3D] = {
-      coordinates.map(c => f(c.x, c.y, c.z)(0))
+    def ff(f: (Double, Double, Double, Int) => Array[Vector3D]): Array[Vector3D] = {
+      coordinates.map(c => f(c.x, c.y, c.z, 0)(0))
     }
 
-    rotateAndMove(moveVector, rotationBase)(ff)((x, y, z) => Array(Vector3D(x, y, z)))
+    rotateAndMove(moveVector, rotationBase)(ff)((x, y, z, idx) => Array(Vector3D(x, y, z)))
   }
 
   @inline
   protected def rotateAndMove[T](
     moveVector: (Double, Double, Double),
-    rotationBase: Option[MatrixBase3D])(coordinates: ((Double, Double, Double) => Array[T]) => Array[T])(f: (Double, Double, Double) => Array[T]): Array[T] = {
+    rotationBase: Option[MatrixBase3D])(coordinates: ((Double, Double, Double, Int) => Array[T]) => Array[T])(f: (Double, Double, Double, Int) => Array[T]): Array[T] = {
 
     rotationBase match{
       case Some(rotation) =>
@@ -34,10 +34,11 @@ abstract class DataModel {
         val matrix = TransformationMatrix(Vector3D(moveVector), rotation).value
 
         @inline
-        def coordinateTransformer(px: Double, py: Double, pz: Double) = {
+        def coordinateTransformer(px: Double, py: Double, pz: Double, idx: Int) = {
           f(matrix(0) * px + matrix(1) * py + matrix(2) * pz + matrix(3),
             matrix(4) * px + matrix(5) * py + matrix(6) * pz + matrix(7),
-            matrix(8) * px + matrix(9) * py + matrix(10) * pz + matrix(11))
+            matrix(8) * px + matrix(9) * py + matrix(10) * pz + matrix(11),
+            idx)
         }
 
         coordinates(coordinateTransformer)
@@ -50,12 +51,12 @@ abstract class DataModel {
   @inline
   protected def simpleMove[T](
     moveVector: (Double, Double, Double),
-    coordinates: ((Double, Double, Double) => Array[T]) => Array[T])(f: (Double, Double, Double) => Array[T]): Array[T] = {
-    coordinates { (px, py, pz) =>
+    coordinates: ((Double, Double, Double, Int) => Array[T]) => Array[T])(f: (Double, Double, Double, Int) => Array[T]): Array[T] = {
+    coordinates { (px, py, pz, idx) =>
       val x = moveVector._1 + px
       val y = moveVector._2 + py
       val z = moveVector._3 + pz
-      f(x, y, z)
+      f(x, y, z, idx)
     }
   }
 
@@ -65,7 +66,7 @@ abstract class DataModel {
   }
 
   // calculate all coordinates which are in the model boundary
-  def withContainingCoordinates[T](extendArrayBy: Int = 1)(f: (Double, Double, Double) => Array[T])(implicit c: ClassTag[T]): Array[T]
+  def withContainingCoordinates[T](extendArrayBy: Int = 1)(f: (Double, Double, Double, Int) => Array[T])(implicit c: ClassTag[T]): Array[T]
 }
 
 case class Cuboid(
@@ -108,7 +109,7 @@ case class Cuboid(
     rotationBase.isEmpty
 
   @inline
-  private def looper[T](extendArrayBy: Int, c: ClassTag[T])(f: (Double, Double, Double) => Array[T]) = {
+  private def looper[T](extendArrayBy: Int, c: ClassTag[T])(f: (Double, Double, Double, Int) => Array[T]) = {
     implicit val tag = c
     val xhMax = topLeft.x + width
     val yhMax = topLeft.y + height
@@ -124,7 +125,7 @@ case class Cuboid(
       while (y < yhMax) {
         x = topLeft.x
         while (x < xhMax) {
-          f(x, y, z).copyToArray(array, idx, extendArrayBy)
+          f(x, y, z, idx).copyToArray(array, idx, extendArrayBy)
           x += resolution
           idx += extendArrayBy
         }
@@ -135,7 +136,7 @@ case class Cuboid(
     array
   }
 
-  override def withContainingCoordinates[T](extendArrayBy: Int = 1)(f: (Double, Double, Double) => Array[T])(implicit c: ClassTag[T]): Array[T] = {
+  override def withContainingCoordinates[T](extendArrayBy: Int = 1)(f: (Double, Double, Double, Int) => Array[T])(implicit c: ClassTag[T]): Array[T] = {
     rotateAndMove(moveVector, rotationBase)(looper[T](extendArrayBy, c))(f)
   }
 }

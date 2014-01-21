@@ -21,6 +21,7 @@ class Skeleton
 
     @cellTracing    = @model.cellTracing
     @treeGeometries = []
+    @isVisible      = true
 
     @showInactiveTrees = true
     
@@ -209,11 +210,32 @@ class Skeleton
     return null
 
 
-  setVisibility : (isVisible) ->
+  setVisibilityTemporary : (isVisible) ->
 
     for mesh in @getMeshes()
       mesh.visible = isVisible
     @flycam.update()
+
+
+  setVisibility : (@isVisible) ->
+
+
+  restoreVisibilty : ->
+
+    @setVisibilityTemporary( @isVisible )
+
+
+  toggleVisibility : ->
+
+    @setVisibility( not @isVisible )
+
+
+  updateForCam : (id) ->
+
+    if id in constants.ALL_PLANES
+      @setVisibilityTemporary( @isVisible )
+    else
+      @setVisibilityTemporary( true )
 
 
   toggleInactiveTreeVisibility : ->

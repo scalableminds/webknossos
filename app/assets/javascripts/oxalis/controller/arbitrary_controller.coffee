@@ -140,8 +140,8 @@ class ArbitraryController
     
     @input.keyboardNoLoop = new Input.KeyboardNoLoop(
 
-      "1" : => @sceneController.toggleSkeletonVisibility()
-      "2" : => @sceneController.toggleInactiveTreeVisibility()
+      "1" : => @sceneController.skeleton.toggleVisibility()
+      "2" : => @sceneController.skeleton.toggleInactiveTreeVisibility()
 
       #Delete active node
       "delete" : => @model.cellTracing.deleteActiveNode()

@@ -1,6 +1,7 @@
 ### define
 ../model/dimensions : Dimensions
 ../constants : constants
+./abstract_tree_controller : AbstractTreeController
 ###
 
 class CellTacingController
@@ -44,8 +45,8 @@ class CellTacingController
 
     @keyboardControls =
 
-      "1" : => @sceneController.toggleSkeletonVisibility()
-      "2" : => @sceneController.toggleInactiveTreeVisibility()
+      "1" : => @toggleVisibility()
+      "2" : => @sceneController.skeleton.toggleInactiveTreeVisibility()
 
       #Delete active node
       "delete" : => @model.cellTracing.deleteActiveNode()
@@ -127,18 +128,13 @@ class CellTacingController
 
   toggleSkeletonVisibility : =>
 
-    @sceneController.toggleSkeletonVisibility()
+    @sceneController.skeleton.toggleVisibility()
     # Show warning, if this is the first time to use
     # this function for this user
     if @model.user.firstVisToggle
       @view.showFirstVisToggle()
       @model.user.firstVisToggle = false
       @model.user.push()
-
-
-  toggleInactiveTreeVisibility : =>
-
-    @sceneController.toggleInactiveTreeVisibility()
   
 
   setWaypoint : (position, ctrlPressed) =>

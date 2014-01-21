@@ -24,7 +24,6 @@ class SceneController
     @current          = 0
     @displayPlane     = [true, true, true]
     @planeShift       = [0, 0, 0]
-    @showSkeleton     = true
     @pingBinary       = true
     @pingBinarySeg    = true
 
@@ -48,9 +47,11 @@ class SceneController
 
     # TODO: Implement text 
 
-    @contour = new ContourGeometry(@model.volumeTracing, @model.flycam)
+    if @model.volumeTracing?
+      @contour = new ContourGeometry(@model.volumeTracing, @model.flycam)
 
-    @skeleton = new Skeleton(@flycam, @model)
+    if @model.cellTracing?
+      @skeleton = new Skeleton(@flycam, @model)
 
     # create Meshes
     @planes = new Array(3)
@@ -82,10 +83,9 @@ class SceneController
 
     @cube.updateForCam(id)
     @bb.updateForCam(id)
+    @skeleton?.updateForCam(id)
 
     if id in constants.ALL_PLANES
-      unless @showSkeleton
-        @skeleton.setVisibility(false)
       for mesh in @volumeMeshes
         mesh.visible = false
       for i in constants.ALL_PLANES
@@ -100,8 +100,6 @@ class SceneController
         else
           @planes[i].setVisible(false)
     else
-      unless @showSkeleton
-        @skeleton.setVisibility(true)
       for mesh in @volumeMeshes
         mesh.visible = true
       for i in constants.ALL_PLANES
@@ -131,11 +129,6 @@ class SceneController
   setTextRotation : (rotVec) =>
 
     # TODO: Implement
-
-
-  setWaypoint : =>
-
-    @skeleton.setWaypoint()
 
 
   setDisplayCrosshair : (value) =>
@@ -171,23 +164,11 @@ class SceneController
     for plane in @planes
       result = result.concat(plane.getMeshes())
 
-    result = result.concat(@skeleton.getMeshes())
-                    .concat(@contour.getMeshes())
-                    .concat(@cube.getMeshes())
-                    .concat(@bb.getMeshes())
+    for geometry in [@skeleton, @contour, @cube, @bb]
+      if geometry?
+        result = result.concat geometry.getMeshes()
     
     return result
-
-
-  toggleSkeletonVisibility : ->
-
-    @showSkeleton = not @showSkeleton
-    @skeleton.setVisibility(@showSkeleton)
-
-
-  toggleInactiveTreeVisibility : ->
-
-    @skeleton.toggleInactiveTreeVisibility()
 
 
   setBoundingBox : (bbArray) ->
@@ -217,8 +198,8 @@ class SceneController
     @cube.setVisibility( false )
     @bb.setVisibility( false )
 
-    @skeleton.setVisibility(@showSkeleton)
-    @skeleton.setSizeAttenuation(true)
+    @skeleton?.restoreVisibility()
+    @skeleton?.setSizeAttenuation(true)
 
 
   start : ->
@@ -228,7 +209,7 @@ class SceneController
     @cube.setVisibility( true )
     @bb.setVisibility( true )
 
-    @skeleton.setSizeAttenuation(false)
+    @skeleton?.setSizeAttenuation(false)
 
 
   bind : ->

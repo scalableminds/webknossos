@@ -3,7 +3,6 @@ jquery : $
 underscore : _
 ./controller/plane_controller : PlaneController
 ./controller/arbitrary_controller : ArbitraryController
-./controller/abstract_tree_controller : AbstractTreeController
 ./controller/scene_controller : SceneController
 ./model : Model
 ./view : View

@@ -6,7 +6,8 @@ underscore : _
 ./controller/scene_controller : SceneController
 ./model : Model
 ./view : View
-./view/skeleton_tracing_view : SkeletonTracingView
+./view/skeletontracing_view : SkeletonTracingView
+./view/volumetracing_view : VolumeTracingView
 ../libs/event_mixin : EventMixin
 ../libs/input : Input
 ./view/gui : Gui
@@ -59,7 +60,7 @@ class Controller
       if @model.cellTracing?
         @view = new SkeletonTracingView(@model)
       else
-        @view = new View(@model)
+        @view = new VolumeTracingView(@model)
 
       @gui = @createGui(restrictions, settings)
 

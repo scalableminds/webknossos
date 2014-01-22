@@ -19,7 +19,7 @@ import scala.concurrent.ExecutionContext.Implicits._
 import akka.actor.Actor
 import braingames.binary.models.DataSet
 import reactivemongo.api.MongoConnection
-import braingames.binary.LoadBlock
+import braingames.binary.{LoadBlock, SaveBlock}
 import net.liftweb.common.Box
 
 case class InsertBinary(dataSet: DataSet)
@@ -112,6 +112,10 @@ class GridDataStore
     
     //Future.failed(new DataNotFoundException("GRIDFS2"))
     Future.successful(None)
+  }
+
+  def save(blockInfo: SaveBlock): Future[Unit] = {
+    Future.successful()
   }
 }
 

@@ -230,9 +230,73 @@ class DataRequestActor(
             case request: DataReadRequest =>
               new DataBlockCutter(block, request, layer, pointOffset).cutOutRequestedData
             case request: DataWriteRequest =>
-              new DataBlockWriter(block, request, layer, pointOffset).writeSuppliedData
+              val blocks = new DataBlockWriter(block, request, layer, pointOffset).writeSuppliedData
+              saveBlocks(minBlock, maxBlock, dataRequest, layer, blocks)
               Array[Byte]()
           }
+    }
+  }
+
+  def saveToLayer(saveBlock: SaveBlock): Future[Unit] = {
+    if (saveBlock.dataLayerSection.doesContainBlock(saveBlock.block, saveBlock.dataSet.blockLength)) {
+      def saveToStore(dataStores: List[ActorRef]): Future[Unit] = dataStores match {
+        case a :: tail =>
+          (a ? saveBlock).mapTo[Unit].recoverWith {
+            case e: AskTimeoutException =>
+              println(s"WARN: (${saveBlock.dataSet.name}/${saveBlock.dataLayerSection.baseDir} ${saveBlock.block}) ${a.path}: Not response in time.")
+              saveToStore(tail)
+          }
+          Future.successful(Unit)
+        case _ =>
+          Future.successful(Unit)
+      }
+
+      saveToStore(dataStores)
+    } else {
+      Future.successful(Unit)
+    }
+  }
+
+  def saveToSomewhere(dataSet: DataSet, layer: DataLayer, requestedSection: Option[String], resolution: Int, block: Point3D, data: Array[Byte]) = {
+
+    def saveToSections(sections: Stream[DataLayerSection]): Future[Unit] = sections match {
+      case section #:: tail =>
+        val saveBlock = SaveBlock(dataSet, layer, section, resolution, block, data)
+        saveToLayer(saveBlock).onFailure {
+          case _ =>
+            saveToSections(tail)
+        }
+        Future.successful(Unit)
+
+      case _ =>
+        System.err.println("Could not save userData to any section.")
+        Future.successful()
+    }
+
+    val sections = Stream(layer.sections.filter {
+      section =>
+        requestedSection.map(_ == section.sectionId) getOrElse true
+    }: _*)
+
+    saveToSections(sections)
+  }
+
+  def saveBlocks(minBlock: Point3D, maxBlock: Point3D, dataRequest: DataRequest, layer: DataLayer, blocks: Vector[Array[Byte]]) = {
+    val blockIdxs = for {
+      x <- minBlock.x to maxBlock.x
+      y <- minBlock.y to maxBlock.y
+      z <- minBlock.z to maxBlock.z
+    } yield Point3D(x, y, z)
+
+    (blockIdxs, blocks).zipped foreach {
+      (p, block) =>
+        saveToSomewhere(
+          dataRequest.dataSet,
+          layer,
+          dataRequest.dataSection,
+          dataRequest.resolution,
+          p,
+          block)
     }
   }
 }
@@ -305,6 +369,7 @@ class DataBlockWriter(block: BlockedArray3D[Byte], dataRequest: DataWriteRequest
 
   def writeSuppliedData = {
     cube.withContainingCoordinates(extendArrayBy = layer.bytesPerElement)(writeData)
+    block.underlying
   }
 
   def calculatePositionInLoadedBlock(globalPoint: Point3D) = {

@@ -1,9 +1,9 @@
 package braingames.binary.store
 
-import java.io.{ FileNotFoundException, InputStream, FileInputStream, File }
+import java.io.{ FileNotFoundException, InputStream, OutputStream, FileInputStream, FileOutputStream, File }
 import scala.concurrent.Future
 import scala.concurrent.ExecutionContext.Implicits._
-import braingames.binary.LoadBlock
+import braingames.binary.{LoadBlock, SaveBlock}
 import net.liftweb.common.Box
 import net.liftweb.common.Failure
 
@@ -30,6 +30,22 @@ class FileDataStore extends DataStore {
     }
   }
 
+  def save(dataInfo: SaveBlock): Future[Unit] = {
+    Future {
+      try {
+        val folder = new File(createDirectory(dataInfo))
+        folder.mkdirs()
+        val binaryStream =
+          new FileOutputStream(createFilename(dataInfo))
+        byteArrayToOutputStream(binaryStream, dataInfo)
+      } catch {
+        case e: FileNotFoundException =>
+          System.err.println("File datastore couldn't write to file: " + createFilename(dataInfo))
+          Failure("Couldn't write to file: " + e)
+      }
+    }
+  }
+
   /**
    *  Read file contents to a byteArray
    */
@@ -39,5 +55,13 @@ class FileDataStore extends DataStore {
     //assert(is.skip(1) == 0, "INPUT STREAM NOT EMPTY")
     is.close()
     byteArray
+  }
+
+  /**
+   *  Writes bytearray contents to a FileOutputStream
+   */
+  def byteArrayToOutputStream(os: OutputStream, dataInfo: SaveBlock) = {
+    os.write(dataInfo.data)
+    os.close()
   }
 }

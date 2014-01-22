@@ -20,6 +20,7 @@ class Paginator
     @extractTemplate()
 
     if data
+      @dataRetrievalPromise = new $.Deferred().resolve()
       @handleData(data)
     else
       @retrieveData()

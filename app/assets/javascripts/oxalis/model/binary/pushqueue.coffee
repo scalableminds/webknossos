@@ -69,26 +69,6 @@ class PushQueue
 
   pushBatch : (batch) ->
 
-#    Used for testing
-#    if @alreadyPushed?
-#      return
-
-#    @alreadyPushed = true
-#    transmitBuffer = []
-
-#    for i in [0...2]
-#      transmitBuffer.push(0, 0, 0, 0, 0, 0, 0, 67, 0, 0, 0, 67, 0, 0, 0, 0)
-
-#      for x in [0...32]
-#        for y in [0...32]
-#          for z in [0...32]
-#            transmitBuffer.push(x, y)
-
-#    console.log transmitBuffer
-
-#    @getSendSocket().send(transmitBuffer)
-#    return
-
     @batchCount++
 
     console.log "Pushing batch", batch

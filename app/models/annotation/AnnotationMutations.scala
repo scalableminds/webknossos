@@ -272,13 +272,13 @@ trait AnnotationFileService extends FoxImplicits {
     }.orElse(annotationToInputStream())
   }
 
-  def loadAnnotationContent()(implicit ctx: DBAccessContext) =
-    loadAnnotationContentStream().map {
-      annotationStream =>
-        NamedFileStream(
-          annotationStream,
-          SavedTracingInformationHandler.nameForAnnotation(annotation) + ".nml")
-    }
+  def loadAnnotationContent()(implicit ctx: DBAccessContext): Fox[NamedFileStream] = {
+    for{
+      annotationStream <- loadAnnotationContentStream()
+      name <- SavedTracingInformationHandler.nameForAnnotation(annotation)
+    } yield
+      NamedFileStream( annotationStream, name + ".nml")
+  }
 
   def annotationToInputStream(): Fox[InputStream] = {
     annotation.content.flatMap {

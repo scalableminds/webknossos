@@ -118,7 +118,7 @@ object NMLIO extends Controller with Secured with TextUtils {
   }
 
   def zipTracings(annotations: List[Annotation], zipFileName: String)(implicit request: AuthenticatedRequest[_]) = {
-    Future.sequence(annotations.par.map(_.muta.loadAnnotationContent().futureBox).seq).map {
+    Future.traverse(annotations)(_.muta.loadAnnotationContent().futureBox).map {
       zipStreams =>
         val zipped = TemporaryFile("annotationZips", normalize(zipFileName))
         ZipIO.zip(zipStreams.flatten, new BufferedOutputStream(new FileOutputStream(zipped.file)))
@@ -131,7 +131,7 @@ object NMLIO extends Controller with Secured with TextUtils {
       for {
         tasks <- TaskDAO.findAllByProject(project.name)
         tracings <- Future.traverse(tasks)(_.annotations).map(_.flatten.filter(_.state.isFinished))
-        zip <- zipTracings(tracings, normalize(projectName + "_nmls.zip"))
+        zip <- zipTracings(tracings, projectName + "_nmls.zip")
       } yield zip
 
     for {
@@ -145,7 +145,7 @@ object NMLIO extends Controller with Secured with TextUtils {
   def taskDownload(taskId: String) = Authenticated(role = RoleDAO.Admin).async { implicit request =>
     def createTaskZip(task: Task) = task.annotations.flatMap { annotations =>
       val finished = annotations.filter(_.state.isFinished)
-      zipTracings(finished, normalize(task.id + "_nmls.zip"))
+      zipTracings(finished, task.id + "_nmls.zip")
     }
 
     for {
@@ -158,7 +158,7 @@ object NMLIO extends Controller with Secured with TextUtils {
     for {
       user <- UserService.findOneById(userId, useCache = true) ?~> Messages("user.notFound")
       annotations <- AnnotationService.findTasksOf(user).map(_.filter(_.state.isFinished))
-      zipped <- zipTracings(annotations, normalize(user.abreviatedName + "_nmls.zip"))
+      zipped <- zipTracings(annotations, user.abreviatedName + "_nmls.zip")
     } yield {
       Ok.sendFile(zipped.file)
     }

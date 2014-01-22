@@ -11,4 +11,4 @@ class SkeletonTracingView extends View
 
     super(@model)
 
-    $('#comments-tree').hide()
+    $('.skeleton-controls').hide()

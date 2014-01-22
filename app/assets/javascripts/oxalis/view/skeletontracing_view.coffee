@@ -11,6 +11,8 @@ class SkeletonTracingView extends View
 
     super(@model)
 
+    $('.volume-controls').hide()
+
     @model.cellTracing.on({
       emptyBranchStack : =>
 

@@ -256,5 +256,3 @@ object BinaryData extends Controller with Secured {
   //              (input, output)
   //          }
   //    }
-
-}

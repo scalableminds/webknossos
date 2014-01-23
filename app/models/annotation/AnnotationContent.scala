@@ -69,13 +69,12 @@ object AnnotationContent {
       dataSet <- ac.dataSet
       contentData <- ac.contentData
     } yield {
-      ((__ \ 'settings).write[AnnotationSettings] and
-        (__ \ 'dataSet).write[Option[DataSet]] and
-        (__ \ 'contentData).write[Option[JsObject]] and
-        (__ \ 'editPosition).write[Point3D] and
-        (__ \ 'contentType).write[String])
-      .tupled
-      .writes((ac.settings, dataSet, contentData, ac.editPosition, ac.contentType))
+      Json.obj(
+	"settings" -> ac.settings,
+	"dataSet" -> dataSet,
+	"contentData" -> contentData,
+	"editPosition" -> ac.editPosition,
+	"contentType" -> ac.contentType)
     }
   }
 }

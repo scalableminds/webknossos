@@ -39,32 +39,8 @@ object AnnotationController extends Controller with Secured with TracingInformat
 
   implicit val timeout = Timeout(5 seconds)
 
-  def simpleAnnotationHtml(annotation: AnnotationLike)(implicit ctx: DBAccessContext) = {
-    for {
-      user <- annotation.user
-      content <- annotation.content.futureBox
-    } yield html.admin.annotation.simpleAnnotation(annotation, user, content)
-  }
-
-  def extendedAnnotationHtml(user: User, annotation: AnnotationLike)(implicit ctx: DBAccessContext) = {
-    for {
-      task <- annotation.task ?~> Messages("task.notFound")
-      taskType <- task.taskType.futureBox
-      project <- task.project.futureBox
-
-      dataSetName <- annotation.dataSetName
-      stats <- annotation.statisticsForAnnotation().futureBox
-      content <- annotation.content.futureBox
-    } yield html.admin.annotation.extendedAnnotation(
-      task,
-      annotation,
-      taskType,
-      project,
-      dataSetName,
-      stats.toOption,
-      content,
-      user)
-  }
+  def annotationJson(user: User, annotation: AnnotationLike)(implicit ctx: DBAccessContext): Fox[JsObject] =
+    AnnotationLike.annotationLikeInfoWrites(annotation, Some(user), Nil)
 
 
   def info(typ: String, id: String) = UserAwareAction.async {
@@ -96,9 +72,9 @@ object AnnotationController extends Controller with Secured with TracingInformat
       for {
         _ <- ensureTeamAdministration(request.user, annotation.team).toFox
         reset <- annotation.muta.resetToBase() ?~> Messages("annotation.reset.failed")
-        html <- extendedAnnotationHtml(request.user, reset)
+        json <- annotationJson(request.user, reset)
       } yield {
-        JsonOk(html, Messages("annotation.reset.success"))
+        JsonOk(json, Messages("annotation.reset.success"))
       }
     }
   }
@@ -109,9 +85,9 @@ object AnnotationController extends Controller with Secured with TracingInformat
       for {
         _ <- ensureTeamAdministration(request.user, annotation.team).toFox
         reopenedAnnotation <- annotation.muta.reopen() ?~> Messages("annotation.invalid")
-        html <- simpleAnnotationHtml(reopenedAnnotation)
+  json <- annotationJson(request.user, reopenedAnnotation)
       } yield {
-        JsonOk(html, Messages("annotation.reopened"))
+  JsonOk(json, Messages("annotation.reopened"))
       }
     }
   }
@@ -315,9 +291,9 @@ object AnnotationController extends Controller with Secured with TracingInformat
       task <- TaskDAO.findOneById(taskId) ?~> Messages("task.notFound")
       _ <- ensureTeamAdministration(request.user, task.team).toFox
       annotations <- task.annotations
-      htmls <- Future.traverse(annotations)(simpleAnnotationHtml)
+      jsons <- Fox.sequence(annotations.map(annotationJson(request.user, _)))
     } yield {
-      JsonOk(htmls.foldLeft(Html.empty)( _ += _))
+      Ok(JsArray(jsons.flatten))
     }
   }
 

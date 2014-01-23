@@ -133,7 +133,7 @@ object SkeletonTracing {
     )
 }
 
-object SkeletonTracingService extends AnnotationContentService with CommonTracingService with AnnotationStatistics {
+object SkeletonTracingService extends AnnotationContentService with CommonTracingService {
   val dao = SkeletonTracingDAO
 
   type AType = SkeletonTracing

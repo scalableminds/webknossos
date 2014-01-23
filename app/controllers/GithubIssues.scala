@@ -22,7 +22,8 @@ case class GithubAuth(user: String, key: String)
 
 object GithubIssues extends Controller with Secured {
 
-  override val DefaultAccessRole = RoleDAO.Admin
+  override val DefaultAccessRole = RoleDAO.User
+
   val conf = Play.configuration
 
   val githubUrl = "https://api.github.com"
@@ -78,6 +79,7 @@ object GithubIssues extends Controller with Secured {
     }
   }
 
+<<<<<<< HEAD
   def submit = Authenticated()(parse.urlFormEncoded) { implicit request =>
     Async {
       for {
@@ -87,9 +89,18 @@ object GithubIssues extends Controller with Secured {
         success <- handleSubmission(request.user, summary, description, issueType)
       } yield {
         val message = Messages(if (success) "issue.submit.success" else "issue.submit.failure")
+=======
+  def submit = Authenticated().async(parse.urlFormEncoded) { implicit request =>
+    for {
+      summary <- postParameter("summary") ?~> Messages("issue.summary.notSupplied")
+      description <- postParameter("description") ?~> Messages("issue.description.notSupplied")
+      issueType <- postParameter("type") ?~> Messages("issue.type.notSupplied")
+      success <- handleSubmission(request.user, summary, description, issueType)
+    } yield {
+      val message = Messages(if (success) "issue.submit.success" else "issue.submit.failure")
+>>>>>>> dev
 
-        Ok(html.issue.close(success, message))
-      }
+      Ok(html.issue.close(success, message))
     }
   }
 }

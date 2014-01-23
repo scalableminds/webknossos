@@ -8,7 +8,7 @@
   <td>
     <span class="label"> <%= tasks.type.settings.allowedModes %></span>
   </td>
-  <td class="nowrap"> 
+  <td class="nowrap">
     <% if (annotations.state.isFinished) { %>
       <i class="icon-ok"></i><span> Finished</span><br />
         <% if (annotations.review.comments && annotations.review.comments.length > 0) { %>
@@ -23,7 +23,7 @@
     <% } else { %>
       <a href="<%= jsRoutes.controllers.AnnotationController.trace(annotations.typ, annotations.id).url %>"><i class="icon-random"></i> trace</a><br/>
       <a href="<%= jsRoutes.controllers.AnnotationController.finish(annotations.typ, annotations.id).url %>" class="trace-finish" data-ajax="replace-row,confirm=@Messages("annotation.finish.confirm")" ><i class="icon-ok-circle"></i> finish</a>
-      
+
       <% if (annotations.review.comments && annotations.review.comments.length > 0) { %>
         <br />
         <a href="#" rel="popover" data-placement="bottom" data-title="Comment from Reviewer" data-html="true"

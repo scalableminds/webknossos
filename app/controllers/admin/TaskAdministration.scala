@@ -34,6 +34,7 @@ import braingames.util.Fox
 import play.api.mvc.SimpleResult
 import play.api.mvc.Request
 import play.api.mvc.AnyContent
+import braingames.reactivemongo.DBAccessContext
 
 object TaskAdministration extends AdminController {
 
@@ -154,7 +155,7 @@ object TaskAdministration extends AdminController {
       task <- TaskDAO.findOneById(taskId) ?~> Messages("task.notFound")
       projectName <- task.project.map(_.name) getOrElse ""
       form = basicTaskForm(task.assignedInstances).fill(
-        (task._taskType.toString,
+        (task._taskType.stringify,
           task.neededExperience,
           task.priority,
           task.instances,
@@ -281,21 +282,19 @@ object TaskAdministration extends AdminController {
     }
   }
 
+  def dataSetNamesForTasks(tasks: List[Task])(implicit ctx: DBAccessContext) =
+    Future.traverse(tasks)(_.annotationBase.flatMap(_.dataSetName getOrElse "").futureBox.map(_.toOption))
 
   // currently not used?
   def tasksForProject(projectName: String) = Authenticated().async { implicit request =>
     for {
       project <- ProjectDAO.findOneByName(projectName) ?~> Messages("project.notFound")
-      
       tasks <- project.tasks
-      // how can this be written more elegant?
-      dataSetNames <- Future.traverse(tasks)(_.annotationBase.flatMap(_.dataSetName getOrElse "").futureBox.map(_.toOption))
+      dataSetNames <- dataSetNamesForTasks(tasks)
       statuses <- Future.traverse(tasks)(_.status)
       taskTypes <- Future.traverse(tasks)(_.taskType.futureBox)
-
-      val zipped = (tasks zip dataSetNames, statuses zip taskTypes).zipped.toList
-
     } yield {
+      val zipped = (tasks zip dataSetNames, statuses zip taskTypes).zipped.toList
       val result = zipped.foldLeft(Html.empty) {
         case (h, ((t, d), (s, tt))) => h += html.admin.task.simpleTask(t, d.getOrElse(""), s, tt.toOption)
       }
@@ -308,12 +307,10 @@ object TaskAdministration extends AdminController {
       taskType <- TaskTypeDAO.findOneById(taskTypeId) ?~> Messages("taskType.notFound")
       
       tasks <- TaskDAO.findAllByTaskType(taskType)
-      dataSetNames <- Future.traverse(tasks)(_.annotationBase.flatMap(_.dataSetName getOrElse "").futureBox.map(_.toOption))
+      dataSetNames <- dataSetNamesForTasks(tasks)
       statuses <- Future.traverse(tasks)(_.status)
-      
-      val zipped = (tasks, dataSetNames, statuses).zipped.toList
-
     } yield {
+      val zipped = (tasks, dataSetNames, statuses).zipped.toList
       val result = zipped.foldLeft(Html.empty) {
         case (h, (t, d, s)) => h += html.admin.task.simpleTask(t, d.getOrElse(""), s, Some(taskType))
       }

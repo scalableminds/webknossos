@@ -69,7 +69,7 @@ object ApplicationBuild extends Build {
     braingamesBinary,
     scalaAsync,
     cache)
-  
+
   val dependencyResolvers = Seq(
     novusRel,
     novuesSnaps,

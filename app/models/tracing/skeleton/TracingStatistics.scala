@@ -1,15 +1,15 @@
 package models.tracing.skeleton
 
-import models.annotation.Annotation
+import models.annotation.{AnnotationLike, Annotation}
 import play.api.Logger
 import scala.concurrent.Future
 import braingames.util.{FoxImplicits, Fox}
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json.{Json, JsObject}
 
-trait AnnotationStatistics extends FoxImplicits {
-  def statisticsForAnnotation(annotation: Annotation) = {
-    annotation.content.flatMap {
+trait AnnotationStatistics extends FoxImplicits { this: AnnotationLike =>
+  def statisticsForAnnotation() = {
+    this.content.flatMap {
       case t: SkeletonTracing =>
         for {
           trees <- t.dbtrees.toFox

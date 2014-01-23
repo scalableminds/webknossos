@@ -36,7 +36,7 @@ class ActivityMonitor extends Actor {
         activities =>
           for {
             (userId, time) <- activities
-            Some(user) <- UserService.findOneById(userId.toString, useCache = true)(GlobalAccessContext)
+            Some(user) <- UserService.findOneById(userId.stringify, useCache = true)(GlobalAccessContext)
           } {
             UserService.logActivity(user, time)
           }

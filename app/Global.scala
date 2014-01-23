@@ -5,6 +5,7 @@ import models.team.TeamTree
 import models.user.time.TimeEntry
 import oxalis.thirdparty.BrainTracing
 import play.api._
+import play.api.mvc.RequestHeader
 import play.api.Play.current
 import play.api.libs.concurrent._
 import play.api.Play.current
@@ -19,6 +20,7 @@ import play.api.libs.concurrent.Execution.Implicits._
 import scala.Some
 import oxalis.binary.BinaryDataService
 import com.typesafe.config.Config
+import play.airbrake.Airbrake
 
 object Global extends GlobalSettings {
 
@@ -55,6 +57,11 @@ object Global extends GlobalSettings {
       Props(new AnnotationStore()),
       name = "annotationStore")
     Akka.system.actorOf(Props(new Mailer(conf)), name = "mailActor")
+  }
+
+  override def onError(request: RequestHeader, ex: Throwable) = {
+    Airbrake.notify(request, ex)
+    super.onError(request, ex)
   }
 }
 

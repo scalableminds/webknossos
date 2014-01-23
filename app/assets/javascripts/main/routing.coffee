@@ -71,7 +71,7 @@ $ ->
           type: 'GET'
           success: (task) ->
 
-            if task.messages and _.where(task.messages, {success: "explorationalTracingHasNoTaskData"}).length > 0
+            if task.noData
               populateTemplate({task : null})
             else
               populateTemplate({task : task})

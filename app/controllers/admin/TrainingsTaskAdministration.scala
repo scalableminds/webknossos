@@ -6,84 +6,125 @@ import models.security._
 import play.api.data.Form
 import play.api.data.Forms._
 import oxalis.security.AuthenticatedRequest
-import models.task.TaskType
+import models.task._
+import models.annotation._
 import braingames.binary.models.DataSet
-import models.task.Task
-import models.user.Experience
-import models.task.Training
+import models.user.{ExperienceService, Experience}
 import oxalis.nml._
 import play.api.i18n.Messages
-import models.task.Project
 import java.util.Date
-import models.annotation.{AnnotationType, AnnotationDAO}
-import models.tracing.skeleton.SkeletonTracing
+import models.annotation.{AnnotationService, AnnotationType, AnnotationDAO}
+import models.tracing.skeleton.{SkeletonTracingService, SkeletonTracing}
 import views._
 import controllers.Controller
+import play.api.libs.concurrent.Execution.Implicits._
+import scala.concurrent.Future
+import scala.Some
+import org.joda.time.DateTime
+import play.api.libs.json._
 
-object TrainingsTaskAdministration extends Controller with Secured {
+object TrainingsTaskAdministration extends AdminController {
 
-  override val DefaultAccessRole = Role.User
   override val DefaultAccessPermission = Some(Permission("admin.review", List("access")))
 
   val trainingsTaskForm = Form(
     tuple(
-      "task" -> text.verifying("task.notFound", task => Task.findOneById(task).isDefined),
-      "tracing" -> text.verifying("tracing.notFound", exp => SkeletonTracing.findOneById(exp).isDefined),
+      "task" -> text,
+      "tracing" -> text,
       "training" -> mapping(
         "domain" -> nonEmptyText(1, 50),
         "gain" -> number,
         "loss" -> number)(Training.fromForm)(Training.toForm)))
-    .fill("", "", Training.empty)
+                          .fill("", "", Training.empty)
 
   def taskToForm(t: Task) = {
     (t.id, "", Training.empty)
   }
-  def list = Authenticated { implicit request =>
-    Ok(html.admin.training.trainingsTaskList(Task.findAllTrainings))
+
+  def list = Authenticated().async { implicit request =>
+    render.async {
+      case Accepts.Html() =>
+        // TODO remove unpacking of trainings for html
+        for {
+          trainings <- TaskDAO.findAllTrainings
+        } yield {
+          Ok(html.admin.training.trainingsTaskList(trainings))
+        }
+      case Accepts.Json() =>
+        for {
+          trainings <- TaskDAO.findAllTrainings
+          trainingsJSON <- Future.traverse(trainings)(Task.transformToJson)
+        } yield {
+          JsonOk(Json.obj("data" -> trainingsJSON))
+        }
+    }
+  }
+
+  def getData = Authenticated().async { implicit request =>
+    for {
+      _nonTrainings <- TaskService.findAllNonTrainings
+      nonTrainings <- Future.traverse(_nonTrainings)(Task.transformToJson)
+      experiences <- ExperienceService.findAllDomains
+      annotations <- AnnotationService.openExplorationalFor(request.user).collect[List]()
+      annotationJSON <- Future.traverse(annotations)(Annotation.transformToJson)
+    } yield {
+      JsonOk(Json.obj(
+        "tasks" -> nonTrainings,
+        "annotations" -> annotationJSON,
+        "experiences" -> experiences))
+    }
   }
 
   def trainingsTaskCreateHTML(taskForm: Form[(String, String, Training)])(implicit request: AuthenticatedRequest[_]) = {
-    html.admin.training.trainingsTaskCreate(
-      Task.findAllNonTrainings,
-      AnnotationDAO.findOpenAnnotationsFor(request.user, AnnotationType.Explorational),
-      Experience.findAllDomains,
-      taskForm)
+    for {
+      nonTrainings <- TaskService.findAllNonTrainings
+      experiences <- ExperienceService.findAllDomains
+      annotations <- AnnotationService.openExplorationalFor(request.user).collect[List]()
+    } yield {
+      html.admin.training.trainingsTaskCreate(
+        nonTrainings,
+        annotations,
+        experiences.toList,
+        taskForm)
+    }
   }
 
-  def create(taskId: String) = Authenticated { implicit request =>
-    val form = Task.findOneById(taskId) map { task =>
-      trainingsTaskForm.fill(taskToForm(task))
-    } getOrElse trainingsTaskForm
-    Ok(trainingsTaskCreateHTML(trainingsTaskForm))
+  def create(taskId: String) = Authenticated().async { implicit request =>
+    for {
+      taskOpt <- TaskDAO.findOneById(taskId)
+      form = taskOpt.map(task => trainingsTaskForm.fill(taskToForm(task))) getOrElse trainingsTaskForm
+      html <- trainingsTaskCreateHTML(form)
+    } yield {
+      Ok(html)
+    }
   }
 
-  def createFromForm = Authenticated(parser = parse.multipartFormData) { implicit request =>
+  def createFromForm = Authenticated().async(parse.multipartFormData) { implicit request =>
     trainingsTaskForm.bindFromRequest.fold(
-      formWithErrors => BadRequest(trainingsTaskCreateHTML(formWithErrors)),
-      {
+      hasErrors = (formWithErrors => trainingsTaskCreateHTML(formWithErrors).map(html => BadRequest(html))),
+      success = {
         case (taskId, annotationId, training) =>
-          (for {
-            task <- Task.findOneById(taskId) ?~ Messages("task.notFound")
-            annotation <- AnnotationDAO.findOneById(annotationId) ?~ Messages("annotation.notFound")
-          } yield {
-            val trainingsTask = Task.copyDeepAndInsert(task.copy(
+          for {
+            task <- TaskDAO.findOneById(taskId) ?~> Messages("task.notFound")
+            annotation <- AnnotationDAO.findOneById(annotationId) ?~> Messages("annotation.notFound")
+            trainingsTask <- TaskService.copyDeepAndInsert(task.copy(
               instances = Integer.MAX_VALUE,
-              created = new Date),
-              includeUserTracings = false)
-
-            val sample = AnnotationDAO.createSample(annotation, trainingsTask._id)
-            trainingsTask.update(_.copy(training = Some(training.copy(sample = sample._id))))
-
-            Ok(html.admin.training.trainingsTaskList(Task.findAllTrainings))
-          })
+              created = DateTime.now()),
+              includeUserTracings = false).toFox
+            sample <- AnnotationService.createSample(annotation, trainingsTask._id).toFox
+            _ <- TaskService.setTraining(trainingsTask, training, sample)
+            trainings <- TaskDAO.findAllTrainings
+          } yield {
+            Ok(html.admin.training.trainingsTaskList(trainings))
+          }
       })
   }
 
-  def delete(taskId: String) = Authenticated { implicit request =>
+  def delete(taskId: String) = Authenticated().async { implicit request =>
     for {
-      task <- Task.findOneById(taskId) ?~ Messages("task.training.notFound")
+      task <- TaskDAO.findOneById(taskId) ?~> Messages("task.training.notFound")
+      _ <- TaskService.remove(task._id)
     } yield {
-      Task.removeById(task._id)
       JsonOk(Messages("task.training.deleted"))
     }
   }

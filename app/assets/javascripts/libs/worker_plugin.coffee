@@ -2,8 +2,10 @@
 libs/dispatched_worker : DispatchedWorker
 ###
 
-load : (name, parentRequire, load, config) ->
+return {
+  load : (name, parentRequire, load, config) ->
 
-  load(new DispatchedWorker(parentRequire.toUrl(name)))
-  return
+    load(new DispatchedWorker(parentRequire.toUrl(name)))
+    return
+}
 

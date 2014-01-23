@@ -2,81 +2,95 @@ package controllers
 
 import oxalis.security.Secured
 import models.user._
-import play.api.libs.json.Json._
-import play.api.libs.json.JsValue
-import play.api.libs.json._
-import models.security.Role
 import models.task._
-import play.api.Logger
-import models.tracing._
-import models.binary._
+import models.annotation._
+import play.api.libs.json.Json._
+import play.api.libs.json._
+import models.security.{RoleDAO, Role}
 import play.api.i18n.Messages
 import oxalis.user.UserCache
-import models.annotation.{AnnotationType, AnnotationDAO}
 import play.api.libs.concurrent.Execution.Implicits._
 import views._
-import controllers.Controller
-import models.user.time.{TimeTrackingService, TimeTrackingDAO, TimeTracking}
+import braingames.util.ExtendedTypes.ExtendedList
+import braingames.util.ExtendedTypes.ExtendedBoolean
+import play.api.Logger
+import braingames.binary.models.DataSet
+import scala.concurrent.Future
+import braingames.util.{Fox, FoxImplicits}
 
-object UserController extends Controller with Secured {
-  override val DefaultAccessRole = Role.User
+object UserController extends Controller with Secured with Dashboard {
+  override val DefaultAccessRole = RoleDAO.User
 
-  def dashboard = Authenticated {
-    implicit request =>
-      Async {
-        val user = request.user
-        val annotations = AnnotationDAO.findFor(user).filter(t => !AnnotationType.isSystemTracing(t))
-        val (taskAnnotations, allExplorationalAnnotations) =
-          annotations.partition(_.typ == AnnotationType.Task)
+  def dashboard = Authenticated().async {
+    implicit request => {
+      dashboardInfo(request.user).map { info =>
+        Ok(html.user.dashboard.userDashboard(info))
+      }
+    }
+  }
 
-        val explorationalAnnotations =
-          allExplorationalAnnotations
-            .filter(!_.state.isFinished)
-            .sortBy(a => -a.content.map(_.timestamp).getOrElse(0L))
+  def getDashboardInfo = Authenticated().async {
+    implicit request => {
+      val futures = dashboardInfo(request.user).map { info =>
 
-        val userTasks = taskAnnotations.flatMap(a => a.task.map(_ -> a))
+      // TODO: move dataSetFormat into braingames-libs and bump the necessary version
+        implicit val dataSetFormat = Json.format[DataSet]
+
+        val loggedTime = info.loggedTime.map { case (paymentInterval, duration) =>
+          // TODO make formatTimeHumanReadable(duration) (?) work
+          Json.obj("paymentInterval" -> paymentInterval, "duration" -> duration.toString)
+        }
 
         for {
-          loggedTime <- TimeTrackingService.loggedTime(user)
-          dataSets <- DataSetDAO.findAll
+          taskList <- Future.traverse(info.tasks)({
+            case (task, annotation) =>
+              for {
+                tasks <- Task.transformToJson(task)
+                annotations <- Annotation.transformToJson(annotation)
+              } yield (tasks, annotations)
+          })
+          exploratoryList <- Future.traverse(info.exploratory)(Annotation.transformToJson(_))
         } yield {
-          Ok(html.user.dashboard.userDashboard(
-            explorationalAnnotations,
-            userTasks,
-            loggedTime,
-            dataSets,
-            userTasks.find(!_._2.state.isFinished).isDefined))
-
+          Json.obj(
+            "user" -> info.user,
+            "loggedTime" -> loggedTime,
+            "dataSets" -> info.dataSets,
+            "hasAnOpenTask" -> info.hasAnOpenTask,
+            "exploratory" -> Json.toJson(exploratoryList),
+            "tasks" -> Json.toJson(taskList.map(tuple => Json.obj("tasks" -> tuple._1, "annotation" -> tuple._2)))
+          )
         }
       }
-  }
 
-  def saveSettings = Authenticated(parser = parse.json(maxLength = 2048)) {
-    implicit request =>
-      request.body.asOpt[JsObject].map {
-        settings =>
-          if (UserConfiguration.isValid(settings)) {
-            request.user.update(_.changeSettings(UserConfiguration(settings.fields.toMap)))
-            UserCache.invalidateUser(request.user.id)
-            Ok
-          } else
-            BadRequest("Invalid settings")
-      } ?~ Messages("user.settings.invalid")
-  }
-
-  def showSettings = UserAwareAction {
-    implicit request =>
-      val configuration = request.userOpt match {
-        case Some(user) =>
-          user.configuration.settingsOrDefaults
-        case _ =>
-          UserConfiguration.defaultConfiguration.settings
+      futures.flatMap { f =>
+        f.map { content => JsonOk(Json.obj("data" -> content)) }
       }
-      Ok(toJson(configuration))
+
+    }
   }
 
-  def defaultSettings = Authenticated {
-    implicit request =>
-      Ok(toJson(UserConfiguration.defaultConfiguration.settings))
+  def saveSettings = Authenticated().async(parse.json(maxLength = 2048)) { implicit request =>
+    (for {
+      settings <- request.body.asOpt[JsObject] ?~> Messages("user.settings.invalid")
+      if (UserSettings.isValid(settings))
+      _ <- UserService.updateSettings(request.user, UserSettings(settings.fields.toMap))
+    } yield {
+      UserCache.invalidateUser(request.user.id)
+      JsonOk(Messages("user.settings.updated"))
+    }) ~> Messages("user.settings.invalid")
+  }
+
+  def showSettings = UserAwareAction { implicit request =>
+    val configuration = request.userOpt match {
+      case Some(user) =>
+        user.configuration.settingsOrDefaults
+      case _ =>
+        UserSettings.defaultSettings.settings
+    }
+    Ok(toJson(configuration))
+  }
+
+  def defaultSettings = Authenticated() { implicit request =>
+    Ok(toJson(UserSettings.defaultSettings.settings))
   }
 }

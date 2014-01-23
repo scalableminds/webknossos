@@ -6,6 +6,8 @@ libs/keyboard : KeyboardJS
 libs/pan_zoom_svg : PanZoomSVG
 main/routing_utils : RoutingUtils
 oxalis/constants : constants
+./paginator : Paginator
+./dashboardLoader : DashboardLoader
 ###
 
 $ ->
@@ -18,46 +20,34 @@ $ ->
 
     if routes[javaTemplate]?
       routes[javaTemplate].call($("#main-container")[0])
+    else
+      hideLoading()
+
     return
+
+  hideLoading = ->
+
+    $("#loader").css("display" : "none")
 
 
   route
 
     "user.dashboard.userDashboard" : ->
 
-      RoutingUtils.maskFinishedTasks()
-
-      $("#nml-explore-form").each ->
-
-        $form = $(this)
-
-        $form.find("[type=submit]").click (event) ->
-
-          event.preventDefault()
-          $input = $("<input>", type : "file", name : "nmlFile", class : "hide", multiple : "")
-
-          $input.change ->
-            if this.files.length
-              $form.append(this)
-              $form.submit()
-
-          $input.click()
-
-
-      $("a[rel=popover]").popover()
-
-      # confirm new task, when there already is an open one
-      $("#new-task-button").on "ajax-after", (event) ->
-
-        $(this).data("ajax", "add-row=#dashboard-tasks,confirm=Do you really want another task?")
-
-      # remove confirmation, when there is no open task left
-      $("#dashboard-tasks").on "ajax-success", ".trace-finish", (event, responseData) ->
-
-        if responseData["hasAnOpenTask"] == false
-          $("#new-task-button").data("ajax", "add-row=#dashboard-tasks")
+      DashboardLoader.displayBasicDashboard()
+      DashboardLoader.displayUserDashboard()
 
       return
+
+    "admin.user.user" : ->
+
+      DashboardLoader.displayBasicDashboard()
+
+      return
+
+    "admin.taskType.taskTypes" : ->
+
+      hideLoading()
 
     "tracing.trace" : ->
 
@@ -68,8 +58,34 @@ $ ->
         "stats"
       ], (Controller) ->
 
-        oxalis = window.oxalis = new Controller(constants.CONTROL_MODE_TRACE)
+        leftTabBar = $("#main")
+        dataUrl = leftTabBar.data("url")
 
+        populateTemplate = (data) ->
+          templateSource = _.unescape(leftTabBar.html())
+          templateOutput = _.template(templateSource)(data)
+          leftTabBar.html(templateOutput)
+
+        if dataUrl
+
+          $.ajax(
+            url: dataUrl
+            type: 'GET'
+            success: (task) ->
+
+              populateTemplate({task : task})
+
+            error: ->
+
+              populateTemplate({task : null})
+
+            complete: (task) ->
+
+              oxalis = window.oxalis = new Controller(constants.CONTROL_MODE_TRACE)
+          )
+        else
+          populateTemplate({task : null})
+          oxalis = window.oxalis = new Controller(constants.CONTROL_MODE_TRACE)
         return
 
     "tracing.view" : ->
@@ -89,7 +105,7 @@ $ ->
 
     "admin.task.taskOverview" : ->
 
-      require [ "worker!libs/viz" ], (VizWorker) ->
+      require [ "worker!libs/viz.js" ], (VizWorker) ->
 
         graphSource = $("#graphData").html().replace( /"[^"]+"/gm, (a) -> a.replace(" "," ") )
         userData = JSON.parse($("#userData").html())
@@ -124,15 +140,15 @@ $ ->
 
             new PanZoomSVG($svg)
 
+            hideLoading()
+
           (error) ->
             $(".graph").html("<i class=\"icon-warning-sign\"></i> #{error.replace(/\n/g,"<br>")}")
         )
 
-    "admin.user.user" : ->
 
-      RoutingUtils.maskFinishedTasks()
-
-      return
+    # "admin.user.userAdministration" : ->
+      # TODO: does "admin.user.userAdministration" still exist or has it been replaced by "userList" ?
 
     "admin.user.userList" : ->
       require ["multiselect"], ->
@@ -199,6 +215,7 @@ $ ->
             $(this).parents("table").find("input[type=checkbox]").attr('checked', false)
             $(this).parents("tr").find("input[type=checkbox]").attr('checked', true)
 
+        hideLoading()
       return
 
 
@@ -280,9 +297,73 @@ $ ->
           event.preventDefault()
           save()
 
+        hideLoading()
 
     "levelcreator.levelCreator" : ->
 
       require ["./level_creator"], (LevelCreator) ->
 
         window.levelCreator = new LevelCreator()
+        hideLoading()
+
+    "admin.project.projectList" : ->
+
+      preparePaginationData = (projects, users) ->
+
+        for aProject, index in projects
+
+          id = aProject._owner.$oid
+          owner = _.find(users, (u) -> u._id.$oid == id)
+
+          if owner
+            ownerName = owner.firstName + " " + owner.lastName
+          else
+            ownerName = "<deleted>"
+
+          projects[index].owner = ownerName
+
+        return {"data" : projects }
+
+      $owner = $("#owner")
+      $pageSelection = $(".page-selection")
+
+      ajaxOptions =
+        url : $pageSelection.data("url")
+        dataType : "json"
+        type : "get"
+
+      $.ajax(ajaxOptions).done((response) ->
+
+        paginationData = preparePaginationData(response.projects, response.users)
+
+        new Paginator( $pageSelection, paginationData)
+
+        for aUser in response.users
+          $owner.append("<option value='#{aUser._id.$oid}' selected=''>#{aUser.firstName} #{aUser.lastName}</option>")
+      )
+
+    "admin.training.trainingsTaskCreate" : ->
+
+      url = $("#form-well").data("url")
+
+      $.get(url).done((response) ->
+
+        $selectTask = $("#task")
+        $selectTracing = $("#tracing")
+
+        # set autocompletion source for tracings domain input
+        $("#training_domain").data("source", response.experiences)
+
+        for aTask in response.tasks
+          summary = aTask.type.summary || ""
+          id = aTask.id
+          $selectTask.append("<option value='#{id}'>#{summary} #{id}</option>")
+
+        for aTracing in response.annotations
+          id = aTracing.id
+          optionString = aTracing.typ + " " + aTracing.dataSetName + " " + aTracing.created
+          $selectTracing.append("<option value='#{id}'>#{optionString}</option>")
+
+
+        hideLoading()
+      )

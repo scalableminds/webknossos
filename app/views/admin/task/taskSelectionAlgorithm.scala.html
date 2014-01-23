@@ -2,6 +2,14 @@
 
 @main(){
   <div class="container" id="task-selection-algoritm">
+    <h3>Tasks Selection Algorithm</h3>
+    <div>
+      <p>
+        The task selection algorithm definies, which task a user gets assigned next.
+        The default behaviour is to take the first applicable task available,
+        but it is possible to customize the behaviour here.
+      </p>
+    </div>
     @helper.form(action = controllers.admin.routes.TaskAlgorithm.submitAlgorithm) {
       
       <input type="submit" value="Save" class="btn btn-primary">

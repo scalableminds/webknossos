@@ -5,10 +5,6 @@ import scala.concurrent.Future
 import scala.concurrent.duration._
 import scala.concurrent.ExecutionContext.Implicits._
 import net.liftweb.common.Box
-import net.liftweb.common.Full
-import net.liftweb.common.Empty
-import braingames.binary.models.DataLayer
-import braingames.binary.models.DataSet
 
 case class Data(val value: Array[Byte]) extends AnyVal
 
@@ -55,12 +51,7 @@ trait DataCache {
     ensureCacheMaxSize
     val cachedBlockInfo = CachedBlock.from(blockInfo)
     cache().get(cachedBlockInfo).getOrElse {
-      val p = loadF.map {
-        case Full(box) =>
-          Full(box)
-        case Empty =>
-          Full(createNullArray2(blockInfo.dataSet, blockInfo.dataLayer))
-      }
+      val p = loadF
       cache send (_ + (cachedBlockInfo -> p))
       p
     }
@@ -82,7 +73,4 @@ trait DataCache {
   def cleanUp() {
     cache send (_ => Map.empty)
   }
-
-  def createNullArray2(dataSet: DataSet, dataLayer: DataLayer): Array[Byte] =
-    new Array[Byte](dataSet.blockSize * dataLayer.bytesPerElement)
 }

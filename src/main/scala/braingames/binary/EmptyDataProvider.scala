@@ -19,9 +19,10 @@ trait EmptyDataProvider {
     new Array[Byte](blockSize * bytesPerElement)
 
   def nullFile(blockSize: Int, bytesPerElement: Int) =
-    nullFiles().get((blockSize, bytesPerElement)).getOrElse {
-      val a = createNullArray(blockSize, bytesPerElement)
-      nullFiles.send(_ + ((blockSize -> bytesPerElement) -> a))
-      a
-    }
+    createNullArray(blockSize, bytesPerElement)
+    //nullFiles().get((blockSize, bytesPerElement)).getOrElse {
+    //  val a = createNullArray(blockSize, bytesPerElement)
+    //  nullFiles.send(_ + ((blockSize -> bytesPerElement) -> a))
+    //  a
+    //}
 }

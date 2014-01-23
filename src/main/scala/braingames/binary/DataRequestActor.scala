@@ -135,9 +135,10 @@ class DataRequestActor(
   }
 
   def loadFromSomewhere(dataSet: DataSet, layer: DataLayer, requestedSection: Option[String], resolution: Int, block: Point3D): Future[Array[Byte]] = {
-
+    var lastSection: Option[DataLayerSection] = None
     def loadFromSections(sections: Stream[(DataLayerSection, DataLayer)]): Future[Array[Byte]] = sections match {
       case (section, layer) #:: tail =>
+        lastSection = Some(section)
         val loadBlock = LoadBlock(dataSet, layer, section, resolution, block)
         loadFromLayer(loadBlock).flatMap {
           case Full(byteArray) =>
@@ -149,7 +150,13 @@ class DataRequestActor(
             loadFromSections(tail)
         }
       case _ =>
-        Future.successful(loadNullBlock(dataSet, layer))
+        val nullBlock = loadNullBlock(dataSet, layer)
+        lastSection.map {
+          section =>
+          val loadBlock = LoadBlock(dataSet, layer, section, resolution, block)
+          updateCache(loadBlock, Future.successful(Full(nullBlock)))
+        }
+        Future.successful(nullBlock)
     }
 
     val sections = Stream(layer.sections.map {(_, layer)}.filter {

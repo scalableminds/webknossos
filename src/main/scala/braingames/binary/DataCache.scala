@@ -57,6 +57,11 @@ trait DataCache {
     }
   }
 
+  def updateCache(blockInfo: LoadBlock, data: Future[Box[Array[Byte]]]) = {
+    val cachedBlockInfo = CachedBlock.from(blockInfo)
+    cache send (_ + (cachedBlockInfo -> data))
+  }
+
   /**
    * Function to restrict the cache to a maximum size. Should be
    * called before or after an item got inserted into the cache

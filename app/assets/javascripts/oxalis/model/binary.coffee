@@ -92,7 +92,7 @@ class Binary
 
     interval = new Date() - @lastPingTime
     if @queue.queue and @queue.queue.length > 0
-      console.log interval, @queueStatus - @queue.queue.length, @queue.queue[0].priority
+      #console.log interval, @queueStatus - @queue.queue.length, @queue.queue[0].priority
     @queueStatus = @queue.queue.length
     @lastPingTime = new Date() 
 

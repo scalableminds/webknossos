@@ -16,11 +16,25 @@ class User
     _.extend(@userSettings, user)
 
 
-  setValue : (name, value) ->
+  setByName : (name, value) ->
 
     @userSettings[name] = value
     @trigger(name + "Changed", value)
     @push()
+
+
+  setByObject : (object) ->
+
+    for name of object
+      @setByName(name, object[name])
+
+
+  set : (arg1, arg2) ->
+
+    if _.isObject(arg1)
+      @setByObject(arg1)
+    else
+      @setByName(arg1, arg2) 
 
 
   get : (name) ->

@@ -335,7 +335,7 @@ class PlaneController
       @zoomPos = @getMousePosition()
 
     @flycam.zoomByDelta( value )
-    @model.user.setValue("zoom", @flycam.getPlaneScalingFactor())
+    @model.user.set("zoom", @flycam.getPlaneScalingFactor())
     
     if zoomToMouse
       @finishZoom()
@@ -383,7 +383,7 @@ class PlaneController
     moveValue = Math.min(constants.MAX_MOVE_VALUE, moveValue)
     moveValue = Math.max(constants.MIN_MOVE_VALUE, moveValue)
 
-    @model.user.setValue("moveValue", (Number) moveValue)
+    @model.user.set("moveValue", (Number) moveValue)
 
 
   scaleTrianglesPlane : (delta) ->
@@ -392,7 +392,7 @@ class PlaneController
     scale = Math.min(constants.MAX_SCALE, scale)
     scale = Math.max(constants.MIN_SCALE, scale)
 
-    @model.user.setValue("scale", (Number) scale)
+    @model.user.set("scale", (Number) scale)
 
 
   scrollPlanes : (delta, type) =>

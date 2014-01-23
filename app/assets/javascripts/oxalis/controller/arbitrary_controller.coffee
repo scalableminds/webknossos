@@ -254,7 +254,7 @@ class ArbitraryController
     moveValue = Math.min(constants.MAX_MOVE_VALUE, moveValue)
     moveValue = Math.max(constants.MIN_MOVE_VALUE, moveValue)
 
-    @model.user.setValue("moveValue3d", (Number) moveValue)
+    @model.user.set("moveValue3d", (Number) moveValue)
 
 
   setParticleSize : (delta) =>
@@ -263,7 +263,7 @@ class ArbitraryController
     particleSize = Math.min(constants.MAX_PARTICLE_SIZE, particleSize)
     particleSize = Math.max(constants.MIN_PARTICLE_SIZE, particleSize)
 
-    @model.user.setValue("particleSize", (Number) particleSize)
+    @model.user.set("particleSize", (Number) particleSize)
 
 
   setClippingDistance : (value) =>

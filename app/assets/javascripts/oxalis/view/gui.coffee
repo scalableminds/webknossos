@@ -334,7 +334,7 @@ class Gui
 
   set : (name, value, type) =>
 
-    @user.setValue( name, (type) value)
+    @user.set( name, (type) value)
 
 
   setBrightnessAndContrast : =>

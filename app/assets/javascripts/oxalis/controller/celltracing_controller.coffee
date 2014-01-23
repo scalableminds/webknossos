@@ -62,7 +62,7 @@ class CellTacingController
     particleSize = Math.min(constants.MAX_PARTICLE_SIZE, particleSize)
     particleSize = Math.max(constants.MIN_PARTICLE_SIZE, particleSize)
 
-    @model.user.setValue("particleSize", (Number) particleSize)
+    @model.user.set("particleSize", (Number) particleSize)
  
 
   toggleSkeletonVisibility : =>
@@ -72,7 +72,7 @@ class CellTacingController
     # this function for this user
     if @model.user.get("firstVisToggle")
       @view.showFirstVisToggle()
-      @model.user.setValue("firstVisToggle", false)
+      @model.user.set("firstVisToggle", false)
       @model.user.push()
 
 

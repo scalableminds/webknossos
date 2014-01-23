@@ -1,56 +1,36 @@
-@(task: models.task.Task, annotation: models.annotation.Annotation)
+@()
 
-@tracingLinks = {
-  <a href="@controllers.routes.AnnotationController.trace(annotation.typ, annotation.id)"><i class="icon-random"></i> trace</a><br/>
-  <a href="@controllers.routes.AnnotationController.finish(annotation.typ, annotation.id)" class="trace-finish" data-ajax="replace-row,confirm=@Messages("annotation.finish.confirm")" ><i class="icon-ok-circle"></i> finish</a>
-}
+<tr class="<%if(annotations.state.isFinished){print('finished')}else{print('unfinished')}%>">
+  <td> <%= tasks.formattedHash %> </td>
+  <td> <%= (tasks.type.summary || "<deleted>") + " - " + annotations.typ %></td>
+  <td> <%= tasks.projectName %> </td>
+  <td> <%= tasks.type.description || "" %></td>
+  <td>
+    <span class="label"> <%= tasks.type.settings.allowedModes %></span>
+  </td>
+  <td class="nowrap">
+    <% if (annotations.state.isFinished) { %>
+      <i class="icon-ok"></i><span> Finished</span><br />
+        <% if (annotations.review.comments && annotations.review.comments.length > 0) { %>
+          <br />
+          <a href="#" rel="popover" data-placement="bottom" data-title="Comment from Reviewer" data-html="true"
+             data-content="<%= annotations.review.comments[0].replace(/\n/g, '<br /><br />')%>)">
+              <i class="icon-eye-open"></i> Review successful<span class="caret-down"></span>
+          </a>
+        <% } %>
+    <% } else if (annotations.state.isInReview || annotations.state.isReadyForReview) { %>
+      <i class="icon-eye-open"></i><span> In Review</span>
+    <% } else { %>
+      <a href="<%= jsRoutes.controllers.AnnotationController.trace(annotations.typ, annotations.id).url %>"><i class="icon-random"></i> trace</a><br/>
+      <a href="<%= jsRoutes.controllers.AnnotationController.finish(annotations.typ, annotations.id).url %>" class="trace-finish" data-ajax="replace-row,confirm=@Messages("annotation.finish.confirm")" ><i class="icon-ok-circle"></i> finish</a>
 
-@linkText(failed: Boolean) = {
-  @if(failed) {
-    Review failed
-  } else {
-    Review successful
-  }
-}
-
-@displayComments(failed: Boolean, comments: List[String]) = {
-  @comments match{
-    case head :: tail => {
-      <br />
-      <a href="#" rel="popover" data-placement="bottom" data-title="Comment from Reviewer" data-html="true" data-content="@org.apache.commons.lang3.StringEscapeUtils.escapeHtml4(head).replaceAll("\n", "<br /><br />")"><i class="icon-eye-open"></i> @linkText(failed)<span class="caret-down"></span></a>    
-    }
-    case _ => {
-
-    }
-  }
-
-}
-
-<tr class="@if(annotation.state.isFinished){finished}else{unfinished}">
-  <td> @formatHash(task.id) </td>
-  @defining(task.taskType){ taskType =>
-    <td> @taskType.map(_.summary).getOrElse("<deleted>") - @annotation.typ</td>
-    <td> @task.project.map(_.name) </td>
-    <td> @taskType.map(_.description).getOrElse("") </td>
-    <td>
-      @taskType.toList.flatMap(_.settings.allowedModes).map{ mode: String =>
-        <span class="label"> @mode.capitalize </span>
-      }
-    </td>
-  }
-  <td class="nowrap"> 
-    @annotation.state match{
-      case s if s.isFinished => {
-        <i class="icon-ok"></i><span> Finished</span><br />
-        @displayComments(false, annotation.review.flatMap( _.comment ))
-      }
-      case s if s.isInReview || s.isReadyForReview => {
-        <i class="icon-eye-open"></i><span> In Review</span>
-      }
-      case _ => {
-        @tracingLinks
-        @displayComments(true, annotation.review.flatMap( _.comment ))
-      }
-    }
+      <% if (annotations.review.comments && annotations.review.comments.length > 0) { %>
+        <br />
+        <a href="#" rel="popover" data-placement="bottom" data-title="Comment from Reviewer" data-html="true"
+           data-content="<%= annotations.review.comments[0].replace(/\n/g, '<br /><br />')%>)">
+            <i class="icon-eye-open"></i> Review failed<span class="caret-down"></span>
+        </a>
+      <% } %>
+    <% } %>
   </td>
 </tr>

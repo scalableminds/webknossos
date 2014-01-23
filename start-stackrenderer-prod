@@ -1,3 +1,0 @@
-#!/bin/bash
-
-sbt "project stackrenderer" "start -Dhttp.port=9095"

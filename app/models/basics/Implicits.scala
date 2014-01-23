@@ -1,8 +1,9 @@
 package models.basics
 
-import oxalis.security.{UserAwareRequest, AuthenticatedRequest}
+import oxalis.security.UserAwareRequest
 import models.user.User
-import braingames.reactivemongo.{DBAccessContext, AuthedAccessContext}
+import braingames.reactivemongo.DBAccessContext
+import braingames.reactivemongo.AuthedAccessContext
 
 /**
  * Company: scalableminds

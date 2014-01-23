@@ -6,10 +6,10 @@ import models.basics.BasicSettings
 
 import AnnotationSettings._
 
-case class AnnotationSettings(
-  allowedModes: List[String] = ALL_MODES,
-  branchPointsAllowed: Boolean = true,
-  somaClickingAllowed: Boolean = true)
+case class AnnotationSettings(allowedModes: List[String] = ALL_MODES,
+                              branchPointsAllowed: Boolean = true,
+                              somaClickingAllowed: Boolean = true
+                             )
 
 object AnnotationSettings {
   val OXALIS = "oxalis"
@@ -24,6 +24,5 @@ object AnnotationSettings {
   val skeletonDefault = AnnotationSettings(allowedModes = SKELETON_MODES)
   val volumeDefault = AnnotationSettings(allowedModes = VOLUME_MODES)
 
-  implicit val settingsWrites: Writes[AnnotationSettings] =
-    Json.writes[AnnotationSettings]
+  implicit val annotationSettingsFormat = Json.format[AnnotationSettings]
 }

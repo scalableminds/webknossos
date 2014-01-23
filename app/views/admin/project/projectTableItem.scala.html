@@ -1,11 +1,17 @@
 @(project: models.task.Project)
-@import models.annotation.AnnotationType
 
+@import models.annotation.AnnotationType
+@import play.api.libs.concurrent.Execution.Implicits._
+
+<!-- TODO: delete this file  -->
 
 <tr id="@project.name">
-  <td class="details-toggle"> <i class="caret-right"></i> <i class="caret-down"></i> </td>
+  <td class="details-toggle"
+    href="@controllers.admin.routes.TaskAdministration.tasksForProject(project.name)"
+    data-ajax="add-row=#@project.name+tr">
+    <i class="caret-right"></i> <i class="caret-down"></i> </td>
   <td> @project.name </td>
-  <td> @project.owner.map(_.name).getOrElse("<deleted>") </td>
+  <td> @project.owner.map(_.map(_.name).getOrElse("<deleted>")) </td>
   <td class="nowrap">  
     <a href="@controllers.routes.AnnotationController.trace(AnnotationType.CompoundProject, project.name)" title="view all finished tracings"><i class="icon-random"></i> view</a><br />
     <a href="@controllers.admin.routes.NMLIO.projectDownload(project.name)" title="download all finished tracings"><i class="icon-download"></i> download</a><br />

@@ -1,7 +1,5 @@
 package models.user.time
 
-import com.mongodb.casbah.Imports._
-import models.basics.BasicReactiveDAO
 import java.util.Date
 import java.util.Calendar
 import scala.concurrent.duration._
@@ -18,6 +16,9 @@ import play.api.libs.json.Json
 import scala.concurrent.Future
 import play.modules.reactivemongo.json.BSONFormats._
 import play.api.libs.concurrent.Execution.Implicits._
+import models.basics.SecuredBaseDAO
+import models.user.time.TimeTracking.LoggedPerPaymentInterval
+
 
 case class TimeTracking(user: BSONObjectID, timeEntries: List[TimeEntry], _id: BSONObjectID = BSONObjectID.generate){
 
@@ -36,7 +37,7 @@ case class TimeTracking(user: BSONObjectID, timeEntries: List[TimeEntry], _id: B
     }
   }
 
-  def splitIntoPaymentIntervals = {
+  def splitIntoPaymentIntervals: LoggedPerPaymentInterval = {
     groupByPaymentIntervals.map {
       case (pI, entries) => (pI, entries.foldLeft(0L)(_ + _.time) millis)
     }
@@ -51,6 +52,8 @@ case class TimeTracking(user: BSONObjectID, timeEntries: List[TimeEntry], _id: B
 
 object TimeTracking {
 
+  type LoggedPerPaymentInterval = Map[PaymentInterval, Duration]
+
   val timeRx = "(([0-9]+)d)?(\\s*([0-9]+)h)?(\\s*([0-9]+)m)?".r
 
   val hoursRx = "[0-9]+".r
@@ -61,7 +64,7 @@ object TimeTracking {
 
   val millisecondsPerMinute = 60000L
 
-  implicit val timeTrackingFormatter = Json.format[TimeTracking]
+  implicit val timeTrackingFormat = Json.format[TimeTracking]
 
   def inMillis(days: Int, hours: Int, minutes: Int) =
     ((days * hoursPerDay + hours) * minutesPerHour + minutes) * millisecondsPerMinute
@@ -78,19 +81,19 @@ object TimeTracking {
   }
 }
 
-object TimeTrackingDAO extends BasicReactiveDAO[TimeTracking] {
+object TimeTrackingDAO extends SecuredBaseDAO[TimeTracking] {
   val collectionName = "timeTracking"
 
-  val formatter = TimeTracking.timeTrackingFormatter
+  val formatter = TimeTracking.timeTrackingFormat
 
   val MaxTracingPause = (Play.current.configuration.getInt("oxalis.user.time.tracingPauseInMinutes") getOrElse (5) minutes).toMillis
 
   def emptyTracking(user: User) = TimeTracking(user._id, Nil)
 
-  def findOneByUser(user: User)(implicit ctx: DBAccessContext) = findOne("user", toBSONObjectID(user._id))
+  def findOneByUser(user: User)(implicit ctx: DBAccessContext) = findOne("user", user._id)
 
   def addTimeEntry(timeTracker: TimeTracking, entry: TimeEntry)(implicit ctx: DBAccessContext) =
-    collectionUpdate(Json.obj("_id" -> timeTracker._id), Json.obj("$push" -> Json.obj("timeEntries" -> entry)))
+    collectionUpdate(Json.obj("_id" -> timeTracker._id), Json.obj("$set" -> Json.obj("timeEntries.-1" -> entry)))
 
   def setTimeEntries(timeTracker: TimeTracking, entries: List[TimeEntry])(implicit ctx: DBAccessContext) =
     collectionUpdate(Json.obj("_id" -> timeTracker._id), Json.obj("$set" -> Json.obj("timeEntries" -> entries)))

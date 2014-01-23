@@ -1,24 +1,29 @@
 package models.task
 
-import com.mongodb.casbah.Imports._
-import models.context._
-import com.novus.salat.annotations._
-import com.novus.salat.dao.SalatDAO
-import models.basics.BasicDAO
+import models.basics.SecuredBaseDAO
 import play.api.libs.json.Json
-import play.api.libs.functional.syntax._
 import models.annotation.AnnotationSettings
+import reactivemongo.bson.BSONObjectID
+import braingames.reactivemongo.DBAccessContext
+import play.modules.reactivemongo.json.BSONFormats._
 
 case class TimeSpan(min: Int, max: Int, maxHard: Int) {
 
   override def toString = s"$min - $max, Limit: $maxHard"
 }
 
-case class TaskType(summary: String, description: String, expectedTime: TimeSpan, settings: AnnotationSettings = AnnotationSettings.default, fileName: Option[String] = None, _id: ObjectId = new ObjectId) {
-  lazy val id = _id.toString
+object TimeSpan {
+  implicit val timeSpanFormat = Json.format[TimeSpan]
 }
 
-object TaskType extends BasicDAO[TaskType]("taskTypes") {
+case class TaskType(summary: String, description: String, expectedTime: TimeSpan, settings: AnnotationSettings = AnnotationSettings.default, fileName: Option[String] = None, _id: BSONObjectID = BSONObjectID.generate) {
+  val id = _id.stringify
+}
+
+object TaskType {
+
+  implicit val taskTypeFormat = Json.format[TaskType]
+
   def empty = TaskType("", "", TimeSpan(5, 10, 15))
 
   def fromForm(summary: String, description: String, allowedModes: Seq[String], branchPointsAllowed: Boolean, somaClickingAllowed: Boolean, expectedTime: TimeSpan) =
@@ -33,14 +38,20 @@ object TaskType extends BasicDAO[TaskType]("taskTypes") {
 
   def toForm(tt: TaskType) =
     Some((
-        tt.summary, 
-        tt.description, 
-        tt.settings.allowedModes,
-        tt.settings.branchPointsAllowed,
-        tt.settings.somaClickingAllowed,
-        tt.expectedTime))
+      tt.summary,
+      tt.description,
+      tt.settings.allowedModes,
+      tt.settings.branchPointsAllowed,
+      tt.settings.somaClickingAllowed,
+      tt.expectedTime))
+}
 
-  def findOneBySumnary(summary: String) = {
-    findOne(MongoDBObject("summary" -> summary))
+object TaskTypeDAO extends SecuredBaseDAO[TaskType] {
+
+  val collectionName = "taskTypes"
+  val formatter = TaskType.taskTypeFormat
+
+  def findOneBySumnary(summary: String)(implicit ctx: DBAccessContext) = {
+    findOne("summary", summary)
   }
 }

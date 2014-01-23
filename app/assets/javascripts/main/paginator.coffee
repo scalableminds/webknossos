@@ -6,25 +6,41 @@ routes : jsRoutes
 ###
 
 class Paginator
-  
 
-  constructor: (@pageSelectionDiv) ->
-    
+
+  constructor: (@pageSelectionDiv, data=null) ->
+
+    @rowsPerPage = 100
     @allElements = null
     @elementsToShow = null
-        
+
     tableID = @pageSelectionDiv.data("paged-table-id")
     @tbody = $("#"+tableID).find("tbody")
 
     @extractTemplate()
-    @retrieveData()
-    
+
+    if data
+      @dataRetrievalPromise = new $.Deferred().resolve()
+      @handleData(data)
+    else
+      @retrieveData()
+
     searchboxElement = @pageSelectionDiv.find(".pagination-searchbox")
     @addSearchboxListener(searchboxElement)
+    @addHashListener(searchboxElement)
+
+
+  addHashListener : (searchboxElement) ->
+
+    if hash = window.location.hash.slice(1)
+      searchboxElement.val(hash).trigger("keyup")
+
+    window.onhashchange = ->
+      searchboxElement.val(window.location.hash.slice(1)).trigger("keyup")
 
 
   extractTemplate : ->
-    
+
     templateSource = _.unescape(@tbody.html())
     # compile
     @template = _.template(templateSource)
@@ -34,41 +50,40 @@ class Paginator
 
 
   retrieveData : ->
-    
-    @rowsPerPage = 100
-    
+
     ajaxOptions =
       url : @pageSelectionDiv.data("url")
       dataType : "json"
       type : "get"
 
-    $.ajax(ajaxOptions).then(
+    @dataRetrievalPromise = $.ajax(ajaxOptions)
+    @dataRetrievalPromise.then(@handleData)
 
-      (responseData) =>
-        
-        @allElements = @elementsToShow = responseData.data
+  handleData: (responseData) =>
 
-        pageCount = Math.ceil(@allElements.length / @rowsPerPage)
-        
-        pageSelectionHandler = (event, number) =>
-          index = number - 1
-          json = @getElementsForPage(index)
-          @displayJSON json
-        
-        @pageSelectionDiv.bootpag(
-          total: pageCount
-          page: 1
-          maxVisible: 20
-          leaps: true
-        ).on "page", pageSelectionHandler
+    @allElements = @elementsToShow = responseData.data
 
-        # activate the first page
-        pageSelectionHandler null, 1
+    pageCount = Math.ceil(@allElements.length / @rowsPerPage)
 
-        @hideLoader()
+    pageSelectionHandler = (event, number) =>
+      index = number - 1
+      json = @getElementsForPage(index)
+      @displayJSON(json)
 
-        return
-    )
+    @pageSelectionDiv.bootpag(
+      total: pageCount
+      page: 1
+      maxVisible: 20
+      leaps: true
+    ).on("page", pageSelectionHandler)
+
+    # activate the first page
+    pageSelectionHandler(null, 1)
+
+    @hideLoader()
+
+    return
+
 
   hideLoader : ->
 
@@ -76,13 +91,13 @@ class Paginator
 
 
   getElementsForPage : (index) ->
-    
+
     start = @rowsPerPage * index
     return @elementsToShow.slice(start, start + @rowsPerPage)
 
 
   updatePageCount : ->
-    
+
     @pageSelectionDiv.bootpag(
       total: Math.ceil(@elementsToShow.length / @rowsPerPage)
       page:  1
@@ -90,38 +105,40 @@ class Paginator
 
 
   addSearchboxListener : (searchboxElement) ->
-    
+
     lastQuery = null
     currentQuery = null
 
     searchboxElement.keyup (event) =>
-      newQuery = $(event.currentTarget).val().toLowerCase()
+      @dataRetrievalPromise.done( =>
+        newQuery = $(event.currentTarget).val().toLowerCase()
 
-      if newQuery == currentQuery
-        return
+        if newQuery == currentQuery
+          return
 
-      currentQuery = currentQuery
-      lastQuery = currentQuery
-      currentQuery = newQuery
+        currentQuery = currentQuery
+        lastQuery = currentQuery
+        currentQuery = newQuery
 
-      if currentQuery.length > 0
-        @elementsToShow = []
+        if currentQuery.length > 0
+          @elementsToShow = []
 
-        i = 0
-        for task in @allElements
-          if @JSONcontains task, currentQuery
-            @elementsToShow.push task
-      else
-        @elementsToShow = @allElements
-     
-      @updatePageCount()
-      @displayJSON(@getElementsForPage(0))
-      
+          i = 0
+          for task in @allElements
+            if @JSONcontains task, currentQuery
+              @elementsToShow.push task
+        else
+          @elementsToShow = @allElements
+
+        @updatePageCount()
+        @displayJSON(@getElementsForPage(0))
+      )
+
 
   displayJSON : (jsonArray) ->
-    
+
     htmlArray = []
-    
+
     for element in jsonArray
       htmlArray.push(@generateHTML(element))
 
@@ -133,7 +150,7 @@ class Paginator
     contains = false
 
     $.each data, (key, value) =>
-    
+
       if _.isObject(value) or _.isArray(value)
          contains = @JSONcontains value, query
          return !contains # if contains then break else continue
@@ -144,11 +161,11 @@ class Paginator
         if value.indexOf(query) > -1
           contains = true
           return false # break
-    
+
     return contains
 
 
   generateHTML : (element) ->
-    
+
     return @template({controllers : jsRoutes.controllers, element : element})
 

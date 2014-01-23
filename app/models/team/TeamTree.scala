@@ -1,6 +1,6 @@
 package models.team
 
-import models.basics.{BasicReactiveDAO, BasicDAO}
+import models.basics.SecuredBaseDAO
 import reactivemongo.bson.BSONObjectID
 import play.api.libs.json.Json
 import scala.concurrent.Future
@@ -15,9 +15,8 @@ import braingames.reactivemongo.{DBAccessContext, SecuredMongoDAO}
  * Time: 01:42
  */
 
-// def default = Group("Structure of Neocortical Circuits Group")
-
 case class TeamTree(root: Team, _id: BSONObjectID = BSONObjectID.generate) {
+
   val teamPaths = root.allTeamPaths
 
   def contains(teamPath: TeamPath) = {
@@ -25,7 +24,8 @@ case class TeamTree(root: Team, _id: BSONObjectID = BSONObjectID.generate) {
   }
 }
 
-object TeamTreeDAO extends BasicReactiveDAO[TeamTree] {
+object TeamTreeDAO extends SecuredBaseDAO[TeamTree] {
+
   val collectionName = "teams"
   val formatter = Json.format[TeamTree]
 
@@ -33,7 +33,7 @@ object TeamTreeDAO extends BasicReactiveDAO[TeamTree] {
     !name.contains(TeamPath.TeamSeparator) && !name.contains(TeamPath.All)
 
   def findAllTeams(teams: List[String])(implicit ctx: DBAccessContext) = {
-    find(Json.obj("root.name" -> Json.obj("$in" -> teams))).toList
+    find(Json.obj("root.name" -> Json.obj("$in" -> teams))).collect[List]()
   }
 
   def findByTeamName(name: String)(implicit ctx: DBAccessContext) =
@@ -45,6 +45,5 @@ object TeamTreeDAO extends BasicReactiveDAO[TeamTree] {
         findByTeamName(head).map(_.)
       case _ =>
         Future.successful(None)
-    }
   }*/
 }

@@ -1,5 +1,8 @@
 @(userAnnotations: Map[models.user.User,List[models.annotation.Annotation]])(implicit session: oxalis.view.AuthedSessionData)
 
+@import braingames.util.ExtendedTypes.ExtendedList
+@import play.api.libs.concurrent.Execution.Implicits._
+
 @main(false){
   <div class="container">
     @userAnnotations.map{ case (user, annotations) =>
@@ -7,13 +10,13 @@
             <h5>@user.name (@user.email)</h5>
         <table class="table table-striped">
           <tbody>
-            @annotations.sortBy(_.content.map(_.timestamp).getOrElse(0L)).map{ annotation =>
+            @annotations.futureSort(_.content.map(_.timestamp).getOrElse(0L)).map(_.map{ annotation =>
               <tr>
-                <td><strong>@annotation.dataSetName</strong></h4>
-                <td><time datetime="@annotation.content.map(_.date)">@annotation.content.map(a => formatDate(a.date))</time></td>
+                <td><strong>@annotation.dataSetName</strong></td>
+                <td><time datetime="@annotation.content.map(_.date)">@annotation.content.map(a => formatDate(a.date)).getOrElse("")</time></td>
                 <td><a href="@controllers.routes.AnnotationController.download(annotation.typ, annotation.id)"><i class="icon-download"></i> Export NML</a></td>
               </tr>
-            }
+            })
           </tbody>
         </table>
       </div>

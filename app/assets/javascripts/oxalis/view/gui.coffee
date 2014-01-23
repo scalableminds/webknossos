@@ -27,6 +27,7 @@ class Gui
     
     @settings = 
 
+      boundingBox : "0, 0, 0, 0, 0, 0"
       fourBit : @user.get("fourBit")
       brightness : @user.get("brightness")[@datasetPosition]
       contrast : @user.get("contrast")[@datasetPosition]
@@ -80,6 +81,8 @@ class Gui
       0.05, 0.5, 0.01, "Crosshair size")
 
     @folders.push( @fView = @gui.addFolder("View") )
+    bbController = @fView.add(@settings, "boundingBox").name("Bounding Box").onChange(@setBoundingBox)
+    @addTooltip(bbController, "Format: minX, minY, minZ, maxX, maxY, maxZ")
     @addCheckbox(@fView, @settings, "fourBit", "4 Bit")
     @addCheckbox(@fView, @user.getSettings(), "interpolation", "Interpolation")
     @brightnessController =
@@ -242,6 +245,41 @@ class Gui
       new $.Deferred().resolve()
 
 
+  setBoundingBox : (value) =>
+
+    bbArray = @stringToNumberArray( value )
+    if bbArray?.length == 6
+      @trigger("newBoundingBox", bbArray)
+
+
+  setPosFromString : (posString) =>
+ 
+    posArray = @stringToNumberArray( posString )
+    if posArray?.length == 3
+      @model.flycam.setPosition(posArray)
+      return
+    else
+      @updateGlobalPosition(@model.flycam.getPosition())
+
+
+  stringToNumberArray : (s) ->
+
+    # remove leading/trailing whitespaces
+    s = s.trim()
+    # replace remaining whitespaces with commata
+    s = s.replace /,?\s+,?/g, ","
+    stringArray = s.split(",")
+
+    result = []
+    for e in stringArray
+      if not isNaN(newEl = parseInt(e))
+        result.push(newEl)
+      else
+        return null
+
+    return result
+
+
   setPosFromString : (posString) =>
 
     # remove leading/trailing whitespaces
@@ -392,15 +430,14 @@ class Gui
     @setFolderElementVisibility( @clippingControllerArbitrary, false )
     @setFolderElementVisibility( @clippingController, true )
 
-    switch mode 
-      when constants.MODE_PLANE_TRACING
-        @hideFolders( [ @fFlightcontrols, @fCells ] )
-        @user.triggerAll()
-      when constants.MODE_ARBITRARY
-        @hideFolders( [ @fViewportcontrols, @fTDView, @fCells ] )
-        @setFolderElementVisibility( @clippingControllerArbitrary, true )
-        @setFolderElementVisibility( @clippingController, false )
-        @user.triggerAll()
-      when constants.MODE_VOLUME
-        @hideFolders( [ @fTrees, @fNodes, @fFlightcontrols ] )
+    if      mode == constants.MODE_PLANE_TRACING
+      @hideFolders( [ @fFlightcontrols, @fCells ] )
+      @user.triggerAll()
+    else if mode == constants.MODE_ARBITRARY or mode == constants.MODE_ARBITRARY_PLANE
+      @hideFolders( [ @fViewportcontrols, @fTDView, @fCells ] )
+      @setFolderElementVisibility( @clippingControllerArbitrary, true )
+      @setFolderElementVisibility( @clippingController, false )
+      @user.triggerAll()
+    else if mode == constants.MODE_VOLUME
+      @hideFolders( [ @fTrees, @fNodes, @fFlightcontrols ] )
 

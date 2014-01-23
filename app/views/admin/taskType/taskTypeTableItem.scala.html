@@ -5,7 +5,9 @@
 @import models.task.Task
 
 <tr id="@taskType.id">
-  <td class="details-toggle"> <i class="caret-right"></i> <i class="caret-down"></i> </td>
+  <td class="details-toggle"
+    href="@controllers.admin.routes.TaskAdministration.tasksForType(taskType.id)"
+    data-ajax="add-row=#@taskType.id+tr"> <i class="caret-right"></i> <i class="caret-down"></i> </td>
   <td> @formatHash(taskType.id) </td>
   <td> @taskType.summary </td>
   <td> @formatShortText(taskType.description) </td>
@@ -33,9 +35,12 @@
 <tr class="details-row" >
   <td colspan="12">
     <table class="table table-condensed table-nohead">
-      <tbody>
-        <!-- TAKS FOR TASKTYPE NEED TO BE LOADED INTO THIS TABLE -->
+      <tbody> <!-- class="hide" -->
+        <!-- TASKS FOR TASKTYPE NEED TO BE LOADED INTO THIS TABLE -->
       </tbody>
     </table>
   </td>
 </tr>
+
+
+

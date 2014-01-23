@@ -1,54 +1,58 @@
 package controllers.admin
 
-import oxalis.security.Secured
-import models.security.Role
-import models.task.TaskSelectionAlgorithm
+import models.task.{TaskSelectionAlgorithmDAO, TaskSelectionAlgorithm}
 import play.api.libs.json.Json
 import views.html
 import play.api.i18n.Messages
-import controllers.Controller
+import braingames.util.ExtendedTypes.ExtendedBoolean
+import play.api.libs.concurrent.Execution.Implicits._
 
-object TaskAlgorithm extends Controller with Secured {
+object TaskAlgorithm extends AdminController {
 
-  override val DefaultAccessRole = Role.Admin
-
-  def testAlgorithm = Authenticated(parser = parse.urlFormEncoded) { implicit request =>
-    (for {
-      code <- postParameter("code") ?~ Messages("taskAlgorithm.notSupplied")
-      if (TaskSelectionAlgorithm.isValidAlgorithm(code))
-    } yield {
-      Ok
-    }) ?~ Messages("taskAlgorithm.invalid") ~> 422
-  }
-
-  def index = Authenticated { implicit request =>
-    Ok(html.admin.task.taskSelectionAlgorithm(TaskSelectionAlgorithm.findAll, TaskSelectionAlgorithm.current))
-  }
-
-  def submitAlgorithm = Authenticated(parser = parse.urlFormEncoded) { implicit request =>
-    (for {
-      code <- postParameter("code") ?~ Messages("taskAlgorithm.notSupplied")
-      use <- postParameter("use") ?~ Messages("taskAlgorithm.use.notSupplied")
-      if (TaskSelectionAlgorithm.isValidAlgorithm(code))
-    } yield {
-      val alg = TaskSelectionAlgorithm(code)
-      TaskSelectionAlgorithm.insertOne(alg)
-      if (use == "1")
-        TaskSelectionAlgorithm.use(alg)
-      Ok
-    }) ?~ Messages("taskAlgorithm.invalid") ~> 422
-  }
-
-  def useAlgorithm(id: String) = Authenticated { implicit request =>
+  def testAlgorithm = Authenticated()(parse.urlFormEncoded) { implicit request =>
     for {
-      algorithm <- TaskSelectionAlgorithm.findOneById(id) ?~ Messages("taskAlgorithm.notFound")
+      code <- postParameter("code") ?~ Messages("taskAlgorithm.notSupplied")
+      _ <- (TaskSelectionAlgorithm.isValidAlgorithm(code) failIfFalse Messages("taskAlgorithm.invalid")) ~> 422
     } yield {
-      TaskSelectionAlgorithm.use(algorithm)
       Ok
     }
   }
 
-  def listAlgorithms = Authenticated { implicit request =>
-    Ok(Json.toJson(TaskSelectionAlgorithm.findAll))
+  def index = Authenticated().async { implicit request =>
+    for {
+      algorithms <- TaskSelectionAlgorithmDAO.findAll
+      current <- TaskSelectionAlgorithmDAO.current
+    } yield {
+      Ok(html.admin.task.taskSelectionAlgorithm(algorithms, current))
+    }
+  }
+
+  def submitAlgorithm = Authenticated().async(parse.urlFormEncoded) { implicit request =>
+    (for {
+      code <- postParameter("code") ?~> Messages("taskAlgorithm.notSupplied")
+      use <- postParameter("use") ?~> Messages("taskAlgorithm.use.notSupplied")
+      if(TaskSelectionAlgorithm.isValidAlgorithm(code))
+      alg = TaskSelectionAlgorithm(code)
+      _ <- TaskSelectionAlgorithmDAO.insert(alg)
+    } yield {
+      if (use == "1")
+        TaskSelectionAlgorithmDAO.use(alg)
+      Ok
+    }) ?~> Messages("taskAlgorithm.invalid") ~> 422
+  }
+
+  def useAlgorithm(id: String) = Authenticated().async { implicit request =>
+    for {
+      algorithm <- TaskSelectionAlgorithmDAO.findOneById(id) ?~> Messages("taskAlgorithm.notFound")
+    } yield {
+      TaskSelectionAlgorithmDAO.use(algorithm)
+      Ok
+    }
+  }
+
+  def listAlgorithms = Authenticated().async { implicit request =>
+    TaskSelectionAlgorithmDAO.findAll.map { algorithms =>
+      Ok(Json.toJson(algorithms))
+    }
   }
 }

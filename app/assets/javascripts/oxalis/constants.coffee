@@ -13,7 +13,8 @@ Constants =
 
   MODE_PLANE_TRACING   : 0
   MODE_ARBITRARY       : 1
-  MODE_VOLUME          : 2
+  MODE_ARBITRARY_PLANE : 2
+  MODE_VOLUME          : 3
 
   CONTROL_MODE_TRACE   : 0
   CONTROL_MODE_VIEW    : 1

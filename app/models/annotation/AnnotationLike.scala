@@ -1,7 +1,6 @@
 package models.annotation
 
 import models.user.User
-import org.bson.types.ObjectId
 import models.task.Task
 import models.annotation.AnnotationType._
 import play.api.libs.json._
@@ -9,6 +8,11 @@ import play.api.libs.functional.syntax._
 import scala.concurrent.Future
 import play.api.libs.concurrent.Execution.Implicits._
 import braingames.reactivemongo.DBAccessContext
+import braingames.util.{FoxImplicits, Fox}
+import reactivemongo.bson.BSONObjectID
+import play.api.Logger
+import models.tracing.skeleton.AnnotationStatistics
+import oxalis.view.{ResourceActionCollection, ResourceAction}
 
 /**
  * Company: scalableminds
@@ -16,20 +20,22 @@ import braingames.reactivemongo.DBAccessContext
  * Date: 01.06.13
  * Time: 15:06
  */
-trait AnnotationLike {
+trait AnnotationLike extends AnnotationStatistics{
   def _name: Option[String]
 
-  def user: Option[User]
+  def user: Future[Option[User]]
 
-  def content: Option[AnnotationContent]
+  def muta: AnnotationMutationsLike
 
-  def _user: ObjectId
+  def content: Fox[AnnotationContent]
+
+  def _user: BSONObjectID
 
   def id: String
 
   def typ: AnnotationType
 
-  def task: Option[Task]
+  def task: Fox[Task]
 
   def state: AnnotationState
 
@@ -39,33 +45,35 @@ trait AnnotationLike {
 
   def version: Int
 
-  def incrementVersion: AnnotationLike
+ // def incrementVersion: AnnotationLike
 
-  def isTrainingsAnnotation() = {
-    this.task.map(_.isTraining) getOrElse false
-  }
+  def dataSetName = content.map(_.dataSetName) getOrElse ""
 
-  def annotationInfo(user: Option[User])(implicit ctx: DBAccessContext): Future[JsObject] =
+
+  def isTrainingsAnnotation =
+    typ == AnnotationType.Training
+
+  def annotationInfo(user: Option[User])(implicit ctx: DBAccessContext): Fox[JsObject] =
     AnnotationLike.annotationLikeInfoWrites(this, user)
+
+  def actions(user: Option[User]): ResourceActionCollection
 }
 
-object AnnotationLike {
+object AnnotationLike extends FoxImplicits {
 
-  import models.annotation.AnnotationContent._
-
-  def annotationLikeInfoWrites(a: AnnotationLike, user: Option[User])(implicit ctx: DBAccessContext): Future[JsObject] = {
-    a.content.map(writeAnnotationContent).getOrElse(Future.successful(Json.obj())).map {
-      js =>
-        ((__ \ 'version).write[Int] and
-          (__ \ 'id).write[String] and
-          (__ \ 'name).write[String] and
-          (__ \ 'typ).write[String] and
-          (__ \ 'content).write[JsObject] and
-          (__ \ 'restrictions).write[AnnotationRestrictions](
-            AnnotationRestrictions.writeFor(user)))
-          .tupled
-          .writes(
-          (a.version, a.id, a._name getOrElse "", a.typ, js, a.restrictions))
+  def annotationLikeInfoWrites(a: AnnotationLike, user: Option[User])(implicit ctx: DBAccessContext): Fox[JsObject] = {
+    for {
+      contentJs <- a.content.flatMap(AnnotationContent.writeAsJson(_))
+      restrictionsJs <- AnnotationRestrictions.writeAsJson(a.restrictions, user).toFox
+    } yield {
+      val name = a._name.getOrElse("")
+      Json.obj(
+        "version" -> a.version,
+        "id" -> a.id,
+        "name" -> name,
+        "typ" -> a.typ,
+        "content" -> contentJs,
+        "restrictions" -> restrictionsJs)
     }
   }
 

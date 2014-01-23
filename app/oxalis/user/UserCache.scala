@@ -3,10 +3,11 @@ package oxalis.user
 import play.api.cache.Cache
 import play.api.Play.current
 import scala.concurrent.Future
-import models.user.User
+import models.user.{UserDAO, User}
+import braingames.reactivemongo.GlobalAccessContext
 
 object UserCache {
-  val userCacheTimeout = current.configuration.getInt("user.cacheTimeout") getOrElse 60
+  val userCacheTimeout = current.configuration.getInt("user.cacheTimeout") getOrElse 3
   val userCacheKeyPrefix = current.configuration.getString("user.cacheKey") getOrElse "user"
 
   def cacheKeyForUser(id: String) =
@@ -14,8 +15,13 @@ object UserCache {
 
   def findUser(id: String) = {
     Cache.getOrElse(cacheKeyForUser(id), userCacheTimeout) {
-      User.findOneById(id)
+      UserDAO.findOneById(id)(GlobalAccessContext)
     }
+  }
+
+  def store(id: String, user: Future[Option[User]]) = {
+    Cache.set(cacheKeyForUser(id), user)
+    user
   }
   
   def invalidateUser(id: String) = 

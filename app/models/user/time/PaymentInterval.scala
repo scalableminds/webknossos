@@ -1,5 +1,7 @@
 package models.user.time
 
+import play.api.libs.json.Json
+
 /**
  * Company: scalableminds
  * User: tmbo
@@ -19,4 +21,8 @@ case class PaymentInterval(month: Int, year: Int) extends Ordered[PaymentInterva
   override def >=(that: PaymentInterval): Boolean = (this compare that) >= 0
 
   override def toString = "%d/%d".format(month, year)
+}
+
+object PaymentInterval {
+	implicit val paymentIntervalFormat = Json.format[PaymentInterval]
 }

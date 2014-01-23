@@ -1,24 +1,23 @@
 package controllers.admin
 
 import play.mvc.Security.Authenticated
-import oxalis.security.Secured
-import models.security.Role
+import oxalis.security.{AuthenticatedRequest, Secured}
+import models.security.{RoleDAO, Role}
 import oxalis.annotation._
 import views._
-import models.task.TaskType
+import models.task._
 import play.api.data.Forms._
 import play.api.data.Form
-import models.task.TimeSpan
 import play.api.i18n.Messages
-import models.task.Task
 import models.tracing._
 import play.api.templates.Html
 import controllers.{Controller, Application}
 import models.annotation.AnnotationDAO
+import play.api.libs.concurrent.Execution.Implicits._
+import braingames.util.Fox
+import play.api.mvc.SimpleResult
 
-object TaskTypeAdministration extends Controller with Secured{
-
-  override val DefaultAccessRole = Role.Admin
+object TaskTypeAdministration extends AdminController {
 
   val taskTypeForm = Form(
     mapping(
@@ -31,58 +30,88 @@ object TaskTypeAdministration extends Controller with Secured{
         "minTime" -> number,
         "maxTime" -> number,
         "maxHard" -> number)(TimeSpan.apply)(TimeSpan.unapply))(
-        TaskType.fromForm)(TaskType.toForm)).fill(TaskType.empty)
-  
-  def create = Authenticated(parser = parse.urlFormEncoded) { implicit request =>
+      TaskType.fromForm)(TaskType.toForm)).fill(TaskType.empty)
+
+  def create = Authenticated().async(parse.urlFormEncoded) { implicit request =>
     taskTypeForm.bindFromRequest.fold(
-      formWithErrors => BadRequest(html.admin.taskType.taskTypes(TaskType.findAll, formWithErrors)),
-      { t =>
-        TaskType.insertOne(t)
-        Redirect(routes.TaskTypeAdministration.list)
+      hasErrors = formWithErrors => taskTypeListWithForm(formWithErrors).map(html => BadRequest(html)),
+      success = { t =>
+        TaskTypeDAO.insert(t).map { _ =>
+          Redirect(routes.TaskTypeAdministration.list)
           .flashing(
             FlashSuccess(Messages("taskType.createSuccess")))
           .highlighting(t.id)
+        }
       })
   }
 
-
-  def list = Authenticated { implicit request =>
-    Ok(html.admin.taskType.taskTypes(TaskType.findAll, taskTypeForm))
+  def taskTypeListWithForm(form: Form[TaskType])(implicit request: AuthenticatedRequest[_]) = {
+    TaskTypeDAO.findAll.map { taskTypes =>
+      html.admin.taskType.taskTypes(taskTypes, form)
+    }
   }
 
-  def edit(taskTypeId: String) = Authenticated { implicit request =>
+  def list = Authenticated().async { implicit request =>
+    taskTypeListWithForm(taskTypeForm).map { html =>
+      Ok(html)
+    }
+  }
+
+  // TODO: 
+  // def list = Authenticated().async { implicit request =>
+  //   render.async {
+  //     case Accepts.Html() =>
+  //       TaskTypeDAO.findAll
+  //     case Accepts.Json() =>
+  //       //for {
+  //       //  tasks <- TaskService.findAllNonTrainings
+  //       //  js <- Future.traverse(tasks)(Task.transformToJson)
+  //       //} yield {
+  //       // JsonOk(Json.obj("data" -> js))
+  //       //}
+  //   }
+  // }
+
+  def edit(taskTypeId: String) = Authenticated().async { implicit request =>
     for {
-      taskType <- TaskType.findOneById(taskTypeId) ?~ Messages("taskType.notFound")
+      taskType <- TaskTypeDAO.findOneById(taskTypeId) ?~> Messages("taskType.notFound")
     } yield {
       Ok(html.admin.taskType.taskTypeEdit(taskType.id, taskTypeForm.fill(taskType)))
     }
   }
 
-  def editTaskTypeForm(taskTypeId: String) = Authenticated(parser = parse.urlFormEncoded) { implicit request =>
-    for {
-      taskType <- TaskType.findOneById(taskTypeId) ?~ Messages("taskType.notFound")
-    } yield {
+  def editTaskTypeForm(taskTypeId: String) = Authenticated().async(parse.urlFormEncoded) { implicit request =>
+    def evaluateForm(taskType: TaskType): Fox[SimpleResult] = {
       taskTypeForm.bindFromRequest.fold(
-        formWithErrors => BadRequest(html.admin.taskType.taskTypeEdit(taskType.id, formWithErrors)),
-        { t =>
+        hasErrors = (errors => Fox.successful(BadRequest(html.admin.taskType.taskTypeEdit(taskType.id, errors)))),
+        success = { t =>
           val updatedTaskType = t.copy(_id = taskType._id)
-          TaskType.save(updatedTaskType)
-          Task.findAllByTaskType(taskType).map { task =>
-            AnnotationDAO.updateAllUsingNewTaskType(task, updatedTaskType)
-          }
-          Redirect(routes.TaskTypeAdministration.list)
+          for {
+            _ <- TaskTypeDAO.update(taskType._id, updatedTaskType)
+            tasks <- TaskDAO.findAllByTaskType(taskType)
+          } yield {
+            tasks.map(task => AnnotationDAO.updateAllUsingNewTaskType(task, updatedTaskType.settings))
+            Redirect(routes.TaskTypeAdministration.list)
             .flashing(
               FlashSuccess(Messages("taskType.editSuccess")))
             .highlighting(taskType.id)
+          }
         })
+    }
+
+    for {
+      taskType <- TaskTypeDAO.findOneById(taskTypeId) ?~> Messages("taskType.notFound")
+      result <- evaluateForm(taskType)
+    } yield {
+      result
     }
   }
 
-  def delete(taskTypeId: String) = Authenticated { implicit request =>
+  def delete(taskTypeId: String) = Authenticated().async { implicit request =>
     for {
-      taskType <- TaskType.findOneById(taskTypeId) ?~ Messages("taskType.notFound")
+      taskType <- TaskTypeDAO.findOneById(taskTypeId) ?~> Messages("taskType.notFound")
     } yield {
-      TaskType.removeById(taskType._id)
+      TaskTypeDAO.removeById(taskType._id)
       JsonOk(Messages("taskType.deleted", taskType.summary))
     }
   }

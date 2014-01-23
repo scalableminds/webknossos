@@ -1,16 +1,26 @@
 package models.security
 
+import play.api.libs.json.Json
+
 abstract class Implyable {
+
   def implies(permission: Permission): Boolean
 }
 
-case class Permission(
-    domain: String,
-    actions: List[String] = "view" :: Nil) extends Implyable {
+case class Permission(domain: String, actions: List[String] = "view" :: Nil) extends Implyable {
 
-  val domainRx = createDomainRx
+  val All = "*"
 
-  val impliesAllActions = actions.contains("*")
+  val impliesAllActions = actions.contains(All)
+
+  lazy val domainRx = {
+    val fixedDomain =
+      if (domain.endsWith(".*"))
+        domain.dropRight(2) + All
+      else
+        domain
+    fixedDomain.replace(".", "\\.").replace(All, ".*") r
+  }
 
   def implies(permission: Permission) = {
     permission match {
@@ -25,13 +35,8 @@ case class Permission(
         false
     }
   }
+}
 
-  def createDomainRx = {
-    val fixedDomain =
-      if (domain.endsWith(".*"))
-        domain.dropRight(2) + "*"
-      else
-        domain
-    fixedDomain.replace(".", "\\.").replace("*", ".*")r
-  }
+object Permission {
+  implicit val permissionFormat = Json.format[Permission]
 }

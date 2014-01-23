@@ -14,10 +14,10 @@ import models.annotation.AnnotationLike
 import models.annotation.AnnotationType._
 import oxalis.annotation.handler.AnnotationInformationHandler
 import braingames.util.{FoxImplicits, Fox}
-import controllers.Controller
+import play.api.Logger
 
 object TracingController extends Controller with Secured with TracingInformationProvider {
-  override val DefaultAccessRole = Role.User
+  override val DefaultAccessRole = RoleDAO.User
 }
 
 trait TracingInformationProvider extends play.api.http.Status with FoxImplicits with models.basics.Implicits {
@@ -28,8 +28,8 @@ trait TracingInformationProvider extends play.api.http.Status with FoxImplicits 
     f(informationHandlers(tracingType))
   }
 
-  def withAnnotation[T](typ: AnnotationType, id: String)(f: AnnotationLike => Box[T])(implicit request: UserAwareRequest[_]): Fox[T] = {
-    withAnnotation(AnnotationIdentifier(typ, id))(a => Future.successful(f(a)))
+  def withAnnotation[T](typ: AnnotationType, id: String)(f: AnnotationLike => Fox[T])(implicit request: UserAwareRequest[_]): Fox[T] = {
+    withAnnotation(AnnotationIdentifier(typ, id))(a => f(a))
   }
 
   def withAnnotation[T](annotationId: AnnotationIdentifier)(f: AnnotationLike => Fox[T])(implicit request: UserAwareRequest[_]): Fox[T] = {
@@ -47,7 +47,7 @@ trait TracingInformationProvider extends play.api.http.Status with FoxImplicits 
     f.mapTo[Box[AnnotationLike]]
   }
 
-  def nameAnnotation(annotation: AnnotationLike)(implicit request: AuthenticatedRequest[_]) = Box.legacyNullTest[String] {
+  def nameAnnotation(annotation: AnnotationLike)(implicit request: AuthenticatedRequest[_]) = {
     withInformationHandler(annotation.typ) {
       handler =>
         handler.nameForAnnotation(annotation)
@@ -57,7 +57,7 @@ trait TracingInformationProvider extends play.api.http.Status with FoxImplicits 
   def respondWithTracingInformation(annotationId: AnnotationIdentifier)(implicit request: UserAwareRequest[_]): Fox[JsValue] = {
     withAnnotation(annotationId) {
       annotation =>
-        annotation.annotationInfo(request.userOpt).map(js => Full(js))
+        annotation.annotationInfo(request.userOpt)
     }
   }
 }

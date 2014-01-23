@@ -30,6 +30,7 @@ $ ->
 
 
   dataAjaxHandler = (event, element=null) ->
+
     event.preventDefault()
     
     $this = element or $(this)
@@ -71,6 +72,15 @@ $ ->
     if options["busy-class"]
       $this.addClass("busy")
 
+    fillTemplateFromTable = ($el, responseData) ->
+
+      unless $el.data("tr-template")
+        return null
+
+      templateSource = _.unescape($el.data("tr-template"))
+      return _.template(templateSource)(responseData)
+
+
     $.ajax(ajaxOptions).then(
 
       (responseData) ->
@@ -85,6 +95,9 @@ $ ->
         $this.trigger("ajax-success", responseData)
 
         if options["replace-row"]
+          unless html
+            html = fillTemplateFromTable($this.closest("table"), responseData)
+          
           $this.parents("tr").first().replaceWith(html)
 
         if options["delete-row"]
@@ -93,10 +106,18 @@ $ ->
           $this.parents("tr").first().remove()
 
         if options["add-row"]
-          $(options["add-row"]).find("tbody").append(html)
+          $table = $(options["add-row"])
+          $tbody = $table.find("tbody")
+          unless html
+            html = fillTemplateFromTable($table, responseData)
+          $tbody.append(html)
 
         if options["replace"]
-          $(options["replace"]).replaceWith(html)
+          $el = $(options["replace"])
+          unless html
+            html = fillTemplateFromTable($table, responseData)
+          $el.replaceWith(html)
+
 
         if options["replace-table"]
           $(options["replace-table"]).replaceWith(html)
@@ -142,9 +163,11 @@ $ ->
   $(document).on "submit", "form[data-ajax]", dataAjaxHandler
 
 
-  $(".page-selection").each ->
+  $(".page-selection").each( ->
 
-        new Paginator $(this)
+    unless $(this).data("disable-auto-pagination")
+      new Paginator $(this)
+  )
 
 
   $(document).on "change", "table input.select-all-rows", ->
@@ -201,10 +224,9 @@ $ ->
   $("table.table-details").each ->
 
     $table = $(this)
-
     $table.find(".details-row").addClass("hide")
 
-    $table.on "click", ".details-toggle", (event) ->
+    $table.on("click", ".details-toggle", (event) ->
       $toggle = $(this)
 
       alreadyFetched = $toggle.data("alreadyFetched")
@@ -216,14 +238,15 @@ $ ->
 
       $toggle.parents("tr").next().toggleClass("hide", !newState)
       $toggle.toggleClass("open", newState)
+    )
 
-
-    $table.find(".details-toggle-all").click ->
+    $table.find(".details-toggle-all").click( ->
 
       $toggle = $(this)
       newState = !$toggle.hasClass("open")
 
       $table.find(".details-toggle").click()
+    )
 
 
   highlightToasts = ->

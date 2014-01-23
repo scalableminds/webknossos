@@ -14,10 +14,12 @@ password.validation=Password (again)
 firstName=First Name
 lastName=Last Name
 
+format.json.invalid=Invalid Json format
+
 image.create.failed=Failed to create image
 
 user.verified={0} has been verified
-user.verifyFailed=Couldn't verify user
+user.verifyFailed=Couldn''t verify user
 user.notFound=User not found
 user.notVerified=Your account hasn''t been activated yet. After you have uploaded all requested information to braintracing.org, an admin will verify your acount.
 user.noPermission=You don''t have enough permissions to access this site. Sorry :(
@@ -31,6 +33,7 @@ user.login.failed=Invalid email or password
 user.login.success=You are now logged in
 user.logout.success=You have successfully logged out
 user.settings.invalid=Couldn''t parse settings
+user.settings.updated=Your settings got updated
 user.experience.increased=Increased experience of {0}
 user.experience.set=Set experience of {0}
 user.experience.removed=Removed experience from {0}
@@ -70,6 +73,7 @@ projectName=Project Name
 project.removed=Project got removed
 project.notFound=Project couldn''t be found
 project.nameAlreadyInUse=Name already used
+project.nameInvalid=Project names can only contain alphanumeric characters, _ and -
 project.createSuccess=Project successfully created
 
 role.invalid=Invalid role

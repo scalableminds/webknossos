@@ -1,24 +1,24 @@
 package models.basics
-
+import play.api.Logger
 import play.api.libs.json._
 
 trait BasicSettings{
-  def defaultConfiguration: { def settings: Map[String, JsValue]}
+  def defaultSettings: { def settings: Map[String, JsValue]}
   
-  def MaxSettings = defaultConfiguration.settings.size
+  def MaxSettings = defaultSettings.settings.size
   
   def isValid(js: JsObject) = {
     /*js
       .fields
       .filter {
         case (s, _) =>
-          defaultConfiguration.settings.find(_._1 == s).isEmpty
+          defaultSettings.settings.find(_._1 == s).isEmpty
       }
       .isEmpty*/ true
   }
 
   def isValidSetting(field: Tuple2[String, JsValue]) = {
     val (key, _) = field
-    defaultConfiguration.settings.get(key)
+    defaultSettings.settings.get(key)
   }
 }

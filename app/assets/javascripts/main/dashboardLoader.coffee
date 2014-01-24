@@ -46,32 +46,26 @@ DashboardLoader =
 
     RoutingUtils.maskFinishedTasks()
 
-    extractTemplate = (table) ->
+    extractTemplate = (table) =>
 
-      $tableBody = table.find("tbody")
+      $tableBody = table.find("tbody").find("template")
       taskTRTemplate = $tableBody.html()
-      $tableBody.empty()
-
-      table.data("tr-template", taskTRTemplate)
+      taskTRTemplate = _.unescape(taskTRTemplate)
+      @template = _.template(taskTRTemplate)
 
     $dashboardTasks = $("#dashboard-tasks")
     $explorativeTasks = $("#explorative-tasks")
 
-    for aTable in [$dashboardTasks, $explorativeTasks]
-      extractTemplate(aTable)
 
-    populateTemplate = (data, table, contextProvider) ->
+    populateTemplate = (data, table, contextProvider) =>
+      extractTemplate(table)
 
       $tableBody = table.find("tbody")
-      templateSource = _.unescape(table.data("tr-template"))
-      templateFn = _.template(templateSource)
 
-      outputHTML = []
+      tableItems = for el in data
+        @template(contextProvider(el))
 
-      for el in data
-        outputHTML.push(templateFn(contextProvider(el)))
-
-      $tableBody.removeClass("hide").html(outputHTML.join(""))
+      $tableBody.removeClass("hide").append(tableItems)
 
 
     $tabbableDashboard = $("tabbable-dashboard")

@@ -75,22 +75,13 @@ $ ->
 
     fillTemplateFromTable = ($el, responseData) ->
 
-      # unless $el.data("tr-template")
-      # return null
-
       templateSource = _.unescape($el.html())
       # VERY HACKY. Replace Handlebar templates with Underscore identifier
-      # _.templateSettings = {
-      #   evaluate:    /\{\{=(.+?)\}\}/g,
-      #   interpolate: /\{\{(.+?)\}\}/g,
-      # };
-      # escape:      /\{\{-(.+?)\}\}/g
       templateSource = templateSource.replace(/{{/gm,"<%")
       templateSource = templateSource.replace(/}}/gm,"%>")
       templateSource = _.unescape(templateSource)
       for data in responseData
         _.template(templateSource)(data)
-
 
 
     $.ajax(ajaxOptions).then(
@@ -118,11 +109,12 @@ $ ->
           $this.parents("tr").first().remove()
 
         if options["add-row"]
+
           $table = $(options["add-row"])
           $tbody = $table.find("tbody")
           unless html
-            html = fillTemplateFromTable($tbody.find(".tr-template"), responseData)
-            $tbody.prepend(html)
+            html = fillTemplateFromTable($tbody.find("template"), responseData)
+          $tbody.prepend(html)
 
         if options["replace"]
           $el = $(options["replace"])

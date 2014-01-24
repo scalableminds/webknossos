@@ -303,13 +303,17 @@ object AnnotationController extends Controller with Secured with TracingInformat
 
   def traceJSON(typ: String, id: String) = Authenticated().async {
     implicit request => {
-      withAnnotation(AnnotationIdentifier(typ, id)) {
-        annotation =>
-          if (annotation.restrictions.allowAccess(request.user)) {
-            // TODO: RF -allow all modes
-            jsonForAnnotation(annotation)
-          } else
-            Future.successful(Failure(Messages("notAllowed")) ~> 403)
+      if (typ == models.annotation.AnnotationType.Explorational) {
+        Future.successful(JsonOk(Json.obj("noData" -> true)))
+      } else {
+        withAnnotation(AnnotationIdentifier(typ, id)) {
+          annotation =>
+            if (annotation.restrictions.allowAccess(request.user)) {
+              // TODO: RF -allow all modes
+              jsonForAnnotation(annotation)
+            } else
+              Future.successful(Failure(Messages("notAllowed")) ~> 403)
+        }
       }
     }
   }

@@ -66,26 +66,25 @@ $ ->
           templateOutput = _.template(templateSource)(data)
           leftTabBar.html(templateOutput)
 
-        if dataUrl
+        $.ajax(
+          url: dataUrl
+          type: 'GET'
+          success: (task) ->
 
-          $.ajax(
-            url: dataUrl
-            type: 'GET'
-            success: (task) ->
-
+            if task.noData
+              populateTemplate({task : null})
+            else
               populateTemplate({task : task})
 
-            error: ->
+          error: (xhr, status, error) ->
 
-              populateTemplate({task : null})
+            console.error("Something went wrong when receiving task data", xhr, status, error)
 
-            complete: (task) ->
+          complete: (task) ->
 
-              oxalis = window.oxalis = new Controller(constants.CONTROL_MODE_TRACE)
-          )
-        else
-          populateTemplate({task : null})
-          oxalis = window.oxalis = new Controller(constants.CONTROL_MODE_TRACE)
+            oxalis = window.oxalis = new Controller(constants.CONTROL_MODE_TRACE)
+        )
+
         return
 
     "tracing.view" : ->

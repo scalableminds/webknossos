@@ -41,11 +41,11 @@ class Paginator
 
   extractTemplate : ->
 
-    templateSource = _.unescape(@tbody.html())
+    templateSource = _.unescape(@tbody.find(".tr-template").first().html())
     # compile
     @template = _.template(templateSource)
 
-    @tbody.html("")
+    #@tbody.html("")
     @tbody.removeClass("hide")
 
 
@@ -142,7 +142,7 @@ class Paginator
     for element in jsonArray
       htmlArray.push(@generateHTML(element))
 
-    @tbody.html(htmlArray.join(""))
+    @tbody.append(htmlArray.join(""))
 
 
   JSONcontains : (data, query) ->

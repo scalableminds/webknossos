@@ -1,6 +1,7 @@
 ### define
 jquery : $
 underscore : _
+moment : moment
 ../libs/toast : Toast
 ./paginator : Paginator
 ../libs/jquery.bootpag.min : Bootpag
@@ -74,11 +75,22 @@ $ ->
 
     fillTemplateFromTable = ($el, responseData) ->
 
-      unless $el.data("tr-template")
-        return null
+      # unless $el.data("tr-template")
+      # return null
 
-      templateSource = _.unescape($el.data("tr-template"))
-      return _.template(templateSource)(responseData)
+      templateSource = _.unescape($el.html())
+      # VERY HACKY. Replace Handlebar templates with Underscore identifier
+      # _.templateSettings = {
+      #   evaluate:    /\{\{=(.+?)\}\}/g,
+      #   interpolate: /\{\{(.+?)\}\}/g,
+      # };
+      # escape:      /\{\{-(.+?)\}\}/g
+      templateSource = templateSource.replace(/{{/gm,"<%")
+      templateSource = templateSource.replace(/}}/gm,"%>")
+      templateSource = _.unescape(templateSource)
+      for data in responseData
+        _.template(templateSource)(data)
+
 
 
     $.ajax(ajaxOptions).then(
@@ -109,8 +121,8 @@ $ ->
           $table = $(options["add-row"])
           $tbody = $table.find("tbody")
           unless html
-            html = fillTemplateFromTable($table, responseData)
-          $tbody.append(html)
+            html = fillTemplateFromTable($tbody.find(".tr-template"), responseData)
+            $tbody.prepend(html)
 
         if options["replace"]
           $el = $(options["replace"])
@@ -168,6 +180,8 @@ $ ->
     unless $(this).data("disable-auto-pagination")
       new Paginator $(this)
   )
+
+
 
 
   $(document).on "change", "table input.select-all-rows", ->

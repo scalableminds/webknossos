@@ -20,6 +20,7 @@ require.config
     "qassert" : "libs/qassert"
     "backbone" : "libs/backbone"
     "backbone.marionette" : "libs/backbone.marionette"
+    "moment" : "libs/moment.min"
 
   shim :
     "underscore" :

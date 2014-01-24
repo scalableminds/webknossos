@@ -15,7 +15,7 @@ case class ResourceAction(
                            call: Call,
                            condition: Boolean = true,
                            icon: Option[String] = None,
-                           dataAjax: Option[String] = None,
+			   dataAjax: String = "",
                            clazz: String = ""
                          )
 

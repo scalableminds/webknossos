@@ -41,11 +41,10 @@ class Paginator
 
   extractTemplate : ->
 
-    templateSource = _.unescape(@tbody.find(".tr-template").first().html())
+    templateSource = _.unescape(@tbody.find("template").first().html())
     # compile
     @template = _.template(templateSource)
 
-    #@tbody.html("")
     @tbody.removeClass("hide")
 
 

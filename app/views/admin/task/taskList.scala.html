@@ -26,10 +26,10 @@
           <th> Priority </th>
           <th> Created </th>
           <th> States </th>
-        </tr>
+         </tr>
       </thead>
       <tbody class="hide">
-        <template class="tr-template">
+        <template>
           <tr id="<%= element.id %>">
             <td class="details-toggle" href="<%= controllers.AnnotationController.annotationsForTask(element.id).url %>" data-ajax="add-row=#<%= element.id %> + tr"> <i class="caret-right"></i> <i class="caret-down"></i> </td>
             <td> <%= element.formattedHash %> </td>
@@ -68,33 +68,11 @@
               <a href="<%= controllers.admin.TaskAdministration.delete(element.id).url %>" data-ajax="delete-row,confirm"><i class="icon-trash"></i> delete </a>
             </td>
           </tr>
-
           <tr class="details-row hide" >
             <td colspan="12">
               <table class="table table-condensed table-nohead">
                 <tbody>
-                  <template class="tr-template">
-                    <tr>
-                      <td>{{= user }}</td>
-                      <td>{{= moment(lastEdit).format("YYYY-MM-DD HH:SS") }}</td>
-                      <td><i class="icon-ok-circle"></i> {{= stateLabel }}</td>
-                      <td class="nowrap">
-                        <div class="btn-group">
-                          <a class="btn dropdown-toggle" data-toggle="dropdown" href="#">
-                            Actions
-                            <span class="caret"></span>
-                          </a>
-                          <ul class="dropdown-menu">
-                            {{ _.each(actions, function(action){ }}
-                              <li>
-                                <a href="{{= action.call.url }}" data-ajax="{{= action.dataAjax }}"><i class="{{= action.icon }}"></i> {{= action.name }}</a>
-                              </li>
-                           {{ }) }}
-                          </ul>
-                        </div>
-                      </td>
-                    </tr>
-                  </template>
+                  @views.html.admin.annotation.annotationTableItem()
                 </tbody>
               </table>
             </td>

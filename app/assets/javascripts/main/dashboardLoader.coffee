@@ -65,7 +65,7 @@ DashboardLoader =
       tableItems = for el in data
         @template(contextProvider(el))
 
-      $tableBody.removeClass("hide").append(tableItems)
+      $tableBody.removeClass("hide").prepend(tableItems)
 
 
     $tabbableDashboard = $("tabbable-dashboard")

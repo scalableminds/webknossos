@@ -23,13 +23,13 @@
       <% } else { %>
         <a href="<%= jsRoutes.controllers.AnnotationController.trace(annotations.typ, annotations.id).url %>"><i class="fa fa-random"></i> trace</a><br/>
         <a href="<%= jsRoutes.controllers.AnnotationController.finish(annotations.typ, annotations.id).url %>" class="trace-finish" data-ajax="replace-row,confirm=@Messages("annotation.finish.confirm")" ><i class="fa fa-check-circle-o"></i> finish</a>
-      <% } %>
-      <% if (annotations.review.comments && annotations.review.comments.length > 0) { %>
-        <br />
-        <a href="#" rel="popover" data-placement="bottom" data-title="Comment from Reviewer" data-html="true"
-           data-content="<%= annotations.review.comments[0].replace(/\n/g, '<br /><br />')%>)">
-            <i class="fa fa-eye"></i> Review failed<span class="caret-down"></span>
-        </a>
+        <% if (annotations.review.comments && annotations.review.comments.length > 0) { %>
+          <br />
+          <a href="#" rel="popover" data-placement="bottom" data-title="Comment from Reviewer" data-html="true"
+             data-content="<%= annotations.review.comments[0].replace(/\n/g, '<br /><br />')%>)">
+              <i class="fa fa-eye"></i> Review failed<span class="caret-down"></span>
+          </a>
+        <% } %>
       <% } %>
     </td>
   </tr>

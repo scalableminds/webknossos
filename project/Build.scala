@@ -24,6 +24,7 @@ object Dependencies{
   val braingamesBinary = "com.scalableminds" %% "braingames-binary" % braingamesVersion
   val braingamesUtil = "com.scalableminds" %% "braingames-util" % braingamesVersion
   val scalaAsync = "org.scala-lang.modules" %% "scala-async" % "0.9.0-M2"
+  val airbrake = "eu.teamon" %% "play-airbrake" % "0.3.2-SCM"
 }
 
 object Resolvers {
@@ -37,6 +38,7 @@ object Resolvers {
   val scmRel = Resolver.url("Scalableminds REL Repo", url("http://scalableminds.github.com/releases/"))(Resolver.ivyStylePatterns)
   val scmIntRel = Resolver.sftp("scm.io intern releases repo", "scm.io", 44144, "/srv/maven/releases/") as("maven", "5MwEuHWH6tRPL6yfNadQ")
   val scmIntSnaps = Resolver.sftp("scm.io intern snapshots repo", "scm.io", 44144, "/srv/maven/snapshots/") as("maven", "5MwEuHWH6tRPL6yfNadQ")
+  val teamon = "teamon.eu repo" at "http://repo.teamon.eu"
 }
 
 object ApplicationBuild extends Build {
@@ -68,7 +70,8 @@ object ApplicationBuild extends Build {
     braingamesUtil,
     braingamesBinary,
     scalaAsync,
-    cache)
+    cache,
+    airbrake)
 
   val dependencyResolvers = Seq(
     novusRel,
@@ -80,7 +83,8 @@ object ApplicationBuild extends Build {
     typesafeRel,
     scmRel,
     scmIntRel,
-    scmIntSnaps
+    scmIntSnaps,
+    teamon
   )
 
   val isoshaderDependencies = Seq()

@@ -25,9 +25,8 @@ class Binary
 
   constructor : (@user, dataSet, @TEXTURE_SIZE_P, @layer, @testData = false) ->
 
-    @dataSetName = dataSet.name
-    @isRGB       = @layer.isRGB
-    @bitDepth    = if @isRGB then 24 else 8
+    @dataSetName    = dataSet.name
+    @targetBitDepth = if @layer.name == "color" then @layer.bitDepth else 8
 
     for layer in dataSet.dataLayers
       if layer.typ == @layer.name
@@ -48,7 +47,7 @@ class Binary
 
     @planes = []
     for planeId in constants.ALL_PLANES
-      @planes.push( new Plane2D(planeId, @cube, @queue, @TEXTURE_SIZE_P, @layer.bitDepth, @bitDepth) )
+      @planes.push( new Plane2D(planeId, @cube, @queue, @TEXTURE_SIZE_P, @layer.bitDepth, @targetBitDepth) )
 
     if @layer.allowManipulation
       # assume zoom step count to be at least 1

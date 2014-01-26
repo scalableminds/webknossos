@@ -33,7 +33,10 @@ class Plane
     @createMeshes(planeWidth, textureWidth)
 
 
-  createDataTexture : (width, bytes, format) ->
+  createDataTexture : (width, bytes) ->
+
+    format = if bytes == 1 then THREE.LuminanceFormat else THREE.RGBFormat
+    
     return new THREE.DataTexture(
       new Uint8Array(bytes * width * width), width, width,
       format, THREE.UnsignedByteType,
@@ -48,12 +51,9 @@ class Plane
     planeGeo = new THREE.PlaneGeometry(pWidth, pWidth, 1, 1)
     volumePlaneGeo = new THREE.PlaneGeometry(pWidth, pWidth, 1, 1)
 
-    # create texture
-    bytes = @model.binary["color"].bitDepth >> 3
-    if @model.binary["color"].isRGB
-      texture = @createDataTexture(tWidth, bytes, THREE.RGBFormat)
-    else
-      texture = @createDataTexture(tWidth, bytes, THREE.LuminanceFormat)
+    # create textures
+    bytes = @model.binary["color"].targetBitDepth >> 3
+    texture = @createDataTexture(tWidth, bytes)
     texture.needsUpdate = true
     
     volumeTexture = @createDataTexture(tWidth, 1, THREE.LuminanceFormat)

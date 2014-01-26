@@ -53,15 +53,16 @@ class Model
             @scaleInfo = new ScaleInfo(tracing.content.dataSet.scale)
 
             # TODO: Define color bit depth
-            supportedDataLayers = [{name: "color", bitDepth: 24, allowManipulation : true, isRGB : true},
-                                    {name: "volume", bitDepth: 16, allowManipulation : false},
-                                    {name: "segmentation", bitDepth: 16, allowManipulation : false}]            
+            supportedDataLayers = [{name: "color", allowManipulation : true},
+                                    {name: "volume", allowManipulation : false},
+                                    {name: "segmentation", allowManipulation : false}]            
 
             zoomStepCount = Infinity
             @binary = {}
             for layer in tracing.content.dataSet.dataLayers
               for supportedLayer in supportedDataLayers
                 if layer.typ == supportedLayer.name
+                  supportedLayer.bitDepth = parseInt( layer.elementClass.substring(4) )
                   @binary[layer.typ] = new Binary(@user, tracing.content.dataSet, constants.TEXTURE_SIZE_P, supportedLayer)
                   zoomStepCount = Math.min(zoomStepCount, @binary[layer.typ].cube.ZOOM_STEP_COUNT - 1)
 

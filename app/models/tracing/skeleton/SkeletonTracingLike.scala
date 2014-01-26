@@ -15,7 +15,7 @@ import controllers.admin.NMLIO
 import org.apache.commons.io.IOUtils
 import play.api.libs.concurrent.Execution.Implicits._
 import scala.concurrent.Future
-import org.bson.types.ObjectId
+
 import models.annotation.AnnotationType._
 import scala.Some
 import oxalis.nml.NML
@@ -31,7 +31,7 @@ trait SkeletonTracingLike extends AnnotationContent {
 
   def dataSetName: String
 
-  def trees: List[TreeLike]
+  def trees: Future[List[TreeLike]]
 
   def activeNodeId: Option[Int]
 
@@ -43,11 +43,11 @@ trait SkeletonTracingLike extends AnnotationContent {
 
   def editPosition: Point3D
 
-  def insertBranchPoint[A](bp: BranchPoint): A
+  def insertBranchPoint[T](bp: BranchPoint): Future[T]
 
-  def insertComment[A](c: Comment): A
+  def insertComment[T](c: Comment): Future[T]
 
-  def insertTree[A](tree: TreeLike): A
+  def insertTree[T](tree: TreeLike): Future[T]
 
   def allowAllModes: Self
 
@@ -59,32 +59,38 @@ trait SkeletonTracingLike extends AnnotationContent {
     NMLService.toNML(this).map(IOUtils.toInputStream)
 
   override def contentData =
-    Some(SkeletonTracingLike.skeletonTracingLikeWrites.writes(this))
+    SkeletonTracingLike.skeletonTracingLikeWrites(this).map(json => Some(json))
 
-  private def applyUpdates(f: (Self => Self)*) = {
-    f.foldLeft(self) {
-      case (t, f) => f(t)
+  private def applyUpdates(f: (Self => Future[Self])*) = {
+    f.foldLeft(Future.successful(self)) {
+      case (futureT, f) => futureT.flatMap(t => f(t))
     }
   }
 
-  private def updateWithAll[E](l: List[E])(f: (Self, E) => Self)(t: Self): Self = {
-    l.foldLeft(t)(f)
+  private def updateWithAll[E](list: List[E])(f: (Self, E) => Future[Self])(start: Self): Future[Self] = {
+    list.foldLeft(Future.successful(start)) {
+      case (fs, e) => fs.flatMap(s => f(s, e))
+    }
   }
 
-  def mergeWith(source: AnnotationContent): Self = {
+  def mergeWith(source: AnnotationContent): Future[Self] = {
     source match {
       case source: SkeletonTracingLike =>
-        val (preparedTrees: List[TreeLike], nodeMapping: FunctionalNodeMapping) = prepareTreesForMerge(source.trees, trees)
-        applyUpdates(
-          updateWithAll(preparedTrees) {
-            case (tracing, tree) => tracing.insertTree(tree)
-          },
-          updateWithAll(source.branchPoints) {
-            case (tracing, branchPoint) => tracing.insertBranchPoint(branchPoint.copy(id = nodeMapping(branchPoint.id)))
-          },
-          updateWithAll(source.comments) {
-            case (tracing, comment) => tracing.insertComment(comment.copy(node = nodeMapping(comment.node)))
-          })
+        for {
+          sourceTrees <- source.trees
+          targetTrees <- trees
+          (preparedTrees: List[TreeLike], nodeMapping: FunctionalNodeMapping) = prepareTreesForMerge(sourceTrees, targetTrees)
+          result <- applyUpdates(
+            updateWithAll(preparedTrees){
+              case (tracing, tree) => tracing.insertTree(tree)
+            },
+            updateWithAll(source.branchPoints) {
+              case (tracing, branchPoint) => tracing.insertBranchPoint(branchPoint.copy(id = nodeMapping(branchPoint.id)))
+            },
+            updateWithAll(source.comments) {
+              case (tracing, comment) => tracing.insertComment(comment.copy(node = nodeMapping(comment.node)))
+            })
+        } yield result
     }
   }
 
@@ -123,7 +129,8 @@ object SkeletonTracingLike {
     def writes(e: SkeletonTracingLike) = {
       for {
         dataSetOpt <- DataSetDAO.findOneByName(e.dataSetName)
-        trees <- Xml.toXML(e.trees.filterNot(_.nodes.isEmpty))
+        trees <- e.trees
+        treesXml <- Xml.toXML(trees.filterNot(_.nodes.isEmpty))
         branchpoints <- Xml.toXML(e.branchPoints)
         comments <- Xml.toXML(e.comments)
       } yield {
@@ -134,14 +141,10 @@ object SkeletonTracingLike {
                 <experiment name={dataSet.name}/>
                 <scale x={dataSet.scale.x.toString} y={dataSet.scale.y.toString} z={dataSet.scale.z.toString}/>
                 <offset x="0" y="0" z="0"/>
-                <time ms={e.timestamp.toString}/>
-                {e.activeNodeId.map(id => s"<activeNode id=$id/>").getOrElse("")}
-                <editPosition x={e.editPosition.x.toString} y={e.editPosition.y.toString} z={e.editPosition.z.toString}/>
-              </parameters>
-              {trees}
-              <branchpoints>
-                {branchpoints}
-              </branchpoints>
+                <time ms={e.timestamp.toString}/>{e.activeNodeId.map(id => s"<activeNode id=$id/>").getOrElse("")}<editPosition x={e.editPosition.x.toString} y={e.editPosition.y.toString} z={e.editPosition.z.toString}/>
+              </parameters>{treesXml}<branchpoints>
+              {branchpoints}
+            </branchpoints>
               <comments>
                 {comments}
               </comments>
@@ -153,10 +156,15 @@ object SkeletonTracingLike {
     }
   }
 
-  implicit val skeletonTracingLikeWrites: OWrites[SkeletonTracingLike] =
-    ((__ \ 'trees).write[List[TreeLike]] and
-      (__ \ 'activeNode).writeNullable[Int] and
-      (__ \ 'branchPoints).write[List[BranchPoint]] and
-      (__ \ 'comments).write[List[Comment]])(t =>
-      (t.trees, t.activeNodeId, t.branchPoints, t.comments))
+  def skeletonTracingLikeWrites(t: SkeletonTracingLike) =
+    for {
+      trees <- t.trees
+    } yield {
+      Json.obj(
+        "trees" -> trees,
+        "activeNode" -> t.activeNodeId,
+        "branchPoints" -> t.branchPoints,
+        "comments" -> t.comments
+      )
+    }
 }

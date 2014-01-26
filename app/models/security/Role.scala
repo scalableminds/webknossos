@@ -1,46 +1,44 @@
 package models.security
 
-import com.mongodb.casbah.Imports._
-import models.context._
-import com.novus.salat.annotations._
-import com.novus.salat.dao.SalatDAO
-import models.basics.BasicDAO
+import models.basics.{TemporaryStore}
 import braingames.image.Color
 import play.api.Logger
 import play.api.Play
+import play.api.libs.json.Json
+import reactivemongo.bson.BSONObjectID
+import play.api.libs.concurrent.Execution.Implicits._
 
-case class Role( name: String, permissions: List[Permission], color: Color, _id: ObjectId = new ObjectId ) extends Implyable {
-  def implies( permission: Permission ) =
-    permissions.find( _.implies( permission ) ).isDefined
+case class Role(name: String, permissions: List[Permission], color: Color) extends Implyable {
+
+  def implies(permission: Permission) =
+    permissions.find(_.implies(permission)).isDefined
 }
 
-object Role extends BasicDAO[Role]( "roles" ) {
+object Role {
 
-  lazy val EmptyRole = Role( "EMPTY", Nil, Color(0,0,0,0) )
-  lazy val User = findOneByName( "user" )
-  lazy val Admin = findOneByName( "admin" )
+  implicit val roleFormat = Json.format[Role]
 
-  def apply( roleName: String ): Option[Role] = {
-    val r = findOneByName( roleName )
-    if ( r.isEmpty ) {
-      Logger.error( s"Requested Role doesn't exist in DB: $roleName" )
-      Some(EmptyRole)
-    } else {
-      r
-    }
-  }
-  
-  def ensureImportantRoles() {
-    if(User.isEmpty || Admin.isEmpty){
-      Logger.error("Application is going to get shutdown, because not all required roles are present.")
-      Play.stop()
-    }
-  }
-  
+  lazy val EmptyRole = Role("EMPTY", Nil, Color(0, 0, 0, 0))
+}
+
+object RoleService {
   def colorOf(role: String) = {
-    apply(role).map( _.color.toHtml) getOrElse "#000000"
+    RoleDAO.find(role).map(_.color.toHtml) getOrElse "#000000"
   }
 
-  def findOneByName( roleName: String ) =
-    findOne( MongoDBObject( "name" -> roleName ) )
+  def ensureImportantRoles() {
+    RoleDAO.insert("user", Role("user", Nil, Color(0.2274F, 0.5294F, 0.6784F, 1)))
+    RoleDAO.insert("admin", Role("admin", Permission("admin.*", "*" :: Nil) :: Nil, Color(0.2F, 0.2F, 0.2F, 1)))
+    RoleDAO.insert("reviewer", Role("reviewer",
+      Permission("admin.review.*", "*" :: Nil) ::
+        Permission("admin.menu", "*" :: Nil) :: Nil,
+      Color(0.2745F, 0.5333F, 0.2784F, 1)))
+  }
+}
+
+object RoleDAO extends TemporaryStore[Role] {
+
+  def User = find("user")
+
+  def Admin = find("admin")
 }

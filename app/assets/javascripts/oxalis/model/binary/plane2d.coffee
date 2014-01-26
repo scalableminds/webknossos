@@ -6,10 +6,10 @@
 ###
 
 # Macros
+# should work as normal functions, as well
+tileIndexByTileMacro = (_this, tile) ->
 
-tileIndexByTileMacro = (tile) ->
-
-  tile[0] * (1 << @TEXTURE_SIZE_P - @cube.BUCKET_SIZE_P) + tile[1]
+  tile[0] * (1 << _this.TEXTURE_SIZE_P - _this.cube.BUCKET_SIZE_P) + tile[1]
 
 
 subTileMacro = (tile, index) ->
@@ -17,9 +17,9 @@ subTileMacro = (tile, index) ->
   [(tile[0] << 1) + (index % 2), (tile[1] << 1) + (index >> 1)]
 
 
-bufferOffsetByTileMacro = (tile, tileSize) ->
+bufferOffsetByTileMacro = (_this, tile, tileSize) ->
 
-  tile[0] * (1 << tileSize) + tile[1] * (1 << tileSize) * (1 << @TEXTURE_SIZE_P)
+  tile[0] * (1 << tileSize) + tile[1] * (1 << tileSize) * (1 << _this.TEXTURE_SIZE_P)
 
 
 class Plane2D
@@ -69,7 +69,7 @@ class Plane2D
         # If the tile is part of the texture, mark it as changed
         if u in [0...@BUCKETS_PER_ROW] and v in [0...@BUCKETS_PER_ROW]
           tile = [u, v]
-          @dataTexture.tiles[tileIndexByTileMacro(tile)] = false
+          @dataTexture.tiles[tileIndexByTileMacro(@, tile)] = false
           @dataTexture.ready &= not (u in [@dataTexture.area[0]..@dataTexture.area[2]] and v in [@dataTexture.area[1]..@dataTexture.area[3]])
 
     @cube.on "volumeLabled", =>
@@ -171,8 +171,8 @@ class Plane2D
           oldTile = [oldOffset[0] + du, oldOffset[1] + dv]
           newTile = [newOffset[0] + du, newOffset[1] + dv]
 
-          oldTileIndex = tileIndexByTileMacro(oldTile)
-          newTileIndex = tileIndexByTileMacro(newTile)
+          oldTileIndex = tileIndexByTileMacro(@, oldTile)
+          newTileIndex = tileIndexByTileMacro(@, newTile)
 
           #if oldTiles[oldTileIndex]
           #  @copyTile(newTile, oldTile, texture.buffer, oldBuffer)
@@ -189,7 +189,7 @@ class Plane2D
         for v in [area[3]..area[1]] by -1
           
           tile = [u, v]
-          tileIndex = tileIndexByTileMacro(tile)
+          tileIndex = tileIndexByTileMacro(@, tile)
 
           # Render tile if necessary and mark it as rendered
           unless texture.tiles[tileIndex]
@@ -206,8 +206,8 @@ class Plane2D
 
    copyTile : (destTile, sourceTile, destBuffer, sourceBuffer) ->
 
-    destOffset = bufferOffsetByTileMacro(destTile, @cube.BUCKET_SIZE_P)
-    sourceOffset = bufferOffsetByTileMacro(sourceTile, @cube.BUCKET_SIZE_P)
+    destOffset = bufferOffsetByTileMacro(@, destTile, @cube.BUCKET_SIZE_P)
+    sourceOffset = bufferOffsetByTileMacro(@, sourceTile, @cube.BUCKET_SIZE_P)
 
     @renderToBuffer(
       {
@@ -255,7 +255,7 @@ class Plane2D
       tileSizeP = @cube.BUCKET_SIZE_P - (@dataTexture.zoomStep - tileZoomStep)
       skipP = Math.max(@dataTexture.zoomStep - bucketZoomStep, 0)
       repeatP = Math.max(bucketZoomStep - @dataTexture.zoomStep, 0)
-      destOffset = bufferOffsetByTileMacro(tile, tileSizeP)
+      destOffset = bufferOffsetByTileMacro(@, tile, tileSizeP)
 
       offsetMask = (1 << bucketZoomStep - tileZoomStep) - 1;
       scaleFactorP = @cube.BUCKET_SIZE_P - (bucketZoomStep - tileZoomStep)
@@ -357,7 +357,7 @@ class Plane2D
     bucket[@U] += tile[0]
     bucket[@V] += tile[1]
 
-    destOffset = bufferOffsetByTileMacro(tile, @cube.BUCKET_SIZE_P)
+    destOffset = bufferOffsetByTileMacro(@, tile, @cube.BUCKET_SIZE_P)
     sourceOffset = ((@volumeTexture.layer >> @volumeTexture.zoomStep) & (1 << @cube.BUCKET_SIZE_P) - 1)  << @DELTA[@W]
 
     bucketData = @cube.getVolumeBucketByZoomedAddress(bucket)

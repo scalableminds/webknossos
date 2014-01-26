@@ -10,9 +10,13 @@ import models.binary.DataSetDAO
 import scala.concurrent.Future
 import play.api.libs.concurrent.Execution.Implicits._
 import braingames.reactivemongo.DBAccessContext
+import braingames.util.Fox
+import play.api.Logger
 
 trait AnnotationContent {
   type Self <: AnnotationContent
+
+  def service: AnnotationContentService
 
   def id: String
 
@@ -22,15 +26,13 @@ trait AnnotationContent {
 
   def dataSetName: String
 
-  def updateFromJson(jsUpdates: Seq[JsValue]): Option[Self]
+  def updateFromJson(jsUpdates: Seq[JsValue])(implicit ctx: DBAccessContext): Fox[Self]
 
   def settings: AnnotationSettings
 
-  def copyDeepAndInsert: Self
+  def copyDeepAndInsert: Future[Self]
 
-  def mergeWith(source: AnnotationContent): Self
-
-  def clearTracingData(): Self
+  def mergeWith(source: AnnotationContent): Future[Self]
 
   def contentType: String
 
@@ -38,7 +40,7 @@ trait AnnotationContent {
 
   def downloadFileExtension: String
 
-  def contentData: Option[JsObject] = None
+  def contentData: Future[Option[JsObject]] = Future.successful(None)
 
   lazy val date = new Date(timestamp)
 
@@ -52,8 +54,9 @@ object AnnotationContent {
   implicit val dataLayerWrites: Writes[DataLayer] =
     ((__ \ 'typ).write[String] and
       (__ \ 'maxCoordinates).write[BoundingBox] and
-      (__ \ 'resolutions).write[List[Int]])(l =>
-      (l.typ, l.maxCoordinates, l.resolutions))
+      (__ \ 'resolutions).write[List[Int]] and
+      (__ \ 'elementClass).write[String])(l =>
+      (l.typ, l.maxCoordinates, l.resolutions, l.elementClass))
 
   implicit val dataSetWrites: Writes[DataSet] =
     ((__ \ 'name).write[String] and
@@ -61,16 +64,18 @@ object AnnotationContent {
       (__ \ 'dataLayers).write[List[DataLayer]])(d =>
       (d.name, d.scale, d.dataLayers))
 
-  def writeAnnotationContent(ac: AnnotationContent)(implicit ctx: DBAccessContext) = {
-    ac.dataSet.map {
-      dataSet =>
-        ((__ \ 'settings).write[AnnotationSettings] and
-          (__ \ 'dataSet).write[Option[DataSet]] and
-          (__ \ 'contentData).write[Option[JsObject]] and
-          (__ \ 'editPosition).write[Point3D] and
-          (__ \ 'contentType).write[String])
-          .tupled
-          .writes((ac.settings, dataSet, ac.contentData, ac.editPosition, ac.contentType))
+  def writeAsJson(ac: AnnotationContent)(implicit ctx: DBAccessContext) = {
+    for {
+      dataSet <- ac.dataSet
+      contentData <- ac.contentData
+    } yield {
+      ((__ \ 'settings).write[AnnotationSettings] and
+        (__ \ 'dataSet).write[Option[DataSet]] and
+        (__ \ 'contentData).write[Option[JsObject]] and
+        (__ \ 'editPosition).write[Point3D] and
+        (__ \ 'contentType).write[String])
+      .tupled
+      .writes((ac.settings, dataSet, contentData, ac.editPosition, ac.contentType))
     }
   }
 }

@@ -9,14 +9,14 @@
   val max = 12
   while(c == Some("views.html.main$") && i <= max){
     i += 1
-    c = Reflect.getCallerClass.map( _(i).getName() ) 
+    c = Reflect.getCallerClass.map( _(i).getName() )
     play.api.Logger.error(s"REFL $i: $c")
   }
   c
 }
 
 @pageSkeleton{
-    @mainHeader(showNavButtons)    
+    @mainHeader(showNavButtons)
     <div id="alert-container">
       @session.flash.data.map{ f =>
         @if(f._1 == "modal"){
@@ -37,6 +37,7 @@
       }
     </div>
     <div id="main-container" data-template="@callingTemplate">
+      <div id="loader"><div id="loader-icon"><i class="icon-spinner icon-spin icon-4x"></i><br>Loading</div></div>
       @body
     </div>
 }

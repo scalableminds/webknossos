@@ -10,8 +10,13 @@ import models.annotation.AnnotationLike
 import oxalis.annotation.handler.AnnotationInformationHandler
 import braingames.reactivemongo.DBAccessContext
 import braingames.util.Fox
+import play.api.libs.json.Json
 
 case class AnnotationIdentifier(annotationType: String, identifier: String)
+
+object AnnotationIdentifier{
+  implicit val annotationIdentifierFormat = Json.format[AnnotationIdentifier]
+}
 
 case class RequestAnnotation(id: AnnotationIdentifier, implicit val ctx: DBAccessContext)
 
@@ -72,7 +77,7 @@ class AnnotationStore extends Actor {
       }
       f
     } catch {
-      case e =>
+      case e: Exception =>
         Logger.error("Request Annotaton in AnnotationStore failed: " + e)
         throw e
     }

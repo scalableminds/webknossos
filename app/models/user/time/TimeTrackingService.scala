@@ -3,10 +3,11 @@ package models.user.time
 import models.user.User
 import oxalis.thirdparty.BrainTracing
 import models.annotation.AnnotationLike
-import models.task.Task
+import models.task.{TaskService, Task}
 import braingames.reactivemongo.DBAccessContext
 import play.api.libs.concurrent.Execution.Implicits._
 import scala.concurrent.duration.Duration
+import braingames.util.Fox
 
 /**
  * Company: scalableminds
@@ -38,11 +39,11 @@ object TimeTrackingService {
     TimeTrackingDAO.logTime(user, annotation).map {
       time =>
         BrainTracing.logTime(user, time, annotation)
-        logTimeToTask(time, annotation.flatMap(_.task))
+        logTimeToTask(time, annotation.toFox.flatMap(_.task))
     }
   }
 
-  private def logTimeToTask(time: Long, taskOpt: Option[Task]) = {
-    taskOpt.map(task => Task.logTime(time, task))
+  private def logTimeToTask(time: Long, taskOpt: Fox[Task])(implicit ctx: DBAccessContext) = {
+    taskOpt.map(task => TaskService.logTime(time, task))
   }
 }

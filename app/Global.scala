@@ -1,41 +1,26 @@
 import akka.actor.Props
 import braingames.reactivemongo.GlobalDBAccess
-import models.annotation.AnnotationDAO
-import models.security.Permission
-import models.task.TimeSpan
 import models.team._
 import models.team.TeamTree
 import models.user.time.TimeEntry
 import oxalis.thirdparty.BrainTracing
 import play.api._
+import play.api.mvc.RequestHeader
 import play.api.Play.current
 import play.api.libs.concurrent._
 import play.api.Play.current
 import models.security._
-import models.task._
 import models.user._
-import braingames.image.Color
 import models.task._
-import models.binary._
-import models.security.Role
-import models.tracing._
-import models.basics.{BasicEvolution}
-import oxalis.mail.DefaultMails
-import braingames.geometry._
 import oxalis.annotation.{AnnotationStore}
 import braingames.mail.Mailer
-import scala.collection.parallel.Tasks
-import akka.pattern.ask
-import akka.util.Timeout
-import akka.actor.ActorSystem
-import com.typesafe.config.ConfigFactory
 import scala.collection.JavaConversions._
 import scala.concurrent.duration._
 import play.api.libs.concurrent.Execution.Implicits._
 import scala.Some
-import scala.util._
 import oxalis.binary.BinaryDataService
 import com.typesafe.config.Config
+import play.airbrake.Airbrake
 
 object Global extends GlobalSettings {
 
@@ -45,7 +30,7 @@ object Global extends GlobalSettings {
     startActors(conf.underlying)
 
     if (conf.getBoolean("application.insertInitialData") getOrElse false) {
-      InitialData.insertRoles()
+
       InitialData.insertUsers()
       InitialData.insertTaskAlgorithms()
       InitialData.insertTeams()
@@ -53,7 +38,6 @@ object Global extends GlobalSettings {
 
     BinaryDataService.start(onComplete = {
       if (Play.current.mode == Mode.Dev) {
-        BasicEvolution.runDBEvolution()
         // Data insertion needs to be delayed, because the dataSets need to be
         // found by the DirectoryWatcher first
         InitialData.insertTasks()
@@ -61,12 +45,11 @@ object Global extends GlobalSettings {
       Logger.info("Directory start completed")
     })
 
-    Role.ensureImportantRoles()
+    RoleService.ensureImportantRoles()
   }
 
   override def onStop(app: Application) {
     BinaryDataService.stop()
-    models.context.db.close()
   }
 
   def startActors(conf: Config) {
@@ -74,6 +57,11 @@ object Global extends GlobalSettings {
       Props(new AnnotationStore()),
       name = "annotationStore")
     Akka.system.actorOf(Props(new Mailer(conf)), name = "mailActor")
+  }
+
+  override def onError(request: RequestHeader, ex: Throwable) = {
+    Airbrake.notify(request, ex)
+    super.onError(request, ex)
   }
 }
 
@@ -83,41 +71,32 @@ object Global extends GlobalSettings {
  */
 object InitialData extends GlobalDBAccess {
 
-  def insertRoles() = {
-    if (Role.findAll.isEmpty) {
-      Role.insertOne(Role("user", Nil, Color(0.2274F, 0.5294F, 0.6784F, 1)))
-      Role.insertOne(Role("admin", Permission("admin.*", "*" :: Nil) :: Nil, Color(0.2F, 0.2F, 0.2F, 1)))
-      Role.insertOne(Role("reviewer",
-        Permission("admin.review.*", "*" :: Nil) ::
-          Permission("admin.menu", "*" :: Nil) :: Nil,
-        Color(0.2745F, 0.5333F, 0.2784F, 1)))
-    }
-  }
-
   def insertUsers() = {
-    if (User.findOneByEmail("scmboy@scalableminds.com").isEmpty) {
-      println("inserted")
-      User.insertOne(User(
-        "scmboy@scalableminds.com",
-        "SCM",
-        "Boy",
-        true,
-        braingames.security.SCrypt.hashPassword("secret"),
-        List(TeamMembership(
-          TeamPath("Structure of Neocortical Circuits Group" :: Nil),
-          TeamMembership.Admin)),
-        "local",
-        UserConfiguration.defaultConfiguration,
-        Set("user", "admin")))
+    UserDAO.findOneByEmail("scmboy@scalableminds.com").map {
+      case None =>
+        println("inserted")
+        UserDAO.insert(User(
+          "scmboy@scalableminds.com",
+          "SCM",
+          "Boy",
+          true,
+          braingames.security.SCrypt.hashPassword("secret"),
+          List(TeamMembership(
+            TeamPath("Structure of Neocortical Circuits Group" :: Nil),
+            TeamMembership.Admin)),
+          UserSettings.defaultSettings,
+          Set("user", "admin")))
+      case _ =>
     }
   }
 
   def insertTaskAlgorithms() = {
-    if (TaskSelectionAlgorithm.findAll.isEmpty) {
-      TaskSelectionAlgorithm.insertOne(TaskSelectionAlgorithm(
-        """function simple(user, tasks){ 
-          |  return tasks[0];
-          |}""".stripMargin))
+    TaskSelectionAlgorithmDAO.findAll.map{ alogrithms =>
+      if(alogrithms.isEmpty)
+        TaskSelectionAlgorithmDAO.insert(TaskSelectionAlgorithm(
+          """function simple(user, tasks){
+            |  return tasks[0];
+            |}""".stripMargin))
     }
   }
 
@@ -130,12 +109,14 @@ object InitialData extends GlobalDBAccess {
   }
 
   def insertTasks() = {
-    if (TaskType.findAll.isEmpty) {
-      val tt = TaskType(
-        "ek_0563_BipolarCells",
-        "Check those cells out!",
-        TimeSpan(5, 10, 15))
-      TaskType.insertOne(tt)
+    TaskTypeDAO.findAll.map { types =>
+      if (types.isEmpty) {
+        val taskType = TaskType(
+          "ek_0563_BipolarCells",
+          "Check those cells out!",
+          TimeSpan(5, 10, 15))
+        TaskTypeDAO.insert(taskType)
+      }
     }
   }
 }

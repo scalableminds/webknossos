@@ -1,4 +1,5 @@
 @(tasks: List[models.task.Task], annotations: List[models.annotation.Annotation], experiences: Seq[String], tracingForm: Form[(String, String, models.task.Training)])(implicit session: oxalis.view.AuthedSessionData)
+@import braingames.reactivemongo.GlobalAccessContext
 
 @import play.api.libs.json.Json
 
@@ -16,20 +17,16 @@
     <div class="row">
       <p class="span8">The tracing is used as a reference for the training. After a user has submitted his training result, it is getting compared with the reference.</p>
     </div>
-    <div class="well">
+    <div class="well" id="form-well" data-url="@controllers.admin.routes.TrainingsTaskAdministration.getData">
     
       @helper.form(controllers.admin.routes.TrainingsTaskAdministration.createFromForm, 'class -> "form-horizontal", 'enctype -> "multipart/form-data") {
         
-        @helper.select(tracingForm("task"), tasks.map { task =>
-          task.id -> (s"${task.taskType.map(_.summary).getOrElse("")} ${task.id}")
-        }, Symbol("help-inline") -> taskHelpLink)
+        @helper.select(tracingForm("task"), Nil, Symbol("help-inline") -> taskHelpLink)
 
-        @helper.select(tracingForm("tracing"), annotations.map { a =>
-          a.id -> ( a.typ + " " + a.dataSetName + " " + a.content.map(t => formatDate(t.date)) )
-        })
+        @helper.select(tracingForm("tracing"), Nil)
 
         @helper.input(tracingForm("training.domain")) { (id, name, value, args) =>
-            <input type="text" name="@name" id="@id" data-source='@Json.stringify(Json.toJson(experiences))' data-provide="typeahead" autocomplete="off" @toHtmlArgs(args)>
+            <input type="text" name="@name" id="training_domain" data-source='' data-provide="typeahead" autocomplete="off" @toHtmlArgs(args)>
         }
 
         @helper.inputText(tracingForm("training.gain"), 'type -> "number")

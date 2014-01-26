@@ -5,6 +5,7 @@ import reactivemongo.bson.BSONObjectID
 import play.modules.reactivemongo.json.BSONFormats._
 
 case class Team(name: String, subTeams: List[Team], owner: Option[BSONObjectID] = None){
+
   def allTeamPaths: List[TeamPath] = {
     val subs = subTeams.flatMap(_.allTeamPaths)
     subs.map(path => name +: path)
@@ -20,6 +21,7 @@ case class Team(name: String, subTeams: List[Team], owner: Option[BSONObjectID] 
   }
 }
 
-object Team extends Function3[String, List[Team], Option[BSONObjectID], Team]{
+object Team extends {
+
   implicit val teamFormat = Json.format[Team]
 }

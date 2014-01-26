@@ -62,7 +62,7 @@ trait TaskAssignment {
     if (tasks.isEmpty) {
       None
     } else {
-      val params = Map("user" -> user, "tasks" -> tasks)
+      val params = Map("user" -> user, "tasks" -> tasks.toArray)
       val current = await(TaskSelectionAlgorithmDAO.current(GlobalAccessContext))
       val assignment = (jsExecutionActor ? JS(current.js, params))
                        .mapTo[Future[Try[Task]]].flatMap(_.map {

@@ -56,7 +56,7 @@ object TaskService extends TaskAssignmentSimulation with TaskAssignment with Fox
 
     def copy(annotations: List[Annotation]) = Future.traverse(annotations) { annotation =>
       if (includeUserTracings || AnnotationType.isSystemTracing(annotation))
-        AnnotationService.copyDeepAndInsert(annotation.copy(_task = Some(task._id)))
+        annotation.copy(_task = Some(task._id)).muta.copyDeepAndInsert()
       else
         Future.successful(None)
     }

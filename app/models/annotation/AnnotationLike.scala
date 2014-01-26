@@ -11,6 +11,8 @@ import braingames.reactivemongo.DBAccessContext
 import braingames.util.{FoxImplicits, Fox}
 import reactivemongo.bson.BSONObjectID
 import play.api.Logger
+import models.tracing.skeleton.AnnotationStatistics
+import oxalis.view.{ResourceActionCollection, ResourceAction}
 
 /**
  * Company: scalableminds
@@ -18,10 +20,12 @@ import play.api.Logger
  * Date: 01.06.13
  * Time: 15:06
  */
-trait AnnotationLike {
+trait AnnotationLike extends AnnotationStatistics{
   def _name: Option[String]
 
   def user: Future[Option[User]]
+
+  def muta: AnnotationMutationsLike
 
   def content: Fox[AnnotationContent]
 
@@ -43,12 +47,16 @@ trait AnnotationLike {
 
  // def incrementVersion: AnnotationLike
 
-  def isTrainingsAnnotation() = {
-    this.task.map(_.isTraining) getOrElse false
-  }
+  def dataSetName = content.map(_.dataSetName) getOrElse ""
+
+
+  def isTrainingsAnnotation =
+    typ == AnnotationType.Training
 
   def annotationInfo(user: Option[User])(implicit ctx: DBAccessContext): Fox[JsObject] =
     AnnotationLike.annotationLikeInfoWrites(this, user)
+
+  def actions(user: Option[User]): ResourceActionCollection
 }
 
 object AnnotationLike extends FoxImplicits {

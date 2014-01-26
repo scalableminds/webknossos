@@ -14,7 +14,7 @@ case class AnnotationReview(
     comment: Option[String] = None,
     _id: BSONObjectID = BSONObjectID.generate) {
 
-  def reviewer = UserService.findOneById(_reviewer.toString, useCache = true)(GlobalAccessContext)
+  def reviewer = UserService.findOneById(_reviewer.stringify, useCache = true)(GlobalAccessContext)
   
   val date = new Date(timestamp)
 }

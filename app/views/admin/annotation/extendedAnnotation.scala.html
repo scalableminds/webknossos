@@ -1,10 +1,11 @@
 @(task: models.task.Task,
-  annotation: models.annotation.Annotation,
+  annotation: models.annotation.AnnotationLike,
   taskType: net.liftweb.common.Box[models.task.TaskType],
   project: net.liftweb.common.Box[models.task.Project],
   dataSetName: String,
   statsOpt: Option[models.tracing.skeleton.SkeletonTracingStatistic],
-  content: net.liftweb.common.Box[models.annotation.AnnotationContent]
+  content: net.liftweb.common.Box[models.annotation.AnnotationContent],
+  user: models.user.User
   )
 
 @import models.annotation.AnnotationDAO
@@ -69,6 +70,6 @@
     }
   </td>
   <td>   
-    @annotationLinks(annotation)
+    @annotationLinks(annotation.actions(Some(user)))
   </td>
 </tr>

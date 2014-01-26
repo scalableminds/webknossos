@@ -24,6 +24,7 @@ import reactivemongo.bson.BSONObjectID
 import braingames.reactivemongo.{DBAccessContext, GlobalAccessContext}
 import play.modules.reactivemongo.json.BSONFormats._
 import reactivemongo.api.indexes.{IndexType, Index}
+import oxalis.view.{ResourceAction, ResourceActionCollection}
 
 case class Annotation(
                        _user: BSONObjectID,
@@ -41,6 +42,8 @@ case class Annotation(
 
   lazy val id = _id.stringify
 
+  lazy val muta = new AnnotationMutations(this)
+
   /**
    * Easy access methods
    */
@@ -49,11 +52,9 @@ case class Annotation(
 
   def task = _task.toFox.flatMap(id => TaskDAO.findOneById(id)(GlobalAccessContext))
 
-  def user = UserService.findOneById(_user.toString, useCache = true)(GlobalAccessContext)
+  def user = UserService.findOneById(_user.stringify, useCache = true)(GlobalAccessContext)
 
   def content = _content.resolveAs[AnnotationContent](GlobalAccessContext).toFox
-
-  def dataSetName = content.map(_.dataSetName) getOrElse ""
 
   val contentType = _content.contentType
 
@@ -62,10 +63,10 @@ case class Annotation(
   def isReadyToBeFinished(implicit ctx: DBAccessContext) = {
     // TODO: RF - rework
     task
-    .flatMap(_.annotationBase.toFox.flatMap(SkeletonTracingService.statisticsForAnnotation).map(_.numberOfNodes))
+    .flatMap(_.annotationBase.toFox.flatMap(_.statisticsForAnnotation()).map(_.numberOfNodes))
     .getOrElse(1L)
     .flatMap { nodesInBase =>
-      SkeletonTracingService.statisticsForAnnotation(this).map(_.numberOfNodes > nodesInBase) getOrElse true
+      this.statisticsForAnnotation().map(_.numberOfNodes > nodesInBase) getOrElse true
     }
   }
 
@@ -82,6 +83,31 @@ case class Annotation(
   def removeTask = {
     this.copy(_task = None, typ = AnnotationType.Orphan)
   }
+
+  def actions(userOpt: Option[User]) = {
+    import controllers.admin.routes._
+    import controllers.routes._
+    val basicActions = List(
+      ResourceAction("trace", AnnotationController.trace(typ,id), icon = Some("icon-random")),
+      ResourceAction(ResourceAction.Finish, AnnotationController.finish(typ, id), condition = !state.isFinished, icon = Some("icon-ok-circle"), dataAjax = Some("replace-row,confirm"), clazz = "trace-finish"),
+      ResourceAction("start review", TrainingsTracingAdministration.startReview(id), condition = state.isReadyForReview, icon = Some("icon-eye-open"), dataAjax = Some("replace-row")),
+      ResourceAction("reopen", AnnotationController.reopen(typ, id), condition = state.isFinished, icon = Some("icon-share-alt"), dataAjax =Some("replace-row")),
+      ResourceAction(ResourceAction.Download, AnnotationController.download(typ, id), icon = Some("icon-download")),
+      ResourceAction("reset", AnnotationController.reset(typ, id), icon = Some("icon-undo"), dataAjax = Some("replace-row,confirm")),
+      ResourceAction("delete", AnnotationController.cancel(typ, id), icon = Some("icon-trash"), dataAjax = Some("delete-row,confirm"))
+    )
+
+    val reviewActions = (review.headOption, userOpt) match{
+      case (Some(r), Some(user)) if user._id == r._reviewer => List(
+        ResourceAction("review", AnnotationController.trace(AnnotationType.Review, r._id.stringify), condition = state.isInReview, icon = Some("icon-random")),
+        ResourceAction("finish review", TrainingsTracingAdministration.finishReview(id), condition = state.isInReview, icon = Some("icon-ok-sign")),
+        ResourceAction("abort review", TrainingsTracingAdministration.abortReview(id), condition = state.isInReview, icon = Some("icon-remove-sign"), dataAjax = Some("replace-row,confirm")))
+      case _ =>
+        Nil
+    }
+
+    ResourceActionCollection(reviewActions ::: basicActions)
+  }
 }
 
 object Annotation {
@@ -93,11 +119,12 @@ object Annotation {
       task <- annotation.task.futureBox
       user <- annotation.user
       content <- annotation.content.futureBox
-      stats <- models.annotation.AnnotationDAO.statisticsForAnnotation(annotation).futureBox
+      contentType = content.map(_.contentType).getOrElse("")
+      stats <- annotation.statisticsForAnnotation().futureBox
     } yield {
       Json.obj(
         "created" -> content.map(annotationContent => DateTimeFormat.forPattern("yyyy-MM-dd HH:mm").print(annotationContent.timestamp)).toOption,
-        "contentType" -> content.map(_.contentType).getOrElse("").toString,
+        "contentType" -> contentType,
         "dataSetName" -> dataSetName,
         "state" -> annotation.state,
         "typ" -> annotation.typ,
@@ -115,7 +142,6 @@ object Annotation {
 
 object AnnotationDAO
   extends SecuredBaseDAO[Annotation]
-  with AnnotationStatistics
   with FoxImplicits {
 
   val collectionName = "annotations"

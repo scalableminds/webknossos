@@ -75,10 +75,9 @@ object AnnotationRestrictions {
       }
 
       override def allowDownload(user: Option[User]) = async {
-        val isTraining = await(annotation.isTrainingsAnnotation())
         user.map {
           user =>
-            !isTraining && allowAccess(user)
+            !annotation.isTrainingsAnnotation && allowAccess(user)
         } getOrElse false
       }
     }

@@ -92,12 +92,13 @@ object Task extends FoxImplicits {
       editPosition <- task.annotationBase.flatMap(_.content.map(_.editPosition)) getOrElse Point3D(1, 1, 1)
       status <- task.status
       taskType <- task.taskType.futureBox
+      projectName = task._project.getOrElse("")
     } yield {
       Json.obj(
         "id" -> task.id,
         "formattedHash" -> Formatter.formatHash(task.id),
         "seedIdHeidelberg" -> task.seedIdHeidelberg,
-        "projectName" -> task._project.getOrElse("").toString,
+        "projectName" -> projectName,
         "type" -> taskType.toOption,
         "dataSet" -> dataSetName,
         "editPosition" -> editPosition,

@@ -160,7 +160,7 @@ class PolyhedronRasterizer
   draw : (x, y, z) ->
     
     { buffer, shift_z } = @
-    drawMacro(x, y, z, buffer, shift_z)
+    drawFunction(x, y, z, buffer, shift_z)
 
     return
 
@@ -197,7 +197,7 @@ class PolyhedronRasterizer
     y_inc = if (dy = y1 - y) < 0 then -1 else 1
     z_inc = if (dz = z1 - z) < 0 then -1 else 1
     
-    drawMacro(x, y, z, buffer, shift_z)
+    drawFunction(x, y, z, buffer, shift_z)
     
     dx = if dx < 0 then -dx else dx
     dy = if dy < 0 then -dy else dy
@@ -270,11 +270,11 @@ class PolyhedronRasterizer
       
       switch mode
         when 0 
-          drawMacro(x, y, z, buffer, shift_z)
+          drawFunction(x, y, z, buffer, shift_z)
         when 1 
-          drawMacro(y, x, z, buffer, shift_z)
+          drawFunction(y, x, z, buffer, shift_z)
         else
-          drawMacro(z, y, x, buffer, shift_z)
+          drawFunction(z, y, x, buffer, shift_z)
 
     return
 
@@ -292,7 +292,7 @@ class PolyhedronRasterizer
     dx2 = dx << 1
     dy2 = dy << 1
 
-    drawMacro(x, y, z, buffer, shift_z)
+    drawFunction(x, y, z, buffer, shift_z)
 
     if dx >= dy
 
@@ -331,9 +331,9 @@ class PolyhedronRasterizer
       x   += x_inc
       
       if mode
-        drawMacro(y, x, z, buffer, shift_z)
+        drawFunction(y, x, z, buffer, shift_z)
       else
-        drawMacro(x, y, z, buffer, shift_z)
+        drawFunction(x, y, z, buffer, shift_z)
 
     return
 

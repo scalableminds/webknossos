@@ -20,7 +20,8 @@ import play.api.libs.json.{Json, JsObject, JsArray}
 object ProjectAdministration extends AdminController {
 
   val projectForm = Form(tuple(
-    "projectName" -> nonEmptyText(1, 100),
+    "projectName" -> nonEmptyText(1, 100)
+      .verifying("project.nameInvalid", name => name.matches("^[a-zA-Z0-9_-]*$")),
     "owner" -> nonEmptyText(1, 100)))
 
   def sortedUsers(implicit ctx: DBAccessContext) = UserService.findAll.map(_.sortBy(_.name))

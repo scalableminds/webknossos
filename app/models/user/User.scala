@@ -138,7 +138,7 @@ object UserDAO extends SecuredBaseDAO[User] {
   }
 
   def updateSettings(user: User, settings: UserSettings)(implicit ctx: DBAccessContext) = {
-    collectionUpdate(findByIdQ(user._id), Json.obj("$set" -> Json.obj("settings" -> settings)))
+    collectionUpdate(findByIdQ(user._id), Json.obj("$set" -> Json.obj("configuration.settings" -> settings.settings)))
   }
 
   def setExperience(_user: BSONObjectID, domain: String, value: Int)(implicit ctx: DBAccessContext) = {

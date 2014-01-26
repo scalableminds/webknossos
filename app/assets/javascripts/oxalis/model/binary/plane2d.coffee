@@ -28,7 +28,6 @@ class Plane2D
   TEXTURE_SIZE_P : 0
   BUCKETS_PER_ROW : 0
   MAP_SIZE : 0
-  TEXTURE_BIT_DEPTH : 8
   RECURSION_PLACEHOLDER : {}
   DELTA : [0, 5, 10]
   U : 0
@@ -42,7 +41,7 @@ class Plane2D
   dataTexture : null
 
 
-  constructor : (index, @cube, @queue, @TEXTURE_SIZE_P, @DATA_BIT_DEPTH, @MAPPED_DATA_BIT_DEPTH) ->
+  constructor : (index, @cube, @queue, @TEXTURE_SIZE_P, @DATA_BIT_DEPTH, @TEXTURE_BIT_DEPTH, @MAPPED_DATA_BIT_DEPTH) ->
 
     _.extend(@, new EventMixin())
 
@@ -396,6 +395,7 @@ class Plane2D
     bytesSrc       = @DATA_BIT_DEPTH >> 3
     bytesSrcMapped = if mapping? then @MAPPED_DATA_BIT_DEPTH >> 3 else bytesSrc
     bytesDest      = @TEXTURE_BIT_DEPTH >> 3
+    shorten        = bytesDest < bytesSrcMapped
 
     while i--
       dest = destination.offset++ * bytesDest
@@ -407,12 +407,14 @@ class Plane2D
       if mapping?
         sourceValue = mapping[ sourceValue ]
 
+      # If you have to shorten the data,
       # use the first none-zero byte unless all are zero
       # assuming little endian order
       for b in [0...bytesSrcMapped]
-        if (value = (sourceValue >> (b*8)) % 256 ) or b == bytesSrcMapped - 1
+        if (value = (sourceValue >> (b*8)) % 256 ) or b == bytesSrcMapped - 1 or (not shorten)
           destination.buffer[dest++] = if contrastCurve? then contrastCurve[value] else value
-          break
+          if shorten
+            break
 
       if (i & source.nextPixelMask) == 0
         source.offset += source.pixelDelta

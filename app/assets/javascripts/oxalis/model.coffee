@@ -53,9 +53,10 @@ class Model
             @user = new User(user)
             @scaleInfo = new ScaleInfo(dataSet.scale)
 
-            supportedDataLayers = [{name: "color", bitDepth: 8, allowManipulation : true},
-                                    {name: "volume", bitDepth: 16, allowManipulation : false},
-                                    {name: "segmentation", bitDepth: 16, allowManipulation : false}]
+            # TODO: Define color bit depth
+            supportedDataLayers = [{name: "color", allowManipulation : true},
+                                    {name: "volume", allowManipulation : false},
+                                    {name: "segmentation", allowManipulation : false}]  
 
             # For now, let's make sure we always have a segmentation layer
             unless _.find( dataSet.dataLayers, (layer) -> layer.typ == "segmentation" )?
@@ -63,13 +64,15 @@ class Model
                 maxCoordinates : dataSet.dataLayers[0].maxCoordinates
                 resolutions : [0]
                 typ : "segmentation"
-                noData : true )   
+                elementClass : "uint16"
+                noData : true )
 
             zoomStepCount = Infinity
             @binary = {}
             for layer in dataSet.dataLayers
               for supportedLayer in supportedDataLayers
                 if layer.typ == supportedLayer.name
+                  supportedLayer.bitDepth = parseInt( layer.elementClass.substring(4) )
                   @binary[layer.typ] = new Binary(@user, dataSet, constants.TEXTURE_SIZE_P, supportedLayer, tracingId)
                   zoomStepCount = Math.min(zoomStepCount, @binary[layer.typ].cube.ZOOM_STEP_COUNT - 1)
 

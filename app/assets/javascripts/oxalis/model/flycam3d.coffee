@@ -14,7 +14,7 @@ transformationWithDistanceMacro = (_this, transformationFn, transformationArg1, 
   
   { currentMatrix } = _this
   M4x4.translate(_this.distanceVecNegative, currentMatrix, currentMatrix)
-  transformationFn(transformationArg1, transformationArg2)
+  transformationFn.call(_this, transformationArg1, transformationArg2)
   M4x4.translate(_this.distanceVecPositive, currentMatrix, currentMatrix)
   updateMacro(_this)
   

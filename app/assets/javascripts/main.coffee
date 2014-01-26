@@ -54,9 +54,16 @@ require [
     # Airbrake shim
     unless window.Airbrake?
       window.Airbrake = []
+    else
+      # TODO: ensure that the filter is also added when Airbrake loaded later
+      Airbrake.addFilter( (notice) ->
+        return location.hostname != "127.0.0.1" and location.hostname != "localhost"
+      )
 
     window.onerror = (message, file, line) ->
+
       Airbrake.push({error: {message: message, fileName: file, lineNumber: line}})
+
 
     $.assertSetup(
       ajax :
@@ -74,7 +81,7 @@ require [
         console.warn.apply(console, arguments)
         [title, message, linebreak, additionalInfos] = arguments
         stacktrace = additionalInfos.Stacktrace
-        Airbrake.push({error : {message: [title, message, stacktrace].join(" ")}})
+        Airbrake.push({error : {message: title + " " + message}, params: stacktrace})
     )
 
 

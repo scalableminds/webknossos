@@ -12,7 +12,11 @@
     <link href='http://fonts.googleapis.com/css?family=Source+Sans+Pro:200,400' rel='stylesheet' type='text/css'>
     <script type="text/javascript" src="@routes.Assets.at("javascripts/libs/require-2.1.1.js")"></script>
     <script type="text/javascript" src="@routes.Assets.at("javascripts/main.js")"></script>
-    @Html(play.airbrake.Airbrake.js)
+    <script type="text/javascript"
+      src="@routes.Assets.at("javascripts/libs/airbrake.min.js")"
+      data-airbrake-project-id="95438"
+      data-airbrake-project-key="39c9330e5f01e1798722d309b7c6cda2"
+      data-airbrake-environment-name=@play.api.Play.current.mode></script>
   </head>
   <body>
     @body

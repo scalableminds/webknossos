@@ -24,7 +24,7 @@ object Dependencies{
   val braingamesBinary = "com.scalableminds" %% "braingames-binary" % braingamesVersion
   val braingamesUtil = "com.scalableminds" %% "braingames-util" % braingamesVersion
   val scalaAsync = "org.scala-lang.modules" %% "scala-async" % "0.9.0-M2"
-  val airbrake = "eu.teamon" %% "play-airbrake" % "0.3.2-SCM"
+  val airbrake = "eu.teamon" %% "play-airbrake" % "0.3.4-SCM"
 }
 
 object Resolvers {

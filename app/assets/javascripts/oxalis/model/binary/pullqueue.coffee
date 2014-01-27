@@ -18,6 +18,7 @@ class PullQueue
 
   batchCount : 0
   roundTripTime : 0
+  loadedBucketList: []
 
   
   constructor : (@dataSetName, @cube, @dataLayerName, @testData) ->
@@ -139,10 +140,7 @@ class PullQueue
               bucketData = @decode(responseBuffer.subarray(offset, offset += (@cube.BUCKET_LENGTH >> 1)))
             else
               bucketData = responseBuffer.subarray(offset, offset += @cube.BUCKET_LENGTH)
-            if @testData
-              id = bucket[0] + bucket[1] * 100 + bucket[2] * 10000
-              for i in [0...bucketData.length]
-                bucketData[i] = (id >> (8 * ((@cube.BIT_DEPTH >> 3) - 1 - (i % (@cube.BIT_DEPTH >> 3))))) % 256
+            @loadedBucketList.push(bucket)
             @cube.setBucketByZoomedAddress(bucket, bucketData)
 
         =>

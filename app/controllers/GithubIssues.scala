@@ -32,7 +32,7 @@ object GithubIssues extends Controller with Secured {
   } yield GithubAuth(user, key)
 
   val assignee = conf.getString("issues.github.defaultAssignee")
-  val branchName = conf.getString("branchname") getOrElse "master"
+  val branchName = conf.getString("application.branch") getOrElse "master"
 
   if (authentication.isEmpty)
     Logger.warn("Github authentication configuration is missing.")

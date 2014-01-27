@@ -205,7 +205,7 @@ object BinaryData extends Controller with Secured {
     implicit request =>
       for {
         dataSet <- DataSetDAO.findOneByName(dataSetName).toFox ?~> Messages("dataSet.notFound")
-        dataLayer <- tryGetUserDataLayer(dataSet, dataLayerTyp, Some(annotationId), request.userOpt) ?~> Messages("dataLayer.notFound") 
+        dataLayer <- tryGetUserDataLayer(dataSet, dataLayerTyp, Some(annotationId), request.userOpt) ?~> Messages("dataLayer.test") 
         payloadBodySize = cubeSize * cubeSize * cubeSize * dataLayer.bytesPerElement
         payload <- request.body.asBytes() ?~> Messages("binary.payload.notSupplied")
         requests <- BinaryProtocol.parseDataWriteRequests(payload, payloadBodySize, containsHandle = false) ?~> Messages("binary.payload.invalid")

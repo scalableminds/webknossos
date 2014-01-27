@@ -1,6 +1,7 @@
 ### define
 ../../libs/resizable_buffer : ResizableBuffer
 libs/threejs/ColorConverter : ColorConverter
+./materials/particle_material_factory : ParticleMaterialFactory
 ###
 
 class Tree
@@ -23,12 +24,14 @@ class Tree
         color: @darkenHex( treeColor ), 
         linewidth: @model.user.particleSize / 4}), THREE.LinePieces)
 
+    sizes = [0...100]
+    material = new ParticleMaterialFactory().getMaterial(sizes)
     @nodes = new THREE.ParticleSystem(
-      nodeGeometry, 
-      new THREE.ParticleBasicMaterial({
-        vertexColors: true, 
-        size: @model.user.particleSize, 
-        sizeAttenuation : false}))
+      nodeGeometry, material )
+      #new THREE.ParticleBasicMaterial({
+      #  vertexColors: true, 
+      #  size: @model.user.particleSize, 
+      #  sizeAttenuation : false}))
 
     @nodesColorBuffer = new ResizableBuffer(3)
 

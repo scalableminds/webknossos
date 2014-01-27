@@ -3,6 +3,8 @@
  * @author Larry Battle / http://bateru.com/news
  */
 
+// Look for CHANGED to see custom edits
+
 var THREE = THREE || { REVISION: '57' };
 
 self.console = self.console || {
@@ -18922,7 +18924,9 @@ THREE.WebGLRenderer = function ( parameters ) {
 
 					attribute.size = size;
 
-					attribute.array = new Float32Array( nvertices * size );
+					// CHANGED
+					//attribute.array = new Float32Array( nvertices * size );
+					attribute.array = new Float32Array( attribute.value.length * size );
 
 					attribute.buffer = _gl.createBuffer();
 					attribute.buffer.belongsToAttribute = a;

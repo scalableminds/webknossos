@@ -4,24 +4,40 @@
 class ParticleMaterialFactory
 
 
-  constructor : ->
+  constructor : (@baseVoxel) ->
 
-  getMaterial : (sizes) ->
+  getMaterial : ->
 
-    attributes     =
+    uniforms =
+      zoomFactor :
+        type : "f"
+        value : 1
+      baseVoxel :
+        type : "f"
+        value : @baseVoxel
+
+    attributes =
       size :
         type : "f"
-        value : sizes
+        value : []
 
     vertexShader   = @getVertexShader()
     fragmentShader = @getFragmentShader()
 
     material = new THREE.ShaderMaterial({
       attributes
+      uniforms
       vertexShader
       fragmentShader
       vertexColors : true
     })
+
+    material.setSizes = (sizes) ->
+      attributes.size.value = sizes
+      attributes.size.needsUpdate = true
+
+    material.setZoomFactor = (zoomFactor) ->
+      uniforms.zoomFactor.value = zoomFactor
 
     return material
 
@@ -29,6 +45,8 @@ class ParticleMaterialFactory
   getVertexShader : ->
 
     return "
+      uniform float zoomFactor;
+      uniform float baseVoxel;
       varying vec3 vColor;
       attribute float size;
 
@@ -36,7 +54,7 @@ class ParticleMaterialFactory
       {
           vec4 mvPosition = modelViewMatrix * vec4( position, 1.0 );
           vColor = color;
-          gl_PointSize = size;
+          gl_PointSize = size / zoomFactor / baseVoxel;
           gl_Position = projectionMatrix * mvPosition;
       }
     "

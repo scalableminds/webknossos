@@ -17,6 +17,8 @@ class Tree
 
     @edgesBuffer = new ResizableBuffer(6)
     @nodesBuffer = new ResizableBuffer(3)
+    @sizesBuffer = new ResizableBuffer(1)
+    @nodesColorBuffer = new ResizableBuffer(3)
 
     @edges = new THREE.Line(
       edgeGeometry, 
@@ -24,24 +26,26 @@ class Tree
         color: @darkenHex( treeColor ), 
         linewidth: @model.user.particleSize / 4}), THREE.LinePieces)
 
-    sizes = [0...100]
-    material = new ParticleMaterialFactory().getMaterial(sizes)
+    @particleMaterial = new ParticleMaterialFactory(@model.scaleInfo.baseVoxel)
+      .getMaterial()
     @nodes = new THREE.ParticleSystem(
-      nodeGeometry, material )
+      nodeGeometry, @particleMaterial )
       #new THREE.ParticleBasicMaterial({
       #  vertexColors: true, 
       #  size: @model.user.particleSize, 
       #  sizeAttenuation : false}))
 
-    @nodesColorBuffer = new ResizableBuffer(3)
-
     @id = treeId
+
+    @model.flycam.on "zoomStepChanged", =>
+      @particleMaterial.setZoomFactor( @model.flycam.getPlaneScalingFactor() )
 
 
   clear : ->
 
     @nodesBuffer.clear()
     @edgesBuffer.clear()
+    @sizesBuffer.clear()
     @nodeIDs.clear()
 
 
@@ -53,6 +57,7 @@ class Tree
   addNode : (node) ->
 
     @nodesBuffer.push(node.pos)
+    @sizesBuffer.push([node.radius * 2])
     @nodeIDs.push([node.id])
     @nodesColorBuffer.push( @getColor(node.id) )
 
@@ -89,6 +94,7 @@ class Tree
     # swap IDs and nodes
     swapLast( @nodeIDs, nodesIndex )
     swapLast( @nodesBuffer, nodesIndex )
+    swapLast( @sizesBuffer, nodesIndex )
     swapLast( @nodesColorBuffer, nodesIndex )
 
     # Delete Edge by finding it in the array
@@ -119,6 +125,7 @@ class Tree
     merge("nodeIDs")
     merge("nodesBuffer")
     merge("edgesBuffer")
+    merge("sizesBuffer")
     @edgesBuffer.push( @getEdgeArray(lastNode, activeNode) )
 
     @updateNodesColors()
@@ -216,6 +223,8 @@ class Tree
     @edges.geometry.__webglLineCount     = @edgesBuffer.getLength() * 2
     @nodes.geometry.__vertexArray        = @nodesBuffer.getBuffer()
     @nodes.geometry.__webglParticleCount = @nodesBuffer.getLength()
+    @particleMaterial.setSizes( @sizesBuffer.getBuffer() )
+    @particleMaterial.setZoomFactor( @model.flycam.getPlaneScalingFactor() )
 
     @edges.geometry.verticesNeedUpdate   = true
     @nodes.geometry.verticesNeedUpdate   = true

@@ -192,6 +192,15 @@ class Tree
     @updateColors()
 
 
+  updateNodeRadius : (id, radius) ->
+
+    for i in [0..@nodeIDs.length]
+      if @nodeIDs.get(i) == id
+        @sizesBuffer.set( [radius * 2], i )
+
+    @updateGeometries()
+
+
   getColor : (id, isActiveNode, isBranchPoint) ->
 
     color = @model.cellTracing.getTree(@id).color

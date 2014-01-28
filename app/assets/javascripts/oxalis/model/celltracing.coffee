@@ -208,10 +208,9 @@ class CellTracing
   addNode : (position, type, centered = true) ->
 
     if @ensureDirection(position)
-      unless @lastRadius?
-        @lastRadius = 10 * @scaleInfo.baseVoxel
-        if @activeNode then @lastRadius = @activeNode.radius
-      point = new TracePoint(type, @idCount++, position, @lastRadius, (new Date()).getTime(), @activeTree.treeId)
+      radius = 10 * @scaleInfo.baseVoxel
+      if @activeNode then radius = @activeNode.radius
+      point = new TracePoint(type, @idCount++, position, radius, (new Date()).getTime(), @activeTree.treeId)
       @activeTree.nodes.push(point)
       if @activeNode
         @activeNode.appendNext(point)
@@ -268,6 +267,11 @@ class CellTracing
     if @activeNode then @activeNode.type else null
 
 
+  getActiveNodeRadius : ->
+
+    if @activeNode then @activeNode.radius else 10 * @scaleInfo.baseVoxel
+
+
   getActiveTreeId : ->
 
     if @activeTree then @activeTree.treeId else null
@@ -314,6 +318,14 @@ class CellTracing
 
     if mergeTree
       @mergeTree(lastActiveNode, lastActiveTree)
+
+
+  setActiveNodeRadius : (radius) ->
+
+    if @activeNode?
+      @activeNode.radius = radius
+      @stateLogger.updateNode( @activeNode, @activeNode.treeId )
+      @trigger "newActiveNodeRadius", radius
 
 
   setComment : (commentText) ->

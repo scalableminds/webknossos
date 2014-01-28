@@ -26,7 +26,7 @@ class Tree
         color: @darkenHex( treeColor ), 
         linewidth: @model.user.particleSize / 4}), THREE.LinePieces)
 
-    @particleMaterial = new ParticleMaterialFactory(@model.scaleInfo.baseVoxel)
+    @particleMaterial = new ParticleMaterialFactory(@model)
       .getMaterial()
     @nodes = new THREE.ParticleSystem(
       nodeGeometry, @particleMaterial )
@@ -36,9 +36,6 @@ class Tree
       #  sizeAttenuation : false}))
 
     @id = treeId
-
-    @model.flycam.on "zoomStepChanged", =>
-      @particleMaterial.setZoomFactor( @model.flycam.getPlaneScalingFactor() )
 
 
   clear : ->
@@ -224,7 +221,6 @@ class Tree
     @nodes.geometry.__vertexArray        = @nodesBuffer.getBuffer()
     @nodes.geometry.__webglParticleCount = @nodesBuffer.getLength()
     @particleMaterial.setSizes( @sizesBuffer.getBuffer() )
-    @particleMaterial.setZoomFactor( @model.flycam.getPlaneScalingFactor() )
 
     @edges.geometry.verticesNeedUpdate   = true
     @nodes.geometry.verticesNeedUpdate   = true

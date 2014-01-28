@@ -4,17 +4,18 @@
 class ParticleMaterialFactory
 
 
-  constructor : (@baseVoxel) ->
-
-  getMaterial : ->
+  constructor : (@model) ->
 
     uniforms =
       zoomFactor :
         type : "f"
-        value : 1
+        value : @model.flycam.getPlaneScalingFactor()
       baseVoxel :
         type : "f"
-        value : @baseVoxel
+        value : @model.scaleInfo.baseVoxel
+      minParticleSize :
+        type : "f"
+        value : @model.user.particleSize
 
     attributes =
       size :
@@ -24,7 +25,7 @@ class ParticleMaterialFactory
     vertexShader   = @getVertexShader()
     fragmentShader = @getFragmentShader()
 
-    material = new THREE.ShaderMaterial({
+    @material = new THREE.ShaderMaterial({
       attributes
       uniforms
       vertexShader
@@ -32,14 +33,23 @@ class ParticleMaterialFactory
       vertexColors : true
     })
 
-    material.setSizes = (sizes) ->
+    @material.setSizes = (sizes) ->
       attributes.size.value = sizes
       attributes.size.needsUpdate = true
 
-    material.setZoomFactor = (zoomFactor) ->
+    @material.setZoomFactor = (zoomFactor) ->
       uniforms.zoomFactor.value = zoomFactor
 
-    return material
+    @model.user.on "particleSizeChanged", (size) ->
+      uniforms.minParticleSize.value = size
+
+    @model.flycam.on "zoomStepChanged", =>
+      uniforms.zoomFactor.value = @model.flycam.getPlaneScalingFactor()
+
+
+  getMaterial : ->
+
+    return @material
 
 
   getVertexShader : ->
@@ -47,6 +57,7 @@ class ParticleMaterialFactory
     return "
       uniform float zoomFactor;
       uniform float baseVoxel;
+      uniform float minParticleSize;
       varying vec3 vColor;
       attribute float size;
 
@@ -54,7 +65,9 @@ class ParticleMaterialFactory
       {
           vec4 mvPosition = modelViewMatrix * vec4( position, 1.0 );
           vColor = color;
-          gl_PointSize = size / zoomFactor / baseVoxel;
+          gl_PointSize = max(
+            size / zoomFactor / baseVoxel,
+            minParticleSize );
           gl_Position = projectionMatrix * mvPosition;
       }
     "

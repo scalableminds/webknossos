@@ -119,7 +119,7 @@ class Gui
     @activeNodeIdController = @addNumber(@fNodes, @settings, "activeNodeID",
       1, 1, "Active Node ID", (value) => @trigger( "setActiveNode", value))
     @particleSizeController = @addSlider(@fNodes, @user, "particleSize",
-      constants.MIN_PARTICLE_SIZE, constants.MAX_PARTICLE_SIZE, 1, "Node size")
+      constants.MIN_PARTICLE_SIZE, constants.MAX_PARTICLE_SIZE, 1, "Min. node size")
     @addFunction(@fNodes, @settings, "deleteActiveNode", "Delete Active Node")
 
     @folders.push( @fCells = @gui.addFolder("Cells") )

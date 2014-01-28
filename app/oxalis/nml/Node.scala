@@ -12,6 +12,8 @@ object Node {
     def synchronousWrites(n: Node) =
       <node id={ n.id.toString } radius={ n.radius.toString } x={ n.position.x.toString } y={ n.position.y.toString } z={ (n.position.z).toString } inVp={ n.viewport.toString } inMag={ n.resolution.toString } time={ n.timestamp.toString }/>
   }
+
+  val formatter = Json.format[Node]
   
   implicit object NodeFormat extends Format[Node] {
     val ID = "id"

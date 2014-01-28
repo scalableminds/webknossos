@@ -8,6 +8,7 @@ import com.mongodb.casbah.commons.MongoDBObject
 import oxalis.nml.Tree
 import oxalis.nml.Node
 import oxalis.nml.Edge
+import braingames.geometry.Point3D
 import com.mongodb.casbah.commons.MongoDBList
 import com.mongodb.casbah.query.Implicits._
 import oxalis.nml.TreeLike
@@ -91,7 +92,10 @@ object DBTree extends BasicDAO[DBTree]("trees") with DBTreeFactory {
       "node" -> MongoDBObject(
         "id" -> node.id,
         "radius" -> node.radius,
-        "position" -> node.position,
+        "position" -> MongoDBObject(
+          "x" -> node.position.x,
+          "y" -> node.position.y,
+          "z" -> node.position.z),
         "viewport" -> node.viewport,
         "resolution" -> node.resolution,
         "timestamp" -> node.timestamp))), false, false)

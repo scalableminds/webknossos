@@ -16,6 +16,9 @@ class ParticleMaterialFactory
       minParticleSize :
         type : "f"
         value : @model.user.particleSize
+      showRadius :
+        type : "i"
+        value : 1
 
     attributes =
       size :
@@ -41,6 +44,9 @@ class ParticleMaterialFactory
     @material.setZoomFactor = (zoomFactor) ->
       uniforms.zoomFactor.value = zoomFactor
 
+    @material.setShowRadius = (showRadius) ->
+      uniforms.showRadius.value = if showRadius then 1 else 0
+
     @model.user.on "particleSizeChanged", (size) ->
       uniforms.minParticleSize.value = size
 
@@ -59,6 +65,7 @@ class ParticleMaterialFactory
       uniform float zoomFactor;
       uniform float baseVoxel;
       uniform float minParticleSize;
+      uniform int   showRadius;
       varying vec3 vColor;
       attribute float size;
 
@@ -66,9 +73,12 @@ class ParticleMaterialFactory
       {
           vec4 mvPosition = modelViewMatrix * vec4( position, 1.0 );
           vColor = color;
-          gl_PointSize = max(
-            size / zoomFactor / baseVoxel * 2.0,
-            minParticleSize );
+          if (showRadius == 1)
+            gl_PointSize = max(
+              size / zoomFactor / baseVoxel * 2.0,
+              minParticleSize );
+          else
+            gl_PointSize = minParticleSize;
           gl_Position = projectionMatrix * mvPosition;
       }
     "

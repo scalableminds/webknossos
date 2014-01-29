@@ -82,6 +82,7 @@ class SceneController
 
     @cube.updateForCam(id)
     @bb.updateForCam(id)
+    @skeleton.updateForCam(id)
 
     if id in constants.ALL_PLANES
       unless @showSkeleton

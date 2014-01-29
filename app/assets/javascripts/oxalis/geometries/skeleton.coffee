@@ -247,3 +247,9 @@ class Skeleton
 
     for tree in @treeGeometries
       tree.setSizeAttenuation( sizeAttenuation )
+
+
+  updateForCam : (cam) ->
+
+    for tree in @treeGeometries
+      tree.showRadius( cam != constants.TDView )

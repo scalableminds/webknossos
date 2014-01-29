@@ -221,6 +221,11 @@ class Tree
 
     @nodes.geometry.__colorArray = @nodesColorBuffer.getBuffer()
     @nodes.geometry.colorsNeedUpdate = true
+
+
+  showRadius : (show) ->
+
+    @particleMaterial.setShowRadius( show )
   
 
   updateGeometries : ->

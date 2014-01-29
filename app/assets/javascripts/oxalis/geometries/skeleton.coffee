@@ -25,6 +25,7 @@ class Skeleton
     @showInactiveTrees = true
     
     @reset()
+    @reset()
 
     @cellTracing.on
       newActiveNode : => 

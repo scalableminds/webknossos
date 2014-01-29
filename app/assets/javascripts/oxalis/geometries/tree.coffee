@@ -26,14 +26,9 @@ class Tree
         color: @darkenHex( treeColor ), 
         linewidth: @model.user.particleSize / 4}), THREE.LinePieces)
 
-    @particleMaterial = new ParticleMaterialFactory(@model)
-      .getMaterial()
+    @particleMaterial = new ParticleMaterialFactory(@model).getMaterial()
     @nodes = new THREE.ParticleSystem(
       nodeGeometry, @particleMaterial )
-      #new THREE.ParticleBasicMaterial({
-      #  vertexColors: true, 
-      #  size: @model.user.particleSize, 
-      #  sizeAttenuation : false}))
 
     @id = treeId
 

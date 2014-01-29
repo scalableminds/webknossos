@@ -67,7 +67,7 @@ class ParticleMaterialFactory
           vec4 mvPosition = modelViewMatrix * vec4( position, 1.0 );
           vColor = color;
           gl_PointSize = max(
-            size / zoomFactor / baseVoxel,
+            size / zoomFactor / baseVoxel * 2.0,
             minParticleSize );
           gl_Position = projectionMatrix * mvPosition;
       }

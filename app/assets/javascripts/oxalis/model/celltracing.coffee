@@ -18,7 +18,7 @@ class CellTracing
   TYPE_BRANCH  : constants.TYPE_BRANCH
   # Max and min radius in base voxels (see scaleInfo.baseVoxel)
   MIN_RADIUS        : 1
-  MAX_RADIUS        : 1000
+  MAX_RADIUS        : 5000
   
   branchStack : []
   trees : []

@@ -323,7 +323,8 @@ class CellTracing
   setActiveNodeRadius : (radius) ->
 
     if @activeNode?
-      @activeNode.radius = radius
+      @activeNode.radius = Math.min( @MAX_RADIUS,
+                            Math.max( @MIN_RADIUS, radius ) )
       @stateLogger.updateNode( @activeNode, @activeNode.treeId )
       @trigger "newActiveNodeRadius", radius
 

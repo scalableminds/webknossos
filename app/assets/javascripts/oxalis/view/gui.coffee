@@ -176,13 +176,14 @@ class Gui
           $("#zoomFactor").html("<p>Viewport width: " + (nm / 1000000).toFixed(1) + " mm</p>")
 
     @model.cellTracing.on
-      newActiveNode    : => @update()
-      newActiveTree    : => @update()
-      deleteActiveTree : => @update()
-      deleteActiveNode : => @update()
-      deleteLastNode   : => @update()
-      newNode          : => @update()
-      newTree          : => @update()
+      newActiveNode       : => @update()
+      newActiveTree       : => @update()
+      newActiveNodeRadius : => @update()
+      deleteActiveTree    : => @update()
+      deleteActiveNode    : => @update()
+      deleteLastNode      : => @update()
+      newNode             : => @update()
+      newTree             : => @update()
 
     @model.volumeTracing.on
       newActiveCell    : =>

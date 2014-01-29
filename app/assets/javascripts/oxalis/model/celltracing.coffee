@@ -109,12 +109,12 @@ class CellTracing
     console.log "[benchmark] start inserting #{numberOfNodesPerTree} nodes"
     startTime = (new Date()).getTime()
     offset = 0
-    size = numberOfNodesPerTree / 100
+    size = numberOfNodesPerTree / 10
     for i in [0...numberOfTrees]
       @createNewTree()
       for i in [0...numberOfNodesPerTree]
         pos = [Math.random() * size + offset, Math.random() * size + offset, Math.random() * size + offset]
-        point = new TracePoint(@TYPE_USUAL, @idCount++, pos, null, null, @activeTree.treeId)
+        point = new TracePoint(@TYPE_USUAL, @idCount++, pos, Math.random() * 200, null, @activeTree.treeId)
         @activeTree.nodes.push(point)
         if @activeNode
           @activeNode.appendNext(point)

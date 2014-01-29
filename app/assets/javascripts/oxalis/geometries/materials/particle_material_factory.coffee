@@ -21,6 +21,7 @@ class ParticleMaterialFactory
       size :
         type : "f"
         _array : new Float32Array(0)
+        value : []
 
     vertexShader   = @getVertexShader()
     fragmentShader = @getFragmentShader()

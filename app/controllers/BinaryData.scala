@@ -213,7 +213,6 @@ object BinaryData extends Controller with Secured {
         println("Parsed!")
         println("Parsed!" + requests.toString)
         writeData(dataSet, dataLayer, cubeSize, requests, annotationId, request.userOpt)
-        println("written!")
       }
   }
 }

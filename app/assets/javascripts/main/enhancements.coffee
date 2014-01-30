@@ -87,7 +87,6 @@ $ ->
       else
         _.template(templateSource)(responseData)
 
-
     $.ajax(ajaxOptions).then(
 
       (responseData) ->

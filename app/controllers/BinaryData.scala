@@ -210,8 +210,6 @@ object BinaryData extends Controller with Secured {
         payload <- request.body.asBytes() ?~> Messages("binary.payload.notSupplied")
         requests <- BinaryProtocol.parseDataWriteRequests(payload, payloadBodySize, containsHandle = false) ?~> Messages("binary.payload.invalid")
       } yield {
-        println("Parsed!")
-        println("Parsed!" + requests.toString)
         writeData(dataSet, dataLayer, cubeSize, requests, annotationId, request.userOpt)
       }
   }

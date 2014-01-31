@@ -17,18 +17,21 @@ import reactivemongo.bson.BSONObjectID
 import play.modules.reactivemongo.json.BSONFormats._
 import reactivemongo.api.indexes.{IndexType, Index}
 import reactivemongo.api.indexes.Index
+import play.api.libs.json._
+import play.api.libs.functional.syntax._
+import play.api.libs.concurrent.Execution.Implicits._
 
 case class User(
-  email: String,
-  firstName: String,
-  lastName: String,
-  verified: Boolean = false,
-  pwdHash: String = "",
-  teams: List[TeamMembership],
-  configuration: UserSettings = UserSettings.defaultSettings,
-  experiences: Map[String, Int] = Map.empty,
-  lastActivity: Long = System.currentTimeMillis,
-  _id: BSONObjectID = BSONObjectID.generate) extends DBAccessContextPayload {
+                 email: String,
+                 firstName: String,
+                 lastName: String,
+                 verified: Boolean = false,
+                 pwdHash: String = "",
+                 teams: List[TeamMembership],
+                 configuration: UserSettings = UserSettings.defaultSettings,
+                 experiences: Map[String, Int] = Map.empty,
+                 lastActivity: Long = System.currentTimeMillis,
+                 _id: BSONObjectID = BSONObjectID.generate) extends DBAccessContextPayload {
 
   val dao = User
 
@@ -86,7 +89,18 @@ case class User(
 }
 
 object User {
-  implicit val userFormat = Json.format[User]
+  private[user] val userFormat = Json.format[User]
+
+  val userPublicWrites: Writes[User] =
+    ((__ \ "id").write[String] and
+      (__ \ "email").write[String] and
+      (__ \ "firstName").write[String] and
+      (__ \ "lastName").write[String] and
+      (__ \ "verified").write[Boolean] and
+      (__ \ "teams").write[List[TeamMembership]] and
+      (__ \ "experiences").write[Map[String, Int]] and
+      (__ \ "lastActivity").write[Long])(u =>
+      (u.id, u.email, u.firstName, u.lastName, u.verified, u.teams, u.experiences, u.lastActivity))
 }
 
 object UserDAO extends SecuredBaseDAO[User] {
@@ -98,7 +112,7 @@ object UserDAO extends SecuredBaseDAO[User] {
   collection.indexesManager.ensure(Index(Seq("email" -> IndexType.Ascending)))
 
   override def findQueryFilter(implicit ctx: DBAccessContext) = {
-    ctx.data match{
+    ctx.data match {
       case Some(user: User) =>
         AllowIf(Json.obj("teams.team" -> Json.obj("$in" -> user.teamNames)))
       case _ =>
@@ -107,7 +121,7 @@ object UserDAO extends SecuredBaseDAO[User] {
   }
 
   override def removeQueryFilter(implicit ctx: DBAccessContext) = {
-    ctx.data match{
+    ctx.data match {
       case Some(user: User) =>
         AllowIf(Json.obj("teams.team" -> Json.obj("$in" -> user.adminTeamNames)))
       case _ =>
@@ -116,7 +130,9 @@ object UserDAO extends SecuredBaseDAO[User] {
   }
 
   def findAllInTeams(teams: List[String])(implicit ctx: DBAccessContext) =
-    collectionFind(Json.obj("teams.team" -> Json.obj("$in" -> teams))).cursor[User].collect[List]()
+    collectionFind(Json.obj("teams.team" -> Json.obj("$in" -> teams)))
+      .cursor[User](formatter, defaultContext)
+      .collect[List]()
 
   def findOneByEmail(email: String)(implicit ctx: DBAccessContext) = findOne("email", email)
 
@@ -137,13 +153,13 @@ object UserDAO extends SecuredBaseDAO[User] {
   }
 
   def addTeams(_user: BSONObjectID, teams: Seq[TeamMembership])(implicit ctx: DBAccessContext) =
-    collectionUpdate(findByIdQ(_user), Json.obj("$pushAll"-> Json.obj("teams" -> teams)))
+    collectionUpdate(findByIdQ(_user), Json.obj("$pushAll" -> Json.obj("teams" -> teams)))
 
   def addRole(_user: BSONObjectID, role: String)(implicit ctx: DBAccessContext) =
-    collectionUpdate(findByIdQ(_user), Json.obj("$push"-> Json.obj("roles" -> role)))
+    collectionUpdate(findByIdQ(_user), Json.obj("$push" -> Json.obj("roles" -> role)))
 
   def deleteRole(_user: BSONObjectID, role: String)(implicit ctx: DBAccessContext) =
-    collectionUpdate(findByIdQ(_user), Json.obj("$pull"-> Json.obj("roles" -> role)))
+    collectionUpdate(findByIdQ(_user), Json.obj("$pull" -> Json.obj("roles" -> role)))
 
   def increaseExperience(_user: BSONObjectID, domain: String, value: Int)(implicit ctx: DBAccessContext) = {
     collectionUpdate(findByIdQ(_user), Json.obj("$inc" -> Json.obj(s"experiences.$domain" -> value)))

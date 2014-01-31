@@ -47,7 +47,7 @@ object UserController extends Controller with Secured with Dashboard {
           exploratoryList <- Future.traverse(info.exploratory)(Annotation.transformToJson(_))
         } yield {
           Json.obj(
-            "user" -> info.user,
+            "user" -> Json.toJson(info.user)(User.userPublicWrites),
             "loggedTime" -> loggedTime,
             "dataSets" -> info.dataSets,
             "hasAnOpenTask" -> info.hasAnOpenTask,

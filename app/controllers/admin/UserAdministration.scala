@@ -18,7 +18,7 @@ import braingames.util.Fox
 import scala.concurrent.Future
 import braingames.reactivemongo.DBAccessContext
 import net.liftweb.common.Full
-import play.api.libs.json.Json
+import play.api.libs.json.{Writes, Json}
 
 object UserAdministration extends AdminController with Dashboard {
 
@@ -44,7 +44,7 @@ object UserAdministration extends AdminController with Dashboard {
   def list = Authenticated.async{ implicit request =>
     for{
       users <- UserDAO.findAllInTeams(request.user.adminTeamNames)
-    } yield Ok(Json.toJson(users))
+    } yield Ok(Writes.list(User.userPublicWrites).writes(users))   // TODO: strip security relevant information
   }
 
   // TODO: secure

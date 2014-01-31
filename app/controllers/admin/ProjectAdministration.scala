@@ -6,7 +6,7 @@ import models.task.{ProjectService, ProjectDAO, Project}
 import play.api.data.Form._
 import play.api.data.Form
 import play.api.data.Forms._
-import models.user.UserService
+import models.user.{User, UserService}
 import play.api.i18n.Messages
 import braingames.reactivemongo.DBAccessContext
 import play.api.libs.concurrent.Execution.Implicits._
@@ -44,7 +44,9 @@ object ProjectAdministration extends AdminController {
             projects <- ProjectDAO.findAll
             users <- sortedUsers
           } yield {
-            JsonOk(Json.obj("projects" -> projects, "users" -> users))
+            JsonOk(Json.obj(
+              "projects" -> projects,
+              "users" -> users.map(u => Json.toJson(u)(User.userPublicWrites))))
           }
       }
   }

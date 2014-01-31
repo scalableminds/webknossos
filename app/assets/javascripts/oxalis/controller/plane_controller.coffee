@@ -399,8 +399,8 @@ class PlaneController
 
     switch type
       when null then @moveZ(delta)
-      when "shift" then @cellTracingController.setParticleSize(delta)
-      when "ctrl" then @cellTracingController.setRadius(delta)
+      #when "shift" then @cellTracingController.setParticleSize(delta)
+      when "shift" then @cellTracingController.setRadius(delta)
       when "alt"
         @zoomPlanes(delta, true)
 

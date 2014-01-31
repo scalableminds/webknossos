@@ -102,6 +102,70 @@ $ ->
         return
 
 
+    "admin.binary.binaryData" : ->
+
+      $modal = $(".modal")
+      $modal.find(".btn-primary").on "click", -> submitTeams()
+
+      # Attach model to main body to avoid z-Index
+      $modal = $modal.detach()
+      $("body").append($modal)
+
+      teamsCache = ["/Structure of Neocortical Circuits Group/*", "team1", "team2", "team3"]
+      assignedTeams = []
+
+      $(".label").on "click", ->
+        # Find parent and read all labels for one dataset
+        $parent = $(this).closest("tr")
+        dataset = $parent.find("td").first().text().trim()
+        $modal.data("dataset", dataset)
+
+        $labels = $parent.find(".label")
+        assignedTeams = _.map($labels, (label) -> return $(label).text())
+
+        if teamsCache
+          showModal()
+        else
+          $ajax(
+            url: ""
+            dataType: "json"
+          ).done (responseJSON) =>
+            teamsCache = response
+            showModal()
+
+      showModal = ->
+
+        $teamList = $modal.find("ul").empty()
+        $checkBoxTags = _.map(teamsCache, (team) ->
+
+          checked = if _.contains(assignedTeams, team) then "checked" else ""
+          $("""
+            <li>
+              <label class="checkbox"><input type="checkbox" value="#{team}" #{checked}> #{team}</label>
+            </li>
+          """)
+        )
+        $teamList.append($checkBoxTags)
+        $modal.modal("show")
+
+
+      submitTeams = ->
+
+          $checkboxes = $modal.find("input:checked")
+          dataset = $modal.data("dataset")
+          assignedTeams = _.map($checkboxes, (checkbox) -> return $(checkbox).parent().text())
+
+          console.log dataset, assignedTeams
+          $modal.modal("hide")
+          # $.ajax(
+          #   url: ""
+          #   data: {dataset: assignedTeams}
+          # ).done ->
+          #   window.location.reload()
+
+      return hideLoading()
+
+
     "admin.task.taskOverview" : ->
 
       require [ "worker!libs/viz.js" ], (VizWorker) ->
@@ -150,72 +214,45 @@ $ ->
       # TODO: does "admin.user.userAdministration" still exist or has it been replaced by "userList" ?
 
     "admin.user.userList" : ->
-      require ["multiselect"], ->
 
-        $popovers = $("a[rel=popover]")
-        template = """
-                   <form class="form-inline">
-        #{$("#single-teampicker").html()}
-                   </form>
-                   """
+      $modal = $(".modal")
 
-        $popovers.popover(
-          content: template
-        )
+      #teampicker only
+      $modal.on "change", "select[name=teams]", ->
+        #add a new team / role pair
+        $template = $modal.find(".team-role-pair").first()
+        $newRow = $template.clone()
+        $newRow.insertAfter($template)
 
-        $popovers.on "click", ->
+      $(".show-modal").on "click", ->
 
-          $this = $(@)
-          url = $this.data("url")
-          rowId = $this.closest("tr").data("id")
+        templateId = $(this).data("template")
+        showModal(templateId)
 
-          $(".popover").find("a")
-            .attr("href", url)
-            .attr("data-ajax", "method=POST,submit,replace=##{rowId}")
+      showModal = (templateId) ->
 
-          $(".popover").find(".multiselect")
-            .multiselect(
-              buttonWidth: "200px"
-            )
+        template = $("##{templateId}")
+        title = template.data("header")
 
-          $(".popover").find(".popover-hide").on "click", -> $this.popover("hide")
+        $modal.find(".modal-body").html(template.html())
+        $modal.find(".modal-header h3").text(title)
+        $modal.find(".modal-hide").on "click", -> $modal.modal("hide")
+
+        $modal.modal("show")
 
 
-        $("#bulk-actions a").on "click", ->
-
-          $this = $(@)
-          templateId = $this.data("template")
-          showModal(templateId)
-
-        showModal = (templateId) ->
-
-          template = $("##{templateId}")
-          title = template.data("header")
-
+      $("form").on "click", ".label-experience", (event) ->
+        values = $(this).html().split(" ")
+        if values
+          showModal("experiencepicker")
           $modal = $(".modal")
 
-          $modal.find(".modal-body").html(template.html())
-          $modal.find(".modal-header h3").text(title)
-          $modal.find(".modal-hide").on "click", -> $modal.modal("hide")
-          $modal.find(".multiselect").multiselect()
+          $modal.find("input[name=experience-domain]").attr("value", values[0])
+          $modal.find("input[name=experience-value]").attr("value", values[1])
+          $(this).parents("table").find("input[type=checkbox]").attr('checked', false)
+          $(this).parents("tr").find("input[type=checkbox]").attr('checked', true)
 
-          $modal.modal("show")
-
-
-
-        $("form").on "click", ".label-experience", (event) ->
-          values = $(this).html().split(" ")
-          if values
-            showModal("experiencepicker")
-            $modal = $(".modal")
-
-            $modal.find("input[name=experience-domain]").attr("value", values[0])
-            $modal.find("input[name=experience-value]").attr("value", values[1])
-            $(this).parents("table").find("input[type=checkbox]").attr('checked', false)
-            $(this).parents("tr").find("input[type=checkbox]").attr('checked', true)
-
-        hideLoading()
-      return
+      return hideLoading()
 
 
     "admin.task.taskSelectionAlgorithm" : ->

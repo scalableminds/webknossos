@@ -15,14 +15,14 @@
             @team <br />
         }
     </td>
-	<td>
-		@if(user.verified) {
-  		<i class="icon-ok"></i>
-		} else {
-  		<a href="#" data-url="@controllers.admin.routes.UserAdministration.verify(user.id)" data-placement="bottom" data-html="true" data-title="Assign to a Team" rel="popover"> verify </a>
-		}
-	</td>
-	<td class="nowrap">
+  <td>
+    @if(user.verified) {
+      <i class="icon-ok"></i>
+    } else {
+      <a href="#" class="show-modal" data-url="@controllers.admin.routes.UserAdministration.verify(user.id)" data-placement="bottom" data-html="true" data-title="Assign to a Team" data-template="teampicker"> verify </a>
+    }
+  </td>
+  <td class="nowrap">
     <a href="@controllers.admin.routes.UserAdministration.show(user.id)" ><i class="icon-user"></i> show Tracings</a><br />
     <a href="@controllers.admin.routes.NMLIO.userDownload(user.id)" title="download all finished tracings"><i class="icon-download"></i> download </a><br />
   	<a href="@controllers.admin.routes.UserAdministration.delete(user.id)" data-ajax="delete-row,confirm"><i class="icon-trash"></i> delete </a><br />

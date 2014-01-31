@@ -8,15 +8,15 @@ import play.api.libs.json.{Json, JsValue}
 import play.api.libs.json.Json._
 import scala.collection.immutable.HashMap
 import models.basics._
-import models.security.{RoleDAO, Permission, Implyable, Role}
 import models.user.Experience._
-import models.team.{Team, TeamMembership, TeamTreeDAO, TeamPath}
+import models.team._
 import braingames.reactivemongo.{DBAccessContext, DBAccessContextPayload}
 import scala.concurrent.Future
 import play.api.libs.concurrent.Execution.Implicits._
 import reactivemongo.bson.BSONObjectID
 import play.modules.reactivemongo.json.BSONFormats._
 import reactivemongo.api.indexes.{IndexType, Index}
+import reactivemongo.api.indexes.Index
 
 case class User(
   email: String,
@@ -26,8 +26,6 @@ case class User(
   pwdHash: String = "",
   teams: List[TeamMembership],
   configuration: UserSettings = UserSettings.defaultSettings,
-  roles: Set[String] = Set.empty,
-  permissions: List[Permission] = Nil,
   experiences: Map[String, Int] = Map.empty,
   lastActivity: Long = System.currentTimeMillis,
   _id: BSONObjectID = BSONObjectID.generate) extends DBAccessContextPayload {
@@ -36,7 +34,9 @@ case class User(
 
   //lazy val teamTrees = TeamTreeDAO.findAllTeams(_groups)(GlobalAccessContext)
 
-  val _roles = roles.flatMap(RoleDAO.find)
+  def teamsWithRole(role: Role) = teams.filter(_.role == role)
+
+  def teamNames = teams.map(_.team)
 
   val name = firstName + " " + lastName
 
@@ -44,18 +44,13 @@ case class User(
 
   lazy val id = _id.stringify
 
-  val ruleSet: List[Implyable] = permissions ++ _roles
+  lazy val adminTeams = teamsWithRole(Role.Admin)
 
-  def hasRole(role: Role) =
-    roles.find(_ == role.name).isDefined
+  lazy val adminTeamNames = adminTeams.map(_.team)
 
-  def adminTeams =
-    // TODO: FIX it is not possible to make someone an admin of a team, therefore we need to skip the 
-    // filter for now
-    teams/*.filter(_.role == TeamMembership.Admin)*/.map(_.teamPath)
+  lazy val hasAdminAccess = !adminTeams.isEmpty
 
-  def hasPermission(permission: Permission) =
-    ruleSet.find(_.implies(permission)).isDefined
+  def roleInTeam(team: String) = teams.find(_.team == team).map(_.role)
 
   override def toString = email
 
@@ -74,21 +69,17 @@ case class User(
     this.copy(experiences = this.experiences.filterNot(_._1 == n))
   }
 
-  def logActivity(time: Long) = {
+  def logActivity(time: Long) =
     this.copy(lastActivity = time)
-  }
 
-  def verify = {
-    this.copy(verified = true, roles = this.roles + "user")
-  }
+  def verify =
+    this.copy(verified = true)
 
-  def addTeamMemberships(teamMemberships: List[TeamMembership]) = {
+  def addTeam(teamMemberships: List[TeamMembership]) =
     this.copy(teams = teamMemberships ::: teams)
-  }
 
-  def deleteRole(role: String) = {
-    this.copy(roles = this.roles.filterNot(_ == role))
-  }
+  def removeTeam(team: String) =
+    this.copy(teams = teams.filterNot(_.team == team))
 
   def lastActivityDays =
     (System.currentTimeMillis - this.lastActivity) / (1000 * 60 * 60 * 24)
@@ -105,6 +96,24 @@ object UserDAO extends SecuredBaseDAO[User] {
   val formatter = User.userFormat
 
   collection.indexesManager.ensure(Index(Seq("email" -> IndexType.Ascending)))
+
+  override def findQueryFilter(implicit ctx: DBAccessContext) = {
+    ctx.data match{
+      case Some(user: User) =>
+        AllowIf(Json.obj("teams.team" -> Json.obj("$in" -> user.teamNames)))
+      case _ =>
+        DenyEveryone()
+    }
+  }
+
+  override def removeQueryFilter(implicit ctx: DBAccessContext) = {
+    ctx.data match{
+      case Some(user: User) =>
+        AllowIf(Json.obj("teams.team" -> Json.obj("$in" -> user.adminTeamNames)))
+      case _ =>
+        DenyEveryone()
+    }
+  }
 
   def findOneByEmail(email: String)(implicit ctx: DBAccessContext) = findOne("email", email)
 
@@ -153,9 +162,9 @@ object UserDAO extends SecuredBaseDAO[User] {
     collectionUpdate(findByIdQ(user._id), Json.obj("$set" -> Json.obj("lastActivity" -> lastActivity)))
   }
 
-  def verify(user: User, roles: Set[String])(implicit ctx: DBAccessContext) = {
+  def verify(user: User)(implicit ctx: DBAccessContext) = {
     collectionUpdate(
       Json.obj("email" -> user.email),
-      Json.obj("$set" -> Json.obj("roles" -> roles, "verified" -> true)))
+      Json.obj("$set" -> Json.obj("verified" -> true)))
   }
 }

@@ -3,8 +3,10 @@ package controllers
 import play.api.mvc.{Controller => PlayController}
 import oxalis.security.AuthenticatedRequest
 import oxalis.view.ProvidesSessionData
-import play.api.mvc.Request
 import braingames.mvc.ExtendedController
+import models.user.User
+import net.liftweb.common.{Failure, Full}
+import play.api.i18n.Messages
 
 class Controller extends PlayController
 with ExtendedController
@@ -13,4 +15,11 @@ with models.basics.Implicits {
 
   implicit def AuthenticatedRequest2Request[T](r: AuthenticatedRequest[T]) =
     r.request
+
+  def ensureTeamAdministration(user: User, team: String) = {
+    user.adminTeams.exists(_.team == team) match {
+      case true => Full(true)
+      case _ => Failure(Messages("team.notAllowed"))
+    }
+  }
 }

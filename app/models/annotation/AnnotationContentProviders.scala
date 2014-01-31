@@ -1,6 +1,5 @@
 package models.annotation
 
-import braingames.binary.models.DataSet
 import play.api.Logger
 import models.tracing.skeleton.{SkeletonTracingService, SkeletonTracing}
 import models.tracing.volume.{VolumeTracingService, VolumeTracing}
@@ -8,6 +7,7 @@ import scala.concurrent.Future
 import play.api.libs.concurrent.Execution.Implicits._
 import braingames.reactivemongo.DBAccessContext
 import braingames.util.Fox
+import models.binary.DataSet
 
 /**
  * Company: scalableminds

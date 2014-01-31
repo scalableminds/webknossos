@@ -18,7 +18,7 @@ import oxalis.nml.NML
 import scala.Some
 import braingames.reactivemongo.DBAccessContext
 import braingames.util.Fox
-import braingames.binary.models.DataSet
+import models.binary.DataSet
 import models.basics.SecuredBaseDAO
 import play.api.libs.concurrent.Execution.Implicits._
 

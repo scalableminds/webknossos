@@ -128,7 +128,7 @@ object SkeletonTracingLike {
   implicit object SkeletonTracingLikeXMLWrites extends XMLWrites[SkeletonTracingLike] with GlobalDBAccess {
     def writes(e: SkeletonTracingLike) = {
       for {
-        dataSetOpt <- DataSetDAO.findOneByName(e.dataSetName)
+        dataSetOpt <- DataSetDAO.findOneBySourceName(e.dataSetName)
         trees <- e.trees
         treesXml <- Xml.toXML(trees.filterNot(_.nodes.isEmpty))
         branchpoints <- Xml.toXML(e.branchPoints)
@@ -136,10 +136,11 @@ object SkeletonTracingLike {
       } yield {
         dataSetOpt match {
           case Some(dataSet) =>
+            val dataSource = dataSet.dataSource
             <things>
               <parameters>
-                <experiment name={dataSet.name}/>
-                <scale x={dataSet.scale.x.toString} y={dataSet.scale.y.toString} z={dataSet.scale.z.toString}/>
+                <experiment name={dataSource.name}/>
+                <scale x={dataSource.scale.x.toString} y={dataSource.scale.y.toString} z={dataSource.scale.z.toString}/>
                 <offset x="0" y="0" z="0"/>
                 <time ms={e.timestamp.toString}/>{e.activeNodeId.map(id => s"<activeNode id=$id/>").getOrElse("")}<editPosition x={e.editPosition.x.toString} y={e.editPosition.y.toString} z={e.editPosition.z.toString}/>
               </parameters>{treesXml}<branchpoints>

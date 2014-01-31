@@ -1,7 +1,6 @@
 package controllers.admin
 
 import oxalis.security.Secured
-import models.security.RoleDAO
 import controllers.Controller
 
 /**
@@ -10,6 +9,4 @@ import controllers.Controller
  * Date: 28.10.13
  * Time: 16:02
  */
-trait AdminController extends Controller with Secured {
-  override val DefaultAccessRole = RoleDAO.Admin
-}
+trait AdminController extends Controller with Secured

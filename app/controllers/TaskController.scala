@@ -3,7 +3,6 @@ package controllers
 import play.api.libs.json.Json._
 import play.api.libs.json._
 import oxalis.security.Secured
-import models.security.RoleDAO
 import play.api.Logger
 import models.user._
 import models.task._
@@ -19,7 +18,6 @@ import net.liftweb.common.{Full, Failure}
 import braingames.reactivemongo.DBAccessContext
 
 object TaskController extends Controller with Secured {
-  override val DefaultAccessRole = RoleDAO.User
 
   val MAX_OPEN_TASKS = current.configuration.getInt("oxalis.tasks.maxOpenPerUser") getOrElse 5
 
@@ -35,7 +33,7 @@ object TaskController extends Controller with Secured {
   def requestTaskFor(user: User)(implicit ctx: DBAccessContext) =
     TaskService.nextTaskForUser(user) orElse (Training.findAssignableFor(user).map(_.headOption))
 
-  def request = Authenticated().async { implicit request =>
+  def request = Authenticated.async { implicit request =>
     val user = request.user
     for {
       _ <- ensureMaxNumberOfOpenTasks(user)

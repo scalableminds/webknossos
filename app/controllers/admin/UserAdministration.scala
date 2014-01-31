@@ -1,35 +1,23 @@
 package controllers.admin
 
-import akka.actor.actorRef2Scala
-import oxalis.mail.DefaultMails
-import braingames.mail.Send
 import oxalis.security.AuthenticatedRequest
-import oxalis.security.Secured
 import controllers._
-import models.security._
 import models.user._
 import play.api.i18n.Messages
 import views.html
 import net.liftweb.common._
 import braingames.util.ExtendedTypes.ExtendedString
-import models.annotation.{AnnotationService, AnnotationType, AnnotationDAO}
-import models.tracing.skeleton.SkeletonTracing
+import models.annotation.AnnotationService
 import play.api.Logger
-import models.team.{TeamPath, TeamMembership}
+import models.team.{Role, TeamMembership}
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.mvc.Request
-import braingames.mail.Send
-import net.liftweb.common.Full
-import models.security.Permission
-import scala.Some
 import models.user.time.{TimeTrackingService, TimeTracking}
 import reactivemongo.bson.BSONObjectID
 import braingames.util.Fox
 import scala.concurrent.Future
 import braingames.reactivemongo.DBAccessContext
-
 import net.liftweb.common.Full
-import scala.Some
 
 object UserAdministration extends AdminController with Dashboard {
 
@@ -52,7 +40,8 @@ object UserAdministration extends AdminController with Dashboard {
     }
   }
 
-  def show(userId: String) = Authenticated().async { implicit request =>
+  // TODO: secure
+  def show(userId: String) = Authenticated.async { implicit request =>
     for {
       user <- UserDAO.findOneById(userId) ?~> Messages("user.notFound")
       loggedTime <- TimeTrackingService.loggedTime(user)
@@ -60,16 +49,17 @@ object UserAdministration extends AdminController with Dashboard {
     } yield Ok(html.admin.user.user(info))
   }
 
-  def index = Authenticated().async { implicit request =>
+  def index = Authenticated.async { implicit request =>
     for {
       users <- sortedUsers
       experiences <- ExperienceService.findAllDomains
     } yield {
-      Ok(html.admin.user.userList(users, RoleDAO.findAll.sortBy(_.name), experiences.toList, request.user.adminTeams))
+      Ok(html.admin.user.userList(users, experiences.toList, request.user.adminTeams.map(_.team)))
     }
   }
 
-  def logTime(userId: String, time: String, note: String) = Authenticated().async { implicit request =>
+  // TODO: secure
+  def logTime(userId: String, time: String, note: String) = Authenticated.async { implicit request =>
     for {
       user <- UserDAO.findOneById(userId) ?~> Messages("user.notFound")
       time <- TimeTracking.parseTime(time) ?~> Messages("time.invalidFormat")
@@ -81,11 +71,12 @@ object UserAdministration extends AdminController with Dashboard {
 
   def extractTeamsFromRequest(request: Request[Map[String, Seq[String]]]) = {
     request.body.get("teams").getOrElse(Nil).map {
-      t => TeamMembership(TeamPath.fromString(t), TeamMembership.Member)
+      t => TeamMembership(t, Role.User)
     }
   }
 
-  def verifyAndAssign(_user: BSONObjectID, teams: Seq[TeamMembership], issuingUser: User)(implicit ctx: DBAccessContext): Fox[String] = {
+  // TODO: secure
+  private def verifyAndAssign(_user: BSONObjectID, teams: Seq[TeamMembership], issuingUser: User)(implicit ctx: DBAccessContext): Fox[String] = {
     for {
       userName <- UserService.verify(_user) ?~> Messages("user.verifyFailed")
       _ <- UserService.assignToTeams(teams, issuingUser)(_user)
@@ -94,7 +85,7 @@ object UserAdministration extends AdminController with Dashboard {
     }
   }
 
-  def verify(userId: String) = Authenticated().async(parse.urlFormEncoded) { implicit request =>
+  def verify(userId: String) = Authenticated.async(parse.urlFormEncoded) { implicit request =>
     for {
       id <- BSONObjectID.parse(userId).toOption ?~> Messages("objectId.parseFailed")
       _ <- verifyAndAssign(id, extractTeamsFromRequest(request), request.user)
@@ -104,12 +95,13 @@ object UserAdministration extends AdminController with Dashboard {
     }
   }
 
-  def verifyBulk = Authenticated().async(parse.urlFormEncoded) { implicit request =>
+  def verifyBulk = Authenticated.async(parse.urlFormEncoded) { implicit request =>
     implicit val issuingUser = request.user
     val teams = extractTeamsFromRequest(request)
     bulkOperation(verifyAndAssign(_, teams, issuingUser), Messages("user.verified", _))
   }
 
+  // TODO: secure
   private def deleteUser(_user: BSONObjectID)(implicit ctx: DBAccessContext) = {
     for {
       user <- UserDAO.findOneById(_user) ?~> Messages("user.notFound")
@@ -120,7 +112,7 @@ object UserAdministration extends AdminController with Dashboard {
     }
   }
 
-  def delete(userId: String) = Authenticated().async { implicit request =>
+  def delete(userId: String) = Authenticated.async { implicit request =>
     for {
       id <- BSONObjectID.parse(userId).toOption ?~> Messages("objectId.parseFailed")
       name <- deleteUser(id)
@@ -129,11 +121,12 @@ object UserAdministration extends AdminController with Dashboard {
     }
   }
 
-  def deleteBulk = Authenticated().async(parse.urlFormEncoded) {
+  def deleteBulk = Authenticated.async(parse.urlFormEncoded) {
     implicit request =>
       bulkOperation(deleteUser, Messages("user.deleted", _))
   }
 
+  // TODO: secure
   private def addRole(_user: BSONObjectID, roleName: String)(implicit ctx: DBAccessContext) = {
     for {
       user <- UserDAO.findOneById(_user) ?~> Messages("user.notFound")
@@ -144,6 +137,7 @@ object UserAdministration extends AdminController with Dashboard {
     }
   }
 
+  // TODO: secure
   private def deleteRole(_user: BSONObjectID, roleName: String)(implicit ctx: DBAccessContext) = {
     for {
       user <- UserDAO.findOneById(_user) ?~> Messages("user.notFound")
@@ -153,16 +147,16 @@ object UserAdministration extends AdminController with Dashboard {
     }
   }
 
-  def loginAsUser(userId: String) = Authenticated(permission = Some(Permission("admin.ghost"))).async { implicit request =>
-    for {
-      user <- UserDAO.findOneById(userId) ?~> Messages("user.notFound")
-    } yield {
-      Redirect(controllers.routes.UserController.dashboard)
-      .withSession(Secured.createSession(user))
-    }
-  }
+//  def loginAsUser(userId: String) = Authenticated(permission = Some(Permission("admin.ghost"))).async { implicit request =>
+//    for {
+//      user <- UserDAO.findOneById(userId) ?~> Messages("user.notFound")
+//    } yield {
+//      Redirect(controllers.routes.UserController.dashboard)
+//      .withSession(Secured.createSession(user))
+//    }
+//  }
 
-  def deleteRoleBulk = Authenticated().async(parse.urlFormEncoded) { implicit request =>
+  def deleteRoleBulk = Authenticated.async(parse.urlFormEncoded) { implicit request =>
     for {
       roleName <- postParameter("role") ?~> Messages("role.invalid")
       result <- bulkOperation(deleteRole(_, roleName), Messages("role.removed", _))
@@ -171,7 +165,7 @@ object UserAdministration extends AdminController with Dashboard {
     }
   }
 
-  def addRoleBulk = Authenticated().async(parse.urlFormEncoded) { implicit request =>
+  def addRoleBulk = Authenticated.async(parse.urlFormEncoded) { implicit request =>
     for {
       roleName <- postParameter("role") ?~> Messages("role.invalid")
       result <- bulkOperation(addRole(_, roleName), Messages("role.added", _))
@@ -180,6 +174,7 @@ object UserAdministration extends AdminController with Dashboard {
     }
   }
 
+  // TODO: secure
   private def increaseExp(_user: BSONObjectID, domain: String, value: Int)(implicit ctx: DBAccessContext) = {
     for {
       user <- UserDAO.findOneById(_user) ?~> Messages("user.notFound")
@@ -189,6 +184,7 @@ object UserAdministration extends AdminController with Dashboard {
     }
   }
 
+  // TODO: secure
   private def setExp(_user: BSONObjectID, domain: String, value: Int)(implicit ctx: DBAccessContext) = {
     for {
       user <- UserDAO.findOneById(_user) ?~> Messages("user.notFound")
@@ -198,6 +194,7 @@ object UserAdministration extends AdminController with Dashboard {
     }
   }
 
+  // TODO: secure
   private def deleteExp(_user: BSONObjectID, domain: String)(implicit ctx: DBAccessContext) = {
     for {
       user <- UserDAO.findOneById(_user) ?~> Messages("user.notFound")
@@ -207,7 +204,7 @@ object UserAdministration extends AdminController with Dashboard {
     }
   }
 
-  def increaseExperienceBulk = Authenticated().async(parse.urlFormEncoded) { implicit request =>
+  def increaseExperienceBulk = Authenticated.async(parse.urlFormEncoded) { implicit request =>
     for {
       domain <- postParameter("experience-domain") ?~> Messages("experience.domain.invalid")
       value <- postParameter("experience-value").flatMap(_.toIntOpt) ?~> Messages("experience.value.invalid")
@@ -217,7 +214,7 @@ object UserAdministration extends AdminController with Dashboard {
     }
   }
 
-  def setExperienceBulk = Authenticated().async(parse.urlFormEncoded) { implicit request =>
+  def setExperienceBulk = Authenticated.async(parse.urlFormEncoded) { implicit request =>
     for {
       domain <- postParameter("experience-domain") ?~> Messages("experience.domain.invalid")
       value <- postParameter("experience-value").flatMap(_.toIntOpt) ?~> Messages("experience.value.invalid")
@@ -227,7 +224,7 @@ object UserAdministration extends AdminController with Dashboard {
     }
   }
 
-  def deleteExperienceBulk = Authenticated().async(parse.urlFormEncoded) { implicit request =>
+  def deleteExperienceBulk = Authenticated.async(parse.urlFormEncoded) { implicit request =>
     for {
       domain <- postParameter("experience-domain") ?~> Messages("experience.domain.invalid")
       result <- bulkOperation(deleteExp(_, domain), Messages("user.experience.removed", _))

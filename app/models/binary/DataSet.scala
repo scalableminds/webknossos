@@ -1,31 +1,32 @@
 package models.binary
 
-import models.context._
-import braingames.geometry.Point3D
 import play.api.libs.functional.syntax._
 import models.basics._
 import play.api.libs.json._
-import braingames.binary.models.DataSet
-import braingames.binary.models.{DataSetRepository => AbstractDataSetRepository}
-import scala.concurrent.Future
-import braingames.binary.models.DataSet
+import braingames.binary.models.{DataSourceRepository => AbstractDataSourceRepository, DataSource}
 import models.user.User
 import braingames.reactivemongo.{DBAccessContext, GlobalDBAccess, SecuredMongoDAO}
-import models.team.TeamPath
+import play.api.libs.concurrent.Execution.Implicits._
 
-object DataSetRepository extends AbstractDataSetRepository with GlobalDBAccess{
+object DataSetRepository extends AbstractDataSourceRepository with GlobalDBAccess{
 
   def deleteAllExcept(l: Array[String]) =
-    DataSetDAO.deleteAllExcept(l)
+    DataSetDAO.deleteAllSourcesExcept(l)
 
-  def updateOrCreate(dataSet: DataSet) =
-    DataSetDAO.updateOrCreate(dataSet)
+  def updateOrCreate(dataSource: DataSource) =
+    DataSetDAO.updateOrCreate(dataSource)
 
   def removeByName(name: String) =
-    DataSetDAO.removeByName(name)
+    DataSetDAO.removeBySourceName(name)
 
   def findByName(name: String) =
-    DataSetDAO.findOneByName(name)
+    DataSetDAO.findOneBySourceName(name).map(_.map(_.dataSource))
+}
+
+case class DataSet(dataSource: DataSource, allowedTeams: List[String], description: Option[String] = None)
+
+object DataSet{
+  implicit val dataSetFormat = Json.format[DataSet]
 }
 
 object DataSetDAO extends SecuredBaseDAO[DataSet] {
@@ -33,44 +34,45 @@ object DataSetDAO extends SecuredBaseDAO[DataSet] {
 
   // Security
 
-  def allUserAccess = {
-    Json.obj("allowedTeams" -> TeamPath.All)
-  }
-
-  def teamRegexesForUser(user: User) = user.teams.map{t =>
-    Json.obj(
-      "allowedTeams" -> Json.obj("$regex" -> t.teamPath.toRegex))}
-
   override def findQueryFilter(implicit ctx: DBAccessContext) = {
     ctx.data match{
       case Some(user: User) =>
-        AllowIf(Json.obj("$or" -> JsArray(allUserAccess :: teamRegexesForUser(user))))
+        AllowIf(Json.obj("allowedTeams" -> Json.obj("$in" -> user.teamNames)))
       case _ =>
-        AllowIf(Json.obj(
-          "allowedTeams" -> TeamPath.All))
+        DenyEveryone()
     }
   }
 
   import braingames.binary.models.DataLayer.dataLayerFormat
 
-  val formatter = Json.format[DataSet]
+  val formatter = DataSet.dataSetFormat
 
   def default()(implicit ctx: DBAccessContext) =
     findMaxBy("priority")
 
-  def deleteAllExcept(names: Array[String])(implicit ctx: DBAccessContext) =
-    collectionRemove(Json.obj("name" -> Json.obj("$nin" -> names)))
+  def deleteAllSourcesExcept(names: Array[String])(implicit ctx: DBAccessContext) =
+    collectionRemove(Json.obj("dataSource.name" -> Json.obj("$nin" -> names)))
 
-  def findOneByName(name: String)(implicit ctx: DBAccessContext) =
-    findOne("name", name)
+  def findOneBySourceName(name: String)(implicit ctx: DBAccessContext) =
+    findOne("dataSource.name", name)
 
-  def updateOrCreate(d: DataSet)(implicit ctx: DBAccessContext) =
+  def updateOrCreate(d: DataSource)(implicit ctx: DBAccessContext) =
     collectionUpdate(
-      Json.obj("name" -> d.name),
+      Json.obj("dataSource.name" -> d.name),
       Json.obj(
-        "$set" -> formatWithoutId(d)),
+        "$set" -> Json.obj("dataSource" -> formatWithoutId(d)),
+        "$setOnInsert" -> Json.obj("allowedTeams" -> List(d.owningTeam))
+      ),
       upsert = true)
 
-  def removeByName(name: String)(implicit ctx: DBAccessContext) =
-    remove("name", name)
+  def removeBySourceName(name: String)(implicit ctx: DBAccessContext) =
+    remove("dataSource.name", name)
+
+  def formatWithoutId(ds: DataSource) = {
+    val js = Json.toJson(ds)
+    js.transform(removeId).getOrElse {
+      System.err.println("Couldn't remove ID from: " + js)
+      js
+    }
+  }
 }

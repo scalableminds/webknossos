@@ -8,6 +8,7 @@ binary.payload.invalid=Couldn''t parse payload
 binary.data.notFound=Couldn''t find the requested data
 
 email=Email
+team=Team
 password=Password
 password.main=Password
 password.validation=Password (again)
@@ -21,7 +22,7 @@ image.create.failed=Failed to create image
 user.verified={0} has been verified
 user.verifyFailed=Couldn''t verify user
 user.notFound=User not found
-user.notVerified=Your account hasn''t been activated yet. After you have uploaded all requested information to braintracing.org, an admin will verify your acount.
+user.notVerified=Your account hasn''t been activated yet.
 user.noPermission=You don''t have enough permissions to access this site. Sorry :(
 user.deleted={0} has been deleted
 user.bulk.empty=No user has been chosen

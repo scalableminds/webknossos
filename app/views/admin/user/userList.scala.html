@@ -1,4 +1,5 @@
-@(users: List[models.user.User], roles: List[models.security.Role], experiences: List[String], teams: List[models.team.TeamPath])(implicit session: oxalis.view.AuthedSessionData)
+@(users: List[models.user.User], experiences: List[String], teams: List[String])(implicit session: oxalis.view.AuthedSessionData)
+@import models.team.Role
 
 @import play.api.libs.json.Json
 
@@ -104,9 +105,6 @@
           <div class="controls">
             <select name="role" class="input-medium" required data-invalid-message="Please select a role.">
               <option value="">Modify roles...</option>
-              @roles.map{ role =>
-                <option value="@role.name">@role.name</option>
-              }
             </select>
           </div>
         </div>

@@ -4,7 +4,7 @@ import models.user.User
 import models.annotation.{AnnotationService, Annotation}
 import models.task.Task
 import models.user.time.TimeTracking._
-import braingames.binary.models.DataSet
+import models.binary.DataSet
 import models.user.time.TimeTrackingService
 import models.binary.DataSetDAO
 import braingames.util.ExtendedTypes.ExtendedList

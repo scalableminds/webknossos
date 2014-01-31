@@ -3,25 +3,20 @@ package models.team
 import play.api.libs.json.Json
 import reactivemongo.bson.BSONObjectID
 import play.modules.reactivemongo.json.BSONFormats._
+import braingames.reactivemongo.SecuredDAO
+import models.basics.SecuredBaseDAO
+import braingames.util.FoxImplicits
 
-case class Team(name: String, subTeams: List[Team], owner: Option[BSONObjectID] = None){
-
-  def allTeamPaths: List[TeamPath] = {
-    val subs = subTeams.flatMap(_.allTeamPaths)
-    subs.map(path => name +: path)
-  }
-
-  def contains(teamPath: TeamPath): Boolean = teamPath match {
-    case TeamPath(head :: Nil) if head == name =>
-      true
-    case TeamPath(head :: tail) if head == name =>
-      subTeams.find(_.contains(TeamPath(tail))).isDefined
-    case _ =>
-      false
-  }
-}
+case class Team(name: String, owner: Option[BSONObjectID] = None)
 
 object Team extends {
 
   implicit val teamFormat = Json.format[Team]
+}
+
+object TeamDAO extends SecuredBaseDAO[Team] with FoxImplicits {
+  val collectionName = "teams"
+
+  implicit val formatter = Team.teamFormat
+
 }

@@ -1,14 +1,10 @@
 @(user: models.user.User)
+@import models.team.RoleService
 <tr data-name="@user.name" data-id="@user.id" id="@user.id">
 	<td> <input type="checkbox" name="id" value="@user.id" class="select-row"> </td>
 	<td> @user.lastName </td>
 	<td> @user.firstName</td>
 	<td> @user.email </td>
-	<td>
-		@user.roles.map{ role =>
-  		<span class="label" style="background-color:@models.security.RoleService.colorOf(role)">@role</span>
-		}
-	</td>
 	<td>
 		@user.experiences.map{ experience =>
 			<span class="label label-experience">@experience._1 @experience._2</span>
@@ -30,6 +26,6 @@
     <a href="@controllers.admin.routes.UserAdministration.show(user.id)" ><i class="icon-user"></i> show Tracings</a><br />
     <a href="@controllers.admin.routes.NMLIO.userDownload(user.id)" title="download all finished tracings"><i class="icon-download"></i> download </a><br />
   	<a href="@controllers.admin.routes.UserAdministration.delete(user.id)" data-ajax="delete-row,confirm"><i class="icon-trash"></i> delete </a><br />
-    <a href="@controllers.admin.routes.UserAdministration.loginAsUser(user.id)"><i class="icon-signin"></i> log in as User </a>
+    <!--<a href="controllers.admin.routes.UserAdministration.loginAsUser(user.id)"><i class="icon-signin"></i> log in as User </a>-->
 	</td>
 </tr>

@@ -19,7 +19,7 @@
     @if(user.verified) {
       <i class="icon-ok"></i>
     } else {
-      <a href="#" class="show-modal" data-url="@controllers.admin.routes.UserAdministration.verify(user.id)" data-placement="bottom" data-html="true" data-title="Assign to a Team" data-template="teampicker"> verify </a>
+      <a href="#" class="show-modal" data-url="@controllers.admin.routes.UserAdministration.verify(user.id)" data-title="Assign to a Team" data-template="teampicker"> verify </a>
     }
   </td>
   <td class="nowrap">

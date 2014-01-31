@@ -12,16 +12,16 @@
 
 @linkText(failed: Boolean) = {
   @if(failed) {
-    Review failed - 
+    Review failed -
   } else {
-    Review - 
+    Review -
   }
 }
 
 @displayComments(failed: Boolean, comments: List[String]) = {
   @comments match{
     case head :: tail => {
-      <a href="#" rel="popover" data-placement="bottom" data-title="Comment from Reviewer" data-html="true" data-content="@org.apache.commons.lang3.StringEscapeUtils.escapeHtml4(head).replaceAll("\n", "<br /><br />")"><i class="icon-eye-open"></i> @linkText(failed) Comment <span class="caret-down"></span></a>    
+      <a href="#" rel="popover" data-placement="bottom" data-title="Comment from Reviewer" data-html="true" data-content="@org.apache.commons.lang3.StringEscapeUtils.escapeHtml4(head).replaceAll("\n", "<br /><br />")"><i class="icon-eye-open"></i> @linkText(failed) Comment <span class="caret-down"></span></a>
     }
     case _ => {
 
@@ -35,16 +35,16 @@
   <td> @taskType.map(_.summary).getOrElse("<deleted>") - @annotation.typ</td>
   <td> @project.map(_.name).getOrElse("") </td>
   <td>
-    
+
     @taskType.map( _.settings.allowedModes.map{ mode => {
         mode.capitalize
     }}).getOrElse(List(""))
-    
+
   </td>
   <td> @dataSetName </td>
-  
+
   @statsOpt.map{ stats =>
-  <td> 
+  <td>
     <span title="Trees"><i class="icon-sitemap"></i> @stats.numberOfTrees &nbsp;</span>
     <span title="Nodes">&bull; @stats.numberOfNodes &nbsp;</span>
     <span title="Edges"><i class="icon-resize-horizontal"></i> @stats.numberOfEdges</span>
@@ -54,7 +54,7 @@
   <td>
     @content.map(e => formatDate(e.timestamp)).getOrElse("")
   </td>
-  <td> 
+  <td>
     @annotation.state match{
       case s if s.isFinished => {
         <i class="icon-ok"></i><span> Finished</span><br />
@@ -69,7 +69,7 @@
       }
     }
   </td>
-  <td>   
+  <td>
     @annotationLinks(annotation.actions(Some(user)))
   </td>
 </tr>

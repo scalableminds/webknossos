@@ -38,6 +38,7 @@ class Gui
       activeNodeID : @model.cellTracing.getActiveNodeId() or -1
       activeCellID : @model.volumeTracing.getActiveCellId()
       newNodeNewTree : if somaClickingAllowed then @user.newNodeNewTree else false
+      radius : @model.cellTracing.getActiveNodeRadius()
       deleteActiveNode : => @trigger "deleteActiveNode"
       createNewCell : => @trigger "createNewCell"
 
@@ -118,8 +119,11 @@ class Gui
     @folders.push( @fNodes = @gui.addFolder("Nodes") )
     @activeNodeIdController = @addNumber(@fNodes, @settings, "activeNodeID",
       1, 1, "Active Node ID", (value) => @trigger( "setActiveNode", value))
+    @radiusController = @addSlider(@fNodes, @settings, "radius",
+      @model.cellTracing.MIN_RADIUS, @model.cellTracing.MAX_RADIUS, 1, "Radius", (radius) =>
+        @model.cellTracing.setActiveNodeRadius( radius ))
     @particleSizeController = @addSlider(@fNodes, @user, "particleSize",
-      constants.MIN_PARTICLE_SIZE, constants.MAX_PARTICLE_SIZE, 1, "Node size")
+      constants.MIN_PARTICLE_SIZE, constants.MAX_PARTICLE_SIZE, 1, "Min. node size")
     @addFunction(@fNodes, @settings, "deleteActiveNode", "Delete Active Node")
 
     @folders.push( @fCells = @gui.addFolder("Cells") )
@@ -172,13 +176,14 @@ class Gui
           $("#zoomFactor").html("<p>Viewport width: " + (nm / 1000000).toFixed(1) + " mm</p>")
 
     @model.cellTracing.on
-      newActiveNode    : => @update()
-      newActiveTree    : => @update()
-      deleteActiveTree : => @update()
-      deleteActiveNode : => @update()
-      deleteLastNode   : => @update()
-      newNode          : => @update()
-      newTree          : => @update()
+      newActiveNode       : => @update()
+      newActiveTree       : => @update()
+      newActiveNodeRadius : => @update()
+      deleteActiveTree    : => @update()
+      deleteActiveNode    : => @update()
+      deleteLastNode      : => @update()
+      newNode             : => @update()
+      newTree             : => @update()
 
     @model.volumeTracing.on
       newActiveCell    : =>
@@ -400,9 +405,11 @@ class Gui
     @settings.activeNodeID = @model.cellTracing.getActiveNodeId() or -1
     @settings.activeTreeID = @model.cellTracing.getActiveTreeId()
     @settings.activeCellID = @model.volumeTracing.getActiveCellId()
+    @settings.radius = @model.cellTracing.getActiveNodeRadius()
     @activeNodeIdController.updateDisplay()
     @activeTreeIdController.updateDisplay()
     @activeCellIdController.updateDisplay()
+    @radiusController.updateDisplay()
 
 
   setFolderVisibility : (folder, visible) ->

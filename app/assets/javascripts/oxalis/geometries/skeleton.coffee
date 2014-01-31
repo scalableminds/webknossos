@@ -30,6 +30,8 @@ class Skeleton
       newActiveNode : => 
         @setActiveNode()
         @setInactiveTreeVisibility(@showInactiveTrees)
+      newActiveNodeRadius : =>
+        @setActiveNodeRadius()
       newTree : (treeId, treeColor) => 
         @createNewTree(treeId, treeColor)
         @setInactiveTreeVisibility(@showInactiveTrees)
@@ -194,6 +196,14 @@ class Skeleton
     @lastActiveNode = activeNode
 
 
+  setActiveNodeRadius : ->
+
+    if (activeNode = @model.cellTracing.getActiveNode())?
+      treeGeometry = @getTreeGeometry( activeNode.treeId )
+      treeGeometry?.updateNodeRadius( activeNode.id, activeNode.radius )
+      @flycam.update()
+
+
   getAllNodes : ->
 
     return (tree.nodes for tree in @treeGeometries)
@@ -236,3 +246,9 @@ class Skeleton
 
     for tree in @treeGeometries
       tree.setSizeAttenuation( sizeAttenuation )
+
+
+  updateForCam : (cam) ->
+
+    for tree in @treeGeometries
+      tree.showRadius( cam != constants.TDView )

@@ -3,6 +3,8 @@
  * @author Larry Battle / http://bateru.com/news
  */
 
+// Look for CHANGED to see custom edits
+
 var THREE = THREE || { REVISION: '57' };
 
 self.console = self.console || {
@@ -18923,7 +18925,7 @@ THREE.WebGLRenderer = function ( parameters ) {
 					attribute.size = size;
 
 					attribute.array = new Float32Array( nvertices * size );
-
+					
 					attribute.buffer = _gl.createBuffer();
 					attribute.buffer.belongsToAttribute = a;
 
@@ -19542,8 +19544,10 @@ THREE.WebGLRenderer = function ( parameters ) {
 
 				if ( customAttribute.needsUpdate || object.sortParticles ) {
 
+					// CHANGED: Allow client to bypass ThreeJS array
+					var array = customAttribute._array || customAttribute.array;
 					_gl.bindBuffer( _gl.ARRAY_BUFFER, customAttribute.buffer );
-					_gl.bufferData( _gl.ARRAY_BUFFER, customAttribute.array, hint );
+					_gl.bufferData( _gl.ARRAY_BUFFER, array, hint );
 
 				}
 

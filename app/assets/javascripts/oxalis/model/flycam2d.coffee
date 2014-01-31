@@ -83,6 +83,7 @@ class Flycam2d
     @zoomStep = zoomStep
     @hasChanged = true
     @updateStoredValues()
+    @trigger "zoomStepChanged", zoomStep
 
 
   getMaxZoomStep : ->

@@ -5,7 +5,7 @@ import scala.Some
 import scala.concurrent.{Future, Await}
 import scala.concurrent.duration._
 import oxalis.user.UserCache
-import models.team.{Role, TeamMembership, Team}
+import models.team.{TeamDAO, Role, TeamMembership, Team}
 import reactivemongo.bson.BSONObjectID
 import play.api.i18n.Messages
 import oxalis.mail.DefaultMails
@@ -39,9 +39,13 @@ object UserService extends FoxImplicits {
     UserDAO.logActivity(user, lastActivity)(GlobalAccessContext)
   }
 
-  def insert(email: String, firstName: String, lastName: String, password: String, isVerified: Boolean) = {
-    val user = User(email, firstName, lastName, false, hashPassword(password), Nil)
-    UserDAO.insert(user, isVerified)(GlobalAccessContext)
+  def insert(teamName: String, email: String, firstName: String, lastName: String, password: String, isVerified: Boolean) = {
+    for{
+      teamOpt <- TeamDAO.findOneByName(teamName)(GlobalAccessContext)
+      teamMemberships = teamOpt.map(t => TeamMembership(t.name, Role.User)).toList
+      user = User(email, firstName, lastName, false, hashPassword(password), teamMemberships)
+      _ <- UserDAO.insert(user, isVerified)(GlobalAccessContext)
+    } yield user
   }
 
   def findOneByEmail(email: String): Future[Option[User]] = {

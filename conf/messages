@@ -1,7 +1,7 @@
 error.email=Please supply a valid email address
 error.required=Please supply all needed values
 
-notAllowed=None of your business
+notAllowed=You are not allowed to view this resource
 
 binary.payload.notSupplied=No valid payload supplied
 binary.payload.invalid=Couldn''t parse payload
@@ -14,6 +14,16 @@ password.main=Password
 password.validation=Password (again)
 firstName=First Name
 lastName=Last Name
+summary=Summary
+description=Description
+expectedTime.minTime=Expected Time (min)
+expectedTime.maxTime=Expected Time (max)
+expectedTime.maxHard=Time limit
+gain=Gain
+lose=Loss
+task=Task
+
+bsonid.invalid=The passed resource id is invalid.
 
 format.json.invalid=Invalid Json format
 
@@ -22,7 +32,7 @@ image.create.failed=Failed to create image
 user.verified={0} has been verified
 user.verifyFailed=Couldn''t verify user
 user.notFound=User not found
-user.notVerified=Your account hasn''t been activated yet.
+user.notVerified=Your account hasn''t been activated yet
 user.noPermission=You don''t have enough permissions to access this site. Sorry :(
 user.deleted={0} has been deleted
 user.bulk.empty=No user has been chosen
@@ -158,13 +168,4 @@ game.notFound=Specified game couldn''t be found
 
 time.invalidFormat=Time couldn''t get parsed.
 point.invalidFormat=Invalid format. Use something like: 4, 63, 24
-
-summary=Summary
-description=Description
-expectedTime.minTime=Expected Time (min)
-expectedTime.maxTime=Expected Time (max)
-expectedTime.maxHard=Time limit
-gain=Gain
-lose=Loss
-task=Task
 

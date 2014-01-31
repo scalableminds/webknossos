@@ -65,7 +65,7 @@ object Authentication extends Controller with Secured with ProvidesUnauthorizedS
           UserService.findOneByEmail(email).flatMap {
             case None =>
               for {
-                user <- UserService.insert(email, firstName, lastName, password, autoVerify)
+                user <- UserService.insert(team, email, firstName, lastName, password, autoVerify)
                 brainDBResult <- BrainTracing.register(user, password)
               } yield {
                 Application.Mailer ! Send(

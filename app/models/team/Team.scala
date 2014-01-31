@@ -3,7 +3,7 @@ package models.team
 import play.api.libs.json.Json
 import reactivemongo.bson.BSONObjectID
 import play.modules.reactivemongo.json.BSONFormats._
-import braingames.reactivemongo.SecuredDAO
+import braingames.reactivemongo.{DBAccessContext, SecuredDAO}
 import models.basics.SecuredBaseDAO
 import braingames.util.FoxImplicits
 
@@ -18,5 +18,8 @@ object TeamDAO extends SecuredBaseDAO[Team] with FoxImplicits {
   val collectionName = "teams"
 
   implicit val formatter = Team.teamFormat
+
+  def findOneByName(name: String)(implicit ctx: DBAccessContext) =
+    findOne("name", name)
 
 }

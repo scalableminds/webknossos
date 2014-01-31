@@ -115,6 +115,9 @@ object UserDAO extends SecuredBaseDAO[User] {
     }
   }
 
+  def findAllInTeams(teams: List[String])(implicit ctx: DBAccessContext) =
+    collectionFind(Json.obj("teams.team" -> Json.obj("$in" -> teams))).cursor[User].collect[List]()
+
   def findOneByEmail(email: String)(implicit ctx: DBAccessContext) = findOne("email", email)
 
   def findByIdQ(id: BSONObjectID) = Json.obj("_id" -> id)

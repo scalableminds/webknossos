@@ -66,11 +66,9 @@
         </div>
         <div class="span4">
           <div>
+
             <select name="role" class="input-medium" required data-invalid-message="Please select a role.">
               <option value="">Modify roles...</option>
-                @roles.map{ role =>
-                  <option value="@role.name">@role.name</option>
-                }
             </select>
           </div>
         </div>

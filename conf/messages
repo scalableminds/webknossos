@@ -48,6 +48,7 @@ dataSet.notFound=Selected data set doesn''t exist
 dataSet.notSupplied=No data set supplied
 
 dataLayer.notFound=DataLayer not found
+dataLayer.test=Test message
 
 cellId=Cell Id
 

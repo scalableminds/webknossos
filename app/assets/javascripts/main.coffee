@@ -42,51 +42,16 @@ require.config
     "qassert" : [ "jquery" ]
 
 require [
+  "./main/errorHandling"
   "jquery"
   "underscore"
   "bootstrap"
-], ->
+], (ErrorHandling) ->
+
+  ErrorHandling.initialize( { throwAssertions: false, sendLocalErrors: false } )
 
   require [
-    "qassert"
+    "./main/enhancements"
+    "./main/routing"
+    "libs/core_ext"
   ], ->
-
-    # Airbrake shim
-    unless window.Airbrake?
-      window.Airbrake = []
-    else
-      # TODO: ensure that the filter is also added when Airbrake loaded later
-      Airbrake.addFilter( (notice) ->
-        return location.hostname != "127.0.0.1" and location.hostname != "localhost"
-      )
-
-    window.onerror = (message, file, line) ->
-
-      Airbrake.push({error: {message: message, fileName: file, lineNumber: line}})
-
-
-    $.assertSetup(
-      ajax :
-        url : "/assert"
-        type : "POST"
-        contentType : "application/x-www-form-urlencoded"
-      catchGlobalErrors : false
-      context :
-        userAgent :
-          version : navigator.appVersion
-          product : navigator.product + " - " + navigator.productSub
-          vendor : navigator.vendor + " - " + navigator.vendorSub
-          platform : navigator.platform
-      log: ->
-        console.warn.apply(console, arguments)
-        [title, message, linebreak, additionalInfos] = arguments
-        stacktrace = additionalInfos.Stacktrace
-        Airbrake.push({error : {message: title + " " + message}, params: stacktrace})
-    )
-
-
-    require [
-      "./main/enhancements"
-      "./main/routing"
-      "libs/core_ext"
-    ], ->

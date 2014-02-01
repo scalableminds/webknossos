@@ -99,8 +99,7 @@ class Tree
         edgesIndex = i
         break
 
-    $.assert(found,
-      "No edge found.", { found, edgeArray, nodesIndex })
+    $.assert(found, "No edge found.", { found, edgeArray, nodesIndex })
 
     swapLast( @edgesBuffer, edgesIndex )
 

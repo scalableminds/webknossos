@@ -2,7 +2,10 @@
 underscore : _
 backbone.marionette : marionette
 ./user_list_item_view : UserListItemView
-backboneMVC/models/admin/user/user_collection : UserCollection
+admin/models/user/user_collection : UserCollection
+admin/views/user/team_role_modal_view : TeamRoleModalView
+admin/views/user/bulk_delete_modal_view : BulkDeleteModalView
+admin/views/user/experience_modal_view : ExperienceModalView
 ###
 
 class UserListView extends Backbone.Marionette.CompositeView
@@ -34,43 +37,37 @@ class UserListView extends Backbone.Marionette.CompositeView
           </a>
           <ul class="dropdown-menu">
             <li>
-              <a data-template="teampicker" class="show-modal">
+              <a id="team-role-modal">
                 <i class="icon-ok"></i> Verify
               </a>
             </li>
             <li>
-              <a data-template="deletepicker"  class="show-modal">
+              <a id="bulk-delete-modal">
                 <i class="icon-trash"></i> Delete
               </a>
             </li>
             <li>
-              <a data-template="experiencepicker"  class="show-modal">
+              <a id="experience-modal">
                 <i class="icon-trophy"></i> Change Experience
               </a>
             </li>
           </ul>
         </div>
-
-        </div>
-        <div class="modal hide fade">
-          <div class="modal-header">
-              <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
-              <h3></h3>
-          </div>
-          <div class="modal-body">
-          </div>
-        </div>
-      </form>
-    </div>
+      </div>
+    </form>
+    <div id="modal-wrapper"></div>
   """)
   className : "user-administration-table container wide"
   itemView : UserListItemView
   itemViewContainer : "tbody"
+
   ui :
-    bulkActionButtons : ".show-modal"
+    "modalWrapper" : "#modal-wrapper"
 
   events :
-    "click .show-modal" : "showModal"
+    "click #team-role-modal" : "showTeamRoleModal"
+    "click #bulk-delete-modal" : "showBulkDeleteModal"
+    "click #experience-modal" : "showExperienceModal"
 
   initialize : ->
 
@@ -78,8 +75,28 @@ class UserListView extends Backbone.Marionette.CompositeView
     @collection.fetch()
 
 
-  showModal : ->
+  showTeamRoleModal : ->
+
+    @showModal(TeamRoleModalView)
 
 
+  showBulkDeleteModal : ->
+
+    @showModal(BulkDeleteModalView)
+
+
+  showExperienceModal : ->
+
+    @showModal(ExperienceModalView)
+
+
+  showModal : (modalView) ->
+
+    view = new modalView({collection: @collection})
+    view.render()
+    @ui.modalWrapper.html(view.el)
+    @ui.modalWrapper.html(view.el)
+
+    view.$el.modal("show")
 
 

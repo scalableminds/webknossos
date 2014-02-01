@@ -3,7 +3,7 @@
 @import play.api.Play.current
 
 @if(showNavButtons) {
-  <header class="navbar navbar-static-top navbar-inverse">
+  <header class="navbar navbar-fixed-top navbar-inverse">
     <div class="navbar-inner">
       <a class="brand" href="@routes.Application.index">@current.configuration.getString("application.name")</a>
        @session.userOpt.map{ user =>

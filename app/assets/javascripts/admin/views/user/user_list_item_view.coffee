@@ -5,8 +5,8 @@ backbone.marionette : marionette
 
 class UserListItemView extends Backbone.Marionette.ItemView
 
-  tagName: "tr"
-  attributes: ->
+  tagName : "tr"
+  attributes : ->
     "data-name" : "#{@model.get("firstName")} #{@model.get("lastName")}"
     "data-id" : @model.get("id")
     "id" : @model.get("id")
@@ -50,7 +50,7 @@ class UserListItemView extends Backbone.Marionette.ItemView
   events : ->
     "click a[href=#]" : "delete"
 
-  delete: ->
+
+  delete : ->
 
     @model.destroy()
-    #/admin/users/<%= id %>/delete" data-ajax="delete-row,confirm"

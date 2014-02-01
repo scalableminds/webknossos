@@ -215,7 +215,7 @@ $ ->
 
     "admin.user.userList" : ->
 
-      require ["./backboneMVC/views/admin/user/user_list_view"], (UserListView) =>
+      require ["./admin/views/user/user_list_view"], (UserListView) =>
 
         view = new UserListView().render()
         $(this).html(view.el)

@@ -34,7 +34,7 @@ body:-webkit-full-screen {
 }
 
 .navbar #main-menu {
-    a [class^="icon-"], 
+    a [class^="icon-"],
     a [class*=" icon-"] {
         color: #fff;
     }
@@ -144,7 +144,7 @@ body:-webkit-full-screen {
 }
 
 .table {
-    a [class^="icon-"], 
+    a [class^="icon-"],
     a [class*=" icon-"] {
         color: #000;
     }
@@ -264,7 +264,23 @@ svg a:hover {
     position: absolute;
     top: 50%;
     left: 50%;
+    z-index: 1;
 }
+
+#loader-background {
+    position: absolute;
+    left: 0px;
+    top: 0px;
+    height: 100%;
+    width: 100%;
+    background-color: white;
+    color: white;
+    text-align: center;
+    padding-top: 100px;
+    opacity: 0.7;
+    filter: alpha(opacity=50);
+}
+
 #container {
     display: none;
 }
@@ -750,9 +766,9 @@ svg a:hover {
 }
 
 // Fixing font awesome
-.btn [class^="icon-"], 
-.nav [class^="icon-"], 
-.btn [class*=" icon-"], 
+.btn [class^="icon-"],
+.nav [class^="icon-"],
+.btn [class*=" icon-"],
 .nav [class*=" icon-"] {
     line-height: normal;
 }

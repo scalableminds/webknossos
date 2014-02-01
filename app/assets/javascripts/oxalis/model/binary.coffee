@@ -5,7 +5,7 @@
 ./binary/plane2d : Plane2D
 ./binary/ping_strategy : PingStrategy
 ./binary/ping_strategy_3d : PingStrategy3d
-./dimensions : Dimensions
+../constants : constants
 ###
 
 class Binary
@@ -25,7 +25,8 @@ class Binary
 
   constructor : (@user, dataSet, @TEXTURE_SIZE_P, @layer, @testData = false) ->
 
-    @dataSetName = dataSet.name
+    @dataSetName    = dataSet.name
+    @targetBitDepth = if @layer.name == "color" then @layer.bitDepth else 8
 
     for layer in dataSet.dataLayers
       if layer.typ == @layer.name
@@ -45,9 +46,8 @@ class Binary
     @pingStrategies3d = [new PingStrategy3d.DslSlow()]
 
     @planes = []
-    @planes[Dimensions.PLANE_XY] = new Plane2D(Dimensions.PLANE_XY, @cube, @queue, @TEXTURE_SIZE_P, @layer.bitDepth)
-    @planes[Dimensions.PLANE_XZ] = new Plane2D(Dimensions.PLANE_XZ, @cube, @queue, @TEXTURE_SIZE_P, @layer.bitDepth)
-    @planes[Dimensions.PLANE_YZ] = new Plane2D(Dimensions.PLANE_YZ, @cube, @queue, @TEXTURE_SIZE_P, @layer.bitDepth)
+    for planeId in constants.ALL_PLANES
+      @planes.push( new Plane2D(planeId, @cube, @queue, @TEXTURE_SIZE_P, @layer.bitDepth, @targetBitDepth) )
 
     if @layer.allowManipulation
       # assume zoom step count to be at least 1

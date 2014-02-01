@@ -11,12 +11,12 @@
     <link rel="stylesheet" type="text/css" media="screen" href="@routes.Assets.at("stylesheets/main.css")">
     <link href='http://fonts.googleapis.com/css?family=Source+Sans+Pro:200,400' rel='stylesheet' type='text/css'>
     <script type="text/javascript" src="@routes.Assets.at("javascripts/libs/require-2.1.1.js")"></script>
-    <script type="text/javascript" src="@routes.Assets.at("javascripts/main.js")"></script>
     <script type="text/javascript"
       src="@routes.Assets.at("javascripts/libs/airbrake.min.js")"
       data-airbrake-project-id=@play.api.Play.current.configuration.getString("airbrake.projectID")
       data-airbrake-project-key=@play.api.Play.current.configuration.getString("airbrake.projectKey")
       data-airbrake-environment-name=@play.api.Play.current.mode></script>
+    <script type="text/javascript" src="@routes.Assets.at("javascripts/main.js")"></script>
   </head>
   <body>
     @body

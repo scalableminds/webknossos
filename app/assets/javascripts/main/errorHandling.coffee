@@ -15,19 +15,11 @@ ErrorHandling =
 
   initializeAirbrake : ->
 
-    # Airbrake shim
-    unless window.Airbrake?
-    
-      window.Airbrake = []
-    
-    else
-
-      # TODO: ensure that the filter is also added when Airbrake was loaded later
-      unless @sendLocalErrors
-    
-        Airbrake.addFilter( (notice) ->
-          return location.hostname != "127.0.0.1" and location.hostname != "localhost"
-        )
+    unless @sendLocalErrors
+  
+      Airbrake.addFilter( (notice) ->
+        return location.hostname != "127.0.0.1" and location.hostname != "localhost"
+      )
   
     window.onerror = (message, file, line, colno, error) ->
 

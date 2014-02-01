@@ -19,9 +19,10 @@ GET           /login                                                     control
 POST          /login                                                     controllers.Authentication.authenticate
 GET           /logout                                                    controllers.Authentication.logout
 GET           /register                                                  controllers.Authentication.register
-POST          /register                                                  controllers.Authentication.registrate
+POST          /register                                                  controllers.Authentication.handleRegistration
 
 # User settings
+GET           /users                                                     controllers.admin.UserAdministration.list
 POST          /user/configuration                                        controllers.UserController.saveSettings
 GET           /user/configuration                                        controllers.UserController.showSettings
 GET           /user/configuration/default                                controllers.UserController.defaultSettings
@@ -38,12 +39,6 @@ POST          /datasets/:dataSetName/layers/:dataLayerName/data          control
 GET           /datasets/:dataSetName/layers/:dataLayerName/data          controllers.BinaryData.requestViaAjaxDebug(dataSetName: String, dataLayerName: String, cubeSize: Int, x: Int, y: Int, z: Int, resolution: Int)
 GET           /datasets/:dataSetName/layers/:dataLayerName/sprite        controllers.BinaryData.requestSpriteSheet(dataSetName: String, dataLayerName: String, cubeSize: Int ?=128, imagesPerRow: Int ?= 8, x: Int, y: Int, z: Int, resolution: Int)
 GET           /datasets/:dataSetName/layers/:dataLayerName/image         controllers.BinaryData.requestImage(dataSetName: String, dataLayerName: String, width: Int, height: Int, x: Int, y: Int, z: Int, resolution: Int)
-
-# Assertions
-GET           /assert/:assertionId                                       controllers.AssertionController.view(assertionId: String)
-POST          /assert                                                    controllers.AssertionController.log
-GET           /assert                                                    controllers.AssertionController.list
-GET           /assert/:from/:number                                      controllers.AssertionController.listSliced(from: Int, number: Int)
 
 # SkeletonTracing Stuff
 POST          /annotations/createExplorational                           controllers.AnnotationController.createExplorational
@@ -64,6 +59,8 @@ GET           /annotations/:typ/:id/cancel                               control
 #Admin pages
 GET           /admin/nml/upload                                          controllers.admin.NMLIO.uploadForm
 POST          /admin/nml/upload                                          controllers.admin.NMLIO.upload
+
+GET           /teams                                                     controllers.TeamController.list
 
 
 # Admin Tasks
@@ -120,7 +117,7 @@ POST          /admin/users/verify                                        control
 POST          /admin/users/delete                                        controllers.admin.UserAdministration.deleteBulk
 POST          /admin/users/:id/verify                                    controllers.admin.UserAdministration.verify(id: String)
 GET           /admin/users/:id/delete                                    controllers.admin.UserAdministration.delete(id: String)
-GET           /admin/users/:id/loginAs                                   controllers.admin.UserAdministration.loginAsUser(id: String)
+# GET           /admin/users/:id/loginAs                                   controllers.admin.UserAdministration.loginAsUser(id: String)
 GET           /admin/users/:id/details                                   controllers.admin.UserAdministration.show(id: String)
 GET           /admin/users/:id/download                                  controllers.admin.NMLIO.userDownload(id: String)
 POST          /admin/users/role                                          controllers.admin.UserAdministration.addRoleBulk

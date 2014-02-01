@@ -3,7 +3,7 @@ package models.tracing.volume
 import braingames.geometry.Point3D
 import models.annotation.{AnnotationContentService, AnnotationContent, AnnotationSettings}
 import models.basics.SecuredBaseDAO
-import braingames.binary.models.DataSet
+import models.binary.DataSet
 import java.io.InputStream
 import play.api.libs.json.{Json, JsValue}
 import oxalis.binary.BinaryDataService
@@ -72,7 +72,7 @@ object VolumeTracingDAO extends SecuredBaseDAO[VolumeTracing] {
   val formatter = VolumeTracing.volumeTracingFormat
 
   def createFrom(baseDataSet: DataSet)(implicit ctx: DBAccessContext) = {
-    val dataSet = BinaryDataService.createUserDataSet(baseDataSet)
+    val dataSet = BinaryDataService.createUserDataSource(baseDataSet.dataSource)
     val t = VolumeTracing(dataSet.name, System.currentTimeMillis(), Point3D(0,0,0))
     insert(t)
   }

@@ -20,6 +20,8 @@
 
 @helper.inputText(taskForm("taskInstances"), 'type -> "number", 'min -> 1)
 
+@helper.inputText(taskForm("team"))
+
 @helper.select(taskForm("project"), ("" -> "") +: projects.map { project =>
   project.name -> project.name 
 })

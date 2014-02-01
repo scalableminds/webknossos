@@ -4,13 +4,11 @@ import models.basics._
 import models.task.{TaskService, TaskDAO, TaskType, Task}
 import play.api.libs.json.{Json, JsObject}
 import models.user.{UserService, UserDAO, User}
-import models.security.Role
 import AnnotationType._
 import org.joda.time.format.DateTimeFormat
 import org.joda.time.DateTime
 import braingames.format.Formatter
 import oxalis.nml.NML
-import braingames.binary.models.DataSet
 import braingames.geometry.Point3D
 import java.util.Date
 import play.api.libs.json.{Json, JsValue}
@@ -25,11 +23,13 @@ import braingames.reactivemongo.{DBAccessContext, GlobalAccessContext}
 import play.modules.reactivemongo.json.BSONFormats._
 import reactivemongo.api.indexes.{IndexType, Index}
 import oxalis.view.{ResourceAction, ResourceActionCollection}
+import models.team.Role
 
 case class Annotation(
                        _user: BSONObjectID,
                        _content: ContentReference,
                        _task: Option[BSONObjectID] = None,
+                       team: String,
                        state: AnnotationState = AnnotationState.InProgress,
                        typ: String = AnnotationType.Explorational,
                        version: Int = 0,

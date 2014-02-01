@@ -8,6 +8,7 @@ import braingames.reactivemongo.DBAccessContext
 import scala.concurrent.Future
 import play.api.libs.concurrent.Execution.Implicits._
 import braingames.util.{FoxImplicits, Fox}
+import models.user.User
 
 object SavedTracingInformationHandler extends AnnotationInformationHandler with FoxImplicits {
 
@@ -31,7 +32,7 @@ object SavedTracingInformationHandler extends AnnotationInformationHandler with 
       Future.successful(a.id)
   }
 
-  def provideAnnotation(annotationId: String)(implicit ctx: DBAccessContext): Fox[Annotation] = {
+  def provideAnnotation(annotationId: String, user: Option[User])(implicit ctx: DBAccessContext): Fox[Annotation] = {
     for {
       annotation <- AnnotationDAO.findOneById(annotationId) ?~> Messages("annotation.notFound")
     } yield {

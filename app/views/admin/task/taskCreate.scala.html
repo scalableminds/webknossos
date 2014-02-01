@@ -1,4 +1,4 @@
-@(taskTypes: List[models.task.TaskType], dataSets: List[braingames.binary.models.DataSet], experiences: List[String], projects: List[models.task.Project], nmlForm: Form[(String, models.user.Experience, Int, Int, String)], taskForm: Form[(String, String, braingames.geometry.Point3D, models.user.Experience, Int, Int, String)])(implicit session: oxalis.view.AuthedSessionData)
+@(taskTypes: List[models.task.TaskType], dataSets: List[models.binary.DataSet], experiences: List[String], projects: List[models.task.Project], nmlForm: Form[(String, models.user.Experience, Int, Int, String, String)], taskForm: Form[(String, String, braingames.geometry.Point3D, models.user.Experience, Int, Int, String, String)])(implicit session: oxalis.view.AuthedSessionData)
 
 @main(){
   <div class="container">
@@ -30,7 +30,7 @@
         @basicTaskForm(nmlForm, taskTypes, experiences, projects)
 
         @helper.select(taskForm("dataSet"), dataSets.map { dataSet =>
-          dataSet.name -> dataSet.name 
+          dataSet.dataSource.name -> dataSet.dataSource.name
         })
 
         @helper.inputText(taskForm("start.point"), 'type -> "text")
@@ -45,7 +45,7 @@
 
     <div class="well">
       One line for each task. The values are seperated by a space. Format: <br />
-      dataSet taskTypeSummary experienceDomain minExperience x y z priority instances (opt: project)<br /><br />
+      dataSet taskTypeSummary experienceDomain minExperience x y z priority instances team (opt: project)<br /><br />
       @helper.form(controllers.admin.routes.TaskAdministration.createBulk){
         <textarea class="input-fullwidth input-monospace" rows="20" name="data"></textarea>
         <div class="form-actions">

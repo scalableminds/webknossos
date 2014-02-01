@@ -50,7 +50,7 @@ object CompoundAnnotation extends Formatter with FoxImplicits {
         tasks <- TaskDAO.findAllByProject(project.name)
         annotations <- Future.traverse(tasks)(_.annotations).map(_.flatten)
       } yield {
-        createFromAnnotations(annotations, project.name, AnnotationType.CompoundProject)
+        createFromAnnotations(project.team, annotations, project.name, AnnotationType.CompoundProject)
       }
     }
   }
@@ -60,7 +60,7 @@ object CompoundAnnotation extends Formatter with FoxImplicits {
       for {
         annotations <- task.annotations
       } yield {
-        createFromAnnotations(annotations, task.id, AnnotationType.CompoundTask)
+        createFromAnnotations(task.team, annotations, task.id, AnnotationType.CompoundTask)
       }
     }
   }
@@ -71,12 +71,12 @@ object CompoundAnnotation extends Formatter with FoxImplicits {
         tasks <- TaskDAO.findAllByTaskType(taskType)
         annotations <- Future.traverse(tasks)(_.annotations).map(_.flatten)
       } yield {
-        createFromAnnotations(annotations, taskType.id, AnnotationType.CompoundTaskType)
+        createFromAnnotations(taskType.team, annotations, taskType.id, AnnotationType.CompoundTaskType)
       }
     }
   }
 
-  def createFromAnnotations(annotations: List[Annotation], id: String, typ: AnnotationType)(implicit ctx: DBAccessContext): Option[TemporaryAnnotation] = {
+  def createFromAnnotations(team: String, annotations: List[Annotation], id: String, typ: AnnotationType)(implicit ctx: DBAccessContext): Option[TemporaryAnnotation] = {
     val as = annotations.filter(filterAnnotation)
 
     def annotationContent(): Fox[TemporarySkeletonTracing] = {
@@ -101,6 +101,7 @@ object CompoundAnnotation extends Formatter with FoxImplicits {
       case head :: _ =>
         Some(TemporaryAnnotation(
           id,
+          team,
           () => annotationContent,
           typ
         ))

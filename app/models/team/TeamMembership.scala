@@ -8,10 +8,10 @@ import play.api.libs.json.Json
  * Date: 14.07.13
  * Time: 16:49
  */
-case class TeamMembership(teamPath: TeamPath, role: String){
+case class TeamMembership(team: String, role: Role){
 
   override def toString =
-    s"$role - $teamPath"
+    s"${role.name} - $team"
 }
 
 object TeamMembership{

@@ -1,37 +1,22 @@
 package controllers
 
 import play.api._
-import play.api.mvc.{SimpleResult, WebSocket, AsyncResult}
+import play.api.mvc._
 import play.api.Play.current
 import play.api.libs.iteratee._
-import Input.EOF
 import play.api.libs.concurrent._
-import play.api.libs.json.JsValue
-import play.libs.Akka._
-import _root_.models.security.{RoleDAO, Role}
 import models.binary._
-import oxalis.security.{UserAwareRequest, AuthenticatedRequest, Secured}
-import scala.concurrent.Future
+import oxalis.security._
 import braingames.geometry.Point3D
-import akka.pattern.AskTimeoutException
-import play.api.libs.iteratee.Concurrent.Channel
-import scala.collection.mutable.ArrayBuffer
-import akka.routing.RoundRobinRouter
 import scala.concurrent.Future
 import play.api.i18n.Messages
 import braingames.image._
-import java.awt.image.BufferedImage
 import braingames.image.JPEGWriter
 import braingames.binary.models._
 import braingames.binary._
 import oxalis.binary.BinaryDataService
-import net.liftweb.common._
-import braingames.util.ExtendedTypes.ExtendedFutureBox
-import braingames.util.ExtendedTypes.ExtendedArraySeq
 import braingames.binary.ParsedRequest
-import oxalis.security.AuthenticatedRequest
 import braingames.binary.models.DataLayerId
-import scala.Some
 import braingames.binary.DataRequestSettings
 import braingames.image.ImageCreatorParameters
 import braingames.binary.ParsedRequestCollection
@@ -39,7 +24,6 @@ import braingames.reactivemongo.DBAccessContext
 import braingames.util.Fox
 
 object BinaryData extends Controller with Secured {
-  override val DefaultAccessRole = RoleDAO.User
 
   val conf = Play.configuration
 
@@ -49,7 +33,7 @@ object BinaryData extends Controller with Secured {
   def createDataRequestCollection(dataSet: DataSet, dataLayerName: String, cubeSize: Int, parsedRequest: ParsedRequestCollection) = {
     val dataLayerId = DataLayerId(dataLayerName)
     val dataRequests = parsedRequest.requests.map(r =>
-      BinaryDataService.createDataRequest(dataSet, dataLayerId, cubeSize, r))
+      BinaryDataService.createDataRequest(dataSet.dataSource, dataLayerId, cubeSize, r))
     DataRequestCollection(dataRequests)
   }
 
@@ -61,7 +45,7 @@ object BinaryData extends Controller with Secured {
                    parsedRequest: ParsedRequestCollection
                  )(implicit ctx: DBAccessContext): Fox[Array[Byte]] = {
     for {
-      dataSet <- DataSetDAO.findOneByName(dataSetName) ?~> Messages("dataSet.notFound")
+      dataSet <- DataSetDAO.findOneBySourceName(dataSetName) ?~> Messages("dataSet.notFound")
       dataRequestCollection = createDataRequestCollection(dataSet, dataLayerName, cubeSize, parsedRequest)
       data <- BinaryDataService.handleDataRequest(dataRequestCollection) ?~> "Data request couldn't get handled"
     } yield {
@@ -80,9 +64,9 @@ object BinaryData extends Controller with Secured {
                    settings: DataRequestSettings
                  )(implicit ctx: DBAccessContext): Fox[Array[Byte]] = {
     for {
-      dataSet <- DataSetDAO.findOneByName(dataSetName) ?~> Messages("dataSet.notFound")
+      dataSet <- DataSetDAO.findOneBySourceName(dataSetName) ?~> Messages("dataSet.notFound")
       dataRequestCollection = BinaryDataService.createDataRequest(
-        dataSet,
+        dataSet.dataSource,
         DataLayerId(dataLayerName),
         width,
         height,
@@ -96,7 +80,7 @@ object BinaryData extends Controller with Secured {
     }
   }
 
-  def requestViaAjaxDebug(dataSetName: String, dataLayerName: String, cubeSize: Int, x: Int, y: Int, z: Int, resolution: Int) = Authenticated().async {
+  def requestViaAjaxDebug(dataSetName: String, dataLayerName: String, cubeSize: Int, x: Int, y: Int, z: Int, resolution: Int) = Authenticated.async {
     implicit request =>
       val dataRequests = ParsedRequestCollection(Array(ParsedRequest(resolution, Point3D(x, y, z), false)))
       for {
@@ -124,8 +108,8 @@ object BinaryData extends Controller with Secured {
   def respondWithSpriteSheet(dataSetName: String, dataLayerName: String, width: Int, height: Int, depth: Int, imagesPerRow: Int, x: Int, y: Int, z: Int, resolution: Int)(implicit request: UserAwareRequest[_]): Future[SimpleResult] = {
     val settings = DataRequestSettings(useHalfByte = false, skipInterpolation = false)
     for {
-      dataSet <- DataSetDAO.findOneByName(dataSetName) ?~> Messages("dataSet.notFound")
-      dataLayer <- dataSet.dataLayer(dataLayerName) ?~> Messages("dataLayer.notFound")
+      dataSet <- DataSetDAO.findOneBySourceName(dataSetName) ?~> Messages("dataSet.notFound")
+      dataLayer <- dataSet.dataSource.dataLayer(dataLayerName) ?~> Messages("dataLayer.notFound")
       params = ImageCreatorParameters(dataLayer.bytesPerElement, width, height, imagesPerRow)
       data <- requestData(dataSetName, dataLayerName, Point3D(x, y, z), width, height, depth, resolution, settings) ?~> Messages("binary.data.notFound")
       spriteSheet <- ImageCreator.spriteSheetFor(data, params) ?~> Messages("image.create.failed")

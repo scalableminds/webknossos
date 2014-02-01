@@ -1,18 +1,17 @@
-@(dataSet: braingames.binary.models.DataSet)
+@(dataSet: models.binary.DataSet)
 @import oxalis.binary.BinaryDataService
-<tr data-name="@dataSet.name" data-id="@dataSet.name" id="@dataSet.name">
-    <td> <input type="checkbox" name="id" value="@dataSet.name" class="select-row"> </td>
-    <td> @dataSet.name </td>
-    <td> @dataSet.relativeBaseDir(BinaryDataService.baseFolder)</td>
-    <td> @dataSet.scale </td>
-    <td> @dataSet.owningTeam </td>
+<tr data-name="@dataSet.dataSource.name" data-id="@dataSet.dataSource.name" id="@dataSet.dataSource.name">
+    <td> @dataSet.dataSource.name </td>
+    <td> @dataSet.dataSource.relativeBaseDir(BinaryDataService.baseFolder)</td>
+    <td> @dataSet.dataSource.scale </td>
+    <td> @dataSet.dataSource.owningTeam </td>
     <td>
     @dataSet.allowedTeams.map{ team =>
         <span class="label">@team</span>
     }
     </td>
     <td>
-    @dataSet.dataLayers.map{ dataLayer =>
+    @dataSet.dataSource.dataLayers.map{ dataLayer =>
         <span class="label">@dataLayer.typ - @dataLayer.elementClass </span>
     }
     <!--<td class="nowrap">

@@ -1,15 +1,10 @@
 import akka.actor.Props
 import braingames.reactivemongo.GlobalDBAccess
 import models.team._
-import models.team.TeamTree
-import models.user.time.TimeEntry
-import oxalis.thirdparty.BrainTracing
 import play.api._
 import play.api.mvc.RequestHeader
-import play.api.Play.current
 import play.api.libs.concurrent._
 import play.api.Play.current
-import models.security._
 import models.user._
 import models.task._
 import oxalis.annotation.{AnnotationStore}
@@ -44,8 +39,6 @@ object Global extends GlobalSettings {
       }
       Logger.info("Directory start completed")
     })
-
-    RoleService.ensureImportantRoles()
   }
 
   override def onStop(app: Application) {
@@ -71,6 +64,8 @@ object Global extends GlobalSettings {
  */
 object InitialData extends GlobalDBAccess {
 
+  val mpi = Team("Structure of Neocortical Circuits Group", None)
+
   def insertUsers() = {
     UserDAO.findOneByEmail("scmboy@scalableminds.com").map {
       case None =>
@@ -81,11 +76,8 @@ object InitialData extends GlobalDBAccess {
           "Boy",
           true,
           braingames.security.SCrypt.hashPassword("secret"),
-          List(TeamMembership(
-            TeamPath("Structure of Neocortical Circuits Group" :: Nil),
-            TeamMembership.Admin)),
-          UserSettings.defaultSettings,
-          Set("user", "admin")))
+          List(TeamMembership(mpi.name,Role.Admin)),
+          UserSettings.defaultSettings))
       case _ =>
     }
   }
@@ -101,10 +93,10 @@ object InitialData extends GlobalDBAccess {
   }
 
   def insertTeams() = {
-    TeamTreeDAO.findOne.map {
+    TeamDAO.findOne.map {
       case Some(_) =>
       case _ =>
-        TeamTreeDAO.insert(TeamTree(Team("Structure of Neocortical Circuits Group", Nil)))
+        TeamDAO.insert(mpi)
     }
   }
 
@@ -114,7 +106,8 @@ object InitialData extends GlobalDBAccess {
         val taskType = TaskType(
           "ek_0563_BipolarCells",
           "Check those cells out!",
-          TimeSpan(5, 10, 15))
+          TimeSpan(5, 10, 15),
+          mpi.name)
         TaskTypeDAO.insert(taskType)
       }
     }

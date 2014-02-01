@@ -6,7 +6,6 @@ import models.task._
 import models.annotation._
 import play.api.libs.json.Json._
 import play.api.libs.json._
-import models.security.{RoleDAO, Role}
 import play.api.i18n.Messages
 import oxalis.user.UserCache
 import play.api.libs.concurrent.Execution.Implicits._
@@ -14,14 +13,13 @@ import views._
 import braingames.util.ExtendedTypes.ExtendedList
 import braingames.util.ExtendedTypes.ExtendedBoolean
 import play.api.Logger
-import braingames.binary.models.DataSet
+import models.binary.DataSet
 import scala.concurrent.Future
 import braingames.util.{Fox, FoxImplicits}
 
 object UserController extends Controller with Secured with Dashboard {
-  override val DefaultAccessRole = RoleDAO.User
 
-  def dashboard = Authenticated().async {
+  def dashboard = Authenticated.async {
     implicit request => {
       dashboardInfo(request.user).map { info =>
         Ok(html.user.dashboard.userDashboard(info))
@@ -29,12 +27,9 @@ object UserController extends Controller with Secured with Dashboard {
     }
   }
 
-  def getDashboardInfo = Authenticated().async {
+  def getDashboardInfo = Authenticated.async {
     implicit request => {
       val futures = dashboardInfo(request.user).map { info =>
-
-      // TODO: move dataSetFormat into braingames-libs and bump the necessary version
-        implicit val dataSetFormat = Json.format[DataSet]
 
         val loggedTime = info.loggedTime.map { case (paymentInterval, duration) =>
           // TODO make formatTimeHumanReadable(duration) (?) work
@@ -52,7 +47,7 @@ object UserController extends Controller with Secured with Dashboard {
           exploratoryList <- Future.traverse(info.exploratory)(Annotation.transformToJson(_))
         } yield {
           Json.obj(
-            "user" -> info.user,
+            "user" -> Json.toJson(info.user)(User.userPublicWrites),
             "loggedTime" -> loggedTime,
             "dataSets" -> info.dataSets,
             "hasAnOpenTask" -> info.hasAnOpenTask,
@@ -69,7 +64,7 @@ object UserController extends Controller with Secured with Dashboard {
     }
   }
 
-  def saveSettings = Authenticated().async(parse.json(maxLength = 2048)) { implicit request =>
+  def saveSettings = Authenticated.async(parse.json(maxLength = 2048)) { implicit request =>
     (for {
       settings <- request.body.asOpt[JsObject] ?~> Messages("user.settings.invalid")
       if (UserSettings.isValid(settings))
@@ -90,7 +85,7 @@ object UserController extends Controller with Secured with Dashboard {
     Ok(toJson(configuration))
   }
 
-  def defaultSettings = Authenticated() { implicit request =>
+  def defaultSettings = Authenticated{ implicit request =>
     Ok(toJson(UserSettings.defaultSettings.settings))
   }
 }

@@ -57,7 +57,7 @@
               @helper.form(action = controllers.routes.AnnotationController.createExplorational, 'class -> "form-inline inline-block") {
                 <select name="dataSetName">
                   @dashboardInfo.dataSets.map{ d =>
-                    <option value="@d.name"> @d.name </option>
+                    <option value="@d.dataSource.name"> @d.dataSource.name </option>
                   }
                 </select>
                 <label class="radio inline hide">

@@ -5,7 +5,7 @@ import scala.Some
 import scala.concurrent.{Future, Await}
 import scala.concurrent.duration._
 import oxalis.user.UserCache
-import models.team.{TeamMembership, Team}
+import models.team.{TeamDAO, Role, TeamMembership, Team}
 import reactivemongo.bson.BSONObjectID
 import play.api.i18n.Messages
 import oxalis.mail.DefaultMails
@@ -39,9 +39,13 @@ object UserService extends FoxImplicits {
     UserDAO.logActivity(user, lastActivity)(GlobalAccessContext)
   }
 
-  def insert(email: String, firstName: String, lastName: String, password: String, isVerified: Boolean) = {
-    val user = User(email, firstName, lastName, false, hashPassword(password), Nil)
-    UserDAO.insert(user, isVerified)(GlobalAccessContext)
+  def insert(teamName: String, email: String, firstName: String, lastName: String, password: String, isVerified: Boolean) = {
+    for{
+      teamOpt <- TeamDAO.findOneByName(teamName)(GlobalAccessContext)
+      teamMemberships = teamOpt.map(t => TeamMembership(t.name, Role.User)).toList
+      user = User(email, firstName, lastName, false, hashPassword(password), teamMemberships)
+      _ <- UserDAO.insert(user, isVerified)(GlobalAccessContext)
+    } yield user
   }
 
   def findOneByEmail(email: String): Future[Option[User]] = {
@@ -58,7 +62,7 @@ object UserService extends FoxImplicits {
   def verify(_user: BSONObjectID)(implicit ctx: DBAccessContext): Fox[String] = {
     def verifyHim(user: User) = {
       val u = user.verify
-      UserDAO.verify(u, u.roles)
+      UserDAO.verify(u)
     }
 
     for {
@@ -71,10 +75,8 @@ object UserService extends FoxImplicits {
     }
   }
 
-  private def userIsAllowedToAssignTeam(teamMembership: TeamMembership, user: User) = {
-    user.teams.exists(t => t.teamPath.implies(teamMembership.teamPath)
-      && t.role == TeamMembership.Admin)
-  }
+  private def userIsAllowedToAssignTeam(teamMembership: TeamMembership, user: User) =
+    user.roleInTeam(teamMembership.team) == Some(Role.Admin)
 
   def assignToTeams(teamMemberships: Seq[TeamMembership], assigningUser: User)(_user: BSONObjectID)(implicit ctx: DBAccessContext): Fox[Seq[TeamMembership]] = {
     teamMemberships.find(!userIsAllowedToAssignTeam(_, assigningUser)) match {

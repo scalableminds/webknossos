@@ -5,9 +5,18 @@
 
 class VolumeTracingController
 
+  # See comment in Controller class on general controller architecture.
+  #
+  # Volume Tracing Controller:
+  # Add Volume Tracing controls that are not specific to the view mode.
+  # Also, this would be the place to define general Volume Tracing
+  # functions that can be called by the specific view mode controller.
+
+
   MERGE_MODE_NORMAL : 0
   MERGE_MODE_CELL1  : 1
   MERGE_MODE_CELL2  : 2
+
 
   constructor : ( { @model, @view, @sceneController, @cameraController, @move, @calculateGlobalPos, @gui } ) ->
 

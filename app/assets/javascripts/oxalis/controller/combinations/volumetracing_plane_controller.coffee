@@ -5,6 +5,12 @@ underscore : _
 
 class VolumeTacingPlaneController extends PlaneController
 
+  # See comment in Controller class on general controller architecture.
+  #
+  # Volume Tracing Plane Controller:
+  # Extends Plane controller to add controls that are specific to Volume
+  # Tracing.
+
 
   getMouseControls : ->
 

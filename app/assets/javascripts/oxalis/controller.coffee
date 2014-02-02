@@ -17,6 +17,19 @@ underscore : _
 
 class Controller
 
+  # Main controller, responsible for setting modes and everything
+  # that has to be controlled in any mode.
+  #
+  # We have a matrix of modes like this:
+  #
+  #   Annotation Mode \ View mode    Plane       Arbitrary
+  #              Skeleton Tracing      X             X
+  #                Volume Tracing      X             /
+  # 
+  # In order to maximize code reuse, there is - besides the main
+  # controller - a controller for each row, each column and each
+  # cross in this matrix.
+
   view : null
   planeController : null
   arbitraryController : null

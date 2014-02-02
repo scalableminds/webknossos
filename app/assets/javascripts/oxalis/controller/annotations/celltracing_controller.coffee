@@ -6,6 +6,14 @@
 
 class CellTacingController
 
+  # See comment in Controller class on general controller architecture.
+  #
+  # Cell Tracing Controller:
+  # Add Skeleton Tracing controls that are not specific to the view mode.
+  # Also, this would be the place to define general Skeleton Tracing
+  # functions that can be called by the specific view mode controller.
+
+
   constructor : ( { @model, @view, @sceneController, @cameraController, @move, @calculateGlobalPos, @gui }, controlMode ) ->
 
     @inTraceMode = controlMode == constants.CONTROL_MODE_TRACE

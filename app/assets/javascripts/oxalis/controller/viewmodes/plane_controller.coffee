@@ -14,6 +14,10 @@ libs/threejs/TrackballControls : TrackballControls
 
 class PlaneController
 
+  # See comment in Controller class on general controller architecture.
+  #
+  # Plane Controller: Responsible for Plane Modes
+
   bindings : []
   model : null
   view : null

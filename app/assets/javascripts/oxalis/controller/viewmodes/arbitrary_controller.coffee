@@ -13,6 +13,10 @@ libs/input : Input
 
 class ArbitraryController
 
+  # See comment in Controller class on general controller architecture.
+  #
+  # Arbitrary Controller: Responsible for Arbitrary Modes
+
   WIDTH : 128
   HEIGHT : 128
 

@@ -6,6 +6,12 @@ underscore : _
 
 class CellTracingPlaneController extends PlaneController
 
+  # See comment in Controller class on general controller architecture.
+  #
+  # Cell Tracing Plane Controller:
+  # Extends Plane controller to add controls that are specific to Skeleton
+  # Tracing.
+
 
   getPlaneMouseControls : ->
 

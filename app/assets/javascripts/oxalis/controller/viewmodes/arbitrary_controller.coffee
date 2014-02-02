@@ -4,11 +4,11 @@ underscore : _
 libs/event_mixin : EventMixin
 libs/request : Request
 libs/input : Input
-../geometries/arbitrary_plane : ArbitraryPlane
-../geometries/crosshair : Crosshair
-../view/arbitrary_view : ArbitraryView
-../geometries/arbitrary_plane_info : ArbitraryPlaneInfo
-../constants : constants
+../../geometries/arbitrary_plane : ArbitraryPlane
+../../geometries/crosshair : Crosshair
+../../view/arbitrary_view : ArbitraryView
+../../geometries/arbitrary_plane_info : ArbitraryPlaneInfo
+../../constants : constants
 ###
 
 class ArbitraryController

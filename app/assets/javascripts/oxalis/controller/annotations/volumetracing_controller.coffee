@@ -1,6 +1,6 @@
 ### define
-../model/dimensions : Dimensions
-../constants : constants
+../../model/dimensions : Dimensions
+../../constants : constants
 ###
 
 class VolumeTracingController

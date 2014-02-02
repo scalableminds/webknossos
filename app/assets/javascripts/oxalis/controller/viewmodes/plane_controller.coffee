@@ -1,15 +1,15 @@
 ### define
 jquery : $
 underscore : _
-./camera_controller : CameraController
-../model/dimensions : Dimensions
 libs/event_mixin : EventMixin
 libs/input : Input
-../view/plane_view : PlaneView
-../constants : constants
 libs/threejs/TrackballControls : TrackballControls
-./celltracing_controller : CellTracingController
-./volumetracing_controller : VolumeTracingController
+../camera_controller : CameraController
+../annotations/celltracing_controller : CellTracingController
+../annotations/volumetracing_controller : VolumeTracingController
+../../model/dimensions : Dimensions
+../../view/plane_view : PlaneView
+../../constants : constants
 ###
 
 class PlaneController

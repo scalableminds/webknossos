@@ -1,7 +1,7 @@
 ### define
-../model/dimensions : Dimensions
-../constants : constants
-./abstract_tree_controller : AbstractTreeController
+../../model/dimensions : Dimensions
+../../constants : constants
+../abstract_tree_controller : AbstractTreeController
 ###
 
 class CellTacingController

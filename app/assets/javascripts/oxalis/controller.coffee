@@ -1,8 +1,8 @@
 ### define
 jquery : $
 underscore : _
-./controller/plane_controller : PlaneController
-./controller/arbitrary_controller : ArbitraryController
+./controller/viewmodes/plane_controller : PlaneController
+./controller/viewmodes/arbitrary_controller : ArbitraryController
 ./controller/scene_controller : SceneController
 ./model : Model
 ./view : View

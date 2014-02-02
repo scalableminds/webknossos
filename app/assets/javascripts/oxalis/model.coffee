@@ -53,7 +53,6 @@ class Model
             @user = new User(user)
             @scaleInfo = new ScaleInfo(dataSet.scale)
 
-            # TODO: Define color bit depth
             supportedDataLayers = [{name: "color", allowManipulation : true},
                                     {name: "volume", allowManipulation : false},
                                     {name: "segmentation", allowManipulation : false}]  
@@ -94,7 +93,7 @@ class Model
               "positionChanged" : (position) =>
                 @flycam3d.setPositionSilent(position)
             
-            isSkeletonTracing = tracing.content.settings.allowedModes.indexOf("volume") == -1
+            isSkeletonTracing = "volume" not in tracing.content.settings.allowedModes
             if isSkeletonTracing
               @cellTracing = new CellTracing(tracing, @scaleInfo, @flycam, @flycam3d, @user)
             else

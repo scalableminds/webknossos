@@ -112,21 +112,26 @@ class PlaneController
     for planeId in [0..2]
       do (planeId) =>
         inputcatcher = $("#plane#{constants.PLANE_NAMES[planeId]}")
-        @input.mouseControllers.push( new Input.Mouse( inputcatcher,
-          _.extend(@activeSubController.mouseControls,
-            {
-              over : => @view.setActiveViewport( @activeViewport = planeId )
-              scroll : @scrollPlanes
-            }), planeId))
+        @input.mouseControllers.push(
+          new Input.Mouse( inputcatcher, @getPlaneMouseControls(), planeId ))
 
-    @input.mouseControllers.push( new Input.Mouse($("#TDView"),
+    @input.mouseControllers.push(
+      new Input.Mouse($("#TDView"), @getTDViewMouseControls(), constants.TDView ))
+
+
+  getPlaneMouseControls : ->
+
+    return
       leftDownMove : (delta) => @moveTDView(delta)
       scroll : (value) => @zoomTDView(value, true)
-      leftClick : (position, plane, event) =>
-        @cellTracingController?.onClick(position, event.shiftKey, event.altKey, constants.TDView)
-      over : => @view.setActiveViewport( @activeViewport = constants.TDView ),
-    constants.TDView
-    ) )
+      over : => @view.setActiveViewport( @activeViewport = constants.TDView )
+
+
+  getTDViewMouseControls : ->
+
+    return
+      over : => @view.setActiveViewport( @activeViewport = planeId )
+      scroll : @scrollPlanes
 
 
   initTrackballControls : ->
@@ -213,17 +218,20 @@ class PlaneController
       keyboardDelayChanged : (value) => @input.keyboardLoopDelayed.delay = value
       })
     
-    @input.keyboardNoLoop = new Input.KeyboardNoLoop( 
-      _.extend(@activeSubController.keyboardControls,
-        {
-          #Zoom in/out
-          "i" : => @zoom( 1, false)
-          "o" : => @zoom(-1, false)
+    @input.keyboardNoLoop = new Input.KeyboardNoLoop( @getKeyboardControls() )
 
-          #Change move value
-          "h" : => @changeMoveValue(25)
-          "g" : => @changeMoveValue(-25)
-        }))
+
+  getKeyboardControls : ->
+
+    return
+      #Zoom in/out
+      "i" : => @zoom( 1, false)
+      "o" : => @zoom(-1, false)
+
+      #Change move value
+      "h" : => @changeMoveValue(25)
+      "g" : => @changeMoveValue(-25)
+
 
   init : ->
 
@@ -234,11 +242,6 @@ class PlaneController
   start : (newMode) ->
 
     @stop()
-
-    if newMode == constants.MODE_PLANE_TRACING
-      @activeSubController = @cellTracingController
-    else if newMode == constants.MODE_VOLUME
-      @activeSubController = @volumeTracingController
 
     @initKeyboard()
     @init()
@@ -427,10 +430,3 @@ class PlaneController
         [ curGlobalPos[0] - (constants.VIEWPORT_WIDTH * scaleFactor / 2 - clickPos.x) / scaleFactor * planeRatio[0] * zoomFactor, 
           curGlobalPos[1], 
           curGlobalPos[2] - (constants.VIEWPORT_WIDTH * scaleFactor / 2 - clickPos.y) / scaleFactor * planeRatio[2] * zoomFactor ]
-
-
-  centerActiveNode : ->
-
-    @activeSubController.centerActiveNode()
-
-    

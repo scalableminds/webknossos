@@ -9,7 +9,7 @@ import controllers.Controller
 object BinaryDataAdministration extends AdminController {
 
   def list = Authenticated.async { implicit request =>
-    DataSetDAO.findAll.map { dataSets =>
+    DataSetDAO.findAllOwnedBy(request.user.adminTeamNames).map { dataSets =>
       Ok(html.admin.binary.binaryData(dataSets))
     }
   }

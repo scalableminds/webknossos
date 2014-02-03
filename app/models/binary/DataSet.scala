@@ -45,7 +45,11 @@ object DataSetDAO extends SecuredBaseDAO[DataSet] {
   override def findQueryFilter(implicit ctx: DBAccessContext) = {
     ctx.data match {
       case Some(user: User) =>
-        AllowIf(Json.obj("allowedTeams" -> Json.obj("$in" -> user.teamNames)))
+        AllowIf(
+          Json.obj("$or" -> Json.arr(
+          Json.obj("allowedTeams" -> Json.obj("$in" -> user.teamNames)),
+          Json.obj("dataSource.owningTeam" -> Json.obj("$in" -> user.adminTeamNames))
+        )))
       case _ =>
         DenyEveryone()
     }
@@ -66,6 +70,9 @@ object DataSetDAO extends SecuredBaseDAO[DataSet] {
 
   def findOneBySourceName(name: String)(implicit ctx: DBAccessContext) =
     findOne(byNameQ(name))
+
+  def findAllOwnedBy(teams: List[String])(implicit ctx: DBAccessContext) =
+    find(Json.obj("dataSource.owningTeam" -> Json.obj("$in" -> teams))).collect[List]()
 
   def updateOrCreate(d: DataSource)(implicit ctx: DBAccessContext) =
     collectionUpdate(

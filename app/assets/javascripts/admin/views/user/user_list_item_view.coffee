@@ -1,6 +1,8 @@
 ### define
 underscore : _
 backbone.marionette : marionette
+admin/views/user/team_role_modal_view : TeamRoleModalView
+
 ###
 
 class UserListItemView extends Backbone.Marionette.ItemView
@@ -36,10 +38,14 @@ class UserListItemView extends Backbone.Marionette.ItemView
       <% if(verified) { %>
         <i class="icon-ok"></i>
       <% } else { %>
-        <a href="#" class="show-modal" data-title="Assign to a Team" data-template="teampicker"> verify </a>
+        <a href="#" class="verify-user"> verify </a>
       <% } %>
     </td>
     <td class="nowrap">
+      <a href="/admin/users/<%= id %>/details"><i class="icon-user"></i> show Tracings</a><br />
+      <a href="/admin/users/<%= id %>/download" title="download all finished tracings"><i class="icon-download"></i> download </a><br />
+      <a href="#" class="delete-user"><i class="icon-trash"></i> delete </a><br />
+      <a href="/admin/users/<%= id %>/loginAs"><i class="icon-signin"></i> log in as User </a>
       <a href="/users/<%= id %>/details"><i class="icon-user"></i> show Tracings</a><br />
       <a href="/api/users/<%= id %>/annotations/download" title="download all finished tracings"><i class="icon-download"></i> download </a><br />
       <a href="#"><i class="icon-trash"></i> delete </a><br />
@@ -47,10 +53,21 @@ class UserListItemView extends Backbone.Marionette.ItemView
     </td>
   """)
 
-  events : ->
-    "click a[href=#]" : "delete"
+  events :
+    "click .delete-user" : "delete"
+    "click .verify-user" : "verify"
 
 
   delete : ->
 
     @model.destroy()
+
+
+  verify : ->
+
+    #select checkbox, so that it gets picked up by the bulk verification modal
+    @$el.find("input").prop("checked", true)
+
+    #HACKY
+    $("#team-role-modal").click()
+

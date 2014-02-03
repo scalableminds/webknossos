@@ -19,8 +19,13 @@ import braingames.util.{Fox, FoxImplicits}
 import models.user.time.{TimeTracking, TimeTrackingService}
 import models.team.TeamMembership
 import play.api.libs.functional.syntax._
+import play.api.templates.Html
 
 object UserController extends Controller with Secured with Dashboard {
+
+  def empty = Authenticated{ implicit request =>
+    Ok(views.html.main()(Html.empty))
+  }
 
   // HTML actions
   def dashboard = Authenticated.async {

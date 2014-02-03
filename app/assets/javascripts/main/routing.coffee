@@ -16,7 +16,7 @@ $ ->
 
     javaTemplate = $("#main-container").data("template")
 
-    javaTemplate = javaTemplate.match(/views\.html\.(.*)\$/)[1]
+    javaTemplate = javaTemplate.match(/^([^\$]*)/)[1]
 
     if routes[javaTemplate]?
       routes[javaTemplate].call($("#main-container")[0])
@@ -32,24 +32,24 @@ $ ->
 
   route
 
-    "user.dashboard.userDashboard" : ->
+    "views.html.user.dashboard.userDashboard" : ->
 
       DashboardLoader.displayBasicDashboard()
       DashboardLoader.displayUserDashboard()
 
       return
 
-    "admin.user.user" : ->
+    "views.html.admin.user.user" : ->
 
       DashboardLoader.displayBasicDashboard()
 
       return
 
-    "admin.taskType.taskTypes" : ->
+    "views.html.admin.taskType.taskTypes" : ->
 
       hideLoading()
 
-    "tracing.trace" : ->
+    "views.html.tracing.trace" : ->
 
       require [
         "./oxalis/controller"
@@ -87,7 +87,7 @@ $ ->
 
         return
 
-    "tracing.view" : ->
+    "views.html.tracing.view" : ->
 
       require [
         "./oxalis/controller"
@@ -102,7 +102,7 @@ $ ->
         return
 
 
-    "admin.binary.binaryData" : ->
+    "views.html.admin.binary.binaryData" : ->
 
       $modal = $(".modal")
       $modal.find(".btn-primary").on "click", -> submitTeams()
@@ -166,7 +166,7 @@ $ ->
       return hideLoading()
 
 
-    "admin.task.taskOverview" : ->
+    "views.html.admin.task.taskOverview" : ->
 
       require [ "worker!libs/viz.js" ], (VizWorker) ->
 
@@ -209,11 +209,7 @@ $ ->
             $(".graph").html("<i class=\"icon-warning-sign\"></i> #{error.replace(/\n/g,"<br>")}")
         )
 
-
-    # "admin.user.userAdministration" : ->
-      # TODO: does "admin.user.userAdministration" still exist or has it been replaced by "userList" ?
-
-    "admin.user.userList" : ->
+    "controllers.UserController" : ->
 
       require ["./admin/views/user/user_list_view"], (UserListView) =>
 
@@ -260,7 +256,7 @@ $ ->
       return hideLoading()
 
 
-    "admin.task.taskSelectionAlgorithm" : ->
+    "views.html.admin.task.taskSelectionAlgorithm" : ->
 
       $this = $(this)
       $form = $this.find("form")
@@ -340,14 +336,14 @@ $ ->
 
         hideLoading()
 
-    "levelcreator.levelCreator" : ->
+    "views.html.levelcreator.levelCreator" : ->
 
       require ["./level_creator"], (LevelCreator) ->
 
         window.levelCreator = new LevelCreator()
         hideLoading()
 
-    "admin.project.projectList" : ->
+    "views.html.admin.project.projectList" : ->
 
       preparePaginationData = (projects, users) ->
 
@@ -383,7 +379,7 @@ $ ->
           $owner.append("<option value='#{aUser._id.$oid}' selected=''>#{aUser.firstName} #{aUser.lastName}</option>")
       )
 
-    "admin.training.trainingsTaskCreate" : ->
+    "views.html.admin.training.trainingsTaskCreate" : ->
 
       url = $("#form-well").data("url")
 

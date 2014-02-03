@@ -22,7 +22,7 @@ GET           /register                                                  control
 POST          /register                                                  controllers.Authentication.handleRegistration
 
 # User settings
-GET           /users                                                     controllers.Application.emptyMain
+GET           /users                                                     controllers.UserController.empty
 POST          /user/configuration                                        controllers.SettingsController.update
 GET           /user/configuration                                        controllers.SettingsController.read
 GET           /user/configuration/default                                controllers.SettingsController.default

@@ -14,7 +14,7 @@ class BulkDeleteModal extends Backbone.Marionette.ItemView
     </div>
     <div class="modal-body">
       <fieldset data-validation-group>
-        <a href="#" class="btn btn-danger modal-hide">Delete</a>
+        <button class="btn btn-danger modal-hide">Delete</button>
       </fieldset>
     </div>
   """)
@@ -22,7 +22,16 @@ class BulkDeleteModal extends Backbone.Marionette.ItemView
   events :
     "click .modal-hide" : "bulkDeleteUsers"
 
-  initalize : ->
-
   bulkDeleteUsers : ->
+
+    #jquery tbody to exclude the "check all users" element
+    $("tbody input[type=checkbox]:checked").each(
+      (i, element) =>
+        user = @collection.findWhere(
+          id: $(element).val()
+        )
+        user.destroy()
+    )
+
+    @$el.modal("hide")
 

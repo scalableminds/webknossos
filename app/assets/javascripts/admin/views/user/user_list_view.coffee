@@ -95,7 +95,6 @@ class UserListView extends Backbone.Marionette.CompositeView
     view = new modalView({collection: @collection})
     view.render()
     @ui.modalWrapper.html(view.el)
-    @ui.modalWrapper.html(view.el)
 
     view.$el.modal("show")
 

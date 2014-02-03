@@ -8,7 +8,7 @@ import models.user.User
 import braingames.reactivemongo.{DBAccessContext, GlobalDBAccess, SecuredMongoDAO}
 import play.api.libs.concurrent.Execution.Implicits._
 
-object DataSetRepository extends AbstractDataSourceRepository with GlobalDBAccess{
+object DataSetRepository extends AbstractDataSourceRepository with GlobalDBAccess {
 
   def deleteAllExcept(l: Array[String]) =
     DataSetDAO.deleteAllSourcesExcept(l)
@@ -23,10 +23,18 @@ object DataSetRepository extends AbstractDataSourceRepository with GlobalDBAcces
     DataSetDAO.findOneBySourceName(name).map(_.map(_.dataSource))
 }
 
-case class DataSet(dataSource: DataSource, allowedTeams: List[String], description: Option[String] = None)
+case class DataSet(dataSource: DataSource, allowedTeams: List[String], description: Option[String] = None) {
+  def isEditableBy(user: User) =
+    user.adminTeamNames.contains(dataSource.owningTeam)
+}
 
-object DataSet{
+object DataSet {
   implicit val dataSetFormat = Json.format[DataSet]
+}
+
+object DataSetService {
+  def updateTeams(dataSet: DataSet, teams: List[String])(implicit ctx: DBAccessContext) =
+    DataSetDAO.updateTeams(dataSet.dataSource.name, teams)
 }
 
 object DataSetDAO extends SecuredBaseDAO[DataSet] {
@@ -35,7 +43,7 @@ object DataSetDAO extends SecuredBaseDAO[DataSet] {
   // Security
 
   override def findQueryFilter(implicit ctx: DBAccessContext) = {
-    ctx.data match{
+    ctx.data match {
       case Some(user: User) =>
         AllowIf(Json.obj("allowedTeams" -> Json.obj("$in" -> user.teamNames)))
       case _ =>
@@ -47,6 +55,9 @@ object DataSetDAO extends SecuredBaseDAO[DataSet] {
 
   val formatter = DataSet.dataSetFormat
 
+  def byNameQ(name: String) =
+    Json.obj("dataSource.name" -> name)
+
   def default()(implicit ctx: DBAccessContext) =
     findMaxBy("priority")
 
@@ -54,11 +65,11 @@ object DataSetDAO extends SecuredBaseDAO[DataSet] {
     collectionRemove(Json.obj("dataSource.name" -> Json.obj("$nin" -> names)))
 
   def findOneBySourceName(name: String)(implicit ctx: DBAccessContext) =
-    findOne("dataSource.name", name)
+    findOne(byNameQ(name))
 
   def updateOrCreate(d: DataSource)(implicit ctx: DBAccessContext) =
     collectionUpdate(
-      Json.obj("dataSource.name" -> d.name),
+      byNameQ(d.name),
       Json.obj(
         "$set" -> Json.obj("dataSource" -> formatWithoutId(d)),
         "$setOnInsert" -> Json.obj("allowedTeams" -> List(d.owningTeam))
@@ -66,7 +77,7 @@ object DataSetDAO extends SecuredBaseDAO[DataSet] {
       upsert = true)
 
   def removeBySourceName(name: String)(implicit ctx: DBAccessContext) =
-    remove("dataSource.name", name)
+    collectionRemove(byNameQ(name))
 
   def formatWithoutId(ds: DataSource) = {
     val js = Json.toJson(ds)
@@ -75,4 +86,10 @@ object DataSetDAO extends SecuredBaseDAO[DataSet] {
       js
     }
   }
+
+  def updateTeams(name: String, teams: List[String])(implicit ctx: DBAccessContext) =
+    collectionUpdate(
+      byNameQ(name),
+      Json.obj("$set" -> Json.obj(
+        "allowedTeams" -> teams)))
 }

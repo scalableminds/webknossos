@@ -5,7 +5,7 @@ jquery : $
 ../view : View
 ###
 
-class SkeletonTracingView extends View
+class VolumeTracingView extends View
 
   constructor : (@model) ->
 

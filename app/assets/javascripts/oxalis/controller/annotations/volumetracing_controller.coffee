@@ -68,6 +68,19 @@ class VolumeTracingController
       input.val("")
 
 
+  handleCellSelection : (cellId) ->
+
+    if cellId > 0
+      if      @mergeMode == @MERGE_MODE_NORMAL
+        @model.volumeTracing.setActiveCell( cellId )
+      else if @mergeMode == @MERGE_MODE_CELL1
+        $("#merge-cell1").val(cellId)
+        $("#merge-cell2").focus()
+      else if @mergeMode == @MERGE_MODE_CELL2
+        $("#merge-cell2").val(cellId)
+        @merge()
+
+
 
   enterDeleteMode : (enter = true) ->
 

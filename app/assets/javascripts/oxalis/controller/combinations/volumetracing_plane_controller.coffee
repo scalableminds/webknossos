@@ -12,16 +12,21 @@ class VolumeTacingPlaneController extends PlaneController
   # Tracing.
 
 
-  getMouseControls : ->
+  constructor : (@model, stats, @gui, @view, @sceneController, @volumeTracingController) ->
 
-    return _.extend super(),
+    super(@model, stats, @gui, @view, @sceneController)
+
+
+  getPlaneMouseControls : (planeId) ->
+
+    return _.extend super(planeId),
       
       leftDownMove : (delta, pos, plane, event) =>
 
         if event.ctrlKey
           @move [
-            delta.x * @model.user.getMouseInversionX() / @view.scaleFactor
-            delta.y * @model.user.getMouseInversionY() / @view.scaleFactor
+            delta.x * @model.user.getMouseInversionX() / @planeView.scaleFactor
+            delta.y * @model.user.getMouseInversionY() / @planeView.scaleFactor
             0
           ]
         else
@@ -29,13 +34,13 @@ class VolumeTacingPlaneController extends PlaneController
       
       leftMouseDown : (pos, plane, event) =>
 
-        @enterDeleteMode( event.shiftKey )
+        @volumeTracingController.enterDeleteMode( event.shiftKey )
         @model.volumeTracing.startEditing(plane)
       
       leftMouseUp : =>
 
         @model.volumeTracing.finishLayer()
-        @restoreAfterDeleteMode()
+        @volumeTracingController.restoreAfterDeleteMode()
       
       rightDownMove : (delta, pos, plane, event) =>
 
@@ -43,28 +48,20 @@ class VolumeTacingPlaneController extends PlaneController
       
       rightMouseDown : (pos, plane, event) =>
 
-        @enterDeleteMode()
+        @volumeTracingController.enterDeleteMode()
         @model.volumeTracing.startEditing(plane)
       
       rightMouseUp : =>
 
         @model.volumeTracing.finishLayer()
-        @restoreAfterDeleteMode()
+        @volumeTracingController.restoreAfterDeleteMode()
 
       leftClick : (pos, plane, event) =>
 
         cellId = @model.binary["segmentation"].cube.getDataValue(
                   @calculateGlobalPos( pos ))
 
-        if cellId > 0
-          if      @mergeMode == @MERGE_MODE_NORMAL
-            @model.volumeTracing.setActiveCell( cellId )
-          else if @mergeMode == @MERGE_MODE_CELL1
-            $("#merge-cell1").val(cellId)
-            $("#merge-cell2").focus()
-          else if @mergeMode == @MERGE_MODE_CELL2
-            $("#merge-cell2").val(cellId)
-            @merge()
+        @volumeTracingController.handleCellSelection( cellId )
 
 
   getKeyboardControls : ->

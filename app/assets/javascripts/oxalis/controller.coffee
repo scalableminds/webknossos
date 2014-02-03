@@ -93,7 +93,7 @@ class Controller
       else if @model.volumeTracing?
         
         @view = new VolumeTracingView(@model)
-        @annotationController = new CellTracingController(
+        @annotationController = new VolumeTracingController(
           @model, @sceneController, @gui, @view )
         @planeController = new VolumeTracingPlaneController(
           @model, stats, @gui, @view, @sceneController, @annotationController)

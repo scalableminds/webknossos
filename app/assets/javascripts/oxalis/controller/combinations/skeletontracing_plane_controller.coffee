@@ -2,6 +2,7 @@
 underscore : _
 ../viewmodes/plane_controller : PlaneController
 ../../constants : constants
+../../model/dimensions : dimensions
 ###
 
 class SkeletonTracingPlaneController extends PlaneController
@@ -112,7 +113,7 @@ class SkeletonTracingPlaneController extends PlaneController
       globalPos = @model.flycam.getPosition()
 
       # make sure you can't click nodes, that are clipped away (one can't see)
-      ind = Dimensions.getIndices(plane)
+      ind = dimensions.getIndices(plane)
       if intersect.object.visible and
         (plane == constants.TDView or
           (Math.abs(globalPos[ind[2]] - intersectsCoord[ind[2]]) < @cameraController.getClippingDistance(ind[2])+1))

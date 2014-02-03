@@ -58,6 +58,7 @@ class Paginator
     @dataRetrievalPromise = $.ajax(ajaxOptions)
     @dataRetrievalPromise.then(@handleData)
 
+
   handleData: (responseData) =>
 
     @allElements = @elementsToShow = responseData.data
@@ -141,7 +142,7 @@ class Paginator
     for element in jsonArray
       htmlArray.push(@generateHTML(element))
 
-    @tbody.append(htmlArray.join(""))
+    @tbody.html(htmlArray.join(""))
 
 
   JSONcontains : (data, query) ->

@@ -19,7 +19,7 @@
 
 class Model
 
-  initialize : =>
+  initialize : (controlMode) =>
 
     tracingId = $("#container").data("tracing-id")
     tracingType = $("#container").data("tracing-type")
@@ -93,13 +93,15 @@ class Model
               "positionChanged" : (position) =>
                 @flycam3d.setPositionSilent(position)
             
-            isSkeletonTracing = "volume" not in tracing.content.settings.allowedModes
-            if isSkeletonTracing
-              @cellTracing = new CellTracing(tracing, @scaleInfo, @flycam, @flycam3d, @user)
-            else
-              $.assert( @binary["segmentation"]?,
-                "Volume is allowed, but segmentation does not exist" )
-              @volumeTracing = new VolumeTracing(@flycam, @binary["segmentation"].cube)
+            if controlMode == constants.CONTROL_MODE_TRACE
+
+              if "volume" in tracing.content.settings.allowedModes
+                $.assert( @binary["segmentation"]?,
+                  "Volume is allowed, but segmentation does not exist" )
+                @volumeTracing = new VolumeTracing(@flycam, @binary["segmentation"].cube)
+              
+              else
+                @cellTracing = new CellTracing(tracing, @scaleInfo, @flycam, @flycam3d, @user)
             
             {"restrictions": tracing.restrictions, "settings": tracing.content.settings}
             

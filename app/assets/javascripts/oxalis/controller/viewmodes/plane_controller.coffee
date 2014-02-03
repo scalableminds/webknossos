@@ -127,7 +127,17 @@ class PlaneController
   getPlaneMouseControls : (planeId) ->
 
     return {
+
+      leftDownMove : (delta, pos) => 
+
+        @move [
+          delta.x * @model.user.getMouseInversionX() / @planeView.scaleFactor
+          delta.y * @model.user.getMouseInversionY() / @planeView.scaleFactor
+          0
+        ]
+
       over : => @planeView.setActiveViewport( @activeViewport = planeId )
+      
       scroll : @scrollPlanes
     }
 

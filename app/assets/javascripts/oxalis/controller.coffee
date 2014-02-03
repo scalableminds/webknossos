@@ -50,7 +50,7 @@ class Controller
 
     @model = new Model()
 
-    @model.initialize().done ({restrictions, settings, error}) =>
+    @model.initialize( @controlMode ).done ({restrictions, settings, error}) =>
 
       # Do not continue, when there was an error and we got no settings from the server
       if error
@@ -90,13 +90,19 @@ class Controller
         @arbitraryController = new CellTracingArbitraryController(
           @model, stats, @gui, @view, @sceneController)
       
-      else
+      else if @model.volumeTracing?
         
         @view = new VolumeTracingView(@model)
         @annotationController = new CellTracingController(
           @model, @sceneController, @gui, @view )
         @planeController = new VolumeTracingPlaneController(
           @model, stats, @gui, @view, @sceneController, @annotationController)
+
+      else # View mode
+
+        @view = new View(@model)
+        @planeController = new PlaneController(
+          @model, stats, @gui, @view, @sceneController)
 
       @initMouse()
       @initKeyboard()
@@ -202,11 +208,11 @@ class Controller
   setMode : (newMode, force = false) ->
 
     if (newMode == constants.MODE_ARBITRARY or newMode == constants.MODE_ARBITRARY_PLANE) and (newMode in @allowedModes or force)
-      @planeController.stop()
+      @planeController?.stop()
       @arbitraryController.start(newMode)
 
     else if (newMode == constants.MODE_PLANE_TRACING or newMode == constants.MODE_VOLUME) and (newMode in @allowedModes or force)
-      @arbitraryController.stop()
+      @arbitraryController?.stop()
       @planeController.start(newMode)
 
     else # newMode not allowed or invalid

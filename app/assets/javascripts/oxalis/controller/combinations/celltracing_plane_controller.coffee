@@ -25,15 +25,6 @@ class CellTracingPlaneController extends PlaneController
 
     return _.extend super(planeId),
 
-      leftDownMove : (delta, pos) => 
-
-        @move [
-          delta.x * @model.user.getMouseInversionX() / @planeView.scaleFactor
-          delta.y * @model.user.getMouseInversionY() / @planeView.scaleFactor
-          0
-        ]
-      
-
       leftClick : (pos, plane, event) =>
         
         @onClick(pos, event.shiftKey, event.altKey, plane)

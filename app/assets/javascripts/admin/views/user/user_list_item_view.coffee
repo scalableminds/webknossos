@@ -49,7 +49,7 @@ class UserListItemView extends Backbone.Marionette.ItemView
     </td>
   """)
 
-  events : ->
+  events :
     "click .delete-user" : "delete"
     "click .verify-user" : "verify"
 

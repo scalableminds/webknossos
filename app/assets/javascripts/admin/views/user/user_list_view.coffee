@@ -72,7 +72,10 @@ class UserListView extends Backbone.Marionette.CompositeView
   initialize : ->
 
     @collection = new UserCollection()
-    @collection.fetch()
+    @collection.fetch(
+      data:
+        isEditable: true
+    )
 
 
   showTeamRoleModal : ->
@@ -92,7 +95,8 @@ class UserListView extends Backbone.Marionette.CompositeView
 
   showModal : (modalView) ->
 
-    view = new modalView({userCollection: @collection})
+    view = new modalView()
+    view.userCollection = @collection
     view.render()
     @ui.modalWrapper.html(view.el)
 

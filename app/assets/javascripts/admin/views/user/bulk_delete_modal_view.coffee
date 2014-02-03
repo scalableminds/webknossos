@@ -27,7 +27,7 @@ class BulkDeleteModal extends Backbone.Marionette.ItemView
     #jquery tbody to exclude the "check all users" element
     $("tbody input[type=checkbox]:checked").each(
       (i, element) =>
-        user = @collection.findWhere(
+        user = @userCollection.findWhere(
           id: $(element).val()
         )
         user.destroy()

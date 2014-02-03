@@ -67,7 +67,7 @@ GET           /annotations/:typ/:id/cancel                               control
 GET           /admin/nml/upload                                          controllers.admin.NMLIO.uploadForm
 POST          /admin/nml/upload                                          controllers.admin.NMLIO.upload
 
-GET           /teams                                                     controllers.TeamController.list
+GET           /api/teams                                                     controllers.TeamController.list
 
 
 # Admin Tasks

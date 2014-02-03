@@ -1,9 +1,11 @@
 ### define
 underscore : _
 backbone.marionette : marionette
+admin/models/user/team_collection : TeamCollection
+admin/views/user/team_role_modal_item_view : TeamRoleModalItem
 ###
 
-class TeamRoleModal extends Backbone.Marionette.ItemView
+class TeamRoleModal extends Backbone.Marionette.CompositeView
 
   tagName : "div"
   className : "modal hide fade"
@@ -13,8 +15,12 @@ class TeamRoleModal extends Backbone.Marionette.ItemView
       <h3>Assign teams for this dataset</h3>
     </div>
     <div class="modal-body">
-      <ul name="teams" class="modal-team-list">
-      </ul>
+      <header class="row-fluid">
+        <h4 class="span8" for="teams">Teams</h4>
+        <h4 class="span4" for="role">Role</h4>
+      </header>
+      <div id="team-list">
+      </div>
     </div>
     <div class="modal-footer">
       <a class="btn btn-primary">Save</a>
@@ -22,10 +28,19 @@ class TeamRoleModal extends Backbone.Marionette.ItemView
     </div>
   """)
 
+  itemView : TeamRoleModalItem
+  itemViewContainer : "#team-list"
   events :
     "click .btn-primary" : "changeExperience"
 
-  initalize : ->
+
+  initialize : ->
+
+    @collection = new TeamCollection()
+    @collection.fetch()
+
 
   changeExperience : ->
+
+    console.log("click")
 

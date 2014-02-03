@@ -5,9 +5,9 @@
     <td> @dataSet.dataSource.relativeBaseDir(BinaryDataService.baseFolder)</td>
     <td> @dataSet.dataSource.scale </td>
     <td> @dataSet.dataSource.owningTeam </td>
-    <td>
+    <td class="team-label">
     @dataSet.allowedTeams.map{ team =>
-        <span class="label team-label">@team</span>
+        <span class="label">@team</span>
     }
     </td>
     <td>

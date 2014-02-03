@@ -120,7 +120,7 @@ $ ->
         dataset = $parent.find("td").first().text().trim()
         $modal.data("dataset", dataset)
 
-        $labels = $parent.find(".team-label")
+        $labels = $parent.find(".team-label").find(".label")
         assignedTeams = _.map($labels, (label) -> return $(label).text())
 
         if teamsCache

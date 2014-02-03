@@ -7,7 +7,7 @@ import braingames.reactivemongo.{DBAccessContext, SecuredDAO}
 import models.basics.SecuredBaseDAO
 import braingames.util.FoxImplicits
 
-case class Team(name: String, owner: Option[BSONObjectID] = None)
+case class Team(name: String, roles: List[Role], owner: Option[BSONObjectID] = None)
 
 object Team extends {
 

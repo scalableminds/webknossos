@@ -64,7 +64,7 @@ object Global extends GlobalSettings {
  */
 object InitialData extends GlobalDBAccess {
 
-  val mpi = Team("Structure of Neocortical Circuits Group", None)
+  val mpi = Team("Structure of Neocortical Circuits Group", RoleService.roles)
 
   def insertUsers() = {
     UserDAO.findOneByEmail("scmboy@scalableminds.com").map {

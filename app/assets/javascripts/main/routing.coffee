@@ -215,42 +215,47 @@ $ ->
 
     "admin.user.userList" : ->
 
-      $modal = $(".modal")
+      require ["./admin/views/user/user_list_view"], (UserListView) =>
 
-      #teampicker only
-      $modal.on "change", "select[name=teams]", ->
-        #add a new team / role pair
-        $template = $modal.find(".team-role-pair").first()
-        $newRow = $template.clone()
-        $newRow.insertAfter($template)
+        view = new UserListView().render()
+        $(this).html(view.el)
 
-      $(".show-modal").on "click", ->
+      # $modal = $(".modal")
 
-        templateId = $(this).data("template")
-        showModal(templateId)
+      # #teampicker only
+      # $modal.on "change", "select[name=teams]", ->
+      #   #add a new team / role pair
+      #   $template = $modal.find(".team-role-pair").first()
+      #   $newRow = $template.clone()
+      #   $newRow.insertAfter($template)
 
-      showModal = (templateId) ->
+      # $(".show-modal").on "click", ->
 
-        template = $("##{templateId}")
-        title = template.data("header")
+      #   templateId = $(this).data("template")
+      #   showModal(templateId)
 
-        $modal.find(".modal-body").html(template.html())
-        $modal.find(".modal-header h3").text(title)
-        $modal.find(".modal-hide").on "click", -> $modal.modal("hide")
+      # showModal = (templateId) ->
 
-        $modal.modal("show")
+      #   template = $("##{templateId}")
+      #   title = template.data("header")
+
+      #   $modal.find(".modal-body").html(template.html())
+      #   $modal.find(".modal-header h3").text(title)
+      #   $modal.find(".modal-hide").on "click", -> $modal.modal("hide")
+
+      #   $modal.modal("show")
 
 
-      $("form").on "click", ".label-experience", (event) ->
-        values = $(this).html().split(" ")
-        if values
-          showModal("experiencepicker")
-          $modal = $(".modal")
+      # $("form").on "click", ".label-experience", (event) ->
+      #   values = $(this).html().split(" ")
+      #   if values
+      #     showModal("experiencepicker")
+      #     $modal = $(".modal")
 
-          $modal.find("input[name=experience-domain]").attr("value", values[0])
-          $modal.find("input[name=experience-value]").attr("value", values[1])
-          $(this).parents("table").find("input[type=checkbox]").attr('checked', false)
-          $(this).parents("tr").find("input[type=checkbox]").attr('checked', true)
+      #     $modal.find("input[name=experience-domain]").attr("value", values[0])
+      #     $modal.find("input[name=experience-value]").attr("value", values[1])
+      #     $(this).parents("table").find("input[type=checkbox]").attr('checked', false)
+      #     $(this).parents("tr").find("input[type=checkbox]").attr('checked', true)
 
       return hideLoading()
 

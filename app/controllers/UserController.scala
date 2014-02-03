@@ -31,14 +31,6 @@ object UserController extends Controller with Secured with Dashboard {
     }
   }
 
-  def index = Authenticated.async { implicit request =>
-    for {
-      experiences <- ExperienceService.findAllDomains
-    } yield {
-      Ok(html.admin.user.userList(Nil, experiences.toList, request.user.adminTeams.map(_.team)))
-    }
-  }
-
   def getDashboardInfo = Authenticated.async {
     implicit request => {
       val futures = dashboardInfo(request.user).map { info =>

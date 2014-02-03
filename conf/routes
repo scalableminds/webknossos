@@ -22,11 +22,18 @@ GET           /register                                                  control
 POST          /register                                                  controllers.Authentication.handleRegistration
 
 # User settings
-GET           /users                                                     controllers.UserController.list
+GET           /users                                                     controllers.Application.emptyMain
 POST          /user/configuration                                        controllers.SettingsController.update
 GET           /user/configuration                                        controllers.SettingsController.read
 GET           /user/configuration/default                                controllers.SettingsController.default
 GET           /user/tasks/request                                        controllers.TaskController.request
+
+GET           /api/users                                                 controllers.UserController.list
+DELETE        /api/users/:id                                             controllers.UserController.delete(id: String)
+PATCH         /api/users/:id                                             controllers.UserController.update(id: String)
+GET           /api/users/:id/annotations/download                        controllers.admin.NMLIO.userDownload(id: String)
+# GET         /api/users/:id/loginAs                                     controllers.UserController.loginAsUser(id: String)
+GET           /users/:id/details                                         controllers.UserController.show(id: String)
 
 # Binary Data
 
@@ -109,15 +116,6 @@ GET           /admin/training/:id/startReview                            control
 GET           /admin/training/:id/abortReview                            controllers.admin.TrainingsTracingAdministration.abortReview(id: String)
 GET           /admin/training/:id/finishReview                           controllers.admin.TrainingsTracingAdministration.finishReview(id: String)
 POST          /admin/training/:id/finishReview                           controllers.admin.TrainingsTracingAdministration.finishReviewForm(id: String, passed: Boolean ?= true)
-
-
-# User Administration
-GET           /admin/users                                               controllers.UserController.index
-DELETE        /admin/users/:id                                           controllers.UserController.delete(id: String)
-PATCH         /admin/users/:id                                           controllers.UserController.update(id: String)
-# GET           /admin/users/:id/loginAs                                   controllers.UserController.loginAsUser(id: String)
-GET           /admin/users/:id/details                                   controllers.UserController.show(id: String)
-GET           /admin/users/:id/download                                  controllers.admin.NMLIO.userDownload(id: String)
 
 # Binary Administration
 GET           /admin/datasets                                            controllers.admin.BinaryDataAdministration.list

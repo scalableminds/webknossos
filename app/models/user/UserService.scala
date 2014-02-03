@@ -36,12 +36,12 @@ object UserService extends FoxImplicits {
       UserCache.store(id, UserDAO.findOneById(id))
   }
 
-  def logActivity(user: User, lastActivity: Long)  {
+  def logActivity(user: User, lastActivity: Long) = {
     UserDAO.logActivity(user, lastActivity)(GlobalAccessContext)
   }
 
   def insert(teamName: String, email: String, firstName: String, lastName: String, password: String, isVerified: Boolean) = {
-    for{
+    for {
       teamOpt <- TeamDAO.findOneByName(teamName)(GlobalAccessContext)
       teamMemberships = teamOpt.map(t => TeamMembership(t.name, Role.User)).toList
       user = User(email, firstName, lastName, false, hashPassword(password), teamMemberships)
@@ -50,17 +50,23 @@ object UserService extends FoxImplicits {
   }
 
   def update(user: User, firstName: String, lastName: String, verified: Boolean, teams: List[TeamMembership], experiences: Map[String, Int])(implicit ctx: DBAccessContext) = {
-    if(!user.verified && verified)
+    if (!user.verified && verified)
       Application.Mailer ! Send(DefaultMails.verifiedMail(user.name, user.email))
 
-    UserDAO.update(user._id, firstName, lastName, verified, teams, experiences)
+    UserDAO.update(user._id, firstName, lastName, verified, teams, experiences).map {
+      result =>
+        UserCache.invalidateUser(user.id)
+        result
+    }
   }
 
-  def removeFromAllPossibleTeams(user: User, issuingUser: User)(implicit ctx: DBAccessContext)={
-    if(user.teamNames.diff(issuingUser.adminTeamNames).isEmpty){
+  def removeFromAllPossibleTeams(user: User, issuingUser: User)(implicit ctx: DBAccessContext) = {
+    if (user.teamNames.diff(issuingUser.adminTeamNames).isEmpty) {
       // if a user doesn't belong to any team any more he gets deleted
-      UserDAO.removeById(user._id).flatMap{ _ =>
-        AnnotationService.freeAnnotationsOfUser(user)
+      UserDAO.removeById(user._id).flatMap {
+        _ =>
+          UserCache.invalidateUser(user.id)
+          AnnotationService.freeAnnotationsOfUser(user)
       }
     } else {
       // the issuing user is not able to remove the user from all teams, therefore the account is not getting deleted
@@ -73,7 +79,11 @@ object UserService extends FoxImplicits {
   }
 
   def updateSettings(user: User, settings: UserSettings)(implicit ctx: DBAccessContext) = {
-      UserDAO.updateSettings(user, settings)
+    UserDAO.updateSettings(user, settings).map {
+      result =>
+        UserCache.invalidateUser(user.id)
+        result
+    }
   }
 
   def auth(email: String, password: String): Future[Option[User]] =

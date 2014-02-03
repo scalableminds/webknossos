@@ -18,6 +18,8 @@ require.config
     "dat" : "libs/dat.gui.min"
     "coffee-script" : "libs/coffee-script-1.4.0.min"
     "qassert" : "libs/qassert"
+    "backbone" : "libs/backbone"
+    "backbone.marionette" : "libs/backbone.marionette"
 
   shim :
     "underscore" :
@@ -40,6 +42,8 @@ require.config
     "m4x4" :
       exports : "M4x4"
     "qassert" : [ "jquery" ]
+    "backbone" : [ "underscore" ]
+    "backbone.marionette" : [ "backbone" ]
 
 require [
   "jquery"

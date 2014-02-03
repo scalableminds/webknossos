@@ -23,13 +23,11 @@ body:-webkit-full-screen {
   width: 100%;
   height: 100%;
 }
-.navbar-static-top {
-  min-width: 1024px;
-}
 .navbar .brand {
   background: url(/assets/images/oxalis-white.png) 15px center no-repeat;
   padding-left: 43px;
   font-weight: 400;
+  margin-left: 0px;
 }
 .navbar span.brand:hover {
   color: #999;
@@ -334,14 +332,7 @@ svg a:hover {
   overflow-x: hidden;
 }
 #main-container {
-  position: absolute;
-  top: @headerHeight;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  overflow-x: auto;
-  width: 100%;
-  min-width: 1024px;
+  margin-top: 40px
 }
 #main {
   white-space: nowrap;

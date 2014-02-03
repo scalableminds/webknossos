@@ -3,7 +3,7 @@
 @import play.api.Play.current
 
 @if(showNavButtons) {
-  <header class="navbar navbar-static-top navbar-inverse">
+  <header class="navbar navbar-fixed-top navbar-inverse">
     <div class="navbar-inner">
       <a class="brand" href="@routes.Application.index">@current.configuration.getString("application.name")</a>
        @session.userOpt.map{ user =>
@@ -21,7 +21,7 @@
               </a>
               <ul class="dropdown-menu">
                 <li>
-                  <a href="@controllers.routes.UserController.index">Users</a>
+                  <a href="/users">Users</a>
                 </li>
                 <li>
                   <a href="@controllers.admin.routes.ProjectAdministration.list">Projects</a>

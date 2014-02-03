@@ -8,6 +8,7 @@ import scala.concurrent.Future
 import models.user.{UsedAnnotationDAO, UsedAnnotation}
 import models.basics.Implicits._
 import play.api.libs.concurrent.Execution.Implicits._
+import play.api.templates.Html
 
 object Application extends Controller with Secured {
   lazy val app = play.api.Play.current
@@ -56,6 +57,10 @@ object Application extends Controller with Secured {
       case _ =>
         Future.successful(Redirect(routes.DataSetController.list))
     }
+  }
+
+  def emptyMain = Authenticated { implicit request =>
+    Ok(views.html.main()(Html.empty))
   }
 
   def impressum = UserAwareAction { implicit request =>

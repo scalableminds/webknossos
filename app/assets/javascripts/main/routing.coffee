@@ -111,26 +111,26 @@ $ ->
       $modal = $modal.detach()
       $("body").append($modal)
 
-      teamsCache = ["/Structure of Neocortical Circuits Group/*", "team1", "team2", "team3"]
+      teamsCache = null
       assignedTeams = []
 
-      $(".label").on "click", ->
+      $(".team-label").on "click", ->
         # Find parent and read all labels for one dataset
         $parent = $(this).closest("tr")
         dataset = $parent.find("td").first().text().trim()
         $modal.data("dataset", dataset)
 
-        $labels = $parent.find(".label")
+        $labels = $parent.find(".team-label")
         assignedTeams = _.map($labels, (label) -> return $(label).text())
 
         if teamsCache
           showModal()
         else
-          $ajax(
-            url: ""
+          $.ajax(
+            url: "/api/teams"
             dataType: "json"
           ).done (responseJSON) =>
-            teamsCache = response
+            teamsCache = responseJSON
             showModal()
 
       showModal = ->
@@ -138,10 +138,10 @@ $ ->
         $teamList = $modal.find("ul").empty()
         $checkBoxTags = _.map(teamsCache, (team) ->
 
-          checked = if _.contains(assignedTeams, team) then "checked" else ""
+          checked = if _.contains(assignedTeams, team.name) then "checked" else ""
           $("""
             <li>
-              <label class="checkbox"><input type="checkbox" value="#{team}" #{checked}> #{team}</label>
+              <label class="checkbox"><input type="checkbox" value="#{team.name}" #{checked}> #{team.name}</label>
             </li>
           """)
         )
@@ -153,15 +153,17 @@ $ ->
 
           $checkboxes = $modal.find("input:checked")
           dataset = $modal.data("dataset")
-          assignedTeams = _.map($checkboxes, (checkbox) -> return $(checkbox).parent().text())
+          assignedTeams = _.map($checkboxes, (checkbox) -> return $(checkbox).parent().text().trim())
 
           console.log dataset, assignedTeams
           $modal.modal("hide")
-          # $.ajax(
-          #   url: ""
-          #   data: {dataset: assignedTeams}
-          # ).done ->
-          #   window.location.reload()
+          $.ajax(
+            url: "/api/datasets/#{dataset}/teams"
+            type: "POST"
+            contentType: "application/json; charset=utf-8"
+            data: JSON.stringify(assignedTeams)
+          ).done ->
+            window.location.reload()
 
       return hideLoading()
 

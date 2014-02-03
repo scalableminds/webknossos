@@ -22,10 +22,10 @@ GET           /register                                                  control
 POST          /register                                                  controllers.Authentication.handleRegistration
 
 # User settings
-GET           /users                                                     controllers.admin.UserAdministration.list
-POST          /user/configuration                                        controllers.UserController.saveSettings
-GET           /user/configuration                                        controllers.UserController.showSettings
-GET           /user/configuration/default                                controllers.UserController.defaultSettings
+GET           /users                                                     controllers.UserController.list
+POST          /user/configuration                                        controllers.SettingsController.update
+GET           /user/configuration                                        controllers.SettingsController.read
+GET           /user/configuration/default                                controllers.SettingsController.default
 GET           /user/tasks/request                                        controllers.TaskController.request
 
 # Binary Data
@@ -112,19 +112,12 @@ POST          /admin/training/:id/finishReview                           control
 
 
 # User Administration
-GET           /admin/users                                               controllers.admin.UserAdministration.index
-POST          /admin/users/verify                                        controllers.admin.UserAdministration.verifyBulk
-POST          /admin/users/delete                                        controllers.admin.UserAdministration.deleteBulk
-POST          /admin/users/:id/verify                                    controllers.admin.UserAdministration.verify(id: String)
-GET           /admin/users/:id/delete                                    controllers.admin.UserAdministration.delete(id: String)
-# GET           /admin/users/:id/loginAs                                   controllers.admin.UserAdministration.loginAsUser(id: String)
-GET           /admin/users/:id/details                                   controllers.admin.UserAdministration.show(id: String)
+GET           /admin/users                                               controllers.UserController.index
+DELETE        /admin/users/:id                                           controllers.UserController.delete(id: String)
+PATCH         /admin/users/:id                                           controllers.UserController.update(id: String)
+# GET           /admin/users/:id/loginAs                                   controllers.UserController.loginAsUser(id: String)
+GET           /admin/users/:id/details                                   controllers.UserController.show(id: String)
 GET           /admin/users/:id/download                                  controllers.admin.NMLIO.userDownload(id: String)
-POST          /admin/users/role                                          controllers.admin.UserAdministration.addRoleBulk
-DELETE        /admin/users/role                                          controllers.admin.UserAdministration.deleteRoleBulk
-POST          /admin/users/experience                                    controllers.admin.UserAdministration.setExperienceBulk
-DELETE        /admin/users/experience                                    controllers.admin.UserAdministration.deleteExperienceBulk
-POST          /admin/users/experience/increase                           controllers.admin.UserAdministration.increaseExperienceBulk
 
 # Binary Administration
 GET           /admin/datasets                                            controllers.admin.BinaryDataAdministration.list

@@ -16,16 +16,16 @@
         }
     </td>
   <td>
-    @if(user.verified) {
+    <!--@if(user.verified) {
       <i class="icon-ok"></i>
     } else {
-      <a href="#" class="show-modal" data-url="@controllers.admin.routes.UserAdministration.verify(user.id)" data-placement="bottom" data-html="true" data-title="Assign to a Team" data-template="teampicker"> verify </a>
-    }
+      <a href="#" class="show-modal" data-url="controllers.admin.routes.UserAdministration.verify(user.id)" data-placement="bottom" data-html="true" data-title="Assign to a Team" data-template="teampicker"> verify </a>
+    }   -->
   </td>
   <td class="nowrap">
-    <a href="@controllers.admin.routes.UserAdministration.show(user.id)" ><i class="icon-user"></i> show Tracings</a><br />
+    <a href="@controllers.routes.UserController.show(user.id)" ><i class="icon-user"></i> show Tracings</a><br />
     <a href="@controllers.admin.routes.NMLIO.userDownload(user.id)" title="download all finished tracings"><i class="icon-download"></i> download </a><br />
-  	<a href="@controllers.admin.routes.UserAdministration.delete(user.id)" data-ajax="delete-row,confirm"><i class="icon-trash"></i> delete </a><br />
+  	<a href="@controllers.routes.UserController.delete(user.id)" data-ajax="delete-row,confirm"><i class="icon-trash"></i> delete </a><br />
     <!--<a href="controllers.admin.routes.UserAdministration.loginAsUser(user.id)"><i class="icon-signin"></i> log in as User </a>-->
 	</td>
 </tr>

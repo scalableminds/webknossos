@@ -154,6 +154,14 @@ object UserDAO extends SecuredBaseDAO[User] {
       insert(user).map(_ => user)
   }
 
+  def update(_user: BSONObjectID, firstName: String, lastName: String, verified: Boolean, teams: List[TeamMembership], experiences: Map[String, Int])(implicit ctx: DBAccessContext) =
+    collectionUpdate(findByIdQ(_user), Json.obj("$set" -> Json.obj(
+      "firstName" -> firstName,
+      "lastName" -> lastName,
+      "verified" -> verified,
+      "teams" -> teams,
+      "experiences" -> experiences)))
+
   def addTeams(_user: BSONObjectID, teams: Seq[TeamMembership])(implicit ctx: DBAccessContext) =
     collectionUpdate(findByIdQ(_user), Json.obj("$pushAll" -> Json.obj("teams" -> teams)))
 
@@ -181,6 +189,10 @@ object UserDAO extends SecuredBaseDAO[User] {
 
   def logActivity(user: User, lastActivity: Long)(implicit ctx: DBAccessContext) = {
     collectionUpdate(findByIdQ(user._id), Json.obj("$set" -> Json.obj("lastActivity" -> lastActivity)))
+  }
+
+  def updateTeams(_user: BSONObjectID, teams: List[TeamMembership])(implicit ctx: DBAccessContext) = {
+    collectionUpdate(findByIdQ(_user), Json.obj("$set" -> Json.obj("teams" -> teams)))
   }
 
   def verify(user: User)(implicit ctx: DBAccessContext) = {

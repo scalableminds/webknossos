@@ -5,8 +5,6 @@ libs/event_mixin : EventMixin
 libs/input : Input
 libs/threejs/TrackballControls : TrackballControls
 ../camera_controller : CameraController
-../annotations/celltracing_controller : CellTracingController
-../annotations/volumetracing_controller : VolumeTracingController
 ../../model/dimensions : Dimensions
 ../../view/plane_view : PlaneView
 ../../constants : constants
@@ -39,7 +37,7 @@ class PlaneController
       @keyboardLoopDelayed?.unbind()
 
 
-  constructor : (@model, stats, @gui, renderer, scene, @sceneController, @controlMode) ->
+  constructor : (@model, stats, @gui, @view, @sceneController) ->
 
     _.extend(@, new EventMixin())
 
@@ -49,12 +47,12 @@ class PlaneController
 
     @oldNmPos = @model.scaleInfo.voxelToNm( @flycam.getPosition() )
 
-    @view  = new PlaneView(@model, @flycam, stats, renderer, scene)
+    @planeView = new PlaneView(@model, @flycam, @view, @stats)
 
     @activeViewport = constants.PLANE_XY
 
     # initialize Camera Controller
-    @cameraController = new CameraController(@view.getCameras(), @flycam, @model)
+    @cameraController = new CameraController(@planeView.getCameras(), @flycam, @model)
 
     @canvasesAndNav = $("#main")[0]
 
@@ -89,16 +87,10 @@ class PlaneController
           .on("click", button.callback)
       )
 
-    objects = { @model, @view, @sceneController, @cameraController, @move, @calculateGlobalPos, @gui }
-    if @model.cellTracing?
-      @cellTracingController = new CellTracingController( objects, @controlMode )
-    if @model.volumeTracing?
-      @volumeTracingController = new VolumeTracingController( objects )
-
     meshes = @sceneController.getMeshes()
     
     for mesh in meshes
-      @view.addGeometry(mesh)
+      @planeView.addGeometry(mesh)
 
     @model.user.triggerAll()
 
@@ -123,18 +115,18 @@ class PlaneController
       new Input.Mouse($("#TDView"), @getTDViewMouseControls(), constants.TDView ))
 
 
-  getPlaneMouseControls : ->
+  getTDMouseControls : ->
 
     return
       leftDownMove : (delta) => @moveTDView(delta)
       scroll : (value) => @zoomTDView(value, true)
-      over : => @view.setActiveViewport( @activeViewport = constants.TDView )
+      over : => @planeView.setActiveViewport( @activeViewport = constants.TDView )
 
 
-  getTDViewMouseControls : ->
+  getPlaneViewMouseControls : ->
 
     return
-      over : => @view.setActiveViewport( @activeViewport = planeId )
+      over : => @planeView.setActiveViewport( @activeViewport = planeId )
       scroll : @scrollPlanes
 
 
@@ -143,7 +135,7 @@ class PlaneController
     view = $("#TDView")[0]
     pos = @model.scaleInfo.voxelToNm(@flycam.getPosition())
     @controls = new THREE.TrackballControls(
-      @view.getCameras()[constants.TDView],
+      @planeView.getCameras()[constants.TDView],
       view, 
       new THREE.Vector3(pos...), 
       => @flycam.update())
@@ -251,7 +243,7 @@ class PlaneController
     @init()
     @initMouse()
     @sceneController.start()
-    @view.start()
+    @planeView.start()
 
     @isStarted = true
 
@@ -260,34 +252,33 @@ class PlaneController
 
     if @isStarted
       @input.unbind()
-      @view.stop()
+      @planeView.stop()
       @sceneController.stop()
 
     @isStarted = false
 
   bind : ->
 
-    @view.bind()
+    @planeView.bind()
 
-    @view.on
+    @planeView.on
       render : => @render()
-      finishedRender : => @model.cellTracing?.rendered()
       renderCam : (id, event) => @sceneController.updateSceneForCam(id)
 
     @sceneController.on
       newGeometries : (list, event) =>
         for geometry in list
-          @view.addGeometry(geometry)
+          @planeView.addGeometry(geometry)
       removeGeometries : (list, event) =>
         for geometry in list
-          @view.removeGeometry(geometry)   
+          @planeView.removeGeometry(geometry)   
     @sceneController.skeleton?.on
       newGeometries : (list, event) =>
         for geometry in list
-          @view.addGeometry(geometry)
+          @planeView.addGeometry(geometry)
       removeGeometries : (list, event) =>
         for geometry in list
-          @view.removeGeometry(geometry)    
+          @planeView.removeGeometry(geometry)    
 
 
   render : ->
@@ -357,7 +348,7 @@ class PlaneController
     if zoomToMouse
       zoomToPosition = @input.mouseControllers[constants.TDView].position
 
-    @cameraController.zoomTDView(value, zoomToPosition, @view.curWidth)
+    @cameraController.zoomTDView(value, zoomToPosition, @planeView.curWidth)
 
 
   moveTDView : (delta) ->
@@ -410,7 +401,6 @@ class PlaneController
 
     switch type
       when null then @moveZ(delta)
-      when "shift" then @cellTracingController?.setParticleSize(delta)
       when "alt"
         @zoomPlanes(delta, true)
 
@@ -419,7 +409,7 @@ class PlaneController
 
     curGlobalPos  = @flycam.getPosition()
     zoomFactor    = @flycam.getPlaneScalingFactor()
-    scaleFactor   = @view.scaleFactor
+    scaleFactor   = @planeView.scaleFactor
     planeRatio    = @model.scaleInfo.baseVoxelFactors
     position = switch @activeViewport
       when constants.PLANE_XY 

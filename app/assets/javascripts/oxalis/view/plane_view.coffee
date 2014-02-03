@@ -10,10 +10,11 @@ jquery : $
 
 class PlaneView
 
-  constructor : (@model, @flycam, @stats, @renderer, @scene) ->
+  constructor : (@model, @flycam, @view, @stats) ->
 
     _.extend(@, new EventMixin())
 
+    { @renderer, @scene } = @view
     @running = false
 
     # The "render" div serves as a container for the canvas, that is 
@@ -201,12 +202,6 @@ class PlaneView
   getCameras : =>
 
     @camera
-
-
-  showFirstVisToggle : ->
-
-    modal.show("You just toggled the skeleton visibility. To toggle back, just hit the 1-Key.",
-      [{id: "ok-button", label: "OK, Got it."}])
 
 
   showBranchModal : (callback) ->

@@ -68,23 +68,31 @@ class Controller
       # FPS stats
       stats = new Stats()
       stats.getDomElement().id = "stats"
-      $("body").append stats.getDomElement() 
-
-      if @model.cellTracing?
-        @view = new SkeletonTracingView(@model)
-      else
-        @view = new VolumeTracingView(@model)
+      $("body").append stats.getDomElement()
 
       @gui = @createGui(restrictions, settings)
 
       @sceneController = new SceneController(
-        @model.binary["color"].cube.upperBoundary,@model.flycam, @model)
+        @model.binary["color"].cube.upperBoundary, @model.flycam, @model)
 
-      @planeController = new PlaneController(
-        @model, stats, @gui, @view.renderer, @view.scene, @sceneController, @controlMode)
 
-      @arbitraryController = new ArbitraryController(
-        @model, stats, @gui, @view.renderer, @view.scene, @sceneController)
+      if @model.cellTracing?
+
+        @view = new SkeletonTracingView(@model)
+        @annotationController = new CellTracingController(
+          @model, @sceneController, @gui, @view )
+        @planeController = new CellTracingPlaneController(
+          @model, stats, @gui, @view, @sceneController)
+        @arbitraryController = new CellTracingArbitraryController(
+          @model, stats, @gui, @view, @sceneController)
+      
+      else
+        
+        @view = new VolumeTracingView(@model)
+        @annotationController = new CellTracingController(
+          @model, @sceneController, @gui, @view )
+        @planeController = new VolumeTracingPlaneController(
+          @model, stats, @gui, @view, @sceneController)
 
       @initMouse()
       @initKeyboard()

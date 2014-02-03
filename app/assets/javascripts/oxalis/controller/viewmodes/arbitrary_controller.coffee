@@ -46,7 +46,7 @@ class ArbitraryController
       @keyboardOnce?.unbind()
 
 
-  constructor : (@model, stats, @gui, renderer, scene, @sceneController) ->
+  constructor : (@model, stats, @gui, @view, @sceneController) ->
 
     _.extend(this, new EventMixin())
 
@@ -55,20 +55,20 @@ class ArbitraryController
     @canvas = canvas = $("#render-canvas")
     
     @cam = @model.flycam3d
-    @view = new ArbitraryView(canvas, @cam, stats, renderer, scene, @model.scaleInfo)
+    @arbitraryView = new ArbitraryView(canvas, @cam, stats, @view, @model.scaleInfo)
 
     @plane = new ArbitraryPlane(@cam, @model, @WIDTH, @HEIGHT)
-    @view.addGeometry @plane
+    @arbitraryView.addGeometry @plane
 
     @infoPlane = new ArbitraryPlaneInfo()
 
     @input = _.extend({}, @input)
 
     @crosshair = new Crosshair(@cam, model.user.crosshairSize)
-    @view.addGeometry(@crosshair)
+    @arbitraryView.addGeometry(@crosshair)
 
     @bind()
-    @view.draw()
+    @arbitraryView.draw()
 
     @stop()
 
@@ -92,7 +92,7 @@ class ArbitraryController
             delta.y * @model.user.getMouseInversionY() * @model.user.mouseRotateValue,
             true )
         else if @mode == constants.MODE_ARBITRARY_PLANE
-          f = @cam.getZoomStep() / (@view.width / @WIDTH)
+          f = @cam.getZoomStep() / (@arbitraryView.width / @WIDTH)
           @cam.move [delta.x * f, delta.y * f, 0]
       scroll : @scroll
     )
@@ -108,8 +108,8 @@ class ArbitraryController
     @input.keyboard = new Input.Keyboard(
  
       #Scale plane
-      "l"             : (timeFactor) => @view.applyScale -@model.user.scaleValue
-      "k"             : (timeFactor) => @view.applyScale  @model.user.scaleValue
+      "l"             : (timeFactor) => @arbitraryView.applyScale -@model.user.scaleValue
+      "k"             : (timeFactor) => @arbitraryView.applyScale  @model.user.scaleValue
 
       #Move   
       "w"             : (timeFactor) => @cam.move [0, getVoxelOffset(timeFactor), 0]
@@ -186,15 +186,15 @@ class ArbitraryController
   init : ->
 
     @setClippingDistance @model.user.clippingDistance
-    @view.applyScale(0)
+    @arbitraryView.applyScale(0)
 
 
   bind : ->
 
-    @view.on "render", (force, event) => @render(force, event)
-    @view.on "finishedRender", => @model.cellTracing.rendered()
+    @arbitraryView.on "render", (force, event) => @render(force, event)
+    @arbitraryView.on "finishedRender", => @model.cellTracing.rendered()
 
-    @model.binary["color"].cube.on "bucketLoaded", => @view.draw()
+    @model.binary["color"].cube.on "bucketLoaded", => @arbitraryView.draw()
 
     @model.user.on "crosshairSizeChanged", (value) =>
       @crosshair.setScale(value)
@@ -215,9 +215,9 @@ class ArbitraryController
 
     @initKeyboard()
     @initMouse()
-    @view.start()
+    @arbitraryView.start()
     @init()
-    @view.draw()   
+    @arbitraryView.draw()   
 
     @isStarted = true 
  
@@ -227,7 +227,7 @@ class ArbitraryController
     if @isStarted
       @input.unbind()
     
-    @view.stop()
+    @arbitraryView.stop()
 
     @isStarted = false
 
@@ -273,7 +273,7 @@ class ArbitraryController
 
   setClippingDistance : (value) =>
 
-    @view.setClippingDistance(value)
+    @arbitraryView.setClippingDistance(value)
 
 
   pushBranch : ->

@@ -249,6 +249,12 @@ class SkeletonTracingView extends View
       $("#sort-desc-icon"))
 
 
+  showFirstVisToggle : ->
+
+    modal.show("You just toggled the skeleton visibility. To toggle back, just hit the 1-Key.",
+      [{id: "ok-button", label: "OK, Got it."}])
+
+
   toggleIconVisibility : (isFirst, firstIcon, secondIcon) ->
 
     if isFirst

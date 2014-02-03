@@ -18,7 +18,7 @@ class VolumeTracingController
   MERGE_MODE_CELL2  : 2
 
 
-  constructor : ( { @model, @view, @sceneController, @cameraController, @move, @calculateGlobalPos, @gui } ) ->
+  constructor : ( @model, @sceneController, @gui, @volumeTracingView ) ->
 
     @inDeleteMode = false
 

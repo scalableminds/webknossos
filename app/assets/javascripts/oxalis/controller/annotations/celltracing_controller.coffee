@@ -14,9 +14,7 @@ class CellTacingController
   # functions that can be called by the specific view mode controller.
 
 
-  constructor : ( { @model, @view, @sceneController, @cameraController, @move, @calculateGlobalPos, @gui }, controlMode ) ->
-
-    @inTraceMode = controlMode == constants.CONTROL_MODE_TRACE
+  constructor : ( @model, @sceneController, @gui, @skeletonTracingView ) ->
 
     @abstractTreeController = new AbstractTreeController(@model)
     @abstractTreeController.view.on 
@@ -31,10 +29,6 @@ class CellTacingController
     @model.cellTracing.on
       newActiveNode : (centered) =>
         @centerActiveNode if centered
-
-    # For data viewer, no keyboard controls
-    if not @inTraceMode
-      @keyboardControls = {}
 
     # Mange side bar input
     $("#comment-input").on "change", (event) => 
@@ -102,48 +96,9 @@ class CellTacingController
     # Show warning, if this is the first time to use
     # this function for this user
     if @model.user.firstVisToggle
-      @view.showFirstVisToggle()
+      @skeletonTracingView.showFirstVisToggle()
       @model.user.firstVisToggle = false
       @model.user.push()
-  
-
-  setWaypoint : (position, ctrlPressed) =>
-
-    activeNode = @model.cellTracing.getActiveNode()
-    # set the new trace direction
-    if activeNode
-      @model.flycam.setDirection([
-        position[0] - activeNode.pos[0], 
-        position[1] - activeNode.pos[1], 
-        position[2] - activeNode.pos[2]
-      ])
-
-    @addNode(position, not ctrlPressed)
-
-    # Strg + Rightclick to set new not active branchpoint
-    if ctrlPressed and 
-      @model.user.newNodeNewTree == false and 
-        @model.cellTracing.getActiveNodeType() == constants.TYPE_USUAL
-
-      @model.cellTracing.pushBranch()
-      @model.cellTracing.setActiveNode(activeNode.id)
-
-
-  ########### Model Interaction
-
-  addNode : (position, centered) =>
-
-    if @model.user.newNodeNewTree == true
-      @createNewTree()
-      # make sure the tree was rendered two times before adding nodes,
-      # otherwise our buffer optimizations won't work
-      @model.cellTracing.one("finishedRender", =>
-        @model.cellTracing.one("finishedRender", =>
-          @model.cellTracing.addNode(position, constants.TYPE_USUAL))
-        @view.draw())
-      @view.draw()
-    else
-      @model.cellTracing.addNode(position, constants.TYPE_USUAL, centered)
 
 
   centerActiveNode : =>

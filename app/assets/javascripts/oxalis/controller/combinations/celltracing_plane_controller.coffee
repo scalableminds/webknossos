@@ -13,6 +13,14 @@ class CellTracingPlaneController extends PlaneController
   # Tracing.
 
 
+  constructor : (@model, stats, @gui, @view, @sceneController) ->
+
+    super(@model, stats, @gui, @view, @sceneController)
+
+    @planeView.on
+      finishedRender : => @model.cellTracing.rendered()
+
+
   getPlaneMouseControls : ->
 
     return _.extend super(),
@@ -20,8 +28,8 @@ class CellTracingPlaneController extends PlaneController
       leftDownMove : (delta, pos) => 
 
         @move [
-          delta.x * @model.user.getMouseInversionX() / @view.scaleFactor
-          delta.y * @model.user.getMouseInversionY() / @view.scaleFactor
+          delta.x * @model.user.getMouseInversionX() / @planeView.scaleFactor
+          delta.y * @model.user.getMouseInversionY() / @planeView.scaleFactor
           0
         ]
       
@@ -77,13 +85,21 @@ class CellTracingPlaneController extends PlaneController
     )
 
 
+  scrollPlanes : (delta, type) =>
+
+    super(delta, type)
+
+    if type == "shift"
+      @cellTracingController.setParticleSize(delta)
+
+
   onClick : (position, shiftPressed, altPressed, plane) =>
 
     unless shiftPressed # do nothing
       return
 
-    scaleFactor = @view.scaleFactor
-    camera      = @view.getCameras()[plane]
+    scaleFactor = @planeView.scaleFactor
+    camera      = @planeView.getCameras()[plane]
     # vector with direction from camera position to click position
     vector = new THREE.Vector3((position.x / (384 * scaleFactor) ) * 2 - 1, - (position.y / (384 * scaleFactor)) * 2 + 1, 0.5)
     
@@ -116,4 +132,41 @@ class CellTracingPlaneController extends PlaneController
         # center the node if click was in 3d-view
         centered = plane == constants.TDView
         @model.cellTracing.setActiveNode(nodeID, shiftPressed and altPressed, centered)
+  
+
+  setWaypoint : (position, ctrlPressed) =>
+
+    activeNode = @model.cellTracing.getActiveNode()
+    # set the new trace direction
+    if activeNode
+      @model.flycam.setDirection([
+        position[0] - activeNode.pos[0], 
+        position[1] - activeNode.pos[1], 
+        position[2] - activeNode.pos[2]
+      ])
+
+    @addNode(position, not ctrlPressed)
+
+    # Strg + Rightclick to set new not active branchpoint
+    if ctrlPressed and 
+      @model.user.newNodeNewTree == false and 
+        @model.cellTracing.getActiveNodeType() == constants.TYPE_USUAL
+
+      @model.cellTracing.pushBranch()
+      @model.cellTracing.setActiveNode(activeNode.id)
+      
+
+  addNode : (position, centered) =>
+
+    if @model.user.newNodeNewTree == true
+      @createNewTree()
+      # make sure the tree was rendered two times before adding nodes,
+      # otherwise our buffer optimizations won't work
+      @model.cellTracing.one("finishedRender", =>
+        @model.cellTracing.one("finishedRender", =>
+          @model.cellTracing.addNode(position, constants.TYPE_USUAL))
+        @planeView.draw())
+      @planeView.draw()
+    else
+      @model.cellTracing.addNode(position, constants.TYPE_USUAL, centered)
         break

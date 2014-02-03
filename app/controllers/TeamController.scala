@@ -7,9 +7,6 @@ import play.api.libs.concurrent.Execution.Implicits._
 import models.user.User
 import braingames.util.ExtendedTypes.ExtendedString
 
-/**
- * Created by tombocklisch on 30.01.14.
- */
 object TeamController extends Controller with Secured {
 
   def list = Authenticated.async{ implicit request =>

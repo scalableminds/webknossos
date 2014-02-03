@@ -46,6 +46,10 @@ class UserListItemView extends Backbone.Marionette.ItemView
       <a href="/admin/users/<%= id %>/download" title="download all finished tracings"><i class="icon-download"></i> download </a><br />
       <a href="#" class="delete-user"><i class="icon-trash"></i> delete </a><br />
       <a href="/admin/users/<%= id %>/loginAs"><i class="icon-signin"></i> log in as User </a>
+      <a href="/users/<%= id %>/details"><i class="icon-user"></i> show Tracings</a><br />
+      <a href="/api/users/<%= id %>/annotations/download" title="download all finished tracings"><i class="icon-download"></i> download </a><br />
+      <a href="#"><i class="icon-trash"></i> delete </a><br />
+      <!--<a href="/admin/users/<%= id %>/loginAs"><i class="icon-signin"></i> log in as User </a>-->
     </td>
   """)
 

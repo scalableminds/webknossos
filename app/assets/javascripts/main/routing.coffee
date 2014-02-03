@@ -350,7 +350,7 @@ $ ->
         for aProject, index in projects
 
           id = aProject._owner.$oid
-          owner = _.find(users, (u) -> u._id.$oid == id)
+          owner = _.find(users, (u) -> u.id == id)
 
           if owner
             ownerName = owner.firstName + " " + owner.lastName
@@ -376,7 +376,7 @@ $ ->
         new Paginator( $pageSelection, paginationData)
 
         for aUser in response.users
-          $owner.append("<option value='#{aUser._id.$oid}' selected=''>#{aUser.firstName} #{aUser.lastName}</option>")
+          $owner.append("<option value='#{aUser.id}' selected=''>#{aUser.firstName} #{aUser.lastName}</option>")
       )
 
     "views.html.admin.training.trainingsTaskCreate" : ->

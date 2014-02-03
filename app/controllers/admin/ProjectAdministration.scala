@@ -27,18 +27,13 @@ object ProjectAdministration extends AdminController {
 
   // TODO: remove form
   def projectListWithForm(form: Form[(String, String, String)])(implicit request: AuthenticatedRequest[_]) =
-    for {
-      users <- sortedUsers
-      projects <- ProjectDAO.findAll
-    } yield {
-      html.admin.project.projectList()
-    }
+    Future.successful(html.admin.project.projectList(request.user.adminTeamNames))
 
   def list = Authenticated.async {
     implicit request =>
       render.async {
         case Accepts.Html() =>
-          Future.successful(Ok(html.admin.project.projectList()))
+          Future.successful(Ok(html.admin.project.projectList(request.user.adminTeamNames)))
         case Accepts.Json() =>
           for {
             projects <- ProjectDAO.findAll

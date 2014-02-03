@@ -101,6 +101,7 @@ object TaskAdministration extends AdminController {
         dataSets,
         domains.toList,
         projects,
+        request.user.adminTeamNames,
         taskFromNMLForm,
         taskForm)
     }
@@ -116,6 +117,7 @@ object TaskAdministration extends AdminController {
         taskTypes,
         domains.toList,
         projects,
+        request.user.adminTeamNames,
         taskForm)
     }
 

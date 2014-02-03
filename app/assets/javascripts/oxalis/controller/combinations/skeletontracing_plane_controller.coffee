@@ -4,21 +4,21 @@ underscore : _
 ../../constants : constants
 ###
 
-class CellTracingPlaneController extends PlaneController
+class SkeletonTracingPlaneController extends PlaneController
 
   # See comment in Controller class on general controller architecture.
   #
-  # Cell Tracing Plane Controller:
+  # Skeleton Tracing Plane Controller:
   # Extends Plane controller to add controls that are specific to Skeleton
   # Tracing.
 
 
-  constructor : (@model, stats, @gui, @view, @sceneController, @cellTracingController) ->
+  constructor : (@model, stats, @gui, @view, @sceneController, @skeletonTracingController) ->
 
     super(@model, stats, @gui, @view, @sceneController)
 
     @planeView.on
-      finishedRender : => @model.cellTracing.rendered()
+      finishedRender : => @model.skeletonTracing.rendered()
 
 
   getPlaneMouseControls : (planeId) ->
@@ -51,26 +51,26 @@ class CellTracingPlaneController extends PlaneController
       "2" : => @sceneController.skeleton.toggleInactiveTreeVisibility()
 
       #Delete active node
-      "delete" : => @model.cellTracing.deleteActiveNode()
-      "c" : => @model.cellTracing.createNewTree()
+      "delete" : => @model.skeletonTracing.deleteActiveNode()
+      "c" : => @model.skeletonTracing.createNewTree()
 
       #Branches
-      "b" : => @model.cellTracing.pushBranch()
+      "b" : => @model.skeletonTracing.pushBranch()
       "j" : => @popBranch() 
 
       "s" : @centerActiveNode
 
       #Comments
-      "n" : => @cellTracingController.setActiveNode(
-        @model.cellTracing.nextCommentNodeID(false), false, true)
-      "p" : => @cellTracingController.setActiveNode(
-        @model.cellTracing.nextCommentNodeID(true), false, true)
+      "n" : => @skeletonTracingController.setActiveNode(
+        @model.skeletonTracing.nextCommentNodeID(false), false, true)
+      "p" : => @skeletonTracingController.setActiveNode(
+        @model.skeletonTracing.nextCommentNodeID(true), false, true)
 
 
   popBranch : =>
 
-    _.defer => @model.cellTracing.popBranch().done((id) => 
-      @cellTracingController.setActiveNode(id, false, true)
+    _.defer => @model.skeletonTracing.popBranch().done((id) => 
+      @skeletonTracingController.setActiveNode(id, false, true)
     )
 
 
@@ -79,7 +79,7 @@ class CellTracingPlaneController extends PlaneController
     super(delta, type)
 
     if type == "shift"
-      @cellTracingController.setParticleSize(delta)
+      @skeletonTracingController.setParticleSize(delta)
 
 
   onClick : (position, shiftPressed, altPressed, plane) =>
@@ -120,13 +120,13 @@ class CellTracingPlaneController extends PlaneController
         # set the active Node to the one that has the ID stored in the vertex
         # center the node if click was in 3d-view
         centered = plane == constants.TDView
-        @cellTracingController.setActiveNode(nodeID, shiftPressed and altPressed, centered)
+        @skeletonTracingController.setActiveNode(nodeID, shiftPressed and altPressed, centered)
         break
   
 
   setWaypoint : (position, ctrlPressed) =>
 
-    activeNode = @model.cellTracing.getActiveNode()
+    activeNode = @model.skeletonTracing.getActiveNode()
     # set the new trace direction
     if activeNode
       @model.flycam.setDirection([
@@ -140,10 +140,10 @@ class CellTracingPlaneController extends PlaneController
     # Strg + Rightclick to set new not active branchpoint
     if ctrlPressed and 
       @model.user.newNodeNewTree == false and 
-        @model.cellTracing.getActiveNodeType() == constants.TYPE_USUAL
+        @model.skeletonTracing.getActiveNodeType() == constants.TYPE_USUAL
 
-      @model.cellTracing.pushBranch()
-      @cellTracingController.setActiveNode(activeNode.id)
+      @model.skeletonTracing.pushBranch()
+      @skeletonTracingController.setActiveNode(activeNode.id)
       
 
   addNode : (position, centered) =>
@@ -152,10 +152,10 @@ class CellTracingPlaneController extends PlaneController
       @createNewTree()
       # make sure the tree was rendered two times before adding nodes,
       # otherwise our buffer optimizations won't work
-      @model.cellTracing.one("finishedRender", =>
-        @model.cellTracing.one("finishedRender", =>
-          @model.cellTracing.addNode(position, constants.TYPE_USUAL))
+      @model.skeletonTracing.one("finishedRender", =>
+        @model.skeletonTracing.one("finishedRender", =>
+          @model.skeletonTracing.addNode(position, constants.TYPE_USUAL))
         @planeView.draw())
       @planeView.draw()
     else
-      @model.cellTracing.addNode(position, constants.TYPE_USUAL, centered)
+      @model.skeletonTracing.addNode(position, constants.TYPE_USUAL, centered)

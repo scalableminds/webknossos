@@ -6,7 +6,7 @@ libs/threejs/ColorConverter : ColorConverter
 class Tree
 
   constructor : (treeId, treeColor, @model) ->
-    # create cellTracing to show in TDView and pre-allocate buffers
+    # create skeletonTracing to show in TDView and pre-allocate buffers
 
     edgeGeometry = new THREE.Geometry()
     nodeGeometry = new THREE.Geometry()
@@ -147,7 +147,7 @@ class Tree
 
     @id = newTreeId
 
-    newColor = @model.cellTracing.getTree().color
+    newColor = @model.skeletonTracing.getTree().color
     @edges.material.color = new THREE.Color( @darkenHex( newColor ) )
     
     @updateNodesColors()
@@ -187,11 +187,11 @@ class Tree
 
   getColor : (id, isActiveNode, isBranchPoint) ->
 
-    color = @model.cellTracing.getTree(@id).color
+    color = @model.skeletonTracing.getTree(@id).color
     if id?
 
-      isActiveNode  = isActiveNode  || @model.cellTracing.getActiveNodeId() == id
-      isBranchPoint = isBranchPoint || @model.cellTracing.isBranchPoint(id)
+      isActiveNode  = isActiveNode  || @model.skeletonTracing.getActiveNodeId() == id
+      isBranchPoint = isBranchPoint || @model.skeletonTracing.isBranchPoint(id)
 
       if not isActiveNode
         color = @darkenHex(color)

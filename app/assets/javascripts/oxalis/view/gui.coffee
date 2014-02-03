@@ -34,10 +34,10 @@ class Gui
       resetBrightnessAndContrast : => @resetBrightnessAndContrast()
       quality : @qualityArray[@user.quality]
 
-    if @model.cellTracing?
+    if @model.skeletonTracing?
       @settingsSkeleton =
-        activeTreeID : @model.cellTracing.getActiveTreeId()
-        activeNodeID : @model.cellTracing.getActiveNodeId() or -1
+        activeTreeID : @model.skeletonTracing.getActiveTreeId()
+        activeNodeID : @model.skeletonTracing.getActiveNodeId() or -1
         newNodeNewTree : if somaClickingAllowed then @user.newNodeNewTree else false
         deleteActiveNode : => @trigger "deleteActiveNode"
 
@@ -180,7 +180,7 @@ class Gui
         else
           $("#zoomFactor").html("<p>Viewport width: " + (nm / 1000000).toFixed(1) + " mm</p>")
 
-    @model.cellTracing?.on
+    @model.skeletonTracing?.on
       newActiveNode    : => @update()
       newActiveTree    : => @update()
       deleteActiveTree : => @update()
@@ -245,7 +245,7 @@ class Gui
 
     @user.pushImpl()
     if @restrictions.allowUpdate
-      @model.cellTracing?.pushNow()
+      @model.skeletonTracing?.pushNow()
         .then( 
           -> Toast.success("Saved!")
           -> Toast.error("Couldn't save. Please try again.")
@@ -407,8 +407,8 @@ class Gui
     # Helper method to combine common update methods
     # called when value user switch to different active node
     if @settingsSkeleton?
-      @settingsSkeleton.activeNodeID = @model.cellTracing.getActiveNodeId() or -1
-      @settingsSkeleton.activeTreeID = @model.cellTracing.getActiveTreeId()
+      @settingsSkeleton.activeNodeID = @model.skeletonTracing.getActiveNodeId() or -1
+      @settingsSkeleton.activeTreeID = @model.skeletonTracing.getActiveTreeId()
       @activeNodeIdController.updateDisplay()
       @activeTreeIdController.updateDisplay()
     if @settingsVolume?

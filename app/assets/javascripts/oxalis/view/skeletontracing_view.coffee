@@ -13,7 +13,7 @@ class SkeletonTracingView extends View
 
     $('.volume-controls').hide()
 
-    @model.cellTracing.on({
+    @model.skeletonTracing.on({
       emptyBranchStack : =>
 
         Toast.error("No more branchpoints", false)
@@ -94,7 +94,7 @@ class SkeletonTracingView extends View
         @updateCommentsSortButton()
         @updateComments()
 
-    @model.cellTracing.stateLogger.on
+    @model.skeletonTracing.stateLogger.on
       pushFailed       : (critical) =>
         if not critical or @reloadDenied
           Toast.error("Auto-Save failed!")
@@ -121,7 +121,7 @@ class SkeletonTracingView extends View
 
   updateComments : ->
     
-    comments = @model.cellTracing.getComments( @model.user.sortCommentsAsc )
+    comments = @model.skeletonTracing.getComments( @model.user.sortCommentsAsc )
     commentList = $("#comment-list")
     commentList.empty()
 
@@ -134,7 +134,7 @@ class SkeletonTracingView extends View
       if treeId != lastTreeId
         newContent.appendChild((
           $('<li>').append($('<i>', {"class": "icon-sitemap"}),
-          $('<span>', {"data-treeid": treeId, "text": @model.cellTracing.getTree(treeId)?.name})))[0])
+          $('<span>', {"data-treeid": treeId, "text": @model.skeletonTracing.getTree(treeId)?.name})))[0])
         lastTreeId = treeId
       newContent.appendChild((
         $('<li>').append($('<i>', {"class": "icon-angle-right"}), 
@@ -147,7 +147,7 @@ class SkeletonTracingView extends View
 
   updateActiveComment : ->
 
-    comment = @model.cellTracing.getComment()
+    comment = @model.skeletonTracing.getComment()
     if comment
       $("#comment-input").val(comment)
     else
@@ -158,7 +158,7 @@ class SkeletonTracingView extends View
       oldIcon.toggleClass("icon-arrow-right", false)
       oldIcon.toggleClass("icon-angle-right", true)
 
-    activeHref = $("#comment-container a[data-nodeid=#{@model.cellTracing.getActiveNodeId()}]")
+    activeHref = $("#comment-container a[data-nodeid=#{@model.skeletonTracing.getActiveNodeId()}]")
     if activeHref.length
 
       newIcon = activeHref.parent("li").children("i")
@@ -169,7 +169,7 @@ class SkeletonTracingView extends View
       $("#comment-container").animate({
         scrollTop: newIcon.offset().top - $("#comment-container").offset().top + $("#comment-container").scrollTop()}, 250)
     else
-      activeTree = $("#comment-container span[data-treeid=#{@model.cellTracing.getActiveTreeId()}]")
+      activeTree = $("#comment-container span[data-treeid=#{@model.skeletonTracing.getActiveTreeId()}]")
       if activeTree.length
         $("#comment-container").animate({
           scrollTop: activeTree.offset().top - $("#comment-container").offset().top + $("#comment-container").scrollTop()}, 250)
@@ -177,7 +177,7 @@ class SkeletonTracingView extends View
 
   updateActiveTree : ->
 
-    activeTree = @model.cellTracing.getTree()
+    activeTree = @model.skeletonTracing.getTree()
     if activeTree
       $("#tree-name-input").val(activeTree.name)
       $("#tree-name").text(activeTree.name)
@@ -212,7 +212,7 @@ class SkeletonTracingView extends View
 
   updateTrees : ->
 
-    trees = @model.cellTracing.getTreesSorted()
+    trees = @model.skeletonTracing.getTreesSorted()
 
     treeList = $("#tree-list")
     treeList.empty()

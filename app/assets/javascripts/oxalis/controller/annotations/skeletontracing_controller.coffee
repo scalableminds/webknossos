@@ -4,11 +4,11 @@
 ../abstract_tree_controller : AbstractTreeController
 ###
 
-class CellTacingController
+class SkeletonTacingController
 
   # See comment in Controller class on general controller architecture.
   #
-  # Cell Tracing Controller:
+  # Skeleton Tracing Controller:
   # Add Skeleton Tracing controls that are not specific to the view mode.
   # Also, this would be the place to define general Skeleton Tracing
   # functions that can be called by the specific view mode controller.
@@ -22,13 +22,13 @@ class CellTacingController
 
     @gui.on
       deleteActiveNode : =>
-        @model.cellTracing.deleteActiveNode()
-      setActiveTree : (id) => @model.cellTracing.setActiveTree(id)
-      setActiveNode : (id) => @model.cellTracing.setActiveNode(id)
+        @model.skeletonTracing.deleteActiveNode()
+      setActiveTree : (id) => @model.skeletonTracing.setActiveTree(id)
+      setActiveNode : (id) => @model.skeletonTracing.setActiveNode(id)
 
     # Mange side bar input
     $("#comment-input").on "change", (event) => 
-      @model.cellTracing.setComment(event.target.value)
+      @model.skeletonTracing.setComment(event.target.value)
       $("#comment-input").blur()
 
     $("#comment-previous").click =>
@@ -42,7 +42,7 @@ class CellTacingController
       @setActiveNode($(event.target).data("nodeid"), false, true)
 
     $("#tree-name-submit").click (event) =>
-      @model.cellTracing.setTreeName($("#tree-name-input").val())
+      @model.skeletonTracing.setTreeName($("#tree-name-input").val())
 
     $("#tree-name-input").keypress (event) =>
       if event.which == 13
@@ -56,17 +56,17 @@ class CellTacingController
       @selectNextTree(true)
 
     $("#tree-create-button").click =>
-      @model.cellTracing.createNewTree()
+      @model.skeletonTracing.createNewTree()
 
     $("#tree-delete-button").click =>
-      @model.cellTracing.deleteTree(true)
+      @model.skeletonTracing.deleteTree(true)
 
     $("#tree-list").on "click", "a[data-treeid]", (event) =>
       event.preventDefault()
       @setActiveTree($(event.currentTarget).data("treeid"), true)
 
     $("#tree-color-shuffle").click =>
-      @model.cellTracing.shuffleActiveTreeColor()
+      @model.skeletonTracing.shuffleActiveTreeColor()
 
     $("#tree-sort").on "click", "a[data-sort]", (event) =>
       event.preventDefault()
@@ -99,37 +99,37 @@ class CellTacingController
 
   centerActiveNode : =>
 
-    position = @model.cellTracing.getActiveNodePos()
+    position = @model.skeletonTracing.getActiveNodePos()
     if position
       @model.flycam.setPosition(position)
 
 
   setActiveNode : (nodeId, merge = false, centered = false) ->
 
-    @model.cellTracing.setActiveNode nodeId, merge
+    @model.skeletonTracing.setActiveNode nodeId, merge
     @centerActiveNode() if centered
 
 
   deleteActiveNode : =>
 
-    @model.cellTracing.deleteActiveNode()
+    @model.skeletonTracing.deleteActiveNode()
 
 
   createNewTree : =>
 
-    @model.cellTracing.createNewTree()
+    @model.skeletonTracing.createNewTree()
 
 
   setActiveTree : (treeId, centered) ->
 
-    @model.cellTracing.setActiveTree(treeId)
+    @model.skeletonTracing.setActiveTree(treeId)
     if centered
       @centerActiveNode()
 
 
   selectNextTree : (next) ->
 
-    @model.cellTracing.selectNextTree(next)
+    @model.skeletonTracing.selectNextTree(next)
     @centerActiveNode()
 
 
@@ -138,12 +138,12 @@ class CellTacingController
   prevComment : =>
 
     @setActiveNode(
-      @model.cellTracing.nextCommentNodeID(false), false, true)
+      @model.skeletonTracing.nextCommentNodeID(false), false, true)
 
 
   nextComment : =>
 
     @setActiveNode(
-      @model.cellTracing.nextCommentNodeID(true), false, true)
+      @model.skeletonTracing.nextCommentNodeID(true), false, true)
 
     

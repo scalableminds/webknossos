@@ -1,6 +1,6 @@
 ### define 
 ./model/binary : Binary
-./model/celltracing : CellTracing
+./model/skeletontracing : SkeletonTracing
 ./model/user : User
 ./model/volumetracing : VolumeTracing
 ./model/scaleinfo : ScaleInfo
@@ -101,7 +101,7 @@ class Model
                 @volumeTracing = new VolumeTracing(@flycam, @binary["segmentation"].cube)
               
               else
-                @cellTracing = new CellTracing(tracing, @scaleInfo, @flycam, @flycam3d, @user)
+                @skeletonTracing = new SkeletonTracing(tracing, @scaleInfo, @flycam, @flycam3d, @user)
             
             {"restrictions": tracing.restrictions, "settings": tracing.content.settings}
             

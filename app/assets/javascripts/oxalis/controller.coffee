@@ -2,10 +2,10 @@
 jquery : $
 underscore : _
 ./controller/viewmodes/plane_controller : PlaneController
-./controller/annotations/celltracing_controller : CellTracingController
+./controller/annotations/skeletontracing_controller : SkeletonTracingController
 ./controller/annotations/volumetracing_controller : VolumeTracingController
-./controller/combinations/celltracing_arbitrary_controller : CellTracingArbitraryController
-./controller/combinations/celltracing_plane_controller : CellTracingPlaneController
+./controller/combinations/skeletontracing_arbitrary_controller : SkeletonTracingArbitraryController
+./controller/combinations/skeletontracing_plane_controller : SkeletonTracingPlaneController
 ./controller/combinations/volumetracing_plane_controller : VolumeTracingPlaneController
 ./controller/scene_controller : SceneController
 ./model : Model
@@ -80,14 +80,14 @@ class Controller
         @model.binary["color"].cube.upperBoundary, @model.flycam, @model)
 
 
-      if @model.cellTracing?
+      if @model.skeletonTracing?
 
         @view = new SkeletonTracingView(@model)
-        @annotationController = new CellTracingController(
+        @annotationController = new SkeletonTracingController(
           @model, @sceneController, @gui, @view )
-        @planeController = new CellTracingPlaneController(
+        @planeController = new SkeletonTracingPlaneController(
           @model, stats, @gui, @view, @sceneController, @annotationController)
-        @arbitraryController = new CellTracingArbitraryController(
+        @arbitraryController = new SkeletonTracingArbitraryController(
           @model, stats, @gui, @view, @sceneController)
       
       else if @model.volumeTracing?

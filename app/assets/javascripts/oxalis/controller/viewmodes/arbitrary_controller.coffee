@@ -148,8 +148,8 @@ class ArbitraryController
       "2" : => @sceneController.skeleton.toggleInactiveTreeVisibility()
 
       #Delete active node
-      "delete" : => @model.cellTracing.deleteActiveNode()
-      "c" : => @model.cellTracing.createNewTree()
+      "delete" : => @model.skeletonTracing.deleteActiveNode()
+      "c" : => @model.skeletonTracing.createNewTree()
       
       #Branches
       "b" : => @pushBranch()
@@ -170,15 +170,15 @@ class ArbitraryController
         @record = false
         @infoPlane.updateInfo(false)
       #Comments
-      "n" : => @setActiveNode(@model.cellTracing.nextCommentNodeID(false), true)
-      "p" : => @setActiveNode(@model.cellTracing.nextCommentNodeID(true), true)
+      "n" : => @setActiveNode(@model.skeletonTracing.nextCommentNodeID(false), true)
+      "p" : => @setActiveNode(@model.skeletonTracing.nextCommentNodeID(true), true)
     )
 
     @input.keyboardOnce = new Input.Keyboard(
 
       #Delete active node and recenter last node
       "shift + space" : =>
-        @model.cellTracing.deleteActiveNode()
+        @model.skeletonTracing.deleteActiveNode()
         @centerActiveNode()
         
     , -1)
@@ -192,7 +192,7 @@ class ArbitraryController
   bind : ->
 
     @arbitraryView.on "render", (force, event) => @render(force, event)
-    @arbitraryView.on "finishedRender", => @model.cellTracing.rendered()
+    @arbitraryView.on "finishedRender", => @model.skeletonTracing.rendered()
 
     @model.binary["color"].cube.on "bucketLoaded", => @arbitraryView.draw()
 
@@ -240,7 +240,7 @@ class ArbitraryController
 
   addNode : (position) =>
 
-    @model.cellTracing.addNode(position, constants.TYPE_USUAL)
+    @model.skeletonTracing.addNode(position, constants.TYPE_USUAL)
 
 
   setWaypoint : () =>
@@ -249,7 +249,7 @@ class ArbitraryController
       return
 
     position  = @cam.getPosition()
-    activeNodePos = @model.cellTracing.getActiveNodePos()
+    activeNodePos = @model.skeletonTracing.getActiveNodePos()
 
     @addNode(position)
 
@@ -278,19 +278,19 @@ class ArbitraryController
 
   pushBranch : ->
 
-    @model.cellTracing.pushBranch()
+    @model.skeletonTracing.pushBranch()
 
 
   popBranch : ->
 
-    _.defer => @model.cellTracing.popBranch().done((id) => 
+    _.defer => @model.skeletonTracing.popBranch().done((id) => 
       @setActiveNode(id, true)
     )
 
 
   centerActiveNode : ->
 
-    activeNode = @model.cellTracing.getActiveNode()
+    activeNode = @model.skeletonTracing.getActiveNode()
     if activeNode
       @cam.setPosition(activeNode.pos)
       parent = activeNode.parent
@@ -308,8 +308,8 @@ class ArbitraryController
 
   setActiveNode : (nodeId, centered, mergeTree) ->
 
-    @model.cellTracing.setActiveNode(nodeId, mergeTree)
-    @cam.setPosition @model.cellTracing.getActiveNodePos()  
+    @model.skeletonTracing.setActiveNode(nodeId, mergeTree)
+    @cam.setPosition @model.skeletonTracing.getActiveNodePos()  
 
 
   moved : ->

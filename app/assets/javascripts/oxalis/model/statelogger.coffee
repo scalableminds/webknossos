@@ -9,7 +9,7 @@ class StateLogger
 
   PUSH_THROTTLE_TIME : 30000 #30s
 
-  constructor : (@cellTracing, @flycam, @version, @tracingId, @tracingType, @allowUpdate) ->
+  constructor : (@skeletonTracing, @flycam, @version, @tracingId, @tracingType, @allowUpdate) ->
 
     _.extend(this, new EventMixin())
 
@@ -169,14 +169,14 @@ class StateLogger
   concatUpdateTracing : (array) ->
 
     branchPoints = []
-    for branchPoint in @cellTracing.branchStack
+    for branchPoint in @skeletonTracing.branchStack
       branchPoints.push({id : branchPoint.id})
     return array.concat( {
       action : "updateTracing"
       value : {
         branchPoints : branchPoints
-        comments : @cellTracing.getPlainComments()
-        activeNodeId : @cellTracing.getActiveNodeId()
+        comments : @skeletonTracing.getPlainComments()
+        activeNodeId : @skeletonTracing.getActiveNodeId()
         editPosition : @flycam.getPosition()
       }
     })
@@ -197,7 +197,7 @@ class StateLogger
 
 
   pushThrottled : ->
-    # Pushes the buffered cellTracing to the server. Pushing happens at most 
+    # Pushes the buffered skeletonTracing to the server. Pushing happens at most 
     # every 30 seconds.
 
     saveFkt = => @pushImpl(true)

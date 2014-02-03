@@ -11,7 +11,7 @@ underscore : _
 libs/threejs/ColorConverter : ColorConverter
 ###
 
-class CellTracing
+class SkeletonTracing
 
   GOLDEN_RATIO : 0.618033988749895
   TYPE_USUAL   : constants.TYPE_USUAL

@@ -50,7 +50,7 @@ class SceneController
     if @model.volumeTracing?
       @contour = new ContourGeometry(@model.volumeTracing, @model.flycam)
 
-    if @model.cellTracing?
+    if @model.skeletonTracing?
       @skeleton = new Skeleton(@flycam, @model)
 
     # create Meshes
@@ -94,7 +94,7 @@ class SceneController
           @planes[i].setVisible(true)
           pos = @flycam.getPosition().slice()
           ind = Dimensions.getIndices(i)
-          # Offset the plane so the user can see the cellTracing behind the plane
+          # Offset the plane so the user can see the skeletonTracing behind the plane
           pos[ind[2]] += if i==constants.PLANE_XY then @planeShift[ind[2]] else -@planeShift[ind[2]]
           @planes[i].setPosition(new THREE.Vector3(pos...))
         else

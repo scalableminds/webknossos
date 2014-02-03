@@ -47,7 +47,7 @@ class PlaneController
 
     @oldNmPos = @model.scaleInfo.voxelToNm( @flycam.getPosition() )
 
-    @planeView = new PlaneView(@model, @flycam, @view, @stats)
+    @planeView = new PlaneView(@model, @flycam, @view, stats)
 
     @activeViewport = constants.PLANE_XY
 
@@ -109,25 +109,27 @@ class PlaneController
       do (planeId) =>
         inputcatcher = $("#plane#{constants.PLANE_NAMES[planeId]}")
         @input.mouseControllers.push(
-          new Input.Mouse( inputcatcher, @getPlaneMouseControls(), planeId ))
+          new Input.Mouse( inputcatcher, @getPlaneMouseControls(planeId), planeId ))
 
     @input.mouseControllers.push(
       new Input.Mouse($("#TDView"), @getTDViewMouseControls(), constants.TDView ))
 
 
-  getTDMouseControls : ->
+  getTDViewMouseControls : ->
 
-    return
+    return {
       leftDownMove : (delta) => @moveTDView(delta)
       scroll : (value) => @zoomTDView(value, true)
       over : => @planeView.setActiveViewport( @activeViewport = constants.TDView )
+    }
 
 
-  getPlaneViewMouseControls : ->
+  getPlaneMouseControls : (planeId) ->
 
-    return
+    return {
       over : => @planeView.setActiveViewport( @activeViewport = planeId )
       scroll : @scrollPlanes
+    }
 
 
   initTrackballControls : ->
@@ -219,7 +221,7 @@ class PlaneController
 
   getKeyboardControls : ->
 
-    return
+    return {
       #Zoom in/out
       "i" : => @zoom( 1, false)
       "o" : => @zoom(-1, false)
@@ -227,6 +229,7 @@ class PlaneController
       #Change move value
       "h" : => @changeMoveValue(25)
       "g" : => @changeMoveValue(-25)
+    }
 
 
   init : ->

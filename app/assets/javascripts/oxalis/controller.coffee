@@ -2,7 +2,11 @@
 jquery : $
 underscore : _
 ./controller/viewmodes/plane_controller : PlaneController
-./controller/viewmodes/arbitrary_controller : ArbitraryController
+./controller/annotations/celltracing_controller : CellTracingController
+./controller/annotations/volumetracing_controller : VolumeTracingController
+./controller/combinations/celltracing_arbitrary_controller : CellTracingArbitraryController
+./controller/combinations/celltracing_plane_controller : CellTracingPlaneController
+./controller/combinations/volumetracing_plane_controller : VolumeTracingPlaneController
 ./controller/scene_controller : SceneController
 ./model : Model
 ./view : View
@@ -82,7 +86,7 @@ class Controller
         @annotationController = new CellTracingController(
           @model, @sceneController, @gui, @view )
         @planeController = new CellTracingPlaneController(
-          @model, stats, @gui, @view, @sceneController)
+          @model, stats, @gui, @view, @sceneController, @annotationController)
         @arbitraryController = new CellTracingArbitraryController(
           @model, stats, @gui, @view, @sceneController)
       
@@ -92,7 +96,7 @@ class Controller
         @annotationController = new CellTracingController(
           @model, @sceneController, @gui, @view )
         @planeController = new VolumeTracingPlaneController(
-          @model, stats, @gui, @view, @sceneController)
+          @model, stats, @gui, @view, @sceneController, @annotationController)
 
       @initMouse()
       @initKeyboard()

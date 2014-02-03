@@ -13,7 +13,7 @@ class CellTracingPlaneController extends PlaneController
   # Tracing.
 
 
-  constructor : (@model, stats, @gui, @view, @sceneController) ->
+  constructor : (@model, stats, @gui, @view, @sceneController, @cellTracingController) ->
 
     super(@model, stats, @gui, @view, @sceneController)
 
@@ -21,9 +21,9 @@ class CellTracingPlaneController extends PlaneController
       finishedRender : => @model.cellTracing.rendered()
 
 
-  getPlaneMouseControls : ->
+  getPlaneMouseControls : (planeId) ->
 
-    return _.extend super(),
+    return _.extend super(planeId),
 
       leftDownMove : (delta, pos) => 
 
@@ -36,14 +36,12 @@ class CellTracingPlaneController extends PlaneController
 
       leftClick : (pos, plane, event) =>
         
-        if @inTraceMode
-          @onClick(pos, event.shiftKey, event.altKey, plane)
+        @onClick(pos, event.shiftKey, event.altKey, plane)
 
 
       rightClick : (pos, plane, event) =>
         
-        if @inTraceMode
-          @setWaypoint(@calculateGlobalPos( pos ), event.ctrlKey)
+        @setWaypoint(@calculateGlobalPos( pos ), event.ctrlKey)
 
 
   getTDViewMouseControls : ->
@@ -72,16 +70,16 @@ class CellTracingPlaneController extends PlaneController
       "s" : @centerActiveNode
 
       #Comments
-      "n" : => @model.cellTracing.setActiveNode(
+      "n" : => @cellTracingController.setActiveNode(
         @model.cellTracing.nextCommentNodeID(false), false, true)
-      "p" : => @model.cellTracing.setActiveNode(
+      "p" : => @cellTracingController.setActiveNode(
         @model.cellTracing.nextCommentNodeID(true), false, true)
 
 
   popBranch : =>
 
     _.defer => @model.cellTracing.popBranch().done((id) => 
-      @model.cellTracing.setActiveNode(id, false, true)
+      @cellTracingController.setActiveNode(id, false, true)
     )
 
 
@@ -131,7 +129,8 @@ class CellTracingPlaneController extends PlaneController
         # set the active Node to the one that has the ID stored in the vertex
         # center the node if click was in 3d-view
         centered = plane == constants.TDView
-        @model.cellTracing.setActiveNode(nodeID, shiftPressed and altPressed, centered)
+        @cellTracingController.setActiveNode(nodeID, shiftPressed and altPressed, centered)
+        break
   
 
   setWaypoint : (position, ctrlPressed) =>
@@ -153,7 +152,7 @@ class CellTracingPlaneController extends PlaneController
         @model.cellTracing.getActiveNodeType() == constants.TYPE_USUAL
 
       @model.cellTracing.pushBranch()
-      @model.cellTracing.setActiveNode(activeNode.id)
+      @cellTracingController.setActiveNode(activeNode.id)
       
 
   addNode : (position, centered) =>
@@ -169,4 +168,3 @@ class CellTracingPlaneController extends PlaneController
       @planeView.draw()
     else
       @model.cellTracing.addNode(position, constants.TYPE_USUAL, centered)
-        break

@@ -58,13 +58,13 @@ class Model
                                     {name: "segmentation", allowManipulation : false}]  
 
             # For now, let's make sure we always have a segmentation layer
-            unless _.find( dataSet.dataLayers, (layer) -> layer.typ == "segmentation" )?
-              dataSet.dataLayers.push(
-                maxCoordinates : dataSet.dataLayers[0].maxCoordinates
-                resolutions : [0]
-                typ : "segmentation"
-                elementClass : "uint16"
-                noData : true )
+            #unless _.find( dataSet.dataLayers, (layer) -> layer.typ == "segmentation" )?
+            #  dataSet.dataLayers.push(
+            #    maxCoordinates : dataSet.dataLayers[0].maxCoordinates
+            #    resolutions : [0]
+            #    typ : "segmentation"
+            #    elementClass : "uint16"
+            #    noData : true )
 
             zoomStepCount = Infinity
             @binary = {}

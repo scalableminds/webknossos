@@ -298,7 +298,7 @@ class CellTracing
     return null
 
 
-  setActiveNode : (nodeID, mergeTree = false, centered = false) ->
+  setActiveNode : (nodeID, mergeTree = false) ->
 
     lastActiveNode = @activeNode
     lastActiveTree = @activeTree
@@ -310,7 +310,7 @@ class CellTracing
           break
     @stateLogger.push()
 
-    @trigger("newActiveNode", centered)
+    @trigger("newActiveNode")
 
     if mergeTree
       @mergeTree(lastActiveNode, lastActiveTree)

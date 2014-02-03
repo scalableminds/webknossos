@@ -18,17 +18,13 @@ class CellTacingController
 
     @abstractTreeController = new AbstractTreeController(@model)
     @abstractTreeController.view.on 
-      nodeClick : (id) => @model.cellTracing.setActiveNode(id, false, true)
+      nodeClick : (id) => @setActiveNode(id, false, true)
 
     @gui.on
       deleteActiveNode : =>
         @model.cellTracing.deleteActiveNode()
       setActiveTree : (id) => @model.cellTracing.setActiveTree(id)
       setActiveNode : (id) => @model.cellTracing.setActiveNode(id)
-
-    @model.cellTracing.on
-      newActiveNode : (centered) =>
-        @centerActiveNode if centered
 
     # Mange side bar input
     $("#comment-input").on "change", (event) => 
@@ -43,7 +39,7 @@ class CellTacingController
 
     $("#tab-comments").on "click", "a[data-nodeid]", (event) =>
       event.preventDefault()
-      @model.cellTracing.setActiveNode($(event.target).data("nodeid"), false, true)
+      @setActiveNode($(event.target).data("nodeid"), false, true)
 
     $("#tree-name-submit").click (event) =>
       @model.cellTracing.setTreeName($("#tree-name-input").val())
@@ -108,6 +104,12 @@ class CellTacingController
       @model.flycam.setPosition(position)
 
 
+  setActiveNode : (nodeId, merge = false, centered = false) ->
+
+    @model.cellTracing.setActiveNode nodeId, merge
+    @centerActiveNode() if centered
+
+
   deleteActiveNode : =>
 
     @model.cellTracing.deleteActiveNode()
@@ -135,13 +137,13 @@ class CellTacingController
 
   prevComment : =>
 
-    @model.cellTracing.setActiveNode(
+    @setActiveNode(
       @model.cellTracing.nextCommentNodeID(false), false, true)
 
 
   nextComment : =>
 
-    @model.cellTracing.setActiveNode(
+    @setActiveNode(
       @model.cellTracing.nextCommentNodeID(true), false, true)
 
     

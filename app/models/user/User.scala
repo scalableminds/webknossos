@@ -86,12 +86,15 @@ case class User(
 
   def lastActivityDays =
     (System.currentTimeMillis - this.lastActivity) / (1000 * 60 * 60 * 24)
+
+  def isEditableBy(other: User) =
+    other.hasAdminAccess && ( teams.isEmpty || other.adminTeamNames.exists(teamNames.contains))
 }
 
 object User {
   private[user] val userFormat = Json.format[User]
 
-  val userPublicWrites: Writes[User] =
+  def userPublicWrites(requestingUser: User): Writes[User] =
     ((__ \ "id").write[String] and
       (__ \ "email").write[String] and
       (__ \ "firstName").write[String] and
@@ -99,8 +102,9 @@ object User {
       (__ \ "verified").write[Boolean] and
       (__ \ "teams").write[List[TeamMembership]] and
       (__ \ "experiences").write[Map[String, Int]] and
-      (__ \ "lastActivity").write[Long])(u =>
-      (u.id, u.email, u.firstName, u.lastName, u.verified, u.teams, u.experiences, u.lastActivity))
+      (__ \ "lastActivity").write[Long] and
+      (__ \ "isEditable").write[Boolean])(u =>
+      (u.id, u.email, u.firstName, u.lastName, u.verified, u.teams, u.experiences, u.lastActivity, u.isEditableBy(requestingUser)))
 }
 
 object UserDAO extends SecuredBaseDAO[User] {
@@ -130,11 +134,6 @@ object UserDAO extends SecuredBaseDAO[User] {
         DenyEveryone()
     }
   }
-
-  def findAllInTeams(teams: List[String])(implicit ctx: DBAccessContext) =
-    collectionFind(Json.obj("teams.team" -> Json.obj("$in" -> teams)))
-      .cursor[User](formatter, defaultContext)
-      .collect[List]()
 
   def findOneByEmail(email: String)(implicit ctx: DBAccessContext) = findOne("email", email)
 

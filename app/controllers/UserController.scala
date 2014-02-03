@@ -20,6 +20,7 @@ import models.user.time.{TimeTracking, TimeTrackingService}
 import models.team.TeamMembership
 import play.api.libs.functional.syntax._
 import play.api.templates.Html
+import braingames.util.ExtendedTypes.ExtendedString
 
 object UserController extends Controller with Secured with Dashboard {
 
@@ -56,7 +57,7 @@ object UserController extends Controller with Secured with Dashboard {
           exploratoryList <- Future.traverse(info.exploratory)(Annotation.transformToJson(_))
         } yield {
           Json.obj(
-            "user" -> Json.toJson(info.user)(User.userPublicWrites),
+            "user" -> Json.toJson(info.user)(User.userPublicWrites(request.user)),
             "loggedTime" -> loggedTime,
             "dataSets" -> info.dataSets,
             "hasAnOpenTask" -> info.hasAnOpenTask,
@@ -85,8 +86,16 @@ object UserController extends Controller with Secured with Dashboard {
   // REST API
   def list = Authenticated.async{ implicit request =>
     for{
-      users <- UserDAO.findAllInTeams(request.user.adminTeamNames)
-    } yield Ok(Writes.list(User.userPublicWrites).writes(users))
+      users <- UserDAO.findAll
+    } yield {
+      val filtered = request.getQueryString("isEditable").flatMap(_.toBooleanOpt) match{
+        case Some(isEditable) =>
+          users.filter(_.isEditableBy(request.user) == isEditable)
+        case None =>
+          users
+      }
+      Ok(Writes.list(User.userPublicWrites(request.user)).writes(filtered))
+    }
   }
 
   def logTime(userId: String, time: String, note: String) = Authenticated.async { implicit request =>

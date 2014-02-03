@@ -41,7 +41,7 @@ object ProjectAdministration extends AdminController {
           } yield {
             JsonOk(Json.obj(
               "projects" -> projects,
-              "users" -> users.map(u => Json.toJson(u)(User.userPublicWrites))))
+              "users" -> users.map(u => Json.toJson(u)(User.userPublicWrites(request.user)))))
           }
       }
   }

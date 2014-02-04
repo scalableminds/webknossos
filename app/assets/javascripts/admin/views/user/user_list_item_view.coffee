@@ -48,6 +48,9 @@ class UserListItemView extends Backbone.Marionette.ItemView
     "click .delete-user" : "delete"
     "click .verify-user" : "verify"
 
+  modelEvents :
+    "change" : "modelChanged"
+
 
   delete : ->
 
@@ -61,4 +64,9 @@ class UserListItemView extends Backbone.Marionette.ItemView
 
     #HACKY
     $("#team-role-modal").click()
+
+
+  modelChanged : ->
+
+    @render()
 

@@ -1,27 +1,23 @@
 package models.team
 
-import braingames.image.Color
 import play.api.libs.json.Json
 
-case class Role(name: String, color: Color)
+case class Role(name: String)
 
 object Role {
   implicit val roleFormat = Json.format[Role]
 
-  val User = Role("user", Color(0.2274F, 0.5294F, 0.6784F, 1))
+  val User = Role("user")
 
-  val Admin = Role("admin", Color(0.2F, 0.2F, 0.2F, 1))
+  val Admin = Role("admin")
 
-  val Reviewer = Role("reviewer", Color(0.2745F, 0.5333F, 0.2784F, 1))
+  val Reviewer = Role("reviewer")
 
-  val EmptyRole = Role("EMPTY", Color(0, 0, 0, 0))
+  val EmptyRole = Role("EMPTY")
 }
 
 object RoleService {
   import Role._
-
-  def colorOf(role: String) =
-    roles.find(_.name == role).map(_.color)
 
   def roles = List(User, Admin, Reviewer)
 }

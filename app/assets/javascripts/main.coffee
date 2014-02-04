@@ -6,7 +6,7 @@ require.config
     "jquery" : "libs/jquery-1.8.3.min"
     "multiselect" : "libs/bootstrap-multiselect"
     "slider" : "libs/bootstrap-slider"
-    "underscore" : "libs/lodash-1.3.1"
+    "underscore" : "libs/lodash-2.2.1"
     "bootstrap" : "libs/bootstrap.min"
     "worker" : "libs/worker_plugin"
     "three": "libs/threejs/three"
@@ -43,7 +43,7 @@ require.config
       exports : "M4x4"
     "qassert" : [ "jquery" ]
     "backbone" : [ "underscore" ]
-    "backbone.marionette" : [ "backbone" ]
+    "backbone.marionette" : [ "backbone", "underscore" ]
 
 require [
   "jquery"

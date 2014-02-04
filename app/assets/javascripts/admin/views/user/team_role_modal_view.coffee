@@ -60,7 +60,7 @@ class TeamRoleModal extends Backbone.Marionette.CompositeView
             return {
               team : $(element).val()
               role :
-                name: $(element).parent().parent().find("select :selected").val()
+                name: $(element).parent().parent().find("select   :selected").val()
             }
           )
 
@@ -68,9 +68,14 @@ class TeamRoleModal extends Backbone.Marionette.CompositeView
           teams = teams || []
 
           # Verify user and update his teams
-          user.set("verified", true)
-          user.set("teams", teams)
-          user.save()
+          #user.set("verified", true)
+          #user.set("teams", teams)
+          user.save(
+            "verified" : true
+            "teams" : teams
+          )
+
+          return
       )
 
       @$el.modal("hide")

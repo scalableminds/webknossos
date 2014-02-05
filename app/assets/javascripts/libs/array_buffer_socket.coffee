@@ -314,7 +314,7 @@ class ArrayBufferSocket.XmlHttpRequest
       dataType : 'arraybuffer'
       timeout : @MESSAGE_TIMEOUT
       type : @type
-    ).pipe (buffer) =>
+    ).then (buffer) =>
 
       if buffer
         new @responseBufferType(buffer)

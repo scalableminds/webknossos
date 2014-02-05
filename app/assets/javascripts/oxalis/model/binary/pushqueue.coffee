@@ -29,6 +29,12 @@ class PushQueue
     @removeDuplicates()
 
 
+  insertFront : (bucket) ->
+
+    @queue.unshift( bucket )
+    @removeDuplicates()
+
+
   clear : ->
 
     @queue = []
@@ -99,7 +105,7 @@ class PushQueue
 
     @getParams.version++
     @getSendSocket().send( transmitBufferBuilder.build() )
-      .pipe(
+      .then(
 
         (responseBuffer) =>
 
@@ -107,8 +113,8 @@ class PushQueue
 
         =>
           
-          #for bucket in batch
-          #  @insert(bucket)
+          for bucket in batch
+            @insertFront(bucket)
     
     ).always =>
 

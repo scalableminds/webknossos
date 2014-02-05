@@ -123,7 +123,7 @@ class PullQueue
     roundTripBeginTime = new Date()
 
     @getLoadSocket().send(transmitBuffer)
-      .pipe(
+      .then(
 
         (responseBuffer) =>
 

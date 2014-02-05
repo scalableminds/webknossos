@@ -1,4 +1,4 @@
-### define 
+### define
 underscore : _
 jquery : $
 ###
@@ -9,6 +9,14 @@ class EventMixin
 
     @__callbacks = {}
     @__deferreds = {}
+    @on = EventMixin::on
+    @off = EventMixin::off
+    @one = EventMixin::one
+    @ask = EventMixin::ask
+    @trigger = EventMixin::trigger
+    @addDeferred = EventMixin::addDeferred
+    @deferred = EventMixin::deferred
+    @passthrough = EventMixin::passthrough
 
 
   on : (type, callback) ->
@@ -84,19 +92,19 @@ class EventMixin
 
       types = type
       for type in types
-        @passthrough(obj, type, type) 
+        @passthrough(obj, type, type)
 
     else if _.isObject(type)
 
       typeMap = type
       for type, renamedType of typeMap
-        @passthrough(obj, type, renamedType) 
+        @passthrough(obj, type, renamedType)
 
     else
 
-      obj.on type, (args...) => 
+      obj.on type, (args...) =>
         @trigger(renamedType, args...)
-      
+
     this
 
 

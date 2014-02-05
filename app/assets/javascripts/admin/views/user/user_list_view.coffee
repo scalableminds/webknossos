@@ -1,6 +1,7 @@
 ### define
 underscore : _
 backbone.marionette : marionette
+libs/toast : Toast
 ./user_list_item_view : UserListItemView
 admin/models/user/user_collection : UserCollection
 admin/views/user/team_role_modal_view : TeamRoleModalView
@@ -90,5 +91,8 @@ class UserListView extends Backbone.Marionette.CompositeView
       @ui.modalWrapper.html(view.el)
 
       view.$el.modal("show")
+
+    else
+      Toast.error("No user is selected.")
 
 

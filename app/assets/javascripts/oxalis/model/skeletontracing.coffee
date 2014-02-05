@@ -101,10 +101,6 @@ class SkeletonTracing
           return
     )
 
-  pushNow : ->
-
-    @stateLogger.pushNow()
-
     
   benchmark : (numberOfTrees = 1, numberOfNodesPerTree = 10000) ->
 

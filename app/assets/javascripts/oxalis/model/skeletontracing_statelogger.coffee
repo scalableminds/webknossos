@@ -3,8 +3,7 @@
 ###
 
 class SkeletonTracingStateLogger extends StateLogger
-
-  PUSH_THROTTLE_TIME : 30000 #30s
+  
 
   constructor : (flycam, version, tracingId, tracingType, allowUpdate, @skeletonTracing) ->
 

@@ -1,8 +1,6 @@
 ### define 
 jquery : $
-../../libs/toast : Toast
-./modal : modal
-../view : View
+../../view : View
 ###
 
 class VolumeTracingView extends View

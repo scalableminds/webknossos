@@ -1,5 +1,5 @@
 ### define
-./statelogger : StateLogger
+../statelogger : StateLogger
 ###
 
 class SkeletonTracingStateLogger extends StateLogger

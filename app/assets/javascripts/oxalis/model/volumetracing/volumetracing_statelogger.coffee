@@ -1,5 +1,5 @@
 ### define
-./statelogger : StateLogger
+../statelogger : StateLogger
 ###
 
 class VolumeTracingStateLogger extends StateLogger

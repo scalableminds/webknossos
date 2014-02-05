@@ -1,6 +1,5 @@
 ### define
 libs/event_mixin : EventMixin
-../constants : constants
 libs/toast : Toast
 ###
 

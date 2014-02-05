@@ -1,6 +1,5 @@
 ### define
 ../model : Model
-../model/skeletontracing : SkeletonTracing
 ../model/dimensions : Dimensions
 ../../libs/event_mixin : EventMixin
 ../../libs/resizable_buffer : ResizableBuffer

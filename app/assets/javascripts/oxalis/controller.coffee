@@ -10,8 +10,8 @@ underscore : _
 ./controller/scene_controller : SceneController
 ./model : Model
 ./view : View
-./view/skeletontracing_view : SkeletonTracingView
-./view/volumetracing_view : VolumeTracingView
+./view/skeletontracing/skeletontracing_view : SkeletonTracingView
+./view/volumetracing/volumetracing_view : VolumeTracingView
 ../libs/event_mixin : EventMixin
 ../libs/input : Input
 ./view/gui : Gui

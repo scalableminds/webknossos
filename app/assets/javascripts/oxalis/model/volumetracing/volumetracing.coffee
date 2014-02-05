@@ -2,7 +2,7 @@
 ./volumecell : VolumeCell
 ./volumelayer : VolumeLayer
 libs/event_mixin : EventMixin
-./dimensions : Dimensions
+../dimensions : Dimensions
 libs/drawing : Drawing
 ./volumetracing_statelogger : VolumeTracingStateLogger
 ###

@@ -1,13 +1,7 @@
 ### define
 jquery : $
-underscore : _
-../../libs/request : Request
-../../libs/event_mixin : EventMixin
 ./tracepoint : TracePoint
 ./tracetree : TraceTree
-./statelogger : StateLogger
-../constants : constants
-libs/threejs/ColorConverter : ColorConverter
 ###
 
 class TracingParser

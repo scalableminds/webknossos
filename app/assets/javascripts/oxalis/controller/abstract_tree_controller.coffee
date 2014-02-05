@@ -1,5 +1,5 @@
 ### define 
-../view/abstract_tree_view : AbstractTreeView
+../view/skeletontracing/abstract_tree_view : AbstractTreeView
 ###
 
 

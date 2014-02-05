@@ -1,8 +1,8 @@
 ### define 
 ./model/binary : Binary
-./model/skeletontracing : SkeletonTracing
+./model/skeletontracing/skeletontracing : SkeletonTracing
 ./model/user : User
-./model/volumetracing : VolumeTracing
+./model/volumetracing/volumetracing : VolumeTracing
 ./model/scaleinfo : ScaleInfo
 ./model/flycam2d : Flycam2d
 ./model/flycam3d : Flycam3d

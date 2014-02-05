@@ -1,7 +1,6 @@
 ### define 
-./dimensions : Dimensions
+../dimensions : Dimensions
 libs/drawing : Drawing
-../constants : constants
 ###
 
 

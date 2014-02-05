@@ -1,8 +1,8 @@
 ### define 
 jquery : $
-../../libs/toast : Toast
-./modal : modal
-../view : View
+libs/toast : Toast
+../modal : modal
+../../view : View
 ###
 
 class SkeletonTracingView extends View

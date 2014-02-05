@@ -1,12 +1,12 @@
 ### define
 jquery : $
 underscore : _
-../../libs/request : Request
-../../libs/event_mixin : EventMixin
+libs/request : Request
+libs/event_mixin : EventMixin
 ./tracepoint : TracePoint
 ./tracetree : TraceTree
 ./skeletontracing_statelogger : SkeletonTracingStateLogger
-../constants : constants
+../../constants : constants
 ./tracingparser : TracingParser
 libs/threejs/ColorConverter : ColorConverter
 ###

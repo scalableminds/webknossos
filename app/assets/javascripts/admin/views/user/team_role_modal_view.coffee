@@ -33,10 +33,6 @@ class TeamRoleModal extends Backbone.Marionette.CompositeView
   itemViewContainer : "#team-list"
   events :
     "click .btn-primary" : "changeExperience"
-    "composite:collection:rendered" : "prefillModal"
-    "composite:rendered" : "prefillModal"
-    "itemview:rendered" : "prefillModal"
-    "itemview:render" : "prefillModal"
 
 
   initialize : (args) ->
@@ -48,10 +44,13 @@ class TeamRoleModal extends Backbone.Marionette.CompositeView
     )
     @userCollection = args.userCollection
 
+    # For some reason listening to this events throught the 'events' property won't work
+    @on("after:item:added", @prefillModal)
+
 
   changeExperience : ->
 
-    if @validateModal()
+    if @isValid()
 
       # Find all selected users that will be affected by the bulk action
       $("tbody input[type=checkbox]:checked").each(
@@ -89,7 +88,7 @@ class TeamRoleModal extends Backbone.Marionette.CompositeView
       Toast.error("No role is selected!")
 
 
-  validateModal : ->
+  isValid : ->
 
     isValid = true
 
@@ -115,7 +114,14 @@ class TeamRoleModal extends Backbone.Marionette.CompositeView
       # Select all the user's teams
       _.each(user.get("teams"),
         (team) =>
+
+          # Check all his teams
           selector = """input[value="#{team.team}"]"""
-          @$el.find("#{selector}").prop("checked", true)
+          $teamCheckbox = @$el.find("#{selector}").prop("checked", true)
+
+          # Select the role in the dropdown
+          $teamCheckbox.closest(".row-fluid").find("option").filter( ->
+            return $(this).text() == team.role.name
+          ).prop('selected', true)
       )
 

@@ -1,12 +1,13 @@
 ### define
-../../../libs/array_buffer_socket : ArrayBufferSocket
-../../../libs/unit8array_builder : Uint8ArrayBuilder
+libs/array_buffer_socket : ArrayBufferSocket
+libs/unit8array_builder : Uint8ArrayBuilder
 ###
 
 class PushQueue
 
-  BATCH_LIMIT : 6
+  BATCH_LIMIT : 1
   BATCH_SIZE : 3
+  THROTTLE_TIME : 2000
 
 
   constructor : (@dataSetName, @cube, @dataLayerName, @tracingId, version, @sendData = true) ->
@@ -18,6 +19,8 @@ class PushQueue
       cubeSize : 1 << @cube.BUCKET_SIZE_P
       annotationId : tracingId
       version : version
+
+    @push = _.throttle @pushImpl, @THROTTLE_TIME
 
 
   insert : (bucket) ->
@@ -54,7 +57,7 @@ class PushQueue
       console.log(e)
 
 
-  push : ->
+  pushImpl : =>
 
     unless @sendData
       return

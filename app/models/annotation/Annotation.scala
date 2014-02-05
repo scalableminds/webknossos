@@ -100,8 +100,8 @@ case class Annotation(
     val reviewActions = (review.headOption, userOpt) match{
       case (Some(r), Some(user)) if user._id == r._reviewer => List(
         ResourceAction("review", AnnotationController.trace(AnnotationType.Review, r._id.stringify), condition = state.isInReview, icon = Some("fa fa-random")),
-        ResourceAction("finish review", TrainingsTracingAdministration.finishReview(id), condition = state.isInReview, icon = Some("fa fa-ok-sign")),
-        ResourceAction("abort review", TrainingsTracingAdministration.abortReview(id), condition = state.isInReview, icon = Some("fa fa-remove-sign"), dataAjax = Some("replace-row,confirm")))
+        ResourceAction("finish review", TrainingsTracingAdministration.finishReview(id), condition = state.isInReview, icon = Some("fa fa-check-circle")),
+        ResourceAction("abort review", TrainingsTracingAdministration.abortReview(id), condition = state.isInReview, icon = Some("fa fa-time-circle"), dataAjax = Some("replace-row,confirm")))
       case _ =>
         Nil
     }

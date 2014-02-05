@@ -57,7 +57,7 @@
   <td>
     @annotation.state match{
       case s if s.isFinished => {
-        <i class="fa fa-ok"></i><span> Finished</span><br />
+        <i class="fa fa-check"></i><span> Finished</span><br />
         @displayComments(false, annotation.review.flatMap( _.comment ))
       }
       case s if s.isInReview || s.isReadyForReview => {

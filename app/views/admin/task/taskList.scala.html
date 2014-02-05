@@ -33,7 +33,7 @@
           <tr id="<%= element.id %>">
             <td class="details-toggle" href="<%= controllers.AnnotationController.annotationsForTask(element.id).url %>" data-ajax="add-row=#<%= element.id %> + tr"> <i class="caret-right"></i> <i class="caret-down"></i> </td>
             <td> <%= element.formattedHash %> </td>
-            <td> <%= element.seedIdHeidelberg %> </td>
+            <td> <%= element.team %> </td>
             <td>
               <a href="@controllers.admin.routes.ProjectAdministration.list#<%= element.projectName %>">
                 <%= element.projectName %>

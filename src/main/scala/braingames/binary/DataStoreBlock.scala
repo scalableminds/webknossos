@@ -1,12 +1,10 @@
 package braingames.binary
 
-import braingames.binary.models.DataLayer
-import braingames.binary.models.DataSet
+import braingames.binary.models.{DataSource, DataLayer, DataLayerSection}
 import braingames.geometry.Point3D
-import braingames.binary.models.DataLayerSection
 
 trait DataStoreBlock {
-  def dataSet: DataSet
+  def dataSource: DataSource
   def dataLayer: DataLayer
   def dataLayerSection: DataLayerSection
   def resolution: Int
@@ -14,14 +12,14 @@ trait DataStoreBlock {
 
 
 case class LoadBlock(
-  dataSet: DataSet,
+  dataSource: DataSource,
   dataLayer: DataLayer,
   dataLayerSection: DataLayerSection,
   resolution: Int,
   block: Point3D) extends DataStoreBlock
 
 case class SaveBlock(
-  dataSet: DataSet,
+  dataSource: DataSource,
   dataLayer: DataLayer,
   dataLayerSection: DataLayerSection,
   resolution: Int,

@@ -1,4 +1,4 @@
-package braingames.io
+package braingames.binary.watcher
 
 import scala.collection.mutable.HashMap
 import scala.collection.JavaConverters._
@@ -23,6 +23,8 @@ case class StartWatching(pathName: String, recursive: Boolean)
 case class StopWatching()
 
 class DirectoryWatcherActor(config: Config, changeHandler: DirectoryChangeHandler) extends Actor {
+
+  import braingames.binary.Logger._
 
   val TICKER_INTERVAL = config.getInt("tickerInterval") minutes
 
@@ -52,7 +54,7 @@ class DirectoryWatcherActor(config: Config, changeHandler: DirectoryChangeHandle
         start(Paths.get(pathName), recursive)
         sender ! true
       } else {
-        System.err.println(s"Can't watch $pathName because it doesn't exist.")
+        logger.error(s"Can't watch $pathName because it doesn't exist.")
         sender ! false
       }
   }
@@ -79,7 +81,6 @@ class DirectoryWatcherActor(config: Config, changeHandler: DirectoryChangeHandle
   def handleEvent(event: WatchEvent[_]): Unit = {
     val kind = event.kind
     val event_path = event.context().asInstanceOf[Path]
-    println("handleEvent called with: " + event.kind)
     if (kind.equals(StandardWatchEventKinds.ENTRY_CREATE)) {
       changeHandler.onCreate(event_path)
     } else if (kind.equals(StandardWatchEventKinds.ENTRY_DELETE)) {
@@ -122,7 +123,7 @@ class DirectoryWatcherActor(config: Config, changeHandler: DirectoryChangeHandle
         })
     } catch {
       case e: FileSystemLoopException =>
-        System.err.println("LOOOOPException: " + e)
+        logger.error("Found a file system loop. :(", e)
     }
   }
 
@@ -156,17 +157,16 @@ class DirectoryWatcherActor(config: Config, changeHandler: DirectoryChangeHandle
                       }
                     } catch {
                       case ioe: IOException =>
-                        System.err.println("IOException: " + ioe)
+                        logger.error("IOException while watching for file changes.", ioe)
                       case e: Exception =>
-                        System.err.println("Exception: " + e)
-                        e.printStackTrace()
+                        logger.error("Exception while watching for file changes.",e)
                         break
                     }
                   }
                 }
               })
             } else {
-              println("WatchKey not recognized!!")
+              logger.warn("WatchKey not recognized!")
             }
 
             if (!key.reset()) {
@@ -179,11 +179,8 @@ class DirectoryWatcherActor(config: Config, changeHandler: DirectoryChangeHandle
         }
       }
     } catch {
-      case ie: InterruptedException =>
-        System.err.println("Watch stopped. InterruptedException: " + ie)
       case e: Exception =>
-        System.err.println("Watch stopped. Exception: " + e)
-        e.printStackTrace()
+        logger.error("File watcher stopped due to Exception. ", e)
     }
   }
 

@@ -49,7 +49,10 @@ case class DataLayer(
 
 case class DataLayerType(name: String, interpolation: Interpolation, defaultElementClass: String = "uint8")
 
-object DataLayer extends Function6[String, String, Option[List[String]], String, Option[String], List[DataLayerSection], DataLayer]{
+object DataLayer{
+
+  import braingames.binary.Logger._
+
   val COLOR =
     DataLayerType("color", TrilerpInterpolation)
   val SEGMENTATION =
@@ -70,13 +73,13 @@ object DataLayer extends Function6[String, String, Option[List[String]], String,
       .find(_.name == layerType)
       .map(_.interpolation)
       .getOrElse {
-      System.err.println(s"Invalid interpolation string: $layerType. Using default interpolation")
+      logger.warn(s"Invalid interpolation string: '$layerType'. Using default interpolation '$defaultInterpolation'")
       defaultInterpolation
     }
   }
 }
 
-case class UserDataLayer(name: String, dataSetName: String, dataLayer: DataLayer)
+case class UserDataLayer(name: String, dataSourceName: String, dataLayer: DataLayer)
 
 object UserDataLayer {
   implicit val userDataLayerFormat = Json.format[UserDataLayer]

@@ -17,16 +17,16 @@ import scala.concurrent.Future
 import scala.concurrent.Promise
 import scala.concurrent.ExecutionContext.Implicits._
 import akka.actor.Actor
-import braingames.binary.models.DataSet
+import braingames.binary.models.DataSource
 import reactivemongo.api.MongoConnection
 import braingames.binary.{LoadBlock, SaveBlock}
 import net.liftweb.common.Box
 
-case class InsertBinary(dataSet: DataSet)
+case class InsertBinary(dataSource: DataSource)
 case class InsertionState()
 /*
 class BinaryData2DBActor extends Actor {
-  lazy val insertionState = Agent[Map[DataSetLike, (Int, Int)]](Map())(context.system)
+  lazy val insertionState = Agent[Map[DataSourceLike, (Int, Int)]](Map())(context.system)
 
   //GridFs handle
   lazy val connection = MongoConnection(List("localhost:27017"))
@@ -35,20 +35,20 @@ class BinaryData2DBActor extends Actor {
   val gridFS = new GridFS(DB("binaryData", connection), "binarydata")
 
   def receive = {
-    case InsertBinary(dataSet) =>
+    case InsertBinary(dataSource) =>
       Future {
-        create(dataSet)
+        create(dataSource)
       }
     case InsertionState() =>
       val state = insertionState()
       sender ! state.mapValues(i => i._1 / i._2.toDouble)
   }
 
-  def create(dataSet: DataSetLike) = {
+  def create(dataSource: DataSourceLike) = {
     val resolution = 1
-    val dataLayer = dataSet.colorLayer
-    GridDataSetPairing.getOrCreatePrefix(dataSet, dataLayer, 1).map { prefix =>
-      val max = dataSet.maxCoordinates
+    val dataLayer = dataSource.colorLayer
+    GridDataSourcePairing.getOrCreatePrefix(dataSource, dataLayer, 1).map { prefix =>
+      val max = dataSource.maxCoordinates
       val maxX = ((max.x / 128.0).ceil - 1).toInt
       val maxY = ((max.y / 128.0).ceil - 1).toInt
       val maxZ = ((max.z / 128.0).ceil - 1).toInt
@@ -59,7 +59,7 @@ class BinaryData2DBActor extends Actor {
         y <- 0 to maxY
         z <- 0 to maxZ
       } {
-        val blockInfo = LoadBlock(dataSet.baseDir, dataSet.name, dataLayer.baseDir, dataLayer.bytesPerElement, resolution, x, y, z)
+        val blockInfo = LoadBlock(dataSource.baseDir, dataSource.name, dataLayer.baseDir, dataLayer.bytesPerElement, resolution, x, y, z)
         val f = new File(DataStore.createFilename(blockInfo))
         val blockId = GridDataStore.blockToId(prefix, x, y, z)
         val meta = DefaultFileToSave(blockId, id = new BSONObjectID(blockId))
@@ -67,8 +67,8 @@ class BinaryData2DBActor extends Actor {
         val it = gridFS.save(enumerator, meta, 2359296)
         it.map(result =>
           insertionState send { d =>
-            val p = d.get(dataSet) getOrElse (0 -> 0)
-            d.updated(dataSet, (p._1 + 1 -> maxAll))
+            val p = d.get(dataSource) getOrElse (0 -> 0)
+            d.updated(dataSource, (p._1 + 1 -> maxAll))
           })
       }
     }
@@ -89,7 +89,7 @@ class GridDataStore
   gridFS.ensureIndex()
 
   def load(blockInfo: LoadBlock): Future[Box[Array[Byte]]] = {
-    /*GridDataSetPairing.findPrefix(blockInfo.dataSetName, blockInfo.dataLayerBaseDir, blockInfo.resolution).flatMap {
+    /*GridDataSourcePairing.findPrefix(blockInfo.dataSourceName, blockInfo.dataLayerBaseDir, blockInfo.resolution).flatMap {
       _ match {
         case Some(prefix) =>
           val r = gridFS.find(BSONDocument(

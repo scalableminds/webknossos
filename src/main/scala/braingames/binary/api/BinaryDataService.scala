@@ -3,51 +3,36 @@ package braingames.binary.api
 import akka.actor.ActorSystem
 import akka.agent.Agent
 import akka.actor.ActorRef
-import com.typesafe.config.ConfigFactory
 import braingames.binary._
 import scala.concurrent.Future
 import akka.actor.Props
 import akka.pattern.ask
 import akka.routing.RoundRobinRouter
-import braingames.io.DirectoryWatcherActor
-import braingames.io.DataSetChangeHandler
+import braingames.binary.watcher.DirectoryWatcherActor
+import braingames.binary.watcher.DataSourceChangeHandler
 import akka.util.Timeout
 import scala.concurrent.duration._
-import braingames.geometry.Point3D
-import braingames.geometry.Vector3D
 import braingames.binary.models._
-import scala.collection.mutable.ArrayBuffer
 import akka.pattern.AskTimeoutException
-import braingames.io.StopWatching
-import braingames.io.StartWatching
-import scala.util.Success
-import scala.util.Failure
 import com.typesafe.config.Config
 import net.liftweb.common.Box
-import braingames.io.StopWatching
+import braingames.binary.watcher.StopWatching
 import scala.util.Failure
 import scala.Some
 import scala.util.Success
-import braingames.binary.models.DataSet
-import braingames.io.StartWatching
-import braingames.io.StopWatching
-import scala.util.Failure
-import scala.Some
-import braingames.binary.DataRequest
-import braingames.binary.Cuboid
-import scala.util.Success
-import braingames.binary.models.DataSet
-import braingames.io.StartWatching
+import braingames.binary.watcher.StartWatching
 import java.io.File
 
-trait BinaryDataService extends DataSetService with BinaryDataHelpers {
+trait BinaryDataService extends DataSourceService with BinaryDataHelpers{
+  import Logger._
+
   implicit def system: ActorSystem
 
   lazy implicit val executor = system.dispatcher
 
-  def dataSetRepository: DataSetRepository
+  def dataSourceRepository: DataSourceRepository
 
-  val dataSetChangeHandler = new DataSetChangeHandler(dataSetRepository)
+  val dataSourceChangeHandler = new DataSourceChangeHandler(dataSourceRepository)
 
   def config: Config
 
@@ -64,7 +49,7 @@ trait BinaryDataService extends DataSetService with BinaryDataHelpers {
     val props = Props(new DataRequestActor(
       config.getConfig("braingames.binary"),
       bindataCache,
-      dataSetRepository))
+      dataSourceRepository))
 
     system.actorOf(props
       .withRouter(new RoundRobinRouter(nrOfBinRequestActors)), "dataRequestActor")
@@ -76,7 +61,7 @@ trait BinaryDataService extends DataSetService with BinaryDataHelpers {
     val directoryWatcherConfig = config.getConfig("braingames.binary.changeHandler")
     val directoryWatcherActor =
       system.actorOf(
-        Props(new DirectoryWatcherActor(directoryWatcherConfig, dataSetChangeHandler)),
+        Props(new DirectoryWatcherActor(directoryWatcherConfig, dataSourceChangeHandler)),
         name = "directoryWatcher")
 
     directoryWatcher = Some(directoryWatcherActor)
@@ -85,7 +70,7 @@ trait BinaryDataService extends DataSetService with BinaryDataHelpers {
       case Success(x) =>
         onComplete
       case Failure(e) =>
-        System.err.println(s"Failed to start watching $baseFolder: $e")
+        logger.error(s"Failed to start watching $baseFolder.", e)
     }
   }
 
@@ -100,7 +85,7 @@ trait BinaryDataService extends DataSetService with BinaryDataHelpers {
   def askDataRequestActor[T](request: T) = {
     val future = (dataRequestActor ? request) recover {
       case e: AskTimeoutException =>
-        println("WARN: Data request to DataRequestActor timed out!")
+        logger.warn("Data request to DataRequestActor timed out!")
         None
     }
 

@@ -11,7 +11,7 @@ case class DataBlock(info: LoadBlock, data: Data)
 case class Data(val value: Array[Byte]) extends AnyVal
 
 case class CachedBlock(
-  dataSetName: String,
+  dataSourceName: String,
   dataLayerId: String,
   dataLayerTyp: String,
   resolution: Int,
@@ -22,7 +22,7 @@ case class CachedBlock(
 object CachedBlock {
   def from(b: LoadBlock) =
     CachedBlock(
-      b.dataSet.name,
+      b.dataSource.name,
       b.dataLayerSection.sectionId,
       b.dataLayer.typ,
       b.resolution,

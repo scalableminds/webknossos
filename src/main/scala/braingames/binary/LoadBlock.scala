@@ -1,12 +1,12 @@
 package braingames.binary
 
 import braingames.binary.models.DataLayer
-import braingames.binary.models.DataSet
+import braingames.binary.models.DataSource
 import braingames.geometry.Point3D
 import braingames.binary.models.DataLayerSection
 
 case class LoadBlock(
-  dataSet: DataSet,
+  dataSource: DataSource,
   dataLayer: DataLayer,
   dataLayerSection: DataLayerSection,
   resolution: Int,

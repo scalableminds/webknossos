@@ -5,7 +5,7 @@ import braingames.binary.models._
 trait AbstractDataRequest
 
 case class DataRequest(
-  dataSet: DataSet,
+  dataSource: DataSource,
   dataLayer: DataLayerId,
   resolution: Int,
   cuboid: Cuboid,

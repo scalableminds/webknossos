@@ -16,10 +16,10 @@ import akka.routing.RoundRobinRouter
 import java.util.UUID
 import com.typesafe.config.Config
 import braingames.binary.models.DataLayer
-import braingames.binary.models.DataSet
+import braingames.binary.models.DataSource
 import braingames.binary.models.DataLayerId
 import store._
-import braingames.binary.models.DataSetRepository
+import braingames.binary.models.DataSourceRepository
 import scala.concurrent.Await
 import braingames.binary.models.DataLayerSection
 import net.liftweb.common.Box
@@ -33,7 +33,7 @@ import braingames.util.ExtendedTypes.ExtendedDouble
 class DataRequestActor(
   val conf: Config,
   val cache: Agent[Map[CachedBlock, Future[Box[Array[Byte]]]]],
-  dataSetRepository: DataSetRepository)
+  dataSourceRepository: DataSourceRepository)
   extends Actor
   with DataCache
   with EmptyDataProvider {
@@ -105,7 +105,7 @@ class DataRequestActor(
   }
 
   def loadFromLayer(loadBlock: LoadBlock): Future[Box[Array[Byte]]] = {
-    if (loadBlock.dataLayerSection.doesContainBlock(loadBlock.block, loadBlock.dataSet.blockLength)) {
+    if (loadBlock.dataLayerSection.doesContainBlock(loadBlock.block, loadBlock.dataSource.blockLength)) {
 
       def loadFromStore(dataStores: List[ActorRef]): Future[Box[Array[Byte]]] = dataStores match {
         case a :: tail =>
@@ -121,7 +121,7 @@ class DataRequestActor(
               }
           }.recoverWith {
             case e: AskTimeoutException =>
-              println(s"WARN: (${loadBlock.dataSet.name}/${loadBlock.dataLayerSection.baseDir} ${loadBlock.block}) ${a.path}: Not response in time.")
+              println(s"WARN: (${loadBlock.dataSource.name}/${loadBlock.dataLayerSection.baseDir} ${loadBlock.block}) ${a.path}: Not response in time.")
               loadFromStore(tail)
           }
         case _ =>
@@ -136,11 +136,11 @@ class DataRequestActor(
     }
   }
 
-  def loadFromSomewhere(dataSet: DataSet, layer: DataLayer, requestedLayer: DataLayerId, resolution: Int, block: Point3D): Future[Array[Byte]] = {
+  def loadFromSomewhere(dataSource: DataSource, layer: DataLayer, requestedLayer: DataLayerId, resolution: Int, block: Point3D): Future[Array[Byte]] = {
 
     def loadFromSections(sections: Stream[DataLayerSection]): Future[Array[Byte]] = sections match {
       case section #:: tail =>
-        val loadBlock = LoadBlock(dataSet, layer, section, resolution, block)
+        val loadBlock = LoadBlock(dataSource, layer, section, resolution, block)
         loadFromLayer(loadBlock).flatMap {
           case Full(byteArray) =>
             Future.successful(byteArray)
@@ -151,14 +151,14 @@ class DataRequestActor(
             loadFromSections(tail)
         }
       case _ =>
-        Future.successful(loadNullBlock(dataSet, layer))
+        Future.successful(loadNullBlock(dataSource, layer))
     }
 
     val sections = Stream(layer.sections.filter {
       section =>
         requestedLayer.section.map( _ == section.sectionId) getOrElse true
     }: _*).append {
-      Await.result(layer.fallback.map(dataSetRepository.findByName).getOrElse(Future.successful(None)).map(_.flatMap {
+      Await.result(layer.fallback.map(dataSourceRepository.findByName).getOrElse(Future.successful(None)).map(_.flatMap {
         d =>
           d.dataLayer(requestedLayer.typ).map {
             fallbackLayer =>
@@ -186,7 +186,7 @@ class DataRequestActor(
     Future.traverse(blockIdxs) {
       p =>
         loadFromSomewhere(
-          dataRequest.dataSet,
+          dataRequest.dataSource,
           layer,
           dataRequest.dataLayer,
           dataRequest.resolution,
@@ -197,7 +197,7 @@ class DataRequestActor(
   def load(dataRequest: DataRequest): Future[Array[Byte]] = {
     val cube = dataRequest.cuboid
 
-    val dataSet = dataRequest.dataSet
+    val dataSource = dataRequest.dataSource
 
     val maxCorner = cube.maxCorner
 
@@ -206,22 +206,22 @@ class DataRequestActor(
     val minPoint = Point3D(math.max(roundDown(minCorner._1), 0), math.max(roundDown(minCorner._2), 0), math.max(roundDown(minCorner._3), 0))
 
     val minBlock =
-      dataSet.pointToBlock(minPoint, dataRequest.resolution)
+      dataSource.pointToBlock(minPoint, dataRequest.resolution)
     val maxBlock =
-      dataSet.pointToBlock(
+      dataSource.pointToBlock(
         Point3D(roundUp(maxCorner._1), roundUp(maxCorner._2), roundUp(maxCorner._3)),
         dataRequest.resolution)
 
-    val pointOffset = minBlock.scale(dataSet.blockLength)
+    val pointOffset = minBlock.scale(dataSource.blockLength)
 
-    dataSet.dataLayer(dataRequest.dataLayer.typ) match {
+    dataSource.dataLayer(dataRequest.dataLayer.typ) match {
       case Some(layer) =>
         loadBlocks(minBlock, maxBlock, dataRequest, layer)
           .map {
           blocks =>
             BlockedArray3D(
               blocks.toVector,
-              dataSet.blockLength, dataSet.blockLength, dataSet.blockLength,
+              dataSource.blockLength, dataSource.blockLength, dataSource.blockLength,
               maxBlock.x - minBlock.x + 1, maxBlock.y - minBlock.y + 1, maxBlock.z - minBlock.z + 1,
               layer.bytesPerElement,
               0.toByte)
@@ -237,7 +237,7 @@ class DataRequestActor(
 }
 
 class DataBlockCutter(block: BlockedArray3D[Byte], dataRequest: DataRequest, layer: DataLayer, offset: Point3D) {
-  val dataSet = dataRequest.dataSet
+  val dataSource = dataRequest.dataSource
 
   val resolution = dataRequest.resolution
 
@@ -278,7 +278,7 @@ class DataBlockCutter(block: BlockedArray3D[Byte], dataRequest: DataRequest, lay
   }
 
   def calculatePositionInLoadedBlock(globalPoint: Point3D) = {
-    dataSet.applyResolution(globalPoint, resolution).move(offset.negate)
+    dataSource.applyResolution(globalPoint, resolution).move(offset.negate)
   }
 
   def byteLoader(globalPoint: Point3D): Array[Byte] = {

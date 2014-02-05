@@ -36,11 +36,11 @@ object DataStore {
 
   def createFilename(dataInfo: LoadBlock) =
     "%s/%s/%d/x%04d/y%04d/z%04d/%s_mag%d_x%04d_y%04d_z%04d.raw".format(
-      dataInfo.dataSet.baseDir,
+      dataInfo.dataSource.baseDir,
       dataInfo.dataLayerSection.baseDir,
       dataInfo.resolution,
       dataInfo.block.x, dataInfo.block.y, dataInfo.block.z,
-      dataInfo.dataSet.name,
+      dataInfo.dataSource.name,
       dataInfo.resolution,
       dataInfo.block.x, dataInfo.block.y, dataInfo.block.z)
 }

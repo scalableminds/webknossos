@@ -8,20 +8,18 @@ import play.api.libs.functional.syntax._
 import braingames.binary.models._
 import java.io.File
 
-case class DataSetSettings(
+case class DataSourceSettings(
   name: String,
   scale: Scale,
-  allowedTeams: Option[List[String]],
   priority: Option[Int])
 
-case class DataSet(
+case class DataSource(
   name: String,
   baseDir: String,
   priority: Int = 0,
   scale: Scale,
   dataLayers: List[DataLayer] = Nil,
-  owningTeam: String,
-  allowedTeams: List[String]
+  owningTeam: String
   ) {
 
   def dataLayer(typ: String) =
@@ -46,31 +44,34 @@ case class DataSet(
       point.z / resolution)
 }
 
-object DataSetSettings extends SettingsFile with Function4[String, Scale, Option[List[String]], Option[Int], DataSetSettings]{
+object DataSource{
+  implicit val dataSourceFormat = Json.format[DataSource]
+}
+
+object DataSourceSettings extends SettingsFile{
 
   val settingsFileName = "settings.json"
 
-  implicit val dataSetSettingsFormat = Json.format[DataSetSettings]
+  implicit val dataSourceSettingsFormat = Json.format[DataSourceSettings]
 
   def settingsFileFromFolder(f: File) = {
     new File(f.getPath + "/" + settingsFileName)
   }
 
-  def readFromFolder(folder: File): Option[DataSetSettings] = {
+  def readFromFolder(folder: File): Option[DataSourceSettings] = {
     extractSettingsFromFile(
       settingsFileFromFolder(folder),
-      dataSetSettingsFormat)
+      dataSourceSettingsFormat)
   }
 
-  def fromDataSet(dataSet: DataSet) = DataSetSettings(
-    dataSet.name,
-    dataSet.scale,
-    Some(dataSet.allowedTeams),
-    Some(dataSet.priority)
+  def fromDataSource(dataSource: DataSource) = DataSourceSettings(
+    dataSource.name,
+    dataSource.scale,
+    Some(dataSource.priority)
   )
 
-  def writeToFolder(dataSet: DataSet, folder: File) = {
-    val settings = fromDataSet(dataSet)
+  def writeToFolder(dataSource: DataSource, folder: File) = {
+    val settings = fromDataSource(dataSource)
     writeSettingsToFile(settings, settingsFileFromFolder(folder))
   }
 }

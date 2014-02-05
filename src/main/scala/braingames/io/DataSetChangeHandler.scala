@@ -13,7 +13,7 @@ import braingames.binary.Cuboid
 case class ImplicitLayerInfo(name: String, resolutions: List[Int])
 case class ExplicitLayerInfo(name: String, dataType: String)
 
-class DataSetChangeHandler(dataSetRepository: DataSetRepository)
+class DataSourceChangeHandler(dataSourceRepository: DataSourceRepository)
     extends DirectoryChangeHandler {
 
   val maxRecursiveLayerDepth = 2
@@ -22,14 +22,13 @@ class DataSetChangeHandler(dataSetRepository: DataSetRepository)
     val file = path.toFile()
     val files = file.listFiles()
     if (files != null) {
-      val foundDataSets = files.filter(_.isDirectory).flatMap { f =>
-        dataSetFromFile(f).map { dataSet =>
-          dataSetRepository.updateOrCreate(dataSet)
-          dataSet.name
-        }
-      }
-      println(s"Found datasets: ${foundDataSets.mkString(",")}")
-      dataSetRepository.deleteAllExcept(foundDataSets)
+      val foundDataSources = files.filter(_.isDirectory).flatMap { f =>
+        val dataSources = teamAwareDataSourcesFromFile(f)
+        dataSources.foreach(dataSourceRepository.updateOrCreate)
+        dataSources
+      }.map(_.name)
+      println(s"Found datasets: ${foundDataSources.mkString(",")}")
+      dataSourceRepository.deleteAllExcept(foundDataSources)
     }
   }
 
@@ -37,31 +36,33 @@ class DataSetChangeHandler(dataSetRepository: DataSetRepository)
     onStart(path, recursive)
   }
 
+  def teamNameFrom(f: File) = {
+    f.getName
+  }
+
   def onCreate(path: Path) {
-    val file = path.toFile()
-    dataSetFromFile(file).map { dataSet =>
-      dataSetRepository.updateOrCreate(dataSet)
+    Option(path.toFile().getParentFile).map{ teamFolder =>
+      val team = teamNameFrom(teamFolder)
+      dataSourceFromFile(teamFolder, team).map { dataSource =>
+        dataSourceRepository.updateOrCreate(dataSource)
+      }
     }
   }
 
   def onDelete(path: Path) {
-    val file = path.toFile()
-    dataSetFromFile(file).map { dataSet =>
-      dataSetRepository.removeByName(dataSet.name)
+    Option(path.toFile().getParentFile).map{ teamFolder =>
+      val team = teamNameFrom(teamFolder)
+      dataSourceFromFile(teamFolder, team).map { dataSource =>
+        dataSourceRepository.removeByName(dataSource.name)
+      }
     }
   }
 
-  def listFiles(f: File): Array[File] = {
-    val r = f.listFiles()
-    if (r == null)
-      Array()
-    else
-      r
-  }
+  def listFiles(f: File): Array[File] =
+    Option(f.listFiles).getOrElse(Array.empty)
 
-  def listDirectories(f: File) = {
-    f.listFiles().filter(_.isDirectory())
-  }
+  def listDirectories(f: File) =
+    f.listFiles.filter(_.isDirectory)
 
   def highestResolutionDir(l: Array[File]) = {
     if (l.isEmpty)
@@ -84,12 +85,12 @@ class DataSetChangeHandler(dataSetRepository: DataSetRepository)
     }
   }
 
-  def extractSections(base: File, dataSetPath: String): Iterable[DataLayerSection] = {
+  def extractSections(base: File, dataSourcePath: String): Iterable[DataLayerSection] = {
     val sectionSettingsMap = extractSectionSettings(base)
     sectionSettingsMap.map {
       case (path, settings) =>
         DataLayerSection(
-          path.getAbsolutePath().replace(dataSetPath, ""),
+          path.getAbsolutePath().replace(dataSourcePath, ""),
           settings.sectionId getOrElse path.getName,
           settings.resolutions,
           BoundingBox.createFrom(settings.bboxSmall),
@@ -112,43 +113,48 @@ class DataSetChangeHandler(dataSetRepository: DataSetRepository)
     extract(base).flatten.toMap
   }
 
-  def extractLayers(file: File, dataSetPath: String) = {
+  def extractLayers(file: File, dataSourcePath: String) = {
     for {
       layer <- listDirectories(file).toList
       settings <- DataLayerSettings.fromFile(layer)
     } yield {
       println("Found Layer: " + settings)
-      val sections = extractSections(layer, dataSetPath).toList
+      val sections = extractSections(layer, dataSourcePath).toList
       DataLayer(settings.typ, settings.flags, settings.`class`, settings.fallback, sections)
     }
   }
 
-  def dataSetFromFile(folder: File): Option[DataSet] = {
+  def teamAwareDataSourcesFromFile(folder: File): Array[DataSource] = {
+    val team = folder.getName
+    listDirectories(folder).flatMap{ f =>
+      dataSourceFromFile(f, team)
+    }
+  }
+
+  def dataSourceFromFile(folder: File, team: String): Option[DataSource] = {
     if (folder.isDirectory) {
-      val dataSet: DataSet = DataSetSettings.readFromFolder(folder) match {
+      val dataSource: DataSource = DataSourceSettings.readFromFolder(folder) match {
         case Some(settings) =>
-          DataSet(
+          DataSource(
             settings.name,
             folder.getAbsolutePath(),
             settings.priority getOrElse 0,
             settings.scale,
             Nil,
-            "Structure of Neocortical Circuits Group",
-            settings.allowedTeams getOrElse List("Structure of Neocortical Circuits Group"))
+            team)
         case _ =>
-          DataSet(
+          DataSource(
             folder.getName,
             folder.getAbsolutePath,
             0,
             Scale.default,
             Nil,
-            "Structure of Neocortical Circuits Group",
-            List("Structure of Neocortical Circuits Group"))
+            team)
       }
 
       val layers = extractLayers(folder, folder.getAbsolutePath())
 
-      Some(dataSet.copy(dataLayers = layers))
+      Some(dataSource.copy(dataLayers = layers))
     } else
       None
   }

@@ -3,7 +3,7 @@ package braingames.binary
 import akka.agent.Agent
 import akka.actor.ActorSystem
 import braingames.binary.models.DataLayer
-import braingames.binary.models.DataSet
+import braingames.binary.models.DataSource
 import scala.concurrent.ExecutionContext.Implicits._
 
 trait EmptyDataProvider {
@@ -11,8 +11,8 @@ trait EmptyDataProvider {
 
   lazy val nullFiles = Agent[Map[(Int, Int), Array[Byte]]](Map.empty)
 
-  def loadNullBlock(dataSet: DataSet, dataLayer: DataLayer): Array[Byte] = {
-    nullFile(dataSet.blockSize, dataLayer.bytesPerElement)
+  def loadNullBlock(dataSource: DataSource, dataLayer: DataLayer): Array[Byte] = {
+    nullFile(dataSource.blockSize, dataLayer.bytesPerElement)
   }
 
   def createNullArray(blockSize: Int, bytesPerElement: Int) =

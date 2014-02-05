@@ -30,28 +30,16 @@ class UserListView extends Backbone.Marionette.CompositeView
       </table>
 
       <div class="form-actions navbar-fixed-bottom">
-        <div class="btn-group dropup">
-          <a class="btn dropdown-toggle" data-toggle="dropdown" href="#">
-            Bulk Actions
-            <span class="caret"></span>
+        <div class="btn-group">
+          <a class="btn" id="team-role-modal">
+            <i class="icon-ok"></i> Verify
           </a>
-          <ul class="dropdown-menu">
-            <li>
-              <a id="team-role-modal">
-                <i class="icon-ok"></i> Verify
-              </a>
-            </li>
-            <li>
-              <a id="bulk-delete-modal">
-                <i class="icon-trash"></i> Delete
-              </a>
-            </li>
-            <li>
-              <a id="experience-modal">
-                <i class="icon-trophy"></i> Change Experience
-              </a>
-            </li>
-          </ul>
+          <a class="btn" id="bulk-delete-modal">
+            <i class="icon-trash"></i> Delete
+          </a>
+          <a class="btn" id="experience-modal">
+            <i class="icon-trophy"></i> Change Experience
+          </a>
         </div>
       </div>
     </form>
@@ -68,6 +56,7 @@ class UserListView extends Backbone.Marionette.CompositeView
     "click #team-role-modal" : "showTeamRoleModal"
     "click #bulk-delete-modal" : "showBulkDeleteModal"
     "click #experience-modal" : "showExperienceModal"
+
 
   initialize : ->
 
@@ -95,11 +84,11 @@ class UserListView extends Backbone.Marionette.CompositeView
 
   showModal : (modalView) ->
 
-    view = new modalView()
-    view.userCollection = @collection
-    view.render()
-    @ui.modalWrapper.html(view.el)
+    if @$el.find("input[type=checkbox]:checked").length > 0
+      view = new modalView({userCollection : @collection})
+      view.render()
+      @ui.modalWrapper.html(view.el)
 
-    view.$el.modal("show")
+      view.$el.modal("show")
 
 

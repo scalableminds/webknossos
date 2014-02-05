@@ -246,15 +246,15 @@ class View
 
     oldIcon = $("#comment-container i.fa fa-arrow-right")
     if oldIcon.length
-      oldIcon.toggleClass("fa fa-arrow-right", false)
-      oldIcon.toggleClass("fa fa-angle-right", true)
+      oldIcon.toggleClass("fa-arrow-right", false)
+      oldIcon.toggleClass("fa-angle-right", true)
 
     activeHref = $("#comment-container a[data-nodeid=#{@model.cellTracing.getActiveNodeId()}]")
     if activeHref.length
 
       newIcon = activeHref.parent("li").children("i")
-      newIcon.toggleClass("fa fa-arrow-right", true)
-      newIcon.toggleClass("fa fa-angle-right", false)
+      newIcon.toggleClass("fa-arrow-right", true)
+      newIcon.toggleClass("fa-angle-right", false)
 
       # animate scrolling to the new comment
       $("#comment-container").animate({
@@ -275,16 +275,16 @@ class View
       $("#tree-active-color").css("color": "##{('000000'+activeTree.color.toString(16)).slice(-6)}")
       activeHref = $("#tree-list a[data-treeid=#{activeTree.treeId}]")
 
-    oldIcon = $("#tree-list i.fa fa-arrow-right")
+    oldIcon = $("#tree-list i.fa-arrow-right")
     if oldIcon.length
-      oldIcon.toggleClass("fa fa-arrow-right", false)
-      oldIcon.toggleClass("fa fa-bull", true)
+      oldIcon.toggleClass("fa-arrow-right", false)
+      oldIcon.toggleClass("fa-bull", true)
 
     if activeHref?.length
 
       newIcon = activeHref.parent("li").children("i")
-      newIcon.toggleClass("fa fa-arrow-right", true)
-      newIcon.toggleClass("fa fa-bull", false)
+      newIcon.toggleClass("fa-arrow-right", true)
+      newIcon.toggleClass("fa-bull", false)
 
       # animate scrolling to the new tree
       $("#tree-list").animate({
@@ -337,7 +337,8 @@ class View
     @toggleIconVisibility(
       @model.user.sortCommentsAsc,
       $("#sort-asc-icon"),
-      $("#sort-desc-icon"))
+      $("#sort-desc-icon")
+    )
 
 
   toggleIconVisibility : (isFirst, firstIcon, secondIcon) ->

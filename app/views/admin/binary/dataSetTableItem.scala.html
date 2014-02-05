@@ -10,11 +10,12 @@
         <span class="label">@team</span>
     }
     </td>
+    <td> <i class="fa @if(dataSet.isPublic){fa-check}else{fa-times}"></i></td>
     <td>
     @dataSet.dataSource.dataLayers.map{ dataLayer =>
         <span class="label">@dataLayer.typ - @dataLayer.elementClass </span>
     }
-    <!--<td class="nowrap">
-        <a href="#" ><i class="fa fa-eye"></i> :)</a><br />
-    </td> -->
+    <td class="nowrap">
+        <a href="@controllers.routes.DataSetController.view(dataSet.dataSource.name)" ><i class="fa fa-eye"></i> view</a><br />
+    </td>
 </tr>

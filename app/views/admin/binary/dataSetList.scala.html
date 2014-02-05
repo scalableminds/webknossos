@@ -11,12 +11,13 @@
           <th> Scale </th>
           <th> Owning Team </th>
           <th> Allowed Teams </th>
+          <th> Public </th>
           <th> Data Layers </th>
           <th></th>
         </tr>
       </thead>
       <tbody>
-        @dataSets.map{ dataSet =>
+        @dataSets.sortBy(-_.created).map{ dataSet =>
             @dataSetTableItem(dataSet)
         }
       </tbody>

@@ -33,15 +33,20 @@ class TeamRoleModal extends Backbone.Marionette.CompositeView
   itemViewContainer : "#team-list"
   events :
     "click .btn-primary" : "changeExperience"
+    "composite:collection:rendered" : "prefillModal"
+    "composite:rendered" : "prefillModal"
+    "itemview:rendered" : "prefillModal"
+    "itemview:render" : "prefillModal"
 
 
-  initialize : ->
+  initialize : (args) ->
 
     @collection = new TeamCollection()
     @collection.fetch(
       data:
         isEditable: true
     )
+    @userCollection = args.userCollection
 
 
   changeExperience : ->
@@ -97,4 +102,20 @@ class TeamRoleModal extends Backbone.Marionette.CompositeView
     return isValid
 
 
+  prefillModal : ->
+
+    # If only one user is selected then prefill the modal with his current values
+    $userTableCheckboxes = $("tbody input[type=checkbox]:checked")
+    if $userTableCheckboxes.length < 2
+
+      user = @userCollection.findWhere(
+        id: $userTableCheckboxes.val()
+      )
+
+      # Select all the user's teams
+      _.each(user.get("teams"),
+        (team) =>
+          selector = """input[value="#{team.team}"]"""
+          @$el.find("#{selector}").prop("checked", true)
+      )
 

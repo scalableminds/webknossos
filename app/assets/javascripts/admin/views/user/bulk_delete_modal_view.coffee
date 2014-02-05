@@ -12,15 +12,21 @@ class BulkDeleteModal extends Backbone.Marionette.ItemView
       <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
       <h3>Do you really want to delete these users?</h3>
     </div>
-    <div class="modal-body">
-      <fieldset data-validation-group>
-        <button class="btn btn-danger modal-hide">Delete</button>
-      </fieldset>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-danger modal-hide">Delete</button>
+      <a href="#" class="btn" data-dismiss="modal">Cancel</a>
     </div>
   """)
 
   events :
     "click .modal-hide" : "bulkDeleteUsers"
+
+
+  initialize : (args) ->
+
+    @userCollection = args.userCollection
+
 
   bulkDeleteUsers : ->
 

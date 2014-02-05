@@ -7,7 +7,6 @@ TemplateHelpers =
   roleToColor : (role) ->
 
     hash = @hashString(role)
-    console.log(role, hash)
     return @COLOR_MAP[hash]
 
 
@@ -16,6 +15,5 @@ TemplateHelpers =
     hash = 0
     for i in string
       hash += string.charCodeAt(i)
-    console.log("before ", string, hash)
 
     return hash % @COLOR_MAP.length

@@ -19,8 +19,8 @@ class UserListItemView extends Backbone.Marionette.ItemView
     <td><%= firstName %></td>
     <td><%= email %></td>
     <td>
-      <% _.each(experiences, function(experience){ %>
-        <span class="label label-experience"><%= experience._1 %> <%= experience._2 %></span>
+      <% _.each(experiences, function(value, domain){ %>
+        <span class="label label-experience"><%= domain %> : <%= value %></span>
       <% }) %>
     </td>
     <td>
@@ -49,7 +49,7 @@ class UserListItemView extends Backbone.Marionette.ItemView
     "click .verify-user" : "verify"
 
   modelEvents :
-    "change" : "modelChanged"
+    "change" : "render"
 
 
   delete : ->
@@ -64,9 +64,4 @@ class UserListItemView extends Backbone.Marionette.ItemView
 
     #HACKY
     $("#team-role-modal").click()
-
-
-  modelChanged : ->
-
-    @render()
 

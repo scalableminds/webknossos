@@ -1,4 +1,4 @@
-package braingames.io
+package braingames.binary.watcher
 
 import java.nio.file._
 

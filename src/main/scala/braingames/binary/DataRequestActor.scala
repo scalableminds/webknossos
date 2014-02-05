@@ -38,6 +38,8 @@ class DataRequestActor(
   with DataCache
   with EmptyDataProvider {
 
+  import Logger._
+
   import store.DataStore._
 
   val sys = context.system
@@ -78,7 +80,6 @@ class DataRequestActor(
 
   def receive = {
     case dataRequest: DataRequest =>
-      val t = System.currentTimeMillis()
       val s = sender
       // This construct results in a parallel execution and catches all the errors
       Future.successful().flatMap{ _ =>
@@ -87,8 +88,7 @@ class DataRequestActor(
         case Success(data) =>
           s ! Some(data)
         case Failure(e) =>
-          System.err.println(s"DataRequestActor Error for Request. Error: $e")
-          e.printStackTrace()
+          logger.error(s"DataRequestActor error for request. Request: $dataRequest", e)
           s ! None
       }
     case DataRequestCollection(requests) =>
@@ -98,8 +98,7 @@ class DataRequestActor(
         case Success(results) =>
           s ! Some(results.appendArrays)
         case Failure(e) =>
-          System.err.println(s"DataRequestActor Error for Request. Error: $e")
-          e.printStackTrace()
+          logger.error(s"DataRequestActor Error for request collection. Collection: $requests", e)
           s ! None
       }
   }
@@ -121,7 +120,7 @@ class DataRequestActor(
               }
           }.recoverWith {
             case e: AskTimeoutException =>
-              println(s"WARN: (${loadBlock.dataSource.name}/${loadBlock.dataLayerSection.baseDir} ${loadBlock.block}) ${a.path}: Not response in time.")
+              logger.warn(s"Load from ${a.path} timed out. (${loadBlock.dataSource.name}/${loadBlock.dataLayerSection.baseDir}, Block: ${loadBlock.block})")
               loadFromStore(tail)
           }
         case _ =>
@@ -145,7 +144,7 @@ class DataRequestActor(
           case Full(byteArray) =>
             Future.successful(byteArray)
           case net.liftweb.common.Failure(e, _, _) =>
-            System.err.println("DataStore Failure: " + e)
+            logger.error(s"DataStore Failure: $e")
             loadFromSections(tail)
           case _ =>
             loadFromSections(tail)
@@ -165,7 +164,7 @@ class DataRequestActor(
               if (layer.isCompatibleWith(fallbackLayer))
                 fallbackLayer.sections
               else {
-                System.err.println("Incompatible fallback layer!")
+                logger.error(s"Incompatible fallback layer. $layer is not compatible with $fallbackLayer")
                 Nil
               }
           }

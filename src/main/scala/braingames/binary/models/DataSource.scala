@@ -42,6 +42,10 @@ case class DataSource(
       point.x / resolution,
       point.y / resolution,
       point.z / resolution)
+
+  override def toString() = {
+    s"""$name (${dataLayers.map(_.typ).mkString(", ")}})"""
+  }
 }
 
 object DataSource{

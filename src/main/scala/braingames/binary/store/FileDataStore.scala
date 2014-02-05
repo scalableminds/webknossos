@@ -12,6 +12,7 @@ import net.liftweb.common.Failure
  */
 class FileDataStore extends DataStore {
   import DataStore._
+  import braingames.binary.Logger._
   /**
    * Loads the due to x,y and z defined block into the cache array and
    * returns it.
@@ -24,7 +25,7 @@ class FileDataStore extends DataStore {
         Some(inputStreamToByteArray(binaryStream, dataInfo))
       } catch {
         case e: FileNotFoundException =>
-          System.err.println("File datastore couldn't find file: " + createFilename(dataInfo))
+          logger.warn("File data store couldn't find file: " + createFilename(dataInfo))
           Failure("Couldn't find file: " + e)
       }
     }

@@ -1,4 +1,4 @@
-package braingames.io
+package braingames.binary.watcher
 
 import java.io.File
 import braingames.geometry.{Scale, Point3D, Vector3D, BoundingBox}
@@ -16,6 +16,8 @@ case class ExplicitLayerInfo(name: String, dataType: String)
 class DataSourceChangeHandler(dataSourceRepository: DataSourceRepository)
     extends DirectoryChangeHandler {
 
+  import braingames.binary.Logger._
+
   val maxRecursiveLayerDepth = 2
 
   def onStart(path: Path, recursive: Boolean) {
@@ -27,7 +29,6 @@ class DataSourceChangeHandler(dataSourceRepository: DataSourceRepository)
         dataSources.foreach(dataSourceRepository.updateOrCreate)
         dataSources
       }.map(_.name)
-      println(s"Found datasets: ${foundDataSources.mkString(",")}")
       dataSourceRepository.deleteAllExcept(foundDataSources)
     }
   }
@@ -118,7 +119,7 @@ class DataSourceChangeHandler(dataSourceRepository: DataSourceRepository)
       layer <- listDirectories(file).toList
       settings <- DataLayerSettings.fromFile(layer)
     } yield {
-      println("Found Layer: " + settings)
+      logger.info("Found Layer: " + settings)
       val sections = extractSections(layer, dataSourcePath).toList
       DataLayer(settings.typ, settings.flags, settings.`class`, settings.fallback, sections)
     }
@@ -126,9 +127,11 @@ class DataSourceChangeHandler(dataSourceRepository: DataSourceRepository)
 
   def teamAwareDataSourcesFromFile(folder: File): Array[DataSource] = {
     val team = folder.getName
-    listDirectories(folder).flatMap{ f =>
+    val dataSources = listDirectories(folder).flatMap{ f =>
       dataSourceFromFile(f, team)
     }
+    logger.info(s"Datasets for team $team: ${dataSources.mkString(",")}")
+    dataSources
   }
 
   def dataSourceFromFile(folder: File, team: String): Option[DataSource] = {

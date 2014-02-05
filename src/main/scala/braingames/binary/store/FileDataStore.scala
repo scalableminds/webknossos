@@ -25,7 +25,7 @@ class FileDataStore extends DataStore {
         Some(inputStreamToByteArray(binaryStream, dataInfo))
       } catch {
         case e: FileNotFoundException =>
-          logger.warn("File data store couldn't find file: " + createFilename(dataInfo))
+          logger.info("File data store couldn't find file: " + createFilename(dataInfo))
           Failure("Couldn't find file: " + e)
       }
     }

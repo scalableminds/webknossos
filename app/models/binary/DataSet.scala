@@ -52,11 +52,14 @@ object DataSetDAO extends SecuredBaseDAO[DataSet] {
       case Some(user: User) =>
         AllowIf(
           Json.obj("$or" -> Json.arr(
+            Json.obj("isPublic" -> true),
             Json.obj("allowedTeams" -> Json.obj("$in" -> user.teamNames)),
             Json.obj("dataSource.owningTeam" -> Json.obj("$in" -> user.adminTeamNames))
           )))
       case _ =>
-        DenyEveryone()
+        AllowIf(
+          Json.obj("isPublic" -> true)
+        )
     }
   }
 

@@ -32,7 +32,7 @@ $ ->
   dataAjaxHandler = (event, element=null) ->
 
     event.preventDefault()
-    
+
     $this = element or $(this)
     $form = if $this.is("form") then $this else $this.parents("form").first()
 
@@ -97,7 +97,7 @@ $ ->
         if options["replace-row"]
           unless html
             html = fillTemplateFromTable($this.closest("table"), responseData)
-          
+
           $this.parents("tr").first().replaceWith(html)
 
         if options["delete-row"]

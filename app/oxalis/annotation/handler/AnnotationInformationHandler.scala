@@ -8,6 +8,7 @@ import models.basics.Implicits._
 import scala.concurrent.Future
 import play.api.libs.concurrent.Execution.Implicits._
 import braingames.util.Fox
+import models.user.User
 
 object AnnotationInformationHandler {
   val informationHandlers: Map[String, AnnotationInformationHandler] = Map(
@@ -27,7 +28,7 @@ trait AnnotationInformationHandler {
 
   def cache: Boolean = true
 
-  def provideAnnotation(identifier: String)(implicit ctx: DBAccessContext): Fox[AType]
+  def provideAnnotation(identifier: String, user: Option[User])(implicit ctx: DBAccessContext): Fox[AType]
 
   /*def nameForAnnotation(identifier: String)(implicit request: AuthenticatedRequest[_]): Box[String] = {
     withAnnotation(identifier)(nameForAnnotation)
@@ -38,7 +39,7 @@ trait AnnotationInformationHandler {
   }
 
   def withAnnotation[A](identifier: String)(f: AType => A)(implicit request: AuthenticatedRequest[_]): Fox[A] = {
-    provideAnnotation(identifier).map(f)
+    provideAnnotation(identifier, Some(request.user)).map(f)
   }
 
 }

@@ -3,7 +3,6 @@ package controllers
 import play.api.libs.json.Json._
 import play.api.libs.json._
 import oxalis.security.Secured
-import models.security.{RoleDAO, Role}
 import play.api.mvc._
 import play.api.Logger
 import models.user.User
@@ -22,7 +21,6 @@ case class GithubAuth(user: String, key: String)
 
 object GithubIssues extends Controller with Secured {
 
-  override val DefaultAccessRole = RoleDAO.User
   val conf = Play.configuration
 
   val githubUrl = "https://api.github.com"
@@ -37,7 +35,7 @@ object GithubIssues extends Controller with Secured {
   if (authentication.isEmpty)
     Logger.warn("Github authentication configuration is missing.")
 
-  def index = Authenticated() { implicit request =>
+  def index = Authenticated{ implicit request =>
     Ok(html.issue.index())
   }
 
@@ -78,7 +76,7 @@ object GithubIssues extends Controller with Secured {
     }
   }
 
-  def submit = Authenticated().async(parse.urlFormEncoded) { implicit request =>
+  def submit = Authenticated.async(parse.urlFormEncoded) { implicit request =>
     for {
       summary <- postParameter("summary") ?~> Messages("issue.summary.notSupplied")
       description <- postParameter("description") ?~> Messages("issue.description.notSupplied")

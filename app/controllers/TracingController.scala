@@ -2,7 +2,6 @@ package controllers
 
 import play.api.libs.json._
 import oxalis.security.{UserAwareRequest, Secured, AuthenticatedRequest}
-import models.security._
 import net.liftweb.common._
 import scala.concurrent.Future
 import scala.concurrent.duration._
@@ -16,9 +15,7 @@ import oxalis.annotation.handler.AnnotationInformationHandler
 import braingames.util.{FoxImplicits, Fox}
 import play.api.Logger
 
-object TracingController extends Controller with Secured with TracingInformationProvider {
-  override val DefaultAccessRole = RoleDAO.User
-}
+object TracingController extends Controller with Secured with TracingInformationProvider
 
 trait TracingInformationProvider extends play.api.http.Status with FoxImplicits with models.basics.Implicits {
 
@@ -42,7 +39,7 @@ trait TracingInformationProvider extends play.api.http.Status with FoxImplicits 
 
   def findAnnotation(annotationId: AnnotationIdentifier)(implicit request: UserAwareRequest[_]): Fox[AnnotationLike] = {
     implicit val timeout = Timeout(5 seconds)
-    val f = Application.annotationStore ? RequestAnnotation(annotationId, authedRequestToDBAccess)
+    val f = Application.annotationStore ? RequestAnnotation(annotationId, request.userOpt, authedRequestToDBAccess)
 
     f.mapTo[Box[AnnotationLike]]
   }

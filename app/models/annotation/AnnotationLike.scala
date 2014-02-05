@@ -25,6 +25,8 @@ trait AnnotationLike extends AnnotationStatistics{
 
   def user: Future[Option[User]]
 
+  def team: String
+
   def muta: AnnotationMutationsLike
 
   def content: Fox[AnnotationContent]

@@ -1,31 +1,22 @@
 package controllers.admin
 
-import play.mvc.Security.Authenticated
-import oxalis.security.Secured
-import models.security._
 import play.api.data.Form
 import play.api.data.Forms._
 import oxalis.security.AuthenticatedRequest
 import models.task._
 import models.annotation._
-import braingames.binary.models.DataSet
 import models.user.{ExperienceService, Experience}
 import oxalis.nml._
 import play.api.i18n.Messages
 import java.util.Date
 import models.annotation.{AnnotationService, AnnotationType, AnnotationDAO}
-import models.tracing.skeleton.{SkeletonTracingService, SkeletonTracing}
 import views._
-import controllers.Controller
 import play.api.libs.concurrent.Execution.Implicits._
 import scala.concurrent.Future
-import scala.Some
 import org.joda.time.DateTime
 import play.api.libs.json._
 
 object TrainingsTaskAdministration extends AdminController {
-
-  override val DefaultAccessPermission = Some(Permission("admin.review", List("access")))
 
   val trainingsTaskForm = Form(
     tuple(
@@ -41,7 +32,7 @@ object TrainingsTaskAdministration extends AdminController {
     (t.id, "", Training.empty)
   }
 
-  def list = Authenticated().async { implicit request =>
+  def list = Authenticated.async { implicit request =>
     render.async {
       case Accepts.Html() =>
         // TODO remove unpacking of trainings for html
@@ -60,7 +51,7 @@ object TrainingsTaskAdministration extends AdminController {
     }
   }
 
-  def getData = Authenticated().async { implicit request =>
+  def getData = Authenticated.async { implicit request =>
     for {
       _nonTrainings <- TaskService.findAllNonTrainings
       nonTrainings <- Future.traverse(_nonTrainings)(Task.transformToJson)
@@ -89,7 +80,7 @@ object TrainingsTaskAdministration extends AdminController {
     }
   }
 
-  def create(taskId: String) = Authenticated().async { implicit request =>
+  def create(taskId: String) = Authenticated.async { implicit request =>
     for {
       taskOpt <- TaskDAO.findOneById(taskId)
       form = taskOpt.map(task => trainingsTaskForm.fill(taskToForm(task))) getOrElse trainingsTaskForm
@@ -99,7 +90,7 @@ object TrainingsTaskAdministration extends AdminController {
     }
   }
 
-  def createFromForm = Authenticated().async(parse.multipartFormData) { implicit request =>
+  def createFromForm = Authenticated.async(parse.multipartFormData) { implicit request =>
     trainingsTaskForm.bindFromRequest.fold(
       hasErrors = (formWithErrors => trainingsTaskCreateHTML(formWithErrors).map(html => BadRequest(html))),
       success = {
@@ -120,7 +111,7 @@ object TrainingsTaskAdministration extends AdminController {
       })
   }
 
-  def delete(taskId: String) = Authenticated().async { implicit request =>
+  def delete(taskId: String) = Authenticated.async { implicit request =>
     for {
       task <- TaskDAO.findOneById(taskId) ?~> Messages("task.training.notFound")
       _ <- TaskService.remove(task._id)

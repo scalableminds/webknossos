@@ -31,7 +31,7 @@ class UserListItemView extends Backbone.Marionette.ItemView
     </td>
     <td>
       <% if(verified) { %>
-        <i class="fa fa-ok"></i>
+        <i class="fa fa-check"></i>
       <% } else { %>
         <a href="#" class="verify-user"> verify </a>
       <% } %>

@@ -1,4 +1,4 @@
-### define 
+### define
 jquery : $
 ../libs/toast : Toast
 ./constants : constants
@@ -15,7 +15,7 @@ class View
 
     @renderer = new THREE.WebGLRenderer( clearColor: 0x000000, clearAlpha: 1.0, antialias: false )
     @scene = new THREE.Scene()
-   
+
     @setTheme(constants.THEME_BRIGHT)
     @createKeyboardCommandOverlay()
 
@@ -35,12 +35,12 @@ class View
         Toast.error("You're tracing in the wrong direction")
 
 
-      updateComments : => 
+      updateComments : =>
 
         @updateComments()
 
 
-      newActiveNode : => 
+      newActiveNode : =>
 
         @updateActiveComment()
         @updateActiveTree()
@@ -64,19 +64,19 @@ class View
         @updateComments()
 
 
-      newNode : => 
+      newNode : =>
 
         @updateActiveComment()
         @updateTreesThrottled()
 
 
-      newTreeName : => 
+      newTreeName : =>
 
         @updateTrees()
         @updateComments()
 
 
-      newTree : => 
+      newTree : =>
 
         @updateTrees()
         @updateComments()
@@ -131,7 +131,7 @@ class View
 
   toggleTheme : ->
 
-    if @currentTheme is constants.THEME_BRIGHT 
+    if @currentTheme is constants.THEME_BRIGHT
       @setTheme(constants.THEME_DARK)
     else
       @setTheme(constants.THEME_BRIGHT)
@@ -189,9 +189,9 @@ class View
             <h3>keyboard commands</h3></div>
             <div class="modal-body" id="help-modal-body"><p>
             <table class="table table-condensed table-nohead table-bordered"><tbody>'''
-      
+
     html += generalKeys
-    if mode == constants.MODE_PLANE_TRACING 
+    if mode == constants.MODE_PLANE_TRACING
       html += viewportKeys + TDViewKeys
     else if mode == constants.MODE_ARBITRARY or mode == constants.MODE_ARBITRARY_PLANE
       html += arbitraryKeys
@@ -211,7 +211,7 @@ class View
 
 
   updateComments : ->
-    
+
     comments = @model.cellTracing.getComments( @model.user.sortCommentsAsc )
     commentList = $("#comment-list")
     commentList.empty()
@@ -224,11 +224,11 @@ class View
       treeId = comment.node.treeId
       if treeId != lastTreeId
         newContent.appendChild((
-          $('<li>').append($('<i>', {"class": "icon-sitemap"}),
+          $('<li>').append($('<i>', {"class": "fa fa-sitemap"}),
           $('<span>', {"data-treeid": treeId, "text": @model.cellTracing.getTree(treeId)?.name})))[0])
         lastTreeId = treeId
       newContent.appendChild((
-        $('<li>').append($('<i>', {"class": "icon-angle-right"}), 
+        $('<li>').append($('<i>', {"class": "fa fa-angle-right"}),
         $('<a>', {"href": "#", "data-nodeid": comment.node.id, "text": comment.node.id + " - " + comment.content})))[0])
 
     commentList.append(newContent)
@@ -244,17 +244,17 @@ class View
     else
       $("#comment-input").val("")
 
-    oldIcon = $("#comment-container i.icon-arrow-right")
+    oldIcon = $("#comment-container i.fa fa-arrow-right")
     if oldIcon.length
-      oldIcon.toggleClass("icon-arrow-right", false)
-      oldIcon.toggleClass("icon-angle-right", true)
+      oldIcon.toggleClass("fa fa-arrow-right", false)
+      oldIcon.toggleClass("fa fa-angle-right", true)
 
     activeHref = $("#comment-container a[data-nodeid=#{@model.cellTracing.getActiveNodeId()}]")
     if activeHref.length
 
       newIcon = activeHref.parent("li").children("i")
-      newIcon.toggleClass("icon-arrow-right", true)
-      newIcon.toggleClass("icon-angle-right", false)
+      newIcon.toggleClass("fa fa-arrow-right", true)
+      newIcon.toggleClass("fa fa-angle-right", false)
 
       # animate scrolling to the new comment
       $("#comment-container").animate({
@@ -275,16 +275,16 @@ class View
       $("#tree-active-color").css("color": "##{('000000'+activeTree.color.toString(16)).slice(-6)}")
       activeHref = $("#tree-list a[data-treeid=#{activeTree.treeId}]")
 
-    oldIcon = $("#tree-list i.icon-arrow-right")
+    oldIcon = $("#tree-list i.fa fa-arrow-right")
     if oldIcon.length
-      oldIcon.toggleClass("icon-arrow-right", false)
-      oldIcon.toggleClass("icon-bull", true)
+      oldIcon.toggleClass("fa fa-arrow-right", false)
+      oldIcon.toggleClass("fa fa-bull", true)
 
     if activeHref?.length
 
       newIcon = activeHref.parent("li").children("i")
-      newIcon.toggleClass("icon-arrow-right", true)
-      newIcon.toggleClass("icon-bull", false)
+      newIcon.toggleClass("fa fa-arrow-right", true)
+      newIcon.toggleClass("fa fa-bull", false)
 
       # animate scrolling to the new tree
       $("#tree-list").animate({
@@ -312,10 +312,10 @@ class View
 
     for tree in trees
       newContent.appendChild((
-        $('<li>').append($('<i>', {"class": "icon-bull"}),
+        $('<li>').append($('<i>', {"class": "fa fa-bull"}),
           $('<a>', {"href": "#", "data-treeid": tree.treeId})
           .append($('<span>', {"title": "nodes", "text": tree.nodes.length}).css("display": "inline-block", "width": "50px"),
-          $('<i>', {"class": "icon-sign-blank"}).css(
+          $('<i>', {"class": "fa fa-sign-blank"}).css(
             "color": "##{('000000'+tree.color.toString(16)).slice(-6)}"),
           $('<span>', {"title": "name", "text": tree.name}) )) )[0])
 

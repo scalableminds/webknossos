@@ -15,8 +15,8 @@
   }.getOrElse( <td></td> )
   <td> @task.created.formatted("yyyy-MM-dd HH:mm") </td>
 
-  <td>  
-    <a href="@controllers.admin.routes.TrainingsTaskAdministration.delete(task.id)" data-ajax="delete-row,confirm"><i class="icon-trash"></i> delete </a>
+  <td>
+    <a href="@controllers.admin.routes.TrainingsTaskAdministration.delete(task.id)" data-ajax="delete-row,confirm"><i class="fa fa-trash-o"></i> delete </a>
   </td>
 </tr>
 <tr class="details-row" >

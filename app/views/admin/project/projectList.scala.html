@@ -60,10 +60,10 @@
           <td> <%= element.team %> </td>
           <td> <%= element.name %> </td>
           <td> <%= element.owner %> </td>
-          <td class="nowrap">  
-            <a href="<%= controllers.AnnotationController.trace('CompoundProject', element.name).url %>" title="view all finished tracings"><i class="icon-random"></i> view</a><br />
-            <a href="<%= controllers.admin.NMLIO.projectDownload(element.name).url %>" title="download all finished tracings"><i class="icon-download"></i> download</a><br />
-            <a href="<%= controllers.admin.ProjectAdministration.delete(element.name).url %>" data-ajax="delete-row,confirm"><i class="icon-trash"></i> delete </a>
+          <td class="nowrap">
+            <a href="<%= controllers.AnnotationController.trace('CompoundProject', element.name).url %>" title="view all finished tracings"><i class="fa fa-random"></i> view</a><br />
+            <a href="<%= controllers.admin.NMLIO.projectDownload(element.name).url %>" title="download all finished tracings"><i class="fa fa-download"></i> download</a><br />
+            <a href="<%= controllers.admin.ProjectAdministration.delete(element.name).url %>" data-ajax="delete-row,confirm"><i class="fa fa-trash-o"></i> delete </a>
           </td>
         </tr>
         <tr class="details-row" >

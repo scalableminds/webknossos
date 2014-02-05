@@ -16,14 +16,14 @@
           <br />
           @if(isAdminView){
             <a href="@controllers.admin.routes.NMLIO.userDownload(dashboardInfo.user.id)" title="download all finished tracings">
-              <i class="icon-download"></i> download
+              <i class="fa fa-download"></i> download
             </a>
           } else {
             <a href="@controllers.routes.TaskController.request" class="btn btn-success"  data-ajax="add-row=#dashboard-tasks@if(dashboardInfo.hasAnOpenTask){,confirm=@Messages("task.requestAnother")}" id="new-task-button">
               Get a new task
             </a>
           }
-          
+
           <div class="divider-vertical"></div>
           <a href="#" id="toggle-finished">Show finished tasks</a>
           <br /><br />
@@ -45,13 +45,13 @@
         </div>
 
         <div class="tab-pane" id="tab-explorative">
-        
+
           <h3>Explorative Tracings</h3>
           <br />
           @if(!isAdminView) {
             <div>
               @helper.form(action = controllers.admin.routes.NMLIO.upload, 'enctype -> "multipart/form-data", 'id -> "nml-explore-form", 'class -> "form-inline inline-block"){
-                <button type="submit" class="btn"><i class="icon-upload"></i> Upload NML & explore</button>
+                <button type="submit" class="btn"><i class="fa fa-upload"></i> Upload NML & explore</button>
               }
               <div class="divider-vertical"></div>
               @helper.form(action = controllers.routes.AnnotationController.createExplorational, 'class -> "form-inline inline-block") {
@@ -68,7 +68,7 @@
                   <input type="radio" name="contentType" value="volumeTracing">
                   Volume
                 </label>
-                <button type="submit" class="btn"><i class="icon-search"></i> Explore data set</button>
+                <button type="submit" class="btn"><i class="fa fa-search"></i> Explore data set</button>
               }
             </div>
           }

@@ -33,13 +33,13 @@ class UserListView extends Backbone.Marionette.CompositeView
       <div class="form-actions navbar-fixed-bottom">
         <div class="btn-group">
           <a class="btn" id="team-role-modal">
-            <i class="icon-ok"></i> Verify
+            <i class="fa fa-group"></i> Edit Teams
           </a>
           <a class="btn" id="bulk-delete-modal">
-            <i class="icon-trash"></i> Delete
+            <i class="fa fa-trash-o"></i> Delete
           </a>
           <a class="btn" id="experience-modal">
-            <i class="icon-trophy"></i> Change Experience
+            <i class="fa fa-trophy"></i> Change Experience
           </a>
         </div>
       </div>

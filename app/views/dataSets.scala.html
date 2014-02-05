@@ -17,7 +17,7 @@
             <h4>@dataSet.dataSource.name</h4>
             <div class="dataset-buttons">
               <!--<a href="/levels/512c70a6e4b004e525ec5635?missionId=51f90698e4b02ee135a87368" class="edit-button">
-                <i class="icon-pencil"></i>
+                <i class="fa fa-pencil"></i>
               </a>-->
             </div>
           </header>
@@ -26,7 +26,7 @@
               <img src="@controllers.routes.BinaryData.requestImage(dataSet.dataSource.name, "color", 200, 200, 200, 200, 0, math.log(colorLayer.resolutions.max).toInt)" />
             }
             <a href="@controllers.routes.DataSetController.view(dataSet.dataSource.name)">
-              <i class="icon-play"></i>
+              <i class="fa fa-play"></i>
             </a>
           </div>
             <!--FIXME-->

@@ -31,16 +31,16 @@ class UserListItemView extends Backbone.Marionette.ItemView
     </td>
     <td>
       <% if(verified) { %>
-        <i class="icon-ok"></i>
+        <i class="fa fa-ok"></i>
       <% } else { %>
         <a href="#" class="verify-user"> verify </a>
       <% } %>
     </td>
     <td class="nowrap">
-      <a href="/users/<%= id %>/details"><i class="icon-user"></i> show Tracings</a><br />
-      <a href="/api/users/<%= id %>/annotations/download" title="download all finished tracings"><i class="icon-download"></i> download </a><br />
-      <a href="#"><i class="icon-trash"></i> delete </a><br />
-      <!--<a href="/admin/users/<%= id %>/loginAs"><i class="icon-signin"></i> log in as User </a>-->
+      <a href="/users/<%= id %>/details"><i class="fa fa-user"></i> show Tracings</a><br />
+      <a href="/api/users/<%= id %>/annotations/download" title="download all finished tracings"><i class="fa fa-download"></i> download </a><br />
+      <a href="#"><i class="fa fa-trash-o"></i> delete </a><br />
+      <!--<a href="/admin/users/<%= id %>/loginAs"><i class="fa fa-signin"></i> log in as User </a>-->
     </td>
   """, null, {imports: {TemplateHelpers}})
 

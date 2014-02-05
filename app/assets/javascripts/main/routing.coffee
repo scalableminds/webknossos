@@ -208,7 +208,7 @@ $ ->
             hideLoading()
 
           (error) ->
-            $(".graph").html("<i class=\"icon-warning-sign\"></i> #{error.replace(/\n/g,"<br>")}")
+            $(".graph").html("<i class=\"fa fa-warning-sign\"></i> #{error.replace(/\n/g,"<br>")}")
         )
 
     "controllers.UserController" : ->

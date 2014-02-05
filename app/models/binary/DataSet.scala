@@ -23,7 +23,12 @@ object DataSetRepository extends AbstractDataSourceRepository with GlobalDBAcces
     DataSetDAO.findOneBySourceName(name).map(_.map(_.dataSource))
 }
 
-case class DataSet(dataSource: DataSource, allowedTeams: List[String], description: Option[String] = None) {
+case class DataSet(
+                    dataSource: DataSource,
+                    isPublic: Boolean = false,
+                    allowedTeams: List[String],
+                    description: Option[String] = None,
+                    created: Long = System.currentTimeMillis()) {
   def isEditableBy(user: User) =
     user.adminTeamNames.contains(dataSource.owningTeam)
 }
@@ -47,11 +52,14 @@ object DataSetDAO extends SecuredBaseDAO[DataSet] {
       case Some(user: User) =>
         AllowIf(
           Json.obj("$or" -> Json.arr(
-          Json.obj("allowedTeams" -> Json.obj("$in" -> user.teamNames)),
-          Json.obj("dataSource.owningTeam" -> Json.obj("$in" -> user.adminTeamNames))
-        )))
+            Json.obj("isPublic" -> true),
+            Json.obj("allowedTeams" -> Json.obj("$in" -> user.teamNames)),
+            Json.obj("dataSource.owningTeam" -> Json.obj("$in" -> user.adminTeamNames))
+          )))
       case _ =>
-        DenyEveryone()
+        AllowIf(
+          Json.obj("isPublic" -> true)
+        )
     }
   }
 
@@ -79,7 +87,11 @@ object DataSetDAO extends SecuredBaseDAO[DataSet] {
       byNameQ(d.name),
       Json.obj(
         "$set" -> Json.obj("dataSource" -> formatWithoutId(d)),
-        "$setOnInsert" -> Json.obj("allowedTeams" -> List(d.owningTeam))
+        "$setOnInsert" -> Json.obj(
+          "allowedTeams" -> List(d.owningTeam),
+          "created" -> System.currentTimeMillis,
+          "isPublic" -> false
+        )
       ),
       upsert = true)
 

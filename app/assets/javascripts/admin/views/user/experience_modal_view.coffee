@@ -16,24 +16,24 @@ class ExperienceModal extends Backbone.Marionette.ItemView
       <div class="control-group">
         <label class="control-label" for="experience-domain">Domain</label>
         <div class="controls">
-          <input type="text" class="input-small" name="experience-domain" autocomplete="off" required data-invalid-message="Please enter a experience domain.">
+          <input type="text" class="input-small" name="experience-domain" autocomplete="off" required>
         </div>
       </div>
       <div class="control-group">
         <label class="control-label" for="experience-value">Value</label>
         <div class="controls">
-          <input type="number" class="input-small" name="experience-value" value="0" required data-invalid-message="Please specify a experience value.">
+          <input type="number" class="input-small" name="experience-value" value="0">
         </div>
       </div>
     </div>
     <div class="modal-footer">
-      <a href="#" class="increase-experience btn btn-primary modal-hide">
+      <a href="#" class="increase-experience btn btn-primary">
       Increase Experience
       </a>
-      <a href="#" class="set-experience btn btn-primary modal-hide">
+      <a href="#" class="set-experience btn btn-primary">
         Set Experience
       </a>
-      <a href="#" class="delete-experience btn btn-primary modal-hide">
+      <a href="#" class="delete-experience btn btn-primary">
         Delete Experience
       </a>
       <a href="#" class="btn" data-dismiss="modal">Cancel</a>
@@ -44,7 +44,6 @@ class ExperienceModal extends Backbone.Marionette.ItemView
     "click .set-experience" : "setExperience"
     "click .delete-experience" : "deleteExperience"
     "click .increase-experience" : "changeExperience"
-    "click .modal-hide" : "hideModal"
 
 
   ui :
@@ -58,45 +57,49 @@ class ExperienceModal extends Backbone.Marionette.ItemView
 
   setExperience : ->
 
-    @validate()
-    @changeExperience(true)
+    if @isValid()
+      @changeExperience(true)
     return
 
 
   deleteExperience : ->
 
-    @validate()
+    if @isValid()
 
-    domain = @ui.experienceDomain.val()
-    users = @findUsers()
+      domain = @ui.experienceDomain.val()
+      users = @findUsers()
 
-    for user in users
-      experiences = user.get("experiences")
-      if _.isNumber(experiences[domain])
-        delete experiences[domain]
+      for user in users
+        experiences = user.get("experiences")
+        if _.isNumber(experiences[domain])
+          delete experiences[domain]
 
-      user.save("experiences" : experiences)
-      user.trigger("change") #Backbone doesn't support nested models
+        user.save("experiences" : experiences)
+        user.trigger("change") #Backbone doesn't support nested models
+
+        @hideModal()
 
     return
 
 
   changeExperience : (setOnly) ->
 
-    @validate()
+    if @isValid()
 
-    domain = @ui.experienceDomain.val()
-    value = +@ui.experienceValue.val()
-    users = @findUsers()
+      domain = @ui.experienceDomain.val()
+      value = +@ui.experienceValue.val()
+      users = @findUsers()
 
-    for user in users
-      experiences = user.get("experiences")
-      if _.isNumber(experiences[domain]) and not setOnly
-        experiences[domain] += value
-      else
-        experiences[domain] = value
-      user.save("experiences" : experiences)
-      user.trigger("change") #Backbone doesn't support nested models
+      for user in users
+        experiences = user.get("experiences")
+        if _.isNumber(experiences[domain]) and not setOnly
+          experiences[domain] += value
+        else
+          experiences[domain] = value
+        user.save("experiences" : experiences)
+        user.trigger("change") #Backbone doesn't support nested models
+
+        @hideModal()
 
     return
 
@@ -111,8 +114,15 @@ class ExperienceModal extends Backbone.Marionette.ItemView
     return users
 
 
-  validate : ->
+  isValid : ->
 
+    isValid = @ui.experienceDomain.val().trim() != ""
+
+    # Highlight the domain textbox if it is empty
+    unless isValid
+      @ui.experienceDomain.focus()
+
+    return isValid
 
   hideModal : ->
 

@@ -9,10 +9,15 @@ class PushQueue
   BATCH_SIZE : 3
 
 
-  constructor : (@dataSetName, @cube, @dataLayerName, @tracingId, @sendData = true) ->
+  constructor : (@dataSetName, @cube, @dataLayerName, @tracingId, version, @sendData = true) ->
 
     @queue = []
     @batchCount = 0
+
+    @getParams =
+      cubeSize : 1 << @cube.BUCKET_SIZE_P
+      annotationId : tracingId
+      version : version
 
 
   insert : (bucket) ->
@@ -89,7 +94,8 @@ class PushQueue
 
     console.log( "transmitBuffer:", transmitBufferBuilder.build() )
 
-    @getSendSocket().send(transmitBufferBuilder.build())
+    @getParams.version++
+    @getSendSocket().send( transmitBufferBuilder.build() )
       .pipe(
 
         (responseBuffer) =>
@@ -109,9 +115,14 @@ class PushQueue
 
   getSendSocket : ->
 
+    cubeSize = 1 << @cube.BUCKET_SIZE_P
+
     if @socket? then @socket else @socket = new ArrayBufferSocket(
       senders : [
-        new ArrayBufferSocket.XmlHttpRequest("/datasets/#{@dataSetName}/layers/#{@dataLayerName}/data?cubeSize=#{1 << @cube.BUCKET_SIZE_P}&annotationId=#{@tracingId}", "PUT")
+        new ArrayBufferSocket.XmlHttpRequest(
+          "/datasets/#{@dataSetName}/layers/#{@dataLayerName}/data",
+          @getParams,
+          "PUT")
       ]
       requestBufferType : Uint8Array
       responseBufferType : Uint8Array

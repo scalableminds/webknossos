@@ -24,12 +24,14 @@ class Binary
   direction : [0, 0, 0]
 
 
-  constructor : (@user, dataSet, @TEXTURE_SIZE_P, @layer, tracingId) ->
+  constructor : (@user, tracing, @layer, tracingId) ->
 
-    @dataSetName    = dataSet.name
+    @TEXTURE_SIZE_P = constants.TEXTURE_SIZE_P
+
+    @dataSetName    = tracing.content.dataSet.name
     @targetBitDepth = if @layer.name == "color" then @layer.bitDepth else 8
 
-    for layer in dataSet.dataLayers
+    for layer in tracing.content.dataSet.dataLayers
       if layer.typ == @layer.name
         dataLayer = layer
 
@@ -42,7 +44,7 @@ class Binary
 
     @cube = new Cube(upperBoundary, dataLayer.resolutions.length, @layer.bitDepth)
     @pullQueue = new PullQueue(@dataSetName, @cube, @layer.name, tracingId)
-    @pushQueue = new PushQueue(@dataSetName, @cube, @layer.name, tracingId)
+    @pushQueue = new PushQueue(@dataSetName, @cube, @layer.name, tracingId, tracing.version)
     @cube.setPushQueue( @pushQueue )
 
     @pingStrategies = [new PingStrategy.DslSlow(@cube, @TEXTURE_SIZE_P)]

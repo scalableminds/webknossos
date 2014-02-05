@@ -44,8 +44,6 @@ class SkeletonTracing
     ############ Load Tree from @data ##############
 
     @stateLogger = new StateLogger(this, @flycam, tracing.version, tracing.id, tracing.typ, tracing.restrictions.allowUpdate)
-    
-    console.log "Annotation data: ", tracing
  
     tracingParser = new TracingParser(@, @data)
     {

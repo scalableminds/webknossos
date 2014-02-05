@@ -49,6 +49,9 @@ class Model
               dataSet: tracing.content.dataSet.name
             })
 
+            console.log "tracing", tracing
+            console.log "user", user
+
             dataSet = tracing.content.dataSet
             @user = new User(user)
             @scaleInfo = new ScaleInfo(dataSet.scale)
@@ -72,7 +75,7 @@ class Model
               for supportedLayer in supportedDataLayers
                 if layer.typ == supportedLayer.name
                   supportedLayer.bitDepth = parseInt( layer.elementClass.substring(4) )
-                  @binary[layer.typ] = new Binary(@user, dataSet, constants.TEXTURE_SIZE_P, supportedLayer, tracingId)
+                  @binary[layer.typ] = new Binary(@user, tracing, supportedLayer, tracingId)
                   zoomStepCount = Math.min(zoomStepCount, @binary[layer.typ].cube.ZOOM_STEP_COUNT - 1)
 
             unless @binary["color"]?

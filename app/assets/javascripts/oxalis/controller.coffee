@@ -130,6 +130,7 @@ class Controller
         id = @modeMapping[ $(button).attr("id") ]
         do (id) ->
           $(button).on "click", ->
+            $(this).blur()
             _controller.setMode( id )
 
         if not (id in @allowedModes)
@@ -218,7 +219,7 @@ class Controller
     else # newMode not allowed or invalid
       return
 
-
+    
     for button in $("#view-mode .btn-group").children()
 
       $(button).removeClass("btn-primary")

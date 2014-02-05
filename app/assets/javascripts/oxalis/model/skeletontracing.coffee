@@ -5,7 +5,7 @@ underscore : _
 ../../libs/event_mixin : EventMixin
 ./tracepoint : TracePoint
 ./tracetree : TraceTree
-./statelogger : StateLogger
+./skeletontracing_statelogger : SkeletonTracingStateLogger
 ../constants : constants
 ./tracingparser : TracingParser
 libs/threejs/ColorConverter : ColorConverter
@@ -43,7 +43,9 @@ class SkeletonTracing
 
     ############ Load Tree from @data ##############
 
-    @stateLogger = new StateLogger(this, @flycam, tracing.version, tracing.id, tracing.typ, tracing.restrictions.allowUpdate)
+    @stateLogger = new SkeletonTracingStateLogger(
+      @flycam, tracing.version, tracing.id, tracing.typ,
+      tracing.restrictions.allowUpdate, this)
  
     tracingParser = new TracingParser(@, @data)
     {
@@ -96,10 +98,6 @@ class SkeletonTracing
         else
           return
     )
-
-  pushNow : ->
-
-    @stateLogger.pushNow()
 
     
   benchmark : (numberOfTrees = 1, numberOfNodesPerTree = 10000) ->

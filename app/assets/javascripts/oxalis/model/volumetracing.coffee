@@ -1,14 +1,15 @@
 ### define 
 ./volumecell : VolumeCell
 ./volumelayer : VolumeLayer
-../../libs/event_mixin : EventMixin
+libs/event_mixin : EventMixin
 ./dimensions : Dimensions
 libs/drawing : Drawing
+./volumetracing_statelogger : VolumeTracingStateLogger
 ###
 
 class VolumeTracing
 
-  constructor : (@flycam, @cube) ->
+  constructor : (tracing, @flycam, @cube) ->
 
     _.extend(@, new EventMixin())
 
@@ -16,6 +17,10 @@ class VolumeTracing
     @activeCell   = null        # Cell currently selected
     @currentLayer = null        # Layer currently edited
     @idCount      = 1
+
+    @stateLogger  = new VolumeTracingStateLogger(
+      @flycam, tracing.version, tracing.id, tracing.typ,
+      tracing.restrictions.allowUpdate, this)
 
     @createCell()
 

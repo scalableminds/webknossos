@@ -101,7 +101,7 @@ class Model
               if "volume" in tracing.content.settings.allowedModes
                 $.assert( @binary["segmentation"]?,
                   "Volume is allowed, but segmentation does not exist" )
-                @volumeTracing = new VolumeTracing(@flycam, @binary["segmentation"].cube)
+                @volumeTracing = new VolumeTracing(tracing, @flycam, @binary["segmentation"].cube)
               
               else
                 @skeletonTracing = new SkeletonTracing(tracing, @scaleInfo, @flycam, @flycam3d, @user)

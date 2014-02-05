@@ -244,8 +244,10 @@ class Gui
   saveNow : =>
 
     @user.pushImpl()
-    if @restrictions.allowUpdate
-      @model.skeletonTracing?.pushNow()
+    model = @model.skeletonTracing || @model.volumeTracing
+
+    if @restrictions.allowUpdate and model?
+      model.stateLogger.pushNow()
         .then( 
           -> Toast.success("Saved!")
           -> Toast.error("Couldn't save. Please try again.")

@@ -155,11 +155,13 @@ class CellTacingController
       # otherwise our buffer optimizations won't work
       @model.cellTracing.one("finishedRender", =>
         @model.cellTracing.one("finishedRender", =>
-          @model.cellTracing.addNode(position, constants.TYPE_USUAL, @planeController.activeViewport))
+          @model.cellTracing.addNode(position, constants.TYPE_USUAL,
+            @planeController.activeViewport, @model.flycam.getIntegerZoomStep()))
         @view.draw())
       @view.draw()
     else
-      @model.cellTracing.addNode(position, constants.TYPE_USUAL, @planeController.activeViewport, centered)
+      @model.cellTracing.addNode(position, constants.TYPE_USUAL,
+        @planeController.activeViewport, @model.flycam.getIntegerZoomStep(), centered)
 
 
   pushBranch : =>

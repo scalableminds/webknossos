@@ -236,7 +236,7 @@ class ArbitraryController
 
   addNode : (position) =>
 
-    @model.cellTracing.addNode(position, constants.TYPE_USUAL, constants.ARBITRARY_VIEW)
+    @model.cellTracing.addNode(position, constants.TYPE_USUAL, constants.ARBITRARY_VIEW, 0)
 
 
   setWaypoint : () =>

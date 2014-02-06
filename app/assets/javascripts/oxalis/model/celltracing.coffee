@@ -66,7 +66,7 @@ class CellTracing
 
     tracingType = tracing.typ
     if (tracingType == "Task" or tracingType == "Training") and @getNodeListOfAllTrees().length == 0
-      @addNode(tracing.content.editPosition)
+      @addNode(tracing.content.editPosition, @TYPE_USUAL, 0, 0)
 
     @branchPointsAllowed = tracing.content.settings.branchPointsAllowed
     if not @branchPointsAllowed
@@ -205,7 +205,7 @@ class CellTracing
     @branchDeferred.resolve()
 
 
-  addNode : (position, type, viewport, centered = true) ->
+  addNode : (position, type, viewport, resolution, centered = true) ->
 
     if @ensureDirection(position)
       unless @lastRadius?
@@ -215,7 +215,7 @@ class CellTracing
       metaInfo =
         timestamp : (new Date()).getTime()
         viewport : viewport
-        resolution : @flycam.getIntegerZoomStep()
+        resolution : resolution
         bitDepth : if @user.fourBit then 4 else 8
         interpolation : @user.interpolation
 

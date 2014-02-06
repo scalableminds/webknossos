@@ -5,7 +5,7 @@
 
 class CellTacingController
 
-  constructor : ( { @model, @view, @sceneController, @cameraController, @move, @calculateGlobalPos }, controlMode ) ->
+  constructor : ( { @model, @view, @sceneController, @cameraController, @move, @calculateGlobalPos, @planeController }, controlMode ) ->
 
     @inTraceMode = controlMode == constants.CONTROL_MODE_TRACE
 
@@ -155,11 +155,11 @@ class CellTacingController
       # otherwise our buffer optimizations won't work
       @model.cellTracing.one("finishedRender", =>
         @model.cellTracing.one("finishedRender", =>
-          @model.cellTracing.addNode(position, constants.TYPE_USUAL))
+          @model.cellTracing.addNode(position, constants.TYPE_USUAL, @planeController.activeViewport))
         @view.draw())
       @view.draw()
     else
-      @model.cellTracing.addNode(position, constants.TYPE_USUAL, centered)
+      @model.cellTracing.addNode(position, constants.TYPE_USUAL, @planeController.activeViewport, centered)
 
 
   pushBranch : =>

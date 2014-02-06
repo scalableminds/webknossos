@@ -18,6 +18,8 @@ class DataSourceChangeHandler(dataSourceRepository: DataSourceRepository)
 
   import braingames.binary.Logger._
 
+  val defaultTeam = "Structure of Neocortical Circuits Group"
+
   val maxRecursiveLayerDepth = 2
 
   def onStart(path: Path, recursive: Boolean) {
@@ -126,9 +128,14 @@ class DataSourceChangeHandler(dataSourceRepository: DataSourceRepository)
   }
 
   def teamAwareDataSourcesFromFile(folder: File): Array[DataSource] = {
-    val team = folder.getName
-    val dataSources = listDirectories(folder).flatMap{ f =>
-      dataSourceFromFile(f, team)
+    val (team, dataSources) = DataSourceSettings.settingsFileFromFolder(folder).exists() match {
+      case true =>
+        (defaultTeam, dataSourceFromFile(folder, defaultTeam).toArray)
+      case false =>
+        val team = folder.getName
+        (team, listDirectories(folder).flatMap{ f =>
+          dataSourceFromFile(f, team)
+        })
     }
     logger.info(s"Datasets for team $team: ${dataSources.mkString(",")}")
     dataSources

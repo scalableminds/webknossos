@@ -94,16 +94,11 @@ class StateLogger
 
   nodeObject : (node, treeId) ->
 
-    return {
+    return _.extend node.metaInfo,
       treeId : treeId,
       id: node.id,
       radius: node.radius,
       position : node.pos
-      timestamp: node.time
-      # DUMMY VALUES
-      viewport : 0		
-      resolution: 0
-      }
 
 
   edgeObject : (node, treeId) ->

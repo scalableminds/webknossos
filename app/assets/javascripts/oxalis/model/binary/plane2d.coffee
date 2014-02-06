@@ -28,7 +28,6 @@ class Plane2D
   TEXTURE_SIZE_P : 0
   BUCKETS_PER_ROW : 0
   MAP_SIZE : 0
-  TEXTURE_BIT_DEPTH : 8
   RECURSION_PLACEHOLDER : {}
   DELTA : [0, 5, 10]
   U : 0
@@ -43,7 +42,7 @@ class Plane2D
   volumeTexture : null
 
 
-  constructor : (index, @cube, @queue, @TEXTURE_SIZE_P, @DATA_BIT_DEPTH) ->
+  constructor : (index, @cube, @queue, @TEXTURE_SIZE_P, @DATA_BIT_DEPTH, @TEXTURE_BIT_DEPTH) ->
 
     _.extend(@, new EventMixin())
 
@@ -393,6 +392,7 @@ class Plane2D
 
     bytesSrc  = @DATA_BIT_DEPTH >> 3
     bytesDest = @TEXTURE_BIT_DEPTH >> 3
+    shorten   = bytesDest < bytesSrc
 
     while i--
       dest = destination.offset++ * bytesDest
@@ -401,9 +401,10 @@ class Plane2D
       # use the first none-zero byte unless all are zero
       # assuming little endian order
       for b in [0...bytesSrc]
-        if (value = source.buffer[src + b]) or b == bytesSrc - 1
+        if (value = source.buffer[src + b]) or b == bytesSrc - 1 or (not shorten)
           destination.buffer[dest++] = if contrastCurve? then contrastCurve[value] else value
-          break
+          if shorten
+            break
       src += bytesSrc
 
       if (i & source.nextPixelMask) == 0

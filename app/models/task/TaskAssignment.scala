@@ -34,9 +34,8 @@ trait TaskAssignment {
 
   val jsExecutionActor = Akka.system.actorOf(Props[JsExecutionActor])
 
-  def findAssignableTasksFor(user: User)(implicit ctx: DBAccessContext) = {
+  def findAssignableTasksFor(user: User)(implicit ctx: DBAccessContext) =
     findAssignableFor(user, shouldBeTraining = false)
-  }
 
   def findAssignableFor(user: User, shouldBeTraining: Boolean)(implicit ctx: DBAccessContext) = {
     val finishedTasks = AnnotationDAO.findFor(user._id, AnnotationType.Task).map(_.flatMap(_._task))

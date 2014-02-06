@@ -1,13 +1,13 @@
 package models.annotation
 
 import models.user.User
-import models.security.{RoleDAO, Role}
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
 import scala.async.Async._
 import scala.concurrent.Future
 import play.api.libs.concurrent.Execution.Implicits._
 import braingames.reactivemongo.GlobalAccessContext
+import models.team.Role
 
 /**
  * Company: scalableminds
@@ -56,7 +56,7 @@ object AnnotationRestrictions {
       override def allowAccess(user: Option[User]) = {
         user.map {
           user =>
-            annotation._user == user._id || (RoleDAO.Admin.map(user.hasRole) getOrElse false)
+            annotation._user == user._id || user.roleInTeam(annotation.team) == Some(Role.Admin)
         } getOrElse false
       }
 
@@ -70,7 +70,7 @@ object AnnotationRestrictions {
       override def allowFinish(user: Option[User]) = {
         user.map {
           user =>
-            (annotation._user == user._id || (RoleDAO.Admin.map(user.hasRole) getOrElse false)) && !annotation.state.isFinished
+            (annotation._user == user._id || user.roleInTeam(annotation.team) == Some(Role.Admin)) && !annotation.state.isFinished
         } getOrElse false
       }
 

@@ -6,6 +6,7 @@ Constants =
   PLANE_YZ             : 1
   PLANE_XZ             : 2
   TDView               : 3
+  ARBITRARY_VIEW       : 4
   PLANE_NAMES          : ["xy", "yz", "xz"]
   ALL_PLANES           : [0, 1, 2]
   ALL_VIEWPORTS        : [0, 1, 2, 3]

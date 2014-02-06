@@ -10,5 +10,5 @@ object BinaryDataService extends AbstractBinaryDataService {
   
   lazy val config = Play.current.configuration.underlying
   
-  lazy val dataSetRepository = DataSetRepository
+  lazy val dataSourceRepository = DataSetRepository
 }

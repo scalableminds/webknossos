@@ -1,10 +1,21 @@
-@()(implicit session: oxalis.view.AuthedSessionData)
+@(teams: List[String])(implicit session: oxalis.view.AuthedSessionData)
 
 @main(){
   <div class="container">
     <h3>Projects</h3>
     <div class="well">
         <form action="@controllers.admin.routes.ProjectAdministration.create" method="POST" class="form-horizontal">
+          <div class=" control-group">
+            <label class="control-label" for="team">Team</label>
+            <div class="controls">
+                <select id="team" name="team">
+                    @teams.map{ t =>
+                      <option value="@t">@t</option>
+                    }
+                </select>
+                <span class="help-inline errors"></span>
+            </div>
+          </div>
           <div class=" control-group">
             <label class="control-label" for="projectName">Project Name</label>
             <div class="controls">
@@ -37,6 +48,7 @@
       <thead>
         <tr>
           <th class="details-toggle-all"> <i class="caret-right"></i> <i class="caret-down"></i> </th>
+          <th> Team</th>
           <th> Name</th>
           <th> Owner</th>
           <th> </th>
@@ -45,12 +57,13 @@
       <tbody class="hide">
         <tr id="<%= element.name %>">
           <td class="details-toggle" href="<%= controllers.admin.TaskAdministration.tasksForProject(element.name).url %>" data-ajax="add-row=#<%= element.name %> + tr"> <i class="caret-right"></i> <i class="caret-down"></i> </td>
+          <td> <%= element.team %> </td>
           <td> <%= element.name %> </td>
           <td> <%= element.owner %> </td>
-          <td class="nowrap">  
-            <a href="<%= controllers.AnnotationController.trace('CompoundProject', element.name).url %>" title="view all finished tracings"><i class="icon-random"></i> view</a><br />
-            <a href="<%= controllers.admin.NMLIO.projectDownload(element.name).url %>" title="download all finished tracings"><i class="icon-download"></i> download</a><br />
-            <a href="<%= controllers.admin.ProjectAdministration.delete(element.name).url %>" data-ajax="delete-row,confirm"><i class="icon-trash"></i> delete </a>
+          <td class="nowrap">
+            <a href="<%= controllers.AnnotationController.trace('CompoundProject', element.name).url %>" title="view all finished tracings"><i class="fa fa-random"></i> view</a><br />
+            <a href="<%= controllers.admin.NMLIO.projectDownload(element.name).url %>" title="download all finished tracings"><i class="fa fa-download"></i> download</a><br />
+            <a href="<%= controllers.admin.ProjectAdministration.delete(element.name).url %>" data-ajax="delete-row,confirm"><i class="fa fa-trash-o"></i> delete </a>
           </td>
         </tr>
         <tr class="details-row" >

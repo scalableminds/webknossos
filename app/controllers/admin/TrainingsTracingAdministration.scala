@@ -1,7 +1,6 @@
 package controllers.admin
 
 import oxalis.security.Secured
-import models.security.{RoleDAO, Role}
 import models.user.{UserService, User}
 import play.api.data._
 import play.api.data.Forms._
@@ -23,7 +22,7 @@ object TrainingsTracingAdministration extends AdminController {
     single(
       "comment" -> text))
 
-  def startReview(training: String) = Authenticated().async { implicit request =>
+  def startReview(training: String) = Authenticated.async { implicit request =>
     for {
       annotation <- AnnotationDAO.findOneById(training) ?~> Messages("annotation.notFound")
       _ <- annotation.state.isReadyForReview.failIfFalse(Messages("annotation.review.notReady")).toFox
@@ -36,7 +35,7 @@ object TrainingsTracingAdministration extends AdminController {
     }
   }
 
-  def oxalisReview(training: String) = Authenticated().async { implicit request =>
+  def oxalisReview(training: String) = Authenticated.async { implicit request =>
     for {
       annotation <- AnnotationDAO.findOneById(training) ?~> Messages("annotation.notFound")
       review <- annotation.review.headOption ?~> Messages("annotation.review.notFound")
@@ -45,7 +44,7 @@ object TrainingsTracingAdministration extends AdminController {
     }
   }
 
-  def abortReview(trainingsId: String) = Authenticated().async { implicit request =>
+  def abortReview(trainingsId: String) = Authenticated.async { implicit request =>
     for {
       annotation <- AnnotationDAO.findOneById(trainingsId) ?~> Messages("annotation.review.notFound")
       updated <- annotation.muta.unassignReviewer() ?~> Messages("annotation.update.failed")
@@ -57,7 +56,7 @@ object TrainingsTracingAdministration extends AdminController {
     }
   }
 
-  def finishReview(trainingId: String) = Authenticated().async { implicit request =>
+  def finishReview(trainingId: String) = Authenticated.async { implicit request =>
     def isAllowedToFinish(review: AnnotationReview, annotation: AnnotationLike) =
       review._reviewer == request.user._id && annotation.state.isInReview
 
@@ -70,7 +69,7 @@ object TrainingsTracingAdministration extends AdminController {
     }
   }
 
-  def finishReviewForm(training: String, passed: Boolean) = Authenticated().async(parse.urlFormEncoded) { implicit request =>
+  def finishReviewForm(training: String, passed: Boolean) = Authenticated.async(parse.urlFormEncoded) { implicit request =>
     def isUserReviewer(review: AnnotationReview) =
       review._reviewer == request.user._id
 

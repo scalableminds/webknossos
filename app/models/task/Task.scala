@@ -28,6 +28,7 @@ import reactivemongo.api.indexes.{IndexType, Index}
 case class Task(
                  seedIdHeidelberg: Int,
                  _taskType: BSONObjectID,
+                 team: String,
                  neededExperience: Experience = Experience.empty,
                  priority: Int = 100,
                  instances: Int = 1,
@@ -96,6 +97,7 @@ object Task extends FoxImplicits {
     } yield {
       Json.obj(
         "id" -> task.id,
+        "team" -> task.team,
         "formattedHash" -> Formatter.formatHash(task.id),
         "seedIdHeidelberg" -> task.seedIdHeidelberg,
         "projectName" -> projectName,
@@ -121,6 +123,26 @@ object TaskDAO extends SecuredBaseDAO[Task] with FoxImplicits {
 
   collection.indexesManager.ensure(Index(Seq("_project" -> IndexType.Ascending)))
   collection.indexesManager.ensure(Index(Seq("_taskType" -> IndexType.Ascending)))
+
+  override def findQueryFilter(implicit ctx: DBAccessContext) = {
+    ctx.data match{
+      case Some(user: User) =>
+        AllowIf(Json.obj("team" -> Json.obj("$in" -> user.teamNames)))
+      case _ =>
+        DenyEveryone()
+    }
+  }
+
+  override def removeQueryFilter(implicit ctx: DBAccessContext) = {
+    ctx.data match{
+      case Some(user: User) =>
+        AllowIf(Json.obj("team" -> Json.obj("$in" -> user.adminTeamNames)))
+      case _ =>
+        DenyEveryone()
+    }
+  }
+
+
 
   @deprecated(message = "This mehtod shouldn't be used. Use TaskService.remove instead", "2.0")
   override def removeById(bson: BSONObjectID)(implicit ctx: DBAccessContext) = {
@@ -166,6 +188,7 @@ object TaskDAO extends SecuredBaseDAO[Task] with FoxImplicits {
              neededExperience: Experience,
              priority: Int,
              instances: Int,
+             team: String,
              _project: Option[String]
             )(implicit ctx: DBAccessContext) =
     collectionUpdate(
@@ -175,5 +198,6 @@ object TaskDAO extends SecuredBaseDAO[Task] with FoxImplicits {
           "neededExperience" -> neededExperience,
           "priority" -> priority,
           "instances" -> instances,
+          "team" -> team,
           "_project" -> _project)))
 }

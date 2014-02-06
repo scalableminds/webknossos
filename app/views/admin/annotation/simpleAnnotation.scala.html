@@ -9,11 +9,11 @@
   val lastReviewer = annotation.review.headOption.map(_._reviewer)
   annotation.state match{
     case s if s.isFinished =>
-      <i class="icon-ok-circle"></i><span> Finished</span>
+      <i class="fa fa-check-circle-o"></i><span> Finished</span>
     case s if lastReviewer != user.map(_._id) && s.isInReview =>
-      <i class="icon-eye-open"></i><span> Already getting reviewed.</span>
+      <i class="fa fa-eye"></i><span> Already getting reviewed.</span>
     case _ =>
-      <i class="icon-random"></i><span> In Progress</span>
+      <i class="fa fa-random"></i><span> In Progress</span>
   }
 }
 
@@ -21,7 +21,7 @@
   <td> @user.map(_.name).getOrElse("<deleted>") </td>
   <td> @content.map(a => formatDate(a.date)).getOrElse("") </td>
   <td> @stateLabel() </td>
-  <td class="nowrap"> 
+  <td class="nowrap">
     @annotationLinks(annotation.actions(user))
   </td>
 </tr>

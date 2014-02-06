@@ -5,7 +5,7 @@ import scala.Some
 import scala.concurrent.{Future, Await}
 import scala.concurrent.duration._
 import oxalis.user.UserCache
-import models.team.{TeamMembership, Team}
+import models.team.{TeamDAO, Role, TeamMembership, Team}
 import reactivemongo.bson.BSONObjectID
 import play.api.i18n.Messages
 import oxalis.mail.DefaultMails
@@ -17,6 +17,7 @@ import braingames.reactivemongo.{GlobalAccessContext, DBAccessContext}
 import braingames.security.SCrypt._
 import braingames.mail.Send
 import play.api.libs.concurrent.Execution.Implicits._
+import models.annotation.AnnotationService
 
 object UserService extends FoxImplicits {
   val defaultUserEmail = "scmboy@scalableminds.com"
@@ -35,13 +36,42 @@ object UserService extends FoxImplicits {
       UserCache.store(id, UserDAO.findOneById(id))
   }
 
-  def logActivity(user: User, lastActivity: Long)  {
+  def logActivity(user: User, lastActivity: Long) = {
     UserDAO.logActivity(user, lastActivity)(GlobalAccessContext)
   }
 
-  def insert(email: String, firstName: String, lastName: String, password: String, isVerified: Boolean) = {
-    val user = User(email, firstName, lastName, false, hashPassword(password), Nil)
-    UserDAO.insert(user, isVerified)(GlobalAccessContext)
+  def insert(teamName: String, email: String, firstName: String, lastName: String, password: String, isVerified: Boolean) = {
+    for {
+      teamOpt <- TeamDAO.findOneByName(teamName)(GlobalAccessContext)
+      teamMemberships = teamOpt.map(t => TeamMembership(t.name, Role.User)).toList
+      user = User(email, firstName, lastName, false, hashPassword(password), teamMemberships)
+      _ <- UserDAO.insert(user, isVerified)(GlobalAccessContext)
+    } yield user
+  }
+
+  def update(user: User, firstName: String, lastName: String, verified: Boolean, teams: List[TeamMembership], experiences: Map[String, Int])(implicit ctx: DBAccessContext) = {
+    if (!user.verified && verified)
+      Application.Mailer ! Send(DefaultMails.verifiedMail(user.name, user.email))
+
+    UserDAO.update(user._id, firstName, lastName, verified, teams, experiences).map {
+      result =>
+        UserCache.invalidateUser(user.id)
+        result
+    }
+  }
+
+  def removeFromAllPossibleTeams(user: User, issuingUser: User)(implicit ctx: DBAccessContext) = {
+    if (user.teamNames.diff(issuingUser.adminTeamNames).isEmpty) {
+      // if a user doesn't belong to any team any more he gets deleted
+      UserDAO.removeById(user._id).flatMap {
+        _ =>
+          UserCache.invalidateUser(user.id)
+          AnnotationService.freeAnnotationsOfUser(user)
+      }
+    } else {
+      // the issuing user is not able to remove the user from all teams, therefore the account is not getting deleted
+      UserDAO.updateTeams(user._id, user.teams.filterNot(t => issuingUser.adminTeams.contains(t.team)))
+    }
   }
 
   def findOneByEmail(email: String): Future[Option[User]] = {
@@ -49,61 +79,17 @@ object UserService extends FoxImplicits {
   }
 
   def updateSettings(user: User, settings: UserSettings)(implicit ctx: DBAccessContext) = {
-    UserDAO.updateSettings(user, settings)
+    UserDAO.updateSettings(user, settings).map {
+      result =>
+        UserCache.invalidateUser(user.id)
+        result
+    }
   }
 
   def auth(email: String, password: String): Future[Option[User]] =
     UserDAO.auth(email, password)(GlobalAccessContext)
 
-  def verify(_user: BSONObjectID)(implicit ctx: DBAccessContext): Fox[String] = {
-    def verifyHim(user: User) = {
-      val u = user.verify
-      UserDAO.verify(u, u.roles)
-    }
-
-    for {
-      user <- UserDAO.findOneById(_user)(GlobalAccessContext) ?~> Messages("user.notFound")
-      if (!user.verified)
-      _ <- verifyHim(user)
-    } yield {
-      Application.Mailer ! Send(DefaultMails.verifiedMail(user.name, user.email))
-      user.name
-    }
-  }
-
-  private def userIsAllowedToAssignTeam(teamMembership: TeamMembership, user: User) = {
-    user.teams.exists(t => t.teamPath.implies(teamMembership.teamPath)
-      && t.role == TeamMembership.Admin)
-  }
-
-  def assignToTeams(teamMemberships: Seq[TeamMembership], assigningUser: User)(_user: BSONObjectID)(implicit ctx: DBAccessContext): Fox[Seq[TeamMembership]] = {
-    teamMemberships.find(!userIsAllowedToAssignTeam(_, assigningUser)) match {
-      case None =>
-        for {
-          _ <- UserDAO.addTeams(_user, teamMemberships) ?~> Messages("team.assign.failed")
-        } yield {
-          teamMemberships
-        }
-      case _ =>
-        Failure(Messages("team.assign.notAllowed"))
-    }
-  }
-
-  def addRole(_user: BSONObjectID, role: String)(implicit ctx: DBAccessContext) =
-    UserDAO.addRole(_user, role)
-
-  def deleteRole(_user: BSONObjectID, role: String)(implicit ctx: DBAccessContext) =
-    UserDAO.deleteRole(_user, role)
-
   def increaseExperience(_user: BSONObjectID, domain: String, value: Int)(implicit ctx: DBAccessContext) = {
     UserDAO.increaseExperience(_user, domain.trim, value)
-  }
-
-  def setExperience(_user: BSONObjectID, domain: String, value: Int)(implicit ctx: DBAccessContext) = {
-    UserDAO.setExperience(_user, domain.trim, value)
-  }
-
-  def deleteExperience(_user: BSONObjectID, domain: String)(implicit ctx: DBAccessContext) = {
-    UserDAO.deleteExperience(_user, domain.trim)
   }
 }

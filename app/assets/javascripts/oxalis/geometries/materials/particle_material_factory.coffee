@@ -23,8 +23,6 @@ class ParticleMaterialFactory
     attributes =
       size :
         type : "f"
-        _array : new Float32Array(0)
-        value : []
 
     vertexShader   = @getVertexShader()
     fragmentShader = @getFragmentShader()
@@ -36,10 +34,6 @@ class ParticleMaterialFactory
       fragmentShader
       vertexColors : true
     })
-
-    @material.setSizes = (sizes) ->
-      attributes.size._array = sizes
-      attributes.size.needsUpdate = true
 
     @material.setZoomFactor = (zoomFactor) ->
       uniforms.zoomFactor.value = zoomFactor

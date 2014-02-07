@@ -10,15 +10,20 @@ class Tree
     # create cellTracing to show in TDView and pre-allocate buffers
 
     edgeGeometry = new THREE.Geometry()
-    nodeGeometry = new THREE.Geometry()
+    nodeGeometry = new THREE.BufferGeometry()
+
+    nodeGeometry.addAttribute( 'position', Float32Array, 0, 3 )
+    nodeGeometry.addAttribute( 'size', Float32Array, 0, 1 )
+    nodeGeometry.addAttribute( 'color', Float32Array, 0, 3 )
+
     @nodeIDs = nodeGeometry.nodeIDs = new ResizableBuffer(1, 100, Int32Array)
     edgeGeometry.dynamic = true
     nodeGeometry.dynamic = true
 
     @edgesBuffer = new ResizableBuffer(6)
-    @nodesBuffer = new ResizableBuffer(3)
-    @sizesBuffer = new ResizableBuffer(1)
-    @nodesColorBuffer = new ResizableBuffer(3)
+    @nodesBuffer = nodeGeometry.attributes.position._rBuffer = new ResizableBuffer(3)
+    @sizesBuffer = nodeGeometry.attributes.size._rBuffer = new ResizableBuffer(1)
+    @nodesColorBuffer = nodeGeometry.attributes.color._rBuffer = new ResizableBuffer(3)
 
     @edges = new THREE.Line(
       edgeGeometry,
@@ -62,7 +67,6 @@ class Tree
       if neighbor.id < node.id
         @edgesBuffer.push(neighbor.pos.concat(node.pos))
 
-    @updateColors()
     @updateGeometries()
 
 
@@ -107,7 +111,6 @@ class Tree
 
     swapLast( @edgesBuffer, edgesIndex )
 
-    @updateColors()
     @updateGeometries()
 
   mergeTree : (otherTree, lastNode, activeNode) ->
@@ -177,7 +180,7 @@ class Tree
     for i in [0..@nodeIDs.length]
       @nodesColorBuffer.push( @getColor( @nodeIDs.get(i) ))
 
-    @updateColors()
+    @updateGeometries()
 
 
   updateNodeColor : (id, isActiveNode, isBranchPoint) ->
@@ -186,7 +189,7 @@ class Tree
       if @nodeIDs.get(i) == id
         @nodesColorBuffer.set( @getColor( id, isActiveNode, isBranchPoint ), i )
 
-    @updateColors()
+    @updateGeometries()
 
 
   updateNodeRadius : (id, radius) ->
@@ -214,12 +217,6 @@ class Tree
     return @hexToRGB( color )
 
 
-  updateColors : ->
-
-    @nodes.geometry.__colorArray = @nodesColorBuffer.getBuffer()
-    @nodes.geometry.colorsNeedUpdate = true
-
-
   showRadius : (show) ->
 
     @particleMaterial.setShowRadius( show )
@@ -229,12 +226,15 @@ class Tree
 
     @edges.geometry.__vertexArray        = @edgesBuffer.getBuffer()
     @edges.geometry.__webglLineCount     = @edgesBuffer.getLength() * 2
-    @nodes.geometry.__vertexArray        = @nodesBuffer.getBuffer()
-    @nodes.geometry.__webglParticleCount = @nodesBuffer.getLength()
-    @particleMaterial.setSizes( @sizesBuffer.getBuffer() )
 
     @edges.geometry.verticesNeedUpdate   = true
-    @nodes.geometry.verticesNeedUpdate   = true
+
+    attributes = @nodes.geometry.attributes
+    for attr of attributes
+      a = attributes[attr]
+      a.array       = a._rBuffer.getBuffer()
+      a.numItems    = a._rBuffer.getBufferLength()
+      a.needsUpdate = a._rBuffer.getBufferLength()
 
 
   #### Color utility methods

@@ -1,6 +1,6 @@
 ### define
 ../../libs/resizable_buffer : ResizableBuffer
-libs/threejs/ColorConverter : ColorConverter
+three.color : ColorConverter
 ###
 
 class Tree
@@ -18,16 +18,16 @@ class Tree
     @nodesBuffer = new ResizableBuffer(3)
 
     @edges = new THREE.Line(
-      edgeGeometry, 
+      edgeGeometry,
       new THREE.LineBasicMaterial({
-        color: @darkenHex( treeColor ), 
+	color: @darkenHex( treeColor ),
         linewidth: @model.user.particleSize / 4}), THREE.LinePieces)
 
     @nodes = new THREE.ParticleSystem(
-      nodeGeometry, 
+      nodeGeometry,
       new THREE.ParticleBasicMaterial({
-        vertexColors: true, 
-        size: @model.user.particleSize, 
+	vertexColors: true,
+	size: @model.user.particleSize,
         sizeAttenuation : false}))
 
     @nodesColorBuffer = new ResizableBuffer(3)
@@ -149,7 +149,7 @@ class Tree
 
     newColor = @model.cellTracing.getTree().color
     @edges.material.color = new THREE.Color( @darkenHex( newColor ) )
-    
+
     @updateNodesColors()
     @updateGeometries()
 
@@ -205,7 +205,7 @@ class Tree
 
     @nodes.geometry.__colorArray = @nodesColorBuffer.getBuffer()
     @nodes.geometry.colorsNeedUpdate = true
-  
+
 
   updateGeometries : ->
 
@@ -217,7 +217,7 @@ class Tree
     @edges.geometry.verticesNeedUpdate   = true
     @nodes.geometry.verticesNeedUpdate   = true
 
-    
+
   #### Color utility methods
 
   hexToRGB : (hexColor) ->

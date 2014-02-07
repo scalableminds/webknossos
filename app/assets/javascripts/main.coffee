@@ -3,36 +3,39 @@ require.config
   baseUrl : "/assets/javascripts"
 
   paths :
-    "jquery" : "libs/jquery-1.8.3.min"
-    "multiselect" : "libs/bootstrap-multiselect"
-    "slider" : "libs/bootstrap-slider"
-    "underscore" : "libs/lodash-2.2.1"
-    "bootstrap" : "libs/bootstrap.min"
-    "worker" : "libs/worker_plugin"
-    "three": "libs/threejs/three"
-    "three.trackball": "libs/threejs/TrackballControls"
-    "three.color": "libs/threejs/ColorConverter"
-    "stats" : "libs/threejs/stats"
-    "v3" : "libs/v3"
-    "m4x4" : "libs/m4x4"
-    "dat" : "libs/dat.gui.min"
-    "coffee-script" : "libs/coffee-script-1.4.0.min"
-    "qassert" : "libs/qassert"
-    "backbone" : "libs/backbone"
-    "backbone.marionette" : "libs/backbone.marionette"
+    "jquery"              : "../bower_components/jquery/jquery.min"
+    "underscore"          : "../bower_components/lodash/dist/lodash.min"
+    "bootstrap"           : "../bower_components/bootstrap/docs/assets/js/bootstrap.min"
+    "slider"              : "../bower_components/bootstrap-slider/bootstrap-slider"
+    "coffee-script"       : "../bower_components/coffee-script/extras/coffee-script"
+    "backbone.marionette" : "../bower_components/backbone.marionette/lib/backbone.marionette.min"
+    "backbone"            : "../bower_components/backbone/backbone-min"
+    "three"               : "../bower_components/threejs/build/three"
+    "three.color"         : "../bower_components/threejs/examples/js/math/ColorConverter"
+    "three.trackball"     : "../bower_components/threejs/examples/js/controls/TrackballControls"
+    "stats"               : "../bower_components/threejs-stats/Stats"
+    "dat"                 : "../bower_components/dat.gui/dat.gui.min"
+    "ace"                 : "../bower_components/ace-builds/src-min-noconflict/ace"
+    "keyboard"            : "../bower_components/KeyboardJS/keyboard"
+    "gamepad"             : "../bower_components/gamepad.js/gamepad"
+    "jquery.mousewheel"   : "../bower_components/jquery-mousewheel/jquery.mousewheel"
+    "jquery.bootpag"      : "../bower_components/jquery-bootpag/lib/jquery.bootpag"
+    "v3"                  : "libs/v3"
+    "m4x4"                : "libs/m4x4"
+    "worker"              : "libs/worker_plugin"
+    "qassert"             : "libs/qassert"
 
   shim :
     "underscore" :
       exports : "_"
     "bootstrap" : [ "jquery" ]
-    "multiselect" : [ "bootstrap" ]
     "slider" : [ "bootstrap" ]
+    "ace" :
+      exports : "ace"
     "libs/viz" :
       exports : "Viz"
     "routes" :
       exports : "jsRoutes"
-    "libs/ace/ace" :
-      exports : "ace"
     "three" :
       exports : "THREE"
     "stats" :
@@ -41,7 +44,12 @@ require.config
       exports : "V3"
     "m4x4" :
       exports : "M4x4"
-    "qassert" : [ "jquery" ]
+    "three.trackball" :
+      deps : ["three"]
+    "three.color" :
+      deps : ["three"]
+      exports : "THREE.ColorConverter"
+    "qassert" : [ "jquery"]
     "backbone" : [ "underscore" ]
     "backbone.marionette" : [ "backbone", "underscore" ]
 

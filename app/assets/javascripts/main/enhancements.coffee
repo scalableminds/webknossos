@@ -3,7 +3,6 @@ jquery : $
 underscore : _
 ../libs/toast : Toast
 ./paginator : Paginator
-../libs/jquery.bootpag.min : Bootpag
 ###
 
 $ ->

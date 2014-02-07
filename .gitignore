@@ -35,6 +35,7 @@ modules/shellgame/target
 modules/shellgame/logs
 modules/shellgame/shellgame-assets
 public/levelStacks
+public/bower_components
 aws.conf
 aws.conf.disabled
 /knowledge

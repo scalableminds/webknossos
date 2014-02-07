@@ -1,8 +1,8 @@
 ### define
 jquery : $
 underscore : _
+keyboard : KeyboardJS
 libs/toast : Toast
-libs/keyboard : KeyboardJS
 libs/pan_zoom_svg : PanZoomSVG
 main/routing_utils : RoutingUtils
 oxalis/constants : constants
@@ -264,7 +264,7 @@ $ ->
       $form = $this.find("form")
       $submitButton = $this.find("[type=submit]")
 
-      require ["libs/ace/ace"], (ace) ->
+      require ["ace"], (ace) ->
 
         editor = ace.edit("editor")
         editor.setTheme("ace/theme/twilight");

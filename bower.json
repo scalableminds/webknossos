@@ -16,13 +16,11 @@
     "dat.gui": "",
     "coffee-script": "~1.4.0",
     "bootstrap-slider": "",
-    "ace-builds": "git://github.com/ajaxorg/ace-builds#~1.1.1",
+    "ace-builds": "ace-builds#~1.1.1",
     "jquery-mousewheel": "~3.1.9",
     "gamepad.js": "*",
-    "jquery-bootpag": "1.0.4"
+    "jquery-bootpag": "1.0.4",
+    "tweenjs": "r6"
   },
-  "devDependencies": {},
-  "resolutions": {
-    "jquery-bootpag": "1.0.4"
-  }
+  "devDependencies": {}
 }

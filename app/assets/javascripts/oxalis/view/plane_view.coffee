@@ -1,9 +1,9 @@
 ### define
 jquery : $
+tween : TWEEN_LIB
 ../model/dimensions : Dimensions
 ../../libs/toast : Toast
 ../../libs/event_mixin : EventMixin
-../../libs/Tween : TWEEN_LIB
 ../constants : constants
 ./modal : modal
 ###
@@ -16,7 +16,7 @@ class PlaneView
 
     @running = false
 
-    # The "render" div serves as a container for the canvas, that is 
+    # The "render" div serves as a container for the canvas, that is
     # attached to it once a renderer has been initalized.
     container = $("#render")
 
@@ -105,7 +105,7 @@ class PlaneView
     if @flycam.hasChanged or @flycam.hasNewTextures() or modelChanged
 
       @trigger "render"
-      
+
       # update postion and FPS displays
       @stats.update()
 
@@ -113,7 +113,7 @@ class PlaneView
       f = @deviceScaleFactor
       viewport = [[0, @curWidth+20], [@curWidth+20, @curWidth+20], [0, 0], [@curWidth+20, 0]]
       @renderer.autoClear = true
-      
+
       for i in constants.ALL_VIEWPORTS
         @trigger "renderCam", i
         @renderer.setViewport(viewport[i][0] * f, viewport[i][1] * f, @curWidth * f, @curWidth * f)
@@ -121,12 +121,12 @@ class PlaneView
         @renderer.enableScissorTest(true)
         @renderer.setClearColorHex(constants.PLANE_COLORS[i], 1);
         @renderer.render @scene, @camera[i]
-    
+
       @flycam.hasChanged = false
       @flycam.hasNewTexture = [false, false, false]
 
       @trigger "finishedRender"
-  
+
   addGeometry : (geometry) ->
     # Adds a new Three.js geometry to the scene.
     # This provides the public interface to the GeometryFactory.
@@ -167,7 +167,7 @@ class PlaneView
       @camera[i].aspect = WIDTH / HEIGHT
       @camera[i].updateProjectionMatrix()
     @draw()
-  
+
 
   scaleTrianglesPlane : (scale) =>
 
@@ -219,13 +219,13 @@ class PlaneView
   bind : ->
 
     @model.cellTracing.on({
-      doubleBranch         : (callback) => @showBranchModal(callback)      
+      doubleBranch         : (callback) => @showBranchModal(callback)
       mergeDifferentTrees  : ->
         Toast.error("You can't merge nodes within the same tree", false) })
 
-    @model.user.on 
+    @model.user.on
       scaleChanged : (scale) => if @running then @scaleTrianglesPlane(scale)
-    
+
 
   stop : ->
 
@@ -233,7 +233,7 @@ class PlaneView
 
     $(window).off "resize", => @.resize()
 
-    @running = false 
+    @running = false
 
 
   start : ->

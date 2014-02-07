@@ -20,6 +20,8 @@ require.config
     "gamepad"             : "../bower_components/gamepad.js/gamepad"
     "jquery.mousewheel"   : "../bower_components/jquery-mousewheel/jquery.mousewheel"
     "jquery.bootpag"      : "../bower_components/jquery-bootpag/lib/jquery.bootpag"
+    "tween"               : "../bower_components/tweenjs/build/Tween"
+    "dat.gui"             : "../bower_components/dat.gui/dat.gui.min"
     "v3"                  : "libs/v3"
     "m4x4"                : "libs/m4x4"
     "worker"              : "libs/worker_plugin"

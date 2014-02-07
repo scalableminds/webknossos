@@ -1,5 +1,5 @@
 ### define
-../../libs/datgui/dat.gui : DatGui
+dat.gui : DatGui
 ../../libs/request : Request
 ../../libs/event_mixin : EventMixin
 ../../libs/toast : Toast
@@ -7,12 +7,12 @@
 ../constants : constants
 ###
 
-class Gui 
+class Gui
 
   model : null
-  
+
   constructor : (container, @model, @restrictions, @tracingSettings) ->
-    
+
     _.extend(this, new EventMixin())
 
     @updateGlobalPosition( @model.flycam.getPosition() )
@@ -24,8 +24,8 @@ class Gui
     @datasetPosition = @initDatasetPosition(@user.briConNames)
 
     somaClickingAllowed = @tracingSettings.somaClickingAllowed
-    
-    @settings = 
+
+    @settings =
 
       boundingBox : "0, 0, 0, 0, 0, 0"
       fourBit : @user.fourBit
@@ -54,7 +54,7 @@ class Gui
     container.append @gui.domElement
 
     @folders = []
-    
+
     @folders.push( fControls = @gui.addFolder("Controls") )
     @addCheckbox(fControls, @user, "inverseX", "Inverse X")
     @addCheckbox(fControls, @user, "inverseY", "Inverse Y")
@@ -133,7 +133,7 @@ class Gui
 
     $("#dataset-name").text(@model.binary["color"].dataSetName)
 
-    $("#trace-position-input").on "change", (event) => 
+    $("#trace-position-input").on "change", (event) =>
 
       @setPosFromString(event.target.value)
       $("#trace-position-input").blur()
@@ -158,7 +158,7 @@ class Gui
 
 
     @model.flycam.on
-      positionChanged : (position) => 
+      positionChanged : (position) =>
         @updateGlobalPosition(position)
 
     @model.user.on
@@ -237,7 +237,7 @@ class Gui
     @user.pushImpl()
     if @restrictions.allowUpdate
       @model.cellTracing.pushNow()
-        .then( 
+	.then(
           -> Toast.success("Saved!")
           -> Toast.error("Couldn't save. Please try again.")
         )
@@ -253,7 +253,7 @@ class Gui
 
 
   setPosFromString : (posString) =>
- 
+
     posArray = @stringToNumberArray( posString )
     if posArray?.length == 3
       @model.flycam.setPosition(posArray)
@@ -339,7 +339,7 @@ class Gui
 
   setBrightnessAndContrast : =>
     @model.binary["color"].updateContrastCurve(@settings.brightness, @settings.contrast)
-    
+
     @user.brightness[@datasetPosition] = (Number) @settings.brightness
     @user.contrast[@datasetPosition] = (Number) @settings.contrast
     @user.push()

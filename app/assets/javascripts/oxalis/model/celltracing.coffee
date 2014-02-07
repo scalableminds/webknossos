@@ -1,6 +1,7 @@
 ### define
 jquery : $
 underscore : _
+three.color : ColorConverter
 ../../libs/request : Request
 ../../libs/event_mixin : EventMixin
 ./tracepoint : TracePoint
@@ -8,7 +9,6 @@ underscore : _
 ./statelogger : StateLogger
 ../constants : constants
 ./tracingparser : TracingParser
-libs/threejs/ColorConverter : ColorConverter
 ###
 
 class CellTracing
@@ -19,7 +19,7 @@ class CellTracing
   # Max and min radius in base voxels (see scaleInfo.baseVoxel)
   MIN_RADIUS        : 1
   MAX_RADIUS        : 1000
-  
+
   branchStack : []
   trees : []
   comments : []
@@ -44,9 +44,9 @@ class CellTracing
     ############ Load Tree from @data ##############
 
     @stateLogger = new StateLogger(this, @flycam, tracing.version, tracing.id, tracing.typ, tracing.restrictions.allowUpdate)
-    
+
     console.log "Annotation data: ", tracing
- 
+
     tracingParser = new TracingParser(@, @data)
     {
       @idCount
@@ -103,7 +103,7 @@ class CellTracing
 
     @stateLogger.pushNow()
 
-    
+
   benchmark : (numberOfTrees = 1, numberOfNodesPerTree = 10000) ->
 
     console.log "[benchmark] start inserting #{numberOfNodesPerTree} nodes"
@@ -226,7 +226,7 @@ class CellTracing
       @doubleBranchPop = false
 
       @stateLogger.createNode(point, @activeTree.treeId)
-      
+
       @trigger("newNode", centered)
       @trigger("newActiveNode")
     else
@@ -253,7 +253,7 @@ class CellTracing
   getActiveNode : -> @activeNode
 
 
-  getActiveNodeId : -> 
+  getActiveNodeId : ->
 
     if @activeNode then @activeNode.id else null
 
@@ -286,7 +286,7 @@ class CellTracing
       else
         @activeTree.name = "Tree#{('00'+@activeTree.treeId).slice(-3)}"
       @stateLogger.updateTree(@activeTree)
-      
+
       @trigger("newTreeName")
 
 
@@ -377,7 +377,7 @@ class CellTracing
     if not ascendingOrder
       return @comments.reverse()
     return @comments
-    
+
 
   getPlainComments : =>
 
@@ -444,8 +444,8 @@ class CellTracing
   createNewTree : ->
 
     tree = new TraceTree(
-      @treeIdCount++, 
-      @getNewTreeColor(@treeIdCount-1), 
+      @treeIdCount++,
+      @getNewTreeColor(@treeIdCount-1),
       "Tree#{('00'+(@treeIdCount-1)).slice(-3)}",
       (new Date()).getTime())
     @trees.push(tree)
@@ -474,7 +474,7 @@ class CellTracing
     @stateLogger.deleteNode(deletedNode, @activeTree.treeId)
 
     @deleteBranch(deletedNode)
-    
+
     if deletedNode.neighbors.length > 1
       # Need to split tree
       newTrees = []
@@ -503,7 +503,7 @@ class CellTracing
       # this deferred will be resolved once the skeleton has finished reloading the trees
       @finishedDeferred = new $.Deferred()
       @trigger("reloadTrees", newTrees, @finishedDeferred)
-        
+
     else if @activeNode.neighbors.length == 1
       # no children, so just remove it.
       @setActiveNode(deletedNode.neighbors[0].id)
@@ -542,7 +542,7 @@ class CellTracing
 
     @stateLogger.deleteTree(tree)
     @trigger("deleteTree", index)
-    
+
     # Because we always want an active tree, check if we need
     # to create one.
     if @trees.length == 0
@@ -567,7 +567,7 @@ class CellTracing
         # update tree ids
         for node in @activeTree.nodes
           node.treeId = @activeTree.treeId
-        
+
         @stateLogger.mergeTree(lastTree, @activeTree, lastNode.id, activeNodeID)
 
         @trigger("mergeTree", lastTree.treeId, lastNode, @activeNode)

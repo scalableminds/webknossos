@@ -207,8 +207,8 @@ class Controller
         "shift + 4" : =>
           @setMode(constants.MODE_VOLUME)
 
-	"t" : =>
-	  @view.toggleTheme()
+        "t" : =>
+          @view.toggleTheme()
           @abstractTreeController.drawTree()
 
         "m" : => # rotate allowed modes

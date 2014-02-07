@@ -20,14 +20,15 @@ class Tree
     @edges = new THREE.Line(
       edgeGeometry,
       new THREE.LineBasicMaterial({
-	color: @darkenHex( treeColor ),
-        linewidth: @model.user.particleSize / 4}), THREE.LinePieces)
+        color: @darkenHex( treeColor ),
+        linewidth: @model.user.particleSize / 4}, THREE.LinePieces)
+    )
 
     @nodes = new THREE.ParticleSystem(
       nodeGeometry,
       new THREE.ParticleBasicMaterial({
-	vertexColors: true,
-	size: @model.user.particleSize,
+        vertexColors: true,
+        size: @model.user.particleSize,
         sizeAttenuation : false}))
 
     @nodesColorBuffer = new ResizableBuffer(3)

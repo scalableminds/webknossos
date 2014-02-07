@@ -145,10 +145,10 @@ class PlaneController
 
         nmPosition = @model.scaleInfo.voxelToNm(position)
 
-	@controls.target.set(
-	  new THREE.Vector3(nmPosition...)
-	)
-	@controls.update()
+        @controls.target.set(
+          new THREE.Vector3(nmPosition...)
+        )
+        @controls.update()
 
         # As the previous step will also move the camera, we need to
         # fix this by offsetting the viewport
@@ -158,8 +158,8 @@ class PlaneController
           invertedDiff.push( @oldNmPos[i] - nmPosition[i] )
         @oldNmPos = nmPosition
 
-	@cameraController.moveTDView(
-          new THREE.Vector3( invertedDiff... ))
+        @cameraController.moveTDView(
+                new THREE.Vector3( invertedDiff... ))
 
     @cameraController.on
       cameraPositionChanged : =>
@@ -270,14 +270,14 @@ class PlaneController
           @view.addGeometry(geometry)
       removeGeometries : (list, event) =>
         for geometry in list
-	  @view.removeGeometry(geometry)
+          @view.removeGeometry(geometry)
     @sceneController.skeleton.on
       newGeometries : (list, event) =>
         for geometry in list
           @view.addGeometry(geometry)
       removeGeometries : (list, event) =>
         for geometry in list
-	  @view.removeGeometry(geometry)
+          @view.removeGeometry(geometry)
 
 
   render : ->
@@ -414,16 +414,16 @@ class PlaneController
     planeRatio    = @model.scaleInfo.baseVoxelFactors
     position = switch @activeViewport
       when constants.PLANE_XY
-	[ curGlobalPos[0] - (constants.VIEWPORT_WIDTH * scaleFactor / 2 - clickPos.x) / scaleFactor * planeRatio[0] * zoomFactor,
-	  curGlobalPos[1] - (constants.VIEWPORT_WIDTH * scaleFactor / 2 - clickPos.y) / scaleFactor * planeRatio[1] * zoomFactor,
+        [ curGlobalPos[0] - (constants.VIEWPORT_WIDTH * scaleFactor / 2 - clickPos.x) / scaleFactor * planeRatio[0] * zoomFactor,
+          curGlobalPos[1] - (constants.VIEWPORT_WIDTH * scaleFactor / 2 - clickPos.y) / scaleFactor * planeRatio[1] * zoomFactor,
           curGlobalPos[2] ]
       when constants.PLANE_YZ
-	[ curGlobalPos[0],
-	  curGlobalPos[1] - (constants.VIEWPORT_WIDTH * scaleFactor / 2 - clickPos.y) / scaleFactor * planeRatio[1] * zoomFactor,
+         [ curGlobalPos[0],
+          curGlobalPos[1] - (constants.VIEWPORT_WIDTH * scaleFactor / 2 - clickPos.y) / scaleFactor * planeRatio[1] * zoomFactor,
           curGlobalPos[2] - (constants.VIEWPORT_WIDTH * scaleFactor / 2 - clickPos.x) / scaleFactor * planeRatio[2] * zoomFactor ]
       when constants.PLANE_XZ
-	[ curGlobalPos[0] - (constants.VIEWPORT_WIDTH * scaleFactor / 2 - clickPos.x) / scaleFactor * planeRatio[0] * zoomFactor,
-	  curGlobalPos[1],
+        [ curGlobalPos[0] - (constants.VIEWPORT_WIDTH * scaleFactor / 2 - clickPos.x) / scaleFactor * planeRatio[0] * zoomFactor,
+          curGlobalPos[1],
           curGlobalPos[2] - (constants.VIEWPORT_WIDTH * scaleFactor / 2 - clickPos.y) / scaleFactor * planeRatio[2] * zoomFactor ]
 
 

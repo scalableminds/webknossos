@@ -471,9 +471,9 @@ class Input.Gamepad
             value = @gamepad[button]
             callback -@filterDeadzone(value)
 
-	  else if button in ["leftStickY", "rightStickY"]
-            value = @gamepad[button]
-            callback @filterDeadzone(value)
+          else if button in ["leftStickY", "rightStickY"]
+                  value = @gamepad[button]
+                  callback @filterDeadzone(value)
           #buttons
           else
             callback()

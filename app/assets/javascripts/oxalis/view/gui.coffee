@@ -237,7 +237,7 @@ class Gui
     @user.pushImpl()
     if @restrictions.allowUpdate
       @model.cellTracing.pushNow()
-	.then(
+        .then(
           -> Toast.success("Saved!")
           -> Toast.error("Couldn't save. Please try again.")
         )

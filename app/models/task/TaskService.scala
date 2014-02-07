@@ -8,6 +8,8 @@ import braingames.util.FoxImplicits
 import play.api.libs.concurrent.Execution.Implicits._
 import models.user.Experience
 import scala.concurrent.Future
+import play.api.Logger
+import reactivemongo.core.commands.LastError
 
 /**
  * Company: scalableminds
@@ -23,8 +25,13 @@ object TaskService extends TaskAssignmentSimulation with TaskAssignment with Fox
   def findAllNonTrainings(implicit ctx: DBAccessContext) = TaskDAO.findAllNonTrainings
 
   def remove(_task: BSONObjectID)(implicit ctx: DBAccessContext) = {
-    AnnotationDAO.removeAllWithTaskId(_task)
-    TaskDAO.removeById(_task)
+    TaskDAO.removeById(_task).flatMap{
+      case result if result.n > 0 =>
+        AnnotationDAO.removeAllWithTaskId(_task)
+      case _ =>
+        Logger.warn("Tried to remove task without permission.")
+        Future.successful(LastError(false ,None, None, None, None, 0, false))
+    }
   }
 
   def toTrainingForm(t: Task): Option[(String, Training)] =

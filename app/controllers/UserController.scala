@@ -6,7 +6,6 @@ import models.task._
 import models.annotation._
 import play.api.libs.json.Json._
 import play.api.libs.json._
-import models.security.{RoleDAO, Role}
 import play.api.i18n.Messages
 import oxalis.user.UserCache
 import play.api.libs.concurrent.Execution.Implicits._
@@ -14,14 +13,23 @@ import views._
 import braingames.util.ExtendedTypes.ExtendedList
 import braingames.util.ExtendedTypes.ExtendedBoolean
 import play.api.Logger
-import braingames.binary.models.DataSet
+import models.binary.DataSet
 import scala.concurrent.Future
 import braingames.util.{Fox, FoxImplicits}
+import models.user.time.{TimeTracking, TimeTrackingService}
+import models.team.TeamMembership
+import play.api.libs.functional.syntax._
+import play.api.templates.Html
+import braingames.util.ExtendedTypes.ExtendedString
 
 object UserController extends Controller with Secured with Dashboard {
-  override val DefaultAccessRole = RoleDAO.User
 
-  def dashboard = Authenticated().async {
+  def empty = Authenticated{ implicit request =>
+    Ok(views.html.main()(Html.empty))
+  }
+
+  // HTML actions
+  def dashboard = Authenticated.async {
     implicit request => {
       dashboardInfo(request.user).map { info =>
         Ok(html.user.dashboard.userDashboard(info))
@@ -29,12 +37,9 @@ object UserController extends Controller with Secured with Dashboard {
     }
   }
 
-  def getDashboardInfo = Authenticated().async {
+  def getDashboardInfo = Authenticated.async {
     implicit request => {
       val futures = dashboardInfo(request.user).map { info =>
-
-      // TODO: move dataSetFormat into braingames-libs and bump the necessary version
-        implicit val dataSetFormat = Json.format[DataSet]
 
         val loggedTime = info.loggedTime.map { case (paymentInterval, duration) =>
           // TODO make formatTimeHumanReadable(duration) (?) work
@@ -52,7 +57,7 @@ object UserController extends Controller with Secured with Dashboard {
           exploratoryList <- Future.traverse(info.exploratory)(Annotation.transformToJson(_))
         } yield {
           Json.obj(
-            "user" -> info.user,
+            "user" -> Json.toJson(info.user)(User.userPublicWrites(request.user)),
             "loggedTime" -> loggedTime,
             "dataSets" -> info.dataSets,
             "hasAnOpenTask" -> info.hasAnOpenTask,
@@ -69,28 +74,84 @@ object UserController extends Controller with Secured with Dashboard {
     }
   }
 
-  def saveSettings = Authenticated().async(parse.json(maxLength = 2048)) { implicit request =>
-    (for {
-      settings <- request.body.asOpt[JsObject] ?~> Messages("user.settings.invalid")
-      if (UserSettings.isValid(settings))
-      _ <- UserService.updateSettings(request.user, UserSettings(settings.fields.toMap))
+  def show(userId: String) = Authenticated.async { implicit request =>
+    for {
+      user <- UserDAO.findOneById(userId) ?~> Messages("user.notFound")
+      _ <- allowedToAdministrate(request.user, user).toFox
+      loggedTime <- TimeTrackingService.loggedTime(user)
+      info <- dashboardInfo(user)
+    } yield Ok(html.admin.user.user(info))
+  }
+
+  // REST API
+  def list = Authenticated.async{ implicit request =>
+    for{
+      users <- UserDAO.findAll
     } yield {
-      UserCache.invalidateUser(request.user.id)
-      JsonOk(Messages("user.settings.updated"))
-    }) ~> Messages("user.settings.invalid")
-  }
-
-  def showSettings = UserAwareAction { implicit request =>
-    val configuration = request.userOpt match {
-      case Some(user) =>
-        user.configuration.settingsOrDefaults
-      case _ =>
-        UserSettings.defaultSettings.settings
+      val filtered = request.getQueryString("isEditable").flatMap(_.toBooleanOpt) match{
+        case Some(isEditable) =>
+          users.filter(_.isEditableBy(request.user) == isEditable)
+        case None =>
+          users
+      }
+      Ok(Writes.list(User.userPublicWrites(request.user)).writes(filtered))
     }
-    Ok(toJson(configuration))
   }
 
-  def defaultSettings = Authenticated() { implicit request =>
-    Ok(toJson(UserSettings.defaultSettings.settings))
+  def logTime(userId: String, time: String, note: String) = Authenticated.async { implicit request =>
+    for {
+      user <- UserDAO.findOneById(userId) ?~> Messages("user.notFound")
+      _ <- allowedToAdministrate(request.user, user).toFox
+      time <- TimeTracking.parseTime(time) ?~> Messages("time.invalidFormat")
+    } yield {
+      TimeTrackingService.logTime(user, time, note)
+      JsonOk
+    }
   }
+
+  def delete(userId: String) = Authenticated.async { implicit request =>
+    for {
+      user <- UserDAO.findOneById(userId) ?~> Messages("user.notFound")
+      _ <- allowedToAdministrate(request.user, user).toFox
+      _ <- UserService.removeFromAllPossibleTeams(user, request.user)
+    } yield {
+      JsonOk(Messages("user.deleted", user.name))
+    }
+  }
+
+  val userUpdateReader =
+    ((__ \ "firstName").read[String] and
+      (__ \ "lastName").read[String] and
+      (__ \ "verified").read[Boolean] and
+      (__ \ "teams").read[List[TeamMembership]] and
+      (__ \ "experiences").read[Map[String, Int]]).tupled
+
+  def update(userId: String) = Authenticated.async(parse.json) { implicit request =>
+    val issuingUser = request.user
+    request.body.validate(userUpdateReader) match{
+      case JsSuccess((firstName, lastName, verified, assignedTeams, experiences), _) =>
+        for{
+          user <- UserDAO.findOneById(userId) ?~> Messages("user.notFound")
+          _ <- allowedToAdministrate(issuingUser, user).toFox
+
+        } yield {
+          val updatedTeams = assignedTeams.filter(t => issuingUser.adminTeamNames.contains(t.team))
+          val teams = user.teams.filterNot(t => updatedTeams.exists(_.team == t.team)) ::: updatedTeams
+          UserService.update(user, firstName, lastName, verified, teams, experiences)
+          Ok
+        }
+      case e: JsError =>
+        Logger.warn("User update, client sent invalid json: " + e)
+        Future.successful(BadRequest(JsError.toFlatJson(e)))
+    }
+  }
+
+  //  def loginAsUser(userId: String) = Authenticated(permission = Some(Permission("admin.ghost"))).async { implicit request =>
+  //    for {
+  //      user <- UserDAO.findOneById(userId) ?~> Messages("user.notFound")
+  //    } yield {
+  //      Redirect(controllers.routes.UserController.dashboard)
+  //      .withSession(Secured.createSession(user))
+  //    }
+  //  }
 }

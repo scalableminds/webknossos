@@ -11,6 +11,7 @@ import oxalis.annotation.handler.AnnotationInformationHandler
 import braingames.reactivemongo.DBAccessContext
 import braingames.util.Fox
 import play.api.libs.json.Json
+import models.user.User
 
 case class AnnotationIdentifier(annotationType: String, identifier: String)
 
@@ -18,7 +19,7 @@ object AnnotationIdentifier{
   implicit val annotationIdentifierFormat = Json.format[AnnotationIdentifier]
 }
 
-case class RequestAnnotation(id: AnnotationIdentifier, implicit val ctx: DBAccessContext)
+case class RequestAnnotation(id: AnnotationIdentifier, user: Option[User], implicit val ctx: DBAccessContext)
 
 case class StoredResult(result: Fox[AnnotationLike], timestamp: Long = System.currentTimeMillis)
 
@@ -45,13 +46,13 @@ class AnnotationStore extends Actor {
   }
 
   def receive = {
-    case RequestAnnotation(id, ctx) =>
+    case RequestAnnotation(id, user, ctx) =>
       val s = sender
       cachedAnnotations()
         .get(id)
         .filterNot(isExpired(maxCacheTime))
         .map(_.result)
-        .getOrElse(requestAnnotation(id)(ctx))
+        .getOrElse(requestAnnotation(id, user)(ctx))
         .futureBox
         .map {
         result =>
@@ -66,11 +67,11 @@ class AnnotationStore extends Actor {
   def isExpired(maxAge: Duration)(result: StoredResult) =
     System.currentTimeMillis - result.timestamp > maxAge.toMillis
 
-  def requestAnnotation(id: AnnotationIdentifier)(implicit ctx: DBAccessContext) = {
+  def requestAnnotation(id: AnnotationIdentifier, user: Option[User])(implicit ctx: DBAccessContext) = {
     try {
       val handler = AnnotationInformationHandler.informationHandlers(id.annotationType)
       val f: Fox[AnnotationLike] =
-        handler.provideAnnotation(id.identifier)
+        handler.provideAnnotation(id.identifier, user)
       if (handler.cache) {
         val stored = StoredResult(f)
         cachedAnnotations.send(_ + (id -> stored))

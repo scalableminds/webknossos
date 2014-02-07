@@ -1,7 +1,7 @@
 package oxalis.nml
 
 import scala.xml.XML
-import braingames.binary.models.DataSet
+import models.binary.DataSet
 import braingames.image.Color
 import braingames.util.ExtendedTypes.ExtendedString
 import braingames.geometry.Point3D

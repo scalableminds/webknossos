@@ -1,7 +1,10 @@
-@(taskTypeForm: Form[_])
+@(teams: List[String], taskTypeForm: Form[_])
 @import models.annotation.AnnotationSettings
 
 @helper.inputText(taskTypeForm("summary"))
+@helper.select(taskTypeForm("team"), teams.map { t =>
+  t -> t
+})
 @helper.textarea(taskTypeForm("description"))
 
 @helper.checkbox(field = taskTypeForm("allowedModes[]"), 'value-> AnnotationSettings.OXALIS, '_label -> "Allow Oxalis", 'checked -> "checked")

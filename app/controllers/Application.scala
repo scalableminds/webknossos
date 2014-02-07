@@ -4,17 +4,13 @@ import oxalis.security.Secured
 import play.api.mvc.Action
 import play.api._
 import play.api.libs.concurrent.Akka
-import akka.actor.Props
-import braingames.mail.Mailer
-import views.html
-import models.binary.DataSetDAO
 import scala.concurrent.Future
 import models.user.{UsedAnnotationDAO, UsedAnnotation}
 import models.basics.Implicits._
 import play.api.libs.concurrent.Execution.Implicits._
+import play.api.templates.Html
 
 object Application extends Controller with Secured {
-  override val DefaultAccessRole = None
   lazy val app = play.api.Play.current
 
   lazy val version = scala.io.Source.fromFile("version").mkString.trim
@@ -61,6 +57,10 @@ object Application extends Controller with Secured {
       case _ =>
         Future.successful(Redirect(routes.DataSetController.list))
     }
+  }
+
+  def emptyMain = Authenticated { implicit request =>
+    Ok(views.html.main()(Html.empty))
   }
 
   def impressum = UserAwareAction { implicit request =>

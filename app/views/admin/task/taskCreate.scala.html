@@ -1,4 +1,4 @@
-@(taskTypes: List[models.task.TaskType], dataSets: List[braingames.binary.models.DataSet], experiences: List[String], projects: List[models.task.Project], nmlForm: Form[(String, models.user.Experience, Int, Int, String)], taskForm: Form[(String, String, braingames.geometry.Point3D, models.user.Experience, Int, Int, String)])(implicit session: oxalis.view.AuthedSessionData)
+@(taskTypes: List[models.task.TaskType], dataSets: List[models.binary.DataSet], experiences: List[String], projects: List[models.task.Project], teams: List[String], nmlForm: Form[(String, models.user.Experience, Int, Int, String, String)], taskForm: Form[(String, String, braingames.geometry.Point3D, models.user.Experience, Int, Int, String, String)])(implicit session: oxalis.view.AuthedSessionData)
 
 @main(){
   <div class="container">
@@ -8,7 +8,7 @@
       Every nml creates a new task. You can either upload a single NML file or a zipped collection of nml files (.zip).<br /><br />
       @helper.form(controllers.admin.routes.TaskAdministration.createFromNML, 'class -> "form-horizontal", 'enctype -> "multipart/form-data") {
 
-        @basicTaskForm(nmlForm, taskTypes, experiences, projects)
+        @basicTaskForm(nmlForm, taskTypes, experiences, projects, teams)
 
         <div class="control-group">
           <label class="control-label" for="nmlFile">@Messages("nmlFile")</label>
@@ -27,10 +27,10 @@
     <div class="well">
       @helper.form(controllers.admin.routes.TaskAdministration.createFromForm, 'class -> "form-horizontal") {
 
-        @basicTaskForm(nmlForm, taskTypes, experiences, projects)
+        @basicTaskForm(nmlForm, taskTypes, experiences, projects, teams)
 
         @helper.select(taskForm("dataSet"), dataSets.map { dataSet =>
-          dataSet.name -> dataSet.name 
+          dataSet.dataSource.name -> dataSet.dataSource.name
         })
 
         @helper.inputText(taskForm("start.point"), 'type -> "text")
@@ -44,8 +44,8 @@
     <h3>Import Tasks in Bulk</h3>
 
     <div class="well">
-      One line for each task. The values are seperated by a space. Format: <br />
-      dataSet taskTypeSummary experienceDomain minExperience x y z priority instances (opt: project)<br /><br />
+      One line for each task. The values are seperated by ','. Format: <br />
+      dataSet, taskTypeSummary, experienceDomain, minExperience, x, y, z, priority, instances, team, (opt: project)<br /><br />
       @helper.form(controllers.admin.routes.TaskAdministration.createBulk){
         <textarea class="input-fullwidth input-monospace" rows="20" name="data"></textarea>
         <div class="form-actions">

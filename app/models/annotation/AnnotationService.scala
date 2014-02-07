@@ -11,7 +11,7 @@ import braingames.geometry.Point3D
 import reactivemongo.bson.BSONObjectID
 import models.annotation.AnnotationType._
 import scala.Some
-import braingames.binary.models.DataSet
+import models.binary.DataSet
 import oxalis.nml.NML
 import braingames.mvc.BoxImplicits
 
@@ -31,6 +31,7 @@ object AnnotationService extends AnnotationContentProviders with BoxImplicits wi
         annotation = Annotation(
           user._id,
           contentReference,
+          team = user.teams.head.team, // TODO: refactor
           typ = AnnotationType.Explorational,
           state = AnnotationState.InProgress
         )
@@ -91,7 +92,7 @@ object AnnotationService extends AnnotationContentProviders with BoxImplicits wi
     for {
       tracing <- SkeletonTracingService.createFrom(dataSetName, start, true, settings)
       content = ContentReference.createFor(tracing)
-      _ <- AnnotationDAO.insert(Annotation(userId, content, typ = AnnotationType.TracingBase, _task = Some(task._id)))
+      _ <- AnnotationDAO.insert(Annotation(userId, content, team = task.team, typ = AnnotationType.TracingBase, _task = Some(task._id)))
     } yield tracing
   }
 
@@ -99,7 +100,7 @@ object AnnotationService extends AnnotationContentProviders with BoxImplicits wi
     SkeletonTracingService.createFrom(nml, settings).toFox.map {
       tracing =>
         val content = ContentReference.createFor(tracing)
-        AnnotationDAO.insert(Annotation(userId, content, typ = AnnotationType.TracingBase, _task = Some(task._id)))
+        AnnotationDAO.insert(Annotation(userId, content, team = task.team, typ = AnnotationType.TracingBase, _task = Some(task._id)))
     }
   }
 
@@ -109,10 +110,11 @@ object AnnotationService extends AnnotationContentProviders with BoxImplicits wi
       _task = Some(_task)).muta.copyDeepAndInsert()
   }
 
-  def createFrom(_user: BSONObjectID, content: AnnotationContent, annotationType: AnnotationType, name: Option[String])(implicit ctx: DBAccessContext) = {
+  def createFrom(_user: BSONObjectID, team: String, content: AnnotationContent, annotationType: AnnotationType, name: Option[String])(implicit ctx: DBAccessContext) = {
     val annotation = Annotation(
       _user,
       ContentReference.createFor(content),
+      team = team,
       _name = name,
       typ = annotationType)
 

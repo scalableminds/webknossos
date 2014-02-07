@@ -6,7 +6,7 @@ require.config
     "jquery" : "libs/jquery-1.8.3.min"
     "multiselect" : "libs/bootstrap-multiselect"
     "slider" : "libs/bootstrap-slider"
-    "underscore" : "libs/lodash-1.3.1"
+    "underscore" : "libs/lodash-2.2.1"
     "bootstrap" : "libs/bootstrap.min"
     "worker" : "libs/worker_plugin"
     "three": "libs/threejs/three"
@@ -18,6 +18,9 @@ require.config
     "dat" : "libs/dat.gui.min"
     "coffee-script" : "libs/coffee-script-1.4.0.min"
     "qassert" : "libs/qassert"
+    "backbone" : "libs/backbone"
+    "backbone.marionette" : "libs/backbone.marionette"
+    "moment" : "libs/moment.min"
 
   shim :
     "underscore" :
@@ -40,6 +43,8 @@ require.config
     "m4x4" :
       exports : "M4x4"
     "qassert" : [ "jquery" ]
+    "backbone" : [ "underscore" ]
+    "backbone.marionette" : [ "backbone", "underscore" ]
 
 require [
   "jquery"

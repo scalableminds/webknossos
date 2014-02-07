@@ -64,7 +64,7 @@ class TeamRoleModal extends Backbone.Marionette.CompositeView
             return {
               team : $(element).val()
               role :
-                name: $(element).parent().parent().find("select   :selected").val()
+                name: $(element).parent().parent().parent().find("select   :selected").val()
             }
           )
 

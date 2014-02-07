@@ -102,7 +102,7 @@ $ ->
         return
 
 
-    "views.html.admin.binary.binaryData" : ->
+    "views.html.admin.binary.dataSetList" : ->
 
       $modal = $(".modal")
       $modal.find(".btn-primary").on "click", -> submitTeams()

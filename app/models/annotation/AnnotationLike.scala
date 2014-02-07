@@ -69,14 +69,13 @@ object AnnotationLike extends FoxImplicits with FilterableJson{
     val lastReviewer = annotation.review.headOption.map(_._reviewer)
     annotation.state match {
       case s if s.isFinished =>
-	"Finished"
+        "Finished"
       case s if lastReviewer != user.map(_._id) && s.isInReview =>
-	"Under Review"
+        "Under Review"
       case _ =>
-	"In Progress"
+        "In Progress"
     }
   }
-
 
   def annotationLikeInfoWrites(a: AnnotationLike, user: Option[User], exclude: List[String])(implicit ctx: DBAccessContext): Fox[JsObject] = {
     JsonObjectWithFilter(exclude)(

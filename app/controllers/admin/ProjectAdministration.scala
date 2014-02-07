@@ -52,9 +52,12 @@ object ProjectAdministration extends AdminController {
     implicit request =>
       for {
         project <- ProjectDAO.findOneByName(projectName) ?~> Messages("project.notFound")
+        successBox <- ProjectService.remove(project)
       } yield {
-        ProjectService.remove(project)
-        JsonOk(Messages("project.removed"))
+        if (successBox.isEmpty)
+          JsonBadRequest(Messages("project.remove.notAllowed"))
+        else
+          JsonOk(Messages("project.removed"))
       }
   }
 

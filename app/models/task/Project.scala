@@ -13,7 +13,7 @@ import play.api.libs.concurrent.Execution.Implicits._
 import reactivemongo.api.indexes.{IndexType, Index}
 import models.team.Role
 import play.api.Logger
-import reactivemongo.core.commands.LastError
+import net.liftweb.common.{Full, Empty}
 
 case class Project(name: String, team: String, _owner: BSONObjectID) {
   def owner = UserService.findOneById(_owner.stringify, useCache = true)(GlobalAccessContext)
@@ -27,14 +27,14 @@ object Project {
 
 object ProjectService extends FoxImplicits {
   def remove(project: Project)(implicit ctx: DBAccessContext) = {
-    ctx.data match{
-      case Some(user: User) if user._id == project._owner => {
-        ProjectDAO.remove("name", project.name)
+    ProjectDAO.remove("name", project.name).flatMap{
+      case result if result.n > 0 => {
         TaskDAO.removeAllWithProject(project)
+        Future.successful(Full(None))
       }
       case _ => {
         Logger.warn("Tried to remove project without permission.")
-        Future.successful(LastError(false, None, None, None, None, 0, false))
+        Future.successful(Empty)
       }
     }
   }
@@ -64,7 +64,7 @@ object ProjectDAO extends SecuredBaseDAO[Project] {
   override def removeQueryFilter(implicit ctx: DBAccessContext) = {
     ctx.data match{
       case Some(user: User) =>
-        AllowIf(Json.obj("team" -> Json.obj("$in" -> user.adminTeamNames)))
+        AllowIf(Json.obj("_owner" -> user._id))
       case _ =>
         DenyEveryone()
     }

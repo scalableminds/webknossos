@@ -82,6 +82,7 @@ priority=Priority
 project=Project
 projectName=Project Name
 project.remove.confirm=Do you really want to delete this project? All tracings and tasks connected to this project will be deleted.
+project.remove.notAllowed=You are not allowed to remove this project.
 project.removed=Project got removed
 project.notFound=Project couldn''t be found
 project.nameAlreadyInUse=Name already used

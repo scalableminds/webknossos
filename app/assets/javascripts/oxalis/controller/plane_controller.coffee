@@ -145,9 +145,7 @@ class PlaneController
 
         nmPosition = @model.scaleInfo.voxelToNm(position)
 
-        @controls.target.set(
-          new THREE.Vector3(nmPosition...)
-        )
+        @controls.target.set( nmPosition... )
         @controls.update()
 
         # As the previous step will also move the camera, we need to

@@ -9,9 +9,10 @@ class Tree
   constructor : (treeId, treeColor, @model) ->
     # create cellTracing to show in TDView and pre-allocate buffers
 
-    edgeGeometry = new THREE.Geometry()
+    edgeGeometry = new THREE.BufferGeometry()
     nodeGeometry = new THREE.BufferGeometry()
 
+    edgeGeometry.addAttribute( 'position', Float32Array, 0, 3 )
     nodeGeometry.addAttribute( 'position', Float32Array, 0, 3 )
     nodeGeometry.addAttribute( 'size', Float32Array, 0, 1 )
     nodeGeometry.addAttribute( 'color', Float32Array, 0, 3 )
@@ -20,7 +21,7 @@ class Tree
     edgeGeometry.dynamic = true
     nodeGeometry.dynamic = true
 
-    @edgesBuffer = new ResizableBuffer(6)
+    @edgesBuffer = edgeGeometry.attributes.position._rBuffer = new ResizableBuffer(6)
     @nodesBuffer = nodeGeometry.attributes.position._rBuffer = new ResizableBuffer(3)
     @sizesBuffer = nodeGeometry.attributes.size._rBuffer = new ResizableBuffer(1)
     @nodesColorBuffer = nodeGeometry.attributes.color._rBuffer = new ResizableBuffer(3)
@@ -224,17 +225,12 @@ class Tree
 
   updateGeometries : ->
 
-    @edges.geometry.__vertexArray        = @edgesBuffer.getBuffer()
-    @edges.geometry.__webglLineCount     = @edgesBuffer.getLength() * 2
-
-    @edges.geometry.verticesNeedUpdate   = true
-
-    attributes = @nodes.geometry.attributes
-    for attr of attributes
-      a = attributes[attr]
-      a.array       = a._rBuffer.getBuffer()
-      a.numItems    = a._rBuffer.getBufferLength()
-      a.needsUpdate = a._rBuffer.getBufferLength()
+    for mesh in [ @edges, @nodes ]
+      for attr of mesh.geometry.attributes
+        a = mesh.geometry.attributes[attr]
+        a.array       = a._rBuffer.getBuffer()
+        a.numItems    = a._rBuffer.getBufferLength()
+        a.needsUpdate = a._rBuffer.getBufferLength()
 
 
   #### Color utility methods

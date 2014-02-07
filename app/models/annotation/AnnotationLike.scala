@@ -66,7 +66,6 @@ object AnnotationLike extends FoxImplicits {
   def annotationLikeInfoWrites(a: AnnotationLike, user: Option[User])(implicit ctx: DBAccessContext): Fox[JsObject] = {
     for {
       contentJs <- a.content.flatMap(AnnotationContent.writeAsJson(_))
-      restrictionsJs <- AnnotationRestrictions.writeAsJson(a.restrictions, user).toFox
     } yield {
       val name = a._name.getOrElse("")
       Json.obj(
@@ -75,7 +74,7 @@ object AnnotationLike extends FoxImplicits {
         "name" -> name,
         "typ" -> a.typ,
         "content" -> contentJs,
-        "restrictions" -> restrictionsJs)
+        "restrictions" -> AnnotationRestrictions.writeAsJson(a.restrictions, user))
     }
   }
 

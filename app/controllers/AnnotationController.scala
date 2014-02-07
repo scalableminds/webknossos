@@ -122,7 +122,7 @@ object AnnotationController extends Controller with Secured with TracingInformat
         annotation =>
           for {
             annotationName <- nameAnnotation(annotation) ?~> Messages("annotation.name.impossible")
-            _ <- annotation.restrictions.allowDownload(request.user) failIfFalse Messages("annotation.download.notAllowed")
+            _ <- annotation.restrictions.allowDownload(request.user).failIfFalse(Messages("annotation.download.notAllowed")).toFox
             content <- annotation.content ?~> Messages("annotation.content.empty")
             stream <- content.toDownloadStream
           } yield {

@@ -64,7 +64,7 @@
             <td class="nowrap">
               <a href="<%= controllers.AnnotationController.trace('CompoundProject', element.name).url %>" title="view all finished tracings"><i class="icon-random"></i> view</a><br />
               <a href="<%= controllers.admin.NMLIO.projectDownload(element.name).url %>" title="download all finished tracings"><i class="icon-download"></i> download</a><br />
-              <a href="<%= controllers.admin.ProjectAdministration.delete(element.name).url %>" data-ajax="delete-row,confirm"><i class="icon-trash"></i> delete </a>
+              <a href="<%= controllers.admin.ProjectAdministration.delete(element.name).url %>" data-ajax="delete-row,confirm=@Messages("project.remove.confirm")"><i class="icon-trash"></i> delete </a>
             </td>
           </tr>
           <tr class="details-row hide" >

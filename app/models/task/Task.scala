@@ -149,6 +149,12 @@ object TaskDAO extends SecuredBaseDAO[Task] with FoxImplicits {
     super.removeById(bson)
   }
 
+  def removeAllWithProject(project: Project)(implicit ctx: DBAccessContext) = {
+    project.tasks.map(_.map(task => {
+      removeById(task._id)
+    }))
+  }
+
   def findAllOfOneType(isTraining: Boolean)(implicit ctx: DBAccessContext) =
     collectionFind(Json.obj("training" -> Json.obj("$exists" -> isTraining))).cursor[Task].collect[List]()
 

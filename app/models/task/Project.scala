@@ -24,8 +24,10 @@ object Project {
 }
 
 object ProjectService extends FoxImplicits {
-  def remove(project: Project)(implicit ctx: DBAccessContext) =
+  def remove(project: Project)(implicit ctx: DBAccessContext) = {
+    TaskDAO.removeAllWithProject(project)
     ProjectDAO.remove("name", project.name)
+  }
 
   def insert(name: String, team: String, owner: User)(implicit ctx: DBAccessContext) =
     ProjectDAO.insert(Project(name, team, owner._id))

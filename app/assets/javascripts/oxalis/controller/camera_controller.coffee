@@ -193,10 +193,13 @@ class CameraController
     # moves camera by the nm vector
     camera = @cameras[constants.TDView]
 
-    rotation = camera.rotation.clone().negate()
-    eulerOrder = camera.eulerOrder.split("").reverse().join("")       # reverse order
+    rotation = THREE.Vector3.prototype.multiplyScalar.call(
+      camera.rotation.clone(), -1
+    )
+    # reverse euler order
+    rotation.order = rotation.order.split("").reverse().join("")
     
-    nmVector.applyEuler( rotation , eulerOrder )
+    nmVector.applyEuler( rotation )
     @moveTDViewRaw( nmVector )
 
 

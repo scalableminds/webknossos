@@ -57,9 +57,9 @@ class SceneController
     for i in [constants.PLANE_XY, constants.PLANE_YZ, constants.PLANE_XZ]
       @planes[i] = new Plane(constants.PLANE_WIDTH, constants.TEXTURE_WIDTH, @flycam, i, @model)
 
-    @planes[constants.PLANE_XY].setRotation(new THREE.Vector3( Math.PI , 0, 0))
-    @planes[constants.PLANE_YZ].setRotation(new THREE.Vector3( Math.PI, 1/2 * Math.PI, 0))
-    @planes[constants.PLANE_XZ].setRotation(new THREE.Vector3( - 1/2 * Math.PI, 0, 0))
+    @planes[constants.PLANE_XY].setRotation(new THREE.Euler( Math.PI , 0, 0))
+    @planes[constants.PLANE_YZ].setRotation(new THREE.Euler( Math.PI, 1/2 * Math.PI, 0))
+    @planes[constants.PLANE_XZ].setRotation(new THREE.Euler( - 1/2 * Math.PI, 0, 0))
 
 
   showAllShapes : (min, max) ->

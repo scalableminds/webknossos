@@ -119,7 +119,7 @@ class PlaneView
         @renderer.setViewport(viewport[i][0] * f, viewport[i][1] * f, @curWidth * f, @curWidth * f)
         @renderer.setScissor(viewport[i][0] * f, viewport[i][1] * f, @curWidth * f, @curWidth * f)
         @renderer.enableScissorTest(true)
-        @renderer.setClearColorHex(constants.PLANE_COLORS[i], 1);
+        @renderer.setClearColor(constants.PLANE_COLORS[i], 1);
         @renderer.render @scene, @camera[i]
 
       @flycam.hasChanged = false

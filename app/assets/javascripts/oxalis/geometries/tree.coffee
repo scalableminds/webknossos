@@ -1,6 +1,7 @@
 ### define
 ../../libs/resizable_buffer : ResizableBuffer
 three.color : ColorConverter
+./materials/particle_material_factory : ParticleMaterialFactory
 ###
 
 class Tree
@@ -16,6 +17,8 @@ class Tree
 
     @edgesBuffer = new ResizableBuffer(6)
     @nodesBuffer = new ResizableBuffer(3)
+    @sizesBuffer = new ResizableBuffer(1)
+    @nodesColorBuffer = new ResizableBuffer(3)
 
     @edges = new THREE.Line(
       edgeGeometry,
@@ -24,14 +27,10 @@ class Tree
         linewidth: @model.user.particleSize / 4}, THREE.LinePieces)
     )
 
+    @particleMaterial = new ParticleMaterialFactory(@model).getMaterial()
     @nodes = new THREE.ParticleSystem(
-      nodeGeometry,
-      new THREE.ParticleBasicMaterial({
-        vertexColors: true,
-        size: @model.user.particleSize,
-        sizeAttenuation : false}))
-
-    @nodesColorBuffer = new ResizableBuffer(3)
+      nodeGeometry, @particleMaterial
+    )
 
     @id = treeId
 
@@ -40,6 +39,7 @@ class Tree
 
     @nodesBuffer.clear()
     @edgesBuffer.clear()
+    @sizesBuffer.clear()
     @nodeIDs.clear()
 
 
@@ -51,6 +51,7 @@ class Tree
   addNode : (node) ->
 
     @nodesBuffer.push(node.pos)
+    @sizesBuffer.push([node.radius * 2])
     @nodeIDs.push([node.id])
     @nodesColorBuffer.push( @getColor(node.id) )
 
@@ -87,6 +88,7 @@ class Tree
     # swap IDs and nodes
     swapLast( @nodeIDs, nodesIndex )
     swapLast( @nodesBuffer, nodesIndex )
+    swapLast( @sizesBuffer, nodesIndex )
     swapLast( @nodesColorBuffer, nodesIndex )
 
     # Delete Edge by finding it in the array
@@ -117,6 +119,7 @@ class Tree
     merge("nodeIDs")
     merge("nodesBuffer")
     merge("edgesBuffer")
+    merge("sizesBuffer")
     @edgesBuffer.push( @getEdgeArray(lastNode, activeNode) )
 
     @updateNodesColors()
@@ -186,6 +189,15 @@ class Tree
     @updateColors()
 
 
+  updateNodeRadius : (id, radius) ->
+
+    for i in [0..@nodeIDs.length]
+      if @nodeIDs.get(i) == id
+        @sizesBuffer.set( [radius * 2], i )
+
+    @updateGeometries()
+
+
   getColor : (id, isActiveNode, isBranchPoint) ->
 
     color = @model.cellTracing.getTree(@id).color
@@ -208,12 +220,18 @@ class Tree
     @nodes.geometry.colorsNeedUpdate = true
 
 
+  showRadius : (show) ->
+
+    @particleMaterial.setShowRadius( show )
+
+
   updateGeometries : ->
 
     @edges.geometry.__vertexArray        = @edgesBuffer.getBuffer()
     @edges.geometry.__webglLineCount     = @edgesBuffer.getLength() * 2
     @nodes.geometry.__vertexArray        = @nodesBuffer.getBuffer()
     @nodes.geometry.__webglParticleCount = @nodesBuffer.getLength()
+    @particleMaterial.setSizes( @sizesBuffer.getBuffer() )
 
     @edges.geometry.verticesNeedUpdate   = true
     @nodes.geometry.verticesNeedUpdate   = true

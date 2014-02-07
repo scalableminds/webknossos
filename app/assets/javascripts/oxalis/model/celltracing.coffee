@@ -18,7 +18,7 @@ class CellTracing
   TYPE_BRANCH  : constants.TYPE_BRANCH
   # Max and min radius in base voxels (see scaleInfo.baseVoxel)
   MIN_RADIUS        : 1
-  MAX_RADIUS        : 1000
+  MAX_RADIUS        : 5000
 
   branchStack : []
   trees : []
@@ -109,12 +109,12 @@ class CellTracing
     console.log "[benchmark] start inserting #{numberOfNodesPerTree} nodes"
     startTime = (new Date()).getTime()
     offset = 0
-    size = numberOfNodesPerTree / 100
+    size = numberOfNodesPerTree / 10
     for i in [0...numberOfTrees]
       @createNewTree()
       for i in [0...numberOfNodesPerTree]
         pos = [Math.random() * size + offset, Math.random() * size + offset, Math.random() * size + offset]
-        point = new TracePoint(@TYPE_USUAL, @idCount++, pos, null, null, @activeTree.treeId)
+        point = new TracePoint(@TYPE_USUAL, @idCount++, pos, Math.random() * 200, null, @activeTree.treeId)
         @activeTree.nodes.push(point)
         if @activeNode
           @activeNode.appendNext(point)
@@ -208,10 +208,9 @@ class CellTracing
   addNode : (position, type, centered = true) ->
 
     if @ensureDirection(position)
-      unless @lastRadius?
-        @lastRadius = 10 * @scaleInfo.baseVoxel
-        if @activeNode then @lastRadius = @activeNode.radius
-      point = new TracePoint(type, @idCount++, position, @lastRadius, (new Date()).getTime(), @activeTree.treeId)
+      radius = 10 * @scaleInfo.baseVoxel
+      if @activeNode then radius = @activeNode.radius
+      point = new TracePoint(type, @idCount++, position, radius, (new Date()).getTime(), @activeTree.treeId)
       @activeTree.nodes.push(point)
       if @activeNode
         @activeNode.appendNext(point)
@@ -268,6 +267,11 @@ class CellTracing
     if @activeNode then @activeNode.type else null
 
 
+  getActiveNodeRadius : ->
+
+    if @activeNode then @activeNode.radius else 10 * @scaleInfo.baseVoxel
+
+
   getActiveTreeId : ->
 
     if @activeTree then @activeTree.treeId else null
@@ -314,6 +318,15 @@ class CellTracing
 
     if mergeTree
       @mergeTree(lastActiveNode, lastActiveTree)
+
+
+  setActiveNodeRadius : (radius) ->
+
+    if @activeNode?
+      @activeNode.radius = Math.min( @MAX_RADIUS,
+                            Math.max( @MIN_RADIUS, radius ) )
+      @stateLogger.updateNode( @activeNode, @activeNode.treeId )
+      @trigger "newActiveNodeRadius", radius
 
 
   setComment : (commentText) ->

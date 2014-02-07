@@ -56,13 +56,19 @@ class CellTacingController
       @keyboardControls = {}
 
 
-  setParticleSize : (delta) =>
+  setParticleSize : (delta) ->
 
     particleSize = @model.user.particleSize + delta
     particleSize = Math.min(constants.MAX_PARTICLE_SIZE, particleSize)
     particleSize = Math.max(constants.MIN_PARTICLE_SIZE, particleSize)
 
     @model.user.setValue("particleSize", (Number) particleSize)
+
+
+  setRadius : (delta) ->
+
+    @model.cellTracing.setActiveNodeRadius(
+      @model.cellTracing.getActiveNodeRadius() * Math.pow(2 , delta / 10))
  
 
   toggleSkeletonVisibility : =>

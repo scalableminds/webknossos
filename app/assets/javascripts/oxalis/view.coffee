@@ -161,7 +161,7 @@ class View
       <tr><td>C</td><td>Create new tree</td><td>Shift + Alt + Leftclick</td><td>Merge two trees</td></tr>
       <tr><td>T</td><td>Toggle theme</td><td>M</td><td>Toggle mode</td></tr>
       <tr><td>1</td><td>Toggle skeleton visibility</td><td>2</td><td>Toggle inactive tree visibility</td></tr>
-      <tr><td>Shift + Mousewheel</td><td>Change node size</td><td></td><td></td></tr>'
+      <tr><td>Shift + Mousewheel</td><td>Change node radius</td><td></td><td></td></tr>'
 
     TDViewKeys =
       '<tr><th colspan="4">3D-view</th></tr>

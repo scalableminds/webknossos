@@ -299,6 +299,8 @@ class Input.Mouse
       @trigger("scroll", delta, "shift")
     else if event.altKey
       @trigger("scroll", delta, "alt")
+    else if event.ctrlKey
+      @trigger("scroll", delta, "ctrl")
     else
       @trigger("scroll", delta, null)
 

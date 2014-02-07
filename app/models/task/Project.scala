@@ -12,6 +12,8 @@ import net.liftweb.common.Full
 import play.api.libs.concurrent.Execution.Implicits._
 import reactivemongo.api.indexes.{IndexType, Index}
 import models.team.Role
+import play.api.Logger
+import reactivemongo.core.commands.LastError
 
 case class Project(name: String, team: String, _owner: BSONObjectID) {
   def owner = UserService.findOneById(_owner.stringify, useCache = true)(GlobalAccessContext)
@@ -25,8 +27,16 @@ object Project {
 
 object ProjectService extends FoxImplicits {
   def remove(project: Project)(implicit ctx: DBAccessContext) = {
-    TaskDAO.removeAllWithProject(project)
-    ProjectDAO.remove("name", project.name)
+    ctx.data match{
+      case Some(user: User) if user._id == project._owner => {
+        ProjectDAO.remove("name", project.name)
+        TaskDAO.removeAllWithProject(project)
+      }
+      case _ => {
+        Logger.warn("Tried to remove project without permission.")
+        Future.successful(LastError(false, None, None, None, None, 0, false))
+      }
+    }
   }
 
   def insert(name: String, team: String, owner: User)(implicit ctx: DBAccessContext) =

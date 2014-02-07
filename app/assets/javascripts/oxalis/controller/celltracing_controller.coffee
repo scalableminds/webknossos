@@ -58,11 +58,11 @@ class CellTacingController
 
   setParticleSize : (delta) =>
 
-    particleSize = @model.user.particleSize + delta
+    particleSize = @model.user.get("particleSize") + delta
     particleSize = Math.min(constants.MAX_PARTICLE_SIZE, particleSize)
     particleSize = Math.max(constants.MIN_PARTICLE_SIZE, particleSize)
 
-    @model.user.setValue("particleSize", (Number) particleSize)
+    @model.user.set("particleSize", (Number) particleSize)
  
 
   toggleSkeletonVisibility : =>
@@ -70,9 +70,9 @@ class CellTacingController
     @sceneController.toggleSkeletonVisibility()
     # Show warning, if this is the first time to use
     # this function for this user
-    if @model.user.firstVisToggle
+    if @model.user.get("firstVisToggle")
       @view.showFirstVisToggle()
-      @model.user.firstVisToggle = false
+      @model.user.set("firstVisToggle", false)
       @model.user.push()
 
 
@@ -96,7 +96,7 @@ class CellTacingController
 
     # Strg + Rightclick to set new not active branchpoint
     if ctrlPressed and 
-      @model.user.newNodeNewTree == false and 
+      @model.user.get("newNodeNewTree") == false and 
         @model.cellTracing.getActiveNodeType() == constants.TYPE_USUAL
 
       @pushBranch()
@@ -149,7 +149,7 @@ class CellTacingController
 
   addNode : (position, centered) =>
 
-    if @model.user.newNodeNewTree == true
+    if @model.user.get("newNodeNewTree") == true
       @createNewTree()
       # make sure the tree was rendered two times before adding nodes,
       # otherwise our buffer optimizations won't work

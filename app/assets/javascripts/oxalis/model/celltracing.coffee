@@ -389,7 +389,7 @@ class CellTracing
 
   selectNextTree : (forward) ->
 
-    trees = @getTreesSorted(@user.sortTreesByName)
+    trees = @getTreesSorted(@user.get("sortTreesByName"))
     for i in [0...trees.length]
       if @activeTree.treeId == trees[i].treeId
         break
@@ -594,7 +594,7 @@ class CellTracing
 
   getTreesSorted : ->
 
-    if @user.sortTreesByName
+    if @user.get("sortTreesByName")
       return (@trees.slice(0)).sort(@compareNames)
     else
       return (@trees.slice(0)).sort(@compareTimestamps)

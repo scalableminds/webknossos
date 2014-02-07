@@ -212,7 +212,7 @@ class View
 
   updateComments : ->
 
-    comments = @model.cellTracing.getComments( @model.user.sortCommentsAsc )
+    comments = @model.cellTracing.getComments( @model.user.get("sortCommentsAsc") )
     commentList = $("#comment-list")
     commentList.empty()
 
@@ -327,7 +327,7 @@ class View
   updateTreesSortButton : ->
 
     @toggleIconVisibility(
-      @model.user.sortTreesByName,
+      @model.user.get("sortTreesByName"),
       $("#sort-name-icon"),
       $("#sort-id-icon"))
 
@@ -335,7 +335,7 @@ class View
   updateCommentsSortButton : ->
 
     @toggleIconVisibility(
-      @model.user.sortCommentsAsc,
+      @model.user.get("sortCommentsAsc"),
       $("#sort-asc-icon"),
       $("#sort-desc-icon")
     )

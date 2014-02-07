@@ -10,7 +10,6 @@
     "backbone.marionette": "~1.5.1",
     "font-awesome": "~4.0.3",
     "momentjs": "~2.5.0",
-    "threejs": "r57",
     "threejs-stats": "",
     "KeyboardJS": "~0.4.1",
     "dat.gui": "",
@@ -20,7 +19,8 @@
     "jquery-mousewheel": "~3.1.9",
     "gamepad.js": "*",
     "jquery-bootpag": "1.0.4",
-    "tweenjs": "r6"
+    "tweenjs": "r6",
+    "three.js": "git@github.com:georgwiese/three.js.git#bower_include_examples"
   },
   "devDependencies": {}
 }

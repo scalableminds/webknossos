@@ -171,46 +171,14 @@ class Router extends Backbone.Router
 
   taskOverview : ->
 
-    require [ "worker!libs/viz.js", "libs/pan_zoom_svg" ], (VizWorker, PanZoomSVG) ->
+    require ["admin/views/task/task_overview_view"], (TaskOverviewView) =>
 
-      graphSource = $("#graphData").html().replace( /"[^"]+"/gm, (a) -> a.replace(" "," ") )
-      userData = JSON.parse($("#userData").html())
-
-      VizWorker.send(
-        source : graphSource
-        format : "svg"
-        layoutEngine : "neato"
-      ).then(
-        (svgResult) ->
-
-          #remove error messages
-          startIndex = svgResult.indexOf("<?xml")
-          svgResult = svgResult.slice(startIndex, svgResult.length - 1)
-
-          $(".graph").html(svgResult)
-
-          userData.map (user) ->
-            $("#" + user.id + " > text").popover(
-              title: user.name,
-              html: true,
-              trigger: "hover",
-              content: user.tooltip
-            )
-
-          #reset some attributes before invoking panZoom plugin
-          $svg = $(".graph.well").find("svg")
-          $svg[0].removeAttribute("viewBox") #get rid of the troublemaker. messes up transformations
-          $svg[0].setAttribute("width", "#{$(window).width() - 100}px")
-          $svg[0].setAttribute("height", "#{$(window).height() - 50 - $svg.offset().top}px" )
-          $svg.css("max-width", "100%")
-
-          new PanZoomSVG($svg)
-
-          @hideLoading()
-
-        (error) ->
-          $(".graph").html("<i class=\"fa fa-warning-sign\"></i> #{error.replace(/\n/g,"<br>")}")
+      new TaskOverviewView(
+        el : $("#main-container").find("#task-overview")[0]
       )
+
+      return @hideLoading()
+
 
   users : ->
 

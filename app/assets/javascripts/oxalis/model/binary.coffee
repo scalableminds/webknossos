@@ -119,7 +119,9 @@ class Binary
     @queue.clear()
 
 
-  ping = @pingImpl
+  ping : (position, {zoomStep, area, activePlane}) ->
+
+    @pingImpl(position, {zoomStep, area, activePlane})
 
 
   pingImpl : (position, {zoomStep, area, activePlane}) ->

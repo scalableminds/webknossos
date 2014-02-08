@@ -23,6 +23,7 @@ class Binary
   latencies: []
   bucketPerSec: []
   kbPerSec: []
+  lastPingTime: 0
 
   dataSetName : ""
   direction : [0, 0, 0]
@@ -86,17 +87,11 @@ class Binary
       plane.updateContrastCurves(@contrastCurves)
 
 
-  printConnectionInfo : _.once ->
-    @printConnectionInfo = _.throttle(@printConnectionInfoImpl, @PING_THROTTLE_TIME)
-    @printConnectionInfo()
-
-
   printConnectionInfoImpl : ->
 
+    if @layer.name != "color" return
     currentDate = new Date()
     interval = currentDate - @lastPingTime
-    #if @queue.queue and @queue.queue.length > 0
-      #console.log interval, @queueStatus - @queue.queue.length, @queue.queue[0].priority
     @queueStatus = @queue.queue.length
     @lastPingTime = currentDate 
 

@@ -98,7 +98,7 @@ class Binary
     kbPerSecond = @queue.loadedBytes / interval
     bucketsPerSocond = @queue.loadedBuckets * 1000 / interval
     
-    @timestamps.push(currentDate)
+    @timestamps.push(currentDate.getTime())
     @latencies.push(@queue.roundTripTime)
     @kbPerSec.push(kbPerSecond)
     @bucketPerSec.push(bucketsPerSocond)

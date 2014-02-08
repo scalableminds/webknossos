@@ -114,12 +114,21 @@ class PlaneView
       viewport = [[0, @curWidth+20], [@curWidth+20, @curWidth+20], [0, 0], [@curWidth+20, 0]]
       @renderer.autoClear = true
 
+      setupRenderArea = (x, y, width, color) =>
+        @renderer.setViewport x, y, width, width 
+        @renderer.setScissor  x, y, width, width 
+        @renderer.enableScissorTest true 
+        @renderer.setClearColor color, 1 
+
+      setupRenderArea( 0, 0, @renderer.domElement.width, 0xffffff )
+      @renderer.clear()
+
       for i in constants.ALL_VIEWPORTS
         @trigger "renderCam", i
-        @renderer.setViewport(viewport[i][0] * f, viewport[i][1] * f, @curWidth * f, @curWidth * f)
-        @renderer.setScissor(viewport[i][0] * f, viewport[i][1] * f, @curWidth * f, @curWidth * f)
-        @renderer.enableScissorTest(true)
-        @renderer.setClearColor(constants.PLANE_COLORS[i], 1);
+        setupRenderArea(
+          viewport[i][0] * f, viewport[i][1] * f, @curWidth * f,
+          constants.PLANE_COLORS[i]
+        )
         @renderer.render @scene, @camera[i]
 
       @flycam.hasChanged = false

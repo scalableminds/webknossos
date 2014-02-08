@@ -74,12 +74,8 @@ GET           /api/teams                                                     con
 # TODO: those routes need to be renamed!
 # --->
 GET           /admin/tasks/algorithm                                     controllers.admin.TaskAlgorithm.index
-# POST          /admin/tasks/algorithm                                     controllers.admin.TaskAlgorithm.submitAlgorithm
+POST          /admin/tasks/algorithm                                     controllers.admin.TaskAlgorithm.submitAlgorithm
 GET           /admin/tasks/algorithm/:id?use=true                        controllers.admin.TaskAlgorithm.useAlgorithm(id: String)
-
-# GET           /api/algorithms/:id                                        controllers.admin.TaskAlgorithm.read(id: String)
-# POST          /api/algorithms                                            controllers.admin.TaskAlgorithm.create
-GET           /api/algorithms                                            controllers.admin.TaskAlgorithm.list
 # <---
 
 GET           /admin/tasks                                               controllers.admin.TaskAdministration.list

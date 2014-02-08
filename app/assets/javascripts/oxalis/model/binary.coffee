@@ -23,6 +23,11 @@ class Binary
   latencies: []
   bucketPerSec: []
   kbPerSec: []
+  bytesTillLastPing: []
+  bucketTillLastPing: []
+  bytesAbsolute: []
+  bucketAbsolute: []
+
   lastPingTime: 0
 
   dataSetName : ""
@@ -106,6 +111,8 @@ class Binary
     @bucketPerSec.push(bucketsPerSocond)
     @bytesTillLastPing.push(@queue.loadedBytes)
     @bucketTillLastPing.push(@queue.loadedBuckets)
+    @bytesAbsolute.push(@queue.absoluteLoadedBytes)
+    @bucketAbsolute.push(@queue.absoluteLoadedBuckets)
 
     #console.log "PING - latency: ", @queue.roundTripTime, "ms, connection: ", kbPerSecond, "KByte/s, ", bucketsPerSocond, "buckets/s" 
     

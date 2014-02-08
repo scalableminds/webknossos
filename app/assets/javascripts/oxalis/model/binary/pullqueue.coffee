@@ -27,6 +27,8 @@ class PullQueue
     @queue = []
     @loadedBuckets = 0
     @loadedBytes = 0
+    @absoluteLoadedBuckets = 0
+    @absoluteLoadedBytes = 0
 
 
   swap : (a, b) ->
@@ -167,6 +169,8 @@ class PullQueue
 
     @loadedBuckets += bucketCount
     @loadedBytes += byteCount
+    @absoluteLoadedBuckets += bucketCount
+    @absoluteLoadedBytes += byteCount
 
 
   decode : (colors) ->

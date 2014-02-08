@@ -30,7 +30,8 @@ class Tree
       edgeGeometry,
       new THREE.LineBasicMaterial({
         color: @darkenHex( treeColor ),
-        linewidth: @model.user.particleSize / 4}, THREE.LinePieces)
+        linewidth: @model.user.particleSize / 4}),
+      THREE.LinePieces
     )
 
     @particleMaterial = new ParticleMaterialFactory(@model).getMaterial()

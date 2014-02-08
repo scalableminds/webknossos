@@ -86,7 +86,12 @@ class Binary
       plane.updateContrastCurves(@contrastCurves)
 
 
-  printConnectionInfo : ->
+  printConnectionInfo : _.once ->
+    @printConnectionInfo = _.throttle(@printConnectionInfoImpl, @PING_THROTTLE_TIME)
+    @printConnectionInfo()
+
+
+  printConnectionInfoImpl : ->
 
     currentDate = new Date()
     interval = currentDate - @lastPingTime
@@ -114,15 +119,12 @@ class Binary
     @queue.clear()
 
 
-  ping : _.once (position, options) ->
-
-    @ping = _.throttle(@pingImpl, @PING_THROTTLE_TIME)
-    @arbitraryPing(position, options)
+  ping = @pingImpl
 
 
   pingImpl : (position, {zoomStep, area, activePlane}) ->
 
-    @printConnectionInfo()
+    @printConnectionInfoImpl()
 
     if @lastPosition?
       

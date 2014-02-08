@@ -89,7 +89,9 @@ class Binary
 
   printConnectionInfoImpl : ->
 
-    if @layer.name != "color" return
+    if @layer.name != "color"
+      return
+    
     currentDate = new Date()
     interval = currentDate - @lastPingTime
     @queueStatus = @queue.queue.length

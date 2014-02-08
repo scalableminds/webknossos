@@ -19,6 +19,7 @@ class PullQueue
   batchCount : 0
   roundTripTime : 0
   loadedBucketList: []
+  requestedBucketList: []
 
   
   constructor : (@dataSetName, @cube, @dataLayerName, @testData) ->
@@ -102,6 +103,7 @@ class PullQueue
           batch.push bucket
           @cube.requestBucketByZoomedAddress(bucket)
           #console.log "Requested: ", bucket
+          @requestedBucketList.push(bucket)
 
       @pullBatch(batch) if batch.length > 0
 

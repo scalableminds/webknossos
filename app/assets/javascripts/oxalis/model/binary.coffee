@@ -104,6 +104,8 @@ class Binary
     @latencies.push(@queue.roundTripTime)
     @kbPerSec.push(kbPerSecond)
     @bucketPerSec.push(bucketsPerSocond)
+    @bytesTillLastPing.push(@queue.loadedBytes)
+    @bucketTillLastPing.push(@queue.loadedBuckets)
 
     #console.log "PING - latency: ", @queue.roundTripTime, "ms, connection: ", kbPerSecond, "KByte/s, ", bucketsPerSocond, "buckets/s" 
     

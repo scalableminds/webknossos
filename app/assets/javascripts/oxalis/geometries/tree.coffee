@@ -102,7 +102,7 @@ class Tree
     for i in [0...@edgesBuffer.getLength()]
       found = true
       for j in [0..5]
-        found &= Math.abs(@edges.geometry.__vertexArray[6 * i + j] - edgeArray[j]) < 0.5
+        found &= Math.abs(@edges.geometry.attributes.position.array[6 * i + j] - edgeArray[j]) < 0.5
       if found
         edgesIndex = i
         break
@@ -230,7 +230,7 @@ class Tree
         a = mesh.geometry.attributes[attr]
         a.array       = a._rBuffer.getBuffer()
         a.numItems    = a._rBuffer.getBufferLength()
-        a.needsUpdate = a._rBuffer.getBufferLength()
+        a.needsUpdate = true
 
 
   #### Color utility methods

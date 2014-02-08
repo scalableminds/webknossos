@@ -8,6 +8,7 @@ import braingames.util.ExtendedTypes.ExtendedBoolean
 import braingames.util.ExtendedTypes.ExtendedString
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json._
+import play.api.templates.Html
 
 object TaskAlgorithm extends AdminController {
 

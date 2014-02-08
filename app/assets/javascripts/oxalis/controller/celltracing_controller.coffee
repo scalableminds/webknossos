@@ -134,7 +134,7 @@ class CellTacingController
       index = intersect.index
       nodeID = intersect.object.geometry.nodeIDs.getAllElements()[index]
 
-      posArray = intersect.object.geometry.__vertexArray
+      posArray = intersect.object.geometry.attributes.position.array
       intersectsCoord = [posArray[3 * index], posArray[3 * index + 1], posArray[3 * index + 2]]
       globalPos = @model.flycam.getPosition()
 

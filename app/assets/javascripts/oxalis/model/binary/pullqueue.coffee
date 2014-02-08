@@ -20,16 +20,14 @@ class PullQueue
   roundTripTime : 0
   loadedBucketList: []
   requestedBucketList: []
-
+  loadedBuckets: 0
+  loadedBytes: 0
+  absoluteLoadedBuckets: 0
+  absoluteLoadedBytes: 0
   
   constructor : (@dataSetName, @cube, @dataLayerName, @testData) ->
 
     @queue = []
-    @loadedBuckets = 0
-    @loadedBytes = 0
-    @absoluteLoadedBuckets = 0
-    @absoluteLoadedBytes = 0
-
 
   swap : (a, b) ->
 

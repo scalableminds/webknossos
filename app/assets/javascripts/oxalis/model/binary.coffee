@@ -69,8 +69,6 @@ class Binary
       set4BitChanged : (is4Bit) => @queue(is4Bit)
     })
 
-    @ping = _.throttle(@pingImpl, @PING_THROTTLE_TIME)
-
 
   updateContrastCurve : (brightness, contrast) ->
 
@@ -90,16 +88,17 @@ class Binary
 
   printConnectionInfo : ->
 
-    interval = new Date() - @lastPingTime
-    #if @queue.queue and @queue.queue.length > 0
-      #console.log interval, @queueStatus - @queue.queue.length, @queue.queue[0].priority
+    currentDate = new Date()
+    interval = currentDate - @lastPingTime
+    if @queue.queue and @queue.queue.length > 0
+      console.log interval, @queueStatus - @queue.queue.length, @queue.queue[0].priority
     @queueStatus = @queue.queue.length
-    @lastPingTime = new Date() 
+    @lastPingTime = currentDate 
 
     kbPerSecond = @queue.loadedBytes / interval
     bucketsPerSocond = @queue.loadedBuckets * 1000 / interval
     
-    @timestamps.push(new Date().getTime())
+    @timestamps.push(currentDate)
     @latencies.push(@queue.roundTripTime)
     @kbPerSec.push(kbPerSecond)
     @bucketPerSec.push(bucketsPerSocond)
@@ -113,6 +112,12 @@ class Binary
   pingStop : ->
 
     @queue.clear()
+
+
+  ping : _.once (position, options) ->
+
+    @ping = _.throttle(@pingImpl, @PING_THROTTLE_TIME)
+    @arbitraryPing(position, options)
 
 
   pingImpl : (position, {zoomStep, area, activePlane}) ->

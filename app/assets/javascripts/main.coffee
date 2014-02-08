@@ -43,7 +43,9 @@ require.config
     "m4x4" :
       exports : "M4x4"
     "qassert" : [ "jquery" ]
-    "backbone" : [ "underscore" ]
+    "backbone" :
+      depends : [ "underscore" ]
+      exports : "Backbone"
     "backbone.marionette" : [ "backbone", "underscore" ]
 
 require [
@@ -72,7 +74,13 @@ require [
     )
 
     require [
+      "./main/router"
       "./main/enhancements"
-      "./main/routing"
       "libs/core_ext"
-    ], ->
+    ], (Router) ->
+
+      $ ->
+
+        new Router()
+        Backbone.history.start({pushState : true})
+

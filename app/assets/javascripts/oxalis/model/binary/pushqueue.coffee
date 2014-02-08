@@ -1,6 +1,7 @@
 ### define
 libs/array_buffer_socket : ArrayBufferSocket
 libs/unit8array_builder : Uint8ArrayBuilder
+libs/gzip.min : gzip
 ###
 
 class PushQueue
@@ -101,10 +102,17 @@ class PushQueue
       transmitBufferBuilder.push(
         @cube.getBucketDataByZoomedAddress( bucket ))
 
-    console.log( "transmitBuffer:", transmitBufferBuilder.build() )
+    transmitBuffer = transmitBufferBuilder.build()
+
+    console.log( "uncompressed transmitBuffer:", transmitBuffer.length, transmitBuffer )
+
+    gzip = new Zlib.Gzip( transmitBuffer )
+    transmitBuffer = gzip.compress()
+
+    console.log( "compressed transmitBuffer:", transmitBuffer.length, transmitBuffer )
 
     @getParams.version++
-    @getSendSocket().send( transmitBufferBuilder.build() )
+    @getSendSocket().send( transmitBuffer )
       .then(
 
         (responseBuffer) =>

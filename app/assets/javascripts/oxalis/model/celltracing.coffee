@@ -572,7 +572,7 @@ class CellTracing
 
         @trigger("mergeTree", lastTree.treeId, lastNode, @activeNode)
 
-        @deleteTree(false, lastTree.treeId, false)
+        #@deleteTree(false, lastTree.treeId, false)
 
         @setActiveNode(activeNodeID)
       else

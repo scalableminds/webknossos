@@ -35,7 +35,15 @@ class TracingParser
       
       # Initialize nodes
       for node in treeData.nodes
-        tree.nodes.push(new TracePoint(@celltracing.TYPE_USUAL, node.id, node.position, node.radius, node.timestamp, treeData.id))
+
+        metaInfo = _.pick( node,
+          'timestamp', 'viewport', 'resolution', 'bitDepth', 'interpolation' )
+
+        tree.nodes.push(
+          new TracePoint(
+            @celltracing.TYPE_USUAL,
+            node.id, node.position, node.radius, treeData.id,
+            metaInfo))
         # idCount should be bigger than any other id
         @idCount = Math.max(node.id + 1, @idCount);
       

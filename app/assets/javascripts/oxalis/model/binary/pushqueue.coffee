@@ -139,7 +139,8 @@ class PushQueue
         new ArrayBufferSocket.XmlHttpRequest(
           "/datasets/#{@dataSetName}/layers/#{@dataLayerName}/data",
           @getParams,
-          "PUT")
+          "PUT", "gzip"
+        )
       ]
       requestBufferType : Uint8Array
       responseBufferType : Uint8Array

@@ -294,7 +294,7 @@ class ArrayBufferSocket.XmlHttpRequest
 
   MESSAGE_TIMEOUT : 10000
 
-  constructor : (@url, @getParams, @type = "GET") ->
+  constructor : (@url, @getParams, @type = "GET", @encoding = null) ->
 
   open : ({ @responseBufferType, @requestBufferType }) ->
 
@@ -314,6 +314,7 @@ class ArrayBufferSocket.XmlHttpRequest
       dataType : 'arraybuffer'
       timeout : @MESSAGE_TIMEOUT
       type : @type
+      contentEncoding : @encoding
     ).then (buffer) =>
 
       if buffer

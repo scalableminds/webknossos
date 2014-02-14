@@ -31,17 +31,21 @@ class Model
 
     bytes = 0
     buckets = 0
-    totalBytes = if @totalBytes.length > 0 then @totalBytes[@totalBytes.length - 1] else 0
-    totalBuckets = if @totalBuckets.length > 0 then @totalBuckets[@totalBuckets.length - 1] else 0
+    totalBytes = 0
+    totalBuckets = 0
 
     for dataLayerName of @binary
       bytes += @binary[dataLayerName].queue.loadedBytes
       buckets += @binary[dataLayerName].queue.loadedBuckets
+      totalBytes += @binary[dataLayerName].queue.totalLoadedBytes
+      totalBuckets += @binary[dataLayerName].queue.totalLoadedBuckets
+      @binary[dataLayerName].queue.loadedBytes = 0
+      @binary[dataLayerName].queue.loadedBuckets = 0
 
     @bytes.push(bytes)
     @buckets.push(buckets)
-    @totalBytes.push(bytes + totalBytes)
-    @totalBuckets.push(buckets + totalBuckets)
+    @totalBytes.push(totalBytes)
+    @totalBuckets.push(totalBuckets)
 
 
   initialize : =>

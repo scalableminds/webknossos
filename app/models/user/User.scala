@@ -1,7 +1,6 @@
 package models.user
 
 import play.api.Play.current
-import models.context._
 import braingames.security.SCrypt._
 import scala.collection.mutable.Stack
 import play.api.libs.json.{Json, JsValue}
@@ -10,7 +9,7 @@ import scala.collection.immutable.HashMap
 import models.basics._
 import models.user.Experience._
 import models.team._
-import braingames.reactivemongo.{DBAccessContext, DBAccessContextPayload}
+import braingames.reactivemongo._
 import scala.concurrent.Future
 import play.api.libs.concurrent.Execution.Implicits._
 import reactivemongo.bson.BSONObjectID
@@ -20,6 +19,9 @@ import reactivemongo.api.indexes.Index
 import play.api.libs.json._
 import play.api.libs.functional.syntax._
 import play.api.libs.concurrent.Execution.Implicits._
+import reactivemongo.core.commands.LastError
+import braingames.reactivemongo.AccessRestrictions.{DenyEveryone, AllowIf}
+import braingames.util.Fox
 
 case class User(
                  email: String,
@@ -113,25 +115,28 @@ object UserDAO extends SecuredBaseDAO[User] {
 
   val formatter = User.userFormat
 
-  collection.indexesManager.ensure(Index(Seq("email" -> IndexType.Ascending)))
+  underlying.indexesManager.ensure(Index(Seq("email" -> IndexType.Ascending)))
 
-  override def findQueryFilter(implicit ctx: DBAccessContext) = {
-    ctx.data match {
-      case Some(user: User) =>
-        AllowIf(Json.obj("$or" -> Json.arr(
-          Json.obj("teams.team" -> Json.obj("$in" -> user.teamNames)),
-          Json.obj("teams" -> Json.arr()))))
-      case _ =>
-        DenyEveryone()
+  override val AccessDefinitions = new DefaultAccessDefinitions{
+
+    override def findQueryFilter(implicit ctx: DBAccessContext) = {
+      ctx.data match {
+        case Some(user: User) =>
+          AllowIf(Json.obj("$or" -> Json.arr(
+            Json.obj("teams.team" -> Json.obj("$in" -> user.teamNames)),
+            Json.obj("teams" -> Json.arr()))))
+        case _ =>
+          DenyEveryone()
+      }
     }
-  }
 
-  override def removeQueryFilter(implicit ctx: DBAccessContext) = {
-    ctx.data match {
-      case Some(user: User) =>
-        AllowIf(Json.obj("teams.team" -> Json.obj("$in" -> user.adminTeamNames)))
-      case _ =>
-        DenyEveryone()
+    override def removeQueryFilter(implicit ctx: DBAccessContext) = {
+      ctx.data match {
+        case Some(user: User) =>
+          AllowIf(Json.obj("teams.team" -> Json.obj("$in" -> user.adminTeamNames)))
+        case _ =>
+          DenyEveryone()
+      }
     }
   }
 
@@ -142,10 +147,10 @@ object UserDAO extends SecuredBaseDAO[User] {
   def authRemote(email: String, loginType: String)(implicit ctx: DBAccessContext) =
     findOne(Json.obj("email" -> email, "loginType" -> loginType))
 
-  def auth(email: String, password: String)(implicit ctx: DBAccessContext): Future[Option[User]] =
-    findOneByEmail(email).map(_.filter(user => verifyPassword(password, user.pwdHash)))
+  def auth(email: String, password: String)(implicit ctx: DBAccessContext): Fox[User] =
+    findOneByEmail(email).filter(user => verifyPassword(password, user.pwdHash))
 
-  def insert(user: User, isVerified: Boolean)(implicit ctx: DBAccessContext): Future[User] = {
+  def insert(user: User, isVerified: Boolean)(implicit ctx: DBAccessContext): Fox[User] = {
     if (isVerified) {
       val u = user.verify
       insert(u).map(_ => u)
@@ -153,8 +158,8 @@ object UserDAO extends SecuredBaseDAO[User] {
       insert(user).map(_ => user)
   }
 
-  def update(_user: BSONObjectID, firstName: String, lastName: String, verified: Boolean, teams: List[TeamMembership], experiences: Map[String, Int])(implicit ctx: DBAccessContext) =
-    collectionUpdate(findByIdQ(_user), Json.obj("$set" -> Json.obj(
+  def update(_user: BSONObjectID, firstName: String, lastName: String, verified: Boolean, teams: List[TeamMembership], experiences: Map[String, Int])(implicit ctx: DBAccessContext): Fox[LastError] =
+    update(findByIdQ(_user), Json.obj("$set" -> Json.obj(
       "firstName" -> firstName,
       "lastName" -> lastName,
       "verified" -> verified,
@@ -162,40 +167,40 @@ object UserDAO extends SecuredBaseDAO[User] {
       "experiences" -> experiences)))
 
   def addTeams(_user: BSONObjectID, teams: Seq[TeamMembership])(implicit ctx: DBAccessContext) =
-    collectionUpdate(findByIdQ(_user), Json.obj("$pushAll" -> Json.obj("teams" -> teams)))
+    update(findByIdQ(_user), Json.obj("$pushAll" -> Json.obj("teams" -> teams)))
 
   def addRole(_user: BSONObjectID, role: String)(implicit ctx: DBAccessContext) =
-    collectionUpdate(findByIdQ(_user), Json.obj("$push" -> Json.obj("roles" -> role)))
+    update(findByIdQ(_user), Json.obj("$push" -> Json.obj("roles" -> role)))
 
   def deleteRole(_user: BSONObjectID, role: String)(implicit ctx: DBAccessContext) =
-    collectionUpdate(findByIdQ(_user), Json.obj("$pull" -> Json.obj("roles" -> role)))
+    update(findByIdQ(_user), Json.obj("$pull" -> Json.obj("roles" -> role)))
 
   def increaseExperience(_user: BSONObjectID, domain: String, value: Int)(implicit ctx: DBAccessContext) = {
-    collectionUpdate(findByIdQ(_user), Json.obj("$inc" -> Json.obj(s"experiences.$domain" -> value)))
+    update(findByIdQ(_user), Json.obj("$inc" -> Json.obj(s"experiences.$domain" -> value)))
   }
 
   def updateSettings(user: User, settings: UserSettings)(implicit ctx: DBAccessContext) = {
-    collectionUpdate(findByIdQ(user._id), Json.obj("$set" -> Json.obj("configuration.settings" -> settings.settings)))
+    update(findByIdQ(user._id), Json.obj("$set" -> Json.obj("configuration.settings" -> settings.settings)))
   }
 
   def setExperience(_user: BSONObjectID, domain: String, value: Int)(implicit ctx: DBAccessContext) = {
-    collectionUpdate(findByIdQ(_user), Json.obj("$set" -> Json.obj(s"experiences.$domain" -> value)))
+    update(findByIdQ(_user), Json.obj("$set" -> Json.obj(s"experiences.$domain" -> value)))
   }
 
   def deleteExperience(_user: BSONObjectID, domain: String)(implicit ctx: DBAccessContext) = {
-    collectionUpdate(findByIdQ(_user), Json.obj("$unset" -> Json.obj(s"experiences.$domain" -> 1)))
+    update(findByIdQ(_user), Json.obj("$unset" -> Json.obj(s"experiences.$domain" -> 1)))
   }
 
   def logActivity(user: User, lastActivity: Long)(implicit ctx: DBAccessContext) = {
-    collectionUpdate(findByIdQ(user._id), Json.obj("$set" -> Json.obj("lastActivity" -> lastActivity)))
+    update(findByIdQ(user._id), Json.obj("$set" -> Json.obj("lastActivity" -> lastActivity)))
   }
 
   def updateTeams(_user: BSONObjectID, teams: List[TeamMembership])(implicit ctx: DBAccessContext) = {
-    collectionUpdate(findByIdQ(_user), Json.obj("$set" -> Json.obj("teams" -> teams)))
+    update(findByIdQ(_user), Json.obj("$set" -> Json.obj("teams" -> teams)))
   }
 
   def verify(user: User)(implicit ctx: DBAccessContext) = {
-    collectionUpdate(
+    update(
       Json.obj("email" -> user.email),
       Json.obj("$set" -> Json.obj("verified" -> true)))
   }

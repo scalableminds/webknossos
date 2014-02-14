@@ -12,8 +12,8 @@ import models.annotation._
 import play.api.libs.json.{Json, JsObject}
 import braingames.format.Formatter
 import scala.concurrent.duration._
-import braingames.util.FoxImplicits
-import braingames.reactivemongo.{GlobalAccessContext, DBAccessContext}
+import braingames.util.{Fox, FoxImplicits}
+import braingames.reactivemongo.{DefaultAccessDefinitions, GlobalAccessContext, DBAccessContext}
 import reactivemongo.bson.BSONObjectID
 import play.modules.reactivemongo.json.BSONFormats._
 import org.joda.time.DateTime
@@ -24,6 +24,8 @@ import scala.async.Async._
 import akka.actor.Props
 import akka.routing.RoundRobinRouter
 import reactivemongo.api.indexes.{IndexType, Index}
+import reactivemongo.core.commands.LastError
+import braingames.reactivemongo.AccessRestrictions.{AllowIf, DenyEveryone}
 
 case class Task(
                  seedIdHeidelberg: Int,
@@ -121,24 +123,27 @@ object TaskDAO extends SecuredBaseDAO[Task] with FoxImplicits {
 
   val formatter = Task.taskFormat
 
-  collection.indexesManager.ensure(Index(Seq("_project" -> IndexType.Ascending)))
-  collection.indexesManager.ensure(Index(Seq("_taskType" -> IndexType.Ascending)))
+  underlying.indexesManager.ensure(Index(Seq("_project" -> IndexType.Ascending)))
+  underlying.indexesManager.ensure(Index(Seq("_taskType" -> IndexType.Ascending)))
 
-  override def findQueryFilter(implicit ctx: DBAccessContext) = {
-    ctx.data match{
-      case Some(user: User) =>
-        AllowIf(Json.obj("team" -> Json.obj("$in" -> user.teamNames)))
-      case _ =>
-        DenyEveryone()
+  override val AccessDefinitions = new DefaultAccessDefinitions{
+
+    override def findQueryFilter(implicit ctx: DBAccessContext) = {
+      ctx.data match{
+        case Some(user: User) =>
+          AllowIf(Json.obj("team" -> Json.obj("$in" -> user.teamNames)))
+        case _ =>
+          DenyEveryone()
+      }
     }
-  }
 
-  override def removeQueryFilter(implicit ctx: DBAccessContext) = {
-    ctx.data match{
-      case Some(user: User) =>
-        AllowIf(Json.obj("team" -> Json.obj("$in" -> user.adminTeamNames)))
-      case _ =>
-        DenyEveryone()
+    override def removeQueryFilter(implicit ctx: DBAccessContext) = {
+      ctx.data match{
+        case Some(user: User) =>
+          AllowIf(Json.obj("team" -> Json.obj("$in" -> user.adminTeamNames)))
+        case _ =>
+          DenyEveryone()
+      }
     }
   }
 
@@ -149,14 +154,17 @@ object TaskDAO extends SecuredBaseDAO[Task] with FoxImplicits {
     super.removeById(bson)
   }
 
-  def findAllOfOneType(isTraining: Boolean)(implicit ctx: DBAccessContext) =
-    collectionFind(Json.obj("training" -> Json.obj("$exists" -> isTraining))).cursor[Task].collect[List]()
+  def findAllOfOneType(isTraining: Boolean)(implicit ctx: DBAccessContext) =  withExceptionCatcher{
+    find(Json.obj("training" -> Json.obj("$exists" -> isTraining))).cursor[Task].collect[List]()
+  }
 
-  def findAllByTaskType(taskType: TaskType)(implicit ctx: DBAccessContext) =
+  def findAllByTaskType(taskType: TaskType)(implicit ctx: DBAccessContext) = withExceptionCatcher{
     find("_taskType", taskType._id).collect[List]()
+  }
 
-  def findAllByProject(project: String)(implicit ctx: DBAccessContext) =
+  def findAllByProject(project: String)(implicit ctx: DBAccessContext) = withExceptionCatcher{
     find("_project", project).collect[List]()
+  }
 
   def findAllTrainings(implicit ctx: DBAccessContext) =
     findAllOfOneType(isTraining = true)
@@ -168,10 +176,10 @@ object TaskDAO extends SecuredBaseDAO[Task] with FoxImplicits {
     findAllNonTrainings.map(_.filter(!_.isFullyAssigned))
 
   def logTime(time: Long, _task: BSONObjectID)(implicit ctx: DBAccessContext) =
-    collectionUpdate(Json.obj("_id" -> _task), Json.obj("$inc" -> Json.obj("tracingTime" -> time)))
+    update(Json.obj("_id" -> _task), Json.obj("$inc" -> Json.obj("tracingTime" -> time)))
 
   def changeAssignedInstances(_task: BSONObjectID, by: Int)(implicit ctx: DBAccessContext) =
-    collectionUpdate(Json.obj("_id" -> _task), Json.obj("$inc" -> Json.obj("assignedInstances" -> by)))
+    update(Json.obj("_id" -> _task), Json.obj("$inc" -> Json.obj("assignedInstances" -> by)))
 
   def assignOnce(_task: BSONObjectID)(implicit ctx: DBAccessContext) =
     changeAssignedInstances(_task, 1)
@@ -180,7 +188,7 @@ object TaskDAO extends SecuredBaseDAO[Task] with FoxImplicits {
     changeAssignedInstances(_task, -1)
 
   def setTraining(_task: BSONObjectID, training: Training)(implicit ctx: DBAccessContext) =
-    collectionUpdate(
+    update(
       Json.obj("_id" -> _task),
       Json.obj("$set" -> Json.obj("training" -> training)))
 
@@ -190,8 +198,8 @@ object TaskDAO extends SecuredBaseDAO[Task] with FoxImplicits {
              instances: Int,
              team: String,
              _project: Option[String]
-            )(implicit ctx: DBAccessContext) =
-    collectionUpdate(
+            )(implicit ctx: DBAccessContext): Fox[LastError] =
+    update(
       Json.obj("_id" -> _task),
       Json.obj("$set" ->
         Json.obj(

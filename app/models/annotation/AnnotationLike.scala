@@ -25,7 +25,7 @@ import oxalis.mvc.FilterableJson
 trait AnnotationLike extends AnnotationStatistics {
   def _name: Option[String]
 
-  def user: Future[Option[User]]
+  def user: Fox[User]
 
   def team: String
 

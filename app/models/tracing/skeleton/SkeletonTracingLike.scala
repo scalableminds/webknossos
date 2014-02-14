@@ -21,6 +21,9 @@ import scala.Some
 import oxalis.nml.NML
 import models.annotation.AnnotationType.AnnotationType
 import braingames.reactivemongo.GlobalDBAccess
+import braingames.util.{FoxImplicits, Fox}
+import net.liftweb.common.Full
+import java.io.InputStream
 
 trait SkeletonTracingLike extends AnnotationContent {
   type Self <: SkeletonTracingLike
@@ -31,7 +34,7 @@ trait SkeletonTracingLike extends AnnotationContent {
 
   def dataSetName: String
 
-  def trees: Future[List[TreeLike]]
+  def trees: Fox[List[TreeLike]]
 
   def activeNodeId: Option[Int]
 
@@ -43,11 +46,11 @@ trait SkeletonTracingLike extends AnnotationContent {
 
   def editPosition: Point3D
 
-  def insertBranchPoint[T](bp: BranchPoint): Future[T]
+  def insertBranchPoint[T](bp: BranchPoint): Fox[T]
 
-  def insertComment[T](c: Comment): Future[T]
+  def insertComment[T](c: Comment): Fox[T]
 
-  def insertTree[T](tree: TreeLike): Future[T]
+  def insertTree[T](tree: TreeLike): Fox[T]
 
   def allowAllModes: Self
 
@@ -55,25 +58,25 @@ trait SkeletonTracingLike extends AnnotationContent {
 
   def downloadFileExtension = ".nml"
 
-  def toDownloadStream =
+  def toDownloadStream: Fox[InputStream] =
     NMLService.toNML(this).map(IOUtils.toInputStream)
 
   override def contentData =
-    SkeletonTracingLike.skeletonTracingLikeWrites(this).map(json => Some(json))
+    SkeletonTracingLike.skeletonTracingLikeWrites(this)
 
-  private def applyUpdates(f: (Self => Future[Self])*) = {
-    f.foldLeft(Future.successful(self)) {
+  private def applyUpdates(f: (Self => Fox[Self])*) = {
+    f.foldLeft(Fox.successful(self)) {
       case (futureT, f) => futureT.flatMap(t => f(t))
     }
   }
 
-  private def updateWithAll[E](list: List[E])(f: (Self, E) => Future[Self])(start: Self): Future[Self] = {
-    list.foldLeft(Future.successful(start)) {
+  private def updateWithAll[E](list: List[E])(f: (Self, E) => Fox[Self])(start: Self): Fox[Self] = {
+    list.foldLeft(Fox.successful(start)) {
       case (fs, e) => fs.flatMap(s => f(s, e))
     }
   }
 
-  def mergeWith(source: AnnotationContent): Future[Self] = {
+  def mergeWith(source: AnnotationContent): Fox[Self] = {
     source match {
       case source: SkeletonTracingLike =>
         for {
@@ -123,36 +126,31 @@ trait SkeletonTracingLike extends AnnotationContent {
   }
 }
 
-object SkeletonTracingLike {
+object SkeletonTracingLike extends FoxImplicits {
 
   implicit object SkeletonTracingLikeXMLWrites extends XMLWrites[SkeletonTracingLike] with GlobalDBAccess {
-    def writes(e: SkeletonTracingLike) = {
+    def writes(e: SkeletonTracingLike): Fox[scala.xml.Node] = {
       for {
-        dataSetOpt <- DataSetDAO.findOneBySourceName(e.dataSetName)
+        dataSet <- DataSetDAO.findOneBySourceName(e.dataSetName)
         trees <- e.trees
         treesXml <- Xml.toXML(trees.filterNot(_.nodes.isEmpty))
         branchpoints <- Xml.toXML(e.branchPoints)
         comments <- Xml.toXML(e.comments)
       } yield {
-        dataSetOpt match {
-          case Some(dataSet) =>
-            val dataSource = dataSet.dataSource
-            <things>
-              <parameters>
-                <experiment name={dataSource.name}/>
-                <scale x={dataSource.scale.x.toString} y={dataSource.scale.y.toString} z={dataSource.scale.z.toString}/>
-                <offset x="0" y="0" z="0"/>
-                <time ms={e.timestamp.toString}/>{e.activeNodeId.map(id => s"<activeNode id=$id/>").getOrElse("")}<editPosition x={e.editPosition.x.toString} y={e.editPosition.y.toString} z={e.editPosition.z.toString}/>
-              </parameters>{treesXml}<branchpoints>
-              {branchpoints}
-            </branchpoints>
-              <comments>
-                {comments}
-              </comments>
-            </things>
-          case _ =>
-            <error>DataSet not fount</error>
-        }
+        val dataSource = dataSet.dataSource
+        <things>
+          <parameters>
+            <experiment name={dataSource.name}/>
+            <scale x={dataSource.scale.x.toString} y={dataSource.scale.y.toString} z={dataSource.scale.z.toString}/>
+            <offset x="0" y="0" z="0"/>
+            <time ms={e.timestamp.toString}/>{e.activeNodeId.map(id => s"<activeNode id=$id/>").getOrElse("")}<editPosition x={e.editPosition.x.toString} y={e.editPosition.y.toString} z={e.editPosition.z.toString}/>
+          </parameters>{treesXml}<branchpoints>
+          {branchpoints}
+        </branchpoints>
+          <comments>
+            {comments}
+          </comments>
+        </things>
       }
     }
   }

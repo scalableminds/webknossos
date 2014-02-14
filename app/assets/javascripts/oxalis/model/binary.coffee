@@ -64,6 +64,8 @@ class Binary
       set4BitChanged : (is4Bit) => @queue(is4Bit)
     })
 
+    @ping = _.throttle(@pingImpl, @PING_THROTTLE_TIME)
+
 
   updateContrastCurve : (brightness, contrast) ->
 
@@ -86,14 +88,7 @@ class Binary
     @queue.clear()
 
 
-  ping : (position, {zoomStep, area, activePlane}) ->
-
-    @pingImpl(position, {zoomStep, area, activePlane})
-
-
   pingImpl : (position, {zoomStep, area, activePlane}) ->
-
-    @printConnectionInfoImpl()
 
     if @lastPosition?
       

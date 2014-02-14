@@ -82,7 +82,7 @@ class PlaneController
           .on("click", button.callback)
       )
 
-    objects = { @model, @view, @sceneController, @cameraController, @move, @calculateGlobalPos }
+    objects = { @model, @view, @sceneController, @cameraController, @move, @calculateGlobalPos, planeController : this }
     @cellTracingController = new CellTracingController( objects, @controlMode )
     @volumeTracingController = new VolumeTracingController( objects )
 

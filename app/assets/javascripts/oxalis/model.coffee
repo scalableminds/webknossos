@@ -30,15 +30,18 @@ class Model
     @timestamps.push(new Date().getTime())
 
     bytes = 0
-    buckets = 0 
+    buckets = 0
+    totalBytes = if @totalBytes.length > 0 then @totalBytes[@totalBytes.length - 1] else 0
+    totalBuckets = if @totalBuckets.length > 0 then @totalBuckets[@totalBuckets.length - 1] else 0
+
     for dataLayerName of @binary
       bytes += @binary[dataLayerName].queue.loadedBytes
       buckets += @binary[dataLayerName].queue.loadedBuckets
 
     @bytes.push(bytes)
     @buckets.push(buckets)
-    @totalBytes.push(bytes + @totalBytes[@totalBytes.length - 1])
-    @totalBuckets.push(buckets + @totalBuckets[@totalBuckets.length - 1])
+    @totalBytes.push(bytes + totalBytes)
+    @totalBuckets.push(buckets + totalBuckets)
 
 
   initialize : =>

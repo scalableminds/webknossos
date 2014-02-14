@@ -2,6 +2,8 @@ require.config
 
   baseUrl : "/assets/javascripts"
 
+  waitSeconds : 0
+
   paths :
     "jquery" : "libs/jquery-1.8.3.min"
     "multiselect" : "libs/bootstrap-multiselect"

@@ -19,17 +19,6 @@ class Binary
   queue : null
   planes : []
 
-  timestamps: []
-  latencies: []
-  bucketPerSec: []
-  kbPerSec: []
-  bytesTillLastPing: []
-  bucketTillLastPing: []
-  bytesAbsolute: []
-  bucketAbsolute: []
-
-  lastPingTime: 0
-
   dataSetName : ""
   direction : [0, 0, 0]
 
@@ -90,34 +79,6 @@ class Binary
 
     for plane in @planes
       plane.updateContrastCurves(@contrastCurves)
-
-
-  printConnectionInfoImpl : ->
-
-    if @layer.name != "color"
-      return
-    
-    currentDate = new Date()
-    interval = currentDate - @lastPingTime
-    @queueStatus = @queue.queue.length
-    @lastPingTime = currentDate 
-
-    kbPerSecond = @queue.loadedBytes / interval
-    bucketsPerSocond = @queue.loadedBuckets * 1000 / interval
-    
-    @timestamps.push(currentDate.getTime())
-    @latencies.push(@queue.roundTripTime)
-    @kbPerSec.push(kbPerSecond)
-    @bucketPerSec.push(bucketsPerSocond)
-    @bytesTillLastPing.push(@queue.loadedBytes)
-    @bucketTillLastPing.push(@queue.loadedBuckets)
-    @bytesAbsolute.push(@queue.absoluteLoadedBytes)
-    @bucketAbsolute.push(@queue.absoluteLoadedBuckets)
-
-    #console.log "PING - latency: ", @queue.roundTripTime, "ms, connection: ", kbPerSecond, "KByte/s, ", bucketsPerSocond, "buckets/s" 
-    
-    @queue.loadedBytes = 0
-    @queue.loadedBuckets = 0
 
 
   pingStop : ->

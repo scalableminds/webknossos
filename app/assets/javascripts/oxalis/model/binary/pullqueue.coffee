@@ -18,16 +18,16 @@ class PullQueue
 
   batchCount : 0
   roundTripTime : 0
-  loadedBucketList: []
-  requestedBucketList: []
-  loadedBuckets: 0
-  loadedBytes: 0
-  absoluteLoadedBuckets: 0
-  absoluteLoadedBytes: 0
   
   constructor : (@dataSetName, @cube, @dataLayerName, @testData) ->
 
     @queue = []
+    @loadedBucketList: []
+    @requestedBucketList: []
+    @loadedBuckets: 0
+    @loadedBytes: 0
+    @totalLoadedBuckets: 0
+    @totalLoadedBytes: 0
 
   swap : (a, b) ->
 
@@ -167,8 +167,8 @@ class PullQueue
 
     @loadedBuckets += bucketCount
     @loadedBytes += byteCount
-    @absoluteLoadedBuckets += bucketCount
-    @absoluteLoadedBytes += byteCount
+    @totalLoadedBuckets += bucketCount
+    @totalLoadedBytes += byteCount
 
 
   decode : (colors) ->

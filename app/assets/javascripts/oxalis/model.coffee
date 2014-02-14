@@ -19,6 +19,28 @@
 
 class Model
 
+  timestamps : []
+  buckets : []
+  bytes : []
+  totalBuckets : []
+  totalBytes : []
+
+  logConnectionInfo : =>
+
+    @timestamps.push(new Date().getTime())
+
+    bytes = 0
+    buckets = 0 
+    for dataLayerName of @binary
+      bytes += @binary[dataLayerName].queue.loadedBytes
+      buckets += @binary[dataLayerName].queue.loadedBuckets
+
+    @bytes.push(bytes)
+    @buckets.push(buckets)
+    @totalBytes.push(bytes + @totalBytes[@totalBytes.length - 1])
+    @totalBuckets.push(buckets + @totalBuckets[@totalBuckets.length - 1])
+
+
   initialize : =>
 
     tracingId = $("#container").data("tracing-id")

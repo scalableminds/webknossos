@@ -22,12 +22,12 @@ class PullQueue
   constructor : (@dataSetName, @cube, @dataLayerName, @testData) ->
 
     @queue = []
-    @loadedBucketList: []
-    @requestedBucketList: []
-    @loadedBuckets: 0
-    @loadedBytes: 0
-    @totalLoadedBuckets: 0
-    @totalLoadedBytes: 0
+    @loadedBucketList = []
+    @requestedBucketList = []
+    @loadedBuckets = 0
+    @loadedBytes = 0
+    @totalLoadedBuckets = 0
+    @totalLoadedBytes = 0
 
   swap : (a, b) ->
 

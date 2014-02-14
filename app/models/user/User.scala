@@ -94,7 +94,10 @@ case class User(
 }
 
 object User {
-  private[user] val userFormat = Json.format[User]
+  // private[user] val userFormat = Json.format[User]
+
+  // TODO: pwdHash will be also sent, probably not a good idea?
+  implicit val userFormat = Json.format[User]
 
   def userPublicWrites(requestingUser: User): Writes[User] =
     ((__ \ "id").write[String] and

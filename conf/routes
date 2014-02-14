@@ -84,6 +84,7 @@ POST          /admin/tasks/createBulk                                    control
 POST          /admin/tasks/createFromNML                                 controllers.admin.TaskAdministration.createFromNML
 POST          /admin/tasks/createFromForm                                controllers.admin.TaskAdministration.createFromForm
 GET           /admin/tasks/overview                                      controllers.admin.TaskAdministration.overview
+GET           /admin/tasks/overviewNew                                   controllers.admin.TaskAdministration.overviewNew
 GET           /admin/tasks/:id/download                                  controllers.admin.NMLIO.taskDownload(id: String)
 GET           /admin/tasks/:id/delete                                    controllers.admin.TaskAdministration.delete(id: String)
 GET           /admin/tasks/:id/edit                                      controllers.admin.TaskAdministration.edit(id: String)

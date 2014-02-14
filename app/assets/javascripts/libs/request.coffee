@@ -33,6 +33,7 @@ Request =
 
 
       xhr.onload = ->
+        console.log @
         if @status == 200
           deferred.resolve(@response)
         else

@@ -291,7 +291,7 @@ object AnnotationController extends Controller with Secured with TracingInformat
 
   def traceJSON(typ: String, id: String) = Authenticated.async {
     implicit request => {
-      if (typ == models.annotation.AnnotationType.Explorational) {
+      if (typ == models.annotation.AnnotationType.Explorational || typ == models.annotation.AnnotationType.CompoundTask) {
         Future.successful(JsonOk(Json.obj("noData" -> true)))
       } else {
         withAnnotation(AnnotationIdentifier(typ, id)) {

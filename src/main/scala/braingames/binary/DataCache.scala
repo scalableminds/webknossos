@@ -5,6 +5,8 @@ import scala.concurrent.Future
 import scala.concurrent.duration._
 import scala.concurrent.ExecutionContext.Implicits._
 import net.liftweb.common.Box
+import net.liftweb.common.Full
+import net.liftweb.common.Empty
 
 case class Data(val value: Array[Byte]) extends AnyVal
 
@@ -52,10 +54,15 @@ trait DataCache {
     val cachedBlockInfo = CachedBlock.from(blockInfo)
     cache().get(cachedBlockInfo).getOrElse {
       val p = loadF
-      cache send (_ + (cachedBlockInfo -> p))
+      p.map {
+        case Full(box) =>
+          cache send (_ + (cachedBlockInfo -> p))
+        case _ =>
+      }
       p
     }
   }
+
 
   def updateCache(blockInfo: LoadBlock, data: Future[Box[Array[Byte]]]) = {
     val cachedBlockInfo = CachedBlock.from(blockInfo)

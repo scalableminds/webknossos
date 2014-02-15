@@ -14,10 +14,10 @@ trait AnnotationStatistics extends FoxImplicits { this: AnnotationLike =>
         for {
           trees <- t.dbtrees.toFox
           numberOfTrees = trees.size
-          (numberOfNodes, numberOfEdges) <- trees.foldLeft(Future.successful((0l, 0l))) {
+          (numberOfNodes, numberOfEdges) <- trees.foldLeft(Fox.successful((0l, 0l))) {
             case (f, tree) =>
               for {
-                (numberOfNodes, numberOfEdges) <- f
+                (numberOfNodes, numberOfEdges) <- f.toFox
                 nNodes <- tree.numberOfNodes
                 nEdges <- tree.numberOfEdges
               } yield {

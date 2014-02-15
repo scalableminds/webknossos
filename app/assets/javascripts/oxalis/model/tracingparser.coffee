@@ -35,7 +35,15 @@ class TracingParser
 
       # Initialize nodes
       for node in treeData.nodes
-        tree.nodes.push(new TracePoint(@celltracing.TYPE_USUAL, node.id, node.position, node.radius, node.timestamp, treeData.id))
+
+        metaInfo = _.pick( node,
+          'timestamp', 'viewport', 'resolution', 'bitDepth', 'interpolation' )
+
+        tree.nodes.push(
+          new TracePoint(
+            @celltracing.TYPE_USUAL,
+            node.id, node.position, node.radius, treeData.id,
+            metaInfo))
         # idCount should be bigger than any other id
         @idCount = Math.max(node.id + 1, @idCount);
 
@@ -47,10 +55,8 @@ class TracingParser
           sourceNode.appendNext(targetNode)
           targetNode.appendNext(sourceNode)
         else
-          $.assertNotEquals(sourceNode, null, "source node undefined",
-            {"edge" : edge})
-          $.assertNotEquals(targetNode, null, "target node undefined",
-            {"edge" : edge})
+          $.assertExists(sourceNode, "source node is null", {"edge" : edge})
+          $.assertExists(targetNode, "target node is null", {"edge" : edge})
 
       # Set active Node
       activeNodeT = @celltracing.findNodeInList(tree.nodes, @data.activeNode)

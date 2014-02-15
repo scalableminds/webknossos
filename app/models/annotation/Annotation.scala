@@ -117,7 +117,7 @@ object Annotation {
     for {
       dataSetName <- annotation.dataSetName
       task <- annotation.task.futureBox
-      user <- annotation.user
+      user <- annotation.user.futureBox
       content <- annotation.content.futureBox
       contentType = content.map(_.contentType).getOrElse("")
       stats <- annotation.statisticsForAnnotation().futureBox
@@ -148,8 +148,8 @@ object AnnotationDAO
 
   val formatter = Annotation.annotationFormat
 
-  collection.indexesManager.ensure(Index(Seq("_task" -> IndexType.Ascending)))
-  collection.indexesManager.ensure(Index(Seq("_user" -> IndexType.Ascending)))
+  underlying.indexesManager.ensure(Index(Seq("_task" -> IndexType.Ascending)))
+  underlying.indexesManager.ensure(Index(Seq("_user" -> IndexType.Ascending)))
 
   def findTrainingForReviewAnnotation(annotation: AnnotationLike)(implicit ctx: DBAccessContext) =
     withValidId(annotation.id) {
@@ -166,42 +166,47 @@ object AnnotationDAO
   def hasAnOpenAnnotation(_user: BSONObjectID, annotationType: AnnotationType)(implicit ctx: DBAccessContext) =
     countOpenAnnotations(_user, annotationType).map(_ > 0)
 
-  def findFor(_user: BSONObjectID)(implicit ctx: DBAccessContext) =
-    collectionFind(Json.obj(
+  def findFor(_user: BSONObjectID)(implicit ctx: DBAccessContext) = withExceptionCatcher{
+    find(Json.obj(
       "_user" -> _user,
       "state.isAssigned" -> true)).cursor[Annotation].collect[List]()
+  }
 
-  def findFor(_user: BSONObjectID, annotationType: AnnotationType)(implicit ctx: DBAccessContext) =
-    collectionFind(Json.obj(
+  def findFor(_user: BSONObjectID, annotationType: AnnotationType)(implicit ctx: DBAccessContext) = withExceptionCatcher{
+    find(Json.obj(
       "_user" -> _user,
       "state.isAssigned" -> true,
       "typ" -> annotationType)).cursor[Annotation].collect[List]()
+  }
 
 
-  def findForWithTypeOtherThan(_user: BSONObjectID, annotationTypes: List[AnnotationType])(implicit ctx: DBAccessContext) =
-    collectionFind(Json.obj(
+  def findForWithTypeOtherThan(_user: BSONObjectID, annotationTypes: List[AnnotationType])(implicit ctx: DBAccessContext) = withExceptionCatcher{
+    find(Json.obj(
       "_user" -> _user,
       "state.isFinished" -> false,
       "state.isAssigned" -> true,
       "typ" -> Json.obj("$nin" -> annotationTypes))).cursor[Annotation].collect[List]()
+  }
 
   def findOpenAnnotationFor(_user: BSONObjectID, annotationType: AnnotationType)(implicit ctx: DBAccessContext) =
-    collectionFind(defaultFindForUserQ(_user, annotationType)).one[Annotation]
+    findOne(defaultFindForUserQ(_user, annotationType))
 
-  def findOpenAnnotationsFor(_user: BSONObjectID, annotationType: AnnotationType)(implicit ctx: DBAccessContext) =
-    collectionFind(defaultFindForUserQ(_user, annotationType)).cursor[Annotation]
+  def findOpenAnnotationsFor(_user: BSONObjectID, annotationType: AnnotationType)(implicit ctx: DBAccessContext) = withExceptionCatcher{
+    find(defaultFindForUserQ(_user, annotationType)).cursor[Annotation].collect[List]()
+  }
 
   def countOpenAnnotations(_user: BSONObjectID, annotationType: AnnotationType)(implicit ctx: DBAccessContext) =
     count(defaultFindForUserQ(_user, annotationType))
 
-  def findOpen(annotationType: AnnotationType)(implicit ctx: DBAccessContext) =
-    collectionFind(Json.obj(
+  def findOpen(annotationType: AnnotationType)(implicit ctx: DBAccessContext) = withExceptionCatcher{
+    find(Json.obj(
       "state.isFinished" -> false,
       "state.isAssigned" -> true,
       "typ" -> annotationType)).cursor[Annotation].collect[List]()
+  }
 
   def removeAllWithTaskId(_task: BSONObjectID)(implicit ctx: DBAccessContext) =
-    collectionRemove(Json.obj("_task" -> _task))
+    remove(Json.obj("_task" -> _task))
 
   def incrementVersion(_annotation: BSONObjectID)(implicit ctx: DBAccessContext) =
     findAndModify(
@@ -209,11 +214,12 @@ object AnnotationDAO
       Json.obj("$inc" -> Json.obj("version" -> 1)),
       true)
 
-  def findByTaskId(_task: BSONObjectID)(implicit ctx: DBAccessContext) =
+  def findByTaskId(_task: BSONObjectID)(implicit ctx: DBAccessContext) = withExceptionCatcher{
     find("_task", _task).collect[List]()
+  }
 
   def findByTaskIdAndType(_task: BSONObjectID, annotationType: AnnotationType)(implicit ctx: DBAccessContext) =
-    collectionFind(Json.obj(
+    find(Json.obj(
       "_task" -> _task,
       "typ" -> annotationType,
       "$or" -> Json.arr(
@@ -221,7 +227,7 @@ object AnnotationDAO
         Json.obj("state.isFinished" -> true))))
 
   def unassignAnnotationsOfUser(_user: BSONObjectID)(implicit ctx: DBAccessContext) =
-    collectionUpdate(
+    update(
       Json.obj(
         "_user" -> _user,
         "typ" -> Json.obj("$in" -> AnnotationType.UserTracings)),
@@ -230,12 +236,12 @@ object AnnotationDAO
           "state.isAssigned" -> false)))
 
   def updateState(annotation: Annotation, state: AnnotationState)(implicit ctx: DBAccessContext) =
-    collectionUpdate(
+    update(
       Json.obj("_id" -> annotation._id),
       Json.obj("$set" -> Json.obj("state" -> state)))
 
   def updateAllUsingNewTaskType(task: Task, settings: AnnotationSettings)(implicit ctx: DBAccessContext) = {
-    collectionFind(
+    find(
       Json.obj(
         "_task" -> task._id)).one[Annotation].map {
       case Some(annotation) =>

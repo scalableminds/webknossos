@@ -5,8 +5,9 @@ import models.basics._
 import play.api.libs.json._
 import braingames.binary.models.{DataSourceRepository => AbstractDataSourceRepository, DataSource}
 import models.user.User
-import braingames.reactivemongo.{DBAccessContext, GlobalDBAccess, SecuredMongoDAO}
+import braingames.reactivemongo.{DefaultAccessDefinitions, DBAccessContext, GlobalDBAccess, SecuredMongoDAO}
 import play.api.libs.concurrent.Execution.Implicits._
+import braingames.reactivemongo.AccessRestrictions.AllowIf
 
 object DataSetRepository extends AbstractDataSourceRepository with GlobalDBAccess {
 
@@ -20,7 +21,7 @@ object DataSetRepository extends AbstractDataSourceRepository with GlobalDBAcces
     DataSetDAO.removeBySourceName(name)
 
   def findByName(name: String) =
-    DataSetDAO.findOneBySourceName(name).map(_.map(_.dataSource))
+    DataSetDAO.findOneBySourceName(name).map(_.dataSource)
 }
 
 case class DataSet(
@@ -46,20 +47,21 @@ object DataSetDAO extends SecuredBaseDAO[DataSet] {
   val collectionName = "dataSets"
 
   // Security
-
-  override def findQueryFilter(implicit ctx: DBAccessContext) = {
-    ctx.data match {
-      case Some(user: User) =>
-        AllowIf(
-          Json.obj("$or" -> Json.arr(
-            Json.obj("isPublic" -> true),
-            Json.obj("allowedTeams" -> Json.obj("$in" -> user.teamNames)),
-            Json.obj("dataSource.owningTeam" -> Json.obj("$in" -> user.adminTeamNames))
-          )))
-      case _ =>
-        AllowIf(
-          Json.obj("isPublic" -> true)
-        )
+  override val AccessDefinitions = new DefaultAccessDefinitions {
+    override def findQueryFilter(implicit ctx: DBAccessContext) = {
+      ctx.data match {
+        case Some(user: User) =>
+          AllowIf(
+            Json.obj("$or" -> Json.arr(
+              Json.obj("isPublic" -> true),
+              Json.obj("allowedTeams" -> Json.obj("$in" -> user.teamNames)),
+              Json.obj("dataSource.owningTeam" -> Json.obj("$in" -> user.adminTeamNames))
+            )))
+        case _ =>
+          AllowIf(
+            Json.obj("isPublic" -> true)
+          )
+      }
     }
   }
 
@@ -74,16 +76,16 @@ object DataSetDAO extends SecuredBaseDAO[DataSet] {
     findMaxBy("priority")
 
   def deleteAllSourcesExcept(names: Array[String])(implicit ctx: DBAccessContext) =
-    collectionRemove(Json.obj("dataSource.name" -> Json.obj("$nin" -> names)))
+    remove(Json.obj("dataSource.name" -> Json.obj("$nin" -> names)))
 
   def findOneBySourceName(name: String)(implicit ctx: DBAccessContext) =
     findOne(byNameQ(name))
 
   def findAllOwnedBy(teams: List[String])(implicit ctx: DBAccessContext) =
-    find(Json.obj("dataSource.owningTeam" -> Json.obj("$in" -> teams))).collect[List]()
+    find(Json.obj("dataSource.owningTeam" -> Json.obj("$in" -> teams))).cursor[DataSet].collect[List]()
 
   def updateOrCreate(d: DataSource)(implicit ctx: DBAccessContext) =
-    collectionUpdate(
+    update(
       byNameQ(d.name),
       Json.obj(
         "$set" -> Json.obj("dataSource" -> formatWithoutId(d)),
@@ -96,7 +98,7 @@ object DataSetDAO extends SecuredBaseDAO[DataSet] {
       upsert = true)
 
   def removeBySourceName(name: String)(implicit ctx: DBAccessContext) =
-    collectionRemove(byNameQ(name))
+    remove(byNameQ(name))
 
   def formatWithoutId(ds: DataSource) = {
     val js = Json.toJson(ds)
@@ -107,7 +109,7 @@ object DataSetDAO extends SecuredBaseDAO[DataSet] {
   }
 
   def updateTeams(name: String, teams: List[String])(implicit ctx: DBAccessContext) =
-    collectionUpdate(
+    update(
       byNameQ(name),
       Json.obj("$set" -> Json.obj(
         "allowedTeams" -> teams)))

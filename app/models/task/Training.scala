@@ -6,6 +6,7 @@ import scala.concurrent.Future
 import braingames.reactivemongo.DBAccessContext
 import reactivemongo.bson.BSONObjectID
 import play.modules.reactivemongo.json.BSONFormats._
+import braingames.util.Fox
 
 case class Training(
     domain: String,
@@ -25,7 +26,7 @@ object Training{
   def fromForm(domain: String, gain: Int, loss: Int) =
     Training(domain, gain, loss, null)
 
-  def findAssignableFor(user: User)(implicit ctx: DBAccessContext): Future[List[Task]] = {
+  def findAssignableFor(user: User)(implicit ctx: DBAccessContext): Fox[List[Task]] = {
     TaskService.findAssignableFor(user, shouldBeTraining = true)
   }
 }

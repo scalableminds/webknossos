@@ -2,6 +2,8 @@ require.config
 
   baseUrl : "/assets/javascripts"
 
+  waitSeconds : 0
+
   paths :
     "jquery"              : "../bower_components/jquery/jquery"
     "underscore"          : "../bower_components/lodash/dist/lodash"
@@ -59,38 +61,16 @@ require.config
     "backbone.marionette" : [ "backbone", "underscore" ]
 
 require [
+  "./main/errorHandling"
   "jquery"
   "underscore"
   "bootstrap"
-], ->
+], (ErrorHandling) ->
+
+  ErrorHandling.initialize( { throwAssertions: false, sendLocalErrors: false } )
 
   require [
-    "qassert"
+    "./main/enhancements"
+    "./main/routing"
+    "libs/core_ext"
   ], ->
-
-    $.assertSetup(
-      ajax :
-        url : "/assert"
-        type : "POST"
-        contentType : "application/x-www-form-urlencoded"
-      catchGlobalErrors : true
-      context :
-        userAgent :
-          version : navigator.appVersion
-          product : navigator.product + " - " + navigator.productSub
-          vendor : navigator.vendor + " - " + navigator.vendorSub
-          platform : navigator.platform
-      log: $.proxy(console.warn, console)
-    )
-
-    require [
-      "./main/router"
-      "./main/enhancements"
-      "libs/core_ext"
-    ], (Router) ->
-
-      $ ->
-
-        new Router()
-        Backbone.history.start({pushState : true})
-

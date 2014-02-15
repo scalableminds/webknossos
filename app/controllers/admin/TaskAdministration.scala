@@ -28,7 +28,7 @@ import scala.concurrent.Future
 import oxalis.nml.NMLService
 import play.api.libs.json.{Json, JsObject, JsArray}
 
-import net.liftweb.common.{Failure, Full}
+import net.liftweb.common.{Empty, Failure, Full}
 import braingames.util.Fox
 import play.api.mvc.SimpleResult
 import play.api.mvc.Request
@@ -287,6 +287,9 @@ object TaskAdministration extends AdminController {
           case f: Failure =>
             Logger.warn("Failure while creating bulk tasks: " + f)
             f
+          case Empty =>
+            Logger.warn("Failure while creating bulk tasks. Parsing the input failed")
+            Failure("Failure while creating bulk tasks. Parsing the input failed.")
         }
       }
 
@@ -336,14 +339,13 @@ object TaskAdministration extends AdminController {
   }
 
   def overview = Authenticated.async { implicit request =>
-    def combineUsersWithCurrentTasks(users: List[User]) = Future.traverse(users)(user =>
-      for {
-        annotations <- AnnotationService.openTasksFor(user)
-        tasks <- Fox.sequence(annotations.map(_.task)).map(_.flatten)
-        taskTypes <- Fox.sequence(tasks.map(_.taskType)).map(_.flatten)
+    def combineUsersWithCurrentTasks(users: List[User]): Future[List[(User, List[TaskType])]] = Future.traverse(users)(user =>
+      (for {
+        annotations <- AnnotationService.openTasksFor(user).getOrElse(Nil)
+        taskTypes <- Fox.sequenceOfFulls(annotations.map(_.task.flatMap(_.taskType)))
       } yield {
         user -> taskTypes.distinct
-      })
+      }))
 
     for {
       users <- UserService.findAll

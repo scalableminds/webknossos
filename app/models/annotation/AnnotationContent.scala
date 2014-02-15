@@ -12,6 +12,7 @@ import play.api.libs.concurrent.Execution.Implicits._
 import braingames.reactivemongo.DBAccessContext
 import braingames.util.Fox
 import play.api.Logger
+import net.liftweb.common.Box
 
 trait AnnotationContent {
   type Self <: AnnotationContent
@@ -30,21 +31,21 @@ trait AnnotationContent {
 
   def settings: AnnotationSettings
 
-  def copyDeepAndInsert: Future[Self]
+  def copyDeepAndInsert: Fox[Self]
 
-  def mergeWith(source: AnnotationContent): Future[Self]
+  def mergeWith(source: AnnotationContent): Fox[Self]
 
   def contentType: String
 
-  def toDownloadStream: Future[InputStream]
+  def toDownloadStream: Fox[InputStream]
 
   def downloadFileExtension: String
 
-  def contentData: Future[Option[JsObject]] = Future.successful(None)
+  def contentData: Fox[JsObject] = Fox.empty
 
   lazy val date = new Date(timestamp)
 
-  def dataSet(implicit ctx: DBAccessContext): Future[Option[DataSet]] = DataSetDAO.findOneBySourceName(dataSetName)
+  def dataSet(implicit ctx: DBAccessContext): Fox[DataSet] = DataSetDAO.findOneBySourceName(dataSetName)
 }
 
 object AnnotationContent {
@@ -66,15 +67,15 @@ object AnnotationContent {
 
   def writeAsJson(ac: AnnotationContent)(implicit ctx: DBAccessContext) = {
     for {
-      dataSet <- ac.dataSet
-      contentData <- ac.contentData
+      dataSet <- ac.dataSet.futureBox
+      contentData <- ac.contentData getOrElse Json.obj()
     } yield {
       Json.obj(
-	"settings" -> ac.settings,
-	"dataSet" -> dataSet,
-	"contentData" -> contentData,
-	"editPosition" -> ac.editPosition,
-	"contentType" -> ac.contentType)
+        "settings" -> ac.settings,
+        "dataSet" -> dataSet.toOption,
+        "contentData" -> contentData,
+        "editPosition" -> ac.editPosition,
+        "contentType" -> ac.contentType)
     }
   }
 }

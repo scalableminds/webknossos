@@ -1,7 +1,6 @@
 package models.user
 
 import play.api.Play.current
-import models.context._
 import braingames.security.SCrypt._
 import scala.collection.mutable.Stack
 import play.api.libs.json.JsValue

@@ -55,26 +55,28 @@
         </tr>
       </thead>
       <tbody class="hide">
-        <tr id="<%= element.name %>">
-          <td class="details-toggle" href="<%= controllers.admin.TaskAdministration.tasksForProject(element.name).url %>" data-ajax="add-row=#<%= element.name %> + tr"> <i class="caret-right"></i> <i class="caret-down"></i> </td>
-          <td> <%= element.team %> </td>
-          <td> <%= element.name %> </td>
-          <td> <%= element.owner %> </td>
-          <td class="nowrap">
-            <a href="<%= controllers.AnnotationController.trace('CompoundProject', element.name).url %>" title="view all finished tracings"><i class="fa fa-random"></i> view</a><br />
-            <a href="<%= controllers.admin.NMLIO.projectDownload(element.name).url %>" title="download all finished tracings"><i class="fa fa-download"></i> download</a><br />
-            <a href="<%= controllers.admin.ProjectAdministration.delete(element.name).url %>" data-ajax="delete-row,confirm"><i class="fa fa-trash-o"></i> delete </a>
-          </td>
-        </tr>
-        <tr class="details-row" >
-          <td colspan="12">
-            <table class="table table-condensed table-nohead">
-              <tbody>
-               <!-- TAKS NEED TO BE LOADED INTO THIS TABLE -->
-              </tbody>
-            </table>
-          </td>
-        </tr>
+        <template>
+          <tr id="<%= element.name %>">
+            <td class="details-toggle" href="<%= controllers.admin.TaskAdministration.tasksForProject(element.name).url %>" data-ajax="add-row=#<%= element.name %> + tr"> <i class="caret-right"></i> <i class="caret-down"></i> </td>
+            <td> <%= element.team %> </td>
+            <td> <%= element.name %> </td>
+            <td> <%= element.owner %> </td>
+            <td class="nowrap">
+              <a href="<%= controllers.AnnotationController.trace('CompoundProject', element.name).url %>" title="view all finished tracings"><i class="icon-random"></i> view</a><br />
+              <a href="<%= controllers.admin.NMLIO.projectDownload(element.name).url %>" title="download all finished tracings"><i class="icon-download"></i> download</a><br />
+              <a href="<%= controllers.admin.ProjectAdministration.delete(element.name).url %>" data-ajax="delete-row,confirm"><i class="icon-trash"></i> delete </a>
+            </td>
+          </tr>
+          <tr class="details-row hide" >
+            <td colspan="12">
+              <table class="table table-condensed table-nohead">
+                <tbody>
+                 <!-- TAKS NEED TO BE LOADED INTO THIS TABLE -->
+                </tbody>
+              </table>
+            </td>
+          </tr>
+        </template>
       </tbody>
     </table>
   </div>

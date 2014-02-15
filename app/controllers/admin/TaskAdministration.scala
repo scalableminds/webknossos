@@ -240,11 +240,11 @@ object TaskAdministration extends AdminController {
       })
   }
 
-  def createBulk = Authenticated.async(parse.urlFormEncoded) { implicit request =>
+  def createBulk = Authenticated.async(parse.urlFormEncoded(1024 * 1024)) { implicit request =>
     def extractParamLines(data: String) =
       data
       .split("\n")
-      .map(_.split(" ").map(_.trim))
+      .map(_.split(",").map(_.trim))
       .filter(_.length >= 9)
 
     def parseParamLine(params: Array[String]) = {
@@ -279,12 +279,15 @@ object TaskAdministration extends AdminController {
 
     def createTasksFromData(data: String) =
       Fox.sequence(extractParamLines(data).map(parseParamLine).toList).map { results =>
-        results.flatMap(_.map {
-          case (dataSetName, position, taskType, task) =>
+        results.flatMap{
+          case Full((dataSetName, position, taskType, task)) =>
             TaskDAO.insert(task)
             AnnotationService.createAnnotationBase(task, request.user._id, taskType.settings, dataSetName, position)
-            task
-        })
+            Full(task)
+          case f: Failure =>
+            Logger.warn("Failure while creating bulk tasks: " + f)
+            f
+        }
       }
 
     for {

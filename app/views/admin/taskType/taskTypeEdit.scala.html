@@ -1,4 +1,4 @@
-@(taskTypeId: String, editForm: Form[models.task.TaskType])(implicit session: oxalis.view.AuthedSessionData)
+@(taskTypeId: String, editForm: Form[models.task.TaskType],teams: List[String])(implicit session: oxalis.view.AuthedSessionData)
 
 @main(){
   <div class="container">
@@ -8,7 +8,7 @@
       All tasks connected to this task type are going to get adjusted to this settings. <br /> <br /> 
       @helper.form(controllers.admin.routes.TaskTypeAdministration.editTaskTypeForm(taskTypeId), 'class -> "form-horizontal") {
 
-        @basicTaskTypeForm(editForm)
+        @basicTaskTypeForm(teams, editForm)
 
         <div class="form-actions">
           <button type="submit" class="btn btn-primary">Save</button>

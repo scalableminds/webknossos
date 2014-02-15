@@ -1,6 +1,7 @@
 ### define
 jquery : $
 underscore : _
+moment : moment
 ../libs/toast : Toast
 ./paginator : Paginator
 ###
@@ -73,12 +74,17 @@ $ ->
 
     fillTemplateFromTable = ($el, responseData) ->
 
-      unless $el.data("tr-template")
-        return null
+      templateSource = _.unescape($el.find("template").html())
+      # VERY HACKY. Replace Handlebar templates with Underscore identifier
+      templateSource = templateSource.replace(/{{/gm,"<%")
+      templateSource = templateSource.replace(/}}/gm,"%>")
+      templateSource = _.unescape(templateSource)
 
-      templateSource = _.unescape($el.data("tr-template"))
-      return _.template(templateSource)(responseData)
-
+      if _.isArray(responseData)
+        for data in responseData
+          _.template(templateSource)(data)
+      else
+        _.template(templateSource)(responseData)
 
     $.ajax(ajaxOptions).then(
 
@@ -108,8 +114,8 @@ $ ->
           $table = $(options["add-row"])
           $tbody = $table.find("tbody")
           unless html
-            html = fillTemplateFromTable($table, responseData)
-          $tbody.append(html)
+            html = fillTemplateFromTable($tbody, responseData)
+          $tbody.prepend(html)
 
         if options["replace"]
           $el = $(options["replace"])
@@ -167,6 +173,8 @@ $ ->
     unless $(this).data("disable-auto-pagination")
       new Paginator $(this)
   )
+
+
 
 
   $(document).on "change", "table input.select-all-rows", ->

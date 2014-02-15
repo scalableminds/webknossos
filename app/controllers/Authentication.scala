@@ -109,15 +109,17 @@ object Authentication extends Controller with Secured with ProvidesUnauthorizedS
       formWithErrors =>
         Future.successful(BadRequest(html.user.login(formWithErrors))), {
         case (email, password) =>
-          for {
-            user <- UserService.auth(email.toLowerCase, password) ?~> Messages("user.login.failed")
-          } yield {
-            val redirectLocation =
-            if(user.verified)
-              controllers.routes.Application.index
-            else
-              controllers.routes.UserController.dashboard
-            Redirect(redirectLocation).withSession(Secured.createSession(user))
+          UserService.auth(email.toLowerCase, password).map{
+            case Some(user) =>
+              val redirectLocation =
+                if(user.verified)
+                  controllers.routes.Application.index
+                else
+                  controllers.routes.UserController.dashboard
+                Redirect(redirectLocation).withSession(Secured.createSession(user))
+            case _ =>
+              BadRequest(html.user.login(loginForm.bindFromRequest))
+                .flashing("success" -> Messages("user.login.failed"))
           }
       })
   }

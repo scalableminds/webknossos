@@ -126,8 +126,6 @@ class Binary
 
   arbitraryPingImpl : (matrix) ->
 
-    @printConnectionInfo()
-
     for strategy in @pingStrategies3d 
       if strategy.inVelocityRange(1) and strategy.inRoundTripTimeRange(@queue.roundTripTime)
         

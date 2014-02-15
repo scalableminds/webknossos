@@ -236,8 +236,10 @@ class DataRequestActor(
             case request: DataReadRequest =>
               new DataBlockCutter(block, request, layer, pointOffset).cutOutRequestedData
             case request: DataWriteRequest =>
-              val blocks = new DataBlockWriter(block, request, layer, pointOffset).writeSuppliedData
-              saveBlocks(minBlock, maxBlock, dataRequest, layer, blocks)
+              ensureCopyInCache(minBlock, maxBlock, dataRequest, layer, block.underlying).map { b =>
+                val blocks = new DataBlockWriter(block.copy(underlying = b), request, layer, pointOffset).writeSuppliedData
+                saveBlocks(minBlock, maxBlock, dataRequest, layer, blocks)
+              }
               Array[Byte]()
           }
     }
@@ -304,6 +306,59 @@ class DataRequestActor(
           p,
           block)
     }
+  }
+
+    def ensureCopyInLayer(loadBlock: LoadBlock, data: Array[Byte]) = {
+    withCache(loadBlock) {
+      Future.successful(Full(data.clone))
+    }
+  }
+
+  def ensureCopy(dataSource: DataSource, layer: DataLayer, requestedSection: Option[String], resolution: Int, block: Point3D, data: Array[Byte]) = {
+
+    def ensureCopyInSections(sections: Stream[DataLayerSection]): Future[Array[Byte]] = sections match {
+      case section #:: tail =>
+        val loadBlock = LoadBlock(dataSource, layer, section, resolution, block)
+        ensureCopyInLayer(loadBlock, data).flatMap {
+          case Full(byteArray) =>
+            Future.successful(byteArray)
+          case _ =>
+            ensureCopyInSections(tail)
+        }
+
+      case _ =>
+        System.err.println("Could not ensure userData to be in cache.")
+        Future.successful(Array[Byte]())
+    }
+
+    val sections = Stream(layer.sections.filter {
+      section =>
+        requestedSection.map(_ == section.sectionId) getOrElse true
+    }: _*)
+
+    ensureCopyInSections(sections)
+  }
+
+  def ensureCopyInCache(minBlock: Point3D, maxBlock: Point3D, dataRequest: DataRequest, layer: DataLayer, blocks: Vector[Array[Byte]]): Future[Vector[Array[Byte]]] = {
+    val blockIdxs = for {
+      x <- minBlock.x to maxBlock.x
+      y <- minBlock.y to maxBlock.y
+      z <- minBlock.z to maxBlock.z
+    } yield Point3D(x, y, z)
+
+    Future.sequence(
+      (for {
+        (p, block) <- (blockIdxs, blocks).zipped
+      } yield {
+        ensureCopy(
+          dataRequest.dataSource,
+          layer,
+          dataRequest.dataSection,
+          dataRequest.resolution,
+          p,
+          block)
+      }).toVector
+    )
   }
 }
 

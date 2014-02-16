@@ -23,7 +23,7 @@ class UserListItemView extends Backbone.Marionette.ItemView
         <span class="label label-experience"><%= domain %> : <%= value %></span>
       <% }) %>
     </td>
-    <td>
+    <td class="no-wrap">
       <% _.each(teams, function(team){ %>
         <%= team.team %>
         <span class="label" style="background-color: <%= TemplateHelpers.roleToColor(team.role.name) %>"><%= team.role.name %></span><br/>

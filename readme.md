@@ -14,7 +14,7 @@ If you are not blessed with a good OS try the steps below and fail ;)
 You do not need to install / build play on your own computer any more. Play is getting shipped as a dependency via sbt.
 
 ## Mongodb
-- install Mongodb (get the production release from mongodb.org). Unpack:
+- install mongodb (get the production release from mongodb.org). Unpack:
 
 ```bash
 tar -xvf mongo(...).tgz

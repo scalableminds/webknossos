@@ -11,10 +11,10 @@ If you are not blessed with a good OS try the steps below and fail ;)
 - install nodejs + coffee + less and make sure PATH is set to find them 
 
 ## Play setup:
-You do not need to install / build play on your own computer any more. Play is getting shipped as a dependency via sbt.
+You do not need to install / build play on your own computer any more. Play is getting shipped as a dependency via sbt. Just run `sbt run`
 
 ## Mongodb
-- install Mongodb (get the production release from mongodb.org). Unpack:
+- install mongodb (get the production release from mongodb.org). Unpack:
 
 ```bash
 tar -xvf mongo(...).tgz

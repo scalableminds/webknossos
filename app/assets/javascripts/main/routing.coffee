@@ -79,6 +79,7 @@ $ ->
           error: (xhr, status, error) ->
 
             console.error("Something went wrong when receiving task data", xhr, status, error)
+            populateTemplate({task : null})
 
           complete: (task) ->
 

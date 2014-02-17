@@ -94,7 +94,7 @@ object UserController extends Controller with Secured with Dashboard {
         case None =>
           users
       }
-      Ok(Writes.list(User.userPublicWrites(request.user)).writes(filtered))
+      Ok(Writes.list(User.userPublicWrites(request.user)).writes(filtered.sortBy(_.lastName.toLowerCase)))
     }
   }
 

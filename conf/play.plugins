@@ -1,2 +1,1 @@
-100:com.scalableminds.mongev.MongevPlugin
 400:play.modules.reactivemongo.ReactiveMongoPlugin

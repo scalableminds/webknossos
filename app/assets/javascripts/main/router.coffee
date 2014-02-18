@@ -16,6 +16,7 @@ class Router extends Backbone.Router
   routes :
     "dashboard"                   : "dashboard"
     "users"                       : "users"
+    "teams"                       : "teams"
     "admin/taskTypes"             : "hideLoading"
     "admin/projects"              : "projects"
     "admin/datasets"              : "datasets"
@@ -185,9 +186,15 @@ class Router extends Backbone.Router
 
     require ["./admin/views/user/user_list_view"], (UserListView) =>
 
-      view = new UserListView().render()
-      $("#main-container").html(view.el)
+      @changeView(new UserListView())
+      return @hideLoading()
 
+
+  teams : ->
+
+    require ["./admin/views/team/team_list_view"], (TeamListView) =>
+
+      @changeView(new TeamListView())
       return @hideLoading()
 
 
@@ -263,5 +270,12 @@ class Router extends Backbone.Router
 
       @hideLoading()
     )
+
+
+  changeView : (view) ->
+
+    $("#main-container").html(view.render().el)
+
+
 
 

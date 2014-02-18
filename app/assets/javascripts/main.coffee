@@ -10,7 +10,6 @@ require [
 ], ($, _, Backbone, ErrorHandling, Router) ->
 
   ErrorHandling.initialize( throwAssertions: false, sendLocalErrors: false )
-  $ -> 
+  $ ->
     new Router()
     Backbone.history.start( pushState : true )
-

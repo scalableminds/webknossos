@@ -6,15 +6,16 @@
     "gulp": "~3.5.2",
     "gulp-coffee": "~1.4.1",
     "gulp-clean": "~0.2.4",
-    "gulp-bower": "0.0.2",
     "event-stream": "~3.1.0",
     "requirejs": "~2.1.11",
     "gulp-exec": "~1.0.4",
     "run-sequence": "~0.3.5",
-    "gulp-changed": "~0.2.0",
     "gulp-tap": "~0.1.1",
     "gulp-util": "~2.2.14",
-    "gulp-watch": "~0.5.0",
-    "gulp-less": "~1.2.1"
+    "gulp-less": "~1.2.1",
+    "gulp-if": "0.0.5",
+    "bower": "~1.2.8",
+    "glob2base": "0.0.8",
+    "glob": "~3.2.8"
   }
 }

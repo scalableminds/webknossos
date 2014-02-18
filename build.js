@@ -1,6 +1,6 @@
 ({
-  mainConfigFile : "target/assets/public/javascripts_tmp/require_config.js",
-  baseUrl : "target/assets/public/javascripts_tmp",
+  mainConfigFile : "public/javascripts_tmp/require_config.js",
+  baseUrl : "public/javascripts_tmp",
   modules : [
     {
       name : "main",
@@ -16,7 +16,7 @@
     }
   ],
   
-  dir : "target/assets/public/javascripts",
+  dir : "public/javascripts",
   optimize : "none",
   removeCombined: true,
   skipDirOptimize: true,

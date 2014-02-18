@@ -33,12 +33,9 @@ src/main/scala/rebel.xml
 *.zip
 *.skp
 *.mtl
-modules/shellgame/target
-modules/shellgame/logs
-modules/shellgame/shellgame-assets
-public/levelStacks
 public/bower_components
 public/javascripts
+public/stylesheets
 aws.conf
 aws.conf.disabled
 /knowledge

@@ -1,13 +1,16 @@
 require [
   "jquery"
   "underscore"
+  "backbone"
   "./main/errorHandling"
   "./main/router"
   "bootstrap"
   "./main/enhancements"
   "libs/core_ext"
-], ($, _, ErrorHandling, Router) ->
+], ($, _, Backbone, ErrorHandling, Router) ->
 
-  ErrorHandling.initialize( { throwAssertions: false, sendLocalErrors: false } )
-  $ -> new Router()
+  ErrorHandling.initialize( throwAssertions: false, sendLocalErrors: false )
+  $ -> 
+    new Router()
+    Backbone.history.start( pushState : true )
 

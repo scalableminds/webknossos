@@ -56,8 +56,9 @@ require.config(
       exports : "THREE.ColorConverter"
     "qassert" : [ "jquery"]
     "backbone" :
-      depends : [ "underscore" ]
+      deps : [ "underscore" ]
       exports : "Backbone"
     "backbone.marionette" : [ "backbone", "underscore" ]
+    "penis" : "123"
 
 )

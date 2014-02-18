@@ -2,80 +2,106 @@ gulp        = require("gulp")
 coffee      = require("gulp-coffee")
 less        = require("gulp-less")
 clean       = require("gulp-clean")
-changed     = require("gulp-changed")
-watch       = require("gulp-watch")
-bower       = require("gulp-bower")
 eventStream = require("event-stream")
 runSequence = require("run-sequence")
 exec        = require("gulp-exec")
 util        = require("gulp-util")
-stream      = require("stream")
 path        = require("path")
+gif         = require("gulp-if")
+glob        = require("glob")
+stream      = require("stream")
+glob2base   = require("glob2base")
+
 
 paths =
   src :
-    less : ["app/assets/stylesheets/main.less"]
-    coffee : ["app/assets/javascripts/**/*.coffee"]
-    js : ["app/assets/javascripts/**/*.js"]
+    css : ["app/assets/stylesheets/main.less"]
+    js : ["app/assets/javascripts/**/*.{coffee,js}"]
   dest :
-    js_tmp : "target/assets/public/javascripts_tmp"
-    js : "target/assets/public/javascripts"
-    css : "target/assets/public/stylesheets"
+    js_tmp : "public/javascripts_tmp"
+    js : "public/javascripts"
+    css : "public/stylesheets"
 
 
-watch = (glob) ->
+watch = (srcGlob) ->
 
   passStream = new stream.PassThrough()
   passStream._writableState.objectMode = true
   passStream._readableState.objectMode = true
 
-  gulp.watch(glob, (event) ->
-    if event.type != "deleted"
-      util.log(util.colors.magenta(event.path), event.type)
-      gulp.src(event.path).on("data", (chunk) -> passStream.write(chunk); return)
+  if not Array.isArray(srcGlob)
+    srcGlob = [ srcGlob ]
+
+  srcGlob.forEach( (srcGlob) ->
+    globBase = glob2base(new glob.Glob(srcGlob))
+
+    gulp.watch(srcGlob, (event) ->
+      if event.type != "deleted"
+        util.log(util.colors.magenta(path.relative(process.cwd(), event.path)), event.type)
+        gulp.src(event.path).on("data", (file) -> 
+          file.base = path.join(file.cwd, globBase)
+          passStream.write(file)
+          return
+        )
+      return
+    )
+
+  )
+  return passStream
+
+logger = ->
+
+  return eventStream.map((file, callback) ->
+    util.log(">>", util.colors.yellow(path.relative(process.cwd(), file.path)))
+    callback(null, file)
     return
   )
 
-  return passStream
 
-
-gulp.task("scripts:build", ->
-  return eventStream.merge(
-
-    gulp.src(paths.src.coffee)
-      .pipe(coffee())
-      .pipe(gulp.dest(paths.dest.js_tmp))
-
-    gulp.src(paths.src.js)
-      .pipe(gulp.dest(paths.dest.js_tmp))
+makeScripts = (dest) ->
+  return eventStream.pipeline(
+    gif(
+      (file) -> return path.extname(file.path) == ".coffee"
+      coffee()
+    )
+    gulp.dest(dest)
+    logger()
   )
-)
 
-gulp.task("scripts:debug", ->
-  return eventStream.merge(
 
-    gulp.src(paths.src.coffee)
-      .pipe(coffee())
-      .pipe(gulp.dest(paths.dest.js))
-
-    gulp.src(paths.src.js)
-      .pipe(gulp.dest(paths.dest.js))
+makeStyles = (dest) ->
+  return eventStream.pipeline(
+    less( sourceMap : true )
+    gulp.dest(dest)
+    logger()
   )
+
+
+
+gulp.task("compile:scripts:production", ->
+  return gulp.src(paths.src.js)
+    .pipe(makeScripts(paths.dest.js_tmp))
 )
 
-gulp.task("styles:build", ->
-  return gulp.src(paths.src.less)
-    .pipe(less(
-      sourceMap : true
-    ))
-    .pipe(gulp.dest(paths.dest.css))
+gulp.task("compile:scripts:development", ->
+  return gulp.src(paths.src.js)
+    .pipe(makeScripts(paths.dest.js))
 )
 
-gulp.task("require:build", ->
+gulp.task("compile:styles", ->
+  return gulp.src(paths.src.css)
+    .pipe(makeStyles(paths.dest.css))
+)
+
+gulp.task("combine:scripts:production", ->
   return gulp.src("build.js")
     .pipe(exec("./node_modules/requirejs/bin/r.js -o build.js"))
 )
 
+gulp.task("install:bower", ->
+  return gulp.src("bower.json")
+    .pipe(exec("./node_modules/bower/bin/bower install"))
+)
 
 gulp.task("clean:tmp", ->
   return gulp.src(paths.dest.js_tmp, read: false)
@@ -88,45 +114,36 @@ gulp.task("clean:build", ->
 )
 
 
-gulp.task("watch:scripts:debug", ->
-  return eventStream.merge(
-
-    watch(paths.src.coffee)
-      .pipe(coffee())
-      .pipe(gulp.dest(paths.dest.js))
-
-    watch(paths.src.js)
-      .pipe(gulp.dest(paths.dest.js))
-  )
+gulp.task("watch:scripts:development", ->
+  return watch(paths.src.js)
+    .pipe(makeScripts(paths.dest.js))
 )
 
-gulp.task("watch:styles:debug", ->
-  return watch(paths.src.less)
-    .pipe(less(
-      sourceMap : true
-    ))
-    .pipe(gulp.dest(paths.dest.css))
+gulp.task("watch:styles", ->
+  return watch(paths.src.css)
+    .pipe(makeStyles(paths.dest.css))
 )
 
 
 gulp.task("build:scripts", (callback) ->
-  runSequence("scripts:build", "require:build", "clean:tmp")
+  runSequence("compile:scripts:production", "combine:scripts:production", "clean:tmp", callback)
 )
+gulp.task("build:styles", ["compile:styles"])
 
 gulp.task("build", (callback) ->
-  runSequence("clean:build", ["build:scripts", "styles:build"], callback)
+  runSequence(["install:bower", "clean:build"], ["build:scripts", "build:styles"], callback)
 )
 
 
 gulp.task("debug:scripts", (callback) ->
-  runSequence("scripts:debug", "watch:scripts:debug", callback)
+  runSequence("compile:scripts:development", "watch:scripts:development", callback)
 )
 gulp.task("debug:styles", (callback) ->
-  runSequence("styles:build", "watch:styles:debug", callback)
+  runSequence("compile:styles", "watch:styles", callback)
 )
 
 gulp.task("debug", (callback) ->
-  runSequence("clean:build", ["debug:scripts", "debug:styles"], callback)
+  runSequence(["install:bower", "clean:build"], ["debug:scripts", "debug:styles"], callback)
 )
 
 

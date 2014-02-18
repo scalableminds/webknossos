@@ -216,18 +216,18 @@ class CellTracing
         timestamp : (new Date()).getTime()
         viewport : viewport
         resolution : resolution
-        bitDepth : if @user.fourBit then 4 else 8
-        interpolation : @user.interpolation
+        bitDepth : if @user.userSettings.fourBit then 4 else 8
+        interpolation : @user.userSettings.interpolation
 
       point = new TracePoint(type, @idCount++, position, radius, @activeTree.treeId, metaInfo)
       @activeTree.nodes.push(point)
-      
+
       if @activeNode
-      
+
         @activeNode.appendNext(point)
         point.appendNext(@activeNode)
         @activeNode = point
-      
+
       else
 
         @activeNode = point
@@ -235,7 +235,7 @@ class CellTracing
         if @branchPointsAllowed
           centered = true
           @pushBranch()
-      
+
       @doubleBranchPop = false
 
       @stateLogger.createNode(point, @activeTree.treeId)

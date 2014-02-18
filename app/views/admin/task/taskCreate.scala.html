@@ -44,8 +44,8 @@
     <h3>Import Tasks in Bulk</h3>
 
     <div class="well">
-      One line for each task. The values are seperated by a space. Format: <br />
-      dataSet taskTypeSummary experienceDomain minExperience x y z priority instances team (opt: project)<br /><br />
+      One line for each task. The values are seperated by ','. Format: <br />
+      dataSet, taskTypeSummary, experienceDomain, minExperience, x, y, z, priority, instances, team, (opt: project)<br /><br />
       @helper.form(controllers.admin.routes.TaskAdministration.createBulk){
         <textarea class="input-fullwidth input-monospace" rows="20" name="data"></textarea>
         <div class="form-actions">

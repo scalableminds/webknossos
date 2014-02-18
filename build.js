@@ -1,12 +1,10 @@
 ({
-  mainConfigFile : ".tmp/javascripts/require-config.js",
+  mainConfigFile : ".tmp/javascripts/require_config.js",
   baseUrl : ".tmp/javascripts",
   modules : [
     {
       name : "main",
-      wrap : {
-        startFile : [ ".tmp/javascripts/require-config.js", ".tmp/javascripts/libs/require-2.1.1.js" ]
-      }
+      include : [ "require", "require_config" ]
     }, {
       name : "oxalis/controller"
     }, {
@@ -15,7 +13,7 @@
       name : "ace"
     }
   ],
-  dir : "public/javascripts/min",
+  dir : "public/javascripts",
   removeCombined: true,
   skipDirOptimize: true,
   optimize : "uglify2",

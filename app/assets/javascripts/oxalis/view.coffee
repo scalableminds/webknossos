@@ -212,7 +212,7 @@ class View
 
   updateComments : ->
 
-    comments = @model.cellTracing.getComments( @model.user.sortCommentsAsc )
+    comments = @model.cellTracing.getComments( @model.user.get("sortCommentsAsc") )
     commentList = $("#comment-list")
     commentList.empty()
 
@@ -315,8 +315,11 @@ class View
         $('<li>').append($('<i>', {"class": "fa fa-bull"}),
           $('<a>', {"href": "#", "data-treeid": tree.treeId})
           .append($('<span>', {"title": "nodes", "text": tree.nodes.length}).css("display": "inline-block", "width": "50px"),
-          $('<i>', {"class": "fa fa-sign-blank"}).css(
-            "color": "##{('000000'+tree.color.toString(16)).slice(-6)}"),
+          $('<i>', {"class": "fa icon-sign-blank"}).css(
+            "background-color": "##{('000000'+tree.color.toString(16)).slice(-6)}"
+            "margin": "3px 5px"
+            "border-radius": "3px"
+          ),
           $('<span>', {"title": "name", "text": tree.name}) )) )[0])
 
     treeList.append(newContent)
@@ -327,7 +330,7 @@ class View
   updateTreesSortButton : ->
 
     @toggleIconVisibility(
-      @model.user.sortTreesByName,
+      @model.user.get("sortTreesByName"),
       $("#sort-name-icon"),
       $("#sort-id-icon"))
 
@@ -335,7 +338,7 @@ class View
   updateCommentsSortButton : ->
 
     @toggleIconVisibility(
-      @model.user.sortCommentsAsc,
+      @model.user.get("sortCommentsAsc"),
       $("#sort-asc-icon"),
       $("#sort-desc-icon")
     )

@@ -9,6 +9,7 @@
     href="@controllers.admin.routes.TaskAdministration.tasksForType(taskType.id)"
     data-ajax="add-row=#@taskType.id+tr"> <i class="caret-right"></i> <i class="caret-down"></i> </td>
   <td> @formatHash(taskType.id) </td>
+  <td> @taskType.team </td>
   <td> @taskType.summary </td>
   <td> @formatShortText(taskType.description) </td>
   <td>

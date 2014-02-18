@@ -227,7 +227,7 @@ class CameraController
   updateCamViewport : ->
     
     scaleFactor = @model.scaleInfo.baseVoxel
-    boundary    = constants.VIEWPORT_WIDTH / 2 * @model.user.zoom
+    boundary    = constants.VIEWPORT_WIDTH / 2 * @model.user.get("zoom")
     for i in [constants.PLANE_XY, constants.PLANE_YZ, constants.PLANE_XZ]
       @cameras[i].near = -@camDistance
       @cameras[i].left  = @cameras[i].bottom = -boundary * scaleFactor

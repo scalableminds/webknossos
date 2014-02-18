@@ -66,7 +66,7 @@ class CellTracing
 
     tracingType = tracing.typ
     if (tracingType == "Task" or tracingType == "Training") and @getNodeListOfAllTrees().length == 0
-      @addNode(tracing.content.editPosition)
+      @addNode(tracing.content.editPosition, @TYPE_USUAL, 0, 0)
 
     @branchPointsAllowed = tracing.content.settings.branchPointsAllowed
     if not @branchPointsAllowed
@@ -114,7 +114,7 @@ class CellTracing
       @createNewTree()
       for i in [0...numberOfNodesPerTree]
         pos = [Math.random() * size + offset, Math.random() * size + offset, Math.random() * size + offset]
-        point = new TracePoint(@TYPE_USUAL, @idCount++, pos, Math.random() * 200, null, @activeTree.treeId)
+        point = new TracePoint(@TYPE_USUAL, @idCount++, pos, Math.random() * 200, @activeTree.treeId, null)
         @activeTree.nodes.push(point)
         if @activeNode
           @activeNode.appendNext(point)
@@ -205,23 +205,37 @@ class CellTracing
     @branchDeferred.resolve()
 
 
-  addNode : (position, type, centered = true) ->
+  addNode : (position, type, viewport, resolution, centered = true) ->
 
     if @ensureDirection(position)
+
       radius = 10 * @scaleInfo.baseVoxel
       if @activeNode then radius = @activeNode.radius
-      point = new TracePoint(type, @idCount++, position, radius, (new Date()).getTime(), @activeTree.treeId)
+
+      metaInfo =
+        timestamp : (new Date()).getTime()
+        viewport : viewport
+        resolution : resolution
+        bitDepth : if @user.fourBit then 4 else 8
+        interpolation : @user.interpolation
+
+      point = new TracePoint(type, @idCount++, position, radius, @activeTree.treeId, metaInfo)
       @activeTree.nodes.push(point)
+      
       if @activeNode
+      
         @activeNode.appendNext(point)
         point.appendNext(@activeNode)
         @activeNode = point
+      
       else
+
         @activeNode = point
         point.type = @TYPE_BRANCH
         if @branchPointsAllowed
           centered = true
           @pushBranch()
+      
       @doubleBranchPop = false
 
       @stateLogger.createNode(point, @activeTree.treeId)
@@ -402,7 +416,7 @@ class CellTracing
 
   selectNextTree : (forward) ->
 
-    trees = @getTreesSorted(@user.sortTreesByName)
+    trees = @getTreesSorted(@user.get("sortTreesByName"))
     for i in [0...trees.length]
       if @activeTree.treeId == trees[i].treeId
         break
@@ -585,7 +599,7 @@ class CellTracing
 
         @trigger("mergeTree", lastTree.treeId, lastNode, @activeNode)
 
-        @deleteTree(false, lastTree.treeId, false)
+        #@deleteTree(false, lastTree.treeId, false)
 
         @setActiveNode(activeNodeID)
       else
@@ -607,7 +621,7 @@ class CellTracing
 
   getTreesSorted : ->
 
-    if @user.sortTreesByName
+    if @user.get("sortTreesByName")
       return (@trees.slice(0)).sort(@compareNames)
     else
       return (@trees.slice(0)).sort(@compareTimestamps)

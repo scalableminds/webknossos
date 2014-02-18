@@ -56,7 +56,7 @@ object TrainingsTaskAdministration extends AdminController {
       _nonTrainings <- TaskService.findAllNonTrainings
       nonTrainings <- Future.traverse(_nonTrainings)(Task.transformToJson)
       experiences <- ExperienceService.findAllDomains
-      annotations <- AnnotationService.openExplorationalFor(request.user).collect[List]()
+      annotations <- AnnotationService.openExplorationalFor(request.user)
       annotationJSON <- Future.traverse(annotations)(Annotation.transformToJson)
     } yield {
       JsonOk(Json.obj(
@@ -70,7 +70,7 @@ object TrainingsTaskAdministration extends AdminController {
     for {
       nonTrainings <- TaskService.findAllNonTrainings
       experiences <- ExperienceService.findAllDomains
-      annotations <- AnnotationService.openExplorationalFor(request.user).collect[List]()
+      annotations <- AnnotationService.openExplorationalFor(request.user)
     } yield {
       html.admin.training.trainingsTaskCreate(
         nonTrainings,
@@ -82,8 +82,7 @@ object TrainingsTaskAdministration extends AdminController {
 
   def create(taskId: String) = Authenticated.async { implicit request =>
     for {
-      taskOpt <- TaskDAO.findOneById(taskId)
-      form = taskOpt.map(task => trainingsTaskForm.fill(taskToForm(task))) getOrElse trainingsTaskForm
+      form <- TaskDAO.findOneById(taskId).map(task => trainingsTaskForm.fill(taskToForm(task))).getOrElse(trainingsTaskForm)
       html <- trainingsTaskCreateHTML(form)
     } yield {
       Ok(html)

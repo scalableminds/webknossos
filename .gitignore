@@ -18,6 +18,7 @@ boot/
 .tmp/
 *.iml
 .idea_modules/
+node_modules/
 *.db
 *.class
 *.keep
@@ -37,6 +38,7 @@ modules/shellgame/logs
 modules/shellgame/shellgame-assets
 public/levelStacks
 public/bower_components
+public/javascripts
 aws.conf
 aws.conf.disabled
 /knowledge

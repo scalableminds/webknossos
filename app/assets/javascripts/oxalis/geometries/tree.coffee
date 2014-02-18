@@ -30,7 +30,7 @@ class Tree
       edgeGeometry,
       new THREE.LineBasicMaterial({
         color: @darkenHex( treeColor ),
-        linewidth: @model.user.particleSize / 4}),
+        linewidth: @model.user.get("particleSize") / 4}),
       THREE.LinePieces
     )
 
@@ -108,8 +108,7 @@ class Tree
         edgesIndex = i
         break
 
-    $.assert(found,
-      "No edge found.", { found, edgeArray, nodesIndex })
+    $.assert(found, "No edge found.", { found, edgeArray, nodesIndex })
 
     swapLast( @edgesBuffer, edgesIndex )
 

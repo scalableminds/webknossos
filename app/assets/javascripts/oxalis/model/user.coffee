@@ -6,71 +6,61 @@ underscore : _
 
 class User
 
-  # userdata
-  # default values are defined in server
-  moveValue : null
-  moveValue3d : null
-  rotateValue : null
-  crosshairSize : null
-  scaleValue : null
-  mouseRotateValue : null
-  clippingDistance : null
-  clippingDistanceArbitrary : null
-  dynamicSpaceDirection : null
-  displayCrosshair : null
-  interpolation : null
-  fourBit : null
-  briConNames : null
-  brightness : null
-  contrast : null
-  quality : null
-  zoom : null
-  scale : null
-  displayTDViewXY : null
-  displayTDViewYZ : null
-  displayTDViewXZ : null
-  newNodeNewTree : null
-  inverseX : null
-  inverseY : null
-  keyboardDelay : null
-  mouseActive : null
-  keyboardActive : null
-  gamepadActive : null
-  motionsensorActive : null
-  firstVisToggle : null
-  particleSize : null
-  sortTreesByName : null
-  sortCommentsAsc : null
-
-  # DON'T add additional instance variables, this will result in a bad request!
+  # To add any user setting, you must define default values in
+  # UserConfiguration.scala
 
   constructor : (user) ->
 
     _.extend(this, new EventMixin())
-    _.extend(@, user)
+    @userSettings = {}
+    _.extend(@userSettings, user)
 
 
-  setValue : (name, value) ->
+  setByName : (name, value) ->
 
-    @[name] = value
+    @userSettings[name] = value
     @trigger(name + "Changed", value)
     @push()
 
 
+  setByObject : (object) ->
+
+    for name of object
+      @setByName(name, object[name])
+
+
+  set : (arg1, arg2) ->
+
+    if _.isObject(arg1)
+      @setByObject(arg1)
+    else
+      @setByName(arg1, arg2) 
+
+
+  get : (name) ->
+
+    return @userSettings[name]
+
+
+  getSettings : ->
+
+    return @userSettings
+
+
   getMouseInversionX : ->
 
-    return if @inverseX then 1 else -1
+    return if @userSettings.inverseX then 1 else -1
 
 
   getMouseInversionY : ->
 
-    return if @inverseY then 1 else -1
+    return if @userSettings.inverseY then 1 else -1
 
 
   triggerAll : ->
 
-    for property of this
-      @trigger(property + "Changed", @[property]) 
+    for property of @userSettings
+      @trigger(property + "Changed", @get(property)) 
 
 
   push : ->
@@ -89,20 +79,13 @@ class User
 
     deferred = $.Deferred()
 
-    data = {}
-    for property of this
-      
-      if not (typeof this[property] == "function") and property.charAt(0) != '_'
-
-        data[property] = this[property]
-
-    console.log "Sending User Data:", data
+    console.log "Sending User Data:", @userSettings
       
     Request.send(
       url      : "/user/configuration"
       type     : "POST"
       dataType : "json"
-      data     : data
+      data     : @userSettings
     ).fail( =>
       
       console.log "couldn't save userdata"

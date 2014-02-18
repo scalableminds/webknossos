@@ -5,7 +5,7 @@
 
 class CellTacingController
 
-  constructor : ( { @model, @view, @sceneController, @cameraController, @move, @calculateGlobalPos }, controlMode ) ->
+  constructor : ( { @model, @view, @sceneController, @cameraController, @move, @calculateGlobalPos, @planeController }, controlMode ) ->
 
     @inTraceMode = controlMode == constants.CONTROL_MODE_TRACE
 
@@ -58,11 +58,11 @@ class CellTacingController
 
   setParticleSize : (delta) ->
 
-    particleSize = @model.user.particleSize + delta
+    particleSize = @model.user.get("particleSize") + delta
     particleSize = Math.min(constants.MAX_PARTICLE_SIZE, particleSize)
     particleSize = Math.max(constants.MIN_PARTICLE_SIZE, particleSize)
 
-    @model.user.setValue("particleSize", (Number) particleSize)
+    @model.user.set("particleSize", (Number) particleSize)
 
 
   setRadius : (delta) ->
@@ -76,9 +76,9 @@ class CellTacingController
     @sceneController.toggleSkeletonVisibility()
     # Show warning, if this is the first time to use
     # this function for this user
-    if @model.user.firstVisToggle
+    if @model.user.get("firstVisToggle")
       @view.showFirstVisToggle()
-      @model.user.firstVisToggle = false
+      @model.user.set("firstVisToggle", false)
       @model.user.push()
 
 
@@ -102,7 +102,7 @@ class CellTacingController
 
     # Strg + Rightclick to set new not active branchpoint
     if ctrlPressed and 
-      @model.user.newNodeNewTree == false and 
+      @model.user.get("newNodeNewTree") == false and 
         @model.cellTracing.getActiveNodeType() == constants.TYPE_USUAL
 
       @pushBranch()
@@ -155,17 +155,19 @@ class CellTacingController
 
   addNode : (position, centered) =>
 
-    if @model.user.newNodeNewTree == true
+    if @model.user.get("newNodeNewTree") == true
       @createNewTree()
       # make sure the tree was rendered two times before adding nodes,
       # otherwise our buffer optimizations won't work
       @model.cellTracing.one("finishedRender", =>
         @model.cellTracing.one("finishedRender", =>
-          @model.cellTracing.addNode(position, constants.TYPE_USUAL))
+          @model.cellTracing.addNode(position, constants.TYPE_USUAL,
+            @planeController.activeViewport, @model.flycam.getIntegerZoomStep()))
         @view.draw())
       @view.draw()
     else
-      @model.cellTracing.addNode(position, constants.TYPE_USUAL, centered)
+      @model.cellTracing.addNode(position, constants.TYPE_USUAL,
+        @planeController.activeViewport, @model.flycam.getIntegerZoomStep(), centered)
 
 
   pushBranch : =>

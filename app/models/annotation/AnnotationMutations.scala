@@ -55,15 +55,15 @@ class AnnotationMutations(val annotation: Annotation) extends AnnotationMutation
     def executeFinish(annotation: Annotation): Future[Box[(Annotation, String)]] = async {
       annotation match {
         case annotation if annotation._task.isEmpty =>
-          val updated = await(annotation.muta.finish())
+          val updated = await(annotation.muta.finish().futureBox)
           updated.map(_ -> Messages("annotation.finished"))
         case annotation =>
           val isReadyToBeFinished = await(annotation.isReadyToBeFinished)
           if (annotation.isTrainingsAnnotation) {
-            val updated = await(AnnotationDAO.passToReview(annotation._id))
+            val updated = await(AnnotationDAO.passToReview(annotation._id).futureBox)
             updated.map(_ -> Messages("task.passedToReview"))
           } else if (isReadyToBeFinished) {
-            val updated = await(AnnotationDAO.finish(annotation._id))
+            val updated = await(AnnotationDAO.finish(annotation._id).futureBox)
             updated.map(_ -> Messages("task.finished"))
           } else
             Failure(Messages("tracing.notEnoughNodes"))
@@ -153,17 +153,17 @@ class AnnotationMutations(val annotation: Annotation) extends AnnotationMutation
   def incrementVersion()(implicit ctx: DBAccessContext) =
     AnnotationDAO.incrementVersion(annotation._id)
 
-  def copyDeepAndInsert()(implicit ctx: DBAccessContext): Future[Option[Annotation]] = {
+  def copyDeepAndInsert()(implicit ctx: DBAccessContext): Fox[Annotation] = {
     val copied = annotation.content.flatMap(content => content.copyDeepAndInsert)
     copied
     .map(_.id)
-    .getOrElse(annotation._content._id)
+    .orElse(Fox.successful(annotation._content._id))
     .flatMap { contentId =>
       val copied = annotation.copy(
         _id = BSONObjectID.generate,
         _content = annotation._content.copy(_id = contentId))
 
-      AnnotationDAO.insert(copied).map(_ => Some(copied))
+      AnnotationDAO.insert(copied).map(_ => copied)
     }
   }
 

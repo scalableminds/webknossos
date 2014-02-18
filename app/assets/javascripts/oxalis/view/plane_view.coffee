@@ -249,7 +249,7 @@ class PlaneView
 
     @running = true
 
-    @scaleTrianglesPlane(@model.user.scale)
+    @scaleTrianglesPlane(@model.user.get("scale"))
     $(".inputcatcher").show()
 
     $(window).on "resize", => @.resize()

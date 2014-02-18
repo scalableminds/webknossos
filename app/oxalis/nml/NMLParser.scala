@@ -53,6 +53,8 @@ object NMLParser {
     val DEFAULT_COLOR = Color(1, 0, 0, 0)
     val DEFAULT_VIEWPORT = 0
     val DEFAULT_RESOLUTION = 0
+    val DEFAULT_BITDEPTH = 0
+    val DEFAULT_INTERPOLATION = false
     val DEFAULT_TIMESTAMP = 0L
 
     def parse: Box[NML] = {
@@ -258,6 +260,14 @@ object NMLParser {
       ((node \ "@inMag").text).toIntOpt.getOrElse(DEFAULT_RESOLUTION)
     }
 
+    def parseBitDepth(node: NodeSeq) = {
+      ((node \ "@bitDepth").text).toIntOpt.getOrElse(DEFAULT_BITDEPTH)
+    }
+
+    def parseInterpolation(node: NodeSeq) = {
+      ((node \ "@interpolation").text).toBooleanOpt.getOrElse(DEFAULT_INTERPOLATION)
+    }
+
     def parseTimestamp(node: NodeSeq) = {
       ((node \ "@time").text).toLongOpt.getOrElse(DEFAULT_TIMESTAMP)
     }
@@ -271,7 +281,9 @@ object NMLParser {
         val viewport = parseViewport(node)
         val resolution = parseResolution(node)
         val timestamp = parseTimestamp(node)
-        (id -> Node(nextNodeId, position, radius, viewport, resolution, timestamp))
+        val bitDepth = parseBitDepth(node)
+        val interpolation = parseInterpolation(node)
+        (id -> Node(nextNodeId, position, radius, viewport, resolution, bitDepth, interpolation, timestamp))
       }
     }
   }

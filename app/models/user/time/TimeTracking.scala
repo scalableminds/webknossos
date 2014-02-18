@@ -18,6 +18,8 @@ import play.modules.reactivemongo.json.BSONFormats._
 import play.api.libs.concurrent.Execution.Implicits._
 import models.basics.SecuredBaseDAO
 import models.user.time.TimeTracking.LoggedPerPaymentInterval
+import net.liftweb.common.Full
+import braingames.util.Fox
 
 
 case class TimeTracking(user: BSONObjectID, timeEntries: List[TimeEntry], _id: BSONObjectID = BSONObjectID.generate){
@@ -93,16 +95,16 @@ object TimeTrackingDAO extends SecuredBaseDAO[TimeTracking] {
   def findOneByUser(user: User)(implicit ctx: DBAccessContext) = findOne("user", user._id)
 
   def addTimeEntry(timeTracker: TimeTracking, entry: TimeEntry)(implicit ctx: DBAccessContext) =
-    collectionUpdate(Json.obj("_id" -> timeTracker._id), Json.obj("$set" -> Json.obj("timeEntries.-1" -> entry)))
+    update(Json.obj("_id" -> timeTracker._id), Json.obj("$set" -> Json.obj("timeEntries.-1" -> entry)))
 
   def setTimeEntries(timeTracker: TimeTracking, entries: List[TimeEntry])(implicit ctx: DBAccessContext) =
-    collectionUpdate(Json.obj("_id" -> timeTracker._id), Json.obj("$set" -> Json.obj("timeEntries" -> entries)))
+    update(Json.obj("_id" -> timeTracker._id), Json.obj("$set" -> Json.obj("timeEntries" -> entries)))
 
-  def logTime(user: User, annotation: Option[AnnotationLike])(implicit ctx: DBAccessContext): Future[Long] = {
+  def logTime(user: User, annotation: Option[AnnotationLike])(implicit ctx: DBAccessContext): Fox[Long] = {
     val current = System.currentTimeMillis
 
-    findOneByUser(user).map {
-      case Some(timeTracker) =>
+    findOneByUser(user).futureBox.map {
+      case Full(timeTracker) =>
         appendToTimeTracker(timeTracker, user, annotation)
       case _ =>
         val entry = TimeEntry(0, current, annotation = annotation.map(_.id))
@@ -117,8 +119,8 @@ object TimeTrackingDAO extends SecuredBaseDAO[TimeTracking] {
   def logTime(user: User, time: Long, note: Option[String])(implicit ctx: DBAccessContext) = {
     val current = System.currentTimeMillis
     val entry = TimeEntry(time, current, note = note)
-    findOneByUser(user).map {
-      case Some(timeTracker) =>
+    findOneByUser(user).futureBox.map {
+      case Full(timeTracker) =>
         addTimeEntry(timeTracker, entry)
       case _ =>
         insertNewForEntry(user, entry)

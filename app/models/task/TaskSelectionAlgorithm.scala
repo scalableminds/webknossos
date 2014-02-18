@@ -27,8 +27,8 @@ object TaskSelectionAlgorithmDAO extends SecuredBaseDAO[TaskSelectionAlgorithm] 
   val collectionName = "taskAlgorithms"
   val formatter = TaskSelectionAlgorithm.taskSelectionAlgorithmFormat
 
-  def current(implicit ctx: DBAccessContext) = {
-    collectionFind(Json.obj("active" -> true))
+  def current(implicit ctx: DBAccessContext) = withExceptionCatcher{
+    find(Json.obj("active" -> true))
     .sort(Json.obj("timestamp" -> -1))
     .one[TaskSelectionAlgorithm].map {
       case Some(a) => a
@@ -37,11 +37,11 @@ object TaskSelectionAlgorithmDAO extends SecuredBaseDAO[TaskSelectionAlgorithm] 
   }
 
   def use(alg: TaskSelectionAlgorithm)(implicit ctx: DBAccessContext) {
-    collectionUpdate(
+    update(
       Json.obj("_id" -> Json.obj("$ne" -> alg._id)),
       Json.obj("$set" -> Json.obj("active" -> false)),
       multi = true)
-    collectionUpdate(
+    update(
       Json.obj("_id" -> alg._id),
       Json.obj("$set" -> Json.obj("active" -> true)))
   }
@@ -52,5 +52,4 @@ object TaskSelectionAlgorithmDAO extends SecuredBaseDAO[TaskSelectionAlgorithm] 
       "js" -> e.js,
       "active" -> e.active)
   }
-
 }

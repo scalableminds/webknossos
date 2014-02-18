@@ -100,12 +100,15 @@ object ApplicationBuild extends Build {
   lazy val oxalis: Project = play.Project(appName, appVersion, oxalisDependencies).settings(
     templatesImport += "oxalis.view.helpers._",
     templatesImport += "oxalis.view._",
-    coffeescriptOptions := Seq(/*"minify",*/ "native", coffeeCmd),
     scalaVersion := "2.10.3",
     //requireJs := Seq("main"),
     //requireJsShim += "main.js",
-    resolvers ++= dependencyResolvers
-    //playAssetsDirectories += file("data")
+    resolvers ++= dependencyResolvers,
+    lessEntryPoints <<= (sourceDirectory in Compile)(base => base / "none"),
+    coffeescriptEntryPoints <<= (sourceDirectory in Compile)(base => base / "none"),
+    javascriptEntryPoints <<= (sourceDirectory in Compile)(base => base / "none"),
+    unmanagedBase <<= target(_ / "assets")
+    // playAssetsDirectories += baseDirectory.value / "target" / "assets"
   )
 
   lazy val datastore: Project = Project("datastore", file("modules") / "datastore", dependencies = Seq(oxalis)).settings(

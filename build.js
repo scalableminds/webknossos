@@ -6,7 +6,12 @@
       name : "main",
       include : [ "require", "require_config" ]
     }, {
-      name : "oxalis/controller"
+      name : "oxalis/controller",
+      paths : {
+        "jquery" : "empty:",
+        "underscore" : "empty:",
+        "backbone" : "empty:"
+      }
     }, {
       name : "admin/views/user/user_list_view"
     }, {

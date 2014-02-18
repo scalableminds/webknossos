@@ -25,10 +25,10 @@ require.config(
     "tween"               : "../bower_components/tweenjs/build/Tween"
     "dat.gui"             : "../bower_components/dat.gui/dat.gui"
     "moment"              : "../bower_components/momentjs/moment"
+    "require"             : "../bower_components/requirejs/require"
     "v3"                  : "libs/v3"
     "m4x4"                : "libs/m4x4"
     "worker"              : "libs/worker_plugin"
-    "qassert"             : "libs/qassert"
 
   shim :
     "underscore" :

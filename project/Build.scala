@@ -107,7 +107,7 @@ object ApplicationBuild extends Build {
     lessEntryPoints <<= (sourceDirectory in Compile)(base => base / "none"),
     coffeescriptEntryPoints <<= (sourceDirectory in Compile)(base => base / "none"),
     javascriptEntryPoints <<= (sourceDirectory in Compile)(base => base / "none"),
-    unmanagedBase <<= target(_ / "assets")
+    unmanagedResourceDirectories in Compile += target.value / "assets"
     // playAssetsDirectories += baseDirectory.value / "target" / "assets"
   )
 

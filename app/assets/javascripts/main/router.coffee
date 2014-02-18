@@ -22,6 +22,7 @@ class Router extends Backbone.Router
     "admin/trainingsTasks/create" : "createTraingsTasks"
     "admin/tasks/overview"        : "taskOverview"
     "annotations/Task/:id"        : "tracingTrace"
+    "annotations/Explorational/:id"        : "tracingTrace"
     "datasets/:id/view"           : "tracingView"
     "users/:id/details"           : "userDetails"
     "*url"                        : "hideLoading"

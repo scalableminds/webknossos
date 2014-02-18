@@ -23,7 +23,7 @@ class UserListItemView extends Backbone.Marionette.ItemView
         <span class="label label-experience"><%= domain %> : <%= value %></span>
       <% }) %>
     </td>
-    <td>
+    <td class="no-wrap">
       <% _.each(teams, function(team){ %>
         <%= team.team %>
         <span class="label" style="background-color: <%= TemplateHelpers.roleToColor(team.role.name) %>"><%= team.role.name %></span><br/>
@@ -39,7 +39,7 @@ class UserListItemView extends Backbone.Marionette.ItemView
     <td class="nowrap">
       <a href="/users/<%= id %>/details"><i class="fa fa-user"></i> show Tracings</a><br />
       <a href="/api/users/<%= id %>/annotations/download" title="download all finished tracings"><i class="fa fa-download"></i> download </a><br />
-      <a href="#"><i class="fa fa-trash-o"></i> delete </a><br />
+      <a href="#" class="delete-user"><i class="fa fa-trash-o"></i> delete </a><br />
       <!--<a href="/admin/users/<%= id %>/loginAs"><i class="fa fa-signin"></i> log in as User </a>-->
     </td>
   """, null, {imports: {TemplateHelpers}})
@@ -52,8 +52,9 @@ class UserListItemView extends Backbone.Marionette.ItemView
     "change" : "render"
 
 
-  delete : ->
+  delete : (evt) ->
 
+    evt.preventDefault()
     @model.destroy()
 
 

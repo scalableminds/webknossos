@@ -2,15 +2,13 @@ gulp        = require("gulp")
 coffee      = require("gulp-coffee")
 less        = require("gulp-less")
 clean       = require("gulp-clean")
+watch       = require("gulp-watch")
 eventStream = require("event-stream")
 runSequence = require("run-sequence")
 exec        = require("gulp-exec")
 util        = require("gulp-util")
 path        = require("path")
 gif         = require("gulp-if")
-glob        = require("glob")
-stream      = require("stream")
-glob2base   = require("glob2base")
 
 
 paths =
@@ -22,32 +20,6 @@ paths =
     js : "public/javascripts"
     css : "public/stylesheets"
 
-
-watch = (srcGlob) ->
-
-  passStream = new stream.PassThrough()
-  passStream._writableState.objectMode = true
-  passStream._readableState.objectMode = true
-
-  if not Array.isArray(srcGlob)
-    srcGlob = [ srcGlob ]
-
-  srcGlob.forEach( (srcGlob) ->
-    globBase = glob2base(new glob.Glob(srcGlob))
-
-    gulp.watch(srcGlob, (event) ->
-      if event.type != "deleted"
-        util.log(util.colors.magenta(path.relative(process.cwd(), event.path)), event.type)
-        gulp.src(event.path).on("data", (file) -> 
-          file.base = path.join(file.cwd, globBase)
-          passStream.write(file)
-          return
-        )
-      return
-    )
-
-  )
-  return passStream
 
 logger = ->
 
@@ -115,12 +87,12 @@ gulp.task("clean:build", ->
 
 
 gulp.task("watch:scripts:development", ->
-  return watch(paths.src.js)
+  return watch(glob : paths.src.js)
     .pipe(makeScripts(paths.dest.js))
 )
 
 gulp.task("watch:styles", ->
-  return watch(paths.src.css)
+  return watch(glob : paths.src.css)
     .pipe(makeStyles(paths.dest.css))
 )
 
@@ -135,12 +107,8 @@ gulp.task("build", (callback) ->
 )
 
 
-gulp.task("debug:scripts", (callback) ->
-  runSequence("compile:scripts:development", "watch:scripts:development", callback)
-)
-gulp.task("debug:styles", (callback) ->
-  runSequence("compile:styles", "watch:styles", callback)
-)
+gulp.task("debug:scripts", ["watch:scripts:development"])
+gulp.task("debug:styles", ["watch:styles"])
 
 gulp.task("debug", (callback) ->
   runSequence(["install:bower", "clean:build"], ["debug:scripts", "debug:styles"], callback)

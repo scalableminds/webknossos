@@ -35,6 +35,7 @@ src/main/scala/rebel.xml
 *.mtl
 public/bower_components
 public/javascripts
+public/javascripts_tmp
 public/stylesheets
 aws.conf
 aws.conf.disabled

@@ -216,8 +216,8 @@ class CellTracing
         timestamp : (new Date()).getTime()
         viewport : viewport
         resolution : resolution
-        bitDepth : if @user.userSettings.fourBit then 4 else 8
-        interpolation : @user.userSettings.interpolation
+        bitDepth : if @user.get("fourBit") then 4 else 8
+        interpolation : @user.get("interpolation")
 
       point = new TracePoint(type, @idCount++, position, radius, @activeTree.treeId, metaInfo)
       @activeTree.nodes.push(point)

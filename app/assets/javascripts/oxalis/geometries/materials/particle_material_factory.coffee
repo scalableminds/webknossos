@@ -15,7 +15,7 @@ class ParticleMaterialFactory
         value : @model.scaleInfo.baseVoxel
       minParticleSize :
         type : "f"
-        value : @model.user.particleSize
+        value : @model.user.get("particleSize")
       showRadius :
         type : "i"
         value : 1

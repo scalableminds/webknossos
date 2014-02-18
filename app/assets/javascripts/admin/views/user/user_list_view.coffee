@@ -12,18 +12,18 @@ admin/views/user/experience_modal_view : ExperienceModalView
 class UserListView extends Backbone.Marionette.CompositeView
 
   template : _.template("""
-    <h3> Users </h3>
+    <h3>Users</h3>
     <form method="post">
       <table class="table table-striped">
         <thead>
           <tr>
-            <th> <input type="checkbox" class="select-all-rows"> </th>
-            <th> Last name </th>
-            <th> First name </th>
-            <th> Email </th>
-            <th> Experiences </th>
-            <th> Teams - Role</th>
-            <th> Verified </th>
+            <th><input type="checkbox" class="select-all-rows"> </th>
+            <th>Last name</th>
+            <th>First name</th>
+            <th>Email</th>
+            <th>Experiences</th>
+            <th>Teams - Role</th>
+            <th>Verified</th>
             <th></th>
           </tr>
         </thead>

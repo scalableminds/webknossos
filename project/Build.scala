@@ -1,6 +1,7 @@
 import sbt._
-import Keys._
+import sbt.Keys._
 import play.Project._
+import sbt.Task
 import scala.concurrent.Future
 import scala.concurrent.ExecutionContext.Implicits.global
 
@@ -46,28 +47,64 @@ object Resolvers {
 }
 
 object AssetCompilation {
-  val gulpPath = SettingKey[String]("gulp-path","where gulp is installed")
+  object SettingsKeys{
+    val gulpPath = SettingKey[String]("gulp-path","where gulp is installed")
+    val npmPath = SettingKey[String]("npm-path","where npm is installed")
+  }
 
-  private def gulpGenerateTask: Def.Initialize[Task[Seq[File]]] = (gulpPath, baseDirectory, streams) map { (gulp, base, s) =>
+  import SettingsKeys._
+  import com.typesafe.sbt.packager.universal.Keys._
+
+  private def npmInstall: Def.Initialize[Task[Seq[File]]] = (npmPath, baseDirectory, streams) map { (npm, base, s) =>
+    try{
+      Process( npm :: "install" :: Nil, base ) ! s.log
+    } catch {
+      case e: java.io.IOException =>
+        s.log.error("Npm couldn't be found. Please set the configuration key 'AssetCompilation.npmPath' properly. " + e.getMessage)
+    }
+    Seq()
+  }
+
+  private def gulpGenerateTask: Def.Initialize[Task[Any]] = (gulpPath, baseDirectory, streams, target) map { (gulp, base, s, t) =>
     try{
       Future{
-        Process( gulp :: "debug" :: Nil, base ) ! s.log
-        s.log.info("Gulp install finished")
+        Process(gulp :: "debug" :: Nil, base) ! s.log
       }
     } catch {
       case e: java.io.IOException =>
         s.log.error("Gulp couldn't be found. Please set the configuration key 'AssetCompilation.gulpPath' properly. " + e.getMessage)
     }
-    Seq()
+  } dependsOn npmInstall
+
+  private def killGulp(x: Unit) = {
+    val pidFile = Path("target") / "gulp.pid"
+    if(pidFile.exists){
+      val pid = scala.io.Source.fromFile(pidFile).mkString.trim
+      Process("kill" :: pid :: Nil).run()
+      pidFile.delete()
+      println("Pow, Pow. Blood is everywhere, gulp is gone!")
+    }
   }
+
+  private def generateAssets: Def.Initialize[Task[AnyVal]] = (gulpPath, baseDirectory, streams, target) map { (gulp, base, s, t) =>
+    try{
+      Process(gulp :: "build" :: Nil, base) ! s.log
+    } catch {
+      case e: java.io.IOException =>
+        s.log.error("Gulp couldn't be found. Please set the configuration key 'AssetCompilation.gulpPath' properly. " + e.getMessage)
+    }
+  } dependsOn npmInstall
+
   val settings = Seq(
-    resourceGenerators in Compile <+= gulpGenerateTask
+    run in Compile <<= (run in Compile) map(killGulp) dependsOn gulpGenerateTask,
+    stage <<= stage dependsOn generateAssets
   )
 }
 
 object ApplicationBuild extends Build {
   import Dependencies._
   import Resolvers._
+  import AssetCompilation.SettingsKeys._
 
   val coffeeCmd =
     if(System.getProperty("os.name").startsWith("Windows"))
@@ -125,7 +162,8 @@ object ApplicationBuild extends Build {
     templatesImport += "oxalis.view.helpers._",
     templatesImport += "oxalis.view._",
     scalaVersion := "2.10.3",
-    AssetCompilation.gulpPath := "node_modules/.bin/gulp",
+    gulpPath := "node_modules/.bin/gulp",
+    npmPath := "npm",
     //requireJs := Seq("main"),
     //requireJsShim += "main.js",
     resolvers ++= dependencyResolvers,

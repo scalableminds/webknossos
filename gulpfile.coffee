@@ -1,24 +1,28 @@
 gulp        = require("gulp")
 coffee      = require("gulp-coffee")
 less        = require("gulp-less")
+bump        = require("gulp-bump")
 clean       = require("gulp-clean")
 watch       = require("gulp-watch")
-eventStream = require("event-stream")
-runSequence = require("run-sequence")
 exec        = require("gulp-exec")
 util        = require("gulp-util")
-path        = require("path")
 gif         = require("gulp-if")
+eventStream = require("event-stream")
+runSequence = require("run-sequence")
+path        = require("path")
+fs          = require("fs")
 
 
 paths =
   src :
-    css : ["app/assets/stylesheets/main.less"]
-    js : ["app/assets/javascripts/**/*.{coffee,js}"]
+    css : "app/assets/stylesheets/main.less"
+    js : "app/assets/javascripts/**/*.{coffee,js}"
+    version : "./version"
   dest :
     js_tmp : "public/javascripts_tmp"
     js : "public/javascripts"
     css : "public/stylesheets"
+    version : "./{bower,package}.json"
 
 
 logger = ->
@@ -46,6 +50,15 @@ makeStyles = (dest) ->
     less( sourceMap : true )
     gulp.dest(dest)
     logger()
+  )
+
+bumpVersion = (src) ->
+  return src.on("data", (versionFile) ->
+    versionString = versionFile.contents.toString("utf8")
+    gulp.src(paths.dest.version)
+      .pipe(bump(version : versionString))
+      .pipe(gulp.dest("./"))
+      .pipe(logger())
   )
 
 
@@ -96,22 +109,33 @@ gulp.task("watch:styles", ->
     .pipe(makeStyles(paths.dest.css))
 )
 
+gulp.task("watch:version", ->
+  return bumpVersion(watch(glob : paths.src.version))
+)
+
 
 gulp.task("build:scripts", (callback) ->
   runSequence("compile:scripts:production", "combine:scripts:production", "clean:tmp", callback)
 )
 gulp.task("build:styles", ["compile:styles"])
+gulp.task("build:version", ->
+  return bumpVersion(gulp.src(paths.src.version))
+)
 
 gulp.task("build", (callback) ->
-  runSequence(["install:bower", "clean:build"], ["build:scripts", "build:styles"], callback)
+  runSequence(["install:bower", "clean:build", "build:version"], ["build:scripts", "build:styles"], callback)
 )
+
 
 
 gulp.task("debug:scripts", ["watch:scripts:development"])
 gulp.task("debug:styles", ["watch:styles"])
+gulp.task("debug:version", ["watch:version"])
 
 gulp.task("debug", (callback) ->
-  runSequence(["install:bower", "clean:build"], ["debug:scripts", "debug:styles"], callback)
+  runSequence(["install:bower", "clean:build"], ["debug:scripts", "debug:styles", "debug:version"], callback)
 )
 
+gulp.task("default", ["build"])
 
+fs.writeFile("target/gulp.pid", process.pid)

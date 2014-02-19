@@ -4,7 +4,7 @@
 @import views.html.admin.annotation._
 
 <tr>
-  <td class="details-toggle"> <i class="caret-right"></i> <i class="caret-down"></i> </td>
+  <td class="details-toggle"> <i class="caret-right"></i><i class="caret-down"></i></td>
   <td> @formatHash(task.id) </td>
   <td> @task.seedIdHeidelberg </td>
   <td> @task.taskType(GlobalAccessContext).map(_.summary).getOrElse("<deleted>") </td>
@@ -16,7 +16,7 @@
   <td> @task.created.formatted("yyyy-MM-dd HH:mm") </td>
 
   <td>
-    <a href="@controllers.admin.routes.TrainingsTaskAdministration.delete(task.id)" data-ajax="delete-row,confirm"><i class="fa fa-trash-o"></i> delete </a>
+    <a href="@controllers.admin.routes.TrainingsTaskAdministration.delete(task.id)" data-ajax="delete-row,confirm"><i class="fa fa-trash-o"></i>delete </a>
   </td>
 </tr>
 <tr class="details-row" >

@@ -19,7 +19,7 @@ class TeamListItemView extends Backbone.Marionette.ItemView
     </td>
     </td>
     <td class="nowrap">
-      <a href="#" class="delete"><i class="fa fa-trash-o"></i> delete</a>
+      <a href="#" class="delete"><i class="fa fa-trash-o"></i>delete</a>
     </td>
   """)
 

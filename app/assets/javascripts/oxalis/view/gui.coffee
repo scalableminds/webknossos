@@ -5,6 +5,7 @@ dat.gui : DatGui
 ../../libs/toast : Toast
 ../model/dimensions : Dimensions
 ../constants : constants
+../controller/arbitrary_controller : ArbitraryController
 ###
 
 class Gui
@@ -16,6 +17,7 @@ class Gui
     _.extend(this, new EventMixin())
 
     @updateGlobalPosition( @model.flycam.getPosition() )
+    @mode == constants.MODE_PLANE_TRACING
 
     @user = @model.user
     @qualityArray = ["high", "medium", "low"]
@@ -164,16 +166,12 @@ class Gui
     @model.flycam.on
       positionChanged : (position) =>
         @updateGlobalPosition(position)
+      zoomStepChanged : =>
+        @updateViewportWidth()
 
-    @model.user.on
-      zoomChanged : (zoom) =>
-        nm = zoom * constants.PLANE_WIDTH * @model.scaleInfo.baseVoxel
-        if(nm<1000)
-          $("#zoomFactor").html("<p>Viewport width: " + nm.toFixed(0) + " nm</p>")
-        else if (nm<1000000)
-          $("#zoomFactor").html("<p>Viewport width: " + (nm / 1000).toFixed(1) + " μm</p>")
-        else
-          $("#zoomFactor").html("<p>Viewport width: " + (nm / 1000000).toFixed(1) + " mm</p>")
+    @model.flycam3d.on
+      changed : =>
+        @updateViewportWidth()
 
     @model.cellTracing.on
       newActiveNode       : => @update()
@@ -413,6 +411,28 @@ class Gui
     @radiusController.updateDisplay()
 
 
+  updateViewportWidth : ->
+
+    if @mode in constants.MODES_PLANE
+      zoom  = @model.flycam.getPlaneScalingFactor()
+      width = constants.PLANE_WIDTH
+    
+    if @mode in constants.MODES_ARBITRARY
+      zoom  = @model.flycam3d.zoomStep
+      width = ArbitraryController::WIDTH
+
+    nm = zoom * width * @model.scaleInfo.baseVoxel
+    
+    if(nm<1000)
+      widthStr = nm.toFixed(0) + " nm</p>"
+    else if (nm<1000000)
+      widthStr = (nm / 1000).toFixed(1) + " μm</p>"
+    else
+      widthStr = (nm / 1000000).toFixed(1) + " mm</p>"
+
+    $("#zoomFactor").html("<p>Viewport width: " + widthStr )
+
+
   setFolderVisibility : (folder, visible) ->
 
     $element = $(folder.domElement)
@@ -431,21 +451,23 @@ class Gui
       @setFolderVisibility( folder, false)
 
 
-  setMode : (mode) ->
+  setMode : (@mode) ->
 
     for folder in @folders
       @setFolderVisibility(folder, true)
     @setFolderElementVisibility( @clippingControllerArbitrary, false )
     @setFolderElementVisibility( @clippingController, true )
 
-    if      mode == constants.MODE_PLANE_TRACING
+    if      @mode == constants.MODE_PLANE_TRACING
       @hideFolders( [ @fFlightcontrols, @fCells ] )
       @user.triggerAll()
-    else if mode == constants.MODE_ARBITRARY or mode == constants.MODE_ARBITRARY_PLANE
+    else if @mode == constants.MODE_ARBITRARY or mode == constants.MODE_ARBITRARY_PLANE
       @hideFolders( [ @fViewportcontrols, @fTDView, @fCells ] )
       @setFolderElementVisibility( @clippingControllerArbitrary, true )
       @setFolderElementVisibility( @clippingController, false )
       @user.triggerAll()
-    else if mode == constants.MODE_VOLUME
+    else if @mode == constants.MODE_VOLUME
       @hideFolders( [ @fTrees, @fNodes, @fFlightcontrols ] )
+
+    @updateViewportWidth()
 

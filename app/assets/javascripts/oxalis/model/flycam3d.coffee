@@ -6,7 +6,7 @@ underscore : _
  
 updateMacro = (_this) ->
  
-  _this.trigger("changed", _this.currentMatrix)
+  _this.trigger("changed", _this.currentMatrix, _this.zoomStep)
   _this.hasChanged = true
  
  

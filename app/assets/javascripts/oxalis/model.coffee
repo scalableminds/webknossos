@@ -78,8 +78,9 @@ class Model
             @flycam3d = new Flycam3d(constants.DISTANCE_3D, tracing.content.dataSet.scale)
 
             @flycam3d.on
-              "changed" : (matrix) =>
-                @flycam.setPosition([matrix[12], matrix[13], matrix[14]])
+              "changed" : (matrix, zoomStep) =>
+                @flycam.setPosition( matrix[12..14] )
+
             @flycam.on
               "positionChanged" : (position) =>
                 @flycam3d.setPositionSilent(position)

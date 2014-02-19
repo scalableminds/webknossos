@@ -1,6 +1,8 @@
 import sbt._
 import Keys._
 import play.Project._
+import scala.concurrent.Future
+import scala.concurrent.ExecutionContext.Implicits.global
 
 object Dependencies{
   val akkaVersion = "2.2.0"
@@ -43,12 +45,32 @@ object Resolvers {
   val teamon = "teamon.eu repo" at "http://repo.teamon.eu"
 }
 
+object AssetCompilation {
+  val gulpPath = SettingKey[String]("gulp-path","where gulp is installed")
+
+  private def gulpGenerateTask: Def.Initialize[Task[Seq[File]]] = (gulpPath, baseDirectory, streams) map { (gulp, base, s) =>
+    try{
+      Future{
+        Process( gulp :: "debug" :: Nil, base ) ! s.log
+        s.log.info("Gulp install finished")
+      }
+    } catch {
+      case e: java.io.IOException =>
+        s.log.error("Gulp couldn't be found. Please set the configuration key 'AssetCompilation.gulpPath' properly. " + e.getMessage)
+    }
+    Seq()
+  }
+  val settings = Seq(
+    resourceGenerators in Compile <+= gulpGenerateTask
+  )
+}
+
 object ApplicationBuild extends Build {
   import Dependencies._
   import Resolvers._
 
-  val coffeeCmd = 
-    if(System.getProperty("os.name").startsWith("Windows")) 
+  val coffeeCmd =
+    if(System.getProperty("os.name").startsWith("Windows"))
       "cmd /C coffee -p"
     else
       "coffee -p"
@@ -99,10 +121,11 @@ object ApplicationBuild extends Build {
     jerseyClient,
     akkaRemote)
 
-  lazy val oxalis: Project = play.Project(appName, appVersion, oxalisDependencies).settings(
+  lazy val oxalisSettings = Seq(
     templatesImport += "oxalis.view.helpers._",
     templatesImport += "oxalis.view._",
     scalaVersion := "2.10.3",
+    AssetCompilation.gulpPath := "node_modules/.bin/gulp",
     //requireJs := Seq("main"),
     //requireJsShim += "main.js",
     resolvers ++= dependencyResolvers,
@@ -112,6 +135,8 @@ object ApplicationBuild extends Build {
     unmanagedResourceDirectories in Compile += target.value / "assets"
     // playAssetsDirectories += baseDirectory.value / "target" / "assets"
   )
+
+  lazy val oxalis: Project = play.Project(appName, appVersion, oxalisDependencies, settings = oxalisSettings ++ AssetCompilation.settings)
 
   lazy val datastore: Project = Project("datastore", file("modules") / "datastore", dependencies = Seq(oxalis)).settings(
     libraryDependencies ++= dataStoreDependencies,
@@ -127,4 +152,4 @@ object ApplicationBuild extends Build {
     coffeescriptOptions := Seq("native", coffeeCmd)
   ).dependsOn(oxalis).aggregate(oxalis)
 }
-            
+

@@ -14,7 +14,7 @@
               <tr>
                 <td><strong>@annotation.dataSetName</strong></td>
                 <td><time datetime="@annotation.content.map(_.date)">@annotation.content.map(a => formatDate(a.date)).getOrElse("")</time></td>
-                <td><a href="@controllers.routes.AnnotationController.download(annotation.typ, annotation.id)"><i class="fa fa-download"></i> Export NML</a></td>
+                <td><a href="@controllers.routes.AnnotationController.download(annotation.typ, annotation.id)"><i class="fa fa-download"></i>Export NML</a></td>
               </tr>
             })
           </tbody>

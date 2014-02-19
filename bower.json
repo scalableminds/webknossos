@@ -20,7 +20,7 @@
     "gamepad.js": "*",
     "jquery-bootpag": "1.0.4",
     "tweenjs": "r6",
-    "three.js": "git@github.com:georgwiese/three.js.git"
+    "three.js": "git@github.com:georgwiese/three.js.git#scm_r66"
   },
   "devDependencies": {}
 }

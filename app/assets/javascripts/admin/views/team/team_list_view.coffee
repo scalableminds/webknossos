@@ -23,7 +23,6 @@ class TeamListView extends Backbone.Marionette.CompositeView
         </thead>
         <tbody></tbody>
       </table>
-
       <div class="form-actions navbar-fixed-bottom">
         <div class="btn-group">
           <a class="btn btn-primary" id="new-team">
@@ -32,17 +31,40 @@ class TeamListView extends Backbone.Marionette.CompositeView
         </div>
       </div>
     </form>
-    <div id="modal-wrapper"></div>
+    <div class="modal hide fade">
+      <div class="modal-header">
+        <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+        <h3>Add a New Team</h3>
+      </div>
+      <div class="modal-body">
+        <form class="form-horizontal">
+          <div class="control-group">
+            <div class="control-group">
+              <label class="control-label" for="inputName">Name</label>
+              <div class="controls">
+                <input type="text" id="inputName" placeholder="Name" required>
+              </div>
+            </div>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <a href="#" class="btn btn-primary" data-dismiss="modal">Add</a>
+        <a href="#" class="btn" data-dismiss="modal">Close</a>
+      </div>
+    </div>
   """)
   className : "team-administration container wide"
   itemView : TeamListItemView
   itemViewContainer : "tbody"
 
   ui :
-    "modalWrapper" : "#modal-wrapper"
+    "modal" : ".modal"
+    "inputName" : "#inputName"
 
   events :
-    "click #new-team" : "addNewTeam"
+    "click #new-team" : "showModal"
+    "click .modal .btn-primary" : "addNewTeam"
 
   initialize : ->
 
@@ -52,17 +74,18 @@ class TeamListView extends Backbone.Marionette.CompositeView
         isEditable: true
     )
 
-    #fetch the user's name
+    #fetch the logged-in user's name
     @user = $.ajax(
       url: "/api/user"
     )
 
   addNewTeam : ->
 
+
     @user.then(
       (userData) =>
         team =
-          name : "test"
+          name : @ui.inputName.val()
           owner : "#{userData.firstName} #{userData.lastName}"
           roles : [{ name : "admin" }, { name : "user" }]
           isEditable : true
@@ -75,12 +98,5 @@ class TeamListView extends Backbone.Marionette.CompositeView
 
   showModal : (modalView) ->
 
-    if @$el.find("input[type=checkbox]:checked").length > 0
-      view = new modalView({userCollection : @collection})
-      view.render()
-      @ui.modalWrapper.html(view.el)
-
-      view.$el.modal("show")
-
-    else
-      Toast.error("No user is selected.")
+    @ui.inputName.val("")
+    @ui.modal.modal("show")

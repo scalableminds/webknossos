@@ -86,7 +86,7 @@ object AssetCompilation {
     }
   }
 
-  private def generateAssets: Def.Initialize[Task[AnyVal]] = (gulpPath, baseDirectory, streams, target) map { (gulp, base, s, t) =>
+  private def assetsGenerationTask: Def.Initialize[Task[AnyVal]] = (gulpPath, baseDirectory, streams, target) map { (gulp, base, s, t) =>
     try{
       Process(gulp :: "build" :: Nil, base) ! s.log
     } catch {
@@ -97,7 +97,8 @@ object AssetCompilation {
 
   val settings = Seq(
     run in Compile <<= (run in Compile) map(killGulp) dependsOn gulpGenerateTask,
-    stage <<= stage dependsOn generateAssets
+    stage <<= stage dependsOn assetsGenerationTask,
+    dist <<= dist dependsOn assetsGenerationTask
   )
 }
 

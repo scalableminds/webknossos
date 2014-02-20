@@ -15,9 +15,10 @@ class PaginationCollection extends Backbone.Paginator.clientPager
     firstPage : 1
     currentPage : 1
     perPage : 3
-    totalPages : 10
     pagesInRange : 4
 
+
+  server_api = {}
 
   parse : (response) ->
 

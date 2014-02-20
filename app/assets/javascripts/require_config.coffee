@@ -59,6 +59,5 @@ require.config(
       deps : [ "underscore" ]
       exports : "Backbone"
     "backbone.marionette" : [ "backbone", "underscore" ]
-    "penis" : "123"
 
 )

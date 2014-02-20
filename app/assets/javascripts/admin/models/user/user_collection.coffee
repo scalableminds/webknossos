@@ -1,8 +1,8 @@
 ### define
 underscore : _
-backbone.marionette : marionette
+../pagination_collection : PaginationView
 ###
 
-class UserCollection extends Backbone.Collection
+class UserCollection extends PaginationView
 
   url : "/api/users"

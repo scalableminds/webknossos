@@ -32,7 +32,7 @@ class PaginationView extends Backbone.Marionette.ItemView
           <a href="#"><i class="fa fa-angle-double-right"></i></a>
         </li>
       </ul>
-      <input type="text" class="search-query pagination-searchbox" placeholder="Search">
+      <input type="text" class="search-query" placeholder="Search">
     </div>
   """)
 
@@ -45,6 +45,8 @@ class PaginationView extends Backbone.Marionette.ItemView
     "click .next" : "goNext"
     "click .last" : "goLast"
     "click .first" : "goFirst"
+    "click .page" : "goToPage"
+    "input input" : "filter"
 
 
   initialize : ->
@@ -72,14 +74,21 @@ class PaginationView extends Backbone.Marionette.ItemView
     @collection.nextPage()
 
 
+  gotoPage : (evt) ->
+
+    evt.preventDefault()
+    page = $(evt.target).text()
+    @collection.goTo(page)
+
+
+  filter : ->
+
+    # implement in parent class
+    throw(new Error("PaginationView: Method filter not implemented"))
+
+
   collectionSynced : ->
 
     @templateHelpers.Pagination = @collection.info()
     @render()
-
-
-  render : ->
-
-    super()
-
 

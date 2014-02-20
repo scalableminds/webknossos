@@ -6,7 +6,7 @@
     "url": "git://github.com/scalableminds/oxalis.git"
   },
   "dependencies": {
-    "coffee-script": "git://github.com/scalableminds/coffee-script.git",
+    "coffee-script": "https://github.com/scalableminds/coffee-script/archive/master.tar.gz",
     "bower": "~1.2.8",
     "requirejs": "~2.1.11",
     "event-stream": "~3.1.0",

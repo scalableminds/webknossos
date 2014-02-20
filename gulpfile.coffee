@@ -94,7 +94,7 @@ gulp.task("clean:tmp", ->
 )
 
 gulp.task("clean:build", ->
-  return gulp.src([paths.dest.js, paths.dest.css], read: false)
+  return gulp.src(["#{paths.dest.js}/*", "#{paths.dest.css}/*"], read: false)
     .pipe(clean())
 )
 

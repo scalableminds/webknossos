@@ -7,6 +7,7 @@ watch       = require("gulp-watch")
 exec        = require("gulp-exec")
 util        = require("gulp-util")
 gif         = require("gulp-if")
+plumber     = require("gulp-plumber")
 eventStream = require("event-stream")
 runSequence = require("run-sequence")
 path        = require("path")
@@ -36,9 +37,12 @@ logger = ->
 
 makeScripts = (dest) ->
   return eventStream.pipeline(
+    plumber()
     gif(
       (file) -> return path.extname(file.path) == ".coffee"
-      coffee()
+      coffee({}).on("error", 
+        (err) -> util.log(util.colors.red("!!"), err.toString())
+      )
     )
     gulp.dest(dest)
     logger()
@@ -47,7 +51,10 @@ makeScripts = (dest) ->
 
 makeStyles = (dest) ->
   return eventStream.pipeline(
-    less( sourceMap : true )
+    plumber()
+    less( sourceMap : true ).on("error", 
+      (err) -> util.log(util.colors.red("!!"), err.toString())
+    )
     gulp.dest(dest)
     logger()
   )

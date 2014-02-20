@@ -1,13 +1,13 @@
 ### define
 jquery : $
 underscore : _
+three.color : ColorConverter
 ../../libs/request : Request
 ../../libs/event_mixin : EventMixin
 ./tracepoint : TracePoint
 ./tracetree : TraceTree
 ./statelogger : StateLogger
 ../constants : constants
-libs/threejs/ColorConverter : ColorConverter
 ###
 
 class TracingParser
@@ -32,7 +32,7 @@ class TracingParser
         @celltracing.getNewTreeColor(treeData.id),
         if treeData.name then treeData.name else "Tree#{('00'+treeData.id).slice(-3)}",
         treeData.timestamp)
-      
+
       # Initialize nodes
       for node in treeData.nodes
 
@@ -46,7 +46,7 @@ class TracingParser
             metaInfo))
         # idCount should be bigger than any other id
         @idCount = Math.max(node.id + 1, @idCount);
-      
+
       # Initialize edges
       for edge in treeData.edges
         sourceNode = @celltracing.findNodeInList(tree.nodes, edge.source)
@@ -83,12 +83,12 @@ class TracingParser
     for comment in @data.comments
       comment.node = @celltracing.findNodeInList(nodeList, comment.node)
     @comments = @data.comments
-  
+
 
   parse : ->
 
     @buildTrees()
-    
+
     nodeList = []
     for tree in @trees
       nodeList = nodeList.concat(tree.nodes)

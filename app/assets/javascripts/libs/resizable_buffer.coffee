@@ -23,6 +23,8 @@ class ResizableBuffer
 
   getLength : -> @length/@elementLength
 
+  getBufferLength : -> @length
+
   getBuffer : -> @buffer
 
   getAllElements : -> @buffer.subarray(0, @length)

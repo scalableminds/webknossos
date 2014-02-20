@@ -29,7 +29,8 @@ class CellLayer
 
   createMeshes : ->
 
-    edgeGeometry = new THREE.Geometry()
+    edgeGeometry = new THREE.BufferGeometry()
+    edgeGeometry.addAttribute( 'position', Float32Array, 0, 3 )
     edgeGeometry.dynamic = true
 
     @edge = new THREE.Line(edgeGeometry, new THREE.LineBasicMaterial({color: @color, linewidth: 2}), THREE.LineStrip)
@@ -64,7 +65,9 @@ class CellLayer
 
   finalizeMesh : (mesh) ->
 
-    mesh.geometry.__vertexArray = mesh.vertexBuffer.getBuffer()
-    mesh.geometry.__webglLineCount = mesh.vertexBuffer.getLength()
-    mesh.geometry.verticesNeedUpdate = true
+    positionAttribute = mesh.geometry.attributes.position
+
+    positionAttribute.array       = mesh.vertexBuffer.getBuffer()
+    positionAttribute.numItems    = mesh.vertexBuffer.getLength()
+    positionAttribute.needsUpdate = true
 

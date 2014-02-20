@@ -108,7 +108,7 @@ class ArbitraryView
       renderer.setViewport(0, 0, @width * f, @height * f)
       renderer.setScissor(0, 0, @width * f, @height * f)
       renderer.enableScissorTest(true)
-      renderer.setClearColorHex(0xFFFFFF, 1);
+      renderer.setClearColor(0xFFFFFF, 1);
 
       renderer.render scene, camera
 

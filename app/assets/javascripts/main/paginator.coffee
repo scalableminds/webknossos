@@ -1,6 +1,7 @@
 ### define
 jquery : $
 underscore : _
+jquery.bootpag : BootPag
 ../libs/toast : Toast
 routes : jsRoutes
 ###

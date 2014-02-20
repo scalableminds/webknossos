@@ -1,4 +1,4 @@
-### define 
+### define
 jquery : $
 ../libs/toast : Toast
 ./constants : constants
@@ -14,9 +14,10 @@ class View
 
     @renderer = new THREE.WebGLRenderer( clearColor: 0x000000, clearAlpha: 1.0, antialias: false )
     @scene = new THREE.Scene()
-   
+
     @setTheme(constants.THEME_BRIGHT)
     @createKeyboardCommandOverlay()
+
 
     # disable loader, show oxalis
     $("#loader").css("display" : "none")
@@ -25,7 +26,7 @@ class View
 
   toggleTheme : ->
 
-    if @currentTheme is constants.THEME_BRIGHT 
+    if @currentTheme is constants.THEME_BRIGHT
       @setTheme(constants.THEME_DARK)
     else
       @setTheme(constants.THEME_BRIGHT)
@@ -55,7 +56,7 @@ class View
       <tr><td>C</td><td>Create new tree</td><td>Shift + Alt + Leftclick</td><td>Merge two trees</td></tr>
       <tr><td>T</td><td>Toggle theme</td><td>M</td><td>Toggle mode</td></tr>
       <tr><td>1</td><td>Toggle skeleton visibility</td><td>2</td><td>Toggle inactive tree visibility</td></tr>
-      <tr><td>Shift + Mousewheel</td><td>Change node size</td><td></td><td></td></tr>'
+      <tr><td>Shift + Mousewheel</td><td>Change node radius</td><td></td><td></td></tr>'
 
     TDViewKeys =
       '<tr><th colspan="4">3D-view</th></tr>
@@ -83,9 +84,9 @@ class View
             <h3>keyboard commands</h3></div>
             <div class="modal-body" id="help-modal-body"><p>
             <table class="table table-condensed table-nohead table-bordered"><tbody>'''
-      
+
     html += generalKeys
-    if mode == constants.MODE_PLANE_TRACING 
+    if mode == constants.MODE_PLANE_TRACING
       html += viewportKeys + TDViewKeys
     else if mode == constants.MODE_ARBITRARY or mode == constants.MODE_ARBITRARY_PLANE
       html += arbitraryKeys

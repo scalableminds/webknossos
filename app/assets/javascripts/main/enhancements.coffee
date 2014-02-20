@@ -1,9 +1,9 @@
 ### define
 jquery : $
 underscore : _
+moment : moment
 ../libs/toast : Toast
 ./paginator : Paginator
-../libs/jquery.bootpag.min : Bootpag
 ###
 
 $ ->
@@ -32,7 +32,7 @@ $ ->
   dataAjaxHandler = (event, element=null) ->
 
     event.preventDefault()
-    
+
     $this = element or $(this)
     $form = if $this.is("form") then $this else $this.parents("form").first()
 
@@ -74,12 +74,17 @@ $ ->
 
     fillTemplateFromTable = ($el, responseData) ->
 
-      unless $el.data("tr-template")
-        return null
+      templateSource = _.unescape($el.find("template").html())
+      # VERY HACKY. Replace Handlebar templates with Underscore identifier
+      templateSource = templateSource.replace(/{{/gm,"<%")
+      templateSource = templateSource.replace(/}}/gm,"%>")
+      templateSource = _.unescape(templateSource)
 
-      templateSource = _.unescape($el.data("tr-template"))
-      return _.template(templateSource)(responseData)
-
+      if _.isArray(responseData)
+        for data in responseData
+          _.template(templateSource)(data)
+      else
+        _.template(templateSource)(responseData)
 
     $.ajax(ajaxOptions).then(
 
@@ -97,7 +102,7 @@ $ ->
         if options["replace-row"]
           unless html
             html = fillTemplateFromTable($this.closest("table"), responseData)
-          
+
           $this.parents("tr").first().replaceWith(html)
 
         if options["delete-row"]
@@ -109,8 +114,8 @@ $ ->
           $table = $(options["add-row"])
           $tbody = $table.find("tbody")
           unless html
-            html = fillTemplateFromTable($table, responseData)
-          $tbody.append(html)
+            html = fillTemplateFromTable($tbody, responseData)
+          $tbody.prepend(html)
 
         if options["replace"]
           $el = $(options["replace"])
@@ -168,6 +173,8 @@ $ ->
     unless $(this).data("disable-auto-pagination")
       new Paginator $(this)
   )
+
+
 
 
   $(document).on "change", "table input.select-all-rows", ->

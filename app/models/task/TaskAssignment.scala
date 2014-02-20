@@ -10,12 +10,13 @@ import models.user.User
 import models.annotation.{AnnotationType, AnnotationDAO}
 import scala.concurrent.Future
 import braingames.reactivemongo.{DBAccessContext, GlobalAccessContext}
-import scala.util.{Success, Failure, Try}
 import play.api.Logger
 import akka.pattern.AskTimeoutException
 import play.api.libs.concurrent.Execution.Implicits._
 import akka.pattern.ask
 import scala.concurrent.duration._
+import braingames.util.Fox
+import net.liftweb.common.{Failure, Empty, Full}
 
 /**
  * Company: scalableminds
@@ -24,9 +25,9 @@ import scala.concurrent.duration._
  * Time: 14:57
  */
 trait TaskAssignment {
-  def findAllTrainings(implicit ctx: DBAccessContext): Future[List[Task]]
+  def findAllTrainings(implicit ctx: DBAccessContext): Fox[List[Task]]
 
-  def findAllAssignableNonTrainings(implicit ctx: DBAccessContext): Future[List[Task]]
+  def findAllAssignableNonTrainings(implicit ctx: DBAccessContext): Fox[List[Task]]
 
   val conf = current.configuration
 
@@ -34,9 +35,8 @@ trait TaskAssignment {
 
   val jsExecutionActor = Akka.system.actorOf(Props[JsExecutionActor])
 
-  def findAssignableTasksFor(user: User)(implicit ctx: DBAccessContext) = {
+  def findAssignableTasksFor(user: User)(implicit ctx: DBAccessContext) =
     findAssignableFor(user, shouldBeTraining = false)
-  }
 
   def findAssignableFor(user: User, shouldBeTraining: Boolean)(implicit ctx: DBAccessContext) = {
     val finishedTasks = AnnotationDAO.findFor(user._id, AnnotationType.Task).map(_.flatMap(_._task))
@@ -55,36 +55,23 @@ trait TaskAssignment {
     }
   }
 
-  import scala.async.Async._
-
-  protected def nextTaskForUser(user: User, futureTasks: Future[List[Task]]): Future[Option[Task]] = async {
-    val tasks = await(futureTasks)
-    if (tasks.isEmpty) {
-      None
-    } else {
+  protected def nextTaskForUser(user: User, futureTasks: Fox[List[Task]]): Fox[Task] = futureTasks.flatMap {
+    case Nil =>
+      Fox.empty
+    case tasks =>
       val params = Map("user" -> user, "tasks" -> tasks.toArray)
-      val current = await(TaskSelectionAlgorithmDAO.current(GlobalAccessContext))
-      val assignment = (jsExecutionActor ? JS(current.js, params))
-                       .mapTo[Future[Try[Task]]].flatMap(_.map {
-        case Failure(f) =>
-          Logger.error("JS Execution error: " + f)
-          None
-        case Success(s) =>
-          Some(s)
-      }.recover {
-        case e: AskTimeoutException =>
-          Logger.warn("JS Execution actor didn't return in time!")
-          None
-        case e: Exception =>
-          Logger.error("JS Execution catched exception: " + e.toString())
-          e.printStackTrace()
-          None
-      })
-      await(assignment)
+      TaskSelectionAlgorithmDAO.current(GlobalAccessContext).flatMap {
+      current =>
+        (jsExecutionActor ? JS(current.js, params))
+          .mapTo[Future[Task]].flatMap(f => f.map(t => Full(t))).recover {
+          case e: Exception =>
+            Logger.error("JS Execution error: " + e.getMessage)
+            Failure("JS Execution error", Full(e), Empty)
+        }
     }
   }
 
-  def nextTaskForUser(user: User)(implicit ctx: DBAccessContext): Future[Option[Task]] = {
+  def nextTaskForUser(user: User)(implicit ctx: DBAccessContext): Fox[Task] = {
     nextTaskForUser(
       user,
       findAssignableTasksFor(user))

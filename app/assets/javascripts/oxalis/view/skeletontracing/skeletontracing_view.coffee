@@ -83,7 +83,8 @@ class SkeletonTracingView extends View
 
       deleteActiveNode : =>
 
-        @updateTrees() })
+        @updateTrees()
+    })
 
 
     @model.user.on
@@ -121,7 +122,7 @@ class SkeletonTracingView extends View
 
   updateComments : ->
     
-    comments = @model.skeletonTracing.getComments( @model.user.sortCommentsAsc )
+    comments = @model.skeletonTracing.getComments( @model.user.get("sortCommentsAsc") )
     commentList = $("#comment-list")
     commentList.empty()
 
@@ -236,7 +237,7 @@ class SkeletonTracingView extends View
   updateTreesSortButton : ->
 
     @toggleIconVisibility(
-      @model.user.sortTreesByName,
+      @model.user.get("sortTreesByName"),
       $("#sort-name-icon"),
       $("#sort-id-icon"))
 
@@ -244,7 +245,7 @@ class SkeletonTracingView extends View
   updateCommentsSortButton : ->
 
     @toggleIconVisibility(
-      @model.user.sortCommentsAsc,
+      @model.user.get("sortCommentsAsc"),
       $("#sort-asc-icon"),
       $("#sort-desc-icon"))
 

@@ -4,39 +4,33 @@ import play.api._
 import play.api.mvc.{Request, Action}
 import play.api.data._
 import play.api.Play.current
-import play.api.libs.concurrent._
 import models.user._
-import play.mvc.Results.Redirect
 import play.api.data.Forms._
-import models._
 import views.html
-import play.api.libs.iteratee.Done
-import play.api.libs.iteratee.Input
 import oxalis.security.Secured
 import braingames.mail._
-import controllers.admin._
 import oxalis.thirdparty.BrainTracing
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.i18n.Messages
 import oxalis.mail.DefaultMails
-import models.tracing.skeleton.SkeletonTracing
 import oxalis.view.{ProvidesUnauthorizedSessionData, UnAuthedSessionData}
 import scala.concurrent.Future
+import models.team.TeamDAO
+import braingames.reactivemongo.DBAccessContext
+import net.liftweb.common.Full
 
 object Authentication extends Controller with Secured with ProvidesUnauthorizedSessionData {
   // -- Authentication
-  override def DefaultAccessRole = None
-
   val autoVerify =
     Play.configuration.getBoolean("application.enableAutoVerify") getOrElse false
 
-  val registerForm: Form[(String, String, String, String)] = {
+  val registerForm: Form[(String, String, String, String, String)] = {
 
-    def registerFormApply(email: String, firstName: String, lastName: String, password: Tuple2[String, String]) =
-      (email.toLowerCase, firstName, lastName, password._1)
+    def registerFormApply(team: String, email: String, firstName: String, lastName: String, password: Tuple2[String, String]) =
+      (team, email.toLowerCase, firstName, lastName, password._1)
 
-    def registerFormUnapply(user: (String, String, String, String)) =
-      Some((user._1, user._2, user._3, ("", "")))
+    def registerFormUnapply(user: (String, String, String, String, String)) =
+      Some((user._1, user._2, user._3, user._4, ("", "")))
 
     val passwordField = tuple("main" -> text, "validation" -> text)
       .verifying("user.password.nomatch", pw => pw._1 == pw._2)
@@ -44,30 +38,37 @@ object Authentication extends Controller with Secured with ProvidesUnauthorizedS
 
     Form(
       mapping(
+        "team" -> text,
         "email" -> email,
         "firstName" -> nonEmptyText(1, 30),
         "lastName" -> nonEmptyText(1, 30),
         "password" -> passwordField)(registerFormApply)(registerFormUnapply))
   }
 
-  def register = Action {
+  def register = Action.async {
     implicit request =>
-      Ok(html.user.register(registerForm))
+      for {
+        teams <- TeamDAO.findAll(DBAccessContext(None))
+      } yield Ok(html.user.register(registerForm, teams))
   }
 
   /**
    * Handle registration form submission.
    */
-  def registrate = Action.async {
+  def handleRegistration = Action.async {
     implicit request =>
       registerForm.bindFromRequest.fold(
       formWithErrors =>
-        Future.successful(BadRequest(html.user.register(formWithErrors))), {
-        case (email, firstName, lastName, password) => {
-          UserService.findOneByEmail(email).flatMap {
-            case None =>
+        for {
+          teams <- TeamDAO.findAll(DBAccessContext(None))
+        } yield BadRequest(html.user.register(formWithErrors, teams)), {
+        case (team, email, firstName, lastName, password) => {
+          UserService.findOneByEmail(email).futureBox.flatMap {
+            case Full(_) =>
+              Future.successful(JsonBadRequest(Messages("user.email.alreadyInUse")))
+            case _ =>
               for {
-                user <- UserService.insert(email, firstName, lastName, password, autoVerify)
+                user <- UserService.insert(team, email, firstName, lastName, password, autoVerify)
                 brainDBResult <- BrainTracing.register(user, password)
               } yield {
                 Application.Mailer ! Send(
@@ -82,8 +83,6 @@ object Authentication extends Controller with Secured with ProvidesUnauthorizedS
                     .flashing("modal" -> "An account has been created. An administrator is going to unlock you soon.")
                 }
               }
-            case Some(_) =>
-              Future.successful(JsonBadRequest(Messages("user.email.alreadyInUse")))
           }
         }
       })
@@ -105,17 +104,23 @@ object Authentication extends Controller with Secured with ProvidesUnauthorizedS
   /**
    * Handle login form submission.
    */
-  def authenticate = Action.async{
+  def authenticate = Action.async {
     implicit request =>
       loginForm.bindFromRequest.fold(
       formWithErrors =>
         Future.successful(BadRequest(html.user.login(formWithErrors))), {
         case (email, password) =>
-          for {
-            user <- UserService.auth(email.toLowerCase, password) ?~> Messages("user.login.failed")
-          } yield {
-            Redirect(controllers.routes.Application.index)
-              .withSession(Secured.createSession(user))
+          UserService.auth(email.toLowerCase, password).map {
+            user =>
+              val redirectLocation =
+                if (user.verified)
+                  controllers.routes.Application.index
+                else
+                  controllers.routes.UserController.dashboard
+              Redirect(redirectLocation).withSession(Secured.createSession(user))
+          }.getOrElse {
+            BadRequest(html.user.login(loginForm.bindFromRequest))
+              .flashing("success" -> Messages("user.login.failed"))
           }
       })
   }

@@ -70,20 +70,20 @@ class SkeletonTacingController
 
     $("#tree-sort").on "click", "a[data-sort]", (event) =>
       event.preventDefault()
-      @model.user.setValue("sortTreesByName", ($(event.currentTarget).data("sort") == "name"))
+      @model.user.set("sortTreesByName", ($(event.currentTarget).data("sort") == "name"))
 
     $("#comment-sort").on "click", "a[data-sort]", (event) =>
       event.preventDefault()
-      @model.user.setValue("sortCommentsAsc", ($(event.currentTarget).data("sort") == "asc"))
+      @model.user.set("sortCommentsAsc", ($(event.currentTarget).data("sort") == "asc"))
 
 
   setParticleSize : (delta) =>
 
-    particleSize = @model.user.particleSize + delta
+    particleSize = @model.user.get("particleSize") + delta
     particleSize = Math.min(constants.MAX_PARTICLE_SIZE, particleSize)
     particleSize = Math.max(constants.MIN_PARTICLE_SIZE, particleSize)
 
-    @model.user.setValue("particleSize", (Number) particleSize)
+    @model.user.set("particleSize", (Number) particleSize)
  
 
   toggleSkeletonVisibility : =>
@@ -91,9 +91,9 @@ class SkeletonTacingController
     @sceneController.skeleton.toggleVisibility()
     # Show warning, if this is the first time to use
     # this function for this user
-    if @model.user.firstVisToggle
+    if @model.user.get("firstVisToggle")
       @skeletonTracingView.showFirstVisToggle()
-      @model.user.firstVisToggle = false
+      @model.user.set("firstVisToggle", false)
       @model.user.push()
 
 

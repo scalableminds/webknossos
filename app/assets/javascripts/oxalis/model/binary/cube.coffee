@@ -95,7 +95,7 @@ class Cube
 
   getBucketIndexByZoomedAddress : ( address ) ->
     
-    $.assertNotIs(@cubes[address[3]], "undefined", "Cube for given zoomStep does not exist"
+    $.assertExists(@cubes[address[3]], "Cube for given zoomStep does not exist"
       cubeCount: @cubes.length
       zoomStep: address[3]
       zoomStepCount: @ZOOM_STEP_COUNT

@@ -193,10 +193,13 @@ class CameraController
     # moves camera by the nm vector
     camera = @cameras[constants.TDView]
 
-    rotation = camera.rotation.clone().negate()
-    eulerOrder = camera.eulerOrder.split("").reverse().join("")       # reverse order
+    rotation = THREE.Vector3.prototype.multiplyScalar.call(
+      camera.rotation.clone(), -1
+    )
+    # reverse euler order
+    rotation.order = rotation.order.split("").reverse().join("")
     
-    nmVector.applyEuler( rotation , eulerOrder )
+    nmVector.applyEuler( rotation )
     @moveTDViewRaw( nmVector )
 
 
@@ -224,7 +227,7 @@ class CameraController
   updateCamViewport : ->
     
     scaleFactor = @model.scaleInfo.baseVoxel
-    boundary    = constants.VIEWPORT_WIDTH / 2 * @model.user.zoom
+    boundary    = constants.VIEWPORT_WIDTH / 2 * @model.user.get("zoom")
     for i in [constants.PLANE_XY, constants.PLANE_YZ, constants.PLANE_XZ]
       @cameras[i].near = -@camDistance
       @cameras[i].left  = @cameras[i].bottom = -boundary * scaleFactor

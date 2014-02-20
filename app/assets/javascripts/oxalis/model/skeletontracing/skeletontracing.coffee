@@ -3,12 +3,12 @@ jquery : $
 underscore : _
 libs/request : Request
 libs/event_mixin : EventMixin
+three.color : ColorConverter
 ./tracepoint : TracePoint
 ./tracetree : TraceTree
 ./skeletontracing_statelogger : SkeletonTracingStateLogger
 ../../constants : constants
 ./tracingparser : TracingParser
-libs/threejs/ColorConverter : ColorConverter
 ###
 
 class SkeletonTracing
@@ -18,8 +18,8 @@ class SkeletonTracing
   TYPE_BRANCH  : constants.TYPE_BRANCH
   # Max and min radius in base voxels (see scaleInfo.baseVoxel)
   MIN_RADIUS        : 1
-  MAX_RADIUS        : 1000
-  
+  MAX_RADIUS        : 5000
+
   branchStack : []
   trees : []
   comments : []
@@ -66,7 +66,7 @@ class SkeletonTracing
 
     tracingType = tracing.typ
     if (tracingType == "Task" or tracingType == "Training") and @getNodeListOfAllTrees().length == 0
-      @addNode(tracing.content.editPosition)
+      @addNode(tracing.content.editPosition, @TYPE_USUAL, 0, 0)
 
     @branchPointsAllowed = tracing.content.settings.branchPointsAllowed
     if not @branchPointsAllowed
@@ -99,18 +99,18 @@ class SkeletonTracing
           return
     )
 
-    
+
   benchmark : (numberOfTrees = 1, numberOfNodesPerTree = 10000) ->
 
     console.log "[benchmark] start inserting #{numberOfNodesPerTree} nodes"
     startTime = (new Date()).getTime()
     offset = 0
-    size = numberOfNodesPerTree / 100
+    size = numberOfNodesPerTree / 10
     for i in [0...numberOfTrees]
       @createNewTree()
       for i in [0...numberOfNodesPerTree]
         pos = [Math.random() * size + offset, Math.random() * size + offset, Math.random() * size + offset]
-        point = new TracePoint(@TYPE_USUAL, @idCount++, pos, null, null, @activeTree.treeId)
+        point = new TracePoint(@TYPE_USUAL, @idCount++, pos, Math.random() * 200, @activeTree.treeId, null)
         @activeTree.nodes.push(point)
         if @activeNode
           @activeNode.appendNext(point)
@@ -201,28 +201,41 @@ class SkeletonTracing
     @branchDeferred.resolve()
 
 
-  addNode : (position, type, centered = true) ->
+  addNode : (position, type, viewport, resolution, centered = true) ->
 
     if @ensureDirection(position)
-      unless @lastRadius?
-        @lastRadius = 10 * @scaleInfo.baseVoxel
-        if @activeNode then @lastRadius = @activeNode.radius
-      point = new TracePoint(type, @idCount++, position, @lastRadius, (new Date()).getTime(), @activeTree.treeId)
+
+      radius = 10 * @scaleInfo.baseVoxel
+      if @activeNode then radius = @activeNode.radius
+
+      metaInfo =
+        timestamp : (new Date()).getTime()
+        viewport : viewport
+        resolution : resolution
+        bitDepth : if @user.get("fourBit") then 4 else 8
+        interpolation : @user.get("interpolation")
+
+      point = new TracePoint(type, @idCount++, position, radius, @activeTree.treeId, metaInfo)
       @activeTree.nodes.push(point)
+
       if @activeNode
+
         @activeNode.appendNext(point)
         point.appendNext(@activeNode)
         @activeNode = point
+
       else
+
         @activeNode = point
         point.type = @TYPE_BRANCH
         if @branchPointsAllowed
           centered = true
           @pushBranch()
+
       @doubleBranchPop = false
 
       @stateLogger.createNode(point, @activeTree.treeId)
-      
+
       @trigger("newNode", centered)
       @trigger("newActiveNode")
     else
@@ -249,7 +262,7 @@ class SkeletonTracing
   getActiveNode : -> @activeNode
 
 
-  getActiveNodeId : -> 
+  getActiveNodeId : ->
 
     if @activeNode then @activeNode.id else null
 
@@ -262,6 +275,11 @@ class SkeletonTracing
   getActiveNodeType : ->
 
     if @activeNode then @activeNode.type else null
+
+
+  getActiveNodeRadius : ->
+
+    if @activeNode then @activeNode.radius else 10 * @scaleInfo.baseVoxel
 
 
   getActiveTreeId : ->
@@ -282,7 +300,7 @@ class SkeletonTracing
       else
         @activeTree.name = "Tree#{('00'+@activeTree.treeId).slice(-3)}"
       @stateLogger.updateTree(@activeTree)
-      
+
       @trigger("newTreeName")
 
 
@@ -310,6 +328,15 @@ class SkeletonTracing
 
     if mergeTree
       @mergeTree(lastActiveNode, lastActiveTree)
+
+
+  setActiveNodeRadius : (radius) ->
+
+    if @activeNode?
+      @activeNode.radius = Math.min( @MAX_RADIUS,
+                            Math.max( @MIN_RADIUS, radius ) )
+      @stateLogger.updateNode( @activeNode, @activeNode.treeId )
+      @trigger "newActiveNodeRadius", radius
 
 
   setComment : (commentText) ->
@@ -373,7 +400,7 @@ class SkeletonTracing
     if not ascendingOrder
       return @comments.reverse()
     return @comments
-    
+
 
   getPlainComments : =>
 
@@ -385,7 +412,7 @@ class SkeletonTracing
 
   selectNextTree : (forward) ->
 
-    trees = @getTreesSorted(@user.sortTreesByName)
+    trees = @getTreesSorted(@user.get("sortTreesByName"))
     for i in [0...trees.length]
       if @activeTree.treeId == trees[i].treeId
         break
@@ -440,8 +467,8 @@ class SkeletonTracing
   createNewTree : ->
 
     tree = new TraceTree(
-      @treeIdCount++, 
-      @getNewTreeColor(@treeIdCount-1), 
+      @treeIdCount++,
+      @getNewTreeColor(@treeIdCount-1),
       "Tree#{('00'+(@treeIdCount-1)).slice(-3)}",
       (new Date()).getTime())
     @trees.push(tree)
@@ -470,7 +497,7 @@ class SkeletonTracing
     @stateLogger.deleteNode(deletedNode, @activeTree.treeId)
 
     @deleteBranch(deletedNode)
-    
+
     if deletedNode.neighbors.length > 1
       # Need to split tree
       newTrees = []
@@ -499,7 +526,7 @@ class SkeletonTracing
       # this deferred will be resolved once the skeleton has finished reloading the trees
       @finishedDeferred = new $.Deferred()
       @trigger("reloadTrees", newTrees, @finishedDeferred)
-        
+
     else if @activeNode.neighbors.length == 1
       # no children, so just remove it.
       @setActiveNode(deletedNode.neighbors[0].id)
@@ -538,7 +565,7 @@ class SkeletonTracing
 
     @stateLogger.deleteTree(tree)
     @trigger("deleteTree", index)
-    
+
     # Because we always want an active tree, check if we need
     # to create one.
     if @trees.length == 0
@@ -563,12 +590,12 @@ class SkeletonTracing
         # update tree ids
         for node in @activeTree.nodes
           node.treeId = @activeTree.treeId
-        
+
         @stateLogger.mergeTree(lastTree, @activeTree, lastNode.id, activeNodeID)
 
         @trigger("mergeTree", lastTree.treeId, lastNode, @activeNode)
 
-        @deleteTree(false, lastTree.treeId, false)
+        #@deleteTree(false, lastTree.treeId, false)
 
         @setActiveNode(activeNodeID)
       else
@@ -590,7 +617,7 @@ class SkeletonTracing
 
   getTreesSorted : ->
 
-    if @user.sortTreesByName
+    if @user.get("sortTreesByName")
       return (@trees.slice(0)).sort(@compareNames)
     else
       return (@trees.slice(0)).sort(@compareTimestamps)

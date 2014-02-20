@@ -1,7 +1,13 @@
 ### define
 jquery : $
+underscore : _
+three.color : ColorConverter
+../../libs/request : Request
+../../libs/event_mixin : EventMixin
 ./tracepoint : TracePoint
 ./tracetree : TraceTree
+./statelogger : StateLogger
+../constants : constants
 ###
 
 class TracingParser
@@ -26,13 +32,22 @@ class TracingParser
         @skeletonTracing.getNewTreeColor(treeData.id),
         if treeData.name then treeData.name else "Tree#{('00'+treeData.id).slice(-3)}",
         treeData.timestamp)
-      
+
       # Initialize nodes
       for node in treeData.nodes
-        tree.nodes.push(new TracePoint(@skeletonTracing.TYPE_USUAL, node.id, node.position, node.radius, node.timestamp, treeData.id))
+
+        metaInfo = _.pick( node,
+          'timestamp', 'viewport', 'resolution', 'bitDepth', 'interpolation' )
+
+        tree.nodes.push(
+          new TracePoint(
+            @skeletonTracing.TYPE_USUAL,
+            node.id, node.position, node.radius, treeData.id,
+            metaInfo))
+
         # idCount should be bigger than any other id
         @idCount = Math.max(node.id + 1, @idCount);
-      
+
       # Initialize edges
       for edge in treeData.edges
         sourceNode = @skeletonTracing.findNodeInList(tree.nodes, edge.source)
@@ -41,10 +56,8 @@ class TracingParser
           sourceNode.appendNext(targetNode)
           targetNode.appendNext(sourceNode)
         else
-          $.assertNotEquals(sourceNode, null, "source node undefined",
-            {"edge" : edge})
-          $.assertNotEquals(targetNode, null, "target node undefined",
-            {"edge" : edge})
+          $.assertExists(sourceNode, "source node is null", {"edge" : edge})
+          $.assertExists(targetNode, "target node is null", {"edge" : edge})
 
       # Set active Node
       activeNodeT = @skeletonTracing.findNodeInList(tree.nodes, @data.activeNode)
@@ -71,7 +84,7 @@ class TracingParser
     for comment in @data.comments
       comment.node = @skeletonTracing.findNodeInList(nodeList, comment.node)
     @comments = @data.comments
-  
+
 
   parse : ->
 
@@ -86,7 +99,7 @@ class TracingParser
       }
 
     @buildTrees()
-    
+
     nodeList = []
     for tree in @trees
       nodeList = nodeList.concat(tree.nodes)

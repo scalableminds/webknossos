@@ -1,4 +1,4 @@
-@(taskForm: Form[_], taskTypes: List[models.task.TaskType], experiences: List[String], projects: List[models.task.Project])
+@(taskForm: Form[_], taskTypes: List[models.task.TaskType], experiences: List[String], projects: List[models.task.Project], teams: List[String])
 
 @import play.api.libs.json.Json
 
@@ -19,6 +19,10 @@
 @helper.inputText(taskForm("priority"), 'type -> "number")
 
 @helper.inputText(taskForm("taskInstances"), 'type -> "number", 'min -> 1)
+
+@helper.select(taskForm("team"), teams.map { t =>
+    t -> t
+})
 
 @helper.select(taskForm("project"), ("" -> "") +: projects.map { project =>
   project.name -> project.name 

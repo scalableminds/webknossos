@@ -4,10 +4,12 @@ import models.annotation.{AnnotationService, Annotation, AnnotationType, Annotat
 import braingames.reactivemongo.DBAccessContext
 import reactivemongo.bson.BSONObjectID
 
-import braingames.util.FoxImplicits
+import braingames.util.{Fox, FoxImplicits}
 import play.api.libs.concurrent.Execution.Implicits._
 import models.user.Experience
 import scala.concurrent.Future
+import play.api.Logger
+import reactivemongo.core.commands.LastError
 
 /**
  * Company: scalableminds
@@ -23,8 +25,13 @@ object TaskService extends TaskAssignmentSimulation with TaskAssignment with Fox
   def findAllNonTrainings(implicit ctx: DBAccessContext) = TaskDAO.findAllNonTrainings
 
   def remove(_task: BSONObjectID)(implicit ctx: DBAccessContext) = {
-    AnnotationDAO.removeAllWithTaskId(_task)
-    TaskDAO.removeById(_task)
+    TaskDAO.removeById(_task).flatMap{
+      case result if result.n > 0 =>
+        AnnotationDAO.removeAllWithTaskId(_task)
+      case _ =>
+        Logger.warn("Tried to remove task without permission.")
+        Future.successful(LastError(false ,None, None, None, None, 0, false))
+    }
   }
 
   def toTrainingForm(t: Task): Option[(String, Training)] =
@@ -54,17 +61,17 @@ object TaskService extends TaskAssignmentSimulation with TaskAssignment with Fox
   def copyDeepAndInsert(source: Task, includeUserTracings: Boolean = true)(implicit ctx: DBAccessContext) = {
     val task = source.copy(_id = BSONObjectID.generate)
 
-    def copy(annotations: List[Annotation]) = Future.traverse(annotations) { annotation =>
+    def executeCopy(annotations: List[Annotation]) = Fox.sequence(annotations.map{ annotation =>
       if (includeUserTracings || AnnotationType.isSystemTracing(annotation))
         annotation.copy(_task = Some(task._id)).muta.copyDeepAndInsert()
       else
-        Future.successful(None)
-    }
+        Fox.empty
+    })
 
     for {
       _ <- TaskDAO.insert(task)
       annotations <- AnnotationDAO.findByTaskId(source._id)
-      _ <- copy(annotations)
+      _ <- executeCopy(annotations)
     } yield {
       task
     }

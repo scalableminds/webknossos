@@ -21,6 +21,7 @@ import braingames.util.{NamedFileStream, Fox}
 
 case class TemporaryAnnotation(
                                 id: String,
+                                team: String,
                                 _content: () => Fox[AnnotationContent],
                                 typ: AnnotationType = AnnotationType.CompoundProject,
                                 restrictions: AnnotationRestrictions = AnnotationRestrictions.restrictEverything,

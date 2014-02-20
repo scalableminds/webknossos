@@ -6,10 +6,12 @@ import views.html
 import play.api.i18n.Messages
 import braingames.util.ExtendedTypes.ExtendedBoolean
 import play.api.libs.concurrent.Execution.Implicits._
+import play.api.libs.json._
+import play.api.templates.Html
 
 object TaskAlgorithm extends AdminController {
 
-  def testAlgorithm = Authenticated()(parse.urlFormEncoded) { implicit request =>
+  def testAlgorithm = Authenticated(parse.urlFormEncoded) { implicit request =>
     for {
       code <- postParameter("code") ?~ Messages("taskAlgorithm.notSupplied")
       _ <- (TaskSelectionAlgorithm.isValidAlgorithm(code) failIfFalse Messages("taskAlgorithm.invalid")) ~> 422
@@ -18,7 +20,7 @@ object TaskAlgorithm extends AdminController {
     }
   }
 
-  def index = Authenticated().async { implicit request =>
+  def index = Authenticated.async { implicit request =>
     for {
       algorithms <- TaskSelectionAlgorithmDAO.findAll
       current <- TaskSelectionAlgorithmDAO.current
@@ -27,7 +29,7 @@ object TaskAlgorithm extends AdminController {
     }
   }
 
-  def submitAlgorithm = Authenticated().async(parse.urlFormEncoded) { implicit request =>
+  def submitAlgorithm = Authenticated.async(parse.urlFormEncoded) { implicit request =>
     (for {
       code <- postParameter("code") ?~> Messages("taskAlgorithm.notSupplied")
       use <- postParameter("use") ?~> Messages("taskAlgorithm.use.notSupplied")
@@ -41,7 +43,7 @@ object TaskAlgorithm extends AdminController {
     }) ?~> Messages("taskAlgorithm.invalid") ~> 422
   }
 
-  def useAlgorithm(id: String) = Authenticated().async { implicit request =>
+  def useAlgorithm(id: String) = Authenticated.async { implicit request =>
     for {
       algorithm <- TaskSelectionAlgorithmDAO.findOneById(id) ?~> Messages("taskAlgorithm.notFound")
     } yield {
@@ -50,7 +52,7 @@ object TaskAlgorithm extends AdminController {
     }
   }
 
-  def listAlgorithms = Authenticated().async { implicit request =>
+  def listAlgorithms = Authenticated.async { implicit request =>
     TaskSelectionAlgorithmDAO.findAll.map { algorithms =>
       Ok(Json.toJson(algorithms))
     }

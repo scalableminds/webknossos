@@ -1,13 +1,13 @@
 package models.annotation
 
 import models.user.User
-import models.security.{RoleDAO, Role}
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
 import scala.async.Async._
 import scala.concurrent.Future
 import play.api.libs.concurrent.Execution.Implicits._
 import braingames.reactivemongo.GlobalAccessContext
+import models.team.Role
 
 /**
  * Company: scalableminds
@@ -23,7 +23,7 @@ class AnnotationRestrictions {
 
   def allowFinish(user: Option[User]): Boolean = false
 
-  def allowDownload(user: Option[User]): Future[Boolean] = Future.successful(false)
+  def allowDownload(user: Option[User]): Boolean = false
 
   def allowAccess(user: User): Boolean = allowAccess(Some(user))
 
@@ -31,22 +31,17 @@ class AnnotationRestrictions {
 
   def allowFinish(user: User): Boolean = allowFinish(Some(user))
 
-  def allowDownload(user: User): Future[Boolean] = allowDownload(Some(user))
+  def allowDownload(user: User): Boolean = allowDownload(Some(user))
 
 }
 
 object AnnotationRestrictions {
-  def writeAsJson(ar: AnnotationRestrictions, u: Option[User]): Future[JsObject] =
-    for {
-      isDownloadAllowed <- ar.allowDownload(u)
-    } yield {
-      Json.obj(
-        "allowAccess" -> ar.allowAccess(u),
-        "allowUpdate" -> ar.allowUpdate(u),
-        "allowFinish" -> ar.allowFinish(u),
-        "allowDownload" -> isDownloadAllowed
-      )
-    }
+  def writeAsJson(ar: AnnotationRestrictions, u: Option[User]) : JsObject =
+    Json.obj(
+      "allowAccess" -> ar.allowAccess(u),
+      "allowUpdate" -> ar.allowUpdate(u),
+      "allowFinish" -> ar.allowFinish(u),
+      "allowDownload" -> ar.allowDownload(u))
 
   def restrictEverything =
     new AnnotationRestrictions()
@@ -56,7 +51,7 @@ object AnnotationRestrictions {
       override def allowAccess(user: Option[User]) = {
         user.map {
           user =>
-            annotation._user == user._id || (RoleDAO.Admin.map(user.hasRole) getOrElse false)
+            annotation._user == user._id || user.roleInTeam(annotation.team) == Some(Role.Admin)
         } getOrElse false
       }
 
@@ -70,11 +65,11 @@ object AnnotationRestrictions {
       override def allowFinish(user: Option[User]) = {
         user.map {
           user =>
-            (annotation._user == user._id || (RoleDAO.Admin.map(user.hasRole) getOrElse false)) && !annotation.state.isFinished
+            (annotation._user == user._id || user.roleInTeam(annotation.team) == Some(Role.Admin)) && !annotation.state.isFinished
         } getOrElse false
       }
 
-      override def allowDownload(user: Option[User]) = async {
+      override def allowDownload(user: Option[User]) = {
         user.map {
           user =>
             !annotation.isTrainingsAnnotation && allowAccess(user)

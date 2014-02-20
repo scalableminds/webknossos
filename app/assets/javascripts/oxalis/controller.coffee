@@ -39,7 +39,7 @@ class Controller
   arbitraryController : null
   abstractTreeController : null
   allowedModes : []
-  
+
 
   constructor : (@controlMode) ->
 
@@ -71,8 +71,7 @@ class Controller
 
       # FPS stats
       stats = new Stats()
-      stats.getDomElement().id = "stats"
-      $("body").append stats.getDomElement()
+      $("body").append stats.domElement
 
       @gui = @createGui(restrictions, settings)
 
@@ -111,6 +110,7 @@ class Controller
         @model.binary[binaryName].cube.on "bucketLoaded" : =>
           @model.flycam.update()
 
+
       if @controlMode == constants.CONTROL_MODE_VIEW
         $('#alpha-slider').slider().on "slide", (event) =>
 
@@ -126,7 +126,7 @@ class Controller
 
       _controller = this
       for button in $("#view-mode .btn-group").children()
-        
+
         id = @modeMapping[ $(button).attr("id") ]
         do (id) ->
           $(button).on "click", ->
@@ -161,12 +161,12 @@ class Controller
   initKeyboard : ->
 
     $(document).keypress (event) ->
-      
+
       if event.shiftKey && event.which == 63
         $("#help-modal").modal('toggle')
 
 
-    
+
     # avoid scrolling while pressing space
     $(document).keydown (event) ->
       event.preventDefault() if (event.which == 32 or event.which == 18 or 37 <= event.which <= 40) and !$(":focus").length
@@ -187,9 +187,9 @@ class Controller
           @setMode(constants.MODE_ARBITRARY_PLANE)
         "shift + 4" : =>
           @setMode(constants.MODE_VOLUME)
-          
-        "t" : => 
-          @view.toggleTheme()       
+
+        "t" : =>
+          @view.toggleTheme()
           @abstractTreeController.drawTree()
 
         "m" : => # rotate allowed modes
@@ -219,7 +219,7 @@ class Controller
     else # newMode not allowed or invalid
       return
 
-    
+
     for button in $("#view-mode .btn-group").children()
 
       $(button).removeClass("btn-primary")
@@ -251,9 +251,9 @@ class Controller
     { model } = @
 
     gui = new Gui($("#optionswindow"), model, restrictions, settings)
-    gui.update()  
+    gui.update()
 
-    model.binary["color"].pullQueue.set4Bit(model.user.fourBit)
+    model.binary["color"].queue.set4Bit(model.user.get("fourBit"))
     model.binary["color"].updateContrastCurve(
       gui.settingsGeneral.brightness, gui.settingsGeneral.contrast)
 

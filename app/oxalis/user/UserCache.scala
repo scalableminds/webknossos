@@ -5,6 +5,7 @@ import play.api.Play.current
 import scala.concurrent.Future
 import models.user.{UserDAO, User}
 import braingames.reactivemongo.GlobalAccessContext
+import braingames.util.Fox
 
 object UserCache {
   val userCacheTimeout = current.configuration.getInt("user.cacheTimeout") getOrElse 3
@@ -19,7 +20,7 @@ object UserCache {
     }
   }
 
-  def store(id: String, user: Future[Option[User]]) = {
+  def store(id: String, user: Fox[User]) = {
     Cache.set(cacheKeyForUser(id), user)
     user
   }

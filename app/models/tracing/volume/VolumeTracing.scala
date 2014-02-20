@@ -4,7 +4,7 @@ import braingames.geometry.Point3D
 import models.annotation.{AnnotationContentService, AnnotationContent, AnnotationSettings}
 import models.basics.SecuredBaseDAO
 import models.binary.UserDataLayerDAO
-import braingames.binary.models.DataSet
+import models.binary.DataSet
 import java.io.InputStream
 import play.api.libs.json.{Json, JsValue}
 import oxalis.binary.BinaryDataService
@@ -45,7 +45,7 @@ case class VolumeTracing(
 
   def contentType: String = VolumeTracing.contentType
 
-  def toDownloadStream: Future[InputStream] = ???
+  def toDownloadStream: Fox[InputStream] = ???
 
   def downloadFileExtension: String = ???
 }
@@ -55,19 +55,10 @@ object VolumeTracingService extends AnnotationContentService{
 
   def dao = VolumeTracingDAO
 
-  def updateSettings(settings: AnnotationSettings, tracingId: String)(implicit ctx: DBAccessContext): Unit = ???
+  def updateSettings(settings: AnnotationSettings, tracingId: String)(implicit ctx: DBAccessContext): Fox[Boolean] = ???
 
   def findOneById(id: String)(implicit ctx: DBAccessContext): Future[Option[VolumeTracingService.AType]] =
     VolumeTracingDAO.findOneById(id)
-
-  def createFrom(baseDataSet: DataSet)(implicit ctx: DBAccessContext) = {
-    val userDataLayer = BinaryDataService.createUserDataLayer(baseDataSet)
-    val volumeTracing = VolumeTracing(baseDataSet.name, userDataLayer.name, System.currentTimeMillis(), Point3D(0,0,0))
-    UserDataLayerDAO.insert(userDataLayer)
-    VolumeTracingDAO.insert(volumeTracing).map{ _ =>
-      volumeTracing
-    }
-  }
 
   def clearTracingData(id: String)(implicit ctx: DBAccessContext): Fox[VolumeTracingService.AType] = ???
 }
@@ -82,4 +73,10 @@ object VolumeTracingDAO extends SecuredBaseDAO[VolumeTracing] {
   val collectionName = "volumes"
 
   val formatter = VolumeTracing.volumeTracingFormat
+
+  def createFrom(baseDataSet: DataSet)(implicit ctx: DBAccessContext) = {
+    val dataSet = BinaryDataService.createUserDataSource(baseDataSet.dataSource)
+    val t = VolumeTracing(dataSet.name, System.currentTimeMillis(), Point3D(0,0,0))
+    insert(t)
+  }
 }

@@ -1,5 +1,5 @@
 ### define
-../../libs/datgui/dat.gui : DatGui
+dat.gui : DatGui
 ../../libs/request : Request
 ../../libs/event_mixin : EventMixin
 ../../libs/toast : Toast
@@ -7,12 +7,12 @@
 ../constants : constants
 ###
 
-class Gui 
+class Gui
 
   model : null
-  
+
   constructor : (container, @model, @restrictions, @tracingSettings) ->
-    
+
     _.extend(this, new EventMixin())
 
     @updateGlobalPosition( @model.flycam.getPosition() )
@@ -21,24 +21,24 @@ class Gui
     @qualityArray = ["high", "medium", "low"]
 
     @datasetPostfix = _.last(@model.binary["color"].dataSetName.split("_"))
-    @datasetPosition = @initDatasetPosition(@user.briConNames)
+    @datasetPosition = @initDatasetPosition(@user.get("briConNames"))
 
     somaClickingAllowed = @tracingSettings.somaClickingAllowed
     
     @settingsGeneral = 
 
       boundingBox : "0, 0, 0, 0, 0, 0"
-      fourBit : @user.fourBit
-      brightness : @user.brightness[@datasetPosition]
-      contrast : @user.contrast[@datasetPosition]
+      fourBit : @user.get("fourBit")
+      brightness : @user.get("brightness")[@datasetPosition]
+      contrast : @user.get("contrast")[@datasetPosition]
       resetBrightnessAndContrast : => @resetBrightnessAndContrast()
-      quality : @qualityArray[@user.quality]
+      quality : @qualityArray[@user.get("quality")]
 
     if @model.skeletonTracing?
       @settingsSkeleton =
         activeTreeID : @model.skeletonTracing.getActiveTreeId()
         activeNodeID : @model.skeletonTracing.getActiveNodeId() or -1
-        newNodeNewTree : if somaClickingAllowed then @user.newNodeNewTree else false
+        newNodeNewTree : if somaClickingAllowed then @user.get("newNodeNewTree") else false
         deleteActiveNode : => @trigger "deleteActiveNode"
 
     if @model.volumeTracing
@@ -46,12 +46,13 @@ class Gui
         activeCellID : @model.volumeTracing.getActiveCellId()
         createNewCell : => @trigger "createNewCell"
 
+
     if @datasetPosition == 0
       # add new dataset to settings
-      @user.briConNames.push(@datasetPostfix)
-      @user.brightness.push(@settingsGeneral.brightness)
-      @user.contrast.push(@settingsGeneral.contrast)
-      @datasetPosition = @user.briConNames.length - 1
+      @user.get("briConNames").push(@datasetPostfix)
+      @user.get("brightness").push(@settings.brightness)
+      @user.get("contrast").push(@settings.contrast)
+      @datasetPosition = @user.get("briConNames").length - 1
 
 
     @gui = new dat.GUI(autoPlace: false, width : 280, hideable : false, closed : true)
@@ -59,37 +60,37 @@ class Gui
     container.append @gui.domElement
 
     @folders = []
-    
+
     @folders.push( fControls = @gui.addFolder("Controls") )
-    @addCheckbox(fControls, @user, "inverseX", "Inverse X")
-    @addCheckbox(fControls, @user, "inverseY", "Inverse Y")
-    @addSlider(fControls, @user, "keyboardDelay",
+    @addCheckbox(fControls, @user.getSettings(), "inverseX", "Inverse X")
+    @addCheckbox(fControls, @user.getSettings(), "inverseY", "Inverse Y")
+    @addSlider(fControls, @user.getSettings(), "keyboardDelay",
       0, 500, 10, "Keyboard delay (ms)" )
 
     @folders.push( @fViewportcontrols = @gui.addFolder("Viewportoptions") )
-    @moveValueController = @addSlider(@fViewportcontrols, @user, "moveValue",
+    @moveValueController = @addSlider(@fViewportcontrols, @user.getSettings(), "moveValue",
       constants.MIN_MOVE_VALUE, constants.MAX_MOVE_VALUE, 10, "Move Value (nm/s)")
-    @zoomController = @addSlider(@fViewportcontrols, @user, "zoom",
+    @zoomController = @addSlider(@fViewportcontrols, @user.getSettings(), "zoom",
       0.01, @model.flycam.getMaxZoomStep(), 0.001, "Zoom")
-    @scaleController = @addSlider(@fViewportcontrols, @user, "scale", constants.MIN_SCALE,
+    @scaleController = @addSlider(@fViewportcontrols, @user.getSettings(), "scale", constants.MIN_SCALE,
       constants.MAX_SCALE, 0.1, "Viewport Scale")
-    @addCheckbox(@fViewportcontrols, @user, "dynamicSpaceDirection", "d/f-Switching")
+    @addCheckbox(@fViewportcontrols, @user.getSettings(), "dynamicSpaceDirection", "d/f-Switching")
 
     @folders.push( @fFlightcontrols = @gui.addFolder("Flightoptions") )
-    @addSlider(@fFlightcontrols, @user, "mouseRotateValue",
+    @addSlider(@fFlightcontrols, @user.getSettings(), "mouseRotateValue",
       0.001, 0.02, 0.001, "Mouse Rotation")
-    @addSlider(@fFlightcontrols, @user, "rotateValue",
+    @addSlider(@fFlightcontrols, @user.getSettings(), "rotateValue",
       0.001, 0.08, 0.001, "Keyboard Rotation Value")
-    @moveValue3dController = @addSlider(@fFlightcontrols, @user, "moveValue3d",
+    @moveValue3dController = @addSlider(@fFlightcontrols, @user.getSettings(), "moveValue3d",
       constants.MIN_MOVE_VALUE, constants.MAX_MOVE_VALUE, 10, "Move Value (nm/s)")
-    @addSlider(@fFlightcontrols, @user, "crosshairSize",
+    @addSlider(@fFlightcontrols, @user.getSettings(), "crosshairSize",
       0.05, 0.5, 0.01, "Crosshair size")
 
     @folders.push( @fView = @gui.addFolder("View") )
     bbController = @fView.add(@settingsGeneral, "boundingBox").name("Bounding Box").onChange(@setBoundingBox)
     @addTooltip(bbController, "Format: minX, minY, minZ, maxX, maxY, maxZ")
     @addCheckbox(@fView, @settingsGeneral, "fourBit", "4 Bit")
-    @addCheckbox(@fView, @user, "interpolation", "Interpolation")
+    @addCheckbox(@fView, @user.getSettings(), "interpolation", "Interpolation")
     @brightnessController =
       @addSlider(@fView, @settingsGeneral, "brightness",
         -256, 256, 5, "Brightness", @setBrightnessAndContrast)
@@ -98,19 +99,19 @@ class Gui
         0.5, 5, 0.1, "Contrast", @setBrightnessAndContrast)
     @addFunction(@fView, @settingsGeneral, "resetBrightnessAndContrast",
       "Reset B/C")
-    @clippingController = @addSlider(@fView, @user, "clippingDistance",
+    @clippingController = @addSlider(@fView, @user.getSettings(), "clippingDistance",
       1, 1000 * @model.scaleInfo.baseVoxel, 1, "Clipping Distance")
-    @clippingControllerArbitrary = @addSlider(@fView, @user, "clippingDistanceArbitrary",
+    @clippingControllerArbitrary = @addSlider(@fView, @user.getSettings(), "clippingDistanceArbitrary",
       1, 127, 1, "Clipping Distance")
-    @addCheckbox(@fView, @user, "displayCrosshair", "Show Crosshairs")
+    @addCheckbox(@fView, @user.getSettings(), "displayCrosshair", "Show Crosshairs")
     (@fView.add @settingsGeneral, "quality", @qualityArray)
                           .name("Quality")
                           .onChange((v) => @setQuality(v))
 
     @folders.push(@fTDView = @gui.addFolder("3D View"))
-    @addCheckbox(@fTDView, @user, "displayTDViewXY", "Display XY-Plane")
-    @addCheckbox(@fTDView, @user, "displayTDViewYZ", "Display YZ-Plane")
-    @addCheckbox(@fTDView, @user, "displayTDViewXZ", "Display XZ-Plane")
+    @addCheckbox(@fTDView, @user.getSettings(), "displayTDViewXY", "Display XY-Plane")
+    @addCheckbox(@fTDView, @user.getSettings(), "displayTDViewYZ", "Display YZ-Plane")
+    @addCheckbox(@fTDView, @user.getSettings(), "displayTDViewXZ", "Display XZ-Plane")
 
     if @settingsSkeleton?
 
@@ -125,8 +126,8 @@ class Gui
       @folders.push( @fNodes = @gui.addFolder("Nodes") )
       @activeNodeIdController = @addNumber(@fNodes, @settingsSkeleton, "activeNodeID",
         1, 1, "Active Node ID", (value) => @trigger( "setActiveNode", value))
-      @particleSizeController = @addSlider(@fNodes, @user, "particleSize",
-        constants.MIN_PARTICLE_SIZE, constants.MAX_PARTICLE_SIZE, 1, "Node size")
+      @particleSizeController = @addSlider(@fNodes, @user.getSettings(), "particleSize",
+        constants.MIN_PARTICLE_SIZE, constants.MAX_PARTICLE_SIZE, 1, "Min. Node size")
       @addFunction(@fNodes, @settingsSkeleton, "deleteActiveNode", "Delete Active Node")
 
     if @settingsVolume?
@@ -142,7 +143,7 @@ class Gui
 
     $("#dataset-name").text(@model.binary["color"].dataSetName)
 
-    $("#trace-position-input").on "change", (event) => 
+    $("#trace-position-input").on "change", (event) =>
 
       @setPosFromString(event.target.value)
       $("#trace-position-input").blur()
@@ -167,7 +168,7 @@ class Gui
 
 
     @model.flycam.on
-      positionChanged : (position) => 
+      positionChanged : (position) =>
         @updateGlobalPosition(position)
 
     @model.user.on
@@ -181,13 +182,14 @@ class Gui
           $("#zoomFactor").html("<p>Viewport width: " + (nm / 1000000).toFixed(1) + " mm</p>")
 
     @model.skeletonTracing?.on
-      newActiveNode    : => @update()
-      newActiveTree    : => @update()
-      deleteActiveTree : => @update()
-      deleteActiveNode : => @update()
-      deleteLastNode   : => @update()
-      newNode          : => @update()
-      newTree          : => @update()
+      newActiveNode       : => @update()
+      newActiveTree       : => @update()
+      newActiveNodeRadius : => @update()
+      deleteActiveTree    : => @update()
+      deleteActiveNode    : => @update()
+      deleteLastNode      : => @update()
+      newNode             : => @update()
+      newTree             : => @update()
 
     @model.volumeTracing?.on
       newActiveCell    : =>
@@ -248,7 +250,7 @@ class Gui
 
     if @restrictions.allowUpdate and model?
       model.stateLogger.pushNow()
-        .then( 
+        .then(
           -> Toast.success("Saved!")
           -> Toast.error("Couldn't save. Please try again.")
         )
@@ -264,7 +266,7 @@ class Gui
 
 
   setPosFromString : (posString) =>
- 
+
     posArray = @stringToNumberArray( posString )
     if posArray?.length == 3
       @model.flycam.setPosition(posArray)
@@ -345,14 +347,15 @@ class Gui
 
   set : (name, value, type) =>
 
-    @user.setValue( name, (type) value)
+    @user.set( name, (type) value)
 
 
   setBrightnessAndContrast : =>
     @model.binary["color"].updateContrastCurve(@settingsGeneral.brightness, @settingsGeneral.contrast)
     
-    @user.brightness[@datasetPosition] = (Number) @settingsGeneral.brightness
-    @user.contrast[@datasetPosition] = (Number) @settingsGeneral.contrast
+    @user.get("brightness")[@datasetPosition] = (Number) @settingsGeneral.brightness
+    @user.get("contrast")[@datasetPosition] = (Number) @settingsGeneral.contrast
+
     @user.push()
 
 
@@ -411,6 +414,7 @@ class Gui
     if @settingsSkeleton?
       @settingsSkeleton.activeNodeID = @model.skeletonTracing.getActiveNodeId() or -1
       @settingsSkeleton.activeTreeID = @model.skeletonTracing.getActiveTreeId()
+      @settingsSkeleton.radius       = @model.skeletonTracing.getActiveNodeRadius()
       @activeNodeIdController.updateDisplay()
       @activeTreeIdController.updateDisplay()
     if @settingsVolume?

@@ -34,11 +34,11 @@ class ActivityMonitor extends Actor {
 
       collectedActivities.send {
         activities =>
-          for {
-            (userId, time) <- activities
-            Some(user) <- UserService.findOneById(userId.stringify, useCache = true)(GlobalAccessContext)
-          } {
-            UserService.logActivity(user, time)
+          activities.map{
+            case (userId, time) =>
+              UserService.findOneById(userId.stringify, useCache = true)(GlobalAccessContext).map{ user =>
+                UserService.logActivity(user, time)
+              }
           }
           Map[BSONObjectID, Long]().empty
       }

@@ -80,7 +80,7 @@ class SkeletonTracingPlaneController extends PlaneController
     super(delta, type)
 
     if type == "shift"
-      @skeletonTracingController.setParticleSize(delta)
+      @skeletonTracingController.setRadius(delta)
 
 
   onClick : (position, shiftPressed, altPressed, plane) =>
@@ -140,7 +140,7 @@ class SkeletonTracingPlaneController extends PlaneController
 
     # Strg + Rightclick to set new not active branchpoint
     if ctrlPressed and 
-      @model.user.newNodeNewTree == false and 
+      @model.user.get("newNodeNewTree") == false and 
         @model.skeletonTracing.getActiveNodeType() == constants.TYPE_USUAL
 
       @model.skeletonTracing.pushBranch()

@@ -5,7 +5,6 @@ import oxalis.security.{AuthenticatedRequest, Secured}
 import views.html
 import models.user._
 import oxalis.nml._
-import models.security.{RoleDAO, Role}
 import oxalis.nml.NMLParser
 import braingames.xml.Xml
 import play.api.Logger
@@ -46,10 +45,8 @@ import net.liftweb.common.Full
 import oxalis.nml.NML
 
 object NMLIO extends Controller with Secured with TextUtils {
-  override val DefaultAccessRole = RoleDAO.User
 
-
-  def uploadForm = Authenticated() { implicit request =>
+  def uploadForm = Authenticated{ implicit request =>
     Ok(html.admin.nml.nmlupload())
   }
 
@@ -76,13 +73,14 @@ object NMLIO extends Controller with Secured with TextUtils {
       content =>
         AnnotationService.createFrom(
           user._id,
+          user.teams.head.team, //TODO: refactor
           content,
           typ,
           name)
     }
   }
 
-  def upload = Authenticated().async(parse.multipartFormData) { implicit request =>
+  def upload = Authenticated.async(parse.multipartFormData) { implicit request =>
     val parseResult = request.body.files.map(f => f.filename -> NMLService.extractFromNML(f.ref.file))
     val (parseFailed, parseSuccess) = splitResult(parseResult)
     if (parseFailed.size > 0) {
@@ -126,7 +124,8 @@ object NMLIO extends Controller with Secured with TextUtils {
     }
   }
 
-  def projectDownload(projectName: String) = Authenticated(role = RoleDAO.Admin).async { implicit request =>
+  // TODO: secure
+  def projectDownload(projectName: String) = Authenticated.async { implicit request =>
     def createProjectZip(project: Project) =
       for {
         tasks <- TaskDAO.findAllByProject(project.name)
@@ -142,7 +141,8 @@ object NMLIO extends Controller with Secured with TextUtils {
     }
   }
 
-  def taskDownload(taskId: String) = Authenticated(role = RoleDAO.Admin).async { implicit request =>
+  // TODO: secure
+  def taskDownload(taskId: String) = Authenticated.async { implicit request =>
     def createTaskZip(task: Task) = task.annotations.flatMap { annotations =>
       val finished = annotations.filter(_.state.isFinished)
       zipTracings(finished, task.id + "_nmls.zip")
@@ -154,7 +154,8 @@ object NMLIO extends Controller with Secured with TextUtils {
     } yield Ok.sendFile(zip.file)
   }
 
-  def userDownload(userId: String) = Authenticated(role = RoleDAO.Admin).async { implicit request =>
+  // TODO: secure
+  def userDownload(userId: String) = Authenticated.async { implicit request =>
     for {
       user <- UserService.findOneById(userId, useCache = true) ?~> Messages("user.notFound")
       annotations <- AnnotationService.findTasksOf(user).map(_.filter(_.state.isFinished))

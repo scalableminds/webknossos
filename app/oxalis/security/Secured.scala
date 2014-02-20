@@ -7,17 +7,8 @@ import play.api.mvc.Results._
 import play.api.i18n.Messages
 import play.api.mvc.Request
 import play.api.Play
-import play.api.mvc.WebSocket
-import play.api.mvc.WebSocket._
 import play.api.Play.current
-import play.api.libs.iteratee.Input
 import controllers.routes
-import play.api.libs.iteratee.Done
-import models.security.Role
-import models.security.Permission
-import play.api.libs.iteratee.Enumerator
-import play.api.libs.iteratee.Iteratee
-import play.api.libs.iteratee.Concurrent
 import play.api.libs.concurrent.Akka
 import akka.actor.Props
 import oxalis.user.{ActivityMonitor, UserActivity}
@@ -27,6 +18,7 @@ import braingames.util.{FoxImplicits, Fox}
 import net.liftweb.common.{Full, Empty}
 import play.api.libs.concurrent.Execution.Implicits._
 import braingames.reactivemongo.GlobalAccessContext
+import models.team.Role
 
 class AuthenticatedRequest[A](
                                val user: User, override val request: Request[A]
@@ -60,15 +52,7 @@ trait Secured extends FoxImplicits {
    * Defines the access role which is used if no role is passed to an
    * authenticated action
    */
-  def DefaultAccessRole: Option[Role]
-
   val userService = models.user.UserService
-
-  /**
-   * Defines the default permission used for authenticated actions if not
-   * specified otherwise
-   */
-  def DefaultAccessPermission: Option[Permission] = None
 
   /**
    * Tries to extract the user from a request
@@ -76,12 +60,12 @@ trait Secured extends FoxImplicits {
   def maybeUser(implicit request: RequestHeader): Fox[User] =
     userFromSession orElse autoLoginUser
 
-  private def autoLoginUser = {
+  private def autoLoginUser: Fox[User] = {
     // development setting: if the key is set, one gets logged in automatically
     if (Play.configuration.getBoolean("application.enableAutoLogin").get)
       UserService.defaultUser
     else
-      Future.successful(None)
+      Fox.empty
   }
 
   private def userFromSession(implicit request: RequestHeader): Fox[User] =
@@ -105,22 +89,17 @@ trait Secured extends FoxImplicits {
    *
    */
 
-  def Authenticated(role: Option[Role] = DefaultAccessRole, permission: Option[Permission] = DefaultAccessPermission) =
-    new ActionBuilder[AuthenticatedRequest] {
-      def invokeBlock[A](request: Request[A], block: (AuthenticatedRequest[A]) => Future[SimpleResult]) = {
-        maybeUser(request).flatMap { user =>
-          Secured.ActivityMonitor ! UserActivity(user, System.currentTimeMillis)
-          if (user.verified) {
-            if (hasAccess(user, role, permission))
-              block(new AuthenticatedRequest(user, request))
-            else
-              Future.successful(Forbidden(views.html.error.defaultError(Messages("user.noPermission"), true)(AuthedSessionData(user, request.flash))))
-          } else {
-            Future.successful(Forbidden(views.html.error.defaultError(Messages("user.notVerified"), false)(AuthedSessionData(user, request.flash))))
-          }
-        }.getOrElse(onUnauthorized(request))
-      }
+  object Authenticated extends ActionBuilder[AuthenticatedRequest]{
+    def invokeBlock[A](request: Request[A], block: (AuthenticatedRequest[A]) => Future[SimpleResult]) = {
+      maybeUser(request).flatMap { user =>
+        Secured.ActivityMonitor ! UserActivity(user, System.currentTimeMillis)
+        if (user.verified)
+          block(new AuthenticatedRequest(user, request))
+        else
+          Future.successful(Forbidden(views.html.error.defaultError(Messages("user.notVerified"), false)(AuthedSessionData(user, request.flash))))
+      }.getOrElse(onUnauthorized(request))
     }
+  }
 
   object UserAwareAction extends ActionBuilder[UserAwareRequest] {
     def invokeBlock[A](request: Request[A], block: (UserAwareRequest[A]) => Future[SimpleResult]) = {
@@ -133,34 +112,6 @@ trait Secured extends FoxImplicits {
       }
     }
   }
-
-
-  //  def AuthenticatedWebSocket[A](
-  //                                 role: Option[Role] = DefaultAccessRole,
-  //                                 permission: Option[Permission] = DefaultAccessPermission)(f: => User => RequestHeader => Future[(Iteratee[A, _], Enumerator[A])])(implicit formatter: FrameFormatter[A]) =
-  //    WebSocket.async[A] {
-  //      request =>
-  //        (for {
-  //          user <- maybeUser(request)
-  //          if (hasAccess(user, role, permission))
-  //          webSocket <- f(user)(request)
-  //        } yield {
-  //          webSocket
-  //        }).getOrElse {
-  //          val iteratee = Done[A, Unit]((), Input.EOF)
-  //          // Send an error and close the socket
-  //          val (enumerator, channel) = Concurrent.broadcast[A]
-  //          channel.eofAndEnd
-  //
-  //          (iteratee -> enumerator)
-  //        }
-  //    }
-
-  def hasAccess(user: User, role: Option[Role], permission: Option[Permission]): Boolean =
-    if (role.isEmpty || user.hasRole(role.get))
-      permission.map(user.hasPermission) getOrElse true
-    else
-      false
 
   /**
    * Redirect to login if the user in not authorized.

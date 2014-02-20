@@ -30,6 +30,8 @@ class Skeleton
       newActiveNode : => 
         @setActiveNode()
         @setInactiveTreeVisibility(@showInactiveTrees)
+      newActiveNodeRadius : =>
+        @setActiveNodeRadius()
       newTree : (treeId, treeColor) => 
         @createNewTree(treeId, treeColor)
         @setInactiveTreeVisibility(@showInactiveTrees)
@@ -153,8 +155,7 @@ class Skeleton
 
   deleteNode : (node, treeId) ->
 
-    $.assert(node.neighbors.length == 1,
-      "Node needs to have exactly 1 neighbor.")
+    $.assertEquals(node.neighbors.length, 1, "Node needs to have exactly 1 neighbor.")
 
     treeGeometry = @getTreeGeometry(treeId)
     treeGeometry.deleteNode(node)
@@ -192,6 +193,14 @@ class Skeleton
       treeGeometry?.updateNodeColor( activeNode.id, true )
 
     @lastActiveNode = activeNode
+
+
+  setActiveNodeRadius : ->
+
+    if (activeNode = @model.cellTracing.getActiveNode())?
+      treeGeometry = @getTreeGeometry( activeNode.treeId )
+      treeGeometry?.updateNodeRadius( activeNode.id, activeNode.radius )
+      @flycam.update()
 
 
   getAllNodes : ->
@@ -257,3 +266,9 @@ class Skeleton
 
     for tree in @treeGeometries
       tree.setSizeAttenuation( sizeAttenuation )
+
+
+  updateForCam : (cam) ->
+
+    for tree in @treeGeometries
+      tree.showRadius( cam != constants.TDView )

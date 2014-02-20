@@ -4,7 +4,7 @@ import models.user.User
 import models.annotation.{AnnotationService, Annotation}
 import models.task.Task
 import models.user.time.TimeTracking._
-import braingames.binary.models.DataSet
+import models.binary.DataSet
 import models.user.time.TimeTrackingService
 import models.binary.DataSetDAO
 import braingames.util.ExtendedTypes.ExtendedList
@@ -13,6 +13,8 @@ import braingames.reactivemongo.DBAccessContext
 import play.api.Logger
 import braingames.util.Fox
 import play.api.libs.json._
+import net.liftweb.common.{Empty, Failure, Full}
+import scala.concurrent.Future
 
 /**
  * Company: scalableminds
@@ -34,9 +36,9 @@ object DashboardInfo {
 }
 
 trait Dashboard {
-  private def userWithTasks(user: User)(implicit ctx: DBAccessContext) = {
-    AnnotationService.findTasksOf(user).flatMap{ taskAnnotations =>
-      Fox.sequence(taskAnnotations.map(a => a.task.map(_ -> a))).map(_.flatten)
+  private def userWithTasks(user: User)(implicit ctx: DBAccessContext): Fox[List[(Task, Annotation)]] = {
+    AnnotationService.findTasksOf(user).flatMap{ taskAnnotations => Fox(
+      Fox.sequence(taskAnnotations.map(a => a.task.map(_ -> a))).map(els => Full(els.flatten)))
     }
   }
 
@@ -51,7 +53,7 @@ trait Dashboard {
       exploratoryAnnotations <- AnnotationService.findExploratoryOf(user)
       dataSets <- DataSetDAO.findAll
       loggedTime <- TimeTrackingService.loggedTime(user)
-      exploratoryAnnotations <- exploratorySortedByTime(exploratoryAnnotations)
+      exploratoryAnnotations <- exploratorySortedByTime(exploratoryAnnotations).toFox
       userTasks <- userWithTasks(user)
     } yield {
       DashboardInfo(

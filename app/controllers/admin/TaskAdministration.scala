@@ -6,8 +6,7 @@ import oxalis.security.AuthenticatedRequest
 import oxalis.security.Secured
 import braingames.util.ExtendedTypes.ExtendedString
 import braingames.geometry.Point3D
-import braingames.binary.models.DataSet
-import models.security.{RoleDAO, Role}
+import models.binary.DataSet
 import models.tracing._
 import models.task._
 import models.user._
@@ -29,12 +28,13 @@ import scala.concurrent.Future
 import oxalis.nml.NMLService
 import play.api.libs.json.{Json, JsObject, JsArray}
 
-import net.liftweb.common.Full
+import net.liftweb.common.{Empty, Failure, Full}
 import braingames.util.Fox
 import play.api.mvc.SimpleResult
 import play.api.mvc.Request
 import play.api.mvc.AnyContent
 import braingames.reactivemongo.DBAccessContext
+import models.team.Team
 
 object TaskAdministration extends AdminController {
 
@@ -51,8 +51,9 @@ object TaskAdministration extends AdminController {
       "priority" -> number,
       "taskInstances" -> number.verifying("task.edit.toFewInstances",
         taskInstances => taskInstances >= minTaskInstances),
+      "team" -> nonEmptyText,
       "project" -> text)
-  ).fill(("", Experience.empty, 100, 10, ""))
+  ).fill(("", Experience.empty, 100, 10, "", ""))
 
   val taskMapping = tuple(
     "dataSet" -> text,
@@ -65,12 +66,13 @@ object TaskAdministration extends AdminController {
       "value" -> number)(Experience.fromForm)(Experience.unapply),
     "priority" -> number,
     "taskInstances" -> number,
+    "team" -> nonEmptyText,
     "project" -> text)
 
   val taskForm = Form(
-    taskMapping).fill("", "", Point3D(0, 0, 0), Experience.empty, 100, 10, "")
+    taskMapping).fill("", "", Point3D(0, 0, 0), Experience.empty, 100, 10, "", "")
 
-  def list = Authenticated().async { implicit request =>
+  def list = Authenticated.async { implicit request =>
     render.async {
       case Accepts.Html() =>
         Future.successful(Ok(html.admin.task.taskList()))
@@ -85,8 +87,8 @@ object TaskAdministration extends AdminController {
   }
 
   def taskCreateHTML(
-                      taskFromNMLForm: Form[(String, Experience, Int, Int, String)],
-                      taskForm: Form[(String, String, Point3D, Experience, Int, Int, String)]
+                      taskFromNMLForm: Form[(String, Experience, Int, Int, String, String)],
+                      taskForm: Form[(String, String, Point3D, Experience, Int, Int, String, String)]
                     )(implicit request: AuthenticatedRequest[_]) =
     for {
       dataSets <- DataSetDAO.findAll
@@ -99,11 +101,12 @@ object TaskAdministration extends AdminController {
         dataSets,
         domains.toList,
         projects,
+        request.user.adminTeamNames,
         taskFromNMLForm,
         taskForm)
     }
 
-  def taskEditHtml(taskId: String, taskForm: Form[(String, Experience, Int, Int, String)])(implicit request: AuthenticatedRequest[_]) =
+  def taskEditHtml(taskId: String, taskForm: Form[(String, Experience, Int, Int, String, String)])(implicit request: AuthenticatedRequest[_]) =
     for {
       projects <- ProjectDAO.findAll
       taskTypes <- TaskTypeDAO.findAll
@@ -114,14 +117,15 @@ object TaskAdministration extends AdminController {
         taskTypes,
         domains.toList,
         projects,
+        request.user.adminTeamNames,
         taskForm)
     }
 
-  def create = Authenticated().async { implicit request =>
+  def create = Authenticated.async { implicit request =>
     taskCreateHTML(taskFromNMLForm, taskForm).map(html => Ok(html))
   }
 
-  def delete(taskId: String) = Authenticated().async { implicit request =>
+  def delete(taskId: String) = Authenticated.async { implicit request =>
     for {
       task <- TaskDAO.findOneById(taskId) ?~> Messages("task.notFound")
       _ <- TaskService.remove(task._id)
@@ -130,15 +134,16 @@ object TaskAdministration extends AdminController {
     }
   }
 
-  def createFromForm = Authenticated().async(parse.urlFormEncoded) { implicit request =>
+  def createFromForm = Authenticated.async(parse.urlFormEncoded) { implicit request =>
     taskForm.bindFromRequest.fold(
     formWithErrors => taskCreateHTML(taskFromNMLForm, formWithErrors).map(html => BadRequest(html)), {
-      case (dataSetName, taskTypeId, start, experience, priority, instances, projectName) =>
+      case (dataSetName, taskTypeId, start, experience, priority, instances, team, projectName) =>
         for {
-          dataSet <- DataSetDAO.findOneByName(dataSetName) ?~> Messages("dataSet.notFound")
+          dataSet <- DataSetDAO.findOneBySourceName(dataSetName) ?~> Messages("dataSet.notFound")
           taskType <- TaskTypeDAO.findOneById(taskTypeId) ?~> Messages("taskType.notFound")
           project <- ProjectService.findIfNotEmpty(projectName) ?~> Messages("project.notFound")
-          task = Task(0, taskType._id, experience, priority, instances, _project = project.map(_.name))
+          _ <- ensureTeamAdministration(request.user, team).toFox
+          task = Task(0, taskType._id, team, experience, priority, instances, _project = project.map(_.name))
           _ <- TaskDAO.insert(task)
         } yield {
           AnnotationService.createAnnotationBase(task, request.user._id, taskType.settings, dataSetName, start)
@@ -150,15 +155,17 @@ object TaskAdministration extends AdminController {
     })
   }
 
-  def edit(taskId: String) = Authenticated().async { implicit request =>
+  def edit(taskId: String) = Authenticated.async { implicit request =>
     for {
       task <- TaskDAO.findOneById(taskId) ?~> Messages("task.notFound")
+      _ <- ensureTeamAdministration(request.user, task.team).toFox
       projectName <- task.project.map(_.name) getOrElse ""
       form = basicTaskForm(task.assignedInstances).fill(
         (task._taskType.stringify,
           task.neededExperience,
           task.priority,
           task.instances,
+          task.team,
           projectName))
       html <- taskEditHtml(task.id, form)
     } yield {
@@ -166,12 +173,12 @@ object TaskAdministration extends AdminController {
     }
   }
 
-  def editTaskForm(taskId: String) = Authenticated().async(parse.urlFormEncoded) { implicit request =>
+  def editTaskForm(taskId: String) = Authenticated.async(parse.urlFormEncoded) { implicit request =>
     def validateForm(task: Task): Fox[SimpleResult] =
       basicTaskForm(task.assignedInstances).bindFromRequest.fold(
         hasErrors = (formWithErrors => taskEditHtml(taskId, formWithErrors).map(h => BadRequest(h))),
         success = {
-          case (taskTypeId, experience, priority, instances, projectName) =>
+          case (taskTypeId, experience, priority, instances, team, projectName) =>
             for {
               taskType <- TaskTypeDAO.findOneById(taskTypeId) ?~> Messages("taskType.notFound")
               project <- ProjectService.findIfNotEmpty(projectName) ?~> Messages("project.notFound")
@@ -181,6 +188,7 @@ object TaskAdministration extends AdminController {
                 neededExperience = experience,
                 priority = priority,
                 instances = instances,
+                team = team,
                 _project = project.map(_.name))
             } yield {
               AnnotationDAO.updateAllUsingNewTaskType(task, taskType.settings)
@@ -193,26 +201,29 @@ object TaskAdministration extends AdminController {
 
     for {
       task <- TaskDAO.findOneById(taskId) ?~> Messages("task.notFound")
+      _ <- ensureTeamAdministration(request.user, task.team).toFox
       result <- validateForm(task)
     } yield {
       result
     }
   }
 
-  def createFromNML = Authenticated().async(parse.multipartFormData) { implicit request =>
+  def createFromNML = Authenticated.async(parse.multipartFormData) { implicit request =>
     taskFromNMLForm.bindFromRequest.fold(
       hasErrors = (formWithErrors => taskCreateHTML(formWithErrors, taskForm).map(html => BadRequest(html))),
       success = {
-        case (taskTypeId, experience, priority, instances, projectName) =>
+        case (taskTypeId, experience, priority, instances, team, projectName) =>
           for {
             nmlFile <- request.body.file("nmlFile") ?~> Messages("nml.file.notFound")
             taskType <- TaskTypeDAO.findOneById(taskTypeId) ?~> Messages("taskType.notFound")
             project <- ProjectService.findIfNotEmpty(projectName) ?~> Messages("project.notFound")
+            _ <- ensureTeamAdministration(request.user, team)
           } yield {
             val nmls = NMLService.extractFromFile(nmlFile.ref.file, nmlFile.filename)
             val baseTask = Task(
               0,
               taskType._id,
+              team,
               experience,
               priority,
               instances,
@@ -229,15 +240,15 @@ object TaskAdministration extends AdminController {
       })
   }
 
-  def createBulk = Authenticated().async(parse.urlFormEncoded) { implicit request =>
+  def createBulk = Authenticated.async(parse.urlFormEncoded(1024 * 1024)) { implicit request =>
     def extractParamLines(data: String) =
       data
       .split("\n")
-      .map(_.split(" ").map(_.trim))
+      .map(_.split(",").map(_.trim))
       .filter(_.length >= 9)
 
     def parseParamLine(params: Array[String]) = {
-      val projectName = if (params.length >= 10) params(9) else ""
+      val projectName = if (params.length >= 11) params(10) else ""
       for {
         project <- ProjectService.findIfNotEmpty(projectName) ?~> Messages("project.notFound")
         experienceValue <- params(3).toIntOpt ?~> "Invalid experience value"
@@ -247,6 +258,8 @@ object TaskAdministration extends AdminController {
         priority <- params(7).toIntOpt ?~> "Invalid priority value"
         instances <- params(8).toIntOpt ?~> "Invalid instances value"
         taskTypeSummary = params(1)
+        team = params(9)
+        _ <- ensureTeamAdministration(request.user, team).toFox
         taskType <- TaskTypeDAO.findOneBySumnary(taskTypeSummary) ?~> Messages("taskType.notFound")
       } yield {
         val dataSetName = params(0)
@@ -255,6 +268,7 @@ object TaskAdministration extends AdminController {
         val task = Task(
           0,
           taskType._id,
+          team,
           experience,
           priority,
           instances,
@@ -265,12 +279,18 @@ object TaskAdministration extends AdminController {
 
     def createTasksFromData(data: String) =
       Fox.sequence(extractParamLines(data).map(parseParamLine).toList).map { results =>
-        results.flatMap(_.map {
-          case (dataSetName, position, taskType, task) =>
+        results.flatMap{
+          case Full((dataSetName, position, taskType, task)) =>
             TaskDAO.insert(task)
             AnnotationService.createAnnotationBase(task, request.user._id, taskType.settings, dataSetName, position)
-            task
-        })
+            Full(task)
+          case f: Failure =>
+            Logger.warn("Failure while creating bulk tasks: " + f)
+            f
+          case Empty =>
+            Logger.warn("Failure while creating bulk tasks. Parsing the input failed")
+            Failure("Failure while creating bulk tasks. Parsing the input failed.")
+        }
       }
 
     for {
@@ -286,7 +306,7 @@ object TaskAdministration extends AdminController {
     Future.traverse(tasks)(_.annotationBase.flatMap(_.dataSetName getOrElse "").futureBox.map(_.toOption))
 
   // currently not used?
-  def tasksForProject(projectName: String) = Authenticated().async { implicit request =>
+  def tasksForProject(projectName: String) = Authenticated.async { implicit request =>
     for {
       project <- ProjectDAO.findOneByName(projectName) ?~> Messages("project.notFound")
       tasks <- project.tasks
@@ -302,7 +322,7 @@ object TaskAdministration extends AdminController {
     }
   }
 
-  def tasksForType(taskTypeId: String) = Authenticated().async { implicit request =>
+  def tasksForType(taskTypeId: String) = Authenticated.async { implicit request =>
     for {
       taskType <- TaskTypeDAO.findOneById(taskTypeId) ?~> Messages("taskType.notFound")
       
@@ -318,15 +338,14 @@ object TaskAdministration extends AdminController {
     }
   }
 
-  def overview = Authenticated().async { implicit request =>
-    def combineUsersWithCurrentTasks(users: List[User]) = Future.traverse(users)(user =>
-      for {
-        annotations <- AnnotationService.openTasksFor(user)
-        tasks <- Fox.sequence(annotations.map(_.task)).map(_.flatten)
-        taskTypes <- Fox.sequence(tasks.map(_.taskType)).map(_.flatten)
+  def overview = Authenticated.async { implicit request =>
+    def combineUsersWithCurrentTasks(users: List[User]): Future[List[(User, List[TaskType])]] = Future.traverse(users)(user =>
+      (for {
+        annotations <- AnnotationService.openTasksFor(user).getOrElse(Nil)
+        taskTypes <- Fox.sequenceOfFulls(annotations.map(_.task.flatMap(_.taskType)))
       } yield {
         user -> taskTypes.distinct
-      })
+      }))
 
     for {
       users <- UserService.findAll

@@ -1,38 +1,27 @@
 package controllers
 
 import oxalis.security.{AuthenticatedRequest, Secured}
-import models.security.{RoleDAO, Role}
-import models.user.{UsedAnnotationDAO, User, UsedAnnotation}
+import models.user.{UsedAnnotationDAO, User}
 import play.api.i18n.Messages
 import play.api.libs.json._
 import play.api.Logger
 import models.annotation._
 import play.api.libs.concurrent.Execution.Implicits._
-import net.liftweb.common.{Failure, Full, Box}
-import controllers.admin.NMLIO
+import net.liftweb.common._
 import views.html
 import play.api.templates.Html
-import oxalis.annotation.AnnotationIdentifier
-import akka.pattern.ask
 import akka.util.Timeout
 import scala.concurrent.duration._
 import play.api.libs.iteratee.Enumerator
 import models.binary.DataSetDAO
-import play.api.libs.iteratee.Input.EOF
 import scala.concurrent.Future
-import models.user.time.{TimeTrackingService, TimeTracking}
+import models.user.time._
 import braingames.reactivemongo.DBAccessContext
-
 import net.liftweb.common.Full
 import play.api.i18n.Messages.Message
 import braingames.util.Fox
 import oxalis.annotation.AnnotationIdentifier
-import play.api.libs.json.JsArray
-import net.liftweb.common.Full
-import scala.Some
 import models.annotation.Annotation
-import braingames.mvc.JsonResult
-import play.api.mvc.{SimpleResult, Action}
 import models.task.{TaskDAO, Task}
 import braingames.util.ExtendedTypes.ExtendedBoolean
 import braingames.util.ExtendedTypes.ExtendedBooleanFuture
@@ -40,7 +29,6 @@ import scala.async.Async._
 import play.api.libs.json.JsArray
 import scala.Some
 import net.liftweb.common.Full
-import scala.async.Async
 import play.api.libs.json.JsObject
 
 /**
@@ -50,36 +38,11 @@ import play.api.libs.json.JsObject
  * Time: 02:09
  */
 object AnnotationController extends Controller with Secured with TracingInformationProvider {
-  override val DefaultAccessRole = RoleDAO.User
 
   implicit val timeout = Timeout(5 seconds)
 
-  def simpleAnnotationHtml(annotation: AnnotationLike)(implicit ctx: DBAccessContext) = {
-    for {
-      user <- annotation.user
-      content <- annotation.content.futureBox
-    } yield html.admin.annotation.simpleAnnotation(annotation, user, content)
-  }
-
-  def extendedAnnotationHtml(user: User, annotation: AnnotationLike)(implicit ctx: DBAccessContext) = {
-    for {
-      task <- annotation.task ?~> Messages("task.notFound")
-      taskType <- task.taskType.futureBox
-      project <- task.project.futureBox
-
-      dataSetName <- annotation.dataSetName
-      stats <- annotation.statisticsForAnnotation().futureBox
-      content <- annotation.content.futureBox
-    } yield html.admin.annotation.extendedAnnotation(
-      task,
-      annotation,
-      taskType,
-      project,
-      dataSetName,
-      stats.toOption,
-      content,
-      user)
-  }
+  def annotationJson(user: User, annotation: AnnotationLike)(implicit ctx: DBAccessContext): Fox[JsObject] =
+    AnnotationLike.annotationLikeInfoWrites(annotation, Some(user), Nil)
 
 
   def info(typ: String, id: String) = UserAwareAction.async {
@@ -95,7 +58,7 @@ object AnnotationController extends Controller with Secured with TracingInformat
       }
   }
 
-  def trace(typ: String, id: String) = Authenticated().async {
+  def trace(typ: String, id: String) = Authenticated.async {
     implicit request =>
       withAnnotation(AnnotationIdentifier(typ, id)) {
         annotation =>
@@ -106,35 +69,38 @@ object AnnotationController extends Controller with Secured with TracingInformat
       }
   }
 
-  def reset(typ: String, id: String) = Authenticated(role = RoleDAO.Admin).async { implicit request =>
+  def reset(typ: String, id: String) = Authenticated.async { implicit request =>
     withAnnotation(AnnotationIdentifier(typ, id)) { annotation =>
       for {
-        reseted <- annotation.muta.resetToBase() ?~> Messages("annotation.reset.failed")
-        html <- extendedAnnotationHtml(request.user, reseted)
+        _ <- ensureTeamAdministration(request.user, annotation.team).toFox
+        reset <- annotation.muta.resetToBase() ?~> Messages("annotation.reset.failed")
+        json <- annotationJson(request.user, reset)
       } yield {
-        JsonOk(html, Messages("annotation.reset.success"))
+        JsonOk(json, Messages("annotation.reset.success"))
       }
     }
   }
 
-  def reopen(typ: String, id: String) = Authenticated(role = RoleDAO.Admin).async { implicit request =>
+
+  def reopen(typ: String, id: String) = Authenticated.async { implicit request =>
     withAnnotation(AnnotationIdentifier(typ, id)) { annotation =>
       for {
+        _ <- ensureTeamAdministration(request.user, annotation.team).toFox
         reopenedAnnotation <- annotation.muta.reopen() ?~> Messages("annotation.invalid")
-        html <- simpleAnnotationHtml(reopenedAnnotation)
+  json <- annotationJson(request.user, reopenedAnnotation)
       } yield {
-        JsonOk(html, Messages("annotation.reopened"))
+  JsonOk(json, Messages("annotation.reopened"))
       }
     }
   }
 
-  def download(typ: String, id: String) = Authenticated().async {
+  def download(typ: String, id: String) = Authenticated.async {
     implicit request =>
       withAnnotation(AnnotationIdentifier(typ, id)) {
         annotation =>
           for {
             annotationName <- nameAnnotation(annotation) ?~> Messages("annotation.name.impossible")
-            _ <- annotation.restrictions.allowDownload(request.user) failIfFalse Messages("annotation.download.notAllowed")
+            _ <- annotation.restrictions.allowDownload(request.user).failIfFalse(Messages("annotation.download.notAllowed")).toFox
             content <- annotation.content ?~> Messages("annotation.content.empty")
             stream <- content.toDownloadStream
           } yield {
@@ -147,11 +113,11 @@ object AnnotationController extends Controller with Secured with TracingInformat
       }
   }
 
-  def createExplorational = Authenticated().async(parse.urlFormEncoded) {
+  def createExplorational = Authenticated.async(parse.urlFormEncoded) {
     implicit request =>
       for {
         dataSetName <- postParameter("dataSetName") ?~> Messages("dataSet.notSupplied")
-        dataSet <- DataSetDAO.findOneByName(dataSetName) ?~> Messages("dataSet.notFound")
+        dataSet <- DataSetDAO.findOneBySourceName(dataSetName) ?~> Messages("dataSet.notFound")
         contentType <- postParameter("contentType") ?~> Messages("annotation.contentType.notSupplied")
         annotation <- AnnotationService.createExplorationalFor(request.user, dataSet, contentType) ?~> Messages("annotation.create.failed")
       } yield {
@@ -160,7 +126,7 @@ object AnnotationController extends Controller with Secured with TracingInformat
   }
 
 
-  def updateWithJson(typ: String, id: String, version: Int) = Authenticated().async(parse.json(maxLength = 2097152)) {
+  def updateWithJson(typ: String, id: String, version: Int) = Authenticated.async(parse.json(maxLength = 2097152)) {
     implicit request =>
       def handleUpdates(annotation: Annotation, js: JsValue): Fox[JsObject] = {
         js match {
@@ -212,7 +178,7 @@ object AnnotationController extends Controller with Secured with TracingInformat
       }
   }
 
-//  def finish(annotationId: String) = Authenticated().async { implicit request =>
+//  def finish(annotationId: String) = Authenticated.async { implicit request =>
 //    for {
 //      annotation <- AnnotationDAO.findOneById(annotationId) ?~> Messages("annotation.notFound")
 //      (updated, message) <- AnnotationService.finishAnnotation(request.user, annotation)
@@ -222,7 +188,7 @@ object AnnotationController extends Controller with Secured with TracingInformat
 //    }
 //  }
 
-  def finish(typ: String, id: String) = Authenticated().async {
+  def finish(typ: String, id: String) = Authenticated.async {
     implicit request =>
       def generateJsonResult(annotation: Annotation, message: String) = {
         if (annotation.typ != AnnotationType.Task)
@@ -251,7 +217,7 @@ object AnnotationController extends Controller with Secured with TracingInformat
       }
   }
 
-  def finishWithRedirect(typ: String, id: String) = Authenticated().async {
+  def finishWithRedirect(typ: String, id: String) = Authenticated.async {
     implicit request =>
       for {
         annotation <- AnnotationDAO.findOneById(id) ?~> Messages("annotation.notFound")
@@ -268,7 +234,7 @@ object AnnotationController extends Controller with Secured with TracingInformat
       }
   }
 
-  def nameExplorativeAnnotation(typ: String, id: String) = Authenticated().async(parse.urlFormEncoded) {
+  def nameExplorativeAnnotation(typ: String, id: String) = Authenticated.async(parse.urlFormEncoded) {
     implicit request =>
       for {
         annotation <- AnnotationDAO.findOneById(id) ?~> Messages("annotation.notFound")
@@ -301,9 +267,9 @@ object AnnotationController extends Controller with Secured with TracingInformat
   }
 
 
-  def traceJSON(typ: String, id: String) = Authenticated().async {
+  def traceJSON(typ: String, id: String) = Authenticated.async {
     implicit request => {
-      if (typ == models.annotation.AnnotationType.Explorational) {
+      if (typ == models.annotation.AnnotationType.Explorational || typ == models.annotation.AnnotationType.CompoundTask) {
         Future.successful(JsonOk(Json.obj("noData" -> true)))
       } else {
         withAnnotation(AnnotationIdentifier(typ, id)) {
@@ -322,17 +288,18 @@ object AnnotationController extends Controller with Secured with TracingInformat
     annotation.task.flatMap( Task.transformToJson(_).map(JsonOk(_)) )
   }
 
-  def annotationsForTask(taskId: String) = Authenticated(role = RoleDAO.Admin).async { implicit request =>
+  def annotationsForTask(taskId: String) = Authenticated.async { implicit request =>
     for {
       task <- TaskDAO.findOneById(taskId) ?~> Messages("task.notFound")
+      _ <- ensureTeamAdministration(request.user, task.team).toFox
       annotations <- task.annotations
-      htmls <- Future.traverse(annotations)(simpleAnnotationHtml)
+      jsons <- Fox.sequence(annotations.map(annotationJson(request.user, _)))
     } yield {
-      JsonOk(htmls.foldLeft(Html.empty)( _ += _))
+      Ok(JsArray(jsons.flatten))
     }
   }
 
-  def cancel(typ: String, id: String) = Authenticated(role = RoleDAO.Admin).async { implicit request =>
+  def cancel(typ: String, id: String) = Authenticated.async { implicit request =>
     def tryToCancel(annotation: AnnotationLike) = async {
       annotation match {
         case t if t.typ == AnnotationType.Task =>
@@ -345,6 +312,7 @@ object AnnotationController extends Controller with Secured with TracingInformat
     }
     withAnnotation(AnnotationIdentifier(typ, id)) { annotation =>
       for {
+        _ <- ensureTeamAdministration(request.user, annotation.team).toFox
         result <- tryToCancel(annotation)
       } yield {
         UsedAnnotationDAO.removeAll(annotation.id)

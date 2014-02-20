@@ -1,4 +1,4 @@
-@(form: Form[(String, String, String, String)])(implicit session: oxalis.view.SessionData)
+@(form: Form[(String, String, String, String, String)], teams: List[models.team.Team])(implicit session: oxalis.view.SessionData)
 
 @main( ){
   
@@ -6,12 +6,12 @@
     <div class="span9 offset1 space-top">
       <div class="well">
         
-        @helper.form(routes.Authentication.registrate, 'class -> "form-horizontal") {
+        @helper.form(routes.Authentication.handleRegistration, 'class -> "form-horizontal") {
         
           <legend>Sign up</legend>
 
           <div class="alert alert-info">
-            Please be advised, registration is for lab members only. If you are not a lab member, you are not going to get verified.
+            Not a member of the listed teams? Contact oxalis@@scalableminds.com to get more information about how to get to use oxalis.
           </div>
 
           @form.errors.map { error =>
@@ -19,7 +19,9 @@
               @Messages(error.message)
             </div>
           }
-
+          @helper.select(form("team"), ("" -> "<None>") +: teams.map { t =>
+            t.name -> t.name
+          })
           @helper.inputText(form("email"), 'type -> "email")
           @helper.inputText(form("firstName"))
           @helper.inputText(form("lastName"))

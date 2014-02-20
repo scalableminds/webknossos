@@ -10,7 +10,7 @@ import braingames.util.TimeLogger._
 import braingames.format.Formatter
 import models.annotation._
 import models.annotation.TemporaryAnnotation
-import scala.Some
+import scala.{annotation, Some}
 import models.annotation.Annotation
 import models.annotation.AnnotationType._
 import models.user.User
@@ -20,6 +20,7 @@ import play.api.libs.concurrent.Execution.Implicits._
 import braingames.util.{FoxImplicits, Fox}
 import braingames.reactivemongo.DBAccessContext
 import reactivemongo.bson.BSONObjectID
+import net.liftweb.common.{Empty, Failure, Full}
 
 object CompoundAnnotation extends Formatter with FoxImplicits {
 
@@ -50,7 +51,7 @@ object CompoundAnnotation extends Formatter with FoxImplicits {
         tasks <- TaskDAO.findAllByProject(project.name)
         annotations <- Future.traverse(tasks)(_.annotations).map(_.flatten)
       } yield {
-        createFromAnnotations(annotations, project.name, AnnotationType.CompoundProject)
+        createFromAnnotations(project.team, annotations, project.name, AnnotationType.CompoundProject)
       }
     }
   }
@@ -60,7 +61,7 @@ object CompoundAnnotation extends Formatter with FoxImplicits {
       for {
         annotations <- task.annotations
       } yield {
-        createFromAnnotations(annotations, task.id, AnnotationType.CompoundTask)
+        createFromAnnotations(task.team, annotations, task.id, AnnotationType.CompoundTask)
       }
     }
   }
@@ -71,27 +72,26 @@ object CompoundAnnotation extends Formatter with FoxImplicits {
         tasks <- TaskDAO.findAllByTaskType(taskType)
         annotations <- Future.traverse(tasks)(_.annotations).map(_.flatten)
       } yield {
-        createFromAnnotations(annotations, taskType.id, AnnotationType.CompoundTaskType)
+        createFromAnnotations(taskType.team, annotations, taskType.id, AnnotationType.CompoundTaskType)
       }
     }
   }
 
-  def createFromAnnotations(annotations: List[Annotation], id: String, typ: AnnotationType)(implicit ctx: DBAccessContext): Option[TemporaryAnnotation] = {
+  def createFromAnnotations(team: String, annotations: List[Annotation], id: String, typ: AnnotationType)(implicit ctx: DBAccessContext): Option[TemporaryAnnotation] = {
     val as = annotations.filter(filterAnnotation)
 
     def annotationContent(): Fox[TemporarySkeletonTracing] = {
-      val annotationsWithContent =
-        Future.traverse(as)(a => a.content.map(a -> _).futureBox).map(_.flatten)
+      val annotationsWithContent: Future[List[(Annotation, AnnotationContent)]] =
+        Fox.sequenceOfFulls(as.map(a => a.content.map(a -> _)))
 
-      annotationsWithContent.flatMap(Future.traverse(_) {
+      annotationsWithContent.flatMap( e => Fox.sequenceOfFulls(e.map{
         case (annotation, skeleton: SkeletonTracing) =>
-          annotation.user.flatMap {
-            userOpt =>
-              renameTreesOfTracing(skeleton, userOpt, annotation._task)
-          }
+          annotation.user.flatMap { user =>
+              renameTreesOfTracing(skeleton, Some(user), annotation._task)
+          } orElse (renameTreesOfTracing(skeleton, None, annotation._task))
         case (annotation, content) =>
-          Future.successful(content)
-      }).flatMap {
+          Fox.successful(content)
+      })).toFox.flatMap {
         tracings =>
           createFromTracings(tracings, id)
       }
@@ -101,6 +101,7 @@ object CompoundAnnotation extends Formatter with FoxImplicits {
       case head :: _ =>
         Some(TemporaryAnnotation(
           id,
+          team,
           () => annotationContent,
           typ
         ))
@@ -110,8 +111,8 @@ object CompoundAnnotation extends Formatter with FoxImplicits {
   }
 
 
-  def createFromTracings(tracings: List[AnnotationContent], id: String)(implicit ctx: DBAccessContext): Future[Option[TemporarySkeletonTracing]] = {
-    def mergeThem(tracings: List[AnnotationContent]): Future[Option[TemporarySkeletonTracing]] = {
+  def createFromTracings(tracings: List[AnnotationContent], id: String)(implicit ctx: DBAccessContext): Fox[TemporarySkeletonTracing] = {
+    def mergeThem(tracings: List[AnnotationContent]): Fox[TemporarySkeletonTracing] = {
       tracings match {
         case head :: tail =>
           head match {
@@ -120,7 +121,7 @@ object CompoundAnnotation extends Formatter with FoxImplicits {
               tail.foldLeft(base) {
                 case (resultF, tracing) =>
                   resultF.flatMap(result => result.mergeWith(tracing))
-              }.map(r => Some(r))
+              }
             case _ =>
               mergeThem(tail)
           }

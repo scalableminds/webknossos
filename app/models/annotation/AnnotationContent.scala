@@ -5,13 +5,14 @@ import braingames.geometry.{BoundingBox, Scale, Point3D}
 import java.io.InputStream
 import play.api.libs.json._
 import play.api.libs.functional.syntax._
-import braingames.binary.models.{DataLayer, DataSet}
-import models.binary.DataSetDAO
+import braingames.binary.models.DataLayer
+import models.binary.{DataSet, DataSetDAO}
 import scala.concurrent.Future
 import play.api.libs.concurrent.Execution.Implicits._
 import braingames.reactivemongo.DBAccessContext
 import braingames.util.Fox
 import play.api.Logger
+import net.liftweb.common.Box
 
 trait AnnotationContent {
   type Self <: AnnotationContent
@@ -30,21 +31,21 @@ trait AnnotationContent {
 
   def settings: AnnotationSettings
 
-  def copyDeepAndInsert: Future[Self]
+  def copyDeepAndInsert: Fox[Self]
 
-  def mergeWith(source: AnnotationContent): Future[Self]
+  def mergeWith(source: AnnotationContent): Fox[Self]
 
   def contentType: String
 
-  def toDownloadStream: Future[InputStream]
+  def toDownloadStream: Fox[InputStream]
 
   def downloadFileExtension: String
 
-  def contentData: Future[Option[JsObject]] = Future.successful(None)
+  def contentData: Fox[JsObject] = Fox.empty
 
   lazy val date = new Date(timestamp)
 
-  def dataSet(implicit ctx: DBAccessContext): Future[Option[DataSet]] = DataSetDAO.findOneByName(dataSetName)
+  def dataSet(implicit ctx: DBAccessContext): Fox[DataSet] = DataSetDAO.findOneBySourceName(dataSetName)
 }
 
 object AnnotationContent {
@@ -62,20 +63,19 @@ object AnnotationContent {
     ((__ \ 'name).write[String] and
       (__ \ 'scale).write[Scale] and
       (__ \ 'dataLayers).write[List[DataLayer]])(d =>
-      (d.name, d.scale, d.dataLayers))
+      (d.dataSource.name, d.dataSource.scale, d.dataSource.dataLayers))
 
   def writeAsJson(ac: AnnotationContent)(implicit ctx: DBAccessContext) = {
     for {
-      dataSet <- ac.dataSet
-      contentData <- ac.contentData
+      dataSet <- ac.dataSet.futureBox
+      contentData <- ac.contentData getOrElse Json.obj()
     } yield {
-      ((__ \ 'settings).write[AnnotationSettings] and
-        (__ \ 'dataSet).write[Option[DataSet]] and
-        (__ \ 'contentData).write[Option[JsObject]] and
-        (__ \ 'editPosition).write[Point3D] and
-        (__ \ 'contentType).write[String])
-      .tupled
-      .writes((ac.settings, dataSet, contentData, ac.editPosition, ac.contentType))
+      Json.obj(
+        "settings" -> ac.settings,
+        "dataSet" -> dataSet.toOption,
+        "contentData" -> contentData,
+        "editPosition" -> ac.editPosition,
+        "contentType" -> ac.contentType)
     }
   }
 }

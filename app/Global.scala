@@ -1,15 +1,11 @@
 import akka.actor.Props
 import braingames.reactivemongo.GlobalDBAccess
 import models.team._
-import models.team.TeamTree
-import models.user.time.TimeEntry
-import oxalis.thirdparty.BrainTracing
+import net.liftweb.common.{Full, Empty}
 import play.api._
 import play.api.mvc.RequestHeader
-import play.api.Play.current
 import play.api.libs.concurrent._
 import play.api.Play.current
-import models.security._
 import models.user._
 import models.task._
 import oxalis.annotation.{AnnotationStore}
@@ -21,11 +17,16 @@ import scala.Some
 import oxalis.binary.BinaryDataService
 import com.typesafe.config.Config
 import play.airbrake.Airbrake
+import com.kenshoo.play.metrics._
+import com.codahale.metrics.JmxReporter
+import play.api.mvc._
 
-object Global extends GlobalSettings {
+object Global extends WithFilters(MetricsFilter) with GlobalSettings {
 
   override def onStart(app: Application) {
     val conf = Play.current.configuration
+    val jmxReporter = JmxReporter.forRegistry(MetricsRegistry.default).build
+    jmxReporter.start
 
     startActors(conf.underlying)
 
@@ -44,8 +45,6 @@ object Global extends GlobalSettings {
       }
       Logger.info("Directory start completed")
     })
-
-    RoleService.ensureImportantRoles()
   }
 
   override def onStop(app: Application) {
@@ -71,22 +70,21 @@ object Global extends GlobalSettings {
  */
 object InitialData extends GlobalDBAccess {
 
+  val mpi = Team("Structure of Neocortical Circuits Group", RoleService.roles)
+
   def insertUsers() = {
-    UserDAO.findOneByEmail("scmboy@scalableminds.com").map {
-      case None =>
-        println("inserted")
+    UserDAO.findOneByEmail("scmboy@scalableminds.com").futureBox.map {
+      case Full(_) =>
+      case _ =>
+        Logger.info("Inserted default user scmboy")
         UserDAO.insert(User(
           "scmboy@scalableminds.com",
           "SCM",
           "Boy",
           true,
           braingames.security.SCrypt.hashPassword("secret"),
-          List(TeamMembership(
-            TeamPath("Structure of Neocortical Circuits Group" :: Nil),
-            TeamMembership.Admin)),
-          UserSettings.defaultSettings,
-          Set("user", "admin")))
-      case _ =>
+          List(TeamMembership(mpi.name,Role.Admin)),
+          UserSettings.defaultSettings))
     }
   }
 
@@ -101,10 +99,10 @@ object InitialData extends GlobalDBAccess {
   }
 
   def insertTeams() = {
-    TeamTreeDAO.findOne.map {
-      case Some(_) =>
+    TeamDAO.findOne().futureBox.map {
+      case Full(_) =>
       case _ =>
-        TeamTreeDAO.insert(TeamTree(Team("Structure of Neocortical Circuits Group", Nil)))
+        TeamDAO.insert(mpi)
     }
   }
 
@@ -114,7 +112,8 @@ object InitialData extends GlobalDBAccess {
         val taskType = TaskType(
           "ek_0563_BipolarCells",
           "Check those cells out!",
-          TimeSpan(5, 10, 15))
+          TimeSpan(5, 10, 15),
+          mpi.name)
         TaskTypeDAO.insert(taskType)
       }
     }

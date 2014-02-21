@@ -1,5 +1,6 @@
 ### define
 underscore : _
+app : app
 backbone.marionette : marionette
 ###
 
@@ -14,6 +15,11 @@ class PaginationView extends Backbone.Marionette.ItemView
         <li class="prev <% if (Pagination.currentPage == 1) { %> disabled <% } %>"">
           <a href="#"><i class="fa fa-angle-left"></i></a>
         </li>
+        <% if (Pagination.lastPage == 1){ %>
+          <li>
+            <span class="page selected"><%= 1 %></span>
+          <li>
+        <% } %>
         <% _.each (Pagination.pageSet, function (p) { %>
           <% if (Pagination.currentPage == p) { %>
             <li>
@@ -25,10 +31,10 @@ class PaginationView extends Backbone.Marionette.ItemView
             </li>
           <% } %>
         <% }); %>
-        <li class="next <% if (Pagination.currentPage == Pagination.lastPage) { %> disabled <% } %>">
+        <li class="next <% if (Pagination.currentPage >= Pagination.lastPage) { %> disabled <% } %>">
           <a href="#"><i class="fa fa-angle-right"></i></a>
         </li>
-        <li class="last <% if (Pagination.currentPage == Pagination.lastPage) { %> disabled <% } %>">
+        <li class="last <% if (Pagination.currentPage >= Pagination.lastPage) { %> disabled <% } %>">
           <a href="#"><i class="fa fa-angle-double-right"></i></a>
         </li>
       </ul>
@@ -39,6 +45,9 @@ class PaginationView extends Backbone.Marionette.ItemView
   className : "container wide"
   templateHelpers :
     Pagination : {}
+
+  ui :
+    "inputSearch" : ".search-query"
 
   events :
     "click .prev" : "goBack"
@@ -81,10 +90,15 @@ class PaginationView extends Backbone.Marionette.ItemView
     @collection.goTo(page)
 
 
-  filter : ->
+  filter : (evt) ->
 
-    # implement in parent class
-    throw(new Error("PaginationView: Method filter not implemented"))
+    # implement actually filtering on the collection in respective view
+    # in order to set correct fields for filtering
+    filterQuery = @ui.inputSearch.val()
+    app.vent.trigger("paginationView:filter", filterQuery)
+
+    @ui.inputSearch.val(filterQuery)
+    @ui.inputSearch.focus()
 
 
   collectionSynced : ->

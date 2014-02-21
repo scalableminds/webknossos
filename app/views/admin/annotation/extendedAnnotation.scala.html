@@ -21,7 +21,7 @@
 @displayComments(failed: Boolean, comments: List[String]) = {
   @comments match{
     case head :: tail => {
-      <a href="#" rel="popover" data-placement="bottom" data-title="Comment from Reviewer" data-html="true" data-content="@org.apache.commons.lang3.StringEscapeUtils.escapeHtml4(head).replaceAll("\n", "<br /><br />")"><i class="fa fa-eye"></i> @linkText(failed) Comment <span class="caret-down"></span></a>
+      <a href="#" rel="popover" data-placement="bottom" data-title="Comment from Reviewer" data-html="true" data-content="@org.apache.commons.lang3.StringEscapeUtils.escapeHtml4(head).replaceAll("\n", "<br /><br />")"><i class="fa fa-eye"></i>@linkText(failed) Comment <span class="caret-down"></span></a>
     }
     case _ => {
 
@@ -45,9 +45,9 @@
 
   @statsOpt.map{ stats =>
   <td>
-    <span title="Trees"><i class="fa fa-sitemap"></i> @stats.numberOfTrees &nbsp;</span>
+    <span title="Trees"><i class="fa fa-sitemap"></i>@stats.numberOfTrees &nbsp;</span>
     <span title="Nodes">&bull; @stats.numberOfNodes &nbsp;</span>
-    <span title="Edges"><i class="fa fa-arrows-h"></i> @stats.numberOfEdges</span>
+    <span title="Edges"><i class="fa fa-arrows-h"></i>@stats.numberOfEdges</span>
   </td>
   }.getOrElse(<td />)
 

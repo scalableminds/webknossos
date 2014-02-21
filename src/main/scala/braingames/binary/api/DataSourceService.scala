@@ -10,6 +10,8 @@ import scalax.file.Path
 import braingames.util.PathUtils
 import braingames.binary.repository.DataSourceRepository
 import braingames.binary.models.DataSourceRepository
+import scala.concurrent.Future
+import braingames.binary.Logger._
 
 /**
  * Company: scalableminds
@@ -51,12 +53,18 @@ trait DataSourceService {
     dataSource
   }
 
-  def importDataSource(id: String): Option[DataSource] = {
+  def importDataSource(id: String): Option[Future[Option[UsableDataSource]]] = {
     DataSourceRepository.dataSources().find(_.id == id).flatMap {
-      case d: DataSource => None  // TODO: think about what we should do if an already imported DS gets imported again
-      case ibx: UnusableDataSource => DataSourceRepository.transformToDataSource(ibx)
+      case ibx: UnusableDataSource if !DataSourceRepository.isImportInProgress(ibx.id)=>
+        Some(DataSourceRepository.transformToDataSource(ibx))
+      case d: DataSource =>
+        None  // TODO: think about what we should do if an already imported DS gets imported again
+      case d =>
+        None
     }
   }
+
+  def importProgress(id: String) = DataSourceRepository.progressForImport(id)
 
   def writeToDataSource(dataSource: DataSource, block: Point3D, content: File) = {
 

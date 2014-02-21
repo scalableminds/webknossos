@@ -10,6 +10,7 @@ import scala.Some
 import braingames.util.PathUtils
 import org.apache.commons.io.FileUtils
 import play.api.libs.json.Json
+import braingames.binary.repository.ProgressTracking.ProgressTracker
 
 object KnossosDataSourceType extends DataSourceType with KnossosDataSourceTypeHandler{
   val name = "knossos"
@@ -27,7 +28,7 @@ trait KnossosDataSourceTypeHandler extends DataSourceTypeHandler {
 
   private val maxRecursiveLayerDepth = 2
 
-  def transformToDataSource(unusableDataSource: UnusableDataSource): Option[DataSource] = {
+  def importDataSource(unusableDataSource: UnusableDataSource, progressTracker: ProgressTracker): Option[DataSource] = {
     dataSourceFromFile(unusableDataSource.sourceFolder)
   }
 

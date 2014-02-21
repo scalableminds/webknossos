@@ -9,10 +9,6 @@ import braingames.binary.models._
 import java.io.File
 import scalax.file.Path
 
-trait DataSourceLike{
-  def id: String
-}
-
 case class DataSourceSettings(
   id: Option[String],
   scale: Scale,
@@ -24,7 +20,7 @@ case class DataSource(
   scale: Scale,
   priority: Int = 0,
   dataLayers: List[DataLayer] = Nil
-  ) extends DataSourceLike{
+  ) {
 
   def dataLayer(typ: String) =
     dataLayers.find(_.typ == typ)

@@ -12,6 +12,7 @@ import net.liftweb.common.Failure
  */
 class FileDataStore extends DataStore {
   import DataStore._
+  import braingames.binary.Logger._
   /**
    * Loads the due to x,y and z defined block into the cache array and
    * returns it.
@@ -24,7 +25,7 @@ class FileDataStore extends DataStore {
         Some(inputStreamToByteArray(binaryStream, dataInfo))
       } catch {
         case e: FileNotFoundException =>
-          System.err.println("File datastore couldn't find file: " + createFilename(dataInfo))
+          logger.info("File data store couldn't find file: " + createFilename(dataInfo))
           Failure("Couldn't find file: " + e)
       }
     }
@@ -50,8 +51,8 @@ class FileDataStore extends DataStore {
    *  Read file contents to a byteArray
    */
   def inputStreamToByteArray(is: InputStream, dataInfo: LoadBlock) = {
-    val byteArray = new Array[Byte](dataInfo.dataSet.blockSize * dataInfo.dataLayer.bytesPerElement)
-    is.read(byteArray, 0, dataInfo.dataSet.blockSize * dataInfo.dataLayer.bytesPerElement)
+    val byteArray = new Array[Byte](dataInfo.dataSource.blockSize * dataInfo.dataLayer.bytesPerElement)
+    is.read(byteArray, 0, dataInfo.dataSource.blockSize * dataInfo.dataLayer.bytesPerElement)
     //assert(is.skip(1) == 0, "INPUT STREAM NOT EMPTY")
     is.close()
     byteArray

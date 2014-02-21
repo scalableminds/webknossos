@@ -58,7 +58,7 @@ object DataStore {
   def createFilename(dataInfo: DataStoreBlock) =
     "%s/%s_mag%d_x%04d_y%04d_z%04d.raw".format(
       createDirectory(dataInfo),
-      dataInfo.dataSet.name,
+      dataInfo.dataSource.name,
       dataInfo.resolution,
       dataInfo.block.x, dataInfo.block.y, dataInfo.block.z)
 }

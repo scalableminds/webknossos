@@ -1,6 +1,6 @@
 package braingames.binary.api
 
-import braingames.binary.models.{DataLayer, DataSetSettings, DataSetRepository, DataSet, UserDataLayer}
+import braingames.binary.models.{DataLayer, DataSourceSettings, DataSourceRepository, DataSource, UserDataLayer}
 import java.util.UUID
 import com.typesafe.config.Config
 import braingames.geometry.Point3D
@@ -12,35 +12,35 @@ import java.io.File
  * Date: 09.06.13
  * Time: 16:20
  */
-trait DataSetService {
+trait DataSourceService {
 
   def config: Config
 
-  def dataSetRepository: DataSetRepository
+  def dataSourceRepository: DataSourceRepository
 
   lazy val userBaseFolder = config.getString("braingames.binary.userBaseFolder")
 
-  def userDataSetName() = {
+  def userDataLayerName() = {
     UUID.randomUUID().toString
   }
 
-  def userDataSetFolder(name: String) = {
+  def userDataLayerFolder(name: String) = {
     userBaseFolder + "/" + name
   }
 
-  def createUserDataLayer(baseDataSet: DataSet): UserDataLayer = {
-    val name = userDataSetName()
-    val baseFolder = new File(userDataSetFolder(name))
-    val sections = baseDataSet.dataLayer(DataLayer.SEGMENTATION.name).map(_.sections).getOrElse(Nil)
+def createUserDataSource(baseDataSource: DataSource): UserDataLayer = {
+    val name = userDataLayerName()
+    val baseFolder = new File(userDataLayerFolder(name))
+    val sections = baseDataSource.dataLayer(DataLayer.SEGMENTATION.name).map(_.sections).getOrElse(Nil)
     val dataLayer = DataLayer(
       DataLayer.SEGMENTATION.name,
       baseFolder.getAbsolutePath(),
       None,
       DataLayer.SEGMENTATION.defaultElementClass,
-      Some(baseDataSet.name),
+      Some(baseDataSource.name),
       sections)
 
     baseFolder.mkdirs()
-    UserDataLayer(name, baseDataSet.name, dataLayer)
+    UserDataLayer(name, baseDataSource.name, dataLayer)
   }
 }

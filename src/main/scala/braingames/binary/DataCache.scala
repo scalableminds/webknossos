@@ -11,7 +11,7 @@ import net.liftweb.common.Empty
 case class Data(val value: Array[Byte]) extends AnyVal
 
 case class CachedBlock(
-  dataSetName: String,
+  dataSourceName: String,
   dataLayerId: String,
   dataLayerTyp: String,
   dataLayerBaseDir: String,
@@ -23,7 +23,7 @@ case class CachedBlock(
 object CachedBlock {
   def from(b: DataStoreBlock) =
     CachedBlock(
-      b.dataSet.name,
+      b.dataSource.name,
       b.dataLayerSection.sectionId,
       b.dataLayer.typ,
       b.dataLayer.baseDir,

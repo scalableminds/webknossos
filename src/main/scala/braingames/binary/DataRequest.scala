@@ -5,14 +5,14 @@ import braingames.binary.models._
 trait AbstractDataRequest
 
 trait DataRequest extends AbstractDataRequest {
-  def dataSet: DataSet
+  def dataSource: DataSource
   def dataLayer: DataLayer
   def dataSection: Option[String]
   def resolution: Int
   def cuboid: Cuboid }
 
 case class DataReadRequest(
-  dataSet: DataSet,
+  dataSource: DataSource,
   dataLayer: DataLayer,
   dataSection: Option[String],
   resolution: Int,
@@ -24,7 +24,7 @@ case class DataRequestSettings(
   skipInterpolation: Boolean)
 
 case class DataWriteRequest(
-  dataSet: DataSet,
+  dataSource: DataSource,
   dataLayer: DataLayer,
   dataSection: Option[String],
   resolution: Int,

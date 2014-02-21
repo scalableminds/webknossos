@@ -16,26 +16,28 @@ import akka.routing.RoundRobinRouter
 import java.util.UUID
 import com.typesafe.config.Config
 import braingames.binary.models.DataLayer
-import braingames.binary.models.DataSet
+import braingames.binary.models.DataSource
 import store._
-import braingames.binary.models.DataSetRepository
+import braingames.binary.models.DataSourceRepository
 import scala.concurrent.Await
 import braingames.binary.models.DataLayerSection
 import net.liftweb.common.Box
 import net.liftweb.common.{Failure => BoxFailure}
 import net.liftweb.common.Full
 import java.util.NoSuchElementException
-import braingames.util.BlockedArray3D
+import braingames.util.{Fox, BlockedArray3D}
 import braingames.util.ExtendedTypes.ExtendedArraySeq
 import braingames.util.ExtendedTypes.ExtendedDouble
 
 class DataRequestActor(
   val conf: Config,
   val cache: Agent[Map[CachedBlock, Future[Box[Array[Byte]]]]],
-  dataSetRepository: DataSetRepository)
+  dataSourceRepository: DataSourceRepository)
   extends Actor
   with DataCache
   with EmptyDataProvider {
+
+  import Logger._
 
   import store.DataStore._
 
@@ -77,7 +79,6 @@ class DataRequestActor(
 
   def receive = {
     case dataRequest: DataRequest =>
-      val t = System.currentTimeMillis()
       val s = sender
       // This construct results in a parallel execution and catches all the errors
       Future.successful().flatMap{ _ =>
@@ -86,8 +87,7 @@ class DataRequestActor(
         case Success(data) =>
           s ! Some(data)
         case Failure(e) =>
-          System.err.println(s"DataRequestActor Error for Request. Error: $e")
-          e.printStackTrace()
+          logger.error(s"DataRequestActor error for request. Request: $dataRequest", e)
           s ! None
       }
     case DataRequestCollection(requests) =>
@@ -97,14 +97,13 @@ class DataRequestActor(
         case Success(results) =>
           s ! Some(results.appendArrays)
         case Failure(e) =>
-          System.err.println(s"DataRequestActor Error for Request. Error: $e")
-          e.printStackTrace()
+          logger.error(s"DataRequestActor Error for request collection. Collection: $requests", e)
           s ! None
       }
   }
 
   def loadFromLayer(loadBlock: LoadBlock): Future[Box[Array[Byte]]] = {
-    if (loadBlock.dataLayerSection.doesContainBlock(loadBlock.block, loadBlock.dataSet.blockLength)) {
+    if (loadBlock.dataLayerSection.doesContainBlock(loadBlock.block, loadBlock.dataSource.blockLength)) {
       def loadFromStore(dataStores: List[ActorRef]): Future[Box[Array[Byte]]] = dataStores match {
         case a :: tail =>
           (a ? loadBlock)
@@ -119,7 +118,7 @@ class DataRequestActor(
               }
           }.recoverWith {
             case e: AskTimeoutException =>
-              println(s"WARN: (${loadBlock.dataSet.name}/${loadBlock.dataLayerSection.baseDir} ${loadBlock.block}) ${a.path}: Not response in time.")
+              logger.warn(s"Load from ${a.path} timed out. (${loadBlock.dataSource.name}/${loadBlock.dataLayerSection.baseDir}, Block: ${loadBlock.block})")
               loadFromStore(tail)
           }
         case _ =>
@@ -134,26 +133,26 @@ class DataRequestActor(
     }
   }
 
-  def loadFromSomewhere(dataSet: DataSet, layer: DataLayer, requestedSection: Option[String], resolution: Int, block: Point3D): Future[Array[Byte]] = {
+  def loadFromSomewhere(dataSource: DataSource, layer: DataLayer, requestedSection: Option[String], resolution: Int, block: Point3D): Future[Array[Byte]] = {
     var lastSection: Option[DataLayerSection] = None
     def loadFromSections(sections: Stream[(DataLayerSection, DataLayer)]): Future[Array[Byte]] = sections match {
       case (section, layer) #:: tail =>
         lastSection = Some(section)
-        val loadBlock = LoadBlock(dataSet, layer, section, resolution, block)
+        val loadBlock = LoadBlock(dataSource, layer, section, resolution, block)
         loadFromLayer(loadBlock).flatMap {
           case Full(byteArray) =>
             Future.successful(byteArray)
           case net.liftweb.common.Failure(e, _, _) =>
-            System.err.println("DataStore Failure: " + e)
+            logger.error(s"DataStore Failure: $e")
             loadFromSections(tail)
           case _ =>
             loadFromSections(tail)
         }
       case _ =>
-        val nullBlock = loadNullBlock(dataSet, layer)
+        val nullBlock = loadNullBlock(dataSource, layer)
         lastSection.map {
           section =>
-          val loadBlock = LoadBlock(dataSet, layer, section, resolution, block)
+          val loadBlock = LoadBlock(dataSource, layer, section, resolution, block)
           updateCache(loadBlock, Future.successful(Full(nullBlock)))
         }
         Future.successful(nullBlock)
@@ -163,14 +162,14 @@ class DataRequestActor(
       section =>
         requestedSection.map( _ == section._1.sectionId) getOrElse true
     }: _*).append {
-      Await.result(layer.fallback.map(dataSetRepository.findByName).getOrElse(Future.successful(None)).map(_.flatMap {
+      Await.result(layer.fallback.map(dataSourceRepository.findByName).getOrElse(Fox.empty).futureBox.map(_.flatMap{
         d =>
           d.dataLayer(layer.typ).map {
             fallbackLayer =>
               if (layer.isCompatibleWith(fallbackLayer))
                 fallbackLayer.sections.map {(_, fallbackLayer)}
               else {
-                System.err.println("Incompatible fallback layer!")
+                logger.error(s"Incompatible fallback layer. $layer is not compatible with $fallbackLayer")
                 Nil
               }
           }
@@ -190,7 +189,7 @@ class DataRequestActor(
     Future.traverse(blockIdxs) {
       p =>
         loadFromSomewhere(
-          dataRequest.dataSet,
+          dataRequest.dataSource,
           layer,
           dataRequest.dataSection,
           dataRequest.resolution,
@@ -202,7 +201,7 @@ class DataRequestActor(
 
     val cube = dataRequest.cuboid
 
-    val dataSet = dataRequest.dataSet
+    val dataSource = dataRequest.dataSource
 
     val layer = dataRequest.dataLayer
 
@@ -213,20 +212,20 @@ class DataRequestActor(
     val minPoint = Point3D(math.max(roundDown(minCorner._1), 0), math.max(roundDown(minCorner._2), 0), math.max(roundDown(minCorner._3), 0))
 
     val minBlock =
-      dataSet.pointToBlock(minPoint, dataRequest.resolution)
+      dataSource.pointToBlock(minPoint, dataRequest.resolution)
     val maxBlock =
-      dataSet.pointToBlock(
+      dataSource.pointToBlock(
         Point3D(roundUp(maxCorner._1), roundUp(maxCorner._2), roundUp(maxCorner._3)),
         dataRequest.resolution)
 
-    val pointOffset = minBlock.scale(dataSet.blockLength)
+    val pointOffset = minBlock.scale(dataSource.blockLength)
 
     loadBlocks(minBlock, maxBlock, dataRequest, layer)
       .map {
       blocks =>
         BlockedArray3D(
           blocks.toVector,
-          dataSet.blockLength, dataSet.blockLength, dataSet.blockLength,
+          dataSource.blockLength, dataSource.blockLength, dataSource.blockLength,
           maxBlock.x - minBlock.x + 1, maxBlock.y - minBlock.y + 1, maxBlock.z - minBlock.z + 1,
           layer.bytesPerElement,
           0.toByte)
@@ -247,12 +246,12 @@ class DataRequestActor(
   }
 
   def saveToLayer(saveBlock: SaveBlock): Future[Unit] = {
-    if (saveBlock.dataLayerSection.doesContainBlock(saveBlock.block, saveBlock.dataSet.blockLength)) {
+    if (saveBlock.dataLayerSection.doesContainBlock(saveBlock.block, saveBlock.dataSource.blockLength)) {
       def saveToStore(dataStores: List[ActorRef]): Future[Unit] = dataStores match {
         case a :: tail =>
           (a ? saveBlock).mapTo[Unit].recoverWith {
             case e: AskTimeoutException =>
-              println(s"WARN: (${saveBlock.dataSet.name}/${saveBlock.dataLayerSection.baseDir} ${saveBlock.block}) ${a.path}: Not response in time.")
+              println(s"WARN: (${saveBlock.dataSource.name}/${saveBlock.dataLayerSection.baseDir} ${saveBlock.block}) ${a.path}: Not response in time.")
               saveToStore(tail)
           }
           Future.successful(Unit)
@@ -266,11 +265,11 @@ class DataRequestActor(
     }
   }
 
-  def saveToSomewhere(dataSet: DataSet, layer: DataLayer, requestedSection: Option[String], resolution: Int, block: Point3D, data: Array[Byte]) = {
+  def saveToSomewhere(dataSource: DataSource, layer: DataLayer, requestedSection: Option[String], resolution: Int, block: Point3D, data: Array[Byte]) = {
 
     def saveToSections(sections: Stream[DataLayerSection]): Future[Unit] = sections match {
       case section #:: tail =>
-        val saveBlock = SaveBlock(dataSet, layer, section, resolution, block, data)
+        val saveBlock = SaveBlock(dataSource, layer, section, resolution, block, data)
         saveToLayer(saveBlock).onFailure {
           case _ =>
             saveToSections(tail)
@@ -300,7 +299,7 @@ class DataRequestActor(
     (blockIdxs, blocks).zipped foreach {
       (p, block) =>
         saveToSomewhere(
-          dataRequest.dataSet,
+          dataRequest.dataSource,
           layer,
           dataRequest.dataSection,
           dataRequest.resolution,
@@ -315,11 +314,11 @@ class DataRequestActor(
     }
   }
 
-  def ensureCopy(dataSet: DataSet, layer: DataLayer, requestedSection: Option[String], resolution: Int, block: Point3D, data: Array[Byte]) = {
+  def ensureCopy(dataSource: DataSource, layer: DataLayer, requestedSection: Option[String], resolution: Int, block: Point3D, data: Array[Byte]) = {
 
     def ensureCopyInSections(sections: Stream[DataLayerSection]): Future[Array[Byte]] = sections match {
       case section #:: tail =>
-        val loadBlock = LoadBlock(dataSet, layer, section, resolution, block)
+        val loadBlock = LoadBlock(dataSource, layer, section, resolution, block)
         ensureCopyInLayer(loadBlock, data).flatMap {
           case Full(byteArray) =>
             Future.successful(byteArray)
@@ -352,7 +351,7 @@ class DataRequestActor(
         (p, block) <- (blockIdxs, blocks).zipped
       } yield {
         ensureCopy(
-          dataRequest.dataSet,
+          dataRequest.dataSource,
           layer,
           dataRequest.dataSection,
           dataRequest.resolution,
@@ -361,11 +360,10 @@ class DataRequestActor(
       }).toVector
     )
   }
-
 }
 
 class DataBlockCutter(block: BlockedArray3D[Byte], dataRequest: DataReadRequest, layer: DataLayer, offset: Point3D) {
-  val dataSet = dataRequest.dataSet
+  val dataSource = dataRequest.dataSource
 
   val resolution = dataRequest.resolution
 
@@ -406,7 +404,7 @@ class DataBlockCutter(block: BlockedArray3D[Byte], dataRequest: DataReadRequest,
   }
 
   def calculatePositionInLoadedBlock(globalPoint: Point3D) = {
-    dataSet.applyResolution(globalPoint, resolution).move(offset.negate)
+    dataSource.applyResolution(globalPoint, resolution).move(offset.negate)
   }
 
   def byteLoader(globalPoint: Point3D): Array[Byte] = {
@@ -418,7 +416,7 @@ class DataBlockCutter(block: BlockedArray3D[Byte], dataRequest: DataReadRequest,
 }
 
 class DataBlockWriter(block: BlockedArray3D[Byte], dataRequest: DataWriteRequest, layer: DataLayer, offset: Point3D) {
-  val dataSet = dataRequest.dataSet
+  val dataSource = dataRequest.dataSource
 
   val resolution = dataRequest.resolution
 
@@ -436,7 +434,7 @@ class DataBlockWriter(block: BlockedArray3D[Byte], dataRequest: DataWriteRequest
   }
 
   def calculatePositionInLoadedBlock(globalPoint: Point3D) = {
-    dataSet.applyResolution(globalPoint, resolution).move(offset.negate)
+    dataSource.applyResolution(globalPoint, resolution).move(offset.negate)
   }
 
   def byteWriter(globalPoint: Point3D, data: Array[Byte]) = {

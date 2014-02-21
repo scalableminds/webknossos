@@ -35,16 +35,16 @@ class TaskListItemView extends Backbone.Marionette.CompositeView
     <td><%= priority %></td>
     <td><%= created %></td>
     <td>
-      <i class="icon-play-circle"></i><%= status.open %><br>
-      <i class="icon-random"></i><%= status.inProgress %><br>
-      <i class="icon-ok-circle"></i><%= status.completed %>
+      <i class="fa fa-play-circle"></i><%= status.open %><br>
+      <i class="fa fa-random"></i><%= status.inProgress %><br>
+      <i class="fa fa-check-circle-o"></i><%= status.completed %>
     </td>
     <td class="nowrap">
-      <a href="/admin/tasks/<%= id %>/edit"><i class="icon-pencil"></i>edit</a><br>
-      <a href="/annotations/CompoundTask/<%= id %>" title="view all finished tracings"><i class="icon-random"></i>view</a><br>
-      <a href="/admin/tasks/<%= id %>/download" title="download all finished tracings"><i class="icon-download"></i>download</a><br>
-      <a href="/admin/trainingsTasks/create"><i class="icon-road"></i>use for Training FIXME</a><br>
-      <a href="#" class="delete"><i class="icon-trash"></i>delete</a>
+      <a href="/admin/tasks/<%= id %>/edit"><i class="fa fa-pencil"></i>edit</a><br>
+      <a href="/annotations/CompoundTask/<%= id %>" title="view all finished tracings"><i class="fa fa-random"></i>view</a><br>
+      <a href="/admin/tasks/<%= id %>/download" title="download all finished tracings"><i class="fa fa-download"></i>download</a><br>
+      <a href="/admin/trainingsTasks/create"><i class="fa fa-road"></i>use for Training FIXME</a><br>
+      <a href="#" class="delete"><i class="fa fa-trash-o"></i>delete</a>
     </td>
     </tr>
     <tr class="details-row hide" >

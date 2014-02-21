@@ -43,7 +43,7 @@ class TaskListView extends Backbone.Marionette.CompositeView
     @listenTo(app.vent, "paginationView:filter", @filter)
 
     @collection.fetch(
-      silent : true #fucking important
+      silent : true #fucking important for pagination
     ).done( =>
       @collection.goTo(1)
     )

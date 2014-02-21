@@ -13,7 +13,7 @@ class TaskSubListItemView extends Backbone.Marionette.ItemView
   template : _.template("""
     <td><%= user %></td>
     <td><%= moment(lastEdit).format("YYYY-MM-DD HH:SS") %></td>
-    <td><i class="icon-ok-circle"></i><%= stateLabel %></td>
+    <td><i class="fa fa-check-circle-o"></i><%= stateLabel %></td>
     <td class="nowrap">
       <div class="btn-group">
         <a class="btn dropdown-toggle" data-toggle="dropdown" href="#">

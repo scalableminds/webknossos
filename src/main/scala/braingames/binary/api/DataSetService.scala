@@ -28,7 +28,7 @@ trait DataSourceService {
     userBaseFolder + "/" + name
   }
 
-def createUserDataLayer(baseDataSource: DataSource): UserDataLayer = {
+def createUserDataSource(baseDataSource: DataSource): UserDataLayer = {
     val name = userDataLayerName()
     val baseFolder = new File(userDataLayerFolder(name))
     val sections = baseDataSource.dataLayer(DataLayer.SEGMENTATION.name).map(_.sections).getOrElse(Nil)

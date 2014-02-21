@@ -25,7 +25,7 @@ import net.liftweb.common.Box
 import net.liftweb.common.{Failure => BoxFailure}
 import net.liftweb.common.Full
 import java.util.NoSuchElementException
-import braingames.util.BlockedArray3D
+import braingames.util.{Fox, BlockedArray3D}
 import braingames.util.ExtendedTypes.ExtendedArraySeq
 import braingames.util.ExtendedTypes.ExtendedDouble
 
@@ -162,7 +162,7 @@ class DataRequestActor(
       section =>
         requestedSection.map( _ == section._1.sectionId) getOrElse true
     }: _*).append {
-      Await.result(layer.fallback.map(dataSourceRepository.findByName).getOrElse(Future.successful(None)).map(_.flatMap {
+      Await.result(layer.fallback.map(dataSourceRepository.findByName).getOrElse(Fox.empty).futureBox.map(_.flatMap{
         d =>
           d.dataLayer(layer.typ).map {
             fallbackLayer =>

@@ -92,7 +92,7 @@ gulp.task("combine:scripts:production", ->
 
 gulp.task("install:bower", ->
   return gulp.src("bower.json")
-    .pipe(exec("./node_modules/bower/bin/bower install"))
+    .pipe(exec("./node_modules/bower/bin/bower install -f"))
 )
 
 gulp.task("clean:tmp", ->

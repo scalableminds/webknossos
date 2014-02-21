@@ -120,7 +120,7 @@ class DataRequestActor(
               }
           }.recoverWith {
             case e: AskTimeoutException =>
-              logger.warn(s"Load from ${a.path} timed out. (${loadBlock.dataSource.name}/${loadBlock.dataLayerSection.baseDir}, Block: ${loadBlock.block})")
+              logger.warn(s"Load from ${a.path} timed out. (${loadBlock.dataSource.id}/${loadBlock.dataLayerSection.baseDir}, Block: ${loadBlock.block})")
               loadFromStore(tail)
           }
         case _ =>

@@ -1,0 +1,97 @@
+/*
+ * Copyright (C) 20011-2014 Scalable minds UG (haftungsbeschränkt) & Co. KG. <http://scm.io>
+ */
+package braingames.binary.repository
+
+import scalax.file.{PathMatcher, Path}
+import braingames.binary.models._
+import braingames.geometry.{Scale, BoundingBox}
+import scala.Some
+import braingames.util.PathUtils
+import org.apache.commons.io.FileUtils
+import play.api.libs.json.Json
+
+object KnossosDataSourceType extends DataSourceType with KnossosDataSourceTypeHandler{
+  val name = "knossos"
+
+  def chanceOfInboxType(source: Path) = {
+    (source ** "*.raw")
+      .take(MaxNumberOfFilesForGuessing)
+      .size.toFloat / MaxNumberOfFilesForGuessing
+  }
+}
+
+
+trait KnossosDataSourceTypeHandler extends DataSourceTypeHandler {
+  import braingames.binary.Logger._
+
+  private val maxRecursiveLayerDepth = 2
+
+  def transformToDataSource(unusableDataSource: UnusableDataSource): Option[DataSource] = {
+    dataSourceFromFile(unusableDataSource.sourceFolder)
+  }
+
+  protected def extractSections(base: Path, dataSourcePath: String): Iterable[DataLayerSection] = {
+    val sectionSettingsMap = extractSectionSettings(base)
+    sectionSettingsMap.map {
+      case (path, settings) =>
+        DataLayerSection(
+          path.toAbsolute.path.replace(dataSourcePath, ""),
+          settings.sectionId getOrElse path.name,
+          settings.resolutions,
+          BoundingBox.createFrom(settings.bboxSmall),
+          BoundingBox.createFrom(settings.bboxBig))
+    }
+  }
+
+  protected def extractSectionSettings(base: Path): Map[Path, DataLayerSectionSettings] = {
+
+    def extract(path: Path, depth: Int = 0): List[Option[(Path, DataLayerSectionSettings)]] = {
+      if (depth > maxRecursiveLayerDepth) {
+        List()
+      } else {
+        DataLayerSectionSettings.fromSettingsFileIn(path).map(path -> _) ::
+          PathUtils.listDirectories(path).toList.flatMap(d => extract(d, depth + 1))
+      }
+    }
+
+    extract(base).flatten.toMap
+  }
+
+  protected def extractLayers(path: Path, dataSourcePath: String) = {
+    for {
+      layer <- PathUtils.listDirectories(path).toList
+      settings <- DataLayerSettings.fromSettingsFileIn(layer)
+    } yield {
+      logger.info("Found Layer: " + settings)
+      val sections = extractSections(layer, dataSourcePath).toList
+      DataLayer(settings.typ, settings.flags, settings.`class`, settings.fallback, sections)
+    }
+  }
+
+  protected def dataSourceFromFile(path: Path): Option[DataSource] = {
+    if (path.isDirectory) {
+      val dataSource: DataSource = DataSourceSettings.fromSettingsFileIn(path) match {
+        case Some(settings) =>
+          DataSource(
+            settings.id getOrElse path.name,
+            path.toAbsolute.path,
+            settings.scale,
+            settings.priority getOrElse 0,
+            Nil)
+        case _ =>
+          DataSource(
+            path.name,
+            path.toAbsolute.path,
+            Scale.default,
+            0,
+            Nil)
+      }
+
+      val layers = extractLayers(path, path.toAbsolute.path)
+
+      Some(dataSource.copy(dataLayers = layers))
+    } else
+      None
+  }
+}

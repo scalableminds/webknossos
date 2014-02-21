@@ -49,7 +49,7 @@ case class DataLayer(
 
 case class DataLayerType(name: String, interpolation: Interpolation, defaultElementClass: String = "uint8")
 
-object DataLayer extends Function5[String, Option[List[String]], String, Option[String], List[DataLayerSection], DataLayer]{
+object DataLayer{
 
   import braingames.binary.Logger._
 

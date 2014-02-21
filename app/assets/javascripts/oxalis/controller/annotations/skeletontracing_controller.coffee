@@ -84,6 +84,12 @@ class SkeletonTacingController
     particleSize = Math.max(constants.MIN_PARTICLE_SIZE, particleSize)
 
     @model.user.set("particleSize", (Number) particleSize)
+
+
+  setRadius : (delta) ->
+
+    @model.skeletonTracing.setActiveNodeRadius(
+      @model.skeletonTracing.getActiveNodeRadius() * Math.pow(2 , delta / 10))
  
 
   toggleSkeletonVisibility : =>

@@ -48,7 +48,7 @@ class SkeletonTracingPlaneController extends PlaneController
 
     return _.extend super(),
 
-      "1" : => @toggleVisibility()
+      "1" : => @sceneController.skeleton.toggleVisibility()
       "2" : => @sceneController.skeleton.toggleInactiveTreeVisibility()
 
       #Delete active node

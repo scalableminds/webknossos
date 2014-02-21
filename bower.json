@@ -1,6 +1,6 @@
 {
   "name": "oxalis",
-  "version": "0.12.2",
+  "version": "0.13.0",
   "dependencies": {
     "bootstrap": "~2.3.0",
     "jquery": "~1.8.3",
@@ -20,7 +20,8 @@
     "gamepad.js": "*",
     "jquery-bootpag": "1.0.4",
     "tweenjs": "r6",
-    "three.js": "git@github.com:georgwiese/three.js.git#scm_r66"
+    "three.js": "git@github.com:georgwiese/three.js.git#scm_r66",
+    "backbone.paginator": "~0.8.1"
   },
   "devDependencies": {}
 }

@@ -115,7 +115,6 @@ object DataSourceRepository extends ProgressTracking {
       .importDataSource(unusableDataSource, progressTrackerFor(importTrackerId(unusableDataSource.id)))
       .flatMap {
       dataSource =>
-        finishTrackerFor(importTrackerId(unusableDataSource.id), true)
         writeDataSourceToFile(
             unusableDataSource.sourceFolder,
             UsableDataSource(unusableDataSource.owningTeam, unusableDataSource.sourceType, dataSource))

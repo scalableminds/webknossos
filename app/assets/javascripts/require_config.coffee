@@ -5,7 +5,7 @@ require.config(
   waitSeconds : 0
 
   paths :
-    "jquery"              : "../bower_components/jquery/dist/jquery"
+    "jquery"              : "../bower_components/jquery/jquery"
     "underscore"          : "../bower_components/lodash/dist/lodash"
     "bootstrap"           : "../bower_components/bootstrap/docs/assets/js/bootstrap"
     "slider"              : "../bower_components/bootstrap-slider/bootstrap-slider"

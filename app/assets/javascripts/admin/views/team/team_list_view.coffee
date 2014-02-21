@@ -3,7 +3,8 @@ underscore : _
 backbone.marionette : marionette
 libs/toast : Toast
 ./team_list_item_view : TeamListItemView
-admin/models/user/team_collection : TeamCollection
+admin/models/team/team_collection : TeamCollection
+admin/models/team/team_model : TeamModel
 ###
 
 class TeamListView extends Backbone.Marionette.CompositeView
@@ -42,7 +43,7 @@ class TeamListView extends Backbone.Marionette.CompositeView
             <div class="control-group">
               <label class="control-label" for="inputName">Name</label>
               <div class="controls">
-                <input type="text" id="inputName" placeholder="Name" required>
+                <input type="text" id="inputName" placeholder="Name" required autofocus>
               </div>
             </div>
           </div>
@@ -84,11 +85,8 @@ class TeamListView extends Backbone.Marionette.CompositeView
 
     @user.then(
       (userData) =>
-        team =
-          name : @ui.inputName.val()
-          owner : "#{userData.firstName} #{userData.lastName}"
-          roles : [{ name : "admin" }, { name : "user" }]
-          isEditable : true
+
+        team = new TeamModel("name", "#{userData.firstName} #{userData.lastName}")
 
         @collection.create(team)
       ->

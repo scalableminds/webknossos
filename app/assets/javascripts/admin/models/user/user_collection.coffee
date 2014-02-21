@@ -1,6 +1,6 @@
 ### define
 underscore : _
-backbone.marionette : marionette
+backbone : Backbone
 ###
 
 class UserCollection extends Backbone.Collection

@@ -1,8 +1,10 @@
 ### define
 underscore : _
-backbone.marionette : marionette
+backbone : Backbone
+./team_model : TeamModel
 ###
 
 class TeamCollection extends Backbone.Collection
 
   url : "/api/teams"
+  model: TeamModel

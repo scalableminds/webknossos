@@ -107,17 +107,17 @@ gulp.task("clean:build", ->
 
 
 gulp.task("watch:scripts:development", ->
-  return watch(glob : paths.src.js)
+  return watch(glob : paths.src.js, name : "Script-Watcher")
     .pipe(makeScripts(paths.dest.js))
 )
 
 gulp.task("watch:styles", ->
-  return watch(glob : paths.src.css)
+  return watch(glob : paths.src.css, name : "Style-Watcher")
     .pipe(makeStyles(paths.dest.css))
 )
 
 gulp.task("watch:version", ->
-  return bumpVersion(watch(glob : paths.src.version))
+  return bumpVersion(watch(glob : paths.src.version, name : "Version-Watcher"))
 )
 
 

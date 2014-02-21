@@ -18,7 +18,7 @@ paths =
   src :
     css : "app/assets/stylesheets/main.less"
     js : "app/assets/javascripts/**/*.{coffee,js}"
-    version : "./version"
+    version : "#{__dirname}/version"
   dest :
     js_tmp : "public/javascripts_tmp"
     js : "public/javascripts"

@@ -1,6 +1,8 @@
 @import 'libs/_theme.less';
 @import 'admin/_user.less';
+@import 'admin/_team.less';
 @import 'admin/_datasets.less';
+@import 'admin/_pagination.less';
 
 // ----------------------- MAIN STYLES
 body {
@@ -491,14 +493,6 @@ svg a:hover {
   white-space: normal;
 }
 
-.pagination-searchbox {
-  float: right;
-}
-
-.pagination-createNew{
-  float: right;
-  padding: 5px 15px;
-}
 
 #level-creator {
 
@@ -778,4 +772,10 @@ svg a:hover {
     left: 0px;
     background-color: #aaf;
     visibility: hidden;
+}
+
+
+// make sure text and icons have space between them
+i {
+  margin-right: 5px;
 }

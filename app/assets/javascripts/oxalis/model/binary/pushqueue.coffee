@@ -7,7 +7,7 @@ gzip : gzip
 class PushQueue
 
   BATCH_LIMIT : 1
-  BATCH_SIZE : 3
+  BATCH_SIZE : 15
   THROTTLE_TIME : 2000
 
 

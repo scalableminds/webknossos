@@ -50,8 +50,8 @@ class Gui
     if @datasetPosition == 0
       # add new dataset to settings
       @user.get("briConNames").push(@datasetPostfix)
-      @user.get("brightness").push(@settings.brightness)
-      @user.get("contrast").push(@settings.contrast)
+      @user.get("brightness").push(@settingsGeneral.brightness)
+      @user.get("contrast").push(@settingsGeneral.contrast)
       @datasetPosition = @user.get("briConNames").length - 1
 
 

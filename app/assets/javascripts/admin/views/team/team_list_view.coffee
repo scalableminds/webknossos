@@ -73,6 +73,8 @@ class TeamListView extends Backbone.Marionette.CompositeView
     @collection.fetch(
       data:
         "isEditable=true"
+    ).done( =>
+      @collection.goTo(1)
     )
 
     #fetch the logged-in user's name
@@ -87,7 +89,6 @@ class TeamListView extends Backbone.Marionette.CompositeView
       (userData) =>
 
         team = new TeamModel("name", "#{userData.firstName} #{userData.lastName}")
-
         @collection.create(team)
       ->
         Toast.error("Ups. Something went wrong")

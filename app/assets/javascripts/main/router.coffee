@@ -189,8 +189,8 @@ class Router extends Backbone.Router
       "admin/models/user/user_collection"], (UserListView, PaginationView, UserCollection) =>
 
       userCollection = new UserCollection()
-      paginationView = new PaginationView({collection: userCollection})
-      userListView = new UserListView({collection: userCollection})
+      paginationView = new PaginationView({collection : userCollection})
+      userListView = new UserListView({collection : userCollection})
 
       @changeView(paginationView, userListView)
       return @hideLoading()
@@ -198,9 +198,17 @@ class Router extends Backbone.Router
 
   teams : ->
 
-    require ["admin/views/team/team_list_view"], (TeamListView) =>
+    require [
+      "admin/views/team/team_list_view"
+      "admin/views/pagination_view"
+      "admin/models/team/team_collection"
+    ], (TeamListView, PaginationView, TeamCollection) =>
 
-      @changeView(new TeamListView())
+      teamCollection = new TeamCollection()
+      paginationView = new PaginationView({collection : teamCollection})
+      teamListView = new TeamListView({collection : teamCollection})
+
+      @changeView(paginationView, teamListView)
       return @hideLoading()
 
 

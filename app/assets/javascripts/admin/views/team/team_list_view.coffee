@@ -2,10 +2,10 @@
 underscore : _
 backbone.marionette : marionette
 libs/toast : Toast
+app : app
 ./team_list_item_view : TeamListItemView
 admin/models/team/team_collection : TeamCollection
 admin/models/team/team_model : TeamModel
->>>>>>> 566b803481ae1f3352a4b2b38045e7ae683096df
 ###
 
 class TeamListView extends Backbone.Marionette.CompositeView
@@ -70,6 +70,8 @@ class TeamListView extends Backbone.Marionette.CompositeView
 
   initialize : ->
 
+    @listenTo(app.vent, "paginationView:filter", @filter)
+
     @collection = new TeamCollection()
     @collection.fetch(
       data:
@@ -93,6 +95,12 @@ class TeamListView extends Backbone.Marionette.CompositeView
       ->
         Toast.error("Ups. Something went wrong")
     )
+
+
+  filter : -> (filterQuery)
+
+    @collection.setFilter(["name", "owner"], filterQuery)
+    @collection.pager()
 
 
   showModal : (modalView) ->

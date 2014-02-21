@@ -24,7 +24,6 @@ class Router extends Backbone.Router
     "datasets/:id/view"             : "tracingView"
     "users/:id/details"             : "userDetails"
     "*url"                          : "hideLoading"
-
     #"admin/tasks/algorithm"      : "taskAlgorithm"
 
 
@@ -291,7 +290,4 @@ class Router extends Backbone.Router
     $mainContainer = $("#main-container").empty()
     for view in views
       $mainContainer.append(view.render().el)
-
-
-
 

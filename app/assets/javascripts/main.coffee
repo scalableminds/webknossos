@@ -12,7 +12,6 @@ require [
   "main/errorHandling"
   "main/router"
   "bootstrap"
-  "main/enhancements"
   "libs/core_ext"
 ], ($, _, Backbone, app, ErrorHandling, Router) ->
 

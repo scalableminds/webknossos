@@ -5,6 +5,7 @@ libs/toast : Toast
 ./team_list_item_view : TeamListItemView
 admin/models/team/team_collection : TeamCollection
 admin/models/team/team_model : TeamModel
+>>>>>>> 566b803481ae1f3352a4b2b38045e7ae683096df
 ###
 
 class TeamListView extends Backbone.Marionette.CompositeView
@@ -83,7 +84,6 @@ class TeamListView extends Backbone.Marionette.CompositeView
     )
 
   addNewTeam : ->
-
 
     @user.then(
       (userData) =>

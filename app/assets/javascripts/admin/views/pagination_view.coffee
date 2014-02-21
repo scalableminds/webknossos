@@ -22,12 +22,12 @@ class PaginationView extends Backbone.Marionette.ItemView
         <% } %>
         <% _.each (Pagination.pageSet, function (p) { %>
           <% if (Pagination.currentPage == p) { %>
-            <li>
-              <span class="page selected"><%= p %></span>
+            <li class="page">
+              <span class="selected"><%= p %></span>
             </li>
           <% } else { %>
-            <li>
-              <a href="#" class="page"><%= p %></a>
+            <li class="page">
+              <a href="#"><%= p %></a>
             </li>
           <% } %>
         <% }); %>
@@ -61,6 +61,7 @@ class PaginationView extends Backbone.Marionette.ItemView
   initialize : ->
 
    @listenTo(@collection, "reset", @collectionSynced)
+   @listenTo(@collection, "remove", @refresh)
 
 
   goFirst : ->
@@ -83,7 +84,7 @@ class PaginationView extends Backbone.Marionette.ItemView
     @collection.nextPage()
 
 
-  gotoPage : (evt) ->
+  goToPage : (evt) ->
 
     evt.preventDefault()
     page = $(evt.target).text()
@@ -101,8 +102,14 @@ class PaginationView extends Backbone.Marionette.ItemView
     @ui.inputSearch.focus()
 
 
-  collectionSynced : ->
+  collectionSynced : (evt) ->
 
     @templateHelpers.Pagination = @collection.info()
     @render()
+
+
+  refresh : ->
+
+    @collection.pager()
+
 

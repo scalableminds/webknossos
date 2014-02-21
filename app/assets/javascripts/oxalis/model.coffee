@@ -6,8 +6,8 @@
 ./model/scaleinfo : ScaleInfo
 ./model/flycam2d : Flycam2d
 ./model/flycam3d : Flycam3d
-../libs/request : Request
-../libs/toast : Toast
+libs/request : Request
+libs/toast : Toast
 ./constants : constants
 ###
 

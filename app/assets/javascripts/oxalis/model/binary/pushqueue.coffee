@@ -1,7 +1,7 @@
 ### define
 libs/array_buffer_socket : ArrayBufferSocket
 libs/unit8array_builder : Uint8ArrayBuilder
-libs/gzip.min : gzip
+gzip : gzip
 ###
 
 class PushQueue

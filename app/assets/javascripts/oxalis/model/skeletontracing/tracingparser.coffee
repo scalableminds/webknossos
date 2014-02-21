@@ -2,12 +2,11 @@
 jquery : $
 underscore : _
 three.color : ColorConverter
-../../libs/request : Request
-../../libs/event_mixin : EventMixin
+libs/request : Request
+libs/event_mixin : EventMixin
 ./tracepoint : TracePoint
 ./tracetree : TraceTree
-./statelogger : StateLogger
-../constants : constants
+../../constants : constants
 ###
 
 class TracingParser

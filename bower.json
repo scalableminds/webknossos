@@ -20,6 +20,7 @@
     "jquery-bootpag": "1.0.4",
     "tweenjs": "r6",
     "three.js": "git@github.com:georgwiese/three.js.git#98e4245f750753b05f13a9a997eb5119f69064ea",
+    "zlib": "git@github.com:imaya/zlib.js.git#0.2.0",
     "backbone.paginator": "~0.8.1",
     "seiyria-bootstrap-slider": "~1.9.5"
   },

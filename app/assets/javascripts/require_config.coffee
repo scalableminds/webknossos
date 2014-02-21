@@ -16,6 +16,7 @@ require.config(
     "three"               : "../bower_components/three.js/build/three"
     "three.color"         : "../bower_components/three.js/examples/js/math/ColorConverter"
     "three.trackball"     : "../bower_components/three.js/examples/js/controls/TrackballControls"
+    "gzip"                : "../bower_components/zlib/bin/gzip.min"
     "stats"               : "../bower_components/threejs-stats/Stats"
     "dat"                 : "../bower_components/dat.gui/dat.gui"
     "ace"                 : "../bower_components/ace-builds/src-min-noconflict/ace"
@@ -44,6 +45,8 @@ require.config(
       exports : "jsRoutes"
     "three" :
       exports : "THREE"
+    "gzip" :
+      exports : "Zlib"
     "stats" :
       exports : "Stats"
     "v3" :

@@ -53,8 +53,8 @@ class Router extends Backbone.Router
   tracingTrace : ->
 
     require [
-      "./oxalis/controller"
-      "./libs/core_ext"
+      "oxalis/controller"
+      "libs/core_ext"
       "three"
       "stats"
     ], (Controller) ->
@@ -91,8 +91,8 @@ class Router extends Backbone.Router
   tracingView : ->
 
     require [
-      "./oxalis/controller"
-      "./libs/core_ext"
+      "oxalis/controller"
+      "libs/core_ext"
       "three"
       "three"
       "stats"
@@ -183,7 +183,7 @@ class Router extends Backbone.Router
 
   users : ->
 
-    require ["./admin/views/user/user_list_view"], (UserListView) =>
+    require ["admin/views/user/user_list_view"], (UserListView) =>
 
       view = new UserListView().render()
       $("#main-container").html(view.el)

@@ -10,6 +10,7 @@ three.trackball : Trackball
 ../constants : constants
 ./celltracing_controller : CellTracingController
 ./volumetracing_controller : VolumeTracingController
+three : THREE
 ###
 
 class PlaneController

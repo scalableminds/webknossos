@@ -37,6 +37,11 @@ object UserController extends Controller with Secured with Dashboard {
     }
   }
 
+  def current =  Authenticated{
+    implicit request =>
+      Ok(Json.toJson(request.user)(User.userPublicWrites(request.user)))
+  }
+
   def getDashboardInfo = Authenticated.async {
     implicit request => {
       val futures = dashboardInfo(request.user).map { info =>
@@ -94,7 +99,7 @@ object UserController extends Controller with Secured with Dashboard {
         case None =>
           users
       }
-      Ok(Writes.list(User.userPublicWrites(request.user)).writes(filtered))
+      Ok(Writes.list(User.userPublicWrites(request.user)).writes(filtered.sortBy(_.lastName.toLowerCase)))
     }
   }
 

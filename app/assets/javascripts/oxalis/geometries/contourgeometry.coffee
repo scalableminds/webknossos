@@ -3,6 +3,7 @@
 ../model/dimensions : Dimensions
 ../../libs/resizable_buffer : ResizableBuffer
 ../constants : constants
+three : THREE
 ###
 
 COLOR_ARRAY      = [0xff0000, 0x00ff00, 0x0000ff, 0xffff00, 0x00ffff, 0xff00ff]

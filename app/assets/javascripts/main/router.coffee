@@ -10,23 +10,25 @@ backbone : Backbone
 
 class Router extends Backbone.Router
 
-  initialize : ->
-
-
   routes :
-    "dashboard"                   : "dashboard"
-    "users"                       : "users"
-    "admin/taskTypes"             : "hideLoading"
-    "admin/projects"              : "projects"
-    "admin/datasets"              : "datasets"
-    "admin/trainingsTasks/create" : "createTraingsTasks"
-    "admin/tasks/overview"        : "taskOverview"
-    "annotations/Task/:id"        : "tracingTrace"
-    "datasets/:id/view"           : "tracingView"
-    "users/:id/details"           : "userDetails"
-    "*url"                        : "hideLoading"
+    "dashboard"                     : "dashboard"
+    "users"                         : "users"
+    "teams"                         : "teams"
+    "admin/taskTypes"               : "hideLoading"
+    "admin/projects"                : "projects"
+    "admin/datasets"                : "datasets"
+    "admin/trainingsTasks/create"   : "createTraingsTasks"
+    "admin/tasks/overview"          : "taskOverview"
+    "annotations/Task/:id"          : "tracingTrace"
+    "annotations/Explorational/:id" : "tracingTrace"
+    "annotations/View/:id"          : "tracingTrace"
+    "datasets/:id/view"             : "tracingView"
+    "users/:id/details"             : "userDetails"
+    "*url"                          : "hideLoading"
 
     #"admin/tasks/algorithm"      : "taskAlgorithm"
+
+
 
   hideLoading : ->
 
@@ -52,10 +54,7 @@ class Router extends Backbone.Router
   tracingTrace : ->
 
     require [
-      "./oxalis/controller"
-      "./libs/core_ext"
-      "three"
-      "stats"
+      "oxalis/controller"
     ], (Controller) ->
 
       leftTabBar = $("#main")
@@ -87,14 +86,11 @@ class Router extends Backbone.Router
 
       return
 
+
   tracingView : ->
 
     require [
-      "./oxalis/controller"
-      "./libs/core_ext"
-      "three"
-      "three"
-      "stats"
+      "oxalis/controller"
       "slider"
     ], (Controller) ->
 
@@ -182,11 +178,24 @@ class Router extends Backbone.Router
 
   users : ->
 
-    require ["./admin/views/user/user_list_view"], (UserListView) =>
+    require [
+      "admin/views/user/user_list_view",
+      "admin/views/pagination_view"
+      "admin/models/user/user_collection"], (UserListView, PaginationView, UserCollection) =>
 
-      view = new UserListView().render()
-      $("#main-container").html(view.el)
+      userCollection = new UserCollection()
+      paginationView = new PaginationView({collection: userCollection})
+      userListView = new UserListView({collection: userCollection})
 
+      @changeView(paginationView, userListView)
+      return @hideLoading()
+
+
+  teams : ->
+
+    require ["admin/views/team/team_list_view"], (TeamListView) =>
+
+      @changeView(new TeamListView())
       return @hideLoading()
 
 
@@ -262,5 +271,14 @@ class Router extends Backbone.Router
 
       @hideLoading()
     )
+
+
+  changeView : (views...) ->
+
+    $mainContainer = $("#main-container").empty()
+    for view in views
+      $mainContainer.append(view.render().el)
+
+
 
 

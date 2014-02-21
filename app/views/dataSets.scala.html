@@ -33,7 +33,7 @@
           <div class="dataset-description clearfix">
             <h3>@team</h3>
             <h4>Original data and segmentation</h4>
-            <p>@dataSet.description</p>
+            <p>@Html(dataSet.description getOrElse "")</p>
           </div>
         </div>
       }

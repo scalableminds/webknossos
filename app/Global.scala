@@ -17,11 +17,16 @@ import scala.Some
 import oxalis.binary.BinaryDataService
 import com.typesafe.config.Config
 import play.airbrake.Airbrake
+import com.kenshoo.play.metrics._
+import com.codahale.metrics.JmxReporter
+import play.api.mvc._
 
-object Global extends GlobalSettings {
+object Global extends WithFilters(MetricsFilter) with GlobalSettings {
 
   override def onStart(app: Application) {
     val conf = Play.current.configuration
+    val jmxReporter = JmxReporter.forRegistry(MetricsRegistry.default).build
+    jmxReporter.start
 
     startActors(conf.underlying)
 

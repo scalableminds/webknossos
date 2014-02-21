@@ -4,6 +4,7 @@
 ../model/dimensions : Dimensions
 ../constants : constants
 libs/event_mixin : EventMixin
+three : THREE
 ###
 
 class CameraController

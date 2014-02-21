@@ -9,6 +9,7 @@ three.color : ColorConverter
 ./statelogger : StateLogger
 ../constants : constants
 ./tracingparser : TracingParser
+three : THREE
 ###
 
 class CellTracing

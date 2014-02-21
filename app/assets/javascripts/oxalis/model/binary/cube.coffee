@@ -52,9 +52,9 @@ class Cube
 
     # Initializing the cube-arrays with boundaries
     cubeBoundary = [
-      @upperBoundary[0] >> @BUCKET_SIZE_P
-      @upperBoundary[1] >> @BUCKET_SIZE_P
-      @upperBoundary[2] >> @BUCKET_SIZE_P
+      Math.ceil(@upperBoundary[0] / (1 << @BUCKET_SIZE_P))
+      Math.ceil(@upperBoundary[1] / (1 << @BUCKET_SIZE_P))
+      Math.ceil(@upperBoundary[2] / (1 << @BUCKET_SIZE_P))
     ]
 
     @arbitraryCube = new Array(cubeBoundary[0] * cubeBoundary[1] * cubeBoundary[2])

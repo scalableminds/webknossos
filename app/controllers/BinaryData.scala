@@ -31,10 +31,13 @@ object BinaryData extends Controller with Secured {
   val scaleFactors = Array(1, 1, 1)
 
   def createDataRequestCollection(dataSet: DataSet, dataLayerName: String, cubeSize: Int, parsedRequest: ParsedRequestCollection) = {
-    val dataLayerId = DataLayerId(dataLayerName)
-    val dataRequests = parsedRequest.requests.map(r =>
-      BinaryDataService.createDataRequest(dataSet.dataSource, dataLayerId, cubeSize, r))
-    DataRequestCollection(dataRequests)
+    dataSet.dataSource.map {
+      source =>
+        val dataLayerId = DataLayerId(dataLayerName)
+        val dataRequests = parsedRequest.requests.map(r =>
+          BinaryDataService.createDataRequest(source, dataLayerId, cubeSize, r))
+        DataRequestCollection(dataRequests)
+    }
   }
 
 
@@ -43,10 +46,10 @@ object BinaryData extends Controller with Secured {
                    dataLayerName: String,
                    cubeSize: Int,
                    parsedRequest: ParsedRequestCollection
-                 )(implicit ctx: DBAccessContext): Fox[Array[Byte]] = {
+                   )(implicit ctx: DBAccessContext): Fox[Array[Byte]] = {
     for {
       dataSet <- DataSetDAO.findOneBySourceName(dataSetName) ?~> Messages("dataSet.notFound")
-      dataRequestCollection = createDataRequestCollection(dataSet, dataLayerName, cubeSize, parsedRequest)
+      dataRequestCollection <- createDataRequestCollection(dataSet, dataLayerName, cubeSize, parsedRequest) ?~> Messages("dataSet.source.notFound")
       data <- BinaryDataService.handleDataRequest(dataRequestCollection) ?~> "Data request couldn't get handled"
     } yield {
       data
@@ -62,11 +65,12 @@ object BinaryData extends Controller with Secured {
                    depth: Int,
                    resolutionExponent: Int,
                    settings: DataRequestSettings
-                 )(implicit ctx: DBAccessContext): Fox[Array[Byte]] = {
+                   )(implicit ctx: DBAccessContext): Fox[Array[Byte]] = {
     for {
       dataSet <- DataSetDAO.findOneBySourceName(dataSetName) ?~> Messages("dataSet.notFound")
+      dataSource <- dataSet.dataSource ?~> Messages("dataSet.source.notFound")
       dataRequestCollection = BinaryDataService.createDataRequest(
-        dataSet.dataSource,
+        dataSource,
         DataLayerId(dataLayerName),
         width,
         height,
@@ -109,7 +113,8 @@ object BinaryData extends Controller with Secured {
     val settings = DataRequestSettings(useHalfByte = false, skipInterpolation = false)
     for {
       dataSet <- DataSetDAO.findOneBySourceName(dataSetName) ?~> Messages("dataSet.notFound")
-      dataLayer <- dataSet.dataSource.dataLayer(dataLayerName) ?~> Messages("dataLayer.notFound")
+      dataSource <- dataSet.dataSource ?~> Messages("dataSet.source.notFound")
+      dataLayer <- dataSource.dataLayer(dataLayerName) ?~> Messages("dataLayer.notFound")
       params = ImageCreatorParameters(dataLayer.bytesPerElement, width, height, imagesPerRow)
       data <- requestData(dataSetName, dataLayerName, Point3D(x, y, z), width, height, depth, resolution, settings) ?~> Messages("binary.data.notFound")
       spriteSheet <- ImageCreator.spriteSheetFor(data, params) ?~> Messages("image.create.failed")

@@ -20,11 +20,17 @@ trait TemporaryStore[T] {
   def findAll =
     ts().values.toList
 
+  def removeAll =
+    ts.send(Map.empty[String, T])
+
   def removeAllExcept(l: Array[String]) =
     ts.send( _.filterKeys( l.contains))
 
   def insert(id: String, t: T) =
     ts.send(_ + (id -> t))
+
+  def insertAll(els: (String, T)*) =
+    ts.send(_ ++ els)
 
   def remove(id: String) =
     ts.send(_ - id)

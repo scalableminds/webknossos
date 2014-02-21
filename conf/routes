@@ -40,6 +40,8 @@ GET           /users/:id/details                                         control
 # DataSets
 GET           /datasets                                                  controllers.DataSetController.list
 GET           /datasets/:dataSetName/view                                controllers.DataSetController.view(dataSetName: String)
+POST          /datasets/:dataSetName/import                              controllers.DataSetController.importDataSet(dataSetName: String)
+GET           /datasets/:dataSetName/import                              controllers.DataSetController.importProgress(dataSetName: String)
 
 # GET         /datasets/:dataSetName/layers/:dataLayerName/ws_data       controllers.BinaryData.requestViaWebsocket(dataSetName: String, dataLayerName: String, cubeSize: Int)
 POST          /datasets/:dataSetName/layers/:dataLayerName/data          controllers.BinaryData.requestViaAjax(dataSetName: String, dataLayerName: String, cubeSize: Int)
@@ -67,7 +69,7 @@ GET           /annotations/:typ/:id/cancel                               control
 GET           /admin/nml/upload                                          controllers.admin.NMLIO.uploadForm
 POST          /admin/nml/upload                                          controllers.admin.NMLIO.upload
 
-GET           /api/teams                                                     controllers.TeamController.list
+GET           /api/teams                                                 controllers.TeamController.list
 
 
 # Admin Tasks

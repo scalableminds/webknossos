@@ -1,21 +1,27 @@
 @(dataSet: models.binary.DataSet)
 @import oxalis.binary.BinaryDataService
-<tr data-name="@dataSet.dataSource.name" data-id="@dataSet.dataSource.name" id="@dataSet.dataSource.name">
-    <td> @dataSet.dataSource.name </td>
-    <td> @dataSet.dataSource.relativeBaseDir(BinaryDataService.baseFolder)</td>
-    <td> @dataSet.dataSource.scale </td>
-    <td> @dataSet.dataSource.owningTeam </td>
+<tr data-name="@dataSet.name" data-id="@dataSet.name" id="@dataSet.name">
+    <td> @dataSet.name </td>
+    <td> @dataSet.dataSource.map(_.relativeBaseDir(BinaryDataService.dataSourceRepositoryDir.toAbsolute.path))</td>
+    <td> @dataSet.dataSource.map(_.scale) </td>
+    <td> @dataSet.owningTeam </td>
     <td class="team-label">
     @dataSet.allowedTeams.map{ team =>
         <span class="label">@team</span>
     }
     </td>
+    <td> <i class="fa @if(dataSet.isActive){fa-check}else{fa-times}"></i></td>
     <td> <i class="fa @if(dataSet.isPublic){fa-check}else{fa-times}"></i></td>
     <td>
-    @dataSet.dataSource.dataLayers.map{ dataLayer =>
+    @dataSet.dataSource.map(_.dataLayers).getOrElse(Nil).map{ dataLayer =>
         <span class="label">@dataLayer.typ - @dataLayer.elementClass </span>
     }
     <td class="nowrap">
-        <a href="@controllers.routes.DataSetController.view(dataSet.dataSource.name)" ><i class="fa fa-eye"></i> view</a><br />
+      @if(dataSet.dataSource.isEmpty){
+        <a href="@controllers.routes.DataSetController.importDataSet(dataSet.name)" ><i class="fa fa-plus-circle"></i> import</a><br />
+      }
+      @if(dataSet.isActive){
+        <a href="@controllers.routes.DataSetController.view(dataSet.name)" ><i class="fa fa-eye"></i> view</a><br />
+      }
     </td>
 </tr>

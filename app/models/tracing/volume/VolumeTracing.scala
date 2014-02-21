@@ -12,7 +12,7 @@ import braingames.reactivemongo.DBAccessContext
 import braingames.util.Fox
 import reactivemongo.bson.BSONObjectID
 import play.modules.reactivemongo.json.BSONFormats._
-
+  import play.api.libs.concurrent.Execution.Implicits._
 /**
  * Company: scalableminds
  * User: tmbo
@@ -72,9 +72,10 @@ object VolumeTracingDAO extends SecuredBaseDAO[VolumeTracing] {
   val formatter = VolumeTracing.volumeTracingFormat
 
   def createFrom(baseDataSet: DataSet)(implicit ctx: DBAccessContext) = {
-    val dataSet = BinaryDataService.createUserDataSource(baseDataSet.dataSource)
-    val t = VolumeTracing(dataSet.name, System.currentTimeMillis(), Point3D(0,0,0))
-    insert(t)
+    baseDataSet.dataSource.toFox.flatMap{ baseSource =>
+      BinaryDataService.createUserDataSource(baseSource)
+      insert(VolumeTracing(baseDataSet.name, System.currentTimeMillis(), Point3D(0,0,0)))
+    }
   }
 
 }

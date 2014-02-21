@@ -51,7 +51,7 @@ trait Dashboard {
   def dashboardInfo(user: User)(implicit ctx: DBAccessContext) = {
     for {
       exploratoryAnnotations <- AnnotationService.findExploratoryOf(user)
-      dataSets <- DataSetDAO.findAll
+      dataSets <- DataSetDAO.findAllActive
       loggedTime <- TimeTrackingService.loggedTime(user)
       exploratoryAnnotations <- exploratorySortedByTime(exploratoryAnnotations).toFox
       userTasks <- userWithTasks(user)

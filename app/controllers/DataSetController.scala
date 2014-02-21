@@ -5,8 +5,12 @@ import models.binary.{DataSetService, DataSetDAO}
 import play.api.i18n.Messages
 import views.html
 import play.api.libs.concurrent.Execution.Implicits._
-import play.api.libs.json.{JsSuccess, JsError}
+import play.api.libs.json.{Json, JsSuccess, JsError}
 import scala.concurrent.Future
+import oxalis.binary.BinaryDataService
+import braingames.binary.repository.DataSourceRepository.InProgress
+import braingames.binary.repository.DataSourceRepository.Finished
+import braingames.binary.repository.DataSourceRepository.NotStarted
 
 /**
  * Company: scalableminds
@@ -31,6 +35,35 @@ object DataSetController extends Controller with Secured {
         dataSets =>
           Ok(html.dataSets(dataSets))
       }
+  }
+
+  def importDataSet(dataSetName: String) = Authenticated.async{ implicit request =>
+    for {
+      dataSet <- DataSetDAO.findOneBySourceName(dataSetName) ?~> Messages("dataSet.notFound")
+      result <- DataSetService.importDataSet(dataSet) ?~> Messages("dataSet.import.notStarted")
+    } yield {
+      JsonOk(Messages("dataSet.import.inProgress"))
+    }
+  }
+
+  def importProgress(dataSetName: String) = Authenticated{ implicit request =>
+    BinaryDataService.importProgress(dataSetName) match{
+      case InProgress(p) =>
+        JsonOk(Json.obj(
+          "operation" -> "import",
+          "status" -> "inProgress",
+          "progress" -> p))
+      case Finished(success) =>
+        JsonOk(Json.obj(
+          "operation" -> "import",
+          "status" -> (if(success) "finished" else "failed"),
+          "progress" -> 1))
+      case NotStarted =>
+        JsonOk(Json.obj(
+          "operation" -> "import",
+          "status" -> "notStarted",
+          "progress" -> 1))
+    }
   }
 
   def updateTeams(dataSetName: String) = Authenticated.async(parse.json){ implicit request =>

@@ -4,11 +4,11 @@
 @import models.annotation.AnnotationType
 
 @main() {
-  <div id="container" data-tracing-type="View" data-tracing-id="@dataSet.dataSource.name" class="clearfix">
+  <div id="container" data-tracing-type="View" data-tracing-id="@dataSet.name" class="clearfix">
     <div id="main" role="main">
       <div id="overlay">
         <div id="dataset" class="well well-small">
-          DataSet: <span id="dataset-name">@dataSet.dataSource.name</span> <br /></div>
+          DataSet: <span id="dataset-name">@dataSet.name</span> <br /></div>
         <div class="input-prepend">
           <span class="add-on">Position</span>
           <input id="trace-position-input" type="text">

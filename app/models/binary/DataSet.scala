@@ -3,35 +3,46 @@ package models.binary
 import play.api.libs.functional.syntax._
 import models.basics._
 import play.api.libs.json._
-import braingames.binary.models.{DataSourceRepository => AbstractDataSourceRepository, DataSource}
+import braingames.binary.models.{DataSourceRepository => AbstractDataSourceRepository, UsableDataSource, DataSourceLike, UnusableDataSource, DataSource}
 import models.user.User
 import braingames.reactivemongo.{DefaultAccessDefinitions, DBAccessContext, GlobalDBAccess, SecuredMongoDAO}
 import play.api.libs.concurrent.Execution.Implicits._
 import braingames.reactivemongo.AccessRestrictions.AllowIf
+import braingames.util.FoxImplicits
+import oxalis.binary.BinaryDataService
+import play.api.Logger
+import net.liftweb.common.Full
 
-object DataSetRepository extends AbstractDataSourceRepository with GlobalDBAccess {
-
-  def deleteAllExcept(l: Array[String]) =
-    DataSetDAO.deleteAllSourcesExcept(l)
-
-  def updateOrCreate(dataSource: DataSource) =
-    DataSetDAO.updateOrCreate(dataSource)
-
-  def removeByName(name: String) =
-    DataSetDAO.removeBySourceName(name)
+object DataSetRepository extends AbstractDataSourceRepository with GlobalDBAccess with FoxImplicits {
 
   def findByName(name: String) =
-    DataSetDAO.findOneBySourceName(name).map(_.dataSource)
+    DataSetDAO.findOneBySourceName(name).flatMap(_.dataSource)
+
+  def foundDataSources(dataSources: List[DataSourceLike]): Unit = {
+    // TODO: this does only work for a single dataSource! datasets need to be assigned a unique id
+    Logger.info("Available datasets: " + dataSources.map(_.id).mkString(", "))
+    dataSources.map{
+      case d: UsableDataSource =>
+        DataSetService.updateDataSet(d)
+      case d: UnusableDataSource =>
+        DataSetDAO.removeByName(d.id)
+        DataSetService.createDataSet(d.id, d.sourceType, d.owningTeam, isActive = false)
+    }
+  }
 }
 
 case class DataSet(
-                    dataSource: DataSource,
-                    isPublic: Boolean = false,
+                    name: String,
+                    dataSource: Option[DataSource],
+                    sourceType: String,
+                    owningTeam: String,
                     allowedTeams: List[String],
+                    isActive: Boolean = false,
+                    isPublic: Boolean = false,
                     description: Option[String] = None,
                     created: Long = System.currentTimeMillis()) {
   def isEditableBy(user: User) =
-    user.adminTeamNames.contains(dataSource.owningTeam)
+    user.adminTeamNames.contains(owningTeam)
 }
 
 object DataSet {
@@ -40,7 +51,34 @@ object DataSet {
 
 object DataSetService {
   def updateTeams(dataSet: DataSet, teams: List[String])(implicit ctx: DBAccessContext) =
-    DataSetDAO.updateTeams(dataSet.dataSource.name, teams)
+    DataSetDAO.updateTeams(dataSet.name, teams)
+
+  def createDataSet(id: String, sourceType: String, owningTeam: String, dataSource: Option[DataSource] = None, isActive: Boolean = false)(implicit ctx: DBAccessContext) = {
+    val dataSet = DataSet(
+      id,
+      dataSource,
+      sourceType,
+      owningTeam,
+      List(owningTeam),
+      isActive = isActive)
+    DataSetDAO.insert(dataSet)
+  }
+
+  def updateDataSet(usableDataSource: UsableDataSource)(implicit ctx: DBAccessContext) = {
+    DataSetDAO.findOneBySourceName(usableDataSource.id).futureBox.map{
+      case Full(_) => DataSetDAO.updateDataSource(usableDataSource.id, usableDataSource.dataSource)
+      case _ => createDataSet(usableDataSource.id, usableDataSource.sourceType, usableDataSource.owningTeam, Some(usableDataSource.dataSource), isActive = true)
+    }
+  }
+
+  def importDataSet(dataSet: DataSet)(implicit ctx: DBAccessContext) = {
+    BinaryDataService.importDataSource(dataSet.name).map(_.map(_.map { usableDataSource =>
+      DataSetDAO.updateDataSource(dataSet.name, usableDataSource.dataSource)
+      DataSetDAO.updateActiveState(dataSet.name, true)
+      Logger.warn(s"Added datasource '${dataSet.name}' to db")
+      usableDataSource
+    }))
+  }
 }
 
 object DataSetDAO extends SecuredBaseDAO[DataSet] {
@@ -55,7 +93,7 @@ object DataSetDAO extends SecuredBaseDAO[DataSet] {
             Json.obj("$or" -> Json.arr(
               Json.obj("isPublic" -> true),
               Json.obj("allowedTeams" -> Json.obj("$in" -> user.teamNames)),
-              Json.obj("dataSource.owningTeam" -> Json.obj("$in" -> user.adminTeamNames))
+              Json.obj("owningTeam" -> Json.obj("$in" -> user.adminTeamNames))
             )))
         case _ =>
           AllowIf(
@@ -70,35 +108,44 @@ object DataSetDAO extends SecuredBaseDAO[DataSet] {
   val formatter = DataSet.dataSetFormat
 
   def byNameQ(name: String) =
-    Json.obj("dataSource.name" -> name)
+    Json.obj("name" -> name)
 
   def default()(implicit ctx: DBAccessContext) =
     findMaxBy("priority")
 
   def deleteAllSourcesExcept(names: Array[String])(implicit ctx: DBAccessContext) =
-    remove(Json.obj("dataSource.name" -> Json.obj("$nin" -> names)))
+    remove(Json.obj("name" -> Json.obj("$nin" -> names)))
 
   def findOneBySourceName(name: String)(implicit ctx: DBAccessContext) =
     findOne(byNameQ(name))
 
   def findAllOwnedBy(teams: List[String])(implicit ctx: DBAccessContext) =
-    find(Json.obj("dataSource.owningTeam" -> Json.obj("$in" -> teams))).cursor[DataSet].collect[List]()
+    find(Json.obj("owningTeam" -> Json.obj("$in" -> teams))).cursor[DataSet].collect[List]()
 
-  def updateOrCreate(d: DataSource)(implicit ctx: DBAccessContext) =
+  def findAllActive(implicit ctx: DBAccessContext) = withExceptionCatcher{
+    find(Json.obj("isActive" -> true)).cursor[DataSet].collect[List]()
+  }
+
+  def updateDataSource(name: String, dataSource: DataSource)(implicit ctx: DBAccessContext) =
     update(
-      byNameQ(d.name),
-      Json.obj(
-        "$set" -> Json.obj("dataSource" -> formatWithoutId(d)),
-        "$setOnInsert" -> Json.obj(
-          "allowedTeams" -> List(d.owningTeam),
-          "created" -> System.currentTimeMillis,
-          "isPublic" -> false
-        )
-      ),
-      upsert = true)
+      Json.obj("name" -> name),
+      Json.obj("$set" -> Json.obj(
+        "dataSource" -> dataSource
+      ))
+    )
 
-  def removeBySourceName(name: String)(implicit ctx: DBAccessContext) =
-    remove(byNameQ(name))
+  def updateActiveState(name: String, isActive: Boolean)(implicit ctx: DBAccessContext) =
+    update(
+      Json.obj("name" -> name),
+      Json.obj("$set" -> Json.obj(
+        "isActive" -> isActive
+      )))
+
+  def removeByName(name: String)(implicit ctx: DBAccessContext) =
+    remove(Json.obj("name" -> name))
+
+  def removeBySourceId(names: List[String])(implicit ctx: DBAccessContext) =
+    remove(Json.obj("dataSource.id" -> Json.obj("$in" -> names)))
 
   def formatWithoutId(ds: DataSource) = {
     val js = Json.toJson(ds)

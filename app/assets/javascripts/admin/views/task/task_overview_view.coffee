@@ -52,5 +52,5 @@ class TaskOverviewView extends Backbone.Marionette.View
         new PanZoomSVG($svg)
 
       (error) =>
-        @ui.graph.html("<i class=\"fa fa-warning-sign\"></i> #{error.replace(/\n/g,"<br>")}")
+        @ui.graph.html("<i class=\"fa fa-warning-sign\"></i>#{error.replace(/\n/g,"<br>")}")
     )

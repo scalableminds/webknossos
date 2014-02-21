@@ -25,15 +25,15 @@
   </td>
   <td>
       <span title="Unassigned">
-        <i class="fa fa-play-circle"></i> @status.open open
+        <i class="fa fa-play-circle"></i>@status.open open
       </span>
       |
       <span title="in Progress">
-        <i class="fa fa-random"></i> @status.inProgress active
+        <i class="fa fa-random"></i>@status.inProgress active
       </span>
       |
       <span title="Completed">
-        <i class="fa fa-check-circle-o"></i> @status.completed done
+        <i class="fa fa-check-circle-o"></i>@status.completed done
       </span>
 
   </td>
@@ -41,6 +41,6 @@
       Tracked Time: @task.tracingTime.map(t => formatTimeHumanReadable(t millis)).getOrElse("-")
   </td>
   <td class="nowrap">
-    <a href="@controllers.admin.routes.NMLIO.taskDownload(task.id)" title="download all finished tracings"><i class="fa fa-download"></i> download </a>
+    <a href="@controllers.admin.routes.NMLIO.taskDownload(task.id)" title="download all finished tracings"><i class="fa fa-download"></i>download </a>
   </td>
 </tr>

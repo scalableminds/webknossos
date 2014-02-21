@@ -47,7 +47,7 @@
     <table class="table table-double-striped table-details" id="projectlist-table">
       <thead>
         <tr>
-          <th class="details-toggle-all"> <i class="caret-right"></i> <i class="caret-down"></i> </th>
+          <th class="details-toggle-all"> <i class="caret-right"></i><i class="caret-down"></i></th>
           <th> Team</th>
           <th> Name</th>
           <th> Owner</th>
@@ -57,14 +57,14 @@
       <tbody class="hide">
         <template>
           <tr id="<%= element.name %>">
-            <td class="details-toggle" href="<%= controllers.admin.TaskAdministration.tasksForProject(element.name).url %>" data-ajax="add-row=#<%= element.name %> + tr"> <i class="caret-right"></i> <i class="caret-down"></i> </td>
+            <td class="details-toggle" href="<%= controllers.admin.TaskAdministration.tasksForProject(element.name).url %>" data-ajax="add-row=#<%= element.name %> + tr"> <i class="caret-right"></i><i class="caret-down"></i></td>
             <td> <%= element.team %> </td>
             <td> <%= element.name %> </td>
             <td> <%= element.owner %> </td>
             <td class="nowrap">
-              <a href="<%= controllers.AnnotationController.trace('CompoundProject', element.name).url %>" title="view all finished tracings"><i class="icon-random"></i> view</a><br />
-              <a href="<%= controllers.admin.NMLIO.projectDownload(element.name).url %>" title="download all finished tracings"><i class="icon-download"></i> download</a><br />
-              <a href="<%= controllers.admin.ProjectAdministration.delete(element.name).url %>" data-ajax="delete-row,confirm"><i class="icon-trash"></i> delete </a>
+              <a href="<%= controllers.AnnotationController.trace('CompoundProject', element.name).url %>" title="view all finished tracings"><i class="icon-random"></i>view</a><br />
+              <a href="<%= controllers.admin.NMLIO.projectDownload(element.name).url %>" title="download all finished tracings"><i class="icon-download"></i>download</a><br />
+              <a href="<%= controllers.admin.ProjectAdministration.delete(element.name).url %>" data-ajax="delete-row,confirm"><i class="icon-trash"></i>delete </a>
             </td>
           </tr>
           <tr class="details-row hide" >

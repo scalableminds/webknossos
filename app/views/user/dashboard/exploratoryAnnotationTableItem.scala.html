@@ -17,19 +17,19 @@
 
     <td>
       <% if (annotations.stats) { %>
-        <span title="Trees"><i class="fa fa-sitemap"></i> <%= annotations.stats.numberOfTrees %> &nbsp;</span><br />
-        <span title="Nodes"><i class="fa fa-bull"></i> <%= annotations.stats.numberOfNodes %> &nbsp;</span><br />
-        <span title="Edges"><i class="fa fa-arrows-h"></i> <%= annotations.stats.numberOfEdges %></span>
+        <span title="Trees"><i class="fa fa-sitemap"></i><%= annotations.stats.numberOfTrees %> &nbsp;</span><br />
+        <span title="Nodes"><i class="fa fa-bull"></i><%= annotations.stats.numberOfNodes %> &nbsp;</span><br />
+        <span title="Edges"><i class="fa fa-arrows-h"></i><%= annotations.stats.numberOfEdges %></span>
       <% } %>
     </td>
 
     <td> <%= annotations.contentType + " - " + annotations.typ %> </td>
     <td> <%= annotations.created %> </td>
     <td class="nowrap">
-      <a href="<%= jsRoutes.controllers.AnnotationController.trace(annotations.typ, annotations.id).url %>"><i class="fa fa-random"></i> trace</a><br />
-      <a href="<%= jsRoutes.controllers.AnnotationController.download(annotations.typ, annotations.id).url %>"><i class="fa fa-download"></i> download</a><br />
+      <a href="<%= jsRoutes.controllers.AnnotationController.trace(annotations.typ, annotations.id).url %>"><i class="fa fa-random"></i>trace</a><br />
+      <a href="<%= jsRoutes.controllers.AnnotationController.download(annotations.typ, annotations.id).url %>"><i class="fa fa-download"></i>download</a><br />
       <% if (annotations.typ == "Explorational"){ %>
-        <a href="<%= jsRoutes.controllers.AnnotationController.finish(annotations.typ, annotations.id).url %>" data-ajax="delete-row,confirm=@Messages("annotation.finish.confirm")"><i class="fa fa-trash-o"></i> delete</a>
+        <a href="<%= jsRoutes.controllers.AnnotationController.finish(annotations.typ, annotations.id).url %>" data-ajax="delete-row,confirm=@Messages("annotation.finish.confirm")"><i class="fa fa-trash-o"></i>delete</a>
       <% } %>
     </td>
   </tr>

@@ -4,7 +4,11 @@
   modules : [
     {
       name : "main",
-      include : [ "require", "require_config" ]
+      override : {
+        wrap : {
+          startFile : [ "public/bower_components/requirejs/require.js", "public/javascripts_tmp/require_config.js" ]
+        }
+      }
     }, {
       name : "oxalis/controller",
       exclude : [ "main" ]

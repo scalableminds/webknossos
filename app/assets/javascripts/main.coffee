@@ -1,15 +1,30 @@
+define("app", ["backbone.marionette"], (Marionette) ->
+  app = new Backbone.Marionette.Application()
+  window.app = app
+  return app
+)
+
 require [
   "jquery"
   "underscore"
   "backbone"
-  "./main/errorHandling"
-  "./main/router"
+  "app"
+  "main/errorHandling"
+  "main/router"
   "bootstrap"
-  "./main/enhancements"
+  "main/enhancements"
   "libs/core_ext"
-], ($, _, Backbone, ErrorHandling, Router) ->
+], ($, _, Backbone, app, ErrorHandling, Router) ->
 
   ErrorHandling.initialize( throwAssertions: false, sendLocalErrors: false )
-  $ ->
-    new Router()
+
+  app.addInitializer( ->
+
+    app.router = new Router()
     Backbone.history.start( pushState : true )
+  )
+
+  $ ->
+
+    app.start()
+

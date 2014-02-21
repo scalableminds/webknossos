@@ -11,6 +11,7 @@ require.config(
     "slider"              : "../bower_components/bootstrap-slider/bootstrap-slider"
     "coffee-script"       : "../bower_components/coffee-script/extras/coffee-script"
     "backbone.marionette" : "../bower_components/backbone.marionette/lib/backbone.marionette"
+    "backbone.paginator"  : "../bower_components/backbone.paginator/dist/backbone.paginator"
     "backbone"            : "../bower_components/backbone/backbone"
     "three"               : "../bower_components/three.js/build/three"
     "three.color"         : "../bower_components/three.js/examples/js/math/ColorConverter"
@@ -59,6 +60,6 @@ require.config(
       deps : [ "underscore" ]
       exports : "Backbone"
     "backbone.marionette" : [ "backbone", "underscore" ]
-    "penis" : "123"
+    "backbone.paginator" : [ "backbone", "underscore" ]
 
 )

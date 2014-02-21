@@ -1,9 +1,9 @@
 ### define
 underscore : _
+app : app
 backbone.marionette : marionette
 libs/toast : Toast
 ./user_list_item_view : UserListItemView
-admin/models/user/user_collection : UserCollection
 admin/views/user/team_role_modal_view : TeamRoleModalView
 admin/views/user/bulk_delete_modal_view : BulkDeleteModalView
 admin/views/user/experience_modal_view : ExperienceModalView
@@ -61,11 +61,20 @@ class UserListView extends Backbone.Marionette.CompositeView
 
   initialize : ->
 
-    @collection = new UserCollection()
     @collection.fetch(
-      data:
-        isEditable: true
-    )
+      data : "isEditable=true"
+      silent : true
+    ).done =>
+      @collection.goTo(1)
+
+    @listenTo(app.vent, "paginationView:filter", @filter)
+
+
+  filter : (filterQuery) ->
+
+    console.log(filterQuery)
+    @collection.setFilter(["email", "firstName", "lastName"], filterQuery)
+    @collection.pager()
 
 
   showTeamRoleModal : ->

@@ -72,7 +72,7 @@ class TeamListView extends Backbone.Marionette.CompositeView
     @collection = new TeamCollection()
     @collection.fetch(
       data:
-        isEditable: true
+        "isEditable=true"
     )
 
     #fetch the logged-in user's name

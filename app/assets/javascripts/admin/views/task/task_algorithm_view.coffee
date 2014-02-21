@@ -1,9 +1,8 @@
-
 ### define
 underscore : _
 backbone.marionette : marionette
-libs/keyboard : KeyboardJS
-libs/ace/ace : ace
+keyboard : KeyboardJS
+ace : ace
 libs/toast : Toast
 ###
 

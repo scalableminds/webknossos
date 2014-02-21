@@ -17,10 +17,15 @@ import braingames.util.Fox
 import net.liftweb.common.{Full, Failure}
 import braingames.reactivemongo.DBAccessContext
 import scala.concurrent.Future
+import play.api.templates.Html
 
 object TaskController extends Controller with Secured {
 
   val MAX_OPEN_TASKS = current.configuration.getInt("oxalis.tasks.maxOpenPerUser") getOrElse 5
+
+  def empty = Authenticated{ implicit request =>
+    Ok(views.html.main()(Html.empty))
+  }
 
   def ensureMaxNumberOfOpenTasks(user: User)(implicit ctx: DBAccessContext): Fox[Int] = {
     AnnotationService.countOpenTasks(user).flatMap{ numberOfOpen => Future.successful(

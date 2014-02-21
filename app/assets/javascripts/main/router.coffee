@@ -14,11 +14,12 @@ class Router extends Backbone.Router
     "dashboard"                     : "dashboard"
     "users"                         : "users"
     "teams"                         : "teams"
+    "tasks"                         : "tasks"
+    "admin/tasks/overview"          : "taskOverview"
     "admin/taskTypes"               : "hideLoading"
     "admin/projects"                : "projects"
     "admin/datasets"                : "datasets"
     "admin/trainingsTasks/create"   : "createTraingsTasks"
-    "admin/tasks/overview"          : "taskOverview"
     "annotations/Task/:id"          : "tracingTrace"
     "annotations/Explorational/:id" : "tracingTrace"
     "datasets/:id/view"             : "tracingView"
@@ -201,6 +202,21 @@ class Router extends Backbone.Router
     require ["admin/views/team/team_list_view"], (TeamListView) =>
 
       @changeView(new TeamListView())
+      return @hideLoading()
+
+
+  tasks : ->
+
+    require [
+      "admin/views/task/task_list_view",
+      "admin/views/pagination_view"
+      "admin/models/task/task_collection"], (TaskListView, PaginationView, TaskCollection) =>
+
+      taskCollection = new TaskCollection()
+      paginationView = new PaginationView({collection: taskCollection})
+      taskListView = new TaskListView({collection: taskCollection})
+
+      @changeView(paginationView, taskListView)
       return @hideLoading()
 
 

@@ -147,7 +147,7 @@ object TaskAdministration extends AdminController {
           _ <- TaskDAO.insert(task)
         } yield {
           AnnotationService.createAnnotationBase(task, request.user._id, taskType.settings, dataSetName, start)
-          Redirect(routes.TaskAdministration.list)
+          Redirect(controllers.routes.TaskController.empty)
           .flashing(
             FlashSuccess(Messages("task.createSuccess")))
           .highlighting(task.id)
@@ -192,7 +192,7 @@ object TaskAdministration extends AdminController {
                 _project = project.map(_.name))
             } yield {
               AnnotationDAO.updateAllUsingNewTaskType(task, taskType.settings)
-              Redirect(routes.TaskAdministration.list)
+              Redirect(controllers.routes.TaskController.empty)
               .flashing(
                 FlashSuccess(Messages("task.editSuccess")))
               .highlighting(task.id)
@@ -234,7 +234,7 @@ object TaskAdministration extends AdminController {
                   AnnotationService.createAnnotationBase(task, request.user._id, taskType.settings, nml)
                 }
             }
-            Redirect(routes.TaskAdministration.list).flashing(
+            Redirect(controllers.routes.TaskController.empty).flashing(
               FlashSuccess(Messages("task.bulk.createSuccess", nmls.size)))
           }
       })
@@ -297,7 +297,7 @@ object TaskAdministration extends AdminController {
       data <- postParameter("data") ?~> Messages("task.bulk.notSupplied")
       inserted <- createTasksFromData(data)
     } yield {
-      Redirect(routes.TaskAdministration.list).flashing(
+      Redirect(controllers.routes.TaskController.empty).flashing(
         FlashSuccess(Messages("task.bulk.createSuccess", inserted.size.toString)))
     }
   }
@@ -325,7 +325,7 @@ object TaskAdministration extends AdminController {
   def tasksForType(taskTypeId: String) = Authenticated.async { implicit request =>
     for {
       taskType <- TaskTypeDAO.findOneById(taskTypeId) ?~> Messages("taskType.notFound")
-      
+
       tasks <- TaskDAO.findAllByTaskType(taskType)
       dataSetNames <- dataSetNamesForTasks(tasks)
       statuses <- Future.traverse(tasks)(_.status)

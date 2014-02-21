@@ -1,8 +1,8 @@
 ### define
 underscore : _
-../pagination_collection : PaginationView
+../pagination_collection : PaginationCollection
 ###
 
-class UserCollection extends PaginationView
+class UserCollection extends PaginationCollection
 
   url : "/api/users"

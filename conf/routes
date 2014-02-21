@@ -84,14 +84,14 @@ POST          /admin/tasks/algorithm                                     control
 GET           /admin/tasks/algorithm/:id?use=true                        controllers.admin.TaskAlgorithm.useAlgorithm(id: String)
 # <---
 
-GET           /admin/tasks                                               controllers.admin.TaskAdministration.list
+GET           /tasks                                                     controllers.TaskController.empty
 GET           /admin/tasks/create                                        controllers.admin.TaskAdministration.create
 POST          /admin/tasks/createBulk                                    controllers.admin.TaskAdministration.createBulk
 POST          /admin/tasks/createFromNML                                 controllers.admin.TaskAdministration.createFromNML
 POST          /admin/tasks/createFromForm                                controllers.admin.TaskAdministration.createFromForm
 GET           /admin/tasks/overview                                      controllers.admin.TaskAdministration.overview
 GET           /admin/tasks/:id/download                                  controllers.admin.NMLIO.taskDownload(id: String)
-GET           /admin/tasks/:id/delete                                    controllers.admin.TaskAdministration.delete(id: String)
+DELETE        /admin/tasks/:id                                           controllers.admin.TaskAdministration.delete(id: String)
 GET           /admin/tasks/:id/edit                                      controllers.admin.TaskAdministration.edit(id: String)
 GET           /admin/tasks/:id/annotations                               controllers.AnnotationController.annotationsForTask(id: String)
 POST          /admin/tasks/:id                                           controllers.admin.TaskAdministration.editTaskForm(id: String)

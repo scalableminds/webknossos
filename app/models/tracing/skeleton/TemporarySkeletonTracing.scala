@@ -40,20 +40,19 @@ case class TemporarySkeletonTracing(
 
   def service = TemporarySkeletonTracingService
 
-  def trees = Future.successful(_trees)
+  def trees = Fox.successful(_trees)
 
   def allowAllModes =
     this.copy(settings = settings.copy(allowedModes = AnnotationSettings.ALL_MODES))
 
-  def insertTree[TemporaryTracing](tree: TreeLike) = {
-    Future.successful(this.copy(_trees = tree :: _trees).asInstanceOf[TemporaryTracing])
-  }
+  def insertTree[TemporaryTracing](tree: TreeLike) =
+    Fox.successful(this.copy(_trees = tree :: _trees).asInstanceOf[TemporaryTracing])
 
   def insertBranchPoint[Tracing](bp: BranchPoint) =
-    Future.successful(this.copy(branchPoints = bp :: this.branchPoints).asInstanceOf[Tracing])
+    Fox.successful(this.copy(branchPoints = bp :: this.branchPoints).asInstanceOf[Tracing])
 
   def insertComment[Tracing](c: Comment) =
-    Future.successful(this.copy(comments = c :: this.comments).asInstanceOf[Tracing])
+    Fox.successful(this.copy(comments = c :: this.comments).asInstanceOf[Tracing])
 
   def updateFromJson(js: Seq[JsValue])(implicit ctx: DBAccessContext) = ???
 
@@ -90,27 +89,27 @@ object TemporarySkeletonTracingService extends AnnotationContentService {
     }
   }
 
-  def createFrom(nmls: List[NML], settings: AnnotationSettings)(implicit ctx: DBAccessContext): Future[Option[TemporarySkeletonTracing]] = {
+  def createFrom(nmls: List[NML], settings: AnnotationSettings)(implicit ctx: DBAccessContext): Fox[TemporarySkeletonTracing] = {
     nmls match {
       case head :: tail =>
         val startTracing = createFrom(head, "", settings)
 
-        tail.foldLeft(Future.successful(startTracing)) {
+        tail.foldLeft(Fox.successful(startTracing)) {
           case (f, s) =>
             f.flatMap(t => t.mergeWith(createFrom(s, s.timestamp.toString)))
-        }.map(result => Some(result))
+        }
       case _ =>
-        Future.successful(None)
+        Fox.empty
     }
   }
 
   type AType = TemporarySkeletonTracing
 
-  def updateSettings(settings: AnnotationSettings, tracingId: String)(implicit ctx: DBAccessContext): Unit = ???
+  def updateSettings(settings: AnnotationSettings, tracingId: String)(implicit ctx: DBAccessContext) = ???
 
-  def findOneById(id: String)(implicit ctx: DBAccessContext): Future[Option[TemporarySkeletonTracingService.AType]] = ???
+  def findOneById(id: String)(implicit ctx: DBAccessContext) = ???
 
-  def createFrom(dataSet: DataSet)(implicit ctx: DBAccessContext): Future[TemporarySkeletonTracingService.AType] = ???
+  def createFrom(dataSet: DataSet)(implicit ctx: DBAccessContext) = ???
 
-  def clearTracingData(id: String)(implicit ctx: DBAccessContext): Fox[TemporarySkeletonTracingService.AType] = ???
+  def clearTracingData(id: String)(implicit ctx: DBAccessContext) = ???
 }

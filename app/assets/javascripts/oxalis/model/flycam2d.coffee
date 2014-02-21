@@ -36,7 +36,7 @@ class Flycam2d
     @quality = 0        # offset of integer zoom step to the best-quality zoom level
 
     # correct zoom values that are too high
-    @user.setValue("zoom", Math.min(@user.zoom, Math.floor(@getMaxZoomStep())))
+    @user.set("zoom", Math.min(@user.get("zoom"), Math.floor(@getMaxZoomStep())))
 
     @user.on({
       qualityChanged : (quality) => @setQuality(quality)
@@ -83,6 +83,7 @@ class Flycam2d
     @zoomStep = zoomStep
     @hasChanged = true
     @updateStoredValues()
+    @trigger "zoomStepChanged", zoomStep
 
 
   getMaxZoomStep : ->
@@ -128,7 +129,7 @@ class Flycam2d
   setDirection : (direction) ->
 
     @direction = direction
-    if @user.dynamicSpaceDirection
+    if @user.get("dynamicSpaceDirection")
       @setSpaceDirection(direction)
 
 

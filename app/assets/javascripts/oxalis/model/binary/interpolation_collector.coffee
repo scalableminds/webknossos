@@ -1,5 +1,5 @@
-### define 
-libs/lodash-2.4.1 : _
+### define
+underscore : _
 ###
 
 templateFill = (str, params) ->
@@ -22,7 +22,7 @@ pointIndexMacro = _.template(
     //-- pointIndexMacro(pointIndex, x, y, z, zoomStep)
     coordMask = 31 << zoomStep;
 
-    pointIndex = 
+    pointIndex =
       (
         ((z & coordMask) << (10 - zoomStep)) +
         ((y & coordMask) << (5 - zoomStep)) +
@@ -95,7 +95,7 @@ subPointMacro = _.template(
   if (bucketIndex == lastBucketIndex) {
 
     <%= pointIndexMacro({ pointIndex : "pointIndex", x : "sub_x", y : "sub_y", z : "sub_z", zoomStep : "lastBucketZoomStep" }) %>
-    
+
     <%= output %> = lastBucket[pointIndex];
 
   } else if (bucketIndex < buckets.length && (bucket = buckets[bucketIndex]) != null) {
@@ -132,14 +132,14 @@ trilinearMacro = _.template(
     """
     //-- trilinearMacro(output, p000, p100, p010, p110, p001, p101, p011, p111, d0, d1, d2)
 
-    output = 
+    output =
       p000 * (1 - d0) * (1 - d1) * (1 - d2) +
-      p100 * d0 * (1 - d1) * (1 - d2) + 
-      p010 * (1 - d0) * d1 * (1 - d2) + 
+      p100 * d0 * (1 - d1) * (1 - d2) +
+      p010 * (1 - d0) * d1 * (1 - d2) +
       p110 * d0 * d1 * (1 - d2) +
-      p001 * (1 - d0) * (1 - d1) * d2 + 
-      p101 * d0 * (1 - d1) * d2 + 
-      p011 * (1 - d0) * d1 * d2 + 
+      p001 * (1 - d0) * (1 - d1) * d2 +
+      p101 * d0 * (1 - d1) * d2 +
+      p011 * (1 - d0) * d1 * d2 +
       p111 * d0 * d1 * d2;
 
     """
@@ -168,13 +168,13 @@ collectLoopMacro = _.template(
     y0 = y >> 0; yd = y - y0;
     z0 = z >> 0; zd = z - z0;
 
-    baseBucketIndex = 
-      ((x0 - min_x) >> 5) * sizeZY + 
-      ((y0 - min_y) >> 5) * sizeZ + 
+    baseBucketIndex =
+      ((x0 - min_x) >> 5) * sizeZY +
+      ((y0 - min_y) >> 5) * sizeZ +
       ((z0 - min_z) >> 5);
 
-    basePointIndex = 
-      ((z0 & 31) << 10) + 
+    basePointIndex =
+      ((z0 & 31) << 10) +
       ((y0 & 31) << 5) +
       ((x0 & 31));
 
@@ -188,19 +188,19 @@ collectLoopMacro = _.template(
     <%= subPointMacro({ output : "output6", xd : 0,  yd : 1,  zd : 1 }) %>
     <%= subPointMacro({ output : "output7", xd : 1,  yd : 1,  zd : 1 }) %>
 
-    <%= trilinearMacro({ 
-      output : "trilinearOutput", 
-      p000 : "output0", 
-      p100 : "output1", 
-      p010 : "output2", 
-      p110 : "output3", 
-      p001 : "output4", 
-      p101 : "output5", 
-      p011 : "output6", 
-      p111 : "output7", 
-      d0 : "xd", 
-      d1 : "yd", 
-      d2 : "zd" 
+    <%= trilinearMacro({
+      output : "trilinearOutput",
+      p000 : "output0",
+      p100 : "output1",
+      p010 : "output2",
+      p110 : "output3",
+      p001 : "output4",
+      p101 : "output5",
+      p011 : "output6",
+      p111 : "output7",
+      d0 : "xd",
+      d1 : "yd",
+      d2 : "zd"
     }) %>
     buffer[j] = trilinearOutput;
     """
@@ -233,7 +233,7 @@ InterpolationCollector =
 
         sizeZ  = boundary[2];
         sizeZY = boundary[2] * boundary[1];
-        
+
         min_x = 0; //cubeOffset[0] << 5;
         min_y = 0; //cubeOffset[1] << 5;
         min_z = 0; //cubeOffset[2] << 5;
@@ -255,22 +255,22 @@ InterpolationCollector =
           y = vertices[--i];
           x = vertices[--i];
 
-          j++;         
+	  j++;
 
-          <%= collectLoopMacro({ 
-            x : "x", y : "y", z : "z", 
-            buffer : "buffer", 
-            j : "j", buckets : "buckets", 
-            min_x : "min_x", min_y : "min_y", min_z : "min_z", 
-            max_x : "max_x", max_y : "max_y", max_z : "max_z", 
+	  <%= collectLoopMacro({
+	    x : "x", y : "y", z : "z",
+	    buffer : "buffer",
+	    j : "j", buckets : "buckets",
+	    min_x : "min_x", min_y : "min_y", min_z : "min_z",
+	    max_x : "max_x", max_y : "max_y", max_z : "max_z",
             sizeZ : "sizeZ", sizeZY : "sizeZY"
           }) %>
         }
       }
-     
-      return { 
-        buffer : buffer, 
-        accessedBuckets : accessedBuckets 
+
+      return {
+	buffer : buffer,
+	accessedBuckets : accessedBuckets
       };
 
       //# sourceURL=/oxalis/model/binary/interpolation_collector/bulkCollect

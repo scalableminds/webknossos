@@ -1,6 +1,7 @@
 ### define
 jquery : $
 underscore : _
+three.color : ColorConverter
 ../../libs/request : Request
 ../../libs/event_mixin : EventMixin
 ./tracepoint : TracePoint
@@ -8,7 +9,7 @@ underscore : _
 ./statelogger : StateLogger
 ../constants : constants
 ./tracingparser : TracingParser
-libs/threejs/ColorConverter : ColorConverter
+three : THREE
 ###
 
 class CellTracing
@@ -18,8 +19,8 @@ class CellTracing
   TYPE_BRANCH  : constants.TYPE_BRANCH
   # Max and min radius in base voxels (see scaleInfo.baseVoxel)
   MIN_RADIUS        : 1
-  MAX_RADIUS        : 1000
-  
+  MAX_RADIUS        : 5000
+
   branchStack : []
   trees : []
   comments : []
@@ -44,9 +45,9 @@ class CellTracing
     ############ Load Tree from @data ##############
 
     @stateLogger = new StateLogger(this, @flycam, tracing.version, tracing.id, tracing.typ, tracing.restrictions.allowUpdate)
-    
+
     console.log "Annotation data: ", tracing
- 
+
     tracingParser = new TracingParser(@, @data)
     {
       @idCount
@@ -103,18 +104,18 @@ class CellTracing
 
     @stateLogger.pushNow()
 
-    
+
   benchmark : (numberOfTrees = 1, numberOfNodesPerTree = 10000) ->
 
     console.log "[benchmark] start inserting #{numberOfNodesPerTree} nodes"
     startTime = (new Date()).getTime()
     offset = 0
-    size = numberOfNodesPerTree / 100
+    size = numberOfNodesPerTree / 10
     for i in [0...numberOfTrees]
       @createNewTree()
       for i in [0...numberOfNodesPerTree]
         pos = [Math.random() * size + offset, Math.random() * size + offset, Math.random() * size + offset]
-        point = new TracePoint(@TYPE_USUAL, @idCount++, pos, null, @activeTree.treeId, null)
+        point = new TracePoint(@TYPE_USUAL, @idCount++, pos, Math.random() * 200, @activeTree.treeId, null)
         @activeTree.nodes.push(point)
         if @activeNode
           @activeNode.appendNext(point)
@@ -208,26 +209,26 @@ class CellTracing
   addNode : (position, type, viewport, resolution, centered = true) ->
 
     if @ensureDirection(position)
-      unless @lastRadius?
-        @lastRadius = 10 * @scaleInfo.baseVoxel
-        if @activeNode then @lastRadius = @activeNode.radius
+
+      radius = 10 * @scaleInfo.baseVoxel
+      if @activeNode then radius = @activeNode.radius
 
       metaInfo =
         timestamp : (new Date()).getTime()
         viewport : viewport
         resolution : resolution
-        bitDepth : if @user.fourBit then 4 else 8
-        interpolation : @user.interpolation
+        bitDepth : if @user.get("fourBit") then 4 else 8
+        interpolation : @user.get("interpolation")
 
-      point = new TracePoint(type, @idCount++, position, @lastRadius, @activeTree.treeId, metaInfo)
+      point = new TracePoint(type, @idCount++, position, radius, @activeTree.treeId, metaInfo)
       @activeTree.nodes.push(point)
-      
+
       if @activeNode
-      
+
         @activeNode.appendNext(point)
         point.appendNext(@activeNode)
         @activeNode = point
-      
+
       else
 
         @activeNode = point
@@ -235,11 +236,11 @@ class CellTracing
         if @branchPointsAllowed
           centered = true
           @pushBranch()
-      
+
       @doubleBranchPop = false
 
       @stateLogger.createNode(point, @activeTree.treeId)
-      
+
       @trigger("newNode", centered)
       @trigger("newActiveNode")
     else
@@ -266,7 +267,7 @@ class CellTracing
   getActiveNode : -> @activeNode
 
 
-  getActiveNodeId : -> 
+  getActiveNodeId : ->
 
     if @activeNode then @activeNode.id else null
 
@@ -279,6 +280,11 @@ class CellTracing
   getActiveNodeType : ->
 
     if @activeNode then @activeNode.type else null
+
+
+  getActiveNodeRadius : ->
+
+    if @activeNode then @activeNode.radius else 10 * @scaleInfo.baseVoxel
 
 
   getActiveTreeId : ->
@@ -299,7 +305,7 @@ class CellTracing
       else
         @activeTree.name = "Tree#{('00'+@activeTree.treeId).slice(-3)}"
       @stateLogger.updateTree(@activeTree)
-      
+
       @trigger("newTreeName")
 
 
@@ -327,6 +333,15 @@ class CellTracing
 
     if mergeTree
       @mergeTree(lastActiveNode, lastActiveTree)
+
+
+  setActiveNodeRadius : (radius) ->
+
+    if @activeNode?
+      @activeNode.radius = Math.min( @MAX_RADIUS,
+                            Math.max( @MIN_RADIUS, radius ) )
+      @stateLogger.updateNode( @activeNode, @activeNode.treeId )
+      @trigger "newActiveNodeRadius", radius
 
 
   setComment : (commentText) ->
@@ -390,7 +405,7 @@ class CellTracing
     if not ascendingOrder
       return @comments.reverse()
     return @comments
-    
+
 
   getPlainComments : =>
 
@@ -402,7 +417,7 @@ class CellTracing
 
   selectNextTree : (forward) ->
 
-    trees = @getTreesSorted(@user.sortTreesByName)
+    trees = @getTreesSorted(@user.get("sortTreesByName"))
     for i in [0...trees.length]
       if @activeTree.treeId == trees[i].treeId
         break
@@ -457,8 +472,8 @@ class CellTracing
   createNewTree : ->
 
     tree = new TraceTree(
-      @treeIdCount++, 
-      @getNewTreeColor(@treeIdCount-1), 
+      @treeIdCount++,
+      @getNewTreeColor(@treeIdCount-1),
       "Tree#{('00'+(@treeIdCount-1)).slice(-3)}",
       (new Date()).getTime())
     @trees.push(tree)
@@ -487,7 +502,7 @@ class CellTracing
     @stateLogger.deleteNode(deletedNode, @activeTree.treeId)
 
     @deleteBranch(deletedNode)
-    
+
     if deletedNode.neighbors.length > 1
       # Need to split tree
       newTrees = []
@@ -516,7 +531,7 @@ class CellTracing
       # this deferred will be resolved once the skeleton has finished reloading the trees
       @finishedDeferred = new $.Deferred()
       @trigger("reloadTrees", newTrees, @finishedDeferred)
-        
+
     else if @activeNode.neighbors.length == 1
       # no children, so just remove it.
       @setActiveNode(deletedNode.neighbors[0].id)
@@ -555,7 +570,7 @@ class CellTracing
 
     @stateLogger.deleteTree(tree)
     @trigger("deleteTree", index)
-    
+
     # Because we always want an active tree, check if we need
     # to create one.
     if @trees.length == 0
@@ -580,12 +595,12 @@ class CellTracing
         # update tree ids
         for node in @activeTree.nodes
           node.treeId = @activeTree.treeId
-        
+
         @stateLogger.mergeTree(lastTree, @activeTree, lastNode.id, activeNodeID)
 
         @trigger("mergeTree", lastTree.treeId, lastNode, @activeNode)
 
-        @deleteTree(false, lastTree.treeId, false)
+        #@deleteTree(false, lastTree.treeId, false)
 
         @setActiveNode(activeNodeID)
       else
@@ -607,7 +622,7 @@ class CellTracing
 
   getTreesSorted : ->
 
-    if @user.sortTreesByName
+    if @user.get("sortTreesByName")
       return (@trees.slice(0)).sort(@compareNames)
     else
       return (@trees.slice(0)).sort(@compareTimestamps)

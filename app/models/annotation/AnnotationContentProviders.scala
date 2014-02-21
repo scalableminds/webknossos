@@ -18,11 +18,11 @@ import models.binary.DataSet
 trait AnnotationContentService {
   type AType <: AnnotationContent
 
-  def updateSettings(settings: AnnotationSettings, tracingId: String)(implicit ctx: DBAccessContext): Unit
+  def updateSettings(settings: AnnotationSettings, tracingId: String)(implicit ctx: DBAccessContext): Fox[Boolean]
 
-  def findOneById(id: String)(implicit ctx: DBAccessContext): Future[Option[AType]]
+  def findOneById(id: String)(implicit ctx: DBAccessContext): Fox[AType]
 
-  def createFrom(dataSet: DataSet)(implicit ctx: DBAccessContext): Future[AType]
+  def createFrom(dataSet: DataSet)(implicit ctx: DBAccessContext): Fox[AType]
 
   def clearTracingData(id: String)(implicit ctx: DBAccessContext): Fox[AType]
 }
@@ -36,13 +36,13 @@ trait AnnotationContentProviders {
 
   val providerList = contentProviders.keys
 
-  def withProviderForContentType[T](contentType: String)(f: AnnotationContentService => Future[T]): Future[Option[T]] = {
+  def withProviderForContentType[T](contentType: String)(f: AnnotationContentService => Fox[T]): Fox[T] = {
     contentProviders.get(contentType) match {
       case Some(p) =>
-        f(p).map(result => Some(result))
+        f(p)
       case _ =>
         Logger.warn(s"Couldn't find content provider for $contentType")
-        Future.successful(None)
+        Fox.failure(s"Couldn't find content provider for $contentType")
     }
   }
 }

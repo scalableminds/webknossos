@@ -3,7 +3,7 @@ package models.team
 import play.api.libs.json._
 import reactivemongo.bson.BSONObjectID
 import play.modules.reactivemongo.json.BSONFormats._
-import braingames.reactivemongo.{DBAccessContext, SecuredDAO}
+import braingames.reactivemongo.{DBAccessContext}
 import models.basics.SecuredBaseDAO
 import braingames.util.FoxImplicits
 import models.user.User

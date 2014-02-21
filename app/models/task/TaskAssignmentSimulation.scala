@@ -4,11 +4,12 @@ import models.user.User
 import models.annotation.{Annotation, AnnotationType, AnnotationDAO, AnnotationService}
 
 import scala.concurrent.Future
-import braingames.util.FoxImplicits
+import braingames.util.{Fox, FoxImplicits}
 import reactivemongo.bson.BSONObjectID
 import scala.async.Async._
 import play.api.libs.concurrent.Execution.Implicits._
 import braingames.reactivemongo.DBAccessContext
+import net.liftweb.common.{Failure, Full}
 
 /**
  * Company: scalableminds
@@ -37,38 +38,37 @@ trait TaskAssignmentSimulation extends TaskAssignment with FoxImplicits {
     }
   }
 
-  def simulateFinishOfCurrentTask(user: User)(implicit ctx: DBAccessContext): Future[User] = {
-    def simulateFinishOfAnnotation(userFuture: Future[User], annotation: Annotation): Future[User] = async {
-      val user = await(userFuture)
-      val updated =
-        for {
-          task <- annotation.task
-          if (task.isTraining)
-          training <- task.training.toFox
-        } yield {
-          user.increaseExperience(training.domain, training.gain)
-        }
+  def simulateFinishOfCurrentTask(user: User)(implicit ctx: DBAccessContext): Fox[User] = {
+    def simulateFinishOfAnnotation(userFox: Fox[User], annotation: Annotation): Fox[User] = userFox.flatMap {
+      user =>
+        val updated =
+          for {
+            task <- annotation.task
+            if (task.isTraining)
+            training <- task.training.toFox
+          } yield {
+            user.increaseExperience(training.domain, training.gain)
+          }
 
-      await(updated getOrElse user)
+        updated getOrElse user
     }
 
 
-    AnnotationService.openTasksFor(user).flatMap { tasks =>
-      tasks.foldLeft(Future.successful(user))(simulateFinishOfAnnotation)
+    AnnotationService.openTasksFor(user).flatMap {
+      tasks =>
+        tasks.foldLeft(Fox.successful(user))(simulateFinishOfAnnotation)
     }
   }
 
-  def simulateTaskAssignment(users: List[User])(implicit ctx: DBAccessContext): Future[Map[User, Task]] = {
-    def assignToEach(users: List[User], assignmentStatus: AssignmentStatus): Future[AssignmentStatus] = {
-      users.foldLeft(Future.successful(assignmentStatus)) {
-        case (status, user) =>
-          async {
-            await(simulateTaskAssignments(user, await(status)))
-          }
+  def simulateTaskAssignment(users: List[User])(implicit ctx: DBAccessContext): Fox[Map[User, Task]] = {
+    def assignToEach(users: List[User], assignmentStatus: AssignmentStatus): Fox[AssignmentStatus] = {
+      users.foldLeft(Fox.successful(assignmentStatus)) {
+        case (status, user) => status.flatMap(simulateTaskAssignments(user, _))
       }
     }
+
     for {
-      preparedUsers <- Future.traverse(users)(simulateFinishOfCurrentTask)
+      preparedUsers <- Fox.combined(users.map(simulateFinishOfCurrentTask))
       available <- findAllAssignableNonTrainings
       result <- assignToEach(preparedUsers, AssignmentStatus(available))
     } yield {
@@ -76,23 +76,29 @@ trait TaskAssignmentSimulation extends TaskAssignment with FoxImplicits {
     }
   }
 
-  def simulateTaskAssignments(user: User, assignmentStatus: AssignmentStatus)(implicit ctx: DBAccessContext): Future[AssignmentStatus] = {
+  def simulateTaskAssignments(user: User, assignmentStatus: AssignmentStatus)(implicit ctx: DBAccessContext): Fox[AssignmentStatus] = {
     async {
-      val doneTasks = await(AnnotationService.findTasksOf(user).map(_.flatMap(_._task)))
+      await(AnnotationService.findTasksOf(user).map(_.flatMap(_._task)).futureBox) match {
+        case Full(doneTasks) =>
 
-      def canBeDoneByUser(t: Task) = t.hasEnoughExperience(user) && !doneTasks.contains(t._id) && !t.isFullyAssigned
+          def canBeDoneByUser(t: Task) = t.hasEnoughExperience(user) && !doneTasks.contains(t._id) && !t.isFullyAssigned
 
-      val tasksAvailable = assignmentStatus.tasks.values.filter(canBeDoneByUser)
-      await(nextTaskForUser(user, Future.successful(tasksAvailable.toList))) match {
-        case Some(task) =>
-          assignmentStatus.addAssignment(user, task, false)
-        case _ =>
-          await(Training.findAssignableFor(user)).headOption match {
-            case Some(training) =>
-              assignmentStatus.addAssignment(user, training, true)
+          val tasksAvailable = assignmentStatus.tasks.values.filter(canBeDoneByUser)
+          await(nextTaskForUser(user, Future.successful(tasksAvailable.toList)).futureBox) match {
+            case Full(task) =>
+              Full(assignmentStatus.addAssignment(user, task, false))
             case _ =>
-              assignmentStatus
+              await(Training.findAssignableFor(user).futureBox) match {
+                case Full(training :: _) =>
+                  Full(assignmentStatus.addAssignment(user, training, true))
+                case _ =>
+                  Full(assignmentStatus)
+              }
           }
+
+        case f: Failure => f
+        case _ => Failure("Failed to simulate task assignemtns")
+
       }
     }
   }

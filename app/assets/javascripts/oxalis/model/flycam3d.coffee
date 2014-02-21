@@ -2,6 +2,7 @@
 libs/event_mixin : EventMixin
 m4x4 : M4x4
 underscore : _
+three : THREE
 ###
 
 updateMacro = (_this) ->

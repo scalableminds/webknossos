@@ -3,6 +3,7 @@
 ../view : View
 ../model/dimensions : Dimensions
 ../constants : constants
+three : THREE
 ###
 
 class Plane

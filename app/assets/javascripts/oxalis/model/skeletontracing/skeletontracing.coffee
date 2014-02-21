@@ -9,6 +9,7 @@ three.color : ColorConverter
 ./skeletontracing_statelogger : SkeletonTracingStateLogger
 ../../constants : constants
 ./tracingparser : TracingParser
+three : THREE
 ###
 
 class SkeletonTracing

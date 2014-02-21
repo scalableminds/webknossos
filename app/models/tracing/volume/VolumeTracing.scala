@@ -57,8 +57,17 @@ object VolumeTracingService extends AnnotationContentService{
 
   def updateSettings(settings: AnnotationSettings, tracingId: String)(implicit ctx: DBAccessContext): Fox[Boolean] = ???
 
-  def findOneById(id: String)(implicit ctx: DBAccessContext): Future[Option[VolumeTracingService.AType]] =
+  def findOneById(id: String)(implicit ctx: DBAccessContext) =
     VolumeTracingDAO.findOneById(id)
+
+  def createFrom(baseDataSet: DataSet)(implicit ctx: DBAccessContext) = {
+    val dataLayer = BinaryDataService.createUserDataSource(baseDataSet.dataSource)
+    val t = VolumeTracing(baseDataSet.dataSource.name, dataLayer.name, System.currentTimeMillis(), Point3D(0,0,0))
+    UserDataLayerDAO.insert(dataLayer)
+    VolumeTracingDAO.insert(t).map{ _ =>
+      t
+    }
+  }
 
   def clearTracingData(id: String)(implicit ctx: DBAccessContext): Fox[VolumeTracingService.AType] = ???
 }
@@ -73,10 +82,4 @@ object VolumeTracingDAO extends SecuredBaseDAO[VolumeTracing] {
   val collectionName = "volumes"
 
   val formatter = VolumeTracing.volumeTracingFormat
-
-  def createFrom(baseDataSet: DataSet)(implicit ctx: DBAccessContext) = {
-    val dataSet = BinaryDataService.createUserDataSource(baseDataSet.dataSource)
-    val t = VolumeTracing(dataSet.name, System.currentTimeMillis(), Point3D(0,0,0))
-    insert(t)
-  }
 }

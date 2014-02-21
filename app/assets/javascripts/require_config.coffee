@@ -55,9 +55,8 @@ require.config(
     "three.color" :
       deps : ["three"]
       exports : "THREE.ColorConverter"
-    "qassert" : [ "jquery"]
     "backbone" :
-      deps : [ "underscore" ]
+      deps : [ "jquery", "underscore" ]
       exports : "Backbone"
     "backbone.marionette" : [ "backbone", "underscore" ]
     "backbone.paginator" : [ "backbone", "underscore" ]

@@ -6,6 +6,7 @@ tween : TWEEN_LIB
 ../../libs/event_mixin : EventMixin
 ../constants : constants
 ./modal : modal
+three : THREE
 ###
 
 class PlaneView

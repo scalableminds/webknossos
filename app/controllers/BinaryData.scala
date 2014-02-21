@@ -53,7 +53,7 @@ object BinaryData extends Controller with Secured {
                  )(implicit ctx: DBAccessContext): Fox[Array[Byte]] = {
     for {
       dataSet <- DataSetDAO.findOneBySourceName(dataSetName) ?~> Messages("dataSet.notFound")
-      dataLayer <- getDataLayer(dataSet.dataSource, dataLayerTyp, annotationId, userOpt) ?~> Messages("dataLayer.notFound")
+      dataLayer <- getDataLayer(dataSet, dataLayerTyp, annotationId, userOpt) ?~> Messages("dataLayer.notFound")
       dataRequestCollection = createDataRequestCollection(dataSet, dataLayer, cubeSize, parsedRequest)
       data <- BinaryDataService.handleDataRequest(dataRequestCollection) ?~> "Data request couldn't get handled"
     } yield {
@@ -75,7 +75,7 @@ object BinaryData extends Controller with Secured {
                  )(implicit ctx: DBAccessContext): Fox[Array[Byte]] = {
     for {
       dataSet <- DataSetDAO.findOneBySourceName(dataSetName) ?~> Messages("dataSet.notFound")
-      dataLayer <- getDataLayer(dataSet.dataSource, dataLayerTyp, annotationId, userOpt) ?~> Messages("dataLayer.notFound")
+      dataLayer <- getDataLayer(dataSet, dataLayerTyp, annotationId, userOpt) ?~> Messages("dataLayer.notFound")
 
       dataRequestCollection = BinaryDataService.createDataReadRequest(
         dataSet.dataSource,
@@ -95,7 +95,7 @@ object BinaryData extends Controller with Secured {
 
   def createDataWriteRequestCollection(dataSet: DataSet, dataLayer: DataLayer, cubeSize: Int, parsedRequest: ParsedRequestCollection[ParsedDataWriteRequest]) = {
     val dataRequests = parsedRequest.requests.map(r =>
-      BinaryDataService.createDataWriteRequest(dataSet, dataLayer, None, cubeSize, r))
+      BinaryDataService.createDataWriteRequest(dataSet.dataSource, dataLayer, None, cubeSize, r))
     DataRequestCollection(dataRequests)
   }
 
@@ -112,7 +112,7 @@ object BinaryData extends Controller with Secured {
     Ok
   }
 
-  def requestViaAjaxDebug(dataSetName: String, dataLayerTyp: String, cubeSize: Int, x: Int, y: Int, z: Int, resolution: Int, annotationId: Option[String]) = Authenticated().async {
+  def requestViaAjaxDebug(dataSetName: String, dataLayerTyp: String, cubeSize: Int, x: Int, y: Int, z: Int, resolution: Int, annotationId: Option[String]) = Authenticated.async {
     implicit request =>
       val dataRequests = ParsedRequestCollection(Array(ParsedDataReadRequest(resolution, Point3D(x, y, z), false)))
       for {
@@ -129,7 +129,7 @@ object BinaryData extends Controller with Secured {
       if annotation.restrictions.allowAccess(userOpt)
       VolumeTracing(_, userDataLayerName, _, _, _, _) <- annotation.content
       userDataLayer <- UserDataLayerDAO.findOneByName(userDataLayerName).toFox
-      if userDataLayer.dataSetName == dataSet.name && userDataLayer.dataLayer.typ == dataLayerTyp
+      if userDataLayer.dataSourceName == dataSet.dataSource.name && userDataLayer.dataLayer.typ == dataLayerTyp
     } yield {
       userDataLayer.dataLayer
     }
@@ -138,7 +138,7 @@ object BinaryData extends Controller with Secured {
   def getDataLayer(dataSet: DataSet, dataLayerTyp: String, annotationId: Option[String], userOpt: Option[User])(implicit ctx: DBAccessContext): Fox[DataLayer] = {
     tryGetUserDataLayer(dataSet, dataLayerTyp, annotationId, userOpt).orElse(
       for {
-        dataLayer <- dataSet.dataLayer(dataLayerTyp)
+        dataLayer <- dataSet.dataSource.dataLayer(dataLayerTyp)
       } yield {
         dataLayer
       }
@@ -195,7 +195,7 @@ object BinaryData extends Controller with Secured {
   def writeViaAjax(dataSetName: String, dataLayerTyp: String, cubeSize: Int, annotationId: String) = UserAwareAction.async(parse.raw(1048576)) {
     implicit request =>
       for {
-        dataSet <- DataSetDAO.findOneByName(dataSetName).toFox ?~> Messages("dataSet.notFound")
+        dataSet <- DataSetDAO.findOneBySourceName(dataSetName).toFox ?~> Messages("dataSet.notFound")
         dataLayer <- tryGetUserDataLayer(dataSet, dataLayerTyp, Some(annotationId), request.userOpt) ?~> Messages("dataLayer.test") 
         payloadBodySize = cubeSize * cubeSize * cubeSize * dataLayer.bytesPerElement
         payload <- request.body.asBytes() ?~> Messages("binary.payload.notSupplied")

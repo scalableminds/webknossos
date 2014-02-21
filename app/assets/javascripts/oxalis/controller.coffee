@@ -17,6 +17,7 @@ underscore : _
 ./view/gui : Gui
 ../libs/toast : Toast
 ./constants : constants
+stats : Stats
 ###
 
 class Controller

@@ -1,9 +1,3 @@
-define("app", ["backbone.marionette"], (Marionette) ->
-  app = new Backbone.Marionette.Application()
-  window.app = app
-  return app
-)
-
 require [
   "jquery"
   "underscore"

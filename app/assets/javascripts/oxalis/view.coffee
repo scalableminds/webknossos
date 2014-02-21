@@ -2,6 +2,8 @@
 jquery : $
 ../libs/toast : Toast
 ./constants : constants
+./view/modal : modal
+three : THREE
 ###
 
 class View

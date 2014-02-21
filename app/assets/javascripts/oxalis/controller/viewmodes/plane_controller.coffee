@@ -8,6 +8,9 @@ three.trackball : Trackball
 ../../model/dimensions : Dimensions
 ../../view/plane_view : PlaneView
 ../../constants : constants
+./celltracing_controller : CellTracingController
+./volumetracing_controller : VolumeTracingController
+three : THREE
 ###
 
 class PlaneController

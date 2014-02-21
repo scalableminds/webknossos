@@ -254,7 +254,7 @@ class Controller
     gui = new Gui($("#optionswindow"), model, restrictions, settings)
     gui.update()
 
-    model.binary["color"].queue.set4Bit(model.user.get("fourBit"))
+    model.binary["color"].pullQueue.set4Bit(model.user.get("fourBit"))
     model.binary["color"].updateContrastCurve(
       gui.settingsGeneral.brightness, gui.settingsGeneral.contrast)
 

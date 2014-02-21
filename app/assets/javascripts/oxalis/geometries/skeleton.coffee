@@ -197,7 +197,7 @@ class Skeleton
 
   setActiveNodeRadius : ->
 
-    if (activeNode = @model.cellTracing.getActiveNode())?
+    if (activeNode = @model.skeletonTracing.getActiveNode())?
       treeGeometry = @getTreeGeometry( activeNode.treeId )
       treeGeometry?.updateNodeRadius( activeNode.id, activeNode.radius )
       @flycam.update()

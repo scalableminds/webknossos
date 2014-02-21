@@ -1,4 +1,5 @@
 ### define
+three : THREE
 ###
 
 class ParticleMaterialFactory

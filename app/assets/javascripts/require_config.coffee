@@ -5,7 +5,7 @@ require.config(
   waitSeconds : 0
 
   paths :
-    "jquery"              : "../bower_components/jquery/jquery"
+    "jquery"              : "../bower_components/jquery/dist/jquery"
     "underscore"          : "../bower_components/lodash/dist/lodash"
     "bootstrap"           : "../bower_components/bootstrap/docs/assets/js/bootstrap"
     "slider"              : "../bower_components/bootstrap-slider/bootstrap-slider"
@@ -55,9 +55,8 @@ require.config(
     "three.color" :
       deps : ["three"]
       exports : "THREE.ColorConverter"
-    "qassert" : [ "jquery"]
     "backbone" :
-      deps : [ "underscore" ]
+      deps : [ "jquery", "underscore" ]
       exports : "Backbone"
     "backbone.marionette" : [ "backbone", "underscore" ]
     "backbone.paginator" : [ "backbone", "underscore" ]

@@ -52,7 +52,7 @@ makeScripts = (dest) ->
 makeStyles = (dest) ->
   return eventStream.pipeline(
     plumber()
-    less( sourceMap : true ).on("error", 
+    less({}).on("error", 
       (err) -> util.log(util.colors.red("!!"), err.toString())
     )
     gulp.dest(dest)

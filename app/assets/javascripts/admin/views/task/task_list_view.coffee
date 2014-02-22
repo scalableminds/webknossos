@@ -26,6 +26,13 @@ class TaskListView extends Backbone.Marionette.CompositeView
          </tr>
       </thead>
     </table>
+    <div class="form-actions navbar-fixed-bottom">
+      <div class="btn-group">
+        <a class="btn btn-primary" href="/admin/tasks/create">
+          <i class="fa fa-tasks"></i>Create New Task
+        </a>
+      </div>
+    </div>
   """)
   className : "task-administration container wide"
   itemView : TaskListItemView

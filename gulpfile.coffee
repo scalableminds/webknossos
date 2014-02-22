@@ -18,7 +18,7 @@ paths =
   src :
     css : "app/assets/stylesheets/main.less"
     js : "app/assets/javascripts/**/*.{coffee,js}"
-    version : "./version"
+    version : "#{__dirname}/version"
   dest :
     js_tmp : "public/javascripts_tmp"
     js : "public/javascripts"
@@ -52,7 +52,7 @@ makeScripts = (dest) ->
 makeStyles = (dest) ->
   return eventStream.pipeline(
     plumber()
-    less( sourceMap : true ).on("error", 
+    less({}).on("error", 
       (err) -> util.log(util.colors.red("!!"), err.toString())
     )
     gulp.dest(dest)
@@ -92,7 +92,7 @@ gulp.task("combine:scripts:production", ->
 
 gulp.task("install:bower", ->
   return gulp.src("bower.json")
-    .pipe(exec("./node_modules/bower/bin/bower install"))
+    .pipe(exec("./node_modules/bower/bin/bower install -f"))
 )
 
 gulp.task("clean:tmp", ->
@@ -107,17 +107,17 @@ gulp.task("clean:build", ->
 
 
 gulp.task("watch:scripts:development", ->
-  return watch(glob : paths.src.js)
+  return watch(glob : paths.src.js, name : "Script-Watcher")
     .pipe(makeScripts(paths.dest.js))
 )
 
 gulp.task("watch:styles", ->
-  return watch(glob : paths.src.css)
+  return watch(glob : paths.src.css, name : "Style-Watcher")
     .pipe(makeStyles(paths.dest.css))
 )
 
 gulp.task("watch:version", ->
-  return bumpVersion(watch(glob : paths.src.version))
+  return bumpVersion(watch(glob : paths.src.version, name : "Version-Watcher"))
 )
 
 

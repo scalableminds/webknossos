@@ -21,6 +21,7 @@ class Router extends Backbone.Router
     "admin/tasks/overview"          : "taskOverview"
     "annotations/Task/:id"          : "tracingTrace"
     "annotations/Explorational/:id" : "tracingTrace"
+    "annotations/View/:id"          : "tracingTrace"
     "datasets/:id/view"             : "tracingView"
     "users/:id/details"             : "userDetails"
     "*url"                          : "hideLoading"
@@ -53,9 +54,6 @@ class Router extends Backbone.Router
 
     require [
       "oxalis/controller"
-      "libs/core_ext"
-      "three"
-      "stats"
     ], (Controller) ->
 
       leftTabBar = $("#main")
@@ -87,14 +85,11 @@ class Router extends Backbone.Router
 
       return
 
+
   tracingView : ->
 
     require [
       "oxalis/controller"
-      "libs/core_ext"
-      "three"
-      "three"
-      "stats"
       "slider"
     ], (Controller) ->
 

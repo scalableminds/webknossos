@@ -2,6 +2,7 @@
 ../../libs/resizable_buffer : ResizableBuffer
 three.color : ColorConverter
 ./materials/particle_material_factory : ParticleMaterialFactory
+three : THREE
 ###
 
 class Tree

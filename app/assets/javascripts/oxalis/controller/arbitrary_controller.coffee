@@ -82,10 +82,13 @@ class ArbitraryController
       leftDownMove : (delta) =>
         if @mode == constants.MODE_ARBITRARY
           @cam.yaw(
-            -delta.x * @model.user.getMouseInversionX() * @model.user.get("mouseRotateValue")            true )
+            -delta.x * @model.user.getMouseInversionX() * @model.user.get("mouseRotateValue"),
+            true
+          )
           @cam.pitch(
             delta.y * @model.user.getMouseInversionY() * @model.user.get("mouseRotateValue"),
-            true )
+            true
+          )
         else if @mode == constants.MODE_ARBITRARY_PLANE
           f = @cam.getZoomStep() / (@view.width / @WIDTH)
           @cam.move [delta.x * f, delta.y * f, 0]

@@ -172,6 +172,12 @@ object TaskDAO extends SecuredBaseDAO[Task] with FoxImplicits {
   def findAllNonTrainings(implicit ctx: DBAccessContext) =
     findAllOfOneType(isTraining = false)
 
+  def findAllAdministratableNonTrainings(user: User)(implicit ctx: DBAccessContext) = withExceptionCatcher{
+    find(Json.obj(
+      "training" -> Json.obj("$exists" -> false),
+      "team" -> Json.obj("$in" -> user.adminTeamNames))).cursor[Task].collect[List]()
+  }
+
   def findAllAssignableNonTrainings(implicit ctx: DBAccessContext) =
     findAllNonTrainings.map(_.filter(!_.isFullyAssigned))
 

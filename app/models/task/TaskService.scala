@@ -6,7 +6,7 @@ import reactivemongo.bson.BSONObjectID
 
 import braingames.util.{Fox, FoxImplicits}
 import play.api.libs.concurrent.Execution.Implicits._
-import models.user.Experience
+import models.user.{User, Experience}
 import scala.concurrent.Future
 import play.api.Logger
 import reactivemongo.core.commands.LastError
@@ -23,6 +23,9 @@ object TaskService extends TaskAssignmentSimulation with TaskAssignment with Fox
   def findAllAssignableNonTrainings(implicit ctx: DBAccessContext) = TaskDAO.findAllAssignableNonTrainings
 
   def findAllNonTrainings(implicit ctx: DBAccessContext) = TaskDAO.findAllNonTrainings
+
+  def findAllAdministratableNonTrainings(user: User)(implicit ctx: DBAccessContext) =
+    TaskDAO.findAllAdministratableNonTrainings(user)
 
   def remove(_task: BSONObjectID)(implicit ctx: DBAccessContext) = {
     TaskDAO.removeById(_task).flatMap{

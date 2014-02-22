@@ -19,9 +19,11 @@
     "gamepad.js": "*",
     "jquery-bootpag": "1.0.4",
     "tweenjs": "r6",
-    "three.js": "git@github.com:georgwiese/three.js.git#scm_r66",
     "backbone.paginator": "~0.8.1",
-    "seiyria-bootstrap-slider": "~1.9.5"
+    "seiyria-bootstrap-slider": "~1.9.5",
+    "three": "https://raw.github.com/georgwiese/three.js/master/build/three.js",
+    "ColorConverter": "https://raw.github.com/georgwiese/three.js/master/examples/js/math/ColorConverter.js",
+    "TrackballControls": "https://raw.github.com/georgwiese/three.js/master/examples/js/controls/TrackballControls.js"
   },
   "devDependencies": {}
 }

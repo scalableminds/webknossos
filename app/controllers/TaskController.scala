@@ -27,6 +27,15 @@ object TaskController extends Controller with Secured {
     Ok(views.html.main()(Html.empty))
   }
 
+  def list = Authenticated.async{ implicit request =>
+    for {
+      tasks <- TaskService.findAllAdministratableNonTrainings(request.user)
+      js <- Future.traverse(tasks)(Task.transformToJson)
+    } yield {
+      Ok(Json.toJson(js))
+    }
+  }
+
   def ensureMaxNumberOfOpenTasks(user: User)(implicit ctx: DBAccessContext): Fox[Int] = {
     AnnotationService.countOpenTasks(user).flatMap{ numberOfOpen => Future.successful(
       if (numberOfOpen < MAX_OPEN_TASKS)

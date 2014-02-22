@@ -72,18 +72,8 @@ object TaskAdministration extends AdminController {
   val taskForm = Form(
     taskMapping).fill("", "", Point3D(0, 0, 0), Experience.empty, 100, 10, "", "")
 
-  def list = Authenticated.async { implicit request =>
-    render.async {
-      case Accepts.Html() =>
-        Future.successful(Ok(html.admin.task.taskList()))
-      case Accepts.Json() =>
-        for {
-          tasks <- TaskService.findAllNonTrainings
-          js <- Future.traverse(tasks)(Task.transformToJson)
-        } yield {
-          JsonOk(Json.obj("data" -> js))
-        }
-    }
+  def list = Authenticated{ implicit request =>
+    Ok(html.admin.task.taskList())
   }
 
   def taskCreateHTML(

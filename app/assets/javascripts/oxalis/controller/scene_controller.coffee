@@ -8,6 +8,7 @@
 ../../libs/event_mixin : EventMixin
 ../constants : constants
 ../view/polygons/polygon_factory : PolygonFactory
+three : THREE
 ###
 
 class SceneController

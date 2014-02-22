@@ -214,12 +214,12 @@ class Cube
       cube[bucketIndex] = bucketData
 
       # Generate identity mapping
-      mappingIndex = @getMappingIndexByZoomedAddress(address)
-      if not @mappings[mappingIndex]?
-        mapping = new Array( 1 << @LOCAL_ID_SIZE_P )
-        for i in [0...mapping.length]
-          mapping[i] = i
-        @mappings[mappingIndex] = mapping
+      #mappingIndex = @getMappingIndexByZoomedAddress(address)
+      #if not @mappings[mappingIndex]?
+      #  mapping = new Array( 1 << @LOCAL_ID_SIZE_P )
+      #  for i in [0...mapping.length]
+      #    mapping[i] = i
+      #  @mappings[mappingIndex] = mapping
 
       @setArbitraryBucketByZoomedAddress(address, bucketData) if address[3] <= @ARBITRARY_MAX_ZOOMSTEP
       @trigger("bucketLoaded", address)

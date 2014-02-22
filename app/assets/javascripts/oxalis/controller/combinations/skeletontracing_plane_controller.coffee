@@ -145,18 +145,20 @@ class SkeletonTracingPlaneController extends PlaneController
 
       @model.skeletonTracing.pushBranch()
       @skeletonTracingController.setActiveNode(activeNode.id)
-      
+
 
   addNode : (position, centered) =>
 
-    if @model.user.newNodeNewTree == true
+    if @model.user.get("newNodeNewTree") == true
       @createNewTree()
       # make sure the tree was rendered two times before adding nodes,
       # otherwise our buffer optimizations won't work
       @model.skeletonTracing.one("finishedRender", =>
         @model.skeletonTracing.one("finishedRender", =>
-          @model.skeletonTracing.addNode(position, constants.TYPE_USUAL))
+          @model.skeletonTracing.addNode(position, constants.TYPE_USUAL,
+            @activeViewport, @model.flycam.getIntegerZoomStep()))
         @planeView.draw())
       @planeView.draw()
     else
-      @model.skeletonTracing.addNode(position, constants.TYPE_USUAL, centered)
+      @model.skeletonTracing.addNode(position, constants.TYPE_USUAL,
+        @activeViewport, @model.flycam.getIntegerZoomStep(), centered)

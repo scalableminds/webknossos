@@ -1,7 +1,6 @@
 ### define
 underscore : _
 ../pagination_collection : PaginationCollection
-./task_model : TaskModel
 ###
 
 class TaskCollection extends PaginationCollection

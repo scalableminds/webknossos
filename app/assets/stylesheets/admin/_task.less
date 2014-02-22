@@ -1,0 +1,19 @@
+.task-administration {
+
+  // .table-double-striped tbody > tr:nth-child(odd) td{
+  //   background-color: #f9f9f9;
+  // }
+
+  tbody + tbody {
+    border-top: 0px;
+  }
+
+  //remove later
+  .table-double-striped > tbody:nth-child(odd) {
+    & > tr:nth-child(4n+1) > td,
+    & > tr:nth-child(4n+2) > td {
+      background-color: #f9f9f9
+    }
+  }
+
+}

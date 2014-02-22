@@ -34,7 +34,6 @@ case class Annotation(
                        typ: String = AnnotationType.Explorational,
                        version: Int = 0,
                        _name: Option[String] = None,
-                       override val review: List[AnnotationReview] = Nil,
                        _id: BSONObjectID = BSONObjectID.generate
                      )
 
@@ -70,16 +69,6 @@ case class Annotation(
     }
   }
 
-  def finishReview(comment: String) = {
-    val alteredReview = this.review match {
-      case head :: tail =>
-        head.copy(comment = Some(comment)) :: tail
-      case _ =>
-        Nil
-    }
-    this.copy(review = alteredReview)
-  }
-
   def removeTask = {
     this.copy(_task = None, typ = AnnotationType.Orphan)
   }
@@ -90,23 +79,13 @@ case class Annotation(
     val basicActions = List(
       ResourceAction("trace", AnnotationController.trace(typ,id), icon = Some("fa fa-random")),
       ResourceAction(ResourceAction.Finish, AnnotationController.finish(typ, id), condition = !state.isFinished, icon = Some("fa fa-check-circle-o"), dataAjax = "replace-row,confirm", clazz = "trace-finish"),
-      ResourceAction("start review", TrainingsTracingAdministration.startReview(id), condition = state.isReadyForReview, icon = Some("fa fa-eye"), dataAjax = "replace-row"),
       ResourceAction("reopen", AnnotationController.reopen(typ, id), condition = state.isFinished, icon = Some("fa fa-share"), dataAjax = "replace-row"),
       ResourceAction(ResourceAction.Download, AnnotationController.download(typ, id), icon = Some("fa fa-download")),
       ResourceAction("reset", AnnotationController.reset(typ, id), icon = Some("fa fa-undo"), dataAjax = "replace-row,confirm"),
       ResourceAction("delete", AnnotationController.cancel(typ, id), icon = Some("fa fa-trash-o"), dataAjax = "delete-row,confirm")
     )
 
-    val reviewActions = (review.headOption, userOpt) match{
-      case (Some(r), Some(user)) if user._id == r._reviewer => List(
-        ResourceAction("review", AnnotationController.trace(AnnotationType.Review, r._id.stringify), condition = state.isInReview, icon = Some("fa fa-random")),
-        ResourceAction("finish review", TrainingsTracingAdministration.finishReview(id), condition = state.isInReview, icon = Some("fa fa-check-circle")),
-        ResourceAction("abort review", TrainingsTracingAdministration.abortReview(id), condition = state.isInReview, icon = Some("fa fa-time-circle"), dataAjax = "replace-row,confirm"))
-      case _ =>
-        Nil
-    }
-
-    ResourceActionCollection(reviewActions ::: basicActions)
+    ResourceActionCollection(basicActions)
   }
 }
 
@@ -131,7 +110,6 @@ object Annotation {
         "name" -> annotation.name,
         "id" -> annotation.id,
         "formattedHash" -> Formatter.formatHash(annotation.id),
-        "review" -> annotation.review,
         "stats" -> stats.toOption
 
       )
@@ -150,12 +128,6 @@ object AnnotationDAO
 
   underlying.indexesManager.ensure(Index(Seq("_task" -> IndexType.Ascending)))
   underlying.indexesManager.ensure(Index(Seq("_user" -> IndexType.Ascending)))
-
-  def findTrainingForReviewAnnotation(annotation: AnnotationLike)(implicit ctx: DBAccessContext) =
-    withValidId(annotation.id) {
-      id =>
-        findOne("review.reviewAnnotation", id)
-    }
 
   def defaultFindForUserQ(_user: BSONObjectID, annotationType: AnnotationType) = Json.obj(
     "_user" -> _user,

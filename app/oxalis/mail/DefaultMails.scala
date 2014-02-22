@@ -47,20 +47,6 @@ object DefaultMails {
       bodyText = html.mail.validated(name).body,
       recipients = List(receiver))
 
-  def trainingsSuccessMail(name: String, receiver: String, comment: String) =
-    Mail(
-      from = defaultFrom,
-      subject = "Trainings task completed.",
-      bodyText = html.mail.trainingsSuccess(name, comment).body,
-      recipients = List(receiver))
-
-  def trainingsFailureMail(name: String, receiver: String, comment: String) =
-    Mail(
-      from = defaultFrom,
-      subject = "Please correct your trainings tracing.",
-      bodyText = html.mail.trainingsFailure(name, comment).body,
-      recipients = List(receiver))
-
   def issueMail(userName: String, email: String, summary: String, description: String) =
     Mail(
       from = email,

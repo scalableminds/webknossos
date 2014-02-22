@@ -78,7 +78,7 @@ object TaskAdministration extends AdminController {
         Future.successful(Ok(html.admin.task.taskList()))
       case Accepts.Json() =>
         for {
-          tasks <- TaskService.findAllNonTrainings
+          tasks <- TaskService.findAll
           js <- Future.traverse(tasks)(Task.transformToJson)
         } yield {
           JsonOk(Json.obj("data" -> js))
@@ -94,12 +94,10 @@ object TaskAdministration extends AdminController {
       dataSets <- DataSetDAO.findAll
       projects <- ProjectDAO.findAll
       taskTypes <- TaskTypeDAO.findAll
-      domains <- ExperienceService.findAllDomains
     } yield {
       html.admin.task.taskCreate(
         taskTypes,
         dataSets,
-        domains.toList,
         projects,
         request.user.adminTeamNames,
         taskFromNMLForm,
@@ -110,12 +108,10 @@ object TaskAdministration extends AdminController {
     for {
       projects <- ProjectDAO.findAll
       taskTypes <- TaskTypeDAO.findAll
-      domains <- ExperienceService.findAllDomains
     } yield {
       html.admin.task.taskEdit(
         taskId,
         taskTypes,
-        domains.toList,
         projects,
         request.user.adminTeamNames,
         taskForm)
@@ -143,7 +139,7 @@ object TaskAdministration extends AdminController {
           taskType <- TaskTypeDAO.findOneById(taskTypeId) ?~> Messages("taskType.notFound")
           project <- ProjectService.findIfNotEmpty(projectName) ?~> Messages("project.notFound")
           _ <- ensureTeamAdministration(request.user, team).toFox
-          task = Task(0, taskType._id, team, experience, priority, instances, _project = project.map(_.name))
+          task = Task(taskType._id, team, experience, priority, instances, _project = project.map(_.name))
           _ <- TaskDAO.insert(task)
         } yield {
           AnnotationService.createAnnotationBase(task, request.user._id, taskType.settings, dataSetName, start)
@@ -221,7 +217,6 @@ object TaskAdministration extends AdminController {
           } yield {
             val nmls = NMLService.extractFromFile(nmlFile.ref.file, nmlFile.filename)
             val baseTask = Task(
-              0,
               taskType._id,
               team,
               experience,
@@ -266,7 +261,6 @@ object TaskAdministration extends AdminController {
         val experience = Experience(params(2), experienceValue)
         val position = Point3D(x, y, z)
         val task = Task(
-          0,
           taskType._id,
           team,
           experience,

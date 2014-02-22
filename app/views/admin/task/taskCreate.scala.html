@@ -1,4 +1,4 @@
-@(taskTypes: List[models.task.TaskType], dataSets: List[models.binary.DataSet], experiences: List[String], projects: List[models.task.Project], teams: List[String], nmlForm: Form[(String, models.user.Experience, Int, Int, String, String)], taskForm: Form[(String, String, braingames.geometry.Point3D, models.user.Experience, Int, Int, String, String)])(implicit session: oxalis.view.AuthedSessionData)
+@(taskTypes: List[models.task.TaskType], dataSets: List[models.binary.DataSet], projects: List[models.task.Project], teams: List[String], nmlForm: Form[(String, models.user.Experience, Int, Int, String, String)], taskForm: Form[(String, String, braingames.geometry.Point3D, models.user.Experience, Int, Int, String, String)])(implicit session: oxalis.view.AuthedSessionData)
 
 @main(){
   <div class="container">
@@ -8,7 +8,7 @@
       Every nml creates a new task. You can either upload a single NML file or a zipped collection of nml files (.zip).<br /><br />
       @helper.form(controllers.admin.routes.TaskAdministration.createFromNML, 'class -> "form-horizontal", 'enctype -> "multipart/form-data") {
 
-        @basicTaskForm(nmlForm, taskTypes, experiences, projects, teams)
+        @basicTaskForm(nmlForm, taskTypes, projects, teams)
 
         <div class="control-group">
           <label class="control-label" for="nmlFile">@Messages("nmlFile")</label>
@@ -27,7 +27,7 @@
     <div class="well">
       @helper.form(controllers.admin.routes.TaskAdministration.createFromForm, 'class -> "form-horizontal") {
 
-        @basicTaskForm(nmlForm, taskTypes, experiences, projects, teams)
+        @basicTaskForm(nmlForm, taskTypes, projects, teams)
 
         @helper.select(taskForm("dataSet"), dataSets.map { dataSet =>
           dataSet.dataSource.name -> dataSet.dataSource.name

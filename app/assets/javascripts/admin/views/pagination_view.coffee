@@ -108,8 +108,6 @@ class PaginationView extends Backbone.Marionette.ItemView
     @templateHelpers.Pagination = @collection.info()
     @render()
 
-    console.log 123
-
 
   refresh : ->
 

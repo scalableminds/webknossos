@@ -85,7 +85,7 @@ class ArbitraryPlane
                       m[2], m[6], m[10], m[14], 
                       m[3], m[7], m[11], m[15]
 
-      mesh.matrix.rotateY(Math.PI)
+      mesh.matrix.multiply( new THREE.Matrix4().makeRotationY( Math.PI ))
       mesh.matrixWorldNeedsUpdate = true
 
       @isDirty = false

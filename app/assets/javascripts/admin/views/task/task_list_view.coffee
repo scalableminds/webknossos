@@ -1,5 +1,6 @@
 ### define
 underscore : _
+app : app
 backbone.marionette : marionette
 ./task_list_item_view : TaskListItemView
 ###
@@ -11,7 +12,7 @@ class TaskListView extends Backbone.Marionette.CompositeView
     <table id="tasklist-table" class="table table-double-striped table-details">
       <thead>
         <tr>
-          <th class="details-toggle-all"> <i class="caret-right"></i><i class="caret-down"></i></th>
+          <th class="details-toggle-all"><i class="caret-right"></i><i class="caret-down"></i></th>
           <th> # </th>
           <th> Team</th>
           <th> Project</th>
@@ -33,10 +34,12 @@ class TaskListView extends Backbone.Marionette.CompositeView
   ui :
     "modal" : ".modal"
     "inputName" : "#inputName"
+    "detailsToggle" : ".details-toggle-all"
 
   events :
     "click #new-team" : "showModal"
     "click .modal .btn-primary" : "addNewTeam"
+    "click .details-toggle-all" : "toggleAllDetails"
 
   initialize : ->
 
@@ -47,6 +50,12 @@ class TaskListView extends Backbone.Marionette.CompositeView
     ).done( =>
       @collection.goTo(1)
     )
+
+
+  toggleAllDetails : ->
+
+    @ui.detailsToggle.toggleClass("open")
+    app.vent.trigger  ("taskListView:toggleDetails")
 
 
   filter : (searchQuery) ->

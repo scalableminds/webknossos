@@ -34,7 +34,3 @@ class TaskSubListItemView extends Backbone.Marionette.ItemView
   templateHelpers :
     moment : moment
 
-  events :
-    "click .delete" : "delete"
-
-

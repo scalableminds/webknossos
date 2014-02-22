@@ -1,5 +1,6 @@
 ### define
 underscore : _
+app : app
 backbone.marionette : marionette
 ./task_list_subitem_view: TaskListSubitemView
 ###
@@ -12,7 +13,10 @@ class TaskListItemView extends Backbone.Marionette.CompositeView
 
   template : _.template("""
     <tr>
-    <td class="details-toggle" href="#"><i class="caret-right"></i><i class="caret-down"></i></td>
+    <td class="details-toggle" href="#">
+      <i class="caret-right"></i>
+      <i class="caret-down"></i>
+      </td>
     <td><%= formattedHash %></td>
     <td><%= team %></td>
     <td>
@@ -66,6 +70,13 @@ class TaskListItemView extends Backbone.Marionette.CompositeView
 
   ui :
     "detailsRow" : ".details-row"
+    "detailsToggle" : ".details-toggle"
+
+
+  initialize :->
+
+    @listenTo(app.vent, "taskListView:toggleDetails", @toggleDetails)
+
 
   delete : ->
 
@@ -74,16 +85,17 @@ class TaskListItemView extends Backbone.Marionette.CompositeView
 
   toggleDetails : ->
 
-    @collection = new Backbone.Collection()
-    @collection.url= """/admin/tasks/#{@model.get("id")}/annotations"""
-    @collection
-      .fetch()
-      .done( =>
-        @render()
-        @ui.detailsRow.toggle()
-      )
-
-  intitialize :->
-    #<%= controllers.AnnotationController.annotationsForTask(element.id).url %>
-
+    if @ui.detailsRow.hasClass("hide")
+      @collection = new Backbone.Collection()
+      @collection.url= """/admin/tasks/#{@model.get("id")}/annotations"""
+      @collection
+        .fetch()
+        .done( =>
+          @render()
+          @ui.detailsRow.removeClass("hide")
+          @ui.detailsToggle.addClass("open")
+        )
+    else
+      @ui.detailsRow.addClass("hide")
+      @ui.detailsToggle.removeClass("open")
 

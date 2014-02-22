@@ -72,10 +72,6 @@ object TaskAdministration extends AdminController {
   val taskForm = Form(
     taskMapping).fill("", "", Point3D(0, 0, 0), Experience.empty, 100, 10, "", "")
 
-  def list = Authenticated{ implicit request =>
-    Ok(html.admin.task.taskList())
-  }
-
   def taskCreateHTML(
                       taskFromNMLForm: Form[(String, Experience, Int, Int, String, String)],
                       taskForm: Form[(String, String, Point3D, Experience, Int, Int, String, String)]

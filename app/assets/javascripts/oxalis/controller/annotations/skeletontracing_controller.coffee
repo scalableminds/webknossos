@@ -121,11 +121,6 @@ class SkeletonTacingController
     @model.skeletonTracing.deleteActiveNode()
 
 
-  createNewTree : =>
-
-    @model.skeletonTracing.createNewTree()
-
-
   setActiveTree : (treeId, centered) ->
 
     @model.skeletonTracing.setActiveTree(treeId)

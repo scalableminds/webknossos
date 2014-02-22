@@ -150,7 +150,7 @@ class SkeletonTracingPlaneController extends PlaneController
   addNode : (position, centered) =>
 
     if @model.user.get("newNodeNewTree") == true
-      @createNewTree()
+      @model.skeletonTracing.createNewTree()
       # make sure the tree was rendered two times before adding nodes,
       # otherwise our buffer optimizations won't work
       @model.skeletonTracing.one("finishedRender", =>

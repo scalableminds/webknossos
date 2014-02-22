@@ -10,7 +10,7 @@ import scala.Some
 import braingames.util.PathUtils
 import org.apache.commons.io.FileUtils
 import play.api.libs.json.Json
-import braingames.binary.repository.ProgressTracking.ProgressTracker
+import braingames.util.ProgressTracking.ProgressTracker
 
 object KnossosDataSourceType extends DataSourceType with KnossosDataSourceTypeHandler{
   val name = "knossos"

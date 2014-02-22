@@ -14,7 +14,7 @@ import scala.Some
 import braingames.binary.models.UnusableDataSource
 import java.awt.image.{DataBufferByte, DataBufferInt}
 import com.tomgibara.imageio.impl.tiff.EmptyImage
-import braingames.binary.repository.ProgressTracking.ProgressTracker
+import braingames.util.ProgressTracking.ProgressTracker
 
 object TiffDataSourceType extends DataSourceType with TiffDataSourceTypeHandler {
   val name = "tiff"

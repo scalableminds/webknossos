@@ -11,9 +11,8 @@ import play.api.libs.json.Json
 import org.apache.commons.io.FileUtils
 import braingames.binary.Logger._
 import scala.concurrent.Future
-import braingames.binary.repository.ProgressTracking.ProgressTracker
-import scala.collection.immutable.Queue
-import braingames.util.ExtendedTypes.CappedQueue
+import braingames.util.ProgressTracking.ProgressTracker
+import braingames.util.ProgressTracking
 
 trait DataSourceTypeHandler {
   def importDataSource(unusableDataSource: UnusableDataSource, progressTracker: ProgressTracker): Option[DataSource]
@@ -27,56 +26,6 @@ trait DataSourceTypeGuesser {
 
 trait DataSourceType extends DataSourceTypeGuesser with DataSourceTypeHandler {
   def name: String
-}
-
-object ProgressTracking {
-
-  trait ProgressTracker {
-    def track(d: Double): Unit
-  }
-
-}
-
-trait ProgressTracking {
-  private val progress = Agent[Map[String, Double]](Map.empty)
-
-  val finishedProgress = Agent[Queue[(String, Finished)]](Queue.empty)
-
-  val Max = 50
-
-  trait ProgressState
-
-  case class Finished(success: Boolean) extends ProgressState
-
-  case class InProgress(progress: Double) extends ProgressState
-
-  case object NotStarted extends ProgressState
-
-  protected class ProgressTrackerImpl(key: String) extends ProgressTracker {
-    def track(d: Double): Unit = {
-      progress.send(_ + (key -> d))
-    }
-  }
-
-  protected def progressFor(key: String): ProgressState =
-    progress()
-      .get(key)
-      .map(InProgress(_))
-      .orElse(finishedProgress().find(_._1 == key).map(_._2))
-      .getOrElse(NotStarted)
-
-  protected def progressTrackerFor(key: String) =
-    new ProgressTrackerImpl(key)
-
-  protected def finishTrackerFor(key: String, success: Boolean): Unit = {
-    progress.send(_ - key)
-    finishedProgress.send( _.enqueueCapped(key -> Finished(success), Max))
-  }
-
-  protected def clearAllTrackers(key: String): Unit = {
-    progress.send(_ - key)
-    finishedProgress.send(_.filterNot(_._1 == key))
-  }
 }
 
 object DataSourceRepository extends ProgressTracking {

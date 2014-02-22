@@ -1,6 +1,9 @@
 import sbt._
-import Keys._
+import sbt.Keys._
 import play.Project._
+import sbt.Task
+import scala.concurrent.Future
+import scala.concurrent.ExecutionContext.Implicits.global
 
 object Dependencies{
   val akkaVersion = "2.2.0"
@@ -43,12 +46,69 @@ object Resolvers {
   val teamon = "teamon.eu repo" at "http://repo.teamon.eu"
 }
 
+object AssetCompilation {
+  object SettingsKeys{
+    val gulpPath = SettingKey[String]("gulp-path","where gulp is installed")
+    val npmPath = SettingKey[String]("npm-path","where npm is installed")
+  }
+
+  import SettingsKeys._
+  import com.typesafe.sbt.packager.universal.Keys._
+
+  private def npmInstall: Def.Initialize[Task[Seq[File]]] = (npmPath, baseDirectory, streams) map { (npm, base, s) =>
+    try{
+      Process( npm :: "install" :: Nil, base ) ! s.log
+    } catch {
+      case e: java.io.IOException =>
+        s.log.error("Npm couldn't be found. Please set the configuration key 'AssetCompilation.npmPath' properly. " + e.getMessage)
+    }
+    Seq()
+  }
+
+  private def gulpGenerateTask: Def.Initialize[Task[Any]] = (gulpPath, baseDirectory, streams, target) map { (gulp, base, s, t) =>
+    try{
+      Future{
+        Process(gulp :: "debug" :: Nil, base) ! s.log
+      }
+    } catch {
+      case e: java.io.IOException =>
+        s.log.error("Gulp couldn't be found. Please set the configuration key 'AssetCompilation.gulpPath' properly. " + e.getMessage)
+    }
+  } dependsOn npmInstall
+
+  private def killGulp(x: Unit) = {
+    val pidFile = Path("target") / "gulp.pid"
+    if(pidFile.exists){
+      val pid = scala.io.Source.fromFile(pidFile).mkString.trim
+      Process("kill" :: pid :: Nil).run()
+      pidFile.delete()
+      println("Pow, Pow. Blood is everywhere, gulp is gone!")
+    }
+  }
+
+  private def assetsGenerationTask: Def.Initialize[Task[AnyVal]] = (gulpPath, baseDirectory, streams, target) map { (gulp, base, s, t) =>
+    try{
+      Process(gulp :: "build" :: Nil, base) ! s.log
+    } catch {
+      case e: java.io.IOException =>
+        s.log.error("Gulp couldn't be found. Please set the configuration key 'AssetCompilation.gulpPath' properly. " + e.getMessage)
+    }
+  } dependsOn npmInstall
+
+  val settings = Seq(
+    run in Compile <<= (run in Compile) map(killGulp) dependsOn gulpGenerateTask,
+    stage <<= stage dependsOn assetsGenerationTask,
+    dist <<= dist dependsOn assetsGenerationTask
+  )
+}
+
 object ApplicationBuild extends Build {
   import Dependencies._
   import Resolvers._
+  import AssetCompilation.SettingsKeys._
 
-  val coffeeCmd = 
-    if(System.getProperty("os.name").startsWith("Windows")) 
+  val coffeeCmd =
+    if(System.getProperty("os.name").startsWith("Windows"))
       "cmd /C coffee -p"
     else
       "coffee -p"
@@ -99,16 +159,23 @@ object ApplicationBuild extends Build {
     jerseyClient,
     akkaRemote)
 
-  lazy val oxalis: Project = play.Project(appName, appVersion, oxalisDependencies).settings(
+  lazy val oxalisSettings = Seq(
     templatesImport += "oxalis.view.helpers._",
     templatesImport += "oxalis.view._",
-    coffeescriptOptions := Seq(/*"minify",*/ "native", coffeeCmd),
     scalaVersion := "2.10.3",
+    gulpPath := "node_modules/.bin/gulp",
+    npmPath := "npm",
     //requireJs := Seq("main"),
     //requireJsShim += "main.js",
-    resolvers ++= dependencyResolvers
-    //playAssetsDirectories += file("data")
+    resolvers ++= dependencyResolvers,
+    lessEntryPoints <<= (sourceDirectory in Compile)(base => base / "none"),
+    coffeescriptEntryPoints <<= (sourceDirectory in Compile)(base => base / "none"),
+    javascriptEntryPoints <<= (sourceDirectory in Compile)(base => base / "none"),
+    unmanagedResourceDirectories in Compile += target.value / "assets"
+    // playAssetsDirectories += baseDirectory.value / "target" / "assets"
   )
+
+  lazy val oxalis: Project = play.Project(appName, appVersion, oxalisDependencies, settings = oxalisSettings ++ AssetCompilation.settings)
 
   lazy val datastore: Project = Project("datastore", file("modules") / "datastore", dependencies = Seq(oxalis)).settings(
     libraryDependencies ++= dataStoreDependencies,
@@ -124,4 +191,4 @@ object ApplicationBuild extends Build {
     coffeescriptOptions := Seq("native", coffeeCmd)
   ).dependsOn(oxalis).aggregate(oxalis)
 }
-            
+

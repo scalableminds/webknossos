@@ -1,6 +1,7 @@
 ### define
 ../model/dimensions : Dimensions
 ../constants : constants
+three : THREE
 ###
 
 class CellTacingController
@@ -56,13 +57,19 @@ class CellTacingController
       @keyboardControls = {}
 
 
-  setParticleSize : (delta) =>
+  setParticleSize : (delta) ->
 
     particleSize = @model.user.get("particleSize") + delta
     particleSize = Math.min(constants.MAX_PARTICLE_SIZE, particleSize)
     particleSize = Math.max(constants.MIN_PARTICLE_SIZE, particleSize)
 
     @model.user.set("particleSize", (Number) particleSize)
+
+
+  setRadius : (delta) ->
+
+    @model.cellTracing.setActiveNodeRadius(
+      @model.cellTracing.getActiveNodeRadius() * Math.pow(2 , delta / 10))
  
 
   toggleSkeletonVisibility : =>
@@ -128,7 +135,7 @@ class CellTacingController
       index = intersect.index
       nodeID = intersect.object.geometry.nodeIDs.getAllElements()[index]
 
-      posArray = intersect.object.geometry.__vertexArray
+      posArray = intersect.object.geometry.attributes.position.array
       intersectsCoord = [posArray[3 * index], posArray[3 * index + 1], posArray[3 * index + 2]]
       globalPos = @model.flycam.getPosition()
 

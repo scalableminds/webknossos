@@ -1,5 +1,5 @@
 ### define
-../../libs/datgui/dat.gui : DatGui
+dat.gui : DatGui
 ../../libs/request : Request
 ../../libs/event_mixin : EventMixin
 ../../libs/toast : Toast
@@ -7,12 +7,12 @@
 ../constants : constants
 ###
 
-class Gui 
+class Gui
 
   model : null
-  
+
   constructor : (container, @model, @restrictions, @tracingSettings) ->
-    
+
     _.extend(this, new EventMixin())
 
     @updateGlobalPosition( @model.flycam.getPosition() )
@@ -24,8 +24,8 @@ class Gui
     @datasetPosition = @initDatasetPosition(@user.get("briConNames"))
 
     somaClickingAllowed = @tracingSettings.somaClickingAllowed
-    
-    @settings = 
+
+    @settings =
 
       boundingBox : "0, 0, 0, 0, 0, 0"
       fourBit : @user.get("fourBit")
@@ -38,6 +38,7 @@ class Gui
       activeNodeID : @model.cellTracing.getActiveNodeId() or -1
       activeCellID : @model.volumeTracing.getActiveCellId()
       newNodeNewTree : if somaClickingAllowed then @user.get("newNodeNewTree") else false
+      radius : @model.cellTracing.getActiveNodeRadius()
       deleteActiveNode : => @trigger "deleteActiveNode"
       createNewCell : => @trigger "createNewCell"
 
@@ -54,7 +55,7 @@ class Gui
     container.append @gui.domElement
 
     @folders = []
-    
+
     @folders.push( fControls = @gui.addFolder("Controls") )
     @addCheckbox(fControls, @user.getSettings(), "inverseX", "Inverse X")
     @addCheckbox(fControls, @user.getSettings(), "inverseY", "Inverse Y")
@@ -118,8 +119,11 @@ class Gui
     @folders.push( @fNodes = @gui.addFolder("Nodes") )
     @activeNodeIdController = @addNumber(@fNodes, @settings, "activeNodeID",
       1, 1, "Active Node ID", (value) => @trigger( "setActiveNode", value))
+    @radiusController = @addSlider(@fNodes, @settings, "radius",
+      @model.cellTracing.MIN_RADIUS, @model.cellTracing.MAX_RADIUS, 1, "Radius", (radius) =>
+        @model.cellTracing.setActiveNodeRadius( radius ))
     @particleSizeController = @addSlider(@fNodes, @user.getSettings(), "particleSize",
-      constants.MIN_PARTICLE_SIZE, constants.MAX_PARTICLE_SIZE, 1, "Node size")
+      constants.MIN_PARTICLE_SIZE, constants.MAX_PARTICLE_SIZE, 1, "Min. node size")
     @addFunction(@fNodes, @settings, "deleteActiveNode", "Delete Active Node")
 
     @folders.push( @fCells = @gui.addFolder("Cells") )
@@ -133,7 +137,7 @@ class Gui
 
     $("#dataset-name").text(@model.binary["color"].dataSetName)
 
-    $("#trace-position-input").on "change", (event) => 
+    $("#trace-position-input").on "change", (event) =>
 
       @setPosFromString(event.target.value)
       $("#trace-position-input").blur()
@@ -158,7 +162,7 @@ class Gui
 
 
     @model.flycam.on
-      positionChanged : (position) => 
+      positionChanged : (position) =>
         @updateGlobalPosition(position)
 
     @model.user.on
@@ -172,13 +176,14 @@ class Gui
           $("#zoomFactor").html("<p>Viewport width: " + (nm / 1000000).toFixed(1) + " mm</p>")
 
     @model.cellTracing.on
-      newActiveNode    : => @update()
-      newActiveTree    : => @update()
-      deleteActiveTree : => @update()
-      deleteActiveNode : => @update()
-      deleteLastNode   : => @update()
-      newNode          : => @update()
-      newTree          : => @update()
+      newActiveNode       : => @update()
+      newActiveTree       : => @update()
+      newActiveNodeRadius : => @update()
+      deleteActiveTree    : => @update()
+      deleteActiveNode    : => @update()
+      deleteLastNode      : => @update()
+      newNode             : => @update()
+      newTree             : => @update()
 
     @model.volumeTracing.on
       newActiveCell    : =>
@@ -237,7 +242,7 @@ class Gui
     @user.pushImpl()
     if @restrictions.allowUpdate
       @model.cellTracing.pushNow()
-        .then( 
+        .then(
           -> Toast.success("Saved!")
           -> Toast.error("Couldn't save. Please try again.")
         )
@@ -253,7 +258,7 @@ class Gui
 
 
   setPosFromString : (posString) =>
- 
+
     posArray = @stringToNumberArray( posString )
     if posArray?.length == 3
       @model.flycam.setPosition(posArray)
@@ -339,9 +344,10 @@ class Gui
 
   setBrightnessAndContrast : =>
     @model.binary["color"].updateContrastCurve(@settings.brightness, @settings.contrast)
-    
+
     @user.get("brightness")[@datasetPosition] = (Number) @settings.brightness
     @user.get("contrast")[@datasetPosition] = (Number) @settings.contrast
+
     @user.push()
 
 
@@ -400,9 +406,11 @@ class Gui
     @settings.activeNodeID = @model.cellTracing.getActiveNodeId() or -1
     @settings.activeTreeID = @model.cellTracing.getActiveTreeId()
     @settings.activeCellID = @model.volumeTracing.getActiveCellId()
+    @settings.radius = @model.cellTracing.getActiveNodeRadius()
     @activeNodeIdController.updateDisplay()
     @activeTreeIdController.updateDisplay()
     @activeCellIdController.updateDisplay()
+    @radiusController.updateDisplay()
 
 
   setFolderVisibility : (folder, visible) ->

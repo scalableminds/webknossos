@@ -1,4 +1,6 @@
-### define ###
+### define 
+three : THREE
+###
 # This class encapsulates any conversions between the nm and voxel
 # coordinate system.
 

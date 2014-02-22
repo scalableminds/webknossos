@@ -4,7 +4,6 @@ underscore : _
 moment : moment
 ../libs/toast : Toast
 ./paginator : Paginator
-../libs/jquery.bootpag.min : Bootpag
 ###
 
 $ ->

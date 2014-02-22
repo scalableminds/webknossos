@@ -55,18 +55,18 @@ trait BinaryDataService extends DataSourceService with BinaryDataHelpers {
       .withRouter(new RoundRobinRouter(nrOfBinRequestActors)), "dataRequestActor")
   }
 
-  var inboxWatcher: Option[ActorRef] = None
+  var repositoryWatcher: Option[ActorRef] = None
 
   def start(onComplete: => Unit = Unit) {
-    val inboxWatcherConfig = config.getConfig("braingames.binary.changeHandler")
-    val inboxWatchActor =
+    val repositoryWatcherConfig = config.getConfig("braingames.binary.changeHandler")
+    val repositoryWatchActor =
       system.actorOf(
-        Props(new DirectoryWatcherActor(inboxWatcherConfig, dataSourceInboxHandler)),
+        Props(new DirectoryWatcherActor(repositoryWatcherConfig, dataSourceInboxHandler)),
         name = "directoryWatcher")
 
-    inboxWatcher = Some(inboxWatchActor)
+    repositoryWatcher = Some(repositoryWatchActor)
 
-    (inboxWatchActor ? StartWatching(dataSourceRepositoryDir, true)).onComplete {
+    (repositoryWatchActor ? StartWatching(dataSourceRepositoryDir, true)).onComplete {
       case Success(x) =>
         onComplete
       case Failure(e) =>
@@ -75,7 +75,7 @@ trait BinaryDataService extends DataSourceService with BinaryDataHelpers {
   }
 
   def stop() {
-    inboxWatcher.map(_ ! StopWatching)
+    repositoryWatcher.map(_ ! StopWatching)
   }
 
   def handleDataRequest(request: AbstractDataRequest): Future[Option[Array[Byte]]] = {

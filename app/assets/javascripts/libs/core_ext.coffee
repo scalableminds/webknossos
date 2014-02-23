@@ -6,7 +6,7 @@ underscore : _
 ###
 
 # Applies an affine transformation matrix on an array of points.
-M4x4.transformPointsAffine = (m, points, r = new MJS_FLOAT_ARRAY_TYPE(points.length)) ->
+M4x4.transformPointsAffine = (m, points, r = new Float32Array(points.length)) ->
 
   m00 = m[0]
   m01 = m[1]
@@ -34,7 +34,7 @@ M4x4.transformPointsAffine = (m, points, r = new MJS_FLOAT_ARRAY_TYPE(points.len
 
 
 # Applies a transformation matrix on an array of points.
-M4x4.transformPoints = (m, points, r = new MJS_FLOAT_ARRAY_TYPE(points.length)) ->
+M4x4.transformPoints = (m, points, r = new Float32Array(points.length)) ->
 
   for i in [0...points.length] by 3
     v0 = points[i]
@@ -54,7 +54,7 @@ M4x4.transformPoints = (m, points, r = new MJS_FLOAT_ARRAY_TYPE(points.length)) 
   r
 
 
-M4x4.inverse = (mat, dest = new MJS_FLOAT_ARRAY_TYPE(16)) ->
+M4x4.inverse = (mat, dest = new Float32Array(16)) ->
 
   # cache matrix values
   a00 = mat[0]
@@ -110,7 +110,7 @@ M4x4.inverse = (mat, dest = new MJS_FLOAT_ARRAY_TYPE(16)) ->
   return dest
 
 
-M4x4.extractTranslation = (m, r = new MJS_FLOAT_ARRAY_TYPE(3)) ->
+M4x4.extractTranslation = (m, r = new Float32Array(3)) ->
 
   r[0] = m[12]
   r[1] = m[13]
@@ -118,7 +118,7 @@ M4x4.extractTranslation = (m, r = new MJS_FLOAT_ARRAY_TYPE(3)) ->
   r
 
 
-V3.round = (v, r = new MJS_FLOAT_ARRAY_TYPE(3)) ->
+V3.round = (v, r = new Float32Array(3)) ->
 
   r[0] = Math.round(v[0])
   r[1] = Math.round(v[1])

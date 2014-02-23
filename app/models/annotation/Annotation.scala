@@ -89,19 +89,19 @@ case class Annotation(
     import controllers.routes._
     val basicActions = List(
       ResourceAction("trace", AnnotationController.trace(typ,id), icon = Some("fa fa-random")),
-      ResourceAction(ResourceAction.Finish, AnnotationController.finish(typ, id), condition = !state.isFinished, icon = Some("fa fa-check-circle-o"), dataAjax = "replace-row,confirm", clazz = "trace-finish"),
-      ResourceAction("start review", TrainingsTracingAdministration.startReview(id), condition = state.isReadyForReview, icon = Some("fa fa-eye"), dataAjax = "replace-row"),
-      ResourceAction("reopen", AnnotationController.reopen(typ, id), condition = state.isFinished, icon = Some("fa fa-share"), dataAjax = "replace-row"),
+      ResourceAction(ResourceAction.Finish, AnnotationController.finish(typ, id), condition = !state.isFinished, icon = Some("fa fa-check-circle-o"), isAjax = true, clazz = "trace-finish"),
+      ResourceAction("start review", TrainingsTracingAdministration.startReview(id), condition = state.isReadyForReview, icon = Some("fa fa-eye"), isAjax = true),
+      ResourceAction("reopen", AnnotationController.reopen(typ, id), condition = state.isFinished, icon = Some("fa fa-share"), isAjax = true),
       ResourceAction(ResourceAction.Download, AnnotationController.download(typ, id), icon = Some("fa fa-download")),
-      ResourceAction("reset", AnnotationController.reset(typ, id), icon = Some("fa fa-undo"), dataAjax = "replace-row,confirm"),
-      ResourceAction("delete", AnnotationController.cancel(typ, id), icon = Some("fa fa-trash-o"), dataAjax = "delete-row,confirm")
+      ResourceAction("reset", AnnotationController.reset(typ, id), icon = Some("fa fa-undo"), isAjax = true),
+      ResourceAction("delete", AnnotationController.cancel(typ, id), icon = Some("fa fa-trash-o"), isAjax = true)
     )
 
     val reviewActions = (review.headOption, userOpt) match{
       case (Some(r), Some(user)) if user._id == r._reviewer => List(
         ResourceAction("review", AnnotationController.trace(AnnotationType.Review, r._id.stringify), condition = state.isInReview, icon = Some("fa fa-random")),
         ResourceAction("finish review", TrainingsTracingAdministration.finishReview(id), condition = state.isInReview, icon = Some("fa fa-check-circle")),
-        ResourceAction("abort review", TrainingsTracingAdministration.abortReview(id), condition = state.isInReview, icon = Some("fa fa-time-circle"), dataAjax = "replace-row,confirm"))
+        ResourceAction("abort review", TrainingsTracingAdministration.abortReview(id), condition = state.isInReview, icon = Some("fa fa-time-circle"), isAjax = true))
       case _ =>
         Nil
     }

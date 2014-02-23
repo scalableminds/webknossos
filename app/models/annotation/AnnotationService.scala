@@ -104,12 +104,6 @@ object AnnotationService extends AnnotationContentProviders with BoxImplicits wi
     }
   }
 
-  def createSample(annotation: Annotation, _task: BSONObjectID)(implicit ctx: DBAccessContext): Fox[Annotation] = {
-    annotation.copy(
-      typ = AnnotationType.Sample,
-      _task = Some(_task)).muta.copyDeepAndInsert()
-  }
-
   def createFrom(_user: BSONObjectID, team: String, content: AnnotationContent, annotationType: AnnotationType, name: Option[String])(implicit ctx: DBAccessContext) = {
     val annotation = Annotation(
       _user,

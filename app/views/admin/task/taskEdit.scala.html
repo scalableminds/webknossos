@@ -1,4 +1,4 @@
-@(taskId: String, taskTypes: List[models.task.TaskType], experiences: List[String], projects: List[models.task.Project], teams: List[String], editForm: Form[(String, models.user.Experience, Int, Int, String, String)])(implicit session: oxalis.view.AuthedSessionData)
+@(taskId: String, taskTypes: List[models.task.TaskType], projects: List[models.task.Project], teams: List[String], editForm: Form[(String, models.user.Experience, Int, Int, String, String)])(implicit session: oxalis.view.AuthedSessionData)
 
 @main(){
   <div class="container">
@@ -8,7 +8,7 @@
       All tracings of this task are going to get adjusted to this settings. This is espacially true when changing the Task type.<br /> <br /> 
       @helper.form(controllers.admin.routes.TaskAdministration.editTaskForm(taskId), 'class -> "form-horizontal") {
 
-        @basicTaskForm(editForm, taskTypes, experiences, projects, teams)
+        @basicTaskForm(editForm, taskTypes, projects, teams)
 
         <div class="form-actions">
           <button type="submit" class="btn btn-primary">Save</button>

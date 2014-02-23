@@ -64,7 +64,6 @@
               <a href="<%= controllers.admin.TaskAdministration.edit(element.id).url %>"><i class="icon-pencil"></i>edit </a><br>
               <a href="<%= controllers.AnnotationController.trace('CompoundTask', element.id).url %>" title="view all finished tracings"><i class="icon-random"></i>view </a><br>
               <a href="<%= controllers.admin.NMLIO.taskDownload(element.id).url %>" title="download all finished tracings"><i class="icon-download"></i>download </a><br>
-              <a href="<%= controllers.admin.TrainingsTaskAdministration.create(element.id).url %>"><i class="icon-road"></i>use for Training </a><br>
               <a href="<%= controllers.admin.TaskAdministration.delete(element.id).url %>" data-ajax="delete-row,confirm"><i class="icon-trash"></i>delete </a>
             </td>
           </tr>

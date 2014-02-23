@@ -109,20 +109,6 @@ GET           /admin/projects/:name/delete                               control
 GET           /admin/projects/:name/download                             controllers.admin.NMLIO.projectDownload(name: String)
 GET           /admin/projects/:name/tasks                                controllers.admin.TaskAdministration.tasksForProject(name: String)
 
-
-GET           /admin/tracings/:id/review                                 controllers.admin.TrainingsTracingAdministration.oxalisReview(id: String)
-
-GET           /admin/trainingsTasks                                      controllers.admin.TrainingsTaskAdministration.list
-GET           /admin/trainingsTasks/create/data                          controllers.admin.TrainingsTaskAdministration.getData
-GET           /admin/trainingsTasks/create                               controllers.admin.TrainingsTaskAdministration.create(taskId: String ?= "")
-POST          /admin/trainingsTasks/createFromForm                       controllers.admin.TrainingsTaskAdministration.createFromForm
-GET           /admin/trainingsTasks/:id/delete                           controllers.admin.TrainingsTaskAdministration.delete(id: String)
-
-GET           /admin/training/:id/startReview                            controllers.admin.TrainingsTracingAdministration.startReview(id: String)
-GET           /admin/training/:id/abortReview                            controllers.admin.TrainingsTracingAdministration.abortReview(id: String)
-GET           /admin/training/:id/finishReview                           controllers.admin.TrainingsTracingAdministration.finishReview(id: String)
-POST          /admin/training/:id/finishReview                           controllers.admin.TrainingsTracingAdministration.finishReviewForm(id: String, passed: Boolean ?= true)
-
 # Binary Administration
 GET           /admin/datasets                                            controllers.admin.BinaryDataAdministration.list
 POST          /api/datasets/:dataSetName/teams                           controllers.DataSetController.updateTeams(dataSetName: String)

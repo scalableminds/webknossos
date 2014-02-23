@@ -85,9 +85,9 @@ object AnnotationController extends Controller with Secured with TracingInformat
       for {
         _ <- ensureTeamAdministration(request.user, annotation.team).toFox
         reopenedAnnotation <- annotation.muta.reopen() ?~> Messages("annotation.invalid")
-  json <- annotationJson(request.user, reopenedAnnotation)
+        json <- annotationJson(request.user, reopenedAnnotation)
       } yield {
-  JsonOk(json, Messages("annotation.reopened"))
+        JsonOk(json, Messages("annotation.reopened"))
       }
     }
   }
@@ -188,30 +188,12 @@ object AnnotationController extends Controller with Secured with TracingInformat
 
   def finish(typ: String, id: String) = Authenticated.async {
     implicit request =>
-      def generateJsonResult(annotation: Annotation, message: String) = {
-        if (annotation.typ != AnnotationType.Task)
-          Fox.successful((JsonOk(message)))
-        else
-          for {
-            task <- annotation.task ?~> Messages("tracing.task.notFound")
-            taskJSON <- Task.transformToJson(task)
-            hasOpen <- AnnotationService.hasAnOpenTask(request.user)
-          } yield {
-            JsonOk(
-              Json.obj(
-                "tasks" -> taskJSON,
-                "annotations" -> annotation,
-                "hasAnOpenTask" -> hasOpen),
-                message)
-          }
-      }
-
       for {
         annotation <- AnnotationDAO.findOneById(id) ?~> Messages("annotation.notFound")
         (updated, message) <- annotation.muta.finishAnnotation(request.user)
-        result <- generateJsonResult(updated, message)
+        json <- annotationJson(request.user, updated)
       } yield {
-        result
+        JsonOk(json, message)
       }
   }
 

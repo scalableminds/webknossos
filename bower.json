@@ -3,7 +3,7 @@
   "version": "0.13.0",
   "dependencies": {
     "bootstrap": "~2.3.0",
-    "jquery": "~1.8.3",
+    "jquery": "~2.0.3",
     "requirejs": "~2.1.1",
     "lodash": "~2.2.1",
     "backbone": "~1.1.0",
@@ -14,14 +14,16 @@
     "KeyboardJS": "~0.4.1",
     "dat.gui": "",
     "coffee-script": "~1.4.0",
-    "bootstrap-slider": "",
     "ace-builds": "ace-builds#~1.1.1",
     "jquery-mousewheel": "~3.1.9",
     "gamepad.js": "*",
     "jquery-bootpag": "1.0.4",
     "tweenjs": "r6",
-    "three.js": "git@github.com:georgwiese/three.js.git#scm_r66",
-    "backbone.paginator": "~0.8.1"
+    "backbone.paginator": "~0.8.1",
+    "seiyria-bootstrap-slider": "~1.9.5",
+    "three": "https://raw.github.com/georgwiese/three.js/scm_oxalis/build/three.js",
+    "ColorConverter": "https://raw.github.com/georgwiese/three.js/scm_oxalis/examples/js/math/ColorConverter.js",
+    "TrackballControls": "https://raw.github.com/georgwiese/three.js/scm_oxalis/examples/js/controls/TrackballControls.js"
   },
   "devDependencies": {}
 }

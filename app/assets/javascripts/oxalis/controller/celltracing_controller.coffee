@@ -1,6 +1,7 @@
 ### define
 ../model/dimensions : Dimensions
 ../constants : constants
+three : THREE
 ###
 
 class CellTacingController

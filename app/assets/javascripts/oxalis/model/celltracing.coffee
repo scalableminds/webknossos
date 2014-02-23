@@ -9,6 +9,7 @@ three.color : ColorConverter
 ./statelogger : StateLogger
 ../constants : constants
 ./tracingparser : TracingParser
+three : THREE
 ###
 
 class CellTracing
@@ -539,18 +540,18 @@ class CellTracing
       @deleteTree(false)
 
 
-  deleteTree : (notify, id, deleteBranchesAndComments) ->
+  deleteTree : (notify, id, deleteBranchesAndComments, notifyServer) ->
 
     if notify
       if confirm("Do you really want to delete the whole tree?")
-        @reallyDeleteTree(id, deleteBranchesAndComments)
+        @reallyDeleteTree(id, deleteBranchesAndComments, informServer)
       else
         return
     else
-      @reallyDeleteTree(id, deleteBranchesAndComments)
+      @reallyDeleteTree(id, deleteBranchesAndComments, notifyServer)
 
 
-  reallyDeleteTree : (id, deleteBranchesAndComments = true) ->
+  reallyDeleteTree : (id, deleteBranchesAndComments = true, notifyServer = true) ->
 
     unless id
       id = @activeTree.treeId
@@ -567,7 +568,8 @@ class CellTracing
         @deleteComment(node.id)
         @deleteBranch(node)
 
-    @stateLogger.deleteTree(tree)
+    if notifyServer
+      @stateLogger.deleteTree(tree)
     @trigger("deleteTree", index)
 
     # Because we always want an active tree, check if we need
@@ -599,7 +601,7 @@ class CellTracing
 
         @trigger("mergeTree", lastTree.treeId, lastNode, @activeNode)
 
-        #@deleteTree(false, lastTree.treeId, false)
+        @deleteTree(false, lastTree.treeId, false, false)
 
         @setActiveNode(activeNodeID)
       else

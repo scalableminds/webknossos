@@ -1,22 +1,16 @@
 .task-administration {
 
-  // .table-double-striped tbody > tr:nth-child(odd) td{
-  //   background-color: #f9f9f9;
-  // }
-
   margin-bottom: @navbar-bottom-offset;
 
   tbody + tbody {
     border-top: 0px;
   }
 
-  //remove later
+  // override main.less style (#TODO remove style in main.less eventually)
   .table-double-striped > tbody:nth-child(odd) {
-    & > tr:nth-child(4n+1) > td,
-    & > tr:nth-child(4n+2) > td {
-      background-color: #f9f9f9
+    tr > td {
+      background-color: inherit;
     }
+
   }
-
-
 }

@@ -17,6 +17,7 @@ fs          = require("fs")
 paths =
   src :
     css : "app/assets/stylesheets/main.less"
+    css_watch : "app/assets/stylesheets/**/*.less"
     js : "app/assets/javascripts/**/*.{coffee,js}"
     version : "#{__dirname}/version"
   dest :
@@ -50,14 +51,16 @@ makeScripts = (dest) ->
 
 
 makeStyles = (dest) ->
-  return eventStream.pipeline(
-    plumber()
-    less({}).on("error", 
-      (err) -> util.log(util.colors.red("!!"), err.toString())
+  return gulp.src(paths.src.css)
+    .pipe(plumber())
+    .pipe(
+      less({}).on("error", 
+        (err) -> util.log(util.colors.red("!!"), err.toString())
+      )
     )
-    gulp.dest(dest)
-    logger()
-  )
+    .pipe(gulp.dest(dest))
+    .pipe(logger())
+
 
 bumpVersion = (src) ->
   return src.on("data", (versionFile) ->
@@ -81,8 +84,7 @@ gulp.task("compile:scripts:development", ->
 )
 
 gulp.task("compile:styles", ->
-  return gulp.src(paths.src.css)
-    .pipe(makeStyles(paths.dest.css))
+  return makeStyles(paths.dest.css)
 )
 
 gulp.task("combine:scripts:production", ->
@@ -112,8 +114,9 @@ gulp.task("watch:scripts:development", ->
 )
 
 gulp.task("watch:styles", ->
-  return watch(glob : paths.src.css, name : "Style-Watcher")
-    .pipe(makeStyles(paths.dest.css))
+  return watch(glob : paths.src.css_watch, emitOnGlob : false, name : "Style-Watcher", ->
+    return makeStyles(paths.dest.css)
+  )
 )
 
 gulp.task("watch:version", ->
@@ -136,7 +139,7 @@ gulp.task("build", (callback) ->
 
 
 gulp.task("debug:scripts", ["watch:scripts:development"])
-gulp.task("debug:styles", ["watch:styles"])
+gulp.task("debug:styles", ["compile:styles", "watch:styles"])
 gulp.task("debug:version", ["watch:version"])
 
 gulp.task("debug", (callback) ->

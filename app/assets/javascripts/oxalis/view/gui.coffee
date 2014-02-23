@@ -17,6 +17,7 @@ class Gui
     _.extend(this, new EventMixin())
 
     @updateGlobalPosition( @model.flycam.getPosition() )
+    @updateRotation()
     @mode == constants.MODE_PLANE_TRACING
 
     @user = @model.user
@@ -144,6 +145,11 @@ class Gui
       @setPosFromString(event.target.value)
       $("#trace-position-input").blur()
 
+    $("#trace-rotation-input").on "change", (event) =>
+
+      @setRotationFromString(event.target.value)
+      $("#trace-rotation-input").blur()
+
     $("#trace-finish-button").click (event) =>
 
       event.preventDefault()
@@ -172,6 +178,7 @@ class Gui
     @model.flycam3d.on
       changed : =>
         @updateViewportWidth()
+        @updateRotation()
 
     @model.cellTracing.on
       newActiveNode       : => @update()
@@ -260,9 +267,19 @@ class Gui
     posArray = @stringToNumberArray( posString )
     if posArray?.length == 3
       @model.flycam.setPosition(posArray)
-      return
     else
       @updateGlobalPosition(@model.flycam.getPosition())
+
+
+  setRotationFromString : (rotString) =>
+
+    rotArray = @stringToNumberArray( rotString )
+    if rotArray?.length == 3
+      @model.flycam3d.setRotation(
+        _.map rotArray, (r) -> Math.PI / 180 * r
+      )
+    else
+      @updateRotation()
 
 
   stringToNumberArray : (s) ->
@@ -275,27 +292,12 @@ class Gui
 
     result = []
     for e in stringArray
-      if not isNaN(newEl = parseInt(e))
+      if not isNaN(newEl = parseFloat(e))
         result.push(newEl)
       else
         return null
 
     return result
-
-
-  setPosFromString : (posString) =>
-
-    # remove leading/trailing whitespaces
-    strippedString = posString.trim()
-    # replace remaining whitespaces with commata
-    unifiedString = strippedString.replace /,?\s+,?/g, ","
-    stringArray = unifiedString.split(",")
-    if stringArray.length == 3
-      pos = [parseInt(stringArray[0]), parseInt(stringArray[1]), parseInt(stringArray[2])]
-      if !isNaN(pos[0]) and !isNaN(pos[1]) and !isNaN(pos[2])
-        @model.flycam.setPosition(pos)
-        return
-    @updateGlobalPosition(@model.flycam.getPosition())
 
 
   initDatasetPosition : (briConNames) ->
@@ -324,6 +326,16 @@ class Gui
     stringPos = Math.floor(globalPos[0]) + ", " + Math.floor(globalPos[1]) + ", " + Math.floor(globalPos[2])
     $("#trace-position-input").val(stringPos)
     @updateSegmentID()
+
+
+  updateRotation : =>
+
+    rotation = _.map(
+      @model.flycam3d.getRotation(),
+      (r) -> (180 / Math.PI * r).toFixed(2)
+    )
+    stringRot = rotation.join(", ")
+    $("#trace-rotation-input").val(stringRot)
 
   updateSegmentID : ->
 

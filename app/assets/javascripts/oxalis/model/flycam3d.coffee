@@ -206,6 +206,14 @@ class Flycam3d
  
     matrix = @currentMatrix
     [ matrix[12], matrix[13], matrix[14] ]
+
+
+  getRotation : ->
+
+    object = new THREE.Object3D()
+    matrix = (new THREE.Matrix4()).fromArray( @currentMatrix )
+    object.applyMatrix( matrix )
+    return [ object.rotation.x, object.rotation.y, object.rotation.z ]
  
  
   setPositionSilent : (p) ->
@@ -220,6 +228,14 @@ class Flycam3d
  
     @setPositionSilent(p)
     updateMacro(@)
+
+
+  setRotation : ([x, y, z]) ->
+
+    @resetRotation()
+    @pitch x
+    @yaw y
+    @roll z
  
  
   getDirection : ->

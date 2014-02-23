@@ -62,7 +62,9 @@ class ArbitraryView
       for element in @group.children
         element.setVisibility = element.setVisibility || (v) -> this.visible = v
         element.setVisibility true
+
       $("#arbitrary-info-canvas").show()
+      $('#trace-rotation').show()
 
       @resize()
       # start the rendering loop
@@ -79,7 +81,9 @@ class ArbitraryView
       for element in @group.children
         element.setVisibility = element.setVisibility || (v) -> this.visible = v
         element.setVisibility false
+
       $("#arbitrary-info-canvas").hide()
+      $('#trace-rotation').hide()
 
       $(window).off "resize", @resize
 

@@ -60,7 +60,8 @@ class ArbitraryView
       @isRunning = true
 
       for element in @group.children
-        element.visible = true
+        element.setVisibility = element.setVisibility || (v) -> this.visible = v
+        element.setVisibility true
       $("#arbitrary-info-canvas").show()
 
       @resize()
@@ -76,7 +77,8 @@ class ArbitraryView
       @isRunning = false
 
       for element in @group.children
-        element.visible = false
+        element.setVisibility = element.setVisibility || (v) -> this.visible = v
+        element.setVisibility false
       $("#arbitrary-info-canvas").hide()
 
       $(window).off "resize", @resize

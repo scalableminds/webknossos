@@ -63,6 +63,10 @@ class ArbitraryController
     @crosshair = new Crosshair(@cam, model.user.get("crosshairSize"))
     @view.addGeometry(@crosshair)
 
+    @model.user.on
+      displayCrosshairChanged : (displayCrosshair) =>
+        @crosshair.setVisibility(displayCrosshair)
+
     @bind()
     @view.draw()
 

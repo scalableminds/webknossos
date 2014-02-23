@@ -544,7 +544,7 @@ class CellTracing
 
     if notify
       if confirm("Do you really want to delete the whole tree?")
-        @reallyDeleteTree(id, deleteBranchesAndComments)
+        @reallyDeleteTree(id, deleteBranchesAndComments, informServer)
       else
         return
     else

@@ -97,7 +97,7 @@ class TeamListView extends Backbone.Marionette.CompositeView
     )
 
 
-  filter : -> (filterQuery)
+  filter : (filterQuery) ->
 
     @collection.setFilter(["name", "owner"], filterQuery)
     @collection.pager()

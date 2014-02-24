@@ -29,11 +29,19 @@ object DataSetController extends Controller with Secured {
       }
   }
 
-  def list = UserAwareAction.async {
+  def listView = UserAwareAction.async {
     implicit request =>
       DataSetDAO.findAll.map {
         dataSets =>
           Ok(html.dataSets(dataSets))
+      }
+  }
+
+  def list = UserAwareAction.async {
+    implicit request =>
+      DataSetDAO.findAll.map {
+        dataSets =>
+          Ok(Json.toJson(dataSets))
       }
   }
 

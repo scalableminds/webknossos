@@ -47,6 +47,7 @@ POST          /api/teams                                                 control
 GET           /datasets                                                  controllers.DataSetController.listView
 GET           /datasets/:dataSetName/view                                controllers.DataSetController.view(dataSetName: String)
 GET           /api/datasets                                              controllers.DataSetController.list
+GET           /api/datasets/:dataSetName                                 controllers.DataSetController.read(dataSetName: String)
 POST          /api/datasets/:dataSetName/import                          controllers.DataSetController.importDataSet(dataSetName: String)
 GET           /api/datasets/:dataSetName/import                          controllers.DataSetController.importProgress(dataSetName: String)
 

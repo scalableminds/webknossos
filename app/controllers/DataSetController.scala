@@ -1,16 +1,26 @@
 package controllers
 
 import oxalis.security.Secured
-import models.binary.{DataSetService, DataSetDAO}
+import models.binary.{DataSet, DataSetService, DataSetDAO}
 import play.api.i18n.Messages
 import views.html
 import play.api.libs.concurrent.Execution.Implicits._
-import play.api.libs.json.{Json, JsSuccess, JsError}
+import play.api.libs.json._
 import scala.concurrent.Future
 import oxalis.binary.BinaryDataService
 import braingames.binary.repository.DataSourceRepository.InProgress
 import braingames.binary.repository.DataSourceRepository.Finished
 import braingames.binary.repository.DataSourceRepository.NotStarted
+import braingames.util.DefaultConverters._
+import play.api.mvc._
+import net.liftweb.common.Full
+import oxalis.user.UserActivity
+import scala.Some
+import play.api.mvc.SimpleResult
+import play.api.libs.json.JsSuccess
+import scala.Some
+import play.api.libs.json
+import models.user.User
 
 /**
  * Company: scalableminds
@@ -20,7 +30,8 @@ import braingames.binary.repository.DataSourceRepository.NotStarted
  */
 object DataSetController extends Controller with Secured {
 
-  def view(dataSetName: String) = UserAwareAction.async {
+  def view(dataSetName: String
+            ) = UserAwareAction.async {
     implicit request =>
       for {
         dataSet <- DataSetDAO.findOneBySourceName(dataSetName) ?~> Messages("dataSet.notFound")
@@ -37,12 +48,18 @@ object DataSetController extends Controller with Secured {
       }
   }
 
-  def list = UserAwareAction.async {
-    implicit request =>
+  def list = UserAwareAction.async{ implicit request =>
+    UsingFilters(
+      Filter("isEditable", (value: Boolean, el: DataSet) =>
+        el.isEditableBy(request.userOpt) && value || !el.isEditableBy(request.userOpt) && !value),
+      Filter("isActive", (value: Boolean, el: DataSet) =>
+        el.isActive == value)
+    ){ filter =>
       DataSetDAO.findAll.map {
         dataSets =>
-          Ok(Json.toJson(dataSets))
+          Ok(Writes.list(DataSet.dataSetPublicWrites(request.userOpt)).writes(filter.applyOn(dataSets)))
       }
+    }
   }
 
   def importDataSet(dataSetName: String) = Authenticated.async{ implicit request =>

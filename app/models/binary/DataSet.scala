@@ -25,8 +25,10 @@ object DataSetRepository extends AbstractDataSourceRepository with GlobalDBAcces
       case d: UsableDataSource =>
         DataSetService.updateDataSet(d)
       case d: UnusableDataSource =>
-        DataSetDAO.removeByName(d.id)
-        DataSetService.createDataSet(d.id, d.sourceType, d.owningTeam, isActive = false)
+        for{
+          _ <- DataSetDAO.removeByName(d.id)
+          _ <- DataSetService.createDataSet(d.id, d.sourceType, d.owningTeam, isActive = false)
+        } yield true
     }
   }
 }
@@ -41,12 +43,26 @@ case class DataSet(
                     isPublic: Boolean = false,
                     description: Option[String] = None,
                     created: Long = System.currentTimeMillis()) {
-  def isEditableBy(user: User) =
-    user.adminTeamNames.contains(owningTeam)
+  def isEditableBy(user: Option[User]) =
+    user.map(_.adminTeamNames.contains(owningTeam)) getOrElse false
 }
 
 object DataSet {
   implicit val dataSetFormat = Json.format[DataSet]
+
+  def dataSetPublicWrites(user: Option[User]): Writes[DataSet] =
+    ((__ \ 'name).write[String] and
+      (__ \ 'dataSource).write[Option[DataSource]] and
+      (__ \ 'sourceType).write[String] and
+      (__ \ 'ownindTeam).write[String] and
+      (__ \ 'allowedTeams).write[List[String]] and
+      (__ \ 'isActive).write[Boolean] and
+      (__ \ 'isPublic).write[Boolean] and
+      (__ \ 'description).write[Option[String]] and
+      (__ \ 'created).write[Long] and
+      (__ \ "isEditable").write[Boolean])(d =>
+    (d.name, d.dataSource, d.sourceType, d.owningTeam, d.allowedTeams, d.isActive, d.isPublic, d.description, d.created, d.isEditableBy(user)))
+
 }
 
 object DataSetService {

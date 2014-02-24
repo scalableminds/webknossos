@@ -101,68 +101,12 @@ class Router extends Backbone.Router
 
   datasets : ->
 
-    $modal = $(".modal")
-    $modal.find(".btn-primary").on "click", -> submitTeams()
+    require ["admin/views/dataset/dataset_list_view"], (DatasetListView) =>
 
-    # Attach model to main body to avoid z-Index
-    $modal = $modal.detach()
-    $("body").append($modal)
-
-    teamsCache = null
-    assignedTeams = []
-
-    $(".team-label").on "click", ->
-      # Find parent and read all labels for one dataset
-      $parent = $(this).closest("tr")
-      dataset = $parent.find("td").first().text().trim()
-      $modal.data("dataset", dataset)
-
-      $labels = $parent.find(".team-label").find(".label")
-      assignedTeams = _.map($labels, (label) -> return $(label).text())
-
-      if teamsCache
-        showModal()
-      else
-        $.ajax(
-          url: "/api/teams"
-          dataType: "json"
-        ).done (responseJSON) =>
-          teamsCache = responseJSON
-          showModal()
-
-    showModal = ->
-
-      $teamList = $modal.find("ul").empty()
-      $checkBoxTags = _.map(teamsCache, (team) ->
-
-        checked = if _.contains(assignedTeams, team.name) then "checked" else ""
-        $("""
-          <li>
-            <label class="checkbox"><input type="checkbox" value="#{team.name}" #{checked}> #{team.name}</label>
-          </li>
-        """)
+      new DatasetListView(
+        el : $("#main-container").find("#dataset-administration")[0]
       )
-      $teamList.append($checkBoxTags)
-      $modal.modal("show")
-
-
-    submitTeams = ->
-
-        $checkboxes = $modal.find("input:checked")
-        dataset = $modal.data("dataset")
-        assignedTeams = _.map($checkboxes, (checkbox) -> return $(checkbox).parent().text().trim())
-
-        console.log dataset, assignedTeams
-        $modal.modal("hide")
-        $.ajax(
-          url: "/api/datasets/#{dataset}/teams"
-          type: "POST"
-          contentType: "application/json; charset=utf-8"
-          data: JSON.stringify(assignedTeams)
-        ).done ->
-          window.location.reload()
-
-    return @hideLoading()
+      return @hideLoading()
 
 
   taskOverview : ->
@@ -172,7 +116,6 @@ class Router extends Backbone.Router
       new TaskOverviewView(
         el : $("#main-container").find("#task-overview")[0]
       )
-
       return @hideLoading()
 
 

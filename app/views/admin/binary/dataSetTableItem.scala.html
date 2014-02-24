@@ -10,15 +10,17 @@
         <span class="label">@team</span>
     }
     </td>
-    <td> <i class="fa @if(dataSet.isActive){fa-check}else{fa-times}"></i></td>
-    <td> <i class="fa @if(dataSet.isPublic){fa-check}else{fa-times}"></i></td>
+    <td><i class="fa @if(dataSet.isActive){fa-check}else{fa-times}"></i></td>
+    <td><i class="fa @if(dataSet.isPublic){fa-check}else{fa-times}"></i></td>
     <td>
     @dataSet.dataSource.map(_.dataLayers).getOrElse(Nil).map{ dataLayer =>
         <span class="label">@dataLayer.typ - @dataLayer.elementClass </span>
     }
     <td class="nowrap">
       @if(dataSet.dataSource.isEmpty){
-        <a href="@controllers.routes.DataSetController.importDataSet(dataSet.name)" ><i class="fa fa-plus-circle"></i> import</a><br />
+      <div class="import-container">
+        <a href="@controllers.routes.DataSetController.importDataSet(dataSet.name)" class=" import-dataset"><i class="fa fa-plus-circle"></i>import</a><br />
+      </div>
       }
       @if(dataSet.isActive){
         <a href="@controllers.routes.DataSetController.view(dataSet.name)" ><i class="fa fa-eye"></i>view</a><br />

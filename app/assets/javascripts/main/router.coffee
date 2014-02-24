@@ -14,9 +14,9 @@ class Router extends Backbone.Router
     "dashboard"                     : "dashboard"
     "users"                         : "users"
     "teams"                         : "teams"
+    "datasets"                      : "datasets"
     "admin/taskTypes"               : "hideLoading"
     "admin/projects"                : "projects"
-    "admin/datasets"                : "datasets"
     "admin/trainingsTasks/create"   : "createTraingsTasks"
     "admin/tasks/overview"          : "taskOverview"
     "annotations/Task/:id"          : "tracingTrace"
@@ -101,11 +101,16 @@ class Router extends Backbone.Router
 
   datasets : ->
 
-    require ["admin/views/dataset/dataset_list_view"], (DatasetListView) =>
+    require [
+      "admin/views/dataset/dataset_list_view",
+      "admin/views/pagination_view",
+      "admin/models/dataset/dataset_collection"], (DatasetListView, PaginationView, DatasetCollection) =>
 
-      new DatasetListView(
-        el : $("#main-container").find("#dataset-administration")[0]
-      )
+      datasetCollection = new DatasetCollection()
+      paginationView = new PaginationView({collection: datasetCollection})
+      datasetView = new DatasetListView({collection : datasetCollection})
+
+      @changeView(paginationView, datasetView)
       return @hideLoading()
 
 

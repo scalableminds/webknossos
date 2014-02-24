@@ -1,7 +1,7 @@
 ### define
 underscore : _
 backbone.marionette : marionette
-./dataset_list_item_view : marionette
+./dataset_list_item_view : DatasetListItemView
 ###
 
 class DatasetListView extends Backbone.Marionette.CompositeView
@@ -56,19 +56,18 @@ class DatasetListView extends Backbone.Marionette.CompositeView
 
   initialize : ->
 
+    @collection.fetch(
+      silent : true
+      data : "isEditable=true"
+    ).done =>
+      @collection.goTo(1)
+
+    @listenTo(app.vent, "paginationView:filter", @filter)
+
     @teamsCache = null
-    @assignedTeams = []
 
 
   loadTeams : (evt) ->
-
-    # Find parent and read all labels for one dataset
-    $parent = $(evt.target).closest("tr")
-    dataset = $parent.find("td").first().text().trim()
-    @ui.modal.data("dataset", dataset)
-
-    $labels = $parent.find(".team-label").find(".label")
-    @assignedTeams = _.map($labels, (label) -> return $(label).text())
 
     if @teamsCache
       @showModal()
@@ -88,7 +87,7 @@ class DatasetListView extends Backbone.Marionette.CompositeView
     $teamList = @ui.modal.find("ul").empty()
     $checkBoxTags = _.map(@teamsCache, (team) =>
 
-      checked = if _.contains(@assignedTeams, team.name) then "checked" else ""
+      checked = if _.contains(@model.get("allowedTeams"), team.name) then "checked" else ""
       $("""
         <li>
           <label class="checkbox"><input type="checkbox" value="#{team.name}" #{checked}> #{team.name}</label>
@@ -102,18 +101,17 @@ class DatasetListView extends Backbone.Marionette.CompositeView
   submitTeams : ->
 
     $checkboxes = @ui.modal.find("input:checked")
-    dataset = @ui.modal.data("dataset")
     assignedTeams = _.map($checkboxes, (checkbox) -> return $(checkbox).parent().text().trim())
 
     console.log dataset, assignedTeams
     @ui.modal.modal("hide")
     $.ajax(
-      url: "/api/datasets/#{dataset}/teams"
+      url: """/api/datasets/#{@model.get("name")}/teams"""
       type: "POST"
       contentType: "application/json; charset=utf-8"
       data: JSON.stringify(assignedTeams)
-    ).done( ->
-      window.location.reload()
+    ).done( =>
+      @render()
     )
 
 
@@ -122,7 +120,7 @@ class DatasetListView extends Backbone.Marionette.CompositeView
     evt.preventDefault()
 
     $.ajax(
-      url : $(evt.target).prop("href")
+      url : """/api/datasets/#{@model.get("name")}/import"""
       method: "POST"
     ).done( =>
       @ui.importContainer.html("""
@@ -136,9 +134,8 @@ class DatasetListView extends Backbone.Marionette.CompositeView
 
   updateProgress : ->
 
-    dataset = @ui.modal.data("dataset")
     $.ajax(
-      url: "/api/datasets/#{dataset}/import"
+      url: "/api/datasets/#{@model.get("name")}/import"
     ).done( (value) =>
       value *= 100
       @ui.importContainer.find("bar").width("#{value}%")
@@ -147,3 +144,6 @@ class DatasetListView extends Backbone.Marionette.CompositeView
     )
 
 
+  filter : (searchQuery) ->
+
+    @collection.setFilter(["name", "owningTeam"], searchQuery)

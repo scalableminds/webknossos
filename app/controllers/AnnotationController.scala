@@ -284,7 +284,7 @@ object AnnotationController extends Controller with Secured with TracingInformat
       annotation match {
         case t if t.typ == AnnotationType.Task =>
           await(annotation.muta.cancelTask().futureBox).map { _ =>
-            JsonOk(Messages("task.cancelled"))
+            Ok
           }
         case _ =>
           Full(JsonOk(Messages("annotation.finished")))

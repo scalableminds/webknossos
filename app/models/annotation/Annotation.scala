@@ -93,8 +93,7 @@ case class Annotation(
       ResourceAction("start review", TrainingsTracingAdministration.startReview(id), condition = state.isReadyForReview, icon = Some("fa fa-eye"), isAjax = true),
       ResourceAction("reopen", AnnotationController.reopen(typ, id), condition = state.isFinished, icon = Some("fa fa-share"), isAjax = true),
       ResourceAction(ResourceAction.Download, AnnotationController.download(typ, id), icon = Some("fa fa-download")),
-      ResourceAction("reset", AnnotationController.reset(typ, id), icon = Some("fa fa-undo"), isAjax = true),
-      ResourceAction("delete", AnnotationController.cancel(typ, id), icon = Some("fa fa-trash-o"), isAjax = true)
+      ResourceAction("reset", AnnotationController.reset(typ, id), icon = Some("fa fa-undo"), isAjax = true)
     )
 
     val reviewActions = (review.headOption, userOpt) match{

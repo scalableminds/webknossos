@@ -1,6 +1,7 @@
 ### define
 underscore : _
 moment : moment
+libs/toast : Toast
 backbone.marionette : marionette
 ###
 
@@ -23,9 +24,12 @@ class TaskSubListItemView extends Backbone.Marionette.ItemView
         <ul class="dropdown-menu">
         <% _.each(actions, function(action){ %>
         <li>
-          <a href="<%= action.call.url %>"><i class="<%= action.icon %>"></i><%= action.name %></a>
+          <a href="<%= action.call.url %>" class="<% if(action.isAjax){ %>isAjax<% } %>"><i class="<%= action.icon %>"></i><%= action.name %></a>
         </li>
         <% }) %>
+        <li>
+          <a href="#" class="delete-annotation"><i class="fa fa-trash-o"></i>delete</a>
+        </li>
         </ul>
       </div>
     </td>
@@ -33,4 +37,37 @@ class TaskSubListItemView extends Backbone.Marionette.ItemView
 
   templateHelpers :
     moment : moment
+
+  events :
+    "click .isAjax" : "callAjax"
+    "click .delete-annotation" : "delete"
+
+
+  initialize : ->
+
+    console.log @model
+
+  # some action are real links and some need to be send as ajax calls to the server
+  callAjax : (evt) ->
+
+    evt.preventDefault()
+    $.ajax(
+      url : $(evt.target).prop("href")
+    ).then(
+      (jsonData) =>
+        if(jsonData)
+          @model = new Backbone.Model(jsonData)
+          @render()
+
+      (response) ->
+        if(response.JSON)
+          message = response.responseJSON.messages[0].error
+          Toast.error(message)
+    )
+
+
+  delete : (evt) ->
+
+    evt.preventDefault()
+    @model.destroy({url : "/annotations/Task/#{@model.id}"})
 

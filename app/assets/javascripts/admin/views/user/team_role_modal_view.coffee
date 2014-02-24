@@ -44,8 +44,7 @@ class TeamRoleModal extends Backbone.Marionette.CompositeView
     )
     @userCollection = args.userCollection
 
-    # For some reason listening to this events throught the 'events' property won't work
-    @on("after:item:added", @prefillModal)
+    @listenTo(@, "after:item:added", @prefillModal)
 
 
   changeExperience : ->

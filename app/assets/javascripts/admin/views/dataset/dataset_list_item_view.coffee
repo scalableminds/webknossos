@@ -44,11 +44,12 @@ class DatasetListItemView extends Backbone.Marionette.ItemView
         <span class="label"><%= layer.typ %> - <%= layer.elementClass %></span>
     <% }) %>
     <td class="nowrap">
-      <% if(!dataSource){ %>
-      <div class="import-container">
-        <a href="/api/datasets/<%= name %>/import" class=" import-dataset">
-          <i class="fa fa-plus-circle"></i>import
-      </div>
+      <% if(dataSource.needsImport){ %>
+        <div class="import-container">
+          <a href="/api/datasets/<%= name %>/import" class=" import-dataset">
+            <i class="fa fa-plus-circle"></i>import
+          </a>
+        </div>
       <% } %>
       <% if(isActive){ %>
         <a href="/datasets/<%= name %>/view" >
@@ -62,7 +63,8 @@ class DatasetListItemView extends Backbone.Marionette.ItemView
     "click .import-dataset" : "startImport"
 
   ui:
-    "importContainer" : "import-container"
+    "importContainer" : ".import-container"
+
 
    startImport : (evt) ->
 
@@ -85,10 +87,10 @@ class DatasetListItemView extends Backbone.Marionette.ItemView
 
       $.ajax(
         url: "/api/datasets/#{@model.get("name")}/import"
-      ).done( (value) =>
-        value *= 100
+      ).done( (responseJSON) =>
+        value = responseJSON.progress * 100
         @ui.importContainer.find("bar").width("#{value}%")
         if value < 100
-          window.timeout((=> @updateProgress()), 1000)
+          window.setTimeout((=> @updateProgress()), 100)
       )
 

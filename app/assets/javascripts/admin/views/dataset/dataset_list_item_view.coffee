@@ -73,6 +73,7 @@ class DatasetListItemView extends Backbone.Marionette.ItemView
   initialize : ->
 
     @listenTo(@model, "change", @render)
+    @ajaxUrl = "/api/datasets/#{@model.get("name")}/import"
 
     # In case the user reloads during an import, continue the progress bar
     if @model.get("dataSource").needsImport
@@ -85,7 +86,7 @@ class DatasetListItemView extends Backbone.Marionette.ItemView
         evt.preventDefault()
 
       $.ajax(
-        url : """/api/datasets/#{@model.get("name")}/import"""
+        url : @ajaxUrl
         method: method
       ).done( (responseJSON) =>
           if responseJSON.status == "inProgress"
@@ -98,7 +99,7 @@ class DatasetListItemView extends Backbone.Marionette.ItemView
     updateProgress : ->
 
       $.ajax(
-        url: "/api/datasets/#{@model.get("name")}/import"
+        url: @ajaxUrl
       ).done( (responseJSON) =>
         value = responseJSON.progress * 100
         @ui.progressBar.width("#{value}%")

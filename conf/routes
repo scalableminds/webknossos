@@ -127,7 +127,7 @@ GET           /admin/training/:id/finishReview                           control
 POST          /admin/training/:id/finishReview                           controllers.admin.TrainingsTracingAdministration.finishReviewForm(id: String, passed: Boolean ?= true)
 
 # Binary Administration
-GET           /admin/datasets                                            controllers.admin.BinaryDataAdministration.list
+GET           /datasets                                            controllers.admin.BinaryDataAdministration.empty
 POST          /api/datasets/:dataSetName/teams                           controllers.DataSetController.updateTeams(dataSetName: String)
 
 # Javascript routing

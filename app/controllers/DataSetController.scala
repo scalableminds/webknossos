@@ -94,7 +94,7 @@ object DataSetController extends Controller with Secured {
         JsonOk(Json.obj(
           "operation" -> "import",
           "status" -> "notStarted",
-          "progress" -> 1))
+          "progress" -> 0))
     }
   }
 

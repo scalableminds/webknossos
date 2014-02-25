@@ -40,6 +40,7 @@ GET           /users/:id/details                                         control
 GET           /teams                                                     controllers.UserController.empty
 GET           /api/teams                                                 controllers.TeamController.list
 POST          /api/teams                                                 controllers.TeamController.create
+DELETE        /api/teams/:id                                             controllers.TeamController.delete(id: string)
 
 # Binary Data
 

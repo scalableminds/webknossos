@@ -11,9 +11,11 @@ import play.api.libs.functional.syntax._
 import play.api.data.validation.ValidationError
 import scala.util.{Failure, Success}
 
-case class Team(name: String, roles: List[Role], owner: Option[BSONObjectID] = None) {
+case class Team(name: String, roles: List[Role], owner: Option[BSONObjectID] = None, _id: BSONObjectID = BSONObjectID.generate) {
   def isEditableBy(user: User) =
     user.adminTeamNames.contains(name)
+
+  lazy val id = _id.stringify
 }
 
 object Team extends {
@@ -22,10 +24,11 @@ object Team extends {
 
   def teamPublicWrites(requestingUser: User): Writes[Team] =
     ((__ \ "name").write[String] and
+      (__ \ "id").write[String] and
       (__ \ "roles").write[List[Role]] and
       (__ \ "owner").write[String] and
       (__ \ "isEditable").write[Boolean])(t =>
-      (t.name, t.roles, t.owner.map(_.stringify) getOrElse "", t.isEditableBy(requestingUser)))
+      (t.name, t.id, t.roles, t.owner.map(_.stringify) getOrElse "", t.isEditableBy(requestingUser)))
 
   def teamPublicReads(requestingUser: User): Reads[Team] =
     ((__ \ "name").read[String] and

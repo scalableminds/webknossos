@@ -8,8 +8,21 @@ import models.user.User
 import braingames.util.ExtendedTypes.ExtendedString
 import scala.concurrent.Future
 import play.api.i18n.Messages
+import models.binary.DataSet
+import net.liftweb.common.{Failure, Full}
+import play.api.templates.Html
 
 object TeamController extends Controller with Secured {
+
+  def empty = Authenticated{ implicit request =>
+    Ok(views.html.main()(Html.empty))
+  }
+
+  def isTeamOwner(team: Team, user: User) =
+    team.owner.map(_ == user._id).getOrElse(false) match {
+      case true  => Full(true)
+      case false => Failure(Messages("notAllowed"))
+    }
 
   def list = Authenticated.async{ implicit request =>
     for{
@@ -22,6 +35,16 @@ object TeamController extends Controller with Secured {
           teams
       }
       Ok(Writes.list(Team.teamPublicWrites(request.user)).writes(filtered))
+    }
+  }
+
+  def delete(teamName: String) = Authenticated.async{ implicit request =>
+    for{
+      team <- TeamDAO.findOneByName(teamName)
+      _ <- isTeamOwner(team, request.user).toFox
+      _ <- TeamService.remove(team)
+    } yield {
+      JsonOk(Messages("team.deleted"))
     }
   }
 

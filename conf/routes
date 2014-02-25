@@ -37,9 +37,10 @@ GET           /api/users/:id/annotations/download                        control
 GET           /users/:id/details                                         controllers.UserController.show(id: String)
 
 # Team
-GET           /teams                                                     controllers.UserController.empty
+GET           /teams                                                     controllers.TeamController.empty
 GET           /api/teams                                                 controllers.TeamController.list
 POST          /api/teams                                                 controllers.TeamController.create
+DELETE        /api/teams/:name                                           controllers.TeamController.delete(name: String)
 
 # Binary Data
 

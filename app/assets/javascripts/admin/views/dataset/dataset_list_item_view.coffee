@@ -103,7 +103,7 @@ class DatasetListItemView extends Backbone.Marionette.ItemView
       ).done( (responseJSON) =>
         value = responseJSON.progress * 100
         @ui.progressBar.width("#{value}%")
-        if value < 100
+        if responseJSON.status != "finished" or responseJSON.status != "failed"
           window.setTimeout((=> @updateProgress()), 100)
         else
           @model.fetch()

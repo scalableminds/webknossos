@@ -72,11 +72,9 @@ class TeamListView extends Backbone.Marionette.CompositeView
 
     @listenTo(app.vent, "paginationView:filter", @filter)
 
-    @collection = new TeamCollection()
     @collection.fetch(
-      data:
-        "isEditable=true"
-      silent: true
+      data : "isEditable=true"
+      silent : true
     ).done( =>
       @collection.goTo(1)
     )

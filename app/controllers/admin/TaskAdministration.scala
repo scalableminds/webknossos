@@ -299,7 +299,6 @@ object TaskAdministration extends AdminController {
   def dataSetNamesForTasks(tasks: List[Task])(implicit ctx: DBAccessContext) =
     Future.traverse(tasks)(_.annotationBase.flatMap(_.dataSetName getOrElse "").futureBox.map(_.toOption))
 
-  // currently not used?
   def tasksForProject(projectName: String) = Authenticated.async { implicit request =>
     for {
       project <- ProjectDAO.findOneByName(projectName) ?~> Messages("project.notFound")
@@ -319,7 +318,7 @@ object TaskAdministration extends AdminController {
   def tasksForType(taskTypeId: String) = Authenticated.async { implicit request =>
     for {
       taskType <- TaskTypeDAO.findOneById(taskTypeId) ?~> Messages("taskType.notFound")
-      
+
       tasks <- TaskDAO.findAllByTaskType(taskType)
       dataSetNames <- dataSetNamesForTasks(tasks)
       statuses <- Future.traverse(tasks)(_.status)

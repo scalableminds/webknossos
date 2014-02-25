@@ -139,11 +139,15 @@ object TaskDAO extends SecuredBaseDAO[Task] with FoxImplicits {
     }
   }
 
-
-
-  @deprecated(message = "This mehtod shouldn't be used. Use TaskService.remove instead", "2.0")
+  @deprecated(message = "This method shouldn't be used. Use TaskService.remove instead", "2.0")
   override def removeById(bson: BSONObjectID)(implicit ctx: DBAccessContext) = {
     super.removeById(bson)
+  }
+
+  def removeAllWithProject(project: Project)(implicit ctx: DBAccessContext) = {
+    project.tasks.map(_.map(task => {
+      removeById(task._id)
+    }))
   }
 
   def findAllByTaskType(taskType: TaskType)(implicit ctx: DBAccessContext) = withExceptionCatcher{

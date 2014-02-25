@@ -32,7 +32,7 @@ object TaskController extends Controller with Secured {
   }
 
   def requestTaskFor(user: User)(implicit ctx: DBAccessContext) =
-    TaskService.nextTaskForUser(user) orElse (Training.findAssignableFor(user).flatMap(_.headOption))
+    TaskService.nextTaskForUser(user)
 
   def request = Authenticated.async { implicit request =>
     val user = request.user
@@ -43,12 +43,7 @@ object TaskController extends Controller with Secured {
       annotation <- AnnotationService.createAnnotationFor(user, task) ?~> Messages("annotation.creationFailed")
       annotationJSON <- Annotation.transformToJson(annotation)
     } yield {
-      val message = if (task.isTraining)
-        Messages("task.training.assigned")
-      else
-        Messages("task.assigned")
-
-      JsonOk(Json.obj( "tasks" -> taskJSON, "annotations" -> annotationJSON), message)
+      JsonOk(Json.obj( "tasks" -> taskJSON, "annotations" -> annotationJSON), Messages("task.assigned"))
     }
   }
 }

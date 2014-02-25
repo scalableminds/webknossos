@@ -2,7 +2,9 @@ package controllers.admin
 
 import scala.concurrent.duration._
 import views._
-import models.task.{ProjectService, ProjectDAO, Project}
+import models.task.{ProjectService, ProjectDAO, Project, TaskService}
+import controllers.admin.TaskAdministration
+import play.api.Logger
 import play.api.data.Form._
 import play.api.data.Form
 import play.api.data.Forms._
@@ -51,8 +53,8 @@ object ProjectAdministration extends AdminController {
     implicit request =>
       for {
         project <- ProjectDAO.findOneByName(projectName) ?~> Messages("project.notFound")
+        _ <- ProjectService.remove(project) ?~> Messages("project.remove.notAllowed")
       } yield {
-        ProjectService.remove(project)
         JsonOk(Messages("project.removed"))
       }
   }

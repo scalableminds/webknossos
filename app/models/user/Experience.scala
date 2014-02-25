@@ -35,9 +35,3 @@ object Experience {
 
   def fromForm(domain: String, value: Int) = Experience(domain.trim, value)
 }
-
-object ExperienceService {
-  def findAllDomains(implicit ctx: DBAccessContext): Fox[Set[String]] = TaskDAO.findAll.map { tasks =>
-    tasks.flatMap(_.training.map(_.domain))(breakOut)
-  }
-}

@@ -66,7 +66,7 @@ class SkeletonTracing
         @createNewTree()
 
     tracingType = tracing.typ
-    if (tracingType == "Task" or tracingType == "Training") and @getNodeListOfAllTrees().length == 0
+    if (tracingType == "Task") and @getNodeListOfAllTrees().length == 0
       @addNode(tracing.content.editPosition, @TYPE_USUAL, 0, 0)
 
     @branchPointsAllowed = tracing.content.settings.branchPointsAllowed
@@ -540,7 +540,7 @@ class SkeletonTracing
 
     if notify
       if confirm("Do you really want to delete the whole tree?")
-        @reallyDeleteTree(id, deleteBranchesAndComments)
+        @reallyDeleteTree(id, deleteBranchesAndComments, informServer)
       else
         return
     else

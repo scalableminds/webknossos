@@ -20,14 +20,11 @@ import net.liftweb.common.{Failure, Full}
 trait TaskAssignmentSimulation extends TaskAssignment with FoxImplicits {
 
   case class AssignmentStatus(assignments: Map[User, Task], tasks: Map[BSONObjectID, Task]) {
-    def addAssignment(user: User, task: Task, isTraining: Boolean) = {
-      if (isTraining)
-        this.copy(assignments = assignments + (user -> task))
-      else
-        this.copy(
-          assignments = assignments + (user -> task),
-          tasks = tasks + (task._id -> task.copy(assignedInstances = task.assignedInstances + 1))
-        )
+    def addAssignment(user: User, task: Task) = {
+      this.copy(
+        assignments = assignments + (user -> task),
+        tasks = tasks + (task._id -> task.copy(assignedInstances = task.assignedInstances + 1))
+      )
     }
   }
 
@@ -35,28 +32,6 @@ trait TaskAssignmentSimulation extends TaskAssignment with FoxImplicits {
     def apply(availableTasks: List[Task]): AssignmentStatus = {
       val tasks = availableTasks.map(t => t._id -> t).toMap
       AssignmentStatus(Map.empty, tasks)
-    }
-  }
-
-  def simulateFinishOfCurrentTask(user: User)(implicit ctx: DBAccessContext): Fox[User] = {
-    def simulateFinishOfAnnotation(userFox: Fox[User], annotation: Annotation): Fox[User] = userFox.flatMap {
-      user =>
-        val updated =
-          for {
-            task <- annotation.task
-            if (task.isTraining)
-            training <- task.training.toFox
-          } yield {
-            user.increaseExperience(training.domain, training.gain)
-          }
-
-        updated getOrElse user
-    }
-
-
-    AnnotationService.openTasksFor(user).flatMap {
-      tasks =>
-        tasks.foldLeft(Fox.successful(user))(simulateFinishOfAnnotation)
     }
   }
 
@@ -68,9 +43,8 @@ trait TaskAssignmentSimulation extends TaskAssignment with FoxImplicits {
     }
 
     for {
-      preparedUsers <- Fox.combined(users.map(simulateFinishOfCurrentTask))
-      available <- findAllAssignableNonTrainings
-      result <- assignToEach(preparedUsers, AssignmentStatus(available))
+      available <- findAllAssignable
+      result <- assignToEach(users, AssignmentStatus(available))
     } yield {
       result.assignments
     }
@@ -86,19 +60,13 @@ trait TaskAssignmentSimulation extends TaskAssignment with FoxImplicits {
           val tasksAvailable = assignmentStatus.tasks.values.filter(canBeDoneByUser)
           await(nextTaskForUser(user, Future.successful(tasksAvailable.toList)).futureBox) match {
             case Full(task) =>
-              Full(assignmentStatus.addAssignment(user, task, false))
+              Full(assignmentStatus.addAssignment(user, task))
             case _ =>
-              await(Training.findAssignableFor(user).futureBox) match {
-                case Full(training :: _) =>
-                  Full(assignmentStatus.addAssignment(user, training, true))
-                case _ =>
-                  Full(assignmentStatus)
-              }
+              Full(assignmentStatus)
           }
 
         case f: Failure => f
         case _ => Failure("Failed to simulate task assignemtns")
-
       }
     }
   }

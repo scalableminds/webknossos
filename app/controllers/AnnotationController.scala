@@ -64,8 +64,7 @@ object AnnotationController extends Controller with Secured with TracingInformat
         annotation =>
           for{
             _ <- annotation.restrictions.allowAccess(request.user).failIfFalse(Messages("notAllowed")).toFox ~> 400
-            result <- htmlForAnnotation(annotation)
-          } yield Ok(result)
+          } yield Ok(htmlForAnnotation(annotation))
       }
   }
 
@@ -80,7 +79,6 @@ object AnnotationController extends Controller with Secured with TracingInformat
       }
     }
   }
-
 
   def reopen(typ: String, id: String) = Authenticated.async { implicit request =>
     withAnnotation(AnnotationIdentifier(typ, id)) { annotation =>
@@ -248,22 +246,8 @@ object AnnotationController extends Controller with Secured with TracingInformat
       }
   }
 
-  def additionalHtml(annotation: AnnotationLike)(implicit request: AuthenticatedRequest[_]) = {
-    if (annotation.typ == AnnotationType.Review) {
-      AnnotationDAO.findTrainingForReviewAnnotation(annotation).map {
-        annotation =>
-          html.admin.training.trainingsReviewItem(annotation, admin.TrainingsTracingAdministration.reviewForm)
-      }
-    } else {
-      annotation.review.headOption.flatMap(_.comment).toFox.map(comment =>
-        html.tracing.trainingsComment(comment))
-    }
-  }
-
   def htmlForAnnotation(annotation: AnnotationLike)(implicit request: AuthenticatedRequest[_]) = {
-    additionalHtml(annotation).getOrElse(Html.empty).map{ additionalHtml =>
-      html.tracing.trace(annotation)(additionalHtml)
-    }
+    html.tracing.trace(annotation)(Html.empty)
   }
 
 

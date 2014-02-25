@@ -37,8 +37,6 @@ object Application extends Controller with Secured {
         controllers.routes.javascript.AnnotationController.download,
         controllers.admin.routes.javascript.NMLIO.taskDownload,
         controllers.admin.routes.javascript.NMLIO.projectDownload,
-        controllers.admin.routes.javascript.TrainingsTaskAdministration.create,
-        controllers.admin.routes.javascript.TrainingsTaskAdministration.delete,
         controllers.admin.routes.javascript.TaskAdministration.delete,
         controllers.admin.routes.javascript.ProjectAdministration.create,
         controllers.admin.routes.javascript.ProjectAdministration.delete

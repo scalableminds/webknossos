@@ -83,7 +83,7 @@ class Tree
 
     swapLast = (array, index) =>
       lastElement = array.pop()
-      for i in [0..array.elementLength]
+      for i in [0...array.elementLength]
         array.getAllElements()[index * array.elementLength + i] = lastElement[i]
 
     # Find index
@@ -91,6 +91,8 @@ class Tree
       if @nodeIDs.get(i) == node.id
         nodesIndex = i
         break
+
+    $.assert(nodesIndex?, "No node found.", { id: node.id, @nodeIDs })
 
     # swap IDs and nodes
     swapLast( @nodeIDs, nodesIndex )
@@ -232,6 +234,15 @@ class Tree
         a.array       = a._rBuffer.getBuffer()
         a.numItems    = a._rBuffer.getBufferLength()
         a.needsUpdate = true
+
+
+  logState : (title) ->
+
+    console.log " +++ " + title + " +++ "
+    console.log "nodeIDs", @nodeIDs.toString()
+    console.log "nodesBuffer", @nodesBuffer.toString()
+    console.log "edgesBuffer", @edgesBuffer.toString()
+    console.log "sizesBuffer", @sizesBuffer.toString()
 
 
   #### Color utility methods

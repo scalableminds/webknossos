@@ -25,9 +25,8 @@ import net.liftweb.common.{Failure, Empty, Full}
  * Time: 14:57
  */
 trait TaskAssignment {
-  def findAllTrainings(implicit ctx: DBAccessContext): Fox[List[Task]]
 
-  def findAllAssignableNonTrainings(implicit ctx: DBAccessContext): Fox[List[Task]]
+  def findAllAssignable(implicit ctx: DBAccessContext): Fox[List[Task]]
 
   val conf = current.configuration
 
@@ -35,16 +34,9 @@ trait TaskAssignment {
 
   val jsExecutionActor = Akka.system.actorOf(Props[JsExecutionActor])
 
-  def findAssignableTasksFor(user: User)(implicit ctx: DBAccessContext) =
-    findAssignableFor(user, shouldBeTraining = false)
-
-  def findAssignableFor(user: User, shouldBeTraining: Boolean)(implicit ctx: DBAccessContext) = {
+  def findAssignableFor(user: User)(implicit ctx: DBAccessContext) = {
     val finishedTasks = AnnotationDAO.findFor(user._id, AnnotationType.Task).map(_.flatMap(_._task))
-    val availableTasks =
-      if (shouldBeTraining)
-        findAllTrainings
-      else
-        findAllAssignableNonTrainings
+    val availableTasks = findAllAssignable
 
     for {
       available <- availableTasks
@@ -74,6 +66,6 @@ trait TaskAssignment {
   def nextTaskForUser(user: User)(implicit ctx: DBAccessContext): Fox[Task] = {
     nextTaskForUser(
       user,
-      findAssignableTasksFor(user))
+      findAssignableFor(user))
   }
 }

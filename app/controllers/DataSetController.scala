@@ -62,6 +62,13 @@ object DataSetController extends Controller with Secured {
     }
   }
 
+  def read(dataSetName: String) = UserAwareAction.async{ implicit request =>
+    DataSetDAO.findOneBySourceName(dataSetName).map {
+      dataSet =>
+        Ok(DataSet.dataSetPublicWrites(request.userOpt).writes(dataSet))
+    }
+  }
+
   def importDataSet(dataSetName: String) = Authenticated.async{ implicit request =>
     for {
       dataSet <- DataSetDAO.findOneBySourceName(dataSetName) ?~> Messages("dataSet.notFound")

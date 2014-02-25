@@ -21,6 +21,7 @@ import play.api.libs.json.JsSuccess
 import scala.Some
 import play.api.libs.json
 import models.user.User
+import play.api.templates.Html
 
 /**
  * Company: scalableminds
@@ -40,7 +41,11 @@ object DataSetController extends Controller with Secured {
       }
   }
 
-  def listView = UserAwareAction.async {
+  def empty = Authenticated{ implicit request =>
+    Ok(views.html.main()(Html.empty))
+  }
+
+  def spotlight = UserAwareAction.async {
     implicit request =>
       DataSetDAO.findAll.map {
         dataSets =>
@@ -48,7 +53,7 @@ object DataSetController extends Controller with Secured {
       }
   }
 
-  def list = UserAwareAction.async{ implicit request =>
+  def list = Authenticated.async{ implicit request =>
     UsingFilters(
       Filter("isEditable", (value: Boolean, el: DataSet) =>
         el.isEditableBy(request.userOpt) && value || !el.isEditableBy(request.userOpt) && !value),

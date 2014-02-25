@@ -1,11 +1,13 @@
 package controllers
 
 import oxalis.security.Secured
-import models.team.{Team, TeamDAO}
-import play.api.libs.json.{Writes, Json}
+import models.team.{TeamService, Team, TeamDAO}
+import play.api.libs.json.{JsError, JsSuccess, Writes, Json}
 import play.api.libs.concurrent.Execution.Implicits._
 import models.user.User
 import braingames.util.ExtendedTypes.ExtendedString
+import scala.concurrent.Future
+import play.api.i18n.Messages
 
 object TeamController extends Controller with Secured {
 
@@ -20,6 +22,17 @@ object TeamController extends Controller with Secured {
           teams
       }
       Ok(Writes.list(Team.teamPublicWrites(request.user)).writes(filtered))
+    }
+  }
+
+  def create = Authenticated.async(parse.json){ implicit request =>
+    request.body.validate(Team.teamPublicReads(request.user)) match {
+      case JsSuccess(team, _) =>
+        TeamService.create(team, request.user).map{ _ =>
+          JsonOk(Messages("team.created"))
+        }
+      case e: JsError =>
+        Future.successful(BadRequest(JsError.toFlatJson(e)))
     }
   }
 }

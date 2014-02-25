@@ -16,7 +16,8 @@ object AnnotationSettings {
   val ARBITRARY = "arbitrary"
   val VOLUME = "volume"
 
-  val ALL_MODES = List(OXALIS, ARBITRARY)
+
+  val ALL_MODES = List(OXALIS, ARBITRARY, VOLUME)
   val SKELETON_MODES = List(OXALIS, ARBITRARY)
   val VOLUME_MODES = List(VOLUME)
 

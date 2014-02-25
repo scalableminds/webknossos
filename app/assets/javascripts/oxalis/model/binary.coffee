@@ -29,6 +29,8 @@ class Binary
     @TEXTURE_SIZE_P = constants.TEXTURE_SIZE_P
 
     @dataSetName    = tracing.content.dataSet.name
+    @lastPingTime   = new Date()
+    @queueStatus    = 0
     @targetBitDepth = if @layer.name == "color" then @layer.bitDepth else 8
 
     for layer in tracing.content.dataSet.dataLayers
@@ -107,8 +109,6 @@ class Binary
       @lastZoomStep = zoomStep
       @lastArea     = area.slice()
 
-      # console.log "ping", @pullQueue.roundTripTime, @pullQueue.bucketsPerSecond, @cube.bucketCount
-
       for strategy in @pingStrategies 
         if strategy.inVelocityRange(1) and strategy.inRoundTripTimeRange(@pullQueue.roundTripTime)
 
@@ -119,6 +119,7 @@ class Binary
 
           break
 
+      @queueStatus
       @pullQueue.pull()
 
 

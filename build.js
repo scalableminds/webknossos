@@ -27,6 +27,7 @@
   allowSourceOverwrites: true,
   generateSourceMaps : true,
   preserveLicenseComments : false,
+  wrapShim : true,
   
   paths : {
     "routes": "empty:"

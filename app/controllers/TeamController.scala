@@ -58,4 +58,14 @@ object TeamController extends Controller with Secured {
         Future.successful(BadRequest(JsError.toFlatJson(e)))
     }
   }
+
+  def delete(teamId: String) = Authenticated.async { implicit request =>
+    for {
+      team <- UserDAO.findOneById(teamId) ?~> Messages("user.notFound")
+      _ <- allowedToAdministrate(request.user, user).toFox
+      _ <- UserService.removeFromAllPossibleTeams(user, request.user)
+    } yield {
+      JsonOk(Messages("user.deleted", user.name))
+    }
+  }
 }

@@ -1,8 +1,9 @@
 ### define
 underscore : _
 jquery : $
-../../libs/request : Request
-../../libs/event_mixin : EventMixin
+libs/request : Request
+libs/event_mixin : EventMixin
+three : THREE
 ###
 
 class StateLogger

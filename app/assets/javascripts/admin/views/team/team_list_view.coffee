@@ -76,6 +76,7 @@ class TeamListView extends Backbone.Marionette.CompositeView
     @collection.fetch(
       data:
         "isEditable=true"
+      silent: true
     ).done( =>
       @collection.goTo(1)
     )
@@ -90,14 +91,17 @@ class TeamListView extends Backbone.Marionette.CompositeView
     @user.then(
       (userData) =>
 
-        team = new TeamModel("name", "#{userData.firstName} #{userData.lastName}")
+        team = new TeamModel(
+          name : @ui.inputName.val(),
+          owner : "#{userData.firstName} #{userData.lastName}"
+        )
         @collection.create(team)
       ->
         Toast.error("Ups. Something went wrong")
     )
 
 
-  filter : -> (filterQuery)
+  filter : (filterQuery) ->
 
     @collection.setFilter(["name", "owner"], filterQuery)
     @collection.pager()

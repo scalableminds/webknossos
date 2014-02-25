@@ -8,14 +8,14 @@ require.config(
     "jquery"              : "../bower_components/jquery/jquery"
     "underscore"          : "../bower_components/lodash/dist/lodash"
     "bootstrap"           : "../bower_components/bootstrap/docs/assets/js/bootstrap"
-    "slider"              : "../bower_components/bootstrap-slider/bootstrap-slider"
+    "slider"              : "../bower_components/seiyria-bootstrap-slider/js/bootstrap-slider"
     "coffee-script"       : "../bower_components/coffee-script/extras/coffee-script"
     "backbone.marionette" : "../bower_components/backbone.marionette/lib/backbone.marionette"
     "backbone.paginator"  : "../bower_components/backbone.paginator/dist/backbone.paginator"
     "backbone"            : "../bower_components/backbone/backbone"
-    "three"               : "../bower_components/three.js/build/three"
-    "three.color"         : "../bower_components/three.js/examples/js/math/ColorConverter"
-    "three.trackball"     : "../bower_components/three.js/examples/js/controls/TrackballControls"
+    "three"               : "../bower_components/three/index"
+    "three.color"         : "../bower_components/ColorConverter/index"
+    "three.trackball"     : "../bower_components/TrackballControls/index"
     "stats"               : "../bower_components/threejs-stats/Stats"
     "dat"                 : "../bower_components/dat.gui/dat.gui"
     "ace"                 : "../bower_components/ace-builds/src-min-noconflict/ace"
@@ -55,9 +55,8 @@ require.config(
     "three.color" :
       deps : ["three"]
       exports : "THREE.ColorConverter"
-    "qassert" : [ "jquery"]
     "backbone" :
-      deps : [ "underscore" ]
+      deps : [ "jquery", "underscore" ]
       exports : "Backbone"
     "backbone.marionette" : [ "backbone", "underscore" ]
     "backbone.paginator" : [ "backbone", "underscore" ]

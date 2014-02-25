@@ -3,11 +3,11 @@ underscore : _
 backbone : Backbone
 ###
 
-class TeamModel extends Backbone.Collection
+class TeamModel extends Backbone.Model
 
-  constructor : ->
+  constructor : (attributes) ->
 
-    super(
+    _.defaults(attributes,
       id: null
       name: ""
       owner: ""
@@ -18,4 +18,6 @@ class TeamModel extends Backbone.Collection
       ]
       isEditable: "true"
     )
+
+    super(attributes)
 

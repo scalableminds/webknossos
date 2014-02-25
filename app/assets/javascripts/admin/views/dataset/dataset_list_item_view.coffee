@@ -102,6 +102,6 @@ class DatasetListItemView extends Backbone.Marionette.ItemView
         if value < 100
           window.setTimeout((=> @updateProgress()), 100)
         else
-          @model.fetch()
+          @model.fetch({url : "/api/datasets/#{@model.get("name")}"})
       )
 

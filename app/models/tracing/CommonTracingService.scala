@@ -18,15 +18,15 @@ import reactivemongo.core.commands.LastError
 trait CommonTracingService extends FoxImplicits {
   def dao: SecuredBaseDAO[_]
 
-  def updateSettings(settings: AnnotationSettings, tracingId: String)(implicit ctx: DBAccessContext): Unit = {
+  def updateSettings(settings: AnnotationSettings, tracingId: String)(implicit ctx: DBAccessContext) = {
     dao.withValidId(tracingId) {
       id =>
-        dao.collectionUpdate(
+        dao.update(
           Json.obj("_id" -> id),
           Json.obj("$set" -> Json.obj("settings" -> settings)),
           upsert = false,
           multi = false
-        )
+        ).map(_.ok)
     }
   }
 

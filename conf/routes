@@ -29,11 +29,17 @@ GET           /user/configuration/default                                control
 GET           /user/tasks/request                                        controllers.TaskController.request
 
 GET           /api/users                                                 controllers.UserController.list
+GET           /api/user                                                  controllers.UserController.current
 DELETE        /api/users/:id                                             controllers.UserController.delete(id: String)
 PUT           /api/users/:id                                             controllers.UserController.update(id: String)
 GET           /api/users/:id/annotations/download                        controllers.admin.NMLIO.userDownload(id: String)
 # GET         /api/users/:id/loginAs                                     controllers.UserController.loginAsUser(id: String)
 GET           /users/:id/details                                         controllers.UserController.show(id: String)
+
+# Team
+GET           /teams                                                     controllers.UserController.empty
+GET           /api/teams                                                 controllers.TeamController.list
+POST          /api/teams                                                 controllers.TeamController.list
 
 # Binary Data
 
@@ -67,7 +73,7 @@ GET           /annotations/:typ/:id/cancel                               control
 GET           /admin/nml/upload                                          controllers.admin.NMLIO.uploadForm
 POST          /admin/nml/upload                                          controllers.admin.NMLIO.upload
 
-GET           /api/teams                                                     controllers.TeamController.list
+
 
 
 # Admin Tasks
@@ -102,20 +108,6 @@ POST          /admin/projects/create                                     control
 GET           /admin/projects/:name/delete                               controllers.admin.ProjectAdministration.delete(name: String)
 GET           /admin/projects/:name/download                             controllers.admin.NMLIO.projectDownload(name: String)
 GET           /admin/projects/:name/tasks                                controllers.admin.TaskAdministration.tasksForProject(name: String)
-
-
-GET           /admin/tracings/:id/review                                 controllers.admin.TrainingsTracingAdministration.oxalisReview(id: String)
-
-GET           /admin/trainingsTasks                                      controllers.admin.TrainingsTaskAdministration.list
-GET           /admin/trainingsTasks/create/data                          controllers.admin.TrainingsTaskAdministration.getData
-GET           /admin/trainingsTasks/create                               controllers.admin.TrainingsTaskAdministration.create(taskId: String ?= "")
-POST          /admin/trainingsTasks/createFromForm                       controllers.admin.TrainingsTaskAdministration.createFromForm
-GET           /admin/trainingsTasks/:id/delete                           controllers.admin.TrainingsTaskAdministration.delete(id: String)
-
-GET           /admin/training/:id/startReview                            controllers.admin.TrainingsTracingAdministration.startReview(id: String)
-GET           /admin/training/:id/abortReview                            controllers.admin.TrainingsTracingAdministration.abortReview(id: String)
-GET           /admin/training/:id/finishReview                           controllers.admin.TrainingsTracingAdministration.finishReview(id: String)
-POST          /admin/training/:id/finishReview                           controllers.admin.TrainingsTracingAdministration.finishReviewForm(id: String, passed: Boolean ?= true)
 
 # Binary Administration
 GET           /admin/datasets                                            controllers.admin.BinaryDataAdministration.list

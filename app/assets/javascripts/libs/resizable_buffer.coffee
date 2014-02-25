@@ -23,6 +23,8 @@ class ResizableBuffer
 
   getLength : -> @length/@elementLength
 
+  getBufferLength : -> @length
+
   getBuffer : -> @buffer
 
   getAllElements : -> @buffer.subarray(0, @length)
@@ -110,3 +112,17 @@ class ResizableBuffer
       newBuffer.set(buffer)
       
       @buffer = newBuffer
+
+
+  toString : ->
+
+    length = @getLength()
+    result = []
+
+    for i in [0...length]
+      element = []
+      for j in [0...@elementLength]
+        element.push( @buffer[ i * @elementLength + j ] )
+      result.push( "[ " + element.join(", ") + " ]" )
+
+    return "(" + length + ") { " + result.join(", ") + " }"

@@ -3,6 +3,7 @@
 ../view : View
 ../model/dimensions : Dimensions
 ../constants : constants
+three : THREE
 ###
 
 class Plane
@@ -217,7 +218,8 @@ class Plane
 
   setRotation : (rotVec) =>
 
-    @plane.rotation = @TDViewBorders.rotation = @crosshair[0].rotation = @crosshair[1].rotation = rotVec
+    for mesh in [ @plane, @TDViewBorders, @crosshair[0], @crosshair[1] ]
+      mesh.setRotationFromEuler rotVec
 
 
   setPosition : (posVec) =>

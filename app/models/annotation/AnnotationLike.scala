@@ -25,7 +25,7 @@ import oxalis.mvc.FilterableJson
 trait AnnotationLike extends AnnotationStatistics {
   def _name: Option[String]
 
-  def user: Future[Option[User]]
+  def user: Fox[User]
 
   def team: String
 
@@ -45,17 +45,11 @@ trait AnnotationLike extends AnnotationStatistics {
 
   def restrictions: AnnotationRestrictions
 
-  def review: List[AnnotationReview] = Nil
-
   def version: Int
 
   // def incrementVersion: AnnotationLike
 
   def dataSetName = content.map(_.dataSetName) getOrElse ""
-
-
-  def isTrainingsAnnotation =
-    typ == AnnotationType.Training
 
   def annotationInfo(user: Option[User])(implicit ctx: DBAccessContext): Fox[JsObject] =
     AnnotationLike.annotationLikeInfoWrites(this, user, Nil)
@@ -66,12 +60,9 @@ trait AnnotationLike extends AnnotationStatistics {
 object AnnotationLike extends FoxImplicits with FilterableJson{
 
   def stateLabel(annotation: AnnotationLike, user: Option[User]) = {
-    val lastReviewer = annotation.review.headOption.map(_._reviewer)
     annotation.state match {
       case s if s.isFinished =>
         "Finished"
-      case s if lastReviewer != user.map(_._id) && s.isInReview =>
-        "Under Review"
       case _ =>
         "In Progress"
     }
@@ -91,7 +82,6 @@ object AnnotationLike extends FoxImplicits with FilterableJson{
       "stats" +> a.statisticsForAnnotation().map(s => Json.toJson(s)).getOrElse(JsNull),
       "content" +> a.content.flatMap(AnnotationContent.writeAsJson(_)).getOrElse(JsNull),
       "restrictions" +> AnnotationRestrictions.writeAsJson(a.restrictions, user),
-      "review" +> a.review,
       "actions" +> a.actions(user))
   }
 

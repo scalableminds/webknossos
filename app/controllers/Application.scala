@@ -9,6 +9,7 @@ import models.user.{UsedAnnotationDAO, UsedAnnotation}
 import models.basics.Implicits._
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.templates.Html
+import net.liftweb.common.Full
 
 object Application extends Controller with Secured {
   lazy val app = play.api.Play.current
@@ -36,8 +37,6 @@ object Application extends Controller with Secured {
         controllers.routes.javascript.AnnotationController.download,
         controllers.admin.routes.javascript.NMLIO.taskDownload,
         controllers.admin.routes.javascript.NMLIO.projectDownload,
-        controllers.admin.routes.javascript.TrainingsTaskAdministration.create,
-        controllers.admin.routes.javascript.TrainingsTaskAdministration.delete,
         controllers.admin.routes.javascript.TaskAdministration.delete,
         controllers.admin.routes.javascript.ProjectAdministration.create,
         controllers.admin.routes.javascript.ProjectAdministration.delete
@@ -48,8 +47,8 @@ object Application extends Controller with Secured {
   def index() = UserAwareAction.async { implicit request =>
     request.userOpt match {
       case Some(user) =>
-        UsedAnnotationDAO.oneBy(user).map {
-          case Some(annotationId) =>
+        UsedAnnotationDAO.oneBy(user).futureBox.map {
+          case Full(annotationId) =>
             Redirect(routes.AnnotationController.trace(annotationId.annotationType, annotationId.identifier))
           case _ =>
             Redirect(routes.UserController.dashboard)

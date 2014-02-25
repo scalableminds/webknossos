@@ -1,8 +1,9 @@
 ### define
 underscore : _
 jquery : $
-../../libs/request : Request
-../../libs/event_mixin : EventMixin
+libs/request : Request
+libs/event_mixin : EventMixin
+three : THREE
 ###
 
 class StateLogger
@@ -94,21 +95,16 @@ class StateLogger
 
   nodeObject : (node, treeId) ->
 
-    return {
+    return _.extend node.metaInfo,
       treeId : treeId,
       id: node.id,
       radius: node.radius,
       position : node.pos
-      timestamp: node.time
-      # DUMMY VALUES
-      viewport : 0		
-      resolution: 0
-      }
 
 
   edgeObject : (node, treeId) ->
 
-    $.assert(node.neighbors.length == 1,
+    $.assertEquals(node.neighbors.length, 1,
       "Node has to have exactly one neighbor", node.neighbors.length)
 
     return {
@@ -123,8 +119,8 @@ class StateLogger
     $.assert(node.neighbors.length <= 1,
       "New node can't have more than one neighbor", node.neighbors.length)
     if node.neighbors[0]
-      $.assert(node.treeId == node.neighbors[0].treeId,
-        "Neighbot has different treeId",
+      $.assertEquals(node.treeId, node.neighbors[0].treeId,
+        "Neighbor has different treeId",
         {treeId1 : node.treeId, treeId2 : node.neighbors[0].treeId})
 
     needsEdge = node.neighbors.length == 1

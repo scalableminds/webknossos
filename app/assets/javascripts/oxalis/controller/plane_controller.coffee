@@ -1,15 +1,16 @@
 ### define
 jquery : $
 underscore : _
-./camera_controller : CameraController
-../model/dimensions : Dimensions
 libs/event_mixin : EventMixin
 libs/input : Input
+three.trackball : Trackball
+./camera_controller : CameraController
+../model/dimensions : Dimensions
 ../view/plane_view : PlaneView
 ../constants : constants
-libs/threejs/TrackballControls : TrackballControls
 ./celltracing_controller : CellTracingController
 ./volumetracing_controller : VolumeTracingController
+three : THREE
 ###
 
 class PlaneController
@@ -82,12 +83,12 @@ class PlaneController
           .on("click", button.callback)
       )
 
-    objects = { @model, @view, @sceneController, @cameraController, @move, @calculateGlobalPos }
+    objects = { @model, @view, @sceneController, @cameraController, @move, @calculateGlobalPos, planeController : this }
     @cellTracingController = new CellTracingController( objects, @controlMode )
     @volumeTracingController = new VolumeTracingController( objects )
 
     meshes = @sceneController.getMeshes()
-    
+
     for mesh in meshes
       @view.addGeometry(mesh)
 
@@ -130,10 +131,10 @@ class PlaneController
     pos = @model.scaleInfo.voxelToNm(@flycam.getPosition())
     @controls = new THREE.TrackballControls(
       @view.getCameras()[constants.TDView],
-      view, 
-      new THREE.Vector3(pos...), 
+      view,
+      new THREE.Vector3(pos...),
       => @flycam.update())
-    
+
     @controls.noZoom = true
     @controls.noPan = true
 
@@ -145,9 +146,9 @@ class PlaneController
 
         nmPosition = @model.scaleInfo.voxelToNm(position)
 
-        @controls.setTarget(
-          new THREE.Vector3(nmPosition...))
-      
+        @controls.target.set( nmPosition... )
+        @controls.update()
+
         # As the previous step will also move the camera, we need to
         # fix this by offsetting the viewport
 
@@ -156,8 +157,8 @@ class PlaneController
           invertedDiff.push( @oldNmPos[i] - nmPosition[i] )
         @oldNmPos = nmPosition
 
-        @cameraController.moveTDView( 
-          new THREE.Vector3( invertedDiff... ))
+        @cameraController.moveTDView(
+                new THREE.Vector3( invertedDiff... ))
 
     @cameraController.on
       cameraPositionChanged : =>
@@ -165,7 +166,7 @@ class PlaneController
 
 
   initKeyboard : ->
-    
+
     # avoid scrolling while pressing space
     $(document).keydown (event) ->
       event.preventDefault() if (event.which == 32 or event.which == 18 or 37 <= event.which <= 40) and !$(":focus").length
@@ -173,15 +174,15 @@ class PlaneController
 
     getMoveValue  = (timeFactor) =>
       if @activeViewport in [0..2]
-        return @model.user.moveValue * timeFactor / @model.scaleInfo.baseVoxel / constants.FPS
+        return @model.user.get("moveValue") * timeFactor / @model.scaleInfo.baseVoxel / constants.FPS
       else
         return constants.TDView_MOVE_SPEED * timeFactor / constants.FPS
 
     @input.keyboard = new Input.Keyboard(
 
       #ScaleTrianglesPlane
-      "l" : (timeFactor) => @scaleTrianglesPlane(-@model.user.scaleValue * timeFactor )
-      "k" : (timeFactor) => @scaleTrianglesPlane( @model.user.scaleValue * timeFactor )
+      "l" : (timeFactor) => @scaleTrianglesPlane(-@model.user.get("scaleValue") * timeFactor )
+      "k" : (timeFactor) => @scaleTrianglesPlane( @model.user.get("scaleValue") * timeFactor )
 
       #Move
       "left"  : (timeFactor) => @moveX(-getMoveValue(timeFactor))
@@ -198,17 +199,18 @@ class PlaneController
       "d"             : (timeFactor, first) => @moveZ(-getMoveValue(timeFactor)    , first)
       "shift + f"     : (timeFactor, first) => @moveZ( getMoveValue(timeFactor) * 5, first)
       "shift + d"     : (timeFactor, first) => @moveZ(-getMoveValue(timeFactor) * 5, first)
-    
+
       "shift + space" : (timeFactor, first) => @moveZ(-getMoveValue(timeFactor)    , first)
       "ctrl + space"  : (timeFactor, first) => @moveZ(-getMoveValue(timeFactor)    , first)
-    
-    , @model.user.keyboardDelay)
+
+    , @model.user.get("keyboardDelay")
+    )
 
     @model.user.on({
       keyboardDelayChanged : (value) => @input.keyboardLoopDelayed.delay = value
       })
-    
-    @input.keyboardNoLoop = new Input.KeyboardNoLoop( 
+
+    @input.keyboardNoLoop = new Input.KeyboardNoLoop(
       _.extend(@activeSubController.keyboardControls,
         {
           #Zoom in/out
@@ -222,8 +224,8 @@ class PlaneController
 
   init : ->
 
-    @cameraController.setClippingDistance @model.user.clippingDistance
-    @sceneController.setClippingDistance @model.user.clippingDistance
+    @cameraController.setClippingDistance @model.user.get("clippingDistance")
+    @sceneController.setClippingDistance @model.user.get("clippingDistance")
 
 
   start : (newMode) ->
@@ -268,14 +270,14 @@ class PlaneController
           @view.addGeometry(geometry)
       removeGeometries : (list, event) =>
         for geometry in list
-          @view.removeGeometry(geometry)   
+          @view.removeGeometry(geometry)
     @sceneController.skeleton.on
       newGeometries : (list, event) =>
         for geometry in list
           @view.addGeometry(geometry)
       removeGeometries : (list, event) =>
         for geometry in list
-          @view.removeGeometry(geometry)    
+          @view.removeGeometry(geometry)
 
 
   render : ->
@@ -335,8 +337,8 @@ class PlaneController
       @zoomPos = @getMousePosition()
 
     @flycam.zoomByDelta( value )
-    @model.user.setValue("zoom", @flycam.getPlaneScalingFactor())
-    
+    @model.user.set("zoom", @flycam.getPlaneScalingFactor())
+
     if zoomToMouse
       @finishZoom()
 
@@ -356,7 +358,7 @@ class PlaneController
 
 
   finishZoom : =>
-    
+
     # Move the plane so that the mouse is at the same position as
     # before the zoom
     if @isMouseOver()
@@ -379,27 +381,28 @@ class PlaneController
 
   changeMoveValue : (delta) ->
 
-    moveValue = @model.user.moveValue + delta
+    moveValue = @model.user.get("moveValue") + delta
     moveValue = Math.min(constants.MAX_MOVE_VALUE, moveValue)
     moveValue = Math.max(constants.MIN_MOVE_VALUE, moveValue)
 
-    @model.user.setValue("moveValue", (Number) moveValue)
+    @model.user.set("moveValue", (Number) moveValue)
 
 
   scaleTrianglesPlane : (delta) ->
 
-    scale = @model.user.scale + delta
+    scale = @model.user.get("scale") + delta
     scale = Math.min(constants.MAX_SCALE, scale)
     scale = Math.max(constants.MIN_SCALE, scale)
 
-    @model.user.setValue("scale", (Number) scale)
+    @model.user.set("scale", (Number) scale)
 
 
   scrollPlanes : (delta, type) =>
 
     switch type
       when null then @moveZ(delta)
-      when "shift" then @cellTracingController.setParticleSize(delta)
+      #when "shift" then @cellTracingController.setParticleSize(delta)
+      when "shift" then @cellTracingController.setRadius(delta)
       when "alt"
         @zoomPlanes(delta, true)
 
@@ -411,17 +414,17 @@ class PlaneController
     scaleFactor   = @view.scaleFactor
     planeRatio    = @model.scaleInfo.baseVoxelFactors
     position = switch @activeViewport
-      when constants.PLANE_XY 
-        [ curGlobalPos[0] - (constants.VIEWPORT_WIDTH * scaleFactor / 2 - clickPos.x) / scaleFactor * planeRatio[0] * zoomFactor, 
-          curGlobalPos[1] - (constants.VIEWPORT_WIDTH * scaleFactor / 2 - clickPos.y) / scaleFactor * planeRatio[1] * zoomFactor, 
+      when constants.PLANE_XY
+        [ curGlobalPos[0] - (constants.VIEWPORT_WIDTH * scaleFactor / 2 - clickPos.x) / scaleFactor * planeRatio[0] * zoomFactor,
+          curGlobalPos[1] - (constants.VIEWPORT_WIDTH * scaleFactor / 2 - clickPos.y) / scaleFactor * planeRatio[1] * zoomFactor,
           curGlobalPos[2] ]
-      when constants.PLANE_YZ 
-        [ curGlobalPos[0], 
-          curGlobalPos[1] - (constants.VIEWPORT_WIDTH * scaleFactor / 2 - clickPos.y) / scaleFactor * planeRatio[1] * zoomFactor, 
+      when constants.PLANE_YZ
+         [ curGlobalPos[0],
+          curGlobalPos[1] - (constants.VIEWPORT_WIDTH * scaleFactor / 2 - clickPos.y) / scaleFactor * planeRatio[1] * zoomFactor,
           curGlobalPos[2] - (constants.VIEWPORT_WIDTH * scaleFactor / 2 - clickPos.x) / scaleFactor * planeRatio[2] * zoomFactor ]
-      when constants.PLANE_XZ 
-        [ curGlobalPos[0] - (constants.VIEWPORT_WIDTH * scaleFactor / 2 - clickPos.x) / scaleFactor * planeRatio[0] * zoomFactor, 
-          curGlobalPos[1], 
+      when constants.PLANE_XZ
+        [ curGlobalPos[0] - (constants.VIEWPORT_WIDTH * scaleFactor / 2 - clickPos.x) / scaleFactor * planeRatio[0] * zoomFactor,
+          curGlobalPos[1],
           curGlobalPos[2] - (constants.VIEWPORT_WIDTH * scaleFactor / 2 - clickPos.y) / scaleFactor * planeRatio[2] * zoomFactor ]
 
 
@@ -429,4 +432,3 @@ class PlaneController
 
     @activeSubController.centerActiveNode()
 
-    

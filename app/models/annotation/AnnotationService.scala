@@ -26,7 +26,7 @@ object AnnotationService extends AnnotationContentProviders with BoxImplicits wi
   def createExplorationalFor(user: User, dataSet: DataSet, contentType: String)(implicit ctx: DBAccessContext) =
     withProviderForContentType(contentType) { provider =>
       for {
-        content <- provider.createFrom(dataSet)
+        content <- provider.createFrom(dataSet).toFox
         contentReference = ContentReference.createFor(content)
         annotation = Annotation(
           user._id,
@@ -47,7 +47,7 @@ object AnnotationService extends AnnotationContentProviders with BoxImplicits wi
 
   def freeAnnotationsOfUser(user: User)(implicit ctx: DBAccessContext) = {
     for {
-      annotations <- AnnotationDAO.findOpenAnnotationsFor(user._id, AnnotationType.Task).collect[List]()
+      annotations <- AnnotationDAO.findOpenAnnotationsFor(user._id, AnnotationType.Task)
       _ = annotations.map(annotation => annotation.muta.cancelTask())
       result <- AnnotationDAO.unassignAnnotationsOfUser(user._id)
     } yield result
@@ -57,7 +57,7 @@ object AnnotationService extends AnnotationContentProviders with BoxImplicits wi
     AnnotationDAO.findOpenAnnotationsFor(user._id, AnnotationType.Explorational)
 
   def openTasksFor(user: User)(implicit ctx: DBAccessContext) =
-    AnnotationDAO.findOpenAnnotationsFor(user._id, AnnotationType.Task).collect[List]()
+    AnnotationDAO.findOpenAnnotationsFor(user._id, AnnotationType.Task)
 
   def countOpenTasks(user: User)(implicit ctx: DBAccessContext) =
     AnnotationDAO.countOpenAnnotations(user._id, AnnotationType.Task)
@@ -104,12 +104,6 @@ object AnnotationService extends AnnotationContentProviders with BoxImplicits wi
     }
   }
 
-  def createSample(annotation: Annotation, _task: BSONObjectID)(implicit ctx: DBAccessContext): Future[Option[Annotation]] = {
-    annotation.copy(
-      typ = AnnotationType.Sample,
-      _task = Some(_task)).muta.copyDeepAndInsert()
-  }
-
   def createFrom(_user: BSONObjectID, team: String, content: AnnotationContent, annotationType: AnnotationType, name: Option[String])(implicit ctx: DBAccessContext) = {
     val annotation = Annotation(
       _user,
@@ -119,7 +113,7 @@ object AnnotationService extends AnnotationContentProviders with BoxImplicits wi
       typ = annotationType)
 
     AnnotationDAO.insert(annotation).map { _ =>
-      Some(annotation)
+      annotation
     }
   }
 }

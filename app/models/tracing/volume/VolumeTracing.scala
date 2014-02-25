@@ -41,7 +41,7 @@ case class VolumeTracing(
 
   def contentType: String =  VolumeTracing.contentType
 
-  def toDownloadStream: Future[InputStream] = ???
+  def toDownloadStream: Fox[InputStream] = ???
 
   def downloadFileExtension: String = ???
 }
@@ -51,11 +51,11 @@ object VolumeTracingService extends AnnotationContentService{
 
   def dao = VolumeTracingDAO
 
-  def updateSettings(settings: AnnotationSettings, tracingId: String)(implicit ctx: DBAccessContext): Unit = ???
+  def updateSettings(settings: AnnotationSettings, tracingId: String)(implicit ctx: DBAccessContext): Fox[Boolean] = ???
 
-  def findOneById(id: String)(implicit ctx: DBAccessContext): Future[Option[VolumeTracingService.AType]] = ???
+  def findOneById(id: String)(implicit ctx: DBAccessContext): Fox[VolumeTracingService.AType] = ???
 
-  def createFrom(dataSet: DataSet)(implicit ctx: DBAccessContext): Future[VolumeTracingService.AType] = ???
+  def createFrom(dataSet: DataSet)(implicit ctx: DBAccessContext): Fox[VolumeTracingService.AType] = ???
 
   def clearTracingData(id: String)(implicit ctx: DBAccessContext): Fox[VolumeTracingService.AType] = ???
 }

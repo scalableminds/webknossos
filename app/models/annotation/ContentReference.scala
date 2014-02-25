@@ -5,6 +5,8 @@ import play.api.Logger
 import scala.concurrent.Future
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json.Json
+import braingames.util.Fox
+import net.liftweb.common.Full
 
 /**
  * Company: scalableminds
@@ -19,10 +21,14 @@ case class ContentReference(contentType: String, _id: String) {
       throw new Exception("No registered resolver for ContentType: " + contentType)
     }
 
-  def resolveAs[T](implicit ctx: DBAccessContext): Future[Option[T]] = {
-    service.findOneById(_id) map {
-      case e: Option[T] => e
-      case _ => None
+  def resolveAs[T](implicit ctx: DBAccessContext): Fox[T] = {
+    service.findOneById(_id).flatMap {
+      r =>
+        try {
+          Fox.successful(r.asInstanceOf[T])
+        } catch {
+          case e: ClassCastException => Fox.failure("Content Service returned wrong object type")
+        }
     }
   }
 }

@@ -12,6 +12,7 @@ import braingames.reactivemongo.{GlobalAccessContext, DBAccessContext}
 import scala.async.Async._
 import play.api.libs.concurrent.Execution.Implicits._
 import reactivemongo.api.indexes.{IndexType, Index}
+import braingames.util.Fox
 
 case class DBTree(_tracing: BSONObjectID, treeId: Int, color: Color, timestamp: Long = System.currentTimeMillis, name: String = "", _id: BSONObjectID = BSONObjectID.generate) {
   val dao = DBTree
@@ -19,8 +20,8 @@ case class DBTree(_tracing: BSONObjectID, treeId: Int, color: Color, timestamp: 
   def id = _id.stringify
 
   def isEmpty = async {
-    val oneNode = await(DBNodeDAO.findOneByTree(_id)(GlobalAccessContext))
-    val oneEdge = await(DBEdgeDAO.findOneByTree(_id)(GlobalAccessContext))
+    val oneNode = await(DBNodeDAO.findOneByTree(_id)(GlobalAccessContext).futureBox)
+    val oneEdge = await(DBEdgeDAO.findOneByTree(_id)(GlobalAccessContext).futureBox)
 
     oneNode.isEmpty && oneEdge.isEmpty
   }
@@ -35,18 +36,19 @@ case class DBTree(_tracing: BSONObjectID, treeId: Int, color: Color, timestamp: 
   def numberOfEdges =
     DBEdgeDAO.countByTree(_id)(GlobalAccessContext)
 
-  def toTree = async {
-    Tree(treeId, await(nodes), await(edges), color, name)
-  }
+  def toTree = for{
+    ns <- nodes
+    es <- edges
+  } yield Tree(treeId, ns, es, color, name)
 }
 
 object DBTreeService {
-  def insert(_tracing: BSONObjectID, t: TreeLike)(implicit ctx: DBAccessContext): Future[DBTree] = {
+  def insert(_tracing: BSONObjectID, t: TreeLike)(implicit ctx: DBAccessContext): Fox[DBTree] = {
     val tree = DBTree.createFrom(_tracing, t)
     for {
       _ <- DBTreeDAO.insert(tree)
-      _ <- Future.traverse(t.nodes)(n => DBNodeDAO.insert(DBNode(n, tree._id)))
-      _ <- Future.traverse(t.edges)(e => DBEdgeDAO.insert(DBEdge(e, tree._id)))
+      _ <- Fox.combined(t.nodes.map(n => DBNodeDAO.insert(DBNode(n, tree._id))).toList)
+      _ <- Fox.combined(t.edges.map(e => DBEdgeDAO.insert(DBEdge(e, tree._id))).toList)
     } yield {
       tree
     }
@@ -55,7 +57,7 @@ object DBTreeService {
   def removeByTracing(_tracing: BSONObjectID)(implicit ctx: DBAccessContext) = {
     for {
       trees <- DBTreeDAO.findByTracing(_tracing)
-      _ <- Future.traverse(trees)(tree => remove(tree._id))
+      _ <- Fox.combined(trees.map(tree => remove(tree._id)))
     } yield {
       true
     }
@@ -106,7 +108,7 @@ object DBTreeDAO extends SecuredBaseDAO[DBTree] {
 
   val formatter = DBTree.dbTreeFormat
 
-  collection.indexesManager.ensure(Index(Seq("_tracing" -> IndexType.Ascending)))
+  underlying.indexesManager.ensure(Index(Seq("_tracing" -> IndexType.Ascending)))
 
   /*def createAndInsertDeepCopy(t: DBTree): DBTree = {
     createAndInsertDeepCopy(t, t._tracing, 0)
@@ -115,8 +117,9 @@ object DBTreeDAO extends SecuredBaseDAO[DBTree] {
   def insertEmptyTree(_tracing: BSONObjectID)(implicit ctx: DBAccessContext) =
     insert(DBTree.empty(_tracing))
 
-  def findByTracing(_tracing: BSONObjectID)(implicit ctx: DBAccessContext) =
+  def findByTracing(_tracing: BSONObjectID)(implicit ctx: DBAccessContext) = withExceptionCatcher{
     find("_tracing", _tracing).collect[List]()
+  }
 
   def removeAllOf(_tracing: BSONObjectID)(implicit ctx: DBAccessContext) =
     remove("_tracing", _tracing)

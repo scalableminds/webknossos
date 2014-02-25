@@ -16,6 +16,7 @@ import play.api.libs.concurrent.Execution.Implicits._
 import oxalis.security.AuthenticatedRequest
 import scala.concurrent.Future
 import play.api.libs.json._
+import net.liftweb.common.Full
 
 object ProjectAdministration extends AdminController {
 
@@ -52,12 +53,9 @@ object ProjectAdministration extends AdminController {
     implicit request =>
       for {
         project <- ProjectDAO.findOneByName(projectName) ?~> Messages("project.notFound")
-        successBox <- ProjectService.remove(project)
+        _ <- ProjectService.remove(project) ?~> Messages("project.remove.notAllowed")
       } yield {
-        if (successBox.isEmpty)
-          JsonBadRequest(Messages("project.remove.notAllowed"))
-        else
-          JsonOk(Messages("project.removed"))
+        JsonOk(Messages("project.removed"))
       }
   }
 
@@ -71,8 +69,8 @@ object ProjectAdministration extends AdminController {
           BadRequest(html)
         }, {
         case (name, team, ownerId) =>
-          ProjectDAO.findOneByName(name).flatMap {
-            case Some(_) =>
+          ProjectDAO.findOneByName(name).futureBox.flatMap {
+            case Full(_) =>
               for {
                 html <- projectListWithForm(projectForm.bindFromRequest.withError("projectName", Messages("project.nameAlreadyInUse")))
               } yield {

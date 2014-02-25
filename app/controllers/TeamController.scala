@@ -9,8 +9,9 @@ import braingames.util.ExtendedTypes.ExtendedString
 import scala.concurrent.Future
 import play.api.i18n.Messages
 import models.binary.DataSet
-import net.liftweb.common.{Failure, Full}
+import net.liftweb.common.{Empty, Failure, Full}
 import play.api.templates.Html
+import braingames.reactivemongo.GlobalAccessContext
 
 object TeamController extends Controller with Secured {
 
@@ -19,7 +20,7 @@ object TeamController extends Controller with Secured {
   }
 
   def isTeamOwner(team: Team, user: User) =
-    team.owner.map(_ == user._id).getOrElse(false) match {
+    team.isEditableBy(user) match {
       case true  => Full(true)
       case false => Failure(Messages("notAllowed"))
     }
@@ -38,9 +39,9 @@ object TeamController extends Controller with Secured {
     }
   }
 
-  def delete(teamName: String) = Authenticated.async{ implicit request =>
+  def delete(id: String) = Authenticated.async{ implicit request =>
     for{
-      team <- TeamDAO.findOneByName(teamName)
+      team <- TeamDAO.findOneById(id)
       _ <- isTeamOwner(team, request.user).toFox
       _ <- TeamService.remove(team)
     } yield {
@@ -51,21 +52,16 @@ object TeamController extends Controller with Secured {
   def create = Authenticated.async(parse.json){ implicit request =>
     request.body.validate(Team.teamPublicReads(request.user)) match {
       case JsSuccess(team, _) =>
-        TeamService.create(team, request.user).map{ _ =>
-          JsonOk(Messages("team.created"))
+        TeamDAO.findOneByName(team.name)(GlobalAccessContext).futureBox.flatMap{
+          case Empty =>
+            TeamService.create(team, request.user).map{ _ =>
+              JsonOk(Messages("team.created"))
+            }
+          case _ =>
+            Future.successful(JsonBadRequest(Messages("team.name.alreadyTaken")))
         }
       case e: JsError =>
         Future.successful(BadRequest(JsError.toFlatJson(e)))
-    }
-  }
-
-  def delete(teamId: String) = Authenticated.async { implicit request =>
-    for {
-      team <- UserDAO.findOneById(teamId) ?~> Messages("user.notFound")
-      _ <- allowedToAdministrate(request.user, user).toFox
-      _ <- UserService.removeFromAllPossibleTeams(user, request.user)
-    } yield {
-      JsonOk(Messages("user.deleted", user.name))
     }
   }
 }

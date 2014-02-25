@@ -30,6 +30,7 @@ format.json.invalid=Invalid Json format
 image.create.failed=Failed to create image
 
 team.created=Team got created
+team.name.alreadyTaken=The teams name is already in use.
 
 user.verified={0} has been verified
 user.verifyFailed=Couldn''t verify user

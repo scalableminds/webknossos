@@ -16,7 +16,7 @@ case class Team(name: String, roles: List[Role], owner: Option[BSONObjectID] = N
   lazy val id = _id.stringify
 
   def isEditableBy(user: User) =
-    user.adminTeamNames.contains(name)
+    owner.map(_ == user._id) getOrElse false
 }
 
 object Team extends {

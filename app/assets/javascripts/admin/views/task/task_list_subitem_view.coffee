@@ -3,6 +3,7 @@ underscore : _
 moment : moment
 libs/toast : Toast
 backbone.marionette : marionette
+admin/models/task/annotation_model : AnnotationModel
 ###
 
 class TaskSubListItemView extends Backbone.Marionette.ItemView
@@ -43,11 +44,7 @@ class TaskSubListItemView extends Backbone.Marionette.ItemView
     "click .delete-annotation" : "delete"
 
 
-  initialize : ->
-
-    console.log @model
-
-  # some action are real links and some need to be send as ajax calls to the server
+  # some actions are real links and some need to be send as ajax calls to the server
   callAjax : (evt) ->
 
     evt.preventDefault()
@@ -56,11 +53,11 @@ class TaskSubListItemView extends Backbone.Marionette.ItemView
     ).then(
       (jsonData) =>
         if(jsonData)
-          @model = new Backbone.Model(jsonData)
+          @model = new AnnotationModel(jsonData)
           @render()
 
       (response) ->
-        if(response.JSON)
+        if(response.responseJSON)
           message = response.responseJSON.messages[0].error
           Toast.error(message)
     )
@@ -69,5 +66,5 @@ class TaskSubListItemView extends Backbone.Marionette.ItemView
   delete : (evt) ->
 
     evt.preventDefault()
-    @model.destroy({url : "/annotations/Task/#{@model.id}"})
+    @model.destroy()
 

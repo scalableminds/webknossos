@@ -67,7 +67,7 @@ GET           /annotations/:typ/:id/data                                 control
 GET           /annotations/:typ/:id/info                                 controllers.AnnotationController.info(typ: String, id: String)
 GET           /annotations/:typ/:id/download                             controllers.AnnotationController.download(typ: String, id: String)
 GET           /annotations/:typ/:id/reopen                               controllers.AnnotationController.reopen(typ: String, id: String)
-DELETE           /annotations/:typ/:id                               controllers.AnnotationController.cancel(typ: String, id: String)
+DELETE        /annotations/:typ/:id                                      controllers.AnnotationController.cancel(typ: String, id: String)
 
 #Admin pages
 GET           /admin/nml/upload                                          controllers.admin.NMLIO.uploadForm
@@ -85,6 +85,7 @@ GET           /admin/tasks/algorithm/:id?use=true                        control
 # <---
 
 GET           /api/tasks                                                 controllers.TaskController.list
+DELETE        /api/tasks/:id                                             controllers.admin.TaskAdministration.delete(id: String)
 
 GET           /tasks                                                     controllers.TaskController.empty
 GET           /admin/tasks/create                                        controllers.admin.TaskAdministration.create
@@ -93,7 +94,6 @@ POST          /admin/tasks/createFromNML                                 control
 POST          /admin/tasks/createFromForm                                controllers.admin.TaskAdministration.createFromForm
 GET           /admin/tasks/overview                                      controllers.admin.TaskAdministration.overview
 GET           /admin/tasks/:id/download                                  controllers.admin.NMLIO.taskDownload(id: String)
-DELETE        /admin/tasks/:id                                           controllers.admin.TaskAdministration.delete(id: String)
 GET           /admin/tasks/:id/edit                                      controllers.admin.TaskAdministration.edit(id: String)
 GET           /admin/tasks/:id/annotations                               controllers.AnnotationController.annotationsForTask(id: String)
 POST          /admin/tasks/:id                                           controllers.admin.TaskAdministration.editTaskForm(id: String)

@@ -2,6 +2,7 @@
 underscore : _
 app : app
 backbone.marionette : marionette
+admin/models/task/annotation_collection : AnnotationCollection
 ./task_list_subitem_view: TaskListSubitemView
 ###
 
@@ -85,8 +86,7 @@ class TaskListItemView extends Backbone.Marionette.CompositeView
   toggleDetails : ->
 
     if @ui.detailsRow.hasClass("hide")
-      @collection = new Backbone.Collection()
-      @collection.url= """/admin/tasks/#{@model.get("id")}/annotations"""
+      @collection = new AnnotationCollection(@model.get("id"))
       @collection
         .fetch()
         .done( =>

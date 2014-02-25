@@ -3,7 +3,7 @@ underscore : _
 ../pagination_collection : PaginationView
 ###
 
-class UserCollection extends PaginationView
+class DatasetCollection extends PaginationView
 
   url : "/api/datasets"
 

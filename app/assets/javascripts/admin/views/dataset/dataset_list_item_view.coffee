@@ -65,6 +65,15 @@ class DatasetListItemView extends Backbone.Marionette.ItemView
   ui:
     "importContainer" : ".import-container"
 
+  initialize : ->
+
+    @listenTo(@model, "change", @someting)
+
+  someting : (evt) ->
+
+    console.log evt
+    @render()
+
 
    startImport : (evt) ->
 
@@ -89,8 +98,10 @@ class DatasetListItemView extends Backbone.Marionette.ItemView
         url: "/api/datasets/#{@model.get("name")}/import"
       ).done( (responseJSON) =>
         value = responseJSON.progress * 100
-        @ui.importContainer.find("bar").width("#{value}%")
+        @ui.importContainer.find(".bar").width("#{value}%")
         if value < 100
           window.setTimeout((=> @updateProgress()), 100)
+        else
+          @model.fetch()
       )
 

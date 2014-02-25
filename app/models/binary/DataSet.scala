@@ -54,7 +54,7 @@ object DataSet {
     ((__ \ 'name).write[String] and
       (__ \ 'dataSource).write[Option[DataSource]] and
       (__ \ 'sourceType).write[String] and
-      (__ \ 'ownindTeam).write[String] and
+      (__ \ 'owningTeam).write[String] and
       (__ \ 'allowedTeams).write[List[String]] and
       (__ \ 'isActive).write[Boolean] and
       (__ \ 'isPublic).write[Boolean] and

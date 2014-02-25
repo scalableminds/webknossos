@@ -55,7 +55,7 @@ object TeamController extends Controller with Secured {
         TeamDAO.findOneByName(team.name)(GlobalAccessContext).futureBox.flatMap{
           case Empty =>
             TeamService.create(team, request.user).map{ _ =>
-              JsonOk(Messages("team.created"))
+              Ok(Team.teamPublicWrites(request.user).writes(team))
             }
           case _ =>
             Future.successful(JsonBadRequest(Messages("team.name.alreadyTaken")))

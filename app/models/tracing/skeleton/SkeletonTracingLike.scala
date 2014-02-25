@@ -3,7 +3,7 @@ package models.tracing.skeleton
 import oxalis.nml._
 import oxalis.nml.utils._
 import braingames.geometry.Scale
-import braingames.geometry.Point3D
+import braingames.geometry.{Point3D, BoundingBox}
 import play.api.libs.json._
 import play.api.libs.functional.syntax._
 import braingames.xml.XMLWrites
@@ -45,6 +45,8 @@ trait SkeletonTracingLike extends AnnotationContent {
   def comments: List[Comment]
 
   def editPosition: Point3D
+
+  def boundingBox: Option[BoundingBox]
 
   def insertBranchPoint[T](bp: BranchPoint): Fox[T]
 

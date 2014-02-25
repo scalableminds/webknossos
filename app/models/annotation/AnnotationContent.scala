@@ -23,6 +23,8 @@ trait AnnotationContent {
 
   def editPosition: Point3D
 
+  def boundingBox: Option[BoundingBox]
+
   def timestamp: Long
 
   def dataSetName: String
@@ -75,6 +77,7 @@ object AnnotationContent {
         "dataSet" -> dataSet.toOption,
         "contentData" -> contentData,
         "editPosition" -> ac.editPosition,
+        "boundingBox" -> ac.boundingBox,
         "contentType" -> ac.contentType)
     }
   }

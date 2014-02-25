@@ -3,7 +3,7 @@ package models.tracing.skeleton
 import oxalis.nml.TreeLike
 import oxalis.nml.BranchPoint
 import braingames.geometry.Scale
-import braingames.geometry.Point3D
+import braingames.geometry.{Point3D, BoundingBox}
 import oxalis.nml.Comment
 import oxalis.nml.NML
 import models.annotation._
@@ -30,6 +30,7 @@ case class TemporarySkeletonTracing(
                                      timestamp: Long,
                                      activeNodeId: Option[Int],
                                      editPosition: Point3D,
+                                     boundingBox: Option[BoundingBox],
                                      comments: List[Comment] = Nil,
                                      settings: AnnotationSettings = AnnotationSettings.default
                                    ) extends SkeletonTracingLike with AnnotationContent {
@@ -69,6 +70,7 @@ object TemporarySkeletonTracingService extends AnnotationContentService {
       System.currentTimeMillis(),
       nml.activeNodeId,
       nml.editPosition,
+      None,
       nml.comments,
       settings)
   }
@@ -85,6 +87,7 @@ object TemporarySkeletonTracingService extends AnnotationContentService {
         System.currentTimeMillis(),
         tracing.activeNodeId,
         tracing.editPosition,
+        tracing.boundingBox,
         tracing.comments)
     }
   }

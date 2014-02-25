@@ -7,7 +7,7 @@ import braingames.util.{FoxImplicits, Fox}
 import models.tracing.skeleton.{SkeletonTracingService}
 import play.api.libs.concurrent.Execution.Implicits._
 import models.task.{Task, TaskService}
-import braingames.geometry.Point3D
+import braingames.geometry.{Point3D, BoundingBox}
 import reactivemongo.bson.BSONObjectID
 import models.annotation.AnnotationType._
 import scala.Some
@@ -88,9 +88,9 @@ object AnnotationService extends AnnotationContentProviders with BoxImplicits wi
     }
   }
 
-  def createAnnotationBase(task: Task, userId: BSONObjectID, settings: AnnotationSettings, dataSetName: String, start: Point3D)(implicit ctx: DBAccessContext) = {
+  def createAnnotationBase(task: Task, userId: BSONObjectID, settings: AnnotationSettings, dataSetName: String, start: Point3D, boundingBox: BoundingBox)(implicit ctx: DBAccessContext) = {
     for {
-      tracing <- SkeletonTracingService.createFrom(dataSetName, start, true, settings)
+      tracing <- SkeletonTracingService.createFrom(dataSetName, start, Some(boundingBox), true, settings)
       content = ContentReference.createFor(tracing)
       _ <- AnnotationDAO.insert(Annotation(userId, content, team = task.team, typ = AnnotationType.TracingBase, _task = Some(task._id)))
     } yield tracing

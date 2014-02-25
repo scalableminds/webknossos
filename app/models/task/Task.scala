@@ -88,6 +88,7 @@ object Task extends FoxImplicits {
     for {
       dataSetName <- task.annotationBase.flatMap(_.dataSetName) getOrElse ""
       editPosition <- task.annotationBase.flatMap(_.content.map(_.editPosition)) getOrElse Point3D(1, 1, 1)
+      boundingBox <- task.annotationBase.flatMap(_.content.map(_.boundingBox)) getOrElse None
       status <- task.status
       taskType <- task.taskType.futureBox
       projectName = task._project.getOrElse("")
@@ -100,6 +101,7 @@ object Task extends FoxImplicits {
         "type" -> taskType.toOption,
         "dataSet" -> dataSetName,
         "editPosition" -> editPosition,
+        "boundingBox" -> boundingBox,
         "neededExperience" -> task.neededExperience,
         "priority" -> task.priority,
         "created" -> DateTimeFormat.forPattern("yyyy-MM-dd HH:mm").print(task.created),

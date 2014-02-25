@@ -1,6 +1,6 @@
 package models.tracing.volume
 
-import braingames.geometry.Point3D
+import braingames.geometry.{Point3D, BoundingBox}
 import models.annotation.{AnnotationContentService, AnnotationContent, AnnotationSettings}
 import models.basics.SecuredBaseDAO
 import models.binary.DataSet
@@ -23,6 +23,7 @@ case class VolumeTracing(
   dataSetName: String,
   timestamp: Long,
   editPosition: Point3D,
+  boundingBox: Option[BoundingBox],
   settings: AnnotationSettings = AnnotationSettings.default,
   _id: BSONObjectID = BSONObjectID.generate)
   extends AnnotationContent {
@@ -73,7 +74,7 @@ object VolumeTracingDAO extends SecuredBaseDAO[VolumeTracing] {
 
   def createFrom(baseDataSet: DataSet)(implicit ctx: DBAccessContext) = {
     val dataSet = BinaryDataService.createUserDataSource(baseDataSet.dataSource)
-    val t = VolumeTracing(dataSet.name, System.currentTimeMillis(), Point3D(0,0,0))
+    val t = VolumeTracing(dataSet.name, System.currentTimeMillis(), Point3D(0,0,0), None)
     insert(t)
   }
 

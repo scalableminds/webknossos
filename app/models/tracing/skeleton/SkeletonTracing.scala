@@ -1,6 +1,6 @@
 package models.tracing.skeleton
 
-import braingames.geometry.Point3D
+import braingames.geometry.{Point3D, BoundingBox}
 import play.api.libs.json._
 import models.binary.DataSetDAO
 import models.user.{UsedAnnotationDAO, UsedAnnotation}
@@ -31,6 +31,7 @@ case class SkeletonTracing(
                             timestamp: Long,
                             activeNodeId: Option[Int],
                             editPosition: Point3D,
+                            boundingBox: Option[BoundingBox],
                             comments: List[Comment] = Nil,
                             settings: AnnotationSettings = AnnotationSettings.default,
                             _id: BSONObjectID = BSONObjectID.generate
@@ -121,6 +122,7 @@ object SkeletonTracing {
       System.currentTimeMillis,
       None,
       Point3D(0, 0, 0),
+      None,
       settings = settings)
 
   def from(t: SkeletonTracingLike) =
@@ -130,6 +132,7 @@ object SkeletonTracing {
       t.timestamp,
       t.activeNodeId,
       t.editPosition,
+      t.boundingBox,
       t.comments,
       t.settings
     )
@@ -140,7 +143,7 @@ object SkeletonTracingService extends AnnotationContentService with CommonTracin
 
   type AType = SkeletonTracing
 
-  def createFrom(dataSetName: String, start: Point3D, insertStartAsNode: Boolean, settings: AnnotationSettings = AnnotationSettings.default)(implicit ctx: DBAccessContext): Fox[SkeletonTracing] = {
+  def createFrom(dataSetName: String, start: Point3D, boundingBox: Option[BoundingBox], insertStartAsNode: Boolean, settings: AnnotationSettings = AnnotationSettings.default)(implicit ctx: DBAccessContext): Fox[SkeletonTracing] = {
     val trees =
       if (insertStartAsNode)
         List(Tree.createFrom(start))
@@ -156,6 +159,7 @@ object SkeletonTracingService extends AnnotationContentService with CommonTracin
         System.currentTimeMillis(),
         Some(1),
         start,
+        boundingBox,
         Nil,
         settings))
   }
@@ -191,7 +195,7 @@ object SkeletonTracingService extends AnnotationContentService with CommonTracin
   }
 
   def createFrom(dataSet: DataSet)(implicit ctx: DBAccessContext): Fox[SkeletonTracing] =
-    createFrom(dataSet.dataSource.name, Point3D(0, 0, 0), false)
+    createFrom(dataSet.dataSource.name, Point3D(0, 0, 0), None, false)
 
   def mergeWith(source: SkeletonTracing, target: SkeletonTracing)(implicit ctx: DBAccessContext): Fox[SkeletonTracing] = {
     target.mergeWith(source).flatMap { merged =>

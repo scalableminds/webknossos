@@ -5,10 +5,10 @@ backbone : Backbone
 
 class TeamModel extends Backbone.Model
 
+  urlRoot : "/api/teams"
   constructor : (attributes) ->
 
     _.defaults(attributes,
-      id: null
       name: ""
       owner: ""
       roles: [

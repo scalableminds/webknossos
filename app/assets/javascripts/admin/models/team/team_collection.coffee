@@ -1,4 +1,4 @@
-  ### define
+### define
 underscore : _
 backbone : Backbone
 ./team_model : TeamModel

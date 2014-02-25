@@ -81,24 +81,13 @@ class TeamListView extends Backbone.Marionette.CompositeView
       @collection.goTo(1)
     )
 
-    #fetch the logged-in user's name
-    @user = $.ajax(
-      url: "/api/user"
-    )
 
   addNewTeam : ->
 
-    @user.then(
-      (userData) =>
-
-        team = new TeamModel(
-          name : @ui.inputName.val(),
-          owner : "#{userData.firstName} #{userData.lastName}"
-        )
-        @collection.create(team)
-      ->
-        Toast.error("Ups. Something went wrong")
+    team = new TeamModel(
+      name : @ui.inputName.val(),
     )
+    @collection.create(team, {wait: true})
 
 
   filter : (filterQuery) ->

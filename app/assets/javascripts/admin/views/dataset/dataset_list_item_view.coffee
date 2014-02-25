@@ -45,10 +45,13 @@ class DatasetListItemView extends Backbone.Marionette.ItemView
     <% }) %>
     <td class="nowrap">
       <% if(dataSource.needsImport){ %>
-        <div class="import-container">
+        <div>
           <a href="/api/datasets/<%= name %>/import" class=" import-dataset">
             <i class="fa fa-plus-circle"></i>import
           </a>
+            <div class="progress progress-striped hide">
+              <div class="bar" style="width: 0%;"></div>
+            </div>
         </div>
       <% } %>
       <% if(isActive){ %>
@@ -63,45 +66,46 @@ class DatasetListItemView extends Backbone.Marionette.ItemView
     "click .import-dataset" : "startImport"
 
   ui:
-    "importContainer" : ".import-container"
+    "importLink" : ".import-dataset"
+    "progressbarContainer" : ".progress"
+    "progressBar" : ".bar"
 
   initialize : ->
 
-    @listenTo(@model, "change", @someting)
+    @listenTo(@model, "change", @render)
+    @ajaxUrl = "/api/datasets/#{@model.get("name")}/import"
 
-  someting : (evt) ->
+    # In case the user reloads during an import, continue the progress bar
+    if @model.get("dataSource").needsImport
+      @startImport(null, "GET")
 
-    console.log evt
-    @render()
 
+   startImport : (evt, method = "POST") ->
 
-   startImport : (evt) ->
-
-      evt.preventDefault()
+      if evt
+        evt.preventDefault()
 
       $.ajax(
-        url : """/api/datasets/#{@model.get("name")}/import"""
-        method: "POST"
-      ).done( =>
-        @ui.importContainer.html("""
-          <div class="progress progress-striped">
-            <div class="bar" style="width: 0%;"></div>
-          </div>
-          """)
-        @updateProgress()
+        url : @ajaxUrl
+        method: method
+      ).done( (responseJSON) =>
+          if responseJSON.status == "inProgress"
+            @ui.importLink.hide()
+            @ui.progressbarContainer.show()
+            @updateProgress()
       )
 
 
     updateProgress : ->
 
       $.ajax(
-        url: "/api/datasets/#{@model.get("name")}/import"
+        url: @ajaxUrl
       ).done( (responseJSON) =>
         value = responseJSON.progress * 100
-        @ui.importContainer.find(".bar").width("#{value}%")
-        if value < 100
+        @ui.progressBar.width("#{value}%")
+        if responseJSON.status != "finished" or responseJSON.status != "failed"
           window.setTimeout((=> @updateProgress()), 100)
         else
-          @model.fetch({url : "/api/datasets/#{@model.get("name")}"})
+          @model.fetch()
       )
 

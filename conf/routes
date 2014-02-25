@@ -44,7 +44,7 @@ POST          /api/teams                                                 control
 # Binary Data
 
 # Spotlight
-GET           /datasets                                                  controllers.DataSetController.spotlight
+GET           /spotlight                                                  controllers.DataSetController.spotlight
 
 # DataSets
 GET           /datasets                                                  controllers.DataSetController.empty

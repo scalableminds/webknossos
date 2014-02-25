@@ -282,6 +282,8 @@ class PlaneController
 
   render : ->
 
+    @model.logConnectionInfo()
+
     for dataLayerName of @model.binary
       if (@sceneController.pingDataLayer(dataLayerName))
         @model.binary[dataLayerName].ping(@flycam.getPosition(), {

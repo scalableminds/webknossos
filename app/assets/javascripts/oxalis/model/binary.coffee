@@ -25,7 +25,9 @@ class Binary
 
   constructor : (@user, dataSet, @TEXTURE_SIZE_P, @layer, @testData = false) ->
 
-    @dataSetName    = dataSet.name
+    @dataSetName = dataSet.name
+    @lastPingTime = new Date()
+    @queueStatus = 0
     @targetBitDepth = if @layer.name == "color" then @layer.bitDepth else 8
 
     for layer in dataSet.dataLayers
@@ -102,8 +104,6 @@ class Binary
       @lastZoomStep = zoomStep
       @lastArea     = area.slice()
 
-      # console.log "ping", @queue.roundTripTime, @queue.bucketsPerSecond, @cube.bucketCount
-
       for strategy in @pingStrategies 
         if strategy.inVelocityRange(1) and strategy.inRoundTripTimeRange(@queue.roundTripTime)
 
@@ -114,6 +114,7 @@ class Binary
 
           break
 
+      @queueStatus
       @queue.pull()
 
 

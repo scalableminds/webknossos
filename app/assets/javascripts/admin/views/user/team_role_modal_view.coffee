@@ -72,8 +72,6 @@ class TeamRoleModal extends Backbone.Marionette.CompositeView
           teams = teams || []
 
           # Verify user and update his teams
-          #user.set("verified", true)
-          #user.set("teams", teams)
           user.save(
             "verified" : true
             "teams" : teams

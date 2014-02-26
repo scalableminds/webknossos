@@ -128,5 +128,3 @@ class ExperienceModal extends Backbone.Marionette.ItemView
 
     @$el.modal("hide")
 
-
-#data-source='@Json.stringify(Json.toJson(experiences))' data-provide="typeahead"

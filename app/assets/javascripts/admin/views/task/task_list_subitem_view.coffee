@@ -41,7 +41,7 @@ class TaskSubListItemView extends Backbone.Marionette.ItemView
 
   events :
     "click .isAjax" : "callAjax"
-    "click .delete-annotation" : "delete"
+    "click .delete-annotation" : "deleteAnnotation"
 
 
   # some actions are real links and some need to be send as ajax calls to the server
@@ -63,8 +63,9 @@ class TaskSubListItemView extends Backbone.Marionette.ItemView
     )
 
 
-  delete : (evt) ->
+  deleteAnnotation : ->
 
-    evt.preventDefault()
-    @model.destroy()
+    if window.confirm("Do you really want to delete this annotation?")
+      @model.destroy()
+      @render()
 

@@ -65,7 +65,7 @@ class TaskListItemView extends Backbone.Marionette.CompositeView
   itemViewContainer : "tbody"
 
   events :
-    "click .delete" : "delete"
+    "click .delete" : "deleteTask"
     "click .details-toggle" : "toggleDetails"
 
   ui :
@@ -76,17 +76,24 @@ class TaskListItemView extends Backbone.Marionette.CompositeView
   initialize :->
 
     @listenTo(app.vent, "taskListView:toggleDetails", @toggleDetails)
+    @collection = new AnnotationCollection(@model.get("id"))
+
+    # minimize the toggle view on item deletion
+    @listenTo(@collection, "remove", (item) =>
+      @toggleDetails()
+    )
 
 
-  delete : ->
+  deleteTask : ->
 
-    @model.destroy()
+    if window.confirm("Do you really want to delete this task?")
+      @model.destroy()
 
 
   toggleDetails : ->
 
     if @ui.detailsRow.hasClass("hide")
-      @collection = new AnnotationCollection(@model.get("id"))
+
       @collection
         .fetch()
         .done( =>

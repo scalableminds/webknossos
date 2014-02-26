@@ -62,7 +62,7 @@ class TaskListView extends Backbone.Marionette.CompositeView
   toggleAllDetails : ->
 
     @ui.detailsToggle.toggleClass("open")
-    app.vent.trigger  ("taskListView:toggleDetails")
+    app.vent.trigger("taskListView:toggleDetails")
 
 
   filter : (searchQuery) ->

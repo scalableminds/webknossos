@@ -30,7 +30,7 @@
         @basicTaskForm(nmlForm, taskTypes, projects, teams)
 
         @helper.select(taskForm("dataSet"), dataSets.map { dataSet =>
-          dataSet.dataSource.name -> dataSet.dataSource.name
+          dataSet.name -> dataSet.name
         })
 
         @helper.inputText(taskForm("start.point"), 'type -> "text")

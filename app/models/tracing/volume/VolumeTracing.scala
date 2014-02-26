@@ -10,12 +10,11 @@ import play.api.libs.json.{Json, JsValue}
 import oxalis.binary.BinaryDataService
 import scala.concurrent.Future
 import braingames.reactivemongo.DBAccessContext
-import braingames.util.Fox
+import braingames.util.{FoxImplicits, Fox}
 import reactivemongo.bson.BSONObjectID
 import play.modules.reactivemongo.json.BSONFormats._
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.Logger
-
 /**
  * Company: scalableminds
  * User: tmbo
@@ -50,7 +49,7 @@ case class VolumeTracing(
   def downloadFileExtension: String = ???
 }
 
-object VolumeTracingService extends AnnotationContentService{
+object VolumeTracingService extends AnnotationContentService with FoxImplicits{
   type AType = VolumeTracing
 
   def dao = VolumeTracingDAO
@@ -61,11 +60,13 @@ object VolumeTracingService extends AnnotationContentService{
     VolumeTracingDAO.findOneById(id)
 
   def createFrom(baseDataSet: DataSet)(implicit ctx: DBAccessContext) = {
-    val dataLayer = BinaryDataService.createUserDataSource(baseDataSet.dataSource)
-    val t = VolumeTracing(baseDataSet.dataSource.name, dataLayer.name, System.currentTimeMillis(), Point3D(0,0,0))
-    UserDataLayerDAO.insert(dataLayer)
-    VolumeTracingDAO.insert(t).map{ _ =>
-      t
+    baseDataSet.dataSource.toFox.flatMap{ baseSource =>
+      val dataLayer = BinaryDataService.createUserDataSource(baseSource)
+      val t = VolumeTracing(baseDataSet.name, dataLayer.name, System.currentTimeMillis(), Point3D(0,0,0))
+      for{
+      _ <- UserDataLayerDAO.insert(dataLayer)
+      _ <- VolumeTracingDAO.insert(t)
+      } yield t
     }
   }
 

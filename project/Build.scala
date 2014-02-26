@@ -9,7 +9,7 @@ object Dependencies{
   val akkaVersion = "2.2.0"
   val reactiveVersion = "0.10.0"
   val reactivePlayVersion = "0.10.2"
-  val braingamesVersion = "2.1.0-SNAPSHOT"
+  val braingamesVersion = "3.0.0-SNAPSHOT"
 
   val restFb = "com.restfb" % "restfb" % "1.6.11"
   val commonsIo = "commons-io" % "commons-io" % "2.4"
@@ -30,6 +30,15 @@ object Dependencies{
   val airbrake = "eu.teamon" %% "play-airbrake" % "0.3.5-SCM"
   val mongev = "com.scalableminds" %% "play-mongev" % "0.2.4"
   val playMetrics = "com.kenshoo" %% "metrics-play" % "0.1.3"
+  val tiff = Seq(
+      "com.twelvemonkeys.common" % "common-lang" % "3.0-rc5",
+      "com.twelvemonkeys.common" % "common-io" % "3.0-rc5",
+      "com.twelvemonkeys.common" % "common-image" % "3.0-rc5",
+      "com.twelvemonkeys.imageio" %  "imageio-core" % "3.0-rc5",
+      "com.twelvemonkeys.imageio" %  "imageio-metadata" % "3.0-rc5",
+      "com.twelvemonkeys.imageio" % "imageio-jpeg" % "3.0-rc5",
+      "com.twelvemonkeys.imageio" % "imageio-tiff" % "3.0-rc5"
+    )
 }
 
 object Resolvers {
@@ -135,7 +144,7 @@ object ApplicationBuild extends Build {
     cache,
     airbrake,
     playMetrics,
-    mongev)
+    mongev)++tiff
 
   val dependencyResolvers = Seq(
     novusRel,

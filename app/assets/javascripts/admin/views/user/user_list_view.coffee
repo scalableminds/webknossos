@@ -72,7 +72,6 @@ class UserListView extends Backbone.Marionette.CompositeView
 
   filter : (filterQuery) ->
 
-    console.log(filterQuery)
     @collection.setFilter(["email", "firstName", "lastName"], filterQuery)
     @collection.pager()
 
@@ -103,5 +102,4 @@ class UserListView extends Backbone.Marionette.CompositeView
 
     else
       Toast.error("No user is selected.")
-
 

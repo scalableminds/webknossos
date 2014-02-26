@@ -191,7 +191,7 @@ object SkeletonTracingService extends AnnotationContentService with CommonTracin
   }
 
   def createFrom(dataSet: DataSet)(implicit ctx: DBAccessContext): Fox[SkeletonTracing] =
-    createFrom(dataSet.dataSource.name, Point3D(0, 0, 0), false)
+    createFrom(dataSet.name, Point3D(0, 0, 0), false)
 
   def mergeWith(source: SkeletonTracing, target: SkeletonTracing)(implicit ctx: DBAccessContext): Fox[SkeletonTracing] = {
     target.mergeWith(source).flatMap { merged =>

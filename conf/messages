@@ -54,9 +54,13 @@ braintracing.new=An account on braintracing.org was created for you. You can use
 braintracing.error=We couldn''t atomatically create an account for you on braintracing.org. Please do it on your own.
 braintracing.exists=Great, you already have an account on braintracing.org. Please double check that you have uploaded all requested information.
 
-dataSet=Data Set
+dataSet=Dataset
 dataSet.notFound=Selected data set doesn''t exist
 dataSet.notSupplied=No data set supplied
+dataSet.source.notFound=The data source for the data source couldn''t be found
+dataSet.import.failed=Failed to import the dataset
+dataSet.import.inProgress=Dataset import is in progress
+dataSet.import.notStarted=Dataset import couldn''t be started
 
 dataLayer.notFound=DataLayer not found
 dataLayer.test=Test message

@@ -2,18 +2,17 @@
 jquery : $
 underscore : _
 three.color : ColorConverter
-../../libs/request : Request
-../../libs/event_mixin : EventMixin
+libs/request : Request
+libs/event_mixin : EventMixin
 ./tracepoint : TracePoint
 ./tracetree : TraceTree
-./statelogger : StateLogger
-../constants : constants
+../../constants : constants
 ###
 
 class TracingParser
 
 
-  constructor : (@celltracing, @data) ->
+  constructor : (@skeletonTracing, @data) ->
 
     @idCount = 1
     @treeIdCount = 1
@@ -29,7 +28,7 @@ class TracingParser
       # Create new tree
       tree = new TraceTree(
         treeData.id,
-        @celltracing.getNewTreeColor(treeData.id),
+        @skeletonTracing.getNewTreeColor(treeData.id),
         if treeData.name then treeData.name else "Tree#{('00'+treeData.id).slice(-3)}",
         treeData.timestamp)
 
@@ -41,16 +40,17 @@ class TracingParser
 
         tree.nodes.push(
           new TracePoint(
-            @celltracing.TYPE_USUAL,
+            @skeletonTracing.TYPE_USUAL,
             node.id, node.position, node.radius, treeData.id,
             metaInfo))
+
         # idCount should be bigger than any other id
         @idCount = Math.max(node.id + 1, @idCount);
 
       # Initialize edges
       for edge in treeData.edges
-        sourceNode = @celltracing.findNodeInList(tree.nodes, edge.source)
-        targetNode = @celltracing.findNodeInList(tree.nodes, edge.target)
+        sourceNode = @skeletonTracing.findNodeInList(tree.nodes, edge.source)
+        targetNode = @skeletonTracing.findNodeInList(tree.nodes, edge.target)
         if sourceNode and targetNode
           sourceNode.appendNext(targetNode)
           targetNode.appendNext(sourceNode)
@@ -59,7 +59,7 @@ class TracingParser
           $.assertExists(targetNode, "target node is null", {"edge" : edge})
 
       # Set active Node
-      activeNodeT = @celltracing.findNodeInList(tree.nodes, @data.activeNode)
+      activeNodeT = @skeletonTracing.findNodeInList(tree.nodes, @data.activeNode)
       if activeNodeT
         @activeNode = activeNodeT
         # Active Tree is the one last added
@@ -72,20 +72,30 @@ class TracingParser
   setBranchpoints : (nodeList) ->
 
     for branchpoint in @data.branchPoints
-      node = @celltracing.findNodeInList(nodeList, branchpoint.id)
+      node = @skeletonTracing.findNodeInList(nodeList, branchpoint.id)
       if node
-        node.type = @celltracing.TYPE_BRANCH
-        @celltracing.branchStack.push(node)
+        node.type = @skeletonTracing.TYPE_BRANCH
+        @skeletonTracing.branchStack.push(node)
 
 
   setComments : (nodeList) ->
 
     for comment in @data.comments
-      comment.node = @celltracing.findNodeInList(nodeList, comment.node)
+      comment.node = @skeletonTracing.findNodeInList(nodeList, comment.node)
     @comments = @data.comments
 
 
   parse : ->
+
+    unless @data?
+      return {
+        idCount : 0
+        treeIdCount : 0
+        trees : []
+        comments : []
+        activeNode : null
+        activeTree : null
+      }
 
     @buildTrees()
 

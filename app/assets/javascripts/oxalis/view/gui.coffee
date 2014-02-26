@@ -1,8 +1,8 @@
 ### define
 dat.gui : DatGui
-../../libs/request : Request
-../../libs/event_mixin : EventMixin
-../../libs/toast : Toast
+libs/request : Request
+libs/event_mixin : EventMixin
+libs/toast : Toast
 ../model/dimensions : Dimensions
 ../constants : constants
 ###
@@ -24,8 +24,8 @@ class Gui
     @datasetPosition = @initDatasetPosition(@user.get("briConNames"))
 
     somaClickingAllowed = @tracingSettings.somaClickingAllowed
-
-    @settings =
+    
+    @settingsGeneral = 
 
       boundingBox : "0, 0, 0, 0, 0, 0"
       fourBit : @user.get("fourBit")
@@ -34,19 +34,24 @@ class Gui
       resetBrightnessAndContrast : => @resetBrightnessAndContrast()
       quality : @qualityArray[@user.get("quality")]
 
-      activeTreeID : @model.cellTracing.getActiveTreeId()
-      activeNodeID : @model.cellTracing.getActiveNodeId() or -1
-      activeCellID : @model.volumeTracing.getActiveCellId()
-      newNodeNewTree : if somaClickingAllowed then @user.get("newNodeNewTree") else false
-      radius : @model.cellTracing.getActiveNodeRadius()
-      deleteActiveNode : => @trigger "deleteActiveNode"
-      createNewCell : => @trigger "createNewCell"
+    if @model.skeletonTracing?
+      @settingsSkeleton =
+        activeTreeID : @model.skeletonTracing.getActiveTreeId()
+        activeNodeID : @model.skeletonTracing.getActiveNodeId() or -1
+        newNodeNewTree : if somaClickingAllowed then @user.get("newNodeNewTree") else false
+        deleteActiveNode : => @trigger "deleteActiveNode"
+
+    if @model.volumeTracing
+      @settingsVolume =
+        activeCellID : @model.volumeTracing.getActiveCellId()
+        createNewCell : => @trigger "createNewCell"
+
 
     if @datasetPosition == 0
       # add new dataset to settings
       @user.get("briConNames").push(@datasetPostfix)
-      @user.get("brightness").push(@settings.brightness)
-      @user.get("contrast").push(@settings.contrast)
+      @user.get("brightness").push(@settingsGeneral.brightness)
+      @user.get("contrast").push(@settingsGeneral.contrast)
       @datasetPosition = @user.get("briConNames").length - 1
 
 
@@ -82,24 +87,24 @@ class Gui
       0.05, 0.5, 0.01, "Crosshair size")
 
     @folders.push( @fView = @gui.addFolder("View") )
-    bbController = @fView.add(@settings, "boundingBox").name("Bounding Box").onChange(@setBoundingBox)
+    bbController = @fView.add(@settingsGeneral, "boundingBox").name("Bounding Box").onChange(@setBoundingBox)
     @addTooltip(bbController, "Format: minX, minY, minZ, maxX, maxY, maxZ")
-    @addCheckbox(@fView, @settings, "fourBit", "4 Bit")
+    @addCheckbox(@fView, @settingsGeneral, "fourBit", "4 Bit")
     @addCheckbox(@fView, @user.getSettings(), "interpolation", "Interpolation")
     @brightnessController =
-      @addSlider(@fView, @settings, "brightness",
+      @addSlider(@fView, @settingsGeneral, "brightness",
         -256, 256, 5, "Brightness", @setBrightnessAndContrast)
     @contrastController =
-      @addSlider(@fView, @settings, "contrast",
+      @addSlider(@fView, @settingsGeneral, "contrast",
         0.5, 5, 0.1, "Contrast", @setBrightnessAndContrast)
-    @addFunction(@fView, @settings, "resetBrightnessAndContrast",
+    @addFunction(@fView, @settingsGeneral, "resetBrightnessAndContrast",
       "Reset B/C")
     @clippingController = @addSlider(@fView, @user.getSettings(), "clippingDistance",
       1, 1000 * @model.scaleInfo.baseVoxel, 1, "Clipping Distance")
     @clippingControllerArbitrary = @addSlider(@fView, @user.getSettings(), "clippingDistanceArbitrary",
       1, 127, 1, "Clipping Distance")
     @addCheckbox(@fView, @user.getSettings(), "displayCrosshair", "Show Crosshairs")
-    (@fView.add @settings, "quality", @qualityArray)
+    (@fView.add @settingsGeneral, "quality", @qualityArray)
                           .name("Quality")
                           .onChange((v) => @setQuality(v))
 
@@ -108,32 +113,33 @@ class Gui
     @addCheckbox(@fTDView, @user.getSettings(), "displayTDViewYZ", "Display YZ-Plane")
     @addCheckbox(@fTDView, @user.getSettings(), "displayTDViewXZ", "Display XZ-Plane")
 
-    @folders.push( @fTrees = @gui.addFolder("Trees") )
-    @activeTreeIdController = @addNumber(@fTrees, @settings, "activeTreeID",
-      1, 1, "Active Tree ID", (value) => @trigger( "setActiveTree", value))
-    if somaClickingAllowed
-      @addCheckbox(@fTrees, @settings, "newNodeNewTree", "Soma clicking mode")
-    else
-      @set("newNodeNewTree", false, Boolean)
+    if @settingsSkeleton?
 
-    @folders.push( @fNodes = @gui.addFolder("Nodes") )
-    @activeNodeIdController = @addNumber(@fNodes, @settings, "activeNodeID",
-      1, 1, "Active Node ID", (value) => @trigger( "setActiveNode", value))
-    @radiusController = @addSlider(@fNodes, @settings, "radius",
-      @model.cellTracing.MIN_RADIUS, @model.cellTracing.MAX_RADIUS, 1, "Radius", (radius) =>
-        @model.cellTracing.setActiveNodeRadius( radius ))
-    @particleSizeController = @addSlider(@fNodes, @user.getSettings(), "particleSize",
-      constants.MIN_PARTICLE_SIZE, constants.MAX_PARTICLE_SIZE, 1, "Min. node size")
-    @addFunction(@fNodes, @settings, "deleteActiveNode", "Delete Active Node")
+      @folders.push( @fTrees = @gui.addFolder("Trees") )
+      @activeTreeIdController = @addNumber(@fTrees, @settingsSkeleton, "activeTreeID",
+        1, 1, "Active Tree ID", (value) => @trigger( "setActiveTree", value))
+      if somaClickingAllowed
+        @addCheckbox(@fTrees, @settingsSkeleton, "newNodeNewTree", "Soma clicking mode")
+      else
+        @set("newNodeNewTree", false, Boolean)
 
-    @folders.push( @fCells = @gui.addFolder("Cells") )
-    @activeCellIdController = @addNumber(@fCells, @settings, "activeCellID",
-      0, 1, "Active Cell ID", (value) => @trigger( "setActiveCell", value))
-    @addFunction(@fCells, @settings, "createNewCell", "Create new Cell")
+      @folders.push( @fNodes = @gui.addFolder("Nodes") )
+      @activeNodeIdController = @addNumber(@fNodes, @settingsSkeleton, "activeNodeID",
+        1, 1, "Active Node ID", (value) => @trigger( "setActiveNode", value))
+      @particleSizeController = @addSlider(@fNodes, @user.getSettings(), "particleSize",
+        constants.MIN_PARTICLE_SIZE, constants.MAX_PARTICLE_SIZE, 1, "Min. Node size")
+      @addFunction(@fNodes, @settingsSkeleton, "deleteActiveNode", "Delete Active Node")
 
-    @fTrees.open()
-    @fNodes.open()
-    @fCells.open()
+    if @settingsVolume?
+
+      @folders.push( @fCells = @gui.addFolder("Cells") )
+      @activeCellIdController = @addNumber(@fCells, @settingsVolume, "activeCellID",
+        0, 1, "Active Cell ID", (value) => @trigger( "setActiveCell", value))
+      @addFunction(@fCells, @settingsVolume, "createNewCell", "Create new Cell")
+
+    @fTrees?.open()
+    @fNodes?.open()
+    @fCells?.open()
 
     $("#dataset-name").text(@model.binary["color"].dataSetName)
 
@@ -147,13 +153,13 @@ class Gui
       event.preventDefault()
       @saveNow().done =>
         if confirm("Are you sure you want to permanently finish this tracing?")
-          window.location.href = event.srcElement.href
+          window.location.href = event.target.href
 
     $("#trace-download-button").click (event) =>
 
       event.preventDefault()
       @saveNow().done =>
-          window.location.href = event.srcElement.href
+          window.location.href = event.target.href
 
     $("#trace-save-button").click (event) =>
 
@@ -175,7 +181,7 @@ class Gui
         else
           $("#zoomFactor").html("<p>Viewport width: " + (nm / 1000000).toFixed(1) + " mm</p>")
 
-    @model.cellTracing.on
+    @model.skeletonTracing?.on
       newActiveNode       : => @update()
       newActiveTree       : => @update()
       newActiveNodeRadius : => @update()
@@ -185,7 +191,7 @@ class Gui
       newNode             : => @update()
       newTree             : => @update()
 
-    @model.volumeTracing.on
+    @model.volumeTracing?.on
       newActiveCell    : =>
         console.log "newActiveCell!"
         @update()
@@ -240,8 +246,10 @@ class Gui
   saveNow : =>
 
     @user.pushImpl()
-    if @restrictions.allowUpdate
-      @model.cellTracing.pushNow()
+    model = @model.skeletonTracing || @model.volumeTracing
+
+    if @restrictions.allowUpdate and model?
+      model.stateLogger.pushNow()
         .then(
           -> Toast.success("Saved!")
           -> Toast.error("Couldn't save. Please try again.")
@@ -343,10 +351,10 @@ class Gui
 
 
   setBrightnessAndContrast : =>
-    @model.binary["color"].updateContrastCurve(@settings.brightness, @settings.contrast)
-
-    @user.get("brightness")[@datasetPosition] = (Number) @settings.brightness
-    @user.get("contrast")[@datasetPosition] = (Number) @settings.contrast
+    @model.binary["color"].updateContrastCurve(@settingsGeneral.brightness, @settingsGeneral.contrast)
+    
+    @user.get("brightness")[@datasetPosition] = (Number) @settingsGeneral.brightness
+    @user.get("contrast")[@datasetPosition] = (Number) @settingsGeneral.contrast
 
     @user.push()
 
@@ -359,8 +367,8 @@ class Gui
     ).done (defaultData) =>
       defaultDatasetPosition = @initDatasetPosition(defaultData.briConNames)
 
-      @settings.brightness = defaultData.brightness[defaultDatasetPosition]
-      @settings.contrast = defaultData.contrast[defaultDatasetPosition]
+      @settingsGeneral.brightness = defaultData.brightness[defaultDatasetPosition]
+      @settingsGeneral.contrast = defaultData.contrast[defaultDatasetPosition]
       @setBrightnessAndContrast()
       @brightnessController.updateDisplay()
       @contrastController.updateDisplay()
@@ -376,46 +384,47 @@ class Gui
 
   updateParticleSize : =>
 
-    @particleSizeController.updateDisplay()
+    @particleSizeController?.updateDisplay()
 
 
   updateMoveValue : =>
 
-    @moveValueController.updateDisplay()
+    @moveValueController?.updateDisplay()
 
 
   updateMoveValue3d : =>
 
-    @moveValue3dController.updateDisplay()
+    @moveValue3dController?.updateDisplay()
 
 
   updateScale : =>
 
-    @scaleController.updateDisplay()
+    @scaleController?.updateDisplay()
 
 
   updateZoom : =>
 
-    @zoomController.updateDisplay()
+    @zoomController?.updateDisplay()
 
 
   update : ->
 
     # Helper method to combine common update methods
     # called when value user switch to different active node
-    @settings.activeNodeID = @model.cellTracing.getActiveNodeId() or -1
-    @settings.activeTreeID = @model.cellTracing.getActiveTreeId()
-    @settings.activeCellID = @model.volumeTracing.getActiveCellId()
-    @settings.radius = @model.cellTracing.getActiveNodeRadius()
-    @activeNodeIdController.updateDisplay()
-    @activeTreeIdController.updateDisplay()
-    @activeCellIdController.updateDisplay()
-    @radiusController.updateDisplay()
+    if @settingsSkeleton?
+      @settingsSkeleton.activeNodeID = @model.skeletonTracing.getActiveNodeId() or -1
+      @settingsSkeleton.activeTreeID = @model.skeletonTracing.getActiveTreeId()
+      @settingsSkeleton.radius       = @model.skeletonTracing.getActiveNodeRadius()
+      @activeNodeIdController.updateDisplay()
+      @activeTreeIdController.updateDisplay()
+    if @settingsVolume?
+      @settingsVolume.activeCellID = @model.volumeTracing.getActiveCellId()
+      @activeCellIdController.updateDisplay()
 
 
   setFolderVisibility : (folder, visible) ->
 
-    $element = $(folder.domElement)
+    $element = $(folder?.domElement)
     if visible then $element.show() else $element.hide()
 
 

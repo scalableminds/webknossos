@@ -78,11 +78,10 @@ case class Annotation(
     import controllers.routes._
     val basicActions = List(
       ResourceAction("trace", AnnotationController.trace(typ,id), icon = Some("fa fa-random")),
-      ResourceAction(ResourceAction.Finish, AnnotationController.finish(typ, id), condition = !state.isFinished, icon = Some("fa fa-check-circle-o"), dataAjax = "replace-row,confirm", clazz = "trace-finish"),
-      ResourceAction("reopen", AnnotationController.reopen(typ, id), condition = state.isFinished, icon = Some("fa fa-share"), dataAjax = "replace-row"),
+      ResourceAction(ResourceAction.Finish, AnnotationController.finish(typ, id), condition = !state.isFinished, icon = Some("fa fa-check-circle-o"), isAjax = true, clazz = "trace-finish"),
+      ResourceAction("reopen", AnnotationController.reopen(typ, id), condition = state.isFinished, icon = Some("fa fa-share"), isAjax = true),
       ResourceAction(ResourceAction.Download, AnnotationController.download(typ, id), icon = Some("fa fa-download")),
-      ResourceAction("reset", AnnotationController.reset(typ, id), icon = Some("fa fa-undo"), dataAjax = "replace-row,confirm"),
-      ResourceAction("delete", AnnotationController.cancel(typ, id), icon = Some("fa fa-trash-o"), dataAjax = "delete-row,confirm")
+      ResourceAction("reset", AnnotationController.reset(typ, id), icon = Some("fa fa-undo"), isAjax = true)
     )
 
     ResourceActionCollection(basicActions)

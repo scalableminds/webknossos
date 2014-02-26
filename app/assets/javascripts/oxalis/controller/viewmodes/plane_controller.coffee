@@ -4,16 +4,20 @@ underscore : _
 libs/event_mixin : EventMixin
 libs/input : Input
 three.trackball : Trackball
-./camera_controller : CameraController
-../model/dimensions : Dimensions
-../view/plane_view : PlaneView
-../constants : constants
-./celltracing_controller : CellTracingController
-./volumetracing_controller : VolumeTracingController
+../camera_controller : CameraController
+../../model/dimensions : Dimensions
+../../view/plane_view : PlaneView
+../../constants : constants
+../annotations/skeletontracing_controller : SkeletonTracingController
+../annotations/volumetracing_controller : VolumeTracingController
 three : THREE
 ###
 
 class PlaneController
+
+  # See comment in Controller class on general controller architecture.
+  #
+  # Plane Controller: Responsible for Plane Modes
 
   bindings : []
   model : null
@@ -36,7 +40,7 @@ class PlaneController
       @keyboardLoopDelayed?.unbind()
 
 
-  constructor : (@model, stats, @gui, renderer, scene, @sceneController, @controlMode) ->
+  constructor : (@model, stats, @gui, @view, @sceneController) ->
 
     _.extend(@, new EventMixin())
 
@@ -46,17 +50,20 @@ class PlaneController
 
     @oldNmPos = @model.scaleInfo.voxelToNm( @flycam.getPosition() )
 
-    @view  = new PlaneView(@model, @flycam, stats, renderer, scene)
+    @planeView = new PlaneView(@model, @flycam, @view, stats)
 
     @activeViewport = constants.PLANE_XY
 
     # initialize Camera Controller
-    @cameraController = new CameraController(@view.getCameras(), @flycam, @model)
+    @cameraController = new CameraController(@planeView.getCameras(), @flycam, @model)
 
     @canvasesAndNav = $("#main")[0]
 
     @TDViewControls = $('#TDViewControls')
     @TDViewControls.addClass("btn-group")
+
+    @gui.on
+      newBoundingBox : (bb) => @sceneController.setBoundingBox(bb)
 
     buttons = [
         name : "3D"
@@ -83,14 +90,10 @@ class PlaneController
           .on("click", button.callback)
       )
 
-    objects = { @model, @view, @sceneController, @cameraController, @move, @calculateGlobalPos, planeController : this }
-    @cellTracingController = new CellTracingController( objects, @controlMode )
-    @volumeTracingController = new VolumeTracingController( objects )
-
     meshes = @sceneController.getMeshes()
 
     for mesh in meshes
-      @view.addGeometry(mesh)
+      @planeView.addGeometry(mesh)
 
     @model.user.triggerAll()
 
@@ -108,21 +111,38 @@ class PlaneController
     for planeId in [0..2]
       do (planeId) =>
         inputcatcher = $("#plane#{constants.PLANE_NAMES[planeId]}")
-        @input.mouseControllers.push( new Input.Mouse( inputcatcher,
-          _.extend(@activeSubController.mouseControls,
-            {
-              over : => @view.setActiveViewport( @activeViewport = planeId )
-              scroll : @scrollPlanes
-            }), planeId))
+        @input.mouseControllers.push(
+          new Input.Mouse( inputcatcher, @getPlaneMouseControls(planeId), planeId ))
 
-    @input.mouseControllers.push( new Input.Mouse($("#TDView"),
+    @input.mouseControllers.push(
+      new Input.Mouse($("#TDView"), @getTDViewMouseControls(), constants.TDView ))
+
+
+  getTDViewMouseControls : ->
+
+    return {
       leftDownMove : (delta) => @moveTDView(delta)
       scroll : (value) => @zoomTDView(value, true)
-      leftClick : (position, plane, event) =>
-        @cellTracingController.onClick(position, event.shiftKey, event.altKey, constants.TDView)
-      over : => @view.setActiveViewport( @activeViewport = constants.TDView ),
-    constants.TDView
-    ) )
+      over : => @planeView.setActiveViewport( @activeViewport = constants.TDView )
+    }
+
+
+  getPlaneMouseControls : (planeId) ->
+
+    return {
+
+      leftDownMove : (delta, pos) => 
+
+        @move [
+          delta.x * @model.user.getMouseInversionX() / @planeView.scaleFactor
+          delta.y * @model.user.getMouseInversionY() / @planeView.scaleFactor
+          0
+        ]
+
+      over : => @planeView.setActiveViewport( @activeViewport = planeId )
+      
+      scroll : @scrollPlanes
+    }
 
 
   initTrackballControls : ->
@@ -130,8 +150,8 @@ class PlaneController
     view = $("#TDView")[0]
     pos = @model.scaleInfo.voxelToNm(@flycam.getPosition())
     @controls = new THREE.TrackballControls(
-      @view.getCameras()[constants.TDView],
-      view,
+      @planeView.getCameras()[constants.TDView],
+      view, 
       new THREE.Vector3(pos...),
       => @flycam.update())
 
@@ -209,18 +229,22 @@ class PlaneController
     @model.user.on({
       keyboardDelayChanged : (value) => @input.keyboardLoopDelayed.delay = value
       })
+    
+    @input.keyboardNoLoop = new Input.KeyboardNoLoop( @getKeyboardControls() )
 
-    @input.keyboardNoLoop = new Input.KeyboardNoLoop(
-      _.extend(@activeSubController.keyboardControls,
-        {
-          #Zoom in/out
-          "i" : => @zoom( 1, false)
-          "o" : => @zoom(-1, false)
 
-          #Change move value
-          "h" : => @changeMoveValue(25)
-          "g" : => @changeMoveValue(-25)
-        }))
+  getKeyboardControls : ->
+
+    return {
+      #Zoom in/out
+      "i" : => @zoom( 1, false)
+      "o" : => @zoom(-1, false)
+
+      #Change move value
+      "h" : => @changeMoveValue(25)
+      "g" : => @changeMoveValue(-25)
+    }
+
 
   init : ->
 
@@ -232,16 +256,11 @@ class PlaneController
 
     @stop()
 
-    if newMode == constants.MODE_PLANE_TRACING
-      @activeSubController = @cellTracingController
-    else if newMode == constants.MODE_VOLUME
-      @activeSubController = @volumeTracingController
-
     @initKeyboard()
     @init()
     @initMouse()
     @sceneController.start()
-    @view.start()
+    @planeView.start()
 
     @isStarted = true
 
@@ -250,37 +269,38 @@ class PlaneController
 
     if @isStarted
       @input.unbind()
-      @view.stop()
+      @planeView.stop()
       @sceneController.stop()
 
     @isStarted = false
 
   bind : ->
 
-    @view.bind()
+    @planeView.bind()
 
-    @view.on
+    @planeView.on
       render : => @render()
-      finishedRender : => @model.cellTracing.rendered()
       renderCam : (id, event) => @sceneController.updateSceneForCam(id)
 
     @sceneController.on
       newGeometries : (list, event) =>
         for geometry in list
-          @view.addGeometry(geometry)
+          @planeView.addGeometry(geometry)
       removeGeometries : (list, event) =>
         for geometry in list
-          @view.removeGeometry(geometry)
-    @sceneController.skeleton.on
+          @planeView.removeGeometry(geometry)
+    @sceneController.skeleton?.on
       newGeometries : (list, event) =>
         for geometry in list
-          @view.addGeometry(geometry)
+          @planeView.addGeometry(geometry)
       removeGeometries : (list, event) =>
         for geometry in list
-          @view.removeGeometry(geometry)
+          @planeView.removeGeometry(geometry)
 
 
   render : ->
+
+    @model.logConnectionInfo()
 
     for dataLayerName of @model.binary
       if (@sceneController.pingDataLayer(dataLayerName))
@@ -290,7 +310,6 @@ class PlaneController
           activePlane:  @activeViewport
         })
 
-    @model.cellTracing.globalPosition = @flycam.getPosition()
     @cameraController.update()
     @sceneController.update()
 
@@ -348,7 +367,7 @@ class PlaneController
     if zoomToMouse
       zoomToPosition = @input.mouseControllers[constants.TDView].position
 
-    @cameraController.zoomTDView(value, zoomToPosition, @view.curWidth)
+    @cameraController.zoomTDView(value, zoomToPosition, @planeView.curWidth)
 
 
   moveTDView : (delta) ->
@@ -401,8 +420,6 @@ class PlaneController
 
     switch type
       when null then @moveZ(delta)
-      #when "shift" then @cellTracingController.setParticleSize(delta)
-      when "shift" then @cellTracingController.setRadius(delta)
       when "alt"
         @zoomPlanes(delta, true)
 
@@ -411,7 +428,7 @@ class PlaneController
 
     curGlobalPos  = @flycam.getPosition()
     zoomFactor    = @flycam.getPlaneScalingFactor()
-    scaleFactor   = @view.scaleFactor
+    scaleFactor   = @planeView.scaleFactor
     planeRatio    = @model.scaleInfo.baseVoxelFactors
     position = switch @activeViewport
       when constants.PLANE_XY
@@ -426,9 +443,3 @@ class PlaneController
         [ curGlobalPos[0] - (constants.VIEWPORT_WIDTH * scaleFactor / 2 - clickPos.x) / scaleFactor * planeRatio[0] * zoomFactor,
           curGlobalPos[1],
           curGlobalPos[2] - (constants.VIEWPORT_WIDTH * scaleFactor / 2 - clickPos.y) / scaleFactor * planeRatio[2] * zoomFactor ]
-
-
-  centerActiveNode : ->
-
-    @activeSubController.centerActiveNode()
-

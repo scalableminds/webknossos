@@ -4,14 +4,18 @@ underscore : _
 libs/event_mixin : EventMixin
 libs/request : Request
 libs/input : Input
-../geometries/arbitrary_plane : ArbitraryPlane
-../geometries/crosshair : Crosshair
-../view/arbitrary_view : ArbitraryView
-../geometries/arbitrary_plane_info : ArbitraryPlaneInfo
-../constants : constants
+../../geometries/arbitrary_plane : ArbitraryPlane
+../../geometries/crosshair : Crosshair
+../../view/arbitrary_view : ArbitraryView
+../../geometries/arbitrary_plane_info : ArbitraryPlaneInfo
+../../constants : constants
 ###
 
 class ArbitraryController
+
+  # See comment in Controller class on general controller architecture.
+  #
+  # Arbitrary Controller: Responsible for Arbitrary Modes
 
   WIDTH : 128
   HEIGHT : 128
@@ -42,7 +46,7 @@ class ArbitraryController
       @keyboardOnce?.unbind()
 
 
-  constructor : (@model, stats, @gui, renderer, scene, @sceneController) ->
+  constructor : (@model, stats, @gui, @view, @sceneController) ->
 
     _.extend(this, new EventMixin())
 
@@ -51,26 +55,27 @@ class ArbitraryController
     @canvas = canvas = $("#render-canvas")
     
     @cam = @model.flycam3d
-    @view = new ArbitraryView(canvas, @cam, stats, renderer, scene, @model.scaleInfo)
+    @arbitraryView = new ArbitraryView(canvas, @cam, stats, @view, @model.scaleInfo)
 
     @plane = new ArbitraryPlane(@cam, @model, @WIDTH, @HEIGHT)
-    @view.addGeometry @plane
+    @arbitraryView.addGeometry @plane
 
     @infoPlane = new ArbitraryPlaneInfo()
 
     @input = _.extend({}, @input)
 
     @crosshair = new Crosshair(@cam, model.user.get("crosshairSize"))
-    @view.addGeometry(@crosshair)
+    @arbitraryView.addGeometry(@crosshair)
 
     @bind()
-    @view.draw()
+    @arbitraryView.draw()
 
     @stop()
 
 
   render : (forceUpdate, event) ->
 
+    @model.logConnectionInfo()
     matrix = @cam.getMatrix()
     @model.binary["color"].arbitraryPing(matrix)
 
@@ -90,7 +95,7 @@ class ArbitraryController
             true
           )
         else if @mode == constants.MODE_ARBITRARY_PLANE
-          f = @cam.getZoomStep() / (@view.width / @WIDTH)
+          f = @cam.getZoomStep() / (@arbitraryView.width / @WIDTH)
           @cam.move [delta.x * f, delta.y * f, 0]
       scroll : @scroll
     )
@@ -106,8 +111,8 @@ class ArbitraryController
     @input.keyboard = new Input.Keyboard(
  
       #Scale plane
-      "l"             : (timeFactor) => @view.applyScale -@model.user.get("scaleValue")
-      "k"             : (timeFactor) => @view.applyScale  @model.user.get("scaleValue")
+      "l"             : (timeFactor) => @arbitraryView.applyScale -@model.user.get("scaleValue")
+      "k"             : (timeFactor) => @arbitraryView.applyScale  @model.user.get("scaleValue")
 
       #Move   
       "w"             : (timeFactor) => @cam.move [0, getVoxelOffset(timeFactor), 0]
@@ -142,12 +147,12 @@ class ArbitraryController
     
     @input.keyboardNoLoop = new Input.KeyboardNoLoop(
 
-      "1" : => @sceneController.toggleSkeletonVisibility()
-      "2" : => @sceneController.toggleInactiveTreeVisibility()
+      "1" : => @sceneController.skeleton.toggleVisibility()
+      "2" : => @sceneController.skeleton.toggleInactiveTreeVisibility()
 
       #Delete active node
-      "delete" : => @model.cellTracing.deleteActiveNode()
-      "c" : => @model.cellTracing.createNewTree()
+      "delete" : => @model.skeletonTracing.deleteActiveNode()
+      "c" : => @model.skeletonTracing.createNewTree()
       
       #Branches
       "b" : => @pushBranch()
@@ -168,15 +173,15 @@ class ArbitraryController
         @record = false
         @infoPlane.updateInfo(false)
       #Comments
-      "n" : => @setActiveNode(@model.cellTracing.nextCommentNodeID(false), true)
-      "p" : => @setActiveNode(@model.cellTracing.nextCommentNodeID(true), true)
+      "n" : => @setActiveNode(@model.skeletonTracing.nextCommentNodeID(false), true)
+      "p" : => @setActiveNode(@model.skeletonTracing.nextCommentNodeID(true), true)
     )
 
     @input.keyboardOnce = new Input.Keyboard(
 
       #Delete active node and recenter last node
       "shift + space" : =>
-        @model.cellTracing.deleteActiveNode()
+        @model.skeletonTracing.deleteActiveNode()
         @centerActiveNode()
         
     , -1)
@@ -184,15 +189,15 @@ class ArbitraryController
   init : ->
 
     @setClippingDistance @model.user.get("clippingDistance")
-    @view.applyScale(0)
+    @arbitraryView.applyScale(0)
 
 
   bind : ->
 
-    @view.on "render", (force, event) => @render(force, event)
-    @view.on "finishedRender", => @model.cellTracing.rendered()
+    @arbitraryView.on "render", (force, event) => @render(force, event)
+    @arbitraryView.on "finishedRender", => @model.skeletonTracing.rendered()
 
-    @model.binary["color"].cube.on "bucketLoaded", => @view.draw()
+    @model.binary["color"].cube.on "bucketLoaded", => @arbitraryView.draw()
 
     @model.user.on "crosshairSizeChanged", (value) =>
       @crosshair.setScale(value)
@@ -213,9 +218,9 @@ class ArbitraryController
 
     @initKeyboard()
     @initMouse()
-    @view.start()
+    @arbitraryView.start()
     @init()
-    @view.draw()   
+    @arbitraryView.draw()   
 
     @isStarted = true 
  
@@ -225,7 +230,7 @@ class ArbitraryController
     if @isStarted
       @input.unbind()
     
-    @view.stop()
+    @arbitraryView.stop()
 
     @isStarted = false
 
@@ -238,7 +243,7 @@ class ArbitraryController
 
   addNode : (position) =>
 
-    @model.cellTracing.addNode(position, constants.TYPE_USUAL, constants.ARBITRARY_VIEW, 0)
+    @model.skeletonTracing.addNode(position, constants.TYPE_USUAL, constants.ARBITRARY_VIEW, 0)
 
 
   setWaypoint : () =>
@@ -247,7 +252,7 @@ class ArbitraryController
       return
 
     position  = @cam.getPosition()
-    activeNodePos = @model.cellTracing.getActiveNodePos()
+    activeNodePos = @model.skeletonTracing.getActiveNodePos()
 
     @addNode(position)
 
@@ -271,24 +276,24 @@ class ArbitraryController
 
   setClippingDistance : (value) =>
 
-    @view.setClippingDistance(value)
+    @arbitraryView.setClippingDistance(value)
 
 
   pushBranch : ->
 
-    @model.cellTracing.pushBranch()
+    @model.skeletonTracing.pushBranch()
 
 
   popBranch : ->
 
-    _.defer => @model.cellTracing.popBranch().done((id) => 
+    _.defer => @model.skeletonTracing.popBranch().done((id) => 
       @setActiveNode(id, true)
     )
 
 
   centerActiveNode : ->
 
-    activeNode = @model.cellTracing.getActiveNode()
+    activeNode = @model.skeletonTracing.getActiveNode()
     if activeNode
       @cam.setPosition(activeNode.pos)
       parent = activeNode.parent
@@ -306,8 +311,8 @@ class ArbitraryController
 
   setActiveNode : (nodeId, centered, mergeTree) ->
 
-    @model.cellTracing.setActiveNode(nodeId, mergeTree)
-    @cam.setPosition @model.cellTracing.getActiveNodePos()  
+    @model.skeletonTracing.setActiveNode(nodeId, mergeTree)
+    @cam.setPosition @model.skeletonTracing.getActiveNodePos()  
 
 
   moved : ->

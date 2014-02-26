@@ -33,7 +33,7 @@ case class SkeletonTracing(
                             editPosition: Point3D,
                             boundingBox: Option[BoundingBox],
                             comments: List[Comment] = Nil,
-                            settings: AnnotationSettings = AnnotationSettings.default,
+                            settings: AnnotationSettings = AnnotationSettings.skeletonDefault,
                             _id: BSONObjectID = BSONObjectID.generate
                           )
   extends SkeletonTracingLike with AnnotationContent with SkeletonManipulations {
@@ -45,7 +45,7 @@ case class SkeletonTracing(
   def service = SkeletonTracingService
 
   def allowAllModes =
-    this.copy(settings = settings.copy(allowedModes = AnnotationSettings.ALL_MODES))
+    this.copy(settings = settings.copy(allowedModes = AnnotationSettings.SKELETON_MODES))
 
   def trees: Fox[List[TreeLike]] = dbtrees.flatMap{ ts =>
     Fox.combined(ts.map(t => t.toTree))

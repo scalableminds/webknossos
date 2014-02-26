@@ -13,6 +13,7 @@ require.config(
     "backbone.marionette" : "../bower_components/backbone.marionette/lib/backbone.marionette"
     "backbone.paginator"  : "../bower_components/backbone.paginator/dist/backbone.paginator"
     "backbone"            : "../bower_components/backbone/backbone"
+    "gzip"                : "../bower_components/zlib/bin/gzip.min"
     "three"               : "../bower_components/three/index"
     "three.color"         : "../bower_components/ColorConverter/index"
     "three.trackball"     : "../bower_components/TrackballControls/index"
@@ -44,6 +45,8 @@ require.config(
       exports : "jsRoutes"
     "three" :
       exports : "THREE"
+    "gzip" :
+      exports : "Zlib"
     "stats" :
       exports : "Stats"
     "v3" :

@@ -24,7 +24,7 @@ class ArbitraryView
   camera : null
   cameraPosition : null
 
-  constructor : (canvas, @dataCam, @stats, @renderer, @scene, scaleInfo) ->
+  constructor : (canvas, @dataCam, @stats, @view, scaleInfo) ->
 
     _.extend(this, new EventMixin())
 
@@ -34,6 +34,8 @@ class ArbitraryView
     @width  = @container.width()
     @height = @container.height()
     @deviceScaleFactor = window.devicePixelRatio || 1
+
+    { @renderer, @scene } = @view
 
     # Initialize main THREE.js components
 

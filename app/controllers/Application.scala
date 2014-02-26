@@ -14,8 +14,6 @@ import net.liftweb.common.Full
 object Application extends Controller with Secured {
   lazy val app = play.api.Play.current
 
-  lazy val version = scala.io.Source.fromFile("version").mkString.trim
-
   lazy val Mailer =
     Akka.system(app).actorFor("/user/mailActor")
 

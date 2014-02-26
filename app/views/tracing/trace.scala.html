@@ -35,7 +35,12 @@
         </div>
 
 
-        <div id="view-mode">
+        <div id="volume-actions" class="volume-controls">
+          <button class="btn" id="btn-merge">Merge cells</button>
+        </div>
+
+        <div id="view-mode" class="skeleton-controls">
+          <p>View mode:</p>
           <div class="btn-group">
             <button type="button" class="btn btn-default btn-primary" id="view-mode-3planes">3 Planes</button>
             <button type="button" class="btn btn-default" id="view-mode-sphere">Sphere</button>
@@ -81,6 +86,19 @@
 
         </div>
       </div>
+
+      <div id="merge">
+        <p>Please enter the IDs of the cells to merge or select them in the viewport:</p>
+        <div class="input-prepend">
+          <span class="add-on">Cell 1</span>
+          <input id="merge-cell1" type="text">
+        </div>
+        <div class="input-prepend">
+          <span class="add-on">Cell 2</span>
+          <input id="merge-cell2" type="text">
+        </div>
+      </div>
+
       <div id="tracing">
         <div id="render">
           <div id="help-modal" class="modal hide fade"></div>
@@ -95,7 +113,7 @@
           </div>
         </div>
       </div>
-      <div class="tabbable" id="comments-tree">
+      <div class="tabbable skeleton-controls" id="comments-tree">
         <ul class="nav nav-tabs">
           <li class="active"><a href="#tab-tree" data-toggle="tab">Tree Viewer</a></li>
           <li><a href="#tab-trees" data-toggle="tab">Trees</a></li>

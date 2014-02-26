@@ -1,18 +1,18 @@
 ### define
 jquery : $
 underscore : _
+libs/request : Request
+libs/event_mixin : EventMixin
 three.color : ColorConverter
-../../libs/request : Request
-../../libs/event_mixin : EventMixin
 ./tracepoint : TracePoint
 ./tracetree : TraceTree
-./statelogger : StateLogger
-../constants : constants
+./skeletontracing_statelogger : SkeletonTracingStateLogger
+../../constants : constants
 ./tracingparser : TracingParser
 three : THREE
 ###
 
-class CellTracing
+class SkeletonTracing
 
   GOLDEN_RATIO : 0.618033988749895
   TYPE_USUAL   : constants.TYPE_USUAL
@@ -44,10 +44,10 @@ class CellTracing
 
     ############ Load Tree from @data ##############
 
-    @stateLogger = new StateLogger(this, @flycam, tracing.version, tracing.id, tracing.typ, tracing.restrictions.allowUpdate)
-
-    console.log "Annotation data: ", tracing
-
+    @stateLogger = new SkeletonTracingStateLogger(
+      @flycam, tracing.version, tracing.id, tracing.typ,
+      tracing.restrictions.allowUpdate, this)
+ 
     tracingParser = new TracingParser(@, @data)
     {
       @idCount
@@ -99,10 +99,6 @@ class CellTracing
         else
           return
     )
-
-  pushNow : ->
-
-    @stateLogger.pushNow()
 
 
   benchmark : (numberOfTrees = 1, numberOfNodesPerTree = 10000) ->

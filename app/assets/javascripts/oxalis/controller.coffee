@@ -1,12 +1,17 @@
 ### define
 jquery : $
 underscore : _
-./controller/plane_controller : PlaneController
-./controller/arbitrary_controller : ArbitraryController
-./controller/abstract_tree_controller : AbstractTreeController
+./controller/viewmodes/plane_controller : PlaneController
+./controller/annotations/skeletontracing_controller : SkeletonTracingController
+./controller/annotations/volumetracing_controller : VolumeTracingController
+./controller/combinations/skeletontracing_arbitrary_controller : SkeletonTracingArbitraryController
+./controller/combinations/skeletontracing_plane_controller : SkeletonTracingPlaneController
+./controller/combinations/volumetracing_plane_controller : VolumeTracingPlaneController
 ./controller/scene_controller : SceneController
 ./model : Model
 ./view : View
+./view/skeletontracing/skeletontracing_view : SkeletonTracingView
+./view/volumetracing/volumetracing_view : VolumeTracingView
 ../libs/event_mixin : EventMixin
 ../libs/input : Input
 ./view/gui : Gui
@@ -16,6 +21,19 @@ stats : Stats
 ###
 
 class Controller
+
+  # Main controller, responsible for setting modes and everything
+  # that has to be controlled in any mode.
+  #
+  # We have a matrix of modes like this:
+  #
+  #   Annotation Mode \ View mode    Plane       Arbitrary
+  #              Skeleton Tracing      X             X
+  #                Volume Tracing      X             /
+  # 
+  # In order to maximize code reuse, there is - besides the main
+  # controller - a controller for each row, each column and each
+  # cross in this matrix.
 
   view : null
   planeController : null
@@ -33,13 +51,11 @@ class Controller
 
     @model = new Model()
 
-    @model.initialize().done (tracingState) =>
+    @model.initialize( @controlMode ).done ({restrictions, settings, error}) =>
 
       # Do not continue, when there was an error and we got no settings from the server
-      if tracingState.error
+      if error
         return
-
-      [restrictions, settings] = [tracingState.restrictions, tracingState.settings]
 
       unless restrictions.allowAccess
         Toast.Error "You are not allowed to access this tracing"
@@ -49,28 +65,44 @@ class Controller
         @allowedModes.push switch allowedMode
           when "oxalis" then constants.MODE_PLANE_TRACING
           when "arbitrary" then constants.MODE_ARBITRARY
+          when "volume" then constants.MODE_VOLUME
 
       if constants.MODE_ARBITRARY in @allowedModes
         @allowedModes.push(constants.MODE_ARBITRARY_PLANE)
-
-      # FIXME: only for developing
-      #@allowedModes.push(constants.MODE_VOLUME)
 
       # FPS stats
       stats = new Stats()
       $("body").append stats.domElement
 
-      @view = new View(@model)
-
       @gui = @createGui(restrictions, settings)
 
-      @sceneController = new SceneController(@model.binary["color"].cube.upperBoundary, @model.flycam, @model)
+      @sceneController = new SceneController(
+        @model.binary["color"].cube.upperBoundary, @model.flycam, @model)
 
-      @planeController = new PlaneController(@model, stats, @gui, @view.renderer, @view.scene, @sceneController, @controlMode)
 
-      @arbitraryController = new ArbitraryController(@model, stats, @gui, @view.renderer, @view.scene, @sceneController)
+      if @model.skeletonTracing?
 
-      @abstractTreeController = new AbstractTreeController(@model)
+        @view = new SkeletonTracingView(@model)
+        @annotationController = new SkeletonTracingController(
+          @model, @sceneController, @gui, @view )
+        @planeController = new SkeletonTracingPlaneController(
+          @model, stats, @gui, @view, @sceneController, @annotationController)
+        @arbitraryController = new SkeletonTracingArbitraryController(
+          @model, stats, @gui, @view, @sceneController)
+      
+      else if @model.volumeTracing?
+        
+        @view = new VolumeTracingView(@model)
+        @annotationController = new VolumeTracingController(
+          @model, @sceneController, @gui, @view )
+        @planeController = new VolumeTracingPlaneController(
+          @model, stats, @gui, @view, @sceneController, @annotationController)
+
+      else # View mode
+
+        @view = new View(@model)
+        @planeController = new PlaneController(
+          @model, stats, @gui, @view, @sceneController)
 
       @initMouse()
       @initKeyboard()
@@ -79,57 +111,6 @@ class Controller
         @model.binary[binaryName].cube.on "bucketLoaded" : =>
           @model.flycam.update()
 
-      @abstractTreeController.view.on
-        nodeClick : (id) => @setActiveNode(id, true, false)
-
-      $("#comment-input").on "change", (event) =>
-        @model.cellTracing.setComment(event.target.value)
-        $("#comment-input").blur()
-
-      $("#comment-previous").click =>
-        @prevComment()
-
-      $("#comment-next").click =>
-        @nextComment()
-
-      $("#tab-comments").on "click", "a[data-nodeid]", (event) =>
-        event.preventDefault()
-        @setActiveNode($(event.target).data("nodeid"), true, false)
-
-      $("#tree-name-submit").click (event) =>
-        @model.cellTracing.setTreeName($("#tree-name-input").val())
-
-      $("#tree-name-input").keypress (event) =>
-        if event.which == 13
-          $("#tree-name-submit").click()
-          $("#tree-name-input").blur()
-
-      $("#tree-prev-button").click (event) =>
-        @selectNextTree(false)
-
-      $("#tree-next-button").click (event) =>
-        @selectNextTree(true)
-
-      $("#tree-create-button").click =>
-        @model.cellTracing.createNewTree()
-
-      $("#tree-delete-button").click =>
-        @model.cellTracing.deleteTree(true)
-
-      $("#tree-list").on "click", "a[data-treeid]", (event) =>
-        event.preventDefault()
-        @setActiveTree($(event.currentTarget).data("treeid"), true)
-
-      $("#tree-color-shuffle").click =>
-        @model.cellTracing.shuffleActiveTreeColor()
-
-      $("#tree-sort").on "click", "a[data-sort]", (event) =>
-        event.preventDefault()
-        @model.user.set("sortTreesByName", ($(event.currentTarget).data("sort") == "name"))
-
-      $("#comment-sort").on "click", "a[data-sort]", (event) =>
-        event.preventDefault()
-        @model.user.set("sortCommentsAsc", ($(event.currentTarget).data("sort") == "asc"))
 
       if @controlMode == constants.CONTROL_MODE_VIEW
         $('#alpha-slider').slider().on "slide", (event) =>
@@ -160,7 +141,7 @@ class Controller
         $("#view-mode").hide()
 
       @allowedModes.sort()
-      @setMode( constants.MODE_PLANE_TRACING, true )
+      #@setMode( constants.MODE_PLANE_TRACING, true )
       if @allowedModes.length == 0
         Toast.error("There was no valid allowed tracing mode specified.")
       else
@@ -229,11 +210,11 @@ class Controller
   setMode : (newMode, force = false) ->
 
     if (newMode == constants.MODE_ARBITRARY or newMode == constants.MODE_ARBITRARY_PLANE) and (newMode in @allowedModes or force)
-      @planeController.stop()
+      @planeController?.stop()
       @arbitraryController.start(newMode)
 
     else if (newMode == constants.MODE_PLANE_TRACING or newMode == constants.MODE_VOLUME) and (newMode in @allowedModes or force)
-      @arbitraryController.stop()
+      @arbitraryController?.stop()
       @planeController.start(newMode)
 
     else # newMode not allowed or invalid
@@ -273,54 +254,8 @@ class Controller
     gui = new Gui($("#optionswindow"), model, restrictions, settings)
     gui.update()
 
-    model.binary["color"].queue.set4Bit(model.user.get("fourBit"))
-    model.binary["color"].updateContrastCurve(gui.settings.brightness, gui.settings.contrast)
+    model.binary["color"].pullQueue.set4Bit(model.user.get("fourBit"))
+    model.binary["color"].updateContrastCurve(
+      gui.settingsGeneral.brightness, gui.settingsGeneral.contrast)
 
-    gui.on
-      deleteActiveNode : =>
-        @model.cellTracing.deleteActiveNode()
-      setActiveTree : (id) => @setActiveTree(id, false)
-      setActiveNode : (id) => @setActiveNode(id, false) # not centered
-      setActiveCell : (id) => @model.volumeTracing.setActiveCell(id)
-      createNewCell : => @model.volumeTracing.createCell()
-      newBoundingBox : (bb) => @sceneController.setBoundingBox(bb)
-
-    gui
-
-
-  setActiveTree : (treeId, centered) ->
-
-    @model.cellTracing.setActiveTree(treeId)
-    if centered
-      @centerActiveNode()
-
-
-  selectNextTree : (next) ->
-
-    @model.cellTracing.selectNextTree(next)
-    @centerActiveNode()
-
-
-  setActiveNode : (nodeId, centered, mergeTree) ->
-
-    @model.cellTracing.setActiveNode(nodeId, mergeTree)
-    if centered
-      @centerActiveNode()
-
-
-  centerActiveNode : ->
-
-    if @mode is constants.MODE_PLANE_TRACING
-      @planeController.centerActiveNode()
-    else
-      @arbitraryController.centerActiveNode()
-
-
-  prevComment : =>
-
-    @setActiveNode(@model.cellTracing.nextCommentNodeID(false), true)
-
-
-  nextComment : =>
-
-    @setActiveNode(@model.cellTracing.nextCommentNodeID(true), true)
+    return gui

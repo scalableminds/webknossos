@@ -54,7 +54,7 @@ case class Task(
     AnnotationService.annotationsFor(this)
 
   def settings(implicit ctx: DBAccessContext) =
-    taskType.map(_.settings) getOrElse AnnotationSettings.default
+    taskType.map(_.settings) getOrElse AnnotationSettings.skeletonDefault
 
   def annotationBase(implicit ctx: DBAccessContext) =
     AnnotationService.baseFor(this)
@@ -141,11 +141,20 @@ object TaskDAO extends SecuredBaseDAO[Task] with FoxImplicits {
     }
   }
 
-
-
-  @deprecated(message = "This mehtod shouldn't be used. Use TaskService.remove instead", "2.0")
+  @deprecated(message = "This method shouldn't be used. Use TaskService.remove instead", "2.0")
   override def removeById(bson: BSONObjectID)(implicit ctx: DBAccessContext) = {
     super.removeById(bson)
+  }
+
+  def findAllAdministratable(user: User)(implicit ctx: DBAccessContext) = withExceptionCatcher{
+    find(Json.obj(
+      "team" -> Json.obj("$in" -> user.adminTeamNames))).cursor[Task].collect[List]()
+  }
+
+  def removeAllWithProject(project: Project)(implicit ctx: DBAccessContext) = {
+    project.tasks.map(_.map(task => {
+      removeById(task._id)
+    }))
   }
 
   def findAllByTaskType(taskType: TaskType)(implicit ctx: DBAccessContext) = withExceptionCatcher{

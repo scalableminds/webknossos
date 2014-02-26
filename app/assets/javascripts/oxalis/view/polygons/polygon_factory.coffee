@@ -47,14 +47,14 @@ class PolygonFactory
   getCubeIndices : (x, y, z) ->
 
     labels = [
-      @modelCube.getLabel( [x, y, z]                                             ),
-      @modelCube.getLabel( [x + @cubeOffset, y, z]                               ),
-      @modelCube.getLabel( [x + @cubeOffset, y, z + @cubeOffset]                 ),
-      @modelCube.getLabel( [x, y, z + @cubeOffset]                               ),
-      @modelCube.getLabel( [x, y + @cubeOffset, z]                               ),
-      @modelCube.getLabel( [x + @cubeOffset, y + @cubeOffset, z]                 ),
-      @modelCube.getLabel( [x + @cubeOffset, y + @cubeOffset, z + @cubeOffset]   ),
-      @modelCube.getLabel( [x, y + @cubeOffset, z + @cubeOffset]                 ) ]
+      @modelCube.getDataValue( [x, y, z]                                             ),
+      @modelCube.getDataValue( [x + @cubeOffset, y, z]                               ),
+      @modelCube.getDataValue( [x + @cubeOffset, y, z + @cubeOffset]                 ),
+      @modelCube.getDataValue( [x, y, z + @cubeOffset]                               ),
+      @modelCube.getDataValue( [x, y + @cubeOffset, z]                               ),
+      @modelCube.getDataValue( [x + @cubeOffset, y + @cubeOffset, z]                 ),
+      @modelCube.getDataValue( [x + @cubeOffset, y + @cubeOffset, z + @cubeOffset]   ),
+      @modelCube.getDataValue( [x, y + @cubeOffset, z + @cubeOffset]                 ) ]
 
     cellIds = []
     for label in labels

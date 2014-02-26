@@ -11,10 +11,11 @@ three : THREE
 
 class PlaneView
 
-  constructor : (@model, @flycam, @stats, @renderer, @scene) ->
+  constructor : (@model, @flycam, @view, @stats) ->
 
     _.extend(@, new EventMixin())
 
+    { @renderer, @scene } = @view
     @running = false
 
     # The "render" div serves as a container for the canvas, that is
@@ -213,12 +214,6 @@ class PlaneView
     @camera
 
 
-  showFirstVisToggle : ->
-
-    modal.show("You just toggled the skeleton visibility. To toggle back, just hit the 1-Key.",
-      [{id: "ok-button", label: "OK, Got it."}])
-
-
   showBranchModal : (callback) ->
 
     modal.show("You didn't add a node after jumping to this branchpoint, do you really want to jump again?",
@@ -228,7 +223,7 @@ class PlaneView
 
   bind : ->
 
-    @model.cellTracing.on({
+    @model.skeletonTracing?.on({
       doubleBranch         : (callback) => @showBranchModal(callback)
       mergeDifferentTrees  : ->
         Toast.error("You can't merge nodes within the same tree", false) })

@@ -6,6 +6,7 @@ notAllowed=You are not allowed to view this resource
 binary.payload.notSupplied=No valid payload supplied
 binary.payload.invalid=Couldn''t parse payload
 binary.data.notFound=Couldn''t find the requested data
+binary.data.notSaved=Couldn''t save the data
 
 email=Email
 team=Team
@@ -58,6 +59,7 @@ dataSet.notFound=Selected data set doesn''t exist
 dataSet.notSupplied=No data set supplied
 
 dataLayer.notFound=DataLayer not found
+dataLayer.test=Test message
 
 cellId=Cell Id
 
@@ -84,6 +86,8 @@ priority=Priority
 
 project=Project
 projectName=Project Name
+project.remove.confirm=Do you really want to delete this project? All tracings and tasks connected to this project will be deleted.
+project.remove.notAllowed=You are not allowed to remove this project.
 project.removed=Project got removed
 project.notFound=Project couldn''t be found
 project.nameAlreadyInUse=Name already used

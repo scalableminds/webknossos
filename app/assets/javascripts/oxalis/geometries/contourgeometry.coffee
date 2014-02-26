@@ -69,6 +69,6 @@ class CellLayer
     positionAttribute = mesh.geometry.attributes.position
 
     positionAttribute.array       = mesh.vertexBuffer.getBuffer()
-    positionAttribute.numItems    = mesh.vertexBuffer.getLength()
+    positionAttribute.numItems    = mesh.vertexBuffer.getLength() * 3
     positionAttribute.needsUpdate = true
 

@@ -22,7 +22,6 @@
   
   dir : "public/javascripts",
   optimize : "none",
-  removeCombined: true,
   skipDirOptimize: true,
   allowSourceOverwrites: true,
   generateSourceMaps : true,

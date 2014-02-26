@@ -7,7 +7,6 @@ import braingames.mvc.ExtendedController
 import models.user.User
 import net.liftweb.common.{Failure, Full}
 import play.api.i18n.Messages
-import models.team.{TeamMembership, Role}
 import models.binary.DataSet
 
 class Controller extends PlayController

@@ -1,5 +1,6 @@
 ### define
 underscore : _
+backbone : Backbone
 ../pagination_collection : PaginationCollection
 ###
 

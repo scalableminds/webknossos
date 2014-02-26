@@ -35,6 +35,7 @@ class TeamListItemView extends Backbone.Marionette.ItemView
   delete : (evt) ->
 
     evt.preventDefault()
-    @model.destroy()
+    if window.confirm("Do really want to delete this team?")
+      @model.destroy()
 
 

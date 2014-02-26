@@ -345,7 +345,7 @@ class Cube
 
     voxelInCube = true
     for i in [0..2]
-      voxelInCube &= voxel[i] in [0...@upperBoundary[i]]
+      voxelInCube &= 0 <= voxel[i] < @upperBoundary[i]
 
     if voxelInCube
       

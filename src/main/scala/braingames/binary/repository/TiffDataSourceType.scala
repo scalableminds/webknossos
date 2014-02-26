@@ -13,8 +13,10 @@ import braingames.binary.Logger._
 import scala.Some
 import braingames.binary.models.UnusableDataSource
 import java.awt.image.{DataBufferByte, DataBufferInt}
-import com.tomgibara.imageio.impl.tiff.EmptyImage
 import braingames.util.ProgressTracking.ProgressTracker
+import scala.collection.JavaConversions._
+import javax.imageio.spi.IIORegistry
+import com.twelvemonkeys.imageio.plugins.tiff.TIFFImageReaderSpi
 
 object TiffDataSourceType extends DataSourceType with TiffDataSourceTypeHandler {
   val name = "tiff"
@@ -29,6 +31,18 @@ object TiffDataSourceType extends DataSourceType with TiffDataSourceTypeHandler 
 
 trait TiffDataSourceTypeHandler extends DataSourceTypeHandler{
   val Target = "target"
+
+
+  registerTiffProvider()
+
+  def registerTiffProvider() = {
+    logger.info("Registering tiff provider")
+    ImageIO.scanForPlugins()
+    val registry = IIORegistry.getDefaultInstance()
+    registry.registerServiceProvider(new TIFFImageReaderSpi())
+    logger.info("Finished registering tiff provider")
+  }
+
 
   case class TiffImageArray(width: Int, height: Int, data: Array[Byte])
 
@@ -172,9 +186,14 @@ trait TiffDataSourceTypeHandler extends DataSourceTypeHandler{
   def tiffToColorArray(tiffFile: Path): Option[TiffImageArray] = {
     tiffFile.fileOption.map{ file =>
       val tiff = ImageIO.read(file)
-      val raster = tiff.getRaster
-      val data = (raster.getDataBuffer().asInstanceOf[DataBufferByte]).getData()
-      TiffImageArray(tiff.getWidth, tiff.getHeight, data)
+      if(tiff == null){
+        logger.error("Couldn't load tiff file. " + ImageIO.getImageReaders(file).toList.map(_.getClass.toString))
+        throw new Exception("Couldn't load tiff file due to missing tif reader.")
+      } else {
+        val raster = tiff.getRaster
+        val data = (raster.getDataBuffer().asInstanceOf[DataBufferByte]).getData()
+        TiffImageArray(tiff.getWidth, tiff.getHeight, data)
+      }
     }
   }
 }

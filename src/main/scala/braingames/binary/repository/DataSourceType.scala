@@ -30,7 +30,7 @@ trait DataSourceType extends DataSourceTypeGuesser with DataSourceTypeHandler {
 
 object DataSourceRepository extends ProgressTracking {
 
-  val dataSources = Agent[List[DataSourceLike]](Nil)
+  lazy val dataSources = Agent[List[DataSourceLike]](Nil)
 
   val types = List(KnossosDataSourceType, TiffDataSourceType)
 

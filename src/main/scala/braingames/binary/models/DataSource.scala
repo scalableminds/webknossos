@@ -25,7 +25,7 @@ case class DataSource(
   def dataLayer(typ: String) =
     dataLayers.find(_.typ == typ)
 
-  def sourceFolder = Path(baseDir)
+  def sourceFolder = Path.fromString(baseDir)
 
   def relativeBaseDir(binaryBase: String) = baseDir.replace(binaryBase, "")
 

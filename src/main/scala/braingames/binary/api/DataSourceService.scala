@@ -25,7 +25,7 @@ trait DataSourceService {
 
   def dataSourceRepository: DataSourceRepository
 
-  lazy val userBaseFolder = PathUtils.ensureDirectory(Path(config.getString("braingames.binary.userBaseFolder")))
+  lazy val userBaseFolder = PathUtils.ensureDirectory(Path.fromString(config.getString("braingames.binary.userBaseFolder")))
 
   def userDataSourceId() = {
     UUID.randomUUID().toString

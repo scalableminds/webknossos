@@ -144,6 +144,11 @@ object TaskDAO extends SecuredBaseDAO[Task] with FoxImplicits {
     super.removeById(bson)
   }
 
+  def findAllAdministratable(user: User)(implicit ctx: DBAccessContext) = withExceptionCatcher{
+    find(Json.obj(
+      "team" -> Json.obj("$in" -> user.adminTeamNames))).cursor[Task].collect[List]()
+  }
+
   def removeAllWithProject(project: Project)(implicit ctx: DBAccessContext) = {
     project.tasks.map(_.map(task => {
       removeById(task._id)

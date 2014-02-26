@@ -3,6 +3,7 @@ underscore : _
 ../pagination_collection : PaginationCollection
 ###
 
-class UserCollection extends PaginationCollection
+class TaskCollection extends PaginationCollection
 
-  url : "/api/users"
+  url : "/api/tasks"
+

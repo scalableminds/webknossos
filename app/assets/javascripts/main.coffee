@@ -3,10 +3,10 @@ require [
   "underscore"
   "backbone"
   "app"
-  "./main/errorHandling"
-  "./main/router"
+  "main/errorHandling"
+  "main/router"
   "bootstrap"
-  "./main/enhancements"
+  "main/enhancements"
   "libs/core_ext"
 ], ($, _, Backbone, app, ErrorHandling, Router) ->
 

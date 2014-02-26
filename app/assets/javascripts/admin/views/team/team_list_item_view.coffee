@@ -1,7 +1,6 @@
 ### define
 underscore : _
 backbone.marionette : marionette
-admin/views/user/team_role_modal_view : TeamRoleModalView
 libs/template_helpers : TemplateHelpers
 ###
 

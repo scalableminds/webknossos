@@ -72,20 +72,6 @@ object TaskAdministration extends AdminController {
   val taskForm = Form(
     taskMapping).fill("", "", Point3D(0, 0, 0), Experience.empty, 100, 10, "", "")
 
-  def list = Authenticated.async { implicit request =>
-    render.async {
-      case Accepts.Html() =>
-        Future.successful(Ok(html.admin.task.taskList()))
-      case Accepts.Json() =>
-        for {
-          tasks <- TaskService.findAll
-          js <- Future.traverse(tasks)(Task.transformToJson)
-        } yield {
-          JsonOk(Json.obj("data" -> js))
-        }
-    }
-  }
-
   def taskCreateHTML(
                       taskFromNMLForm: Form[(String, Experience, Int, Int, String, String)],
                       taskForm: Form[(String, String, Point3D, Experience, Int, Int, String, String)]
@@ -143,7 +129,7 @@ object TaskAdministration extends AdminController {
           _ <- TaskDAO.insert(task)
         } yield {
           AnnotationService.createAnnotationBase(task, request.user._id, taskType.settings, dataSetName, start)
-          Redirect(routes.TaskAdministration.list)
+          Redirect(controllers.routes.TaskController.empty)
           .flashing(
             FlashSuccess(Messages("task.createSuccess")))
           .highlighting(task.id)
@@ -188,7 +174,7 @@ object TaskAdministration extends AdminController {
                 _project = project.map(_.name))
             } yield {
               AnnotationDAO.updateAllUsingNewTaskType(task, taskType.settings)
-              Redirect(routes.TaskAdministration.list)
+              Redirect(controllers.routes.TaskController.empty)
               .flashing(
                 FlashSuccess(Messages("task.editSuccess")))
               .highlighting(task.id)
@@ -229,7 +215,7 @@ object TaskAdministration extends AdminController {
                   AnnotationService.createAnnotationBase(task, request.user._id, taskType.settings, nml)
                 }
             }
-            Redirect(routes.TaskAdministration.list).flashing(
+            Redirect(controllers.routes.TaskController.empty).flashing(
               FlashSuccess(Messages("task.bulk.createSuccess", nmls.size)))
           }
       })
@@ -291,7 +277,7 @@ object TaskAdministration extends AdminController {
       data <- postParameter("data") ?~> Messages("task.bulk.notSupplied")
       inserted <- createTasksFromData(data)
     } yield {
-      Redirect(routes.TaskAdministration.list).flashing(
+      Redirect(controllers.routes.TaskController.empty).flashing(
         FlashSuccess(Messages("task.bulk.createSuccess", inserted.size.toString)))
     }
   }

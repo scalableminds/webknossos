@@ -118,7 +118,7 @@ class DataRequestActor(
               }
           }.recoverWith {
             case e: AskTimeoutException =>
-              logger.warn(s"Load from ${a.path} timed out. (${loadBlock.dataSource.name}/${loadBlock.dataLayerSection.baseDir}, Block: ${loadBlock.block})")
+              logger.warn(s"Load from ${a.path} timed out. (${loadBlock.dataSource.id}/${loadBlock.dataLayerSection.baseDir}, Block: ${loadBlock.block})")
               loadFromStore(tail)
           }
         case _ =>
@@ -251,7 +251,7 @@ class DataRequestActor(
         case a :: tail =>
           (a ? saveBlock).mapTo[Unit].recoverWith {
             case e: AskTimeoutException =>
-              println(s"WARN: (${saveBlock.dataSource.name}/${saveBlock.dataLayerSection.baseDir} ${saveBlock.block}) ${a.path}: Not response in time.")
+              logger.warn(s"No response in time for block: (${saveBlock.dataSource.id}/${saveBlock.dataLayerSection.baseDir} ${saveBlock.block}) ${a.path}")
               saveToStore(tail)
           }
           Future.successful(Unit)

@@ -3,6 +3,7 @@ package braingames.binary
 import braingames.geometry.Point3D
 import braingames.util.ExtendedTypes.ExtendedByteArray
 import scala.collection.mutable.ArraySeq
+import scala.reflect.ClassTag
 
 abstract class BinaryMessage
 
@@ -110,7 +111,7 @@ object BinaryProtocol {
     }
   }
 
-  def parse[T: ClassManifest](in: Array[Byte], containsHandle: Boolean, singlePayloadSize: Int, parseFunction: Array[Byte] => Option[T]): ParsedRequestCollection[T] = {
+  def parse[T: ClassTag](in: Array[Byte], containsHandle: Boolean, singlePayloadSize: Int, parseFunction: Array[Byte] => Option[T]): ParsedRequestCollection[T] = {
     val (payload, handle) = parseHandle(in, containsHandle)
     val requests = parsePayload(in, singlePayloadSize, parseFunction)
     ParsedRequestCollection(requests.toArray, handle)

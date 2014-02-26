@@ -2,6 +2,7 @@ package braingames.binary.models
 
 import play.api.libs.json.{JsSuccess, JsValue, Reads, Json}
 import java.io.File
+import scalax.file.Path
 
 /**
  * Company: scalableminds
@@ -42,23 +43,19 @@ object DataLayerSectionSimpleSettings {
   val dataLayerSectionSimpleSettingsReads = Json.reads[DataLayerSectionSimpleSettings]
 }
 
-object DataLayerSectionSettings extends SettingsFile {
+object DataLayerSectionSettings extends SettingsFile[DataLayerSectionSettings] {
 
   import DataLayerSectionFullSettings._
   import DataLayerSectionSimpleSettings._
 
-  val dataLayerSectionSettingsReads = new Reads[DataLayerSectionSettings] {
+  val settingsFileName = "section.json"
+
+  val settingsFileReads = new Reads[DataLayerSectionSettings] {
     def reads(json: JsValue) = {
       dataLayerSectionFullSettingsReads.reads(json) match {
         case s: JsSuccess[DataLayerSectionFullSettings] => s
         case _ => dataLayerSectionSimpleSettingsReads.reads(json)
       }
     }
-  }
-
-  def fromFile(f: File): Option[DataLayerSectionSettings] = {
-    extractSettingsFromFile(
-      new File(f.getPath + "/section.json"),
-      dataLayerSectionSettingsReads)
   }
 }

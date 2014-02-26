@@ -47,18 +47,21 @@ abstract class DataStore extends Actor {
 }
 
 object DataStore {
-
-  def createDirectory(dataInfo: DataStoreBlock) =
-    "%s/%s/%d/x%04d/y%04d/z%04d/".format(
+  def createFilename(dataInfo: DataStoreBlock) =
+    "%s/%s/%s".format(
       dataInfo.dataLayer.baseDir,
       dataInfo.dataLayerSection.baseDir,
-      dataInfo.resolution,
-      dataInfo.block.x, dataInfo.block.y, dataInfo.block.z)
+      knossosFilePath(dataInfo.dataSource.id, dataInfo.resolution, dataInfo.block.x, dataInfo.block.y, dataInfo.block.z))
 
-  def createFilename(dataInfo: DataStoreBlock) =
-    "%s/%s_mag%d_x%04d_y%04d_z%04d.raw".format(
-      createDirectory(dataInfo),
-      dataInfo.dataSource.name,
-      dataInfo.resolution,
-      dataInfo.block.x, dataInfo.block.y, dataInfo.block.z)
+  def knossosFilename(id: String, resolution: Int, x: Int, y: Int, z: Int) =
+    "%s_mag%d_x%04d_y%04d_z%04d.raw".format(
+      id,
+      resolution,
+      x, y, z)
+
+  def knossosFilePath(id: String, resolution: Int, x: Int, y: Int, z: Int) =
+    "%d/x%04d/y%04d/z%04d/%s".format(
+      resolution,
+      x, y, z,
+      knossosFilename(id, resolution, x, y, z))
 }

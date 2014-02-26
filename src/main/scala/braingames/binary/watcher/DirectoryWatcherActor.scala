@@ -15,11 +15,13 @@ import com.typesafe.config.Config
 import scala.util.control.Breaks._
 import java.nio.file.attribute._
 import java.io.IOException
-import java.nio.file._
 import akka.agent.Agent
 import java.util.EnumSet
+import java.nio.file.{Path => JavaPath, _}
+import scalax.file.Path
+import scala.Some
 
-case class StartWatching(pathName: String, recursive: Boolean)
+case class StartWatching(path: Path, recursive: Boolean)
 case class StopWatching()
 
 class DirectoryWatcherActor(config: Config, changeHandler: DirectoryChangeHandler) extends Actor {
@@ -32,13 +34,13 @@ class DirectoryWatcherActor(config: Config, changeHandler: DirectoryChangeHandle
 
   implicit val system = context.system
 
-  val _watchService = Agent[Map[Path, WatchService]](Map.empty)
-  val keys = new HashMap[WatchKey, Path]
+  val _watchService = Agent[Map[JavaPath, WatchService]](Map.empty)
+  val keys = new HashMap[WatchKey, JavaPath]
 
   var shouldStop = false
   var updateTicker: Option[Cancellable] = None
 
-  def watchService(path: Path) =
+  def watchService(path: JavaPath) =
     _watchService().get(path).getOrElse {
       val ws = path.getFileSystem().newWatchService()
       _watchService.send(_ + (path -> ws))
@@ -48,13 +50,13 @@ class DirectoryWatcherActor(config: Config, changeHandler: DirectoryChangeHandle
   def receive = {
     case StopWatching =>
       shouldStop = true
-    case StartWatching(pathName, recursive) =>
+    case StartWatching(path, recursive) =>
       shouldStop = false
-      if (new File(pathName).exists) {
-        start(Paths.get(pathName), recursive)
+      if (path.exists) {
+        start(Paths.get(path.toAbsolute.path), recursive)
         sender ! true
       } else {
-        logger.error(s"Can't watch $pathName because it doesn't exist.")
+        logger.error(s"Can't watch $path because it doesn't exist.")
         sender ! false
       }
   }
@@ -67,12 +69,12 @@ class DirectoryWatcherActor(config: Config, changeHandler: DirectoryChangeHandle
   /**
    * The main directory watching thread
    */
-  def start(watchedPath: Path, recursive: Boolean): Unit = {
-    changeHandler.onStart(watchedPath, recursive)
+  def start(watchedJavaPath: JavaPath, recursive: Boolean): Unit = {
+    changeHandler.onStart(watchedJavaPath, recursive)
     updateTicker = Some(context.system.scheduler.schedule(TICKER_INTERVAL, TICKER_INTERVAL) {
-      changeHandler.onTick(watchedPath, recursive)
+      changeHandler.onTick(watchedJavaPath, recursive)
     })
-    // watchFile(watchedPath, recursive)
+    // watchFile(watchedJavaPath, recursive)
   }
 
   /**
@@ -80,7 +82,7 @@ class DirectoryWatcherActor(config: Config, changeHandler: DirectoryChangeHandle
    */
   def handleEvent(event: WatchEvent[_]): Unit = {
     val kind = event.kind
-    val event_path = event.context().asInstanceOf[Path]
+    val event_path = event.context().asInstanceOf[JavaPath]
     if (kind.equals(StandardWatchEventKinds.ENTRY_CREATE)) {
       changeHandler.onCreate(event_path)
     } else if (kind.equals(StandardWatchEventKinds.ENTRY_DELETE)) {
@@ -93,7 +95,7 @@ class DirectoryWatcherActor(config: Config, changeHandler: DirectoryChangeHandle
   /**
    * Register a particular file or directory to be watched
    */
-  def register(dir: Path, root: Option[Path] = None): Unit = {
+  def register(dir: JavaPath, root: Option[JavaPath] = None): Unit = {
     val ws = watchService(root getOrElse dir)
     val key = dir.register(ws, StandardWatchEventKinds.ENTRY_CREATE,
       StandardWatchEventKinds.ENTRY_MODIFY,
@@ -105,8 +107,8 @@ class DirectoryWatcherActor(config: Config, changeHandler: DirectoryChangeHandle
   /**
    * Makes it easier to walk a file tree
    */
-  implicit def makeDirVisitor(f: (Path) => Unit) = new SimpleFileVisitor[Path] {
-    override def preVisitDirectory(p: Path, attrs: BasicFileAttributes) = {
+  implicit def makeDirVisitor(f: (JavaPath) => Unit) = new SimpleFileVisitor[JavaPath] {
+    override def preVisitDirectory(p: JavaPath, attrs: BasicFileAttributes) = {
       f(p)
       FileVisitResult.CONTINUE
     }
@@ -115,10 +117,10 @@ class DirectoryWatcherActor(config: Config, changeHandler: DirectoryChangeHandle
   /**
    *  Recursively register directories
    */
-  def registerAll(start: Path, root: Option[Path] = None): Unit = {
+  def registerAll(start: JavaPath, root: Option[JavaPath] = None): Unit = {
     try {
       Files.walkFileTree(start, Set(FileVisitOption.FOLLOW_LINKS).asJava, Integer.MAX_VALUE,
-        (f: Path) => {
+        (f: JavaPath) => {
           register(f, root orElse Some(start))
         })
     } catch {
@@ -127,14 +129,14 @@ class DirectoryWatcherActor(config: Config, changeHandler: DirectoryChangeHandle
     }
   }
 
-  def watchFile(path: Path, recursive: Boolean) {
+  def watchFile(path: JavaPath, recursive: Boolean) {
     try {
       if (recursive) {
         registerAll(path)
       } else {
         register(path)
       }
-      
+
       Future {
         breakable {
           while (true) {
@@ -145,7 +147,7 @@ class DirectoryWatcherActor(config: Config, changeHandler: DirectoryChangeHandle
                 val kind = event.kind
 
                 if (kind != StandardWatchEventKinds.OVERFLOW) {
-                  val name = event.context().asInstanceOf[Path]
+                  val name = event.context().asInstanceOf[JavaPath]
                   var child = dir.resolve(name)
 
                   handleEvent(event)

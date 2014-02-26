@@ -8,8 +8,7 @@ import scala.concurrent.Future
 import akka.actor.Props
 import akka.pattern.ask
 import akka.routing.RoundRobinRouter
-import braingames.binary.watcher.DirectoryWatcherActor
-import braingames.binary.watcher.DataSourceChangeHandler
+import braingames.binary.watcher._
 import akka.util.Timeout
 import scala.concurrent.duration._
 import braingames.binary.models._
@@ -21,61 +20,62 @@ import scala.util.Failure
 import scala.Some
 import scala.util.Success
 import braingames.binary.watcher.StartWatching
-import java.io.File
+import scalax.file.Path
+import braingames.util.PathUtils
+import braingames.binary.repository.DataSourceRepositoryHandler
 
-trait BinaryDataService extends DataSourceService with BinaryDataHelpers{
+trait BinaryDataService extends DataSourceService with BinaryDataHelpers {
+
   import Logger._
 
   implicit def system: ActorSystem
 
-  lazy implicit val executor = system.dispatcher
-
   def dataSourceRepository: DataSourceRepository
-
-  val dataSourceChangeHandler = new DataSourceChangeHandler(dataSourceRepository)
 
   def config: Config
 
-  lazy implicit val timeout = Timeout(config.getInt("braingames.binary.loadTimeout") seconds) // needed for `?` below
+  lazy implicit val executor = system.dispatcher
 
-  lazy val baseFolder = {
-    new File(config.getString("braingames.binary.baseFolder")).getAbsolutePath
-  }
+  val dataSourceInboxHandler = new DataSourceRepositoryHandler(dataSourceRepository)
 
-  val bindataCache = Agent[Map[CachedBlock, Future[Box[Array[Byte]]]]](Map.empty)
+  lazy implicit val timeout = Timeout(config.getInt("braingames.binary.loadTimeout") seconds)
+
+  lazy val dataSourceRepositoryDir = PathUtils.ensureDirectory(Path.fromString(config.getString("braingames.binary.baseFolder  ")))
+
+  val binDataCache = Agent[Map[CachedBlock, Future[Box[Array[Byte]]]]](Map.empty)
 
   lazy val dataRequestActor = {
     val nrOfBinRequestActors = config.getInt("braingames.binary.nrOfBinRequestActors")
     val props = Props(new DataRequestActor(
       config.getConfig("braingames.binary"),
-      bindataCache,
+      binDataCache,
       dataSourceRepository))
 
     system.actorOf(props
       .withRouter(new RoundRobinRouter(nrOfBinRequestActors)), "dataRequestActor")
   }
 
-  var directoryWatcher: Option[ActorRef] = None
+  var repositoryWatcher: Option[ActorRef] = None
 
   def start(onComplete: => Unit = Unit) {
-    val directoryWatcherConfig = config.getConfig("braingames.binary.changeHandler")
-    val directoryWatcherActor =
+    val repositoryWatcherConfig = config.getConfig("braingames.binary.changeHandler")
+    val repositoryWatchActor =
       system.actorOf(
-        Props(new DirectoryWatcherActor(directoryWatcherConfig, dataSourceChangeHandler)),
+        Props(new DirectoryWatcherActor(repositoryWatcherConfig, dataSourceInboxHandler)),
         name = "directoryWatcher")
 
-    directoryWatcher = Some(directoryWatcherActor)
+    repositoryWatcher = Some(repositoryWatchActor)
 
-    (directoryWatcherActor ? StartWatching(baseFolder, true)).onComplete {
+    (repositoryWatchActor ? StartWatching(dataSourceRepositoryDir, true)).onComplete {
       case Success(x) =>
         onComplete
       case Failure(e) =>
-        logger.error(s"Failed to start watching $baseFolder.", e)
+        logger.error(s"Failed to start watching $dataSourceRepositoryDir.", e)
     }
   }
 
   def stop() {
-    directoryWatcher.map(_ ! StopWatching)
+    repositoryWatcher.map(_ ! StopWatching)
   }
 
   def handleDataRequest(request: AbstractDataRequest): Future[Option[Array[Byte]]] = {

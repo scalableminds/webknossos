@@ -6,6 +6,7 @@ import scala.concurrent.ExecutionContext.Implicits._
 import braingames.binary.{LoadBlock, SaveBlock}
 import net.liftweb.common.Box
 import net.liftweb.common.Failure
+import scalax.file.Path
 
 /**
  * A data store implementation which uses the hdd as data storage
@@ -34,14 +35,14 @@ class FileDataStore extends DataStore {
   def save(dataInfo: SaveBlock): Future[Unit] = {
     Future {
       try {
-        val folder = new File(createDirectory(dataInfo))
-        folder.mkdirs()
+        val path = Path.fromString(createFilename(dataInfo))
+        path.doCreateParents()
         val binaryStream =
-          new FileOutputStream(createFilename(dataInfo))
+          new FileOutputStream(path.path)
         byteArrayToOutputStream(binaryStream, dataInfo)
       } catch {
         case e: FileNotFoundException =>
-          System.err.println("File datastore couldn't write to file: " + createFilename(dataInfo))
+          logger.error("File datastore couldn't write to file: " + createFilename(dataInfo))
           Failure("Couldn't write to file: " + e)
       }
     }
@@ -53,7 +54,6 @@ class FileDataStore extends DataStore {
   def inputStreamToByteArray(is: InputStream, dataInfo: LoadBlock) = {
     val byteArray = new Array[Byte](dataInfo.dataSource.blockSize * dataInfo.dataLayer.bytesPerElement)
     is.read(byteArray, 0, dataInfo.dataSource.blockSize * dataInfo.dataLayer.bytesPerElement)
-    //assert(is.skip(1) == 0, "INPUT STREAM NOT EMPTY")
     is.close()
     byteArray
   }

@@ -6,6 +6,7 @@ import braingames.util.JsonHelper._
 import braingames.util.FileIO
 import net.liftweb.common._
 import net.liftweb.common.Box._
+import scalax.file.Path
 
 /**
  * Company: scalableminds
@@ -13,23 +14,35 @@ import net.liftweb.common.Box._
  * Date: 09.06.13
  * Time: 17:44
  */
-trait SettingsFile{
-  def extractSettingsFromFile[T](file: File, settingsReads: Reads[T]): Box[T] = {
-    if (file.isFile) {
-      JsonFromFile(file).flatMap{
-        _.validate(settingsReads) match{
-          case JsSuccess(e ,_) => Full(e)
-          case e : JsError => Failure(e.toString)
+trait SettingsFile[A] {
+  def settingsFileName: String
+
+  def settingsFileReads: Reads[A]
+
+  def settingsFileInFolder(p: Path) = p / settingsFileName
+
+  def fromSettingsFileIn(p: Path): Option[A] =
+    extractSettingsFromFile(
+      settingsFileInFolder(p),
+      settingsFileReads)
+
+  def extractSettingsFromFile[T](path: Path, settingsReads: Reads[T]): Box[T] = {
+    if (path.isFile) {
+      JsonFromFile(path).flatMap {
+        _.validate(settingsReads) match {
+          case JsSuccess(e, _) => Full(e)
+          case e: JsError => Failure(e.toString)
         }
       }
-    } else 
+    } else
       Empty
   }
 
-  def writeSettingsToFile[T](settings: T, file: File)(implicit writer: Writes[T]) = {
-    FileIO.printToFile(file) {
-      printer =>
-        printer.print(writer.writes(settings).toString)
-    }
+  def writeSettingsToFile[T](settings: T, path: Path)(implicit writer: Writes[T]) = {
+    path.fileOption.map(file =>
+      FileIO.printToFile(file) {
+        printer =>
+          printer.print(writer.writes(settings).toString)
+      })
   }
 }

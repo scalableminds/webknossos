@@ -7,23 +7,25 @@ import play.api.libs.json._
 import play.api.libs.functional.syntax._
 import braingames.binary.models._
 import java.io.File
+import scalax.file.Path
 
 case class DataSourceSettings(
-  name: String,
+  id: Option[String],
   scale: Scale,
   priority: Option[Int])
 
 case class DataSource(
-  name: String,
+  id: String,
   baseDir: String,
-  priority: Int = 0,
   scale: Scale,
-  dataLayers: List[DataLayer] = Nil,
-  owningTeam: String
+  priority: Int = 0,
+  dataLayers: List[DataLayer] = Nil
   ) {
 
   def dataLayer(typ: String) =
     dataLayers.find(_.typ == typ)
+
+  def sourceFolder = Path.fromString(baseDir)
 
   def relativeBaseDir(binaryBase: String) = baseDir.replace(binaryBase, "")
 
@@ -44,7 +46,7 @@ case class DataSource(
       point.z / resolution)
 
   override def toString() = {
-    s"""$name (${dataLayers.map(_.typ).mkString(", ")}})"""
+    s"""$id (${dataLayers.map(_.typ).mkString(", ")})"""
   }
 }
 
@@ -52,30 +54,22 @@ object DataSource{
   implicit val dataSourceFormat = Json.format[DataSource]
 }
 
-object DataSourceSettings extends SettingsFile{
-
-  val settingsFileName = "settings.json"
+object DataSourceSettings extends SettingsFile[DataSourceSettings]{
 
   implicit val dataSourceSettingsFormat = Json.format[DataSourceSettings]
 
-  def settingsFileFromFolder(f: File) = {
-    new File(f.getPath + "/" + settingsFileName)
-  }
+  val settingsFileName = "settings.json"
 
-  def readFromFolder(folder: File): Option[DataSourceSettings] = {
-    extractSettingsFromFile(
-      settingsFileFromFolder(folder),
-      dataSourceSettingsFormat)
-  }
+  val settingsFileReads = dataSourceSettingsFormat
 
   def fromDataSource(dataSource: DataSource) = DataSourceSettings(
-    dataSource.name,
+    Some(dataSource.id),
     dataSource.scale,
     Some(dataSource.priority)
   )
 
-  def writeToFolder(dataSource: DataSource, folder: File) = {
+  def writeToFolder(dataSource: DataSource, path: Path) = {
     val settings = fromDataSource(dataSource)
-    writeSettingsToFile(settings, settingsFileFromFolder(folder))
+    writeSettingsToFile(settings, settingsFileInFolder(path))
   }
 }

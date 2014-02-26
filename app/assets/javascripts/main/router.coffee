@@ -15,18 +15,15 @@ class Router extends Backbone.Router
     "users"                         : "users"
     "teams"                         : "teams"
     "datasets"                      : "datasets"
+    "tasks"                         : "tasks"
+    "admin/tasks/overview"          : "taskOverview"
     "admin/taskTypes"               : "hideLoading"
     "admin/projects"                : "projects"
-    "admin/tasks/overview"          : "taskOverview"
-    "annotations/Task/:id"          : "tracingTrace"
-    "annotations/Explorational/:id" : "tracingTrace"
-    "annotations/View/:id"          : "tracingTrace"
+    "annotations/:typ/:id"          : "tracingTrace"
     "datasets/:id/view"             : "tracingView"
     "users/:id/details"             : "userDetails"
     "*url"                          : "hideLoading"
-
     #"admin/tasks/algorithm"      : "taskAlgorithm"
-
 
 
   hideLoading : ->
@@ -131,8 +128,8 @@ class Router extends Backbone.Router
       "admin/models/user/user_collection"], (UserListView, PaginationView, UserCollection) =>
 
       userCollection = new UserCollection()
-      paginationView = new PaginationView({collection: userCollection})
-      userListView = new UserListView({collection: userCollection})
+      paginationView = new PaginationView({collection : userCollection})
+      userListView = new UserListView({collection : userCollection})
 
       @changeView(paginationView, userListView)
       return @hideLoading()
@@ -140,9 +137,32 @@ class Router extends Backbone.Router
 
   teams : ->
 
-    require ["admin/views/team/team_list_view"], (TeamListView) =>
+    require [
+      "admin/views/team/team_list_view"
+      "admin/views/pagination_view"
+      "admin/models/team/team_collection"
+    ], (TeamListView, PaginationView, TeamCollection) =>
 
-      @changeView(new TeamListView())
+      teamCollection = new TeamCollection()
+      paginationView = new PaginationView({collection : teamCollection})
+      teamListView = new TeamListView({collection : teamCollection})
+
+      @changeView(paginationView, teamListView)
+      return @hideLoading()
+
+
+  tasks : ->
+
+    require [
+      "admin/views/task/task_list_view",
+      "admin/views/pagination_view"
+      "admin/models/task/task_collection"], (TaskListView, PaginationView, TaskCollection) =>
+
+      taskCollection = new TaskCollection()
+      paginationView = new PaginationView({collection: taskCollection})
+      taskListView = new TaskListView({collection: taskCollection})
+
+      @changeView(paginationView, taskListView)
       return @hideLoading()
 
 
@@ -199,7 +219,4 @@ class Router extends Backbone.Router
     $mainContainer = $("#main-container").empty()
     for view in views
       $mainContainer.append(view.render().el)
-
-
-
 

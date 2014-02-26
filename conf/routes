@@ -37,9 +37,10 @@ GET           /api/users/:id/annotations/download                        control
 GET           /users/:id/details                                         controllers.UserController.show(id: String)
 
 # Team
-GET           /teams                                                     controllers.UserController.empty
+GET           /teams                                                     controllers.TeamController.empty
 GET           /api/teams                                                 controllers.TeamController.list
-POST          /api/teams                                                 controllers.TeamController.list
+POST          /api/teams                                                 controllers.TeamController.create
+DELETE        /api/teams/:id                                             controllers.TeamController.delete(id: String)
 
 # Binary Data
 
@@ -77,7 +78,7 @@ GET           /annotations/:typ/:id/data                                 control
 GET           /annotations/:typ/:id/info                                 controllers.AnnotationController.info(typ: String, id: String)
 GET           /annotations/:typ/:id/download                             controllers.AnnotationController.download(typ: String, id: String)
 GET           /annotations/:typ/:id/reopen                               controllers.AnnotationController.reopen(typ: String, id: String)
-GET           /annotations/:typ/:id/cancel                               controllers.AnnotationController.cancel(typ: String, id: String)
+DELETE        /annotations/:typ/:id                                      controllers.AnnotationController.cancel(typ: String, id: String)
 
 #Admin pages
 GET           /admin/nml/upload                                          controllers.admin.NMLIO.uploadForm
@@ -93,14 +94,16 @@ POST          /admin/tasks/algorithm                                     control
 GET           /admin/tasks/algorithm/:id?use=true                        controllers.admin.TaskAlgorithm.useAlgorithm(id: String)
 # <---
 
-GET           /admin/tasks                                               controllers.admin.TaskAdministration.list
+GET           /api/tasks                                                 controllers.TaskController.list
+DELETE        /api/tasks/:id                                             controllers.admin.TaskAdministration.delete(id: String)
+
+GET           /tasks                                                     controllers.TaskController.empty
 GET           /admin/tasks/create                                        controllers.admin.TaskAdministration.create
 POST          /admin/tasks/createBulk                                    controllers.admin.TaskAdministration.createBulk
 POST          /admin/tasks/createFromNML                                 controllers.admin.TaskAdministration.createFromNML
 POST          /admin/tasks/createFromForm                                controllers.admin.TaskAdministration.createFromForm
 GET           /admin/tasks/overview                                      controllers.admin.TaskAdministration.overview
 GET           /admin/tasks/:id/download                                  controllers.admin.NMLIO.taskDownload(id: String)
-GET           /admin/tasks/:id/delete                                    controllers.admin.TaskAdministration.delete(id: String)
 GET           /admin/tasks/:id/edit                                      controllers.admin.TaskAdministration.edit(id: String)
 GET           /admin/tasks/:id/annotations                               controllers.AnnotationController.annotationsForTask(id: String)
 POST          /admin/tasks/:id                                           controllers.admin.TaskAdministration.editTaskForm(id: String)

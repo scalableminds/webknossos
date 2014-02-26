@@ -2,7 +2,7 @@
 underscore : _
 backbone.marionette : marionette
 libs/toast : Toast
-admin/models/user/team_collection : TeamCollection
+admin/models/team/team_collection : TeamCollection
 admin/views/user/team_role_modal_item_view : TeamRoleModalItem
 ###
 

@@ -1,7 +1,6 @@
 ### define
 underscore : _
 backbone.marionette : marionette
-admin/views/user/team_role_modal_view : TeamRoleModalView
 libs/template_helpers : TemplateHelpers
 ###
 
@@ -36,6 +35,7 @@ class TeamListItemView extends Backbone.Marionette.ItemView
   delete : (evt) ->
 
     evt.preventDefault()
-    @model.destroy()
+    if window.confirm("Do really want to delete this team?")
+      @model.destroy()
 
 

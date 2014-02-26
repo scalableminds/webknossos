@@ -6,7 +6,6 @@
   <header class="navbar navbar-fixed-top navbar-inverse">
     <div class="navbar-inner">
       <a class="brand" href="@routes.Application.index">@current.configuration.getString("application.name")</a>
-      <span class="version">v@controllers.Application.version</span>
        @session.userOpt.map{ user =>
          <ul class="nav" id="main-menu">
           <li class="divider-vertical"></li>

@@ -54,9 +54,9 @@ class Cube
 
     # Initializing the cube-arrays with boundaries
     cubeBoundary = [
-      @upperBoundary[0] >> @BUCKET_SIZE_P
-      @upperBoundary[1] >> @BUCKET_SIZE_P
-      @upperBoundary[2] >> @BUCKET_SIZE_P
+      Math.ceil(@upperBoundary[0] / (1 << @BUCKET_SIZE_P))
+      Math.ceil(@upperBoundary[1] / (1 << @BUCKET_SIZE_P))
+      Math.ceil(@upperBoundary[2] / (1 << @BUCKET_SIZE_P))
     ]
 
     mappingBoundary = [
@@ -345,7 +345,7 @@ class Cube
 
     voxelInCube = true
     for i in [0..2]
-      voxelInCube &= voxel[i] in [0...@upperBoundary[i]]
+      voxelInCube &= 0 <= voxel[i] < @upperBoundary[i]
 
     if voxelInCube
       

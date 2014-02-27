@@ -1,6 +1,6 @@
 package controllers
 
-import play.api.mvc.{Controller => PlayController}
+import play.api.mvc.{Controller => PlayController, Request}
 import oxalis.security.AuthenticatedRequest
 import oxalis.view.ProvidesSessionData
 import braingames.mvc.ExtendedController
@@ -8,6 +8,7 @@ import models.user.User
 import net.liftweb.common.{Failure, Full}
 import play.api.i18n.Messages
 import models.binary.DataSet
+import braingames.util.Converter
 
 class Controller extends PlayController
 with ExtendedController
@@ -32,8 +33,29 @@ with models.basics.Implicits {
 
 
   def allowedToAdministrate(admin: User, dataSet: DataSet) =
-    dataSet.isEditableBy(admin) match {
+    dataSet.isEditableBy(Some(admin)) match {
       case true  => Full(true)
       case false => Failure(Messages("notAllowed"))
     }
+
+  case class Filter[A, T](name: String, predicate: (A,T)  => Boolean)(implicit converter: Converter[String, A]){
+    def applyOn(list: List[T])(implicit request: Request[_]): List[T] = {
+      request.getQueryString(name).flatMap(converter.convert) match{
+        case Some(attr) => list.filter(predicate(attr,_))
+        case _ => list
+      }
+    }
+  }
+
+  case class FilterColl[T](filters: Seq[Filter[_, T]]){
+    def applyOn(list: List[T])(implicit request: Request[_]): List[T] = {
+      filters.foldLeft(list){
+        case (l, filter) => filter.applyOn(l)
+      }
+    }
+  }
+
+  def UsingFilters[T, R](filters: Filter[_, T]*)(block: FilterColl[T] => R): R = {
+    block(FilterColl(filters))
+  }
 }

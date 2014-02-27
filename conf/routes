@@ -44,9 +44,17 @@ DELETE        /api/teams/:id                                             control
 
 # Binary Data
 
+# Spotlight
+GET           /spotlight                                                  controllers.DataSetController.spotlight
+
 # DataSets
-GET           /datasets                                                  controllers.DataSetController.list
+GET           /datasets                                                  controllers.DataSetController.empty
 GET           /datasets/:dataSetName/view                                controllers.DataSetController.view(dataSetName: String)
+GET           /api/datasets                                              controllers.DataSetController.list
+GET           /api/datasets/:dataSetName                                 controllers.DataSetController.read(dataSetName: String)
+POST          /api/datasets/:dataSetName/teams                           controllers.DataSetController.updateTeams(dataSetName: String)
+POST          /api/datasets/:dataSetName/import                          controllers.DataSetController.importDataSet(dataSetName: String)
+GET           /api/datasets/:dataSetName/import                          controllers.DataSetController.importProgress(dataSetName: String)
 
 # GET         /datasets/:dataSetName/layers/:dataLayerName/ws_data        controllers.BinaryData.requestViaWebsocket(dataSetName: String, dataLayerName: String, cubeSize: Int)
 POST          /datasets/:dataSetName/layers/:dataLayerName/data          controllers.BinaryData.requestViaAjax(dataSetName: String, dataLayerName: String, cubeSize: Int, annotationId: Option[String])
@@ -76,8 +84,7 @@ DELETE        /annotations/:typ/:id                                      control
 GET           /admin/nml/upload                                          controllers.admin.NMLIO.uploadForm
 POST          /admin/nml/upload                                          controllers.admin.NMLIO.upload
 
-
-
+GET           /api/teams                                                 controllers.TeamController.list
 
 # Admin Tasks
 # TODO: those routes need to be renamed!
@@ -113,10 +120,6 @@ POST          /admin/projects/create                                     control
 GET           /admin/projects/:name/delete                               controllers.admin.ProjectAdministration.delete(name: String)
 GET           /admin/projects/:name/download                             controllers.admin.NMLIO.projectDownload(name: String)
 GET           /admin/projects/:name/tasks                                controllers.admin.TaskAdministration.tasksForProject(name: String)
-
-# Binary Administration
-GET           /admin/datasets                                            controllers.admin.BinaryDataAdministration.list
-POST          /api/datasets/:dataSetName/teams                           controllers.DataSetController.updateTeams(dataSetName: String)
 
 # Javascript routing
 GET           /assets/javascripts/routes.js                              controllers.Application.javascriptRoutes

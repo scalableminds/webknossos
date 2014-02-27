@@ -140,7 +140,7 @@ object SkeletonTracingService extends AnnotationContentService with CommonTracin
 
   type AType = SkeletonTracing
 
-  def createFrom(dataSetName: String, start: Point3D, insertStartAsNode: Boolean, settings: AnnotationSettings = AnnotationSettings.default)(implicit ctx: DBAccessContext): Fox[SkeletonTracing] = {
+  def createFrom(dataSetName: String, start: Point3D, insertStartAsNode: Boolean, settings: AnnotationSettings = AnnotationSettings.skeletonDefault)(implicit ctx: DBAccessContext): Fox[SkeletonTracing] = {
     val trees =
       if (insertStartAsNode)
         List(Tree.createFrom(start))
@@ -191,7 +191,7 @@ object SkeletonTracingService extends AnnotationContentService with CommonTracin
   }
 
   def createFrom(dataSet: DataSet)(implicit ctx: DBAccessContext): Fox[SkeletonTracing] =
-    createFrom(dataSet.dataSource.name, Point3D(0, 0, 0), false)
+    createFrom(dataSet.name, Point3D(0, 0, 0), false)
 
   def mergeWith(source: SkeletonTracing, target: SkeletonTracing)(implicit ctx: DBAccessContext): Fox[SkeletonTracing] = {
     target.mergeWith(source).flatMap { merged =>

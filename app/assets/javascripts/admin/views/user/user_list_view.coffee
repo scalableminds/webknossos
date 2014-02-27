@@ -104,4 +104,3 @@ class UserListView extends Backbone.Marionette.CompositeView
     else
       Toast.error("No user is selected.")
 
-

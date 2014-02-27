@@ -29,6 +29,7 @@ import scala.Some
 import braingames.image.ImageCreatorParameters
 import braingames.reactivemongo.DBAccessContext
 import braingames.util.Fox
+import reactivemongo.bson.BSONObjectID
 
 object BinaryData extends Controller with Secured {
 
@@ -38,9 +39,12 @@ object BinaryData extends Controller with Secured {
   val scaleFactors = Array(1, 1, 1)
 
   def createDataRequestCollection(dataSet: DataSet, dataLayer: DataLayer, cubeSize: Int, parsedRequest: ParsedRequestCollection[ParsedDataReadRequest]) = {
-    val dataRequests = parsedRequest.requests.map(r =>
-      BinaryDataService.createDataReadRequest(dataSet.dataSource, dataLayer, None, cubeSize, r))
-    DataRequestCollection(dataRequests)
+    dataSet.dataSource.map {
+      source =>
+        val dataRequests = parsedRequest.requests.map(r =>
+          BinaryDataService.createDataReadRequest(source, dataLayer, None, cubeSize, r))
+        DataRequestCollection(dataRequests)
+      }
   }
 
   def requestData(
@@ -54,7 +58,7 @@ object BinaryData extends Controller with Secured {
     for {
       dataSet <- DataSetDAO.findOneBySourceName(dataSetName) ?~> Messages("dataSet.notFound")
       dataLayer <- getDataLayer(dataSet, dataLayerTyp, annotationId, userOpt) ?~> Messages("dataLayer.notFound")
-      dataRequestCollection = createDataRequestCollection(dataSet, dataLayer, cubeSize, parsedRequest)
+      dataRequestCollection <- createDataRequestCollection(dataSet, dataLayer, cubeSize, parsedRequest) ?~> Messages("dataSet.source.notFound")
       data <- BinaryDataService.handleDataRequest(dataRequestCollection) ?~> "Data request couldn't get handled"
     } yield {
       data
@@ -75,10 +79,11 @@ object BinaryData extends Controller with Secured {
                  )(implicit ctx: DBAccessContext): Fox[Array[Byte]] = {
     for {
       dataSet <- DataSetDAO.findOneBySourceName(dataSetName) ?~> Messages("dataSet.notFound")
+      dataSource <- dataSet.dataSource ?~> Messages("dataSet.source.notFound")
       dataLayer <- getDataLayer(dataSet, dataLayerTyp, annotationId, userOpt) ?~> Messages("dataLayer.notFound")
 
       dataRequestCollection = BinaryDataService.createDataReadRequest(
-        dataSet.dataSource,
+        dataSource,
         dataLayer,
         None,
         width,
@@ -94,9 +99,13 @@ object BinaryData extends Controller with Secured {
   }
 
   def createDataWriteRequestCollection(dataSet: DataSet, dataLayer: DataLayer, cubeSize: Int, parsedRequest: ParsedRequestCollection[ParsedDataWriteRequest]) = {
-    val dataRequests = parsedRequest.requests.map(r =>
-      BinaryDataService.createDataWriteRequest(dataSet.dataSource, dataLayer, None, cubeSize, r))
-    DataRequestCollection(dataRequests)
+    for{
+      dataSource <- dataSet.dataSource
+    } yield {
+      val dataRequests = parsedRequest.requests.map(r =>
+        BinaryDataService.createDataWriteRequest(dataSource, dataLayer, None, cubeSize, r))
+      DataRequestCollection(dataRequests)
+    }
   }
 
   def writeData(
@@ -107,9 +116,10 @@ object BinaryData extends Controller with Secured {
                annotationId: String,
                userOpt: Option[User]
               )(implicit ctx: DBAccessContext) = {
-    val dataWriteRequestCollection = createDataWriteRequestCollection(dataSet, dataLayer, cubeSize, parsedRequest)
-    BinaryDataService.handleDataRequest(dataWriteRequestCollection)
-    Ok
+    for{
+      dataWriteRequestCollection <- createDataWriteRequestCollection(dataSet, dataLayer, cubeSize, parsedRequest).toFox
+      r <- BinaryDataService.handleDataRequest(dataWriteRequestCollection).map(_ => true).toFox
+    } yield r
   }
 
   def requestViaAjaxDebug(dataSetName: String, dataLayerTyp: String, cubeSize: Int, x: Int, y: Int, z: Int, resolution: Int, annotationId: Option[String]) = Authenticated.async {
@@ -123,13 +133,14 @@ object BinaryData extends Controller with Secured {
   }
 
   def tryGetUserDataLayer(dataSet: DataSet, dataLayerTyp: String, annotationId: Option[String], userOpt: Option[User])(implicit ctx: DBAccessContext): Fox[DataLayer] = {
+    // TODO: FIXME - this doesn't always work, sometimes the 'annotationId' sent is actualy the dataset name
     for {
-      id <- annotationId.toFox
+      id <- annotationId.flatMap(BSONObjectID.parse(_).toOption).toFox
       annotation <- AnnotationDAO.findOneById(id).toFox
       if annotation.restrictions.allowAccess(userOpt)
       VolumeTracing(_, userDataLayerName, _, _, _, _) <- annotation.content
       userDataLayer <- UserDataLayerDAO.findOneByName(userDataLayerName).toFox
-      if userDataLayer.dataSourceName == dataSet.dataSource.name && userDataLayer.dataLayer.typ == dataLayerTyp
+      if userDataLayer.dataSourceName == dataSet.name && userDataLayer.dataLayer.typ == dataLayerTyp
     } yield {
       userDataLayer.dataLayer
     }
@@ -138,7 +149,8 @@ object BinaryData extends Controller with Secured {
   def getDataLayer(dataSet: DataSet, dataLayerTyp: String, annotationId: Option[String], userOpt: Option[User])(implicit ctx: DBAccessContext): Fox[DataLayer] = {
     tryGetUserDataLayer(dataSet, dataLayerTyp, annotationId, userOpt).orElse(
       for {
-        dataLayer <- dataSet.dataSource.dataLayer(dataLayerTyp)
+        dataSource <- dataSet.dataSource
+        dataLayer <- dataSource.dataLayer(dataLayerTyp)
       } yield {
         dataLayer
       }
@@ -165,7 +177,8 @@ object BinaryData extends Controller with Secured {
     val settings = DataRequestSettings(useHalfByte = false, skipInterpolation = false)
     for {
       dataSet <- DataSetDAO.findOneBySourceName(dataSetName) ?~> Messages("dataSet.notFound")
-      dataLayer <- dataSet.dataSource.dataLayer(dataLayerTyp) ?~> Messages("dataLayer.notFound")
+      dataSource <- dataSet.dataSource ?~> Messages("dataSet.source.notFound")
+      dataLayer <- dataSource.dataLayer(dataLayerTyp) ?~> Messages("dataLayer.notFound")
       params = ImageCreatorParameters(dataLayer.bytesPerElement, width, height, imagesPerRow)
       data <- requestData(dataSetName, dataLayerTyp, Point3D(x, y, z), width, height, depth, resolution, settings) ?~> Messages("binary.data.notFound")
       spriteSheet <- ImageCreator.spriteSheetFor(data, params) ?~> Messages("image.create.failed")
@@ -200,9 +213,8 @@ object BinaryData extends Controller with Secured {
         payloadBodySize = cubeSize * cubeSize * cubeSize * dataLayer.bytesPerElement
         payload <- request.body.asBytes() ?~> Messages("binary.payload.notSupplied")
         requests <- BinaryProtocol.parseDataWriteRequests(payload, payloadBodySize, containsHandle = false) ?~> Messages("binary.payload.invalid")
-      } yield {
-        writeData(dataSet, dataLayer, cubeSize, requests, annotationId, request.userOpt)
-      }
+        _ <- writeData(dataSet, dataLayer, cubeSize, requests, annotationId, request.userOpt)
+      } yield Ok
   }
 }
 

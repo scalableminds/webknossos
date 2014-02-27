@@ -44,7 +44,6 @@ object AnnotationController extends Controller with Secured with TracingInformat
   def annotationJson(user: User, annotation: AnnotationLike)(implicit ctx: DBAccessContext): Fox[JsObject] =
     AnnotationLike.annotationLikeInfoWrites(annotation, Some(user), Nil)
 
-
   def info(typ: String, id: String) = UserAwareAction.async {
     implicit request =>
       val annotationId = AnnotationIdentifier(typ, id)

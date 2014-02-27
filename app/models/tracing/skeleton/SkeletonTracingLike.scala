@@ -132,15 +132,15 @@ object SkeletonTracingLike extends FoxImplicits {
     def writes(e: SkeletonTracingLike): Fox[scala.xml.Node] = {
       for {
         dataSet <- DataSetDAO.findOneBySourceName(e.dataSetName)
+        dataSource <- dataSet.dataSource.toFox
         trees <- e.trees
         treesXml <- Xml.toXML(trees.filterNot(_.nodes.isEmpty))
         branchpoints <- Xml.toXML(e.branchPoints)
         comments <- Xml.toXML(e.comments)
       } yield {
-        val dataSource = dataSet.dataSource
         <things>
           <parameters>
-            <experiment name={dataSource.name}/>
+            <experiment name={dataSet.name}/>
             <scale x={dataSource.scale.x.toString} y={dataSource.scale.y.toString} z={dataSource.scale.z.toString}/>
             <offset x="0" y="0" z="0"/>
             <time ms={e.timestamp.toString}/>{e.activeNodeId.map(id => s"<activeNode id=$id/>").getOrElse("")}<editPosition x={e.editPosition.x.toString} y={e.editPosition.y.toString} z={e.editPosition.z.toString}/>

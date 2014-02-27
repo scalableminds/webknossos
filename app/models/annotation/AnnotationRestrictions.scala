@@ -72,7 +72,7 @@ object AnnotationRestrictions {
       override def allowDownload(user: Option[User]) = {
         user.map {
           user =>
-            !annotation.isTrainingsAnnotation && allowAccess(user)
+            allowAccess(user)
         } getOrElse false
       }
     }

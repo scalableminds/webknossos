@@ -2,8 +2,10 @@
 underscore : _
 backbone.marionette : marionette
 libs/toast : Toast
+app : app
 ./team_list_item_view : TeamListItemView
-admin/models/user/team_collection : TeamCollection
+admin/models/team/team_collection : TeamCollection
+admin/models/team/team_model : TeamModel
 ###
 
 class TeamListView extends Backbone.Marionette.CompositeView
@@ -42,7 +44,7 @@ class TeamListView extends Backbone.Marionette.CompositeView
             <div class="control-group">
               <label class="control-label" for="inputName">Name</label>
               <div class="controls">
-                <input type="text" id="inputName" placeholder="Name" required>
+                <input type="text" id="inputName" placeholder="Name" required autofocus>
               </div>
             </div>
           </div>
@@ -68,32 +70,28 @@ class TeamListView extends Backbone.Marionette.CompositeView
 
   initialize : ->
 
-    @collection = new TeamCollection()
+    @listenTo(app.vent, "paginationView:filter", @filter)
+
     @collection.fetch(
-      data:
-        isEditable: true
+      data : "isEditable=true"
+      silent : true
+    ).done( =>
+      @collection.goTo(1)
     )
 
-    #fetch the logged-in user's name
-    @user = $.ajax(
-      url: "/api/user"
-    )
 
   addNewTeam : ->
 
-
-    @user.then(
-      (userData) =>
-        team =
-          name : @ui.inputName.val()
-          owner : "#{userData.firstName} #{userData.lastName}"
-          roles : [{ name : "admin" }, { name : "user" }]
-          isEditable : true
-
-        @collection.create(team)
-      ->
-        Toast.error("Ups. Something went wrong")
+    team = new TeamModel(
+      name : @ui.inputName.val(),
     )
+    @collection.create(team, {wait: true})
+
+
+  filter : (filterQuery) ->
+
+    @collection.setFilter(["name", "owner"], filterQuery)
+    @collection.pager()
 
 
   showModal : (modalView) ->

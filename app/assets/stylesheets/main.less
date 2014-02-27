@@ -1,8 +1,12 @@
+@import '_fonts.less';
+@import '_variables.less';
 @import 'libs/_theme.less';
 @import 'admin/_user.less';
 @import 'admin/_team.less';
 @import 'admin/_datasets.less';
 @import 'admin/_pagination.less';
+@import 'admin/_task.less';
+
 
 // ----------------------- MAIN STYLES
 body {
@@ -764,6 +768,15 @@ svg a:hover {
   background-color: inherit;
 }
 
+#merge {
+    width: 280px;
+    padding: 10px;
+    position: absolute;
+    top: 240px;
+    left: 0px;
+    background-color: #aaf;
+    visibility: hidden;
+}
 
 
 // make sure text and icons have space between them

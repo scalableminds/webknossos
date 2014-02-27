@@ -38,7 +38,7 @@ class PaginationView extends Backbone.Marionette.ItemView
           <a href="#"><i class="fa fa-angle-double-right"></i></a>
         </li>
       </ul>
-      <input type="text" class="search-query" placeholder="Search">
+      <input type="search" class="search-query" placeholder="Search" value="">
     </div>
   """)
 
@@ -60,8 +60,9 @@ class PaginationView extends Backbone.Marionette.ItemView
 
   initialize : ->
 
-   @listenTo(@collection, "reset", @collectionSynced)
-   @listenTo(@collection, "remove", @refresh)
+    @listenTo(@collection, "reset", @collectionSynced)
+    @listenTo(@collection, "remove", @refresh)
+    @listenToOnce(@collection, "reset", @searchByHash)
 
 
   goFirst : ->
@@ -91,7 +92,7 @@ class PaginationView extends Backbone.Marionette.ItemView
     @collection.goTo(page)
 
 
-  filter : (evt) ->
+  filter : ->
 
     # implement actually filtering on the collection in respective view
     # in order to set correct fields for filtering
@@ -113,3 +114,9 @@ class PaginationView extends Backbone.Marionette.ItemView
     @collection.pager()
 
 
+  searchByHash : ->
+
+    hash = location.hash.slice(1)
+    if (hash)
+      @ui.inputSearch.val(hash)
+      @filter()

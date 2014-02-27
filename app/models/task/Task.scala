@@ -28,7 +28,6 @@ import reactivemongo.core.commands.LastError
 import braingames.reactivemongo.AccessRestrictions.{AllowIf, DenyEveryone}
 
 case class Task(
-                 seedIdHeidelberg: Int,
                  _taskType: BSONObjectID,
                  team: String,
                  neededExperience: Experience = Experience.empty,
@@ -38,7 +37,6 @@ case class Task(
                  tracingTime: Option[Long] = None,
                  created: DateTime = DateTime.now(),
                  _project: Option[String] = None,
-                 training: Option[Training] = None,
                  _id: BSONObjectID = BSONObjectID.generate
                ) extends FoxImplicits {
 
@@ -56,10 +54,7 @@ case class Task(
     AnnotationService.annotationsFor(this)
 
   def settings(implicit ctx: DBAccessContext) =
-    taskType.map(_.settings) getOrElse AnnotationSettings.default
-
-  def isTraining =
-    training.isDefined
+    taskType.map(_.settings) getOrElse AnnotationSettings.skeletonDefault
 
   def annotationBase(implicit ctx: DBAccessContext) =
     AnnotationService.baseFor(this)
@@ -101,7 +96,6 @@ object Task extends FoxImplicits {
         "id" -> task.id,
         "team" -> task.team,
         "formattedHash" -> Formatter.formatHash(task.id),
-        "seedIdHeidelberg" -> task.seedIdHeidelberg,
         "projectName" -> projectName,
         "type" -> taskType.toOption,
         "dataSet" -> dataSetName,
@@ -109,9 +103,7 @@ object Task extends FoxImplicits {
         "neededExperience" -> task.neededExperience,
         "priority" -> task.priority,
         "created" -> DateTimeFormat.forPattern("yyyy-MM-dd HH:mm").print(task.created),
-        "status" -> status,
-        "isTraining" -> task.isTraining,
-        "training" -> task.training
+        "status" -> status
       )
     }
   }
@@ -147,15 +139,20 @@ object TaskDAO extends SecuredBaseDAO[Task] with FoxImplicits {
     }
   }
 
-
-
-  @deprecated(message = "This mehtod shouldn't be used. Use TaskService.remove instead", "2.0")
+  @deprecated(message = "This method shouldn't be used. Use TaskService.remove instead", "2.0")
   override def removeById(bson: BSONObjectID)(implicit ctx: DBAccessContext) = {
     super.removeById(bson)
   }
 
-  def findAllOfOneType(isTraining: Boolean)(implicit ctx: DBAccessContext) =  withExceptionCatcher{
-    find(Json.obj("training" -> Json.obj("$exists" -> isTraining))).cursor[Task].collect[List]()
+  def findAllAdministratable(user: User)(implicit ctx: DBAccessContext) = withExceptionCatcher{
+    find(Json.obj(
+      "team" -> Json.obj("$in" -> user.adminTeamNames))).cursor[Task].collect[List]()
+  }
+
+  def removeAllWithProject(project: Project)(implicit ctx: DBAccessContext) = {
+    project.tasks.map(_.map(task => {
+      removeById(task._id)
+    }))
   }
 
   def findAllByTaskType(taskType: TaskType)(implicit ctx: DBAccessContext) = withExceptionCatcher{
@@ -166,14 +163,8 @@ object TaskDAO extends SecuredBaseDAO[Task] with FoxImplicits {
     find("_project", project).collect[List]()
   }
 
-  def findAllTrainings(implicit ctx: DBAccessContext) =
-    findAllOfOneType(isTraining = true)
-
-  def findAllNonTrainings(implicit ctx: DBAccessContext) =
-    findAllOfOneType(isTraining = false)
-
-  def findAllAssignableNonTrainings(implicit ctx: DBAccessContext) =
-    findAllNonTrainings.map(_.filter(!_.isFullyAssigned))
+  def findAllAssignable(implicit ctx: DBAccessContext) =
+    findAll.map(_.filter(!_.isFullyAssigned))
 
   def logTime(time: Long, _task: BSONObjectID)(implicit ctx: DBAccessContext) =
     update(Json.obj("_id" -> _task), Json.obj("$inc" -> Json.obj("tracingTime" -> time)))
@@ -186,11 +177,6 @@ object TaskDAO extends SecuredBaseDAO[Task] with FoxImplicits {
 
   def unassignOnce(_task: BSONObjectID)(implicit ctx: DBAccessContext) =
     changeAssignedInstances(_task, -1)
-
-  def setTraining(_task: BSONObjectID, training: Training)(implicit ctx: DBAccessContext) =
-    update(
-      Json.obj("_id" -> _task),
-      Json.obj("$set" -> Json.obj("training" -> training)))
 
   def update(_task: BSONObjectID, _taskType: BSONObjectID,
              neededExperience: Experience,

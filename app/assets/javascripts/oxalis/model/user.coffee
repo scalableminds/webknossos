@@ -1,5 +1,5 @@
 ### define
-../../libs/request : Request
+libs/request : Request
 libs/event_mixin : EventMixin
 underscore : _
 ###

@@ -32,7 +32,7 @@ case class SkeletonTracing(
                             activeNodeId: Option[Int],
                             editPosition: Point3D,
                             comments: List[Comment] = Nil,
-                            settings: AnnotationSettings = AnnotationSettings.default,
+                            settings: AnnotationSettings = AnnotationSettings.skeletonDefault,
                             _id: BSONObjectID = BSONObjectID.generate
                           )
   extends SkeletonTracingLike with AnnotationContent with SkeletonManipulations {
@@ -44,7 +44,7 @@ case class SkeletonTracing(
   def service = SkeletonTracingService
 
   def allowAllModes =
-    this.copy(settings = settings.copy(allowedModes = AnnotationSettings.ALL_MODES))
+    this.copy(settings = settings.copy(allowedModes = AnnotationSettings.SKELETON_MODES))
 
   def trees: Fox[List[TreeLike]] = dbtrees.flatMap{ ts =>
     Fox.combined(ts.map(t => t.toTree))
@@ -140,7 +140,7 @@ object SkeletonTracingService extends AnnotationContentService with CommonTracin
 
   type AType = SkeletonTracing
 
-  def createFrom(dataSetName: String, start: Point3D, insertStartAsNode: Boolean, settings: AnnotationSettings = AnnotationSettings.default)(implicit ctx: DBAccessContext): Fox[SkeletonTracing] = {
+  def createFrom(dataSetName: String, start: Point3D, insertStartAsNode: Boolean, settings: AnnotationSettings = AnnotationSettings.skeletonDefault)(implicit ctx: DBAccessContext): Fox[SkeletonTracing] = {
     val trees =
       if (insertStartAsNode)
         List(Tree.createFrom(start))
@@ -191,7 +191,7 @@ object SkeletonTracingService extends AnnotationContentService with CommonTracin
   }
 
   def createFrom(dataSet: DataSet)(implicit ctx: DBAccessContext): Fox[SkeletonTracing] =
-    createFrom(dataSet.dataSource.name, Point3D(0, 0, 0), false)
+    createFrom(dataSet.name, Point3D(0, 0, 0), false)
 
   def mergeWith(source: SkeletonTracing, target: SkeletonTracing)(implicit ctx: DBAccessContext): Fox[SkeletonTracing] = {
     target.mergeWith(source).flatMap { merged =>

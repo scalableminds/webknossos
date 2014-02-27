@@ -6,9 +6,7 @@ object AnnotationType {
   // User types
   val Task = "Task"
   val View = "View"
-  val Training = "Training"
   val Explorational = "Explorational"
-  val Review = "Trainings Review"
   val CompoundTask = "CompoundTask"
   val CompoundProject = "CompoundProject"
   val CompoundTaskType = "CompoundTaskType"
@@ -16,20 +14,16 @@ object AnnotationType {
   val UserTracings = List(
     Task,
     Explorational,
-    Review,
-    Training,
     CompoundTask,
     CompoundProject,
     CompoundTaskType,
     View)
 
   // System types
-  val Sample = "Trainings Sample"
   val TracingBase = "Tracing Base"
   val Orphan = "Orphan"  // Annotations, where the task got deleted
 
   val SystemTracings = List(
-    Sample,
     TracingBase,
     Orphan)
 

@@ -17,6 +17,8 @@ import models.binary.DataSetDAO
 import scala.concurrent.Future
 import models.user.time._
 import braingames.reactivemongo.DBAccessContext
+import net.liftweb.common.Full
+import play.api.i18n.Messages.Message
 import braingames.util.Fox
 import oxalis.annotation.AnnotationIdentifier
 import models.annotation.Annotation
@@ -42,7 +44,6 @@ object AnnotationController extends Controller with Secured with TracingInformat
   def annotationJson(user: User, annotation: AnnotationLike)(implicit ctx: DBAccessContext): Fox[JsObject] =
     AnnotationLike.annotationLikeInfoWrites(annotation, Some(user), Nil)
 
-
   def info(typ: String, id: String) = UserAwareAction.async {
     implicit request =>
       val annotationId = AnnotationIdentifier(typ, id)
@@ -62,8 +63,7 @@ object AnnotationController extends Controller with Secured with TracingInformat
         annotation =>
           for{
             _ <- annotation.restrictions.allowAccess(request.user).failIfFalse(Messages("notAllowed")).toFox ~> 400
-            result <- htmlForAnnotation(annotation)
-          } yield Ok(result)
+          } yield Ok(htmlForAnnotation(annotation))
       }
   }
 
@@ -79,15 +79,14 @@ object AnnotationController extends Controller with Secured with TracingInformat
     }
   }
 
-
   def reopen(typ: String, id: String) = Authenticated.async { implicit request =>
     withAnnotation(AnnotationIdentifier(typ, id)) { annotation =>
       for {
         _ <- ensureTeamAdministration(request.user, annotation.team).toFox
         reopenedAnnotation <- annotation.muta.reopen() ?~> Messages("annotation.invalid")
-  json <- annotationJson(request.user, reopenedAnnotation)
+        json <- annotationJson(request.user, reopenedAnnotation)
       } yield {
-  JsonOk(json, Messages("annotation.reopened"))
+        JsonOk(json, Messages("annotation.reopened"))
       }
     }
   }
@@ -188,30 +187,12 @@ object AnnotationController extends Controller with Secured with TracingInformat
 
   def finish(typ: String, id: String) = Authenticated.async {
     implicit request =>
-      def generateJsonResult(annotation: Annotation, message: String) = {
-        if (annotation.typ != AnnotationType.Task)
-          Fox.successful((JsonOk(message)))
-        else
-          for {
-            task <- annotation.task ?~> Messages("tracing.task.notFound")
-            taskJSON <- Task.transformToJson(task)
-            hasOpen <- AnnotationService.hasAnOpenTask(request.user)
-          } yield {
-            JsonOk(
-              Json.obj(
-                "tasks" -> taskJSON,
-                "annotations" -> annotation,
-                "hasAnOpenTask" -> hasOpen),
-                message)
-          }
-      }
-
       for {
         annotation <- AnnotationDAO.findOneById(id) ?~> Messages("annotation.notFound")
         (updated, message) <- annotation.muta.finishAnnotation(request.user)
-        result <- generateJsonResult(updated, message)
+        json <- annotationJson(request.user, updated)
       } yield {
-        result
+        JsonOk(json, message)
       }
   }
 
@@ -246,22 +227,8 @@ object AnnotationController extends Controller with Secured with TracingInformat
       }
   }
 
-  def additionalHtml(annotation: AnnotationLike)(implicit request: AuthenticatedRequest[_]) = {
-    if (annotation.typ == AnnotationType.Review) {
-      AnnotationDAO.findTrainingForReviewAnnotation(annotation).map {
-        annotation =>
-          html.admin.training.trainingsReviewItem(annotation, admin.TrainingsTracingAdministration.reviewForm)
-      }
-    } else {
-      annotation.review.headOption.flatMap(_.comment).toFox.map(comment =>
-        html.tracing.trainingsComment(comment))
-    }
-  }
-
   def htmlForAnnotation(annotation: AnnotationLike)(implicit request: AuthenticatedRequest[_]) = {
-    additionalHtml(annotation).getOrElse(Html.empty).map{ additionalHtml =>
-      html.tracing.trace(annotation)(additionalHtml)
-    }
+    html.tracing.trace(annotation)(Html.empty)
   }
 
 
@@ -302,7 +269,7 @@ object AnnotationController extends Controller with Secured with TracingInformat
       annotation match {
         case t if t.typ == AnnotationType.Task =>
           await(annotation.muta.cancelTask().futureBox).map { _ =>
-            JsonOk(Messages("task.cancelled"))
+            Ok
           }
         case _ =>
           Full(JsonOk(Messages("annotation.finished")))

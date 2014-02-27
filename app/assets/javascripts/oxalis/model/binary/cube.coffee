@@ -6,6 +6,8 @@ class Cube
 
   # Constants
   BUCKET_SIZE_P : 5
+  CUBE_SIZE_P   : 7
+  LOCAL_ID_SIZE_P : 16
   BUCKET_LENGTH : 0
   ZOOM_STEP_COUNT : 0
   LOOKUP_DEPTH_UP : 0
@@ -17,7 +19,6 @@ class Cube
 
   arbitraryCube : null
   dataCubes : null
-  volumeCubes : null
   upperBoundary : null
 
   buckets : null
@@ -45,17 +46,26 @@ class Cube
     _.extend(@, new EventMixin())
 
     @LOOKUP_DEPTH_UP = @ZOOM_STEP_COUNT - 1
-    @BUCKET_LENGTH = (1 << @BUCKET_SIZE_P * 3) * (@BIT_DEPTH >> 3)
+    @BUCKET_LENGTH   = (1 << @BUCKET_SIZE_P * 3) * (@BIT_DEPTH >> 3)
+    @BYTE_OFFSET     = (@BIT_DEPTH >> 3)
 
     @cubes = []
     @buckets = new Array(@MAXIMUM_BUCKET_COUNT)
 
     # Initializing the cube-arrays with boundaries
     cubeBoundary = [
-      @upperBoundary[0] >> @BUCKET_SIZE_P
-      @upperBoundary[1] >> @BUCKET_SIZE_P
-      @upperBoundary[2] >> @BUCKET_SIZE_P
+      Math.ceil(@upperBoundary[0] / (1 << @BUCKET_SIZE_P))
+      Math.ceil(@upperBoundary[1] / (1 << @BUCKET_SIZE_P))
+      Math.ceil(@upperBoundary[2] / (1 << @BUCKET_SIZE_P))
     ]
+
+    mappingBoundary = [
+      @upperBoundary[0] >> @CUBE_SIZE_P
+      @upperBoundary[1] >> @CUBE_SIZE_P
+      @upperBoundary[2] >> @CUBE_SIZE_P
+    ]
+    @mappings = new Array( mappingBoundary[0] * mappingBoundary[1] * mappingBoundary[2])
+    @mappings.boundary = mappingBoundary
 
     @arbitraryCube = new Array(cubeBoundary[0] * cubeBoundary[1] * cubeBoundary[2])
     @arbitraryCube.boundary = cubeBoundary.slice()
@@ -64,7 +74,6 @@ class Cube
 
       @cubes[i] = {}
       @cubes[i].data = new Array(cubeBoundary[0] * cubeBoundary[1] * cubeBoundary[2])
-      @cubes[i].volume = new Array(cubeBoundary[0] * cubeBoundary[1] * cubeBoundary[2])
       @cubes[i].boundary = cubeBoundary.slice()
 
       cubeBoundary = [
@@ -74,29 +83,50 @@ class Cube
       ]
 
 
+  setPushQueue : (pushQueue) ->
+
+    @pushQueue = pushQueue
+
+
   getArbitraryCube : ->
 
     @arbitraryCube
 
 
-  getBucketIndexByZoomedAddress : ([bucket_x, bucket_y, bucket_z, zoomStep]) ->
+  getBucketIndexByZoomedAddress : ( address ) ->
     
-    $.assertExists(@cubes[zoomStep], "Cube for given zoomStep does not exist"
+    $.assertExists(@cubes[address[3]], "Cube for given zoomStep does not exist"
       cubeCount: @cubes.length
-      zoomStep: zoomStep
+      zoomStep: address[3]
       zoomStepCount: @ZOOM_STEP_COUNT
     )
 
-    boundary = @cubes[zoomStep].boundary
+    return @getIndexFromZoomedAddress( address, @cubes[address[3]].boundary )
 
-    if bucket_x >= 0 and bucket_x < boundary[0] and
-    bucket_y >= 0 and bucket_y < boundary[1] and
-    bucket_z >= 0 and bucket_z < boundary[2] and
+
+  getMappingIndexByZoomedAddress : ( [x, y, z, zoomStep] ) ->
+
+    bucketToCubeP = @CUBE_SIZE_P - @BUCKET_SIZE_P
+    address = [
+      (x << zoomStep) >> bucketToCubeP 
+      (y << zoomStep) >> bucketToCubeP 
+      (z << zoomStep) >> bucketToCubeP
+      0
+    ]
+
+    return @getIndexFromZoomedAddress( address, @mappings.boundary )
+
+
+  getIndexFromZoomedAddress : ([x, y, z, zoomStep], boundary) ->
+
+    if x >= 0 and x < boundary[0] and
+    y >= 0 and y < boundary[1] and
+    z >= 0 and z < boundary[2] and
     zoomStep >= 0 and zoomStep < @ZOOM_STEP_COUNT
 
-      bucket_x * boundary[2] * boundary[1] +
-      bucket_y * boundary[2] +
-      bucket_z
+      x * boundary[2] * boundary[1] +
+      y * boundary[2] +
+      z
 
     else
 
@@ -110,7 +140,7 @@ class Cube
     z * (1 << @BUCKET_SIZE_P * 2)
 
 
-  getDataBucketByZoomedAddress : (address) ->
+  getBucketDataByZoomedAddress : (address, createIfUndefined = false) ->
 
     if address[3] >= @ZOOM_STEP_COUNT
       return null
@@ -118,32 +148,27 @@ class Cube
     cube = @cubes[address[3]].data
     bucketIndex = @getBucketIndexByZoomedAddress(address)
 
-    if bucketIndex? and (bucket = cube[bucketIndex]) != @LOADING_PLACEHOLDER
-      bucket
-    else
-      null
+    if bucketIndex?
+      bucket = cube[bucketIndex]
+      if bucket? and bucket != @LOADING_PLACEHOLDER
+        return bucket
+      else if createIfUndefined
+        return cube[bucketIndex] = new Uint8Array(@BUCKET_LENGTH)
+
+    return null
 
 
-  getVolumeBucketByZoomedAddress : (address) ->
+  getMappingByZoomedAddress : ( address ) ->
 
-    if address[3] >= @ZOOM_STEP_COUNT
-      return null
-
-    cube = @cubes[address[3]].volume
-    bucketIndex = @getBucketIndexByZoomedAddress(address)
-
-    cube[bucketIndex]
+    if (mappingIndex = @getMappingIndexByZoomedAddress(address))?
+      return @mappings[mappingIndex]
+    return null
 
 
-  getOrCreateVolumeBucketByZoomedAddress : (address) ->
+  getMappingByPosition : ( position ) ->
 
-    cube = @cubes[address[3]].volume
-    bucketIndex = @getBucketIndexByZoomedAddress(address)
-
-    if (bucket = cube[bucketIndex])?
-      bucket
-    else
-      cube[bucketIndex] = new Uint8Array(@BUCKET_LENGTH)
+    return @getMappingByZoomedAddress(
+      @positionToZoomedAddress( position ))
 
 
   isBucketRequestedByZoomedAddress : (address) ->
@@ -160,7 +185,7 @@ class Cube
 
   isBucketLoadedByZoomedAddress : (address) ->
 
-    @getDataBucketByZoomedAddress(address)?
+    @getBucketDataByZoomedAddress(address)?
 
 
   requestBucketByZoomedAddress : (address) ->
@@ -187,6 +212,14 @@ class Cube
       bucketData.zoomStep = address[3]
 
       cube[bucketIndex] = bucketData
+
+      # Generate identity mapping
+      #mappingIndex = @getMappingIndexByZoomedAddress(address)
+      #if not @mappings[mappingIndex]?
+      #  mapping = new Array( 1 << @LOCAL_ID_SIZE_P )
+      #  for i in [0...mapping.length]
+      #    mapping[i] = i
+      #  @mappings[mappingIndex] = mapping
 
       @setArbitraryBucketByZoomedAddress(address, bucketData) if address[3] <= @ARBITRARY_MAX_ZOOMSTEP
       @trigger("bucketLoaded", address)
@@ -219,7 +252,7 @@ class Cube
 
     for address in addressList
 
-      bucket = @getDataBucketByZoomedAddress(address)
+      bucket = @getBucketDataByZoomedAddress(address)
       bucket.accessed = true if bucket?
 
 
@@ -243,7 +276,7 @@ class Cube
 
     cube = @cubes[address[3]].data
     bucketIndex = @getBucketIndexByZoomedAddress(address)
-    bucket = @getDataBucketByZoomedAddress(address)
+    bucket = @getBucketDataByZoomedAddress(address)
 
     cube[bucketIndex] = null
     @collectArbitraryBucket(address, bucket) if address[3] <= @ARBITRARY_MAX_ZOOMSTEP
@@ -261,7 +294,7 @@ class Cube
       zoomStep + 1
     ]
 
-    while substituteAddress[3] <= @ARBITRARY_MAX_ZOOMSTEP and not (substitute = @getDataBucketByZoomedAddress(substituteAddress))?
+    while substituteAddress[3] <= @ARBITRARY_MAX_ZOOMSTEP and not (substitute = @getBucketDataByZoomedAddress(substituteAddress))?
 
           substituteAddress[0] >>= 1
           substituteAddress[1] >>= 1
@@ -304,6 +337,7 @@ class Cube
       voxel = iterator.getNext()
       @labelVoxel(voxel, label)
 
+    @pushQueue.push()
     @trigger("volumeLabled")
 
 
@@ -311,55 +345,56 @@ class Cube
 
     voxelInCube = true
     for i in [0..2]
-      voxelInCube &= voxel[i] in [0...@upperBoundary[i]]
+      voxelInCube &= 0 <= voxel[i] < @upperBoundary[i]
 
     if voxelInCube
       
+      currentAddress = voxel.slice()
       for zoomStep in [0...@ZOOM_STEP_COUNT]
 
-        { bucket, voxelIndex } = @getBucketAndVoxelIndex( voxel, zoomStep )
+        { bucket, voxelIndex } = @getBucketAndVoxelIndex( currentAddress, zoomStep, true )
 
-        break if bucket[voxelIndex] == label
-        bucket[voxelIndex] = label
+        # Write label in little endian order
+        for i in [0...@BYTE_OFFSET]
+          bucket[voxelIndex + i] = (label >> (i * 8) ) & 0xff
 
-        voxel = [
-          voxel[0] >> 1
-          voxel[1] >> 1
-          voxel[2] >> 1
+        currentAddress = [
+          currentAddress[0] >> 1
+          currentAddress[1] >> 1
+          currentAddress[2] >> 1
         ]
 
-
-  getLabel : ( voxel ) ->
-
-    { bucket, voxelIndex } = @getBucketAndVoxelIndex( voxel, 0 )
-    return bucket[voxelIndex]
+      @pushQueue.insert( @positionToZoomedAddress( voxel ))
 
 
   getDataValue : ( voxel ) ->
 
-    byteOffset = (@BIT_DEPTH >> 3)
-    address    = @positionToZoomedAddress( voxel, 0 )
-    voxelIndex = byteOffset * @getVoxelIndexByVoxelOffset( @getVoxelOffset( voxel ) )
-    bucket     = @getDataBucketByZoomedAddress( address )
+    { bucket, voxelIndex} = @getBucketAndVoxelIndex( voxel, 0 )
 
     if bucket?
+      
       result = 0
       # Assuming little endian byte order
-      for i in [0...byteOffset]
+      for i in [0...@BYTE_OFFSET]
         result += (1 << (8 * i)) * bucket[ voxelIndex + i]
+
+      mapping = @getMappingByPosition( voxel )
+      if mapping?
+        return mapping[result]
+
       return result
 
     return null
 
 
-  getBucketAndVoxelIndex : (voxel, zoomStep ) ->
+  getBucketAndVoxelIndex : (voxel, zoomStep, createBucketIfUndefined = false ) ->
 
-    address = @positionToZoomedAddress( voxel, zoomStep )
+    address     = @positionToZoomedAddress( voxel, zoomStep )
     voxelOffset = @getVoxelOffset( voxel )
 
     return {
-      bucket : @getOrCreateVolumeBucketByZoomedAddress(address)
-      voxelIndex : @getVoxelIndexByVoxelOffset(voxelOffset) }
+      bucket : @getBucketDataByZoomedAddress(address, createBucketIfUndefined)
+      voxelIndex : @BYTE_OFFSET * @getVoxelIndexByVoxelOffset(voxelOffset) }
 
 
   getVoxelOffset : ( [x, y, z] ) ->
@@ -371,7 +406,7 @@ class Cube
     ]
     
 
-  positionToZoomedAddress : ([x, y, z], zoomStep) ->
+  positionToZoomedAddress : ([x, y, z], zoomStep = 0) ->
     # return the bucket a given voxel lies in
 
     [

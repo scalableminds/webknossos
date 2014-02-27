@@ -64,15 +64,15 @@ class UserListView extends Backbone.Marionette.CompositeView
     @collection.fetch(
       data : "isEditable=true"
       silent : true
-    ).done =>
+    ).done( =>
       @collection.goTo(1)
+    )
 
     @listenTo(app.vent, "paginationView:filter", @filter)
 
 
   filter : (filterQuery) ->
 
-    console.log(filterQuery)
     @collection.setFilter(["email", "firstName", "lastName"], filterQuery)
     @collection.pager()
 
@@ -103,5 +103,4 @@ class UserListView extends Backbone.Marionette.CompositeView
 
     else
       Toast.error("No user is selected.")
-
 

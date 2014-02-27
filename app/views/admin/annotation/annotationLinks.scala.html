@@ -8,7 +8,7 @@
   </a>
   <ul class="dropdown-menu">
     @actionCollection.actions.map{ action =>
-      <li><a href="@action.call" @action.dataAjax.map( dx => s"""data-ajax=$dx""") >@action.icon.map{ i =>
+      <li><a href="@action.call" >@action.icon.map{ i =>
         <i class="@i"></i>
       } @action.name</a></li>
     }

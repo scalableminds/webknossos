@@ -17,10 +17,24 @@ import braingames.util.Fox
 import net.liftweb.common.{Full, Failure}
 import braingames.reactivemongo.DBAccessContext
 import scala.concurrent.Future
+import play.api.templates.Html
 
 object TaskController extends Controller with Secured {
 
   val MAX_OPEN_TASKS = current.configuration.getInt("oxalis.tasks.maxOpenPerUser") getOrElse 5
+
+  def empty = Authenticated{ implicit request =>
+    Ok(views.html.main()(Html.empty))
+  }
+
+  def list = Authenticated.async{ implicit request =>
+    for {
+      tasks <- TaskService.findAllAdministratable(request.user)
+      js <- Future.traverse(tasks)(Task.transformToJson)
+    } yield {
+      Ok(Json.toJson(js))
+    }
+  }
 
   def ensureMaxNumberOfOpenTasks(user: User)(implicit ctx: DBAccessContext): Fox[Int] = {
     AnnotationService.countOpenTasks(user).flatMap{ numberOfOpen => Future.successful(
@@ -32,7 +46,7 @@ object TaskController extends Controller with Secured {
   }
 
   def requestTaskFor(user: User)(implicit ctx: DBAccessContext) =
-    TaskService.nextTaskForUser(user) orElse (Training.findAssignableFor(user).flatMap(_.headOption))
+    TaskService.nextTaskForUser(user)
 
   def request = Authenticated.async { implicit request =>
     val user = request.user
@@ -43,12 +57,7 @@ object TaskController extends Controller with Secured {
       annotation <- AnnotationService.createAnnotationFor(user, task) ?~> Messages("annotation.creationFailed")
       annotationJSON <- Annotation.transformToJson(annotation)
     } yield {
-      val message = if (task.isTraining)
-        Messages("task.training.assigned")
-      else
-        Messages("task.assigned")
-
-      JsonOk(Json.obj( "tasks" -> taskJSON, "annotations" -> annotationJSON), message)
+      JsonOk(Json.obj( "tasks" -> taskJSON, "annotations" -> annotationJSON), Messages("task.assigned"))
     }
   }
 }

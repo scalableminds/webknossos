@@ -9,12 +9,12 @@
       <img src="@controllers.routes.Assets.at("images/oxalis.svg")">
       <div><p>Oxalis</p></div>
     </div>
-    @datasets.groupBy(_.dataSource.owningTeam).map{ case (team, ds) =>
+    @datasets.groupBy(_.owningTeam).map{ case (team, ds) =>
 
       @ds.map{ dataSet =>
         <div class="dataset img-polaroid">
           <header class="clearfix">
-            <h4>@dataSet.dataSource.name</h4>
+            <h4>@dataSet.name</h4>
             <div class="dataset-buttons">
               <!--<a href="/levels/512c70a6e4b004e525ec5635?missionId=51f90698e4b02ee135a87368" class="edit-button">
                 <i class="fa fa-pencil"></i>
@@ -22,10 +22,10 @@
             </div>
           </header>
           <div class="dataset-display clearfix" style="height: 220px;">
-            @dataSet.dataSource.dataLayer("color").map{ colorLayer =>
-              <img src="@controllers.routes.BinaryData.requestImage(dataSet.dataSource.name, "color", 200, 200, 200, 200, 0, math.log(colorLayer.resolutions.max).toInt)" />
+            @dataSet.dataSource.flatMap(_.dataLayer("color")).map{ colorLayer =>
+              <img src="@controllers.routes.BinaryData.requestImage(dataSet.name, "color", 200, 200, 200, 200, 0, math.log(colorLayer.resolutions.max).toInt)" />
             }
-            <a href="@controllers.routes.DataSetController.view(dataSet.dataSource.name)">
+            <a href="@controllers.routes.DataSetController.view(dataSet.name)">
               <i class="fa fa-play"></i>
             </a>
           </div>

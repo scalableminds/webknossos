@@ -57,25 +57,38 @@ object DataSourceRepository extends ProgressTracking {
     case _ => false
   }
 
-  def transformToDataSource(unusableDataSource: UnusableDataSource): Future[Option[UsableDataSource]] = Future {
-    clearAllTrackers(importTrackerId(unusableDataSource.id))
-    types
-      .maxBy(_.chanceOfInboxType(unusableDataSource.sourceFolder))
-      .importDataSource(unusableDataSource, progressTrackerFor(importTrackerId(unusableDataSource.id)))
-      .flatMap {
-      dataSource =>
-        writeDataSourceToFile(
+  def cleanUp(source: Path) =
+    (source / "target").deleteRecursively()
+
+  def transformToDataSource(unusableDataSource: UnusableDataSource): Future[Option[UsableDataSource]] = {
+    val f = Future {
+      clearAllTrackers(importTrackerId(unusableDataSource.id))
+      cleanUp(unusableDataSource.sourceFolder)
+      types
+        .maxBy(_.chanceOfInboxType(unusableDataSource.sourceFolder))
+        .importDataSource(unusableDataSource, progressTrackerFor(importTrackerId(unusableDataSource.id)))
+        .flatMap {
+        dataSource =>
+          writeDataSourceToFile(
             unusableDataSource.sourceFolder,
             UsableDataSource(unusableDataSource.owningTeam, unusableDataSource.sourceType, dataSource))
-    } match {
-      case Some(r) =>
-        logger.info("Datasource import finished for " + unusableDataSource.id)
-        finishTrackerFor(importTrackerId(unusableDataSource.id), true)
-        Some(r)
-      case None =>
-        logger.warn("Datasource import failed for " + unusableDataSource.id)
+      } match {
+        case Some(r) =>
+          logger.info("Datasource import finished for " + unusableDataSource.id)
+          finishTrackerFor(importTrackerId(unusableDataSource.id), true)
+          Some(r)
+        case None =>
+          logger.warn("Datasource import failed for " + unusableDataSource.id)
+          finishTrackerFor(importTrackerId(unusableDataSource.id), false)
+          None
+      }
+    }
+    f.onFailure {
+      case e =>
+        logger.error("Failed to import dataset", e)
         finishTrackerFor(importTrackerId(unusableDataSource.id), false)
         None
     }
+    f
   }
 }

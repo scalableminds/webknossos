@@ -146,13 +146,38 @@ trait TiffDataSourceTypeHandler extends DataSourceTypeHandler{
       fileCache.closeAll()
     }
 
+    private def fillUpToKnossosSize(tile: Array[Byte], xs: Int, ys: Int, width: Int, height: Int, bytesPerPixel: Int) = {
+      // how many bytes are missing in each x row
+      val destWidth = xs * CubeSize *  bytesPerPixel
+      val fillUpSize = destWidth - width * bytesPerPixel
+      if(fillUpSize == 0)
+        tile
+      else {
+        val size = destWidth * CubeSize * ys
+        val result = new Array[Byte](size)
+        val placeholder = Array.fill(fillUpSize)(0.toByte)
+        tile.grouped(width * bytesPerPixel).zipWithIndex.foreach{
+          case (column, idx) =>
+            column.copyToArray(result, idx * destWidth)
+            placeholder.copyToArray(result, idx * destWidth + width * bytesPerPixel)
+        }
+        result
+      }
+    }
+
     private def writeTile(tile: Array[Byte], layerNumber: Int, width: Int, height: Int, files: KnossosWriterCache): Unit = {
-      val xs = tile.length / bytesPerPixel / height / CubeSize
-      val ys = tile.length / bytesPerPixel / width / CubeSize
+      // number of knossos buckets in x direction
+      val xs = (tile.length.toFloat / bytesPerPixel / height / CubeSize).ceil.toInt
+      // number of knossos buckets in y direction
+      val ys = (tile.length.toFloat / bytesPerPixel / width / CubeSize).ceil.toInt
+
+      // the given array might not fill up the buckets at the border, but we need to make sure it does, otherwise
+      // writing the data to the file would result in a bucket size less than 128
+      val filledTile = fillUpToKnossosSize(tile, xs, ys, width, height, bytesPerPixel)
 
       val sliced = Array.fill(ys * xs)(Vector.empty[Array[Byte]])
 
-      tile.grouped(bytesPerPixel * CubeSize).zipWithIndex.foreach{
+      filledTile.grouped(bytesPerPixel * CubeSize).zipWithIndex.foreach{
         case (slice , i) =>
           val x = i % xs
           val y = i / xs / CubeSize

@@ -1,6 +1,6 @@
 ### define
 ./cube : Cube
-../../../libs/array_buffer_socket : ArrayBufferSocket
+libs/array_buffer_socket : ArrayBufferSocket
 ###
 
 class PullQueue
@@ -19,7 +19,7 @@ class PullQueue
   batchCount : 0
   roundTripTime : 0
   
-  constructor : (@dataSetName, @cube, @dataLayerName, @tracingId ) ->
+  constructor : (@dataSetName, @cube, @dataLayerName, @tracingId, @boundingBox ) ->
 
     @queue = []
     @loadedBucketList = []
@@ -62,8 +62,8 @@ class PullQueue
 
   insert : (bucket, priority) ->
 
-    # Buckets with a negative priority are not loaded
     return unless priority >= 0
+    return unless @boundingBox.containsBucket(bucket)
     
     # Checking whether bucket is already loaded
     unless @cube.isBucketRequestedByZoomedAddress(bucket)
@@ -142,6 +142,8 @@ class PullQueue
               bucketData = @decode(responseBuffer.subarray(offset, offset += (@cube.BUCKET_LENGTH >> 1)))
             else
               bucketData = responseBuffer.subarray(offset, offset += @cube.BUCKET_LENGTH)
+
+            @boundingBox.removeOutsideArea( bucket, bucketData )
 
             @loadedBucketList.push(bucket)
             @cube.setBucketByZoomedAddress(bucket, bucketData)

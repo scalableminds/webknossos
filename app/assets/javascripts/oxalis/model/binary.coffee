@@ -6,6 +6,7 @@
 ./binary/plane2d : Plane2D
 ./binary/ping_strategy : PingStrategy
 ./binary/ping_strategy_3d : PingStrategy3d
+./binary/bounding_box : BoundingBox
 ../constants : constants
 ###
 
@@ -45,7 +46,8 @@ class Binary
     ]
 
     @cube = new Cube(upperBoundary, dataLayer.resolutions.length, @layer.bitDepth)
-    @pullQueue = new PullQueue(@dataSetName, @cube, @layer.name, tracingId)
+    @boundingBox = new BoundingBox(1, @cube)
+    @pullQueue = new PullQueue(@dataSetName, @cube, @layer.name, tracingId, @boundingBox)
     @pushQueue = new PushQueue(@dataSetName, @cube, @layer.name, tracingId, tracing.version)
     @cube.setPushQueue( @pushQueue )
 

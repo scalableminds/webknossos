@@ -211,7 +211,7 @@ class Flycam3d
   getRotation : ->
 
     object = new THREE.Object3D()
-    matrix = (new THREE.Matrix4()).fromArray( @currentMatrix )
+    matrix = (new THREE.Matrix4()).fromArray( @currentMatrix ).transpose()
     object.applyMatrix( matrix )
     return [ object.rotation.x, object.rotation.y, object.rotation.z ]
 
@@ -233,9 +233,9 @@ class Flycam3d
   setRotation : ([x, y, z]) ->
 
     @resetRotation()
-    @pitch x
-    @yaw y
-    @roll z
+    @roll -z
+    @yaw -y
+    @pitch -x
 
 
   getDirection : ->

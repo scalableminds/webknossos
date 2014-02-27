@@ -70,17 +70,8 @@ object DataSetController extends Controller with Secured {
   def read(dataSetName: String) = UserAwareAction.async{ implicit request =>
     import net.liftweb.common._
     import play.api.Logger
-    Logger.error("Dataset read: " + dataSetName)
-    DataSetDAO.findOneBySourceName(dataSetName).futureBox.map {
-      case Full(dataSet) =>
-        Logger.error("Success: " + dataSetName)
+    DataSetDAO.findOneBySourceName(dataSetName).map { dataSet =>
         Ok(DataSet.dataSetPublicWrites(request.userOpt).writes(dataSet))
-      case Empty =>
-        Logger.error("Empty: " + dataSetName)
-        BadRequest("Not found")
-      case f: Failure =>
-        Logger.error("Failure: " + dataSetName)
-        BadRequest("failure: " + f)
     }
   }
 

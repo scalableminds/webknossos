@@ -104,12 +104,12 @@ class PushQueue
 
     transmitBuffer = transmitBufferBuilder.build()
 
-    console.log( "uncompressed transmitBuffer:", transmitBuffer.length, transmitBuffer )
+    #console.log( "uncompressed transmitBuffer:", transmitBuffer.length, transmitBuffer )
 
     gzip = new Zlib.Gzip( transmitBuffer )
     transmitBuffer = gzip.compress()
 
-    console.log( "compressed transmitBuffer:", transmitBuffer.length, transmitBuffer )
+    #console.log( "compressed transmitBuffer:", transmitBuffer.length, transmitBuffer )
 
     @getParams.version++
     @getSendSocket().send( transmitBuffer )

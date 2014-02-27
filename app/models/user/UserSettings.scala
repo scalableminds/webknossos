@@ -53,6 +53,7 @@ object UserSettings extends BasicSettings{
       "firstVisToggle" -> JsBoolean(true),
       "particleSize" -> JsNumber(5),
       "sortTreesByName" -> JsBoolean(false),
-      "sortCommentsAsc" -> JsBoolean(true)))
+      "sortCommentsAsc" -> JsBoolean(true),
+      "sphericalCapRadius" -> JsNumber(140)))
 
 }

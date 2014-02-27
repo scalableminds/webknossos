@@ -88,6 +88,8 @@ class Gui
       constants.MIN_MOVE_VALUE, constants.MAX_MOVE_VALUE, 10, "Move Value (nm/s)")
     @addSlider(@fFlightcontrols, @user.getSettings(), "crosshairSize",
       0.05, 0.5, 0.01, "Crosshair size")
+    @addSlider(@fFlightcontrols, @user.getSettings(), "sphericalCapRadius",
+      50, 500, 1, "Sphere Radius")
 
     @folders.push( @fView = @gui.addFolder("View") )
     bbController = @fView.add(@settingsGeneral, "boundingBox").name("Bounding Box").onChange(@setBoundingBox)

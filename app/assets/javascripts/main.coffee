@@ -12,7 +12,6 @@ require [
 
   ErrorHandling.initialize( throwAssertions: false, sendLocalErrors: false )
 
-
   app.addInitializer( ->
 
     app.router = new Router()

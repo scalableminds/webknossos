@@ -2,7 +2,7 @@
 underscore : _
 backbone.marionette : marionette
 libs/toast : Toast
-admin/models/user/team_collection : TeamCollection
+admin/models/team/team_collection : TeamCollection
 admin/views/user/team_role_modal_item_view : TeamRoleModalItem
 ###
 
@@ -44,8 +44,7 @@ class TeamRoleModal extends Backbone.Marionette.CompositeView
     )
     @userCollection = args.userCollection
 
-    # For some reason listening to this events throught the 'events' property won't work
-    @on("after:item:added", @prefillModal)
+    @listenTo(@, "after:item:added", @prefillModal)
 
 
   changeExperience : ->
@@ -72,8 +71,6 @@ class TeamRoleModal extends Backbone.Marionette.CompositeView
           teams = teams || []
 
           # Verify user and update his teams
-          #user.set("verified", true)
-          #user.set("teams", teams)
           user.save(
             "verified" : true
             "teams" : teams

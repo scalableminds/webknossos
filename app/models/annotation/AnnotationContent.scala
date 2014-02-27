@@ -63,9 +63,9 @@ object AnnotationContent {
 
   implicit val dataSetWrites: Writes[DataSet] =
     ((__ \ 'name).write[String] and
-      (__ \ 'scale).write[Scale] and
-      (__ \ 'dataLayers).write[List[DataLayer]])(d =>
-      (d.dataSource.name, d.dataSource.scale, d.dataSource.dataLayers))
+      (__ \ 'scale).write[Option[Scale]] and
+      (__ \ 'dataLayers).write[Option[List[DataLayer]]])(d =>
+      (d.name, d.dataSource.map(_.scale), d.dataSource.map(_.dataLayers)))
 
   def writeAsJson(ac: AnnotationContent)(implicit ctx: DBAccessContext) = {
     for {

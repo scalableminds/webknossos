@@ -138,7 +138,7 @@ object BinaryData extends Controller with Secured {
       id <- annotationId.flatMap(BSONObjectID.parse(_).toOption).toFox
       annotation <- AnnotationDAO.findOneById(id).toFox
       if annotation.restrictions.allowAccess(userOpt)
-      VolumeTracing(_, userDataLayerName, _, _, _, _) <- annotation.content
+      VolumeTracing(_, userDataLayerName, _, _, _, _, _) <- annotation.content
       userDataLayer <- UserDataLayerDAO.findOneByName(userDataLayerName).toFox
       if userDataLayer.dataSourceName == dataSet.name && userDataLayer.dataLayer.typ == dataLayerTyp
     } yield {

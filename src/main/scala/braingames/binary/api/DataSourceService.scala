@@ -12,6 +12,7 @@ import braingames.binary.repository.DataSourceRepository
 import braingames.binary.models.DataSourceRepository
 import scala.concurrent.Future
 import braingames.binary.Logger._
+import play.api.libs.concurrent.Execution.Implicits._
 
 /**
  * Company: scalableminds

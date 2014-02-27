@@ -11,9 +11,7 @@ class BoundingBox
     @BYTE_OFFSET   = @cube.BYTE_OFFSET
 
     if @boundingBox?
-      
-      @min = [150, 200, 250]
-      @max = [300, 350, 400]
+      { @min, @max } = @boundingBox
 
 
   getBoxForZoomStep : ( zoomStep ) ->

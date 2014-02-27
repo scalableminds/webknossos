@@ -25,7 +25,7 @@ class Binary
   direction : [0, 0, 0]
 
 
-  constructor : (@user, tracing, @layer, tracingId) ->
+  constructor : (@user, tracing, @layer, tracingId, boundingBox) ->
 
     @TEXTURE_SIZE_P = constants.TEXTURE_SIZE_P
 
@@ -46,7 +46,7 @@ class Binary
     ]
 
     @cube = new Cube(upperBoundary, dataLayer.resolutions.length, @layer.bitDepth)
-    @boundingBox = new BoundingBox(1, @cube)
+    @boundingBox = new BoundingBox(boundingBox, @cube)
     @pullQueue = new PullQueue(@dataSetName, @cube, @layer.name, tracingId, @boundingBox)
     @pushQueue = new PushQueue(@dataSetName, @cube, @layer.name, tracingId, tracing.version)
     @cube.setPushQueue( @pushQueue )

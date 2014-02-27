@@ -12,8 +12,8 @@ class BoundingBox
 
     if @boundingBox?
       
-      @min = [100, 100, 100]
-      @max = [300, 300, 300]
+      @min = [150, 200, 250]
+      @max = [300, 350, 400]
 
 
   getBoxForZoomStep : ( zoomStep ) ->
@@ -74,3 +74,5 @@ class BoundingBox
           index = @cube.getVoxelIndexByVoxelOffset [dx, dy, dz]
           for b in [0...@BYTE_OFFSET]
             bucketData[index + b] = 0
+
+    return

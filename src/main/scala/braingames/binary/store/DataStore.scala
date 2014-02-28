@@ -6,6 +6,8 @@ import scala.util._
 import scala.concurrent.ExecutionContext.Implicits._
 import braingames.binary.LoadBlock
 import net.liftweb.common.Box
+import braingames.geometry.Point3D
+import scalax.file.Path
 
 /**
  * Abstract Datastore defines all method a binary data source (e.q. normal file
@@ -14,16 +16,12 @@ import net.liftweb.common.Box
 
 class DataNotFoundException(message: String) extends Exception(s"$message Could not find the data")
 
-abstract class DataStore extends Actor {
-  /**
-   * Loads the data of a given point from the data source
-   */
-  def load(dataInfo: LoadBlock): Future[Box[Array[Byte]]]
+class DataStoreActor(dataStore: DataStore) extends Actor {
 
   def receive = {
     case request: LoadBlock =>
       val s = sender
-      load(request).onComplete {
+      dataStore.load(request).onComplete {
         case Failure(e) =>
           s ! e
         case Success(d) =>
@@ -32,19 +30,26 @@ abstract class DataStore extends Actor {
   }
 }
 
+trait DataStore {
+  /**
+   * Loads the data of a given point from the data source
+   */
+  def load(dataInfo: LoadBlock): Future[Box[Array[Byte]]]
+}
+
 object DataStore {
 
   def createFilename(dataInfo: LoadBlock) =
-    "%s/%s/%s".format(
-      dataInfo.dataSource.baseDir,
-      dataInfo.dataLayerSection.baseDir,
-      knossosFilePath(dataInfo.dataSource.id, dataInfo.resolution, dataInfo.block.x, dataInfo.block.y, dataInfo.block.z))
+    knossosFilePath(knossosBaseDir(dataInfo), dataInfo.dataSource.id, dataInfo.resolution, dataInfo.block)
 
-  def knossosFilePath(id: String, resolution: Int, x: Int, y: Int, z: Int) =
-    "%d/x%04d/y%04d/z%04d/%s_mag%d_x%04d_y%04d_z%04d.raw".format(
-      resolution,
-      x, y, z,
-      id,
-      resolution,
-      x, y, z)
+  def knossosBaseDir(dataInfo: LoadBlock) =
+    Path.fromString(dataInfo.dataSource.baseDir) / dataInfo.dataLayerSection.baseDir
+
+  def knossosFilePath(dataSetDir: Path, id: String, resolution: Int, block: Point3D) = {
+    val x = "x%04d".format(block.x)
+    val y = "y%04d".format(block.y)
+    val z = "z%04d".format(block.z)
+    val fileName = s"${id}_mag${resolution}_${x}_${y}_${z}.raw"
+    dataSetDir / resolution.toString / x / y / z / fileName
+  }
 }

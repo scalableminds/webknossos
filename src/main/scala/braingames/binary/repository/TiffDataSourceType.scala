@@ -4,19 +4,20 @@
 package braingames.binary.repository
 
 import scalax.file.{PathMatcher, Path}
-import braingames.binary.models.{DataLayerSection, DataLayer, UnusableDataSource, DataSource}
+import braingames.binary.models._
 import javax.imageio.ImageIO
 import braingames.geometry.{BoundingBox, Scale, Point3D}
 import java.io._
 import braingames.binary.store.DataStore
 import braingames.binary.Logger._
 import scala.Some
-import braingames.binary.models.UnusableDataSource
 import java.awt.image.{BufferedImage, DataBufferByte, DataBufferInt}
 import braingames.util.ProgressTracking.ProgressTracker
 import scala.collection.JavaConversions._
 import javax.imageio.spi.IIORegistry
 import com.twelvemonkeys.imageio.plugins.tiff.TIFFImageReaderSpi
+import scala.Some
+import braingames.binary.models.UnusableDataSource
 
 object TiffDataSourceType extends DataSourceType with TiffDataSourceTypeHandler {
   val name = "tiff"
@@ -29,13 +30,32 @@ object TiffDataSourceType extends DataSourceType with TiffDataSourceTypeHandler 
 }
 
 
+object KnossosMultiResCreator{
+  def createResolutions(source: Path, target: Path, baseResolution: Int, resolutions: Int, boundingBox: BoundingBox, bytesPerPixel: Int) {
+
+  }
+
+  def zoomOut(source: Path, dest: Path) = {
+
+  }
+}
+
 trait TiffDataSourceTypeHandler extends DataSourceTypeHandler{
   val Target = "target"
 
+  val DefaultScale = Scale(200, 200, 200)
+
+  // Data points in each direction of a cube in the knossos cube structure
+  val CubeSize = 128
+
+  // must be a divisor of cubeSize
+  val ContainerSize = 128
 
   registerTiffProvider()
 
-  def registerTiffProvider() = {
+  protected def registerTiffProvider() = {
+    // sometimes there are problems with ImageIO finding the TiffImageReader
+    // this should make sure the ImageReader is registered and can be used
     logger.info("Registering tiff provider")
     ImageIO.scanForPlugins()
     val registry = IIORegistry.getDefaultInstance()
@@ -48,34 +68,38 @@ trait TiffDataSourceTypeHandler extends DataSourceTypeHandler{
 
   case class TiffStackInfo(boundingBox: BoundingBox, bytesPerPixel: Int)
 
+  protected def prepareTargetPath(target: Path): Unit = {
+    target.deleteRecursively()
+    target.createDirectory()
+  }
+
+  protected def targetPathForDataSource(unusableDataSource: UnusableDataSource, layerType: DataLayerType) =
+    unusableDataSource.sourceFolder / Target / layerType.name
+
+  protected def elementClass(bytesPerPixel: Int) =
+    s"uint${bytesPerPixel * 8}"
+
   def importDataSource(unusableDataSource: UnusableDataSource, progress: ProgressTracker): Option[DataSource] = {
     val layerType = DataLayer.COLOR
-    val targetPath = unusableDataSource.sourceFolder / Target / layerType.name
+    val targetPath = targetPathForDataSource(unusableDataSource, layerType)
 
-    targetPath.deleteRecursively()
-    targetPath.createDirectory()
+    prepareTargetPath(targetPath)
 
     convertToKnossosStructure(unusableDataSource.id, unusableDataSource.sourceFolder, targetPath, progress).map{ stackInfo =>
       val section = DataLayerSection(layerType.name, layerType.name, List(1), stackInfo.boundingBox, stackInfo.boundingBox)
-      val elementClass = s"uint${stackInfo.bytesPerPixel * 8}"
-      val layer = DataLayer(layerType.name, None, elementClass, None, List(section))
+      val elements = elementClass(stackInfo.bytesPerPixel)
+      val layer = DataLayer(layerType.name, None, elements, None, List(section))
       DataSource(
         unusableDataSource.id,
         (unusableDataSource.sourceFolder / Target).toAbsolute.path,
-        Scale(200, 200, 200),
+        DefaultScale,
         dataLayers = List(layer))
 
     }
 
   }
 
-  // Data points in each direction of a cube in the knossos cube structure
-  val CubeSize = 128
-
-  // must be a divisor of cubeSize
-  val ContainerSize = 128
-
-  def extractImageInfo(tiffs: List[Path]): Option[TiffImageArray] = {
+  protected def extractImageInfo(tiffs: List[Path]): Option[TiffImageArray] = {
     tiffs match{
       case head :: tail =>
         tiffToColorArray(head) match {
@@ -98,7 +122,9 @@ trait TiffDataSourceTypeHandler extends DataSourceTypeHandler{
             tiffToColorArray(t).map(_.data)
         }
         TileToCubeWriter(id, 1, target, tiffInfo.width, tiffInfo.height, tiffInfo.bytesPerPixel, tiles ).convertToCubes()
-        Some(TiffStackInfo(BoundingBox(Point3D(0,0,0), tiffInfo.width, tiffInfo.height, depth), tiffInfo.bytesPerPixel))
+        val boundingBox = BoundingBox(Point3D(0,0,0), tiffInfo.width, tiffInfo.height, depth)
+        KnossosMultiResCreator.createResolutions(target, target, 1, 4, boundingBox, tiffInfo.bytesPerPixel)
+        Some(TiffStackInfo(boundingBox, tiffInfo.bytesPerPixel))
       case _ =>
         logger.warn("No tiff files found")
         None
@@ -106,24 +132,24 @@ trait TiffDataSourceTypeHandler extends DataSourceTypeHandler{
   }
 
   private class KnossosWriterCache(id: String, resolution: Int, folder: Path){
-    var cache = Map.empty[(Int, Int, Int), FileOutputStream]
+    var cache = Map.empty[Point3D, FileOutputStream]
 
-    def get(x: Int, y: Int, z: Int): FileOutputStream = {
-      cache.get((x, y, z)).getOrElse{
-        val f = fileForPosition(x,y,z)
-        cache += (x,y,z) -> f
+    def get(block: Point3D): FileOutputStream = {
+      cache.get(block).getOrElse{
+        val f = fileForPosition(block)
+        cache += block -> f
         f
       }
     }
 
-    private def fileForPosition(x: Int, y: Int, z: Int): FileOutputStream = {
-      val p = (folder / Path.fromString(DataStore.knossosFilePath(id, resolution, x, y, z)))
-      p.createFile(failIfExists = false)
-      p.fileOption match{
+    private def fileForPosition(block: Point3D): FileOutputStream = {
+      val path = DataStore.knossosFilePath(folder, id, resolution, block)
+      path.createFile(failIfExists = false)
+      path.fileOption match{
         case Some(f) =>
           new FileOutputStream(f, true)
         case None =>
-          throw new Exception("Couldn't open file: " + p)
+          throw new Exception("Couldn't open file: " + path.path)
       }
     }
 
@@ -133,12 +159,11 @@ trait TiffDataSourceTypeHandler extends DataSourceTypeHandler{
     }
   }
 
-  case class TileToCubeWriter(id: String, resolution: Int, target: Path, width: Int, height: Int, bytesPerPixel: Int, tiles: Iterator[Array[Byte]]){
+  case class TileToCubeWriter(id: String, resolutions: Int, target: Path, width: Int, height: Int, bytesPerPixel: Int, tiles: Iterator[Array[Byte]]){
     val CubeSize = 128
 
-
     def convertToCubes(cubeSize: Int = 128) = {
-      val fileCache = new KnossosWriterCache(id, resolution, target)
+      val fileCache = new KnossosWriterCache(id, 1, target)
       tiles.zipWithIndex.foreach{
         case (tile, idx) =>
           writeTile(tile, idx, width, height, fileCache)
@@ -189,7 +214,7 @@ trait TiffDataSourceTypeHandler extends DataSourceTypeHandler{
         case (cubeData, idx) =>
           val x = idx % xs
           val y = idx / xs
-          val file = files.get(x, y, layerNumber / CubeSize)
+          val file = files.get(Point3D(x, y, layerNumber / CubeSize))
           cubeData.map(file.write)
       }
     }

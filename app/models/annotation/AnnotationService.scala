@@ -88,7 +88,7 @@ object AnnotationService extends AnnotationContentProviders with BoxImplicits wi
     }
   }
 
-  def createAnnotationBase(task: Task, userId: BSONObjectID, settings: AnnotationSettings, dataSetName: String, start: Point3D, boundingBox: BoundingBox)(implicit ctx: DBAccessContext) = {
+  def createAnnotationBase(task: Task, userId: BSONObjectID, boundingBox: BoundingBox, settings: AnnotationSettings, dataSetName: String, start: Point3D)(implicit ctx: DBAccessContext) = {
     for {
       tracing <- SkeletonTracingService.createFrom(dataSetName, start, Some(boundingBox), true, settings)
       content = ContentReference.createFor(tracing)
@@ -96,8 +96,8 @@ object AnnotationService extends AnnotationContentProviders with BoxImplicits wi
     } yield tracing
   }
 
-  def createAnnotationBase(task: Task, userId: BSONObjectID, settings: AnnotationSettings, nml: NML)(implicit ctx: DBAccessContext) = {
-    SkeletonTracingService.createFrom(nml, settings).toFox.map {
+  def createAnnotationBase(task: Task, userId: BSONObjectID, boundingBox: BoundingBox, settings: AnnotationSettings, nml: NML)(implicit ctx: DBAccessContext) = {
+    SkeletonTracingService.createFrom(nml, Some(boundingBox), settings).toFox.map {
       tracing =>
         val content = ContentReference.createFor(tracing)
         AnnotationDAO.insert(Annotation(userId, content, team = task.team, typ = AnnotationType.TracingBase, _task = Some(task._id)))

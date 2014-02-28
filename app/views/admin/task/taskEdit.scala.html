@@ -1,4 +1,4 @@
-@(taskId: String, taskTypes: List[models.task.TaskType], projects: List[models.task.Project], teams: List[String], editForm: Form[(String, models.user.Experience, Int, Int, String, String, braingames.geometry.BoundingBox)])(implicit session: oxalis.view.AuthedSessionData)
+@(taskId: String, taskTypes: List[models.task.TaskType], projects: List[models.task.Project], teams: List[String], editForm: Form[(String, models.user.Experience, Int, Int, String, String)])(implicit session: oxalis.view.AuthedSessionData)
 
 @main(){
   <div class="container">

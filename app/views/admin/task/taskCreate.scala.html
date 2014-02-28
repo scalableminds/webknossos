@@ -10,6 +10,8 @@
 
         @basicTaskForm(nmlForm, taskTypes, projects, teams)
 
+        @helper.inputText(taskForm("boundingBox.box"), 'type -> "text")
+
         <div class="control-group">
           <label class="control-label" for="nmlFile">@Messages("nmlFile")</label>
           <div class="controls">
@@ -34,7 +36,9 @@
         })
 
         @helper.inputText(taskForm("start.point"), 'type -> "text")
-        
+
+        @helper.inputText(taskForm("boundingBox.box"), 'type -> "text")
+
         <div class="form-actions">
           <button type="submit" class="btn btn-primary">Create</button>
         </div>

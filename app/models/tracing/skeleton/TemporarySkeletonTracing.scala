@@ -61,7 +61,15 @@ case class TemporarySkeletonTracing(
 }
 
 object TemporarySkeletonTracingService extends AnnotationContentService {
-  def createFrom(nml: NML, id: String, settings: AnnotationSettings = AnnotationSettings.default)(implicit ctx: DBAccessContext) = {
+  def createFrom(nml: NML, id: String, boundingBox: Option[BoundingBox], settings: AnnotationSettings = AnnotationSettings.default)(implicit ctx: DBAccessContext) = {
+    val box: Option[BoundingBox] = boundingBox.flatMap {
+      box =>
+        if (box.isEmpty)
+          None
+        else
+          Some(box)
+    }
+
     TemporarySkeletonTracing(
       id,
       nml.dataSetName,
@@ -70,7 +78,7 @@ object TemporarySkeletonTracingService extends AnnotationContentService {
       System.currentTimeMillis(),
       nml.activeNodeId,
       nml.editPosition,
-      None,
+      box,
       nml.comments,
       settings)
   }
@@ -92,14 +100,14 @@ object TemporarySkeletonTracingService extends AnnotationContentService {
     }
   }
 
-  def createFrom(nmls: List[NML], settings: AnnotationSettings)(implicit ctx: DBAccessContext): Fox[TemporarySkeletonTracing] = {
+  def createFrom(nmls: List[NML], boundingBox: Option[BoundingBox], settings: AnnotationSettings)(implicit ctx: DBAccessContext): Fox[TemporarySkeletonTracing] = {
     nmls match {
       case head :: tail =>
-        val startTracing = createFrom(head, "", settings)
+        val startTracing = createFrom(head, "", boundingBox, settings)
 
         tail.foldLeft(Fox.successful(startTracing)) {
           case (f, s) =>
-            f.flatMap(t => t.mergeWith(createFrom(s, s.timestamp.toString)))
+            f.flatMap(t => t.mergeWith(createFrom(s, s.timestamp.toString, boundingBox)))
         }
       case _ =>
         Fox.empty

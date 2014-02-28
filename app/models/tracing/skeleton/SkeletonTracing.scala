@@ -150,6 +150,14 @@ object SkeletonTracingService extends AnnotationContentService with CommonTracin
       else
         Nil
 
+    val box: Option[BoundingBox] = boundingBox.flatMap {
+      box =>
+        if (box.isEmpty)
+          None
+        else
+          Some(box)
+    }
+
     createFrom(
       TemporarySkeletonTracing(
         "",
@@ -159,7 +167,7 @@ object SkeletonTracingService extends AnnotationContentService with CommonTracin
         System.currentTimeMillis(),
         Some(1),
         start,
-        boundingBox,
+        box,
         Nil,
         settings))
   }
@@ -184,14 +192,14 @@ object SkeletonTracingService extends AnnotationContentService with CommonTracin
     } yield tracing
   }
 
-  def createFrom(nmls: List[NML], settings: AnnotationSettings)(implicit ctx: DBAccessContext): Fox[SkeletonTracing] = {
-    TemporarySkeletonTracingService.createFrom(nmls, settings).flatMap{ temporary =>
+  def createFrom(nmls: List[NML], boundingBox: Option[BoundingBox], settings: AnnotationSettings)(implicit ctx: DBAccessContext): Fox[SkeletonTracing] = {
+    TemporarySkeletonTracingService.createFrom(nmls, boundingBox, settings).flatMap{ temporary =>
       createFrom(temporary)
     }
   }
 
-  def createFrom(nml: NML, settings: AnnotationSettings)(implicit ctx: DBAccessContext): Fox[SkeletonTracing] = {
-    createFrom(List(nml), settings)
+  def createFrom(nml: NML, boundingBox: Option[BoundingBox], settings: AnnotationSettings)(implicit ctx: DBAccessContext): Fox[SkeletonTracing] = {
+    createFrom(List(nml), boundingBox, settings)
   }
 
   def createFrom(dataSet: DataSet)(implicit ctx: DBAccessContext): Fox[SkeletonTracing] =

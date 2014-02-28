@@ -38,7 +38,7 @@ import models.team.Team
 
 object TaskAdministration extends AdminController {
 
-  val taskFromNMLForm = basicTaskForm(minTaskInstances = 1)
+  val taskFromNMLForm = nmlTaskForm(minTaskInstances = 1)
 
   type TaskForm = Form[(String, String, Point3D, Experience, Int, Int, String)]
 
@@ -52,11 +52,24 @@ object TaskAdministration extends AdminController {
       "taskInstances" -> number.verifying("task.edit.toFewInstances",
         taskInstances => taskInstances >= minTaskInstances),
       "team" -> nonEmptyText,
+      "project" -> text
+    )).fill(("", Experience.empty, 100, 10, "", ""))
+
+  def nmlTaskForm(minTaskInstances: Int) = Form(
+    tuple(
+      "taskType" -> text,
+      "experience" -> mapping(
+        "domain" -> text,
+        "value" -> number)(Experience.fromForm)(Experience.unapply),
+      "priority" -> number,
+      "taskInstances" -> number.verifying("task.edit.toFewInstances",
+        taskInstances => taskInstances >= minTaskInstances),
+      "team" -> nonEmptyText,
       "project" -> text,
       "boundingBox" -> mapping(
-        "box" -> text.verifying("boundingBox.invalid",
-          b => b.matches("([0-9]+),\\s*([0-9]+),\\s*([0-9]+)\\s*,\\s*([0-9]+),\\s*([0-9]+),\\s*([0-9]+)\\s*")))(BoundingBox.fromForm)(BoundingBox.toForm))
-  ).fill(("", Experience.empty, 100, 10, "", "", BoundingBox(Point3D(0, 0, 0), 0, 0, 0)))
+      "box" -> text.verifying("boundingBox.invalid",
+        b => b.matches("([0-9]+),\\s*([0-9]+),\\s*([0-9]+)\\s*,\\s*([0-9]+),\\s*([0-9]+),\\s*([0-9]+)\\s*")))(BoundingBox.fromForm)(BoundingBox.toForm)
+    )).fill(("", Experience.empty, 100, 10, "", "", BoundingBox(Point3D(0, 0, 0), 0, 0, 0)))
 
   val taskMapping = tuple(
     "dataSet" -> text,
@@ -97,7 +110,7 @@ object TaskAdministration extends AdminController {
         taskForm)
     }
 
-  def taskEditHtml(taskId: String, taskForm: Form[(String, Experience, Int, Int, String, String, BoundingBox)])(implicit request: AuthenticatedRequest[_]) =
+  def taskEditHtml(taskId: String, taskForm: Form[(String, Experience, Int, Int, String, String)])(implicit request: AuthenticatedRequest[_]) =
     for {
       projects <- ProjectDAO.findAll
       taskTypes <- TaskTypeDAO.findAll
@@ -135,7 +148,7 @@ object TaskAdministration extends AdminController {
           task = Task(taskType._id, team, experience, priority, instances, _project = project.map(_.name))
           _ <- TaskDAO.insert(task)
         } yield {
-          AnnotationService.createAnnotationBase(task, request.user._id, taskType.settings, dataSetName, start, boundingBox)
+          AnnotationService.createAnnotationBase(task, request.user._id, boundingBox, taskType.settings, dataSetName, start)
           Redirect(controllers.routes.TaskController.empty)
           .flashing(
             FlashSuccess(Messages("task.createSuccess")))
@@ -155,8 +168,7 @@ object TaskAdministration extends AdminController {
           task.priority,
           task.instances,
           task.team,
-          projectName,
-          BoundingBox(Point3D(1,2,3), 4,5,6)))
+          projectName))
       html <- taskEditHtml(task.id, form)
     } yield {
       Ok(html)
@@ -168,7 +180,7 @@ object TaskAdministration extends AdminController {
       basicTaskForm(task.assignedInstances).bindFromRequest.fold(
         hasErrors = (formWithErrors => taskEditHtml(taskId, formWithErrors).map(h => BadRequest(h))),
         success = {
-          case (taskTypeId, experience, priority, instances, team, projectName, boundingBox) =>
+          case (taskTypeId, experience, priority, instances, team, projectName) =>
             for {
               taskType <- TaskTypeDAO.findOneById(taskTypeId) ?~> Messages("taskType.notFound")
               project <- ProjectService.findIfNotEmpty(projectName) ?~> Messages("project.notFound")
@@ -220,7 +232,7 @@ object TaskAdministration extends AdminController {
             nmls.foreach {
               nml =>
                 TaskService.copyDeepAndInsert(baseTask).map { task =>
-                  AnnotationService.createAnnotationBase(task, request.user._id, taskType.settings, nml)
+                  AnnotationService.createAnnotationBase(task, request.user._id, boundingBox, taskType.settings, nml)
                 }
             }
             Redirect(controllers.routes.TaskController.empty).flashing(
@@ -260,7 +272,7 @@ object TaskAdministration extends AdminController {
         val dataSetName = params(0)
         val experience = Experience(params(2), experienceValue)
         val position = Point3D(x, y, z)
-        val boundingBox = BoundingBox(Point3D(minX, minY, minZ), maxX-minX, maxY-minY, maxZ-minZ)
+        val boundingBox = BoundingBox.createFrom(Point3D(minX, minY, minZ), Point3D(maxX, maxY, maxZ))
         val task = Task(
           taskType._id,
           team,
@@ -277,7 +289,7 @@ object TaskAdministration extends AdminController {
         results.flatMap{
           case Full((dataSetName, position, boundingBox, taskType, task)) =>
             TaskDAO.insert(task)
-            AnnotationService.createAnnotationBase(task, request.user._id, taskType.settings, dataSetName, position, boundingBox)
+            AnnotationService.createAnnotationBase(task, request.user._id, boundingBox, taskType.settings, dataSetName, position)
             Full(task)
           case f: Failure =>
             Logger.warn("Failure while creating bulk tasks: " + f)

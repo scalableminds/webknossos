@@ -91,8 +91,8 @@ object BinaryProtocol {
 
   private def parseHandle(b: Array[Byte], containsHandle: Boolean) = {
     if (containsHandle) {
-      val t = b.splitAt(b.length - 1)
-      (t._1, Some(t._2))
+      val (data, handle) = b.splitAt(b.length - 1)
+      (data, Some(handle))
     } else
       (b, None)
   }

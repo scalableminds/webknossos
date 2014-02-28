@@ -158,7 +158,7 @@ class DataRequestActor(
         Future.successful(nullBlock)
     }
 
-    val sections = Stream(layer.sections.map {(_, layer)}.filter {
+    val sections = Stream(layer.sections.map{(_, layer)}.filter {
       section =>
         requestedSection.map( _ == section._1.sectionId) getOrElse true
     }: _*).append {
@@ -246,19 +246,20 @@ class DataRequestActor(
   }
 
   def saveToLayer(saveBlock: SaveBlock): Future[Unit] = {
-    if (saveBlock.dataLayerSection.doesContainBlock(saveBlock.block, saveBlock.dataSource.blockLength)) {
-      def saveToStore(dataStores: List[ActorRef]): Future[Unit] = dataStores match {
-        case a :: tail =>
-          (a ? saveBlock).mapTo[Unit].recoverWith {
-            case e: AskTimeoutException =>
-              logger.warn(s"No response in time for block: (${saveBlock.dataSource.id}/${saveBlock.dataLayerSection.baseDir} ${saveBlock.block}) ${a.path}")
-              saveToStore(tail)
-          }
-          Future.successful(Unit)
-        case _ =>
-          Future.successful(Unit)
-      }
 
+    def saveToStore(dataStores: List[ActorRef]): Future[Unit] = dataStores match {
+      case a :: tail =>
+        (a ? saveBlock).mapTo[Unit].recoverWith {
+          case e: AskTimeoutException =>
+            logger.warn(s"No response in time for block: (${saveBlock.dataSource.id}/${saveBlock.dataLayerSection.baseDir} ${saveBlock.block}) ${a.path}")
+            saveToStore(tail)
+        }
+        Future.successful(Unit)
+      case _ =>
+        Future.successful(Unit)
+    }
+
+    if (saveBlock.dataLayerSection.doesContainBlock(saveBlock.block, saveBlock.dataSource.blockLength)) {
       saveToStore(dataStores)
     } else {
       Future.successful(Unit)

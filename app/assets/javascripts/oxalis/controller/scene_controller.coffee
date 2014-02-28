@@ -46,6 +46,13 @@ class SceneController
       color : 0xffaa00
       showCrossSections : true })
 
+    if @model.boundingBox?
+      @bb2 = new Cube(@model, {
+        min : @model.boundingBox.min
+        max : _.map @model.boundingBox.max, (e) -> e + 1
+        color : 0x00ff00
+        showCrossSections : true })
+
     # TODO: Implement text 
 
     if @model.volumeTracing?
@@ -84,6 +91,7 @@ class SceneController
 
     @cube.updateForCam(id)
     @bb.updateForCam(id)
+    @bb2?.updateForCam(id)
     @skeleton?.updateForCam(id)
 
     if id in constants.ALL_PLANES
@@ -165,7 +173,7 @@ class SceneController
     for plane in @planes
       result = result.concat(plane.getMeshes())
 
-    for geometry in [@skeleton, @contour, @cube, @bb]
+    for geometry in [@skeleton, @contour, @cube, @bb, @bb2]
       if geometry?
         result = result.concat geometry.getMeshes()
     
@@ -198,6 +206,7 @@ class SceneController
       plane.setVisible(false)
     @cube.setVisibility( false )
     @bb.setVisibility( false )
+    @bb2?.setVisibility( false )
 
     @skeleton?.restoreVisibility()
     @skeleton?.setSizeAttenuation(true)
@@ -209,6 +218,7 @@ class SceneController
       plane.setVisible(true)
     @cube.setVisibility( true )
     @bb.setVisibility( true )
+    @bb2?.setVisibility( true )
 
     @skeleton?.setSizeAttenuation(false)
 

@@ -25,8 +25,8 @@ class VolumeLayer
       @minCoord = pos.slice()
 
     for i in [0..2]
-      @minCoord[i] = Math.min(@minCoord[i], Math.floor(pos[i]) - 1)
-      @maxCoord[i] = Math.max(@maxCoord[i], Math.ceil(pos[i]) + 1)
+      @minCoord[i] = Math.min(@minCoord[i], Math.floor(pos[i]) - 2)
+      @maxCoord[i] = Math.max(@maxCoord[i], Math.ceil(pos[i]) + 2)
 
 
   getSmoothedContourList : ->
@@ -44,9 +44,8 @@ class VolumeLayer
     minCoord2d = @get2DCoordinate(@minCoord)
     maxCoord2d = @get2DCoordinate(@maxCoord)
 
-    # There should be a clear 1-pixel line at each side
-    width      = maxCoord2d[0] - minCoord2d[0] + 1 + 2
-    height     = maxCoord2d[1] - minCoord2d[1] + 1 + 2
+    width      = maxCoord2d[0] - minCoord2d[0] + 1
+    height     = maxCoord2d[1] - minCoord2d[1] + 1
     
     map = new Array(width)
     for x in [0...width]
@@ -57,7 +56,7 @@ class VolumeLayer
     setMap = (x, y, value = true) ->
 
       x = Math.floor(x); y = Math.floor(y)
-      map[x - minCoord2d[0] + 1][y - minCoord2d[1] + 1] = value
+      map[x - minCoord2d[0]][y - minCoord2d[1]] = value
 
 
     # The approach is to initialize the map to true, then

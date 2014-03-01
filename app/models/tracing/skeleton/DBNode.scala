@@ -52,6 +52,8 @@ object DBNodeDAO extends SecuredBaseDAO[DBNode] {
           "position" -> node.position,
           "viewport" -> node.viewport,
           "resolution" -> node.resolution,
+          "bitDepth" -> node.bitDepth,
+          "interpolation" -> node.interpolation,
           "timestamp" -> node.timestamp))), upsert = false, multi = false)
 
   def moveAllNodes(_source: BSONObjectID, _target: BSONObjectID)(implicit ctx: DBAccessContext) =

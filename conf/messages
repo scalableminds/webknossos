@@ -72,6 +72,9 @@ cellId=Cell Id
 
 start.point=Start
 
+boundingBox.box=Bounding Box
+boundingBox.invalid=Invalid bounding box
+
 experience=Experience
 experience.domain=Experience Domain
 experience.domain.invalid=Invalid experience domain

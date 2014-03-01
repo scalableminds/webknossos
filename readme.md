@@ -90,7 +90,7 @@ sbt run
 Will fetch all Scala, Java and node dependencies and run the application on Port 9000.
 
 # Credits
-tbd
+scalable minds http://scm.io
 
 # License
 tbd

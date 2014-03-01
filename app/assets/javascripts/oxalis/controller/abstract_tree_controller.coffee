@@ -1,4 +1,4 @@
-### define 
+### define
 ../view/skeletontracing/abstract_tree_view : AbstractTreeView
 ###
 
@@ -11,7 +11,7 @@ class AbstractTreeController
 
 
   constructor : (@model) ->
-    
+
     container = $("#abstractTreeViewer")
     @view = new AbstractTreeView(container.width(), container.height())
     container.append(@view.canvas)
@@ -35,12 +35,12 @@ class AbstractTreeController
 
 
   drawTree : ->
-    
+
     @view.drawTree(@model.skeletonTracing.getTree(), @model.skeletonTracing.getActiveNodeId())
 
 
   setActiveNode : (nodeId, centered, mergeTree) ->
-    
+
     { model } = @
 
     model.skeletonTracing.setActiveNode(nodeId, mergeTree)

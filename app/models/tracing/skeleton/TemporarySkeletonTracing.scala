@@ -3,7 +3,7 @@ package models.tracing.skeleton
 import oxalis.nml.TreeLike
 import oxalis.nml.BranchPoint
 import braingames.geometry.Scale
-import braingames.geometry.Point3D
+import braingames.geometry.{Point3D, BoundingBox}
 import oxalis.nml.Comment
 import oxalis.nml.NML
 import models.annotation._
@@ -30,6 +30,7 @@ case class TemporarySkeletonTracing(
                                      timestamp: Long,
                                      activeNodeId: Option[Int],
                                      editPosition: Point3D,
+                                     boundingBox: Option[BoundingBox],
                                      comments: List[Comment] = Nil,
                                      settings: AnnotationSettings = AnnotationSettings.skeletonDefault
                                    ) extends SkeletonTracingLike with AnnotationContent {
@@ -60,7 +61,15 @@ case class TemporarySkeletonTracing(
 }
 
 object TemporarySkeletonTracingService extends AnnotationContentService {
-  def createFrom(nml: NML, id: String, settings: AnnotationSettings = AnnotationSettings.default)(implicit ctx: DBAccessContext) = {
+  def createFrom(nml: NML, id: String, boundingBox: Option[BoundingBox], settings: AnnotationSettings = AnnotationSettings.default)(implicit ctx: DBAccessContext) = {
+    val box: Option[BoundingBox] = boundingBox.flatMap {
+      box =>
+        if (box.isEmpty)
+          None
+        else
+          Some(box)
+    }
+
     TemporarySkeletonTracing(
       id,
       nml.dataSetName,
@@ -69,6 +78,7 @@ object TemporarySkeletonTracingService extends AnnotationContentService {
       System.currentTimeMillis(),
       nml.activeNodeId,
       nml.editPosition,
+      box,
       nml.comments,
       settings)
   }
@@ -85,18 +95,19 @@ object TemporarySkeletonTracingService extends AnnotationContentService {
         System.currentTimeMillis(),
         tracing.activeNodeId,
         tracing.editPosition,
+        tracing.boundingBox,
         tracing.comments)
     }
   }
 
-  def createFrom(nmls: List[NML], settings: AnnotationSettings)(implicit ctx: DBAccessContext): Fox[TemporarySkeletonTracing] = {
+  def createFrom(nmls: List[NML], boundingBox: Option[BoundingBox], settings: AnnotationSettings)(implicit ctx: DBAccessContext): Fox[TemporarySkeletonTracing] = {
     nmls match {
       case head :: tail =>
-        val startTracing = createFrom(head, "", settings)
+        val startTracing = createFrom(head, "", boundingBox, settings)
 
         tail.foldLeft(Fox.successful(startTracing)) {
           case (f, s) =>
-            f.flatMap(t => t.mergeWith(createFrom(s, s.timestamp.toString)))
+            f.flatMap(t => t.mergeWith(createFrom(s, s.timestamp.toString, boundingBox)))
         }
       case _ =>
         Fox.empty

@@ -1,6 +1,6 @@
 package models.tracing.volume
 
-import braingames.geometry.Point3D
+import braingames.geometry.{Point3D, BoundingBox}
 import models.annotation.{AnnotationContentService, AnnotationContent, AnnotationSettings}
 import models.basics.SecuredBaseDAO
 import models.binary.UserDataLayerDAO
@@ -26,6 +26,7 @@ case class VolumeTracing(
   userDataLayerName: String,
   timestamp: Long,
   editPosition: Point3D,
+  boundingBox: Option[BoundingBox],
   settings: AnnotationSettings = AnnotationSettings.volumeDefault,
   _id: BSONObjectID = BSONObjectID.generate)
   extends AnnotationContent {
@@ -62,7 +63,7 @@ object VolumeTracingService extends AnnotationContentService with FoxImplicits{
   def createFrom(baseDataSet: DataSet)(implicit ctx: DBAccessContext) = {
     baseDataSet.dataSource.toFox.flatMap{ baseSource =>
       val dataLayer = BinaryDataService.createUserDataSource(baseSource)
-      val t = VolumeTracing(baseDataSet.name, dataLayer.name, System.currentTimeMillis(), Point3D(0,0,0))
+      val t = VolumeTracing(baseDataSet.name, dataLayer.name, System.currentTimeMillis(), Point3D(0,0,0), None)
       for{
       _ <- UserDataLayerDAO.insert(dataLayer)
       _ <- VolumeTracingDAO.insert(t)

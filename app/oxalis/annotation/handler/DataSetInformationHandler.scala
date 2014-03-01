@@ -43,7 +43,8 @@ object DataSetInformationHandler extends AnnotationInformationHandler with FoxIm
         Nil,
         System.currentTimeMillis(),
         Some(0),
-        Point3D(5814, 3452, 2731) // make this dynamic!
+        Point3D(5814, 3452, 2731), // make this dynamic!
+        None
       )
 
       val team = user.flatMap(_.teams.map(_.team).intersect(dataSet.allowedTeams).headOption) getOrElse ""    //TODO: refactor

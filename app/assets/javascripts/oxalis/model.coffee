@@ -87,6 +87,16 @@ class Model
             @user = new User(user)
             @scaleInfo = new ScaleInfo(dataSet.scale)
 
+            if (bb = tracing.content.boundingBox)?
+                @boundingBox = {
+                  min : bb.topLeft
+                  max : [
+                    bb.topLeft[0] + bb.width
+                    bb.topLeft[1] + bb.height
+                    bb.topLeft[2] + bb.depth
+                  ]
+                }
+
             supportedDataLayers = [{name: "color", allowManipulation : true},
                                     {name: "volume", allowManipulation : false},
                                     {name: "segmentation", allowManipulation : false}]  
@@ -106,7 +116,7 @@ class Model
               for supportedLayer in supportedDataLayers
                 if layer.typ == supportedLayer.name
                   supportedLayer.bitDepth = parseInt( layer.elementClass.substring(4) )
-                  @binary[layer.typ] = new Binary(@user, tracing, supportedLayer, tracingId)
+                  @binary[layer.typ] = new Binary(@user, tracing, supportedLayer, tracingId, @boundingBox)
                   zoomStepCount = Math.min(zoomStepCount, @binary[layer.typ].cube.ZOOM_STEP_COUNT - 1)
 
             unless @binary["color"]?

@@ -33,6 +33,14 @@ class TaskListItemView extends Backbone.Marionette.CompositeView
     <td><%= dataSet %></td>
     <td>(<%= editPosition %>)</td>
     <td>
+      <% if (boundingBox != null) { %>
+        (<%= boundingBox.topLeft.concat(
+          [boundingBox.topLeft[0] + boundingBox.width,
+            boundingBox.topLeft[1] + boundingBox.height,
+            boundingBox.topLeft[2] + boundingBox.depth]).join(", ") %>)
+      <% } %>
+    </td>
+    <td>
       <% if (neededExperience.domain != "" || neededExperience.value > 0) { %>
         <span class="label"><%= neededExperience.domain %> : <%= neededExperience.value %></span>
       <% } %>

@@ -227,6 +227,7 @@ class Skeleton
 
   setVisibility : (@isVisible) ->
 
+    @flycam.update()
 
   restoreVisibility : ->
 
@@ -239,6 +240,9 @@ class Skeleton
 
 
   updateForCam : (id) ->
+
+    for tree in @treeGeometries
+      tree.showRadius( id != constants.TDView )
 
     if id in constants.ALL_PLANES
       @setVisibilityTemporary( @isVisible )
@@ -266,9 +270,3 @@ class Skeleton
 
     for tree in @treeGeometries
       tree.setSizeAttenuation( sizeAttenuation )
-
-
-  updateForCam : (cam) ->
-
-    for tree in @treeGeometries
-      tree.showRadius( cam != constants.TDView )

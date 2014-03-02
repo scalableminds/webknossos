@@ -20,6 +20,9 @@ class ParticleMaterialFactory
       showRadius :
         type : "i"
         value : 1
+      devicePixelRatio :
+        type : "f"
+        value : window.devicePixelRatio || 1
 
     attributes =
       size :
@@ -61,6 +64,7 @@ class ParticleMaterialFactory
       uniform float baseVoxel;
       uniform float minParticleSize;
       uniform int   showRadius;
+      uniform float devicePixelRatio;
       varying vec3 vColor;
       attribute float size;
 
@@ -70,8 +74,8 @@ class ParticleMaterialFactory
           vColor = color;
           if (showRadius == 1)
             gl_PointSize = max(
-              size / zoomFactor / baseVoxel * 2.0,
-              minParticleSize );
+              size / zoomFactor / baseVoxel,
+              minParticleSize ) * devicePixelRatio;
           else
             gl_PointSize = minParticleSize;
           gl_Position = projectionMatrix * mvPosition;

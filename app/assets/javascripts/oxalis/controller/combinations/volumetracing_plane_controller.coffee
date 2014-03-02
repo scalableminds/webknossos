@@ -81,6 +81,4 @@ class VolumeTacingPlaneController extends PlaneController
   render3dCell : (id) ->
 
     bb = @model.flycam.getViewportBoundingBox()
-    start = (new Date()).getTime()
     @sceneController.showShapes(bb.min, bb.max, id)
-    console.log "isosurface time", (new Date()).getTime() - start

@@ -74,13 +74,19 @@ class SceneController
   showShapes : (min, max, id) ->
 
     @trigger("removeGeometries", @volumeMeshes)
-
     @volumeMeshes = []
+
+    start1 = (new Date()).getTime()
     triangles = @polygonFactory.getTriangles(min, max, id)
+    console.log "[3D Cells] Time to calculate Triangles", (start2 = (new Date()).getTime()) - start1
+
     for id of triangles
       volume = new VolumeGeometry( triangles[id], parseInt( id ) )
       @volumeMeshes = @volumeMeshes.concat( volume.getMeshes() )
     @trigger("newGeometries", @volumeMeshes)
+    console.log "[3D Cells] Time to add and create Geometries", (new Date()).getTime() - start2
+    console.log "[3D Cells] Total time", (new Date()).getTime() - start1
+
     @flycam.update()
 
 

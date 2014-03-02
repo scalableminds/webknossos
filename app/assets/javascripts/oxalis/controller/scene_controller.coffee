@@ -71,16 +71,17 @@ class SceneController
     @planes[constants.PLANE_XZ].setRotation(new THREE.Euler( - 1/2 * Math.PI, 0, 0))
 
 
-  showAllShapes : (min, max) ->
+  showShapes : (min, max, id) ->
 
     @trigger("removeGeometries", @volumeMeshes)
 
     @volumeMeshes = []
-    triangles = @polygonFactory.getTriangles(min, max)
+    triangles = @polygonFactory.getTriangles(min, max, id)
     for id of triangles
       volume = new VolumeGeometry( triangles[id], parseInt( id ) )
       @volumeMeshes = @volumeMeshes.concat( volume.getMeshes() )
     @trigger("newGeometries", @volumeMeshes)
+    @flycam.update()
 
 
   updateSceneForCam : (id) =>

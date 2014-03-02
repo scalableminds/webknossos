@@ -175,6 +175,20 @@ class Flycam2d
     @position
 
 
+  getViewportBoundingBox : ->
+
+    position = @getPosition()
+    offset   = @getPlaneScalingFactor() * @viewportWidth / 2
+    min      = []
+    max      = []
+
+    for i in [0..2]
+      min.push( position[i] - offset * @scaleInfo.baseVoxelFactors[i] )
+      max.push( position[i] + offset * @scaleInfo.baseVoxelFactors[i] )
+
+    return { min, max }
+
+
   getTexturePosition : (planeID) ->
     
     texturePosition = @position.slice()    #copy that position

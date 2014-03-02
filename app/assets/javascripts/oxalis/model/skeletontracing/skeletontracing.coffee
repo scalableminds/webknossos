@@ -3,7 +3,7 @@ jquery : $
 underscore : _
 libs/request : Request
 libs/event_mixin : EventMixin
-three.color : ColorConverter
+libs/color_generator : ColorGenerator
 ./tracepoint : TracePoint
 ./tracetree : TraceTree
 ./skeletontracing_statelogger : SkeletonTracingStateLogger
@@ -14,7 +14,6 @@ three : THREE
 
 class SkeletonTracing
 
-  GOLDEN_RATIO : 0.618033988749895
   TYPE_USUAL   : constants.TYPE_USUAL
   TYPE_BRANCH  : constants.TYPE_BRANCH
   # Max and min radius in base voxels (see scaleInfo.baseVoxel)
@@ -444,9 +443,7 @@ class SkeletonTracing
     if treeId == 1
       return 0xFF0000
     else
-      currentHue = treeId * @GOLDEN_RATIO
-      currentHue %= 1
-      ColorConverter.setHSV(new THREE.Color(), currentHue, 1, 1).getHex()
+      return ColorGenerator.distinctColorForId( treeId )
 
 
   shuffleActiveTreeColor : ->

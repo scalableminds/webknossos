@@ -70,3 +70,17 @@ class VolumeTacingPlaneController extends PlaneController
 
       "c" : =>
         @model.volumeTracing.createCell()
+
+      "5" : =>
+        @render3dCell @model.volumeTracing.getActiveCellId()
+
+      "6" : =>
+        @render3dCell()
+
+
+  render3dCell : (id) ->
+
+    bb = @model.flycam.getViewportBoundingBox()
+    start = (new Date()).getTime()
+    @sceneController.showShapes(bb.min, bb.max, id)
+    console.log "isosurface time", (new Date()).getTime() - start

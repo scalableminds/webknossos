@@ -8,17 +8,18 @@ class PolygonFactory
 
   constructor : (@modelCube) ->
 
-    @cubeOffset = 2
+    @samples = 100
 
-  getTriangles : (min, max) ->
+  getTriangles : (min, max, id) ->
 
     result = {}
+    cubeOffset = Math.ceil((max[0] - min[0]) / @samples) || 1
 
-    for x in [(min[0] - 1)...(max[0] + 3)] by @cubeOffset
-      for y in [(min[1] - 1)...(max[1] + 3)] by @cubeOffset
-        for z in [(min[2] - 1)...(max[2] + 3)] by @cubeOffset
+    for x in [(min[0] - 1)...(max[0] + 3)] by cubeOffset
+      for y in [(min[1] - 1)...(max[1] + 3)] by cubeOffset
+        for z in [(min[2] - 1)...(max[2] + 3)] by cubeOffset
 
-          cubeIndices = @getCubeIndices(x, y, z)
+          cubeIndices = @getCubeIndices(x, y, z, cubeOffset, id)
 
           for cellId of cubeIndices
             
@@ -34,9 +35,9 @@ class PolygonFactory
               newTriangle = []
 
               for vertex in triangle
-                newTriangle.push( [ vertex[0] * @cubeOffset + x,
-                                    vertex[1] * @cubeOffset + y,
-                                    vertex[2] * @cubeOffset + z ] )
+                newTriangle.push( [ vertex[0] * cubeOffset + x,
+                                    vertex[1] * cubeOffset + y,
+                                    vertex[2] * cubeOffset + z ] )
               
               newTriangles.push(newTriangle)
 
@@ -44,21 +45,21 @@ class PolygonFactory
 
     return result
 
-  getCubeIndices : (x, y, z) ->
+  getCubeIndices : (x, y, z, cubeOffset, id) ->
 
     labels = [
       @modelCube.getDataValue( [x, y, z]                                             ),
-      @modelCube.getDataValue( [x + @cubeOffset, y, z]                               ),
-      @modelCube.getDataValue( [x + @cubeOffset, y, z + @cubeOffset]                 ),
-      @modelCube.getDataValue( [x, y, z + @cubeOffset]                               ),
-      @modelCube.getDataValue( [x, y + @cubeOffset, z]                               ),
-      @modelCube.getDataValue( [x + @cubeOffset, y + @cubeOffset, z]                 ),
-      @modelCube.getDataValue( [x + @cubeOffset, y + @cubeOffset, z + @cubeOffset]   ),
-      @modelCube.getDataValue( [x, y + @cubeOffset, z + @cubeOffset]                 ) ]
+      @modelCube.getDataValue( [x + cubeOffset, y, z]                               ),
+      @modelCube.getDataValue( [x + cubeOffset, y, z + cubeOffset]                 ),
+      @modelCube.getDataValue( [x, y, z + cubeOffset]                               ),
+      @modelCube.getDataValue( [x, y + cubeOffset, z]                               ),
+      @modelCube.getDataValue( [x + cubeOffset, y + cubeOffset, z]                 ),
+      @modelCube.getDataValue( [x + cubeOffset, y + cubeOffset, z + cubeOffset]   ),
+      @modelCube.getDataValue( [x, y + cubeOffset, z + cubeOffset]                 ) ]
 
     cellIds = []
     for label in labels
-      unless label in cellIds or label == 0
+      unless label in cellIds or label == 0 or (id? and id != label)
         cellIds.push( label )
 
     result = {}

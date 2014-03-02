@@ -1,15 +1,15 @@
 ### define 
 three : THREE
+libs/color_generator : ColorGenerator
 ###
 
 class VolumeGeometry
 
-  COLORS : [0xff0000, 0x00ff00, 0x0000ff, 0xffff00, 0x00ffff, 0xff00ff]
 
   constructor : (triangles, @id) ->
 
     geo = new THREE.Geometry()
-    color = @COLORS[ (@id - 1) % 6 ]
+    color = ColorGenerator.distinctColorForId( @id % 256 )
 
     i = 0
     for triangle in triangles

@@ -102,13 +102,20 @@ class SkeletonTracingPlaneController extends PlaneController
  
     # identify clicked object
     intersects = raycaster.intersectObjects(@sceneController.skeleton.getAllNodes())
-    
+
     for intersect in intersects
 
       index = intersect.index
-      nodeID = intersect.object.geometry.nodeIDs.getAllElements()[index]
+      geometry = intersect.object.geometry
 
-      posArray = intersect.object.geometry.attributes.position.array
+      # Raycaster also intersects with vertices that have an
+      # index larger than numItems
+      if geometry.nodeIDs.getLength() <= index
+        continue
+
+      nodeID = geometry.nodeIDs.getAllElements()[index]
+
+      posArray = geometry.attributes.position.array
       intersectsCoord = [posArray[3 * index], posArray[3 * index + 1], posArray[3 * index + 2]]
       globalPos = @model.flycam.getPosition()
 

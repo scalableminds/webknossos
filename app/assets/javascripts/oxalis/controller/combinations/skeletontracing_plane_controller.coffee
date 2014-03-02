@@ -59,7 +59,7 @@ class SkeletonTracingPlaneController extends PlaneController
       "b" : => @model.skeletonTracing.pushBranch()
       "j" : => @popBranch() 
 
-      "s" : @centerActiveNode
+      "s" : @skeletonTracingController.centerActiveNode
 
       #Comments
       "n" : => @skeletonTracingController.setActiveNode(

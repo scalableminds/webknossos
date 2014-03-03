@@ -38,21 +38,25 @@ object KnossosMultiResCreator {
 
   val FileSize = CubeSize * CubeSize * CubeSize
 
-  val InterpolationNeighbours = List((0,0,0), (0,0,1), (0,1,0), (0,1,1), (1,0,0), (1,0,1), (1,1,0), (1,1,1)).map(Point3D.apply)
+  val InterpolationNeighbours = Array((0,0,0), (0,0,1), (0,1,0), (0,1,1), (1,0,0), (1,0,1), (1,1,0), (1,1,1)).map(Point3D.apply)
 
-  def downScale(data: BlockedArray3D[Byte], width: Int, height: Int, depth: Int, bytesPerElement: Int ) = {
-    def average(data: List[Array[Byte]]) = {
-      data match{
-        case h :: t =>
-          t.foldLeft(h.map(_.toInt)){
-            case (sum, el) => sum.zip(el).map{
-              case (s, e) => s + e
-            }
-          }.map( e => (e / data.size).toByte)
-        case _ =>
-          logger.error("Missing data!")
-          Array.fill(bytesPerElement)(0.toByte)
+  private def downScale(data: BlockedArray3D[Byte], width: Int, height: Int, depth: Int, bytesPerElement: Int ) = {
+    // must be super fast is it is called for each pixel
+    @inline
+    def average(elements: Array[Array[Byte]]) = {
+      val sum = Array.fill(bytesPerElement)(0)
+      val result = new Array[Byte](bytesPerElement)
+
+      val i = 0
+      while(i < bytesPerElement){
+        var idx = 0
+        while(idx < elements.size){
+          sum(i) = sum(i) + elements(idx)(i)
+          idx += 1
+        }
+        result(i) = (sum(i) / elements.size).toByte
       }
+      result
     }
 
     val size = width * height * depth
@@ -69,8 +73,8 @@ object KnossosMultiResCreator {
     result
   }
 
-  def loadCubes(dataStore: FileDataStore, target: Path, dataSetId: String, start: Point3D, resolution: Int, fileSize: Int, neighbours: List[Point3D]): Future[List[Array[Byte]]] = {
-    Future.traverse(neighbours){ movement =>
+  def loadCubes(dataStore: FileDataStore, target: Path, dataSetId: String, start: Point3D, resolution: Int, fileSize: Int, neighbours: Array[Point3D]): Future[List[Array[Byte]]] = {
+    Future.traverse(neighbours.toList){ movement =>
       val cubePosition = start.move(movement)
       dataStore.load(target, dataSetId, resolution, cubePosition, fileSize).map{
         case Full(data) =>

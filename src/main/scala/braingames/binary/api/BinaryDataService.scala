@@ -40,7 +40,7 @@ trait BinaryDataService extends DataSourceService with BinaryDataHelpers {
 
   lazy implicit val timeout = Timeout(config.getInt("braingames.binary.loadTimeout") seconds)
 
-  lazy val dataSourceRepositoryDir = PathUtils.ensureDirectory(Path.fromString(config.getString("braingames.binary.baseFolder  ")))
+  lazy val dataSourceRepositoryDir = PathUtils.ensureDirectory(Path.fromString(config.getString("braingames.binary.baseFolder")))
 
   val binDataCache = Agent[Map[CachedBlock, Future[Box[Array[Byte]]]]](Map.empty)
 
@@ -70,7 +70,7 @@ trait BinaryDataService extends DataSourceService with BinaryDataHelpers {
       case Success(x) =>
         onComplete
       case Failure(e) =>
-        logger.error(s"Failed to start watching $dataSourceRepositoryDir.", e)
+        logger.error(s"Failed to start watching ${dataSourceRepositoryDir.path}. ${e.getMessage}", e)
     }
   }
 

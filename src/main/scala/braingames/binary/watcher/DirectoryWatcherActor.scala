@@ -53,7 +53,7 @@ class DirectoryWatcherActor(config: Config, changeHandler: DirectoryChangeHandle
     case StartWatching(path, recursive) =>
       shouldStop = false
       if (path.exists) {
-        start(Paths.get(path.toAbsolute.path), recursive)
+        start(Paths.get(path.path), recursive)
         sender ! true
       } else {
         logger.error(s"Can't watch $path because it doesn't exist.")

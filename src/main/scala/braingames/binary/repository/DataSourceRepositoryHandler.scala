@@ -21,11 +21,16 @@ class DataSourceRepositoryHandler(dataSourceRepository: DataSourceRepository) ex
   val maxRecursiveLayerDepth = 2
 
   def onStart(jpath: JavaPath, recursive: Boolean): Unit = {
-    val path = Path(jpath.toFile)
-    if (path.isDirectory) {
-      val foundInboxSources = path.children(PathMatcher.IsDirectory).toList.flatMap(teamAwareInboxSourcesIn)
-      dataSourceRepository.foundDataSources(foundInboxSources)
-      DataSourceRepository.dataSources.send(foundInboxSources)
+    try{
+      val path = Path(jpath.toFile)
+      if (path.isDirectory) {
+        val foundInboxSources = path.children(PathMatcher.IsDirectory).toList.flatMap(teamAwareInboxSourcesIn)
+        dataSourceRepository.foundDataSources(foundInboxSources)
+        DataSourceRepository.dataSources.send(foundInboxSources)
+      }
+    } catch {
+      case e: Exception =>
+        logger.error("Failed to execute onStart. Exception: " + e.getMessage, e)
     }
   }
 

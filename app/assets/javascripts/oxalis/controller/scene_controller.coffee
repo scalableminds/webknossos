@@ -28,7 +28,6 @@ class SceneController
     @pingBinary       = true
     @pingBinarySeg    = true
 
-    @polygonFactory = new PolygonFactory( @model.binary["segmentation"]?.cube )
     @volumeMeshes   = []
 
     @createMeshes()
@@ -73,21 +72,30 @@ class SceneController
 
   showShapes : (min, max, id) ->
 
-    @trigger("removeGeometries", @volumeMeshes)
-    @volumeMeshes = []
+    return if @cellsDeferred?
 
     start1 = (new Date()).getTime()
-    triangles = @polygonFactory.getTriangles(min, max, id)
-    console.log "[3D Cells] Time to calculate Triangles", (start2 = (new Date()).getTime()) - start1
 
-    for id of triangles
-      volume = new VolumeGeometry( triangles[id], parseInt( id ) )
-      @volumeMeshes = @volumeMeshes.concat( volume.getMeshes() )
-    @trigger("newGeometries", @volumeMeshes)
-    console.log "[3D Cells] Time to add and create Geometries", (new Date()).getTime() - start2
-    console.log "[3D Cells] Total time", (new Date()).getTime() - start1
+    @cellsDeferred = (new PolygonFactory(
+      @model.binary["segmentation"]?.cube
+      min, max, id
+    )).getTriangles(min, max, id).done (triangles) =>
 
-    @flycam.update()
+      console.log "[3D Cells] Time to calculate Triangles", (start2 = (new Date()).getTime()) - start1
+
+      @trigger("removeGeometries", @volumeMeshes)
+      @volumeMeshes = []
+
+      for id of triangles
+        volume = new VolumeGeometry( triangles[id], parseInt( id ) )
+        @volumeMeshes = @volumeMeshes.concat( volume.getMeshes() )
+
+      @trigger("newGeometries", @volumeMeshes)
+      console.log "[3D Cells] Time to add and create Geometries", (new Date()).getTime() - start2
+      console.log "[3D Cells] Total time", (new Date()).getTime() - start1
+
+      @flycam.update()
+      @cellsDeferred = null
 
 
   updateSceneForCam : (id) =>

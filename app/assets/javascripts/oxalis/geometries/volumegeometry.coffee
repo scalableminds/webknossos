@@ -24,6 +24,7 @@ class VolumeGeometry
       }))
     @mesh.oberdraw = true
 
+
   getTriangleNormal : (triangle) ->
 
     v1 = new THREE.Vector3( triangle[1][0] - triangle[0][0],
@@ -37,6 +38,7 @@ class VolumeGeometry
     v1.cross(v2)
     v1.normalize()
     return v1
+
 
   getMeshes : ->
 

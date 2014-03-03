@@ -39,8 +39,10 @@ class TeamRoleModal extends Backbone.Marionette.CompositeView
 
     @collection = new TeamCollection()
     @collection.fetch(
-      data:
-        isEditable: true
+      data: "isEditable=true"
+      silent : true
+    ).done(=>
+      @collection.goTo(1)
     )
     @userCollection = args.userCollection
 

@@ -38,7 +38,12 @@ object KnossosMultiResCreator {
 
   val FileSize = CubeSize * CubeSize * CubeSize
 
+  val Parallelism = 4
+
   val InterpolationNeighbours = Array((0,0,0), (0,0,1), (0,1,0), (0,1,1), (1,0,0), (1,0,1), (1,1,0), (1,1,1)).map(Point3D.apply)
+
+  @inline
+  private def byteToUnsignedInt(b: Byte): Int = 0xff & b.asInstanceOf[Int]
 
   private def downScale(data: BlockedArray3D[Byte], width: Int, height: Int, depth: Int, bytesPerElement: Int ) = {
     // must be super fast is it is called for each pixel
@@ -47,14 +52,15 @@ object KnossosMultiResCreator {
       val sum = Array.fill(bytesPerElement)(0)
       val result = new Array[Byte](bytesPerElement)
 
-      val i = 0
+      var i = 0
       while(i < bytesPerElement){
         var idx = 0
         while(idx < elements.size){
-          sum(i) = sum(i) + elements(idx)(i)
+          sum(i) = sum(i) + byteToUnsignedInt(elements(idx)(i))
           idx += 1
         }
         result(i) = (sum(i) / elements.size).toByte
+        i += 1
       }
       result
     }
@@ -63,9 +69,9 @@ object KnossosMultiResCreator {
     val result = new Array[Byte](size)
     var idx = 0
     while(idx < size){
-      val base = Point3D(idx / depth / height, idx / depth % height, idx % depth)
+      val base = Point3D(idx % width, idx / width % height, idx / width / height)
       val points = InterpolationNeighbours.map{ movement =>
-        data(base.move(movement))
+        data(base.scale(2).move(movement))
       }
       average(points).copyToArray(result, idx * bytesPerElement)
       idx += 1
@@ -73,7 +79,7 @@ object KnossosMultiResCreator {
     result
   }
 
-  def loadCubes(dataStore: FileDataStore, target: Path, dataSetId: String, start: Point3D, resolution: Int, fileSize: Int, neighbours: Array[Point3D]): Future[List[Array[Byte]]] = {
+  private def loadCubes(dataStore: FileDataStore, target: Path, dataSetId: String, start: Point3D, resolution: Int, fileSize: Int, neighbours: Array[Point3D]): Future[List[Array[Byte]]] = {
     Future.traverse(neighbours.toList){ movement =>
       val cubePosition = start.move(movement)
       dataStore.load(target, dataSetId, resolution, cubePosition, fileSize).map{
@@ -87,7 +93,8 @@ object KnossosMultiResCreator {
 
   def createResolutions(source: Path, target: Path, dataSetId: String, bytesPerElement: Int, baseResolution: Int, resolutions: Int, boundingBox: BoundingBox): Future[_] = {
     def createNextResolution(resolution: Int) = {
-      val targetResolution = baseResolution * 2
+      val targetResolution = resolution * 2
+      logger.info(s"About to create resolution $targetResolution for $dataSetId")
       val dataStore = new FileDataStore
       val points = for {
         x <- boundingBox.topLeft.x.to(boundingBox.bottomRight.x, CubeSize * targetResolution)
@@ -95,14 +102,21 @@ object KnossosMultiResCreator {
         z <- boundingBox.topLeft.z.to(boundingBox.bottomRight.z, CubeSize * targetResolution)
       } yield Point3D(x,y,z)
 
-      points.foldLeft(Future.successful[Any](0)){
-        case (f, p) => f.flatMap{ _ =>
-          val base = p.scale(1.toFloat / CubeSize / baseResolution)
-          val goal = p.scale(1.toFloat / CubeSize / targetResolution)
-          loadCubes(dataStore, target, dataSetId, base, baseResolution, FileSize, InterpolationNeighbours).flatMap{ cubes =>
-            val block = BlockedArray3D[Byte](cubes.toVector, CubeSize, CubeSize, CubeSize, 2, 2, 2, bytesPerElement, 0)
-            val data = downScale(block, CubeSize, CubeSize, CubeSize, bytesPerElement)
-            dataStore.save(target, dataSetId, targetResolution, goal, data)
+      val baseScale = 1.toFloat / CubeSize / resolution
+      val targetScale = 1.toFloat / CubeSize / targetResolution
+
+      val numberPerGroup = (points.size.toFloat / Parallelism).ceil.toInt
+
+      Future.traverse(points.grouped(numberPerGroup)){ ps => ps.foldLeft(
+        Future.successful[Any](0)){
+          case (f, p) => f.flatMap{ _ =>
+            val base = p.scale(baseScale)
+            val goal = p.scale(targetScale)
+            loadCubes(dataStore, target, dataSetId, base, resolution, FileSize, InterpolationNeighbours).flatMap{ cubes =>
+              val block = BlockedArray3D[Byte](cubes.toVector, CubeSize, CubeSize, CubeSize, 2, 2, 2, bytesPerElement, 0)
+              val data = downScale(block, CubeSize, CubeSize, CubeSize, bytesPerElement)
+              dataStore.save(target, dataSetId, targetResolution, goal, data)
+            }
           }
         }
       }
@@ -120,6 +134,8 @@ trait TiffDataSourceTypeHandler extends DataSourceTypeHandler {
   val Target = "target"
 
   val DefaultScale = Scale(200, 200, 200)
+
+  val Resolutions = List(1, 2, 4, 8, 16, 32, 64, 128)
 
   // Data points in each direction of a cube in the knossos cube structure
   val CubeSize = 128
@@ -164,7 +180,7 @@ trait TiffDataSourceTypeHandler extends DataSourceTypeHandler {
 
     convertToKnossosStructure(unusableDataSource.id, unusableDataSource.sourceFolder, targetPath, progress).map {
       stackInfo =>
-        val section = DataLayerSection(layerType.name, layerType.name, List(1, 2), stackInfo.boundingBox, stackInfo.boundingBox)
+        val section = DataLayerSection(layerType.name, layerType.name, Resolutions, stackInfo.boundingBox, stackInfo.boundingBox)
         val elements = elementClass(stackInfo.bytesPerPixel)
         val layer = DataLayer(layerType.name, baseDir, None, elements, None, List(section))
         DataSource(
@@ -201,7 +217,7 @@ trait TiffDataSourceTypeHandler extends DataSourceTypeHandler {
         }
         TileToCubeWriter(id, 1, target, tiffInfo.width, tiffInfo.height, tiffInfo.bytesPerPixel, tiles).convertToCubes()
         val boundingBox = BoundingBox(Point3D(0, 0, 0), tiffInfo.width, tiffInfo.height, depth)
-        //KnossosMultiResCreator.createResolutions(target, target, id, tiffInfo.bytesPerPixel, 1, 2, boundingBox)
+        KnossosMultiResCreator.createResolutions(target, target, id, tiffInfo.bytesPerPixel, 1, Resolutions.size, boundingBox)
         Some(TiffStackInfo(boundingBox, tiffInfo.bytesPerPixel))
       case _ =>
         logger.warn("No tiff files found")
@@ -304,16 +320,35 @@ trait TiffDataSourceTypeHandler extends DataSourceTypeHandler {
         1
       case BufferedImage.TYPE_3BYTE_BGR =>
         3
+      case x =>
+        logger.error("Unsupported tiff byte format. Format number: " + x)
+        throw new Exception("Unsupported tiff byte format. Format number: " + x)
+    }
+  }
+
+  def convertIfNecessary(image: BufferedImage) = {
+    def convertTo(targetType: Int) = {
+      logger.debug(s"Converting image from type ${image.getType} to $targetType")
+      val convertedImage = new BufferedImage(
+        image.getWidth(),
+        image.getHeight(),
+        targetType)
+      convertedImage.getGraphics().drawImage(image, 0, 0, null)
+      convertedImage
+    }
+
+    image.getType match {
+      case BufferedImage.TYPE_BYTE_INDEXED =>
+        convertTo(BufferedImage.TYPE_BYTE_GRAY)
       case _ =>
-        logger.error("Unsupported tiff byte format.")
-        throw new Exception("Unsupported tiff byte format")
+        image
     }
   }
 
   def tiffToColorArray(tiffFile: Path): Option[TiffImageArray] = {
     tiffFile.fileOption.map {
       file =>
-        val tiff = ImageIO.read(file)
+        val tiff = convertIfNecessary(ImageIO.read(file))
         if (tiff == null) {
           logger.error("Couldn't load tiff file. " + ImageIO.getImageReaders(file).toList.map(_.getClass.toString))
           throw new Exception("Couldn't load tiff file due to missing tif reader.")

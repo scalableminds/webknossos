@@ -36,7 +36,7 @@ object TiffDataSourceType extends DataSourceType with TiffDataSourceTypeHandler 
 object KnossosMultiResCreator {
   val CubeSize = 128
 
-  val FileSize = CubeSize * CubeSize * CubeSize
+  def fileSize(bytesPerElement: Int) = CubeSize * CubeSize * CubeSize * bytesPerElement
 
   val Parallelism = 4
 
@@ -66,7 +66,7 @@ object KnossosMultiResCreator {
     }
 
     val size = width * height * depth
-    val result = new Array[Byte](size)
+    val result = new Array[Byte](size * bytesPerElement)
     var idx = 0
     while(idx < size){
       val base = Point3D(idx % width, idx / width % height, idx / width / height)
@@ -112,7 +112,7 @@ object KnossosMultiResCreator {
           case (f, p) => f.flatMap{ _ =>
             val base = p.scale(baseScale)
             val goal = p.scale(targetScale)
-            loadCubes(dataStore, target, dataSetId, base, resolution, FileSize, InterpolationNeighbours).flatMap{ cubes =>
+            loadCubes(dataStore, target, dataSetId, base, resolution, fileSize(bytesPerElement), InterpolationNeighbours).flatMap{ cubes =>
               val block = BlockedArray3D[Byte](cubes.toVector, CubeSize, CubeSize, CubeSize, 2, 2, 2, bytesPerElement, 0)
               val data = downScale(block, CubeSize, CubeSize, CubeSize, bytesPerElement)
               dataStore.save(target, dataSetId, targetResolution, goal, data)
@@ -217,7 +217,10 @@ trait TiffDataSourceTypeHandler extends DataSourceTypeHandler {
         }
         TileToCubeWriter(id, 1, target, tiffInfo.width, tiffInfo.height, tiffInfo.bytesPerPixel, tiles).convertToCubes()
         val boundingBox = BoundingBox(Point3D(0, 0, 0), tiffInfo.width, tiffInfo.height, depth)
-        KnossosMultiResCreator.createResolutions(target, target, id, tiffInfo.bytesPerPixel, 1, Resolutions.size, boundingBox)
+        KnossosMultiResCreator.createResolutions(target, target, id, tiffInfo.bytesPerPixel, 1, Resolutions.size, boundingBox).onFailure{
+          case e: Exception =>
+            logger.error(s"An error occourd while trying to down scale target of tiff stack $id. ${e.getMessage}", e)
+        }
         Some(TiffStackInfo(boundingBox, tiffInfo.bytesPerPixel))
       case _ =>
         logger.warn("No tiff files found")

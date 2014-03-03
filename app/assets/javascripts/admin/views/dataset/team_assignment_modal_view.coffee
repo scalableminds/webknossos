@@ -37,8 +37,8 @@ class TeamAssignmentModalView extends Backbone.Marionette.CompositeView
 
     @collection = new TeamCollection()
     @collection.fetch(
-      data:
-        isEditable: true
+      data: "isEditable=true"
+      silent : true   #required for PaginationCollections
     )
     @dataset = args.dataset
 

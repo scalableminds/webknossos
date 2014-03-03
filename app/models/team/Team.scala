@@ -28,8 +28,9 @@ object Team extends {
       (__ \ "name").write[String] and
       (__ \ "roles").write[List[Role]] and
       (__ \ "owner").write[String] and
+      (__ \ "amIAnAdmin").write[Boolean] and
       (__ \ "isEditable").write[Boolean])(t =>
-      (t.id, t.name, t.roles, t.owner.map(_.stringify) getOrElse "", t.isEditableBy(requestingUser)))
+      (t.id, t.name, t.roles, t.owner.map(_.stringify) getOrElse "", requestingUser.adminTeamNames.contains(t.name), t.isEditableBy(requestingUser)))
 
   def teamPublicReads(requestingUser: User): Reads[Team] =
     ((__ \ "name").read[String] and

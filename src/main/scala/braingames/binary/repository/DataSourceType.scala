@@ -59,8 +59,10 @@ object DataSourceRepository extends ProgressTracking {
     case _ => false
   }
 
-  def cleanUp(source: Path) =
+  def cleanUp(source: Path) = {
+    (source / DataSourceJson).deleteIfExists()
     (source / "target").deleteRecursively()
+  }
 
   def transformToDataSource(unusableDataSource: UnusableDataSource): Future[Option[UsableDataSource]] = {
     val f = Future {
@@ -87,7 +89,7 @@ object DataSourceRepository extends ProgressTracking {
     }
     f.onFailure {
       case e =>
-        logger.error("Failed to import dataset", e)
+        logger.error("Failed to import dataset: " + e.getMessage, e)
         finishTrackerFor(importTrackerId(unusableDataSource.id), false)
         None
     }

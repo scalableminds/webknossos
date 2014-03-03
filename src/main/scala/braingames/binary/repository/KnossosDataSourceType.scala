@@ -22,7 +22,6 @@ object KnossosDataSourceType extends DataSourceType with KnossosDataSourceTypeHa
   }
 }
 
-
 trait KnossosDataSourceTypeHandler extends DataSourceTypeHandler {
   import braingames.binary.Logger._
 

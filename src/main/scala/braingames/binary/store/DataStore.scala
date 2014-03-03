@@ -6,6 +6,8 @@ import scala.util._
 import scala.concurrent.ExecutionContext.Implicits._
 import braingames.binary.{DataStoreBlock, LoadBlock, SaveBlock}
 import net.liftweb.common.Box
+import braingames.geometry.Point3D
+import scalax.file.Path
 
 /**
  * Abstract Datastore defines all method a binary data source (e.q. normal file
@@ -14,7 +16,30 @@ import net.liftweb.common.Box
 
 class DataNotFoundException(message: String) extends Exception(s"$message Could not find the data")
 
-abstract class DataStore extends Actor {
+class DataStoreActor(dataStore: DataStore) extends Actor {
+
+  def receive = {
+    case request: LoadBlock =>
+      val s = sender
+      dataStore.load(request).onComplete {
+        case Failure(e) =>
+          s ! e
+        case Success(d) =>
+          s ! d
+      }
+
+    case request: SaveBlock =>
+      val s = sender
+      dataStore.save(request).onComplete {
+        case Failure(e) =>
+          s ! e
+        case Success(d) =>
+          s ! d
+      }
+  }
+}
+
+trait DataStore {
   /**
    * Loads the data of a given point from the data source
    */
@@ -24,44 +49,21 @@ abstract class DataStore extends Actor {
    * Saves the data of a given point to the data source
    */
   def save(dataInfo: SaveBlock): Future[Unit]
-
-  def receive = {
-    case request: LoadBlock =>
-      val s = sender
-      load(request).onComplete {
-        case Failure(e) =>
-          s ! e
-        case Success(d) =>
-          s ! d
-      }
-
-    case request: SaveBlock =>
-      val s = sender
-      save(request).onComplete {
-        case Failure(e) =>
-          s ! e
-        case Success(d) =>
-          s ! d
-      }
-  }
 }
 
 object DataStore {
+
   def createFilename(dataInfo: DataStoreBlock) =
-    "%s/%s/%s".format(
-      dataInfo.dataLayer.baseDir,
-      dataInfo.dataLayerSection.baseDir,
-      knossosFilePath(dataInfo.dataSource.id, dataInfo.resolution, dataInfo.block.x, dataInfo.block.y, dataInfo.block.z))
+    knossosFilePath(knossosBaseDir(dataInfo), dataInfo.dataSource.id, dataInfo.resolution, dataInfo.block)
 
-  def knossosFilename(id: String, resolution: Int, x: Int, y: Int, z: Int) =
-    "%s_mag%d_x%04d_y%04d_z%04d.raw".format(
-      id,
-      resolution,
-      x, y, z)
+  def knossosBaseDir(dataInfo: DataStoreBlock) =
+    Path.fromString(dataInfo.dataSource.baseDir) / dataInfo.dataLayerSection.baseDir
 
-  def knossosFilePath(id: String, resolution: Int, x: Int, y: Int, z: Int) =
-    "%d/x%04d/y%04d/z%04d/%s".format(
-      resolution,
-      x, y, z,
-      knossosFilename(id, resolution, x, y, z))
+  def knossosFilePath(dataSetDir: Path, id: String, resolution: Int, block: Point3D) = {
+    val x = "x%04d".format(block.x)
+    val y = "y%04d".format(block.y)
+    val z = "z%04d".format(block.z)
+    val fileName = s"${id}_mag${resolution}_${x}_${y}_${z}.raw"
+    dataSetDir / resolution.toString / x / y / z / fileName
+  }
 }

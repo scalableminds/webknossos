@@ -66,7 +66,7 @@ class DataRequestActor(
       context.system
 
   lazy val dataStores = List[ActorRef](
-    actorForWithLocalFallback[FileDataStore]("fileDataStore")) //,
+    actorForWithLocalFallback[FileDataStoreActor]("fileDataStore")) //,
   //actorForWithLocalFallback[GridDataStore]("gridDataStore"),
   //system.actorOf(Props(new EmptyDataStore()).withRouter(new RoundRobinRouter(3)), s"${id}__emptyDataStore"))
 

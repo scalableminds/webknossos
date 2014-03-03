@@ -232,11 +232,7 @@ trait TiffDataSourceTypeHandler extends DataSourceTypeHandler {
     var cache = Map.empty[Point3D, FileOutputStream]
 
     def get(block: Point3D): FileOutputStream = {
-      cache.get(block).getOrElse {
-        val f = fileForPosition(block)
-        cache += block -> f
-        f
-      }
+      fileForPosition(block)
     }
 
     private def fileForPosition(block: Point3D): FileOutputStream = {
@@ -313,6 +309,7 @@ trait TiffDataSourceTypeHandler extends DataSourceTypeHandler {
           val y = idx / xs
           val file = files.get(Point3D(x, y, layerNumber / CubeSize))
           cubeData.map(file.write)
+          file.close()
       }
     }
   }

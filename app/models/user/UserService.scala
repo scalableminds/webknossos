@@ -29,7 +29,7 @@ object UserService extends FoxImplicits {
   def findAll()(implicit ctx: DBAccessContext) =
     UserDAO.findAll
 
-  def findOneById(id: String, useCache: Boolean)(implicit ctx: DBAccessContext): Future[Option[User]] = {
+  def findOneById(id: String, useCache: Boolean)(implicit ctx: DBAccessContext): Fox[User] = {
     if (useCache)
       UserCache.findUser(id)
     else
@@ -40,14 +40,13 @@ object UserService extends FoxImplicits {
     UserDAO.logActivity(user, lastActivity)(GlobalAccessContext)
   }
 
-  def insert(teamName: String, email: String, firstName: String, lastName: String, password: String, isVerified: Boolean) = {
+  def insert(teamName: String, email: String, firstName: String, lastName: String, password: String, isVerified: Boolean): Fox[User] =
     for {
-      teamOpt <- TeamDAO.findOneByName(teamName)(GlobalAccessContext)
+      teamOpt <- TeamDAO.findOneByName(teamName)(GlobalAccessContext).futureBox
       teamMemberships = teamOpt.map(t => TeamMembership(t.name, Role.User)).toList
       user = User(email, firstName, lastName, false, hashPassword(password), teamMemberships)
-      _ <- UserDAO.insert(user, isVerified)(GlobalAccessContext)
-    } yield user
-  }
+      result <- UserDAO.insert(user, isVerified)(GlobalAccessContext).futureBox
+    } yield result
 
   def update(user: User, firstName: String, lastName: String, verified: Boolean, teams: List[TeamMembership], experiences: Map[String, Int])(implicit ctx: DBAccessContext) = {
     if (!user.verified && verified)
@@ -74,7 +73,7 @@ object UserService extends FoxImplicits {
     }
   }
 
-  def findOneByEmail(email: String): Future[Option[User]] = {
+  def findOneByEmail(email: String): Fox[User] = {
     UserDAO.findOneByEmail(email)(GlobalAccessContext)
   }
 
@@ -86,7 +85,7 @@ object UserService extends FoxImplicits {
     }
   }
 
-  def auth(email: String, password: String): Future[Option[User]] =
+  def auth(email: String, password: String): Fox[User] =
     UserDAO.auth(email, password)(GlobalAccessContext)
 
   def increaseExperience(_user: BSONObjectID, domain: String, value: Int)(implicit ctx: DBAccessContext) = {

@@ -1,6 +1,7 @@
 ### define
 ../constants : constants
 ../model/dimensions : dimensions
+three : THREE
 ###
 
 class Cube

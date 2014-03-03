@@ -1,6 +1,6 @@
 ### define
 ./cube : Cube
-../../../libs/array_buffer_socket : ArrayBufferSocket
+libs/array_buffer_socket : ArrayBufferSocket
 ###
 
 class PullQueue
@@ -18,12 +18,16 @@ class PullQueue
 
   batchCount : 0
   roundTripTime : 0
-
   
-  constructor : (@dataSetName, @cube, @dataLayerName, @testData) ->
+  constructor : (@dataSetName, @cube, @dataLayerName, @tracingId, @boundingBox ) ->
 
     @queue = []
-
+    @loadedBucketList = []
+    @requestedBucketList = []
+    @loadedBuckets = 0
+    @loadedBytes = 0
+    @totalLoadedBuckets = 0
+    @totalLoadedBytes = 0
 
   swap : (a, b) ->
 
@@ -58,8 +62,8 @@ class PullQueue
 
   insert : (bucket, priority) ->
 
-    # Buckets with a negative priority are not loaded
     return unless priority >= 0
+    return unless @boundingBox.containsBucket(bucket)
     
     # Checking whether bucket is already loaded
     unless @cube.isBucketRequestedByZoomedAddress(bucket)
@@ -86,8 +90,8 @@ class PullQueue
 
 
   pull : ->
-    # Starting to download some buckets
 
+    # Starting to download some buckets
     while @batchCount < @BATCH_LIMIT and @queue.length
       
       batch = []
@@ -99,6 +103,7 @@ class PullQueue
           batch.push bucket
           @cube.requestBucketByZoomedAddress(bucket)
           #console.log "Requested: ", bucket
+          @requestedBucketList.push(bucket)
 
       @pullBatch(batch) if batch.length > 0
 
@@ -122,12 +127,12 @@ class PullQueue
     # Measuring the time until response arrives to select appropriate preloading strategy 
     roundTripBeginTime = new Date()
 
-    @getLoadSocket(@dataLayerName).send(transmitBuffer)
-      .pipe(
+    @getLoadSocket().send(transmitBuffer)
+      .then(
 
         (responseBuffer) =>
 
-          @updateConnectionInfo(new Date() - roundTripBeginTime, batch.length)
+          @updateConnectionInfo(new Date() - roundTripBeginTime, batch.length, responseBuffer.length)
 
           offset = 0
 
@@ -137,10 +142,10 @@ class PullQueue
               bucketData = @decode(responseBuffer.subarray(offset, offset += (@cube.BUCKET_LENGTH >> 1)))
             else
               bucketData = responseBuffer.subarray(offset, offset += @cube.BUCKET_LENGTH)
-            if @testData
-              id = bucket[0] + bucket[1] * 100 + bucket[2] * 10000
-              for i in [0...bucketData.length]
-                bucketData[i] = (id >> (8 * ((@cube.BIT_DEPTH >> 3) - 1 - (i % (@cube.BIT_DEPTH >> 3))))) % 256
+
+            @boundingBox.removeOutsideArea( bucket, bucketData )
+
+            @loadedBucketList.push(bucket)
             @cube.setBucketByZoomedAddress(bucket, bucketData)
 
         =>
@@ -156,17 +161,17 @@ class PullQueue
       @pull()
 
 
-  updateConnectionInfo : (roundTripTime, bucketCount) ->
+  updateConnectionInfo : (roundTripTime, bucketCount, byteCount) ->
 
-    if @roundTripTime? and @bucketTime?
+    if @roundTripTime?
       @roundTripTime = (1 - @ROUND_TRIP_TIME_SMOOTHER) * @roundTripTime + @ROUND_TRIP_TIME_SMOOTHER * roundTripTime
-      @bucketTime = (1 - @BUCKET_TIME_SMOOTHER) * @bucketTime + @BUCKET_TIME_SMOOTHER * (new Date() - @lastReceiveTime) / bucketCount
     else
       @roundTripTime = roundTripTime
-      @bucketTime = roundTripTime / bucketCount
 
-    @bucketsPerSecond = 1000 / @bucketTime
-    @lastReceiveTime = new Date()
+    @loadedBuckets += bucketCount
+    @loadedBytes += byteCount
+    @totalLoadedBuckets += bucketCount
+    @totalLoadedBytes += byteCount
 
 
   decode : (colors) ->
@@ -194,7 +199,7 @@ class PullQueue
       senders : [
         # new ArrayBufferSocket.WebWorker("ws://#{document.location.host}/binary/ws?dataSetName=#{@dataSetName}&cubeSize=#{1 << @cube.BUCKET_SIZE_P}")
         # new ArrayBufferSocket.WebSocket("ws://#{document.location.host}/binary/ws?dataSetName=#{@dataSetName}&cubeSize=#{1 << @cube.BUCKET_SIZE_P}")
-        new ArrayBufferSocket.XmlHttpRequest("/datasets/#{@dataSetName}/layers/#{@dataLayerName}/data?cubeSize=#{1 << @cube.BUCKET_SIZE_P}")
+        new ArrayBufferSocket.XmlHttpRequest("/datasets/#{@dataSetName}/layers/#{@dataLayerName}/data?cubeSize=#{1 << @cube.BUCKET_SIZE_P}&annotationId=#{@tracingId}")
       ]
       requestBufferType : Float32Array
       responseBufferType : Uint8Array

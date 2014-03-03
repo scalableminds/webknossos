@@ -23,7 +23,7 @@ class AnnotationRestrictions {
 
   def allowFinish(user: Option[User]): Boolean = false
 
-  def allowDownload(user: Option[User]): Future[Boolean] = Future.successful(false)
+  def allowDownload(user: Option[User]): Boolean = false
 
   def allowAccess(user: User): Boolean = allowAccess(Some(user))
 
@@ -31,22 +31,17 @@ class AnnotationRestrictions {
 
   def allowFinish(user: User): Boolean = allowFinish(Some(user))
 
-  def allowDownload(user: User): Future[Boolean] = allowDownload(Some(user))
+  def allowDownload(user: User): Boolean = allowDownload(Some(user))
 
 }
 
 object AnnotationRestrictions {
-  def writeAsJson(ar: AnnotationRestrictions, u: Option[User]): Future[JsObject] =
-    for {
-      isDownloadAllowed <- ar.allowDownload(u)
-    } yield {
-      Json.obj(
-        "allowAccess" -> ar.allowAccess(u),
-        "allowUpdate" -> ar.allowUpdate(u),
-        "allowFinish" -> ar.allowFinish(u),
-        "allowDownload" -> isDownloadAllowed
-      )
-    }
+  def writeAsJson(ar: AnnotationRestrictions, u: Option[User]) : JsObject =
+    Json.obj(
+      "allowAccess" -> ar.allowAccess(u),
+      "allowUpdate" -> ar.allowUpdate(u),
+      "allowFinish" -> ar.allowFinish(u),
+      "allowDownload" -> ar.allowDownload(u))
 
   def restrictEverything =
     new AnnotationRestrictions()
@@ -74,10 +69,10 @@ object AnnotationRestrictions {
         } getOrElse false
       }
 
-      override def allowDownload(user: Option[User]) = async {
+      override def allowDownload(user: Option[User]) = {
         user.map {
           user =>
-            !annotation.isTrainingsAnnotation && allowAccess(user)
+            allowAccess(user)
         } getOrElse false
       }
     }

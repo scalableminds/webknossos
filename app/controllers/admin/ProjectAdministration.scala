@@ -2,7 +2,9 @@ package controllers.admin
 
 import scala.concurrent.duration._
 import views._
-import models.task.{ProjectService, ProjectDAO, Project}
+import models.task.{ProjectService, ProjectDAO, Project, TaskService}
+import controllers.admin.TaskAdministration
+import play.api.Logger
 import play.api.data.Form._
 import play.api.data.Form
 import play.api.data.Forms._
@@ -14,6 +16,7 @@ import play.api.libs.concurrent.Execution.Implicits._
 import oxalis.security.AuthenticatedRequest
 import scala.concurrent.Future
 import play.api.libs.json._
+import net.liftweb.common.Full
 
 object ProjectAdministration extends AdminController {
 
@@ -50,8 +53,8 @@ object ProjectAdministration extends AdminController {
     implicit request =>
       for {
         project <- ProjectDAO.findOneByName(projectName) ?~> Messages("project.notFound")
+        _ <- ProjectService.remove(project) ?~> Messages("project.remove.notAllowed")
       } yield {
-        ProjectService.remove(project)
         JsonOk(Messages("project.removed"))
       }
   }
@@ -66,8 +69,8 @@ object ProjectAdministration extends AdminController {
           BadRequest(html)
         }, {
         case (name, team, ownerId) =>
-          ProjectDAO.findOneByName(name).flatMap {
-            case Some(_) =>
+          ProjectDAO.findOneByName(name).futureBox.flatMap {
+            case Full(_) =>
               for {
                 html <- projectListWithForm(projectForm.bindFromRequest.withError("projectName", Messages("project.nameAlreadyInUse")))
               } yield {

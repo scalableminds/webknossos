@@ -17,6 +17,7 @@ import oxalis.view.{ProvidesUnauthorizedSessionData, UnAuthedSessionData}
 import scala.concurrent.Future
 import models.team.TeamDAO
 import braingames.reactivemongo.DBAccessContext
+import net.liftweb.common.Full
 
 object Authentication extends Controller with Secured with ProvidesUnauthorizedSessionData {
   // -- Authentication
@@ -62,8 +63,10 @@ object Authentication extends Controller with Secured with ProvidesUnauthorizedS
           teams <- TeamDAO.findAll(DBAccessContext(None))
         } yield BadRequest(html.user.register(formWithErrors, teams)), {
         case (team, email, firstName, lastName, password) => {
-          UserService.findOneByEmail(email).flatMap {
-            case None =>
+          UserService.findOneByEmail(email).futureBox.flatMap {
+            case Full(_) =>
+              Future.successful(JsonBadRequest(Messages("user.email.alreadyInUse")))
+            case _ =>
               for {
                 user <- UserService.insert(team, email, firstName, lastName, password, autoVerify)
                 brainDBResult <- BrainTracing.register(user, password)
@@ -80,8 +83,6 @@ object Authentication extends Controller with Secured with ProvidesUnauthorizedS
                     .flashing("modal" -> "An account has been created. An administrator is going to unlock you soon.")
                 }
               }
-            case Some(_) =>
-              Future.successful(JsonBadRequest(Messages("user.email.alreadyInUse")))
           }
         }
       })
@@ -109,15 +110,17 @@ object Authentication extends Controller with Secured with ProvidesUnauthorizedS
       formWithErrors =>
         Future.successful(BadRequest(html.user.login(formWithErrors))), {
         case (email, password) =>
-          for {
-            user <- UserService.auth(email.toLowerCase, password) ?~> Messages("user.login.failed")
-          } yield {
-            val redirectLocation =
-            if(user.verified)
-              controllers.routes.Application.index
-            else
-              controllers.routes.UserController.dashboard
-            Redirect(redirectLocation).withSession(Secured.createSession(user))
+          UserService.auth(email.toLowerCase, password).map {
+            user =>
+              val redirectLocation =
+                if (user.verified)
+                  controllers.routes.Application.index
+                else
+                  controllers.routes.UserController.dashboard
+              Redirect(redirectLocation).withSession(Secured.createSession(user))
+          }.getOrElse {
+            BadRequest(html.user.login(loginForm.bindFromRequest))
+              .flashing("success" -> Messages("user.login.failed"))
           }
       })
   }

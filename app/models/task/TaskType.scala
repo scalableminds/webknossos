@@ -4,9 +4,10 @@ import models.basics.SecuredBaseDAO
 import play.api.libs.json.Json
 import models.annotation.AnnotationSettings
 import reactivemongo.bson.BSONObjectID
-import braingames.reactivemongo.DBAccessContext
+import braingames.reactivemongo._
 import play.modules.reactivemongo.json.BSONFormats._
 import models.user.User
+import braingames.reactivemongo.AccessRestrictions.{DenyEveryone, AllowIf}
 
 case class TimeSpan(min: Int, max: Int, maxHard: Int) {
 
@@ -54,21 +55,24 @@ object TaskTypeDAO extends SecuredBaseDAO[TaskType] {
   val collectionName = "taskTypes"
   val formatter = TaskType.taskTypeFormat
 
-  override def findQueryFilter(implicit ctx: DBAccessContext) = {
-    ctx.data match{
-      case Some(user: User) =>
-        AllowIf(Json.obj("team" -> Json.obj("$in" -> user.teamNames)))
-      case _ =>
-        DenyEveryone()
-    }
-  }
+  override val AccessDefinitions = new DefaultAccessDefinitions{
 
-  override def removeQueryFilter(implicit ctx: DBAccessContext) = {
-    ctx.data match{
-      case Some(user: User) =>
-        AllowIf(Json.obj("team" -> Json.obj("$in" -> user.adminTeamNames)))
-      case _ =>
-        DenyEveryone()
+    override def findQueryFilter(implicit ctx: DBAccessContext) = {
+      ctx.data match{
+        case Some(user: User) =>
+          AllowIf(Json.obj("team" -> Json.obj("$in" -> user.teamNames)))
+        case _ =>
+          DenyEveryone()
+      }
+    }
+
+    override def removeQueryFilter(implicit ctx: DBAccessContext) = {
+      ctx.data match{
+        case Some(user: User) =>
+          AllowIf(Json.obj("team" -> Json.obj("$in" -> user.adminTeamNames)))
+        case _ =>
+          DenyEveryone()
+      }
     }
   }
 

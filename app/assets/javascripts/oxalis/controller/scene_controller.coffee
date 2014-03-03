@@ -8,6 +8,7 @@
 ../../libs/event_mixin : EventMixin
 ../constants : constants
 ../view/polygons/polygon_factory : PolygonFactory
+three : THREE
 ###
 
 class SceneController
@@ -24,11 +25,10 @@ class SceneController
     @current          = 0
     @displayPlane     = [true, true, true]
     @planeShift       = [0, 0, 0]
-    @showSkeleton     = true
     @pingBinary       = true
     @pingBinarySeg    = true
 
-    @polygonFactory = new PolygonFactory( @model.binary["color"].cube )
+    @polygonFactory = new PolygonFactory( @model.binary["segmentation"]?.cube )
     @volumeMeshes   = []
 
     @createMeshes()
@@ -46,20 +46,29 @@ class SceneController
       color : 0xffaa00
       showCrossSections : true })
 
+    if @model.boundingBox?
+      @bb2 = new Cube(@model, {
+        min : @model.boundingBox.min
+        max : _.map @model.boundingBox.max, (e) -> e + 1
+        color : 0x00ff00
+        showCrossSections : true })
+
     # TODO: Implement text 
 
-    @contour = new ContourGeometry(@model.volumeTracing, @model.flycam)
+    if @model.volumeTracing?
+      @contour = new ContourGeometry(@model.volumeTracing, @model.flycam)
 
-    @skeleton = new Skeleton(@flycam, @model)
+    if @model.skeletonTracing?
+      @skeleton = new Skeleton(@flycam, @model)
 
     # create Meshes
     @planes = new Array(3)
     for i in [constants.PLANE_XY, constants.PLANE_YZ, constants.PLANE_XZ]
       @planes[i] = new Plane(constants.PLANE_WIDTH, constants.TEXTURE_WIDTH, @flycam, i, @model)
 
-    @planes[constants.PLANE_XY].setRotation(new THREE.Vector3( Math.PI , 0, 0))
-    @planes[constants.PLANE_YZ].setRotation(new THREE.Vector3( Math.PI, 1/2 * Math.PI, 0))
-    @planes[constants.PLANE_XZ].setRotation(new THREE.Vector3( - 1/2 * Math.PI, 0, 0))
+    @planes[constants.PLANE_XY].setRotation(new THREE.Euler( Math.PI , 0, 0))
+    @planes[constants.PLANE_YZ].setRotation(new THREE.Euler( Math.PI, 1/2 * Math.PI, 0))
+    @planes[constants.PLANE_XZ].setRotation(new THREE.Euler( - 1/2 * Math.PI, 0, 0))
 
 
   showAllShapes : (min, max) ->
@@ -82,10 +91,10 @@ class SceneController
 
     @cube.updateForCam(id)
     @bb.updateForCam(id)
+    @bb2?.updateForCam(id)
+    @skeleton?.updateForCam(id)
 
     if id in constants.ALL_PLANES
-      unless @showSkeleton
-        @skeleton.setVisibility(false)
       for mesh in @volumeMeshes
         mesh.visible = false
       for i in constants.ALL_PLANES
@@ -94,14 +103,12 @@ class SceneController
           @planes[i].setVisible(true)
           pos = @flycam.getPosition().slice()
           ind = Dimensions.getIndices(i)
-          # Offset the plane so the user can see the cellTracing behind the plane
+          # Offset the plane so the user can see the skeletonTracing behind the plane
           pos[ind[2]] += if i==constants.PLANE_XY then @planeShift[ind[2]] else -@planeShift[ind[2]]
           @planes[i].setPosition(new THREE.Vector3(pos...))
         else
           @planes[i].setVisible(false)
     else
-      unless @showSkeleton
-        @skeleton.setVisibility(true)
       for mesh in @volumeMeshes
         mesh.visible = true
       for i in constants.ALL_PLANES
@@ -131,11 +138,6 @@ class SceneController
   setTextRotation : (rotVec) =>
 
     # TODO: Implement
-
-
-  setWaypoint : =>
-
-    @skeleton.setWaypoint()
 
 
   setDisplayCrosshair : (value) =>
@@ -171,23 +173,11 @@ class SceneController
     for plane in @planes
       result = result.concat(plane.getMeshes())
 
-    result = result.concat(@skeleton.getMeshes())
-                    .concat(@contour.getMeshes())
-                    .concat(@cube.getMeshes())
-                    .concat(@bb.getMeshes())
+    for geometry in [@skeleton, @contour, @cube, @bb, @bb2]
+      if geometry?
+        result = result.concat geometry.getMeshes()
     
     return result
-
-
-  toggleSkeletonVisibility : ->
-
-    @showSkeleton = not @showSkeleton
-    @skeleton.setVisibility(@showSkeleton)
-
-
-  toggleInactiveTreeVisibility : ->
-
-    @skeleton.toggleInactiveTreeVisibility()
 
 
   setBoundingBox : (bbArray) ->
@@ -216,9 +206,10 @@ class SceneController
       plane.setVisible(false)
     @cube.setVisibility( false )
     @bb.setVisibility( false )
+    @bb2?.setVisibility( false )
 
-    @skeleton.setVisibility(@showSkeleton)
-    @skeleton.setSizeAttenuation(true)
+    @skeleton?.restoreVisibility()
+    @skeleton?.setSizeAttenuation(true)
 
 
   start : ->
@@ -227,8 +218,9 @@ class SceneController
       plane.setVisible(true)
     @cube.setVisibility( true )
     @bb.setVisibility( true )
+    @bb2?.setVisibility( true )
 
-    @skeleton.setSizeAttenuation(false)
+    @skeleton?.setSizeAttenuation(false)
 
 
   bind : ->

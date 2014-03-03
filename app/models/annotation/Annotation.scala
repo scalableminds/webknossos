@@ -34,7 +34,6 @@ case class Annotation(
                        typ: String = AnnotationType.Explorational,
                        version: Int = 0,
                        _name: Option[String] = None,
-                       override val review: List[AnnotationReview] = Nil,
                        _id: BSONObjectID = BSONObjectID.generate
                      )
 
@@ -70,16 +69,6 @@ case class Annotation(
     }
   }
 
-  def finishReview(comment: String) = {
-    val alteredReview = this.review match {
-      case head :: tail =>
-        head.copy(comment = Some(comment)) :: tail
-      case _ =>
-        Nil
-    }
-    this.copy(review = alteredReview)
-  }
-
   def removeTask = {
     this.copy(_task = None, typ = AnnotationType.Orphan)
   }
@@ -89,24 +78,13 @@ case class Annotation(
     import controllers.routes._
     val basicActions = List(
       ResourceAction("trace", AnnotationController.trace(typ,id), icon = Some("fa fa-random")),
-      ResourceAction(ResourceAction.Finish, AnnotationController.finish(typ, id), condition = !state.isFinished, icon = Some("fa fa-check-circle-o"), dataAjax = Some("replace-row,confirm"), clazz = "trace-finish"),
-      ResourceAction("start review", TrainingsTracingAdministration.startReview(id), condition = state.isReadyForReview, icon = Some("fa fa-eye"), dataAjax = Some("replace-row")),
-      ResourceAction("reopen", AnnotationController.reopen(typ, id), condition = state.isFinished, icon = Some("fa fa-share"), dataAjax =Some("replace-row")),
+      ResourceAction(ResourceAction.Finish, AnnotationController.finish(typ, id), condition = !state.isFinished, icon = Some("fa fa-check-circle-o"), isAjax = true, clazz = "trace-finish"),
+      ResourceAction("reopen", AnnotationController.reopen(typ, id), condition = state.isFinished, icon = Some("fa fa-share"), isAjax = true),
       ResourceAction(ResourceAction.Download, AnnotationController.download(typ, id), icon = Some("fa fa-download")),
-      ResourceAction("reset", AnnotationController.reset(typ, id), icon = Some("fa fa-undo"), dataAjax = Some("replace-row,confirm")),
-      ResourceAction("delete", AnnotationController.cancel(typ, id), icon = Some("fa fa-trash-o"), dataAjax = Some("delete-row,confirm"))
+      ResourceAction("reset", AnnotationController.reset(typ, id), icon = Some("fa fa-undo"), isAjax = true)
     )
 
-    val reviewActions = (review.headOption, userOpt) match{
-      case (Some(r), Some(user)) if user._id == r._reviewer => List(
-        ResourceAction("review", AnnotationController.trace(AnnotationType.Review, r._id.stringify), condition = state.isInReview, icon = Some("fa fa-random")),
-        ResourceAction("finish review", TrainingsTracingAdministration.finishReview(id), condition = state.isInReview, icon = Some("fa fa-check-circle")),
-        ResourceAction("abort review", TrainingsTracingAdministration.abortReview(id), condition = state.isInReview, icon = Some("fa fa-time-circle"), dataAjax = Some("replace-row,confirm")))
-      case _ =>
-        Nil
-    }
-
-    ResourceActionCollection(reviewActions ::: basicActions)
+    ResourceActionCollection(basicActions)
   }
 }
 
@@ -117,7 +95,7 @@ object Annotation {
     for {
       dataSetName <- annotation.dataSetName
       task <- annotation.task.futureBox
-      user <- annotation.user
+      user <- annotation.user.futureBox
       content <- annotation.content.futureBox
       contentType = content.map(_.contentType).getOrElse("")
       stats <- annotation.statisticsForAnnotation().futureBox
@@ -131,7 +109,6 @@ object Annotation {
         "name" -> annotation.name,
         "id" -> annotation.id,
         "formattedHash" -> Formatter.formatHash(annotation.id),
-        "review" -> annotation.review,
         "stats" -> stats.toOption
 
       )
@@ -148,14 +125,8 @@ object AnnotationDAO
 
   val formatter = Annotation.annotationFormat
 
-  collection.indexesManager.ensure(Index(Seq("_task" -> IndexType.Ascending)))
-  collection.indexesManager.ensure(Index(Seq("_user" -> IndexType.Ascending)))
-
-  def findTrainingForReviewAnnotation(annotation: AnnotationLike)(implicit ctx: DBAccessContext) =
-    withValidId(annotation.id) {
-      id =>
-        findOne("review.reviewAnnotation", id)
-    }
+  underlying.indexesManager.ensure(Index(Seq("_task" -> IndexType.Ascending)))
+  underlying.indexesManager.ensure(Index(Seq("_user" -> IndexType.Ascending)))
 
   def defaultFindForUserQ(_user: BSONObjectID, annotationType: AnnotationType) = Json.obj(
     "_user" -> _user,
@@ -166,42 +137,47 @@ object AnnotationDAO
   def hasAnOpenAnnotation(_user: BSONObjectID, annotationType: AnnotationType)(implicit ctx: DBAccessContext) =
     countOpenAnnotations(_user, annotationType).map(_ > 0)
 
-  def findFor(_user: BSONObjectID)(implicit ctx: DBAccessContext) =
-    collectionFind(Json.obj(
+  def findFor(_user: BSONObjectID)(implicit ctx: DBAccessContext) = withExceptionCatcher{
+    find(Json.obj(
       "_user" -> _user,
       "state.isAssigned" -> true)).cursor[Annotation].collect[List]()
+  }
 
-  def findFor(_user: BSONObjectID, annotationType: AnnotationType)(implicit ctx: DBAccessContext) =
-    collectionFind(Json.obj(
+  def findFor(_user: BSONObjectID, annotationType: AnnotationType)(implicit ctx: DBAccessContext) = withExceptionCatcher{
+    find(Json.obj(
       "_user" -> _user,
       "state.isAssigned" -> true,
       "typ" -> annotationType)).cursor[Annotation].collect[List]()
+  }
 
 
-  def findForWithTypeOtherThan(_user: BSONObjectID, annotationTypes: List[AnnotationType])(implicit ctx: DBAccessContext) =
-    collectionFind(Json.obj(
+  def findForWithTypeOtherThan(_user: BSONObjectID, annotationTypes: List[AnnotationType])(implicit ctx: DBAccessContext) = withExceptionCatcher{
+    find(Json.obj(
       "_user" -> _user,
       "state.isFinished" -> false,
       "state.isAssigned" -> true,
       "typ" -> Json.obj("$nin" -> annotationTypes))).cursor[Annotation].collect[List]()
+  }
 
   def findOpenAnnotationFor(_user: BSONObjectID, annotationType: AnnotationType)(implicit ctx: DBAccessContext) =
-    collectionFind(defaultFindForUserQ(_user, annotationType)).one[Annotation]
+    findOne(defaultFindForUserQ(_user, annotationType))
 
-  def findOpenAnnotationsFor(_user: BSONObjectID, annotationType: AnnotationType)(implicit ctx: DBAccessContext) =
-    collectionFind(defaultFindForUserQ(_user, annotationType)).cursor[Annotation]
+  def findOpenAnnotationsFor(_user: BSONObjectID, annotationType: AnnotationType)(implicit ctx: DBAccessContext) = withExceptionCatcher{
+    find(defaultFindForUserQ(_user, annotationType)).cursor[Annotation].collect[List]()
+  }
 
   def countOpenAnnotations(_user: BSONObjectID, annotationType: AnnotationType)(implicit ctx: DBAccessContext) =
     count(defaultFindForUserQ(_user, annotationType))
 
-  def findOpen(annotationType: AnnotationType)(implicit ctx: DBAccessContext) =
-    collectionFind(Json.obj(
+  def findOpen(annotationType: AnnotationType)(implicit ctx: DBAccessContext) = withExceptionCatcher{
+    find(Json.obj(
       "state.isFinished" -> false,
       "state.isAssigned" -> true,
       "typ" -> annotationType)).cursor[Annotation].collect[List]()
+  }
 
   def removeAllWithTaskId(_task: BSONObjectID)(implicit ctx: DBAccessContext) =
-    collectionRemove(Json.obj("_task" -> _task))
+    remove(Json.obj("_task" -> _task))
 
   def incrementVersion(_annotation: BSONObjectID)(implicit ctx: DBAccessContext) =
     findAndModify(
@@ -209,11 +185,12 @@ object AnnotationDAO
       Json.obj("$inc" -> Json.obj("version" -> 1)),
       true)
 
-  def findByTaskId(_task: BSONObjectID)(implicit ctx: DBAccessContext) =
+  def findByTaskId(_task: BSONObjectID)(implicit ctx: DBAccessContext) = withExceptionCatcher{
     find("_task", _task).collect[List]()
+  }
 
   def findByTaskIdAndType(_task: BSONObjectID, annotationType: AnnotationType)(implicit ctx: DBAccessContext) =
-    collectionFind(Json.obj(
+    find(Json.obj(
       "_task" -> _task,
       "typ" -> annotationType,
       "$or" -> Json.arr(
@@ -221,7 +198,7 @@ object AnnotationDAO
         Json.obj("state.isFinished" -> true))))
 
   def unassignAnnotationsOfUser(_user: BSONObjectID)(implicit ctx: DBAccessContext) =
-    collectionUpdate(
+    update(
       Json.obj(
         "_user" -> _user,
         "typ" -> Json.obj("$in" -> AnnotationType.UserTracings)),
@@ -230,12 +207,12 @@ object AnnotationDAO
           "state.isAssigned" -> false)))
 
   def updateState(annotation: Annotation, state: AnnotationState)(implicit ctx: DBAccessContext) =
-    collectionUpdate(
+    update(
       Json.obj("_id" -> annotation._id),
       Json.obj("$set" -> Json.obj("state" -> state)))
 
   def updateAllUsingNewTaskType(task: Task, settings: AnnotationSettings)(implicit ctx: DBAccessContext) = {
-    collectionFind(
+    find(
       Json.obj(
         "_task" -> task._id)).one[Annotation].map {
       case Some(annotation) =>

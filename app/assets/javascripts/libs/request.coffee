@@ -23,6 +23,7 @@ Request =
       xhr.open options.type, options.url, true
       xhr.responseType = options.dataType if options.dataType?
       xhr.setRequestHeader("Content-Type", options.contentType) if options.contentType
+      xhr.setRequestHeader("Content-Encoding", options.contentEncoding) if options.contentEncoding
 
       if options.formData? and not options.data
         if options.formData instanceof FormData

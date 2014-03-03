@@ -3,6 +3,7 @@
 ../view : View
 ../model/dimensions : Dimensions
 ../constants : constants
+three : THREE
 ###
 
 class Plane
@@ -188,11 +189,16 @@ class Plane
       tPos = @flycam.getTexturePosition(@planeID).slice()
       if @model?
         for dataLayerName of @model.binary
-          @model.binary[dataLayerName].planes[@planeID].get(@flycam.getTexturePosition(@planeID), { zoomStep : @flycam.getIntegerZoomStep(), area : @flycam.getArea(@planeID) }).done ([dataBuffer, volumeBuffer]) =>
+          @model.binary[dataLayerName].planes[@planeID].get(@flycam.getTexturePosition(@planeID), { zoomStep : @flycam.getIntegerZoomStep(), area : @flycam.getArea(@planeID) }).done ( dataBuffer ) =>
             if dataBuffer
               if dataLayerName == "color"
                 @plane.texture.image.data.set(dataBuffer)
               if dataLayerName == "segmentation"
+                # Generate test pattern
+                #for i in [0...512]
+                #  for j in [0...512]
+                #    id = Math.floor(i / 32) * 16 + Math.floor(j / 32)
+                #    dataBuffer[i * 512 + j] = id
                 @plane.volumeTexture.image.data.set(dataBuffer)
               @flycam.hasNewTexture[@planeID] = true
   
@@ -217,7 +223,8 @@ class Plane
 
   setRotation : (rotVec) =>
 
-    @plane.rotation = @TDViewBorders.rotation = @crosshair[0].rotation = @crosshair[1].rotation = rotVec
+    for mesh in [ @plane, @TDViewBorders, @crosshair[0], @crosshair[1] ]
+      mesh.setRotationFromEuler rotVec
 
 
   setPosition : (posVec) =>

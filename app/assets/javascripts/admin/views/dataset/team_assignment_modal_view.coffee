@@ -54,7 +54,7 @@ class TeamAssignmentModalView extends Backbone.Marionette.CompositeView
 
   submitTeams : ->
 
-    $checkboxes = @$el.find("input:checked")
+    $checkboxes = @$("input:checked")
     allowedTeams = _.map($checkboxes, (checkbox) -> return $(checkbox).parent().text().trim())
 
     @dataset.set("allowedTeams", allowedTeams)

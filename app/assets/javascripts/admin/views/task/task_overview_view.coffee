@@ -42,7 +42,7 @@ class TaskOverviewView extends Backbone.Marionette.View
           )
 
         #reset some attributes before invoking panZoom plugin
-        $svg = @$el.find(".graph.well").find("svg")
+        $svg = @$(".graph.well").find("svg")
         $svg[0].removeAttribute("viewBox") #get rid of the troublemaker. messes up transformations
         $svg[0].setAttribute("width", "#{$(window).width() - 100}px")
         $svg[0].setAttribute("height", "#{$(window).height() - 50 - $svg.offset().top}px" )

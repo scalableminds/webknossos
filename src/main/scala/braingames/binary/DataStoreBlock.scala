@@ -8,7 +8,8 @@ trait DataStoreBlock {
   def dataLayer: DataLayer
   def dataLayerSection: DataLayerSection
   def resolution: Int
-  def block: Point3D }
+  def block: Point3D
+}
 
 
 case class LoadBlock(

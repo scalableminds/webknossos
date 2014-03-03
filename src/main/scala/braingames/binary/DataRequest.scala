@@ -9,7 +9,8 @@ trait DataRequest extends AbstractDataRequest {
   def dataLayer: DataLayer
   def dataSection: Option[String]
   def resolution: Int
-  def cuboid: Cuboid }
+  def cuboid: Cuboid
+  }
 
 case class DataReadRequest(
   dataSource: DataSource,

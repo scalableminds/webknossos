@@ -16,6 +16,7 @@ class PaginationCollection extends Backbone.Paginator.clientPager
       return this.url #use url from each individual collection
     type : "GET"
     dataType : "json"
+    cache : true
 
   paginator_ui :
     firstPage : 1

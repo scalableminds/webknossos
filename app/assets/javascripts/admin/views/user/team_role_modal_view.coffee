@@ -114,7 +114,7 @@ class TeamRoleModal extends Backbone.Marionette.CompositeView
       _.each(user.get("teams"),
         (team) =>
 
-          if team.team == itemView.ui.teamCheckbox.val()
+          if team.team == itemView.model.get("name")
             itemView.ui.teamCheckbox.prop("checked", true)
 
             # Select the role in the dropdown

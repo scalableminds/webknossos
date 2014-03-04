@@ -12,11 +12,13 @@ import models.user.{User, UserService}
 import play.api.i18n.Messages
 import braingames.reactivemongo.DBAccessContext
 import play.api.libs.concurrent.Execution.Implicits._
+import play.api.templates.Html
 
 import oxalis.security.AuthenticatedRequest
 import scala.concurrent.Future
 import play.api.libs.json._
 import net.liftweb.common.Full
+
 
 object ProjectAdministration extends AdminController {
 
@@ -27,6 +29,10 @@ object ProjectAdministration extends AdminController {
     "owner" -> nonEmptyText(1, 100)))
 
   def sortedUsers(implicit ctx: DBAccessContext) = UserService.findAll.map(_.sortBy(_.name))
+
+  def empty = Authenticated{ implicit request =>
+    Ok(views.html.main()(Html.empty))
+  }
 
   // TODO: remove form
   def projectListWithForm(form: Form[(String, String, String)])(implicit request: AuthenticatedRequest[_]) =

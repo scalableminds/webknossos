@@ -3,7 +3,7 @@ underscore : _
 app : app
 backbone.marionette : marionette
 admin/models/task/annotation_collection : AnnotationCollection
-./task_list_subitem_view: TaskListSubitemView
+./task_annotation_view: TaskAnnotationView
 ###
 
 class TaskListItemView extends Backbone.Marionette.CompositeView
@@ -61,7 +61,7 @@ class TaskListItemView extends Backbone.Marionette.CompositeView
     </tr>
   """)
 
-  itemView : TaskListSubitemView
+  itemView : TaskAnnotationView
   itemViewContainer : "tbody"
 
   events :

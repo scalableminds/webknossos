@@ -2,9 +2,11 @@
 ./binary/interpolation_collector : InterpolationCollector
 ./binary/cube : Cube
 ./binary/pullqueue : PullQueue
+./binary/pushqueue : PushQueue
 ./binary/plane2d : Plane2D
 ./binary/ping_strategy : PingStrategy
 ./binary/ping_strategy_3d : PingStrategy3d
+./binary/bounding_box : BoundingBox
 ../constants : constants
 ###
 
@@ -16,19 +18,23 @@ class Binary
   TEXTURE_SIZE_P : 0
 
   cube : null
-  queue : null
+  pullQueue : null
   planes : []
 
   dataSetName : ""
   direction : [0, 0, 0]
 
 
-  constructor : (@user, dataSet, @TEXTURE_SIZE_P, @layer, @testData = false) ->
+  constructor : (@user, tracing, @layer, tracingId, boundingBox) ->
 
-    @dataSetName    = dataSet.name
+    @TEXTURE_SIZE_P = constants.TEXTURE_SIZE_P
+
+    @dataSetName    = tracing.content.dataSet.name
+    @lastPingTime   = new Date()
+    @queueStatus    = 0
     @targetBitDepth = if @layer.name == "color" then @layer.bitDepth else 8
 
-    for layer in dataSet.dataLayers
+    for layer in tracing.content.dataSet.dataLayers
       if layer.typ == @layer.name
         dataLayer = layer
 
@@ -40,14 +46,17 @@ class Binary
     ]
 
     @cube = new Cube(upperBoundary, dataLayer.resolutions.length, @layer.bitDepth)
-    @queue = new PullQueue(@dataSetName, @cube, @layer.name, @testData)
+    @boundingBox = new BoundingBox(boundingBox, @cube)
+    @pullQueue = new PullQueue(@dataSetName, @cube, @layer.name, tracingId, @boundingBox)
+    @pushQueue = new PushQueue(@dataSetName, @cube, @layer.name, tracingId, tracing.version)
+    @cube.setPushQueue( @pushQueue )
 
     @pingStrategies = [new PingStrategy.DslSlow(@cube, @TEXTURE_SIZE_P)]
     @pingStrategies3d = [new PingStrategy3d.DslSlow()]
 
     @planes = []
     for planeId in constants.ALL_PLANES
-      @planes.push( new Plane2D(planeId, @cube, @queue, @TEXTURE_SIZE_P, @layer.bitDepth, @targetBitDepth) )
+      @planes.push( new Plane2D(planeId, @cube, @pullQueue, @TEXTURE_SIZE_P, @layer.bitDepth, @targetBitDepth, 32) )
 
     if @layer.allowManipulation
       # assume zoom step count to be at least 1
@@ -59,7 +68,7 @@ class Binary
         @contrastCurves[i] = contrastCurve
 
     @user.on({
-      set4BitChanged : (is4Bit) => @queue(is4Bit)
+      set4BitChanged : (is4Bit) => @pullQueue(is4Bit)
     })
 
     @ping = _.throttle(@pingImpl, @PING_THROTTLE_TIME)
@@ -83,7 +92,7 @@ class Binary
 
   pingStop : ->
 
-    @queue.clear()
+    @pullQueue.clear()
 
 
   pingImpl : (position, {zoomStep, area, activePlane}) ->
@@ -102,19 +111,18 @@ class Binary
       @lastZoomStep = zoomStep
       @lastArea     = area.slice()
 
-      # console.log "ping", @queue.roundTripTime, @queue.bucketsPerSecond, @cube.bucketCount
-
       for strategy in @pingStrategies 
-        if strategy.inVelocityRange(1) and strategy.inRoundTripTimeRange(@queue.roundTripTime)
+        if strategy.inVelocityRange(1) and strategy.inRoundTripTimeRange(@pullQueue.roundTripTime)
 
           pullQueue = strategy.ping(position, @direction, zoomStep, area, activePlane) if zoomStep? and area? and activePlane?
-          @queue.clear()
+          @pullQueue.clear()
           for entry in pullQueue
-            @queue.insert(entry...)
+            @pullQueue.insert(entry...)
 
           break
 
-      @queue.pull()
+      @queueStatus
+      @pullQueue.pull()
 
 
   arbitraryPing : _.once (matrix) ->
@@ -126,16 +134,16 @@ class Binary
   arbitraryPingImpl : (matrix) ->
 
     for strategy in @pingStrategies3d 
-      if strategy.inVelocityRange(1) and strategy.inRoundTripTimeRange(@queue.roundTripTime)
+      if strategy.inVelocityRange(1) and strategy.inRoundTripTimeRange(@pullQueue.roundTripTime)
         
         pullQueue = strategy.ping(matrix)
       
         for entry in pullQueue
-          @queue.insert(entry...)
+          @pullQueue.insert(entry...)
 
         break
 
-    @queue.pull() 
+    @pullQueue.pull() 
 
 
   getByVerticesSync : (vertices) ->

@@ -1,6 +1,5 @@
 package models.user
 
-import models.context._
 import models.basics.SecuredBaseDAO
 import oxalis.annotation.AnnotationIdentifier
 import reactivemongo.bson.BSONObjectID
@@ -27,11 +26,12 @@ object UsedAnnotationDAO extends SecuredBaseDAO[UsedAnnotation] {
     }
   }
 
-  def by(user: User)(implicit ctx: DBAccessContext) =
+  def by(user: User)(implicit ctx: DBAccessContext) = withExceptionCatcher{
     find("user", user._id).collect[List]().map(_.map(_.annotationId))
+  }
 
   def oneBy(user: User)(implicit ctx: DBAccessContext) =
-    findOne("user", user._id).map(_.map(_.annotationId))
+    findOne("user", user._id).map(_.annotationId)
 
   def removeAll(user: User)(implicit ctx: DBAccessContext) = {
     remove("user", user._id)

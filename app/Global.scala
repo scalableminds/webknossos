@@ -1,6 +1,7 @@
 import akka.actor.Props
 import braingames.reactivemongo.GlobalDBAccess
 import models.team._
+import net.liftweb.common.{Full, Empty}
 import play.api._
 import play.api.mvc.RequestHeader
 import play.api.libs.concurrent._
@@ -16,11 +17,16 @@ import scala.Some
 import oxalis.binary.BinaryDataService
 import com.typesafe.config.Config
 import play.airbrake.Airbrake
+import com.kenshoo.play.metrics._
+import com.codahale.metrics.JmxReporter
+import play.api.mvc._
 
-object Global extends GlobalSettings {
+object Global extends WithFilters(MetricsFilter) with GlobalSettings {
 
   override def onStart(app: Application) {
     val conf = Play.current.configuration
+    val jmxReporter = JmxReporter.forRegistry(MetricsRegistry.default).build
+    jmxReporter.start
 
     startActors(conf.underlying)
 
@@ -64,12 +70,13 @@ object Global extends GlobalSettings {
  */
 object InitialData extends GlobalDBAccess {
 
-  val mpi = Team("Structure of Neocortical Circuits Group", None)
+  val mpi = Team("Structure of Neocortical Circuits Group", RoleService.roles)
 
   def insertUsers() = {
-    UserDAO.findOneByEmail("scmboy@scalableminds.com").map {
-      case None =>
-        println("inserted")
+    UserDAO.findOneByEmail("scmboy@scalableminds.com").futureBox.map {
+      case Full(_) =>
+      case _ =>
+        Logger.info("Inserted default user scmboy")
         UserDAO.insert(User(
           "scmboy@scalableminds.com",
           "SCM",
@@ -78,7 +85,6 @@ object InitialData extends GlobalDBAccess {
           braingames.security.SCrypt.hashPassword("secret"),
           List(TeamMembership(mpi.name,Role.Admin)),
           UserSettings.defaultSettings))
-      case _ =>
     }
   }
 
@@ -93,8 +99,8 @@ object InitialData extends GlobalDBAccess {
   }
 
   def insertTeams() = {
-    TeamDAO.findOne.map {
-      case Some(_) =>
+    TeamDAO.findOne().futureBox.map {
+      case Full(_) =>
       case _ =>
         TeamDAO.insert(mpi)
     }

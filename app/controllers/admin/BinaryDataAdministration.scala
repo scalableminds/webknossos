@@ -5,12 +5,12 @@ import views._
 import play.api.libs.concurrent.Execution.Implicits._
 import models.binary.DataSetDAO
 import controllers.Controller
+import play.api.templates.Html
 
 object BinaryDataAdministration extends AdminController {
 
-  def list = Authenticated.async { implicit request =>
-    DataSetDAO.findAll.map { dataSets =>
-      Ok(html.admin.binary.binaryData(dataSets))
-    }
+  def empty = Authenticated{ implicit request =>
+    Ok(views.html.main()(Html.empty))
   }
+
 }

@@ -1,5 +1,5 @@
-### define 
-../view/abstract_tree_view : AbstractTreeView
+### define
+../view/skeletontracing/abstract_tree_view : AbstractTreeView
 ###
 
 
@@ -11,18 +11,18 @@ class AbstractTreeController
 
 
   constructor : (@model) ->
-    
+
     container = $("#abstractTreeViewer")
     @view = new AbstractTreeView(container.width(), container.height())
     container.append(@view.canvas)
 
     @bind()
-    @drawTree(model.cellTracing.getTree())
+    @drawTree(model.skeletonTracing.getTree())
 
 
   bind : ->
 
-    @model.cellTracing.on({
+    @model.skeletonTracing.on({
       newActiveNode        : => @drawTree(),
       newActiveTree        : => @drawTree(),
       newTree              : => @drawTree(),
@@ -35,15 +35,15 @@ class AbstractTreeController
 
 
   drawTree : ->
-    
-    @view.drawTree(@model.cellTracing.getTree(), @model.cellTracing.getActiveNodeId())
+
+    @view.drawTree(@model.skeletonTracing.getTree(), @model.skeletonTracing.getActiveNodeId())
 
 
   setActiveNode : (nodeId, centered, mergeTree) ->
-    
+
     { model } = @
 
-    model.cellTracing.setActiveNode(nodeId, mergeTree)
+    model.skeletonTracing.setActiveNode(nodeId, mergeTree)
 
     @centerActiveNode() if centered
 
@@ -52,6 +52,6 @@ class AbstractTreeController
 
     { model } = @
 
-    position = model.cellTracing.getActiveNodePos()
+    position = model.skeletonTracing.getActiveNodePos()
     if position
       model.flycam.setPosition(position)

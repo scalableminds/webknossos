@@ -10,8 +10,8 @@
 @import play.api.libs.concurrent.Execution.Implicits._
 
 <tr>
-  <td> 
-    <a href="@controllers.admin.routes.TaskAdministration.list#@task.id">
+  <td>
+    <a href="@controllers.routes.TaskController.empty#@task.id">
       @formatHash(task.id)
     </a>
   </td>
@@ -24,23 +24,23 @@
     @dataSetName
   </td>
   <td>
-      <span title="Unassigned"> 
-        <i class="icon-play-circle"></i> @status.open open
+      <span title="Unassigned">
+        <i class="fa fa-play-circle"></i>@status.open open
       </span>
       |
-      <span title="in Progress"> 
-        <i class="icon-random"></i> @status.inProgress active
+      <span title="in Progress">
+        <i class="fa fa-random"></i>@status.inProgress active
       </span>
       |
       <span title="Completed">
-        <i class="icon-ok-circle"></i> @status.completed done
+        <i class="fa fa-check-circle-o"></i>@status.completed done
       </span>
-    
+
   </td>
   <td>
       Tracked Time: @task.tracingTime.map(t => formatTimeHumanReadable(t millis)).getOrElse("-")
   </td>
   <td class="nowrap">
-    <a href="@controllers.admin.routes.NMLIO.taskDownload(task.id)" title="download all finished tracings"><i class="icon-download"></i> download </a>
+    <a href="@controllers.admin.routes.NMLIO.taskDownload(task.id)" title="download all finished tracings"><i class="fa fa-download"></i>download </a>
   </td>
 </tr>

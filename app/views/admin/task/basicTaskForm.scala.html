@@ -1,4 +1,4 @@
-@(taskForm: Form[_], taskTypes: List[models.task.TaskType], experiences: List[String], projects: List[models.task.Project])
+@(taskForm: Form[_], taskTypes: List[models.task.TaskType], projects: List[models.task.Project], teams: List[String])
 
 @import play.api.libs.json.Json
 
@@ -11,7 +11,7 @@
 }, Symbol("help-inline") -> taskTypeHelpLink)
 
 @helper.input(taskForm("experience.domain")) { (id, name, value, args) =>
-  <input type="text" name="@name" value="@value" id="@id" data-source='@Json.stringify(Json.toJson(experiences))' data-provide="typeahead" autocomplete="off" @toHtmlArgs(args)>
+  <input type="text" name="@name" value="@value" id="@id" data-source='[]' data-provide="typeahead" autocomplete="off" @toHtmlArgs(args)>
 }
 
 @helper.inputText(taskForm("experience.value"), 'type -> "number")
@@ -20,7 +20,9 @@
 
 @helper.inputText(taskForm("taskInstances"), 'type -> "number", 'min -> 1)
 
-@helper.inputText(taskForm("team"))
+@helper.select(taskForm("team"), teams.map { t =>
+    t -> t
+})
 
 @helper.select(taskForm("project"), ("" -> "") +: projects.map { project =>
   project.name -> project.name 

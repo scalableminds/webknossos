@@ -7,11 +7,12 @@
 <tr id="@taskType.id">
   <td class="details-toggle"
     href="@controllers.admin.routes.TaskAdministration.tasksForType(taskType.id)"
-    data-ajax="add-row=#@taskType.id+tr"> <i class="caret-right"></i> <i class="caret-down"></i> </td>
+    data-ajax="add-row=#@taskType.id+tr"> <i class="caret-right"></i><i class="caret-down"></i></td>
   <td> @formatHash(taskType.id) </td>
+  <td> @taskType.team </td>
   <td> @taskType.summary </td>
   <td> @formatShortText(taskType.description) </td>
-  <td> 
+  <td>
     @taskType.settings.allowedModes.map{ mode =>
       <span class="label"> @mode.capitalize </span>
     }
@@ -27,9 +28,9 @@
   <td> @taskType.expectedTime </td>
   <td> @taskType.fileName.getOrElse("") </td>
   <td class="nowrap">
-    <a href="@controllers.routes.AnnotationController.trace(AnnotationType.CompoundTaskType, taskType.id)" title="view all finished tracings"><i class="icon-random"></i> view</a><br />
-    <a href="@controllers.admin.routes.TaskTypeAdministration.edit(taskType.id)" ><i class="icon-pencil"></i> edit </a> <br />
-    <a href="@controllers.admin.routes.TaskTypeAdministration.delete(taskType.id)" data-ajax="delete-row,confirm"><i class="icon-trash"></i> delete </a>
+    <a href="@controllers.routes.AnnotationController.trace(AnnotationType.CompoundTaskType, taskType.id)" title="view all finished tracings"><i class="fa fa-random"></i>view</a><br />
+    <a href="@controllers.admin.routes.TaskTypeAdministration.edit(taskType.id)" ><i class="fa fa-pencil"></i>edit </a> <br />
+    <a href="@controllers.admin.routes.TaskTypeAdministration.delete(taskType.id)" data-ajax="delete-row,confirm"><i class="fa fa-trash-o"></i>delete </a>
   </td>
 </tr>
 <tr class="details-row" >

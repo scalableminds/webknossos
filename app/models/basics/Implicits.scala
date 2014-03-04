@@ -2,8 +2,7 @@ package models.basics
 
 import oxalis.security.UserAwareRequest
 import models.user.User
-import braingames.reactivemongo.DBAccessContext
-import braingames.reactivemongo.AuthedAccessContext
+import braingames.reactivemongo.{AuthorizedAccessContext, DBAccessContext}
 
 /**
  * Company: scalableminds
@@ -19,6 +18,6 @@ trait Implicits {
   }
 
   implicit def userToDBAccess(user: User): DBAccessContext = {
-    AuthedAccessContext(user)
+    AuthorizedAccessContext(user)
   }
 }

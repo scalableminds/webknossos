@@ -1,12 +1,15 @@
 import sbt._
-import Keys._
+import sbt.Keys._
 import play.Project._
+import sbt.Task
+import scala.concurrent.Future
+import scala.concurrent.ExecutionContext.Implicits.global
 
 object Dependencies{
   val akkaVersion = "2.2.0"
   val reactiveVersion = "0.10.0"
   val reactivePlayVersion = "0.10.2"
-  val braingamesVersion = "1.4.4-SNAPSHOT"
+  val braingamesVersion = "3.2.4"
 
   val restFb = "com.restfb" % "restfb" % "1.6.11"
   val commonsIo = "commons-io" % "commons-io" % "2.4"
@@ -25,6 +28,17 @@ object Dependencies{
   val braingamesUtil = "com.scalableminds" %% "braingames-util" % braingamesVersion
   val scalaAsync = "org.scala-lang.modules" %% "scala-async" % "0.9.0-M2"
   val airbrake = "eu.teamon" %% "play-airbrake" % "0.3.5-SCM"
+  val mongev = "com.scalableminds" %% "play-mongev" % "0.2.4"
+  val playMetrics = "com.kenshoo" %% "metrics-play" % "0.1.3"
+  val tiff = Seq(
+      "com.twelvemonkeys.common" % "common-lang" % "3.0-rc5",
+      "com.twelvemonkeys.common" % "common-io" % "3.0-rc5",
+      "com.twelvemonkeys.common" % "common-image" % "3.0-rc5",
+      "com.twelvemonkeys.imageio" %  "imageio-core" % "3.0-rc5",
+      "com.twelvemonkeys.imageio" %  "imageio-metadata" % "3.0-rc5",
+      "com.twelvemonkeys.imageio" % "imageio-jpeg" % "3.0-rc5",
+      "com.twelvemonkeys.imageio" % "imageio-tiff" % "3.0-rc5"
+    )
 }
 
 object Resolvers {
@@ -41,12 +55,69 @@ object Resolvers {
   val teamon = "teamon.eu repo" at "http://repo.teamon.eu"
 }
 
+object AssetCompilation {
+  object SettingsKeys{
+    val gulpPath = SettingKey[String]("gulp-path","where gulp is installed")
+    val npmPath = SettingKey[String]("npm-path","where npm is installed")
+  }
+
+  import SettingsKeys._
+  import com.typesafe.sbt.packager.universal.Keys._
+
+  private def npmInstall: Def.Initialize[Task[Seq[File]]] = (npmPath, baseDirectory, streams) map { (npm, base, s) =>
+    try{
+      Process( npm :: "install" :: Nil, base ) ! s.log
+    } catch {
+      case e: java.io.IOException =>
+        s.log.error("Npm couldn't be found. Please set the configuration key 'AssetCompilation.npmPath' properly. " + e.getMessage)
+    }
+    Seq()
+  }
+
+  private def gulpGenerateTask: Def.Initialize[Task[Any]] = (gulpPath, baseDirectory, streams, target) map { (gulp, base, s, t) =>
+    try{
+      Future{
+        Process(gulp :: "debug" :: Nil, base) ! s.log
+      }
+    } catch {
+      case e: java.io.IOException =>
+        s.log.error("Gulp couldn't be found. Please set the configuration key 'AssetCompilation.gulpPath' properly. " + e.getMessage)
+    }
+  } dependsOn npmInstall
+
+  private def killGulp(x: Unit) = {
+    val pidFile = Path("target") / "gulp.pid"
+    if(pidFile.exists){
+      val pid = scala.io.Source.fromFile(pidFile).mkString.trim
+      Process("kill" :: pid :: Nil).run()
+      pidFile.delete()
+      println("Pow, Pow. Blood is everywhere, gulp is gone!")
+    }
+  }
+
+  private def assetsGenerationTask: Def.Initialize[Task[AnyVal]] = (gulpPath, baseDirectory, streams, target) map { (gulp, base, s, t) =>
+    try{
+      Process(gulp :: "build" :: Nil, base) ! s.log
+    } catch {
+      case e: java.io.IOException =>
+        s.log.error("Gulp couldn't be found. Please set the configuration key 'AssetCompilation.gulpPath' properly. " + e.getMessage)
+    }
+  } dependsOn npmInstall
+
+  val settings = Seq(
+    run in Compile <<= (run in Compile) map(killGulp) dependsOn gulpGenerateTask,
+    stage <<= stage dependsOn assetsGenerationTask,
+    dist <<= dist dependsOn assetsGenerationTask
+  )
+}
+
 object ApplicationBuild extends Build {
   import Dependencies._
   import Resolvers._
+  import AssetCompilation.SettingsKeys._
 
-  val coffeeCmd = 
-    if(System.getProperty("os.name").startsWith("Windows")) 
+  val coffeeCmd =
+    if(System.getProperty("os.name").startsWith("Windows"))
       "cmd /C coffee -p"
     else
       "coffee -p"
@@ -71,7 +142,9 @@ object ApplicationBuild extends Build {
     braingamesBinary,
     scalaAsync,
     cache,
-    airbrake)
+    airbrake,
+    playMetrics,
+    mongev)++tiff
 
   val dependencyResolvers = Seq(
     novusRel,
@@ -95,16 +168,23 @@ object ApplicationBuild extends Build {
     jerseyClient,
     akkaRemote)
 
-  lazy val oxalis: Project = play.Project(appName, appVersion, oxalisDependencies).settings(
+  lazy val oxalisSettings = Seq(
     templatesImport += "oxalis.view.helpers._",
     templatesImport += "oxalis.view._",
-    coffeescriptOptions := Seq(/*"minify",*/ "native", coffeeCmd),
     scalaVersion := "2.10.3",
+    gulpPath := "node_modules/.bin/gulp",
+    npmPath := "npm",
     //requireJs := Seq("main"),
     //requireJsShim += "main.js",
-    resolvers ++= dependencyResolvers
-    //playAssetsDirectories += file("data")
+    resolvers ++= dependencyResolvers,
+    lessEntryPoints <<= (sourceDirectory in Compile)(base => base / "none"),
+    coffeescriptEntryPoints <<= (sourceDirectory in Compile)(base => base / "none"),
+    javascriptEntryPoints <<= (sourceDirectory in Compile)(base => base / "none"),
+    unmanagedResourceDirectories in Compile += target.value / "assets"
+    // playAssetsDirectories += baseDirectory.value / "target" / "assets"
   )
+
+  lazy val oxalis: Project = play.Project(appName, appVersion, oxalisDependencies, settings = oxalisSettings ++ AssetCompilation.settings)
 
   lazy val datastore: Project = Project("datastore", file("modules") / "datastore", dependencies = Seq(oxalis)).settings(
     libraryDependencies ++= dataStoreDependencies,
@@ -120,4 +200,4 @@ object ApplicationBuild extends Build {
     coffeescriptOptions := Seq("native", coffeeCmd)
   ).dependsOn(oxalis).aggregate(oxalis)
 }
-            
+

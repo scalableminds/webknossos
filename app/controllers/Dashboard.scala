@@ -13,6 +13,8 @@ import braingames.reactivemongo.DBAccessContext
 import play.api.Logger
 import braingames.util.Fox
 import play.api.libs.json._
+import net.liftweb.common.{Empty, Failure, Full}
+import scala.concurrent.Future
 
 /**
  * Company: scalableminds
@@ -34,9 +36,9 @@ object DashboardInfo {
 }
 
 trait Dashboard {
-  private def userWithTasks(user: User)(implicit ctx: DBAccessContext) = {
-    AnnotationService.findTasksOf(user).flatMap{ taskAnnotations =>
-      Fox.sequence(taskAnnotations.map(a => a.task.map(_ -> a))).map(_.flatten)
+  private def userWithTasks(user: User)(implicit ctx: DBAccessContext): Fox[List[(Task, Annotation)]] = {
+    AnnotationService.findTasksOf(user).flatMap{ taskAnnotations => Fox(
+      Fox.sequence(taskAnnotations.map(a => a.task.map(_ -> a))).map(els => Full(els.flatten)))
     }
   }
 
@@ -49,9 +51,9 @@ trait Dashboard {
   def dashboardInfo(user: User)(implicit ctx: DBAccessContext) = {
     for {
       exploratoryAnnotations <- AnnotationService.findExploratoryOf(user)
-      dataSets <- DataSetDAO.findAll
+      dataSets <- DataSetDAO.findAllActive
       loggedTime <- TimeTrackingService.loggedTime(user)
-      exploratoryAnnotations <- exploratorySortedByTime(exploratoryAnnotations)
+      exploratoryAnnotations <- exploratorySortedByTime(exploratoryAnnotations).toFox
       userTasks <- userWithTasks(user)
     } yield {
       DashboardInfo(

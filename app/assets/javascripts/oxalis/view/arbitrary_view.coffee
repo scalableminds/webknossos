@@ -24,7 +24,7 @@ class ArbitraryView
   camera : null
   cameraPosition : null
 
-  constructor : (canvas, @dataCam, @stats, @renderer, @scene, scaleInfo) ->
+  constructor : (canvas, @dataCam, @stats, @view, scaleInfo) ->
 
     _.extend(this, new EventMixin())
 
@@ -35,13 +35,15 @@ class ArbitraryView
     @height = @container.height()
     @deviceScaleFactor = window.devicePixelRatio || 1
 
+    { @renderer, @scene } = @view
+
     # Initialize main THREE.js components
 
     @camera = camera = new THREE.PerspectiveCamera(45, @width / @height, 50, 1000)
     camera.matrixAutoUpdate = false
     camera.aspect = @width / @height
   
-    @cameraPosition = new THREE.Vector3(0, 0, @CAM_DISTANCE)
+    @cameraPosition = [0, 0, @CAM_DISTANCE]
 
     @group = new THREE.Object3D
     # The dimension(s) with the highest resolution will not be distorted
@@ -100,15 +102,15 @@ class ArbitraryView
                         m[2], m[6], m[10], m[14], 
                         m[3], m[7], m[11], m[15]
 
-      camera.matrix.rotateY(Math.PI)
-      camera.matrix.translate(@cameraPosition)
+      camera.matrix.multiply( new THREE.Matrix4().makeRotationY( Math.PI ))
+      camera.matrix.multiply( new THREE.Matrix4().makeTranslation( @cameraPosition... ))
       camera.matrixWorldNeedsUpdate = true
 
       f = @deviceScaleFactor
       renderer.setViewport(0, 0, @width * f, @height * f)
       renderer.setScissor(0, 0, @width * f, @height * f)
       renderer.enableScissorTest(true)
-      renderer.setClearColorHex(0xFFFFFF, 1);
+      renderer.setClearColor(0xFFFFFF, 1);
 
       renderer.render scene, camera
 

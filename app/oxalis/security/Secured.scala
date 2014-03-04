@@ -60,12 +60,12 @@ trait Secured extends FoxImplicits {
   def maybeUser(implicit request: RequestHeader): Fox[User] =
     userFromSession orElse autoLoginUser
 
-  private def autoLoginUser = {
+  private def autoLoginUser: Fox[User] = {
     // development setting: if the key is set, one gets logged in automatically
     if (Play.configuration.getBoolean("application.enableAutoLogin").get)
       UserService.defaultUser
     else
-      Future.successful(None)
+      Fox.empty
   }
 
   private def userFromSession(implicit request: RequestHeader): Fox[User] =

@@ -18,7 +18,7 @@ import scala.async.Async._
 import scala.Some
 import braingames.util.NamedFileStream
 import play.api.i18n.Messages
-import models.task.{Training, TaskService}
+import models.task.TaskService
 import controllers.Application
 import braingames.mail.Send
 import oxalis.mail.DefaultMails
@@ -44,8 +44,6 @@ trait AnnotationMutationsLike{
   def cancelTask()(implicit ctx: DBAccessContext): Fox[AType]
 
   def loadAnnotationContent()(implicit ctx: DBAccessContext): Fox[NamedFileStream]
-
-  def unassignReviewer()(implicit ctx: DBAccessContext): Fox[AType]
 }
 
 class AnnotationMutations(val annotation: Annotation) extends AnnotationMutationsLike with AnnotationFileService with AnnotationContentProviders with BoxImplicits with FoxImplicits{
@@ -55,15 +53,12 @@ class AnnotationMutations(val annotation: Annotation) extends AnnotationMutation
     def executeFinish(annotation: Annotation): Future[Box[(Annotation, String)]] = async {
       annotation match {
         case annotation if annotation._task.isEmpty =>
-          val updated = await(annotation.muta.finish())
+          val updated = await(annotation.muta.finish().futureBox)
           updated.map(_ -> Messages("annotation.finished"))
         case annotation =>
           val isReadyToBeFinished = await(annotation.isReadyToBeFinished)
-          if (annotation.isTrainingsAnnotation) {
-            val updated = await(AnnotationDAO.passToReview(annotation._id))
-            updated.map(_ -> Messages("task.passedToReview"))
-          } else if (isReadyToBeFinished) {
-            val updated = await(AnnotationDAO.finish(annotation._id))
+          if (isReadyToBeFinished) {
+            val updated = await(AnnotationDAO.finish(annotation._id).futureBox)
             updated.map(_ -> Messages("task.finished"))
           } else
             Failure(Messages("tracing.notEnoughNodes"))
@@ -95,10 +90,6 @@ class AnnotationMutations(val annotation: Annotation) extends AnnotationMutation
       Future.successful(None)
   }
 
-  def unassignReviewer()(implicit ctx: DBAccessContext) = {
-    AnnotationDAO.unassignReviewer(annotation._id)
-  }
-
   def finish()(implicit ctx: DBAccessContext) =
     AnnotationDAO.finish(annotation._id)
 
@@ -113,76 +104,20 @@ class AnnotationMutations(val annotation: Annotation) extends AnnotationMutation
     } yield annotation
   }
 
-  def finishReview(review: AnnotationReview, passed: Boolean, comment: String)(implicit ctx: DBAccessContext) = {
-    def handleFinish(trainee: User, training: Training) =
-      if (passed)
-        handlePassed(trainee, training)
-      else
-        handleFailed(trainee, training)
-
-    def handlePassed(trainee: User, training: Training) =
-      for {
-        _ <- UserService.increaseExperience(trainee._id, training.domain, training.gain)
-        _ <- AnnotationDAO.addReviewComment(annotation._id, comment)
-        _ <- AnnotationDAO.finish(annotation._id)
-      } yield {
-        Application.Mailer ! Send(
-          DefaultMails.trainingsSuccessMail(trainee.name, trainee.email, comment))
-      }
-
-    def handleFailed(trainee: User, training: Training) =
-      for {
-        _ <- AnnotationDAO.addReviewComment(annotation._id, comment)
-        _ <- AnnotationDAO.reopen(annotation._id)
-      } yield {
-        Application.Mailer ! Send(
-          DefaultMails.trainingsFailureMail(trainee.name, trainee.email, comment))
-      }
-
-    for {
-      task <- annotation.task ?~> Messages("annotation.task.notFound")
-      training <- task.training ?~> Messages("annotation.training.notFound")
-      trainee <- annotation.user ?~> Messages("annotation.user.notFound")
-      _ <- handleFinish(trainee, training)
-      _ <- AnnotationDAO.finish(review.reviewAnnotation)
-    } yield {
-      true
-    }
-  }
-
   def incrementVersion()(implicit ctx: DBAccessContext) =
     AnnotationDAO.incrementVersion(annotation._id)
 
-  def copyDeepAndInsert()(implicit ctx: DBAccessContext): Future[Option[Annotation]] = {
+  def copyDeepAndInsert()(implicit ctx: DBAccessContext): Fox[Annotation] = {
     val copied = annotation.content.flatMap(content => content.copyDeepAndInsert)
     copied
     .map(_.id)
-    .getOrElse(annotation._content._id)
+    .orElse(Fox.successful(annotation._content._id))
     .flatMap { contentId =>
       val copied = annotation.copy(
         _id = BSONObjectID.generate,
         _content = annotation._content.copy(_id = contentId))
 
-      AnnotationDAO.insert(copied).map(_ => Some(copied))
-    }
-  }
-
-  def createReviewFor(sample: Annotation, user: User)(implicit ctx: DBAccessContext) = {
-    for {
-      content <- annotation.content
-      reviewContent <- content.copyDeepAndInsert.toFox
-      sampleContent <- sample.content
-    } yield {
-      reviewContent.mergeWith(sampleContent)
-      val review = annotation.copy(
-        _id = BSONObjectID.generate,
-        _user = user._id,
-        state = AnnotationState.Assigned,
-        typ = AnnotationType.Review,
-        _content = annotation._content.copy(_id = reviewContent.id)
-      )
-      AnnotationDAO.insert(review)
-      review
+      AnnotationDAO.insert(copied).map(_ => copied)
     }
   }
 
@@ -200,17 +135,6 @@ class AnnotationMutations(val annotation: Annotation) extends AnnotationMutation
   def updateFromJson(js: Seq[JsValue])(implicit ctx: DBAccessContext) = {
     annotation.content.flatMap(_.updateFromJson(js)).flatMap(_ =>
       AnnotationDAO.incrementVersion(annotation._id))
-  }
-
-  def assignReviewer(user: User)(implicit ctx: DBAccessContext): Fox[Annotation] = {
-    for {
-      task <- annotation.task
-      sampleId <- task.training.map(_.sample).toFox
-      sample <- AnnotationDAO.findOneById(sampleId).toFox
-      reviewAnnotation <- annotation.muta.createReviewFor(sample, user)
-      review = AnnotationReview(user._id, reviewAnnotation._id, System.currentTimeMillis())
-      result <- AnnotationDAO.assignReviewer(annotation._id, review)
-    } yield result
   }
 }
 

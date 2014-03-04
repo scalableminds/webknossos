@@ -3,7 +3,7 @@ package models.task
 import models.basics._
 import models.user.{UserService, User}
 import play.api.libs.json.{JsArray, Json}
-import braingames.reactivemongo.{GlobalAccessContext, DBAccessContext}
+import braingames.reactivemongo.{DefaultAccessDefinitions, GlobalAccessContext, DBAccessContext}
 import reactivemongo.bson.BSONObjectID
 import play.modules.reactivemongo.json.BSONFormats._
 import braingames.util.{FoxImplicits, Fox}
@@ -12,6 +12,9 @@ import net.liftweb.common.Full
 import play.api.libs.concurrent.Execution.Implicits._
 import reactivemongo.api.indexes.{IndexType, Index}
 import models.team.Role
+import play.api.Logger
+import net.liftweb.common.{Full, Empty}
+import braingames.reactivemongo.AccessRestrictions.{DenyEveryone, AllowIf}
 
 case class Project(name: String, team: String, _owner: BSONObjectID) {
   def owner = UserService.findOneById(_owner.stringify, useCache = true)(GlobalAccessContext)
@@ -24,8 +27,18 @@ object Project {
 }
 
 object ProjectService extends FoxImplicits {
-  def remove(project: Project)(implicit ctx: DBAccessContext) =
-    ProjectDAO.remove("name", project.name)
+  def remove(project: Project)(implicit ctx: DBAccessContext) = {
+    ProjectDAO.remove("name", project.name).flatMap{
+      case result if result.n > 0 => {
+        TaskDAO.removeAllWithProject(project)
+        Future.successful(Full(None))
+      }
+      case _ => {
+        Logger.warn("Tried to remove project without permission.")
+        Future.successful(Empty)
+      }
+    }
+  }
 
   def insert(name: String, team: String, owner: User)(implicit ctx: DBAccessContext) =
     ProjectDAO.insert(Project(name, team, owner._id))
@@ -40,21 +53,23 @@ object ProjectService extends FoxImplicits {
 
 object ProjectDAO extends SecuredBaseDAO[Project] {
 
-  override def findQueryFilter(implicit ctx: DBAccessContext) = {
-    ctx.data match{
-      case Some(user: User) =>
-        AllowIf(Json.obj("team" -> Json.obj("$in" -> user.teamNames)))
-      case _ =>
-        DenyEveryone()
+  override val AccessDefinitions = new DefaultAccessDefinitions{
+    override def findQueryFilter(implicit ctx: DBAccessContext) = {
+      ctx.data match{
+        case Some(user: User) =>
+          AllowIf(Json.obj("team" -> Json.obj("$in" -> user.teamNames)))
+        case _ =>
+          DenyEveryone()
+      }
     }
-  }
 
-  override def removeQueryFilter(implicit ctx: DBAccessContext) = {
-    ctx.data match{
-      case Some(user: User) =>
-        AllowIf(Json.obj("team" -> Json.obj("$in" -> user.adminTeamNames)))
-      case _ =>
-        DenyEveryone()
+    override def removeQueryFilter(implicit ctx: DBAccessContext) = {
+      ctx.data match{
+        case Some(user: User) =>
+          AllowIf(Json.obj("_owner" -> user._id))
+        case _ =>
+          DenyEveryone()
+      }
     }
   }
 
@@ -62,7 +77,7 @@ object ProjectDAO extends SecuredBaseDAO[Project] {
 
   val formatter = Project.projectFormat
 
-  collection.indexesManager.ensure(Index(Seq("name" -> IndexType.Ascending)))
+  underlying.indexesManager.ensure(Index(Seq("name" -> IndexType.Ascending)))
 
   def findOneByName(name: String)(implicit ctx: DBAccessContext) = {
     findOne("name", name)

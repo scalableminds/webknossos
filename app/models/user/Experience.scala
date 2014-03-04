@@ -7,6 +7,7 @@ import scala.async.Async._
 import scala.concurrent.Future
 import braingames.reactivemongo.DBAccessContext
 import play.api.libs.concurrent.Execution.Implicits._
+import braingames.util.Fox
 
 /**
  * Experience a user needs to hold to acquire a task. The task itself defines the minimum experience needed.
@@ -33,12 +34,4 @@ object Experience {
   def empty = Experience("", 0)
 
   def fromForm(domain: String, value: Int) = Experience(domain.trim, value)
-}
-
-object ExperienceService {
-  // TODO: don't use tasks to find domain strings
-  def findAllDomains(implicit ctx: DBAccessContext): Future[Set[String]] = async {
-    val tasks = await(TaskDAO.findAll)
-    tasks.flatMap(_.training.map(_.domain))(breakOut)
-  }
 }

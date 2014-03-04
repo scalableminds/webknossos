@@ -1,20 +1,52 @@
-# Awesome Installer
-If you are using OSX try using this awesome installer:
-https://gist.github.com/3942354
+![Oxalis logo](https://oxalis.at/assets/images/oxalis.svg)
+# Oxalis
+Oxalis is a web-based annotation tool for large 3d image datasets.
 
-If you are not blessed with a good OS try the steps below and fail ;)
+# Dependencies
+
+* [Java JDK 1.7 (Oracle version)](http://www.oracle.com/technetwork/java/javase/downloads/index.html)
+* [sbt](http://www.scala-sbt.org/)
+* [mongoDB 2.4.3+](http://www.mongodb.org/downloads)
+* [node.js 0.10.0+](http://nodejs.org/download/)
+* [git](http://git-scm.com/downloads)
+
+# Installation
+## OS X
+If you are using OS X try using this awesome installer:
+https://gist.github.com/normanrz/9128496
+
+Or install Java manually and run:
+
+```bash
+# Install Homebrew package manager
+ruby -e "$(curl -fsSL https://raw.github.com/Homebrew/homebrew/go/install)"
+
+# Install git, node.js, mongoDB, sbt
+brew install git node mongodb sbt
+
+# Start mongoDB
+launchctl load ~/Library/LaunchAgents/homebrew.mxcl.mongodb.plist
+
+# Checkout the Oxalis git repository
+git clone git@github.com:scalableminds/oxalis.git
+```
 
 
-## Project setup:
-- install java 1.7 (from oracle! don't use openJDK)
-- make sure "JAVA_HOME" and "JDK_HOME" are set and PATH contains path to jdk
-- install nodejs + coffee + less and make sure PATH is set to find them 
+## Manual Installation
 
-## Play setup:
-You do not need to install / build play on your own computer any more. Play is getting shipped as a dependency via sbt.
+### Java
+- install Java JDK 1.7 (from Oracle, OpenJDK is currently not supported)
+- make sure `JAVA_HOME` and `JDK_HOME` are set and `PATH` contains path to JDK
 
-## Mongodb
-- install Mongodb (get the production release from mongodb.org). Unpack:
+### sbt
+See: http://www.scala-sbt.org/release/docs/Getting-Started/Setup.html
+
+### mongoDB
+- install mongoDB from http://www.mongodb.org/downloads
+- mongoDB version **2.4.3+ is required**
+- your package managers' versions (e.g. `apt-get`) might be outdated
+
+- unpack
 
 ```bash
 tar -xvf mongo(...).tgz
@@ -31,5 +63,34 @@ sudo vim /etc/environment
 - set up database dir (create (your path)/data/db where you want to save your database)
 
 ```bash	
-start mongo: mongod --dbpath (your path)
+mongod --dbpath (your path)
 ```
+
+### node.js
+* install node from http://nodejs.org/download/
+* node version **0.10.0+ is required**
+* your package managers' versions (e.g. `apt-get`) might be outdated
+* no node modules are required to be installed globally. but installing the following is handy for development
+  * [coffee-script (fork from scalable minds)](https://github.com/scalableminds/coffee-script)
+  * [less](http://lesscss.org/)
+  * [bower](http://bower.io/)
+  * [gulp](http://gulpjs.com/)
+  
+```bash
+npm install -g \
+  https://github.com/scalableminds/coffee-script/archive/master.tar.gz \
+  less bower gulp
+```
+
+# Run
+```bash
+sbt run
+```
+
+Will fetch all Scala, Java and node dependencies and run the application on Port 9000.
+
+# Credits
+scalable minds http://scm.io
+
+# License
+tbd

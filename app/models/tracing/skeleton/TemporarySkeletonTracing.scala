@@ -3,7 +3,7 @@ package models.tracing.skeleton
 import oxalis.nml.TreeLike
 import oxalis.nml.BranchPoint
 import braingames.geometry.Scale
-import braingames.geometry.Point3D
+import braingames.geometry.{Point3D, BoundingBox}
 import oxalis.nml.Comment
 import oxalis.nml.NML
 import models.annotation._
@@ -30,8 +30,9 @@ case class TemporarySkeletonTracing(
                                      timestamp: Long,
                                      activeNodeId: Option[Int],
                                      editPosition: Point3D,
+                                     boundingBox: Option[BoundingBox],
                                      comments: List[Comment] = Nil,
-                                     settings: AnnotationSettings = AnnotationSettings.default
+                                     settings: AnnotationSettings = AnnotationSettings.skeletonDefault
                                    ) extends SkeletonTracingLike with AnnotationContent {
 
   type Self = TemporarySkeletonTracing
@@ -40,20 +41,19 @@ case class TemporarySkeletonTracing(
 
   def service = TemporarySkeletonTracingService
 
-  def trees = Future.successful(_trees)
+  def trees = Fox.successful(_trees)
 
   def allowAllModes =
-    this.copy(settings = settings.copy(allowedModes = AnnotationSettings.ALL_MODES))
+    this.copy(settings = settings.copy(allowedModes = AnnotationSettings.SKELETON_MODES))
 
-  def insertTree[TemporaryTracing](tree: TreeLike) = {
-    Future.successful(this.copy(_trees = tree :: _trees).asInstanceOf[TemporaryTracing])
-  }
+  def insertTree[TemporaryTracing](tree: TreeLike) =
+    Fox.successful(this.copy(_trees = tree :: _trees).asInstanceOf[TemporaryTracing])
 
   def insertBranchPoint[Tracing](bp: BranchPoint) =
-    Future.successful(this.copy(branchPoints = bp :: this.branchPoints).asInstanceOf[Tracing])
+    Fox.successful(this.copy(branchPoints = bp :: this.branchPoints).asInstanceOf[Tracing])
 
   def insertComment[Tracing](c: Comment) =
-    Future.successful(this.copy(comments = c :: this.comments).asInstanceOf[Tracing])
+    Fox.successful(this.copy(comments = c :: this.comments).asInstanceOf[Tracing])
 
   def updateFromJson(js: Seq[JsValue])(implicit ctx: DBAccessContext) = ???
 
@@ -61,7 +61,15 @@ case class TemporarySkeletonTracing(
 }
 
 object TemporarySkeletonTracingService extends AnnotationContentService {
-  def createFrom(nml: NML, id: String, settings: AnnotationSettings = AnnotationSettings.default)(implicit ctx: DBAccessContext) = {
+  def createFrom(nml: NML, id: String, boundingBox: Option[BoundingBox], settings: AnnotationSettings = AnnotationSettings.default)(implicit ctx: DBAccessContext) = {
+    val box: Option[BoundingBox] = boundingBox.flatMap {
+      box =>
+        if (box.isEmpty)
+          None
+        else
+          Some(box)
+    }
+
     TemporarySkeletonTracing(
       id,
       nml.dataSetName,
@@ -70,6 +78,7 @@ object TemporarySkeletonTracingService extends AnnotationContentService {
       System.currentTimeMillis(),
       nml.activeNodeId,
       nml.editPosition,
+      box,
       nml.comments,
       settings)
   }
@@ -86,31 +95,32 @@ object TemporarySkeletonTracingService extends AnnotationContentService {
         System.currentTimeMillis(),
         tracing.activeNodeId,
         tracing.editPosition,
+        tracing.boundingBox,
         tracing.comments)
     }
   }
 
-  def createFrom(nmls: List[NML], settings: AnnotationSettings)(implicit ctx: DBAccessContext): Future[Option[TemporarySkeletonTracing]] = {
+  def createFrom(nmls: List[NML], boundingBox: Option[BoundingBox], settings: AnnotationSettings)(implicit ctx: DBAccessContext): Fox[TemporarySkeletonTracing] = {
     nmls match {
       case head :: tail =>
-        val startTracing = createFrom(head, "", settings)
+        val startTracing = createFrom(head, "", boundingBox, settings)
 
-        tail.foldLeft(Future.successful(startTracing)) {
+        tail.foldLeft(Fox.successful(startTracing)) {
           case (f, s) =>
-            f.flatMap(t => t.mergeWith(createFrom(s, s.timestamp.toString)))
-        }.map(result => Some(result))
+            f.flatMap(t => t.mergeWith(createFrom(s, s.timestamp.toString, boundingBox)))
+        }
       case _ =>
-        Future.successful(None)
+        Fox.empty
     }
   }
 
   type AType = TemporarySkeletonTracing
 
-  def updateSettings(settings: AnnotationSettings, tracingId: String)(implicit ctx: DBAccessContext): Unit = ???
+  def updateSettings(settings: AnnotationSettings, tracingId: String)(implicit ctx: DBAccessContext) = ???
 
-  def findOneById(id: String)(implicit ctx: DBAccessContext): Future[Option[TemporarySkeletonTracingService.AType]] = ???
+  def findOneById(id: String)(implicit ctx: DBAccessContext) = ???
 
-  def createFrom(dataSet: DataSet)(implicit ctx: DBAccessContext): Future[TemporarySkeletonTracingService.AType] = ???
+  def createFrom(dataSet: DataSet)(implicit ctx: DBAccessContext) = ???
 
-  def clearTracingData(id: String)(implicit ctx: DBAccessContext): Fox[TemporarySkeletonTracingService.AType] = ???
+  def clearTracingData(id: String)(implicit ctx: DBAccessContext) = ???
 }

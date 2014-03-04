@@ -1,14 +1,14 @@
 ### define
-./keyboard : KeyboardJS
-./gamepad : GamepadJS
-./event_mixin : EventMixin
-./jquery-mousewheel-3.0.6/jquery.mousewheel : JQ_MOUSE_WHEEL
 oxalis/constants : constants
+keyboard : KeyboardJS
+gamepad : GamepadJS
+jquery.mousewheel : JQ_MOUSE_WHEEL
+./event_mixin : EventMixin
 ###
 
 Input = {}
 # This is the main Input implementation.
-# Although all keys, buttons and sensor are mapped in 
+# Although all keys, buttons and sensor are mapped in
 # the controller, this is were the magic happens.
 # So far we provide the following input methods:
 # * Mouse
@@ -17,7 +17,7 @@ Input = {}
 # * MotionSensor / Gyroscope
 
 # Each input method is contained in its own module. We tried to
-# provide similar public interfaces for the input methods. 
+# provide similar public interfaces for the input methods.
 # In most cases the heavy lifting is done by librarys in the background.
 
 
@@ -36,8 +36,8 @@ class Input.KeyboardNoLoop
 
   attach : (key, callback) ->
 
-    binding = KeyboardJS.on(key, 
-      (event) => 
+    binding = KeyboardJS.on(key,
+      (event) =>
         callback(event) unless $(":focus").length
         return
     )
@@ -50,8 +50,8 @@ class Input.KeyboardNoLoop
     return
 
 
-# This module is "main" keyboard handler. 
-# It is able to handle key-presses and will continously 
+# This module is "main" keyboard handler.
+# It is able to handle key-presses and will continously
 # fire the attached callback.
 class Input.Keyboard
 
@@ -79,11 +79,11 @@ class Input.Keyboard
         # When control key is pressed, everything is ignored, because
         # if there is any browser action attached to this (as with Ctrl + S)
         # KeyboardJS does not receive the up event.
-        
+
         returnValue = undefined
 
         unless @keyCallbackMap[key]? or $(":focus").length
-          
+
           callback(1, true)
           # reset lastTime
           callback._lastTime   = null
@@ -92,7 +92,7 @@ class Input.Keyboard
 
           @keyPressedCount++
           @buttonLoop() if @keyPressedCount == 1
-          
+
         if @delay >= 0
           setTimeout( (=>
             callback._delayed = false
@@ -101,7 +101,7 @@ class Input.Keyboard
         return returnValue
 
       =>
-        
+
         if @keyCallbackMap[key]?
           @keyPressedCount--
           delete @keyCallbackMap[key]
@@ -127,7 +127,7 @@ class Input.Keyboard
 
           callback(elapsed / 1000 * constants.FPS, false)
 
-      setTimeout( (=> @buttonLoop()), @DELAY ) 
+      setTimeout( (=> @buttonLoop()), @DELAY )
 
 
   unbind : ->
@@ -189,7 +189,7 @@ class Input.Mouse
       "mousemove" : @mouseMove
       "mouseup"   : @mouseUp
 
-    @$target.on 
+    @$target.on
       "mousedown" : @mouseDown
       "mouseenter" : @mouseEnter
       "mouseleave" : @mouseLeave
@@ -197,7 +197,7 @@ class Input.Mouse
 
     @on(initialBindings)
     @attach = @on
-      
+
 
   unbind : ->
 
@@ -205,11 +205,11 @@ class Input.Mouse
       "mousemove" : @mouseMove
       "mouseup" : @mouseUp
 
-    @$target.off 
+    @$target.off
       "mousedown" : @mouseDown
       "mouseenter" : @mouseEnter
       "mouseleave" : @mouseLeave
-      "mousewheel" : @mouseWheel 
+      "mousewheel" : @mouseWheel
 
 
   isHit : (event) ->
@@ -229,7 +229,7 @@ class Input.Mouse
 
     event.preventDefault()
 
-    @lastPosition = 
+    @lastPosition =
       x : event.pageX - @$target.offset().left
       y : event.pageY - @$target.offset().top
 
@@ -251,10 +251,10 @@ class Input.Mouse
     @position =
       x : event.pageX - @$target.offset().left
       y : event.pageY - @$target.offset().top
-    
+
     if @lastPosition?
 
-      delta = 
+      delta =
         x : (@position.x - @lastPosition.x)
         y : (@position.y - @lastPosition.y)
 
@@ -294,18 +294,22 @@ class Input.Mouse
 
   mouseWheel : (event, delta) =>
 
+    delta /= 20
+
     event.preventDefault()
     if event.shiftKey
       @trigger("scroll", delta, "shift")
     else if event.altKey
       @trigger("scroll", delta, "alt")
+    else if event.ctrlKey
+      @trigger("scroll", delta, "ctrl")
     else
       @trigger("scroll", delta, null)
 
     return
 
-    
-# This module completly handles the device orientation / 
+
+# This module completly handles the device orientation /
 # tilting sensor (gyroscope).
 # Similarily to the keyboard it relies on looping over
 # all the "pressed" buttons. i.e. Once a certain threshold
@@ -314,7 +318,7 @@ class Input.Deviceorientation
 
   THRESHOLD = 10
   SLOWDOWN_FACTOR = 500
-  
+
   keyPressedCallbacks : {}
   keyBindings : {}
   keyPressedCount : 0
@@ -327,9 +331,9 @@ class Input.Deviceorientation
       @attach(key, callback)
 
     $(window).on(
-      "deviceorientation", 
-      @eventHandler = ({originalEvent : event}) => 
-        
+      "deviceorientation",
+      @eventHandler = ({originalEvent : event}) =>
+
         { gamma, beta } = event
         if gamma < -THRESHOLD or gamma > THRESHOLD
           @fire("x", -gamma)
@@ -351,7 +355,7 @@ class Input.Deviceorientation
   unbind : ->
 
     $(window).off(
-      "deviceorientation", 
+      "deviceorientation",
       @eventHandler
       @unfire("x")
       @unfire("y")
@@ -361,8 +365,8 @@ class Input.Deviceorientation
   fire : (key, dist) ->
 
     unless @keyPressedCallbacks[key]?
-      @keyPressedCount++ 
-      @keyPressedCallbacks[key] = 
+      @keyPressedCount++
+      @keyPressedCallbacks[key] =
         callback : @keyBindings[key]
         distance : (dist - THRESHOLD) / SLOWDOWN_FACTOR
       @buttonLoop() if @keyPressedCount == 1
@@ -381,13 +385,13 @@ class Input.Deviceorientation
       for own key, { callback, distance } of @keyPressedCallbacks
         callback?(distance)
 
-      setTimeout( (=> @buttonLoop()), @delay ) 
+      setTimeout( (=> @buttonLoop()), @delay )
 
 
 # Last but not least, the gamepad module.
 # The current gamepad API for the browser forces us
-# to constantly poll the Gamepad object to evaluate 
-# the state of a button. 
+# to constantly poll the Gamepad object to evaluate
+# the state of a button.
 # In order to abstract the gamepad from different vendors,
 # operation systems and browsers we rely on the GamepadJS lib.
 # All "thumb sticks" return values -1...1 whereas all other buttons
@@ -398,7 +402,7 @@ class Input.Gamepad
   # http://robhawkes.github.com/gamepad-demo/
   # https://github.com/jbuck/input.js/
   # http://www.gamepadjs.com/
-  
+
   DEADZONE : 0.35
   SLOWDOWN_FACTOR : 20
 
@@ -471,9 +475,9 @@ class Input.Gamepad
             value = @gamepad[button]
             callback -@filterDeadzone(value)
 
-          else if button in ["leftStickY", "rightStickY"] 
-            value = @gamepad[button]
-            callback @filterDeadzone(value)
+          else if button in ["leftStickY", "rightStickY"]
+                  value = @gamepad[button]
+                  callback @filterDeadzone(value)
           #buttons
           else
             callback()
@@ -482,7 +486,7 @@ class Input.Gamepad
     setTimeout( (=> @gamepadLoop()), @delay)
 
 
-  # FIXME 
+  # FIXME
   # as far as I know the gamepad.js lib already provides values for deadzones
   filterDeadzone : (value) ->
 

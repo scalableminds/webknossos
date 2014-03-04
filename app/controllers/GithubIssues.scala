@@ -84,7 +84,6 @@ object GithubIssues extends Controller with Secured {
       success <- handleSubmission(request.user, summary, description, issueType)
     } yield {
       val message = Messages(if (success) "issue.submit.success" else "issue.submit.failure")
-
       Ok(html.issue.close(success, message))
     }
   }

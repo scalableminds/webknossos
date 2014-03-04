@@ -1,0 +1,25 @@
+{
+  "name": "oxalis",
+  "version": "0.14.0",
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/scalableminds/oxalis.git"
+  },
+  "dependencies": {
+    "coffee-script": "https://github.com/scalableminds/coffee-script/archive/master.tar.gz",
+    "bower": "~1.2.8",
+    "requirejs": "~2.1.11",
+    "event-stream": "~3.1.0",
+    "run-sequence": "~0.3.5",
+    "gulp": "~3.5.2",
+    "gulp-coffee": "~1.4.1",
+    "gulp-clean": "~0.2.4",
+    "gulp-util": "~2.2.14",
+    "gulp-less": "~1.2.1",
+    "gulp-if": "0.0.5",
+    "gulp-exec": "~1.0.4",
+    "gulp-watch": "~0.5.0",
+    "gulp-bump": "~0.1.5",
+    "gulp-plumber": "~0.5.6"
+  }
+}

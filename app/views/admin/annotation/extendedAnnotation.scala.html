@@ -12,22 +12,10 @@
 
 @linkText(failed: Boolean) = {
   @if(failed) {
-    Review failed - 
+    Review failed -
   } else {
-    Review - 
+    Review -
   }
-}
-
-@displayComments(failed: Boolean, comments: List[String]) = {
-  @comments match{
-    case head :: tail => {
-      <a href="#" rel="popover" data-placement="bottom" data-title="Comment from Reviewer" data-html="true" data-content="@org.apache.commons.lang3.StringEscapeUtils.escapeHtml4(head).replaceAll("\n", "<br /><br />")"><i class="icon-eye-open"></i> @linkText(failed) Comment <span class="caret-down"></span></a>    
-    }
-    case _ => {
-
-    }
-  }
-
 }
 
 <tr class="@if(annotation.state.isFinished){finished}else{unfinished}">
@@ -35,41 +23,36 @@
   <td> @taskType.map(_.summary).getOrElse("<deleted>") - @annotation.typ</td>
   <td> @project.map(_.name).getOrElse("") </td>
   <td>
-    
+
     @taskType.map( _.settings.allowedModes.map{ mode => {
         mode.capitalize
     }}).getOrElse(List(""))
-    
+
   </td>
   <td> @dataSetName </td>
-  
+
   @statsOpt.map{ stats =>
-  <td> 
-    <span title="Trees"><i class="icon-sitemap"></i> @stats.numberOfTrees &nbsp;</span>
+  <td>
+    <span title="Trees"><i class="fa fa-sitemap"></i>@stats.numberOfTrees &nbsp;</span>
     <span title="Nodes">&bull; @stats.numberOfNodes &nbsp;</span>
-    <span title="Edges"><i class="icon-resize-horizontal"></i> @stats.numberOfEdges</span>
+    <span title="Edges"><i class="fa fa-arrows-h"></i>@stats.numberOfEdges</span>
   </td>
   }.getOrElse(<td />)
 
   <td>
     @content.map(e => formatDate(e.timestamp)).getOrElse("")
   </td>
-  <td> 
+  <td>
     @annotation.state match{
       case s if s.isFinished => {
-        <i class="icon-ok"></i><span> Finished</span><br />
-        @displayComments(false, annotation.review.flatMap( _.comment ))
-      }
-      case s if s.isInReview || s.isReadyForReview => {
-        <i class="icon-eye-open"></i><span> In Review</span>
+        <i class="fa fa-check"></i><span> Finished</span><br />
       }
       case _ => {
-        <i class="icon-refresh"></i><span> In Progress</span>
-        @displayComments(true, annotation.review.flatMap( _.comment ))
+        <i class="fa fa-refresh"></i><span> In Progress</span>
       }
     }
   </td>
-  <td>   
+  <td>
     @annotationLinks(annotation.actions(Some(user)))
   </td>
 </tr>

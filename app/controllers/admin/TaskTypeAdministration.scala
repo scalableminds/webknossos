@@ -50,7 +50,7 @@ object TaskTypeAdministration extends AdminController {
 
   def taskTypeListWithForm(form: Form[TaskType])(implicit request: AuthenticatedRequest[_]) = {
     TaskTypeDAO.findAll.map { taskTypes =>
-      html.admin.taskType.taskTypes(taskTypes, form)
+      html.admin.taskType.taskTypes(taskTypes, form, request.user.adminTeamNames)
     }
   }
 
@@ -60,39 +60,25 @@ object TaskTypeAdministration extends AdminController {
     }
   }
 
-  // TODO: 
-  // def list = Authenticated.async { implicit request =>
-  //   render.async {
-  //     case Accepts.Html() =>
-  //       TaskTypeDAO.findAll
-  //     case Accepts.Json() =>
-  //       //for {
-  //       //  tasks <- TaskService.findAllNonTrainings
-  //       //  js <- Future.traverse(tasks)(Task.transformToJson)
-  //       //} yield {
-  //       // JsonOk(Json.obj("data" -> js))
-  //       //}
-  //   }
-  // }
-
   def edit(taskTypeId: String) = Authenticated.async { implicit request =>
     for {
       taskType <- TaskTypeDAO.findOneById(taskTypeId) ?~> Messages("taskType.notFound")
       _ <- ensureTeamAdministration(request.user, taskType.team)
     } yield {
-      Ok(html.admin.taskType.taskTypeEdit(taskType.id, taskTypeForm.fill(taskType)))
+      Ok(html.admin.taskType.taskTypeEdit(taskType.id, taskTypeForm.fill(taskType), request.user.adminTeamNames))
     }
   }
 
   def editTaskTypeForm(taskTypeId: String) = Authenticated.async(parse.urlFormEncoded) { implicit request =>
     def evaluateForm(taskType: TaskType): Fox[SimpleResult] = {
       taskTypeForm.bindFromRequest.fold(
-        hasErrors = (errors => Fox.successful(BadRequest(html.admin.taskType.taskTypeEdit(taskType.id, errors)))),
+        hasErrors = (errors => Fox.successful(BadRequest(html.admin.taskType.taskTypeEdit(taskType.id, errors, request.user.adminTeamNames)))),
         success = { t =>
           val updatedTaskType = t.copy(_id = taskType._id)
           for {
-            _ <- TaskTypeDAO.update(taskType._id, updatedTaskType)
-            tasks <- TaskDAO.findAllByTaskType(taskType)
+            _ <- TaskTypeDAO.update(taskType._id, updatedTaskType).toFox
+            tasks <- TaskDAO.findAllByTaskType(taskType).toFox
+            _ <- ensureTeamAdministration(request.user, updatedTaskType.team).toFox
           } yield {
             tasks.map(task => AnnotationDAO.updateAllUsingNewTaskType(task, updatedTaskType.settings))
             Redirect(routes.TaskTypeAdministration.list)

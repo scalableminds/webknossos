@@ -145,7 +145,9 @@ object SkeletonTracingLike extends FoxImplicits {
             <experiment name={dataSet.name}/>
             <scale x={dataSource.scale.x.toString} y={dataSource.scale.y.toString} z={dataSource.scale.z.toString}/>
             <offset x="0" y="0" z="0"/>
-            <time ms={e.timestamp.toString}/>{e.activeNodeId.map(id => s"<activeNode id=$id/>").getOrElse("")}<editPosition x={e.editPosition.x.toString} y={e.editPosition.y.toString} z={e.editPosition.z.toString}/>
+            <time ms={e.timestamp.toString}/>
+            {e.activeNodeId.map(id => scala.xml.XML.loadString(s"<activeNode id=$id/>")).getOrElse(scala.xml.Null)}
+            <editPosition x={e.editPosition.x.toString} y={e.editPosition.y.toString} z={e.editPosition.z.toString}/>
           </parameters>{treesXml}<branchpoints>
           {branchpoints}
         </branchpoints>

@@ -1,7 +1,8 @@
 ### define
 underscore : _
 backbone.marionette : Marionette
-admin/views/project/project_list_item_view : ProjectListItemView
+./project_list_item_view : ProjectListItemView
+./create_project_modal_view : CreateProjectModalView
 ###
 
 class ProjectsListView extends Backbone.Marionette.CompositeView
@@ -19,14 +20,27 @@ class ProjectsListView extends Backbone.Marionette.CompositeView
         </tr>
       </thead>
     </table>
+    <div id="modal-wrapper"></div>
+    <div class="form-actions navbar-fixed-bottom">
+      <div class="btn-group">
+        <a class="btn btn-primary" href="#">
+          <i class="fa fa-plus"></i>Create New Project
+        </a>
+      </div>
+    </div>
   """)
 
   className : "container wide project-administaration"
   itemView : ProjectListItemView
-  itemView : "table"
+  itemViewContainer : "table"
 
   events :
     "click .details-toggle-all" : "toggleAllDetails"
+    "click .btn-primary" : "showModal"
+
+  ui :
+    "modalWrapper" : "#modal-wrapper"
+
 
   initialize : ->
 
@@ -39,12 +53,21 @@ class ProjectsListView extends Backbone.Marionette.CompositeView
     @listenTo(app.vent, "paginationView:filter", @filter)
 
 
-  filter : ->
+  filter : (searchQuery) ->
 
-    @collection.setFiler(["name", "team"])
+    @collection.setFilter(["name", "team"], searchQuery)
 
 
   toggleAllDetails : ->
 
     @ui.detailsToggle.toggleClass("open")
     app.vent.trigger("taskListView:toggleDetails")
+
+
+  showModal : ->
+
+    modalView = new CreateProjectModalView()
+    @ui.modalWrapper.html(modalView.render().el)
+
+    modalView.show()
+

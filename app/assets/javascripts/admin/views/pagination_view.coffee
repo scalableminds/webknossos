@@ -94,13 +94,16 @@ class PaginationView extends Backbone.Marionette.ItemView
 
   filter : ->
 
-    # implement actually filtering on the collection in respective view
-    # in order to set correct fields for filtering
-    filterQuery = @ui.inputSearch.val()
-    app.vent.trigger("paginationView:filter", filterQuery)
+    # Only enable filtering after the collection has data
+    if @collection.origModels
 
-    @ui.inputSearch.val(filterQuery)
-    @ui.inputSearch.focus()
+      # implement actually filtering on the collection in each respective view
+      # in order to set correct fields for filtering
+      filterQuery = @ui.inputSearch.val()
+      app.vent.trigger("paginationView:filter", filterQuery)
+
+      @ui.inputSearch.val(filterQuery)
+      @ui.inputSearch.focus()
 
 
   collectionSynced : (evt) ->

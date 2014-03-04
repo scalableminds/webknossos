@@ -115,7 +115,7 @@ POST          /admin/taskTypes/:id                                       control
 # Projects
 GET           /projects                                                  controllers.ProjectController.empty
 GET           /api/projects                                              controllers.ProjectController.list
-POST          /api/projects/create                                       controllers.ProjectController.create
+POST          /api/projects                                              controllers.ProjectController.create
 DELETE        /api/projects/:name                                        controllers.ProjectController.delete(name: String)
 POST          /api/projects/:name/download                               controllers.admin.NMLIO.projectDownload(name: String)
 GET           /api/projects/:name/tasks                                  controllers.ProjectController.tasksForProject(name: String)

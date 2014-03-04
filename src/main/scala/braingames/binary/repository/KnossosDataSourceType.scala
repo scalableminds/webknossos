@@ -31,12 +31,12 @@ trait KnossosDataSourceTypeHandler extends DataSourceTypeHandler {
     dataSourceFromFile(unusableDataSource.sourceFolder)
   }
 
-  protected def extractSections(base: Path, basePath: String): Iterable[DataLayerSection] = {
+  protected def extractSections(base: Path): Iterable[DataLayerSection] = {
     val sectionSettingsMap = extractSectionSettings(base)
     sectionSettingsMap.map {
       case (path, settings) =>
         DataLayerSection(
-          path.toAbsolute.path.replace(basePath, ""),
+          path.relativize(base).path,
           settings.sectionId getOrElse path.name,
           settings.resolutions,
           BoundingBox.createFrom(settings.bboxSmall),
@@ -65,7 +65,7 @@ trait KnossosDataSourceTypeHandler extends DataSourceTypeHandler {
     } yield {
       logger.info("Found Layer: " + settings)
       val dataLayerPath = layer.toAbsolute.path
-      val sections = extractSections(layer, dataLayerPath).toList
+      val sections = extractSections(layer).toList
       DataLayer(settings.typ, dataLayerPath, settings.flags, settings.`class`, settings.fallback, sections)
     }
   }

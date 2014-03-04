@@ -57,7 +57,7 @@ object DataStore {
     knossosFilePath(knossosBaseDir(dataInfo), dataInfo.dataSource.id, dataInfo.resolution, dataInfo.block)
 
   def knossosBaseDir(dataInfo: DataStoreBlock) =
-    Path.fromString(dataInfo.dataLayer.baseDir) / dataInfo.dataLayerSection.baseDir
+    Path.fromString(dataInfo.dataLayer.baseDir) / Path.fromString(dataInfo.dataLayerSection.baseDir)
 
   def knossosFilePath(dataSetDir: Path, id: String, resolution: Int, block: Point3D) = {
     val x = "x%04d".format(block.x)

@@ -93,4 +93,4 @@ Will fetch all Scala, Java and node dependencies and run the application on Port
 scalable minds http://scm.io
 
 # License
-tbd
+TBD

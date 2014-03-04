@@ -93,11 +93,13 @@ priority=Priority
 
 project=Project
 projectName=Project Name
+project.name.alreadyTaken=Name already used
+priject.name.invalidChars=Name contains invalid characters
 project.remove.confirm=Do you really want to delete this project? All tracings and tasks connected to this project will be deleted.
 project.remove.notAllowed=You are not allowed to remove this project.
-project.removed=Project got removed
+project.remove.success=Project got removed
+project.remove.failure=Project couldn''t get removed
 project.notFound=Project couldn''t be found
-project.nameAlreadyInUse=Name already used
 project.nameInvalid=Project names can only contain alphanumeric characters, _ and -
 project.createSuccess=Project successfully created
 

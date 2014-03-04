@@ -2,7 +2,9 @@ package models.task
 
 import models.basics._
 import models.user.{UserService, User}
-import play.api.libs.json.{JsArray, Json}
+import play.api.libs.json._
+import play.api.libs.json.Json
+import play.api.libs.functional.syntax._
 import braingames.reactivemongo.{DefaultAccessDefinitions, GlobalAccessContext, DBAccessContext}
 import reactivemongo.bson.BSONObjectID
 import play.modules.reactivemongo.json.BSONFormats._
@@ -15,28 +17,43 @@ import models.team.Role
 import play.api.Logger
 import net.liftweb.common.{Full, Empty}
 import braingames.reactivemongo.AccessRestrictions.{DenyEveryone, AllowIf}
+import play.api.i18n.Messages
+import play.api.data.validation.ValidationError
 
 case class Project(name: String, team: String, _owner: BSONObjectID) {
   def owner = UserService.findOneById(_owner.stringify, useCache = true)(GlobalAccessContext)
+
+  def isOwnedBy(user: User) = user._id == _owner
 
   def tasks(implicit ctx: DBAccessContext) = TaskDAO.findAllByProject(name)(GlobalAccessContext)
 }
 
 object Project {
   implicit val projectFormat = Json.format[Project]
+
+  def StringObjectIdReads(key: String) = Reads.filter[String](ValidationError("objectid.invalid", key))(BSONObjectID.parse(_).isSuccess)
+
+  val projectPublicWrites: Writes[Project] =
+    ((__ \ 'name).write[String] and
+      (__ \ 'team).write[String] and
+      (__ \ 'owner).write[String])(p => (p.name, p.team, p._owner.stringify))
+
+  val projectPublicReads: Reads[Project] =
+    ((__ \ 'name).read[String](Reads.minLength[String](3) keepAnd Reads.pattern("^[a-zA-Z0-9_-]*$".r, Messages("project.name.invalidChars"))) and
+      (__ \ 'team).read[String] and
+      (__ \ 'owner).read[String](StringObjectIdReads("owner")))((name, team, owner) => Project(name, team, BSONObjectID(owner)))
 }
 
 object ProjectService extends FoxImplicits {
-  def remove(project: Project)(implicit ctx: DBAccessContext) = {
+  def remove(project: Project)(implicit ctx: DBAccessContext): Fox[Boolean] = {
     ProjectDAO.remove("name", project.name).flatMap{
-      case result if result.n > 0 => {
-        TaskDAO.removeAllWithProject(project)
-        Future.successful(Full(None))
-      }
-      case _ => {
+      case result if result.n > 0 =>
+        TaskDAO.removeAllWithProject(project).map{ _ =>
+          true
+        }
+      case _ =>
         Logger.warn("Tried to remove project without permission.")
-        Future.successful(Empty)
-      }
+        Fox.successful(false)
     }
   }
 

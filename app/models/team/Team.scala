@@ -33,7 +33,7 @@ object Team extends {
       (t.id, t.name, t.roles, t.owner.map(_.stringify) getOrElse "", requestingUser.adminTeamNames.contains(t.name), t.isEditableBy(requestingUser)))
 
   def teamPublicReads(requestingUser: User): Reads[Team] =
-    ((__ \ "name").read[String] and
+    ((__ \ "name").read[String](Reads.minLength[String](3)) and
       (__ \ "roles").read[List[Role]]
       )( (name, roles) => Team(name, roles, Some(requestingUser._id)))
 }

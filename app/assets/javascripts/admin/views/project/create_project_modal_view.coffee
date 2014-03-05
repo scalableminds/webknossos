@@ -1,9 +1,12 @@
 ### define
 underscore : _
 backbone.marionette : Marionette
+admin/views/selection_view : SelectionView
+admin/models/user/user_collection : UserCollection
+admin/models/team/team_collection : TeamCollection
 ###
 
-class CreateProjectModalView extends Backbone.Marionette.CompositeView
+class CreateProjectModalView extends Backbone.Marionette.Layout
 
   className : "modal hide fade"
   template : _.template("""
@@ -12,27 +15,21 @@ class CreateProjectModalView extends Backbone.Marionette.CompositeView
       <h3>Create a new Project</h3>
     </div>
     <div class="modal-body">
-      <form action="@controllers.admin.routes.ProjectAdministration.create" method="POST" class="form-horizontal">
-        <div class=" control-group">
+      <form action="" method="POST" class="form-horizontal">
+        <div class="control-group">
           <label class="control-label" for="team">Team</label>
-          <div class="controls">
-              <select id="team" name="team">
-              </select>
-              <span class="help-inline errors"></span>
+          <div class="controls team">
           </div>
         </div>
-        <div class=" control-group">
+        <div class="control-group">
           <label class="control-label" for="projectName">Project Name</label>
           <div class="controls">
             <input type="text" id="projectName" name="projectName" value="">
-            <span class="help-inline errors"></span>
           </div>
         </div>
-        <div class=" control-group">
+        <div class="control-group">
           <label class="control-label" for="owner">Owner</label>
-          <div class="controls">
-              <select id="owner" name="owner"></select>
-              <span class="help-inline errors"></span>
+          <div class="controls owner">
           </div>
         </div>
       </form>
@@ -43,8 +40,38 @@ class CreateProjectModalView extends Backbone.Marionette.CompositeView
     </div>
   """)
 
+  regions :
+    "team" : ".team"
+    "owner" : ".owner"
+
+  events :
+    "submit form" : "cancel"
+
   initialize : ->
+
+    @userSelectionView = new SelectionView(
+      collection : new UserCollection()
+      itemViewOptions :
+        modelValue : -> return "#{@model.get("firstName")} #{@model.get("lastName")}"
+    )
+    @teamSelectionView = new SelectionView(
+      collection : new TeamCollection()
+      itemViewOptions :
+        modelValue: -> return "#{@model.get("name")}"
+    )
+
 
   show : ->
 
     @$el.modal("show")
+
+    @userSelectionView.render()
+    @teamSelectionView.render()
+
+    @owner.show(@userSelectionView)
+    @team.show(@teamSelectionView)
+
+
+  cancel : (evt) ->
+
+    evt.preventDefault()

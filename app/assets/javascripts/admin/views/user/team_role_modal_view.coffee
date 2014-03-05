@@ -2,7 +2,7 @@
 underscore : _
 backbone.marionette : marionette
 libs/toast : Toast
-admin/models/user/team_collection : TeamCollection
+admin/models/team/team_collection : TeamCollection
 admin/views/user/team_role_modal_item_view : TeamRoleModalItem
 ###
 
@@ -39,13 +39,14 @@ class TeamRoleModal extends Backbone.Marionette.CompositeView
 
     @collection = new TeamCollection()
     @collection.fetch(
-      data:
-        isEditable: true
+      data: "amIAnAdmin=true"
+      silent : true
+    ).done(=>
+      @collection.goTo(1)
     )
     @userCollection = args.userCollection
 
-    # For some reason listening to this events throught the 'events' property won't work
-    @on("after:item:added", @prefillModal)
+    @listenTo(@, "after:item:added", @prefillModal)
 
 
   changeExperience : ->
@@ -60,7 +61,7 @@ class TeamRoleModal extends Backbone.Marionette.CompositeView
           )
 
           # Find all selected teams
-          teams = _.map(@$el.find("input[type=checkbox]:checked"), (element) ->
+          teams = _.map(@$("input[type=checkbox]:checked"), (element) ->
             return {
               team : $(element).val()
               role :
@@ -72,8 +73,6 @@ class TeamRoleModal extends Backbone.Marionette.CompositeView
           teams = teams || []
 
           # Verify user and update his teams
-          #user.set("verified", true)
-          #user.set("teams", teams)
           user.save(
             "verified" : true
             "teams" : teams
@@ -93,7 +92,7 @@ class TeamRoleModal extends Backbone.Marionette.CompositeView
     isValid = true
 
     # Make sure that all selected checkboxes have a selected role
-    @$el.find("input[type=checkbox]:checked").parent().parent().find("select :selected").each(
+    @$("input[type=checkbox]:checked").parent().parent().find("select :selected").each(
       (i, element) ->
         isValid = $(element).text() != "Modify roles..."
     )
@@ -101,7 +100,7 @@ class TeamRoleModal extends Backbone.Marionette.CompositeView
     return isValid
 
 
-  prefillModal : ->
+  prefillModal : (itemView) ->
 
     # If only one user is selected then prefill the modal with his current values
     $userTableCheckboxes = $("tbody input[type=checkbox]:checked")
@@ -115,13 +114,12 @@ class TeamRoleModal extends Backbone.Marionette.CompositeView
       _.each(user.get("teams"),
         (team) =>
 
-          # Check all his teams
-          selector = """input[value="#{team.team}"]"""
-          $teamCheckbox = @$el.find("#{selector}").prop("checked", true)
+          if team.team == itemView.model.get("name")
+            itemView.ui.teamCheckbox.prop("checked", true)
 
-          # Select the role in the dropdown
-          $teamCheckbox.closest(".row-fluid").find("option").filter( ->
-            return $(this).text() == team.role.name
-          ).prop('selected', true)
+            # Select the role in the dropdown
+            itemView.ui.roleSelect.find("option").filter( ->
+              return $(this).text() == team.role.name
+            ).prop('selected', true)
       )
 

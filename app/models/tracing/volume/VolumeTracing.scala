@@ -1,18 +1,20 @@
 package models.tracing.volume
 
-import braingames.geometry.Point3D
+import braingames.geometry.{Point3D, BoundingBox}
 import models.annotation.{AnnotationContentService, AnnotationContent, AnnotationSettings}
 import models.basics.SecuredBaseDAO
+import models.binary.UserDataLayerDAO
 import models.binary.DataSet
 import java.io.InputStream
 import play.api.libs.json.{Json, JsValue}
 import oxalis.binary.BinaryDataService
 import scala.concurrent.Future
 import braingames.reactivemongo.DBAccessContext
-import braingames.util.Fox
+import braingames.util.{FoxImplicits, Fox}
 import reactivemongo.bson.BSONObjectID
 import play.modules.reactivemongo.json.BSONFormats._
-
+import play.api.libs.concurrent.Execution.Implicits._
+import play.api.Logger
 /**
  * Company: scalableminds
  * User: tmbo
@@ -21,9 +23,11 @@ import play.modules.reactivemongo.json.BSONFormats._
  */
 case class VolumeTracing(
   dataSetName: String,
+  userDataLayerName: String,
   timestamp: Long,
   editPosition: Point3D,
-  settings: AnnotationSettings = AnnotationSettings.default,
+  boundingBox: Option[BoundingBox],
+  settings: AnnotationSettings = AnnotationSettings.volumeDefault,
   _id: BSONObjectID = BSONObjectID.generate)
   extends AnnotationContent {
 
@@ -33,29 +37,39 @@ case class VolumeTracing(
 
   def service = VolumeTracingService
 
-  def updateFromJson(jsUpdates: Seq[JsValue])(implicit ctx: DBAccessContext) = ???
+  def updateFromJson(jsUpdates: Seq[JsValue])(implicit ctx: DBAccessContext) = {Fox.successful(this)}
 
   def copyDeepAndInsert = ???
 
   def mergeWith(source: AnnotationContent) = ???
 
-  def contentType: String =  VolumeTracing.contentType
+  def contentType: String = VolumeTracing.contentType
 
   def toDownloadStream: Fox[InputStream] = ???
 
   def downloadFileExtension: String = ???
 }
 
-object VolumeTracingService extends AnnotationContentService{
+object VolumeTracingService extends AnnotationContentService with FoxImplicits{
   type AType = VolumeTracing
 
   def dao = VolumeTracingDAO
 
   def updateSettings(settings: AnnotationSettings, tracingId: String)(implicit ctx: DBAccessContext): Fox[Boolean] = ???
 
-  def findOneById(id: String)(implicit ctx: DBAccessContext): Fox[VolumeTracingService.AType] = ???
+  def findOneById(id: String)(implicit ctx: DBAccessContext) =
+    VolumeTracingDAO.findOneById(id)
 
-  def createFrom(dataSet: DataSet)(implicit ctx: DBAccessContext): Fox[VolumeTracingService.AType] = ???
+  def createFrom(baseDataSet: DataSet)(implicit ctx: DBAccessContext) = {
+    baseDataSet.dataSource.toFox.flatMap{ baseSource =>
+      val dataLayer = BinaryDataService.createUserDataSource(baseSource)
+      val t = VolumeTracing(baseDataSet.name, dataLayer.name, System.currentTimeMillis(), Point3D(0,0,0), None)
+      for{
+      _ <- UserDataLayerDAO.insert(dataLayer)
+      _ <- VolumeTracingDAO.insert(t)
+      } yield t
+    }
+  }
 
   def clearTracingData(id: String)(implicit ctx: DBAccessContext): Fox[VolumeTracingService.AType] = ???
 }
@@ -70,11 +84,4 @@ object VolumeTracingDAO extends SecuredBaseDAO[VolumeTracing] {
   val collectionName = "volumes"
 
   val formatter = VolumeTracing.volumeTracingFormat
-
-  def createFrom(baseDataSet: DataSet)(implicit ctx: DBAccessContext) = {
-    val dataSet = BinaryDataService.createUserDataSource(baseDataSet.dataSource)
-    val t = VolumeTracing(dataSet.name, System.currentTimeMillis(), Point3D(0,0,0))
-    insert(t)
-  }
-
 }

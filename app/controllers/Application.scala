@@ -14,8 +14,6 @@ import net.liftweb.common.Full
 object Application extends Controller with Secured {
   lazy val app = play.api.Play.current
 
-  lazy val version = scala.io.Source.fromFile("version").mkString.trim
-
   lazy val Mailer =
     Akka.system(app).actorFor("/user/mailActor")
 
@@ -37,8 +35,6 @@ object Application extends Controller with Secured {
         controllers.routes.javascript.AnnotationController.download,
         controllers.admin.routes.javascript.NMLIO.taskDownload,
         controllers.admin.routes.javascript.NMLIO.projectDownload,
-        controllers.admin.routes.javascript.TrainingsTaskAdministration.create,
-        controllers.admin.routes.javascript.TrainingsTaskAdministration.delete,
         controllers.admin.routes.javascript.TaskAdministration.delete,
         controllers.admin.routes.javascript.ProjectAdministration.create,
         controllers.admin.routes.javascript.ProjectAdministration.delete
@@ -56,7 +52,7 @@ object Application extends Controller with Secured {
             Redirect(routes.UserController.dashboard)
         }
       case _ =>
-        Future.successful(Redirect(routes.DataSetController.list))
+        Future.successful(Redirect(routes.DataSetController.spotlight))
     }
   }
 

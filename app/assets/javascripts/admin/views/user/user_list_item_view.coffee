@@ -37,12 +37,15 @@ class UserListItemView extends Backbone.Marionette.ItemView
       <% } %>
     </td>
     <td class="nowrap">
-      <a href="/users/<%= id %>/details"><i class="fa fa-user"></i> show Tracings</a><br />
-      <a href="/api/users/<%= id %>/annotations/download" title="download all finished tracings"><i class="fa fa-download"></i> download </a><br />
-      <a href="#" class="delete-user"><i class="fa fa-trash-o"></i> delete </a><br />
-      <!--<a href="/admin/users/<%= id %>/loginAs"><i class="fa fa-signin"></i> log in as User </a>-->
+      <a href="/users/<%= id %>/details"><i class="fa fa-user"></i>show Tracings</a><br />
+      <a href="/api/users/<%= id %>/annotations/download" title="download all finished tracings"><i class="fa fa-download"></i>download </a><br />
+      <a href="#" class="delete-user"><i class="fa fa-trash-o"></i>delete </a><br />
+      <!--<a href="/admin/users/<%= id %>/loginAs"><i class="fa fa-signin"></i>log in as User </a>-->
     </td>
-  """, null, {imports: {TemplateHelpers}})
+  """)
+
+  templateHelpers :
+    TemplateHelpers : TemplateHelpers
 
   events :
     "click .delete-user" : "delete"
@@ -61,7 +64,7 @@ class UserListItemView extends Backbone.Marionette.ItemView
   verify : ->
 
     #select checkbox, so that it gets picked up by the bulk verification modal
-    @$el.find("input").prop("checked", true)
+    @$("input").prop("checked", true)
 
     #HACKY
     $("#team-role-modal").click()

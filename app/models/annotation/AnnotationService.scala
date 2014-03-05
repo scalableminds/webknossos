@@ -7,7 +7,7 @@ import braingames.util.{FoxImplicits, Fox}
 import models.tracing.skeleton.{SkeletonTracingService}
 import play.api.libs.concurrent.Execution.Implicits._
 import models.task.{Task, TaskService}
-import braingames.geometry.Point3D
+import braingames.geometry.{Point3D, BoundingBox}
 import reactivemongo.bson.BSONObjectID
 import models.annotation.AnnotationType._
 import scala.Some
@@ -88,26 +88,20 @@ object AnnotationService extends AnnotationContentProviders with BoxImplicits wi
     }
   }
 
-  def createAnnotationBase(task: Task, userId: BSONObjectID, settings: AnnotationSettings, dataSetName: String, start: Point3D)(implicit ctx: DBAccessContext) = {
+  def createAnnotationBase(task: Task, userId: BSONObjectID, boundingBox: BoundingBox, settings: AnnotationSettings, dataSetName: String, start: Point3D)(implicit ctx: DBAccessContext) = {
     for {
-      tracing <- SkeletonTracingService.createFrom(dataSetName, start, true, settings)
+      tracing <- SkeletonTracingService.createFrom(dataSetName, start, Some(boundingBox), true, settings)
       content = ContentReference.createFor(tracing)
       _ <- AnnotationDAO.insert(Annotation(userId, content, team = task.team, typ = AnnotationType.TracingBase, _task = Some(task._id)))
     } yield tracing
   }
 
-  def createAnnotationBase(task: Task, userId: BSONObjectID, settings: AnnotationSettings, nml: NML)(implicit ctx: DBAccessContext) = {
-    SkeletonTracingService.createFrom(nml, settings).toFox.map {
+  def createAnnotationBase(task: Task, userId: BSONObjectID, boundingBox: BoundingBox, settings: AnnotationSettings, nml: NML)(implicit ctx: DBAccessContext) = {
+    SkeletonTracingService.createFrom(nml, Some(boundingBox), settings).toFox.map {
       tracing =>
         val content = ContentReference.createFor(tracing)
         AnnotationDAO.insert(Annotation(userId, content, team = task.team, typ = AnnotationType.TracingBase, _task = Some(task._id)))
     }
-  }
-
-  def createSample(annotation: Annotation, _task: BSONObjectID)(implicit ctx: DBAccessContext): Fox[Annotation] = {
-    annotation.copy(
-      typ = AnnotationType.Sample,
-      _task = Some(_task)).muta.copyDeepAndInsert()
   }
 
   def createFrom(_user: BSONObjectID, team: String, content: AnnotationContent, annotationType: AnnotationType, name: Option[String])(implicit ctx: DBAccessContext) = {

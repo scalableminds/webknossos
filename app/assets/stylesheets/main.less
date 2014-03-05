@@ -1,6 +1,12 @@
+@import '_fonts.less';
+@import '_variables.less';
 @import 'libs/_theme.less';
 @import 'admin/_user.less';
+@import 'admin/_team.less';
 @import 'admin/_datasets.less';
+@import 'admin/_pagination.less';
+@import 'admin/_task.less';
+
 
 // ----------------------- MAIN STYLES
 body {
@@ -491,14 +497,6 @@ svg a:hover {
   white-space: normal;
 }
 
-.pagination-searchbox {
-  float: right;
-}
-
-.pagination-createNew{
-  float: right;
-  padding: 5px 15px;
-}
 
 #level-creator {
 
@@ -584,6 +582,7 @@ svg a:hover {
     font-weight: 200;
     display: inline-block;
     font-size: 150px;
+    line-height: normal;
     color: #000;
     margin-left: 17px;
   }
@@ -690,8 +689,7 @@ svg a:hover {
 
     #editor {
       width: 100%;
-      top: 0;
-      bottom: 0;
+      height: 100%;
     }
   }
   input[type=submit] {
@@ -764,4 +762,25 @@ svg a:hover {
 .btn [class*=" fa-"],
 .nav [class*=" fa-"] {
   line-height: normal;
+}
+
+//override bootstrap
+.table .table {
+  background-color: inherit;
+}
+
+#merge {
+    width: 280px;
+    padding: 10px;
+    position: absolute;
+    top: 240px;
+    left: 0px;
+    background-color: #aaf;
+    visibility: hidden;
+}
+
+
+// make sure text and icons have space between them
+i {
+  margin-right: 5px;
 }

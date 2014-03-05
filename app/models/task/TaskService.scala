@@ -6,7 +6,7 @@ import reactivemongo.bson.BSONObjectID
 
 import braingames.util.{Fox, FoxImplicits}
 import play.api.libs.concurrent.Execution.Implicits._
-import models.user.Experience
+import models.user.{User, Experience}
 import scala.concurrent.Future
 import play.api.Logger
 import reactivemongo.core.commands.LastError
@@ -18,11 +18,13 @@ import reactivemongo.core.commands.LastError
  * Time: 14:59
  */
 object TaskService extends TaskAssignmentSimulation with TaskAssignment with FoxImplicits {
-  def findAllTrainings(implicit ctx: DBAccessContext) = TaskDAO.findAllTrainings
 
-  def findAllAssignableNonTrainings(implicit ctx: DBAccessContext) = TaskDAO.findAllAssignableNonTrainings
+  def findAllAssignable(implicit ctx: DBAccessContext) = TaskDAO.findAllAssignable
 
-  def findAllNonTrainings(implicit ctx: DBAccessContext) = TaskDAO.findAllNonTrainings
+  def findAll(implicit ctx: DBAccessContext) = TaskDAO.findAll
+
+  def findAllAdministratable(user: User)(implicit ctx: DBAccessContext) =
+    TaskDAO.findAllAdministratable(user)
 
   def remove(_task: BSONObjectID)(implicit ctx: DBAccessContext) = {
     TaskDAO.removeById(_task).flatMap{
@@ -34,25 +36,11 @@ object TaskService extends TaskAssignmentSimulation with TaskAssignment with Fox
     }
   }
 
-  def toTrainingForm(t: Task): Option[(String, Training)] =
-    Some((t.id, (t.training getOrElse Training.empty)))
-
-  def fromTrainingForm(taskId: String, training: Training)(implicit ctx: DBAccessContext) =
-    for {
-      task <- TaskDAO.findOneById(taskId).toFox
-    } yield {
-      task.copy(training = Some(training))
-    }
-
   def assignOnce(t: Task)(implicit ctx: DBAccessContext) =
     TaskDAO.assignOnce(t._id)
 
   def unassignOnce(t: Task)(implicit ctx: DBAccessContext) =
     TaskDAO.unassignOnce(t._id)
-
-  def setTraining(trainingsTask: Task, training: Training, sample: Annotation)(implicit ctx: DBAccessContext) = {
-    TaskDAO.setTraining(trainingsTask._id, training.copy(sample = sample._id))
-  }
 
   def logTime(time: Long, task: Task)(implicit ctx: DBAccessContext) = {
     TaskDAO.logTime(time, task._id)

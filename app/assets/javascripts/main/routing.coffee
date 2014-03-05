@@ -16,7 +16,7 @@ $ ->
 
     javaTemplate = $("#main-container").data("template")
 
-    javaTemplate = javaTemplate.match(/^([^\$]*)/)[1]
+    javaTemplate = javaTemplate.match(/views\.html\.(.*)\$/)[1]
 
     if routes[javaTemplate]?
       routes[javaTemplate].call($("#main-container")[0])
@@ -32,24 +32,24 @@ $ ->
 
   route
 
-    "views.html.user.dashboard.userDashboard" : ->
+    "user.dashboard.userDashboard" : ->
 
       DashboardLoader.displayBasicDashboard()
       DashboardLoader.displayUserDashboard()
 
       return
 
-    "views.html.admin.user.user" : ->
+    "admin.user.user" : ->
 
       DashboardLoader.displayBasicDashboard()
 
       return
 
-    "views.html.admin.taskType.taskTypes" : ->
+    "admin.taskType.taskTypes" : ->
 
       hideLoading()
 
-    "views.html.tracing.trace" : ->
+    "tracing.trace" : ->
 
       require [
         "./oxalis/controller"
@@ -79,7 +79,6 @@ $ ->
           error: (xhr, status, error) ->
 
             console.error("Something went wrong when receiving task data", xhr, status, error)
-            populateTemplate({task : null})
 
           complete: (task) ->
 
@@ -88,7 +87,7 @@ $ ->
 
         return
 
-    "views.html.tracing.view" : ->
+    "tracing.view" : ->
 
       require [
         "./oxalis/controller"
@@ -103,73 +102,7 @@ $ ->
         return
 
 
-    "views.html.admin.binary.dataSetList" : ->
-
-      $modal = $(".modal")
-      $modal.find(".btn-primary").on "click", -> submitTeams()
-
-      # Attach model to main body to avoid z-Index
-      $modal = $modal.detach()
-      $("body").append($modal)
-
-      teamsCache = null
-      assignedTeams = []
-
-      $(".team-label").on "click", ->
-        # Find parent and read all labels for one dataset
-        $parent = $(this).closest("tr")
-        dataset = $parent.find("td").first().text().trim()
-        $modal.data("dataset", dataset)
-
-        $labels = $parent.find(".team-label").find(".label")
-        assignedTeams = _.map($labels, (label) -> return $(label).text())
-
-        if teamsCache
-          showModal()
-        else
-          $.ajax(
-            url: "/api/teams"
-            dataType: "json"
-          ).done (responseJSON) =>
-            teamsCache = responseJSON
-            showModal()
-
-      showModal = ->
-
-        $teamList = $modal.find("ul").empty()
-        $checkBoxTags = _.map(teamsCache, (team) ->
-
-          checked = if _.contains(assignedTeams, team.name) then "checked" else ""
-          $("""
-            <li>
-              <label class="checkbox"><input type="checkbox" value="#{team.name}" #{checked}> #{team.name}</label>
-            </li>
-          """)
-        )
-        $teamList.append($checkBoxTags)
-        $modal.modal("show")
-
-
-      submitTeams = ->
-
-          $checkboxes = $modal.find("input:checked")
-          dataset = $modal.data("dataset")
-          assignedTeams = _.map($checkboxes, (checkbox) -> return $(checkbox).parent().text().trim())
-
-          console.log dataset, assignedTeams
-          $modal.modal("hide")
-          $.ajax(
-            url: "/api/datasets/#{dataset}/teams"
-            type: "POST"
-            contentType: "application/json; charset=utf-8"
-            data: JSON.stringify(assignedTeams)
-          ).done ->
-            window.location.reload()
-
-      return hideLoading()
-
-
-    "views.html.admin.task.taskOverview" : ->
+    "admin.task.taskOverview" : ->
 
       require [ "worker!libs/viz.js" ], (VizWorker) ->
 
@@ -209,57 +142,84 @@ $ ->
             hideLoading()
 
           (error) ->
-            $(".graph").html("<i class=\"fa fa-warning-sign\"></i> #{error.replace(/\n/g,"<br>")}")
+            $(".graph").html("<i class=\"icon-warning-sign\"></i> #{error.replace(/\n/g,"<br>")}")
         )
 
-    "controllers.UserController" : ->
 
-      require ["./admin/views/user/user_list_view"], (UserListView) =>
+    # "admin.user.userAdministration" : ->
+      # TODO: does "admin.user.userAdministration" still exist or has it been replaced by "userList" ?
 
-        view = new UserListView().render()
-        $(this).html(view.el)
+    "admin.user.userList" : ->
 
-      # $modal = $(".modal")
+      require ["multiselect"], ->
 
-      # #teampicker only
-      # $modal.on "change", "select[name=teams]", ->
-      #   #add a new team / role pair
-      #   $template = $modal.find(".team-role-pair").first()
-      #   $newRow = $template.clone()
-      #   $newRow.insertAfter($template)
+        $popovers = $("a[rel=popover]")
+        template = """
+                   <form class="form-inline">
+        #{$("#single-teampicker").html()}
+                   </form>
+                   """
 
-      # $(".show-modal").on "click", ->
+        $popovers.popover(
+          content: template
+        )
 
-      #   templateId = $(this).data("template")
-      #   showModal(templateId)
+        $popovers.on "click", ->
 
-      # showModal = (templateId) ->
+          $this = $(@)
+          url = $this.data("url")
+          rowId = $this.closest("tr").data("id")
 
-      #   template = $("##{templateId}")
-      #   title = template.data("header")
+          $(".popover").find("a")
+            .attr("href", url)
+            .attr("data-ajax", "method=POST,submit,replace=##{rowId}")
 
-      #   $modal.find(".modal-body").html(template.html())
-      #   $modal.find(".modal-header h3").text(title)
-      #   $modal.find(".modal-hide").on "click", -> $modal.modal("hide")
+          $(".popover").find(".multiselect")
+            .multiselect(
+              buttonWidth: "200px"
+            )
 
-      #   $modal.modal("show")
-
-
-      # $("form").on "click", ".label-experience", (event) ->
-      #   values = $(this).html().split(" ")
-      #   if values
-      #     showModal("experiencepicker")
-      #     $modal = $(".modal")
-
-      #     $modal.find("input[name=experience-domain]").attr("value", values[0])
-      #     $modal.find("input[name=experience-value]").attr("value", values[1])
-      #     $(this).parents("table").find("input[type=checkbox]").attr('checked', false)
-      #     $(this).parents("tr").find("input[type=checkbox]").attr('checked', true)
-
-      return hideLoading()
+          $(".popover").find(".popover-hide").on "click", -> $this.popover("hide")
 
 
-    "views.html.admin.task.taskSelectionAlgorithm" : ->
+        $("#bulk-actions a").on "click", ->
+
+          $this = $(@)
+          templateId = $this.data("template")
+          showModal(templateId)
+
+        showModal = (templateId) ->
+
+          template = $("##{templateId}")
+          title = template.data("header")
+
+          $modal = $(".modal")
+
+          $modal.find(".modal-body").html(template.html())
+          $modal.find(".modal-header h3").text(title)
+          $modal.find(".modal-hide").on "click", -> $modal.modal("hide")
+          $modal.find(".multiselect").multiselect()
+
+          $modal.modal("show")
+
+
+
+        $("form").on "click", ".label-experience", (event) ->
+          values = $(this).html().split(" ")
+          if values
+            showModal("experiencepicker")
+            $modal = $(".modal")
+
+            $modal.find("input[name=experience-domain]").attr("value", values[0])
+            $modal.find("input[name=experience-value]").attr("value", values[1])
+            $(this).parents("table").find("input[type=checkbox]").attr('checked', false)
+            $(this).parents("tr").find("input[type=checkbox]").attr('checked', true)
+
+        hideLoading()
+      return
+
+
+    "admin.task.taskSelectionAlgorithm" : ->
 
       $this = $(this)
       $form = $this.find("form")
@@ -339,21 +299,21 @@ $ ->
 
         hideLoading()
 
-    "views.html.levelcreator.levelCreator" : ->
+    "levelcreator.levelCreator" : ->
 
       require ["./level_creator"], (LevelCreator) ->
 
         window.levelCreator = new LevelCreator()
         hideLoading()
 
-    "views.html.admin.project.projectList" : ->
+    "admin.project.projectList" : ->
 
       preparePaginationData = (projects, users) ->
 
         for aProject, index in projects
 
           id = aProject._owner.$oid
-          owner = _.find(users, (u) -> u.id == id)
+          owner = _.find(users, (u) -> u._id.$oid == id)
 
           if owner
             ownerName = owner.firstName + " " + owner.lastName
@@ -379,10 +339,10 @@ $ ->
         new Paginator( $pageSelection, paginationData)
 
         for aUser in response.users
-          $owner.append("<option value='#{aUser.id}' selected=''>#{aUser.firstName} #{aUser.lastName}</option>")
+          $owner.append("<option value='#{aUser._id.$oid}' selected=''>#{aUser.firstName} #{aUser.lastName}</option>")
       )
 
-    "views.html.admin.training.trainingsTaskCreate" : ->
+    "admin.training.trainingsTaskCreate" : ->
 
       url = $("#form-well").data("url")
 

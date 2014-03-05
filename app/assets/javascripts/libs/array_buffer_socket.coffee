@@ -1,5 +1,6 @@
 ### define
 libs/request : Request
+underscore : _
 ###
 
 class ArrayBufferSocket
@@ -293,19 +294,28 @@ class ArrayBufferSocket.XmlHttpRequest
 
   MESSAGE_TIMEOUT : 10000
 
-  constructor : (@url) ->
+  constructor : (@url, @getParams, @type = "GET", @encoding = null) ->
 
   open : ({ @responseBufferType, @requestBufferType }) ->
 
   send : (data) ->
 
+    # Build GET query string
+    urlSuffix = ""
+    prefix    = "?"
+    for param of @getParams
+      urlSuffix += prefix + param + "=" + @getParams[param]
+      prefix     = "&" 
+
     data = new @requestBufferType(data) if _.isArray(data)
     Request.send(
       data : data
-      url : @url
+      url : @url + urlSuffix
       dataType : 'arraybuffer'
       timeout : @MESSAGE_TIMEOUT
-    ).pipe (buffer) =>
+      type : @type
+      contentEncoding : @encoding
+    ).then (buffer) =>
 
       if buffer
         new @responseBufferType(buffer)

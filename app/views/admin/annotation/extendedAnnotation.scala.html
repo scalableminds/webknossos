@@ -18,18 +18,6 @@
   }
 }
 
-@displayComments(failed: Boolean, comments: List[String]) = {
-  @comments match{
-    case head :: tail => {
-      <a href="#" rel="popover" data-placement="bottom" data-title="Comment from Reviewer" data-html="true" data-content="@org.apache.commons.lang3.StringEscapeUtils.escapeHtml4(head).replaceAll("\n", "<br /><br />")"><i class="fa fa-eye"></i> @linkText(failed) Comment <span class="caret-down"></span></a>
-    }
-    case _ => {
-
-    }
-  }
-
-}
-
 <tr class="@if(annotation.state.isFinished){finished}else{unfinished}">
   <td> @formatHash(task.id) </td>
   <td> @taskType.map(_.summary).getOrElse("<deleted>") - @annotation.typ</td>
@@ -45,9 +33,9 @@
 
   @statsOpt.map{ stats =>
   <td>
-    <span title="Trees"><i class="fa fa-sitemap"></i> @stats.numberOfTrees &nbsp;</span>
+    <span title="Trees"><i class="fa fa-sitemap"></i>@stats.numberOfTrees &nbsp;</span>
     <span title="Nodes">&bull; @stats.numberOfNodes &nbsp;</span>
-    <span title="Edges"><i class="fa fa-arrows-h"></i> @stats.numberOfEdges</span>
+    <span title="Edges"><i class="fa fa-arrows-h"></i>@stats.numberOfEdges</span>
   </td>
   }.getOrElse(<td />)
 
@@ -58,14 +46,9 @@
     @annotation.state match{
       case s if s.isFinished => {
         <i class="fa fa-check"></i><span> Finished</span><br />
-        @displayComments(false, annotation.review.flatMap( _.comment ))
-      }
-      case s if s.isInReview || s.isReadyForReview => {
-        <i class="fa fa-eye"></i><span> In Review</span>
       }
       case _ => {
         <i class="fa fa-refresh"></i><span> In Progress</span>
-        @displayComments(true, annotation.review.flatMap( _.comment ))
       }
     }
   </td>

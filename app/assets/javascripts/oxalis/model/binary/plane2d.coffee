@@ -39,10 +39,9 @@ class Plane2D
   contrastCurves : null
   
   dataTexture : null
-  volumeTexture : null
 
 
-  constructor : (index, @cube, @queue, @TEXTURE_SIZE_P, @DATA_BIT_DEPTH, @TEXTURE_BIT_DEPTH) ->
+  constructor : (index, @cube, @queue, @TEXTURE_SIZE_P, @DATA_BIT_DEPTH, @TEXTURE_BIT_DEPTH, @MAPPED_DATA_BIT_DEPTH) ->
 
     _.extend(@, new EventMixin())
 
@@ -55,7 +54,6 @@ class Plane2D
     [@U, @V, @W] = Dimensions.getIndices(index)
 
     @dataTexture = { renderTile: @renderDataTile }
-    @volumeTexture = { renderTile: @renderVolumeTile }
 
     @cube.on "bucketLoaded", (bucket) =>
 
@@ -74,8 +72,8 @@ class Plane2D
 
     @cube.on "volumeLabled", =>
 
-      @volumeTexture.tiles = new Array(@BUCKETS_PER_ROW * @BUCKETS_PER_ROW)
-      @volumeTexture.ready = false
+      @dataTexture.tiles = new Array(@BUCKETS_PER_ROW * @BUCKETS_PER_ROW)
+      @dataTexture.ready = false
 
 
   updateContrastCurves : (@contrastCurves) ->
@@ -91,12 +89,12 @@ class Plane2D
 
   hasChanged : ->
 
-    not (@dataTexture.ready and @volumeTexture.ready)
+    not @dataTexture.ready
 
 
   getImpl : (position, zoomStep, area) ->
 
-    [@getTexture(@dataTexture, position, zoomStep, area), @getTexture(@volumeTexture, position, zoomStep, area)]
+    @getTexture(@dataTexture, position, zoomStep, area)
 
 
   getTexture : (texture, position, zoomStep, area) ->
@@ -268,7 +266,8 @@ class Plane2D
 
       sourceOffset = (sourceOffsets[0] << @DELTA[@U]) + (sourceOffsets[1] << @DELTA[@V]) + (sourceOffsets[2] << @DELTA[@W])
 
-      bucketData = @cube.getDataBucketByZoomedAddress(bucket)
+      bucketData = @cube.getBucketDataByZoomedAddress(bucket)
+      mapping    = @cube.getMappingByZoomedAddress(bucket)
       @cube.accessBuckets([bucket])
 
       @renderToBuffer(
@@ -280,6 +279,7 @@ class Plane2D
         }
         {
           buffer: bucketData
+          mapping: mapping
           offset: sourceOffset
           pixelDelta: 1 << (@DELTA[@U] + skipP)
           rowDelta: 1 << (@DELTA[@V] + skipP)
@@ -390,22 +390,31 @@ class Plane2D
     source.nextPixelMask = (1 << source.pixelRepeatP) - 1
     source.nextRowMask = (1 << destination.widthP + source.rowRepeatP) - 1
 
-    bytesSrc  = @DATA_BIT_DEPTH >> 3
-    bytesDest = @TEXTURE_BIT_DEPTH >> 3
-    shorten   = bytesDest < bytesSrc
+    mapping = source.mapping
+
+    bytesSrc       = @DATA_BIT_DEPTH >> 3
+    bytesSrcMapped = if mapping? then @MAPPED_DATA_BIT_DEPTH >> 3 else bytesSrc
+    bytesDest      = @TEXTURE_BIT_DEPTH >> 3
+    shorten        = bytesDest < bytesSrcMapped
 
     while i--
       dest = destination.offset++ * bytesDest
       src = source.offset * bytesSrc
 
+      sourceValue = 0
+      for b in [0...bytesSrc]
+        sourceValue += (1 << (b * 8)) * source.buffer[ src + b ]
+      if mapping?
+        sourceValue = mapping[ sourceValue ]
+
+      # If you have to shorten the data,
       # use the first none-zero byte unless all are zero
       # assuming little endian order
-      for b in [0...bytesSrc]
-        if (value = source.buffer[src + b]) or b == bytesSrc - 1 or (not shorten)
+      for b in [0...bytesSrcMapped]
+        if (value = (sourceValue >> (b*8)) % 256 ) or b == bytesSrcMapped - 1 or (not shorten)
           destination.buffer[dest++] = if contrastCurve? then contrastCurve[value] else value
           if shorten
             break
-      src += bytesSrc
 
       if (i & source.nextPixelMask) == 0
         source.offset += source.pixelDelta

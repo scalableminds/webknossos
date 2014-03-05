@@ -45,14 +45,7 @@ object DBNodeDAO extends SecuredBaseDAO[DBNode] {
   def updateNode(node: Node, treeOid: BSONObjectID)(implicit ctx: DBAccessContext) =
     update(
       Json.obj("_treeId" -> treeOid, "node.id" -> node.id),
-      Json.obj("$set" -> Json.obj(
-        "node" -> Json.obj(
-          "id" -> node.id,
-          "radius" -> node.radius,
-          "position" -> node.position,
-          "viewport" -> node.viewport,
-          "resolution" -> node.resolution,
-          "timestamp" -> node.timestamp))), upsert = false, multi = false)
+      Json.obj("$set" -> Json.obj("node" -> node)), upsert = false, multi = false)
 
   def moveAllNodes(_source: BSONObjectID, _target: BSONObjectID)(implicit ctx: DBAccessContext) =
     update(

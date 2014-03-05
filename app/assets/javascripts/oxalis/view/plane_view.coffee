@@ -1,22 +1,24 @@
 ### define
 jquery : $
+tween : TWEEN_LIB
 ../model/dimensions : Dimensions
 ../../libs/toast : Toast
 ../../libs/event_mixin : EventMixin
-../../libs/Tween : TWEEN_LIB
 ../constants : constants
 ./modal : modal
+three : THREE
 ###
 
 class PlaneView
 
-  constructor : (@model, @flycam, @stats, @renderer, @scene) ->
+  constructor : (@model, @flycam, @view, @stats) ->
 
     _.extend(@, new EventMixin())
 
+    { @renderer, @scene } = @view
     @running = false
 
-    # The "render" div serves as a container for the canvas, that is 
+    # The "render" div serves as a container for the canvas, that is
     # attached to it once a renderer has been initalized.
     container = $("#render")
 
@@ -105,7 +107,7 @@ class PlaneView
     if @flycam.hasChanged or @flycam.hasNewTextures() or modelChanged
 
       @trigger "render"
-      
+
       # update postion and FPS displays
       @stats.update()
 
@@ -113,20 +115,29 @@ class PlaneView
       f = @deviceScaleFactor
       viewport = [[0, @curWidth+20], [@curWidth+20, @curWidth+20], [0, 0], [@curWidth+20, 0]]
       @renderer.autoClear = true
-      
+
+      setupRenderArea = (x, y, width, color) =>
+        @renderer.setViewport x, y, width, width 
+        @renderer.setScissor  x, y, width, width 
+        @renderer.enableScissorTest true 
+        @renderer.setClearColor color, 1 
+
+      setupRenderArea( 0, 0, @renderer.domElement.width, 0xffffff )
+      @renderer.clear()
+
       for i in constants.ALL_VIEWPORTS
         @trigger "renderCam", i
-        @renderer.setViewport(viewport[i][0] * f, viewport[i][1] * f, @curWidth * f, @curWidth * f)
-        @renderer.setScissor(viewport[i][0] * f, viewport[i][1] * f, @curWidth * f, @curWidth * f)
-        @renderer.enableScissorTest(true)
-        @renderer.setClearColorHex(constants.PLANE_COLORS[i], 1);
+        setupRenderArea(
+          viewport[i][0] * f, viewport[i][1] * f, @curWidth * f,
+          constants.PLANE_COLORS[i]
+        )
         @renderer.render @scene, @camera[i]
-    
+
       @flycam.hasChanged = false
       @flycam.hasNewTexture = [false, false, false]
 
       @trigger "finishedRender"
-  
+
   addGeometry : (geometry) ->
     # Adds a new Three.js geometry to the scene.
     # This provides the public interface to the GeometryFactory.
@@ -167,7 +178,7 @@ class PlaneView
       @camera[i].aspect = WIDTH / HEIGHT
       @camera[i].updateProjectionMatrix()
     @draw()
-  
+
 
   scaleTrianglesPlane : (scale) =>
 
@@ -203,12 +214,6 @@ class PlaneView
     @camera
 
 
-  showFirstVisToggle : ->
-
-    modal.show("You just toggled the skeleton visibility. To toggle back, just hit the 1-Key.",
-      [{id: "ok-button", label: "OK, Got it."}])
-
-
   showBranchModal : (callback) ->
 
     modal.show("You didn't add a node after jumping to this branchpoint, do you really want to jump again?",
@@ -218,14 +223,14 @@ class PlaneView
 
   bind : ->
 
-    @model.cellTracing.on({
-      doubleBranch         : (callback) => @showBranchModal(callback)      
+    @model.skeletonTracing?.on({
+      doubleBranch         : (callback) => @showBranchModal(callback)
       mergeDifferentTrees  : ->
         Toast.error("You can't merge nodes within the same tree", false) })
 
-    @model.user.on 
+    @model.user.on
       scaleChanged : (scale) => if @running then @scaleTrianglesPlane(scale)
-    
+
 
   stop : ->
 
@@ -233,7 +238,7 @@ class PlaneView
 
     $(window).off "resize", => @.resize()
 
-    @running = false 
+    @running = false
 
 
   start : ->

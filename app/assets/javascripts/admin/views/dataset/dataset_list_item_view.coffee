@@ -1,6 +1,7 @@
 ### define
 underscore : _
 backbone.marionette : marionette
+libs/toast : Toast
 ###
 
 class DatasetListItemView extends Backbone.Marionette.ItemView
@@ -103,9 +104,13 @@ class DatasetListItemView extends Backbone.Marionette.ItemView
       ).done( (responseJSON) =>
         value = responseJSON.progress * 100
         @ui.progressBar.width("#{value}%")
-        if responseJSON.status != "finished" and responseJSON.status != "failed"
-          window.setTimeout((=> @updateProgress()), 100)
-        else
-          @model.fetch()
+
+        switch responseJSON.status
+          when "finished"
+            @model.fetch()
+          when "notStarted", "inProgress"
+            window.setTimeout((=> @updateProgress()), 100)
+          when "failed"
+            Toast.error("Ups. Import Failed.")
       )
 

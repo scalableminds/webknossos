@@ -48,7 +48,7 @@ class SkeletonTracingPlaneController extends PlaneController
 
     return _.extend super(),
 
-      "1" : => @sceneController.skeleton.toggleVisibility()
+      "1" : => @skeletonTracingController.toggleSkeletonVisibility()
       "2" : => @sceneController.skeleton.toggleInactiveTreeVisibility()
 
       #Delete active node
@@ -59,13 +59,13 @@ class SkeletonTracingPlaneController extends PlaneController
       "b" : => @model.skeletonTracing.pushBranch()
       "j" : => @popBranch() 
 
-      "s" : @centerActiveNode
+      "s" : @skeletonTracingController.centerActiveNode
 
       #Comments
       "n" : => @skeletonTracingController.setActiveNode(
-        @model.skeletonTracing.nextCommentNodeID(false), false, true)
-      "p" : => @skeletonTracingController.setActiveNode(
         @model.skeletonTracing.nextCommentNodeID(true), false, true)
+      "p" : => @skeletonTracingController.setActiveNode(
+        @model.skeletonTracing.nextCommentNodeID(false), false, true)
 
 
   popBranch : =>
@@ -102,13 +102,20 @@ class SkeletonTracingPlaneController extends PlaneController
  
     # identify clicked object
     intersects = raycaster.intersectObjects(@sceneController.skeleton.getAllNodes())
-    
+
     for intersect in intersects
 
       index = intersect.index
-      nodeID = intersect.object.geometry.nodeIDs.getAllElements()[index]
+      geometry = intersect.object.geometry
 
-      posArray = intersect.object.geometry.attributes.position.array
+      # Raycaster also intersects with vertices that have an
+      # index larger than numItems
+      if geometry.nodeIDs.getLength() <= index
+        continue
+
+      nodeID = geometry.nodeIDs.getAllElements()[index]
+
+      posArray = geometry.attributes.position.array
       intersectsCoord = [posArray[3 * index], posArray[3 * index + 1], posArray[3 * index + 2]]
       globalPos = @model.flycam.getPosition()
 

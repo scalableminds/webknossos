@@ -89,7 +89,8 @@ class SkeletonTacingController
   setRadius : (delta) ->
 
     @model.skeletonTracing.setActiveNodeRadius(
-      @model.skeletonTracing.getActiveNodeRadius() * Math.pow(2 , delta / 10))
+      @model.skeletonTracing.getActiveNodeRadius() * Math.pow(2 , delta)
+    )
  
 
   toggleSkeletonVisibility : =>

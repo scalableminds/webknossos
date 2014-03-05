@@ -46,7 +46,7 @@ class ArbitraryController
       @keyboardOnce?.unbind()
 
 
-  constructor : (@model, stats, @gui, @view, @sceneController) ->
+  constructor : (@model, stats, @gui, @view, @sceneController, @skeletonTracingController) ->
 
     _.extend(this, new EventMixin())
 
@@ -147,7 +147,7 @@ class ArbitraryController
     
     @input.keyboardNoLoop = new Input.KeyboardNoLoop(
 
-      "1" : => @sceneController.skeleton.toggleVisibility()
+      "1" : => @skeletonTracingController.toggleSkeletonVisibility()
       "2" : => @sceneController.skeleton.toggleInactiveTreeVisibility()
 
       #Delete active node

@@ -4,7 +4,7 @@
   <appender name="SYSLOG" class="ch.qos.logback.classic.net.SyslogAppender">
     <syslogHost>localhost</syslogHost>
     <facility>USER</facility>
-    <suffixPattern>oxalis:  [%thread] %logger %msg</suffixPattern>
+    <suffixPattern>oxalis:  [%thread] %logger %message%n%xException%n</suffixPattern>
   </appender>
   
   <logger name="reactivemongo" level="WARN" />

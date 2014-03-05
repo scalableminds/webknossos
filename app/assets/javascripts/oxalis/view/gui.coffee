@@ -39,6 +39,7 @@ class Gui
         activeTreeID : @model.skeletonTracing.getActiveTreeId()
         activeNodeID : @model.skeletonTracing.getActiveNodeId() or -1
         newNodeNewTree : if somaClickingAllowed then @user.get("newNodeNewTree") else false
+        radius : @model.skeletonTracing.getActiveNodeRadius()
         deleteActiveNode : => @trigger "deleteActiveNode"
 
     if @model.volumeTracing
@@ -126,6 +127,10 @@ class Gui
       @folders.push( @fNodes = @gui.addFolder("Nodes") )
       @activeNodeIdController = @addNumber(@fNodes, @settingsSkeleton, "activeNodeID",
         1, 1, "Active Node ID", (value) => @trigger( "setActiveNode", value))
+
+      @radiusController = @addSlider(@fNodes, @settingsSkeleton, "radius",
+        @model.skeletonTracing.MIN_RADIUS, @model.skeletonTracing.MAX_RADIUS, 1, "Radius", (radius) =>
+          @model.skeletonTracing.setActiveNodeRadius( radius ))
       @particleSizeController = @addSlider(@fNodes, @user.getSettings(), "particleSize",
         constants.MIN_PARTICLE_SIZE, constants.MAX_PARTICLE_SIZE, 1, "Min. Node size")
       @addFunction(@fNodes, @settingsSkeleton, "deleteActiveNode", "Delete Active Node")
@@ -417,6 +422,7 @@ class Gui
       @settingsSkeleton.radius       = @model.skeletonTracing.getActiveNodeRadius()
       @activeNodeIdController.updateDisplay()
       @activeTreeIdController.updateDisplay()
+      @radiusController.updateDisplay()
     if @settingsVolume?
       @settingsVolume.activeCellID = @model.volumeTracing.getActiveCellId()
       @activeCellIdController.updateDisplay()

@@ -62,9 +62,6 @@ class DatasetListView extends Backbone.Marionette.CompositeView
     @ui.modalWrapper.html(modalView.el)
     modalView.$el.modal("show")
 
-  render : ->
-
-    super()
 
   filter : (searchQuery) ->
 

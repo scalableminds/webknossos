@@ -88,7 +88,7 @@ class Controller
         @planeController = new SkeletonTracingPlaneController(
           @model, stats, @gui, @view, @sceneController, @annotationController)
         @arbitraryController = new SkeletonTracingArbitraryController(
-          @model, stats, @gui, @view, @sceneController)
+          @model, stats, @gui, @view, @sceneController, @annotationController)
       
       else if @model.volumeTracing?
         

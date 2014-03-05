@@ -37,8 +37,9 @@ class TeamAssignmentModalView extends Backbone.Marionette.CompositeView
 
     @collection = new TeamCollection()
     @collection.fetch(
-      data:
-        isEditable: true
+      silent : true   #required for PaginationCollections
+    ).done( =>
+      @collection.goTo(1)
     )
     @dataset = args.dataset
 
@@ -53,7 +54,7 @@ class TeamAssignmentModalView extends Backbone.Marionette.CompositeView
 
   submitTeams : ->
 
-    $checkboxes = @$el.find("input:checked")
+    $checkboxes = @$("input:checked")
     allowedTeams = _.map($checkboxes, (checkbox) -> return $(checkbox).parent().text().trim())
 
     @dataset.set("allowedTeams", allowedTeams)

@@ -23,20 +23,20 @@ class ProjectsListView extends Backbone.Marionette.CompositeView
     <div id="modal-wrapper"></div>
     <div class="form-actions navbar-fixed-bottom">
       <div class="btn-group">
-        <a class="btn btn-primary" href="#">
+        <a class="btn btn-primary show-modal" href="#">
           <i class="fa fa-plus"></i>Create New Project
         </a>
       </div>
     </div>
   """)
 
-  className : "container wide project-administaration"
+  className : "container wide project-administration"
   itemView : ProjectListItemView
   itemViewContainer : "table"
 
   events :
     "click .details-toggle-all" : "toggleAllDetails"
-    "click .btn-primary" : "showModal"
+    "click .show-modal" : "showModal"
 
   ui :
     "modalWrapper" : "#modal-wrapper"
@@ -66,7 +66,7 @@ class ProjectsListView extends Backbone.Marionette.CompositeView
 
   showModal : ->
 
-    modalView = new CreateProjectModalView()
+    modalView = new CreateProjectModalView(projectCollection : @collection)
     @ui.modalWrapper.html(modalView.render().el)
 
     modalView.show()

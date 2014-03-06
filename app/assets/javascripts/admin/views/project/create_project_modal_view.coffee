@@ -4,6 +4,7 @@ backbone.marionette : Marionette
 admin/views/selection_view : SelectionView
 admin/models/user/user_collection : UserCollection
 admin/models/team/team_collection : TeamCollection
+admin/models/project/project_model : ProjectModel
 ###
 
 class CreateProjectModalView extends Backbone.Marionette.Layout
@@ -24,7 +25,7 @@ class CreateProjectModalView extends Backbone.Marionette.Layout
         <div class="control-group">
           <label class="control-label" for="projectName">Project Name</label>
           <div class="controls">
-            <input type="text" id="projectName" name="projectName" value="">
+            <input type="text" class="project-name" name="projectName" value="" required autofocus>
           </div>
         </div>
         <div class="control-group">
@@ -35,8 +36,8 @@ class CreateProjectModalView extends Backbone.Marionette.Layout
       </form>
     </div>
     <div class="modal-footer">
-      <a href="#" class="btn btn-primary">Create</a>
-      <a href="#" class="btn"  data-dismiss="modal">Close</a>
+      <a href="#" class="btn btn-primary create">Create</a>
+      <a href="#" class="btn" data-dismiss="modal">Close</a>
     </div>
   """)
 
@@ -45,9 +46,19 @@ class CreateProjectModalView extends Backbone.Marionette.Layout
     "owner" : ".owner"
 
   events :
-    "submit form" : "cancel"
+    "submit form" : "createProject"
+    "click .create" : "createProject"
 
-  initialize : ->
+  ui :
+    "name" : ".project-name"
+    "team" : ".team"
+    "owner" : ".owner"
+    "form" : "form"
+
+
+  initialize : (options) ->
+
+    @projectCollection = options.projectCollection
 
     @userSelectionView = new SelectionView(
       collection : new UserCollection()
@@ -72,6 +83,23 @@ class CreateProjectModalView extends Backbone.Marionette.Layout
     @team.show(@teamSelectionView)
 
 
-  cancel : (evt) ->
+  createProject : (evt) ->
 
     evt.preventDefault()
+
+    if @ui.form[0].checkValidity()
+
+      project = new ProjectModel(
+        owner : @ui.owner.find("select :selected").attr("id")
+        name : @ui.name.val()
+        team : @ui.team.find("select :selected").val()
+      )
+      @projectCollection.create(project, {wait : true})
+
+      @$el.modal("hide")
+
+    else
+
+      @ui.name.focus()
+
+

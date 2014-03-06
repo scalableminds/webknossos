@@ -35,19 +35,21 @@ trait DataSourceService {
   def userDataLayerFolder(name: String) = userBaseFolder / name
 
   def createUserDataSource(baseDataSource: DataSource): UserDataLayer = {
+    val category = DataLayer.SEGMENTATION.category
     val name = userDataLayerName()
     val basePath = userDataLayerFolder(name)
-    val sections = baseDataSource.dataLayer(DataLayer.SEGMENTATION.name).map(_.sections).getOrElse(Nil)
+    val sections = baseDataSource.getDataLayer(category).map(_.sections).getOrElse(Nil)
     val dataLayer = DataLayer(
-      DataLayer.SEGMENTATION.name,
+      name,
+      category,
       basePath.toAbsolute.path,
       None,
       DataLayer.SEGMENTATION.defaultElementClass,
-      Some(baseDataSource.id),
+      baseDataSource.getByCategory(category).map(l => FallbackLayer(baseDataSource.id, l.name)),
       sections)
 
     basePath.createDirectory()
-    UserDataLayer(name, baseDataSource.id, dataLayer)
+    UserDataLayer(baseDataSource.id, dataLayer)
   }
 
   def importDataSource(id: String): Option[Future[Option[UsableDataSource]]] = {

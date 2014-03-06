@@ -1,18 +1,12 @@
 package braingames.binary.models
 
-import braingames.geometry.Point3D
-import braingames.geometry.Vector3D
-import braingames.util.Interpolator
 import play.api.libs.json._
-import play.api.libs.functional.syntax._
-import braingames.binary.models._
 import braingames.geometry.BoundingBox
-import java.io.File
 
 trait DataLayerLike {
   val sections: List[DataLayerSectionLike]
   val elementClass: String
-  val typ: String
+  val category: String
 
   val elementSize = elementClassToSize(elementClass)
   val bytesPerElement = elementSize / 8
@@ -30,24 +24,31 @@ trait DataLayerLike {
   }
 }
 
+case class FallbackLayer(dataSourceName: String, layerName: String)
+
+object FallbackLayer{
+  implicit val fallbackLayerFormat = Json.format[FallbackLayer]
+}
+
+case class DataLayerType(category: String, interpolation: Interpolation, defaultElementClass: String = "uint8")
+
 case class DataLayer(
-  typ: String,
+  name: String,
+  category: String,
   baseDir: String,
   flags: Option[List[String]],
   elementClass: String = "uint8",
-  fallback: Option[String] = None,
+  fallback: Option[FallbackLayer] = None,
   sections: List[DataLayerSection] = Nil) extends DataLayerLike {
 
   def relativeBaseDir(binaryBase: String) = baseDir.replace(binaryBase, "")
 
-  val interpolator = DataLayer.interpolationFromString(typ)
+  val interpolator = DataLayer.interpolationFromString(category)
 
   val resolutions = sections.flatMap(_.resolutions).distinct
 
   val maxCoordinates = BoundingBox.hull(sections.map(_.bboxBig))
 }
-
-case class DataLayerType(name: String, interpolation: Interpolation, defaultElementClass: String = "uint8")
 
 object DataLayer{
 
@@ -68,18 +69,18 @@ object DataLayer{
 
   val defaultInterpolation = NearestNeighborInterpolation
 
-  def interpolationFromString(layerType: String) = {
+  def interpolationFromString(layerCategory: String) = {
     supportedLayers
-      .find(_.name == layerType)
+      .find(_.category == layerCategory)
       .map(_.interpolation)
       .getOrElse {
-      logger.warn(s"Invalid interpolation string: '$layerType'. Using default interpolation '$defaultInterpolation'")
+      logger.warn(s"Invalid interpolation string: '$layerCategory'. Using default interpolation '$defaultInterpolation'")
       defaultInterpolation
     }
   }
 }
 
-case class UserDataLayer(name: String, dataSourceName: String, dataLayer: DataLayer)
+case class UserDataLayer(dataSourceName: String, dataLayer: DataLayer)
 
 object UserDataLayer {
   implicit val userDataLayerFormat = Json.format[UserDataLayer]

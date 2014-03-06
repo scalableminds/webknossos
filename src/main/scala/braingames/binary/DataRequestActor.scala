@@ -25,7 +25,7 @@ import net.liftweb.common.Box
 import net.liftweb.common.{Failure => BoxFailure}
 import net.liftweb.common.Full
 import java.util.NoSuchElementException
-import braingames.util.{Fox, BlockedArray3D}
+import braingames.util.{FoxImplicits, Fox, BlockedArray3D}
 import braingames.util.ExtendedTypes.ExtendedArraySeq
 import braingames.util.ExtendedTypes.ExtendedDouble
 
@@ -35,6 +35,7 @@ class DataRequestActor(
   dataSourceRepository: DataSourceRepository)
   extends Actor
   with DataCache
+  with FoxImplicits
   with EmptyDataProvider {
 
   import Logger._
@@ -133,6 +134,23 @@ class DataRequestActor(
     }
   }
 
+  def fallbackForLayer(layer: DataLayer): Future[List[(DataLayerSection, DataLayer)]] = {
+    layer.fallback.toFox.flatMap{ fallback =>
+      dataSourceRepository.findByName(fallback.dataSourceName).flatMap{
+        d =>
+          d.getDataLayer(fallback.layerName).map {
+            fallbackLayer =>
+              if (layer.isCompatibleWith(fallbackLayer))
+                fallbackLayer.sections.map {(_, fallbackLayer)}
+              else {
+                logger.error(s"Incompatible fallback layer. $layer is not compatible with $fallbackLayer")
+                Nil
+              }
+          }.toFox
+      }
+    }.getOrElse(Nil)
+  }
+
   def loadFromSomewhere(dataSource: DataSource, layer: DataLayer, requestedSection: Option[String], resolution: Int, block: Point3D): Future[Array[Byte]] = {
     var lastSection: Option[DataLayerSection] = None
     def loadFromSections(sections: Stream[(DataLayerSection, DataLayer)]): Future[Array[Byte]] = sections match {
@@ -161,20 +179,7 @@ class DataRequestActor(
     val sections = Stream(layer.sections.map{(_, layer)}.filter {
       section =>
         requestedSection.map( _ == section._1.sectionId) getOrElse true
-    }: _*).append {
-      Await.result(layer.fallback.map(dataSourceRepository.findByName).getOrElse(Fox.empty).futureBox.map(_.flatMap{
-        d =>
-          d.dataLayer(layer.typ).map {
-            fallbackLayer =>
-              if (layer.isCompatibleWith(fallbackLayer))
-                fallbackLayer.sections.map {(_, fallbackLayer)}
-              else {
-                logger.error(s"Incompatible fallback layer. $layer is not compatible with $fallbackLayer")
-                Nil
-              }
-          }
-      }.getOrElse(Nil)), 5 seconds)
-    }
+    }: _*).append(Await.result(fallbackForLayer(layer), 5 seconds))
 
     loadFromSections(sections)
   }

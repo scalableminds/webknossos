@@ -22,8 +22,11 @@ case class DataSource(
   dataLayers: List[DataLayer] = Nil
   ) {
 
-  def dataLayer(typ: String) =
-    dataLayers.find(_.typ == typ)
+  def getDataLayer(name: String) =
+    dataLayers.find(_.name == name)
+
+  def getByCategory(category: String) =
+    dataLayers.find(_.category == category)
 
   def sourceFolder = Path.fromString(baseDir)
 
@@ -46,7 +49,7 @@ case class DataSource(
       point.z / resolution)
 
   override def toString() = {
-    s"""$id (${dataLayers.map(_.typ).mkString(", ")})"""
+    s"""$id (${dataLayers.map(_.name).mkString(", ")})"""
   }
 }
 

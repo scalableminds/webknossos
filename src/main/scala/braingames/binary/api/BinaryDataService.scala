@@ -46,10 +46,10 @@ trait BinaryDataService extends DataSourceService with BinaryDataHelpers {
 
   lazy val dataRequestActor = {
     val nrOfBinRequestActors = config.getInt("braingames.binary.nrOfBinRequestActors")
-    val props = Props(new DataRequestActor(
+    val props = Props(classOf[DataRequestActor],
       config.getConfig("braingames.binary"),
       binDataCache,
-      dataSourceRepository))
+      dataSourceRepository)
 
     system.actorOf(props
       .withRouter(new RoundRobinRouter(nrOfBinRequestActors)), "dataRequestActor")
@@ -61,7 +61,7 @@ trait BinaryDataService extends DataSourceService with BinaryDataHelpers {
     val repositoryWatcherConfig = config.getConfig("braingames.binary.changeHandler")
     val repositoryWatchActor =
       system.actorOf(
-        Props(new DirectoryWatcherActor(repositoryWatcherConfig, dataSourceInboxHandler)),
+        Props(classOf[DirectoryWatcherActor], repositoryWatcherConfig, dataSourceInboxHandler),
         name = "directoryWatcher")
 
     repositoryWatcher = Some(repositoryWatchActor)

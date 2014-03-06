@@ -36,8 +36,6 @@ class SkeletonTracing
 
     @data = tracing.content.contentData
 
-    @flycam.setPosition(tracing.content.editPosition)
-
     # initialize deferreds
     @finishedDeferred = new $.Deferred().resolve()
 

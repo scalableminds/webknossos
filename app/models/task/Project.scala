@@ -1,7 +1,7 @@
 package models.task
 
 import models.basics._
-import models.user.{UserService, User}
+import models.user.{UserDAO, UserService, User}
 import play.api.libs.json._
 import play.api.libs.json.Json
 import play.api.libs.functional.syntax._
@@ -33,10 +33,16 @@ object Project {
 
   def StringObjectIdReads(key: String) = Reads.filter[String](ValidationError("objectid.invalid", key))(BSONObjectID.parse(_).isSuccess)
 
-  val projectPublicWrites: Writes[Project] =
-    ((__ \ 'name).write[String] and
-      (__ \ 'team).write[String] and
-      (__ \ 'owner).write[String])(p => (p.name, p.team, p._owner.stringify))
+  def projectPublicWrites(project: Project, requestingUser: User): Future[JsObject] =
+    for{
+      owner <- project.owner.map(User.userCompactWrites(requestingUser).writes(_)).futureBox
+    } yield {
+      Json.obj(
+        "name" -> project.name,
+        "team" -> project.team,
+        "owner" -> owner.toOption
+      )
+    }
 
   val projectPublicReads: Reads[Project] =
     ((__ \ 'name).read[String](Reads.minLength[String](3) keepAnd Reads.pattern("^[a-zA-Z0-9_-]*$".r, Messages("project.name.invalidChars"))) and

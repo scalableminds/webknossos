@@ -130,14 +130,8 @@ object ApplicationBuild extends Build {
   import Resolvers._
   import AssetCompilation.SettingsKeys._
 
-
-  val coffeeCmd =
-    if(System.getProperty("os.name").startsWith("Windows"))
-      "cmd /C coffee -p"
-    else
-      "coffee -p"
-
   val appName =  "oxalis"
+
   val appVersion = scala.io.Source.fromFile("version").mkString.trim
 
   val oxalisDependencies = Seq(
@@ -174,14 +168,6 @@ object ApplicationBuild extends Build {
     teamon
   )
 
-  val isoshaderDependencies = Seq()
-
-  lazy val dataStoreDependencies = Seq(
-    scalaReflect,
-    jerseyCore,
-    jerseyClient,
-    akkaRemote)
-
   lazy val oxalisSettings = Seq(
     templatesImport += "oxalis.view.helpers._",
     templatesImport += "oxalis.view._",
@@ -199,19 +185,5 @@ object ApplicationBuild extends Build {
   )
 
   lazy val oxalis: Project = play.Project(appName, appVersion, oxalisDependencies, settings = oxalisSettings ++ AssetCompilation.settings)
-
-  lazy val datastore: Project = Project("datastore", file("modules") / "datastore", dependencies = Seq(oxalis)).settings(
-    libraryDependencies ++= dataStoreDependencies,
-    resolvers ++= dependencyResolvers,
-    coffeescriptOptions := Seq("native", coffeeCmd),
-    scalaVersion := "2.10.3"
-  ).aggregate(oxalis)
-
-  lazy val isoshader = play.Project("isoshader", "0.1", isoshaderDependencies, path = file("modules") / "isoshader").settings(
-    templatesImport += "oxalis.view.helpers._",
-    templatesImport += "oxalis.view._",
-    resolvers ++= dependencyResolvers,
-    coffeescriptOptions := Seq("native", coffeeCmd)
-  ).dependsOn(oxalis).aggregate(oxalis)
 }
 

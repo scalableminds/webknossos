@@ -1,6 +1,8 @@
 ### define
 underscore : _
 backbone.marionette : Marionette
+libs/toast : Toast
+app : app
 admin/views/selection_view : SelectionView
 admin/models/user/user_collection : UserCollection
 admin/models/team/team_collection : TeamCollection
@@ -69,6 +71,7 @@ class CreateProjectModalView extends Backbone.Marionette.Layout
       collection : new TeamCollection()
       itemViewOptions :
         modelValue: -> return "#{@model.get("name")}"
+      data : "amIAnAdmin=true"
     )
 
 
@@ -94,7 +97,12 @@ class CreateProjectModalView extends Backbone.Marionette.Layout
         name : @ui.name.val()
         team : @ui.team.find("select :selected").val()
       )
-      @projectCollection.create(project, {wait : true})
+      @projectCollection.create(project,
+        wait : true
+        error : @handleXHRError
+        success : -> app.vent.trigger("CreateProjectModal:refresh") #update pagination
+      )
+
 
       @$el.modal("hide")
 
@@ -103,3 +111,9 @@ class CreateProjectModalView extends Backbone.Marionette.Layout
       @ui.name.focus()
 
 
+  handleXHRError : (model, xhr) ->
+
+    xhr.responseJSON.messages.forEach(
+      (message) ->
+        Toast.error(message.error)
+    )

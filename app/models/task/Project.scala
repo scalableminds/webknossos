@@ -20,10 +20,12 @@ import braingames.reactivemongo.AccessRestrictions.{DenyEveryone, AllowIf}
 import play.api.i18n.Messages
 import play.api.data.validation.ValidationError
 
-case class Project(name: String, team: String, _owner: BSONObjectID) {
+case class Project(name: String, team: String, _owner: BSONObjectID, _id: BSONObjectID = BSONObjectID.generate) {
   def owner = UserService.findOneById(_owner.stringify, useCache = true)(GlobalAccessContext)
 
   def isOwnedBy(user: User) = user._id == _owner
+
+  def id = _id.stringify
 
   def tasks(implicit ctx: DBAccessContext) = TaskDAO.findAllByProject(name)(GlobalAccessContext)
 }
@@ -40,7 +42,8 @@ object Project {
       Json.obj(
         "name" -> project.name,
         "team" -> project.team,
-        "owner" -> owner.toOption
+        "owner" -> owner.toOption,
+        "id" -> project.id
       )
     }
 

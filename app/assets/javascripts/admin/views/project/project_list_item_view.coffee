@@ -1,6 +1,7 @@
 ### define
 underscore : _
 backbone.marionette : Marionette
+libs/Toast : Toast
 ./project_annotation_view : ProjectAnnotationView
 admin/models/project/project_annotation_collection : ProjectAnnotationCollection
 ###
@@ -15,7 +16,7 @@ class ProjectListItemView extends Backbone.Marionette.CompositeView
       </td>
       <td><%= team %></td>
       <td><%= name %></td>
-      <td><%= owner %></td>
+      <td><%= owner.firstName %> <%= owner.lastName %></td>
       <td class="nowrap">
         <a href="/annotations/CompoundProject/<%= name %>" title="View all finished tracings">
           <i class="icon-random"></i>view
@@ -64,7 +65,10 @@ class ProjectListItemView extends Backbone.Marionette.CompositeView
   deleteProject : ->
 
     if window.confirm("Do you really want to delete this project?")
-      @model.destroy()
+      xhr = @model.destroy(
+        wait : true
+        error: @handleXHRError
+      )
 
 
   toggleDetails : ->
@@ -81,3 +85,11 @@ class ProjectListItemView extends Backbone.Marionette.CompositeView
     else
       @ui.detailsRow.addClass("hide")
       @ui.detailsToggle.removeClass("open")
+
+
+  handleXHRError : (model, xhr) ->
+
+    xhr.responseJSON.messages.forEach(
+      (message) ->
+        Toast.error(message.error)
+    )

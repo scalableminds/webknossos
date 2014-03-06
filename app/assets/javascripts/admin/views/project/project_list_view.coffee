@@ -51,6 +51,7 @@ class ProjectsListView extends Backbone.Marionette.CompositeView
     )
 
     @listenTo(app.vent, "paginationView:filter", @filter)
+    @listenTo(app.vent, "CreateProjectModal:refresh", @render)
 
 
   filter : (searchQuery) ->

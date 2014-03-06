@@ -138,7 +138,6 @@ class Router extends Backbone.Router
       @listenTo(taskCollection, "sync", => @hideLoading())
 
 
-
   changeView : (views...) ->
 
     if @activeViews == views
@@ -149,7 +148,11 @@ class Router extends Backbone.Router
     # Remove current views
     if @activeViews
       for view in @activeViews
-        view.remove()
+        # prefer Marionette's close() function to Backbone's remove()
+        if view.close
+          view.close()
+        else
+          view.remove()
     else
       # we are probably coming from a URL that isn't a Backbone.View yet (or page reload)
       @$mainContainer.empty()

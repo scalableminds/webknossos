@@ -9,7 +9,7 @@ object Dependencies{
   val akkaVersion = "2.2.0"
   val reactiveVersion = "0.10.0"
   val reactivePlayVersion = "0.10.2"
-  val braingamesVersion = "3.2.4"
+  val braingamesVersion = "4.0.0-SNAPSHOT"
 
   val restFb = "com.restfb" % "restfb" % "1.6.11"
   val commonsIo = "commons-io" % "commons-io" % "2.4"
@@ -18,7 +18,6 @@ object Dependencies{
   val akkaTest = "com.typesafe.akka" %% "akka-testkit" % akkaVersion
   val akkaAgent = "com.typesafe.akka" %% "akka-agent" % akkaVersion
   val akkaRemote = "com.typesafe.akka" %% "akka-remote" % akkaVersion
-  // Jira integration
   val jerseyClient = "com.sun.jersey" % "jersey-client" % "1.8"
   val jerseyCore = "com.sun.jersey" % "jersey-core" % "1.8"
   val reactivePlay = "org.reactivemongo" %% "play2-reactivemongo" % reactivePlayVersion

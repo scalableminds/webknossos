@@ -55,11 +55,12 @@ object AnnotationContent {
   import AnnotationSettings._
 
   implicit val dataLayerWrites: Writes[DataLayer] =
-    ((__ \ 'typ).write[String] and
+    ((__ \ 'name).write[String] and
+      (__ \ 'category).write[String] and
       (__ \ 'maxCoordinates).write[BoundingBox] and
       (__ \ 'resolutions).write[List[Int]] and
       (__ \ 'elementClass).write[String])(l =>
-      (l.typ, l.maxCoordinates, l.resolutions, l.elementClass))
+      (l.name, l.category, l.maxCoordinates, l.resolutions, l.elementClass))
 
   implicit val dataSetWrites: Writes[DataSet] =
     ((__ \ 'name).write[String] and

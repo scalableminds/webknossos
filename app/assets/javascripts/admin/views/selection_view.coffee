@@ -9,10 +9,11 @@ class SelectionView extends Backbone.Marionette.CollectionView
   tagName : "select"
   itemView : SelectionItemView
 
-  initialize : ->
+  initialize : (options) ->
 
     @collection.fetch(
       silent : true
+      data : options.data
     ).done(
       => @render()
     )

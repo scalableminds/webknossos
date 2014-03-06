@@ -6,9 +6,6 @@ backbone.marionette : Marionette
 class SelectionItemView extends Backbone.Marionette.ItemView
 
   tagName : "option"
-  attributes : ->
-    id : @model.get("id")
-    value : @model.get("value")
 
   template : _.template("""
     <%= value %>
@@ -18,6 +15,7 @@ class SelectionItemView extends Backbone.Marionette.ItemView
   initialize : (options) ->
 
     @modelValue = options.modelValue
+    @listenTo(@, "render", @afterRender)
 
 
   serializeData : ->
@@ -26,3 +24,10 @@ class SelectionItemView extends Backbone.Marionette.ItemView
       value : @modelValue()
       id : @model.get("id")
     }
+
+  afterRender : ->
+
+    @$el.attr(
+      id : @model.get("id")
+      value : @modelValue()
+    )

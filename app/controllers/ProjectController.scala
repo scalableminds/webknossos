@@ -15,15 +15,18 @@ import play.api.i18n.Messages
 import net.liftweb.common.{Empty, Failure, Full}
 
 object ProjectController extends Controller with Secured {
-  def empty = Authenticated{ implicit request =>
-    Ok(views.html.main()(Html.empty))
+  def empty = Authenticated {
+    implicit request =>
+      Ok(views.html.main()(Html.empty))
   }
 
   def list = Authenticated.async {
     implicit request =>
-      ProjectDAO.findAll.map {
-        projects =>
-          Ok(Writes.list(Project.projectPublicWrites).writes(projects))
+      for {
+        projects <- ProjectDAO.findAll
+        js <- Future.traverse(projects)(Project.projectPublicWrites(_, request.user))
+      } yield {
+        Ok(Json.toJson(js))
       }
   }
 
@@ -45,31 +48,34 @@ object ProjectController extends Controller with Secured {
       }
   }
 
-  def create = Authenticated.async(parse.json){ implicit request =>
-    request.body.validate(Project.projectPublicReads) match {
-      case JsSuccess(project, _) =>
-        ProjectDAO.findOneByName(project.name)(GlobalAccessContext).futureBox.flatMap{
-          case Empty if request.user.adminTeamNames.contains(project.team) =>
-            ProjectDAO.insert(project).map{ _ =>
-              Ok(Project.projectPublicWrites.writes(project))
-            }
-          case Empty =>
-            Future.successful(JsonBadRequest(Messages("team.notAllowed")))
-          case _ =>
-            Future.successful(JsonBadRequest(Messages("project.name.alreadyTaken")))
-        }
-      case e: JsError =>
-        Future.successful(BadRequest(JsError.toFlatJson(e)))
-    }
+  def create = Authenticated.async(parse.json) {
+    implicit request =>
+      request.body.validate(Project.projectPublicReads) match {
+        case JsSuccess(project, _) =>
+          ProjectDAO.findOneByName(project.name)(GlobalAccessContext).futureBox.flatMap {
+            case Empty if request.user.adminTeamNames.contains(project.team) =>
+              ProjectDAO.insert(project).flatMap(_ => Project.projectPublicWrites(project, request.user)).map {
+                js =>
+                  Ok(js)
+              }
+            case Empty =>
+              Future.successful(JsonBadRequest(Messages("team.notAllowed")))
+            case _ =>
+              Future.successful(JsonBadRequest(Messages("project.name.alreadyTaken")))
+          }
+        case e: JsError =>
+          Future.successful(BadRequest(JsError.toFlatJson(e)))
+      }
   }
 
-  def tasksForProject(projectName: String) = Authenticated.async { implicit request =>
-    for {
-      project <- ProjectDAO.findOneByName(projectName) ?~> Messages("project.notFound")
-      tasks <- project.tasks
-      js <- Future.traverse(tasks)(Task.transformToJson)
-    } yield {
-      Ok(Json.toJson(js))
-    }
+  def tasksForProject(projectName: String) = Authenticated.async {
+    implicit request =>
+      for {
+        project <- ProjectDAO.findOneByName(projectName) ?~> Messages("project.notFound")
+        tasks <- project.tasks
+        js <- Future.traverse(tasks)(Task.transformToJson)
+      } yield {
+        Ok(Json.toJson(js))
+      }
   }
 }

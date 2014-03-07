@@ -12,7 +12,7 @@ class ProjectsListView extends Backbone.Marionette.CompositeView
     <table class="table table-double-striped table-details" id="projectlist-table">
       <thead>
         <tr>
-          <th class="details-toggle-all"> <i class="caret-right"></i><i class="caret-down"></i></th>
+          <th class="details-toggle-all"><i class="caret-right"></i><i class="caret-down"></i></th>
           <th>Name</th>
           <th>Team</th>
           <th>Owner</th>
@@ -35,11 +35,12 @@ class ProjectsListView extends Backbone.Marionette.CompositeView
   itemViewContainer : "table"
 
   events :
-    "click .details-toggle-all" : "toggleAllDetails"
+    "click @ui.detailsToggle" : "toggleAllDetails"
     "click .show-modal" : "showModal"
 
   ui :
     "modalWrapper" : "#modal-wrapper"
+    "detailsToggle" : ".details-toggle-all"
 
 
   initialize : ->
@@ -62,7 +63,7 @@ class ProjectsListView extends Backbone.Marionette.CompositeView
   toggleAllDetails : ->
 
     @ui.detailsToggle.toggleClass("open")
-    app.vent.trigger("taskListView:toggleDetails")
+    app.vent.trigger("projectListView:toggleDetails")
 
 
   showModal : ->

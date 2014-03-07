@@ -2,8 +2,8 @@
 underscore : _
 backbone.marionette : Marionette
 libs/Toast : Toast
-./project_annotation_view : ProjectAnnotationView
-admin/models/project/project_annotation_collection : ProjectAnnotationCollection
+./project_task_view : ProjectTaskView
+admin/models/project/project_task_collection : ProjectTaskCollection
 ###
 
 class ProjectListItemView extends Backbone.Marionette.CompositeView
@@ -14,8 +14,8 @@ class ProjectListItemView extends Backbone.Marionette.CompositeView
         <i class="caret-right"></i>
         <i class="caret-down"></i>
       </td>
-      <td><%= team %></td>
       <td><%= name %></td>
+      <td><%= team %></td>
       <td><%= owner.firstName %> <%= owner.lastName %></td>
       <td class="nowrap">
         <a href="/annotations/CompoundProject/<%= name %>" title="View all finished tracings">
@@ -40,11 +40,12 @@ class ProjectListItemView extends Backbone.Marionette.CompositeView
   """)
 
   tagName : "tbody"
-  itemView : Backbone.Marionette.ItemView #ProjectAnnotationView
+  itemView : ProjectTaskView
   itemViewContainer : "tbody"
 
   events :
     "click .delete" : "deleteProject"
+    "click .details-toggle" : "toggleDetails"
 
   ui:
     "detailsRow" : ".details-row"
@@ -54,7 +55,7 @@ class ProjectListItemView extends Backbone.Marionette.CompositeView
   initialize : ->
 
     @listenTo(app.vent, "projectListView:toggleDetails", @toggleDetails)
-    @collection = new ProjectAnnotationCollection(@model.get("id"))
+    @collection = new ProjectTaskCollection(@model.get("name"))
 
     # minimize the toggle view on item deletion
     @listenTo(@collection, "remove", (item) =>

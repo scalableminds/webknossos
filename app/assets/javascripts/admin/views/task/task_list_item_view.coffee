@@ -21,7 +21,7 @@ class TaskListItemView extends Backbone.Marionette.CompositeView
     <td><%= formattedHash %></td>
     <td><%= team %></td>
     <td>
-      <a href="/admin/projects#<%= projectName %>">
+      <a href="/projects#<%= projectName %>">
         <%= projectName %>
       </a>
     </td>
@@ -47,7 +47,7 @@ class TaskListItemView extends Backbone.Marionette.CompositeView
     <td class="nowrap">
       <a href="/admin/tasks/<%= id %>/edit"><i class="fa fa-pencil"></i>edit</a><br>
       <a href="/annotations/CompoundTask/<%= id %>" title="view all finished tracings"><i class="fa fa-random"></i>view</a><br>
-      <a href="/admin/tasks/<%= id %>/download" title="download all finished tracings"><i class="fa fa-download"></i>download</a><br>
+      <a href="/api/tasks/<%= id %>/download" title="download all finished tracings"><i class="fa fa-download"></i>download</a><br>
       <a href="#" class="delete"><i class="fa fa-trash-o"></i>delete</a>
     </td>
     </tr>

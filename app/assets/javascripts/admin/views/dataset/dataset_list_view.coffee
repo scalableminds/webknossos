@@ -21,7 +21,7 @@ class DatasetListView extends Backbone.Marionette.CompositeView
           <th>Active</th>
           <th>Public</th>
           <th>Data Layers</th>
-          <th></th>
+          <th>Actions</th>
         </tr>
       </thead>
       <tbody>

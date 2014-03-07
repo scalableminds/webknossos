@@ -100,10 +100,10 @@ POST          /admin/tasks/createBulk                                    control
 POST          /admin/tasks/createFromNML                                 controllers.admin.TaskAdministration.createFromNML
 POST          /admin/tasks/createFromForm                                controllers.admin.TaskAdministration.createFromForm
 GET           /admin/tasks/overview                                      controllers.admin.TaskAdministration.overview
-GET           /admin/tasks/:id/download                                  controllers.admin.NMLIO.taskDownload(id: String)
 GET           /admin/tasks/:id/edit                                      controllers.admin.TaskAdministration.edit(id: String)
-GET           /admin/tasks/:id/annotations                               controllers.AnnotationController.annotationsForTask(id: String)
 POST          /admin/tasks/:id                                           controllers.admin.TaskAdministration.editTaskForm(id: String)
+GET           /api/tasks/:id/download                                  controllers.admin.NMLIO.taskDownload(id: String)
+GET           /api/tasks/:id/annotations                               controllers.AnnotationController.annotationsForTask(id: String)
 
 GET           /admin/taskTypes                                           controllers.admin.TaskTypeAdministration.list
 POST          /admin/taskTypes                                           controllers.admin.TaskTypeAdministration.create

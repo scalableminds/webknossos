@@ -9,7 +9,7 @@ class AnnotationCollection extends Backbone.Collection
   model : AnnotationModel
 
   constructor : (taskId) ->
-    @url = "/admin/tasks/#{taskId}/annotations"
+    @url = "/api/tasks/#{taskId}/annotations"
     super()
 
 

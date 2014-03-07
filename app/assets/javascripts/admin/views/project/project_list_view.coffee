@@ -13,10 +13,10 @@ class ProjectsListView extends Backbone.Marionette.CompositeView
       <thead>
         <tr>
           <th class="details-toggle-all"> <i class="caret-right"></i><i class="caret-down"></i></th>
-          <th>Team</th>
           <th>Name</th>
+          <th>Team</th>
           <th>Owner</th>
-          <th></th>
+          <th>Actions</th>
         </tr>
       </thead>
     </table>

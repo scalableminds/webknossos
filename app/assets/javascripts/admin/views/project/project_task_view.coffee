@@ -3,38 +3,41 @@ underscore : _
 backbone.marionette : Marionette
 ###
 
-class ProjectAnnotationView extends Backbone.Marionette.ItemView
+class ProjectTaskView extends Backbone.Marionette.ItemView
 
+  tagName : "tr"
   template : _.template("""
     <td>
       <a href="/tasks#<%= id %>">
-        <%= shortId %>
+        <%= id.slice(-6) %>
       </a>
     </td>
     <td>
-      <a href="/admin/taskTypes#<% taskTyp.id %>">
-        <%= taskType.name %>
-      </a>
+      <% if(type){ %>
+        <a href="/admin/taskTypes#<% type.id %>">
+          <%= type.summary %>
+        </a>
+      <% } %>
     </td>
     <td>
-      <%= dataset %>
+      <%= dataSet %>
     </td>
     <td>
       <span title="Unassigned">
-        <i class="fa fa-play-circle"></i><%= state.open %> open
+        <i class="fa fa-play-circle"></i><%= status.open %> open
       </span>
       |
       <span title="in Progress">
-        <i class="fa fa-random"></i><%= state.active %> active
+        <i class="fa fa-random"></i><%= status.inProgress %> active
       </span>
       |
       <span title="Completed">
-        <i class="fa fa-check-circle-o"></i><%= state.done %> done
+        <i class="fa fa-check-circle-o"></i><%= status.completed %> done
       </span>
 
     </td>
     <td>
-        Tracked Time: -
+      Traced Time: <%= tracingTime %>
     </td>
     <td class="nowrap">
       <a href="/admin/tasks/<%= id %>/download" title="Download all finished tracings">
@@ -42,5 +45,3 @@ class ProjectAnnotationView extends Backbone.Marionette.ItemView
       </a>
     </td>
   """)
-
-  tagName : "tr"

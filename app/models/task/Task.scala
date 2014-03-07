@@ -98,14 +98,15 @@ object Task extends FoxImplicits {
         "team" -> task.team,
         "formattedHash" -> Formatter.formatHash(task.id),
         "projectName" -> projectName,
-        "type" -> taskType.toOption,
+        "type" -> taskType.toOption.map(TaskType.publicTaskTypeWrites.writes),
         "dataSet" -> dataSetName,
         "editPosition" -> editPosition,
         "boundingBox" -> boundingBox,
         "neededExperience" -> task.neededExperience,
         "priority" -> task.priority,
         "created" -> DateTimeFormat.forPattern("yyyy-MM-dd HH:mm").print(task.created),
-        "status" -> status
+        "status" -> status,
+        "tracingTime" -> task.tracingTime
       )
     }
   }

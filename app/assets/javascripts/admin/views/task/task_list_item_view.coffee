@@ -3,7 +3,7 @@ underscore : _
 app : app
 backbone.marionette : marionette
 admin/models/task/annotation_collection : AnnotationCollection
-./task_list_subitem_view: TaskListSubitemView
+./task_annotation_view: TaskAnnotationView
 ###
 
 class TaskListItemView extends Backbone.Marionette.CompositeView
@@ -21,13 +21,13 @@ class TaskListItemView extends Backbone.Marionette.CompositeView
     <td><%= formattedHash %></td>
     <td><%= team %></td>
     <td>
-      <a href="/admin/projects#<%= projectName %>">
+      <a href="/projects#<%= projectName %>">
         <%= projectName %>
       </a>
     </td>
     <td>
-      <a href="/admin/taskTypes#<% if(type) { print(type.summary)  } else { print('<deleted>') } %>">
-        <% if(type) { print(type.summary)  } else { print("<deleted>") } %>
+      <a href="/admin/taskTypes#<%= type.summary %>">
+        <%= type.summary %>
       </a>
     </td>
     <td><%= dataSet %></td>
@@ -47,13 +47,13 @@ class TaskListItemView extends Backbone.Marionette.CompositeView
     <td class="nowrap">
       <a href="/admin/tasks/<%= id %>/edit"><i class="fa fa-pencil"></i>edit</a><br>
       <a href="/annotations/CompoundTask/<%= id %>" title="view all finished tracings"><i class="fa fa-random"></i>view</a><br>
-      <a href="/admin/tasks/<%= id %>/download" title="download all finished tracings"><i class="fa fa-download"></i>download</a><br>
+      <a href="/api/tasks/<%= id %>/download" title="download all finished tracings"><i class="fa fa-download"></i>download</a><br>
       <a href="#" class="delete"><i class="fa fa-trash-o"></i>delete</a>
     </td>
     </tr>
     <tr class="details-row hide" >
       <td colspan="12">
-        <table class="table table-condensed table-nohead">
+        <table class="table table-condensed table-nohead table-hover">
           <tbody>
           </tbody>
         </table>
@@ -61,7 +61,7 @@ class TaskListItemView extends Backbone.Marionette.CompositeView
     </tr>
   """)
 
-  itemView : TaskListSubitemView
+  itemView : TaskAnnotationView
   itemViewContainer : "tbody"
 
   events :

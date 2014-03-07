@@ -9,6 +9,7 @@ import net.liftweb.common.{Failure, Full}
 import play.api.i18n.Messages
 import models.binary.DataSet
 import braingames.util.Converter
+import play.api.libs.json._
 
 class Controller extends PlayController
 with ExtendedController
@@ -20,36 +21,36 @@ with models.basics.Implicits {
 
   def ensureTeamAdministration(user: User, team: String) = {
     user.adminTeams.exists(_.team == team) match {
-      case true  => Full(true)
+      case true => Full(true)
       case false => Failure(Messages("notAllowed"))
     }
   }
 
   def allowedToAdministrate(admin: User, user: User) =
     user.isEditableBy(admin) match {
-      case true  => Full(true)
+      case true => Full(true)
       case false => Failure(Messages("notAllowed"))
     }
 
 
   def allowedToAdministrate(admin: User, dataSet: DataSet) =
     dataSet.isEditableBy(Some(admin)) match {
-      case true  => Full(true)
+      case true => Full(true)
       case false => Failure(Messages("notAllowed"))
     }
 
-  case class Filter[A, T](name: String, predicate: (A,T)  => Boolean)(implicit converter: Converter[String, A]){
+  case class Filter[A, T](name: String, predicate: (A, T) => Boolean)(implicit converter: Converter[String, A]) {
     def applyOn(list: List[T])(implicit request: Request[_]): List[T] = {
-      request.getQueryString(name).flatMap(converter.convert) match{
-        case Some(attr) => list.filter(predicate(attr,_))
+      request.getQueryString(name).flatMap(converter.convert) match {
+        case Some(attr) => list.filter(predicate(attr, _))
         case _ => list
       }
     }
   }
 
-  case class FilterColl[T](filters: Seq[Filter[_, T]]){
+  case class FilterColl[T](filters: Seq[Filter[_, T]]) {
     def applyOn(list: List[T])(implicit request: Request[_]): List[T] = {
-      filters.foldLeft(list){
+      filters.foldLeft(list) {
         case (l, filter) => filter.applyOn(l)
       }
     }
@@ -58,4 +59,13 @@ with models.basics.Implicits {
   def UsingFilters[T, R](filters: Filter[_, T]*)(block: FilterColl[T] => R): R = {
     block(FilterColl(filters))
   }
+
+  def jsonErrorWrites(errors: JsError): JsObject =
+    Json.obj(
+      "messages" -> errors.errors.map(error =>
+        error._2.foldLeft(Json.obj("field" -> error._1.toJsonString)) {
+          case (js, e) => js ++ Json.obj("error" -> e.message)
+        }
+      )
+    )
 }

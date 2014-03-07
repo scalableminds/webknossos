@@ -1,7 +1,8 @@
 package models.task
 
 import models.basics.SecuredBaseDAO
-import play.api.libs.json.Json
+import play.api.libs.json._
+import play.api.libs.functional.syntax._
 import models.annotation.AnnotationSettings
 import reactivemongo.bson.BSONObjectID
 import braingames.reactivemongo._
@@ -48,6 +49,16 @@ object TaskType {
       tt.settings.branchPointsAllowed,
       tt.settings.somaClickingAllowed,
       tt.expectedTime))
+
+    val publicTaskTypeWrites: Writes[TaskType] =
+      ((__ \ 'summary).write[String] and
+        (__ \ 'description).write[String] and
+        (__ \ 'team).write[String] and
+        (__ \ 'settings).write[AnnotationSettings] and
+        (__ \ 'fileName).write[Option[String]] and
+        (__ \ 'id).write[String])( tt =>
+          (tt.summary, tt.description, tt.team, tt.settings,
+            tt.fileName, tt.id))
 }
 
 object TaskTypeDAO extends SecuredBaseDAO[TaskType] {

@@ -19,6 +19,7 @@ class TaskListView extends Backbone.Marionette.CompositeView
           <th>Type</th>
           <th>DataSet </th>
           <th>Edit position</th>
+          <th>Bounding Box</th>
           <th>Experience</th>
           <th>Priority</th>
           <th>Created</th>

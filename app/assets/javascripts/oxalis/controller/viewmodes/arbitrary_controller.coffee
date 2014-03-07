@@ -67,6 +67,10 @@ class ArbitraryController
     @crosshair = new Crosshair(@cam, model.user.get("crosshairSize"))
     @arbitraryView.addGeometry(@crosshair)
 
+    @model.user.on
+      displayCrosshairChanged : (displayCrosshair) =>
+        @crosshair.setVisibility(displayCrosshair)
+
     @bind()
     @arbitraryView.draw()
 
@@ -199,22 +203,24 @@ class ArbitraryController
 
     @model.binary["color"].cube.on "bucketLoaded", => @arbitraryView.draw()
 
-    @model.user.on "crosshairSizeChanged", (value) =>
-      @crosshair.setScale(value)
+    @model.user.on
 
-    @model.user.on "clippingDistanceArbitraryChanged", (value) =>
-      @setClippingDistance(value)
+      crosshairSizeChanged : (value) =>
+        @crosshair.setScale(value)
+
+      sphericalCapRadiusChanged : (value) =>
+        @model.flycam3d.distance = value
+        @plane.setMode @mode
+
+      clippingDistanceArbitraryChanged : (value) =>
+        @setClippingDistance(value)
 
 
   start : (@mode) ->
 
     @stop()
 
-    if @mode == constants.MODE_ARBITRARY
-      @plane.queryVertices = @plane.queryVerticesSphere
-    else if @mode == constants.MODE_ARBITRARY_PLANE
-      @plane.queryVertices = @plane.queryVerticesPlane
-    @plane.isDirty = true
+    @plane.setMode @mode
 
     @initKeyboard()
     @initMouse()

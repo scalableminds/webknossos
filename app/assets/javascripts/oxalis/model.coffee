@@ -136,6 +136,8 @@ class Model
             @flycam.on
               "positionChanged" : (position) =>
                 @flycam3d.setPositionSilent(position)
+
+            @flycam.setPosition(tracing.content.editPosition)
             
             if controlMode == constants.CONTROL_MODE_TRACE
 

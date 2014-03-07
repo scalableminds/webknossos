@@ -8,6 +8,7 @@ underscore : _
 ./controller/combinations/skeletontracing_plane_controller : SkeletonTracingPlaneController
 ./controller/combinations/volumetracing_plane_controller : VolumeTracingPlaneController
 ./controller/scene_controller : SceneController
+./controller/url_parser : UrlParser
 ./model : Model
 ./view : View
 ./view/skeletontracing/skeletontracing_view : SkeletonTracingView
@@ -50,6 +51,7 @@ class Controller
     @mode = constants.MODE_PLANE_TRACING
 
     @model = new Model()
+    @urlParser = new UrlParser(this, @model)
 
     @model.initialize( @controlMode ).done ({restrictions, settings, error}) =>
 
@@ -60,6 +62,8 @@ class Controller
       unless restrictions.allowAccess
         Toast.Error "You are not allowed to access this tracing"
         return
+
+      @urlParser.startUrlUpdater()
 
       for allowedMode in settings.allowedModes
         @allowedModes.push switch allowedMode

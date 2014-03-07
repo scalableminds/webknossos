@@ -2,7 +2,7 @@
 ../constants : constants
 ###
 
-class UrlParser
+class UrlManager
 
 
   constructor : (@controller, @model) ->

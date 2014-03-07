@@ -4,7 +4,6 @@
   modules : [
     {
       name : "main",
-      exclude : ["main/router"],
       override : {
         wrap : {
           startFile : [ "public/bower_components/requirejs/require.js", "public/javascripts_tmp/require_config.js" ]
@@ -15,6 +14,7 @@
       exclude : [ "main" ]
     }, {
       name : "main/router",
+      exclude : [ "main" ]
     }, {
       name : "ace"
     }

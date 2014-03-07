@@ -1,10 +1,19 @@
 ### define
 jquery : $
 underscore : _
-libs/toast : Toast
-main/routing_utils : RoutingUtils
-oxalis/constants : constants
 backbone : Backbone
+<<<<<<< HEAD
+=======
+admin/views/pagination_view : PaginationView
+admin/views/dataset/dataset_list_view : DatasetListView
+admin/models/dataset/dataset_collection : DatasetCollection
+admin/views/user/user_list_view : UserListView
+admin/models/user/user_collection : UserCollection
+admin/views/team/team_list_view : TeamListView
+admin/models/team/team_collection : TeamCollection
+admin/views/task/task_list_view : TaskListView
+admin/views/pagination_view : TaskCollection
+>>>>>>> #235 changes dependancy management und combing for router
 ###
 
 # #####
@@ -62,80 +71,42 @@ class Router extends Backbone.Router
 
   datasets : ->
 
-    require [
-      "admin/views/dataset/dataset_list_view",
-      "admin/views/pagination_view",
-      "admin/models/dataset/dataset_collection"], (DatasetListView, PaginationView, DatasetCollection) =>
+    datasetCollection = new DatasetCollection()
+    paginationView = new PaginationView(collection: datasetCollection)
+    datasetView = new DatasetListView(collection : datasetCollection)
 
-      datasetCollection = new DatasetCollection()
-      paginationView = new PaginationView(collection: datasetCollection)
-      datasetView = new DatasetListView(collection : datasetCollection)
-
-      @changeView(paginationView, datasetView)
-      @listenTo(datasetCollection, "sync", => @hideLoading())
+    @changeView(paginationView, datasetView)
+    @listenTo(datasetCollection, "sync", => @hideLoading())
 
 
   users : ->
 
-    require [
-      "admin/views/user/user_list_view",
-      "admin/views/pagination_view"
-      "admin/models/user/user_collection"], (UserListView, PaginationView, UserCollection) =>
+    userCollection = new UserCollection()
+    paginationView = new PaginationView(collection : userCollection)
+    userListView = new UserListView(collection : userCollection)
 
-      userCollection = new UserCollection()
-      paginationView = new PaginationView(collection : userCollection)
-      userListView = new UserListView(collection : userCollection)
-
-      @changeView(paginationView, userListView)
-      @listenTo(userCollection, "sync", => @hideLoading())
+    @changeView(paginationView, userListView)
+    @listenTo(userCollection, "sync", => @hideLoading())
 
 
   teams : ->
 
-    require [
-      "admin/views/team/team_list_view"
-      "admin/views/pagination_view"
-      "admin/models/team/team_collection"
-    ], (TeamListView, PaginationView, TeamCollection) =>
+    teamCollection = new TeamCollection()
+    paginationView = new PaginationView(collection : teamCollection)
+    teamListView = new TeamListView(collection : teamCollection)
 
-      teamCollection = new TeamCollection()
-      paginationView = new PaginationView(collection : teamCollection)
-      teamListView = new TeamListView(collection : teamCollection)
-
-      @changeView(paginationView, teamListView)
-      @listenTo(teamCollection, "sync", => @hideLoading())
+    @changeView(paginationView, teamListView)
+    @listenTo(teamCollection, "sync", => @hideLoading())
 
 
   tasks : ->
 
-    require [
-      "admin/views/task/task_list_view",
-      "admin/views/pagination_view"
-      "admin/models/task/task_collection"], (TaskListView, PaginationView, TaskCollection) =>
+    taskCollection = new TaskCollection()
+    paginationView = new PaginationView(collection: taskCollection)
+    taskListView = new TaskListView(collection: taskCollection)
 
-      taskCollection = new TaskCollection()
-      paginationView = new PaginationView(collection: taskCollection)
-      taskListView = new TaskListView(collection: taskCollection)
-
-      @changeView(paginationView, taskListView)
-<<<<<<< HEAD
-      return @hideLoading()
-
-
-  taskAlgorithm : ->
-
-    require ["admin/views/task/task_algorithm_view"], (TaskAlgorithmView) =>
-
-      new TaskAlgorithmView(
-        el : $("#main-container").find("#task-selection-algoritm")[0]
-      )
-
-      return @hideLoading()
-
-
-  changeView : (views...) ->
-=======
-      @listenTo(taskCollection, "sync", => @hideLoading())
+    @changeView(paginationView, taskListView)
+    @listenTo(taskCollection, "sync", => @hideLoading())
 
 
   changeView : (views...) ->
@@ -156,7 +127,6 @@ class Router extends Backbone.Router
     else
       # we are probably coming from a URL that isn't a Backbone.View yet (or page reload)
       @$mainContainer.empty()
->>>>>>> #235 seperated router
 
     # Add new views
     @activeViews = views

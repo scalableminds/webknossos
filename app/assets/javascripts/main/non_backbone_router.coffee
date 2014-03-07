@@ -1,10 +1,8 @@
 ### define
 jquery : $
 underscore : _
-libs/toast : Toast
-main/routing_utils : RoutingUtils
-oxalis/constants : constants
 backbone : Backbone
+oxalis/constants : constants
 ./paginator : Paginator
 ###
 

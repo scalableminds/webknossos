@@ -2,8 +2,13 @@
 underscore : _
 backbone.marionette : Marionette
 libs/toast : Toast
+<<<<<<< HEAD
 ./project_task_view : ProjectTaskView
 admin/models/project/project_task_collection : ProjectTaskCollection
+=======
+admin/models/project/project_annotation_collection : ProjectAnnotationCollection
+./project_annotation_view : ProjectAnnotationView
+>>>>>>> #235 changes dependancy management und combing for router
 ###
 
 class ProjectListItemView extends Backbone.Marionette.CompositeView

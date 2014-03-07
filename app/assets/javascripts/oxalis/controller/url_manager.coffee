@@ -5,6 +5,8 @@
 class UrlManager
 
 
+  UPDATE_INTERVAL : 2000
+
   constructor : (@controller, @model) ->
 
     url           = document.URL
@@ -35,9 +37,9 @@ class UrlManager
 
   startUrlUpdater : ->
 
-    update = => @buildUrl()
+    update = => location.href = @buildUrl()
 
-    setInterval update, 1000
+    setInterval update, @UPDATE_INTERVAL
 
 
   buildUrl : ->
@@ -53,4 +55,4 @@ class UrlManager
     else
       state = state.concat( [flycam.getZoomStep().toFixed(2)] )
 
-    location.href = @baseUrl + "#" + state.join(",")
+    return @baseUrl + "#" + state.join(",")

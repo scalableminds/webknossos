@@ -2,8 +2,6 @@
 jquery : $
 underscore : _
 backbone : Backbone
-<<<<<<< HEAD
-=======
 admin/views/pagination_view : PaginationView
 admin/views/dataset/dataset_list_view : DatasetListView
 admin/models/dataset/dataset_collection : DatasetCollection
@@ -13,8 +11,6 @@ admin/views/team/team_list_view : TeamListView
 admin/models/team/team_collection : TeamCollection
 admin/views/task/task_list_view : TaskListView
 admin/models/task/task_collection : TaskCollection
-admin/views/pagination_view : TaskCollection
->>>>>>> #235 changes dependancy management und combing for router
 ###
 
 # #####

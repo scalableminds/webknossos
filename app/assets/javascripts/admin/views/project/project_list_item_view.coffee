@@ -1,7 +1,7 @@
 ### define
 underscore : _
 backbone.marionette : Marionette
-libs/Toast : Toast
+libs/toast : Toast
 ./project_task_view : ProjectTaskView
 admin/models/project/project_task_collection : ProjectTaskCollection
 ###

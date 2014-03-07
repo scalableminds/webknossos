@@ -11,6 +11,8 @@ admin/views/team/team_list_view : TeamListView
 admin/models/team/team_collection : TeamCollection
 admin/views/task/task_list_view : TaskListView
 admin/models/task/task_collection : TaskCollection
+admin/views/project/project_list_view : ProjectListView
+admin/models/project/project_collection : ProjectCollection
 ###
 
 # #####
@@ -53,17 +55,12 @@ class Router extends Backbone.Router
 
   projects : ->
 
-    require [
-      "admin/views/project/project_list_view",
-      "admin/views/pagination_view",
-      "admin/models/project/project_collection"], (ProjectListView, PaginationView, ProjectCollection) =>
+    projectCollection = new ProjectCollection()
+    paginationView = new PaginationView({collection: projectCollection})
+    projectView = new ProjectListView({collection : projectCollection})
 
-      projectCollection = new ProjectCollection()
-      paginationView = new PaginationView({collection: projectCollection})
-      projectView = new ProjectListView({collection : projectCollection})
-
-      @changeView(paginationView, projectView)
-      return @hideLoading()
+    @changeView(paginationView, projectView)
+    return @hideLoading()
 
 
   datasets : ->

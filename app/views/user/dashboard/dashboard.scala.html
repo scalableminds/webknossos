@@ -58,14 +58,16 @@
                 <option value="@d.name"> @d.name </option>
               }
             </select>
-            <label class="radio inline hide">
-              <input type="radio" name="contentType" value="skeletonTracing" checked>
-              Skeleton
-            </label>
-            <label class="radio inline hide">
-              <input type="radio" name="contentType" value="volumeTracing">
-              Volume
-            </label>
+            <span id="tracing-chooser" class="hide">
+              <label class="radio inline">
+                <input type="radio" name="contentType" value="skeletonTracing" checked>
+                Skeleton
+              </label>
+              <label class="radio inline">
+                <input type="radio" name="contentType" value="volumeTracing">
+                Volume
+              </label>
+            </span>
             <button type="submit" class="btn"><i class="fa fa-search"></i>Explore data set</button>
           }
         </div>

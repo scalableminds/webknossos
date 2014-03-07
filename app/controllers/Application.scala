@@ -52,7 +52,7 @@ object Application extends Controller with Secured {
             Redirect(routes.UserController.dashboard)
         }
       case _ =>
-        Future.successful(Redirect(routes.DataSetController.list))
+        Future.successful(Redirect(routes.DataSetController.spotlight))
     }
   }
 

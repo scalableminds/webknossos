@@ -14,7 +14,7 @@ class TaskCollection extends PaginationCollection
       (response) ->
 
         response.type =
-          summary : response.type?.summary || "deleted"
+          summary : response.type?.summary || "<deleted>"
 
         return response
     )

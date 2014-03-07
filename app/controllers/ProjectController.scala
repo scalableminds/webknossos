@@ -64,7 +64,7 @@ object ProjectController extends Controller with Secured {
               Future.successful(JsonBadRequest(Messages("project.name.alreadyTaken")))
           }
         case e: JsError =>
-          Future.successful(BadRequest(JsError.toFlatJson(e)))
+          Future.successful(BadRequest(jsonErrorWrites(e)))
       }
   }
 

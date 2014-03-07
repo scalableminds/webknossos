@@ -290,9 +290,7 @@ class Gui
 
     rotArray = @stringToNumberArray( rotString )
     if rotArray?.length == 3
-      @model.flycam3d.setRotation(
-        _.map rotArray, (r) -> Math.PI / 180 * r
-      )
+      @model.flycam3d.setRotation rotArray
     else
       @updateRotation()
 
@@ -347,7 +345,7 @@ class Gui
 
     rotation = _.map(
       @model.flycam3d.getRotation(),
-      (r) -> (180 / Math.PI * r).toFixed(2)
+      (r) -> r.toFixed(2)
     )
     stringRot = rotation.join(", ")
     $("#trace-rotation-input").val(stringRot)

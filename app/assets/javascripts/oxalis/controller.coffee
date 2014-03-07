@@ -53,7 +53,7 @@ class Controller
     @model = new Model()
     @urlParser = new UrlParser(this, @model)
 
-    @model.initialize( @controlMode ).done ({restrictions, settings, error}) =>
+    @model.initialize( @controlMode, @urlParser.initialState ).done ({restrictions, settings, error}) =>
 
       # Do not continue, when there was an error and we got no settings from the server
       if error
@@ -145,11 +145,12 @@ class Controller
         $("#view-mode").hide()
 
       @allowedModes.sort()
-      #@setMode( constants.MODE_PLANE_TRACING, true )
       if @allowedModes.length == 0
         Toast.error("There was no valid allowed tracing mode specified.")
       else
         @setMode( @allowedModes[0] )
+      if @urlParser.initialState.mode?
+        @setMode( @urlParser.initialState.mode )
 
       # initial trigger
       @sceneController.setSegmentationAlpha($('#alpha-slider').data("slider-value") or constants.DEFAULT_SEG_ALPHA)

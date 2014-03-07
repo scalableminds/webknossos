@@ -109,7 +109,13 @@ class Flycam3d
 
   getZoomStep : -> 
 
-    @zoomStep   
+    @zoomStep
+
+
+  setZoomStep : (zoomStep) ->
+
+    @zoomStep = Math.min @ZOOM_STEP_MAX,
+                  Math.max @ZOOM_STEP_MIN, zoomStep
 
 
   getMatrix : -> 
@@ -213,7 +219,12 @@ class Flycam3d
     object = new THREE.Object3D()
     matrix = (new THREE.Matrix4()).fromArray( @currentMatrix ).transpose()
     object.applyMatrix( matrix )
-    return [ object.rotation.x, object.rotation.y, object.rotation.z ]
+    return _.map [
+      object.rotation.x
+      object.rotation.y
+      object.rotation.z
+      ], (e) -> 180 / Math.PI * e
+
 
 
   setPositionSilent : (p) ->
@@ -233,9 +244,9 @@ class Flycam3d
   setRotation : ([x, y, z]) ->
 
     @resetRotation()
-    @roll -z
-    @yaw -y
-    @pitch -x
+    @roll  -z * Math.PI / 180
+    @yaw   -y * Math.PI / 180
+    @pitch -x * Math.PI / 180
 
 
   getDirection : ->

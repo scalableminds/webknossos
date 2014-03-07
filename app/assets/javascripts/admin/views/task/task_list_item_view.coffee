@@ -26,8 +26,8 @@ class TaskListItemView extends Backbone.Marionette.CompositeView
       </a>
     </td>
     <td>
-      <a href="/admin/taskTypes#<% if(type) { print(type.summary)  } else { print('<deleted>') } %>">
-        <% if(type) { print(type.summary)  } else { print("<deleted>") } %>
+      <a href="/admin/taskTypes#<%= type.summary %>">
+        <%= type.summary %>
       </a>
     </td>
     <td><%= dataSet %></td>

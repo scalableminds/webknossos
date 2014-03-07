@@ -10,7 +10,7 @@ class TeamListItemView extends Backbone.Marionette.ItemView
   template : _.template("""
     <td><input type="checkbox" name="name" value="<%= name %>" class="select-row"></td>
     <td><%= name %></td>
-    <td><%= owner %></td>
+    <td><%= owner.firstName %> <%= owner.lastName %></td>
     <td>
       <% _.each(roles, function(role){ %>
           <span class="label" style="background-color: <%= TemplateHelpers.roleToColor(role.name) %>"><%= role.name %></span>

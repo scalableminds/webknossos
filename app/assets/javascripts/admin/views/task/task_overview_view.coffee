@@ -119,7 +119,8 @@ class TaskOverviewView extends Backbone.Marionette.View
         title: user.name,
         html: true,
         trigger: "hover",
-        content: user.tooltip
+        content: user.tooltip,
+        container: 'body'
       )
     )
 

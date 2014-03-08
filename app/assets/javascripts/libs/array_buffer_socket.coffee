@@ -9,7 +9,7 @@ class ArrayBufferSocket
   senders : []
   requestBufferType : Float32Array
   responseBufferType : Float32Array
-  
+
   constructor : (options) ->
 
     _.extend(this, options)

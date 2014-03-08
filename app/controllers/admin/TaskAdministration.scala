@@ -354,7 +354,7 @@ object TaskAdministration extends AdminController {
       } yield {
         user -> taskTypes.distinct
       }
-    )
+    ))
 
     for {
       users <- UserService.findAll
@@ -367,45 +367,41 @@ object TaskAdministration extends AdminController {
     }
   }
 
+  case class UserWithProjectsAndTaskTypes(user: User, taskTypes: List[TaskType], projects: List[Option[Project]])
+  object UserWithProjectsAndTaskTypes {
+    implicit val UserWithProjectsAndTaskTypesFormat = Json.format[UserWithProjectsAndTaskTypes]
+  }
+
   def overviewNew = Authenticated.async { implicit request =>
 
-    // case class UserWithTaskType(user: User, tasks: List[TaskType]) {}
-    // object UserWithTaskType {
-    //   implicit val userWithTaskTypeFormat = Json.format[UserWithTaskType]
-    // }
-
-    // case class UserWithProject(user: User, project: Project)
-    // object UserWithProject {
-    //   implicit val userWithProjectFormat = Json.format[UserWithProject]
-    // }
-
-    def getProjectsPerUser(users: List[User]) = Future.traverse(users)(user =>
+    def getUsersWithTypesAndProjects(users: List[User]) = Future.traverse(users)(user =>
       for {
-        annotations <- AnnotationService.openTasksFor(user)
+        annotations <- AnnotationService.openTasksFor(user).getOrElse(Nil)
         tasks <- Fox.sequence(annotations.map(_.task)).map(_.flatten)
         projects <- Fox.sequence(tasks.map(_.project))
-        // taskTypes <- Fox.sequence(tasks.map(_.taskType)).map(_.flatten)
+        taskTypes <- Fox.sequence(tasks.map(_.taskType)).map(_.flatten)
       } yield {
-        // UserWithTaskType(user, taskTypes.distinct)
-        // UserWithProject(user, projects.distinct)
-        // user ->
-        projects.distinct.map(_.toOption)
+        UserWithProjectsAndTaskTypes(
+          user,
+          taskTypes.distinct,
+          projects.distinct.map(_.toOption)
+        )
       }
     )
 
     for {
       users <- UserService.findAll
-      allTaskTypes <- TaskTypeDAO.findAll
-      projectsPerUser <- getProjectsPerUser(users)
-      futureUserTaskAssignment <- TaskService.simulateTaskAssignment(users)
-      futureTaskTypes <- Fox.sequence(futureUserTaskAssignment.map(e => e._2.taskType.map(e._1 -> _)).toList)
+      usersWithTypesAndProjects <- getUsersWithTypesAndProjects(users)
+      // allTaskTypes <- TaskTypeDAO.findAll
+      // futureUserTaskAssignment <- TaskService.simulateTaskAssignment(users)
+      // futureTaskTypes <- Fox.sequence(futureUserTaskAssignment.map(e => e._2.taskType.map(e._1 -> _)).toList)
     } yield {
       JsonOk(
         Json.obj(
-          "projectsPerUser" -> toJson(projectsPerUser), //.map( (userWithTasks) => { toJson(userWithTasks._1) ++ toJson(userWithTasks._2)  } ),
-          "taskTypes" -> allTaskTypes,
-          "users" -> users,
-          "futureTaskTypes" -> futureTaskTypes.map( taskBox => taskBox.toOption.map(_._2)  )
+          "usersWithTypesAndProjects" -> toJson(usersWithTypesAndProjects)
+          // "taskTypes" -> allTaskTypes,
+          // "users" -> users,
+          // "futureTaskTypes" -> futureTaskTypes.map( taskBox => taskBox.toOption.map(_._2) )
         )
       )
     }

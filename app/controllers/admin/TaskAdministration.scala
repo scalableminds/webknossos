@@ -334,7 +334,11 @@ object TaskAdministration extends AdminController {
     Future.successful(Ok(html.admin.task.taskOverview()))
   }
 
-  case class UserWithProjectsAndTaskTypes(user: User, taskTypes: List[TaskType], projects: List[Option[Project]])
+  case class UserWithProjectsAndTaskTypes(
+    user: User,
+    taskTypes: List[TaskType],
+    projects: List[Project],
+    futureTaskType: TaskType)
   
   object UserWithProjectsAndTaskTypes {
     implicit val UserWithProjectsAndTaskTypesFormat = Json.format[UserWithProjectsAndTaskTypes]
@@ -342,35 +346,44 @@ object TaskAdministration extends AdminController {
 
   def overviewData = Authenticated.async { implicit request =>
 
-    def getUsersWithTypesAndProjects(users: List[User]) = Future.traverse(users)(user =>
-      for {
-        annotations <- AnnotationService.openTasksFor(user).getOrElse(Nil)
-        tasks <- Fox.sequence(annotations.map(_.task)).map(_.flatten)
-        projects <- Fox.sequence(tasks.map(_.project))
-        taskTypes <- Fox.sequence(tasks.map(_.taskType)).map(_.flatten)
+    def getUserInfos(users: List[User]) = {
+      
+      val futureTaskTypeMap = for {
+        futureTasks <- TaskService.simulateTaskAssignment(users)
+        futureTaskTypes <- Fox.sequence(futureTasks.map(e => e._2.taskType.map(e._1 -> _)).toList)
       } yield {
-        UserWithProjectsAndTaskTypes(
-          user,
-          taskTypes.distinct,
-          projects.distinct.map(_.toOption)
-        )
+        futureTaskTypes.flatten.toMap
       }
-    )
+
+      Future.traverse(users)(user =>
+        for {
+          annotations <- AnnotationService.openTasksFor(user).getOrElse(Nil)
+          tasks <- Fox.sequence(annotations.map(_.task)).map(_.flatten)
+          projects <- Fox.sequence(tasks.map(_.project))
+          taskTypes <- Fox.sequence(tasks.map(_.taskType)).map(_.flatten)
+          taskTypeMap <- futureTaskTypeMap.futureBox
+        } yield {
+          UserWithProjectsAndTaskTypes(
+            user,
+            taskTypes.distinct,
+            projects.distinct.map(_.toOption).flatten,
+            taskTypeMap.get(user)
+          )
+        }
+      )
+    }
 
     for {
       users <- UserService.findAll
-      usersWithTypesAndProjects <- getUsersWithTypesAndProjects(users)
+      userInfos <- getUserInfos(users)
       allTaskTypes <- TaskTypeDAO.findAll
       allProjects <- ProjectDAO.findAll
-      // futureUserTaskAssignment <- TaskService.simulateTaskAssignment(users)
-      // futureTaskTypes <- Fox.sequence(futureUserTaskAssignment.map(e => e._2.taskType.map(e._1 -> _)).toList)
     } yield {
       JsonOk(
         Json.obj(
-          "userInfos" -> toJson(usersWithTypesAndProjects),
+          "userInfos" -> toJson(userInfos),
           "taskTypes" -> allTaskTypes,
           "projects" -> allProjects
-          // "futureTaskTypes" -> futureTaskTypes.map( taskBox => taskBox.toOption.map(_._2) )
         )
       )
     }

@@ -45,57 +45,73 @@ class TaskOverviewView extends Backbone.Marionette.View
     jsRoutes.controllers.admin.TaskAdministration.overviewData().ajax().then( (data) =>
 
       { userInfos, taskTypes, projects } = data
+      # extract users and add full names
       @users = _.pluck(userInfos, "user")
+      @users.map( (user) -> user.name = user.firstName + " " + user.lastName )
 
-      quoted = (str) -> '"' + str + '"'
-      edge = (a, b) -> quoted(a) + "->" + quoted(b) + ";"
+      nodes = @buildNodes(taskTypes, projects)
+      edges = @buildEdges(userInfos)
 
-      # svg parts
-
-      svgHead = """
-                digraph G {
-                  size="10,10";
-                  overlap=false;
-                  graph [ bgcolor="transparent" ];
-                  node  [ fontname="Helvetica, Arial, sans-serif",
-                          fontsize=10.5,
-                          style=filled,
-                          fillcolor="#ffffff",
-                          pencolor="black"
-                        ];
-                """
-      
-      svgTaskTypes = taskTypes.map( (taskType) -> quoted(taskType.summary) + ";").join("\n")
-      svgProjects = projects.map( (project) -> quoted(project.name) + ";" ).join("\n")
-
-      svgUsers = @users.map( (user) =>
-        userName = user.firstName + " " + user.lastName
-        lastActivityDays = moment().diff(user.lastActivity, 'days')
-        color = @colorJet(Math.min(50, lastActivityDays) * (128 / 50) + 128)
-
-        quoted(userName) + " [id="+ quoted(user._id["$oid"]) + ", shape=box, fillcolor=" + quoted(color) + "];"
-      ).join("\n")
-
-
-      svgUserTaskEdges = userInfos.map( (userInfo) ->
-        {user, taskTypes} = userInfo
-        userName = user.firstName + " " + user.lastName
-
-        taskTypes.map( (taskType) -> edge(userName, taskType.summary)).join("\n")
-      ).join("\n")
-
-
-      svgUserProjectEdges = userInfos.map( (userInfo) ->
-        {user, projects} = userInfo
-        userName = user.firstName + " " + user.lastName
-
-        projects.map( (project) -> edge(userName, project.name)).join("\n")
-      ).join("\n")
-
-      tail = "edge [ color=blue ];  }"
-
-      return svgHead + svgTaskTypes + svgUsers + svgProjects + svgUserTaskEdges + svgUserProjectEdges + tail
+      @buildGraph(nodes, edges)
     )
+
+
+  buildGraph : (nodes, edges) ->
+
+    svgHead = """
+              digraph G {
+                size="10,10";
+                overlap=false;
+                graph [ bgcolor="transparent" ];
+                node  [ fontname="Helvetica, Arial, sans-serif",
+                        fontsize=10.5,
+                        style=filled,
+                        fillcolor="#ffffff",
+                        pencolor="black"
+                      ];
+              """
+    svgTail = "}"    
+    svgHead + nodes + edges + svgTail
+
+
+  buildNodes : (taskTypes, projects) ->
+
+    svgTaskTypes = taskTypes.map( (taskType) => @quoted(taskType.summary) + ";")
+    svgProjects = projects.map( (project) => @quoted(project.name) + ";" )
+
+    svgUsers = @users.map( (user) =>
+      userName = user.firstName + " " + user.lastName
+      lastActivityDays = moment().diff(user.lastActivity, 'days')
+      color = @colorJet(Math.min(50, lastActivityDays) * (128 / 50) + 128)
+
+      @quoted(userName) + " [id="+ @quoted(user._id["$oid"]) + ", shape=box, fillcolor=" + @quoted(color) + "];"
+    )
+
+    svgTaskTypes + svgUsers + svgProjects
+
+
+  buildEdges : (userInfos) ->
+    
+    svgTaskEdges = userInfos.map( (userInfo) =>
+      { user, taskTypes } = userInfo
+      taskTypes.map( (taskType) => @edge(user.name, taskType.summary))
+    )
+
+
+    svgProjectEdges = userInfos.map( (userInfo) =>
+      { user, projects } = userInfo
+      projects.map( (project) => @edge(user.name, project.name))
+    )
+
+    
+    svgFutureTaskTypesEdges  = "edge [ color=blue ];"
+    svgFutureTaskTypesEdges += userInfos.map( (userInfo) =>
+      { user, futureTaskType } = userInfo
+      @edge(user.name, futureTaskType.summary)
+    )
+
+
+    svgTaskEdges + svgProjectEdges + svgFutureTaskTypesEdges
 
 
   setupPanZoom : ->
@@ -136,6 +152,9 @@ class TaskOverviewView extends Backbone.Marionette.View
     ].join("<br />")
 
 
+
+  # utility functions
+
   colorJet : (value) ->
 
     fourValue = value / 64
@@ -153,3 +172,9 @@ class TaskOverviewView extends Backbone.Marionette.View
     b = clamp(Math.min(fourValue + 0.5, -fourValue + 2.5), 0, 1)
           
     rgbToHex(r, g, b)
+
+  
+  quoted : (str) -> '"' + str + '"'
+  
+  edge : (a, b) -> @quoted(a) + "->" + @quoted(b) + ";"
+

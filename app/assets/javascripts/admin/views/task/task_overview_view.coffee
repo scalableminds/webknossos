@@ -4,23 +4,18 @@ backbone.marionette : marionette
 worker!libs/viz.js : VizWorker
 libs/pan_zoom_svg  : PanZoomSVG
 moment : moment
+routes : routes
 ###
 
 class TaskOverviewView extends Backbone.Marionette.View
 
   ui :
-    "graphData" : "#graphData"
-    "userData" : "#userData"
     "graph" : ".graph"
-
 
   initialize : ->
 
     # Backbone.Marionette internal method
     @bindUIElements()
-
-    # graphSource = @ui.graphData.html().replace( /"[^"]+"/gm, (a) -> a.replace(" "," ") )
-    userData = JSON.parse(@ui.userData.html())
 
     @getSVG().done( (graphSource) =>
       VizWorker.send(
@@ -36,7 +31,7 @@ class TaskOverviewView extends Backbone.Marionette.View
 
           @ui.graph.html(svgResult)
 
-          @setupPopovers(userData)
+          @setupPopovers()
           @setupPanZoom()
 
         (error) =>
@@ -47,12 +42,13 @@ class TaskOverviewView extends Backbone.Marionette.View
 
   getSVG : ->
 
-    $.get("http://localhost:9000/admin/tasks/overviewNew").then( (data) =>
+    jsRoutes.controllers.admin.TaskAdministration.overviewData().ajax().then( (data) =>
 
       { userInfos, taskTypes, projects } = data
+      @users = _.pluck(userInfos, "user")
 
-      edge = (a, b) -> "\"" + a + "\"->\"" + b + "\";"
       quoted = (str) -> '"' + str + '"'
+      edge = (a, b) -> quoted(a) + "->" + quoted(b) + ";"
 
       # svg parts
 
@@ -61,13 +57,18 @@ class TaskOverviewView extends Backbone.Marionette.View
                   size="10,10";
                   overlap=false;
                   graph [ bgcolor="transparent" ];
-                  node [ fontname="Helvetica,Arial,sans-serif", fontsize=10.5, style=filled, fillcolor="#ffffff", pencolor="black" ];
+                  node  [ fontname="Helvetica, Arial, sans-serif",
+                          fontsize=10.5,
+                          style=filled,
+                          fillcolor="#ffffff",
+                          pencolor="black"
+                        ];
                 """
       
       svgTaskTypes = taskTypes.map( (taskType) -> quoted(taskType.summary) + ";").join("\n")
       svgProjects = projects.map( (project) -> quoted(project.name) + ";" ).join("\n")
 
-      svgUsers = _.pluck(userInfos, "user").map( (user) =>
+      svgUsers = @users.map( (user) =>
         userName = user.firstName + " " + user.lastName
         lastActivityDays = moment().diff(user.lastActivity, 'days')
         color = @colorJet(Math.min(50, lastActivityDays) * (128 / 50) + 128)
@@ -112,17 +113,27 @@ class TaskOverviewView extends Backbone.Marionette.View
     new PanZoomSVG($svg)
 
 
-  setupPopovers : (userData) ->
+  setupPopovers : ->
 
-    userData.map( (user) ->
-      $("#" + user.id + " > text").popover(
-        title: user.name,
+    @users.forEach( (user) =>
+      $("#" + user._id["$oid"]).popover(
+        title: user.firstName + " " + user.lastName,
         html: true,
         trigger: "hover",
-        content: user.tooltip,
+        content: @createUserTooltip(user),
         container: 'body'
       )
     )
+
+
+  createUserTooltip : (user) ->
+
+    lastActivityDays = moment().diff(user.lastActivity, 'days')
+    
+    ["Last Activity: #{lastActivityDays} days ago",
+     "Experiences:",
+      _.map(user.experiences, (domain, value) -> domain + " : " + value ).join("<br />")
+    ].join("<br />")
 
 
   colorJet : (value) ->

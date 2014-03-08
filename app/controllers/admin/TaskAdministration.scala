@@ -331,32 +331,16 @@ object TaskAdministration extends AdminController {
   }
 
   def overview = Authenticated.async { implicit request =>
-    def combineUsersWithCurrentTasks(users: List[User]): Future[List[(User, List[TaskType])]] = Future.traverse(users)(user =>
-      (for {
-        annotations <- AnnotationService.openTasksFor(user).getOrElse(Nil)
-        taskTypes <- Fox.sequenceOfFulls(annotations.map(_.task.flatMap(_.taskType)))
-      } yield {
-        user -> taskTypes.distinct
-      }
-    ))
-
-    for {
-      users <- UserService.findAll
-      allTaskTypes <- TaskTypeDAO.findAll
-      usersWithTasks <- combineUsersWithCurrentTasks(users)
-      futureUserTaskAssignment <- TaskService.simulateTaskAssignment(users)
-      futureTaskTypes <- Fox.sequence(futureUserTaskAssignment.map(e => e._2.taskType.map(e._1 -> _)).toList)
-    } yield {
-      Ok(html.admin.task.taskOverview(users, allTaskTypes, usersWithTasks.toMap, futureTaskTypes.flatten.toMap))
-    }
+    Future.successful(Ok(html.admin.task.taskOverview()))
   }
 
   case class UserWithProjectsAndTaskTypes(user: User, taskTypes: List[TaskType], projects: List[Option[Project]])
+  
   object UserWithProjectsAndTaskTypes {
     implicit val UserWithProjectsAndTaskTypesFormat = Json.format[UserWithProjectsAndTaskTypes]
   }
 
-  def overviewNew = Authenticated.async { implicit request =>
+  def overviewData = Authenticated.async { implicit request =>
 
     def getUsersWithTypesAndProjects(users: List[User]) = Future.traverse(users)(user =>
       for {
@@ -386,12 +370,10 @@ object TaskAdministration extends AdminController {
           "userInfos" -> toJson(usersWithTypesAndProjects),
           "taskTypes" -> allTaskTypes,
           "projects" -> allProjects
-          // "users" -> users,
           // "futureTaskTypes" -> futureTaskTypes.map( taskBox => taskBox.toOption.map(_._2) )
         )
       )
     }
-
 
   }
 

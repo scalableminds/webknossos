@@ -376,14 +376,16 @@ object TaskAdministration extends AdminController {
     for {
       users <- UserService.findAll
       usersWithTypesAndProjects <- getUsersWithTypesAndProjects(users)
-      // allTaskTypes <- TaskTypeDAO.findAll
+      allTaskTypes <- TaskTypeDAO.findAll
+      allProjects <- ProjectDAO.findAll
       // futureUserTaskAssignment <- TaskService.simulateTaskAssignment(users)
       // futureTaskTypes <- Fox.sequence(futureUserTaskAssignment.map(e => e._2.taskType.map(e._1 -> _)).toList)
     } yield {
       JsonOk(
         Json.obj(
-          "usersWithTypesAndProjects" -> toJson(usersWithTypesAndProjects)
-          // "taskTypes" -> allTaskTypes,
+          "userInfos" -> toJson(usersWithTypesAndProjects),
+          "taskTypes" -> allTaskTypes,
+          "projects" -> allProjects
           // "users" -> users,
           // "futureTaskTypes" -> futureTaskTypes.map( taskBox => taskBox.toOption.map(_._2) )
         )

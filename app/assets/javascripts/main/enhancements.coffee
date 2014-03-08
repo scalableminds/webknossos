@@ -3,7 +3,6 @@ jquery : $
 underscore : _
 moment : moment
 ../libs/toast : Toast
-./paginator : Paginator
 ###
 
 $ ->
@@ -166,15 +165,6 @@ $ ->
 
   $(document).on "click", "a[data-ajax]", dataAjaxHandler
   $(document).on "submit", "form[data-ajax]", dataAjaxHandler
-
-
-  $(".page-selection").each( ->
-
-    unless $(this).data("disable-auto-pagination")
-      new Paginator $(this)
-  )
-
-
 
 
   $(document).on "change", "table input.select-all-rows", ->

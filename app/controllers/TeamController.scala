@@ -33,9 +33,12 @@ object TeamController extends Controller with Secured {
       Filter("amIAnAdmin", (value: Boolean, el: Team) =>
         request.user.adminTeamNames.contains(el.name) == value)
     ){ filter =>
-      TeamDAO.findAll.map {
-        teams =>
-          Ok(Writes.list(Team.teamPublicWrites(request.user)).writes(filter.applyOn(teams)))
+      for{
+        allTeams <- TeamDAO.findAll
+        filteredTeams = filter.applyOn(allTeams)
+        js <- Future.traverse(filteredTeams)(Team.teamPublicWrites(_, request.user))
+      } yield {
+        Ok(Json.toJson(js))
       }
     }
   }
@@ -55,8 +58,11 @@ object TeamController extends Controller with Secured {
       case JsSuccess(team, _) =>
         TeamDAO.findOneByName(team.name)(GlobalAccessContext).futureBox.flatMap{
           case Empty =>
-            TeamService.create(team, request.user).map{ _ =>
-              Ok(Team.teamPublicWrites(request.user).writes(team))
+            for{
+              _ <- TeamService.create(team, request.user)
+              js <- Team.teamPublicWrites(team, request.user)
+            } yield {
+              Ok(js)
             }
           case _ =>
             Future.successful(JsonBadRequest(Messages("team.name.alreadyTaken")))

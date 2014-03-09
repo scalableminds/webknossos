@@ -62,8 +62,15 @@ class DatasetListView extends Backbone.Marionette.CompositeView
     modalView.render()
     @ui.modalWrapper.html(modalView.el)
     modalView.$el.modal("show")
+    @modalView = modalView
 
 
   filter : (searchQuery) ->
 
     @collection.setFilter(["name", "owningTeam"], searchQuery)
+
+
+  close : ->
+
+    @modalView?.close()
+    super()

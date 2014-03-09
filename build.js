@@ -13,13 +13,13 @@
       name : "oxalis/controller",
       exclude : [ "main" ]
     }, {
-      name : "admin/views/user/user_list_view",
+      name : "main/router",
       exclude : [ "main" ]
     }, {
       name : "ace"
     }
   ],
-  
+
   dir : "public/javascripts",
   optimize : "none",
   skipDirOptimize: true,
@@ -27,7 +27,7 @@
   generateSourceMaps : true,
   preserveLicenseComments : false,
   wrapShim : true,
-  
+
   paths : {
     "routes": "empty:"
   }

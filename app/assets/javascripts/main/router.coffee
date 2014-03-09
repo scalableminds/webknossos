@@ -1,200 +1,130 @@
 ### define
 jquery : $
 underscore : _
-libs/toast : Toast
-main/routing_utils : RoutingUtils
-oxalis/constants : constants
 backbone : Backbone
+admin/views/pagination_view : PaginationView
+admin/views/dataset/dataset_list_view : DatasetListView
+admin/models/dataset/dataset_collection : DatasetCollection
+admin/views/user/user_list_view : UserListView
+admin/models/user/user_collection : UserCollection
+admin/views/team/team_list_view : TeamListView
+admin/models/team/team_collection : TeamCollection
+admin/views/task/task_list_view : TaskListView
+admin/models/task/task_collection : TaskCollection
+admin/views/project/project_list_view : ProjectListView
+admin/models/project/project_collection : ProjectCollection
 ###
 
+# #####
+# This Router contains all the routes for views that have been
+# refactored to Backbone.View yet. All other routes, that require HTML to be
+# delivered by the Server are handled by the NonBackboneRouter.
+# #####
 class Router extends Backbone.Router
 
   routes :
-    "dashboard"                     : "dashboard"
     "users"                         : "users"
     "teams"                         : "teams"
     "datasets"                      : "datasets"
     "tasks"                         : "tasks"
-    "projects"                      : "projects"
-    "admin/tasks/overview"          : "taskOverview"
-    "admin/taskTypes"               : "hideLoading"
-    "admin/projects"                : "projects"
-    "annotations/:typ/:id"          : "tracingTrace"
-    "datasets/:id/view"             : "tracingView"
-    "users/:id/details"             : "userDetails"
-    "*url"                          : "hideLoading"
-    #"admin/tasks/algorithm"      : "taskAlgorithm"
+
+
+  initialize : ->
+
+
+    # handle all links and manage page changes (rather the reloading the whole site)
+    $("a").on "click", (evt) =>
+
+      url = $(evt.target).attr("href")
+      urlWithoutSlash = url.slice(1)
+
+      if @routes[urlWithoutSlash]
+        evt.preventDefault()
+        @navigate(url, { trigger: true })
+
+      return
+
+    @$loadingSpinner = $("#loader")
+    @$mainContainer = $("#main-container")
 
 
   hideLoading : ->
 
-    $("#loader").css("display" : "none")
-
-
-  dashboard : ->
-
-    require ["main/dashboardLoader"], (DashboardLoader) ->
-
-      DashboardLoader.displayBasicDashboard()
-      DashboardLoader.displayUserDashboard()
-      return
-
-
-  userDetails : ->
-
-    require ["main/dashboardLoader"], (DashboardLoader) ->
-      DashboardLoader.displayBasicDashboard()
-      return
-
-
-  tracingTrace : ->
-
-    require [
-      "oxalis/controller"
-    ], (Controller) ->
-
-      leftTabBar = $("#main")
-      dataUrl = leftTabBar.data("url")
-
-      populateTemplate = (data) ->
-        templateSource = _.unescape(leftTabBar.html())
-        templateOutput = _.template(templateSource)(data)
-        leftTabBar.html(templateOutput)
-
-      $.ajax(
-        url: dataUrl
-        type: 'GET'
-        success: (task) ->
-
-          if task.noData
-            populateTemplate({task : null})
-          else
-            populateTemplate({task : task})
-
-        error: (xhr, status, error) ->
-
-          console.error("Something went wrong when receiving task data", xhr, status, error)
-
-        complete: (task) ->
-
-          oxalis = window.oxalis = new Controller(constants.CONTROL_MODE_TRACE)
-      )
-
-      return
-
-
-  tracingView : ->
-
-    require [
-      "oxalis/controller"
-      "slider"
-    ], (Controller) ->
-
-      oxalis = window.oxalis = new Controller(constants.CONTROL_MODE_VIEW)
-
-      return
+    @$loadingSpinner.hide()
 
 
   projects : ->
 
-    require [
-      "admin/views/project/project_list_view",
-      "admin/views/pagination_view",
-      "admin/models/project/project_collection"], (ProjectListView, PaginationView, ProjectCollection) =>
+    projectCollection = new ProjectCollection()
+    paginationView = new PaginationView({collection: projectCollection})
+    projectView = new ProjectListView({collection : projectCollection})
 
-      projectCollection = new ProjectCollection()
-      paginationView = new PaginationView({collection: projectCollection})
-      projectView = new ProjectListView({collection : projectCollection})
-
-      @changeView(paginationView, projectView)
-      return @hideLoading()
+    @changeView(paginationView, projectView)
+    return @hideLoading()
 
 
   datasets : ->
 
-    require [
-      "admin/views/dataset/dataset_list_view",
-      "admin/views/pagination_view",
-      "admin/models/dataset/dataset_collection"], (DatasetListView, PaginationView, DatasetCollection) =>
+    datasetCollection = new DatasetCollection()
+    paginationView = new PaginationView(collection: datasetCollection)
+    datasetView = new DatasetListView(collection : datasetCollection)
 
-      datasetCollection = new DatasetCollection()
-      paginationView = new PaginationView({collection: datasetCollection})
-      datasetView = new DatasetListView({collection : datasetCollection})
-
-      @changeView(paginationView, datasetView)
-      return @hideLoading()
-
-
-  taskOverview : ->
-
-    require ["admin/views/task/task_overview_view"], (TaskOverviewView) =>
-
-      new TaskOverviewView(
-        el : $("#main-container").find("#task-overview")[0]
-      )
-      return @hideLoading()
+    @changeView(paginationView, datasetView)
+    @listenTo(datasetCollection, "sync", => @hideLoading())
 
 
   users : ->
 
-    require [
-      "admin/views/user/user_list_view",
-      "admin/views/pagination_view"
-      "admin/models/user/user_collection"], (UserListView, PaginationView, UserCollection) =>
+    userCollection = new UserCollection()
+    paginationView = new PaginationView(collection : userCollection)
+    userListView = new UserListView(collection : userCollection)
 
-      userCollection = new UserCollection()
-      paginationView = new PaginationView({collection : userCollection})
-      userListView = new UserListView({collection : userCollection})
-
-      @changeView(paginationView, userListView)
-      return @hideLoading()
+    @changeView(paginationView, userListView)
+    @listenTo(userCollection, "sync", => @hideLoading())
 
 
   teams : ->
 
-    require [
-      "admin/views/team/team_list_view"
-      "admin/views/pagination_view"
-      "admin/models/team/team_collection"
-    ], (TeamListView, PaginationView, TeamCollection) =>
+    teamCollection = new TeamCollection()
+    paginationView = new PaginationView(collection : teamCollection)
+    teamListView = new TeamListView(collection : teamCollection)
 
-      teamCollection = new TeamCollection()
-      paginationView = new PaginationView({collection : teamCollection})
-      teamListView = new TeamListView({collection : teamCollection})
-
-      @changeView(paginationView, teamListView)
-      return @hideLoading()
+    @changeView(paginationView, teamListView)
+    @listenTo(teamCollection, "sync", => @hideLoading())
 
 
   tasks : ->
 
-    require [
-      "admin/views/task/task_list_view",
-      "admin/views/pagination_view"
-      "admin/models/task/task_collection"], (TaskListView, PaginationView, TaskCollection) =>
+    taskCollection = new TaskCollection()
+    paginationView = new PaginationView(collection: taskCollection)
+    taskListView = new TaskListView(collection: taskCollection)
 
-      taskCollection = new TaskCollection()
-      paginationView = new PaginationView({collection: taskCollection})
-      taskListView = new TaskListView({collection: taskCollection})
-
-      @changeView(paginationView, taskListView)
-      return @hideLoading()
-
-
-  taskAlgorithm : ->
-
-    require ["admin/views/task/task_algorithm_view"], (TaskAlgorithmView) =>
-
-      new TaskAlgorithmView(
-        el : $("#main-container").find("#task-selection-algoritm")[0]
-      )
-
-      return @hideLoading()
+    @changeView(paginationView, taskListView)
+    @listenTo(taskCollection, "sync", => @hideLoading())
 
 
   changeView : (views...) ->
 
-    $mainContainer = $("#main-container").empty()
-    for view in views
-      $mainContainer.append(view.render().el)
+    if @activeViews == views
+      return
 
+    @$loadingSpinner.show()
+
+    # Remove current views
+    if @activeViews
+      for view in @activeViews
+        # prefer Marionette's close() function to Backbone's remove()
+        if view.close
+          view.close()
+        else
+          view.remove()
+    else
+      # we are probably coming from a URL that isn't a Backbone.View yet (or page reload)
+      @$mainContainer.empty()
+
+    # Add new views
+    @activeViews = views
+    for view in views
+      @$mainContainer.append(view.render().el)
+
+    return

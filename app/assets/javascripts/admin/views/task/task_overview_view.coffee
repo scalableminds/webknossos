@@ -9,13 +9,26 @@ routes : routes
 
 class TaskOverviewView extends Backbone.Marionette.View
 
+  events :
+    "change @ui.taskTypesCheckbox" : "selectionChanged"
+    "change @ui.projectsCheckbox" : "selectionChanged"
+
   ui :
     "graph" : ".graph"
+    "taskTypesCheckbox" : "#taskTypesCheckbox"
+    "projectsCheckbox" : "#projectsCheckbox"
+
 
   initialize : ->
 
     # Backbone.Marionette internal method
     @bindUIElements()
+
+    @ui.taskTypesCheckbox.prop("checked", true)
+
+    @paintGraph()
+
+  paintGraph : ->
 
     @getSVG().done( (graphSource) =>
       VizWorker.send(
@@ -38,13 +51,35 @@ class TaskOverviewView extends Backbone.Marionette.View
           @ui.graph.html("<i class=\"fa fa-warning-sign\"></i>#{error.replace(/\n/g,"<br>")}")
       )
     )
-  
+
+  selectionChanged : ->
+
+    @paintGraph()
+
+
+  doDrawTaskTypes : ->
+
+    $(@ui.taskTypesCheckbox).prop("checked")
+
+
+  doDrawProjects : ->
+
+    $(@ui.projectsCheckbox).prop("checked")
+
+
+  getData : ->
+
+    if @data
+      return $.Deferred().resolve()
+    else
+      jsRoutes.controllers.admin.TaskAdministration.overviewData().ajax().then( (@data) => )
+
 
   getSVG : ->
 
-    jsRoutes.controllers.admin.TaskAdministration.overviewData().ajax().then( (data) =>
+    @getData().then( =>
 
-      { userInfos, taskTypes, projects } = data
+      { userInfos, taskTypes, projects } = @data
       # extract users and add full names
       @users = _.pluck(userInfos, "user")
       @users.map( (user) -> user.name = user.firstName + " " + user.lastName )
@@ -76,42 +111,55 @@ class TaskOverviewView extends Backbone.Marionette.View
 
   buildNodes : (taskTypes, projects) ->
 
-    svgTaskTypes = taskTypes.map( (taskType) => @quoted(taskType.summary) + ";")
-    svgProjects = projects.map( (project) => @quoted(project.name) + ";" )
-
     svgUsers = @users.map( (user) =>
       userName = user.firstName + " " + user.lastName
       lastActivityDays = moment().diff(user.lastActivity, 'days')
       color = @colorJet(Math.min(50, lastActivityDays) * (128 / 50) + 128)
 
-      @quoted(userName) + " [id="+ @quoted(user._id["$oid"]) + ", shape=box, fillcolor=" + @quoted(color) + "];"
+      @quoted(userName) + " [id="+ @quoted(user.id) + ", shape=box, fillcolor=" + @quoted(color) + "];"
     )
+
+    svgTaskTypes = ''
+    svgProjects = ''
+
+    if @doDrawTaskTypes()
+      svgTaskTypes = taskTypes.map( (taskType) => @quoted(taskType.summary) + ";")
+
+    if @doDrawProjects()
+      svgProjects = projects.map( (project) => @quoted(project.name) + ";" )
+
 
     svgTaskTypes + svgUsers + svgProjects
 
 
   buildEdges : (userInfos) ->
+
+    svgTaskTypeEdges = ''
+    svgFutureTaskTypesEdges = ''
+    svgProjectEdges = ''
     
-    svgTaskEdges = userInfos.map( (userInfo) =>
-      { user, taskTypes } = userInfo
-      taskTypes.map( (taskType) => @edge(user.name, taskType.summary))
-    )
+    if @doDrawTaskTypes()
+
+      svgTaskTypeEdges = userInfos.map( (userInfo) =>
+        { user, taskTypes } = userInfo
+        taskTypes.map( (taskType) => @edge(user.name, taskType.summary))
+      )
+      
+      svgFutureTaskTypesEdges  = "edge [ color=blue ];"
+      svgFutureTaskTypesEdges += userInfos.map( (userInfo) =>
+        { user, futureTaskType } = userInfo
+        @edge(user.name, futureTaskType.summary)
+      )
 
 
-    svgProjectEdges = userInfos.map( (userInfo) =>
-      { user, projects } = userInfo
-      projects.map( (project) => @edge(user.name, project.name))
-    )
-
-    
-    svgFutureTaskTypesEdges  = "edge [ color=blue ];"
-    svgFutureTaskTypesEdges += userInfos.map( (userInfo) =>
-      { user, futureTaskType } = userInfo
-      @edge(user.name, futureTaskType.summary)
-    )
+    if @doDrawProjects()
+      svgProjectEdges = userInfos.map( (userInfo) =>
+        { user, projects } = userInfo
+        projects.map( (project) => @edge(user.name, project.name))
+      )
 
 
-    svgTaskEdges + svgProjectEdges + svgFutureTaskTypesEdges
+    svgTaskTypeEdges + svgProjectEdges + svgFutureTaskTypesEdges
 
 
   setupPanZoom : ->
@@ -132,7 +180,7 @@ class TaskOverviewView extends Backbone.Marionette.View
   setupPopovers : ->
 
     @users.forEach( (user) =>
-      $("#" + user._id["$oid"]).popover(
+      $("#" + user.id).popover(
         title: user.firstName + " " + user.lastName,
         html: true,
         trigger: "hover",

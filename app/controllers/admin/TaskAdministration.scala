@@ -30,6 +30,9 @@ import play.api.libs.json.{Json, JsObject, JsArray}
 import play.api.libs.json.Json._
 import play.api.libs.json.JsObject
 
+import play.api.libs.json._
+import play.api.libs.functional.syntax._
+
 import net.liftweb.common.{Empty, Failure, Full}
 import braingames.util.Fox
 import play.api.mvc.SimpleResult
@@ -330,18 +333,23 @@ object TaskAdministration extends AdminController {
     }
   }
 
-  def overview = Authenticated.async { implicit request =>
-    Future.successful(Ok(html.admin.task.taskOverview()))
+  def overview = Authenticated { implicit request =>
+    Ok(html.admin.task.taskOverview())
   }
 
-  case class UserWithProjectsAndTaskTypes(
+  case class UserWithTaskInfos(
     user: User,
     taskTypes: List[TaskType],
     projects: List[Project],
     futureTaskType: TaskType)
   
-  object UserWithProjectsAndTaskTypes {
-    implicit val UserWithProjectsAndTaskTypesFormat = Json.format[UserWithProjectsAndTaskTypes]
+  object UserWithTaskInfos {
+    def userInfosPublicWrites(userWithTaskInfos: UserWithTaskInfos): Writes[UserWithTaskInfos] =
+      ( (__ \ "user").write(User.userPublicWrites(userWithTaskInfos.user)) and
+        (__ \ "taskTypes").write[List[TaskType]] and
+        (__ \ "projects").write[List[Project]] and
+        (__ \ "futureTaskType").write[TaskType])( u =>
+        (u.user, u.taskTypes, u.projects, u.futureTaskType))
   }
 
   def overviewData = Authenticated.async { implicit request =>
@@ -363,7 +371,7 @@ object TaskAdministration extends AdminController {
           taskTypes <- Fox.sequence(tasks.map(_.taskType)).map(_.flatten)
           taskTypeMap <- futureTaskTypeMap.futureBox
         } yield {
-          UserWithProjectsAndTaskTypes(
+          UserWithTaskInfos(
             user,
             taskTypes.distinct,
             projects.distinct.map(_.toOption).flatten,
@@ -381,7 +389,7 @@ object TaskAdministration extends AdminController {
     } yield {
       JsonOk(
         Json.obj(
-          "userInfos" -> toJson(userInfos),
+          "userInfos" -> JsArray(userInfos.map(t => toJson(t)(UserWithTaskInfos.userInfosPublicWrites(t)))),
           "taskTypes" -> allTaskTypes,
           "projects" -> allProjects
         )

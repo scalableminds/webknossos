@@ -344,8 +344,8 @@ object TaskAdministration extends AdminController {
     futureTaskType: TaskType)
   
   object UserWithTaskInfos {
-    def userInfosPublicWrites(userWithTaskInfos: UserWithTaskInfos): Writes[UserWithTaskInfos] =
-      ( (__ \ "user").write(User.userPublicWrites(userWithTaskInfos.user)) and
+    def userInfosPublicWrites(requestingUser: User): Writes[UserWithTaskInfos] =
+      ( (__ \ "user").write(User.userPublicWrites(requestingUser)) and
         (__ \ "taskTypes").write[List[TaskType]] and
         (__ \ "projects").write[List[Project]] and
         (__ \ "futureTaskType").write[TaskType])( u =>
@@ -389,7 +389,7 @@ object TaskAdministration extends AdminController {
     } yield {
       JsonOk(
         Json.obj(
-          "userInfos" -> JsArray(userInfos.map(t => toJson(t)(UserWithTaskInfos.userInfosPublicWrites(t)))),
+          "userInfos" -> Writes.list(UserWithTaskInfos.userInfosPublicWrites(request.user)).writes(userInfos),
           "taskTypes" -> allTaskTypes,
           "projects" -> allProjects
         )

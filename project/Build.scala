@@ -64,9 +64,23 @@ object AssetCompilation {
   import SettingsKeys._
   import com.typesafe.sbt.packager.universal.Keys._
 
+  private def startProcess(app: String, param: String, base: File) = {
+    if(System.getProperty("os.name").startsWith("Windows"))
+      Process( "cmd" :: "/c" :: app :: param :: Nil, base )
+    else
+      Process( app :: param :: Nil, base )
+  }
+
+  private def killProcess(pid: String) = {
+    if(System.getProperty("os.name").startsWith("Windows"))
+      Process("kill" :: "-f" :: pid :: Nil).run()
+    else
+      Process("kill" :: pid :: Nil).run()
+  }
+
   private def npmInstall: Def.Initialize[Task[Seq[File]]] = (npmPath, baseDirectory, streams) map { (npm, base, s) =>
     try{
-      Process( npm :: "install" :: Nil, base ) ! s.log
+      startProcess(npm, "install", base ) ! s.log
     } catch {
       case e: java.io.IOException =>
         s.log.error("Npm couldn't be found. Please set the configuration key 'AssetCompilation.npmPath' properly. " + e.getMessage)
@@ -77,7 +91,7 @@ object AssetCompilation {
   private def gulpGenerateTask: Def.Initialize[Task[Any]] = (gulpPath, baseDirectory, streams, target) map { (gulp, base, s, t) =>
     try{
       Future{
-        Process(gulp :: "debug" :: Nil, base) ! s.log
+        startProcess(gulp, "debug", base) ! s.log
       }
     } catch {
       case e: java.io.IOException =>
@@ -89,7 +103,7 @@ object AssetCompilation {
     val pidFile = Path("target") / "gulp.pid"
     if(pidFile.exists){
       val pid = scala.io.Source.fromFile(pidFile).mkString.trim
-      Process("kill" :: pid :: Nil).run()
+      killProcess(pid)
       pidFile.delete()
       println("Pow, Pow. Blood is everywhere, gulp is gone!")
     }
@@ -172,7 +186,12 @@ object ApplicationBuild extends Build {
     templatesImport += "oxalis.view.helpers._",
     templatesImport += "oxalis.view._",
     scalaVersion := "2.10.3",
-    gulpPath := "node_modules/.bin/gulp",
+    gulpPath := (
+      if(System.getProperty("os.name").startsWith("Windows"))
+        "node_modules\\.bin\\gulp"
+      else
+        "node_modules/.bin/gulp"
+    ),
     npmPath := "npm",
     //requireJs := Seq("main"),
     //requireJsShim += "main.js",

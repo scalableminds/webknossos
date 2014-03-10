@@ -113,10 +113,10 @@ class Router extends Backbone.Router
 
   statistics : ->
 
-    require ["admin/views/statistics/statistics_view"], (StatisticsView) =>
+    require ["admin/views/statistic/statistic_view"], (StatisticView) =>
 
-      statisticsView = new StatisticsView()
-      @changeView(statisticsView)
+      statisticView = new StatisticView()
+      @changeView(statisticView)
       return @hideLoading()
 
 

@@ -14,6 +14,7 @@ class Router extends Backbone.Router
     "users"                         : "users"
     "teams"                         : "teams"
     "datasets"                      : "datasets"
+    "statistics"                    : "statistics"
     "tasks"                         : "tasks"
     "projects"                      : "projects"
     "admin/tasks/overview"          : "taskOverview"
@@ -107,6 +108,15 @@ class Router extends Backbone.Router
       projectView = new ProjectListView({collection : projectCollection})
 
       @changeView(paginationView, projectView)
+      return @hideLoading()
+
+
+  statistics : ->
+
+    require ["admin/views/statistics/statistics_view"], (StatisticsView) =>
+
+      statisticsView = new StatisticsView()
+      @changeView(statisticsView)
       return @hideLoading()
 
 

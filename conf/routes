@@ -120,6 +120,9 @@ DELETE        /api/projects/:name                                        control
 GET           /api/projects/:name/download                               controllers.admin.NMLIO.projectDownload(name: String)
 GET           /api/projects/:name/tasks                                  controllers.ProjectController.tasksForProject(name: String)
 
+# Statistics
+GET           /statistics                                                controllers.ProjectController.empty
+
 # Javascript routing
 GET           /assets/javascripts/routes.js                              controllers.Application.javascriptRoutes
 

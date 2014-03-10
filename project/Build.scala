@@ -64,15 +64,17 @@ object AssetCompilation {
   import SettingsKeys._
   import com.typesafe.sbt.packager.universal.Keys._
 
+  def isWindowsSystem = System.getProperty("os.name").startsWith("Windows")
+
   private def startProcess(app: String, param: String, base: File) = {
-    if(System.getProperty("os.name").startsWith("Windows"))
+    if(isWindowsSystem)
       Process( "cmd" :: "/c" :: app :: param :: Nil, base )
     else
       Process( app :: param :: Nil, base )
   }
 
   private def killProcess(pid: String) = {
-    if(System.getProperty("os.name").startsWith("Windows"))
+    if(isWindowsSystem)
       Process("kill" :: "-f" :: pid :: Nil).run()
     else
       Process("kill" :: pid :: Nil).run()
@@ -111,7 +113,7 @@ object AssetCompilation {
 
   private def assetsGenerationTask: Def.Initialize[Task[AnyVal]] = (gulpPath, baseDirectory, streams, target) map { (gulp, base, s, t) =>
     try{
-      Process(gulp :: "build" :: Nil, base) ! s.log
+      startProcess(gulp, "build", base) ! s.log
     } catch {
       case e: java.io.IOException =>
         s.log.error("Gulp couldn't be found. Please set the configuration key 'AssetCompilation.gulpPath' properly. " + e.getMessage)
@@ -129,6 +131,13 @@ object ApplicationBuild extends Build {
   import Dependencies._
   import Resolvers._
   import AssetCompilation.SettingsKeys._
+
+  private def formatPath(path: String) = {
+    if (AssetCompilation.isWindowsSystem)
+      path.replace("/", "\\")
+    else
+      path
+  }
 
   val coffeeCmd =
     if(System.getProperty("os.name").startsWith("Windows"))
@@ -186,12 +195,7 @@ object ApplicationBuild extends Build {
     templatesImport += "oxalis.view.helpers._",
     templatesImport += "oxalis.view._",
     scalaVersion := "2.10.3",
-    gulpPath := (
-      if(System.getProperty("os.name").startsWith("Windows"))
-        "node_modules\\.bin\\gulp"
-      else
-        "node_modules/.bin/gulp"
-    ),
+    gulpPath := formatPath("node_modules/.bin/gulp"),
     npmPath := "npm",
     //requireJs := Seq("main"),
     //requireJsShim += "main.js",

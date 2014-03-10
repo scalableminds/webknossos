@@ -103,7 +103,8 @@ class DatasetListItemView extends Backbone.Marionette.ItemView
         url: @ajaxUrl
       ).done( (responseJSON) =>
         value = responseJSON.progress * 100
-        @ui.progressBar.width("#{value}%")
+        if value
+          @ui.progressBar.width("#{value}%")
 
         switch responseJSON.status
           when "finished"

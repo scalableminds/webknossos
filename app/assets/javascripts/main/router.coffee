@@ -62,20 +62,20 @@ class Router extends Backbone.Router
         leftTabBar.html(templateOutput)
 
       $.ajax(
-        url: dataUrl
-        type: 'GET'
-        success: (task) ->
+        url : dataUrl
+        type : 'GET'
+        success : (task) ->
 
           if task.noData
             populateTemplate({task : null})
           else
             populateTemplate({task : task})
 
-        error: (xhr, status, error) ->
+        error : (xhr, status, error) ->
 
           console.error("Something went wrong when receiving task data", xhr, status, error)
 
-        complete: (task) ->
+        complete : (task) ->
 
           oxalis = window.oxalis = new Controller(constants.CONTROL_MODE_TRACE)
       )
@@ -103,7 +103,7 @@ class Router extends Backbone.Router
       "admin/models/project/project_collection"], (ProjectListView, PaginationView, ProjectCollection) =>
 
       projectCollection = new ProjectCollection()
-      paginationView = new PaginationView({collection: projectCollection})
+      paginationView = new PaginationView({collection : projectCollection})
       projectView = new ProjectListView({collection : projectCollection})
 
       @changeView(paginationView, projectView)
@@ -118,7 +118,7 @@ class Router extends Backbone.Router
       "admin/models/dataset/dataset_collection"], (DatasetListView, PaginationView, DatasetCollection) =>
 
       datasetCollection = new DatasetCollection()
-      paginationView = new PaginationView({collection: datasetCollection})
+      paginationView = new PaginationView({collection : datasetCollection})
       datasetView = new DatasetListView({collection : datasetCollection})
 
       @changeView(paginationView, datasetView)
@@ -174,8 +174,8 @@ class Router extends Backbone.Router
       "admin/models/task/task_collection"], (TaskListView, PaginationView, TaskCollection) =>
 
       taskCollection = new TaskCollection()
-      paginationView = new PaginationView({collection: taskCollection})
-      taskListView = new TaskListView({collection: taskCollection})
+      paginationView = new PaginationView({collection : taskCollection})
+      taskListView = new TaskListView({collection : taskCollection})
 
       @changeView(paginationView, taskListView)
       return @hideLoading()

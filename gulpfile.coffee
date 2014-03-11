@@ -89,12 +89,12 @@ gulp.task("compile:styles", ->
 
 gulp.task("combine:scripts:production", ->
   return gulp.src("build.js")
-    .pipe(exec("#{path.join(process.cwd(), "node_modules", ".bin", "r.js")} -o build.js"))
+    .pipe(exec("\"#{path.join(process.cwd(), "node_modules", ".bin", "r.js")}\" -o build.js"))
 )
 
 gulp.task("install:bower", ->
   return gulp.src("bower.json")
-    .pipe(exec("#{path.join(process.cwd(), "node_modules", ".bin", "bower")} install -f"))
+    .pipe(exec("\"#{path.join(process.cwd(), "node_modules", ".bin", "bower")}\" install -f"))
 )
 
 gulp.task("clean:tmp", ->

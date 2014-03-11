@@ -97,18 +97,19 @@ class Model
                   ]
                 }
 
-            supportedDataLayers = [{name: "color", allowManipulation : true},
-                                    {name: "volume", allowManipulation : false},
-                                    {name: "segmentation", allowManipulation : false}]
+            layerOptions = {
+              color : { allowManipulation : true },
+              volume : { allowManipulation : false },
+              segmentation : { allowManipulation : false }
+            }
 
             zoomStepCount = Infinity
             @binary = {}
             for layer in dataSet.dataLayers
-              for supportedLayer in supportedDataLayers
-                if layer.name == supportedLayer.name
-                  supportedLayer.bitDepth = parseInt( layer.elementClass.substring(4) )
-                  @binary[layer.name] = new Binary(@user, tracing, supportedLayer, tracingId, @boundingBox)
-                  zoomStepCount = Math.min(zoomStepCount, @binary[layer.name].cube.ZOOM_STEP_COUNT - 1)
+              _.extend layer, layerOptions[layer.name]
+              layer.bitDepth = parseInt( layer.elementClass.substring(4) )
+              @binary[layer.name] = new Binary(@user, tracing, layer, tracingId, @boundingBox)
+              zoomStepCount = Math.min(zoomStepCount, @binary[layer.name].cube.ZOOM_STEP_COUNT - 1)
 
             unless @binary["color"]?
               Toast.error("No data available! Something seems to be wrong with the dataset.")

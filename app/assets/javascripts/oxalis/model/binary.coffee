@@ -34,18 +34,14 @@ class Binary
     @queueStatus    = 0
     @targetBitDepth = if @layer.name == "color" then @layer.bitDepth else 8
 
-    for layer in tracing.content.dataSet.dataLayers
-      if layer.name == @layer.name
-        dataLayer = layer
-
-    lowerBoundary = [dataLayer.maxCoordinates.topLeft]
+    lowerBoundary = [@layer.maxCoordinates.topLeft]
     upperBoundary = [
-      dataLayer.maxCoordinates.width + dataLayer.maxCoordinates.topLeft[0]
-      dataLayer.maxCoordinates.height + dataLayer.maxCoordinates.topLeft[1]
-      dataLayer.maxCoordinates.depth + dataLayer.maxCoordinates.topLeft[2]
+      @layer.maxCoordinates.width + @layer.maxCoordinates.topLeft[0]
+      @layer.maxCoordinates.height + @layer.maxCoordinates.topLeft[1]
+      @layer.maxCoordinates.depth + @layer.maxCoordinates.topLeft[2]
     ]
 
-    @cube = new Cube(upperBoundary, dataLayer.resolutions.length, @layer.bitDepth)
+    @cube = new Cube(upperBoundary, @layer.resolutions.length, @layer.bitDepth)
     @boundingBox = new BoundingBox(boundingBox, @cube)
     @pullQueue = new PullQueue(@dataSetName, @cube, @layer.name, tracingId, @boundingBox)
     @pushQueue = new PushQueue(@dataSetName, @cube, @layer.name, tracingId, tracing.version)

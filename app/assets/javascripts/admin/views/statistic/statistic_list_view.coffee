@@ -28,6 +28,7 @@ class StatisticListView extends Backbone.Marionette.CompositeView
 
     @collection = new UserStatisticCollection()
     @collection.fetch()
+
     @listenTo(app.vent, "graphView:updatedSelection", @update)
 
 

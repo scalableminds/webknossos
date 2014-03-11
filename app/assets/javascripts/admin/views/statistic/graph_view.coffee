@@ -3,6 +3,7 @@ underscore : _
 app : app
 backbone.marionette : marionette
 c3 : c3
+moment : moment
 admin/models/statistic/time_statistic_collection : TimeStatisticCollection
 ###
 
@@ -27,11 +28,11 @@ class GraphView extends Backbone.Marionette.ItemView
         x: "x"
         columns: [
           ["x"].concat @collection.map((item) -> return item.get("date"))
-          ["weekly-hours"].concat @collection.map((item) -> return item.get("timestamp"))
+          ["WeeklyHours"].concat @collection.map((item) -> return moment.utc(item.get("timestamp")).format("hh"))
         ]
         selection :
           enabled : true
-          grouped : true
+          grouped : false
       axis :
         x :
           type : "timeseries"

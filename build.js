@@ -13,7 +13,7 @@
       name : "oxalis/controller",
       exclude : [ "main" ]
     }, {
-      name : "main/router",
+      name : "admin/admin",
       exclude : [ "main" ]
     }, {
       name : "ace"

@@ -2,17 +2,6 @@
 jquery : $
 underscore : _
 backbone : Backbone
-admin/views/pagination_view : PaginationView
-admin/views/dataset/dataset_list_view : DatasetListView
-admin/models/dataset/dataset_collection : DatasetCollection
-admin/views/user/user_list_view : UserListView
-admin/models/user/user_collection : UserCollection
-admin/views/team/team_list_view : TeamListView
-admin/models/team/team_collection : TeamCollection
-admin/views/task/task_list_view : TaskListView
-admin/models/task/task_collection : TaskCollection
-admin/views/project/project_list_view : ProjectListView
-admin/models/project/project_collection : ProjectCollection
 ###
 
 # #####
@@ -55,38 +44,39 @@ class Router extends Backbone.Router
 
   projects : ->
 
-    @showWithPagination(ProjectListView, ProjectCollection)
+    @showWithPagination("ProjectListView", "ProjectCollection")
 
 
   datasets : ->
 
-    @showWithPagination(DatasetListView, DatasetCollection)
+    @showWithPagination("DatasetListView", "DatasetCollection")
 
 
   users : ->
 
-    @showWithPagination(UserListView, UserCollection)
+    @showWithPagination("UserListView", "UserCollection")
 
 
   teams : ->
 
-    @showWithPagination(TeamListView, TeamCollection)
+    @showWithPagination("TeamListView", "TeamCollection")
 
 
   tasks : ->
 
-    @showWithPagination(TaskListView, TaskCollection)
+    @showWithPagination("TaskListView", "TaskCollection")
 
 
   showWithPagination : (view, collection) ->
 
+    require ["admin/admin"], (admin) =>
 
-    collection = new collection()
-    view = new view(collection: collection)
-    paginationView = new PaginationView(collection: collection)
+      collection = new admin[collection]()
+      view = new admin[view](collection: collection)
+      paginationView = new admin.PaginationView(collection: collection)
 
-    @changeView(paginationView, view)
-    @listenTo(collection, "sync", => @hideLoading())
+      @changeView(paginationView, view)
+      @listenTo(collection, "sync", => @hideLoading())
 
 
   changeView : (views...) ->

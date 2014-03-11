@@ -99,25 +99,16 @@ class Model
 
             supportedDataLayers = [{name: "color", allowManipulation : true},
                                     {name: "volume", allowManipulation : false},
-                                    {name: "segmentation", allowManipulation : false}]  
-
-            # For now, let's make sure we always have a segmentation layer
-            #unless _.find( dataSet.dataLayers, (layer) -> layer.typ == "segmentation" )?
-            #  dataSet.dataLayers.push(
-            #    maxCoordinates : dataSet.dataLayers[0].maxCoordinates
-            #    resolutions : [0]
-            #    typ : "segmentation"
-            #    elementClass : "uint16"
-            #    noData : true )
+                                    {name: "segmentation", allowManipulation : false}]
 
             zoomStepCount = Infinity
             @binary = {}
             for layer in dataSet.dataLayers
               for supportedLayer in supportedDataLayers
-                if layer.typ == supportedLayer.name
+                if layer.name == supportedLayer.name
                   supportedLayer.bitDepth = parseInt( layer.elementClass.substring(4) )
-                  @binary[layer.typ] = new Binary(@user, tracing, supportedLayer, tracingId, @boundingBox)
-                  zoomStepCount = Math.min(zoomStepCount, @binary[layer.typ].cube.ZOOM_STEP_COUNT - 1)
+                  @binary[layer.name] = new Binary(@user, tracing, supportedLayer, tracingId, @boundingBox)
+                  zoomStepCount = Math.min(zoomStepCount, @binary[layer.name].cube.ZOOM_STEP_COUNT - 1)
 
             unless @binary["color"]?
               Toast.error("No data available! Something seems to be wrong with the dataset.")

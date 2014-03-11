@@ -35,7 +35,7 @@ class Binary
     @targetBitDepth = if @layer.name == "color" then @layer.bitDepth else 8
 
     for layer in tracing.content.dataSet.dataLayers
-      if layer.typ == @layer.name
+      if layer.name == @layer.name
         dataLayer = layer
 
     lowerBoundary = [dataLayer.maxCoordinates.topLeft]

@@ -43,7 +43,7 @@ class Plane
       format, THREE.UnsignedByteType,
       new THREE.UVMapping(),
       THREE.ClampToEdgeWrapping, THREE.ClampToEdgeWrapping,
-      THREE.LinearMipmapLinearFilter, THREE.LinearMipmapLinearFilter )
+      THREE.NearestFilter, THREE.LinearMipmapLinearFilter )
 
 
   createMeshes : (pWidth, tWidth) ->
@@ -53,11 +53,10 @@ class Plane
     volumePlaneGeo = new THREE.PlaneGeometry(pWidth, pWidth, 1, 1)
 
     # create textures
-    bytes = @model.binary["color"].targetBitDepth >> 3
-    texture = @createDataTexture(tWidth, bytes)
-    texture.needsUpdate = true
-    
-    volumeTexture = @createDataTexture(tWidth, 1, THREE.LuminanceFormat)
+    textures = {}
+    for name, binary of @model.binary
+      bytes = binary.targetBitDepth >> 3
+      textures[name] = @createDataTexture(tWidth, bytes)
     
     offset = new THREE.Vector2(0, 0)
     repeat = new THREE.Vector2(0, 0)
@@ -121,27 +120,23 @@ class Plane
     # weird workaround to force JS to pass this as a reference...
     @alpha = new THREE.Vector2( 0, 0)
     uniforms = {
-      texture : {type : "t", value : texture},
-      volumeTexture : {type : "t", value : volumeTexture},
+      texture : {type : "t", value : textures['color']},
+      volumeTexture : {type : "t", value : textures['segmentation']},
       offset : {type : "v2", value : offset},
       repeat : {type : "v2", value : repeat},
       alpha : {type : "v2", value : @alpha}
     }
-    textureMaterial = new THREE.ShaderMaterial({
-      uniforms : uniforms,
-      vertexShader : vertexShader,
+    textureMaterial = new THREE.ShaderMaterial(
+      uniforms : uniforms
+      vertexShader : vertexShader
       fragmentShader : fragmentShader
-      })
+    )
 
     # create mesh
     @plane = new THREE.Mesh( planeGeo, textureMaterial )
-    @plane.texture = texture
-    @plane.volumeTexture = volumeTexture
+    @plane.textures = textures
     @plane.offset = offset
     @plane.repeat = repeat
-    # Never interpolate
-    @plane.texture.magFilter = THREE.NearestFilter
-    @plane.volumeTexture.magFilter = THREE.NearestFilter
 
     # create crosshair
     crosshairGeometries = new Array(2)
@@ -188,25 +183,23 @@ class Plane
       area = @flycam.getArea(@planeID)
       tPos = @flycam.getTexturePosition(@planeID).slice()
       if @model?
-        for dataLayerName of @model.binary
-          @model.binary[dataLayerName].planes[@planeID].get(@flycam.getTexturePosition(@planeID), { zoomStep : @flycam.getIntegerZoomStep(), area : @flycam.getArea(@planeID) }).done ( dataBuffer ) =>
+        for name, binary of @model.binary
+          
+          binary.planes[@planeID].get(
+            position : @flycam.getTexturePosition(@planeID)
+            zoomStep : @flycam.getIntegerZoomStep()
+            area : @flycam.getArea(@planeID)
+          ).done ( dataBuffer ) =>
+
             if dataBuffer
-              if dataLayerName == "color"
-                @plane.texture.image.data.set(dataBuffer)
-              if dataLayerName == "segmentation"
-                # Generate test pattern
-                #for i in [0...512]
-                #  for j in [0...512]
-                #    id = Math.floor(i / 32) * 16 + Math.floor(j / 32)
-                #    dataBuffer[i * 512 + j] = id
-                @plane.volumeTexture.image.data.set(dataBuffer)
+              @plane.textures[name].image.data.set(dataBuffer)
               @flycam.hasNewTexture[@planeID] = true
   
       if !(@flycam.hasNewTexture[@planeID] or @flycam.hasChanged)
         return
 
-      @plane.texture.needsUpdate = true
-      @plane.volumeTexture.needsUpdate = true
+      for name, texture of @plane.textures
+        texture.needsUpdate = true
       
       scalingFactor = @flycam.getTextureScalingFactor()
       @plane.repeat.x = (area[2] -  area[0]) / @textureWidth  # (tWidth -4) ???
@@ -256,5 +249,5 @@ class Plane
 
   setLinearInterpolationEnabled : (value) =>
 
-    @plane.texture.magFilter = if value==true then THREE.LinearFilter else THREE.NearestFilter
+    @plane.textures["color"].magFilter = if value==true then THREE.LinearFilter else THREE.NearestFilter
 

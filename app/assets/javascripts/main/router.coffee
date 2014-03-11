@@ -55,52 +55,38 @@ class Router extends Backbone.Router
 
   projects : ->
 
-    projectCollection = new ProjectCollection()
-    paginationView = new PaginationView({collection: projectCollection})
-    projectView = new ProjectListView({collection : projectCollection})
-
-    @changeView(paginationView, projectView)
-    return @hideLoading()
+    @showWithPagination(ProjectListView, ProjectCollection)
 
 
   datasets : ->
 
-    datasetCollection = new DatasetCollection()
-    paginationView = new PaginationView(collection: datasetCollection)
-    datasetView = new DatasetListView(collection : datasetCollection)
-
-    @changeView(paginationView, datasetView)
-    @listenTo(datasetCollection, "sync", => @hideLoading())
+    @showWithPagination(DatasetListView, DatasetCollection)
 
 
   users : ->
 
-    userCollection = new UserCollection()
-    paginationView = new PaginationView(collection : userCollection)
-    userListView = new UserListView(collection : userCollection)
-
-    @changeView(paginationView, userListView)
-    @listenTo(userCollection, "sync", => @hideLoading())
+    @showWithPagination(UserListView, UserCollection)
 
 
   teams : ->
 
-    teamCollection = new TeamCollection()
-    paginationView = new PaginationView(collection : teamCollection)
-    teamListView = new TeamListView(collection : teamCollection)
-
-    @changeView(paginationView, teamListView)
-    @listenTo(teamCollection, "sync", => @hideLoading())
+    @showWithPagination(TeamListView, TeamCollection)
 
 
   tasks : ->
 
-    taskCollection = new TaskCollection()
-    paginationView = new PaginationView(collection: taskCollection)
-    taskListView = new TaskListView(collection: taskCollection)
+    @showWithPagination(TaskListView, TaskCollection)
 
-    @changeView(paginationView, taskListView)
-    @listenTo(taskCollection, "sync", => @hideLoading())
+
+  showWithPagination : (view, collection) ->
+
+
+    collection = new collection()
+    view = new view(collection: collection)
+    paginationView = new PaginationView(collection: collection)
+
+    @changeView(paginationView, view)
+    @listenTo(collection, "sync", => @hideLoading())
 
 
   changeView : (views...) ->

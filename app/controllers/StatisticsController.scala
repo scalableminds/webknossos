@@ -22,7 +22,7 @@ object StatisticsController extends Controller with Secured{
     case (interval, duration) => Json.obj(
       "start" -> interval.start.toString(),
       "end" -> interval.end.toString(),
-      "tracing-time" -> duration.toMillis
+      "tracingTime" -> duration.toMillis
     )
   }
 
@@ -31,7 +31,8 @@ object StatisticsController extends Controller with Secured{
       case Some(handler) =>
         TimeSpanService.loggedTimePerInterval(handler, start, end).map{ times =>
           Ok(Json.obj(
-            "tracing-times" -> intervalTracingTimeJson(times)
+            "name" -> "oxalis",
+            "tracingTimes" -> intervalTracingTimeJson(times)
           ))
         }
       case _ =>
@@ -49,11 +50,12 @@ object StatisticsController extends Controller with Secured{
           val json = usersWithTimes.map{
             case (user, times) => Json.obj(
               "user" -> User.userCompactWrites(request.user).writes(user),
-              "tracing-times" -> intervalTracingTimeJson(times)
+              "tracingTimes" -> intervalTracingTimeJson(times)
             )
           }
           Ok(Json.obj(
-            "tracing-times" -> json
+            "name" -> "user",
+            "tracingTimes" -> json
           ))
         }
       case _ =>

@@ -45,7 +45,7 @@ DELETE        /api/teams/:id                                             control
 # Binary Data
 
 # Spotlight
-GET           /spotlight                                                  controllers.DataSetController.spotlight
+GET           /spotlight                                                 controllers.DataSetController.spotlight
 
 # DataSets
 GET           /datasets                                                  controllers.DataSetController.empty
@@ -119,6 +119,8 @@ POST          /api/projects                                              control
 DELETE        /api/projects/:name                                        controllers.ProjectController.delete(name: String)
 GET           /api/projects/:name/download                               controllers.admin.NMLIO.projectDownload(name: String)
 GET           /api/projects/:name/tasks                                  controllers.ProjectController.tasksForProject(name: String)
+
+GET           /api/statistics/oxalis                                     controllers.StatisticsController.oxalis(interval: String, start: Option[Long], end: Option[Long])
 
 # Javascript routing
 GET           /assets/javascripts/routes.js                              controllers.Application.javascriptRoutes

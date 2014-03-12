@@ -28,9 +28,9 @@ object TimeSpanService extends FoxImplicits{
     timeSpanTracker ! TrackTime(timestamp, user._id, annotation, ctx)
   }
 
-  def loggedTimePerInterval[T](user: User, groupingF: TimeSpan => T)(implicit ctx: DBAccessContext): Fox[Map[T, Duration]] =
+  def loggedTimeOfUser[T](user: User, groupingF: TimeSpan => T, start: Option[Long] = None, end: Option[Long] = None)(implicit ctx: DBAccessContext): Fox[Map[T, Duration]] =
     for {
-      timeTrackingOpt <- TimeSpanDAO.findByUser(user).futureBox
+      timeTrackingOpt <- TimeSpanDAO.findByUser(user, start, end).futureBox
     } yield {
       timeTrackingOpt match {
         case Full(timeSpans) =>

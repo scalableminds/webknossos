@@ -3,7 +3,6 @@ jquery : $
 underscore : _
 backbone : Backbone
 oxalis/constants : constants
-./paginator : Paginator
 ###
 
 class Router extends Backbone.Router

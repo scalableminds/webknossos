@@ -103,15 +103,24 @@ class Model
               segmentation : { allowManipulation : false }
             }
 
+            @dataSetName = dataSet.name
             zoomStepCount = Infinity
             @binary = {}
+            @lowerBoundary = [ Infinity,  Infinity,  Infinity]
+            @upperBoundary = [-Infinity, -Infinity, -Infinity]
+            
             for layer in dataSet.dataLayers
+
               _.extend layer, layerOptions[layer.name]
               layer.bitDepth = parseInt( layer.elementClass.substring(4) )
-              @binary[layer.name] = new Binary(@user, tracing, layer, tracingId, @boundingBox)
+              @binary[layer.name] = new Binary(this, tracing, layer, tracingId)
               zoomStepCount = Math.min(zoomStepCount, @binary[layer.name].cube.ZOOM_STEP_COUNT - 1)
 
-            unless @binary["color"]?
+              for i in [0..2]
+                @lowerBoundary[i] = Math.min @lowerBoundary[i], @binary[layer.name].lowerBoundary[i]
+                @upperBoundary[i] = Math.max @upperBoundary[i], @binary[layer.name].upperBoundary[i]
+
+            unless @getColorBinaries().length > 0
               Toast.error("No data available! Something seems to be wrong with the dataset.")
 
             # if "volume" layer still used, change name to segmentation
@@ -145,3 +154,12 @@ class Model
             
           -> Toast.error("Ooops. We couldn't communicate with our mother ship. Please try to reload this page.")
         )
+
+  getColorBinaries : ->
+
+    result = []
+    for name, binary of @binary
+      if binary.category == "color"
+        result.push binary
+
+    return result

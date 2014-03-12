@@ -20,7 +20,7 @@ class Gui
     @user = @model.user
     @qualityArray = ["high", "medium", "low"]
 
-    @datasetPostfix = _.last(@model.binary["color"].dataSetName.split("_"))
+    @datasetPostfix = _.last(@model.dataSetName.split("_"))
     @datasetPosition = @initDatasetPosition(@user.get("briConNames"))
 
     somaClickingAllowed = @tracingSettings.somaClickingAllowed
@@ -146,7 +146,7 @@ class Gui
     @fNodes?.open()
     @fCells?.open()
 
-    $("#dataset-name").text(@model.binary["color"].dataSetName)
+    $("#dataset-name").text(@model.dataSetName)
 
     $("#trace-position-input").on "change", (event) =>
 
@@ -356,7 +356,8 @@ class Gui
 
 
   setBrightnessAndContrast : =>
-    @model.binary["color"].updateContrastCurve(@settingsGeneral.brightness, @settingsGeneral.contrast)
+    for binary in @model.getColorBinaries()
+      binary.updateContrastCurve(@settingsGeneral.brightness, @settingsGeneral.contrast)
     
     @user.get("brightness")[@datasetPosition] = (Number) @settingsGeneral.brightness
     @user.get("contrast")[@datasetPosition] = (Number) @settingsGeneral.contrast

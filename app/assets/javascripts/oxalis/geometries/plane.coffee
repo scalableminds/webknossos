@@ -57,6 +57,7 @@ class Plane
     for name, binary of @model.binary
       bytes = binary.targetBitDepth >> 3
       textures[name] = @createDataTexture(tWidth, bytes)
+      textures[name].category = binary.category
     
     offset = new THREE.Vector2(0, 0)
     repeat = new THREE.Vector2(0, 0)
@@ -249,5 +250,6 @@ class Plane
 
   setLinearInterpolationEnabled : (value) =>
 
-    @plane.textures["color"].magFilter = if value==true then THREE.LinearFilter else THREE.NearestFilter
-
+    for name, texture of @plane.textures
+      if texture.category == "color"
+        texture.magFilter = if value then THREE.LinearFilter else THREE.NearestFilter

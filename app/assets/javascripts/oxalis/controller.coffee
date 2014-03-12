@@ -77,7 +77,7 @@ class Controller
       @gui = @createGui(restrictions, settings)
 
       @sceneController = new SceneController(
-        @model.binary["color"].cube.upperBoundary, @model.flycam, @model)
+        @model.upperBoundary, @model.flycam, @model)
 
 
       if @model.skeletonTracing?
@@ -249,13 +249,12 @@ class Controller
 
   createGui : (restrictions, settings)->
 
-    { model } = @
-
-    gui = new Gui($("#optionswindow"), model, restrictions, settings)
+    gui = new Gui($("#optionswindow"), @model, restrictions, settings)
     gui.update()
 
-    model.binary["color"].pullQueue.set4Bit(model.user.get("fourBit"))
-    model.binary["color"].updateContrastCurve(
-      gui.settingsGeneral.brightness, gui.settingsGeneral.contrast)
+    for binary in @model.getColorBinaries()
+      binary.pullQueue.set4Bit(@model.user.get("fourBit"))
+      binary.updateContrastCurve(
+        gui.settingsGeneral.brightness, gui.settingsGeneral.contrast)
 
     return gui

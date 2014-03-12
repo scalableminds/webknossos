@@ -36,8 +36,6 @@ class SkeletonTracing
 
     @data = tracing.content.contentData
 
-    @flycam.setPosition(tracing.content.editPosition)
-
     # initialize deferreds
     @finishedDeferred = new $.Deferred().resolve()
 
@@ -540,7 +538,7 @@ class SkeletonTracing
 
     if notify
       if confirm("Do you really want to delete the whole tree?")
-        @reallyDeleteTree(id, deleteBranchesAndComments, informServer)
+        @reallyDeleteTree(id, deleteBranchesAndComments, notifyServer)
       else
         return
     else

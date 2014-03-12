@@ -312,22 +312,6 @@ object TaskAdministration extends AdminController {
   def dataSetNamesForTasks(tasks: List[Task])(implicit ctx: DBAccessContext) =
     Future.traverse(tasks)(_.annotationBase.flatMap(_.dataSetName getOrElse "").futureBox.map(_.toOption))
 
-  def tasksForProject(projectName: String) = Authenticated.async { implicit request =>
-    for {
-      project <- ProjectDAO.findOneByName(projectName) ?~> Messages("project.notFound")
-      tasks <- project.tasks
-      dataSetNames <- dataSetNamesForTasks(tasks)
-      statuses <- Future.traverse(tasks)(_.status)
-      taskTypes <- Future.traverse(tasks)(_.taskType.futureBox)
-    } yield {
-      val zipped = (tasks zip dataSetNames, statuses zip taskTypes).zipped.toList
-      val result = zipped.foldLeft(Html.empty) {
-        case (h, ((t, d), (s, tt))) => h += html.admin.task.simpleTask(t, d.getOrElse(""), s, tt.toOption)
-      }
-      JsonOk(result)
-    }
-  }
-
   def tasksForType(taskTypeId: String) = Authenticated.async { implicit request =>
     for {
       taskType <- TaskTypeDAO.findOneById(taskTypeId) ?~> Messages("taskType.notFound")

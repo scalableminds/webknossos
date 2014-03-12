@@ -132,12 +132,6 @@ object ApplicationBuild extends Build {
   import Resolvers._
   import AssetCompilation.SettingsKeys._
 
-  private def formatPath(path: String) = {
-    if (AssetCompilation.isWindowsSystem)
-      path.replace("/", "\\")
-    else
-      path
-  }
 
   val coffeeCmd =
     if(System.getProperty("os.name").startsWith("Windows"))
@@ -195,7 +189,7 @@ object ApplicationBuild extends Build {
     templatesImport += "oxalis.view.helpers._",
     templatesImport += "oxalis.view._",
     scalaVersion := "2.10.3",
-    gulpPath := formatPath("node_modules/.bin/gulp"),
+    gulpPath := (Path("node_modules") / ".bin" / "gulp").getPath,
     npmPath := "npm",
     //requireJs := Seq("main"),
     //requireJsShim += "main.js",

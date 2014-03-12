@@ -14,7 +14,7 @@ class TaskCollection extends PaginationCollection
 
         # apply some defaults
         response.type =
-          summary : response.type?.summary || "deleted"
+          summary : response.type?.summary || "<deleted>"
 
         # convert bounding box
         if response.boundingBox?

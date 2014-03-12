@@ -45,7 +45,7 @@ object StatisticsController extends Controller with Secured{
     }
   }
 
-  def user(interval: String, start: Option[Long], end: Option[Long]) = Authenticated.async{ implicit request =>
+  def users(interval: String, start: Option[Long], end: Option[Long]) = Authenticated.async{ implicit request =>
     intervalHandler.get(interval) match{
       case Some(handler) =>
         for{
@@ -58,10 +58,7 @@ object StatisticsController extends Controller with Secured{
               "tracingTimes" -> intervalTracingTimeJson(times)
             )
           }
-          Ok(Json.obj(
-            "name" -> "user",
-            "tracingTimes" -> json
-          ))
+          Ok(Json.toJson(json))
         }
       case _ =>
         Fox.successful(BadRequest(Messages("statistics.interval.invalid")))

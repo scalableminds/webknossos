@@ -79,9 +79,6 @@ class CreateProjectModalView extends Backbone.Marionette.Layout
 
     @$el.modal("show")
 
-    @userSelectionView.render()
-    @teamSelectionView.render()
-
     @owner.show(@userSelectionView)
     @team.show(@teamSelectionView)
 

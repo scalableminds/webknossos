@@ -121,7 +121,7 @@ GET           /api/projects/:name/download                               control
 GET           /api/projects/:name/tasks                                  controllers.ProjectController.tasksForProject(name: String)
 
 GET           /api/statistics/oxalis                                     controllers.StatisticsController.oxalis(interval: String, start: Option[Long], end: Option[Long])
-GET           /api/statistics/user                                       controllers.StatisticsController.user(interval: String, start: Option[Long], end: Option[Long])
+GET           /api/statistics/users                                      controllers.StatisticsController.users(interval: String, start: Option[Long], end: Option[Long])
 # Javascript routing
 GET           /assets/javascripts/routes.js                              controllers.Application.javascriptRoutes
 

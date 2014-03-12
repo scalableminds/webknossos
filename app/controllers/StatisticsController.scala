@@ -9,6 +9,8 @@ import play.api.i18n.Messages
 import play.api.libs.json.Json
 import braingames.util.Fox
 import play.api.libs.concurrent.Execution.Implicits._
+import models.user.{User, UserDAO}
+import scala.concurrent.duration.Duration
 
 object StatisticsController extends Controller with Secured{
   val intervalHandler = Map(
@@ -16,15 +18,38 @@ object StatisticsController extends Controller with Secured{
     "week" -> TimeSpan.groupByWeek _
   )
 
+  def intervalTracingTimeJson[T<: models.user.time.Interval](times: Map[T, Duration]) = times.map{
+    case (interval, duration) => Json.obj(
+      "start" -> interval.start.toString(),
+      "end" -> interval.end.toString(),
+      "tracing-time" -> duration.toMillis
+    )
+  }
+
   def oxalis(interval: String, start: Option[Long], end: Option[Long]) = Authenticated.async{ implicit request =>
     intervalHandler.get(interval) match{
       case Some(handler) =>
         TimeSpanService.loggedTimePerInterval(handler, start, end).map{ times =>
-          val json = times.map{
-            case (interval, duration) => Json.obj(
-              "start" -> interval.start.toString(),
-              "end" -> interval.end.toString(),
-              "tracing-time" -> duration.toMillis
+          Ok(Json.obj(
+            "tracing-times" -> intervalTracingTimeJson(times)
+          ))
+        }
+      case _ =>
+        Fox.successful(BadRequest(Messages("statistics.interval.invalid")))
+    }
+  }
+
+  def user(interval: String, start: Option[Long], end: Option[Long]) = Authenticated.async{ implicit request =>
+    intervalHandler.get(interval) match{
+      case Some(handler) =>
+        for{
+          users <- UserDAO.findAll
+          usersWithTimes <- Fox.combined(users.map( user => TimeSpanService.loggedTimeOfUser(user, handler, start, end).map(user -> _)))
+        } yield {
+          val json = usersWithTimes.map{
+            case (user, times) => Json.obj(
+              "user" -> User.userCompactWrites(request.user).writes(user),
+              "tracing-times" -> intervalTracingTimeJson(times)
             )
           }
           Ok(Json.obj(

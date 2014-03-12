@@ -53,7 +53,7 @@ trait Dashboard {
     for {
       exploratoryAnnotations <- AnnotationService.findExploratoryOf(user)
       dataSets <- DataSetDAO.findAllActive
-      loggedTime <- TimeSpanService.loggedTimePerInterval(user, TimeSpan.groupByMonth _)
+      loggedTime <- TimeSpanService.loggedTimeOfUser(user, TimeSpan.groupByMonth _)
       exploratoryAnnotations <- exploratorySortedByTime(exploratoryAnnotations).toFox
       userTasks <- userWithTasks(user)
     } yield {

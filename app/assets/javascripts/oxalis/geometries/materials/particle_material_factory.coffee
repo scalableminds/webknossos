@@ -42,9 +42,6 @@ class ParticleMaterialFactory
       vertexColors : true
     })
 
-    @material.setZoomFactor = (zoomFactor) ->
-      uniforms.zoomFactor.value = zoomFactor
-
     @material.setShowRadius = (showRadius) ->
       uniforms.showRadius.value = if showRadius then 1 else 0
 

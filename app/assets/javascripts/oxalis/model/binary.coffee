@@ -27,11 +27,11 @@ class Binary
   constructor : (@model, tracing, @layer, tracingId) ->
 
     @TEXTURE_SIZE_P = constants.TEXTURE_SIZE_P
+    { @category, @name } = @layer
 
     @lastPingTime   = new Date()
     @queueStatus    = 0
-    @targetBitDepth = if @layer.category == "color" then @layer.bitDepth else 8
-    @category       = @layer.category
+    @targetBitDepth = if @category == "color" then @layer.bitDepth else 8
 
     {topLeft, width, height, depth} = @layer.maxCoordinates
     @lowerBoundary  = topLeft

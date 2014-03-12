@@ -15,12 +15,6 @@ class PlaneMaterialFactory
       textures[name].category = binary.category
 
     uniforms =
-      texture :
-        type : "t"
-        value : textures['color']
-      volumeTexture :
-        type : "t"
-        value : textures['segmentation']
       offset :
         type : "v2"
         value : new THREE.Vector2(0, 0)
@@ -31,8 +25,31 @@ class PlaneMaterialFactory
         type : "f"
         value : 0
 
+    colors = [
+      new THREE.Vector4(1, 0, 0, 1)
+      new THREE.Vector4(0, 1, 0, 1)
+      new THREE.Vector4(0, 0, 1, 1)
+    ]
+    i = 0
+
+    for name, texture of textures
+      uniforms[name + "_texture"] = {
+        type : "t"
+        value : texture
+      }
+      unless name == "segmentation"
+        uniforms[name + "_weight"] = {
+          type : "f"
+          value : 1
+        }
+        uniforms[name + "_color"] = {
+          type : "v4"
+          value : colors[i++]
+        }
+
     vertexShader   = @getVertexShader()
     fragmentShader = @getFragmentShader()
+    console.log "fragmentShader", fragmentShader
 
     @material = new THREE.ShaderMaterial({
       uniforms
@@ -89,8 +106,20 @@ class PlaneMaterialFactory
 
   getFragmentShader : ->
 
-    return "
-      uniform sampler2D texture, volumeTexture;
+    colorLayerNames = _.map @model.getColorBinaries(), (b) -> b.name
+
+    return _.template(
+      "
+      <% _.each(layers, function(name) { %>
+        uniform sampler2D <%= name %>_texture;
+        uniform vec4 <%= name %>_color;
+        uniform float <%= name %>_weight;
+      <% }) %>
+
+      <% if (hasSegmentation) { %>
+        uniform sampler2D segmentation_texture;
+      <% } %>
+
       uniform vec2 offset, repeat;
       uniform float alpha;
       varying vec2 vUv;
@@ -124,17 +153,39 @@ class PlaneMaterialFactory
       }
 
       void main() {
-        vec4 volumeColor = texture2D(volumeTexture, vUv * repeat + offset);
-        float id = (volumeColor[0] * 255.0);
         float golden_ratio = 0.618033988749895;
+
+        <% if (hasSegmentation) { %>
+          vec4 volume_color = texture2D(segmentation_texture, vUv * repeat + offset);
+          float id = (volume_color.r * 255.0);
+        <% } else { %>
+          float id = 0.0;
+        <% } %>
+
+        /* Get Color Value(s) */
+        <% if (isRgb) { %>
+          vec4 data_color = texture2D( color_texture, vUv * repeat + offset);
+        <% } else { %>
+          vec4 data_color = vec4(0.0, 0.0, 0.0, 0.0)
+          <% _.each(layers, function(name){ %>
+            + texture2D( <%= name %>_texture, vUv * repeat + offset).r * vec4(1.0, 1.0, 1.0, 1.0)
+                * <%= name %>_weight * <%= name %>_color
+          <% }) %> ;
+        <% } %>
 
         /* Color map (<= to fight rounding mistakes) */
         
         if ( id > 0.1 ) {
           vec4 HSV = vec4( mod( 6.0 * id * golden_ratio, 6.0), 1.0, 1.0, 1.0 );
-          gl_FragColor = (1.0 - alpha/100.0) * texture2D(texture, vUv * repeat + offset) + alpha/100.0 * hsv_to_rgb( HSV );
+          gl_FragColor = (1.0 - alpha/100.0) * data_color + alpha/100.0 * hsv_to_rgb( HSV );
         } else {
-          gl_FragColor = texture2D(texture, vUv * repeat + offset);
+          gl_FragColor = data_color;
         }
       }
-    "
+      "
+      {
+        layers : colorLayerNames
+        hasSegmentation : @model.binary["segmentation"]?
+        isRgb : @model.binary["color"]?.targetBitDepth == 24
+      }
+    )

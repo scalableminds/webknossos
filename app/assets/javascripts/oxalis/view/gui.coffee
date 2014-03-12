@@ -31,8 +31,10 @@ class Gui
       fourBit : @user.get("fourBit")
       brightness : @user.get("brightness")[@datasetPosition]
       contrast : @user.get("contrast")[@datasetPosition]
-      resetBrightnessAndContrast : => @resetBrightnessAndContrast()
+      resetColorSettings : => @resetColorSettings()
       quality : @qualityArray[@user.get("quality")]
+
+    @setupColors()
 
     if @model.skeletonTracing?
       @settingsSkeleton =
@@ -87,19 +89,27 @@ class Gui
     @addSlider(@fFlightcontrols, @user.getSettings(), "crosshairSize",
       0.05, 0.5, 0.01, "Crosshair size")
 
+    @folders.push( @fColors = @gui.addFolder("Colors") )
+    @colorControllers = []
+    for binary, i in @model.getColorBinaries()
+      @colorControllers.push(
+        @addColorPicker(@fColors, @settingsGeneral, binary.name + "_color", "Color " + (i+1),
+          @setColorSettings)
+      )
+    @brightnessController =
+      @addSlider(@fColors, @settingsGeneral, "brightness",
+        -256, 256, 5, "Brightness", @setColorSettings)
+    @contrastController =
+      @addSlider(@fColors, @settingsGeneral, "contrast",
+        0.5, 5, 0.1, "Contrast", @setColorSettings)
+    @addFunction(@fColors, @settingsGeneral, "resetColorSettings",
+      "Reset Color Settings")
+
     @folders.push( @fView = @gui.addFolder("View") )
     bbController = @fView.add(@settingsGeneral, "boundingBox").name("Bounding Box").onChange(@setBoundingBox)
     @addTooltip(bbController, "Format: minX, minY, minZ, maxX, maxY, maxZ")
     @addCheckbox(@fView, @settingsGeneral, "fourBit", "4 Bit")
     @addCheckbox(@fView, @user.getSettings(), "interpolation", "Interpolation")
-    @brightnessController =
-      @addSlider(@fView, @settingsGeneral, "brightness",
-        -256, 256, 5, "Brightness", @setBrightnessAndContrast)
-    @contrastController =
-      @addSlider(@fView, @settingsGeneral, "contrast",
-        0.5, 5, 0.1, "Contrast", @setBrightnessAndContrast)
-    @addFunction(@fView, @settingsGeneral, "resetBrightnessAndContrast",
-      "Reset B/C")
     @clippingController = @addSlider(@fView, @user.getSettings(), "clippingDistance",
       1, 1000 * @model.scaleInfo.baseVoxel, 1, "Clipping Distance")
     @clippingControllerArbitrary = @addSlider(@fView, @user.getSettings(), "clippingDistanceArbitrary",
@@ -231,6 +241,15 @@ class Gui
                           .onChange(onChange)
 
 
+  addColorPicker : (folder, object, propertyName, displayName, onChange) =>
+
+    unless onChange?
+      onChange = (v) => @set(propertyName, v, Number)
+    return (folder.addColor object, propertyName)
+                          .name(displayName)
+                          .onChange(onChange)
+
+
   addFunction : (folder, object, propertyName, displayName) =>
 
     return (folder.add object, propertyName)
@@ -355,17 +374,26 @@ class Gui
     @user.set( name, (type) value)
 
 
-  setBrightnessAndContrast : =>
+  setColorSettings : =>
+
     for binary in @model.getColorBinaries()
       binary.updateContrastCurve(@settingsGeneral.brightness, @settingsGeneral.contrast)
+      binary.setColor @settingsGeneral[binary.name + "_color"]
     
     @user.get("brightness")[@datasetPosition] = (Number) @settingsGeneral.brightness
     @user.get("contrast")[@datasetPosition] = (Number) @settingsGeneral.contrast
 
     @user.push()
+    @model.flycam.update()
 
 
-  resetBrightnessAndContrast : =>
+  resetColorSettings : =>
+
+    @model.setDefaultBinaryColors()
+    @setupColors()
+
+    for controller in @colorControllers
+      controller.updateDisplay()
 
     Request.send(
       url : "/user/configuration/default"
@@ -375,9 +403,14 @@ class Gui
 
       @settingsGeneral.brightness = defaultData.brightness[defaultDatasetPosition]
       @settingsGeneral.contrast = defaultData.contrast[defaultDatasetPosition]
-      @setBrightnessAndContrast()
+      @setColorSettings()
       @brightnessController.updateDisplay()
       @contrastController.updateDisplay()
+
+
+  setupColors : ->
+    for binary, i in @model.getColorBinaries()
+      @settingsGeneral[binary.name + "_color"] = binary.color
 
 
   setQuality : (value) =>

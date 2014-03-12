@@ -120,8 +120,9 @@ class Model
                 @lowerBoundary[i] = Math.min @lowerBoundary[i], @binary[layer.name].lowerBoundary[i]
                 @upperBoundary[i] = Math.max @upperBoundary[i], @binary[layer.name].upperBoundary[i]
 
-            unless @getColorBinaries().length > 0
+            if @getColorBinaries().length == 0
               Toast.error("No data available! Something seems to be wrong with the dataset.")
+            @setDefaultBinaryColors()
 
             # if "volume" layer still used, change name to segmentation
             if @binary["volume"]?
@@ -155,6 +156,7 @@ class Model
           -> Toast.error("Ooops. We couldn't communicate with our mother ship. Please try to reload this page.")
         )
 
+
   getColorBinaries : ->
 
     result = []
@@ -163,3 +165,16 @@ class Model
         result.push binary
 
     return result
+
+
+  setDefaultBinaryColors : ->
+
+    colorBinaries = @getColorBinaries()
+
+    if colorBinaries.length == 1
+      defaultColors = [[255, 255, 255]]
+    else
+      defaultColors = [[255, 0, 0], [0, 255, 0], [0, 0, 255]]
+
+    for binary, i in colorBinaries
+      binary.setColor( defaultColors[i % defaultColors.length] )

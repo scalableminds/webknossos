@@ -8,6 +8,7 @@
 ./binary/ping_strategy_3d : PingStrategy3d
 ./binary/bounding_box : BoundingBox
 ../constants : constants
+libs/event_mixin : EventMixin
 ###
 
 class Binary
@@ -25,6 +26,8 @@ class Binary
 
 
   constructor : (@model, tracing, @layer, tracingId) ->
+
+    _.extend(this, new EventMixin())
 
     @TEXTURE_SIZE_P = constants.TEXTURE_SIZE_P
     { @category, @name } = @layer
@@ -64,6 +67,11 @@ class Binary
     })
 
     @ping = _.throttle(@pingImpl, @PING_THROTTLE_TIME)
+
+
+  setColor : (@color) ->
+
+    @trigger "newColor", @color
 
 
   updateContrastCurve : (brightness, contrast) ->

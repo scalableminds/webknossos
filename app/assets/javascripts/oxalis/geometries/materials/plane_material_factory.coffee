@@ -25,26 +25,20 @@ class PlaneMaterialFactory
         type : "f"
         value : 0
 
-    colors = [
-      new THREE.Vector4(1, 0, 0, 1)
-      new THREE.Vector4(0, 1, 0, 1)
-      new THREE.Vector4(0, 0, 1, 1)
-    ]
-    i = 0
-
     for name, texture of textures
       uniforms[name + "_texture"] = {
         type : "t"
         value : texture
       }
       unless name == "segmentation"
+        color = _.map @model.binary[name].color, (e) -> e / 255
         uniforms[name + "_weight"] = {
           type : "f"
           value : 1
         }
         uniforms[name + "_color"] = {
-          type : "v4"
-          value : colors[i++]
+          type : "v3"
+          value : new THREE.Vector3(color...)
         }
 
     vertexShader   = @getVertexShader()
@@ -73,6 +67,12 @@ class PlaneMaterialFactory
     @material.setSegmentationAlpha = (alpha) ->
       uniforms.alpha.value = alpha
 
+    for binary in @model.getColorBinaries()
+      do (binary) ->
+        binary.on "newColor", (color) ->
+          color = _.map color, (e) -> e / 255
+          uniforms[binary.name + "_color"].value = new THREE.Vector3(color...)
+
 
   getMaterial : ->
 
@@ -94,14 +94,14 @@ class PlaneMaterialFactory
 
   getVertexShader : ->
 
-    return "
+    return """
       varying vec2 vUv;
       void main() {
         vUv = uv;
         gl_Position =   projectionMatrix * 
                         modelViewMatrix * 
                         vec4(position,1.0); }
-    "
+    """
 
 
   getFragmentShader : ->
@@ -109,10 +109,10 @@ class PlaneMaterialFactory
     colorLayerNames = _.map @model.getColorBinaries(), (b) -> b.name
 
     return _.template(
-      "
+      """
       <% _.each(layers, function(name) { %>
         uniform sampler2D <%= name %>_texture;
-        uniform vec4 <%= name %>_color;
+        uniform vec3 <%= name %>_color;
         uniform float <%= name %>_weight;
       <% }) %>
 
@@ -166,9 +166,9 @@ class PlaneMaterialFactory
         <% if (isRgb) { %>
           vec4 data_color = texture2D( color_texture, vUv * repeat + offset);
         <% } else { %>
-          vec4 data_color = vec4(0.0, 0.0, 0.0, 0.0)
+          vec3 data_color = vec3(0.0, 0.0, 0.0)
           <% _.each(layers, function(name){ %>
-            + texture2D( <%= name %>_texture, vUv * repeat + offset).r * vec4(1.0, 1.0, 1.0, 1.0)
+            + texture2D( <%= name %>_texture, vUv * repeat + offset).r
                 * <%= name %>_weight * <%= name %>_color
           <% }) %> ;
         <% } %>
@@ -177,12 +177,12 @@ class PlaneMaterialFactory
         
         if ( id > 0.1 ) {
           vec4 HSV = vec4( mod( 6.0 * id * golden_ratio, 6.0), 1.0, 1.0, 1.0 );
-          gl_FragColor = (1.0 - alpha/100.0) * data_color + alpha/100.0 * hsv_to_rgb( HSV );
+          gl_FragColor = (1.0 - alpha/100.0) * vec4(data_color, 1.0) + alpha/100.0 * hsv_to_rgb( HSV );
         } else {
-          gl_FragColor = data_color;
+          gl_FragColor = vec4(data_color, 1.0);
         }
       }
-      "
+      """
       {
         layers : colorLayerNames
         hasSegmentation : @model.binary["segmentation"]?

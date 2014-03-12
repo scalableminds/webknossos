@@ -63,7 +63,7 @@ class ParticleMaterialFactory
 
   getVertexShader : ->
 
-    return "
+    return """
       uniform float zoomFactor;
       uniform float baseVoxel;
       uniform float minParticleSize;
@@ -85,16 +85,16 @@ class ParticleMaterialFactory
             gl_PointSize = minParticleSize;
           gl_Position = projectionMatrix * mvPosition;
       }
-    "
+    """
 
 
   getFragmentShader : ->
 
-    return "
+    return """
       varying vec3 vColor;
 
       void main() 
       {
           gl_FragColor = vec4( vColor, 1.0 );
       }
-    "
+    """

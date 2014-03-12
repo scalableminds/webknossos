@@ -15,20 +15,29 @@ class GraphView extends Backbone.Marionette.ItemView
   initialize : ->
 
 
-    @collection = new TimeStatisticCollection()
-    @collection.fetch().done(=> @update())
+    @model = new TimeStatisticCollection().fetch(
+      data : "interval=week"
+    ).done(=>
+      @collection = @model.get("tracingTime")
+      @collection.fetch().done(=>
+        @update()
+      )
+    )
 
     @listenTo(@collection, "reset", @update)
 
   update : ->
+
+    dates = @collection.map((item) -> return moment(item.get("start")).format("YYYY-MM-DD"))
+    weeklyHours = @collection.map((item) -> return moment(item.get("tracingTime")).format("hh"))
 
     graph = c3.generate(
       bindto : ".graph"
       data:
         x: "x"
         columns: [
-          ["x"].concat @collection.map((item) -> return item.get("date"))
-          ["WeeklyHours"].concat @collection.map((item) -> return moment.utc(item.get("timestamp")).format("hh"))
+          ["x"].concat(dates)
+          ["WeeklyHours"].concat(weeklyHours)
         ]
         selection :
           enabled : true

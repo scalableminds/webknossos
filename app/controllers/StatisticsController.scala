@@ -10,6 +10,7 @@ import play.api.libs.json.Json
 import braingames.util.Fox
 import play.api.libs.concurrent.Execution.Implicits._
 import models.user.{User, UserDAO}
+import play.api.templates.Html
 import scala.concurrent.duration.Duration
 
 object StatisticsController extends Controller with Secured{
@@ -24,6 +25,10 @@ object StatisticsController extends Controller with Secured{
       "end" -> interval.end.toString(),
       "tracing-time" -> duration.toMillis
     )
+  }
+
+  def empty = Authenticated{ implicit request =>
+    Ok(views.html.main()(Html.empty))
   }
 
   def oxalis(interval: String, start: Option[Long], end: Option[Long]) = Authenticated.async{ implicit request =>

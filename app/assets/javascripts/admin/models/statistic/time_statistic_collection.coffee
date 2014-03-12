@@ -3,19 +3,15 @@ underscore : _
 backbone : backbone
 ###
 
-class TimeStatisticCollection extends Backbone.Collection
+class TimeStatisticModel extends Backbone.Model
 
-  url : "/api/teams" #"/api/statistic"
+  url : "api/statistics/oxalis"
 
-  parse : ->
+  parse : (response) ->
 
-    return [
-      date : "2013-01-01"
-      timestamp : 123234345435
-    ,
-      date : "2013-01-15"
-      timestamp: 663455666
-    ,
-      date : "2013-02-01"
-      timestamp : 8908909055
-    ]
+    tracingTime = response.tracingTime
+    response.tracingTime = new backbone.Collection(tracingTime)
+    return response
+
+
+

@@ -14,7 +14,6 @@ import scala.util._
 import play.api.libs.concurrent.Akka
 import models.annotation.{AnnotationLike, AnnotationDAO}
 import models.tracing.skeleton.SkeletonTracing
-import models.user.time.TimeEntry
 import braingames.reactivemongo.{DBAccessContext, GlobalAccessContext}
 
 object BrainTracing {

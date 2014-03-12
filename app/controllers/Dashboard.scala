@@ -3,9 +3,8 @@ package controllers
 import models.user.User
 import models.annotation.{AnnotationService, Annotation}
 import models.task.Task
-import models.user.time.TimeTracking._
 import models.binary.DataSet
-import models.user.time.TimeTrackingService
+import models.user.time._
 import models.binary.DataSetDAO
 import braingames.util.ExtendedTypes.ExtendedList
 import play.api.libs.concurrent.Execution.Implicits._
@@ -15,6 +14,8 @@ import braingames.util.Fox
 import play.api.libs.json._
 import net.liftweb.common.{Empty, Failure, Full}
 import scala.concurrent.Future
+import net.liftweb.common.Full
+import scala.concurrent.duration.Duration
 
 /**
  * Company: scalableminds
@@ -26,7 +27,7 @@ case class DashboardInfo(
                           user: User,
                           exploratory: List[Annotation],
                           tasks: List[(Task, Annotation)],
-                          loggedTime: LoggedPerPaymentInterval,
+                          loggedTime: Map[Month, Duration],
                           dataSets: List[DataSet],
                           hasAnOpenTask: Boolean
                         )
@@ -52,7 +53,7 @@ trait Dashboard {
     for {
       exploratoryAnnotations <- AnnotationService.findExploratoryOf(user)
       dataSets <- DataSetDAO.findAllActive
-      loggedTime <- TimeTrackingService.loggedTime(user)
+      loggedTime <- TimeSpanService.loggedTimePerInterval(user, TimeSpan.groupByMonth _)
       exploratoryAnnotations <- exploratorySortedByTime(exploratoryAnnotations).toFox
       userTasks <- userWithTasks(user)
     } yield {

@@ -64,5 +64,6 @@ class StatisticListView extends Backbone.Marionette.CompositeView
         interval : "week"
         start : @toTimestamp(@model.get("startDate"))
         end : @toTimestamp(@model.get("endDate"))
+        limit : 5
       reset : true
     )

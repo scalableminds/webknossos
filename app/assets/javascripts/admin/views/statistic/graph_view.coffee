@@ -32,9 +32,9 @@ class GraphView extends Backbone.Marionette.ItemView
     graph = c3.generate(
       bindto : "#graph"
       data:
-        x: "x"
+        x: "date"
         columns: [
-          ["x"].concat(dates)
+          ["date"].concat(dates)
           ["WeeklyHours"].concat(weeklyHours)
         ]
         selection :
@@ -43,6 +43,10 @@ class GraphView extends Backbone.Marionette.ItemView
       axis :
         x :
           type : "timeseries"
+          tick :
+            format : (date) -> return moment(date).format("DD.MM.YYYY")
+        y :
+          label : "hours / week"
       legend :
         show : false
       point :

@@ -27,6 +27,11 @@ import models.annotation.{AnnotationService, Annotation, AnnotationDAO, Annotati
 import scala.concurrent.Future
 import oxalis.nml.NMLService
 import play.api.libs.json.{Json, JsObject, JsArray}
+import play.api.libs.json.Json._
+import play.api.libs.json.JsObject
+
+import play.api.libs.json._
+import play.api.libs.functional.syntax._
 
 import net.liftweb.common.{Empty, Failure, Full}
 import braingames.util.Fox
@@ -328,23 +333,69 @@ object TaskAdministration extends AdminController {
     }
   }
 
-  def overview = Authenticated.async { implicit request =>
-    def combineUsersWithCurrentTasks(users: List[User]): Future[List[(User, List[TaskType])]] = Future.traverse(users)(user =>
-      (for {
-        annotations <- AnnotationService.openTasksFor(user).getOrElse(Nil)
-        taskTypes <- Fox.sequenceOfFulls(annotations.map(_.task.flatMap(_.taskType)))
+  def overview = Authenticated { implicit request =>
+    Ok(html.admin.task.taskOverview())
+  }
+
+  case class UserWithTaskInfos(
+    user: User,
+    taskTypes: List[TaskType],
+    projects: List[Project],
+    futureTaskType: TaskType)
+  
+  object UserWithTaskInfos {
+    def userInfosPublicWrites(requestingUser: User): Writes[UserWithTaskInfos] =
+      ( (__ \ "user").write(User.userPublicWrites(requestingUser)) and
+        (__ \ "taskTypes").write[List[TaskType]] and
+        (__ \ "projects").write[List[Project]] and
+        (__ \ "futureTaskType").write[TaskType])( u =>
+        (u.user, u.taskTypes, u.projects, u.futureTaskType))
+  }
+
+  def overviewData = Authenticated.async { implicit request =>
+
+    def getUserInfos(users: List[User]) = {
+      
+      val futureTaskTypeMap = for {
+        futureTasks <- TaskService.simulateTaskAssignment(users)
+        futureTaskTypes <- Fox.sequence(futureTasks.map(e => e._2.taskType.map(e._1 -> _)).toList)
       } yield {
-        user -> taskTypes.distinct
-      }))
+        futureTaskTypes.flatten.toMap
+      }
+
+      Future.traverse(users)(user =>
+        for {
+          annotations <- AnnotationService.openTasksFor(user).getOrElse(Nil)
+          tasks <- Fox.sequence(annotations.map(_.task)).map(_.flatten)
+          projects <- Fox.sequence(tasks.map(_.project))
+          taskTypes <- Fox.sequence(tasks.map(_.taskType)).map(_.flatten)
+          taskTypeMap <- futureTaskTypeMap.futureBox
+        } yield {
+          UserWithTaskInfos(
+            user,
+            taskTypes.distinct,
+            projects.distinct.map(_.toOption).flatten,
+            taskTypeMap.get(user)
+          )
+        }
+      )
+    }
 
     for {
       users <- UserService.findAll
+      userInfos <- getUserInfos(users)
       allTaskTypes <- TaskTypeDAO.findAll
-      usersWithTasks <- combineUsersWithCurrentTasks(users)
-      futureUserTaskAssignment <- TaskService.simulateTaskAssignment(users)
-      futureTaskTypes <- Fox.sequence(futureUserTaskAssignment.map(e => e._2.taskType.map(e._1 -> _)).toList)
+      allProjects <- ProjectDAO.findAll
     } yield {
-      Ok(html.admin.task.taskOverview(users, allTaskTypes, usersWithTasks.toMap, futureTaskTypes.flatten.toMap))
+      JsonOk(
+        Json.obj(
+          "userInfos" -> Writes.list(UserWithTaskInfos.userInfosPublicWrites(request.user)).writes(userInfos),
+          "taskTypes" -> allTaskTypes,
+          "projects" -> allProjects
+        )
+      )
     }
+
   }
+
 }

@@ -18,7 +18,6 @@ import reactivemongo.api.indexes.{IndexType, Index}
 import reactivemongo.api.indexes.Index
 import play.api.libs.json._
 import play.api.libs.functional.syntax._
-import play.api.libs.concurrent.Execution.Implicits._
 import reactivemongo.core.commands.LastError
 import braingames.reactivemongo.AccessRestrictions.{DenyEveryone, AllowIf}
 import braingames.util.Fox

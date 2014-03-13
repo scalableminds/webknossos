@@ -30,8 +30,7 @@ class StatisticListView extends Backbone.Marionette.CompositeView
     #set first day of the week to monday globally
     moment.lang("en", week : dow : 1)
 
-    @model = new Backbone.Model()
-    @model.set(
+    @model = new Backbone.Model(
       startDate : moment().startOf("week")
       endDate : moment().endOf("week")
     )

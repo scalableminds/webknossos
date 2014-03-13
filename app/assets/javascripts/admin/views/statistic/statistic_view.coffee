@@ -4,6 +4,8 @@ backbone.marionette : marionette
 app : app
 ./graph_view : GraphView
 ./statistic_list_view : StatisticListView
+./achievement_view : AchievementView
+admin/models/statistic/time_statistic_model : TimeStatisticModel
 ###
 
 class StatisticView extends Backbone.Marionette.Layout
@@ -16,27 +18,7 @@ class StatisticView extends Backbone.Marionette.Layout
         <div class="timings well"></div>
       </div>
       <div class="achievements span4 well">
-        <h3>Achievements</h3>
-        <table class="table">
-          <tbod>
-            <tr>
-              <td>Overall Time</td>
-              <td>234:99h</td>
-            </tr>
-            <tr>
-              <td>Overall Tracings</td>
-              <td>2,34cm</td>
-            </tr>
-            <tr>
-              <td>Average Branchpoints</td>
-              <td>33</td>
-            </tr>
-            <tr>
-              <td>Finished Tasks</td>
-              <td>23433</td>
-            </tr>
-          </tbody>
-        </table>
+
       </div>
     </div>
   """)
@@ -44,18 +26,31 @@ class StatisticView extends Backbone.Marionette.Layout
   regions :
     "graph" : ".graph"
     "timings" : ".timings"
+    "achievements" : ".achievements"
 
   initialize : ->
 
-    @graphView = new GraphView()
+    timeStatisticModel = new TimeStatisticModel()
+    timeStatisticModel.fetch(
+      data : "interval=week"
+    )
+
+    @graphView = new GraphView(model : timeStatisticModel)
+    @achievementView = new AchievementView(model : timeStatisticModel)
     @statisticListView = new StatisticListView()
 
-    @listenTo(@, "render", @afterRender)
+    @listenTo(timeStatisticModel, "sync", @showGraphView)
+    @listenTo(@, "render", @showStatisticsListView)
 
 
-  afterRender : ->
+  showStatisticsListView : ->
+
+    @timings.show(@statisticListView)
+
+
+  showGraphView : ->
 
     @graph.show(@graphView)
-    @timings.show(@statisticListView)
+    @achievements.show(@achievementView)
 
 

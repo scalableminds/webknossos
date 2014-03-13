@@ -45,14 +45,15 @@ object StatisticsController extends Controller with Secured{
     }
   }
 
-  def users(interval: String, start: Option[Long], end: Option[Long]) = Authenticated.async{ implicit request =>
+  def users(interval: String, start: Option[Long], end: Option[Long], limit: Int) = Authenticated.async{ implicit request =>
     intervalHandler.get(interval) match{
       case Some(handler) =>
         for{
           users <- UserDAO.findAll
           usersWithTimes <- Fox.combined(users.map( user => TimeSpanService.loggedTimeOfUser(user, handler, start, end).map(user -> _)))
         } yield {
-          val json = usersWithTimes.map{
+          val data = usersWithTimes.sortBy(_._2.map(_._2.toMillis).sum).take(limit)
+          val json = data.map{
             case (user, times) => Json.obj(
               "user" -> User.userCompactWrites(request.user).writes(user),
               "tracingTimes" -> intervalTracingTimeJson(times)

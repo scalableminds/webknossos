@@ -122,7 +122,7 @@ GET           /api/projects/:name/tasks                                  control
 
 GET           /statistics                                                controllers.StatisticsController.empty
 GET           /api/statistics/oxalis                                     controllers.StatisticsController.oxalis(interval: String, start: Option[Long], end: Option[Long])
-GET           /api/statistics/users                                      controllers.StatisticsController.users(interval: String, start: Option[Long], end: Option[Long])
+GET           /api/statistics/users                                      controllers.StatisticsController.users(interval: String, start: Option[Long], end: Option[Long], limit: Int)
 # Javascript routing
 GET           /assets/javascripts/routes.js                              controllers.Application.javascriptRoutes
 

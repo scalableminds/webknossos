@@ -10,7 +10,6 @@ class StatisticView extends Backbone.Marionette.Layout
 
   className : "statistics container wide"
   template : _.template("""
-    <h3>Statistics</h3>
     <div class="row-fluid">
       <div class="span8">
         <div class="graph"></div>

@@ -4,35 +4,33 @@ app : app
 backbone.marionette : marionette
 c3 : c3
 moment : moment
-admin/models/statistic/time_statistic_collection : TimeStatisticCollection
+admin/models/statistic/time_statistic_model : TimeStatisticModel
 ###
 
 class GraphView extends Backbone.Marionette.ItemView
 
   template : _.template("""
+    <h3>Overall Weekly Tracing Time</h3>
+    <div id="graph"></div>
   """)
 
   initialize : ->
 
+    @model = new TimeStatisticModel()
+    @listenTo(@model, "sync", @update)
 
-    @model = new TimeStatisticCollection().fetch(
+    @model.fetch(
       data : "interval=week"
-    ).done(=>
-      @collection = @model.get("tracingTime")
-      @collection.fetch().done(=>
-        @update()
-      )
     )
 
-    @listenTo(@collection, "reset", @update)
 
   update : ->
 
-    dates = @collection.map((item) -> return moment(item.get("start")).format("YYYY-MM-DD"))
-    weeklyHours = @collection.map((item) -> return moment(item.get("tracingTime")).format("hh"))
+    dates = @model.get("tracingTimes").map((item) -> return moment(item.get("start")).format("YYYY-MM-DD"))
+    weeklyHours = @model.get("tracingTimes").map((item) -> return parseInt moment.duration(item.get("tracingTime")).asHours())
 
     graph = c3.generate(
-      bindto : ".graph"
+      bindto : "#graph"
       data:
         x: "x"
         columns: [

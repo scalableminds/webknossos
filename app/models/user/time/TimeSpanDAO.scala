@@ -17,10 +17,16 @@ object TimeSpanDAO extends SecuredBaseDAO[TimeSpan]{
   underlying.indexesManager.ensure(Index(List("timestamp" -> IndexType.Descending)))
 
   def intervalFilter(start: Option[Long], end: Option[Long]) = {
-    val startFilter = start.map(s => Json.obj("timestamp" -> Json.obj("$gte" -> s))) getOrElse Json.obj()
-    val endFilter = end.map(e => Json.obj("timestamp" -> Json.obj("$lte" -> e))) getOrElse Json.obj()
 
-    startFilter ++ endFilter
+    if(start.isEmpty && end.isEmpty)
+      Json.obj()
+    else{
+      val startFilter = start.map(s => Json.obj("$gte" -> s)) getOrElse Json.obj()
+      val endFilter = end.map(e => Json.obj("$lte" -> e)) getOrElse Json.obj()
+
+      Json.obj("timestamp" -> (startFilter ++ endFilter))
+    }
+
   }
 
   def findByUser(user: User, start: Option[Long], end: Option[Long])(implicit ctx: DBAccessContext) = withExceptionCatcher{

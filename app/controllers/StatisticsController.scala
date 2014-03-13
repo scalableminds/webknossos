@@ -12,6 +12,9 @@ import play.api.libs.concurrent.Execution.Implicits._
 import models.user.{User, UserDAO}
 import play.api.templates.Html
 import scala.concurrent.duration.Duration
+import models.annotation.AnnotationDAO
+import braingames.reactivemongo.GlobalAccessContext
+import models.tracing.skeleton.DBNodeDAO
 
 object StatisticsController extends Controller with Secured{
   val intervalHandler = Map(
@@ -34,10 +37,18 @@ object StatisticsController extends Controller with Secured{
   def oxalis(interval: String, start: Option[Long], end: Option[Long]) = Authenticated.async{ implicit request =>
     intervalHandler.get(interval) match{
       case Some(handler) =>
-        TimeSpanService.loggedTimePerInterval(handler, start, end).map{ times =>
+        for{
+          times <- TimeSpanService.loggedTimePerInterval(handler, start, end)
+          numberOfAnnotations <- AnnotationDAO.countAll(GlobalAccessContext)
+          numberOfUsers <- UserDAO.count(Json.obj())(GlobalAccessContext)
+          numberOfNodes <- DBNodeDAO.count(Json.obj())(GlobalAccessContext)
+        } yield {
           Ok(Json.obj(
             "name" -> "oxalis",
-            "tracingTimes" -> intervalTracingTimeJson(times)
+            "tracingTimes" -> intervalTracingTimeJson(times),
+            "numberOfAnnotations" -> numberOfAnnotations,
+            "numberOfUsers" -> numberOfUsers,
+            "numberOfNodes" -> numberOfNodes
           ))
         }
       case _ =>

@@ -58,25 +58,11 @@ class DataRequestActor(
 
   val remotePath = conf.getString("datarequest.remotepath")
 
-  val useRemote = conf.getBoolean("useRemote")
-
-  implicit val system =
-    if (useRemote)
-      ActorSystem("DataRequests", conf.getConfig("datarequest"))
-    else
-      context.system
+  implicit val system = context.system
 
   lazy val dataStores = List[ActorRef](
-    actorForWithLocalFallback[FileDataStoreActor]("fileDataStore")) //,
-  //actorForWithLocalFallback[GridDataStore]("gridDataStore"),
-  //system.actorOf(Props(new EmptyDataStore()).withRouter(new RoundRobinRouter(3)), s"${id}__emptyDataStore"))
-
-  def actorForWithLocalFallback[T <: Actor](name: String)(implicit evidence: scala.reflect.ClassTag[T]) = {
-    if (useRemote)
-      system.actorFor(s"$remotePath/user/$name")
-    else
-      system.actorOf(Props[T].withRouter(new RoundRobinRouter(3)), s"${id}__${name}")
-  }
+    system.actorOf(Props[FileDataStoreActor].withRouter(new RoundRobinRouter(3)), s"${id}__fileDataStore")
+  )
 
   def receive = {
     case dataRequest: DataRequest =>
@@ -136,7 +122,7 @@ class DataRequestActor(
 
   def fallbackForLayer(layer: DataLayer): Future[List[(DataLayerSection, DataLayer)]] = {
     layer.fallback.toFox.flatMap{ fallback =>
-      dataSourceRepository.findByName(fallback.dataSourceName).flatMap{
+      dataSourceRepository.findDataSource(fallback.dataSourceName).flatMap{
         d =>
           d.getDataLayer(fallback.layerName).map {
             fallbackLayer =>

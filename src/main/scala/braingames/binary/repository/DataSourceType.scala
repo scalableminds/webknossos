@@ -3,16 +3,15 @@
  */
 package braingames.binary.repository
 
-import scalax.file.Path
+import scalax.file.{PathSet, Path}
 import braingames.binary.models.{UsableDataSource, DataSourceLike, UnusableDataSource, DataSource}
-import akka.agent.Agent
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json.Json
 import org.apache.commons.io.FileUtils
 import braingames.binary.Logger._
-import scala.concurrent.Future
 import braingames.util.ProgressTracking.ProgressTracker
-import braingames.util.ProgressTracking
+import braingames.util.{InProgress, FoxImplicits, Fox, ProgressTracking}
+import net.liftweb.common.{Empty, Full, Failure}
 
 trait DataSourceTypeHandler {
   def importDataSource(unusableDataSource: UnusableDataSource, progressTracker: ProgressTracker): Option[DataSource]
@@ -21,25 +20,40 @@ trait DataSourceTypeHandler {
 trait DataSourceTypeGuesser {
   val MaxNumberOfFilesForGuessing = 10
 
-  def chanceOfInboxType(source: Path): Double
+  def fileExtension: String
+
+  def chanceOfInboxType(source: Path) = {
+    val filteredByExtension = source ** s"*.$fileExtension"
+
+    val files =
+      if((source / "target").isDirectory)
+        filteredByExtension --- ((source / "target") ***)
+      else
+        filteredByExtension
+
+    files
+      .take(MaxNumberOfFilesForGuessing)
+      .size.toFloat / MaxNumberOfFilesForGuessing
+  }
+}
+
+trait DataSourceTypes{
+  val types = List(KnossosDataSourceType, TiffDataSourceType)
+}
+
+object DataSourceTypeGuessers extends DataSourceTypes{
+  def guessRepositoryType(source: Path) = {
+    types.maxBy(_.chanceOfInboxType(source))
+  }
 }
 
 trait DataSourceType extends DataSourceTypeGuesser with DataSourceTypeHandler {
   def name: String
 }
 
-object DataSourceRepository extends ProgressTracking {
-
-  lazy val dataSources = Agent[List[DataSourceLike]](Nil)
-
-  val types = List(KnossosDataSourceType, TiffDataSourceType)
+trait DataSourceInboxHelper extends ProgressTracking with FoxImplicits with LockKeeperHelper{
 
   val DataSourceJson = "datasource.json"
-
-  def guessRepositoryType(source: Path) = {
-    cleanUp(source)
-    types.maxBy(_.chanceOfInboxType(source))
-  }
 
   protected def writeDataSourceToFile(path: Path, usableDataSource: UsableDataSource) = {
     (path / DataSourceJson).fileOption.map {
@@ -64,12 +78,11 @@ object DataSourceRepository extends ProgressTracking {
     (source / "target").deleteRecursively()
   }
 
-  def transformToDataSource(unusableDataSource: UnusableDataSource): Future[Option[UsableDataSource]] = {
-    val f = Future {
+  def transformToDataSource(unusableDataSource: UnusableDataSource): Fox[UsableDataSource] = {
+    withLock[Option[UsableDataSource]](unusableDataSource.sourceFolder){
       clearAllTrackers(importTrackerId(unusableDataSource.id))
       cleanUp(unusableDataSource.sourceFolder)
-      types
-        .maxBy(_.chanceOfInboxType(unusableDataSource.sourceFolder))
+      DataSourceTypeGuessers.guessRepositoryType(unusableDataSource.sourceFolder)
         .importDataSource(unusableDataSource, progressTrackerFor(importTrackerId(unusableDataSource.id)))
         .flatMap {
         dataSource =>
@@ -86,13 +99,11 @@ object DataSourceRepository extends ProgressTracking {
           finishTrackerFor(importTrackerId(unusableDataSource.id), false)
           None
       }
-    }
-    f.onFailure {
-      case e =>
+    }.flatMap(x => x).futureBox.recover {
+      case e: Exception =>
         logger.error("Failed to import dataset: " + e.getMessage, e)
         finishTrackerFor(importTrackerId(unusableDataSource.id), false)
-        None
+        Failure("Failed to import dataset.", Full(e), Empty)
     }
-    f
   }
 }

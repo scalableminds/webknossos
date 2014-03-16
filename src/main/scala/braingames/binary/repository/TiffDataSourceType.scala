@@ -3,7 +3,7 @@
  */
 package braingames.binary.repository
 
-import scalax.file.{PathMatcher, Path}
+import scalax.file.{PathSet, PathMatcher, Path}
 import braingames.binary.models._
 import javax.imageio.ImageIO
 import braingames.geometry.{BoundingBox, Scale, Point3D}
@@ -21,15 +21,12 @@ import net.liftweb.common.Full
 import scala.concurrent.Future
 import braingames.util.BlockedArray3D
 import play.api.libs.concurrent.Execution.Implicits._
+import scala.util.matching.Regex
 
 object TiffDataSourceType extends DataSourceType with TiffDataSourceTypeHandler {
   val name = "tiff"
 
-  def chanceOfInboxType(source: Path) = {
-    (source ** "*.tif")
-      .take(MaxNumberOfFilesForGuessing)
-      .size.toFloat / MaxNumberOfFilesForGuessing
-  }
+  val fileExtension = "tif"
 }
 
 
@@ -139,6 +136,11 @@ case class StackInfo(boundingBox: BoundingBox, bytesPerPixel: Int)
 trait TiffDataSourceTypeHandler extends DataSourceTypeHandler {
   val Target = "target"
 
+  val LayerRxs = Seq(
+    "_c([0-9]+)"r,
+    "_ch([0-9]+)"r
+  )
+
   val DefaultScale = Scale(200, 200, 200)
 
   val DefaultLayerType = DataLayer.COLOR
@@ -200,8 +202,16 @@ trait TiffDataSourceTypeHandler extends DataSourceTypeHandler {
   }
 
   def layerFromFileName(tiffFile: Path) = {
-    val layerRx = "_c([0-9]+)".r
-    layerRx.findFirstMatchIn(tiffFile.path).map(_.group(1).toInt).getOrElse(DefaultLayer)
+    def extractLayer(rs: Seq[Regex]): Int = {
+      rs match{
+        case r :: tail =>
+          r.findFirstMatchIn(tiffFile.path).map(_.group(1).toInt) getOrElse extractLayer(tail)
+        case _ =>
+          DefaultLayer
+      }
+    }
+
+    extractLayer(LayerRxs)
   }
 
   def extractLayers(tiffs: List[Path]): Iterable[TiffLayer] = {
@@ -227,7 +237,7 @@ trait TiffDataSourceTypeHandler extends DataSourceTypeHandler {
   }
 
   def convertToKnossosStructure(id: String, source: Path, targetRoot: Path, progress: ProgressTracker): Iterable[DataLayer] = {
-    val tiffs = (source * "*.tif")
+    val tiffs = (source ** "*.tif")
 
     val layers = extractLayers(tiffs.toList)
     val namingSchema = namingSchemaFor(layers) _
@@ -364,7 +374,7 @@ trait TiffDataSourceTypeHandler extends DataSourceTypeHandler {
         image.getWidth(),
         image.getHeight(),
         targetType)
-      convertedImage.getGraphics().drawImage(image, 0, 0, null)
+      convertedImage.setData(image.getRaster)
       convertedImage
     }
 

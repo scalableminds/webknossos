@@ -326,12 +326,12 @@ class PlaneController
 
   moveY : (y) => @move([0, y, 0])
 
-  moveZ : (z, first) =>
+  moveZ : (z, oneSlide) =>
 
     if @activeViewport == constants.TDView
       return
 
-    if(first)
+    if oneSlide
       @flycam.move(
         Dimensions.transDim(
           [0, 0, (if z < 0 then -1 else 1) << @flycam.getIntegerZoomStep()],
@@ -419,7 +419,7 @@ class PlaneController
   scrollPlanes : (delta, type) =>
 
     switch type
-      when null then @moveZ(delta)
+      when null then @moveZ(delta, true)
       when "alt"
         @zoomPlanes(delta, true)
 

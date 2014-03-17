@@ -34,6 +34,7 @@ class GraphView extends Backbone.Marionette.ItemView
         selection :
           enabled : true
           grouped : false
+          multiple : false
       axis :
         x :
           type : "timeseries"

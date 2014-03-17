@@ -5,13 +5,18 @@
 class UrlManager
 
 
-  UPDATE_INTERVAL : 2000
+  MAX_UPDATE_INTERVAL : 2000
 
   constructor : (@controller, @model) ->
 
     url           = document.URL
     @baseUrl      = url.match(/^([^#]*)#?/)[1]
     @initialState = @parseUrl url
+
+    @update = _.throttle(
+      => location.href = @buildUrl()
+      @MAX_UPDATE_INTERVAL
+    )
 
 
   parseUrl : (url)->
@@ -34,12 +39,12 @@ class UrlManager
     return state
 
 
-
   startUrlUpdater : ->
 
-    update = => location.href = @buildUrl()
-
-    setInterval update, @UPDATE_INTERVAL
+    @model.flycam.on
+      changed : => @update()
+    @model.flycam3d.on
+      changed : => @update()
 
 
   buildUrl : ->

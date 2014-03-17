@@ -6,7 +6,7 @@ backbone.marionette : marionette
 admin/models/task/annotation_model : AnnotationModel
 ###
 
-class TaskSubListItemView extends Backbone.Marionette.ItemView
+class TaskAnnotationView extends Backbone.Marionette.ItemView
 
   tagName : "tr"
   attributes : ->

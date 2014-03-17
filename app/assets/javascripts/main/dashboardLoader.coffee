@@ -3,6 +3,7 @@ jquery : $
 underscore : _
 main/routing_utils : RoutingUtils
 libs/input : Input
+routes : routes
 ###
 
 DashboardLoader =

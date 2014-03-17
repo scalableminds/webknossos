@@ -77,14 +77,11 @@ GET           /annotations/:typ/:id                                      control
 GET           /annotations/:typ/:id/data                                 controllers.AnnotationController.traceJSON(typ: String, id: String)
 GET           /annotations/:typ/:id/info                                 controllers.AnnotationController.info(typ: String, id: String)
 GET           /annotations/:typ/:id/download                             controllers.AnnotationController.download(typ: String, id: String)
-GET           /annotations/:typ/:id/reopen                               controllers.AnnotationController.reopen(typ: String, id: String)
 DELETE        /annotations/:typ/:id                                      controllers.AnnotationController.cancel(typ: String, id: String)
 
 #Admin pages
 GET           /admin/nml/upload                                          controllers.admin.NMLIO.uploadForm
 POST          /admin/nml/upload                                          controllers.admin.NMLIO.upload
-
-GET           /api/teams                                                 controllers.TeamController.list
 
 # Admin Tasks
 # TODO: those routes need to be renamed!
@@ -103,10 +100,11 @@ POST          /admin/tasks/createBulk                                    control
 POST          /admin/tasks/createFromNML                                 controllers.admin.TaskAdministration.createFromNML
 POST          /admin/tasks/createFromForm                                controllers.admin.TaskAdministration.createFromForm
 GET           /admin/tasks/overview                                      controllers.admin.TaskAdministration.overview
-GET           /admin/tasks/:id/download                                  controllers.admin.NMLIO.taskDownload(id: String)
+GET           /admin/tasks/overview/data                                 controllers.admin.TaskAdministration.overviewData
 GET           /admin/tasks/:id/edit                                      controllers.admin.TaskAdministration.edit(id: String)
-GET           /admin/tasks/:id/annotations                               controllers.AnnotationController.annotationsForTask(id: String)
 POST          /admin/tasks/:id                                           controllers.admin.TaskAdministration.editTaskForm(id: String)
+GET           /api/tasks/:id/download                                    controllers.admin.NMLIO.taskDownload(id: String)
+GET           /api/tasks/:id/annotations                                 controllers.AnnotationController.annotationsForTask(id: String)
 
 GET           /admin/taskTypes                                           controllers.admin.TaskTypeAdministration.list
 POST          /admin/taskTypes                                           controllers.admin.TaskTypeAdministration.create
@@ -115,11 +113,13 @@ GET           /admin/taskTypes/:id/edit                                  control
 GET           /admin/taskTypes/:id/tasks                                 controllers.admin.TaskAdministration.tasksForType(id: String)
 POST          /admin/taskTypes/:id                                       controllers.admin.TaskTypeAdministration.editTaskTypeForm(id: String)
 
-GET           /admin/projects                                            controllers.admin.ProjectAdministration.list
-POST          /admin/projects/create                                     controllers.admin.ProjectAdministration.create
-GET           /admin/projects/:name/delete                               controllers.admin.ProjectAdministration.delete(name: String)
-GET           /admin/projects/:name/download                             controllers.admin.NMLIO.projectDownload(name: String)
-GET           /admin/projects/:name/tasks                                controllers.admin.TaskAdministration.tasksForProject(name: String)
+# Projects
+GET           /projects                                                  controllers.ProjectController.empty
+GET           /api/projects                                              controllers.ProjectController.list
+POST          /api/projects                                              controllers.ProjectController.create
+DELETE        /api/projects/:name                                        controllers.ProjectController.delete(name: String)
+GET           /api/projects/:name/download                               controllers.admin.NMLIO.projectDownload(name: String)
+GET           /api/projects/:name/tasks                                  controllers.ProjectController.tasksForProject(name: String)
 
 # Javascript routing
 GET           /assets/javascripts/routes.js                              controllers.Application.javascriptRoutes

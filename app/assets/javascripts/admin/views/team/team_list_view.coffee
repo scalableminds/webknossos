@@ -20,7 +20,7 @@ class TeamListView extends Backbone.Marionette.CompositeView
             <th>Name</th>
             <th>Owner</th>
             <th>Roles</th>
-            <th></th>
+            <th>Actions</th>
           </tr>
         </thead>
         <tbody></tbody>

@@ -7,20 +7,27 @@ class TaskCollection extends PaginationCollection
 
   url : "/api/tasks"
 
-  parse : (response) ->
+  parse : (respones) ->
 
-    for task in response
-      if task.boundingBox?
+    _.map(respones,
+      (response) ->
 
-        { topLeft, width, height, depth } = task.boundingBox
-        task.boundingBox = topLeft.concat [
-          topLeft[0] + width
-          topLeft[1] + height
-          topLeft[2] + depth
-        ]
+        # apply some defaults
+        response.type =
+          summary : response.type?.summary || "<deleted>"
 
-      else
-        task.boundingBox = []
+        # convert bounding box
+        if response.boundingBox?
 
+          { topLeft, width, height, depth } = response.boundingBox
+          response.boundingBox = topLeft.concat [
+            topLeft[0] + width
+            topLeft[1] + height
+            topLeft[2] + depth
+          ]
 
-    return response
+        else
+          response.boundingBox = []
+
+        return response
+    )

@@ -243,7 +243,8 @@ class Skeleton
   updateForCam : (id) ->
 
     for tree in @treeGeometries
-      tree.showRadius( id != constants.TDView )
+      tree.showRadius( id != constants.TDView and
+        not @model.user.get("overrideNodeRadius") )
 
     if id in constants.ALL_PLANES
       @setVisibilityTemporary( @isVisible )

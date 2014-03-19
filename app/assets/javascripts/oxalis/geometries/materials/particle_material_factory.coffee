@@ -14,7 +14,7 @@ class ParticleMaterialFactory
       baseVoxel :
         type : "f"
         value : @model.scaleInfo.baseVoxel
-      minParticleSize :
+      particleSize :
         type : "f"
         value : @model.user.get("particleSize")
       scale :
@@ -50,9 +50,11 @@ class ParticleMaterialFactory
 
     @model.user.on
       particleSizeChanged : (size) ->
-        uniforms.minParticleSize.value = size
+        uniforms.particleSize.value = size
       scaleChanged : (scale) ->
         uniforms.scale.value = scale
+      overrideNodeRadiusChanged : =>
+        @model.flycam.update()
 
     @model.flycam.on
       zoomStepChanged : =>
@@ -69,7 +71,7 @@ class ParticleMaterialFactory
     return "
       uniform float zoomFactor;
       uniform float baseVoxel;
-      uniform float minParticleSize;
+      uniform float particleSize;
       uniform float scale;
       uniform int   showRadius;
       uniform float devicePixelRatio;
@@ -83,9 +85,9 @@ class ParticleMaterialFactory
           if (showRadius == 1)
             gl_PointSize = max(
               size / zoomFactor / baseVoxel,
-              minParticleSize ) * devicePixelRatio * scale;
+              particleSize ) * devicePixelRatio * scale;
           else
-            gl_PointSize = minParticleSize;
+            gl_PointSize = particleSize;
           gl_Position = projectionMatrix * mvPosition;
       }
     "

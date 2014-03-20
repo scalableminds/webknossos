@@ -29,7 +29,7 @@ object TaskTypeAdministration extends AdminController {
       "expectedTime" -> mapping(
         "minTime" -> number,
         "maxTime" -> number,
-        "maxHard" -> number)(TimeSpan.apply)(TimeSpan.unapply))(
+        "maxHard" -> number)(TraceLimit.apply)(TraceLimit.unapply))(
       TaskType.fromForm)(TaskType.toForm)).fill(TaskType.empty)
 
   def create = Authenticated.async(parse.urlFormEncoded) { implicit request =>

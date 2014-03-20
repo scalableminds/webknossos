@@ -10,16 +10,16 @@ import play.modules.reactivemongo.json.BSONFormats._
 import models.user.User
 import braingames.reactivemongo.AccessRestrictions.{DenyEveryone, AllowIf}
 
-case class TimeSpan(min: Int, max: Int, maxHard: Int) {
+case class TraceLimit(min: Int, max: Int, maxHard: Int) {
 
   override def toString = s"$min - $max, Limit: $maxHard"
 }
 
-object TimeSpan {
-  implicit val timeSpanFormat = Json.format[TimeSpan]
+object TraceLimit {
+  implicit val timeSpanFormat = Json.format[TraceLimit]
 }
 
-case class TaskType(summary: String, description: String, expectedTime: TimeSpan, team: String, settings: AnnotationSettings = AnnotationSettings.default, fileName: Option[String] = None, _id: BSONObjectID = BSONObjectID.generate) {
+case class TaskType(summary: String, description: String, expectedTime: TraceLimit, team: String, settings: AnnotationSettings = AnnotationSettings.default, fileName: Option[String] = None, _id: BSONObjectID = BSONObjectID.generate) {
   val id = _id.stringify
 }
 
@@ -27,9 +27,9 @@ object TaskType {
 
   implicit val taskTypeFormat = Json.format[TaskType]
 
-  def empty = TaskType("", "", TimeSpan(5, 10, 15), "")
+  def empty = TaskType("", "", TraceLimit(5, 10, 15), "")
 
-  def fromForm(summary: String, description: String, team: String, allowedModes: Seq[String], branchPointsAllowed: Boolean, somaClickingAllowed: Boolean, expectedTime: TimeSpan) =
+  def fromForm(summary: String, description: String, team: String, allowedModes: Seq[String], branchPointsAllowed: Boolean, somaClickingAllowed: Boolean, expectedTime: TraceLimit) =
     TaskType(
       summary,
       description,

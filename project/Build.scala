@@ -27,7 +27,7 @@ object Dependencies{
   val braingamesUtil = "com.scalableminds" %% "braingames-util" % braingamesVersion
   val scalaAsync = "org.scala-lang.modules" %% "scala-async" % "0.9.0-M2"
   val airbrake = "eu.teamon" %% "play-airbrake" % "0.3.5-SCM"
-  val mongev = "com.scalableminds" %% "play-mongev" % "0.2.6"
+  val mongev = "com.scalableminds" %% "play-mongev" % "0.2.8"
   val playMetrics = "com.kenshoo" %% "metrics-play" % "0.1.3"
   val tiff = Seq(
       "com.twelvemonkeys.common" % "common-lang" % "3.0-rc5",

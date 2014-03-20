@@ -2,7 +2,7 @@
 <template>
   <tr class="<%if(annotations.state.isFinished){print('finished')}else{print('unfinished')}%>">
     <td><%= tasks.formattedHash %> </td>
-    <td><% if(tasks.type){ print(task.type.summary) } else { print("<deleted>") } + " - " + annotations.typ %></td>
+    <td><% if(tasks.type){ print(tasks.type.summary) } else { print("<deleted>") } + " - " + annotations.typ %></td>
     <td><%= tasks.projectName %> </td>
     <td><% if(tasks.type){ print(tasks.type.description) } else { print("") } %></td>
     <td>

@@ -43,7 +43,6 @@ class PlaneMaterialFactory
 
     vertexShader   = @getVertexShader()
     fragmentShader = @getFragmentShader()
-    console.log "fragmentShader", fragmentShader
 
     @material = new THREE.ShaderMaterial({
       uniforms

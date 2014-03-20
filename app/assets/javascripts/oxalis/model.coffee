@@ -181,7 +181,8 @@ class Model
     if colorBinaries.length == 1
       defaultColors = [[255, 255, 255]]
     else
-      defaultColors = [[255, 0, 0], [0, 255, 0], [0, 0, 255]]
+      defaultColors = [[255, 0, 0], [0, 255, 0], [0, 0, 255],
+                        [255, 255, 0], [0, 255, 255], [255, 0, 255]]
 
     for binary, i in colorBinaries
       binary.setColor( defaultColors[i % defaultColors.length] )

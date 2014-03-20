@@ -108,7 +108,7 @@ class Gui
       @addSlider(@fColors, @settingsGeneral, "contrast",
         0.5, 5, 0.1, "Contrast", @setColorSettings)
     @addFunction(@fColors, @settingsGeneral, "resetColorSettings",
-      "Reset Color Settings")
+      "Reset")
 
     @folders.push( @fView = @gui.addFolder("View") )
     bbController = @fView.add(@settingsGeneral, "boundingBox").name("Bounding Box").onChange(@setBoundingBox)

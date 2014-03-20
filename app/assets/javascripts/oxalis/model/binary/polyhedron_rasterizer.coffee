@@ -1,4 +1,4 @@
-### define 
+### define
 m4x4 : M4x4
 ###
 
@@ -56,27 +56,27 @@ nextFreeBit = (x) ->
 #
 # ##How the algorithm works:##
 # First, we use a buffer which holds all line segments orthogonal
-# to the yz-plane belonging to the polyhedron, i.e. the smallest 
-# and highest x-coordinate for all y- and z-coordinates currently 
+# to the yz-plane belonging to the polyhedron, i.e. the smallest
+# and highest x-coordinate for all y- and z-coordinates currently
 # known.
 # We start by drawing the edges of the polyhedron into the buffer.
 # This results in having at least one point in each orthogonal plane.
-# Knowing this, we slice polyhedron at each xy-plane (i.e. same 
+# Knowing this, we slice polyhedron at each xy-plane (i.e. same
 # z-coordinate). We collect all points in this plane and run a convex
 # hull algorithm over them, resulting in a convex polygon. We then draw
-# edges of that polygon into our buffer. 
+# edges of that polygon into our buffer.
 # Finally, we know all relevant line segments and can collect the points
-# There are some algorithms available to determine the order of the 
+# There are some algorithms available to determine the order of the
 # collected points.
-#  
+#
 class PolyhedronRasterizer
 
   # Orientation of transformed polyhedron 1 if z orientation is positive else -1
   orientation : 1
 
-  
+
   constructor : (@vertices, @indices) ->
-    
+
     @calcExtent()
     { min_x, min_y, min_z, delta_z, delta_y, shift_z } = @
 
@@ -107,7 +107,7 @@ class PolyhedronRasterizer
 
 
   calcExtent : ->
-    
+
     min_x = min_y = min_z = Int32_MAX
     max_x = max_y = max_z = Int32_MIN
 
@@ -119,12 +119,12 @@ class PolyhedronRasterizer
       y = vertices[i++]
       z = vertices[i++]
 
-      min_x = x if x < min_x 
-      min_y = y if y < min_y 
-      min_z = z if z < min_z 
-      max_x = x if x > max_x 
-      max_y = y if y > max_y 
-      max_z = z if z > max_z 
+      min_x = x if x < min_x
+      min_y = y if y < min_y
+      min_z = z if z < min_z
+      max_x = x if x > max_x
+      max_y = y if y > max_y
+      max_z = z if z > max_z
 
     @min_x = min_x
     @min_y = min_y
@@ -141,7 +141,7 @@ class PolyhedronRasterizer
 
 
   #transformAffine : (matrix) ->
-  #  
+  #
   #  { min_x, min_y, min_z, vertices } = @
   #
   #  vertices1 = new Int32Array(vertices.length)
@@ -152,13 +152,13 @@ class PolyhedronRasterizer
   #    vertices1[--i] = vertices[i] + min_x
   #
   #  new PolyhedronRasterizer(
-  #    M4x4.transformPointsAffine(matrix, vertices1, vertices1), 
+  #    M4x4.transformPointsAffine(matrix, vertices1, vertices1),
   #    @indices
   #  )
 
 
   draw : (x, y, z) ->
-    
+
     { buffer, shift_z } = @
     drawFunction(x, y, z, buffer, shift_z)
 
@@ -172,16 +172,16 @@ class PolyhedronRasterizer
     # rasterize edges with 3d bresenham
     i = indices.length
     while i
-      
+
       i0 = indices[--i]
       i1 = indices[--i]
 
       @drawLine3d(
-        vertices[i0++], 
-        vertices[i0++], 
+        vertices[i0++],
+        vertices[i0++],
         vertices[i0],
-        vertices[i1++], 
-        vertices[i1++], 
+        vertices[i1++],
+        vertices[i1++],
         vertices[i1]
       )
 
@@ -190,23 +190,23 @@ class PolyhedronRasterizer
 
   drawLine3d : (x, y, z, x1, y1, z1) ->
     # Source: https://sites.google.com/site/proyectosroboticos/bresenham-3d
-    
+
     { shift_z, buffer } = @
-    
+
     x_inc = if (dx = x1 - x) < 0 then -1 else 1
     y_inc = if (dy = y1 - y) < 0 then -1 else 1
     z_inc = if (dz = z1 - z) < 0 then -1 else 1
-    
+
     drawFunction(x, y, z, buffer, shift_z)
-    
+
     dx = if dx < 0 then -dx else dx
     dy = if dy < 0 then -dy else dy
     dz = if dz < 0 then -dz else dz
-     
+
     dx2 = dx << 1
     dy2 = dy << 1
     dz2 = dz << 1
-    
+
 
     if dx >= dy and dx >= dz
 
@@ -233,7 +233,7 @@ class PolyhedronRasterizer
       d = dy
       mode = 1
 
-    else 
+    else
       #swapMacro(z, x)
       __tmp = z
       z = x
@@ -254,7 +254,7 @@ class PolyhedronRasterizer
 
     err_1 = dy2 - d
     err_2 = dz2 - d
-      
+
     for i in [0...d] by 1
 
       if err_1 > 0
@@ -263,15 +263,15 @@ class PolyhedronRasterizer
       if err_2 > 0
         z += z_inc
         err_2 -= dx2
-     
+
       err_1 += dy2
       err_2 += dz2
       x     += x_inc
-      
+
       switch mode
-        when 0 
+        when 0
           drawFunction(x, y, z, buffer, shift_z)
-        when 1 
+        when 1
           drawFunction(y, x, z, buffer, shift_z)
         else
           drawFunction(z, y, x, buffer, shift_z)
@@ -282,13 +282,13 @@ class PolyhedronRasterizer
     # Source: http://en.wikipedia.org/wiki/Bresenham's_line_algorithm#Simplification
 
     { shift_z, buffer } = @
-    
+
     x_inc = if (dx = x1 - x) < 0 then -1 else 1
     y_inc = if (dy = y1 - y) < 0 then -1 else 1
-     
+
     dx = if dx < 0 then -dx else dx
     dy = if dy < 0 then -dy else dy
-     
+
     dx2 = dx << 1
     dy2 = dy << 1
 
@@ -320,16 +320,16 @@ class PolyhedronRasterizer
       mode = 1
 
     err = dy2 - d
-      
+
     for i in [0...d] by 1
 
       if err > 0
         y += y_inc
         err -= dx2
-     
+
       err += dy2
       x   += x_inc
-      
+
       if mode
         drawFunction(y, x, z, buffer, shift_z)
       else
@@ -347,7 +347,7 @@ class PolyhedronRasterizer
     { delta_x, delta_y, delta_z, shift_z, buffer, pointsBuffer } = @
 
     # build and rasterize convex hull of all xy-planes
-    
+
     for z in [0...delta_z] by 1
 
       # put found end points into an ordered collection
@@ -355,7 +355,7 @@ class PolyhedronRasterizer
       pointsPointer = 0
       index_y = z << shift_z
       for y in [0...delta_y] by 1
-        
+
         if (x0 = buffer[index_y++]) != Int32_MAX
           pointsBuffer[pointsPointer++] = y
           pointsBuffer[pointsPointer++] = x0
@@ -365,7 +365,7 @@ class PolyhedronRasterizer
         else
           index_y++
 
-      
+
       # Generating convex hull by brute force. O(n²)
       i = 0
       while i < pointsPointer
@@ -383,10 +383,10 @@ class PolyhedronRasterizer
 
 
     return
-      
+
 
   collectPoints : ->
-    
+
     { buffer, min_x, min_y, min_z, shift_z, delta_y, delta_z } = @
 
     output = []
@@ -427,11 +427,11 @@ class PolyhedronRasterizer
 
       if @orientation is 1
         radius_start_z = radius_max_z
-        radius_end_z = radius_min_z        
+        radius_end_z = radius_min_z
       else
         radius_end_z = radius_max_z
         radius_start_z = radius_min_z
-     
+
       for z in [radius_start_z..radius_end_z]
         for y in [radius_min_y..radius_max_y] by 1
           index = ((z - min_z) << shift_z) + ((y - min_y) << 1)
@@ -460,7 +460,7 @@ class PolyhedronRasterizer.Master
     { vertices, indices } = @
 
     transformedPolyhdron = new PolyhedronRasterizer(
-      M4x4.transformPointsAffine(matrix, vertices, new Int32Array(vertices.length)), 
+      M4x4.transformPointsAffine(matrix, vertices, new Int32Array(vertices.length)),
       indices
     )
 
@@ -472,13 +472,13 @@ class PolyhedronRasterizer.Master
 
 
   @squareFrustum : (nearFaceXWidth, nearFaceYWidth, nearFaceZ, farFaceXWidth, farFaceYWidth, farFaceZ) ->
-  
+
     vertices = [
       -nearFaceXWidth / 2, -nearFaceYWidth / 2, nearFaceZ #0
       -farFaceXWidth  / 2, -farFaceYWidth  / 2, farFaceZ #3
       -nearFaceXWidth / 2,  nearFaceYWidth / 2, nearFaceZ #6
       -farFaceXWidth  / 2,  farFaceYWidth  / 2, farFaceZ #9
-       nearFaceXWidth / 2, -nearFaceYWidth / 2, nearFaceZ #12 
+       nearFaceXWidth / 2, -nearFaceYWidth / 2, nearFaceZ #12
        farFaceXWidth  / 2, -farFaceYWidth  / 2, farFaceZ #15
        nearFaceXWidth / 2,  nearFaceYWidth / 2, nearFaceZ #18
        farFaceXWidth  / 2,  farFaceYWidth  / 2, farFaceZ #21

@@ -94,7 +94,7 @@ class Cube
 
 
   getBucketIndexByZoomedAddress : ( address ) ->
-    
+
     $.assertExists(@cubes[address[3]], "Cube for given zoomStep does not exist"
       cubeCount: @cubes.length
       zoomStep: address[3]
@@ -108,8 +108,8 @@ class Cube
 
     bucketToCubeP = @CUBE_SIZE_P - @BUCKET_SIZE_P
     address = [
-      (x << zoomStep) >> bucketToCubeP 
-      (y << zoomStep) >> bucketToCubeP 
+      (x << zoomStep) >> bucketToCubeP
+      (y << zoomStep) >> bucketToCubeP
       (z << zoomStep) >> bucketToCubeP
       0
     ]
@@ -136,7 +136,7 @@ class Cube
   getVoxelIndexByVoxelOffset : ([x, y, z]) ->
 
     x +
-    y * (1 << @BUCKET_SIZE_P) + 
+    y * (1 << @BUCKET_SIZE_P) +
     z * (1 << @BUCKET_SIZE_P * 2)
 
 
@@ -315,7 +315,7 @@ class Cube
           ]
 
           bucketIndex = @getBucketIndexByZoomedAddress(subBucket)
-              
+
           cube[bucketIndex] = substitute if cube[bucketIndex] == oldBucket
 
   labelTestShape : ->
@@ -348,7 +348,7 @@ class Cube
       voxelInCube &= 0 <= voxel[i] < @upperBoundary[i]
 
     if voxelInCube
-      
+
       currentAddress = voxel.slice()
       for zoomStep in [0...@ZOOM_STEP_COUNT]
 
@@ -372,7 +372,7 @@ class Cube
     { bucket, voxelIndex} = @getBucketAndVoxelIndex( voxel, 0 )
 
     if bucket?
-      
+
       result = 0
       # Assuming little endian byte order
       for i in [0...@BYTE_OFFSET]
@@ -404,7 +404,7 @@ class Cube
       y & 0b11111
       z & 0b11111
     ]
-    
+
 
   positionToZoomedAddress : ([x, y, z], zoomStep = 0) ->
     # return the bucket a given voxel lies in

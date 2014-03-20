@@ -82,7 +82,7 @@ class PlaneMaterialFactory
   createDataTexture : (width, bytes) ->
 
     format = if bytes == 1 then THREE.LuminanceFormat else THREE.RGBFormat
-    
+
     return new THREE.DataTexture(
       new Uint8Array(bytes * width * width), width, width,
       format, THREE.UnsignedByteType,
@@ -98,8 +98,8 @@ class PlaneMaterialFactory
       varying vec2 vUv;
       void main() {
         vUv = uv;
-        gl_Position =   projectionMatrix * 
-                        modelViewMatrix * 
+        gl_Position =   projectionMatrix *
+                        modelViewMatrix *
                         vec4(position,1.0); }
     """
 
@@ -174,7 +174,7 @@ class PlaneMaterialFactory
         <% } %>
 
         /* Color map (<= to fight rounding mistakes) */
-        
+
         if ( id > 0.1 ) {
           vec4 HSV = vec4( mod( 6.0 * id * golden_ratio, 6.0), 1.0, 1.0, 1.0 );
           gl_FragColor = (1.0 - alpha/100.0) * vec4(data_color, 1.0) + alpha/100.0 * hsv_to_rgb( HSV );

@@ -1,4 +1,4 @@
-### define 
+### define
 ./polyhedron_rasterizer : PolyhedronRasterizer
 m4x4 : M4x4
 ###
@@ -12,7 +12,7 @@ class PingStrategy3d
   roundTripTimeRangeEnd : 0
 
   name : 'Abstract'
-  
+
 
   inVelocityRange : (value) ->
 
@@ -28,10 +28,10 @@ class PingStrategy3d
 
     throw "Needs to be implemented in subclass"
     pullQueue : [ x0, y0, z0, zoomStep0, x1, y1, z1, zoomStep1 ]
-    
+
 
   getExtentObject : (poly0, poly1, zoom0, zoom1) ->
-    
+
     min_x : Math.min(poly0.min_x << zoom0, poly1.min_x << zoom1)
     min_y : Math.min(poly0.min_y << zoom0, poly1.min_y << zoom1)
     min_z : Math.min(poly0.min_z << zoom0, poly1.min_z << zoom1)
@@ -41,13 +41,13 @@ class PingStrategy3d
 
 
   modifyMatrixForPoly : (matrix, zoomStep) ->
-    
+
     matrix[12] >>= (5 + zoomStep)
     matrix[13] >>= (5 + zoomStep)
     matrix[14] >>= (5 + zoomStep)
     matrix[12] += 1
     matrix[13] += 1
-    matrix[14] += 1 
+    matrix[14] += 1
 
 
 class PingStrategy3d.DslSlow extends PingStrategy3d
@@ -76,7 +76,7 @@ class PingStrategy3d.DslSlow extends PingStrategy3d
 
     #-----------
     matrix1 = M4x4.clone(matrix)
-    @modifyMatrixForPoly matrix1, 1  
+    @modifyMatrixForPoly matrix1, 1
 
     polyhedron1 = @pingPolyhedron1.transformAffine(matrix1)
 

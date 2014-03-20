@@ -1,4 +1,4 @@
-### define 
+### define
 m4x4 : M4x4
 v3 : V3
 jquery : $
@@ -25,7 +25,7 @@ M4x4.transformPointsAffine = (m, points, r = new Float32Array(points.length)) ->
     v0 = points[i]
     v1 = points[i + 1]
     v2 = points[i + 2]
-    
+
     r[i]     = m00 * v0 + m10 * v1 + m20 * v2 + m30
     r[i + 1] = m01 * v0 + m11 * v1 + m21 * v2 + m31
     r[i + 2] = m02 * v0 + m12 * v1 + m22 * v2 + m32
@@ -40,7 +40,7 @@ M4x4.transformPoints = (m, points, r = new Float32Array(points.length)) ->
     v0 = points[i]
     v1 = points[i + 1]
     v2 = points[i + 2]
-    
+
     r[i]     = m[0] * v0 + m[4] * v1 + m[8] * v2 + m[12]
     r[i + 1] = m[1] * v0 + m[5] * v1 + m[9] * v2 + m[13]
     r[i + 2] = m[2] * v0 + m[6] * v1 + m[10] * v2 + m[14]
@@ -151,14 +151,14 @@ _.mixin(
     timeoutDebounce = null
     deferred = null
     throttled = false
-    
+
     ->
       context = this
       args = arguments
 
       deferred.reject() if deferred
       deferred = $.Deferred()
-      
+
       caller = ->
         result = func.apply(context, args)
         setTimeout(unthrottler, waitThrottle)
@@ -197,7 +197,7 @@ _.mixin(
 
       deferred.reject() if deferred
       deferred = $.Deferred()
-      
+
       later = ->
 
         timeout = null
@@ -214,8 +214,8 @@ _.mixin(
 
 
   # `_.throttle2` makes a function only be executed once in a given
-  # time span -- no matter how often you it. We don't recomment to use 
-  # any input parameters, because you cannot know which are used and 
+  # time span -- no matter how often you it. We don't recomment to use
+  # any input parameters, because you cannot know which are used and
   # which are dropped. In contrast to `_.throttle`, the function
   # at the beginning of the time span.
   throttle2 : (func, wait, resume = true) ->
@@ -228,7 +228,7 @@ _.mixin(
       if timeout == false
         _.defer -> func.apply(context, args)
         timeout = setTimeout (
-          -> 
+          ->
             timeout = false
             func.apply(context, args) if more
             more = false
@@ -237,8 +237,8 @@ _.mixin(
         more = resume and true
 
 
-  # Returns a wrapper function that rejects all invocations while an 
-  # instance of the function is still running. The mutex can be 
+  # Returns a wrapper function that rejects all invocations while an
+  # instance of the function is still running. The mutex can be
   # cleared with a predefined timeout. The wrapped function is
   # required to return a `$.Deferred` at all times.
   mutexDeferred : (func, timeout = 20000) ->
@@ -248,12 +248,12 @@ _.mixin(
     (args...) ->
 
       unless deferred
-        
+
         deferred = _deferred = func.apply(this, args)
         unless timeout < 0
-          setTimeout((-> 
+          setTimeout((->
             deferred = null if deferred == _deferred
-          ), timeout) 
+          ), timeout)
         deferred.always -> deferred = null
         deferred
 
@@ -280,18 +280,18 @@ $.whenWithProgress = (args...) ->
   firstParam = args[0]
   count = length
   pCount = length
-  deferred = if length <= 1 && firstParam && jQuery.isFunction( firstParam.promise ) 
+  deferred = if length <= 1 && firstParam && jQuery.isFunction( firstParam.promise )
       firstParam
-    else 
+    else
       jQuery.Deferred()
   promise = deferred.promise()
-  
+
 
   resolveFunc = ( i ) ->
 
     ( value ) ->
       args[ i ] = if arguments.length > 1 then sliceDeferred.call( arguments, 0 ) else value
-      if !( --count ) 
+      if !( --count )
         deferred.resolveWith( deferred, args )
       # This is new
       else
@@ -306,12 +306,12 @@ $.whenWithProgress = (args...) ->
 
 
   if length > 1
-    for i in [0...length] 
+    for i in [0...length]
       if args[ i ] && args[ i ].promise && jQuery.isFunction( args[ i ].promise )
         args[ i ].promise().then( resolveFunc(i), deferred.reject, progressFunc(i) )
       else
         --count
-    unless count 
+    unless count
       deferred.resolveWith( deferred, args )
   else if deferred != firstParam
     deferred.resolveWith( deferred, if length then [ firstParam ] else [] )

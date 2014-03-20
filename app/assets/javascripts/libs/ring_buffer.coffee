@@ -50,7 +50,7 @@ class RingBuffer
     @ensureCapacity()
 
     { buffer, end, capacity, elementLength } = this
-   
+
     buffer.set(element, end)
 
     if end == capacity - elementLength
@@ -66,7 +66,7 @@ class RingBuffer
     @ensureCapacity(@length + elements.length * @elementLength)
 
     { buffer, elementLength } = this
-   
+
     for element in elements
 
       buffer.set(element, @end)
@@ -108,7 +108,7 @@ class RingBuffer
 
     for i in [(elementLength - 1)..0] by -1
       r[i] = buffer[--end]
-    
+
     @end = end
     @length -= elementLength
 
@@ -139,7 +139,7 @@ class RingBuffer
         @capacity -= @capacity % @elementLength
 
       newBuffer = new @bufferType(@capacity)
-      
+
       if start <= end
 
         newBuffer.set(buffer)
@@ -148,7 +148,7 @@ class RingBuffer
 
         newBuffer.set(buffer.subarray(start))
         newBuffer.set(buffer.subarray(0, end), buffer.length - start)
-      
+
       @start = 0
       @end = @length
       @buffer = newBuffer

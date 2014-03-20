@@ -105,7 +105,7 @@ class TaskOverviewView extends Backbone.Marionette.View
                         pencolor="black"
                       ];
               """
-    svgTail = "}"    
+    svgTail = "}"
     svgHead + nodes + edges + svgTail
 
 
@@ -137,14 +137,14 @@ class TaskOverviewView extends Backbone.Marionette.View
     svgTaskTypeEdges = ''
     svgFutureTaskTypesEdges = ''
     svgProjectEdges = ''
-    
+
     if @doDrawTaskTypes()
 
       svgTaskTypeEdges = userInfos.map( (userInfo) =>
         { user, taskTypes } = userInfo
         taskTypes.map( (taskType) => @edge(user.name, taskType.summary))
       )
-      
+
       svgFutureTaskTypesEdges  = "edge [ color=blue ];"
       svgFutureTaskTypesEdges += userInfos.map( (userInfo) =>
         { user, futureTaskType } = userInfo
@@ -166,10 +166,10 @@ class TaskOverviewView extends Backbone.Marionette.View
 
     # reset some attributes before invoking panZoom plugin
     $svg = @$(".graph.well").find("svg")
-    
+
     # get rid of the troublemaker. messes up transformations
     $svg[0].removeAttribute("viewBox")
-    
+
     $svg[0].setAttribute("width", "#{$(window).width() - 100}px")
     $svg[0].setAttribute("height", "#{$(window).height() - 50 - $svg.offset().top}px" )
     $svg.css("max-width", "100%")
@@ -193,7 +193,7 @@ class TaskOverviewView extends Backbone.Marionette.View
   createUserTooltip : (user) ->
 
     lastActivityDays = moment().diff(user.lastActivity, 'days')
-    
+
     ["Last Activity: #{lastActivityDays} days ago",
      "Experiences:",
       _.map(user.experiences, (domain, value) -> domain + " : " + value ).join("<br />")
@@ -206,23 +206,23 @@ class TaskOverviewView extends Backbone.Marionette.View
   colorJet : (value) ->
 
     fourValue = value / 64
-    
+
     clamp = (value, min, max) -> return Math.min(Math.max(value, min), max)
-    
+
     componentToHex = (c) ->
       hex = Math.floor(c * 255).toString(16)
       if hex.length == 1 then "0" + hex else hex
 
     rgbToHex = (r, g, b) -> "#" + [r, g, b].map(componentToHex).join("")
-    
+
     r = clamp(Math.min(fourValue - 1.5, -fourValue + 4.5), 0, 1)
     g = clamp(Math.min(fourValue - 0.5, -fourValue + 3.5), 0, 1)
     b = clamp(Math.min(fourValue + 0.5, -fourValue + 2.5), 0, 1)
-          
+
     rgbToHex(r, g, b)
 
-  
+
   quoted : (str) -> '"' + str + '"'
-  
+
   edge : (a, b) -> @quoted(a) + "->" + @quoted(b) + ";"
 

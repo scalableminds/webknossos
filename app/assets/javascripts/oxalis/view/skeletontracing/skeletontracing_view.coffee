@@ -1,4 +1,4 @@
-### define 
+### define
 jquery : $
 libs/toast : Toast
 ../modal : modal
@@ -29,12 +29,12 @@ class SkeletonTracingView extends View
         Toast.error("You're tracing in the wrong direction")
 
 
-      updateComments : => 
+      updateComments : =>
 
         @updateComments()
 
 
-      newActiveNode : => 
+      newActiveNode : =>
 
         @updateActiveComment()
         @updateActiveTree()
@@ -58,19 +58,19 @@ class SkeletonTracingView extends View
         @updateComments()
 
 
-      newNode : => 
+      newNode : =>
 
         @updateActiveComment()
         @updateTreesThrottled()
 
 
-      newTreeName : => 
+      newTreeName : =>
 
         @updateTrees()
         @updateComments()
 
 
-      newTree : => 
+      newTree : =>
 
         @updateTrees()
         @updateComments()
@@ -121,7 +121,7 @@ class SkeletonTracingView extends View
 
 
   updateComments : ->
-    
+
     comments = @model.skeletonTracing.getComments( @model.user.get("sortCommentsAsc") )
     commentList = $("#comment-list")
     commentList.empty()
@@ -138,7 +138,7 @@ class SkeletonTracingView extends View
           $('<span>', {"data-treeid": treeId, "text": @model.skeletonTracing.getTree(treeId)?.name})))[0])
         lastTreeId = treeId
       newContent.appendChild((
-        $('<li>').append($('<i>', {"class": "icon-angle-right"}), 
+        $('<li>').append($('<i>', {"class": "icon-angle-right"}),
         $('<a>', {"href": "#", "data-nodeid": comment.node.id, "text": comment.node.id + " - " + comment.content})))[0])
 
     commentList.append(newContent)

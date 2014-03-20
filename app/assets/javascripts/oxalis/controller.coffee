@@ -31,7 +31,7 @@ class Controller
   #   Annotation Mode \ View mode    Plane       Arbitrary
   #              Skeleton Tracing      X             X
   #                Volume Tracing      X             /
-  # 
+  #
   # In order to maximize code reuse, there is - besides the main
   # controller - a controller for each row, each column and each
   # cross in this matrix.
@@ -93,9 +93,9 @@ class Controller
           @model, stats, @gui, @view, @sceneController, @annotationController)
         @arbitraryController = new SkeletonTracingArbitraryController(
           @model, stats, @gui, @view, @sceneController, @annotationController)
-      
+
       else if @model.volumeTracing?
-        
+
         @view = new VolumeTracingView(@model)
         @annotationController = new VolumeTracingController(
           @model, @sceneController, @gui, @view )

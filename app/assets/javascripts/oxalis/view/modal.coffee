@@ -20,11 +20,11 @@ Modal =
     $("#modal").html(html)
 
     for button in buttons
-      
+
       @callbacks[button.id] = button.callback
-      
+
       $("#" + button.id).on("click", (evt) =>
-        
+
         callback = @callbacks[evt.target.id]
         if callback?
           callback()
@@ -34,5 +34,5 @@ Modal =
 
 
   hide : ->
-    
+
     $("#modal").modal("hide")

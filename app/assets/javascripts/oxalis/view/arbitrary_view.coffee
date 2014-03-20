@@ -31,7 +31,7 @@ class ArbitraryView
 
     _.extend(this, new EventMixin())
 
-    # The "render" div serves as a container for the canvas, that is 
+    # The "render" div serves as a container for the canvas, that is
     # attached to it once a renderer has been initalized.
     @container = $(canvas)
     @width  = @container.width()
@@ -45,7 +45,7 @@ class ArbitraryView
     @camera = camera = new THREE.PerspectiveCamera(45, @width / @height, 50, 1000)
     camera.matrixAutoUpdate = false
     camera.aspect = @width / @height
-  
+
     @cameraPosition = [0, 0, @CAM_DISTANCE]
 
     @group = new THREE.Object3D
@@ -105,10 +105,10 @@ class ArbitraryView
         geometry.update()
 
       m = @dataCam.getZoomedMatrix()
-       
-      camera.matrix.set m[0], m[4], m[8],  m[12], 
-                        m[1], m[5], m[9],  m[13], 
-                        m[2], m[6], m[10], m[14], 
+
+      camera.matrix.set m[0], m[4], m[8],  m[12],
+                        m[1], m[5], m[9],  m[13],
+                        m[2], m[6], m[10], m[14],
                         m[3], m[7], m[11], m[15]
 
       camera.matrix.multiply( new THREE.Matrix4().makeRotationY( Math.PI ))
@@ -128,14 +128,14 @@ class ArbitraryView
       @trigger("finishedRender")
 
     window.requestAnimationFrame => @animate()
-   
 
-  draw : -> 
+
+  draw : ->
 
     @forceUpdate = true
 
 
-  addGeometry : (geometry) -> 
+  addGeometry : (geometry) ->
     # Adds a new Three.js geometry to the scene.
     # This provides the public interface to the GeometryFactory.
 

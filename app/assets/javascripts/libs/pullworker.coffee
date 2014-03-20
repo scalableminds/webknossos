@@ -4,16 +4,16 @@ initialize = (url) ->
 
   socket = new WebSocket(url)
   socket.binaryType = 'arraybuffer'
-      
+
   socket.onopen = ->
     postMessage({ message: 'open' })
 
   socket.onerror = (err) ->
     postMessage({ message: 'error', error: err.toString() })
-     
+
   socket.addEventListener(
-    "close" 
-    (code, reason) => 
+    "close"
+    (code, reason) =>
 
       @socket = null
       postMessage({ message: 'close', closeCode: code.toString(), closeReason: reason.toString() })

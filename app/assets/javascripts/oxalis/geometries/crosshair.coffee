@@ -1,4 +1,4 @@
-### define 
+### define
 three : THREE
 ###
 
@@ -30,11 +30,11 @@ class Crosshair
     @mesh.setVisibility = (v) ->
       @arbitraryVisible = v
       @updateVisibility()
-    
+
     @mesh.setVisibilityEnabled = (v) ->
       @visibilityEnabled = v
       @updateVisibility()
-    
+
     @mesh.updateVisibility = ->
       @visible = @arbitraryVisible && @visibilityEnabled
 
@@ -53,7 +53,7 @@ class Crosshair
     if @isDirty
 
       context.clearRect(0, 0, WIDTH, WIDTH)
-      
+
       context.fillStyle = COLOR
       context.strokeStyle = COLOR
 
@@ -66,15 +66,15 @@ class Crosshair
       context.beginPath()
       context.moveTo(WIDTH / 2, WIDTH / 2 - 1)
       context.arc(WIDTH / 2, WIDTH / 2, 4, 0, 2 * Math.PI, true)
-      context.fill()  
+      context.fill()
 
       mesh.material.map.needsUpdate = true
 
     m = @cam.getZoomedMatrix()
 
-    mesh.matrix.set m[0], m[4], m[8], m[12], 
-                    m[1], m[5], m[9], m[13], 
-                    m[2], m[6], m[10], m[14], 
+    mesh.matrix.set m[0], m[4], m[8], m[12],
+                    m[1], m[5], m[9], m[13],
+                    m[2], m[6], m[10], m[14],
                     m[3], m[7], m[11], m[15]
 
     mesh.matrix.multiply( new THREE.Matrix4().makeRotationY( Math.PI ))
@@ -83,7 +83,7 @@ class Crosshair
 
     mesh.matrixWorldNeedsUpdate = true
 
-    @isDirty = false   
+    @isDirty = false
 
 
   setScale : (value) ->
@@ -109,7 +109,7 @@ class Crosshair
 
     material = new THREE.MeshBasicMaterial(map : texture)
     material.transparent = true
-    
+
     mesh = new THREE.Mesh(
       new THREE.PlaneGeometry(WIDTH, WIDTH)
       material
@@ -120,4 +120,4 @@ class Crosshair
     mesh.matrixAutoUpdate = false
     mesh.doubleSided = true
 
-    mesh 
+    mesh

@@ -12,17 +12,17 @@ Drawing =
 
   # Source: http://en.wikipedia.org/wiki/Bresenham's_line_algorithm#Simplification
   drawLine2d : (x, y, x1, y1, draw) ->
-    
+
     x_inc = if (dx = x1 - x) < 0 then -1 else 1
     y_inc = if (dy = y1 - y) < 0 then -1 else 1
-     
+
     dx = Math.abs(dx)
     dy = Math.abs(dy)
-     
+
     dx2 = dx << 1
     dy2 = dy << 1
 
-    draw(x, y)    
+    draw(x, y)
 
     if dx >= dy
 
@@ -35,12 +35,12 @@ Drawing =
       __tmp = y
       y = x
       x = __tmp
-      
+
       #swapMacro(y_inc, x_inc)
       __tmp = y_inc
       y_inc = x_inc
       x_inc = __tmp
-      
+
       #swapMacro(dy2, dx2)
       __tmp = dy2
       dy2 = dx2
@@ -50,16 +50,16 @@ Drawing =
       mode = 1
 
     err = dy2 - d
-      
+
     for i in [0...d]
 
       if err > 0
         y += y_inc
         err -= dx2
-     
+
       err += dy2
       x   += x_inc
-      
+
       if mode
         draw(y, x)
       else
@@ -75,7 +75,7 @@ Drawing =
     ranges = [[x, x, y, null, true, true]]
     paint(x, y)
     while ranges.length
-      
+
       addNextLine = (newY, isNext, downwards) ->
 
         rMinX = minX
@@ -83,7 +83,7 @@ Drawing =
         x = minX
 
         while x <= maxX
-          
+
           # skip testing, if testing previous line within previous range
           empty = (isNext or (x < r[0] or x > r[1])) and test(x, newY)
           if not inRange and empty
@@ -93,7 +93,7 @@ Drawing =
             ranges.push [rMinX, x - 1, newY, downwards, rMinX is minX, false]
             inRange = false
           paint(x, newY)  if inRange
-          
+
           # skip
           x = r[1]  if not isNext and x is r[0]
           x++
@@ -123,7 +123,7 @@ Drawing =
         r[0]--
         r[1]++
       addNextLine y + 1, not up, true  if y < height
-      addNextLine y - 1, not down, false  if y > 0  
+      addNextLine y - 1, not down, false  if y > 0
 
 
   # Source : http://twistedoakstudios.com/blog/Post3138_mouse-path-smoothing-for-jack-lumber
@@ -133,12 +133,12 @@ Drawing =
     a            = @alpha || SMOOTH_ALPHA
 
     if points.length > 2 + smoothLength
-      
-      for i in [0...smoothLength] 
-        
+
+      for i in [0...smoothLength]
+
         j = points.length-i-2
-        p0 = points[j] 
-        p1 = points[j+1] 
+        p0 = points[j]
+        p1 = points[j+1]
 
         p = []
         for k in [0...p0.length]

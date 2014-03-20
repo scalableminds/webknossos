@@ -13,7 +13,7 @@ class Skeleton
   # nodes, edges and trees
 
   COLOR_ACTIVE : 0xff0000
-  
+
   constructor : (@flycam, @model) ->
 
     _.extend(this, new EventMixin())
@@ -23,24 +23,24 @@ class Skeleton
     @isVisible      = true
 
     @showInactiveTrees = true
-    
+
     @reset()
 
     @skeletonTracing.on
-      newActiveNode : => 
+      newActiveNode : =>
         @setActiveNode()
         @setInactiveTreeVisibility(@showInactiveTrees)
       newActiveNodeRadius : =>
         @setActiveNodeRadius()
-      newTree : (treeId, treeColor) => 
+      newTree : (treeId, treeColor) =>
         @createNewTree(treeId, treeColor)
         @setInactiveTreeVisibility(@showInactiveTrees)
       deleteTree : (index) => @deleteTree(index)
       deleteActiveNode : (node, treeId) => @deleteNode(node, treeId)
-      mergeTree : (lastTreeID, lastNode, activeNode) => 
+      mergeTree : (lastTreeID, lastNode, activeNode) =>
         @mergeTree(lastTreeID, lastNode, activeNode)
       newNode : (centered) => @setWaypoint(centered)
-      setBranch : (isBranchPoint, node) => 
+      setBranch : (isBranchPoint, node) =>
         @setBranch(isBranchPoint, node)
       reloadTrees : (trees, finishedDeferred) =>
         @skeletonTracing.one("finishedRender", =>
@@ -55,7 +55,7 @@ class Skeleton
 
 
   createNewTree : (treeId, treeColor) ->
-    
+
     @treeGeometries.push( tree = new Tree(treeId, treeColor, @model) )
     @setActiveNode()
     @trigger "newGeometries", tree.getMeshes()

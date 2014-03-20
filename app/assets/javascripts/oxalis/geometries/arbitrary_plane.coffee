@@ -43,11 +43,11 @@ class ArbitraryPlane
 
     @mesh = @createMesh()
 
-    @cam.on "changed", => 
+    @cam.on "changed", =>
       @isDirty = true
 
-    @model.flycam.on "positionChanged", => 
-      @isDirty = true      
+    @model.flycam.on "positionChanged", =>
+      @isDirty = true
 
     for name, binary of @model.binary
       binary.cube.on "bucketLoaded", => @isDirty = true
@@ -80,15 +80,15 @@ class ArbitraryPlane
 
       newVertices = M4x4.transformPointsAffine matrix, @queryVertices
       newColors = @model.getColorBinaries()[0].getByVerticesSync(newVertices)
- 
+
       mesh.texture.image.data.set(newColors)
       mesh.texture.needsUpdate = true
 
       m = cam.getZoomedMatrix()
 
-      mesh.matrix.set m[0], m[4], m[8], m[12], 
-                      m[1], m[5], m[9], m[13], 
-                      m[2], m[6], m[10], m[14], 
+      mesh.matrix.set m[0], m[4], m[8], m[12],
+                      m[1], m[5], m[9], m[13],
+                      m[2], m[6], m[10], m[14],
                       m[3], m[7], m[11], m[15]
 
       mesh.matrix.multiply( new THREE.Matrix4().makeRotationY( Math.PI ))
@@ -166,18 +166,18 @@ class ArbitraryPlane
     planeGeo = new THREE.PlaneGeometry(width, height, 1, 1)
 
     # create texture
-    texture = 
+    texture =
       new THREE.DataTexture(
-        new Uint8Array(width*height), 
-        width, 
-        height, 
-        THREE.LuminanceFormat, 
-        THREE.UnsignedByteType, 
-        new THREE.UVMapping(), 
-        THREE.ClampToEdgeWrapping , 
-        THREE.ClampToEdgeWrapping, 
-        THREE.LinearMipmapLinearFilter, 
-        THREE.LinearMipmapLinearFilter 
+        new Uint8Array(width*height),
+        width,
+        height,
+        THREE.LuminanceFormat,
+        THREE.UnsignedByteType,
+        new THREE.UVMapping(),
+        THREE.ClampToEdgeWrapping ,
+        THREE.ClampToEdgeWrapping,
+        THREE.LinearMipmapLinearFilter,
+        THREE.LinearMipmapLinearFilter
       )
     texture.needsUpdate = true
     textureMaterial = new THREE.MeshBasicMaterial({wireframe : false, map : texture})

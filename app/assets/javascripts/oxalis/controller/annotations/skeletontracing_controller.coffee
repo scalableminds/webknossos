@@ -89,7 +89,7 @@ class SkeletonTacingController
   setRadius : (delta) ->
 
     @model.skeletonTracing.setActiveNodeRadius(
-      @model.skeletonTracing.getActiveNodeRadius() * Math.pow(2 , delta)
+      @model.skeletonTracing.getActiveNodeRadius() * Math.pow(1.05 , delta)
     )
  
 

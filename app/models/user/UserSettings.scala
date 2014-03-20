@@ -52,6 +52,7 @@ object UserSettings extends BasicSettings{
       "motionsensorActive" -> JsBoolean(false),
       "firstVisToggle" -> JsBoolean(true),
       "particleSize" -> JsNumber(5),
+      "overrideNodeRadius" -> JsBoolean(true),
       "sortTreesByName" -> JsBoolean(false),
       "sortCommentsAsc" -> JsBoolean(true),
       "sphericalCapRadius" -> JsNumber(140)))

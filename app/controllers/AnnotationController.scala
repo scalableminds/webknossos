@@ -131,7 +131,7 @@ object AnnotationController extends Controller with Secured with TracingInformat
             for {
               updated <- annotation.muta.updateFromJson(jsUpdates) ?~> Messages("format.json.invalid")
             } yield {
-              TimeTrackingService.logUserAction(request.user, updated)
+              TimeSpanService.logUserInteraction(request.user, Some(updated))
               Json.obj("version" -> version)
             }
           case _ =>

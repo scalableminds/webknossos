@@ -15,10 +15,10 @@ case class AnnotationReview(
     _id: BSONObjectID = BSONObjectID.generate) {
 
   def reviewer = UserService.findOneById(_reviewer.stringify, useCache = true)(GlobalAccessContext)
-  
+ 
   val date = new Date(timestamp)
 }
 
 object AnnotationReview {
-	implicit val annotationReviewFormat = Json.format[AnnotationReview]
+    implicit val annotationReviewFormat = Json.format[AnnotationReview]
 }

@@ -294,8 +294,6 @@ class Input.Mouse
 
   mouseWheel : (event, delta) =>
 
-    delta /= 20
-
     event.preventDefault()
     if event.shiftKey
       @trigger("scroll", delta, "shift")

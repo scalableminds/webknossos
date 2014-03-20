@@ -5,7 +5,6 @@ backbone.marionette : marionette
 
 class AchievementView extends Backbone.Marionette.ItemView
 
-  className : "statistics container wide"
   template : _.template("""
     <h3>Achievements</h3>
     <table class="table">

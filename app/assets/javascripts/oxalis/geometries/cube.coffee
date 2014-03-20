@@ -13,7 +13,7 @@ class Cube
     lineWidth          = properties.lineWidth         || 1
     color              = properties.color             || 0x000000
     @showCrossSections = properties.showCrossSections || false
-    
+
     @initialized = false
     @visible     = true
 
@@ -87,7 +87,7 @@ class Cube
         array = geo.vertices[j].toArray()
         array[thirdDim] = position[thirdDim]
         geo.vertices[j] = new THREE.Vector3(array...)
-      
+
       geo.verticesNeedUpdate = true
 
   getMeshes : ->

@@ -24,7 +24,7 @@ object UserCache {
     Cache.set(cacheKeyForUser(id), user)
     user
   }
-  
-  def invalidateUser(id: String) = 
+ 
+  def invalidateUser(id: String) =
     Cache.remove(cacheKeyForUser(id))
 }

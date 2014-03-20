@@ -1,19 +1,19 @@
-### define 
+### define
 ../dimensions : Dimensions
 libs/drawing : Drawing
 ###
 
 
 class VolumeLayer
-  
+
   constructor : (@plane, @thirdDimensionValue) ->
-    
+
     @contourList = []
     @maxCoord    = null
     @minCoord    = null
 
   addContour : (pos) ->
-    
+
     @contourList.push(pos)
     @updateArea(pos)
 
@@ -46,7 +46,7 @@ class VolumeLayer
 
     width      = maxCoord2d[0] - minCoord2d[0] + 1
     height     = maxCoord2d[1] - minCoord2d[1] + 1
-    
+
     map = new Array(width)
     for x in [0...width]
       map[x] = new Array(height)
@@ -103,7 +103,7 @@ class VolumeLayer
 
       p1 = @get2DCoordinate(  @contourList[i]  )
       p2 = @get2DCoordinate(  @contourList[(i+1) % @contourList.length]  )
-      
+
       Drawing.drawLine2d(p1[0], p1[1], p2[0], p2[1], setMap)
 
 
@@ -144,7 +144,7 @@ class VolumeLayer
 
 
   contains2dCoordinate : (point, list = @contourList) ->
-    
+
     # Algorithm described in OX-322
     totalDiff = 0
 
@@ -154,7 +154,7 @@ class VolumeLayer
       newQuadrant = @getQuadrantWithRespectToPoint(contour2d, point)
       prevQuadrant = if quadrant? then quadrant else newQuadrant
       quadrant = newQuadrant
-      
+
       if Math.abs(prevQuadrant - quadrant) == 2 or quadrant == 0
         # point is on the edge, considered within the polygon
         #console.log "Point is ON the edge", prevQuadrant, quadrant
@@ -175,7 +175,7 @@ class VolumeLayer
     if xDiff == 0 and yDiff == 0
       # Vertex and point have the same coordinates
       return 0
-    
+
     switch
       when xDiff <= 0 and yDiff >  0 then return 1
       when xDiff <= 0 and yDiff <= 0 then return 2

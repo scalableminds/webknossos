@@ -8,7 +8,7 @@ trait FlashMessages{
     def message: String
     def messageType: String
   }
-  
+ 
   case class FlashError(message: String) extends FlashMessage{
     def messageType = "error"
   }

@@ -31,7 +31,7 @@ class Plane
     # --> model.scaleInfo.baseVoxel
     scaleArray = Dimensions.transDim(@model.scaleInfo.baseVoxelFactors, @planeID)
     @scaleVector = new THREE.Vector3(scaleArray...)
-    
+
     @createMeshes(planeWidth, textureWidth)
 
 
@@ -52,7 +52,7 @@ class Plane
       crosshairGeometries[i].vertices.push(new THREE.Vector3( 25*i, 25*(1-i), 0))
       crosshairGeometries[i].vertices.push(new THREE.Vector3( pWidth/2*i,  pWidth/2*(1-i), 0))
       @crosshair[i] = new THREE.Line(crosshairGeometries[i], new THREE.LineBasicMaterial({color: @CROSSHAIR_COLORS[@planeID][i], linewidth: 1}), THREE.LinePieces)
-      
+
     # create borders
     TDViewBordersGeo = new THREE.Geometry()
     TDViewBordersGeo.vertices.push(new THREE.Vector3( -pWidth/2, -pWidth/2, 0))
@@ -88,7 +88,7 @@ class Plane
       tPos = @flycam.getTexturePosition(@planeID).slice()
       if @model?
         for name, binary of @model.binary
-          
+
           binary.planes[@planeID].get(
             position : @flycam.getTexturePosition(@planeID)
             zoomStep : @flycam.getIntegerZoomStep()
@@ -124,7 +124,7 @@ class Plane
   setPosition : (posVec) =>
 
     @TDViewBorders.position = @crosshair[0].position = @crosshair[1].position = posVec
-    
+
     offset = new THREE.Vector3(0, 0, 0)
     if      @planeID == constants.PLANE_XY then offset.z =  1
     else if @planeID == constants.PLANE_YZ then offset.x = -1

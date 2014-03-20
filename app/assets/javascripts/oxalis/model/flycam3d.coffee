@@ -1,4 +1,4 @@
-### define 
+### define
 libs/event_mixin : EventMixin
 m4x4 : M4x4
 underscore : _
@@ -7,18 +7,18 @@ three : THREE
 
 updateMacro = (_this) ->
 
-  _this.trigger("changed", _this.currentMatrix)
+  _this.trigger("changed", _this.currentMatrix, _this.zoomStep)
   _this.hasChanged = true
 
 
 transformationWithDistanceMacro = (_this, transformationFn, transformationArg1, transformationArg2) ->
-  
+
   { currentMatrix } = _this
   M4x4.translate(_this.distanceVecNegative, currentMatrix, currentMatrix)
   transformationFn.call(_this, transformationArg1, transformationArg2)
   M4x4.translate(_this.distanceVecPositive, currentMatrix, currentMatrix)
   updateMacro(_this)
-  
+
 
 class Flycam3d
 
@@ -26,7 +26,7 @@ class Flycam3d
   ZOOM_STEP_MIN : 0.5
   ZOOM_STEP_MAX : 10
 
-  zoomStep : 1  
+  zoomStep : 1
   hasChanged : true
   scale : null
   currentMatrix : null
@@ -44,10 +44,10 @@ class Flycam3d
 
   calculateScaleValues : (scale) ->
 
-    scale = [1/scale[0], 1/scale[1], 1/scale[2]]  
+    scale = [1/scale[0], 1/scale[1], 1/scale[2]]
     maxScale = Math.max(scale[0], scale[1], scale[2])
     multi = 1/maxScale
-    scale = [multi * scale[0], multi * scale[1], multi * scale[2]]  
+    scale = [multi * scale[0], multi * scale[1], multi * scale[2]]
     scale
 
 
@@ -55,11 +55,11 @@ class Flycam3d
 
     { scale } = @
 
-    m = [ 
-      1, 0, 0, 0, 
-      0, 1, 0, 0, 
-      0, 0, 1, 0, 
-      0, 0, 0, 1 
+    m = [
+      1, 0, 0, 0,
+      0, 1, 0, 0,
+      0, 0, 1, 0,
+      0, 0, 0, 1
     ]
     M4x4.scale(scale, m, m)
     @currentMatrix = m
@@ -81,7 +81,7 @@ class Flycam3d
     updateMacro(@)
 
 
-  update : -> 
+  update : ->
 
     updateMacro(@)
 
@@ -96,23 +96,29 @@ class Flycam3d
 
 
   zoomIn : ->
-    
+
     @zoomStep = Math.max(@zoomStep / @ZOOM_STEP_INTERVAL, @ZOOM_STEP_MIN)
     updateMacro(@)
 
 
   zoomOut : ->
-    
+
     @zoomStep = Math.min(@zoomStep * @ZOOM_STEP_INTERVAL, @ZOOM_STEP_MAX)
     updateMacro(@)
 
 
-  getZoomStep : -> 
+  getZoomStep : ->
 
-    @zoomStep   
+    @zoomStep
 
 
-  getMatrix : -> 
+  setZoomStep : (zoomStep) ->
+
+    @zoomStep = Math.min @ZOOM_STEP_MAX,
+                  Math.max @ZOOM_STEP_MIN, zoomStep
+
+
+  getMatrix : ->
 
     M4x4.clone @currentMatrix
 
@@ -133,7 +139,7 @@ class Flycam3d
 
     M4x4.translate(vector, @currentMatrix, @currentMatrix)
     updateMacro(@)
-    
+
 
   yaw : (angle, regardDistance = false) ->
 
@@ -208,6 +214,19 @@ class Flycam3d
     [ matrix[12], matrix[13], matrix[14] ]
 
 
+  getRotation : ->
+
+    object = new THREE.Object3D()
+    matrix = (new THREE.Matrix4()).fromArray( @currentMatrix ).transpose()
+    object.applyMatrix( matrix )
+    return _.map [
+      object.rotation.x
+      object.rotation.y
+      object.rotation.z
+      ], (e) -> 180 / Math.PI * e
+
+
+
   setPositionSilent : (p) ->
 
     matrix = @currentMatrix
@@ -220,6 +239,14 @@ class Flycam3d
 
     @setPositionSilent(p)
     updateMacro(@)
+
+
+  setRotation : ([x, y, z]) ->
+
+    @resetRotation()
+    @roll  -z * Math.PI / 180
+    @yaw   -y * Math.PI / 180
+    @pitch -x * Math.PI / 180
 
 
   getDirection : ->
@@ -236,11 +263,11 @@ class Flycam3d
       new THREE.Vector3(0, 0, 0),
       new THREE.Vector3(0, 1, 0)).elements
 
-    matrix2 = [ 
-      1, 0, 0, 0, 
-      0, 1, 0, 0, 
-      0, 0, 1, 0, 
-      pos[0], pos[1], pos[2], 1 
+    matrix2 = [
+      1, 0, 0, 0,
+      0, 1, 0, 0,
+      0, 0, 1, 0,
+      pos[0], pos[1], pos[2], 1
     ]
 
     M4x4.scale(@scale, matrix2, matrix2)

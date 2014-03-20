@@ -14,7 +14,7 @@ class ParticleMaterialFactory
       baseVoxel :
         type : "f"
         value : @model.scaleInfo.baseVoxel
-      minParticleSize :
+      particleSize :
         type : "f"
         value : @model.user.get("particleSize")
       scale :
@@ -47,9 +47,11 @@ class ParticleMaterialFactory
 
     @model.user.on
       particleSizeChanged : (size) ->
-        uniforms.minParticleSize.value = size
+        uniforms.particleSize.value = size
       scaleChanged : (scale) ->
         uniforms.scale.value = scale
+      overrideNodeRadiusChanged : =>
+        @model.flycam.update()
 
     @model.flycam.on
       zoomStepChanged : =>
@@ -66,23 +68,23 @@ class ParticleMaterialFactory
     return """
       uniform float zoomFactor;
       uniform float baseVoxel;
-      uniform float minParticleSize;
+      uniform float particleSize;
       uniform float scale;
       uniform int   showRadius;
       uniform float devicePixelRatio;
       varying vec3 vColor;
       attribute float size;
 
-      void main() 
+      void main()
       {
           vec4 mvPosition = modelViewMatrix * vec4( position, 1.0 );
           vColor = color;
           if (showRadius == 1)
             gl_PointSize = max(
               size / zoomFactor / baseVoxel,
-              minParticleSize ) * devicePixelRatio * scale;
+              particleSize ) * devicePixelRatio * scale;
           else
-            gl_PointSize = minParticleSize;
+            gl_PointSize = particleSize;
           gl_Position = projectionMatrix * mvPosition;
       }
     """
@@ -93,7 +95,7 @@ class ParticleMaterialFactory
     return """
       varying vec3 vColor;
 
-      void main() 
+      void main()
       {
           gl_FragColor = vec4( vColor, 1.0 );
       }

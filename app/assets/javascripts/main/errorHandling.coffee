@@ -16,11 +16,11 @@ ErrorHandling =
   initializeAirbrake : ->
 
     unless @sendLocalErrors
-  
+
       Airbrake.addFilter( (notice) ->
         return location.hostname != "127.0.0.1" and location.hostname != "localhost"
       )
-  
+
     window.onerror = (message, file, line, colno, error) ->
 
       unless error?
@@ -41,13 +41,13 @@ ErrorHandling =
 
 
     $.assert = (bool, message, assertionContext) =>
-    
+
       if bool
         return
 
       error = new Error("Assertion violated - " + message)
-      
-      error.params = assertionContext      
+
+      error.params = assertionContext
       error.stack = @trimCallstack(error.stack)
 
       if @throwAssertions
@@ -79,7 +79,7 @@ ErrorHandling =
     # cut function calls caused by ErrorHandling so that Airbrake won't cluster all assertions into one group
 
     trimmedCallstack = []
-    
+
     for line in callstack.split("\n")
 
       if line.indexOf("errorHandling.js") == -1

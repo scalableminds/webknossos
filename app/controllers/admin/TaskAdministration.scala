@@ -342,7 +342,7 @@ object TaskAdministration extends AdminController {
     taskTypes: List[TaskType],
     projects: List[Project],
     futureTaskType: TaskType)
-  
+ 
   object UserWithTaskInfos {
     def userInfosPublicWrites(requestingUser: User): Writes[UserWithTaskInfos] =
       ( (__ \ "user").write(User.userPublicWrites(requestingUser)) and
@@ -355,7 +355,7 @@ object TaskAdministration extends AdminController {
   def overviewData = Authenticated.async { implicit request =>
 
     def getUserInfos(users: List[User]) = {
-      
+     
       val futureTaskTypeMap = for {
         futureTasks <- TaskService.simulateTaskAssignment(users)
         futureTaskTypes <- Fox.sequence(futureTasks.map(e => e._2.taskType.map(e._1 -> _)).toList)

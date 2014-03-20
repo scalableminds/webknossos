@@ -19,14 +19,14 @@ class TraceTree
 
     # Use node with minimal ID as root
     for node in @nodes
-      
+
       # Initialize Cyclic tree detection
       node._seen = false
 
       # define root as the node with smallest id
       if root?
         if root.id > node.id then root = node
-      else 
+      else
         root = node
 
     if root?

@@ -48,7 +48,7 @@ class CameraController
 
     camera = @cameras[constants.TDView]
     b = @model.scaleInfo.voxelToNm(@model.upperBoundary)
-    
+
     pos = @model.scaleInfo.voxelToNm(@model.flycam.getPosition())
     time = 800
     to = {}
@@ -112,7 +112,7 @@ class CameraController
       to.upX = upVector[id][0]; to.upY = upVector[id][1]; to.upZ = upVector[id][2]
       to.l = -offsetX; to.t = offsetY
       to.r = to.l + width; to.b = to.t - width
-    
+
     if animate
       @tween.to(to, time)
       .onUpdate(@updateCameraTDView)
@@ -144,7 +144,7 @@ class CameraController
     @camera.updateProjectionMatrix()
     @notify()
     @flycam.update()
-    
+
 
   TDViewportSize : ->
 
@@ -158,7 +158,7 @@ class CameraController
     middleX = (camera.left + camera.right)/2
     middleY = (camera.bottom + camera.top)/2
     size = @TDViewportSize()
-    
+
     baseOffset = factor * size / 2
     baseDiff = baseOffset - size / 2
 
@@ -199,7 +199,7 @@ class CameraController
     )
     # reverse euler order
     rotation.order = rotation.order.split("").reverse().join("")
-    
+
     nmVector.applyEuler( rotation )
     @moveTDViewRaw( nmVector )
 
@@ -226,7 +226,7 @@ class CameraController
 
 
   updateCamViewport : ->
-    
+
     scaleFactor = @model.scaleInfo.baseVoxel
     boundary    = constants.VIEWPORT_WIDTH / 2 * @model.user.get("zoom")
     for i in [constants.PLANE_XY, constants.PLANE_YZ, constants.PLANE_XZ]
@@ -239,6 +239,6 @@ class CameraController
 
   bind : ->
 
-    @model.user.on 
+    @model.user.on
       clippingDistanceChanged : (value) => @setClippingDistance(value)
       zoomChanged : (value) => @updateCamViewport()

@@ -17,7 +17,7 @@ class SkeletonTacingController
   constructor : ( @model, @sceneController, @gui, @skeletonTracingView ) ->
 
     @abstractTreeController = new AbstractTreeController(@model)
-    @abstractTreeController.view.on 
+    @abstractTreeController.view.on
       nodeClick : (id) => @setActiveNode(id, false, true)
 
     @gui.on
@@ -27,7 +27,7 @@ class SkeletonTacingController
       setActiveNode : (id) => @model.skeletonTracing.setActiveNode(id)
 
     # Mange side bar input
-    $("#comment-input").on "change", (event) => 
+    $("#comment-input").on "change", (event) =>
       @model.skeletonTracing.setComment(event.target.value)
       $("#comment-input").blur()
 
@@ -91,7 +91,7 @@ class SkeletonTacingController
     @model.skeletonTracing.setActiveNodeRadius(
       @model.skeletonTracing.getActiveNodeRadius() * Math.pow(1.05 , delta)
     )
- 
+
 
   toggleSkeletonVisibility : =>
 
@@ -148,4 +148,4 @@ class SkeletonTacingController
     @setActiveNode(
       @model.skeletonTracing.nextCommentNodeID(true), false, true)
 
-    
+

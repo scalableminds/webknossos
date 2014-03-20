@@ -98,7 +98,7 @@ class Binary
   pingImpl : (position, {zoomStep, area, activePlane}) ->
 
     if @lastPosition?
-      
+
       @direction = [
         (1 - @DIRECTION_VECTOR_SMOOTHER) * @direction[0] + @DIRECTION_VECTOR_SMOOTHER * (position[0] - @lastPosition[0])
         (1 - @DIRECTION_VECTOR_SMOOTHER) * @direction[1] + @DIRECTION_VECTOR_SMOOTHER * (position[1] - @lastPosition[1])
@@ -111,7 +111,7 @@ class Binary
       @lastZoomStep = zoomStep
       @lastArea     = area.slice()
 
-      for strategy in @pingStrategies 
+      for strategy in @pingStrategies
         if strategy.inVelocityRange(1) and strategy.inRoundTripTimeRange(@pullQueue.roundTripTime)
 
           pullQueue = strategy.ping(position, @direction, zoomStep, area, activePlane) if zoomStep? and area? and activePlane?
@@ -133,17 +133,17 @@ class Binary
 
   arbitraryPingImpl : (matrix) ->
 
-    for strategy in @pingStrategies3d 
+    for strategy in @pingStrategies3d
       if strategy.inVelocityRange(1) and strategy.inRoundTripTimeRange(@pullQueue.roundTripTime)
-        
+
         pullQueue = strategy.ping(matrix)
-      
+
         for entry in pullQueue
           @pullQueue.insert(entry...)
 
         break
 
-    @pullQueue.pull() 
+    @pullQueue.pull()
 
 
   getByVerticesSync : (vertices) ->

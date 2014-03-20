@@ -1,4 +1,4 @@
-### define 
+### define
 ./model/binary : Binary
 ./model/skeletontracing/skeletontracing : SkeletonTracing
 ./model/user : User
@@ -11,7 +11,7 @@ libs/toast : Toast
 ./constants : constants
 ###
 
-# This is the model. It takes care of the data including the 
+# This is the model. It takes care of the data including the
 # communication with the server.
 
 # All public operations are **asynchronous**. We return a promise
@@ -108,7 +108,7 @@ class Model
             @binary = {}
             @lowerBoundary = [ Infinity,  Infinity,  Infinity]
             @upperBoundary = [-Infinity, -Infinity, -Infinity]
-            
+
             for layer in dataSet.dataLayers
 
               _.extend layer, layerOptions[layer.name]
@@ -129,7 +129,7 @@ class Model
               @binary["segmentation"] = @binary["volume"]
               delete @binary["volume"]
 
-            @flycam = new Flycam2d(constants.PLANE_WIDTH, @scaleInfo, zoomStepCount, @user)      
+            @flycam = new Flycam2d(constants.PLANE_WIDTH, @scaleInfo, zoomStepCount, @user)
             @flycam3d = new Flycam3d(constants.DISTANCE_3D, dataSet.scale)
 
             @flycam3d.on
@@ -147,19 +147,19 @@ class Model
               @flycam3d.setZoomStep( state.zoomStep )
             if state.rotation?
               @flycam3d.setRotation( state.rotation )
-            
+
             if controlMode == constants.CONTROL_MODE_TRACE
 
               if "volume" in tracing.content.settings.allowedModes
                 $.assert( @binary["segmentation"]?,
                   "Volume is allowed, but segmentation does not exist" )
                 @volumeTracing = new VolumeTracing(tracing, @flycam, @binary["segmentation"].cube)
-              
+
               else
                 @skeletonTracing = new SkeletonTracing(tracing, @scaleInfo, @flycam, @flycam3d, @user)
-            
+
             {"restrictions": tracing.restrictions, "settings": tracing.content.settings}
-            
+
           -> Toast.error("Ooops. We couldn't communicate with our mother ship. Please try to reload this page.")
         )
 
@@ -181,7 +181,8 @@ class Model
     if colorBinaries.length == 1
       defaultColors = [[255, 255, 255]]
     else
-      defaultColors = [[255, 0, 0], [0, 255, 0], [0, 0, 255]]
+      defaultColors = [[255, 0, 0], [0, 255, 0], [0, 0, 255],
+                        [255, 255, 0], [0, 255, 255], [255, 0, 255]]
 
     for binary, i in colorBinaries
       binary.setColor( defaultColors[i % defaultColors.length] )

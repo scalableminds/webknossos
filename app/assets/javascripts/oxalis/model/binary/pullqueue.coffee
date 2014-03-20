@@ -18,7 +18,7 @@ class PullQueue
 
   batchCount : 0
   roundTripTime : 0
-  
+
   constructor : (@dataSetName, @cube, @dataLayerName, @tracingId, @boundingBox ) ->
 
     @queue = []
@@ -64,7 +64,7 @@ class PullQueue
 
     return unless priority >= 0
     return unless @boundingBox.containsBucket(bucket)
-    
+
     # Checking whether bucket is already loaded
     unless @cube.isBucketRequestedByZoomedAddress(bucket)
       @queue.push( { "bucket" : bucket, "priority" : priority } )
@@ -93,11 +93,11 @@ class PullQueue
 
     # Starting to download some buckets
     while @batchCount < @BATCH_LIMIT and @queue.length
-      
+
       batch = []
 
       while batch.length < @BATCH_SIZE and @queue.length
-        
+
         bucket = @removeFirst()
         unless @cube.isBucketRequestedByZoomedAddress(bucket)
           batch.push bucket
@@ -124,7 +124,7 @@ class PullQueue
         bucket[2] << (zoomStep + @cube.BUCKET_SIZE_P)
       )
 
-    # Measuring the time until response arrives to select appropriate preloading strategy 
+    # Measuring the time until response arrives to select appropriate preloading strategy
     roundTripBeginTime = new Date()
 
     @getLoadSocket().send(transmitBuffer)
@@ -149,12 +149,12 @@ class PullQueue
             @cube.setBucketByZoomedAddress(bucket, bucketData)
 
         =>
-          
+
           for bucket in batch
 
             @cube.setBucketByZoomedAddress(bucket, null)
             #console.log "Failed: ", bucket
-    
+
     ).always =>
 
       @batchCount--
@@ -181,7 +181,7 @@ class PullQueue
 
     index = 0
     while index < newColors.length
-      value = colors[index >> 1] 
+      value = colors[index >> 1]
       newColors[index] = value & 0b11110000
       index++
       newColors[index] = value << 4

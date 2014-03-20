@@ -34,7 +34,7 @@ class User
     if _.isObject(arg1)
       @setByObject(arg1)
     else
-      @setByName(arg1, arg2) 
+      @setByName(arg1, arg2)
 
 
   get : (name) ->
@@ -60,7 +60,7 @@ class User
   triggerAll : ->
 
     for property of @userSettings
-      @trigger(property + "Changed", @get(property)) 
+      @trigger(property + "Changed", @get(property))
 
 
   push : ->
@@ -80,16 +80,16 @@ class User
     deferred = $.Deferred()
 
     console.log "Sending User Data:", @userSettings
-      
+
     Request.send(
       url      : "/user/configuration"
       type     : "POST"
       dataType : "json"
       data     : @userSettings
     ).fail( =>
-      
+
       console.log "couldn't save userdata"
 
     ).always(-> deferred.resolve())
-    
-    deferred.promise()    
+
+    deferred.promise()

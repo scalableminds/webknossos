@@ -131,7 +131,7 @@ class PlaneController
 
     return {
 
-      leftDownMove : (delta, pos) => 
+      leftDownMove : (delta, pos) =>
 
         @move [
           delta.x * @model.user.getMouseInversionX() / @planeView.scaleFactor
@@ -140,7 +140,7 @@ class PlaneController
         ]
 
       over : => @planeView.setActiveViewport( @activeViewport = planeId )
-      
+
       scroll : @scrollPlanes
     }
 
@@ -151,7 +151,7 @@ class PlaneController
     pos = @model.scaleInfo.voxelToNm(@flycam.getPosition())
     @controls = new THREE.TrackballControls(
       @planeView.getCameras()[constants.TDView],
-      view, 
+      view,
       new THREE.Vector3(pos...),
       => @flycam.update())
 
@@ -229,7 +229,7 @@ class PlaneController
     @model.user.on({
       keyboardDelayChanged : (value) => @input.keyboardLoopDelayed.delay = value
       })
-    
+
     @input.keyboardNoLoop = new Input.KeyboardNoLoop( @getKeyboardControls() )
 
 

@@ -1,4 +1,4 @@
-### define 
+### define
 libs/event_mixin : EventMixin
 m4x4 : M4x4
 underscore : _
@@ -12,13 +12,13 @@ updateMacro = (_this) ->
 
 
 transformationWithDistanceMacro = (_this, transformationFn, transformationArg1, transformationArg2) ->
-  
+
   { currentMatrix } = _this
   M4x4.translate(_this.distanceVecNegative, currentMatrix, currentMatrix)
   transformationFn.call(_this, transformationArg1, transformationArg2)
   M4x4.translate(_this.distanceVecPositive, currentMatrix, currentMatrix)
   updateMacro(_this)
-  
+
 
 class Flycam3d
 
@@ -26,7 +26,7 @@ class Flycam3d
   ZOOM_STEP_MIN : 0.5
   ZOOM_STEP_MAX : 10
 
-  zoomStep : 1  
+  zoomStep : 1
   hasChanged : true
   scale : null
   currentMatrix : null
@@ -44,10 +44,10 @@ class Flycam3d
 
   calculateScaleValues : (scale) ->
 
-    scale = [1/scale[0], 1/scale[1], 1/scale[2]]  
+    scale = [1/scale[0], 1/scale[1], 1/scale[2]]
     maxScale = Math.max(scale[0], scale[1], scale[2])
     multi = 1/maxScale
-    scale = [multi * scale[0], multi * scale[1], multi * scale[2]]  
+    scale = [multi * scale[0], multi * scale[1], multi * scale[2]]
     scale
 
 
@@ -55,11 +55,11 @@ class Flycam3d
 
     { scale } = @
 
-    m = [ 
-      1, 0, 0, 0, 
-      0, 1, 0, 0, 
-      0, 0, 1, 0, 
-      0, 0, 0, 1 
+    m = [
+      1, 0, 0, 0,
+      0, 1, 0, 0,
+      0, 0, 1, 0,
+      0, 0, 0, 1
     ]
     M4x4.scale(scale, m, m)
     @currentMatrix = m
@@ -81,7 +81,7 @@ class Flycam3d
     updateMacro(@)
 
 
-  update : -> 
+  update : ->
 
     updateMacro(@)
 
@@ -96,18 +96,18 @@ class Flycam3d
 
 
   zoomIn : ->
-    
+
     @zoomStep = Math.max(@zoomStep / @ZOOM_STEP_INTERVAL, @ZOOM_STEP_MIN)
     updateMacro(@)
 
 
   zoomOut : ->
-    
+
     @zoomStep = Math.min(@zoomStep * @ZOOM_STEP_INTERVAL, @ZOOM_STEP_MAX)
     updateMacro(@)
 
 
-  getZoomStep : -> 
+  getZoomStep : ->
 
     @zoomStep
 
@@ -118,7 +118,7 @@ class Flycam3d
                   Math.max @ZOOM_STEP_MIN, zoomStep
 
 
-  getMatrix : -> 
+  getMatrix : ->
 
     M4x4.clone @currentMatrix
 
@@ -139,7 +139,7 @@ class Flycam3d
 
     M4x4.translate(vector, @currentMatrix, @currentMatrix)
     updateMacro(@)
-    
+
 
   yaw : (angle, regardDistance = false) ->
 
@@ -263,11 +263,11 @@ class Flycam3d
       new THREE.Vector3(0, 0, 0),
       new THREE.Vector3(0, 1, 0)).elements
 
-    matrix2 = [ 
-      1, 0, 0, 0, 
-      0, 1, 0, 0, 
-      0, 0, 1, 0, 
-      pos[0], pos[1], pos[2], 1 
+    matrix2 = [
+      1, 0, 0, 0,
+      0, 1, 0, 0,
+      0, 0, 1, 0,
+      pos[0], pos[1], pos[2], 1
     ]
 
     M4x4.scale(@scale, matrix2, matrix2)

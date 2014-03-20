@@ -27,8 +27,8 @@ class Gui
     @datasetPosition = @initDatasetPosition(@user.get("briConNames"))
 
     somaClickingAllowed = @tracingSettings.somaClickingAllowed
-    
-    @settingsGeneral = 
+
+    @settingsGeneral =
 
       boundingBox : "0, 0, 0, 0, 0, 0"
       fourBit : @user.get("fourBit")
@@ -108,7 +108,7 @@ class Gui
       @addSlider(@fColors, @settingsGeneral, "contrast",
         0.5, 5, 0.1, "Contrast", @setColorSettings)
     @addFunction(@fColors, @settingsGeneral, "resetColorSettings",
-      "Reset Color Settings")
+      "Reset")
 
     @folders.push( @fView = @gui.addFolder("View") )
     bbController = @fView.add(@settingsGeneral, "boundingBox").name("Bounding Box").onChange(@setBoundingBox)
@@ -389,7 +389,7 @@ class Gui
     for binary in @model.getColorBinaries()
       binary.updateContrastCurve(@settingsGeneral.brightness, @settingsGeneral.contrast)
       binary.setColor @settingsGeneral[binary.name + "_color"]
-    
+
     @user.get("brightness")[@datasetPosition] = (Number) @settingsGeneral.brightness
     @user.get("contrast")[@datasetPosition] = (Number) @settingsGeneral.contrast
 
@@ -477,13 +477,13 @@ class Gui
     if @mode in constants.MODES_PLANE
       zoom  = @model.flycam.getPlaneScalingFactor()
       width = constants.PLANE_WIDTH
-    
+
     if @mode in constants.MODES_ARBITRARY
       zoom  = @model.flycam3d.zoomStep
       width = ArbitraryController::WIDTH
 
     nm = zoom * width * @model.scaleInfo.baseVoxel
-    
+
     if(nm<1000)
       widthStr = nm.toFixed(0) + " nm</p>"
     else if (nm<1000000)

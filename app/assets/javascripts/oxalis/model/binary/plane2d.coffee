@@ -37,7 +37,7 @@ class Plane2D
   cube : null
   queue : null
   contrastCurves : null
-  
+
   dataTexture : null
 
 
@@ -185,7 +185,7 @@ class Plane2D
       # to make linear interpolation possible in the future
       for u in [area[2]..area[0]] by -1
         for v in [area[3]..area[1]] by -1
-          
+
           tile = [u, v]
           tileIndex = tileIndexByTileMacro(@, tile)
 
@@ -195,7 +195,7 @@ class Plane2D
             texture.tiles[tileIndex] = true
 
       texture.buffer
-    
+
     else
 
       # If the texture didn't need to be changed...
@@ -305,7 +305,7 @@ class Plane2D
         bucket_z >> i
         zoomStep + i
       ]
-      
+
       map[0] = bucket if @cube.isBucketLoadedByZoomedAddress(bucket)
 
     if zoomStep and @enhanceRenderMap(map, 0, [bucket_x, bucket_y, bucket_z, zoomStep], map[0], @cube.LOOKUP_DEPTH_DOWN)
@@ -319,7 +319,7 @@ class Plane2D
 
     enhanced = false
 
-    if @cube.isBucketLoadedByZoomedAddress([bucket_x, bucket_y, bucket_z, zoomStep]) 
+    if @cube.isBucketLoadedByZoomedAddress([bucket_x, bucket_y, bucket_z, zoomStep])
 
       map[mapIndex] = [bucket_x, bucket_y, bucket_z, zoomStep]
       enhanced = true
@@ -418,7 +418,7 @@ class Plane2D
 
       if (i & source.nextPixelMask) == 0
         source.offset += source.pixelDelta
-      
+
       if (i & destination.nextRowMask) == 0
         destination.offset += destination.rowDelta - (1 << destination.widthP)
         source.offset -= source.pixelDelta << (destination.widthP - source.pixelRepeatP)

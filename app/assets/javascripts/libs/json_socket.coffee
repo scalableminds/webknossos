@@ -5,10 +5,10 @@ libs/event_mixin : EventMixin
 
 
 class JsonSocket
-  
+
   senderPointer : 0
   senders : []
-  
+
   constructor : (options) ->
 
     _.extend(this, options)
@@ -66,17 +66,17 @@ class JsonSocket.WebSocket
 
       socket = @socket = new @WebSocketImpl(@url)
       openDeferred = @openDeferred = $.Deferred()
-      
+
       socket.onopen = -> openDeferred.resolve()
-      
+
       socket.onerror = (err) ->
         console.error("socket error", err)
-     
-      socket.addEventListener(
-        "close" 
-        (code, reason) => 
 
-          @socket = null          
+      socket.addEventListener(
+        "close"
+        (code, reason) =>
+
+          @socket = null
           console?.error("socket closed", "#{code}: #{reason}")
 
         false
@@ -84,7 +84,7 @@ class JsonSocket.WebSocket
 
       socket.addEventListener(
         "message"
-        (event) => 
+        (event) =>
           data = null
           try
             data = JSON.parse(event.data)
@@ -94,14 +94,14 @@ class JsonSocket.WebSocket
           @trigger("data", data) if data?
         false
       )
-      
+
       setTimeout(
-        => 
+        =>
           if not @socket or @socket.readyState != @WebSocketImpl.OPEN
             openDeferred.reject("timeout")
         @OPEN_TIMEOUT
       )
-    
+
     @openDeferred.promise()
 
 
@@ -114,7 +114,7 @@ class JsonSocket.WebSocket
 
   send : (data) ->
 
-    @open().pipe => 
+    @open().pipe =>
 
       @socket.send(JSON.stringify(data))
       return

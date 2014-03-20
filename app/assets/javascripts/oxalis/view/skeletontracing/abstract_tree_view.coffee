@@ -90,7 +90,7 @@ class AbstractTreeView
       c1 = decisionPoint.children[0]
       c2 = decisionPoint.children[1]
       m = (right - left) * c1.width / (c1.width + c2.width) + left
-    
+
     # Calculate the length of the 'chain' of nodes with one child,
     # because they all share the root's x coordinate
     chainCount = 0
@@ -118,7 +118,7 @@ class AbstractTreeView
     else
       # if decisionPoint is leaf, there's not much to do
       xr = m
-    
+
     if mode == @MODE_NORMAL or chainCount < 3
       # Draw the chain and the root, connect them.
       node = tree
@@ -199,7 +199,7 @@ class AbstractTreeView
     if decisionPoint.children.length == 0
       decisionPoint.width = 1
       return 1
-    
+
     # Branchpoints are as wide as its children combined.
     # But actually, we need the width of the children
     result = 0
@@ -246,4 +246,4 @@ class AbstractTreeView
           Math.abs(y - entry.y) <= @CLICK_TRESHOLD
         return entry.id
 
-        
+

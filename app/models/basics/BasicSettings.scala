@@ -4,7 +4,7 @@ import play.api.libs.json._
 
 trait BasicSettings{
   def defaultSettings: { def settings: Map[String, JsValue]}
-  
+ 
   def MaxSettings = defaultSettings.settings.size
 
   def isValidSetting(field: Tuple2[String, JsValue]) = {

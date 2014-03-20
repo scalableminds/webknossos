@@ -118,10 +118,10 @@ class PlaneView
       @renderer.autoClear = true
 
       setupRenderArea = (x, y, width, color) =>
-        @renderer.setViewport x, y, width, width 
-        @renderer.setScissor  x, y, width, width 
-        @renderer.enableScissorTest true 
-        @renderer.setClearColor color, 1 
+        @renderer.setViewport x, y, width, width
+        @renderer.setScissor  x, y, width, width
+        @renderer.enableScissorTest true
+        @renderer.setClearColor color, 1
 
       setupRenderArea( 0, 0, @renderer.domElement.width, 0xffffff )
       @renderer.clear()

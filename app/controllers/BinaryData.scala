@@ -203,12 +203,12 @@ object BinaryData extends Controller with Secured {
       respondWithImage(dataSetName, dataLayerName, width, height, x, y, z, resolution)
   }
 
-  // TODO: Move maxContentLength to config 
+  // TODO: Move maxContentLength to config
   def writeViaAjax(dataSetName: String, dataLayerName: String, cubeSize: Int, annotationId: String) = UserAwareAction.async(parse.raw(1048576)) {
     implicit request =>
       for {
         dataSet <- DataSetDAO.findOneBySourceName(dataSetName).toFox ?~> Messages("dataSet.notFound")
-        dataLayer <- tryGetUserDataLayer(dataSet, dataLayerName, Some(annotationId), request.userOpt) ?~> Messages("dataLayer.test") 
+        dataLayer <- tryGetUserDataLayer(dataSet, dataLayerName, Some(annotationId), request.userOpt) ?~> Messages("dataLayer.test")
         payloadBodySize = cubeSize * cubeSize * cubeSize * dataLayer.bytesPerElement
         payload <- request.body.asBytes() ?~> Messages("binary.payload.notSupplied")
         requests <- BinaryProtocol.parseDataWriteRequests(payload, payloadBodySize, containsHandle = false) ?~> Messages("binary.payload.invalid")
@@ -244,7 +244,7 @@ object BinaryData extends Controller with Secured {
   //              val input = Iteratee.foreach[Array[Byte]](in => {
   //                for {
   //                  dataSet <- dataSetOpt
-  //                  dataLayer: DataLayer <- dataSet.dataLayer(dataLayerName) ?~> Messages("dataLayer.notFound")              
+  //                  dataLayer: DataLayer <- dataSet.dataLayer(dataLayerName) ?~> Messages("dataLayer.notFound")             
   //                  channel <- channelOpt
   //                  requests <- BinaryProtocol.parse(in, containsHandle = true)
   //                  dataRequestCollection = createDataRequestCollection(dataSet, dataLayer, cubeSize, requests)

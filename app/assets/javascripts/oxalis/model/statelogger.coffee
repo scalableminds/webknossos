@@ -53,7 +53,7 @@ class StateLogger
 
 
   pushThrottled : ->
-    # Pushes the buffered tracing to the server. Pushing happens at most 
+    # Pushes the buffered tracing to the server. Pushing happens at most
     # every 30 seconds.
 
     saveFkt = => @pushImpl(true)
@@ -61,13 +61,13 @@ class StateLogger
     @pushThrottled()
 
 
-  pushNow : ->   # Interface for view & controller 
+  pushNow : ->   # Interface for view & controller
 
     return @pushImpl(false)
 
 
   pushImpl : (notifyOnFailure) ->
-    
+
     # do not allow multiple pushes, before result is there (breaks versioning)
     # still, return the deferred of the pending push, so that it will be informed about success
     if @pushDeferred?
@@ -96,7 +96,7 @@ class StateLogger
       contentType : "application/json"
     )
     .fail (responseObject) =>
-      
+
       @failedPushCount++
 
       if responseObject.responseText? && responseObject.responseText != ""
@@ -112,7 +112,7 @@ class StateLogger
               =>return null)
             alert("Sorry, but the current state is inconsistent. A reload is necessary.")
             window.location.reload()
-      
+
       @push()
       if notifyOnFailure
         @trigger("pushFailed", @failedPushCount >= 3 )
@@ -121,9 +121,9 @@ class StateLogger
         @pushDeferred = null
 
     .done (response) =>
-      
+
       @failedPushCount = 0
-      
+
       @version = response.version
       @committedDiffs = []
       if @pushDeferred

@@ -27,12 +27,12 @@ class SkeletonTracingPlaneController extends PlaneController
     return _.extend super(planeId),
 
       leftClick : (pos, plane, event) =>
-        
+
         @onClick(pos, event.shiftKey, event.altKey, plane)
 
 
       rightClick : (pos, plane, event) =>
-        
+
         @setWaypoint(@calculateGlobalPos( pos ), event.ctrlKey)
 
 
@@ -57,7 +57,7 @@ class SkeletonTracingPlaneController extends PlaneController
 
       #Branches
       "b" : => @model.skeletonTracing.pushBranch()
-      "j" : => @popBranch() 
+      "j" : => @popBranch()
 
       "s" : @skeletonTracingController.centerActiveNode
 
@@ -70,7 +70,7 @@ class SkeletonTracingPlaneController extends PlaneController
 
   popBranch : =>
 
-    _.defer => @model.skeletonTracing.popBranch().done((id) => 
+    _.defer => @model.skeletonTracing.popBranch().done((id) =>
       @skeletonTracingController.setActiveNode(id, false, true)
     )
 
@@ -92,14 +92,14 @@ class SkeletonTracingPlaneController extends PlaneController
     camera      = @planeView.getCameras()[plane]
     # vector with direction from camera position to click position
     vector = new THREE.Vector3((position.x / (384 * scaleFactor) ) * 2 - 1, - (position.y / (384 * scaleFactor)) * 2 + 1, 0.5)
-    
+
     # create a ray with the direction of this vector, set ray threshold depending on the zoom of the 3D-view
     projector = new THREE.Projector()
     raycaster = projector.pickingRay(vector, camera)
     raycaster.ray.threshold = @model.flycam.getRayThreshold(plane)
 
     raycaster.ray.__scalingFactors = @model.scaleInfo.nmPerVoxel
- 
+
     # identify clicked object
     intersects = raycaster.intersectObjects(@sceneController.skeleton.getAllNodes())
 
@@ -130,7 +130,7 @@ class SkeletonTracingPlaneController extends PlaneController
         centered = plane == constants.TDView
         @skeletonTracingController.setActiveNode(nodeID, shiftPressed and altPressed, centered)
         break
-  
+
 
   setWaypoint : (position, ctrlPressed) =>
 
@@ -138,16 +138,16 @@ class SkeletonTracingPlaneController extends PlaneController
     # set the new trace direction
     if activeNode
       @model.flycam.setDirection([
-        position[0] - activeNode.pos[0], 
-        position[1] - activeNode.pos[1], 
+        position[0] - activeNode.pos[0],
+        position[1] - activeNode.pos[1],
         position[2] - activeNode.pos[2]
       ])
 
     @addNode(position, not ctrlPressed)
 
     # Strg + Rightclick to set new not active branchpoint
-    if ctrlPressed and 
-      @model.user.get("newNodeNewTree") == false and 
+    if ctrlPressed and
+      @model.user.get("newNodeNewTree") == false and
         @model.skeletonTracing.getActiveNodeType() == constants.TYPE_USUAL
 
       @model.skeletonTracing.pushBranch()

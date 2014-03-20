@@ -1,4 +1,4 @@
-### define 
+### define
 three : THREE
 jquery : $
 ###
@@ -13,12 +13,12 @@ class Mesh
 
   constructor : (geometry) ->
 
-    @mesh = new THREE.Mesh( 
-      geometry, 
+    @mesh = new THREE.Mesh(
+      geometry,
       new THREE.MeshBasicMaterial( color: 0xffffff, shading: THREE.NoShading, vertexColors: THREE.VertexColors )
     )
 
-  
+
   setPosition : (x, y, z) ->
 
     { mesh } = this
@@ -29,7 +29,7 @@ class Mesh
 
 
   attachScene : (scene) ->
-    
+
     scene.add @mesh
 
 
@@ -50,4 +50,4 @@ class Mesh
 
     deferred.promise()
 
-    
+

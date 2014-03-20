@@ -26,7 +26,7 @@ class BoundingBox
 
     return true unless @boundingBox?
 
-    { min, max } = @getBoxForZoomStep zoomStep 
+    { min, max } = @getBoxForZoomStep zoomStep
 
     return (
       min[0] <= x <= max[0] and
@@ -39,7 +39,7 @@ class BoundingBox
 
     return true unless @boundingBox?
 
-    { min, max } = @getBoxForZoomStep zoomStep 
+    { min, max } = @getBoxForZoomStep zoomStep
 
     return (
       min[0] < x < max[0] and

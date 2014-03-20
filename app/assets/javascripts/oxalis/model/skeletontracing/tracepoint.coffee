@@ -23,7 +23,7 @@ class TracePoint
       for neighbor in @neighbors
         if neighbor != parent
           return neighbor
-          
+
     res = []
     for neighbor in @neighbors
       if neighbor != parent
@@ -37,7 +37,7 @@ class TracePoint
 
     childrenIterator = @children
     parentIterator   = @
-    
+
     while childrenIterator.length == 1
       childrenIterator[0].setChildRelation(parentIterator)
       parentIterator = childrenIterator[0]
@@ -48,7 +48,7 @@ class TracePoint
 
 
   setChildRelation : (@parent) =>
-    
+
     # Make sure you only look once at every node. Assumes
     # that @_seen does not exist or has been initialized
     # to false for all nodes
@@ -70,4 +70,4 @@ class TracePoint
         # Remove neighbor
         @neighbors.splice(i, 1)
         return
-        
+

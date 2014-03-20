@@ -3,13 +3,13 @@
 
 class Uint8ArrayBuilder
 
-  
+
   constructor : ->
 
     @arrays = []
     @size   = 0
 
-  
+
   push : (array) ->
 
     @size += array.byteLength

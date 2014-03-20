@@ -1,9 +1,9 @@
 describe 'request', ->
-  
+
   it 'should load an arraybuffer', ->
     async (done) ->
-    
-      request 
+
+      request
         url : '/binary/model/cube'
         responseType : 'arraybuffer'
         ,

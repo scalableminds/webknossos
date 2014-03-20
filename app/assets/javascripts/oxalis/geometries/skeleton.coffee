@@ -13,7 +13,7 @@ class Skeleton
   # nodes, edges and trees
 
   COLOR_ACTIVE : 0xff0000
-  
+
   constructor : (@flycam, @model) ->
 
     _.extend(this, new EventMixin())
@@ -23,24 +23,24 @@ class Skeleton
     @isVisible      = true
 
     @showInactiveTrees = true
-    
+
     @reset()
 
     @skeletonTracing.on
-      newActiveNode : => 
+      newActiveNode : =>
         @setActiveNode()
         @setInactiveTreeVisibility(@showInactiveTrees)
       newActiveNodeRadius : =>
         @setActiveNodeRadius()
-      newTree : (treeId, treeColor) => 
+      newTree : (treeId, treeColor) =>
         @createNewTree(treeId, treeColor)
         @setInactiveTreeVisibility(@showInactiveTrees)
       deleteTree : (index) => @deleteTree(index)
       deleteActiveNode : (node, treeId) => @deleteNode(node, treeId)
-      mergeTree : (lastTreeID, lastNode, activeNode) => 
+      mergeTree : (lastTreeID, lastNode, activeNode) =>
         @mergeTree(lastTreeID, lastNode, activeNode)
       newNode : (centered) => @setWaypoint(centered)
-      setBranch : (isBranchPoint, node) => 
+      setBranch : (isBranchPoint, node) =>
         @setBranch(isBranchPoint, node)
       reloadTrees : (trees, finishedDeferred) =>
         @skeletonTracing.one("finishedRender", =>
@@ -55,7 +55,7 @@ class Skeleton
 
 
   createNewTree : (treeId, treeColor) ->
-    
+
     @treeGeometries.push( tree = new Tree(treeId, treeColor, @model) )
     @setActiveNode()
     @trigger "newGeometries", tree.getMeshes()
@@ -221,13 +221,14 @@ class Skeleton
   setVisibilityTemporary : (isVisible) ->
 
     for mesh in @getMeshes()
-      mesh.visible = isVisible
+      mesh.visible = isVisible && (if mesh.isVisible? then mesh.isVisible else true)
     @flycam.update()
 
 
   setVisibility : (@isVisible) ->
 
     @flycam.update()
+
 
   restoreVisibility : ->
 
@@ -242,7 +243,8 @@ class Skeleton
   updateForCam : (id) ->
 
     for tree in @treeGeometries
-      tree.showRadius( id != constants.TDView )
+      tree.showRadius( id != constants.TDView and
+        not @model.user.get("overrideNodeRadius") )
 
     if id in constants.ALL_PLANES
       @setVisibilityTemporary( @isVisible )
@@ -259,10 +261,10 @@ class Skeleton
   setInactiveTreeVisibility : (visible) ->
 
     for mesh in @getMeshes()
-      mesh.visible = visible
+      mesh.isVisible = visible
     treeGeometry = @getTreeGeometry(@skeletonTracing.getTree().treeId)
-    treeGeometry.edges.visible = true
-    treeGeometry.nodes.visible = true
+    treeGeometry.edges.isVisible = true
+    treeGeometry.nodes.isVisible = true
     @flycam.update()
 
 

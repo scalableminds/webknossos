@@ -14,7 +14,7 @@ $.fn.alertWithTimeout = (timeout = 3000) ->
     $this.hover(
       ->
         clearTimeout(timerId)
-      -> 
+      ->
         timerId = setTimeout(
           -> $this.alert("close")
           timeout
@@ -50,7 +50,7 @@ Toast =
     return
 
 
-  success : (message, sticky) -> 
+  success : (message, sticky) ->
 
     if message?
       @message("success", message, sticky)
@@ -58,8 +58,8 @@ Toast =
       @message("success", "Success :-)", sticky)
 
 
-  error : (message, sticky = true) -> 
-    
+  error : (message, sticky = true) ->
+
     if message?
       @message("error", message, sticky)
     else

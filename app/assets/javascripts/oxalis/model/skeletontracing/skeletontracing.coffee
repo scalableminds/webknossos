@@ -45,7 +45,7 @@ class SkeletonTracing
     @stateLogger = new SkeletonTracingStateLogger(
       @flycam, tracing.version, tracing.id, tracing.typ,
       tracing.restrictions.allowUpdate, this)
- 
+
     tracingParser = new TracingParser(@, @data)
     {
       @idCount

@@ -53,7 +53,7 @@ class ArbitraryController
     @isStarted = false
 
     @canvas = canvas = $("#render-canvas")
-    
+
     @cam = @model.flycam3d
     @arbitraryView = new ArbitraryView(canvas, @cam, stats, @view, @model.scaleInfo)
 
@@ -66,6 +66,10 @@ class ArbitraryController
 
     @crosshair = new Crosshair(@cam, model.user.get("crosshairSize"))
     @arbitraryView.addGeometry(@crosshair)
+
+    @model.user.on
+      displayCrosshairChanged : (displayCrosshair) =>
+        @crosshair.setVisibility(displayCrosshair)
 
     @bind()
     @arbitraryView.draw()
@@ -107,30 +111,30 @@ class ArbitraryController
     getVoxelOffset  = (timeFactor) =>
 
       return @model.user.get("moveValue3d") * timeFactor / @model.scaleInfo.baseVoxel / constants.FPS
-    
-    
+
+
     @input.keyboard = new Input.Keyboard(
- 
+
       #Scale plane
       "l"             : (timeFactor) => @arbitraryView.applyScale -@model.user.get("scaleValue")
       "k"             : (timeFactor) => @arbitraryView.applyScale  @model.user.get("scaleValue")
 
-      #Move   
+      #Move
       "w"             : (timeFactor) => @cam.move [0, getVoxelOffset(timeFactor), 0]
       "s"             : (timeFactor) => @cam.move [0, -getVoxelOffset(timeFactor), 0]
       "a"             : (timeFactor) => @cam.move [getVoxelOffset(timeFactor), 0, 0]
       "d"             : (timeFactor) => @cam.move [-getVoxelOffset(timeFactor), 0, 0]
-      "space"         : (timeFactor) =>  
+      "space"         : (timeFactor) =>
         @cam.move [0, 0, getVoxelOffset(timeFactor)]
         @moved()
       "alt + space"   : (timeFactor) => @cam.move [0, 0, -getVoxelOffset(timeFactor)]
-      
+
       #Rotate in distance
       "left"          : (timeFactor) => @cam.yaw @model.user.get("rotateValue") * timeFactor, @mode == constants.MODE_ARBITRARY
       "right"         : (timeFactor) => @cam.yaw -@model.user.get("rotateValue") * timeFactor, @mode == constants.MODE_ARBITRARY
       "up"            : (timeFactor) => @cam.pitch -@model.user.get("rotateValue") * timeFactor, @mode == constants.MODE_ARBITRARY
       "down"          : (timeFactor) => @cam.pitch @model.user.get("rotateValue") * timeFactor, @mode == constants.MODE_ARBITRARY
-      
+
       #Rotate at centre
       "shift + left"  : (timeFactor) => @cam.yaw @model.user.get("rotateValue") * timeFactor
       "shift + right" : (timeFactor) => @cam.yaw -@model.user.get("rotateValue") * timeFactor
@@ -145,7 +149,7 @@ class ArbitraryController
       "h"             : (timeFactor) => @changeMoveValue(25)
       "g"             : (timeFactor) => @changeMoveValue(-25)
     )
-    
+
     @input.keyboardNoLoop = new Input.KeyboardNoLoop(
 
       "1" : => @skeletonTracingController.toggleSkeletonVisibility()
@@ -154,11 +158,11 @@ class ArbitraryController
       #Delete active node
       "delete" : => @model.skeletonTracing.deleteActiveNode()
       "c" : => @model.skeletonTracing.createNewTree()
-      
+
       #Branches
       "b" : => @pushBranch()
-      "j" : => @popBranch() 
-      
+      "j" : => @popBranch()
+
       #Reset Matrix
       "r" : => @cam.resetRotation()
 
@@ -166,11 +170,11 @@ class ArbitraryController
       "y" : => @centerActiveNode()
 
       #Recording of Waypoints
-      "z" : => 
+      "z" : =>
         @record = true
         @infoPlane.updateInfo(true)
         @setWaypoint()
-      "u" : => 
+      "u" : =>
         @record = false
         @infoPlane.updateInfo(false)
       #Comments
@@ -184,7 +188,7 @@ class ArbitraryController
       "shift + space" : =>
         @model.skeletonTracing.deleteActiveNode()
         @centerActiveNode()
-        
+
     , -1)
 
   init : ->
@@ -201,37 +205,39 @@ class ArbitraryController
     for name, binary of @model.binary
       binary.cube.on "bucketLoaded", => @arbitraryView.draw()
 
-    @model.user.on "crosshairSizeChanged", (value) =>
-      @crosshair.setScale(value)
+    @model.user.on
 
-    @model.user.on "clippingDistanceArbitraryChanged", (value) =>
-      @setClippingDistance(value)
+      crosshairSizeChanged : (value) =>
+        @crosshair.setScale(value)
+
+      sphericalCapRadiusChanged : (value) =>
+        @model.flycam3d.distance = value
+        @plane.setMode @mode
+
+      clippingDistanceArbitraryChanged : (value) =>
+        @setClippingDistance(value)
 
 
   start : (@mode) ->
 
     @stop()
 
-    if @mode == constants.MODE_ARBITRARY
-      @plane.queryVertices = @plane.queryVerticesSphere
-    else if @mode == constants.MODE_ARBITRARY_PLANE
-      @plane.queryVertices = @plane.queryVerticesPlane
-    @plane.isDirty = true
+    @plane.setMode @mode
 
     @initKeyboard()
     @initMouse()
     @arbitraryView.start()
     @init()
-    @arbitraryView.draw()   
+    @arbitraryView.draw()
 
-    @isStarted = true 
- 
+    @isStarted = true
+
 
   stop : ->
 
     if @isStarted
       @input.unbind()
-    
+
     @arbitraryView.stop()
 
     @isStarted = false
@@ -250,7 +256,7 @@ class ArbitraryController
 
   setWaypoint : () =>
 
-    unless @record 
+    unless @record
       return
 
     position  = @cam.getPosition()
@@ -288,7 +294,7 @@ class ArbitraryController
 
   popBranch : ->
 
-    _.defer => @model.skeletonTracing.popBranch().done((id) => 
+    _.defer => @model.skeletonTracing.popBranch().done((id) =>
       @setActiveNode(id, true)
     )
 
@@ -314,7 +320,7 @@ class ArbitraryController
   setActiveNode : (nodeId, centered, mergeTree) ->
 
     @model.skeletonTracing.setActiveNode(nodeId, mergeTree)
-    @cam.setPosition @model.skeletonTracing.getActiveNodePos()  
+    @cam.setPosition @model.skeletonTracing.getActiveNodePos()
 
 
   moved : ->
@@ -335,4 +341,4 @@ class ArbitraryController
 
     if vectorLength > 10
       @setWaypoint()
-      @lastNodeMatrix = matrix    
+      @lastNodeMatrix = matrix

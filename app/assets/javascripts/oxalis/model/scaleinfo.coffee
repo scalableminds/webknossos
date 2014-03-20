@@ -1,11 +1,11 @@
-### define 
+### define
 three : THREE
 ###
 # This class encapsulates any conversions between the nm and voxel
 # coordinate system.
 
 class ScaleInfo
-  
+
   constructor : (scale) ->
 
     @nmPerVoxel = scale
@@ -44,7 +44,7 @@ class ScaleInfo
 
     res = @baseVoxelFactors.slice();
     for i in [0..2]
-    	res *= baseVoxel
+      res *= baseVoxel
     return res
 
-    
+

@@ -1,4 +1,4 @@
-### define 
+### define
 three : THREE
 ###
 
@@ -23,7 +23,7 @@ class ArbitraryPlaneInfo
     canvas = document.createElement("canvas")
     canvas.width = WIDTH
     canvas.height = HEIGHT
-    
+
     @context = canvas.getContext("2d")
 
     @updateInfo(false)
@@ -74,5 +74,5 @@ class ArbitraryPlaneInfo
     context.closePath()
     context.stroke()  if stroke
     context.fill()  if fill
-    context.fillStyle = "rgba(255, 255, 255, #{ALPHA})"    
+    context.fillStyle = "rgba(255, 255, 255, #{ALPHA})"
     context.fillText(text, WIDTH * 0.5, HEIGHT * 0.5 + 3)

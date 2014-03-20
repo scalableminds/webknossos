@@ -1,13 +1,13 @@
 @(form: Form[(String, String, String, String, String)], teams: List[models.team.Team])(implicit session: oxalis.view.SessionData)
 
 @main( ){
- 
+
   <div class="container">
     <div class="span9 offset1 space-top">
       <div class="well">
-       
+      
         @helper.form(routes.Authentication.handleRegistration, 'class -> "form-horizontal") {
-       
+      
           <legend>Sign up</legend>
 
           <div class="alert alert-info">
@@ -27,7 +27,7 @@
           @helper.inputText(form("lastName"))
           @helper.inputPassword(form("password.main"))
           @helper.inputPassword(form("password.validation"))
-         
+        
           <div class="form-actions">
             <button type="submit" class="btn btn-primary">Sign up</button>
           </div>
@@ -36,4 +36,4 @@
     </div>
   </div>
 }
- 
+

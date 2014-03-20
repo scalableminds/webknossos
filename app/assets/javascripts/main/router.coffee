@@ -15,6 +15,7 @@ class Router extends Backbone.Router
     "users"                         : "users"
     "teams"                         : "teams"
     "datasets"                      : "datasets"
+    "statistics"                    : "statistics"
     "tasks"                         : "tasks"
 
 
@@ -45,6 +46,15 @@ class Router extends Backbone.Router
   projects : ->
 
     @showWithPagination("ProjectListView", "ProjectCollection")
+
+
+  statistics : ->
+
+    require ["admin/admin"], (admin) =>
+
+      statisticView = new admin["StatisticView"]()
+      @changeView(statisticView)
+      return @hideLoading()
 
 
   datasets : ->

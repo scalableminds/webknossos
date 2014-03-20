@@ -221,6 +221,9 @@ object AnnotationDAO
     }
   }
 
+  def countAll(implicit ctx: DBAccessContext) =
+    count(Json.obj())
+
   def finish(_annotation: BSONObjectID)(implicit ctx: DBAccessContext) =
     findAndModify(
       Json.obj("_id" -> _annotation),

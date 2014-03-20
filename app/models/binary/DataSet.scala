@@ -3,7 +3,7 @@ package models.binary
 import play.api.libs.functional.syntax._
 import models.basics._
 import play.api.libs.json._
-import braingames.binary.models.{DataSourceRepository => AbstractDataSourceRepository, UsableDataSource, DataSourceLike, UnusableDataSource, DataSource}
+import braingames.binary.models.{DataSourceRepository => AbstractDataSourceRepository, _}
 import models.user.User
 import braingames.reactivemongo.{DefaultAccessDefinitions, DBAccessContext, GlobalDBAccess, SecuredMongoDAO}
 import play.api.libs.concurrent.Execution.Implicits._
@@ -12,13 +12,20 @@ import braingames.util.FoxImplicits
 import oxalis.binary.BinaryDataService
 import play.api.Logger
 import net.liftweb.common.Full
+import play.api.libs.concurrent.Akka
+import net.liftweb.common.Full
+import scala.Some
+import braingames.reactivemongo.AccessRestrictions.AllowIf
+import braingames.binary.models.UnusableDataSource
 
-object DataSetRepository extends AbstractDataSourceRepository with GlobalDBAccess with FoxImplicits {
+object DataSetRepository extends AbstractDataSourceRepository with InMemoryInboxSourceRepository with GlobalDBAccess with FoxImplicits {
 
-  def findByName(name: String) =
+  val system = Akka.system(play.api.Play.current)
+
+  def findDataSource(name: String) =
     DataSetDAO.findOneBySourceName(name).flatMap(_.dataSource)
 
-  def foundDataSources(dataSources: List[DataSourceLike]): Unit = {
+  def updateDataSources(dataSources: List[DataSourceLike]): Unit = {
     // TODO: this does only work for a single dataSource! datasets need to be assigned a unique id
     Logger.info("Available datasets: " + dataSources.map(_.id).mkString(", "))
     dataSources.map{
@@ -88,12 +95,12 @@ object DataSetService {
   }
 
   def importDataSet(dataSet: DataSet)(implicit ctx: DBAccessContext) = {
-    BinaryDataService.importDataSource(dataSet.name).map(_.map(_.map { usableDataSource =>
+    BinaryDataService.importDataSource(dataSet.name).map{ usableDataSource =>
       DataSetDAO.updateDataSource(dataSet.name, usableDataSource.dataSource)
       DataSetDAO.updateActiveState(dataSet.name, true)
       Logger.warn(s"Added datasource '${dataSet.name}' to db")
       usableDataSource
-    }))
+    }
   }
 }
 

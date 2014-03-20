@@ -10,6 +10,7 @@ admin/views/task/task_list_view : TaskListView
 admin/models/task/task_collection : TaskCollection
 admin/views/project/project_list_view : ProjectListView
 admin/models/project/project_collection : ProjectCollection
+admin/views/statistic/statistic_view : StatisticView
 ###
 
 # ####
@@ -29,5 +30,6 @@ return {
   TaskCollection
   ProjectListView
   ProjectCollection
+  StatisticView
 }
 

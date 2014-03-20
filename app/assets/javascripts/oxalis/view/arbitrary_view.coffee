@@ -9,7 +9,10 @@ underscore : _
 
 class ArbitraryView
 
-  CAM_DISTANCE   : 128
+  # CAM_DISTANCE has to be calculates such that with cam
+  # angle 45°, the plane of width 128 fits exactly in the
+  # viewport.
+  CAM_DISTANCE   : 64 / Math.tan( Math.PI / 180 * 45 / 2 )
   DEFAULT_SCALE  : 2
   MAX_SCALE      : 3
   MIN_SCALE      : 1
@@ -59,8 +62,11 @@ class ArbitraryView
       @isRunning = true
 
       for element in @group.children
-        element.visible = true
+        element.setVisibility = element.setVisibility || (v) -> this.visible = v
+        element.setVisibility true
+
       $("#arbitrary-info-canvas").show()
+      $('#trace-rotation').show()
 
       @resize()
       # start the rendering loop
@@ -75,8 +81,11 @@ class ArbitraryView
       @isRunning = false
 
       for element in @group.children
-        element.visible = false
+        element.setVisibility = element.setVisibility || (v) -> this.visible = v
+        element.setVisibility false
+
       $("#arbitrary-info-canvas").hide()
+      $('#trace-rotation').hide()
 
       $(window).off "resize", @resize
 

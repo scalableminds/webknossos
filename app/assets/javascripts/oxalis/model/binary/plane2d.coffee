@@ -82,7 +82,7 @@ class Plane2D
     @dataTexture.ready = false
 
 
-  get : (position, {zoomStep, area}) ->
+  get : ({position, zoomStep, area}) ->
 
     $.when(@getImpl(position, zoomStep, area))
 

@@ -38,10 +38,15 @@ class Flycam2d
     # correct zoom values that are too high
     @user.set("zoom", Math.min(@user.get("zoom"), Math.floor(@getMaxZoomStep())))
 
-    @user.on({
+    @user.on
       qualityChanged : (quality) => @setQuality(quality)
       zoomChanged : (zoomFactor) => @zoom(Math.log(zoomFactor) / Math.LN2)
-      })
+
+    # Fire changed event every time
+    _trigger = @trigger
+    @trigger = =>
+      _trigger.apply(this, arguments)
+      _trigger.call(this, "changed")
 
 
   zoomByDelta : (delta) ->

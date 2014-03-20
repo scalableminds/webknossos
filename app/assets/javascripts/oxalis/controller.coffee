@@ -8,6 +8,7 @@ underscore : _
 ./controller/combinations/skeletontracing_plane_controller : SkeletonTracingPlaneController
 ./controller/combinations/volumetracing_plane_controller : VolumeTracingPlaneController
 ./controller/scene_controller : SceneController
+./controller/url_manager : UrlManager
 ./model : Model
 ./view : View
 ./view/skeletontracing/skeletontracing_view : SkeletonTracingView
@@ -50,8 +51,9 @@ class Controller
     @mode = constants.MODE_PLANE_TRACING
 
     @model = new Model()
+    @urlManager = new UrlManager(this, @model)
 
-    @model.initialize( @controlMode ).done ({restrictions, settings, error}) =>
+    @model.initialize( @controlMode, @urlManager.initialState ).done ({restrictions, settings, error}) =>
 
       # Do not continue, when there was an error and we got no settings from the server
       if error
@@ -60,6 +62,8 @@ class Controller
       unless restrictions.allowAccess
         Toast.Error "You are not allowed to access this tracing"
         return
+
+      @urlManager.startUrlUpdater()
 
       for allowedMode in settings.allowedModes
         @allowedModes.push switch allowedMode
@@ -77,7 +81,7 @@ class Controller
       @gui = @createGui(restrictions, settings)
 
       @sceneController = new SceneController(
-        @model.binary["color"].cube.upperBoundary, @model.flycam, @model)
+        @model.upperBoundary, @model.flycam, @model)
 
 
       if @model.skeletonTracing?
@@ -141,11 +145,12 @@ class Controller
         $("#view-mode").hide()
 
       @allowedModes.sort()
-      #@setMode( constants.MODE_PLANE_TRACING, true )
       if @allowedModes.length == 0
         Toast.error("There was no valid allowed tracing mode specified.")
       else
         @setMode( @allowedModes[0] )
+      if @urlManager.initialState.mode?
+        @setMode( @urlManager.initialState.mode )
 
       # initial trigger
       @sceneController.setSegmentationAlpha($('#alpha-slider').data("slider-value") or constants.DEFAULT_SEG_ALPHA)
@@ -249,13 +254,12 @@ class Controller
 
   createGui : (restrictions, settings)->
 
-    { model } = @
-
-    gui = new Gui($("#optionswindow"), model, restrictions, settings)
+    gui = new Gui($("#optionswindow"), @model, restrictions, settings)
     gui.update()
 
-    model.binary["color"].pullQueue.set4Bit(model.user.get("fourBit"))
-    model.binary["color"].updateContrastCurve(
-      gui.settingsGeneral.brightness, gui.settingsGeneral.contrast)
+    for binary in @model.getColorBinaries()
+      binary.pullQueue.set4Bit(@model.user.get("fourBit"))
+      binary.updateContrastCurve(
+        gui.settingsGeneral.brightness, gui.settingsGeneral.contrast)
 
     return gui

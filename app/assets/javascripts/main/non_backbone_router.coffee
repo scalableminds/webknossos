@@ -5,7 +5,7 @@ backbone : Backbone
 oxalis/constants : constants
 ###
 
-class Router extends Backbone.Router
+class NonBackboneRouter extends Backbone.Router
 
   routes :
     "dashboard"                     : "dashboard"

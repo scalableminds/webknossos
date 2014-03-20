@@ -17,6 +17,7 @@ class Router extends Backbone.Router
     "datasets"                      : "datasets"
     "statistics"                    : "statistics"
     "tasks"                         : "tasks"
+    "projects"                      : "projects"
 
 
   initialize : ->
@@ -50,11 +51,7 @@ class Router extends Backbone.Router
 
   statistics : ->
 
-    require ["admin/admin"], (admin) =>
-
-      statisticView = new admin["StatisticView"]()
-      @changeView(statisticView)
-      return @hideLoading()
+    @showAdminView("StatisticView")
 
 
   datasets : ->
@@ -87,6 +84,21 @@ class Router extends Backbone.Router
 
       @changeView(paginationView, view)
       @listenTo(collection, "sync", => @hideLoading())
+
+
+  showAdminView : (view, collection) ->
+
+    require ["admin/admin"], (admin) =>
+
+      if collection
+        collection = new admin[collection]()
+        view = new admin[view](collection : collection)
+        @listenTo(collection, "sync", => @hideLoading())
+      else
+        view = new admin[view]()
+        @hideLoading()
+
+      @changeView(view)
 
 
   changeView : (views...) ->

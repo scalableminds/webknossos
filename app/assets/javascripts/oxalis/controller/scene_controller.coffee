@@ -195,9 +195,11 @@ class SceneController
 
   pingDataLayer : (dataLayerName) ->
 
-    if dataLayerName == "color" then return @pingBinary
-    if dataLayerName == "segmentation" then return @pingBinarySeg
-    false
+    if @model.binary[dataLayerName].category == "color"
+      return @pingBinary
+    if @model.binary[dataLayerName].category == "segmentation"
+      return @pingBinarySeg
+    return false
 
 
   stop : ->

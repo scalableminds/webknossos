@@ -97,30 +97,32 @@ class Model
                   ]
                 }
 
-            supportedDataLayers = [{name: "color", allowManipulation : true},
-                                    {name: "volume", allowManipulation : false},
-                                    {name: "segmentation", allowManipulation : false}]  
+            layerOptions = {
+              color : { allowManipulation : true },
+              volume : { allowManipulation : false },
+              segmentation : { allowManipulation : false }
+            }
 
-            # For now, let's make sure we always have a segmentation layer
-            #unless _.find( dataSet.dataLayers, (layer) -> layer.typ == "segmentation" )?
-            #  dataSet.dataLayers.push(
-            #    maxCoordinates : dataSet.dataLayers[0].maxCoordinates
-            #    resolutions : [0]
-            #    typ : "segmentation"
-            #    elementClass : "uint16"
-            #    noData : true )
-
+            @dataSetName = dataSet.name
             zoomStepCount = Infinity
             @binary = {}
+            @lowerBoundary = [ Infinity,  Infinity,  Infinity]
+            @upperBoundary = [-Infinity, -Infinity, -Infinity]
+            
             for layer in dataSet.dataLayers
-              for supportedLayer in supportedDataLayers
-                if layer.typ == supportedLayer.name
-                  supportedLayer.bitDepth = parseInt( layer.elementClass.substring(4) )
-                  @binary[layer.typ] = new Binary(@user, tracing, supportedLayer, tracingId, @boundingBox)
-                  zoomStepCount = Math.min(zoomStepCount, @binary[layer.typ].cube.ZOOM_STEP_COUNT - 1)
 
-            unless @binary["color"]?
+              _.extend layer, layerOptions[layer.name]
+              layer.bitDepth = parseInt( layer.elementClass.substring(4) )
+              @binary[layer.name] = new Binary(this, tracing, layer, tracingId)
+              zoomStepCount = Math.min(zoomStepCount, @binary[layer.name].cube.ZOOM_STEP_COUNT - 1)
+
+              for i in [0..2]
+                @lowerBoundary[i] = Math.min @lowerBoundary[i], @binary[layer.name].lowerBoundary[i]
+                @upperBoundary[i] = Math.max @upperBoundary[i], @binary[layer.name].upperBoundary[i]
+
+            if @getColorBinaries().length == 0
               Toast.error("No data available! Something seems to be wrong with the dataset.")
+            @setDefaultBinaryColors()
 
             # if "volume" layer still used, change name to segmentation
             if @binary["volume"]?
@@ -153,3 +155,26 @@ class Model
             
           -> Toast.error("Ooops. We couldn't communicate with our mother ship. Please try to reload this page.")
         )
+
+
+  getColorBinaries : ->
+
+    result = []
+    for name, binary of @binary
+      if binary.category == "color"
+        result.push binary
+
+    return result
+
+
+  setDefaultBinaryColors : ->
+
+    colorBinaries = @getColorBinaries()
+
+    if colorBinaries.length == 1
+      defaultColors = [[255, 255, 255]]
+    else
+      defaultColors = [[255, 0, 0], [0, 255, 0], [0, 0, 255]]
+
+    for binary, i in colorBinaries
+      binary.setColor( defaultColors[i % defaultColors.length] )

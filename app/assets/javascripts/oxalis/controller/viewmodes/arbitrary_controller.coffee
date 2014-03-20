@@ -77,7 +77,8 @@ class ArbitraryController
 
     @model.logConnectionInfo()
     matrix = @cam.getMatrix()
-    @model.binary["color"].arbitraryPing(matrix)
+    for binary in @model.getColorBinaries()
+      binary.arbitraryPing(matrix)
 
 
   initMouse : ->
@@ -197,7 +198,8 @@ class ArbitraryController
     @arbitraryView.on "render", (force, event) => @render(force, event)
     @arbitraryView.on "finishedRender", => @model.skeletonTracing.rendered()
 
-    @model.binary["color"].cube.on "bucketLoaded", => @arbitraryView.draw()
+    for name, binary of @model.binary
+      binary.cube.on "bucketLoaded", => @arbitraryView.draw()
 
     @model.user.on "crosshairSizeChanged", (value) =>
       @crosshair.setScale(value)

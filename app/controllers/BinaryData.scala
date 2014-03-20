@@ -9,7 +9,6 @@ import models.binary._
 import models.user.User
 import models.annotation.AnnotationDAO
 import models.tracing.volume.VolumeTracing
-import oxalis.security.{UserAwareRequest, AuthenticatedRequest, Secured}
 import scala.concurrent.Future
 import oxalis.security._
 import braingames.geometry.Point3D
@@ -49,7 +48,7 @@ object BinaryData extends Controller with Secured {
 
   def requestData(
                    dataSetName: String,
-                   dataLayerTyp: String,
+                   dataLayerName: String,
                    cubeSize: Int,
                    parsedRequest: ParsedRequestCollection[ParsedDataReadRequest],
                    annotationId: Option[String],
@@ -57,7 +56,7 @@ object BinaryData extends Controller with Secured {
                  )(implicit ctx: DBAccessContext): Fox[Array[Byte]] = {
     for {
       dataSet <- DataSetDAO.findOneBySourceName(dataSetName) ?~> Messages("dataSet.notFound")
-      dataLayer <- getDataLayer(dataSet, dataLayerTyp, annotationId, userOpt) ?~> Messages("dataLayer.notFound")
+      dataLayer <- getDataLayer(dataSet, dataLayerName, annotationId, userOpt) ?~> Messages("dataLayer.notFound")
       dataRequestCollection <- createDataRequestCollection(dataSet, dataLayer, cubeSize, parsedRequest) ?~> Messages("dataSet.source.notFound")
       data <- BinaryDataService.handleDataRequest(dataRequestCollection) ?~> "Data request couldn't get handled"
     } yield {
@@ -67,7 +66,7 @@ object BinaryData extends Controller with Secured {
 
   def requestData(
                    dataSetName: String,
-                   dataLayerTyp: String,
+                   dataLayerName: String,
                    position: Point3D,
                    width: Int,
                    height: Int,
@@ -80,7 +79,7 @@ object BinaryData extends Controller with Secured {
     for {
       dataSet <- DataSetDAO.findOneBySourceName(dataSetName) ?~> Messages("dataSet.notFound")
       dataSource <- dataSet.dataSource ?~> Messages("dataSet.source.notFound")
-      dataLayer <- getDataLayer(dataSet, dataLayerTyp, annotationId, userOpt) ?~> Messages("dataLayer.notFound")
+      dataLayer <- getDataLayer(dataSet, dataLayerName, annotationId, userOpt) ?~> Messages("dataLayer.notFound")
 
       dataRequestCollection = BinaryDataService.createDataReadRequest(
         dataSource,
@@ -122,17 +121,17 @@ object BinaryData extends Controller with Secured {
     } yield r
   }
 
-  def requestViaAjaxDebug(dataSetName: String, dataLayerTyp: String, cubeSize: Int, x: Int, y: Int, z: Int, resolution: Int, annotationId: Option[String]) = Authenticated.async {
+  def requestViaAjaxDebug(dataSetName: String, dataLayerName: String, cubeSize: Int, x: Int, y: Int, z: Int, resolution: Int, annotationId: Option[String]) = Authenticated.async {
     implicit request =>
       val dataRequests = ParsedRequestCollection(Array(ParsedDataReadRequest(resolution, Point3D(x, y, z), false)))
       for {
-        data <- requestData(dataSetName, dataLayerTyp, cubeSize, dataRequests, annotationId, Some(request.user))
+        data <- requestData(dataSetName, dataLayerName, cubeSize, dataRequests, annotationId, Some(request.user))
       } yield {
         Ok(data)
       }
   }
 
-  def tryGetUserDataLayer(dataSet: DataSet, dataLayerTyp: String, annotationId: Option[String], userOpt: Option[User])(implicit ctx: DBAccessContext): Fox[DataLayer] = {
+  def tryGetUserDataLayer(dataSet: DataSet, dataLayerName: String, annotationId: Option[String], userOpt: Option[User])(implicit ctx: DBAccessContext): Fox[DataLayer] = {
     // TODO: FIXME - this doesn't always work, sometimes the 'annotationId' sent is actualy the dataset name
     for {
       id <- annotationId.flatMap(BSONObjectID.parse(_).toOption).toFox
@@ -140,17 +139,17 @@ object BinaryData extends Controller with Secured {
       if annotation.restrictions.allowAccess(userOpt)
       VolumeTracing(_, userDataLayerName, _, _, _, _, _) <- annotation.content
       userDataLayer <- UserDataLayerDAO.findOneByName(userDataLayerName).toFox
-      if userDataLayer.dataSourceName == dataSet.name && userDataLayer.dataLayer.typ == dataLayerTyp
+      if userDataLayer.dataSourceName == dataSet.name
     } yield {
       userDataLayer.dataLayer
     }
   }
 
-  def getDataLayer(dataSet: DataSet, dataLayerTyp: String, annotationId: Option[String], userOpt: Option[User])(implicit ctx: DBAccessContext): Fox[DataLayer] = {
-    tryGetUserDataLayer(dataSet, dataLayerTyp, annotationId, userOpt).orElse(
+  def getDataLayer(dataSet: DataSet, dataLayerName: String, annotationId: Option[String], userOpt: Option[User])(implicit ctx: DBAccessContext): Fox[DataLayer] = {
+    tryGetUserDataLayer(dataSet, dataLayerName, annotationId, userOpt).orElse(
       for {
         dataSource <- dataSet.dataSource
-        dataLayer <- dataSource.dataLayer(dataLayerTyp)
+        dataLayer <- dataSource.getDataLayer(dataLayerName)
       } yield {
         dataLayer
       }
@@ -162,25 +161,25 @@ object BinaryData extends Controller with Secured {
    * POST body is specified in the BinaryProtokoll.parseAjax functions.
    */
 
-  def requestViaAjax(dataSetName: String, dataLayerTyp: String, cubeSize: Int, annotationId: Option[String]) = UserAwareAction.async(parse.raw) {
+  def requestViaAjax(dataSetName: String, dataLayerName: String, cubeSize: Int, annotationId: Option[String]) = UserAwareAction.async(parse.raw) {
     implicit request =>
       for {
         payload <- request.body.asBytes() ?~> Messages("binary.payload.notSupplied")
         requests <- BinaryProtocol.parseDataReadRequests(payload, containsHandle = false) ?~> Messages("binary.payload.invalid")
-        data <- requestData(dataSetName, dataLayerTyp, cubeSize, requests, annotationId, request.userOpt) ?~> Messages("binary.data.notFound")
+        data <- requestData(dataSetName, dataLayerName, cubeSize, requests, annotationId, request.userOpt) ?~> Messages("binary.data.notFound")
       } yield {
         Ok(data)
       }
   }
 
-  def respondWithSpriteSheet(dataSetName: String, dataLayerTyp: String, width: Int, height: Int, depth: Int, imagesPerRow: Int, x: Int, y: Int, z: Int, resolution: Int)(implicit request: UserAwareRequest[_]): Future[SimpleResult] = {
+  def respondWithSpriteSheet(dataSetName: String, dataLayerName: String, width: Int, height: Int, depth: Int, imagesPerRow: Int, x: Int, y: Int, z: Int, resolution: Int)(implicit request: UserAwareRequest[_]): Future[SimpleResult] = {
     val settings = DataRequestSettings(useHalfByte = false, skipInterpolation = false)
     for {
       dataSet <- DataSetDAO.findOneBySourceName(dataSetName) ?~> Messages("dataSet.notFound")
       dataSource <- dataSet.dataSource ?~> Messages("dataSet.source.notFound")
-      dataLayer <- dataSource.dataLayer(dataLayerTyp) ?~> Messages("dataLayer.notFound")
+      dataLayer <- dataSource.getDataLayer(dataLayerName) ?~> Messages("dataLayer.notFound")
       params = ImageCreatorParameters(dataLayer.bytesPerElement, width, height, imagesPerRow)
-      data <- requestData(dataSetName, dataLayerTyp, Point3D(x, y, z), width, height, depth, resolution, settings) ?~> Messages("binary.data.notFound")
+      data <- requestData(dataSetName, dataLayerName, Point3D(x, y, z), width, height, depth, resolution, settings) ?~> Messages("binary.data.notFound")
       spriteSheet <- ImageCreator.spriteSheetFor(data, params) ?~> Messages("image.create.failed")
       firstSheet <- spriteSheet.pages.headOption ?~> "Couldn'T create spritesheet"
     } yield {
@@ -190,26 +189,26 @@ object BinaryData extends Controller with Secured {
     }
   }
 
-  def respondWithImage(dataSetName: String, dataLayerTyp: String, width: Int, height: Int, x: Int, y: Int, z: Int, resolution: Int)(implicit request: UserAwareRequest[_]) = {
-    respondWithSpriteSheet(dataSetName, dataLayerTyp, width, height, 1, 1, x, y, z, resolution)
+  def respondWithImage(dataSetName: String, dataLayerName: String, width: Int, height: Int, x: Int, y: Int, z: Int, resolution: Int)(implicit request: UserAwareRequest[_]) = {
+    respondWithSpriteSheet(dataSetName, dataLayerName, width, height, 1, 1, x, y, z, resolution)
   }
 
-  def requestSpriteSheet(dataSetName: String, dataLayerTyp: String, cubeSize: Int, imagesPerRow: Int, x: Int, y: Int, z: Int, resolution: Int) = UserAwareAction.async(parse.raw) {
+  def requestSpriteSheet(dataSetName: String, dataLayerName: String, cubeSize: Int, imagesPerRow: Int, x: Int, y: Int, z: Int, resolution: Int) = UserAwareAction.async(parse.raw) {
     implicit request =>
-      respondWithSpriteSheet(dataSetName, dataLayerTyp, cubeSize, cubeSize, cubeSize, imagesPerRow, x, y, z, resolution)
+      respondWithSpriteSheet(dataSetName, dataLayerName, cubeSize, cubeSize, cubeSize, imagesPerRow, x, y, z, resolution)
   }
 
-  def requestImage(dataSetName: String, dataLayerTyp: String, width: Int, height: Int, x: Int, y: Int, z: Int, resolution: Int) = UserAwareAction.async(parse.raw) {
+  def requestImage(dataSetName: String, dataLayerName: String, width: Int, height: Int, x: Int, y: Int, z: Int, resolution: Int) = UserAwareAction.async(parse.raw) {
     implicit request =>
-      respondWithImage(dataSetName, dataLayerTyp, width, height, x, y, z, resolution)
+      respondWithImage(dataSetName, dataLayerName, width, height, x, y, z, resolution)
   }
 
   // TODO: Move maxContentLength to config 
-  def writeViaAjax(dataSetName: String, dataLayerTyp: String, cubeSize: Int, annotationId: String) = UserAwareAction.async(parse.raw(1048576)) {
+  def writeViaAjax(dataSetName: String, dataLayerName: String, cubeSize: Int, annotationId: String) = UserAwareAction.async(parse.raw(1048576)) {
     implicit request =>
       for {
         dataSet <- DataSetDAO.findOneBySourceName(dataSetName).toFox ?~> Messages("dataSet.notFound")
-        dataLayer <- tryGetUserDataLayer(dataSet, dataLayerTyp, Some(annotationId), request.userOpt) ?~> Messages("dataLayer.test") 
+        dataLayer <- tryGetUserDataLayer(dataSet, dataLayerName, Some(annotationId), request.userOpt) ?~> Messages("dataLayer.test") 
         payloadBodySize = cubeSize * cubeSize * cubeSize * dataLayer.bytesPerElement
         payload <- request.body.asBytes() ?~> Messages("binary.payload.notSupplied")
         requests <- BinaryProtocol.parseDataWriteRequests(payload, payloadBodySize, containsHandle = false) ?~> Messages("binary.payload.invalid")
@@ -225,7 +224,7 @@ object BinaryData extends Controller with Secured {
    *
    */
 
-  //  def requestViaWebsocket(dataSetName: String, dataLayerTyp: String, cubeSize: Int): WebSocket[Array[Byte]] =
+  //  def requestViaWebsocket(dataSetName: String, dataLayerName: String, cubeSize: Int): WebSocket[Array[Byte]] =
   //    AuthenticatedWebSocket[Array[Byte]]() {
   //      user =>
   //        request =>
@@ -245,7 +244,7 @@ object BinaryData extends Controller with Secured {
   //              val input = Iteratee.foreach[Array[Byte]](in => {
   //                for {
   //                  dataSet <- dataSetOpt
-  //                  dataLayer: DataLayer <- dataSet.dataLayer(dataLayerTyp) ?~> Messages("dataLayer.notFound")              
+  //                  dataLayer: DataLayer <- dataSet.dataLayer(dataLayerName) ?~> Messages("dataLayer.notFound")              
   //                  channel <- channelOpt
   //                  requests <- BinaryProtocol.parse(in, containsHandle = true)
   //                  dataRequestCollection = createDataRequestCollection(dataSet, dataLayer, cubeSize, requests)

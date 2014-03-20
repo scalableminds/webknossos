@@ -8,21 +8,10 @@ import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json._
 import scala.concurrent.Future
 import oxalis.binary.BinaryDataService
-import braingames.binary.repository.DataSourceRepository.InProgress
-import braingames.binary.repository.DataSourceRepository.Finished
-import braingames.binary.repository.DataSourceRepository.NotStarted
 import braingames.util.DefaultConverters._
-import play.api.mvc._
-import net.liftweb.common.Full
-import oxalis.user.UserActivity
-import scala.Some
-import play.api.mvc.SimpleResult
 import play.api.libs.json.JsSuccess
-import scala.Some
-import play.api.libs.json
-import models.user.User
 import play.api.templates.Html
-import braingames.binary.repository.DataSourceRepository
+import braingames.util.{NotStarted, Finished, ProgressState, InProgress}
 
 /**
  * Company: scalableminds
@@ -68,10 +57,8 @@ object DataSetController extends Controller with Secured {
   }
 
   def read(dataSetName: String) = UserAwareAction.async{ implicit request =>
-    import net.liftweb.common._
-    import play.api.Logger
     DataSetDAO.findOneBySourceName(dataSetName).map { dataSet =>
-        Ok(DataSet.dataSetPublicWrites(request.userOpt).writes(dataSet))
+      Ok(DataSet.dataSetPublicWrites(request.userOpt).writes(dataSet))
     }
   }
 
@@ -84,7 +71,7 @@ object DataSetController extends Controller with Secured {
     }
   }
 
-  def progressToResult(progress: DataSourceRepository.ProgressState) = progress  match{
+  def progressToResult(progress: ProgressState) = progress  match{
     case InProgress(p) =>
       JsonOk(Json.obj(
         "operation" -> "import",
@@ -104,7 +91,7 @@ object DataSetController extends Controller with Secured {
 
 
   def importProgress(dataSetName: String) = Authenticated{ implicit request =>
-    progressToResult(BinaryDataService.importProgress(dataSetName))
+    progressToResult(BinaryDataService.progressForImport(dataSetName))
   }
 
   def updateTeams(dataSetName: String) = Authenticated.async(parse.json){ implicit request =>

@@ -26,7 +26,24 @@ class Crosshair
     @context = canvas.getContext("2d")
 
     @mesh = @createMesh(canvas)
+
+    @mesh.setVisibility = (v) ->
+      @arbitraryVisible = v
+      @updateVisibility()
+    
+    @mesh.setVisibilityEnabled = (v) ->
+      @visibilityEnabled = v
+      @updateVisibility()
+    
+    @mesh.updateVisibility = ->
+      @visible = @arbitraryVisible && @visibilityEnabled
+
     @setScale(scale)
+
+
+  setVisibility : ( v ) ->
+
+    @mesh.setVisibilityEnabled( v )
 
 
   update : ->

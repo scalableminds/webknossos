@@ -5,6 +5,7 @@ libs/event_mixin : EventMixin
 libs/toast : Toast
 ../model/dimensions : Dimensions
 ../constants : constants
+../controller/viewmodes/arbitrary_controller : ArbitraryController
 ###
 
 class Gui
@@ -16,6 +17,8 @@ class Gui
     _.extend(this, new EventMixin())
 
     @updateGlobalPosition( @model.flycam.getPosition() )
+    @updateRotation()
+    @mode == constants.MODE_PLANE_TRACING
 
     @user = @model.user
     @qualityArray = ["high", "medium", "low"]
@@ -88,6 +91,8 @@ class Gui
       constants.MIN_MOVE_VALUE, constants.MAX_MOVE_VALUE, 10, "Move Value (nm/s)")
     @addSlider(@fFlightcontrols, @user.getSettings(), "crosshairSize",
       0.05, 0.5, 0.01, "Crosshair size")
+    @addSlider(@fFlightcontrols, @user.getSettings(), "sphericalCapRadius",
+      50, 500, 1, "Sphere Radius")
 
     @folders.push( @fColors = @gui.addFolder("Colors") )
     @colorControllers = []
@@ -163,6 +168,11 @@ class Gui
       @setPosFromString(event.target.value)
       $("#trace-position-input").blur()
 
+    $("#trace-rotation-input").on "change", (event) =>
+
+      @setRotationFromString(event.target.value)
+      $("#trace-rotation-input").blur()
+
     $("#trace-finish-button").click (event) =>
 
       event.preventDefault()
@@ -185,16 +195,13 @@ class Gui
     @model.flycam.on
       positionChanged : (position) =>
         @updateGlobalPosition(position)
+      zoomStepChanged : =>
+        @updateViewportWidth()
 
-    @model.user.on
-      zoomChanged : (zoom) =>
-        nm = zoom * constants.PLANE_WIDTH * @model.scaleInfo.baseVoxel
-        if(nm<1000)
-          $("#zoomFactor").html("<p>Viewport width: " + nm.toFixed(0) + " nm</p>")
-        else if (nm<1000000)
-          $("#zoomFactor").html("<p>Viewport width: " + (nm / 1000).toFixed(1) + " μm</p>")
-        else
-          $("#zoomFactor").html("<p>Viewport width: " + (nm / 1000000).toFixed(1) + " mm</p>")
+    @model.flycam3d.on
+      changed : =>
+        @updateViewportWidth()
+        @updateRotation()
 
     @model.skeletonTracing?.on
       newActiveNode       : => @update()
@@ -294,9 +301,17 @@ class Gui
     posArray = @stringToNumberArray( posString )
     if posArray?.length == 3
       @model.flycam.setPosition(posArray)
-      return
     else
       @updateGlobalPosition(@model.flycam.getPosition())
+
+
+  setRotationFromString : (rotString) =>
+
+    rotArray = @stringToNumberArray( rotString )
+    if rotArray?.length == 3
+      @model.flycam3d.setRotation rotArray
+    else
+      @updateRotation()
 
 
   stringToNumberArray : (s) ->
@@ -309,27 +324,12 @@ class Gui
 
     result = []
     for e in stringArray
-      if not isNaN(newEl = parseInt(e))
+      if not isNaN(newEl = parseFloat(e))
         result.push(newEl)
       else
         return null
 
     return result
-
-
-  setPosFromString : (posString) =>
-
-    # remove leading/trailing whitespaces
-    strippedString = posString.trim()
-    # replace remaining whitespaces with commata
-    unifiedString = strippedString.replace /,?\s+,?/g, ","
-    stringArray = unifiedString.split(",")
-    if stringArray.length == 3
-      pos = [parseInt(stringArray[0]), parseInt(stringArray[1]), parseInt(stringArray[2])]
-      if !isNaN(pos[0]) and !isNaN(pos[1]) and !isNaN(pos[2])
-        @model.flycam.setPosition(pos)
-        return
-    @updateGlobalPosition(@model.flycam.getPosition())
 
 
   initDatasetPosition : (briConNames) ->
@@ -358,6 +358,16 @@ class Gui
     stringPos = Math.floor(globalPos[0]) + ", " + Math.floor(globalPos[1]) + ", " + Math.floor(globalPos[2])
     $("#trace-position-input").val(stringPos)
     @updateSegmentID()
+
+
+  updateRotation : =>
+
+    rotation = _.map(
+      @model.flycam3d.getRotation(),
+      (r) -> r.toFixed(2)
+    )
+    stringRot = rotation.join(", ")
+    $("#trace-rotation-input").val(stringRot)
 
   updateSegmentID : ->
 
@@ -462,6 +472,28 @@ class Gui
       @activeCellIdController.updateDisplay()
 
 
+  updateViewportWidth : ->
+
+    if @mode in constants.MODES_PLANE
+      zoom  = @model.flycam.getPlaneScalingFactor()
+      width = constants.PLANE_WIDTH
+    
+    if @mode in constants.MODES_ARBITRARY
+      zoom  = @model.flycam3d.zoomStep
+      width = ArbitraryController::WIDTH
+
+    nm = zoom * width * @model.scaleInfo.baseVoxel
+    
+    if(nm<1000)
+      widthStr = nm.toFixed(0) + " nm</p>"
+    else if (nm<1000000)
+      widthStr = (nm / 1000).toFixed(1) + " μm</p>"
+    else
+      widthStr = (nm / 1000000).toFixed(1) + " mm</p>"
+
+    $("#zoomFactor").html("<p>Viewport width: " + widthStr )
+
+
   setFolderVisibility : (folder, visible) ->
 
     $element = $(folder?.domElement)
@@ -480,21 +512,23 @@ class Gui
       @setFolderVisibility( folder, false)
 
 
-  setMode : (mode) ->
+  setMode : (@mode) ->
 
     for folder in @folders
       @setFolderVisibility(folder, true)
     @setFolderElementVisibility( @clippingControllerArbitrary, false )
     @setFolderElementVisibility( @clippingController, true )
 
-    if      mode == constants.MODE_PLANE_TRACING
+    if      @mode == constants.MODE_PLANE_TRACING
       @hideFolders( [ @fFlightcontrols, @fCells ] )
       @user.triggerAll()
-    else if mode == constants.MODE_ARBITRARY or mode == constants.MODE_ARBITRARY_PLANE
+    else if @mode == constants.MODE_ARBITRARY or mode == constants.MODE_ARBITRARY_PLANE
       @hideFolders( [ @fViewportcontrols, @fTDView, @fCells ] )
       @setFolderElementVisibility( @clippingControllerArbitrary, true )
       @setFolderElementVisibility( @clippingController, false )
       @user.triggerAll()
-    else if mode == constants.MODE_VOLUME
+    else if @mode == constants.MODE_VOLUME
       @hideFolders( [ @fTrees, @fNodes, @fFlightcontrols ] )
+
+    @updateViewportWidth()
 

@@ -3,6 +3,7 @@ three : THREE
 m4x4 : M4x4
 v3 : V3
 underscore : _
+oxalis/constants : constants
 ###
 
 # Let's set up our trianglesplane.
@@ -25,7 +26,6 @@ underscore : _
 # for the flat surface
 class ArbitraryPlane
 
-  sphericalCapRadius : 0
   cam : null
   model : null
 
@@ -41,10 +41,7 @@ class ArbitraryPlane
 
   constructor : (@cam, @model, @width = 128, @height = 128) ->
 
-    @sphericalCapRadius = @cam.distance
     @mesh = @createMesh()
-    @queryVerticesSphere = @calculateSphereVertices()
-    @queryVerticesPlane = @calculatePlaneVertices()
 
     @cam.on "changed", => 
       @isDirty = true
@@ -57,6 +54,15 @@ class ArbitraryPlane
 
     throw "width needs to be a power of 2" unless Math.log(width) / Math.LN2 % 1 != 1
     throw "height needs to be a power of 2" unless Math.log(height) / Math.LN2 % 1 != 1
+
+
+  setMode : ( mode, radius ) ->
+
+    @queryVertices = switch mode
+      when constants.MODE_ARBITRARY       then @calculateSphereVertices()
+      when constants.MODE_ARBITRARY_PLANE then @calculatePlaneVertices()
+
+    @isDirty = true
 
 
   attachScene : (scene) ->
@@ -91,9 +97,9 @@ class ArbitraryPlane
       @isDirty = false
 
 
-  calculateSphereVertices : ->
+  calculateSphereVertices : ( sphericalCapRadius = @cam.distance ) ->
 
-    { width, height, sphericalCapRadius } = this
+    { width, height } = this
 
     queryVertices = new Float32Array(width * height * 3)
 

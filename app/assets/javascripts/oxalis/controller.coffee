@@ -8,6 +8,7 @@ underscore : _
 ./controller/combinations/skeletontracing_plane_controller : SkeletonTracingPlaneController
 ./controller/combinations/volumetracing_plane_controller : VolumeTracingPlaneController
 ./controller/scene_controller : SceneController
+./controller/url_manager : UrlManager
 ./model : Model
 ./view : View
 ./view/skeletontracing/skeletontracing_view : SkeletonTracingView
@@ -50,8 +51,9 @@ class Controller
     @mode = constants.MODE_PLANE_TRACING
 
     @model = new Model()
+    @urlManager = new UrlManager(this, @model)
 
-    @model.initialize( @controlMode ).done ({restrictions, settings, error}) =>
+    @model.initialize( @controlMode, @urlManager.initialState ).done ({restrictions, settings, error}) =>
 
       # Do not continue, when there was an error and we got no settings from the server
       if error
@@ -60,6 +62,8 @@ class Controller
       unless restrictions.allowAccess
         Toast.Error "You are not allowed to access this tracing"
         return
+
+      @urlManager.startUrlUpdater()
 
       for allowedMode in settings.allowedModes
         @allowedModes.push switch allowedMode
@@ -141,11 +145,12 @@ class Controller
         $("#view-mode").hide()
 
       @allowedModes.sort()
-      #@setMode( constants.MODE_PLANE_TRACING, true )
       if @allowedModes.length == 0
         Toast.error("There was no valid allowed tracing mode specified.")
       else
         @setMode( @allowedModes[0] )
+      if @urlManager.initialState.mode?
+        @setMode( @urlManager.initialState.mode )
 
       # initial trigger
       @sceneController.setSegmentationAlpha($('#alpha-slider').data("slider-value") or constants.DEFAULT_SEG_ALPHA)

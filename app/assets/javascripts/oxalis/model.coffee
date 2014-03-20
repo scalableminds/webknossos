@@ -50,7 +50,7 @@ class Model
     @totalBuckets.push(totalBuckets)
 
 
-  initialize : (controlMode) =>
+  initialize : (controlMode, state) =>
 
     tracingId = $("#container").data("tracing-id")
     tracingType = $("#container").data("tracing-type")
@@ -133,13 +133,20 @@ class Model
             @flycam3d = new Flycam3d(constants.DISTANCE_3D, dataSet.scale)
 
             @flycam3d.on
-              "changed" : (matrix) =>
-                @flycam.setPosition([matrix[12], matrix[13], matrix[14]])
+              "changed" : (matrix, zoomStep) =>
+                @flycam.setPosition( matrix[12..14] )
+
             @flycam.on
               "positionChanged" : (position) =>
                 @flycam3d.setPositionSilent(position)
 
-            @flycam.setPosition(tracing.content.editPosition)
+            # init state
+            @flycam.setPosition( state.position || tracing.content.editPosition )
+            if state.zoomStep?
+              @flycam.setZoomStep( state.zoomStep )
+              @flycam3d.setZoomStep( state.zoomStep )
+            if state.rotation?
+              @flycam3d.setRotation( state.rotation )
             
             if controlMode == constants.CONTROL_MODE_TRACE
 

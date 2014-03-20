@@ -7,7 +7,7 @@ three : THREE
 
 updateMacro = (_this) ->
 
-  _this.trigger("changed", _this.currentMatrix)
+  _this.trigger("changed", _this.currentMatrix, _this.zoomStep)
   _this.hasChanged = true
 
 
@@ -109,7 +109,13 @@ class Flycam3d
 
   getZoomStep : -> 
 
-    @zoomStep   
+    @zoomStep
+
+
+  setZoomStep : (zoomStep) ->
+
+    @zoomStep = Math.min @ZOOM_STEP_MAX,
+                  Math.max @ZOOM_STEP_MIN, zoomStep
 
 
   getMatrix : -> 
@@ -208,6 +214,19 @@ class Flycam3d
     [ matrix[12], matrix[13], matrix[14] ]
 
 
+  getRotation : ->
+
+    object = new THREE.Object3D()
+    matrix = (new THREE.Matrix4()).fromArray( @currentMatrix ).transpose()
+    object.applyMatrix( matrix )
+    return _.map [
+      object.rotation.x
+      object.rotation.y
+      object.rotation.z
+      ], (e) -> 180 / Math.PI * e
+
+
+
   setPositionSilent : (p) ->
 
     matrix = @currentMatrix
@@ -220,6 +239,14 @@ class Flycam3d
 
     @setPositionSilent(p)
     updateMacro(@)
+
+
+  setRotation : ([x, y, z]) ->
+
+    @resetRotation()
+    @roll  -z * Math.PI / 180
+    @yaw   -y * Math.PI / 180
+    @pitch -x * Math.PI / 180
 
 
   getDirection : ->

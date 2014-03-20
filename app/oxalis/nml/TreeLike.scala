@@ -16,7 +16,7 @@ trait TreeLike {
   def name: String
   def changeTreeId(id: Int): TreeLike
   def changeName(name: String): TreeLike
-  
+ 
   def applyNodeMapping(f: Int => Int): TreeLike
 }
 

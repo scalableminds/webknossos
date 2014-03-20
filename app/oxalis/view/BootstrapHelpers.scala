@@ -3,7 +3,7 @@ package oxalis.view
 import views.html.helper.FieldConstructor
 
 trait BootstrapHelpers {
-    
-  implicit val bootsrapFields = FieldConstructor(views.html.BootstrapFieldConstructor.f)    
-    
+   
+  implicit val bootsrapFields = FieldConstructor(views.html.BootstrapFieldConstructor.f)   
+   
 }

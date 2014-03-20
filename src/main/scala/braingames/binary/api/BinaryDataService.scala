@@ -22,7 +22,7 @@ import scala.util.Success
 import braingames.binary.watcher.StartWatching
 import scalax.file.Path
 import braingames.util.PathUtils
-import braingames.binary.repository.DataSourceRepositoryHandler
+import braingames.binary.repository.DataSourceInbox
 
 trait BinaryDataService extends DataSourceService with BinaryDataHelpers {
 
@@ -36,7 +36,7 @@ trait BinaryDataService extends DataSourceService with BinaryDataHelpers {
 
   lazy implicit val executor = system.dispatcher
 
-  val dataSourceInboxHandler = new DataSourceRepositoryHandler(dataSourceRepository)
+  val dataSourceInbox = DataSourceInbox.create(dataSourceRepository, system)
 
   lazy implicit val timeout = Timeout(config.getInt("braingames.binary.loadTimeout") seconds)
 
@@ -61,7 +61,7 @@ trait BinaryDataService extends DataSourceService with BinaryDataHelpers {
     val repositoryWatcherConfig = config.getConfig("braingames.binary.changeHandler")
     val repositoryWatchActor =
       system.actorOf(
-        Props(classOf[DirectoryWatcherActor], repositoryWatcherConfig, dataSourceInboxHandler),
+        Props(classOf[DirectoryWatcherActor], repositoryWatcherConfig, dataSourceInbox.handler),
         name = "directoryWatcher")
 
     repositoryWatcher = Some(repositoryWatchActor)

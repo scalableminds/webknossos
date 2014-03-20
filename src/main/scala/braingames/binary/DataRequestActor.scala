@@ -25,7 +25,7 @@ import net.liftweb.common.Box
 import net.liftweb.common.{Failure => BoxFailure}
 import net.liftweb.common.Full
 import java.util.NoSuchElementException
-import braingames.util.{Fox, BlockedArray3D}
+import braingames.util.{FoxImplicits, Fox, BlockedArray3D}
 import braingames.util.ExtendedTypes.ExtendedArraySeq
 import braingames.util.ExtendedTypes.ExtendedDouble
 
@@ -35,6 +35,7 @@ class DataRequestActor(
   dataSourceRepository: DataSourceRepository)
   extends Actor
   with DataCache
+  with FoxImplicits
   with EmptyDataProvider {
 
   import Logger._
@@ -57,25 +58,11 @@ class DataRequestActor(
 
   val remotePath = conf.getString("datarequest.remotepath")
 
-  val useRemote = conf.getBoolean("useRemote")
-
-  implicit val system =
-    if (useRemote)
-      ActorSystem("DataRequests", conf.getConfig("datarequest"))
-    else
-      context.system
+  implicit val system = context.system
 
   lazy val dataStores = List[ActorRef](
-    actorForWithLocalFallback[FileDataStoreActor]("fileDataStore")) //,
-  //actorForWithLocalFallback[GridDataStore]("gridDataStore"),
-  //system.actorOf(Props(new EmptyDataStore()).withRouter(new RoundRobinRouter(3)), s"${id}__emptyDataStore"))
-
-  def actorForWithLocalFallback[T <: Actor](name: String)(implicit evidence: scala.reflect.ClassTag[T]) = {
-    if (useRemote)
-      system.actorFor(s"$remotePath/user/$name")
-    else
-      system.actorOf(Props[T].withRouter(new RoundRobinRouter(3)), s"${id}__${name}")
-  }
+    system.actorOf(Props[FileDataStoreActor].withRouter(new RoundRobinRouter(3)), s"${id}__fileDataStore")
+  )
 
   def receive = {
     case dataRequest: DataRequest =>
@@ -133,6 +120,23 @@ class DataRequestActor(
     }
   }
 
+  def fallbackForLayer(layer: DataLayer): Future[List[(DataLayerSection, DataLayer)]] = {
+    layer.fallback.toFox.flatMap{ fallback =>
+      dataSourceRepository.findDataSource(fallback.dataSourceName).flatMap{
+        d =>
+          d.getDataLayer(fallback.layerName).map {
+            fallbackLayer =>
+              if (layer.isCompatibleWith(fallbackLayer))
+                fallbackLayer.sections.map {(_, fallbackLayer)}
+              else {
+                logger.error(s"Incompatible fallback layer. $layer is not compatible with $fallbackLayer")
+                Nil
+              }
+          }.toFox
+      }
+    }.getOrElse(Nil)
+  }
+
   def loadFromSomewhere(dataSource: DataSource, layer: DataLayer, requestedSection: Option[String], resolution: Int, block: Point3D): Future[Array[Byte]] = {
     var lastSection: Option[DataLayerSection] = None
     def loadFromSections(sections: Stream[(DataLayerSection, DataLayer)]): Future[Array[Byte]] = sections match {
@@ -161,20 +165,7 @@ class DataRequestActor(
     val sections = Stream(layer.sections.map{(_, layer)}.filter {
       section =>
         requestedSection.map( _ == section._1.sectionId) getOrElse true
-    }: _*).append {
-      Await.result(layer.fallback.map(dataSourceRepository.findByName).getOrElse(Fox.empty).futureBox.map(_.flatMap{
-        d =>
-          d.dataLayer(layer.typ).map {
-            fallbackLayer =>
-              if (layer.isCompatibleWith(fallbackLayer))
-                fallbackLayer.sections.map {(_, fallbackLayer)}
-              else {
-                logger.error(s"Incompatible fallback layer. $layer is not compatible with $fallbackLayer")
-                Nil
-              }
-          }
-      }.getOrElse(Nil)), 5 seconds)
-    }
+    }: _*).append(Await.result(fallbackForLayer(layer), 5 seconds))
 
     loadFromSections(sections)
   }

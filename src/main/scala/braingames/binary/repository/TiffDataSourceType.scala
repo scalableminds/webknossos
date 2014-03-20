@@ -3,7 +3,7 @@
  */
 package braingames.binary.repository
 
-import scalax.file.{PathMatcher, Path}
+import scalax.file.{PathSet, PathMatcher, Path}
 import braingames.binary.models._
 import javax.imageio.ImageIO
 import braingames.geometry.{BoundingBox, Scale, Point3D}
@@ -21,15 +21,12 @@ import net.liftweb.common.Full
 import scala.concurrent.Future
 import braingames.util.BlockedArray3D
 import play.api.libs.concurrent.Execution.Implicits._
+import scala.util.matching.Regex
 
 object TiffDataSourceType extends DataSourceType with TiffDataSourceTypeHandler {
   val name = "tiff"
 
-  def chanceOfInboxType(source: Path) = {
-    (source ** "*.tif")
-      .take(MaxNumberOfFilesForGuessing)
-      .size.toFloat / MaxNumberOfFilesForGuessing
-  }
+  val fileExtension = "tif"
 }
 
 
@@ -130,10 +127,25 @@ object KnossosMultiResCreator {
   }
 }
 
+case class TiffLayer(layer: Int, width: Int, height: Int, depth: Int, bytesPerPixel: Int, tiffs: Iterator[RawImage])
+
+case class RawImage(width: Int, height: Int, bytesPerPixel: Int, data: Array[Byte])
+
+case class StackInfo(boundingBox: BoundingBox, bytesPerPixel: Int)
+
 trait TiffDataSourceTypeHandler extends DataSourceTypeHandler {
   val Target = "target"
 
+  val LayerRxs = Seq(
+    "_c([0-9]+)"r,
+    "_ch([0-9]+)"r
+  )
+
   val DefaultScale = Scale(200, 200, 200)
+
+  val DefaultLayerType = DataLayer.COLOR
+
+  val DefaultLayer = 1
 
   val Resolutions = List(1, 2, 4, 8, 16, 32, 64, 128)
 
@@ -155,48 +167,32 @@ trait TiffDataSourceTypeHandler extends DataSourceTypeHandler {
     logger.info("Finished registering tiff provider")
   }
 
-
-  case class TiffImageArray(width: Int, height: Int, bytesPerPixel: Int, data: Array[Byte])
-
-  case class TiffStackInfo(boundingBox: BoundingBox, bytesPerPixel: Int)
-
   protected def prepareTargetPath(target: Path): Unit = {
     target.deleteRecursively()
     target.createDirectory()
   }
 
-  protected def targetPathForDataSource(unusableDataSource: UnusableDataSource, layerType: DataLayerType) =
-    unusableDataSource.sourceFolder / Target / layerType.name
-
   protected def elementClass(bytesPerPixel: Int) =
     s"uint${bytesPerPixel * 8}"
 
   def importDataSource(unusableDataSource: UnusableDataSource, progress: ProgressTracker): Option[DataSource] = {
-    val layerType = DataLayer.COLOR
-    val baseDir = (unusableDataSource.sourceFolder / Target).toAbsolute.path
-    val targetPath = targetPathForDataSource(unusableDataSource, layerType)
+    val target = (unusableDataSource.sourceFolder / Target).toAbsolute
 
-    prepareTargetPath(targetPath)
+    prepareTargetPath(target)
 
-    convertToKnossosStructure(unusableDataSource.id, unusableDataSource.sourceFolder, targetPath, progress).map {
-      stackInfo =>
-        val section = DataLayerSection(layerType.name, layerType.name, Resolutions, stackInfo.boundingBox, stackInfo.boundingBox)
-        val elements = elementClass(stackInfo.bytesPerPixel)
-        val layer = DataLayer(layerType.name, baseDir, None, elements, None, List(section))
-        DataSource(
-          unusableDataSource.id,
-          baseDir,
-          DefaultScale,
-          dataLayers = List(layer))
+    val layers = convertToKnossosStructure(unusableDataSource.id, unusableDataSource.sourceFolder, target, progress).toList
 
-    }
-
+    Some(DataSource(
+      unusableDataSource.id,
+      target.path,
+      DefaultScale,
+      dataLayers = layers))
   }
 
-  protected def extractImageInfo(tiffs: List[Path]): Option[TiffImageArray] = {
+  protected def extractImageInfo(tiffs: List[Path]): Option[RawImage] = {
     tiffs match {
       case head :: tail =>
-        tiffToColorArray(head) match {
+        tiffToRawImage(head) match {
           case Some(tia) => Some(tia)
           case _ => extractImageInfo(tail)
         }
@@ -205,26 +201,70 @@ trait TiffDataSourceTypeHandler extends DataSourceTypeHandler {
     }
   }
 
-  def convertToKnossosStructure(id: String, source: Path, target: Path, progress: ProgressTracker): Option[TiffStackInfo] = {
-    val tiffs = (source * "*.tif")
-    val depth = tiffs.size
-    extractImageInfo(tiffs.toList) match {
-      case Some(tiffInfo) =>
-        val tiles = tiffs.toList.sortBy(_.name).toIterator.zipWithIndex.flatMap {
-          case (t, idx) =>
-            progress.track((idx + 1).toFloat / depth)
-            tiffToColorArray(t).map(_.data)
+  def layerFromFileName(tiffFile: Path) = {
+    def extractLayer(rs: Seq[Regex]): Int = {
+      rs match{
+        case r :: tail =>
+          r.findFirstMatchIn(tiffFile.path).map(_.group(1).toInt) getOrElse extractLayer(tail)
+        case _ =>
+          DefaultLayer
+      }
+    }
+
+    extractLayer(LayerRxs)
+  }
+
+  def extractLayers(tiffs: List[Path]): Iterable[TiffLayer] = {
+    tiffs.groupBy(path => layerFromFileName(path)).flatMap{
+      case (layer, layerTiffs) =>
+        val depth = layerTiffs.size
+        extractImageInfo(layerTiffs.toList) match {
+          case Some(tiffInfo) =>
+            val rawImages = layerTiffs.toList.sortBy(_.name).toIterator.flatMap( t => tiffToRawImage(t))
+            Some(TiffLayer(layer, tiffInfo.width, tiffInfo.height, depth, tiffInfo.bytesPerPixel, rawImages))
+          case _ =>
+            logger.warn("No tiff files found")
+            None
         }
-        TileToCubeWriter(id, 1, target, tiffInfo.width, tiffInfo.height, tiffInfo.bytesPerPixel, tiles).convertToCubes()
-        val boundingBox = BoundingBox(Point3D(0, 0, 0), tiffInfo.width, tiffInfo.height, depth)
-        KnossosMultiResCreator.createResolutions(target, target, id, tiffInfo.bytesPerPixel, 1, Resolutions.size, boundingBox).onFailure{
-          case e: Exception =>
-            logger.error(s"An error occourd while trying to down scale target of tiff stack $id. ${e.getMessage}", e)
-        }
-        Some(TiffStackInfo(boundingBox, tiffInfo.bytesPerPixel))
-      case _ =>
-        logger.warn("No tiff files found")
-        None
+    }
+  }
+
+  def namingSchemaFor(layers: Iterable[TiffLayer])(idx: Int) = {
+    if(layers.size == 1)
+      "color"
+    else
+      s"color_$idx"
+  }
+
+  def convertToKnossosStructure(id: String, source: Path, targetRoot: Path, progress: ProgressTracker): Iterable[DataLayer] = {
+    val tiffs = (source ** "*.tif")
+
+    val layers = extractLayers(tiffs.toList)
+    val namingSchema = namingSchemaFor(layers) _
+
+    val progressMax = tiffs.size
+    val progressPerLayer = progressMax.toFloat / layers.size
+
+    layers.zipWithIndex.map{
+      case (layer, idx) =>
+      def progressReporter(i: Int) =
+        // somewhat hacky way to meassure the progress
+        progress.track(math.min((idx * progressPerLayer + i) / progressMax, 1))
+
+
+      val layerName = namingSchema(layer.layer)
+      val target = targetRoot / layerName
+      TileToCubeWriter(id, 1, target, layer.depth, layer.bytesPerPixel, layer.tiffs, progressReporter _ ).convertToCubes()
+      val boundingBox = BoundingBox(Point3D(0, 0, 0), layer.width, layer.height, layer.depth)
+      KnossosMultiResCreator.createResolutions(target, target, id, layer.bytesPerPixel, 1, Resolutions.size, boundingBox).onFailure{
+        case e: Exception =>
+          logger.error(s"An error occourd while trying to down scale target of tiff stack $id. ${e.getMessage}", e)
+      }
+
+      val section = DataLayerSection(layerName, layerName, Resolutions, boundingBox, boundingBox)
+      val elements = elementClass(layer.bytesPerPixel)
+
+      DataLayer(layerName, DefaultLayerType.category, targetRoot.path, None, elements, None, List(section))
     }
   }
 
@@ -252,46 +292,47 @@ trait TiffDataSourceTypeHandler extends DataSourceTypeHandler {
     }
   }
 
-  case class TileToCubeWriter(id: String, resolutions: Int, target: Path, width: Int, height: Int, bytesPerPixel: Int, tiles: Iterator[Array[Byte]]) {
+  case class TileToCubeWriter(id: String, resolutions: Int, target: Path, depth: Int, bytesPerPixel: Int, tiles: Iterator[RawImage], progressHook: Int => Unit) {
     val CubeSize = 128
 
     def convertToCubes(cubeSize: Int = 128) = {
       val fileCache = new KnossosWriterCache(id, 1, target)
       tiles.zipWithIndex.foreach {
         case (tile, idx) =>
-          writeTile(tile, idx, width, height, fileCache)
+          writeTile(tile, idx, fileCache)
+          progressHook(idx)
       }
       fileCache.closeAll()
     }
 
-    private def fillUpToKnossosSize(tile: Array[Byte], xs: Int, ys: Int, width: Int, height: Int, bytesPerPixel: Int) = {
+    private def fillUpToKnossosSize(tile: RawImage, xs: Int, ys: Int, bytesPerPixel: Int) = {
       // how many bytes are missing in each x row
       val destWidth = xs * CubeSize * bytesPerPixel
-      val fillUpSize = destWidth - width * bytesPerPixel
+      val fillUpSize = destWidth - tile.width * bytesPerPixel
       if (fillUpSize == 0)
-        tile
+        tile.data
       else {
         val size = destWidth * CubeSize * ys
         val result = new Array[Byte](size)
         val placeholder = Array.fill(fillUpSize)(0.toByte)
-        tile.grouped(width * bytesPerPixel).zipWithIndex.foreach {
+        tile.data.grouped(tile.width * bytesPerPixel).zipWithIndex.foreach {
           case (column, idx) =>
             column.copyToArray(result, idx * destWidth)
-            placeholder.copyToArray(result, idx * destWidth + width * bytesPerPixel)
+            placeholder.copyToArray(result, idx * destWidth + tile.width * bytesPerPixel)
         }
         result
       }
     }
 
-    private def writeTile(tile: Array[Byte], layerNumber: Int, width: Int, height: Int, files: KnossosWriterCache): Unit = {
+    private def writeTile(tile: RawImage, layerNumber: Int, files: KnossosWriterCache): Unit = {
       // number of knossos buckets in x direction
-      val xs = (tile.length.toFloat / bytesPerPixel / height / CubeSize).ceil.toInt
+      val xs = (tile.data.length.toFloat / bytesPerPixel / tile.height / CubeSize).ceil.toInt
       // number of knossos buckets in y direction
-      val ys = (tile.length.toFloat / bytesPerPixel / width / CubeSize).ceil.toInt
+      val ys = (tile.data.length.toFloat / bytesPerPixel / tile.width / CubeSize).ceil.toInt
 
       // the given array might not fill up the buckets at the border, but we need to make sure it does, otherwise
       // writing the data to the file would result in a bucket size less than 128
-      val filledTile = fillUpToKnossosSize(tile, xs, ys, width, height, bytesPerPixel)
+      val filledTile = fillUpToKnossosSize(tile, xs, ys, bytesPerPixel)
 
       val sliced = Array.fill(ys * xs)(Vector.empty[Array[Byte]])
 
@@ -333,7 +374,7 @@ trait TiffDataSourceTypeHandler extends DataSourceTypeHandler {
         image.getWidth(),
         image.getHeight(),
         targetType)
-      convertedImage.getGraphics().drawImage(image, 0, 0, null)
+      convertedImage.setData(image.getRaster)
       convertedImage
     }
 
@@ -345,7 +386,7 @@ trait TiffDataSourceTypeHandler extends DataSourceTypeHandler {
     }
   }
 
-  def tiffToColorArray(tiffFile: Path): Option[TiffImageArray] = {
+  def tiffToRawImage(tiffFile: Path): Option[RawImage] = {
     tiffFile.fileOption.map {
       file =>
         val tiff = convertIfNecessary(ImageIO.read(file))
@@ -356,7 +397,8 @@ trait TiffDataSourceTypeHandler extends DataSourceTypeHandler {
           val raster = tiff.getRaster
           val data = (raster.getDataBuffer().asInstanceOf[DataBufferByte]).getData()
           val bytesPerPixel = imageTypeToByteDepth(tiff.getType)
-          TiffImageArray(tiff.getWidth, tiff.getHeight, bytesPerPixel, data)
+          val layer = layerFromFileName(tiffFile)
+          RawImage(tiff.getWidth, tiff.getHeight, bytesPerPixel, data)
         }
     }
   }

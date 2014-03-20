@@ -3,16 +3,15 @@
  */
 package braingames.binary.repository
 
-import braingames.binary.models._
+import braingames.binary.models.{UnusableDataSource, UsableDataSource, DataSourceLike, DataSourceRepository}
 import braingames.binary.watcher.DirectoryChangeHandler
 import braingames.util.{JsonHelper, PathUtils}
-import scalax.file.{PathMatcher, Path}
 import java.nio.file.{Path => JavaPath}
+import scalax.file.{PathMatcher, Path}
 import net.liftweb.common.Full
-import net.liftweb.common.Full
-import braingames.binary.models.UnusableDataSource
+import play.api.libs.concurrent.Execution.Implicits._
 
-class DataSourceRepositoryHandler(dataSourceRepository: DataSourceRepository) extends DirectoryChangeHandler with PathUtils{
+protected class DataSourceInboxChangeHandler(dataSourceRepository: DataSourceRepository) extends DirectoryChangeHandler with PathUtils{
 
   import braingames.binary.Logger._
 
@@ -25,8 +24,8 @@ class DataSourceRepositoryHandler(dataSourceRepository: DataSourceRepository) ex
       val path = Path(jpath.toFile)
       if (path.isDirectory) {
         val foundInboxSources = path.children(PathMatcher.IsDirectory).toList.flatMap(teamAwareInboxSourcesIn)
-        dataSourceRepository.foundDataSources(foundInboxSources)
-        DataSourceRepository.dataSources.send(foundInboxSources)
+        dataSourceRepository.updateDataSources(foundInboxSources)
+        dataSourceRepository.updateInboxSources(foundInboxSources)
       }
     } catch {
       case e: Exception =>
@@ -60,7 +59,7 @@ class DataSourceRepositoryHandler(dataSourceRepository: DataSourceRepository) ex
       case Full(usableDataSource) =>
         usableDataSource
       case _ =>
-        UnusableDataSource(path.name, path.toAbsolute.path, team, DataSourceRepository.guessRepositoryType(path).name)
+        UnusableDataSource(path.name, path.toAbsolute.path, team, DataSourceTypeGuessers.guessRepositoryType(path).name)
     }
   }
 }

@@ -14,7 +14,7 @@ case class DataLayerSettings(
   typ: String,
   `class`: String,
   flags: Option[List[String]],
-  fallback: Option[String])
+  fallback: Option[FallbackLayer])
 
 object DataLayerSettings extends SettingsFile[DataLayerSettings] {
   val settingsFileReads = Json.reads[DataLayerSettings]

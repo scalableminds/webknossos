@@ -13,7 +13,7 @@ case class Data(val value: Array[Byte]) extends AnyVal
 case class CachedBlock(
   id: String,
   dataLayerId: String,
-  dataLayerTyp: String,
+  dataLayerName: String,
   dataLayerBaseDir: String,
   resolution: Int,
   x: Int,
@@ -25,7 +25,7 @@ object CachedBlock {
     CachedBlock(
       b.dataSource.id,
       b.dataLayerSection.sectionId,
-      b.dataLayer.typ,
+      b.dataLayer.name,
       b.dataLayer.baseDir,
       b.resolution,
       b.block.x,

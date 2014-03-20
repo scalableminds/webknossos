@@ -48,8 +48,8 @@ object Resolvers {
   val sgSnaps = "sgodbillon" at "https://bitbucket.org/sgodbillon/repository/raw/master/snapshots/"
   val typesafeRel = "typesafe" at "http://repo.typesafe.com/typesafe/releases"
   val scmRel = Resolver.url("Scalableminds REL Repo", url("http://scalableminds.github.com/releases/"))(Resolver.ivyStylePatterns)
-  val scmIntRel = Resolver.sftp("scm.io intern releases repo", "scm.io", 44144, "/srv/maven/releases/") as("maven", "5MwEuHWH6tRPL6yfNadQ")
-  val scmIntSnaps = Resolver.sftp("scm.io intern snapshots repo", "scm.io", 44144, "/srv/maven/snapshots/") as("maven", "5MwEuHWH6tRPL6yfNadQ")
+  val scmIntRel = "scm.io intern releases repo" at "http://maven.scm.io/releases/"
+  val scmIntSnaps = "scm.io intern snapshots repo" at "http://maven.scm.io/snapshots/"
   val teamon = "teamon.eu repo" at "http://repo.teamon.eu"
 }
 
@@ -167,7 +167,6 @@ object ApplicationBuild extends Build {
     sonaRels,
     sonaSnaps,
     sgSnaps,
-    manSnaps,
     typesafeRel,
     scmRel,
     scmIntRel,

@@ -158,7 +158,7 @@ class Model
 
             if controlMode == constants.CONTROL_MODE_TRACE
 
-              if false and "volume" in tracing.content.settings.allowedModes
+              if "volume" in tracing.content.settings.allowedModes
                 $.assert( @binary["segmentation"]?,
                   "Volume is allowed, but segmentation does not exist" )
                 @volumeTracing = new VolumeTracing(tracing, @flycam, @binary["segmentation"].cube)

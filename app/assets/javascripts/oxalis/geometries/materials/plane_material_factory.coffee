@@ -24,6 +24,13 @@ class PlaneMaterialFactory
       alpha :
         type : "f"
         value : 0
+      # TODO: Initialize correctly
+      brightness :
+        type : "f"
+        value : 0
+      contrast :
+        type : "f"
+        value : 1
 
     for name, texture of textures
       uniforms[name + "_texture"] = {
@@ -68,9 +75,13 @@ class PlaneMaterialFactory
 
     for binary in @model.getColorBinaries()
       do (binary) ->
-        binary.on "newColor", (color) ->
-          color = _.map color, (e) -> e / 255
-          uniforms[binary.name + "_color"].value = new THREE.Vector3(color...)
+        binary.on
+          newColor : (color) ->
+            color = _.map color, (e) -> e / 255
+            uniforms[binary.name + "_color"].value = new THREE.Vector3(color...)
+          newColorSettings : (brightness, contrast) ->
+            uniforms.brightness.value = brightness / 255
+            uniforms.contrast.value = contrast
 
 
   getMaterial : ->
@@ -120,7 +131,7 @@ class PlaneMaterialFactory
       <% } %>
 
       uniform vec2 offset, repeat;
-      uniform float alpha;
+      uniform float alpha, brightness, contrast;
       varying vec2 vUv;
 
       /* Inspired from: https://github.com/McManning/WebGL-Platformer/blob/master/shaders/main.frag */
@@ -153,6 +164,7 @@ class PlaneMaterialFactory
 
       void main() {
         float golden_ratio = 0.618033988749895;
+        float color_value  = 0.0;
 
         <% if (hasSegmentation) { %>
           vec4 volume_color = texture2D(segmentation_texture, vUv * repeat + offset);
@@ -161,16 +173,29 @@ class PlaneMaterialFactory
           float id = 0.0;
         <% } %>
 
+
         /* Get Color Value(s) */
+
         <% if (isRgb) { %>
           vec4 data_color = texture2D( color_texture, vUv * repeat + offset);
+
         <% } else { %>
-          vec3 data_color = vec3(0.0, 0.0, 0.0)
+          vec3 data_color = vec3(0.0, 0.0, 0.0);
+
           <% _.each(layers, function(name){ %>
-            + texture2D( <%= name %>_texture, vUv * repeat + offset).r
-                * <%= name %>_weight * <%= name %>_color
+
+            /* Get grayscale value */
+            color_value = texture2D( <%= name %>_texture, vUv * repeat + offset).r;
+
+            /* Brightness / Contrast Transformation */
+            color_value = (color_value + brightness - 0.5) * contrast + 0.5;
+
+            /* Multiply with color and weight */
+            data_color += color_value * <%= name %>_weight * <%= name %>_color;
+
           <% }) %> ;
         <% } %>
+
 
         /* Color map (<= to fight rounding mistakes) */
 

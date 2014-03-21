@@ -68,8 +68,8 @@ object DataSetController extends Controller with Secured {
   def importDataSet(dataSetName: String) = Authenticated.async{ implicit request =>
     for {
       dataSet <- DataSetDAO.findOneBySourceName(dataSetName) ?~> Messages("dataSet.notFound")
-      result <- DataSetService.importDataSet(dataSet) ?~> Messages("dataSet.import.notStarted")
     } yield {
+      DataSetService.importDataSet(dataSet)
       progressToResult(InProgress(0))
     }
   }

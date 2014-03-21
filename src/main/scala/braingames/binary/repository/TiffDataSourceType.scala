@@ -180,7 +180,9 @@ trait TiffDataSourceTypeHandler extends DataSourceTypeHandler {
 
     prepareTargetPath(target)
 
-    val layers = convertToKnossosStructure(unusableDataSource.id, unusableDataSource.sourceFolder, target, progress).toList
+    val layers =
+      DataLayer("segmentation", "segmentation", (target / "segmentation").path, None, "uint16") ::
+      convertToKnossosStructure(unusableDataSource.id, unusableDataSource.sourceFolder, target, progress).toList
 
     Some(DataSource(
       unusableDataSource.id,

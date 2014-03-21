@@ -184,13 +184,13 @@ trait TiffDataSourceTypeHandler extends DataSourceTypeHandler {
 
     val sections = colorLayers.flatMap(_.sections)
 
-    val segmentationLayers = {
-      if(!sections.isEmpty){
-        val bb = sections.reduce((l,r) => l.bboxSmall.combineWith(r.bboxSmall))
+    val segmentationLayers = sections match{
+      case head :: tail =>
+        val bb = tail.foldLeft(head.bboxSmall)((bb, next) => bb.combineWith(next.bboxSmall))
         List(DataLayer("segmentation", "segmentation", (target / "segmentation").path, None, "uint16", None, List(
           DataLayerSection("segmentation", "segmentation", List(1), bb, bb)
         )))
-      } else
+      case _ =>
         Nil
     }
 

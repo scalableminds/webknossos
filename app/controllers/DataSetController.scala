@@ -11,7 +11,10 @@ import oxalis.binary.BinaryDataService
 import braingames.util.DefaultConverters._
 import play.api.libs.json.JsSuccess
 import play.api.templates.Html
-import braingames.util.{NotStarted, Finished, ProgressState, InProgress}
+import braingames.util._
+import play.api.libs.json.JsSuccess
+import braingames.util.Finished
+import braingames.util.InProgress
 
 /**
  * Company: scalableminds
@@ -65,7 +68,16 @@ object DataSetController extends Controller with Secured {
   def importDataSet(dataSetName: String) = Authenticated.async{ implicit request =>
     for {
       dataSet <- DataSetDAO.findOneBySourceName(dataSetName) ?~> Messages("dataSet.notFound")
-      result <- DataSetService.importDataSet(dataSet) ?~> Messages("dataSet.import.notStarted")
+    } yield {
+      DataSetService.importDataSet(dataSet)
+      progressToResult(InProgress(0))
+    }
+  }
+
+  def importAll = Authenticated.async{ implicit request =>
+    for {
+      dataSets <- DataSetDAO.findAll ?~> Messages("dataSet.notFound")
+      result <- Fox.sequence(dataSets.map(dataSet => DataSetService.importDataSet(dataSet)))
     } yield {
       progressToResult(InProgress(0))
     }

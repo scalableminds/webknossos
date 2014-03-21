@@ -341,14 +341,14 @@ object TaskAdministration extends AdminController {
     user: User,
     taskTypes: List[TaskType],
     projects: List[Project],
-    futureTaskType: TaskType)
+    futureTaskType: Option[TaskType])
  
   object UserWithTaskInfos {
     def userInfosPublicWrites(requestingUser: User): Writes[UserWithTaskInfos] =
       ( (__ \ "user").write(User.userPublicWrites(requestingUser)) and
         (__ \ "taskTypes").write[List[TaskType]] and
         (__ \ "projects").write[List[Project]] and
-        (__ \ "futureTaskType").write[TaskType])( u =>
+        (__ \ "futureTaskType").write[Option[TaskType]])( u =>
         (u.user, u.taskTypes, u.projects, u.futureTaskType))
   }
 
@@ -358,27 +358,27 @@ object TaskAdministration extends AdminController {
      
       val futureTaskTypeMap = for {
         futureTasks <- TaskService.simulateTaskAssignment(users)
-        futureTaskTypes <- Fox.sequence(futureTasks.map(e => e._2.taskType.map(e._1 -> _)).toList)
+        futureTaskTypes <- Fox.sequenceOfFulls(futureTasks.map(e => e._2.taskType.map(e._1 -> _)).toList)
       } yield {
-        futureTaskTypes.flatten.toMap
+        futureTaskTypes.toMap
       }
 
-      Future.traverse(users)(user =>
+      Future.traverse(users){user =>
         for {
           annotations <- AnnotationService.openTasksFor(user).getOrElse(Nil)
-          tasks <- Fox.sequence(annotations.map(_.task)).map(_.flatten)
-          projects <- Fox.sequence(tasks.map(_.project))
-          taskTypes <- Fox.sequence(tasks.map(_.taskType)).map(_.flatten)
-          taskTypeMap <- futureTaskTypeMap.futureBox
+          tasks <- Fox.sequenceOfFulls(annotations.map(_.task))
+          projects <- Fox.sequenceOfFulls(tasks.map(_.project))
+          taskTypes <- Fox.sequenceOfFulls(tasks.map(_.taskType))
+          taskTypeMap <- futureTaskTypeMap getOrElse(Map.empty)
         } yield {
           UserWithTaskInfos(
             user,
             taskTypes.distinct,
-            projects.distinct.map(_.toOption).flatten,
+            projects.distinct,
             taskTypeMap.get(user)
           )
         }
-      )
+      }
     }
 
     for {

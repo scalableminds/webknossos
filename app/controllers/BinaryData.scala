@@ -139,7 +139,7 @@ object BinaryData extends Controller with Secured {
       if annotation.restrictions.allowAccess(userOpt)
       VolumeTracing(_, userDataLayerName, _, _, _, _, _) <- annotation.content
       userDataLayer <- UserDataLayerDAO.findOneByName(userDataLayerName).toFox
-      if userDataLayer.dataSourceName == dataSet.name
+      if userDataLayer.dataSourceName == dataSet.name && userDataLayer.dataLayer.category == "volume"
     } yield {
       userDataLayer.dataLayer
     }

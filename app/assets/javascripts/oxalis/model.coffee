@@ -105,12 +105,6 @@ class Model
                   ]
                 }
 
-            layerOptions = {
-              color : { allowManipulation : true },
-              volume : { allowManipulation : false },
-              segmentation : { allowManipulation : false }
-            }
-
             @dataSetName = dataSet.name
             zoomStepCount = Infinity
             @binary = {}
@@ -119,7 +113,6 @@ class Model
 
             for layer in dataSet.dataLayers
 
-              _.extend layer, layerOptions[layer.name]
               layer.bitDepth = parseInt( layer.elementClass.substring(4) )
               @binary[layer.name] = new Binary(this, tracing, layer, tracingId)
               zoomStepCount = Math.min(zoomStepCount, @binary[layer.name].cube.ZOOM_STEP_COUNT - 1)

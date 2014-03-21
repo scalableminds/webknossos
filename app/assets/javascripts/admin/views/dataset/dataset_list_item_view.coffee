@@ -42,7 +42,7 @@ class DatasetListItemView extends Backbone.Marionette.ItemView
     </td>
     <td>
     <% _.map(dataSource.dataLayers, function(layer){ %>
-        <span class="label"><%= layer.typ %> - <%= layer.elementClass %></span>
+        <span class="label"><%= layer.category %> - <%= layer.elementClass %></span>
     <% }) %>
     <td class="nowrap">
       <% if(dataSource.needsImport){ %>

@@ -180,13 +180,22 @@ trait TiffDataSourceTypeHandler extends DataSourceTypeHandler {
 
     prepareTargetPath(target)
 
-    val segmentationLayer = DataLayer("segmentation", "segmentation", (target / "segmentation").path, None, "uint16", None, List(
-      DataLayerSection("segmentation", "segmentation", List(1), BoundingBox(Point3D(0,0,0),0,0,0), BoundingBox(Point3D(0,0,0),0,0,0))
-    ))
+    val colorLayers = convertToKnossosStructure(unusableDataSource.id, unusableDataSource.sourceFolder, target, progress).toList
+
+    val sections = colorLayers.flatMap(_.sections)
+
+    val segmentationLayers = {
+      if(!sections.isEmpty){
+        val bb = sections.reduce((l,r) => l.bboxSmall.combineWith(r.bboxSmall))
+        List(DataLayer("segmentation", "segmentation", (target / "segmentation").path, None, "uint16", None, List(
+          DataLayerSection("segmentation", "segmentation", List(1), bb, bb)
+        )))
+      } else
+        Nil
+    }
 
     val layers =
-      segmentationLayer ::
-      convertToKnossosStructure(unusableDataSource.id, unusableDataSource.sourceFolder, target, progress).toList
+      segmentationLayers ::: colorLayers
 
     Some(DataSource(
       unusableDataSource.id,

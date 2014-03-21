@@ -49,6 +49,7 @@ GET           /spotlight                                                 control
 
 # DataSets
 GET           /datasets                                                  controllers.DataSetController.empty
+GET           /datasets/import                                           controllers.DataSetController.importAll
 GET           /datasets/:dataSetName/view                                controllers.DataSetController.view(dataSetName: String)
 GET           /api/datasets                                              controllers.DataSetController.list
 GET           /api/datasets/:dataSetName                                 controllers.DataSetController.read(dataSetName: String)

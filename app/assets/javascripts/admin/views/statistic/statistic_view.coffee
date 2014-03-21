@@ -17,9 +17,7 @@ class StatisticView extends Backbone.Marionette.Layout
         <div class="graph well"></div>
         <div class="timings well"></div>
       </div>
-      <div class="achievements span4 well">
-
-      </div>
+      <div class="achievements span4 well"></div>
     </div>
   """)
 

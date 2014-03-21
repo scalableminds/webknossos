@@ -4,8 +4,10 @@
 
 # The general pages
 GET           /                                                          controllers.Application.index
-GET           /dashboard                                                 controllers.UserController.dashboard
+GET           /dashboard                                                 controllers.UserController.empty
+GET           /dashboardOld                                              controllers.UserController.dashboard
 GET           /getDashboardInfo                                          controllers.UserController.getDashboardInfo
+GET           /getDashboardInfoNew                                       controllers.UserController.getDashboardInfoNew
 GET           /impressum                                                 controllers.Application.impressum
 
 # Tasks

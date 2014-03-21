@@ -18,6 +18,7 @@ class Router extends Backbone.Router
     "statistics"                    : "statistics"
     "tasks"                         : "tasks"
     "projects"                      : "projects"
+    "dashboard"                     : "dashboard"
 
 
   initialize : ->
@@ -72,6 +73,17 @@ class Router extends Backbone.Router
   tasks : ->
 
     @showWithPagination("TaskListView", "TaskCollection")
+
+
+  dashboard : ->
+
+    require ["dashboard/views/dashboard_view"], (Dashboard) =>
+
+      view = new Dashboard()
+      @changeView(view)
+      
+
+      @hideLoading()
 
 
   showWithPagination : (view, collection) ->

@@ -8,7 +8,7 @@ oxalis/constants : constants
 class NonBackboneRouter extends Backbone.Router
 
   routes :
-    "dashboard"                     : "dashboard"
+    "dashboardOld"                     : "dashboard"
     "admin/tasks/overview"          : "taskOverview"
     "admin/taskTypes"               : "hideLoading"
     "admin/projects"                : "projects"

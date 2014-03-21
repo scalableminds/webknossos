@@ -148,7 +148,8 @@ class TaskOverviewView extends Backbone.Marionette.View
       svgFutureTaskTypesEdges  = "edge [ color=blue ];"
       svgFutureTaskTypesEdges += userInfos.map( (userInfo) =>
         { user, futureTaskType } = userInfo
-        @edge(user.name, futureTaskType.summary)
+        if(futureTaskType)
+          @edge(user.name, futureTaskType.summary)
       )
 
 

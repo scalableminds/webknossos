@@ -62,11 +62,19 @@ class Model
 
       if tracing.error
         Toast.error(tracing.error)
-        {"error": true}
+        return {"error" : true}
 
       else unless tracing.content.dataSet
-        Toast.error("Selected dataset doesnt exist")
-        {"error": true}
+        Toast.error("Selected dataset doesn't exist")
+        return {"error" : true}
+
+      else unless tracing.content.dataSet.dataLayers
+        datasetName = tracing.content.dataSet.name
+        if datasetName
+          Toast.error("Please, double check if you have the dataset '#{datasetName}' imported.")
+        else
+          Toast.error("Please, make sure you have a dataset imported.")
+        return {"error" : true}
 
       else
         Request.send(

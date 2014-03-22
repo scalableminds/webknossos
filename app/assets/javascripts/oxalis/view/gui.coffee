@@ -274,7 +274,7 @@ class Gui
 
   saveNow : =>
 
-    @user.pushImpl()
+    @user.save()
     model = @model.skeletonTracing || @model.volumeTracing
 
     if @restrictions.allowUpdate and model?

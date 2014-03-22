@@ -77,10 +77,8 @@ class Model
         return {"error" : true}
 
       else
-        Request.send(
-          url : "/user/configuration"
-          dataType : "json"
-        ).pipe(
+        @user = new User()
+        @user.fetch().pipe(
           (user) =>
 
             $.assertExtendContext({
@@ -92,7 +90,6 @@ class Model
             console.log "user", user
 
             dataSet = tracing.content.dataSet
-            @user = new User(user)
             @scaleInfo = new ScaleInfo(dataSet.scale)
 
             if (bb = tracing.content.boundingBox)?

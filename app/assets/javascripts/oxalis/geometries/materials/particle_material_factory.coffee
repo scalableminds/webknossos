@@ -6,9 +6,9 @@ three : THREE
 class ParticleMaterialFactory extends AbstractMaterialFactory
 
 
-  constructor : (@model) ->
+  setupAttributesAndUniforms : ->
 
-    super(@model)
+    super()
 
     @uniforms =
       zoomFactor :
@@ -34,13 +34,10 @@ class ParticleMaterialFactory extends AbstractMaterialFactory
       size :
         type : "f"
 
-    @makeMaterial( vertexColors : true )
-    @setupChangeListeners()
 
+  makeMaterial : ->
 
-  makeMaterial : (options) ->
-
-    super(options)
+    super( vertexColors : true )
 
     @material.setShowRadius = (showRadius) =>
       @uniforms.showRadius.value = if showRadius then 1 else 0

@@ -7,6 +7,13 @@ class AbstractMaterialFactory
 
   constructor : (@model) ->
 
+    @setupAttributesAndUniforms()
+    @makeMaterial()
+    @setupChangeListeners()
+
+
+  setupAttributesAndUniforms : ->
+
     @uniforms = {}
     @attributes = {}
 

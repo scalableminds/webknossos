@@ -6,15 +6,20 @@ three : THREE
 class PlaneMaterialFactory extends AbstractMaterialFactory
 
 
-  constructor : (@model, tWidth) ->
+  constructor : (@model, @tWidth) ->
 
     super(@model)
+
+
+  setupAttributesAndUniforms : ->
+
+    super()
 
     # create textures
     @textures = {}
     for name, binary of @model.binary
       bytes = binary.targetBitDepth >> 3
-      @textures[name] = @createDataTexture(tWidth, bytes)
+      @textures[name] = @createDataTexture(@tWidth, bytes)
       @textures[name].category = binary.category
 
     @uniforms =
@@ -51,9 +56,6 @@ class PlaneMaterialFactory extends AbstractMaterialFactory
           value : new THREE.Vector3(color...)
         }
 
-    @makeMaterial()
-    @setupChangeListeners()
-
 
   makeMaterial : (options) ->
 
@@ -79,7 +81,7 @@ class PlaneMaterialFactory extends AbstractMaterialFactory
   setupChangeListeners : ->
 
     for binary in @model.getColorBinaries()
-      do (binary) ->
+      do (binary) =>
         binary.on
           newColor : (color) =>
             color = _.map color, (e) -> e / 255

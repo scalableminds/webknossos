@@ -10,7 +10,7 @@ class ParticleMaterialFactory extends AbstractMaterialFactory
 
     super()
 
-    @uniforms =
+    @uniforms = _.extend @uniforms,
       zoomFactor :
         type : "f"
         value : @model.flycam.getPlaneScalingFactor()
@@ -30,7 +30,7 @@ class ParticleMaterialFactory extends AbstractMaterialFactory
         type : "f"
         value : window.devicePixelRatio || 1
 
-    @attributes =
+    @attributes = _.extend @attributes,
       size :
         type : "f"
 
@@ -45,6 +45,8 @@ class ParticleMaterialFactory extends AbstractMaterialFactory
 
   setupChangeListeners : ->
 
+    super()
+
     @model.user.on
       particleSizeChanged : (size) =>
         @uniforms.particleSize.value = size
@@ -56,11 +58,6 @@ class ParticleMaterialFactory extends AbstractMaterialFactory
     @model.flycam.on
       zoomStepChanged : =>
         @uniforms.zoomFactor.value = @model.flycam.getPlaneScalingFactor()
-
-
-  getMaterial : ->
-
-    return @material
 
 
   getVertexShader : ->

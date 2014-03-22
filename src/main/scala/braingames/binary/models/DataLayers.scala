@@ -38,6 +38,7 @@ case class DataLayer(
   baseDir: String,
   flags: Option[List[String]],
   elementClass: String = "uint8",
+  isWritable: Boolean = false,
   fallback: Option[FallbackLayer] = None,
   sections: List[DataLayerSection] = Nil) extends DataLayerLike {
 
@@ -48,6 +49,8 @@ case class DataLayer(
   val resolutions = sections.flatMap(_.resolutions).distinct
 
   val maxCoordinates = BoundingBox.hull(sections.map(_.bboxBig))
+
+  lazy val boundingBox = BoundingBox.combine(sections.map(_.bboxBig))
 }
 
 object DataLayer{

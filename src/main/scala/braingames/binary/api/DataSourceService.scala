@@ -31,16 +31,17 @@ trait DataSourceService extends FoxImplicits{
   def createUserDataSource(baseDataSource: DataSource): UserDataLayer = {
     val category = DataLayer.SEGMENTATION.category
     val name = userDataLayerName()
-    val basePath = userDataLayerFolder(name)
-    val sections = baseDataSource.getDataLayer(category).map(_.sections).getOrElse(Nil)
+    val basePath = userDataLayerFolder(name).toAbsolute
+    val sections = DataLayerSection("1", "1", List(1), baseDataSource.boundingBox, baseDataSource.boundingBox)
     val dataLayer = DataLayer(
       name,
       category,
-      basePath.toAbsolute.path,
+      basePath.path,
       None,
       DataLayer.SEGMENTATION.defaultElementClass,
-      baseDataSource.getByCategory(category).map(l => FallbackLayer(baseDataSource.id, l.name)),
-      sections)
+      isWritable = true,
+      fallback = baseDataSource.getByCategory(category).map(l => FallbackLayer(baseDataSource.id, l.name)),
+      sections = List(sections))
 
     basePath.createDirectory()
     UserDataLayer(baseDataSource.id, dataLayer)

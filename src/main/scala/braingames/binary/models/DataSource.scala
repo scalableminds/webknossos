@@ -1,7 +1,7 @@
 package braingames.binary.models
 
 import play.api.libs.json.Reads
-import braingames.geometry.{Scale, Point3D}
+import braingames.geometry.{BoundingBox, Scale, Point3D}
 import braingames.geometry.Scale._
 import play.api.libs.json._
 import play.api.libs.functional.syntax._
@@ -35,6 +35,8 @@ case class DataSource(
   val blockLength = 128
 
   val blockSize = blockLength * blockLength * blockLength
+
+  lazy val boundingBox = BoundingBox.combine(dataLayers.map(_.boundingBox))
 
   def pointToBlock(point: Point3D, resolution: Int) =
     Point3D(

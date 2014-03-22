@@ -182,20 +182,15 @@ trait TiffDataSourceTypeHandler extends DataSourceTypeHandler {
 
     val colorLayers = convertToKnossosStructure(unusableDataSource.id, unusableDataSource.sourceFolder, target, progress).toList
 
-    val sections = colorLayers.flatMap(_.sections)
-
-    val segmentationLayers = sections match{
-      case head :: tail =>
-        val bb = tail.foldLeft(head.bboxSmall)((bb, next) => bb.combineWith(next.bboxSmall))
-        List(DataLayer("segmentation", "segmentation", (target / "segmentation").path, None, "uint16", None, List(
-          DataLayerSection("segmentation", "segmentation", List(1), bb, bb)
-        )))
-      case _ =>
-        Nil
+    val segmentationLayers = {
+      val bb = BoundingBox.combine(colorLayers.map(_.boundingBox))
+      DataLayer("segmentation", "segmentation", (target / "segmentation").path, None, "uint16", false, None, List(
+        DataLayerSection("segmentation", "segmentation", List(1), bb, bb)
+      ))
     }
 
     val layers =
-      segmentationLayers ::: colorLayers
+      segmentationLayers :: colorLayers
 
     Some(DataSource(
       unusableDataSource.id,
@@ -279,7 +274,7 @@ trait TiffDataSourceTypeHandler extends DataSourceTypeHandler {
       val section = DataLayerSection(layerName, layerName, Resolutions, boundingBox, boundingBox)
       val elements = elementClass(layer.bytesPerPixel)
 
-      DataLayer(layerName, DefaultLayerType.category, targetRoot.path, None, elements, None, List(section))
+      DataLayer(layerName, DefaultLayerType.category, targetRoot.path, None, elements, false, None, List(section))
     }
   }
 

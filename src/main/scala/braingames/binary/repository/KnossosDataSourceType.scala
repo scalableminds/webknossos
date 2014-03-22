@@ -62,7 +62,7 @@ trait KnossosDataSourceTypeHandler extends DataSourceTypeHandler {
       logger.info("Found Layer: " + settings)
       val dataLayerPath = layer.toAbsolute.path
       val sections = extractSections(layer).toList
-      DataLayer(layer.name, settings.typ, dataLayerPath, settings.flags, settings.`class`, settings.fallback, sections)
+      DataLayer(layer.name, settings.typ, dataLayerPath, settings.flags, settings.`class`, false, settings.fallback, sections)
     }
   }
 

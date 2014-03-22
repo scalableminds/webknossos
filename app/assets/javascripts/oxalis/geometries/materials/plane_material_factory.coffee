@@ -1,20 +1,23 @@
 ### define
 three : THREE
+./abstract_material_factory : AbstractMaterialFactory
 ###
 
-class PlaneMaterialFactory
+class PlaneMaterialFactory extends AbstractMaterialFactory
 
 
   constructor : (@model, tWidth) ->
 
+    super(@model)
+
     # create textures
-    textures = {}
+    @textures = {}
     for name, binary of @model.binary
       bytes = binary.targetBitDepth >> 3
-      textures[name] = @createDataTexture(tWidth, bytes)
-      textures[name].category = binary.category
+      @textures[name] = @createDataTexture(tWidth, bytes)
+      @textures[name].category = binary.category
 
-    uniforms =
+    @uniforms =
       offset :
         type : "v2"
         value : new THREE.Vector2(0, 0)
@@ -32,56 +35,58 @@ class PlaneMaterialFactory
         type : "f"
         value : 1
 
-    for name, texture of textures
-      uniforms[name + "_texture"] = {
+    for name, texture of @textures
+      @uniforms[name + "_texture"] = {
         type : "t"
         value : texture
       }
       unless name == "segmentation"
         color = _.map @model.binary[name].color, (e) -> e / 255
-        uniforms[name + "_weight"] = {
+        @uniforms[name + "_weight"] = {
           type : "f"
           value : 1
         }
-        uniforms[name + "_color"] = {
+        @uniforms[name + "_color"] = {
           type : "v3"
           value : new THREE.Vector3(color...)
         }
 
-    vertexShader   = @getVertexShader()
-    fragmentShader = @getFragmentShader()
+    @makeMaterial()
+    @setupChangeListeners()
 
-    @material = new THREE.ShaderMaterial({
-      uniforms
-      vertexShader
-      fragmentShader
-    })
 
-    @material.setData = (name, data) ->
-      textures[name].image.data.set(data)
-      textures[name].needsUpdate = true
+  makeMaterial : (options) ->
 
-    @material.setColorInterpolation = (interpolation) ->
-      for name, texture of textures
+    super(options)
+
+    @material.setData = (name, data) =>
+      @textures[name].image.data.set(data)
+      @textures[name].needsUpdate = true
+
+    @material.setColorInterpolation = (interpolation) =>
+      for name, texture of @textures
         if texture.category == "color"
           texture.magFilter = interpolation
 
-    @material.setScaleParams = ({offset, repeat}) ->
-      uniforms.offset.value.set offset.x, offset.y
-      uniforms.repeat.value.set repeat.x, repeat.y
+    @material.setScaleParams = ({offset, repeat}) =>
+      @uniforms.offset.value.set offset.x, offset.y
+      @uniforms.repeat.value.set repeat.x, repeat.y
 
-    @material.setSegmentationAlpha = (alpha) ->
-      uniforms.alpha.value = alpha
+    @material.setSegmentationAlpha = (alpha) =>
+      @uniforms.alpha.value = alpha
+
+
+  setupChangeListeners : ->
 
     for binary in @model.getColorBinaries()
       do (binary) ->
         binary.on
-          newColor : (color) ->
+          newColor : (color) =>
             color = _.map color, (e) -> e / 255
-            uniforms[binary.name + "_color"].value = new THREE.Vector3(color...)
-          newColorSettings : (brightness, contrast) ->
-            uniforms.brightness.value = brightness / 255
-            uniforms.contrast.value = contrast
+            @uniforms[binary.name + "_color"].value = new THREE.Vector3(color...)
+          newColorSettings : (brightness, contrast) =>
+            @uniforms.brightness.value = brightness / 255
+            @uniforms.contrast.value = contrast
 
 
   getMaterial : ->
@@ -98,7 +103,7 @@ class PlaneMaterialFactory
       format, THREE.UnsignedByteType,
       new THREE.UVMapping(),
       THREE.ClampToEdgeWrapping, THREE.ClampToEdgeWrapping,
-      THREE.NearestFilter, THREE.LinearMipmapLinearFilter
+      THREE.NearestFilter, THREE.NearestFilter
     )
 
 

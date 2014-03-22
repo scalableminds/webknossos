@@ -11,35 +11,39 @@ admin/models/project/project_model : ProjectModel
 
 class CreateProjectModalView extends Backbone.Marionette.Layout
 
-  className : "modal hide fade"
+  className : "modal fade"
   template : _.template("""
-    <div class="modal-header">
-      <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
-      <h3>Create a new Project</h3>
-    </div>
-    <div class="modal-body">
-      <form action="" method="POST" class="form-horizontal">
-        <div class="control-group">
-          <label class="control-label" for="team">Team</label>
-          <div class="controls team">
-          </div>
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+          <h3>Create a new Project</h3>
         </div>
-        <div class="control-group">
-          <label class="control-label" for="projectName">Project Name</label>
-          <div class="controls">
-            <input type="text" class="project-name" name="projectName" value="" required autofocus>
-          </div>
+        <div class="modal-body container-fluid">
+          <form action="" method="POST" class="form-horizontal">
+            <div class="form-group">
+              <label class="col-sm-2 control-label" for="team">Team</label>
+              <div class="col-sm-10 team">
+              </div>
+            </div>
+            <div class="form-group">
+              <label class="col-sm-2 control-label" for="projectName">Project Name</label>
+              <div class="col-sm-10">
+                <input type="text" class="form-control project-name" name="projectName" value="" required autofocus>
+              </div>
+            </div>
+            <div class="form-group">
+              <label class="col-sm-2 control-label" for="owner">Owner</label>
+              <div class="col-sm-10 owner">
+              </div>
+            </div>
+          </form>
         </div>
-        <div class="control-group">
-          <label class="control-label" for="owner">Owner</label>
-          <div class="controls owner">
-          </div>
+        <div class="modal-footer">
+          <a href="#" class="btn btn-primary create">Create</a>
+          <a href="#" class="btn btn-default" data-dismiss="modal">Close</a>
         </div>
-      </form>
-    </div>
-    <div class="modal-footer">
-      <a href="#" class="btn btn-primary create">Create</a>
-      <a href="#" class="btn" data-dismiss="modal">Close</a>
+      </div>
     </div>
   """)
 

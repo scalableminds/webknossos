@@ -1,19 +1,19 @@
 @(elements: helper.FieldElements)
 
-<div class="@if(elements.hasErrors) { error } control-group">
-    <label class="control-label" for="@elements.id">@elements.label</label>
-    <div class="controls">
+<div class="@if(elements.hasErrors) { error } form-group">
+    <label class="col-sm-2 control-label" for="@elements.id">@elements.label</label>
+    <div class="col-sm-3">
         @elements.args.get(Symbol("input-append")).map{ append =>
-          <div class="input-append">
+          <div class="input-group">
             @elements.input
-            <span class="add-on">@append</span>
+            <span class="input-group-addon">@append</span>
           </div>
         }.getOrElse{
           @elements.input
         }
-        <span class="help-inline errors">@elements.errors.mkString(", ")</span>
-        @elements.args.get(Symbol("help-inline")).map{ help =>
-        	<span class="help-inline">@help</span>
+        <span class="help-block errors">@elements.errors.mkString(", ")</span>
+        @elements.args.get(Symbol("help-block")).map{ help =>
+            <span class="help-block">@help</span>
         }
     </div>
 </div>

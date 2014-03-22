@@ -14,19 +14,21 @@ class UserListItemView extends Backbone.Marionette.ItemView
     "id" : @model.get("id")
 
   template : _.template("""
-    <td><input type="checkbox" name="id" value="<%= id %>" class="select-row"></td>
+    <td>
+      <input type="checkbox" name="id" value="<%= id %>" class="select-row">
+    </td>
     <td><%= lastName %></td>
     <td><%= firstName %></td>
     <td><%= email %></td>
     <td>
       <% _.each(experiences, function(value, domain){ %>
-        <span class="label label-experience"><%= domain %> : <%= value %></span>
+        <span class="label label-default"><%= domain %> : <%= value %></span>
       <% }) %>
     </td>
     <td class="no-wrap">
       <% _.each(teams, function(team){ %>
         <%= team.team %>
-        <span class="label" style="background-color: <%= TemplateHelpers.roleToColor(team.role.name) %>"><%= team.role.name %></span><br/>
+        <span class="label label-default" style="background-color: <%= TemplateHelpers.roleToColor(team.role.name) %>"><%= team.role.name %></span><br/>
       <% }) %>
     </td>
     <td>

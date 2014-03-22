@@ -7,6 +7,8 @@ backbone.marionette : Marionette
 class SelectionView extends Backbone.Marionette.CollectionView
 
   tagName : "select"
+  className: "form-control"
+
   itemView : SelectionItemView
 
   initialize : (options) ->

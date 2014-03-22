@@ -7,7 +7,7 @@ require.config(
   paths :
     "jquery"              : "../bower_components/jquery/jquery"
     "underscore"          : "../bower_components/lodash/dist/lodash"
-    "bootstrap"           : "../bower_components/bootstrap/docs/assets/js/bootstrap"
+    "bootstrap"           : "../bower_components/bootstrap/dist/js/bootstrap"
     "slider"              : "../bower_components/seiyria-bootstrap-slider/js/bootstrap-slider"
     "coffee-script"       : "../bower_components/coffee-script/extras/coffee-script"
     "backbone.marionette" : "../bower_components/backbone.marionette/lib/backbone.marionette"

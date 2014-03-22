@@ -6,8 +6,8 @@
 @main() {
   <div id="container" data-tracing-type="View" data-tracing-id="@dataSet.name" class="clearfix">
     <div id="main" role="main">
-      <div id="overlay">
-        <div id="dataset" class="well well-small">
+      <div id="left-menu">
+        <div id="dataset" class="well well-sm">
           DataSet: <span id="dataset-name">@dataSet.name</span> <br /></div>
         <div class="input-prepend">
           <span class="add-on">Position</span>
@@ -18,7 +18,7 @@
 
         <div id="segmentation-slider" class="clearfix">
           <p>Segmentation:</p>
-            <input type="text" id="alpha-slider" class="span2" value="" data-slider-min="0" data-slider-max="100" data-slider-step="1" data-slider-value="20" data-slider-orientation="horizontal" data-slider-selection="after" data-slider-tooltip="hide">
+            <input type="text" id="alpha-slider" class="col-sm-2" value="" data-slider-min="0" data-slider-max="100" data-slider-step="1" data-slider-value="20" data-slider-orientation="horizontal" data-slider-selection="after" data-slider-tooltip="hide">
         </div>
 
         <div id="helpbar">

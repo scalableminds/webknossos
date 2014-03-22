@@ -2,7 +2,7 @@
 
 @main(){
   <div class="container">
-  
+
     <h3>Create Task from explorative SkeletonTracing</h3>
     <div class="well">
       Every nml creates a new task. You can either upload a single NML file or a zipped collection of nml files (.zip).<br /><br />
@@ -10,17 +10,26 @@
 
         @basicTaskForm(nmlForm, taskTypes, projects, teams)
 
-        @helper.inputText(taskForm("boundingBox.box"), 'type -> "text")
+        @helper.inputText(taskForm("boundingBox.box"), 'type -> "text", 'class -> "form-control")
 
-        <div class="control-group">
-          <label class="control-label" for="nmlFile">@Messages("nmlFile")</label>
-          <div class="controls">
-            <input type="file" name="nmlFile" id="nmlFile" />
+        <div class="form-group">
+          <label class="col-sm-2 control-label" for="nmlFile">@Messages("nmlFile")</label>
+          <div class="col-sm-3">
+            <div class="input-group">
+              <span class="input-group-btn">
+                <span class="btn btn-primary btn-file">
+                  Browse… <input type="file" multiple="">
+                </span>
+              </span>
+              <input type="text" class="form-control" readonly="">
+            </div>
           </div>
         </div>
 
-        <div class="form-actions">
-          <button type="submit" class="btn btn-primary">Create</button>
+        <div class="form-group">
+          <div class="col-sm-2">
+            <button type="submit" class="form-control btn btn-primary">Create</button>
+          </div>
         </div>
       }
     </div>
@@ -33,14 +42,16 @@
 
         @helper.select(taskForm("dataSet"), dataSets.map { dataSet =>
           dataSet.name -> dataSet.name
-        })
+        }, 'class -> "form-control")
 
-        @helper.inputText(taskForm("start.point"), 'type -> "text")
+        @helper.inputText(taskForm("start.point"), 'type -> "text", 'class -> "form-control")
 
-        @helper.inputText(taskForm("boundingBox.box"), 'type -> "text")
+        @helper.inputText(taskForm("boundingBox.box"), 'type -> "text", 'class -> "form-control")
 
-        <div class="form-actions">
-          <button type="submit" class="btn btn-primary">Create</button>
+        <div class="form-group">
+          <div class="col-sm-2">
+            <button type="submit" class="form-control btn btn-primary">Create</button>
+          </div>
         </div>
       }
     </div>
@@ -50,10 +61,16 @@
     <div class="well">
       One line for each task. The values are seperated by ','. Format: <br />
       dataSet, taskTypeSummary, experienceDomain, minExperience, x, y, z, priority, instances, team, minX, minY, minZ, maxX, maxY, maxZ, (opt: project)<br /><br />
-      @helper.form(controllers.admin.routes.TaskAdministration.createBulk){
-        <textarea class="input-fullwidth input-monospace" rows="20" name="data"></textarea>
-        <div class="form-actions">
-          <button type="submit" class="btn btn-primary pull-right">Import</button>
+      @helper.form(controllers.admin.routes.TaskAdministration.createBulk, 'class -> "form-horizontal"){
+        <div class="form-group">
+          <div class="col-sm-12">
+            <textarea class="form-control input-monospace" rows="20" name="data"></textarea>
+          </div>
+        </div>
+        <div class="form-group">
+          <div class="col-sm-offset-10 col-sm-2">
+            <button type="submit" class="form-control btn btn-primary">Import</button>
+          </div>
         </div>
       }
     </div>

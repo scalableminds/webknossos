@@ -61,6 +61,6 @@ Toast =
   error : (message, sticky = true) ->
 
     if message?
-      @message("error", message, sticky)
+      @message("danger", message, sticky)
     else
-      @message("error", "Error :-/", sticky)
+      @message("danger", "Error :-/", sticky)

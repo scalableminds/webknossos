@@ -86,12 +86,6 @@ POST          /admin/nml/upload                                          control
 
 # Admin Tasks
 # TODO: those routes need to be renamed!
-# --->
-GET           /admin/tasks/algorithm                                     controllers.admin.TaskAlgorithm.index
-POST          /admin/tasks/algorithm                                     controllers.admin.TaskAlgorithm.submitAlgorithm
-GET           /admin/tasks/algorithm/:id?use=true                        controllers.admin.TaskAlgorithm.useAlgorithm(id: String)
-# <---
-
 GET           /api/tasks                                                 controllers.TaskController.list
 DELETE        /api/tasks/:id                                             controllers.admin.TaskAdministration.delete(id: String)
 

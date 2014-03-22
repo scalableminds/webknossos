@@ -1,4 +1,4 @@
-// Is only used in dev mode. In prod mode, the google hosted font is used.
+ /* Is only used in dev mode. In prod mode, the google hosted font is used. */
 
 @font-face {
   font-family: 'Source Sans Pro';
@@ -7,8 +7,4 @@
   src: local('Source Sans Pro'),
        local('SourceSansPro-Regular'),
        url('../fonts/source-sans-pro-regular.woff') format('woff');
-}
-
-body {
-  font-family: 'Source Sans Pro'
 }

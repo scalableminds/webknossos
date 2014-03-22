@@ -16,74 +16,76 @@
       </div>
 
        @session.userOpt.map{ user =>
-         <ul class="nav navbar-nav" id="main-menu">
-          <li class="divider-vertical"></li>
-          <li>
-            <a href="@routes.UserController.dashboard"><i class="fa fa-home fa-fw"></i>Dashboard</a>
-          </li>
-          @if(user.hasAdminAccess){
+       <div class="collapse navbar-collapse" id="main-menu">
+          <ul class="nav navbar-nav" >
+            <li class="divider-vertical hidden-xs"></li>
+            <li>
+              <a href="@routes.UserController.dashboard"><i class="fa fa-home fa-fw"></i>Dashboard</a>
+            </li>
+            @if(user.hasAdminAccess){
+              <li class="dropdown">
+                <a href="#" class="dropdown-toggle" data-toggle="dropdown">
+                  <i class="fa fa-wrench fa-fw"></i>Administration
+                  <b class="caret"></b>
+                </a>
+                <ul class="dropdown-menu">
+                  <li>
+                    <a href="/users">Users</a>
+                  </li>
+                  <li>
+                    <a href="/teams">Teams</a>
+                  </li>
+                  <li>
+                    <a href="/projects">Projects</a>
+                  </li>
+                  <li>
+                    <a href="/tasks">Tasks</a>
+                  </li>
+                  <li>
+                    <a href="@controllers.admin.routes.TaskTypeAdministration.list">Task Types</a>
+                  </li>
+                  <li>
+                    <a href="/datasets">DataSets</a>
+                  </li>
+                  <li>
+                    <a href="@controllers.admin.routes.TaskAdministration.overview">Overview</a>
+                  </li>
+                  <li>
+                    <a href="/statistics">Statistics</a>
+                  </li>
+                </ul>
+              </li>
+            }
+            <li>
+              <a href="@routes.GithubIssues.index" data-newwindow="700x470"><i class="fa fa-ambulance fa-fw"></i>Submit an issue</a>
+            </li>
+            <li class="divider-vertical hidden-xs"></li>
+          </ul>
+          <ul class="nav navbar-nav navbar-right">
+            <li class="divider-vertical hidden-xs"></li>
             <li class="dropdown">
               <a href="#" class="dropdown-toggle" data-toggle="dropdown">
-                <i class="fa fa-wrench fa-fw"></i>Administration
+                <i class="fa fa-user fa-fw"></i><strong>@user.name</strong> <span>(@user.email)</span>
                 <b class="caret"></b>
               </a>
               <ul class="dropdown-menu">
+                  <!--<li>
+                <a href="#"><i class="fa fa-edit"></i>Edit Profile</a>
+              </li>-->
                 <li>
-                  <a href="/users">Users</a>
-                </li>
-                <li>
-                  <a href="/teams">Teams</a>
-                </li>
-                <li>
-                  <a href="/projects">Projects</a>
-                </li>
-                <li>
-                  <a href="/tasks">Tasks</a>
-                </li>
-                <li>
-                  <a href="@controllers.admin.routes.TaskTypeAdministration.list">Task Types</a>
-                </li>
-                <li>
-                  <a href="/datasets">DataSets</a>
-                </li>
-                <li>
-                  <a href="@controllers.admin.routes.TaskAdministration.overview">Overview</a>
-                </li>
-                <li>
-                  <a href="/statistics">Statistics</a>
+                  <a href="@routes.Authentication.logout()"><i class="fa fa-power-off"></i>Logout</a>
                 </li>
               </ul>
             </li>
-          }
-          <li>
-            <a href="@routes.GithubIssues.index" data-newwindow="700x470"><i class="fa fa-ambulance fa-fw"></i>Submit an issue</a>
-          </li>
-          <li class="divider-vertical"></li>
-        </ul>
-        <ul class="nav navbar-nav navbar-right">
-          <li class="divider-vertical"></li>
-          <li class="dropdown">
-            <a href="#" class="dropdown-toggle" data-toggle="dropdown">
-              <i class="fa fa-user fa-fw"></i><strong>@user.name</strong> <span>(@user.email)</span>
-              <b class="caret"></b>
-            </a>
-            <ul class="dropdown-menu">
-                <!--<li>
-              <a href="#"><i class="fa fa-edit"></i>Edit Profile</a>
-            </li>-->
-              <li>
-                <a href="@routes.Authentication.logout()"><i class="fa fa-power-off"></i>Logout</a>
-              </li>
-            </ul>
-          </li>
-        </ul>
-      }.getOrElse {
-        <ul class="nav navbar-nav navbar-right">
-          <li>
-            <a href="@controllers.routes.Authentication.login()">Login</a>
-          </li>
-        </ul>
-      }
+          </ul>
+        }.getOrElse {
+          <ul class="nav navbar-nav navbar-right">
+            <li>
+              <a href="@controllers.routes.Authentication.login()">Login</a>
+            </li>
+          </ul>
+        }
+      </div>
     </div>
   </header>
 } else {

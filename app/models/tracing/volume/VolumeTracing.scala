@@ -9,12 +9,14 @@ import java.io.InputStream
 import play.api.libs.json.{Json, JsValue}
 import oxalis.binary.BinaryDataService
 import scala.concurrent.Future
-import braingames.reactivemongo.DBAccessContext
+import braingames.reactivemongo.{DBAccessContext, GlobalAccessContext}
 import braingames.util.{FoxImplicits, Fox}
 import reactivemongo.bson.BSONObjectID
 import play.modules.reactivemongo.json.BSONFormats._
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.Logger
+import braingames.binary.models.DataLayer
+
 /**
  * Company: scalableminds
  * User: tmbo
@@ -48,6 +50,14 @@ case class VolumeTracing(
   def toDownloadStream: Fox[InputStream] = ???
 
   def downloadFileExtension: String = ???
+
+  override def contentData = {
+    UserDataLayerDAO.findOneByName(userDataLayerName)(GlobalAccessContext).map{ userDataLayer =>
+      Json.obj(
+        "customLayers" -> List(userDataLayer.dataLayer)
+      )
+    }
+  }
 }
 
 object VolumeTracingService extends AnnotationContentService with FoxImplicits{

@@ -3,6 +3,7 @@ underscore : _
 backbone.marionette : marionette
 app : app
 dashboard/views/explorative_tracing_list_item_view : ExplorativeTracingListItemView
+libs/input : Input
 ###
 
 class ExplorativeTracingListView extends Backbone.Marionette.CompositeView
@@ -15,7 +16,7 @@ class ExplorativeTracingListView extends Backbone.Marionette.CompositeView
         <form action="<%= jsRoutes.controllers.admin.NMLIO.upload().url %>"
               method="POST"
               enctype="multipart/form-data"
-              id="nml-explore-form"
+              id="upload-and-explore-form"
               class="form-inline inline-block">
           <button type="submit" class="btn">
             <i class="fa fa-upload"></i>
@@ -70,16 +71,48 @@ class ExplorativeTracingListView extends Backbone.Marionette.CompositeView
   events :
     "click #new-task-button" : "newTask"
 
+  ui :
+    tracingChooser : "#tracing-chooser"
+    uploadAndExploreForm : "#upload-and-explore-form"
+
   isAdminView : false
 
   initialize : (options) ->
 
-
+    @bindUIElements()
     @model = options.model
-
     @collection = @model.get("exploratory")
 
-    window.test = @
+
+  onShow : ->
+
+    @tracingChooserToggler = new Input.KeyboardNoLoop(
+      "v" : => @ui.tracingChooser.toggleClass("hide")
+    )
+
+    @setupUploadForm()
+
+
+  setupUploadForm : ->
+
+    $form = @ui.uploadAndExploreForm
+    $form.find("[type=submit]").click( (event) ->
+      event.preventDefault()
+      $input = $("<input>", type : "file", name : "nmlFile", class : "hide", multiple : "")
+
+      $input.change( ->
+        if this.files.length
+          $form.append(this)
+          $form.submit()
+      )
+
+      $input.click()
+    )
+
+
+  onClose : ->
+
+    @tracingChooserToggler.unbind()
 
 
   newTask : ->

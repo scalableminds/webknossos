@@ -67,7 +67,10 @@ class DashboardTaskListView extends Backbone.Marionette.CompositeView
 
   newTask : ->
 
-    console.log("fetching new task")
+    # confirm new task, when there already is an open one
+    # $("#new-task-button").on("ajax-after", (event) ->
+    #   $(this).data("ajax", "add-row=#dashboard-tasks,confirm=Do you really want another task?")
+    # )
 
 
   toggleFinished : ->

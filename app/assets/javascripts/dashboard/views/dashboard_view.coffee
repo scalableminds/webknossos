@@ -3,12 +3,14 @@ underscore : _
 backbone.marionette : marionette
 app : app
 dashboard/views/dashboard_task_list_view : DashboardTaskListView
+dashboard/views/explorative_tracing_list_view : ExplorativeTracingListView
+dashboard/views/tracked_time_view : TrackedTimeView
 dashboard/models/dashboard_model : DashboardModel
 ###
 
 class DashboardView extends Backbone.Marionette.Layout
 
-  className : "container"
+  className : "container wide"
   id : "dashboard"
   template : _.template("""
     <div class="tabbable" id="tabbable-dashboard">
@@ -58,22 +60,21 @@ class DashboardView extends Backbone.Marionette.Layout
 
   showTasks : ->
 
-
-    view = new DashboardTaskListView( model : @model )
-    @tabPane.show(view)
     console.log("showing tasks")
-
-
-  showTrackedTime : ->
-
-    console.log("showing tracked time")
-    @ui.tabPane.html("")
+    view = new DashboardTaskListView( model : @model, asAdmin : false )
+    @tabPane.show(view)
 
 
   showExplorative : ->
 
     console.log("showing Explorative")
-    @ui.tabPane.html("")
+    view = new ExplorativeTracingListView( model : @model, asAdmin : false )
+    @tabPane.show(view)
 
 
+  showTrackedTime : ->
+
+    console.log("showing tracked time")
+    view = new TrackedTimeView( model : @model )
+    @tabPane.show(view)
 

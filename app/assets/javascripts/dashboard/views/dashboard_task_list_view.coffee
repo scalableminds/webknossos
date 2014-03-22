@@ -3,6 +3,7 @@ underscore : _
 backbone.marionette : marionette
 app : app
 dashboard/views/dashboard_task_list_item_view : DashboardTaskListItemView
+routes : routes
 ###
 
 class DashboardTaskListView extends Backbone.Marionette.CompositeView
@@ -10,18 +11,18 @@ class DashboardTaskListView extends Backbone.Marionette.CompositeView
   template : _.template("""
     <h3>Tasks</h3>
     <br />
-    @if(isAdminView){
-      <a href="@controllers.admin.routes.NMLIO.userDownload(dashboardInfo.user.id)" title="download all finished tracings">
+    <% if (this.isAdminView) { %>
+      <a href="<%= jsRoutes.controllers.TaskController.request().url %>" title="download all finished tracings">
         <i class="fa fa-download"></i>download
       </a>
-    } else {
-      <a href="@controllers.routes.TaskController.request"
+    <% } else { %>
+      <a href="<%= jsRoutes.controllers.admin.NMLIO.userDownload(user.id).url %>"
          class="btn btn-success"
-         data-ajax="add-row=#dashboard-tasks@if(dashboardInfo.hasAnOpenTask){,confirm=@Messages("task.requestAnother")}"
+         data-ajax="add-row=#dashboard-tasks<% if(hasAnOpenTask) { %>,confirm=@Messages("task.requestAnother") <% } %>"
          id="new-task-button">
          Get a new task
       </a>
-    }
+    <% } %>
     <div class="divider-vertical"></div>
     <a href="#" id="toggle-finished">Show finished tasks</a>
     <br /><br />
@@ -36,27 +37,17 @@ class DashboardTaskListView extends Backbone.Marionette.CompositeView
           <th> </th>
         </tr>
       </thead>
-      <tbody>
-
-      </tbody>
+      <tbody></tbody>
     </table>
   """)
 
   itemView : DashboardTaskListItemView
   itemViewContainer : "tbody"
 
-  ui :
-    "tabTasks" : "#tab-tasks"
-    "tabExplorative" : "#tab-explorative"
-    "tabTrackedTime" : "#tab-tracked-time"
-
   events :
     "click #new-task-button" : "newTask"
 
-
-  render : ->
-
-    super()
+  isAdminView : false
 
   initialize : (options) ->
 

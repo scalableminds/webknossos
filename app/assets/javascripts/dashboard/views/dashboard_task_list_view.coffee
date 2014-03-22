@@ -12,11 +12,12 @@ class DashboardTaskListView extends Backbone.Marionette.CompositeView
     <h3>Tasks</h3>
     <br />
     <% if (this.isAdminView) { %>
-      <a href="<%= jsRoutes.controllers.TaskController.request().url %>" title="download all finished tracings">
-        <i class="fa fa-download"></i>download
+      <a href="<%= jsRoutes.controllers.admin.NMLIO.userDownload(user.id).url %>"
+         title="download all finished tracings">
+          <i class="fa fa-download"></i>download
       </a>
     <% } else { %>
-      <a href="<%= jsRoutes.controllers.admin.NMLIO.userDownload(user.id).url %>"
+      <a href="<%= jsRoutes.controllers.TaskController.request().url %>"
          class="btn btn-success"
          data-ajax="add-row=#dashboard-tasks<% if(hasAnOpenTask) { %>,confirm=@Messages("task.requestAnother") <% } %>"
          id="new-task-button">
@@ -46,17 +47,30 @@ class DashboardTaskListView extends Backbone.Marionette.CompositeView
 
   events :
     "click #new-task-button" : "newTask"
+    "click #toggle-finished" : "toggleFinished"
+
+  modelEvents :
+    "change:filteredTasks" : "update"
 
   isAdminView : false
 
   initialize : (options) ->
 
-    console.log "options", options
     @model = options.model
+    @collection = @model.get("filteredTasks")
 
-    @collection = @model.get("tasks")
+  update : ->
+
+    @collection = @model.get("filteredTasks")
+    @render()
 
 
   newTask : ->
 
     console.log("fetching new task")
+
+
+  toggleFinished : ->
+
+    showFinishedTasks = !@model.get("showFinishedTasks")
+    @model.set("showFinishedTasks", showFinishedTasks)

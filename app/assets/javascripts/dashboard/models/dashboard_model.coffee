@@ -7,7 +7,8 @@ class DashboardModel extends Backbone.Model
 
   urlRoot : "/getDashboardInfoNew"
 
-  # defaults :
+  defaults :
+      showFinishedTasks : false
   #   dataSets : ""
   #   exploratory
   #   hasAnOpenTask
@@ -18,9 +19,21 @@ class DashboardModel extends Backbone.Model
   initialize : ->
 
     @listenTo(@, "sync", @transformToCollection)
+    @listenTo(@, "change:showFinishedTasks", @filterTasks)
+
+
+
+  filterTasks : ->
+
+    if @get("showFinishedTasks")
+      @set("filteredTasks", @get("tasks"))
+    else
+      filteredTasks = @get("tasks").filter( (task) -> !task.get("annotation").state.isFinished )
+      @set( "filteredTasks", new Backbone.Collection(filteredTasks) )
 
 
   transformToCollection : ->
+
 
     tasks = new Backbone.Collection(@get("tasks"))
 
@@ -39,6 +52,7 @@ class DashboardModel extends Backbone.Model
         task.type = defaultTaskType(taskAnnotationTuple.get("annotation"))
 
     @set("tasks", tasks)
+    @filterTasks()
 
     exploratory = new Backbone.Collection(@get("exploratory"))
     @set("exploratory", exploratory)

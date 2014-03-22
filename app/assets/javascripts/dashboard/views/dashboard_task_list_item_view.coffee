@@ -14,9 +14,11 @@ class DashboardTaskListItemView extends Backbone.Marionette.ItemView
     <td><%= tasks.projectName       %></td>
     <td><%= tasks.type.description  %></td>
     <td>
-      <span class="label">
-        <%= tasks.type.settings.allowedModes %>
-      </span>
+      <% _.each(tasks.type.settings.allowedModes, function(mode) { %>
+        <span class="label">
+          <%= mode %>
+        </span>
+      <% }) %>
     </td>
     <td class="nowrap">
       <% if (annotation.state.isFinished) { %>

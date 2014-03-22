@@ -4,6 +4,7 @@ m4x4 : M4x4
 v3 : V3
 underscore : _
 oxalis/constants : constants
+./materials/arbitrary_plane_material_factory : ArbitraryPlaneMaterialFactory
 ###
 
 # Let's set up our trianglesplane.
@@ -39,7 +40,7 @@ class ArbitraryPlane
   x : 0
 
 
-  constructor : (@cam, @model, @width = 128, @height = 128) ->
+  constructor : (@cam, @model, @width = 128) ->
 
     @mesh = @createMesh()
 
@@ -53,7 +54,6 @@ class ArbitraryPlane
       binary.cube.on "bucketLoaded", => @isDirty = true
 
     throw "width needs to be a power of 2" unless Math.log(width) / Math.LN2 % 1 != 1
-    throw "height needs to be a power of 2" unless Math.log(height) / Math.LN2 % 1 != 1
 
 
   setMode : ( mode, radius ) ->
@@ -81,8 +81,7 @@ class ArbitraryPlane
       newVertices = M4x4.transformPointsAffine matrix, @queryVertices
       newColors = @model.getColorBinaries()[0].getByVerticesSync(newVertices)
 
-      mesh.texture.image.data.set(newColors)
-      mesh.texture.needsUpdate = true
+      @textureMaterial.setData "color", newColors
 
       m = cam.getZoomedMatrix()
 
@@ -99,9 +98,7 @@ class ArbitraryPlane
 
   calculateSphereVertices : ( sphericalCapRadius = @cam.distance ) ->
 
-    { width, height } = this
-
-    queryVertices = new Float32Array(width * height * 3)
+    queryVertices = new Float32Array(@width * @width * 3)
 
     # so we have Point [0, 0, 0] centered
     currentIndex = 0
@@ -113,11 +110,11 @@ class ArbitraryPlane
     # Transforming those normalVertices to become a spherical cap
     # which is better more smooth for querying.
     # http://en.wikipedia.org/wiki/Spherical_cap
-    for y in [0...height] by 1
-      for x in [0...width] by 1
+    for y in [0...@width] by 1
+      for x in [0...@width] by 1
 
-        vertex[0] = x - (Math.floor width/2)
-        vertex[1] = y - (Math.floor height/2)
+        vertex[0] = x - (Math.floor @width/2)
+        vertex[1] = y - (Math.floor @width/2)
         vertex[2] = 0
 
         vector = V3.sub(vertex, centerVertex, vector)
@@ -133,18 +130,16 @@ class ArbitraryPlane
 
   calculatePlaneVertices : ->
 
-    { width, height } = this
-
-    queryVertices = new Float32Array(width * height * 3)
+    queryVertices = new Float32Array(@width * @width * 3)
 
     # so we have Point [0, 0, 0] centered
     currentIndex = 0
 
-    for y in [0...height] by 1
-      for x in [0...width] by 1
+    for y in [0...@width] by 1
+      for x in [0...@width] by 1
 
-        queryVertices[currentIndex++] = x - (Math.floor width/2)
-        queryVertices[currentIndex++] = y - (Math.floor height/2)
+        queryVertices[currentIndex++] = x - (Math.floor @width/2)
+        queryVertices[currentIndex++] = y - (Math.floor @width/2)
         queryVertices[currentIndex++] = 0
 
     queryVertices
@@ -161,30 +156,13 @@ class ArbitraryPlane
 
   createMesh : ->
 
-    { height, width } = this
-    # create plane
-    planeGeo = new THREE.PlaneGeometry(width, height, 1, 1)
-
-    # create texture
-    texture =
-      new THREE.DataTexture(
-        new Uint8Array(width*height),
-        width,
-        height,
-        THREE.LuminanceFormat,
-        THREE.UnsignedByteType,
-        new THREE.UVMapping(),
-        THREE.ClampToEdgeWrapping ,
-        THREE.ClampToEdgeWrapping,
-        THREE.LinearMipmapLinearFilter,
-        THREE.LinearMipmapLinearFilter
-      )
-    texture.needsUpdate = true
-    textureMaterial = new THREE.MeshBasicMaterial({wireframe : false, map : texture})
+    @textureMaterial = new ArbitraryPlaneMaterialFactory(@model, @width).getMaterial()
 
     # create mesh
-    plane = new THREE.Mesh( planeGeo, textureMaterial )
-    plane.texture = texture
+    plane = new THREE.Mesh(
+      new THREE.PlaneGeometry(@width, @width, 1, 1)
+      @textureMaterial
+    )
     plane.rotation.x = Math.PI
     @x = 1
 

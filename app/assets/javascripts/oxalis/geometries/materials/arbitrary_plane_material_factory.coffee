@@ -8,10 +8,15 @@ class ArbitraryPlaneMaterialFactory extends AbstractPlaneMaterialFactory
 
   createTextures : ->
 
+    @textures = {
+      color : @createDataTexture(@tWidth, 1)
+    }
+
     @uniforms["color_texture"] = {
       type : "t"
-      value : createDataTexture(@tWidth, 1)
+      value : @textures["color"]
     }
+
 
 
   getFragmentShader : ->
@@ -32,6 +37,6 @@ class ArbitraryPlaneMaterialFactory extends AbstractPlaneMaterialFactory
         color_value = (color_value + brightness - 0.5) * contrast + 0.5;
 
         /* Set frag color */
-        gl_FragColor = vec4(data_value, data_value, data_value, 1.0);
+        gl_FragColor = vec4(color_value, color_value, color_value, 1.0);
       }
     """

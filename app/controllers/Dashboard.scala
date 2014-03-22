@@ -33,7 +33,6 @@ case class DashboardInfo(
                         )
 
 object DashboardInfo {
-  // implicit val dashboardInfoFormat = Json.format[DashboardInfo]
 }
 
 trait Dashboard {

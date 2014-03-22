@@ -85,7 +85,7 @@ def getDashboardInfoNew = Authenticated.async {
 
         val loggedTime = info.loggedTime.map { case (paymentInterval, duration) =>
           // TODO make formatTimeHumanReadable(duration) (?) work
-          Json.obj("paymentInterval" -> paymentInterval, "duration" -> duration.toString)
+          Json.obj("paymentInterval" -> paymentInterval, "durationInSeconds" -> duration.toSeconds)
         }
 
         for {

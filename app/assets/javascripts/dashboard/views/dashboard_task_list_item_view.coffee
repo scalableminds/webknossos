@@ -22,12 +22,12 @@ class DashboardTaskListItemView extends Backbone.Marionette.ItemView
       <% if (annotation.state.isFinished) { %>
         <i class="fa fa-check"></i><span> Finished</span><br />
       <% } else { %>
-        <a href="/annotation/<%= annotation.typ %>/<%= annotation.id %>">
+        <a href="/annotations/<%= annotation.typ %>/<%= annotation.id %>">
           <i class="fa fa-random"></i>
           trace
         </a>
         <br/>
-        <a href="/annotation/<%= annotation.typ %>/<%= annotation.id %>/finish"
+        <a href="/annotations/<%= annotation.typ %>/<%= annotation.id %>/finish"
           class="trace-finish"
           data-ajax="replace-row,confirm=@Messages("annotation.finish.confirm")">
             <i class="fa fa-check-circle-o"></i>

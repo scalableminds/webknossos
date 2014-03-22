@@ -214,9 +214,7 @@ class Gui
       newTree             : => @update()
 
     @model.volumeTracing?.on
-      newActiveCell    : =>
-        console.log "newActiveCell!"
-        @update()
+      newActiveCell : => @update()
 
     @model.user.on
       scaleChanged : => @updateScale()

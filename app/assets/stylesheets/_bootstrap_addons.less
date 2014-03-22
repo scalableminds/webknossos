@@ -31,3 +31,18 @@
   border-right-color: #222222;
   border-left-color: #111111;
 }
+
+
+// override bootstrap's defaults
+.navbar-nav > li > a {
+  padding-top: 10px !important;
+  padding-bottom: 10px !important;
+}
+.navbar {
+  min-height: @navbar-height !important
+}
+
+.navbar .navbar-header > .navbar-brand {
+  height: @navbar-height;
+  line-height: 50%;
+}

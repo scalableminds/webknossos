@@ -63,7 +63,7 @@ class PlaneMaterialFactory extends AbstractPlaneMaterialFactory
       @uniforms.repeat.value.set repeat.x, repeat.y
 
     @material.setSegmentationAlpha = (alpha) =>
-      @uniforms.alpha.value = alpha
+      @uniforms.alpha.value = alpha / 100
 
 
   setupChangeListeners : ->
@@ -158,6 +158,9 @@ class PlaneMaterialFactory extends AbstractPlaneMaterialFactory
             data_color += color_value * <%= name %>_weight * <%= name %>_color;
 
           <% }) %> ;
+
+          data_color = clamp(data_color, 0.0, 1.0);
+
         <% } %>
 
 
@@ -165,7 +168,7 @@ class PlaneMaterialFactory extends AbstractPlaneMaterialFactory
 
         if ( id > 0.1 ) {
           vec4 HSV = vec4( mod( 6.0 * id * golden_ratio, 6.0), 1.0, 1.0, 1.0 );
-          gl_FragColor = (1.0 - alpha/100.0) * vec4(data_color, 1.0) + alpha/100.0 * hsv_to_rgb( HSV );
+          gl_FragColor = mix( vec4(data_color, 1.0), hsv_to_rgb(HSV), alpha );
         } else {
           gl_FragColor = vec4(data_color, 1.0);
         }

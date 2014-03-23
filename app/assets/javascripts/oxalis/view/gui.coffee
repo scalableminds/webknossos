@@ -223,7 +223,7 @@ class Gui
       moveValue3dChanged : => @updateMoveValue3d()
       particleSizeChanged : => @updateParticleSize()
 
-    @model.binary["segmentation"]?.cube.on
+    @model.getSegmentationBinary()?.cube.on
       bucketLoaded : => @updateSegmentID()
 
     @createTooltips()
@@ -369,8 +369,8 @@ class Gui
 
   updateSegmentID : ->
 
-    if @model.binary["segmentation"]?
-      segmentID = @model.binary["segmentation"].cube.getDataValue( @model.flycam.getPosition() )
+    if @model.getSegmentationBinary()?
+      segmentID = @model.getSegmentationBinary().cube.getDataValue( @model.flycam.getPosition() )
       if segmentID?
         $("#segment-id").html("<p>Segment ID: " + segmentID + "</p>")
       else
@@ -385,7 +385,7 @@ class Gui
   setColorSettings : =>
 
     for binary in @model.getColorBinaries()
-      binary.updateContrastCurve(@settingsGeneral.brightness, @settingsGeneral.contrast)
+      binary.setColorSettings(@settingsGeneral.brightness, @settingsGeneral.contrast)
       binary.setColor @settingsGeneral[binary.name + "_color"]
 
     @user.get("brightness")[@datasetPosition] = (Number) @settingsGeneral.brightness

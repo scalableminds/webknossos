@@ -121,7 +121,7 @@ class Controller
 
           alpha = event.value
           if (alpha == 0)
-            @model.binary["segmentation"].pingStop()
+            @model.getSegmentationBinary().pingStop()
           @sceneController.setSegmentationAlpha( alpha )
 
       @modeMapping =
@@ -259,7 +259,5 @@ class Controller
 
     for binary in @model.getColorBinaries()
       binary.pullQueue.set4Bit(@model.user.get("fourBit"))
-      binary.updateContrastCurve(
-        gui.settingsGeneral.brightness, gui.settingsGeneral.contrast)
 
     return gui

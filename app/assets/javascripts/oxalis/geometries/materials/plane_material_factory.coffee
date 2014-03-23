@@ -28,21 +28,23 @@ class PlaneMaterialFactory extends AbstractPlaneMaterialFactory
     @textures = {}
     for name, binary of @model.binary
       bytes = binary.targetBitDepth >> 3
-      @textures[name] = @createDataTexture(@tWidth, bytes)
-      @textures[name].category = binary.category
+      shaderName = @sanitizeName(name)
+      @textures[shaderName] = @createDataTexture(@tWidth, bytes)
+      @textures[shaderName].binaryCategory = binary.category
+      @textures[shaderName].binaryName = binary.name
 
-    for name, texture of @textures
-      @uniforms[name + "_texture"] = {
+    for shaderName, texture of @textures
+      @uniforms[shaderName + "_texture"] = {
         type : "t"
         value : texture
       }
-      unless name == "segmentation"
-        color = _.map @model.binary[name].color, (e) -> e / 255
-        @uniforms[name + "_weight"] = {
+      unless texture.binaryCategory == "segmentation"
+        color = _.map @model.binary[texture.binaryName].color, (e) -> e / 255
+        @uniforms[shaderName + "_weight"] = {
           type : "f"
           value : 1
         }
-        @uniforms[name + "_color"] = {
+        @uniforms[shaderName + "_color"] = {
           type : "v3"
           value : new THREE.Vector3(color...)
         }
@@ -54,7 +56,7 @@ class PlaneMaterialFactory extends AbstractPlaneMaterialFactory
 
     @material.setColorInterpolation = (interpolation) =>
       for name, texture of @textures
-        if texture.category == "color"
+        if texture.binaryCategory == "color"
           texture.magFilter = interpolation
 
     @material.setScaleParams = ({offset, repeat}) =>
@@ -74,12 +76,14 @@ class PlaneMaterialFactory extends AbstractPlaneMaterialFactory
         binary.on
           newColor : (color) =>
             color = _.map color, (e) -> e / 255
-            @uniforms[binary.name + "_color"].value = new THREE.Vector3(color...)
+            uniformName = @sanitizeName(binary.name) + "_color"
+            @uniforms[uniformName].value = new THREE.Vector3(color...)
 
 
   getFragmentShader : ->
 
-    colorLayerNames = _.map @model.getColorBinaries(), (b) -> b.name
+    colorLayerNames = _.map @model.getColorBinaries(), (b) => @sanitizeName(b.name)
+    segmentationBinary = @model.getSegmentationBinary()
 
     return _.template(
       """
@@ -172,8 +176,8 @@ class PlaneMaterialFactory extends AbstractPlaneMaterialFactory
       """
       {
         layers : colorLayerNames
-        hasSegmentation : @model.getSegmentationBinary()?
-        segmentationName : @model.getSegmentationBinary()?.name
+        hasSegmentation : segmentationBinary?
+        segmentationName : @sanitizeName( segmentationBinary?.name )
         isRgb : @model.binary["color"]?.targetBitDepth == 24
       }
     )

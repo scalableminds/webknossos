@@ -32,8 +32,9 @@ class AbstractPlaneMaterialFactory extends AbstractMaterialFactory
     super(options)
 
     @material.setData = (name, data) =>
-      @textures[name].image.data.set(data)
-      @textures[name].needsUpdate = true
+      textureName = @sanitizeName(name)
+      @textures[textureName]?.image.data.set(data)
+      @textures[textureName]?.needsUpdate = true
 
 
   setupChangeListeners : ->
@@ -49,6 +50,14 @@ class AbstractPlaneMaterialFactory extends AbstractMaterialFactory
   createTextures : ->
 
     throw new Error("Subclass responsibility")
+
+
+  sanitizeName : (name) ->
+    # Make sure name starts with a letter and contains
+    # no "-" signs
+
+    return unless name?
+    return "binary_" + name.replace(/-/g, "_")
 
 
   createDataTexture : (width, bytes) ->

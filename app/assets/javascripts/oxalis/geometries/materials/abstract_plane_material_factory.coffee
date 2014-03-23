@@ -9,6 +9,8 @@ class AbstractPlaneMaterialFactory extends AbstractMaterialFactory
   constructor : (@model, @tWidth) ->
 
     super(@model)
+    @minFilter = THREE.NearestFilter
+    @maxFilter = THREE.NearestFilter
 
 
   setupAttributesAndUniforms : ->
@@ -63,7 +65,7 @@ class AbstractPlaneMaterialFactory extends AbstractMaterialFactory
       format, THREE.UnsignedByteType,
       new THREE.UVMapping(),
       THREE.ClampToEdgeWrapping, THREE.ClampToEdgeWrapping,
-      THREE.LinearFilter, THREE.NearestFilter
+      @minFilter, @maxFilter
     )
 
 

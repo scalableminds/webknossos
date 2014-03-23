@@ -6,6 +6,12 @@ three : THREE
 class ArbitraryPlaneMaterialFactory extends AbstractPlaneMaterialFactory
 
 
+  constructor : (@model, @tWidth) ->
+
+    super(@model, @tWidth)
+    @minFilter = THREE.LinearFilter
+
+
   createTextures : ->
 
     @textures = {

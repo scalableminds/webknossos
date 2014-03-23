@@ -27,6 +27,7 @@ case class VolumeTracing(
   dataSetName: String,
   userDataLayerName: String,
   timestamp: Long,
+  activeCellId: Option[Int],
   editPosition: Point3D,
   boundingBox: Option[BoundingBox],
   settings: AnnotationSettings = AnnotationSettings.volumeDefault,
@@ -39,7 +40,22 @@ case class VolumeTracing(
 
   def service = VolumeTracingService
 
-  def updateFromJson(jsUpdates: Seq[JsValue])(implicit ctx: DBAccessContext) = {Fox.successful(this)}
+  def updateFromJson(jsUpdates: Seq[JsValue])(implicit ctx: DBAccessContext): Fox[VolumeTracing] = {
+    val updates = jsUpdates.flatMap { json =>
+      TracingUpdater.createUpdateFromJson(json)
+    }
+    if (jsUpdates.size == updates.size) {
+      for {
+        updatedTracing <- updates.foldLeft(Fox.successful(this)) {
+          case (f, updater) => f.flatMap(tracing => updater.update(tracing))
+        }
+        _ <- VolumeTracingDAO.update(updatedTracing._id, updatedTracing.copy(timestamp = System.currentTimeMillis))(GlobalAccessContext)
+      } yield updatedTracing
+    } else {
+      Fox.empty
+    }
+  }
+
 
   def copyDeepAndInsert = ???
 
@@ -54,7 +70,8 @@ case class VolumeTracing(
   override def contentData = {
     UserDataLayerDAO.findOneByName(userDataLayerName)(GlobalAccessContext).map{ userDataLayer =>
       Json.obj(
-        "customLayers" -> List(AnnotationContent.dataLayerWrites.writes(userDataLayer.dataLayer))
+        "customLayers" -> List(AnnotationContent.dataLayerWrites.writes(userDataLayer.dataLayer)),
+        "activeCell" -> activeCellId
       )
     }
   }
@@ -73,7 +90,7 @@ object VolumeTracingService extends AnnotationContentService with FoxImplicits{
   def createFrom(baseDataSet: DataSet)(implicit ctx: DBAccessContext) = {
     baseDataSet.dataSource.toFox.flatMap{ baseSource =>
       val dataLayer = BinaryDataService.createUserDataSource(baseSource)
-      val t = VolumeTracing(baseDataSet.name, dataLayer.dataLayer.name, System.currentTimeMillis(), Point3D(0,0,0), None)
+      val t = VolumeTracing(baseDataSet.name, dataLayer.dataLayer.name, System.currentTimeMillis(), None, Point3D(0,0,0), None)
       for{
       _ <- UserDataLayerDAO.insert(dataLayer)
       _ <- VolumeTracingDAO.insert(t)

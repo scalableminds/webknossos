@@ -23,9 +23,8 @@ class Gui
     @user = @model.user
     @qualityArray = ["high", "medium", "low"]
 
-    @datasetPostfix = _.last(@model.dataSetName.split("_"))
     @brightnessContrastSettings = @user.getOrCreateBrightnessContrastSettings(
-      @datasetPostfix
+      @model.datasetPostfix
     )
 
     somaClickingAllowed = @tracingSettings.somaClickingAllowed
@@ -389,7 +388,7 @@ class Gui
       controller.updateDisplay()
 
     @user.resetBrightnessContrastSettings(
-      @datasetPostfix
+      @model.datasetPostfix
     ).done (@brightnessContrastSettings) =>
 
       @settingsGeneral.brightness = @brightnessContrastSettings.brightness

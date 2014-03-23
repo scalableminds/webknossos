@@ -106,6 +106,7 @@ class Model
                 }
 
             @dataSetName = dataSet.name
+            @datasetPostfix = _.last(@dataSetName.split("_"))
             zoomStepCount = Infinity
             @binary = {}
             @lowerBoundary = [ Infinity,  Infinity,  Infinity]

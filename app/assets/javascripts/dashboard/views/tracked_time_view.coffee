@@ -1,7 +1,6 @@
 ### define
 underscore : _
 backbone.marionette : marionette
-app : app
 dashboard/views/dashboard_task_list_item_view : DashboardTaskListItemView
 routes : routes
 ###

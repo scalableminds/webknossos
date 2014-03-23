@@ -89,12 +89,12 @@ def getDashboardInfoNew = Authenticated.async {
         }
 
         for {
-          taskList <- Future.traverse(info.tasks)({
+          tasksWithAnnotations <- Future.traverse(info.tasks)({
             case (task, annotation) =>
               for {
-                tasks <- Task.transformToJson(task)
-                annotations <- Annotation.transformToJson(annotation)
-              } yield (tasks, annotations)
+                taskJSON <- Task.transformToJson(task)
+                annotationJSON <- Annotation.transformToJson(annotation)
+              } yield (taskJSON, annotationJSON)
           })
           exploratoryList <- Future.traverse(info.exploratory)(Annotation.transformToJson(_))
         } yield {
@@ -104,7 +104,9 @@ def getDashboardInfoNew = Authenticated.async {
             "dataSets" -> info.dataSets,
             "hasAnOpenTask" -> info.hasAnOpenTask,
             "exploratory" -> Json.toJson(exploratoryList),
-            "tasks" -> Json.toJson(taskList.map(tuple => Json.obj("tasks" -> tuple._1, "annotation" -> tuple._2)))
+            "tasksWithAnnotations" -> Json.toJson(
+              tasksWithAnnotations.map(tuple => Json.obj("task" -> tuple._1, "annotation" -> tuple._2))
+            )
           )
         }
       }

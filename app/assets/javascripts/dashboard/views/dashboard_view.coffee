@@ -1,7 +1,6 @@
 ### define
 underscore : _
 backbone.marionette : marionette
-app : app
 dashboard/views/dashboard_task_list_view : DashboardTaskListView
 dashboard/views/explorative_tracing_list_view : ExplorativeTracingListView
 dashboard/views/tracked_time_view : TrackedTimeView
@@ -16,17 +15,17 @@ class DashboardView extends Backbone.Marionette.Layout
     <div class="tabbable" id="tabbable-dashboard">
       <ul class="nav nav-tabs">
         <li class="active">
-          <a href="#tab-tasks"  id="tab-tasks" data-toggle="tab">Tasks</a>
+          <a href="#" id="tab-tasks" data-toggle="tab">Tasks</a>
         </li>
         <li>
-          <a href="#tab-explorative"  id="tab-explorative" data-toggle="tab">Explorative Tracings</a>
+          <a href="#" id="tab-explorative" data-toggle="tab">Explorative Tracings</a>
         </li>
         <li>
-          <a href="#tab-tracked-time" id="tab-tracked-time" data-toggle="tab">Tracked Time</a>
+          <a href="#" id="tab-tracked-time" data-toggle="tab">Tracked Time</a>
         </li>
       </ul>
       <div class="tab-content">
-        <div class="tab-pane active"> My Tab Pane </div>
+        <div class="tab-pane active"></div>
       </div>
     </div>
   """)
@@ -51,7 +50,6 @@ class DashboardView extends Backbone.Marionette.Layout
 
     @bindUIElements()
 
-    window.test = @
     @model = new DashboardModel()
     @listenTo(@model, "sync", @showTasks)
 
@@ -60,21 +58,18 @@ class DashboardView extends Backbone.Marionette.Layout
 
   showTasks : ->
 
-    console.log("showing tasks")
     view = new DashboardTaskListView( model : @model, asAdmin : false )
     @tabPane.show(view)
 
 
   showExplorative : ->
 
-    console.log("showing Explorative")
     view = new ExplorativeTracingListView( model : @model, asAdmin : false )
     @tabPane.show(view)
 
 
   showTrackedTime : ->
 
-    console.log("showing tracked time")
     view = new TrackedTimeView( model : @model )
     @tabPane.show(view)
 

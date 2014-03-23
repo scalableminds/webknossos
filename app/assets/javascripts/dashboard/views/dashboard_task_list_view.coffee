@@ -1,9 +1,10 @@
 ### define
 underscore : _
 backbone.marionette : marionette
-app : app
-dashboard/views/dashboard_task_list_item_view : DashboardTaskListItemView
+./dashboard_task_list_item_view : DashboardTaskListItemView
+dashboard/models/dashboard_task_model : DashboardTaskModel
 routes : routes
+libs/toast : Toast
 ###
 
 class DashboardTaskListView extends Backbone.Marionette.CompositeView
@@ -19,7 +20,6 @@ class DashboardTaskListView extends Backbone.Marionette.CompositeView
     <% } else { %>
       <a href="<%= jsRoutes.controllers.TaskController.request().url %>"
          class="btn btn-success"
-         data-ajax="add-row=#dashboard-tasks<% if(hasAnOpenTask) { %>,confirm=@Messages("task.requestAnother") <% } %>"
          id="new-task-button">
          Get a new task
       </a>
@@ -49,31 +49,45 @@ class DashboardTaskListView extends Backbone.Marionette.CompositeView
     "click #new-task-button" : "newTask"
     "click #toggle-finished" : "toggleFinished"
 
-  modelEvents :
-    "change:filteredTasks" : "update"
-
   isAdminView : false
 
-  initialize : (options) ->
+  initialize : ->
 
-    @model = options.model
-    @collection = @model.get("filteredTasks")
+    @showFinishedTasks = false
+    @collection = @model.getUnfinishedTasks()
+    @listenTo(@model.get("tasks"), "add", @addChildView, @)
 
   update : ->
 
-    @collection = @model.get("filteredTasks")
+    @collection =
+      if @showFinishedTasks
+        @model.getFinishedTasks()
+      else
+        @model.getUnfinishedTasks()
+
     @render()
 
 
-  newTask : ->
+  newTask : (event) ->
 
-    # confirm new task, when there already is an open one
-    # $("#new-task-button").on("ajax-after", (event) ->
-    #   $(this).data("ajax", "add-row=#dashboard-tasks,confirm=Do you really want another task?")
-    # )
+    event.preventDefault()
+
+
+    if @model.getUnfinishedTasks().length == 0 or confirm("Do you really want another task?")
+
+      newTask = new DashboardTaskModel()
+      newTask.fetch(
+        url : "/user/tasks/request"
+        success : =>
+          console.log "success ", newTask
+          @model.get("tasks").add(newTask)
+
+        error : (model, xhr) ->
+          Toast.message(xhr.responseJSON.messages)
+      )
 
 
   toggleFinished : ->
 
-    showFinishedTasks = !@model.get("showFinishedTasks")
-    @model.set("showFinishedTasks", showFinishedTasks)
+    @showFinishedTasks = not @showFinishedTasks
+    @update()

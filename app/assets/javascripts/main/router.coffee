@@ -81,7 +81,7 @@ class Router extends Backbone.Router
 
       view = new Dashboard()
       @changeView(view)
-      
+
 
       @hideLoading()
 
@@ -138,3 +138,7 @@ class Router extends Backbone.Router
       @$mainContainer.append(view.render().el)
 
     return
+
+  loadURL : (url) ->
+
+    window.location = url

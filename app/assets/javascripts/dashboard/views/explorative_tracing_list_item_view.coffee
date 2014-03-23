@@ -1,6 +1,5 @@
 ### define
 underscore : _
-app : app
 backbone.marionette : marionette
 routes : routes
 ###

@@ -1,6 +1,5 @@
 ### define
 underscore : _
-app : app
 backbone.marionette : marionette
 ###
 
@@ -9,13 +8,13 @@ class DashboardTaskListItemView extends Backbone.Marionette.ItemView
   tagName : "tr"
 
   template : _.template("""
-    <td><%= tasks.formattedHash     %></td>
-    <td><%= tasks.type.summary      %></td>
-    <td><%= tasks.projectName       %></td>
-    <td><%= tasks.type.description  %></td>
+    <td><%= formattedHash     %></td>
+    <td><%= type.summary      %></td>
+    <td><%= projectName       %></td>
+    <td><%= type.description  %></td>
     <td>
-      <% _.each(tasks.type.settings.allowedModes, function(mode) { %>
-        <span class="label">
+      <% _.each(type.settings.allowedModes, function(mode) { %>
+        <span class="label-default label">
           <%= mode %>
         </span>
       <% }) %>

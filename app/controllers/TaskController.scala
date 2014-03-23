@@ -57,7 +57,7 @@ object TaskController extends Controller with Secured {
       annotation <- AnnotationService.createAnnotationFor(user, task) ?~> Messages("annotation.creationFailed")
       annotationJSON <- Annotation.transformToJson(annotation)
     } yield {
-      JsonOk(Json.obj( "tasks" -> taskJSON, "annotations" -> annotationJSON), Messages("task.assigned"))
+      JsonOk(Json.obj( "task" -> taskJSON, "annotation" -> annotationJSON), Messages("task.assigned"))
     }
   }
 }

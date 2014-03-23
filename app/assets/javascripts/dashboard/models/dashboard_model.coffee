@@ -1,6 +1,7 @@
 ### define
 underscore : _
 backbone : Backbone
+./dashboard_task_model : DashboardTaskModel
 ###
 
 class DashboardModel extends Backbone.Model
@@ -9,52 +10,35 @@ class DashboardModel extends Backbone.Model
 
   defaults :
       showFinishedTasks : false
-  #   dataSets : ""
-  #   exploratory
-  #   hasAnOpenTask
-  #   loggedTime
-  #   tasks
-  #   user
 
   initialize : ->
 
     @listenTo(@, "sync", @transformToCollection)
-    @listenTo(@, "change:showFinishedTasks", @filterTasks)
 
 
+  getFinishedTasks : ->
 
-  filterTasks : ->
+    return @get("tasks")
 
-    if @get("showFinishedTasks")
-      @set("filteredTasks", @get("tasks"))
-    else
-      filteredTasks = @get("tasks").filter( (task) -> !task.get("annotation").state.isFinished )
-      @set( "filteredTasks", new Backbone.Collection(filteredTasks) )
+
+  getUnfinishedTasks : ->
+
+    filteredTasks = @get("tasks").filter( (task) -> return !task.get("annotation").state.isFinished )
+    return new Backbone.Collection(filteredTasks)
 
 
   transformToCollection : ->
 
+    tasks = @get("tasksWithAnnotations").map( (el) ->
 
-    tasks = new Backbone.Collection(@get("tasks"))
+      return DashboardTaskModel::parse(el)
+    )
 
-    defaultTaskType = (annotation) ->
-
-      summary : "[deleted] " + annotation.typ
-      description : ""
-      settings : { allowedModes : "" }
-
-
-    for taskAnnotationTuple in tasks.models
-
-      task = taskAnnotationTuple.get("tasks")
-
-      unless task.type
-        task.type = defaultTaskType(taskAnnotationTuple.get("annotation"))
-
+    tasks = new Backbone.Collection(tasks, model : DashboardTaskModel )
     @set("tasks", tasks)
-    @filterTasks()
 
     exploratory = new Backbone.Collection(@get("exploratory"))
     @set("exploratory", exploratory)
+
 
 

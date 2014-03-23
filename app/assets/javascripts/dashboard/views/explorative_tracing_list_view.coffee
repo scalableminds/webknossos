@@ -4,6 +4,7 @@ backbone.marionette : marionette
 app : app
 dashboard/views/explorative_tracing_list_item_view : ExplorativeTracingListItemView
 libs/input : Input
+libs/toast : Toast
 ###
 
 class ExplorativeTracingListView extends Backbone.Marionette.CompositeView
@@ -18,10 +19,13 @@ class ExplorativeTracingListView extends Backbone.Marionette.CompositeView
               enctype="multipart/form-data"
               id="upload-and-explore-form"
               class="form-inline inline-block">
-          <button type="submit" class="btn">
-            <i class="fa fa-upload"></i>
-            Upload NML & explore
-          </button>
+            <span class="btn-file btn">
+              <input type="file" name="nmlFile" multiple>
+                <i class="fa fa-upload" id="form-upload-icon"></i>
+                <i class="fa fa-spinner fa-spin hide" id="form-spinner-icon"></i>
+                Upload NML & explore
+              </input>
+            </span>
         </form>
 
         <div class="divider-vertical"></div>
@@ -69,11 +73,14 @@ class ExplorativeTracingListView extends Backbone.Marionette.CompositeView
   itemViewContainer : "tbody"
 
   events :
-    "click #new-task-button" : "newTask"
+    "change input[type=file]" : "selectFiles"
+    "submit @ui.uploadAndExploreForm" : "uploadFiles"
 
   ui :
     tracingChooser : "#tracing-chooser"
     uploadAndExploreForm : "#upload-and-explore-form"
+    formSpinnerIcon : "#form-spinner-icon"
+    formUploadIcon : "#form-upload-icon"
 
   isAdminView : false
 
@@ -90,31 +97,46 @@ class ExplorativeTracingListView extends Backbone.Marionette.CompositeView
       "v" : => @ui.tracingChooser.toggleClass("hide")
     )
 
-    @setupUploadForm()
+
+  selectFiles : (event) ->
+
+    if event.target.files.length
+      @ui.uploadAndExploreForm.submit()
 
 
-  setupUploadForm : ->
+  uploadFiles : (event) ->
 
-    $form = @ui.uploadAndExploreForm
-    $form.find("[type=submit]").click( (event) ->
-      event.preventDefault()
-      $input = $("<input>", type : "file", name : "nmlFile", class : "hide", multiple : "")
+    event.preventDefault()
 
-      $input.change( ->
-        if this.files.length
-          $form.append(this)
-          $form.submit()
-      )
+    toggleIcon = =>
 
-      $input.click()
+      [@ui.formSpinnerIcon, @ui.formUploadIcon].map((ea) -> ea.toggleClass("hide"))
+
+
+    toggleIcon()
+
+    $.ajax(
+      @getUploadOptions(@ui.uploadAndExploreForm)
+    ).done( (data) ->
+      url = "/annotations/" + data.annotation.typ + "/" + data.annotation.id
+      app.router.loadURL(url)
+      Toast.message(data.messages)
+    ).fail( (xhr) ->
+      Toast.message(xhr.responseJSON.messages)
+    ).always( ->
+      toggleIcon()
     )
+
+
+  getUploadOptions : (form) ->
+
+    url : form.attr("action")
+    data : new FormData(form[0])
+    type : "POST"
+    processData : false
+    contentType : false
 
 
   onClose : ->
 
     @tracingChooserToggler.unbind()
-
-
-  newTask : ->
-
-    console.log("fetching new task")

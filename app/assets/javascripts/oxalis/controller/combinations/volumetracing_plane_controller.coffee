@@ -58,7 +58,7 @@ class VolumeTacingPlaneController extends PlaneController
 
       leftClick : (pos, plane, event) =>
 
-        cellId = @model.binary["segmentation"].cube.getDataValue(
+        cellId = @model.getSegmentationBinary().cube.getDataValue(
                   @calculateGlobalPos( pos ))
 
         @volumeTracingController.handleCellSelection( cellId )

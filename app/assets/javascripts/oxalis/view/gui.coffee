@@ -214,9 +214,7 @@ class Gui
       newTree             : => @update()
 
     @model.volumeTracing?.on
-      newActiveCell    : =>
-        console.log "newActiveCell!"
-        @update()
+      newActiveCell : => @update()
 
     @model.user.on
       scaleChanged : => @updateScale()
@@ -225,7 +223,7 @@ class Gui
       moveValue3dChanged : => @updateMoveValue3d()
       particleSizeChanged : => @updateParticleSize()
 
-    @model.binary["segmentation"]?.cube.on
+    @model.getSegmentationBinary()?.cube.on
       bucketLoaded : => @updateSegmentID()
 
     @createTooltips()
@@ -371,8 +369,8 @@ class Gui
 
   updateSegmentID : ->
 
-    if @model.binary["segmentation"]?
-      segmentID = @model.binary["segmentation"].cube.getDataValue( @model.flycam.getPosition() )
+    if @model.getSegmentationBinary()?
+      segmentID = @model.getSegmentationBinary().cube.getDataValue( @model.flycam.getPosition() )
       if segmentID?
         $("#segment-id").html("<p>Segment ID: " + segmentID + "</p>")
       else

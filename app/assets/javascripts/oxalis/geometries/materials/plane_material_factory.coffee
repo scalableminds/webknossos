@@ -184,7 +184,7 @@ class PlaneMaterialFactory
       """
       {
         layers : colorLayerNames
-        hasSegmentation : @model.binary["segmentation"]?
+        hasSegmentation : @model.getSegmentationBinary()?
         isRgb : @model.binary["color"]?.targetBitDepth == 24
       }
     )

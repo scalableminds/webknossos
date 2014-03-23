@@ -117,7 +117,7 @@ class Model
             @lowerBoundary = [ Infinity,  Infinity,  Infinity]
             @upperBoundary = [-Infinity, -Infinity, -Infinity]
 
-            for layer in dataSet.dataLayers
+            for layer in @getLayers( dataSet.dataLayers, tracing.content.contentData.customLayers )
 
               _.extend layer, layerOptions[layer.name]
               layer.bitDepth = parseInt( layer.elementClass.substring(4) )
@@ -131,11 +131,6 @@ class Model
             if @getColorBinaries().length == 0
               Toast.error("No data available! Something seems to be wrong with the dataset.")
             @setDefaultBinaryColors()
-
-            # if "volume" layer still used, change name to segmentation
-            if @binary["volume"]?
-              @binary["segmentation"] = @binary["volume"]
-              delete @binary["volume"]
 
             @flycam = new Flycam2d(constants.PLANE_WIDTH, @scaleInfo, zoomStepCount, @user)
             @flycam3d = new Flycam3d(constants.DISTANCE_3D, dataSet.scale)
@@ -159,9 +154,9 @@ class Model
             if controlMode == constants.CONTROL_MODE_TRACE
 
               if "volume" in tracing.content.settings.allowedModes
-                $.assert( @binary["segmentation"]?,
+                $.assert( @getSegmentationBinary()?,
                   "Volume is allowed, but segmentation does not exist" )
-                @volumeTracing = new VolumeTracing(tracing, @flycam, @binary["segmentation"].cube)
+                @volumeTracing = new VolumeTracing(tracing, @flycam, @getSegmentationBinary().cube)
 
               else
                 @skeletonTracing = new SkeletonTracing(tracing, @scaleInfo, @flycam, @flycam3d, @user)
@@ -174,12 +169,14 @@ class Model
 
   getColorBinaries : ->
 
-    result = []
-    for name, binary of @binary
-      if binary.category == "color"
-        result.push binary
+    return _.filter @binary, (binary) ->
+      binary.category == "color"
 
-    return result
+
+  getSegmentationBinary : ->
+
+    return _.find @binary, (binary) ->
+      binary.category == "segmentation"
 
 
   setDefaultBinaryColors : ->
@@ -194,3 +191,21 @@ class Model
 
     for binary, i in colorBinaries
       binary.setColor( defaultColors[i % defaultColors.length] )
+
+
+  getLayers : (layers, userLayers) ->
+    # Overwrite or extend layers with userLayers
+
+    return layers unless userLayers?
+
+    for userLayer in userLayers
+
+      layer = _.find layers, (layer) ->
+        layer.name == userLayer.fallback?.layerName
+
+      if layer?
+        _.extend layer, userLayer
+      else
+        layers.push(userLayer)
+
+    return layers

@@ -121,7 +121,7 @@ class Controller
 
           alpha = event.value
           if (alpha == 0)
-            @model.binary["segmentation"].pingStop()
+            @model.getSegmentationBinary().pingStop()
           @sceneController.setSegmentationAlpha( alpha )
 
       @modeMapping =

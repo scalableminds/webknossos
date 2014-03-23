@@ -9,7 +9,6 @@ class DashboardTaskModel extends Backbone.Model
 
   parse : (response) ->
 
-    console.log "parse", response
     defaultTaskType = (annotation) ->
 
       summary : "[deleted] " + annotation.typ
@@ -24,3 +23,23 @@ class DashboardTaskModel extends Backbone.Model
     # transform the task-annotation-object to a task which holds its annotation as an attribute
     task.annotation = response.annotation
     return task
+
+
+  finish : ->
+
+    annotation = @get("annotation")
+    url = "/annotations/#{annotation.typ}/#{annotation.id}/finish"
+
+    deferred = new $.Deferred()
+
+    $.get(url).success( (response) =>
+
+      @get("annotation").state.isFinished = true
+      @trigger("change")
+      deferred.resolve(response)
+
+    ).fail( (xhr) ->
+      deferred.reject(xhr.responseJSON)
+    )
+
+    return deferred.promise()

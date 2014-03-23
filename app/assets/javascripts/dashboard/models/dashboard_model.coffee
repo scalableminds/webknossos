@@ -7,7 +7,7 @@ backbone : Backbone
 class DashboardModel extends Backbone.Model
 
   urlRoot : "/getDashboardInfoNew"
-
+  newTaskUrl : "/user/tasks/request"
   defaults :
       showFinishedTasks : false
 
@@ -41,4 +41,16 @@ class DashboardModel extends Backbone.Model
     @set("exploratory", exploratory)
 
 
+  getNewTask : ->
 
+    deferred = new $.Deferred()
+    newTask = new DashboardTaskModel()
+    newTask.fetch(
+      url : newTaskUrl
+      success : (response) =>
+        @get("tasks").add(newTask)
+        deferred.resolve(response)
+      error : (model, xhr) ->
+        deferred.reject(xhr.responseJSON)
+    )
+    return deferred

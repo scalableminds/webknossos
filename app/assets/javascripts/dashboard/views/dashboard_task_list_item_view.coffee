@@ -1,6 +1,7 @@
 ### define
 underscore : _
 backbone.marionette : marionette
+libs/toast : Toast
 ###
 
 class DashboardTaskListItemView extends Backbone.Marionette.ItemView
@@ -28,11 +29,9 @@ class DashboardTaskListItemView extends Backbone.Marionette.ItemView
           trace
         </a>
         <br/>
-        <a href="/annotations/<%= annotation.typ %>/<%= annotation.id %>/finish"
-          class="trace-finish"
-          data-ajax="replace-row,confirm=@Messages("annotation.finish.confirm")">
-            <i class="fa fa-check-circle-o"></i>
-            finish
+        <a href="#" id="finish-link" class="trace-finish">
+          <i class="fa fa-check-circle-o"></i>
+          finish
         </a>
       <% } %>
     </td>
@@ -44,3 +43,20 @@ class DashboardTaskListItemView extends Backbone.Marionette.ItemView
       return "finished"
     else
       return "unfinished"
+
+  events :
+    "click #finish-link" : "finish"
+
+
+  initialize : ->
+
+    @model.on('change', @render)
+
+
+  finish : ->
+
+    if confirm("Are you sure you want to permanently finish this tracing?")
+
+      @model.finish().fail( (response) ->
+        Toast.message(response.messages)
+      )

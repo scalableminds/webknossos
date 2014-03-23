@@ -2,7 +2,6 @@
 underscore : _
 backbone.marionette : marionette
 ./dashboard_task_list_item_view : DashboardTaskListItemView
-dashboard/models/dashboard_task_model : DashboardTaskModel
 routes : routes
 libs/toast : Toast
 ###
@@ -18,7 +17,7 @@ class DashboardTaskListView extends Backbone.Marionette.CompositeView
           <i class="fa fa-download"></i>download
       </a>
     <% } else { %>
-      <a href="<%= jsRoutes.controllers.TaskController.request().url %>"
+      <a href="#"
          class="btn btn-success"
          id="new-task-button">
          Get a new task
@@ -55,7 +54,10 @@ class DashboardTaskListView extends Backbone.Marionette.CompositeView
 
     @showFinishedTasks = false
     @collection = @model.getUnfinishedTasks()
+
     @listenTo(@model.get("tasks"), "add", @addChildView, @)
+    @listenTo(@model.get("tasks"), "change", @update)
+
 
   update : ->
 
@@ -72,18 +74,10 @@ class DashboardTaskListView extends Backbone.Marionette.CompositeView
 
     event.preventDefault()
 
-
     if @model.getUnfinishedTasks().length == 0 or confirm("Do you really want another task?")
 
-      newTask = new DashboardTaskModel()
-      newTask.fetch(
-        url : "/user/tasks/request"
-        success : =>
-          console.log "success ", newTask
-          @model.get("tasks").add(newTask)
-
-        error : (model, xhr) ->
-          Toast.message(xhr.responseJSON.messages)
+      @model.getNewTask().then((response) ->
+        Toast.message(response.messages)
       )
 
 

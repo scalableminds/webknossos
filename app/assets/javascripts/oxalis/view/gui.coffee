@@ -23,8 +23,9 @@ class Gui
     @user = @model.user
     @qualityArray = ["high", "medium", "low"]
 
-    @datasetPostfix = _.last(@model.dataSetName.split("_"))
-    @datasetPosition = @initDatasetPosition(@user.get("briConNames"))
+    @brightnessContrastSettings = @user.getOrCreateBrightnessContrastSettings(
+      @model.datasetPostfix
+    )
 
     somaClickingAllowed = @tracingSettings.somaClickingAllowed
 
@@ -32,8 +33,8 @@ class Gui
 
       boundingBox : "0, 0, 0, 0, 0, 0"
       fourBit : @user.get("fourBit")
-      brightness : @user.get("brightness")[@datasetPosition]
-      contrast : @user.get("contrast")[@datasetPosition]
+      brightness : @brightnessContrastSettings.brightness
+      contrast : @brightnessContrastSettings.contrast
       resetColorSettings : => @resetColorSettings()
       quality : @qualityArray[@user.get("quality")]
 
@@ -51,14 +52,6 @@ class Gui
       @settingsVolume =
         activeCellID : @model.volumeTracing.getActiveCellId()
         createNewCell : => @trigger "createNewCell"
-
-
-    if @datasetPosition == 0
-      # add new dataset to settings
-      @user.get("briConNames").push(@datasetPostfix)
-      @user.get("brightness").push(@settingsGeneral.brightness)
-      @user.get("contrast").push(@settingsGeneral.contrast)
-      @datasetPosition = @user.get("briConNames").length - 1
 
 
     @gui = new dat.GUI(autoPlace: false, width : 280, hideable : false, closed : true)
@@ -330,17 +323,6 @@ class Gui
     return result
 
 
-  initDatasetPosition : (briConNames) ->
-
-    for i in [0...briConNames.length]
-      if briConNames[i] == @datasetPostfix
-        datasetPosition = i
-    unless datasetPosition
-      # take default values
-      datasetPosition = 0
-    datasetPosition
-
-
   addTooltip : (element, title) ->
 
     $(element.domElement).parent().parent().tooltip({ title : title })
@@ -388,8 +370,8 @@ class Gui
       binary.setColorSettings(@settingsGeneral.brightness, @settingsGeneral.contrast)
       binary.setColor @settingsGeneral[binary.name + "_color"]
 
-    @user.get("brightness")[@datasetPosition] = (Number) @settingsGeneral.brightness
-    @user.get("contrast")[@datasetPosition] = (Number) @settingsGeneral.contrast
+    @brightnessContrastSettings.brightness = (Number) @settingsGeneral.brightness
+    @brightnessContrastSettings.contrast = (Number) @settingsGeneral.contrast
 
     @user.push()
     @model.flycam.update()
@@ -403,14 +385,12 @@ class Gui
     for controller in @colorControllers
       controller.updateDisplay()
 
-    Request.send(
-      url : "/user/configuration/default"
-      dataType : "json"
-    ).done (defaultData) =>
-      defaultDatasetPosition = @initDatasetPosition(defaultData.briConNames)
+    @user.resetBrightnessContrastSettings(
+      @model.datasetPostfix
+    ).done (@brightnessContrastSettings) =>
 
-      @settingsGeneral.brightness = defaultData.brightness[defaultDatasetPosition]
-      @settingsGeneral.contrast = defaultData.contrast[defaultDatasetPosition]
+      @settingsGeneral.brightness = @brightnessContrastSettings.brightness
+      @settingsGeneral.contrast = @brightnessContrastSettings.contrast
       @setColorSettings()
       @brightnessController.updateDisplay()
       @contrastController.updateDisplay()

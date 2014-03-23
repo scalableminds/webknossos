@@ -21,6 +21,11 @@ class ArbitraryPlaneMaterialFactory extends AbstractPlaneMaterialFactory
     }
 
 
+  createDataTexture : (width, bytes) ->
+
+    @minFilter = THREE.LinearFilter
+    super(width, bytes)
+
 
   getFragmentShader : ->
 

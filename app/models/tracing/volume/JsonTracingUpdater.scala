@@ -41,7 +41,7 @@ case class UpdateTracing(value: JsObject) extends TracingUpdater {
   import braingames.geometry.Point3D
 
   def createUpdate()(implicit ctx: DBAccessContext) = {
-    val activeCellId = (value \ "activeCellId").asOpt[Int]
+    val activeCellId = (value \ "activeCell").asOpt[Int]
     val editPosition = (value \ "editPosition").as[Point3D]
     TracingUpdate { t =>
       val updated = t.copy(

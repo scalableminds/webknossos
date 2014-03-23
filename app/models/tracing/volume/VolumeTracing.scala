@@ -56,7 +56,6 @@ case class VolumeTracing(
     }
   }
 
-
   def copyDeepAndInsert = ???
 
   def mergeWith(source: AnnotationContent) = ???

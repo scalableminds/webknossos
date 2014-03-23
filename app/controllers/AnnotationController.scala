@@ -196,23 +196,6 @@ object AnnotationController extends Controller with Secured with TracingInformat
       }
   }
 
-  def finishWithRedirect(typ: String, id: String) = Authenticated.async {
-    implicit request =>
-      for {
-        annotation <- AnnotationDAO.findOneById(id) ?~> Messages("annotation.notFound")
-        finished <- annotation.muta.finishAnnotation(request.user).futureBox
-      } yield {
-        finished match {
-          case Full((_, message)) =>
-            Redirect(routes.UserController.dashboard).flashing("success" -> message)
-          case Failure(message, _, _) =>
-            Redirect(routes.UserController.dashboard).flashing("error" -> message)
-          case _ =>
-            Redirect(routes.UserController.dashboard).flashing("error" -> Messages("error.unknown"))
-        }
-      }
-  }
-
   def nameExplorativeAnnotation(typ: String, id: String) = Authenticated.async(parse.urlFormEncoded) {
     implicit request =>
       for {

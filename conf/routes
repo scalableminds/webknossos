@@ -5,9 +5,6 @@
 # The general pages
 GET           /                                                          controllers.Application.index
 GET           /dashboard                                                 controllers.UserController.empty
-GET           /dashboardOld                                              controllers.UserController.dashboard
-GET           /getDashboardInfo                                          controllers.UserController.getDashboardInfo
-GET           /getDashboardInfoNew                                       controllers.UserController.getDashboardInfoNew
 GET           /impressum                                                 controllers.Application.impressum
 
 # Tasks
@@ -32,11 +29,12 @@ GET           /user/tasks/request                                        control
 
 GET           /api/users                                                 controllers.UserController.list
 GET           /api/user                                                  controllers.UserController.current
+GET           /api/user/dashboard                                        controllers.UserController.dashboard
 DELETE        /api/users/:id                                             controllers.UserController.delete(id: String)
 PUT           /api/users/:id                                             controllers.UserController.update(id: String)
 GET           /api/users/:id/annotations/download                        controllers.admin.NMLIO.userDownload(id: String)
 # GET         /api/users/:id/loginAs                                     controllers.UserController.loginAsUser(id: String)
-GET           /users/:id/details                                         controllers.UserController.show(id: String)
+
 
 # Team
 GET           /teams                                                     controllers.TeamController.empty
@@ -71,7 +69,6 @@ PUT           /datasets/:dataSetName/layers/:dataLayerName/data          control
 POST          /annotations/createExplorational                           controllers.AnnotationController.createExplorational
 PUT           /annotations/:typ/:id                                      controllers.AnnotationController.updateWithJson(typ: String, id: String, version: Int)
 POST          /annotations/:typ/:id/name                                 controllers.AnnotationController.nameExplorativeAnnotation(typ: String, id: String)
-GET           /annotations/:typ/:id/finishAndRedirect                    controllers.AnnotationController.finishWithRedirect(typ: String, id: String)
 GET           /annotations/:typ/:id/finish                               controllers.AnnotationController.finish(typ: String, id: String)
 GET           /annotations/:typ/:id/reopen                               controllers.AnnotationController.reopen(typ: String, id: String)
 GET           /annotations/:typ/:id/reset                                controllers.AnnotationController.reset(typ: String, id: String)

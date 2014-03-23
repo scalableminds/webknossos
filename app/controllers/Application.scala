@@ -50,7 +50,7 @@ object Application extends Controller with Secured {
           case Full(annotationId) =>
             Redirect(routes.AnnotationController.trace(annotationId.annotationType, annotationId.identifier))
           case _ =>
-            Redirect(routes.UserController.dashboard)
+            Redirect("/dashboard")
         }
       case _ =>
         Future.successful(Redirect(routes.DataSetController.spotlight))

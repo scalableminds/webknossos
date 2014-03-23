@@ -32,8 +32,6 @@ case class DashboardInfo(
                           hasAnOpenTask: Boolean
                         )
 
-object DashboardInfo {
-}
 
 trait Dashboard {
   private def userWithTasks(user: User)(implicit ctx: DBAccessContext): Fox[List[(Task, Annotation)]] = {

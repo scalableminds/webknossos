@@ -37,15 +37,15 @@ class DashboardTaskListItemView extends Backbone.Marionette.ItemView
     </td>
   """)
 
+  events :
+    "click #finish-link" : "finish"
+
   className : ->
 
     if @model.get("annotation").state.isFinished
       return "finished"
     else
       return "unfinished"
-
-  events :
-    "click #finish-link" : "finish"
 
 
   initialize : ->

@@ -5,8 +5,6 @@ backbone : Backbone
 
 class DashboardTaskModel extends Backbone.Model
 
-  urlRoot : "/getDashboardInfoNew"
-
   parse : (response) ->
 
     defaultTaskType = (annotation) ->

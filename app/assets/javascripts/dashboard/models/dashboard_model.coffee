@@ -6,7 +6,7 @@ backbone : Backbone
 
 class DashboardModel extends Backbone.Model
 
-  urlRoot : "/getDashboardInfoNew"
+  urlRoot : "/api/user/dashboard"
   newTaskUrl : "/user/tasks/request"
   defaults :
       showFinishedTasks : false

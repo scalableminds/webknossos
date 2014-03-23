@@ -81,7 +81,7 @@ DashboardLoader =
     # not working currently?
     # url = $tabbableDashboard.data("url")
 
-    url = "/getDashboardInfo"
+    url = "/api/user/dashboard"
 
     $.get(url).done((response) =>
 

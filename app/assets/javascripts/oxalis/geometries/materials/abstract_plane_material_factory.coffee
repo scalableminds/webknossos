@@ -8,9 +8,9 @@ class AbstractPlaneMaterialFactory extends AbstractMaterialFactory
 
   constructor : (@model, @tWidth) ->
 
-    super(@model)
     @minFilter = THREE.NearestFilter
     @maxFilter = THREE.NearestFilter
+    super(@model)
 
 
   setupAttributesAndUniforms : ->

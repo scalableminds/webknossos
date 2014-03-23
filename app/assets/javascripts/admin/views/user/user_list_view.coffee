@@ -106,8 +106,7 @@ class UserListView extends Backbone.Marionette.CompositeView
       Toast.error("No user is selected.")
 
 
-  close : ->
+  onClose : ->
 
     @modalView?.close()
-    super()
 

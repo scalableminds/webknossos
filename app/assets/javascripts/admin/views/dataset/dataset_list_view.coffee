@@ -70,7 +70,6 @@ class DatasetListView extends Backbone.Marionette.CompositeView
     @collection.setFilter(["name", "owningTeam"], searchQuery)
 
 
-  close : ->
+  onClose : ->
 
     @modalView?.close()
-    super()

@@ -385,7 +385,7 @@ class Gui
   setColorSettings : =>
 
     for binary in @model.getColorBinaries()
-      binary.updateContrastCurve(@settingsGeneral.brightness, @settingsGeneral.contrast)
+      binary.setColorSettings(@settingsGeneral.brightness, @settingsGeneral.contrast)
       binary.setColor @settingsGeneral[binary.name + "_color"]
 
     @user.get("brightness")[@datasetPosition] = (Number) @settingsGeneral.brightness

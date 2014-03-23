@@ -18,7 +18,6 @@ class ArbitraryController
   # Arbitrary Controller: Responsible for Arbitrary Modes
 
   WIDTH : 128
-  HEIGHT : 128
 
   plane : null
   crosshair : null
@@ -57,7 +56,7 @@ class ArbitraryController
     @cam = @model.flycam3d
     @arbitraryView = new ArbitraryView(canvas, @cam, stats, @view, @model.scaleInfo)
 
-    @plane = new ArbitraryPlane(@cam, @model, @WIDTH, @HEIGHT)
+    @plane = new ArbitraryPlane(@cam, @model, @WIDTH)
     @arbitraryView.addGeometry @plane
 
     @infoPlane = new ArbitraryPlaneInfo()

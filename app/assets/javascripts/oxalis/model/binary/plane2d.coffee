@@ -36,7 +36,6 @@ class Plane2D
 
   cube : null
   queue : null
-  contrastCurves : null
 
   dataTexture : null
 
@@ -74,12 +73,6 @@ class Plane2D
 
       @dataTexture.tiles = new Array(@BUCKETS_PER_ROW * @BUCKETS_PER_ROW)
       @dataTexture.ready = false
-
-
-  updateContrastCurves : (@contrastCurves) ->
-
-    @dataTexture.tiles = new Array(@BUCKETS_PER_ROW * @BUCKETS_PER_ROW)
-    @dataTexture.ready = false
 
 
   get : ({position, zoomStep, area}) ->
@@ -286,7 +279,6 @@ class Plane2D
           pixelRepeatP: repeatP
           rowRepeatP: repeatP
         }
-        if @contrastCurves? then @contrastCurves[bucket[3]]
       )
 
 
@@ -383,7 +375,7 @@ class Plane2D
     )
 
 
-  renderToBuffer : (destination, source, contrastCurve) ->
+  renderToBuffer : (destination, source) ->
 
     i = 1 << (destination.widthP << 1)
     destination.nextRowMask = (1 << destination.widthP) - 1
@@ -412,7 +404,7 @@ class Plane2D
       # assuming little endian order
       for b in [0...bytesSrcMapped]
         if (value = (sourceValue >> (b*8)) % 256 ) or b == bytesSrcMapped - 1 or (not shorten)
-          destination.buffer[dest++] = if contrastCurve? then contrastCurve[value] else value
+          destination.buffer[dest++] = value
           if shorten
             break
 

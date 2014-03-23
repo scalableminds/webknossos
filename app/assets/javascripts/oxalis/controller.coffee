@@ -259,7 +259,5 @@ class Controller
 
     for binary in @model.getColorBinaries()
       binary.pullQueue.set4Bit(@model.user.get("fourBit"))
-      binary.updateContrastCurve(
-        gui.settingsGeneral.brightness, gui.settingsGeneral.contrast)
 
     return gui

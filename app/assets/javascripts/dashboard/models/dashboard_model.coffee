@@ -46,7 +46,7 @@ class DashboardModel extends Backbone.Model
     deferred = new $.Deferred()
     newTask = new DashboardTaskModel()
     newTask.fetch(
-      url : newTaskUrl
+      url : @newTaskUrl
       success : (response) =>
         @get("tasks").add(newTask)
         deferred.resolve(response)

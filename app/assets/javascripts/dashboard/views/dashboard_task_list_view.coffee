@@ -76,7 +76,7 @@ class DashboardTaskListView extends Backbone.Marionette.CompositeView
 
     if @model.getUnfinishedTasks().length == 0 or confirm("Do you really want another task?")
 
-      @model.getNewTask().then((response) ->
+      @model.getNewTask().always((response) ->
         Toast.message(response.messages)
       )
 

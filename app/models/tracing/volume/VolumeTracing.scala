@@ -1,7 +1,7 @@
 package models.tracing.volume
 
 import braingames.geometry.{Point3D, BoundingBox}
-import models.annotation.{AnnotationContentService, AnnotationContent, AnnotationSettings}
+import models.annotation.{AnnotationLike, AnnotationContentService, AnnotationContent, AnnotationSettings}
 import models.basics.SecuredBaseDAO
 import models.binary.UserDataLayerDAO
 import models.binary.DataSet
@@ -54,7 +54,7 @@ case class VolumeTracing(
   override def contentData = {
     UserDataLayerDAO.findOneByName(userDataLayerName)(GlobalAccessContext).map{ userDataLayer =>
       Json.obj(
-        "customLayers" -> List(userDataLayer.dataLayer)
+        "customLayers" -> List(AnnotationContent.dataLayerWrites.writes(userDataLayer.dataLayer))
       )
     }
   }

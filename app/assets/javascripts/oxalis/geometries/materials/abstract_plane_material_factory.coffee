@@ -69,7 +69,7 @@ class AbstractPlaneMaterialFactory extends AbstractMaterialFactory
       format, THREE.UnsignedByteType,
       new THREE.UVMapping(),
       THREE.ClampToEdgeWrapping, THREE.ClampToEdgeWrapping,
-      THREE.NearestFilter, THREE.NearestFilter
+      THREE.LinearFilter, THREE.NearestFilter
     )
 
 

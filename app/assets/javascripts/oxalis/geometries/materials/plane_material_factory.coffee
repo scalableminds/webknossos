@@ -58,6 +58,7 @@ class PlaneMaterialFactory extends AbstractPlaneMaterialFactory
       for name, texture of @textures
         if texture.binaryCategory == "color"
           texture.magFilter = interpolation
+          texture.needsUpdate = true
 
     @material.setScaleParams = ({offset, repeat}) =>
       @uniforms.offset.value.set offset.x, offset.y

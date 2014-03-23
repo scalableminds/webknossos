@@ -116,7 +116,7 @@ class PlaneMaterialFactory
       <% }) %>
 
       <% if (hasSegmentation) { %>
-        uniform sampler2D segmentation_texture;
+        uniform sampler2D <%= segmentationName %>_texture;
       <% } %>
 
       uniform vec2 offset, repeat;
@@ -155,7 +155,7 @@ class PlaneMaterialFactory
         float golden_ratio = 0.618033988749895;
 
         <% if (hasSegmentation) { %>
-          vec4 volume_color = texture2D(segmentation_texture, vUv * repeat + offset);
+          vec4 volume_color = texture2D(<%= segmentationName %>_texture, vUv * repeat + offset);
           float id = (volume_color.r * 255.0);
         <% } else { %>
           float id = 0.0;
@@ -185,6 +185,7 @@ class PlaneMaterialFactory
       {
         layers : colorLayerNames
         hasSegmentation : @model.getSegmentationBinary()?
+        segmentationName : @model.getSegmentationBinary()?.name
         isRgb : @model.binary["color"]?.targetBitDepth == 24
       }
     )

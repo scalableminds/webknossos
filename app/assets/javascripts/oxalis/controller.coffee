@@ -45,6 +45,10 @@ class Controller
 
   constructor : (@controlMode) ->
 
+    unless @browserSupported()
+      unless window.confirm("You are using an unsupported browser, please use the newest version of Chrome, Opera or Safari.\n\nTry anyways?")
+        window.history.back()
+
     _.extend(@, new EventMixin())
 
     @fullScreen = false
@@ -261,3 +265,9 @@ class Controller
       binary.pullQueue.set4Bit(@model.user.get("fourBit"))
 
     return gui
+
+
+  browserSupported : ->
+
+    # right now only webkit-based browsers are supported
+    return window.webkitURL

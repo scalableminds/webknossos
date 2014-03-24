@@ -6,68 +6,72 @@ underscore : _
 
 class Pipeline
 
-  # Collects a list of asynchronous actions
-  # and executes them in order
+  # Executes asnychronous actions in order.
+  #
+  # Each action is exectued after the previous action
+  # is finished. Any output of the previous action is
+  # passed to the current action.
 
 
-  constructor : (@options = {}) ->
+  constructor : (firstArguments, @options = {}) ->
 
-    @actions     = []
-    @deferred    = null
-    @retryCount  = 0
+    @actions       = []
+    @nextArguments = firstArguments
+    @retryCount    = 0
+    @running       = false
 
     _.defaults @options,
       maxRetry : 3
 
 
-  enqueueAction : ( action ) ->
+  executeAction : ( action ) ->
     # action : function that returns a
     #          $.Deferred object
 
+    action._deferred = new $.Deferred()
     @actions.push( action )
 
+    if not running
+      @executeNext()
 
-  enqueueActions : ( actionList ) ->
-
-    @actions = @actions.concat( actionList )
+    return action._deferred
 
 
-  execute : ( firstArgument ) ->
+  executeActions : ( actionList ) ->
 
-    unless @deferred?
-      @deferred = deferred = new $.Deferred()
-      @executeNext(firstArgument)
-
+    for action in actionList
+      deferred = @executeAction(action)
     return deferred
 
 
-  executeNext : ( previousResponse ) ->
+  executeNext : ->
 
     currentAction = @actions.shift()
 
     if currentAction?
 
-      currentAction(previousResponse)
+      @running = true
+
+      currentAction( @nextArguments... )
         .done (response) =>
 
+          currentAction._deferred.resolve(arguments...)
+
+          @nextArguments = arguments
           @retryCount = 0
-          @executeNext(response)
+          @executeNext()
 
         .fail (response) =>
 
           @retryCount++
 
-          if @retryCount >= @options.maxRetry
-            deferred  = @deferred
-            @deferred = null
-            deferred.reject( response )
+          if @retryCount > @options.maxRetry
+            currentAction._deferred.reject(arguments...)
 
           else
             @actions.unshift( currentAction )
             @executeNext()
 
-    else
+      else
 
-      deferred  = @deferred
-      @deferred = null
-      deferred.resolve( previousResponse )
+        @running = false

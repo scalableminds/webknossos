@@ -17,5 +17,5 @@ object UserDataLayerDAO extends SecuredBaseDAO[UserDataLayer] {
   val formatter = UserDataLayer.userDataLayerFormat
 
   def findOneByName(name: String)(implicit ctx: DBAccessContext) =
-    find(Json.obj("dataLayer.name" -> name)).one[UserDataLayer]
+    findOne("dataLayer.name", name)
 }

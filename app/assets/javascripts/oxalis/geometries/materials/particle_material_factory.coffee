@@ -1,13 +1,16 @@
 ### define
 three : THREE
+./abstract_material_factory : AbstractMaterialFactory
 ###
 
-class ParticleMaterialFactory
+class ParticleMaterialFactory extends AbstractMaterialFactory
 
 
-  constructor : (@model) ->
+  setupAttributesAndUniforms : ->
 
-    uniforms =
+    super()
+
+    @uniforms = _.extend @uniforms,
       zoomFactor :
         type : "f"
         value : @model.flycam.getPlaneScalingFactor()
@@ -27,40 +30,34 @@ class ParticleMaterialFactory
         type : "f"
         value : window.devicePixelRatio || 1
 
-    attributes =
+    @attributes = _.extend @attributes,
       size :
         type : "f"
 
-    vertexShader   = @getVertexShader()
-    fragmentShader = @getFragmentShader()
 
-    @material = new THREE.ShaderMaterial({
-      attributes
-      uniforms
-      vertexShader
-      fragmentShader
-      vertexColors : true
-    })
+  makeMaterial : ->
 
-    @material.setShowRadius = (showRadius) ->
-      uniforms.showRadius.value = if showRadius then 1 else 0
+    super( vertexColors : true )
+
+    @material.setShowRadius = (showRadius) =>
+      @uniforms.showRadius.value = if showRadius then 1 else 0
+
+
+  setupChangeListeners : ->
+
+    super()
 
     @model.user.on
-      particleSizeChanged : (size) ->
-        uniforms.particleSize.value = size
-      scaleChanged : (scale) ->
-        uniforms.scale.value = scale
+      particleSizeChanged : (size) =>
+        @uniforms.particleSize.value = size
+      scaleChanged : (scale) =>
+        @uniforms.scale.value = scale
       overrideNodeRadiusChanged : =>
         @model.flycam.update()
 
     @model.flycam.on
       zoomStepChanged : =>
-        uniforms.zoomFactor.value = @model.flycam.getPlaneScalingFactor()
-
-
-  getMaterial : ->
-
-    return @material
+        @uniforms.zoomFactor.value = @model.flycam.getPlaneScalingFactor()
 
 
   getVertexShader : ->

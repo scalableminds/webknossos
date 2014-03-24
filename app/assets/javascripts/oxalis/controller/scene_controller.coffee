@@ -28,7 +28,7 @@ class SceneController
     @pingBinary       = true
     @pingBinarySeg    = true
 
-    @polygonFactory = new PolygonFactory( @model.binary["segmentation"]?.cube )
+    @polygonFactory = new PolygonFactory( @model.getSegmentationBinary()?.cube )
     @volumeMeshes   = []
 
     @createMeshes()

@@ -9,10 +9,6 @@ underscore : _
 
 class ArbitraryView
 
-  # CAM_DISTANCE has to be calculates such that with cam
-  # angle 45°, the plane of width 128 fits exactly in the
-  # viewport.
-  CAM_DISTANCE   : 64 / Math.tan( Math.PI / 180 * 45 / 2 )
   DEFAULT_SCALE  : 2
   MAX_SCALE      : 3
   MIN_SCALE      : 1
@@ -27,9 +23,14 @@ class ArbitraryView
   camera : null
   cameraPosition : null
 
-  constructor : (canvas, @dataCam, @stats, @view, scaleInfo) ->
+  constructor : (canvas, @dataCam, @stats, @view, scaleInfo, width) ->
 
     _.extend(this, new EventMixin())
+
+    # CAM_DISTANCE has to be calculates such that with cam
+    # angle 45°, the plane of width 128 fits exactly in the
+    # viewport.
+    @CAM_DISTANCE = width / 2 / Math.tan( Math.PI / 180 * 45 / 2 )
 
     # The "render" div serves as a container for the canvas, that is
     # attached to it once a renderer has been initalized.

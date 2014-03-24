@@ -13,7 +13,7 @@ class DashboardTaskListView extends Backbone.Marionette.CompositeView
     <br />
     <% if (userID) { %>
       <a href="<%= jsRoutes.controllers.admin.NMLIO.userDownload(user.id).url %>"
-         class="btn btn-default"
+         class="btn btn-primary"
          title="download all finished tracings">
           <i class="fa fa-download"></i>download
       </a>
@@ -25,7 +25,9 @@ class DashboardTaskListView extends Backbone.Marionette.CompositeView
       </a>
     <% } %>
     <div class="divider-vertical"></div>
-    <a href="#" id="toggle-finished">Show finished tasks</a>
+    <a href="#" id="toggle-finished" class="btn btn-default">
+      Show finished tasks
+    </a>
     <br /><br />
     <table class="table table-striped">
       <thead>

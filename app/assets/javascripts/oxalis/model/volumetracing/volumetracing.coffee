@@ -17,7 +17,7 @@ class VolumeTracing
     @cells        = []
     @activeCell   = null
     @currentLayer = null        # Layer currently edited
-    @idCount      = 1
+    @idCount      = @contentData.idCount || 1
 
     @stateLogger  = new VolumeTracingStateLogger(
       @flycam, tracing.version, tracing.id, tracing.typ,

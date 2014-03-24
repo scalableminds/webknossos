@@ -40,7 +40,7 @@ Toast =
 
     else
       $messageElement = $("<div>", class : "alert alert-#{type} fade in").html(message)
-      $messageElement.prepend($("<a>", class : "close", "data-dismiss" : "alert", href : "#").html("&times;"))
+      $messageElement.prepend($("<button>", type : "button", class : "close", "data-dismiss" : "alert").html("&times;"))
       if sticky
         $messageElement.alert()
       else

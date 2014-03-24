@@ -3,31 +3,32 @@
 @main(){
 
   <div class="container">
-    <div class="col-sm-9 offset1 space-top">
-      <div class="well">
+    <div class="well space-top col-center col-sm-6">
+      @helper.form(routes.Authentication.authenticate, 'class -> "form-horizontal") {
 
-        @helper.form(routes.Authentication.authenticate, 'class -> "form-horizontal") {
+        <legend>Login</legend>
+        <div class="alert alert-info">
+          Please be advised, access is for lab members only.
+        </div>
 
-          <legend>Login</legend>
-          <div class="alert alert-info">
-            Please be advised, access is for lab members only.
-          </div>
-
-          @form.globalError.map { error =>
-            <div class="alert alert-error">
-              @Messages(error.message)
-            </div>
-          }
-
-          @helper.inputText(form("email"), 'type -> "email")
-          @helper.inputPassword(form("password"))
-
-          <div class="form-actions">
-            <button type="submit" class="btn btn-primary">Login</button>
-            <a href="@routes.Authentication.register" class="btn btn-default">Sign Up</a>
+        @form.globalError.map { error =>
+          <div class="alert alert-error">
+            @Messages(error.message)
           </div>
         }
-      </div>
+
+        @helper.inputText(form("email"), 'type -> "email", 'class -> "form-control")
+        @helper.inputPassword(form("password"), 'class -> "form-control")
+
+        <div class="form-group">
+          <div class="col-sm-offset-3 col-sm-5">
+            <button type="submit" class="form-control btn btn-primary">Login</button>
+          </div>
+          <div class="col-sm-4">
+            <a href="@routes.Authentication.register" class="form-control btn btn-default">Sign Up</a>
+          </div>
+        </div>
+      }
     </div>
   </div>
 }

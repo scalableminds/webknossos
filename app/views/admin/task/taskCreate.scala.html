@@ -1,10 +1,10 @@
 @(taskTypes: List[models.task.TaskType], dataSets: List[models.binary.DataSet], projects: List[models.task.Project], teams: List[String], nmlForm: Form[(String, models.user.Experience, Int, Int, String, String, braingames.geometry.BoundingBox)], taskForm: Form[(String, String, braingames.geometry.Point3D, models.user.Experience, Int, Int, String, String, braingames.geometry.BoundingBox)])(implicit session: oxalis.view.AuthedSessionData)
 
 @main(){
-  <div class="container">
+  <div class="container task-types-administration">
 
-    <h3>Create Task from explorative SkeletonTracing</h3>
-    <div class="well">
+    <div class="well col-center col-sm-7">
+      <h3>Create Task from explorative SkeletonTracing</h3>
       Every nml creates a new task. You can either upload a single NML file or a zipped collection of nml files (.zip).<br /><br />
       @helper.form(controllers.admin.routes.TaskAdministration.createFromNML, 'class -> "form-horizontal", 'enctype -> "multipart/form-data") {
 
@@ -13,8 +13,8 @@
         @helper.inputText(taskForm("boundingBox.box"), 'type -> "text", 'class -> "form-control")
 
         <div class="form-group">
-          <label class="col-sm-2 control-label" for="nmlFile">@Messages("nmlFile")</label>
-          <div class="col-sm-3">
+          <label class="col-sm-3 control-label" for="nmlFile">@Messages("nmlFile")</label>
+          <div class="col-sm-9">
             <div class="input-group">
               <span class="input-group-btn">
                 <span class="btn btn-primary btn-file">
@@ -27,15 +27,15 @@
         </div>
 
         <div class="form-group">
-          <div class="col-sm-2">
+          <div class="col-sm-9 col-sm-offset-3">
             <button type="submit" class="form-control btn btn-primary">Create</button>
           </div>
         </div>
       }
     </div>
 
-    <h3>Create Task</h3>
-    <div class="well">
+    <div class="well col-center col-sm-7">
+      <h3>Create Task</h3>
       @helper.form(controllers.admin.routes.TaskAdministration.createFromForm, 'class -> "form-horizontal") {
 
         @basicTaskForm(nmlForm, taskTypes, projects, teams)
@@ -49,16 +49,16 @@
         @helper.inputText(taskForm("boundingBox.box"), 'type -> "text", 'class -> "form-control")
 
         <div class="form-group">
-          <div class="col-sm-2">
+          <div class="col-sm-9 col-sm-offset-3">
             <button type="submit" class="form-control btn btn-primary">Create</button>
           </div>
         </div>
       }
     </div>
 
-    <h3>Import Tasks in Bulk</h3>
 
     <div class="well">
+      <h3>Import Tasks in Bulk</h3>
       One line for each task. The values are seperated by ','. Format: <br />
       dataSet, taskTypeSummary, experienceDomain, minExperience, x, y, z, priority, instances, team, minX, minY, minZ, maxX, maxY, maxZ, (opt: project)<br /><br />
       @helper.form(controllers.admin.routes.TaskAdministration.createBulk, 'class -> "form-horizontal"){

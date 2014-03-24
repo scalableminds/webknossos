@@ -24,7 +24,7 @@ ruby -e "$(curl -fsSL https://raw.github.com/Homebrew/homebrew/go/install)"
 # Install git, node.js, mongoDB, sbt
 brew install git node mongodb sbt
 
-# Start mongoDB
+# Start mongo
 launchctl load ~/Library/LaunchAgents/homebrew.mxcl.mongodb.plist
 
 # Checkout the Oxalis git repository

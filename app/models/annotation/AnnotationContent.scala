@@ -5,7 +5,7 @@ import braingames.geometry.{BoundingBox, Scale, Point3D}
 import java.io.InputStream
 import play.api.libs.json._
 import play.api.libs.functional.syntax._
-import braingames.binary.models.DataLayer
+import braingames.binary.models.{FallbackLayer, DataLayer}
 import models.binary.{DataSet, DataSetDAO}
 import scala.concurrent.Future
 import play.api.libs.concurrent.Execution.Implicits._
@@ -59,8 +59,9 @@ object AnnotationContent {
       (__ \ 'category).write[String] and
       (__ \ 'maxCoordinates).write[BoundingBox] and
       (__ \ 'resolutions).write[List[Int]] and
+      (__ \ 'fallback).write[Option[FallbackLayer]] and
       (__ \ 'elementClass).write[String])(l =>
-      (l.name, l.category, l.maxCoordinates, l.resolutions, l.elementClass))
+      (l.name, l.category, l.maxCoordinates, l.resolutions, l.fallback, l.elementClass))
 
   implicit val dataSetWrites: Writes[DataSet] =
     ((__ \ 'name).write[String] and

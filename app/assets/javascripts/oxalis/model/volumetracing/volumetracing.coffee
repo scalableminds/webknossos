@@ -13,8 +13,9 @@ class VolumeTracing
 
     _.extend(@, new EventMixin())
 
-    @cells        = []          # List of VolumeCells
-    @activeCell   = null        # Cell currently selected
+    @contentData  = tracing.content.contentData
+    @cells        = []
+    @activeCell   = null
     @currentLayer = null        # Layer currently edited
     @idCount      = 1
 
@@ -25,7 +26,7 @@ class VolumeTracing
       this, @binary.pushQueue
     )
 
-    @createCell()
+    @createCell(@contentData.activeCell)
 
     # For testing
     window.setAlpha = (v) -> Drawing.setAlpha(v)

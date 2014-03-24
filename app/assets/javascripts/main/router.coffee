@@ -26,7 +26,7 @@ class Router extends Backbone.Router
     # handle all links and manage page changes (rather the reloading the whole site)
     $(document).on "click", "a", (evt) =>
 
-      url = $(evt.currentTarget).attr("href")
+      url = $(evt.currentTarget).attr("href") || ""
       urlWithoutSlash = url.slice(1)
 
       if @routes[urlWithoutSlash]

@@ -5,7 +5,7 @@
 class VolumeTracingStateLogger extends StateLogger
 
 
-  constructor : (flycam, version, tracingId, tracingType, allowUpdate, @volumeTracing) ->
+  constructor : (flycam, version, tracingId, tracingType, allowUpdate, @volumeTracing, @pushQueue) ->
 
     super(flycam, version, tracingId, tracingType, allowUpdate)
 

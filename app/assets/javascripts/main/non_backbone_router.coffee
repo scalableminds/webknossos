@@ -23,22 +23,6 @@ class NonBackboneRouter extends Backbone.Router
     $("#loader").hide()
 
 
-  dashboard : ->
-
-    require ["main/dashboardLoader"], (DashboardLoader) ->
-
-      DashboardLoader.displayBasicDashboard()
-      DashboardLoader.displayUserDashboard()
-      return
-
-
-  userDetails : ->
-
-    require ["main/dashboardLoader"], (DashboardLoader) ->
-      DashboardLoader.displayBasicDashboard()
-      return
-
-
   tracingTrace : ->
 
     require [

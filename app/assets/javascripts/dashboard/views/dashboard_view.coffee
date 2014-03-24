@@ -12,6 +12,9 @@ class DashboardView extends Backbone.Marionette.Layout
   className : "container wide"
   id : "dashboard"
   template : _.template("""
+    <% if (userID) { %>
+      <h3> User: </h3>
+    <% } %>
     <div class="tabbable" id="tabbable-dashboard">
       <ul class="nav nav-tabs">
         <li class="active">
@@ -35,7 +38,7 @@ class DashboardView extends Backbone.Marionette.Layout
     "tabExplorative" : "#tab-explorative"
     "tabTrackedTime" : "#tab-tracked-time"
     "tabPane" : ".tab-pane"
-
+    "header" : "h3"
 
   events :
     "click #tab-tasks" : "showTasks"
@@ -51,9 +54,21 @@ class DashboardView extends Backbone.Marionette.Layout
     @bindUIElements()
 
     @model = new DashboardModel(options)
-    @listenTo(@model, "sync", @showTasks)
+    @listenTo(@model, "sync", @modelSynced)
 
     @model.fetch("data" : options.userID)
+
+
+  modelSynced : ->
+
+    @showTasks()
+    @showUserName()
+
+
+  showUserName : ->
+
+    user = @model.get("user")
+    @ui.header.html("User: #{user.firstName} #{user.lastName}")
 
 
   showTasks : ->

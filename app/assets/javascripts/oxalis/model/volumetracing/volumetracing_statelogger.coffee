@@ -15,6 +15,15 @@ class VolumeTracingStateLogger extends StateLogger
         @push()
 
 
+  pushDiff : (action, value, push = true) ->
+
+    @pushQueue.pushImpl()
+    super(arguments...)
+
+    if push
+      @pushImpl()
+
+
   concatUpdateTracing : ->
 
     @pushDiff(

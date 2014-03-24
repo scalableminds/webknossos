@@ -8,7 +8,7 @@ class Pipeline
 
   # Executes asnychronous actions in order.
   #
-  # Each action is exectued after the previous action
+  # Each action is executed after the previous action
   # is finished. Any output of the previous action is
   # passed to the current action.
 
@@ -35,6 +35,18 @@ class Pipeline
       @executeNext()
 
     return action._deferred
+
+
+  executePassAlongAction : (action) ->
+    # For actions that don't return anything
+
+    newAction = ->
+      args = arguments
+      action(args...).pipe ->
+        # TODO: Figure out how to pass along all arguments
+        return args[0]
+
+    return @executeAction(newAction)
 
 
   executeActions : ( actionList ) ->

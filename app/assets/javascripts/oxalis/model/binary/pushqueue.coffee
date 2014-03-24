@@ -11,7 +11,7 @@ class PushQueue
   THROTTLE_TIME : 2000
 
 
-  constructor : (@dataSetName, @cube, @dataLayerName, @tracingId, version, @updatePipeline, @sendData = true) ->
+  constructor : (@dataSetName, @cube, @dataLayerName, @tracingId, @updatePipeline, @sendData = true) ->
 
     @queue = []
     @batchCount = 0
@@ -19,7 +19,6 @@ class PushQueue
     @getParams =
       cubeSize : 1 << @cube.BUCKET_SIZE_P
       annotationId : tracingId
-      version : version
 
     @push = _.throttle @pushImpl, @THROTTLE_TIME
 
@@ -77,7 +76,6 @@ class PushQueue
 
         bucket = @queue.splice(0, 1)[0]
         batch.push bucket
-        #console.log "sent: ", bucket
 
       @pushBatch(batch) if batch.length > 0
 
@@ -111,23 +109,24 @@ class PushQueue
 
     #console.log( "compressed transmitBuffer:", transmitBuffer.length, transmitBuffer )
 
-    @getParams.version++
-    @getSendSocket().send( transmitBuffer )
-      .then(
+    @updatePipeline.executePassAlongAction =>
 
-        (responseBuffer) =>
+      @getSendSocket().send( transmitBuffer )
+        .then(
 
-          # TODO: define action
+          (responseBuffer) =>
 
-        =>
+            # TODO: define action
 
-          for bucket in batch
-            @insertFront(bucket)
+          =>
 
-    ).always =>
+            for bucket in batch
+              @insertFront(bucket)
 
-      @batchCount--
-      @push()
+      ).always =>
+
+        @batchCount--
+        @push()
 
 
   getSendSocket : ->

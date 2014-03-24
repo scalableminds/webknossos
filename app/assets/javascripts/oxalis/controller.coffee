@@ -16,6 +16,7 @@ underscore : _
 ../libs/event_mixin : EventMixin
 ../libs/input : Input
 ./view/gui : Gui
+./view/user_settings_view : UserSettingsView
 ../libs/toast : Toast
 ./constants : constants
 stats : Stats
@@ -257,6 +258,10 @@ class Controller
 
 
   createGui : (restrictions, settings)->
+
+
+    view = new UserSettingsView( model : @model.user )
+    $("#optionswindow").html(view.render().el)
 
     gui = new Gui($("#optionswindow"), @model, restrictions, settings)
     gui.update()

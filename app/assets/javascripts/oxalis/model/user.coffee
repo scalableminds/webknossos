@@ -9,9 +9,6 @@ class User extends Backbone.Model
 
   url : "/user/configuration"
 
-  # TODOs
-  # - error handling
-
 
   getSettings : ->
     return @attributes

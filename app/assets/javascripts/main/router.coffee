@@ -19,7 +19,7 @@ class Router extends Backbone.Router
     "tasks"                         : "tasks"
     "projects"                      : "projects"
     "dashboard"                     : "dashboard"
-
+    "users/:id/details"             : "dashboard"
 
   initialize : ->
 
@@ -27,7 +27,7 @@ class Router extends Backbone.Router
     # handle all links and manage page changes (rather the reloading the whole site)
     $(document).on "click", "a", (evt) =>
 
-      url = $(evt.currentTarget).attr("href")
+      url = $(evt.currentTarget).attr("href") or ""
       urlWithoutSlash = url.slice(1)
 
       if @routes[urlWithoutSlash]
@@ -75,13 +75,12 @@ class Router extends Backbone.Router
     @showWithPagination("TaskListView", "TaskCollection")
 
 
-  dashboard : ->
+  dashboard : (userID) ->
 
     require ["dashboard/views/dashboard_view"], (Dashboard) =>
 
-      view = new Dashboard()
+      view = new Dashboard("userID" : userID)
       @changeView(view)
-
 
       @hideLoading()
 

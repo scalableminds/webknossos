@@ -28,49 +28,36 @@ object UserController extends Controller with Secured with Dashboard {
     Ok(views.html.main()(Html.empty))
   }
 
+  // TODO: find a better way to ignore parameters
+  def emptyWithWildcard(param: String) = Authenticated{ implicit request =>
+    Ok(views.html.main()(Html.empty))
+  }
+
   def current =  Authenticated{
     implicit request =>
       Ok(Json.toJson(request.user)(User.userPublicWrites(request.user)))
   }
 
-  def dashboard = Authenticated.async {
+  def details = Authenticated.async {
     implicit request => {
-      val futures = dashboardInfo(request.user).map { info =>
-
-        val loggedTime = info.loggedTime.map { case (paymentInterval, duration) =>
-          Json.obj("paymentInterval" -> paymentInterval, "durationInSeconds" -> duration.toSeconds)
-        }
-
-        for {
-          tasksWithAnnotations <- Future.traverse(info.tasks)({
-            case (task, annotation) =>
-              for {
-                taskJSON <- Task.transformToJson(task)
-                annotationJSON <- Annotation.transformToJson(annotation)
-              } yield (taskJSON, annotationJSON)
-          })
-          exploratoryList <- Future.traverse(info.exploratory)(Annotation.transformToJson(_))
-        } yield {
-          Json.obj(
-            "user" -> Json.toJson(info.user)(User.userPublicWrites(request.user)),
-            "loggedTime" -> loggedTime,
-            "dataSets" -> info.dataSets,
-            "hasAnOpenTask" -> info.hasAnOpenTask,
-            "exploratory" -> Json.toJson(exploratoryList),
-            "tasksWithAnnotations" -> Json.toJson(
-              tasksWithAnnotations.map(tuple => Json.obj("task" -> tuple._1, "annotation" -> tuple._2))
-            )
-          )
-        }
+      for {
+        info <- dashboardInfo(request.user, request.user)
+        content <- info
+      } yield {
+        JsonOk(content)
       }
-
-      futures.flatMap { f =>
-        f.map { content => JsonOk(content) }
-      }
-
     }
   }
 
+  def userDetails(userId: String) = Authenticated.async{ implicit request =>
+    for {
+      user <- UserDAO.findOneById(userId) ?~> Messages("user.notFound")
+      info <- dashboardInfo(user, request.user)
+      content <- info
+    } yield {
+      JsonOk(content)
+    }
+  }
 
   // REST API
   def list = Authenticated.async{ implicit request =>

@@ -46,21 +46,41 @@ trait Dashboard {
   private def hasOpenTask(tasksAndAnnotations: List[(Task, Annotation)]) =
     tasksAndAnnotations.exists { case (_, annotation) => !annotation.state.isFinished }
 
-  def dashboardInfo(user: User)(implicit ctx: DBAccessContext) = {
+  def dashboardInfo(user: User, requestingUser: User)(implicit ctx: DBAccessContext) = {
     for {
       exploratoryAnnotations <- AnnotationService.findExploratoryOf(user)
       dataSets <- DataSetDAO.findAllActive
-      loggedTime <- TimeSpanService.loggedTimeOfUser(user, TimeSpan.groupByMonth _)
+      loggedTimeAsMap <- TimeSpanService.loggedTimeOfUser(user, TimeSpan.groupByMonth _)
       exploratoryAnnotations <- exploratorySortedByTime(exploratoryAnnotations).toFox
       userTasks <- userWithTasks(user)
     } yield {
-      DashboardInfo(
-        user,
-        exploratoryAnnotations,
-        userTasks,
-        loggedTime,
-        dataSets,
-        hasOpenTask(userTasks))
+
+      val loggedTime = loggedTimeAsMap.map { case (paymentInterval, duration) =>
+        Json.obj("paymentInterval" -> paymentInterval, "durationInSeconds" -> duration.toSeconds)
+      }
+
+      for {
+        tasksWithAnnotations <- Future.traverse(userTasks)({
+          case (task, annotation) =>
+            for {
+              taskJSON <- Task.transformToJson(task)
+              annotationJSON <- Annotation.transformToJson(annotation)
+            } yield (taskJSON, annotationJSON)
+        })
+        exploratoryList <- Future.traverse(exploratoryAnnotations)(Annotation.transformToJson(_))
+      } yield {
+        Json.obj(
+          "user" -> Json.toJson(user)(User.userPublicWrites(requestingUser)),
+          "loggedTime" -> loggedTime,
+          "dataSets" -> dataSets,
+          "hasAnOpenTask" -> hasOpenTask(userTasks),
+          "exploratory" -> Json.toJson(exploratoryList),
+          "tasksWithAnnotations" -> Json.toJson(
+            tasksWithAnnotations.map(tuple => Json.obj("task" -> tuple._1, "annotation" -> tuple._2))
+          )
+        )
+      }
     }
-  }
+
+ }
 }

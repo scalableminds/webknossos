@@ -46,14 +46,14 @@ class DashboardView extends Backbone.Marionette.Layout
     "tabPane" : ".tab-pane"
 
 
-  initialize : ->
+  initialize : (options) ->
 
     @bindUIElements()
 
-    @model = new DashboardModel()
+    @model = new DashboardModel(options)
     @listenTo(@model, "sync", @showTasks)
 
-    @model.fetch()
+    @model.fetch("data" : options.userID)
 
 
   showTasks : ->

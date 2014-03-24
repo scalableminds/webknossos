@@ -11,8 +11,9 @@ class DashboardTaskListView extends Backbone.Marionette.CompositeView
   template : _.template("""
     <h3>Tasks</h3>
     <br />
-    <% if (this.isAdminView) { %>
+    <% if (userID) { %>
       <a href="<%= jsRoutes.controllers.admin.NMLIO.userDownload(user.id).url %>"
+         class="btn btn-default"
          title="download all finished tracings">
           <i class="fa fa-download"></i>download
       </a>
@@ -26,7 +27,7 @@ class DashboardTaskListView extends Backbone.Marionette.CompositeView
     <div class="divider-vertical"></div>
     <a href="#" id="toggle-finished">Show finished tasks</a>
     <br /><br />
-    <table class="table table-striped mask-finished" id="dashboard-tasks">
+    <table class="table table-striped">
       <thead>
         <tr>
           <th> # </th>
@@ -44,11 +45,13 @@ class DashboardTaskListView extends Backbone.Marionette.CompositeView
   itemView : DashboardTaskListItemView
   itemViewContainer : "tbody"
 
+  ui :
+    "finishToggle" : "#toggle-finished"
+
   events :
     "click #new-task-button" : "newTask"
-    "click #toggle-finished" : "toggleFinished"
+    "click @ui.finishToggle" : "toggleFinished"
 
-  isAdminView : false
 
   initialize : ->
 
@@ -85,3 +88,6 @@ class DashboardTaskListView extends Backbone.Marionette.CompositeView
 
     @showFinishedTasks = not @showFinishedTasks
     @update()
+
+    verb = if @showFinishedTasks then "Hide" else "Show"
+    @ui.finishToggle.html("#{verb} finished tasks")

@@ -42,13 +42,6 @@ body:-webkit-full-screen {
   }
 }
 
-.navbar .version {
-  float: left;
-  font-size: 11px;
-  padding-top: 12px;
-  display: inline-block;
-}
-
 .label {
   margin-right: .2em;
 }
@@ -63,13 +56,6 @@ body:-webkit-full-screen {
   width: auto;
 }
 
-.input-monospace {
-  font-family: Monaco, Consolas, "Lucida Console", "Courier New", monospace;
-}
-
-.popover {
-  width: 400px;
-}
 
 .nowrap * {
   white-space: nowrap;
@@ -94,7 +80,7 @@ body:-webkit-full-screen {
 }
 
 .table-nohead {
-  tbody tr:nth-child(1) {
+  tbody tr:first-child {
     td, th {
       border-top: none;
     }
@@ -161,15 +147,6 @@ body:-webkit-full-screen {
   border-left: 4px solid transparent;
 }
 
-@-webkit-keyframes rotation {
-  from {
-    -webkit-transform: rotate(0);
-  }
-  to {
-    -webkit-transform: rotate(360deg);
-  }
-}
-
 .fa-random {
   width: 14px;
   background-position: -217px -120px;
@@ -188,10 +165,6 @@ body:-webkit-full-screen {
 
 .inline {
   display: inline;
-}
-
-.rotating {
-  -webkit-animation: rotation 1s linear infinite;
 }
 
 #alert-container {
@@ -264,10 +237,6 @@ body:-webkit-full-screen {
   padding-top: 100px;
   opacity: 0.7;
   filter: alpha(opacity=50);
-}
-
-#container {
-  display: none;
 }
 
 #tracing {
@@ -484,26 +453,6 @@ body:-webkit-full-screen {
   margin: -400px 0 0 -500px;
 }
 
-.modal {
-  white-space: normal;
-}
-
-#issue-submit {
-
-  form {
-
-    margin: 0;
-
-    input[type=text],
-    textarea {
-      width: 600px;
-    }
-    textarea {
-      height: 8em;
-    }
-  }
-}
-
 #oxalis-header {
 
   margin-bottom: 40px;
@@ -532,21 +481,6 @@ body:-webkit-full-screen {
   }
 }
 
-.key-arrow {
-  left: 170px !important;
-}
-
-.img-mpi-neuro{
-  width: 176%;
-  margin-left: -15px;
-  margin-top: -101px;
-}
-
-.overview-options {
-  float: right;
-  margin-right: 15px;
-  margin-top: 15px
-}
 
 @media screen and (max-width: 960px) {
   .container {
@@ -565,7 +499,6 @@ body:-webkit-full-screen {
     padding: 3px;
   }
 }
-
 
 // Fixing datGUI from Bootstrap
 .dg {
@@ -595,11 +528,6 @@ body:-webkit-full-screen {
   line-height: normal;
 }
 
-//override bootstrap
-.table .table {
-  background-color: inherit;
-}
-
 #merge {
     width: 280px;
     padding: 10px;
@@ -610,11 +538,9 @@ body:-webkit-full-screen {
     visibility: hidden;
 }
 
-.nav-tabs {
-  margin-bottom: 10px;
+textarea[name=description] {
+  height: 100px;
 }
-
-
 // make sure text and icons have space between them
 i {
   margin-right: 5px;

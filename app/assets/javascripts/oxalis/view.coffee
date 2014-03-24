@@ -22,8 +22,8 @@ class View
 
 
     # disable loader, show oxalis
-    $("#loader").css("display" : "none")
-    $("#container").css("display" : "inline")
+    $("#loader").hide()
+    $("#container").removeClass("hide")
 
 
   toggleTheme : ->

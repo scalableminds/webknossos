@@ -9,31 +9,22 @@
       <legend>Submit issue</legend>
 
       <div class="form-group">
-        <label class="control-label" for="issueType">Type</label>
-        <div class="controls select">
-          <select name="type" id="issueType">
-            <option value="unrelated">Non technical problem</option>
-            <option value="bug">Technical problem</option>
-            <option value="feature">Feature suggestion</option>
-          </select>
-        </div>
+        <label for="issueType">Type</label>
+        <select name="type" id="issueType" class="form-control">
+          <option value="unrelated">Non technical problem</option>
+          <option value="bug">Technical problem</option>
+          <option value="feature">Feature suggestion</option>
+        </select>
       </div>
       <div class="form-group">
         <label class="control-label" for="issueSummary">Summary</label>
-        <div class="controls">
-          <input type="text" name="summary" id="issue-summary" autofocus/>
-        </div>
-      </div>
+        <input type="text" class="form-control" name="summary" id="issue-summary" autofocus/>
       <div class="form-group">
         <label class="control-label" for="issueDescription">Description</label>
-        <div class="controls">
-          <textarea name="description" id="issue-description"></textarea>
-        </div>
+        <textarea name="description" class="form-control" id="issue-description"></textarea>
       </div>
       <div class="form-group">
-        <div class="controls">
-          <input type="submit" value="Send" class="btn btn-primary" />
-        </div>
+        <input type="submit" value="Send" class="form-control btn btn-primary" />
       </div>
     }
 

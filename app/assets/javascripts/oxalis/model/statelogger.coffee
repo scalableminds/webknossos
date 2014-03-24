@@ -10,7 +10,7 @@ class StateLogger
 
   PUSH_THROTTLE_TIME : 30000 #30s
 
-  constructor : (@flycam, @version, @tracingId, @tracingType, @allowUpdate) ->
+  constructor : (@flycam, @version, @tracingId, @tracingType, @allowUpdate, @pipeline) ->
 
     _.extend(this, new EventMixin())
 

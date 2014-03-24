@@ -11,7 +11,7 @@ class PushQueue
   THROTTLE_TIME : 2000
 
 
-  constructor : (@dataSetName, @cube, @dataLayerName, @tracingId, version, @sendData = true) ->
+  constructor : (@dataSetName, @cube, @dataLayerName, @tracingId, version, @updatePipeline, @sendData = true) ->
 
     @queue = []
     @batchCount = 0

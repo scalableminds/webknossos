@@ -5,9 +5,9 @@
 class SkeletonTracingStateLogger extends StateLogger
 
 
-  constructor : (flycam, version, tracingId, tracingType, allowUpdate, @skeletonTracing) ->
+  constructor : (flycam, version, tracingId, tracingType, allowUpdate, updatePipeline, @skeletonTracing) ->
 
-    super(flycam, version, tracingId, tracingType, allowUpdate)
+    super(flycam, version, tracingId, tracingType, allowUpdate, updatePipeline)
 
 
   #### TREES

@@ -8,6 +8,7 @@
 ./model/flycam3d : Flycam3d
 libs/request : Request
 libs/toast : Toast
+libs/pipeline : Pipeline
 ./constants : constants
 ###
 
@@ -94,6 +95,7 @@ class Model
             dataSet = tracing.content.dataSet
             @user = new User(user)
             @scaleInfo = new ScaleInfo(dataSet.scale)
+            @updatePipeline = new Pipeline([tracing.version])
 
             if (bb = tracing.content.boundingBox)?
                 @boundingBox = {
@@ -115,7 +117,7 @@ class Model
             for layer in @getLayers( dataSet.dataLayers, tracing.content.contentData.customLayers )
 
               layer.bitDepth = parseInt( layer.elementClass.substring(4) )
-              @binary[layer.name] = new Binary(this, tracing, layer, tracingId)
+              @binary[layer.name] = new Binary(this, tracing, layer, tracingId, @updatePipeline)
               zoomStepCount = Math.min(zoomStepCount, @binary[layer.name].cube.ZOOM_STEP_COUNT - 1)
 
               for i in [0..2]
@@ -150,10 +152,10 @@ class Model
               if "volume" in tracing.content.settings.allowedModes
                 $.assert( @getSegmentationBinary()?,
                   "Volume is allowed, but segmentation does not exist" )
-                @volumeTracing = new VolumeTracing(tracing, @flycam, @getSegmentationBinary())
+                @volumeTracing = new VolumeTracing(tracing, @flycam, @getSegmentationBinary(), @updatePipeline)
 
               else
-                @skeletonTracing = new SkeletonTracing(tracing, @scaleInfo, @flycam, @flycam3d, @user)
+                @skeletonTracing = new SkeletonTracing(tracing, @scaleInfo, @flycam, @flycam3d, @user, @updatePipeline)
 
             {"restrictions": tracing.restrictions, "settings": tracing.content.settings}
 

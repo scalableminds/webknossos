@@ -42,10 +42,12 @@ case class UpdateTracing(value: JsObject) extends TracingUpdater {
 
   def createUpdate()(implicit ctx: DBAccessContext) = {
     val activeCellId = (value \ "activeCell").asOpt[Int]
+    val nextCellId = (value \ "nextCell").asOpt[Int]
     val editPosition = (value \ "editPosition").as[Point3D]
     TracingUpdate { t =>
       val updated = t.copy(
         activeCellId = activeCellId,
+        nextCellId = nextCellId,
         editPosition = editPosition)
       VolumeTracingDAO.update(t._id, updated).map(_ => updated)
     }

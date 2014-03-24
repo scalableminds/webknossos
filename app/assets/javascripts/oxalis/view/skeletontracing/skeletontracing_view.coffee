@@ -61,7 +61,7 @@ class SkeletonTracingView extends View
       newNode : =>
 
         @updateActiveComment()
-        @updateTreesThrottled()
+        @updateTreesDebounced()
 
 
       newTreeName : =>
@@ -76,9 +76,9 @@ class SkeletonTracingView extends View
         @updateComments()
 
 
-      newActiveTreeColor : =>
+      newTreeColor : =>
 
-        @updateTrees()
+        @updateTreesDebounced()
 
 
       deleteActiveNode : =>
@@ -105,7 +105,7 @@ class SkeletonTracingView extends View
             [ { id : "reload-button", label : "OK, reload", callback : ( ->
               $(window).on(
                 "beforeunload"
-                =>return null)
+                => return null)
               window.location.reload() )},
             {id : "cancel-button", label : "Cancel", callback : ( => @reloadDenied = true ) } ] )
 
@@ -134,11 +134,11 @@ class SkeletonTracingView extends View
       treeId = comment.node.treeId
       if treeId != lastTreeId
         newContent.appendChild((
-          $('<li>').append($('<i>', {"class": "icon-sitemap"}),
+          $('<li>').append($('<i>', {"class": "fa fa-sitemap"}),
           $('<span>', {"data-treeid": treeId, "text": @model.skeletonTracing.getTree(treeId)?.name})))[0])
         lastTreeId = treeId
       newContent.appendChild((
-        $('<li>').append($('<i>', {"class": "icon-angle-right"}),
+        $('<li>').append($('<i>', {"class": "fa fa-angle-right"}),
         $('<a>', {"href": "#", "data-nodeid": comment.node.id, "text": comment.node.id + " - " + comment.content})))[0])
 
     commentList.append(newContent)
@@ -157,14 +157,14 @@ class SkeletonTracingView extends View
     oldIcon = $("#comment-container i.icon-arrow-right")
     if oldIcon.length
       oldIcon.toggleClass("icon-arrow-right", false)
-      oldIcon.toggleClass("icon-angle-right", true)
+      oldIcon.toggleClass("fa fa-angle-right", true)
 
     activeHref = $("#comment-container a[data-nodeid=#{@model.skeletonTracing.getActiveNodeId()}]")
     if activeHref.length
 
       newIcon = activeHref.parent("li").children("i")
       newIcon.toggleClass("icon-arrow-right", true)
-      newIcon.toggleClass("icon-angle-right", false)
+      newIcon.toggleClass("fa fa-angle-right", false)
 
       # animate scrolling to the new comment
       $("#comment-container").animate({
@@ -201,14 +201,14 @@ class SkeletonTracingView extends View
         scrollTop: newIcon.offset().top - $("#tree-list").offset().top + $("#tree-list").scrollTop()}, 250)
 
 
-  updateTreesThrottled : ->
+  updateTreesDebounced : ->
     # avoid lags caused by frequent DOM modification
 
-    @updateTreesThrottled = _.throttle(
+    @updateTreesDebounced = _.debounce(
       => @updateTrees()
-      1000
+      200
     )
-    @updateTreesThrottled()
+    @updateTreesDebounced()
 
 
   updateTrees : ->
@@ -225,7 +225,7 @@ class SkeletonTracingView extends View
         $('<li>').append($('<i>', {"class": "icon-bull"}),
           $('<a>', {"href": "#", "data-treeid": tree.treeId})
           .append($('<span>', {"title": "nodes", "text": tree.nodes.length}).css("display": "inline-block", "width": "50px"),
-          $('<i>', {"class": "icon-sign-blank"}).css(
+          $('<i>', {"class": "fa fa-circle"}).css(
             "color": "##{('000000'+tree.color.toString(16)).slice(-6)}"),
           $('<span>', {"title": "name", "text": tree.name}) )) )[0])
 

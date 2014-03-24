@@ -149,7 +149,7 @@ class SkeletonTracingStateLogger extends StateLogger
       {
         branchPoints : branchPoints
         comments : @skeletonTracing.getPlainComments()
-        activeNodeId : @skeletonTracing.getActiveNodeId()
+        activeNode : @skeletonTracing.getActiveNodeId()
         editPosition : @flycam.getPosition()
       }
       false

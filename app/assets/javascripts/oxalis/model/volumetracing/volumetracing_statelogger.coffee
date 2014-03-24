@@ -20,7 +20,7 @@ class VolumeTracingStateLogger extends StateLogger
     @pushDiff(
       "updateTracing"
       {
-        activeCellId : @volumeTracing.getActiveCellId()
+        activeCell : @volumeTracing.getActiveCellId()
         editPosition : @flycam.getPosition()
       }
       false

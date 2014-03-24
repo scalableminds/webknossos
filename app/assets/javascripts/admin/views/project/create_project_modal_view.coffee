@@ -22,18 +22,18 @@ class CreateProjectModalView extends Backbone.Marionette.Layout
         <div class="modal-body container-fluid">
           <form action="" method="POST" class="form-horizontal">
             <div class="form-group">
-              <label class="col-sm-2 control-label" for="team">Team</label>
+              <label class="col-sm-2 for="team">Team</label>
               <div class="col-sm-10 team">
               </div>
             </div>
             <div class="form-group">
-              <label class="col-sm-2 control-label" for="projectName">Project Name</label>
+              <label class="col-sm-2 for="projectName">Project Name</label>
               <div class="col-sm-10">
                 <input type="text" class="form-control project-name" name="projectName" value="" required autofocus>
               </div>
             </div>
             <div class="form-group">
-              <label class="col-sm-2 control-label" for="owner">Owner</label>
+              <label class="col-sm-2 for="owner">Owner</label>
               <div class="col-sm-10 owner">
               </div>
             </div>

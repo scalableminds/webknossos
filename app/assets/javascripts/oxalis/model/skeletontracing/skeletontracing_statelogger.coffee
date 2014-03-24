@@ -139,17 +139,18 @@ class SkeletonTracingStateLogger extends StateLogger
       })
 
 
-  concatUpdateTracing : (array) ->
+  concatUpdateTracing : ->
 
     branchPoints = []
     for branchPoint in @skeletonTracing.branchStack
       branchPoints.push({id : branchPoint.id})
-    return array.concat( {
-      action : "updateTracing"
-      value : {
+    @pushDiff(
+      "updateTracing"
+      {
         branchPoints : branchPoints
         comments : @skeletonTracing.getPlainComments()
         activeNodeId : @skeletonTracing.getActiveNodeId()
         editPosition : @flycam.getPosition()
       }
-    })
+      false
+    )

@@ -31,7 +31,7 @@ class Pipeline
     action._deferred = new $.Deferred()
     @actions.push( action )
 
-    if not running
+    if not @running
       @executeNext()
 
     return action._deferred
@@ -72,6 +72,6 @@ class Pipeline
             @actions.unshift( currentAction )
             @executeNext()
 
-      else
+    else
 
-        @running = false
+      @running = false

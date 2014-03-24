@@ -15,12 +15,13 @@ class VolumeTracingStateLogger extends StateLogger
         @push()
 
 
-  concatUpdateTracing : (array) ->
+  concatUpdateTracing : ->
 
-    return array.concat( {
-      action : "updateTracing"
-      value : {
+    @pushDiff(
+      "updateTracing"
+      {
         activeCellId : @volumeTracing.getActiveCellId()
         editPosition : @flycam.getPosition()
       }
-    })
+      false
+    )

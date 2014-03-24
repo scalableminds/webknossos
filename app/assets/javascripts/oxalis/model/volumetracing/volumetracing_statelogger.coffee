@@ -20,7 +20,7 @@ class VolumeTracingStateLogger extends StateLogger
     return array.concat( {
       action : "updateTracing"
       value : {
-        activeCellId : @volumeTracing.getActiveCellId()
+        activeCell : @volumeTracing.getActiveCellId()
         editPosition : @flycam.getPosition()
       }
     })

@@ -9,6 +9,7 @@
 @import 'admin/_project.less';
 @import 'admin/_statistics.less';
 @import '_bootstrap_addons';
+@import '_spotlight';
 
 
 // ----------------------- MAIN STYLES
@@ -461,7 +462,7 @@ body:-webkit-full-screen {
 }
 
 #credits {
-  margin-top: 100px;
+  margin-top: 50px;
   border-radius: 0;
   color: #888;
 
@@ -505,7 +506,7 @@ body:-webkit-full-screen {
 
 #oxalis-header {
 
-  margin-bottom: 20px;
+  margin-bottom: 40px;
   margin-left: 34px;
   margin-top: 20px;
 
@@ -525,115 +526,6 @@ body:-webkit-full-screen {
   }
 }
 
-#dataset-list {
-
-  margin-top: 40px;
-
-  .dataset {
-  float: left;
-  clear: both;
-  margin-right: 20px;
-  margin-bottom: 20px;
-  padding: 10px;
-  min-width: 250px;
-  width: 940px;
-
-  header {
-    width: 250px;
-
-    h4, .stack-buttons {
-      text-align: center;
-    }
-  }
-
-  form {
-    display: inline;
-  }
-
-  .dataset-buttons {
-    margin: 10px;
-  }
-  .dataset-buttons a {
-    font-size: 0;
-    margin: 0 5px;
-
-    [class^="fa-"]::before,
-    [class*=" fa-"]::before {
-    font-size: 20px;
-    }
-  }
-  .dataset-buttons input[type=checkbox] {
-    margin: -7px 5px 0;
-  }
-  .dataset-buttons .busy .fa-retweet {
-    .rotating;
-  }
-  }
-
-  .dataset-description {
-  float: left;
-  }
-
-  .dataset-display {
-
-  text-align: center;
-  position: relative;
-  width: 250px;
-  float: left;
-
-  a, .loading-indicator {
-    display: block;
-    font-size: 80px;
-    text-align: center;
-    top: 0;
-    line-height: 200px;
-    position: absolute;
-    width: 100%;
-    text-decoration: none;
-  }
-
-  input[type="range"] {
-    width: 100%;
-  }
-  img {
-    display: block;
-    opacity: 0.8;
-    margin: 0 auto;
-  }
-  .stack-meta {
-    font-family: "Monaco", Consolas, "Courier New", monospace, sans-serif;
-    height: 50px;
-    overflow: auto;
-    resize: both;
-    text-align: left;
-    font-size: .8em;
-    line-height: 1.5em;
-  }
-  }
-}
-
-#task-selection-algoritm {
-
-  position: relative;
-  height: 100%;
-
-  .editor-wrapper {
-    position: relative;
-    background: #141414;
-    width: 100%;
-    height: 600px;
-    box-shadow: 0 0 10px #aaa;
-
-    #editor {
-      width: 100%;
-      height: 100%;
-    }
-  }
-  input[type=submit] {
-    margin: 10px 0;
-  }
-}
-
 #impressum{
   h5{
   margin-top: 2em;
@@ -648,10 +540,6 @@ body:-webkit-full-screen {
   width: 176%;
   margin-left: -15px;
   margin-top: -101px;
-}
-
-.graph.well svg {
-  max-width: 900px;
 }
 
 .overview-options {
@@ -725,7 +613,6 @@ body:-webkit-full-screen {
 .nav-tabs {
   margin-bottom: 10px;
 }
-
 
 
 // make sure text and icons have space between them

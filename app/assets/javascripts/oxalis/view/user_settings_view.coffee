@@ -3,7 +3,7 @@ backbone.marionette : marionette
 underscore : _
 ###
 
-class UserSettingsView extends Backbone.Marionette.ItemView
+class UserSettingsView extends Backbone.Marionette.CompositeView
 
   # TODO: remove accordion* classes after bootstrap 3 update
 
@@ -67,7 +67,7 @@ class UserSettingsView extends Backbone.Marionette.ItemView
     value = evt.target.checked
 
     console.log attribute, value
-    @model.set(attribute, evt.target.checked)
+    @model.set(attribute, value)
 
 
   render : ->

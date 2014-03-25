@@ -126,11 +126,17 @@
           </div>
         </div>
       </div>
-      <div class="tabbable skeleton-controls" id="comments-tree">
+      <div id="right-menu" class="skeleton-controls">
         <ul class="nav nav-tabs">
-          <li class="active"><a href="#tab-tree" data-toggle="tab">Tree Viewer</a></li>
-          <li><a href="#tab-trees" data-toggle="tab">Trees</a></li>
-          <li><a href="#tab-comments" data-toggle="tab">Comments</a></li>
+          <li class="active">
+            <a href="#tab-tree" data-toggle="tab">Tree Viewer</a>
+          </li>
+          <li>
+            <a href="#tab-trees" data-toggle="tab">Trees</a>
+          </li>
+          <li>
+            <a href="#tab-comments" data-toggle="tab">Comments</a>
+          </li>
         </ul>
         <div class="tab-content">
           <div class="tab-pane active" id="tab-tree">
@@ -138,21 +144,23 @@
           </div>
           <div class="tab-pane" id="tab-trees">
             <div id="tree-navbar">
-              <div>
-                <div class="btn-group">
-                  <button class="btn btn-default" id="tree-create-button"><i class="fa fa-plus"></i>Create tree</button>
-                  <button class="btn btn-default" id="tree-delete-button"><i class="fa fa-trash-o"></i>Delete tree</button>
-                </div>
-                <div class="btn-group pull-right">
-                  <button class="btn btn-default" id="tree-color-shuffle" title="Change color"><i class="fa fa-adjust"></i></button>
-                  <button class="btn btn-default dropdown-toggle" data-toggle="dropdown" id="tree-sort-button" title="Sort">
-                    <i class="fa fa-sort-alpha-asc"></i>
-                  </button>
-                  <ul class="dropdown-menu pull-right" id="tree-sort">
-                    <a href="#" data-sort="name"><li>by name <i class="fa fa-check" id="sort-name-icon"></i></li></a>
-                    <a href="#" data-sort="id"><li>by creation time <i class="fa fa-check" id= "sort-id-icon"></i></li></a>
-                  </ul>
-                </div>
+              <div class="btn-group">
+                <button class="btn btn-default" id="tree-create-button"><i class="fa fa-plus"></i>Create tree</button>
+                <button class="btn btn-default" id="tree-delete-button"><i class="fa fa-trash-o"></i>Delete tree</button>
+              </div>
+              <div class="btn-group pull-right">
+                <button class="btn btn-default" id="tree-color-shuffle" title="Change color"><i class="fa fa-adjust"></i></button>
+                <button class="btn btn-default dropdown-toggle" data-toggle="dropdown" id="tree-sort-button" title="Sort">
+                  <i class="fa fa-sort-alpha-asc"></i>
+                </button>
+                <ul class="dropdown-menu pull-right" id="tree-sort">
+                  <li>
+                    <a href="#" data-sort="name">by name <i class="fa fa-check" id="sort-name-icon"></i></a>
+                  </li>
+                  <li>
+                    <a href="#" data-sort="id">by creation time <i class="fa fa-check" id= "sort-id-icon"></i></a>
+                  </li>
+                </ul>
               </div>
               <div class="input-group">
                 <span class="input-group-btn">
@@ -176,7 +184,7 @@
               <div class="input-group-btn">
                 <button class="btn btn-default" id="comment-previous"><i class="fa fa-arrow-left"></i></button>
               </div>
-              <input class="input-large form-control" id="comment-input" type="text" placeholder="Add comment">
+              <input class="form-control" id="comment-input" type="text" placeholder="Add comment">
               <div class="input-group-btn">
                 <button class="btn btn-default" id="comment-next"><i class="fa fa-arrow-right"></i></button>
                 <button class="btn btn-default dropdown-toggle" data-toggle="dropdown" id="comment-sort-button" title="sort">

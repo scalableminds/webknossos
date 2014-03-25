@@ -4,21 +4,21 @@
 @import models.annotation.AnnotationType
 
 @main() {
-  <div id="container" data-tracing-type="View" data-tracing-id="@dataSet.name" class="clearfix">
+  <div id="container" data-tracing-type="View" data-tracing-id="@dataSet.name" class="hide">
     <div id="main" role="main">
       <div id="left-menu">
         <div id="dataset" class="well well-sm">
           DataSet: <span id="dataset-name">@dataSet.name</span> <br /></div>
-        <div class="input-prepend">
-          <span class="add-on">Position</span>
-          <input id="trace-position-input" type="text">
+        <div class="input-group">
+          <span class="input-group-addon">Position</span>
+          <input id="trace-position-input" class="form-control" type="text">
         </div>
         <div id="zoomFactor"></div>
         <div id="segment-id"></div>
 
         <div id="segmentation-slider" class="clearfix">
           <p>Segmentation:</p>
-            <input type="text" id="alpha-slider" class="col-sm-2" value="" data-slider-min="0" data-slider-max="100" data-slider-step="1" data-slider-value="20" data-slider-orientation="horizontal" data-slider-selection="after" data-slider-tooltip="hide">
+            <input type="text" id="alpha-slider" class="col-sm-7" value="" data-slider-min="0" data-slider-max="100" data-slider-step="1" data-slider-value="20" data-slider-orientation="horizontal" data-slider-selection="after" data-slider-tooltip="hide">
         </div>
 
         <div id="helpbar">
@@ -34,10 +34,10 @@
           </table>
         </div>
         <div>
-          <img src="@controllers.routes.Assets.at("images/Max-Planck-Gesellschaft.svg")">
+          <img class="img-responsive" src="@controllers.routes.Assets.at("images/Max-Planck-Gesellschaft.svg")">
         </div>
         <div>
-          <img src="@controllers.routes.Assets.at("images/Logo_MPI_cut.svg")">
+          <img class="img-responsive" src="@controllers.routes.Assets.at("images/Logo_MPI_cut.svg")">
         </div>
       </div>
       <div id="tracing">

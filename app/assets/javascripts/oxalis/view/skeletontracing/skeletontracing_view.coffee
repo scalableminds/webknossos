@@ -181,7 +181,6 @@ class SkeletonTracingView extends View
     activeTree = @model.skeletonTracing.getTree()
     if activeTree
       $("#tree-name-input").val(activeTree.name)
-      $("#tree-name").text(activeTree.name)
       $("#tree-active-color").css("color": "##{('000000'+activeTree.color.toString(16)).slice(-6)}")
       activeHref = $("#tree-list a[data-treeid=#{activeTree.treeId}]")
 

@@ -1,11 +1,7 @@
 // The menu items to the right side of the tracing view.
 // Currently tabs for comments / trees etc
 
-#tree-name {
-  height: 20px;
-}
-
-#tree-navbar {
+#tab-trees {
   p {
     width: 260px;
     margin-top: 5px;
@@ -20,42 +16,27 @@
   }
 }
 
-#comments-tree {
+#right-menu {
   display: inline-block;
-  vertical-align: top;
   margin-top: 10px;
   margin-left: 20px;
-  width: 300px;
-}
-#tab-tree {
-  padding-left: 5px;
-  padding-right: 5px;
-  overflow-y: hidden;
-}
-#tab-comments {
-  padding-left: 5px;
-  padding-right: 5px;
-  width: 350px;
-  overflow-y: hidden;
-}
-#comment-container {
-  max-height: 2*@standardViewportWidth - 90px;
-  margin-top: 10px;
-  overflow-y: auto;
-  white-space: normal;
-}
-#abstractTreeViewer {
-  height : 2*@standardViewportWidth + 20px;
-  width: 350px;
-  float: left;
-  font-size: 0;
-}
-#tree-list {
-  height : 2*@standardViewportWidth - 90px;
-  margin-top: 10px;
-  overflow-y: auto;
+  width: 300px; // will be set dynamically in JS
   overflow-x: hidden;
+  overflow-y: scroll;
 
+  .tab-pane {
+    min-height: 100px;
+    word-wrap: break-word;
+    white-space: normal;
+
+    div {
+      margin-bottom: 10px;
+    }
+  }
+
+}
+
+#tree-list {
   .fa-bull::before {
     width: 14px;
   }

@@ -56,7 +56,7 @@ makeStyles = (dest) ->
   return gulp.src(paths.src.css)
     .pipe(plumber())
     .pipe(
-      less({}).on("error", handleError)
+      less({ paths : [] }).on("error", handleError)
     )
     .pipe(gulp.dest(dest))
     .pipe(logger())

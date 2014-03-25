@@ -8,7 +8,7 @@
 
 @main( ){
   <div id="container" data-tracing-type="@annotation.typ" data-tracing-id="@annotation.id" class="hide clearfix">
-    <div id="main" role="main" data-url="@controllers.routes.AnnotationController.traceJSON(annotation.typ, annotation.id)">
+    <div id="main" role="main" data-url="@controllers.routes.AnnotationController.info(annotation.typ, annotation.id)">
       <div id="left-menu">
         @if(annotation.restrictions.allowUpdate(session.user)){
           <a href="#" class="btn btn-primary" id="trace-save-button">Save</a>
@@ -154,25 +154,17 @@
                   </ul>
                 </div>
               </div>
-              <div id="tree-edit">
-<!--                 <div class="">
-                  <p class="" id="tree-name-p">
-                    <i class="fa fa-sign-blank fa fa-large" id="tree-active-color"></i>&#160;&#160;
-                    <span id="tree-name"></span>
-                  </p>
-                </div> -->
-                <div class="input-group">
-                  <span class="input-group-btn">
-                    <button class="btn btn-default" id="tree-prev-button"><i class="fa fa-arrow-left"></i></button>
-                  </span>
-                  <input name="name" id="tree-name-input" class="form-control" maxlength="30" type="text" autocomplete="off">
-                  <span class="input-group-btn">
-                    <button class="btn btn-default" id="tree-name-submit"><i class="fa fa-check"></i></button>
-                  </span>
-                  <span class="input-group-btn">
-                    <button class="btn btn-default" id="tree-next-button"><i class="fa fa-arrow-right"></i></button>
-                  </span>
-                </div>
+              <div class="input-group">
+                <span class="input-group-btn">
+                  <button class="btn btn-default" id="tree-prev-button"><i class="fa fa-arrow-left"></i></button>
+                </span>
+                <input name="name" id="tree-name-input" class="form-control" maxlength="30" type="text" autocomplete="off">
+                <span class="input-group-btn">
+                  <button class="btn btn-default" id="tree-name-submit"><i class="fa fa-check"></i></button>
+                </span>
+                <span class="input-group-btn">
+                  <button class="btn btn-default" id="tree-next-button"><i class="fa fa-arrow-right"></i></button>
+                </span>
               </div>
               <div>
                 <ul id="tree-list"></ul>

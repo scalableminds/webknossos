@@ -54,6 +54,36 @@
   margin-bottom: 10px;
 }
 
+.table-double-striped > tbody {
+  & > tr:nth-child(odd) > td{
+    background-color: inherit;
+  }
+  & > tr:nth-child(even) > td {
+    background-color: #f9f9f9;
+  }
+}
+
+.table-double-striped {
+ & > tbody:nth-child(odd) > tr > td{
+  background-color: #fff;
+ }
+ & > tbody:nth-child(even) > tr > td{
+  background-color: #f9f9f9;
+ }
+}
+
+.table-nohead {
+  tbody tr:first-child {
+    td, th {
+      border-top: none;
+    }
+  }
+}
+
+.table .table {
+  margin-bottom: 0;
+}
+
 // #####################################
 // OVERRIDE BOOTSTRAP'S DEFAULTS
 // #####################################

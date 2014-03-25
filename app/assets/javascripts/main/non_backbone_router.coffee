@@ -56,18 +56,18 @@ class NonBackboneRouter extends Backbone.Router
       $.ajax(
         url: dataUrl
         type: 'GET'
-        success: (task) ->
+        success: (info) ->
 
-          if task.noData
+          if info
             populateTemplate({task : null})
           else
-            populateTemplate({task : task})
+            populateTemplate({task : info.task})
 
         error: (xhr, status, error) ->
 
-          console.error("Something went wrong when receiving task data", xhr, status, error)
+          console.error("Something went wrong when receiving info data", xhr, status, error)
 
-        complete: (task) ->
+        complete: (info) ->
 
           oxalis = window.oxalis = new Controller(constants.CONTROL_MODE_TRACE)
       )

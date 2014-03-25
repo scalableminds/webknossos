@@ -53,7 +53,7 @@ class TaskListItemView extends Backbone.Marionette.CompositeView
     </td>
     </tr>
     <tr class="details-row hide" >
-      <td colspan="12">
+      <td colspan="13">
         <table class="table table-condensed table-nohead table-hover">
           <tbody>
           </tbody>

@@ -21,9 +21,9 @@ object UserDataLayerDAO extends SecuredBaseDAO[UserDataLayer] {
       Json.obj("dataLayer.name" -> name),
       segmentationIdOpt match {
         case Some(segmentationId) =>
-          Json.obj("$set" -> Json.obj("nextSegmentationId" -> segmentationId))
+          Json.obj("$set" -> Json.obj("dataLayer.nextSegmentationId" -> segmentationId))
         case _ =>
-          Json.obj("$unset" -> Json.obj("nextSegmentationId" -> 0))
+          Json.obj("$unset" -> Json.obj("dataLayer.nextSegmentationId" -> 0))
       })
 
   def findOneByName(name: String)(implicit ctx: DBAccessContext) =

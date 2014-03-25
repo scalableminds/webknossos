@@ -40,7 +40,9 @@ case class DataLayer(
   elementClass: String = "uint8",
   isWritable: Boolean = false,
   fallback: Option[FallbackLayer] = None,
-  sections: List[DataLayerSection] = Nil) extends DataLayerLike {
+  sections: List[DataLayerSection] = Nil,
+  nextSegmentationId: Option[Int] = None
+  ) extends DataLayerLike {
 
   def relativeBaseDir(binaryBase: String) = baseDir.replace(binaryBase, "")
 

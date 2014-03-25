@@ -4,11 +4,14 @@
 package braingames.binary.repository
 
 import scalax.file.{PathSet, Path}
+import scala.concurrent.Future
+import net.liftweb.common.Box
 import braingames.binary.models.{UsableDataSource, DataSourceLike, UnusableDataSource, DataSource}
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json.Json
 import org.apache.commons.io.FileUtils
 import braingames.binary.Logger._
+import braingames.geometry.Point3D
 import braingames.util.ProgressTracking.ProgressTracker
 import braingames.util.{InProgress, FoxImplicits, Fox, ProgressTracking}
 import net.liftweb.common.{Empty, Full, Failure}
@@ -51,7 +54,7 @@ trait DataSourceType extends DataSourceTypeGuesser with DataSourceTypeHandler {
   def name: String
 }
 
-trait DataSourceInboxHelper extends ProgressTracking with FoxImplicits with LockKeeperHelper{
+trait DataSourceInboxHelper extends ProgressTracking with FoxImplicits with LockKeeperHelper with SegmentationIdHelper {
 
   val DataSourceJson = "datasource.json"
 
@@ -79,26 +82,27 @@ trait DataSourceInboxHelper extends ProgressTracking with FoxImplicits with Lock
   }
 
   def transformToDataSource(unusableDataSource: UnusableDataSource): Fox[UsableDataSource] = {
-    withLock[Option[UsableDataSource]](unusableDataSource.sourceFolder){
+    withLock[Fox[UsableDataSource]](unusableDataSource.sourceFolder){
       clearAllTrackers(importTrackerId(unusableDataSource.id))
       cleanUp(unusableDataSource.sourceFolder)
       DataSourceTypeGuessers.guessRepositoryType(unusableDataSource.sourceFolder)
         .importDataSource(unusableDataSource, progressTrackerFor(importTrackerId(unusableDataSource.id)))
+        .map(setNextSegmentationIds(_).toFox).getOrElse(Fox.empty)
         .flatMap {
-        dataSource =>
-          writeDataSourceToFile(
-            unusableDataSource.sourceFolder,
-            UsableDataSource(unusableDataSource.owningTeam, unusableDataSource.sourceType, dataSource))
-      } match {
-        case Some(r) =>
-          logger.info("Datasource import finished for " + unusableDataSource.id)
-          finishTrackerFor(importTrackerId(unusableDataSource.id), true)
-          Some(r)
-        case None =>
-          logger.warn("Datasource import failed for " + unusableDataSource.id)
-          finishTrackerFor(importTrackerId(unusableDataSource.id), false)
-          None
-      }
+          dataSource =>
+            writeDataSourceToFile(
+              unusableDataSource.sourceFolder,
+              UsableDataSource(unusableDataSource.owningTeam, unusableDataSource.sourceType, dataSource))
+        }.futureBox.map {
+          case Full(r) =>
+            logger.info("Datasource import finished for " + unusableDataSource.id)
+            finishTrackerFor(importTrackerId(unusableDataSource.id), true)
+            Full(r)
+          case _ =>
+            logger.warn("Datasource import failed for " + unusableDataSource.id)
+            finishTrackerFor(importTrackerId(unusableDataSource.id), false)
+            Empty
+        }
     }.flatMap(x => x).futureBox.recover {
       case e: Exception =>
         logger.error("Failed to import dataset: " + e.getMessage, e)
@@ -106,4 +110,5 @@ trait DataSourceInboxHelper extends ProgressTracking with FoxImplicits with Lock
         Failure("Failed to import dataset.", Full(e), Empty)
     }
   }
+
 }

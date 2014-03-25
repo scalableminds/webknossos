@@ -71,7 +71,7 @@ case class VolumeTracing(
       Json.obj(
         "customLayers" -> List(AnnotationContent.dataLayerWrites.writes(userDataLayer.dataLayer)),
         "activeCell" -> activeCellId,
-        "nextCell" -> userDataLayer.dataLayer.nextSegmentationId
+        "nextCell" -> userDataLayer.dataLayer.nextSegmentationId.getOrElse(1)
       )
     }
   }

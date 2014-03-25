@@ -8,18 +8,22 @@ admin/models/team/team_collection : TeamCollection
 
 class TeamAssignmentModalView extends Backbone.Marionette.CompositeView
 
-  className : "modal hide fade"
+  className : "modal fade"
   template : _.template("""
-    <div class="modal-header">
-        <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
-        <h3>Assign teams for this dataset</h3>
-    </div>
-    <div class="modal-body">
-      <ul name="teams" class="team-list"></ul>
-    </div>
-    <div class="modal-footer">
-      <a class="btn btn-primary">Save</a>
-      <a href="#" class="btn" data-dismiss="modal">Cancel</a>
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+            <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+            <h3>Assign teams for this dataset</h3>
+        </div>
+        <div class="modal-body">
+          <ul name="teams" class="team-list"></ul>
+        </div>
+        <div class="modal-footer">
+          <a class="btn btn-primary">Save</a>
+          <a href="#" class="btn btn-default" data-dismiss="modal">Cancel</a>
+        </div>
+      </div>
     </div>
   """)
 
@@ -55,7 +59,7 @@ class TeamAssignmentModalView extends Backbone.Marionette.CompositeView
   submitTeams : ->
 
     $checkboxes = @$("input:checked")
-    allowedTeams = _.map($checkboxes, (checkbox) -> return $(checkbox).parent().text().trim())
+    allowedTeams = _.map($checkboxes, (checkbox) -> return $(checkbox).parent().parent().text().trim())
 
     @dataset.set("allowedTeams", allowedTeams)
     @$el.modal("hide")

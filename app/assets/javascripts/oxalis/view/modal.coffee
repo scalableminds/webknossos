@@ -13,7 +13,7 @@ Modal =
 
     html += "<div class=\"modal-footer\">"
     for button in buttons
-      html += "<a href=\"#\" id=\"" + button.id + "\" class=\"btn\">" +
+      html += "<a href=\"#\" id=\"" + button.id + "\" class=\"btn btn-default\">" +
                     button.label + "</a>"
     html += "</div>"
 

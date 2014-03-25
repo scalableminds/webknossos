@@ -9,4 +9,4 @@ class VolumeTracingView extends View
 
     super(@model)
 
-    $('.skeleton-controls').hide()
+    $(".skeleton-controls").hide()

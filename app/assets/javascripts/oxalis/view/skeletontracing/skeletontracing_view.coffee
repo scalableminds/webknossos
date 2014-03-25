@@ -134,7 +134,7 @@ class SkeletonTracingView extends View
       treeId = comment.node.treeId
       if treeId != lastTreeId
         newContent.appendChild((
-          $('<li>').append($('<i>', {"class": "fa fa-sitemap"}),
+          $('<ul>').append($('<i>', {"class": "fa fa-sitemap"}),
           $('<span>', {"data-treeid": treeId, "text": @model.skeletonTracing.getTree(treeId)?.name})))[0])
         lastTreeId = treeId
       newContent.appendChild((
@@ -154,17 +154,15 @@ class SkeletonTracingView extends View
     else
       $("#comment-input").val("")
 
-    oldIcon = $("#comment-container i.icon-arrow-right")
+    oldIcon = $("#comment-container i.fa-angle-right")
     if oldIcon.length
-      oldIcon.toggleClass("icon-arrow-right", false)
-      oldIcon.toggleClass("fa fa-angle-right", true)
+      oldIcon.toggleClass("fa-angle-right", false)
 
     activeHref = $("#comment-container a[data-nodeid=#{@model.skeletonTracing.getActiveNodeId()}]")
     if activeHref.length
 
       newIcon = activeHref.parent("li").children("i")
-      newIcon.toggleClass("icon-arrow-right", true)
-      newIcon.toggleClass("fa fa-angle-right", false)
+      newIcon.toggleClass("fa-angle-right", true)
 
       # animate scrolling to the new comment
       $("#comment-container").animate({
@@ -181,20 +179,19 @@ class SkeletonTracingView extends View
     activeTree = @model.skeletonTracing.getTree()
     if activeTree
       $("#tree-name-input").val(activeTree.name)
-      $("#tree-name").text(activeTree.name)
       $("#tree-active-color").css("color": "##{('000000'+activeTree.color.toString(16)).slice(-6)}")
       activeHref = $("#tree-list a[data-treeid=#{activeTree.treeId}]")
 
-    oldIcon = $("#tree-list i.icon-arrow-right")
+    oldIcon = $("#tree-list i.fa-angle-right")
     if oldIcon.length
-      oldIcon.toggleClass("icon-arrow-right", false)
-      oldIcon.toggleClass("icon-bull", true)
+      oldIcon.toggleClass("fa-angle-right", false)
+      oldIcon.toggleClass("fa-bull", true)
 
     if activeHref?.length
 
       newIcon = activeHref.parent("li").children("i")
-      newIcon.toggleClass("icon-arrow-right", true)
-      newIcon.toggleClass("icon-bull", false)
+      newIcon.toggleClass("fa-angle-right", true)
+      newIcon.toggleClass("fa-bull", false)
 
       # animate scrolling to the new tree
       $("#tree-list").animate({
@@ -222,7 +219,7 @@ class SkeletonTracingView extends View
 
     for tree in trees
       newContent.appendChild((
-        $('<li>').append($('<i>', {"class": "icon-bull"}),
+        $('<li>').append($('<i>', {"class": "fa fa-bull"}),
           $('<a>', {"href": "#", "data-treeid": tree.treeId})
           .append($('<span>', {"title": "nodes", "text": tree.nodes.length}).css("display": "inline-block", "width": "50px"),
           $('<i>', {"class": "fa fa-circle"}).css(

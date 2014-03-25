@@ -16,7 +16,7 @@ underscore : _
 ../libs/event_mixin : EventMixin
 ../libs/input : Input
 ./view/gui : Gui
-./view/user_settings_view : UserSettingsView
+./view/usersettings/user_settings_view : UserSettingsView
 ../libs/toast : Toast
 ./constants : constants
 stats : Stats

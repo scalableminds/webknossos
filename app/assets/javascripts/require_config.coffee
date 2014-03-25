@@ -12,6 +12,7 @@ require.config(
     "coffee-script"       : "../bower_components/coffee-script/extras/coffee-script"
     "backbone.marionette" : "../bower_components/backbone.marionette/lib/backbone.marionette"
     "backbone.paginator"  : "../bower_components/backbone.paginator/dist/backbone.paginator"
+    "backbone.subviews"   : "../bower_components/backbone.subviews/backbone.subviews"
     "backbone"            : "../bower_components/backbone/backbone"
     "gzip"                : "../bower_components/zlib/bin/gzip.min"
     "three"               : "../bower_components/three/index"

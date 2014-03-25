@@ -24,8 +24,4 @@ class CheckboxSettingView extends AbstractSettingView
 
   handleCheckboxChange : (evt) ->
 
-    attribute = @options.name
-    value = evt.target.checked
-
-    console.log attribute, value
-    @model.set(attribute, value)
+    @model.set(@options.name, evt.target.checked)

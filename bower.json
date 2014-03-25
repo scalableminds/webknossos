@@ -21,6 +21,7 @@
     "tweenjs": "r6",
     "zlib": "git@github.com:imaya/zlib.js.git#0.2.0",
     "backbone.paginator": "~0.8.1",
+    "backbone.subviews": "~0.7.0",
     "seiyria-bootstrap-slider": "~1.9.5",
     "three": "https://raw.github.com/georgwiese/three.js/scm_oxalis/build/three.js",
     "ColorConverter": "https://raw.github.com/georgwiese/three.js/scm_oxalis/examples/js/math/ColorConverter.js",

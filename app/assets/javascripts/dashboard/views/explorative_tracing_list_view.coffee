@@ -3,6 +3,7 @@ underscore : _
 backbone.marionette : marionette
 app : app
 dashboard/views/explorative_tracing_list_item_view : ExplorativeTracingListItemView
+admin/models/dataset/dataset_collection : DatasetCollection
 libs/input : Input
 libs/toast : Toast
 ###
@@ -34,8 +35,8 @@ class ExplorativeTracingListView extends Backbone.Marionette.CompositeView
               method="POST"
               class="form-inline inline-block">
           <select name="dataSetName">
-            <% _.each(dataSets, function(d) { %>
-              <option value="<%= d.name %>"> <%= d.name %> </option>
+            <% dataSets.forEach(function(d) { %>
+              <option value="<%= d.get("name") %>"> <%= d.get("name") %> </option>
             <% }) %>
           </select>
           <span id="tracing-chooser">
@@ -88,8 +89,13 @@ class ExplorativeTracingListView extends Backbone.Marionette.CompositeView
 
     @bindUIElements()
     @model = options.model
-    @collection = @model.get("exploratory")
+    @collection = @model.get("exploratoryAnnotations")
 
+    datasetCollection = new DatasetCollection()
+    @model.set("dataSets", datasetCollection)
+
+    @listenTo(datasetCollection, "sync", @render)
+    datasetCollection.fetch( silent : true )
 
   onShow : ->
 

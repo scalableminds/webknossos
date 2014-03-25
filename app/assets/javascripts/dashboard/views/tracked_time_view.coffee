@@ -31,9 +31,12 @@ class TrackedTimeView extends Backbone.Marionette.CompositeView
   initialize : (options) ->
 
     @model = options.model
+    @model.set("formattedLogs", [])
 
-    formattedLogs = @model.get("loggedTime")
-      .map( (entry) ->
+    $.get("/api/user/loggedTime").success( (response) =>
+      loggedTime = response.loggedTime
+
+      formattedLogs = loggedTime.map( (entry) ->
 
         t = moment.duration(seconds: entry.durationInSeconds)
         [ days, hours, minutes ] = [ t.days(), t.hours(), t.minutes() ]
@@ -50,7 +53,10 @@ class TrackedTimeView extends Backbone.Marionette.CompositeView
 
           interval : interval.year + "-" + interval.month
         }
-      )
-      .sort( (a, b) -> a.interval > b.interval )
+      ).sort( (a, b) -> a.interval > b.interval )
 
-    @model.set("formattedLogs", formattedLogs)
+      @model.set("formattedLogs", formattedLogs)
+
+      @render()
+    )
+

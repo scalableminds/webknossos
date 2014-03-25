@@ -41,8 +41,7 @@ object UserController extends Controller with Secured with Dashboard {
   def details = Authenticated.async {
     implicit request => {
       for {
-        info <- dashboardInfo(request.user, request.user)
-        content <- info
+        content <- dashboardInfo(request.user, request.user)
       } yield {
         JsonOk(content)
       }
@@ -52,10 +51,21 @@ object UserController extends Controller with Secured with Dashboard {
   def userDetails(userId: String) = Authenticated.async{ implicit request =>
     for {
       user <- UserDAO.findOneById(userId) ?~> Messages("user.notFound")
-      info <- dashboardInfo(user, request.user)
-      content <- info
+      content <- dashboardInfo(user, request.user)
     } yield {
       JsonOk(content)
+    }
+  }
+
+  def loggedTime = Authenticated.async{ implicit request =>
+    for {
+      loggedTimeAsMap <- TimeSpanService.loggedTimeOfUser(request.user, TimeSpan.groupByMonth _)
+    } yield {
+      JsonOk(Json.obj("loggedTime" ->
+        loggedTimeAsMap.map { case (paymentInterval, duration) =>
+          Json.obj("paymentInterval" -> paymentInterval, "durationInSeconds" -> duration.toSeconds)
+        }
+      ))
     }
   }
 

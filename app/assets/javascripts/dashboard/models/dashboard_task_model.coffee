@@ -5,22 +5,23 @@ backbone : Backbone
 
 class DashboardTaskModel extends Backbone.Model
 
-  parse : (response) ->
+  parse : (annotation) ->
+    # transform the annotation object which holds a task to a task object which holds its annotation
 
-    defaultTaskType = (annotation) ->
-
-      summary : "[deleted] " + annotation.typ
-      description : ""
-      settings : { allowedModes : "" }
-
-    task = response.task
+    task = annotation.task
 
     unless task.type
-      task.type = defaultTaskType(response.annotation)
+      task.type = @defaultTaskType(annotation)
 
-    # transform the task-annotation-object to a task which holds its annotation as an attribute
-    task.annotation = response.annotation
+    task.annotation = annotation
     return task
+
+
+  defaultTaskType : (annotation) ->
+
+    summary : "[deleted] " + annotation.typ
+    description : ""
+    settings : { allowedModes : "" }
 
 
   finish : ->

@@ -36,7 +36,7 @@ class DashboardModel extends Backbone.Model
 
   transformToCollection : ->
 
-    tasks = @get("tasksWithAnnotations").map( (el) ->
+    tasks = @get("taskAnnotations").map( (el) ->
 
       return DashboardTaskModel::parse(el)
     )
@@ -44,8 +44,8 @@ class DashboardModel extends Backbone.Model
     tasks = new Backbone.Collection(tasks, model : DashboardTaskModel )
     @set("tasks", tasks)
 
-    exploratory = new Backbone.Collection(@get("exploratory"))
-    @set("exploratory", exploratory)
+    exploratoryAnnotations = new Backbone.Collection(@get("exploratoryAnnotations"))
+    @set("exploratoryAnnotations", exploratoryAnnotations)
 
 
   getNewTask : ->

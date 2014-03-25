@@ -1,12 +1,13 @@
 package controllers
 
 import models.user.User
-import models.annotation.{AnnotationService, Annotation}
+import models.annotation.{AnnotationService, Annotation, AnnotationLike}
 import models.task.Task
 import models.binary.DataSet
 import models.user.time._
 import models.binary.DataSetDAO
 import braingames.util.ExtendedTypes.ExtendedList
+import braingames.util.FoxImplicits
 import play.api.libs.concurrent.Execution.Implicits._
 import braingames.reactivemongo.DBAccessContext
 import play.api.Logger
@@ -33,53 +34,34 @@ case class DashboardInfo(
                         )
 
 
-trait Dashboard {
+trait Dashboard extends FoxImplicits {
   private def userWithTasks(user: User)(implicit ctx: DBAccessContext): Fox[List[(Task, Annotation)]] = {
     AnnotationService.findTasksOf(user).flatMap{ taskAnnotations => Fox(
       Fox.sequence(taskAnnotations.map(a => a.task.map(_ -> a))).map(els => Full(els.flatten)))
     }
   }
 
-  private def exploratorySortedByTime(exploratoryAnnotations: List[Annotation]) =
-    exploratoryAnnotations.futureSort(_.content.map(-_.timestamp).getOrElse(0L))
 
   private def hasOpenTask(tasksAndAnnotations: List[(Task, Annotation)]) =
     tasksAndAnnotations.exists { case (_, annotation) => !annotation.state.isFinished }
 
+  private def annotationsAsJson(annotations : Fox[List[AnnotationLike]], user : User)(implicit ctx: DBAccessContext) = {
+    annotations.flatMap{ taskAnnotations =>
+      Fox.sequence(taskAnnotations.map(AnnotationLike.annotationLikeInfoWrites(_, Some(user), List("content", "actions"))))
+    }
+  }
+
+
   def dashboardInfo(user: User, requestingUser: User)(implicit ctx: DBAccessContext) = {
     for {
-      exploratoryAnnotations <- AnnotationService.findExploratoryOf(user)
-      dataSets <- DataSetDAO.findAllActive
-      loggedTimeAsMap <- TimeSpanService.loggedTimeOfUser(user, TimeSpan.groupByMonth _)
-      exploratoryAnnotations <- exploratorySortedByTime(exploratoryAnnotations).toFox
-      userTasks <- userWithTasks(user)
+      exploratoryAnnotations <- annotationsAsJson(AnnotationService.findExploratoryOf(user), user)
+      tasksAnnotations <- annotationsAsJson(AnnotationService.findTasksOf(user), user)
     } yield {
-
-      val loggedTime = loggedTimeAsMap.map { case (paymentInterval, duration) =>
-        Json.obj("paymentInterval" -> paymentInterval, "durationInSeconds" -> duration.toSeconds)
-      }
-
-      for {
-        tasksWithAnnotations <- Future.traverse(userTasks)({
-          case (task, annotation) =>
-            for {
-              taskJSON <- Task.transformToJson(task)
-              annotationJSON <- Annotation.transformToJson(annotation)
-            } yield (taskJSON, annotationJSON)
-        })
-        exploratoryList <- Future.traverse(exploratoryAnnotations)(Annotation.transformToJson(_))
-      } yield {
-        Json.obj(
-          "user" -> Json.toJson(user)(User.userPublicWrites(requestingUser)),
-          "loggedTime" -> loggedTime,
-          "dataSets" -> dataSets,
-          "hasAnOpenTask" -> hasOpenTask(userTasks),
-          "exploratory" -> Json.toJson(exploratoryList),
-          "tasksWithAnnotations" -> Json.toJson(
-            tasksWithAnnotations.map(tuple => Json.obj("task" -> tuple._1, "annotation" -> tuple._2))
-          )
-        )
-      }
+      Json.obj(
+        "user" -> Json.toJson(user)(User.userPublicWrites(requestingUser)),
+        "exploratoryAnnotations" -> exploratoryAnnotations.flatMap ( o => o),
+        "taskAnnotations" -> tasksAnnotations.flatMap ( o => o)
+      )
     }
 
  }

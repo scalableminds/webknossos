@@ -31,7 +31,7 @@ class VolumeTracingStateLogger extends StateLogger
       {
         activeCell : @volumeTracing.getActiveCellId()
         editPosition : @flycam.getPosition()
-        idCount : @volumeTracing.idCount
+        nextCell : @volumeTracing.idCount
       }
       false
     )

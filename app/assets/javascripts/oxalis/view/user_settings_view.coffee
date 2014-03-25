@@ -1,6 +1,7 @@
 ### define
 backbone.marionette : marionette
 underscore : _
+./usersettings/checkbox_setting_view : CheckboxSettingView
 ###
 
 class UserSettingsView extends Backbone.Marionette.CompositeView
@@ -19,12 +20,7 @@ class UserSettingsView extends Backbone.Marionette.CompositeView
         <div id="user-settings-controls accordion-body" class="panel-collapse collapse in">
           <div class="panel-body accordion-inner">
 
-            <label class="checkbox">
-              <input type="checkbox" <%= boolToChecked(inverseX) %> data-attribute="inverseX"> Inverse X
-            </label>
-            <label class="checkbox">
-              <input type="checkbox" <%= boolToChecked(inverseY) %> data-attribute="inverseY"> Inverse Y
-            </label>
+            <div id="view-settings"></div>
 
           </div>
         </div>
@@ -47,30 +43,34 @@ class UserSettingsView extends Backbone.Marionette.CompositeView
     """)
 
 
-  templateHelpers :
-    boolToChecked : (bool) ->
-      return if bool then "checked" else ""
+  itemViewContainer : "#view-settings"
 
+  itemViewOptions : (item, index) ->
 
-  events :
-    "change [data-attribute][type=checkbox]" : "handleCheckboxChange"
+    return @settingViews[index].options
 
 
   initialize : ->
 
-    @listenTo(@model, "change", @render)
+    @settingViews = [
+      {
+        view : CheckboxSettingView
+        options :
+          name : "inverseX"
+          displayName : "Inverse X"
+      }
+      {
+        view : CheckboxSettingView
+        options :
+          name : "inverseY"
+          displayName : "Inverse Y"
+      }
+    ]
+
+    @listenTo(@, "render", @afterRender)
 
 
-  handleCheckboxChange : (evt) ->
+  afterRender : ->
 
-    attribute = $(evt.target).data("attribute")
-    value = evt.target.checked
-
-    console.log attribute, value
-    @model.set(attribute, value)
-
-
-  render : ->
-
-    console.log "render"
-    super(arguments...)
+    for settingView, i in @settingViews
+      @addItemView(@model, settingView.view, i)

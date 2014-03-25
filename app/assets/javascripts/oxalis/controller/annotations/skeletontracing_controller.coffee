@@ -26,7 +26,7 @@ class SkeletonTacingController
       setActiveTree : (id) => @model.skeletonTracing.setActiveTree(id)
       setActiveNode : (id) => @model.skeletonTracing.setActiveNode(id)
 
-    # Mange side bar input
+    # Manage side bar input
     $("#comment-input").on "change", (event) =>
       @model.skeletonTracing.setComment(event.target.value)
       $("#comment-input").blur()
@@ -66,7 +66,10 @@ class SkeletonTacingController
       @setActiveTree($(event.currentTarget).data("treeid"), true)
 
     $("#tree-color-shuffle").click =>
-      @model.skeletonTracing.shuffleActiveTreeColor()
+      @model.skeletonTracing.shuffleTreeColor()
+
+    $("#tree-color-shuffle-all").click =>
+      @model.skeletonTracing.shuffleAllTreeColors()
 
     $("#tree-sort").on "click", "a[data-sort]", (event) =>
       event.preventDefault()

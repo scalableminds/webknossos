@@ -134,7 +134,7 @@ class SkeletonTracingView extends View
       treeId = comment.node.treeId
       if treeId != lastTreeId
         newContent.appendChild((
-          $('<li>').append($('<i>', {"class": "fa fa-sitemap"}),
+          $('<ul>').append($('<i>', {"class": "fa fa-sitemap"}),
           $('<span>', {"data-treeid": treeId, "text": @model.skeletonTracing.getTree(treeId)?.name})))[0])
         lastTreeId = treeId
       newContent.appendChild((

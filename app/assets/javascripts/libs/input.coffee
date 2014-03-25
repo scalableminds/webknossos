@@ -185,7 +185,7 @@ class Input.Mouse
     @isMouseOver = false
     @lastPosition = null
 
-    $(window).on
+    $(document).on
       "mousemove" : @mouseMove
       "mouseup"   : @mouseUp
 
@@ -201,7 +201,7 @@ class Input.Mouse
 
   unbind : ->
 
-    $(window).off
+    $(document).off
       "mousemove" : @mouseMove
       "mouseup" : @mouseUp
 

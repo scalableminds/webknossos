@@ -45,6 +45,10 @@ class Controller
 
   constructor : (@controlMode) ->
 
+    unless @browserSupported()
+      unless window.confirm("You are using an unsupported browser, please use the newest version of Chrome, Opera or Safari.\n\nTry anyways?")
+        window.history.back()
+
     _.extend(@, new EventMixin())
 
     @fullScreen = false
@@ -131,7 +135,7 @@ class Controller
 
           alpha = event.value
           if (alpha == 0)
-            @model.binary["segmentation"].pingStop()
+            @model.getSegmentationBinary().pingStop()
           @sceneController.setSegmentationAlpha( alpha )
 
       @modeMapping =
@@ -269,7 +273,11 @@ class Controller
 
     for binary in @model.getColorBinaries()
       binary.pullQueue.set4Bit(@model.user.get("fourBit"))
-      binary.updateContrastCurve(
-        gui.settingsGeneral.brightness, gui.settingsGeneral.contrast)
 
     return gui
+
+
+  browserSupported : ->
+
+    # right now only webkit-based browsers are supported
+    return window.webkitURL

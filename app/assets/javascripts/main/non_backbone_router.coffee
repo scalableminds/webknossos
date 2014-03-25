@@ -58,7 +58,7 @@ class NonBackboneRouter extends Backbone.Router
         type: 'GET'
         success: (info) ->
 
-          if info
+          if info.task
             populateTemplate({task : null})
           else
             populateTemplate({task : info.task})

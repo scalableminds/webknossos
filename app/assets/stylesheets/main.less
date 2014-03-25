@@ -1,28 +1,28 @@
- @import '../../../public/bower_components/bootstrap/less/bootstrap.less';
-@import '../../../public/bower_components/font-awesome/less/font-awesome.less';
-@import '../../assets/bower_components/seiyria-bootstrap-slider/css/bootstrap-slider.css';
+@import (inline) "../../../public/bower_components/bootstrap/dist/css/bootstrap.css";
+@import (inline) "../../../public/bower_components/seiyria-bootstrap-slider/css/bootstrap-slider.css";
+@import "../../../public/bower_components/font-awesome/less/font-awesome.less";
 
-@import '_variables.less';
-@import 'admin/_user.less';
-@import 'admin/_team.less';
-@import 'admin/_dataset.less';
-@import 'admin/_pagination.less';
-@import 'admin/_task.less';
-@import 'admin/_project.less';
-@import 'admin/_statistics.less';
-@import '_bootstrap_addons.less';
-@import '_spotlight.less';
-@import '_dashboard.less';
-@import 'trace_view/_tracing_view.less';
-@import 'trace_view/_left_menu.less';
-@import 'trace_view/_right_menu.less';
+@import "_variables.less";
+@import "admin/_user.less";
+@import "admin/_team.less";
+@import "admin/_dataset.less";
+@import "admin/_pagination.less";
+@import "admin/_task.less";
+@import "admin/_project.less";
+@import "admin/_statistics.less";
+@import "_bootstrap_addons.less";
+@import "_spotlight.less";
+@import "_dashboard.less";
+@import "trace_view/_tracing_view.less";
+@import "trace_view/_left_menu.less";
+@import "trace_view/_right_menu.less";
 
 
 // ----------------------- MAIN STYLES
 body {
   //background: #000000;
   color: @mainColor;
-  font-family: 'Source Sans Pro', sans-serif;
+  font-family: "Source Sans Pro", sans-serif;
   font-weight: 400;
   font-size: 16px;
   -webkit-font-smoothing: antialised;
@@ -283,7 +283,7 @@ body:-webkit-full-screen {
 // Fixing datGUI from Bootstrap
 .dg {
 
-  font: 11px 'Lucida Grande', sans-serif;
+  font: 11px "Lucida Grande", sans-serif;
 
   input, select, textarea {
     height: auto;

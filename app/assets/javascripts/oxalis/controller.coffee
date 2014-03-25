@@ -89,7 +89,6 @@ class Controller
       _.defer ->
         menuPosition = $("#right-menu").position()
         MARGIN = 40
-        console.log menuPosition
         $("#right-menu")
           .width(window.innerWidth - menuPosition.left - MARGIN)
           .height(window.innerHeight - menuPosition.top - MARGIN)

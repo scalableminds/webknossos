@@ -6,6 +6,7 @@ import scala.concurrent.Future
 import play.api.Logger
 import play.api.libs.concurrent.Execution.Implicits._
 import braingames.reactivemongo.DBAccessContext
+import models.binary.UserDataLayerDAO
 
 object TracingUpdater {
 
@@ -42,13 +43,13 @@ case class UpdateTracing(value: JsObject) extends TracingUpdater {
 
   def createUpdate()(implicit ctx: DBAccessContext) = {
     val activeCellId = (value \ "activeCell").asOpt[Int]
-    val nextCellId = (value \ "nextCell").asOpt[Int]
+    val nextSegmentationId = (value \ "nextCell").asOpt[Int]
     val editPosition = (value \ "editPosition").as[Point3D]
     TracingUpdate { t =>
       val updated = t.copy(
         activeCellId = activeCellId,
-        nextCellId = nextCellId,
         editPosition = editPosition)
+      UserDataLayerDAO.updateNextSegmentationId(t.userDataLayerName, nextSegmentationId)
       VolumeTracingDAO.update(t._id, updated).map(_ => updated)
     }
   }

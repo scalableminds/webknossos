@@ -28,7 +28,6 @@ case class VolumeTracing(
   userDataLayerName: String,
   timestamp: Long,
   activeCellId: Option[Int],
-  nextCellId: Option[Int],
   editPosition: Point3D,
   boundingBox: Option[BoundingBox],
   settings: AnnotationSettings = AnnotationSettings.volumeDefault,
@@ -72,7 +71,7 @@ case class VolumeTracing(
       Json.obj(
         "customLayers" -> List(AnnotationContent.dataLayerWrites.writes(userDataLayer.dataLayer)),
         "activeCell" -> activeCellId,
-        "nextCell" -> nextCellId
+        "nextCell" -> userDataLayer.dataLayer.nextSegmentationId
       )
     }
   }

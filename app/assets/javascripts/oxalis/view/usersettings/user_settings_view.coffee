@@ -3,19 +3,32 @@ backbone.marionette : marionette
 backbone.subviews : subviews
 underscore : _
 ./categoryviews/controls_category_view : ControlsCategoryView
+./categoryviews/viewport_category_view : ViewportCategoryView
 ###
 
-class UserSettingsView extends Backbone.Marionette.CompositeView
+class UserSettingsView extends Backbone.Marionette.ItemView
 
-  # TODO: remove accordion* classes after bootstrap 3 update
 
   template : _.template("""
     <div class="panel-group accordion" id="user-settings">
 
-      <div data-subview="category-controls"></div>
+      <% _.forEach(subviewCreators, function (subview, key) { %>
+        <div data-subview="<%= key %>"></div>
+      <% }) %>
 
     </div>
   """)
+
+
+  subviewCreators :
+
+    "category-controls" : ->
+
+      return new ControlsCategoryView({ @model })
+
+    "viewport-controls" : ->
+
+      return new ViewportCategoryView({ @model })
 
 
   initialize : ->
@@ -23,8 +36,6 @@ class UserSettingsView extends Backbone.Marionette.CompositeView
     Backbone.Subviews.add(this)
 
 
-  subviewCreators :
+  serializeData : ->
 
-    "category-controls" : ->
-
-      return new ControlsCategoryView({@model})
+    return { @subviewCreators }

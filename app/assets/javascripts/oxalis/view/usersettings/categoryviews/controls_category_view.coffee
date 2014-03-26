@@ -1,38 +1,13 @@
 ### define
-backbone.marionette : marionette
-backbone.subviews : subviews
-underscore : _
 ../settingviews/checkbox_setting_view : CheckboxSettingView
 ../settingviews/slider_setting_view : SliderSettingView
+./category_view : CategoryView
 ###
 
-class ControlsCategoryView extends Backbone.Marionette.CompositeView
-
-  # TODO: remove accordion* classes after bootstrap 3 update
-
-  template : _.template("""
-    <div class="panel panel-default accordion-group">
-      <div class="panel-heading accordion-heading">
-        <a class="panel-title accordion-toggle" data-toggle="collapse" data-parent="#user-settings" href="#user-settings-controls">
-          Controls
-        </a>
-      </div>
-      <div id="user-settings-controls accordion-body" class="panel-collapse collapse in">
-        <div class="panel-body accordion-inner">
-
-          <div data-subview="inverseX"></div>
-          <div data-subview="inverseY"></div>
-          <div data-subview="keyboardDelay"></div>
-
-        </div>
-      </div>
-    </div>
-  """)
+class ControlsCategoryView extends CategoryView
 
 
-  initialize : ->
-
-    Backbone.Subviews.add(this)
+  caption : "Controls"
 
 
   subviewCreators :
@@ -64,4 +39,5 @@ class ControlsCategoryView extends Backbone.Marionette.CompositeView
           displayName : "Keyboard delay (ms)"
           min : 0
           max : 500
+          step : 1
       )

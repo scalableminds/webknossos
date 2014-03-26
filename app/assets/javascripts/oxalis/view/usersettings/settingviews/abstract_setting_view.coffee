@@ -8,8 +8,7 @@ class AbstractSettingView extends Backbone.Marionette.ItemView
 
   initialize : ({ @model, @options }) ->
 
-    console.log "Init", arguments
-    @listenTo(@model, "change:#{@options.name}" , @render)
+    @listenTo(@model, "change:#{@options.name}" , @update)
 
 
   serializeData : ->

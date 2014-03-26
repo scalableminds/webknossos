@@ -6,11 +6,18 @@ underscore : _
 class CheckboxSettingView extends AbstractSettingView
 
 
+  className : "checkbox-setting-view"
+
+
   template : _.template("""
     <label class="checkbox">
       <input type="checkbox" <%= boolToChecked(value) %>> <%= displayName %>
     </label>
   """)
+
+
+  ui :
+    checkbox : "input[type=checkbox]"
 
 
   templateHelpers :
@@ -19,13 +26,14 @@ class CheckboxSettingView extends AbstractSettingView
 
 
   events :
-    "change [type=checkbox]" : "handleCheckboxChange"
+    "change @ui.checkbox" : "handleChange"
 
 
-  handleCheckboxChange : (evt) ->
+  handleChange : (evt) ->
 
-    attribute = @options.name
-    value = evt.target.checked
+    @model.set(@options.name, evt.target.checked)
 
-    console.log attribute, value
-    @model.set(attribute, value)
+
+  update : (@model, value) ->
+
+    @ui.checkbox.prop("checked", value)

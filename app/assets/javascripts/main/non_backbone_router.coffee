@@ -12,7 +12,7 @@ class NonBackboneRouter extends Backbone.Router
     "admin/tasks/overview"          : "taskOverview"
     "admin/taskTypes"               : "hideLoading"
     "admin/projects"                : "projects"
-    "annotations/:typ/:id"          : "tracingTrace"
+    # "annotations/:typ/:id"          : "tracingTrace"
     "datasets/:id/view"             : "tracingView"
     "users/:id/details"             : "userDetails"
     "*url"                          : "hideLoading"
@@ -132,4 +132,3 @@ class NonBackboneRouter extends Backbone.Router
       for aUser in response.users
         $owner.append("<option value='#{aUser.id}' selected=''>#{aUser.firstName} #{aUser.lastName}</option>")
     )
-

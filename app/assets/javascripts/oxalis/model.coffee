@@ -51,10 +51,9 @@ class Model
     @totalBuckets.push(totalBuckets)
 
 
-  initialize : (controlMode, state) =>
+  initialize : (options) =>
 
-    tracingId = $("#container").data("tracing-id")
-    tracingType = $("#container").data("tracing-type")
+    {tracingId, tracingType, controlMode, state} = options
 
     Request.send(
       url : "/annotations/#{tracingType}/#{tracingId}/info"

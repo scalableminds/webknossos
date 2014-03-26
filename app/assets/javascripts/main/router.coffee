@@ -2,6 +2,7 @@
 jquery : $
 underscore : _
 backbone : Backbone
+oxalis/view/tracing_layout_view : TracingLayoutView
 ###
 
 # #####
@@ -18,6 +19,7 @@ class Router extends Backbone.Router
     "statistics"                    : "statistics"
     "tasks"                         : "tasks"
     "projects"                      : "projects"
+    "annotations/:type/:id"         : "tracingView"
 
 
   initialize : ->
@@ -43,6 +45,14 @@ class Router extends Backbone.Router
   hideLoading : ->
 
     @$loadingSpinner.hide()
+
+
+  tracingView : (type, id)->
+
+    @changeView(new TracingLayoutView(
+      tracingType: type
+      tracingId :id
+    ))
 
 
   projects : ->

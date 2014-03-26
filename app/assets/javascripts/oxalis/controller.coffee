@@ -43,7 +43,9 @@ class Controller
   allowedModes : []
 
 
-  constructor : (@controlMode) ->
+  constructor : (options) ->
+
+    @controlMode = options.controlMode
 
     unless @browserSupported()
       unless window.confirm("You are using an unsupported browser, please use the newest version of Chrome, Opera or Safari.\n\nTry anyways?")
@@ -56,8 +58,9 @@ class Controller
 
     @model = new Model()
     @urlManager = new UrlManager(this, @model)
+    options.state = @urlManager .initialState
 
-    @model.initialize( @controlMode, @urlManager.initialState ).done ({restrictions, settings, error}) =>
+    @model.initialize(options).done ({restrictions, settings, error}) =>
 
       # Do not continue, when there was an error and we got no settings from the server
       if error

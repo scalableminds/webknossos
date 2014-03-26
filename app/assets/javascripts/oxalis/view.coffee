@@ -22,8 +22,8 @@ class View
 
 
     # disable loader, show oxalis
-    $("#loader").css("display" : "none")
-    $("#container").css("display" : "inline")
+    $("#loader").hide()
+    $("#container").removeClass("hide")
 
 
   toggleTheme : ->
@@ -102,7 +102,7 @@ class View
             <br>Select the different categories to open/close them.
             Please report any issues.</p>
             </p></div><div class="modal-footer">
-            <a href="#" class="btn" data-dismiss="modal">Close</a></div>'''
+            <a href="#" class="btn btn-default" data-dismiss="modal">Close</a></div>'''
 
     $("#help-modal").html(html)
 

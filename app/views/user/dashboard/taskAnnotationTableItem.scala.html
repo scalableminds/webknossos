@@ -6,7 +6,7 @@
     <td><%= tasks.projectName %> </td>
     <td><% if(tasks.type){ print(tasks.type.description) } else { print("") } %></td>
     <td>
-      <span class="label"> <% if(tasks.type){ print(tasks.type.settings.allowedModes) } else { print("")} %></span>
+      <span class="label label-default"> <% if(tasks.type){ print(tasks.type.settings.allowedModes) } else { print("")} %></span>
     </td>
     <td class="nowrap">
       <% if (annotations.state.isFinished) { %>

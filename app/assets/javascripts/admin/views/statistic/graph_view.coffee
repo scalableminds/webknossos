@@ -2,7 +2,7 @@
 underscore : _
 app : app
 backbone.marionette : marionette
-c3 : c3
+c3: c3
 moment : moment
 ###
 

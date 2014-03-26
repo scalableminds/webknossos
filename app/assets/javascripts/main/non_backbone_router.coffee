@@ -16,7 +16,6 @@ class NonBackboneRouter extends Backbone.Router
     "datasets/:id/view"             : "tracingView"
     "users/:id/details"             : "userDetails"
     "*url"                          : "hideLoading"
-    #"admin/tasks/algorithm"      : "taskAlgorithm"
 
 
   hideLoading : ->
@@ -66,7 +65,7 @@ class NonBackboneRouter extends Backbone.Router
 
         error: (xhr, status, error) ->
 
-          console.error("Something went wrong when receiving task data", xhr, status, error)
+          console.error("Something went wrong when receiving info data", xhr, status, error)
 
         complete: (info) ->
 
@@ -95,17 +94,6 @@ class NonBackboneRouter extends Backbone.Router
       new TaskOverviewView(
         el : $("#main-container").find("#task-overview")[0]
       )
-      return @hideLoading()
-
-
-  taskAlgorithm : ->
-
-    require ["admin/views/task/task_algorithm_view"], (TaskAlgorithmView) =>
-
-      new TaskAlgorithmView(
-        el : $("#main-container").find("#task-selection-algoritm")[0]
-      )
-
       return @hideLoading()
 
 

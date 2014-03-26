@@ -35,13 +35,7 @@ trait SegmentationIdHelper {
           val resolution = section.resolutions.min
           val minBlock = dataSource.pointToBlock(section.bboxBig.topLeft, resolution)
           val maxBlock = dataSource.pointToBlock(section.bboxBig.bottomRight.move(Point3D(-1, -1, -1)), resolution)
-          val blockIdxs = for {
-            x <- minBlock.x to maxBlock.x
-            y <- minBlock.y to maxBlock.y
-            z <- minBlock.z to maxBlock.z
-          } yield Point3D(x, y, z)
-
-          blockIdxs.map {
+          (minBlock to maxBlock).map {
             block =>
               dataStore.load(LoadBlock(dataSource, dataLayer, section, resolution, block)).map {
                 case Full(data) =>

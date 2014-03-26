@@ -27,20 +27,6 @@ class SkeletonTacingController
       setActiveNode : (id) => @model.skeletonTracing.setActiveNode(id)
 
     # Manage side bar input
-    $("#comment-input").on "change", (event) =>
-      @model.skeletonTracing.setComment(event.target.value)
-      $("#comment-input").blur()
-
-    $("#comment-previous").click =>
-      @prevComment()
-
-    $("#comment-next").click =>
-      @nextComment()
-
-    $("#tab-comments").on "click", "a[data-nodeid]", (event) =>
-      event.preventDefault()
-      @setActiveNode($(event.target).data("nodeid"), false, true)
-
     $("#tree-name-submit").click (event) =>
       @model.skeletonTracing.setTreeName($("#tree-name-input").val())
 
@@ -74,10 +60,6 @@ class SkeletonTacingController
     $("#tree-sort").on "click", "a[data-sort]", (event) =>
       event.preventDefault()
       @model.user.set("sortTreesByName", ($(event.currentTarget).data("sort") == "name"))
-
-    $("#comment-sort").on "click", "a[data-sort]", (event) =>
-      event.preventDefault()
-      @model.user.set("sortCommentsAsc", ($(event.currentTarget).data("sort") == "asc"))
 
 
   setParticleSize : (delta) =>
@@ -136,19 +118,3 @@ class SkeletonTacingController
 
     @model.skeletonTracing.selectNextTree(next)
     @centerActiveNode()
-
-
-  # Comments
-
-  prevComment : =>
-
-    @setActiveNode(
-      @model.skeletonTracing.nextCommentNodeID(false), false, true)
-
-
-  nextComment : =>
-
-    @setActiveNode(
-      @model.skeletonTracing.nextCommentNodeID(true), false, true)
-
-

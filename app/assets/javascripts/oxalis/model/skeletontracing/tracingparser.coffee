@@ -1,6 +1,7 @@
 ### define
 jquery : $
 underscore : _
+backbone : backbone
 three.color : ColorConverter
 libs/request : Request
 libs/event_mixin : EventMixin
@@ -17,7 +18,7 @@ class TracingParser
     @idCount = 1
     @treeIdCount = 1
     @trees = []
-    @comments = []
+    @comments = new Backbone.Collection()
     @activeNode = null
     @activeTree = null
 
@@ -82,7 +83,7 @@ class TracingParser
 
     for comment in @data.comments
       comment.node = @skeletonTracing.findNodeInList(nodeList, comment.node)
-    @comments = @data.comments
+    @comments.add(@data.comments)
 
 
   parse : ->
@@ -92,7 +93,7 @@ class TracingParser
         idCount : 0
         treeIdCount : 0
         trees : []
-        comments : []
+        comments : new Backbone.Collection()
         activeNode : null
         activeTree : null
       }

@@ -45,7 +45,8 @@ class Controller
 
   constructor : (options) ->
 
-    @controlMode = options.controlMode
+    {@controlMode, _model:@model } = options
+
 
     unless @browserSupported()
       unless window.confirm("You are using an unsupported browser, please use the newest version of Chrome, Opera or Safari.\n\nTry anyways?")
@@ -56,7 +57,6 @@ class Controller
     @fullScreen = false
     @mode = constants.MODE_PLANE_TRACING
 
-    @model = new Model()
     @urlManager = new UrlManager(this, @model)
     options.state = @urlManager .initialState
 
@@ -87,14 +87,6 @@ class Controller
 
       @gui = @createGui(restrictions, settings)
 
-      #TODO trigger on resize
-      # set width / height for the right-side menu
-      _.defer ->
-        menuPosition = $("#right-menu").position()
-        MARGIN = 40
-        $("#right-menu")
-          .width(window.innerWidth - menuPosition.left - MARGIN)
-          .height(window.innerHeight - menuPosition.top - MARGIN)
 
       @sceneController = new SceneController(
         @model.upperBoundary, @model.flycam, @model)

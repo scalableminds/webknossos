@@ -1,5 +1,6 @@
 ### define
 backbone.marionette : marionette
+./right-menu/comment_tab_view : CommentTabView
 ###
 
 class RightMenuView extends Backbone.Marionette.Layout
@@ -58,37 +59,20 @@ class RightMenuView extends Backbone.Marionette.Layout
           </div>
         </div>
       </div>
-      <div class="tab-pane" id="tab-comments">
-        <div class="input-group" id="comment-navbar">
-          <div class="input-group-btn">
-            <button class="btn btn-default" id="comment-previous"><i class="fa fa-arrow-left"></i></button>
-          </div>
-          <input class="form-control" id="comment-input" type="text" placeholder="Add comment">
-          <div class="input-group-btn">
-            <button class="btn btn-default" id="comment-next"><i class="fa fa-arrow-right"></i></button>
-            <button class="btn btn-default dropdown-toggle" data-toggle="dropdown" id="comment-sort-button" title="sort">
-              <i class="fa fa-sort-alpha-asc"></i>
-            </button>
-            <ul class="dropdown-menu pull-right" role="menu" id="comment-sort">
-              <li>
-                <a href="#" data-sort="asc">
-                  Ascending
-                  <i class="fa fa-check" id="sort-asc-icon"></i>
-                </a>
-              </li>
-              <li>
-                <a href="#" data-sort="desc">
-                  Descending
-                  <i class="fa fa-check" id= "sort-desc-icon"></i>
-                </a>
-            </ul>
-          </div>
-        </div>
-        <div id="comment-container">
-          <ul id="comment-list"></ul>
-        </div>
-      </div>
+      <div class="tab-pane" id="tab-comments"></div>
     </div>
   """)
 
-  initialize : ->
+  regions :
+    "commentTab" : "#tab-comments"
+
+  initialize : (options) ->
+
+    @commentTabView = new CommentTabView(options)
+
+    @listenTo(@, "show", @afterRender)
+
+
+  afterRender : ->
+
+      @commentTab.show(@commentTabView)

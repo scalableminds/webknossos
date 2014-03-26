@@ -1,4 +1,5 @@
 ### define
+app : app
 ./model/binary : Binary
 ./model/skeletontracing/skeletontracing : SkeletonTracing
 ./model/user : User
@@ -19,7 +20,6 @@ libs/toast : Toast
 
 
 class Model
-
 
   timestamps : []
   buckets : []
@@ -155,7 +155,9 @@ class Model
               else
                 @skeletonTracing = new SkeletonTracing(tracing, @scaleInfo, @flycam, @flycam3d, @user)
 
-            {"restrictions": tracing.restrictions, "settings": tracing.content.settings}
+            app.vent.trigger("model:sync")
+            return {"restrictions": tracing.restrictions, "settings": tracing.content.settings}
+
 
           -> Toast.error("Ooops. We couldn't communicate with our mother ship. Please try to reload this page.")
         )

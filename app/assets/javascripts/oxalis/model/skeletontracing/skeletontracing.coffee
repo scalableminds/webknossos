@@ -1,6 +1,7 @@
 ### define
 jquery : $
 underscore : _
+backbone : backbone
 libs/request : Request
 libs/event_mixin : EventMixin
 three.color : ColorConverter
@@ -23,7 +24,7 @@ class SkeletonTracing
 
   branchStack : []
   trees : []
-  comments : []
+  comments : new Backbone.Collection()
   activeNode : null
   activeTree : null
   firstEdgeDirection : null
@@ -337,77 +338,6 @@ class SkeletonTracing
                             Math.max( @MIN_RADIUS, radius ) )
       @stateLogger.updateNode( @activeNode, @activeNode.treeId )
       @trigger "newActiveNodeRadius", radius
-
-
-  setComment : (commentText) ->
-
-    if @activeNode
-      # remove any existing comments for that node
-      for i in [0...@comments.length]
-        if(@comments[i].node.id == @activeNode.id)
-          @comments.splice(i, 1)
-          @deletedCommentIndex = i
-          break
-      if commentText != ""
-        @comments.push({node: @activeNode, content: commentText})
-      @stateLogger.push()
-      @trigger("updateComments")
-
-
-  getComment : (nodeID) ->
-
-    unless nodeID? then nodeID = @activeNode.id if @activeNode
-    for comment in @comments
-      if comment.node.id == nodeID then return comment.content
-    return ""
-
-
-  deleteComment : (nodeID) ->
-
-    for i in [0...@comments.length]
-      if(@comments[i].node.id == nodeID)
-        @comments.splice(i, 1)
-        @stateLogger.push()
-        @trigger("updateComments")
-        break
-
-
-  nextCommentNodeID : (forward) ->
-
-    length = @comments.length
-    offset = if forward then 1 else -1
-
-    unless @activeNode
-      if length > 0 then return @comments[0].node.id
-
-    if length == 0
-      return null
-
-    for i in [0...@comments.length]
-      if @comments[i].node.id == @activeNode.id
-        return @comments[(length + i + offset) % length].node.id
-
-    if @deletedCommentIndex?
-      offset = if forward then 0 else -1
-      return @comments[(length + @deletedCommentIndex + offset) % length].node.id
-
-    return @comments[0].node.id
-
-
-  getComments : (ascendingOrder = true) =>
-
-    @comments.sort(@compareNodes)
-    if not ascendingOrder
-      return @comments.reverse()
-    return @comments
-
-
-  getPlainComments : =>
-
-    plainComments = []
-    for comment in @comments
-      plainComments.push({node: comment.node.id, content: comment.content})
-    plainComments
 
 
   selectNextTree : (forward) ->

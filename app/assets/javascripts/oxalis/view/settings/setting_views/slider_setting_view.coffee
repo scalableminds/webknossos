@@ -6,15 +6,19 @@ underscore : _
 class SliderSettingView extends AbstractSettingView
 
 
-  className : "slider-setting-view"
+  className : "slider-setting-view row"
 
 
   template : _.template("""
-    <label>
-      <p><%= displayName %></p>
+    <div class="col-sm-4">
+      <%= displayName %>
+    </div>
+    <div class="col-sm-4">
       <input type="range" min="<%= min %>" max="<%= max %>" step="<%= step %>" value="<%= value %>">
-      <input type="number" min="<%= min %>" max="<%= max %>" step="<%= step %>" value="<%= value %>">
-    </label>
+    </div>
+    <div class="col-sm-4">
+      <input class="form-control" type="number" min="<%= min %>" max="<%= max %>" step="<%= step %>" value="<%= value %>">
+    </div>
   """)
 
 
@@ -30,10 +34,10 @@ class SliderSettingView extends AbstractSettingView
 
   handleChange : (evt) ->
 
-    @model.set(@options.name, evt.target.value)
+    @model.set(@options.name, (Number) evt.target.value)
 
 
   update : (@model, value) ->
 
-    @ui.slider.val(value)
-    @ui.text.val(value)
+    @ui.slider.val(parseFloat(value))
+    @ui.text.val(parseFloat(value))

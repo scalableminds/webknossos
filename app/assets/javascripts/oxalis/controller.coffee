@@ -16,7 +16,8 @@ underscore : _
 ../libs/event_mixin : EventMixin
 ../libs/input : Input
 ./view/gui : Gui
-./view/usersettings/user_settings_view : UserSettingsView
+./view/settings/user_settings_view : UserSettingsView
+./view/settings/dataset_settings_view : DatasetSettingsView
 ../libs/toast : Toast
 ./constants : constants
 stats : Stats
@@ -269,10 +270,13 @@ class Controller
   createGui : (restrictions, settings)->
 
 
-    view = new UserSettingsView( model : @model.user )
-    $("#optionswindow").html(view.render().el)
+    userSettingsView = new UserSettingsView( model : @model.user )
+    $("#user-settings-tab").html(userSettingsView.render().el)
 
-    gui = new Gui($("#optionswindow"), @model, restrictions, settings)
+    datasetSettingsView = new DatasetSettingsView( model : @model.user )
+    $("#dataset-settings-tab").html(datasetSettingsView.render().el)
+
+    gui = new Gui($("#user-settings-tab"), @model, restrictions, settings)
     gui.update()
 
     for binary in @model.getColorBinaries()

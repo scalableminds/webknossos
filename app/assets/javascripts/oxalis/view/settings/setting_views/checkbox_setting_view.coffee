@@ -10,9 +10,10 @@ class CheckboxSettingView extends AbstractSettingView
 
 
   template : _.template("""
-    <label class="checkbox">
-      <input type="checkbox" <%= boolToChecked(value) %>> <%= displayName %>
-    </label>
+    <div class="checkbox">
+      <%= displayName %>
+      <input type="checkbox" <%= boolToChecked(value) %>>
+    </div>
   """)
 
 

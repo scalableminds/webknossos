@@ -10,10 +10,10 @@ class DropdownSettingView extends AbstractSettingView
 
 
   template : _.template("""
-    <div class="col-sm-8">
+    <div class="col-sm-6">
       <%= displayName %>
     </div>
-    <div class="col-sm-4">
+    <div class="col-sm-6">
       <select class="form-control">
         <% _.forEach(options, function (value, index) { %>
           <option value="<%= index %>"><%= value %></option>

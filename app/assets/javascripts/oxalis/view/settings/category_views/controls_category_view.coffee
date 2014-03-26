@@ -1,6 +1,6 @@
 ### define
-../settingviews/checkbox_setting_view : CheckboxSettingView
-../settingviews/slider_setting_view : SliderSettingView
+../setting_views/checkbox_setting_view : CheckboxSettingView
+../setting_views/slider_setting_view : SliderSettingView
 ./category_view : CategoryView
 ###
 

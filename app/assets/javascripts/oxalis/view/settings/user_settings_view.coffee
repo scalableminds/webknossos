@@ -2,15 +2,18 @@
 backbone.marionette : marionette
 backbone.subviews : subviews
 underscore : _
-./categoryviews/controls_category_view : ControlsCategoryView
-./categoryviews/viewport_category_view : ViewportCategoryView
+./category_views/controls_category_view : ControlsCategoryView
+./category_views/viewport_category_view : ViewportCategoryView
 ###
 
 class UserSettingsView extends Backbone.Marionette.ItemView
 
 
+  id : "user-settings"
+
+
   template : _.template("""
-    <div class="panel-group accordion" id="user-settings">
+    <div class="panel-group accordion">
 
       <% _.forEach(subviewCreators, function (subview, key) { %>
         <div data-subview="<%= key %>"></div>

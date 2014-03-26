@@ -1,6 +1,7 @@
 ### define
-../settingviews/checkbox_setting_view : CheckboxSettingView
-../settingviews/slider_setting_view : SliderSettingView
+../setting_views/checkbox_setting_view : CheckboxSettingView
+../setting_views/slider_setting_view : SliderSettingView
+../setting_views/dropdown_setting_view : DropdownSettingView
 ./category_view : CategoryView
 ../../../constants : constants
 ###
@@ -56,4 +57,15 @@ class ViewportCategoryView extends CategoryView
         options :
           name : "dynamicSpaceDirection"
           displayName : "d/f-Switching"
+      )
+
+
+    "quality" : ->
+
+      return new DropdownSettingView(
+        model : @model
+        options :
+          name : "quality"
+          displayName : "Quality"
+          options : ["high", "medium", "low"]
       )

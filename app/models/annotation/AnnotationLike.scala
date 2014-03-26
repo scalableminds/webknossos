@@ -16,6 +16,7 @@ import oxalis.view.{ResourceActionCollection, ResourceAction}
 import play.api.libs.json.Json.JsValueWrapper
 import oxalis.mvc.FilterableJson
 import braingames.format.Formatter
+import org.joda.time.format.DateTimeFormat
 
 /**
  * Company: scalableminds
@@ -75,7 +76,7 @@ object AnnotationLike extends FoxImplicits with FilterableJson{
     JsonObjectWithFilter(exclude)(
       "version" +> a.version,
       "user" +> a.user.toFox.map(u => JsString(u.name)).getOrElse(JsNull),
-      "created" +> a.created,
+      "created" +> DateTimeFormat.forPattern("yyyy-MM-dd HH:mm").print(a.created),
       "stateLabel" +> stateLabel(a, user),
       "state" +> a.state,
       "id" +> a.id,

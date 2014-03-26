@@ -53,11 +53,10 @@ object TaskController extends Controller with Secured {
     for {
       _ <- ensureMaxNumberOfOpenTasks(user)
       task <- requestTaskFor(user) ?~> Messages("task.unavailable")
-      taskJSON <- Task.transformToJson(task).toFox
       annotation <- AnnotationService.createAnnotationFor(user, task) ?~> Messages("annotation.creationFailed")
-      annotationJSON <- Annotation.transformToJson(annotation)
+      annotationJSON <- AnnotationLike.annotationLikeInfoWrites(annotation, Some(user), List("content", "actions"))
     } yield {
-      JsonOk(Json.obj( "task" -> taskJSON, "annotation" -> annotationJSON), Messages("task.assigned"))
+      JsonOk(annotationJSON)
     }
   }
 }

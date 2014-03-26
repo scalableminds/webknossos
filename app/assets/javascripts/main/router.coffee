@@ -20,6 +20,8 @@ class Router extends Backbone.Router
     "projects"                      : "projects"
     "dashboard"                     : "dashboard"
     "users/:id/details"             : "dashboard"
+    "admin/taskTypes"               : "taskTypes"
+
 
   initialize : ->
 
@@ -73,6 +75,15 @@ class Router extends Backbone.Router
   tasks : ->
 
     @showWithPagination("TaskListView", "TaskCollection")
+
+  taskTypes : ->
+
+    require ["admin/views/tasktypes/task_type_list_view"], (TaskTypeListView) =>
+
+      view = new TaskTypeListView()
+      @changeView(view)
+
+      @hideLoading()
 
 
   dashboard : (userID) ->

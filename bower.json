@@ -25,10 +25,7 @@
     "three": "https://raw.github.com/georgwiese/three.js/scm_oxalis/build/three.js",
     "ColorConverter": "https://raw.github.com/georgwiese/three.js/scm_oxalis/examples/js/math/ColorConverter.js",
     "TrackballControls": "https://raw.github.com/georgwiese/three.js/scm_oxalis/examples/js/controls/TrackballControls.js",
-    "c3": "~0.1.22"
+    "c3": "~0.1.23"
   },
-  "devDependencies": {},
-  "resolutions": {
-    "d3": "~3.4.3"
-  }
+  "devDependencies": {}
 }

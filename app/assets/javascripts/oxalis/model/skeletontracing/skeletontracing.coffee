@@ -618,3 +618,11 @@ class SkeletonTracing
     if a.node.treeId > b.node.treeId
       return 1
     return a.node.id - b.node.id
+
+  getPlainComments : =>
+
+    return @comments.toJSON()
+    # plainComments = []
+    # for comment in @comments
+    #   plainComments.push({node: comment.node, content: comment.content})
+    # plainComments

@@ -39,20 +39,66 @@ class CommentTabView extends Backbone.Marionette.CompositeView
 
   itemView : CommentTabItemView
   itemViewContainer : "#comment-list"
-  itemViewOptions :
-    getActive : ->
-        return @activeNode
+  itemViewOptions : ->
+    activeCommentId : @activeCommentId
 
   events :
     "click #comment-sort" : "sortComments"
+    "change input" : "addComment"
+    "click #comment-list li" : "setActive"
+    "click #comment-next" : "nextComment"
+    "click #comment-previous" : "previousComment"
 
   initialize : (options) ->
 
-    @activeNode = 0
+    {@_model} = options
+
+
     @listenTo(app.vent, "model:sync", ->
-      @collection = options._model.skeletonTracing.comments
+      @collection = @_model.skeletonTracing.comments
+      @activeCommentId = @collection.first().get("node")
       @render()
     )
+
+  getActiveNodeId : ->
+
+    return @_model.skeletonTracing.getActiveNodeId()
+
+
+  setActiveNodeId : (nodeId) ->
+
+    @activeCommentId = nodeId
+    @_model.skeletonTracing.setActiveNode(nodeId, false)
+    # better call this instead
+    # skeletontracingcontroller.setActiveNode(nodeID, false, true)
+    app.vent.trigger("commentTabView:updatedComments", nodeId)
+
+
+  addComment : (evt) ->
+
+    newComment = @collection.add(
+      node : @getActiveNodeId()
+      content: $(evt.target).val()
+    )
+
+    @setActiveNodeId(newComment.get("node"))
+
+
+  nextComment : ->
+
+    nextComment = @collection.find((model) => model.get("node") > @activeCommentId)
+    if nextComment
+
+      @setActiveNodeId(nextComment.get("node"))
+
+
+  previousComment : ->
+
+    previousComment = _.findLast(@collection.models, (model) => model.get("node") < @activeCommentId)
+    if previousComment
+
+      @setActiveNodeId(previousComment.get("node"))
+
 
 
   updateComments : ->
@@ -78,10 +124,10 @@ class CommentTabView extends Backbone.Marionette.CompositeView
 
     commentList.append(newContent)
 
-    @updateActiveComment()
+    @updateActiveCommentId()
 
 
-  updateActiveComment : ->
+  updateActiveCommentId : ->
 
     comment = @model.skeletonTracing.getComment()
     if comment

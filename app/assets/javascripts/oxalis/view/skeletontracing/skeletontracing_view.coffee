@@ -30,13 +30,12 @@ class SkeletonTracingView extends View
 
       newActiveNode : =>
 
-        @updateActiveComment()
         @updateActiveTree()
 
 
       deleteTree : =>
 
-        @updateActiveComment()
+        #@updateActiveComment()
         @updateTrees()
 
 
@@ -49,25 +48,25 @@ class SkeletonTracingView extends View
       reloadTrees : =>
 
         @updateTrees()
-        @updateComments()
+        #@updateComments()
 
 
       newNode : =>
 
-        @updateActiveComment()
+        #@updateActiveComment()
         @updateTreesDebounced()
 
 
       newTreeName : =>
 
         @updateTrees()
-        @updateComments()
+        #@updateComments()
 
 
       newTree : =>
 
         @updateTrees()
-        @updateComments()
+        #@updateComments()
 
 
       newTreeColor : =>

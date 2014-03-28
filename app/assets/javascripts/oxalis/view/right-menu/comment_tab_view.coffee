@@ -11,7 +11,7 @@ class CommentTabView extends Backbone.Marionette.CompositeView
       <div class="input-group-btn">
         <button class="btn btn-default" id="comment-previous"><i class="fa fa-arrow-left"></i></button>
       </div>
-      <input class="form-control" id="comment-input" type="text" placeholder="Add comment">
+      <input class="form-control" id="comment-input" type="text" value="<%= activeComment.get("content") %>" placeholder="Add comment">
       <div class="input-group-btn">
         <button class="btn btn-default" id="comment-next"><i class="fa fa-arrow-right"></i></button>
         <button class="btn btn-default dropdown-toggle" data-toggle="dropdown" id="comment-sort-button" title="sort">
@@ -40,11 +40,17 @@ class CommentTabView extends Backbone.Marionette.CompositeView
   itemView : CommentTabItemView
   itemViewContainer : "#comment-list"
   itemViewOptions : ->
-    activeCommentId : @activeCommentId
+    activeComment : @activeComment
+  templateHelpers : ->
+    activeComment : @activeComment
+
+
+  ui :
+    "commentInput" : "input"
 
   events :
     "click #comment-sort" : "sortComments"
-    "change input" : "addComment"
+    "change input" : "handleInput"
     "click #comment-list li" : "setActive"
     "click #comment-next" : "nextComment"
     "click #comment-previous" : "previousComment"
@@ -52,11 +58,22 @@ class CommentTabView extends Backbone.Marionette.CompositeView
   initialize : (options) ->
 
     {@_model} = options
-
+    @activeComment = new Backbone.Model()
 
     @listenTo(app.vent, "model:sync", ->
       @collection = @_model.skeletonTracing.comments
-      @activeCommentId = @collection.first().get("node")
+
+      # Marionette internal function
+      this._initialEvents()
+
+      # select the activeNode if there is a comment...
+      if comment = @collection.findWhere("node" : @getActiveNodeId())
+        @activeComment = comment
+      # ... or else set the first comment if one is available
+      else if comment = @collection.first()
+        @activeComment = comment
+
+
       @render()
     )
 
@@ -65,39 +82,54 @@ class CommentTabView extends Backbone.Marionette.CompositeView
     return @_model.skeletonTracing.getActiveNodeId()
 
 
-  setActiveNodeId : (nodeId) ->
+  setActiveNode: (activeComment) ->
 
-    @activeCommentId = nodeId
+    # populate the input element
+    @activeComment = activeComment
+    @ui.commentInput.val(activeComment.get("content"))
+
+    nodeId = activeComment.get("node")
     @_model.skeletonTracing.setActiveNode(nodeId, false)
-    # better call this instead
+    # better call this instead:
     # skeletontracingcontroller.setActiveNode(nodeID, false, true)
     app.vent.trigger("commentTabView:updatedComments", nodeId)
 
 
-  addComment : (evt) ->
+  handleInput : (evt) ->
 
-    newComment = @collection.add(
-      node : @getActiveNodeId()
-      content: $(evt.target).val()
-    )
+    # add, delete or update a comment
+    nodeId = @getActiveNodeId()
+    commentText = $(evt.target).val()
 
-    @setActiveNodeId(newComment.get("node"))
+    if comment = @collection.findWhere(node : nodeId)
+      unless commentText == ""
+        comment.set("content", commentText)
+      else
+        @collection.remove(comment)
+    else
+      if commentText != ""
+        newComment = @collection.add(
+          node : nodeId
+          content: commentText
+        )
+
+        @setActiveNode(newComment)
 
 
   nextComment : ->
 
-    nextComment = @collection.find((model) => model.get("node") > @activeCommentId)
+    nextComment = @collection.find((model) => model.get("node") > @activeComment.get("node"))
     if nextComment
 
-      @setActiveNodeId(nextComment.get("node"))
+      @setActiveNode(nextComment)
 
 
   previousComment : ->
 
-    previousComment = _.findLast(@collection.models, (model) => model.get("node") < @activeCommentId)
+    previousComment = _.findLast(@collection.models, (model) => model.get("node") < @activeComment.get("node"))
     if previousComment
 
-      @setActiveNodeId(previousComment.get("node"))
+      @setActiveNode(previousComment)
 
 
 

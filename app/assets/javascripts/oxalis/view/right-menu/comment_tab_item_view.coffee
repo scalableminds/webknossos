@@ -8,7 +8,7 @@ class CommentTabItemView extends Backbone.Marionette.ItemView
   tagName : "li"
   template : _.template("""
     <i class="fa <%= isActive() %>"></i>
-    <a href="#"><%= content %></a>
+    <a href="#"><%= node %> <%= content %></a>
    """)
 
   templateHelpers : ->
@@ -21,8 +21,9 @@ class CommentTabItemView extends Backbone.Marionette.ItemView
 
   initialize : (options) ->
 
-    {@activeCommentId} = options
+    @activeCommentId = options.activeComment.get("node")
     @listenTo(app.vent, "commentTabView:updatedComments", @update)
+    @listenTo(@model, "change", @render)
 
 
   update : (@activeCommentId) ->

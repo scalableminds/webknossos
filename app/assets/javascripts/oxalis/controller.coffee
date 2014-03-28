@@ -222,7 +222,7 @@ class Controller
 
           event.preventDefault()
           event.stopPropagation()
-          @gui.saveNow()
+          #@gui.saveNow()
       } )
 
     new Input.KeyboardNoLoop( keyboardControls )
@@ -248,7 +248,7 @@ class Controller
         $(button).addClass("btn-primary")
 
     @mode = newMode
-    @gui.setMode(newMode)
+    #@gui.setMode(newMode)
     @view.setMode(newMode)
 
 
@@ -273,16 +273,16 @@ class Controller
     userSettingsView = new UserSettingsView( model : @model.user )
     $("#user-settings-tab").html(userSettingsView.render().el)
 
-    datasetSettingsView = new DatasetSettingsView( model : @model.user )
+    datasetSettingsView = new DatasetSettingsView( model : @model.dataset )
     $("#dataset-settings-tab").html(datasetSettingsView.render().el)
 
-    gui = new Gui($("#user-settings-tab"), @model, restrictions, settings)
-    gui.update()
+    #gui = new Gui($("#user-settings-tab"), @model, restrictions, settings)
+    #gui.update()
 
     for binary in @model.getColorBinaries()
-      binary.pullQueue.set4Bit(@model.user.get("fourBit"))
+      binary.pullQueue.set4Bit(@model.dataset.get("fourBit"))
 
-    return gui
+    #return gui
 
 
   browserSupported : ->

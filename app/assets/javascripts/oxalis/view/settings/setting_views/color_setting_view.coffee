@@ -1,4 +1,5 @@
 ### define
+libs/utils : Utils
 ./abstract_setting_view : AbstractSettingView
 underscore : _
 ###
@@ -14,9 +15,13 @@ class ColorSettingView extends AbstractSettingView
       <%= displayName %>
     </div>
     <div class="col-sm-4">
-      <input type="color">
+      <input type="color" value="<%= rgbToHex(value) %>">
     </div>
   """)
+
+
+  templateHelpers :
+    rgbToHex : Utils.rgbToHex
 
 
   ui :

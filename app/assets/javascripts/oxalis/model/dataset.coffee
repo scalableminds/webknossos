@@ -3,33 +3,22 @@ libs/request : Request
 libs/event_mixin : EventMixin
 underscore : _
 backbone : Backbone
+backbone-deep-model : DeepModel
 ###
 
-class Dataset extends Backbone.Model
+class Dataset extends Backbone.DeepModel
 
-  url : "/api/dataSetConfigurations/#{datasetName}"
+
+  constructor : (datasetName) ->
+
+    @url = "/api/dataSetConfigurations/#{datasetName}"
+
+    super()
 
 
   getSettings : ->
 
     return @attributes
-
-
-  getMouseInversionX : ->
-
-    return if @get("inverseX") then 1 else -1
-
-
-  getMouseInversionY : ->
-
-    return if @get("inverseY") then 1 else -1
-
-
-  getOrCreateBrightnessContrastSettings : (datasetPostfix) ->
-
-    settings = @get("brightnessContrastSettings")
-    settings[datasetPostfix] = settings[datasetPostfix] || _.clone settings["default"]
-    return settings[datasetPostfix]
 
 
   resetBrightnessContrastSettings : (datasetPostfix) ->

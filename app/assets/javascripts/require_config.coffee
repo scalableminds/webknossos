@@ -13,6 +13,7 @@ require.config(
     "backbone.marionette" : "../bower_components/backbone.marionette/lib/backbone.marionette"
     "backbone.paginator"  : "../bower_components/backbone.paginator/dist/backbone.paginator"
     "backbone.subviews"   : "../bower_components/backbone.subviews/backbone.subviews"
+    "backbone-deep-model" : "../bower_components/backbone-deep-model/distribution/deep-model.min"
     "backbone"            : "../bower_components/backbone/backbone"
     "gzip"                : "../bower_components/zlib/bin/gzip.min"
     "three"               : "../bower_components/three/index"

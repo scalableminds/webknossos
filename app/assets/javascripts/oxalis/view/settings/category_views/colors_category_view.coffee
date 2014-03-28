@@ -11,13 +11,18 @@ class ColorsCategoryView extends CategoryView
   caption : "Colors"
 
 
-  subviewCreators :
+  subviewCreators : {}
 
-    "color" : ->
 
-      return new ColorSettingView(
+  initialize : ->
+
+    for key, color of @model.get("layerColors")
+
+      @subviewCreators[key] = -> new ColorSettingView(
         model : @model
         options :
-          name : "color"
-          displayName : "Color"
+          name : "layerColors.#{key}"
+          displayName : key
       )
+
+    super()

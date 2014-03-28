@@ -9,6 +9,7 @@ import scala.collection.immutable.HashMap
 import models.basics._
 import models.user.Experience._
 import models.team._
+import models.configuration.{UserConfiguration, DataSetConfiguration}
 import braingames.reactivemongo._
 import scala.concurrent.Future
 import play.api.libs.concurrent.Execution.Implicits._
@@ -29,7 +30,8 @@ case class User(
                  verified: Boolean = false,
                  pwdHash: String = "",
                  teams: List[TeamMembership],
-                 configuration: UserSettings = UserSettings.defaultSettings,
+                 userConfiguration: UserConfiguration = UserConfiguration.default,
+                 dataSetConfigurations: Map[String, DataSetConfiguration] = Map.empty,
                  experiences: Map[String, Int] = Map.empty,
                  lastActivity: Long = System.currentTimeMillis,
                  _id: BSONObjectID = BSONObjectID.generate) extends DBAccessContextPayload {
@@ -188,8 +190,12 @@ object UserDAO extends SecuredBaseDAO[User] {
     update(findByIdQ(_user), Json.obj("$inc" -> Json.obj(s"experiences.$domain" -> value)))
   }
 
-  def updateSettings(user: User, settings: UserSettings)(implicit ctx: DBAccessContext) = {
-    update(findByIdQ(user._id), Json.obj("$set" -> Json.obj("configuration.settings" -> settings.settings)))
+  def updateUserConfiguration(user: User, configuration: UserConfiguration)(implicit ctx: DBAccessContext) = {
+    update(findByIdQ(user._id), Json.obj("$set" -> Json.obj("userConfiguration.configuration" -> configuration.configuration)))
+  }
+
+  def updateDataSetConfiguration(user: User, dataSetName: String, configuration: DataSetConfiguration)(implicit ctx: DBAccessContext) = {
+    update(findByIdQ(user._id), Json.obj("$set" -> Json.obj(s"dataSetConfigurations.$dataSetName.configuration" -> configuration.configuration)))
   }
 
   def setExperience(_user: BSONObjectID, domain: String, value: Int)(implicit ctx: DBAccessContext) = {

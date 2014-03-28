@@ -22,9 +22,10 @@ class VolumeTracingController
 
     @inDeleteMode = false
 
-    @gui.on
-      setActiveCell : (id) => @model.volumeTracing.setActiveCell(id)
-      createNewCell : => @model.volumeTracing.createCell()
+    # TODO add to volumetracing model
+    # @gui.on
+    #   setActiveCell : (id) => @model.volumeTracing.setActiveCell(id)
+    #   createNewCell : => @model.volumeTracing.createCell()
 
 
     # Merging

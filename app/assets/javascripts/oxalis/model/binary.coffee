@@ -27,7 +27,7 @@ class Binary
 
   constructor : (@model, tracing, @layer, tracingId) ->
 
-    _.extend(this, new EventMixin())
+    _.extend(this, Backbone.Events)
 
     @TEXTURE_SIZE_P = constants.TEXTURE_SIZE_P
     { @category, @name } = @layer
@@ -42,8 +42,8 @@ class Binary
 
     @cube = new Cube(@upperBoundary, @layer.resolutions.length, @layer.bitDepth)
     @boundingBox = new BoundingBox(@model.boundingBox, @cube)
-    @pullQueue = new PullQueue(@model.dataSetName, @cube, @layer.name, tracingId, @boundingBox)
-    @pushQueue = new PushQueue(@model.dataSetName, @cube, @layer.name, tracingId, tracing.version)
+    @pullQueue = new PullQueue(@model.datasetName, @cube, @layer.name, tracingId, @boundingBox)
+    @pushQueue = new PushQueue(@model.datasetName, @cube, @layer.name, tracingId, tracing.version)
     @cube.setPushQueue( @pushQueue )
 
     @pingStrategies = [new PingStrategy.DslSlow(@cube, @TEXTURE_SIZE_P)]
@@ -53,9 +53,7 @@ class Binary
     for planeId in constants.ALL_PLANES
       @planes.push( new Plane2D(planeId, @cube, @pullQueue, @TEXTURE_SIZE_P, @layer.bitDepth, @targetBitDepth, 32) )
 
-    @model.user.on({
-      set4BitChanged : (is4Bit) => @pullQueue(is4Bit)
-    })
+    @listenTo(@model.dataset, "change:fourBit" , (model, is4Bit) -> @pullQueue(is4Bit) )
 
     @ping = _.throttle(@pingImpl, @PING_THROTTLE_TIME)
 

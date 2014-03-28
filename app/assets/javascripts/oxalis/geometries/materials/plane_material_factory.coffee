@@ -72,13 +72,11 @@ class PlaneMaterialFactory extends AbstractPlaneMaterialFactory
 
     super()
 
-    for binary in @model.getColorBinaries()
-      do (binary) =>
-        binary.on
-          newColor : (color) =>
-            color = _.map color, (e) -> e / 255
-            uniformName = @sanitizeName(binary.name) + "_color"
-            @uniforms[uniformName].value = new THREE.Vector3(color...)
+    @model.dataset.on("change:layerColors.*" , (model, color) ->
+      console.log(model, color)
+      color = _.map color, (e) -> e / 255
+      uniformName = @sanitizeName(binary.name) + "_color"
+      @uniforms[uniformName].value = new THREE.Vector3(color...)
 
 
   getFragmentShader : ->

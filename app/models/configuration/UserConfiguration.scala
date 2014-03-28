@@ -1,25 +1,26 @@
-package models.user
+package models.configuration
 
-import play.api.Play.current
+import play.api.libs.json._
+import models.basics.BasicSettings
+/*import play.api.Play.current
 import braingames.security.SCrypt._
 import scala.collection.mutable.Stack
 import play.api.libs.json.JsValue
 import play.api.libs.json.JsBoolean
-import play.api.libs.json._
-import models.basics.BasicSettings
+*/
 
-case class UserSettings(
-    settings: Map[String, JsValue]) {
+case class UserConfiguration(
+    configuration: Map[String, JsValue]) {
 
-  def settingsOrDefaults = {
-    UserSettings.defaultSettings.settings ++ settings
+  def configurationOrDefaults = {
+    UserConfiguration.default.configuration ++ configuration
   }
 }
 
-object UserSettings extends BasicSettings{
-  implicit val userConfigurationFormat = Json.format[UserSettings]
+object UserConfiguration extends BasicSettings {
+  implicit val userConfigurationFormat = Json.format[UserConfiguration]
 
-  val defaultSettings = UserSettings(
+  val default = UserConfiguration(
     Map(
       "moveValue" -> JsNumber(300),
       "moveValue3d" -> JsNumber(300),
@@ -31,23 +32,6 @@ object UserSettings extends BasicSettings{
       "clippingDistanceArbitrary" -> JsNumber(64),
       "dynamicSpaceDirection" -> JsBoolean(true),
       "displayCrosshair" -> JsBoolean(true),
-      "interpolation" -> JsBoolean(false),
-      "fourBit" -> JsBoolean(false),
-      "brightnessContrastSettings" -> Json.obj(
-        "default" -> Json.obj(
-          "brightness" -> 0,
-          "contrast" -> 1
-        ),
-        "st08x2" -> Json.obj(
-          "brightness" -> -90,
-          "contrast" -> 2.4
-        ),
-        "07x2" -> Json.obj(
-          "brightness" -> -70,
-          "contrast" -> 2.4
-        )
-      ),
-      "quality" -> JsNumber(0),
       "zoom" -> JsNumber(2),
       "scale" -> JsNumber(1),
       "displayTDViewXY" -> JsBoolean(true),

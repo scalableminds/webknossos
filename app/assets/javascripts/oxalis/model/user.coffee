@@ -2,84 +2,32 @@
 libs/request : Request
 libs/event_mixin : EventMixin
 underscore : _
+backbone : Backbone
 ###
 
-class User
+class User extends Backbone.Model
 
-  # To add any user setting, you must define default values in
-  # UserConfiguration.scala
-
-  constructor : (user) ->
-
-    _.extend(this, new EventMixin())
-    @userSettings = {}
-    _.extend(@userSettings, user)
-
-
-  setByName : (name, value) ->
-
-    @userSettings[name] = value
-    @trigger(name + "Changed", value)
-    @push()
-
-
-  setByObject : (object) ->
-
-    for name of object
-      @setByName(name, object[name])
-
-
-  set : (arg1, arg2) ->
-
-    if _.isObject(arg1)
-      @setByObject(arg1)
-    else
-      @setByName(arg1, arg2)
-
-
-  get : (name) ->
-
-    return @userSettings[name]
+  url : "/api/user/userConfiguration"
 
 
   getSettings : ->
 
-    return @userSettings
+    return @attributes
 
 
   getMouseInversionX : ->
 
-    return if @userSettings.inverseX then 1 else -1
+    return if @get("inverseX") then 1 else -1
 
 
   getMouseInversionY : ->
 
-    return if @userSettings.inverseY then 1 else -1
-
-
-  getOrCreateBrightnessContrastSettings : (datasetPostfix) ->
-
-    settings = @get("brightnessContrastSettings")
-    settings[datasetPostfix] = settings[datasetPostfix] || _.clone settings["default"]
-    return settings[datasetPostfix]
-
-
-  resetBrightnessContrastSettings : (datasetPostfix) ->
-
-    Request.send(
-      url : "/user/configuration/default"
-      dataType : "json"
-    ).then (defaultData) =>
-
-      @get("brightnessContrastSettings")[datasetPostfix] =
-        defaultData.brightnessContrastSettings[datasetPostfix]
-
-      return @getOrCreateBrightnessContrastSettings(datasetPostfix)
+    return if @get("inverseY") then 1 else -1
 
 
   triggerAll : ->
 
-    for property of @userSettings
+    for property of @attributes
       @trigger(property + "Changed", @get(property))
 
 
@@ -90,26 +38,6 @@ class User
 
   pushThrottled : ->
 
-    saveFkt = @pushImpl
+    saveFkt = @save
     @pushThrottled = _.throttle(_.mutexDeferred( saveFkt, -1), 10000)
     @pushThrottled()
-
-
-  pushImpl : ->
-
-    deferred = $.Deferred()
-
-    console.log "Sending User Data:", @userSettings
-
-    Request.send(
-      url      : "/user/configuration"
-      type     : "POST"
-      dataType : "json"
-      data     : @userSettings
-    ).fail( =>
-
-      console.log "couldn't save userdata"
-
-    ).always(-> deferred.resolve())
-
-    deferred.promise()

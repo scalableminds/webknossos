@@ -17,17 +17,13 @@ class AbstractPlaneMaterialFactory extends AbstractMaterialFactory
 
     super()
 
-    settings = @model.user.getOrCreateBrightnessContrastSettings(
-      @model.datasetPostfix
-    )
-
     @uniforms = _.extend @uniforms,
       brightness :
         type : "f"
-        value : settings.brightness / 255
+        value : @model.dataset.get("brightness") / 255
       contrast :
         type : "f"
-        value : settings.contrast
+        value : @model.dataset.get("contrast")
 
     @createTextures()
 

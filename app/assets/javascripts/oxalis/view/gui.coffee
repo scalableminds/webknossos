@@ -166,25 +166,6 @@ class Gui
       @setRotationFromString(event.target.value)
       $("#trace-rotation-input").blur()
 
-    $("#trace-finish-button").click (event) =>
-
-      event.preventDefault()
-      @saveNow().done =>
-        if confirm("Are you sure you want to permanently finish this tracing?")
-          window.location.href = event.target.href
-
-    $("#trace-download-button").click (event) =>
-
-      event.preventDefault()
-      @saveNow().done =>
-          window.location.href = event.target.href
-
-    $("#trace-save-button").click (event) =>
-
-      event.preventDefault()
-      @saveNow()
-
-
     @model.flycam.on
       positionChanged : (position) =>
         @updateGlobalPosition(position)
@@ -263,21 +244,6 @@ class Gui
                           .step(step)
                           .name(displayName)
                           .onChange(onChange)
-
-
-  saveNow : =>
-
-    @user.save()
-    model = @model.skeletonTracing || @model.volumeTracing
-
-    if @restrictions.allowUpdate and model?
-      model.stateLogger.pushNow()
-        .then(
-          -> Toast.success("Saved!")
-          -> Toast.error("Couldn't save. Please try again.")
-        )
-    else
-      new $.Deferred().resolve()
 
 
   setBoundingBox : (value) =>

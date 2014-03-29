@@ -1,25 +1,18 @@
 ### define
 underscore : _
 backbone.marionette : marionette
+<<<<<<< HEAD
 ./settings/user_settings_view : UserSettingsView
 ./settings/dataset_settings_view : DatasetSettingsView
+=======
+./left-menu/dataset_actions_view : DatasetActionsView
+>>>>>>> b41c930f86840f081515c25eff8d699dedd543e0
 ###
 
 class LeftMenuView extends Backbone.Marionette.Layout
 
   template : _.template("""
-    @if(annotation.restrictions.allowUpdate(session.user)){
-      <a href="#" class="btn btn-primary" id="trace-save-button">Save</a>
-    } else {
-      <button class="btn btn-primary disabled">Read only</button>
-    }
-    <div id="buttonbar" class="btn-group inline-block">
-      @if(annotation.restrictions.allowFinish(session.user)){
-        <a href="@controllers.routes.AnnotationController.finishWithRedirect(annotation.typ, annotation.id)" class="btn btn-default btn-small" id="trace-finish-button"><i class="fa fa-check-circle-o"></i>Finish</a>
-      }
-      <a href="@controllers.routes.AnnotationController.download(annotation.typ, annotation.id)" class="btn btn-default btn-small" id="trace-download-button"><i class="fa fa-download"></i>NML</a>
-      <a href="#help-modal" class="btn btn-default btn-small" data-toggle="modal"><i class="fa fa-question-circle"></i>Help</a>
-    </div>
+    <div id="dataset-actions"></div
     <div id="dataset" class="well well-sm">
         @annotation._name.getOrElse(annotation.typ)<br />
         DataSet: <span id="dataset-name"></span><br />
@@ -64,13 +57,22 @@ class LeftMenuView extends Backbone.Marionette.Layout
     </div>
   """)
 
+<<<<<<< HEAD
 
   regions :
     "userSettings" : "#user-settings-tab"
     "datasetSettings" : "#dataset-settings-tab"
-
+    "datsetActionButtons" : "#dataset-actions"
 
   initialize : (options) ->
+
+    @datasetActionsView = new DatasetActionsView(options)
+    @listenTo(@, "render", @afterRender)
+
+
+  afterRender : ->
+
+    @datsetActionButtons.show(@datasetActionsView)
 
 
   #   <% if(task) { %>

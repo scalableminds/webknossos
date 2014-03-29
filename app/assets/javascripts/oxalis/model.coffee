@@ -155,6 +155,8 @@ class Model
               else
                 @skeletonTracing = new SkeletonTracing(tracing, @scaleInfo, @flycam, @flycam3d, @user)
 
+            @restrictions = tracing.restrictions
+
             app.vent.trigger("model:sync")
             return {"restrictions": tracing.restrictions, "settings": tracing.content.settings}
 

@@ -37,6 +37,6 @@ class ColorSettingView extends AbstractSettingView
     @model.set(@options.name, evt.target.value)
 
 
-  update : (@model, value) ->
+  update : (model, value) ->
 
     @ui.colorpicker.val(value)

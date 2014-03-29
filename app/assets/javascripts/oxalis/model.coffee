@@ -79,7 +79,7 @@ class Model
 
       else
         @user = new User()
-        @user.fetch().pipe( (user) =>
+        @user.fetch().pipe( =>
 
           @dataset = new Dataset(tracing.content.dataSet.name)
           @dataset.fetch().pipe( =>
@@ -90,7 +90,7 @@ class Model
             })
 
             console.log "tracing", tracing
-            console.log "user", user
+            console.log "user", @user
 
             dataset = tracing.content.dataSet
             @scaleInfo = new ScaleInfo(dataset.scale)

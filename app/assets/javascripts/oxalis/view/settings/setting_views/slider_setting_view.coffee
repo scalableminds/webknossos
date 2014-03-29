@@ -37,7 +37,7 @@ class SliderSettingView extends AbstractSettingView
     @model.set(@options.name, (Number) evt.target.value)
 
 
-  update : (@model, value) ->
+  update : (model, value) ->
 
     @ui.slider.val(parseFloat(value))
     @ui.text.val(parseFloat(value))

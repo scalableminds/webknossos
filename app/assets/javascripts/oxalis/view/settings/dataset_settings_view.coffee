@@ -1,4 +1,5 @@
 ### define
+libs/utils : Utils
 backbone.marionette : marionette
 backbone.subviews : subviews
 underscore : _
@@ -29,9 +30,22 @@ class DatasetSettingsView extends Backbone.Marionette.ItemView
       return new ColorsCategoryView({ @model })
 
 
-  initialize : ->
+  initialize : ({ @_model }) ->
+
+    @listenTo(app.vent, "model:sync", ->
+      @model = @_model.dataset
+      @render()
+    )
 
     Backbone.Subviews.add(this)
+
+
+  render : ->
+
+    if @model
+      super()
+    else
+      @$el.html(Utils.loaderTemplate())
 
 
   serializeData : ->

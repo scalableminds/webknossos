@@ -77,6 +77,7 @@ class PlaneMaterialFactory extends AbstractPlaneMaterialFactory
       color = _.map color, (e) -> e / 255
       uniformName = @sanitizeName(binary.name) + "_color"
       @uniforms[uniformName].value = new THREE.Vector3(color...)
+    )
 
 
   getFragmentShader : ->

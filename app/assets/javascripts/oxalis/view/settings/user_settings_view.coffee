@@ -1,4 +1,5 @@
 ### define
+libs/utils : Utils
 backbone.marionette : marionette
 backbone.subviews : subviews
 underscore : _
@@ -34,9 +35,22 @@ class UserSettingsView extends Backbone.Marionette.ItemView
       return new ViewportCategoryView({ @model })
 
 
-  initialize : ->
+  initialize : ({ @_model }) ->
+
+    @listenTo(app.vent, "model:sync", ->
+      @model = @_model.user
+      @render()
+    )
 
     Backbone.Subviews.add(this)
+
+
+  render : ->
+
+    if @model
+      super()
+    else
+      @$el.html(Utils.loaderTemplate())
 
 
   serializeData : ->

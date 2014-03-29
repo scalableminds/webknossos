@@ -49,3 +49,12 @@ Utils =
   rgbToHex : ([r, g, b]) ->
 
     return "#" + Utils.intToHex(r) + Utils.intToHex(g) + Utils.intToHex(b)
+
+
+  loaderTemplate : ->
+
+    return """
+      <div id="loader-icon">
+        <i class="fa fa-spinner fa-spin fa-4x"></i>
+        <br>Loading
+      </div>"""

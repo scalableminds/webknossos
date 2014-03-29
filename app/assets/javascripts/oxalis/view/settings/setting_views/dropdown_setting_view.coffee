@@ -36,6 +36,6 @@ class DropdownSettingView extends AbstractSettingView
     @model.set(@options.name, evt.target.value)
 
 
-  update : (@model, value) ->
+  update : (model, value) ->
 
     @ui.select.val(parseInt(value, 10))

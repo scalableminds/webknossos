@@ -36,7 +36,6 @@ class TracingLayoutView extends Backbone.Marionette.Layout
       "_model" : oxalisModel = new OxalisModel()
       )
 
-
     @leftMenuView = new LeftMenuView(@options)
     @rightMenuView = new RightMenuView(@options)
     @tracingView = new TracingView(@options)

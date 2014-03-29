@@ -35,6 +35,6 @@ class CheckboxSettingView extends AbstractSettingView
     @model.set(@options.name, evt.target.checked)
 
 
-  update : (@model, value) ->
+  update : (model, value) ->
 
     @ui.checkbox.prop("checked", value)

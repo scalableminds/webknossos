@@ -1,6 +1,7 @@
 ### define
 ../setting_views/color_setting_view : ColorSettingView
 ../setting_views/slider_setting_view : SliderSettingView
+../setting_views/button_setting_view : ButtonSettingView
 ./category_view : CategoryView
 ../../../constants : constants
 ###
@@ -37,6 +38,15 @@ class ColorsCategoryView extends CategoryView
           step : 0.1
       )
 
+    "resetBrightnessContrast" : ->
+
+      return new ButtonSettingView(
+        model : @model
+        options :
+          callbackName : "resetBrightnessContrast"
+          displayName : "Reset Brightness/Contrast"
+      )
+
 
 
   initialize : ->
@@ -47,7 +57,7 @@ class ColorsCategoryView extends CategoryView
         model : @model
         options :
           name : "layerColors.#{key}"
-          displayName : key
+          displayName : "Layer: #{key}"
       )
 
     super()

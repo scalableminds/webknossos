@@ -7,7 +7,7 @@ underscore : _
 class ColorSettingView extends AbstractSettingView
 
 
-  className : "color-setting-view"
+  className : "color-setting-view row"
 
 
   template : _.template("""
@@ -15,7 +15,7 @@ class ColorSettingView extends AbstractSettingView
       <%= displayName %>
     </div>
     <div class="col-sm-4">
-      <input type="color" value="<%= rgbToHex(value) %>">
+      <input class="form-control" type="color" value="<%= rgbToHex(value) %>">
     </div>
   """)
 

@@ -23,18 +23,15 @@ class Dataset extends Backbone.DeepModel
     return @attributes
 
 
-  resetBrightnessContrastSettings : (datasetPostfix) ->
+  resetBrightnessContrast : =>
 
     Request.send(
       url : "/api/dataSetConfigurations/default"
       dataType : "json"
-    ).then (defaultData) =>
-
-      # @get("brightnessContrastSettings")[datasetPostfix] =
-      #   defaultData.brightnessContrastSettings[datasetPostfix]
-
-      # return @getOrCreateBrightnessContrastSettings(datasetPostfix)
-      alert("FixMe")
+    ).done( (defaultData) =>
+      @set("brightness", defaultData.brightness)
+      @set("contrast", defaultData.contrast)
+    )
 
 
   triggerAll : ->

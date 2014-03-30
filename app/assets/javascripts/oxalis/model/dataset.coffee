@@ -13,6 +13,8 @@ class Dataset extends Backbone.DeepModel
 
     @url = "/api/dataSetConfigurations/#{datasetName}"
 
+    @listenTo(this, "change", @push)
+
     super()
 
 

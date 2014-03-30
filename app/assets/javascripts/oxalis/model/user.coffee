@@ -10,6 +10,13 @@ class User extends Backbone.Model
   url : "/api/user/userConfiguration"
 
 
+  constructor : ->
+
+    @listenTo(this, "change", @push)
+
+    super()
+
+
   getSettings : ->
 
     return @attributes

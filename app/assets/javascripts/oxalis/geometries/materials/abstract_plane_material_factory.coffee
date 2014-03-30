@@ -8,6 +8,8 @@ class AbstractPlaneMaterialFactory extends AbstractMaterialFactory
 
   constructor : (@model, @tWidth) ->
 
+    _.extend(this, Backbone.Events)
+
     @minFilter = THREE.NearestFilter
     @maxFilter = THREE.NearestFilter
     super(@model)

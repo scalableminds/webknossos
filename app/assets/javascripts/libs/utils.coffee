@@ -46,9 +46,19 @@ Utils =
     return if hex.length == 1 then "0" + hex else hex
 
 
-  rgbToHex : ([r, g, b]) ->
+  rgbToHex : (color) ->
 
-    return "#" + Utils.intToHex(r) + Utils.intToHex(g) + Utils.intToHex(b)
+    return "#" + color.map( (int) -> Utils.intToHex(int) ).join("")
+
+
+  hexToRgb : (hex) ->
+
+    bigint = parseInt(hex[1..], 16)
+    r = (bigint >> 16) & 255
+    g = (bigint >> 8) & 255
+    b = bigint & 255
+
+    return [r, g, b]
 
 
   loaderTemplate : ->

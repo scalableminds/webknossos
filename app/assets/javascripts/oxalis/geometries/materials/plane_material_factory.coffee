@@ -72,11 +72,12 @@ class PlaneMaterialFactory extends AbstractPlaneMaterialFactory
 
     super()
 
-    @model.dataset.on("change:layerColors.*" , (model, color) ->
-      console.log(model, color)
-      color = _.map color, (e) -> e / 255
-      uniformName = @sanitizeName(binary.name) + "_color"
-      @uniforms[uniformName].value = new THREE.Vector3(color...)
+    @listenTo(@model.dataset, "change:layerColors.*" , (model, layerColors) ->
+      for name, color of layerColors
+        color = _.map color, (e) -> e / 255
+        uniformName = @sanitizeName(name) + "_color"
+        @uniforms[uniformName].value = new THREE.Vector3(color...)
+      return
     )
 
 

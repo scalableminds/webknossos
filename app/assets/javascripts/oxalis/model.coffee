@@ -167,14 +167,16 @@ class Model
 
   getColorBinaries : ->
 
-    return _.filter @binary, (binary) ->
+    return _.filter(@binary, (binary) ->
       binary.category == "color"
+    )
 
 
   getSegmentationBinary : ->
 
-    return _.find @binary, (binary) ->
+    return _.find(@binary, (binary) ->
       binary.category == "segmentation"
+    )
 
 
   setDefaultBinaryColors : ->
@@ -189,8 +191,11 @@ class Model
                         [255, 255, 0], [0, 255, 255], [255, 0, 255]]
 
     for binary, i in colorBinaries
-      console.log binary.name, defaultColors[i % defaultColors.length]
-      @dataset.set("layerColors.#{binary.name}", defaultColors[i % defaultColors.length])
+      if layerColors[binary.name]
+        color = layerColors[binary.name]
+      else
+        color = defaultColors[i % defaultColors.length]
+      @dataset.set("layerColors.#{binary.name}", color)
 
 
   getLayers : (layers, userLayers) ->

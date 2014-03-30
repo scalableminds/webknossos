@@ -34,9 +34,9 @@ class ColorSettingView extends AbstractSettingView
 
   handleChange : (evt) ->
 
-    @model.set(@options.name, evt.target.value)
+    @model.set(@options.name, Utils.hexToRgb(evt.target.value))
 
 
   update : (model, value) ->
 
-    @ui.colorpicker.val(value)
+    @ui.colorpicker.val(Utils.rgbToHex(value))

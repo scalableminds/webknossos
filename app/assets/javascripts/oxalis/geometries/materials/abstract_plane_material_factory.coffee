@@ -42,12 +42,13 @@ class AbstractPlaneMaterialFactory extends AbstractMaterialFactory
 
   setupChangeListeners : ->
 
-    for binary in @model.getColorBinaries()
-      do (binary) =>
-        binary.on
-          newColorSettings : (brightness, contrast) =>
-            @uniforms.brightness.value = brightness / 255
-            @uniforms.contrast.value = contrast
+    @listenTo(@model.dataset, "change:brightness", (brightness) ->
+      @uniforms.brightness.value = brightness / 255
+    )
+
+    @listenTo(@model.dataset, "change:contrast", (contrast) ->
+      @uniforms.contrast.value = contrast
+    )
 
 
   createTextures : ->

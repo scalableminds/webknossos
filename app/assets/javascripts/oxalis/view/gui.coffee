@@ -334,7 +334,7 @@ class Gui
 
     for binary in @model.getColorBinaries()
       #binary.setColorSettings(@settingsGeneral.brightness, @settingsGeneral.contrast)
-      binary.setColor @settingsGeneral[binary.name + "_color"]
+      #binary.setColor @settingsGeneral[binary.name + "_color"]
 
     #@brightnessContrastSettings.brightness = (Number) @settingsGeneral.brightness
     #@brightnessContrastSettings.contrast = (Number) @settingsGeneral.contrast

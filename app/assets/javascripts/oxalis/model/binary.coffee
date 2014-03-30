@@ -58,16 +58,6 @@ class Binary
     @ping = _.throttle(@pingImpl, @PING_THROTTLE_TIME)
 
 
-  setColor : (@color) ->
-
-    @trigger "newColor", @color
-
-
-  setColorSettings : (brightness, contrast) ->
-
-    @trigger "newColorSettings", brightness, contrast
-
-
   pingStop : ->
 
     @pullQueue.clear()

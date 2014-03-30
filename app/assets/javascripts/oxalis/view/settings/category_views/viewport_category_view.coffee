@@ -58,14 +58,3 @@ class ViewportCategoryView extends CategoryView
           name : "dynamicSpaceDirection"
           displayName : "d/f-Switching"
       )
-
-
-    "quality" : ->
-
-      return new DropdownSettingView(
-        model : @model
-        options :
-          name : "quality"
-          displayName : "Quality"
-          options : ["high", "medium", "low"]
-      )

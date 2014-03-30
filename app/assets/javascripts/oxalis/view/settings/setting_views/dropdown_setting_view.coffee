@@ -15,12 +15,17 @@ class DropdownSettingView extends AbstractSettingView
     </div>
     <div class="col-sm-6">
       <select class="form-control">
-        <% _.forEach(options, function (value, index) { %>
-          <option value="<%= index %>"><%= value %></option>
+        <% _.forEach(options, function (name, index) { %>
+          <option value="<%= index %>" <%= isSelected(value, index) %>><%= name %></option>
         <% }) %>
       </select>
     </div>
   """)
+
+
+  templateHelpers :
+    isSelected : (value, index) ->
+      return if value == index then "selected" else ""
 
 
   ui :
@@ -32,8 +37,7 @@ class DropdownSettingView extends AbstractSettingView
 
 
   handleChange : (evt) ->
-    console.log evt, evt.target, evt.target.value
-    @model.set(@options.name, evt.target.value)
+    @model.set(@options.name, parseInt(evt.target.value, 10))
 
 
   update : (model, value) ->

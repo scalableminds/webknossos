@@ -4,6 +4,7 @@ backbone.marionette : marionette
 backbone.subviews : subviews
 underscore : _
 ./category_views/colors_category_view : ColorsCategoryView
+./category_views/quality_category_view : QualityCategoryView
 ###
 
 class DatasetSettingsView extends Backbone.Marionette.ItemView
@@ -28,6 +29,10 @@ class DatasetSettingsView extends Backbone.Marionette.ItemView
     "colors-controls" : ->
 
       return new ColorsCategoryView({ @model })
+
+    "quality-controls" : ->
+
+      return new QualityCategoryView({ @model })
 
 
   initialize : ({ @_model }) ->

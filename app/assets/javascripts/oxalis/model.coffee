@@ -125,7 +125,7 @@ class Model
               Toast.error("No data available! Something seems to be wrong with the dataset.")
             @setDefaultBinaryColors()
 
-            @flycam = new Flycam2d(constants.PLANE_WIDTH, @scaleInfo, zoomStepCount, @user)
+            @flycam = new Flycam2d(constants.PLANE_WIDTH, @scaleInfo, zoomStepCount, this)
             @flycam3d = new Flycam3d(constants.DISTANCE_3D, dataset.scale)
 
             @flycam3d.on

@@ -1,17 +1,14 @@
 ### define
 backbone.marionette : marionette
 ./left-menu/dataset_actions_view : DatasetActionsView
+./left-menu/dataset_info_view : DatasetInfoView
 ###
 
 class LeftMenuView extends Backbone.Marionette.Layout
 
   template : _.template("""
-    <div id="dataset-actions"></div
-    <div id="dataset" class="well well-sm">
-        @annotation._name.getOrElse(annotation.typ)<br />
-        DataSet: <span id="dataset-name"></span><br />
-        <span id="zoomFactor"></span>
-    </div>
+    <div id="dataset-actions" class="row"></div
+
     <div class="input-group">
       <span class="input-group-addon">Position</span>
       <input id="trace-position-input" class="form-control" type="text">
@@ -20,6 +17,8 @@ class LeftMenuView extends Backbone.Marionette.Layout
       <span class="input-group-addon">Rotation</span>
       <input id="trace-rotation-input" class="form-control" type="text">
     </div>
+
+    <div id="dataset-info"></div>
 
 
     <div id="volume-actions" class="volume-controls">
@@ -57,17 +56,20 @@ class LeftMenuView extends Backbone.Marionette.Layout
   """)
 
   regions :
-    "datsetActionButtons" : "#dataset-actions"
+    "datasetActionButtons" : "#dataset-actions"
+    "datasetInfo" : "#dataset-info"
 
   initialize : (options) ->
 
     @datasetActionsView = new DatasetActionsView(options)
+    @datasetInfoView = new DatasetInfoView(options)
     @listenTo(@, "render", @afterRender)
 
 
   afterRender : ->
 
-    @datsetActionButtons.show(@datasetActionsView)
+    @datasetActionButtons.show(@datasetActionsView)
+    @datasetInfo.show(@datasetInfoView)
 
 
 

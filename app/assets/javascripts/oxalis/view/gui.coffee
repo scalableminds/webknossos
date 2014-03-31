@@ -154,7 +154,6 @@ class Gui
     @fNodes?.open()
     @fCells?.open()
 
-    $("#dataset-name").text(@model.dataSetName)
 
     $("#trace-position-input").on "change", (event) =>
 
@@ -169,12 +168,9 @@ class Gui
     @model.flycam.on
       positionChanged : (position) =>
         @updateGlobalPosition(position)
-      zoomStepChanged : =>
-        @updateViewportWidth()
 
     @model.flycam3d.on
       changed : =>
-        @updateViewportWidth()
         @updateRotation()
 
     @model.skeletonTracing?.on
@@ -419,27 +415,6 @@ class Gui
       @activeCellIdController.updateDisplay()
 
 
-  updateViewportWidth : ->
-
-    if @mode in constants.MODES_PLANE
-      zoom  = @model.flycam.getPlaneScalingFactor()
-      width = constants.PLANE_WIDTH
-
-    if @mode in constants.MODES_ARBITRARY
-      zoom  = @model.flycam3d.zoomStep
-      width = ArbitraryController::WIDTH
-
-    nm = zoom * width * @model.scaleInfo.baseVoxel
-
-    if(nm<1000)
-      widthStr = nm.toFixed(0) + " nm</p>"
-    else if (nm<1000000)
-      widthStr = (nm / 1000).toFixed(1) + " μm</p>"
-    else
-      widthStr = (nm / 1000000).toFixed(1) + " mm</p>"
-
-    $("#zoomFactor").html("<p>Viewport width: " + widthStr )
-
 
   setFolderVisibility : (folder, visible) ->
 
@@ -477,5 +452,4 @@ class Gui
     else if @mode == constants.MODE_VOLUME
       @hideFolders( [ @fTrees, @fNodes, @fFlightcontrols ] )
 
-    @updateViewportWidth()
 

@@ -19,7 +19,6 @@ class DatsetActionsView extends Marionette.ItemView
       <a href="/annotations/<%= tracingType %>/<%= tracingId %>/download" class="btn btn-default btn-small" id="trace-download-button"><i class="fa fa-download"></i>NML</a>
       <a href="#help-modal" class="btn btn-default btn-small" data-toggle="modal"><i class="fa fa-question-circle"></i>Help</a>
     </div>
-
   """)
 
   events :

@@ -46,6 +46,7 @@ class GraphView extends Backbone.Marionette.ItemView
         onclick : @selectDataPoint
     )
 
+
   selectDataPoint : (data) ->
 
     app.vent.trigger("graphView:updatedSelection", data)

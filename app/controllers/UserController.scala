@@ -16,11 +16,11 @@ import play.api.Logger
 import models.binary.DataSet
 import scala.concurrent.Future
 import braingames.util.{Fox, FoxImplicits}
-import models.user.time.{TimeTracking, TimeTrackingService}
 import models.team.TeamMembership
 import play.api.libs.functional.syntax._
 import play.api.templates.Html
 import braingames.util.ExtendedTypes.ExtendedString
+import models.user.time.{TimeSpanService, TimeSpan}
 
 object UserController extends Controller with Secured with Dashboard {
 
@@ -83,7 +83,6 @@ object UserController extends Controller with Secured with Dashboard {
     for {
       user <- UserDAO.findOneById(userId) ?~> Messages("user.notFound")
       _ <- allowedToAdministrate(request.user, user).toFox
-      loggedTime <- TimeTrackingService.loggedTime(user)
       info <- dashboardInfo(user)
     } yield Ok(html.admin.user.user(info))
   }
@@ -107,9 +106,9 @@ object UserController extends Controller with Secured with Dashboard {
     for {
       user <- UserDAO.findOneById(userId) ?~> Messages("user.notFound")
       _ <- allowedToAdministrate(request.user, user).toFox
-      time <- TimeTracking.parseTime(time) ?~> Messages("time.invalidFormat")
+      time <- TimeSpan.parseTime(time) ?~> Messages("time.invalidFormat")
     } yield {
-      TimeTrackingService.logTime(user, time, note)
+      TimeSpanService.logTime(user, time, Some(note))
       JsonOk
     }
   }

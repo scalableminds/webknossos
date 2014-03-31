@@ -21,7 +21,7 @@ class DatasetListView extends Backbone.Marionette.CompositeView
           <th>Active</th>
           <th>Public</th>
           <th>Data Layers</th>
-          <th></th>
+          <th>Actions</th>
         </tr>
       </thead>
       <tbody>
@@ -44,8 +44,9 @@ class DatasetListView extends Backbone.Marionette.CompositeView
     @collection.fetch(
       silent : true
       data : "isEditable=true"
-    ).done =>
+    ).done( =>
       @collection.goTo(1)
+    )
 
     @listenTo(app.vent, "paginationView:filter", @filter)
     @listenTo(app.vent, "TeamAssignmentModalView:refresh", @render)
@@ -61,11 +62,14 @@ class DatasetListView extends Backbone.Marionette.CompositeView
     modalView.render()
     @ui.modalWrapper.html(modalView.el)
     modalView.$el.modal("show")
+    @modalView = modalView
 
-  render : ->
-
-    super()
 
   filter : (searchQuery) ->
 
     @collection.setFilter(["name", "owningTeam"], searchQuery)
+
+
+  onClose : ->
+
+    @modalView?.close()

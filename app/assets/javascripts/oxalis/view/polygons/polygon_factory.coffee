@@ -44,7 +44,7 @@ class PolygonFactory
           cubeIndices = @getCubeIndices(x, y, z)
 
           for cellId of cubeIndices
-            
+
             unless result[cellId]?
               result[ cellId ] = []
 
@@ -60,7 +60,7 @@ class PolygonFactory
                 newTriangle.push( [ vertex[0] * @cubeOffset + x,
                                     vertex[1] * @cubeOffset + y,
                                     vertex[2] * @cubeOffset + z ] )
-              
+
               newTriangles.push(newTriangle)
 
             result[ cellId ] = result[ cellId ].concat( newTriangles )
@@ -97,11 +97,11 @@ class PolygonFactory
     result = {}
     for cellId in cellIds
       cubeIndex = 0
-      
+
       for i in [0..7]
         bit = if cellId == labels[i] then 1 else 0
         cubeIndex |= bit << i
-      
+
       result[cellId] = cubeIndex
 
     return result

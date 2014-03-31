@@ -9,13 +9,13 @@ class ArrayBufferSocket
   senders : []
   requestBufferType : Float32Array
   responseBufferType : Float32Array
-  
+
   constructor : (options) ->
 
     _.extend(this, options)
     @sender = @senders[0]
     @sender.open(this)
-  
+
 
   switchToNextSender : ->
 
@@ -55,7 +55,7 @@ class ArrayBufferSocket.WebSocket
     @nextHandle = 0
 
   open : ({ @responseBufferType, @requestBufferType }) ->
-    
+
     @initialize()
 
 
@@ -70,21 +70,21 @@ class ArrayBufferSocket.WebSocket
       openDeferred = @openDeferred = $.Deferred()
 
       socket.binaryType = 'arraybuffer'
-      
+
       socket.onopen = -> openDeferred.resolve()
-      
+
       socket.onerror = (err) ->
         console.error("socket error", err)
-     
+
       socket.addEventListener(
-        "close" 
-        (code, reason) => 
+        "close"
+        (code, reason) =>
 
           @socket = null
-          
+
           request.reject("socket closed") for request in @pendingRequests when request?
           @pendingRequests.length = 0
-          
+
           console?.error("socket closed", "#{code}: #{reason}")
 
         false
@@ -96,9 +96,9 @@ class ArrayBufferSocket.WebSocket
 
           buffer = event.data
           handle = new Uint8Array(buffer, buffer.byteLength - 1, 1)[0]
-          
+
           request = @pendingRequests[handle]
-            
+
           @pendingRequests[handle] = undefined
 
           if buffer.byteLength > 1
@@ -107,34 +107,34 @@ class ArrayBufferSocket.WebSocket
             request.reject()
 
           return
-          
+
         false
       )
-      
+
       setTimeout(
-        => 
+        =>
           if not @socket or @socket.readyState != @WebSocketImpl.OPEN
             openDeferred.reject("timeout")
         @OPEN_TIMEOUT
       )
-    
+
     @openDeferred.promise()
 
 
   send : (data) ->
 
     @initialize().pipe =>
-    
+
       { transmitBuffer, socketHandle } = @createPackage(data)
 
       deferred = $.Deferred()
       deferred.handle = socketHandle
-      
+
       @pendingRequests[socketHandle] = deferred
       @socket.send(transmitBuffer)
-    
+
       setTimeout(
-        => 
+        =>
           _.removeElement(@pendingRequests, deferred) if deferred.state() == "pending"
           deferred.reject("timeout")
         @MESSAGE_TIMEOUT
@@ -162,7 +162,7 @@ class ArrayBufferSocket.WebSocket
 
     payloadBuffer = new @requestBufferType(transmitBuffer, 0, data.length)
     payloadBuffer.set(data)
-    
+
     handleBuffer = new Uint8Array(transmitBuffer, dataLength, 1)
     socketHandle = handleBuffer[0] = @nextHandle
 
@@ -187,7 +187,7 @@ class ArrayBufferSocket.WebWorker
 
 
   open : ({ @responseBufferType, @requestBufferType }) ->
-    
+
     @initialize()
 
 
@@ -206,51 +206,51 @@ class ArrayBufferSocket.WebWorker
         (event) =>
 
           switch event.data.message
-            
+
             when 'open'
               openDeferred.resolve()
-            
+
             when 'error'
               console.error("socket error", event.error)
-            
+
             when 'close'
               @worker = null
               request.reject("socket closed") for request in @pendingRequests
               @pendingRequests.length = 0
               console.error("socket closed", "#{event.data.closeCode}: #{event.data.closeReason}")
-            
+
             when 'data'
               buffer = event.data.buffer
               handle = new Float32Array(buffer, 0, 1)[0]
 
               for request in @pendingRequests when request.handle == handle
-   
+
                 _.removeElement(@pendingRequests, request)
- 
+
                 if buffer.byteLength > 4
                   request.resolve(new @responseBufferType(buffer, 4))
                 else
                   request.reject()
 
-                break              
+                break
       )
 
       @worker.postMessage({ message: 'initialize', url: @url })
 
       setTimeout(
-        => 
+        =>
           if not @worker
             openDeferred.reject("timeout")
         @OPEN_TIMEOUT
       )
-    
+
     @openDeferred.promise()
 
 
   send : (data) ->
 
     @initialize().pipe =>
-    
+
       { transmitBuffer, socketHandle } = @createPackage(data)
 
       deferred = $.Deferred()
@@ -260,7 +260,7 @@ class ArrayBufferSocket.WebWorker
       @worker.webkitPostMessage({ message: 'send', buffer: transmitBuffer.buffer })
 
       setTimeout(
-        => 
+        =>
           _.removeElement(@pendingRequests, deferred) if deferred.state() == "pending"
           deferred.reject("timeout")
         @MESSAGE_TIMEOUT
@@ -305,7 +305,7 @@ class ArrayBufferSocket.XmlHttpRequest
     prefix    = "?"
     for param of @getParams
       urlSuffix += prefix + param + "=" + @getParams[param]
-      prefix     = "&" 
+      prefix     = "&"
 
     data = new @requestBufferType(data) if _.isArray(data)
     Request.send(

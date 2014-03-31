@@ -28,6 +28,8 @@ require.config(
     "dat.gui"             : "../bower_components/dat.gui/dat.gui"
     "moment"              : "../bower_components/momentjs/moment"
     "require"             : "../bower_components/requirejs/require"
+    "c3"                  : "../bower_components/c3/c3"
+    "d3"                  : "../bower_components/d3/d3"
     "v3"                  : "libs/v3"
     "m4x4"                : "libs/m4x4"
     "worker"              : "libs/worker_plugin"
@@ -63,5 +65,8 @@ require.config(
       exports : "Backbone"
     "backbone.marionette" : [ "backbone", "underscore" ]
     "backbone.paginator" : [ "backbone", "underscore" ]
+    "c3" :
+      deps : ["d3"]
+      exports : "c3"
 
 )

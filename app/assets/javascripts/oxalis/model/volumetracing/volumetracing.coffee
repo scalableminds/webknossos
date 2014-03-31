@@ -1,4 +1,4 @@
-### define 
+### define
 ./volumecell : VolumeCell
 ./volumelayer : VolumeLayer
 libs/event_mixin : EventMixin
@@ -81,7 +81,7 @@ class VolumeTracing
       return @activeCell.id
     else
       return 0
-      
+
 
   setActiveCell : (id) ->
 

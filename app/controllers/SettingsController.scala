@@ -1,7 +1,6 @@
 package controllers
 
 import oxalis.security.Secured
-import play.api.libs.json.JsObject
 import play.api.i18n.Messages
 import models.user.{UserSettings, UserService}
 import oxalis.user.UserCache

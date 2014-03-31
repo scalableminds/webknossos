@@ -58,13 +58,14 @@ class UserListItemView extends Backbone.Marionette.ItemView
   delete : (evt) ->
 
     evt.preventDefault()
-    @model.destroy()
+    if window.confirm("Do you really want to delete this user?")
+      @model.destroy()
 
 
   verify : ->
 
     #select checkbox, so that it gets picked up by the bulk verification modal
-    @$el.find("input").prop("checked", true)
+    @$("input").prop("checked", true)
 
     #HACKY
     $("#team-role-modal").click()

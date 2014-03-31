@@ -156,16 +156,16 @@ trait AnnotationFileService extends FoxImplicits {
     folder
   }
 
-  def outputPathForAnnotation() =
-    s"$annotationStorageFolder/${
-      annotation.id
-    }${fileExtension(annotation)}"
+  def outputPathForAnnotation() = fileExtension(annotation).map{ ext =>
+    s"$annotationStorageFolder/${annotation.id}$ext"
+  }
 
   def writeAnnotationToFile() {
     for {
       in: InputStream <- annotationToInputStream()
+      path <- outputPathForAnnotation()
     } {
-      val f = new File(outputPathForAnnotation())
+      val f = new File(path)
       val out = new FileOutputStream(f).getChannel
       val ch = Channels.newChannel(in)
       try {
@@ -180,11 +180,13 @@ trait AnnotationFileService extends FoxImplicits {
 
   def loadAnnotationContentFromFileStream(): Fox[InputStream] = {
     if (annotation.state.isFinished) {
-      val f = new File(outputPathForAnnotation())
-      if (f.exists())
-        Some(new FileInputStream(f))
-      else
-        None
+      outputPathForAnnotation().map{ path =>
+        val f = new File(path)
+        if (f.exists())
+          Some(new FileInputStream(f))
+        else
+          None
+      }
     } else
       None
   }

@@ -4,7 +4,9 @@ three.color : ColorConverter
 
 GOLDEN_RATIO = 0.618033988749895
 
+
 ColorGenerator =
+
 
   distinctColorForId : (id) ->
 

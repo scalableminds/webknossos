@@ -13,7 +13,7 @@ class Skeleton
   # nodes, edges and trees
 
   COLOR_ACTIVE : 0xff0000
-  
+
   constructor : (@flycam, @model) ->
 
     _.extend(this, new EventMixin())
@@ -23,24 +23,24 @@ class Skeleton
     @isVisible      = true
 
     @showInactiveTrees = true
-    
+
     @reset()
 
     @skeletonTracing.on
-      newActiveNode : => 
+      newActiveNode : =>
         @setActiveNode()
         @setInactiveTreeVisibility(@showInactiveTrees)
       newActiveNodeRadius : =>
         @setActiveNodeRadius()
-      newTree : (treeId, treeColor) => 
+      newTree : (treeId, treeColor) =>
         @createNewTree(treeId, treeColor)
         @setInactiveTreeVisibility(@showInactiveTrees)
       deleteTree : (index) => @deleteTree(index)
       deleteActiveNode : (node, treeId) => @deleteNode(node, treeId)
-      mergeTree : (lastTreeID, lastNode, activeNode) => 
+      mergeTree : (lastTreeID, lastNode, activeNode) =>
         @mergeTree(lastTreeID, lastNode, activeNode)
       newNode : (centered) => @setWaypoint(centered)
-      setBranch : (isBranchPoint, node) => 
+      setBranch : (isBranchPoint, node) =>
         @setBranch(isBranchPoint, node)
       reloadTrees : (trees, finishedDeferred) =>
         @skeletonTracing.one("finishedRender", =>
@@ -48,14 +48,14 @@ class Skeleton
             @loadSkeletonFromModel(trees, finishedDeferred))
           @flycam.update())
         @flycam.update()
-      newActiveTreeColor : (oldTreeId) => @updateActiveTreeColor(oldTreeId)
+      newTreeColor : (treeId) => @updateTreeColor(treeId)
 
     @model.user.on "particleSizeChanged", (particleSize) =>
       @setParticleSize(particleSize)
 
 
   createNewTree : (treeId, treeColor) ->
-    
+
     @treeGeometries.push( tree = new Tree(treeId, treeColor, @model) )
     @setActiveNode()
     @trigger "newGeometries", tree.getMeshes()
@@ -119,11 +119,9 @@ class Skeleton
     @flycam.update()
 
 
-  updateActiveTreeColor : (oldTreeId) ->
+  updateTreeColor : (treeId) ->
 
-    treeGeometry = @getTreeGeometry(oldTreeId)
-    newTreeId    = @skeletonTracing.getActiveTreeId()
-    treeGeometry.updateTreeColor( newTreeId )
+    @getTreeGeometry(treeId).updateTreeColor()
     @flycam.update()
 
 
@@ -131,7 +129,7 @@ class Skeleton
 
     meshes = []
     for tree in @treeGeometries
-      meshes = meshes.concat( tree.getMeshes() )
+      meshes = meshes.concat(tree.getMeshes())
     return meshes
 
   setWaypoint : (centered) =>
@@ -139,7 +137,7 @@ class Skeleton
     curGlobalPos = @flycam.getPosition()
     treeGeometry = @getTreeGeometry(@skeletonTracing.getTree().treeId)
 
-    treeGeometry.addNode( @skeletonTracing.getActiveNode() )
+    treeGeometry.addNode(@skeletonTracing.getActiveNode())
 
     # Animation to center waypoint position
     position = @skeletonTracing.getActiveNodePos()
@@ -147,7 +145,7 @@ class Skeleton
       @waypointAnimation = new TWEEN.Tween({ globalPosX: curGlobalPos[0], globalPosY: curGlobalPos[1], globalPosZ: curGlobalPos[2], flycam: @flycam})
       @waypointAnimation.to({globalPosX: position[0], globalPosY: position[1], globalPosZ: position[2]}, 200)
       @waypointAnimation.onUpdate ->
-        @flycam.setPosition [@globalPosX, @globalPosY, @globalPosZ]
+        @flycam.setPosition([@globalPosX, @globalPosY, @globalPosZ])
       @waypointAnimation.start()
 
     @flycam.update()
@@ -185,12 +183,12 @@ class Skeleton
   setActiveNode : ->
 
     if @lastActiveNode?
-      treeGeometry = @getTreeGeometry( @lastActiveNode.treeId )
-      treeGeometry?.updateNodeColor( @lastActiveNode.id, false )
+      treeGeometry = @getTreeGeometry(@lastActiveNode.treeId)
+      treeGeometry?.updateNodeColor(@lastActiveNode.id, false)
 
     if (activeNode = @model.skeletonTracing.getActiveNode())?
-      treeGeometry = @getTreeGeometry( activeNode.treeId )
-      treeGeometry?.updateNodeColor( activeNode.id, true )
+      treeGeometry = @getTreeGeometry(activeNode.treeId)
+      treeGeometry?.updateNodeColor(activeNode.id, true)
 
     @lastActiveNode = activeNode
 
@@ -221,13 +219,14 @@ class Skeleton
   setVisibilityTemporary : (isVisible) ->
 
     for mesh in @getMeshes()
-      mesh.visible = isVisible
+      mesh.visible = isVisible && (if mesh.isVisible? then mesh.isVisible else true)
     @flycam.update()
 
 
   setVisibility : (@isVisible) ->
 
     @flycam.update()
+
 
   restoreVisibility : ->
 
@@ -242,7 +241,8 @@ class Skeleton
   updateForCam : (id) ->
 
     for tree in @treeGeometries
-      tree.showRadius( id != constants.TDView )
+      tree.showRadius( id != constants.TDView and
+        not @model.user.get("overrideNodeRadius") )
 
     if id in constants.ALL_PLANES
       @setVisibilityTemporary( @isVisible )
@@ -259,10 +259,10 @@ class Skeleton
   setInactiveTreeVisibility : (visible) ->
 
     for mesh in @getMeshes()
-      mesh.visible = visible
+      mesh.isVisible = visible
     treeGeometry = @getTreeGeometry(@skeletonTracing.getTree().treeId)
-    treeGeometry.edges.visible = true
-    treeGeometry.nodes.visible = true
+    treeGeometry.edges.isVisible = true
+    treeGeometry.nodes.isVisible = true
     @flycam.update()
 
 

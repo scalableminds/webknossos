@@ -6,11 +6,14 @@
     border-top: 0px;
   }
 
-  // override main.less style (#TODO remove style in main.less eventually)
-  .table-double-striped > tbody:nth-child(odd) {
-    tr > td {
-      background-color: inherit;
-    }
+}
 
+#task-overview {
+
+  svg a:hover {
+    text-decoration: none;
+    &[href] {
+      cursor: pointer;
+    }
   }
 }

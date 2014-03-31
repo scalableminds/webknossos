@@ -48,7 +48,7 @@ class PingStrategy.DslSlow extends PingStrategy
 
   ping : (position, direction, zoomStep, area, activePlane) ->
 
-    pullQueue = [] 
+    pullQueue = []
 
     for plane in [0..2]
       [@u, @v, @w] = Dimensions.getIndices(plane)
@@ -92,7 +92,7 @@ class PingStrategy.DslSlow extends PingStrategy
 
 
   strategyName : ->
-    
+
     "DSL_SLOW"
 
 

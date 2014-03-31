@@ -2,10 +2,10 @@ describe 'Model.Binary', ->
 
   it 'should exist', ->
     expect(Model.Binary).toBeDefined()
-  
+
   it 'should pull vertices', ->
     async (done) ->
-      
+
       Model.Binary.pullVertices [1,2,3], [1,2,3], (err, { vertices, minmax }) ->
         expect(vertices).toBeA(Float32Array)
         expect(vertices.length % 3).toEqual(0)
@@ -26,33 +26,33 @@ describe 'Model.Binary', ->
 
         done()
 
-  
+
   it 'should get some color values', ->
     async (done) ->
-      
+
       Model.Binary.get [0,0,0,0,1,0], (err, colors) ->
         expect(err).toBeNull()
         expect(colors).toBeA(Float32Array)
         expect(colors.length).toBeGreaterThan(0)
         done()
-  
+
   it 'should expand the data structure', ->
-    
+
     Model.Binary.cube = null
     Model.Binary.extendPoints 80,80,80, 250,250,250
 
     expect(Model.Binary.cubeSize).toBeSameArrayAs [3,3,3]
     expect(Model.Binary.cubeOffset).toBeSameArrayAs [1,1,1]
     expect(Model.Binary.cube.length).toBe 27
-  
+
   it 'should find the right indices', ->
-    
+
     Model.Binary.cube = null
     Model.Binary.extendPoints 80,80,80, 250,250,250
-    
+
     expect(Model.Binary.pointIndex(80, 80, 80)).toBe 16 * (64 * (64 + 1) + 1)
     expect(Model.Binary.bucketIndex(80, 80, 80)).toBe 0
-  
+
   it 'should get and set color values', ->
 
     Model.Binary.cube = null
@@ -94,7 +94,7 @@ describe 'Model.Mesh', ->
           expect(colors[i    ]).toEqual 1
           expect(colors[i + 1]).toEqual 0
           expect(colors[i + 2]).toEqual 0
-        
+
         expect(indexes).toBeSameArrayAs [0, 6, 4, 0, 2, 6, 0, 3, 2, 0, 1, 3, 2, 7, 6, 2, 3, 7, 4, 6, 7, 4, 7, 5, 0, 4, 5, 0, 5, 1, 1, 5, 7, 1, 7, 3]
         done()
 
@@ -111,7 +111,7 @@ describe 'Model.Shader', ->
         done()
 
 describe 'Interpolation', ->
-  
+
   data = [
     1   # 0,0,0
     1.2 # 1,0,0
@@ -123,24 +123,24 @@ describe 'Interpolation', ->
     1.1 # 1,1,1
   ]
   getter = (x,y,z) -> data[x + y * 2 + z * 4]
-  
+
   it 'should (sometimes) not interpolate', ->
 
     expect(interpolate(0, 0, 0, getter)).toBe data[0]
-  
+
   it 'should interpolate linearly', ->
 
     # 0.8 * 1 + 0.2 * 1.3
-    expect(interpolate(0, 0.2, 0, getter)).toBeNearly 1.06 
+    expect(interpolate(0, 0.2, 0, getter)).toBeNearly 1.06
 
   it 'should interpolate bilinearly', ->
 
     # y0 = 0.6 * 1 + 0.4 * 1.2
     # y1 = 0.6 * 1.3 + 0.4 * 1.6
     #    = 0.8 * y0 + 0.2 * y1
-    
+
     # 0.8 * (0.6 * 1 + 0.4 * 1.2) + 0.2 * (0.6 * 1.3 + 0.4 * 1.6)
-    expect(interpolate(0.4, 0.2, 0, getter)).toBeNearly 1.148 
+    expect(interpolate(0.4, 0.2, 0, getter)).toBeNearly 1.148
 
   it 'should interpolate trilinearly', ->
 
@@ -155,7 +155,7 @@ describe 'Interpolation', ->
     # 0.3 * (0.4 * (0.7 * 1 + 0.3 * 1.2) + 0.6 * (0.7 * 1.3 + 0.3 * 1.6)) +
     # 0.7 * (0.4 * (0.7 * 1.7 + 0.3 * 1.8) + 0.6 * (0.7 * 2 + 0.3 * 1.1))
     expect(interpolate(0.3, 0.6, 0.7, getter)).toBeNearly 1.5884
-  
+
   it 'should find the next index', ->
 
     Model.Binary.cube = null
@@ -174,26 +174,26 @@ describe 'Interpolation', ->
 describe 'M4x4.moveVertices', ->
   testModel = new Int8Array(new ArrayBuffer(81))
   i = 0
-  for y in [0..2]  
+  for y in [0..2]
     for x in [-1..1]
       for z in [-1..1]
         testModel[i]   = x
         testModel[i+1] = y
         testModel[i+2] = z
         i += 3
-  
+
   it 'should be able to move model', ->
     data = M4x4.moveVertices testModel, [1,2,3], [0,1,0]
-      
+
     correct = [0,2,2,0,2,3,0,2,4,1,2,2,1,2,3,1,2,4,2,2,2,2,2,3,2,2,4,0,3,2,0,3,3,0,3,4,1,3,2,1,3,3,1,3,4,2,3,2,2,3,3,2,3,4,0,4,2,0,4,3,0,4,4,1,4,2,1,4,3,1,4,4,2,4,2,2,4,3,2,4,4]
-    
+
     expect(data).toBeSameArrayAs correct
 
   it 'should be able to rotate model', ->
     data = M4x4.moveVertices testModel, [0,0,0], [1,2,3]
-        
+
     correct = [-1,1,0,-1,0,0,-1,-1,1,0,1,-1,0,0,0,0,-1,1,1,1,-1,1,0,0,1,-1,0,-1,2,0,-1,1,1,-1,0,2,0,1,0,0,1,1,0,0,1,1,1,0,1,0,1,1,-1,1,0,2,1,0,1,2,-1,1,2,1,2,1,1,1,2,0,0,2,2,2,1,1,1,1,1,0,2]
-    
+
     invalidCount = 0
     for i in [0...data.length]
       invalidCount++ if Math.round(data[i]) != correct[i]
@@ -202,5 +202,5 @@ describe 'M4x4.moveVertices', ->
   it 'should rotate independent of the rotating vectors size', ->
     data = M4x4.moveVertices testModel, [0,0,0], [1,2,3]
     data1 = M4x4.moveVertices testModel, [0,0,0], [2,4,6]
-    
+
     expect(data1).toBeSameArrayAs data

@@ -1,4 +1,4 @@
-### define 
+### define
 three : THREE
 libs/color_generator : ColorGenerator
 ###

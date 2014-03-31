@@ -3,7 +3,7 @@
 ./dimensions : Dimensions
 ../constants : constants
 ###
-  
+
 class Flycam2d
 
   TEXTURE_WIDTH       : 512
@@ -38,10 +38,15 @@ class Flycam2d
     # correct zoom values that are too high
     @user.set("zoom", Math.min(@user.get("zoom"), Math.floor(@getMaxZoomStep())))
 
-    @user.on({
+    @user.on
       qualityChanged : (quality) => @setQuality(quality)
       zoomChanged : (zoomFactor) => @zoom(Math.log(zoomFactor) / Math.LN2)
-      })
+
+    # Fire changed event every time
+    _trigger = @trigger
+    @trigger = =>
+      _trigger.apply(this, arguments)
+      _trigger.call(this, "changed")
 
 
   zoomByDelta : (delta) ->
@@ -151,7 +156,7 @@ class Flycam2d
       p[Dimensions.getIndices(planeID)[2]] *= @spaceDirection[Dimensions.getIndices(planeID)[2]]
     @setPosition([@position[0]+p[0], @position[1]+p[1], @position[2]+p[2]])
 
-    
+
   movePlane : (vector, planeID, increaseSpeedWithZoom = true) -> # vector of voxels in BaseVoxels
 
     vector = Dimensions.transDim(vector, planeID)
@@ -190,7 +195,7 @@ class Flycam2d
 
 
   getTexturePosition : (planeID) ->
-    
+
     texturePosition = @position.slice()    #copy that position
     # As the Model does not render textures for exact positions, the last 5 bits of
     # the X and Y coordinates for each texture have to be set to 0
@@ -214,7 +219,7 @@ class Flycam2d
 
 
   needsUpdate : (planeID) ->
-  
+
     area = @getArea planeID
     ind  = Dimensions.getIndices planeID
     res = ((area[0] < 0) or (area[1] < 0) or (area[2] > @TEXTURE_WIDTH) or (area[3] > @TEXTURE_WIDTH) or
@@ -231,7 +236,7 @@ class Flycam2d
     [ @buffer[planeID][0]/2 + (@position[ind[0]] - @getTexturePosition(planeID)[ind[0]])/Math.pow(2, @integerZoomStep),
       @buffer[planeID][1]/2 + (@position[ind[1]] - @getTexturePosition(planeID)[ind[1]])/Math.pow(2, @integerZoomStep)]
 
-  
+
   getArea : (planeID) ->
     # returns [left, top, right, bottom] array
 
@@ -250,7 +255,7 @@ class Flycam2d
     for i in [0..2]
       result.push( @getArea(i) )
     return result
-    
+
 
   hasNewTextures : ->
 

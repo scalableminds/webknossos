@@ -1,6 +1,5 @@
 @(dashboardInfo: controllers.DashboardInfo, isAdminView: Boolean)(implicit session: oxalis.view.AuthedSessionData)
 
-@import models.user.time.PaymentInterval
 @import scala.concurrent.ExecutionContext.Implicits._
 <div class="tabbable" id="tabbable-dashboard" data-url="@controllers.routes.UserController.getDashboardInfo">
   <ul class="nav nav-tabs">
@@ -58,14 +57,16 @@
                 <option value="@d.name"> @d.name </option>
               }
             </select>
-            <label class="radio inline">
-              <input type="radio" name="contentType" value="skeletonTracing" checked>
-              Skeleton
-            </label>
-            <label class="radio inline">
-              <input type="radio" name="contentType" value="volumeTracing">
-              Volume
-            </label>
+            <span id="tracing-chooser">
+              <label class="radio inline">
+                <input type="radio" name="contentType" value="skeletonTracing" checked>
+                Skeleton
+              </label>
+              <label class="radio inline">
+                <input type="radio" name="contentType" value="volumeTracing">
+                Volume
+              </label>
+            </span>
             <button type="submit" class="btn"><i class="fa fa-search"></i>Explore data set</button>
           }
         </div>

@@ -14,9 +14,12 @@ class ParticleMaterialFactory
       baseVoxel :
         type : "f"
         value : @model.scaleInfo.baseVoxel
-      minParticleSize :
+      particleSize :
         type : "f"
         value : @model.user.get("particleSize")
+      scale :
+        type : "f"
+        value : @model.user.get("scale")
       showRadius :
         type : "i"
         value : 1
@@ -39,17 +42,20 @@ class ParticleMaterialFactory
       vertexColors : true
     })
 
-    @material.setZoomFactor = (zoomFactor) ->
-      uniforms.zoomFactor.value = zoomFactor
-
     @material.setShowRadius = (showRadius) ->
       uniforms.showRadius.value = if showRadius then 1 else 0
 
-    @model.user.on "particleSizeChanged", (size) ->
-      uniforms.minParticleSize.value = size
+    @model.user.on
+      particleSizeChanged : (size) ->
+        uniforms.particleSize.value = size
+      scaleChanged : (scale) ->
+        uniforms.scale.value = scale
+      overrideNodeRadiusChanged : =>
+        @model.flycam.update()
 
-    @model.flycam.on "zoomStepChanged", =>
-      uniforms.zoomFactor.value = @model.flycam.getPlaneScalingFactor()
+    @model.flycam.on
+      zoomStepChanged : =>
+        uniforms.zoomFactor.value = @model.flycam.getPlaneScalingFactor()
 
 
   getMaterial : ->
@@ -59,37 +65,38 @@ class ParticleMaterialFactory
 
   getVertexShader : ->
 
-    return "
+    return """
       uniform float zoomFactor;
       uniform float baseVoxel;
-      uniform float minParticleSize;
+      uniform float particleSize;
+      uniform float scale;
       uniform int   showRadius;
       uniform float devicePixelRatio;
       varying vec3 vColor;
       attribute float size;
 
-      void main() 
+      void main()
       {
           vec4 mvPosition = modelViewMatrix * vec4( position, 1.0 );
           vColor = color;
           if (showRadius == 1)
             gl_PointSize = max(
               size / zoomFactor / baseVoxel,
-              minParticleSize ) * devicePixelRatio;
+              particleSize ) * devicePixelRatio * scale;
           else
-            gl_PointSize = minParticleSize;
+            gl_PointSize = particleSize;
           gl_Position = projectionMatrix * mvPosition;
       }
-    "
+    """
 
 
   getFragmentShader : ->
 
-    return "
+    return """
       varying vec3 vColor;
 
-      void main() 
+      void main()
       {
           gl_FragColor = vec4( vColor, 1.0 );
       }
-    "
+    """

@@ -20,7 +20,7 @@ class TeamListView extends Backbone.Marionette.CompositeView
             <th>Name</th>
             <th>Owner</th>
             <th>Roles</th>
-            <th></th>
+            <th>Actions</th>
           </tr>
         </thead>
         <tbody></tbody>
@@ -41,11 +41,9 @@ class TeamListView extends Backbone.Marionette.CompositeView
       <div class="modal-body">
         <form class="form-horizontal">
           <div class="control-group">
-            <div class="control-group">
-              <label class="control-label" for="inputName">Name</label>
-              <div class="controls">
-                <input type="text" id="inputName" placeholder="Name" required autofocus>
-              </div>
+            <label class="control-label" for="inputName">Name</label>
+            <div class="controls">
+              <input type="text" id="inputName" placeholder="Name" required autofocus>
             </div>
           </div>
         </form>

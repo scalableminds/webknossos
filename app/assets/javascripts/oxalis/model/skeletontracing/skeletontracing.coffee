@@ -35,8 +35,6 @@ class SkeletonTracing
 
     @data = tracing.content.contentData
 
-    @flycam.setPosition(tracing.content.editPosition)
-
     # initialize deferreds
     @finishedDeferred = new $.Deferred().resolve()
 
@@ -46,7 +44,7 @@ class SkeletonTracing
     @stateLogger = new SkeletonTracingStateLogger(
       @flycam, tracing.version, tracing.id, tracing.typ,
       tracing.restrictions.allowUpdate, this)
- 
+
     tracingParser = new TracingParser(@, @data)
     {
       @idCount
@@ -56,6 +54,8 @@ class SkeletonTracing
       @activeNode
       @activeTree
     } = tracingParser.parse()
+
+    @colorIdCounter = @treeIdCount
 
     # ensure a tree is active
     unless @activeTree
@@ -418,7 +418,7 @@ class SkeletonTracing
         break
 
     diff = (if forward then 1 else -1) + trees.length
-    @setActiveTree( trees[ (i + diff) % trees.length ].treeId )
+    @setActiveTree(trees[ (i + diff) % trees.length ].treeId)
 
 
   setActiveTree : (id) ->
@@ -437,36 +437,32 @@ class SkeletonTracing
     @trigger("newActiveTree")
 
 
-  getNewTreeColor : (treeId) ->
+  getNewTreeColor : ->
 
-    # this generates the most distinct colors possible, using the golden ratio
-    if treeId == 1
-      return 0xFF0000
-    else
-      return ColorGenerator.distinctColorForId( treeId )
+    return ColorGenerator.distinctColorForId( @colorIdCounter++ )
 
 
-  shuffleActiveTreeColor : ->
+  shuffleTreeColor : (tree) ->
 
-    oldTreeId = @activeTree.treeId
-    @activeTree.treeId = @treeIdCount++
-    @activeTree.color = @getNewTreeColor(@activeTree.treeId)
+    tree = @activeTree unless tree
+    tree.color = @getNewTreeColor()
 
-    # update tree ids
-    for node in @activeTree.nodes
-      node.treeId = @activeTree.treeId
+    @stateLogger.updateTree(tree)
 
-    @stateLogger.updateTree(@activeTree, oldTreeId)
+    @trigger("newTreeColor", tree.treeId)
 
-    @trigger("newActiveTree")
-    @trigger("newActiveTreeColor", oldTreeId)
+
+  shuffleAllTreeColors : ->
+
+    for tree in @trees
+      @shuffleTreeColor(tree)
 
 
   createNewTree : ->
 
     tree = new TraceTree(
       @treeIdCount++,
-      @getNewTreeColor(@treeIdCount-1),
+      @getNewTreeColor(),
       "Tree#{('00'+(@treeIdCount-1)).slice(-3)}",
       (new Date()).getTime())
     @trees.push(tree)
@@ -537,7 +533,7 @@ class SkeletonTracing
 
     if notify
       if confirm("Do you really want to delete the whole tree?")
-        @reallyDeleteTree(id, deleteBranchesAndComments, informServer)
+        @reallyDeleteTree(id, deleteBranchesAndComments, notifyServer)
       else
         return
     else

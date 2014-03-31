@@ -112,7 +112,7 @@ object InitialData extends GlobalDBAccess {
         val taskType = TaskType(
           "ek_0563_BipolarCells",
           "Check those cells out!",
-          TimeSpan(5, 10, 15),
+          TraceLimit(5, 10, 15),
           mpi.name)
         TaskTypeDAO.insert(taskType)
       }

@@ -18,7 +18,6 @@ import reactivemongo.api.indexes.{IndexType, Index}
 import reactivemongo.api.indexes.Index
 import play.api.libs.json._
 import play.api.libs.functional.syntax._
-import play.api.libs.concurrent.Execution.Implicits._
 import reactivemongo.core.commands.LastError
 import braingames.reactivemongo.AccessRestrictions.{DenyEveryone, AllowIf}
 import braingames.util.Fox
@@ -107,6 +106,13 @@ object User {
       (__ \ "lastActivity").write[Long] and
       (__ \ "isEditable").write[Boolean])(u =>
       (u.id, u.email, u.firstName, u.lastName, u.verified, u.teams, u.experiences, u.lastActivity, u.isEditableBy(requestingUser)))
+
+  def userCompactWrites(requestingUser: User): Writes[User] =
+    ((__ \ "id").write[String] and
+      (__ \ "email").write[String] and
+      (__ \ "firstName").write[String] and
+      (__ \ "lastName").write[String])( u =>
+      (u.id, u.email, u.firstName, u.lastName))
 }
 
 object UserDAO extends SecuredBaseDAO[User] {

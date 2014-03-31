@@ -27,17 +27,15 @@ object Application extends Controller with Secured {
       Routes.javascriptRouter("jsRoutes")(//fill in stuff which should be able to be called from js
         controllers.admin.routes.javascript.NMLIO.upload,
         controllers.routes.javascript.AnnotationController.annotationsForTask,
-        controllers.admin.routes.javascript.TaskAdministration.tasksForProject, 
         controllers.admin.routes.javascript.TaskAdministration.edit,
+        controllers.admin.routes.javascript.TaskAdministration.overviewData,
         controllers.routes.javascript.AnnotationController.trace,
         controllers.routes.javascript.AnnotationController.finish,
         controllers.routes.javascript.AnnotationController.nameExplorativeAnnotation,
         controllers.routes.javascript.AnnotationController.download,
         controllers.admin.routes.javascript.NMLIO.taskDownload,
         controllers.admin.routes.javascript.NMLIO.projectDownload,
-        controllers.admin.routes.javascript.TaskAdministration.delete,
-        controllers.admin.routes.javascript.ProjectAdministration.create,
-        controllers.admin.routes.javascript.ProjectAdministration.delete
+        controllers.admin.routes.javascript.TaskAdministration.delete
 
       )).as("text/javascript")
   }
@@ -52,7 +50,7 @@ object Application extends Controller with Secured {
             Redirect(routes.UserController.dashboard)
         }
       case _ =>
-        Future.successful(Redirect(routes.DataSetController.list))
+        Future.successful(Redirect(routes.DataSetController.spotlight))
     }
   }
 

@@ -1,6 +1,7 @@
 ### define
 underscore : _
 backbone.marionette : marionette
+libs/toast : Toast
 ###
 
 class DatasetListItemView extends Backbone.Marionette.ItemView
@@ -41,7 +42,7 @@ class DatasetListItemView extends Backbone.Marionette.ItemView
     </td>
     <td>
     <% _.map(dataSource.dataLayers, function(layer){ %>
-        <span class="label"><%= layer.typ %> - <%= layer.elementClass %></span>
+        <span class="label"><%= layer.category %> - <%= layer.elementClass %></span>
     <% }) %>
     <td class="nowrap">
       <% if(dataSource.needsImport){ %>
@@ -102,10 +103,15 @@ class DatasetListItemView extends Backbone.Marionette.ItemView
         url: @ajaxUrl
       ).done( (responseJSON) =>
         value = responseJSON.progress * 100
-        @ui.progressBar.width("#{value}%")
-        if responseJSON.status != "finished" and responseJSON.status != "failed"
-          window.setTimeout((=> @updateProgress()), 100)
-        else
-          @model.fetch()
+        if value
+          @ui.progressBar.width("#{value}%")
+
+        switch responseJSON.status
+          when "finished"
+            @model.fetch()
+          when "notStarted", "inProgress"
+            window.setTimeout((=> @updateProgress()), 100)
+          when "failed"
+            Toast.error("Ups. Import Failed.")
       )
 

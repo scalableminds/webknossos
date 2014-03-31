@@ -42,7 +42,7 @@ class PushQueue
 
 
   removeDuplicates : ->
-    
+
     @queue.sort( @comparePositions )
 
     i = 0
@@ -51,13 +51,13 @@ class PushQueue
         @queue.splice( i, 1 )
       else
         i++
-        
+
 
   comparePositions : ([x1, y1, z1], [x2, y2, z2]) ->
-      
+
       return (x1 - x2) || (y1 - y2) || (z1 - z2)
 
-      
+
   print : ->
 
     for e in @queue
@@ -70,11 +70,11 @@ class PushQueue
       return
 
     while @batchCount < @BATCH_LIMIT and @queue.length
-      
+
       batch = []
 
       while batch.length < @BATCH_SIZE and @queue.length
-        
+
         bucket = @queue.splice(0, 1)[0]
         batch.push bucket
         #console.log "sent: ", bucket
@@ -120,10 +120,10 @@ class PushQueue
           # TODO: define action
 
         =>
-          
+
           for bucket in batch
             @insertFront(bucket)
-    
+
     ).always =>
 
       @batchCount--

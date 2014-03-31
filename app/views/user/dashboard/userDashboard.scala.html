@@ -1,8 +1,7 @@
 @( dashboardInfo: controllers.DashboardInfo)(implicit session: oxalis.view.AuthedSessionData)
-@import models.user.time.PaymentInterval
 
 @main(){
-  <div class="container" id="dashboard">
+  <div class="container wide" id="dashboard">
     @dashboard(dashboardInfo, false)
   </div>
   @credits()

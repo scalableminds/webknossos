@@ -18,7 +18,7 @@ object AnnotationState{
   val Unassigned = AnnotationState()
 
   val ReadyForReview = Assigned.copy(isReadyForReview = true)
-  
+ 
   val InReview = Assigned.copy(isInReview = true)
 
   val InProgress = Assigned.copy(isInProgress = true)

@@ -94,13 +94,19 @@ class UserListView extends Backbone.Marionette.CompositeView
 
   showModal : (modalView) ->
 
-    if @$el.find("input[type=checkbox]:checked").length > 0
-      view = new modalView({userCollection : @collection})
-      view.render()
-      @ui.modalWrapper.html(view.el)
+    if @$("input[type=checkbox]:checked").length > 0
+      modalView = new modalView({userCollection : @collection})
+      modalView.render()
+      @ui.modalWrapper.html(modalView.el)
 
-      view.$el.modal("show")
+      modalView.$el.modal("show")
+      @modalView = modalView
 
     else
       Toast.error("No user is selected.")
+
+
+  onClose : ->
+
+    @modalView?.close()
 

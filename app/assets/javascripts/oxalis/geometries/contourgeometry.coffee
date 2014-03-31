@@ -60,7 +60,7 @@ class CellLayer
 
     @edge.vertexBuffer.push(edgePoint)
     @finalizeMesh(@edge)
-    
+
     @flycam.update()
 
 

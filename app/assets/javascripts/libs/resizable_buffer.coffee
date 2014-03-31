@@ -41,7 +41,7 @@ class ResizableBuffer
     @ensureCapacity()
 
     { buffer, elementLength, length } = this
-   
+
     buffer.set(element, length)
 
     @length += elementLength
@@ -78,7 +78,7 @@ class ResizableBuffer
 
     for i in [(elementLength - 1)..0] by -1
       r[i] = buffer[--length]
-    
+
     @length -= elementLength
 
     r
@@ -110,7 +110,7 @@ class ResizableBuffer
       newBuffer = new @bufferType(@capacity)
 
       newBuffer.set(buffer)
-      
+
       @buffer = newBuffer
 
 

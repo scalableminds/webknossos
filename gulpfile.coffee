@@ -35,15 +35,17 @@ logger = ->
     return
   )
 
+handleError = (err) ->
+  util.log(util.colors.red("!!"), err.toString())
+  util.beep()
+
 
 makeScripts = (dest) ->
   return eventStream.pipeline(
     plumber()
     gif(
       (file) -> return path.extname(file.path) == ".coffee"
-      coffee({}).on("error", 
-        (err) -> util.log(util.colors.red("!!"), err.toString())
-      )
+      coffee({}).on("error", handleError)
     )
     gulp.dest(dest)
     logger()
@@ -54,9 +56,7 @@ makeStyles = (dest) ->
   return gulp.src(paths.src.css)
     .pipe(plumber())
     .pipe(
-      less({}).on("error", 
-        (err) -> util.log(util.colors.red("!!"), err.toString())
-      )
+      less({}).on("error", handleError)
     )
     .pipe(gulp.dest(dest))
     .pipe(logger())
@@ -89,12 +89,12 @@ gulp.task("compile:styles", ->
 
 gulp.task("combine:scripts:production", ->
   return gulp.src("build.js")
-    .pipe(exec("./node_modules/requirejs/bin/r.js -o build.js"))
+    .pipe(exec("\"#{path.join(process.cwd(), "node_modules", ".bin", "r.js")}\" -o build.js"))
 )
 
 gulp.task("install:bower", ->
   return gulp.src("bower.json")
-    .pipe(exec("./node_modules/bower/bin/bower install -f"))
+    .pipe(exec("\"#{path.join(process.cwd(), "node_modules", ".bin", "bower")}\" install -f"))
 )
 
 gulp.task("clean:tmp", ->

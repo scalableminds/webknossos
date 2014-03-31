@@ -8,10 +8,11 @@ import models.user.User
 import braingames.util.ExtendedTypes.ExtendedString
 import scala.concurrent.Future
 import play.api.i18n.Messages
-import models.binary.DataSet
+import models.binary.{DataSetDAO, DataSet}
 import net.liftweb.common.{Empty, Failure, Full}
 import play.api.templates.Html
 import braingames.reactivemongo.GlobalAccessContext
+import braingames.util.DefaultConverters._
 
 object TeamController extends Controller with Secured {
 
@@ -26,16 +27,19 @@ object TeamController extends Controller with Secured {
     }
 
   def list = Authenticated.async{ implicit request =>
-    for{
-      teams <- TeamDAO.findAll
-    } yield{
-      val filtered = request.getQueryString("isEditable").flatMap(_.toBooleanOpt) match{
-        case Some(isEditable) =>
-          teams.filter(_.isEditableBy(request.user) == isEditable)
-        case None =>
-          teams
+    UsingFilters(
+      Filter("isEditable", (value: Boolean, el: Team) =>
+        el.isEditableBy(request.user) == value),
+      Filter("amIAnAdmin", (value: Boolean, el: Team) =>
+        request.user.adminTeamNames.contains(el.name) == value)
+    ){ filter =>
+      for{
+        allTeams <- TeamDAO.findAll
+        filteredTeams = filter.applyOn(allTeams)
+        js <- Future.traverse(filteredTeams)(Team.teamPublicWrites(_, request.user))
+      } yield {
+        Ok(Json.toJson(js))
       }
-      Ok(Writes.list(Team.teamPublicWrites(request.user)).writes(filtered))
     }
   }
 
@@ -54,8 +58,11 @@ object TeamController extends Controller with Secured {
       case JsSuccess(team, _) =>
         TeamDAO.findOneByName(team.name)(GlobalAccessContext).futureBox.flatMap{
           case Empty =>
-            TeamService.create(team, request.user).map{ _ =>
-              Ok(Team.teamPublicWrites(request.user).writes(team))
+            for{
+              _ <- TeamService.create(team, request.user)
+              js <- Team.teamPublicWrites(team, request.user)
+            } yield {
+              Ok(js)
             }
           case _ =>
             Future.successful(JsonBadRequest(Messages("team.name.alreadyTaken")))

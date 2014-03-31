@@ -52,7 +52,7 @@ class SceneController
         color : 0x00ff00
         showCrossSections : true })
 
-    # TODO: Implement text 
+    # TODO: Implement text
 
     if @model.volumeTracing?
       @contour = new ContourGeometry(@model.volumeTracing, @model.flycam)
@@ -140,7 +140,7 @@ class SceneController
     globalPosVec = new THREE.Vector3(gPos...)
     planeScale   = @flycam.getPlaneScalingFactor()
     for i in constants.ALL_PLANES
-      
+
       @planes[i].updateTexture()
 
       # Update plane position
@@ -191,7 +191,7 @@ class SceneController
     for geometry in [@skeleton, @contour, @cube, @bb, @bb2]
       if geometry?
         result = result.concat geometry.getMeshes()
-    
+
     return result
 
 
@@ -210,9 +210,11 @@ class SceneController
 
   pingDataLayer : (dataLayerName) ->
 
-    if dataLayerName == "color" then return @pingBinary
-    if dataLayerName == "segmentation" then return @pingBinarySeg
-    false
+    if @model.binary[dataLayerName].category == "color"
+      return @pingBinary
+    if @model.binary[dataLayerName].category == "segmentation"
+      return @pingBinarySeg
+    return false
 
 
   stop : ->
@@ -239,7 +241,7 @@ class SceneController
 
 
   bind : ->
-    
+
     @model.user.on({
       clippingDistanceChanged : (value) =>
         @setClippingDistance(value)

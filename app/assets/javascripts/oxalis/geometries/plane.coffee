@@ -4,6 +4,7 @@
 ../model/dimensions : Dimensions
 ../constants : constants
 three : THREE
+./materials/plane_material_factory : PlaneMaterialFactory
 ###
 
 class Plane
@@ -30,118 +31,16 @@ class Plane
     # --> model.scaleInfo.baseVoxel
     scaleArray = Dimensions.transDim(@model.scaleInfo.baseVoxelFactors, @planeID)
     @scaleVector = new THREE.Vector3(scaleArray...)
-    
+
     @createMeshes(planeWidth, textureWidth)
-
-
-  createDataTexture : (width, bytes) ->
-
-    format = if bytes == 1 then THREE.LuminanceFormat else THREE.RGBFormat
-    
-    return new THREE.DataTexture(
-      new Uint8Array(bytes * width * width), width, width,
-      format, THREE.UnsignedByteType,
-      new THREE.UVMapping(),
-      THREE.ClampToEdgeWrapping, THREE.ClampToEdgeWrapping,
-      THREE.LinearMipmapLinearFilter, THREE.LinearMipmapLinearFilter )
 
 
   createMeshes : (pWidth, tWidth) ->
 
     # create plane
     planeGeo = new THREE.PlaneGeometry(pWidth, pWidth, 1, 1)
-    volumePlaneGeo = new THREE.PlaneGeometry(pWidth, pWidth, 1, 1)
-
-    # create textures
-    bytes = @model.binary["color"].targetBitDepth >> 3
-    texture = @createDataTexture(tWidth, bytes)
-    texture.needsUpdate = true
-    
-    volumeTexture = @createDataTexture(tWidth, 1, THREE.LuminanceFormat)
-    
-    offset = new THREE.Vector2(0, 0)
-    repeat = new THREE.Vector2(0, 0)
-
-    vertexShader = "
-      varying vec2 vUv;
-      void main() {
-        vUv = uv;
-        gl_Position =   projectionMatrix * 
-                        modelViewMatrix * 
-                        vec4(position,1.0); }"
-    fragmentShader = "
-      uniform sampler2D texture, volumeTexture;
-      uniform vec2 offset, repeat;
-      uniform vec2 alpha;
-      varying vec2 vUv;
-
-      /* Inspired from: https://github.com/McManning/WebGL-Platformer/blob/master/shaders/main.frag */
-      vec4 hsv_to_rgb(vec4 HSV)
-      {
-        vec4 RGB; /* = HSV.z; */
-
-        float h = HSV.x;
-        float s = HSV.y;
-        float v = HSV.z;
-
-        float i = floor(h);
-        float f = h - i;
-
-        float p = (1.0 - s);
-        float q = (1.0 - s * f);
-        float t = (1.0 - s * (1.0 - f));
-
-        if (i == 0.0) { RGB = vec4(1.0, t, p, 1.0); }
-        else if (i == 1.0) { RGB = vec4(q, 1.0, p, 1.0); }
-        else if (i == 2.0) { RGB = vec4(p, 1.0, t, 1.0); }
-        else if (i == 3.0) { RGB = vec4(p, q, 1.0, 1.0); }
-        else if (i == 4.0) { RGB = vec4(t, p, 1.0, 1.0); }
-        else /* i == -1 */ { RGB = vec4(1.0, p, q, 1.0); }
-
-        RGB *= v;
-
-        return RGB;
-      }
-
-      void main() {
-        vec4 volumeColor = texture2D(volumeTexture, vUv * repeat + offset);
-        float id = (volumeColor[0] * 255.0);
-        float golden_ratio = 0.618033988749895;
-
-        /* Color map (<= to fight rounding mistakes) */
-        
-        if ( id > 0.1 ) {
-          vec4 HSV = vec4( mod( 6.0 * id * golden_ratio, 6.0), 1.0, 1.0, 1.0 );
-          gl_FragColor = (1.0 - alpha[0]/100.0) * texture2D(texture, vUv * repeat + offset) + alpha[0]/100.0 * hsv_to_rgb( HSV );
-        } else {
-          gl_FragColor = texture2D(texture, vUv * repeat + offset);
-        }
-      }
-        "
-    # weird workaround to force JS to pass this as a reference...
-    @alpha = new THREE.Vector2( 0, 0)
-    uniforms = {
-      texture : {type : "t", value : texture},
-      volumeTexture : {type : "t", value : volumeTexture},
-      offset : {type : "v2", value : offset},
-      repeat : {type : "v2", value : repeat},
-      alpha : {type : "v2", value : @alpha}
-    }
-    textureMaterial = new THREE.ShaderMaterial({
-      uniforms : uniforms,
-      vertexShader : vertexShader,
-      fragmentShader : fragmentShader
-      })
-
-    # create mesh
+    textureMaterial = new PlaneMaterialFactory(@model, tWidth).getMaterial()
     @plane = new THREE.Mesh( planeGeo, textureMaterial )
-    @plane.texture = texture
-    @plane.volumeTexture = volumeTexture
-    @plane.offset = offset
-    @plane.repeat = repeat
-    # Never interpolate
-    @plane.texture.magFilter = THREE.NearestFilter
-    @plane.volumeTexture.magFilter = THREE.NearestFilter
 
     # create crosshair
     crosshairGeometries = new Array(2)
@@ -153,7 +52,7 @@ class Plane
       crosshairGeometries[i].vertices.push(new THREE.Vector3( 25*i, 25*(1-i), 0))
       crosshairGeometries[i].vertices.push(new THREE.Vector3( pWidth/2*i,  pWidth/2*(1-i), 0))
       @crosshair[i] = new THREE.Line(crosshairGeometries[i], new THREE.LineBasicMaterial({color: @CROSSHAIR_COLORS[@planeID][i], linewidth: 1}), THREE.LinePieces)
-      
+
     # create borders
     TDViewBordersGeo = new THREE.Geometry()
     TDViewBordersGeo.vertices.push(new THREE.Vector3( -pWidth/2, -pWidth/2, 0))
@@ -188,31 +87,26 @@ class Plane
       area = @flycam.getArea(@planeID)
       tPos = @flycam.getTexturePosition(@planeID).slice()
       if @model?
-        for dataLayerName of @model.binary
-          @model.binary[dataLayerName].planes[@planeID].get(@flycam.getTexturePosition(@planeID), { zoomStep : @flycam.getIntegerZoomStep(), area : @flycam.getArea(@planeID) }).done ( dataBuffer ) =>
-            if dataBuffer
-              if dataLayerName == "color"
-                @plane.texture.image.data.set(dataBuffer)
-              if dataLayerName == "segmentation"
-                # Generate test pattern
-                #for i in [0...512]
-                #  for j in [0...512]
-                #    id = Math.floor(i / 32) * 16 + Math.floor(j / 32)
-                #    dataBuffer[i * 512 + j] = id
-                @plane.volumeTexture.image.data.set(dataBuffer)
-              @flycam.hasNewTexture[@planeID] = true
-  
-      if !(@flycam.hasNewTexture[@planeID] or @flycam.hasChanged)
-        return
+        for name, binary of @model.binary
 
-      @plane.texture.needsUpdate = true
-      @plane.volumeTexture.needsUpdate = true
-      
-      scalingFactor = @flycam.getTextureScalingFactor()
-      @plane.repeat.x = (area[2] -  area[0]) / @textureWidth  # (tWidth -4) ???
-      @plane.repeat.y = (area[3] -  area[1]) / @textureWidth
-      @plane.offset.x = area[0] / @textureWidth
-      @plane.offset.y = 1 - area[3] / @textureWidth
+          binary.planes[@planeID].get(
+            position : @flycam.getTexturePosition(@planeID)
+            zoomStep : @flycam.getIntegerZoomStep()
+            area : @flycam.getArea(@planeID)
+          ).done ( dataBuffer ) =>
+
+            if dataBuffer
+              @plane.material.setData name, dataBuffer
+              @flycam.hasNewTexture[@planeID] = true
+
+      @plane.material.setScaleParams(
+        repeat :
+          x : (area[2] -  area[0]) / @textureWidth
+          y : (area[3] -  area[1]) / @textureWidth
+        offset :
+          x : area[0] / @textureWidth
+          y : 1 - area[3] / @textureWidth
+      )
 
 
   setScale : (factor) =>
@@ -230,7 +124,7 @@ class Plane
   setPosition : (posVec) =>
 
     @TDViewBorders.position = @crosshair[0].position = @crosshair[1].position = posVec
-    
+
     offset = new THREE.Vector3(0, 0, 0)
     if      @planeID == constants.PLANE_XY then offset.z =  1
     else if @planeID == constants.PLANE_YZ then offset.x = -1
@@ -245,7 +139,7 @@ class Plane
 
 
   setSegmentationAlpha : (alpha) ->
-    @alpha.x = alpha
+    @plane.material.setSegmentationAlpha alpha
     @flycam.hasChanged = true
 
 
@@ -254,7 +148,8 @@ class Plane
     [@plane, @TDViewBorders, @crosshair[0], @crosshair[1]]
 
 
-  setLinearInterpolationEnabled : (value) =>
+  setLinearInterpolationEnabled : (enabled) =>
 
-    @plane.texture.magFilter = if value==true then THREE.LinearFilter else THREE.NearestFilter
-
+    @plane.material.setColorInterpolation(
+      if enabled then THREE.LinearFilter else THREE.NearestFilter
+    )

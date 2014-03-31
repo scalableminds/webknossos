@@ -3,6 +3,7 @@ three : THREE
 m4x4 : M4x4
 v3 : V3
 underscore : _
+oxalis/constants : constants
 ###
 
 # Let's set up our trianglesplane.
@@ -25,7 +26,6 @@ underscore : _
 # for the flat surface
 class ArbitraryPlane
 
-  sphericalCapRadius : 0
   cam : null
   model : null
 
@@ -41,22 +41,28 @@ class ArbitraryPlane
 
   constructor : (@cam, @model, @width = 128, @height = 128) ->
 
-    @sphericalCapRadius = @cam.distance
     @mesh = @createMesh()
-    @queryVerticesSphere = @calculateSphereVertices()
-    @queryVerticesPlane = @calculatePlaneVertices()
 
-    @cam.on "changed", => 
+    @cam.on "changed", =>
       @isDirty = true
 
-    @model.flycam.on "positionChanged", => 
-      @isDirty = true      
-
-    @model.binary["color"].cube.on "bucketLoaded", => 
+    @model.flycam.on "positionChanged", =>
       @isDirty = true
+
+    for name, binary of @model.binary
+      binary.cube.on "bucketLoaded", => @isDirty = true
 
     throw "width needs to be a power of 2" unless Math.log(width) / Math.LN2 % 1 != 1
     throw "height needs to be a power of 2" unless Math.log(height) / Math.LN2 % 1 != 1
+
+
+  setMode : ( mode, radius ) ->
+
+    @queryVertices = switch mode
+      when constants.MODE_ARBITRARY       then @calculateSphereVertices()
+      when constants.MODE_ARBITRARY_PLANE then @calculatePlaneVertices()
+
+    @isDirty = true
 
 
   attachScene : (scene) ->
@@ -73,16 +79,16 @@ class ArbitraryPlane
       matrix = cam.getZoomedMatrix()
 
       newVertices = M4x4.transformPointsAffine matrix, @queryVertices
-      newColors = @model.binary["color"].getByVerticesSync(newVertices)
- 
+      newColors = @model.getColorBinaries()[0].getByVerticesSync(newVertices)
+
       mesh.texture.image.data.set(newColors)
       mesh.texture.needsUpdate = true
 
       m = cam.getZoomedMatrix()
 
-      mesh.matrix.set m[0], m[4], m[8], m[12], 
-                      m[1], m[5], m[9], m[13], 
-                      m[2], m[6], m[10], m[14], 
+      mesh.matrix.set m[0], m[4], m[8], m[12],
+                      m[1], m[5], m[9], m[13],
+                      m[2], m[6], m[10], m[14],
                       m[3], m[7], m[11], m[15]
 
       mesh.matrix.multiply( new THREE.Matrix4().makeRotationY( Math.PI ))
@@ -91,9 +97,9 @@ class ArbitraryPlane
       @isDirty = false
 
 
-  calculateSphereVertices : ->
+  calculateSphereVertices : ( sphericalCapRadius = @cam.distance ) ->
 
-    { width, height, sphericalCapRadius } = this
+    { width, height } = this
 
     queryVertices = new Float32Array(width * height * 3)
 
@@ -160,18 +166,18 @@ class ArbitraryPlane
     planeGeo = new THREE.PlaneGeometry(width, height, 1, 1)
 
     # create texture
-    texture = 
+    texture =
       new THREE.DataTexture(
-        new Uint8Array(width*height), 
-        width, 
-        height, 
-        THREE.LuminanceFormat, 
-        THREE.UnsignedByteType, 
-        new THREE.UVMapping(), 
-        THREE.ClampToEdgeWrapping , 
-        THREE.ClampToEdgeWrapping, 
-        THREE.LinearMipmapLinearFilter, 
-        THREE.LinearMipmapLinearFilter 
+        new Uint8Array(width*height),
+        width,
+        height,
+        THREE.LuminanceFormat,
+        THREE.UnsignedByteType,
+        new THREE.UVMapping(),
+        THREE.ClampToEdgeWrapping ,
+        THREE.ClampToEdgeWrapping,
+        THREE.LinearMipmapLinearFilter,
+        THREE.LinearMipmapLinearFilter
       )
     texture.needsUpdate = true
     textureMaterial = new THREE.MeshBasicMaterial({wireframe : false, map : texture})

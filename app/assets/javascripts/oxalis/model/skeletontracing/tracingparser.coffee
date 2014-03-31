@@ -28,7 +28,7 @@ class TracingParser
       # Create new tree
       tree = new TraceTree(
         treeData.id,
-        @skeletonTracing.getNewTreeColor(treeData.id),
+        new THREE.Color().setRGB(treeData.color...).getHex(),
         if treeData.name then treeData.name else "Tree#{('00'+treeData.id).slice(-3)}",
         treeData.timestamp)
 

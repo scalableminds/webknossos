@@ -2,11 +2,19 @@
 jquery : $
 underscore : _
 main/routing_utils : RoutingUtils
+libs/input : Input
+routes : routes
 ###
 
 DashboardLoader =
 
   displayUserDashboard : ->
+
+    new Input.KeyboardNoLoop(
+      "v" : ->
+        $("#tracing-chooser").toggleClass("hide")
+    )
+
 
     $("#nml-explore-form").each ->
 

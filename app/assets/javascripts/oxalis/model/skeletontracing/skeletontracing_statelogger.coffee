@@ -3,7 +3,7 @@
 ###
 
 class SkeletonTracingStateLogger extends StateLogger
-  
+
 
   constructor : (flycam, version, tracingId, tracingType, allowUpdate, @skeletonTracing) ->
 

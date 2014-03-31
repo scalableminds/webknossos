@@ -3,9 +3,11 @@
 @import 'libs/_theme.less';
 @import 'admin/_user.less';
 @import 'admin/_team.less';
-@import 'admin/_datasets.less';
+@import 'admin/_dataset.less';
 @import 'admin/_pagination.less';
 @import 'admin/_task.less';
+@import 'admin/_project.less';
+@import 'admin/_statistics.less';
 
 
 // ----------------------- MAIN STYLES
@@ -94,10 +96,21 @@ body:-webkit-full-screen {
 }
 
 .table-double-striped > tbody {
-  & > tr:nth-child(4n+1) > td,
-  & > tr:nth-child(4n+2) > td {
-    background-color: #f9f9f9
+  & > tr:nth-child(odd) > td{
+    background-color: inherit;
   }
+  & > tr:nth-child(even) > td {
+    background-color: #f9f9f9;
+  }
+}
+
+.table-double-striped {
+ & > tbody:nth-child(odd) > tr > td{
+  background-color: #fff;
+ }
+ & > tbody:nth-child(even) > tr > td{
+  background-color: #f9f9f9;
+ }
 }
 
 .table-nohead {
@@ -199,13 +212,6 @@ body:-webkit-full-screen {
 
 .rotating {
   -webkit-animation: rotation 1s linear infinite;
-}
-
-svg a:hover {
-  text-decoration: none;
-  &[href] {
-    cursor: pointer;
-  }
 }
 
 #alert-container {
@@ -317,6 +323,11 @@ svg a:hover {
   max-height: 2*@standardViewportWidth - 90px;
   margin-top: 10px;
   overflow-y: auto;
+  white-space: normal;
+
+  ul {
+    list-style-type: none;
+  }
 }
 #abstractTreeViewer {
   height : 2*@standardViewportWidth + 20px;
@@ -434,12 +445,12 @@ svg a:hover {
     vertical-align: top;
   }
   p {
-    width: 260px;
+    width: 290px;
     margin-top: 5px;
     margin-bottom: 5px;
   }
   input {
-    width: 203px;
+    width: 232px;
   }
 }
 
@@ -461,9 +472,6 @@ svg a:hover {
 #tabbable-dashboard {
   margin-top: 20px;
   min-height: 400px;
-}
-#user-administration-table {
-  margin-bottom: 70px;
 }
 
 #credits {
@@ -497,59 +505,6 @@ svg a:hover {
   white-space: normal;
 }
 
-
-#level-creator {
-
-  .layer-filter-group {
-    background: rgba(123,45,35,.8);
-    box-shadow: 0 0 5px #444;
-    text-overflow: ellipsis;
-    overflow-x: hidden;
-    box-sizing: border-box;
-    padding: 0 3px;
-    font-size: .7em;
-    height: 20px;
-  }
-
-  #preview {
-    resize: both;
-    overflow: auto;
-    height: 175px;
-    position: relative;
-  }
-  #preview-error {
-    position: absolute;
-    top: 10px;
-    left: 10px;
-    max-width: 50%;
-    z-index: 100;
-    padding: 10px;
-    background: rgba(245,245,245,.8);
-  }
-  #preview canvas {
-    display: block;
-    margin: 0 auto;
-  }
-
-  #preview-slider {
-    width: 100%;
-  }
-  #zoom-slider {
-    width: 100%;
-  }
-  #editor {
-    position: relative;
-    width: 100%;
-    height: 400px;
-  }
-  #editor-container {
-    input[type=submit] {
-      margin: 10px 0;
-    }
-  }
-}
-
-
 #issue-submit {
 
   form {
@@ -582,6 +537,7 @@ svg a:hover {
     font-weight: 200;
     display: inline-block;
     font-size: 150px;
+    line-height: normal;
     color: #000;
     margin-left: 17px;
   }
@@ -712,8 +668,10 @@ svg a:hover {
   margin-top: -101px;
 }
 
-.graph.well svg {
-  max-width: 900px;
+.overview-options {
+  float: right;
+  margin-right: 15px;
+  margin-top: 15px
 }
 
 @media screen and (max-width: 960px) {

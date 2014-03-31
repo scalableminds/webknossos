@@ -32,7 +32,7 @@ class VolumeTacingPlaneController extends PlaneController
   getPlaneMouseControls : (planeId) ->
 
     return _.extend super(planeId),
-      
+
       leftDownMove : (delta, pos, plane, event) =>
 
         if event.ctrlKey
@@ -43,26 +43,26 @@ class VolumeTacingPlaneController extends PlaneController
           ]
         else
           @model.volumeTracing.addToLayer( @calculateGlobalPos(pos))
-      
+
       leftMouseDown : (pos, plane, event) =>
 
         @volumeTracingController.enterDeleteMode( event.shiftKey )
         @model.volumeTracing.startEditing(plane)
-      
+
       leftMouseUp : =>
 
         @model.volumeTracing.finishLayer()
         @volumeTracingController.restoreAfterDeleteMode()
-      
+
       rightDownMove : (delta, pos, plane, event) =>
 
         @model.volumeTracing.addToLayer( @calculateGlobalPos(pos))
-      
+
       rightMouseDown : (pos, plane, event) =>
 
         @volumeTracingController.enterDeleteMode()
         @model.volumeTracing.startEditing(plane)
-      
+
       rightMouseUp : =>
 
         @model.volumeTracing.finishLayer()

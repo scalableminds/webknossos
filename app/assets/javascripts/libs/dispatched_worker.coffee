@@ -1,4 +1,4 @@
-### define 
+### define
 jquery : $
 underscore : _
 ###
@@ -15,21 +15,21 @@ class DispatchedWorker
 
     @worker.onerror = (err) -> console?.error(err)
 
-  
+
   # Returns a `$.Deferred` object representing the completion state.
-  send : (payload) ->  
-    
+  send : (payload) ->
+
     deferred = new $.Deferred()
 
     workerHandle = Math.random()
 
     workerMessageCallback = ({ data : packet }) =>
-      
+
       if packet.workerHandle == workerHandle
         @worker.removeEventListener("message", workerMessageCallback, false)
         if packet.error
           deferred.reject(packet.error)
-        else 
+        else
           deferred.resolve(packet.payload)
 
     @worker.addEventListener("message", workerMessageCallback, false)
@@ -51,28 +51,28 @@ class DispatchedWorker.Pool
     for _worker in @workers when not _worker.busy
       worker = _worker
       break
-    
+
     if not worker and @workers.length < @workerLimit
       worker = @spawnWorker()
-    
+
     if worker
       worker.send(data)
     else
       @queuePush(data)
-      
+
 
   spawnWorker : ->
 
     worker = new DispatchedWorker(@url)
     worker.busy = false
-    
+
     workerReset = =>
 
       worker.busy = false
       @queueShift(worker)
 
 
-    worker.worker.onerror = (err) -> 
+    worker.worker.onerror = (err) ->
 
       console?.error(err)
       workerReset()
@@ -83,7 +83,7 @@ class DispatchedWorker.Pool
     @workers.push(worker)
 
     worker
-  
+
 
   queueShift : (worker) ->
 
@@ -92,7 +92,7 @@ class DispatchedWorker.Pool
       worker.send(data)
         .done (data) -> deferred.resolve(data)
         .fail (err) -> deferred.reject(err)
-    
+
 
   queuePush : (data) ->
 

@@ -13,23 +13,25 @@ class TaskListView extends Backbone.Marionette.CompositeView
       <thead>
         <tr>
           <th class="details-toggle-all"><i class="caret-right"></i><i class="caret-down"></i></th>
-          <th> # </th>
-          <th> Team</th>
-          <th> Project</th>
-          <th> Type</th>
-          <th> DataSet </th>
-          <th> Edit position </th>
-          <th> Experience </th>
-          <th> Priority </th>
-          <th> Created </th>
-          <th> States </th>
+          <th>#</th>
+          <th>Team</th>
+          <th>Project</th>
+          <th>Type</th>
+          <th>DataSet </th>
+          <th>Edit position</th>
+          <th>Bounding Box</th>
+          <th>Experience</th>
+          <th>Priority</th>
+          <th>Created</th>
+          <th>States</th>
+          <th>Actions</th>
          </tr>
       </thead>
     </table>
     <div class="form-actions navbar-fixed-bottom">
       <div class="btn-group">
         <a class="btn btn-primary" href="/admin/tasks/create">
-          <i class="fa fa-tasks"></i>Create New Task
+          <i class="fa fa-plus"></i>Create New Task
         </a>
       </div>
     </div>

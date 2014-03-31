@@ -13,10 +13,10 @@ class Tree
     edgeGeometry = new THREE.BufferGeometry()
     nodeGeometry = new THREE.BufferGeometry()
 
-    edgeGeometry.addAttribute( 'position', Float32Array, 0, 3 )
-    nodeGeometry.addAttribute( 'position', Float32Array, 0, 3 )
-    nodeGeometry.addAttribute( 'size', Float32Array, 0, 1 )
-    nodeGeometry.addAttribute( 'color', Float32Array, 0, 3 )
+    edgeGeometry.addAttribute('position', Float32Array, 0, 3)
+    nodeGeometry.addAttribute('position', Float32Array, 0, 3)
+    nodeGeometry.addAttribute('size', Float32Array, 0, 1)
+    nodeGeometry.addAttribute('color', Float32Array, 0, 3)
 
     @nodeIDs = nodeGeometry.nodeIDs = new ResizableBuffer(1, 100, Int32Array)
     edgeGeometry.dynamic = true
@@ -36,9 +36,7 @@ class Tree
     )
 
     @particleMaterial = new ParticleMaterialFactory(@model).getMaterial()
-    @nodes = new THREE.ParticleSystem(
-      nodeGeometry, @particleMaterial
-    )
+    @nodes = new THREE.ParticleSystem(nodeGeometry, @particleMaterial)
 
     @id = treeId
 
@@ -61,7 +59,7 @@ class Tree
     @nodesBuffer.push(node.pos)
     @sizesBuffer.push([node.radius * 2])
     @nodeIDs.push([node.id])
-    @nodesColorBuffer.push( @getColor(node.id) )
+    @nodesColorBuffer.push(@getColor(node.id))
 
     # Add any edge from smaller IDs to the node
     # ASSUMPTION: if this node is new, it should have a
@@ -76,7 +74,7 @@ class Tree
   addNodes : (nodeList) ->
 
     for node in nodeList
-      @addNode( node )
+      @addNode(node)
 
 
   deleteNode : (node) ->
@@ -92,7 +90,7 @@ class Tree
         nodesIndex = i
         break
 
-    $.assert(nodesIndex?, "No node found.", { id: node.id, @nodeIDs })
+    $.assert(nodesIndex?, "No node found.", { id : node.id, @nodeIDs })
 
     # swap IDs and nodes
     swapLast( @nodeIDs, nodesIndex )
@@ -101,7 +99,7 @@ class Tree
     swapLast( @nodesColorBuffer, nodesIndex )
 
     # Delete Edge by finding it in the array
-    edgeArray = @getEdgeArray( node, node.neighbors[0] )
+    edgeArray = @getEdgeArray(node, node.neighbors[0])
 
     for i in [0...@edgesBuffer.getLength()]
       found = true
@@ -113,7 +111,7 @@ class Tree
 
     $.assert(found, "No edge found.", { found, edgeArray, nodesIndex })
 
-    swapLast( @edgesBuffer, edgesIndex )
+    swapLast(@edgesBuffer, edgesIndex)
 
     @updateGeometries()
 
@@ -127,7 +125,7 @@ class Tree
     merge("nodesBuffer")
     merge("edgesBuffer")
     merge("sizesBuffer")
-    @edgesBuffer.push( @getEdgeArray(lastNode, activeNode) )
+    @edgesBuffer.push(@getEdgeArray(lastNode, activeNode))
 
     @updateNodesColors()
     @updateGeometries()
@@ -154,12 +152,10 @@ class Tree
     @updateGeometries()
 
 
-  updateTreeColor : ( newTreeId ) ->
+  updateTreeColor : ->
 
-    @id = newTreeId
-
-    newColor = @model.skeletonTracing.getTree().color
-    @edges.material.color = new THREE.Color( @darkenHex( newColor ) )
+    newColor = @model.skeletonTracing.getTree(@id).color
+    @edges.material.color = new THREE.Color(@darkenHex(newColor))
 
     @updateNodesColors()
     @updateGeometries()
@@ -182,7 +178,7 @@ class Tree
 
     @nodesColorBuffer.clear()
     for i in [0..@nodeIDs.length]
-      @nodesColorBuffer.push( @getColor( @nodeIDs.get(i) ))
+      @nodesColorBuffer.push(@getColor(@nodeIDs.get(i)))
 
     @updateGeometries()
 
@@ -191,7 +187,7 @@ class Tree
 
     for i in [0..@nodeIDs.length]
       if @nodeIDs.get(i) == id
-        @nodesColorBuffer.set( @getColor( id, isActiveNode, isBranchPoint ), i )
+        @nodesColorBuffer.set(@getColor(id, isActiveNode, isBranchPoint), i)
 
     @updateGeometries()
 
@@ -200,7 +196,7 @@ class Tree
 
     for i in [0..@nodeIDs.length]
       if @nodeIDs.get(i) == id
-        @sizesBuffer.set( [radius * 2], i )
+        @sizesBuffer.set([radius * 2], i)
 
     @updateGeometries()
 
@@ -218,12 +214,12 @@ class Tree
       if isBranchPoint
         color = @invertHex(color)
 
-    return @hexToRGB( color )
+    return @hexToRGB(color)
 
 
   showRadius : (show) ->
 
-    @particleMaterial.setShowRadius( show )
+    @particleMaterial.setShowRadius(show)
 
 
   updateGeometries : ->

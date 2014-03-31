@@ -74,8 +74,6 @@ class PlaneView
 
     @setActiveViewport( constants.PLANE_XY )
 
-    @positionStats = $("#status")
-
     @first = true
     @newTextures = [true, true, true, true]
     # start the rendering loop

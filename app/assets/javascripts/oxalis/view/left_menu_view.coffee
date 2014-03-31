@@ -1,5 +1,8 @@
 ### define
+underscore : _
 backbone.marionette : marionette
+./settings/user_settings_view : UserSettingsView
+./settings/dataset_settings_view : DatasetSettingsView
 ./left-menu/dataset_actions_view : DatasetActionsView
 ./left-menu/dataset_info_view : DatasetInfoView
 ###
@@ -36,20 +39,15 @@ class LeftMenuView extends Backbone.Marionette.Layout
 
     <div id="lefttabbar">
         <ul class="nav nav-tabs">
+          <li class="active">
+          <a href="#dataset-settings-tab" data-toggle="tab"><i class="fa fa-cogs"></i> Dataset</a></li>
+          <li>
+          <a href="#user-settings-tab" data-toggle="tab"><i class="fa fa-cogs"></i> User</a></li>
+        </ul>
 
-          @if(additionalHtml.body != ""){
-            <div class="tab-pane active" id="tab1">
-              <div id="review-comments">
-                @additionalHtml
-              </div>
-            </div>
-            <div class="tab-pane" id="tab2" />
-          } else {
-            <div class="tab-pane active" id="tab2" />
-          }
-            <div id="status"></div>
-            <div id="optionswindow"></div>
-          </div>
+        <div class="tab-content">
+          <div class="tab-pane active" id="dataset-settings-tab"></div>
+          <div class="tab-pane" id="user-settings-tab"></div>
         </div>
 
     </div>
@@ -58,21 +56,27 @@ class LeftMenuView extends Backbone.Marionette.Layout
   regions :
     "datasetActionButtons" : "#dataset-actions"
     "datasetInfo" : "#dataset-info"
+    "userSettings" : "#user-settings-tab"
+    "datasetSettings" : "#dataset-settings-tab"
 
   initialize : (options) ->
 
     @datasetActionsView = new DatasetActionsView(options)
     @datasetInfoView = new DatasetInfoView(options)
+
+    @userSettingsView = new UserSettingsView( _model : options._model )
+    @datasetSettingsView = new DatasetSettingsView( _model : options._model )
+
     @listenTo(@, "render", @afterRender)
 
 
   afterRender : ->
 
+    @userSettings.show(@userSettingsView)
+    @datasetSettings.show(@datasetSettingsView)
+
     @datasetActionButtons.show(@datasetActionsView)
     @datasetInfo.show(@datasetInfoView)
-
-
-
 
 
   #   <% if(task) { %>

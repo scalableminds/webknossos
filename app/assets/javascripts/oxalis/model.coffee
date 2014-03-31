@@ -3,6 +3,7 @@ app : app
 ./model/binary : Binary
 ./model/skeletontracing/skeletontracing : SkeletonTracing
 ./model/user : User
+./model/dataset : Dataset
 ./model/volumetracing/volumetracing : VolumeTracing
 ./model/scaleinfo : ScaleInfo
 ./model/flycam2d : Flycam2d
@@ -77,11 +78,11 @@ class Model
         return {"error" : true}
 
       else
-        Request.send(
-          url : "/user/configuration"
-          dataType : "json"
-        ).pipe(
-          (user) =>
+        @user = new User()
+        @user.fetch().pipe( =>
+
+          @dataset = new Dataset(tracing.content.dataSet.name)
+          @dataset.fetch().pipe( =>
 
             $.assertExtendContext({
               task: tracingId
@@ -89,11 +90,10 @@ class Model
             })
 
             console.log "tracing", tracing
-            console.log "user", user
+            console.log "user", @user
 
-            dataSet = tracing.content.dataSet
-            @user = new User(user)
-            @scaleInfo = new ScaleInfo(dataSet.scale)
+            dataset = tracing.content.dataSet
+            @scaleInfo = new ScaleInfo(dataset.scale)
 
             if (bb = tracing.content.boundingBox)?
                 @boundingBox = {
@@ -105,16 +105,15 @@ class Model
                   ]
                 }
 
-            @dataSetName = dataSet.name
-            @datasetPostfix = _.last(@dataSetName.split("_"))
+            @datasetName = dataset.name
             zoomStepCount = Infinity
             @binary = {}
             @lowerBoundary = [ Infinity,  Infinity,  Infinity]
             @upperBoundary = [-Infinity, -Infinity, -Infinity]
 
-            for layer in @getLayers( dataSet.dataLayers, tracing.content.contentData.customLayers )
+            for layer in @getLayers(dataset.dataLayers, tracing.content.contentData.customLayers)
 
-              layer.bitDepth = parseInt( layer.elementClass.substring(4) )
+              layer.bitDepth = parseInt(layer.elementClass.substring(4), 10)
               @binary[layer.name] = new Binary(this, tracing, layer, tracingId)
               zoomStepCount = Math.min(zoomStepCount, @binary[layer.name].cube.ZOOM_STEP_COUNT - 1)
 
@@ -126,8 +125,8 @@ class Model
               Toast.error("No data available! Something seems to be wrong with the dataset.")
             @setDefaultBinaryColors()
 
-            @flycam = new Flycam2d(constants.PLANE_WIDTH, @scaleInfo, zoomStepCount, @user)
-            @flycam3d = new Flycam3d(constants.DISTANCE_3D, dataSet.scale)
+            @flycam = new Flycam2d(constants.PLANE_WIDTH, @scaleInfo, zoomStepCount, this)
+            @flycam3d = new Flycam3d(constants.DISTANCE_3D, dataset.scale)
 
             @flycam3d.on
               "changed" : (matrix, zoomStep) =>
@@ -162,23 +161,27 @@ class Model
 
 
           -> Toast.error("Ooops. We couldn't communicate with our mother ship. Please try to reload this page.")
+          )
         )
 
 
   getColorBinaries : ->
 
-    return _.filter @binary, (binary) ->
+    return _.filter(@binary, (binary) ->
       binary.category == "color"
+    )
 
 
   getSegmentationBinary : ->
 
-    return _.find @binary, (binary) ->
+    return _.find(@binary, (binary) ->
       binary.category == "segmentation"
+    )
 
 
   setDefaultBinaryColors : ->
 
+    layerColors = @dataset.get("layerColors")
     colorBinaries = @getColorBinaries()
 
     if colorBinaries.length == 1
@@ -188,7 +191,11 @@ class Model
                         [255, 255, 0], [0, 255, 255], [255, 0, 255]]
 
     for binary, i in colorBinaries
-      binary.setColor( defaultColors[i % defaultColors.length] )
+      if layerColors[binary.name]
+        color = layerColors[binary.name]
+      else
+        color = defaultColors[i % defaultColors.length]
+      @dataset.set("layerColors.#{binary.name}", color)
 
 
   getLayers : (layers, userLayers) ->

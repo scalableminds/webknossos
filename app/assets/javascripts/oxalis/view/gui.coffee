@@ -23,9 +23,9 @@ class Gui
     @user = @model.user
     @qualityArray = ["high", "medium", "low"]
 
-    @brightnessContrastSettings = @user.getOrCreateBrightnessContrastSettings(
-      @model.datasetPostfix
-    )
+    # @brightnessContrastSettings = @user.getOrCreateBrightnessContrastSettings(
+    #   @model.datasetPostfix
+    # )
 
     somaClickingAllowed = @tracingSettings.somaClickingAllowed
 
@@ -33,8 +33,8 @@ class Gui
 
       boundingBox : "0, 0, 0, 0, 0, 0"
       fourBit : @user.get("fourBit")
-      brightness : @brightnessContrastSettings.brightness
-      contrast : @brightnessContrastSettings.contrast
+      #brightness : @brightnessContrastSettings.brightness
+      #contrast : @brightnessContrastSettings.contrast
       resetColorSettings : => @resetColorSettings()
       quality : @qualityArray[@user.get("quality")]
 
@@ -94,12 +94,12 @@ class Gui
         @addColorPicker(@fColors, @settingsGeneral, binary.name + "_color", "Color " + (i+1),
           @setColorSettings)
       )
-    @brightnessController =
-      @addSlider(@fColors, @settingsGeneral, "brightness",
-        -256, 256, 5, "Brightness", @setColorSettings)
-    @contrastController =
-      @addSlider(@fColors, @settingsGeneral, "contrast",
-        0.5, 5, 0.1, "Contrast", @setColorSettings)
+    # @brightnessController =
+    #   @addSlider(@fColors, @settingsGeneral, "brightness",
+    #     -256, 256, 5, "Brightness", @setColorSettings)
+    # @contrastController =
+    #   @addSlider(@fColors, @settingsGeneral, "contrast",
+    #     0.5, 5, 0.1, "Contrast", @setColorSettings)
     @addFunction(@fColors, @settingsGeneral, "resetColorSettings",
       "Reset")
 
@@ -242,9 +242,6 @@ class Gui
                           .onChange(onChange)
 
 
-
-
-
   setBoundingBox : (value) =>
 
     bbArray = @stringToNumberArray( value )
@@ -331,12 +328,12 @@ class Gui
 
   setColorSettings : =>
 
-    for binary in @model.getColorBinaries()
-      binary.setColorSettings(@settingsGeneral.brightness, @settingsGeneral.contrast)
-      binary.setColor @settingsGeneral[binary.name + "_color"]
+    #for binary in @model.getColorBinaries()
+      #binary.setColorSettings(@settingsGeneral.brightness, @settingsGeneral.contrast)
+      #binary.setColor @settingsGeneral[binary.name + "_color"]
 
-    @brightnessContrastSettings.brightness = (Number) @settingsGeneral.brightness
-    @brightnessContrastSettings.contrast = (Number) @settingsGeneral.contrast
+    #@brightnessContrastSettings.brightness = (Number) @settingsGeneral.brightness
+    #@brightnessContrastSettings.contrast = (Number) @settingsGeneral.contrast
 
     @user.push()
     @model.flycam.update()
@@ -350,15 +347,15 @@ class Gui
     for controller in @colorControllers
       controller.updateDisplay()
 
-    @user.resetBrightnessContrastSettings(
-      @model.datasetPostfix
-    ).done (@brightnessContrastSettings) =>
+    # @user.resetBrightnessContrastSettings(
+    #   @model.datasetPostfix
+    # ).done (@brightnessContrastSettings) =>
 
-      @settingsGeneral.brightness = @brightnessContrastSettings.brightness
-      @settingsGeneral.contrast = @brightnessContrastSettings.contrast
-      @setColorSettings()
-      @brightnessController.updateDisplay()
-      @contrastController.updateDisplay()
+    #   @settingsGeneral.brightness = @brightnessContrastSettings.brightness
+    #   @settingsGeneral.contrast = @brightnessContrastSettings.contrast
+    #   @setColorSettings()
+    #   @brightnessController.updateDisplay()
+    #   @contrastController.updateDisplay()
 
 
   setupColors : ->

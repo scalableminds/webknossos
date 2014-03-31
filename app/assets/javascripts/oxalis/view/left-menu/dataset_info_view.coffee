@@ -28,7 +28,7 @@ class DatsetActionsView extends Marionette.ItemView
 
   initialize : (options) ->
 
-    {@_model, @mode, @tracingType} = options
+    {@_model, @controlMode, @tracingType} = options
 
     @listenTo(app.vent, "model:sync", ->
 
@@ -62,11 +62,11 @@ class DatsetActionsView extends Marionette.ItemView
 
   calculateZoomLevel : ->
 
-    if @mode in constants.MODES_PLANE
+    if @controlMode in constants.MODES_PLANE
       zoom  = @_model.flycam.getPlaneScalingFactor()
       width = constants.PLANE_WIDTH
 
-    if @mode in constants.MODES_ARBITRARY
+    if @controlMode in constants.MODES_ARBITRARY
       zoom  = @_model.flycam3d.zoomStep
       width = ArbitraryController::WIDTH
 

@@ -20,11 +20,12 @@ class SkeletonTacingController
     @abstractTreeController.view.on
       nodeClick : (id) => @setActiveNode(id, false, true)
 
-    @gui.on
-      deleteActiveNode : =>
-        @model.skeletonTracing.deleteActiveNode()
-      setActiveTree : (id) => @model.skeletonTracing.setActiveTree(id)
-      setActiveNode : (id) => @model.skeletonTracing.setActiveNode(id)
+    # TODO add to tracing model
+    # @gui.on
+    #   deleteActiveNode : =>
+    #     @model.skeletonTracing.deleteActiveNode()
+    #   setActiveTree : (id) => @model.skeletonTracing.setActiveTree(id)
+    #   setActiveNode : (id) => @model.skeletonTracing.setActiveNode(id)
 
     # Manage side bar input
     $("#tree-name-submit").click (event) =>

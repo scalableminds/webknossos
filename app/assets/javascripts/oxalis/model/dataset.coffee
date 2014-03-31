@@ -3,14 +3,15 @@ libs/request : Request
 libs/event_mixin : EventMixin
 underscore : _
 backbone : Backbone
+backbone-deep-model : DeepModel
 ###
 
-class User extends Backbone.Model
-
-  url : "/api/user/userConfiguration"
+class Dataset extends Backbone.DeepModel
 
 
-  constructor : ->
+  constructor : (datasetName) ->
+
+    @url = "/api/dataSetConfigurations/#{datasetName}"
 
     @listenTo(this, "change", @push)
 
@@ -22,14 +23,15 @@ class User extends Backbone.Model
     return @attributes
 
 
-  getMouseInversionX : ->
+  resetBrightnessContrast : =>
 
-    return if @get("inverseX") then 1 else -1
-
-
-  getMouseInversionY : ->
-
-    return if @get("inverseY") then 1 else -1
+    Request.send(
+      url : "/api/dataSetConfigurations/default"
+      dataType : "json"
+    ).done( (defaultData) =>
+      @set("brightness", defaultData.brightness)
+      @set("contrast", defaultData.contrast)
+    )
 
 
   triggerAll : ->

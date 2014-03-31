@@ -1,5 +1,4 @@
 ### define
-../../libs/event_mixin : EventMixin
 ./dimensions : Dimensions
 ../constants : constants
 ###
@@ -13,11 +12,13 @@ class Flycam2d
   scaleInfo : null
   viewportWidth : 0
 
-  constructor : (@viewportWidth, @scaleInfo, @zoomStepCount, @user) ->
+  constructor : (@viewportWidth, @scaleInfo, @zoomStepCount, @model) ->
 
-    _.extend(this, new EventMixin())
+    _.extend(this, Backbone.Events)
 
     console.log "ZoomStepCount: ", @zoomStepCount
+
+    @user = @model.user
 
     # Invariant: 2^zoomStep / 2^integerZoomStep <= 2^maxZoomDiff
     @maxZoomStepDiff = Math.min(Math.log(@MAX_ZOOM_THRESHOLD) / Math.LN2, Math.log((@TEXTURE_WIDTH-@MAX_TEXTURE_OFFSET)/@viewportWidth)/Math.LN2)
@@ -38,9 +39,9 @@ class Flycam2d
     # correct zoom values that are too high
     @user.set("zoom", Math.min(@user.get("zoom"), Math.floor(@getMaxZoomStep())))
 
-    @user.on
-      qualityChanged : (quality) => @setQuality(quality)
-      zoomChanged : (zoomFactor) => @zoom(Math.log(zoomFactor) / Math.LN2)
+    @listenTo(@model.dataset, "change:quality", (model, quality) -> @setQuality(quality))
+    # TODO move zoom into tracing settings
+    @listenTo(@user, "change:zoom", (model, zoomFactor) -> @zoom(Math.log(zoomFactor) / Math.LN2))
 
     # Fire changed event every time
     _trigger = @trigger

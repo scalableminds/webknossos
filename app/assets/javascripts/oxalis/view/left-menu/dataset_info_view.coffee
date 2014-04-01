@@ -52,12 +52,12 @@ class DatsetActionsView extends Marionette.ItemView
       datasetName: ""
 
     if @_model.flycam or @_model.flycam3d
-      return _.extend(defaults,
+      _.extend(defaults,
         zoomLevel : @calculateZoomLevel()
         datasetName :@_model.datasetName
       )
-    else
-      return defaults
+
+    return defaults
 
 
   calculateZoomLevel : ->

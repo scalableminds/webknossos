@@ -61,6 +61,22 @@ Utils =
     return [r, g, b]
 
 
+  stringToNumberArray : (s) ->
+
+    # remove leading/trailing whitespaces
+    s = s.trim()
+    # replace remaining whitespaces with commata
+    s = s.replace /,?\s+,?/g, ","
+    stringArray = s.split(",")
+
+    result = []
+    for e in stringArray
+      if not isNaN(newEl = parseFloat(e))
+        result.push(newEl)
+
+    return result
+
+
   loaderTemplate : ->
 
     return """

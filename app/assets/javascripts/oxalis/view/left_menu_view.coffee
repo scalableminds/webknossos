@@ -5,23 +5,17 @@ backbone.marionette : marionette
 ./settings/dataset_settings_view : DatasetSettingsView
 ./left-menu/dataset_actions_view : DatasetActionsView
 ./left-menu/dataset_info_view : DatasetInfoView
+./left-menu/dataset_position_view : DatasetPositionView
 ###
 
 class LeftMenuView extends Backbone.Marionette.Layout
 
   template : _.template("""
-    <div id="dataset-actions" class="row"></div
-
-    <div class="input-group">
-      <span class="input-group-addon">Position</span>
-      <input id="trace-position-input" class="form-control" type="text">
-    </div>
-    <div class="input-group" id="trace-rotation">
-      <span class="input-group-addon">Rotation</span>
-      <input id="trace-rotation-input" class="form-control" type="text">
-    </div>
+    <div id="dataset-actions"></div
 
     <div id="dataset-info"></div>
+
+    <div id="dataset-position"></div>
 
 
     <div id="volume-actions" class="volume-controls">
@@ -56,6 +50,7 @@ class LeftMenuView extends Backbone.Marionette.Layout
   regions :
     "datasetActionButtons" : "#dataset-actions"
     "datasetInfo" : "#dataset-info"
+    "datasetPosition" : "#dataset-position"
     "userSettings" : "#user-settings-tab"
     "datasetSettings" : "#dataset-settings-tab"
 
@@ -63,9 +58,10 @@ class LeftMenuView extends Backbone.Marionette.Layout
 
     @datasetActionsView = new DatasetActionsView(options)
     @datasetInfoView = new DatasetInfoView(options)
+    @datasetPositionView = new DatasetPositionView(options)
 
-    @userSettingsView = new UserSettingsView( _model : options._model )
-    @datasetSettingsView = new DatasetSettingsView( _model : options._model )
+    @userSettingsView = new UserSettingsView(_model : options._model)
+    @datasetSettingsView = new DatasetSettingsView(_model : options._model)
 
     @listenTo(@, "render", @afterRender)
 
@@ -77,6 +73,7 @@ class LeftMenuView extends Backbone.Marionette.Layout
 
     @datasetActionButtons.show(@datasetActionsView)
     @datasetInfo.show(@datasetInfoView)
+    @datasetPosition.show(@datasetPositionView)
 
 
   #   <% if(task) { %>

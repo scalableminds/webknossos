@@ -67,7 +67,6 @@ class ArbitraryView
         element.setVisibility true
 
       $("#arbitrary-info-canvas").show()
-      $('#trace-rotation').show()
 
       @resize()
       # start the rendering loop
@@ -86,7 +85,6 @@ class ArbitraryView
         element.setVisibility false
 
       $("#arbitrary-info-canvas").hide()
-      $('#trace-rotation').hide()
 
       $(window).off "resize", @resize
 

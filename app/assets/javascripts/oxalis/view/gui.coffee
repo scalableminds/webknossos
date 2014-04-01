@@ -3,6 +3,7 @@ dat.gui : DatGui
 libs/request : Request
 libs/event_mixin : EventMixin
 libs/toast : Toast
+libs/utils : Utils
 ../model/dimensions : Dimensions
 ../constants : constants
 ../controller/viewmodes/arbitrary_controller : ArbitraryController
@@ -155,24 +156,6 @@ class Gui
     @fCells?.open()
 
 
-    $("#trace-position-input").on "change", (event) =>
-
-      @setPosFromString(event.target.value)
-      $("#trace-position-input").blur()
-
-    $("#trace-rotation-input").on "change", (event) =>
-
-      @setRotationFromString(event.target.value)
-      $("#trace-rotation-input").blur()
-
-    @model.flycam.on
-      positionChanged : (position) =>
-        @updateGlobalPosition(position)
-
-    @model.flycam3d.on
-      changed : =>
-        @updateRotation()
-
     @model.skeletonTracing?.on
       newActiveNode       : => @update()
       newActiveTree       : => @update()
@@ -244,45 +227,9 @@ class Gui
 
   setBoundingBox : (value) =>
 
-    bbArray = @stringToNumberArray( value )
+    bbArray = Utils.stringToNumberArray( value )
     if bbArray?.length == 6
       @trigger("newBoundingBox", bbArray)
-
-
-  setPosFromString : (posString) =>
-
-    posArray = @stringToNumberArray( posString )
-    if posArray?.length == 3
-      @model.flycam.setPosition(posArray)
-    else
-      @updateGlobalPosition(@model.flycam.getPosition())
-
-
-  setRotationFromString : (rotString) =>
-
-    rotArray = @stringToNumberArray( rotString )
-    if rotArray?.length == 3
-      @model.flycam3d.setRotation rotArray
-    else
-      @updateRotation()
-
-
-  stringToNumberArray : (s) ->
-
-    # remove leading/trailing whitespaces
-    s = s.trim()
-    # replace remaining whitespaces with commata
-    s = s.replace /,?\s+,?/g, ","
-    stringArray = s.split(",")
-
-    result = []
-    for e in stringArray
-      if not isNaN(newEl = parseFloat(e))
-        result.push(newEl)
-      else
-        return null
-
-    return result
 
 
   addTooltip : (element, title) ->
@@ -293,23 +240,6 @@ class Gui
   createTooltips : ->
 
       $(".cr.number.has-slider").tooltip({"title" : "Move mouse up or down while clicking the number to easily adjust the value"})
-
-
-  updateGlobalPosition : (globalPos) =>
-
-    stringPos = Math.floor(globalPos[0]) + ", " + Math.floor(globalPos[1]) + ", " + Math.floor(globalPos[2])
-    $("#trace-position-input").val(stringPos)
-    @updateSegmentID()
-
-
-  updateRotation : =>
-
-    rotation = _.map(
-      @model.flycam3d.getRotation(),
-      (r) -> r.toFixed(2)
-    )
-    stringRot = rotation.join(", ")
-    $("#trace-rotation-input").val(stringRot)
 
   updateSegmentID : ->
 

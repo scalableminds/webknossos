@@ -13,6 +13,7 @@ class GraphView extends Backbone.Marionette.ItemView
     <div id="graph"></div>
   """)
 
+
   initialize : ->
 
     @listenTo(@, "show", @addGraph)

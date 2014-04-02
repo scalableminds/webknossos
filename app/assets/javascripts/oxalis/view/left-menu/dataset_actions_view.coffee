@@ -7,17 +7,21 @@ libs/toast : Toast
 class DatsetActionsView extends Marionette.ItemView
 
   template : _.template("""
-    <% if(allowUpdate){ %>
-      <a href="#" class="btn btn-primary" id="trace-save-button">Save</a>
-    <% } else { %>
-      <button class="btn btn-primary disabled">Read only</button>
-    <% } %>
-    <div id="buttonbar" class="btn-group inline-block">
-      <% if(allowFinish) { %>
-        <a href="/annotations/<%= tracingType %>/<%= tracingId %>/finishAndRedirect" class="btn btn-default btn-small" id="trace-finish-button"><i class="fa fa-check-circle-o"></i>Finish</a>
-      <% } %>
-      <a href="/annotations/<%= tracingType %>/<%= tracingId %>/download" class="btn btn-default btn-small" id="trace-download-button"><i class="fa fa-download"></i>NML</a>
-      <a href="#help-modal" class="btn btn-default btn-small" data-toggle="modal"><i class="fa fa-question-circle"></i>Help</a>
+    <div class="col-sm-3">
+      <% if(allowUpdate){ %>
+        <a href="#" class="btn btn-primary" id="trace-save-button">Save</a>
+      <% } else { %>
+        <button class="btn btn-primary disabled">Read only</button>
+      <% } %>
+    </div>
+    <div class="col-sm-9">
+      <div id="buttonbar" class="btn-group btn-group-justified">
+        <% if(allowFinish) { %>
+          <a href="/annotations/<%= tracingType %>/<%= tracingId %>/finishAndRedirect" class="btn btn-default" id="trace-finish-button"><i class="fa fa-check-circle-o"></i>Finish</a>
+        <% } %>
+        <a href="/annotations/<%= tracingType %>/<%= tracingId %>/download" class="btn btn-default" id="trace-download-button"><i class="fa fa-download"></i>NML</a>
+        <a href="#help-modal" class="btn btn-default" data-toggle="modal"><i class="fa fa-question-circle"></i>Help</a>
+      </div>
     </div>
   """)
 

@@ -10,12 +10,13 @@ backbone.marionette : marionette
 
 class LeftMenuView extends Backbone.Marionette.Layout
 
+  className : "container-fluid"
   template : _.template("""
-    <div id="dataset-actions"></div>
+    <div id="dataset-actions" class="row"></div>
 
-    <div id="dataset-info"></div>
+    <div id="dataset-info" class="row"></div>
 
-    <div id="dataset-position"></div>
+    <div id="dataset-position" class="row"></div>
 
     <div id="volume-actions" class="volume-controls">
       <button class="btn btn-default" id="btn-merge">Merge cells</button>
@@ -30,7 +31,8 @@ class LeftMenuView extends Backbone.Marionette.Layout
       </div>
     </div>
 
-    <div id="lefttabbar">
+    <div class="row>
+    <div id="lefttabbar" class="col-sm-12">
         <ul class="nav nav-tabs">
           <li class="active">
           <a href="#dataset-settings-tab" data-toggle="tab"><i class="fa fa-cogs"></i> Dataset</a></li>
@@ -42,7 +44,7 @@ class LeftMenuView extends Backbone.Marionette.Layout
           <div class="tab-pane active" id="dataset-settings-tab"></div>
           <div class="tab-pane" id="user-settings-tab"></div>
         </div>
-
+      </div>
     </div>
   """)
 

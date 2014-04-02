@@ -7,12 +7,14 @@ oxalis/constants : constants
 
 class DatsetActionsView extends Marionette.ItemView
 
-  className : "well well-sm"
+  className : "col-sm-12"
   id : "dataset"
   template : _.template("""
-    <p><% annotationType %></p>
-    <p>DataSet: <%= datasetName %></p>
-    <p>Viewport width: <%= chooseUnit(zoomLevel) %></p>
+    <div class="well">
+      <p><% annotationType %></p>
+      <p>DataSet: <%= datasetName %></p>
+      <p>Viewport width: <%= chooseUnit(zoomLevel) %></p>
+    </div>
   """)
 
   templateHelpers :

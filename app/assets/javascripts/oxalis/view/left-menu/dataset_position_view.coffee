@@ -7,6 +7,7 @@ libs/utils : Utils
 
 class DatsetPositionView extends Marionette.ItemView
 
+  className : "col-sm-12"
   template : _.template("""
     <div class="input-group">
       <span class="input-group-addon">Position</span>

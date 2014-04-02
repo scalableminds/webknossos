@@ -15,10 +15,11 @@ class ButtonSettingView extends Backbone.Marionette.ItemView
     </div>
   """)
 
+  events :
+    "click button" : "handleClick"
+
 
   initialize : ({ @model, @options }) ->
-
-    @listenTo(this, "render", @afterRender)
 
 
   serializeData : ->
@@ -26,6 +27,6 @@ class ButtonSettingView extends Backbone.Marionette.ItemView
     return @options
 
 
-  afterRender : ->
+  handleClick : ->
 
-    @$("button").click(@model[@options.callbackName])
+    @model[@options.callbackName]()

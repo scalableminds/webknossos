@@ -1,0 +1,31 @@
+.nav-tabs {
+  margin-bottom: 0;
+  & > li > a {
+    padding-top: 4px;
+    padding-bottom: 4px;
+  }
+}
+
+#lefttabbar {
+  position: relative;
+
+  .panel {
+    border-radius: 0px;
+    margin-top: -1px; //avoid double borders
+  }
+  .panel-body {
+
+    .row {
+      margin-bottom: 5px;
+    }
+  }
+}
+
+.slider-setting-view, .color-setting-view {
+  input[type=range] {
+    height: @buttonHeight;
+  }
+  .col-sm-4 {
+    padding-left: 4px;
+  }
+}

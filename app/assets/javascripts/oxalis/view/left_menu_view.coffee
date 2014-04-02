@@ -25,7 +25,7 @@ class LeftMenuView extends Backbone.Marionette.Layout
 
     <div id="view-modes" class="row"></div>
 
-    <div class="row>
+    <div class="row">
       <div id="lefttabbar" class="col-sm-12">
         <ul class="nav nav-tabs">
           <li class="active">

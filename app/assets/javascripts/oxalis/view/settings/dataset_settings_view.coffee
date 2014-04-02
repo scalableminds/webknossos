@@ -28,11 +28,11 @@ class DatasetSettingsView extends Backbone.Marionette.ItemView
 
     "colors-controls" : ->
 
-      return new ColorsCategoryView({ @model })
+      return new ColorsCategoryView(model : @model)
 
     "quality-controls" : ->
 
-      return new QualityCategoryView({ @model })
+      return new QualityCategoryView(model : @model)
 
 
   initialize : ({ @_model }) ->

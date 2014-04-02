@@ -10,11 +10,13 @@ class SliderSettingView extends AbstractSettingView
 
 
   template : _.template("""
-    <div class="col-sm-4">
+    <div class="col-sm-5">
       <%= displayName %>
     </div>
-    <div class="col-sm-4">
-      <input type="range" min="<%= min %>" max="<%= max %>" step="<%= step %>" value="<%= value %>">
+    <div class="col-sm-3 no-gutter v-center">
+      <div class="v-center-agent">
+        <input type="range" min="<%= min %>" max="<%= max %>" step="<%= step %>" value="<%= value %>">
+      </div>
     </div>
     <div class="col-sm-4">
       <input class="form-control" type="number" min="<%= min %>" max="<%= max %>" step="<%= step %>" value="<%= value %>">
@@ -30,6 +32,8 @@ class SliderSettingView extends AbstractSettingView
   events :
     "change @ui.slider" : "handleChange"
     "change @ui.text" : "handleChange"
+    "click @ui.slider" : "handleClick"
+    "dblclick @ui.slider" : "handleDoubleClick"
 
 
   handleChange : (evt) ->
@@ -41,3 +45,8 @@ class SliderSettingView extends AbstractSettingView
 
     @ui.slider.val(parseFloat(value))
     @ui.text.val(parseFloat(value))
+
+
+  resetValue : (evt) ->
+
+    console.log evt

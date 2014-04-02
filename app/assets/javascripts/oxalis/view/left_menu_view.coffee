@@ -11,12 +11,11 @@ backbone.marionette : marionette
 class LeftMenuView extends Backbone.Marionette.Layout
 
   template : _.template("""
-    <div id="dataset-actions"></div
+    <div id="dataset-actions"></div>
 
     <div id="dataset-info"></div>
 
     <div id="dataset-position"></div>
-
 
     <div id="volume-actions" class="volume-controls">
       <button class="btn btn-default" id="btn-merge">Merge cells</button>

@@ -7,7 +7,7 @@ libs/utils : Utils
 
 class DatsetPositionView extends Marionette.ItemView
 
-  className : "col-sm-12"
+  className : "col-sm-12 stacked-input-group"
   template : _.template("""
     <div class="input-group">
       <span class="input-group-addon">Position</span>
@@ -39,10 +39,17 @@ class DatsetPositionView extends Marionette.ItemView
 
     @listenTo(app.vent, "model:sync", ->
 
+      # TODO make controlMode a property of the model and read from there
+      @listenTo(app.vent, "changeViewMode", (mode) ->
+        @controlMode = mode
+        @render()
+      )
+
       # TODO MEASURE PERFORMANCE HIT BECAUSE OF CONSTANT RE-RENDER
       @_model.flycam3d.on("changed", =>
         @render()
       )
+
 
       @_model.flycam.on("positionChanged", =>
         @render()

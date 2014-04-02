@@ -84,6 +84,31 @@
   margin-bottom: 0;
 }
 
+.stacked-input-group {
+  .input-group:not(:first-child) {
+    margin-top: -1px; //avoid double borders
+  }
+  .input-group-addon, input {
+    border-radius: 0px;
+  }
+  .input-group:first-child {
+    .input-group-addon {
+      border-top-left-radius: 4px;
+    }
+    input {
+      border-top-right-radius: 4px;
+    }
+  }
+  .input-group:last-child {
+    .input-group-addon {
+      border-bottom-left-radius: 4px;
+    }
+    input {
+      border-bottom-right-radius: 4px;
+    }
+  }
+}
+
 // #####################################
 // OVERRIDE BOOTSTRAP'S DEFAULTS
 // #####################################

@@ -6,6 +6,7 @@ backbone.marionette : marionette
 ./left-menu/dataset_actions_view : DatasetActionsView
 ./left-menu/dataset_info_view : DatasetInfoView
 ./left-menu/dataset_position_view : DatasetPositionView
+./left-menu/view_modes_view : ViewModesView
 ###
 
 class LeftMenuView extends Backbone.Marionette.Layout
@@ -22,17 +23,10 @@ class LeftMenuView extends Backbone.Marionette.Layout
       <button class="btn btn-default" id="btn-merge">Merge cells</button>
     </div>
 
-    <div id="view-mode" class="skeleton-controls">
-      <p>View mode:</p>
-      <div class="btn-group">
-        <button type="button" class="btn btn-default btn-primary" id="view-mode-3planes">3 Planes</button>
-        <button type="button" class="btn btn-default" id="view-mode-sphere">Sphere</button>
-        <button type="button" class="btn btn-default" id="view-mode-arbitraryplane">Arbitrary Plane</button>
-      </div>
-    </div>
+    <div id="view-modes" class="row"></div>
 
     <div class="row>
-    <div id="lefttabbar" class="col-sm-12">
+      <div id="lefttabbar" class="col-sm-12">
         <ul class="nav nav-tabs">
           <li class="active">
           <a href="#dataset-settings-tab" data-toggle="tab"><i class="fa fa-cogs"></i> Dataset</a></li>
@@ -54,12 +48,15 @@ class LeftMenuView extends Backbone.Marionette.Layout
     "datasetPosition" : "#dataset-position"
     "userSettings" : "#user-settings-tab"
     "datasetSettings" : "#dataset-settings-tab"
+    "viewModes" : "#view-modes"
+
 
   initialize : (options) ->
 
     @datasetActionsView = new DatasetActionsView(options)
     @datasetInfoView = new DatasetInfoView(options)
     @datasetPositionView = new DatasetPositionView(options)
+    @viewModesView = new ViewModesView(options)
 
     @userSettingsView = new UserSettingsView(_model : options._model)
     @datasetSettingsView = new DatasetSettingsView(_model : options._model)
@@ -69,13 +66,13 @@ class LeftMenuView extends Backbone.Marionette.Layout
 
   afterRender : ->
 
-    @userSettings.show(@userSettingsView)
-    @datasetSettings.show(@datasetSettingsView)
-
     @datasetActionButtons.show(@datasetActionsView)
     @datasetInfo.show(@datasetInfoView)
     @datasetPosition.show(@datasetPositionView)
+    @viewModes.show(@viewModesView)
 
+    @userSettings.show(@userSettingsView)
+    @datasetSettings.show(@datasetSettingsView)
 
   #   <% if(task) { %>
   #     <li><a href="#tab0" data-toggle="tab">Task</a></li>

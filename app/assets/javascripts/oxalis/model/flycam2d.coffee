@@ -114,7 +114,10 @@ class Flycam2d
 
   getIntegerZoomStep : ->
 
-    @integerZoomStep
+    unless @integerZoomStep
+      @calculateIntegerZoomStep()
+
+    return @integerZoomStep
 
 
   getTextureScalingFactor : ->

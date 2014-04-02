@@ -15,7 +15,7 @@ class DatsetActionsView extends Marionette.ItemView
       <% } %>
     </div>
     <div class="col-sm-9">
-      <div id="buttonbar" class="btn-group btn-group-justified">
+      <div class="btn-group btn-group-justified">
         <% if(allowFinish) { %>
           <a href="/annotations/<%= tracingType %>/<%= tracingId %>/finishAndRedirect" class="btn btn-default" id="trace-finish-button"><i class="fa fa-check-circle-o"></i>Finish</a>
         <% } %>

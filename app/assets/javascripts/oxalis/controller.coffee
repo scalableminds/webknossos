@@ -1,6 +1,8 @@
 ### define
 jquery : $
 underscore : _
+app : app
+backbone : backbone
 ./controller/viewmodes/plane_controller : PlaneController
 ./controller/annotations/skeletontracing_controller : SkeletonTracingController
 ./controller/annotations/volumetracing_controller : VolumeTracingController
@@ -49,12 +51,11 @@ class Controller
 
     {@controlMode, _model:@model } = options
 
+    _.extend(@, Backbone.Events)
 
     unless @browserSupported()
       unless window.confirm("You are using an unsupported browser, please use the newest version of Chrome, Opera or Safari.\n\nTry anyways?")
         window.history.back()
-
-    _.extend(@, new EventMixin())
 
     @fullScreen = false
     @mode = constants.MODE_PLANE_TRACING
@@ -134,22 +135,10 @@ class Controller
             @model.getSegmentationBinary().pingStop()
           @sceneController.setSegmentationAlpha( alpha )
 
-      @modeMapping =
-        "view-mode-3planes"        : constants.MODE_PLANE_TRACING
-        "view-mode-sphere"         : constants.MODE_ARBITRARY
-        "view-mode-arbitraryplane" : constants.MODE_ARBITRARY_PLANE
+      @listenTo(app.vent, "changeViewMode", (mode) ->
+        @setMode(mode)
+      )
 
-      _controller = this
-      for button in $("#view-mode .btn-group").children()
-
-        id = @modeMapping[ $(button).attr("id") ]
-        do (id) ->
-          $(button).on "click", ->
-            $(this).blur()
-            _controller.setMode( id )
-
-        if not (id in @allowedModes)
-          $(button).attr("disabled", "disabled")
 
       if @allowedModes.length == 1
         $("#view-mode").hide()

@@ -1,0 +1,259 @@
+/*
+ * Copyright (C) 20011-2014 Scalable minds UG (haftungsbeschränkt) & Co. KG. <http://scm.io>
+ */
+package com.scalableminds.datastore.controllers
+
+import play.api._
+import play.api.Play.current
+import play.api.libs.concurrent._
+import braingames.geometry.Point3D
+import play.api.i18n.Messages
+import braingames.binary.models._
+import braingames.binary._
+import braingames.reactivemongo.DBAccessContext
+import braingames.util.{FoxImplicits, Fox}
+import play.api.mvc.{Controller, SimpleResult, Action}
+import braingames.binary.ParsedDataReadRequest
+import braingames.binary.DataRequestSettings
+import braingames.binary.ParsedDataWriteRequest
+import braingames.binary.ParsedRequestCollection
+import scala.concurrent.Future
+import braingames.image.{JPEGWriter, ImageCreator, ImageCreatorParameters}
+import braingames.mvc.ExtendedController
+import com.scalableminds.datastore.services.{UserAccessService, BinaryDataService}
+import com.scalableminds.datastore.models.DataSourceDAO
+import play.api.mvc.BodyParsers.parse
+import play.api.libs.concurrent.Execution.Implicits._
+import com.scalableminds.datastore.DataStorePlugin
+
+object BinaryDataController extends BinaryDataReadController with BinaryDataWriteController
+
+trait BinaryDataCommonController extends Controller with ExtendedController with FoxImplicits{
+  protected def getDataLayer(dataSource: DataSource, dataLayerName: String): Fox[DataLayer] = {
+    def tryToGetUserDataLayer = {
+      /*for {
+        userDataLayer <- UserDataLayerDAO.findOneByName(dataLayerName).toFox
+        if userDataLayer.dataSourceName == dataSet.name
+      } yield {
+        userDataLayer.dataLayer
+      }*/
+      None
+    }
+
+    dataSource.getDataLayer(dataLayerName) orElse tryToGetUserDataLayer
+  }
+
+  import play.api.mvc._
+
+  case class TokenSecuredAction(dataSetName: String, dataLayerName: String) extends ActionBuilder[Request] {
+
+    def invokeBlock[A](request: Request[A], block: (Request[A]) => Future[SimpleResult]) = {
+      val hasAccess = request.getQueryString("token").map{ token =>
+        UserAccessService.hasAccess(token, dataSetName, dataLayerName)
+      } getOrElse Future.successful(false)
+
+      hasAccess.flatMap{
+        case true =>
+          block(request)
+        case false =>
+          Future.successful(Forbidden("Invalid access token."))
+      }
+    }
+  }
+
+}
+
+trait BinaryDataReadController extends BinaryDataCommonController {
+
+  def requestViaAjaxDebug(
+                           dataSetName: String,
+                           dataLayerName: String,
+                           cubeSize: Int,
+                           x: Int,
+                           y: Int,
+                           z: Int,
+                           resolution: Int) = TokenSecuredAction(dataSetName, dataLayerName).async {
+    implicit request =>
+      val dataRequests = ParsedRequestCollection(Array(ParsedDataReadRequest(resolution, Point3D(x, y, z), false)))
+      for {
+        data <- requestData(dataSetName, dataLayerName, cubeSize, dataRequests)
+      } yield {
+        Ok(data)
+      }
+  }
+
+  /**
+   * Handles a request for binary data via a HTTP POST. The content of the
+   * POST body is specified in the BinaryProtokoll.parseAjax functions.
+   */
+
+  def requestViaAjax(dataSetName: String, dataLayerName: String, cubeSize: Int) = TokenSecuredAction(dataSetName, dataLayerName).async(parse.raw) {
+    implicit request =>
+      for {
+        payload <- request.body.asBytes() ?~> Messages("binary.payload.notSupplied")
+        requests <- BinaryProtocol.parseDataReadRequests(payload, containsHandle = false) ?~> Messages("binary.payload.invalid")
+        data <- requestData(dataSetName, dataLayerName, cubeSize, requests) ?~> Messages("binary.data.notFound")
+      } yield {
+        Ok(data)
+      }
+  }
+
+  def requestSpriteSheet(
+                          dataSetName: String,
+                          dataLayerName: String,
+                          cubeSize: Int,
+                          imagesPerRow: Int,
+                          x: Int,
+                          y: Int,
+                          z: Int,
+                          resolution: Int) = TokenSecuredAction(dataSetName, dataLayerName).async(parse.raw) {
+    implicit request =>
+      respondWithSpriteSheet(dataSetName, dataLayerName, cubeSize, cubeSize, cubeSize, imagesPerRow, x, y, z, resolution)
+  }
+
+  def requestImage(
+                    dataSetName: String,
+                    dataLayerName: String,
+                    width: Int,
+                    height: Int,
+                    x: Int,
+                    y: Int,
+                    z: Int,
+                    resolution: Int) = TokenSecuredAction(dataSetName, dataLayerName).async(parse.raw) {
+    implicit request =>
+      respondWithImage(dataSetName, dataLayerName, width, height, x, y, z, resolution)
+  }
+
+  private def createDataRequestCollection(
+                                           dataSource: DataSource,
+                                           dataLayer: DataLayer,
+                                           cubeSize: Int,
+                                           parsedRequest: ParsedRequestCollection[ParsedDataReadRequest]) = {
+    val dataRequests = parsedRequest.requests.map(r =>
+      DataStorePlugin.binaryDataService.createDataReadRequest(dataSource, dataLayer, None, cubeSize, r))
+    DataRequestCollection(dataRequests)
+  }
+
+
+  private def requestData(
+                           dataSetName: String,
+                           dataLayerName: String,
+                           cubeSize: Int,
+                           parsedRequest: ParsedRequestCollection[ParsedDataReadRequest]): Fox[Array[Byte]] = {
+    for {
+      usableDataSource <- DataSourceDAO.findUsableByName(dataSetName) ?~> Messages("datasource.unavailable")
+      dataSource = usableDataSource.dataSource
+      dataLayer <- getDataLayer(dataSource, dataLayerName) ?~> Messages("dataLayer.notFound")
+      dataRequestCollection = createDataRequestCollection(dataSource, dataLayer, cubeSize, parsedRequest)
+      data <- DataStorePlugin.binaryDataService.handleDataRequest(dataRequestCollection) ?~> "Data request couldn't get handled"
+    } yield {
+      data
+    }
+  }
+
+  private def requestData(
+                           dataSetName: String,
+                           dataLayerName: String,
+                           position: Point3D,
+                           width: Int,
+                           height: Int,
+                           depth: Int,
+                           resolutionExponent: Int,
+                           settings: DataRequestSettings): Fox[Array[Byte]] = {
+    for {
+      usableDataSource <- DataSourceDAO.findUsableByName(dataSetName) ?~> Messages("datasource.unavailable")
+      dataSource = usableDataSource.dataSource
+      dataLayer <- getDataLayer(dataSource, dataLayerName) ?~> Messages("dataLayer.notFound")
+
+      dataRequestCollection = DataStorePlugin.binaryDataService.createDataReadRequest(
+        dataSource,
+        dataLayer,
+        None,
+        width,
+        height,
+        depth,
+        position,
+        resolutionExponent,
+        settings)
+      data <- DataStorePlugin.binaryDataService.handleDataRequest(dataRequestCollection) ?~> "Data request couldn't get handled"
+    } yield {
+      data
+    }
+  }
+
+  private def respondWithSpriteSheet(
+                              dataSetName: String,
+                              dataLayerName: String,
+                              width: Int,
+                              height: Int,
+                              depth: Int,
+                              imagesPerRow: Int,
+                              x: Int,
+                              y: Int,
+                              z: Int,
+                              resolution: Int): Future[SimpleResult] = {
+    val settings = DataRequestSettings(useHalfByte = false, skipInterpolation = false)
+    for {
+      usableDataSource <- DataSourceDAO.findUsableByName(dataSetName) ?~> Messages("dataSource.unavailable")
+      dataSource = usableDataSource.dataSource
+      dataLayer <- getDataLayer(dataSource, dataLayerName) ?~> Messages("dataLayer.notFound")
+      params = ImageCreatorParameters(dataLayer.bytesPerElement, width, height, imagesPerRow)
+      data <- requestData(dataSetName, dataLayerName, Point3D(x, y, z), width, height, depth, resolution, settings) ?~> Messages("binary.data.notFound")
+      spriteSheet <- ImageCreator.spriteSheetFor(data, params) ?~> Messages("image.create.failed")
+      firstSheet <- spriteSheet.pages.headOption ?~> "Couldn'T create spritesheet"
+    } yield {
+      val file = new JPEGWriter().writeToFile(firstSheet.image)
+      Ok.sendFile(file, true, _ => "test.jpg").withHeaders(
+        CONTENT_TYPE -> "image/jpeg")
+    }
+  }
+
+  private def respondWithImage(
+                                dataSetName: String,
+                                dataLayerName: String,
+                                width: Int,
+                                height: Int,
+                                x: Int,
+                                y: Int,
+                                z: Int,
+                                resolution: Int) = {
+    respondWithSpriteSheet(dataSetName, dataLayerName, width, height, 1, 1, x, y, z, resolution)
+  }
+}
+
+trait BinaryDataWriteController extends BinaryDataCommonController {
+
+  private def createDataWriteRequestCollection(
+                                        dataSource: DataSource,
+                                        dataLayer: DataLayer,
+                                        cubeSize: Int,
+                                        parsedRequest: ParsedRequestCollection[ParsedDataWriteRequest]) = {
+    val dataRequests = parsedRequest.requests.map(r =>
+      DataStorePlugin.binaryDataService.createDataWriteRequest(dataSource, dataLayer, None, cubeSize, r))
+    DataRequestCollection(dataRequests)
+  }
+
+
+  private def writeData(
+                 dataSource: DataSource,
+                 dataLayer: DataLayer,
+                 cubeSize: Int,
+                 parsedRequest: ParsedRequestCollection[ParsedDataWriteRequest]): Fox[Boolean] = {
+    val dataWriteRequestCollection = createDataWriteRequestCollection(dataSource, dataLayer, cubeSize, parsedRequest)
+    DataStorePlugin.binaryDataService.handleDataRequest(dataWriteRequestCollection).map(_ => true)
+  }
+
+  def writeViaAjax(dataSetName: String, dataLayerName: String, cubeSize: Int) = TokenSecuredAction(dataSetName, dataLayerName).async(parse.raw(1048576)) {
+    implicit request =>
+      for {
+        usableDataSource <- DataSourceDAO.findUsableByName(dataSetName).toFox ?~> Messages("dataSet.notFound")
+        dataSource = usableDataSource.dataSource
+        dataLayer <- getDataLayer(dataSource, dataLayerName) ?~> Messages("dataLayer.notFound")
+        if (dataLayer.isWritable)
+        payloadBodySize = cubeSize * cubeSize * cubeSize * dataLayer.bytesPerElement
+        payload <- request.body.asBytes() ?~> Messages("binary.payload.notSupplied")
+        requests <- BinaryProtocol.parseDataWriteRequests(payload, payloadBodySize, containsHandle = false) ?~> Messages("binary.payload.invalid")
+        _ <- writeData(dataSource, dataLayer, cubeSize, requests)
+      } yield Ok
+  }
+}

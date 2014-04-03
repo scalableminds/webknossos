@@ -1,0 +1,14 @@
+# Routes
+# This file defines all application routes (Higher priority routes first)
+# ~~~~
+
+# Read data
+POST          /datasets/:dataSetName/layers/:dataLayerName/data          com.scalableminds.datastore.controllers.BinaryDataController.requestViaAjax(dataSetName: String, dataLayerName: String, cubeSize: Int)
+POST          /datasets/:dataSetName/import                              com.scalableminds.datastore.controllers.DataSourceController.startImport(dataSetName: String)
+GET           /datasets/:dataSetName/import                              com.scalableminds.datastore.controllers.DataSourceController.importProgress(dataSetName: String)
+GET           /datasets/:dataSetName/layers/:dataLayerName/data          com.scalableminds.datastore.controllers.BinaryDataController.requestViaAjaxDebug(dataSetName: String, dataLayerName: String, cubeSize: Int, x: Int, y: Int, z: Int, resolution: Int)
+GET           /datasets/:dataSetName/layers/:dataLayerName/sprite        com.scalableminds.datastore.controllers.BinaryDataController.requestSpriteSheet(dataSetName: String, dataLayerName: String, cubeSize: Int ?=128, imagesPerRow: Int ?= 8, x: Int, y: Int, z: Int, resolution: Int)
+GET           /datasets/:dataSetName/layers/:dataLayerName/image         com.scalableminds.datastore.controllers.BinaryDataController.requestImage(dataSetName: String, dataLayerName: String, width: Int, height: Int, x: Int, y: Int, z: Int, resolution: Int)
+
+# Write data
+PUT           /datasets/:dataSetName/layers/:dataLayerName/data          com.scalableminds.datastore.controllers.BinaryDataController.writeViaAjax(dataSetName: String, dataLayerName: String, cubeSize: Int)

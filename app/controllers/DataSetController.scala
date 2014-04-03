@@ -7,7 +7,6 @@ import views.html
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json._
 import scala.concurrent.Future
-import oxalis.binary.BinaryDataService
 import braingames.util.DefaultConverters._
 import play.api.libs.json.JsSuccess
 import play.api.templates.Html
@@ -68,42 +67,19 @@ object DataSetController extends Controller with Secured {
   def importDataSet(dataSetName: String) = Authenticated.async{ implicit request =>
     for {
       dataSet <- DataSetDAO.findOneBySourceName(dataSetName) ?~> Messages("dataSet.notFound")
+      result <- DataSetService.importDataSet(dataSet)
     } yield {
-      DataSetService.importDataSet(dataSet)
-      progressToResult(InProgress(0))
+      Ok(result)
     }
   }
 
-  def importAll = Authenticated.async{ implicit request =>
-    for {
-      dataSets <- DataSetDAO.findAll ?~> Messages("dataSet.notFound")
-      result <- Fox.sequence(dataSets.map(dataSet => DataSetService.importDataSet(dataSet)))
+  def importProgress(dataSetName: String) = Authenticated.async{ implicit request =>
+    for{
+      dataSet <- DataSetDAO.findOneBySourceName(dataSetName)
+      progress <- DataStoreHandler.progressForImport(dataSet)
     } yield {
-      progressToResult(InProgress(0))
+      Ok(progress)
     }
-  }
-
-  def progressToResult(progress: ProgressState) = progress  match{
-    case InProgress(p) =>
-      JsonOk(Json.obj(
-        "operation" -> "import",
-        "status" -> "inProgress",
-        "progress" -> p))
-    case Finished(success) =>
-      JsonOk(Json.obj(
-        "operation" -> "import",
-        "status" -> (if(success) "finished" else "failed"),
-        "progress" -> 1))
-    case NotStarted =>
-      JsonOk(Json.obj(
-        "operation" -> "import",
-        "status" -> "notStarted",
-        "progress" -> 0))
-  }
-
-
-  def importProgress(dataSetName: String) = Authenticated{ implicit request =>
-    progressToResult(BinaryDataService.progressForImport(dataSetName))
   }
 
   def updateTeams(dataSetName: String) = Authenticated.async(parse.json){ implicit request =>

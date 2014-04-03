@@ -180,17 +180,7 @@ trait TiffDataSourceTypeHandler extends DataSourceTypeHandler {
 
     prepareTargetPath(target)
 
-    val colorLayers = convertToKnossosStructure(unusableDataSource.id, unusableDataSource.sourceFolder, target, progress).toList
-
-    val segmentationLayers = {
-      val bb = BoundingBox.combine(colorLayers.map(_.boundingBox))
-      DataLayer("segmentation", "segmentation", (target / "segmentation").path, None, "uint16", false, None, List(
-        DataLayerSection("segmentation", "segmentation", List(1), bb, bb)
-      ))
-    }
-
-    val layers =
-      segmentationLayers :: colorLayers
+    val layers = convertToKnossosStructure(unusableDataSource.id, unusableDataSource.sourceFolder, target, progress).toList
 
     Some(DataSource(
       unusableDataSource.id,
@@ -407,7 +397,6 @@ trait TiffDataSourceTypeHandler extends DataSourceTypeHandler {
           val raster = tiff.getRaster
           val data = (raster.getDataBuffer().asInstanceOf[DataBufferByte]).getData()
           val bytesPerPixel = imageTypeToByteDepth(tiff.getType)
-          val layer = layerFromFileName(tiffFile)
           RawImage(tiff.getWidth, tiff.getHeight, bytesPerPixel, data)
         }
     }

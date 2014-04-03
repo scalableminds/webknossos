@@ -7,7 +7,7 @@ import play.api.libs.concurrent.Execution.Implicits._
 
 trait DataSourceRepository extends InboxSourceRepository {
 
-  def findDataSource(name: String): Fox[DataSource]
+  def findUsableDataSource(name: String): Fox[DataSource]
 
   def updateDataSources(dataSources: List[DataSourceLike])
 }

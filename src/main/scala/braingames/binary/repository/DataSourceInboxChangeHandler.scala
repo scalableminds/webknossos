@@ -3,15 +3,17 @@
  */
 package braingames.binary.repository
 
-import braingames.binary.models.{UnusableDataSource, UsableDataSource, DataSourceLike, DataSourceRepository}
+import braingames.binary.models._
 import braingames.binary.watcher.DirectoryChangeHandler
 import braingames.util.{JsonHelper, PathUtils}
 import java.nio.file.{Path => JavaPath}
 import scalax.file.{PathMatcher, Path}
 import net.liftweb.common.Full
 import play.api.libs.concurrent.Execution.Implicits._
+import net.liftweb.common.Full
+import play.api.Play
 
-protected class DataSourceInboxChangeHandler(dataSourceRepository: DataSourceRepository) extends DirectoryChangeHandler with PathUtils{
+protected class DataSourceInboxChangeHandler(dataSourceRepository: DataSourceRepository, serverUrl: String) extends DirectoryChangeHandler with PathUtils{
 
   import braingames.binary.Logger._
 
@@ -55,11 +57,11 @@ protected class DataSourceInboxChangeHandler(dataSourceRepository: DataSourceRep
   }
 
   def dataSourceFromFolder(path: Path, team: String): DataSourceLike = {
-    JsonHelper.JsonFromFile(path / "datasource.json").flatMap( _.validate(UsableDataSource.usableDataSourceFormat).asOpt) match {
-      case Full(usableDataSource) =>
-        usableDataSource
+    JsonHelper.JsonFromFile(path / "datasource.json").flatMap( _.validate(FiledDataSource.filedDataSourceFormat).asOpt) match {
+      case Full(filedDataSource) =>
+        filedDataSource.toUsable(serverUrl)
       case _ =>
-        UnusableDataSource(path.name, path.toAbsolute.path, team, DataSourceTypeGuessers.guessRepositoryType(path).name)
+        UnusableDataSource(serverUrl, path.name, path.toAbsolute.path, team, DataSourceTypeGuessers.guessRepositoryType(path).name)
     }
   }
 }

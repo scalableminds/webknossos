@@ -15,10 +15,7 @@ import braingames.binary.models._
 import akka.pattern.AskTimeoutException
 import com.typesafe.config.Config
 import net.liftweb.common.Box
-import braingames.binary.watcher.StopWatching
-import scala.util.Failure
 import scala.Some
-import scala.util.Success
 import braingames.binary.watcher.StartWatching
 import scalax.file.Path
 import braingames.util.PathUtils
@@ -34,9 +31,11 @@ trait BinaryDataService extends DataSourceService with BinaryDataHelpers {
 
   def config: Config
 
+  def serverUrl: String
+
   lazy implicit val executor = system.dispatcher
 
-  val dataSourceInbox = DataSourceInbox.create(dataSourceRepository, system)
+  val dataSourceInbox = DataSourceInbox.create(dataSourceRepository, serverUrl, system)
 
   lazy implicit val timeout = Timeout(config.getInt("braingames.binary.loadTimeout") seconds)
 
@@ -57,7 +56,7 @@ trait BinaryDataService extends DataSourceService with BinaryDataHelpers {
 
   var repositoryWatcher: Option[ActorRef] = None
 
-  def start(onComplete: => Unit = Unit) {
+  def start() {
     val repositoryWatcherConfig = config.getConfig("braingames.binary.changeHandler")
     val repositoryWatchActor =
       system.actorOf(
@@ -66,16 +65,7 @@ trait BinaryDataService extends DataSourceService with BinaryDataHelpers {
 
     repositoryWatcher = Some(repositoryWatchActor)
 
-    (repositoryWatchActor ? StartWatching(dataSourceRepositoryDir, true)).onComplete {
-      case Success(x) =>
-        onComplete
-      case Failure(e) =>
-        logger.error(s"Failed to start watching ${dataSourceRepositoryDir.path}. ${e.getMessage}", e)
-    }
-  }
-
-  def stop() {
-    repositoryWatcher.map(_ ! StopWatching)
+    repositoryWatchActor ! StartWatching(dataSourceRepositoryDir, true)
   }
 
   def handleDataRequest(request: AbstractDataRequest): Future[Option[Array[Byte]]] = {

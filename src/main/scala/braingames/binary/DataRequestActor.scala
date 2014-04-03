@@ -122,7 +122,7 @@ class DataRequestActor(
 
   def fallbackForLayer(layer: DataLayer): Future[List[(DataLayerSection, DataLayer)]] = {
     layer.fallback.toFox.flatMap{ fallback =>
-      dataSourceRepository.findDataSource(fallback.dataSourceName).flatMap{
+      dataSourceRepository.findUsableDataSource(fallback.dataSourceName).flatMap{
         d =>
           d.getDataLayer(fallback.layerName).map {
             fallbackLayer =>

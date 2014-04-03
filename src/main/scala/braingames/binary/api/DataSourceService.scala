@@ -7,6 +7,7 @@ import scalax.file.Path
 import braingames.util.{Fox, FoxImplicits, PathUtils}
 import braingames.binary.repository.DataSourceInbox
 import play.api.libs.concurrent.Execution.Implicits._
+import play.api.i18n.Messages
 
 /**
  * Company: scalableminds
@@ -22,11 +23,11 @@ trait DataSourceService extends FoxImplicits{
 
   lazy val userBaseFolder = PathUtils.ensureDirectory(Path.fromString(config.getString("braingames.binary.userBaseFolder")))
 
+  def userDataLayerFolder(name: String) = userBaseFolder / name
+
   def userDataLayerName() = {
     UUID.randomUUID().toString
   }
-
-  def userDataLayerFolder(name: String) = userBaseFolder / name
 
   def createUserDataSource(baseDataSource: DataSource): UserDataLayer = {
     val category = DataLayer.SEGMENTATION.category
@@ -47,8 +48,9 @@ trait DataSourceService extends FoxImplicits{
     UserDataLayer(baseDataSource.id, dataLayer)
   }
 
-  def importDataSource(id: String): Fox[UsableDataSource] =
+  def importDataSource(id: String): Fox[Fox[UsableDataSource]] = {
     dataSourceInbox.importDataSource(id)
+  }
 
   def progressForImport(id: String) =
     dataSourceInbox.progressForImport(id)

@@ -20,7 +20,7 @@ import braingames.binary.ParsedRequestCollection
 import scala.concurrent.Future
 import braingames.image.{JPEGWriter, ImageCreator, ImageCreatorParameters}
 import braingames.mvc.ExtendedController
-import com.scalableminds.datastore.services.{UserAccessService, BinaryDataService}
+import com.scalableminds.datastore.services.{UserDataLayerService, UserAccessService, BinaryDataService}
 import com.scalableminds.datastore.models.DataSourceDAO
 import play.api.mvc.BodyParsers.parse
 import play.api.libs.concurrent.Execution.Implicits._
@@ -30,17 +30,7 @@ object BinaryDataController extends BinaryDataReadController with BinaryDataWrit
 
 trait BinaryDataCommonController extends Controller with ExtendedController with FoxImplicits{
   protected def getDataLayer(dataSource: DataSource, dataLayerName: String): Fox[DataLayer] = {
-    def tryToGetUserDataLayer = {
-      /*for {
-        userDataLayer <- UserDataLayerDAO.findOneByName(dataLayerName).toFox
-        if userDataLayer.dataSourceName == dataSet.name
-      } yield {
-        userDataLayer.dataLayer
-      }*/
-      None
-    }
-
-    dataSource.getDataLayer(dataLayerName) orElse tryToGetUserDataLayer
+    dataSource.getDataLayer(dataLayerName).toFox orElse UserDataLayerService.findUserDataLayer(dataSource.id, dataLayerName)
   }
 
   import play.api.mvc._

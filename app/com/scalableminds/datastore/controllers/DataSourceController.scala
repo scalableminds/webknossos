@@ -35,7 +35,7 @@ object DataSourceController extends Controller with ExtendedController {
   def importProgress(dataSourceName: String) = Action.async {
     implicit request =>
       for {
-        dataSet <- DataStorePlugin.dataSourceRepository.findDataSource(dataSourceName) ?~> Messages("dataSource.notFound")
+        dataSource <- DataStorePlugin.dataSourceRepository.findDataSource(dataSourceName) ?~> Messages("dataSource.notFound")
       } yield {
         progressToResult(DataStorePlugin.binaryDataService.progressForImport(dataSourceName))
       }
@@ -44,7 +44,7 @@ object DataSourceController extends Controller with ExtendedController {
   def startImport(dataSourceName: String) = Action.async {
     implicit request =>
       for {
-        dataSet <- DataStorePlugin.dataSourceRepository.findDataSource(dataSourceName) ?~> Messages("dataSource.notFound")
+        dataSource <- DataStorePlugin.dataSourceRepository.findDataSource(dataSourceName) ?~> Messages("dataSource.notFound")
         startedImport <- DataStorePlugin.binaryDataService.importDataSource(dataSourceName)
       } yield {
         startedImport.map{ usableDataSource =>

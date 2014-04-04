@@ -4,10 +4,10 @@
 package com.scalableminds.datastore.services
 
 import play.api.libs.json.{JsError, Json, JsValue}
-import braingames.binary.models.DataSourceLike
+import braingames.binary.models.{DataLayer, DataSourceLike}
 import play.api.libs.ws.WS
 import braingames.binary.Logger._
-import braingames.util.FoxImplicits
+import braingames.util.{Fox, FoxImplicits}
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.http.HeaderNames
 import akka.actor.{ActorSystem, Props}
@@ -19,6 +19,7 @@ import play.api.mvc.AnyContentAsJson
 import play.api.libs.json.JsSuccess
 import play.api.libs.iteratee.Iteratee
 import scala.concurrent.Future
+import net.liftweb.common.{Failure, Full}
 
 class OxalisMessageHandler extends JsonMessageHandler {
 
@@ -63,7 +64,7 @@ class OxalisMessageHandler extends JsonMessageHandler {
                 embedInRESTResponse(call, response).map(Right(_))
             }
           case None =>
-            logger.warn(s"Unable to process WS REST request '${call.uuid}'")
+            logger.warn(s"Couldn't find handler for WS REST request '${call.uuid}'")
             Future.successful(Left(Json.obj("error" -> "Handler is not able to process request.")))
         }
       case e: JsError =>
@@ -94,7 +95,7 @@ class OxalisServer(url: String, key: String, name: String, secured: Boolean)(imp
       .post(Json.toJson(dataSources))
       .map {
       result =>
-        if (result.status != 200)
+        if (result.status != OK)
           logger.warn(s"Reporting found data sources to oxalis failed. Status ${result.status}. Body: '${result.body.take(100)}'")
     }
   }
@@ -104,18 +105,24 @@ class OxalisServer(url: String, key: String, name: String, secured: Boolean)(imp
       .post(Json.toJson(dataSource))
       .map {
       result =>
-        if (result.status != 200)
+        if (result.status != OK)
           logger.warn(s"Reporting data source update to oxalis failed. Status ${result.status}. Body: '${result.body.take(100)}'")
     }
   }
 
-  def ping() = {
-    oxalisWS(s"/api/datastores/$name/ping")
+  def requestUserDataLayer(dataSetName: String, dataLayerName: String): Fox[DataLayer] = {
+    oxalisWS(s"/api/datastores/$name/datasources/$dataSetName/layers/$dataLayerName")
       .get()
       .map {
       result =>
-        if (result.status != 200)
-          logger.warn(s"Pinging oxalis failed. Status ${result.status}. Body: '${result.body.take(100)}'")
+        logger.warn(s"Querying user data layer. Status: '${result.status}'")
+        if(result.status == OK)
+          result.json.validate(DataLayer.dataLayerFormat) match {
+            case JsSuccess(dataLayer, _) => Full(dataLayer)
+            case e: JsError => Failure("Invalid json result from data layer query: " + e.toString)
+          }
+        else
+          Failure(s"Couldn't request user data layer. Status ${result.status}. Body: '${result.body.take(100)}'")
     }
   }
 
@@ -129,7 +136,7 @@ class OxalisServer(url: String, key: String, name: String, secured: Boolean)(imp
       .map {
       result =>
         logger.warn(s"Querying dataToken validity: ${token}. Status: '${result.status}'")
-        result.status == 200
+        result.status == OK
     }
   }
 }

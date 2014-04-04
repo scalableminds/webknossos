@@ -15,9 +15,6 @@ object UserAccessService {
 
   val AccessExpiration = 30 minutes
 
-  def asCacheKey(token: String) =
-    "dataAccess" + token
-
   def hasAccess(token: String, dataSetName: String, dataLayerName: String): Future[Boolean] = {
     Cache.getOrElse(token, AccessExpiration.toSeconds.toInt){
       DataStorePlugin.current

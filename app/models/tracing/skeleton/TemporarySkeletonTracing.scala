@@ -68,8 +68,7 @@ object TemporarySkeletonTracingService extends AnnotationContentService {
     val box = boundingBox.flatMap { box => if (box.isEmpty) None else Some(box) }
     val start = DataSetDAO.findOneBySourceName(nml.dataSetName).futureBox.map {
       case Full(dataSet) =>
-        dataSet.dataSource.map(_.boundingBox.center).getOrElse(Point3D(0, 0, 0))
-
+        dataSet.defaultStart
       case _ =>
         Point3D(0, 0, 0)
     }

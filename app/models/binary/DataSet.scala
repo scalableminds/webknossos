@@ -17,6 +17,7 @@ import net.liftweb.common.Full
 import scala.Some
 import braingames.reactivemongo.AccessRestrictions.AllowIf
 import braingames.binary.models.UnusableDataSource
+import braingames.geometry.Point3D
 
 object DataSetRepository extends AbstractDataSourceRepository with InMemoryInboxSourceRepository with GlobalDBAccess with FoxImplicits {
 

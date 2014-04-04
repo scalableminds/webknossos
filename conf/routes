@@ -2,4 +2,4 @@
 # This file defines all application routes (Higher priority routes first)
 # ~~~~
 
-->    /datastore/         com.scalableminds.datastore.Routes
+->    /data/         com.scalableminds.datastore.Routes

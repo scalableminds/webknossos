@@ -29,7 +29,7 @@ trait DataSourceService extends FoxImplicits{
     UUID.randomUUID().toString
   }
 
-  def createUserDataSource(baseDataSource: DataSource): UserDataLayer = {
+  def createUserDataLayer(baseDataSource: DataSource): UserDataLayer = {
     val category = DataLayer.SEGMENTATION.category
     val name = userDataLayerName()
     val basePath = userDataLayerFolder(name).toAbsolute

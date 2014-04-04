@@ -38,6 +38,8 @@ case class DataSource(
 
   lazy val boundingBox = BoundingBox.combine(dataLayers.map(_.boundingBox))
 
+  lazy val center = boundingBox.center
+
   def pointToBlock(point: Point3D, resolution: Int) =
     Point3D(
       point.x / blockLength / resolution,

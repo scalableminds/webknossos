@@ -10,9 +10,13 @@ GET           /impressum                                                 control
 
 # Tasks
 
-# Jira integration
+# Github Issues integration
 GET           /issues                                                    controllers.GithubIssues.index
 POST          /issues                                                    controllers.GithubIssues.submit
+
+# Help section
+GET           /help/faq                                                  controllers.HelpController.faq
+GET           /help/keyboardshortcuts                                    controllers.HelpController.keyboardShortcuts
 
 # Authentication
 GET           /login                                                     controllers.Authentication.login

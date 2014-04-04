@@ -247,7 +247,6 @@ class Controller
 
     @mode = newMode
     @gui.setMode(newMode)
-    @view.setMode(newMode)
 
 
   toggleFullScreen : ->

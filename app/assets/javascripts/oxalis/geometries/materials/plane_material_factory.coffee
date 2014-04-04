@@ -145,7 +145,7 @@ class PlaneMaterialFactory extends AbstractPlaneMaterialFactory
         /* Get Color Value(s) */
 
         <% if (isRgb) { %>
-          vec4 data_color = texture2D( color_texture, vUv * repeat + offset);
+          vec3 data_color = texture2D( color_texture, vUv * repeat + offset).xyz;
 
         <% } else { %>
           vec3 data_color = vec3(0.0, 0.0, 0.0);

@@ -37,6 +37,23 @@ object DataStoreHandler extends DataStoreBackChannelHandler{
     }
   }
 
+  def requestDataLayerThumbnail(dataSet: DataSet, dataLayerName: String, width: Int, height: Int): Fox[String] = {
+    Logger.info("Thumbnail called for: " + dataSet.name + " Layer: " + dataLayerName)
+    findByServer(dataSet.dataStoreInfo.name).toFox.flatMap {
+      dataStore =>
+        val call = RESTCall(
+          "GET",
+          s"/data/datasets/${dataSet.name}/layers/$dataLayerName/thumbnail.json",
+          Map.empty,
+          Map("token" -> DataTokenService.oxalisToken, "width" -> width.toString, "height" -> height.toString),
+          Json.obj())
+        dataStore.request(call).flatMap {
+          json =>
+            (json \ "value").asOpt[String]
+        }
+    }
+  }
+
   def progressForImport(dataSet: DataSet): Fox[JsValue] = {
     Logger.info("Progress called for: " + dataSet.name)
     findByServer(dataSet.dataStoreInfo.name).toFox.flatMap {

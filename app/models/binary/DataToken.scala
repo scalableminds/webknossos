@@ -17,6 +17,7 @@ import play.api.libs.concurrent.Execution.Implicits._
 import oxalis.cleanup.CleanUpService
 import models.binary.DataTokenDAO
 import net.liftweb.common.Full
+import play.api.Logger
 
 case class DataToken(
                       _user: BSONObjectID,
@@ -43,6 +44,8 @@ object DataToken {
 
 object DataTokenService {
 
+  val oxalisToken = DataToken.generateRandomToken
+
   CleanUpService.register("deletion of expired dataTokens", DataToken.expirationTime millis){
     DataTokenDAO.removeExpiredTokens()(GlobalAccessContext).map(r => s"deleted ${r.updated}")
   }
@@ -55,6 +58,8 @@ object DataTokenService {
   def validate(token: String, dataSetName: String, dataLayerName: String) = {
     DataTokenDAO.findByToken(token)(GlobalAccessContext).futureBox.map {
       case Full(dataToken) if dataToken.isValidFor(dataSetName, dataLayerName) =>
+        true
+      case _ if token == oxalisToken =>
         true
       case _ =>
         false

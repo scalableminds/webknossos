@@ -115,13 +115,13 @@ object SkeletonTracing {
 
   val contentType = "skeletonTracing"
 
-  def from(settings: AnnotationSettings, dataSetName: String): SkeletonTracing =
+  def from(dataSetName: String, start: Point3D, settings: AnnotationSettings): SkeletonTracing =
     SkeletonTracing(
       dataSetName,
       Nil,
       System.currentTimeMillis,
       None,
-      Point3D(0, 0, 0),
+      start,
       None,
       settings = settings)
 
@@ -203,7 +203,7 @@ object SkeletonTracingService extends AnnotationContentService with CommonTracin
   }
 
   def createFrom(dataSet: DataSet)(implicit ctx: DBAccessContext): Fox[SkeletonTracing] =
-    createFrom(dataSet.name, Point3D(0, 0, 0), None, false)
+    createFrom(dataSet.name, dataSet.dataSource.map(_.boundingBox.center).getOrElse(Point3D(0, 0, 0)), None, false)
 
   def mergeWith(source: SkeletonTracing, target: SkeletonTracing)(implicit ctx: DBAccessContext): Fox[SkeletonTracing] = {
     target.mergeWith(source).flatMap { merged =>

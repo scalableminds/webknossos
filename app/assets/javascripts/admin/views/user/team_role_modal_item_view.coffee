@@ -9,12 +9,14 @@ class TeamRoleModalItem extends Backbone.Marionette.ItemView
   tagName : "div"
   className : "row-fluid"
   template : _.template("""
-    <div class="span8">
-      <label class="checkbox">
-        <input type="checkbox" value="<%= name %>"><%= name %></option>
-      </label>
+    <div class="col-sm-8">
+      <div class="checkbox">
+        <label>
+          <input type="checkbox" value="<%= name %>"><%= name %></option>
+        </label>
+      </div>
     </div>
-    <div class="span4">
+    <div class="col-sm-4">
       <div>
         <select name="role" class="input-medium">
           <option value="">Modify roles...</option>

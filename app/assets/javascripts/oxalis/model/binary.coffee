@@ -53,15 +53,6 @@ class Binary
     for planeId in constants.ALL_PLANES
       @planes.push( new Plane2D(planeId, @cube, @pullQueue, @TEXTURE_SIZE_P, @layer.bitDepth, @targetBitDepth, 32) )
 
-    if @layer.allowManipulation
-      # assume zoom step count to be at least 1
-      @contrastCurves = []
-      contrastCurve = new Uint8Array(256)
-      @contrastCurves[0] = new Uint8Array(256)
-
-      for i in [1..@cube.ZOOM_STEP_COUNT]
-        @contrastCurves[i] = contrastCurve
-
     @model.user.on({
       set4BitChanged : (is4Bit) => @pullQueue(is4Bit)
     })
@@ -74,20 +65,9 @@ class Binary
     @trigger "newColor", @color
 
 
-  updateContrastCurve : (brightness, contrast) ->
+  setColorSettings : (brightness, contrast) ->
 
-    unless @contrastCurves?
-      return
-
-    contrastCurve = @contrastCurves[1]
-    contrastCurveMag1 = @contrastCurves[0]
-
-    for i in [0..255] by 1
-      contrastCurve[i] = Math.max(Math.min((i + brightness) * contrast, 255), 0)
-      contrastCurveMag1[i] = Math.max(Math.min((i + brightness + 8) * contrast, 255), 0)
-
-    for plane in @planes
-      plane.updateContrastCurves(@contrastCurves)
+    @trigger "newColorSettings", brightness, contrast
 
 
   pingStop : ->
@@ -149,16 +129,11 @@ class Binary
   getByVerticesSync : (vertices) ->
     # A synchronized implementation of `get`. Cuz its faster.
 
-    contrastCurve = @contrastCurves[1]
-
     { buffer, accessedBuckets } = InterpolationCollector.bulkCollect(
       vertices
       @cube.getArbitraryCube()
     )
 
     @cube.accessBuckets(accessedBuckets)
-
-    for i in [0...buffer.length] by 1
-      buffer[i] = contrastCurve[buffer[i]]
 
     buffer

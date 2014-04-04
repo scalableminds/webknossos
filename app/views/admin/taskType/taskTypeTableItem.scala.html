@@ -14,15 +14,15 @@
   <td> @formatShortText(taskType.description) </td>
   <td>
     @taskType.settings.allowedModes.map{ mode =>
-      <span class="label"> @mode.capitalize </span>
+      <span class="label label-default"> @mode.capitalize </span>
     }
   </td>
   <td>
     @if(taskType.settings.branchPointsAllowed) {
-      <span class="label"> Branchpoints </span>
+      <span class="label label-default"> Branchpoints </span>
     }
     @if(taskType.settings.somaClickingAllowed) {
-      <span class="label"> Soma clicking </span>
+      <span class="label label-default"> Soma clicking </span>
     }
   </td>
   <td> @taskType.expectedTime </td>

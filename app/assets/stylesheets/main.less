@@ -1,20 +1,29 @@
-@import '_fonts.less';
-@import '_variables.less';
-@import 'libs/_theme.less';
-@import 'admin/_user.less';
-@import 'admin/_team.less';
-@import 'admin/_dataset.less';
-@import 'admin/_pagination.less';
-@import 'admin/_task.less';
-@import 'admin/_project.less';
-@import 'admin/_statistics.less';
+@import (inline) "../../../public/bower_components/bootstrap/dist/css/bootstrap.css";
+@import (inline) "../../../public/bower_components/seiyria-bootstrap-slider/css/bootstrap-slider.css";
+@import (inline) "../../../public/bower_components/c3/c3.css";
+@import "../../../public/bower_components/font-awesome/less/font-awesome.less";
+
+@import "_variables.less";
+@import "admin/_user.less";
+@import "admin/_team.less";
+@import "admin/_dataset.less";
+@import "admin/_pagination.less";
+@import "admin/_task.less";
+@import "admin/_project.less";
+@import "admin/_statistics.less";
+@import "_bootstrap_addons.less";
+@import "_spotlight.less";
+@import "_dashboard.less";
+@import "trace_view/_tracing_view.less";
+@import "trace_view/_left_menu.less";
+@import "trace_view/_right_menu.less";
 
 
 // ----------------------- MAIN STYLES
 body {
   //background: #000000;
   color: @mainColor;
-  font-family: 'Source Sans Pro', sans-serif;
+  font-family: "Source Sans Pro", sans-serif;
   font-weight: 400;
   font-size: 16px;
   -webkit-font-smoothing: antialised;
@@ -23,13 +32,17 @@ body:-webkit-full-screen {
   width: 100%;
   height: 100%;
 }
-.navbar .brand {
+.navbar .navbar-brand {
   background: url(/assets/images/oxalis-white.png) 15px center no-repeat;
   padding-left: 43px;
   font-weight: 400;
   margin-left: 0px;
+  padding-top: 10px;
+  padding-bottom: 10px;
+  height: @navbar-height;
+
 }
-.navbar span.brand:hover {
+.navbar span.navbar-brand:hover {
   color: #999;
 }
 
@@ -38,13 +51,9 @@ body:-webkit-full-screen {
   a [class*=" fa-"] {
     color: #fff;
   }
-}
-
-.navbar .version {
-  float: left;
-  font-size: 11px;
-  padding-top: 12px;
-  display: inline-block;
+  .dropdown-menu i {
+    color: #000;
+  }
 }
 
 .label {
@@ -54,10 +63,6 @@ body:-webkit-full-screen {
 .well form {
   margin-bottom: 0;
 }
-.well form .form-actions {
-  padding-bottom: 0;
-  margin-bottom: 0;
-}
 
 .container.wide {
   margin-left: 20px;
@@ -65,68 +70,9 @@ body:-webkit-full-screen {
   width: auto;
 }
 
-.input-fullwidth {
-  width: 100%;
-  -webkit-box-sizing: border-box;
-  -moz-box-sizing: border-box;
-  box-sizing: border-box;
-}
-
-.input-monospace {
-  font-family: Monaco, Consolas, "Lucida Console", "Courier New", monospace;
-}
-.divider-vertical {
-  display: inline-block;
-  vertical-align: middle;
-  height: 25px;
-  margin: 0 9px;
-  border-right: 1px solid #e5e5e5;
-}
-
-.form-actions fieldset {
-  display: inline-block;
-}
-
-.popover {
-  width: 400px;
-}
 
 .nowrap * {
   white-space: nowrap;
-}
-
-.table-double-striped > tbody {
-  & > tr:nth-child(odd) > td{
-    background-color: inherit;
-  }
-  & > tr:nth-child(even) > td {
-    background-color: #f9f9f9;
-  }
-}
-
-.table-double-striped {
- & > tbody:nth-child(odd) > tr > td{
-  background-color: #fff;
- }
- & > tbody:nth-child(even) > tr > td{
-  background-color: #f9f9f9;
- }
-}
-
-.table-nohead {
-  tbody tr:nth-child(1) {
-    td, th {
-      border-top: none;
-    }
-  }
-}
-
-.table .table {
-  margin-bottom: 0;
-}
-
-.table tr.highlighted > td {
-  background: #fcf8e3 !important;
 }
 
 .table-details {
@@ -181,15 +127,6 @@ body:-webkit-full-screen {
   border-left: 4px solid transparent;
 }
 
-@-webkit-keyframes rotation {
-  from {
-    -webkit-transform: rotate(0);
-  }
-  to {
-    -webkit-transform: rotate(360deg);
-  }
-}
-
 .fa-random {
   width: 14px;
   background-position: -217px -120px;
@@ -208,10 +145,6 @@ body:-webkit-full-screen {
 
 .inline {
   display: inline;
-}
-
-.rotating {
-  -webkit-animation: rotation 1s linear infinite;
 }
 
 #alert-container {
@@ -286,240 +219,34 @@ body:-webkit-full-screen {
   filter: alpha(opacity=50);
 }
 
-#container {
-  display: none;
-}
-
-#tracing {
-  margin-top: 10px;
-  position: relative;
-  display: inline-block;
-  vertical-align: top;
-}
-#render {
-  position: relative;
-}
-#render canvas {
-  z-index: 10;
-}
-#comments-tree {
-  display: inline-block;
-  vertical-align: top;
-  margin-top: 10px;
-  margin-left: 20px;
-}
-#tab-tree {
-  padding-left: 5px;
-  padding-right: 5px;
-  overflow-y: hidden;
-}
-#tab-comments {
-  padding-left: 5px;
-  padding-right: 5px;
-  width: 350px;
-  overflow-y: hidden;
-}
-#comment-container {
-  max-height: 2*@standardViewportWidth - 90px;
-  margin-top: 10px;
-  overflow-y: auto;
-  white-space: normal;
-}
-#abstractTreeViewer {
-  height : 2*@standardViewportWidth + 20px;
-  width: 350px;
-  float: left;
-  font-size: 0;
-}
-#tree-list {
-  height : 2*@standardViewportWidth - 90px;
-  margin-top: 10px;
-  overflow-y: auto;
-  overflow-x: hidden;
-
-  .fa-bull::before {
-    width: 14px;
-  }
-}
 #main-container {
-  margin-top: 40px
+  margin-top: @navbar-height;
 }
 #main {
   white-space: nowrap;
 }
-#inputcatchers {
-  position: absolute;
-  width: 100%;
-}
-.inputcatcher {
-  width: @standardViewportWidth;
-  height: @standardViewportWidth;
-  border-style:solid;
-  border-width: 2px;
-  z-index: 20;
-  box-sizing: border-box;
-  -moz-box-sizing: border-box;
-  float: left;
-}
-.active {
-  border-color: #ff0;
-}
-#planeyz {
-  margin-left: 20px;
-}
-#planexz {
-  margin-top: 20px;
-}
-#TDView {
-  margin-top: 20px;
-  margin-left: 20px;
-  position: relative;
-}
-#TDViewControls {
-  float: left;
-  height: 20px;
-  position: absolute;
-  top: 0px;
-  z-index: 30;
-}
-#TDViewControls .btn > span {
-  display: inline-block;
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  margin-right: 5px;
-}
-#overlay {
-  position: relative;
-  width: 280px;
-  padding: 10px;
-  display: inline-block;
-  vertical-align: top;
-  white-space: normal;
-}
-#overlay > * {
-  margin-bottom: 10px;
-}
-#overlay .nav-tabs > li > a {
-  padding-top: 4px;
-  padding-bottom: 4px;
-}
-#overlay .nav-tabs {
-  margin-top: 25px;
-  margin-bottom: 0;
-}
-#review-comments {
-  max-height: 500px;
-  overflow-y: auto;
-  padding: 10px;
-  border: 1px solid #ddd;
-  border-top: none;
-}
-
-#explorative-name-input {
-  padding-top: 0px;
-  padding-bottom: 0px;
-  margin-top: -1px;
-}
-#explorative-name-submit {
-  padding-top: 0px;
-  padding-bottom: 0px;
-  margin-top: -1px;
-}
-.explorative-name-column {
-  width: 200px;
-  max-width: 200px;
-  word-wrap: break-word;
-}
-#tree-name {
-  height: 20px;
-}
-
-#tree-edit {
-  height: 35px;
-  * {
-    vertical-align: top;
-  }
-  p {
-    width: 260px;
-    margin-top: 5px;
-    margin-bottom: 5px;
-  }
-  input {
-    width: 203px;
-  }
-}
-
-#toggle-explorative {
-
-  .fa-caret-down {
-    display: none;
-  }
-
-  &:not(.collapsed) {
-    .fa-caret-right {
-      display: none;
-    }
-    .fa-caret-down {
-      display: inline-block;
-    }
-  }
-}
-#tabbable-dashboard {
-  margin-top: 20px;
-  min-height: 400px;
-}
 
 #credits {
-  margin-top: 100px;
+  margin-top: 50px;
   border-radius: 0;
   color: #888;
 
   section {
     margin-top: 4em;
   }
-}
-.credit-logos {
-  width: 200px;
-  float: left;
-  margin: -40px 30px auto 10px;
 
   img {
-    margin-top: 15px;
+    margin-bottom: 15px;
   }
 }
+
 #help-modal-body {
   max-height: 800px;
-}
-#help-modal {
-  width: 1000px;
-  top: 50%;
-  margin: -400px 0 0 -500px;
-}
-
-.modal {
-  white-space: normal;
-}
-
-#issue-submit {
-
-  form {
-
-    margin: 0;
-
-    input[type=text],
-    textarea {
-      width: 600px;
-    }
-    textarea {
-      height: 8em;
-    }
-  }
 }
 
 #oxalis-header {
 
-  margin-bottom: 20px;
+  margin-bottom: 40px;
   margin-left: 34px;
   margin-top: 20px;
 
@@ -539,139 +266,10 @@ body:-webkit-full-screen {
   }
 }
 
-#dataset-list {
-
-  margin-top: 40px;
-
-  .dataset {
-  float: left;
-  clear: both;
-  margin-right: 20px;
-  margin-bottom: 20px;
-  padding: 10px;
-  min-width: 250px;
-  width: 940px;
-
-  header {
-    width: 250px;
-
-    h4, .stack-buttons {
-      text-align: center;
-    }
-  }
-
-  form {
-    display: inline;
-  }
-
-  .dataset-buttons {
-    margin: 10px;
-  }
-  .dataset-buttons a {
-    font-size: 0;
-    margin: 0 5px;
-
-    [class^="fa-"]::before,
-    [class*=" fa-"]::before {
-    font-size: 20px;
-    }
-  }
-  .dataset-buttons input[type=checkbox] {
-    margin: -7px 5px 0;
-  }
-  .dataset-buttons .busy .fa-retweet {
-    .rotating;
-  }
-  }
-
-  .dataset-description {
-  float: left;
-  }
-
-  .dataset-display {
-
-  text-align: center;
-  position: relative;
-  width: 250px;
-  float: left;
-
-  a, .loading-indicator {
-    display: block;
-    font-size: 80px;
-    text-align: center;
-    top: 0;
-    line-height: 200px;
-    position: absolute;
-    width: 100%;
-    text-decoration: none;
-  }
-
-  input[type="range"] {
-    width: 100%;
-  }
-  img {
-    display: block;
-    opacity: 0.8;
-    margin: 0 auto;
-  }
-  .stack-meta {
-    font-family: "Monaco", Consolas, "Courier New", monospace, sans-serif;
-    height: 50px;
-    overflow: auto;
-    resize: both;
-    text-align: left;
-    font-size: .8em;
-    line-height: 1.5em;
-  }
-  }
-}
-
-#task-selection-algoritm {
-
-  position: relative;
-  height: 100%;
-
-  .editor-wrapper {
-    position: relative;
-    background: #141414;
-    width: 100%;
-    height: 600px;
-    box-shadow: 0 0 10px #aaa;
-
-    #editor {
-      width: 100%;
-      height: 100%;
-    }
-  }
-  input[type=submit] {
-    margin: 10px 0;
-  }
-}
-
 #impressum{
   h5{
   margin-top: 2em;
   }
-}
-
-.key-arrow {
-  left: 170px !important;
-}
-
-.img-mpi-neuro{
-  width: 176%;
-  margin-left: -15px;
-  margin-top: -101px;
-}
-
-.graph.well svg {
-  max-width: 900px;
-}
-
-.overview-options {
-  float: right;
-  margin-right: 15px;
-  margin-top: 15px
 }
 
 @media screen and (max-width: 960px) {
@@ -685,18 +283,10 @@ body:-webkit-full-screen {
   margin-top: 30px;
 }
 
-#segmentation-slider {
-  p{
-    float:left;
-    padding: 3px;
-  }
-}
-
-
 // Fixing datGUI from Bootstrap
 .dg {
 
-  font: 11px 'Lucida Grande', sans-serif;
+  font: 11px "Lucida Grande", sans-serif;
 
   input, select, textarea {
     height: auto;
@@ -721,11 +311,6 @@ body:-webkit-full-screen {
   line-height: normal;
 }
 
-//override bootstrap
-.table .table {
-  background-color: inherit;
-}
-
 #merge {
     width: 280px;
     padding: 10px;
@@ -736,7 +321,10 @@ body:-webkit-full-screen {
     visibility: hidden;
 }
 
-
+//submit issue form
+textarea[name=description] {
+  height: 100px;
+}
 // make sure text and icons have space between them
 i {
   margin-right: 5px;

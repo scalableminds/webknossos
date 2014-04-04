@@ -4,7 +4,7 @@
 
 @main() {
 
-  <div id="dataset-list" class="container">
+  <div class="container">
     <div id="oxalis-header">
       <img src="@controllers.routes.Assets.at("images/oxalis.svg")">
       <div><p>Oxalis</p></div>
@@ -12,28 +12,23 @@
     @datasets.groupBy(_.owningTeam).map{ case (team, ds) =>
 
       @ds.map{ dataSet =>
-        <div class="dataset img-polaroid">
-          <header class="clearfix">
-            <h4>@dataSet.name</h4>
-            <div class="dataset-buttons">
-              <!--<a href="/levels/512c70a6e4b004e525ec5635?missionId=51f90698e4b02ee135a87368" class="edit-button">
-                <i class="fa fa-pencil"></i>
-              </a>-->
+        <div class="dataset panel panel-default">
+          <div class="panel-body row">
+            <div class="dataset-thumbnail col-sm-4">
+              <a href="@controllers.routes.DataSetController.view(dataSet.name)">
+              @*@dataSet.dataSource.flatMap(_.getByCategory("color")).map{ colorLayer =>*@
+                @*<img src="@controllers.routes.BinaryData.requestImage(dataSet.name, "color", 200, 200, 200, 200, 0, math.log(colorLayer.resolutions.max).toInt)" class="img-rounded"/>*@
+              @*}*@
+              @*}*@
+                <i class="fa fa-play"></i>
+              </a>
             </div>
-          </header>
-          <div class="dataset-display clearfix" style="height: 220px;">
-            @*@dataSet.dataSource.flatMap(_.getByCategory("color")).map{ colorLayer =>*@
-              @*<img src="@controllers.routes.BinaryData.requestImage(dataSet.name, "color", 200, 200, 200, 200, 0, math.log(colorLayer.resolutions.max).toInt)" />*@
-            @*}*@
-            <a href="@controllers.routes.DataSetController.view(dataSet.name)">
-              <i class="fa fa-play"></i>
-            </a>
-          </div>
-            <!--FIXME-->
-          <div class="dataset-description clearfix">
-            <h3>@team</h3>
-            <h4>Original data and segmentation</h4>
-            <p>@Html(dataSet.description getOrElse "")</p>
+            <div class="dataset-description col-sm-8">
+              <h3>@team</h3>
+              <h4>Original data and segmentation</h4>
+              <p><h4>Dataset: @dataSet.name</h4></p>
+              <p>@Html(dataSet.description getOrElse "")</p>
+            </div>
           </div>
         </div>
       }

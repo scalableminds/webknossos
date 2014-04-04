@@ -17,7 +17,9 @@ class UserListView extends Backbone.Marionette.CompositeView
       <table class="table table-striped">
         <thead>
           <tr>
-            <th><input type="checkbox" class="select-all-rows"> </th>
+            <th>
+              <input type="checkbox" class="select-all-rows">
+            </th>
             <th>Last name</th>
             <th>First name</th>
             <th>Email</th>
@@ -30,17 +32,19 @@ class UserListView extends Backbone.Marionette.CompositeView
         <tbody></tbody>
       </table>
 
-      <div class="form-actions navbar-fixed-bottom">
-        <div class="btn-group">
-          <a class="btn" id="team-role-modal">
-            <i class="fa fa-group"></i>Edit Teams
-          </a>
-          <a class="btn" id="bulk-delete-modal">
-            <i class="fa fa-trash-o"></i>Delete
-          </a>
-          <a class="btn" id="experience-modal">
-            <i class="fa fa-trophy"></i>Change Experience
-          </a>
+      <div class="navbar navbar-default navbar-fixed-bottom">
+        <div class="navbar-form">
+          <div class="btn-group">
+            <a class="btn btn-default" id="team-role-modal">
+              <i class="fa fa-group"></i>Edit Teams
+            </a>
+            <a class="btn btn-default" id="bulk-delete-modal">
+              <i class="fa fa-trash-o"></i>Delete
+            </a>
+            <a class="btn btn-default" id="experience-modal">
+              <i class="fa fa-trophy"></i>Change Experience
+            </a>
+          </div>
         </div>
       </div>
     </form>
@@ -106,8 +110,7 @@ class UserListView extends Backbone.Marionette.CompositeView
       Toast.error("No user is selected.")
 
 
-  close : ->
+  onClose : ->
 
     @modalView?.close()
-    super()
 

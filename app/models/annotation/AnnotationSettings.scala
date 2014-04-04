@@ -6,7 +6,7 @@ import models.basics.BasicSettings
 
 import AnnotationSettings._
 
-case class AnnotationSettings(allowedModes: List[String] = ALL_MODES,
+case class AnnotationSettings(allowedModes: List[String] = SKELETON_MODES,
                               branchPointsAllowed: Boolean = true,
                               somaClickingAllowed: Boolean = true
                              )

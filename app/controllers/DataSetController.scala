@@ -1,7 +1,7 @@
 package controllers
 
 import oxalis.security.Secured
-import models.binary.{DataSet, DataSetService, DataSetDAO}
+import models.binary._
 import play.api.i18n.Messages
 import views.html
 import play.api.libs.concurrent.Execution.Implicits._
@@ -14,6 +14,9 @@ import braingames.util._
 import play.api.libs.json.JsSuccess
 import braingames.util.Finished
 import braingames.util.InProgress
+import braingames.reactivemongo.DBAccessContext
+import braingames.binary.models.DataLayer
+import play.api.libs.json.JsSuccess
 
 /**
  * Company: scalableminds
@@ -21,6 +24,7 @@ import braingames.util.InProgress
  * Date: 03.08.13
  * Time: 17:58
  */
+
 object DataSetController extends Controller with Secured {
 
   def view(dataSetName: String) = UserAwareAction.async {
@@ -59,7 +63,9 @@ object DataSetController extends Controller with Secured {
   }
 
   def read(dataSetName: String) = UserAwareAction.async{ implicit request =>
-    DataSetDAO.findOneBySourceName(dataSetName).map { dataSet =>
+    for{
+      dataSet <- DataSetDAO.findOneBySourceName(dataSetName) ?~> Messages("dataSet.notFound")
+    } yield {
       Ok(DataSet.dataSetPublicWrites(request.userOpt).writes(dataSet))
     }
   }

@@ -15,6 +15,8 @@ import play.modules.reactivemongo.json.BSONFormats._
 import reactivemongo.api.indexes.{IndexType, Index}
 import play.api.libs.concurrent.Execution.Implicits._
 import oxalis.cleanup.CleanUpService
+import models.binary.DataTokenDAO
+import net.liftweb.common.Full
 
 case class DataToken(
                       _user: BSONObjectID,
@@ -48,6 +50,15 @@ object DataTokenService {
   def generate(user: User, dataSetName: String, dataLayerName: String)(implicit ctx: DBAccessContext) = {
     val token = DataToken(user._id, dataSetName, dataLayerName)
     DataTokenDAO.insert(token).map(_ => token)
+  }
+
+  def validate(token: String, dataSetName: String, dataLayerName: String) = {
+    DataTokenDAO.findByToken(token)(GlobalAccessContext).futureBox.map {
+      case Full(dataToken) if dataToken.isValidFor(dataSetName, dataLayerName) =>
+        true
+      case _ =>
+        false
+    }
   }
 }
 

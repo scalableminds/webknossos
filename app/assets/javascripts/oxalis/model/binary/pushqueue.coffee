@@ -134,11 +134,15 @@ class PushQueue
 
     cubeSize = 1 << @cube.BUCKET_SIZE_P
 
+    params = @getParams
+
+    params.token = @layer.token
+
     if @socket? then @socket else @socket = new ArrayBufferSocket(
       senders : [
         new ArrayBufferSocket.XmlHttpRequest(
-          "#{@layer.url}/data/datasets/#{@dataSetName}/layers/#{@layer.name}/data?token=#{@layer.token}",
-          @getParams,
+          "#{@layer.url}/data/datasets/#{@dataSetName}/layers/#{@layer.name}/data",
+          params,
           "PUT", "gzip"
         )
       ]

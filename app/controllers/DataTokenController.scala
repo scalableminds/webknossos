@@ -18,10 +18,10 @@ import play.api.libs.json.Json
 
 object DataTokenController extends Controller with Secured{
   def validate(token: String, dataSetName: String, dataLayerName: String) = Action.async{ implicit request =>
-    DataTokenDAO.findByToken(token)(GlobalAccessContext).futureBox.map{
-      case Full(dataToken) if dataToken.isValidFor(dataSetName, dataLayerName) =>
+    DataTokenService.validate(token, dataSetName, dataLayerName).map{
+      case true =>
         Ok
-      case _ =>
+      case false =>
         Forbidden
     }
   }

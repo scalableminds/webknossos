@@ -58,11 +58,12 @@ POST          /api/datasets/:dataSetName/teams                     controllers.D
 POST          /api/datasets/:dataSetName/import                    controllers.DataSetController.importDataSet(dataSetName: String)
 GET           /api/datasets/:dataSetName/import                    controllers.DataSetController.importProgress(dataSetName: String)
 
-POST          /api/datastores/:name/datasources                    controllers.DataStoreController.updateAll(name: String, key: String)
-POST          /api/datastores/:name/datasources/:dataSource        controllers.DataStoreController.updateOne(name: String, dataSource: String, key: String)
-GET           /api/datastores/:name/backchannel                    controllers.DataStoreController.backChannel(name: String, key: String)
-GET           /api/datastore                                       controllers.DataStoreController.show(key: String)
-GET           /api/datastores/:name/ping                           controllers.DataStoreController.ping(name: String, key: String)
+POST          /api/datastores/:name/datasources                         controllers.DataStoreController.updateAll(name: String)
+POST          /api/datastores/:name/datasources/:dataSet                controllers.DataStoreController.updateOne(name: String, dataSet: String)
+GET           /api/datastores/:name/datasources/:dataSet/layers/:layer  controllers.DataStoreController.layerRead(name: String, dataSet: String, layer: String)
+GET           /api/datastores/:name/backchannel                         controllers.DataStoreController.backChannel(name: String, key: String)
+GET           /api/datastore                                            controllers.DataStoreController.show()
+
 GET           /dataToken/validate                                  controllers.DataTokenController.validate(token: String, dataSetName: String, dataLayerName: String)
 GET           /dataToken/generate                                  controllers.DataTokenController.generate(dataSetName: String, dataLayerName: String)
 ->            /data/                                               com.scalableminds.datastore.Routes

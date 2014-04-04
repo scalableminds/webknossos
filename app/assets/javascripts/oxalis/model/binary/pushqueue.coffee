@@ -11,7 +11,7 @@ class PushQueue
   THROTTLE_TIME : 2000
 
 
-  constructor : (@dataSetName, @cube, @dataLayerName, @tracingId, version, @sendData = true) ->
+  constructor : (@dataSetName, @cube, @layer, @tracingId, version, @sendData = true) ->
 
     @queue = []
     @batchCount = 0
@@ -137,7 +137,7 @@ class PushQueue
     if @socket? then @socket else @socket = new ArrayBufferSocket(
       senders : [
         new ArrayBufferSocket.XmlHttpRequest(
-          "/datasets/#{@dataSetName}/layers/#{@dataLayerName}/data",
+          "#{@layer.url}/data/datasets/#{@dataSetName}/layers/#{@layer.name}/data?token=#{@layer.token}",
           @getParams,
           "PUT", "gzip"
         )

@@ -81,7 +81,14 @@ class Model
           url : "/user/configuration"
           dataType : "json"
         ).pipe(
-          (user) => @initializeWithData(controlMode, state, tracingId, tracingType, tracing, user)
+          (user) =>
+
+            dataSet = tracing.content.dataSet
+            $.when(
+              @getDataTokens(dataSet.dataStore.url, dataSet.name, dataSet.dataLayers)...
+            ).pipe =>
+              @initializeWithData(controlMode, state, tracingId, tracingType, tracing, user)
+
           -> Toast.error("Ooops. We couldn't communicate with our mother ship. Please try to reload this page.")
         )
 
@@ -172,6 +179,17 @@ class Model
 
     {"restrictions": tracing.restrictions, "settings": tracing.content.settings}
 
+
+  getDataTokens : (dataStoreUrl, dataSetName, layers) ->
+
+    for layer in layers
+      do (layer) ->
+        Request.send(
+          url : "#{dataStoreUrl}/dataToken/generate?dataSetName=#{dataSetName}&dataLayerName=#{layer.name}"
+          dataType : "json"
+        ).pipe (dataStore) ->
+          layer.token = dataStore.token
+          layer.url   = dataStoreUrl
 
 
   getColorBinaries : ->

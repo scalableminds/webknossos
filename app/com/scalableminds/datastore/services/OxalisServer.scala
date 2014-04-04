@@ -23,8 +23,13 @@ import net.liftweb.common.{Failure, Full}
 
 class OxalisMessageHandler extends JsonMessageHandler {
 
-  def requestFromRESTCall[T](call: RESTCall) =
-    FakeRequest(call.method, call.path, FakeHeaders(call.headers.toList), AnyContentAsJson(call.body))
+  def queryStringToString(queryStrings: Map[String, String]) =
+    queryStrings.map( t => t._1 + "=" + t._2).mkString("?", "&", "")
+
+  def requestFromRESTCall[T](call: RESTCall) = {
+    val path = call.path + queryStringToString(call.queryStrings)
+    FakeRequest(call.method, path, FakeHeaders(call.headers.toList), AnyContentAsJson(call.body))
+  }
 
   def embedInRESTResponse(call: RESTCall, response: SimpleResult)(implicit codec: Codec): Future[Array[Byte]] = {
 

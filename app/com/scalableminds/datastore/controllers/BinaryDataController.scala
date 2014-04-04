@@ -25,6 +25,11 @@ import com.scalableminds.datastore.models.DataSourceDAO
 import play.api.mvc.BodyParsers.parse
 import play.api.libs.concurrent.Execution.Implicits._
 import com.scalableminds.datastore.DataStorePlugin
+import java.io.File
+import play.api.libs.json.Json
+import org.apache.commons.io.FileUtils
+import org.apache.commons.io.IOUtils
+import org.apache.commons.codec.binary.Base64
 
 object BinaryDataController extends BinaryDataReadController with BinaryDataWriteController
 
@@ -98,7 +103,12 @@ trait BinaryDataReadController extends BinaryDataCommonController {
                           z: Int,
                           resolution: Int) = TokenSecuredAction(dataSetName, dataLayerName).async(parse.raw) {
     implicit request =>
-      respondWithSpriteSheet(dataSetName, dataLayerName, cubeSize, cubeSize, cubeSize, imagesPerRow, x, y, z, resolution)
+      for{
+        image <- respondWithSpriteSheet(dataSetName, dataLayerName, cubeSize, cubeSize, cubeSize, imagesPerRow, x, y, z, resolution)
+      } yield {
+        Ok.sendFile(image, true, _ => "test.jpg").withHeaders(
+          CONTENT_TYPE -> contentTypeJpeg)
+      }
   }
 
   def requestImage(
@@ -111,7 +121,79 @@ trait BinaryDataReadController extends BinaryDataCommonController {
                     z: Int,
                     resolution: Int) = TokenSecuredAction(dataSetName, dataLayerName).async(parse.raw) {
     implicit request =>
-      respondWithImage(dataSetName, dataLayerName, width, height, x, y, z, resolution)
+      for{
+        image <- respondWithImage(dataSetName, dataLayerName, width, height, x, y, z, resolution)
+      } yield {
+        Ok.sendFile(image, true, _ => "test.jpg").withHeaders(
+          CONTENT_TYPE -> contentTypeJpeg)
+      }
+  }
+
+  def contentTypeJpeg = play.api.libs.MimeTypes.forExtension("jpeg").getOrElse(play.api.http.ContentTypes.BINARY)
+
+  def requestImageThumbnailJson(
+                             dataSetName: String,
+                             dataLayerName: String,
+                             width: Int,
+                             height: Int) = TokenSecuredAction(dataSetName, dataLayerName).async(parse.raw) {
+    implicit request =>
+
+      for {
+        thumbnail <- requestImageThumbnail(dataSetName, dataLayerName, width, height)
+      } yield {
+        Ok(Json.obj(
+          "mimeType" -> contentTypeJpeg,
+          "value" -> Base64.encodeBase64String(FileUtils.readFileToByteArray(thumbnail))))
+      }
+  }
+
+  def requestImageThumbnailJpeg(
+                                 dataSetName: String,
+                                 dataLayerName: String,
+                                 width: Int,
+                                 height: Int) = TokenSecuredAction(dataSetName, dataLayerName).async(parse.raw) {
+    implicit request =>
+
+      for {
+        thumbnail <- requestImageThumbnail(dataSetName, dataLayerName, width, height)
+      } yield {
+        Ok.sendFile(thumbnail, true, _ => "thumbnail.jpg").withHeaders(
+          CONTENT_TYPE -> contentTypeJpeg)
+      }
+  }
+
+  private def requestImageThumbnail(
+                    dataSetName: String,
+                    dataLayerName: String,
+                    width: Int,
+                    height: Int) = {
+
+      def bestResolution(dataLayer: DataLayer): Int = {
+        val wr = math.floor(math.log(dataLayer.boundingBox.width.toDouble / width) / math.log(2)).toInt
+        val hr = math.floor(math.log(dataLayer.boundingBox.height.toDouble / height) / math.log(2)).toInt
+
+        math.max(0, List(wr, hr, (dataLayer.resolutions.size-1)).min)
+      }
+
+      def goodThumbnailParameters(dataLayer: DataLayer) = {
+        // Parameters that seem to be working good enough
+        val center = dataLayer.boundingBox.center
+        val resolution = bestResolution(dataLayer)
+        val x = center.x / math.pow(2, resolution) - width / 2
+        val y = center.y / math.pow(2, resolution) - height / 2
+        val z = center.z / math.pow(2, resolution)
+        (x.toInt, y.toInt, z.toInt, resolution)
+      }
+
+      for{
+        usableDataSource <- DataSourceDAO.findUsableByName(dataSetName) ?~> Messages("dataSource.unavailable")
+        dataSource = usableDataSource.dataSource
+        dataLayer <- getDataLayer(dataSource, dataLayerName)
+        (x,y,z, resolution) = goodThumbnailParameters(dataLayer)
+        image <- respondWithImage(dataSetName, dataLayerName, width, height, x, y, z, resolution)
+      } yield {
+        image
+      }
   }
 
   private def createDataRequestCollection(
@@ -181,7 +263,7 @@ trait BinaryDataReadController extends BinaryDataCommonController {
                               x: Int,
                               y: Int,
                               z: Int,
-                              resolution: Int): Future[SimpleResult] = {
+                              resolution: Int): Fox[File] = {
     val settings = DataRequestSettings(useHalfByte = false, skipInterpolation = false)
     for {
       usableDataSource <- DataSourceDAO.findUsableByName(dataSetName) ?~> Messages("dataSource.unavailable")
@@ -192,9 +274,7 @@ trait BinaryDataReadController extends BinaryDataCommonController {
       spriteSheet <- ImageCreator.spriteSheetFor(data, params) ?~> Messages("image.create.failed")
       firstSheet <- spriteSheet.pages.headOption ?~> "Couldn'T create spritesheet"
     } yield {
-      val file = new JPEGWriter().writeToFile(firstSheet.image)
-      Ok.sendFile(file, true, _ => "test.jpg").withHeaders(
-        CONTENT_TYPE -> "image/jpeg")
+      new JPEGWriter().writeToFile(firstSheet.image)
     }
   }
 

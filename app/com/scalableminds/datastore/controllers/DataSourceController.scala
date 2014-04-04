@@ -12,6 +12,7 @@ import play.api.libs.concurrent.Execution.Implicits._
 import scala.concurrent.Future
 import play.api.i18n.Messages
 import com.scalableminds.datastore.DataStorePlugin
+import com.scalableminds.datastore.models.DataSourceDAO
 
 object DataSourceController extends Controller with ExtendedController {
   def progressToResult(progress: ProgressState) = progress match {
@@ -48,6 +49,7 @@ object DataSourceController extends Controller with ExtendedController {
         startedImport <- DataStorePlugin.binaryDataService.importDataSource(dataSourceName)
       } yield {
         startedImport.map{ usableDataSource =>
+          DataSourceDAO.updateDataSource(usableDataSource)
           DataStorePlugin.binaryDataService.oxalisServer.reportDataSouce(usableDataSource)
         }
         progressToResult(InProgress(0))

@@ -1,4 +1,5 @@
 ### define
+app : app
 ../geometries/plane : Plane
 ../geometries/skeleton : Skeleton
 ../geometries/cube : Cube
@@ -151,7 +152,7 @@ class SceneController
 
     # convert nm to voxel
     for i in constants.ALL_PLANES
-      @planeShift[i] = value * @model.scaleInfo.voxelPerNM[i]
+      @planeShift[i] = value * app.scaleInfo.voxelPerNM[i]
 
 
   setInterpolation : (value) =>

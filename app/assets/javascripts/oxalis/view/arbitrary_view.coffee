@@ -1,4 +1,5 @@
 ### define
+app : app
 libs/event_mixin : EventMixin
 three : THREE
 stats : Stats
@@ -23,7 +24,7 @@ class ArbitraryView
   camera : null
   cameraPosition : null
 
-  constructor : (canvas, @dataCam, @stats, @view, scaleInfo, width) ->
+  constructor : (canvas, @dataCam, @stats, @view, width) ->
 
     _.extend(this, new EventMixin())
 
@@ -51,7 +52,7 @@ class ArbitraryView
 
     @group = new THREE.Object3D
     # The dimension(s) with the highest resolution will not be distorted
-    @group.scale = new THREE.Vector3(scaleInfo.nmPerVoxel...)
+    @group.scale = new THREE.Vector3(app.scaleInfo.nmPerVoxel...)
     # Add scene to the group, all Geometries are than added to group
     @scene.add(@group)
     @group.add(camera)

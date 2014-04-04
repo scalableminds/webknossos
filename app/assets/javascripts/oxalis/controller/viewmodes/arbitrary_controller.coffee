@@ -1,4 +1,5 @@
 ### define
+app : app
 jquery : $
 underscore : _
 libs/event_mixin : EventMixin
@@ -54,7 +55,7 @@ class ArbitraryController
     @canvas = canvas = $("#render-canvas")
 
     @cam = @model.flycam3d
-    @arbitraryView = new ArbitraryView(canvas, @cam, stats, @view, @model.scaleInfo, @WIDTH)
+    @arbitraryView = new ArbitraryView(canvas, @cam, stats, @view, @WIDTH)
 
     @plane = new ArbitraryPlane(@cam, @model, @WIDTH)
     @arbitraryView.addGeometry @plane
@@ -109,7 +110,7 @@ class ArbitraryController
 
     getVoxelOffset  = (timeFactor) =>
 
-      return @model.user.get("moveValue3d") * timeFactor / @model.scaleInfo.baseVoxel / constants.FPS
+      return @model.user.get("moveValue3d") * timeFactor / app.scaleInfo.baseVoxel / constants.FPS
 
 
     @input.keyboard = new Input.Keyboard(
@@ -311,7 +312,7 @@ class ArbitraryController
           activeNode.pos[1] - parent.pos[1],
           activeNode.pos[2] - parent.pos[2]])
         if direction[0] or direction[1] or direction[2]
-          @cam.setDirection( @model.scaleInfo.voxelToNm( direction ))
+          @cam.setDirection( app.scaleInfo.voxelToNm( direction ))
           break
         parent = parent.parent
 

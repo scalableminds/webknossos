@@ -5,6 +5,7 @@ backbone.subviews : subviews
 underscore : _
 ./category_views/controls_category_view : ControlsCategoryView
 ./category_views/viewport_category_view : ViewportCategoryView
+./category_views/view_category_view : ViewCategoryView
 ###
 
 class UserSettingsView extends Backbone.Marionette.ItemView
@@ -26,13 +27,17 @@ class UserSettingsView extends Backbone.Marionette.ItemView
 
   subviewCreators :
 
-    "category-controls" : ->
+    "controls-category" : ->
 
       return new ControlsCategoryView({ @model })
 
-    "viewport-controls" : ->
+    "viewport-category" : ->
 
       return new ViewportCategoryView({ @model })
+
+    "view-category" : ->
+
+      return new ViewCategoryView({ @model })
 
 
   initialize : ({ @_model }) ->

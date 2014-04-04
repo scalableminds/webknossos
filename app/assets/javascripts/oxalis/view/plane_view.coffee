@@ -1,4 +1,5 @@
 ### define
+app : app
 jquery : $
 tween : TWEEN_LIB
 ../model/dimensions : Dimensions
@@ -55,7 +56,7 @@ class PlaneView
     # scene.scale does not have an effect.
     @group = new THREE.Object3D
     # The dimension(s) with the highest resolution will not be distorted
-    @group.scale = @model.scaleInfo.getNmPerVoxelVector()
+    @group.scale = app.scaleInfo.getNmPerVoxelVector()
     # Add scene to the group, all Geometries are than added to group
     @scene.add(@group)
 

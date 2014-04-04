@@ -1,4 +1,5 @@
 ### define
+app : app
 jquery : $
 underscore : _
 libs/event_mixin : EventMixin
@@ -48,7 +49,7 @@ class PlaneController
 
     @flycam = @model.flycam
 
-    @oldNmPos = @model.scaleInfo.voxelToNm( @flycam.getPosition() )
+    @oldNmPos = app.scaleInfo.voxelToNm( @flycam.getPosition() )
 
     @planeView = new PlaneView(@model, @flycam, @view, stats)
 
@@ -134,7 +135,7 @@ class PlaneController
   initTrackballControls : ->
 
     view = $("#TDView")[0]
-    pos = @model.scaleInfo.voxelToNm(@flycam.getPosition())
+    pos = app.scaleInfo.voxelToNm(@flycam.getPosition())
     @controls = new THREE.TrackballControls(
       @planeView.getCameras()[constants.TDView],
       view,
@@ -145,12 +146,12 @@ class PlaneController
     @controls.noPan = true
 
     @controls.target.set(
-      @model.scaleInfo.voxelToNm(@flycam.getPosition())...)
+      app.scaleInfo.voxelToNm(@flycam.getPosition())...)
 
     @flycam.on
       positionChanged : (position) =>
 
-        nmPosition = @model.scaleInfo.voxelToNm(position)
+        nmPosition = app.scaleInfo.voxelToNm(position)
 
         @controls.target.set( nmPosition... )
         @controls.update()
@@ -180,7 +181,7 @@ class PlaneController
 
     getMoveValue  = (timeFactor) =>
       if @activeViewport in [0..2]
-        return @model.user.get("moveValue") * timeFactor / @model.scaleInfo.baseVoxel / constants.FPS
+        return @model.user.get("moveValue") * timeFactor / app.scaleInfo.baseVoxel / constants.FPS
       else
         return constants.TDView_MOVE_SPEED * timeFactor / constants.FPS
 
@@ -415,7 +416,7 @@ class PlaneController
     curGlobalPos  = @flycam.getPosition()
     zoomFactor    = @flycam.getPlaneScalingFactor()
     scaleFactor   = @planeView.scaleFactor
-    planeRatio    = @model.scaleInfo.baseVoxelFactors
+    planeRatio    = app.scaleInfo.baseVoxelFactors
     position = switch @activeViewport
       when constants.PLANE_XY
         [ curGlobalPos[0] - (constants.VIEWPORT_WIDTH * scaleFactor / 2 - clickPos.x) / scaleFactor * planeRatio[0] * zoomFactor,

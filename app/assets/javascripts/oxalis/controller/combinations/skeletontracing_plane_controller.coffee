@@ -1,4 +1,5 @@
 ### define
+app : app
 underscore : _
 ../viewmodes/plane_controller : PlaneController
 ../../constants : constants
@@ -98,7 +99,7 @@ class SkeletonTracingPlaneController extends PlaneController
     raycaster = projector.pickingRay(vector, camera)
     raycaster.ray.threshold = @model.flycam.getRayThreshold(plane)
 
-    raycaster.ray.__scalingFactors = @model.scaleInfo.nmPerVoxel
+    raycaster.ray.__scalingFactors = app.scaleInfo.nmPerVoxel
 
     # identify clicked object
     intersects = raycaster.intersectObjects(@sceneController.skeleton.getAllNodes())

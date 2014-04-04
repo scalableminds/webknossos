@@ -1,4 +1,5 @@
 ### define
+app : app
 jquery : $
 underscore : _
 backbone : backbone
@@ -30,7 +31,7 @@ class SkeletonTracing
   firstEdgeDirection : null
   currentHue : null
 
-  constructor : (tracing, @scaleInfo, @flycam, @flycam3d, @user) ->
+  constructor : (tracing, @flycam, @flycam3d, @user) ->
 
     _.extend(this, new EventMixin())
 
@@ -206,7 +207,7 @@ class SkeletonTracing
 
     if @ensureDirection(position)
 
-      radius = 10 * @scaleInfo.baseVoxel
+      radius = 10 * app.scaleInfo.baseVoxel
       if @activeNode then radius = @activeNode.radius
 
       metaInfo =
@@ -247,8 +248,8 @@ class SkeletonTracing
 
     if (!@branchPointsAllowed and @activeTree.nodes.length == 2 and
         @firstEdgeDirection and @activeTree.treeId == @trees[0].treeId)
-      sourceNodeNm = @scaleInfo.voxelToNm(@activeTree.nodes[1].pos)
-      targetNodeNm = @scaleInfo.voxelToNm(position)
+      sourceNodeNm = app.scaleInfo.voxelToNm(@activeTree.nodes[1].pos)
+      targetNodeNm = app.scaleInfo.voxelToNm(position)
       secondEdgeDirection = [targetNodeNm[0] - sourceNodeNm[0],
                              targetNodeNm[1] - sourceNodeNm[1],
                              targetNodeNm[2] - sourceNodeNm[2]]
@@ -280,7 +281,7 @@ class SkeletonTracing
 
   getActiveNodeRadius : ->
 
-    if @activeNode then @activeNode.radius else 10 * @scaleInfo.baseVoxel
+    if @activeNode then @activeNode.radius else 10 * app.scaleInfo.baseVoxel
 
 
   getActiveTreeId : ->

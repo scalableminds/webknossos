@@ -73,7 +73,7 @@ class DatsetActionsView extends Marionette.ItemView
       width = ArbitraryController::WIDTH
 
     # unit is nm
-    return zoom * width * @_model.scaleInfo.baseVoxel
+    return zoom * width * app.scaleInfo.baseVoxel
 
 
   onClose : ->

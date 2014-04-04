@@ -1,4 +1,5 @@
 ### define
+app : app
 three : THREE
 ./abstract_material_factory : AbstractMaterialFactory
 ###
@@ -16,7 +17,7 @@ class ParticleMaterialFactory extends AbstractMaterialFactory
         value : @model.flycam.getPlaneScalingFactor()
       baseVoxel :
         type : "f"
-        value : @model.scaleInfo.baseVoxel
+        value : app.scaleInfo.baseVoxel
       particleSize :
         type : "f"
         value : @model.user.get("particleSize")

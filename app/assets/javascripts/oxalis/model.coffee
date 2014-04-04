@@ -93,7 +93,7 @@ class Model
             console.log "user", @user
 
             dataset = tracing.content.dataSet
-            @scaleInfo = new ScaleInfo(dataset.scale)
+            app.scaleInfo = new ScaleInfo(dataset.scale)
 
             if (bb = tracing.content.boundingBox)?
                 @boundingBox = {
@@ -125,7 +125,7 @@ class Model
               Toast.error("No data available! Something seems to be wrong with the dataset.")
             @setDefaultBinaryColors()
 
-            @flycam = new Flycam2d(constants.PLANE_WIDTH, @scaleInfo, zoomStepCount, this)
+            @flycam = new Flycam2d(constants.PLANE_WIDTH, zoomStepCount, this)
             @flycam3d = new Flycam3d(constants.DISTANCE_3D, dataset.scale)
 
             @flycam3d.on
@@ -152,7 +152,7 @@ class Model
                 @volumeTracing = new VolumeTracing(tracing, @flycam, @getSegmentationBinary().cube)
 
               else
-                @skeletonTracing = new SkeletonTracing(tracing, @scaleInfo, @flycam, @flycam3d, @user)
+                @skeletonTracing = new SkeletonTracing(tracing, @flycam, @flycam3d, @user)
 
             @restrictions = tracing.restrictions
 

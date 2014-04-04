@@ -22,8 +22,8 @@ class View
 
 
     # disable loader, show oxalis
-    $("#loader").css("display" : "none")
-    $("#container").css("display" : "inline")
+    $("#loader").hide()
+    $("#container").removeClass("hide")
 
 
   toggleTheme : ->
@@ -82,10 +82,13 @@ class View
       <tr><td>Shift + Left Mouse drag / Right Mouse drag</td><td>Remove voxels from cell</td><td>Left mouse click</td><td>Set active cell</td></tr>
       <tr><td>C</td><td>Create new cell</td><td></td><td></td></tr>'
 
-    html = '''<div class="modal-header"><button type="button" class="close" data-dismiss="modal">x</button>
-            <h3>keyboard commands</h3></div>
-            <div class="modal-body" id="help-modal-body"><p>
-            <table class="table table-condensed table-nohead table-bordered"><tbody>'''
+    html = """<div class="modal-dialog modal-lg">
+                <div class="modal-content">
+                  <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal">&times;</button>
+                    <h3>Keyboard Shortcuts</h3></div>
+                    <div class="modal-body" id="help-modal-body"><p>
+                    <table class="table table-condensed table-nohead table-bordered"><tbody>"""
 
     html += generalKeys
     if mode == constants.MODE_PLANE_TRACING
@@ -95,14 +98,16 @@ class View
     else if mode == constants.MODE_VOLUME
       html += volumeKeys
 
-    html += '''</tbody>
+    html += """</tbody>
             </table>
             <br>
             <p>All other options like moving speed, clipping distance and particle size can be adjusted in the options located to the left.
             <br>Select the different categories to open/close them.
             Please report any issues.</p>
             </p></div><div class="modal-footer">
-            <a href="#" class="btn" data-dismiss="modal">Close</a></div>'''
+            <a href="#" class="btn btn-default" data-dismiss="modal">Close</a></div>
+            </div>
+            </div>"""
 
     $("#help-modal").html(html)
 

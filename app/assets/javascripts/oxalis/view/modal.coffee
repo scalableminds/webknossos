@@ -9,13 +9,22 @@ Modal =
   show : (text, buttons) ->
     # buttons: [{id:..., label:..., callback:...}, ...]
 
-    html =  "<div class=\"modal-body\"><p>" + text + "</p></div>"
+    html =  """
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+          <h4 class="modal-title" id="myModalLabel">Ups...</h4>
+        </div>
+        <div class=\"modal-body\">
+          <p>#{text}</p>
+        </div>"""
 
     html += "<div class=\"modal-footer\">"
     for button in buttons
-      html += "<a href=\"#\" id=\"" + button.id + "\" class=\"btn\">" +
+      html += "<a href=\"#\" id=\"" + button.id + "\" class=\"btn btn-default\">" +
                     button.label + "</a>"
-    html += "</div>"
+    html += "</div></div></div>"
 
     $("#modal").html(html)
 

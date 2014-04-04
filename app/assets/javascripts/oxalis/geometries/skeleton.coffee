@@ -48,7 +48,7 @@ class Skeleton
             @loadSkeletonFromModel(trees, finishedDeferred))
           @flycam.update())
         @flycam.update()
-      newActiveTreeColor : (oldTreeId) => @updateActiveTreeColor(oldTreeId)
+      newTreeColor : (treeId) => @updateTreeColor(treeId)
 
     @model.user.on "particleSizeChanged", (particleSize) =>
       @setParticleSize(particleSize)
@@ -119,11 +119,9 @@ class Skeleton
     @flycam.update()
 
 
-  updateActiveTreeColor : (oldTreeId) ->
+  updateTreeColor : (treeId) ->
 
-    treeGeometry = @getTreeGeometry(oldTreeId)
-    newTreeId    = @skeletonTracing.getActiveTreeId()
-    treeGeometry.updateTreeColor( newTreeId )
+    @getTreeGeometry(treeId).updateTreeColor()
     @flycam.update()
 
 
@@ -131,7 +129,7 @@ class Skeleton
 
     meshes = []
     for tree in @treeGeometries
-      meshes = meshes.concat( tree.getMeshes() )
+      meshes = meshes.concat(tree.getMeshes())
     return meshes
 
   setWaypoint : (centered) =>
@@ -139,7 +137,7 @@ class Skeleton
     curGlobalPos = @flycam.getPosition()
     treeGeometry = @getTreeGeometry(@skeletonTracing.getTree().treeId)
 
-    treeGeometry.addNode( @skeletonTracing.getActiveNode() )
+    treeGeometry.addNode(@skeletonTracing.getActiveNode())
 
     # Animation to center waypoint position
     position = @skeletonTracing.getActiveNodePos()
@@ -147,7 +145,7 @@ class Skeleton
       @waypointAnimation = new TWEEN.Tween({ globalPosX: curGlobalPos[0], globalPosY: curGlobalPos[1], globalPosZ: curGlobalPos[2], flycam: @flycam})
       @waypointAnimation.to({globalPosX: position[0], globalPosY: position[1], globalPosZ: position[2]}, 200)
       @waypointAnimation.onUpdate ->
-        @flycam.setPosition [@globalPosX, @globalPosY, @globalPosZ]
+        @flycam.setPosition([@globalPosX, @globalPosY, @globalPosZ])
       @waypointAnimation.start()
 
     @flycam.update()
@@ -185,12 +183,12 @@ class Skeleton
   setActiveNode : ->
 
     if @lastActiveNode?
-      treeGeometry = @getTreeGeometry( @lastActiveNode.treeId )
-      treeGeometry?.updateNodeColor( @lastActiveNode.id, false )
+      treeGeometry = @getTreeGeometry(@lastActiveNode.treeId)
+      treeGeometry?.updateNodeColor(@lastActiveNode.id, false)
 
     if (activeNode = @model.skeletonTracing.getActiveNode())?
-      treeGeometry = @getTreeGeometry( activeNode.treeId )
-      treeGeometry?.updateNodeColor( activeNode.id, true )
+      treeGeometry = @getTreeGeometry(activeNode.treeId)
+      treeGeometry?.updateNodeColor(activeNode.id, true)
 
     @lastActiveNode = activeNode
 

@@ -1,7 +1,7 @@
 package models.tracing.volume
 
 import braingames.geometry.{Point3D, BoundingBox}
-import models.annotation.{AnnotationContentService, AnnotationContent, AnnotationSettings}
+import models.annotation.{AnnotationLike, AnnotationContentService, AnnotationContent, AnnotationSettings}
 import models.basics.SecuredBaseDAO
 import models.binary.UserDataLayerDAO
 import models.binary.DataSet
@@ -23,6 +23,7 @@ import controllers.DataStoreHandler
 case class VolumeTracing(
   dataSetName: String,
   userDataLayerName: String,
+  activeCellId: Option[Int] = None,
   timestamp: Long = System.currentTimeMillis(),
   editPosition: Point3D = Point3D(0,0,0),
   boundingBox: Option[BoundingBox] = None,
@@ -36,7 +37,22 @@ case class VolumeTracing(
 
   def service = VolumeTracingService
 
-  def updateFromJson(jsUpdates: Seq[JsValue])(implicit ctx: DBAccessContext) = {Fox.successful(this)}
+  def updateFromJson(jsUpdates: Seq[JsValue])(implicit ctx: DBAccessContext): Fox[VolumeTracing] = {
+    val updates = jsUpdates.flatMap { json =>
+      TracingUpdater.createUpdateFromJson(json)
+    }
+    if (jsUpdates.size == updates.size) {
+      for {
+        updatedTracing <- updates.foldLeft(Fox.successful(this)) {
+          case (f, updater) => f.flatMap(tracing => updater.update(tracing))
+        }
+        _ <- VolumeTracingDAO.update(updatedTracing._id, updatedTracing.copy(timestamp = System.currentTimeMillis))(GlobalAccessContext)
+      } yield updatedTracing
+    } else {
+      Fox.empty
+    }
+  }
+
 
   def copyDeepAndInsert = ???
 
@@ -51,7 +67,8 @@ case class VolumeTracing(
   override def contentData = {
     UserDataLayerDAO.findOneByName(userDataLayerName)(GlobalAccessContext).map{ userDataLayer =>
       Json.obj(
-        "customLayers" -> List(userDataLayer.dataLayer)
+        "customLayers" -> List(AnnotationContent.dataLayerWrites.writes(userDataLayer.dataLayer)),
+        "activeCell" -> activeCellId
       )
     }
   }

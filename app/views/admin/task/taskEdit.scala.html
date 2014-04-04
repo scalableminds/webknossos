@@ -10,9 +10,13 @@
 
         @basicTaskForm(editForm, taskTypes, projects, teams)
 
-        <div class="form-actions">
-          <button type="submit" class="btn btn-primary">Save</button>
-          <a class="btn" href="@controllers.routes.TaskController.empty#@taskId">Cancel</a>
+        <div class="form-group">
+          <div class="col-sm-2 col-sm-offset-2">
+            <button type="submit" class="form-control btn btn-primary">Save</button>
+          </div>
+          <div class="col-sm-2">
+            <a class="form-control btn btn-default" href="@controllers.routes.TaskController.empty#@taskId">Cancel</a>
+          </div>
         </div>
       }
     </div>

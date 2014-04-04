@@ -77,7 +77,6 @@ GET           /annotations/:typ/:id/reopen                         controllers.A
 GET           /annotations/:typ/:id/reset                          controllers.AnnotationController.reset(typ: String, id: String)
 
 GET           /annotations/:typ/:id                                controllers.AnnotationController.trace(typ: String, id: String)
-GET           /annotations/:typ/:id/data                           controllers.AnnotationController.traceJSON(typ: String, id: String)
 GET           /annotations/:typ/:id/info                           controllers.AnnotationController.info(typ: String, id: String)
 GET           /annotations/:typ/:id/download                       controllers.AnnotationController.download(typ: String, id: String)
 DELETE        /annotations/:typ/:id                                controllers.AnnotationController.cancel(typ: String, id: String)
@@ -87,13 +86,6 @@ GET           /admin/nml/upload                                    controllers.a
 POST          /admin/nml/upload                                    controllers.admin.NMLIO.upload
 
 # Admin Tasks
-# TODO: those routes need to be renamed!
-# --->
-GET           /admin/tasks/algorithm                               controllers.admin.TaskAlgorithm.index
-POST          /admin/tasks/algorithm                               controllers.admin.TaskAlgorithm.submitAlgorithm
-GET           /admin/tasks/algorithm/:id?use=true                  controllers.admin.TaskAlgorithm.useAlgorithm(id: String)
-# <---
-
 GET           /api/tasks                                           controllers.TaskController.list
 DELETE        /api/tasks/:id                                       controllers.admin.TaskAdministration.delete(id: String)
 
@@ -106,6 +98,7 @@ GET           /admin/tasks/overview                                controllers.a
 GET           /admin/tasks/overview/data                           controllers.admin.TaskAdministration.overviewData
 GET           /admin/tasks/:id/edit                                controllers.admin.TaskAdministration.edit(id: String)
 POST          /admin/tasks/:id                                     controllers.admin.TaskAdministration.editTaskForm(id: String)
+
 GET           /api/tasks/:id/download                              controllers.admin.NMLIO.taskDownload(id: String)
 GET           /api/tasks/:id/annotations                           controllers.AnnotationController.annotationsForTask(id: String)
 

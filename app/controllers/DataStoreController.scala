@@ -20,7 +20,6 @@ import braingames.binary.models._
 import play.api.libs.concurrent.Execution.Implicits._
 import braingames.reactivemongo.{GlobalAccessContext, DBAccessContext}
 import braingames.rest.{RESTResponse, RESTCall}
-import play.api.test.FakeRequest
 
 object DataStoreHandler extends DataStoreBackChannelHandler{
   def createUserDataLayer(dataStoreInfo: DataStoreInfo, base: DataSource): Fox[UserDataLayer] = {

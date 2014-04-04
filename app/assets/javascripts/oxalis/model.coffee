@@ -85,15 +85,16 @@ class Model
           (user) =>
 
             dataSet = tracing.content.dataSet
+            layers  = @getLayers(dataSet.dataLayers, tracing.content.contentData.customLayers)
             $.when(
-              @getDataTokens(dataSet.dataStore.url, dataSet.name, dataSet.dataLayers)...
+              @getDataTokens(dataSet.dataStore.url, dataSet.name, layers)...
             ).pipe =>
-              @initializeWithData(controlMode, state, tracingId, tracingType, tracing, user)
+              @initializeWithData(controlMode, state, tracingId, tracingType, tracing, user, layers)
 
           -> Toast.error("Ooops. We couldn't communicate with our mother ship. Please try to reload this page.")
         )
 
-  initializeWithData : (controlMode, state, tracingId, tracingType, tracing, user) ->
+  initializeWithData : (controlMode, state, tracingId, tracingType, tracing, user, layers) ->
 
     $.assertExtendContext({
       task: tracingId
@@ -124,7 +125,7 @@ class Model
     @lowerBoundary = [ Infinity,  Infinity,  Infinity]
     @upperBoundary = [-Infinity, -Infinity, -Infinity]
 
-    for layer in @getLayers( dataSet.dataLayers, tracing.content.contentData.customLayers )
+    for layer in layers
 
       layer.bitDepth = parseInt( layer.elementClass.substring(4) )
       @binary[layer.name] = new Binary(this, tracing, layer, tracingId)

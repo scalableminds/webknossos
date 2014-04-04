@@ -42,7 +42,8 @@ trait DataSourceService extends FoxImplicits{
       DataLayer.SEGMENTATION.defaultElementClass,
       isWritable = true,
       fallback = baseDataSource.getByCategory(category).map(l => FallbackLayer(baseDataSource.id, l.name)),
-      sections = List(sections))
+      sections = List(sections),
+      nextSegmentationId = baseDataSource.getByCategory(category).flatMap(_.nextSegmentationId))
 
     basePath.createDirectory()
     UserDataLayer(baseDataSource.id, dataLayer)

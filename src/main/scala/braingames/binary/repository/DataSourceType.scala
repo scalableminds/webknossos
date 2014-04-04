@@ -4,11 +4,14 @@
 package braingames.binary.repository
 
 import scalax.file.{PathSet, Path}
+import scala.concurrent.Future
+import net.liftweb.common.Box
 import braingames.binary.models.{UsableDataSource, DataSourceLike, UnusableDataSource, DataSource}
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json.Json
 import org.apache.commons.io.FileUtils
 import braingames.binary.Logger._
+import braingames.geometry.Point3D
 import braingames.util.ProgressTracking.ProgressTracker
 import braingames.util.{InProgress, FoxImplicits, Fox, ProgressTracking}
 import net.liftweb.common.{Empty, Full, Failure}

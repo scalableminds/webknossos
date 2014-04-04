@@ -14,7 +14,7 @@ import scala.Some
 import net.liftweb.common.{Empty, Full, Failure}
 import play.api.libs.concurrent.Execution.Implicits._
 
-trait DataSourceInboxHelper extends ProgressTracking with FoxImplicits with LockKeeperHelper{
+trait DataSourceInboxHelper extends ProgressTracking with FoxImplicits with LockKeeperHelper with SegmentationIdHelper{
 
   val DataSourceJson = "datasource.json"
 
@@ -44,26 +44,28 @@ trait DataSourceInboxHelper extends ProgressTracking with FoxImplicits with Lock
   }
 
   def transformToDataSource(unusableDataSource: UnusableDataSource): Fox[UsableDataSource] = {
-    withLock[Option[UsableDataSource]](unusableDataSource.sourceFolder){
+    withLock(unusableDataSource.sourceFolder){
       clearAllTrackers(importTrackerId(unusableDataSource.id))
       cleanUp(unusableDataSource.sourceFolder)
       DataSourceTypeGuessers.guessRepositoryType(unusableDataSource.sourceFolder)
         .importDataSource(unusableDataSource, progressTrackerFor(importTrackerId(unusableDataSource.id)))
+        .toFox
+        .flatMap(setNextSegmentationIds)
         .flatMap {
         dataSource =>
           writeDataSourceToFile(
             unusableDataSource.sourceFolder,
             FiledDataSource(unusableDataSource.owningTeam, unusableDataSource.sourceType, dataSource))
-      } match {
-        case Some(r) =>
+      }.futureBox.map{
+        case Full(r) =>
           logger.info("Datasource import finished for " + unusableDataSource.id)
           finishTrackerFor(importTrackerId(unusableDataSource.id), true)
-          Some(r.toUsable(serverUrl))
-        case None =>
+          Full(r.toUsable(serverUrl))
+        case _ =>
           logger.warn("Datasource import failed for " + unusableDataSource.id)
           finishTrackerFor(importTrackerId(unusableDataSource.id), false)
-          None
-      }
+          Empty
+      }.toFox
     }.flatMap(x => x).futureBox.recover {
       case e: Exception =>
         logger.error("Failed to import dataset: " + e.getMessage, e)

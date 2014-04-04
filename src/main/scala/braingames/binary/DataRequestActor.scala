@@ -171,13 +171,7 @@ class DataRequestActor(
   }
 
   def loadBlocks(minBlock: Point3D, maxBlock: Point3D, dataRequest: DataRequest, layer: DataLayer) = {
-    val blockIdxs = for {
-      x <- minBlock.x to maxBlock.x
-      y <- minBlock.y to maxBlock.y
-      z <- minBlock.z to maxBlock.z
-    } yield Point3D(x, y, z)
-
-    Future.traverse(blockIdxs) {
+    Future.traverse(minBlock to maxBlock) {
       p =>
         loadFromSomewhere(
           dataRequest.dataSource,
@@ -227,9 +221,10 @@ class DataRequestActor(
             case request: DataReadRequest =>
               new DataBlockCutter(block, request, layer, pointOffset).cutOutRequestedData
             case request: DataWriteRequest =>
-              ensureCopyInCache(minBlock, maxBlock, dataRequest, layer, block.underlying).map { b =>
-                val blocks = new DataBlockWriter(block.copy(underlying = b), request, layer, pointOffset).writeSuppliedData
-                saveBlocks(minBlock, maxBlock, dataRequest, layer, blocks)
+              ensureCopyInCache(minBlock, maxBlock, dataRequest, layer, block.underlying).map {
+                b =>
+                  val blocks = new DataBlockWriter(block.copy(underlying = b), request, layer, pointOffset).writeSuppliedData
+                  saveBlocks(minBlock, maxBlock, dataRequest, layer, blocks)
               }
               Array[Byte]()
           }
@@ -282,20 +277,14 @@ class DataRequestActor(
   }
 
   def saveBlocks(minBlock: Point3D, maxBlock: Point3D, dataRequest: DataRequest, layer: DataLayer, blocks: Vector[Array[Byte]]) = {
-    val blockIdxs = for {
-      x <- minBlock.x to maxBlock.x
-      y <- minBlock.y to maxBlock.y
-      z <- minBlock.z to maxBlock.z
-    } yield Point3D(x, y, z)
-
-    (blockIdxs, blocks).zipped foreach {
-      (p, block) =>
+    (minBlock to maxBlock, blocks).zipped foreach {
+      (point, block) =>
         saveToSomewhere(
           dataRequest.dataSource,
           layer,
           dataRequest.dataSection,
           dataRequest.resolution,
-          p,
+          point,
           block)
     }
   }
@@ -332,15 +321,9 @@ class DataRequestActor(
   }
 
   def ensureCopyInCache(minBlock: Point3D, maxBlock: Point3D, dataRequest: DataRequest, layer: DataLayer, blocks: Vector[Array[Byte]]): Future[Vector[Array[Byte]]] = {
-    val blockIdxs = for {
-      x <- minBlock.x to maxBlock.x
-      y <- minBlock.y to maxBlock.y
-      z <- minBlock.z to maxBlock.z
-    } yield Point3D(x, y, z)
-
     Future.sequence(
       (for {
-        (p, block) <- (blockIdxs, blocks).zipped
+        (p, block) <- (minBlock to maxBlock, blocks).zipped
       } yield {
         ensureCopy(
           dataRequest.dataSource,

@@ -56,16 +56,16 @@ class OxalisMessageHandler extends JsonMessageHandler {
   }
 
   def handle(js: JsValue): Future[Either[JsValue, Array[Byte]]] = {
-    logger.info("About to handle WS REST call. Json: " + js)
+    logger.trace("About to handle WS REST call. Json: " + js)
     js.validate(RESTCall.restCallFormat) match {
       case JsSuccess(call, _) =>
         val request = requestFromRESTCall(call)
         route(request) match {
           case Some(f) =>
-            logger.info(s"Got a handler for WS REST request '${call.uuid}'. ")
+            logger.trace(s"Got a handler for WS REST request '${call.uuid}'. ")
             f.flatMap {
               response: SimpleResult =>
-                logger.info(s"Rerouted WS REST request '${call.uuid}' finished.")
+                logger.trace(s"Rerouted WS REST request '${call.uuid}' finished.")
                 embedInRESTResponse(call, response).map(Right(_))
             }
           case None =>
@@ -120,7 +120,7 @@ class OxalisServer(url: String, key: String, name: String, secured: Boolean)(imp
       .get()
       .map {
       result =>
-        logger.warn(s"Querying user data layer. Status: '${result.status}'")
+        logger.trace(s"Querying user data layer. Status: '${result.status}'")
         if(result.status == OK)
           result.json.validate(DataLayer.dataLayerFormat) match {
             case JsSuccess(dataLayer, _) => Full(dataLayer)
@@ -140,7 +140,7 @@ class OxalisServer(url: String, key: String, name: String, secured: Boolean)(imp
       .get()
       .map {
       result =>
-        logger.warn(s"Querying dataToken validity: ${token}. Status: '${result.status}'")
+        logger.trace(s"Querying dataToken validity: ${token}. Status: '${result.status}'")
         result.status == OK
     }
   }

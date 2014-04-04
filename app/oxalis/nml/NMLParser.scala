@@ -43,7 +43,6 @@ object NMLParser {
   }
 
   private object NMLParserImpl {
-    val DEFAULT_EDIT_POSITION = Point3D(0, 0, 0)
     val DEFAULT_TIME = 0L
     val DEFAULT_ACTIVE_NODE_ID = 1
     val DEFAULT_COLOR = Color(1, 0, 0, 0)
@@ -63,7 +62,7 @@ object NMLParser {
         } yield {
           val dataSetName = parseDataSetName(parameters \ "experiment")
           val activeNodeId = parseActiveNode(parameters \ "activeNode")
-          val editPosition = parseEditPosition(parameters \ "editPosition")
+          val editPosition = parseEditPosition(parameters \ "editPosition") // STARTPOS
           val time = parseTime(parameters \ "time")
           val comments = parseComments(data \ "comments")
           val branchPoints = parseBranchPoints(data \ "branchpoints")
@@ -154,7 +153,7 @@ object NMLParser {
     }
 
     private def parseEditPosition(node: NodeSeq) = {
-      node.headOption.flatMap(parsePoint3D).getOrElse(DEFAULT_EDIT_POSITION)
+      node.headOption.flatMap(parsePoint3D)
     }
 
     private def parseBranchPoints(branchPoints: NodeSeq) = {

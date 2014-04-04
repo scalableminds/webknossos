@@ -90,7 +90,7 @@ object VolumeTracingService extends AnnotationContentService with FoxImplicits{
   def createFrom(baseDataSet: DataSet)(implicit ctx: DBAccessContext) = {
     baseDataSet.dataSource.toFox.flatMap{ baseSource =>
       val dataLayer = BinaryDataService.createUserDataSource(baseSource)
-      val t = VolumeTracing(baseDataSet.name, dataLayer.dataLayer.name, System.currentTimeMillis(), None, Point3D(0,0,0), None)
+      val t = VolumeTracing(baseDataSet.name, dataLayer.dataLayer.name, System.currentTimeMillis(), None, baseDataSet.defaultStart, None)
       for{
       _ <- UserDataLayerDAO.insert(dataLayer)
       _ <- VolumeTracingDAO.insert(t)

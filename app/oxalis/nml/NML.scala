@@ -10,5 +10,5 @@ case class NML(
   timestamp: Long,
   activeNodeId: Option[Int],
   scale: Scale,
-  editPosition: Point3D,
+  editPosition: Option[Point3D],
   comments: List[Comment])

@@ -50,8 +50,12 @@ case class DataSet(
                     isPublic: Boolean = false,
                     description: Option[String] = None,
                     created: Long = System.currentTimeMillis()) {
+
   def isEditableBy(user: Option[User]) =
     user.map(_.adminTeamNames.contains(owningTeam)) getOrElse false
+
+  def defaultStart =
+    dataSource.map(_.boundingBox.center).getOrElse(Point3D(0, 0, 0))
 }
 
 object DataSet {

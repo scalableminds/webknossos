@@ -27,5 +27,8 @@
     "TrackballControls": "https://raw.github.com/georgwiese/three.js/scm_oxalis/examples/js/controls/TrackballControls.js",
     "c3": "~0.1.25"
   },
-  "devDependencies": {}
+  "devDependencies": {},
+  "resolutions": {
+    "d3": "~3.4.4"
+  }
 }

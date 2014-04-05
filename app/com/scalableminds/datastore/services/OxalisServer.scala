@@ -3,22 +3,23 @@
  */
 package com.scalableminds.datastore.services
 
-import play.api.libs.json.{JsError, Json, JsValue}
+import play.api.libs.json.{ JsError, Json, JsValue }
 import braingames.binary.models.DataSourceLike
 import play.api.libs.ws.WS
 import braingames.binary.Logger._
 import braingames.util.FoxImplicits
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.http.HeaderNames
-import akka.actor.{ActorSystem, Props}
+import akka.actor.{ ActorSystem, Props }
 import braingames.rest.RESTCall
 import play.api.mvc._
 import play.api.test.Helpers._
-import play.api.test.{FakeRequest, FakeHeaders}
+import play.api.test.{ FakeRequest, FakeHeaders }
 import play.api.mvc.AnyContentAsJson
 import play.api.libs.json.JsSuccess
 import play.api.libs.iteratee.Iteratee
 import scala.concurrent.Future
+import java.io.File
 
 class OxalisMessageHandler extends JsonMessageHandler {
 
@@ -73,7 +74,13 @@ class OxalisMessageHandler extends JsonMessageHandler {
   }
 }
 
-class OxalisServer(url: String, key: String, name: String, secured: Boolean)(implicit system: ActorSystem) extends FoxImplicits {
+class OxalisServer(
+  url: String,
+  key: String,
+  name: String,
+  secured: Boolean,
+  keystore: Option[File],
+  keystorePassword: Option[String])(implicit system: ActorSystem) extends FoxImplicits {
 
   val webSocketPath = s"/api/datastores/$name/backchannel?key=$key"
 
@@ -81,7 +88,7 @@ class OxalisServer(url: String, key: String, name: String, secured: Boolean)(imp
 
   val httpUrl = (if (secured) "https://" else "http://") + url
 
-  val webSocket = system.actorOf(Props(new JsonWSTunnel(webSocketUrl, new OxalisMessageHandler)))
+  val webSocket = system.actorOf(Props(new JsonWSTunnel(webSocketUrl, new OxalisMessageHandler, keystore, keystorePassword)))
 
   def oxalisWS(path: String) = {
     WS.url(s"$httpUrl$path")
@@ -93,30 +100,30 @@ class OxalisServer(url: String, key: String, name: String, secured: Boolean)(imp
     oxalisWS(s"/api/datastores/$name/datasources")
       .post(Json.toJson(dataSources))
       .map {
-      result =>
-        if (result.status != 200)
-          logger.warn(s"Reporting found data sources to oxalis failed. Status ${result.status}. Body: '${result.body.take(100)}'")
-    }
+        result =>
+          if (result.status != 200)
+            logger.warn(s"Reporting found data sources to oxalis failed. Status ${result.status}. Body: '${result.body.take(100)}'")
+      }
   }
 
   def reportDataSouce(dataSource: DataSourceLike) = {
     oxalisWS(s"/api/datastores/$name/datasources/${dataSource.id}")
       .post(Json.toJson(dataSource))
       .map {
-      result =>
-        if (result.status != 200)
-          logger.warn(s"Reporting data source update to oxalis failed. Status ${result.status}. Body: '${result.body.take(100)}'")
-    }
+        result =>
+          if (result.status != 200)
+            logger.warn(s"Reporting data source update to oxalis failed. Status ${result.status}. Body: '${result.body.take(100)}'")
+      }
   }
 
   def ping() = {
     oxalisWS(s"/api/datastores/$name/ping")
       .get()
       .map {
-      result =>
-        if (result.status != 200)
-          logger.warn(s"Pinging oxalis failed. Status ${result.status}. Body: '${result.body.take(100)}'")
-    }
+        result =>
+          if (result.status != 200)
+            logger.warn(s"Pinging oxalis failed. Status ${result.status}. Body: '${result.body.take(100)}'")
+      }
   }
 
   def requestUserAccess(token: String, dataSetName: String, dataLayerName: String) = {
@@ -127,9 +134,9 @@ class OxalisServer(url: String, key: String, name: String, secured: Boolean)(imp
         "dataLayerName" -> dataLayerName)
       .get()
       .map {
-      result =>
-        logger.warn(s"Querying dataToken validity: ${token}. Status: '${result.status}'")
-        result.status == 200
-    }
+        result =>
+          logger.warn(s"Querying dataToken validity: ${token}. Status: '${result.status}'")
+          result.status == 200
+      }
   }
 }

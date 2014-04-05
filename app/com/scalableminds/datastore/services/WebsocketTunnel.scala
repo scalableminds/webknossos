@@ -3,19 +3,23 @@
  */
 package com.scalableminds.datastore.services
 
-import akka.actor.{ActorRef, Actor}
+import akka.actor.{ ActorRef, Actor }
 import play.api.libs.ws.WS
-import org.java_websocket.client.WebSocketClient
+import org.java_websocket.client._
 import org.java_websocket.handshake.ServerHandshake
 import braingames.binary.Logger._
 import java.net.URI
-import play.api.libs.json.{Json, JsValue}
+import play.api.libs.json.{ Json, JsValue }
 import com.fasterxml.jackson.core.JsonParseException
-import scala.concurrent.{Await, Future}
+import scala.concurrent.{ Await, Future }
 import scala.concurrent.duration._
 import java.nio.ByteBuffer
 import play.api.mvc.Codec
 import net.liftweb.common.Failure
+import java.io.{ File, FileInputStream }
+import java.security.KeyStore;
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.TrustManagerFactory;
 
 case class SendJson(js: JsValue)
 
@@ -29,7 +33,11 @@ trait JsonMessageHandler {
   def handle(js: JsValue): Future[Either[JsValue, Array[Byte]]]
 }
 
-class JsonWSTunnel(serverUrl: String, incomingMessageHandler: JsonMessageHandler)(implicit codec: Codec) extends Actor {
+class JsonWSTunnel(
+  serverUrl: String,
+  incomingMessageHandler: JsonMessageHandler,
+  keystoreOpt: Option[File] = None,
+  keystorePasswordOpt: Option[String] = None)(implicit codec: Codec) extends Actor {
 
   implicit val exco = context.system.dispatcher
 
@@ -102,14 +110,37 @@ class JsonWSTunnel(serverUrl: String, incomingMessageHandler: JsonMessageHandler
     websocket.map(w => w.getConnection.isOpen || w.getConnection.isConnecting) getOrElse false
   }
 
+  private def initializeWS(): WebSock = {
+    val w = new WebSock(self, serverUrl)
+
+    for {
+      keystore <- keystoreOpt
+      keystorePassword <- keystorePasswordOpt
+    } {
+      val storetype = "JKS";
+
+      val ks = KeyStore.getInstance(storetype);
+      ks.load(new FileInputStream(keystore), keystorePassword.toCharArray());
+
+      val tmf = TrustManagerFactory.getInstance("SunX509");
+      tmf.init(ks);
+
+      val sslContext = SSLContext.getInstance("TLS");
+      sslContext.init(null, tmf.getTrustManagers(), null);
+
+      w.setWebSocketFactory(new DefaultSSLWebSocketClientFactory(sslContext));
+    }
+    w
+  }
+
   def connect(url: String) = {
     // Connecting to the websocket is a little difficult. If the websocket doesn't exist / respond the call to
     // `connectBlocking` doesn't fail or return
     try {
       val f = Future {
-        if(!isAlive) {
+        if (!isAlive) {
           closeCurrentWS()
-          val w = new WebSock(self, url)
+          val w = initializeWS()
           logger.debug(s"About to connect to WS.")
           if (w.connectBlocking()) {
             logger.debug(s"Connected to WS.")

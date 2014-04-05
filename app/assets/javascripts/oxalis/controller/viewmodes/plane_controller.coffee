@@ -65,30 +65,15 @@ class PlaneController
     @gui.on
       newBoundingBox : (bb) => @sceneController.setBoundingBox(bb)
 
-    buttons = [
-        name : "3D"
-        callback : @cameraController.changeTDViewDiagonal
-      ,
-        name : "XY"
-        callback : @cameraController.changeTDViewXY
-        color : "#f00"
-      ,
-        name : "YZ"
-        callback : @cameraController.changeTDViewYZ
-        color : "#00f"
-      ,
-        name : "XZ"
-        callback : @cameraController.changeTDViewXZ
-        color : "#0f0"
+    callbacks = [
+      @cameraController.changeTDViewDiagonal,
+      @cameraController.changeTDViewXY,
+      @cameraController.changeTDViewYZ,
+      @cameraController.changeTDViewXZ
     ]
-
-    for button in buttons
-
-      button.control = @TDViewControls.append(
-        $("<button>", type : "button", class : "btn btn-small")
-          .html("#{if button.color then "<span style=\"background: #{button.color}\"></span>" else ""}#{button.name}")
-          .on("click", button.callback)
-      )
+    $("#TDViewControls button").each((i, element) =>
+      $(element).on("click", callbacks[i])
+    )
 
     meshes = @sceneController.getMeshes()
 

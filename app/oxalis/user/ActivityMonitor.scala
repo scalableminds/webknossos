@@ -11,19 +11,19 @@ import reactivemongo.bson.BSONObjectID
 import braingames.reactivemongo.GlobalAccessContext
 
 
-case class FlushActivities()
+case object FlushActivities
 
 case class UserActivity(user: User, time: Long)
 
 class ActivityMonitor extends Actor {
-  implicit val system = ActorSystem("agents")
+  implicit val system = context.system
 
   val collectedActivities = Agent(Map[BSONObjectID, Long]().empty)
 
   val updateCycle = 5 minutes
 
   override def preStart = {
-    Akka.system.scheduler.schedule(updateCycle, updateCycle, self, FlushActivities)
+    context.system.scheduler.schedule(updateCycle, updateCycle, self, FlushActivities)
   }
 
   def receive = {
@@ -36,9 +36,7 @@ class ActivityMonitor extends Actor {
         activities =>
           activities.map{
             case (userId, time) =>
-              UserService.findOneById(userId.stringify, useCache = true)(GlobalAccessContext).map{ user =>
-                UserService.logActivity(user, time)
-              }
+              UserService.logActivity(userId, time)
           }
           Map[BSONObjectID, Long]().empty
       }

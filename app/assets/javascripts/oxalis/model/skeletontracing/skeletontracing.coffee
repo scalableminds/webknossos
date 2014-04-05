@@ -27,6 +27,7 @@ class SkeletonTracing
   activeNode : null
   activeTree : null
   firstEdgeDirection : null
+  currentHue : null
 
   constructor : (tracing, @scaleInfo, @flycam, @flycam3d, @user, updatePipeline) ->
 
@@ -417,7 +418,7 @@ class SkeletonTracing
         break
 
     diff = (if forward then 1 else -1) + trees.length
-    @setActiveTree( trees[ (i + diff) % trees.length ].treeId )
+    @setActiveTree(trees[ (i + diff) % trees.length ].treeId)
 
 
   setActiveTree : (id) ->
@@ -436,38 +437,37 @@ class SkeletonTracing
     @trigger("newActiveTree")
 
 
-  getNewTreeColor : (treeId) ->
+  getNewTreeColor : ->
 
     # this generates the most distinct colors possible, using the golden ratio
-    if treeId == 1
-      return 0xFF0000
-    else
-      currentHue = treeId * @GOLDEN_RATIO
-      currentHue %= 1
-      ColorConverter.setHSV(new THREE.Color(), currentHue, 1, 1).getHex()
+    @currentHue = @treeIdCount * @GOLDEN_RATIO % 1 unless @currentHue
+    color = ColorConverter.setHSV(new THREE.Color(), @currentHue, 1, 1).getHex()
+    @currentHue += @GOLDEN_RATIO
+    @currentHue %= 1
+    color
 
 
-  shuffleActiveTreeColor : ->
+  shuffleTreeColor : (tree) ->
 
-    oldTreeId = @activeTree.treeId
-    @activeTree.treeId = @treeIdCount++
-    @activeTree.color = @getNewTreeColor(@activeTree.treeId)
+    tree = @activeTree unless tree
+    tree.color = @getNewTreeColor()
 
-    # update tree ids
-    for node in @activeTree.nodes
-      node.treeId = @activeTree.treeId
+    @stateLogger.updateTree(tree)
 
-    @stateLogger.updateTree(@activeTree, oldTreeId)
+    @trigger("newTreeColor", tree.treeId)
 
-    @trigger("newActiveTree")
-    @trigger("newActiveTreeColor", oldTreeId)
+
+  shuffleAllTreeColors : ->
+
+    for tree in @trees
+      @shuffleTreeColor(tree)
 
 
   createNewTree : ->
 
     tree = new TraceTree(
       @treeIdCount++,
-      @getNewTreeColor(@treeIdCount-1),
+      @getNewTreeColor(),
       "Tree#{('00'+(@treeIdCount-1)).slice(-3)}",
       (new Date()).getTime())
     @trees.push(tree)

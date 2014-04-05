@@ -24,7 +24,7 @@ ruby -e "$(curl -fsSL https://raw.github.com/Homebrew/homebrew/go/install)"
 # Install git, node.js, mongoDB, sbt
 brew install git node mongodb sbt
 
-# Start mongoDB
+# Start mongo
 launchctl load ~/Library/LaunchAgents/homebrew.mxcl.mongodb.plist
 
 # Checkout the Oxalis git repository
@@ -90,7 +90,7 @@ sbt run
 Will fetch all Scala, Java and node dependencies and run the application on Port 9000.
 
 # Credits
-scalable minds http://scm.io
+scalable minds - http://scm.io
 
 # License
 TBD

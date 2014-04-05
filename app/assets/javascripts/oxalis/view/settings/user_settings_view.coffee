@@ -6,6 +6,8 @@ underscore : _
 ./category_views/controls_category_view : ControlsCategoryView
 ./category_views/viewport_category_view : ViewportCategoryView
 ./category_views/view_category_view : ViewCategoryView
+./category_views/flight_category_view : FlightCategoryView
+../../constants : constants
 ###
 
 class UserSettingsView extends Backbone.Marionette.ItemView
@@ -35,6 +37,10 @@ class UserSettingsView extends Backbone.Marionette.ItemView
 
       return new ViewportCategoryView({ @model })
 
+    "flight-category" : ->
+
+      return new FlightCategoryView({ @model })
+
     "view-category" : ->
 
       return new ViewCategoryView({ @model })
@@ -46,6 +52,8 @@ class UserSettingsView extends Backbone.Marionette.ItemView
       @model = @_model.user
       @render()
     )
+
+    @listenTo(app.vent, "changeViewMode", @changeViewMode)
 
     Backbone.Subviews.add(this)
 
@@ -61,3 +69,13 @@ class UserSettingsView extends Backbone.Marionette.ItemView
   serializeData : ->
 
     return { @subviewCreators }
+
+
+  changeViewMode : (mode) ->
+
+    if mode == constants.MODE_PLANE_TRACING
+      @showSubview("viewport-category")
+      @hideSubview("flight-category")
+    else
+      @hideSubview("viewport-category")
+      @showSubview("flight-category")

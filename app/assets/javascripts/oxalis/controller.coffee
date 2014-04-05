@@ -88,7 +88,7 @@ class Controller
       stats = new Stats()
       $("body").append stats.domElement
 
-      @gui = @createGui(restrictions, settings)
+      #@gui = @createGui(restrictions, settings)
 
 
       @sceneController = new SceneController(
@@ -147,9 +147,9 @@ class Controller
       if @allowedModes.length == 0
         Toast.error("There was no valid allowed tracing mode specified.")
       else
-        @setMode( @allowedModes[0] )
+        app.vent.trigger("changeViewMode", @allowedModes[0])
       if @urlManager.initialState.mode?
-        @setMode( @urlManager.initialState.mode )
+        app.vent.trigger("changeViewMode", @urlManager.initialState.mode)
 
       # initial trigger
       @sceneController.setSegmentationAlpha($('#alpha-slider').data("slider-value") or constants.DEFAULT_SEG_ALPHA)
@@ -185,13 +185,13 @@ class Controller
       _.extend( keyboardControls, {
         #Set Mode, outcomment for release
         "shift + 1" : =>
-          @setMode(constants.MODE_PLANE_TRACING)
+          @app.vent.trigger("changeViewMode", constants.MODE_PLANE_TRACING)
         "shift + 2" : =>
-          @setMode(constants.MODE_ARBITRARY)
+          @app.vent.trigger("changeViewMode", constants.MODE_ARBITRARY)
         "shift + 3" : =>
-          @setMode(constants.MODE_ARBITRARY_PLANE)
+          @app.vent.trigger("changeViewMode", constants.MODE_ARBITRARY_PLANE)
         "shift + 4" : =>
-          @setMode(constants.MODE_VOLUME)
+          @app.vent.trigger("changeViewMode", constants.MODE_VOLUME)
 
         "t" : =>
           @view.toggleTheme()
@@ -200,7 +200,7 @@ class Controller
         "m" : => # rotate allowed modes
 
           index = (@allowedModes.indexOf(@mode) + 1) % @allowedModes.length
-          @setMode( @allowedModes[index] )
+          @app.vent.trigger("changeViewMode", @allowedModes[index])
 
         "super + s, ctrl + s" : (event) =>
 

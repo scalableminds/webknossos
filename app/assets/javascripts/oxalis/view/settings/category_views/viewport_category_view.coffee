@@ -1,4 +1,5 @@
 ### define
+app : app
 ../setting_views/checkbox_setting_view : CheckboxSettingView
 ../setting_views/slider_setting_view : SliderSettingView
 ../setting_views/dropdown_setting_view : DropdownSettingView
@@ -9,7 +10,7 @@
 class ViewportCategoryView extends CategoryView
 
 
-  caption : "Viewport"
+  caption : "Viewportoptions"
 
 
   subviewCreators :
@@ -20,7 +21,7 @@ class ViewportCategoryView extends CategoryView
         model : @model
         options :
           name : "moveValue"
-          displayName : "Move value (nm/s)"
+          displayName : "Move Value (nm/s)"
           min : constants.MIN_MOVE_VALUE
           max : constants.MAX_MOVE_VALUE
           step : 10
@@ -57,4 +58,16 @@ class ViewportCategoryView extends CategoryView
         options :
           name : "dynamicSpaceDirection"
           displayName : "d/f-Switching"
+      )
+
+    "clippingDistance" : ->
+
+      return new SliderSettingView(
+        model : @model
+        options :
+          name : "clippingDistance"
+          displayName : "Clipping Distance"
+          min : 1
+          max : 1000 * app.scaleInfo.baseVoxel
+          step : 1
       )

@@ -29,6 +29,7 @@ case class VolumeTracing(
   timestamp: Long,
   activeCellId: Option[Int],
   editPosition: Point3D,
+  zoomLevel: Double,
   boundingBox: Option[BoundingBox],
   settings: AnnotationSettings = AnnotationSettings.volumeDefault,
   _id: BSONObjectID = BSONObjectID.generate)
@@ -56,7 +57,6 @@ case class VolumeTracing(
     }
   }
 
-
   def copyDeepAndInsert = ???
 
   def mergeWith(source: AnnotationContent) = ???
@@ -70,8 +70,9 @@ case class VolumeTracing(
   override def contentData = {
     UserDataLayerDAO.findOneByName(userDataLayerName)(GlobalAccessContext).map{ userDataLayer =>
       Json.obj(
+        "activeCell" -> activeCellId,
         "customLayers" -> List(AnnotationContent.dataLayerWrites.writes(userDataLayer.dataLayer)),
-        "activeCell" -> activeCellId
+        "zoomLevel" -> zoomLevel
       )
     }
   }
@@ -90,7 +91,7 @@ object VolumeTracingService extends AnnotationContentService with FoxImplicits{
   def createFrom(baseDataSet: DataSet)(implicit ctx: DBAccessContext) = {
     baseDataSet.dataSource.toFox.flatMap{ baseSource =>
       val dataLayer = BinaryDataService.createUserDataSource(baseSource)
-      val t = VolumeTracing(baseDataSet.name, dataLayer.dataLayer.name, System.currentTimeMillis(), None, baseDataSet.defaultStart, None)
+      val t = VolumeTracing(baseDataSet.name, dataLayer.dataLayer.name, System.currentTimeMillis(), None, baseDataSet.defaultStart, VolumeTracing.defaultZoomLevel, None)
       for{
       _ <- UserDataLayerDAO.insert(dataLayer)
       _ <- VolumeTracingDAO.insert(t)
@@ -105,6 +106,8 @@ object VolumeTracing{
   implicit val volumeTracingFormat = Json.format[VolumeTracing]
 
   val contentType = "volumeTracing"
+
+  val defaultZoomLevel = 0.0
 }
 
 object VolumeTracingDAO extends SecuredBaseDAO[VolumeTracing] {

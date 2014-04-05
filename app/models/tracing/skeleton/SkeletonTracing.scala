@@ -31,6 +31,7 @@ case class SkeletonTracing(
                             timestamp: Long,
                             activeNodeId: Option[Int],
                             editPosition: Point3D,
+                            zoomLevel: Double,
                             boundingBox: Option[BoundingBox],
                             comments: List[Comment] = Nil,
                             settings: AnnotationSettings = AnnotationSettings.skeletonDefault,
@@ -115,6 +116,8 @@ object SkeletonTracing {
 
   val contentType = "skeletonTracing"
 
+  val defaultZoomLevel = 0.0
+
   def from(dataSetName: String, start: Point3D, settings: AnnotationSettings): SkeletonTracing =
     SkeletonTracing(
       dataSetName,
@@ -122,6 +125,7 @@ object SkeletonTracing {
       System.currentTimeMillis,
       None,
       start,
+      defaultZoomLevel,
       None,
       settings = settings)
 
@@ -132,6 +136,7 @@ object SkeletonTracing {
       t.timestamp,
       t.activeNodeId,
       t.editPosition,
+      t.zoomLevel,
       t.boundingBox,
       t.comments,
       t.settings
@@ -167,6 +172,7 @@ object SkeletonTracingService extends AnnotationContentService with CommonTracin
         System.currentTimeMillis(),
         Some(1),
         start,
+        SkeletonTracing.defaultZoomLevel,
         box,
         Nil,
         settings))

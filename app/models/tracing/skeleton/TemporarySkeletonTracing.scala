@@ -33,6 +33,7 @@ case class TemporarySkeletonTracing(
                                      timestamp: Long,
                                      activeNodeId: Option[Int],
                                      editPosition: Point3D,
+                                     zoomLevel: Double,
                                      boundingBox: Option[BoundingBox],
                                      comments: List[Comment] = Nil,
                                      settings: AnnotationSettings = AnnotationSettings.skeletonDefault
@@ -82,6 +83,7 @@ object TemporarySkeletonTracingService extends AnnotationContentService {
         System.currentTimeMillis(),
         nml.activeNodeId,
         _,
+        SkeletonTracing.defaultZoomLevel,
         box,
         nml.comments,
         settings)
@@ -100,6 +102,7 @@ object TemporarySkeletonTracingService extends AnnotationContentService {
         System.currentTimeMillis(),
         tracing.activeNodeId,
         tracing.editPosition,
+        tracing.zoomLevel,
         tracing.boundingBox,
         tracing.comments)
     }

@@ -22,7 +22,7 @@ class SettingsView extends Backbone.Marionette.ItemView
   initialize : ({ @_model }) ->
 
     @listenTo(app.vent, "model:sync", ->
-      @model = @_model.user
+      @model = @_model[@modelName]
       @render()
     )
 

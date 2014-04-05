@@ -1,9 +1,10 @@
 ### define
 underscore : _
 backbone.marionette : marionette
+./settings/skeleton_tracing_settings_view : SkeletonTracingSettingsView
+./settings/volume_tracing_settings_view : VolumeTracingSettingsView
 ./settings/plane_user_settings_view : PlaneUserSettingsView
 ./settings/arbitrary_user_settings_view : ArbitraryUserSettingsView
-./settings/volume_user_settings_view : VolumeUserSettingsView
 ./settings/dataset_settings_view : DatasetSettingsView
 ./left-menu/dataset_actions_view : DatasetActionsView
 ./left-menu/dataset_info_view : DatasetInfoView
@@ -33,13 +34,19 @@ class LeftMenuView extends Backbone.Marionette.Layout
       <div id="lefttabbar" class="col-sm-12">
         <ul class="nav nav-tabs">
           <li class="active">
-          <a href="#dataset-settings-tab" data-toggle="tab"><i class="fa fa-cogs"></i> Dataset</a></li>
+            <a href="#tracing-settings-tab" data-toggle="tab"><i class="fa fa-cogs"></i> Tracing</a>
+          </li>
           <li>
-          <a href="#user-settings-tab" data-toggle="tab"><i class="fa fa-cogs"></i> User</a></li>
+            <a href="#dataset-settings-tab" data-toggle="tab"><i class="fa fa-cogs"></i> Dataset</a>
+          </li>
+          <li>
+            <a href="#user-settings-tab" data-toggle="tab"><i class="fa fa-cogs"></i> User</a>
+          </li>
         </ul>
 
         <div class="tab-content">
-          <div class="tab-pane active" id="dataset-settings-tab"></div>
+          <div class="tab-pane active" id="tracing-settings-tab"></div>
+          <div class="tab-pane" id="dataset-settings-tab"></div>
           <div class="tab-pane" id="user-settings-tab"></div>
         </div>
       </div>
@@ -50,6 +57,7 @@ class LeftMenuView extends Backbone.Marionette.Layout
     "datasetActionButtons" : "#dataset-actions"
     "datasetInfo" : "#dataset-info"
     "datasetPosition" : "#dataset-position"
+    "tracingSettings" : "#tracing-settings-tab"
     "userSettings" : "#user-settings-tab"
     "datasetSettings" : "#dataset-settings-tab"
     "viewModes" : "#view-modes"
@@ -62,9 +70,12 @@ class LeftMenuView extends Backbone.Marionette.Layout
     @datasetPositionView = new DatasetPositionView(options)
     @viewModesView = new ViewModesView(options)
 
+    @skeletonTracingSettingsView = new SkeletonTracingSettingsView(_model : options._model)
+    @volumeTracingSettingsView = new VolumeTracingSettingsView(_model : options._model)
+
     @planeUserSettingsView = new PlaneUserSettingsView(_model : options._model)
     @arbitraryUserSettingsView = new ArbitraryUserSettingsView(_model : options._model)
-    @volumeUserSettingsView = new VolumeUserSettingsView(_model : options._model)
+
     @datasetSettingsView = new DatasetSettingsView(_model : options._model)
 
     @listenTo(@, "render", @afterRender)
@@ -85,10 +96,13 @@ class LeftMenuView extends Backbone.Marionette.Layout
 
     if mode == constants.MODE_PLANE_TRACING
       @userSettings.show(@planeUserSettingsView)
+      @tracingSettings.show(@skeletonTracingSettingsView)
     else if mode in constants.MODES_ARBITRARY
       @userSettings.show(@arbitraryUserSettingsView)
+      @tracingSettings.show(@skeletonTracingSettingsView)
     else if mode == constants.MODE_VOLUME
-      @userSettings.show(@volumeUserSettingsView)
+      @userSettings.show(@planeUserSettingsView)
+      @tracingSettings.show(@volumeTracingSettingsView)
 
   #   <% if(task) { %>
   #     <li><a href="#tab0" data-toggle="tab">Task</a></li>

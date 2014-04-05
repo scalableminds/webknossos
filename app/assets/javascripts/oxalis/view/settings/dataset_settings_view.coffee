@@ -1,27 +1,16 @@
 ### define
-libs/utils : Utils
-backbone.marionette : marionette
-backbone.subviews : subviews
-underscore : _
+./settings_view : SettingsView
 ./category_views/colors_category_view : ColorsCategoryView
 ./category_views/quality_category_view : QualityCategoryView
 ###
 
-class DatasetSettingsView extends Backbone.Marionette.ItemView
+class DatasetSettingsView extends SettingsView
 
 
   id : "dataset-settings"
 
 
-  template : _.template("""
-    <div class="panel-group accordion">
-
-      <% _.forEach(subviewCreators, function (subview, key) { %>
-        <div data-subview="<%= key %>"></div>
-      <% }) %>
-
-    </div>
-  """)
+  modelName : "dataset"
 
 
   subviewCreators :
@@ -33,26 +22,3 @@ class DatasetSettingsView extends Backbone.Marionette.ItemView
     "quality-category" : ->
 
       return new QualityCategoryView(model : @model)
-
-
-  initialize : ({ @_model }) ->
-
-    @listenTo(app.vent, "model:sync", ->
-      @model = @_model.dataset
-      @render()
-    )
-
-    Backbone.Subviews.add(this)
-
-
-  render : ->
-
-    if @model
-      super()
-    else
-      @$el.html(Utils.loaderTemplate())
-
-
-  serializeData : ->
-
-    return { @subviewCreators }

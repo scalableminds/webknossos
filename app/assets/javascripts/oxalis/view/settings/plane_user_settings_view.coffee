@@ -1,6 +1,4 @@
 ### define
-backbone.marionette : marionette
-underscore : _
 ./settings_view : SettingsView
 ./category_views/controls_category_view : ControlsCategoryView
 ./category_views/viewport_category_view : ViewportCategoryView
@@ -11,6 +9,9 @@ class PlaneUserSettingsView extends SettingsView
 
 
   id : "user-settings"
+
+
+  modelName : "user"
 
 
   subviewCreators :

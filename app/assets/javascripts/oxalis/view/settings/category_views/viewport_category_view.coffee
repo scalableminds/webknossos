@@ -51,15 +51,6 @@ class ViewportCategoryView extends CategoryView
           step : 0.1
       )
 
-    "dynamicSpaceDirection" : ->
-
-      return new CheckboxSettingView(
-        model : @model
-        options :
-          name : "dynamicSpaceDirection"
-          displayName : "d/f-Switching"
-      )
-
     "clippingDistance" : ->
 
       return new SliderSettingView(
@@ -70,4 +61,22 @@ class ViewportCategoryView extends CategoryView
           min : 1
           max : 1000 * app.scaleInfo.baseVoxel
           step : 1
+      )
+
+    "dynamicSpaceDirection" : ->
+
+      return new CheckboxSettingView(
+        model : @model
+        options :
+          name : "dynamicSpaceDirection"
+          displayName : "d/f-Switching"
+      )
+
+    "displayCrosshair" : ->
+
+      return new CheckboxSettingView(
+        model : @model
+        options :
+          name : "displayCrosshair"
+          displayName : "Show Crosshairs"
       )

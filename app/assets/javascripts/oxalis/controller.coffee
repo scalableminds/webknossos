@@ -185,13 +185,13 @@ class Controller
       _.extend( keyboardControls, {
         #Set Mode, outcomment for release
         "shift + 1" : =>
-          @app.vent.trigger("changeViewMode", constants.MODE_PLANE_TRACING)
+          app.vent.trigger("changeViewMode", constants.MODE_PLANE_TRACING)
         "shift + 2" : =>
-          @app.vent.trigger("changeViewMode", constants.MODE_ARBITRARY)
+          app.vent.trigger("changeViewMode", constants.MODE_ARBITRARY)
         "shift + 3" : =>
-          @app.vent.trigger("changeViewMode", constants.MODE_ARBITRARY_PLANE)
+          app.vent.trigger("changeViewMode", constants.MODE_ARBITRARY_PLANE)
         "shift + 4" : =>
-          @app.vent.trigger("changeViewMode", constants.MODE_VOLUME)
+          app.vent.trigger("changeViewMode", constants.MODE_VOLUME)
 
         "t" : =>
           @view.toggleTheme()
@@ -200,7 +200,7 @@ class Controller
         "m" : => # rotate allowed modes
 
           index = (@allowedModes.indexOf(@mode) + 1) % @allowedModes.length
-          @app.vent.trigger("changeViewMode", @allowedModes[index])
+          app.vent.trigger("changeViewMode", @allowedModes[index])
 
         "super + s, ctrl + s" : (event) =>
 

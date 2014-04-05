@@ -1,5 +1,6 @@
 ### define
 ../setting_views/slider_setting_view : SliderSettingView
+../setting_views/checkbox_setting_view : CheckboxSettingView
 ./category_view : CategoryView
 ../../../constants : constants
 ###
@@ -82,4 +83,13 @@ class FlightCategoryView extends CategoryView
           min : 1
           max : 127
           step : 1
+      )
+
+    "displayCrosshair" : ->
+
+      return new CheckboxSettingView(
+        model : @model
+        options :
+          name : "displayCrosshair"
+          displayName : "Show Crosshair"
       )

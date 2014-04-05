@@ -1,17 +1,21 @@
 ### define
 underscore : _
 backbone.marionette : marionette
-./settings/user_settings_view : UserSettingsView
+./settings/plane_user_settings_view : PlaneUserSettingsView
+./settings/arbitrary_user_settings_view : ArbitraryUserSettingsView
+./settings/volume_user_settings_view : VolumeUserSettingsView
 ./settings/dataset_settings_view : DatasetSettingsView
 ./left-menu/dataset_actions_view : DatasetActionsView
 ./left-menu/dataset_info_view : DatasetInfoView
 ./left-menu/dataset_position_view : DatasetPositionView
 ./left-menu/view_modes_view : ViewModesView
+../constants : constants
 ###
 
 class LeftMenuView extends Backbone.Marionette.Layout
 
   className : "container-fluid"
+
   template : _.template("""
     <div id="dataset-actions" class="row"></div>
 
@@ -58,10 +62,13 @@ class LeftMenuView extends Backbone.Marionette.Layout
     @datasetPositionView = new DatasetPositionView(options)
     @viewModesView = new ViewModesView(options)
 
-    @userSettingsView = new UserSettingsView(_model : options._model)
+    @planeUserSettingsView = new PlaneUserSettingsView(_model : options._model)
+    @arbitraryUserSettingsView = new ArbitraryUserSettingsView(_model : options._model)
+    @volumeUserSettingsView = new VolumeUserSettingsView(_model : options._model)
     @datasetSettingsView = new DatasetSettingsView(_model : options._model)
 
     @listenTo(@, "render", @afterRender)
+    @listenTo(app.vent, "changeViewMode", @changeViewMode)
 
 
   afterRender : ->
@@ -71,8 +78,17 @@ class LeftMenuView extends Backbone.Marionette.Layout
     @datasetPosition.show(@datasetPositionView)
     @viewModes.show(@viewModesView)
 
-    @userSettings.show(@userSettingsView)
     @datasetSettings.show(@datasetSettingsView)
+
+
+  changeViewMode : (mode) ->
+
+    if mode == constants.MODE_PLANE_TRACING
+      @userSettings.show(@planeUserSettingsView)
+    else if mode in constants.MODES_ARBITRARY
+      @userSettings.show(@arbitraryUserSettingsView)
+    else if mode == constants.MODE_VOLUME
+      @userSettings.show(@volumeUserSettingsView)
 
   #   <% if(task) { %>
   #     <li><a href="#tab0" data-toggle="tab">Task</a></li>

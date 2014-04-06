@@ -116,7 +116,7 @@ object SkeletonTracing {
 
   val contentType = "skeletonTracing"
 
-  val defaultZoomLevel = 0.0
+  val defaultZoomLevel = 2.0
 
   def from(dataSetName: String, start: Point3D, settings: AnnotationSettings): SkeletonTracing =
     SkeletonTracing(

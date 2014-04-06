@@ -13,7 +13,7 @@ class ExplorativeTracingListItemView extends Backbone.Marionette.ItemView
     <td class="explorative-name-column hover-dynamic">
       <span class="hover-hide" id="explorative-tracing-name"> <%= name %> </span>
       <form action="<%= jsRoutes.controllers.AnnotationController.nameExplorativeAnnotation(typ, id).url %>"
-        method="POST" class="hover-show hide" id="explorative-name-form">
+        method="POST" class="hover-show" id="explorative-name-form" style="display: none">
         <div class="input-append">
           <input class="input-medium hover-input"
                  name="name"

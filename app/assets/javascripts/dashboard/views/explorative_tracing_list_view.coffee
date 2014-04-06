@@ -19,7 +19,7 @@ class ExplorativeTracingListView extends Backbone.Marionette.CompositeView
               enctype="multipart/form-data"
               id="upload-and-explore-form"
               class="form-inline inline-block">
-            <span class="btn-file btn">
+            <span class="btn-file btn btn-default">
               <input type="file" name="nmlFile" multiple>
                 <i class="fa fa-upload" id="form-upload-icon"></i>
                 <i class="fa fa-spinner fa-spin hide" id="form-spinner-icon"></i>
@@ -33,7 +33,7 @@ class ExplorativeTracingListView extends Backbone.Marionette.CompositeView
         <form action="<%= jsRoutes.controllers.AnnotationController.createExplorational().url %>"
               method="POST"
               class="form-inline inline-block">
-          <select name="dataSetName">
+          <select id="dataSetsSelect" name="dataSetName">
             <% dataSets.forEach(function(d) { %>
               <option value="<%= d.get("name") %>"> <%= d.get("name") %> </option>
             <% }) %>

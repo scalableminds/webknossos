@@ -2,7 +2,7 @@
 jquery : $
 underscore : _
 app : app
-backbone : backbone
+backbone : Backbone
 ./controller/viewmodes/plane_controller : PlaneController
 ./controller/annotations/skeletontracing_controller : SkeletonTracingController
 ./controller/annotations/volumetracing_controller : VolumeTracingController
@@ -15,7 +15,6 @@ backbone : backbone
 ./view : View
 ./view/skeletontracing/skeletontracing_view : SkeletonTracingView
 ./view/volumetracing/volumetracing_view : VolumeTracingView
-../libs/event_mixin : EventMixin
 ../libs/input : Input
 ./view/gui : Gui
 ./view/settings/user_settings_view : UserSettingsView
@@ -135,9 +134,7 @@ class Controller
             @model.getSegmentationBinary().pingStop()
           @sceneController.setSegmentationAlpha( alpha )
 
-      @listenTo(app.vent, "changeViewMode", (mode) ->
-        @setMode(mode)
-      )
+      @listenTo(app.vent, "changeViewMode", @setMode)
 
 
       if @allowedModes.length == 1
@@ -249,24 +246,6 @@ class Controller
       @fullScreen = true
       if requestFullscreen
         requestFullscreen.call(body, body.ALLOW_KEYBOARD_INPUT)
-
-
-  createGui : (restrictions, settings)->
-
-
-    userSettingsView = new UserSettingsView( model : @model.user )
-    $("#user-settings-tab").html(userSettingsView.render().el)
-
-    datasetSettingsView = new DatasetSettingsView( model : @model.dataset )
-    $("#dataset-settings-tab").html(datasetSettingsView.render().el)
-
-    #gui = new Gui($("#user-settings-tab"), @model, restrictions, settings)
-    #gui.update()
-
-    for binary in @model.getColorBinaries()
-      binary.pullQueue.set4Bit(@model.dataset.get("fourBit"))
-
-    #return gui
 
 
   browserSupported : ->

@@ -1,6 +1,5 @@
 ### define
 libs/request : Request
-libs/event_mixin : EventMixin
 underscore : _
 backbone : Backbone
 ###

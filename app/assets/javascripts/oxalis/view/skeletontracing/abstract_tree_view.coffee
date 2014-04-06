@@ -1,5 +1,5 @@
 ### define
-libs/event_mixin : EventMixin
+backbone : Backbone
 libs/toast : Toast
 ###
 
@@ -15,7 +15,7 @@ class AbstractTreeView
 
   constructor : (width, height) ->
 
-    _.extend(this, new EventMixin())
+    _.extend(this, Backbone.Events)
 
     @canvas = $("<canvas>", {id : "abstractTreeViewerCanvas"})
     @canvas.click(@onClick)
@@ -236,7 +236,7 @@ class AbstractTreeView
 
     id = @getIdFromPos(evt.offsetX, evt.offsetY)
     if id
-      @trigger "nodeClick", id
+      @trigger("nodeClick", id)
 
 
   getIdFromPos : (x, y) =>

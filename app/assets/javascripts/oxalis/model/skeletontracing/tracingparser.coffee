@@ -4,7 +4,6 @@ underscore : _
 backbone : backbone
 three.color : ColorConverter
 libs/request : Request
-libs/event_mixin : EventMixin
 ./tracepoint : TracePoint
 ./tracetree : TraceTree
 ../../constants : constants

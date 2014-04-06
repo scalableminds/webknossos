@@ -161,8 +161,8 @@ class SkeletonTracingPlaneController extends PlaneController
       @model.skeletonTracing.createNewTree()
       # make sure the tree was rendered two times before adding nodes,
       # otherwise our buffer optimizations won't work
-      @model.skeletonTracing.one("finishedRender", =>
-        @model.skeletonTracing.one("finishedRender", =>
+      @model.skeletonTracing.once("finishedRender", =>
+        @model.skeletonTracing.once("finishedRender", =>
           @model.skeletonTracing.addNode(position, constants.TYPE_USUAL,
             @activeViewport, @model.flycam.getIntegerZoomStep()))
         @planeView.draw())

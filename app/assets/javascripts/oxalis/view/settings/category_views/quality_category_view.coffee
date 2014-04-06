@@ -13,12 +13,12 @@ class QualityCategoryView extends CategoryView
 
   subviewCreators :
 
-    "fourbit" : ->
+    "fourBit" : ->
 
       return new CheckboxSettingView(
         model : @model
         options :
-          name : "fourbit"
+          name : "fourBit"
           displayName : "4 Bit"
       )
 

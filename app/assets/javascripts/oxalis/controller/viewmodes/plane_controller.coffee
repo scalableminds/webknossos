@@ -1,8 +1,8 @@
 ### define
 app : app
+backbone : Backbone
 jquery : $
 underscore : _
-libs/event_mixin : EventMixin
 libs/input : Input
 three.trackball : Trackball
 ../camera_controller : CameraController
@@ -43,7 +43,7 @@ class PlaneController
 
   constructor : (@model, stats, @gui, @view, @sceneController) ->
 
-    _.extend(@, new EventMixin())
+    _.extend(this, Backbone.Events)
 
     @isStarted = false
 
@@ -90,7 +90,7 @@ class PlaneController
       return
 
     @initTrackballControls()
-    @bind()
+    @bindToEvents()
 
 
   initMouse : ->
@@ -148,28 +148,27 @@ class PlaneController
     @controls.target.set(
       app.scaleInfo.voxelToNm(@flycam.getPosition())...)
 
-    @flycam.on
-      positionChanged : (position) =>
+    @listenTo(@flycam, "positionChanged", (position) ->
 
-        nmPosition = app.scaleInfo.voxelToNm(position)
+      nmPosition = app.scaleInfo.voxelToNm(position)
 
-        @controls.target.set( nmPosition... )
-        @controls.update()
+      @controls.target.set( nmPosition... )
+      @controls.update()
 
-        # As the previous step will also move the camera, we need to
-        # fix this by offsetting the viewport
+      # As the previous step will also move the camera, we need to
+      # fix this by offsetting the viewport
 
-        invertedDiff = []
-        for i in [0..2]
-          invertedDiff.push( @oldNmPos[i] - nmPosition[i] )
-        @oldNmPos = nmPosition
+      invertedDiff = []
+      for i in [0..2]
+        invertedDiff.push( @oldNmPos[i] - nmPosition[i] )
+      @oldNmPos = nmPosition
 
-        @cameraController.moveTDView(
-                new THREE.Vector3( invertedDiff... ))
+      @cameraController.moveTDView(
+        new THREE.Vector3( invertedDiff... )
+      )
+    )
 
-    @cameraController.on
-      cameraPositionChanged : =>
-        @controls.update()
+    @listenTo(@cameraController, "cameraPositionChanged", @controls.update)
 
 
   initKeyboard : ->
@@ -213,9 +212,7 @@ class PlaneController
     , @model.user.get("keyboardDelay")
     )
 
-    @model.user.on({
-      keyboardDelayChanged : (value) => @input.keyboardLoopDelayed.delay = value
-      })
+    @listenTo(@model.user, "change:keyboardDelay", (model, value) -> @input.keyboardLoopDelayed.delay = value)
 
     @input.keyboardNoLoop = new Input.KeyboardNoLoop( @getKeyboardControls() )
 
@@ -235,8 +232,8 @@ class PlaneController
 
   init : ->
 
-    @cameraController.setClippingDistance @model.user.get("clippingDistance")
-    @sceneController.setClippingDistance @model.user.get("clippingDistance")
+    @cameraController.setClippingDistance(@model.user.get("clippingDistance"))
+    @sceneController.setClippingDistance(@model.user.get("clippingDistance"))
 
 
   start : (newMode) ->
@@ -261,28 +258,30 @@ class PlaneController
 
     @isStarted = false
 
-  bind : ->
+  bindToEvents : ->
 
-    @planeView.bind()
+    @planeView.bindToEvents()
 
-    @planeView.on
-      render : => @render()
-      renderCam : (id, event) => @sceneController.updateSceneForCam(id)
+    @listenTo(@planeView, "render", @render)
+    @listenTo(@planeView, "renderCam", @sceneController.updateSceneForCam)
 
-    @sceneController.on
-      newGeometries : (list, event) =>
-        for geometry in list
-          @planeView.addGeometry(geometry)
-      removeGeometries : (list, event) =>
-        for geometry in list
-          @planeView.removeGeometry(geometry)
-    @sceneController.skeleton?.on
-      newGeometries : (list, event) =>
-        for geometry in list
-          @planeView.addGeometry(geometry)
-      removeGeometries : (list, event) =>
-        for geometry in list
-          @planeView.removeGeometry(geometry)
+    @listenTo(@sceneController, "newGeometries", (list) ->
+      for geometry in list
+        @planeView.addGeometry(geometry)
+    )
+    @listenTo(@sceneController, "removeGeometries", (list) ->
+      for geometry in list
+        @planeView.removeGeometry(geometry)
+    )
+
+    @listenTo(@sceneController.skeleton, "newGeometries", (list) ->
+      for geometry in list
+        @planeView.addGeometry(geometry)
+    )
+    @listenTo(@sceneController.skeleton, "removeGeometries", (list) ->
+      for geometry in list
+        @planeView.removeGeometry(geometry)
+    )
 
 
   render : ->

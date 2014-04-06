@@ -48,17 +48,17 @@ class ParticleMaterialFactory extends AbstractMaterialFactory
 
     super()
 
-    @model.user.on
-      particleSizeChanged : (size) =>
-        @uniforms.particleSize.value = size
-      scaleChanged : (scale) =>
-        @uniforms.scale.value = scale
-      overrideNodeRadiusChanged : =>
-        @model.flycam.update()
+    @listenTo(@model.user, "change:particleSize", (model, size) ->
+      @uniforms.particleSize.value = size
+    )
+    @listenTo(@model.user, "change:scale", (model, scale) ->
+      @uniforms.scale.value = scale
+    )
+    @listenTo(@model.user, "change:overrideNodeRadius", @model.flycam.update)
 
-    @model.flycam.on
-      zoomStepChanged : =>
-        @uniforms.zoomFactor.value = @model.flycam.getPlaneScalingFactor()
+    @listenTo(@model.flycam, "zoomStepChanged", ->
+      @uniforms.zoomFactor.value = @model.flycam.getPlaneScalingFactor()
+    )
 
 
   getVertexShader : ->

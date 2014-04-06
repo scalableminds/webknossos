@@ -1,10 +1,10 @@
 ### define
 app : app
+backbone : Backbone
 jquery : $
 tween : TWEEN_LIB
 ../model/dimensions : Dimensions
 ../../libs/toast : Toast
-../../libs/event_mixin : EventMixin
 ../constants : constants
 ./modal : modal
 three : THREE
@@ -14,7 +14,7 @@ class PlaneView
 
   constructor : (@model, @flycam, @view, @stats) ->
 
-    _.extend(@, new EventMixin())
+    _.extend(this, Backbone.Events)
 
     { @renderer, @scene } = @view
     @running = false
@@ -106,7 +106,7 @@ class PlaneView
 
     if @flycam.hasChanged or @flycam.hasNewTextures() or modelChanged
 
-      @trigger "render"
+      @trigger("render")
 
       # update postion and FPS displays
       @stats.update()
@@ -126,7 +126,7 @@ class PlaneView
       @renderer.clear()
 
       for i in constants.ALL_VIEWPORTS
-        @trigger "renderCam", i
+        @trigger("renderCam", i)
         setupRenderArea(
           viewport[i][0] * f, viewport[i][1] * f, @curWidth * f,
           constants.PLANE_COLORS[i]
@@ -136,7 +136,7 @@ class PlaneView
       @flycam.hasChanged = false
       @flycam.hasNewTexture = [false, false, false]
 
-      @trigger "finishedRender"
+      @trigger("finishedRender")
 
   addGeometry : (geometry) ->
     # Adds a new Three.js geometry to the scene.
@@ -222,15 +222,16 @@ class PlaneView
        {id: "cancel-button", label: "Cancel"}])
 
 
-  bind : ->
+  bindToEvents : ->
 
-    @model.skeletonTracing?.on({
-      doubleBranch         : (callback) => @showBranchModal(callback)
-      mergeDifferentTrees  : ->
-        Toast.error("You can't merge nodes within the same tree", false) })
+    @listenTo(@model.skeletonTracing, "doubleBranch", @showBranchModal)
+    @listenTo(@model.skeletonTracing, "mergeDifferentTrees", ->
+      Toast.error("You can't merge nodes within the same tree", false)
+    )
 
-    @model.user.on
-      scaleChanged : (scale) => if @running then @scaleTrianglesPlane(scale)
+    @listenTo(@model.user, "change:scale", (model, scale) ->
+      if @running then @scaleTrianglesPlane(scale)
+    )
 
 
   stop : ->

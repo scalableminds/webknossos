@@ -1,10 +1,10 @@
 ### define
 app : app
+backbone : Backbone
 ../model : Model
 ../view : View
 ../model/dimensions : Dimensions
 ../constants : constants
-libs/event_mixin : EventMixin
 three : THREE
 ###
 
@@ -19,7 +19,7 @@ class CameraController
 
   constructor : (@cameras, @flycam, @model) ->
 
-    _.extend(@, new EventMixin())
+    _.extend(this, Backbone.Events)
 
     @updateCamViewport()
     for cam in @cameras
@@ -28,7 +28,7 @@ class CameraController
 
     @changeTDViewDiagonal(false)
 
-    @bind()
+    @bindToEvents()
 
   update : =>
     gPos = @flycam.getPosition()
@@ -238,8 +238,7 @@ class CameraController
     @flycam.update()
 
 
-  bind : ->
+  bindToEvents : ->
 
-    @model.user.on
-      clippingDistanceChanged : (value) => @setClippingDistance(value)
-      zoomChanged : (value) => @updateCamViewport()
+    @listenTo(@model.user, "change:clippingDistance", (model, value) -> @setClippingDistance(value))
+    @listenTo(@model.user, "change:zoom", (model, value) -> @updateCamViewport())

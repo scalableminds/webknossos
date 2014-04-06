@@ -1,7 +1,7 @@
 ### define
+backbone : Backbone
 ./volumecell : VolumeCell
 ./volumelayer : VolumeLayer
-libs/event_mixin : EventMixin
 ../dimensions : Dimensions
 libs/drawing : Drawing
 ./volumetracing_statelogger : VolumeTracingStateLogger
@@ -11,7 +11,7 @@ class VolumeTracing
 
   constructor : (tracing, @flycam, @cube) ->
 
-    _.extend(@, new EventMixin())
+    _.extend(this, Backbone.Events)
 
     @cells        = []          # List of VolumeCells
     @activeCell   = null        # Cell currently selected
@@ -56,7 +56,7 @@ class VolumeTracing
       return
 
     @currentLayer.addContour(pos)
-    @trigger "updateLayer", @currentLayer.getSmoothedContourList()
+    @trigger("updateLayer", @currentLayer.getSmoothedContourList())
 
   finishLayer : ->
 
@@ -72,7 +72,7 @@ class VolumeTracing
     @currentLayer = null
     @flycam.update()
 
-    @trigger "resetContour"
+    @trigger("resetContour")
 
 
   getActiveCellId : ->
@@ -95,4 +95,4 @@ class VolumeTracing
       @createCell(id)
 
     console.log @getActiveCellId()
-    @trigger "newActiveCell"
+    @trigger("newActiveCell")

@@ -1,5 +1,5 @@
 ### define
-../../libs/event_mixin : EventMixin
+backbone : Backbone
 ../model/dimensions : Dimensions
 ../../libs/resizable_buffer : ResizableBuffer
 ../constants : constants
@@ -12,18 +12,18 @@ class CellLayer
 
   constructor : (@volumeTracing, @flycam) ->
 
-    _.extend(this, new EventMixin())
+    _.extend(this, Backbone.Events)
 
     @color = 0x000000
 
-    @volumeTracing.on({
-      updateLayer : (contourList) =>
-        @reset()
-        for p in contourList
-          @addEdgePoint(p)
-      resetContour : =>
-        @reset()
-      })
+    @listenTo(@volumeTracing, "updateLayer", (contourList) ->
+      @reset()
+      for p in contourList
+        @addEdgePoint(p)
+    )
+    @listenTo(@volumeTracing, "resetContour", ->
+      @reset()
+    )
 
     @createMeshes()
 

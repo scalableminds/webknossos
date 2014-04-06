@@ -1,6 +1,6 @@
 ### define
 app : app
-libs/event_mixin : EventMixin
+backbone : Backbone
 three : THREE
 stats : Stats
 jquery : $
@@ -26,7 +26,7 @@ class ArbitraryView
 
   constructor : (canvas, @dataCam, @stats, @view, width) ->
 
-    _.extend(this, new EventMixin())
+    _.extend(this, Backbone.Events)
 
     # CAM_DISTANCE has to be calculates such that with cam
     # angle 45°, the plane of width 128 fits exactly in the
@@ -111,8 +111,8 @@ class ArbitraryView
                         m[2], m[6], m[10], m[14],
                         m[3], m[7], m[11], m[15]
 
-      camera.matrix.multiply( new THREE.Matrix4().makeRotationY( Math.PI ))
-      camera.matrix.multiply( new THREE.Matrix4().makeTranslation( @cameraPosition... ))
+      camera.matrix.multiply(new THREE.Matrix4().makeRotationY(Math.PI))
+      camera.matrix.multiply(new THREE.Matrix4().makeTranslation(@cameraPosition...))
       camera.matrixWorldNeedsUpdate = true
 
       f = @deviceScaleFactor

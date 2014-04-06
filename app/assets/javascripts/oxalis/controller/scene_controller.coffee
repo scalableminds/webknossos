@@ -1,12 +1,12 @@
 ### define
 app : app
+backbone : Backbone
 ../geometries/plane : Plane
 ../geometries/skeleton : Skeleton
 ../geometries/cube : Cube
 ../geometries/contourgeometry : ContourGeometry
 ../geometries/volumegeometry : VolumeGeometry
 ../model/dimensions : Dimensions
-../../libs/event_mixin : EventMixin
 ../constants : constants
 ../view/polygons/polygon_factory : PolygonFactory
 three : THREE
@@ -21,7 +21,7 @@ class SceneController
 
   constructor : (@upperBoundary, @flycam, @model) ->
 
-    _.extend(@, new EventMixin())
+    _.extend(this, Backbone.Events)
 
     @current          = 0
     @displayPlane     = [true, true, true]
@@ -33,7 +33,7 @@ class SceneController
     @volumeMeshes   = []
 
     @createMeshes()
-    @bind()
+    @bindToEvents()
 
 
   createMeshes : ->
@@ -136,33 +136,33 @@ class SceneController
       @planes[i].setScale(planeScale)
 
 
-  setTextRotation : (rotVec) =>
+  setTextRotation : (rotVec) ->
 
     # TODO: Implement
 
 
-  setDisplayCrosshair : (value) =>
+  setDisplayCrosshair : (value) ->
 
     for plane in @planes
       plane.setDisplayCrosshair value
     @flycam.update()
 
 
-  setClippingDistance : (value) =>
+  setClippingDistance : (value) ->
 
     # convert nm to voxel
     for i in constants.ALL_PLANES
       @planeShift[i] = value * app.scaleInfo.voxelPerNM[i]
 
 
-  setInterpolation : (value) =>
+  setInterpolation : (value) ->
 
     for plane in @planes
       plane.setLinearInterpolationEnabled(value)
     @flycam.update()
 
 
-  setDisplaySV : (plane, value) =>
+  setDisplaySV : (plane, value) ->
 
     @displayPlane[plane] = value
     @flycam.update()
@@ -226,18 +226,12 @@ class SceneController
     @skeleton?.setSizeAttenuation(false)
 
 
-  bind : ->
+  bindToEvents : ->
 
-    @model.user.on({
-      clippingDistanceChanged : (value) =>
-        @setClippingDistance(value)
-      displayCrosshairChanged : (value) =>
-        @setDisplayCrosshair(value)
-      interpolationChanged : (value) =>
-        @setInterpolation(value)
-      displayTDViewXYChanged : (value) =>
-        @setDisplaySV constants.PLANE_XY, value
-      displayTDViewYZChanged : (value) =>
-        @setDisplaySV constants.PLANE_YZ, value
-      displayTDViewXZChanged : (value) =>
-        @setDisplaySV constants.PLANE_XZ, value  })
+    user = @model.user
+    @listenTo(user, "change:clippingDistance", (model, value) -> @setClippingDistance(value))
+    @listenTo(user, "change:displayCrosshair", (model, value) -> @setDisplayCrosshair(value))
+    @listenTo(user, "change:interpolation", (model, value) -> @setInterpolation(value))
+    @listenTo(user, "change:displayTDViewXY", (model, value) -> @setDisplaySV(constants.PLANE_XY, value))
+    @listenTo(user, "change:displayTDViewYZ", (model, value) -> @setDisplaySV(constants.PLANE_YZ, value))
+    @listenTo(user, "change:displayTDViewXZ", (model, value) -> @setDisplaySV(constants.PLANE_XZ, value))

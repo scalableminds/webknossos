@@ -1,4 +1,5 @@
 ### define
+backbone : Backbone
 ./binary/interpolation_collector : InterpolationCollector
 ./binary/cube : Cube
 ./binary/pullqueue : PullQueue
@@ -8,7 +9,6 @@
 ./binary/ping_strategy_3d : PingStrategy3d
 ./binary/bounding_box : BoundingBox
 ../constants : constants
-libs/event_mixin : EventMixin
 ###
 
 class Binary
@@ -53,7 +53,8 @@ class Binary
     for planeId in constants.ALL_PLANES
       @planes.push( new Plane2D(planeId, @cube, @pullQueue, @TEXTURE_SIZE_P, @layer.bitDepth, @targetBitDepth, 32) )
 
-    @listenTo(@model.dataset, "change:fourBit" , (model, is4Bit) -> @pullQueue(is4Bit) )
+    @pullQueue.set4Bit(@model.dataset.get("fourBit"))
+    @listenTo(@model.dataset, "change:fourBit" , (model, is4Bit) -> @pullQueue.set4Bit(is4Bit) )
 
     @ping = _.throttle(@pingImpl, @PING_THROTTLE_TIME)
 

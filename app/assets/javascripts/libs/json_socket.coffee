@@ -1,6 +1,6 @@
 ### define
+backbone : Backbone
 libs/request : Request
-libs/event_mixin : EventMixin
 ###
 
 
@@ -12,13 +12,13 @@ class JsonSocket
   constructor : (options) ->
 
     _.extend(this, options)
-    _.extend(this, new EventMixin())
+    _.extend(this, Backbone.Events)
 
     senderDataCallback = (args...) =>
-      @trigger( "data", args... )
+      @trigger("data", args...)
 
     for sender in @senders
-      sender.on "data", senderDataCallback
+      sender.on("data", senderDataCallback)
 
     @sender = @senders[0]
     @sender.open()
@@ -57,7 +57,7 @@ class JsonSocket.WebSocket
 
   constructor : (@url) ->
 
-    _.extend(this, new EventMixin())
+    _.extend(this, Backbone.Events)
 
 
   open : ->
@@ -131,7 +131,7 @@ class JsonSocket.Comet
 
   constructor : (@url) ->
 
-    _.extend(this, new EventMixin())
+    _.extend(this, Backbone.Events)
     @globalCallbackName = "callback_#{Math.round(Math.random() * 10000)}"
 
 

@@ -1,10 +1,10 @@
 ### define
 app : app
+backbone : Backbone
 jquery : $
 underscore : _
 backbone : backbone
 libs/request : Request
-libs/event_mixin : EventMixin
 three.color : ColorConverter
 ./tracepoint : TracePoint
 ./tracetree : TraceTree
@@ -33,7 +33,7 @@ class SkeletonTracing
 
   constructor : (tracing, @flycam, @flycam3d, @user) ->
 
-    _.extend(this, new EventMixin())
+    _.extend(this, Backbone.Events)
 
     @doubleBranchPop = false
 
@@ -126,7 +126,7 @@ class SkeletonTracing
             @pushBranch()
         @doubleBranchPop = false
       offset += size
-    @trigger "reloadTrees"
+    @trigger("reloadTrees")
     console.log "[benchmark] done. Took me #{((new Date()).getTime() - startTime) / 1000} seconds."
 
 
@@ -148,7 +148,7 @@ class SkeletonTracing
     deferred = new $.Deferred()
     if @branchPointsAllowed
       if @branchStack.length and @doubleBranchPop
-        @trigger( "doubleBranch", =>
+        @trigger("doubleBranch", =>
           point = @branchStack.pop()
           @stateLogger.push()
           @setActiveNode(point.id)
@@ -338,7 +338,7 @@ class SkeletonTracing
       @activeNode.radius = Math.min( @MAX_RADIUS,
                             Math.max( @MIN_RADIUS, radius ) )
       @stateLogger.updateNode( @activeNode, @activeNode.treeId )
-      @trigger "newActiveNodeRadius", radius
+      @trigger("newActiveNodeRadius", radius)
 
 
   selectNextTree : (forward) ->

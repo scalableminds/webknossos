@@ -1,8 +1,8 @@
 ### define
+backbone : Backbone
 underscore : _
 jquery : $
 libs/request : Request
-libs/event_mixin : EventMixin
 three : THREE
 ###
 
@@ -12,7 +12,7 @@ class StateLogger
 
   constructor : (@flycam, @version, @tracingId, @tracingType, @allowUpdate) ->
 
-    _.extend(this, new EventMixin())
+    _.extend(this, Backbone.Events)
 
     @committedDiffs = []
     @newDiffs = []
@@ -115,7 +115,7 @@ class StateLogger
 
       @push()
       if notifyOnFailure
-        @trigger("pushFailed", @failedPushCount >= 3 )
+        @trigger("pushFailed", @failedPushCount >= 3)
       if @pushDeferred
         @pushDeferred.reject()
         @pushDeferred = null

@@ -8,6 +8,7 @@ import play.api.libs.json.{JsResult, JsValue, Format, Json}
 
 sealed trait DataSourceLike{
   def id: String
+  def isUsable: Boolean
 }
 
 object DataSourceLike{
@@ -26,6 +27,8 @@ object DataSourceLike{
 
 case class UnusableDataSource(serverUrl: String, id: String, baseDir: String, owningTeam: String, sourceType: String) extends DataSourceLike{
   def sourceFolder: Path = Path.fromString(baseDir)
+
+  val isUsable = false
 }
 
 object UnusableDataSource{
@@ -34,6 +37,8 @@ object UnusableDataSource{
 
 case class UsableDataSource(serverUrl: String, owningTeam: String, sourceType: String, dataSource: DataSource) extends DataSourceLike{
   val id = dataSource.id
+
+  val isUsable = true
 }
 
 object UsableDataSource{

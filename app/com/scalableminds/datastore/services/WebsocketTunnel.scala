@@ -29,7 +29,7 @@ trait JsonMessageHandler {
   def handle(js: JsValue): Future[Either[JsValue, Array[Byte]]]
 }
 
-class JsonWSTunnela(serverUrl: String, incomingMessageHandler: JsonMessageHandler)(implicit codec: Codec) extends Actor {
+class JsonWSTunnel(serverUrl: String, incomingMessageHandler: JsonMessageHandler)(implicit codec: Codec) extends Actor {
 
   implicit val exco = context.system.dispatcher
 

@@ -34,7 +34,7 @@ class User extends Backbone.Model
   triggerAll : ->
 
     for property of @attributes
-      @trigger(property + "Changed", @get(property))
+      @trigger("change:#{property}", this, @get(property))
 
 
   push : ->

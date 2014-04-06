@@ -72,7 +72,7 @@ class PlaneMaterialFactory extends AbstractPlaneMaterialFactory
 
     super()
 
-    @listenTo(@model.dataset, "change:layerColors.*" , (model, layerColors) ->
+    @listenTo(@model.dataset, "change:layerColors change:layerColors.*" , (model, layerColors) ->
       for name, color of layerColors
         color = _.map color, (e) -> e / 255
         uniformName = @sanitizeName(name) + "_color"

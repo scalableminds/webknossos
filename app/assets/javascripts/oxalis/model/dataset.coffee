@@ -36,7 +36,7 @@ class Dataset extends Backbone.DeepModel
   triggerAll : ->
 
     for property of @attributes
-      @trigger(property + "Changed", @get(property))
+      @trigger("change:#{property}", this, @get(property))
 
 
   push : ->

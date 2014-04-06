@@ -16,8 +16,6 @@ backbone : Backbone
 ./view/skeletontracing/skeletontracing_view : SkeletonTracingView
 ./view/volumetracing/volumetracing_view : VolumeTracingView
 ../libs/input : Input
-./view/settings/user_settings_view : UserSettingsView
-./view/settings/dataset_settings_view : DatasetSettingsView
 ../libs/toast : Toast
 ./constants : constants
 stats : Stats
@@ -121,8 +119,7 @@ class Controller
       @initKeyboard()
 
       for binaryName of @model.binary
-        @model.binary[binaryName].cube.on "bucketLoaded" : =>
-          @model.flycam.update()
+        @listenTo(@model.binary[binaryName].cube, "bucketLoaded", -> @model.flycam.update)
 
 
       if @controlMode == constants.CONTROL_MODE_VIEW

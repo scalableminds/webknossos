@@ -17,7 +17,7 @@ class DataSourceRepository(implicit val system: ActorSystem) extends AbstractDat
     DataSourceDAO.findUsableByName(name).map(_.dataSource)
 
   def updateDataSources(dataSources: List[DataSourceLike]): Unit = {
-    Logger.debug("Available datasets: " + dataSources.map(_.id).mkString(", "))
+    Logger.debug("Available datasets: " + dataSources.map(d => d.id + s" (${if(d.isUsable) "active" else "inactive"}})").mkString(", "))
     dataSources.map{
       case d: UsableDataSource =>
         DataSourceDAO.updateDataSource(d)

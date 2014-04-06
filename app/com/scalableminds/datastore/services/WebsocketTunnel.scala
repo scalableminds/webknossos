@@ -29,7 +29,7 @@ trait JsonMessageHandler {
   def handle(js: JsValue): Future[Either[JsValue, Array[Byte]]]
 }
 
-class JsonWSTunnel(serverUrl: String, incomingMessageHandler: JsonMessageHandler)(implicit codec: Codec) extends Actor {
+class JsonWSTunnela(serverUrl: String, incomingMessageHandler: JsonMessageHandler)(implicit codec: Codec) extends Actor {
 
   implicit val exco = context.system.dispatcher
 
@@ -53,11 +53,11 @@ class JsonWSTunnel(serverUrl: String, incomingMessageHandler: JsonMessageHandler
 
     def onMessage(message: String): Unit = {
       receiver ! ReceivedString(message)
-      logger.warn(s"Websocket string message: $message")
+      logger.trace(s"Websocket string message: $message")
     }
 
     override def onMessage(blob: ByteBuffer): Unit = {
-      logger.warn(s"Websocket blob message. Size: ${blob.limit()}")
+      logger.trace(s"Websocket blob message. Size: ${blob.limit()}")
       onMessage(codec.decode(blob.array()))
     }
   }
@@ -87,7 +87,6 @@ class JsonWSTunnel(serverUrl: String, incomingMessageHandler: JsonMessageHandler
         val js = Json.parse(s)
         incomingMessageHandler.handle(js).map {
           case Right(enumerator) =>
-            logger.info("Scheduling binary data return value")
             self ! SendData(enumerator)
           case Left(json) =>
             self ! SendJson(json)
@@ -165,52 +164,3 @@ class JsonWSTunnel(serverUrl: String, incomingMessageHandler: JsonMessageHandler
     sendIt(numberOfRetries = 0)
   }
 }
-
-
-//public class SSLClientExample {
-//
-//  /*
-//   * Keystore with certificate created like so (in JKS format):
-//   *
-//   *keytool -genkey -validity 3650 -keystore "keystore.jks" -storepass "storepassword" -keypass "keypassword" -alias "default" -dname "CN=127.0.0.1, OU=MyOrgUnit, O=MyOrg, L=MyCity, S=MyRegion, C=MyCountry"
-//   */
-//  public static void main( String[] args ) throws Exception {
-//    WebSocketImpl.DEBUG = true;
-//
-//    WebSocketChatClient chatclient = new WebSocketChatClient( new URI( "wss://localhost:8887" ) );
-//
-//    // load up the key store
-//    String STORETYPE = "JKS";
-//    String KEYSTORE = "keystore.jks";
-//    String STOREPASSWORD = "storepassword";
-//    String KEYPASSWORD = "keypassword";
-//
-//    KeyStore ks = KeyStore.getInstance( STORETYPE );
-//    File kf = new File( KEYSTORE );
-//    ks.load( new FileInputStream( kf ), STOREPASSWORD.toCharArray() );
-//
-//    KeyManagerFactory kmf = KeyManagerFactory.getInstance( "SunX509" );
-//    kmf.init( ks, KEYPASSWORD.toCharArray() );
-//    TrustManagerFactory tmf = TrustManagerFactory.getInstance( "SunX509" );
-//    tmf.init( ks );
-//
-//    SSLContext sslContext = null;
-//    sslContext = SSLContext.getInstance( "TLS" );
-//    sslContext.init( kmf.getKeyManagers(), tmf.getTrustManagers(), null );
-//    // sslContext.init( null, null, null ); // will use java's default key and trust store which is sufficient unless you deal with self-signed certificates
-//
-//    SSLSocketFactory factory = sslContext.getSocketFactory();// (SSLSocketFactory) SSLSocketFactory.getDefault();
-//
-//    chatclient.setSocket( factory.createSocket() );
-//
-//    chatclient.connectBlocking();
-//
-//    BufferedReader reader = new BufferedReader( new InputStreamReader( System.in ) );
-//    while ( true ) {
-//      String line = reader.readLine();
-//      if( line.equals( "close" ) ) {
-//        chatclient.close();
-//      } else {
-//        chatclient.send( line );
-//      }
-//    }

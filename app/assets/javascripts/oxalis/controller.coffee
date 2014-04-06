@@ -16,7 +16,6 @@ backbone : Backbone
 ./view/skeletontracing/skeletontracing_view : SkeletonTracingView
 ./view/volumetracing/volumetracing_view : VolumeTracingView
 ../libs/input : Input
-./view/gui : Gui
 ./view/settings/user_settings_view : UserSettingsView
 ./view/settings/dataset_settings_view : DatasetSettingsView
 ../libs/toast : Toast

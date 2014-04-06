@@ -57,7 +57,7 @@ class CommentTabView extends Backbone.Marionette.CompositeView
 
   initialize : (options) ->
 
-    {@_model} = options
+    { @_model } = options
     @activeComment = new Backbone.Model()
 
     @listenTo(app.vent, "model:sync", ->
@@ -76,13 +76,15 @@ class CommentTabView extends Backbone.Marionette.CompositeView
 
       @render()
     )
+    @listenTo(app.vent, "comments:deleteComment", @deleteComment)
+
 
   getActiveNodeId : ->
 
     return @_model.skeletonTracing.getActiveNodeId()
 
 
-  setActiveNode: (activeComment) ->
+  setActiveNode : (activeComment) ->
 
     # populate the input element
     @activeComment = activeComment
@@ -132,10 +134,9 @@ class CommentTabView extends Backbone.Marionette.CompositeView
       @setActiveNode(previousComment)
 
 
-
   updateComments : ->
 
-    comments = @model.skeletonTracing.getComments( @model.user.get("sortCommentsAsc") )
+    comments = @model.skeletonTracing.getComments(@model.user.get("sortCommentsAsc"))
     commentList = $("#comment-list")
     commentList.empty()
 
@@ -186,12 +187,14 @@ class CommentTabView extends Backbone.Marionette.CompositeView
         $("#comment-container").animate({
           scrollTop: activeTree.offset().top - $("#comment-container").offset().top + $("#comment-container").scrollTop()}, 250)
 
+
   updateCommentsSortButton : ->
 
     @toggleIconVisibility(
       @model.user.get("sortCommentsAsc"),
       $("#sort-asc-icon"),
     $("#sort-desc-icon"))
+
 
   setComment : (commentText) ->
 
@@ -218,12 +221,12 @@ class CommentTabView extends Backbone.Marionette.CompositeView
 
   deleteComment : (nodeID) ->
 
-    for i in [0...@comments.length]
-      if(@comments[i].node.id == nodeID)
-        @comments.splice(i, 1)
-        @stateLogger.push()
-        @trigger("updateComments")
-        break
+    comment = @collection.findWhere("node" : nodeID)
+    if comment
+      @collection.remove(comment)
+      # TODO save the change
+      #@stateLogger.push()
+      @trigger("updateComments")
 
 
   nextCommentNodeID : (forward) ->
@@ -246,4 +249,3 @@ class CommentTabView extends Backbone.Marionette.CompositeView
       return @comments[(length + @deletedCommentIndex + offset) % length].node.id
 
     return @comments[0].node.id
-

@@ -210,14 +210,9 @@ $ ->
 
       return
 
-  if window.location.hash
-    $(window.location.hash).addClass("highlighted")
 
-  $(window).on "hashchange", ->
-    $(".highlighted").removeClass("highlighted")
-    $(window.location.hash).addClass("highlighted")
-
-
+  # TODO
+  # REMOVE AFTER REFACTORING TASK-TYPES VIEW !!!
   $("table.table-details").each ->
 
     $table = $(this)

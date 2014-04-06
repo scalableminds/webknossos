@@ -14,7 +14,6 @@ class NonBackboneRouter extends Backbone.Router
     "annotations/:typ/:id"          : "tracingTrace"
     "datasets/:id/view"             : "tracingView"
     "*url"                          : "hideLoading"
-    #"admin/tasks/algorithm"      : "taskAlgorithm"
 
 
   hideLoading : ->
@@ -39,18 +38,18 @@ class NonBackboneRouter extends Backbone.Router
       $.ajax(
         url: dataUrl
         type: 'GET'
-        success: (task) ->
+        success: (info) ->
 
-          if task.noData
+          if info.task
             populateTemplate({task : null})
           else
-            populateTemplate({task : task})
+            populateTemplate({task : info.task})
 
         error: (xhr, status, error) ->
 
-          console.error("Something went wrong when receiving task data", xhr, status, error)
+          console.error("Something went wrong when receiving info data", xhr, status, error)
 
-        complete: (task) ->
+        complete: (info) ->
 
           oxalis = window.oxalis = new Controller(constants.CONTROL_MODE_TRACE)
       )
@@ -77,17 +76,6 @@ class NonBackboneRouter extends Backbone.Router
       new TaskOverviewView(
         el : $("#main-container").find("#task-overview")[0]
       )
-      return @hideLoading()
-
-
-  taskAlgorithm : ->
-
-    require ["admin/views/task/task_algorithm_view"], (TaskAlgorithmView) =>
-
-      new TaskAlgorithmView(
-        el : $("#main-container").find("#task-selection-algoritm")[0]
-      )
-
       return @hideLoading()
 
 

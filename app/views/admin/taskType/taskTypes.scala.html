@@ -1,15 +1,17 @@
 @(taskTypes: List[models.task.TaskType], form: Form[models.task.TaskType], teams: List[String])(implicit session: oxalis.view.AuthedSessionData)
 
 @main(){
-	<div class="container">
+  <div class="container task-types-administration">
+    <div class="well col-center col-sm-6">
     <h3>Task types</h3>
-    <div class="well">
       @helper.form(controllers.admin.routes.TaskTypeAdministration.create, 'class -> "form-horizontal") {
 
         @basicTaskTypeForm(teams, form)
 
-        <div class="form-actions">
-          <button type="submit" class="btn btn-primary">Create</button>
+        <div class="form-group">
+          <div class="col-sm-9 col-sm-offset-3">
+            <button type="submit" class="form-control btn btn-primary">Create</button>
+          </div>
         </div>
       }
     </div>
@@ -37,9 +39,9 @@
         </tr>
       </thead>
       <tbody>
-	    @taskTypes.map{ taskType =>
+      @taskTypes.map{ taskType =>
           @taskTypeTableItem(taskType)
-	    }
+      }
       </tbody>
     </table>
   </div>

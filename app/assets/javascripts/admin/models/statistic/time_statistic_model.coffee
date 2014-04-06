@@ -1,6 +1,7 @@
 ### define
 underscore : _
 backbone : backbone
+moment : moment
 ###
 
 class TimeStatisticModel extends Backbone.Model
@@ -13,6 +14,18 @@ class TimeStatisticModel extends Backbone.Model
       times = @get("tracingTimes")
       @set("tracingTimes", new Backbone.Collection(times))
     )
+
+  parse : (response) ->
+
+
+    if _.isEmpty(response.tracingTimes)
+      response.tracingTimes.push(
+        start : moment().startOf("week")
+        end : moment().endOf("week")
+        tracingTime : 0
+      )
+
+    return response
 
 
 

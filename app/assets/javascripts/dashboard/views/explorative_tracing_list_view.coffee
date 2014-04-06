@@ -38,17 +38,13 @@ class ExplorativeTracingListView extends Backbone.Marionette.CompositeView
               <option value="<%= d.get("name") %>"> <%= d.get("name") %> </option>
             <% }) %>
           </select>
-          <span id="tracing-chooser">
-            <label class="radio inline">
-              <input type="radio" name="contentType" value="skeletonTracing" checked>
-              Skeleton
-            </label>
-            <label class="radio inline">
-              <input type="radio" name="contentType" value="volumeTracing">
-              Volume
-            </label>
-          </span>
-          <button type="submit" class="btn"><i class="fa fa-search"></i>Explore data set</button>
+          <div class="divider-vertical"></div>
+          <button type="submit" class="btn btn-default" name="contentType" value="skeletonTracing">
+            <i class="fa fa-search"></i>Open skeleton mode
+          </button>
+          <button type="submit" class="btn btn-default" name="contentType" value="volumeTracing">
+            <i class="fa fa-search"></i>Open volume mode
+          </button>
         </form>
       </div>
     <% } %>
@@ -59,8 +55,8 @@ class ExplorativeTracingListView extends Backbone.Marionette.CompositeView
           <th> # </th>
           <th> Name </th>
           <th> DataSet </th>
-          <th> SkeletonTracing Stats </th>
-          <th> SkeletonTracing-Type </th>
+          <th> Stats </th>
+          <th> Type </th>
           <th> Last edited </th>
           <th> </th>
         </tr>

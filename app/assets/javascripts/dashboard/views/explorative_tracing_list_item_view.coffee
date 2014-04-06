@@ -22,7 +22,7 @@ class ExplorativeTracingListItemView extends Backbone.Marionette.ItemView
                  type="text"
                  value="<%= name %>"
                  autocomplete="off">
-            <a href="#" id="explorative-name-submit" class="btn"><i class="fa fa-check"></i></a>
+            <a href="#" id="explorative-name-submit" class="btn btn-default"><i class="fa fa-check"></i></a>
         </div>
       </form>
     </td>

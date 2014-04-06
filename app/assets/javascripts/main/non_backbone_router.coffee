@@ -13,7 +13,6 @@ class NonBackboneRouter extends Backbone.Router
     "admin/projects"                : "projects"
     "annotations/:typ/:id"          : "tracingTrace"
     "datasets/:id/view"             : "tracingView"
-    "users/:id/details"             : "userDetails"
     "*url"                          : "hideLoading"
     #"admin/tasks/algorithm"      : "taskAlgorithm"
 
@@ -108,7 +107,7 @@ class NonBackboneRouter extends Backbone.Router
 
         projects[index].owner = ownerName
 
-      return { "data" : projects }
+      return { data : projects }
 
     $owner = $("#owner")
     $pageSelection = $(".page-selection")

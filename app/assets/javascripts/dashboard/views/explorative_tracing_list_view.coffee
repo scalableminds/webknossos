@@ -12,8 +12,7 @@ class ExplorativeTracingListView extends Backbone.Marionette.CompositeView
 
   template : _.template("""
     <h3>Explorative Tracings</h3>
-    <br />
-    <% if (!this.isAdminView) {%>
+    <% if (!isAdminView) {%>
       <div>
         <form action="<%= jsRoutes.controllers.admin.NMLIO.upload().url %>"
               method="POST"
@@ -83,19 +82,18 @@ class ExplorativeTracingListView extends Backbone.Marionette.CompositeView
     formSpinnerIcon : "#form-spinner-icon"
     formUploadIcon : "#form-upload-icon"
 
-  isAdminView : false
 
   initialize : (options) ->
 
-    @bindUIElements()
-    @model = options.model
+    @model.set("isAdminView", options.isAdminView)
     @collection = @model.get("exploratoryAnnotations")
 
     datasetCollection = new DatasetCollection()
     @model.set("dataSets", datasetCollection)
 
     @listenTo(datasetCollection, "sync", @render)
-    datasetCollection.fetch( silent : true )
+    datasetCollection.fetch(silent : true)
+
 
   onShow : ->
 
@@ -116,13 +114,19 @@ class ExplorativeTracingListView extends Backbone.Marionette.CompositeView
 
     toggleIcon = =>
 
-      [@ui.formSpinnerIcon, @ui.formUploadIcon].map((ea) -> ea.toggleClass("hide"))
+      [@ui.formSpinnerIcon, @ui.formUploadIcon].forEach((ea) -> ea.toggleClass("hide"))
 
 
     toggleIcon()
 
+    form = @ui.uploadAndExploreForm
+
     $.ajax(
-      @getUploadOptions(@ui.uploadAndExploreForm)
+      url : form.attr("action")
+      data : new FormData(form[0])
+      type : "POST"
+      processData : false
+      contentType : false
     ).done( (data) ->
       url = "/annotations/" + data.annotation.typ + "/" + data.annotation.id
       app.router.loadURL(url)
@@ -132,15 +136,6 @@ class ExplorativeTracingListView extends Backbone.Marionette.CompositeView
     ).always( ->
       toggleIcon()
     )
-
-
-  getUploadOptions : (form) ->
-
-    url : form.attr("action")
-    data : new FormData(form[0])
-    type : "POST"
-    processData : false
-    contentType : false
 
 
   onClose : ->

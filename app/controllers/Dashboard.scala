@@ -47,7 +47,7 @@ trait Dashboard extends FoxImplicits {
 
   private def annotationsAsJson(annotations : Fox[List[AnnotationLike]], user : User)(implicit ctx: DBAccessContext) = {
     annotations.flatMap{ taskAnnotations =>
-      Fox.sequence(taskAnnotations.map(AnnotationLike.annotationLikeInfoWrites(_, Some(user), List("content", "actions"))))
+      Fox.sequence(taskAnnotations.map(AnnotationLike.annotationLikeInfoWrites(_, Some(user), exclude = List("content", "actions"))))
     }
   }
 
@@ -58,7 +58,6 @@ trait Dashboard extends FoxImplicits {
       tasksAnnotations <- annotationsAsJson(AnnotationService.findTasksOf(user), user)
     } yield {
       Json.obj(
-        "user" -> Json.toJson(user)(User.userPublicWrites(requestingUser)),
         "exploratoryAnnotations" -> exploratoryAnnotations.flatMap ( o => o),
         "taskAnnotations" -> tasksAnnotations.flatMap ( o => o)
       )

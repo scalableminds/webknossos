@@ -2,6 +2,7 @@
 underscore : _
 backbone : Backbone
 ./dashboard_task_model : DashboardTaskModel
+./user_model : UserModel
 ###
 
 class DashboardModel extends Backbone.Model
@@ -9,18 +10,31 @@ class DashboardModel extends Backbone.Model
   urlRoot : ->
 
     if userID = @get("userID")
-      return "/api/users/#{userID}/details"
+      return "/api/users/#{userID}/annotations"
     else
-      return "/api/user/details"
+      return "/api/user/annotations"
 
 
   newTaskUrl : "/user/tasks/request"
   defaults :
       showFinishedTasks : false
 
-  initialize : ->
+  initialize : (options) ->
 
+    @set("userID", options.userID)
     @listenTo(@, "sync", @transformToCollection)
+
+
+  fetch : ->
+
+    promiseA = super(arguments)
+
+    user = new UserModel(id : @get("userID"))
+    @set("user", user)
+
+    promiseB = user.fetch()
+
+    return $.when(promiseA, promiseB)
 
 
   getFinishedTasks : ->
@@ -37,7 +51,6 @@ class DashboardModel extends Backbone.Model
   transformToCollection : ->
 
     tasks = @get("taskAnnotations").map( (el) ->
-
       return DashboardTaskModel::parse(el)
     )
 
@@ -50,14 +63,11 @@ class DashboardModel extends Backbone.Model
 
   getNewTask : ->
 
-    deferred = new $.Deferred()
     newTask = new DashboardTaskModel()
-    newTask.fetch(
+
+    return newTask.fetch(
       url : @newTaskUrl
       success : (response) =>
         @get("tasks").add(newTask)
-        deferred.resolve(response)
-      error : (model, xhr) ->
-        deferred.reject(xhr.responseJSON)
     )
-    return deferred
+

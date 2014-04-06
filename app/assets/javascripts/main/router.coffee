@@ -77,10 +77,15 @@ class Router extends Backbone.Router
 
   dashboard : (userID) ->
 
-    require ["dashboard/views/dashboard_view"], (Dashboard) =>
+    require ["dashboard/views/dashboard_view", "dashboard/models/dashboard_model"], (DashboardView, DashboardModel) =>
 
-      view = new Dashboard("userID" : userID)
-      @changeView(view)
+      isAdminView = userID != null
+
+      model = new DashboardModel({ userID })
+      model.fetch().done( =>
+        view = new DashboardView(model : model, isAdminView : isAdminView)
+        @changeView(view)
+      )
 
       @hideLoading()
 

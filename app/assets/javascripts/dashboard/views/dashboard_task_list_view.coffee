@@ -10,8 +10,7 @@ class DashboardTaskListView extends Backbone.Marionette.CompositeView
 
   template : _.template("""
     <h3>Tasks</h3>
-    <br />
-    <% if (userID) { %>
+    <% if (isAdminView) { %>
       <a href="<%= jsRoutes.controllers.admin.NMLIO.userDownload(user.id).url %>"
          class="btn btn-primary"
          title="download all finished tracings">
@@ -28,7 +27,6 @@ class DashboardTaskListView extends Backbone.Marionette.CompositeView
     <a href="#" id="toggle-finished" class="btn btn-default">
       Show finished tasks
     </a>
-    <br /><br />
     <table class="table table-striped">
       <thead>
         <tr>
@@ -55,14 +53,16 @@ class DashboardTaskListView extends Backbone.Marionette.CompositeView
     "click @ui.finishToggle" : "toggleFinished"
 
 
-  initialize : ->
+  initialize : (options) ->
 
+    @model.set("isAdminView", options.isAdminView)
     @showFinishedTasks = false
     @collection = @model.getUnfinishedTasks()
 
     @listenTo(@model.get("tasks"), "add", @addChildView, @)
     @listenTo(@model.get("tasks"), "change", @update)
 
+    @update()
 
   update : ->
 
@@ -81,8 +81,12 @@ class DashboardTaskListView extends Backbone.Marionette.CompositeView
 
     if @model.getUnfinishedTasks().length == 0 or confirm("Do you really want another task?")
 
-      @model.getNewTask().always((response) ->
-        Toast.message(response.messages)
+      showMessages = (response) -> Toast.message(response.messages)
+
+      @model.getNewTask().done((response) ->
+        showMessages(response)
+      ).fail((xhr) ->
+        showMessages(xhr.responseJSON)
       )
 
 

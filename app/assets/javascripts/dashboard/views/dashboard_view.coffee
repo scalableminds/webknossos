@@ -4,7 +4,6 @@ backbone.marionette : marionette
 dashboard/views/dashboard_task_list_view : DashboardTaskListView
 dashboard/views/explorative_tracing_list_view : ExplorativeTracingListView
 dashboard/views/tracked_time_view : TrackedTimeView
-dashboard/models/dashboard_model : DashboardModel
 ###
 
 class DashboardView extends Backbone.Marionette.Layout
@@ -12,8 +11,8 @@ class DashboardView extends Backbone.Marionette.Layout
   className : "container wide"
   id : "dashboard"
   template : _.template("""
-    <% if (userID) { %>
-      <h3> User: </h3>
+    <% if (isAdminView) { %>
+      <h3>User: <%= user.firstName %> <%= user.lastName %></h3>
     <% } %>
     <div class="tabbable" id="tabbable-dashboard">
       <ul class="nav nav-tabs">
@@ -38,7 +37,6 @@ class DashboardView extends Backbone.Marionette.Layout
     "tabExplorative" : "#tab-explorative"
     "tabTrackedTime" : "#tab-tracked-time"
     "tabPane" : ".tab-pane"
-    "header" : "h3"
 
   events :
     "click #tab-tasks" : "showTasks"
@@ -51,40 +49,24 @@ class DashboardView extends Backbone.Marionette.Layout
 
   initialize : (options) ->
 
-    @bindUIElements()
-
-    @model = new DashboardModel(options)
-    @listenTo(@model, "sync", @modelSynced)
-
-    @model.fetch("data" : options.userID)
-
-
-  modelSynced : ->
-
+    @model.set("isAdminView", options.isAdminView)
     @showTasks()
-    @showUserName()
-
-
-  showUserName : ->
-
-    user = @model.get("user")
-    @ui.header.html("User: #{user.firstName} #{user.lastName}")
 
 
   showTasks : ->
 
-    view = new DashboardTaskListView( model : @model, asAdmin : false )
+    view = new DashboardTaskListView(model : @model, isAdminView : @isAdminView)
     @tabPane.show(view)
 
 
   showExplorative : ->
 
-    view = new ExplorativeTracingListView( model : @model, asAdmin : false )
+    view = new ExplorativeTracingListView(model : @model, isAdminView : @isAdminView)
     @tabPane.show(view)
 
 
   showTrackedTime : ->
 
-    view = new TrackedTimeView( model : @model )
+    view = new TrackedTimeView(model : @model)
     @tabPane.show(view)
 

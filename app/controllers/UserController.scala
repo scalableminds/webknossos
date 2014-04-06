@@ -33,22 +33,27 @@ object UserController extends Controller with Secured with Dashboard {
     Ok(views.html.main()(Html.empty))
   }
 
-  def current =  Authenticated{
-    implicit request =>
-      Ok(Json.toJson(request.user)(User.userPublicWrites(request.user)))
+  def current =  Authenticated { implicit request =>
+    Ok(Json.toJson(request.user)(User.userPublicWrites(request.user)))
   }
 
-  def details = Authenticated.async {
-    implicit request => {
-      for {
-        content <- dashboardInfo(request.user, request.user)
-      } yield {
-        JsonOk(content)
-      }
+  def user(userId: String) =  Authenticated.async { implicit request =>
+    for {
+      user <- UserDAO.findOneById(userId) ?~> Messages("user.notFound")
+    } yield {
+      Ok(Json.toJson(user)(User.userPublicWrites(request.user)))
     }
   }
 
-  def userDetails(userId: String) = Authenticated.async{ implicit request =>
+  def annotations = Authenticated.async { implicit request =>
+    for {
+      content <- dashboardInfo(request.user, request.user)
+    } yield {
+      JsonOk(content)
+    }
+  }
+
+  def userAnnotations(userId: String) = Authenticated.async{ implicit request =>
     for {
       user <- UserDAO.findOneById(userId) ?~> Messages("user.notFound")
       content <- dashboardInfo(user, request.user)

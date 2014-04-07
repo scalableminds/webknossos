@@ -3,7 +3,7 @@
  */
 package com.scalableminds.datastore.controllers
 
-import play.api.mvc.{Action, Controller}
+import play.api.mvc.Action
 import braingames.mvc.ExtendedController
 import braingames.util.{NotStarted, Finished, InProgress, ProgressState}
 import play.api.libs.json.Json
@@ -14,7 +14,7 @@ import play.api.i18n.Messages
 import com.scalableminds.datastore.DataStorePlugin
 import com.scalableminds.datastore.models.DataSourceDAO
 
-object DataSourceController extends Controller with ExtendedController {
+object DataSourceController extends Controller {
   def progressToResult(progress: ProgressState) = progress match {
     case InProgress(p) =>
       JsonOk(Json.obj(

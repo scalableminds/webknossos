@@ -98,18 +98,27 @@ class CreateProjectModalView extends Backbone.Marionette.Layout
         name : @ui.name.val()
         team : @ui.team.find("select :selected").val()
       )
+
+
       @projectCollection.create(project,
         wait : true
         error : @handleXHRError
-        success : -> app.vent.trigger("CreateProjectModal:refresh") #update pagination
+        success : _.bind(@closeModal, @)
       )
-
-
-      @$el.modal("hide")
 
     else
 
       @ui.name.focus()
+
+
+  closeModal : ->
+
+    # The event is neccesarry due to the 300ms CSS transition
+    @$el.on("hide.bs.modal", =>
+      @$el.off("hide.bs.modal")
+      app.vent.trigger("CreateProjectModal:refresh") #update pagination
+    )
+    @$el.modal("hide")
 
 
   handleXHRError : (model, xhr) ->

@@ -1,4 +1,4 @@
 // --- !Ups
-db.dataSets.remove({}, {"multi" : true})
+db.dataSets.remove()
 
 // --- !Downs

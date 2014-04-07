@@ -56,8 +56,6 @@ class DataRequestActor(
   // defines how many file handles are deleted when the limit is reached
   val dropCount = conf.getInt("cacheDropCount")
 
-  val remotePath = conf.getString("datarequest.remotepath")
-
   implicit val system = context.system
 
   lazy val dataStores = List[ActorRef](

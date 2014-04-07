@@ -78,17 +78,15 @@ class OxalisServer(
   url: String,
   key: String,
   name: String,
-  secured: Boolean,
-  keystore: Option[File],
-  keystorePassword: Option[String])(implicit system: ActorSystem) extends FoxImplicits {
+  webSocketSecurityInfo: WSSecurityInfo)(implicit system: ActorSystem) extends FoxImplicits {
 
   val webSocketPath = s"/api/datastores/$name/backchannel?key=$key"
 
-  val webSocketUrl = (if (secured) "wss://" else "ws://") + url + webSocketPath
+  val webSocketUrl = (if (webSocketSecurityInfo.secured) "wss://" else "ws://") + url + webSocketPath
 
-  val httpUrl = (if (secured) "https://" else "http://") + url
+  val httpUrl = (if (webSocketSecurityInfo.secured) "https://" else "http://") + url
 
-  val webSocket = system.actorOf(Props(new JsonWSTunnel(webSocketUrl, new OxalisMessageHandler, keystore, keystorePassword)))
+  val webSocket = system.actorOf(Props(new JsonWSTunnel(webSocketUrl, new OxalisMessageHandler, webSocketSecurityInfo)))
 
   def oxalisWS(path: String) = {
     WS.url(s"$httpUrl$path")

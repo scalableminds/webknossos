@@ -29,6 +29,9 @@ case class ReceivedString(s: String)
 
 case class ConnectToWS()
 
+case class KeyStoreInfo(keyStore: File, keyStorePassword: String)
+case class WSSecurityInfo(secured: Boolean, selfSigned: Boolean, keyStoreInfo: Option[KeyStoreInfo])
+
 trait JsonMessageHandler {
   def handle(js: JsValue): Future[Either[JsValue, Array[Byte]]]
 }
@@ -36,8 +39,7 @@ trait JsonMessageHandler {
 class JsonWSTunnel(
   serverUrl: String,
   incomingMessageHandler: JsonMessageHandler,
-  keystoreOpt: Option[File] = None,
-  keystorePasswordOpt: Option[String] = None)(implicit codec: Codec) extends Actor {
+  webSocketSecurityInfo: WSSecurityInfo)(implicit codec: Codec) extends Actor {
 
   implicit val exco = context.system.dispatcher
 
@@ -114,13 +116,12 @@ class JsonWSTunnel(
     val w = new WebSock(self, serverUrl)
 
     for {
-      keystore <- keystoreOpt
-      keystorePassword <- keystorePasswordOpt
+      keyStoreInfo <- webSocketSecurityInfo.keyStoreInfo
     } {
       val storetype = "JKS";
 
       val ks = KeyStore.getInstance(storetype);
-      ks.load(new FileInputStream(keystore), keystorePassword.toCharArray());
+      ks.load(new FileInputStream(keyStoreInfo.keyStore), keyStoreInfo.keyStorePassword.toCharArray());
 
       val tmf = TrustManagerFactory.getInstance("SunX509");
       tmf.init(ks);

@@ -16,16 +16,18 @@ class BinaryDataService(val dataSourceRepository: DataSourceRepository)(implicit
 
   lazy val isCertificateSelfSigned = Play.current.configuration.getBoolean("datastore.oxalis.selfsigned") getOrElse false
 
-  val (keystore, keystorePassword) =
+  val keyStoreInfo =
     if (isOxalisSecured && isCertificateSelfSigned) {
-      val keystorePath = Play.current.configuration.getString("keystore.path") getOrElse "scmCAKeyStore"
-      val keystorePassword = Play.current.configuration.getString("keystore.password") getOrElse "changeit"
-      val keystore = new File(keystorePath)
-      if (keystore.isFile() && keystore.canRead())
-        (Some(keystore) -> Some(keystorePassword))
+      val keyStorePath = Play.current.configuration.getString("keyStore.path") getOrElse "scmCAKeyStore"
+      val keyStorePassword = Play.current.configuration.getString("keyStore.password") getOrElse "changeit"
+      val keyStore = new File(keyStorePath)
+      if (keyStore.isFile() && keyStore.canRead())
+        Some(KeyStoreInfo(keyStore, keyStorePassword))
       else
         throw new Exception("Can't establish a selfsigned secured connection without a valid keystore")
-    } else (None -> None)
+    } else None
+  
+  val webSocketSecurityInfo = WSSecurityInfo(isOxalisSecured, isCertificateSelfSigned, keyStoreInfo)
 
   lazy val key = Play.current.configuration.getString("datastore.key") get
 
@@ -35,5 +37,5 @@ class BinaryDataService(val dataSourceRepository: DataSourceRepository)(implicit
 
   lazy val config = Play.current.configuration.underlying
 
-  val oxalisServer = new OxalisServer(oxalisUrl, key, name, isOxalisSecured, keystore, keystorePassword)
+  val oxalisServer = new OxalisServer(oxalisUrl, key, name, webSocketSecurityInfo)
 }

@@ -10,16 +10,17 @@ import braingames.binary.Logger._
 import braingames.util.{Fox, FoxImplicits}
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.http.HeaderNames
-import akka.actor.{ActorSystem, Props}
+import akka.actor.{ ActorSystem, Props }
 import braingames.rest.RESTCall
 import play.api.mvc._
 import play.api.test.Helpers._
-import play.api.test.{FakeRequest, FakeHeaders}
+import play.api.test.{ FakeRequest, FakeHeaders }
 import play.api.mvc.AnyContentAsJson
 import play.api.libs.json.JsSuccess
 import play.api.libs.iteratee.Iteratee
 import scala.concurrent.Future
 import net.liftweb.common.{Failure, Full}
+import java.io.File
 
 class OxalisMessageHandler extends JsonMessageHandler {
 
@@ -79,15 +80,19 @@ class OxalisMessageHandler extends JsonMessageHandler {
   }
 }
 
-class OxalisServer(url: String, key: String, name: String, secured: Boolean)(implicit system: ActorSystem) extends FoxImplicits {
+class OxalisServer(
+  url: String,
+  key: String,
+  name: String,
+  webSocketSecurityInfo: WSSecurityInfo)(implicit system: ActorSystem) extends FoxImplicits {
 
   val webSocketPath = s"/api/datastores/$name/backchannel?key=$key"
 
-  val webSocketUrl = (if (secured) "wss://" else "ws://") + url + webSocketPath
+  val webSocketUrl = (if (webSocketSecurityInfo.secured) "wss://" else "ws://") + url + webSocketPath
 
-  val httpUrl = (if (secured) "https://" else "http://") + url
+  val httpUrl = (if (webSocketSecurityInfo.secured) "https://" else "http://") + url
 
-  val webSocket = system.actorOf(Props(new JsonWSTunnel(webSocketUrl, new OxalisMessageHandler)))
+  val webSocket = system.actorOf(Props(new JsonWSTunnel(webSocketUrl, new OxalisMessageHandler, webSocketSecurityInfo)))
 
   def oxalisWS(path: String) = {
     WS.url(s"$httpUrl$path")
@@ -99,6 +104,7 @@ class OxalisServer(url: String, key: String, name: String, secured: Boolean)(imp
     oxalisWS(s"/api/datastores/$name/datasources")
       .post(Json.toJson(dataSources))
       .map {
+
       result =>
         if (result.status != OK)
           logger.warn(s"Reporting found data sources to oxalis failed. Status ${result.status}. Body: '${result.body.take(100)}'")

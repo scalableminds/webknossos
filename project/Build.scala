@@ -6,7 +6,7 @@ import scala.concurrent.Future
 import scala.concurrent.ExecutionContext.Implicits.global
 
 object Dependencies{
-  val braingamesVersion = "5.0.4-SNAPSHOT"
+  val braingamesVersion = "5.0.6-SNAPSHOT"
 
   val braingamesDataStore = "com.scalableminds" %% "braingames-datastore" % braingamesVersion
 }

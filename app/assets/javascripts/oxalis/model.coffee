@@ -177,7 +177,7 @@ class Model
     for layer in layers
       do (layer) ->
         Request.send(
-          url : "#{dataStoreUrl}/dataToken/generate?dataSetName=#{dataSetName}&dataLayerName=#{layer.name}"
+          url : "/dataToken/generate?dataSetName=#{dataSetName}&dataLayerName=#{layer.name}"
           dataType : "json"
         ).pipe (dataStore) ->
           layer.token = dataStore.token

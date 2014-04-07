@@ -15,6 +15,7 @@ import com.typesafe.config.Config
 import play.airbrake.Airbrake
 import com.kenshoo.play.metrics._
 import com.codahale.metrics.JmxReporter
+import play.api.libs.json.Json
 import play.api.mvc._
 
 object Global extends WithFilters(MetricsFilter) with GlobalSettings {
@@ -121,11 +122,10 @@ object InitialData extends GlobalDBAccess {
   }
 
   def insertLocalDataStore() = {
-    DataStoreDAO.findAll.map {
-      stores =>
-        if (stores.isEmpty) {
-          DataStoreDAO.insert(DataStore("localhost-9000", "", "something-secure"))
-        }
+    DataStoreDAO.findOne(Json.obj("name" -> "localhost")).futureBox.map { maybeStore =>
+      if (maybeStore.isEmpty) {
+        DataStoreDAO.insert(DataStore("localhost", "", "something-secure"))
+      }
     }
   }
 

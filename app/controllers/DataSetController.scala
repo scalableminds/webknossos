@@ -55,8 +55,8 @@ object DataSetController extends Controller with Secured {
 
       for {
         dataSet <- DataSetDAO.findOneBySourceName(dataSetName) ?~> Messages("dataSet.notFound")
-        layer <- DataStoreController.getDataLayer(dataSet, dataLayerName)?~> Messages("dataLayer.notFound")
-        image <- imageFromCacheIfPossible(dataSet)
+        layer <- DataStoreController.getDataLayer(dataSet, dataLayerName) ?~> Messages("dataLayer.notFound")
+        image <- imageFromCacheIfPossible(dataSet) ?~> Messages("dataLayer.thumbnailFailed")
       } yield {
         val data = Base64.decodeBase64(image)
         Ok(data).withHeaders(

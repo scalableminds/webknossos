@@ -17,6 +17,10 @@ import braingames.util.InProgress
 import braingames.reactivemongo.DBAccessContext
 import braingames.binary.models.DataLayer
 import play.api.libs.json.JsSuccess
+import play.api.cache.Cache
+import org.apache.commons.codec.binary.Base64
+import play.api.Play.current
+import scala.concurrent.duration._
 
 /**
  * Company: scalableminds
@@ -27,12 +31,38 @@ import play.api.libs.json.JsSuccess
 
 object DataSetController extends Controller with Secured {
 
+  val ThumbnailWidth = 200
+  val ThumbnailHeight = 200
+
+  val ThumbnailCacheDuration = 1 hour
+
   def view(dataSetName: String) = UserAwareAction.async {
     implicit request =>
       for {
         dataSet <- DataSetDAO.findOneBySourceName(dataSetName) ?~> Messages("dataSet.notFound")
       } yield {
         Ok(html.tracing.view(dataSet))
+      }
+  }
+
+  def thumbnail(dataSetName: String, dataLayerName: String) = UserAwareAction.async {
+    implicit request =>
+
+      def imageFromCacheIfPossible(dataSet: DataSet) =
+        Cache.getOrElse(s"thumbnail-$dataSetName*$dataLayerName", ThumbnailCacheDuration.toSeconds.toInt) {
+          DataStoreHandler.requestDataLayerThumbnail(dataSet, dataLayerName, ThumbnailWidth, ThumbnailHeight)
+        }
+
+      for {
+        dataSet <- DataSetDAO.findOneBySourceName(dataSetName) ?~> Messages("dataSet.notFound")
+        layer <- DataStoreController.getDataLayer(dataSet, dataLayerName)?~> Messages("dataLayer.notFound")
+        image <- imageFromCacheIfPossible(dataSet)
+      } yield {
+        val data = Base64.decodeBase64(image)
+        Ok(data).withHeaders(
+          CONTENT_LENGTH -> data.length.toString,
+          CONTENT_TYPE -> play.api.libs.MimeTypes.forExtension("jpeg").getOrElse(play.api.http.ContentTypes.BINARY)
+        )
       }
   }
 

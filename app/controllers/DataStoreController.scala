@@ -23,7 +23,7 @@ import braingames.rest.{RESTResponse, RESTCall}
 
 object DataStoreHandler extends DataStoreBackChannelHandler{
   def createUserDataLayer(dataStoreInfo: DataStoreInfo, base: DataSource): Fox[UserDataLayer] = {
-    Logger.info("Progress called to create user data source. Base: " + base.id + " Datastore: " + dataStoreInfo)
+    Logger.debug("Called to create user data source. Base: " + base.id + " Datastore: " + dataStoreInfo)
     findByServer(dataStoreInfo.name).toFox.flatMap {
       dataStore =>
         val call = RESTCall("POST", s"/data/datasets/${base.id}/layers", Map.empty, Map.empty, Json.obj())
@@ -37,8 +37,25 @@ object DataStoreHandler extends DataStoreBackChannelHandler{
     }
   }
 
+  def requestDataLayerThumbnail(dataSet: DataSet, dataLayerName: String, width: Int, height: Int): Fox[String] = {
+    Logger.debug("Thumbnail called for: " + dataSet.name + " Layer: " + dataLayerName)
+    findByServer(dataSet.dataStoreInfo.name).toFox.flatMap {
+      dataStore =>
+        val call = RESTCall(
+          "GET",
+          s"/data/datasets/${dataSet.name}/layers/$dataLayerName/thumbnail.json",
+          Map.empty,
+          Map("token" -> DataTokenService.oxalisToken, "width" -> width.toString, "height" -> height.toString),
+          Json.obj())
+        dataStore.request(call).flatMap {
+          json =>
+            (json \ "value").asOpt[String]
+        }
+    }
+  }
+
   def progressForImport(dataSet: DataSet): Fox[JsValue] = {
-    Logger.info("Progress called for: " + dataSet.name)
+    Logger.debug("Import rogress called for: " + dataSet.name)
     findByServer(dataSet.dataStoreInfo.name).toFox.flatMap {
       dataStore =>
         val call = RESTCall("GET", s"/data/datasets/${dataSet.name}/import", Map.empty, Map.empty, Json.obj())
@@ -47,7 +64,7 @@ object DataStoreHandler extends DataStoreBackChannelHandler{
   }
 
   def importDataSource(dataSet: DataSet): Fox[JsValue] = {
-    Logger.info("Import called for: " + dataSet.name)
+    Logger.debug("Import called for: " + dataSet.name)
     findByServer(dataSet.dataStoreInfo.name).toFox.flatMap {
       dataStore =>
         val call = RESTCall("POST", s"/data/datasets/${dataSet.name}/import", Map.empty, Map.empty, Json.obj())
@@ -87,10 +104,10 @@ object WebSocketRESTServer {
 
     val iteratee = Iteratee.foreach[Array[Byte]] {
       it =>
-        Logger.info("Got WS message: " + it.size)
+        Logger.trace("Got WS message: " + it.size)
         ws.response(it)
     }.map{ _ =>
-      Logger.info("Websocket closed.")
+      Logger.debug("Websocket closed.")
     }
     (iteratee, enumerator, ws)
   }
@@ -106,7 +123,7 @@ case class WebSocketRESTServer(out: Channel[Array[Byte]]) extends FoxImplicits{
     try{
       val promise = Promise[Box[JsValue]]()
       openCalls.send(_ + (call.uuid -> promise))
-      Logger.info(s"About to send WS REST call to '${call.path}'")
+      Logger.debug(s"About to send WS REST call to '${call.method} ${call.path}'")
       val data: Array[Byte] = codec.encode(Json.stringify(RESTCall.restCallFormat.writes(call)))
       out.push(data)
       system.scheduler.scheduleOnce(RESTCallTimeout)(cancelRESTCall(call.uuid))

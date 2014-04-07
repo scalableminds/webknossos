@@ -9,17 +9,16 @@
       <img src="@controllers.routes.Assets.at("images/oxalis.svg")">
       <div><p>Oxalis</p></div>
     </div>
-    @datasets.groupBy(_.owningTeam).map{ case (team, ds) =>
+    @datasets.filter(_.isActive).groupBy(_.owningTeam).map{ case (team, ds) =>
 
       @ds.map{ dataSet =>
         <div class="dataset panel panel-default">
           <div class="panel-body row">
             <div class="dataset-thumbnail col-sm-4">
               <a href="@controllers.routes.DataSetController.view(dataSet.name)">
-              @*@dataSet.dataSource.flatMap(_.getByCategory("color")).map{ colorLayer =>*@
-                @*<img src="@controllers.routes.BinaryData.requestImage(dataSet.name, "color", 200, 200, 200, 200, 0, math.log(colorLayer.resolutions.max).toInt)" class="img-rounded"/>*@
-              @*}*@
-              @*}*@
+                @dataSet.dataSource.flatMap(_.getByCategory("color")).map{ colorLayer =>
+                  <img src="@controllers.routes.DataSetController.thumbnail(dataSet.name, colorLayer.name)" class="img-rounded"/>
+                }
                 <i class="fa fa-play"></i>
               </a>
             </div>

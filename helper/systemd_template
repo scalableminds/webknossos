@@ -7,7 +7,7 @@
 Description=Standalone datastore for oxalis
 
 [Service]
-ExecStart={{install_dir}}/{{name}}/bin/{{project}} -Dconfig.file={{config_dir}/{{config}} -Dpidfile.path={{run_dir}}/{{name}}.pid
+ExecStart={{install_dir}}/{{name}}/bin/{{project}} -Dconfig.file={{config_dir}}/{{config}} -Dpidfile.path={{run_dir}}/{{name}}.pid
 Type=simple
 Restart=always
 User={{name}}

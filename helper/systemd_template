@@ -1,6 +1,6 @@
 {% set name = project+"-"+branch %}
 {% set install_dir = "/usr/lib/%s" % name %}
-{% set run_dir = "/var/run/%s" %s name %}
+{% set run_dir = "/var/run/%s" % name %}
 {% set config_dir = install_dir + "/conf"%}
 
 [Unit]

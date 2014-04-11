@@ -1,6 +1,6 @@
 package braingames.binary.store
 
-import java.io.{ FileNotFoundException, InputStream, OutputStream, FileInputStream, FileOutputStream, File }
+import java.io.{FileNotFoundException, InputStream, OutputStream, FileInputStream, FileOutputStream, File}
 import scala.concurrent.Future
 import scala.concurrent.ExecutionContext.Implicits._
 import braingames.binary.{LoadBlock, SaveBlock}
@@ -18,8 +18,10 @@ class FileDataStoreActor extends DataStoreActor(new FileDataStore)
  * A data store implementation which uses the hdd as data storage
  */
 class FileDataStore extends DataStore {
+
   import FileDataStore._
   import DataStore._
+
   /**
    * Loads the due to x,y and z defined block into the cache array and
    * returns it.
@@ -33,8 +35,11 @@ class FileDataStore extends DataStore {
     Future {
       val path = knossosFilePath(dataSetDir, dataSetId, resolution, block)
       try {
-        path.fileOption.map{ file =>
-          inputStreamToByteArray(new FileInputStream(file), fileSize)
+        path.fileOption
+          .filter(_.exists())
+          .orElse(fuzzyKnossosFile(dataSetDir, dataSetId, resolution, block))
+          .map { file =>
+            inputStreamToByteArray(new FileInputStream(file), fileSize)
         }
       } catch {
         case e: FileNotFoundException =>
@@ -65,9 +70,9 @@ class FileDataStore extends DataStore {
   }
 }
 
-object FileDataStore{
+object FileDataStore {
   /**
-   *  Read file contents to a byteArray
+   * Read file contents to a byteArray
    */
   def inputStreamToByteArray(is: InputStream, dataInfo: LoadBlock): Array[Byte] =
     inputStreamToByteArray(is, dataInfo.dataSource.blockSize * dataInfo.dataLayer.bytesPerElement)
@@ -80,7 +85,7 @@ object FileDataStore{
   }
 
   /**
-   *  Writes bytearray contents to a FileOutputStream
+   * Writes bytearray contents to a FileOutputStream
    */
   def byteArrayToOutputStream(os: OutputStream, dataInfo: SaveBlock): Unit =
     byteArrayToOutputStream(os, dataInfo.data)

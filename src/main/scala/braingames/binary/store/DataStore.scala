@@ -8,6 +8,7 @@ import braingames.binary.{DataStoreBlock, LoadBlock, SaveBlock}
 import net.liftweb.common.Box
 import braingames.geometry.Point3D
 import scalax.file.Path
+import java.io.{File, FilenameFilter}
 
 /**
  * Abstract Datastore defines all method a binary data source (e.q. normal file
@@ -59,11 +60,29 @@ object DataStore {
   def knossosBaseDir(dataInfo: DataStoreBlock) =
     Path.fromString(dataInfo.dataLayer.baseDir + "/" + dataInfo.dataLayerSection.baseDir)
 
+  def knossosDir(dataSetDir: Path, resolution: Int, block: Point3D) = {
+    val x = "x%04d".format(block.x)
+    val y = "y%04d".format(block.y)
+    val z = "z%04d".format(block.z)
+    dataSetDir / resolution.toString / x / y / z
+  }
+
   def knossosFilePath(dataSetDir: Path, id: String, resolution: Int, block: Point3D) = {
     val x = "x%04d".format(block.x)
     val y = "y%04d".format(block.y)
     val z = "z%04d".format(block.z)
     val fileName = s"${id}_mag${resolution}_${x}_${y}_${z}.raw"
-    dataSetDir / resolution.toString / x / y / z / fileName
+    knossosDir(dataSetDir, resolution, block) / fileName
+  }
+
+  def fuzzyKnossosFile(dataSetDir: Path, id: String, resolution: Int, block: Point3D): Option[File] = {
+    knossosDir(dataSetDir, resolution, block).fileOption.map {
+      dir =>
+        dir.listFiles(new FilenameFilter() {
+          override def accept(dir: File, name: String): Boolean = {
+            name.endsWith(".raw")
+          }
+        })
+    }.getOrElse(Array()).headOption
   }
 }

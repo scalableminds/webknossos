@@ -32,8 +32,7 @@ class SliderSettingView extends AbstractSettingView
   events :
     "change @ui.slider" : "handleChange"
     "change @ui.text" : "handleChange"
-    "click @ui.slider" : "handleClick"
-    "dblclick @ui.slider" : "handleDoubleClick"
+    "dblclick @ui.slider" : "resetValue"
 
 
   handleChange : (evt) ->
@@ -49,4 +48,6 @@ class SliderSettingView extends AbstractSettingView
 
   resetValue : (evt) ->
 
-    console.log evt
+    if @model
+      if reset = @model.reset
+        reset()

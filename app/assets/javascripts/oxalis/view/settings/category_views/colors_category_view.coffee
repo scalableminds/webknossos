@@ -38,16 +38,6 @@ class ColorsCategoryView extends CategoryView
           step : 0.1
       )
 
-    "resetBrightnessContrast" : ->
-
-      return new ButtonSettingView(
-        model : @model
-        options :
-          callbackName : "resetBrightnessContrast"
-          displayName : "Reset Brightness/Contrast"
-      )
-
-
 
   initialize : ->
 

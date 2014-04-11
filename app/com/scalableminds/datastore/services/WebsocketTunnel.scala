@@ -27,7 +27,7 @@ case class SendData(data: Array[Byte])
 
 case class ReceivedString(s: String)
 
-case class ConnectToWS()
+case object ConnectToWS
 
 case class KeyStoreInfo(keyStore: File, keyStorePassword: String)
 case class WSSecurityInfo(secured: Boolean, selfSigned: Boolean, keyStoreInfo: Option[KeyStoreInfo])
@@ -42,6 +42,8 @@ class JsonWSTunnel(
   webSocketSecurityInfo: WSSecurityInfo)(implicit codec: Codec) extends Actor {
 
   implicit val exco = context.system.dispatcher
+
+  private var isTerminating = false
 
   private var websocket: Option[WebSock] = None
 
@@ -59,6 +61,7 @@ class JsonWSTunnel(
 
     def onClose(code: Int, reason: String, remote: Boolean): Unit = {
       logger.warn(s"Websocket closed. Reason: $reason Code: $code")
+      self ! ConnectToWS
     }
 
     def onMessage(message: String): Unit = {
@@ -73,17 +76,18 @@ class JsonWSTunnel(
   }
 
   override def preStart = {
-    self ! ConnectToWS()
+    self ! ConnectToWS
     super.preStart
   }
 
   override def postStop = {
+    isTerminating = true
     closeCurrentWS()
     super.postStop
   }
 
   def receive = {
-    case ConnectToWS() =>
+    case ConnectToWS =>
       connect(serverUrl)
 
     case SendJson(js) =>
@@ -134,27 +138,33 @@ class JsonWSTunnel(
   }
 
   def connect(url: String) = {
+    def retry() = {
+      context.system.scheduler.scheduleOnce(1 second, self, ConnectToWS)
+    }
+
     // Connecting to the websocket is a little difficult. If the websocket doesn't exist / respond the call to
     // `connectBlocking` doesn't fail or return
-    try {
-      val f = Future {
-        if (!isAlive) {
-          closeCurrentWS()
-          val w = initializeWS()
-          logger.debug(s"About to connect to WS.")
-          if (w.connectBlocking()) {
-            logger.debug(s"Connected to WS.")
-            websocket = Some(w)
-          } else {
-            throw new Exception("Connection failed.")
+    if(!isTerminating) {
+      try {
+        val f = Future {
+          if (!isAlive) {
+            closeCurrentWS()
+            val w = initializeWS()
+            logger.debug(s"About to connect to WS.")
+            if (w.connectBlocking()) {
+              logger.debug(s"Connected to WS.")
+              websocket = Some(w)
+            } else {
+              throw new Exception("Connection failed.")
+            }
           }
         }
+        Await.result(f, atMost = ConnectTimeout)
+      } catch {
+        case e: Exception =>
+          logger.error(s"Trying to connect to WS resulted in: ${e.getMessage}", e)
+          retry()
       }
-      Await.result(f, atMost = ConnectTimeout)
-    } catch {
-      case e: Exception =>
-        logger.error(s"Trying to connect to WS resulted in: ${e.getMessage}", e)
-        self ! ConnectToWS
     }
   }
 
@@ -166,6 +176,17 @@ class JsonWSTunnel(
   }
 
   def tryToSend[T](t: T) = {
+    def retry(numberOfRetries: Int, e: Option[Exception]) = {
+      if (numberOfRetries < MaxSendRetries) {
+        logger.warn(s"Sending json failed. Trying to reconnect... Exception? ${e.map(_.getMessage)}")
+        closeCurrentWS()
+        connect(serverUrl)
+        sendIt(numberOfRetries + 1)
+      } else {
+        logger.error("All attempts to send json failed. Stopping WS.")
+      }
+    }
+
     def sendIt(numberOfRetries: Int) {
       websocket match {
         case Some(ws) =>
@@ -180,17 +201,10 @@ class JsonWSTunnel(
             }
           } catch {
             case e: Exception =>
-              if (numberOfRetries < MaxSendRetries) {
-                logger.warn(s"Sending json failed. Trying to reconnect... Exception: ${e.getMessage}")
-                closeCurrentWS()
-                connect(serverUrl)
-                sendIt(numberOfRetries + 1)
-              } else {
-                logger.error("All attempts to send json failed. Stopping WS.")
-              }
+              retry(numberOfRetries, Some(e))
           }
         case _ =>
-          logger.error("Can't send message, no websocket present")
+          retry(numberOfRetries, Some(new Exception("No websocket present")))
       }
     }
     sendIt(numberOfRetries = 0)

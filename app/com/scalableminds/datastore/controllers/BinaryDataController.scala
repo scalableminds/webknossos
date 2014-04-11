@@ -12,7 +12,7 @@ import braingames.binary.models._
 import braingames.binary._
 import braingames.reactivemongo.DBAccessContext
 import braingames.util.{FoxImplicits, Fox}
-import play.api.mvc.{Controller, SimpleResult, Action}
+import play.api.mvc.{SimpleResult, Action}
 import braingames.binary.ParsedDataReadRequest
 import braingames.binary.DataRequestSettings
 import braingames.binary.ParsedDataWriteRequest
@@ -33,7 +33,7 @@ import org.apache.commons.codec.binary.Base64
 
 object BinaryDataController extends BinaryDataReadController with BinaryDataWriteController
 
-trait BinaryDataCommonController extends Controller with ExtendedController with FoxImplicits{
+trait BinaryDataCommonController extends Controller with FoxImplicits{
   protected def getDataLayer(dataSource: DataSource, dataLayerName: String): Fox[DataLayer] = {
     dataSource.getDataLayer(dataLayerName).toFox orElse UserDataLayerService.findUserDataLayer(dataSource.id, dataLayerName)
   }
@@ -69,11 +69,13 @@ trait BinaryDataReadController extends BinaryDataCommonController {
                            z: Int,
                            resolution: Int) = TokenSecuredAction(dataSetName, dataLayerName).async {
     implicit request =>
-      val dataRequests = ParsedRequestCollection(Array(ParsedDataReadRequest(resolution, Point3D(x, y, z), false)))
-      for {
-        data <- requestData(dataSetName, dataLayerName, cubeSize, dataRequests)
-      } yield {
-        Ok(data)
+      AllowRemoteOrigin{
+        val dataRequests = ParsedRequestCollection(Array(ParsedDataReadRequest(resolution, Point3D(x, y, z), false)))
+        for {
+          data <- requestData(dataSetName, dataLayerName, cubeSize, dataRequests)
+        } yield {
+          Ok(data)
+        }
       }
   }
 
@@ -84,12 +86,14 @@ trait BinaryDataReadController extends BinaryDataCommonController {
 
   def requestViaAjax(dataSetName: String, dataLayerName: String, cubeSize: Int) = TokenSecuredAction(dataSetName, dataLayerName).async(parse.raw) {
     implicit request =>
-      for {
-        payload <- request.body.asBytes() ?~> Messages("binary.payload.notSupplied")
-        requests <- BinaryProtocol.parseDataReadRequests(payload, containsHandle = false) ?~> Messages("binary.payload.invalid")
-        data <- requestData(dataSetName, dataLayerName, cubeSize, requests) ?~> Messages("binary.data.notFound")
-      } yield {
-        Ok(data)
+      AllowRemoteOrigin{
+        for {
+          payload <- request.body.asBytes() ?~> Messages("binary.payload.notSupplied")
+          requests <- BinaryProtocol.parseDataReadRequests(payload, containsHandle = false) ?~> Messages("binary.payload.invalid")
+          data <- requestData(dataSetName, dataLayerName, cubeSize, requests) ?~> Messages("binary.data.notFound")
+        } yield {
+          Ok(data)
+        }
       }
   }
 
@@ -103,11 +107,13 @@ trait BinaryDataReadController extends BinaryDataCommonController {
                           z: Int,
                           resolution: Int) = TokenSecuredAction(dataSetName, dataLayerName).async(parse.raw) {
     implicit request =>
-      for{
-        image <- respondWithSpriteSheet(dataSetName, dataLayerName, cubeSize, cubeSize, cubeSize, imagesPerRow, x, y, z, resolution)
-      } yield {
-        Ok.sendFile(image, true, _ => "test.jpg").withHeaders(
-          CONTENT_TYPE -> contentTypeJpeg)
+      AllowRemoteOrigin{
+        for{
+          image <- respondWithSpriteSheet(dataSetName, dataLayerName, cubeSize, cubeSize, cubeSize, imagesPerRow, x, y, z, resolution)
+        } yield {
+          Ok.sendFile(image, true, _ => "test.jpg").withHeaders(
+            CONTENT_TYPE -> contentTypeJpeg)
+        }
       }
   }
 
@@ -121,11 +127,13 @@ trait BinaryDataReadController extends BinaryDataCommonController {
                     z: Int,
                     resolution: Int) = TokenSecuredAction(dataSetName, dataLayerName).async(parse.raw) {
     implicit request =>
-      for{
-        image <- respondWithImage(dataSetName, dataLayerName, width, height, x, y, z, resolution)
-      } yield {
-        Ok.sendFile(image, true, _ => "test.jpg").withHeaders(
-          CONTENT_TYPE -> contentTypeJpeg)
+      AllowRemoteOrigin{
+        for{
+          image <- respondWithImage(dataSetName, dataLayerName, width, height, x, y, z, resolution)
+        } yield {
+          Ok.sendFile(image, true, _ => "test.jpg").withHeaders(
+            CONTENT_TYPE -> contentTypeJpeg)
+        }
       }
   }
 
@@ -137,13 +145,14 @@ trait BinaryDataReadController extends BinaryDataCommonController {
                              width: Int,
                              height: Int) = TokenSecuredAction(dataSetName, dataLayerName).async(parse.raw) {
     implicit request =>
-
-      for {
-        thumbnail <- requestImageThumbnail(dataSetName, dataLayerName, width, height)
-      } yield {
-        Ok(Json.obj(
-          "mimeType" -> contentTypeJpeg,
-          "value" -> Base64.encodeBase64String(FileUtils.readFileToByteArray(thumbnail))))
+      AllowRemoteOrigin {
+        for {
+          thumbnail <- requestImageThumbnail(dataSetName, dataLayerName, width, height)
+        } yield {
+          Ok(Json.obj(
+            "mimeType" -> contentTypeJpeg,
+            "value" -> Base64.encodeBase64String(FileUtils.readFileToByteArray(thumbnail))))
+        }
       }
   }
 
@@ -153,12 +162,13 @@ trait BinaryDataReadController extends BinaryDataCommonController {
                                  width: Int,
                                  height: Int) = TokenSecuredAction(dataSetName, dataLayerName).async(parse.raw) {
     implicit request =>
-
-      for {
-        thumbnail <- requestImageThumbnail(dataSetName, dataLayerName, width, height)
-      } yield {
-        Ok.sendFile(thumbnail, true, _ => "thumbnail.jpg").withHeaders(
-          CONTENT_TYPE -> contentTypeJpeg)
+      AllowRemoteOrigin{
+        for {
+          thumbnail <- requestImageThumbnail(dataSetName, dataLayerName, width, height)
+        } yield {
+          Ok.sendFile(thumbnail, true, _ => "thumbnail.jpg").withHeaders(
+            CONTENT_TYPE -> contentTypeJpeg)
+        }
       }
   }
 
@@ -315,15 +325,17 @@ trait BinaryDataWriteController extends BinaryDataCommonController {
 
   def writeViaAjax(dataSetName: String, dataLayerName: String, cubeSize: Int) = TokenSecuredAction(dataSetName, dataLayerName).async(parse.raw(1048576)) {
     implicit request =>
-      for {
-        usableDataSource <- DataSourceDAO.findUsableByName(dataSetName).toFox ?~> Messages("dataSet.notFound")
-        dataSource = usableDataSource.dataSource
-        dataLayer <- getDataLayer(dataSource, dataLayerName) ?~> Messages("dataLayer.notFound")
-        if (dataLayer.isWritable)
-        payloadBodySize = cubeSize * cubeSize * cubeSize * dataLayer.bytesPerElement
-        payload <- request.body.asBytes() ?~> Messages("binary.payload.notSupplied")
-        requests <- BinaryProtocol.parseDataWriteRequests(payload, payloadBodySize, containsHandle = false) ?~> Messages("binary.payload.invalid")
-        _ <- writeData(dataSource, dataLayer, cubeSize, requests)
-      } yield Ok
+      AllowRemoteOrigin{
+        for {
+          usableDataSource <- DataSourceDAO.findUsableByName(dataSetName).toFox ?~> Messages("dataSet.notFound")
+          dataSource = usableDataSource.dataSource
+          dataLayer <- getDataLayer(dataSource, dataLayerName) ?~> Messages("dataLayer.notFound")
+          if (dataLayer.isWritable)
+          payloadBodySize = cubeSize * cubeSize * cubeSize * dataLayer.bytesPerElement
+          payload <- request.body.asBytes() ?~> Messages("binary.payload.notSupplied")
+          requests <- BinaryProtocol.parseDataWriteRequests(payload, payloadBodySize, containsHandle = false) ?~> Messages("binary.payload.invalid")
+          _ <- writeData(dataSource, dataLayer, cubeSize, requests)
+        } yield Ok
+      }
   }
 }

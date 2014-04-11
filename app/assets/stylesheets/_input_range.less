@@ -1,0 +1,59 @@
+// Based on http://codepen.io/Topcoat/pen/BskEn
+// Modified to fit Bootstrap's style
+input[type=range] {
+  padding: 6px 0px;
+  margin: 0;
+  background: transparent;
+  border: none;
+  box-sizing: border-box;
+  background-clip: padding-box;
+  vertical-align: top;
+  outline: none;
+  -webkit-appearance: none;
+
+  border: 1px solid @bsBorderGrey;
+  background: @bsBackgroundGrey;
+  height: 1rem;
+  border-radius: @bsBorderRadius;
+
+  // Declarations get duplicated because an invalid selector invalidates the entire declaration block
+  &::-moz-range-track {
+    border-radius: @bsBorderRadius;
+    border: 1px solid @bsBorderGrey;
+    background: @bsBackgroundGrey;
+    height: 1rem;
+  }
+
+  &::-webkit-slider-thumb {
+    cursor: pointer;
+    -webkit-appearance: none;
+    height: @bsButtonHeight;
+    width: 20px;
+    border: 1px solid rgba(0,0,0,0.36);
+    border-radius: @bsBorderRadius;
+    background:url("http://db.tt/q5LHtPKx") center center no-repeat #e5e9e8;
+    background-size: 7px 18px;
+    box-shadow: inset 0 1px white;
+  }
+  &::-moz-range-thumb {
+    cursor: pointer;
+    height: @bsButtonHeight;
+    width: 20px;
+    border: 1px solid rgba(0,0,0,0.36);
+    border-radius: @bsBorderRadius;
+    background:url("http://db.tt/q5LHtPKx") center center no-repeat #e5e9e8;
+    background-size: 7px 18px;
+    box-shadow: inset 0 1px white;
+  }
+
+  // Active state
+  &:active::-webkit-slider-thumb {
+    border: 1px solid #357ebd;
+    box-shadow: 0 0 0 2px #428bca;
+  }
+
+  &:active::-moz-range-thumb {
+    border: 1px solid #357ebd;
+    box-shadow: 0 0 0 2px #428bca;
+  }
+}

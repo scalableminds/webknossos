@@ -18,40 +18,56 @@ class LeftMenuView extends Backbone.Marionette.Layout
   className : "container-fluid"
 
   template : _.template("""
-    <div id="dataset-actions" class="row"></div>
+    <% if (isNotViewMode()) { %>
+      <div id="dataset-actions" class="row"></div>
+    <% } %>
 
     <div id="dataset-info" class="row"></div>
 
     <div id="dataset-position" class="row"></div>
 
-    <div id="volume-actions" class="volume-controls">
-      <button class="btn btn-default" id="btn-merge">Merge cells</button>
-    </div>
+    <% if (isNotViewMode()) { %>
+      <div id="volume-actions" class="volume-controls">
+        <button class="btn btn-default" id="btn-merge">Merge cells</button>
+      </div>
+    <% } %>
 
-    <div id="view-modes" class="row"></div>
+    <% if (isNotViewMode()) { %>
+      <div id="view-modes" class="row"></div>
+    <% } %>
 
-    <div class="row">
-      <div id="lefttabbar" class="col-sm-12">
-        <ul class="nav nav-tabs">
-          <li class="active">
-            <a href="#tracing-settings-tab" data-toggle="tab"><i class="fa fa-cogs"></i> Tracing</a>
-          </li>
-          <li>
-            <a href="#dataset-settings-tab" data-toggle="tab"><i class="fa fa-cogs"></i> Dataset</a>
-          </li>
-          <li>
-            <a href="#user-settings-tab" data-toggle="tab"><i class="fa fa-cogs"></i> User</a>
-          </li>
-        </ul>
+    <% if (isNotViewMode()) { %>
+      <div class="row">
+        <div id="lefttabbar" class="col-sm-12">
+          <ul class="nav nav-tabs">
+            <li class="active">
+              <a href="#tracing-settings-tab" data-toggle="tab"><i class="fa fa-cogs"></i> Tracing</a>
+            </li>
+            <li>
+              <a href="#dataset-settings-tab" data-toggle="tab"><i class="fa fa-cogs"></i> Dataset</a>
+            </li>
+            <li>
+              <a href="#user-settings-tab" data-toggle="tab"><i class="fa fa-cogs"></i> User</a>
+            </li>
+          </ul>
 
-        <div class="tab-content">
-          <div class="tab-pane active" id="tracing-settings-tab"></div>
-          <div class="tab-pane" id="dataset-settings-tab"></div>
-          <div class="tab-pane" id="user-settings-tab"></div>
+          <div class="tab-content">
+            <div class="tab-pane active" id="tracing-settings-tab"></div>
+            <div class="tab-pane" id="dataset-settings-tab"></div>
+            <div class="tab-pane" id="user-settings-tab"></div>
+          </div>
         </div>
       </div>
-    </div>
+    <% } %>
   """)
+
+  templateHelpers :
+    # spotlight aka public viewing
+    isViewMode : ->
+      return @controlMode == constants.CONTROL_MODE_VIEW
+    isNotViewMode : ->
+      return not @isViewMode()
+
 
   regions :
     "datasetActionButtons" : "#dataset-actions"
@@ -65,6 +81,7 @@ class LeftMenuView extends Backbone.Marionette.Layout
 
   initialize : (options) ->
 
+    @options = options
     @datasetActionsView = new DatasetActionsView(options)
     @datasetInfoView = new DatasetInfoView(options)
     @datasetPositionView = new DatasetPositionView(options)
@@ -103,6 +120,12 @@ class LeftMenuView extends Backbone.Marionette.Layout
     else if mode == constants.MODE_VOLUME
       @userSettings.show(@planeUserSettingsView)
       @tracingSettings.show(@volumeTracingSettingsView)
+
+
+  serializeData : ->
+
+    return @options
+
 
   #   <% if(task) { %>
   #     <li><a href="#tab0" data-toggle="tab">Task</a></li>

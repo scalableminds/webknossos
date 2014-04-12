@@ -29,7 +29,7 @@ object DataSetController extends Controller with Secured {
       for {
         dataSet <- DataSetDAO.findOneBySourceName(dataSetName) ?~> Messages("dataSet.notFound")
       } yield {
-        Ok(html.tracing.view(dataSet))
+        Ok(views.html.main()(Html.empty))
       }
   }
 

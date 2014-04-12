@@ -14,7 +14,10 @@ class TracingLayoutView extends Backbone.Marionette.Layout
   template : _.template("""
     <div id="left-menu"></div>
     <div id="tracing"></div>
-    <div id="right-menu"></div>
+
+    <% if (!isViewMode()) { %>
+      <div id="right-menu"></div>
+    <% } %>
    """)
 
   ui :
@@ -25,20 +28,24 @@ class TracingLayoutView extends Backbone.Marionette.Layout
     "rightMenu" : "#right-menu"
     "tracingContainer" : "#tracing"
 
+  templateHelpers : ->
+    isViewMode : ->
+      return @controleMode == constants.CONTROL_MODE_VIEW
+
 
   initialize : (options) ->
 
     @options = _.extend(
       {},
       options,
-      "mode" : "skeleton"
-      "controlMode" : constants.CONTROL_MODE_TRACE
-      "_model" : oxalisModel = new OxalisModel()
+      _model : new OxalisModel()
       )
 
     @leftMenuView = new LeftMenuView(@options)
-    @rightMenuView = new RightMenuView(@options)
     @tracingView = new TracingView(@options)
+
+    if @options.controlMode != constants.CONTROL_MODE_VIEW
+      @rightMenuView = new RightMenuView(@options)
 
 
     @listenTo(@, "render", @afterRender)
@@ -47,11 +54,18 @@ class TracingLayoutView extends Backbone.Marionette.Layout
   afterRender : ->
 
     @leftMenu.show(@leftMenuView)
-    @rightMenu.show(@rightMenuView)
     @tracingContainer.show(@tracingView)
+
+    if @rightMenuView
+      @rightMenu.show(@rightMenuView)
 
     app.oxalis = new OxalisController(@options)
     #@resize()
+
+
+  serializeData : ->
+
+    return @options
 
 
   resize : ->

@@ -3,6 +3,7 @@ jquery : $
 underscore : _
 backbone : Backbone
 oxalis/view/tracing_layout_view : TracingLayoutView
+oxalis/constants : constants
 ###
 
 # #####
@@ -20,6 +21,8 @@ class Router extends Backbone.Router
     "tasks"                         : "tasks"
     "projects"                      : "projects"
     "annotations/:type/:id"         : "tracingView"
+    "datasets/:id/view"             : "tracingViewPublic"
+
 
 
   initialize : ->
@@ -52,6 +55,16 @@ class Router extends Backbone.Router
     @changeView(new TracingLayoutView(
       tracingType: type
       tracingId :id
+      controlMode : constants.CONTROL_MODE_TRACE
+    ))
+
+
+  tracingViewPublic : (id) ->
+
+    @changeView(new TracingLayoutView(
+      tracingType: "View"
+      tracingId :id
+      controlMode : constants.CONTROL_MODE_VIEW
     ))
 
 

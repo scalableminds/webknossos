@@ -274,14 +274,16 @@ class PlaneController
         @planeView.removeGeometry(geometry)
     )
 
-    @listenTo(@sceneController.skeleton, "newGeometries", (list) ->
-      for geometry in list
-        @planeView.addGeometry(geometry)
-    )
-    @listenTo(@sceneController.skeleton, "removeGeometries", (list) ->
-      for geometry in list
-        @planeView.removeGeometry(geometry)
-    )
+    # TODO check for ControleMode rather the Object existence
+    if @sceneController.skeleton
+      @listenTo(@sceneController.skeleton, "newGeometries", (list) ->
+        for geometry in list
+          @planeView.addGeometry(geometry)
+      )
+      @listenTo(@sceneController.skeleton, "removeGeometries", (list) ->
+        for geometry in list
+          @planeView.removeGeometry(geometry)
+      )
 
 
   render : ->

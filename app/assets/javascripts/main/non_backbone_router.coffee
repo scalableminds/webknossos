@@ -12,8 +12,6 @@ class NonBackboneRouter extends Backbone.Router
     "admin/tasks/overview"          : "taskOverview"
     "admin/taskTypes"               : "hideLoading"
     "admin/projects"                : "projects"
-    # "annotations/:typ/:id"          : "tracingTrace"
-    "datasets/:id/view"             : "tracingView"
     "users/:id/details"             : "userDetails"
     "*url"                          : "hideLoading"
 
@@ -36,54 +34,6 @@ class NonBackboneRouter extends Backbone.Router
 
     require ["main/dashboardLoader"], (DashboardLoader) ->
       DashboardLoader.displayBasicDashboard()
-      return
-
-
-  tracingTrace : ->
-
-    require [
-      "oxalis/controller"
-    ], (Controller) ->
-
-      leftTabBar = $("#main")
-      dataUrl = leftTabBar.data("url")
-
-      populateTemplate = (data) ->
-        templateSource = _.unescape(leftTabBar.html())
-        templateOutput = _.template(templateSource)(data)
-        leftTabBar.html(templateOutput)
-
-      $.ajax(
-        url: dataUrl
-        type: 'GET'
-        success: (info) ->
-
-          if info.task
-            populateTemplate({task : null})
-          else
-            populateTemplate({task : info.task})
-
-        error: (xhr, status, error) ->
-
-          console.error("Something went wrong when receiving info data", xhr, status, error)
-
-        complete: (info) ->
-
-          oxalis = window.oxalis = new Controller(constants.CONTROL_MODE_TRACE)
-      )
-
-      return
-
-
-  tracingView : ->
-
-    require [
-      "oxalis/controller"
-      "slider"
-    ], (Controller) ->
-
-      oxalis = window.oxalis = new Controller(constants.CONTROL_MODE_VIEW)
-
       return
 
 

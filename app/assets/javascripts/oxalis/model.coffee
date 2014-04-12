@@ -155,6 +155,7 @@ class Model
                 @skeletonTracing = new SkeletonTracing(tracing, @flycam, @flycam3d, @user)
 
             @restrictions = tracing.restrictions
+            @mode = constants.MODE_PLANE_TRACING
 
             app.vent.trigger("model:sync")
             return {"restrictions": tracing.restrictions, "settings": tracing.content.settings}

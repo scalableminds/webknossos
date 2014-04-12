@@ -19,7 +19,8 @@
 
     <logger name="play" level="WARN" />
     <logger name="application" level="INFO" />
-    <logger name="braingames.binary" level="DEBUG" />
+    <logger name="braingames.binary" level="TRACE" />
+    <logger name="braingames.datastore" level="TRACE" />
 
     <root level="WARN">
         <appender-ref ref="STDOUT" />

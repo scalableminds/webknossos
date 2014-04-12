@@ -17,6 +17,6 @@ if [ $? -eq 2 ]; then
 fi
 
 mkdir -p <%= log_dir %>
-chown -R <%= user %>:adm <%= log_dir %>
+chown -R <%= user %>:<%= group %> <%= log_dir %>
 mkdir -p <%= run_dir %>
 chown -R <%= user %>:root <%= run_dir %>

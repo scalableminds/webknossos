@@ -7,11 +7,12 @@
 Description=Standalone datastore for oxalis
 
 [Service]
-ExecStart={{install_dir}}/bin/{{project}} -Dconfig.file={{config_dir}}/{{config}} -Dpidfile.path={{run_dir}}/{{name}}.pid
+ExecStart={{install_dir}}/bin/{{project}} -Dconfig.file={{config_dir}}/{{config}} -Dpidfile.path={{run_dir}}/{{name}}.pid -Dlogger.file={{config_dir}}/application-logger-dev.xml -Dapplication.name={{project}} -Dapplication.branch={{branch}}
 Type=simple
 Restart=always
 User={{name}}
 EnvironmentFile=-/etc/sysconfig/{{name}}
+WorkingDirectory={{install_dir}}
 
 [Install]
 WantedBy=multi-user.target

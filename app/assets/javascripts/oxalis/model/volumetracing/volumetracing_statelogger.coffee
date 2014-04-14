@@ -5,9 +5,9 @@
 class VolumeTracingStateLogger extends StateLogger
 
 
-  constructor : (flycam, version, tracingId, tracingType, allowUpdate, @volumeTracing) ->
+  constructor : (flycam, version, tracingId, tracingType, allowUpdate, updatePipeline, @volumeTracing, @pushQueue) ->
 
-    super(flycam, version, tracingId, tracingType, allowUpdate)
+    super(flycam, version, tracingId, tracingType, allowUpdate, updatePipeline)
 
     # For now, just save regularily
     @flycam.on
@@ -15,12 +15,23 @@ class VolumeTracingStateLogger extends StateLogger
         @push()
 
 
-  concatUpdateTracing : (array) ->
+  pushDiff : (action, value, push = true) ->
 
-    return array.concat( {
-      action : "updateTracing"
-      value : {
-        activeCellId : @volumeTracing.getActiveCellId()
+    @pushQueue.pushImpl()
+    super(arguments...)
+
+    if push
+      @pushImpl()
+
+
+  concatUpdateTracing : ->
+
+    @pushDiff(
+      "updateTracing"
+      {
+        activeCell : @volumeTracing.getActiveCellId()
         editPosition : @flycam.getPosition()
+        nextCell : @volumeTracing.idCount
       }
-    })
+      false
+    )

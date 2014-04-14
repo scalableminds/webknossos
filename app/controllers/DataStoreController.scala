@@ -162,7 +162,7 @@ case class WebSocketRESTServer(out: Channel[Array[Byte]]) extends FoxImplicits{
                   Logger.warn("REST request timed out. UUID: " + response.uuid)
               }
           }
-        case _ if (json \ "ping").asOpt.isDefined =>
+        case _ if (json \ "ping").asOpt[String].isDefined =>
           Logger.trace("Received a ping.")
         case e: JsError =>
           Logger.warn("Invalid REST result: " + JsError.toFlatJson(e))

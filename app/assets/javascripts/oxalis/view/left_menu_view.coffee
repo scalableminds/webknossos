@@ -7,6 +7,7 @@ backbone.marionette : marionette
 ./left-menu/dataset_position_view : DatasetPositionView
 ./left-menu/view_modes_view : ViewModesView
 ./left-menu/help_logo_view : HelpLogoView
+./left-menu/segmentation_info_view : SegmentationInfoView
 ../constants : constants
 ###
 
@@ -34,6 +35,7 @@ class LeftMenuView extends Backbone.Marionette.Layout
     <% } %>
 
     <% if (isViewMode) { %>
+      <div id="segmentation-info" class="row"></div>
       <div id="help-logo" class="row"></div>
     <% } %>
 
@@ -55,6 +57,7 @@ class LeftMenuView extends Backbone.Marionette.Layout
     "settingsTab" : "#settings-tab"
     "viewModes" : "#view-modes"
     "helpLogo" : "#help-logo"
+    "segmentationInfo" : "#segmentation-info"
 
 
   initialize : (options) ->
@@ -70,6 +73,7 @@ class LeftMenuView extends Backbone.Marionette.Layout
 
     else if @isViewMode()
       @helpLogoView = new HelpLogoView()
+      @segmentationInfoView = new SegmentationInfoView(options)
 
     @listenTo(@, "render", @afterRender)
 
@@ -87,6 +91,7 @@ class LeftMenuView extends Backbone.Marionette.Layout
 
     else if @isViewMode()
       @helpLogo.show(@helpLogoView)
+      @segmentationInfo.show(@segmentationInfoView)
 
 
   isTraceMode : ->

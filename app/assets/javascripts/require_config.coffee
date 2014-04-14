@@ -8,7 +8,6 @@ require.config(
     "jquery"              : "../bower_components/jquery/jquery"
     "underscore"          : "../bower_components/lodash/dist/lodash"
     "bootstrap"           : "../bower_components/bootstrap/dist/js/bootstrap"
-    "slider"              : "../bower_components/seiyria-bootstrap-slider/js/bootstrap-slider"
     "coffee-script"       : "../bower_components/coffee-script/extras/coffee-script"
     "backbone.marionette" : "../bower_components/backbone.marionette/lib/backbone.marionette"
     "backbone.paginator"  : "../bower_components/backbone.paginator/dist/backbone.paginator"
@@ -40,7 +39,6 @@ require.config(
     "underscore" :
       exports : "_"
     "bootstrap" : [ "jquery" ]
-    "slider" : [ "bootstrap" ]
     "ace" :
       exports : "ace"
     "libs/viz" :

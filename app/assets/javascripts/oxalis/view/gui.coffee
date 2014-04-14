@@ -176,8 +176,7 @@ class Gui
       moveValue3dChanged : => @updateMoveValue3d()
       particleSizeChanged : => @updateParticleSize()
 
-    @model.getSegmentationBinary()?.cube.on
-      bucketLoaded : => @updateSegmentID()
+
 
     @createTooltips()
 
@@ -240,15 +239,6 @@ class Gui
   createTooltips : ->
 
       $(".cr.number.has-slider").tooltip({"title" : "Move mouse up or down while clicking the number to easily adjust the value"})
-
-  updateSegmentID : ->
-
-    if @model.getSegmentationBinary()?
-      segmentID = @model.getSegmentationBinary().cube.getDataValue( @model.flycam.getPosition() )
-      if segmentID?
-        $("#segment-id").html("<p>Segment ID: " + segmentID + "</p>")
-      else
-        $("#segment-id").html("<p>Segment ID: -</p>")
 
 
   set : (name, value, type) =>

@@ -18,11 +18,11 @@ class HelpLogoView extends Backbone.Marionette.ItemView
         <tr><td>I,O or Alt + Mousewheel</td><td>Zoom in/out</td></tr>
       </tbody>
     </table>
-  </div>
-  <div>
-    <img class="img-responsive" src="/assets/images/Max-Planck-Gesellschaft.svg")">
-  </div>
-  <div>
-    <img class="img-responsive" src="/assets/images/Logo_MPI_cut.svg")">
-  </div>
+    <div>
+      <img class="img-responsive" src="/assets/images/Max-Planck-Gesellschaft.svg")">
+    </div>
+    <div>
+      <img class="img-responsive" src="/assets/images/Logo_MPI_cut.svg")">
+    </div>
   """)
+

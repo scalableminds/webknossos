@@ -1,7 +1,6 @@
 ### define
 backbone.marionette : marionette
 app : app
-libs/toast : Toast
 oxalis/constants : constants
 ###
 

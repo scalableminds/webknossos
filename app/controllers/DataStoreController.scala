@@ -149,7 +149,8 @@ case class WebSocketRESTServer(out: Channel[Array[Byte]]) extends FoxImplicits{
 
   def response(rawJson: Array[Byte]) = {
     try {
-      Json.parse(rawJson).validate[RESTResponse] match {
+      val json = Json.parse(rawJson)
+      json.validate[RESTResponse] match {
         case JsSuccess(response, _) =>
           Logger.warn("Finished with REST result: " + response)
           openCalls().get(response.uuid).map {
@@ -161,6 +162,8 @@ case class WebSocketRESTServer(out: Channel[Array[Byte]]) extends FoxImplicits{
                   Logger.warn("REST request timed out. UUID: " + response.uuid)
               }
           }
+        case _ if (json \ "ping").asOpt.isDefined =>
+          Logger.trace("Received a ping.")
         case e: JsError =>
           Logger.warn("Invalid REST result: " + JsError.toFlatJson(e))
       }

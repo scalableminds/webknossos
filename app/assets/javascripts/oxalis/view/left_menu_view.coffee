@@ -10,6 +10,7 @@ backbone.marionette : marionette
 ./left-menu/dataset_info_view : DatasetInfoView
 ./left-menu/dataset_position_view : DatasetPositionView
 ./left-menu/view_modes_view : ViewModesView
+./left-menu/help_logo_view : HelpLogoView
 ../constants : constants
 ###
 
@@ -18,7 +19,7 @@ class LeftMenuView extends Backbone.Marionette.Layout
   className : "container-fluid"
 
   template : _.template("""
-    <% if (isNotViewMode()) { %>
+    <% if (isTraceMode) { %>
       <div id="dataset-actions" class="row"></div>
     <% } %>
 
@@ -26,17 +27,21 @@ class LeftMenuView extends Backbone.Marionette.Layout
 
     <div id="dataset-position" class="row"></div>
 
-    <% if (isNotViewMode()) { %>
+    <% if (isTraceMode) { %>
       <div id="volume-actions" class="volume-controls">
         <button class="btn btn-default" id="btn-merge">Merge cells</button>
       </div>
     <% } %>
 
-    <% if (isNotViewMode()) { %>
+    <% if (isTraceMode) { %>
       <div id="view-modes" class="row"></div>
     <% } %>
 
-    <% if (isNotViewMode()) { %>
+    <% if (isViewMode) { %>
+      <div id="help-logo" class="row"></div>
+    <% } %>
+
+    <% if (isTraceMode) { %>
       <div class="row">
         <div id="lefttabbar" class="col-sm-12">
           <ul class="nav nav-tabs">
@@ -61,12 +66,10 @@ class LeftMenuView extends Backbone.Marionette.Layout
     <% } %>
   """)
 
-  templateHelpers :
+  templateHelpers : ->
     # spotlight aka public viewing
-    isViewMode : ->
-      return @controlMode == constants.CONTROL_MODE_VIEW
-    isNotViewMode : ->
-      return not @isViewMode()
+    isTraceMode : @isTraceMode()
+    isViewMode : @isViewMode
 
 
   regions :
@@ -77,23 +80,29 @@ class LeftMenuView extends Backbone.Marionette.Layout
     "userSettings" : "#user-settings-tab"
     "datasetSettings" : "#dataset-settings-tab"
     "viewModes" : "#view-modes"
+    "helpLogo" : "#help-logo"
 
 
   initialize : (options) ->
 
     @options = options
-    @datasetActionsView = new DatasetActionsView(options)
     @datasetInfoView = new DatasetInfoView(options)
     @datasetPositionView = new DatasetPositionView(options)
-    @viewModesView = new ViewModesView(options)
 
-    @skeletonTracingSettingsView = new SkeletonTracingSettingsView(_model : options._model)
-    @volumeTracingSettingsView = new VolumeTracingSettingsView(_model : options._model)
+    if @isTraceMode()
+      @datasetActionsView = new DatasetActionsView(options)
+      @viewModesView = new ViewModesView(options)
 
-    @planeUserSettingsView = new PlaneUserSettingsView(_model : options._model)
-    @arbitraryUserSettingsView = new ArbitraryUserSettingsView(_model : options._model)
+      @skeletonTracingSettingsView = new SkeletonTracingSettingsView(_model : options._model)
+      @volumeTracingSettingsView = new VolumeTracingSettingsView(_model : options._model)
 
-    @datasetSettingsView = new DatasetSettingsView(_model : options._model)
+      @planeUserSettingsView = new PlaneUserSettingsView(_model : options._model)
+      @arbitraryUserSettingsView = new ArbitraryUserSettingsView(_model : options._model)
+
+      @datasetSettingsView = new DatasetSettingsView(_model : options._model)
+    else
+      @helpLogoView = new HelpLogoView()
+
 
     @listenTo(@, "render", @afterRender)
     @listenTo(app.vent, "changeViewMode", @changeViewMode)
@@ -101,30 +110,42 @@ class LeftMenuView extends Backbone.Marionette.Layout
 
   afterRender : ->
 
-    @datasetActionButtons.show(@datasetActionsView)
     @datasetInfo.show(@datasetInfoView)
     @datasetPosition.show(@datasetPositionView)
-    @viewModes.show(@viewModesView)
 
-    @datasetSettings.show(@datasetSettingsView)
+    if @isTraceMode()
+      @datasetActionButtons.show(@datasetActionsView)
+      @viewModes.show(@viewModesView)
+
+      @datasetSettings.show(@datasetSettingsView)
+
+    if @isViewMode()
+      @helpLogo.show(@helpLogoView)
+
+
+  isTraceMode : ->
+
+    return @options.controlMode == constants.CONTROL_MODE_TRACE
+
+
+  isViewMode : ->
+
+    return not @isTraceMode()
 
 
   changeViewMode : (mode) ->
 
-    if mode == constants.MODE_PLANE_TRACING
-      @userSettings.show(@planeUserSettingsView)
-      @tracingSettings.show(@skeletonTracingSettingsView)
-    else if mode in constants.MODES_ARBITRARY
-      @userSettings.show(@arbitraryUserSettingsView)
-      @tracingSettings.show(@skeletonTracingSettingsView)
-    else if mode == constants.MODE_VOLUME
-      @userSettings.show(@planeUserSettingsView)
-      @tracingSettings.show(@volumeTracingSettingsView)
+    if @isTraceMode()
 
-
-  serializeData : ->
-
-    return @options
+      if mode == constants.MODE_PLANE_TRACING
+        @userSettings.show(@planeUserSettingsView)
+        @tracingSettings.show(@skeletonTracingSettingsView)
+      else if mode in constants.MODES_ARBITRARY
+        @userSettings.show(@arbitraryUserSettingsView)
+        @tracingSettings.show(@skeletonTracingSettingsView)
+      else if mode == constants.MODE_VOLUME
+        @userSettings.show(@planeUserSettingsView)
+        @tracingSettings.show(@volumeTracingSettingsView)
 
 
   #   <% if(task) { %>

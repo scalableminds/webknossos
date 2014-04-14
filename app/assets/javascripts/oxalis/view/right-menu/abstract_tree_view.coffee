@@ -7,7 +7,7 @@ oxalis/view/skeletontracing/abstract_tree_renderer : AbstractTreeRenderer
 class AbstractTreeView extends Backbone.Marionette.ItemView
 
   template : _.template("""
-      <canvas width="<%= width %>" height="<%= height %>" style="width: <%= width %>px; height: <%= height %>px">
+      <canvas width="<%= width %>px" height="<%= height %>px" style="width: <%= width %>px; height: <%= height %>px">
     """)
 
   ui :

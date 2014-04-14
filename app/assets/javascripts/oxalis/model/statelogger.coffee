@@ -10,7 +10,7 @@ class StateLogger
 
   PUSH_THROTTLE_TIME : 30000 #30s
 
-  constructor : (@flycam, @version, @tracingId, @tracingType, @allowUpdate) ->
+  constructor : (@flycam, @version, @tracingId, @tracingType, @allowUpdate, @pipeline) ->
 
     _.extend(this, new EventMixin())
 
@@ -68,36 +68,21 @@ class StateLogger
 
   pushImpl : (notifyOnFailure) ->
 
-    # do not allow multiple pushes, before result is there (breaks versioning)
-    # still, return the deferred of the pending push, so that it will be informed about success
-    if @pushDeferred?
-      return @pushDeferred
-
-    @pushDeferred = new $.Deferred()
-
-    # reject and null pushDeferred if the server didn't answer after 10 seconds
-    setTimeout(((version) =>
-      if @pushDeferred and version == @version
-        @pushDeferred.reject()
-        @pushDeferred = null
-        console.error "Server did take too long to answer"),
-      10000, @version)
-
+    @concatUpdateTracing()
     @committedDiffs = @committedDiffs.concat(@newDiffs)
     @newDiffs = []
     @committedCurrentState = true
-    data = @concatUpdateTracing(@committedDiffs)
-    console.log "Sending data: ", data
+    console.log "Sending data: ", @committedDiffs
 
-    Request.send(
-      url : "/annotations/#{@tracingType}/#{@tracingId}?version=#{(@version + 1)}"
-      method : "PUT"
-      data : data
-      contentType : "application/json"
-    )
-    .fail (responseObject) =>
-
-      @failedPushCount++
+    @pipeline.executeAction( (prevVersion) =>
+      Request.send(
+        url : "/annotations/#{@tracingType}/#{@tracingId}?version=#{(prevVersion + 1)}"
+        method : "PUT"
+        data : @committedDiffs
+        contentType : "application/json"
+      ).pipe (response) ->
+        return response.version
+    ).fail (responseObject) =>
 
       if responseObject.responseText? && responseObject.responseText != ""
         # restore whatever is send as the response
@@ -115,17 +100,8 @@ class StateLogger
 
       @push()
       if notifyOnFailure
-        @trigger("pushFailed", @failedPushCount >= 3 )
-      if @pushDeferred
-        @pushDeferred.reject()
-        @pushDeferred = null
+        @trigger("pushFailed")
 
-    .done (response) =>
+    .done =>
 
-      @failedPushCount = 0
-
-      @version = response.version
       @committedDiffs = []
-      if @pushDeferred
-        @pushDeferred.resolve()
-        @pushDeferred = null

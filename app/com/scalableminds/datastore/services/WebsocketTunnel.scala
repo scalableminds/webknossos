@@ -29,6 +29,8 @@ case class ReceivedString(s: String)
 
 case object ConnectToWS
 
+case object PingSocket
+
 case class KeyStoreInfo(keyStore: File, keyStorePassword: String)
 case class WSSecurityInfo(secured: Boolean, selfSigned: Boolean, keyStoreInfo: Option[KeyStoreInfo])
 
@@ -50,6 +52,8 @@ class JsonWSTunnel(
   private val ConnectTimeout = 10 seconds
 
   private val MaxSendRetries = 5
+
+  private val PingInterval = 5 seconds
 
   private class WebSock(receiver: ActorRef, url: String) extends WebSocketClient(new URI(url)) {
     def onOpen(handshakedata: ServerHandshake): Unit = {
@@ -77,6 +81,7 @@ class JsonWSTunnel(
 
   override def preStart = {
     self ! ConnectToWS
+    context.system.scheduler.schedule(PingInterval, PingInterval, self, PingSocket)
     super.preStart
   }
 
@@ -92,6 +97,9 @@ class JsonWSTunnel(
 
     case SendJson(js) =>
       tryToSend(Json.prettyPrint(js))
+
+    case PingSocket =>
+      tryToSend(ping)
 
     case SendData(data) =>
       tryToSend(data)
@@ -110,6 +118,10 @@ class JsonWSTunnel(
           logger.error(s"Received invalid json from WS: $s")
       }
   }
+
+  val ping = Json.prettyPrint(Json.obj(
+    "ping" -> ":D"
+  ))
 
   def isAlive = {
     websocket.map(w => w.getConnection.isOpen || w.getConnection.isConnecting) getOrElse false

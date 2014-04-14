@@ -49,6 +49,7 @@ class TracingLayoutView extends Backbone.Marionette.Layout
 
 
     @listenTo(@, "render", @afterRender)
+    @listenTo(@rightMenu, "show", @resize)
 
 
   afterRender : ->
@@ -60,7 +61,6 @@ class TracingLayoutView extends Backbone.Marionette.Layout
       @rightMenu.show(@rightMenuView)
 
     app.oxalis = new OxalisController(@options)
-    #@resize()
 
 
   serializeData : ->
@@ -74,5 +74,5 @@ class TracingLayoutView extends Backbone.Marionette.Layout
       menuPosition = @ui.rightMenu.position()
       MARGIN = 40
       @ui.rightMenu
-        .width(window.innerWidth - menuPosition.left - MARGIN)
         .height(window.innerHeight - menuPosition.top - MARGIN)
+        #.width(window.innerWidth - menuPosition.left - MARGIN)

@@ -39,7 +39,6 @@ class Controller
   view : null
   planeController : null
   arbitraryController : null
-  abstractTreeController : null
   allowedModes : []
 
 
@@ -171,7 +170,6 @@ class Controller
 
         "t" : =>
           @view.toggleTheme()
-          @abstractTreeController.drawTree()
 
         "m" : => # rotate allowed modes
 

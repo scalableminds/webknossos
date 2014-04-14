@@ -1,9 +1,10 @@
 ### define
 jquery : $
-../libs/toast : Toast
+app : app
+libs/toast : Toast
+three : THREE
 ./constants : constants
 ./view/modal : modal
-three : THREE
 ###
 
 class View
@@ -35,6 +36,8 @@ class View
 
 
   setTheme : (theme) ->
+
+    app.vent.trigger("view:setTheme", theme)
 
     if theme is constants.THEME_BRIGHT
       $("body").attr('class', 'bright')

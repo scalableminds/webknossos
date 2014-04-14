@@ -1,5 +1,4 @@
 ### define
-dat.gui : DatGui
 libs/request : Request
 libs/event_mixin : EventMixin
 libs/toast : Toast

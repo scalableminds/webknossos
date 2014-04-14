@@ -1,7 +1,8 @@
 ### define
-../../model/dimensions : Dimensions
-../../constants : constants
-../abstract_tree_controller : AbstractTreeController
+app : app
+backbone : backbone
+oxalis/model/dimensions : Dimensions
+oxalis/constants : constants
 ###
 
 class SkeletonTacingController
@@ -16,9 +17,8 @@ class SkeletonTacingController
 
   constructor : ( @model, @sceneController, @gui, @skeletonTracingView ) ->
 
-    @abstractTreeController = new AbstractTreeController(@model)
-    @abstractTreeController.view.on
-      nodeClick : (id) => @setActiveNode(id, false, true)
+    _.extend(@, Backbone.Events)
+    @listenTo(app.vent, "activeNode:change", (nodeId) -> setActiveNode : (nodeId, false, true))
 
     # TODO add to tracing model
     # @gui.on

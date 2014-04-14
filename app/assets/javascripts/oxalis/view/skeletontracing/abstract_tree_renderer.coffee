@@ -4,7 +4,7 @@ libs/toast : Toast
 ###
 
 
-class AbstractTreeView
+class AbstractTreeRenderer
 
   NODE_RADIUS          : 2
   MAX_NODE_DISTANCE    : 100
@@ -13,21 +13,12 @@ class AbstractTreeView
   MODE_NORMAL          : 0     # draw every node and the complete tree
   MODE_NOCHAIN         : 1    # draw only decision points
 
-  constructor : (width, height) ->
+  constructor : ($canvas, width, height) ->
 
     _.extend(this, Backbone.Events)
 
-    @canvas = $("<canvas>", {id : "abstractTreeViewerCanvas"})
-    @canvas.click(@onClick)
-    $(@canvas).css(
-      width : width
-      height : height
-    )
-    @canvas[0].width = @canvas.width()
-    @canvas[0].height = @canvas.height()
-    @ctx = @canvas[0].getContext("2d")
+    @ctx = $canvas[0].getContext("2d")
     @ctx.lineWidth = 1
-    console.log(@ctx)
     @width = width
     @height = height
     @nodeList = []

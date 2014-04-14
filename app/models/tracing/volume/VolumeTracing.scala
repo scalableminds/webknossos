@@ -7,15 +7,13 @@ import models.binary.UserDataLayerDAO
 import models.binary.DataSet
 import java.io.InputStream
 import play.api.libs.json.{Json, JsValue}
-import oxalis.binary.BinaryDataService
-import scala.concurrent.Future
 import braingames.reactivemongo.{DBAccessContext, GlobalAccessContext}
 import braingames.util.{FoxImplicits, Fox}
 import reactivemongo.bson.BSONObjectID
 import play.modules.reactivemongo.json.BSONFormats._
 import play.api.libs.concurrent.Execution.Implicits._
-import play.api.Logger
-import braingames.binary.models.DataLayer
+import controllers.DataStoreHandler
+import braingames.binary.models.{DataLayer, UserDataLayer, DataSource}
 
 /**
  * Company: scalableminds
@@ -26,10 +24,10 @@ import braingames.binary.models.DataLayer
 case class VolumeTracing(
   dataSetName: String,
   userDataLayerName: String,
-  timestamp: Long,
-  activeCellId: Option[Int],
-  editPosition: Point3D,
-  boundingBox: Option[BoundingBox],
+  activeCellId: Option[Int] = None,
+  timestamp: Long = System.currentTimeMillis(),
+  editPosition: Point3D = Point3D(0,0,0),
+  boundingBox: Option[BoundingBox] = None,
   settings: AnnotationSettings = AnnotationSettings.volumeDefault,
   _id: BSONObjectID = BSONObjectID.generate)
   extends AnnotationContent {
@@ -88,13 +86,14 @@ object VolumeTracingService extends AnnotationContentService with FoxImplicits{
     VolumeTracingDAO.findOneById(id)
 
   def createFrom(baseDataSet: DataSet)(implicit ctx: DBAccessContext) = {
-    baseDataSet.dataSource.toFox.flatMap{ baseSource =>
-      val dataLayer = BinaryDataService.createUserDataSource(baseSource)
-      val t = VolumeTracing(baseDataSet.name, dataLayer.dataLayer.name, System.currentTimeMillis(), None, baseDataSet.defaultStart, None)
-      for{
+    for {
+      baseSource <- baseDataSet.dataSource.toFox
+      dataLayer <- DataStoreHandler.createUserDataLayer(baseDataSet.dataStoreInfo, baseSource)
+      volumeTracing = VolumeTracing(baseDataSet.name, dataLayer.dataLayer.name, editPosition = baseDataSet.defaultStart)
       _ <- UserDataLayerDAO.insert(dataLayer)
-      _ <- VolumeTracingDAO.insert(t)
-      } yield t
+      _ <- VolumeTracingDAO.insert(volumeTracing)
+    } yield {
+      volumeTracing
     }
   }
 

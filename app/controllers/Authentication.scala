@@ -120,7 +120,7 @@ object Authentication extends Controller with Secured with ProvidesUnauthorizedS
               Redirect(redirectLocation).withSession(Secured.createSession(user))
           }.getOrElse {
             BadRequest(html.user.login(loginForm.bindFromRequest))
-              .flashing("success" -> Messages("user.login.failed"))
+              .flashing("error" -> Messages("user.login.failed"))
           }
       })
   }

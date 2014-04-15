@@ -23,6 +23,12 @@ class NonBackboneRouter extends Backbone.Router
 
   tracingTrace : ->
 
+    $('[href="/dashboard"]').click(->
+      # Temporary hack to circumvent backbones routing.
+      # This ensures that the tracing view is completely unloaded.
+      location.href = "/dashboard"
+    )
+
     require [
       "oxalis/controller"
     ], (Controller) ->
@@ -58,6 +64,12 @@ class NonBackboneRouter extends Backbone.Router
 
 
   tracingView : ->
+
+    $('[href="/dashboard"]').click(->
+      # Temporary hack to circumvent backbones routing.
+      # This ensures that the tracing view is completely unloaded.
+      location.href = "/dashboard"
+    )
 
     require [
       "oxalis/controller"

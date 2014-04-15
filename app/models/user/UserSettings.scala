@@ -39,11 +39,11 @@ object UserSettings extends BasicSettings{
           "contrast" -> 1
         ),
         "st08x2" -> Json.obj(
-          "brightness" -> -90,
+          "brightness" -> 0,
           "contrast" -> 2.4
         ),
         "07x2" -> Json.obj(
-          "brightness" -> -70,
+          "brightness" -> 0,
           "contrast" -> 2.4
         )
       ),

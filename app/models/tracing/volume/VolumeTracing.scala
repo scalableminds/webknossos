@@ -54,7 +54,6 @@ case class VolumeTracing(
     }
   }
 
-
   def copyDeepAndInsert = ???
 
   def mergeWith(source: AnnotationContent) = ???
@@ -69,7 +68,8 @@ case class VolumeTracing(
     UserDataLayerDAO.findOneByName(userDataLayerName)(GlobalAccessContext).map{ userDataLayer =>
       Json.obj(
         "customLayers" -> List(AnnotationContent.dataLayerWrites.writes(userDataLayer.dataLayer)),
-        "activeCell" -> activeCellId
+        "activeCell" -> activeCellId,
+        "nextCell" -> userDataLayer.dataLayer.nextSegmentationId.getOrElse[Int](1)
       )
     }
   }

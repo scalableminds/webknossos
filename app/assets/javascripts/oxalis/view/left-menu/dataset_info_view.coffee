@@ -4,7 +4,7 @@ app : app
 oxalis/constants : constants
 ###
 
-class DatsetActionsView extends Marionette.ItemView
+class DatsetActionsView extends Backbone.Marionette.ItemView
 
   className : "col-sm-12"
   id : "dataset"

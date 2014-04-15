@@ -58,7 +58,7 @@ class AbstractTreeView extends Backbone.Marionette.ItemView
 
     return {
       width : @width || 300
-      height : @height || 300
+      height : @height || 700
     }
 
 

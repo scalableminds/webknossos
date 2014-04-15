@@ -81,7 +81,14 @@ DashboardLoader =
     # not working currently?
     # url = $tabbableDashboard.data("url")
 
-    url = "/getDashboardInfo"
+    # TODO: Delete when merging #289
+    match = (/\/users\/([^\/]*)\/details/).exec(location.href)
+    if match
+      url = "/getDashboardInfo/" + match[1]
+    else
+      url = "/getDashboardInfo"
+
+
 
     $.get(url).done((response) =>
 

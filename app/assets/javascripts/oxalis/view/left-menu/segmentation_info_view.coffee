@@ -4,7 +4,7 @@ app : app
 oxalis/constants : constants
 ###
 
-class SegmentationInfoView extends Marionette.ItemView
+class SegmentationInfoView extends Backbone.Marionette.ItemView
 
   className : "col-sm-12"
   template : _.template("""

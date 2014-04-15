@@ -4,7 +4,7 @@ app : app
 libs/toast : Toast
 ###
 
-class DatsetActionsView extends Marionette.ItemView
+class DatsetActionsView extends Backbone.Marionette.ItemView
 
   template : _.template("""
     <div class="col-sm-3">

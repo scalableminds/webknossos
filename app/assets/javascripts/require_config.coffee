@@ -24,7 +24,6 @@ require.config(
     "gamepad"             : "../bower_components/gamepad.js/gamepad"
     "jquery.mousewheel"   : "../bower_components/jquery-mousewheel/jquery.mousewheel"
     "tween"               : "../bower_components/tweenjs/build/Tween"
-    "dat.gui"             : "../bower_components/dat.gui/dat.gui"
     "moment"              : "../bower_components/momentjs/moment"
     "require"             : "../bower_components/requirejs/require"
     "c3"                  : "../bower_components/c3/c3"

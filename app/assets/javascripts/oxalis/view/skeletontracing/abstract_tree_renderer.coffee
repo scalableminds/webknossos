@@ -17,7 +17,6 @@ class AbstractTreeRenderer
 
     _.extend(this, Backbone.Events)
 
-    @canvas = $canvas
     @ctx = $canvas[0].getContext("2d")
     @ctx.lineWidth = 1
     @width = width
@@ -27,7 +26,7 @@ class AbstractTreeRenderer
 
   drawTree : (tree, @activeNodeId) ->
     # clear Background
-    @ctx.clearRect(0, 0, @canvas.width(), @height)
+    @ctx.clearRect(0, 0, @width, @height)
     @vgColor = $(@canvas).css("color")
 
     unless tree?
@@ -54,7 +53,7 @@ class AbstractTreeRenderer
     unless root?
       return
 
-    @nodeDistance = Math.min(@canvas.height() / (@getMaxTreeDepth(root, mode) + 1), @MAX_NODE_DISTANCE)
+    @nodeDistance = Math.min(@height / (@getMaxTreeDepth(root, mode) + 1), @MAX_NODE_DISTANCE)
 
     # The algorithm works as follows:
     # A tree is given a left and right border that it can use. If
@@ -69,7 +68,7 @@ class AbstractTreeRenderer
     # by recordWidths(), the second by drawTreeWithWidths().
 
     @recordWidths(root)
-    @drawTreeWithWidths(root, 0, @canvas.width(), @nodeDistance, mode)
+    @drawTreeWithWidths(root, 0, @width, @nodeDistance, mode)
 
   drawTreeWithWidths : (tree, left, right, top, mode = @MODE_NORMAL) ->
 

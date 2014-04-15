@@ -7,7 +7,7 @@ oxalis/view/skeletontracing/abstract_tree_renderer : AbstractTreeRenderer
 class AbstractTreeView extends Backbone.Marionette.ItemView
 
   template : _.template("""
-      <canvas width="<%= width %>px" height="<%= height %>px" style="width: <%= width %>px; height: <%= height %>px">
+      <canvas width="<%= width %>" height="<%= height %>" style="width: <%= width %>px; height: <%= height %>px">
     """)
 
   ui :
@@ -22,14 +22,15 @@ class AbstractTreeView extends Backbone.Marionette.ItemView
 
     @listenTo(app.vent, "view:setTheme", @drawTree)
     @listenTo(@, "show", ->
+      _.defer =>
 
-      @width = @$el.width()
-      @height = @$el.height()
-      @view = new AbstractTreeRenderer(
-        @ui.canvas,
-        @width,
-        @height
-      )
+        @width = @$el.width()
+        @height = @$el.height()
+        @abstractTreeRenderer = new AbstractTreeRenderer(
+          @ui.canvas,
+          @width,
+          @height
+        )
 
       #re-render with correct height/width
       @render()
@@ -51,7 +52,7 @@ class AbstractTreeView extends Backbone.Marionette.ItemView
 
   drawTree : ->
 
-    @view.drawTree(@_model.skeletonTracing.getTree(), @_model.skeletonTracing.getActiveNodeId())
+    @abstractTreeRenderer.drawTree(@_model.skeletonTracing.getTree(), @_model.skeletonTracing.getActiveNodeId())
 
 
   serializeData : ->
@@ -64,6 +65,7 @@ class AbstractTreeView extends Backbone.Marionette.ItemView
 
   handleClick : (event) ->
 
-    id = @getIdFromPos(evt.offsetX, evt.offsetY)
+    id = @abstractTreeRenderer.getIdFromPos(event.offsetX, event.offsetY)
     if id
+      # TODO make sure someone listens
       app.vent.trigger("activeNode:change", id)

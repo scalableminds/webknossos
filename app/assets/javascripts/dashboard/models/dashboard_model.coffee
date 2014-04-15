@@ -22,6 +22,7 @@ class DashboardModel extends Backbone.Model
   initialize : (options) ->
 
     @set("userID", options.userID)
+    @set("isAdminView", options.isAdminView)
     @listenTo(@, "sync", @transformToCollection)
 
 

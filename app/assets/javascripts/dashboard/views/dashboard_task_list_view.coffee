@@ -55,7 +55,6 @@ class DashboardTaskListView extends Backbone.Marionette.CompositeView
 
   initialize : (options) ->
 
-    @model.set("isAdminView", options.isAdminView)
     @showFinishedTasks = false
     @collection = @model.getUnfinishedTasks()
 

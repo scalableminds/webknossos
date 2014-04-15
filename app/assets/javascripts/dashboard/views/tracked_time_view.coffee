@@ -2,7 +2,6 @@
 underscore : _
 backbone.marionette : marionette
 dashboard/views/dashboard_task_list_item_view : DashboardTaskListItemView
-dashboard/models/logged_time_model : LoggedTimeModel
 routes : routes
 ###
 
@@ -33,9 +32,8 @@ class TrackedTimeView extends Backbone.Marionette.CompositeView
 
     @model.set("formattedLogs", [])
 
-    loggedTime = new LoggedTimeModel()
-    @listenTo(loggedTime, "sync", =>
-      @model.set("formattedLogs", loggedTime.getFormattedLogs())
+    @listenTo(@model, "sync", =>
+      @model.set("formattedLogs", @model.getFormattedLogs())
       @render()
     )
-    loggedTime.fetch()
+    @model.fetch()

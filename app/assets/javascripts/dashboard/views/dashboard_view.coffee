@@ -4,6 +4,7 @@ backbone.marionette : marionette
 dashboard/views/dashboard_task_list_view : DashboardTaskListView
 dashboard/views/explorative_tracing_list_view : ExplorativeTracingListView
 dashboard/views/tracked_time_view : TrackedTimeView
+dashboard/models/logged_time_model : LoggedTimeModel
 ###
 
 class DashboardView extends Backbone.Marionette.Layout
@@ -49,24 +50,24 @@ class DashboardView extends Backbone.Marionette.Layout
 
   initialize : (options) ->
 
-    @model.set("isAdminView", options.isAdminView)
-    @showTasks()
-
+    @model.fetch().done( =>
+      @showTasks()
+    )
 
   showTasks : ->
 
-    view = new DashboardTaskListView(model : @model, isAdminView : @isAdminView)
+    view = new DashboardTaskListView(model : @model)
     @tabPane.show(view)
 
 
   showExplorative : ->
 
-    view = new ExplorativeTracingListView(model : @model, isAdminView : @isAdminView)
+    view = new ExplorativeTracingListView(model : @model)
     @tabPane.show(view)
 
 
   showTrackedTime : ->
 
-    view = new TrackedTimeView(model : @model)
+    view = new TrackedTimeView(model : new LoggedTimeModel())
     @tabPane.show(view)
 

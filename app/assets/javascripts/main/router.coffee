@@ -81,13 +81,11 @@ class Router extends Backbone.Router
 
       isAdminView = userID != null
 
-      model = new DashboardModel({ userID })
-      model.fetch().done( =>
-        view = new DashboardView(model : model, isAdminView : isAdminView)
-        @changeView(view)
-      )
+      model = new DashboardModel({ userID, isAdminView : false })
+      view = new DashboardView(model : model, isAdminView : isAdminView)
 
-      @hideLoading()
+      @changeView(view)
+      @listenTo(model, "sync", @hideLoading)
 
 
   showWithPagination : (view, collection) ->

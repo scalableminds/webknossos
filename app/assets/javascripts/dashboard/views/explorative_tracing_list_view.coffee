@@ -81,7 +81,6 @@ class ExplorativeTracingListView extends Backbone.Marionette.CompositeView
 
   initialize : (options) ->
 
-    @model.set("isAdminView", options.isAdminView)
     @collection = @model.get("exploratoryAnnotations")
 
     datasetCollection = new DatasetCollection()

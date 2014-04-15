@@ -13,7 +13,7 @@ class ExplorativeTracingListItemView extends Backbone.Marionette.ItemView
     <td class="explorative-name-column hover-dynamic">
       <span class="hover-hide" id="explorative-tracing-name"> <%= name %> </span>
       <form action="<%= jsRoutes.controllers.AnnotationController.nameExplorativeAnnotation(typ, id).url %>"
-        method="POST" class="hover-show" id="explorative-name-form" style="display: none">
+        method="POST" class="hover-show" id="explorative-name-form">
         <div class="input-append">
           <input class="input-medium hover-input"
                  name="name"
@@ -22,7 +22,6 @@ class ExplorativeTracingListItemView extends Backbone.Marionette.ItemView
                  type="text"
                  value="<%= name %>"
                  autocomplete="off">
-            <a href="#" id="explorative-name-submit" class="btn btn-default"><i class="fa fa-check"></i></a>
         </div>
       </form>
     </td>
@@ -60,6 +59,18 @@ class ExplorativeTracingListItemView extends Backbone.Marionette.ItemView
   events :
     "submit #explorative-name-form" : "nameExplorativeAnnotation"
     "click #finish-tracing" : "finishTracing"
+
+  ui :
+    "explorativeNameForm" : "#explorative-name-form"
+    "explorativeNameInput": "#explorative-name-input"
+
+
+  onRender: ->
+
+    @ui.explorativeNameForm.hide()
+    @ui.explorativeNameInput.change(=>
+       @ui.explorativeNameForm.submit()
+    )
 
 
   nameExplorativeAnnotation : (event) ->

@@ -50,7 +50,8 @@ DELETE        /api/teams/:id                                       controllers.T
 # Binary Data
 
 # Spotlight
-GET           /spotlight                                           controllers.DataSetController.spotlight
+GET           /spotlight                                           controllers.DataSetController.empty
+GET           /spotlightOld                                        controllers.DataSetController.spotlight
 
 # DataSets
 GET           /datasets                                            controllers.DataSetController.empty

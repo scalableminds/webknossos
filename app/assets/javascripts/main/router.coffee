@@ -20,6 +20,7 @@ class Router extends Backbone.Router
     "projects"                      : "projects"
     "dashboard"                     : "dashboard"
     "users/:id/details"             : "dashboard"
+    "spotlight"                     : "spotlight"
 
   initialize : ->
 
@@ -87,6 +88,17 @@ class Router extends Backbone.Router
       @changeView(view)
       @listenTo(model, "sync", @hideLoading)
 
+
+  spotlight: ->
+
+    require(["views/spotlight_view", "admin/models/dataset/dataset_collection"], (SpotlightView, DatasetCollection) =>
+
+      collection = new DatasetCollection()
+      view = new SpotlightView(model: collection)
+
+      @changeView(view)
+      @listenTo(collection, "sync", @hideLoading)
+    )
 
   showWithPagination : (view, collection) ->
 

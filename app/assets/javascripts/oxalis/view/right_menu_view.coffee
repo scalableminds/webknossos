@@ -6,6 +6,8 @@ backbone.marionette : marionette
 
 class RightMenuView extends Backbone.Marionette.Layout
 
+  MARGIN : 40
+
   template : _.template("""
     <ul class="nav nav-tabs">
       <li class="active">
@@ -62,6 +64,9 @@ class RightMenuView extends Backbone.Marionette.Layout
     </div>
   """)
 
+  ui :
+    "tabContentContainer" : ".tab-content"
+
   regions :
     "commentTab" : "#tab-comments"
     "abstractTreeTab" : "#tab-abstract-tree"
@@ -71,7 +76,16 @@ class RightMenuView extends Backbone.Marionette.Layout
     @commentTabView = new CommentTabView(options)
     @abstractTreeView = new AbstractTreeView(options)
 
-    @listenTo(@, "show", @afterRender)
+    @listenTo(@, "render", @afterRender)
+    @listenTo(@, "show", @resizeHeight)
+
+
+  resize : ->
+
+    _.defer =>
+      # make tab content 100% height
+      tabContentPosition = @ui.tabContentContainer.position()
+      @ui.tabContentContainer.height(window.innerHeight - tabContentPosition.top - @MARGIN)
 
 
   afterRender : ->

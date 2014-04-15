@@ -11,6 +11,8 @@ oxalis/constants : constants
 
 class TracingLayoutView extends Backbone.Marionette.Layout
 
+  MARGIN : 40
+
   template : _.template("""
     <div id="left-menu"></div>
     <div id="tracing"></div>
@@ -49,7 +51,13 @@ class TracingLayoutView extends Backbone.Marionette.Layout
 
 
     @listenTo(@, "render", @afterRender)
-    @listenTo(@rightMenu, "show", @resize)
+    @listenTo(app.vent, "planes:resize", @resize)
+
+
+  resize : ->
+
+    menuPosition = @ui.rightMenu.position()
+    @ui.rightMenu.width(window.innerWidth - menuPosition.left - @MARGIN)
 
 
   afterRender : ->
@@ -68,11 +76,4 @@ class TracingLayoutView extends Backbone.Marionette.Layout
     return @options
 
 
-  resize : ->
 
-    _.defer =>
-      menuPosition = @ui.rightMenu.position()
-      MARGIN = 40
-      @ui.rightMenu
-        .height(window.innerHeight - menuPosition.top - MARGIN)
-        #.width(window.innerWidth - menuPosition.left - MARGIN)

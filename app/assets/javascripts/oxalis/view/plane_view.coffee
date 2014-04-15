@@ -169,6 +169,7 @@ class PlaneView
       constants.RESIZE_THROTTLE_TIME
     )
     @resizeThrottled()
+    app.vent.trigger("planes:resize")
 
 
   resize : ->

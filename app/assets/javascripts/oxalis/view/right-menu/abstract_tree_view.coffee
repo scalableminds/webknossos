@@ -1,4 +1,5 @@
 ### define
+underscore : _
 app : app
 oxalis/view/skeletontracing/abstract_tree_renderer : AbstractTreeRenderer
 ###
@@ -20,22 +21,9 @@ class AbstractTreeView extends Backbone.Marionette.ItemView
 
     {@_model} = options
 
+    @listenTo(@, "render", @drawTree)
+    @listenTo(app.vent, "planes:resize", @resize)
     @listenTo(app.vent, "view:setTheme", @drawTree)
-    @listenTo(@, "show", ->
-      _.defer =>
-
-        @width = @$el.width()
-        @height = @$el.height()
-        @abstractTreeRenderer = new AbstractTreeRenderer(
-          @ui.canvas,
-          @width,
-          @height
-        )
-
-      #re-render with correct height/width
-      @render()
-    )
-
     @listenTo(app.vent, "model:sync", ->
 
       @listenTo(@_model.skeletonTracing, "newActiveNode" , @drawTree)
@@ -47,19 +35,36 @@ class AbstractTreeView extends Backbone.Marionette.ItemView
       @listenTo(@_model.skeletonTracing, "deleteActiveNode" , @drawTree)
       @listenTo(@_model.skeletonTracing, "newNode" , @drawTree)
 
-      @drawTree(@_model.skeletonTracing.getTree())
+      @drawTree()
     )
+
+
+  resize : ->
+
+    @width = @$el.width()
+    @height = @$el.height() - 10
+
+    #re-render with correct height/width
+    @render()
+
+    @abstractTreeRenderer = new AbstractTreeRenderer(
+      @ui.canvas,
+      @width,
+      @height
+    )
+
 
   drawTree : ->
 
-    @abstractTreeRenderer.drawTree(@_model.skeletonTracing.getTree(), @_model.skeletonTracing.getActiveNodeId())
+    if @_model.skeletonTracing and @abstractTreeRenderer
+      @abstractTreeRenderer.drawTree(@_model.skeletonTracing.getTree(), @_model.skeletonTracing.getActiveNodeId())
 
 
   serializeData : ->
 
     return {
       width : @width || 300
-      height : @height || 700
+      height : @height || 300
     }
 
 
@@ -67,5 +72,4 @@ class AbstractTreeView extends Backbone.Marionette.ItemView
 
     id = @abstractTreeRenderer.getIdFromPos(event.offsetX, event.offsetY)
     if id
-      # TODO make sure someone listens
       app.vent.trigger("activeNode:change", id)

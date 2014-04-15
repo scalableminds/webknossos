@@ -11,6 +11,9 @@ class CommentTabItemView extends Backbone.Marionette.ItemView
     <a href="#"><%= node %> <%= content %></a>
    """)
 
+  events :
+    "click a" : "setActiveNode"
+
   templateHelpers : ->
     isActive : =>
       if @model.get("node") == @activeCommentId
@@ -22,11 +25,16 @@ class CommentTabItemView extends Backbone.Marionette.ItemView
   initialize : (options) ->
 
     @activeCommentId = options.activeComment.get("node")
-    @listenTo(app.vent, "commentTabView:updatedComments", @update)
+    @listenTo(app.vent, "activeNode:change", @update)
     @listenTo(@model, "change", @render)
 
 
   update : (@activeCommentId) ->
 
     @render()
+
+
+  setActiveNode : ->
+
+    app.vent.trigger("activeNode:change", @model.get("node"))
 

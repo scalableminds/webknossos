@@ -1,7 +1,7 @@
 @(dashboardInfo: controllers.DashboardInfo, isAdminView: Boolean)(implicit session: oxalis.view.AuthedSessionData)
 
 @import scala.concurrent.ExecutionContext.Implicits._
-<div class="tabbable" id="tabbable-dashboard" data-url="@controllers.routes.UserController.getDashboardInfo">
+<div class="tabbable" id="tabbable-dashboard" data-url="@controllers.routes.UserController.dashboard">
   <ul class="nav nav-tabs">
     <li class="active"><a href="#tab-tasks" data-toggle="tab">Tasks</a></li>
     <li><a href="#tab-explorative" data-toggle="tab">Explorative Tracings</a></li>

@@ -43,17 +43,12 @@ object Application extends Controller with Secured {
       )).as("text/javascript")
   }
 
-  def index() = UserAwareAction.async { implicit request =>
+  def index() = UserAwareAction { implicit request =>
     request.userOpt match {
       case Some(user) =>
-        UsedAnnotationDAO.oneBy(user).futureBox.map {
-          case Full(annotationId) =>
-            Redirect(routes.AnnotationController.trace(annotationId.annotationType, annotationId.identifier))
-          case _ =>
-            Redirect("/dashboard")
-        }
+        Redirect("/dashboard")
       case _ =>
-        Future.successful(Redirect(routes.DataSetController.spotlight))
+        Redirect(routes.DataSetController.spotlight)
     }
   }
 

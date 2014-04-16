@@ -37,5 +37,5 @@ class BinaryDataService(val dataSourceRepository: DataSourceRepository)(implicit
 
   lazy val config = Play.current.configuration.underlying
 
-  val oxalisServer = new OxalisServer(oxalisUrl, key, name, webSocketSecurityInfo)
+  lazy val oxalisServer = new OxalisServer(oxalisUrl, key, name, webSocketSecurityInfo)
 }

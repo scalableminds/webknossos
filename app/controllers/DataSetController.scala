@@ -8,19 +8,13 @@ import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json._
 import scala.concurrent.Future
 import braingames.util.DefaultConverters._
-import play.api.libs.json.JsSuccess
 import play.api.templates.Html
-import braingames.util._
-import play.api.libs.json.JsSuccess
-import braingames.util.Finished
-import braingames.util.InProgress
-import braingames.reactivemongo.DBAccessContext
-import braingames.binary.models.DataLayer
 import play.api.libs.json.JsSuccess
 import play.api.cache.Cache
 import org.apache.commons.codec.binary.Base64
 import play.api.Play.current
 import scala.concurrent.duration._
+import braingames.util.ExtendedTypes.ExtendedString
 
 /**
  * Company: scalableminds
@@ -105,16 +99,18 @@ object DataSetController extends Controller with Secured {
       dataSet <- DataSetDAO.findOneBySourceName(dataSetName) ?~> Messages("dataSet.notFound")
       result <- DataSetService.importDataSet(dataSet)
     } yield {
-      Ok(result)
+      val status = result.status.toIntOpt.getOrElse(INTERNAL_SERVER_ERROR)
+      Status(status)(result.body)
     }
   }
 
   def importProgress(dataSetName: String) = Authenticated.async{ implicit request =>
     for{
       dataSet <- DataSetDAO.findOneBySourceName(dataSetName)
-      progress <- DataStoreHandler.progressForImport(dataSet)
+      result <- DataStoreHandler.progressForImport(dataSet)
     } yield {
-      Ok(progress)
+      val status = result.status.toIntOpt.getOrElse(INTERNAL_SERVER_ERROR)
+      Status(status)(result.body)
     }
   }
 

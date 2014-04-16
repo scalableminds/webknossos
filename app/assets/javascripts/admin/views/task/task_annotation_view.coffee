@@ -14,7 +14,7 @@ class TaskAnnotationView extends Backbone.Marionette.ItemView
 
   template : _.template("""
     <td><%= user %></td>
-    <td><%= moment(lastEdit).format("YYYY-MM-DD HH:SS") %></td>
+    <td><%= moment(created).format("YYYY-MM-DD HH:SS") %></td>
     <td><i class="fa fa-check-circle-o"></i><%= stateLabel %></td>
     <td class="nowrap">
       <div class="btn-group">

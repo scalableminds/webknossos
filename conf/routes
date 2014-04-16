@@ -4,9 +4,7 @@
 
 # The general pages
 GET           /                                                    controllers.Application.index
-GET           /dashboard                                           controllers.UserController.dashboard
-GET           /getDashboardInfo/:userID                            controllers.UserController.getDashboardInfoForUser(userID)
-# TODO: Delete when merging #289
+GET           /dashboard                                           controllers.UserController.empty
 GET           /impressum                                           controllers.Application.impressum
 
 # Github Issues integration
@@ -30,14 +28,18 @@ POST          /user/configuration                                  controllers.S
 GET           /user/configuration                                  controllers.SettingsController.read
 GET           /user/configuration/default                          controllers.SettingsController.default
 GET           /user/tasks/request                                  controllers.TaskController.request
+GET           /users/:id/details                                   controllers.UserController.emptyWithWildcard(id)
 
 GET           /api/users                                           controllers.UserController.list
 GET           /api/user                                            controllers.UserController.current
+GET           /api/user/annotations                                controllers.UserController.annotations
+GET           /api/user/loggedTime                                 controllers.UserController.loggedTime
+GET           /api/users/:id                                       controllers.UserController.user(id: String)
 DELETE        /api/users/:id                                       controllers.UserController.delete(id: String)
 PUT           /api/users/:id                                       controllers.UserController.update(id: String)
+GET           /api/users/:id/annotations                           controllers.UserController.userAnnotations(id: String)
 GET           /api/users/:id/annotations/download                  controllers.admin.NMLIO.userDownload(id: String)
 # GET         /api/users/:id/loginAs                                     controllers.UserController.loginAsUser(id: String)
-GET           /users/:id/details                                   controllers.UserController.show(id: String)
 
 # Team
 GET           /teams                                               controllers.TeamController.empty

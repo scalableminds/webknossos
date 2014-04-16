@@ -40,6 +40,7 @@ import net.liftweb.common.Full
 import oxalis.nml.NML
 import models.annotation.AnnotationType
 import models.annotation.Annotation
+import play.api.libs.json._
 
 import net.liftweb.common.Full
 import oxalis.nml.NML
@@ -88,11 +89,9 @@ object NMLIO extends Controller with Secured with TextUtils {
         fileName =>
           "error" -> Messages("nml.file.invalid", fileName)
       }
-      Future.successful(Redirect(controllers.routes.UserController.dashboard)
-                        .flashing(errors: _*))
+      Future.successful(JsonBadRequest(errors))
     } else if (parseSuccess.size == 0) {
-      Future.successful(Redirect(controllers.routes.UserController.dashboard)
-                        .flashing("error" -> Messages("nml.file.noFile")))
+      Future.successful(JsonBadRequest(Messages("nml.file.noFile")))
     } else {
       val tracingName = nameForNMLs(parseSuccess.map {
         case (fileName, _) => fileName
@@ -104,14 +103,12 @@ object NMLIO extends Controller with Secured with TextUtils {
       createAnnotationFrom(request.user, nmls, AnnotationType.Explorational, tracingName)
       .map {
         annotation =>
-          Redirect(controllers.routes.AnnotationController.trace(annotation.typ, annotation.id))
-          .flashing(
-            "success" -> Messages("nml.file.uploadSuccess"))
+          JsonOk(
+            Json.obj("annotation" -> Json.obj("typ" -> annotation.typ, "id" -> annotation.id)),
+            Messages("nml.file.uploadSuccess")
+          )
       }
-      .getOrElse(
-        Redirect(controllers.routes.UserController.dashboard)
-        .flashing(
-          "error" -> Messages("nml.file.invalid")))
+      .getOrElse(JsonBadRequest(Messages("nml.file.invalid")))
     }
   }
 

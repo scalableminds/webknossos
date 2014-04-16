@@ -37,15 +37,6 @@ trait DataSourceTypeGuesser {
 
   def chanceOfInboxType(source: Path) = {
     lazyFileFinder(source, Seq("target"))
-    val filteredByExtension = source ** s"*.$fileExtension"
-
-    val files =
-      if((source / "target").isDirectory)
-        filteredByExtension --- ((source / "target") ***)
-      else
-        filteredByExtension
-
-    files
       .take(MaxNumberOfFilesForGuessing)
       .filter(_.name.endsWith(fileExtension))
       .size.toFloat / MaxNumberOfFilesForGuessing

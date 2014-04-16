@@ -57,6 +57,7 @@ protected class DataSourceInboxChangeHandler(dataSourceRepository: DataSourceRep
   }
 
   def dataSourceFromFolder(path: Path, team: String): DataSourceLike = {
+    logger.debug(s"Handling $team at ${path.path}")
     JsonHelper.JsonFromFile(path / "datasource.json").flatMap( _.validate(FiledDataSource.filedDataSourceFormat).asOpt) match {
       case Full(filedDataSource) =>
         filedDataSource.toUsable(serverUrl)

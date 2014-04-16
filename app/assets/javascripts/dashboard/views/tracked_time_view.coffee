@@ -20,7 +20,7 @@ class TrackedTimeView extends Backbone.Marionette.CompositeView
       <% _.each(formattedLogs, function(entry) { %>
         <tr>
           <td> <%= entry.interval %> </td>
-          <td> <%= entry.time     %> </td>
+          <td> <%= entry.time %> </td>
         </tr>
       <% }) %>
       </tbody>
@@ -32,8 +32,6 @@ class TrackedTimeView extends Backbone.Marionette.CompositeView
 
     @model.set("formattedLogs", [])
 
-    @listenTo(@model, "sync", =>
-      @model.set("formattedLogs", @model.getFormattedLogs())
-      @render()
-    )
+    @listenTo(@model, "sync", @render)
+
     @model.fetch()

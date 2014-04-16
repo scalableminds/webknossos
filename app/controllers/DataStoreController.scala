@@ -27,9 +27,8 @@ object DataStoreHandler extends DataStoreBackChannelHandler{
     findByServer(dataStoreInfo.name).toFox.flatMap {
       dataStore =>
         val call = RESTCall("POST", s"/data/datasets/${base.id}/layers", Map.empty, Map.empty, Json.obj())
-        dataStore.request(call).flatMap {
-          json =>
-            json.validate(UserDataLayer.userDataLayerFormat) match {
+        dataStore.request(call).flatMap { response =>
+            response.body.validate(UserDataLayer.userDataLayerFormat) match {
               case JsSuccess(userDataLayer, _) => Full(userDataLayer)
               case e: JsError => Failure("REST user data layer create returned malformed json: " + e.toString)
             }
@@ -47,14 +46,13 @@ object DataStoreHandler extends DataStoreBackChannelHandler{
           Map.empty,
           Map("token" -> DataTokenService.oxalisToken, "width" -> width.toString, "height" -> height.toString),
           Json.obj())
-        dataStore.request(call).flatMap {
-          json =>
-            (json \ "value").asOpt[String]
+        dataStore.request(call).flatMap { response =>
+            (response.body \ "value").asOpt[String]
         }
     }
   }
 
-  def progressForImport(dataSet: DataSet): Fox[JsValue] = {
+  def progressForImport(dataSet: DataSet): Fox[RESTResponse] = {
     Logger.debug("Import rogress called for: " + dataSet.name)
     findByServer(dataSet.dataStoreInfo.name).toFox.flatMap {
       dataStore =>
@@ -63,7 +61,7 @@ object DataStoreHandler extends DataStoreBackChannelHandler{
     }
   }
 
-  def importDataSource(dataSet: DataSet): Fox[JsValue] = {
+  def importDataSource(dataSet: DataSet): Fox[RESTResponse] = {
     Logger.debug("Import called for: " + dataSet.name)
     findByServer(dataSet.dataStoreInfo.name).toFox.flatMap {
       dataStore =>
@@ -115,13 +113,13 @@ object WebSocketRESTServer {
 
 case class WebSocketRESTServer(out: Channel[Array[Byte]]) extends FoxImplicits{
   protected implicit val system = Akka.system(play.api.Play.current)
-  protected val openCalls = Agent[Map[String, Promise[Box[JsValue]]]](Map.empty)
+  protected val openCalls = Agent[Map[String, Promise[Box[RESTResponse]]]](Map.empty)
 
   protected val RESTCallTimeout = 5 minutes
 
-  def request(call: RESTCall)(implicit codec: Codec): Fox[JsValue] = {
+  def request(call: RESTCall)(implicit codec: Codec): Fox[RESTResponse] = {
     try{
-      val promise = Promise[Box[JsValue]]()
+      val promise = Promise[Box[RESTResponse]]()
       openCalls.send(_ + (call.uuid -> promise))
       Logger.debug(s"About to send WS REST call to '${call.method} ${call.path}'")
       val data: Array[Byte] = codec.encode(Json.stringify(RESTCall.restCallFormat.writes(call)))
@@ -155,7 +153,7 @@ case class WebSocketRESTServer(out: Channel[Array[Byte]]) extends FoxImplicits{
           Logger.warn("Finished with REST result: " + response)
           openCalls().get(response.uuid).map {
             promise =>
-              promise.trySuccess(Full(response.body)) match {
+              promise.trySuccess(Full(response)) match {
                 case true =>
                   Logger.debug("REST request completed. UUID: " + response.uuid)
                 case false =>

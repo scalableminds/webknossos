@@ -204,11 +204,11 @@ object AnnotationController extends Controller with Secured with TracingInformat
       } yield {
         finished match {
           case Full((_, message)) =>
-            Redirect(routes.UserController.dashboard).flashing("success" -> message)
+            Redirect("/dashboard").flashing("success" -> message)
           case Failure(message, _, _) =>
-            Redirect(routes.UserController.dashboard).flashing("error" -> message)
+            Redirect("/dashboard").flashing("error" -> message)
           case _ =>
-            Redirect(routes.UserController.dashboard).flashing("error" -> Messages("error.unknown"))
+            Redirect("/dashboard").flashing("error" -> Messages("error.unknown"))
         }
       }
   }

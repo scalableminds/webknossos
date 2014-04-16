@@ -27,7 +27,8 @@ case class TemporaryAnnotation(
                                 restrictions: AnnotationRestrictions = AnnotationRestrictions.restrictEverything,
                                 state: AnnotationState = AnnotationState.Finished,
                                 _name: Option[String] = None,
-                                version: Int = 0
+                                version: Int = 0,
+                                created : Long = System.currentTimeMillis
                               ) extends AnnotationLike {
 
   def _user = BSONObjectID.generate

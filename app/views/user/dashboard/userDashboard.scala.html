@@ -1,8 +1,0 @@
-@( dashboardInfo: controllers.DashboardInfo)(implicit session: oxalis.view.AuthedSessionData)
-
-@main(){
-  <div class="container wide" id="dashboard">
-    @dashboard(dashboardInfo, false)
-  </div>
-  @credits()
-}

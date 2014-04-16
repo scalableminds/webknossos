@@ -15,7 +15,7 @@ $ ->
     e.preventDefault()
 
   # hover show/hide functionality
-  $(document).on "mouseenter mouseleave", ".hover-dynamic", ->
+  $(document).on "mouseenter", ".hover-dynamic", ->
     $(".hover-show", this).show()
     $(".hover-hide", this).hide()
   $(document).on "blur", ".hover-dynamic .hover-input", ->

@@ -2,22 +2,17 @@ package models.configuration
 
 import play.api.libs.json._
 import models.basics.BasicSettings
-/*import play.api.Play.current
-import braingames.security.SCrypt._
-import scala.collection.mutable.Stack
-import play.api.libs.json.JsValue
-import play.api.libs.json.JsBoolean
-*/
 
-case class UserConfiguration(
-    configuration: Map[String, JsValue]) {
+case class UserConfiguration(configuration: Map[String, JsValue]) {
 
   def configurationOrDefaults = {
     UserConfiguration.default.configuration ++ configuration
   }
+
 }
 
 object UserConfiguration extends BasicSettings {
+
   implicit val userConfigurationFormat = Json.format[UserConfiguration]
 
   val default = UserConfiguration(

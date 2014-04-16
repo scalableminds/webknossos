@@ -35,6 +35,7 @@ class TeamRoleModal extends Backbone.Marionette.CompositeView
 
   itemView : TeamRoleModalItem
   itemViewContainer : "#team-list"
+
   events :
     "click .btn-primary" : "changeExperience"
 
@@ -69,7 +70,7 @@ class TeamRoleModal extends Backbone.Marionette.CompositeView
             return {
               team : $(element).val()
               role :
-                name: $(element).parent().parent().parent().find("select   :selected").val()
+                name: @$("select   :selected").val()
             }
           )
 

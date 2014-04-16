@@ -40,7 +40,7 @@ class OxalisMessageHandler extends JsonMessageHandler {
       val head = s"""
           |{
           |  "uuid" : "${call.uuid}",
-          |  "status": "200",
+          |  "status": "${response.header.status}",
           |  "path" : "${call.path}",
           |  "headers" : $headers,
           |  "body" :

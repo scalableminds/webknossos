@@ -5,7 +5,7 @@ import akka.actor.Actor
 import scala.util._
 import scala.concurrent.ExecutionContext.Implicits._
 import braingames.binary.{DataStoreBlock, LoadBlock, SaveBlock}
-import net.liftweb.common.Box
+import net.liftweb.common.{Full, Empty, Box}
 import braingames.geometry.Point3D
 import scalax.file.Path
 import java.io.{File, FilenameFilter}
@@ -24,7 +24,7 @@ class DataStoreActor(dataStore: DataStore) extends Actor {
       val s = sender
       dataStore.load(request).onComplete {
         case Failure(e) =>
-          s ! e
+          s ! net.liftweb.common.Failure(e.getMessage, Full(e), Empty)
         case Success(d) =>
           s ! d
       }
@@ -33,7 +33,7 @@ class DataStoreActor(dataStore: DataStore) extends Actor {
       val s = sender
       dataStore.save(request).onComplete {
         case Failure(e) =>
-          s ! e
+          s ! net.liftweb.common.Failure(e.getMessage, Full(e), Empty)
         case Success(d) =>
           s ! d
       }

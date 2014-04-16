@@ -3,7 +3,7 @@
  */
 package braingames.binary.repository
 
-import scalax.file.{PathSet, Path}
+import scalax.file.{PathMatcher, PathSet, Path}
 import scala.concurrent.Future
 import net.liftweb.common.Box
 import braingames.binary.models.{UsableDataSource, DataSourceLike, UnusableDataSource, DataSource}
@@ -25,7 +25,18 @@ trait DataSourceTypeGuesser {
 
   def fileExtension: String
 
+  private def lazyFileFinder(source: Path, excludeDirs: Seq[String]): Stream[Path] = {
+    def tail = {
+      (source * PathMatcher.IsDirectory).filter( path => excludeDirs.contains(path.name)).foldLeft(Stream.empty[Path]){
+        case (stream, path) =>
+          stream ++ lazyFileFinder(path, excludeDirs)
+      }
+    }
+    (source * PathMatcher.IsFile).toStream ++ tail
+  }
+
   def chanceOfInboxType(source: Path) = {
+    lazyFileFinder(source, Seq("target"))
     val filteredByExtension = source ** s"*.$fileExtension"
 
     val files =
@@ -36,6 +47,7 @@ trait DataSourceTypeGuesser {
 
     files
       .take(MaxNumberOfFilesForGuessing)
+      .filter(_.name.endsWith(fileExtension))
       .size.toFloat / MaxNumberOfFilesForGuessing
   }
 }

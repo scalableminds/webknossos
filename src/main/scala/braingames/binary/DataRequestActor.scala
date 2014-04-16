@@ -98,6 +98,13 @@ class DataRequestActor(
               dataOpt match {
                 case d: Full[Array[Byte]] =>
                   Future.successful(d)
+                case f: net.liftweb.common.Failure =>
+                  f.exception.map{e =>
+                    logger.warn("Load from store failed: " + f.msg, e)
+                  } getOrElse {
+                    logger.warn("Load from store failed: " + f.msg)
+                  }
+                  loadFromStore(tail)
                 case _ =>
                   loadFromStore(tail)
               }

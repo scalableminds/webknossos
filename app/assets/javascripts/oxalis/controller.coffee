@@ -39,7 +39,6 @@ class Controller
   view : null
   planeController : null
   arbitraryController : null
-  abstractTreeController : null
   allowedModes : []
 
 
@@ -54,10 +53,9 @@ class Controller
         window.history.back()
 
     @fullScreen = false
-    @mode = constants.MODE_PLANE_TRACING
 
     @urlManager = new UrlManager(this, @model)
-    options.state = @urlManager .initialState
+    options.state = @urlManager.initialState
 
     @model.initialize(options).done ({restrictions, settings, error}) =>
 
@@ -121,20 +119,7 @@ class Controller
       for binaryName of @model.binary
         @listenTo(@model.binary[binaryName].cube, "bucketLoaded", -> @model.flycam.update)
 
-
-      if @controlMode == constants.CONTROL_MODE_VIEW
-        $('#alpha-slider').slider().on "slide", (event) =>
-
-          alpha = event.value
-          if (alpha == 0)
-            @model.getSegmentationBinary().pingStop()
-          @sceneController.setSegmentationAlpha( alpha )
-
       @listenTo(app.vent, "changeViewMode", @setMode)
-
-
-      if @allowedModes.length == 1
-        $("#view-mode").hide()
 
       @allowedModes.sort()
       if @allowedModes.length == 0
@@ -143,9 +128,6 @@ class Controller
         app.vent.trigger("changeViewMode", @allowedModes[0])
       if @urlManager.initialState.mode?
         app.vent.trigger("changeViewMode", @urlManager.initialState.mode)
-
-      # initial trigger
-      @sceneController.setSegmentationAlpha($('#alpha-slider').data("slider-value") or constants.DEFAULT_SEG_ALPHA)
 
 
   initMouse : ->
@@ -188,11 +170,10 @@ class Controller
 
         "t" : =>
           @view.toggleTheme()
-          @abstractTreeController.drawTree()
 
         "m" : => # rotate allowed modes
 
-          index = (@allowedModes.indexOf(@mode) + 1) % @allowedModes.length
+          index = (@allowedModes.indexOf(@model.mode) + 1) % @allowedModes.length
           app.vent.trigger("changeViewMode", @allowedModes[index])
 
         "super + s, ctrl + s" : (event) =>
@@ -217,14 +198,7 @@ class Controller
     else # newMode not allowed or invalid
       return
 
-
-    for button in $("#view-mode .btn-group").children()
-
-      $(button).removeClass("btn-primary")
-      if newMode == @modeMapping[$(button).attr("id")]
-        $(button).addClass("btn-primary")
-
-    @mode = newMode
+    @model.mode = newMode
     #@gui.setMode(newMode)
     @view.setMode(newMode)
 

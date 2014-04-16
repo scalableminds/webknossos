@@ -22,7 +22,7 @@ class Dataset extends Backbone.DeepModel
     return @attributes
 
 
-  resetBrightnessContrast : =>
+  reset : =>
 
     Request.send(
       url : "/api/dataSetConfigurations/default"

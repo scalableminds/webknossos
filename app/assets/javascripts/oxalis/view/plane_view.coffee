@@ -113,7 +113,12 @@ class PlaneView
 
       # scale for retina displays
       f = @deviceScaleFactor
-      viewport = [[0, @curWidth+20], [@curWidth+20, @curWidth+20], [0, 0], [@curWidth+20, 0]]
+      viewport = [
+        [0, @curWidth + 20],
+        [@curWidth + 20, @curWidth + 20],
+        [0, 0],
+        [@curWidth + 20, 0]
+      ]
       @renderer.autoClear = true
 
       setupRenderArea = (x, y, width, color) =>
@@ -164,6 +169,7 @@ class PlaneView
       constants.RESIZE_THROTTLE_TIME
     )
     @resizeThrottled()
+    app.vent.trigger("planes:resize")
 
 
   resize : ->
@@ -224,10 +230,11 @@ class PlaneView
 
   bindToEvents : ->
 
-    @listenTo(@model.skeletonTracing, "doubleBranch", @showBranchModal)
-    @listenTo(@model.skeletonTracing, "mergeDifferentTrees", ->
-      Toast.error("You can't merge nodes within the same tree", false)
-    )
+    if @model.skeletonTracing
+      @listenTo(@model.skeletonTracing, "doubleBranch", @showBranchModal)
+      @listenTo(@model.skeletonTracing, "mergeDifferentTrees", ->
+        Toast.error("You can't merge nodes within the same tree", false)
+      )
 
     @listenTo(@model.user, "change:scale", (model, scale) ->
       if @running then @scaleTrianglesPlane(scale)

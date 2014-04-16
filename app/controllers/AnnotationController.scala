@@ -228,7 +228,6 @@ object AnnotationController extends Controller with Secured with TracingInformat
   }
 
   def empty(implicit request: AuthenticatedRequest[_]) = {
-    // html.tracing.trace(annotation)(Html.empty)
     views.html.main()(Html.empty)
   }
 

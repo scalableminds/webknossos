@@ -21,11 +21,21 @@
   }
 }
 
+@settingsPaddingLeft: 4px;
+
 .slider-setting-view, .color-setting-view {
-  input[type=range] {
-    height: @buttonHeight;
+  .v-center-agent {
+    height: @bsButtonHeight;
   }
   .col-sm-4 {
-    padding-left: 4px;
+    padding-left: @settingsPaddingLeft;
   }
+}
+
+.checkbox-setting-view .col-sm-1 {
+  padding-left: @settingsPaddingLeft;
+}
+
+.dropdown-setting-view .col-sm-7 {
+  padding-left: @settingsPaddingLeft;
 }

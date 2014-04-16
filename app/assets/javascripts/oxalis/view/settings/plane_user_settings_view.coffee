@@ -20,9 +20,11 @@ class PlaneUserSettingsView extends SettingsView
 
       return new ControlsCategoryView({ @model })
 
+
     "viewport-category" : ->
 
       return new ViewportCategoryView({ @model })
+
 
     "tdview-category" : ->
 

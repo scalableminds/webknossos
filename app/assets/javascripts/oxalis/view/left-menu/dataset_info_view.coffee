@@ -1,11 +1,10 @@
 ### define
 backbone.marionette : marionette
 app : app
-libs/toast : Toast
 oxalis/constants : constants
 ###
 
-class DatsetActionsView extends Marionette.ItemView
+class DatsetActionsView extends Backbone.Marionette.ItemView
 
   className : "col-sm-12"
   id : "dataset"
@@ -64,11 +63,11 @@ class DatsetActionsView extends Marionette.ItemView
 
   calculateZoomLevel : ->
 
-    if @controlMode in constants.MODES_PLANE
+    if @_model.mode in constants.MODES_PLANE
       zoom  = @_model.flycam.getPlaneScalingFactor()
       width = constants.PLANE_WIDTH
 
-    if @controlMode in constants.MODES_ARBITRARY
+    if @_model.mode in constants.MODES_ARBITRARY
       zoom  = @_model.flycam3d.zoomStep
       width = ArbitraryController::WIDTH
 

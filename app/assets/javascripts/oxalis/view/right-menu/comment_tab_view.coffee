@@ -91,10 +91,7 @@ class CommentTabView extends Backbone.Marionette.CompositeView
     @ui.commentInput.val(activeComment.get("content"))
 
     nodeId = activeComment.get("node")
-    @_model.skeletonTracing.setActiveNode(nodeId, false)
-    # better call this instead:
-    # skeletontracingcontroller.setActiveNode(nodeID, false, true)
-    app.vent.trigger("commentTabView:updatedComments", nodeId)
+    app.vent.trigger("activeNode:change", nodeId)
 
 
   handleInput : (evt) ->

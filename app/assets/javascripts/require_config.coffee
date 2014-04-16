@@ -8,7 +8,6 @@ require.config(
     "jquery"              : "../bower_components/jquery/jquery"
     "underscore"          : "../bower_components/lodash/dist/lodash"
     "bootstrap"           : "../bower_components/bootstrap/dist/js/bootstrap"
-    "slider"              : "../bower_components/seiyria-bootstrap-slider/js/bootstrap-slider"
     "coffee-script"       : "../bower_components/coffee-script/extras/coffee-script"
     "backbone.marionette" : "../bower_components/backbone.marionette/lib/backbone.marionette"
     "backbone.paginator"  : "../bower_components/backbone.paginator/dist/backbone.paginator"
@@ -20,14 +19,11 @@ require.config(
     "three.color"         : "../bower_components/ColorConverter/index"
     "three.trackball"     : "../bower_components/TrackballControls/index"
     "stats"               : "../bower_components/threejs-stats/Stats"
-    "dat"                 : "../bower_components/dat.gui/dat.gui"
     "ace"                 : "../bower_components/ace-builds/src-min-noconflict/ace"
     "keyboard"            : "../bower_components/KeyboardJS/keyboard"
     "gamepad"             : "../bower_components/gamepad.js/gamepad"
     "jquery.mousewheel"   : "../bower_components/jquery-mousewheel/jquery.mousewheel"
-    "jquery.bootpag"      : "../bower_components/jquery-bootpag/lib/jquery.bootpag"
     "tween"               : "../bower_components/tweenjs/build/Tween"
-    "dat.gui"             : "../bower_components/dat.gui/dat.gui"
     "moment"              : "../bower_components/momentjs/moment"
     "require"             : "../bower_components/requirejs/require"
     "c3"                  : "../bower_components/c3/c3"
@@ -40,7 +36,6 @@ require.config(
     "underscore" :
       exports : "_"
     "bootstrap" : [ "jquery" ]
-    "slider" : [ "bootstrap" ]
     "ace" :
       exports : "ace"
     "libs/viz" :

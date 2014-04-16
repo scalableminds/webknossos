@@ -1,14 +1,17 @@
 ### define
 backbone.marionette : marionette
 ./right-menu/comment_tab_view : CommentTabView
+./right-menu/abstract_tree_view : AbstractTreeView
 ###
 
 class RightMenuView extends Backbone.Marionette.Layout
 
+  MARGIN : 40
+
   template : _.template("""
     <ul class="nav nav-tabs">
       <li class="active">
-        <a href="#tab-tree" data-toggle="tab">Tree Viewer</a>
+        <a href="#tab-abstract-tree" data-toggle="tab">Tree Viewer</a>
       </li>
       <li>
         <a href="#tab-trees" data-toggle="tab">Trees</a>
@@ -18,9 +21,7 @@ class RightMenuView extends Backbone.Marionette.Layout
       </li>
     </ul>
     <div class="tab-content">
-      <div class="tab-pane active" id="tab-tree">
-        <div id="abstractTreeViewer"></div>
-      </div>
+      <div class="tab-pane active" id="tab-abstract-tree"></div>
       <div class="tab-pane" id="tab-trees">
         <div id="tree-navbar">
           <div class="btn-group">
@@ -63,16 +64,31 @@ class RightMenuView extends Backbone.Marionette.Layout
     </div>
   """)
 
+  ui :
+    "tabContentContainer" : ".tab-content"
+
   regions :
     "commentTab" : "#tab-comments"
+    "abstractTreeTab" : "#tab-abstract-tree"
 
   initialize : (options) ->
 
     @commentTabView = new CommentTabView(options)
+    @abstractTreeView = new AbstractTreeView(options)
 
-    @listenTo(@, "show", @afterRender)
+    @listenTo(@, "render", @afterRender)
+    @listenTo(@, "show", @resizeHeight)
+
+
+  resize : ->
+
+    _.defer =>
+      # make tab content 100% height
+      tabContentPosition = @ui.tabContentContainer.position()
+      @ui.tabContentContainer.height(window.innerHeight - tabContentPosition.top - @MARGIN)
 
 
   afterRender : ->
 
       @commentTab.show(@commentTabView)
+      @abstractTreeTab.show(@abstractTreeView)

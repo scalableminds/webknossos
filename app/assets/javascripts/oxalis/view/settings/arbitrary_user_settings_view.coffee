@@ -17,8 +17,8 @@ class ArbitraryUserSettingsView extends SettingsView
 
     "controls-category" : ->
 
-      return new ControlsCategoryView({ @model })
+      return new ControlsCategoryView(model : @model)
 
     "flight-category" : ->
 
-      return new FlightCategoryView({ @model })
+      return new FlightCategoryView(model : @model)

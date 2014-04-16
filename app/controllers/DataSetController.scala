@@ -66,7 +66,7 @@ object DataSetController extends Controller with Secured {
 
   def spotlight = UserAwareAction.async {
     implicit request =>
-      DataSetDAO.findAll.map {
+      DataSetDAO.findAllActive.map {
         dataSets =>
           Ok(html.dataSets(dataSets))
       }

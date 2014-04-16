@@ -33,7 +33,7 @@ class ExplorativeTracingListView extends Backbone.Marionette.CompositeView
         <form action="<%= jsRoutes.controllers.AnnotationController.createExplorational().url %>"
               method="POST"
               class="form-inline inline-block">
-          <select id="dataSetsSelect" name="dataSetName">
+          <select id="dataSetsSelect" name="dataSetName" class="form-control">
             <% dataSets.forEach(function(d) { %>
               <option value="<%= d.get("name") %>"> <%= d.get("name") %> </option>
             <% }) %>

@@ -92,7 +92,7 @@ class DatasetListItemView extends Backbone.Marionette.ItemView
       ).done( (responseJSON) =>
           if responseJSON.status == "inProgress"
             @ui.importLink.hide()
-            @ui.progressbarContainer.show()
+            @ui.progressbarContainer.removeClass("hide")
             @updateProgress()
       )
 

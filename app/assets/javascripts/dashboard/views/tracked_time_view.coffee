@@ -30,8 +30,6 @@ class TrackedTimeView extends Backbone.Marionette.CompositeView
 
   initialize : (options) ->
 
-    @model.set("formattedLogs", [])
-
     @listenTo(@model, "sync", @render)
 
     @model.fetch()

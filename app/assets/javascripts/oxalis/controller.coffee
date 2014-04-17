@@ -86,18 +86,18 @@ class Controller
       #TODO trigger on resize
       # set width / height for the right-side menu
       _.defer =>
+        if $("#right-menu").length
+          menuPosition = $("#right-menu").position()
+          MARGIN = 40
+          width = window.innerWidth - menuPosition.left - MARGIN
+          height = window.innerHeight - menuPosition.top - MARGIN
+          tabHeight = height - $('#right-menu .nav').height() - 30
 
-        menuPosition = $("#right-menu").position()
-        MARGIN = 40
-        width = window.innerWidth - menuPosition.left - MARGIN
-        height = window.innerHeight - menuPosition.top - MARGIN
-        tabHeight = height - $('#right-menu .nav').height() - 30
-
-        $("#right-menu").width(width).height(height)
-        @annotationController?.abstractTreeController?.setDimensions({
-          width : width
-          height : tabHeight
-        })
+          $("#right-menu").width(width).height(height)
+          @annotationController?.abstractTreeController?.setDimensions({
+            width : width
+            height : tabHeight
+          })
 
       @sceneController = new SceneController(
         @model.upperBoundary, @model.flycam, @model)

@@ -1,66 +1,65 @@
-#inputcatchers {
-  position: absolute;
-  width: 100%;
-}
-.inputcatcher {
-  width: @standardViewportWidth;
-  height: @standardViewportWidth;
-  border-style:solid;
-  border-width: 2px;
-  z-index: 20;
-  box-sizing: border-box;
-  -moz-box-sizing: border-box;
-  float: left;
-}
-.active {
-  border-color: #ff0;
-}
-#planeyz {
-  margin-left: 20px;
-}
-#planexz {
-  margin-top: 20px;
-}
-#TDView {
-  margin-top: 20px;
-  margin-left: 20px;
-  position: relative;
-}
-#TDViewControls {
-  float: left;
-  height: 20px;
-  position: absolute;
-  top: 0px;
-  z-index: 30;
-}
-#TDViewControls .btn {
-  & > span {
-    display: inline-block;
-    width: 10px;
-    height: 10px;
-    border-radius: 50%;
-    margin-right: 5px;
-  }
-  &:nth-child(2) span {
-    background-color: red;
-  }
-  &:nth-child(3) span {
-    background-color: blue;
-  }
-  &:nth-child(4) span {
-    background-color: #0f0;
-  }
-}
-
 #tracing {
+
   margin-top: 10px;
   position: relative;
   display: inline-block;
   vertical-align: top;
-}
-#render {
-  position: relative;
-}
-#render canvas {
-  z-index: 10;
+
+  canvas {
+    z-index: 10;
+  }
+
+  #inputcatchers {
+    position: absolute;
+    width: 100%;
+  }
+  .inputcatcher {
+    width: @standardViewportWidth;
+    height: @standardViewportWidth;
+    border-style:solid;
+    border-width: 2px;
+    z-index: 20;
+    box-sizing: border-box;
+    -moz-box-sizing: border-box;
+    float: left;
+  }
+  .active {
+    border-color: #ff0;
+  }
+  #planeyz {
+    margin-left: 20px;
+  }
+  #planexz {
+    margin-top: 20px;
+  }
+  #TDView {
+    margin-top: 20px;
+    margin-left: 20px;
+    position: relative;
+  }
+  #TDViewControls {
+    float: left;
+    height: 20px;
+    position: absolute;
+    top: 0px;
+    z-index: 30;
+  }
+  #TDViewControls .btn {
+    & > span {
+      display: inline-block;
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      margin-right: 5px;
+    }
+    &:nth-child(2) span {
+      background-color: red;
+    }
+    &:nth-child(3) span {
+      background-color: blue;
+    }
+    &:nth-child(4) span {
+      background-color: #0f0;
+    }
+  }
 }

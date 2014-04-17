@@ -20,7 +20,7 @@ import net.liftweb.common.Full
 import play.api.Logger
 
 case class DataToken(
-                      _user: BSONObjectID,
+                      _user: Option[BSONObjectID],
                       dataSetName: String,
                       dataLayerName: String,
                       token: String = DataToken.generateRandomToken,
@@ -50,8 +50,8 @@ object DataTokenService {
     DataTokenDAO.removeExpiredTokens()(GlobalAccessContext).map(r => s"deleted ${r.updated}")
   }
 
-  def generate(user: User, dataSetName: String, dataLayerName: String)(implicit ctx: DBAccessContext) = {
-    val token = DataToken(user._id, dataSetName, dataLayerName)
+  def generate(user: Option[User], dataSetName: String, dataLayerName: String)(implicit ctx: DBAccessContext) = {
+    val token = DataToken(user.map(_._id), dataSetName, dataLayerName)
     DataTokenDAO.insert(token).map(_ => token)
   }
 

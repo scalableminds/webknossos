@@ -32,7 +32,7 @@ object DataTokenController extends Controller with Secured{
       .orElse(UserDataLayerDAO.findOneByName(dataLayerName).map(_.dataLayer))
   }
 
-  def generate(dataSetName: String, dataLayerName: String) = Authenticated.async{ implicit request =>
+  def generate(dataSetName: String, dataLayerName: String) = Action.async{ implicit request =>
     for{
       dataSet <- DataSetDAO.findOneBySourceName(dataSetName) ?~> Messages("dataSet.notFound")
       _ <- ensureAccessToLayer(dataSet, dataLayerName) ?~> Messages("dataLayer.forbidden") ~> FORBIDDEN

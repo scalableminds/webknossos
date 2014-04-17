@@ -32,11 +32,11 @@ object DataTokenController extends Controller with Secured{
       .orElse(UserDataLayerDAO.findOneByName(dataLayerName).map(_.dataLayer))
   }
 
-  def generate(dataSetName: String, dataLayerName: String) = Authenticated.async{ implicit request =>
+  def generate(dataSetName: String, dataLayerName: String) = UserAwareAction.async{ implicit request =>
     for{
       dataSet <- DataSetDAO.findOneBySourceName(dataSetName) ?~> Messages("dataSet.notFound")
       _ <- ensureAccessToLayer(dataSet, dataLayerName) ?~> Messages("dataLayer.forbidden") ~> FORBIDDEN
-      token <- DataTokenService.generate(request.user, dataSetName, dataLayerName) ?~> Messages("dataToken.creationFailed")
+      token <- DataTokenService.generate(request.userOpt, dataSetName, dataLayerName) ?~> Messages("dataToken.creationFailed")
     } yield {
       Ok(Json.toJson(token))
     }

@@ -12,7 +12,7 @@
         </div>
 
         @form.globalError.map { error =>
-          <div class="alert alert-error">
+          <div class="alert alert-danger">
             @Messages(error.message)
           </div>
         }

@@ -27,7 +27,7 @@ class SkeletonTracing
   activeTree : null
   firstEdgeDirection : null
 
-  constructor : (tracing, @scaleInfo, @flycam, @flycam3d, @user) ->
+  constructor : (tracing, @scaleInfo, @flycam, @flycam3d, @user, updatePipeline) ->
 
     _.extend(this, new EventMixin())
 
@@ -43,7 +43,7 @@ class SkeletonTracing
 
     @stateLogger = new SkeletonTracingStateLogger(
       @flycam, tracing.version, tracing.id, tracing.typ,
-      tracing.restrictions.allowUpdate, this)
+      tracing.restrictions.allowUpdate, updatePipeline, this)
 
     tracingParser = new TracingParser(@, @data)
     {

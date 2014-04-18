@@ -204,11 +204,11 @@ object AnnotationController extends Controller with Secured with TracingInformat
       } yield {
         finished match {
           case Full((_, message)) =>
-            Redirect(routes.UserController.dashboard).flashing("success" -> message)
+            Redirect("/dashboard").flashing("success" -> message)
           case Failure(message, _, _) =>
-            Redirect(routes.UserController.dashboard).flashing("error" -> message)
+            Redirect("/dashboard").flashing("error" -> message)
           case _ =>
-            Redirect(routes.UserController.dashboard).flashing("error" -> Messages("error.unknown"))
+            Redirect("/dashboard").flashing("error" -> Messages("error.unknown"))
         }
       }
   }
@@ -229,28 +229,6 @@ object AnnotationController extends Controller with Secured with TracingInformat
 
   def htmlForAnnotation(annotation: AnnotationLike)(implicit request: AuthenticatedRequest[_]) = {
     html.tracing.trace(annotation)(Html.empty)
-  }
-
-
-  def traceJSON(typ: String, id: String) = Authenticated.async {
-    implicit request => {
-      if (typ == models.annotation.AnnotationType.Explorational || typ == models.annotation.AnnotationType.CompoundTask) {
-        Future.successful(JsonOk(Json.obj("noData" -> true)))
-      } else {
-        withAnnotation(AnnotationIdentifier(typ, id)) {
-          annotation =>
-            if (annotation.restrictions.allowAccess(request.user)) {
-              // TODO: RF -allow all modes
-              jsonForAnnotation(annotation)
-            } else
-              Future.successful(Failure(Messages("notAllowed")) ~> 403)
-        }
-      }
-    }
-  }
-
-  def jsonForAnnotation(annotation: AnnotationLike)(implicit request: AuthenticatedRequest[_]) = {
-    annotation.task.flatMap( Task.transformToJson(_).map(JsonOk(_)) )
   }
 
   def annotationsForTask(taskId: String) = Authenticated.async { implicit request =>

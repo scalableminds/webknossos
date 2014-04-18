@@ -1,0 +1,158 @@
+<?xml version="1.0"?>
+<xs:schema attributeFormDefault="unqualified" elementFormDefault="qualified" xmlns:xs="http://www.w3.org/2001/XMLSchema">
+  <xs:element name="things">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="parameters">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="experiment">
+                <xs:complexType>
+                  <xs:simpleContent>
+                    <xs:extension base="xs:string">
+                      <xs:attribute type="xs:string" name="name"/>
+                    </xs:extension>
+                  </xs:simpleContent>
+                </xs:complexType>
+              </xs:element>
+              <xs:element name="scale">
+                <xs:complexType>
+                  <xs:simpleContent>
+                    <xs:extension base="xs:string">
+                      <xs:attribute type="xs:float" name="x"/>
+                      <xs:attribute type="xs:float" name="y"/>
+                      <xs:attribute type="xs:float" name="z"/>
+                    </xs:extension>
+                  </xs:simpleContent>
+                </xs:complexType>
+              </xs:element>
+              <xs:element name="offset">
+                <xs:complexType>
+                  <xs:simpleContent>
+                    <xs:extension base="xs:string">
+                      <xs:attribute type="xs:long" name="x"/>
+                      <xs:attribute type="xs:long" name="y"/>
+                      <xs:attribute type="xs:long" name="z"/>
+                    </xs:extension>
+                  </xs:simpleContent>
+                </xs:complexType>
+              </xs:element>
+              <xs:element name="time">
+                <xs:complexType>
+                  <xs:simpleContent>
+                    <xs:extension base="xs:string">
+                      <xs:attribute type="xs:long" name="ms"/>
+                    </xs:extension>
+                  </xs:simpleContent>
+                </xs:complexType>
+              </xs:element>
+              <xs:element name="activeNode">
+                <xs:complexType>
+                  <xs:simpleContent>
+                    <xs:extension base="xs:string">
+                      <xs:attribute type="xs:long" name="id"/>
+                    </xs:extension>
+                  </xs:simpleContent>
+                </xs:complexType>
+              </xs:element>
+              <xs:element name="editPosition">
+                <xs:complexType>
+                  <xs:simpleContent>
+                    <xs:extension base="xs:string">
+                      <xs:attribute type="xs:long" name="x"/>
+                      <xs:attribute type="xs:long" name="y"/>
+                      <xs:attribute type="xs:long" name="z"/>
+                    </xs:extension>
+                  </xs:simpleContent>
+                </xs:complexType>
+              </xs:element>
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+        <xs:element name="thing" maxOccurs="unbounded" minOccurs="0">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="nodes">
+                <xs:complexType>
+                  <xs:sequence>
+                    <xs:element name="node" maxOccurs="unbounded" minOccurs="0">
+                      <xs:complexType>
+                        <xs:simpleContent>
+                          <xs:extension base="xs:string">
+                            <xs:attribute type="xs:long" name="id" use="optional"/>
+                            <xs:attribute type="xs:float" name="radius" use="optional"/>
+                            <xs:attribute type="xs:long" name="x" use="optional"/>
+                            <xs:attribute type="xs:long" name="y" use="optional"/>
+                            <xs:attribute type="xs:long" name="z" use="optional"/>
+                            <xs:attribute type="xs:long" name="inVp" use="optional"/>
+                            <xs:attribute type="xs:long" name="inMag" use="optional"/>
+                            <xs:attribute type="xs:long" name="bitDepth" use="optional"/>
+                            <xs:attribute type="xs:string" name="interpolation" use="optional"/>
+                            <xs:attribute type="xs:long" name="time" use="optional"/>
+                          </xs:extension>
+                        </xs:simpleContent>
+                      </xs:complexType>
+                    </xs:element>
+                  </xs:sequence>
+                </xs:complexType>
+              </xs:element>
+              <xs:element name="edges">
+                <xs:complexType>
+                  <xs:sequence>
+                    <xs:element name="edge" maxOccurs="unbounded" minOccurs="0">
+                      <xs:complexType>
+                        <xs:simpleContent>
+                          <xs:extension base="xs:string">
+                            <xs:attribute type="xs:long" name="source" use="optional"/>
+                            <xs:attribute type="xs:long" name="target" use="optional"/>
+                          </xs:extension>
+                        </xs:simpleContent>
+                      </xs:complexType>
+                    </xs:element>
+                  </xs:sequence>
+                </xs:complexType>
+              </xs:element>
+            </xs:sequence>
+            <xs:attribute type="xs:long" name="id" use="optional"/>
+            <xs:attribute type="xs:float" name="color.r" use="optional"/>
+            <xs:attribute type="xs:float" name="color.g" use="optional"/>
+            <xs:attribute type="xs:float" name="color.b" use="optional"/>
+            <xs:attribute type="xs:float" name="color.a" use="optional"/>
+            <xs:attribute type="xs:string" name="name" use="optional"/>
+          </xs:complexType>
+        </xs:element>
+        <xs:element name="branchpoints">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="branchpoint" maxOccurs="unbounded" minOccurs="0">
+                <xs:complexType>
+                  <xs:simpleContent>
+                    <xs:extension base="xs:string">
+                      <xs:attribute type="xs:long" name="id" use="optional"/>
+                    </xs:extension>
+                  </xs:simpleContent>
+                </xs:complexType>
+              </xs:element>
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+        <xs:element name="comments">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="comment" maxOccurs="unbounded" minOccurs="0">
+                <xs:complexType>
+                  <xs:simpleContent>
+                    <xs:extension base="xs:string">
+                      <xs:attribute type="xs:long" name="node" use="optional"/>
+                      <xs:attribute type="xs:string" name="content" use="optional"/>
+                    </xs:extension>
+                  </xs:simpleContent>
+                </xs:complexType>
+              </xs:element>
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+</xs:schema>

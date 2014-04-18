@@ -9,7 +9,7 @@ object Dependencies{
   val akkaVersion = "2.2.0"
   val reactiveVersion = "0.10.0"
   val reactivePlayVersion = "0.10.2"
-  val braingamesVersion = "4.2.4"
+  val braingamesVersion = "5.4.0"
 
   val restFb = "com.restfb" % "restfb" % "1.6.11"
   val commonsIo = "commons-io" % "commons-io" % "2.4"
@@ -25,6 +25,7 @@ object Dependencies{
   val scalaReflect = "org.scala-lang" % "scala-reflect" % "2.10.0"
   val braingamesBinary = "com.scalableminds" %% "braingames-binary" % braingamesVersion
   val braingamesUtil = "com.scalableminds" %% "braingames-util" % braingamesVersion
+  val braingamesDatastore = "com.scalableminds" %% "braingames-datastore" % braingamesVersion
   val scalaAsync = "org.scala-lang.modules" %% "scala-async" % "0.9.0-M2"
   val airbrake = "eu.teamon" %% "play-airbrake" % "0.3.5-SCM"
   val mongev = "com.scalableminds" %% "play-mongev" % "0.2.8"
@@ -130,14 +131,8 @@ object ApplicationBuild extends Build {
   import Resolvers._
   import AssetCompilation.SettingsKeys._
 
-
-  val coffeeCmd =
-    if(System.getProperty("os.name").startsWith("Windows"))
-      "cmd /C coffee -p"
-    else
-      "coffee -p"
-
   val appName =  "oxalis"
+
   val appVersion = scala.io.Source.fromFile("version").mkString.trim
 
   val oxalisDependencies = Seq(
@@ -155,6 +150,7 @@ object ApplicationBuild extends Build {
     scalaReflect,
     braingamesUtil,
     braingamesBinary,
+    braingamesDatastore,
     scalaAsync,
     cache,
     airbrake,
@@ -174,14 +170,6 @@ object ApplicationBuild extends Build {
     teamon
   )
 
-  val isoshaderDependencies = Seq()
-
-  lazy val dataStoreDependencies = Seq(
-    scalaReflect,
-    jerseyCore,
-    jerseyClient,
-    akkaRemote)
-
   lazy val oxalisSettings = Seq(
     templatesImport += "oxalis.view.helpers._",
     templatesImport += "oxalis.view._",
@@ -199,19 +187,5 @@ object ApplicationBuild extends Build {
   )
 
   lazy val oxalis: Project = play.Project(appName, appVersion, oxalisDependencies, settings = oxalisSettings ++ AssetCompilation.settings)
-
-  lazy val datastore: Project = Project("datastore", file("modules") / "datastore", dependencies = Seq(oxalis)).settings(
-    libraryDependencies ++= dataStoreDependencies,
-    resolvers ++= dependencyResolvers,
-    coffeescriptOptions := Seq("native", coffeeCmd),
-    scalaVersion := "2.10.3"
-  ).aggregate(oxalis)
-
-  lazy val isoshader = play.Project("isoshader", "0.1", isoshaderDependencies, path = file("modules") / "isoshader").settings(
-    templatesImport += "oxalis.view.helpers._",
-    templatesImport += "oxalis.view._",
-    resolvers ++= dependencyResolvers,
-    coffeescriptOptions := Seq("native", coffeeCmd)
-  ).dependsOn(oxalis).aggregate(oxalis)
 }
 

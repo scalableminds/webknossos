@@ -32,6 +32,10 @@ object TaskTypeAdministration extends AdminController {
         "maxHard" -> number)(TraceLimit.apply)(TraceLimit.unapply))(
       TaskType.fromForm)(TaskType.toForm)).fill(TaskType.empty)
 
+  def empty = Authenticated{ implicit request =>
+    Ok(views.html.main()(Html.empty))
+  }
+
   def create = Authenticated.async(parse.urlFormEncoded) { implicit request =>
     taskTypeForm.bindFromRequest.fold(
       hasErrors = formWithErrors => taskTypeListWithForm(formWithErrors).map(html => BadRequest(html)),

@@ -18,62 +18,63 @@ object BinaryTest extends Specification {
 
   "Binary REST interface" should {
     "return data through GET" in {
-      running( FakeApplication() ) {
+      running(FakeApplication()) {
         /**
          * URL:
-         * 	GET - /route/data/:modeltype
+         * GET - /route/data/:modeltype
          * Params:
-         *  	- modeltype: String , A valid data source model (e.q. cube)
-         *  	- px: Int , x - Coordinate of the origin point
-         *  	- py: Int , y - Coordinate of the origin point
-         *  	- pz: Int , z - Coordinate of the origin point
-         *  	- ax: Int , x - Coordinate of the view axis
-         *  	- ay: Int , y - Coordinate of the view axis
-         *  	- az: Int , z - Coordinate of the view axis
+         * - modeltype: String , A valid data source model (e.q. cube)
+         * - px: Int , x - Coordinate of the origin point
+         * - py: Int , y - Coordinate of the origin point
+         * - pz: Int , z - Coordinate of the origin point
+         * - ax: Int , x - Coordinate of the view axis
+         * - ay: Int , y - Coordinate of the view axis
+         * - az: Int , z - Coordinate of the view axis
          * Response-type:
-         * 	application/octet-stream
+         * application/octet-stream
          * Response:
-         * 	To calculate the response the given model gets rotateted and moved
-         * 	to the given origin. Afterwards the colors of the points inside the
-         * 	produced figure are returned as binary data.
+         * To calculate the response the given model gets rotateted and moved
+         * to the given origin. Afterwards the colors of the points inside the
+         * produced figure are returned as binary data.
          */
+        route()
         val dataId = DataSet.default.id
-        val matrix = Array[Float]( 1, 0, 0, 0, 0, 1, 0, 0, 1, 1, 1, 0, 685, 611, 648, 1 )
-        val Some( resultAsyc ) = routeAndCall( FakeRequest(
+        val matrix = Array[Float](1, 0, 0, 0, 0, 1, 0, 0, 1, 1, 1, 0, 685, 611, 648, 1)
+        val Some(resultAsyc) = routeAndCall(FakeRequest(
           POST,
           "/binary/ajax?&dataSetId=" + dataId + "&cubeSize=64",
-          FakeHeaders( Map( "Content" -> List( "application/octet-stream" ) ) ),
-          RawBuffer( memoryThreshold = 1024, matrix.flatMap( _.toBinary.reverse ) ) ).authenticated() )
+          FakeHeaders(Map("Content" -> List("application/octet-stream"))),
+          RawBuffer(memoryThreshold = 1024, matrix.flatMap(_.toBinary.reverse))).authenticated())
 
-        ( resultAsyc.asInstanceOf[AsyncResult] ).result.map( result => {
-          status( result ) must be equalTo ( OK )
-          contentType( result ) must equalTo( Some( "application/octet-stream" ) )
-          contentAsBytes( result ).size must be equalTo 262144
-        } ).value.get
+        (resultAsyc.asInstanceOf[AsyncResult]).result.map(result => {
+          status(result) must be equalTo (OK)
+          contentType(result) must equalTo(Some("application/octet-stream"))
+          contentAsBytes(result).size must be equalTo 262144
+        }).value.get
       }
     }
 
     "return data through WebSocket" in {
-      running( FakeApplication() ) {
+      running(FakeApplication()) {
         ko
       }
-    }.pendingUntilFixed( "Testing websockets isn't implemented in play till now" )
+    }.pendingUntilFixed("Testing websockets isn't implemented in play till now")
 
     "return null block for negative parameters" in {
-      running( FakeApplication() ) {
+      running(FakeApplication()) {
         val dataId = DataSet.default.id
-        val matrix = Array[Float]( 1, 0, 0, 0, 0, 1, 0, 0, 1, 1, 1, 0, -1, -1, -1, 1 )
-        val Some( resultAsyc ) = routeAndCall( FakeRequest(
+        val matrix = Array[Float](1, 0, 0, 0, 0, 1, 0, 0, 1, 1, 1, 0, -1, -1, -1, 1)
+        val Some(resultAsyc) = routeAndCall(FakeRequest(
           POST,
           "/binary/ajax?&dataSetId=" + dataId + "&cubeSize=64",
-          FakeHeaders( Map( "Content" -> List( "application/octet-stream" ) ) ),
-          RawBuffer( memoryThreshold = 1024, matrix.flatMap( _.toBinary.reverse ) ) ).authenticated() )
+          FakeHeaders(Map("Content" -> List("application/octet-stream"))),
+          RawBuffer(memoryThreshold = 1024, matrix.flatMap(_.toBinary.reverse))).authenticated())
 
-        ( resultAsyc.asInstanceOf[AsyncResult] ).result.map( result => {
-          status( result ) must be equalTo ( OK )
-          contentType( result ) must equalTo( Some( "application/octet-stream" ) )
-          ((_:Byte) must be equalTo 0).forall(contentAsBytes( result ).toTraversable)
-        } ).value.get
+        (resultAsyc.asInstanceOf[AsyncResult]).result.map(result => {
+          status(result) must be equalTo (OK)
+          contentType(result) must equalTo(Some("application/octet-stream"))
+          ((_: Byte) must be equalTo 0).forall(contentAsBytes(result).toTraversable)
+        }).value.get
       }
     }
   }

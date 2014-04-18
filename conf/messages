@@ -1,5 +1,6 @@
 error.email=Please supply a valid email address
 error.required=Please supply all needed values
+error.minLength=Please use at least 3 characters.
 
 notAllowed=You are not allowed to view this resource
 
@@ -67,7 +68,10 @@ dataSet.import.inProgress=Dataset import is in progress
 dataSet.import.notStarted=Dataset import couldn''t be started
 
 dataLayer.notFound=DataLayer not found
+dataLayer.forbidden=Access to this layer is not allowed.
 dataLayer.test=Test message
+
+dataToken.creationFailed=Creation of the data token failed.
 
 cellId=Cell Id
 
@@ -175,11 +179,6 @@ taskType.createSuccess=Task type successfully created
 taskType.notFound=Selected task type doesn''t exist
 taskType.deleted=Task type ''{0}'' successfully deleted
 taskType.emptyModeSelection=Please select at least one tracing mode
-
-taskAlgorithm.notSupplied=No algorithm supplied
-taskAlgorithm.notFound=Couldn''t find algorithm
-taskAlgorithm.invalid=Invalid algorithm code
-taskAlgorithm.use.notSupplied=You need to specify if the algorithm should be used
 
 game.notFound=Specified game couldn''t be found
 

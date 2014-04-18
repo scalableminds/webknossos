@@ -77,7 +77,7 @@ class SceneController
     start1 = (new Date()).getTime()
 
     @cellsDeferred = (new PolygonFactory(
-      @model.binary["segmentation"]?.cube
+      @model.getSegmentationBinary()?.cube
       min, max, id
     )).getTriangles(min, max, id).done (triangles) =>
 

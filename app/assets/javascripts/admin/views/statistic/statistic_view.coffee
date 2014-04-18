@@ -13,11 +13,11 @@ class StatisticView extends Backbone.Marionette.Layout
   className : "statistics container wide"
   template : _.template("""
     <div class="row-fluid">
-      <div class="span8">
+      <div class="col-sm-8">
         <div class="graph well"></div>
         <div class="timings well"></div>
       </div>
-      <div class="achievements span4 well">
+      <div class="achievements col-sm-4 well">
 
       </div>
     </div>

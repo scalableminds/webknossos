@@ -35,7 +35,7 @@ class TaskListItemView extends Backbone.Marionette.CompositeView
     <td>(<%= boundingBox.join(", ") %>)</td>
     <td>
       <% if (neededExperience.domain != "" || neededExperience.value > 0) { %>
-        <span class="label"><%= neededExperience.domain %> : <%= neededExperience.value %></span>
+        <span class="label label-default"><%= neededExperience.domain %> : <%= neededExperience.value %></span>
       <% } %>
     </td>
     <td><%= priority %></td>
@@ -53,7 +53,7 @@ class TaskListItemView extends Backbone.Marionette.CompositeView
     </td>
     </tr>
     <tr class="details-row hide" >
-      <td colspan="12">
+      <td colspan="13">
         <table class="table table-condensed table-nohead table-hover">
           <tbody>
           </tbody>

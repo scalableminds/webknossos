@@ -8,22 +8,22 @@
 
 @helper.select(taskForm("taskType"), taskTypes.map { tt =>
   tt.id -> tt.summary
-}, Symbol("help-inline") -> taskTypeHelpLink)
+}, Symbol("help-block") -> taskTypeHelpLink, 'class -> "form-control")
 
 @helper.input(taskForm("experience.domain")) { (id, name, value, args) =>
-  <input type="text" name="@name" value="@value" id="@id" data-source='[]' data-provide="typeahead" autocomplete="off" @toHtmlArgs(args)>
+  <input type="text" class="form-control" name="@name" value="@value" id="@id" data-source='[]' data-provide="typeahead" autocomplete="off" @toHtmlArgs(args)>
 }
 
-@helper.inputText(taskForm("experience.value"), 'type -> "number")
+@helper.inputText(taskForm("experience.value"), 'type -> "number", 'class -> "form-control")
 
-@helper.inputText(taskForm("priority"), 'type -> "number")
+@helper.inputText(taskForm("priority"), 'type -> "number", 'class -> "form-control")
 
-@helper.inputText(taskForm("taskInstances"), 'type -> "number", 'min -> 1)
+@helper.inputText(taskForm("taskInstances"), 'type -> "number", 'min -> 1, 'class -> "form-control")
 
 @helper.select(taskForm("team"), teams.map { t =>
     t -> t
-})
+}, 'class -> "form-control")
 
 @helper.select(taskForm("project"), ("" -> "") +: projects.map { project =>
   project.name -> project.name
-})
+}, 'class -> "form-control")

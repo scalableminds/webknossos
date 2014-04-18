@@ -39,11 +39,14 @@ class Controller
   view : null
   planeController : null
   arbitraryController : null
-  abstractTreeController : null
   allowedModes : []
 
 
   constructor : (@controlMode) ->
+
+    unless @browserSupported()
+      unless window.confirm("You are using an unsupported browser, please use the newest version of Chrome, Opera or Safari.\n\nTry anyways?")
+        window.history.back()
 
     _.extend(@, new EventMixin())
 
@@ -79,6 +82,22 @@ class Controller
       $("body").append stats.domElement
 
       @gui = @createGui(restrictions, settings)
+
+      #TODO trigger on resize
+      # set width / height for the right-side menu
+      _.defer =>
+        if $("#right-menu").length
+          menuPosition = $("#right-menu").position()
+          MARGIN = 40
+          width = window.innerWidth - menuPosition.left - MARGIN
+          height = window.innerHeight - menuPosition.top - MARGIN
+          tabHeight = height - $('#right-menu .nav').height() - 30
+
+          $("#right-menu").width(width).height(height)
+          @annotationController?.abstractTreeController?.setDimensions({
+            width : width
+            height : tabHeight
+          })
 
       @sceneController = new SceneController(
         @model.upperBoundary, @model.flycam, @model)
@@ -121,7 +140,7 @@ class Controller
 
           alpha = event.value
           if (alpha == 0)
-            @model.binary["segmentation"].pingStop()
+            @model.getSegmentationBinary().pingStop()
           @sceneController.setSegmentationAlpha( alpha )
 
       @modeMapping =
@@ -196,7 +215,7 @@ class Controller
 
         "t" : =>
           @view.toggleTheme()
-          @abstractTreeController.drawTree()
+          @annotationController?.abstractTreeController?.drawTree()
 
         "m" : => # rotate allowed modes
 
@@ -234,7 +253,6 @@ class Controller
 
     @mode = newMode
     @gui.setMode(newMode)
-    @view.setMode(newMode)
 
 
   toggleFullScreen : ->
@@ -259,7 +277,11 @@ class Controller
 
     for binary in @model.getColorBinaries()
       binary.pullQueue.set4Bit(@model.user.get("fourBit"))
-      binary.updateContrastCurve(
-        gui.settingsGeneral.brightness, gui.settingsGeneral.contrast)
 
     return gui
+
+
+  browserSupported : ->
+
+    # right now only webkit-based browsers are supported
+    return window.webkitURL

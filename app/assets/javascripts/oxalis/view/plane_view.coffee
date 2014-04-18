@@ -189,12 +189,13 @@ class PlaneView
     canvas.width(2 * WIDTH + 20)
     canvas.height(2 * HEIGHT + 20)
 
-    $('#TDViewControls button').outerWidth(@curWidth/4)
+    $('#TDViewControls button').outerWidth(@curWidth / 4 - 0.5)
 
-    divs = $(".inputcatcher")
-    for div in divs
-      $(div).css({width: WIDTH + "px"})
-      $(div).css({height: HEIGHT + "px"})
+    $(".inputcatcher")
+      .css(
+        width : WIDTH
+        height : HEIGHT
+      )
 
     @resizeThrottled()
 

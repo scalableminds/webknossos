@@ -19,7 +19,7 @@ class PullQueue
   batchCount : 0
   roundTripTime : 0
 
-  constructor : (@dataSetName, @cube, @dataLayerName, @tracingId, @boundingBox ) ->
+  constructor : (@dataSetName, @cube, @layer, @tracingId, @boundingBox ) ->
 
     @queue = []
     @loadedBucketList = []
@@ -199,7 +199,7 @@ class PullQueue
       senders : [
         # new ArrayBufferSocket.WebWorker("ws://#{document.location.host}/binary/ws?dataSetName=#{@dataSetName}&cubeSize=#{1 << @cube.BUCKET_SIZE_P}")
         # new ArrayBufferSocket.WebSocket("ws://#{document.location.host}/binary/ws?dataSetName=#{@dataSetName}&cubeSize=#{1 << @cube.BUCKET_SIZE_P}")
-        new ArrayBufferSocket.XmlHttpRequest("/datasets/#{@dataSetName}/layers/#{@dataLayerName}/data?cubeSize=#{1 << @cube.BUCKET_SIZE_P}&annotationId=#{@tracingId}")
+        new ArrayBufferSocket.XmlHttpRequest("#{@layer.url}/data/datasets/#{@dataSetName}/layers/#{@layer.name}/data?cubeSize=#{1 << @cube.BUCKET_SIZE_P}&token=#{@layer.token}")
       ]
       requestBufferType : Float32Array
       responseBufferType : Uint8Array

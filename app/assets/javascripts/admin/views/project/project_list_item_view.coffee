@@ -19,13 +19,13 @@ class ProjectListItemView extends Backbone.Marionette.CompositeView
       <td><%= owner.firstName %> <%= owner.lastName %></td>
       <td class="nowrap">
         <a href="/annotations/CompoundProject/<%= name %>" title="View all finished tracings">
-          <i class="icon-random"></i>view
+          <i class="fa fa-random"></i>view
         </a><br/>
         <a href="/api/projects/<%= name %>/download" title="Download all finished tracings">
-          <i class="icon-download"></i>download
+          <i class="fa fa-download"></i>download
         </a><br/>
         <a href="#" class="delete">
-          <i class="icon-trash"></i>delete
+          <i class="fa fa-trash-o"></i>delete
         </a>
       </td>
     </tr>

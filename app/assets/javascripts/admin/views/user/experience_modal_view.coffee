@@ -6,37 +6,41 @@ backbone.marionette : marionette
 class ExperienceModal extends Backbone.Marionette.ItemView
 
   tagName : "div"
-  className : "modal hide fade"
+  className : "modal fade"
   template : _.template("""
-    <div class="modal-header">
-      <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
-      <h3>Change Experience</h3>
-    </div>
-    <div class="modal-body form-horizontal">
-      <div class="control-group">
-        <label class="control-label" for="experience-domain">Domain</label>
-        <div class="controls">
-          <input type="text" class="input-small" name="experience-domain" autocomplete="off" required>
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+          <h3>Change Experience</h3>
+        </div>
+        <div class="modal-body form-horizontal">
+          <div class="form-group">
+            <label class="col-sm-2 control-label" for="experience-domain">Domain</label>
+            <div class="col-sm-10">
+              <input type="text" class="form-control" name="experience-domain" autocomplete="off" required>
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="col-sm-2 control-label" for="experience-value">Value</label>
+            <div class="col-sm-10">
+              <input type="number" class="form-control" name="experience-value" value="0">
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <a href="#" class="increase-experience btn btn-primary">
+          Increase Experience
+          </a>
+          <a href="#" class="set-experience btn btn-primary">
+            Set Experience
+          </a>
+          <a href="#" class="delete-experience btn btn-primary">
+            Delete Experience
+          </a>
+          <a href="#" class="btn btn-default" data-dismiss="modal">Cancel</a>
         </div>
       </div>
-      <div class="control-group">
-        <label class="control-label" for="experience-value">Value</label>
-        <div class="controls">
-          <input type="number" class="input-small" name="experience-value" value="0">
-        </div>
-      </div>
-    </div>
-    <div class="modal-footer">
-      <a href="#" class="increase-experience btn btn-primary">
-      Increase Experience
-      </a>
-      <a href="#" class="set-experience btn btn-primary">
-        Set Experience
-      </a>
-      <a href="#" class="delete-experience btn btn-primary">
-        Delete Experience
-      </a>
-      <a href="#" class="btn" data-dismiss="modal">Cancel</a>
     </div>
   """)
 
@@ -50,9 +54,9 @@ class ExperienceModal extends Backbone.Marionette.ItemView
     "experienceValue" : "input[type=number]"
     "experienceDomain" : "input[type=text]"
 
-  initialize : (args) ->
+  initialize : (options) ->
 
-    @userCollection = args.userCollection
+    @userCollection = options.userCollection
 
 
   setExperience : ->

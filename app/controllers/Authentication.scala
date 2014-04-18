@@ -114,13 +114,13 @@ object Authentication extends Controller with Secured with ProvidesUnauthorizedS
             user =>
               val redirectLocation =
                 if (user.verified)
-                  controllers.routes.Application.index
+                  Redirect(controllers.routes.Application.index)
                 else
-                  controllers.routes.UserController.dashboard
-              Redirect(redirectLocation).withSession(Secured.createSession(user))
+                  Redirect("/dashboard")
+              redirectLocation.withSession(Secured.createSession(user))
+
           }.getOrElse {
-            BadRequest(html.user.login(loginForm.bindFromRequest))
-              .flashing("success" -> Messages("user.login.failed"))
+            BadRequest(html.user.login(loginForm.bindFromRequest.withGlobalError("user.login.failed")))
           }
       })
   }

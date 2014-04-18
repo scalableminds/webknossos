@@ -17,9 +17,10 @@ import java.nio.ByteBuffer
 import play.api.mvc.Codec
 import net.liftweb.common.Failure
 import java.io.{ File, FileInputStream }
-import java.security.KeyStore;
-import javax.net.ssl.SSLContext;
-import javax.net.ssl.TrustManagerFactory;
+import java.security.KeyStore
+import javax.net.ssl.SSLContext
+import javax.net.ssl.TrustManagerFactory
+import java.util.concurrent.TimeoutException
 
 case class SendJson(js: JsValue)
 
@@ -167,12 +168,16 @@ class JsonWSTunnel(
               logger.debug(s"Connected to WS.")
               websocket = Some(w)
             } else {
-              throw new Exception("Connection failed.")
+              logger.warn(s"Connection failed.")
+              retry()
             }
           }
         }
         Await.result(f, atMost = ConnectTimeout)
       } catch {
+        case e: TimeoutException =>
+          logger.warn(s"WS connection took too long. Aborting.")
+          retry()
         case e: Exception =>
           logger.error(s"Trying to connect to WS resulted in: ${e.getMessage}", e)
           retry()

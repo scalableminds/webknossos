@@ -1,6 +1,7 @@
 ### define
 underscore : _
 ../viewmodes/plane_controller : PlaneController
+../annotations/volumetracing_controller : VolumeTracingController
 ###
 
 class VolumeTacingPlaneController extends PlaneController
@@ -23,7 +24,7 @@ class VolumeTacingPlaneController extends PlaneController
 
       leftDownMove : (delta, pos, plane, event) =>
 
-        if event.ctrlKey
+        if @volumeTracingController.controlMode == VolumeTracingController::CONTROL_MODE_MOVE
           @move [
             delta.x * @model.user.getMouseInversionX() / @planeView.scaleFactor
             delta.y * @model.user.getMouseInversionY() / @planeView.scaleFactor

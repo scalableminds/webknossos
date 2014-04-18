@@ -7,7 +7,7 @@ import braingames.util.{Fox, FoxImplicits}
 import play.api.Play
 import play.api.libs.concurrent.Akka
 import akka.actor.{Actor, Props}
-import models.user.User
+import models.user.{UserDAO, User}
 import models.annotation.AnnotationLike
 import braingames.reactivemongo.{GlobalAccessContext, DBAccessContext}
 import scala.concurrent.duration._
@@ -16,6 +16,7 @@ import reactivemongo.bson.BSONObjectID
 import akka.agent.Agent
 import play.api.Play.current
 import play.api.libs.concurrent.Execution.Implicits._
+import oxalis.thirdparty.BrainTracing
 
 object TimeSpanService extends FoxImplicits{
   val MaxTracingPause = (Play.current.configuration.getInt("oxalis.user.time.tracingPauseInMinutes") getOrElse (5) minutes).toMillis
@@ -71,7 +72,11 @@ object TimeSpanService extends FoxImplicits{
       case TrackTime(timestamp, _user, annotation, ctx) =>
         val timeSpan = lastUserActivity().get(_user) match {
           case Some(last) if isNotInterrupted(timestamp, annotation, last) =>
-            val updated = last.copy(lastUpdate = timestamp, time = last.time + timestamp - last.lastUpdate)
+            val duration = timestamp - last.lastUpdate
+            val updated = last.copy(lastUpdate = timestamp, time = last.time + duration)
+            UserDAO.findOneById(_user)(GlobalAccessContext).map{ user =>
+              BrainTracing.logTime(user, duration, annotation)(GlobalAccessContext)
+            }
             TimeSpanDAO.update(updated._id, updated)(ctx)
             updated
           case _ =>

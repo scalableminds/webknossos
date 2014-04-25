@@ -21,6 +21,7 @@ import play.api.libs.functional.syntax._
 import reactivemongo.core.commands.LastError
 import braingames.reactivemongo.AccessRestrictions.{DenyEveryone, AllowIf}
 import braingames.util.Fox
+import play.api.Logger
 
 case class User(
                  email: String,
@@ -200,7 +201,7 @@ object UserDAO extends SecuredBaseDAO[User] {
     update(findByIdQ(_user), Json.obj("$unset" -> Json.obj(s"experiences.$domain" -> 1)))
   }
 
-  def logActivity(_user: BSONObjectID, lastActivity: Long)(implicit ctx: DBAccessContext) = {
+  def logActivity(_user: BSONObjectID, lastActivity: Long)(implicit c: DBAccessContext) = {
     update(findByIdQ(_user), Json.obj("$set" -> Json.obj("lastActivity" -> lastActivity)))
   }
 

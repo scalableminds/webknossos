@@ -5,7 +5,7 @@ import scala.concurrent.duration._
 import models.user.{UserService, User}
 import akka.agent.Agent
 import play.api.libs.concurrent.Akka
-import play.api.Play.current
+import play.api.Logger
 import play.api.libs.concurrent.Execution.Implicits._
 import reactivemongo.bson.BSONObjectID
 import braingames.reactivemongo.GlobalAccessContext
@@ -31,12 +31,14 @@ class ActivityMonitor extends Actor {
       collectedActivities.send(_.updated(user._id, time))
 
     case FlushActivities =>
+      Logger.info("Flushing user activities.")
 
       collectedActivities.send {
         activities =>
           activities.map{
-            case (userId, time) =>
-              UserService.logActivity(userId, time)
+            case (_user, time) =>
+              Logger.debug(s"Flushing user activities of: ${_user.stringify} Time: $time")
+              UserService.logActivity(_user, time)
           }
           Map[BSONObjectID, Long]().empty
       }

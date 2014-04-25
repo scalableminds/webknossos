@@ -13,7 +13,7 @@ import oxalis.thirdparty.BrainTracing
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.i18n.Messages
 import oxalis.mail.DefaultMails
-import oxalis.view.{ProvidesUnauthorizedSessionData, UnAuthedSessionData}
+import oxalis.view.{SessionData, ProvidesUnauthorizedSessionData, UnAuthedSessionData}
 import scala.concurrent.Future
 import models.team.TeamDAO
 import braingames.reactivemongo.DBAccessContext
@@ -47,9 +47,13 @@ object Authentication extends Controller with Secured with ProvidesUnauthorizedS
 
   def register = Action.async {
     implicit request =>
-      for {
-        teams <- TeamDAO.findAll(DBAccessContext(None))
-      } yield Ok(html.user.register(registerForm, teams))
+      formHtml(registerForm).map(Ok(_))
+  }
+
+  def formHtml(form: Form[(String, String, String, String, String)])(implicit session: SessionData) = {
+    for {
+      teams <- TeamDAO.findAll(DBAccessContext(None))
+    } yield html.user.register(form, teams)
   }
 
   /**
@@ -57,15 +61,14 @@ object Authentication extends Controller with Secured with ProvidesUnauthorizedS
    */
   def handleRegistration = Action.async {
     implicit request =>
-      registerForm.bindFromRequest.fold(
+      val boundForm = registerForm.bindFromRequest
+      boundForm.fold(
       formWithErrors =>
-        for {
-          teams <- TeamDAO.findAll(DBAccessContext(None))
-        } yield BadRequest(html.user.register(formWithErrors, teams)), {
+        formHtml(registerForm).map(BadRequest(_)), {
         case (team, email, firstName, lastName, password) => {
           UserService.findOneByEmail(email).futureBox.flatMap {
             case Full(_) =>
-              Future.successful(JsonBadRequest(Messages("user.email.alreadyInUse")))
+              formHtml(boundForm.withError("email", "user.email.alreadyInUse")).map(BadRequest(_))
             case _ =>
               for {
                 user <- UserService.insert(team, email, firstName, lastName, password, autoVerify)
@@ -120,8 +123,7 @@ object Authentication extends Controller with Secured with ProvidesUnauthorizedS
               redirectLocation.withSession(Secured.createSession(user))
 
           }.getOrElse {
-            BadRequest(html.user.login(loginForm.bindFromRequest))
-              .flashing("error" -> Messages("user.login.failed"))
+            BadRequest(html.user.login(loginForm.bindFromRequest.withGlobalError("user.login.failed")))
           }
       })
   }

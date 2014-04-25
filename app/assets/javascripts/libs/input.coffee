@@ -36,9 +36,19 @@ class Input.KeyboardNoLoop
 
   attach : (key, callback) ->
 
+    # Workaround: KeyboardJS fires event for "C" even if you press
+    # "Ctrl + C".
+    shouldIgnore = (event) ->
+      bindingHasCtrl  = key.toLowerCase().indexOf("ctrl") != -1
+      bindingHasShift = key.toLowerCase().indexOf("shift") != -1
+      eventHasCtrl  = event.ctrl or event.metaKey
+      eventHasShift = event.shiftKey
+      return (eventHasCtrl and not bindingHasCtrl) or
+        (eventHasShift and not bindingHasShift)
+
     binding = KeyboardJS.on(key,
       (event) =>
-        callback(event) unless $(":focus").length
+        callback(event) unless $(":focus").length or shouldIgnore(event)
         return
     )
     @bindings.push(binding)

@@ -16,16 +16,16 @@ $ ->
 
   # hover show/hide functionality
   $(document).on "mouseenter", ".hover-dynamic", ->
-    $(".hover-show", this).show()
-    $(".hover-hide", this).hide()
+    $(".hover-show", this).removeClass("hide")
+    $(".hover-hide", this).addClass("hide")
   $(document).on "blur", ".hover-dynamic .hover-input", ->
     window.setTimeout(( =>
-      $(this).parents(".hover-dynamic").find(".hover-show").hide()
-      $(this).parents(".hover-dynamic").find(".hover-hide").show()),200)
+      $(this).parents(".hover-dynamic").find(".hover-show").addClass("hide")
+      $(this).parents(".hover-dynamic").find(".hover-hide").removeClass("hide")), 200)
   $(document).on "mouseleave", ".hover-dynamic", ->
     if not $(".hover-input:focus", this).length
-      $(".hover-show", this).hide()
-      $(".hover-hide", this).show()
+      $(".hover-show", this).addClass("hide")
+      $(".hover-hide", this).removeClass("hide")
 
 
   dataAjaxHandler = (event, element=null) ->

@@ -18,7 +18,7 @@ class TeamRoleModalItem extends Backbone.Marionette.ItemView
     </div>
     <div class="col-sm-4">
       <div>
-        <select name="role" class="input-medium">
+        <select name="role" class="form-control">
           <option value="">Modify roles...</option>
             <% _.each(roles, function(role) { %>
               <option value="<%= role.name %>"><%= role.name %></option>

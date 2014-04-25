@@ -9,13 +9,13 @@ class ExplorativeTracingListItemView extends Backbone.Marionette.ItemView
 
   tagName : "tr"
   template : _.template("""
-    <td> <%= formattedHash %> </td>
+    <td><%= formattedHash %></td>
     <td class="explorative-name-column hover-dynamic">
-      <span class="hover-hide" id="explorative-tracing-name"> <%= name %> </span>
+      <span class="hover-hide" id="explorative-tracing-name"><%= name %></span>
       <form action="<%= jsRoutes.controllers.AnnotationController.nameExplorativeAnnotation(typ, id).url %>"
-        method="POST" class="hover-show" id="explorative-name-form">
+        method="POST" class="hover-show hide" id="explorative-name-form">
         <div class="input-append">
-          <input class="input-medium hover-input"
+          <input class="input-medium hover-input form-control"
                  name="name"
                  id="explorative-name-input"
                  maxlength="50"
@@ -25,18 +25,18 @@ class ExplorativeTracingListItemView extends Backbone.Marionette.ItemView
         </div>
       </form>
     </td>
-    <td> <%= dataSetName %> </td>
+    <td><%= dataSetName %></td>
 
     <td>
       <% if (stats) { %>
-        <span title="Trees"><i class="fa fa-sitemap"></i><%= stats.numberOfTrees %> &nbsp;</span><br />
-        <span title="Nodes"><i class="fa fa-bull"></i><%= stats.numberOfNodes %> &nbsp;</span><br />
+        <span title="Trees"><i class="fa fa-sitemap"></i><%= stats.numberOfTrees %>&nbsp;</span><br />
+        <span title="Nodes"><i class="fa fa-bull"></i><%= stats.numberOfNodes %>&nbsp;</span><br />
         <span title="Edges"><i class="fa fa-arrows-h"></i><%= stats.numberOfEdges %></span>
       <% } %>
     </td>
 
-    <td> <%= contentType + " - " + typ %> </td>
-    <td> <%= created %> </td>
+    <td><%= contentType + " - " + typ %></td>
+    <td><%= created %></td>
     <td class="nowrap">
       <a href="<%= jsRoutes.controllers.AnnotationController.trace(typ, id).url %>">
         <i class="fa fa-random"></i>
@@ -59,18 +59,16 @@ class ExplorativeTracingListItemView extends Backbone.Marionette.ItemView
   events :
     "submit #explorative-name-form" : "nameExplorativeAnnotation"
     "click #finish-tracing" : "finishTracing"
+    "change @ui.explorativeNameInput" : "submitForm"
 
   ui :
     "explorativeNameForm" : "#explorative-name-form"
     "explorativeNameInput": "#explorative-name-input"
 
 
-  onRender: ->
+  submitForm: ->
 
-    @ui.explorativeNameForm.hide()
-    @ui.explorativeNameInput.change(=>
-       @ui.explorativeNameForm.submit()
-    )
+    @ui.explorativeNameForm.submit()
 
 
   nameExplorativeAnnotation : (event) ->

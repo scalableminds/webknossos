@@ -3,7 +3,6 @@ underscore : _
 backbone.marionette : marionette
 app : app
 dashboard/views/explorative_tracing_list_item_view : ExplorativeTracingListItemView
-admin/models/dataset/dataset_collection : DatasetCollection
 libs/input : Input
 libs/toast : Toast
 ###
@@ -83,9 +82,7 @@ class ExplorativeTracingListView extends Backbone.Marionette.CompositeView
 
     @collection = @model.get("exploratoryAnnotations")
 
-    datasetCollection = new DatasetCollection()
-    @model.set("dataSets", datasetCollection)
-
+    datasetCollection = @model.get("dataSets")
     @listenTo(datasetCollection, "sync", @render)
     datasetCollection.fetch(silent : true)
 

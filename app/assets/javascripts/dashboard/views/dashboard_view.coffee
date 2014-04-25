@@ -4,7 +4,7 @@ backbone.marionette : marionette
 dashboard/views/dashboard_task_list_view : DashboardTaskListView
 dashboard/views/explorative_tracing_list_view : ExplorativeTracingListView
 dashboard/views/tracked_time_view : TrackedTimeView
-dashboard/models/logged_time_model : LoggedTimeModel
+views/spotlight_dataset_list_view : SpotlightDatasetListView
 ###
 
 class DashboardView extends Backbone.Marionette.Layout
@@ -18,6 +18,9 @@ class DashboardView extends Backbone.Marionette.Layout
     <div class="tabbable" id="tabbable-dashboard">
       <ul class="nav nav-tabs">
         <li class="active">
+          <a href="#" id="tab-datasets" data-toggle="tab">Datasets</a>
+        </li>
+        <li>
           <a href="#" id="tab-tasks" data-toggle="tab">Tasks</a>
         </li>
         <li>
@@ -34,15 +37,19 @@ class DashboardView extends Backbone.Marionette.Layout
   """)
 
   ui :
+    "tabDatasets" : "#tab-datasets"
     "tabTasks" : "#tab-tasks"
     "tabExplorative" : "#tab-explorative"
     "tabTrackedTime" : "#tab-tracked-time"
     "tabPane" : ".tab-pane"
 
+
   events :
+    "click #tab-datasets" : "showDatasets"
     "click #tab-tasks" : "showTasks"
     "click #tab-explorative" : "showExplorative"
     "click #tab-tracked-time" : "showTrackedTime"
+
 
   regions :
     "tabPane" : ".tab-pane"
@@ -51,23 +58,37 @@ class DashboardView extends Backbone.Marionette.Layout
   initialize : (options) ->
 
     @model.fetch().done( =>
-      @showTasks()
+      @showDatasets()
     )
+
+
+  showDatasets : ->
+
+    unless @spotlightDatasetListView
+      @spotlightDatasetListView = new SpotlightDatasetListView(collection : @model.get("dataSets"))
+
+    @tabPane.show(@spotlightDatasetListView)
+
 
   showTasks : ->
 
-    view = new DashboardTaskListView(model : @model)
-    @tabPane.show(view)
+    unless @dashboardTaskListView
+      @dashboardTaskListView = new DashboardTaskListView(model : @model)
+
+    @tabPane.show(@dashboardTaskListView)
 
 
   showExplorative : ->
 
-    view = new ExplorativeTracingListView(model : @model)
-    @tabPane.show(view)
+    unless @explorativeTracingListView
+      @explorativeTracingListView = new ExplorativeTracingListView(model : @model)
+
+    @tabPane.show(@explorativeTracingListView)
 
 
   showTrackedTime : ->
 
-    view = new TrackedTimeView(model : new LoggedTimeModel())
-    @tabPane.show(view)
+    unless @trackedTimeView
+      @trackedTimeView = new TrackedTimeView(model : @model.get("loggedTime"))
 
+    @tabPane.show(@trackedTimeView)

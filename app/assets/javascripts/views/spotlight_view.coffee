@@ -8,14 +8,14 @@ admin/models/dataset/dataset_collection : DatasetCollection
 
 class SpotlightView extends Backbone.Marionette.Layout
 
-  className : "container"
-
   template : _.template("""
-    <div id="oxalis-header">
-      <img src="/assets/images/oxalis.svg">
-      <div><p>Oxalis</p></div>
+    <div class="container">
+      <div id="oxalis-header">
+        <img src="/assets/images/oxalis.svg">
+        <div><p>Oxalis</p></div>
+      </div>
+      <div id="datasets"></div>
     </div>
-    <div id="datasets"></div>
     <div id="credits"></div>
   """)
 
@@ -33,8 +33,7 @@ class SpotlightView extends Backbone.Marionette.Layout
     @spotlightDatasetListView = new SpotlightDatasetListView(collection : options.model)
     @creditsView = new CreditsView()
 
-    # TODO: fix this workaround
-    setTimeout((=> @show()), 1000)
+    @listenTo(@, "render", @show)
 
 
   show : ->

@@ -11,9 +11,7 @@ class SpotlightDatasetView extends Backbone.Marionette.ItemView
       <div class="panel-body row">
         <div class="dataset-thumbnail col-sm-4">
           <a href="/datasets/<%= name %>/view">
-            <% _.each(dataSource.dataLayers.filter(function(layer) { return layer.category == "color" }), function(colorLayer){ %>
-              <img src="/api/datasets/<%= name %>/layers/<%= colorLayer.name %>/thumbnail" class="img-rounded"/>
-            <% }) %>
+            <img src="<%= thumbnailURL %>">
             <i class="fa fa-play"></i>
           </a>
         </div>

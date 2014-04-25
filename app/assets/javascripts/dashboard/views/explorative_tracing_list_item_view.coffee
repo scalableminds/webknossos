@@ -40,7 +40,7 @@ class ExplorativeTracingListItemView extends Backbone.Marionette.ItemView
     <td class="nowrap">
       <a href="<%= jsRoutes.controllers.AnnotationController.trace(typ, id).url %>">
         <i class="fa fa-random"></i>
-        trace
+        <strong>trace</strong>
       </a><br />
       <a href="<%= jsRoutes.controllers.AnnotationController.download(typ, id).url %>">
         <i class="fa fa-download"></i>

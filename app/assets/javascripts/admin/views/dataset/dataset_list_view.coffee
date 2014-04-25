@@ -3,13 +3,13 @@ underscore : _
 backbone.marionette : marionette
 ./dataset_list_item_view : DatasetListItemView
 ./team_assignment_modal_view: TeamAssignmentModalView
+admin/views/pagination_view : PaginationView
 ###
 
 class DatasetListView extends Backbone.Marionette.CompositeView
 
-  className : "dataset-administration container wide"
   template : _.template("""
-    <h3>DataSets</h3>
+    <div id="pagination"></div>
     <table class="table table-striped" id="dataSet-table">
       <thead>
         <tr>
@@ -35,6 +35,7 @@ class DatasetListView extends Backbone.Marionette.CompositeView
 
   ui :
     "modalWrapper" : "#modal-wrapper"
+    "pagination" : "#pagination"
 
   itemView : DatasetListItemView
   itemViewContainer: "tbody"
@@ -50,6 +51,12 @@ class DatasetListView extends Backbone.Marionette.CompositeView
 
     @listenTo(app.vent, "paginationView:filter", @filter)
     @listenTo(app.vent, "TeamAssignmentModalView:refresh", @render)
+
+
+  onShow : ->
+
+    paginationView = new PaginationView(collection: @collection)
+    @ui.pagination.prepend(paginationView.render().el)
 
 
   showModal : (evt) ->

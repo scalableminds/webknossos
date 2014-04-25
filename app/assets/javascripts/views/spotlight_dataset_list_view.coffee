@@ -5,13 +5,9 @@ admin/models/dataset/dataset_collection : DatasetCollection
 views/spotlight_dataset_view : SpotlightDatasetView
 ###
 
-class SpotlightDatasetListView extends Backbone.Marionette.CompositeView
+class SpotlightDatasetListView extends Backbone.Marionette.CollectionView
 
-  template : _.template("<div></div>")
-
-  itemViewContainer : "div"
   itemView : SpotlightDatasetView
-
 
   initialize : (options) ->
 

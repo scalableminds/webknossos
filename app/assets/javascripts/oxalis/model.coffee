@@ -107,6 +107,7 @@ class Model
     console.log "user", user
 
     dataSet = tracing.content.dataSet
+    isVolumeTracing = "volume" in tracing.content.settings.allowedModes
     @user = new User(user)
     @scaleInfo = new ScaleInfo(dataSet.scale)
     @updatePipeline = new Pipeline([tracing.version])
@@ -127,6 +128,7 @@ class Model
     @binary = {}
 
     for layer in layers
+      continue if not isVolumeTracing and layer.category == "segmentation"
       layer.bitDepth = parseInt( layer.elementClass.substring(4) )
       @binary[layer.name] = new Binary(this, tracing, layer, tracingId, @updatePipeline)
       zoomStepCount = Math.min(zoomStepCount, @binary[layer.name].cube.ZOOM_STEP_COUNT - 1)
@@ -137,11 +139,9 @@ class Model
 
     @flycam = new Flycam2d(constants.PLANE_WIDTH, @scaleInfo, zoomStepCount, @user)
     @flycam3d = new Flycam3d(constants.DISTANCE_3D, dataSet.scale)
-
     @flycam3d.on
       "changed" : (matrix, zoomStep) =>
         @flycam.setPosition( matrix[12..14] )
-
     @flycam.on
       "positionChanged" : (position) =>
         @flycam3d.setPositionSilent(position)
@@ -156,13 +156,12 @@ class Model
 
     if controlMode == constants.CONTROL_MODE_TRACE
 
-      if "volume" in tracing.content.settings.allowedModes
+      if isVolumeTracing
         $.assert( @getSegmentationBinary()?,
           "Volume is allowed, but segmentation does not exist" )
         @volumeTracing = new VolumeTracing(tracing, @flycam, @getSegmentationBinary(), @updatePipeline)
 
       else
-        delete @binary[ @getSegmentationBinary().name ]
         @skeletonTracing = new SkeletonTracing(tracing, @scaleInfo, @flycam, @flycam3d, @user, @updatePipeline)
 
     @computeBoundaries()

@@ -125,18 +125,11 @@ class Model
     @datasetPostfix = _.last(@dataSetName.split("_"))
     zoomStepCount = Infinity
     @binary = {}
-    @lowerBoundary = [ Infinity,  Infinity,  Infinity]
-    @upperBoundary = [-Infinity, -Infinity, -Infinity]
 
     for layer in layers
-
       layer.bitDepth = parseInt( layer.elementClass.substring(4) )
       @binary[layer.name] = new Binary(this, tracing, layer, tracingId, @updatePipeline)
       zoomStepCount = Math.min(zoomStepCount, @binary[layer.name].cube.ZOOM_STEP_COUNT - 1)
-
-      for i in [0..2]
-        @lowerBoundary[i] = Math.min @lowerBoundary[i], @binary[layer.name].lowerBoundary[i]
-        @upperBoundary[i] = Math.max @upperBoundary[i], @binary[layer.name].upperBoundary[i]
 
     if @getColorBinaries().length == 0
       Toast.error("No data available! Something seems to be wrong with the dataset.")
@@ -169,7 +162,10 @@ class Model
         @volumeTracing = new VolumeTracing(tracing, @flycam, @getSegmentationBinary(), @updatePipeline)
 
       else
+        delete @binary[ @getSegmentationBinary().name ]
         @skeletonTracing = new SkeletonTracing(tracing, @scaleInfo, @flycam, @flycam3d, @user, @updatePipeline)
+
+    @computeBoundaries()
 
     {"restrictions": tracing.restrictions, "settings": tracing.content.settings}
 
@@ -228,3 +224,14 @@ class Model
         layers.push(userLayer)
 
     return layers
+
+
+  computeBoundaries : ->
+
+    @lowerBoundary = [ Infinity,  Infinity,  Infinity]
+    @upperBoundary = [-Infinity, -Infinity, -Infinity]
+
+    for key, binary of @binary
+      for i in [0..2]
+        @lowerBoundary[i] = Math.min @lowerBoundary[i], binary.lowerBoundary[i]
+        @upperBoundary[i] = Math.max @upperBoundary[i], binary.upperBoundary[i]

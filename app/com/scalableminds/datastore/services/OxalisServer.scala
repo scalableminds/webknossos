@@ -101,6 +101,7 @@ class OxalisServer(
   }
 
   def reportDataSouces(dataSources: List[DataSourceLike]) = {
+    logger.trace("reporting datasources " + dataSources.map(d => d.id + s" (${if(d.isUsable) "active" else "inactive"}})").mkString(", "))
     oxalisWS(s"/api/datastores/$name/datasources")
       .post(Json.toJson(dataSources))
       .map {
@@ -108,6 +109,7 @@ class OxalisServer(
       result =>
         if (result.status != OK)
           logger.warn(s"Reporting found data sources to oxalis failed. Status ${result.status}. Body: '${result.body.take(100)}'")
+        logger.trace(s"result of reporting datasources: ${result}")
     }
   }
 

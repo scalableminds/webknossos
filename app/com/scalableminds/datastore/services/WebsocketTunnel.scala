@@ -17,19 +17,34 @@ import java.nio.ByteBuffer
 import play.api.mvc.Codec
 import net.liftweb.common.Failure
 import java.io.{ File, FileInputStream }
-import java.security.KeyStore;
-import javax.net.ssl.SSLContext;
-import javax.net.ssl.TrustManagerFactory;
+import java.security.KeyStore
+import javax.net.ssl.SSLContext
+import javax.net.ssl.TrustManagerFactory
+import java.util.concurrent.TimeoutException
+import akka.agent.Agent
+import scala.collection.immutable.Queue
 
-case class SendJson(js: JsValue)
+case class SendJson(js: JsValue, retryOnFailure: Boolean = true) extends WSMessage[String] {
+  def payload = Json.prettyPrint(js)
+}
 
-case class SendData(data: Array[Byte])
+case class SendData(data: Array[Byte], retryOnFailure: Boolean = true) extends WSMessage[Array[Byte]] {
+  def payload = data
+}
+
+case class SendString(s: String, retryOnFailure: Boolean = true) extends WSMessage[String] {
+  def payload = s
+}
+
+sealed trait WSMessage[T] {
+  def payload: T
+
+  def retryOnFailure: Boolean
+}
 
 case class ReceivedString(s: String)
 
 case object ConnectToWS
-
-case object PingSocket
 
 case class KeyStoreInfo(keyStore: File, keyStorePassword: String)
 case class WSSecurityInfo(secured: Boolean, selfSigned: Boolean, keyStoreInfo: Option[KeyStoreInfo])
@@ -47,11 +62,15 @@ class JsonWSTunnel(
 
   private var isTerminating = false
 
-  private var websocket: Option[WebSock] = None
+  private var isReconnectPaused = true
 
-  private val ConnectTimeout = 10 seconds
+  private val reconnectThrottle = 1 second
 
-  private val MaxSendRetries = 5
+  private val websocket = Agent[Option[WebSock]](None)
+
+  private val messageQueue = Agent[Queue[WSMessage[_]]](Queue.empty)
+
+  private val ConnectTimeout = 2 minutes
 
   private val PingInterval = 5 seconds
 
@@ -81,7 +100,11 @@ class JsonWSTunnel(
 
   override def preStart = {
     self ! ConnectToWS
-    context.system.scheduler.schedule(PingInterval, PingInterval, self, PingSocket)
+
+    context.system.scheduler.schedule(reconnectThrottle, reconnectThrottle){
+      isReconnectPaused = false
+    }
+    context.system.scheduler.schedule(PingInterval, PingInterval, self, SendJson(ping, retryOnFailure = false))
     super.preStart
   }
 
@@ -95,14 +118,12 @@ class JsonWSTunnel(
     case ConnectToWS =>
       connect(serverUrl)
 
-    case SendJson(js) =>
-      tryToSend(Json.prettyPrint(js))
-
-    case PingSocket =>
-      tryToSend(ping)
-
-    case SendData(data) =>
-      tryToSend(data)
+    case msg: WSMessage[_] =>
+      messageQueue.send{ msgs =>
+        msgs.map( m => tryToSend(m))
+        tryToSend(msg)
+        Queue.empty
+      }
 
     case ReceivedString(s) =>
       try {
@@ -119,12 +140,12 @@ class JsonWSTunnel(
       }
   }
 
-  val ping = Json.prettyPrint(Json.obj(
+  val ping = Json.obj(
     "ping" -> ":D"
-  ))
+  )
 
   def isAlive = {
-    websocket.map(w => w.getConnection.isOpen || w.getConnection.isConnecting) getOrElse false
+    websocket().map(w => w.getConnection.isOpen || w.getConnection.isConnecting) getOrElse false
   }
 
   private def initializeWS(): WebSock = {
@@ -149,14 +170,15 @@ class JsonWSTunnel(
     w
   }
 
-  def connect(url: String) = {
-    def retry() = {
-      context.system.scheduler.scheduleOnce(1 second, self, ConnectToWS)
-    }
+  def scheduleReconnect() = {
+    context.system.scheduler.scheduleOnce(1 second, self, ConnectToWS)
+  }
 
+  def connect(url: String) = {
     // Connecting to the websocket is a little difficult. If the websocket doesn't exist / respond the call to
     // `connectBlocking` doesn't fail or return
-    if(!isTerminating) {
+    if(!isTerminating && !isReconnectPaused) {
+      isReconnectPaused = true
       try {
         val f = Future {
           if (!isAlive) {
@@ -165,60 +187,69 @@ class JsonWSTunnel(
             logger.debug(s"About to connect to WS.")
             if (w.connectBlocking()) {
               logger.debug(s"Connected to WS.")
-              websocket = Some(w)
+              updateWebsocket(w)
             } else {
-              throw new Exception("Connection failed.")
+              logger.warn(s"Connection failed.")
+              scheduleReconnect()
             }
           }
         }
         Await.result(f, atMost = ConnectTimeout)
       } catch {
+        case e: TimeoutException =>
+          logger.warn(s"WS connection took too long. Aborting.")
+          scheduleReconnect()
         case e: Exception =>
           logger.error(s"Trying to connect to WS resulted in: ${e.getMessage}", e)
-          retry()
+          scheduleReconnect()
       }
+    }
+  }
+
+  def updateWebsocket(ws: WebSock) = {
+    websocket.send {
+      w =>
+        w.map(_.close)
+        Some(ws)
     }
   }
 
   def closeCurrentWS() = {
-    websocket.map {
+    websocket.send {
       ws =>
-        ws.close()
+        ws.map(_.close())
+        None
     }
   }
 
-  def tryToSend[T](t: T) = {
-    def retry(numberOfRetries: Int, e: Option[Exception]) = {
-      if (numberOfRetries < MaxSendRetries) {
-        logger.warn(s"Sending json failed. Trying to reconnect... Exception? ${e.map(_.getMessage)}")
-        closeCurrentWS()
-        connect(serverUrl)
-        sendIt(numberOfRetries + 1)
-      } else {
-        logger.error("All attempts to send json failed. Stopping WS.")
+  def tryToSend(t: WSMessage[_]) = {
+    def retry() = {
+      if(t.retryOnFailure) {
+        logger.info("Scheduling retry for message.")
+        messageQueue.send(_.enqueue(t))
       }
+      scheduleReconnect()
     }
 
-    def sendIt(numberOfRetries: Int) {
-      websocket match {
-        case Some(ws) =>
-          try {
-            t match {
-              case s: String =>
-                ws.send(s)
-              case bs: Array[Byte] =>
-                ws.send(bs)
-              case _ =>
-                Failure("Can't send. Unsupported content")
-            }
-          } catch {
-            case e: Exception =>
-              retry(numberOfRetries, Some(e))
+    websocket() match {
+      case Some(ws) =>
+        try {
+          t.payload match {
+            case s: String =>
+              ws.send(s)
+            case bs: Array[Byte] =>
+              ws.send(bs)
+            case _ =>
+              Failure("Can't send. Unsupported content")
           }
-        case _ =>
-          retry(numberOfRetries, Some(new Exception("No websocket present")))
-      }
+        } catch {
+          case e: Exception =>
+            logger.warn("Message send failed.", e)
+            retry()
+        }
+      case _ =>
+        logger.warn("Message send failed. Scheduling retry. No websocket present")
+        retry()
     }
-    sendIt(numberOfRetries = 0)
   }
 }

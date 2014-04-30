@@ -110,6 +110,8 @@ class OxalisServer(
         if (result.status != OK)
           logger.warn(s"Reporting found data sources to oxalis failed. Status ${result.status}. Body: '${result.body.take(100)}'")
         logger.trace(s"result of reporting datasources: ${result.toString}")
+    }.recover{
+      case er => logger.error(s"Error reporting the datasets: ${er.getMessage}\n${er.getStackTrace.mkString("\n    ")}")
     }
   }
 

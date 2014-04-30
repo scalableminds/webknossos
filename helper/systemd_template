@@ -7,7 +7,7 @@
 Description=Standalone datastore for oxalis
 
 [Service]
-ExecStart={{install_dir}}/bin/{{project}} -Dconfig.file={{config_dir}}/{{config}} -Dpidfile.path={{run_dir}}/{{name}}.pid -Dlogger.file={{config_dir}}/application-logger-dev.xml -Dapplication.name={{project}} -Dapplication.branch={{branch}}
+ExecStart={{install_dir}}/bin/{{project}} -Dconfig.file={{config_dir}}/{{config}} -Dpidfile.path={{run_dir}}/{{name}}.pid -Dlogger.file={{config_dir}}/application-logger-dev.xml -Dapplication.name={{project}} -Dapplication.branch={{branch}} -Dhttps.keyStore={{install_dir}}/scmCAKeyStore -Dhttps.keyStorePassword=changeit
 Type=simple
 Restart=always
 User={{name}}

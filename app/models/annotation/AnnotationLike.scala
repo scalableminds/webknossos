@@ -15,6 +15,8 @@ import models.tracing.skeleton.AnnotationStatistics
 import oxalis.view.{ResourceActionCollection, ResourceAction}
 import play.api.libs.json.Json.JsValueWrapper
 import oxalis.mvc.FilterableJson
+import braingames.format.Formatter
+import org.joda.time.format.DateTimeFormat
 
 /**
  * Company: scalableminds
@@ -55,6 +57,8 @@ trait AnnotationLike extends AnnotationStatistics {
     AnnotationLike.annotationLikeInfoWrites(this, user, Nil)
 
   def actions(user: Option[User]): ResourceActionCollection
+
+  def created : Long
 }
 
 object AnnotationLike extends FoxImplicits with FilterableJson{
@@ -72,7 +76,7 @@ object AnnotationLike extends FoxImplicits with FilterableJson{
     JsonObjectWithFilter(exclude)(
       "version" +> a.version,
       "user" +> a.user.toFox.map(u => JsString(u.name)).getOrElse(JsNull),
-      "lastEdit" +> a.content.map(_.timestamp).getOrElse(0L),
+      "created" +> DateTimeFormat.forPattern("yyyy-MM-dd HH:mm").print(a.created),
       "stateLabel" +> stateLabel(a, user),
       "state" +> a.state,
       "id" +> a.id,
@@ -80,9 +84,14 @@ object AnnotationLike extends FoxImplicits with FilterableJson{
       "typ" +> a.typ,
       "task" +> a.task.flatMap(t => Task.transformToJson(t)).getOrElse(JsNull),
       "stats" +> a.statisticsForAnnotation().map(s => Json.toJson(s)).getOrElse(JsNull),
-      "content" +> a.content.flatMap(AnnotationContent.writeAsJson(_)).getOrElse(JsNull),
       "restrictions" +> AnnotationRestrictions.writeAsJson(a.restrictions, user),
-      "actions" +> a.actions(user))
+      "actions" +> a.actions(user),
+      "formattedHash" +> Formatter.formatHash(a.id),
+
+      "content" +> a.content.flatMap(AnnotationContent.writeAsJson(_)).getOrElse(JsNull),
+      "contentType" +> a.content.map(_.contentType).getOrElse(""),
+      "dataSetName" +> a.dataSetName
+    )
   }
 
 }

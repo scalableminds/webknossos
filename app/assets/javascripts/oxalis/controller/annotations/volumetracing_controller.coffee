@@ -1,6 +1,7 @@
 ### define
 ../../model/dimensions : Dimensions
 ../../constants : constants
+libs/input : Input
 ###
 
 class VolumeTracingController
@@ -17,15 +18,35 @@ class VolumeTracingController
   MERGE_MODE_CELL1  : 1
   MERGE_MODE_CELL2  : 2
 
+  CONTROL_MODE_MOVE : 0
+  CONTROL_MODE_TRACE : 1
+
 
   constructor : ( @model, @sceneController, @gui, @volumeTracingView ) ->
 
     @inDeleteMode = false
+    @controlMode = @CONTROL_MODE_MOVE
 
     # TODO add to volumetracing model
     # @gui.on
     #   setActiveCell : (id) => @model.volumeTracing.setActiveCell(id)
     #   createNewCell : => @model.volumeTracing.createCell()
+
+    # Keyboard shortcuts
+    new Input.KeyboardNoLoop(
+      "m" : => @toggleControlMode()
+    )
+
+    # Control mode
+    @controlModeMapping =
+      "control-mode-move" : @CONTROL_MODE_MOVE
+      "control-mode-trace" : @CONTROL_MODE_TRACE
+
+    for control of @controlModeMapping
+
+      do (control) =>
+        $("#" + control).on "click", =>
+          @setControlMode(@controlModeMapping[control])
 
 
     # Merging
@@ -56,6 +77,24 @@ class VolumeTracingController
         $(input).keypress (event) =>
           if event.which == 13
             @merge()
+
+
+  setControlMode : (@controlMode) ->
+
+    # Set button class
+    for button in $("#control-mode .btn-group").children()
+
+      $(button).removeClass("btn-primary")
+      if @controlMode == @controlModeMapping[$(button).attr("id")]
+        $(button).addClass("btn-primary")
+
+
+  toggleControlMode : ->
+
+    if @controlMode == @CONTROL_MODE_MOVE
+      @setControlMode(@CONTROL_MODE_TRACE)
+    else
+      @setControlMode(@CONTROL_MODE_MOVE)
 
 
   merge : ->

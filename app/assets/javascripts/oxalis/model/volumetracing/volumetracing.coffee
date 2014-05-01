@@ -9,20 +9,24 @@ libs/drawing : Drawing
 
 class VolumeTracing
 
-  constructor : (tracing, @flycam, @cube) ->
+  constructor : (tracing, @flycam, @binary, updatePipeline) ->
 
     _.extend(this, Backbone.Events)
 
-    @cells        = []          # List of VolumeCells
-    @activeCell   = null        # Cell currently selected
+    @contentData  = tracing.content.contentData
+    @cells        = []
+    @activeCell   = null
     @currentLayer = null        # Layer currently edited
-    @idCount      = 1
+    @idCount      = @contentData.nextCell || 1
 
     @stateLogger  = new VolumeTracingStateLogger(
       @flycam, tracing.version, tracing.id, tracing.typ,
-      tracing.restrictions.allowUpdate, this)
+      tracing.restrictions.allowUpdate,
+      updatePipeline,
+      this, @binary.pushQueue
+    )
 
-    @createCell()
+    @createCell(@contentData.activeCell)
 
     # For testing
     window.setAlpha = (v) -> Drawing.setAlpha(v)
@@ -66,7 +70,7 @@ class VolumeTracing
     start = (new Date()).getTime()
     iterator = @currentLayer.getVoxelIterator()
     labelValue = if @activeCell then @activeCell.id else 0
-    @cube.labelVoxels(iterator, labelValue)
+    @binary.cube.labelVoxels(iterator, labelValue)
     console.log "Labeling time:", ((new Date()).getTime() - start)
 
     @currentLayer = null

@@ -84,7 +84,6 @@ class Controller
 
       #@gui = @createGui(restrictions, settings)
 
-
       @sceneController = new SceneController(
         @model.upperBoundary, @model.flycam, @model)
 
@@ -200,7 +199,6 @@ class Controller
 
     @model.mode = newMode
     #@gui.setMode(newMode)
-    @view.setMode(newMode)
 
 
   toggleFullScreen : ->

@@ -62,8 +62,5 @@ require.config(
       exports : "Backbone"
     "backbone.marionette" : [ "backbone", "underscore" ]
     "backbone.paginator" : [ "backbone", "underscore" ]
-    "c3" :
-      deps : ["d3"]
-      exports : "c3"
 
 )

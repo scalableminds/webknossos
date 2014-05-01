@@ -15,7 +15,7 @@ require [
 
     app.addInitializer( ->
 
-      new NonBackboneRouter() #handle all the routes that are not yet Backbone Views
+      new NonBackboneRouter() # handle all the routes that are not yet Backbone Views
       app.router = new Router()
       Backbone.history.start( pushState : true )
     )

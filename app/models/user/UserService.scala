@@ -37,8 +37,8 @@ object UserService extends FoxImplicits {
       UserCache.store(id, UserDAO.findOneById(id))
   }
 
-  def logActivity(user: User, lastActivity: Long) = {
-    UserDAO.logActivity(user, lastActivity)(GlobalAccessContext)
+  def logActivity(_user: BSONObjectID, lastActivity: Long) = {
+    UserDAO.logActivity(_user, lastActivity)(GlobalAccessContext)
   }
 
   def insert(teamName: String, email: String, firstName: String, lastName: String, password: String, isVerified: Boolean): Fox[User] =

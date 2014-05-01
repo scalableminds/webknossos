@@ -16,6 +16,7 @@
 @import "trace_view/_tracing_view.less";
 @import "trace_view/_left_menu.less";
 @import "trace_view/_right_menu.less";
+@import "_help.less";
 
 
 // ----------------------- MAIN STYLES
@@ -243,11 +244,6 @@ body:-webkit-full-screen {
 #help-modal-body {
   max-height: 800px;
 }
-#help-modal {
-  width: 1000px;
-  top: 50%;
-  margin: -400px 0 0 -500px;
-}
 
 #oxalis-header {
 
@@ -324,6 +320,10 @@ body:-webkit-full-screen {
     left: 0px;
     background-color: #aaf;
     visibility: hidden;
+}
+
+#optionswindow select {
+  color: black;
 }
 
 //submit issue form

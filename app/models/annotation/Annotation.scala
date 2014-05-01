@@ -34,6 +34,7 @@ case class Annotation(
                        typ: String = AnnotationType.Explorational,
                        version: Int = 0,
                        _name: Option[String] = None,
+                       created : Long = System.currentTimeMillis,
                        _id: BSONObjectID = BSONObjectID.generate
                      )
 

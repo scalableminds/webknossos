@@ -8,13 +8,14 @@ class DatasetModel extends Backbone.Model
   urlRoot : "/api/datasets"
   idAttribute : "name"
 
-  constructor : (attributes) ->
+  parse : (response) ->
 
     # since defaults doesn't override null...
-    if attributes.dataSource == null
-      attributes.dataSource =
+    if response.dataSource == null
+      response.dataSource =
         needsImport : true
         baseDir : ""
         scale : []
 
-    super(attributes)
+    return response
+

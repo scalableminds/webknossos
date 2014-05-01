@@ -8,33 +8,16 @@ oxalis/constants : constants
 class NonBackboneRouter extends Backbone.Router
 
   routes :
-    "dashboard"                     : "dashboard"
     "admin/tasks/overview"          : "taskOverview"
     "admin/taskTypes"               : "hideLoading"
     "admin/projects"                : "projects"
-    "users/:id/details"             : "userDetails"
     "*url"                          : "hideLoading"
 
 
   hideLoading : ->
 
     $("#loader").hide()
-
-
-  dashboard : ->
-
-    require ["main/dashboardLoader"], (DashboardLoader) ->
-
-      DashboardLoader.displayBasicDashboard()
-      DashboardLoader.displayUserDashboard()
-      return
-
-
-  userDetails : ->
-
-    require ["main/dashboardLoader"], (DashboardLoader) ->
-      DashboardLoader.displayBasicDashboard()
-      return
+    return
 
 
   taskOverview : ->
@@ -63,7 +46,7 @@ class NonBackboneRouter extends Backbone.Router
 
         projects[index].owner = ownerName
 
-      return { "data" : projects }
+      return { data : projects }
 
     $owner = $("#owner")
     $pageSelection = $(".page-selection")

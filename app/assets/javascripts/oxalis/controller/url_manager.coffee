@@ -22,19 +22,22 @@ class UrlManager
   parseUrl : (url)->
 
     stateString = url.match(/^.*#([\d.-]*(?:,[\d.-]*)*)$/)?[1]
-    state       = {}
+    state       =
+      position : null
+      mode : null
+      zoomStep : null
 
-    if stateString?
+    if stateString
 
       stateArray = stateString.split(",")
-      return unless stateArray.length >= 5
+      if stateArray.length >= 5
 
-      state.position = _.map stateArray.slice(0, 3), (e) -> +e
-      state.mode     = +stateArray[3]
-      state.zoomStep = +stateArray[4]
+        state.position = _.map stateArray.slice(0, 3), (e) -> +e
+        state.mode     = +stateArray[3]
+        state.zoomStep = +stateArray[4]
 
-      if stateArray.length >= 8
-        state.rotation = _.map stateArray.slice(5, 8), (e) -> +e
+        if stateArray.length >= 8
+          state.rotation = _.map stateArray.slice(5, 8), (e) -> +e
 
     return state
 

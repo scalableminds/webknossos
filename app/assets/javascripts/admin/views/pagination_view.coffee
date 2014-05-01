@@ -17,17 +17,17 @@ class PaginationView extends Backbone.Marionette.ItemView
             <a href="#"><i class="fa fa-angle-left"></i></a>
           </li>
           <% if (Pagination.lastPage == 1){ %>
-            <li>
-              <span class="page selected"><%= 1 %></span>
+            <li class="active">
+              <span>1</span>
             <li>
           <% } %>
           <% _.each (Pagination.pageSet, function (p) { %>
             <% if (Pagination.currentPage == p) { %>
-              <li class="page">
-                <span class="selected"><%= p %></span>
+              <li class="active">
+                <span><%= p %></span>
               </li>
             <% } else { %>
-              <li class="page">
+              <li>
                 <a href="#"><%= p %></a>
               </li>
             <% } %>
@@ -109,8 +109,8 @@ class PaginationView extends Backbone.Marionette.ItemView
       filterQuery = @ui.inputSearch.val()
       app.vent.trigger("paginationView:filter", filterQuery)
 
-      @ui.inputSearch.val(filterQuery)
       @ui.inputSearch.focus()
+      @ui.inputSearch.val(filterQuery)
 
 
   collectionSynced : (evt) ->

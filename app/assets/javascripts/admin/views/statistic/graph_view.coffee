@@ -13,6 +13,7 @@ class GraphView extends Backbone.Marionette.ItemView
     <div id="graph"></div>
   """)
 
+
   initialize : ->
 
     @listenTo(@, "show", @addGraph)
@@ -35,6 +36,7 @@ class GraphView extends Backbone.Marionette.ItemView
           enabled : true
           grouped : false
           multiple : false
+        onclick : @selectDataPoint
       axis :
         x :
           type : "timeseries"
@@ -42,9 +44,8 @@ class GraphView extends Backbone.Marionette.ItemView
           label : "hours / week"
       legend :
         show : false
-      point :
-        onclick : @selectDataPoint
     )
+
 
   selectDataPoint : (data) ->
 

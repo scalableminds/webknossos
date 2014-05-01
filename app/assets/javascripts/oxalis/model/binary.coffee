@@ -25,7 +25,7 @@ class Binary
   direction : [0, 0, 0]
 
 
-  constructor : (@model, tracing, @layer, tracingId) ->
+  constructor : (@model, tracing, @layer, tracingId, updatePipeline) ->
 
     _.extend(this, Backbone.Events)
 
@@ -42,8 +42,9 @@ class Binary
 
     @cube = new Cube(@upperBoundary, @layer.resolutions.length, @layer.bitDepth)
     @boundingBox = new BoundingBox(@model.boundingBox, @cube)
-    @pullQueue = new PullQueue(@model.datasetName, @cube, @layer.name, tracingId, @boundingBox)
-    @pushQueue = new PushQueue(@model.datasetName, @cube, @layer.name, tracingId, tracing.version)
+
+    @pullQueue = new PullQueue(@model.dataSetName, @cube, @layer, tracingId, @boundingBox)
+    @pushQueue = new PushQueue(@model.dataSetName, @cube, @layer, tracingId, updatePipeline)
     @cube.setPushQueue( @pushQueue )
 
     @pingStrategies = [new PingStrategy.DslSlow(@cube, @TEXTURE_SIZE_P)]

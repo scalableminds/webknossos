@@ -32,7 +32,7 @@ class SkeletonTracing
   firstEdgeDirection : null
   currentHue : null
 
-  constructor : (tracing, @flycam, @flycam3d, @user) ->
+  constructor : (tracing, @flycam, @flycam3d, @user, updatePipeline) ->
 
     _.extend(this, Backbone.Events)
 
@@ -48,7 +48,7 @@ class SkeletonTracing
 
     @stateLogger = new SkeletonTracingStateLogger(
       @flycam, tracing.version, tracing.id, tracing.typ,
-      tracing.restrictions.allowUpdate, this)
+      tracing.restrictions.allowUpdate, updatePipeline, this)
 
     tracingParser = new TracingParser(@, @data)
     {

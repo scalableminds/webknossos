@@ -86,8 +86,8 @@ class SkeletonTracingView extends View
         @updateTrees()
 
     @model.skeletonTracing.stateLogger.on
-      pushFailed       : (critical) =>
-        if not critical or @reloadDenied
+      pushFailed : =>
+        if @reloadDenied
           Toast.error("Auto-Save failed!")
         else
           modal.show("Several attempts to reach our server have failed. You should reload the page

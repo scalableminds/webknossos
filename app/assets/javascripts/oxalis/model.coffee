@@ -105,7 +105,6 @@ class Model
 
     console.log "tracing", tracing
     console.log "user", user
-    console.log "XXX"
 
     dataSet = tracing.content.dataSet
     isVolumeTracing = "volume" in tracing.content.settings.allowedModes

@@ -54,7 +54,6 @@ class SkeletonTracingView extends View
 
       newNode : =>
 
-        #@updateActiveComment()
         @updateTreesDebounced()
 
 

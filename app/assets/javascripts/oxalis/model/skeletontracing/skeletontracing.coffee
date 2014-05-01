@@ -6,12 +6,13 @@ underscore : _
 backbone : backbone
 libs/request : Request
 three.color : ColorConverter
+three : THREE
 ./tracepoint : TracePoint
 ./tracetree : TraceTree
 ./skeletontracing_statelogger : SkeletonTracingStateLogger
 ../../constants : constants
 ./tracingparser : TracingParser
-three : THREE
+oxalis/model/right-menu/comments_collection : CommentsCollection
 ###
 
 class SkeletonTracing
@@ -25,7 +26,7 @@ class SkeletonTracing
 
   branchStack : []
   trees : []
-  comments : new Backbone.Collection()
+  comments : new CommentsCollection()
   activeNode : null
   activeTree : null
   firstEdgeDirection : null

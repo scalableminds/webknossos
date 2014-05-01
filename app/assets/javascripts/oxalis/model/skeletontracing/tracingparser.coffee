@@ -7,6 +7,7 @@ libs/request : Request
 ./tracepoint : TracePoint
 ./tracetree : TraceTree
 ../../constants : constants
+oxalis/model/right-menu/comments_collection : CommentsCollection
 ###
 
 class TracingParser
@@ -17,7 +18,7 @@ class TracingParser
     @idCount = 1
     @treeIdCount = 1
     @trees = []
-    @comments = new Backbone.Collection()
+    @comments = new CommentsCollection()
     @activeNode = null
     @activeTree = null
 
@@ -90,7 +91,7 @@ class TracingParser
         idCount : 0
         treeIdCount : 0
         trees : []
-        comments : new Backbone.Collection()
+        comments : new CommentsCollection()
         activeNode : null
         activeTree : null
       }

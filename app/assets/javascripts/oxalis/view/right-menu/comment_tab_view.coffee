@@ -1,10 +1,10 @@
 ### define
-backbone.marionette : marionette
-./comment_tab_item_view : CommentTabItemView
 app : app
+./comment_tab_item_view : CommentTabItemView
+./sorted_composite_view : SortedCompositeView
 ###
 
-class CommentTabView extends Backbone.Marionette.CompositeView
+class CommentTabView extends SortedCompositeView
 
   template : _.template("""
     <div class="input-group" id="comment-navbar">
@@ -14,22 +14,13 @@ class CommentTabView extends Backbone.Marionette.CompositeView
       <input class="form-control" id="comment-input" type="text" value="<%= activeComment.get("content") %>" placeholder="Add comment">
       <div class="input-group-btn">
         <button class="btn btn-default" id="comment-next"><i class="fa fa-arrow-right"></i></button>
-        <button class="btn btn-default dropdown-toggle" data-toggle="dropdown" id="comment-sort-button" title="sort">
-          <i class="fa fa-sort-alpha-asc"></i>
+        <button class="btn btn-default" id="comment-sort" title="sort">
+          <% if(isSortedAscending){ %>
+            <i class="fa fa-sort-alpha-asc"></i>
+          <% } else { %>
+            <i class="fa fa-sort-alpha-desc"></i>
+          <% } %>
         </button>
-        <ul class="dropdown-menu pull-right" role="menu" id="comment-sort">
-          <li>
-            <a href="#" data-sort="asc">
-              Ascending
-              <i class="fa fa-check" id="sort-asc-icon"></i>
-            </a>
-          </li>
-          <li>
-            <a href="#" data-sort="desc">
-              Descending
-              <i class="fa fa-check" id= "sort-desc-icon"></i>
-            </a>
-        </ul>
       </div>
     </div>
     <div id="comment-container">
@@ -43,6 +34,7 @@ class CommentTabView extends Backbone.Marionette.CompositeView
     activeComment : @activeComment
   templateHelpers : ->
     activeComment : @activeComment
+    isSortedAscending : @isSortedAscending
 
 
   ui :
@@ -59,6 +51,7 @@ class CommentTabView extends Backbone.Marionette.CompositeView
 
     { @_model } = options
     @activeComment = new Backbone.Model()
+    @isSortedAscending = true
 
     @listenTo(app.vent, "model:sync", ->
       @collection = @_model.skeletonTracing.comments
@@ -73,10 +66,13 @@ class CommentTabView extends Backbone.Marionette.CompositeView
       else if comment = @collection.first()
         @activeComment = comment
 
+      # events
       @listenTo(app.vent, "activeNode:change", @updateInputElement)
+      @listenTo(app.vent, "comments:deleteComment", @deleteComment) #TODO
+      @listenTo(@collection, "sort", @render)
+
       @render()
     )
-    @listenTo(app.vent, "comments:deleteComment", @deleteComment)
 
 
 
@@ -140,11 +136,13 @@ class CommentTabView extends Backbone.Marionette.CompositeView
       @setActiveNode(previousComment)
 
 
-  # @stateLogger.push()
-  # @trigger("updateComments")
+  sortComments : (evt) ->
+
+    @isSortedAscending = !@isSortedAscending
+    @collection.sort(@isSortedAscending)
 
 
-  # TODO old method, replace with new
+  # TODO figure out when to call this?
   deleteComment : (nodeID) ->
 
     comment = @collection.findWhere("node" : nodeID)

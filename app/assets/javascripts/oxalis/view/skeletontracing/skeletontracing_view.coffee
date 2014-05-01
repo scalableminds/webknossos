@@ -1,5 +1,6 @@
 ### define
 jquery : $
+underscore : _
 libs/toast : Toast
 ../modal : modal
 ../../view : View
@@ -10,8 +11,11 @@ class SkeletonTracingView extends View
   constructor : (@model) ->
 
     super(@model)
+    _.extend(@, Backbone.Events)
 
     $('.volume-controls').hide()
+
+    @listenTo(app.vent, "activeNode:change", @updateActiveTree)
 
     @model.skeletonTracing.on({
       emptyBranchStack : =>
@@ -28,9 +32,6 @@ class SkeletonTracingView extends View
 
         Toast.error("You're tracing in the wrong direction")
 
-      newActiveNode : =>
-
-        @updateActiveTree()
 
 
       deleteTree : =>

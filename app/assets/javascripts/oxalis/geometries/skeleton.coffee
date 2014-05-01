@@ -26,7 +26,7 @@ class Skeleton
 
     @reset()
 
-    @listenTo(@skeletonTracing, "newActiveNode", ->
+    @listenTo(app.vent, "activeNode:change", (nodeId) ->
       @setActiveNode()
       @setInactiveTreeVisibility(@showInactiveTrees)
     )

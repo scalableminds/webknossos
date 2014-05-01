@@ -26,7 +26,7 @@ class AbstractTreeView extends Backbone.Marionette.ItemView
     @listenTo(app.vent, "view:setTheme", @drawTree)
     @listenTo(app.vent, "model:sync", ->
 
-      @listenTo(@_model.skeletonTracing, "newActiveNode" , @drawTree)
+      @listenTo(app.vent, "activeNode:change" , @drawTree)
       @listenTo(@_model.skeletonTracing, "newActiveTree" , @drawTree)
       @listenTo(@_model.skeletonTracing, "newTree" , @drawTree)
       @listenTo(@_model.skeletonTracing, "mergeTree" , @drawTree)

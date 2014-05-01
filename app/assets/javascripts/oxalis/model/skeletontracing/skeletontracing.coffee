@@ -239,7 +239,8 @@ class SkeletonTracing
       @stateLogger.createNode(point, @activeTree.treeId)
 
       @trigger("newNode", centered)
-      @trigger("newActiveNode")
+      #@trigger("newActiveNode")
+      app.vent.trigger("activeNode:change", @activeNode.id)
     else
       @trigger("wrongDirection")
 
@@ -326,8 +327,6 @@ class SkeletonTracing
           break
     @stateLogger.push()
 
-    @trigger("newActiveNode")
-
     if mergeTree
       @mergeTree(lastActiveNode, lastActiveTree)
 
@@ -362,9 +361,11 @@ class SkeletonTracing
       @activeNode = null
     else
       @activeNode = @activeTree.nodes[0]
+      app.vent.trigger("activeNode:change", @activeNode.id)
     @stateLogger.push()
 
-    @trigger("newActiveNode")
+    #@trigger("newActiveNode")
+
     @trigger("newActiveTree")
 
 
@@ -623,7 +624,3 @@ class SkeletonTracing
   getPlainComments : =>
 
     return @comments.toJSON()
-    # plainComments = []
-    # for comment in @comments
-    #   plainComments.push({node: comment.node, content: comment.content})
-    # plainComments

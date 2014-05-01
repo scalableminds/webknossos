@@ -13,6 +13,7 @@ class SettingsTabView extends Backbone.Marionette.Layout
 
   className : "col-sm-12"
   id : "lefttabbar"
+
   template : _.template("""
     <ul class="nav nav-tabs">
       <li class="active">

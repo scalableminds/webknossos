@@ -11,7 +11,7 @@ class DatsetActionsView extends Backbone.Marionette.ItemView
   template : _.template("""
     <div class="well">
       <p><% annotationType %></p>
-      <p>DataSet: <%= datasetName %></p>
+      <p>DataSet: <%= dataSetName %></p>
       <p>Viewport width: <%= chooseUnit(zoomLevel) %></p>
     </div>
   """)
@@ -50,12 +50,12 @@ class DatsetActionsView extends Backbone.Marionette.ItemView
     defaults =
       annotationType : @tracingType
       zoomLevel : 0
-      datasetName: ""
+      dataSetName: ""
 
     if @_model.flycam or @_model.flycam3d
       _.extend(defaults,
         zoomLevel : @calculateZoomLevel()
-        datasetName :@_model.datasetName
+        dataSetName :@_model.dataSetName
       )
 
     return defaults

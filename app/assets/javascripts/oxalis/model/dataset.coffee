@@ -8,9 +8,9 @@ backbone-deep-model : DeepModel
 class Dataset extends Backbone.DeepModel
 
 
-  constructor : (datasetName) ->
+  constructor : (dataSetName) ->
 
-    @url = "/api/dataSetConfigurations/#{datasetName}"
+    @url = "/api/dataSetConfigurations/#{dataSetName}"
 
     @listenTo(this, "change", @push)
 

@@ -71,9 +71,9 @@ class Model
         return {"error" : true}
 
       else unless tracing.content.dataSet.dataLayers
-        datasetName = tracing.content.dataSet.name
-        if datasetName
-          Toast.error("Please, double check if you have the dataset '#{datasetName}' imported.")
+        dataSetName = tracing.content.dataSet.name
+        if dataSetName
+          Toast.error("Please, double check if you have the dataset '#{dataSetName}' imported.")
         else
           Toast.error("Please, make sure you have a dataset imported.")
         return {"error" : true}

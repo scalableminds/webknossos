@@ -194,16 +194,6 @@ class SkeletonTracing
     return id in (node.id for node in @branchStack)
 
 
-  rejectBranchDeferred : ->
-
-    @branchDeferred.reject()
-
-
-  resolveBranchDeferred : ->
-
-    @branchDeferred.resolve()
-
-
   addNode : (position, type, viewport, resolution, centered = true) ->
 
     if @ensureDirection(position)

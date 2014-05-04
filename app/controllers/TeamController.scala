@@ -30,6 +30,8 @@ object TeamController extends Controller with Secured {
     UsingFilters(
       Filter("isEditable", (value: Boolean, el: Team) =>
         el.isEditableBy(request.user) == value),
+      Filter("isRoot", (value: Boolean, el: Team) =>
+        el.parent.isEmpty == value),
       Filter("amIAnAdmin", (value: Boolean, el: Team) =>
         request.user.adminTeamNames.contains(el.name) == value)
     ){ filter =>
@@ -59,6 +61,8 @@ object TeamController extends Controller with Secured {
         TeamDAO.findOneByName(team.name)(GlobalAccessContext).futureBox.flatMap{
           case Empty =>
             for{
+              parent <- team.parent.toFox.flatMap(TeamDAO.findOneByName(_)(GlobalAccessContext)) ?~> Messages("team.parent.notFound")
+              _ <- parent.parent ?~> Messages("tam.parent.mustBeRoot") // current limitation
               _ <- TeamService.create(team, request.user)
               js <- Team.teamPublicWrites(team, request.user)
             } yield {

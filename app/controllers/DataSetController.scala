@@ -16,6 +16,7 @@ import play.api.Play.current
 import scala.concurrent.duration._
 import braingames.util.ExtendedTypes.ExtendedString
 import models.user.{User, UserService}
+import braingames.util.Fox
 
 /**
  * Company: scalableminds
@@ -130,6 +131,7 @@ object DataSetController extends Controller with Secured {
         for{
           dataSet <- DataSetDAO.findOneBySourceName(dataSetName) ?~> Messages("dataSet.notFound")
           _ <- allowedToAdministrate(request.user, dataSet).toFox
+          _ <- Fox.combined(teams.map(team => ensureTeamAdministration(request.user, team).toFox))
           _ <- DataSetService.updateTeams(dataSet, teams)
         } yield
           Ok

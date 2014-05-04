@@ -10,7 +10,7 @@ class DatasetListView extends Backbone.Marionette.CompositeView
   className : "dataset-administration container wide"
   template : _.template("""
     <h3>DataSets</h3>
-    <table class="table table-double-striped table-details" id="dataSet-table">
+    <table class="table table-double-striped table-details">
       <thead>
         <tr>
           <th class="details-toggle-all">

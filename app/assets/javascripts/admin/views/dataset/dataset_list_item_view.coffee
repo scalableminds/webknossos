@@ -74,6 +74,11 @@ class DatasetListItemView extends Backbone.Marionette.CompositeView
     <tr class="details-row hide" >
       <td colspan="13">
         <table class="table table-condensed table-nohead table-hover">
+          <thead>
+            <tr>
+              <th>Users with Access Rights</th>
+            </tr>
+          </thead>
           <tbody>
           </tbody>
         </table>

@@ -1,8 +1,9 @@
 ### define
 underscore : _
+app : app
 backbone.marionette : marionette
 libs/toast : Toast
-app : app
+libs/template_helpers : TemplateHelpers
 admin/models/dataset/dataset_accesslist_collection : DatasetAccesslistCollection
 ./dataset_access_view : DatasetAccessView
 ###
@@ -31,7 +32,7 @@ class DatasetListItemView extends Backbone.Marionette.CompositeView
       <td><%= owningTeam %></td>
       <td class="team-label">
         <% _.map(allowedTeams, function(team){ %>
-          <span class="label label-default"><%= team %></span>
+          <span class="label label-default" style="background-color: <%= TemplateHelpers.stringToColor(team) %>"><%= team %></span>
         <% }) %>
       </td>
       <td>
@@ -82,6 +83,9 @@ class DatasetListItemView extends Backbone.Marionette.CompositeView
 
   itemView : DatasetAccessView
   itemViewContainer : "tbody"
+
+  templateHelpers :
+    TemplateHelpers : TemplateHelpers
 
   events :
     "click .import-dataset" : "startImport"

@@ -15,6 +15,7 @@ import org.apache.commons.codec.binary.Base64
 import play.api.Play.current
 import scala.concurrent.duration._
 import braingames.util.ExtendedTypes.ExtendedString
+import models.user.{User, UserService}
 
 /**
  * Company: scalableminds
@@ -83,6 +84,15 @@ object DataSetController extends Controller with Secured {
         dataSets =>
           Ok(Writes.list(DataSet.dataSetPublicWrites(request.userOpt)).writes(filter.applyOn(dataSets)))
       }
+    }
+  }
+
+  def accessList(dataSetName: String) = Authenticated.async{ implicit request =>
+    for{
+      dataSet <- DataSetDAO.findOneBySourceName(dataSetName) ?~> Messages("dataSet.notFound")
+      users <- UserService.findByTeams(dataSet.allowedTeams)
+    } yield {
+      Ok(Writes.list(User.userCompactWrites(request.user)).writes(users))
     }
   }
 

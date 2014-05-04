@@ -48,7 +48,7 @@ object Application extends Controller with Secured {
       case Some(user) =>
         Redirect("/dashboard")
       case _ =>
-        Redirect(routes.DataSetController.spotlight)
+        Redirect("/spotlight")
     }
   }
 

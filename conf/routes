@@ -51,7 +51,6 @@ DELETE        /api/teams/:id                                       controllers.T
 
 # Spotlight
 GET           /spotlight                                           controllers.DataSetController.empty
-GET           /spotlightOld                                        controllers.DataSetController.spotlight
 
 # DataSets
 GET           /datasets                                            controllers.DataSetController.empty

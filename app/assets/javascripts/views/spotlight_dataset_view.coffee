@@ -20,7 +20,7 @@ class SpotlightDatasetView extends Backbone.Marionette.ItemView
         <h3><%= owningTeam %></h3>
         <h4>Original data and segmentation</h4>
         <p><h4>Dataset: <%= name %></h4></p>
-        <p><%= description || "" %></p>
+        <p><%= description %></p>
       </div>
     </div>
   """)

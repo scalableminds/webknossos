@@ -64,14 +64,6 @@ object DataSetController extends Controller with Secured {
     Ok(views.html.main()(Html.empty))
   }
 
-  def spotlight = UserAwareAction.async {
-    implicit request =>
-      DataSetDAO.findAllActive.map {
-        dataSets =>
-          Ok(html.dataSets(dataSets))
-      }
-  }
-
   def list = Authenticated.async{ implicit request =>
     UsingFilters(
       Filter("isEditable", (value: Boolean, el: DataSet) =>

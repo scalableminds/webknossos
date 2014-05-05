@@ -86,7 +86,6 @@ class ExplorativeTracingListView extends Backbone.Marionette.CompositeView
     datasetCollection.fetch(silent : true)
 
 
-
   selectFiles : (event) ->
 
     if event.target.files.length

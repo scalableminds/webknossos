@@ -8,8 +8,14 @@ views/spotlight_dataset_list_view : SpotlightDatasetListView
 class DatasetSwitchView extends Backbone.Marionette.Layout
 
   template : _.template("""
-    <a href="#" id="showAdvancedView" class="btn btn-default">Show advanced view</a>
-    <a href="#" id="showGalleryView" class="btn btn-default">Show gallery view</a>
+    <div class="pull-right">
+      <a href="#" id="showAdvancedView" class="btn btn-default">
+        <i class="fa fa-th-list"></i>Show advanced view
+      </a>
+      <a href="#" id="showGalleryView" class="btn btn-default">
+        <i class="fa fa-th"></i>Show gallery view
+      </a>
+    </div>
 
     <h3>Datasets</h3>
 

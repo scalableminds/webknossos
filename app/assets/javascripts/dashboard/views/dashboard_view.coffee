@@ -4,7 +4,6 @@ backbone.marionette : marionette
 dashboard/views/dashboard_task_list_view : DashboardTaskListView
 dashboard/views/explorative_tracing_list_view : ExplorativeTracingListView
 dashboard/views/tracked_time_view : TrackedTimeView
-views/spotlight_dataset_list_view : SpotlightDatasetListView
 admin/views/dataset/dataset_switch_view : DatasetSwitchView
 ###
 
@@ -66,7 +65,6 @@ class DashboardView extends Backbone.Marionette.Layout
   showDatasets : ->
 
     unless @spotlightDatasetListView
-      # @spotlightDatasetListView = new SpotlightDatasetListView(collection : @model.get("dataSets"))
       @spotlightDatasetListView = new DatasetSwitchView(model : @model.get("dataSets"))
 
     @tabPane.show(@spotlightDatasetListView)

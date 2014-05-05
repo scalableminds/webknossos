@@ -27,6 +27,3 @@ class DatasetModel extends Backbone.Model
 
     if colorLayer = _.findWhere(layers, category : "color")
       return "/api/datasets/#{datasetName}/layers/#{colorLayer.name}/thumbnail"
-    else
-      # TODO: use a placeholder thumbnail
-      return ""

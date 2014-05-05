@@ -27,7 +27,7 @@ trait DataSourceTypeGuesser {
 
   private def lazyFileFinder(source: Path, excludeDirs: Seq[String]): Stream[Path] = {
     def tail = {
-      (source * PathMatcher.IsDirectory).filter( path => excludeDirs.contains(path.name)).foldLeft(Stream.empty[Path]){
+      (source * PathMatcher.IsDirectory).filterNot( path => excludeDirs.contains(path.name)).foldLeft(Stream.empty[Path]){
         case (stream, path) =>
           stream ++ lazyFileFinder(path, excludeDirs)
       }

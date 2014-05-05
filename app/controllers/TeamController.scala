@@ -55,6 +55,13 @@ object TeamController extends Controller with Secured {
     }
   }
 
+  def ensureRootTeam(team: Team) = {
+    team.parent.isEmpty match {
+      case true => Full(true)
+      case _ => Empty
+    }
+  }
+
   def create = Authenticated.async(parse.json){ implicit request =>
     request.body.validate(Team.teamPublicReads(request.user)) match {
       case JsSuccess(team, _) =>
@@ -62,7 +69,7 @@ object TeamController extends Controller with Secured {
           case Empty =>
             for{
               parent <- team.parent.toFox.flatMap(TeamDAO.findOneByName(_)(GlobalAccessContext)) ?~> Messages("team.parent.notFound")
-              _ <- parent.parent ?~> Messages("tam.parent.mustBeRoot") // current limitation
+              _ <- ensureRootTeam(parent) ?~> Messages("team.parent.mustBeRoot") // current limitation
               _ <- TeamService.create(team, request.user)
               js <- Team.teamPublicWrites(team, request.user)
             } yield {

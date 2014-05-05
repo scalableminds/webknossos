@@ -4,8 +4,7 @@ backbone.marionette : marionette
 libs/toast : Toast
 app : app
 ./team_list_item_view : TeamListItemView
-admin/models/team/team_collection : TeamCollection
-admin/models/team/team_model : TeamModel
+./create_team_modal_view : CreateTeamModalView
 ###
 
 class TeamListView extends Backbone.Marionette.CompositeView
@@ -37,46 +36,23 @@ class TeamListView extends Backbone.Marionette.CompositeView
         </div>
       </div>
     </form>
-    <div class="modal fade">
-      <div class="modal-dialog">
-        <div class="modal-content">
-          <div class="modal-header">
-            <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
-            <h3>Add a New Team</h3>
-          </div>
-          <div class="modal-body container-fluid">
-            <form class="form-horizontal">
-              <div class="form-group">
-                <label class="col-sm-2 control-label" for="inputName">Name</label>
-                <div class="col-sm-10">
-                  <input type="text" class="form-control" id="inputName" placeholder="Name" required autofocus>
-                </div>
-              </div>
-            </form>
-          </div>
-          <div class="modal-footer">
-            <a href="#" class="btn btn-primary" data-dismiss="modal">Add</a>
-            <a href="#" class="btn btn-default" data-dismiss="modal">Close</a>
-          </div>
-        </div>
-      </div>
-    </div>
+   <div class="modal-wrapper"></div>
   """)
   className : "team-administration container wide"
   itemView : TeamListItemView
   itemViewContainer : "tbody"
 
   ui :
-    "modal" : ".modal"
-    "inputName" : "#inputName"
+    "modalWrapper" : ".modal-wrapper"
 
   events :
     "click #new-team" : "showModal"
-    "click .modal .btn-primary" : "addNewTeam"
 
   initialize : ->
 
     @listenTo(app.vent, "paginationView:filter", @filter)
+    @listenTo(app.vent, "CreateTeamModal:refresh", @render)
+
 
     @collection.fetch(
       data : "isEditable=true"
@@ -84,14 +60,6 @@ class TeamListView extends Backbone.Marionette.CompositeView
     ).done( =>
       @collection.goTo(1)
     )
-
-
-  addNewTeam : ->
-
-    team = new TeamModel(
-      name : @ui.inputName.val(),
-    )
-    @collection.create(team, {wait: true})
 
 
   filter : (filterQuery) ->
@@ -102,5 +70,7 @@ class TeamListView extends Backbone.Marionette.CompositeView
 
   showModal : (modalView) ->
 
-    @ui.inputName.val("")
-    @ui.modal.modal("show")
+    modalView = new CreateTeamModalView(teamCollection : @collection)
+    @ui.modalWrapper.html(modalView.render().el)
+
+    modalView.show()

@@ -51,7 +51,7 @@ class TeamListView extends Backbone.Marionette.CompositeView
   initialize : ->
 
     @listenTo(app.vent, "paginationView:filter", @filter)
-    @listenTo(app.vent, "CreateTeamModal:refresh", @render)
+    @listenTo(app.vent, "CreateTeamModal:refresh", @refreshPagination)
 
 
     @collection.fetch(
@@ -74,3 +74,10 @@ class TeamListView extends Backbone.Marionette.CompositeView
     @ui.modalWrapper.html(modalView.render().el)
 
     modalView.show()
+
+
+  refreshPagination : ->
+
+    @collection.pager()
+    @collection.lastPage() # newly inserted items are on the last page
+    @render()

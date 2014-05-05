@@ -21,8 +21,8 @@ class DatasetListItemView extends Backbone.Marionette.CompositeView
         <i class="caret-right"></i>
         <i class="caret-down"></i>
       </td>
-      <td><%= name %></td>
-      <td><%= dataSource.baseDir %></td>
+      <td title="<%= dataSource.baseDir %>"><%= name %></td>
+      <td><%= dataStore.name %></td>
       <td>(
         <%= dataSource.scale[0] %>,
         <%= dataSource.scale[1] %>,
@@ -103,6 +103,7 @@ class DatasetListItemView extends Backbone.Marionette.CompositeView
     "progressBar" : ".progress-bar"
     "detailsToggle" : ".details-toggle"
     "detailsRow" : ".details-row"
+
 
 
   initialize : ->

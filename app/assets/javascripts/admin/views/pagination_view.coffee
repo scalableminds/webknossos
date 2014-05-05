@@ -28,7 +28,7 @@ class PaginationView extends Backbone.Marionette.ItemView
               </li>
             <% } else { %>
               <li>
-                <a href="#"><%= p %></a>
+                <a href="#" class="page"><%= p %></a>
               </li>
             <% } %>
           <% }); %>
@@ -69,17 +69,18 @@ class PaginationView extends Backbone.Marionette.ItemView
 
     @listenTo(@collection, "reset", @collectionSynced)
     @listenTo(@collection, "remove", @refresh)
+    @listenTo(@collection, "add", @afterAdd)
     @listenToOnce(@collection, "reset", @searchByHash)
 
 
   goFirst : ->
 
-    @collection.goTo(1)
+    @collection.firstPage()
 
 
   goLast : ->
 
-    @collection.goTo(@collection.totalPages)
+    @collection.lastPage()
 
 
   goBack : ->
@@ -122,6 +123,12 @@ class PaginationView extends Backbone.Marionette.ItemView
   refresh : ->
 
     @collection.pager()
+
+
+  afterAdd : ->
+
+    @refresh()
+    @goLast()
 
 
   searchByHash : ->

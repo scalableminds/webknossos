@@ -79,7 +79,7 @@ object TeamController extends Controller with Secured {
             Future.successful(JsonBadRequest(Messages("team.name.alreadyTaken")))
         }
       case e: JsError =>
-        Future.successful(BadRequest(JsError.toFlatJson(e)))
+        Future.successful(BadRequest(jsonErrorWrites(e)))
     }
   }
 }

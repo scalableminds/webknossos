@@ -3,6 +3,7 @@ underscore : _
 backbone.marionette : marionette
 ./dataset_list_view : DatasetListView
 views/spotlight_dataset_list_view : SpotlightDatasetListView
+admin/views/pagination_view : PaginationView
 ###
 
 class DatasetSwitchView extends Backbone.Marionette.Layout
@@ -18,7 +19,7 @@ class DatasetSwitchView extends Backbone.Marionette.Layout
     </div>
 
     <h3>Datasets</h3>
-
+    <div class="pagination"></div>
     <div class="dataset-region"></div>
   """)
 
@@ -30,16 +31,14 @@ class DatasetSwitchView extends Backbone.Marionette.Layout
     "click @ui.showAdvancedButton" : "showAdvancedView"
     "click @ui.showGalleryButton" : "showGalleryView"
 
-
   regions :
     "datasetPane" : ".dataset-region"
-
+    "pagination" : ".pagination"
 
   onShow : ->
 
     @ui.showAdvancedButton.hide()
     @showGalleryView()
-
 
   toggleSwitchButtons : ->
 
@@ -49,19 +48,17 @@ class DatasetSwitchView extends Backbone.Marionette.Layout
   showGalleryView : ->
 
     @toggleSwitchButtons()
+    datasetGalleryView = new SpotlightDatasetListView(collection : @model)
+    @datasetPane.show(datasetGalleryView)
 
-    unless @datasetGalleryView
-      @datasetGalleryView = new SpotlightDatasetListView(collection : @model)
-
-    @datasetPane.show(@datasetGalleryView)
+    @pagination.close()
 
 
   showAdvancedView : ->
 
     @toggleSwitchButtons()
+    datasetListView = new DatasetListView(collection: @model)
+    @datasetPane.show(datasetListView)
 
-    unless @datasetListView
-      @datasetListView = new DatasetListView(collection: @model)
-
-    @datasetPane.show(@datasetListView)
-
+    paginationView = new PaginationView(collection: @model)
+    @pagination.show(paginationView)

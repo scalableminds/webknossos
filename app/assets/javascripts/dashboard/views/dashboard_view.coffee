@@ -64,31 +64,23 @@ class DashboardView extends Backbone.Marionette.Layout
 
   showDatasets : ->
 
-    unless @spotlightDatasetListView
-      @spotlightDatasetListView = new DatasetSwitchView(model : @model.get("dataSets"))
-
-    @tabPane.show(@spotlightDatasetListView)
+    spotlightDatasetListView = new DatasetSwitchView(model : @model.get("dataSets"))
+    @tabPane.show(spotlightDatasetListView)
 
 
   showTasks : ->
 
-    unless @dashboardTaskListView
-      @dashboardTaskListView = new DashboardTaskListView(model : @model)
-
-    @tabPane.show(@dashboardTaskListView)
+    dashboardTaskListView = new DashboardTaskListView(model : @model)
+    @tabPane.show(dashboardTaskListView)
 
 
   showExplorative : ->
 
-    unless @explorativeTracingListView
-      @explorativeTracingListView = new ExplorativeTracingListView(model : @model)
-
-    @tabPane.show(@explorativeTracingListView)
+    explorativeTracingListView = new ExplorativeTracingListView(model : @model)
+    @tabPane.show(explorativeTracingListView)
 
 
   showTrackedTime : ->
 
-    unless @trackedTimeView
-      @trackedTimeView = new TrackedTimeView(model : @model.get("loggedTime"))
-
-    @tabPane.show(@trackedTimeView)
+    trackedTimeView = new TrackedTimeView(model : @model.get("loggedTime"))
+    @tabPane.show(trackedTimeView)

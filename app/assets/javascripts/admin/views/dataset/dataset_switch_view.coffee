@@ -37,8 +37,6 @@ class DatasetSwitchView extends Backbone.Marionette.Layout
 
   onShow : ->
 
-    # Marionette doesn't seem to rebind the events when this view is shown a second time.
-    @delegateEvents(@events)
     @ui.showAdvancedButton.hide()
     @showGalleryView()
 

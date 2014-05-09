@@ -11,10 +11,19 @@ class SpotlightDatasetView extends Backbone.Marionette.ItemView
   template : _.template("""
     <div class="panel-body row">
       <div class="dataset-thumbnail col-sm-4">
-        <a href="/datasets/<%= name %>/view">
-          <img src="<%= thumbnailURL %>">
-          <i class="fa fa-play"></i>
-        </a>
+        <img class="img-rounded" src="<%= thumbnailURL %>">
+
+        <div class="link-row">
+          <a href="/datasets/<%= name %>/view" title="View tracing">
+            <img src="assets/images/eye.svg">
+          </a>
+          <a href="/datasets/<%= name %>/skeletonTracing" title="Create skeleton tracing">
+            <img src="assets/images/skeleton.svg">
+          </a>
+          <a href="/datasets/<%= name %>/volumeTracing" title="Create volume tracing">
+            <img src="assets/images/volume.svg">
+          </a>
+        </div>
       </div>
       <div class="dataset-description col-sm-8">
         <h3><%= owningTeam %></h3>
@@ -24,3 +33,9 @@ class SpotlightDatasetView extends Backbone.Marionette.ItemView
       </div>
     </div>
   """)
+
+
+  onShow: ->
+
+    @$(".link-row > a").tooltip(placement : "bottom")
+

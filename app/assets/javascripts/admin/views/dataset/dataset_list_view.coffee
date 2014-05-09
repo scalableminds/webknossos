@@ -12,7 +12,7 @@ class DatasetListView extends Backbone.Marionette.CompositeView
       <thead>
         <tr>
           <th>Name</th>
-          <th>Base Dir</th>
+          <th>Datastore</th>
           <th>Scale</th>
           <th>Owning Team</th>
           <th>Allowed Teams</th>

@@ -7,9 +7,7 @@ backbone.marionette : marionette
 
 class DatasetListView extends Backbone.Marionette.CompositeView
 
-  className : "dataset-administration container wide"
   template : _.template("""
-    <h3>DataSets</h3>
     <table class="table table-striped" id="dataSet-table">
       <thead>
         <tr>
@@ -35,6 +33,7 @@ class DatasetListView extends Backbone.Marionette.CompositeView
 
   ui :
     "modalWrapper" : "#modal-wrapper"
+
 
   itemView : DatasetListItemView
   itemViewContainer: "tbody"

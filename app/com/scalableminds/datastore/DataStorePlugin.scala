@@ -1,3 +1,6 @@
+/*
+ * Copyright (C) 20011-2014 Scalable minds UG (haftungsbeschränkt) & Co. KG. <http://scm.io>
+ */
 package com.scalableminds.datastore
 
 import play.api.{Play, Logger, Plugin}
@@ -17,12 +20,12 @@ class DataStorePlugin(app: play.api.Application) extends Plugin {
     binaryDataService.start()
   }
 
-  override def onStop(){
+  override def onStop() {
     system.shutdown()
   }
 }
 
-object DataStorePlugin{
+object DataStorePlugin {
   def current = Play.current.plugin[DataStorePlugin]
 
   def dataSourceRepository = DataStorePlugin.current.get.dataSourceRepository

@@ -9,7 +9,7 @@ import com.scalableminds.datastore.DataStorePlugin
 
 case class DataSourceServer(serverAddress: String, serverId: String)
 
-object DataSourceServer{
+object DataSourceServer {
   val serverAddress = Play.current.configuration.getString("http.uri").get
 
   def self = {
@@ -18,7 +18,8 @@ object DataSourceServer{
   }
 }
 
-object NetworkInformation{
+object NetworkInformation {
+
   import java.net.InetAddress
   import java.net.SocketException
   import java.net.NetworkInterface
@@ -31,7 +32,7 @@ object NetworkInformation{
       val mac = network.getHardwareAddress()
 
       Some(mac.map("%02X".format(_)).mkString(":"))
-    } catch{
+    } catch {
       case e: UnknownHostException =>
         e.printStackTrace()
         None
@@ -48,7 +49,7 @@ object DataSourceDAO extends TemporaryStore[DataSourceLike] {
   lazy val system = DataStorePlugin.current.get.system
 
   def findUsableByName(name: String): Option[UsableDataSource] =
-    find(name).flatMap{
+    find(name).flatMap {
       case ds: UsableDataSource => Some(ds)
       case _ => None
     }

@@ -3,10 +3,10 @@ package braingames.binary.models
 import java.io.File
 import play.api.libs.json._
 import braingames.util.JsonHelper._
-import braingames.util.FileIO
 import net.liftweb.common._
 import net.liftweb.common.Box._
 import scalax.file.Path
+import braingames.io.FileIO
 
 /**
  * Company: scalableminds

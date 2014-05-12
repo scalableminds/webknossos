@@ -18,8 +18,8 @@ import net.liftweb.common.Box
 import scala.Some
 import braingames.binary.watcher.StartWatching
 import scalax.file.Path
-import braingames.util.PathUtils
 import braingames.binary.repository.DataSourceInbox
+import braingames.io.PathUtils
 
 trait BinaryDataService extends DataSourceService with BinaryDataHelpers {
 

@@ -9,10 +9,11 @@ import java.util.UUID
 import net.liftweb.common._
 import scala.concurrent.duration._
 import braingames.binary.Logger._
-import braingames.util.{FoxImplicits, Fox, FileIO}
+import braingames.util.{FoxImplicits, Fox}
 import akka.pattern.ask
 import akka.util.Timeout
 import play.api.libs.concurrent.Execution.Implicits._
+import braingames.io.FileIO
 
 trait LockKeeperHelper extends LockKeeperImpl {
   def withLock[T](folder: Path)(f: => T): Fox[T] = {

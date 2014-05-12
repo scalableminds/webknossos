@@ -7,10 +7,10 @@ import scalax.file.{PathSet, PathMatcher, Path}
 import braingames.binary.models._
 import braingames.geometry.{Scale, BoundingBox}
 import scala.Some
-import braingames.util.PathUtils
 import org.apache.commons.io.FileUtils
 import play.api.libs.json.Json
 import braingames.util.ProgressTracking.ProgressTracker
+import braingames.io.PathUtils
 
 object KnossosDataSourceType extends DataSourceType with KnossosDataSourceTypeHandler{
   val name = "knossos"

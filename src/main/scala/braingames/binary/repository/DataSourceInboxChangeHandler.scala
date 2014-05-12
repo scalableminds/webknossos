@@ -5,13 +5,14 @@ package braingames.binary.repository
 
 import braingames.binary.models._
 import braingames.binary.watcher.DirectoryChangeHandler
-import braingames.util.{JsonHelper, PathUtils}
+import braingames.util.JsonHelper
 import java.nio.file.{Path => JavaPath}
 import scalax.file.{PathMatcher, Path}
 import net.liftweb.common.Full
 import play.api.libs.concurrent.Execution.Implicits._
 import net.liftweb.common.Full
 import play.api.Play
+import braingames.io.PathUtils
 
 protected class DataSourceInboxChangeHandler(dataSourceRepository: DataSourceRepository, serverUrl: String) extends DirectoryChangeHandler with PathUtils{
 

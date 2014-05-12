@@ -1,15 +1,12 @@
+/*
+ * Copyright (C) 20011-2014 Scalable minds UG (haftungsbeschränkt) & Co. KG. <http://scm.io>
+ */
 package com.scalableminds.braingames.binary.models
 
 import play.api.libs.json.Json
 import java.io.File
 import scalax.file.Path
 
-/**
- * Company: scalableminds
- * User: tmbo
- * Date: 09.06.13
- * Time: 17:47
- */
 case class DataLayerSettings(
   typ: String,
   `class`: String,

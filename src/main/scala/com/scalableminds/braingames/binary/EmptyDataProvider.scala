@@ -1,3 +1,6 @@
+/*
+ * Copyright (C) 20011-2014 Scalable minds UG (haftungsbeschränkt) & Co. KG. <http://scm.io>
+ */
 package com.scalableminds.braingames.binary
 
 import akka.agent.Agent
@@ -19,10 +22,5 @@ trait EmptyDataProvider {
     new Array[Byte](blockSize * bytesPerElement)
 
   def nullFile(blockSize: Int, bytesPerElement: Int) =
-    //nullFiles().get((blockSize, bytesPerElement)).getOrElse {
-    //  val a = createNullArray(blockSize, bytesPerElement)
-    //  nullFiles.send(_ + ((blockSize -> bytesPerElement) -> a))
-    //  a
-    //}
     createNullArray(blockSize, bytesPerElement)
 }

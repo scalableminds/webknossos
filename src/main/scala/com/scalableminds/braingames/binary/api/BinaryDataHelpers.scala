@@ -1,3 +1,6 @@
+/*
+ * Copyright (C) 20011-2014 Scalable minds UG (haftungsbeschränkt) & Co. KG. <http://scm.io>
+ */
 package com.scalableminds.braingames.binary.api
 
 import com.scalableminds.util.geometry.{Vector3D, Point3D}
@@ -5,12 +8,6 @@ import com.scalableminds.braingames.binary.{DataRequestSettings, Cuboid}
 import com.scalableminds.braingames.binary.{ParsedDataReadRequest, ParsedDataWriteRequest, DataReadRequest, DataWriteRequest}
 import com.scalableminds.braingames.binary.models.{DataLayer, DataSource}
 
-/**
- * Company: scalableminds
- * User: tmbo
- * Date: 04.08.13
- * Time: 20:04
- */
 trait BinaryDataHelpers {
 
   def resolutionFromExponent(resolutionExponent: Int) =

@@ -1,3 +1,6 @@
+/*
+ * Copyright (C) 20011-2014 Scalable minds UG (haftungsbeschränkt) & Co. KG. <http://scm.io>
+ */
 package com.scalableminds.braingames.binary.store
 
 import java.io.{FileNotFoundException, InputStream, OutputStream, FileInputStream, FileOutputStream, File}
@@ -10,7 +13,6 @@ import scalax.file.Path
 import com.scalableminds.braingames.binary.Logger._
 import scalax.file.Path
 import com.scalableminds.util.geometry.Point3D
-
 
 class FileDataStoreActor extends DataStoreActor(new FileDataStore)
 

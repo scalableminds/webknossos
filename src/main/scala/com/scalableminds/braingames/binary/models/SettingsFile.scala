@@ -1,3 +1,6 @@
+/*
+ * Copyright (C) 20011-2014 Scalable minds UG (haftungsbeschränkt) & Co. KG. <http://scm.io>
+ */
 package com.scalableminds.braingames.binary.models
 
 import java.io.File
@@ -8,12 +11,6 @@ import net.liftweb.common.Box._
 import scalax.file.Path
 import com.scalableminds.util.io.FileIO
 
-/**
- * Company: scalableminds
- * User: tmbo
- * Date: 09.06.13
- * Time: 17:44
- */
 trait SettingsFile[A] {
   def settingsFileName: String
 

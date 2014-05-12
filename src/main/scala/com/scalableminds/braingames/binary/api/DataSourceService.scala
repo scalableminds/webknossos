@@ -1,3 +1,6 @@
+/*
+ * Copyright (C) 20011-2014 Scalable minds UG (haftungsbeschränkt) & Co. KG. <http://scm.io>
+ */
 package com.scalableminds.braingames.binary.api
 
 import com.scalableminds.braingames.binary.models._
@@ -10,12 +13,6 @@ import play.api.libs.concurrent.Execution.Implicits._
 import play.api.i18n.Messages
 import com.scalableminds.util.io.PathUtils
 
-/**
- * Company: scalableminds
- * User: tmbo
- * Date: 09.06.13
- * Time: 16:20
- */
 trait DataSourceService extends FoxImplicits{
 
   def config: Config

@@ -17,10 +17,10 @@ class SpotlightDatasetView extends Backbone.Marionette.ItemView
           <a href="/datasets/<%= name %>/view" title="View tracing">
             <img src="assets/images/eye.svg">
           </a>
-          <a id="skeletonTraceLink" title="Create skeleton tracing">
+          <a href="#" title="Create skeleton tracing" id="skeletonTraceLink">
             <img src="assets/images/skeleton.svg">
           </a>
-          <a id="volumeTraceLink" title="Create volume tracing">
+          <a href="#" title="Create volume tracing" id="volumeTraceLink">
             <img src="assets/images/volume.svg">
           </a>
         </div>
@@ -54,7 +54,8 @@ class SpotlightDatasetView extends Backbone.Marionette.ItemView
     @ui.volumeTraceLink.click(@submitForm.bind(@, "volumeTracing"))
 
 
-  submitForm : (type) ->
+  submitForm : (type, event) ->
 
+    event.preventDefault()
     @ui.contentTypeInput.val(type)
     @ui.form.submit()

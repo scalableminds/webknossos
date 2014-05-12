@@ -6,20 +6,20 @@ package com.scalableminds.datastore.controllers
 import play.api._
 import play.api.Play.current
 import play.api.libs.concurrent._
-import braingames.geometry.Point3D
+import com.scalableminds.util.geometry.Point3D
 import play.api.i18n.Messages
-import braingames.binary.models._
-import braingames.binary._
-import braingames.reactivemongo.DBAccessContext
-import braingames.util.{FoxImplicits, Fox}
+import com.scalableminds.braingames.binary.models._
+import com.scalableminds.braingames.binary._
+import com.scalableminds.util.reactivemongo.DBAccessContext
+import com.scalableminds.util.tools.{FoxImplicits, Fox}
 import play.api.mvc.{SimpleResult, Action}
-import braingames.binary.ParsedDataReadRequest
-import braingames.binary.DataRequestSettings
-import braingames.binary.ParsedDataWriteRequest
-import braingames.binary.ParsedRequestCollection
+import com.scalableminds.braingames.binary.ParsedDataReadRequest
+import com.scalableminds.braingames.binary.DataRequestSettings
+import com.scalableminds.braingames.binary.ParsedDataWriteRequest
+import com.scalableminds.braingames.binary.ParsedRequestCollection
 import scala.concurrent.Future
-import braingames.image.{JPEGWriter, ImageCreator, ImageCreatorParameters}
-import braingames.mvc.ExtendedController
+import com.scalableminds.util.image.{JPEGWriter, ImageCreator, ImageCreatorParameters}
+import com.scalableminds.util.mvc.ExtendedController
 import com.scalableminds.datastore.services.{UserDataLayerService, UserAccessService, BinaryDataService}
 import com.scalableminds.datastore.models.DataSourceDAO
 import play.api.mvc.BodyParsers.parse

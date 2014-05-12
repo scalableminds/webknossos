@@ -2,7 +2,7 @@ package com.scalableminds.datastore.controllers
 
 
 import play.api.mvc.{Controller => PlayController, _}
-import braingames.mvc.ExtendedController
+import com.scalableminds.util.mvc.ExtendedController
 import scala.concurrent.Future
 import play.api.libs.concurrent.Execution.Implicits._
 

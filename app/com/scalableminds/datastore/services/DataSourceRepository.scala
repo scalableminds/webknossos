@@ -1,7 +1,7 @@
 package com.scalableminds.datastore.services
 
-import braingames.binary.models.{DataSourceRepository => AbstractDataSourceRepository, UnusableDataSource, UsableDataSource, DataSourceLike, InMemoryInboxSourceRepository}
-import braingames.util.FoxImplicits
+import com.scalableminds.braingames.binary.models.{DataSourceRepository => AbstractDataSourceRepository, UnusableDataSource, UsableDataSource, DataSourceLike, InMemoryInboxSourceRepository}
+import com.scalableminds.util.tools.FoxImplicits
 import com.scalableminds.datastore.models.DataSourceDAO
 import play.api.Logger
 import play.api.libs.concurrent.Execution.Implicits._

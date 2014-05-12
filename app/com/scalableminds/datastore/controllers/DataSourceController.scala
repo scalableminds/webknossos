@@ -4,8 +4,8 @@
 package com.scalableminds.datastore.controllers
 
 import play.api.mvc.Action
-import braingames.mvc.ExtendedController
-import braingames.util.{NotStarted, Finished, InProgress, ProgressState}
+import com.scalableminds.util.mvc.ExtendedController
+import com.scalableminds.util.tools.{NotStarted, Finished, InProgress, ProgressState}
 import play.api.libs.json.Json
 import com.scalableminds.datastore.services.{DataSourceRepository, BinaryDataService}
 import play.api.libs.concurrent.Execution.Implicits._

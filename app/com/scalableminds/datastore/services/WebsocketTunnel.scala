@@ -7,7 +7,7 @@ import akka.actor.{ ActorRef, Actor }
 import play.api.libs.ws.WS
 import org.java_websocket.client._
 import org.java_websocket.handshake.ServerHandshake
-import braingames.binary.Logger._
+import com.scalableminds.braingames.binary.Logger._
 import java.net.URI
 import play.api.libs.json.{ Json, JsValue }
 import com.fasterxml.jackson.core.JsonParseException

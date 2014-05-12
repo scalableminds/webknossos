@@ -3,10 +3,10 @@
  */
 package com.scalableminds.datastore.services
 
-import braingames.binary.api.{ BinaryDataService => AbstractBinaryDataService }
+import com.scalableminds.braingames.binary.api.{ BinaryDataService => AbstractBinaryDataService }
 import play.api.Play
 import akka.actor.ActorSystem
-import braingames.binary.Logger._
+import com.scalableminds.braingames.binary.Logger._
 import java.io.File
 
 class BinaryDataService(val dataSourceRepository: DataSourceRepository)(implicit val system: ActorSystem) extends AbstractBinaryDataService {

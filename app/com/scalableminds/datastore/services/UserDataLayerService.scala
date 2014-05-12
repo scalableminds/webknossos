@@ -10,8 +10,8 @@ import play.api.Play.current
 import scala.concurrent.Future
 import play.api.Play
 import com.scalableminds.datastore.DataStorePlugin
-import braingames.util.Fox
-import braingames.binary.models.DataLayer
+import com.scalableminds.util.tools.Fox
+import com.scalableminds.braingames.binary.models.DataLayer
 
 object UserDataLayerService {
 

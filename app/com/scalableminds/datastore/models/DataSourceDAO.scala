@@ -3,7 +3,7 @@
  */
 package com.scalableminds.datastore.models
 
-import braingames.binary.models.{UsableDataSource, DataSourceLike, DataSource}
+import com.scalableminds.braingames.binary.models.{UsableDataSource, DataSourceLike, DataSource}
 import play.api.Play
 import com.scalableminds.datastore.DataStorePlugin
 

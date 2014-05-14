@@ -1,5 +1,6 @@
 ### define
 ./tlt : tlt
+underscore : _
 ###
 
 # This class is capable of turning voxel data into triangles
@@ -9,7 +10,7 @@ class PolygonFactory
   constructor : (@modelCube, min, max, @id) ->
 
     @samples    = 100
-    @cubeOffset = Math.ceil((max[0] - min[0]) / @samples) || 1
+    @voxelsToSkip = Math.ceil((max[0] - min[0]) / @samples) || 1
     @chunkSize  = 10000
 
     [ @startX, @endX ] = [ min[0] - 1, max[0] + 3 ]
@@ -22,72 +23,76 @@ class PolygonFactory
     result    = {}
     @deferred = new $.Deferred()
 
-    setTimeout( @calculateTrianglesAsync, 0, result )
+    _.defer( @calculateTrianglesAsync, result )
     return @deferred
 
 
-  calculateTrianglesAsync : (result, _x, _y, _z) =>
+  calculateTrianglesAsync : (result, lastPosition) =>
 
     i = 0
+    position = @getNextPosition(lastPosition)
 
-    x = @startX
-    while x < @endX
-      y = @startY
-      while y < @endY
-        z = @startZ
-        while z < @endZ
+    while @isPositionInBoundingBox(position)
+      @updateTriangles(result, position)
 
-          if ++i == 1 and _z?
-            [x, y, z] = [_x, _y, _z]
-            continue
+      # If chunk size is reached, pause execution
+      if i == @chunkSize
+        _.defer(@calculateTrianglesAsync, result, position)
+        return
+      i++
 
-          cubeIndices = @getCubeIndices(x, y, z)
-
-          for cellId of cubeIndices
-
-            unless result[cellId]?
-              result[ cellId ] = []
-
-            if cubeIndices[ cellId ] % 255 == 0
-              continue
-
-            newTriangles = []
-
-            for triangle in tlt[ cubeIndices[ cellId ] ]
-              newTriangle = []
-
-              for vertex in triangle
-                newTriangle.push( [ vertex[0] * @cubeOffset + x,
-                                    vertex[1] * @cubeOffset + y,
-                                    vertex[2] * @cubeOffset + z ] )
-
-              newTriangles.push(newTriangle)
-
-            result[ cellId ] = result[ cellId ].concat( newTriangles )
-
-          # If chunk size is reached, pause execution
-          if i == @chunkSize
-            setTimeout( @calculateTrianglesAsync, 0, result, x, y, z)
-            return
-
-          z += @cubeOffset
-        y += @cubeOffset
-      x += @cubeOffset
+      position = @getNextPosition(position)
 
     @deferred.resolve( result )
 
 
-  getCubeIndices : (x, y, z) ->
+  isPositionInBoundingBox : (position) ->
+
+    if position?
+      [x, y, z] = position
+      return (x >= @startX and y >= @startY and z >= @startZ) and
+        (x <= @endX and y <= @endY and z <= @endZ)
+    return false
+
+
+  getNextPosition : (lastPosition) ->
+
+    unless lastPosition?
+      return [@startX, @startY, @startZ]
+
+    else
+      [oldX, oldY, oldZ] = lastPosition
+
+      if oldX + @voxelsToSkip < @endX
+        return [oldX + @voxelsToSkip, oldY, oldZ]
+      if oldY + @voxelsToSkip < @endY
+        return [@startX, oldY + @voxelsToSkip, oldZ]
+      else
+        return [@startX, @startY, oldZ + @voxelsToSkip]
+
+
+  updateTriangles : (result, position) ->
+
+    cubeIndices = @getCubeIndices(position)
+
+    for cellId, cubeIndex of cubeIndices
+      unless result[cellId]?
+        result[ cellId ] = []
+      unless cubeIndex == 0 or cubeIndex == 256
+        @addNewTriangles(result[cellId], cubeIndex, position)
+
+
+  getCubeIndices : ([x, y, z]) ->
 
     labels = [
-      @modelCube.getDataValue( [x, y, z]                                             ),
-      @modelCube.getDataValue( [x + @cubeOffset, y, z]                               ),
-      @modelCube.getDataValue( [x + @cubeOffset, y, z + @cubeOffset]                 ),
-      @modelCube.getDataValue( [x, y, z + @cubeOffset]                               ),
-      @modelCube.getDataValue( [x, y + @cubeOffset, z]                               ),
-      @modelCube.getDataValue( [x + @cubeOffset, y + @cubeOffset, z]                 ),
-      @modelCube.getDataValue( [x + @cubeOffset, y + @cubeOffset, z + @cubeOffset]   ),
-      @modelCube.getDataValue( [x, y + @cubeOffset, z + @cubeOffset]                 ) ]
+      @modelCube.getDataValue( [x, y, z]                                                 ),
+      @modelCube.getDataValue( [x + @voxelsToSkip, y, z]                                 ),
+      @modelCube.getDataValue( [x + @voxelsToSkip, y, z + @voxelsToSkip]                 ),
+      @modelCube.getDataValue( [x, y, z + @voxelsToSkip]                                 ),
+      @modelCube.getDataValue( [x, y + @voxelsToSkip, z]                                 ),
+      @modelCube.getDataValue( [x + @voxelsToSkip, y + @voxelsToSkip, z]                 ),
+      @modelCube.getDataValue( [x + @voxelsToSkip, y + @voxelsToSkip, z + @voxelsToSkip] ),
+      @modelCube.getDataValue( [x, y + @voxelsToSkip, z + @voxelsToSkip]                 ) ]
 
     cellIds = []
     for label in labels
@@ -105,3 +110,16 @@ class PolygonFactory
       result[cellId] = cubeIndex
 
     return result
+
+
+  addNewTriangles : (triangleList, cubeIndex, [x, y, z]) ->
+
+      for triangle in tlt[ cubeIndex ]
+        vertices = []
+
+        for vertex in triangle
+          vertices.push( [ vertex[0] * @voxelsToSkip + x,
+                          vertex[1] * @voxelsToSkip + y,
+                          vertex[2] * @voxelsToSkip + z ] )
+
+        triangleList.push(vertices)

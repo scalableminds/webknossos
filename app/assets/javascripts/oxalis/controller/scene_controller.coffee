@@ -74,14 +74,10 @@ class SceneController
 
     return if @cellsDeferred?
 
-    start1 = (new Date()).getTime()
-
     @cellsDeferred = (new PolygonFactory(
       @model.getSegmentationBinary()?.cube
       min, max, id
     )).getTriangles(min, max, id).done (triangles) =>
-
-      console.log "[3D Cells] Time to calculate Triangles", (start2 = (new Date()).getTime()) - start1
 
       @trigger("removeGeometries", @volumeMeshes)
       @volumeMeshes = []
@@ -91,9 +87,6 @@ class SceneController
         @volumeMeshes = @volumeMeshes.concat( volume.getMeshes() )
 
       @trigger("newGeometries", @volumeMeshes)
-      console.log "[3D Cells] Time to add and create Geometries", (new Date()).getTime() - start2
-      console.log "[3D Cells] Total time", (new Date()).getTime() - start1
-
       @flycam.update()
       @cellsDeferred = null
 
@@ -206,7 +199,6 @@ class SceneController
     for plane in @planes
       plane.setSegmentationAlpha( alpha )
     @pingBinarySeg = alpha != 0
-    #console.log "pingValues:", @pingBinary, @pingBinarySeg
 
   pingDataLayer : (dataLayerName) ->
 

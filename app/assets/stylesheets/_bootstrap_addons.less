@@ -1,0 +1,92 @@
+// http://www.abeautifulsite.net/blog/2013/08/whipping-file-inputs-into-shape-with-bootstrap-3/
+.btn-file {
+    position: relative;
+    overflow: hidden;
+}
+
+.btn-file input[type=file] {
+    position: absolute;
+    top: 0;
+    right: 0;
+    min-width: 100%;
+    min-height: 100%;
+    font-size: 999px;
+    text-align: right;
+    filter: alpha(opacity=0);
+    opacity: 0;
+    outline: none;
+    background: white;
+    cursor: inherit;
+    display: block;
+}
+
+.divider-vertical {
+  display: inline-block;
+  vertical-align: middle;
+  height: 25px;
+  margin: 0 9px;
+  border-right: 1px solid #e5e5e5;
+}
+
+.col-center {
+  float: none !important;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.modal {
+  white-space: normal;
+}
+
+.nav-tabs {
+  margin-bottom: 10px;
+}
+
+.table-double-striped > tbody {
+  & > tr:nth-child(odd) > td{
+    background-color: inherit;
+  }
+  & > tr:nth-child(even) > td {
+    background-color: #f9f9f9;
+  }
+}
+
+.table-double-striped {
+ & > tbody:nth-child(odd) > tr > td{
+  background-color: #fff;
+ }
+ & > tbody:nth-child(even) > tr > td{
+  background-color: #f9f9f9;
+ }
+}
+
+.table-nohead {
+  tbody tr:first-child {
+    td, th {
+      border-top: none;
+    }
+  }
+}
+
+.table .table {
+  margin-bottom: 0;
+}
+
+// #####################################
+// OVERRIDE BOOTSTRAP'S DEFAULTS
+// #####################################
+.navbar-nav > li > a {
+  padding-top: 10px !important;
+  padding-bottom: 10px !important;
+}
+.navbar {
+  min-height: @navbar-height !important
+}
+
+.alert button.close {
+  margin-left: 10px;
+}
+
+.table .table {
+  background-color: inherit;
+}

@@ -1,20 +1,20 @@
 package controllers
 
 import oxalis.security.Secured
-import models.binary.{DataSet, DataSetService, DataSetDAO}
+import models.binary._
 import play.api.i18n.Messages
 import views.html
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json._
 import scala.concurrent.Future
-import oxalis.binary.BinaryDataService
 import braingames.util.DefaultConverters._
-import play.api.libs.json.JsSuccess
 import play.api.templates.Html
-import braingames.util._
 import play.api.libs.json.JsSuccess
-import braingames.util.Finished
-import braingames.util.InProgress
+import play.api.cache.Cache
+import org.apache.commons.codec.binary.Base64
+import play.api.Play.current
+import scala.concurrent.duration._
+import braingames.util.ExtendedTypes.ExtendedString
 
 /**
  * Company: scalableminds
@@ -22,7 +22,13 @@ import braingames.util.InProgress
  * Date: 03.08.13
  * Time: 17:58
  */
+
 object DataSetController extends Controller with Secured {
+
+  val ThumbnailWidth = 200
+  val ThumbnailHeight = 200
+
+  val ThumbnailCacheDuration = 1 hour
 
   def view(dataSetName: String) = UserAwareAction.async {
     implicit request =>
@@ -33,16 +39,33 @@ object DataSetController extends Controller with Secured {
       }
   }
 
+  def thumbnail(dataSetName: String, dataLayerName: String) = UserAwareAction.async {
+    implicit request =>
+
+      def imageFromCacheIfPossible(dataSet: DataSet) =
+        Cache.getOrElse(s"thumbnail-$dataSetName*$dataLayerName", ThumbnailCacheDuration.toSeconds.toInt) {
+          DataStoreHandler.requestDataLayerThumbnail(dataSet, dataLayerName, ThumbnailWidth, ThumbnailHeight)
+        }
+
+      for {
+        dataSet <- DataSetDAO.findOneBySourceName(dataSetName) ?~> Messages("dataSet.notFound")
+        layer <- DataStoreController.getDataLayer(dataSet, dataLayerName) ?~> Messages("dataLayer.notFound")
+        image <- imageFromCacheIfPossible(dataSet) ?~> Messages("dataLayer.thumbnailFailed")
+      } yield {
+        val data = Base64.decodeBase64(image)
+        Ok(data).withHeaders(
+          CONTENT_LENGTH -> data.length.toString,
+          CONTENT_TYPE -> play.api.libs.MimeTypes.forExtension("jpeg").getOrElse(play.api.http.ContentTypes.BINARY)
+        )
+      }
+  }
+
   def empty = Authenticated{ implicit request =>
     Ok(views.html.main()(Html.empty))
   }
 
-  def spotlight = UserAwareAction.async {
-    implicit request =>
-      DataSetDAO.findAll.map {
-        dataSets =>
-          Ok(html.dataSets(dataSets))
-      }
+  def userAwareEmpty = UserAwareAction { implicit request =>
+    Ok(views.html.main()(Html.empty))
   }
 
   def list = Authenticated.async{ implicit request =>
@@ -60,7 +83,9 @@ object DataSetController extends Controller with Secured {
   }
 
   def read(dataSetName: String) = UserAwareAction.async{ implicit request =>
-    DataSetDAO.findOneBySourceName(dataSetName).map { dataSet =>
+    for{
+      dataSet <- DataSetDAO.findOneBySourceName(dataSetName) ?~> Messages("dataSet.notFound")
+    } yield {
       Ok(DataSet.dataSetPublicWrites(request.userOpt).writes(dataSet))
     }
   }
@@ -68,42 +93,21 @@ object DataSetController extends Controller with Secured {
   def importDataSet(dataSetName: String) = Authenticated.async{ implicit request =>
     for {
       dataSet <- DataSetDAO.findOneBySourceName(dataSetName) ?~> Messages("dataSet.notFound")
+      result <- DataSetService.importDataSet(dataSet)
     } yield {
-      DataSetService.importDataSet(dataSet)
-      progressToResult(InProgress(0))
+      val status = result.status.toIntOpt.getOrElse(INTERNAL_SERVER_ERROR)
+      Status(status)(result.body)
     }
   }
 
-  def importAll = Authenticated.async{ implicit request =>
-    for {
-      dataSets <- DataSetDAO.findAll ?~> Messages("dataSet.notFound")
-      result <- Fox.sequence(dataSets.map(dataSet => DataSetService.importDataSet(dataSet)))
+  def importProgress(dataSetName: String) = Authenticated.async{ implicit request =>
+    for{
+      dataSet <- DataSetDAO.findOneBySourceName(dataSetName)
+      result <- DataStoreHandler.progressForImport(dataSet)
     } yield {
-      progressToResult(InProgress(0))
+      val status = result.status.toIntOpt.getOrElse(INTERNAL_SERVER_ERROR)
+      Status(status)(result.body)
     }
-  }
-
-  def progressToResult(progress: ProgressState) = progress  match{
-    case InProgress(p) =>
-      JsonOk(Json.obj(
-        "operation" -> "import",
-        "status" -> "inProgress",
-        "progress" -> p))
-    case Finished(success) =>
-      JsonOk(Json.obj(
-        "operation" -> "import",
-        "status" -> (if(success) "finished" else "failed"),
-        "progress" -> 1))
-    case NotStarted =>
-      JsonOk(Json.obj(
-        "operation" -> "import",
-        "status" -> "notStarted",
-        "progress" -> 0))
-  }
-
-
-  def importProgress(dataSetName: String) = Authenticated{ implicit request =>
-    progressToResult(BinaryDataService.progressForImport(dataSetName))
   }
 
   def updateTeams(dataSetName: String) = Authenticated.async(parse.json){ implicit request =>

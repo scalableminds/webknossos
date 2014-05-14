@@ -1,3 +1,6 @@
+/*
+ * Copyright (C) 20011-2014 Scalable minds UG (haftungsbeschränkt) & Co. KG. <http://scm.io>
+ */
 package controllers
 
 import models.user.User
@@ -18,12 +21,6 @@ import scala.concurrent.Future
 import net.liftweb.common.Full
 import scala.concurrent.duration.Duration
 
-/**
- * Company: scalableminds
- * User: tmbo
- * Date: 07.11.13
- * Time: 20:58
- */
 case class DashboardInfo(
                           user: User,
                           exploratory: List[Annotation],
@@ -47,7 +44,7 @@ trait Dashboard extends FoxImplicits {
 
   private def annotationsAsJson(annotations : Fox[List[AnnotationLike]], user : User)(implicit ctx: DBAccessContext) = {
     annotations.flatMap{ taskAnnotations =>
-      Fox.sequence(taskAnnotations.map(AnnotationLike.annotationLikeInfoWrites(_, Some(user), List("content", "actions"))))
+      Fox.sequence(taskAnnotations.map(AnnotationLike.annotationLikeInfoWrites(_, Some(user), exclude = List("content", "actions"))))
     }
   }
 
@@ -58,7 +55,6 @@ trait Dashboard extends FoxImplicits {
       tasksAnnotations <- annotationsAsJson(AnnotationService.findTasksOf(user), user)
     } yield {
       Json.obj(
-        "user" -> Json.toJson(user)(User.userPublicWrites(requestingUser)),
         "exploratoryAnnotations" -> exploratoryAnnotations.flatMap ( o => o),
         "taskAnnotations" -> tasksAnnotations.flatMap ( o => o)
       )

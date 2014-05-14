@@ -2,7 +2,7 @@
 underscore : _
 app : app
 backbone.marionette : marionette
-c3 : c3
+c3: c3
 moment : moment
 ###
 
@@ -12,6 +12,7 @@ class GraphView extends Backbone.Marionette.ItemView
     <h3>Overall Weekly Tracing Time</h3>
     <div id="graph"></div>
   """)
+
 
   initialize : ->
 
@@ -35,6 +36,7 @@ class GraphView extends Backbone.Marionette.ItemView
           enabled : true
           grouped : false
           multiple : false
+        onclick : @selectDataPoint
       axis :
         x :
           type : "timeseries"
@@ -42,9 +44,8 @@ class GraphView extends Backbone.Marionette.ItemView
           label : "hours / week"
       legend :
         show : false
-      point :
-        onclick : @selectDataPoint
     )
+
 
   selectDataPoint : (data) ->
 

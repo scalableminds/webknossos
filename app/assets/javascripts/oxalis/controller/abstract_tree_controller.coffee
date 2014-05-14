@@ -12,9 +12,7 @@ class AbstractTreeController
 
   constructor : (@model) ->
 
-    container = $("#abstractTreeViewer")
-    @view = new AbstractTreeView(container.width(), container.height())
-    container.append(@view.canvas)
+    @view = new AbstractTreeView()
 
     @bind()
     @drawTree(model.skeletonTracing.getTree())
@@ -32,6 +30,11 @@ class AbstractTreeController
       deleteActiveNode     : => @drawTree(),
       newNode              : => @drawTree()
       })
+
+
+  setDimensions : ->
+    @view.setDimensions(arguments...)
+    @drawTree()
 
 
   drawTree : ->

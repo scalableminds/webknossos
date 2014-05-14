@@ -21,11 +21,13 @@ class ProjectsListView extends Backbone.Marionette.CompositeView
       </thead>
     </table>
     <div id="modal-wrapper"></div>
-    <div class="form-actions navbar-fixed-bottom">
-      <div class="btn-group">
-        <a class="btn btn-primary show-modal" href="#">
-          <i class="fa fa-plus"></i>Create New Project
-        </a>
+    <div class="navbar navbar-default navbar-fixed-bottom">
+      <div class="navbar-form">
+        <div class="btn-group">
+          <a class="btn btn-primary show-modal" href="#">
+            <i class="fa fa-plus"></i>Create New Project
+          </a>
+        </div>
       </div>
     </div>
   """)
@@ -52,7 +54,7 @@ class ProjectsListView extends Backbone.Marionette.CompositeView
     )
 
     @listenTo(app.vent, "paginationView:filter", @filter)
-    @listenTo(app.vent, "CreateProjectModal:refresh", @render)
+    @listenTo(app.vent, "CreateProjectModal:refresh", @refreshPagination)
 
 
   filter : (searchQuery) ->
@@ -72,4 +74,11 @@ class ProjectsListView extends Backbone.Marionette.CompositeView
     @ui.modalWrapper.html(modalView.render().el)
 
     modalView.show()
+
+
+  refreshPagination : ->
+
+    @collection.pager()
+    @collection.lastPage() # newly inserted items are on the last page
+    @render()
 

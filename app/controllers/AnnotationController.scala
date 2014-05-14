@@ -231,28 +231,6 @@ object AnnotationController extends Controller with Secured with TracingInformat
     html.tracing.trace(annotation)(Html.empty)
   }
 
-
-  def traceJSON(typ: String, id: String) = Authenticated.async {
-    implicit request => {
-      if (typ == models.annotation.AnnotationType.Explorational || typ == models.annotation.AnnotationType.CompoundTask) {
-        Future.successful(JsonOk(Json.obj("noData" -> true)))
-      } else {
-        withAnnotation(AnnotationIdentifier(typ, id)) {
-          annotation =>
-            if (annotation.restrictions.allowAccess(request.user)) {
-              // TODO: RF -allow all modes
-              jsonForAnnotation(annotation)
-            } else
-              Future.successful(Failure(Messages("notAllowed")) ~> 403)
-        }
-      }
-    }
-  }
-
-  def jsonForAnnotation(annotation: AnnotationLike)(implicit request: AuthenticatedRequest[_]) = {
-    annotation.task.flatMap( Task.transformToJson(_).map(JsonOk(_)) )
-  }
-
   def annotationsForTask(taskId: String) = Authenticated.async { implicit request =>
     for {
       task <- TaskDAO.findOneById(taskId) ?~> Messages("task.notFound")

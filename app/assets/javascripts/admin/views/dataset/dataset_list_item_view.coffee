@@ -12,8 +12,8 @@ class DatasetListItemView extends Backbone.Marionette.ItemView
     "data-dataset-name" : @model.get("name")
 
   template : _.template("""
-    <td><%= name %></td>
-    <td><%= dataSource.baseDir %></td>
+    <td title="<%= dataSource.baseDir %>"><%= name %></td>
+    <td><%= dataStore.name %></td>
     <td>(
       <%= dataSource.scale[0] %>,
       <%= dataSource.scale[1] %>,
@@ -23,7 +23,7 @@ class DatasetListItemView extends Backbone.Marionette.ItemView
     <td><%= owningTeam %></td>
     <td class="team-label">
       <% _.map(allowedTeams, function(team){ %>
-        <span class="label"><%= team %></span>
+        <span class="label label-default"><%= team %></span>
       <% }) %>
     </td>
     <td>
@@ -42,7 +42,7 @@ class DatasetListItemView extends Backbone.Marionette.ItemView
     </td>
     <td>
     <% _.map(dataSource.dataLayers, function(layer){ %>
-        <span class="label"><%= layer.category %> - <%= layer.elementClass %></span>
+        <span class="label label-default"><%= layer.category %> - <%= layer.elementClass %></span>
     <% }) %>
     <td class="nowrap">
       <% if(dataSource.needsImport){ %>
@@ -51,7 +51,7 @@ class DatasetListItemView extends Backbone.Marionette.ItemView
             <i class="fa fa-plus-circle"></i>import
           </a>
             <div class="progress progress-striped hide">
-              <div class="bar" style="width: 0%;"></div>
+              <div class="progress-bar" style="width: 0%;"></div>
             </div>
         </div>
       <% } %>
@@ -69,7 +69,8 @@ class DatasetListItemView extends Backbone.Marionette.ItemView
   ui:
     "importLink" : ".import-dataset"
     "progressbarContainer" : ".progress"
-    "progressBar" : ".bar"
+    "progressBar" : ".progress-bar"
+
 
   initialize : ->
 
@@ -77,8 +78,10 @@ class DatasetListItemView extends Backbone.Marionette.ItemView
     @ajaxUrl = "/api/datasets/#{@model.get("name")}/import"
 
     # In case the user reloads during an import, continue the progress bar
-    if @model.get("dataSource").needsImport
-      @startImport(null, "GET")
+    @listenToOnce(@, "render", ->
+      if @model.get("dataSource").needsImport
+        @startImport(null, "GET")
+    )
 
 
    startImport : (evt, method = "POST") ->
@@ -92,7 +95,7 @@ class DatasetListItemView extends Backbone.Marionette.ItemView
       ).done( (responseJSON) =>
           if responseJSON.status == "inProgress"
             @ui.importLink.hide()
-            @ui.progressbarContainer.show()
+            @ui.progressbarContainer.removeClass("hide")
             @updateProgress()
       )
 

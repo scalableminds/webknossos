@@ -6,7 +6,7 @@ import java.io.InputStream
 import play.api.libs.json._
 import play.api.libs.functional.syntax._
 import braingames.binary.models.{FallbackLayer, DataLayer}
-import models.binary.{DataSet, DataSetDAO}
+import models.binary.{DataStoreInfo, DataSet, DataSetDAO}
 import scala.concurrent.Future
 import play.api.libs.concurrent.Execution.Implicits._
 import braingames.reactivemongo.DBAccessContext
@@ -65,9 +65,10 @@ object AnnotationContent {
 
   implicit val dataSetWrites: Writes[DataSet] =
     ((__ \ 'name).write[String] and
+      (__ \ 'dataStore).write[DataStoreInfo] and
       (__ \ 'scale).write[Option[Scale]] and
       (__ \ 'dataLayers).write[Option[List[DataLayer]]])(d =>
-      (d.name, d.dataSource.map(_.scale), d.dataSource.map(_.dataLayers)))
+      (d.name, d.dataStoreInfo, d.dataSource.map(_.scale), d.dataSource.map(_.dataLayers)))
 
   def writeAsJson(ac: AnnotationContent)(implicit ctx: DBAccessContext) = {
     for {

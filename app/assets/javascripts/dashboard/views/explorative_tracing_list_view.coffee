@@ -3,7 +3,6 @@ underscore : _
 backbone.marionette : marionette
 app : app
 dashboard/views/explorative_tracing_list_item_view : ExplorativeTracingListItemView
-admin/models/dataset/dataset_collection : DatasetCollection
 libs/input : Input
 libs/toast : Toast
 ###
@@ -12,15 +11,14 @@ class ExplorativeTracingListView extends Backbone.Marionette.CompositeView
 
   template : _.template("""
     <h3>Explorative Tracings</h3>
-    <br />
-    <% if (!this.isAdminView) {%>
+    <% if (!isAdminView) {%>
       <div>
         <form action="<%= jsRoutes.controllers.admin.NMLIO.upload().url %>"
               method="POST"
               enctype="multipart/form-data"
               id="upload-and-explore-form"
               class="form-inline inline-block">
-            <span class="btn-file btn">
+            <span class="btn-file btn btn-default">
               <input type="file" name="nmlFile" multiple>
                 <i class="fa fa-upload" id="form-upload-icon"></i>
                 <i class="fa fa-spinner fa-spin hide" id="form-spinner-icon"></i>
@@ -34,22 +32,17 @@ class ExplorativeTracingListView extends Backbone.Marionette.CompositeView
         <form action="<%= jsRoutes.controllers.AnnotationController.createExplorational().url %>"
               method="POST"
               class="form-inline inline-block">
-          <select name="dataSetName">
+          <select id="dataSetsSelect" name="dataSetName" class="form-control">
             <% dataSets.forEach(function(d) { %>
               <option value="<%= d.get("name") %>"> <%= d.get("name") %> </option>
             <% }) %>
           </select>
-          <span id="tracing-chooser">
-            <label class="radio inline">
-              <input type="radio" name="contentType" value="skeletonTracing" checked>
-              Skeleton
-            </label>
-            <label class="radio inline">
-              <input type="radio" name="contentType" value="volumeTracing">
-              Volume
-            </label>
-          </span>
-          <button type="submit" class="btn"><i class="fa fa-search"></i>Explore data set</button>
+          <button type="submit" class="btn btn-default" name="contentType" value="skeletonTracing">
+            <i class="fa fa-search"></i>Open skeleton mode
+          </button>
+          <button type="submit" class="btn btn-default" name="contentType" value="volumeTracing">
+            <i class="fa fa-search"></i>Open volume mode
+          </button>
         </form>
       </div>
     <% } %>
@@ -60,8 +53,8 @@ class ExplorativeTracingListView extends Backbone.Marionette.CompositeView
           <th> # </th>
           <th> Name </th>
           <th> DataSet </th>
-          <th> SkeletonTracing Stats </th>
-          <th> SkeletonTracing-Type </th>
+          <th> Stats </th>
+          <th> Type </th>
           <th> Last edited </th>
           <th> </th>
         </tr>
@@ -83,25 +76,14 @@ class ExplorativeTracingListView extends Backbone.Marionette.CompositeView
     formSpinnerIcon : "#form-spinner-icon"
     formUploadIcon : "#form-upload-icon"
 
-  isAdminView : false
 
   initialize : (options) ->
 
-    @bindUIElements()
-    @model = options.model
     @collection = @model.get("exploratoryAnnotations")
 
-    datasetCollection = new DatasetCollection()
-    @model.set("dataSets", datasetCollection)
-
+    datasetCollection = @model.get("dataSets")
     @listenTo(datasetCollection, "sync", @render)
-    datasetCollection.fetch( silent : true )
-
-  onShow : ->
-
-    @tracingChooserToggler = new Input.KeyboardNoLoop(
-      "v" : => @ui.tracingChooser.toggleClass("hide")
-    )
+    datasetCollection.fetch(silent : true)
 
 
   selectFiles : (event) ->
@@ -116,13 +98,19 @@ class ExplorativeTracingListView extends Backbone.Marionette.CompositeView
 
     toggleIcon = =>
 
-      [@ui.formSpinnerIcon, @ui.formUploadIcon].map((ea) -> ea.toggleClass("hide"))
+      [@ui.formSpinnerIcon, @ui.formUploadIcon].forEach((ea) -> ea.toggleClass("hide"))
 
 
     toggleIcon()
 
+    form = @ui.uploadAndExploreForm
+
     $.ajax(
-      @getUploadOptions(@ui.uploadAndExploreForm)
+      url : form.attr("action")
+      data : new FormData(form[0])
+      type : "POST"
+      processData : false
+      contentType : false
     ).done( (data) ->
       url = "/annotations/" + data.annotation.typ + "/" + data.annotation.id
       app.router.loadURL(url)
@@ -133,16 +121,3 @@ class ExplorativeTracingListView extends Backbone.Marionette.CompositeView
       toggleIcon()
     )
 
-
-  getUploadOptions : (form) ->
-
-    url : form.attr("action")
-    data : new FormData(form[0])
-    type : "POST"
-    processData : false
-    contentType : false
-
-
-  onClose : ->
-
-    @tracingChooserToggler.unbind()

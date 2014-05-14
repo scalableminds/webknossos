@@ -4,7 +4,7 @@ backbone.marionette : marionette
 dashboard/views/dashboard_task_list_view : DashboardTaskListView
 dashboard/views/explorative_tracing_list_view : ExplorativeTracingListView
 dashboard/views/tracked_time_view : TrackedTimeView
-dashboard/models/dashboard_model : DashboardModel
+admin/views/dataset/dataset_switch_view : DatasetSwitchView
 ###
 
 class DashboardView extends Backbone.Marionette.Layout
@@ -12,12 +12,15 @@ class DashboardView extends Backbone.Marionette.Layout
   className : "container wide"
   id : "dashboard"
   template : _.template("""
-    <% if (userID) { %>
-      <h3> User: </h3>
+    <% if (isAdminView) { %>
+      <h3>User: <%= user.firstName %> <%= user.lastName %></h3>
     <% } %>
     <div class="tabbable" id="tabbable-dashboard">
       <ul class="nav nav-tabs">
         <li class="active">
+          <a href="#" id="tab-datasets" data-toggle="tab">Datasets</a>
+        </li>
+        <li>
           <a href="#" id="tab-tasks" data-toggle="tab">Tasks</a>
         </li>
         <li>
@@ -34,16 +37,19 @@ class DashboardView extends Backbone.Marionette.Layout
   """)
 
   ui :
+    "tabDatasets" : "#tab-datasets"
     "tabTasks" : "#tab-tasks"
     "tabExplorative" : "#tab-explorative"
     "tabTrackedTime" : "#tab-tracked-time"
     "tabPane" : ".tab-pane"
-    "header" : "h3"
+
 
   events :
+    "click #tab-datasets" : "showDatasets"
     "click #tab-tasks" : "showTasks"
     "click #tab-explorative" : "showExplorative"
     "click #tab-tracked-time" : "showTrackedTime"
+
 
   regions :
     "tabPane" : ".tab-pane"
@@ -51,40 +57,30 @@ class DashboardView extends Backbone.Marionette.Layout
 
   initialize : (options) ->
 
-    @bindUIElements()
-
-    @model = new DashboardModel(options)
-    @listenTo(@model, "sync", @modelSynced)
-
-    @model.fetch("data" : options.userID)
+    @model.fetch().done( =>
+      @showDatasets()
+    )
 
 
-  modelSynced : ->
+  showDatasets : ->
 
-    @showTasks()
-    @showUserName()
-
-
-  showUserName : ->
-
-    user = @model.get("user")
-    @ui.header.html("User: #{user.firstName} #{user.lastName}")
+    spotlightDatasetListView = new DatasetSwitchView(model : @model.get("dataSets"))
+    @tabPane.show(spotlightDatasetListView)
 
 
   showTasks : ->
 
-    view = new DashboardTaskListView( model : @model, asAdmin : false )
-    @tabPane.show(view)
+    dashboardTaskListView = new DashboardTaskListView(model : @model)
+    @tabPane.show(dashboardTaskListView)
 
 
   showExplorative : ->
 
-    view = new ExplorativeTracingListView( model : @model, asAdmin : false )
-    @tabPane.show(view)
+    explorativeTracingListView = new ExplorativeTracingListView(model : @model)
+    @tabPane.show(explorativeTracingListView)
 
 
   showTrackedTime : ->
 
-    view = new TrackedTimeView( model : @model )
-    @tabPane.show(view)
-
+    trackedTimeView = new TrackedTimeView(model : @model.get("loggedTime"))
+    @tabPane.show(trackedTimeView)

@@ -1,3 +1,4 @@
 100:com.scalableminds.mongev.MongevPlugin
 400:play.modules.reactivemongo.ReactiveMongoPlugin
 401:com.kenshoo.play.metrics.MetricsPlugin
+1000:com.scalableminds.datastore.DataStorePlugin

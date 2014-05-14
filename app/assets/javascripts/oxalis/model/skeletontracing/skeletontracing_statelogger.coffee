@@ -5,9 +5,9 @@
 class SkeletonTracingStateLogger extends StateLogger
 
 
-  constructor : (flycam, version, tracingId, tracingType, allowUpdate, @skeletonTracing) ->
+  constructor : (flycam, version, tracingId, tracingType, allowUpdate, updatePipeline, @skeletonTracing) ->
 
-    super(flycam, version, tracingId, tracingType, allowUpdate)
+    super(flycam, version, tracingId, tracingType, allowUpdate, updatePipeline)
 
 
   #### TREES
@@ -139,17 +139,18 @@ class SkeletonTracingStateLogger extends StateLogger
       })
 
 
-  concatUpdateTracing : (array) ->
+  concatUpdateTracing : ->
 
     branchPoints = []
     for branchPoint in @skeletonTracing.branchStack
       branchPoints.push({id : branchPoint.id})
-    return array.concat( {
-      action : "updateTracing"
-      value : {
+    @pushDiff(
+      "updateTracing"
+      {
         branchPoints : branchPoints
         comments : @skeletonTracing.getPlainComments()
-        activeNodeId : @skeletonTracing.getActiveNodeId()
+        activeNode : @skeletonTracing.getActiveNodeId()
         editPosition : @flycam.getPosition()
       }
-    })
+      false
+    )

@@ -2,6 +2,9 @@
 underscore : _
 backbone : Backbone
 ./dashboard_task_model : DashboardTaskModel
+./user_model : UserModel
+admin/models/dataset/dataset_collection : DatasetCollection
+dashboard/models/logged_time_model : LoggedTimeModel
 ###
 
 class DashboardModel extends Backbone.Model
@@ -9,18 +12,35 @@ class DashboardModel extends Backbone.Model
   urlRoot : ->
 
     if userID = @get("userID")
-      return "/api/users/#{userID}/details"
+      return "/api/users/#{userID}/annotations"
     else
-      return "/api/user/details"
+      return "/api/user/annotations"
 
 
   newTaskUrl : "/user/tasks/request"
   defaults :
       showFinishedTasks : false
 
-  initialize : ->
+  initialize : (options) ->
 
     @listenTo(@, "sync", @transformToCollection)
+
+
+  fetch : ->
+
+    promises = [super(arguments)]
+
+    user = new UserModel(id : @get("userID"))
+    @set("user", user)
+
+    promises.push(user.fetch())
+
+    # TODO: decide whether these submodels should be loaded at this time
+
+    @set("dataSets", new DatasetCollection())
+    @set("loggedTime", new LoggedTimeModel())
+
+    return $.when.apply($, promises)
 
 
   getFinishedTasks : ->
@@ -37,7 +57,6 @@ class DashboardModel extends Backbone.Model
   transformToCollection : ->
 
     tasks = @get("taskAnnotations").map( (el) ->
-
       return DashboardTaskModel::parse(el)
     )
 
@@ -50,14 +69,11 @@ class DashboardModel extends Backbone.Model
 
   getNewTask : ->
 
-    deferred = new $.Deferred()
     newTask = new DashboardTaskModel()
-    newTask.fetch(
+
+    return newTask.fetch(
       url : @newTaskUrl
       success : (response) =>
         @get("tasks").add(newTask)
-        deferred.resolve(response)
-      error : (model, xhr) ->
-        deferred.reject(xhr.responseJSON)
     )
-    return deferred
+

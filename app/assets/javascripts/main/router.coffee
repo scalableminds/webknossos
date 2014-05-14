@@ -14,14 +14,13 @@ class Router extends Backbone.Router
   routes :
     "users"                         : "users"
     "teams"                         : "teams"
-    "datasets"                      : "datasets"
     "statistics"                    : "statistics"
     "tasks"                         : "tasks"
     "projects"                      : "projects"
     "dashboard"                     : "dashboard"
     "users/:id/details"             : "dashboard"
     "admin/taskTypes"               : "taskTypes"
-
+    "spotlight"                     : "spotlight"
 
   initialize : ->
 
@@ -57,11 +56,6 @@ class Router extends Backbone.Router
     @showAdminView("StatisticView")
 
 
-  datasets : ->
-
-    @showWithPagination("DatasetListView", "DatasetCollection")
-
-
   users : ->
 
     @showWithPagination("UserListView", "UserCollection")
@@ -88,12 +82,27 @@ class Router extends Backbone.Router
 
   dashboard : (userID) ->
 
-    require ["dashboard/views/dashboard_view"], (Dashboard) =>
+    require ["dashboard/views/dashboard_view", "dashboard/models/dashboard_model"], (DashboardView, DashboardModel) =>
 
-      view = new Dashboard("userID" : userID)
+      isAdminView = userID != null
+
+      model = new DashboardModel({ userID, isAdminView : false })
+      view = new DashboardView(model : model, isAdminView : isAdminView)
+
       @changeView(view)
+      @listenTo(model, "sync", @hideLoading)
 
-      @hideLoading()
+
+  spotlight: ->
+
+    require(["views/spotlight_view", "admin/models/dataset/dataset_collection"], (SpotlightView, DatasetCollection) =>
+
+      collection = new DatasetCollection()
+      view = new SpotlightView(model: collection)
+
+      @changeView(view)
+      @listenTo(collection, "sync", @hideLoading)
+    )
 
 
   showWithPagination : (view, collection) ->

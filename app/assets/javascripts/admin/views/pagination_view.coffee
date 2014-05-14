@@ -7,38 +7,45 @@ backbone.marionette : marionette
 class PaginationView extends Backbone.Marionette.ItemView
 
   template : _.template("""
-    <div class="pagination">
-      <ul>
-        <li class="first <% if (Pagination.currentPage == 1) { %> disabled <% } %>">
-          <a href="#"><i class="fa fa-angle-double-left"></i></a>
-        </li>
-        <li class="prev <% if (Pagination.currentPage == 1) { %> disabled <% } %>"">
-          <a href="#"><i class="fa fa-angle-left"></i></a>
-        </li>
-        <% if (Pagination.lastPage == 1){ %>
-          <li>
-            <span class="page selected"><%= 1 %></span>
-          <li>
-        <% } %>
-        <% _.each (Pagination.pageSet, function (p) { %>
-          <% if (Pagination.currentPage == p) { %>
-            <li class="page">
-              <span class="selected"><%= p %></span>
-            </li>
-          <% } else { %>
-            <li class="page">
-              <a href="#"><%= p %></a>
-            </li>
+    <div class="row">
+      <div class="col-sm-9">
+        <ul class="pagination">
+          <li class="first <% if (Pagination.currentPage == 1) { %> disabled <% } %>">
+            <a href="#"><i class="fa fa-angle-double-left"></i></a>
+          </li>
+          <li class="prev <% if (Pagination.currentPage == 1) { %> disabled <% } %>"">
+            <a href="#"><i class="fa fa-angle-left"></i></a>
+          </li>
+          <% if (Pagination.lastPage == 1){ %>
+            <li class="active">
+              <span>1</span>
+            <li>
           <% } %>
-        <% }); %>
-        <li class="next <% if (Pagination.currentPage >= Pagination.lastPage) { %> disabled <% } %>">
-          <a href="#"><i class="fa fa-angle-right"></i></a>
-        </li>
-        <li class="last <% if (Pagination.currentPage >= Pagination.lastPage) { %> disabled <% } %>">
-          <a href="#"><i class="fa fa-angle-double-right"></i></a>
-        </li>
-      </ul>
-      <input type="search" class="search-query" placeholder="Search" value="">
+          <% _.each (Pagination.pageSet, function (p) { %>
+            <% if (Pagination.currentPage == p) { %>
+              <li class="active">
+                <span><%= p %></span>
+              </li>
+            <% } else { %>
+              <li>
+                <a href="#" class="page"><%= p %></a>
+              </li>
+            <% } %>
+          <% }); %>
+          <li class="next <% if (Pagination.currentPage >= Pagination.lastPage) { %> disabled <% } %>">
+            <a href="#"><i class="fa fa-angle-right"></i></a>
+          </li>
+          <li class="last <% if (Pagination.currentPage >= Pagination.lastPage) { %> disabled <% } %>">
+            <a href="#"><i class="fa fa-angle-double-right"></i></a>
+          </li>
+        </ul>
+      </div>
+       <div class="col-sm-3">
+          <div class="input-group search-container">
+            <input type="search" class="form-control search-query" placeholder="Search" value="">
+            <span class="input-group-addon"><i class="fa fa-search"></i></span>
+          </div>
+        </div>
     </div>
   """)
 
@@ -62,17 +69,18 @@ class PaginationView extends Backbone.Marionette.ItemView
 
     @listenTo(@collection, "reset", @collectionSynced)
     @listenTo(@collection, "remove", @refresh)
+    @listenTo(@collection, "add", @afterAdd)
     @listenToOnce(@collection, "reset", @searchByHash)
 
 
   goFirst : ->
 
-    @collection.goTo(1)
+    @collection.firstPage()
 
 
   goLast : ->
 
-    @collection.goTo(@collection.totalPages)
+    @collection.lastPage()
 
 
   goBack : ->
@@ -102,8 +110,8 @@ class PaginationView extends Backbone.Marionette.ItemView
       filterQuery = @ui.inputSearch.val()
       app.vent.trigger("paginationView:filter", filterQuery)
 
-      @ui.inputSearch.val(filterQuery)
       @ui.inputSearch.focus()
+      @ui.inputSearch.val(filterQuery)
 
 
   collectionSynced : (evt) ->
@@ -115,6 +123,12 @@ class PaginationView extends Backbone.Marionette.ItemView
   refresh : ->
 
     @collection.pager()
+
+
+  afterAdd : ->
+
+    @refresh()
+    @goLast()
 
 
   searchByHash : ->

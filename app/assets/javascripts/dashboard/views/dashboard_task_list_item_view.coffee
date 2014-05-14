@@ -26,7 +26,7 @@ class DashboardTaskListItemView extends Backbone.Marionette.ItemView
       <% } else { %>
         <a href="/annotations/<%= annotation.typ %>/<%= annotation.id %>">
           <i class="fa fa-random"></i>
-          trace
+          <strong>trace</strong>
         </a>
         <br/>
         <a href="#" id="finish-link" class="trace-finish">

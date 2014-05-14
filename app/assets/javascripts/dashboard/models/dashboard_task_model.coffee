@@ -19,7 +19,7 @@ class DashboardTaskModel extends Backbone.Model
 
   defaultTaskType : (annotation) ->
 
-    summary : "[deleted] " + annotation.typ
+    summary : "[deleted] #{annotation.typ}"
     description : ""
     settings : { allowedModes : "" }
 

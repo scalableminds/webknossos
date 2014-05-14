@@ -9,6 +9,7 @@ import oxalis.nml.NML
 import models.annotation._
 import play.api.libs.json.JsValue
 
+import models.binary.DataSetDAO
 import models.annotation.AnnotationType._
 import scala.Some
 import oxalis.nml.NML
@@ -21,6 +22,8 @@ import braingames.util.Fox
 import models.binary.DataSet
 import models.basics.SecuredBaseDAO
 import play.api.libs.concurrent.Execution.Implicits._
+import braingames.util.{FoxImplicits, Fox}
+import net.liftweb.common.Full
 
 case class TemporarySkeletonTracing(
                                      id: String,
@@ -62,25 +65,27 @@ case class TemporarySkeletonTracing(
 
 object TemporarySkeletonTracingService extends AnnotationContentService {
   def createFrom(nml: NML, id: String, boundingBox: Option[BoundingBox], settings: AnnotationSettings = AnnotationSettings.default)(implicit ctx: DBAccessContext) = {
-    val box: Option[BoundingBox] = boundingBox.flatMap {
-      box =>
-        if (box.isEmpty)
-          None
-        else
-          Some(box)
+    val box = boundingBox.flatMap { box => if (box.isEmpty) None else Some(box) }
+    val start = DataSetDAO.findOneBySourceName(nml.dataSetName).futureBox.map {
+      case Full(dataSet) =>
+        dataSet.defaultStart
+      case _ =>
+        Point3D(0, 0, 0)
     }
 
-    TemporarySkeletonTracing(
-      id,
-      nml.dataSetName,
-      nml.trees,
-      nml.branchPoints,
-      System.currentTimeMillis(),
-      nml.activeNodeId,
-      nml.editPosition,
-      box,
-      nml.comments,
-      settings)
+    start.map {
+      TemporarySkeletonTracing(
+        id,
+        nml.dataSetName,
+        nml.trees,
+        nml.branchPoints,
+        System.currentTimeMillis(),
+        nml.activeNodeId,
+        _,
+        box,
+        nml.comments,
+        settings)
+      }.toFox
   }
 
   def createFrom(tracing: SkeletonTracingLike, id: String)(implicit ctx: DBAccessContext) = {
@@ -103,11 +108,17 @@ object TemporarySkeletonTracingService extends AnnotationContentService {
   def createFrom(nmls: List[NML], boundingBox: Option[BoundingBox], settings: AnnotationSettings)(implicit ctx: DBAccessContext): Fox[TemporarySkeletonTracing] = {
     nmls match {
       case head :: tail =>
-        val startTracing = createFrom(head, "", boundingBox, settings)
+        val startTracing = createFrom(head, head.timestamp.toString, boundingBox, settings)
 
-        tail.foldLeft(Fox.successful(startTracing)) {
+        tail.foldLeft(startTracing) {
           case (f, s) =>
-            f.flatMap(t => t.mergeWith(createFrom(s, s.timestamp.toString, boundingBox)))
+            for {
+              t <- f
+              n <- createFrom(s, s.timestamp.toString, boundingBox)
+              r <- t.mergeWith(n)
+            } yield {
+              r
+            }
         }
       case _ =>
         Fox.empty

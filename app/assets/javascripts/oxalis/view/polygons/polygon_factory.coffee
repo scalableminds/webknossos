@@ -7,15 +7,19 @@ underscore : _
 # Based on the marching cubes algorithm
 class PolygonFactory
 
+  MAX_SAMPLES : 80
+
   constructor : (@modelCube, min, max, @id) ->
 
-    @samples    = 100
-    @voxelsToSkip = Math.ceil((max[0] - min[0]) / @samples) || 1
+    @voxelsToSkip = Math.ceil((max[0] - min[0]) / @MAX_SAMPLES) || 1
     @chunkSize  = 10000
 
-    [ @startX, @endX ] = [ min[0] - 1, max[0] + 3 ]
-    [ @startY, @endY ] = [ min[1] - 1, max[1] + 3 ]
-    [ @startZ, @endZ ] = [ min[2] - 1, max[2] + 3 ]
+    round = (number) =>
+      Math.floor(number / @voxelsToSkip) * @voxelsToSkip
+
+    [ @startX, @endX ] = [ round(min[0]), round(max[0]) + @voxelsToSkip ]
+    [ @startY, @endY ] = [ round(min[1]), round(max[1]) + @voxelsToSkip ]
+    [ @startZ, @endZ ] = [ round(min[2]), round(max[2]) + @voxelsToSkip ]
 
 
   getTriangles : () ->

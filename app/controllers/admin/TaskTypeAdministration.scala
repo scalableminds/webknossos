@@ -15,6 +15,8 @@ import models.annotation.AnnotationDAO
 import play.api.libs.concurrent.Execution.Implicits._
 import braingames.util.Fox
 import play.api.mvc.SimpleResult
+import scala.concurrent.Future
+import play.api.libs.json._
 
 object TaskTypeAdministration extends AdminController {
 
@@ -58,9 +60,11 @@ object TaskTypeAdministration extends AdminController {
     }
   }
 
-  def list = Authenticated.async { implicit request =>
-    taskTypeListWithForm(taskTypeForm).map { html =>
-      Ok(html)
+  def list = Authenticated.async{ implicit request =>
+    for {
+      taskTypes <- TaskTypeDAO.findAll
+    } yield {
+      Ok(Json.toJson(taskTypes.map(TaskType.publicTaskTypeWrites.writes)))
     }
   }
 

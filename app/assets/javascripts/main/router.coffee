@@ -72,9 +72,10 @@ class Router extends Backbone.Router
 
   taskTypes : ->
 
-    require ["admin/views/tasktypes/task_type_list_view"], (TaskTypeListView) =>
+    require ["admin/views/tasktype/task_type_list_view", "admin/models/tasktype/task_type_collection"], (TaskTypeListView, TaskTypeCollection) =>
 
-      view = new TaskTypeListView()
+      collection = new TaskTypeCollection()
+      view = new TaskTypeListView(collection: collection)
       @changeView(view)
 
       @hideLoading()

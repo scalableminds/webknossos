@@ -115,7 +115,6 @@ GET           /admin/taskTypes/:id/delete                          controllers.a
 GET           /admin/taskTypes/:id/edit                            controllers.admin.TaskTypeAdministration.edit(id: String)
 GET           /admin/taskTypes/:id/tasks                           controllers.admin.TaskAdministration.tasksForType(id: String)
 POST          /admin/taskTypes/:id                                 controllers.admin.TaskTypeAdministration.editTaskTypeForm(id: String)
->>>>>>> a24121d80d896d9abd0f7829296658e7e876ce21
 
 # Projects
 GET           /projects                                            controllers.ProjectController.empty

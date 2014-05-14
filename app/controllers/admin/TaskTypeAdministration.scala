@@ -44,7 +44,7 @@ object TaskTypeAdministration extends AdminController {
           _ <- ensureTeamAdministration(request.user, t.team).toFox
           _ <- TaskTypeDAO.insert(t)
         } yield {
-          Redirect(routes.TaskTypeAdministration.list)
+          Redirect("/admin/taskTypes")
           .flashing(
             FlashSuccess(Messages("taskType.createSuccess")))
           .highlighting(t.id)
@@ -85,7 +85,7 @@ object TaskTypeAdministration extends AdminController {
             _ <- ensureTeamAdministration(request.user, updatedTaskType.team).toFox
           } yield {
             tasks.map(task => AnnotationDAO.updateAllUsingNewTaskType(task, updatedTaskType.settings))
-            Redirect(routes.TaskTypeAdministration.list)
+            Redirect("/admin/taskTypes")
             .flashing(
               FlashSuccess(Messages("taskType.editSuccess")))
             .highlighting(taskType.id)

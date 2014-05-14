@@ -3,7 +3,7 @@
 @import play.api.libs.json.Json
 
 @taskTypeHelpLink() = {
-  <a href="@controllers.admin.routes.TaskTypeAdministration.list">Create a new Type</a>
+  <a href="/admin/taskTypes">Create a new Type</a>
 }
 
 @helper.select(taskForm("taskType"), taskTypes.map { tt =>

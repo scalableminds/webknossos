@@ -48,9 +48,7 @@ class TaskTypeItemView extends Backbone.Marionette.CompositeView
     <tr class="details-row hide">
       <td colspan="12">
         <table class="table table-condensed table-nohead">
-          <tbody> <!-- class="hide" -->
-            <!-- TASKS FOR TASKTYPE NEED TO BE LOADED INTO THIS TABLE -->
-          </tbody>
+          <tbody></tbody>
         </table>
       </td>
     </tr>

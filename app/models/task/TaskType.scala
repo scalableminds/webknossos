@@ -57,13 +57,10 @@ object TaskType {
         (__ \ 'team).write[String] and
         (__ \ 'settings).write[AnnotationSettings] and
         (__ \ 'fileName).write[Option[String]] and
-        (__ \ 'formattedHash).write[String] and
         (__ \ 'expectedTime).write[String] and
-        (__ \ 'formattedShortText).write[String] and
         (__ \ 'id).write[String])( tt =>
           (tt.summary, tt.description, tt.team, tt.settings,
-            tt.fileName, Formatter.formatHash(tt.id), tt.expectedTime.toString,
-            Formatter.formatShortText(tt.description), tt.id))
+            tt.fileName, tt.expectedTime.toString, tt.id))
 }
 
 object TaskTypeDAO extends SecuredBaseDAO[TaskType] {

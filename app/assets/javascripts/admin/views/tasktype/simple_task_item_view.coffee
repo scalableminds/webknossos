@@ -1,7 +1,6 @@
 ### define
 underscore : _
 backbone.marionette : marionette
-libs/toast : Toast
 ###
 
 class SimpleTaskItemView extends Backbone.Marionette.CompositeView
@@ -38,10 +37,11 @@ class SimpleTaskItemView extends Backbone.Marionette.CompositeView
       </span>
     </td>
     <td>
-      Tracked Time: <%= tracingTime || "-" %>
+      Tracked Time: <%= formattedTracingTime %>
     </td>
     <td class="nowrap">
-      <a href="/api/tasks/<%= id %>/download" title="download all finished tracings"><i class="fa fa-download"></i>
+      <a href="/api/tasks/<%= id %>/download" title="download all finished tracings">
+        <i class="fa fa-download"></i>
         download
       </a>
     </td>

@@ -1,6 +1,7 @@
 ### define
 underscore : _
 ../pagination_collection : PaginationCollection
+format_utils : FormatUtils
 ###
 
 class TaskCollection extends Backbone.Collection
@@ -27,6 +28,7 @@ class TaskCollection extends Backbone.Collection
         # apply some defaults
         response.type =
           summary : response.type?.summary || "<deleted>"
+        response.formattedTracingTime = FormatUtils.formatSeconds(response.tracingTime? or 0)
 
         # convert bounding box
         if response.boundingBox?

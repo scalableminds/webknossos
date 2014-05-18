@@ -8,33 +8,42 @@ libs/toast : Toast
 class TaskTypeItemView extends Backbone.Marionette.CompositeView
 
   template : _.template("""
-    <tr id="@taskType.id">
+    <tr id="<%= id %>">
       <td class="details-toggle"
         href="@controllers.admin.routes.TaskAdministration.tasksForType(taskType.id)"
-        data-ajax="add-row=#@taskType.id+tr"> <i class="caret-right"></i><i class="caret-down"></i></td>
-      <td> @formatHash(taskType.id) </td>
-      <td> @taskType.team </td>
-      <td> @taskType.summary </td>
-      <td> @formatShortText(taskType.description) </td>
+        data-ajax="add-row=#<%= id %>+tr">
+        <i class="caret-right"></i>
+        <i class="caret-down"></i>
+      </td>
+      <td><%= formattedHash %></td>
+      <td><%= team %></td>
+      <td><%= summary %></td>
+      <td><%= formattedShortText %></td>
       <td>
-        @taskType.settings.allowedModes.map{ mode =>
-          <span class="label label-default"> @mode.capitalize </span>
-        }
+        <% _.each(settings.allowedModes, function (mode) { %>
+          <span class="label label-default"><%= mode[0].toUpperCase() + mode.slice(1) %></span>
+        <% }) %>
       </td>
       <td>
-        @if(taskType.settings.branchPointsAllowed) {
-          <span class="label label-default"> Branchpoints </span>
-        }
-        @if(taskType.settings.somaClickingAllowed) {
-          <span class="label label-default"> Soma clicking </span>
-        }
+        <% if(settings.branchPointsAllowed) { %>
+          <span class="label label-default">Branchpoints</span>
+        <% } %>
+        <% if(settings.somaClickingAllowed) { %>
+          <span class="label label-default">Soma clicking</span>
+        <% } %>
       </td>
-      <td> @taskType.expectedTime </td>
-      <td> @taskType.fileName.getOrElse("") </td>
+      <td><%= expectedTime  %></td>
+      <td><%= fileName %></td>
       <td class="nowrap">
-        <a href="@controllers.routes.AnnotationController.trace(AnnotationType.CompoundTaskType, taskType.id)" title="view all finished tracings"><i class="fa fa-random"></i>view</a><br />
-        <a href="@controllers.admin.routes.TaskTypeAdministration.edit(taskType.id)" ><i class="fa fa-pencil"></i>edit </a> <br />
-        <a href="@controllers.admin.routes.TaskTypeAdministration.delete(taskType.id)" data-ajax="delete-row,confirm"><i class="fa fa-trash-o"></i>delete </a>
+        <a href="/annotations/CompoundTaskType/<%= id %>" title="view all finished tracings">
+          <i class="fa fa-random"></i>view
+        </a> <br />
+        <a href="/admin/taskTypes/<%= id %>/edit" >
+          <i class="fa fa-pencil"></i>edit
+        </a> <br />
+        <a href="/admin/taskTypes/<%= id %>/delete" data-ajax="delete-row,confirm">
+          <i class="fa fa-trash-o"></i>delete
+        </a>
       </td>
     </tr>
     <tr class="details-row" >

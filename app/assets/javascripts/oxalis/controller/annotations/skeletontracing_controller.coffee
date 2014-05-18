@@ -27,41 +27,6 @@ class SkeletonTacingController
     #   setActiveTree : (id) => @model.skeletonTracing.setActiveTree(id)
     #   setActiveNode : (id) => @model.skeletonTracing.setActiveNode(id)
 
-    # Manage side bar input
-    $("#tree-name-submit").click (event) =>
-      @model.skeletonTracing.setTreeName($("#tree-name-input").val())
-
-    $("#tree-name-input").keypress (event) =>
-      if event.which == 13
-        $("#tree-name-submit").click()
-        $("#tree-name-input").blur()
-
-    $("#tree-prev-button").click (event) =>
-      @selectNextTree(false)
-
-    $("#tree-next-button").click (event) =>
-      @selectNextTree(true)
-
-    $("#tree-create-button").click =>
-      @model.skeletonTracing.createNewTree()
-
-    $("#tree-delete-button").click =>
-      @model.skeletonTracing.deleteTree(true)
-
-    $("#tree-list").on "click", "a[data-treeid]", (event) =>
-      event.preventDefault()
-      @setActiveTree($(event.currentTarget).data("treeid"), true)
-
-    $("#tree-color-shuffle").click =>
-      @model.skeletonTracing.shuffleTreeColor()
-
-    $("#tree-color-shuffle-all").click =>
-      @model.skeletonTracing.shuffleAllTreeColors()
-
-    $("#tree-sort").on "click", "a[data-sort]", (event) =>
-      event.preventDefault()
-      @model.user.set("sortTreesByName", ($(event.currentTarget).data("sort") == "name"))
-
 
   setParticleSize : (delta) =>
 
@@ -90,17 +55,10 @@ class SkeletonTacingController
       @model.user.push()
 
 
-  centerActiveNode : =>
-
-    position = @model.skeletonTracing.getActiveNodePos()
-    if position
-      @model.flycam.setPosition(position)
-
-
   setActiveNode : (nodeId, merge = false, centered = false) ->
 
     @model.skeletonTracing.setActiveNode nodeId, merge
-    @centerActiveNode() if centered
+    @model.skeletonTracing.centerActiveNode() if centered
 
 
   deleteActiveNode : =>
@@ -112,10 +70,7 @@ class SkeletonTacingController
 
     @model.skeletonTracing.setActiveTree(treeId)
     if centered
-      @centerActiveNode()
+      @model.skeletonTracing.centerActiveNode()
 
 
-  selectNextTree : (next) ->
 
-    @model.skeletonTracing.selectNextTree(next)
-    @centerActiveNode()

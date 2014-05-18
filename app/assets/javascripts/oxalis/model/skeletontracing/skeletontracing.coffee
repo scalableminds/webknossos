@@ -342,6 +342,13 @@ class SkeletonTracing
     @setActiveTree(trees[ (i + diff) % trees.length ].treeId)
 
 
+  centerActiveNode : ->
+
+    position = @getActiveNodePos()
+    if position
+      @flycam.setPosition(position)
+
+
   setActiveTree : (id) ->
 
     for tree in @trees

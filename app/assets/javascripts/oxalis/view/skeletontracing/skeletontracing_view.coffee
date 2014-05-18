@@ -31,59 +31,8 @@ class SkeletonTracingView extends View
       wrongDirection : =>
 
         Toast.error("You're tracing in the wrong direction")
-
-
-
-      deleteTree : =>
-
-        #@updateActiveComment()
-        @updateTrees()
-
-
-      mergeTree : =>
-
-        @updateTrees()
-        @updateComments()
-
-
-      reloadTrees : =>
-
-        @updateTrees()
-        #@updateComments()
-
-
-      newNode : =>
-
-        @updateTreesDebounced()
-
-
-      newTreeName : =>
-
-        @updateTrees()
-        #@updateComments()
-
-
-      newTree : =>
-
-        @updateTrees()
-        #@updateComments()
-
-
-      newTreeColor : =>
-
-        @updateTreesDebounced()
-
-
-      deleteActiveNode : =>
-
-        @updateTrees()
     })
 
-
-    @model.user.on
-      sortTreesByNameChanged : =>
-        @updateTreesSortButton()
-        @updateTrees()
 
     @model.skeletonTracing.stateLogger.on
       pushFailed : =>
@@ -161,14 +110,6 @@ class SkeletonTracingView extends View
     treeList.append(newContent)
 
     @updateActiveTree()
-
-
-  updateTreesSortButton : ->
-
-    @toggleIconVisibility(
-      @model.user.get("sortTreesByName"),
-      $("#sort-name-icon"),
-      $("#sort-id-icon"))
 
 
   showFirstVisToggle : ->

@@ -320,16 +320,10 @@ object TaskAdministration extends AdminController {
   def tasksForType(taskTypeId: String) = Authenticated.async { implicit request =>
     for {
       taskType <- TaskTypeDAO.findOneById(taskTypeId) ?~> Messages("taskType.notFound")
-
       tasks <- TaskDAO.findAllByTaskType(taskType)
-      dataSetNames <- dataSetNamesForTasks(tasks)
-      statuses <- Future.traverse(tasks)(_.status)
+      js <- Future.traverse(tasks)(Task.transformToJson)
     } yield {
-      val zipped = (tasks, dataSetNames, statuses).zipped.toList
-      val result = zipped.foldLeft(Html.empty) {
-        case (h, (t, d, s)) => h += html.admin.task.simpleTask(t, d.getOrElse(""), s, Some(taskType))
-      }
-      JsonOk(result)
+      Ok(Json.toJson(js))
     }
   }
 
@@ -342,7 +336,7 @@ object TaskAdministration extends AdminController {
     taskTypes: List[TaskType],
     projects: List[Project],
     futureTaskType: Option[TaskType])
- 
+
   object UserWithTaskInfos {
     def userInfosPublicWrites(requestingUser: User): Writes[UserWithTaskInfos] =
       ( (__ \ "user").write(User.userPublicWrites(requestingUser)) and
@@ -355,7 +349,7 @@ object TaskAdministration extends AdminController {
   def overviewData = Authenticated.async { implicit request =>
 
     def getUserInfos(users: List[User]) = {
-     
+
       val futureTaskTypeMap = for {
         futureTasks <- TaskService.simulateTaskAssignment(users)
         futureTaskTypes <- Fox.sequenceOfFulls(futureTasks.map(e => e._2.taskType.map(e._1 -> _)).toList)

@@ -137,7 +137,19 @@ class TaskTypeListView extends Backbone.Marionette.CompositeView
   itemView : TaskTypeItemView
   itemViewContainer: "table"
 
+  ui:
+    "detailsToggle" : ".details-toggle-all"
+
+  events:
+    "click @ui.detailsToggle" : "toggleAllDetails"
+
+
   initialize : ->
 
-    # @listenTo(app.vent, "paginationView:filter", @filter)
     @collection.fetch().done()
+
+
+  toggleAllDetails : ->
+
+    @ui.detailsToggle.toggleClass("open")
+    app.vent.trigger("taskTypeListView:toggleDetails")

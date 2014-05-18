@@ -3,9 +3,21 @@ underscore : _
 ../pagination_collection : PaginationCollection
 ###
 
-class TaskCollection extends PaginationCollection
+class TaskCollection extends Backbone.Collection
+  # extends PaginationCollection
+
+  # TODO: solve conflict
+  # super class should be PaginationCollection for task list
+  #             should be Backbone.Collection for task type list
 
   url : "/api/tasks"
+
+  constructor : (taskTypeID) ->
+
+    if taskTypeID
+      @url = "/admin/taskTypes/#{taskTypeID}/tasks"
+    super()
+
 
   parse : (respones) ->
 

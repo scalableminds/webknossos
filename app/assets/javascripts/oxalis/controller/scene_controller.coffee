@@ -70,6 +70,11 @@ class SceneController
     @planes[constants.PLANE_XZ].setRotation(new THREE.Euler( - 1/2 * Math.PI, 0, 0))
 
 
+  removeShapes : ->
+
+    @trigger("removeGeometries", @volumeMeshes)
+
+
   showShapes : (min, max, id) ->
 
     return if @cellsDeferred?
@@ -79,7 +84,7 @@ class SceneController
       min, max, id
     )).getTriangles(min, max, id).done (triangles) =>
 
-      @trigger("removeGeometries", @volumeMeshes)
+      @removeShapes()
       @volumeMeshes = []
 
       for id of triangles

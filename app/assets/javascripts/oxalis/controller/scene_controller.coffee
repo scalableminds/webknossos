@@ -169,9 +169,10 @@ class SceneController
     @flycam.update()
 
 
-  setDisplaySV : (plane, value) =>
+  setDisplayPlanes : (value) =>
 
-    @displayPlane[plane] = value
+    for i in [0..2]
+      @displayPlane[i] = value
     @flycam.update()
 
 
@@ -241,9 +242,6 @@ class SceneController
         @setDisplayCrosshair(value)
       interpolationChanged : (value) =>
         @setInterpolation(value)
-      displayTDViewXYChanged : (value) =>
-        @setDisplaySV constants.PLANE_XY, value
-      displayTDViewYZChanged : (value) =>
-        @setDisplaySV constants.PLANE_YZ, value
-      displayTDViewXZChanged : (value) =>
-        @setDisplaySV constants.PLANE_XZ, value  })
+      tdViewDisplayPlanesChanged : (value) =>
+        @setDisplayPlanes value
+    })

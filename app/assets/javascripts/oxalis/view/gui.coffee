@@ -118,9 +118,7 @@ class Gui
                           .onChange((v) => @setQuality(v))
 
     @folders.push(@fTDView = @gui.addFolder("3D View"))
-    @addCheckbox(@fTDView, @user.getSettings(), "displayTDViewXY", "Display XY-Plane")
-    @addCheckbox(@fTDView, @user.getSettings(), "displayTDViewYZ", "Display YZ-Plane")
-    @addCheckbox(@fTDView, @user.getSettings(), "displayTDViewXZ", "Display XZ-Plane")
+    @addCheckbox(@fTDView, @user.getSettings(), "tdViewDisplayPlanes", "Display Planes")
 
     if @settingsSkeleton?
 

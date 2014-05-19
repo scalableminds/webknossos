@@ -81,7 +81,7 @@ class PolygonFactory
 
     for cellId, cubeIndex of cubeIndices
       unless result[cellId]?
-        result[ cellId ] = []
+        result[cellId] = []
       unless cubeIndex == 0 or cubeIndex == 256
         @addNewTriangles(result[cellId], cubeIndex, position)
 

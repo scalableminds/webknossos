@@ -164,14 +164,13 @@ class SkeletonTracingView extends View
       newIcon = activeHref.parent("li").children("i")
       newIcon.toggleClass("fa-angle-right", true)
 
-      # animate scrolling to the new comment
-      $("#comment-container").animate({
-        scrollTop: newIcon.offset().top - $("#comment-container").offset().top + $("#comment-container").scrollTop()}, 250)
-    else
-      activeTree = $("#comment-container span[data-treeid=#{@model.skeletonTracing.getActiveTreeId()}]")
-      if activeTree.length
-        $("#comment-container").animate({
-          scrollTop: activeTree.offset().top - $("#comment-container").offset().top + $("#comment-container").scrollTop()}, 250)
+    # animate scrolling to the active tree
+    activeTree = $("#comment-container span[data-treeid=#{@model.skeletonTracing.getActiveTreeId()}]")
+    if activeTree.length
+      $("#comment-container").animate(
+        scrollTop: activeTree.offset().top - $("#comment-container").offset().top + $("#comment-container").scrollTop()
+        250
+      )
 
 
   updateActiveTree : ->

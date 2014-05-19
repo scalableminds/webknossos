@@ -6,10 +6,11 @@ import argparse
 class NMLGenerator(object):
 
 
-  def __init__(self, nodes_per_tree=1, trees=1):
+  def __init__(self, nodes_per_tree=1, trees=1, include_comments=False):
 
     self.nodes_per_tree = nodes_per_tree
     self.trees = trees
+    self.include_comments = include_comments
 
 
   def print_nml(self):
@@ -56,14 +57,17 @@ class NMLGenerator(object):
   def print_comments(self):
 
     print '  <comments>'
-    for node_id in range(1, self.trees * self.nodes_per_tree + 1):
-      print '    <comment node="%d" content="Node %d"/>' % (node_id, node_id)
+    if self.include_comments:
+      for node_id in range(1, self.trees * self.nodes_per_tree + 1):
+        print '    <comment node="%d" content="Node %d"/>' % (node_id, node_id)
     print '  </comments>'
 
 
 parser = argparse.ArgumentParser(description='Print an NML file.')
 parser.add_argument('nodes_per_tree', type=int, help='Number of nodes per tree')
 parser.add_argument('trees', type=int, help='Number of trees', default=1, nargs='?')
+parser.add_argument('--comments', dest='include_comments', action='store_const',
+                  const=True, default=False, help='Include comments')
 args = parser.parse_args()
 
-NMLGenerator(args.nodes_per_tree, args.trees).print_nml()
+NMLGenerator(args.nodes_per_tree, args.trees, args.include_comments).print_nml()

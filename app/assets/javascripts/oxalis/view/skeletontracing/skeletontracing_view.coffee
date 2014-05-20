@@ -13,7 +13,6 @@ class SkeletonTracingView extends View
     super(@model)
     _.extend(@, Backbone.Events)
 
-    $('.volume-controls').hide()
 
     @listenTo(app.vent, "activeNode:change", @updateActiveTree)
 
@@ -48,68 +47,6 @@ class SkeletonTracingView extends View
               window.location.reload() )},
             {id : "cancel-button", label : "Cancel", callback : ( => @reloadDenied = true ) } ] )
 
-    $("a[href=#tab-trees]").on "shown", (event) =>
-      @updateActiveTree()
-
-    @updateTrees()
-    @updateTreesSortButton()
-
-
-  updateActiveTree : ->
-
-    activeTree = @model.skeletonTracing.getTree()
-    if activeTree
-      $("#tree-name-input").val(activeTree.name)
-      $("#tree-active-color").css("color": "##{('000000'+activeTree.color.toString(16)).slice(-6)}")
-      activeHref = $("#tree-list a[data-treeid=#{activeTree.treeId}]")
-
-    oldIcon = $("#tree-list i.fa-angle-right")
-    if oldIcon.length
-      oldIcon.toggleClass("fa-angle-right", false)
-      oldIcon.toggleClass("fa-bull", true)
-
-    if activeHref?.length
-
-      newIcon = activeHref.parent("li").children("i")
-      newIcon.toggleClass("fa-angle-right", true)
-      newIcon.toggleClass("fa-bull", false)
-
-      # animate scrolling to the new tree
-      $("#tree-list").animate({
-        scrollTop: newIcon.offset().top - $("#tree-list").offset().top + $("#tree-list").scrollTop()}, 250)
-
-
-  updateTreesDebounced : ->
-    # avoid lags caused by frequent DOM modification
-
-    @updateTreesDebounced = _.debounce(
-      => @updateTrees()
-      200
-    )
-    @updateTreesDebounced()
-
-
-  updateTrees : ->
-
-    trees = @model.skeletonTracing.getTreesSorted()
-
-    treeList = $("#tree-list")
-    treeList.empty()
-
-    newContent = document.createDocumentFragment()
-
-    for tree in trees
-      newContent.appendChild((
-        $('<li>').append($('<i>', {"class": "fa fa-bull"}),
-          $('<a>', {"href": "#", "data-treeid": tree.treeId})
-          .append($('<span>', {"title": "nodes", "text": tree.nodes.length}).css("display": "inline-block", "width": "50px"),
-          $('<i>', {"class": "fa fa-circle"}).css(
-            "color": "##{('000000'+tree.color.toString(16)).slice(-6)}"),
-          $('<span>', {"title": "name", "text": tree.name}) )) )[0])
-
-    treeList.append(newContent)
-
-    @updateActiveTree()
 
 
   showFirstVisToggle : ->

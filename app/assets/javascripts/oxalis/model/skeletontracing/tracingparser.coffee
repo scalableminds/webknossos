@@ -2,7 +2,6 @@
 jquery : $
 underscore : _
 backbone : backbone
-three.color : ColorConverter
 libs/request : Request
 ./tracepoint : TracePoint
 ./tracetree : TraceTree

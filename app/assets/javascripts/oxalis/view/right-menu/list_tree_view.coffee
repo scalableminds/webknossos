@@ -2,9 +2,10 @@
 underscore : _
 app : app
 backbone.marionette : marionette
+./list_tree_item_view : ListTreeItemView
 ###
 
-class ListTreeView extends Backbone.Marionette.ItemView
+class ListTreeView extends Backbone.Marionette.CompositeView
 
   template : _.template("""
     <div id="tree-navbar">
@@ -33,17 +34,20 @@ class ListTreeView extends Backbone.Marionette.ItemView
         </span>
         <input name="name" id="tree-name-input" class="form-control" maxlength="30" type="text" autocomplete="off">
         <span class="input-group-btn">
-          <button class="btn btn-default" id="tree-name-submit"><i class="fa fa-check"></i></button>
-        </span>
-        <span class="input-group-btn">
           <button class="btn btn-default" id="tree-next-button"><i class="fa fa-arrow-right"></i></button>
         </span>
       </div>
       <div>
-        <ul id="tree-list"></ul>
+      <ul id="tree-list"></ul>
       </div>
     </div>
     """)
+
+  itemView : ListTreeItemView
+  itemViewContainer : "ul"
+  itemViewOptions : ->
+    parent : @
+    activeTreeId : @getActiveTree().treeId
 
   events :
     "change #tree-name-input" : "setTreeName"
@@ -55,12 +59,19 @@ class ListTreeView extends Backbone.Marionette.ItemView
     "click #tree-color-shuffle-all" : "shuffleAllTreeColors"
     "click a[data-sort]" : "sortTrees"
 
+  ui :
+    "treeNameInput" : "#tree-name-input"
+
 
   initialize : (options) ->
 
     {@_model} = options
 
-    @listenTo(app.vent)
+    @listenTo(app.vent, "model:sync", @refresh)
+    @listenTo(app.vent, "model:sync", ->
+      #potentially a performance problem
+      @listenTo(@_model.skeletonTracing, "all", @refresh)
+    )
 
 
   setTreeName : (evt) ->
@@ -82,21 +93,52 @@ class ListTreeView extends Backbone.Marionette.ItemView
   deleteTree : ->
     @_model.skeletonTracing.deleteTree(true)
 
-  # $("#tree-list").on "click", "a[data-treeid]", (event) =>
-  #   event.preventDefault()
-  #   @setActiveTree($(event.currentTarget).data("treeid"), true)
 
   shuffleTreeColor : ->
     @_model.skeletonTracing.shuffleTreeColor()
 
+
   shuffleAllTreeColors : ->
     @_model.skeletonTracing.shuffleAllTreeColors()
+
 
   sortTrees : (evt) ->
     evt.preventDefault()
     @_model.user.set("sortTreesByName", ($(evt.currentTarget).data("sort") == "name"))
 
+
   selectNextTree : (next) ->
 
-    @model.skeletonTracing.selectNextTree(next)
-    @model.skeletonTracing.centerActiveNode()
+    @_model.skeletonTracing.selectNextTree(next)
+    @_model.skeletonTracing.centerActiveNode()
+    @updateTreesDebounced()
+
+
+  getActiveTree : ->
+
+    return @_model.skeletonTracing.getTree()
+
+
+  refresh : ->
+
+    trees = @_model.skeletonTracing.getTreesSorted()
+    @collection = new Backbone.Collection(trees)
+
+    @updateTreesDebounced()
+
+
+  updateTreesDebounced : ->
+    # avoid lags caused by frequent DOM modification
+
+    @updateTreesDebounced = _.debounce(
+      =>
+        name = @getActiveTree().name
+        @ui.treeNameInput.val(name)
+        @_renderChildren()
+      200
+    )
+    @updateTreesDebounced()
+
+    # animate scrolling to the new tree
+    # $("#tree-list").animate({
+    #   scrollTop: newIcon.offset().top - $("#tree-list").offset().top + $("#tree-list").scrollTop()}, 250)

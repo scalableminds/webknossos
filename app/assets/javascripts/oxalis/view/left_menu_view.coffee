@@ -24,7 +24,7 @@ class LeftMenuView extends Backbone.Marionette.Layout
 
     <div id="dataset-position" class="row"></div>
 
-    <% if (isTraceMode) { %>
+    <% if (!isTraceMode && !isViewMode) { %>
       <div id="volume-actions" class="volume-controls">
         <button class="btn btn-default" id="btn-merge">Merge cells</button>
       </div>
@@ -45,9 +45,8 @@ class LeftMenuView extends Backbone.Marionette.Layout
   """)
 
   templateHelpers : ->
-    # spotlight aka public viewing
     isTraceMode : @isTraceMode()
-    isViewMode : @isViewMode
+    isViewMode : @isViewMode # spotlight aka public viewing
 
 
   regions :

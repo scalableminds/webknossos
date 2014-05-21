@@ -36,7 +36,7 @@ class TaskTypeListView extends Backbone.Marionette.CompositeView
 
   form : ->
     """
-    <form action="/admin/taskTypes" method="POST" class="form-horizontal">
+    <form action="/api/taskTypes" method="POST" class="form-horizontal">
       <div class=" form-group">
         <label class="col-sm-3 control-label" for="summary">Summary</label>
         <div class="col-sm-9">

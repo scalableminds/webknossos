@@ -14,7 +14,7 @@ class TaskCollection extends Backbone.Collection
   url : ->
 
     if @forTaskTypeID
-      return "/admin/taskTypes/#{@forTaskTypeID}/tasks"
+      return "/api/taskTypes/#{@forTaskTypeID}/tasks"
     else
       return "/api/tasks"
 

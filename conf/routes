@@ -111,11 +111,11 @@ GET           /api/tasks/:id/annotations                           controllers.A
 
 GET           /taskTypes                                           controllers.admin.TaskTypeAdministration.empty
 GET           /api/taskTypes                                       controllers.admin.TaskTypeAdministration.list
-POST          /admin/taskTypes                                     controllers.admin.TaskTypeAdministration.create
-DELETE        /admin/taskTypes/:id/delete                          controllers.admin.TaskTypeAdministration.delete(id: String)
-GET           /admin/taskTypes/:id/edit                            controllers.admin.TaskTypeAdministration.edit(id: String)
-GET           /admin/taskTypes/:id/tasks                           controllers.admin.TaskAdministration.tasksForType(id: String)
-POST          /admin/taskTypes/:id                                 controllers.admin.TaskTypeAdministration.editTaskTypeForm(id: String)
+POST          /api/taskTypes                                     controllers.admin.TaskTypeAdministration.create
+DELETE        /api/taskTypes/:id/delete                          controllers.admin.TaskTypeAdministration.delete(id: String)
+GET           /api/taskTypes/:id/edit                            controllers.admin.TaskTypeAdministration.edit(id: String)
+GET           /api/taskTypes/:id/tasks                           controllers.admin.TaskAdministration.tasksForType(id: String)
+POST          /api/taskTypes/:id                                 controllers.admin.TaskTypeAdministration.editTaskTypeForm(id: String)
 
 # Projects
 GET           /projects                                            controllers.ProjectController.empty

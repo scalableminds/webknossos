@@ -6,6 +6,6 @@ class TaskTypeModel extends Backbone.Model
 
   destroy : ->
 
-    options = url : "/admin/taskTypes/#{@get('id')}/delete"
+    options = url : "/api/taskTypes/#{@get('id')}/delete"
     super(options)
 

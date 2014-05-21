@@ -4,26 +4,39 @@
 
 .dataset-thumbnail {
 
-  width: 250px;
-
-  a {
-    position: relative;
-    display: block;
-  }
-
-  i {
-    display: block;
-    font-size: 80px;
-    text-align: center;
-    top: 0;
-    line-height: 200px;
-    position: absolute;
-    width: 100%;
-    text-decoration: none;
-  }
+  width: 200px;
+  height: 200px;
+  margin-right: 50px;
 
   img {
     opacity: 0.8;
+    position: absolute;
+  }
+}
+
+.link-row {
+  display: inline-block;
+  width: 150px;
+  height: 50px;
+  margin: 50% 20%;
+
+  a {
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
+    background: rgba(0, 0, 0, 0.8);
+    display: inline-block;
+    position: relative;
+
+    img {
+      width: 25px;
+      height: 25px;
+      margin: 7.5px;
+      -webkit-filter: invert(100%);
+    }
+  }
+  a:hover {
+    background: rgba(0, 0, 0, 1.0);
   }
 }
 

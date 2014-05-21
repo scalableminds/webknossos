@@ -36,6 +36,7 @@ object DataSet {
   def dataSetPublicWrites(user: Option[User]): Writes[DataSet] =
     ((__ \ 'name).write[String] and
       (__ \ 'dataSource).write[Option[DataSource]] and
+      (__ \ 'dataStore).write[DataStoreInfo] and
       (__ \ 'sourceType).write[String] and
       (__ \ 'owningTeam).write[String] and
       (__ \ 'allowedTeams).write[List[String]] and
@@ -44,7 +45,7 @@ object DataSet {
       (__ \ 'description).write[Option[String]] and
       (__ \ 'created).write[Long] and
       (__ \ "isEditable").write[Boolean])(d =>
-    (d.name, d.dataSource, d.sourceType, d.owningTeam, d.allowedTeams, d.isActive, d.isPublic, d.description, d.created, d.isEditableBy(user)))
+    (d.name, d.dataSource, d.dataStoreInfo, d.sourceType, d.owningTeam, d.allowedTeams, d.isActive, d.isPublic, d.description, d.created, d.isEditableBy(user)))
 }
 
 object DataSetDAO extends SecuredBaseDAO[DataSet] {

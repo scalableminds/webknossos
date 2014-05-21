@@ -12,8 +12,8 @@ class DatasetListItemView extends Backbone.Marionette.ItemView
     "data-dataset-name" : @model.get("name")
 
   template : _.template("""
-    <td><%= name %></td>
-    <td><%= dataSource.baseDir %></td>
+    <td title="<%= dataSource.baseDir %>"><%= name %></td>
+    <td><%= dataStore.name %></td>
     <td>(
       <%= dataSource.scale[0] %>,
       <%= dataSource.scale[1] %>,
@@ -70,6 +70,7 @@ class DatasetListItemView extends Backbone.Marionette.ItemView
     "importLink" : ".import-dataset"
     "progressbarContainer" : ".progress"
     "progressBar" : ".progress-bar"
+
 
   initialize : ->
 

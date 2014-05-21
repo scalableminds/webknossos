@@ -21,10 +21,14 @@ class ListTreeView extends Backbone.Marionette.CompositeView
         </button>
         <ul class="dropdown-menu pull-right" id="tree-sort">
           <li>
-            <a href="#" data-sort="name">by name <i class="fa fa-check" id="sort-name-icon"></i></a>
+            <a href="#" data-sort="name">by name
+              <i class="fa fa-check" id="sort-name-icon"></i>
+            </a>
           </li>
           <li>
-            <a href="#" data-sort="id">by creation time <i class="fa fa-check" id= "sort-id-icon"></i></a>
+            <a href="#" data-sort="time">by creation time
+              <i class="fa fa-check" id= "sort-time-icon"></i>
+            </a>
           </li>
         </ul>
       </div>
@@ -44,10 +48,11 @@ class ListTreeView extends Backbone.Marionette.CompositeView
     """)
 
   itemView : ListTreeItemView
-  itemViewContainer : "ul"
+  itemViewContainer : "ul#tree-list"
   itemViewOptions : ->
     parent : @
     activeTreeId : @getActiveTree().treeId
+
 
   events :
     "change #tree-name-input" : "setTreeName"
@@ -61,6 +66,8 @@ class ListTreeView extends Backbone.Marionette.CompositeView
 
   ui :
     "treeNameInput" : "#tree-name-input"
+    "sortNameIcon" : "#sort-name-icon"
+    "sortTimeIcon" : "#sort-time-icon"
 
 
   initialize : (options) ->
@@ -69,8 +76,16 @@ class ListTreeView extends Backbone.Marionette.CompositeView
 
     @listenTo(app.vent, "model:sync", @refresh)
     @listenTo(app.vent, "model:sync", ->
-      #potentially a performance problem
-      @listenTo(@_model.skeletonTracing, "all", @refresh)
+
+      @updateSortIndicator()
+
+      @listenTo(@_model.skeletonTracing, "deleteTree", @refresh)
+      @listenTo(@_model.skeletonTracing, "mergeTree", @refresh)
+      @listenTo(@_model.skeletonTracing, "deleteActiveNode", @updateTreesDebounced)
+      @listenTo(@_model.skeletonTracing, "newNode", @updateTreesDebounced)
+      @listenTo(@_model.skeletonTracing, "newTreeColor", @updateTreesDebounced)
+      @listenTo(@_model.skeletonTracing, "reloadTrees", @updateTreesDebounced)
+      @listenTo(app.vent, "activeNode:change", @_renderChildren)
     )
 
 
@@ -106,12 +121,22 @@ class ListTreeView extends Backbone.Marionette.CompositeView
     evt.preventDefault()
     @_model.user.set("sortTreesByName", ($(evt.currentTarget).data("sort") == "name"))
 
+    @refresh()
+    @updateSortIndicator()
+
+
+  updateSortIndicator : ->
+
+    isSortedByName = @_model.user.get("sortTreesByName")
+    @ui.sortNameIcon.toggle(isSortedByName)
+    @ui.sortTimeIcon.toggle(!isSortedByName)
+
 
   selectNextTree : (next) ->
 
     @_model.skeletonTracing.selectNextTree(next)
     @_model.skeletonTracing.centerActiveNode()
-    @updateTreesDebounced()
+    @updateName()
 
 
   getActiveTree : ->
@@ -127,13 +152,18 @@ class ListTreeView extends Backbone.Marionette.CompositeView
     @updateTreesDebounced()
 
 
+  updateName : ->
+
+      name = @getActiveTree().name
+      @ui.treeNameInput.val(name)
+
+
   updateTreesDebounced : ->
     # avoid lags caused by frequent DOM modification
 
     @updateTreesDebounced = _.debounce(
       =>
-        name = @getActiveTree().name
-        @ui.treeNameInput.val(name)
+        @updateName()
         @_renderChildren()
       200
     )

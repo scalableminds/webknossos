@@ -22,6 +22,11 @@ class PlaneMaterialFactory extends AbstractPlaneMaterialFactory
         value : 0
 
 
+  convertColor : (color) ->
+
+    return _.map color, (e) -> e / 255
+
+
   createTextures : ->
 
     # create textures
@@ -33,13 +38,14 @@ class PlaneMaterialFactory extends AbstractPlaneMaterialFactory
       @textures[shaderName].binaryCategory = binary.category
       @textures[shaderName].binaryName = binary.name
 
+    layerColors = @model.dataset.get("layerColors")
     for shaderName, texture of @textures
       @uniforms[shaderName + "_texture"] = {
         type : "t"
         value : texture
       }
       unless texture.binaryCategory == "segmentation"
-        color = _.map @model.binary[texture.binaryName].color, (e) -> e / 255
+        color = @convertColor(layerColors[texture.binaryName])
         @uniforms[shaderName + "_weight"] = {
           type : "f"
           value : 1
@@ -74,7 +80,7 @@ class PlaneMaterialFactory extends AbstractPlaneMaterialFactory
 
     @listenTo(@model.dataset, "change:layerColors change:layerColors.*" , (model, layerColors) ->
       for name, color of layerColors
-        color = _.map color, (e) -> e / 255
+        color = @convertColor(color)
         uniformName = @sanitizeName(name) + "_color"
         @uniforms[uniformName].value = new THREE.Vector3(color...)
       return

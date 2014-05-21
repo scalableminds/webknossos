@@ -68,7 +68,7 @@ class CommentTabView extends SortedCompositeView
 
       # events
       @listenTo(app.vent, "activeNode:change", @updateInputElement)
-      @listenTo(@_model.skeletonTracing, "deleteTree", @deleteComment)
+      @listenTo(@_model.skeletonTracing, "deleteComment", @deleteComment)
       @listenTo(@collection, "sort", @render)
 
       @render()

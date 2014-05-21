@@ -417,7 +417,7 @@ class SkeletonTracing
     unless @finishedDeferred.state() == "resolved"
       return
 
-    app.vent.trigger("comments:deleteComment", @activeNode.id)
+    @trigger("deleteComment", @activeNode.id)
     for neighbor in @activeNode.neighbors
       neighbor.removeNeighbor(@activeNode.id)
     @activeTree.removeNode(@activeNode.id)
@@ -489,7 +489,7 @@ class SkeletonTracing
     # remove branchpoints and comments, NOT when merging trees
     for node in tree.nodes
       if deleteBranchesAndComments
-        app.vent.trigger("comments:deleteComment", node.id)
+        @trigger("deleteComment", node.id)
         @deleteBranch(node)
 
     if notifyServer

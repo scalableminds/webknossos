@@ -81,6 +81,7 @@ class ListTreeView extends Backbone.Marionette.CompositeView
 
       @listenTo(@_model.skeletonTracing, "deleteTree", @refresh)
       @listenTo(@_model.skeletonTracing, "mergeTree", @refresh)
+      @listenTo(@_model.skeletonTracing, "newTree", @refresh)
       @listenTo(@_model.skeletonTracing, "deleteActiveNode", @updateTreesDebounced)
       @listenTo(@_model.skeletonTracing, "newNode", @updateTreesDebounced)
       @listenTo(@_model.skeletonTracing, "newTreeColor", @updateTreesDebounced)

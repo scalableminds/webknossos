@@ -13,7 +13,7 @@ class SimpleTaskItemView extends Backbone.Marionette.CompositeView
       </a>
     </td>
     <td>
-      <a href="/admin/taskTypes#<%= id %>">
+      <a href="/taskTypes#<%= id %>">
         <%= type.summary %>
       </a>
     </td>

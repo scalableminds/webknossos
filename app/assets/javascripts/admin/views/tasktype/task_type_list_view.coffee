@@ -41,7 +41,6 @@ class TaskTypeListView extends Backbone.Marionette.CompositeView
         <label class="col-sm-3 control-label" for="summary">Summary</label>
         <div class="col-sm-9">
           <input type="text" id="summary" name="summary" value="" class="form-control">
-          <span class="help-block errors"></span>
         </div>
       </div>
       <div class=" form-group">
@@ -50,14 +49,12 @@ class TaskTypeListView extends Backbone.Marionette.CompositeView
           <select id="team" name="team" class="form-control">
             <option value="Structure of Neocortical Circuits Group">Structure of Neocortical Circuits Group</option>
           </select>
-          <span class="help-block errors"></span>
         </div>
       </div>
       <div class=" form-group">
         <label class="col-sm-3 control-label" for="description">Description</label>
         <div class="col-sm-9">
           <textarea id="description" name="description" class="form-control"></textarea>
-          <span class="help-block errors"></span>
         </div>
       </div>
 
@@ -67,7 +64,6 @@ class TaskTypeListView extends Backbone.Marionette.CompositeView
         <div class="col-sm-2">
           <input type="checkbox" id="allowedModes__" name="allowedModes[]" value="oxalis" checked="checked">
           <span></span>
-          <span class="help-block errors"></span>
         </div>
       </div>
       <div class="col-sm-6 form-group">
@@ -75,7 +71,6 @@ class TaskTypeListView extends Backbone.Marionette.CompositeView
         <div class="col-sm-2">
           <input type="checkbox" id="allowedModes__" name="allowedModes[]" value="arbitrary" checked="checked">
           <span></span>
-          <span class="help-block errors"></span>
         </div>
       </div>
       <div class="col-sm-6 form-group">
@@ -83,7 +78,6 @@ class TaskTypeListView extends Backbone.Marionette.CompositeView
         <div class="col-sm-2">
           <input type="checkbox" id="branchPointsAllowed" name="branchPointsAllowed" value="true" checked="">
           <span></span>
-          <span class="help-block errors"></span>
         </div>
       </div>
       <div class="col-sm-6 form-group">
@@ -91,7 +85,6 @@ class TaskTypeListView extends Backbone.Marionette.CompositeView
         <div class="col-sm-2">
           <input type="checkbox" id="somaClickingAllowed" name="somaClickingAllowed" value="true" checked="">
           <span></span>
-          <span class="help-block errors"></span>
         </div>
       </div>
 
@@ -103,7 +96,6 @@ class TaskTypeListView extends Backbone.Marionette.CompositeView
             <input type="number" id="expectedTime_minTime" name="expectedTime.minTime" value="5" min="0" input-append="hours" class="form-control">
             <span class="input-group-addon">hours</span>
           </div>
-          <span class="help-block errors"></span>
         </div>
       </div>
       <div class=" form-group">
@@ -113,7 +105,6 @@ class TaskTypeListView extends Backbone.Marionette.CompositeView
             <input type="number" id="expectedTime_maxTime" name="expectedTime.maxTime" value="10" min="0" input-append="hours" class="form-control">
             <span class="input-group-addon">hours</span>
           </div>
-          <span class="help-block errors"></span>
         </div>
       </div>
       <div class=" form-group">
@@ -123,7 +114,6 @@ class TaskTypeListView extends Backbone.Marionette.CompositeView
             <input type="number" id="expectedTime_maxHard" name="expectedTime.maxHard" value="15" min="0" input-append="hours" class="form-control">
             <span class="input-group-addon">hours</span>
           </div>
-          <span class="help-block errors"></span>
         </div>
       </div>
       <div class="form-group">
@@ -146,7 +136,7 @@ class TaskTypeListView extends Backbone.Marionette.CompositeView
 
   initialize : ->
 
-    @collection.fetch().done()
+    @collection.fetch()
 
 
   toggleAllDetails : ->

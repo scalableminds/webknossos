@@ -31,7 +31,7 @@ class TaskTypeItemView extends Backbone.Marionette.CompositeView
           <span class="label label-default">Soma clicking</span>
         <% } %>
       </td>
-      <td><%= expectedTime  %></td>
+      <td><%= expectedTime %></td>
       <td><%= fileName %></td>
       <td class="nowrap">
         <a href="/annotations/CompoundTaskType/<%= id %>" title="view all finished tracings">
@@ -40,7 +40,7 @@ class TaskTypeItemView extends Backbone.Marionette.CompositeView
         <a href="/admin/taskTypes/<%= id %>/edit" >
           <i class="fa fa-pencil"></i>edit
         </a> <br />
-        <a href="/admin/taskTypes/<%= id %>/delete" data-ajax="delete-row,confirm">
+        <a href="#" class="delete">
           <i class="fa fa-trash-o"></i>delete
         </a>
       </td>
@@ -60,13 +60,14 @@ class TaskTypeItemView extends Backbone.Marionette.CompositeView
 
   events :
     "click .details-toggle" : "toggleDetails"
+    "click .delete" : "deleteTaskType"
 
   ui :
     "detailsRow" : ".details-row"
     "detailsToggle" : ".details-toggle"
 
 
-  initialize :->
+  initialize : ->
 
     @listenTo(app.vent, "taskTypeListView:toggleDetails", @toggleDetails)
     @collection = new TaskCollection(@model.get("id"))
@@ -76,6 +77,16 @@ class TaskTypeItemView extends Backbone.Marionette.CompositeView
       @toggleDetails()
     )
 
+
+  deleteTaskType : (evt) ->
+
+    evt.preventDefault()
+
+    if window.confirm("Do you really want to delete this task type?")
+      @model.destroy()
+
+
+      # /admin/taskTypes/<%= id %>/delete
 
   toggleDetails : ->
 

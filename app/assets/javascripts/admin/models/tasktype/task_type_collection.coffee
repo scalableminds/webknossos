@@ -1,11 +1,13 @@
 ### define
 underscore : _
 format_utils : FormatUtils
+./task_type_model : TaskTypeModel
 ###
 
 class TaskTypeCollection extends Backbone.Collection
 
   url : "/api/taskTypes"
+  model : TaskTypeModel
 
 
   parse : (responses) ->

@@ -14,7 +14,7 @@ class ProjectTaskView extends Backbone.Marionette.ItemView
     </td>
     <td>
       <% if(type){ %>
-        <a href="/admin/taskTypes#<% type.id %>">
+        <a href="/taskTypes#<% type.id %>">
           <%= type.summary %>
         </a>
       <% } %>

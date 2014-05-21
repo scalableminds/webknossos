@@ -11,12 +11,16 @@ class TaskCollection extends Backbone.Collection
   # super class should be PaginationCollection for task list
   #             should be Backbone.Collection for task type list
 
-  url : "/api/tasks"
+  url : ->
 
-  constructor : (taskTypeID) ->
+    if @forTaskTypeID
+      return "/admin/taskTypes/#{@forTaskTypeID}/tasks"
+    else
+      return "/api/tasks"
 
-    if taskTypeID
-      @url = "/admin/taskTypes/#{taskTypeID}/tasks"
+
+  constructor : (@forTaskTypeID) ->
+
     super()
 
 

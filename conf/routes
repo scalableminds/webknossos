@@ -109,10 +109,10 @@ POST          /admin/tasks/:id                                     controllers.a
 GET           /api/tasks/:id/download                              controllers.admin.NMLIO.taskDownload(id: String)
 GET           /api/tasks/:id/annotations                           controllers.AnnotationController.annotationsForTask(id: String)
 
+GET           /taskTypes                                           controllers.admin.TaskTypeAdministration.empty
 GET           /api/taskTypes                                       controllers.admin.TaskTypeAdministration.list
-GET           /admin/taskTypes                                     controllers.admin.TaskTypeAdministration.empty
 POST          /admin/taskTypes                                     controllers.admin.TaskTypeAdministration.create
-GET           /admin/taskTypes/:id/delete                          controllers.admin.TaskTypeAdministration.delete(id: String)
+DELETE        /admin/taskTypes/:id/delete                          controllers.admin.TaskTypeAdministration.delete(id: String)
 GET           /admin/taskTypes/:id/edit                            controllers.admin.TaskTypeAdministration.edit(id: String)
 GET           /admin/taskTypes/:id/tasks                           controllers.admin.TaskAdministration.tasksForType(id: String)
 POST          /admin/taskTypes/:id                                 controllers.admin.TaskTypeAdministration.editTaskTypeForm(id: String)

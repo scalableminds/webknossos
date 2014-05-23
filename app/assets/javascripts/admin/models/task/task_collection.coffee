@@ -4,24 +4,20 @@ underscore : _
 format_utils : FormatUtils
 ###
 
-class TaskCollection extends Backbone.Collection
-  # extends PaginationCollection
+class TaskCollection extends PaginationCollection
 
-  # TODO: solve conflict
-  # super class should be PaginationCollection for task list
-  #             should be Backbone.Collection for task type list
-
-  url : ->
-
-    if @forTaskTypeID
-      return "/api/taskTypes/#{@forTaskTypeID}/tasks"
-    else
-      return "/api/tasks"
-
-
-  constructor : (@forTaskTypeID) ->
+  constructor : (forTaskTypeID) ->
 
     super()
+
+    # We cannot use @url as a method since the Backbone.Paginator.clientPager
+    # ignores the context which is necessary to read forTaskTypeID.
+    # TODO: Check if this is still an issue with a newer version of backbone.paginator.
+    @url =
+      if forTaskTypeID
+        "/api/taskTypes/#{forTaskTypeID}/tasks"
+      else
+        "/api/tasks"
 
 
   parse : (respones) ->

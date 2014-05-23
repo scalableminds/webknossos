@@ -94,7 +94,7 @@ class TaskTypeItemView extends Backbone.Marionette.CompositeView
     if @ui.detailsRow.hasClass("hide")
 
       @collection
-        .fetch()
+        .fetch(silent : true)
         .done( =>
           @render()
           @ui.detailsRow.removeClass("hide")

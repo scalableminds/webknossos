@@ -23,7 +23,7 @@ class TaskTypeView extends Backbone.Marionette.Layout
   initialize : ->
 
     @listView = new TaskTypeListView(collection : @collection)
-    @formView = new TaskTypeFormView()
+    @formView = new TaskTypeFormView(collection : @collection)
 
 
   onRender : ->

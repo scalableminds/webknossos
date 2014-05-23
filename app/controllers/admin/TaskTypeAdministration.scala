@@ -39,25 +39,27 @@ object TaskTypeAdministration extends AdminController {
   }
 
   def create = Authenticated.async(parse.urlFormEncoded) { implicit request =>
-    taskTypeForm.bindFromRequest.fold(
-      hasErrors = formWithErrors => taskTypeListWithForm(formWithErrors).map(html => BadRequest(html)),
+    val boundForm = taskTypeForm.bindFromRequest
+
+    boundForm.fold(
+      hasErrors = { formWithErrors =>
+        Future.successful(JsonBadRequest(
+          Json.obj("errors" -> boundForm.errorsAsJson),
+          Messages("Incomplete form.")
+        ))
+      },
+
       success = { t =>
         for{
           _ <- ensureTeamAdministration(request.user, t.team).toFox
           _ <- TaskTypeDAO.insert(t)
         } yield {
-          Redirect("/taskTypes")
-          .flashing(
-            FlashSuccess(Messages("taskType.createSuccess")))
-          .highlighting(t.id)
+          JsonOk(
+            Json.obj("newTaskType" -> TaskType.publicTaskTypeWrites.writes(t)),
+            Messages("taskType.createSuccess")
+          )
         }
       })
-  }
-
-  def taskTypeListWithForm(form: Form[TaskType])(implicit request: AuthenticatedRequest[_]) = {
-    TaskTypeDAO.findAll.map { taskTypes =>
-      html.admin.taskType.taskTypes(taskTypes, form, request.user.adminTeamNames)
-    }
   }
 
   def list = Authenticated.async{ implicit request =>

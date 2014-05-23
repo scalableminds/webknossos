@@ -9,7 +9,6 @@ class TaskTypeCollection extends Backbone.Collection
   url : "/api/taskTypes"
   model : TaskTypeModel
 
-
   parse : (responses) ->
 
     _.map(responses, (response) ->
@@ -18,3 +17,9 @@ class TaskTypeCollection extends Backbone.Collection
 
       return response
     )
+
+
+  addJSON : (item) ->
+
+    [item] = @parse([item])
+    @add(item)

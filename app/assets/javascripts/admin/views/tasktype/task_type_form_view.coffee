@@ -4,6 +4,7 @@ app : app
 backbone.marionette : marionette
 admin/models/team/team_collection : TeamCollection
 admin/views/selection_view : SelectionView
+libs/toast : Toast
 ###
 
 class TaskTypeFormView extends Backbone.Marionette.Layout
@@ -15,7 +16,8 @@ class TaskTypeFormView extends Backbone.Marionette.Layout
           <div class=" form-group">
             <label class="col-sm-3 control-label" for="summary">Summary</label>
             <div class="col-sm-9">
-              <input type="text" id="summary" name="summary" value="" class="form-control">
+              <input type="text" id="summary" name="summary" value="" class="form-control"
+               required pattern=".{3,50}" title="Please use at least 3 characters.">
             </div>
           </div>
 
@@ -68,7 +70,8 @@ class TaskTypeFormView extends Backbone.Marionette.Layout
             <label class="col-sm-3 control-label" for="expectedTime_minTime">Expected Time (min)</label>
             <div class="col-sm-9">
               <div class="input-group">
-                <input type="number" id="expectedTime_minTime" name="expectedTime.minTime" value="5" min="0" input-append="hours" class="form-control">
+                <input type="number" id="expectedTime_minTime" name="expectedTime.minTime"
+                  value="5" min="0" input-append="hours" class="form-control" required>
                 <span class="input-group-addon">hours</span>
               </div>
             </div>
@@ -78,7 +81,8 @@ class TaskTypeFormView extends Backbone.Marionette.Layout
             <label class="col-sm-3 control-label" for="expectedTime_maxTime">Expected Time (max)</label>
             <div class="col-sm-9">
               <div class="input-group">
-                <input type="number" id="expectedTime_maxTime" name="expectedTime.maxTime" value="10" min="0" input-append="hours" class="form-control">
+                <input type="number" id="expectedTime_maxTime" name="expectedTime.maxTime"
+                  value="10" min="0" input-append="hours" class="form-control" required>
                 <span class="input-group-addon">hours</span>
               </div>
             </div>
@@ -88,7 +92,8 @@ class TaskTypeFormView extends Backbone.Marionette.Layout
             <label class="col-sm-3 control-label" for="expectedTime_maxHard">Time limit</label>
             <div class="col-sm-9">
               <div class="input-group">
-                <input type="number" id="expectedTime_maxHard" name="expectedTime.maxHard" value="15" min="0" input-append="hours" class="form-control">
+                <input type="number" id="expectedTime_maxHard" name="expectedTime.maxHard"
+                  value="15" min="0" input-append="hours" class="form-control" required>
                 <span class="input-group-addon">hours</span>
               </div>
             </div>
@@ -107,6 +112,11 @@ class TaskTypeFormView extends Backbone.Marionette.Layout
   regions :
     "team" : ".team"
 
+  events :
+    "submit form" : "submitForm"
+
+  ui :
+    "form" : "form"
 
   initialize : ->
 
@@ -115,6 +125,31 @@ class TaskTypeFormView extends Backbone.Marionette.Layout
       itemViewOptions :
         modelValue: -> return "#{@model.get("name")}"
       data : "amIAnAdmin=true"
+      name: "team"
+    )
+
+
+  submitForm : (event) ->
+
+    event.preventDefault()
+
+    if not @ui.form[0].checkValidity()
+      Toast.error("Please supply all needed values.")
+      return
+
+    target = $(event.target)
+    url = target.attr("action")
+
+    $.ajax(
+      url : url
+      type: "post",
+      data: target.serialize(),
+    ).done((response) =>
+      Toast.message(response.messages)
+      @collection.addJSON(response.newTaskType)
+
+    ).fail((xhr) ->
+      Toast.message(xhr.responseJSON.messages)
     )
 
 

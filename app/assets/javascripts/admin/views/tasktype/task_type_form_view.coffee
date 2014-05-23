@@ -128,6 +128,36 @@ class TaskTypeFormView extends Backbone.Marionette.Layout
       name: "team"
     )
 
+    if @options.isEditForm
+      @model.fetch().done(=> @prefillForm())
+
+
+  prefillForm : ->
+
+    console.log("prefilling with", @model)
+
+    @$("#summary").val(@model.get("summary"))
+    @$("#description").val(@model.get("description"))
+
+    settings = @model.get("settings")
+
+    @$("#allowedModes__").each((index, checkbox) =>
+      checkbox = $(checkbox)
+      mode = checkbox.attr("value")
+      checkbox.attr("checked", mode in settings.allowedModes)
+    )
+
+    ["branchPointsAllowed", "somaClickingAllowed"].forEach((checkboxString) =>
+      @$("##{checkboxString}").attr("value", settings[checkboxString])
+    )
+
+    inputStrings = ["expectedTime_minTime", "expectedTime_maxTime", "expectedTime_maxHard"]
+    numValues = @model.get("expectedTime").match(/([0-9]+) - ([0-9]+), Limit: ([0-9]+)/).slice(1).map(parseFloat)
+
+    _.each(inputStrings, (inputString, index) =>
+      @$("##{inputString}").val(numValues[index])
+    )
+
 
   submitForm : (event) ->
 
@@ -138,19 +168,26 @@ class TaskTypeFormView extends Backbone.Marionette.Layout
       return
 
     target = $(event.target)
-    url = target.attr("action")
 
-    $.ajax(
-      url : url
-      type: "post",
-      data: target.serialize(),
-    ).done((response) =>
-      Toast.message(response.messages)
-      @collection.addJSON(response.newTaskType)
+    if not @options.isEditForm
 
-    ).fail((xhr) ->
-      Toast.message(xhr.responseJSON.messages)
-    )
+      url = target.attr("action")
+
+      $.ajax(
+        url : url
+        type: "post",
+        data: target.serialize(),
+      ).done((response) =>
+        Toast.message(response.messages)
+        @collection.addJSON(response.newTaskType)
+
+      ).fail((xhr) ->
+        Toast.message(xhr.responseJSON.messages)
+      )
+
+    else
+
+      # TODO ...
 
 
   onRender : ->

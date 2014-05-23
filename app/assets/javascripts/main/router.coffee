@@ -19,6 +19,7 @@ class Router extends Backbone.Router
     "projects"                      : "projects"
     "dashboard"                     : "dashboard"
     "users/:id/details"             : "dashboard"
+    "taskTypes/:id/edit"            : "editTaskType"
     "taskTypes"                     : "taskTypes"
     "spotlight"                     : "spotlight"
 
@@ -76,6 +77,17 @@ class Router extends Backbone.Router
 
       collection = new TaskTypeCollection()
       view = new TaskTypeView(collection: collection)
+      @changeView(view)
+
+      @hideLoading()
+
+
+  editTaskType : (taskTypeID) ->
+
+    require ["admin/views/tasktype/task_type_form_view", "admin/models/tasktype/task_type_model"], (TaskTypeFormView, TaskTypeModel) =>
+
+      model = new TaskTypeModel(taskTypeID)
+      view = new TaskTypeFormView(model : model, isEditForm : true)
       @changeView(view)
 
       @hideLoading()

@@ -37,7 +37,7 @@ class TaskTypeItemView extends Backbone.Marionette.CompositeView
         <a href="/annotations/CompoundTaskType/<%= id %>" title="view all finished tracings">
           <i class="fa fa-random"></i>view
         </a> <br />
-        <a href="/api/taskTypes/<%= id %>/edit" >
+        <a href="/taskTypes/<%= id %>/edit" >
           <i class="fa fa-pencil"></i>edit
         </a> <br />
         <a href="#" class="delete">

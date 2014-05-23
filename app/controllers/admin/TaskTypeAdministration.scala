@@ -62,6 +62,16 @@ object TaskTypeAdministration extends AdminController {
       })
   }
 
+  def get(taskTypeId: String) = Authenticated.async{ implicit request =>
+    for {
+      taskType <- TaskTypeDAO.findOneById(taskTypeId) ?~> Messages("taskType.notFound")
+      _ <- ensureTeamAdministration(request.user, taskType.team)
+    } yield {
+      Ok(Json.toJson(TaskType.publicTaskTypeWrites.writes(taskType)))
+    }
+  }
+
+
   def list = Authenticated.async{ implicit request =>
     for {
       taskTypes <- TaskTypeDAO.findAll
@@ -70,6 +80,7 @@ object TaskTypeAdministration extends AdminController {
     }
   }
 
+  // TODO: remove me
   def edit(taskTypeId: String) = Authenticated.async { implicit request =>
     for {
       taskType <- TaskTypeDAO.findOneById(taskTypeId) ?~> Messages("taskType.notFound")
@@ -81,8 +92,14 @@ object TaskTypeAdministration extends AdminController {
 
   def editTaskTypeForm(taskTypeId: String) = Authenticated.async(parse.urlFormEncoded) { implicit request =>
     def evaluateForm(taskType: TaskType): Fox[SimpleResult] = {
-      taskTypeForm.bindFromRequest.fold(
-        hasErrors = (errors => Fox.successful(BadRequest(html.admin.taskType.taskTypeEdit(taskType.id, errors, request.user.adminTeamNames)))),
+      val boundForm = taskTypeForm.bindFromRequest
+      boundForm.fold(
+        hasErrors = { formWithErrors =>
+          Future.successful(JsonBadRequest(
+            Json.obj("errors" -> boundForm.errorsAsJson),
+            Messages("Incomplete form.")
+          ))
+        },
         success = { t =>
           val updatedTaskType = t.copy(_id = taskType._id)
           for {
@@ -91,12 +108,10 @@ object TaskTypeAdministration extends AdminController {
             _ <- ensureTeamAdministration(request.user, updatedTaskType.team).toFox
           } yield {
             tasks.map(task => AnnotationDAO.updateAllUsingNewTaskType(task, updatedTaskType.settings))
-            Redirect("/taskTypes")
-            .flashing(
-              FlashSuccess(Messages("taskType.editSuccess")))
-            .highlighting(taskType.id)
+            JsonOk(Messages("taskType.editSuccess"))
           }
-        })
+        }
+      )
     }
 
     for {

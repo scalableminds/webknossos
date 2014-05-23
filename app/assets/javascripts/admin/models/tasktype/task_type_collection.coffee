@@ -1,6 +1,5 @@
 ### define
 underscore : _
-format_utils : FormatUtils
 ./task_type_model : TaskTypeModel
 ###
 
@@ -11,12 +10,7 @@ class TaskTypeCollection extends Backbone.Collection
 
   parse : (responses) ->
 
-    _.map(responses, (response) ->
-      response.formattedHash = FormatUtils.formatHash(response.id)
-      response.formattedShortText = FormatUtils.formatShortText(response.summary)
-
-      return response
-    )
+    return _.map(responses, TaskTypeModel.parse)
 
 
   addJSON : (item) ->

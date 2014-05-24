@@ -159,18 +159,39 @@ class SkeletonTracingView extends View
       oldIcon.toggleClass("fa-angle-right", false)
 
     activeHref = $("#comment-container a[data-nodeid=#{@model.skeletonTracing.getActiveNodeId()}]")
+    commentIcon = null
+
     if activeHref.length
+      commentIcon = activeHref.parent("li").children("i")
+      commentIcon.toggleClass("fa-angle-right", true)
 
-      newIcon = activeHref.parent("li").children("i")
-      newIcon.toggleClass("fa-angle-right", true)
+    @scrollCommentsList(commentIcon)
 
-    # animate scrolling to the active tree
-    activeTree = $("#comment-container span[data-treeid=#{@model.skeletonTracing.getActiveTreeId()}]")
+
+  scrollCommentsList : (commentIcon) ->
+
+    activeTreeId = @model.skeletonTracing.getActiveTreeId()
+    activeTree = $("#comment-container span[data-treeid=#{activeTreeId}]")
+    activeTreeTop = activeTree.offset().top
+    height = $('#comment-container').height()
+
     if activeTree.length
-      $("#comment-container").animate(
-        scrollTop: activeTree.offset().top - $("#comment-container").offset().top + $("#comment-container").scrollTop()
-        250
-      )
+      if commentIcon?
+        commentIconTop = commentIcon.offset().top
+        if commentIconTop - activeTreeTop > height / 2
+          @scrollCommentsListTo(commentIconTop - height / 2)
+          return
+      @scrollCommentsListTo(activeTreeTop)
+
+
+  scrollCommentsListTo : (top) ->
+
+    container = $("#comment-container")
+    offset = container.scrollTop() - container.offset().top
+    container.animate(
+      scrollTop: top + offset
+      250
+    )
 
 
   updateActiveTree : ->

@@ -17,25 +17,37 @@
 }
 
 #right-menu {
-  display: inline-block;
+  display: inline-flex;
+  flex-direction: column;
   margin-top: 10px;
   margin-left: 20px;
   width: 300px; // will be set dynamically in JS
-  overflow-x: hidden;
-  overflow-y: scroll;
+  overflow: hidden;
 
-  .tab-pane {
-    min-height: 100px;
-    word-wrap: break-word;
-    white-space: normal;
+  .tab-content {
+    display: flex;
+    flex-grow: 1;
+    flex-direction: column;
 
-    div {
-      margin-bottom: 10px;
+    .tab-pane {
+      min-height: 100px;
+      word-wrap: break-word;
+      white-space: normal;
+
+      div {
+        margin-bottom: 10px;
+      }
+
+      ul {
+        list-style: none;
+        padding-left: 5px;
+      }
     }
 
-    ul {
-      list-style: none;
-      padding-left: 5px;
+    .tab-pane.active{
+      display: flex;
+      flex-direction: column;
+      flex-grow: 1;
     }
   }
 
@@ -46,6 +58,12 @@
     width: 11px;
     margin-left: 5px;
   }
+}
+
+#comment-container {
+  overflow-y: scroll;
+  flex-grow: 1;
+  height: 0;
 }
 
 #comment-list {

@@ -116,17 +116,17 @@ class TaskOverviewView extends Backbone.Marionette.View
       lastActivityDays = moment().diff(user.lastActivity, 'days')
       color = @colorJet(Math.min(50, lastActivityDays) * (128 / 50) + 128)
 
-      @quoted(userName) + " [id="+ @quoted(user.id) + ", shape=box, fillcolor=" + @quoted(color) + "];"
-    )
+      @quoted(userName) + " [id="+ @quoted(user.id) + ", shape=box, fillcolor=" + @quoted(color) + "]"
+    ).join(";")
 
-    svgTaskTypes = ''
-    svgProjects = ''
+    svgTaskTypes = ""
+    svgProjects = ""
 
     if @doDrawTaskTypes()
-      svgTaskTypes = taskTypes.map( (taskType) => @quoted(taskType.summary) + ";")
+      svgTaskTypes = taskTypes.map( (taskType) => @quoted(taskType.summary)).join(";")
 
     if @doDrawProjects()
-      svgProjects = projects.map( (project) => @quoted(project.name) + ";" )
+      svgProjects = projects.map( (project) => @quoted(project.name)).join(";")
 
 
     svgTaskTypes + svgUsers + svgProjects
@@ -134,30 +134,30 @@ class TaskOverviewView extends Backbone.Marionette.View
 
   buildEdges : (userInfos) ->
 
-    svgTaskTypeEdges = ''
-    svgFutureTaskTypesEdges = ''
-    svgProjectEdges = ''
+    svgTaskTypeEdges = ""
+    svgFutureTaskTypesEdges = ""
+    svgProjectEdges = ""
 
     if @doDrawTaskTypes()
 
       svgTaskTypeEdges = userInfos.map( (userInfo) =>
         { user, taskTypes } = userInfo
         taskTypes.map( (taskType) => @edge(user.name, taskType.summary))
-      )
+      ).join(";")
 
       svgFutureTaskTypesEdges  = "edge [ color=blue ];"
       svgFutureTaskTypesEdges += userInfos.map( (userInfo) =>
         { user, futureTaskType } = userInfo
         if(futureTaskType)
           @edge(user.name, futureTaskType.summary)
-      )
+      ).join(";")
 
 
     if @doDrawProjects()
       svgProjectEdges = userInfos.map( (userInfo) =>
         { user, projects } = userInfo
         projects.map( (project) => @edge(user.name, project.name))
-      )
+      ).join(";")
 
 
     svgTaskTypeEdges + svgProjectEdges + svgFutureTaskTypesEdges
@@ -225,5 +225,5 @@ class TaskOverviewView extends Backbone.Marionette.View
 
   quoted : (str) -> '"' + str + '"'
 
-  edge : (a, b) -> @quoted(a) + "->" + @quoted(b) + ";"
+  edge : (a, b) -> @quoted(a) + "->" + @quoted(b)
 

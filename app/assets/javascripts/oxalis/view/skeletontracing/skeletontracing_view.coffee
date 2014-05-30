@@ -172,6 +172,8 @@ class SkeletonTracingView extends View
 
     activeTreeId = @model.skeletonTracing.getActiveTreeId()
     activeTree = $("#comment-container span[data-treeid=#{activeTreeId}]")
+    return unless activeTree.length > 0
+
     activeTreeTop = activeTree.offset().top
     height = $('#comment-container').height()
 

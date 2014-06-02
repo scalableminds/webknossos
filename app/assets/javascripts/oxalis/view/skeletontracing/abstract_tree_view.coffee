@@ -77,7 +77,7 @@ class AbstractTreeView
     # by recordWidths(), the second by drawTreeWithWidths().
 
     @recordWidths(root)
-    @drawTreeWithWidths(root, 0, @canvas.width(), @nodeDistance, mode)
+    @drawTreeWithWidths(root, @NODE_RADIUS, @canvas.width() - @NODE_RADIUS, @nodeDistance, mode)
 
   drawTreeWithWidths : (tree, left, right, top, mode = @MODE_NORMAL) ->
 
@@ -99,7 +99,7 @@ class AbstractTreeView
       subTree = subTree.children[0]
       chainCount++
 
-    # if the decision point has (2) children, draw them and remember their prosition
+    # if the decision point has (2) children, draw them and remember their position
     if decisionPoint.children.length > 0
       # Calculate the top of the children
       if mode == @MODE_NORMAL or chainCount < 3

@@ -197,6 +197,10 @@ class Controller
 
     $(document).keypress (event) ->
 
+      if $(event.target).is("input")
+        # don't summon help modal when the user types into an input field
+        return
+
       if event.shiftKey && event.which == 63
         $("#help-modal").modal('toggle')
 

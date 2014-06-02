@@ -37,6 +37,7 @@ GET           /api/user/loggedTime                                 controllers.U
 GET           /api/users/:id                                       controllers.UserController.user(id: String)
 DELETE        /api/users/:id                                       controllers.UserController.delete(id: String)
 PUT           /api/users/:id                                       controllers.UserController.update(id: String)
+GET           /api/users/:id/loggedTime                            controllers.UserController.userLoggedTime(id: String)
 GET           /api/users/:id/annotations                           controllers.UserController.userAnnotations(id: String)
 GET           /api/users/:id/annotations/download                  controllers.admin.NMLIO.userDownload(id: String)
 # GET         /api/users/:id/loginAs                                     controllers.UserController.loginAsUser(id: String)

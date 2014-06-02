@@ -3,6 +3,8 @@ underscore : _
 backbone : Backbone
 ./dashboard_task_model : DashboardTaskModel
 ./user_model : UserModel
+admin/models/dataset/dataset_collection : DatasetCollection
+dashboard/models/logged_time_model : LoggedTimeModel
 ###
 
 class DashboardModel extends Backbone.Model
@@ -26,14 +28,19 @@ class DashboardModel extends Backbone.Model
 
   fetch : ->
 
-    promiseA = super(arguments)
+    promises = [super(arguments)]
 
     user = new UserModel(id : @get("userID"))
     @set("user", user)
 
-    promiseB = user.fetch()
+    promises.push(user.fetch())
 
-    return $.when(promiseA, promiseB)
+    # TODO: decide whether these submodels should be loaded at this time
+
+    @set("dataSets", new DatasetCollection())
+    @set("loggedTime", new LoggedTimeModel(userID : @get("userID")))
+
+    return $.when.apply($, promises)
 
 
   getFinishedTasks : ->

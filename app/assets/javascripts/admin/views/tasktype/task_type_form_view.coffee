@@ -12,7 +12,7 @@ class TaskTypeFormView extends Backbone.Marionette.Layout
   template : _.template("""
     <div class="well col-center col-sm-6">
       <h3>Task types</h3>
-        <form action="/api/taskTypes" method="POST" class="form-horizontal">
+        <form method="POST" class="form-horizontal">
           <div class=" form-group">
             <label class="col-sm-3 control-label" for="summary">Summary</label>
             <div class="col-sm-9">
@@ -53,7 +53,7 @@ class TaskTypeFormView extends Backbone.Marionette.Layout
           <div class="col-sm-6 form-group">
             <label class="col-sm-10 control-label" for="branchPointsAllowed">Allow Branchpoints</label>
             <div class="col-sm-2">
-              <input type="checkbox" id="branchPointsAllowed" name="branchPointsAllowed" checked>
+              <input type="checkbox" id="branchPointsAllowed" name="branchPointsAllowed" value="true" checked>
               <span></span>
             </div>
           </div>
@@ -61,7 +61,7 @@ class TaskTypeFormView extends Backbone.Marionette.Layout
           <div class="col-sm-6 form-group">
             <label class="col-sm-10 control-label" for="somaClickingAllowed">Allow Soma clicking</label>
             <div class="col-sm-2">
-              <input type="checkbox" id="somaClickingAllowed" name="somaClickingAllowed" checked>
+              <input type="checkbox" id="somaClickingAllowed" name="somaClickingAllowed" value="true" checked>
               <span></span>
             </div>
           </div>
@@ -162,32 +162,36 @@ class TaskTypeFormView extends Backbone.Marionette.Layout
   submitForm : (event) ->
 
     event.preventDefault()
+    target = $(event.target)
 
     if not @ui.form[0].checkValidity()
       Toast.error("Please supply all needed values.")
       return
 
-    target = $(event.target)
+    url =
+      if @options.isEditForm
+        "/api/taskTypes/#{@model.get("id")}"
+      else
+        "/api/taskTypes"
 
-    if not @options.isEditForm
+    $.ajax(
+      url : url
+      type: "post",
+      data: target.serialize(),
+    ).done((response) =>
+      Toast.message(response.messages)
 
-      url = target.attr("action")
-
-      $.ajax(
-        url : url
-        type: "post",
-        data: target.serialize(),
-      ).done((response) =>
-        Toast.message(response.messages)
+      if @options.isEditForm
+        app.router.navigate("/taskTypes", { trigger: true })
+      else
         @collection.addJSON(response.newTaskType)
-
-      ).fail((xhr) ->
-        Toast.message(xhr.responseJSON.messages)
-      )
-
-    else
-
-      # TODO ...
+        @render()
+    ).fail((xhr) ->
+      mainMessage = xhr.responseJSON.messages[0]
+      detailedErrors = _.values(xhr.responseJSON.errors)
+      mainMessage.error += detailedErrors
+      Toast.message([mainMessage])
+    )
 
 
   onRender : ->

@@ -8,9 +8,9 @@ class ViewModesView extends Backbone.Marionette.ItemView
 
   className : "col-sm-12"
   template : _.template("""
-    <div class="btn-group btn-group-justified">
+    <div class="btn-group btn-group-justified" id="mode-container">
       <div class="btn-group">
-        <button type="button" class="btn btn-default btn-primary" id="mode-3planes">3 Planes</button>
+        <button type="button" class="btn btn-default" id="mode-3planes">3 Planes</button>
       </div>
       <div class="btn-group">
         <button type="button" class="btn btn-default" id="mode-sphere">Sphere</button>
@@ -21,25 +21,33 @@ class ViewModesView extends Backbone.Marionette.ItemView
     </div>
   """)
 
+  modeMapping :
+    "mode-3planes" : constants.MODE_PLANE_TRACING
+    "mode-sphere" : constants.MODE_ARBITRARY
+    "mode-arbitraryplane" : constants.MODE_ARBITRARY_PLANE
+
   events :
-    "click #mode-3planes" : "changeModeToPlanes"
-    "click #mode-sphere" : "changeModeToSphere"
-    "click #mode-arbitraryplane" : "changeModeToArbitrary"
+    "click #mode-3planes" : "changeMode"
+    "click #mode-sphere" : "changeMode"
+    "click #mode-arbitraryplane" : "changeMode"
+
 
   initialize : (options) ->
 
-
-  changeModeToArbitrary : ->
-
-    app.vent.trigger("changeViewMode", constants.MODE_ARBITRARY_PLANE)
+    @listenTo(app.vent, "changeViewMode", @updateForMode)
 
 
-  changeModeToSphere : ->
+  changeMode : (evt) ->
 
-    app.vent.trigger("changeViewMode", constants.MODE_ARBITRARY)
+    mode = @modeMapping[evt.target.id]
+    app.vent.trigger("changeViewMode", mode)
 
 
-  changeModeToPlanes : ->
+  updateForMode : (mode) ->
 
-    app.vent.trigger("changeViewMode", constants.MODE_PLANE_TRACING)
+    for buttonId in _.keys(@modeMapping)
+      @$("##{buttonId}").removeClass("btn-primary")
+
+    buttonId = _.invert(@modeMapping)[mode]
+    @$("##{buttonId}").addClass("btn-primary")
 

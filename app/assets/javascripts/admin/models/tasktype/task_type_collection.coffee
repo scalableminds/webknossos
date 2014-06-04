@@ -10,7 +10,7 @@ class TaskTypeCollection extends Backbone.Collection
 
   parse : (responses) ->
 
-    return _.map(responses, TaskTypeModel.parse)
+    return _.map(responses, TaskTypeModel::parse)
 
 
   addJSON : (item) ->

@@ -35,17 +35,17 @@ class TaskTypeFormView extends Backbone.Marionette.Layout
           </div>
 
           <div class="col-sm-6 form-group">
-            <label class="col-sm-10 control-label" for="allowedModes__">Allow Oxalis</label>
+            <label class="col-sm-10 control-label" for="oxalisAllowed">Allow Oxalis</label>
             <div class="col-sm-2">
-              <input type="checkbox" id="allowedModes__" name="allowedModes[]" value="oxalis" checked="checked">
+              <input type="checkbox" id="oxalisAllowed" name="allowedModes[]" value="oxalis" checked>
               <span></span>
             </div>
           </div>
 
           <div class="col-sm-6 form-group">
-            <label class="col-sm-10 control-label" for="allowedModes__">Allow Arbitrary</label>
+            <label class="col-sm-10 control-label" for="arbitraryAllowed">Allow Arbitrary</label>
             <div class="col-sm-2">
-              <input type="checkbox" id="allowedModes__" name="allowedModes[]" value="arbitrary" checked="checked">
+              <input type="checkbox" id="arbitraryAllowed" name="allowedModes[]" value="arbitrary" checked>
               <span></span>
             </div>
           </div>
@@ -53,7 +53,7 @@ class TaskTypeFormView extends Backbone.Marionette.Layout
           <div class="col-sm-6 form-group">
             <label class="col-sm-10 control-label" for="branchPointsAllowed">Allow Branchpoints</label>
             <div class="col-sm-2">
-              <input type="checkbox" id="branchPointsAllowed" name="branchPointsAllowed" value="true" checked="">
+              <input type="checkbox" id="branchPointsAllowed" name="branchPointsAllowed" checked>
               <span></span>
             </div>
           </div>
@@ -61,7 +61,7 @@ class TaskTypeFormView extends Backbone.Marionette.Layout
           <div class="col-sm-6 form-group">
             <label class="col-sm-10 control-label" for="somaClickingAllowed">Allow Soma clicking</label>
             <div class="col-sm-2">
-              <input type="checkbox" id="somaClickingAllowed" name="somaClickingAllowed" value="true" checked="">
+              <input type="checkbox" id="somaClickingAllowed" name="somaClickingAllowed" checked>
               <span></span>
             </div>
           </div>
@@ -117,6 +117,13 @@ class TaskTypeFormView extends Backbone.Marionette.Layout
 
   ui :
     "form" : "form"
+    "branchPointsAllowed" : "#branchPointsAllowed"
+    "somaClickingAllowed" : "#somaClickingAllowed"
+    "oxalisAllowed" : "#oxalisAllowed"
+    "arbitraryAllowed" : "#arbitraryAllowed"
+    "summary" : "#summary"
+    "description" : "#description"
+
 
   initialize : ->
 
@@ -134,28 +141,21 @@ class TaskTypeFormView extends Backbone.Marionette.Layout
 
   prefillForm : ->
 
-    console.log("prefilling with", @model)
-
-    @$("#summary").val(@model.get("summary"))
-    @$("#description").val(@model.get("description"))
+    @ui.summary.val(@model.get("summary"))
+    @ui.description.val(@model.get("description"))
 
     settings = @model.get("settings")
-
-    @$("#allowedModes__").each((index, checkbox) =>
-      checkbox = $(checkbox)
-      mode = checkbox.attr("value")
-      checkbox.attr("checked", mode in settings.allowedModes)
-    )
-
-    ["branchPointsAllowed", "somaClickingAllowed"].forEach((checkboxString) =>
-      @$("##{checkboxString}").attr("value", settings[checkboxString])
-    )
+    @ui.oxalisAllowed.attr("checked", "oxalis" in settings.allowedModes)
+    @ui.arbitraryAllowed.attr("checked", "arbitrary" in settings.allowedModes)
+    @ui.branchPointsAllowed.attr("checked", settings["branchPointsAllowed"])
+    @ui.somaClickingAllowed.attr("checked", settings["somaClickingAllowed"])
 
     inputStrings = ["expectedTime_minTime", "expectedTime_maxTime", "expectedTime_maxHard"]
     numValues = @model.get("expectedTime").match(/([0-9]+) - ([0-9]+), Limit: ([0-9]+)/).slice(1).map(parseFloat)
 
-    _.each(inputStrings, (inputString, index) =>
-      @$("##{inputString}").val(numValues[index])
+    _.each(_.zip(inputStrings, numValues), (inputAndNum) =>
+      [input, num] = inputAndNum
+      @$("##{input}").val(num)
     )
 
 

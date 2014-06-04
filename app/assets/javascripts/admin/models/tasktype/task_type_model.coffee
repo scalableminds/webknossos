@@ -5,14 +5,7 @@ format_utils : FormatUtils
 
 class TaskTypeModel extends Backbone.Model
 
-  # TODO: the following three lines need to be there for editing
-  # and they shouldnt be there for the listview
   url : -> "/api/taskTypes/#{@id}"
-
-  constructor : (@id) ->
-
-    super({})
-
 
   parse : (response) ->
 

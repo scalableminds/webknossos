@@ -1,6 +1,6 @@
 ### define
 backbone.marionette : Marionette
-libs/Utils : Utils
+libs/utils : Utils
 ###
 
 class ListTreeItemView extends Backbone.Marionette.ItemView

@@ -45,6 +45,7 @@ class LeftMenuView extends Backbone.Marionette.Layout
   """)
 
   templateHelpers : ->
+
     isTraceMode : @isTraceMode()
     isViewMode : @isViewMode # spotlight aka public viewing
 

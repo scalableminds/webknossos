@@ -203,6 +203,9 @@ class AbstractTreeView
     # Branchpoints are as wide as its children combined.
     # But actually, we need the width of the children
     result = 0
+    if decisionPoint.children.length > 2
+      decisionPoint.children = decisionPoint.children[0...2]
+
     for child in decisionPoint.children
       child.width = @recordWidths(child)
       result += child.width

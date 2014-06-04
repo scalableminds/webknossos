@@ -44,13 +44,13 @@ case class UpdateTracing(value: JsObject) extends TracingUpdater {
   def createUpdate()(implicit ctx: DBAccessContext) = {
     val activeCellId = (value \ "activeCell").asOpt[Int]
     val nextSegmentationId = (value \ "nextCell").asOpt[Int]
-    val editPosition = (value \ "editPosition").as[Point3D]
-    val zoomLevel = (value \ "zoomLevel").as[Double]
+    val editPosition = (value \ "editPosition").asOpt[Point3D]
+    val zoomLevel = (value \ "zoomLevel").asOpt[Double]
     TracingUpdate { t =>
       val updated = t.copy(
         activeCellId = activeCellId,
-        editPosition = editPosition,
-        zoomLevel = zoomLevel)
+        editPosition = editPosition getOrElse t.editPosition,
+        zoomLevel = zoomLevel getOrElse t.zoomLevel)
       UserDataLayerDAO.updateNextSegmentationId(t.userDataLayerName, nextSegmentationId)
       VolumeTracingDAO.update(t._id, updated).map(_ => updated)
     }

@@ -89,8 +89,8 @@ class SceneController
       @volumeMeshes = []
 
       for id of triangles
-        volume = new VolumeGeometry( triangles[id], parseInt( id ) )
-        @volumeMeshes = @volumeMeshes.concat( volume.getMeshes() )
+        volume = new VolumeGeometry(triangles[id], parseInt(id))
+        @volumeMeshes = @volumeMeshes.concat(volume.getMeshes())
 
       @trigger("newGeometries", @volumeMeshes)
       @flycam.update()
@@ -204,7 +204,7 @@ class SceneController
   setSegmentationAlpha : (alpha) ->
 
     for plane in @planes
-      plane.setSegmentationAlpha( alpha )
+      plane.setSegmentationAlpha(alpha)
     @pingBinarySeg = alpha != 0
 
   pingDataLayer : (dataLayerName) ->
@@ -220,9 +220,9 @@ class SceneController
 
     for plane in @planes
       plane.setVisible(false)
-    @cube.setVisibility( false )
-    @bb.setVisibility( false )
-    @bb2?.setVisibility( false )
+    @cube.setVisibility(false)
+    @bb.setVisibility(false)
+    @bb2?.setVisibility(false)
 
     @skeleton?.restoreVisibility()
     @skeleton?.setSizeAttenuation(true)
@@ -232,9 +232,9 @@ class SceneController
 
     for plane in @planes
       plane.setVisible(true)
-    @cube.setVisibility( true )
-    @bb.setVisibility( true )
-    @bb2?.setVisibility( true )
+    @cube.setVisibility(true)
+    @bb.setVisibility(true)
+    @bb2?.setVisibility(true)
 
     @skeleton?.setSizeAttenuation(false)
 

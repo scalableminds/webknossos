@@ -17,9 +17,9 @@ class PolygonFactory
     round = (number) =>
       Math.floor(number / @voxelsToSkip) * @voxelsToSkip
 
-    [ @startX, @endX ] = [ round(min[0]), round(max[0]) + @voxelsToSkip ]
-    [ @startY, @endY ] = [ round(min[1]), round(max[1]) + @voxelsToSkip ]
-    [ @startZ, @endZ ] = [ round(min[2]), round(max[2]) + @voxelsToSkip ]
+    [@startX, @endX] = [round(min[0]), round(max[0]) + @voxelsToSkip]
+    [@startY, @endY] = [round(min[1]), round(max[1]) + @voxelsToSkip]
+    [@startZ, @endZ] = [round(min[2]), round(max[2]) + @voxelsToSkip]
 
 
   getTriangles : () ->
@@ -27,7 +27,7 @@ class PolygonFactory
     result    = {}
     @deferred = new $.Deferred()
 
-    _.defer( @calculateTrianglesAsync, result )
+    _.defer(@calculateTrianglesAsync, result)
     return @deferred
 
 
@@ -47,7 +47,7 @@ class PolygonFactory
 
       position = @getNextPosition(position)
 
-    @deferred.resolve( result )
+    @deferred.resolve(result)
 
 
   isPositionInBoundingBox : (position) ->
@@ -89,19 +89,19 @@ class PolygonFactory
   getCubeIndices : ([x, y, z]) ->
 
     labels = [
-      @modelCube.getDataValue( [x, y, z]                                                 ),
-      @modelCube.getDataValue( [x + @voxelsToSkip, y, z]                                 ),
-      @modelCube.getDataValue( [x + @voxelsToSkip, y, z + @voxelsToSkip]                 ),
-      @modelCube.getDataValue( [x, y, z + @voxelsToSkip]                                 ),
-      @modelCube.getDataValue( [x, y + @voxelsToSkip, z]                                 ),
-      @modelCube.getDataValue( [x + @voxelsToSkip, y + @voxelsToSkip, z]                 ),
-      @modelCube.getDataValue( [x + @voxelsToSkip, y + @voxelsToSkip, z + @voxelsToSkip] ),
-      @modelCube.getDataValue( [x, y + @voxelsToSkip, z + @voxelsToSkip]                 ) ]
+      @modelCube.getDataValue([x, y, z]                                                ),
+      @modelCube.getDataValue([x + @voxelsToSkip, y, z]                                ),
+      @modelCube.getDataValue([x + @voxelsToSkip, y, z + @voxelsToSkip]                ),
+      @modelCube.getDataValue([x, y, z + @voxelsToSkip]                                ),
+      @modelCube.getDataValue([x, y + @voxelsToSkip, z]                                ),
+      @modelCube.getDataValue([x + @voxelsToSkip, y + @voxelsToSkip, z]                ),
+      @modelCube.getDataValue([x + @voxelsToSkip, y + @voxelsToSkip, z + @voxelsToSkip]),
+      @modelCube.getDataValue([x, y + @voxelsToSkip, z + @voxelsToSkip]                ) ]
 
     cellIds = []
     for label in labels
       unless label in cellIds or label == 0 or (@id? and @id != label)
-        cellIds.push( label )
+        cellIds.push(label)
 
     result = {}
     for cellId in cellIds
@@ -118,7 +118,7 @@ class PolygonFactory
 
   addNewTriangles : (triangleList, cubeIndex, [x, y, z]) ->
 
-      for triangle in tlt[ cubeIndex ]
+      for triangle in tlt[cubeIndex]
         vertices = []
 
         for vertex in triangle

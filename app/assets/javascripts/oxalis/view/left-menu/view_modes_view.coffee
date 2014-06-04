@@ -27,9 +27,7 @@ class ViewModesView extends Backbone.Marionette.ItemView
     "mode-arbitraryplane" : constants.MODE_ARBITRARY_PLANE
 
   events :
-    "click #mode-3planes" : "changeMode"
-    "click #mode-sphere" : "changeMode"
-    "click #mode-arbitraryplane" : "changeMode"
+    "click #mode-container>*" : "changeMode"
 
 
   initialize : (options) ->
@@ -44,6 +42,8 @@ class ViewModesView extends Backbone.Marionette.ItemView
 
 
   updateForMode : (mode) ->
+
+    #@$("#mode-container").children().removeClass("btn-primary")
 
     for buttonId in _.keys(@modeMapping)
       @$("##{buttonId}").removeClass("btn-primary")

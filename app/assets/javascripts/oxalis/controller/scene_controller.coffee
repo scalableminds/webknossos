@@ -78,9 +78,10 @@ class SceneController
   showShapes : (min, max, id) ->
 
     return if @cellsDeferred?
+    return unless @model.getSegmentationBinary()?
 
     @cellsDeferred = (new PolygonFactory(
-      @model.getSegmentationBinary()?.cube
+      @model.getSegmentationBinary().cube
       min, max, id
     )).getTriangles(min, max, id).done (triangles) =>
 

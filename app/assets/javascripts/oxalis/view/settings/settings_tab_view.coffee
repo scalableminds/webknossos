@@ -16,10 +16,10 @@ class SettingsTabView extends Backbone.Marionette.Layout
 
   template : _.template("""
     <ul class="nav nav-tabs">
-      <li class="active">
+      <li>
         <a href="#tracing-settings-tab" data-toggle="tab"><i class="fa fa-cogs"></i> Tracing</a>
       </li>
-      <li>
+      <li  class="active">
         <a href="#dataset-settings-tab" data-toggle="tab"><i class="fa fa-cogs"></i> Dataset</a>
       </li>
       <li>
@@ -28,8 +28,8 @@ class SettingsTabView extends Backbone.Marionette.Layout
     </ul>
 
     <div class="tab-content">
-      <div class="tab-pane active" id="tracing-settings-tab"></div>
-      <div class="tab-pane" id="dataset-settings-tab"></div>
+      <div class="tab-pane" id="tracing-settings-tab"></div>
+      <div class="tab-pane active" id="dataset-settings-tab"></div>
       <div class="tab-pane" id="user-settings-tab"></div>
     </div>
   </div>

@@ -68,6 +68,16 @@ class Controller
 
       @urlManager.startUrlUpdater()
 
+      # Warn if segmentation data is not available
+      if @model.getSegmentationBinary()?
+        hasWarned = false
+        @model.flycam.on
+          zoomStepChanged : =>
+            if @model.flycam.getIntegerZoomStep() > 1 and not hasWarned
+              hasWarned = true
+              Toast.info(
+                "Segmentation data is only available at lower zoom levels.")
+
       for allowedMode in settings.allowedModes
         @allowedModes.push switch allowedMode
           when "oxalis" then constants.MODE_PLANE_TRACING
@@ -186,6 +196,10 @@ class Controller
   initKeyboard : ->
 
     $(document).keypress (event) ->
+
+      if $(event.target).is("input")
+        # don't summon help modal when the user types into an input field
+        return
 
       if event.shiftKey && event.which == 63
         $("#help-modal").modal('toggle')

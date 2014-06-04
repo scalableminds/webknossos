@@ -50,6 +50,11 @@ Toast =
     return
 
 
+  info : (message, sticky) ->
+
+    @message("info", message, sticky)
+
+
   success : (message, sticky) ->
 
     if message?

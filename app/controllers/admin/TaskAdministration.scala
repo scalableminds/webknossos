@@ -47,6 +47,10 @@ object TaskAdministration extends AdminController {
 
   type TaskForm = Form[(String, String, Point3D, Experience, Int, Int, String)]
 
+  def empty = Authenticated{ implicit request =>
+    Ok(views.html.main()(Html.empty))
+  }
+
   def basicTaskForm(minTaskInstances: Int) = Form(
     tuple(
       "taskType" -> text,
@@ -333,16 +337,12 @@ object TaskAdministration extends AdminController {
     }
   }
 
-  def overview = Authenticated { implicit request =>
-    Ok(html.admin.task.taskOverview())
-  }
-
   case class UserWithTaskInfos(
     user: User,
     taskTypes: List[TaskType],
     projects: List[Project],
     futureTaskType: Option[TaskType])
- 
+
   object UserWithTaskInfos {
     def userInfosPublicWrites(requestingUser: User): Writes[UserWithTaskInfos] =
       ( (__ \ "user").write(User.userPublicWrites(requestingUser)) and
@@ -355,7 +355,7 @@ object TaskAdministration extends AdminController {
   def overviewData = Authenticated.async { implicit request =>
 
     def getUserInfos(users: List[User]) = {
-     
+
       val futureTaskTypeMap = for {
         futureTasks <- TaskService.simulateTaskAssignment(users)
         futureTaskTypes <- Fox.sequenceOfFulls(futureTasks.map(e => e._2.taskType.map(e._1 -> _)).toList)

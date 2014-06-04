@@ -98,14 +98,14 @@ GET           /api/tasks                                           controllers.T
 DELETE        /api/tasks/:id                                       controllers.admin.TaskAdministration.delete(id: String)
 
 GET           /tasks                                               controllers.TaskController.empty
+GET           /tasks/overview                                      controllers.admin.TaskAdministration.empty
 GET           /admin/tasks/create                                  controllers.admin.TaskAdministration.create
 POST          /admin/tasks/createBulk                              controllers.admin.TaskAdministration.createBulk
 POST          /admin/tasks/createFromNML                           controllers.admin.TaskAdministration.createFromNML
 POST          /admin/tasks/createFromForm                          controllers.admin.TaskAdministration.createFromForm
-GET           /admin/tasks/overview                                controllers.admin.TaskAdministration.overview
-GET           /admin/tasks/overview/data                           controllers.admin.TaskAdministration.overviewData
 GET           /admin/tasks/:id/edit                                controllers.admin.TaskAdministration.edit(id: String)
 POST          /admin/tasks/:id                                     controllers.admin.TaskAdministration.editTaskForm(id: String)
+GET           /api/tasks/overview                                  controllers.admin.TaskAdministration.overviewData
 
 GET           /api/tasks/:id/download                              controllers.admin.NMLIO.taskDownload(id: String)
 GET           /api/tasks/:id/annotations                           controllers.AnnotationController.annotationsForTask(id: String)

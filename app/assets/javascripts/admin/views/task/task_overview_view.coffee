@@ -7,7 +7,28 @@ moment : moment
 routes : routes
 ###
 
-class TaskOverviewView extends Backbone.Marionette.View
+class TaskOverviewView extends Backbone.Marionette.ItemView
+
+  template : _.template("""
+    <div class="container wide" id="task-overview">
+      <h3>TaskType - User Overview</h3>
+      <div>
+        <p>All ovals symbolize task types and/or projects. Users are drawn as rectangles. Blue lines symbolize the next task type the user gets, after he has finished his current task. If the user currently has a task, then there is a black arrow drawn to the task type and/or the project of the task. </p>
+      </div>
+      <div class="overview-options">
+        <label class="checkbox">
+          <input type="checkbox" id="taskTypesCheckbox">Task types
+        </label>
+        <label class="checkbox">
+          <input type="checkbox" id="projectsCheckbox">Projects
+        </label>
+      </div>
+
+      <div class="graph well">
+        <p><i class="fa fa-refresh rotating"></i>Loading ...</p>
+      </div>
+    </div>
+  """)
 
   events :
     "change @ui.taskTypesCheckbox" : "selectionChanged"
@@ -21,12 +42,14 @@ class TaskOverviewView extends Backbone.Marionette.View
 
   initialize : ->
 
-    # Backbone.Marionette internal method
-    @bindUIElements()
+    @fetchPromise = @model.fetch()
+
+
+  onRender : ->
 
     @ui.taskTypesCheckbox.prop("checked", true)
-
     @paintGraph()
+
 
   paintGraph : ->
 
@@ -67,19 +90,11 @@ class TaskOverviewView extends Backbone.Marionette.View
     $(@ui.projectsCheckbox).prop("checked")
 
 
-  getData : ->
-
-    if @data
-      return $.Deferred().resolve()
-    else
-      jsRoutes.controllers.admin.TaskAdministration.overviewData().ajax().then( (@data) => )
-
-
   getSVG : ->
 
-    @getData().then( =>
+    @fetchPromise.then( =>
 
-      { userInfos, taskTypes, projects } = @data
+      { userInfos, taskTypes, projects } = @model.attributes
       # extract users and add full names
       @users = _.pluck(userInfos, "user")
       @users.map( (user) -> user.name = user.firstName + " " + user.lastName )

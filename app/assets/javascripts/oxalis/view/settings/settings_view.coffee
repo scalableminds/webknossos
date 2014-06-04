@@ -9,7 +9,7 @@ class SettingsView extends Backbone.Marionette.ItemView
 
 
   template : _.template("""
-    <div class="panel-group accordion">
+    <div class="panel-group">
 
       <% _.forEach(subviewCreators, function (subview, key) { %>
         <div data-subview="<%= key %>"></div>

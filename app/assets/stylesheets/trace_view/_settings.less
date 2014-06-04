@@ -13,12 +13,34 @@
     border-radius: 0px;
     margin-top: -1px; //avoid double borders
   }
+
   .panel-body {
 
     .row {
       margin-bottom: 5px;
     }
   }
+
+  .panel-heading {
+
+    .caret-down {
+      display: inline-block;
+    }
+    .caret-right {
+      display: none;
+    }
+
+    &.collapsed {
+      .caret-right {
+        display: inline-block
+      }
+      .caret-down {
+        display: none
+      }
+
+    }
+  }
+
   li.active > a{
     background-color: #f5f5f5;
   }

@@ -9,9 +9,13 @@ class CategoryView extends Backbone.Marionette.ItemView
 
   template : _.template("""
     <div class="panel panel-default">
-      <div class="panel-heading" data-toggle="collapse" data-parent="#user-settings" href="#user-settings-<%= tabId %>">
+      <div class="panel-heading" data-toggle="collapse" data-target="#user-settings-<%= tabId %>">
         <h4 class="panel-title">
-          <a><%= caption %></a>
+          <a>
+            <i class="caret-down"></i>
+            <i class="caret-right"></i>
+            <%= caption %>
+          </a>
         </h4>
       </div>
       <div id="user-settings-<%= tabId %>" class="panel-collapse collapse in">

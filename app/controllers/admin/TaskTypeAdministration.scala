@@ -80,16 +80,6 @@ object TaskTypeAdministration extends AdminController {
     }
   }
 
-  // TODO: remove me
-  def edit(taskTypeId: String) = Authenticated.async { implicit request =>
-    for {
-      taskType <- TaskTypeDAO.findOneById(taskTypeId) ?~> Messages("taskType.notFound")
-      _ <- ensureTeamAdministration(request.user, taskType.team)
-    } yield {
-      Ok(html.admin.taskType.taskTypeEdit(taskType.id, taskTypeForm.fill(taskType), request.user.adminTeamNames))
-    }
-  }
-
   def editTaskTypeForm(taskTypeId: String) = Authenticated.async(parse.urlFormEncoded) { implicit request =>
     def evaluateForm(taskType: TaskType): Fox[SimpleResult] = {
       val boundForm = taskTypeForm.bindFromRequest

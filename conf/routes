@@ -109,9 +109,6 @@ POST          /admin/tasks/:id                                     controllers.a
 GET           /api/tasks/:id/download                              controllers.admin.NMLIO.taskDownload(id: String)
 GET           /api/tasks/:id/annotations                           controllers.AnnotationController.annotationsForTask(id: String)
 
-# TODO: remove me when clearing scala templates for editing tasktypes
-GET           /dummy                                               controllers.admin.TaskTypeAdministration.edit(id: String)
-
 GET           /taskTypes                                           controllers.admin.TaskTypeAdministration.empty
 GET           /taskTypes/:id/edit                                  controllers.UserController.emptyWithWildcard(id: String)
 GET           /api/taskTypes                                       controllers.admin.TaskTypeAdministration.list

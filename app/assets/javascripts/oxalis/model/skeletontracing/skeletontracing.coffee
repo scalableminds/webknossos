@@ -315,7 +315,9 @@ class SkeletonTracing
           @activeNode = node
           @activeTree = tree
           break
+
     @stateLogger.push()
+    @trigger("newActiveNode", @activeNode.id)
 
     if mergeTree
       @mergeTree(lastActiveNode, lastActiveTree)

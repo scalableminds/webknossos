@@ -31,8 +31,8 @@ class CommentTabView extends SortedCompositeView
   itemView : CommentTabItemView
   itemViewContainer : "#comment-list"
   itemViewOptions : ->
+    parent : @
     activeComment : @activeComment
-    skeletonTracing : @_model.skeletonTracing
   templateHelpers : ->
     activeComment : @activeComment
     isSortedAscending : @isSortedAscending
@@ -47,6 +47,7 @@ class CommentTabView extends SortedCompositeView
     "click #comment-list li" : "setActive"
     "click #comment-next" : "nextComment"
     "click #comment-previous" : "previousComment"
+
 
   initialize : (options) ->
 
@@ -86,7 +87,8 @@ class CommentTabView extends SortedCompositeView
 
     @activeComment = activeComment
     nodeId = activeComment.get("node")
-    @_model.skeletonTracing.trigger("newActiveNode", nodeId)
+    @_model.skeletonTracing.setActiveNode(nodeId)
+    @_model.skeletonTracing.centerActiveNode()
 
 
   updateInputElement : (nodeId) ->
@@ -143,13 +145,10 @@ class CommentTabView extends SortedCompositeView
     @collection.sort(@isSortedAscending)
 
 
-  # TODO figure out when to call this?
   deleteComment : (nodeID) ->
 
     comment = @collection.findWhere("node" : nodeID)
     if comment
       @collection.remove(comment)
-      # TODO save the change
-      #@stateLogger.push()
       @trigger("updateComments")
 

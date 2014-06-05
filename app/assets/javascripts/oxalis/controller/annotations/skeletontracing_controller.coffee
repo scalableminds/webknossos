@@ -18,7 +18,6 @@ class SkeletonTacingController
   constructor : ( @model, @sceneController, @gui, @skeletonTracingView ) ->
 
     _.extend(@, Backbone.Events)
-    @listenTo(@model.skeletonTracing, "newActiveNode", (nodeId) -> @setActiveNode(nodeId, false, true))
 
     # TODO add to tracing model
     # @gui.on
@@ -61,9 +60,12 @@ class SkeletonTacingController
     @model.skeletonTracing.centerActiveNode() if centered
 
 
-  deleteActiveNode : =>
+  centerActiveNode : =>
 
-    @model.skeletonTracing.deleteActiveNode()
+    position = @model.skeletonTracing.getActiveNodePos()
+    if position
+      @model.flycam.setPosition(position)
+
 
 
 

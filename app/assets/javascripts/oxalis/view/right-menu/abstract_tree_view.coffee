@@ -26,7 +26,7 @@ class AbstractTreeView extends Backbone.Marionette.ItemView
     @listenTo(app.vent, "view:setTheme", @drawTree)
     @listenTo(app.vent, "model:sync", ->
 
-      @listenTo(app.vent, "activeNode:change" , @drawTree)
+      @listenTo(@_model.skeletonTracing, "newActiveNode" , @drawTree)
       @listenTo(@_model.skeletonTracing, "newActiveTree" , @drawTree)
       @listenTo(@_model.skeletonTracing, "newTree" , @drawTree)
       @listenTo(@_model.skeletonTracing, "mergeTree" , @drawTree)
@@ -72,4 +72,4 @@ class AbstractTreeView extends Backbone.Marionette.ItemView
 
     id = @abstractTreeRenderer.getIdFromPos(event.offsetX, event.offsetY)
     if id
-      app.vent.trigger("activeNode:change", id)
+      @_model.skeletonTracing.trigger("newActiveNode", id)

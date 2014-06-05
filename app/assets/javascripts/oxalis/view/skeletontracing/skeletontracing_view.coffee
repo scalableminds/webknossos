@@ -14,7 +14,7 @@ class SkeletonTracingView extends View
     _.extend(@, Backbone.Events)
 
 
-    @listenTo(app.vent, "activeNode:change", @updateActiveTree)
+    @listenTo(@model.skeletonTracing, "newActiveNode", @updateActiveTree)
 
     @model.skeletonTracing.on({
       emptyBranchStack : =>

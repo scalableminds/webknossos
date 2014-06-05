@@ -18,7 +18,7 @@ class SkeletonTacingController
   constructor : ( @model, @sceneController, @gui, @skeletonTracingView ) ->
 
     _.extend(@, Backbone.Events)
-    @listenTo(app.vent, "activeNode:change", (nodeId) -> @setActiveNode(nodeId, false, true))
+    @listenTo(@model.skeletonTracing, "newActiveNode", (nodeId) -> @setActiveNode(nodeId, false, true))
 
     # TODO add to tracing model
     # @gui.on

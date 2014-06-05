@@ -230,8 +230,7 @@ class SkeletonTracing
       @stateLogger.createNode(point, @activeTree.treeId)
 
       @trigger("newNode", centered)
-      #@trigger("newActiveNode")
-      app.vent.trigger("activeNode:change", @activeNode.id)
+      @trigger("newActiveNode", @activeNode.id)
     else
       @trigger("wrongDirection")
 
@@ -359,10 +358,9 @@ class SkeletonTracing
       @activeNode = null
     else
       @activeNode = @activeTree.nodes[0]
-      app.vent.trigger("activeNode:change", @activeNode.id)
     @stateLogger.push()
 
-    #@trigger("newActiveNode")
+    @trigger("newActiveNode", @activeNode.id)
 
     @trigger("newActiveTree")
 

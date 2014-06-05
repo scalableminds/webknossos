@@ -32,6 +32,7 @@ class CommentTabView extends SortedCompositeView
   itemViewContainer : "#comment-list"
   itemViewOptions : ->
     activeComment : @activeComment
+    skeletonTracing : @_model.skeletonTracing
   templateHelpers : ->
     activeComment : @activeComment
     isSortedAscending : @isSortedAscending
@@ -67,7 +68,7 @@ class CommentTabView extends SortedCompositeView
         @activeComment = comment
 
       # events
-      @listenTo(app.vent, "activeNode:change", @updateInputElement)
+      @listenTo(@_model.skeletonTracing, "newActiveNode", @updateInputElement)
       @listenTo(@_model.skeletonTracing, "deleteComment", @deleteComment)
       @listenTo(@collection, "sort", @render)
 
@@ -85,7 +86,7 @@ class CommentTabView extends SortedCompositeView
 
     @activeComment = activeComment
     nodeId = activeComment.get("node")
-    app.vent.trigger("activeNode:change", nodeId)
+    @_model.skeletonTracing.trigger("newActiveNode", nodeId)
 
 
   updateInputElement : (nodeId) ->

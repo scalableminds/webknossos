@@ -24,8 +24,10 @@ class CommentTabItemView extends Backbone.Marionette.ItemView
 
   initialize : (options) ->
 
-    @activeCommentId = options.activeComment.get("node")
-    @listenTo(app.vent, "activeNode:change", @update)
+    {activeComment, @skeletonTracing} = options
+    @activeCommentId = activeComment.get("node")
+
+    @listenTo(@skeletonTracing, "newActiveNode", @update)
     @listenTo(@model, "change", @render)
 
 
@@ -36,5 +38,5 @@ class CommentTabItemView extends Backbone.Marionette.ItemView
 
   setActiveNode : ->
 
-    app.vent.trigger("activeNode:change", @model.get("node"))
+    @skeletonTracing.trigger("newActiveNode", @model.get("node"))
 

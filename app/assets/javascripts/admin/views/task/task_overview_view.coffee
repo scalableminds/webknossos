@@ -9,8 +9,9 @@ routes : routes
 
 class TaskOverviewView extends Backbone.Marionette.ItemView
 
+  id : "task-overview"
+  className : "container wide"
   template : _.template("""
-    <div class="container wide" id="task-overview">
       <h3>TaskType - User Overview</h3>
       <div>
         <p>All ovals symbolize task types and/or projects. Users are drawn as rectangles. Blue lines symbolize the next task type the user gets, after he has finished his current task. If the user currently has a task, then there is a black arrow drawn to the task type and/or the project of the task. </p>
@@ -27,7 +28,6 @@ class TaskOverviewView extends Backbone.Marionette.ItemView
       <div class="graph well">
         <p><i class="fa fa-refresh rotating"></i>Loading ...</p>
       </div>
-    </div>
   """)
 
   events :

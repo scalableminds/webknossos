@@ -358,9 +358,8 @@ class SkeletonTracing
       @activeNode = null
     else
       @activeNode = @activeTree.nodes[0]
+      @trigger("newActiveNode", @activeNode.id)
     @stateLogger.push()
-
-    @trigger("newActiveNode", @activeNode.id)
 
     @trigger("newActiveTree")
 

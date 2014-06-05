@@ -16,7 +16,7 @@ class ListTreeItemView extends Backbone.Marionette.ItemView
   """)
 
   events :
-    "click a"
+    "click a" : "setActive"
 
   templateHelpers : ->
     getIcon : =>

@@ -86,6 +86,7 @@ class ListTreeView extends Backbone.Marionette.CompositeView
       @listenTo(@_model.skeletonTracing, "newNode", @updateTreesDebounced)
       @listenTo(@_model.skeletonTracing, "newTreeColor", @updateTreesDebounced)
       @listenTo(@_model.skeletonTracing, "reloadTrees", @updateTreesDebounced)
+      @listenTo(@_model.skeletonTracing, "newActiveTree", @updateTreesDebounced)
       @listenTo(@_model.skeletonTracing, "newActiveNode", @_renderChildren)
     )
 
@@ -173,3 +174,9 @@ class ListTreeView extends Backbone.Marionette.CompositeView
     # animate scrolling to the new tree
     # $("#tree-list").animate({
     #   scrollTop: newIcon.offset().top - $("#tree-list").offset().top + $("#tree-list").scrollTop()}, 250)
+
+
+  setActiveTree : (treeId) ->
+
+    @_model.skeletonTracing.setActiveTree(treeId)
+    @_model.skeletonTracing.centerActiveNode()

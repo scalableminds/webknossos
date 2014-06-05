@@ -66,11 +66,5 @@ class SkeletonTacingController
     @model.skeletonTracing.deleteActiveNode()
 
 
-  setActiveTree : (treeId, centered) ->
-
-    @model.skeletonTracing.setActiveTree(treeId)
-    if centered
-      @model.skeletonTracing.centerActiveNode()
-
 
 

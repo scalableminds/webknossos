@@ -43,10 +43,7 @@ class ViewModesView extends Backbone.Marionette.ItemView
 
   updateForMode : (mode) ->
 
-    #@$("#mode-container").children().removeClass("btn-primary")
-
-    for buttonId in _.keys(@modeMapping)
-      @$("##{buttonId}").removeClass("btn-primary")
+    @$("#mode-container button").removeClass("btn-primary")
 
     buttonId = _.invert(@modeMapping)[mode]
     @$("##{buttonId}").addClass("btn-primary")

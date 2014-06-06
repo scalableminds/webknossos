@@ -12,7 +12,7 @@ import akka.util.Timeout
 import models.annotation.AnnotationLike
 import models.annotation.AnnotationType._
 import oxalis.annotation.handler.AnnotationInformationHandler
-import braingames.util.{FoxImplicits, Fox}
+import com.scalableminds.util.tools.{FoxImplicits, Fox}
 import play.api.Logger
 
 object TracingController extends Controller with Secured with TracingInformationProvider

@@ -6,7 +6,7 @@ import views.html
 import models.user._
 import oxalis.nml._
 import oxalis.nml.NMLParser
-import braingames.xml.Xml
+import com.scalableminds.util.xml.Xml
 import play.api.Logger
 import scala.xml.PrettyPrinter
 import models.tracing._
@@ -15,7 +15,7 @@ import models.task.{TaskDAO, ProjectDAO, Project, Task}
 import java.io.BufferedOutputStream
 import java.io.ByteArrayOutputStream
 import java.util.zip.ZipOutputStream
-import braingames.util._
+import com.scalableminds.util._
 import java.io.StringReader
 import java.io.InputStream
 import org.xml.sax.InputSource
@@ -41,6 +41,8 @@ import oxalis.nml.NML
 import models.annotation.AnnotationType
 import models.annotation.Annotation
 import play.api.libs.json._
+import com.scalableminds.util.tools.{TextUtils, Fox}
+import com.scalableminds.util.io.ZipIO
 
 import net.liftweb.common.Full
 import oxalis.nml.NML

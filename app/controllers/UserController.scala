@@ -10,16 +10,16 @@ import play.api.i18n.Messages
 import oxalis.user.UserCache
 import play.api.libs.concurrent.Execution.Implicits._
 import views._
-import braingames.util.ExtendedTypes.ExtendedList
-import braingames.util.ExtendedTypes.ExtendedBoolean
+import com.scalableminds.util.tools.ExtendedTypes.ExtendedList
+import com.scalableminds.util.tools.ExtendedTypes.ExtendedBoolean
 import play.api.Logger
 import models.binary.DataSet
 import scala.concurrent.Future
-import braingames.util.{Fox, FoxImplicits}
+import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import models.team.TeamMembership
 import play.api.libs.functional.syntax._
 import play.api.templates.Html
-import braingames.util.ExtendedTypes.ExtendedString
+import com.scalableminds.util.tools.ExtendedTypes.ExtendedString
 import models.user.time.{TimeSpanService, TimeSpan}
 
 object UserController extends Controller with Secured with Dashboard {

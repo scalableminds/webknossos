@@ -4,7 +4,7 @@ import models.basics.SecuredBaseDAO
 import java.util.Date
 import play.api.libs.json.Writes
 import play.api.libs.json.Json
-import braingames.reactivemongo.DBAccessContext
+import com.scalableminds.util.reactivemongo.DBAccessContext
 import reactivemongo.bson.BSONObjectID
 import play.modules.reactivemongo.json.BSONFormats._
 import play.api.libs.concurrent.Execution.Implicits._

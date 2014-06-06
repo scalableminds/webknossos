@@ -12,12 +12,12 @@ import oxalis.binary.DataSetActor
 import play.api.test._
 import play.api.test.Helpers._
 import oxalis.binary.{ SingleRequest, CubeRequest }
-import braingames.geometry.Point3D
+import com.scalableminds.util.geometry.Point3D
 import akka.util.Timeout
 import models.DataSet
 import play.libs.Akka._
 import play.api.libs.concurrent._
-import braingames.geometry.Cube
+import com.scalableminds.util.geometry.Cube
 
 class DataSetActorTest extends AkkaSpecification {
 

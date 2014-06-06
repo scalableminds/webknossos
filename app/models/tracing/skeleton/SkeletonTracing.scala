@@ -1,11 +1,11 @@
 package models.tracing.skeleton
 
-import braingames.geometry.{Point3D, BoundingBox}
+import com.scalableminds.util.geometry.{Point3D, BoundingBox}
 import play.api.libs.json._
 import models.binary.DataSetDAO
 import models.user.{UsedAnnotationDAO, UsedAnnotation}
-import braingames.geometry.Scale
-import braingames.image.Color
+import com.scalableminds.util.geometry.Scale
+import com.scalableminds.util.image.Color
 import models.basics._
 import oxalis.nml._
 import models.binary.DataSet
@@ -14,14 +14,14 @@ import models.tracing.CommonTracingService
 import scala.Some
 import models.binary.DataSet
 import oxalis.nml.NML
-import braingames.reactivemongo.DBAccessContext
+import com.scalableminds.util.reactivemongo.DBAccessContext
 import scala.tools.nsc.Global
-import braingames.reactivemongo.GlobalAccessContext
+import com.scalableminds.util.reactivemongo.GlobalAccessContext
 import reactivemongo.bson.BSONObjectID
 import scala.concurrent.Future
 import play.api.libs.concurrent.Execution.Implicits._
 import play.modules.reactivemongo.json.BSONFormats._
-import braingames.util.{FoxImplicits, Fox}
+import com.scalableminds.util.tools.{FoxImplicits, Fox}
 import net.liftweb.common.Empty
 import play.api.Logger
 

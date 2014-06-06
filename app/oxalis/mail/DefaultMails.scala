@@ -4,7 +4,7 @@ import views._
 import models.user.User
 import play.api.Play
 import play.api.i18n.Messages
-import braingames.mail.Mail
+import com.scalableminds.util.mail.Mail
 
 object DefaultMails {
   /**

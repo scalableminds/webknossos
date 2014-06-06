@@ -1,4 +1,4 @@
-@(taskTypes: List[models.task.TaskType], dataSets: List[models.binary.DataSet], projects: List[models.task.Project], teams: List[String], nmlForm: Form[(String, models.user.Experience, Int, Int, String, String, braingames.geometry.BoundingBox)], taskForm: Form[(String, String, braingames.geometry.Point3D, models.user.Experience, Int, Int, String, String, braingames.geometry.BoundingBox)])(implicit session: oxalis.view.AuthedSessionData)
+@(taskTypes: List[models.task.TaskType], dataSets: List[models.binary.DataSet], projects: List[models.task.Project], teams: List[String], nmlForm: Form[(String, models.user.Experience, Int, Int, String, String, com.scalableminds.util.geometry.BoundingBox)], taskForm: Form[(String, String, com.scalableminds.util.geometry.Point3D, models.user.Experience, Int, Int, String, String, com.scalableminds.util.geometry.BoundingBox)])(implicit session: oxalis.view.AuthedSessionData)
 
 @main(){
   <div class="container task-types-administration">

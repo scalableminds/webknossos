@@ -2,7 +2,7 @@ package models.task
 
 import models.basics._
 import java.util.Date
-import braingames.geometry.Point3D
+import com.scalableminds.util.geometry.Point3D
 
 import scala.concurrent.Future
 import play.api.libs.concurrent.Execution.Implicits._
@@ -10,10 +10,10 @@ import play.api.Logger
 import models.user.{User, Experience}
 import models.annotation._
 import play.api.libs.json.{Json, JsObject}
-import braingames.format.Formatter
+import com.scalableminds.util.mvc.Formatter
 import scala.concurrent.duration._
-import braingames.util.{Fox, FoxImplicits}
-import braingames.reactivemongo.{DefaultAccessDefinitions, GlobalAccessContext, DBAccessContext}
+import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.util.reactivemongo.{DefaultAccessDefinitions, GlobalAccessContext, DBAccessContext}
 import reactivemongo.bson.BSONObjectID
 import play.modules.reactivemongo.json.BSONFormats._
 import org.joda.time.DateTime
@@ -25,7 +25,7 @@ import akka.actor.Props
 import akka.routing.RoundRobinRouter
 import reactivemongo.api.indexes.{IndexType, Index}
 import reactivemongo.core.commands.LastError
-import braingames.reactivemongo.AccessRestrictions.{AllowIf, DenyEveryone}
+import com.scalableminds.util.reactivemongo.AccessRestrictions.{AllowIf, DenyEveryone}
 
 case class Task(
                  _taskType: BSONObjectID,

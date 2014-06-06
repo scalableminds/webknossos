@@ -7,14 +7,14 @@ import views.html
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json._
 import scala.concurrent.Future
-import braingames.util.DefaultConverters._
+import com.scalableminds.util.tools.DefaultConverters._
 import play.api.templates.Html
 import play.api.libs.json.JsSuccess
 import play.api.cache.Cache
 import org.apache.commons.codec.binary.Base64
 import play.api.Play.current
 import scala.concurrent.duration._
-import braingames.util.ExtendedTypes.ExtendedString
+import com.scalableminds.util.tools.ExtendedTypes.ExtendedString
 
 /**
  * Company: scalableminds

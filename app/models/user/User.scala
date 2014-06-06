@@ -1,7 +1,7 @@
 package models.user
 
 import play.api.Play.current
-import braingames.security.SCrypt._
+import com.scalableminds.util.security.SCrypt._
 import scala.collection.mutable.Stack
 import play.api.libs.json.{Json, JsValue}
 import play.api.libs.json.Json._
@@ -9,7 +9,7 @@ import scala.collection.immutable.HashMap
 import models.basics._
 import models.user.Experience._
 import models.team._
-import braingames.reactivemongo._
+import com.scalableminds.util.reactivemongo._
 import scala.concurrent.Future
 import play.api.libs.concurrent.Execution.Implicits._
 import reactivemongo.bson.BSONObjectID
@@ -19,8 +19,8 @@ import reactivemongo.api.indexes.Index
 import play.api.libs.json._
 import play.api.libs.functional.syntax._
 import reactivemongo.core.commands.LastError
-import braingames.reactivemongo.AccessRestrictions.{DenyEveryone, AllowIf}
-import braingames.util.Fox
+import com.scalableminds.util.reactivemongo.AccessRestrictions.{DenyEveryone, AllowIf}
+import com.scalableminds.util.tools.Fox
 import play.api.Logger
 
 case class User(

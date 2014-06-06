@@ -16,15 +16,15 @@ import play.api.libs.iteratee.Enumerator
 import models.binary.DataSetDAO
 import scala.concurrent.Future
 import models.user.time._
-import braingames.reactivemongo.DBAccessContext
+import com.scalableminds.util.reactivemongo.DBAccessContext
 import net.liftweb.common.Full
 import play.api.i18n.Messages.Message
-import braingames.util.Fox
+import com.scalableminds.util.tools.Fox
 import oxalis.annotation.AnnotationIdentifier
 import models.annotation.Annotation
 import models.task.{TaskDAO, Task}
-import braingames.util.ExtendedTypes.ExtendedBoolean
-import braingames.util.ExtendedTypes.ExtendedBooleanFuture
+import com.scalableminds.util.tools.ExtendedTypes.ExtendedBoolean
+import com.scalableminds.util.tools.ExtendedTypes.ExtendedBooleanFuture
 import scala.async.Async._
 import play.api.libs.json.JsArray
 import scala.Some

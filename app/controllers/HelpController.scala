@@ -11,7 +11,7 @@ import play.api.Play
 import play.api.Play.current
 import play.api.i18n.Messages
 import oxalis.mail.DefaultMails
-import braingames.mail.Send
+import com.scalableminds.util.mail.Send
 import play.api.libs.ws.WS
 import com.ning.http.client.Realm
 import play.api.libs.concurrent.Execution.Implicits._

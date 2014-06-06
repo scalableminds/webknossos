@@ -6,7 +6,7 @@ package oxalis.cleanup
 import scala.concurrent.duration.FiniteDuration
 import play.api.Logger
 import play.api.libs.concurrent.Akka
-import braingames.util.Fox
+import com.scalableminds.util.tools.Fox
 import play.api.libs.concurrent.Execution.Implicits._
 import net.liftweb.common.{Empty, Failure, Full}
 

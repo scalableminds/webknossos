@@ -3,12 +3,12 @@ package controllers
 import play.api.mvc.{Controller => PlayController, Request}
 import oxalis.security.AuthenticatedRequest
 import oxalis.view.ProvidesSessionData
-import braingames.mvc.ExtendedController
+import com.scalableminds.util.mvc.ExtendedController
 import models.user.User
 import net.liftweb.common.{Failure, Full}
 import play.api.i18n.Messages
 import models.binary.DataSet
-import braingames.util.Converter
+import com.scalableminds.util.tools.Converter
 import play.api.libs.json._
 
 class Controller extends PlayController

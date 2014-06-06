@@ -5,10 +5,10 @@ import play.api.libs.json._
 import play.api.libs.functional.syntax._
 import models.annotation.AnnotationSettings
 import reactivemongo.bson.BSONObjectID
-import braingames.reactivemongo._
+import com.scalableminds.util.reactivemongo._
 import play.modules.reactivemongo.json.BSONFormats._
 import models.user.User
-import braingames.reactivemongo.AccessRestrictions.{DenyEveryone, AllowIf}
+import com.scalableminds.util.reactivemongo.AccessRestrictions.{DenyEveryone, AllowIf}
 
 case class TraceLimit(min: Int, max: Int, maxHard: Int) {
 

@@ -1,26 +1,26 @@
 package models.annotation
 
-import braingames.util.{NamedFileStream, Fox, FoxImplicits}
+import com.scalableminds.util.io.NamedFileStream
+import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import play.api.Play
 import java.io.{FileInputStream, FileOutputStream, InputStream, File}
 import java.nio.channels.Channels
-import braingames.reactivemongo.DBAccessContext
+import com.scalableminds.util.reactivemongo.DBAccessContext
 import oxalis.annotation.handler.SavedTracingInformationHandler
 import models.tracing.skeleton.SkeletonTracingLike
 import oxalis.nml.NMLService
 import org.apache.commons.io.IOUtils
 import play.api.libs.json.JsValue
-import braingames.mvc.BoxImplicits
+import com.scalableminds.util.mvc.BoxImplicits
 import models.user.{UserService, UsedAnnotationDAO, User}
 import scala.concurrent.Future
 import net.liftweb.common.{Failure, Box}
 import scala.async.Async._
 import scala.Some
-import braingames.util.NamedFileStream
 import play.api.i18n.Messages
 import models.task.TaskService
 import controllers.Application
-import braingames.mail.Send
+import com.scalableminds.util.mail.Send
 import oxalis.mail.DefaultMails
 import reactivemongo.bson.BSONObjectID
 import play.api.libs.concurrent.Execution.Implicits._

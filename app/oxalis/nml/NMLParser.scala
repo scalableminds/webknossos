@@ -2,12 +2,12 @@ package oxalis.nml
 
 import scala.xml.{Node => XMLNode, Elem, XML, NodeSeq}
 import models.binary.DataSet
-import braingames.image.Color
-import braingames.util.ExtendedTypes.ExtendedString
-import braingames.geometry.Point3D
+import com.scalableminds.util.image.Color
+import com.scalableminds.util.tools.ExtendedTypes.ExtendedString
+import com.scalableminds.util.geometry.Point3D
 import play.api.Logger
 import java.io.File
-import braingames.geometry.Scale
+import com.scalableminds.util.geometry.Scale
 import models.user.User
 import com.sun.org.apache.xerces.internal.impl.io.MalformedByteSequenceException
 import java.io.InputStream

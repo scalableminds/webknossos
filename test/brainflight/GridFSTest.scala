@@ -8,8 +8,8 @@ import play.Logger
 import oxalis.binary.{ FileDataStore }
 import oxalis.binary.GridFileDataStore
 import java.security.MessageDigest
-import braingames.util.ExtendedTypes._
-import braingames.geometry.Point3D
+import com.scalableminds.util.tools.ExtendedTypes._
+import com.scalableminds.util.geometry.Point3D
 import models.DataSet
 
 class GridFSTest extends Specification {
@@ -73,7 +73,7 @@ class GridFSTest extends Specification {
         gfds.fileCache.size must be equalTo 1
         gfds.cleanUp()
         gfds.fileCache.size must be equalTo 0
-        
+
         ko
       }
     }.pendingUntilFixed

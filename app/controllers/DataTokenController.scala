@@ -5,12 +5,12 @@ package controllers
 
 import play.api.mvc.Action
 import models.binary._
-import braingames.reactivemongo.{DBAccessContext, GlobalAccessContext}
+import com.scalableminds.util.reactivemongo.{DBAccessContext, GlobalAccessContext}
 import net.liftweb.common.Full
 import oxalis.security.Secured
 import scala.concurrent.Future
-import braingames.util.Fox
-import braingames.binary.models.DataLayer
+import com.scalableminds.util.tools.Fox
+import com.scalableminds.braingames.binary.models.DataLayer
 import net.liftweb.common.Full
 import play.api.i18n.Messages
 import play.api.libs.concurrent.Execution.Implicits._

@@ -2,7 +2,7 @@ package models.annotation
 
 import play.api.libs.concurrent.Execution.Implicits._
 import reactivemongo.bson.BSONObjectID
-import braingames.reactivemongo.DBAccessContext
+import com.scalableminds.util.reactivemongo.DBAccessContext
 import play.api.libs.json.JsValue
 import oxalis.view.ResourceActionCollection
 import models.user.User
@@ -17,7 +17,8 @@ import models.user.User
 import models.annotation.AnnotationType._
 
 import scala.concurrent.Future
-import braingames.util.{NamedFileStream, Fox}
+import com.scalableminds.util.tools.Fox
+import com.scalableminds.util.io.NamedFileStream
 
 case class TemporaryAnnotation(
                                 id: String,

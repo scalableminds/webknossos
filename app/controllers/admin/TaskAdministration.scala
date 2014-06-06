@@ -4,8 +4,8 @@ import scala.Array.canBuildFrom
 import scala.Option.option2Iterable
 import oxalis.security.AuthenticatedRequest
 import oxalis.security.Secured
-import braingames.util.ExtendedTypes.ExtendedString
-import braingames.geometry.{Point3D, BoundingBox}
+import com.scalableminds.util.tools.ExtendedTypes.ExtendedString
+import com.scalableminds.util.geometry.{Point3D, BoundingBox}
 import models.binary.DataSet
 import models.tracing._
 import models.task._
@@ -34,11 +34,11 @@ import play.api.libs.json._
 import play.api.libs.functional.syntax._
 
 import net.liftweb.common.{Empty, Failure, Full}
-import braingames.util.Fox
+import com.scalableminds.util.tools.Fox
 import play.api.mvc.SimpleResult
 import play.api.mvc.Request
 import play.api.mvc.AnyContent
-import braingames.reactivemongo.DBAccessContext
+import com.scalableminds.util.reactivemongo.DBAccessContext
 import models.team.Team
 
 object TaskAdministration extends AdminController {
@@ -342,7 +342,7 @@ object TaskAdministration extends AdminController {
     taskTypes: List[TaskType],
     projects: List[Project],
     futureTaskType: Option[TaskType])
- 
+
   object UserWithTaskInfos {
     def userInfosPublicWrites(requestingUser: User): Writes[UserWithTaskInfos] =
       ( (__ \ "user").write(User.userPublicWrites(requestingUser)) and
@@ -355,7 +355,7 @@ object TaskAdministration extends AdminController {
   def overviewData = Authenticated.async { implicit request =>
 
     def getUserInfos(users: List[User]) = {
-     
+
       val futureTaskTypeMap = for {
         futureTasks <- TaskService.simulateTaskAssignment(users)
         futureTaskTypes <- Fox.sequenceOfFulls(futureTasks.map(e => e._2.taskType.map(e._1 -> _)).toList)

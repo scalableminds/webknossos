@@ -13,9 +13,9 @@ import play.api.libs.concurrent.Execution.Implicits._
 import play.api.i18n.Messages
 import models.annotation.AnnotationService
 import play.api.Play.current
-import braingames.util.Fox
+import com.scalableminds.util.tools.Fox
 import net.liftweb.common.{Full, Failure}
-import braingames.reactivemongo.DBAccessContext
+import com.scalableminds.util.reactivemongo.DBAccessContext
 import scala.concurrent.Future
 import play.api.templates.Html
 

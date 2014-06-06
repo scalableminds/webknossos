@@ -4,7 +4,7 @@
 package controllers
 
 import oxalis.security.Secured
-import braingames.reactivemongo.GlobalAccessContext
+import com.scalableminds.util.reactivemongo.GlobalAccessContext
 import models.user.{User, UserService}
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.templates.Html

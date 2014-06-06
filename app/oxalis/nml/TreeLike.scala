@@ -1,7 +1,7 @@
 package oxalis.nml
 
-import braingames.image.Color
-import braingames.xml.{SynchronousXMLWrites, XMLWrites, Xml}
+import com.scalableminds.util.image.Color
+import com.scalableminds.util.xml.{SynchronousXMLWrites, XMLWrites, Xml}
 import play.api.libs.json.Writes
 import play.api.libs.json.Json
 import play.api.libs.concurrent.Execution.Implicits._

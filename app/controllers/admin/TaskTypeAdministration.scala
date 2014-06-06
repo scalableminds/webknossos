@@ -13,7 +13,7 @@ import play.api.templates.Html
 import controllers.{Controller, Application}
 import models.annotation.AnnotationDAO
 import play.api.libs.concurrent.Execution.Implicits._
-import braingames.util.Fox
+import com.scalableminds.util.tools.Fox
 import play.api.mvc.SimpleResult
 
 object TaskTypeAdministration extends AdminController {

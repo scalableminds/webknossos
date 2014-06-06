@@ -8,8 +8,8 @@ import net.liftweb.common.Box
 import play.api.Logger
 import models.annotation.AnnotationLike
 import oxalis.annotation.handler.AnnotationInformationHandler
-import braingames.reactivemongo.DBAccessContext
-import braingames.util.Fox
+import com.scalableminds.util.reactivemongo.DBAccessContext
+import com.scalableminds.util.tools.Fox
 import play.api.libs.json.Json
 import models.user.User
 

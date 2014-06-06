@@ -1,10 +1,11 @@
 package oxalis.view
 
 import play.api.templates.Html
+import com.scalableminds.util.mvc.Formatter
 
 package object helpers
     extends BootstrapHelpers
-    with braingames.format.Formatter {
+    with Formatter {
   implicit def Html2ExtendedHtml(html: Html) = new ExtendedHtml(html)
 
   def ajaxAttributes(route: play.api.mvc.Call, ajaxParameters: String = "") = {

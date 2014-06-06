@@ -4,7 +4,7 @@ import play.api.libs.json.JsValue
 import play.api.libs.json.Format
 import play.api.libs.json._
 import play.api.data.validation.ValidationError
-import braingames.xml.{SynchronousXMLWrites, XMLWrites}
+import com.scalableminds.util.xml.{SynchronousXMLWrites, XMLWrites}
 
 case class BranchPoint(id: Int)
 

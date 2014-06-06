@@ -8,7 +8,7 @@ import play.api.libs.concurrent.Akka
 import play.api.Logger
 import play.api.libs.concurrent.Execution.Implicits._
 import reactivemongo.bson.BSONObjectID
-import braingames.reactivemongo.GlobalAccessContext
+import com.scalableminds.util.reactivemongo.GlobalAccessContext
 
 
 case object FlushActivities

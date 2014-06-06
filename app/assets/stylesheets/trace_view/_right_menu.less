@@ -16,32 +16,50 @@
   }
 }
 
+.flex-column-container, #right-menu .tab-pane > div {
+  display: flex;
+  flex-direction: column;
+  flex-grow: 1;
+}
+
+
 #right-menu {
-  display: inline-block;
+
+  display: inline-flex;
+  flex-direction: column;
   margin-top: 10px;
   margin-left: 20px;
   width: 300px; // will be set dynamically in JS
-  overflow-x: hidden;
-  overflow-y: auto;
+  overflow: hidden;
+  height: 800px;
 
   .tab-content {
+    display: flex;
+    flex-grow: 1;
     padding-top: 10px;
-  }
+    flex-direction: column;
 
-  .tab-pane {
-    height: 100%;
-    min-height: 100px;
-    word-wrap: break-word;
-    white-space: normal;
+    .tab-pane {
+      // height: 100%; ?
+      min-height: 100px;
+      word-wrap: break-word;
+      white-space: normal;
 
-    div {
-      height: 100%;
-      margin-bottom: 10px;
+      div {
+        // height: 100%; ?
+        margin-bottom: 10px;
+      }
+
+      ul {
+        list-style: none;
+        padding-left: 5px;
+      }
     }
 
-    ul {
-      list-style: none;
-      padding-left: 5px;
+    .tab-pane.active{
+      display: flex;
+      flex-direction: column;
+      flex-grow: 1;
     }
   }
 
@@ -52,6 +70,12 @@
     width: 11px;
     margin-left: 5px;
   }
+}
+
+#comment-container {
+  overflow-y: auto;
+  flex-grow: 1;
+  height: 0;
 }
 
 #comment-list {

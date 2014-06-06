@@ -46,6 +46,8 @@ trait SkeletonTracingLike extends AnnotationContent {
 
   def editPosition: Point3D
 
+  def zoomLevel: Double
+
   def boundingBox: Option[BoundingBox]
 
   def insertBranchPoint[T](bp: BranchPoint): Fox[T]
@@ -148,6 +150,7 @@ object SkeletonTracingLike extends FoxImplicits {
             <time ms={e.timestamp.toString}/>
             {e.activeNodeId.map(id => scala.xml.XML.loadString(s"""<activeNode id="$id"/>""")).getOrElse(scala.xml.Null)}
             <editPosition x={e.editPosition.x.toString} y={e.editPosition.y.toString} z={e.editPosition.z.toString}/>
+            <zoomLevel zoom={e.zoomLevel.toString}/>
           </parameters>{treesXml}<branchpoints>
           {branchpoints}
         </branchpoints>
@@ -164,10 +167,11 @@ object SkeletonTracingLike extends FoxImplicits {
       trees <- t.trees
     } yield {
       Json.obj(
-        "trees" -> trees,
         "activeNode" -> t.activeNodeId,
         "branchPoints" -> t.branchPoints,
-        "comments" -> t.comments
+        "comments" -> t.comments,
+        "trees" -> trees,
+        "zoomLevel" -> t.zoomLevel
       )
     }
 }

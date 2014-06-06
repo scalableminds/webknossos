@@ -38,7 +38,7 @@ class DashboardModel extends Backbone.Model
     # TODO: decide whether these submodels should be loaded at this time
 
     @set("dataSets", new DatasetCollection())
-    @set("loggedTime", new LoggedTimeModel())
+    @set("loggedTime", new LoggedTimeModel(userID : @get("userID")))
 
     return $.when.apply($, promises)
 

@@ -151,6 +151,7 @@ class SkeletonTracingStateLogger extends StateLogger
         comments : @skeletonTracing.getPlainComments()
         activeNode : @skeletonTracing.getActiveNodeId()
         editPosition : @flycam.getPosition()
+        zoomLevel : @flycam.getZoomStep()
       }
       false
     )

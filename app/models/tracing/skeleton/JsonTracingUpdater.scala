@@ -212,12 +212,14 @@ case class UpdateTracing(value: JsObject) extends TracingUpdater {
     val comments = (value \ "comments").as[List[Comment]]
     val activeNodeId = (value \ "activeNode").asOpt[Int]
     val editPosition = (value \ "editPosition").as[Point3D]
+    val zoomLevel = (value \ "zoomLevel").as[Double]
     TracingUpdate { t =>
       val updated = t.copy(
         branchPoints = branchPoints,
         comments = comments,
         activeNodeId = activeNodeId,
-        editPosition = editPosition)
+        editPosition = editPosition,
+        zoomLevel = zoomLevel)
       SkeletonTracingDAO.update(t._id, updated).map(_ => updated)
     }
   }

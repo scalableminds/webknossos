@@ -8,7 +8,7 @@ backbone.marionette : marionette
 class RightMenuView extends Backbone.Marionette.Layout
 
   MARGIN : 40
-
+  className : "flex-column-container"
   template : _.template("""
     <ul class="nav nav-tabs">
       <li class="active">

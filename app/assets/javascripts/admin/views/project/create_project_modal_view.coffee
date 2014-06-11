@@ -102,7 +102,7 @@ class CreateProjectModalView extends Backbone.Marionette.Layout
 
       @projectCollection.create(project,
         wait : true
-        error : @handleXHRError
+        error : (model, xhr) -> Toast.message(xhr.responseJSON.messages)
         success : _.bind(@closeModal, @)
       )
 
@@ -120,10 +120,3 @@ class CreateProjectModalView extends Backbone.Marionette.Layout
     )
     @$el.modal("hide")
 
-
-  handleXHRError : (model, xhr) ->
-
-    xhr.responseJSON.messages.forEach(
-      (message) ->
-        Toast.error(message.error)
-    )

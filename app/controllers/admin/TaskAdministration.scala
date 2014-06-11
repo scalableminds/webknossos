@@ -47,6 +47,10 @@ object TaskAdministration extends AdminController {
 
   type TaskForm = Form[(String, String, Point3D, Experience, Int, Int, String)]
 
+  def empty = Authenticated{ implicit request =>
+    Ok(views.html.main()(Html.empty))
+  }
+
   def basicTaskForm(minTaskInstances: Int) = Form(
     tuple(
       "taskType" -> text,
@@ -325,10 +329,6 @@ object TaskAdministration extends AdminController {
     } yield {
       Ok(Json.toJson(js))
     }
-  }
-
-  def overview = Authenticated { implicit request =>
-    Ok(html.admin.task.taskOverview())
   }
 
   case class UserWithTaskInfos(

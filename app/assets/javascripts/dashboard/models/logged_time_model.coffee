@@ -6,7 +6,14 @@ format_utils : FormatUtils
 
 class LoggedTimeModel extends Backbone.Model
 
-  urlRoot : "/api/user/loggedTime"
+  urlRoot : ->
+
+    if userID = @get("userID")
+      return "/api/users/#{userID}/loggedTime"
+    else
+      return "/api/user/loggedTime"
+
+
   defaults :
     formattedLogs : []
 

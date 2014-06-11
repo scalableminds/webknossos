@@ -15,13 +15,13 @@ class SpotlightDatasetView extends Backbone.Marionette.ItemView
 
         <div class="link-row">
           <a href="/datasets/<%= name %>/view" title="View tracing">
-            <img src="assets/images/eye.svg">
+            <img src="/assets/images/eye.svg">
           </a>
           <a href="#" title="Create skeleton tracing" id="skeletonTraceLink">
-            <img src="assets/images/skeleton.svg">
+            <img src="/assets/images/skeleton.svg">
           </a>
           <a href="#" title="Create volume tracing" id="volumeTraceLink">
-            <img src="assets/images/volume.svg">
+            <img src="/assets/images/volume.svg">
           </a>
         </div>
       </div>

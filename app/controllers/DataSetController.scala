@@ -15,6 +15,8 @@ import org.apache.commons.codec.binary.Base64
 import play.api.Play.current
 import scala.concurrent.duration._
 import braingames.util.ExtendedTypes.ExtendedString
+import models.user.{User, UserService}
+import braingames.util.Fox
 
 /**
  * Company: scalableminds
@@ -82,6 +84,15 @@ object DataSetController extends Controller with Secured {
     }
   }
 
+  def accessList(dataSetName: String) = Authenticated.async{ implicit request =>
+    for{
+      dataSet <- DataSetDAO.findOneBySourceName(dataSetName) ?~> Messages("dataSet.notFound")
+      users <- UserService.findByTeams(dataSet.allowedTeams)
+    } yield {
+      Ok(Writes.list(User.userCompactWrites(request.user)).writes(users))
+    }
+  }
+
   def read(dataSetName: String) = UserAwareAction.async{ implicit request =>
     for{
       dataSet <- DataSetDAO.findOneBySourceName(dataSetName) ?~> Messages("dataSet.notFound")
@@ -116,6 +127,7 @@ object DataSetController extends Controller with Secured {
         for{
           dataSet <- DataSetDAO.findOneBySourceName(dataSetName) ?~> Messages("dataSet.notFound")
           _ <- allowedToAdministrate(request.user, dataSet).toFox
+          _ <- Fox.combined(teams.map(team => ensureTeamAdministration(request.user, team).toFox))
           _ <- DataSetService.updateTeams(dataSet, teams)
         } yield
           Ok

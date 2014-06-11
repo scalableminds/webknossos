@@ -64,7 +64,7 @@ with models.basics.Implicits {
     Json.obj(
       "messages" -> errors.errors.map(error =>
         error._2.foldLeft(Json.obj("field" -> error._1.toJsonString)) {
-          case (js, e) => js ++ Json.obj("error" -> e.message)
+          case (js, e) => js ++ Json.obj("error" -> Messages(e.message))
         }
       )
     )

@@ -22,6 +22,8 @@ class Router extends Backbone.Router
     "taskTypes/:id/edit"            : "editTaskType"
     "taskTypes"                     : "taskTypes"
     "spotlight"                     : "spotlight"
+    "tasks/overview"                : "taskOverview"
+
 
   initialize : ->
 
@@ -106,7 +108,7 @@ class Router extends Backbone.Router
       @listenTo(model, "sync", @hideLoading)
 
 
-  spotlight: ->
+  spotlight : ->
 
     require(["views/spotlight_view", "admin/models/dataset/dataset_collection"], (SpotlightView, DatasetCollection) =>
 
@@ -115,6 +117,18 @@ class Router extends Backbone.Router
 
       @changeView(view)
       @listenTo(collection, "sync", @hideLoading)
+    )
+
+
+  taskOverview : ->
+
+    require(["admin/views/task/task_overview_view", "admin/models/task/task_overview_model"], (TaskOverviewView, TaskOverviewModel) =>
+
+      model = new TaskOverviewModel()
+      view = new TaskOverviewView({model})
+
+      @changeView(view)
+      @listenTo(model, "sync", @hideLoading)
     )
 
 

@@ -29,6 +29,10 @@ object UserService extends FoxImplicits {
   def findAll()(implicit ctx: DBAccessContext) =
     UserDAO.findAll
 
+  def findByTeams(teams: List[String])(implicit ctx: DBAccessContext) = {
+    UserDAO.findByTeams(teams)
+  }
+
   def findOneById(id: String, useCache: Boolean)(implicit ctx: DBAccessContext): Fox[User] = {
     if (useCache)
       UserCache.findUser(id)

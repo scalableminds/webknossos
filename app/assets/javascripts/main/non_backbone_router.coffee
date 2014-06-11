@@ -9,6 +9,7 @@ class NonBackboneRouter extends Backbone.Router
 
   routes :
     "admin/tasks/overview"          : "taskOverview"
+    "admin/taskTypes"               : "hideLoading"
     "annotations/:typ/:id"          : "tracingTrace"
     "datasets/:id/view"             : "tracingView"
     "*url"                          : "hideLoading"

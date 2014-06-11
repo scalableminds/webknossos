@@ -69,7 +69,7 @@ class PlaneView
     @scene.add( directionalLight )
 
     # Attach the canvas to the container
-    @renderer.setSize 2*WIDTH+20, 2*HEIGHT+20
+    @renderer.setSize 2 * WIDTH + 20, 2 * HEIGHT + 20
     $(@renderer.domElement).attr("id": "render-canvas")
     container.append @renderer.domElement
 

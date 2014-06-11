@@ -8,7 +8,6 @@ oxalis/constants : constants
 class NonBackboneRouter extends Backbone.Router
 
   routes :
-    "admin/tasks/overview"          : "taskOverview"
     "admin/taskTypes"               : "hideLoading"
     "admin/projects"                : "projects"
     "annotations/:typ/:id"          : "tracingTrace"

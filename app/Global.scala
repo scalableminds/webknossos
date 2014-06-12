@@ -63,7 +63,7 @@ object Global extends WithFilters(MetricsFilter) with GlobalSettings {
  */
 object InitialData extends GlobalDBAccess {
 
-  val mpi = Team("Structure of Neocortical Circuits Group", RoleService.roles)
+  val mpi = Team("Structure of Neocortical Circuits Group", None, RoleService.roles)
 
   def insert() = {
     insertUsers()

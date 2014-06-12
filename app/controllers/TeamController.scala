@@ -30,6 +30,8 @@ object TeamController extends Controller with Secured {
     UsingFilters(
       Filter("isEditable", (value: Boolean, el: Team) =>
         el.isEditableBy(request.user) == value),
+      Filter("isRoot", (value: Boolean, el: Team) =>
+        el.parent.isEmpty == value),
       Filter("amIAnAdmin", (value: Boolean, el: Team) =>
         request.user.adminTeamNames.contains(el.name) == value)
     ){ filter =>
@@ -53,12 +55,21 @@ object TeamController extends Controller with Secured {
     }
   }
 
+  def ensureRootTeam(team: Team) = {
+    team.parent.isEmpty match {
+      case true => Full(true)
+      case _ => Empty
+    }
+  }
+
   def create = Authenticated.async(parse.json){ implicit request =>
     request.body.validate(Team.teamPublicReads(request.user)) match {
       case JsSuccess(team, _) =>
         TeamDAO.findOneByName(team.name)(GlobalAccessContext).futureBox.flatMap{
           case Empty =>
             for{
+              parent <- team.parent.toFox.flatMap(TeamDAO.findOneByName(_)(GlobalAccessContext)) ?~> Messages("team.parent.notFound")
+              _ <- ensureRootTeam(parent) ?~> Messages("team.parent.mustBeRoot") // current limitation
               _ <- TeamService.create(team, request.user)
               js <- Team.teamPublicWrites(team, request.user)
             } yield {
@@ -68,7 +79,7 @@ object TeamController extends Controller with Secured {
             Future.successful(JsonBadRequest(Messages("team.name.alreadyTaken")))
         }
       case e: JsError =>
-        Future.successful(BadRequest(JsError.toFlatJson(e)))
+        Future.successful(BadRequest(jsonErrorWrites(e)))
     }
   }
 }

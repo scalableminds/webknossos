@@ -2,15 +2,13 @@ package models.user
 
 import play.api.Play.current
 import com.scalableminds.util.security.SCrypt._
-import scala.collection.mutable.Stack
-import play.api.libs.json.{Json, JsValue}
+//import scala.collection.mutable.Stack
+//import play.api.libs.json.{Json, JsValue}
 import play.api.libs.json.Json._
-import scala.collection.immutable.HashMap
 import models.basics._
-import models.user.Experience._
 import models.team._
 import com.scalableminds.util.reactivemongo._
-import scala.concurrent.Future
+//import scala.concurrent.Future
 import play.api.libs.concurrent.Execution.Implicits._
 import reactivemongo.bson.BSONObjectID
 import play.modules.reactivemongo.json.BSONFormats._
@@ -112,15 +110,16 @@ object User {
     ((__ \ "id").write[String] and
       (__ \ "email").write[String] and
       (__ \ "firstName").write[String] and
-      (__ \ "lastName").write[String])( u =>
-      (u.id, u.email, u.firstName, u.lastName))
+      (__ \ "lastName").write[String] and
+      (__ \ "teams").write[List[TeamMembership]])( u =>
+      (u.id, u.email, u.firstName, u.lastName, u.teams))
 }
 
 object UserDAO extends SecuredBaseDAO[User] {
 
   val collectionName = "users"
 
-  val formatter = User.userFormat
+  implicit val formatter = User.userFormat
 
   underlying.indexesManager.ensure(Index(Seq("email" -> IndexType.Ascending)))
 
@@ -151,6 +150,10 @@ object UserDAO extends SecuredBaseDAO[User] {
   }
 
   def findOneByEmail(email: String)(implicit ctx: DBAccessContext) = findOne("email", email)
+
+  def findByTeams(teams: List[String])(implicit ctx: DBAccessContext) = withExceptionCatcher {
+    find(Json.obj("$or" -> teams.map(team => Json.obj("teams.team" -> team)))).cursor[User].collect[List]()
+  }
 
   def findByIdQ(id: BSONObjectID) = Json.obj("_id" -> id)
 

@@ -70,7 +70,7 @@ case class VolumeTracing(
       Json.obj(
         "activeCell" -> activeCellId,
         "customLayers" -> List(AnnotationContent.dataLayerWrites.writes(userDataLayer.dataLayer)),
-        "nextCell" -> userDataLayer.dataLayer.nextSegmentationId.getOrElse[Int](1),
+        "nextCell" -> userDataLayer.dataLayer.nextSegmentationId.getOrElse[Long](1),
         "zoomLevel" -> zoomLevel
       )
     }

@@ -39,10 +39,17 @@ trait SegmentationIdHelper {
             block =>
               dataStore.load(LoadBlock(dataSource, dataLayer, section, resolution, block)).map {
                 case Full(data) =>
-                  var maxId = 0
-                  (0 until data.length by 2).map {
+                  var maxId: Long = 0
+                  var currentId: Long = 0
+                  (data.length-1 to 0 by -1).map {
                     i =>
-                      maxId = maxId.max(data(i) + (data(i + 1) << 8))
+                      currentId += data(i)
+                      if (i % dataLayer.bytesPerElement == 0) {
+                        maxId = maxId.max(currentId)
+                        currentId = 0
+                      } else {
+                        currentId <<= 8
+                      }
                   }
                   maxId
                 case _ =>

@@ -17,6 +17,20 @@ class VolumeTacingPlaneController extends PlaneController
 
     super(@model, stats, @gui, @view, @sceneController)
 
+    @model.flycam.on
+      positionChanged : =>
+        @render3dCell @model.volumeTracing.getActiveCellId()
+      zoomStepChanged : =>
+        @render3dCell @model.volumeTracing.getActiveCellId()
+
+    @model.user.on
+      tdViewDisplayIsosurfaceChanged : =>
+        @render3dCell @model.volumeTracing.getActiveCellId()
+
+    @model.volumeTracing.on
+      newActiveCell : (id) =>
+        @render3dCell id
+
 
   getPlaneMouseControls : (planeId) ->
 
@@ -71,3 +85,13 @@ class VolumeTacingPlaneController extends PlaneController
 
       "c" : =>
         @model.volumeTracing.createCell()
+
+
+  render3dCell : (id) ->
+
+    unless @model.user.get("tdViewDisplayIsosurface")
+      @sceneController.removeShapes()
+    else
+      bb = @model.flycam.getViewportBoundingBox()
+      @sceneController.showShapes(bb.min, bb.max, id)
+    @model.flycam.update()

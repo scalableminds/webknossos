@@ -119,8 +119,14 @@ class Gui
 
     @folders.push(@fTDView = @gui.addFolder("3D View"))
     @addCheckbox(@fTDView, @user.getSettings(), "tdViewDisplayPlanes", "Display Planes")
-    @displayIsosurfaceController = @addCheckbox(
-      @fTDView, @user.getSettings(), "tdViewDisplayIsosurface", "Display Isosurface")
+
+    @folders.push(@fIsosurface = @gui.addFolder("Isosurface View"))
+    @addCheckbox(
+      @fIsosurface, @user.getSettings(), "isosurfaceDisplay", "Display Isosurface")
+    @addSlider(@fIsosurface, @user.getSettings(), "isosurfaceBBsize",
+      1, 10, 0.01, "Bounding Box size")
+    @addSlider(@fIsosurface, @user.getSettings(), "isosurfaceResolution",
+      40, 400, 1, "Resolution")
 
     if @settingsSkeleton?
 
@@ -496,7 +502,8 @@ class Gui
       @setFolderVisibility(folder, true)
     @setFolderElementVisibility( @clippingControllerArbitrary, false )
     @setFolderElementVisibility( @clippingController, true )
-    @setFolderElementVisibility( @displayIsosurfaceController, false )
+
+    @setFolderVisibility(@fIsosurface, false)
 
     if      @mode == constants.MODE_PLANE_TRACING
       @hideFolders( [ @fFlightcontrols, @fCells ] )
@@ -508,7 +515,7 @@ class Gui
 
     else if @mode == constants.MODE_VOLUME
       @hideFolders( [ @fTrees, @fNodes, @fFlightcontrols ] )
-      @setFolderElementVisibility( @displayIsosurfaceController, true )
+      @setFolderVisibility(@fIsosurface, true)
 
     @user.triggerAll()
     @updateViewportWidth()

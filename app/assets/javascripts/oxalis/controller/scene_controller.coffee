@@ -75,15 +75,18 @@ class SceneController
     @trigger("removeGeometries", @volumeMeshes)
 
 
-  showShapes : (min, max, id) ->
+  showShapes : (bb, resolution, id) ->
 
-    return if @cellsDeferred?
     return unless @model.getSegmentationBinary()?
+
+    if @cellsDeferred?
+      @cellsDeferred.cancel()
 
     @cellsDeferred = (new PolygonFactory(
       @model.getSegmentationBinary().cube
-      min, max, id
-    )).getTriangles(min, max, id).done (triangles) =>
+      resolution
+      bb.min, bb.max, id
+    )).getTriangles().done (triangles) =>
 
       @removeShapes()
       @volumeMeshes = []

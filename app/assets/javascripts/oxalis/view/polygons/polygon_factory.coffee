@@ -7,11 +7,9 @@ underscore : _
 # Based on the marching cubes algorithm
 class PolygonFactory
 
-  MAX_SAMPLES : 80
+  constructor : (@modelCube, resolution, min, max, @id) ->
 
-  constructor : (@modelCube, min, max, @id) ->
-
-    @voxelsToSkip = Math.ceil((max[0] - min[0]) / @MAX_SAMPLES) || 1
+    @voxelsToSkip = Math.ceil((max[0] - min[0]) / resolution) || 1
     @chunkSize  = 10000
 
     round = (number) =>
@@ -26,12 +24,22 @@ class PolygonFactory
 
     result    = {}
     @deferred = new $.Deferred()
+    @isCancelled = false
 
     _.defer(@calculateTrianglesAsync, result)
-    return @deferred
+    return @getCancelableDeferred()
+
+  getCancelableDeferred : () ->
+    restrictedDeferred = @deferred.promise()
+    restrictedDeferred.cancel = =>
+      @isCancelled = true
+    return restrictedDeferred
 
 
   calculateTrianglesAsync : (result, lastPosition) =>
+
+    if @isCancelled
+      return
 
     i = 0
     position = @getNextPosition(lastPosition)

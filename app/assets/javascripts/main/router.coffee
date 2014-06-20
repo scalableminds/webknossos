@@ -53,7 +53,7 @@ class Router extends Backbone.Router
 
     @changeView(new TracingLayoutView(
       tracingType: type
-      tracingId :id
+      tracingId : id
       controlMode : constants.CONTROL_MODE_TRACE
     ))
 
@@ -62,7 +62,7 @@ class Router extends Backbone.Router
 
     @changeView(new TracingLayoutView(
       tracingType: "View"
-      tracingId :id
+      tracingId : id
       controlMode : constants.CONTROL_MODE_VIEW
     ))
 

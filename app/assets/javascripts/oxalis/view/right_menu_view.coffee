@@ -43,7 +43,6 @@ class RightMenuView extends Backbone.Marionette.Layout
     @listTreeView = new ListTreeView(options)
 
     @listenTo(@, "render", @afterRender)
-    @listenTo(@, "show", @resizeHeight)
 
 
   resize : ->

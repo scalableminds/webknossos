@@ -27,11 +27,10 @@
 
   display: inline-flex;
   flex-direction: column;
-  margin-top: 10px;
-  margin-left: 20px;
   width: 300px; // will be set dynamically in JS
+  margin: 10px;
   overflow: hidden;
-  height: 800px;
+  height: calc(100vh ~"-" @navbar-height ~"-" 20px); // 20px = 2 * 10px margin
 
   .tab-content {
     display: flex;
@@ -44,11 +43,6 @@
       min-height: 100px;
       word-wrap: break-word;
       white-space: normal;
-
-      div {
-        // height: 100%; ?
-        margin-bottom: 10px;
-      }
 
       ul {
         list-style: none;

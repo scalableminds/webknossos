@@ -14,6 +14,7 @@ import play.api.Logger
 import braingames.util.{FoxImplicits, Fox}
 import scala.concurrent.Future
 import models.team.Role
+import models.tracing.skeleton.SkeletonTracing
 
 /**
  * Company: scalableminds
@@ -43,7 +44,8 @@ object DataSetInformationHandler extends AnnotationInformationHandler with FoxIm
         Nil,
         System.currentTimeMillis(),
         Some(0),
-        Point3D(5814, 3452, 2731), // make this dynamic!
+        dataSet.defaultStart,
+        SkeletonTracing.defaultZoomLevel,
         None
       )
 

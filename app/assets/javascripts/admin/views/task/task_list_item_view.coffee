@@ -17,7 +17,7 @@ class TaskListItemView extends Backbone.Marionette.CompositeView
       <td class="details-toggle" href="#">
         <i class="caret-right"></i>
         <i class="caret-down"></i>
-        </td>
+      </td>
       <td><%= formattedHash %></td>
       <td><%= team %></td>
       <td>

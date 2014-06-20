@@ -9,6 +9,7 @@ import braingames.reactivemongo._
 import play.modules.reactivemongo.json.BSONFormats._
 import models.user.User
 import braingames.reactivemongo.AccessRestrictions.{DenyEveryone, AllowIf}
+import braingames.format.Formatter
 
 case class TraceLimit(min: Int, max: Int, maxHard: Int) {
 
@@ -56,9 +57,10 @@ object TaskType {
         (__ \ 'team).write[String] and
         (__ \ 'settings).write[AnnotationSettings] and
         (__ \ 'fileName).write[Option[String]] and
+        (__ \ 'expectedTime).write[String] and
         (__ \ 'id).write[String])( tt =>
           (tt.summary, tt.description, tt.team, tt.settings,
-            tt.fileName, tt.id))
+            tt.fileName, tt.expectedTime.toString, tt.id))
 }
 
 object TaskTypeDAO extends SecuredBaseDAO[TaskType] {

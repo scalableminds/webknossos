@@ -111,12 +111,14 @@ GET           /api/tasks/overview                                             co
 GET           /api/tasks/:id/download                                         controllers.admin.NMLIO.taskDownload(id: String)
 GET           /api/tasks/:id/annotations                                      controllers.AnnotationController.annotationsForTask(id: String)
 
-GET           /admin/taskTypes                                                controllers.admin.TaskTypeAdministration.list
-POST          /admin/taskTypes                                                controllers.admin.TaskTypeAdministration.create
-GET           /admin/taskTypes/:id/delete                                     controllers.admin.TaskTypeAdministration.delete(id: String)
-GET           /admin/taskTypes/:id/edit                                       controllers.admin.TaskTypeAdministration.edit(id: String)
-GET           /admin/taskTypes/:id/tasks                                      controllers.admin.TaskAdministration.tasksForType(id: String)
-POST          /admin/taskTypes/:id                                            controllers.admin.TaskTypeAdministration.editTaskTypeForm(id: String)
+GET           /taskTypes                                                      controllers.admin.TaskTypeAdministration.empty
+GET           /taskTypes/:id/edit                                             controllers.UserController.emptyWithWildcard(id: String)
+GET           /api/taskTypes                                                  controllers.admin.TaskTypeAdministration.list
+POST          /api/taskTypes                                                  controllers.admin.TaskTypeAdministration.create
+DELETE        /api/taskTypes/:id/delete                                       controllers.admin.TaskTypeAdministration.delete(id: String)
+GET           /api/taskTypes/:id/tasks                                        controllers.admin.TaskAdministration.tasksForType(id: String)
+GET           /api/taskTypes/:id                                              controllers.admin.TaskTypeAdministration.get(id: String)
+POST          /api/taskTypes/:id                                              controllers.admin.TaskTypeAdministration.editTaskTypeForm(id: String)
 
 # Projects
 GET           /projects                                                       controllers.ProjectController.empty

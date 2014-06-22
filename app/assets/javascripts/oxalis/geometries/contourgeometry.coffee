@@ -21,7 +21,7 @@ class CellLayer
         @reset()
         for p in contourList
           @addEdgePoint(p)
-      resetContour : =>
+      volumeAnnotated : =>
         @reset()
       })
 

@@ -324,16 +324,10 @@ object TaskAdministration extends AdminController {
   def tasksForType(taskTypeId: String) = Authenticated.async { implicit request =>
     for {
       taskType <- TaskTypeDAO.findOneById(taskTypeId) ?~> Messages("taskType.notFound")
-
       tasks <- TaskDAO.findAllByTaskType(taskType)
-      dataSetNames <- dataSetNamesForTasks(tasks)
-      statuses <- Future.traverse(tasks)(_.status)
+      js <- Future.traverse(tasks)(Task.transformToJson)
     } yield {
-      val zipped = (tasks, dataSetNames, statuses).zipped.toList
-      val result = zipped.foldLeft(Html.empty) {
-        case (h, (t, d, s)) => h += html.admin.task.simpleTask(t, d.getOrElse(""), s, Some(taskType))
-      }
-      JsonOk(result)
+      Ok(Json.toJson(js))
     }
   }
 

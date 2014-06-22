@@ -20,6 +20,9 @@ class SelectionView extends Backbone.Marionette.CollectionView
       => @render()
     )
 
+    if options.name
+
+      @$el.attr("name", options.name)
 
 
 

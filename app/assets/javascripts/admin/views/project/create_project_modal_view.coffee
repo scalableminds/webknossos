@@ -22,7 +22,7 @@ class CreateProjectModalView extends Backbone.Marionette.Layout
         <div class="modal-body container-fluid">
           <form action="" method="POST" class="form-horizontal">
             <div class="form-group">
-              <label class="col-sm-2 for="team">Team</label>
+              <label class="col-sm-2" for="team">Team</label>
               <div class="col-sm-10 team">
               </div>
             </div>

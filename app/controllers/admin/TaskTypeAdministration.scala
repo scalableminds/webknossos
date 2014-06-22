@@ -15,6 +15,8 @@ import models.annotation.AnnotationDAO
 import play.api.libs.concurrent.Execution.Implicits._
 import com.scalableminds.util.tools.Fox
 import play.api.mvc.SimpleResult
+import scala.concurrent.Future
+import play.api.libs.json._
 
 object TaskTypeAdministration extends AdminController {
 
@@ -37,46 +39,57 @@ object TaskTypeAdministration extends AdminController {
   }
 
   def create = Authenticated.async(parse.urlFormEncoded) { implicit request =>
-    taskTypeForm.bindFromRequest.fold(
-      hasErrors = formWithErrors => taskTypeListWithForm(formWithErrors).map(html => BadRequest(html)),
+    val boundForm = taskTypeForm.bindFromRequest
+
+    boundForm.fold(
+      hasErrors = { formWithErrors =>
+        Future.successful(JsonBadRequest(
+          Json.obj("errors" -> boundForm.errorsAsJson),
+          Messages("Incomplete form.")
+        ))
+      },
+
       success = { t =>
         for{
           _ <- ensureTeamAdministration(request.user, t.team).toFox
           _ <- TaskTypeDAO.insert(t)
         } yield {
-          Redirect(routes.TaskTypeAdministration.list)
-          .flashing(
-            FlashSuccess(Messages("taskType.createSuccess")))
-          .highlighting(t.id)
+          JsonOk(
+            Json.obj("newTaskType" -> TaskType.publicTaskTypeWrites.writes(t)),
+            Messages("taskType.createSuccess")
+          )
         }
       })
   }
 
-  def taskTypeListWithForm(form: Form[TaskType])(implicit request: AuthenticatedRequest[_]) = {
-    TaskTypeDAO.findAll.map { taskTypes =>
-      html.admin.taskType.taskTypes(taskTypes, form, request.user.adminTeamNames)
-    }
-  }
-
-  def list = Authenticated.async { implicit request =>
-    taskTypeListWithForm(taskTypeForm).map { html =>
-      Ok(html)
-    }
-  }
-
-  def edit(taskTypeId: String) = Authenticated.async { implicit request =>
+  def get(taskTypeId: String) = Authenticated.async{ implicit request =>
     for {
       taskType <- TaskTypeDAO.findOneById(taskTypeId) ?~> Messages("taskType.notFound")
       _ <- ensureTeamAdministration(request.user, taskType.team)
     } yield {
-      Ok(html.admin.taskType.taskTypeEdit(taskType.id, taskTypeForm.fill(taskType), request.user.adminTeamNames))
+      Ok(Json.toJson(TaskType.publicTaskTypeWrites.writes(taskType)))
+    }
+  }
+
+
+  def list = Authenticated.async{ implicit request =>
+    for {
+      taskTypes <- TaskTypeDAO.findAll
+    } yield {
+      Ok(Json.toJson(taskTypes.map(TaskType.publicTaskTypeWrites.writes)))
     }
   }
 
   def editTaskTypeForm(taskTypeId: String) = Authenticated.async(parse.urlFormEncoded) { implicit request =>
     def evaluateForm(taskType: TaskType): Fox[SimpleResult] = {
-      taskTypeForm.bindFromRequest.fold(
-        hasErrors = (errors => Fox.successful(BadRequest(html.admin.taskType.taskTypeEdit(taskType.id, errors, request.user.adminTeamNames)))),
+      val boundForm = taskTypeForm.bindFromRequest
+      boundForm.fold(
+        hasErrors = { formWithErrors =>
+          Future.successful(JsonBadRequest(
+            Json.obj("errors" -> boundForm.errorsAsJson),
+            Messages("Incomplete form.")
+          ))
+        },
         success = { t =>
           val updatedTaskType = t.copy(_id = taskType._id)
           for {
@@ -85,12 +98,10 @@ object TaskTypeAdministration extends AdminController {
             _ <- ensureTeamAdministration(request.user, updatedTaskType.team).toFox
           } yield {
             tasks.map(task => AnnotationDAO.updateAllUsingNewTaskType(task, updatedTaskType.settings))
-            Redirect(routes.TaskTypeAdministration.list)
-            .flashing(
-              FlashSuccess(Messages("taskType.editSuccess")))
-            .highlighting(taskType.id)
+            JsonOk(Messages("taskType.editSuccess"))
           }
-        })
+        }
+      )
     }
 
     for {

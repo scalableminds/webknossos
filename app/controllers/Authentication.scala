@@ -83,7 +83,7 @@ object Authentication extends Controller with Secured with ProvidesUnauthorizedS
                     .withSession(Secured.createSession(user))
                 } else {
                   Redirect(controllers.routes.Authentication.login)
-                    .flashing("modal" -> "An account has been created. An administrator is going to unlock you soon.")
+                    .flashing("modal" -> "Your account has been created. An administrator is going to unlock you soon.")
                 }
               }
           }

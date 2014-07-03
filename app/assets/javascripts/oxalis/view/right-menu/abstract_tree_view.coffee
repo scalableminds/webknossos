@@ -21,7 +21,6 @@ class AbstractTreeView extends Backbone.Marionette.ItemView
 
     {@_model} = options
 
-    @listenTo(@, "render", @drawTree)
     @listenTo(app.vent, "planes:resize", @resize)
     @listenTo(app.vent, "view:setTheme", @drawTree)
     @listenTo(app.vent, "model:sync", ->
@@ -52,6 +51,8 @@ class AbstractTreeView extends Backbone.Marionette.ItemView
       @width,
       @height
     )
+
+    @drawTree()
 
 
   drawTree : ->

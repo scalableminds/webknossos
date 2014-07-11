@@ -169,9 +169,9 @@ class Router extends Backbone.Router
     # Remove current views
     if @activeViews
       for view in @activeViews
-        # prefer Marionette's close() function to Backbone's remove()
-        if view.close
-          view.close()
+        # prefer Marionette's.destroy() function to Backbone's remove()
+        if view.destroy
+          view.destroy()
         else
           view.remove()
     else

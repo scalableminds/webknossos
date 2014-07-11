@@ -42,8 +42,8 @@ class DashboardTaskListView extends Backbone.Marionette.CompositeView
     </table>
   """)
 
-  itemView : DashboardTaskListItemView
-  itemViewContainer : "tbody"
+  childView : DashboardTaskListItemView
+  childViewContainer : "tbody"
 
   ui :
     "finishToggle" : "#toggle-finished"

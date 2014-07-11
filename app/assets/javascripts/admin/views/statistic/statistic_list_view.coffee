@@ -22,8 +22,8 @@ class StatisticListView extends Backbone.Marionette.CompositeView
     </table>
   """)
 
-  itemView : StatisticListItemView
-  itemViewContainer: "tbody"
+  childView : StatisticListItemView
+  childViewContainer: "tbody"
 
   initialize : ->
 

@@ -6,7 +6,7 @@ admin/models/dataset/dataset_collection : DatasetCollection
 ./spotlight_dataset_list_view : SpotlightDatasetListView
 ###
 
-class SpotlightView extends Backbone.Marionette.Layout
+class SpotlightView extends Backbone.Marionette.LayoutView
 
   template : _.template("""
     <div class="container">

@@ -7,7 +7,7 @@ admin/views/selection_view : SelectionView
 libs/toast : Toast
 ###
 
-class TaskTypeFormView extends Backbone.Marionette.Layout
+class TaskTypeFormView extends Backbone.Marionette.LayoutView
 
   template : _.template("""
     <div class="well clearfix">

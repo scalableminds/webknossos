@@ -6,7 +6,7 @@ backbone.marionette : marionette
 ./task_type_form_view : TaskTypeFormView
 ###
 
-class TaskTypeView extends Backbone.Marionette.Layout
+class TaskTypeView extends Backbone.Marionette.LayoutView
 
   className : "container task-types-administration"
 

@@ -7,7 +7,7 @@
     "requirejs": "~2.1.1",
     "lodash": "~2.2.1",
     "backbone": "~1.1.0",
-    "backbone.marionette": "~1.5.1",
+    "backbone.marionette": "2.0.1",
     "font-awesome": "~4.0.3",
     "momentjs": "~2.5.1",
     "threejs-stats": "",
@@ -31,6 +31,7 @@
   "devDependencies": {},
   "resolutions": {
     "backbone.babysitter": "^0.1.0",
-    "backbone.wreqr": "^1.0.0"
+    "backbone.wreqr": "^1.0.0",
+    "backbone.marionette": "2.0.1"
   }
 }

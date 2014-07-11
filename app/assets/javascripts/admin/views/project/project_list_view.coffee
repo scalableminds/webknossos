@@ -33,8 +33,8 @@ class ProjectsListView extends Backbone.Marionette.CompositeView
   """)
 
   className : "container wide project-administration"
-  itemView : ProjectListItemView
-  itemViewContainer : "table"
+  childView : ProjectListItemView
+  childViewContainer : "table"
 
   events :
     "click @ui.detailsToggle" : "toggleAllDetails"

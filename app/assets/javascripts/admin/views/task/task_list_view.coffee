@@ -39,8 +39,8 @@ class TaskListView extends Backbone.Marionette.CompositeView
     </div>
   """)
   className : "task-administration container wide"
-  itemView : TaskListItemView
-  itemViewContainer : "table"
+  childView : TaskListItemView
+  childViewContainer : "table"
 
   ui :
     "modal" : ".modal"

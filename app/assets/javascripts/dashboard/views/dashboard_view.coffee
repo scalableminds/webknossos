@@ -7,7 +7,7 @@ dashboard/views/tracked_time_view : TrackedTimeView
 admin/views/dataset/dataset_switch_view : DatasetSwitchView
 ###
 
-class DashboardView extends Backbone.Marionette.Layout
+class DashboardView extends Backbone.Marionette.LayoutView
 
   className : "container wide"
   id : "dashboard"

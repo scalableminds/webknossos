@@ -33,8 +33,8 @@ class TeamRoleModal extends Backbone.Marionette.CompositeView
     </div>
   """)
 
-  itemView : TeamRoleModalItem
-  itemViewContainer : "#team-list"
+  childView : TeamRoleModalItem
+  childViewContainer : "#team-list"
 
   events :
     "click .btn-primary" : "changeExperience"
@@ -51,7 +51,7 @@ class TeamRoleModal extends Backbone.Marionette.CompositeView
     )
     @userCollection = args.userCollection
 
-    @listenTo(@, "after:item:added", @prefillModal)
+    @listenTo(@, "add:child", @prefillModal)
 
 
   changeExperience : ->
@@ -105,7 +105,7 @@ class TeamRoleModal extends Backbone.Marionette.CompositeView
     return isValid
 
 
-  prefillModal : (itemView) ->
+  prefillModal : (childView) ->
 
     # If only one user is selected then prefill the modal with his current values
     $userTableCheckboxes = $("tbody input[type=checkbox]:checked")
@@ -119,11 +119,11 @@ class TeamRoleModal extends Backbone.Marionette.CompositeView
       _.each(user.get("teams"),
         (team) =>
 
-          if team.team == itemView.model.get("name")
-            itemView.ui.teamCheckbox.prop("checked", true)
+          if team.team == childView.model.get("name")
+            childView.ui.teamCheckbox.prop("checked", true)
 
             # Select the role in the dropdown
-            itemView.ui.roleSelect.find("option").filter( ->
+            childView.ui.roleSelect.find("option").filter( ->
               return $(this).text() == team.role.name
             ).prop('selected', true)
       )

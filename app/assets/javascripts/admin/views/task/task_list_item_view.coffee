@@ -62,8 +62,8 @@ class TaskListItemView extends Backbone.Marionette.CompositeView
     </tr>
   """)
 
-  itemView : TaskAnnotationView
-  itemViewContainer : "tbody"
+  childView : TaskAnnotationView
+  childViewContainer : "tbody"
 
   events :
     "click .delete" : "deleteTask"

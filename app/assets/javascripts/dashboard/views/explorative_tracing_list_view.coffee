@@ -63,8 +63,8 @@ class ExplorativeTracingListView extends Backbone.Marionette.CompositeView
     </table>
   """)
 
-  itemView : ExplorativeTracingListItemView
-  itemViewContainer : "tbody"
+  childView : ExplorativeTracingListItemView
+  childViewContainer : "tbody"
 
   events :
     "change input[type=file]" : "selectFiles"

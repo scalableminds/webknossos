@@ -51,8 +51,8 @@ class UserListView extends Backbone.Marionette.CompositeView
     <div id="modal-wrapper"></div>
   """)
   className : "user-administration-table container wide"
-  itemView : UserListItemView
-  itemViewContainer : "tbody"
+  childView : UserListItemView
+  childViewContainer : "tbody"
 
   ui :
     "modalWrapper" : "#modal-wrapper"
@@ -110,7 +110,7 @@ class UserListView extends Backbone.Marionette.CompositeView
       Toast.error("No user is selected.")
 
 
-  onClose : ->
+  onDestroy : ->
 
-    @modalView?.close()
+    @modalView?.destroy()
 

@@ -7,7 +7,7 @@ admin/models/team/team_collection : TeamCollection
 admin/views/selection_view : SelectionView
 ###
 
-class CreateTeamModalView extends Backbone.Marionette.Layout
+class CreateTeamModalView extends Backbone.Marionette.LayoutView
 
   className : "modal fade"
   template : _.template("""
@@ -72,7 +72,7 @@ class CreateTeamModalView extends Backbone.Marionette.Layout
     @teamCollection.create(team,
       wait: true
       error : (model, xhr) -> Toast.message(xhr.responseJSON.messages)
-      success: _.bind(@closeModal, @)
+      success: _.bind(@destroyModal, @)
     )
 
 
@@ -82,7 +82,7 @@ class CreateTeamModalView extends Backbone.Marionette.Layout
     @parentTeams.show(@teamSelectionView)
 
 
-  closeModal : ->
+  destroyModal : ->
 
     # The event is neccesarry due to the 300ms CSS transition
     @$el.on("hide.bs.modal", =>

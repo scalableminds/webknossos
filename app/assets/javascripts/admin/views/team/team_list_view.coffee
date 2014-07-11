@@ -63,8 +63,8 @@ class TeamListView extends Backbone.Marionette.CompositeView
     </div>
   """)
   className : "team-administration container wide"
-  itemView : TeamListItemView
-  itemViewContainer : "tbody"
+  childView : TeamListItemView
+  childViewContainer : "tbody"
 
   ui :
     "modal" : ".modal"

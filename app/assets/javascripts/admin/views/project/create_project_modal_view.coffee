@@ -9,7 +9,7 @@ admin/models/team/team_collection : TeamCollection
 admin/models/project/project_model : ProjectModel
 ###
 
-class CreateProjectModalView extends Backbone.Marionette.Layout
+class CreateProjectModalView extends Backbone.Marionette.LayoutView
 
   className : "modal fade"
   template : _.template("""
@@ -68,12 +68,12 @@ class CreateProjectModalView extends Backbone.Marionette.Layout
 
     @userSelectionView = new SelectionView(
       collection : new UserCollection()
-      itemViewOptions :
+      childViewOptions :
         modelValue : -> return "#{@model.get("firstName")} #{@model.get("lastName")}"
     )
     @teamSelectionView = new SelectionView(
       collection : new TeamCollection()
-      itemViewOptions :
+      childViewOptions :
         modelValue: -> return "#{@model.get("name")}"
       data : "amIAnAdmin=true"
     )

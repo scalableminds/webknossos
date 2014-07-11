@@ -27,8 +27,8 @@ class TeamAssignmentModalView extends Backbone.Marionette.CompositeView
     </div>
   """)
 
-  itemView : TeamAssignmentModalItemView
-  itemViewContainer : "ul"
+  childView : TeamAssignmentModalItemView
+  childViewContainer : "ul"
 
   ui:
     "teamList" : ".team-list"
@@ -47,13 +47,13 @@ class TeamAssignmentModalView extends Backbone.Marionette.CompositeView
     )
     @dataset = args.dataset
 
-    @listenTo(@, "after:item:added", @prefillModal)
+    @listenTo(@, "add:child", @prefillModal)
 
 
-  prefillModal : (itemView)->
+  prefillModal : (childView)->
 
-    if _.contains(@dataset.get("allowedTeams"), itemView.model.get("name"))
-      $(itemView.el).find("input").prop("checked", true)
+    if _.contains(@dataset.get("allowedTeams"), childView.model.get("name"))
+      $(childView.el).find("input").prop("checked", true)
 
 
   submitTeams : ->

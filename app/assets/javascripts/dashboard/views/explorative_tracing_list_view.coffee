@@ -65,8 +65,8 @@ class ExplorativeTracingListView extends Backbone.Marionette.CompositeView
     </table>
   """)
 
-  itemView : ExplorativeTracingListItemView
-  itemViewContainer : "tbody"
+  childView : ExplorativeTracingListItemView
+  childViewContainer : "tbody"
 
   events :
     "change input[type=file]" : "selectFiles"
@@ -133,6 +133,6 @@ class ExplorativeTracingListView extends Backbone.Marionette.CompositeView
     )
 
 
-  onClose : ->
+  onDestroy : ->
 
     @tracingChooserToggler.unbind()

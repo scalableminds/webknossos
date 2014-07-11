@@ -7,7 +7,7 @@ dashboard/views/tracked_time_view : TrackedTimeView
 dashboard/models/logged_time_model : LoggedTimeModel
 ###
 
-class DashboardView extends Backbone.Marionette.Layout
+class DashboardView extends Backbone.Marionette.LayoutView
 
   className : "container wide"
   id : "dashboard"

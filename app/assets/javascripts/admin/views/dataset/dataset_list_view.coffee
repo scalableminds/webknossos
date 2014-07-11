@@ -36,8 +36,8 @@ class DatasetListView extends Backbone.Marionette.CompositeView
   ui :
     "modalWrapper" : "#modal-wrapper"
 
-  itemView : DatasetListItemView
-  itemViewContainer: "tbody"
+  childView : DatasetListItemView
+  childViewContainer: "tbody"
 
   initialize : ->
 
@@ -70,6 +70,6 @@ class DatasetListView extends Backbone.Marionette.CompositeView
     @collection.setFilter(["name", "owningTeam"], searchQuery)
 
 
-  onClose : ->
+  onDestroy : ->
 
-    @modalView?.close()
+    @modalView?.destroy()

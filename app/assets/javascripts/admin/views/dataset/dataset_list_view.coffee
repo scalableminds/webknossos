@@ -66,7 +66,7 @@ class DatasetListView extends Backbone.Marionette.CompositeView
   showModal : (evt) ->
 
     dataset = @collection.findWhere(
-      name : $(evt.target).closest("tr").data("dataset-name")
+      name : $(evt.target).closest("tbody").data("dataset-name")
     )
 
     modalView = new TeamAssignmentModalView({dataset : dataset})

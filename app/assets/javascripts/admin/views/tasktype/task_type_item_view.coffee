@@ -54,8 +54,8 @@ class TaskTypeItemView extends Backbone.Marionette.CompositeView
     </tr>
   """)
 
-  itemView : SimpleTaskItemView
-  itemViewContainer : "tbody"
+  childView : SimpleTaskItemView
+  childViewContainer : "tbody"
   tagName : "tbody"
 
   events :

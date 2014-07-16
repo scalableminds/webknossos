@@ -86,8 +86,8 @@ class DatasetListItemView extends Backbone.Marionette.CompositeView
     </tr>
   """)
 
-  itemView : DatasetAccessView
-  itemViewContainer : "tbody"
+  childView : DatasetAccessView
+  childViewContainer : "tbody"
 
   templateHelpers :
     TemplateHelpers : TemplateHelpers

@@ -27,8 +27,8 @@ class TaskTypeListView extends Backbone.Marionette.CompositeView
       </table>
     """)
 
-  itemView : TaskTypeItemView
-  itemViewContainer: "table"
+  childView : TaskTypeItemView
+  childViewContainer: "table"
 
   ui:
     "detailsToggle" : ".details-toggle-all"

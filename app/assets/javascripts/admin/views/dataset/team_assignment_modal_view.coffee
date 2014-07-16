@@ -50,7 +50,7 @@ class TeamAssignmentModalView extends Backbone.Marionette.CompositeView
     @listenTo(@, "add:child", @prefillModal)
 
 
-  prefillModal : (childView)->
+  prefillModal : (childView) ->
 
     if _.contains(@dataset.get("allowedTeams"), childView.model.get("name"))
       $(childView.el).find("input").prop("checked", true)
@@ -62,15 +62,22 @@ class TeamAssignmentModalView extends Backbone.Marionette.CompositeView
     allowedTeams = _.map($checkboxes, (checkbox) -> return $(checkbox).parent().parent().text().trim())
 
     @dataset.set("allowedTeams", allowedTeams)
-    @$el.modal("hide")
 
     $.ajax(
       url: """/api/datasets/#{@dataset.get("name")}/teams"""
       type: "POST"
       contentType: "application/json; charset=utf-8"
       data: JSON.stringify(allowedTeams)
-    ).done( =>
-      @render()
     )
 
-    app.vent.trigger("TeamAssignmentModalView:refresh")
+    @destroyModal()
+
+
+  destroyModal : ->
+
+    # The event is neccesarry due to the 300ms CSS transition
+    @$el.on("hide.bs.modal", =>
+      @$el.off("hide.bs.modal")
+      app.vent.trigger("TeamAssignmentModalView:refresh")
+    )
+    @$el.modal("hide")

@@ -57,7 +57,7 @@ class CreateTeamModalView extends Backbone.Marionette.LayoutView
 
     @teamSelectionView = new SelectionView(
       collection : new TeamCollection()
-      itemViewOptions :
+      childViewOptions :
         modelValue: -> return "#{@model.get("name")}"
       data : "isRoot=true"
     )

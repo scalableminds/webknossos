@@ -7,7 +7,7 @@ views/spotlight_dataset_view : SpotlightDatasetView
 
 class SpotlightDatasetListView extends Backbone.Marionette.CollectionView
 
-  itemView : SpotlightDatasetView
+  childView : SpotlightDatasetView
 
   initialize : (options) ->
 

@@ -42,7 +42,7 @@ class DatasetListView extends Backbone.Marionette.CompositeView
 
 
   childView : DatasetListItemView
-  childViewContainer: "tbody"
+  childViewContainer: "table"
 
   initialize : ->
 

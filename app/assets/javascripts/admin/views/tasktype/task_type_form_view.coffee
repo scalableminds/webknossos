@@ -132,14 +132,6 @@ class TaskTypeFormView extends Backbone.Marionette.LayoutView
 
   initialize : ->
 
-    @teamSelectionView = new SelectionView(
-      collection : new TeamCollection()
-      childViewOptions :
-        modelValue: -> return "#{@model.get("name")}"
-      data : "amIAnAdmin=true"
-      name: "team"
-    )
-
     if @options.isEditForm
       @model.fetch().done(=> @prefillForm())
 
@@ -201,5 +193,12 @@ class TaskTypeFormView extends Backbone.Marionette.LayoutView
 
   onRender : ->
 
-    @team.show(@teamSelectionView)
+    teamSelectionView = new SelectionView(
+      collection : new TeamCollection()
+      childViewOptions :
+        modelValue: -> return "#{@model.get("name")}"
+      data : "amIAnAdmin=true"
+      name: "team"
+    )
+    @team.show(teamSelectionView)
 

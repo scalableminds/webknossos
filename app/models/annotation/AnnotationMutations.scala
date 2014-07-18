@@ -136,6 +136,12 @@ class AnnotationMutations(val annotation: Annotation) extends AnnotationMutation
     annotation.content.flatMap(_.updateFromJson(js)).flatMap(_ =>
       AnnotationDAO.incrementVersion(annotation._id))
   }
+
+  def transferToUser(user: User)(implicit ctx: DBAccessContext) = {
+    for {
+      updatedAnnotation <- AnnotationDAO.transfer(annotation._id, user._id)
+    } yield updatedAnnotation
+  }
 }
 
 

@@ -61,7 +61,6 @@ class DashboardTaskListView extends Backbone.Marionette.CompositeView
     @listenTo(@model.get("tasks"), "add", @addChildView, @)
     @listenTo(@model.get("tasks"), "change", @update)
 
-    @update()
 
   update : ->
 

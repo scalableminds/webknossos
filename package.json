@@ -7,7 +7,7 @@
   },
   "dependencies": {
     "coffee-script": "https://github.com/scalableminds/coffee-script/archive/master.tar.gz",
-    "bower": "~1.2.8",
+    "bower": "*",
     "requirejs": "~2.1.11",
     "event-stream": "~3.1.0",
     "run-sequence": "~0.3.5",

@@ -28,10 +28,5 @@
     "c3": "0.1.25",
     "marionette": "1.8.6"
   },
-  "devDependencies": {},
-  "resolutions": {
-    "backbone.babysitter": "^0.1.0",
-    "backbone.wreqr": "^1.0.0",
-    "backbone.marionette": "2.0.1"
-  }
+  "devDependencies": {}
 }

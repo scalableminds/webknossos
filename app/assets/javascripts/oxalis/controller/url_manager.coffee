@@ -14,7 +14,7 @@ class UrlManager
     @initialState = @parseUrl url
 
     @update = _.throttle(
-      => location.href = @buildUrl()
+      => location.replace(@buildUrl())
       @MAX_UPDATE_INTERVAL
     )
 

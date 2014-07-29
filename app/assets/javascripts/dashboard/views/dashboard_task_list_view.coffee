@@ -2,6 +2,7 @@
 underscore : _
 backbone.marionette : marionette
 ./dashboard_task_list_item_view : DashboardTaskListItemView
+./task_transfer_modal_view : TaskTransferModalView
 routes : routes
 libs/toast : Toast
 ###
@@ -30,26 +31,31 @@ class DashboardTaskListView extends Backbone.Marionette.CompositeView
     <table class="table table-striped">
       <thead>
         <tr>
-          <th> # </th>
-          <th> Type </th>
-          <th> Project </th>
-          <th> Description </th>
-          <th> Modes </th>
-          <th> </th>
+          <th># </th>
+          <th>Type </th>
+          <th>Project </th>
+          <th>Description </th>
+          <th>Modes </th>
+          <th></th>
         </tr>
       </thead>
       <tbody></tbody>
     </table>
+    <div class="modal-container"></div>
   """)
 
   childView : DashboardTaskListItemView
+  childViewOptions : ->
+    isAdminView : @model.get("isAdminView")
   childViewContainer : "tbody"
 
   ui :
     "finishToggle" : "#toggle-finished"
+    "modalContainer" : ".modal-container"
 
   events :
     "click #new-task-button" : "newTask"
+    "click #transfer-task" : "transferTask"
     "click @ui.finishToggle" : "toggleFinished"
 
 
@@ -59,7 +65,6 @@ class DashboardTaskListView extends Backbone.Marionette.CompositeView
     @collection = @model.getUnfinishedTasks()
 
     @listenTo(@model.get("tasks"), "add", @addChildView, @)
-    @listenTo(@model.get("tasks"), "change", @update)
 
 
   update : ->
@@ -96,3 +101,20 @@ class DashboardTaskListView extends Backbone.Marionette.CompositeView
 
     verb = if @showFinishedTasks then "Hide" else "Show"
     @ui.finishToggle.html("#{verb} finished tasks")
+
+
+  transferTask : (evt) ->
+
+    evt.preventDefault()
+
+    modalContainer = new Backbone.Marionette.Region(
+      el : @ui.modalContainer
+    )
+    url = evt.target.href
+    @modal = new TaskTransferModalView(url : url)
+    modalContainer.show(@modal)
+
+
+  onDestroy : ->
+
+    @modal?.destroy()

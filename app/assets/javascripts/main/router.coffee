@@ -101,7 +101,7 @@ class Router extends Backbone.Router
 
       isAdminView = userID != null
 
-      model = new DashboardModel({ userID, isAdminView : false })
+      model = new DashboardModel({ userID, isAdminView : isAdminView })
       view = new DashboardView(model : model, isAdminView : isAdminView)
 
       @changeView(view)

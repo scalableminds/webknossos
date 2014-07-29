@@ -85,8 +85,8 @@ class CreateTeamModalView extends Backbone.Marionette.LayoutView
   destroyModal : ->
 
     # The event is neccesarry due to the 300ms CSS transition
-    @$el.on("hide.bs.modal", =>
-      @$el.off("hide.bs.modal")
+    @$el.on("hidden.bs.modal", =>
+      @$el.off("hidden.bs.modal")
       app.vent.trigger("CreateTeamModal:refresh") #update pagination
     )
     @$el.modal("hide")

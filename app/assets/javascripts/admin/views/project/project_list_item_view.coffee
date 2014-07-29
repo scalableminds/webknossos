@@ -91,7 +91,3 @@ class ProjectListItemView extends Backbone.Marionette.CompositeView
   handleXHRError : (model, xhr) ->
 
     Toast.message(xhr.responseJSON.messages)
-    # xhr.responseJSON.messages.forEach(
-    #   (message) ->
-    #     Toast.error(message.error)
-    # )

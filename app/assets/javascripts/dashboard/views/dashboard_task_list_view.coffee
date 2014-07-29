@@ -65,6 +65,7 @@ class DashboardTaskListView extends Backbone.Marionette.CompositeView
     @collection = @model.getUnfinishedTasks()
 
     @listenTo(@model.get("tasks"), "add", @addChildView, @)
+    @listenTo(app.vent, "TaskTransferModal:refresh", @refresh)
 
 
   update : ->
@@ -114,6 +115,12 @@ class DashboardTaskListView extends Backbone.Marionette.CompositeView
     @modal = new TaskTransferModalView(url : url)
     modalContainer.show(@modal)
 
+
+  refresh : ->
+
+    @model.fetch().done( =>
+      @update()
+    )
 
   onDestroy : ->
 

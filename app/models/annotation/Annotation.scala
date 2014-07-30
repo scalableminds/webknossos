@@ -279,11 +279,10 @@ object AnnotationDAO
         "$pop" -> Json.obj("review" -> -1)),
       true)
 
-  def transfer(_annotation: BSONObjectID, _user: BSONObjectID)(implicit ctx: DBAccessContext) ={
-    println(_annotation)
+  def transfer(_annotation: BSONObjectID, _user: BSONObjectID)(implicit ctx: DBAccessContext) =
     findAndModify(
       Json.obj("_id" -> _annotation),
       Json.obj("$set" -> Json.obj(
         "_user" -> _user)),
-      true)}
+      true)
 }

@@ -25,5 +25,5 @@ object GithubApi
 
   def organisationRepositoriesUrl(org: String) = s"/orgs/$org/repos"
 
-  def issuesUrl(repo: String) = s"/repos/$repo/issues"
+  def issuesUrl(repo: String) = s"/repos/$repo/issues?state=all"
 }

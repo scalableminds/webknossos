@@ -1,7 +1,7 @@
 package controllers
 
 import oxalis.security.{AuthenticatedRequest, Secured}
-import models.user.{UsedAnnotationDAO, User}
+import models.user.{UsedAnnotationDAO, User, UserDAO}
 import play.api.i18n.Messages
 import play.api.libs.json._
 import play.api.Logger
@@ -262,5 +262,17 @@ object AnnotationController extends Controller with Secured with TracingInformat
         result
       }
     }
+  }
+
+  def transfer(typ: String, id: String) = Authenticated.async(parse.json) {
+    implicit request =>
+      for {
+        annotation <- AnnotationDAO.findOneById(id).toFox ?~> Messages("annotation.notFound")
+        userId <- (request.body\"userId").asOpt[String].toFox
+        user <- UserDAO.findOneById(userId) ?~> Messages("user.notFound")
+        result <- annotation.muta.transferToUser(user)
+      } yield {
+        Ok
+      }
   }
 }

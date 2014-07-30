@@ -84,6 +84,7 @@ GET           /annotations/:typ/:id/finishAndRedirect                         co
 GET           /annotations/:typ/:id/finish                                    controllers.AnnotationController.finish(typ: String, id: String)
 GET           /annotations/:typ/:id/reopen                                    controllers.AnnotationController.reopen(typ: String, id: String)
 GET           /annotations/:typ/:id/reset                                     controllers.AnnotationController.reset(typ: String, id: String)
+POST          /annotations/:typ/:id/transfer                                  controllers.AnnotationController.transfer(typ: String, id: String)
 
 GET           /annotations/:typ/:id                                           controllers.AnnotationController.trace(typ: String, id: String)
 GET           /annotations/:typ/:id/info                                      controllers.AnnotationController.info(typ: String, id: String)

@@ -59,4 +59,7 @@ trait GithubOauth extends FoxImplicits {
 
   def authorizeUrl(state: String, scopes: List[String], redirectUri: String) =
     s"$GithubAuthorizeUri?client_id=$clientId&redirect_uri=$redirectUri&scope=${scopes.mkString(",")}&state=$state"
+
+  def authorizeUrl(state: String, redirectUri: String) =
+    s"$GithubAuthorizeUri?client_id=$clientId&redirect_uri=$redirectUri&state=$state"
 }

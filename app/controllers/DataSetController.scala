@@ -14,14 +14,9 @@ import play.api.cache.Cache
 import org.apache.commons.codec.binary.Base64
 import play.api.Play.current
 import scala.concurrent.duration._
-//<<<<<<< HEAD
 import com.scalableminds.util.tools.ExtendedTypes.ExtendedString
-//=======
-//import braingames.util.ExtendedTypes.ExtendedString
 import models.user.{User, UserService}
 import com.scalableminds.util.tools.Fox
-//import braingames.util.Fox
-//>>>>>>> dev
 
 /**
  * Company: scalableminds

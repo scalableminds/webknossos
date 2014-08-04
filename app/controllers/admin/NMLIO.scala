@@ -1,5 +1,6 @@
 package controllers.admin
 
+import models.task.Task
 import play.api.mvc.Action
 import oxalis.security.{AuthenticatedRequest, Secured}
 import views.html
@@ -11,7 +12,7 @@ import play.api.Logger
 import scala.xml.PrettyPrinter
 import models.tracing._
 import play.api.i18n.Messages
-import models.task.{TaskDAO, ProjectDAO, Project, Task}
+import models.task._
 import java.io.BufferedOutputStream
 import java.io.ByteArrayOutputStream
 import java.util.zip.ZipOutputStream
@@ -150,6 +151,21 @@ object NMLIO extends Controller with Secured with TextUtils {
     for {
       task <- TaskDAO.findOneById(taskId) ?~> Messages("task.notFound")
       zip <- createTaskZip(task)
+    } yield Ok.sendFile(zip.file)
+  }
+
+  // TODO: secure
+  def taskTypeDownload(taskTypeId: String) = Authenticated.async { implicit request =>
+    def createTaskTypeZip(taskType: TaskType) =
+      for {
+        tasks <- TaskDAO.findAllByTaskType(taskType)
+        tracings <- Future.traverse(tasks)(_.annotations).map(_.flatten.filter(_.state.isFinished))
+        zip <- zipTracings(tracings, taskType.summary + "_nmls.zip")
+      } yield zip
+
+    for {
+      task <- TaskTypeDAO.findOneById(taskTypeId) ?~> Messages("taskType.notFound")
+      zip <- createTaskTypeZip(task)
     } yield Ok.sendFile(zip.file)
   }
 

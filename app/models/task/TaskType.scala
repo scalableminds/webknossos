@@ -3,7 +3,7 @@ package models.task
 import models.basics.SecuredBaseDAO
 import play.api.libs.json._
 import play.api.libs.functional.syntax._
-import models.annotation.AnnotationSettings
+import models.annotation.{AnnotationService, AnnotationSettings}
 import reactivemongo.bson.BSONObjectID
 import com.scalableminds.util.reactivemongo._
 import play.modules.reactivemongo.json.BSONFormats._

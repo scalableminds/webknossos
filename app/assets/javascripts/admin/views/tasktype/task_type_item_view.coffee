@@ -40,6 +40,9 @@ class TaskTypeItemView extends Backbone.Marionette.CompositeView
         <a href="/taskTypes/<%= id %>/edit" >
           <i class="fa fa-pencil"></i>edit
         </a> <br />
+        <a href="/api/taskTypes/<%= id %>/download" >
+          <i class="fa fa-download"></i>download
+        </a> <br />
         <a href="#" class="delete">
           <i class="fa fa-trash-o"></i>delete
         </a>

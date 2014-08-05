@@ -120,4 +120,3 @@ class ExplorativeTracingListView extends Backbone.Marionette.CompositeView
     ).always( ->
       toggleIcon()
     )
-

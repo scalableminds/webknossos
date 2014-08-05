@@ -47,6 +47,7 @@ class DashboardTaskListView extends Backbone.Marionette.CompositeView
   childView : DashboardTaskListItemView
   childViewOptions : ->
     isAdminView : @model.get("isAdminView")
+
   childViewContainer : "tbody"
 
   ui :

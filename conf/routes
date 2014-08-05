@@ -42,6 +42,7 @@ GET           /api/users/:id/annotations                                      co
 GET           /api/users/:id/annotations/download                             controllers.admin.NMLIO.userDownload(id: String)
 # GET         /api/users/:id/loginAs                                      controllers.UserController.loginAsUser(id: String)
 
+
 # Team
 GET           /teams                                                          controllers.TeamController.empty
 GET           /api/teams                                                      controllers.TeamController.list

@@ -85,3 +85,4 @@ class DashboardView extends Backbone.Marionette.LayoutView
 
     trackedTimeView = new TrackedTimeView(model : @model.get("loggedTime"))
     @tabPane.show(trackedTimeView)
+

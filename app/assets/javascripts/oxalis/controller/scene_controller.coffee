@@ -253,4 +253,5 @@ class SceneController
         @setInterpolation(value)
       tdViewDisplayPlanesChanged : (value) =>
         @setDisplayPlanes value
-    })
+      segmentationOpacityChanged : (value) =>
+        @setSegmentationAlpha value  })

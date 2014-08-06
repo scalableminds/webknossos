@@ -88,6 +88,9 @@ class Gui
       50, 500, 1, "Sphere Radius")
 
     @folders.push( @fColors = @gui.addFolder("Colors") )
+    @segmentationOpacityController =
+      @addSlider(@fColors, @user.getSettings(), "segmentationOpacity",
+        0, 100, 1, "Segment. Opacity")
     @colorControllers = []
     for binary, i in @model.getColorBinaries()
       @colorControllers.push(
@@ -399,7 +402,6 @@ class Gui
   setupColors : ->
     for binary, i in @model.getColorBinaries()
       @settingsGeneral[binary.name + "_color"] = binary.color
-
 
   setQuality : (value) =>
 

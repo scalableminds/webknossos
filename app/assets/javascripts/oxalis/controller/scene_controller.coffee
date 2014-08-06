@@ -228,6 +228,8 @@ class SceneController
   bind : ->
 
     @model.user.on({
+      clippingDistChanged : (value) =>
+        console.log("CD changed", value)
       clippingDistanceChanged : (value) =>
         @setClippingDistance(value)
       displayCrosshairChanged : (value) =>
@@ -239,4 +241,6 @@ class SceneController
       displayTDViewYZChanged : (value) =>
         @setDisplaySV constants.PLANE_YZ, value
       displayTDViewXZChanged : (value) =>
-        @setDisplaySV constants.PLANE_XZ, value  })
+        @setDisplaySV constants.PLANE_XZ, value
+      segmentationOpacityChanged : (value) =>
+        @setSegmentationAlpha value  })

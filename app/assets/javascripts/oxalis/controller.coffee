@@ -172,7 +172,7 @@ class Controller
         @setMode( @urlManager.initialState.mode )
 
       # initial trigger
-      @sceneController.setSegmentationAlpha($('#alpha-slider').data("slider-value") or constants.DEFAULT_SEG_ALPHA)
+      @sceneController.setSegmentationAlpha($('#alpha-slider').data("slider-value") or @model.user.getSettings().segmentationOpacity)
 
 
   initMouse : ->

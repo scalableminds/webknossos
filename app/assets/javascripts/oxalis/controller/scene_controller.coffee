@@ -228,8 +228,6 @@ class SceneController
   bind : ->
 
     @model.user.on({
-      clippingDistChanged : (value) =>
-        console.log("CD changed", value)
       clippingDistanceChanged : (value) =>
         @setClippingDistance(value)
       displayCrosshairChanged : (value) =>

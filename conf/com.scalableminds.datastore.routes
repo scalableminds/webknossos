@@ -15,3 +15,6 @@ POST        /datasets/:dataSetName/layers                                 com.sc
 
 # Write data
 PUT         /datasets/:dataSetName/layers/:dataLayerName/data             com.scalableminds.datastore.controllers.BinaryDataController.writeViaAjax(dataSetName: String, dataLayerName: String, cubeSize: Int)
+
+# Segmentation Mapping
+GET         /datasets/:dataSetName/layers/:dataLayerName/mapping          com.scalableminds.datastore.controllers.BinaryDataController.requestSegmentationMapping(dataSetName: String, dataLayerName: String)

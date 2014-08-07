@@ -17,6 +17,7 @@ import com.scalableminds.braingames.binary.ParsedDataReadRequest
 import com.scalableminds.braingames.binary.DataRequestSettings
 import com.scalableminds.braingames.binary.ParsedDataWriteRequest
 import com.scalableminds.braingames.binary.ParsedRequestCollection
+import com.scalableminds.braingames.binary.MappingRequest
 import scala.concurrent.Future
 import com.scalableminds.util.image.{JPEGWriter, ImageCreator, ImageCreatorParameters}
 import com.scalableminds.util.mvc.ExtendedController
@@ -336,6 +337,21 @@ trait BinaryDataWriteController extends BinaryDataCommonController {
           requests <- BinaryProtocol.parseDataWriteRequests(payload, payloadBodySize, containsHandle = false) ?~> Messages("binary.payload.invalid")
           _ <- writeData(dataSource, dataLayer, cubeSize, requests)
         } yield Ok
+      }
+  }
+
+  def requestSegmentationMapping(dataSetName: String, dataLayerName: String) = TokenSecuredAction(dataSetName, dataLayerName).async {
+    implicit request =>
+      AllowRemoteOrigin{
+        for {
+          usableDataSource <- DataSourceDAO.findUsableByName(dataSetName).toFox ?~> Messages("dataSet.notFound")
+          dataSource = usableDataSource.dataSource
+          dataLayer <- getDataLayer(dataSource, dataLayerName) ?~> Messages("dataLayer.notFound")
+          if (dataLayer.category == "segmentation")
+          result <- DataStorePlugin.binaryDataService.handleMappingRequest(MappingRequest(dataSource, dataLayer)).toFox
+        } yield {
+          Ok(result)
+        }
       }
   }
 }

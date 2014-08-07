@@ -9,13 +9,13 @@ import models.team.{TeamDAO, Role, TeamMembership, Team}
 import reactivemongo.bson.BSONObjectID
 import play.api.i18n.Messages
 import oxalis.mail.DefaultMails
-import braingames.util.{FoxImplicits, Fox}
+import com.scalableminds.util.tools.{FoxImplicits, Fox}
 import controllers.Application
-import braingames.mail.Send
+import com.scalableminds.util.mail.Send
 import net.liftweb.common.Failure
-import braingames.reactivemongo.{GlobalAccessContext, DBAccessContext}
-import braingames.security.SCrypt._
-import braingames.mail.Send
+import com.scalableminds.util.reactivemongo.{GlobalAccessContext, DBAccessContext}
+import com.scalableminds.util.security.SCrypt._
+import com.scalableminds.util.mail.Send
 import play.api.libs.concurrent.Execution.Implicits._
 import models.annotation.AnnotationService
 
@@ -28,6 +28,10 @@ object UserService extends FoxImplicits {
 
   def findAll()(implicit ctx: DBAccessContext) =
     UserDAO.findAll
+
+  def findByTeams(teams: List[String])(implicit ctx: DBAccessContext) = {
+    UserDAO.findByTeams(teams)
+  }
 
   def findOneById(id: String, useCache: Boolean)(implicit ctx: DBAccessContext): Fox[User] = {
     if (useCache)

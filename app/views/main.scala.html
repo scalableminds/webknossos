@@ -1,6 +1,6 @@
 @(showNavButtons: Boolean = true)(body: Html)(implicit session: oxalis.view.SessionData)
 
-@import braingames.util.Reflect
+@import com.scalableminds.util.tools.Reflect
 
 @callingTemplate = @{
   // TODO: REMOVE HOTFIX
@@ -19,12 +19,16 @@
     <div id="alert-container">
       @session.flash.data.map{ f =>
         @if(f._1 == "modal"){
-          <div class="modal modal-message hide fade">
-            <div class="modal-body">
-              <p>@f._2</p>
-            </div>
-            <div class="modal-footer">
-              <button class="btn btn-default" data-dismiss="modal" aria-hidden="true">Ok</button>
+          <div class="modal modal-message fade">
+            <div class="modal-dialog">
+              <div class="modal-content">
+                <div class="modal-body">
+                  <p>@f._2</p>
+                </div>
+                <div class="modal-footer">
+                  <button type="button" class="btn btn-default" data-dismiss="modal">Ok</button>
+                </div>
+              </div>
             </div>
           </div>
         } else {

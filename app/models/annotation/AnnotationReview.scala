@@ -5,7 +5,7 @@ import java.util.Date
 import play.api.libs.json.Json
 import play.modules.reactivemongo.json.BSONFormats._
 import reactivemongo.bson.BSONObjectID
-import braingames.reactivemongo.GlobalAccessContext
+import com.scalableminds.util.reactivemongo.GlobalAccessContext
 
 case class AnnotationReview(
     _reviewer: BSONObjectID,

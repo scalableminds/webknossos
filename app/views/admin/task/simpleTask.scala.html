@@ -4,7 +4,7 @@
   status : models.task.CompletionStatus,
   taskType : Option[models.task.TaskType])
 
-@import braingames.reactivemongo.GlobalAccessContext
+@import com.scalableminds.util.reactivemongo.GlobalAccessContext
 
 @import scala.concurrent.duration._
 @import play.api.libs.concurrent.Execution.Implicits._
@@ -16,7 +16,7 @@
     </a>
   </td>
   <td>
-    <a href="@controllers.admin.routes.TaskTypeAdministration.list#@taskType.map(_.id)">
+    <a href="/taskTypes#@taskType.map(_.id)">
       @taskType.map(_.summary)
     </a>
   </td>

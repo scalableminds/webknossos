@@ -6,7 +6,7 @@ import play.api.test.Helpers._
 import oxalis.binary.DataStore
 import java.io.FileNotFoundException
 import oxalis.binary.FileDataStore
-import braingames.geometry.Point3D
+import com.scalableminds.util.geometry.Point3D
 import oxalis.binary.DataStore
 import models.DataSet
 

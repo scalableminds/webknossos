@@ -32,3 +32,13 @@ class PaginationCollection extends Backbone.Paginator.clientPager
     this.totalPages = Math.ceil(response.length / @perPage)
     return response;
 
+
+  lastPage : ->
+
+    lastPage = @info().totalPages
+    @goTo(lastPage)
+
+
+  firstPage : ->
+
+    @goTo(1)

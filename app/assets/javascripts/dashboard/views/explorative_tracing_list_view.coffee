@@ -3,7 +3,6 @@ underscore : _
 backbone.marionette : marionette
 app : app
 dashboard/views/explorative_tracing_list_item_view : ExplorativeTracingListItemView
-admin/models/dataset/dataset_collection : DatasetCollection
 libs/input : Input
 libs/toast : Toast
 ###
@@ -38,7 +37,6 @@ class ExplorativeTracingListView extends Backbone.Marionette.CompositeView
               <option value="<%= d.get("name") %>"> <%= d.get("name") %> </option>
             <% }) %>
           </select>
-          <div class="divider-vertical"></div>
           <button type="submit" class="btn btn-default" name="contentType" value="skeletonTracing">
             <i class="fa fa-search"></i>Open skeleton mode
           </button>
@@ -83,18 +81,9 @@ class ExplorativeTracingListView extends Backbone.Marionette.CompositeView
 
     @collection = @model.get("exploratoryAnnotations")
 
-    datasetCollection = new DatasetCollection()
-    @model.set("dataSets", datasetCollection)
-
+    datasetCollection = @model.get("dataSets")
     @listenTo(datasetCollection, "sync", @render)
     datasetCollection.fetch(silent : true)
-
-
-  onShow : ->
-
-    @tracingChooserToggler = new Input.KeyboardNoLoop(
-      "v" : => @ui.tracingChooser.toggleClass("hide")
-    )
 
 
   selectFiles : (event) ->
@@ -131,8 +120,3 @@ class ExplorativeTracingListView extends Backbone.Marionette.CompositeView
     ).always( ->
       toggleIcon()
     )
-
-
-  onDestroy : ->
-
-    @tracingChooserToggler.unbind()

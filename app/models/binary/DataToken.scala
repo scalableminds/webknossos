@@ -9,7 +9,7 @@ import java.security.SecureRandom
 import java.math.BigInteger
 import models.basics.SecuredBaseDAO
 import scala.concurrent.duration._
-import braingames.reactivemongo.{GlobalAccessContext, DBAccessContext}
+import com.scalableminds.util.reactivemongo.{GlobalAccessContext, DBAccessContext}
 import models.user.User
 import play.modules.reactivemongo.json.BSONFormats._
 import reactivemongo.api.indexes.{IndexType, Index}

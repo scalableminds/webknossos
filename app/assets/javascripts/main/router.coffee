@@ -14,12 +14,16 @@ class Router extends Backbone.Router
   routes :
     "users"                         : "users"
     "teams"                         : "teams"
-    "datasets"                      : "datasets"
     "statistics"                    : "statistics"
     "tasks"                         : "tasks"
     "projects"                      : "projects"
     "dashboard"                     : "dashboard"
     "users/:id/details"             : "dashboard"
+    "taskTypes/:id/edit"            : "editTaskType"
+    "taskTypes"                     : "taskTypes"
+    "spotlight"                     : "spotlight"
+    "tasks/overview"                : "taskOverview"
+
 
   initialize : ->
 
@@ -55,11 +59,6 @@ class Router extends Backbone.Router
     @showAdminView("StatisticView")
 
 
-  datasets : ->
-
-    @showWithPagination("DatasetListView", "DatasetCollection")
-
-
   users : ->
 
     @showWithPagination("UserListView", "UserCollection")
@@ -74,6 +73,27 @@ class Router extends Backbone.Router
 
     @showWithPagination("TaskListView", "TaskCollection")
 
+  taskTypes : ->
+
+    require ["admin/views/tasktype/task_type_view", "admin/models/tasktype/task_type_collection"], (TaskTypeView, TaskTypeCollection) =>
+
+      collection = new TaskTypeCollection()
+      view = new TaskTypeView(collection: collection)
+      @changeView(view)
+
+      @hideLoading()
+
+
+  editTaskType : (taskTypeID) ->
+
+    require ["admin/views/tasktype/task_type_form_view", "admin/models/tasktype/task_type_model"], (TaskTypeFormView, TaskTypeModel) =>
+
+      model = new TaskTypeModel({id : taskTypeID})
+      view = new TaskTypeFormView(model : model, isEditForm : true)
+      @changeView(view)
+
+      @hideLoading()
+
 
   dashboard : (userID) ->
 
@@ -81,11 +101,35 @@ class Router extends Backbone.Router
 
       isAdminView = userID != null
 
-      model = new DashboardModel({ userID, isAdminView : false })
+      model = new DashboardModel({ userID, isAdminView : isAdminView })
       view = new DashboardView(model : model, isAdminView : isAdminView)
 
       @changeView(view)
       @listenTo(model, "sync", @hideLoading)
+
+
+  spotlight : ->
+
+    require(["views/spotlight_view", "admin/models/dataset/dataset_collection"], (SpotlightView, DatasetCollection) =>
+
+      collection = new DatasetCollection()
+      view = new SpotlightView(model: collection)
+
+      @changeView(view)
+      @listenTo(collection, "sync", @hideLoading)
+    )
+
+
+  taskOverview : ->
+
+    require(["admin/views/task/task_overview_view", "admin/models/task/task_overview_model"], (TaskOverviewView, TaskOverviewModel) =>
+
+      model = new TaskOverviewModel()
+      view = new TaskOverviewView({model})
+
+      @changeView(view)
+      @listenTo(model, "sync", @hideLoading)
+    )
 
 
   showWithPagination : (view, collection) ->

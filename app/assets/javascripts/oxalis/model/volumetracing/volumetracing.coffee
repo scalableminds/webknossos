@@ -76,7 +76,7 @@ class VolumeTracing
     @currentLayer = null
     @flycam.update()
 
-    @trigger "resetContour"
+    @trigger "volumeAnnotated"
 
 
   getActiveCellId : ->
@@ -89,8 +89,6 @@ class VolumeTracing
 
   setActiveCell : (id) ->
 
-    console.log "setActiveCell", id
-
     @activeCell = null
     for cell in @cells
       if cell.id == id then @activeCell = cell
@@ -98,5 +96,4 @@ class VolumeTracing
     if not @activeCell? and id > 0
       @createCell(id)
 
-    console.log @getActiveCellId()
-    @trigger "newActiveCell"
+    @trigger "newActiveCell", id

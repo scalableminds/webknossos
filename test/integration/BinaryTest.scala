@@ -8,7 +8,7 @@ import play.api.libs.json.Json._
 import scala.util.Random
 import play.api.mvc._
 import play.api.mvc.AnyContent
-import braingames.util.ExtendedTypes._
+import com.scalableminds.util.tools.ExtendedTypes._
 import controllers.BinaryData
 import models.DataSet
 import util.ExtendedFakeRequest._

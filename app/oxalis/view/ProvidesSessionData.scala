@@ -1,6 +1,6 @@
 package oxalis.view
 
-import braingames.security._
+import com.scalableminds.util.security._
 import oxalis.security._
 import play.api.mvc.Request
 import play.api.Logger

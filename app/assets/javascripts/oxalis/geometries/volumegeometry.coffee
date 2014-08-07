@@ -1,15 +1,15 @@
 ### define
 three : THREE
+libs/color_generator : ColorGenerator
 ###
 
 class VolumeGeometry
 
-  COLORS : [0xff0000, 0x00ff00, 0x0000ff, 0xffff00, 0x00ffff, 0xff00ff]
 
   constructor : (triangles, @id) ->
 
     geo = new THREE.Geometry()
-    color = @COLORS[ (@id - 1) % 6 ]
+    color = ColorGenerator.distinctColorForId( @id % 256 )
 
     i = 0
     for triangle in triangles
@@ -24,6 +24,7 @@ class VolumeGeometry
       }))
     @mesh.oberdraw = true
 
+
   getTriangleNormal : (triangle) ->
 
     v1 = new THREE.Vector3( triangle[1][0] - triangle[0][0],
@@ -37,6 +38,7 @@ class VolumeGeometry
     v1.cross(v2)
     v1.normalize()
     return v1
+
 
   getMeshes : ->
 

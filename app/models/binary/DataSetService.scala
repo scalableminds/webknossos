@@ -3,18 +3,18 @@
  */
 package models.binary
 
-import braingames.reactivemongo.{GlobalAccessContext, DBAccessContext}
+import com.scalableminds.util.reactivemongo.{GlobalAccessContext, DBAccessContext}
 import play.api.Logger
 import play.api.libs.concurrent.Akka
 import net.liftweb.common.Full
 import scala.Some
-import braingames.util.{Fox, FoxImplicits}
-import braingames.binary.models.{DataSource, UnusableDataSource, DataSourceLike, UsableDataSource}
+import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.braingames.binary.models.{DataSource, UnusableDataSource, DataSourceLike, UsableDataSource}
 import play.api.i18n.Messages
 import play.api.libs.concurrent.Execution.Implicits._
 import controllers.DataStoreHandler
 import reactivemongo.core.commands.LastError
-import braingames.rest.RESTResponse
+import com.scalableminds.util.rest.RESTResponse
 
 object DataSetService extends FoxImplicits {
   val system = Akka.system(play.api.Play.current)

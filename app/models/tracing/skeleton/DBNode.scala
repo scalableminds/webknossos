@@ -5,12 +5,12 @@ import reactivemongo.bson.BSONObjectID
 import models.basics.SecuredBaseDAO
 import play.api.libs.json.Json
 import play.modules.reactivemongo.json.BSONFormats._
-import braingames.reactivemongo.DBAccessContext
+import com.scalableminds.util.reactivemongo.DBAccessContext
 import play.api.libs.concurrent.Execution.Implicits._
 import reactivemongo.api.indexes.{IndexType, Index}
 import reactivemongo.core.commands.LastError
 import scala.concurrent.Future
-import braingames.util.Fox
+import com.scalableminds.util.tools.Fox
 
 case class DBNode(node: Node, _treeId: BSONObjectID, _id: BSONObjectID = BSONObjectID.generate)
 

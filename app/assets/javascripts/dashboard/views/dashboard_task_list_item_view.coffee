@@ -26,10 +26,17 @@ class DashboardTaskListItemView extends Backbone.Marionette.ItemView
       <% } else { %>
         <a href="/annotations/<%= annotation.typ %>/<%= annotation.id %>">
           <i class="fa fa-random"></i>
-          trace
+          <strong>trace</strong>
         </a>
+        <% if (isAdminView) { %>
+          <br/>
+          <a href="/annotations/<%= annotation.typ %>/<%= annotation.id %>/transfer" id="transfer-task">
+            <i class="fa fa-share"></i>
+            transfer
+          </a>
+        <% } %>
         <br/>
-        <a href="#" id="finish-link" class="trace-finish">
+        <a href="#" id="finish-task" class="trace-finish">
           <i class="fa fa-check-circle-o"></i>
           finish
         </a>
@@ -38,7 +45,8 @@ class DashboardTaskListItemView extends Backbone.Marionette.ItemView
   """)
 
   events :
-    "click #finish-link" : "finish"
+    "click #finish-task" : "finish"
+
 
   className : ->
 
@@ -48,8 +56,9 @@ class DashboardTaskListItemView extends Backbone.Marionette.ItemView
       return "unfinished"
 
 
-  initialize : ->
+  initialize : (options) ->
 
+    @model.set("isAdminView", options.isAdminView)
     @model.on('change', @render)
 
 

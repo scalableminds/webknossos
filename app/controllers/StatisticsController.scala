@@ -7,13 +7,13 @@ import oxalis.security.Secured
 import models.user.time.{TimeSpan, TimeSpanService}
 import play.api.i18n.Messages
 import play.api.libs.json.Json
-import braingames.util.Fox
+import com.scalableminds.util.tools.Fox
 import play.api.libs.concurrent.Execution.Implicits._
 import models.user.{User, UserDAO}
 import play.api.templates.Html
 import scala.concurrent.duration.Duration
 import models.annotation.AnnotationDAO
-import braingames.reactivemongo.GlobalAccessContext
+import com.scalableminds.util.reactivemongo.GlobalAccessContext
 import models.tracing.skeleton.DBNodeDAO
 
 object StatisticsController extends Controller with Secured{

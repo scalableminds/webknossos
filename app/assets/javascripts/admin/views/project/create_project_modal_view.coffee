@@ -22,7 +22,7 @@ class CreateProjectModalView extends Backbone.Marionette.LayoutView
         <div class="modal-body container-fluid">
           <form action="" method="POST" class="form-horizontal">
             <div class="form-group">
-              <label class="col-sm-2 for="team">Team</label>
+              <label class="col-sm-2" for="team">Team</label>
               <div class="col-sm-10 team">
               </div>
             </div>
@@ -102,8 +102,8 @@ class CreateProjectModalView extends Backbone.Marionette.LayoutView
 
       @projectCollection.create(project,
         wait : true
-        error : @handleXHRError
-        success : _.bind(@closeModal, @)
+        error : (model, xhr) -> Toast.message(xhr.responseJSON.messages)
+        success : _.bind(@destroyModal, @)
       )
 
     else
@@ -111,19 +111,12 @@ class CreateProjectModalView extends Backbone.Marionette.LayoutView
       @ui.name.focus()
 
 
-  closeModal : ->
+  destroyModal : ->
 
     # The event is neccesarry due to the 300ms CSS transition
-    @$el.on("hide.bs.modal", =>
-      @$el.off("hide.bs.modal")
+    @$el.on("hidden.bs.modal", =>
+      @$el.off("hidden.bs.modal")
       app.vent.trigger("CreateProjectModal:refresh") #update pagination
     )
     @$el.modal("hide")
 
-
-  handleXHRError : (model, xhr) ->
-
-    xhr.responseJSON.messages.forEach(
-      (message) ->
-        Toast.error(message.error)
-    )

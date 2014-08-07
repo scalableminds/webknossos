@@ -4,11 +4,11 @@ import models.user.User
 import models.annotation.{Annotation, AnnotationType, AnnotationDAO, AnnotationService}
 
 import scala.concurrent.Future
-import braingames.util.{Fox, FoxImplicits}
+import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import reactivemongo.bson.BSONObjectID
 import scala.async.Async._
 import play.api.libs.concurrent.Execution.Implicits._
-import braingames.reactivemongo.DBAccessContext
+import com.scalableminds.util.reactivemongo.DBAccessContext
 import net.liftweb.common.{Failure, Full}
 
 /**

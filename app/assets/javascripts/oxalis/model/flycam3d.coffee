@@ -51,9 +51,11 @@ class Flycam3d
     scale
 
 
-  reset : ->
+  reset : (resetPosition = true) ->
 
     { scale } = @
+    if @currentMatrix?
+      position = @currentMatrix[12..14]
 
     m = [
       1, 0, 0, 0,
@@ -64,19 +66,11 @@ class Flycam3d
     M4x4.scale(scale, m, m)
     @currentMatrix = m
 
-    updateMacro(@)
+    if position? and not resetPosition
+      @setPosition(position)
 
-
-  resetRotation : ->
-
-    { currentMatrix } = @
-
-    x = currentMatrix[12]
-    y = currentMatrix[13]
-    z = currentMatrix[14]
-
-    @reset()
-    @setPosition([x, y, z])
+    # Apply 180° Rotation to keep it consistent with plane view
+    @roll Math.PI
 
     updateMacro(@)
 
@@ -219,11 +213,17 @@ class Flycam3d
     object = new THREE.Object3D()
     matrix = (new THREE.Matrix4()).fromArray( @currentMatrix ).transpose()
     object.applyMatrix( matrix )
+
+    # Fix JS modulo bug
+    # http://javascript.about.com/od/problemsolving/a/modulobug.htm
+    mod = (x, n) ->
+      return ((x % n) + n) % n
+
     return _.map [
       object.rotation.x
       object.rotation.y
-      object.rotation.z
-      ], (e) -> 180 / Math.PI * e
+      object.rotation.z - Math.PI
+      ], (e) -> mod(180 / Math.PI * e, 360)
 
 
 
@@ -243,7 +243,7 @@ class Flycam3d
 
   setRotation : ([x, y, z]) ->
 
-    @resetRotation()
+    @reset(false)
     @roll  -z * Math.PI / 180
     @yaw   -y * Math.PI / 180
     @pitch -x * Math.PI / 180

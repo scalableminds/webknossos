@@ -1,13 +1,13 @@
 package models.tracing.skeleton
 
-import braingames.geometry.Scale
-import braingames.geometry.Point3D
+import com.scalableminds.util.geometry.Scale
+import com.scalableminds.util.geometry.Point3D
 import oxalis.nml._
 import oxalis.nml.utils._
 import models.task.{TaskDAO, TaskType, Task, Project}
 import play.api.Logger
-import braingames.util.TimeLogger._
-import braingames.format.Formatter
+import com.scalableminds.util.tools.TimeLogger._
+import com.scalableminds.util.mvc.Formatter
 import models.annotation._
 import models.annotation.TemporaryAnnotation
 import scala.{annotation, Some}
@@ -17,8 +17,8 @@ import models.user.User
 
 import scala.concurrent.Future
 import play.api.libs.concurrent.Execution.Implicits._
-import braingames.util.{FoxImplicits, Fox}
-import braingames.reactivemongo.DBAccessContext
+import com.scalableminds.util.tools.{FoxImplicits, Fox}
+import com.scalableminds.util.reactivemongo.DBAccessContext
 import reactivemongo.bson.BSONObjectID
 import net.liftweb.common.{Empty, Failure, Full}
 

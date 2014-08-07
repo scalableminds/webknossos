@@ -4,12 +4,12 @@ import play.api.libs.functional.syntax._
 import models.basics._
 import play.api.libs.json._
 import models.user.User
-import braingames.reactivemongo.{DefaultAccessDefinitions, DBAccessContext}
+import com.scalableminds.util.reactivemongo.{DefaultAccessDefinitions, DBAccessContext}
 import play.api.libs.concurrent.Execution.Implicits._
 import scala.Some
-import braingames.reactivemongo.AccessRestrictions.AllowIf
-import braingames.binary.models.DataSource
-import braingames.geometry.Point3D
+import com.scalableminds.util.reactivemongo.AccessRestrictions.AllowIf
+import com.scalableminds.braingames.binary.models.DataSource
+import com.scalableminds.util.geometry.Point3D
 
 case class DataSet(
                     name: String,
@@ -36,6 +36,7 @@ object DataSet {
   def dataSetPublicWrites(user: Option[User]): Writes[DataSet] =
     ((__ \ 'name).write[String] and
       (__ \ 'dataSource).write[Option[DataSource]] and
+      (__ \ 'dataStore).write[DataStoreInfo] and
       (__ \ 'sourceType).write[String] and
       (__ \ 'owningTeam).write[String] and
       (__ \ 'allowedTeams).write[List[String]] and
@@ -44,7 +45,7 @@ object DataSet {
       (__ \ 'description).write[Option[String]] and
       (__ \ 'created).write[Long] and
       (__ \ "isEditable").write[Boolean])(d =>
-    (d.name, d.dataSource, d.sourceType, d.owningTeam, d.allowedTeams, d.isActive, d.isPublic, d.description, d.created, d.isEditableBy(user)))
+    (d.name, d.dataSource, d.dataStoreInfo, d.sourceType, d.owningTeam, d.allowedTeams, d.isActive, d.isPublic, d.description, d.created, d.isEditableBy(user)))
 }
 
 object DataSetDAO extends SecuredBaseDAO[DataSet] {
@@ -69,7 +70,7 @@ object DataSetDAO extends SecuredBaseDAO[DataSet] {
     }
   }
 
-  import braingames.binary.models.DataLayer.dataLayerFormat
+  import com.scalableminds.braingames.binary.models.DataLayer.dataLayerFormat
 
   val formatter = DataSet.dataSetFormat
 

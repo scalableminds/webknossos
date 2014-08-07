@@ -1,11 +1,11 @@
 package models.basics
 
-import braingames.reactivemongo.{UnsecuredMongoDAO, SecuredMongoDAO}
+import com.scalableminds.util.reactivemongo.{UnsecuredMongoDAO, SecuredMongoDAO}
 import play.modules.reactivemongo.ReactiveMongoPlugin
 import play.api.Play
 import reactivemongo.bson.BSONObjectID
 
-import braingames.util.Fox
+import com.scalableminds.util.tools.Fox
 import scala.util.Success
 import scala.concurrent.Future
 import net.liftweb.common.Empty

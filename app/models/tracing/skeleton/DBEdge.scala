@@ -4,13 +4,13 @@ import oxalis.nml.Edge
 import reactivemongo.bson.BSONObjectID
 import play.api.libs.json.Json
 import models.basics.SecuredBaseDAO
-import braingames.reactivemongo.DBAccessContext
+import com.scalableminds.util.reactivemongo.DBAccessContext
 import scala.concurrent.Future
 import play.modules.reactivemongo.json.BSONFormats._
 import play.api.libs.concurrent.Execution.Implicits._
 import reactivemongo.api.indexes.{IndexType, Index}
 import reactivemongo.core.commands.LastError
-import braingames.util.Fox
+import com.scalableminds.util.tools.Fox
 
 case class DBEdge(edge: Edge, _treeId: BSONObjectID, _id: BSONObjectID = BSONObjectID.generate)
 

@@ -1,5 +1,6 @@
 import akka.actor.{PoisonPill, Props}
-import braingames.reactivemongo.GlobalDBAccess
+import com.scalableminds.util.reactivemongo.GlobalDBAccess
+import com.scalableminds.util.security.SCrypt
 import com.scalableminds.datastore.services.BinaryDataService
 import models.binary.{DataStore, DataStoreDAO}
 import models.team._
@@ -9,7 +10,7 @@ import play.api.libs.concurrent._
 import models.user._
 import models.task._
 import oxalis.annotation.{AnnotationStore}
-import braingames.mail.Mailer
+import com.scalableminds.util.mail.Mailer
 import play.api.libs.concurrent.Execution.Implicits._
 import com.typesafe.config.Config
 import play.airbrake.Airbrake
@@ -62,7 +63,7 @@ object Global extends WithFilters(MetricsFilter) with GlobalSettings {
  */
 object InitialData extends GlobalDBAccess {
 
-  val mpi = Team("Structure of Neocortical Circuits Group", RoleService.roles)
+  val mpi = Team("Structure of Neocortical Circuits Group", None, RoleService.roles)
 
   def insert() = {
     insertUsers()
@@ -82,7 +83,7 @@ object InitialData extends GlobalDBAccess {
           "SCM",
           "Boy",
           true,
-          braingames.security.SCrypt.hashPassword("secret"),
+          SCrypt.hashPassword("secret"),
           List(TeamMembership(mpi.name, Role.Admin)),
           UserSettings.defaultSettings))
     }

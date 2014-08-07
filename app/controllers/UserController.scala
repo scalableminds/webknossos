@@ -2,27 +2,22 @@ package controllers
 
 import oxalis.security.Secured
 import models.user._
-import models.task._
-import models.annotation._
 import play.api.libs.json.Json._
 import play.api.libs.json._
 import play.api.i18n.Messages
-import oxalis.user.UserCache
 import play.api.libs.concurrent.Execution.Implicits._
-import views._
-import braingames.util.ExtendedTypes.ExtendedList
-import braingames.util.ExtendedTypes.ExtendedBoolean
+import com.scalableminds.util.tools.ExtendedTypes.ExtendedList
+import com.scalableminds.util.tools.ExtendedTypes.ExtendedBoolean
 import play.api.Logger
-import models.binary.DataSet
 import scala.concurrent.Future
-import braingames.util.{Fox, FoxImplicits}
-import models.team.TeamMembership
+import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import models.team._
 import play.api.libs.functional.syntax._
 import play.api.templates.Html
-import braingames.util.ExtendedTypes.ExtendedString
-import models.user.time.{TimeSpanService, TimeSpan}
+import com.scalableminds.util.tools.ExtendedTypes.ExtendedString
+import models.user.time._
 
-object UserController extends Controller with Secured with Dashboard {
+object UserController extends Controller with Secured with Dashboard with FoxImplicits{
 
   def empty = Authenticated{ implicit request =>
     Ok(views.html.main()(Html.empty))
@@ -130,6 +125,15 @@ object UserController extends Controller with Secured with Dashboard {
       (__ \ "teams").read[List[TeamMembership]] and
       (__ \ "experiences").read[Map[String, Int]]).tupled
 
+  def ensureProperTeamAdministration(user: User, teams: List[(TeamMembership, Team)]) = {
+    Fox.combined(teams.map{
+      case (TeamMembership(_, Role.Admin), team) if !team.couldBeAdministratedBy(user) =>
+        Fox.failure(Messages("team.admin.notPossibleBy", team.name, user.name))
+      case (_, team) =>
+        Fox.successful(team)
+    })
+  }
+
   def update(userId: String) = Authenticated.async(parse.json) { implicit request =>
     val issuingUser = request.user
     request.body.validate(userUpdateReader) match{
@@ -137,10 +141,11 @@ object UserController extends Controller with Secured with Dashboard {
         for{
           user <- UserDAO.findOneById(userId) ?~> Messages("user.notFound")
           _ <- allowedToAdministrate(issuingUser, user).toFox
-
+          _ <- Fox.combined(assignedTeams.map(t => ensureTeamAdministration(issuingUser, t.team)toFox)) ?~> Messages("team.admin.notAllowed")
+          teams <- Fox.combined(assignedTeams.map(t => TeamDAO.findOneByName(t.team))) ?~> Messages("team.notFound")
+          _ <- ensureProperTeamAdministration(user, assignedTeams.zip(teams))
         } yield {
-          val updatedTeams = assignedTeams.filter(t => issuingUser.adminTeamNames.contains(t.team))
-          val teams = user.teams.filterNot(t => updatedTeams.exists(_.team == t.team)) ::: updatedTeams
+          val teams = user.teams.filterNot(t => assignedTeams.exists(_.team == t.team)) ::: assignedTeams
           UserService.update(user, firstName, lastName, verified, teams, experiences)
           Ok
         }

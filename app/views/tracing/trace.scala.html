@@ -1,5 +1,5 @@
 @(annotation: models.annotation.AnnotationLike)(additionalHtml: Html)(implicit session: oxalis.view.AuthedSessionData)
-@import braingames.reactivemongo.GlobalAccessContext
+@import com.scalableminds.util.reactivemongo.GlobalAccessContext
 
 @import models.task.Task
 @import models.annotation.AnnotationType
@@ -31,9 +31,11 @@
           <span class="input-group-addon">Position</span>
           <input id="trace-position-input" class="form-control" type="text">
         </div>
-        <div class="input-group" id="trace-rotation">
-          <span class="input-group-addon">Rotation</span>
-          <input id="trace-rotation-input" class="form-control" type="text">
+        <div class="skeleton-controls">
+          <div class="input-group" id="trace-rotation">
+            <span class="input-group-addon">Rotation</span>
+            <input id="trace-rotation-input" class="form-control" type="text">
+          </div>
         </div>
 
 
@@ -47,6 +49,14 @@
             <button type="button" class="btn btn-default btn-primary" id="view-mode-3planes">3 Planes</button>
             <button type="button" class="btn btn-default" id="view-mode-sphere">Sphere</button>
             <button type="button" class="btn btn-default" id="view-mode-arbitraryplane">Arbitrary Plane</button>
+          </div>
+        </div>
+
+        <div id="control-mode" class="volume-controls">
+          <p>Control mode:</p>
+          <div class="btn-group">
+            <button type="button" class="btn btn-default btn-primary" id="control-mode-move">Move</button>
+            <button type="button" class="btn btn-default" id="control-mode-trace">Trace</button>
           </div>
         </div>
 

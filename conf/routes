@@ -3,133 +3,139 @@
 # ~~~~
 
 # The general pages
-GET           /                                                    controllers.Application.index
-GET           /dashboard                                           controllers.UserController.empty
-GET           /impressum                                           controllers.Application.impressum
+GET           /                                                               controllers.Application.index
+GET           /dashboard                                                      controllers.UserController.empty
+GET           /impressum                                                      controllers.Application.impressum
 
 # Github Issues integration
-GET           /issues                                              controllers.GithubIssues.index
-POST          /issues                                              controllers.GithubIssues.submit
+GET           /issues                                                         controllers.GithubIssues.index
+POST          /issues                                                         controllers.GithubIssues.submit
 
 # Help section
-GET           /help/faq                                            controllers.HelpController.faq
-GET           /help/keyboardshortcuts                              controllers.HelpController.keyboardShortcuts
+GET           /help/faq                                                       controllers.HelpController.faq
+GET           /help/keyboardshortcuts                                         controllers.HelpController.keyboardShortcuts
 
 # Authentication
-GET           /login                                               controllers.Authentication.login
-POST          /login                                               controllers.Authentication.authenticate
-GET           /logout                                              controllers.Authentication.logout
-GET           /register                                            controllers.Authentication.register
-POST          /register                                            controllers.Authentication.handleRegistration
+GET           /login                                                          controllers.Authentication.login
+POST          /login                                                          controllers.Authentication.authenticate
+GET           /logout                                                         controllers.Authentication.logout
+GET           /register                                                       controllers.Authentication.register
+POST          /register                                                       controllers.Authentication.handleRegistration
 
 # User settings
-GET           /users                                               controllers.UserController.empty
-POST          /user/configuration                                  controllers.SettingsController.update
-GET           /user/configuration                                  controllers.SettingsController.read
-GET           /user/configuration/default                          controllers.SettingsController.default
-GET           /user/tasks/request                                  controllers.TaskController.request
-GET           /users/:id/details                                   controllers.UserController.emptyWithWildcard(id)
+GET           /users                                                          controllers.UserController.empty
+POST          /user/configuration                                             controllers.SettingsController.update
+GET           /user/configuration                                             controllers.SettingsController.read
+GET           /user/configuration/default                                     controllers.SettingsController.default
+GET           /user/tasks/request                                             controllers.TaskController.request
+GET           /users/:id/details                                              controllers.UserController.emptyWithWildcard(id)
 
-GET           /api/users                                           controllers.UserController.list
-GET           /api/user                                            controllers.UserController.current
-GET           /api/user/annotations                                controllers.UserController.annotations
-GET           /api/user/loggedTime                                 controllers.UserController.loggedTime
-GET           /api/users/:id                                       controllers.UserController.user(id: String)
-DELETE        /api/users/:id                                       controllers.UserController.delete(id: String)
-PUT           /api/users/:id                                       controllers.UserController.update(id: String)
-GET           /api/users/:id/loggedTime                            controllers.UserController.userLoggedTime(id: String)
-GET           /api/users/:id/annotations                           controllers.UserController.userAnnotations(id: String)
-GET           /api/users/:id/annotations/download                  controllers.admin.NMLIO.userDownload(id: String)
-# GET         /api/users/:id/loginAs                                     controllers.UserController.loginAsUser(id: String)
+GET           /api/users                                                      controllers.UserController.list
+GET           /api/user                                                       controllers.UserController.current
+GET           /api/user/annotations                                           controllers.UserController.annotations
+GET           /api/user/loggedTime                                            controllers.UserController.loggedTime
+GET           /api/users/:id                                                  controllers.UserController.user(id: String)
+DELETE        /api/users/:id                                                  controllers.UserController.delete(id: String)
+PUT           /api/users/:id                                                  controllers.UserController.update(id: String)
+GET           /api/users/:id/loggedTime                                       controllers.UserController.userLoggedTime(id: String)
+GET           /api/users/:id/annotations                                      controllers.UserController.userAnnotations(id: String)
+GET           /api/users/:id/annotations/download                             controllers.admin.NMLIO.userDownload(id: String)
+# GET         /api/users/:id/loginAs                                      controllers.UserController.loginAsUser(id: String)
+
 
 # Team
-GET           /teams                                               controllers.TeamController.empty
-GET           /api/teams                                           controllers.TeamController.list
-POST          /api/teams                                           controllers.TeamController.create
-DELETE        /api/teams/:id                                       controllers.TeamController.delete(id: String)
+GET           /teams                                                          controllers.TeamController.empty
+GET           /api/teams                                                      controllers.TeamController.list
+POST          /api/teams                                                      controllers.TeamController.create
+DELETE        /api/teams/:id                                                  controllers.TeamController.delete(id: String)
 
 # Binary Data
 
 # Spotlight
-GET           /spotlight                                           controllers.DataSetController.spotlight
+GET           /spotlight                                                      controllers.DataSetController.userAwareEmpty
 
 # DataSets
-GET           /datasets                                            controllers.DataSetController.empty
+GET           /datasets                                                       controllers.DataSetController.empty
 # GET           /datasets/import                               controllers.DataSetController.importAll
-GET           /datasets/:dataSetName/view                          controllers.DataSetController.view(dataSetName: String)
+GET           /datasets/:dataSetName/view                                     controllers.DataSetController.view(dataSetName: String)
 
-GET           /api/datasets                                        controllers.DataSetController.list
-GET           /api/datasets/:dataSetName                           controllers.DataSetController.read(dataSetName: String)
-POST          /api/datasets/:dataSetName/teams                     controllers.DataSetController.updateTeams(dataSetName: String)
-POST          /api/datasets/:dataSetName/import                    controllers.DataSetController.importDataSet(dataSetName: String)
-GET           /api/datasets/:dataSetName/import                    controllers.DataSetController.importProgress(dataSetName: String)
-GET           /api/datasets/:dataSetName/layers/:layer/thumbnail   controllers.DataSetController.thumbnail(dataSetName: String, layer: String)
+GET           /api/datasets                                                   controllers.DataSetController.list
+GET           /api/datasets/:dataSetName                                      controllers.DataSetController.read(dataSetName: String)
+GET           /api/datasets/:dataSetName/accessList                           controllers.DataSetController.accessList(dataSetName: String)
+POST          /api/datasets/:dataSetName/teams                                controllers.DataSetController.updateTeams(dataSetName: String)
+POST          /api/datasets/:dataSetName/import                               controllers.DataSetController.importDataSet(dataSetName: String)
+GET           /api/datasets/:dataSetName/import                               controllers.DataSetController.importProgress(dataSetName: String)
+GET           /api/datasets/:dataSetName/layers/:layer/thumbnail              controllers.DataSetController.thumbnail(dataSetName: String, layer: String)
 
-POST          /api/datastores/:name/datasources                         controllers.DataStoreController.updateAll(name: String)
-POST          /api/datastores/:name/datasources/:dataSet                controllers.DataStoreController.updateOne(name: String, dataSet: String)
-GET           /api/datastores/:name/datasources/:dataSet/layers/:layer  controllers.DataStoreController.layerRead(name: String, dataSet: String, layer: String)
-GET           /api/datastores/:name/backchannel                         controllers.DataStoreController.backChannel(name: String, key: String)
-GET           /api/datastore                                            controllers.DataStoreController.show()
+POST          /api/datastores/:name/datasources                               controllers.DataStoreController.updateAll(name: String)
+POST          /api/datastores/:name/datasources/:dataSet                      controllers.DataStoreController.updateOne(name: String, dataSet: String)
+GET           /api/datastores/:name/datasources/:dataSet/layers/:layer        controllers.DataStoreController.layerRead(name: String, dataSet: String, layer: String)
+GET           /api/datastores/:name/backchannel                               controllers.DataStoreController.backChannel(name: String, key: String)
+GET           /api/datastore                                                  controllers.DataStoreController.show()
 
-GET           /dataToken/validate                                  controllers.DataTokenController.validate(token: String, dataSetName: String, dataLayerName: String)
-GET           /dataToken/generate                                  controllers.DataTokenController.generate(dataSetName: String, dataLayerName: String)
-->            /data/                                               com.scalableminds.datastore.Routes
+GET           /dataToken/validate                                             controllers.DataTokenController.validate(token: String, dataSetName: String, dataLayerName: String)
+GET           /dataToken/generate                                             controllers.DataTokenController.generate(dataSetName: String, dataLayerName: String)
+->            /data/                                                          com.scalableminds.datastore.Routes
 
 # SkeletonTracing Stuff
-POST          /annotations/createExplorational                     controllers.AnnotationController.createExplorational
-PUT           /annotations/:typ/:id                                controllers.AnnotationController.updateWithJson(typ: String, id: String, version: Int)
-POST          /annotations/:typ/:id/name                           controllers.AnnotationController.nameExplorativeAnnotation(typ: String, id: String)
-GET           /annotations/:typ/:id/finishAndRedirect              controllers.AnnotationController.finishWithRedirect(typ: String, id: String)
-GET           /annotations/:typ/:id/finish                         controllers.AnnotationController.finish(typ: String, id: String)
-GET           /annotations/:typ/:id/reopen                         controllers.AnnotationController.reopen(typ: String, id: String)
-GET           /annotations/:typ/:id/reset                          controllers.AnnotationController.reset(typ: String, id: String)
+POST          /annotations/createExplorational                                controllers.AnnotationController.createExplorational
+PUT           /annotations/:typ/:id                                           controllers.AnnotationController.updateWithJson(typ: String, id: String, version: Int)
+POST          /annotations/:typ/:id/name                                      controllers.AnnotationController.nameExplorativeAnnotation(typ: String, id: String)
+GET           /annotations/:typ/:id/finishAndRedirect                         controllers.AnnotationController.finishWithRedirect(typ: String, id: String)
+GET           /annotations/:typ/:id/finish                                    controllers.AnnotationController.finish(typ: String, id: String)
+GET           /annotations/:typ/:id/reopen                                    controllers.AnnotationController.reopen(typ: String, id: String)
+GET           /annotations/:typ/:id/reset                                     controllers.AnnotationController.reset(typ: String, id: String)
+POST          /annotations/:typ/:id/transfer                                  controllers.AnnotationController.transfer(typ: String, id: String)
 
-GET           /annotations/:typ/:id                                controllers.AnnotationController.trace(typ: String, id: String)
-GET           /annotations/:typ/:id/info                           controllers.AnnotationController.info(typ: String, id: String)
-GET           /annotations/:typ/:id/download                       controllers.AnnotationController.download(typ: String, id: String)
-DELETE        /annotations/:typ/:id                                controllers.AnnotationController.cancel(typ: String, id: String)
+GET           /annotations/:typ/:id                                           controllers.AnnotationController.trace(typ: String, id: String)
+GET           /annotations/:typ/:id/info                                      controllers.AnnotationController.info(typ: String, id: String)
+GET           /annotations/:typ/:id/download                                  controllers.AnnotationController.download(typ: String, id: String)
+DELETE        /annotations/:typ/:id                                           controllers.AnnotationController.cancel(typ: String, id: String)
 
 #Admin pages
-GET           /admin/nml/upload                                    controllers.admin.NMLIO.uploadForm
-POST          /admin/nml/upload                                    controllers.admin.NMLIO.upload
+GET           /admin/nml/upload                                               controllers.admin.NMLIO.uploadForm
+POST          /admin/nml/upload                                               controllers.admin.NMLIO.upload
 
 # Admin Tasks
-GET           /api/tasks                                           controllers.TaskController.list
-DELETE        /api/tasks/:id                                       controllers.admin.TaskAdministration.delete(id: String)
+GET           /api/tasks                                                      controllers.TaskController.list
+DELETE        /api/tasks/:id                                                  controllers.admin.TaskAdministration.delete(id: String)
 
-GET           /tasks                                               controllers.TaskController.empty
-GET           /admin/tasks/create                                  controllers.admin.TaskAdministration.create
-POST          /admin/tasks/createBulk                              controllers.admin.TaskAdministration.createBulk
-POST          /admin/tasks/createFromNML                           controllers.admin.TaskAdministration.createFromNML
-POST          /admin/tasks/createFromForm                          controllers.admin.TaskAdministration.createFromForm
-GET           /admin/tasks/overview                                controllers.admin.TaskAdministration.overview
-GET           /admin/tasks/overview/data                           controllers.admin.TaskAdministration.overviewData
-GET           /admin/tasks/:id/edit                                controllers.admin.TaskAdministration.edit(id: String)
-POST          /admin/tasks/:id                                     controllers.admin.TaskAdministration.editTaskForm(id: String)
+GET           /tasks                                                          controllers.TaskController.empty
+GET           /tasks/overview                                                 controllers.admin.TaskAdministration.empty
+GET           /admin/tasks/create                                             controllers.admin.TaskAdministration.create
+POST          /admin/tasks/createBulk                                         controllers.admin.TaskAdministration.createBulk
+POST          /admin/tasks/createFromNML                                      controllers.admin.TaskAdministration.createFromNML
+POST          /admin/tasks/createFromForm                                     controllers.admin.TaskAdministration.createFromForm
+GET           /admin/tasks/:id/edit                                           controllers.admin.TaskAdministration.edit(id: String)
+POST          /admin/tasks/:id                                                controllers.admin.TaskAdministration.editTaskForm(id: String)
+GET           /api/tasks/overview                                             controllers.admin.TaskAdministration.overviewData
 
-GET           /api/tasks/:id/download                              controllers.admin.NMLIO.taskDownload(id: String)
-GET           /api/tasks/:id/annotations                           controllers.AnnotationController.annotationsForTask(id: String)
+GET           /api/tasks/:id/download                                         controllers.admin.NMLIO.taskDownload(id: String)
+GET           /api/tasks/:id/annotations                                      controllers.AnnotationController.annotationsForTask(id: String)
 
-GET           /admin/taskTypes                                     controllers.admin.TaskTypeAdministration.list
-POST          /admin/taskTypes                                     controllers.admin.TaskTypeAdministration.create
-GET           /admin/taskTypes/:id/delete                          controllers.admin.TaskTypeAdministration.delete(id: String)
-GET           /admin/taskTypes/:id/edit                            controllers.admin.TaskTypeAdministration.edit(id: String)
-GET           /admin/taskTypes/:id/tasks                           controllers.admin.TaskAdministration.tasksForType(id: String)
-POST          /admin/taskTypes/:id                                 controllers.admin.TaskTypeAdministration.editTaskTypeForm(id: String)
+GET           /taskTypes                                                      controllers.admin.TaskTypeAdministration.empty
+GET           /taskTypes/:id/edit                                             controllers.UserController.emptyWithWildcard(id: String)
+GET           /api/taskTypes                                                  controllers.admin.TaskTypeAdministration.list
+POST          /api/taskTypes                                                  controllers.admin.TaskTypeAdministration.create
+DELETE        /api/taskTypes/:id/delete                                       controllers.admin.TaskTypeAdministration.delete(id: String)
+GET           /api/taskTypes/:id/tasks                                        controllers.admin.TaskAdministration.tasksForType(id: String)
+GET           /api/taskTypes/:id/download                                     controllers.admin.NMLIO.taskTypeDownload(id: String)
+GET           /api/taskTypes/:id                                              controllers.admin.TaskTypeAdministration.get(id: String)
+POST          /api/taskTypes/:id                                              controllers.admin.TaskTypeAdministration.editTaskTypeForm(id: String)
 
 # Projects
-GET           /projects                                            controllers.ProjectController.empty
-GET           /api/projects                                        controllers.ProjectController.list
-POST          /api/projects                                        controllers.ProjectController.create
-DELETE        /api/projects/:name                                  controllers.ProjectController.delete(name: String)
-GET           /api/projects/:name/download                         controllers.admin.NMLIO.projectDownload(name: String)
-GET           /api/projects/:name/tasks                            controllers.ProjectController.tasksForProject(name: String)
+GET           /projects                                                       controllers.ProjectController.empty
+GET           /api/projects                                                   controllers.ProjectController.list
+POST          /api/projects                                                   controllers.ProjectController.create
+DELETE        /api/projects/:name                                             controllers.ProjectController.delete(name: String)
+GET           /api/projects/:name/download                                    controllers.admin.NMLIO.projectDownload(name: String)
+GET           /api/projects/:name/tasks                                       controllers.ProjectController.tasksForProject(name: String)
 
-GET           /statistics                                          controllers.StatisticsController.empty
-GET           /api/statistics/oxalis                               controllers.StatisticsController.oxalis(interval: String, start: Option[Long], end: Option[Long])
-GET           /api/statistics/users                                controllers.StatisticsController.users(interval: String, start: Option[Long], end: Option[Long], limit: Int)
+GET           /statistics                                                     controllers.StatisticsController.empty
+GET           /api/statistics/oxalis                                          controllers.StatisticsController.oxalis(interval: String, start: Option[Long], end: Option[Long])
+GET           /api/statistics/users                                           controllers.StatisticsController.users(interval: String, start: Option[Long], end: Option[Long], limit: Int)
 # Javascript routing
-GET           /assets/javascripts/routes.js                        controllers.Application.javascriptRoutes
+GET           /assets/javascripts/routes.js                                   controllers.Application.javascriptRoutes
 
 # Map static resources from the /public folder to the /public path
-GET           /assets/*file                                        controllers.Assets.at(path="/public", file)
+GET           /assets/*file                                                   controllers.Assets.at(path="/public", file)

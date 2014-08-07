@@ -4,8 +4,8 @@ import play.api.cache.Cache
 import play.api.Play.current
 import scala.concurrent.Future
 import models.user.{UserDAO, User}
-import braingames.reactivemongo.GlobalAccessContext
-import braingames.util.Fox
+import com.scalableminds.util.reactivemongo.GlobalAccessContext
+import com.scalableminds.util.tools.Fox
 
 object UserCache {
   val userCacheTimeout = current.configuration.getInt("user.cacheTimeout") getOrElse 3
@@ -24,7 +24,7 @@ object UserCache {
     Cache.set(cacheKeyForUser(id), user)
     user
   }
- 
+
   def invalidateUser(id: String) =
     Cache.remove(cacheKeyForUser(id))
 }

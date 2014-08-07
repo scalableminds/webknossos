@@ -50,7 +50,7 @@ class TaskListView extends Backbone.Marionette.CompositeView
   events :
     "click #new-team" : "showModal"
     "click .modal .btn-primary" : "addNewTeam"
-    "click .details-toggle-all" : "toggleAllDetails"
+    "click @ui.detailsToggle" : "toggleAllDetails"
 
   initialize : ->
 

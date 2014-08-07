@@ -1,19 +1,19 @@
 package models.tracing.volume
 
-import braingames.geometry.{Point3D, BoundingBox}
+import com.scalableminds.util.geometry.{Point3D, BoundingBox}
 import models.annotation.{AnnotationLike, AnnotationContentService, AnnotationContent, AnnotationSettings}
 import models.basics.SecuredBaseDAO
 import models.binary.UserDataLayerDAO
 import models.binary.DataSet
 import java.io.InputStream
 import play.api.libs.json.{Json, JsValue}
-import braingames.reactivemongo.{DBAccessContext, GlobalAccessContext}
-import braingames.util.{FoxImplicits, Fox}
+import com.scalableminds.util.reactivemongo.{DBAccessContext, GlobalAccessContext}
+import com.scalableminds.util.tools.{FoxImplicits, Fox}
 import reactivemongo.bson.BSONObjectID
 import play.modules.reactivemongo.json.BSONFormats._
 import play.api.libs.concurrent.Execution.Implicits._
 import controllers.DataStoreHandler
-import braingames.binary.models.{DataLayer, UserDataLayer, DataSource}
+import com.scalableminds.braingames.binary.models.{DataLayer, UserDataLayer, DataSource}
 
 /**
  * Company: scalableminds
@@ -27,6 +27,7 @@ case class VolumeTracing(
   activeCellId: Option[Int] = None,
   timestamp: Long = System.currentTimeMillis(),
   editPosition: Point3D = Point3D(0,0,0),
+  zoomLevel: Double,
   boundingBox: Option[BoundingBox] = None,
   settings: AnnotationSettings = AnnotationSettings.volumeDefault,
   _id: BSONObjectID = BSONObjectID.generate)
@@ -67,9 +68,10 @@ case class VolumeTracing(
   override def contentData = {
     UserDataLayerDAO.findOneByName(userDataLayerName)(GlobalAccessContext).map{ userDataLayer =>
       Json.obj(
-        "customLayers" -> List(AnnotationContent.dataLayerWrites.writes(userDataLayer.dataLayer)),
         "activeCell" -> activeCellId,
-        "nextCell" -> userDataLayer.dataLayer.nextSegmentationId.getOrElse[Int](1)
+        "customLayers" -> List(AnnotationContent.dataLayerWrites.writes(userDataLayer.dataLayer)),
+        "nextCell" -> userDataLayer.dataLayer.nextSegmentationId.getOrElse[Long](1),
+        "zoomLevel" -> zoomLevel
       )
     }
   }
@@ -89,7 +91,7 @@ object VolumeTracingService extends AnnotationContentService with FoxImplicits{
     for {
       baseSource <- baseDataSet.dataSource.toFox
       dataLayer <- DataStoreHandler.createUserDataLayer(baseDataSet.dataStoreInfo, baseSource)
-      volumeTracing = VolumeTracing(baseDataSet.name, dataLayer.dataLayer.name, editPosition = baseDataSet.defaultStart)
+      volumeTracing = VolumeTracing(baseDataSet.name, dataLayer.dataLayer.name, editPosition = baseDataSet.defaultStart, zoomLevel = VolumeTracing.defaultZoomLevel)
       _ <- UserDataLayerDAO.insert(dataLayer)
       _ <- VolumeTracingDAO.insert(volumeTracing)
     } yield {
@@ -104,6 +106,8 @@ object VolumeTracing{
   implicit val volumeTracingFormat = Json.format[VolumeTracing]
 
   val contentType = "volumeTracing"
+
+  val defaultZoomLevel = 0.0
 }
 
 object VolumeTracingDAO extends SecuredBaseDAO[VolumeTracing] {

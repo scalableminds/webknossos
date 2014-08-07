@@ -2,8 +2,8 @@ package models.tracing.skeleton
 
 import oxalis.nml.TreeLike
 import oxalis.nml.BranchPoint
-import braingames.geometry.Scale
-import braingames.geometry.{Point3D, BoundingBox}
+import com.scalableminds.util.geometry.Scale
+import com.scalableminds.util.geometry.{Point3D, BoundingBox}
 import oxalis.nml.Comment
 import oxalis.nml.NML
 import models.annotation._
@@ -17,12 +17,12 @@ import models.annotation.AnnotationType.AnnotationType
 import scala.concurrent.Future
 import oxalis.nml.NML
 import scala.Some
-import braingames.reactivemongo.DBAccessContext
-import braingames.util.Fox
+import com.scalableminds.util.reactivemongo.DBAccessContext
+import com.scalableminds.util.tools.Fox
 import models.binary.DataSet
 import models.basics.SecuredBaseDAO
 import play.api.libs.concurrent.Execution.Implicits._
-import braingames.util.{FoxImplicits, Fox}
+import com.scalableminds.util.tools.{FoxImplicits, Fox}
 import net.liftweb.common.Full
 
 case class TemporarySkeletonTracing(
@@ -33,6 +33,7 @@ case class TemporarySkeletonTracing(
                                      timestamp: Long,
                                      activeNodeId: Option[Int],
                                      editPosition: Point3D,
+                                     zoomLevel: Double,
                                      boundingBox: Option[BoundingBox],
                                      comments: List[Comment] = Nil,
                                      settings: AnnotationSettings = AnnotationSettings.skeletonDefault
@@ -82,6 +83,7 @@ object TemporarySkeletonTracingService extends AnnotationContentService {
         System.currentTimeMillis(),
         nml.activeNodeId,
         _,
+        SkeletonTracing.defaultZoomLevel,
         box,
         nml.comments,
         settings)
@@ -100,6 +102,7 @@ object TemporarySkeletonTracingService extends AnnotationContentService {
         System.currentTimeMillis(),
         tracing.activeNodeId,
         tracing.editPosition,
+        tracing.zoomLevel,
         tracing.boundingBox,
         tracing.comments)
     }

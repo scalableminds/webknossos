@@ -6,7 +6,7 @@ package models.binary
 import models.basics.SecuredBaseDAO
 import play.api.libs.json.Json
 import java.util.UUID
-import braingames.reactivemongo.DBAccessContext
+import com.scalableminds.util.reactivemongo.DBAccessContext
 
 case class DataStore(name: String, serverId: String, key: String = UUID.randomUUID().toString)
 

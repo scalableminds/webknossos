@@ -2,12 +2,12 @@ package oxalis.nml
 
 import models.tracing.skeleton.SkeletonTracingLike
 import scala.xml.PrettyPrinter
-import braingames.xml.Xml
+import com.scalableminds.util.xml.Xml
 import models.annotation.Annotation
 import org.apache.commons.io.IOUtils
 import java.io.File
 import play.api.{Logger, Play}
-import braingames.util.ZipIO
+import com.scalableminds.util.io.ZipIO
 import play.api.libs.concurrent.Execution.Implicits._
 
 /**

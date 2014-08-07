@@ -5,10 +5,10 @@ import models.user.{UserDAO, UserService, User}
 import play.api.libs.json._
 import play.api.libs.json.Json
 import play.api.libs.functional.syntax._
-import braingames.reactivemongo.{DefaultAccessDefinitions, GlobalAccessContext, DBAccessContext}
+import com.scalableminds.util.reactivemongo.{DefaultAccessDefinitions, GlobalAccessContext, DBAccessContext}
 import reactivemongo.bson.BSONObjectID
 import play.modules.reactivemongo.json.BSONFormats._
-import braingames.util.{FoxImplicits, Fox}
+import com.scalableminds.util.tools.{FoxImplicits, Fox}
 import scala.concurrent.Future
 import net.liftweb.common.Full
 import play.api.libs.concurrent.Execution.Implicits._
@@ -16,7 +16,7 @@ import reactivemongo.api.indexes.{IndexType, Index}
 import models.team.Role
 import play.api.Logger
 import net.liftweb.common.{Full, Empty}
-import braingames.reactivemongo.AccessRestrictions.{DenyEveryone, AllowIf}
+import com.scalableminds.util.reactivemongo.AccessRestrictions.{DenyEveryone, AllowIf}
 import play.api.i18n.Messages
 import play.api.data.validation.ValidationError
 

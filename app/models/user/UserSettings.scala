@@ -1,7 +1,7 @@
 package models.user
 
 import play.api.Play.current
-import braingames.security.SCrypt._
+import com.scalableminds.util.security.SCrypt._
 import scala.collection.mutable.Stack
 import play.api.libs.json.JsValue
 import play.api.libs.json.JsBoolean
@@ -50,9 +50,10 @@ object UserSettings extends BasicSettings{
       "quality" -> JsNumber(0),
       "zoom" -> JsNumber(2),
       "scale" -> JsNumber(1),
-      "displayTDViewXY" -> JsBoolean(true),
-      "displayTDViewYZ" -> JsBoolean(true),
-      "displayTDViewXZ" -> JsBoolean(true),
+      "tdViewDisplayPlanes" -> JsBoolean(true),
+      "isosurfaceDisplay" -> JsBoolean(false),
+      "isosurfaceBBsize" -> JsNumber(1),
+      "isosurfaceResolution" -> JsNumber(80),
       "newNodeNewTree" -> JsBoolean(false),
       "inverseX" -> JsBoolean(false),
       "inverseY" -> JsBoolean(false),

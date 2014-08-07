@@ -7,19 +7,19 @@ import models.user.{UserService, UserDAO, User}
 import AnnotationType._
 import org.joda.time.format.DateTimeFormat
 import org.joda.time.DateTime
-import braingames.format.Formatter
+import com.scalableminds.util.mvc.Formatter
 import oxalis.nml.NML
-import braingames.geometry.Point3D
+import com.scalableminds.util.geometry.Point3D
 import java.util.Date
 import play.api.libs.json.{Json, JsValue}
 import play.api.Logger
 import models.tracing.skeleton.{SkeletonTracingService, AnnotationStatistics, SkeletonTracing, TemporarySkeletonTracing}
 import models.basics.Implicits._
-import braingames.util.{Fox, FoxImplicits}
+import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import play.api.libs.concurrent.Execution.Implicits._
 import scala.concurrent.Future
 import reactivemongo.bson.BSONObjectID
-import braingames.reactivemongo.{DBAccessContext, GlobalAccessContext}
+import com.scalableminds.util.reactivemongo.{DBAccessContext, GlobalAccessContext}
 import play.modules.reactivemongo.json.BSONFormats._
 import reactivemongo.api.indexes.{IndexType, Index}
 import oxalis.view.{ResourceAction, ResourceActionCollection}
@@ -277,5 +277,12 @@ object AnnotationDAO
       Json.obj("$set" -> Json.obj(
         "state" -> AnnotationState.ReadyForReview),
         "$pop" -> Json.obj("review" -> -1)),
+      true)
+
+  def transfer(_annotation: BSONObjectID, _user: BSONObjectID)(implicit ctx: DBAccessContext) =
+    findAndModify(
+      Json.obj("_id" -> _annotation),
+      Json.obj("$set" -> Json.obj(
+        "_user" -> _user)),
       true)
 }

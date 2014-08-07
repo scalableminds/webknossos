@@ -1,7 +1,7 @@
 package oxalis.nml
 
-import braingames.image.Color
-import braingames.geometry.Point3D
+import com.scalableminds.util.image.Color
+import com.scalableminds.util.geometry.Point3D
 
 case class Tree(treeId: Int, nodes: Set[Node], edges: Set[Edge], color: Color, name: String = "") extends TreeLike {
 

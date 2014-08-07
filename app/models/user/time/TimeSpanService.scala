@@ -3,13 +3,13 @@
  */
 package models.user.time
 
-import braingames.util.{Fox, FoxImplicits}
+import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import play.api.Play
 import play.api.libs.concurrent.Akka
 import akka.actor.{Actor, Props}
 import models.user.{UserDAO, User}
 import models.annotation.AnnotationLike
-import braingames.reactivemongo.{GlobalAccessContext, DBAccessContext}
+import com.scalableminds.util.reactivemongo.{GlobalAccessContext, DBAccessContext}
 import scala.concurrent.duration._
 import net.liftweb.common.Full
 import reactivemongo.bson.BSONObjectID

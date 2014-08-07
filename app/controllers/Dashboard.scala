@@ -9,12 +9,12 @@ import models.task.Task
 import models.binary.DataSet
 import models.user.time._
 import models.binary.DataSetDAO
-import braingames.util.ExtendedTypes.ExtendedList
-import braingames.util.FoxImplicits
+import com.scalableminds.util.tools.ExtendedTypes.ExtendedList
+import com.scalableminds.util.tools.FoxImplicits
 import play.api.libs.concurrent.Execution.Implicits._
-import braingames.reactivemongo.DBAccessContext
+import com.scalableminds.util.reactivemongo.DBAccessContext
 import play.api.Logger
-import braingames.util.Fox
+import com.scalableminds.util.tools.Fox
 import play.api.libs.json._
 import net.liftweb.common.{Empty, Failure, Full}
 import scala.concurrent.Future

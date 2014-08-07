@@ -5,8 +5,8 @@ import models.tracing.skeleton.{SkeletonTracingService, SkeletonTracing}
 import models.tracing.volume.{VolumeTracingService, VolumeTracing}
 import scala.concurrent.Future
 import play.api.libs.concurrent.Execution.Implicits._
-import braingames.reactivemongo.DBAccessContext
-import braingames.util.Fox
+import com.scalableminds.util.reactivemongo.DBAccessContext
+import com.scalableminds.util.tools.Fox
 import models.binary.DataSet
 
 /**

@@ -1,6 +1,6 @@
 package oxalis.thirdparty
 
-import braingames.security.SCrypt._
+import com.scalableminds.util.security.SCrypt._
 import models.user.User
 import play.api.libs.ws.WS
 import com.ning.http.client.Realm.AuthScheme
@@ -14,7 +14,7 @@ import scala.util._
 import play.api.libs.concurrent.Akka
 import models.annotation.{AnnotationLike, AnnotationDAO}
 import models.tracing.skeleton.SkeletonTracing
-import braingames.reactivemongo.{DBAccessContext, GlobalAccessContext}
+import com.scalableminds.util.reactivemongo.{DBAccessContext, GlobalAccessContext}
 
 object BrainTracing {
   val URL = "http://braintracing.org/"

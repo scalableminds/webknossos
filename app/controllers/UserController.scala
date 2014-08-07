@@ -2,30 +2,20 @@ package controllers
 
 import oxalis.security.Secured
 import models.user._
-import models.task._
-import models.annotation._
 import play.api.libs.json.Json._
 import play.api.libs.json._
 import play.api.i18n.Messages
-import oxalis.user.UserCache
 import play.api.libs.concurrent.Execution.Implicits._
-import views._
 import com.scalableminds.util.tools.ExtendedTypes.ExtendedList
 import com.scalableminds.util.tools.ExtendedTypes.ExtendedBoolean
 import play.api.Logger
-import models.binary.DataSet
 import scala.concurrent.Future
-//<<<<<<< HEAD
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
-//import models.team.TeamMembership
-//=======
-//import braingames.util.{Fox, FoxImplicits}
-import models.team.{Team, Role, TeamDAO, TeamMembership}
-//>>>>>>> dev
+import models.team._
 import play.api.libs.functional.syntax._
 import play.api.templates.Html
 import com.scalableminds.util.tools.ExtendedTypes.ExtendedString
-import models.user.time.{TimeSpanService, TimeSpan}
+import models.user.time._
 
 object UserController extends Controller with Secured with Dashboard with FoxImplicits{
 

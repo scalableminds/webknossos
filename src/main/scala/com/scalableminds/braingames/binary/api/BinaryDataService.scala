@@ -24,7 +24,7 @@ import scalax.file.Path
 import com.scalableminds.braingames.binary.repository.DataSourceInbox
 import com.scalableminds.util.io.PathUtils
 
-trait BinaryDataService extends DataSourceService with BinaryDataHelpers {
+trait BinaryDataService extends DataSourceService with BinaryDataHelpers with SegmentationMappingHelpers {
 
   import Logger._
 

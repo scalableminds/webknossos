@@ -6,7 +6,7 @@ package com.scalableminds.braingames.binary.store
 import java.io.{FileNotFoundException, InputStream, OutputStream, FileInputStream, FileOutputStream, File}
 import scala.concurrent.Future
 import scala.concurrent.ExecutionContext.Implicits._
-import com.scalableminds.braingames.binary.{LoadBlock, SaveBlock}
+import com.scalableminds.braingames.binary.{LoadBlock, SaveBlock, MappingRequest}
 import net.liftweb.common.Box
 import net.liftweb.common.Failure
 import scalax.file.Path
@@ -34,15 +34,18 @@ class FileDataStore extends DataStore {
   }
 
   def load(dataSetDir: Path, dataSetId: String, resolution: Int, block: Point3D, fileSize: Int): Future[Box[Array[Byte]]] = {
+    load(knossosFilePath(dataSetDir, dataSetId, resolution, block), Some(fileSize), fuzzyKnossosFile(dataSetDir, dataSetId, resolution, block))
+  }
+
+  def load(path: Path, fileSize: Option[Int] = None, fallback: Option[File] = None): Future[Box[Array[Byte]]] = {
     Future {
-      val path = knossosFilePath(dataSetDir, dataSetId, resolution, block)
       try {
         path.fileOption
           .filter(_.exists())
-          .orElse(fuzzyKnossosFile(dataSetDir, dataSetId, resolution, block))
+          .orElse(fallback)
           .map { file =>
-            inputStreamToByteArray(new FileInputStream(file), fileSize)
-        }
+            inputStreamToByteArray(new FileInputStream(file), fileSize.getOrElse(file.length().toInt))
+          }
       } catch {
         case e: FileNotFoundException =>
           logger.info("File data store couldn't find file: " + path.toAbsolute.path)
@@ -69,6 +72,10 @@ class FileDataStore extends DataStore {
           Failure("Couldn't write to file: " + e)
       }
     }
+  }
+
+  def load(request: MappingRequest): Future[Box[Array[Byte]]] = {
+    load(knossosMappingFilePath(request))
   }
 }
 

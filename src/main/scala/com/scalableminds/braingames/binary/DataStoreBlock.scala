@@ -14,7 +14,6 @@ trait DataStoreBlock {
   def block: Point3D
 }
 
-
 case class LoadBlock(
   dataSource: DataSource,
   dataLayer: DataLayer,

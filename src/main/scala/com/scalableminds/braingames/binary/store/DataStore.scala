@@ -7,7 +7,7 @@ import scala.concurrent.Future
 import akka.actor.Actor
 import scala.util._
 import scala.concurrent.ExecutionContext.Implicits._
-import com.scalableminds.braingames.binary.{DataStoreBlock, LoadBlock, SaveBlock}
+import com.scalableminds.braingames.binary.{DataStoreBlock, LoadBlock, SaveBlock, MappingRequest}
 import net.liftweb.common.{Full, Empty, Box}
 import com.scalableminds.util.geometry.Point3D
 import scalax.file.Path
@@ -76,6 +76,11 @@ object DataStore {
     val z = "z%04d".format(block.z)
     val fileName = s"${id}_mag${resolution}_${x}_${y}_${z}.raw"
     knossosDir(dataSetDir, resolution, block) / fileName
+  }
+
+  def knossosMappingFilePath(mappingRequest: MappingRequest) = {
+    val fileName = s"${mappingRequest.dataSource.id}_${mappingRequest.dataLayer.name}_mapping.raw"
+    Path.fromString(mappingRequest.dataSource.baseDir) / mappingRequest.dataLayer.name / fileName
   }
 
   def fuzzyKnossosFile(dataSetDir: Path, id: String, resolution: Int, block: Point3D): Option[File] = {

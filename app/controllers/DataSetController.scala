@@ -70,7 +70,7 @@ object DataSetController extends Controller with Secured {
     Ok(views.html.main()(Html.empty))
   }
 
-  def list = Authenticated.async{ implicit request =>
+  def list = UserAwareAction.async{ implicit request =>
     UsingFilters(
       Filter("isEditable", (value: Boolean, el: DataSet) =>
         el.isEditableBy(request.userOpt) && value || !el.isEditableBy(request.userOpt) && !value),

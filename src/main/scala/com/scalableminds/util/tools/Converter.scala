@@ -35,9 +35,31 @@ object DefaultConverters{
       case _: java.lang.NumberFormatException => None
     }
   }
+
+  implicit object IntArrayToByteArrayConverter extends ArrayConverter[Array[Int], Array[Byte]]{
+    def convert(a: Array[Int], bytesPerElement: Int) = {
+      a.map{
+        value =>
+          (0 until bytesPerElement).map{
+            pos =>
+              (value >> (8 * pos)).byteValue 
+          }
+      }.flatten
+    }
+  }
+
+  implicit object ByteArrayToIntArrayConverter extends ArrayConverter[Array[Byte], Array[Int]]{
+    def convert(a: Array[Byte], bytesPerElement: Int) = {
+      a.grouped(bytesPerElement).map(_.foldRight[Int](0)((a, b) => (b << 8) + a)).toArray
+    }
+  }
 }
 
 
 trait Converter[A, B]{
   def convert(a: A): Option[B]
+}
+
+trait ArrayConverter[A, B]{
+  def convert(a: A, bytesPerElement: Int): B
 }

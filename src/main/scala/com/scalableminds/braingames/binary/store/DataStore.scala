@@ -79,7 +79,7 @@ object DataStore {
   }
 
   def knossosMappingFilePath(mappingRequest: MappingRequest) = {
-    val fileName = s"${mappingRequest.dataSource.id}_${mappingRequest.dataLayer.name}_mapping.raw"
+    val fileName = s"${mappingRequest.dataSource.id}_${mappingRequest.dataLayer.name}_mapping.map"
     Path.fromString(mappingRequest.dataSource.baseDir) / mappingRequest.dataLayer.name / fileName
   }
 

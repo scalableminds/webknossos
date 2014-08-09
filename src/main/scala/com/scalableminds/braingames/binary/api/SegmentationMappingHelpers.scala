@@ -15,22 +15,24 @@ trait SegmentationMappingHelpers {
 
   lazy val dataStore = new FileDataStore()
 
-  def normalizeId(mapping: Array[Int])(idx: Int): Int = {
-    if (mapping.size <= idx || mapping(idx) == 0 || mapping(idx) == idx)
-      idx
-    else
-      normalizeId(mapping)(mapping(idx))
+  def normalizeId(mapping: Array[Int], ids: Set[Int] = Set())(id: Int): Int = {
+    if (id >= mapping.size || mapping(id) == 0 || mapping(id) == id)
+      if (ids.isEmpty) 0 else id
+    else if (ids.contains(id))
+      ids.min
+    else normalizeId(mapping, ids + id)(mapping(id))
   }
 
   def normalize(mapping: Array[Int]) = {
-    mapping.map(normalizeId(mapping))
+    (0 until mapping.length).map(normalizeId(mapping)).toArray
   }
 
   def handleMappingRequest(request: MappingRequest) = {
     dataStore.load(request).map {
       case Full(data) =>
         IntArrayToByteArrayConverter.convert(
-            normalize(ByteArrayToIntArrayConverter.convert(
+            normalize(
+              ByteArrayToIntArrayConverter.convert(
                 data,
                 request.dataLayer.bytesPerElement)),
             request.dataLayer.bytesPerElement)

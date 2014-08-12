@@ -29,6 +29,13 @@ class PullQueue
     @totalLoadedBuckets = 0
     @totalLoadedBytes = 0
 
+    if @layer.category == "segmentation"
+      @getMappingSocket().send()
+        .then(
+          (responseBuffer) =>
+            @cube.mapping = responseBuffer
+        )
+
   swap : (a, b) ->
 
     queue = @queue
@@ -192,6 +199,15 @@ class PullQueue
 
   set4Bit : (@fourBit) ->
 
+
+  getMappingSocket : ->
+
+    if @mappingSocket? then @mappingSocket else @mappingSocket = new ArrayBufferSocket(
+      senders : [
+        new ArrayBufferSocket.XmlHttpRequest("#{@layer.url}/data/datasets/#{@dataSetName}/layers/#{@layer.name}/mapping?token=#{@layer.token}")
+      ]
+      responseBufferType : if @layer.bitDepth == 16 then Uint16Array else Uint32Array
+    )
 
   getLoadSocket : ->
 

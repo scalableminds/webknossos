@@ -69,7 +69,6 @@ dataSet.import.notStarted=Dataset import couldn''t be started
 
 dataLayer.notFound=DataLayer not found
 dataLayer.forbidden=Access to this layer is not allowed.
-dataLayer.test=Test message
 
 dataToken.creationFailed=Creation of the data token failed.
 

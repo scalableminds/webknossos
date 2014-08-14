@@ -98,14 +98,19 @@ object AnnotationController extends Controller with Secured with TracingInformat
           for {
             annotationName <- nameAnnotation(annotation) ?~> Messages("annotation.name.impossible")
             _ <- annotation.restrictions.allowDownload(request.user).failIfFalse(Messages("annotation.download.notAllowed")).toFox
+            annotationDAO <- AnnotationDAO.findOneById(id) ?~> Messages("annotation.notFound")
             content <- annotation.content ?~> Messages("annotation.content.empty")
             stream <- content.toDownloadStream
           } yield {
+            val filename = annotationDAO._name match {
+              case Some(name) if (!name.isEmpty) => name.replaceAll(".nml", "")
+              case _ => annotationName
+            }
             Ok.stream(Enumerator.fromStream(stream).andThen(Enumerator.eof[Array[Byte]])).withHeaders(
               CONTENT_TYPE ->
                 "application/octet-stream",
               CONTENT_DISPOSITION ->
-                s"filename=${annotationName + content.downloadFileExtension}")
+                s"filename=${filename + content.downloadFileExtension}")
           }
       }
   }

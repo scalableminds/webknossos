@@ -3,6 +3,7 @@ jquery : $
 libs/toast : Toast
 ../modal : modal
 ../../view : View
+../mergemodal : MergeModalView
 ###
 
 class SkeletonTracingView extends View
@@ -114,11 +115,19 @@ class SkeletonTracingView extends View
     $("a[href=#tab-trees]").on "shown", (event) =>
       @updateActiveTree()
 
+    $("#merge-button").on "click", (event) =>
+      @showMergeModal()
+
     @updateComments()
     @updateTrees()
     @updateTreesSortButton()
     @updateCommentsSortButton()
 
+  showMergeModal : ->
+    container = $("#modal")
+    modalView = new MergeModalView(el : container)
+    el = modalView.render().el
+    modalView.show()
 
   updateComments : ->
 

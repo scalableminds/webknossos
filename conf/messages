@@ -143,6 +143,7 @@ tracing.invalidName=Tracing name is invalid
 tracing.reset.success=Reseted tracing to base
 tracing.reset.failed=Couldn't reset tracing to base
 annotation.reopened=Tracing got reopened
+annotation.merge.success=Merging successfully done
 
 issue.summary.notSupplied=No summary supplied
 issue.description.notSupplied=No description supplied

@@ -134,11 +134,9 @@ class MergeModalView extends Backbone.Marionette.LayoutView
     )
 
   mergeTask : ->
-    debugger
     taskId = @ui.task.find("select :selected").val()
-
-    $.ajax(url: "/annotations/CompoundTask/#{taskId}/merge/" + @_model.tracingId + "/CompoundTask").done(() ->
-      console.log("Merge sie udal")
+    $.ajax(url: "/annotations/CompoundTask/#{taskId}/merge/#{@_model.tracingType}/#{@_model.tracingId}").done((annotation) ->
+      window.location.replace("/annotations/#{annotation.typ}/#{annotation.id}")
     )
 
   mergeTaskType : ->

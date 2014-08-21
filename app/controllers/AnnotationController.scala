@@ -57,12 +57,13 @@ object AnnotationController extends Controller with Secured with TracingInformat
       }
   }
 
-  def merge(typ: String, id: String, mergedId: String, mergedTyp: String) = Authenticated.async { implicit request =>
+  def merge(typ: String, id: String, mergedTyp: String, mergedId: String) = Authenticated.async { implicit request =>
     withMergedAnnotation(typ, id, mergedId, mergedTyp) { annotation =>
       for {
         _ <- annotation.restrictions.allowAccess(request.user).failIfFalse(Messages("notAllowed")).toFox ~> 400
+        json <- annotationJson(request.user, annotation)
       } yield {
-        Redirect(routes.AnnotationController.trace(annotation.typ, annotation.id))
+        JsonOk(json, Messages("annotation.merge.success"))
       }
     }
   }

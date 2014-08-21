@@ -5,7 +5,7 @@ import oxalis.security.{UserAwareRequest, Secured, AuthenticatedRequest}
 import net.liftweb.common._
 import scala.concurrent.Future
 import scala.concurrent.duration._
-import oxalis.annotation.{RequestAnnotation, AnnotationIdentifier}
+import oxalis.annotation.{MergeAnnotation, RequestAnnotation, AnnotationIdentifier}
 import akka.pattern.ask
 import play.api.libs.concurrent.Execution.Implicits._
 import akka.util.Timeout
@@ -40,6 +40,17 @@ trait TracingInformationProvider extends play.api.http.Status with FoxImplicits 
   def findAnnotation(annotationId: AnnotationIdentifier)(implicit request: UserAwareRequest[_]): Fox[AnnotationLike] = {
     implicit val timeout = Timeout(5 seconds)
     val f = Application.annotationStore ? RequestAnnotation(annotationId, request.userOpt, authedRequestToDBAccess)
+
+    f.mapTo[Box[AnnotationLike]]
+  }
+
+  def withMergedAnnotation[T](typ: AnnotationType, id: String, mergedId: String)(f: AnnotationLike => Fox[T])(implicit request: UserAwareRequest[_]): Fox[T] = {
+    mergeAnnotation(AnnotationIdentifier(typ, id), AnnotationIdentifier(typ, mergedId)).flatMap(f)
+  }
+
+  def mergeAnnotation(annotationId: AnnotationIdentifier, mergedAnnotationId: AnnotationIdentifier)(implicit request: UserAwareRequest[_]): Fox[AnnotationLike] = {
+    implicit val timeout = Timeout(5 seconds)
+    val f = Application.annotationStore ? MergeAnnotation(annotationId, mergedAnnotationId, request.userOpt, authedRequestToDBAccess)
 
     f.mapTo[Box[AnnotationLike]]
   }

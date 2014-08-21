@@ -58,12 +58,10 @@ object AnnotationController extends Controller with Secured with TracingInformat
   }
 
   def merge(typ: String, id: String, mergedId: String) = Authenticated.async { implicit request =>
-    withAnnotation(AnnotationIdentifier(typ, id)) { annotation =>
+    withMergedAnnotation(typ, id, mergedId) { annotation =>
       for {
-        _ <- annotation.restrictions.allowAccess(request.user).failIfFalse(Messages("notAllowed")).toFox ~> 400 
-        mergedAnnotation <- findAnnotation(AnnotationIdentifier(typ, mergedId))
+        _ <- annotation.restrictions.allowAccess(request.user).failIfFalse(Messages("notAllowed")).toFox ~> 400
       } yield {
-//        val annotations =
         Ok(htmlForAnnotation(annotation))
       }
     }

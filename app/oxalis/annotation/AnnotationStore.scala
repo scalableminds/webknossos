@@ -20,7 +20,7 @@ object AnnotationIdentifier{
 }
 
 case class RequestAnnotation(id: AnnotationIdentifier, user: Option[User], implicit val ctx: DBAccessContext)
-
+case class MergeAnnotation(id: AnnotationIdentifier, mergedId: AnnotationIdentifier, user: Option[User], implicit val ctx: DBAccessContext)
 case class StoredResult(result: Fox[AnnotationLike], timestamp: Long = System.currentTimeMillis)
 
 class AnnotationStore extends Actor {
@@ -62,7 +62,40 @@ class AnnotationStore extends Actor {
           Logger.error("AnnotationStore ERROR: " + e)
           e.printStackTrace()
       }
-  }
+    case MergeAnnotation(id, mergedId, user, ctx) =>
+      val s = sender
+      val handler = AnnotationInformationHandler.informationHandlers(mergedId.annotationType)
+      val mergedAnnotation: Fox[AnnotationLike] = handler.provideAnnotation(mergedId.identifier, user)(ctx)
+      val stored = StoredResult(mergedAnnotation)
+
+      cachedAnnotations()
+        .get(id)
+        .filterNot(isExpired(maxCacheTime))
+        .map(_.result)
+        .get match {
+          case annotationLike if (handler.cache) =>  {
+            cachedAnnotations.send(_ + (id -> stored))
+          }
+          case _ => {
+            val annotationLike = requestAnnotation(id, user)(ctx)
+            cachedAnnotations.send(_ + (id -> stored))
+          }
+        }
+
+      cachedAnnotations()
+        .get(id)
+        .filterNot(isExpired(maxCacheTime))
+        .map(_.result)
+        .get
+        .futureBox
+        .map {
+          result => s ! result
+        }.recover {
+          case e =>
+            Logger.error("AnnotationStore ERROR: " + e)
+            e.printStackTrace()
+        }
+    }
 
   def isExpired(maxAge: Duration)(result: StoredResult) =
     System.currentTimeMillis - result.timestamp > maxAge.toMillis

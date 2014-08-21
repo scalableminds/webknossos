@@ -98,7 +98,7 @@ class MergeModalView extends Backbone.Marionette.LayoutView
   @annotationTyp = $("#annotationTyp").val()
 
   show : ->
-    debugger
+
     @$el.modal("show")
 
     $.ajax(url: "/api/user").done((user) =>

@@ -44,8 +44,8 @@ trait TracingInformationProvider extends play.api.http.Status with FoxImplicits 
     f.mapTo[Box[AnnotationLike]]
   }
 
-  def withMergedAnnotation[T](typ: AnnotationType, id: String, mergedId: String)(f: AnnotationLike => Fox[T])(implicit request: UserAwareRequest[_]): Fox[T] = {
-    mergeAnnotation(AnnotationIdentifier(typ, id), AnnotationIdentifier(typ, mergedId)).flatMap(f)
+  def withMergedAnnotation[T](typ: AnnotationType, id: String, mergedId: String, mergedTyp: String)(f: AnnotationLike => Fox[T])(implicit request: UserAwareRequest[_]): Fox[T] = {
+    mergeAnnotation(AnnotationIdentifier(typ, id), AnnotationIdentifier(mergedTyp, mergedId)).flatMap(f)
   }
 
   def mergeAnnotation(annotationId: AnnotationIdentifier, mergedAnnotationId: AnnotationIdentifier)(implicit request: UserAwareRequest[_]): Fox[AnnotationLike] = {

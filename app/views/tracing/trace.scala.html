@@ -7,8 +7,6 @@
 @import play.api.libs.concurrent.Execution.Implicits._
 
 @main( ){
-  <input type="hidden" id="annotationId" value=@annotation.id />
-  <input type="hidden" id="annotationTyp" value=@annotation.typ />
   <div id="container" data-tracing-type="@annotation.typ" data-tracing-id="@annotation.id" class="hide clearfix">
     <div id="main" role="main" data-url="@controllers.routes.AnnotationController.info(annotation.typ, annotation.id)">
       <div id="left-menu">

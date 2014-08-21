@@ -62,7 +62,7 @@ object AnnotationController extends Controller with Secured with TracingInformat
       for {
         _ <- annotation.restrictions.allowAccess(request.user).failIfFalse(Messages("notAllowed")).toFox ~> 400
       } yield {
-        Ok(htmlForAnnotation(annotation))
+        Redirect(routes.AnnotationController.trace(annotation.typ, annotation.id))
       }
     }
   }

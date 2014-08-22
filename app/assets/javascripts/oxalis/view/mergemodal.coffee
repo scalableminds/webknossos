@@ -149,21 +149,18 @@ class MergeModalView extends Backbone.Marionette.LayoutView
 
   mergeTask : ->
     taskId = @ui.task.find("select :selected").val()
-    $.ajax(url: "/annotations/CompoundTask/#{taskId}/merge/#{@_model.tracingType}/#{@_model.tracingId}").done((annotation) ->
-      window.location.replace("/annotations/#{annotation.typ}/#{annotation.id}")
-    )
+    url = "/annotations/CompoundTask/#{taskId}/merge/#{@_model.tracingType}/#{@_model.tracingId}"
+    @merge(url)
 
   mergeTaskType : ->
     taskTypeId = @ui.tasktype.find("select :selected").prop("id")
-    $.ajax(url: "/annotations/CompoundTaskType/#{taskTypeId}/merge/#{@_model.tracingType}/#{@_model.tracingId}").done((annotation) ->
-      window.location.replace("/annotations/#{annotation.typ}/#{annotation.id}")
-    )
+    url = "/annotations/CompoundTaskType/#{taskTypeId}/merge/#{@_model.tracingType}/#{@_model.tracingId}"
+    @merge(url)
 
   mergeProject : ->
     projectId = @ui.project.find("select :selected").prop("id")
-    $.ajax(url: "/annotations/CompoundProject/#{projectId}/merge/#{@_model.tracingType}/#{@_model.tracingId}").done((annotation) ->
-      window.location.replace("/annotations/#{annotation.typ}/#{annotation.id}")
-    )
+    url = "/annotations/CompoundProject/#{projectId}/merge/#{@_model.tracingType}/#{@_model.tracingId}"
+    @merge(url)
 
   mergeNml : ->
     console.log("mergeNml")
@@ -178,3 +175,14 @@ class MergeModalView extends Backbone.Marionette.LayoutView
     )
     @$el.modal("hide")
 
+  merge : (url) ->
+    $.ajax(url: url)
+    .done( (annotation) ->
+      url = "/annotations/" + annotation.typ + "/" + annotation.id
+      app.router.loadURL(url)
+      Toast.message(annotation.messages)
+    ).fail( (xhr) ->
+      Toast.message(xhr.responseJSON.messages)
+    ).always( ->
+      toggleIcon()
+    )

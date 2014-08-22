@@ -11,6 +11,7 @@ admin/models/task/task_collection : TaskCollection
 admin/models/tasktype/task_type_collection : TaskTypeCollection
 admin/models/project/project_collection : ProjectCollection
 admin/models/project/project_model : ProjectModel
+routes : MyJSRoutesModule
 ###
 
 class MergeModalView extends Backbone.Marionette.LayoutView
@@ -54,7 +55,19 @@ class MergeModalView extends Backbone.Marionette.LayoutView
             <label for="nml">NML</label>
             <div class="row clearfix">
               <div class="col-md-10 column">
-                <a href="@controllers.routes.AnnotationController.download(annotation.typ, annotation.id)" class="btn btn-default input-block-level form-control" id="trace-download-button"><i class="fa fa-download"></i>NML</a>
+                <form action="<%= jsRoutes.controllers.admin.NMLIO.upload().url %>"
+                    method="POST"
+                    enctype="multipart/form-data"
+                    id="upload-and-explore-form"
+                    class="form-inline inline-block">
+                  <span class="btn-file btn btn-default">
+                    <input type="file" name="nmlFile" multiple>
+                      <i class="fa fa-upload" id="form-upload-icon"></i>
+                      <i class="fa fa-spinner fa-spin hide" id="form-spinner-icon"></i>
+                      Upload NML
+                    </input>
+                  </span>
+                </form>
               </div>
               <div class="col-md-2 column ">
                 <button class="btn btn-primary" id="nml-merge">Merge</button>
@@ -86,6 +99,7 @@ class MergeModalView extends Backbone.Marionette.LayoutView
     "click #task-type-merge"   : "mergeTaskType"
     "click #project-merge"     : "mergeProject"
     "click #nml-merge"         : "mergeNml"
+    "submit @ui.uploadAndExploreForm" : "uploadFiles"
     "click #explorativs-merge" : "mergeExplorativs"
 
   ui :
@@ -93,7 +107,7 @@ class MergeModalView extends Backbone.Marionette.LayoutView
     "tasktype"    : ".task-type"
     "project"     : ".project"
     "explorativs" : ".explorativs"
-
+    "uploadAndExploreForm" : "#upload-and-explore-form"
 
   initialize : (options) ->
 

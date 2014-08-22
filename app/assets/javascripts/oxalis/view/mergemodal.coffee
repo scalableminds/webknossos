@@ -99,6 +99,7 @@ class MergeModalView extends Backbone.Marionette.LayoutView
     "click #task-type-merge"   : "mergeTaskType"
     "click #project-merge"     : "mergeProject"
     "click #nml-merge"         : "mergeNml"
+    "change input[type=file]"         : "selectFiles"
     "submit @ui.uploadAndExploreForm" : "uploadFiles"
     "click #explorativs-merge" : "mergeExplorativs"
 
@@ -108,6 +109,10 @@ class MergeModalView extends Backbone.Marionette.LayoutView
     "project"     : ".project"
     "explorativs" : ".explorativs"
     "uploadAndExploreForm" : "#upload-and-explore-form"
+    "formSpinnerIcon"      : "#form-spinner-icon"
+    "formUploadIcon"       : "#form-upload-icon"
+
+  nml = ""
 
   initialize : (options) ->
 
@@ -163,8 +168,12 @@ class MergeModalView extends Backbone.Marionette.LayoutView
     @merge(url)
 
   mergeNml : ->
-    console.log("mergeNml")
-
+    if(nml == "")
+      Toast.message("Please upload NML file")
+    else
+      url = "/annotations/#{nml.typ}/#{nml.id}/merge/#{@_model.tracingType}/#{@_model.tracingId}"
+      console.log url
+      @merge(url)
 
   destroyModal : ->
 
@@ -181,6 +190,40 @@ class MergeModalView extends Backbone.Marionette.LayoutView
       url = "/annotations/" + annotation.typ + "/" + annotation.id
       app.router.loadURL(url)
       Toast.message(annotation.messages)
+    ).fail( (xhr) ->
+      Toast.message(xhr.responseJSON.messages)
+    ).always( ->
+      toggleIcon()
+    )
+
+  selectFiles : (event) ->
+
+    if event.target.files.length
+      @ui.uploadAndExploreForm.submit()
+
+
+  uploadFiles : (event) ->
+
+    event.preventDefault()
+
+    toggleIcon = =>
+
+      [@ui.formSpinnerIcon, @ui.formUploadIcon].forEach((ea) -> ea.toggleClass("hide"))
+
+
+    toggleIcon()
+
+    form = @ui.uploadAndExploreForm
+
+    $.ajax(
+      url : form.attr("action")
+      data : new FormData(form[0])
+      type : "POST"
+      processData : false
+      contentType : false
+    ).done( (data) ->
+      nml = data.annotation
+      Toast.message(data.messages)
     ).fail( (xhr) ->
       Toast.message(xhr.responseJSON.messages)
     ).always( ->

@@ -2,7 +2,8 @@ package oxalis.annotation
 
 import akka.actor.Actor
 import akka.agent.Agent
-import scala.concurrent.Future
+import akka.util.Timeout
+import scala.concurrent.{Await, Future}
 import scala.concurrent.duration._
 import net.liftweb.common.Box
 import play.api.Logger
@@ -65,15 +66,21 @@ class AnnotationStore extends Actor {
     case MergeAnnotation(id, mergedId, user, ctx) =>
       val s = sender
 
+      implicit val timeout = Timeout(5 seconds)
+      val future = cachedAnnotations.future
+      val r = Await.result(future, timeout.duration)
+
       val result = (id: AnnotationIdentifier) => cachedAnnotations().get(id).filterNot(isExpired(maxCacheTime)).map(_.result)
 
       if(result(id).isEmpty) {
         requestAnnotation(id, user)(ctx)
       }
+
       mergeAnnotation(id, mergedId, user)(ctx)
-      result(id).get.futureBox.map { result => Logger.debug("result: " + result); s ! result}.recover { case e =>
-          Logger.error("AnnotationStore ERROR: " + e)
-          e.printStackTrace()
+
+      r(id).result.futureBox.map { result => Logger.debug("result: " + result); s ! result}.recover { case e =>
+        Logger.error("AnnotationStore ERROR: " + e)
+        e.printStackTrace()
       }
   }
 

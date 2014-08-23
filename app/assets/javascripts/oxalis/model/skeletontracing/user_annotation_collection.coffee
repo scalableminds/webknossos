@@ -11,8 +11,6 @@ class UserAnnotationCollection extends PaginationCollection
 
     super()
 
-    console.log "UserId" + userId
-
     # We cannot use @url as a method since the Backbone.Paginator.clientPager
     # ignores the context which is necessary to read forTaskTypeID.
     # TODO: Check if this is still an issue with a newer version of backbone.paginator.

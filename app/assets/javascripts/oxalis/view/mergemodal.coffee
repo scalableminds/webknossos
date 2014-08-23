@@ -3,7 +3,7 @@ underscore : _
 backbone.marionette : Marionette
 libs/toast : Toast
 app : app
-../model/skeletontracing/user_annotation_model : UserAnnotationModel
+../model/skeletontracing/user_annotation_collection : UserAnnotationCollection
 admin/views/selection_view : SelectionView
 admin/models/user/user_collection : UserCollection
 admin/models/team/team_collection : TeamCollection
@@ -95,19 +95,19 @@ class MergeModalView extends Backbone.Marionette.LayoutView
     "explorativs" : ".explorativs"
 
   events :
-    "click #task-merge"        : "mergeTask"
-    "click #task-type-merge"   : "mergeTaskType"
-    "click #project-merge"     : "mergeProject"
-    "click #nml-merge"         : "mergeNml"
+    "click #task-merge"               : "mergeTask"
+    "click #task-type-merge"          : "mergeTaskType"
+    "click #project-merge"            : "mergeProject"
+    "click #nml-merge"                : "mergeNml"
     "change input[type=file]"         : "selectFiles"
     "submit @ui.uploadAndExploreForm" : "uploadFiles"
-    "click #explorativs-merge" : "mergeExplorativs"
+    "click #explorativs-merge"        : "mergeExplorativs"
 
   ui :
-    "task"        : ".task"
-    "tasktype"    : ".task-type"
-    "project"     : ".project"
-    "explorativs" : ".explorativs"
+    "task"                 : ".task"
+    "tasktype"             : ".task-type"
+    "project"              : ".project"
+    "explorativs"          : ".explorativs"
     "uploadAndExploreForm" : "#upload-and-explore-form"
     "formSpinnerIcon"      : "#form-spinner-icon"
     "formUploadIcon"       : "#form-upload-icon"
@@ -139,17 +139,16 @@ class MergeModalView extends Backbone.Marionette.LayoutView
         childViewOptions :
           modelValue: -> return "#{@model.get("name")}"
       )
-      # @explorativSelectionView = new SelectionView(
-      #   collection : new UserAnnotationModel(id : user.id)
-      #   # data : "amIAnAdmin=true"
-      #   childViewOptions :
-      #     modelValue: -> return "#{@model.get("name")}"
-      # )
+      @explorativSelectionView = new SelectionView(
+        collection : new UserAnnotationCollection(id : user.id)
+        childViewOptions :
+          modelValue: -> return "#{@model.get("id")}"
+      )
 
-      @task.show(@taskSelectionView)
-      @tasktype.show(@taskTypeSelectionView)
-      @project.show(@projectSelectionView)
-      # @explorativs.show(@explorativSelectionView)
+      @task       .show(@taskSelectionView)
+      @tasktype   .show(@taskTypeSelectionView)
+      @project    .show(@projectSelectionView)
+      @explorativs.show(@explorativSelectionView)
     )
 
   mergeTask : ->
@@ -169,11 +168,15 @@ class MergeModalView extends Backbone.Marionette.LayoutView
 
   mergeNml : ->
     if(nml == "")
-      Toast.message("Please upload NML file")
+      Toast.error("Please upload NML file")
     else
       url = "/annotations/#{nml.typ}/#{nml.id}/merge/#{@_model.tracingType}/#{@_model.tracingId}"
-      console.log url
       @merge(url)
+
+  mergeExplorativs : ->
+    explorativId = @ui.project.find("select :selected").val()
+    url = "/annotations/Explorational/#{explorativId}/merge/#{@_model.tracingType}/#{@_model.tracingId}"
+    @merge(url)
 
   destroyModal : ->
 
@@ -191,7 +194,7 @@ class MergeModalView extends Backbone.Marionette.LayoutView
       app.router.loadURL(url)
       Toast.message(annotation.messages)
     ).fail( (xhr) ->
-      Toast.message("Error. Please try again.")
+      Toast.error("Error. Please try again.")
     ).always( ->
       toggleIcon()
     )

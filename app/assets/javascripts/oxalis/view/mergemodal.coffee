@@ -191,7 +191,7 @@ class MergeModalView extends Backbone.Marionette.LayoutView
       app.router.loadURL(url)
       Toast.message(annotation.messages)
     ).fail( (xhr) ->
-      Toast.message(xhr.responseJSON.messages)
+      Toast.message("Error. Please try again.")
     ).always( ->
       toggleIcon()
     )
@@ -207,7 +207,6 @@ class MergeModalView extends Backbone.Marionette.LayoutView
     event.preventDefault()
 
     toggleIcon = =>
-
       [@ui.formSpinnerIcon, @ui.formUploadIcon].forEach((ea) -> ea.toggleClass("hide"))
 
 

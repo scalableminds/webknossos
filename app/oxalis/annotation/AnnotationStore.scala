@@ -66,10 +66,6 @@ class AnnotationStore extends Actor {
     case MergeAnnotation(id, mergedId, user, ctx) =>
       val s = sender
 
-      implicit val timeout = Timeout(5 seconds)
-      val future = cachedAnnotations.future
-      val r = Await.result(future, timeout.duration)
-
       val result = (id: AnnotationIdentifier) => cachedAnnotations().get(id).filterNot(isExpired(maxCacheTime)).map(_.result)
 
       if(result(id).isEmpty) {
@@ -77,6 +73,10 @@ class AnnotationStore extends Actor {
       }
 
       mergeAnnotation(id, mergedId, user)(ctx)
+
+      implicit val timeout = Timeout(5 seconds)
+      val future = cachedAnnotations.future
+      val r = Await.result(future, timeout.duration)
 
       r(id).result.futureBox.map { result => Logger.debug("result: " + result); s ! result}.recover { case e =>
         Logger.error("AnnotationStore ERROR: " + e)

@@ -174,7 +174,7 @@ class MergeModalView extends Backbone.Marionette.LayoutView
       @merge(url)
 
   mergeExplorativs : ->
-    explorativId = @ui.project.find("select :selected").val()
+    explorativId = @ui.project.find("select :selected").prop("id")
     url = "/annotations/Explorational/#{explorativId}/merge/#{@_model.tracingType}/#{@_model.tracingId}"
     @merge(url)
 

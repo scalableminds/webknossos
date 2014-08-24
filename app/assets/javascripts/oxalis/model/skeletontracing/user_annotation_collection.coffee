@@ -1,7 +1,6 @@
 ### define
 underscore : _
 backbone : Backbone
-./user_annotation_model : UserAnnotationModel
 admin/models/pagination_collection : PaginationCollection
 ###
 

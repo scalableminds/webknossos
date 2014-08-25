@@ -75,9 +75,9 @@ class MergeModalView extends Backbone.Marionette.LayoutView
             </div>
           </div>
           <div class="form-group">
-            <label for="explorativs">Explorativs</label>
+            <label for="explorative">Explorativs</label>
             <div class="row">
-              <div class="col-md-10 explorativs"></div>
+              <div class="col-md-10 explorative"></div>
               <div class="col-md-2">
                 <button class="btn btn-primary" id="explorative-merge">Merge</button>
               </div>
@@ -92,7 +92,7 @@ class MergeModalView extends Backbone.Marionette.LayoutView
     "task"        : ".task"
     "tasktype"    : ".task-type"
     "project"     : ".project"
-    "explorativs" : ".explorativs"
+    "explorative" : ".explorative"
 
   events :
     "click #task-merge"               : "mergeTask"
@@ -107,7 +107,7 @@ class MergeModalView extends Backbone.Marionette.LayoutView
     "task"                 : ".task"
     "tasktype"             : ".task-type"
     "project"              : ".project"
-    "explorativs"          : ".explorativs"
+    "explorative"          : ".explorative"
     "uploadAndExploreForm" : "#upload-and-explore-form"
     "formSpinnerIcon"      : "#form-spinner-icon"
     "formUploadIcon"       : "#form-upload-icon"
@@ -149,7 +149,7 @@ class MergeModalView extends Backbone.Marionette.LayoutView
       @task       .show(@taskSelectionView)
       @tasktype   .show(@taskTypeSelectionView)
       @project    .show(@projectSelectionView)
-      @explorativs.show(@explorativSelectionView)
+      @explorative.show(@explorativSelectionView)
     )
 
 
@@ -185,7 +185,7 @@ class MergeModalView extends Backbone.Marionette.LayoutView
 
   mergeExplorative : ->
 
-    explorativId = @ui.explorativs.find("select :selected").val()
+    explorativId = @ui.explorative.find("select :selected").val()
     url = "/annotations/Explorational/#{explorativId}/merge/#{@_model.tracingType}/#{@_model.tracingId}"
     @merge(url)
 

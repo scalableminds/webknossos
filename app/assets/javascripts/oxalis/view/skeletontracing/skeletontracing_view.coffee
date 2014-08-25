@@ -3,7 +3,7 @@ jquery : $
 libs/toast : Toast
 ../modal : modal
 ../../view : View
-../mergemodal : MergeModalView
+../merge_modal_view : MergeModalView
 ###
 
 class SkeletonTracingView extends View

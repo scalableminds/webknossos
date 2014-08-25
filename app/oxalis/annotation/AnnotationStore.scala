@@ -7,7 +7,7 @@ import scala.concurrent.{Await, Future}
 import scala.concurrent.duration._
 import net.liftweb.common.Box
 import play.api.Logger
-import models.annotation.AnnotationLike
+import models.annotation.{AnnotationType, AnnotationLike}
 import oxalis.annotation.handler.AnnotationInformationHandler
 import com.scalableminds.util.reactivemongo.DBAccessContext
 import com.scalableminds.util.tools.Fox
@@ -33,8 +33,7 @@ class AnnotationStore extends Actor {
 
   val maxCacheTime = 5 minutes
 
-  type AnnotationID = String
-  val cachedAnnotations = Agent[Map[AnnotationID, StoredResult]](Map())
+  val cachedAnnotations = Agent[Map[AnnotationIdentifier, StoredResult]](Map())
 
   def removeExpired() {
     cachedAnnotations.send {
@@ -49,10 +48,10 @@ class AnnotationStore extends Actor {
 
   def receive = {
     case RequestAnnotation(id, user, ctx) =>
-
       val s = sender
+
       cachedAnnotations()
-        .get(id.identifier)
+        .get(id)
         .filterNot(isExpired(maxCacheTime))
         .map(_.result)
         .getOrElse(requestAnnotation(id, user)(ctx))
@@ -68,13 +67,7 @@ class AnnotationStore extends Actor {
     case MergeAnnotation(id, mergedId, user, ctx) =>
       val s = sender
 
-      val mID = id.identifier + mergedId.identifier
-
-      cachedAnnotations()
-        .get(mID)
-        .filterNot(isExpired(maxCacheTime))
-        .map(_.result)
-        .getOrElse(mergeAnnotation(id, mergedId, user)(ctx))
+      mergeAnnotation(id, mergedId, user)(ctx)
         .futureBox
         .map {
         result =>
@@ -92,12 +85,13 @@ class AnnotationStore extends Actor {
 
   def requestAnnotation(id: AnnotationIdentifier, user: Option[User])(implicit ctx: DBAccessContext) = {
     try {
+
       val handler = AnnotationInformationHandler.informationHandlers(id.annotationType)
       val f: Fox[AnnotationLike] =
         handler.provideAnnotation(id.identifier, user)
       if (handler.cache) {
         val stored = StoredResult(f)
-        cachedAnnotations.send(_ + (id.identifier -> stored))
+        cachedAnnotations.send(_ + (id -> stored))
       }
       f
     } catch {
@@ -110,28 +104,37 @@ class AnnotationStore extends Actor {
   def mergeAnnotation(id: AnnotationIdentifier, mergedId: AnnotationIdentifier, user: Option[User])(implicit ctx: DBAccessContext) = {
     try {
 
-      Logger.debug("merge")
-
-//    ID section
+      // Finding of annotations
       val handlerID = AnnotationInformationHandler.informationHandlers(id.annotationType)
-      println(handlerID)
       val annotationID: Fox[AnnotationLike] = handlerID.provideAnnotation(id.identifier, user)
 
-//    MergeID section
-      val handlerMergedID = AnnotationInformationHandler.informationHandlers(mergedId.annotationType)
-      val annotationMergedID: Fox[AnnotationLike] = handlerMergedID.provideAnnotation(mergedId.identifier, user)
+      // Merged can be already cached
+      val annotationMergedID = cachedAnnotations()
+        .get(mergedId)
+        .filterNot(isExpired(maxCacheTime))
+        .map(_.result)
+        .getOrElse {
+          val handlerMergedID = AnnotationInformationHandler.informationHandlers(mergedId.annotationType)
+          val annotationMergedID: Fox[AnnotationLike] = handlerMergedID.provideAnnotation(mergedId.identifier, user)
+          annotationMergedID
+        }
 
-      val newAnnotation = for {
+      // Merging
+      val newAnnotation: Fox[AnnotationLike] = for {
         annotation <- annotationID
         annotationMerged <- annotationMergedID
       } yield {
         AnnotationLike.merge(annotation, annotationMerged)
       }
 
-      if(handlerMergedID.cache) {
+      // Caching of merged annotation
+      for {
+        id <- newAnnotation.map(_.id).getOrElse("WrongID")
+        typ <- newAnnotation.map(_.typ).getOrElse(AnnotationType.Explorational)
+      } yield {
         val storedMerge = StoredResult(newAnnotation)
-        val mID = id.identifier + mergedId.identifier
-        cachedAnnotations.send(_ + (mID -> storedMerge))
+        val annotation = AnnotationIdentifier(typ, id)
+        cachedAnnotations.send(_ + (annotation -> storedMerge))
       }
 
       newAnnotation

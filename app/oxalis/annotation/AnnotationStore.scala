@@ -33,7 +33,8 @@ class AnnotationStore extends Actor {
 
   val maxCacheTime = 5 minutes
 
-  val cachedAnnotations = Agent[Map[AnnotationIdentifier, StoredResult]](Map())
+  type AnnotationID = String
+  val cachedAnnotations = Agent[Map[AnnotationID, StoredResult]](Map())
 
   def removeExpired() {
     cachedAnnotations.send {
@@ -48,9 +49,10 @@ class AnnotationStore extends Actor {
 
   def receive = {
     case RequestAnnotation(id, user, ctx) =>
+
       val s = sender
       cachedAnnotations()
-        .get(id)
+        .get(id.identifier)
         .filterNot(isExpired(maxCacheTime))
         .map(_.result)
         .getOrElse(requestAnnotation(id, user)(ctx))
@@ -66,21 +68,22 @@ class AnnotationStore extends Actor {
     case MergeAnnotation(id, mergedId, user, ctx) =>
       val s = sender
 
-      val result = (id: AnnotationIdentifier) => cachedAnnotations().get(id).filterNot(isExpired(maxCacheTime)).map(_.result)
+      val mID = id.identifier + mergedId.identifier
 
-      if(result(id).isEmpty) {
-        requestAnnotation(id, user)(ctx)
-      }
-
-      mergeAnnotation(id, mergedId, user)(ctx)
-
-      implicit val timeout = Timeout(5 seconds)
-      val future = cachedAnnotations.future
-      val r = Await.result(future, timeout.duration)
-
-      r(id).result.futureBox.map { result => Logger.debug("result: " + result); s ! result}.recover { case e =>
-        Logger.error("AnnotationStore ERROR: " + e)
-        e.printStackTrace()
+      cachedAnnotations()
+        .get(mID)
+        .filterNot(isExpired(maxCacheTime))
+        .map(_.result)
+        .getOrElse(mergeAnnotation(id, mergedId, user)(ctx))
+        .futureBox
+        .map {
+        result =>
+          Logger.debug("Result " +  result)
+          s ! result
+      }.recover {
+        case e =>
+          Logger.error("AnnotationStore ERROR: " + e)
+          e.printStackTrace()
       }
   }
 
@@ -94,7 +97,7 @@ class AnnotationStore extends Actor {
         handler.provideAnnotation(id.identifier, user)
       if (handler.cache) {
         val stored = StoredResult(f)
-        cachedAnnotations.send(_ + (id -> stored))
+        cachedAnnotations.send(_ + (id.identifier -> stored))
       }
       f
     } catch {
@@ -106,11 +109,32 @@ class AnnotationStore extends Actor {
 
   def mergeAnnotation(id: AnnotationIdentifier, mergedId: AnnotationIdentifier, user: Option[User])(implicit ctx: DBAccessContext) = {
     try {
-      val handler = AnnotationInformationHandler.informationHandlers(mergedId.annotationType)
-      val merged: Fox[AnnotationLike] = handler.provideAnnotation(mergedId.identifier, user)
-      val storedMerge = StoredResult(merged)
 
-      cachedAnnotations.send(_ + (id -> storedMerge))
+      Logger.debug("merge")
+
+//    ID section
+      val handlerID = AnnotationInformationHandler.informationHandlers(id.annotationType)
+      println(handlerID)
+      val annotationID: Fox[AnnotationLike] = handlerID.provideAnnotation(id.identifier, user)
+
+//    MergeID section
+      val handlerMergedID = AnnotationInformationHandler.informationHandlers(mergedId.annotationType)
+      val annotationMergedID: Fox[AnnotationLike] = handlerMergedID.provideAnnotation(mergedId.identifier, user)
+
+      val newAnnotation = for {
+        annotation <- annotationID
+        annotationMerged <- annotationMergedID
+      } yield {
+        AnnotationLike.merge(annotation, annotationMerged)
+      }
+
+      if(handlerMergedID.cache) {
+        val storedMerge = StoredResult(newAnnotation)
+        val mID = id.identifier + mergedId.identifier
+        cachedAnnotations.send(_ + (mID -> storedMerge))
+      }
+
+      newAnnotation
     } catch {
       case e: Exception =>
         Logger.error("Request Annotaton in AnnotationStore failed: " + e)

@@ -1,5 +1,6 @@
 package models.annotation
 
+import models.annotation
 import models.user.User
 import models.task.Task
 import models.annotation.AnnotationType._
@@ -59,6 +60,7 @@ trait AnnotationLike extends AnnotationStatistics {
   def actions(user: Option[User]): ResourceActionCollection
 
   def created : Long
+
 }
 
 object AnnotationLike extends FoxImplicits with FilterableJson{
@@ -94,4 +96,17 @@ object AnnotationLike extends FoxImplicits with FilterableJson{
     )
   }
 
+  def merge(annotation: AnnotationLike, annotationMerged: AnnotationLike) = {
+    val id = annotation.id + annotationMerged.id
+    val a = TemporaryAnnotation(id,
+                                annotationMerged.team,
+                                () => annotationMerged.content,
+                                annotationMerged.typ,
+                                annotationMerged.restrictions,
+                                annotationMerged.state,
+                                annotationMerged._name,
+                                annotationMerged.version
+    )
+    a
+  }
 }

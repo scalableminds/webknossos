@@ -245,7 +245,7 @@ class MergeModalView extends Backbone.Marionette.LayoutView
       Toast.message(data.messages)
     ).fail( (xhr) ->
       Toast.message(xhr.responseJSON.messages)
-    ).always( ->
+    ).always( =>
       @toggleIcon()
     )
 

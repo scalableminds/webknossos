@@ -60,13 +60,18 @@ class MergeModalView extends Backbone.Marionette.LayoutView
                     enctype="multipart/form-data"
                     id="upload-and-explore-form"
                     class="form-inline inline-block">
-                  <span class="btn-file btn btn-default">
-                    <input type="file" name="nmlFile" accept=".nml">
-                      <i class="fa fa-upload" id="form-upload-icon"></i>
-                      <i class="fa fa-spinner fa-spin hide" id="form-spinner-icon"></i>
-                      Upload NML
-                    </input>
-                  </span>
+                    <div class="input-group">
+                      <span class="input-group-btn">
+                        <span class="btn btn-primary btn-file">
+                          <input type="file" name="nmlFile" accept=".nml">
+                          <i class="fa fa-upload" id="form-upload-icon"></i>
+                          <i class="fa fa-spinner fa-spin hide" id="form-spinner-icon"></i>
+                          Upload NML
+                        </input>
+                        </span>
+                      </span>
+                      <input type="text" class="file-info form-control" readonly="">
+                    </div>
                 </form>
               </div>
               <div class="col-md-2">
@@ -111,11 +116,11 @@ class MergeModalView extends Backbone.Marionette.LayoutView
     "uploadAndExploreForm" : "#upload-and-explore-form"
     "formSpinnerIcon"      : "#form-spinner-icon"
     "formUploadIcon"       : "#form-upload-icon"
-
+    "fileInfo"             : ".file-info"
 
   initialize : (options) ->
-
     @_model = options._model
+    debugger
     @nml = ""
 
 
@@ -219,6 +224,7 @@ class MergeModalView extends Backbone.Marionette.LayoutView
 
     if event.target.files.length
       @ui.uploadAndExploreForm.submit()
+      @ui.fileInfo.val(event.target.files[0].name)
 
 
   toggleIcon : ->

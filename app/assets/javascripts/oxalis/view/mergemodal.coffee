@@ -210,8 +210,8 @@ class MergeModalView extends Backbone.Marionette.LayoutView
       Toast.message(annotation.messages)
     ).fail( (xhr) ->
       Toast.error("Error. Please try again.")
-    ).always( ->
-      toggleIcon()
+    ).always( =>
+      @toggleIcon()
     )
 
 
@@ -221,15 +221,16 @@ class MergeModalView extends Backbone.Marionette.LayoutView
       @ui.uploadAndExploreForm.submit()
 
 
+  toggleIcon : ->
+
+    [@ui.formSpinnerIcon, @ui.formUploadIcon].forEach((ea) -> ea.toggleClass("hide"))
+
+
   uploadFiles : (event) ->
 
     event.preventDefault()
 
-    toggleIcon = =>
-      [@ui.formSpinnerIcon, @ui.formUploadIcon].forEach((ea) -> ea.toggleClass("hide"))
-
-
-    toggleIcon()
+    @toggleIcon()
 
     form = @ui.uploadAndExploreForm
 
@@ -245,6 +246,6 @@ class MergeModalView extends Backbone.Marionette.LayoutView
     ).fail( (xhr) ->
       Toast.message(xhr.responseJSON.messages)
     ).always( ->
-      toggleIcon()
+      @toggleIcon()
     )
 

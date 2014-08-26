@@ -103,8 +103,7 @@ class AnnotationStore extends Actor {
 
     def mergeAnnotation(annotationLike: Fox[AnnotationLike], annotationMergeLike: Fox[AnnotationLike], user: Option[User]) = {
       try {
-
-        val mergedAnnotation = for {
+        for {
           annotation <- annotationLike
           annotationMerge <- annotationMergeLike
         } yield {
@@ -117,8 +116,6 @@ class AnnotationStore extends Actor {
 
           mergedAnnotation
         }
-
-        mergedAnnotation
       } catch {
         case e: Exception =>
           Logger.error("Request Annotaton in AnnotationStore failed: " + e)

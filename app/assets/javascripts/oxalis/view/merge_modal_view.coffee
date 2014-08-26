@@ -120,8 +120,7 @@ class MergeModalView extends Backbone.Marionette.LayoutView
 
   initialize : (options) ->
     @_model = options._model
-    debugger
-    @nml = ""
+    @nml = undefined
 
 
   show : ->
@@ -181,11 +180,11 @@ class MergeModalView extends Backbone.Marionette.LayoutView
 
   mergeNml : ->
 
-    if(@nml == "")
-      Toast.error("Please upload NML file")
-    else
+    if @nml
       url = "/annotations/#{@nml.typ}/#{@nml.id}/merge/#{@_model.tracingType}/#{@_model.tracingId}"
       @merge(url)
+    else
+      Toast.error("Please upload NML file")
 
 
   mergeExplorative : ->

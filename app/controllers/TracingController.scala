@@ -50,7 +50,11 @@ trait TracingInformationProvider extends play.api.http.Status with FoxImplicits 
 
   def mergeAnnotation(annotationId: AnnotationIdentifier, mergedAnnotationId: AnnotationIdentifier)(implicit request: UserAwareRequest[_]): Fox[AnnotationLike] = {
     implicit val timeout = Timeout(5 seconds)
-    val f = Application.annotationStore ? MergeAnnotation(annotationId, mergedAnnotationId, request.userOpt, authedRequestToDBAccess)
+
+    val annotationIdLike = Application.annotationStore ? RequestAnnotation(annotationId, request.userOpt, authedRequestToDBAccess)
+    val annotationMergeLike = Application.annotationStore ? RequestAnnotation(mergedAnnotationId, request.userOpt, authedRequestToDBAccess)
+
+    val f = Application.annotationStore ? MergeAnnotation(annotationIdLike.mapTo[Box[AnnotationLike]], annotationMergeLike.mapTo[Box[AnnotationLike]], request.userOpt, authedRequestToDBAccess)
 
     f.mapTo[Box[AnnotationLike]]
   }

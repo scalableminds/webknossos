@@ -21,7 +21,7 @@ object AnnotationIdentifier{
 }
 
 case class RequestAnnotation(id: AnnotationIdentifier, user: Option[User], implicit val ctx: DBAccessContext)
-case class MergeAnnotation(id: AnnotationIdentifier, mergedId: AnnotationIdentifier, user: Option[User], implicit val ctx: DBAccessContext)
+case class MergeAnnotation(annotationLike: Fox[AnnotationLike], annotationMergeLike: Fox[AnnotationLike], user: Option[User], implicit val ctx: DBAccessContext)
 case class StoredResult(result: Fox[AnnotationLike], timestamp: Long = System.currentTimeMillis)
 
 class AnnotationStore extends Actor {
@@ -64,10 +64,10 @@ class AnnotationStore extends Actor {
           Logger.error("AnnotationStore ERROR: " + e)
           e.printStackTrace()
       }
-    case MergeAnnotation(id, mergedId, user, ctx) =>
+    case MergeAnnotation(annotationLike, annotationMergeLike, user, ctx) =>
       val s = sender
 
-      mergeAnnotation(id, mergedId, user)(ctx)
+      mergeAnnotation(annotationLike, annotationMergeLike, user)
         .futureBox
         .map {
         result =>
@@ -101,47 +101,28 @@ class AnnotationStore extends Actor {
     }
   }
 
-  def mergeAnnotation(id: AnnotationIdentifier, mergedId: AnnotationIdentifier, user: Option[User])(implicit ctx: DBAccessContext) = {
-    try {
+    def mergeAnnotation(annotationLike: Fox[AnnotationLike], annotationMergeLike: Fox[AnnotationLike], user: Option[User]) = {
+      try {
 
-      // Finding of annotations
-      val handlerID = AnnotationInformationHandler.informationHandlers(id.annotationType)
-      val annotationID: Fox[AnnotationLike] = handlerID.provideAnnotation(id.identifier, user)
+        val mergedAnnotation = for {
+          annotation <- annotationLike
+          annotationMerge <- annotationMergeLike
+        } yield {
+          val mergedAnnotation =  AnnotationLike.merge(annotation, annotationMerge)
 
-      // Merged can be already cached
-      val annotationMergedID = cachedAnnotations()
-        .get(mergedId)
-        .filterNot(isExpired(maxCacheTime))
-        .map(_.result)
-        .getOrElse {
-          val handlerMergedID = AnnotationInformationHandler.informationHandlers(mergedId.annotationType)
-          val annotationMergedID: Fox[AnnotationLike] = handlerMergedID.provideAnnotation(mergedId.identifier, user)
-          annotationMergedID
+          // Caching of merged annotation
+          val storedMerge = StoredResult(Option(mergedAnnotation))
+          val mID = AnnotationIdentifier(mergedAnnotation.typ, mergedAnnotation.id)
+          cachedAnnotations.send(_ + (mID -> storedMerge))
+
+          mergedAnnotation
         }
 
-      // Merging
-      val newAnnotation: Fox[AnnotationLike] = for {
-        annotation <- annotationID
-        annotationMerged <- annotationMergedID
-      } yield {
-        AnnotationLike.merge(annotation, annotationMerged)
+        mergedAnnotation
+      } catch {
+        case e: Exception =>
+          Logger.error("Request Annotaton in AnnotationStore failed: " + e)
+          throw e
       }
-
-      // Caching of merged annotation
-      for {
-        id <- newAnnotation.map(_.id).getOrElse("WrongID")
-        typ <- newAnnotation.map(_.typ).getOrElse(AnnotationType.Explorational)
-      } yield {
-        val storedMerge = StoredResult(newAnnotation)
-        val annotation = AnnotationIdentifier(typ, id)
-        cachedAnnotations.send(_ + (annotation -> storedMerge))
-      }
-
-      newAnnotation
-    } catch {
-      case e: Exception =>
-        Logger.error("Request Annotaton in AnnotationStore failed: " + e)
-        throw e
-    }
   }
 }

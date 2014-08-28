@@ -10,21 +10,29 @@ import com.scalableminds.util.tools.DefaultConverters._
 import net.liftweb.common.Full
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
+import scala.collection.breakOut
 
 trait SegmentationMappingHelpers {
 
   lazy val dataStore = new FileDataStore()
 
-  def normalizeId(mapping: Array[Int], ids: Set[Int] = Set())(id: Int): Int = {
-    if (id >= mapping.size || mapping(id) == 0 || mapping(id) == id)
-      if (ids.isEmpty) 0 else id
-    else if (ids.contains(id))
-      ids.min
-    else normalizeId(mapping, ids + id)(mapping(id))
+  def normalizeId(mapping: Map[Int, Int], ids: Set[Int] = Set())(Id: Int): Int = {
+    mapping.get(Id) match {
+      case Some(0) | Some(Id) | None =>
+        if (ids.isEmpty) 0 else Id
+      case Some(x) =>
+        if (ids.contains(Id))
+          ids.min
+        else 
+          normalizeId(mapping, ids + Id)(x)
+    }
   }
 
-  def normalize(mapping: Array[Int]) = {
-    (0 until mapping.length).map(normalizeId(mapping)).toArray
+  def normalize(mapping: Map[Int, Int]): Array[Int] = {
+    mapping.map{
+      case (k,v) => 
+        normalizeId(mapping)(v)
+    }(breakOut)
   }
 
   def handleMappingRequest(request: MappingRequest) = {
@@ -34,7 +42,7 @@ trait SegmentationMappingHelpers {
             normalize(
               ByteArrayToIntArrayConverter.convert(
                 data,
-                request.dataLayer.bytesPerElement)),
+                request.dataLayer.bytesPerElement).zipWithIndex.toMap),
             request.dataLayer.bytesPerElement)
       case _ =>
         Array[Byte]()

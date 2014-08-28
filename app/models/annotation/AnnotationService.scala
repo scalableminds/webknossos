@@ -23,7 +23,8 @@ import com.scalableminds.util.mvc.BoxImplicits
  */
 
 object AnnotationService extends AnnotationContentProviders with BoxImplicits with FoxImplicits{
-  def createExplorationalFor(user: User, dataSet: DataSet, contentType: String)(implicit ctx: DBAccessContext) =
+
+  def createExplorationalFor(user: User, dataSet: DataSet, contentType: String, id: String = "")(implicit ctx: DBAccessContext) =
     withProviderForContentType(contentType) { provider =>
       for {
         content <- provider.createFrom(dataSet).toFox
@@ -33,11 +34,13 @@ object AnnotationService extends AnnotationContentProviders with BoxImplicits wi
           contentReference,
           team = user.teams.head.team, // TODO: refactor
           typ = AnnotationType.Explorational,
-          state = AnnotationState.InProgress
+          state = AnnotationState.InProgress,
+          _id = if(!id.isEmpty) BSONObjectID(id) else BSONObjectID.generate
         )
         _ <- AnnotationDAO.insert(annotation)
       } yield annotation
     }
+
 
   def baseFor(task: Task)(implicit ctx: DBAccessContext) =
     AnnotationDAO.findByTaskIdAndType(task._id, AnnotationType.TracingBase).one[Annotation].toFox

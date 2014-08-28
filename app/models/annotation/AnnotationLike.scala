@@ -97,9 +97,11 @@ object AnnotationLike extends FoxImplicits with FilterableJson{
   }
 
   def merge(annotation: AnnotationLike, annotationMerged: AnnotationLike) = {
-    val merged = TemporaryAnnotation(BSONObjectID.generate.stringify,
+    val id = BSONObjectID.generate.stringify
+    val content = () => annotationMerged.content
+    val merged = TemporaryAnnotation(id,
                                     annotationMerged.team,
-                                    () => annotationMerged.content,
+                                    content,
                                     annotationMerged.typ,
                                     annotationMerged.restrictions,
                                     annotationMerged.state,

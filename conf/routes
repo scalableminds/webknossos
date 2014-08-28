@@ -92,6 +92,7 @@ GET           /annotations/:typ/:id/info                                      co
 GET           /annotations/:typ/:id/download                                  controllers.AnnotationController.download(typ: String, id: String)
 DELETE        /annotations/:typ/:id                                           controllers.AnnotationController.cancel(typ: String, id: String)
 GET           /annotations/:typ/:id/merge/:mergedTyp/:mergedId                controllers.AnnotationController.merge(typ: String, id: String, mergedTyp: String, mergedId: String)
+GET           /annotations/:typ/:id/saveMerged                                controllers.AnnotationController.saveMerged(typ: String, id: String)
 
 #Admin pages
 GET           /admin/nml/upload                                               controllers.admin.NMLIO.uploadForm

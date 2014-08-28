@@ -68,11 +68,22 @@ object AnnotationController extends Controller with Secured with TracingInformat
     }
   }
 
-  def trace(typ: String, id: String) = Authenticated.async {
-    implicit request =>
-      withAnnotation(AnnotationIdentifier(typ, id)) {
-        annotation =>
-          for{
+  def saveMerged(typ: String, id: String) = Authenticated.async { implicit request =>
+      withAnnotation(AnnotationIdentifier(typ, id)) { annotation =>
+        for {
+          dataSetName     <- annotation.dataSetName ?~> Messages("dataSet.notSupplied")
+          dataSet         <- DataSetDAO.findOneBySourceName(dataSetName) ?~> Messages("dataSet.notFound")
+          content         <- annotation.content ?~> Messages("annotation.contentType.notSupplied")
+          savedAnnotation <- AnnotationService.createExplorationalFor(request.user, dataSet, content.contentType, annotation.id) ?~> Messages("annotation.create.failed")
+        } yield {
+          Redirect(routes.AnnotationController.trace(savedAnnotation.typ, savedAnnotation.id))
+        }
+      }
+  }
+
+  def trace(typ: String, id: String) = Authenticated.async { implicit request =>
+      withAnnotation(AnnotationIdentifier(typ, id)) { annotation =>
+          for {
             _ <- annotation.restrictions.allowAccess(request.user).failIfFalse(Messages("notAllowed")).toFox ~> 400
           } yield Ok(htmlForAnnotation(annotation))
       }

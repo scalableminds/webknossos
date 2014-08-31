@@ -50,7 +50,7 @@ object DefaultConverters{
 
   implicit object ByteArrayToIntArrayConverter extends ArrayConverter[Array[Byte], Array[Int]]{
     def convert(a: Array[Byte], bytesPerElement: Int) = {
-      a.grouped(bytesPerElement).map(_.foldRight[Int](0)((a, b) => (b << 8) + a)).toArray
+      a.sliding(bytesPerElement).map(_.foldRight[Int](0)((a, b) => (b << 8) + a)).toArray
     }
   }
 }

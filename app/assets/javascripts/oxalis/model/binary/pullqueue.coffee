@@ -34,6 +34,7 @@ class PullQueue
         .then(
           (responseBuffer) =>
             @cube.mapping = responseBuffer
+            console.log("Loaded mapping:", @cube)
         )
 
   swap : (a, b) ->

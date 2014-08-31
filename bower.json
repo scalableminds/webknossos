@@ -1,6 +1,6 @@
 {
   "name": "oxalis",
-  "version": "0.17.9",
+  "version": "0.17.12",
   "dependencies": {
     "bootstrap": "~3.1.1",
     "jquery": "~2.0.3",

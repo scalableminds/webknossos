@@ -1,6 +1,7 @@
 ### define
 ./cube : Cube
 libs/array_buffer_socket : ArrayBufferSocket
+libs/request : Request
 ###
 
 class PullQueue
@@ -30,12 +31,13 @@ class PullQueue
     @totalLoadedBytes = 0
 
     if @layer.category == "segmentation"
-      @getMappingSocket().send()
-        .then(
-          (responseBuffer) =>
-            @cube.mapping = responseBuffer
-            console.log("Loaded mapping:", @cube)
-        )
+      Request.send(
+        url : "#{@layer.url}/data/datasets/#{@dataSetName}/layers/#{@layer.name}/mapping?token=#{@layer.token}"
+        dataType : 'arraybuffer'
+      ).then( (buffer) =>
+        if buffer
+          @cube.mapping = new (if @layer.bitDepth == 16 then Uint16Array else Uint32Array)(buffer)
+      )
 
   swap : (a, b) ->
 
@@ -199,16 +201,6 @@ class PullQueue
 
 
   set4Bit : (@fourBit) ->
-
-
-  getMappingSocket : ->
-
-    if @mappingSocket? then @mappingSocket else @mappingSocket = new ArrayBufferSocket(
-      senders : [
-        new ArrayBufferSocket.XmlHttpRequest("#{@layer.url}/data/datasets/#{@dataSetName}/layers/#{@layer.name}/mapping?token=#{@layer.token}")
-      ]
-      responseBufferType : if @layer.bitDepth == 16 then Uint16Array else Uint32Array
-    )
 
   getLoadSocket : ->
 

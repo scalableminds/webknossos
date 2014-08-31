@@ -15,27 +15,61 @@ trait SegmentationMappingHelpers {
 
   lazy val dataStore = new FileDataStore()
 
-  def normalizeId(mapping: Array[Int], ids: Set[Int] = Set())(id: Int): Int = {
-    if (id >= mapping.size || mapping(id) == 0 || mapping(id) == id)
-      if (ids.isEmpty) 0 else id
+  private def normalizeId(mapping: Map[Long, Long], ids: Set[Long] = Set())(id: Long): Long = {
+    if (!mapping.contains(id) || mapping(id) == id)
+      id
     else if (ids.contains(id))
       ids.min
     else normalizeId(mapping, ids + id)(mapping(id))
   }
 
-  def normalize(mapping: Array[Int]) = {
-    (0 until mapping.length).map(normalizeId(mapping)).toArray
+  private def normalize(mapping: Map[Long, Long]) = {
+    mapping.mapValues(normalizeId(mapping)).filter(x => x._1 != x._2)
+  }
+
+  private def byteArrayToMapping(data: Array[Byte], bytesPerElement: Int): Map[Long, Long] = {
+    var currentId: Long = 0
+    var mapping: Map[Long, Long] = Map[Long, Long]()
+    (data.length-1 to 0 by -1).map {
+      i =>
+        currentId += (data(i).toLong + 256) % 256
+        if (i % bytesPerElement == 0 && currentId != 0) {
+          mapping += (i.toLong / bytesPerElement -> currentId)
+          currentId = 0
+        } else {
+          currentId <<= 8
+        }
+    }
+    mapping
+  }
+
+  private def mappingToByteArray(mapping: Map[Long, Long], bytesPerElement: Int): Array[Byte] = {
+    val data = new Array[Byte]((mapping.keys.max.toInt + 1) * bytesPerElement)
+    mapping.map {
+      pair =>
+        var targetId = pair._2
+        val offset = pair._1.toInt * bytesPerElement
+        (offset until offset + bytesPerElement).map {
+          i =>
+            data(i) = targetId.byteValue
+            targetId >>= 8
+        }
+    }
+    data
   }
 
   def handleMappingRequest(request: MappingRequest) = {
     dataStore.load(request).map {
       case Full(data) =>
-        IntArrayToByteArrayConverter.convert(
-            normalize(
-              ByteArrayToIntArrayConverter.convert(
-                data,
-                request.dataLayer.bytesPerElement)),
-            request.dataLayer.bytesPerElement)
+        mappingToByteArray(
+          normalize(
+            byteArrayToMapping(
+              data,
+              request.dataLayer.bytesPerElement
+            )
+          ),
+          request.dataLayer.bytesPerElement
+        )
       case _ =>
         Array[Byte]()
     }

@@ -32,14 +32,15 @@ trait DataSourceService extends FoxImplicits{
     val name = userDataLayerName()
     val basePath = userDataLayerFolder(name).toAbsolute
     val sections = DataLayerSection("1", "1", List(1), baseDataSource.boundingBox, baseDataSource.boundingBox)
+    val fallbackLayer = baseDataSource.getByCategory(category)
     val dataLayer = DataLayer(
       name,
       category,
       basePath.path,
       None,
-      DataLayer.SEGMENTATION.defaultElementClass,
+      fallbackLayer.map(l => l.elementClass).getOrElse(DataLayer.SEGMENTATION.defaultElementClass),
       isWritable = true,
-      fallback = baseDataSource.getByCategory(category).map(l => FallbackLayer(baseDataSource.id, l.name)),
+      fallback = fallbackLayer.map(l => FallbackLayer(baseDataSource.id, l.name)),
       sections = List(sections),
       nextSegmentationId = baseDataSource.getByCategory(category).flatMap(_.nextSegmentationId))
 

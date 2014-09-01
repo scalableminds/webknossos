@@ -2,9 +2,10 @@ package models.annotation
 
 import models.user.User
 import com.scalableminds.util.reactivemongo.DBAccessContext
+import play.api.Logger
 import scala.concurrent.Future
 import com.scalableminds.util.tools.{FoxImplicits, Fox}
-import models.tracing.skeleton.{SkeletonTracingService}
+import models.tracing.skeleton.{CompoundAnnotation, SkeletonTracingService}
 import play.api.libs.concurrent.Execution.Implicits._
 import models.task.{Task, TaskService}
 import com.scalableminds.util.geometry.{Point3D, BoundingBox}
@@ -118,6 +119,15 @@ object AnnotationService extends AnnotationContentProviders with BoxImplicits wi
     AnnotationDAO.insert(annotation).map { _ =>
       annotation
     }
+  }
+
+  def merge(annotation: Annotation, annotationSec: Annotation)(implicit ctx: DBAccessContext): Option[TemporaryAnnotation] = {
+    val team = annotationSec.team
+    val annotations = List(annotation, annotationSec)
+    val id = BSONObjectID.generate.stringify
+    val typ = annotationSec.typ
+
+    CompoundAnnotation.createFromNotFinishedAnnotations(team, annotations, id, typ)
   }
 }
 

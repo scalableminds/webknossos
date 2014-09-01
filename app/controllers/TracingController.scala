@@ -9,7 +9,7 @@ import oxalis.annotation.{MergeAnnotation, RequestAnnotation, AnnotationIdentifi
 import akka.pattern.ask
 import play.api.libs.concurrent.Execution.Implicits._
 import akka.util.Timeout
-import models.annotation.AnnotationLike
+import models.annotation.{Annotation, AnnotationLike}
 import models.annotation.AnnotationType._
 import oxalis.annotation.handler.AnnotationInformationHandler
 import com.scalableminds.util.tools.{FoxImplicits, Fox}
@@ -51,12 +51,12 @@ trait TracingInformationProvider extends play.api.http.Status with FoxImplicits 
   def mergeAnnotation(annotationId: AnnotationIdentifier, mergedAnnotationId: AnnotationIdentifier)(implicit request: UserAwareRequest[_]): Fox[AnnotationLike] = {
     implicit val timeout = Timeout(5 seconds)
 
-    val annotationIdLike = Application.annotationStore ? RequestAnnotation(annotationId, request.userOpt, authedRequestToDBAccess)
-    val annotationMergeLike = Application.annotationStore ? RequestAnnotation(mergedAnnotationId, request.userOpt, authedRequestToDBAccess)
+    val annotation = Application.annotationStore ? RequestAnnotation(annotationId, request.userOpt, authedRequestToDBAccess)
+    val annotationSec = Application.annotationStore ? RequestAnnotation(mergedAnnotationId, request.userOpt, authedRequestToDBAccess)
 
-    val f = Application.annotationStore ? MergeAnnotation(annotationIdLike.mapTo[Box[AnnotationLike]], annotationMergeLike.mapTo[Box[AnnotationLike]], request.userOpt, authedRequestToDBAccess)
+    val f = Application.annotationStore ? MergeAnnotation(annotation.mapTo[Box[Annotation]], annotationSec.mapTo[Box[Annotation]], request.userOpt, authedRequestToDBAccess)
 
-    f.mapTo[Box[AnnotationLike]]
+    f.mapTo[Box[Annotation]]
   }
 
   def nameAnnotation(annotation: AnnotationLike)(implicit request: AuthenticatedRequest[_]) = {

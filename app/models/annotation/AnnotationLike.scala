@@ -12,7 +12,7 @@ import com.scalableminds.util.reactivemongo.DBAccessContext
 import com.scalableminds.util.tools.{FoxImplicits, Fox}
 import reactivemongo.bson.BSONObjectID
 import play.api.Logger
-import models.tracing.skeleton.AnnotationStatistics
+import models.tracing.skeleton.{CompoundAnnotation, AnnotationStatistics}
 import oxalis.view.{ResourceActionCollection, ResourceAction}
 import play.api.libs.json.Json.JsValueWrapper
 import oxalis.mvc.FilterableJson
@@ -94,20 +94,5 @@ object AnnotationLike extends FoxImplicits with FilterableJson{
       "contentType" +> a.content.map(_.contentType).getOrElse(""),
       "dataSetName" +> a.dataSetName
     )
-  }
-
-  def merge(annotation: AnnotationLike, annotationMerged: AnnotationLike) = {
-    val id = BSONObjectID.generate.stringify
-    val content = () => annotationMerged.content
-    val merged = TemporaryAnnotation(id,
-                                    annotationMerged.team,
-                                    content,
-                                    annotationMerged.typ,
-                                    annotationMerged.restrictions,
-                                    annotationMerged.state,
-                                    annotationMerged._name,
-                                    annotationMerged.version
-    )
-    merged
   }
 }

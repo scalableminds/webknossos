@@ -7,7 +7,7 @@ import scala.concurrent.{Await, Future}
 import scala.concurrent.duration._
 import net.liftweb.common.Box
 import play.api.Logger
-import models.annotation.{AnnotationType, AnnotationLike}
+import models.annotation.{Annotation, AnnotationService, AnnotationType, AnnotationLike}
 import oxalis.annotation.handler.AnnotationInformationHandler
 import com.scalableminds.util.reactivemongo.DBAccessContext
 import com.scalableminds.util.tools.Fox
@@ -21,7 +21,7 @@ object AnnotationIdentifier{
 }
 
 case class RequestAnnotation(id: AnnotationIdentifier, user: Option[User], implicit val ctx: DBAccessContext)
-case class MergeAnnotation(annotationLike: Fox[AnnotationLike], annotationMergeLike: Fox[AnnotationLike], user: Option[User], implicit val ctx: DBAccessContext)
+case class MergeAnnotation(annotation: Fox[Annotation], annotationSec: Fox[Annotation], user: Option[User], implicit val ctx: DBAccessContext)
 case class StoredResult(result: Fox[AnnotationLike], timestamp: Long = System.currentTimeMillis)
 
 class AnnotationStore extends Actor {
@@ -64,10 +64,10 @@ class AnnotationStore extends Actor {
           Logger.error("AnnotationStore ERROR: " + e)
           e.printStackTrace()
       }
-    case MergeAnnotation(annotationLike, annotationMergeLike, user, ctx) =>
+    case MergeAnnotation(annotation, annotationSec, user, ctx) =>
       val s = sender
 
-      mergeAnnotation(annotationLike, annotationMergeLike, user)
+      mergeAnnotation(annotation, annotationSec, user)(ctx)
         .futureBox
         .map {
         result =>
@@ -101,13 +101,13 @@ class AnnotationStore extends Actor {
     }
   }
 
-    def mergeAnnotation(annotationLike: Fox[AnnotationLike], annotationMergeLike: Fox[AnnotationLike], user: Option[User]) = {
+    def mergeAnnotation(annotation: Fox[Annotation], annotationSec: Fox[Annotation], user: Option[User])(implicit ctx: DBAccessContext) = {
       try {
         for {
-          annotation <- annotationLike
-          annotationMerge <- annotationMergeLike
+          ann <- annotation
+          annSec <- annotationSec
+          mergedAnnotation <- AnnotationService.merge(ann, annSec)
         } yield {
-          val mergedAnnotation =  AnnotationLike.merge(annotation, annotationMerge)
 
           // Caching of merged annotation
           val storedMerge = StoredResult(Option(mergedAnnotation))

@@ -213,7 +213,10 @@ class MergeModalView extends Backbone.Marionette.LayoutView
       app.router.loadURL(url)
       Toast.message(annotation.messages)
     ).fail( (xhr) ->
-      Toast.error("Error. Please try again.")
+      if xhr
+        Toast.error(xhr.responseJSON.messages[0].error)
+      else
+        Toast.error("Error. Please try again.")
     ).always( =>
       @toggleIcon()
     )

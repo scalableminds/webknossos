@@ -21,7 +21,7 @@ object AnnotationIdentifier{
 }
 
 case class RequestAnnotation(id: AnnotationIdentifier, user: Option[User], implicit val ctx: DBAccessContext)
-case class MergeAnnotation(annotation: Fox[Annotation], annotationSec: Fox[Annotation], user: Option[User], implicit val ctx: DBAccessContext)
+case class MergeAnnotation(annotation: Fox[AnnotationLike], annotationSec: Fox[AnnotationLike], user: Option[User], implicit val ctx: DBAccessContext)
 case class StoredResult(result: Fox[AnnotationLike], timestamp: Long = System.currentTimeMillis)
 
 class AnnotationStore extends Actor {
@@ -85,7 +85,7 @@ class AnnotationStore extends Actor {
 
   def requestAnnotation(id: AnnotationIdentifier, user: Option[User])(implicit ctx: DBAccessContext) = {
     try {
-
+      Logger.debug("requestAnnotation")
       val handler = AnnotationInformationHandler.informationHandlers(id.annotationType)
       val f: Fox[AnnotationLike] =
         handler.provideAnnotation(id.identifier, user)
@@ -101,20 +101,24 @@ class AnnotationStore extends Actor {
     }
   }
 
-    def mergeAnnotation(annotation: Fox[Annotation], annotationSec: Fox[Annotation], user: Option[User])(implicit ctx: DBAccessContext) = {
+    def mergeAnnotation(annotation: Fox[AnnotationLike], annotationSec: Fox[AnnotationLike], user: Option[User])(implicit ctx: DBAccessContext) = {
       try {
+        Logger.debug("mergeAnnotation")
         for {
           ann <- annotation
           annSec <- annotationSec
-          mergedAnnotation <- AnnotationService.merge(ann, annSec)
+          mergedAnnotation <- AnnotationService.merge(ann.asInstanceOf[Annotation], annSec.asInstanceOf[Annotation]) // TODO refactor
+          merged <- mergedAnnotation.asInstanceOf[AnnotationLike]
         } yield {
+          println("Ann: " + ann)
+          println("AnnSec: " + annSec)
 
           // Caching of merged annotation
-          val storedMerge = StoredResult(Option(mergedAnnotation))
-          val mID = AnnotationIdentifier(mergedAnnotation.typ, mergedAnnotation.id)
+          val storedMerge = StoredResult(Option(merged))
+          val mID = AnnotationIdentifier(merged.typ, merged.id)
           cachedAnnotations.send(_ + (mID -> storedMerge))
 
-          mergedAnnotation
+          merged
         }
       } catch {
         case e: Exception =>

@@ -54,9 +54,9 @@ trait TracingInformationProvider extends play.api.http.Status with FoxImplicits 
     val annotation = Application.annotationStore ? RequestAnnotation(annotationId, request.userOpt, authedRequestToDBAccess)
     val annotationSec = Application.annotationStore ? RequestAnnotation(mergedAnnotationId, request.userOpt, authedRequestToDBAccess)
 
-    val f = Application.annotationStore ? MergeAnnotation(annotation.mapTo[Box[Annotation]], annotationSec.mapTo[Box[Annotation]], request.userOpt, authedRequestToDBAccess)
+    val f = Application.annotationStore ? MergeAnnotation(annotation.mapTo[Box[AnnotationLike]], annotationSec.mapTo[Box[AnnotationLike]], request.userOpt, authedRequestToDBAccess)
 
-    f.mapTo[Box[Annotation]]
+    f.mapTo[Box[AnnotationLike]]
   }
 
   def nameAnnotation(annotation: AnnotationLike)(implicit request: AuthenticatedRequest[_]) = {

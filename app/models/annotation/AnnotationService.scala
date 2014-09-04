@@ -121,13 +121,35 @@ object AnnotationService extends AnnotationContentProviders with BoxImplicits wi
     }
   }
 
-  def merge(annotation: Annotation, annotationSec: Annotation)(implicit ctx: DBAccessContext): Option[TemporaryAnnotation] = {
-    val team = annotationSec.team
-    val annotations = List(annotation, annotationSec)
-    val id = BSONObjectID.generate.stringify
-    val typ = annotationSec.typ
+  def merge(annotation: AnnotationLike, annotationSec: AnnotationLike)(implicit ctx: DBAccessContext): Fox[Option[TemporaryAnnotation]] = {
 
-    CompoundAnnotation.createFromNotFinishedAnnotations(team, annotations, id, typ)
+    def createAnnotation(ann: AnnotationLike)(content: AnnotationContent): Annotation = {
+      val annotation = Annotation(
+        _user    = ann._user,
+        _content = ContentReference.createFor(content),
+        team     = ann.team,
+        _name    = ann._name,
+        typ      = ann.typ)
+
+      annotation
+    }
+
+    for {
+      content    <- annotation.content
+      contentSec <- annotationSec.content
+    } yield {
+
+      val ann     = createAnnotation(annotation)(content)
+      val annSec  = createAnnotation(annotationSec)(contentSec)
+
+      val team   = annotationSec.team
+      val id     = BSONObjectID.generate.stringify
+      val typ    = annotationSec.typ
+
+      CompoundAnnotation.createFromNotFinishedAnnotations(team, List(ann, annSec), id, typ)
+    }
+
+
   }
 }
 

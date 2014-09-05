@@ -90,7 +90,7 @@ class MergeModalView extends Backbone.Marionette.LayoutView
           </div>
         </div>
         <div class="modal-footer">
-          <h4>If you want product of merging to be read-only then left checkbox checked</h4>
+          <h4>If you want product of merging to be read-only then left checkbox selected</h4>
             <div class="checkbox pull-right">
               <input type="checkbox" id="checkbox-read-only" checked="checked"/>
             </div>
@@ -218,9 +218,15 @@ class MergeModalView extends Backbone.Marionette.LayoutView
     $.ajax(
       url: "#{url}/#{@readOnly}"
     ).done( (annotation) ->
-      redirectUrl = "/annotations/#{annotation.typ}/#{annotation.id}"
-      app.router.loadURL(redirectUrl)
+
       Toast.message(annotation.messages)
+
+      redirectUrl = if @readOnly
+        "/annotations/#{annotation.typ}/#{annotation.id}"
+      else
+        "/annotations/#{annotation.typ}/#{annotation.id}/saveMerged"
+      app.router.loadURL(redirectUrl)
+
     ).fail( (xhr) ->
       if xhr.responseJSON
         Toast.error(xhr.responseJSON.messages[0].error)

@@ -44,13 +44,10 @@ object AnnotationController extends Controller with Secured with TracingInformat
   def annotationJson(user: User, annotation: AnnotationLike)(implicit ctx: DBAccessContext): Fox[JsObject] =
     AnnotationLike.annotationLikeInfoWrites(annotation, Some(user), Nil)
 
-  def info(typ: String, id: String) = UserAwareAction.async {
-    implicit request =>
+  def info(typ: String, id: String) = UserAwareAction.async { implicit request =>
       val annotationId = AnnotationIdentifier(typ, id)
-      respondWithTracingInformation(annotationId).map {
-        js =>
-          request.userOpt.map {
-            user =>
+      respondWithTracingInformation(annotationId).map { js =>
+          request.userOpt.map { user =>
               UsedAnnotationDAO.use(user, annotationId)
           }
           Ok(js)
@@ -71,11 +68,12 @@ object AnnotationController extends Controller with Secured with TracingInformat
   def saveMerged(typ: String, id: String) = Authenticated.async { implicit request =>
       withAnnotation(AnnotationIdentifier(typ, id)) { annotation =>
         for {
-          dataSetName     <- annotation.dataSetName ?~> Messages("dataSet.notSupplied")
-          dataSet         <- DataSetDAO.findOneBySourceName(dataSetName) ?~> Messages("dataSet.notFound")
-          content         <- annotation.content ?~> Messages("annotation.contentType.notSupplied")
+          dataSetName <- annotation.dataSetName ?~> Messages("dataSet.notSupplied")
+          dataSet <- DataSetDAO.findOneBySourceName(dataSetName) ?~> Messages("dataSet.notFound")
+          content <- annotation.content ?~> Messages("annotation.contentType.notSupplied")
           savedAnnotation <- AnnotationService.createExplorationalFor(request.user, dataSet, content.contentType, annotation.id) ?~> Messages("annotation.create.failed")
         } yield {
+          Logger.info("Save merged annotation")
           Redirect(routes.AnnotationController.trace(savedAnnotation.typ, savedAnnotation.id))
         }
       }
@@ -145,8 +143,7 @@ object AnnotationController extends Controller with Secured with TracingInformat
   }
 
 
-  def updateWithJson(typ: String, id: String, version: Int) = Authenticated.async(parse.json(maxLength = 2097152)) {
-    implicit request =>
+  def updateWithJson(typ: String, id: String, version: Int) = Authenticated.async(parse.json(maxLength = 2097152)) { implicit request =>
       def handleUpdates(annotation: Annotation, js: JsValue): Fox[JsObject] = {
         js match {
           case JsArray(jsUpdates) =>

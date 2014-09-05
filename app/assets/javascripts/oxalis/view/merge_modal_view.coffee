@@ -133,11 +133,9 @@ class MergeModalView extends Backbone.Marionette.LayoutView
 
   show : ->
 
-    debugger
     @$el.modal("show")
 
     $.ajax(url : "/api/user").done((user) =>
-      debugger
       @taskSelectionView = new SelectionView(
         collection : new  TaskCollection()
         childViewOptions :

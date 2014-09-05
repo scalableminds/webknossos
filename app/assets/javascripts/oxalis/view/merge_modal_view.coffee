@@ -213,18 +213,19 @@ class MergeModalView extends Backbone.Marionette.LayoutView
 
   merge : (url) ->
 
-    @readOnly = document.getElementById('checkbox-read-only').checked
+    readOnly = document.getElementById('checkbox-read-only').checked
 
     $.ajax(
-      url: "#{url}/#{@readOnly}"
+      url: "#{url}/#{readOnly}"
     ).done( (annotation) ->
 
       Toast.message(annotation.messages)
 
-      redirectUrl = if @readOnly
+      redirectUrl = if readOnly
         "/annotations/#{annotation.typ}/#{annotation.id}"
       else
         "/annotations/#{annotation.typ}/#{annotation.id}/saveMerged"
+
       app.router.loadURL(redirectUrl)
 
     ).fail( (xhr) ->

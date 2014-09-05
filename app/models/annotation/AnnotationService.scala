@@ -145,7 +145,7 @@ object AnnotationService extends AnnotationContentProviders with BoxImplicits wi
       val team   = annotationSec.team
       val id     = BSONObjectID.generate.stringify
       val typ    = annotationSec.typ
-      val restrictions = if(readOnly) AnnotationRestrictions.restrictEverything else annotationSec.restrictions
+      val restrictions = if(readOnly) AnnotationRestrictions.readonlyMergedAnnotation() else AnnotationRestrictions.updateableMergedAnnotation()
 
       CompoundAnnotation.createFromNotFinishedAnnotations(team, List(ann, annSec), id, typ, restrictions)
     }

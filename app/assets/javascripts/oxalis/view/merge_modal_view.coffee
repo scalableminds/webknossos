@@ -89,6 +89,12 @@ class MergeModalView extends Backbone.Marionette.LayoutView
             </div>
           </div>
         </div>
+        <div class="modal-footer">
+          <h4>If you want product of merging to be read-only then left checkbox checked</h4>
+            <div class="checkbox pull-right">
+              <input type="checkbox" id="checkbox-read-only" checked="checked"/>
+            </div>
+        </div>
       </div>
     </div>
   """)
@@ -118,6 +124,7 @@ class MergeModalView extends Backbone.Marionette.LayoutView
     "formUploadIcon"       : "#form-upload-icon"
     "fileInfo"             : ".file-info"
 
+
   initialize : (options) ->
     @_model = options._model
     @nml = undefined
@@ -128,7 +135,7 @@ class MergeModalView extends Backbone.Marionette.LayoutView
     @$el.modal("show")
 
     $.ajax(url : "/api/user").done((user) =>
-
+      debugger
       @taskSelectionView = new SelectionView(
         collection : new  TaskCollection()
         childViewOptions :
@@ -206,14 +213,16 @@ class MergeModalView extends Backbone.Marionette.LayoutView
 
   merge : (url) ->
 
+    @readOnly = document.getElementById('checkbox-read-only').checked
+
     $.ajax(
-      url: url
+      url: "#{url}/#{@readOnly}"
     ).done( (annotation) ->
-      url = "/annotations/" + annotation.typ + "/" + annotation.id
-      app.router.loadURL(url)
+      redirectUrl = "/annotations/#{annotation.typ}/#{annotation.id}"
+      app.router.loadURL(redirectUrl)
       Toast.message(annotation.messages)
     ).fail( (xhr) ->
-      if xhr
+      if xhr.responseJSON
         Toast.error(xhr.responseJSON.messages[0].error)
       else
         Toast.error("Error. Please try again.")

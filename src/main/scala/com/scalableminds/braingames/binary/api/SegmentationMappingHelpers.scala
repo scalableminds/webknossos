@@ -15,12 +15,16 @@ trait SegmentationMappingHelpers {
 
   lazy val dataStore = new FileDataStore()
 
-  private def normalizeId(mapping: Map[Long, Long], ids: Set[Long] = Set())(id: Long): Long = {
-    if (!mapping.contains(id) || mapping(id) == id)
-      id
-    else if (ids.contains(id))
-      ids.min
-    else normalizeId(mapping, ids + id)(mapping(id))
+  private def normalizeId(mapping: Map[Long, Long], ids: Set[Long] = Set())(Id: Long): Long = {
+    mapping.get(Id) match {
+      case Some(Id) | None =>
+        Id
+      case Some(id) =>
+        if (ids.contains(Id))
+          ids.min
+        else
+          normalizeId(mapping, ids + Id)(id)
+    }
   }
 
   private def normalize(mapping: Map[Long, Long]) = {

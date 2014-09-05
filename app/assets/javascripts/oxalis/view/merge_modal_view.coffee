@@ -90,9 +90,10 @@ class MergeModalView extends Backbone.Marionette.LayoutView
           </div>
         </div>
         <div class="modal-footer">
-          <h4>If you want product of merging to be read-only then left checkbox selected</h4>
-            <div class="checkbox pull-right">
-              <input type="checkbox" id="checkbox-read-only" checked="checked"/>
+            <div class="checkbox">
+              <label>
+              <input type="checkbox" id="checkbox-read-only" checked="checked">
+              If you want product of merging to be read-only then left checkbox selected
             </div>
         </div>
       </div>
@@ -132,6 +133,7 @@ class MergeModalView extends Backbone.Marionette.LayoutView
 
   show : ->
 
+    debugger
     @$el.modal("show")
 
     $.ajax(url : "/api/user").done((user) =>

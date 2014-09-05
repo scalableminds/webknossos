@@ -110,14 +110,14 @@ object CompoundAnnotation extends Formatter with FoxImplicits {
     }
   }
 
-  def createFromNotFinishedAnnotations(team: String, annotations: List[Annotation], id: String, typ: AnnotationType)(implicit ctx: DBAccessContext): Option[TemporaryAnnotation] = {
+  def createFromNotFinishedAnnotations(team: String, annotations: List[Annotation], id: String, typ: AnnotationType, restrictions: AnnotationRestrictions)(implicit ctx: DBAccessContext): Option[TemporaryAnnotation] = {
     Some(TemporaryAnnotation(
       id,
       team,
       () => annotationContent(annotations, id),
       typ,
       state = AnnotationState.InProgress,
-      restrictions = annotations.head.restrictions // TODO refactor
+      restrictions = restrictions
     ))
   }
 

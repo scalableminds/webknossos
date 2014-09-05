@@ -21,7 +21,7 @@ object AnnotationIdentifier{
 }
 
 case class RequestAnnotation(id: AnnotationIdentifier, user: Option[User], implicit val ctx: DBAccessContext)
-case class MergeAnnotation(annotation: Fox[AnnotationLike], annotationSec: Fox[AnnotationLike], user: Option[User], implicit val ctx: DBAccessContext)
+case class MergeAnnotation(annotation: Fox[AnnotationLike], annotationSec: Fox[AnnotationLike], readOnly: Boolean, user: Option[User], implicit val ctx: DBAccessContext)
 case class StoredResult(result: Fox[AnnotationLike], timestamp: Long = System.currentTimeMillis)
 
 class AnnotationStore extends Actor {
@@ -64,10 +64,10 @@ class AnnotationStore extends Actor {
           Logger.error("AnnotationStore ERROR: " + e)
           e.printStackTrace()
       }
-    case MergeAnnotation(annotation, annotationSec, user, ctx) =>
+    case MergeAnnotation(annotation, annotationSec,readOnly, user, ctx) =>
       val s = sender
 
-      mergeAnnotation(annotation, annotationSec, user)(ctx)
+      mergeAnnotation(annotation, annotationSec, readOnly, user)(ctx)
         .futureBox
         .map {
         result =>
@@ -100,12 +100,12 @@ class AnnotationStore extends Actor {
     }
   }
 
-    def mergeAnnotation(annotation: Fox[AnnotationLike], annotationSec: Fox[AnnotationLike], user: Option[User])(implicit ctx: DBAccessContext) = {
+    def mergeAnnotation(annotation: Fox[AnnotationLike], annotationSec: Fox[AnnotationLike], readOnly: Boolean, user: Option[User])(implicit ctx: DBAccessContext) = {
       try {
         for {
           ann <- annotation
           annSec <- annotationSec
-          mergedAnnotation <- AnnotationService.merge(ann, annSec)
+          mergedAnnotation <- AnnotationService.merge(ann, annSec, readOnly)
           merged <- mergedAnnotation
         } yield {
 

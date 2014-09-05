@@ -44,17 +44,17 @@ trait TracingInformationProvider extends play.api.http.Status with FoxImplicits 
     f.mapTo[Box[AnnotationLike]]
   }
 
-  def withMergedAnnotation[T](typ: AnnotationType, id: String, mergedId: String, mergedTyp: String)(f: AnnotationLike => Fox[T])(implicit request: UserAwareRequest[_]): Fox[T] = {
-    mergeAnnotation(AnnotationIdentifier(typ, id), AnnotationIdentifier(mergedTyp, mergedId)).flatMap(f)
+  def withMergedAnnotation[T](typ: AnnotationType, id: String, mergedId: String, mergedTyp: String, readOnly: Boolean)(f: AnnotationLike => Fox[T])(implicit request: UserAwareRequest[_]): Fox[T] = {
+    mergeAnnotation(AnnotationIdentifier(typ, id), AnnotationIdentifier(mergedTyp, mergedId), readOnly).flatMap(f)
   }
 
-  def mergeAnnotation(annotationId: AnnotationIdentifier, mergedAnnotationId: AnnotationIdentifier)(implicit request: UserAwareRequest[_]): Fox[AnnotationLike] = {
+  def mergeAnnotation(annotationId: AnnotationIdentifier, mergedAnnotationId: AnnotationIdentifier, readOnly: Boolean)(implicit request: UserAwareRequest[_]): Fox[AnnotationLike] = {
     implicit val timeout = Timeout(5 seconds)
 
     val annotation = Application.annotationStore ? RequestAnnotation(annotationId, request.userOpt, authedRequestToDBAccess)
     val annotationSec = Application.annotationStore ? RequestAnnotation(mergedAnnotationId, request.userOpt, authedRequestToDBAccess)
 
-    val f = Application.annotationStore ? MergeAnnotation(annotation.mapTo[Box[AnnotationLike]], annotationSec.mapTo[Box[AnnotationLike]], request.userOpt, authedRequestToDBAccess)
+    val f = Application.annotationStore ? MergeAnnotation(annotation.mapTo[Box[AnnotationLike]], annotationSec.mapTo[Box[AnnotationLike]], readOnly, request.userOpt, authedRequestToDBAccess)
 
     f.mapTo[Box[AnnotationLike]]
   }

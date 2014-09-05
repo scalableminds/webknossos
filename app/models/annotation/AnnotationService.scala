@@ -121,7 +121,7 @@ object AnnotationService extends AnnotationContentProviders with BoxImplicits wi
     }
   }
 
-  def merge(annotation: AnnotationLike, annotationSec: AnnotationLike)(implicit ctx: DBAccessContext): Fox[Option[TemporaryAnnotation]] = {
+  def merge(annotation: AnnotationLike, annotationSec: AnnotationLike, readOnly: Boolean)(implicit ctx: DBAccessContext): Fox[Option[TemporaryAnnotation]] = {
 
     def createAnnotation(ann: AnnotationLike)(content: AnnotationContent): Annotation = {
       val annotation = Annotation(
@@ -145,8 +145,9 @@ object AnnotationService extends AnnotationContentProviders with BoxImplicits wi
       val team   = annotationSec.team
       val id     = BSONObjectID.generate.stringify
       val typ    = annotationSec.typ
+      val restrictions = if(readOnly) AnnotationRestrictions.restrictEverything else annotationSec.restrictions
 
-      CompoundAnnotation.createFromNotFinishedAnnotations(team, List(ann, annSec), id, typ)
+      CompoundAnnotation.createFromNotFinishedAnnotations(team, List(ann, annSec), id, typ, restrictions)
     }
 
 

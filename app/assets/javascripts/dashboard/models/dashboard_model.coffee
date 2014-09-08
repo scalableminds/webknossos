@@ -63,7 +63,13 @@ class DashboardModel extends Backbone.Model
     tasks = new Backbone.Collection(tasks, model : DashboardTaskModel )
     @set("tasks", tasks)
 
-    exploratoryAnnotations = new Backbone.Collection(@get("exploratoryAnnotations"))
+    exploratoryAnnotations = new Backbone.Collection()
+    # Display newst first.
+    exploratoryAnnotations.comparator = (a,b) ->
+      return a.get("created") < b.get("created")
+    exploratoryAnnotations.add(@get("exploratoryAnnotations"))
+
+
     @set("exploratoryAnnotations", exploratoryAnnotations)
 
 

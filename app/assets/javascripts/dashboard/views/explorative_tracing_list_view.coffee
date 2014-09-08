@@ -55,7 +55,7 @@ class ExplorativeTracingListView extends Backbone.Marionette.CompositeView
           <th> DataSet </th>
           <th> Stats </th>
           <th> Type </th>
-          <th> Last edited </th>
+          <th> Created </th>
           <th> </th>
         </tr>
       </thead>

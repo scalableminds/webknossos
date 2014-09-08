@@ -56,4 +56,12 @@ object DefaultMails {
       recipients = List(brainTracingMailingList),
       replyTo = Some(email),
       ccRecipients = List(supportMail, email))
+
+  def changePasswordMail(name: String, receiver: String) = {
+    Mail(
+      from = defaultFrom,
+      subject = "Your password was changed.If this wasn't you please contact your admin immediately",
+      bodyText = html.mail.validated(name).body,
+      recipients = List(receiver))
+  }
 }

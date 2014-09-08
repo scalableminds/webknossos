@@ -1,5 +1,6 @@
 package controllers
 
+import com.scalableminds.util.security.SCrypt._
 import oxalis.security.Secured
 import models.user._
 import play.api.data._
@@ -195,21 +196,25 @@ object UserController extends Controller with Secured with Dashboard with FoxImp
 
   def handleResetPassword = Authenticated.async { implicit request =>
     resetForm.bindFromRequest.fold(
-    formWithErrors =>
-      Future.successful(BadRequest(html.user.login(formWithErrors))), {
-      case (email, password) =>
-        UserService.auth(email.toLowerCase, password).map {
-          user =>
-            val redirectLocation =
-              if (user.verified)
-                Redirect(controllers.routes.Application.index)
-              else
-                Redirect("/dashboard")
-            redirectLocation.withSession(Secured.createSession(user))
+      formWithErrors => Future.successful(BadRequest(html.user.reset_password(formWithErrors))), {
+      case (oldPassword, newPassword) => {
+        Logger.debug("Old = " + oldPassword)
+        Logger.debug("New = " + newPassword)
+        val email = request.user.email.toLowerCase
+        UserService.auth(email, oldPassword).map { user =>
+          if (user.verified) {
+            Logger.debug("User verified")
+            UserService.changePassword(user, newPassword)
+          }
+          else
+            Logger.debug("User sucks")
 
+          Redirect("/user/password/reset")
         }.getOrElse {
-          BadRequest(html.user.login(resetForm.bindFromRequest.withGlobalError("user.login.failed")))
+          BadRequest(html.user.reset_password(resetForm.bindFromRequest.withGlobalError("user.login.failed")))
         }
-    })
+        }
+      }
+    )
   }
 }

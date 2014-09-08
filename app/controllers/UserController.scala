@@ -198,20 +198,18 @@ object UserController extends Controller with Secured with Dashboard with FoxImp
     resetForm.bindFromRequest.fold(
       formWithErrors => Future.successful(BadRequest(html.user.reset_password(formWithErrors))), {
       case (oldPassword, newPassword) => {
-        Logger.debug("Old = " + oldPassword)
-        Logger.debug("New = " + newPassword)
         val email = request.user.email.toLowerCase
         UserService.auth(email, oldPassword).map { user =>
-          if (user.verified) {
-            Logger.debug("User verified")
+          val action = if (user.verified) {
             UserService.changePassword(user, newPassword)
-          }
-          else
-            Logger.debug("User sucks")
+            Redirect(controllers.routes.Authentication.logout).flashing(
+              FlashSuccess(Messages("user.resetPassword.success")))
+          } else
+            BadRequest(html.user.reset_password(resetForm.bindFromRequest.withGlobalError("user.resetPassword.failed")))
 
-          Redirect("/user/password/reset")
+          action
         }.getOrElse {
-          BadRequest(html.user.reset_password(resetForm.bindFromRequest.withGlobalError("user.login.failed")))
+          BadRequest(html.user.reset_password(resetForm.bindFromRequest.withGlobalError("user.resetPassword.failed")))
         }
         }
       }

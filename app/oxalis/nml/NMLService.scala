@@ -1,7 +1,9 @@
 package oxalis.nml
 
 import models.tracing.skeleton.SkeletonTracingLike
+import net.liftweb.common.Box
 import play.api.libs.Files
+import play.api.mvc.MultipartFormData.FilePart
 import scala.xml.PrettyPrinter
 import com.scalableminds.util.xml.Xml
 import models.annotation.Annotation
@@ -25,13 +27,13 @@ object NMLService {
     Xml.toXML(t).map(prettyPrinter.format(_))
   }
 
-  def extractFromNML(file: File) =
+  def extractFromNML(file: File): Box[NML] =
     NMLParser.parse(file)
 
-  def extractFromZip(file: File) =
+  def extractFromZip(file: File): List[Box[NML]] =
     ZipIO.unzip(file).map(nml => NMLParser.parse(nml))
 
-  def extractFromFile(file: File, fileName: String) = {
+  def extractFromFile(file: File, fileName: String): List[Box[NML]] = {
     if (fileName.endsWith(".zip")) {
       Logger.trace("Extracting from ZIP file")
       extractFromZip(file)
@@ -41,13 +43,12 @@ object NMLService {
     }
   }
 
-  def extractFromFiles(files: Seq[play.api.mvc.MultipartFormData.FilePart[Files.TemporaryFile]])= {
+  def extractFromFiles(files: Seq[FilePart[Files.TemporaryFile]]) = {
 
-    val m = files map { file =>
+    val extracted = files map { file =>
       val nmls = extractFromFile(file.ref.file, file.filename)
       nmls.map(f => (file.filename -> f))
     }
-    val a = m.flatten
-    a
+    extracted.flatten
   }
 }

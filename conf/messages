@@ -12,6 +12,7 @@ binary.data.notSaved=Couldn''t save the data
 email=Email
 team=Team
 password=Password
+password_old=Old password
 password.main=Password
 password.validation=Password (again)
 firstName=First Name

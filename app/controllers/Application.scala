@@ -39,7 +39,6 @@ object Application extends Controller with Secured {
         controllers.admin.routes.javascript.NMLIO.projectDownload,
         controllers.admin.routes.javascript.NMLIO.userDownload,
         controllers.admin.routes.javascript.TaskAdministration.delete
-
       )).as("text/javascript")
   }
 

@@ -21,6 +21,8 @@ POST          /login                                                          co
 GET           /logout                                                         controllers.Authentication.logout
 GET           /register                                                       controllers.Authentication.register
 POST          /register                                                       controllers.Authentication.handleRegistration
+GET           /reset                                                          controllers.Authentication.resetPassword
+POST          /reset                                                          controllers.Authentication.handleResetPassword
 
 # User settings
 GET           /users                                                          controllers.UserController.empty

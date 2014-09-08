@@ -2,6 +2,8 @@ package controllers
 
 import oxalis.security.Secured
 import models.user._
+import play.api.data._
+import play.api.data.Forms._
 import play.api.libs.json.Json._
 import play.api.libs.json._
 import play.api.i18n.Messages
@@ -9,6 +11,7 @@ import play.api.libs.concurrent.Execution.Implicits._
 import com.scalableminds.util.tools.ExtendedTypes.ExtendedList
 import com.scalableminds.util.tools.ExtendedTypes.ExtendedBoolean
 import play.api.Logger
+import views.html
 import scala.concurrent.Future
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import models.team._
@@ -16,6 +19,8 @@ import play.api.libs.functional.syntax._
 import play.api.templates.Html
 import com.scalableminds.util.tools.ExtendedTypes.ExtendedString
 import models.user.time._
+
+import scala.text
 
 object UserController extends Controller with Secured with Dashboard with FoxImplicits{
 
@@ -163,4 +168,48 @@ object UserController extends Controller with Secured with Dashboard with FoxImp
   //      .withSession(Secured.createSession(user))
   //    }
   //  }
+
+  val resetForm: Form[(String, String)] = {
+
+    def resetFormApply(oldPassword: String, password: Tuple2[String, String]) =
+      (oldPassword, password._1)
+
+    def resetFormUnapply(user: (String, String)) =
+      Some(user._1, ("", ""))
+
+    val passwordField = tuple("main" -> nonEmptyText, "validation" -> nonEmptyText)
+      .verifying("user.password.nomatch", pw => pw._1 == pw._2)
+      .verifying("user.password.tooshort", pw => pw._1.length >= 6)
+
+    Form(mapping(
+      "password_old" -> nonEmptyText,
+      "password" -> passwordField)(resetFormApply)(resetFormUnapply))
+  }
+
+  /**
+   * Reset password page
+   */
+  def resetPassword = Authenticated { implicit request =>
+    Ok(html.user.reset_password(resetForm))
+  }
+
+  def handleResetPassword = Authenticated.async { implicit request =>
+    resetForm.bindFromRequest.fold(
+    formWithErrors =>
+      Future.successful(BadRequest(html.user.login(formWithErrors))), {
+      case (email, password) =>
+        UserService.auth(email.toLowerCase, password).map {
+          user =>
+            val redirectLocation =
+              if (user.verified)
+                Redirect(controllers.routes.Application.index)
+              else
+                Redirect("/dashboard")
+            redirectLocation.withSession(Secured.createSession(user))
+
+        }.getOrElse {
+          BadRequest(html.user.login(resetForm.bindFromRequest.withGlobalError("user.login.failed")))
+        }
+    })
+  }
 }

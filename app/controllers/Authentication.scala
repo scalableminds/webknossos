@@ -137,31 +137,4 @@ object Authentication extends Controller with Secured with ProvidesUnauthorizedS
       .flashing("success" -> Messages("user.logout.success"))
   }
 
-
-  val resetForm: Form[(String, String)] = {
-
-    def resetFormApply(oldPassword: String, password: Tuple2[String, String]) =
-      (oldPassword, password._1)
-
-    def resetFormUnapply(user: (String, String)) =
-      Some(user._1, ("", ""))
-
-    val passwordField = tuple("main" -> text, "validation" -> text)
-      .verifying("user.password.nomatch", pw => pw._1 == pw._2)
-      .verifying("user.password.tooshort", pw => pw._1.length >= 6)
-
-    Form(mapping(
-      "password_old" -> text,
-      "password" -> passwordField)(resetFormApply)(resetFormUnapply))
-  }
-
-  /**
-   * Reset password page
-   */
-  def resetPassword = Action { implicit request =>
-    Ok(html.user.reset_password(resetForm))
-  }
-
-  def handleResetPassword = logout
-
 }

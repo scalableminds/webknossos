@@ -21,8 +21,6 @@ POST          /login                                                          co
 GET           /logout                                                         controllers.Authentication.logout
 GET           /register                                                       controllers.Authentication.register
 POST          /register                                                       controllers.Authentication.handleRegistration
-GET           /reset                                                          controllers.Authentication.resetPassword
-POST          /reset                                                          controllers.Authentication.handleResetPassword
 
 # User settings
 GET           /users                                                          controllers.UserController.empty
@@ -31,6 +29,8 @@ GET           /user/configuration                                             co
 GET           /user/configuration/default                                     controllers.SettingsController.default
 GET           /user/tasks/request                                             controllers.TaskController.request
 GET           /users/:id/details                                              controllers.UserController.emptyWithWildcard(id)
+GET           /user/password/reset                                            controllers.UserController.resetPassword
+POST          /user/password/reset                                            controllers.UserController.handleResetPassword
 
 GET           /api/users                                                      controllers.UserController.list
 GET           /api/user                                                       controllers.UserController.current
@@ -43,7 +43,6 @@ GET           /api/users/:id/loggedTime                                       co
 GET           /api/users/:id/annotations                                      controllers.UserController.userAnnotations(id: String)
 GET           /api/users/:id/annotations/download                             controllers.admin.NMLIO.userDownload(id: String)
 # GET         /api/users/:id/loginAs                                      controllers.UserController.loginAsUser(id: String)
-
 
 # Team
 GET           /teams                                                          controllers.TeamController.empty

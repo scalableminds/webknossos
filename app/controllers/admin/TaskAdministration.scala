@@ -230,7 +230,7 @@ object TaskAdministration extends AdminController {
             project <- ProjectService.findIfNotEmpty(projectName) ?~> Messages("project.notFound")
             _ <- ensureTeamAdministration(request.user, team)
           } yield {
-            val nmls = NMLService.extractFromFile(nmlFile.ref.file, nmlFile.filename)
+            val nmls = NMLService.extractFromFile(nmlFile.ref.file, nmlFile.filename).flatten
             val baseTask = Task(
               taskType._id,
               team,

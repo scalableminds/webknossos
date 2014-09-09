@@ -36,7 +36,7 @@ object AnnotationService extends AnnotationContentProviders with BoxImplicits wi
           team = user.teams.head.team, // TODO: refactor
           typ = AnnotationType.Explorational,
           state = AnnotationState.InProgress,
-          _id = if(!id.isEmpty) BSONObjectID(id) else BSONObjectID.generate
+          _id = BSONObjectID.parse(id).getOrElse(BSONObjectID.generate)
         )
         _ <- AnnotationDAO.insert(annotation)
       } yield annotation

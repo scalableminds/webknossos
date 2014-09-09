@@ -163,9 +163,6 @@ object UserDAO extends SecuredBaseDAO[User] {
 
   def auth(email: String, password: String)(implicit ctx: DBAccessContext): Fox[User] =
     findOneByEmail(email).filter { user =>
-
-      Logger.debug("Passed password: " + password);
-      Logger.debug("User password: " + user.pwdHash);
       verifyPassword(password, user.pwdHash)
     }
 

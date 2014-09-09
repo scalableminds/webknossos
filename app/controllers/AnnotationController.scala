@@ -73,7 +73,7 @@ object AnnotationController extends Controller with Secured with TracingInformat
           content <- annotation.content ?~> Messages("annotation.contentType.notSupplied")
           savedAnnotation <- AnnotationService.createExplorationalFor(request.user, dataSet, content.contentType, annotation.id) ?~> Messages("annotation.create.failed")
         } yield {
-          Logger.info("Save merged annotation")
+          Logger.debug("Save merged annotation")
           Redirect(routes.AnnotationController.trace(savedAnnotation.typ, savedAnnotation.id))
         }
       }

@@ -60,7 +60,7 @@ object DefaultMails {
   def changePasswordMail(name: String, receiver: String) = {
     Mail(
       from = defaultFrom,
-      subject = "Your password was changed.If this wasn't you please contact your admin immediately",
+      subject = "Your password was changed. If this wasn't you please contact with your admin immediately",
       bodyText = html.mail.validated(name).body,
       recipients = List(receiver))
   }

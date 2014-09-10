@@ -21,14 +21,12 @@ libs/pipeline : Pipeline
 
 class Model
 
-
-
+  # TODO: Move to seperate class
   timestamps : []
   buckets : []
   bytes : []
   totalBuckets : []
   totalBytes : []
-
 
   logConnectionInfo : =>
 
@@ -85,7 +83,6 @@ class Model
           dataType : "json"
         ).pipe(
           (user) =>
-
             dataSet = tracing.content.dataSet
             layers  = @getLayers(dataSet.dataLayers, tracing.content.contentData.customLayers)
             $.when(
@@ -160,7 +157,6 @@ class Model
         $.assert( @getSegmentationBinary()?,
           "Volume is allowed, but segmentation does not exist" )
         @volumeTracing = new VolumeTracing(tracing, @flycam, @getSegmentationBinary(), @updatePipeline)
-
       else
         @skeletonTracing = new SkeletonTracing(tracing, @scaleInfo, @flycam, @flycam3d, @user, @updatePipeline)
 

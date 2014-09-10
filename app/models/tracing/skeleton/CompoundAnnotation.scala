@@ -24,12 +24,12 @@ import net.liftweb.common.{Empty, Failure, Full}
 
 object CompoundAnnotation extends Formatter with FoxImplicits {
 
-  def treePrefix(tracing: SkeletonTracingLike, user: Option[User], taskId: Option[BSONObjectID]) = {
+  def treePrefix(tracing: SkeletonTracingLike, user: Fox[User], taskId: Option[BSONObjectID]) = {
     val userName = user.map(_.abreviatedName) getOrElse ""
     s"${formatHash(taskId.map(_.stringify).getOrElse(""))}_${userName}_"
   }
 
-  def renameTreesOfTracing(tracing: SkeletonTracing, user: Option[User], taskId: Option[BSONObjectID])(implicit ctx: DBAccessContext) = {
+  def renameTreesOfTracing(tracing: SkeletonTracing, user: Fox[User], taskId: Option[BSONObjectID])(implicit ctx: DBAccessContext) = {
     def renameTrees(prefix: String, trees: List[TreeLike]) = {
       trees.zipWithIndex.map {
         case (tree, index) =>
@@ -83,9 +83,7 @@ object CompoundAnnotation extends Formatter with FoxImplicits {
 
     annotationsWithContent.flatMap( e => Fox.sequenceOfFulls(e.map{
       case (annotation, skeleton: SkeletonTracing) =>
-        annotation.user.flatMap { user =>
-          renameTreesOfTracing(skeleton, Some(user), annotation._task)
-        } orElse (renameTreesOfTracing(skeleton, None, annotation._task))
+        renameTreesOfTracing(skeleton, annotation.user, annotation._task)
       case (annotation, content) =>
         Fox.successful(content)
     })).toFox.flatMap {

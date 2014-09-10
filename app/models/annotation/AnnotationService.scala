@@ -123,33 +123,13 @@ object AnnotationService extends AnnotationContentProviders with BoxImplicits wi
   }
 
   def merge(readOnly: Boolean, team: String, typ: AnnotationType, annotationsLike: AnnotationLike*)(implicit ctx: DBAccessContext): TemporaryAnnotation = {
-
-    def createAnnotation(annotation: AnnotationLike)(content: AnnotationContent) =
-      Annotation(
-        _user    = annotation._user,
-        _content = ContentReference.createFor(content),
-        team     = annotation.team,
-        _name    = annotation._name,
-        typ      = annotation.typ)
-
     val restrictions =
       if(readOnly)
         AnnotationRestrictions.readonlyMergedAnnotation()
       else
         AnnotationRestrictions.updateableMergedAnnotation()
 
-    val annotations = new ListBuffer[Annotation]()
-
-    annotationsLike.foreach { annotationLike =>
-      for {
-        content <- annotationLike.content
-      } yield {
-        annotations += createAnnotation(annotationLike)(content)
-      }
-    }
-
-    CompoundAnnotation.createFromNotFinishedAnnotations(team, annotations.toList, BSONObjectID.generate.stringify, typ, restrictions)
-
+    CompoundAnnotation.createTemporaryAnnotation(team, annotationsLike.toList, BSONObjectID.generate.stringify, typ, restrictions)
   }
 }
 

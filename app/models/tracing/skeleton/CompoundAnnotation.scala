@@ -24,21 +24,25 @@ import net.liftweb.common.{Empty, Failure, Full}
 
 object CompoundAnnotation extends Formatter with FoxImplicits {
 
-  def treePrefix(tracing: SkeletonTracingLike, user: Fox[User], taskId: Option[BSONObjectID]) = {
+  def treePrefix(tracing: SkeletonTracingLike, user: Option[User], task: Fox[Task]): Future[String] = {
     val userName = user.map(_.abreviatedName) getOrElse ""
-    s"${formatHash(taskId.map(_.stringify).getOrElse(""))}_${userName}_"
+    task.map(_.id).getOrElse("").map{ taskId =>
+      s"${formatHash(taskId)}_${userName}_"
+    }
   }
 
-  def renameTreesOfTracing(tracing: SkeletonTracing, user: Fox[User], taskId: Option[BSONObjectID])(implicit ctx: DBAccessContext) = {
+  def renameTreesOfTracing(tracing: SkeletonTracing, user: Option[User], task: Fox[Task])(implicit ctx: DBAccessContext) = {
     def renameTrees(prefix: String, trees: List[TreeLike]) = {
       trees.zipWithIndex.map {
         case (tree, index) =>
           tree.changeName(s"${prefix}tree%03d".format(index + 1))
       }
     }
-    TemporarySkeletonTracingService.createFrom(tracing, "").map{ temp =>
-      temp.copy(
-        _trees = renameTrees(treePrefix(tracing, user, taskId), temp._trees))
+    TemporarySkeletonTracingService.createFrom(tracing, "").flatMap{ temp =>
+      treePrefix(tracing, user, task).map{ prefix =>
+        temp.copy(
+          _trees = renameTrees(prefix, temp._trees))
+      }
     }
   }
 
@@ -77,13 +81,15 @@ object CompoundAnnotation extends Formatter with FoxImplicits {
     }
   }
 
-  private[this] def annotationContent(annotations: List[Annotation], id: String)(implicit ctx: DBAccessContext): Fox[TemporarySkeletonTracing] = {
-    val annotationsWithContent: Future[List[(Annotation, AnnotationContent)]] =
+  private[this] def annotationContent(annotations: List[AnnotationLike], id: String)(implicit ctx: DBAccessContext): Fox[TemporarySkeletonTracing] = {
+    val annotationsWithContent: Future[List[(AnnotationLike, AnnotationContent)]] =
       Fox.sequenceOfFulls(annotations.map(a => a.content.map(a -> _)))
 
     annotationsWithContent.flatMap( e => Fox.sequenceOfFulls(e.map{
       case (annotation, skeleton: SkeletonTracing) =>
-        renameTreesOfTracing(skeleton, annotation.user, annotation._task)
+        annotation.user.flatMap { user =>
+          renameTreesOfTracing(skeleton, Some(user), annotation.task)
+        } orElse (renameTreesOfTracing(skeleton, None, annotation.task))
       case (annotation, content) =>
         Fox.successful(content)
     })).toFox.flatMap {
@@ -108,7 +114,7 @@ object CompoundAnnotation extends Formatter with FoxImplicits {
     }
   }
 
-  def createFromNotFinishedAnnotations(team: String, annotations: List[Annotation], id: String, typ: AnnotationType, restrictions: AnnotationRestrictions)(implicit ctx: DBAccessContext): TemporaryAnnotation = {
+  def createTemporaryAnnotation(team: String, annotations: List[AnnotationLike], id: String, typ: AnnotationType, restrictions: AnnotationRestrictions)(implicit ctx: DBAccessContext): TemporaryAnnotation = {
     TemporaryAnnotation(
       id,
       team,

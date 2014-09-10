@@ -114,6 +114,8 @@ object User {
       (__ \ "lastName").write[String] and
       (__ \ "teams").write[List[TeamMembership]])( u =>
       (u.id, u.email, u.firstName, u.lastName, u.teams))
+
+  val createNotVerifiedUser = User("","","", teams = Nil)
 }
 
 object UserDAO extends SecuredBaseDAO[User] {

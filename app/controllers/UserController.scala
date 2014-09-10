@@ -201,9 +201,8 @@ object UserController extends Controller with Secured with Dashboard with FoxImp
         Future.successful(BadRequest(html.user.reset_password(formWithErrors))), {
         case (oldPassword, newPassword) => {
           val email = request.user.email.toLowerCase
-          val fakeUser = User("","","", teams = Nil)
           for {
-            user <- UserService.auth(email, oldPassword).getOrElse(fakeUser)
+            user <- UserService.auth(email, oldPassword).getOrElse(User.createNotVerifiedUser)
             ok <- if(user.verified) UserService.changePassword(user, newPassword).map(_.ok) else Some(false).toFox
           } yield {
             if(ok) {

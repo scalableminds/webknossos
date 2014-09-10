@@ -203,7 +203,7 @@ object UserController extends Controller with Secured with Dashboard with FoxImp
           val email = request.user.email.toLowerCase
           val fakeUser = User("","","", teams = Nil)
           for {
-            user <- UserService.auth(email, oldPassword).map {user => user}.getOrElse(fakeUser)
+            user <- UserService.auth(email, oldPassword).getOrElse(fakeUser)
             ok <- if(user.verified) UserService.changePassword(user, newPassword).map(_.ok) else Some(false).toFox
           } yield {
             if(ok) {

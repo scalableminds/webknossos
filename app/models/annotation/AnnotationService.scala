@@ -3,6 +3,7 @@ package models.annotation
 import models.user.User
 import com.scalableminds.util.reactivemongo.DBAccessContext
 import play.api.Logger
+import scala.collection.mutable.ListBuffer
 import scala.concurrent.Future
 import com.scalableminds.util.tools.{FoxImplicits, Fox}
 import models.tracing.skeleton.{CompoundAnnotation, SkeletonTracingService}
@@ -121,35 +122,33 @@ object AnnotationService extends AnnotationContentProviders with BoxImplicits wi
     }
   }
 
-  def merge(annotation: AnnotationLike, annotationSec: AnnotationLike, readOnly: Boolean)(implicit ctx: DBAccessContext): Fox[Option[TemporaryAnnotation]] = {
+  def merge(readOnly: Boolean, team: String, typ: AnnotationType, annotationsLike: AnnotationLike*)(implicit ctx: DBAccessContext): TemporaryAnnotation = {
 
-    def createAnnotation(ann: AnnotationLike)(content: AnnotationContent): Annotation = {
-      val annotation = Annotation(
-        _user    = ann._user,
+    def createAnnotation(annotation: AnnotationLike)(content: AnnotationContent) =
+      Annotation(
+        _user    = annotation._user,
         _content = ContentReference.createFor(content),
-        team     = ann.team,
-        _name    = ann._name,
-        typ      = ann.typ)
+        team     = annotation.team,
+        _name    = annotation._name,
+        typ      = annotation.typ)
 
-      annotation
+    val restrictions =
+      if(readOnly)
+        AnnotationRestrictions.readonlyMergedAnnotation()
+      else
+        AnnotationRestrictions.updateableMergedAnnotation()
+
+    val annotations = new ListBuffer[Annotation]()
+
+    annotationsLike.foreach { annotationLike =>
+      for {
+        content <- annotationLike.content
+      } yield {
+        annotations += createAnnotation(annotationLike)(content)
+      }
     }
 
-    for {
-      content    <- annotation.content
-      contentSec <- annotationSec.content
-    } yield {
-
-      val ann     = createAnnotation(annotation)(content)
-      val annSec  = createAnnotation(annotationSec)(contentSec)
-
-      val team   = annotationSec.team
-      val id     = BSONObjectID.generate.stringify
-      val typ    = annotationSec.typ
-      val restrictions = if(readOnly) AnnotationRestrictions.readonlyMergedAnnotation() else AnnotationRestrictions.updateableMergedAnnotation()
-
-      CompoundAnnotation.createFromNotFinishedAnnotations(team, List(ann, annSec), id, typ, restrictions)
-    }
-
+    CompoundAnnotation.createFromNotFinishedAnnotations(team, annotations.toList, BSONObjectID.generate.stringify, typ, restrictions)
 
   }
 }

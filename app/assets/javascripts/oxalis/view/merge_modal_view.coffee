@@ -93,7 +93,7 @@ class MergeModalView extends Backbone.Marionette.LayoutView
             <div class="checkbox">
               <label>
               <input type="checkbox" id="checkbox-read-only" checked="checked">
-              If you want product of merging to be read-only then left checkbox selected
+              The merged tracing will be read-only.
             </div>
         </div>
       </div>

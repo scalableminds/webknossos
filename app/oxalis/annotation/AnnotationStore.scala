@@ -13,6 +13,7 @@ import com.scalableminds.util.reactivemongo.DBAccessContext
 import com.scalableminds.util.tools.Fox
 import play.api.libs.json.Json
 import models.user.User
+import net.liftweb.common.Failure
 
 case class AnnotationIdentifier(annotationType: String, identifier: String)
 
@@ -61,6 +62,7 @@ class AnnotationStore extends Actor {
           s ! result
       }.recover {
         case e =>
+          s ! Failure("AnnotationStore ERROR: " + e)
           Logger.error("AnnotationStore ERROR: " + e)
           e.printStackTrace()
       }
@@ -75,6 +77,7 @@ class AnnotationStore extends Actor {
           s ! result
       }.recover {
         case e =>
+          s ! Failure("AnnotationStore ERROR: " + e)
           Logger.error("AnnotationStore ERROR: " + e)
           e.printStackTrace()
       }

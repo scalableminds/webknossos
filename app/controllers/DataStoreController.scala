@@ -186,7 +186,6 @@ object DataStoreController extends Controller with DataStoreActionHelper{
         case Full(dataStore) =>
           val (iterator, enumerator, restChannel) = WebSocketRESTServer.create
           DataStoreHandler.register(dataStore.name, restChannel)
-          // TODO: key logging needs to be removed
           Logger.debug(s"Key $name connected.")
           (iterator, enumerator)
         case _ =>

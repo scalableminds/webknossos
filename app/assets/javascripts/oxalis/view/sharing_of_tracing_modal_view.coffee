@@ -28,7 +28,7 @@ class MergeModalView extends Backbone.Marionette.LayoutView
             <div class="row">
               <div class="col-md-12">
                 <a id="mail-link-share" href="#" target="_top" class="fa fa-envelope">
-                  Share with link via mail
+                  Share the link via mail
                 </a>
               </div>
             </div>
@@ -37,22 +37,22 @@ class MergeModalView extends Backbone.Marionette.LayoutView
             <label for="restriction">Restrictions</label>
             <div class="row">
               <div class="col-md-10">
-                <div class="checkbox"> <label> <input type="checkbox" checked> Allow access </label> </div>
+                <div class="checkbox"> <label> <input id="checkbox-allow-access" type="checkbox" checked="checked"> Allow access </label> </div>
               </div>
             </div>
             <div class="row">
               <div class="col-md-10">
-                <div class="checkbox"> <label> <input type="checkbox"> Allow update </label> </div>
+                <div class="checkbox"> <label> <input id="checkbox-allow-update" type="checkbox"> Allow update </label> </div>
               </div>
             </div>
             <div class="row">
               <div class="col-md-10">
-                <div class="checkbox"> <label> <input type="checkbox"> Allow download </label> </div>
+                <div class="checkbox"> <label> <input id="checkbox-allow-download" type="checkbox"> Allow download </label> </div>
               </div>
             </div>
             <div class="row">
               <div class="col-md-10">
-                <div class="checkbox"> <label> <input type="checkbox"> Allow finish </label> </div>
+                <div class="checkbox"> <label> <input id="checkbox-allow-finish" type="checkbox"> Allow finish </label> </div>
               </div>
             </div>
           </div>
@@ -73,18 +73,22 @@ class MergeModalView extends Backbone.Marionette.LayoutView
 
 
   initialize : (options) ->
+
     @_model       = options._model
     @_tracingType = @_model.tracingType
     @_tracingId   = @_model.tracingId
-    @_sharingLink = undefined
+    @_sharedLink = undefined
+
 
   show : ->
 
     @$el.modal("show")
 
+    console.log @_model
+
     $.ajax(url : "/api/annotations/#{@_tracingType}/#{@_tracingId}/generateLink").done((tracing) =>
-      @_sharingLink = tracing.link
-      @ui.sharinglink.val(@_sharingLink)
+      @_sharedLink = tracing.link
+      @ui.sharinglink.val(@_sharedLink)
     )
 
 
@@ -102,42 +106,33 @@ class MergeModalView extends Backbone.Marionette.LayoutView
 
     $.ajax(url : "/api/user").done((user) =>
       mailAuthor = user.email
-      window.location.href = "mailto:#{mailAuthor}?Subject=Hello%20again&body=#{mailAuthor} is sharing link with you: #{@_sharingLink}";
+      window.location.href = "mailto:#{mailAuthor}?Subject=Hello%20again&body=#{mailAuthor} is sharing link with you: #{@_sharedLink}";
     )
 
 
   submit : ->
 
-    # zbierz comboboxy
-    # wez linka
-    # ajax
-    # toast
+    allowAccess   = $('#checkbox-allow-access')  .prop('checked')
+    allowUpdate   = $('#checkbox-allow-update')  .prop('checked')
+    allowDownload = $('#checkbox-allow-download').prop('checked')
+    allowFinish   = $('#checkbox-allow-finish')  .prop('checked')
 
-
-  merge : (url) ->
-
-    readOnly = document.getElementById('checkbox-read-only').checked
+    data = { 'sharedLink' : @_sharedLink, 'allowAcces' : allowAcces, 'allowUpdate' : allowUpdate, 'allowDownload' : allowDownload, 'allowFinish' : allowFinish }
 
     $.ajax(
-      url: "#{url}/#{readOnly}"
+      url : "/annotations/#{@_tracingType}/#{@_tracingId}/share"
+      data : data
+      type : "POST"
+      processData : false
+      contentType : false
     ).done( (annotation) ->
-
+      console.log "Zapisano SHARE"
       Toast.message(annotation.messages)
-
-      redirectUrl = if readOnly
-        "/annotations/#{annotation.typ}/#{annotation.id}"
-      else
-        "/annotations/#{annotation.typ}/#{annotation.id}/saveMerged"
-
-      app.router.loadURL(redirectUrl)
-
     ).fail( (xhr) ->
       if xhr.responseJSON
         Toast.error(xhr.responseJSON.messages[0].error)
       else
         Toast.error("Error. Please try again.")
-    ).always( =>
-      @toggleIcon()
     )
 
 

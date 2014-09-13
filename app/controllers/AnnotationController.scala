@@ -276,6 +276,19 @@ object AnnotationController extends Controller with Secured with TracingInformat
       }
   }
 
+  def share(typ: String, id: String) = Authenticated.async(parse.json) { implicit request =>
+    for {
+      sharedLink <- (request.body\"sharedLink").asOpt[String].toFox
+      allowAccess <- (request.body\"allowAccess").asOpt[Boolean].toFox
+      allowUpdate <- (request.body\"allowUpdate").asOpt[Boolean].toFox
+      allowDownload <- (request.body\"allowDownload").asOpt[Boolean].toFox
+      allowFinish <- (request.body\"allowFinish").asOpt[Boolean].toFox
+    } yield {
+      JsonOk(Messages("annotation.finished"))
+    }
+  }
+
+  // TEMP SOLUTION
   def generateSharingLink(typ: String, id: String) = Authenticated.async { implicit request =>
     Future.successful(JsonOk(
       Json.obj("link" -> "http://aasdfasdf.com"),

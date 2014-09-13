@@ -275,4 +275,10 @@ object AnnotationController extends Controller with Secured with TracingInformat
         Ok
       }
   }
+
+  def generateSharingLink(typ: String, id: String) = Authenticated.async { implicit request =>
+    Future.successful(JsonOk(
+      Json.obj("link" -> "http://aasdfasdf.com"),
+      Messages("good")))
+  }
 }

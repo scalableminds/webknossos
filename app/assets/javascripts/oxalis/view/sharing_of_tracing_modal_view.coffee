@@ -86,7 +86,7 @@ class MergeModalView extends Backbone.Marionette.LayoutView
 
     console.log @_model
 
-    $.ajax(url : "/api/annotations/#{@_tracingType}/#{@_tracingId}/generateLink").done((tracing) =>
+    $.ajax(url : "/annotations/#{@_tracingType}/#{@_tracingId}/generateLink").done((tracing) =>
       @_sharedLink = tracing.link
       @ui.sharinglink.val(@_sharedLink)
     )

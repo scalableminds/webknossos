@@ -85,11 +85,11 @@ object NMLIO extends Controller with Secured with TextUtils {
   }
 
   def upload = Authenticated.async(parse.multipartFormData) { implicit request =>
-    val parseResult = request.body.files.map(f => f.filename -> NMLService.extractFromNML(f.ref.file))
+    val parseResult = NMLService.extractFromFiles(request.body.files)
+
     val (parseFailed, parseSuccess) = splitResult(parseResult)
     if (parseFailed.size > 0) {
-      val errors = parseFailed.map {
-        fileName =>
+      val errors = parseFailed.map { fileName =>
           "error" -> Messages("nml.file.invalid", fileName)
       }
       Future.successful(JsonBadRequest(errors))
@@ -104,8 +104,7 @@ object NMLIO extends Controller with Secured with TextUtils {
       }
 
       createAnnotationFrom(request.user, nmls, AnnotationType.Explorational, tracingName)
-      .map {
-        annotation =>
+      .map { annotation =>
           JsonOk(
             Json.obj("annotation" -> Json.obj("typ" -> annotation.typ, "id" -> annotation.id)),
             Messages("nml.file.uploadSuccess")

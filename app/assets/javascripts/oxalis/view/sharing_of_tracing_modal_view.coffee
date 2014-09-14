@@ -129,6 +129,8 @@ class MergeModalView extends Backbone.Marionette.LayoutView
         Toast.error(xhr.responseJSON.messages[0].error)
       else
         Toast.error("Error. Please try again.")
+    ).always( =>
+      @destroyModal()
     )
 
 

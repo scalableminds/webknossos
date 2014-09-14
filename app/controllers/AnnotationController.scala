@@ -2,6 +2,7 @@ package controllers
 
 import oxalis.security.{AuthenticatedRequest, Secured}
 import models.user.{UsedAnnotationDAO, User, UserDAO}
+import play.Play
 import play.api.i18n.Messages
 import play.api.libs.json._
 import play.api.Logger
@@ -280,28 +281,40 @@ object AnnotationController extends Controller with Secured with TracingInformat
   def saveShare(typ: String, id: String) = Authenticated.async(parse.json) { implicit request =>
     request.body.validate[SharedAnnotationData].map {
       case _ =>
-        Logger.debug("saveshare")
         val sharedAnnotationData = request.body.as[SharedAnnotationData]
         val sharedAnnotation = SharedAnnotation(typ, id, sharedAnnotationData.sharedLink, sharedAnnotationData.restrictions)
 
-        SharedAnnotationDAO.insert(sharedAnnotation)
+        SharedAnnotationDAO.insert(sharedAnnotation) // TODO check if saving into db was successful
         Future.successful(JsonOk(Messages("sharedAnnotation.success")))
     } recoverTotal {
-      e => Future.successful(JsonOk(Messages("sharedAnnotation.failed")))
+      e => Future.successful(JsonBadRequest(Messages("sharedAnnotation.failed")))
     }
   }
 
-  // TEMP SOLUTION this is wrong
-  def getShare(id: String) = Authenticated.async { implicit request =>
+  // todo - not auth
+  // todo - set restrictions
+  def getShare(sharedLink: String) = Authenticated.async { implicit request =>
+
+    for {
+      sharedAnnotation <- SharedAnnotationDAO.findOne("sharedLink", sharedLink)
+      annotation <- findAnnotation(AnnotationIdentifier(sharedAnnotation.typ, sharedAnnotation.id))
+
+    } yield {
+
+    }
+
     Future.successful(JsonOk(
       Json.obj("sharedLink" -> "http://aasdfasdf.com"),
       Messages("good")))
   }
 
-  // TEMP SOLUTION
   def generateSharedLink(typ: String, id: String) = Authenticated.async { implicit request =>
+
+    val httpUri = Play.application().configuration().getString("http.uri")
+    val id = java.util.UUID.randomUUID.toString
+    val sharedLink = s"$httpUri/annotations/share/$id"
+
     Future.successful(JsonOk(
-      Json.obj("sharedLink" -> "http://aasdfasdf.com"),
-      Messages("good")))
+      Json.obj("sharedLink" -> sharedLink)))
   }
 }

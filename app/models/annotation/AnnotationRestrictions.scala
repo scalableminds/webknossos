@@ -16,7 +16,9 @@ import models.team.Role
  * Time: 02:02
  */
 
-class AnnotationRestrictions {
+trait AnnotationBaseRestrictions
+
+class AnnotationRestrictions extends AnnotationBaseRestrictions {
   def allowAccess(user: Option[User]): Boolean = false
 
   def allowUpdate(user: Option[User]): Boolean = false

@@ -71,23 +71,20 @@ class MergeModalView extends Backbone.Marionette.LayoutView
   ui :
     "sharinglink"            : "#sharing-link"
 
-
   initialize : (options) ->
 
     @_model       = options._model
-    @_tracingType = @_model.tracingType
-    @_tracingId   = @_model.tracingId
-    @_sharedLink = undefined
+    @_tracingId   = $("#container").data("tracing-id")
+    @_tracingType = $("#container").data("tracing-type")
+    @_sharedLink  = undefined
 
 
   show : ->
 
     @$el.modal("show")
 
-    console.log @_model
-
     $.ajax(url : "/annotations/#{@_tracingType}/#{@_tracingId}/generateLink").done((tracing) =>
-      @_sharedLink = tracing.link
+      @_sharedLink = tracing.sharedLink
       @ui.sharinglink.val(@_sharedLink)
     )
 
@@ -112,21 +109,20 @@ class MergeModalView extends Backbone.Marionette.LayoutView
 
   submit : ->
 
-    allowAccess   = $('#checkbox-allow-access')  .prop('checked')
-    allowUpdate   = $('#checkbox-allow-update')  .prop('checked')
-    allowDownload = $('#checkbox-allow-download').prop('checked')
-    allowFinish   = $('#checkbox-allow-finish')  .prop('checked')
+    allowAccess   = $('#checkbox-allow-access')  .prop('checked').toString()
+    allowUpdate   = $('#checkbox-allow-update')  .prop('checked').toString()
+    allowDownload = $('#checkbox-allow-download').prop('checked').toString()
+    allowFinish   = $('#checkbox-allow-finish')  .prop('checked').toString()
+    link = @_sharedLink
 
-    data = { 'sharedLink' : @_sharedLink, 'allowAcces' : allowAcces, 'allowUpdate' : allowUpdate, 'allowDownload' : allowDownload, 'allowFinish' : allowFinish }
+    data = { "sharedLink" : link, "restrictions" : { "allowAccess" : allowAccess, "allowUpdate" : allowUpdate, "allowDownload" : allowDownload, "allowFinish" : allowFinish} }
 
     $.ajax(
-      url : "/annotations/#{@_tracingType}/#{@_tracingId}/share"
-      data : data
-      type : "POST"
-      processData : false
-      contentType : false
+      url : """/annotations/#{@_tracingType}/#{@_tracingId}/saveShare"""
+      type: "POST"
+      contentType: "application/json; charset=utf-8"
+      data: JSON.stringify(data)
     ).done( (annotation) ->
-      console.log "Zapisano SHARE"
       Toast.message(annotation.messages)
     ).fail( (xhr) ->
       if xhr.responseJSON

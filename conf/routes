@@ -91,8 +91,9 @@ GET           /annotations/:typ/:id                                           co
 GET           /annotations/:typ/:id/info                                      controllers.AnnotationController.info(typ: String, id: String)
 GET           /annotations/:typ/:id/download                                  controllers.AnnotationController.download(typ: String, id: String)
 DELETE        /annotations/:typ/:id                                           controllers.AnnotationController.cancel(typ: String, id: String)
-GET           /annotations/:typ/:id/generateLink                              controllers.AnnotationController.generateSharingLink(typ: String, id: String)
-POST          /annotations/:typ/:id/share                                     controllers.AnnotationController.share(typ: String, id: String)
+GET           /annotations/:typ/:id/generateLink                              controllers.AnnotationController.generateSharedLink(typ: String, id: String)
+POST          /annotations/:typ/:id/saveShare                                 controllers.AnnotationController.saveShare(typ: String, id: String)
+GET           /annotations/share/:id                                          controllers.AnnotationController.getShare(id: String)
 
 #Admin pages
 GET           /admin/nml/upload                                               controllers.admin.NMLIO.uploadForm

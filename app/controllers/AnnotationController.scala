@@ -8,6 +8,7 @@ import play.api.Logger
 import models.annotation._
 import play.api.libs.concurrent.Execution.Implicits._
 import net.liftweb.common._
+import play.api.mvc.Action
 import views.html
 import play.api.templates.Html
 import akka.util.Timeout
@@ -276,22 +277,31 @@ object AnnotationController extends Controller with Secured with TracingInformat
       }
   }
 
-  def share(typ: String, id: String) = Authenticated.async(parse.json) { implicit request =>
-    for {
-      sharedLink <- (request.body\"sharedLink").asOpt[String].toFox
-      allowAccess <- (request.body\"allowAccess").asOpt[Boolean].toFox
-      allowUpdate <- (request.body\"allowUpdate").asOpt[Boolean].toFox
-      allowDownload <- (request.body\"allowDownload").asOpt[Boolean].toFox
-      allowFinish <- (request.body\"allowFinish").asOpt[Boolean].toFox
-    } yield {
-      JsonOk(Messages("annotation.finished"))
+  def saveShare(typ: String, id: String) = Authenticated.async(parse.json) { implicit request =>
+    request.body.validate[SharedAnnotationData].map {
+      case _ =>
+        Logger.debug("saveshare")
+        val sharedAnnotationData = request.body.as[SharedAnnotationData]
+        val sharedAnnotation = SharedAnnotation(typ, id, sharedAnnotationData.sharedLink, sharedAnnotationData.restrictions)
+
+        SharedAnnotationDAO.insert(sharedAnnotation)
+        Future.successful(JsonOk(Messages("sharedAnnotation.success")))
+    } recoverTotal {
+      e => Future.successful(JsonOk(Messages("sharedAnnotation.failed")))
     }
   }
 
-  // TEMP SOLUTION
-  def generateSharingLink(typ: String, id: String) = Authenticated.async { implicit request =>
+  // TEMP SOLUTION this is wrong
+  def getShare(id: String) = Authenticated.async { implicit request =>
     Future.successful(JsonOk(
-      Json.obj("link" -> "http://aasdfasdf.com"),
+      Json.obj("sharedLink" -> "http://aasdfasdf.com"),
+      Messages("good")))
+  }
+
+  // TEMP SOLUTION
+  def generateSharedLink(typ: String, id: String) = Authenticated.async { implicit request =>
+    Future.successful(JsonOk(
+      Json.obj("sharedLink" -> "http://aasdfasdf.com"),
       Messages("good")))
   }
 }

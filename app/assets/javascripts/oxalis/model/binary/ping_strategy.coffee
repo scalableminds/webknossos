@@ -67,13 +67,13 @@ class PingStrategy.DslSlow extends PingStrategy
       for bucket in buckets
         if bucket?
           priority = Math.abs(bucket[0] - centerBucket[0]) + Math.abs(bucket[1] - centerBucket[1]) + Math.abs(bucket[2] - centerBucket[2])
-          pullQueue.push([[bucket[0], bucket[1], bucket[2], zoomStep], priority])
+          pullQueue.push({bucket: [bucket[0], bucket[1], bucket[2], zoomStep], priority: priority})
           if plane == activePlane
             # preload only for active plane
             if direction[@w] >= 0 then bucket[@w]++ else bucket[@w]--
-            pullQueue.push([[bucket[0], bucket[1], bucket[2], zoomStep], priority << 1])
+            pullQueue.push({bucket: [bucket[0], bucket[1], bucket[2], zoomStep], priority: priority << 1})
             if direction[@w] >= 0 then bucket[@w]++ else bucket[@w]--
-            pullQueue.push([[bucket[0], bucket[1], bucket[2], zoomStep], priority << 2])
+            pullQueue.push({bucket: [bucket[0], bucket[1], bucket[2], zoomStep], priority: priority << 2})
 
     pullQueue
 

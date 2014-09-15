@@ -24,8 +24,7 @@ class Binary
 
   direction : [0, 0, 0]
 
-
-  constructor : (@model, tracing, @layer, tracingId, updatePipeline) ->
+  constructor : (@model, tracing, @layer, tracingId, maxZoomStep, updatePipeline, @connectionInfo) ->
 
     _.extend(this, new EventMixin())
 
@@ -40,9 +39,9 @@ class Binary
     @lowerBoundary  = topLeft
     @upperBoundary  = [ topLeft[0] + width, topLeft[1] + height, topLeft[2] + depth ]
 
-    @cube = new Cube(@upperBoundary, @layer.resolutions.length, @layer.bitDepth)
+    @cube = new Cube(@upperBoundary, maxZoomStep, @layer.bitDepth)
     @boundingBox = new BoundingBox(@model.boundingBox, @cube)
-    @pullQueue = new PullQueue(@model.dataSetName, @cube, @layer, tracingId, @boundingBox)
+    @pullQueue = new PullQueue(@model.dataSetName, @cube, @layer, tracingId, @boundingBox, connectionInfo)
     @pushQueue = new PushQueue(@model.dataSetName, @cube, @layer, tracingId, updatePipeline)
     @cube.setPushQueue( @pushQueue )
 
@@ -92,13 +91,8 @@ class Binary
       @lastArea     = area.slice()
 
       for strategy in @pingStrategies
-        if strategy.inVelocityRange(1) and strategy.inRoundTripTimeRange(@pullQueue.roundTripTime)
-
-          pullQueue = strategy.ping(position, @direction, zoomStep, area, activePlane) if zoomStep? and area? and activePlane?
-          @pullQueue.clear()
-          for entry in pullQueue
-            @pullQueue.insert(entry...)
-
+        if strategy.inVelocityRange(@connectionInfo.bandwidth) and strategy.inRoundTripTimeRange(@connectionInfo.roundTripTime)
+          @pullQueue.queue = strategy.ping(position, @direction, zoomStep, area, activePlane) if zoomStep? and area? and activePlane?
           break
 
       @queueStatus

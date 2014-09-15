@@ -18,12 +18,14 @@ class PullQueue
   batchCount : 0
   roundTripTime : 0
 
+
   constructor : (@dataSetName, @cube, @layer, @tracingId, @boundingBox, @connctionInfo) ->
 
     @queue = []
 
     if @layer.category == "segmentation"
       @loadGlobalSegmentation()
+
 
   loadGlobalSegmentation : ->
     Request.send(
@@ -33,6 +35,7 @@ class PullQueue
         if buffer
           @cube.mapping = new (if @layer.bitDepth == 16 then Uint16Array else Uint32Array)(buffer)
       )
+
 
   pull : ->
     # Filter and sort queue, using negative priorities for sorting so .pop() can be used to get next bucket
@@ -99,6 +102,11 @@ class PullQueue
 
       @batchCount--
       @pull()
+
+
+  clear : ->
+
+    @queue = []
 
 
   decode : (colors) ->

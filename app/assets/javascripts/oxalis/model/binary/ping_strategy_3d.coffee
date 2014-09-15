@@ -11,7 +11,14 @@ class PingStrategy3d
   roundTripTimeRangeStart : 0
   roundTripTimeRangeEnd : 0
 
+  contentTypes : []
+
   name : 'Abstract'
+
+
+  forContentType : (contentType) ->
+
+    _.isEmpty(@contentTypes) or ~@contentTypes.indexOf(contentType)
 
 
   inVelocityRange : (value) ->

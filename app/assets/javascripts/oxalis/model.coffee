@@ -59,15 +59,15 @@ class Model
             $.when(
               @getDataTokens(dataSet.dataStore.url, dataSet.name, layers)...
             ).pipe =>
-              @initializeWithData(controlMode, state, tracingId, tracingType, tracing, user, layers)
+              @initializeWithData(controlMode, state, tracing, user, layers)
 
           -> Toast.error("Ooops. We couldn't communicate with our mother ship. Please try to reload this page.")
         )
 
-  initializeWithData : (controlMode, state, tracingId, tracingType, tracing, user, layers) ->
+  initializeWithData : (controlMode, state, tracing, user, layers) ->
 
     $.assertExtendContext({
-      task: tracingId
+      task: tracing.id
       dataSet: tracing.content.dataSet.name
     })
 
@@ -102,7 +102,7 @@ class Model
 
     for layer in layers
       layer.bitDepth = parseInt(layer.elementClass.substring(4))
-      @binary[layer.name] = new Binary(this, tracing, layer, tracingId, maxZoomStep, @updatePipeline, @connectionInfo)
+      @binary[layer.name] = new Binary(this, tracing, layer, maxZoomStep, @updatePipeline, @connectionInfo)
 
     if @getColorBinaries().length == 0
       Toast.error("No data available! Something seems to be wrong with the dataset.")

@@ -1,4 +1,4 @@
-@(annotation: models.annotation.AnnotationLike)(additionalHtml: Html)(implicit session: oxalis.view.AuthedSessionData)
+@(annotation: models.annotation.AnnotationLike)(additionalHtml: Html)(implicit session: oxalis.view.SessionData)
 @import com.scalableminds.util.reactivemongo.GlobalAccessContext
 
 @import models.task.Task
@@ -11,13 +11,13 @@
   <div id="container" data-tracing-type="@annotation.typ" data-tracing-id="@annotation.id" class="hide clearfix">
     <div id="main" role="main" data-url="@controllers.routes.AnnotationController.info(annotation.typ, annotation.id)">
       <div id="left-menu">
-        @if(annotation.restrictions.allowUpdate(session.user)){
+        @if(annotation.restrictions.allowUpdate(session.userOpt)){
           <a href="#" class="btn btn-primary" id="trace-save-button">Save</a>
         } else {
           <button class="btn btn-primary disabled">Read only</button>
         }
         <div id="buttonbar" class="btn-group inline-block">
-          @if(annotation.restrictions.allowFinish(session.user)){
+          @if(annotation.restrictions.allowFinish(session.userOpt)){
             <a href="@controllers.routes.AnnotationController.finishWithRedirect(annotation.typ, annotation.id)" class="btn btn-default btn-small" id="trace-finish-button"><i class="fa fa-check-circle-o"></i>Finish</a>
           }
           <a href="@controllers.routes.AnnotationController.download(annotation.typ, annotation.id)" class="btn btn-default btn-small" id="trace-download-button"><i class="fa fa-download"></i>NML</a>

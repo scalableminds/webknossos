@@ -1,6 +1,6 @@
 package controllers
 
-import oxalis.security.{AuthenticatedRequest, Secured}
+import oxalis.security.{UserAwareRequest, AuthenticatedRequest, Secured}
 import models.user.{UsedAnnotationDAO, User, UserDAO}
 import play.Play
 import play.api.i18n.Messages
@@ -46,27 +46,25 @@ object AnnotationController extends Controller with Secured with TracingInformat
   def annotationJson(user: User, annotation: AnnotationLike)(implicit ctx: DBAccessContext): Fox[JsObject] =
     AnnotationLike.annotationLikeInfoWrites(annotation, Some(user), Nil)
 
-  def info(typ: String, id: String) = UserAwareAction.async {
-    implicit request =>
-      val annotationId = AnnotationIdentifier(typ, id)
-      respondWithTracingInformation(annotationId).map {
-        js =>
-          request.userOpt.map {
-            user =>
+  def info(typ: String, id: String) = UserAwareAction.async { implicit request =>
+    Logger.debug("----> info")
+    val annotationId = AnnotationIdentifier(typ, id)
+      respondWithTracingInformation(annotationId).map { js =>
+          request.userOpt.map { user =>
               UsedAnnotationDAO.use(user, annotationId)
           }
           Ok(js)
       }
   }
 
-  def trace(typ: String, id: String) = Authenticated.async {
-    implicit request =>
-      withAnnotation(AnnotationIdentifier(typ, id)) {
-        annotation =>
-          for{
-            _ <- annotation.restrictions.allowAccess(request.user).failIfFalse(Messages("notAllowed")).toFox ~> 400
-          } yield Ok(htmlForAnnotation(annotation))
-      }
+  def trace(typ: String, id: String) = Authenticated.async { implicit request =>
+    Logger.debug("trace")
+    withAnnotation(AnnotationIdentifier(typ, id)) { annotation =>
+      for {
+        _ <- annotation.restrictions.allowAccess(request.user).failIfFalse(Messages("notAllowed")).toFox ~> 400
+      } yield
+        Ok(htmlForAnnotation(annotation))
+    }
   }
 
   def reset(typ: String, id: String) = Authenticated.async { implicit request =>
@@ -229,7 +227,7 @@ object AnnotationController extends Controller with Secured with TracingInformat
       }
   }
 
-  def htmlForAnnotation(annotation: AnnotationLike)(implicit request: AuthenticatedRequest[_]) = {
+  def htmlForAnnotation(annotation: AnnotationLike)(implicit request: UserAwareRequest[_]) = {
     html.tracing.trace(annotation)(Html.empty)
   }
 
@@ -291,20 +289,17 @@ object AnnotationController extends Controller with Secured with TracingInformat
     }
   }
 
-  // todo - not auth
   // todo - set restrictions to annotation
-  def getShare(sharedLink: String) = Authenticated.async { implicit request =>
+  def getShare(sharedId: String) = UserAwareAction.async { implicit request =>
+    val httpUri = Play.application().configuration().getString("http.uri")
+    val sharedLink = s"$httpUri/annotations/share/$sharedId/sharedLink"
     for {
       sharedAnnotation <- SharedAnnotationDAO.findOneBySharedLink(sharedLink)
       annotation <- findAnnotation(AnnotationIdentifier(sharedAnnotation.typ, sharedAnnotation.id))
-
+      // brakuje ustawienia praw
     } yield {
-
+      Ok(htmlForAnnotation(annotation))
     }
-
-    Future.successful(JsonOk(
-      Json.obj("sharedLink" -> "http://aasdfasdf.com"),
-      Messages("good")))
   }
 
   def deleteShare(typ: String, id: String) = Authenticated.async(parse.json) { implicit request =>
@@ -335,8 +330,8 @@ object AnnotationController extends Controller with Secured with TracingInformat
   def generateSharedLink(typ: String, id: String) = Authenticated.async { implicit request =>
 
     val httpUri = Play.application().configuration().getString("http.uri")
-    val id = java.util.UUID.randomUUID.toString
-    val sharedLink = s"$httpUri/annotations/share/$id"
+    val sharedId = java.util.UUID.randomUUID.toString
+    val sharedLink = s"$httpUri/annotations/share/$sharedId/sharedLink"
 
     Future.successful(JsonOk(
       Json.obj("sharedLink" -> sharedLink)))

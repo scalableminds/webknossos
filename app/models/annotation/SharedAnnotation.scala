@@ -3,6 +3,7 @@ package models.annotation
 import com.scalableminds.util.reactivemongo.DBAccessContext
 import com.scalableminds.util.tools.FoxImplicits
 import models.basics.SecuredBaseDAO
+import play.api.Logger
 import play.api.libs.json.{Reads, OFormat, Json, JsObject}
 import reactivemongo.bson.BSONObjectID
 import play.api.libs.functional.syntax._
@@ -121,6 +122,6 @@ object SharedAnnotationDAO
   }
 
   def findOneBySharedLink(sharedLink: String)(implicit ctx: DBAccessContext) = {
-    findOne("sharedLink", sharedLink)
+    findOne(Json.obj("sharedLink" -> sharedLink))
   }
 }

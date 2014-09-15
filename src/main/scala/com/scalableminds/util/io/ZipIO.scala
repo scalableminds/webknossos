@@ -19,9 +19,10 @@ object ZipIO {
     `def`.setLevel(compressionLevel)
   }
 
-  def zip(sources: Seq[NamedFileStream], out: OutputStream) =
-    if (sources.size > 0)
+  def zip(sources: Stream[NamedFileStream], out: OutputStream) = {
+    if (!sources.isEmpty)
       writeZip(sources, new ZipOutputStream(out))
+  }
 
   def gzip(source: InputStream, out: OutputStream) = {
     val t = System.currentTimeMillis()
@@ -43,8 +44,7 @@ object ZipIO {
     gzipped
   }
 
-  private def writeZip(sources: Seq[NamedFileStream], zip: ZipOutputStream) = {
-    val t = System.currentTimeMillis()
+  private def writeZip(sources: Stream[NamedFileStream], zip: ZipOutputStream) = {
     sources.foreach {
       source =>
         zip.putNextEntry(new ZipEntry(source.normalizedName))

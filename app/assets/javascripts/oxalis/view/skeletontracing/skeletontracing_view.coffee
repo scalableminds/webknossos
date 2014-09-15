@@ -116,11 +116,17 @@ class SkeletonTracingView extends View
     $("a[href=#tab-trees]").on "shown", (event) =>
       @updateActiveTree()
 
-    $("#share-tracing-button").on "click", (event) =>
-      @showSharingOfTracingModal()
+    $("#share-tracing-option-button").on "click", (event) =>
+      @_tracingId   = $("#container").data("tracing-id")
+      @_tracingType = $("#container").data("tracing-type")
 
-    $("#unshare-tracing-button").on "click", (event) =>
-      @showUnsharingOfTracingModal()
+      $.ajax(url : "/annotations/#{@_tracingType}/#{@_tracingId}/isShared").done((shared) =>
+        if(shared.isShared)
+          @showUnsharingOfTracingModal()
+        else
+          @showSharingOfTracingModal()
+      )
+
 
     @updateComments()
     @updateTrees()

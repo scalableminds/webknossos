@@ -307,7 +307,7 @@ object AnnotationController extends Controller with Secured with TracingInformat
       Messages("good")))
   }
 
-  def deleteShare(typ: String, id: String) =  Authenticated.async(parse.json) { implicit request =>
+  def deleteShare(typ: String, id: String) = Authenticated.async(parse.json) { implicit request =>
     for {
       sharedLink <- (request.body \ "sharedLink").asOpt[String].toFox
       _ <- SharedAnnotationDAO.remove(Json.obj("typ" -> typ, "id" -> id, "sharedLink" -> sharedLink))
@@ -317,11 +317,19 @@ object AnnotationController extends Controller with Secured with TracingInformat
 
   }
 
+  def isShared(typ: String, id: String) = Authenticated.async { implicit request =>
+    for {
+      isShared <- SharedAnnotationDAO.isShared(typ, id)
+    } yield {
+      JsonOk(Json.obj("isShared" -> isShared))
+    }
+  }
+
   def getSharedLink(typ: String, id: String) = Authenticated.async { implicit request =>
     for {
-      sharedLink <- SharedAnnotationDAO.findOne(Json.obj("typ" -> typ, "id" -> id))
+      sharedAnnotation <- SharedAnnotationDAO.findOne(Json.obj("typ" -> typ, "id" -> id))
     } yield {
-      JsonOk(Json.obj("sharedLink" -> sharedLink.sharedLink))
+      JsonOk(Json.obj("sharedLink" -> sharedAnnotation.sharedLink))
     }
   }
 

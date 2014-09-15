@@ -1,5 +1,6 @@
 package models.annotation
 
+import com.scalableminds.util.reactivemongo.DBAccessContext
 import com.scalableminds.util.tools.FoxImplicits
 import models.basics.SecuredBaseDAO
 import play.api.libs.json.{Reads, OFormat, Json, JsObject}
@@ -89,7 +90,18 @@ object SharedAnnotationDAO
   extends SecuredBaseDAO[SharedAnnotation]
   with FoxImplicits {
 
+  import play.api.libs.concurrent.Execution.Implicits._
+
   val collectionName = "sharedAnnotations"
   val formatter = SharedAnnotation.sharedAnnotationFormat
 
+  def isShared(typ: String, id: String)(implicit ctx: DBAccessContext) = {
+    find(
+      Json.obj(
+        "typ" -> typ,
+        "id" -> id)).one[SharedAnnotation].map {
+      case Some(annotation) => true
+      case _ => false
+    }
+  }
 }

@@ -6,6 +6,7 @@
 @import scala.async.Async._
 @import play.api.libs.concurrent.Execution.Implicits._
 
+
 @main( ){
   <div id="container" data-tracing-type="@annotation.typ" data-tracing-id="@annotation.id" class="hide clearfix">
     <div id="main" role="main" data-url="@controllers.routes.AnnotationController.info(annotation.typ, annotation.id)">
@@ -22,8 +23,11 @@
           <a href="@controllers.routes.AnnotationController.download(annotation.typ, annotation.id)" class="btn btn-default btn-small" id="trace-download-button"><i class="fa fa-download"></i>NML</a>
           <a href="#help-modal" class="btn btn-default btn-small" data-toggle="modal"><i class="fa fa-question-circle"></i>Help</a>
         </div>
-        <div id="share-tracing-button" class="btn btn-default form-control">Share tracing</div>
-        <div id="unshare-tracing-button" class="btn btn-default form-control">Unshare tracing</div>
+
+        <div id="share-tracing-option-button" class="btn btn-default form-control">
+          <i class="fa fa-share"></i>Option of sharing of tracing
+        </div>
+
         <div id="dataset" class="well well-sm">
             @annotation._name.getOrElse(annotation.typ)<br />
             DataSet: <span id="dataset-name"></span><br />

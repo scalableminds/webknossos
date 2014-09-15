@@ -7,6 +7,7 @@ import play.api.libs.json.{Reads, OFormat, Json, JsObject}
 import reactivemongo.bson.BSONObjectID
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
+import com.scalableminds.util.tools.{Fox, FoxImplicits}
 
 /**
  * Company: scalableminds
@@ -103,5 +104,23 @@ object SharedAnnotationDAO
       case Some(annotation) => true
       case _ => false
     }
+  }
+
+  def removeObj(typ: String, id: String, sharedLink: String)(implicit ctx: DBAccessContext) = {
+    remove(Json.obj("typ" -> typ, "id" -> id, "sharedLink" -> sharedLink))
+  }
+
+  def getSharedLink(typ: String, id: String)(implicit ctx: DBAccessContext) = {
+    findOne(
+      Json.obj(
+        "typ" -> typ,
+        "id" -> id)).map {
+      case a: SharedAnnotation => a.sharedLink
+      case _ => ""
+    }
+  }
+
+  def findOneBySharedLink(sharedLink: String)(implicit ctx: DBAccessContext) = {
+    findOne("sharedLink", sharedLink)
   }
 }

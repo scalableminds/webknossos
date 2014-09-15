@@ -3,7 +3,8 @@ jquery : $
 libs/toast : Toast
 ../modal : modal
 ../../view : View
-../sharing_of_tracing_modal_view : SharingOfTracingModalView
+../sharetracing/sharing_of_tracing_modal_view : SharingOfTracingModalView
+../sharetracing/unsharing_of_tracing_modal_view : UnsharingOfTracingModalView
 ###
 
 class SkeletonTracingView extends View
@@ -118,6 +119,9 @@ class SkeletonTracingView extends View
     $("#share-tracing-button").on "click", (event) =>
       @showSharingOfTracingModal()
 
+    $("#unshare-tracing-button").on "click", (event) =>
+      @showUnsharingOfTracingModal()
+
     @updateComments()
     @updateTrees()
     @updateTreesSortButton()
@@ -125,8 +129,17 @@ class SkeletonTracingView extends View
 
 
   showSharingOfTracingModal : ->
+
     container = $("#modal")
     modalView = new SharingOfTracingModalView(el : container, _model : @model)
+    el = modalView.render().el
+    modalView.show()
+
+
+  showUnsharingOfTracingModal : ->
+
+    container = $("#modal")
+    modalView = new UnsharingOfTracingModalView(el : container, _model : @model)
     el = modalView.render().el
     modalView.show()
 

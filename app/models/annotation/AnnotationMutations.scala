@@ -2,26 +2,15 @@ package models.annotation
 
 import com.scalableminds.util.io.NamedFileStream
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
-import play.api.Play
-import java.io.{FileInputStream, FileOutputStream, InputStream, File}
-import java.nio.channels.Channels
 import com.scalableminds.util.reactivemongo.DBAccessContext
-import oxalis.annotation.handler.SavedTracingInformationHandler
-import models.tracing.skeleton.SkeletonTracingLike
-import oxalis.nml.NMLService
-import org.apache.commons.io.IOUtils
 import play.api.libs.json.JsValue
 import com.scalableminds.util.mvc.BoxImplicits
-import models.user.{UserService, UsedAnnotationDAO, User}
+import models.user.{UsedAnnotationDAO, User}
 import scala.concurrent.Future
 import net.liftweb.common.{Failure, Box}
 import scala.async.Async._
-import scala.Some
 import play.api.i18n.Messages
 import models.task.TaskService
-import controllers.Application
-import com.scalableminds.util.mail.Send
-import oxalis.mail.DefaultMails
 import reactivemongo.bson.BSONObjectID
 import play.api.libs.concurrent.Execution.Implicits._
 
@@ -107,26 +96,12 @@ class AnnotationMutations(val annotation: Annotation) extends AnnotationMutation
   def incrementVersion()(implicit ctx: DBAccessContext) =
     AnnotationDAO.incrementVersion(annotation._id)
 
-  def copyDeepAndInsert()(implicit ctx: DBAccessContext): Fox[Annotation] = {
-    val copied = annotation.content.flatMap(content => content.copyDeepAndInsert)
-    copied
-    .map(_.id)
-    .orElse(Fox.successful(annotation._content._id))
-    .flatMap { contentId =>
-      val copied = annotation.copy(
-        _id = BSONObjectID.generate,
-        _content = annotation._content.copy(_id = contentId))
-
-      AnnotationDAO.insert(copied).map(_ => copied)
-    }
-  }
-
   def resetToBase()(implicit ctx: DBAccessContext) = {
     for {
       task <- annotation.task.toFox
       annotationContent <- annotation.content
       tracingBase <- task.annotationBase.flatMap(_.content)
-      reset <- tracingBase.copyDeepAndInsert.toFox
+      reset <- tracingBase.temporaryDuplicate(id = BSONObjectID.generate.stringify).flatMap(_.saveToDB)
       _ <- annotationContent.service.clearTracingData(annotationContent.id)
       updatedAnnotation <- AnnotationDAO.updateContent(annotation._id, ContentReference.createFor(reset))
     } yield updatedAnnotation
@@ -141,83 +116,5 @@ class AnnotationMutations(val annotation: Annotation) extends AnnotationMutation
     for {
       updatedAnnotation <- AnnotationDAO.transfer(annotation._id, user._id)
     } yield updatedAnnotation
-  }
-}
-
-
-trait AnnotationFileService extends FoxImplicits {
-
-  def annotation: Annotation
-
-  val conf = Play.current.configuration
-
-  val defaultDownloadExtension = ".txt"
-
-  def fileExtension(annotation: Annotation) =
-    annotation.content.map(_.downloadFileExtension) getOrElse defaultDownloadExtension
-
-  val annotationStorageFolder = {
-    val folder = conf.getString("oxalis.annotation.storageFolder") getOrElse "data/nmls"
-    new File(folder).mkdirs()
-    folder
-  }
-
-  def outputPathForAnnotation() = fileExtension(annotation).map{ ext =>
-    s"$annotationStorageFolder/${annotation.id}$ext"
-  }
-
-  def writeAnnotationToFile() {
-    for {
-      in: InputStream <- annotationToInputStream()
-      path <- outputPathForAnnotation()
-    } {
-      val f = new File(path)
-      val out = new FileOutputStream(f).getChannel
-      val ch = Channels.newChannel(in)
-      try {
-        out.transferFrom(ch, 0, in.available)
-      } finally {
-        in.close()
-        ch.close()
-        out.close()
-      }
-    }
-  }
-
-  def loadAnnotationContentFromFileStream(): Fox[InputStream] = {
-    if (annotation.state.isFinished) {
-      outputPathForAnnotation().map{ path =>
-        val f = new File(path)
-        if (f.exists())
-          Some(new FileInputStream(f))
-        else
-          None
-      }
-    } else
-      None
-  }
-
-  def loadAnnotationContentStream(): Fox[InputStream] = {
-    loadAnnotationContentFromFileStream().orElse {
-      writeAnnotationToFile()
-      loadAnnotationContentFromFileStream()
-    }.orElse(annotationToInputStream())
-  }
-
-  def loadAnnotationContent()(implicit ctx: DBAccessContext): Fox[NamedFileStream] = {
-    for{
-      annotationStream <- loadAnnotationContentStream()
-      name <- SavedTracingInformationHandler.nameForAnnotation(annotation)
-    } yield
-      NamedFileStream( annotationStream, name + ".nml")
-  }
-
-  def annotationToInputStream(): Fox[InputStream] = {
-    annotation.content.flatMap {
-      case t: SkeletonTracingLike =>
-        NMLService.toNML(t).map(IOUtils.toInputStream).toFox
-      case _ =>
-        throw new Exception("Invalid content!")
-    }
   }
 }

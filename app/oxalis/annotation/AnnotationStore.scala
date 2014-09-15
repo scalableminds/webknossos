@@ -3,6 +3,7 @@ package oxalis.annotation
 import akka.actor.Actor
 import akka.agent.Agent
 import akka.util.Timeout
+import reactivemongo.bson.BSONObjectID
 import scala.concurrent.{Await, Future}
 import scala.concurrent.duration._
 import net.liftweb.common.Box
@@ -22,7 +23,7 @@ object AnnotationIdentifier{
 }
 
 case class RequestAnnotation(id: AnnotationIdentifier, user: Option[User], implicit val ctx: DBAccessContext)
-case class MergeAnnotation(annotation: Fox[AnnotationLike], annotationSec: Fox[AnnotationLike], readOnly: Boolean, user: Option[User], implicit val ctx: DBAccessContext)
+case class MergeAnnotation(annotation: Fox[AnnotationLike], annotationSec: Fox[AnnotationLike], readOnly: Boolean, user: User, implicit val ctx: DBAccessContext)
 case class StoredResult(result: Fox[AnnotationLike], timestamp: Long = System.currentTimeMillis)
 
 class AnnotationStore extends Actor {
@@ -103,13 +104,13 @@ class AnnotationStore extends Actor {
     }
   }
 
-    def mergeAnnotation(annotation: Fox[AnnotationLike], annotationSec: Fox[AnnotationLike], readOnly: Boolean, user: Option[User])(implicit ctx: DBAccessContext) = {
+    def mergeAnnotation(annotation: Fox[AnnotationLike], annotationSec: Fox[AnnotationLike], readOnly: Boolean, user: User)(implicit ctx: DBAccessContext) = {
       try {
         for {
           ann <- annotation
           annSec <- annotationSec
         } yield {
-          val mergedAnnotation = AnnotationService.merge(readOnly, annSec.team, annSec.typ, ann, annSec)
+          val mergedAnnotation = AnnotationService.merge(readOnly, user._id, annSec.team, annSec.typ, ann, annSec)
 
           // Caching of merged annotation
           val storedMerge = StoredResult(Option(mergedAnnotation))

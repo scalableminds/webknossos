@@ -55,9 +55,13 @@ case class VolumeTracing(
     }
   }
 
-  def copyDeepAndInsert = ???
+  def temporaryDuplicate(id: String)(implicit ctx: DBAccessContext) = ???
 
-  def mergeWith(source: AnnotationContent) = ???
+  def mergeWith(source: AnnotationContent)(implicit ctx: DBAccessContext) = ???
+
+  def saveToDB(implicit ctx: DBAccessContext) = {
+    VolumeTracingService.saveToDB(this)
+  }
 
   def contentType: String = VolumeTracing.contentType
 
@@ -96,6 +100,15 @@ object VolumeTracingService extends AnnotationContentService with FoxImplicits{
       _ <- VolumeTracingDAO.insert(volumeTracing)
     } yield {
       volumeTracing
+    }
+  }
+
+  def saveToDB(volume: VolumeTracing)(implicit ctx: DBAccessContext) = {
+    VolumeTracingDAO.update(
+      Json.obj("_id" -> volume._id),
+      Json.obj("$set" -> VolumeTracingDAO.formatter.writes(volume)),
+      upsert = true).map { _ =>
+      volume
     }
   }
 

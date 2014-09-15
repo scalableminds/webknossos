@@ -67,12 +67,17 @@ object AnnotationController extends Controller with Secured with TracingInformat
 
   def saveMerged(typ: String, id: String) = Authenticated.async { implicit request =>
       withAnnotation(AnnotationIdentifier(typ, id)) { annotation =>
+        Logger.error("Save merged id: " + id)
         for {
           dataSetName <- annotation.dataSetName ?~> Messages("dataSet.notSupplied")
           dataSet <- DataSetDAO.findOneBySourceName(dataSetName) ?~> Messages("dataSet.notFound")
-          content <- annotation.content ?~> Messages("annotation.contentType.notSupplied")
-          savedAnnotation <- AnnotationService.createExplorationalFor(request.user, dataSet, content.contentType, annotation.id) ?~> Messages("annotation.create.failed")
+          temporary <- annotation.temporaryDuplicate(true)
+          a = Logger.error("Temporary id: " + temporary.id)
+          explorational = temporary.copy(typ = AnnotationType.Explorational)
+          b = Logger.error("Explorational id: " + explorational.id)
+          savedAnnotation <- explorational.saveToDB
         } yield {
+          Logger.error("Saved id: " + savedAnnotation.id)
           Logger.debug("Save merged annotation")
           Redirect(routes.AnnotationController.trace(savedAnnotation.typ, savedAnnotation.id))
         }

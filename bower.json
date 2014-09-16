@@ -1,6 +1,6 @@
 {
   "name": "oxalis",
-  "version": "0.17.14",
+  "version": "0.17.25",
   "dependencies": {
     "bootstrap": "~3.1.1",
     "jquery": "~2.0.3",
@@ -8,7 +8,7 @@
     "lodash": "~2.2.1",
     "backbone": "~1.1.0",
     "backbone.marionette": "2.0.1",
-    "font-awesome": "~4.0.3",
+    "font-awesome": "4.2.0",
     "momentjs": "~2.5.1",
     "threejs-stats": "",
     "KeyboardJS": "~0.4.1",

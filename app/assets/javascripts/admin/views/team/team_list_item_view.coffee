@@ -15,7 +15,7 @@ class TeamListItemView extends Backbone.Marionette.ItemView
     <td><%= owner.firstName %> <%= owner.lastName %></td>
     <td>
       <% _.each(roles, function(role){ %>
-          <span class="label label-default" style="background-color: <%= TemplateHelpers.roleToColor(role.name) %>"><%= role.name %></span>
+          <span class="label label-default" style="background-color: <%= TemplateHelpers.stringToColor(role.name) %>"><%= role.name %></span>
       <% }) %>
     </td>
     </td>

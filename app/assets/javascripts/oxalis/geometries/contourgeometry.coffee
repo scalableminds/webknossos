@@ -16,14 +16,14 @@ class CellLayer
 
     @color = 0x000000
 
-    @listenTo(@volumeTracing, "updateLayer", (contourList) ->
-      @reset()
-      for p in contourList
-        @addEdgePoint(p)
-    )
-    @listenTo(@volumeTracing, "resetContour", ->
-      @reset()
-    )
+    @volumeTracing.on({
+      updateLayer : (contourList) =>
+        @reset()
+        for p in contourList
+          @addEdgePoint(p)
+      volumeAnnotated : =>
+        @reset()
+      })
 
     @createMeshes()
 

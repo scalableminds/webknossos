@@ -35,7 +35,6 @@ class Plane
 
     @createMeshes(planeWidth, textureWidth)
 
-
   createMeshes : (pWidth, tWidth) ->
 
     # create plane

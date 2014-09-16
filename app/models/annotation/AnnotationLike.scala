@@ -7,15 +7,15 @@ import play.api.libs.json._
 import play.api.libs.functional.syntax._
 import scala.concurrent.Future
 import play.api.libs.concurrent.Execution.Implicits._
-import braingames.reactivemongo.DBAccessContext
-import braingames.util.{FoxImplicits, Fox}
+import com.scalableminds.util.reactivemongo.DBAccessContext
+import com.scalableminds.util.tools.{FoxImplicits, Fox}
 import reactivemongo.bson.BSONObjectID
 import play.api.Logger
 import models.tracing.skeleton.AnnotationStatistics
 import oxalis.view.{ResourceActionCollection, ResourceAction}
 import play.api.libs.json.Json.JsValueWrapper
 import oxalis.mvc.FilterableJson
-import braingames.format.Formatter
+import com.scalableminds.util.mvc.Formatter
 import org.joda.time.format.DateTimeFormat
 
 /**

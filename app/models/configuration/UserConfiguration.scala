@@ -1,5 +1,10 @@
 package models.configuration
 
+import play.api.Play.current
+import com.scalableminds.util.security.SCrypt._
+import scala.collection.mutable.Stack
+import play.api.libs.json.JsValue
+import play.api.libs.json.JsBoolean
 import play.api.libs.json._
 import models.basics.BasicSettings
 
@@ -44,9 +49,10 @@ object UserConfiguration extends BasicSettings {
       ),
       "zoom" -> JsNumber(2),
       "scale" -> JsNumber(1),
-      "displayTDViewXY" -> JsBoolean(true),
-      "displayTDViewYZ" -> JsBoolean(true),
-      "displayTDViewXZ" -> JsBoolean(true),
+      "tdViewDisplayPlanes" -> JsBoolean(true),
+      "isosurfaceDisplay" -> JsBoolean(false),
+      "isosurfaceBBsize" -> JsNumber(1),
+      "isosurfaceResolution" -> JsNumber(80),
       "newNodeNewTree" -> JsBoolean(false),
       "inverseX" -> JsBoolean(false),
       "inverseY" -> JsBoolean(false),
@@ -60,6 +66,7 @@ object UserConfiguration extends BasicSettings {
       "overrideNodeRadius" -> JsBoolean(true),
       "sortTreesByName" -> JsBoolean(false),
       "sortCommentsAsc" -> JsBoolean(true),
+      "segmentationOpacity" -> JsNumber(20),
       "sphericalCapRadius" -> JsNumber(140)))
 
 }

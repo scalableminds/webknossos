@@ -1,19 +1,19 @@
 package models.annotation
 
 import models.user.User
-import braingames.reactivemongo.DBAccessContext
+import com.scalableminds.util.reactivemongo.DBAccessContext
 import scala.concurrent.Future
-import braingames.util.{FoxImplicits, Fox}
+import com.scalableminds.util.tools.{FoxImplicits, Fox}
 import models.tracing.skeleton.{SkeletonTracingService}
 import play.api.libs.concurrent.Execution.Implicits._
 import models.task.{Task, TaskService}
-import braingames.geometry.{Point3D, BoundingBox}
+import com.scalableminds.util.geometry.{Point3D, BoundingBox}
 import reactivemongo.bson.BSONObjectID
 import models.annotation.AnnotationType._
 import scala.Some
 import models.binary.DataSet
 import oxalis.nml.NML
-import braingames.mvc.BoxImplicits
+import com.scalableminds.util.mvc.BoxImplicits
 
 /**
  * Company: scalableminds

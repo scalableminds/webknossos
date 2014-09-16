@@ -1,6 +1,7 @@
 ### define
 ./cube : Cube
 libs/array_buffer_socket : ArrayBufferSocket
+libs/request : Request
 ###
 
 class PullQueue
@@ -28,6 +29,15 @@ class PullQueue
     @loadedBytes = 0
     @totalLoadedBuckets = 0
     @totalLoadedBytes = 0
+
+    if @layer.category == "segmentation"
+      Request.send(
+        url : "#{@layer.url}/data/datasets/#{@dataSetName}/layers/#{@layer.name}/mapping?token=#{@layer.token}"
+        dataType : 'arraybuffer'
+      ).then( (buffer) =>
+        if buffer
+          @cube.mapping = new (if @layer.bitDepth == 16 then Uint16Array else Uint32Array)(buffer)
+      )
 
   swap : (a, b) ->
 
@@ -191,7 +201,6 @@ class PullQueue
 
 
   set4Bit : (@fourBit) ->
-
 
   getLoadSocket : ->
 

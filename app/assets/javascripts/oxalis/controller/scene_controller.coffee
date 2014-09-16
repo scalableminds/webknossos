@@ -29,7 +29,6 @@ class SceneController
     @pingBinary       = true
     @pingBinarySeg    = true
 
-    @polygonFactory = new PolygonFactory( @model.getSegmentationBinary()?.cube )
     @volumeMeshes   = []
 
     @createMeshes()
@@ -72,16 +71,34 @@ class SceneController
     @planes[constants.PLANE_XZ].setRotation(new THREE.Euler( - 1/2 * Math.PI, 0, 0))
 
 
-  showAllShapes : (min, max) ->
+  removeShapes : ->
 
     @trigger("removeGeometries", @volumeMeshes)
 
-    @volumeMeshes = []
-    triangles = @polygonFactory.getTriangles(min, max)
-    for id of triangles
-      volume = new VolumeGeometry( triangles[id], parseInt( id ) )
-      @volumeMeshes = @volumeMeshes.concat( volume.getMeshes() )
-    @trigger("newGeometries", @volumeMeshes)
+
+  showShapes : (bb, resolution, id) ->
+
+    return unless @model.getSegmentationBinary()?
+
+    if @cellsDeferred?
+      @cellsDeferred.cancel()
+
+    @cellsDeferred = (new PolygonFactory(
+      @model.getSegmentationBinary().cube
+      resolution
+      bb.min, bb.max, id
+    )).getTriangles().done (triangles) =>
+
+      @removeShapes()
+      @volumeMeshes = []
+
+      for id of triangles
+        volume = new VolumeGeometry(triangles[id], parseInt(id))
+        @volumeMeshes = @volumeMeshes.concat(volume.getMeshes())
+
+      @trigger("newGeometries", @volumeMeshes)
+      @flycam.update()
+      @cellsDeferred = null
 
 
   updateSceneForCam : (id) =>
@@ -162,9 +179,10 @@ class SceneController
     @flycam.update()
 
 
-  setDisplaySV : (plane, value) ->
+  setDisplayPlanes : (value) =>
 
-    @displayPlane[plane] = value
+    for i in [0..2]
+      @displayPlane[i] = value
     @flycam.update()
 
 
@@ -190,9 +208,8 @@ class SceneController
   setSegmentationAlpha : (alpha) ->
 
     for plane in @planes
-      plane.setSegmentationAlpha( alpha )
+      plane.setSegmentationAlpha(alpha)
     @pingBinarySeg = alpha != 0
-    #console.log "pingValues:", @pingBinary, @pingBinarySeg
 
   pingDataLayer : (dataLayerName) ->
 
@@ -207,9 +224,9 @@ class SceneController
 
     for plane in @planes
       plane.setVisible(false)
-    @cube.setVisibility( false )
-    @bb.setVisibility( false )
-    @bb2?.setVisibility( false )
+    @cube.setVisibility(false)
+    @bb.setVisibility(false)
+    @bb2?.setVisibility(false)
 
     @skeleton?.restoreVisibility()
     @skeleton?.setSizeAttenuation(true)
@@ -219,9 +236,9 @@ class SceneController
 
     for plane in @planes
       plane.setVisible(true)
-    @cube.setVisibility( true )
-    @bb.setVisibility( true )
-    @bb2?.setVisibility( true )
+    @cube.setVisibility(true)
+    @bb.setVisibility(true)
+    @bb2?.setVisibility(true)
 
     @skeleton?.setSizeAttenuation(false)
 
@@ -236,3 +253,4 @@ class SceneController
     @listenTo(user, "change:displayTDViewYZ", (model, value) -> @setDisplaySV(constants.PLANE_YZ, value))
     @listenTo(user, "change:displayTDViewXZ", (model, value) -> @setDisplaySV(constants.PLANE_XZ, value))
     @listenTo(app.vent, "segmentationInfoView:change", (value) -> setSegmentationAlpha(value))
+

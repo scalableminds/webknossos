@@ -3,7 +3,7 @@ package models.tracing.skeleton
 import models.annotation.{AnnotationLike, Annotation}
 import play.api.Logger
 import scala.concurrent.Future
-import braingames.util.{FoxImplicits, Fox}
+import com.scalableminds.util.tools.{FoxImplicits, Fox}
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json.{Json, JsObject}
 

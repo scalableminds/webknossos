@@ -1,16 +1,16 @@
 package models.annotation
 
 import java.util.Date
-import braingames.geometry.{BoundingBox, Scale, Point3D}
+import com.scalableminds.util.geometry.{BoundingBox, Scale, Point3D}
 import java.io.InputStream
 import play.api.libs.json._
 import play.api.libs.functional.syntax._
-import braingames.binary.models.{FallbackLayer, DataLayer}
+import com.scalableminds.braingames.binary.models.{FallbackLayer, DataLayer}
 import models.binary.{DataStoreInfo, DataSet, DataSetDAO}
 import scala.concurrent.Future
 import play.api.libs.concurrent.Execution.Implicits._
-import braingames.reactivemongo.DBAccessContext
-import braingames.util.Fox
+import com.scalableminds.util.reactivemongo.DBAccessContext
+import com.scalableminds.util.tools.Fox
 import play.api.Logger
 import net.liftweb.common.Box
 

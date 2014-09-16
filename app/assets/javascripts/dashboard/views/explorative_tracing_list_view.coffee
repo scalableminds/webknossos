@@ -55,7 +55,7 @@ class ExplorativeTracingListView extends Backbone.Marionette.CompositeView
           <th> DataSet </th>
           <th> Stats </th>
           <th> Type </th>
-          <th> Last edited </th>
+          <th> Created </th>
           <th> </th>
         </tr>
       </thead>
@@ -63,8 +63,8 @@ class ExplorativeTracingListView extends Backbone.Marionette.CompositeView
     </table>
   """)
 
-  itemView : ExplorativeTracingListItemView
-  itemViewContainer : "tbody"
+  childView : ExplorativeTracingListItemView
+  childViewContainer : "tbody"
 
   events :
     "change input[type=file]" : "selectFiles"
@@ -120,4 +120,3 @@ class ExplorativeTracingListView extends Backbone.Marionette.CompositeView
     ).always( ->
       toggleIcon()
     )
-

@@ -5,8 +5,8 @@ jquery : $
 underscore : _
 backbone : backbone
 libs/request : Request
-three.color : ColorConverter
-three : THREE
+libs/event_mixin : EventMixin
+libs/color_generator : ColorGenerator
 ./tracepoint : TracePoint
 ./tracetree : TraceTree
 ./skeletontracing_statelogger : SkeletonTracingStateLogger
@@ -17,7 +17,6 @@ oxalis/model/right-menu/comments_collection : CommentsCollection
 
 class SkeletonTracing
 
-  GOLDEN_RATIO : 0.618033988749895
   TYPE_USUAL   : constants.TYPE_USUAL
   TYPE_BRANCH  : constants.TYPE_BRANCH
   # Max and min radius in base voxels (see scaleInfo.baseVoxel)
@@ -30,7 +29,6 @@ class SkeletonTracing
   activeNode : null
   activeTree : null
   firstEdgeDirection : null
-  currentHue : null
 
   constructor : (tracing, @flycam, @flycam3d, @user, updatePipeline) ->
 
@@ -59,6 +57,8 @@ class SkeletonTracing
       @activeNode
       @activeTree
     } = tracingParser.parse()
+
+    @colorIdCounter = @treeIdCount
 
     # ensure a tree is active
     unless @activeTree
@@ -368,12 +368,7 @@ class SkeletonTracing
 
   getNewTreeColor : ->
 
-    # this generates the most distinct colors possible, using the golden ratio
-    @currentHue = @treeIdCount * @GOLDEN_RATIO % 1 unless @currentHue
-    color = ColorConverter.setHSV(new THREE.Color(), @currentHue, 1, 1).getHex()
-    @currentHue += @GOLDEN_RATIO
-    @currentHue %= 1
-    color
+    return ColorGenerator.distinctColorForId( @colorIdCounter++ )
 
 
   shuffleTreeColor : (tree) ->

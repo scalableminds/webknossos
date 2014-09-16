@@ -138,6 +138,9 @@ class Controller
       if @urlManager.initialState.mode?
         app.vent.trigger("changeViewMode", @urlManager.initialState.mode)
 
+      # initial trigger
+      @sceneController.setSegmentationAlpha($('#alpha-slider').data("slider-value") or @model.user.getSettings().segmentationOpacity)
+
 
   initMouse : ->
 

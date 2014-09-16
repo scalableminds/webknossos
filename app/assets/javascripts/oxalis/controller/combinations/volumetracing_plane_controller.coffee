@@ -17,6 +17,24 @@ class VolumeTacingPlaneController extends PlaneController
 
     super(@model, stats, @gui, @view, @sceneController)
 
+    @model.flycam.on
+      positionChanged : =>
+        @render3dCell @model.volumeTracing.getActiveCellId()
+      zoomStepChanged : =>
+        @render3dCell @model.volumeTracing.getActiveCellId()
+
+    @model.user.on
+      isosurfaceDisplayChanged : =>
+        @render3dCell @model.volumeTracing.getActiveCellId()
+      isosurfaceBBsizeChanged : =>
+        @render3dCell @model.volumeTracing.getActiveCellId()
+      isosurfaceResolutionChanged : =>
+        @render3dCell @model.volumeTracing.getActiveCellId()
+
+    @model.volumeTracing.on
+      newActiveCell : (id) =>
+        @render3dCell id
+
 
   getPlaneMouseControls : (planeId) ->
 
@@ -71,3 +89,23 @@ class VolumeTacingPlaneController extends PlaneController
 
       "c" : =>
         @model.volumeTracing.createCell()
+
+
+  render3dCell : (id) ->
+
+    unless @model.user.get("isosurfaceDisplay")
+      @sceneController.removeShapes()
+    else
+      bb = @model.flycam.getViewportBoundingBox()
+      res = @model.user.get("isosurfaceResolution")
+      @sceneController.showShapes(@scaleIsosurfaceBB(bb), res, id)
+    @model.flycam.update()
+
+  scaleIsosurfaceBB : (bb) ->
+    factor = @model.user.get("isosurfaceBBsize")
+    for i in [0..2]
+      width = bb.max[i] - bb.min[i]
+      diff = (factor - 1) * width / 2
+      bb.min[i] -= diff
+      bb.max[i] += diff
+    return bb

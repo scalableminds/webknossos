@@ -174,7 +174,7 @@ class PlaneView
 
   resize : ->
 
-    #Call this after the canvas was resized to fix the viewport
+    # Call this after the canvas was resized to fix the viewport
     canvas = $("#render-canvas")
     WIDTH = (canvas.width()-20)/2
     HEIGHT = (canvas.height()-20)/2
@@ -184,6 +184,11 @@ class PlaneView
       @camera[i].aspect = WIDTH / HEIGHT
       @camera[i].updateProjectionMatrix()
     @draw()
+
+
+    # notify THREE.TrackballControls
+    TDView = $("#TDView")
+    TDView.trigger($.Event('resizeCanvas'));
 
 
   scaleTrianglesPlane : (scale) =>

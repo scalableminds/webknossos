@@ -1,11 +1,24 @@
 ### define
 underscore : _
 ../pagination_collection : PaginationCollection
+format_utils : FormatUtils
 ###
 
 class TaskCollection extends PaginationCollection
 
-  url : "/api/tasks"
+  constructor : (forTaskTypeID) ->
+
+    super()
+
+    # We cannot use @url as a method since the Backbone.Paginator.clientPager
+    # ignores the context which is necessary to read forTaskTypeID.
+    # TODO: Check if this is still an issue with a newer version of backbone.paginator.
+    @url =
+      if forTaskTypeID
+        "/api/taskTypes/#{forTaskTypeID}/tasks"
+      else
+        "/api/tasks"
+
 
   parse : (respones) ->
 
@@ -15,6 +28,7 @@ class TaskCollection extends PaginationCollection
         # apply some defaults
         response.type =
           summary : response.type?.summary || "<deleted>"
+        response.formattedTracingTime = FormatUtils.formatSeconds(response.tracingTime? or 0)
 
         # convert bounding box
         if response.boundingBox?

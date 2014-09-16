@@ -5,17 +5,17 @@ import scala.Some
 import akka.util.Timeout
 import play.api.libs.concurrent.Akka
 import akka.actor.Props
-import braingames.js.{JS, JsExecutionActor}
+import com.scalableminds.util.js.{JS, JsExecutionActor}
 import models.user.User
 import models.annotation.{AnnotationType, AnnotationDAO}
 import scala.concurrent.Future
-import braingames.reactivemongo.{DBAccessContext, GlobalAccessContext}
+import com.scalableminds.util.reactivemongo.{DBAccessContext, GlobalAccessContext}
 import play.api.Logger
 import akka.pattern.AskTimeoutException
 import play.api.libs.concurrent.Execution.Implicits._
 import akka.pattern.ask
 import scala.concurrent.duration._
-import braingames.util.Fox
+import com.scalableminds.util.tools.Fox
 import net.liftweb.common.{Failure, Empty, Full}
 
 /**

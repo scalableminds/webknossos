@@ -40,8 +40,8 @@ class ProjectListItemView extends Backbone.Marionette.CompositeView
   """)
 
   tagName : "tbody"
-  itemView : ProjectTaskView
-  itemViewContainer : "tbody"
+  childView : ProjectTaskView
+  childViewContainer : "tbody"
 
   events :
     "click .delete" : "deleteProject"
@@ -90,7 +90,4 @@ class ProjectListItemView extends Backbone.Marionette.CompositeView
 
   handleXHRError : (model, xhr) ->
 
-    xhr.responseJSON.messages.forEach(
-      (message) ->
-        Toast.error(message.error)
-    )
+    Toast.message(xhr.responseJSON.messages)

@@ -1,6 +1,6 @@
 package oxalis.nml
 
-import braingames.xml.{SynchronousXMLWrites, XMLWrites}
+import com.scalableminds.util.xml.{SynchronousXMLWrites, XMLWrites}
 import play.api.libs.json._
 
 case class Edge(source: Int, target: Int)

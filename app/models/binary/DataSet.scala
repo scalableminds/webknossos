@@ -4,12 +4,12 @@ import play.api.libs.functional.syntax._
 import models.basics._
 import play.api.libs.json._
 import models.user.User
-import braingames.reactivemongo.{DefaultAccessDefinitions, DBAccessContext}
+import com.scalableminds.util.reactivemongo.{DefaultAccessDefinitions, DBAccessContext}
 import play.api.libs.concurrent.Execution.Implicits._
 import scala.Some
-import braingames.reactivemongo.AccessRestrictions.AllowIf
-import braingames.binary.models.DataSource
-import braingames.geometry.Point3D
+import com.scalableminds.util.reactivemongo.AccessRestrictions.AllowIf
+import com.scalableminds.braingames.binary.models.DataSource
+import com.scalableminds.util.geometry.Point3D
 
 case class DataSet(
                     name: String,
@@ -70,7 +70,7 @@ object DataSetDAO extends SecuredBaseDAO[DataSet] {
     }
   }
 
-  import braingames.binary.models.DataLayer.dataLayerFormat
+  import com.scalableminds.braingames.binary.models.DataLayer.dataLayerFormat
 
   val formatter = DataSet.dataSetFormat
 

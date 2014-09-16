@@ -1,10 +1,10 @@
 package models.task
 
 import models.annotation.{AnnotationService, Annotation, AnnotationType, AnnotationDAO}
-import braingames.reactivemongo.DBAccessContext
+import com.scalableminds.util.reactivemongo.DBAccessContext
 import reactivemongo.bson.BSONObjectID
 
-import braingames.util.{Fox, FoxImplicits}
+import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import play.api.libs.concurrent.Execution.Implicits._
 import models.user.{User, Experience}
 import scala.concurrent.Future

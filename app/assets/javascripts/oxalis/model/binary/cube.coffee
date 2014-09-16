@@ -20,6 +20,7 @@ class Cube
   arbitraryCube : null
   dataCubes : null
   upperBoundary : null
+  mapping : []
 
   buckets : null
   bucketIterator : 0
@@ -58,14 +59,6 @@ class Cube
       Math.ceil(@upperBoundary[1] / (1 << @BUCKET_SIZE_P))
       Math.ceil(@upperBoundary[2] / (1 << @BUCKET_SIZE_P))
     ]
-
-    mappingBoundary = [
-      @upperBoundary[0] >> @CUBE_SIZE_P
-      @upperBoundary[1] >> @CUBE_SIZE_P
-      @upperBoundary[2] >> @CUBE_SIZE_P
-    ]
-    @mappings = new Array( mappingBoundary[0] * mappingBoundary[1] * mappingBoundary[2])
-    @mappings.boundary = mappingBoundary
 
     @arbitraryCube = new Array(cubeBoundary[0] * cubeBoundary[1] * cubeBoundary[2])
     @arbitraryCube.boundary = cubeBoundary.slice()
@@ -160,9 +153,7 @@ class Cube
 
   getMappingByZoomedAddress : ( address ) ->
 
-    if (mappingIndex = @getMappingIndexByZoomedAddress(address))?
-      return @mappings[mappingIndex]
-    return null
+    return @mapping
 
 
   getMappingByPosition : ( position ) ->

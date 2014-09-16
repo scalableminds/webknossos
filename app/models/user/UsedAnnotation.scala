@@ -4,7 +4,7 @@ import models.basics.SecuredBaseDAO
 import oxalis.annotation.AnnotationIdentifier
 import reactivemongo.bson.BSONObjectID
 import play.api.libs.json.Json
-import braingames.reactivemongo.DBAccessContext
+import com.scalableminds.util.reactivemongo.DBAccessContext
 import play.modules.reactivemongo.json.BSONFormats._
 import play.api.libs.concurrent.Execution.Implicits._
 

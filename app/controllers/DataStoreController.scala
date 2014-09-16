@@ -13,13 +13,13 @@ import play.api.libs.iteratee.Concurrent.Channel
 import play.api.Logger
 import play.api.libs.concurrent.Akka
 import scala.concurrent.duration._
-import braingames.util.{Fox, FoxImplicits}
+import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import models.binary._
 import play.api.i18n.Messages
-import braingames.binary.models._
+import com.scalableminds.braingames.binary.models._
 import play.api.libs.concurrent.Execution.Implicits._
-import braingames.reactivemongo.{GlobalAccessContext, DBAccessContext}
-import braingames.rest.{RESTResponse, RESTCall}
+import com.scalableminds.util.reactivemongo.{GlobalAccessContext, DBAccessContext}
+import com.scalableminds.util.rest.{RESTResponse, RESTCall}
 
 object DataStoreHandler extends DataStoreBackChannelHandler{
   def createUserDataLayer(dataStoreInfo: DataStoreInfo, base: DataSource): Fox[UserDataLayer] = {
@@ -150,7 +150,7 @@ case class WebSocketRESTServer(out: Channel[Array[Byte]]) extends FoxImplicits{
       val json = Json.parse(rawJson)
       json.validate[RESTResponse] match {
         case JsSuccess(response, _) =>
-          Logger.warn("Finished with REST result: " + response)
+          Logger.debug("Finished with REST result: " + response)
           openCalls().get(response.uuid).map {
             promise =>
               promise.trySuccess(Full(response)) match {
@@ -186,7 +186,6 @@ object DataStoreController extends Controller with DataStoreActionHelper{
         case Full(dataStore) =>
           val (iterator, enumerator, restChannel) = WebSocketRESTServer.create
           DataStoreHandler.register(dataStore.name, restChannel)
-          // TODO: key logging needs to be removed
           Logger.debug(s"Key $name connected.")
           (iterator, enumerator)
         case _ =>

@@ -4,8 +4,8 @@ import scala.Array.canBuildFrom
 import scala.Option.option2Iterable
 import oxalis.security.AuthenticatedRequest
 import oxalis.security.Secured
-import braingames.util.ExtendedTypes.ExtendedString
-import braingames.geometry.{Point3D, BoundingBox}
+import com.scalableminds.util.tools.ExtendedTypes.ExtendedString
+import com.scalableminds.util.geometry.{Point3D, BoundingBox}
 import models.binary.DataSet
 import models.tracing._
 import models.task._
@@ -34,11 +34,11 @@ import play.api.libs.json._
 import play.api.libs.functional.syntax._
 
 import net.liftweb.common.{Empty, Failure, Full}
-import braingames.util.Fox
+import com.scalableminds.util.tools.Fox
 import play.api.mvc.SimpleResult
 import play.api.mvc.Request
 import play.api.mvc.AnyContent
-import braingames.reactivemongo.DBAccessContext
+import com.scalableminds.util.reactivemongo.DBAccessContext
 import models.team.Team
 
 object TaskAdministration extends AdminController {
@@ -46,6 +46,10 @@ object TaskAdministration extends AdminController {
   val taskFromNMLForm = nmlTaskForm(minTaskInstances = 1)
 
   type TaskForm = Form[(String, String, Point3D, Experience, Int, Int, String)]
+
+  def empty = Authenticated{ implicit request =>
+    Ok(views.html.main()(Html.empty))
+  }
 
   def basicTaskForm(minTaskInstances: Int) = Form(
     tuple(
@@ -226,7 +230,7 @@ object TaskAdministration extends AdminController {
             project <- ProjectService.findIfNotEmpty(projectName) ?~> Messages("project.notFound")
             _ <- ensureTeamAdministration(request.user, team)
           } yield {
-            val nmls = NMLService.extractFromFile(nmlFile.ref.file, nmlFile.filename)
+            val nmls = NMLService.extractFromFile(nmlFile.ref.file, nmlFile.filename).flatten
             val baseTask = Task(
               taskType._id,
               team,
@@ -320,21 +324,11 @@ object TaskAdministration extends AdminController {
   def tasksForType(taskTypeId: String) = Authenticated.async { implicit request =>
     for {
       taskType <- TaskTypeDAO.findOneById(taskTypeId) ?~> Messages("taskType.notFound")
-
       tasks <- TaskDAO.findAllByTaskType(taskType)
-      dataSetNames <- dataSetNamesForTasks(tasks)
-      statuses <- Future.traverse(tasks)(_.status)
+      js <- Future.traverse(tasks)(Task.transformToJson)
     } yield {
-      val zipped = (tasks, dataSetNames, statuses).zipped.toList
-      val result = zipped.foldLeft(Html.empty) {
-        case (h, (t, d, s)) => h += html.admin.task.simpleTask(t, d.getOrElse(""), s, Some(taskType))
-      }
-      JsonOk(result)
+      Ok(Json.toJson(js))
     }
-  }
-
-  def overview = Authenticated { implicit request =>
-    Ok(html.admin.task.taskOverview())
   }
 
   case class UserWithTaskInfos(
@@ -342,7 +336,7 @@ object TaskAdministration extends AdminController {
     taskTypes: List[TaskType],
     projects: List[Project],
     futureTaskType: Option[TaskType])
- 
+
   object UserWithTaskInfos {
     def userInfosPublicWrites(requestingUser: User): Writes[UserWithTaskInfos] =
       ( (__ \ "user").write(User.userPublicWrites(requestingUser)) and
@@ -355,7 +349,7 @@ object TaskAdministration extends AdminController {
   def overviewData = Authenticated.async { implicit request =>
 
     def getUserInfos(users: List[User]) = {
-     
+
       val futureTaskTypeMap = for {
         futureTasks <- TaskService.simulateTaskAssignment(users)
         futureTaskTypes <- Fox.sequenceOfFulls(futureTasks.map(e => e._2.taskType.map(e._1 -> _)).toList)

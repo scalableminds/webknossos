@@ -8,7 +8,7 @@ import models.user._
 import play.api.data.Forms._
 import views.html
 import oxalis.security.Secured
-import braingames.mail._
+import com.scalableminds.util.mail._
 import oxalis.thirdparty.BrainTracing
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.i18n.Messages
@@ -16,7 +16,7 @@ import oxalis.mail.DefaultMails
 import oxalis.view.{SessionData, ProvidesUnauthorizedSessionData, UnAuthedSessionData}
 import scala.concurrent.Future
 import models.team.TeamDAO
-import braingames.reactivemongo.DBAccessContext
+import com.scalableminds.util.reactivemongo.DBAccessContext
 import net.liftweb.common.Full
 
 object Authentication extends Controller with Secured with ProvidesUnauthorizedSessionData {
@@ -83,7 +83,7 @@ object Authentication extends Controller with Secured with ProvidesUnauthorizedS
                     .withSession(Secured.createSession(user))
                 } else {
                   Redirect(controllers.routes.Authentication.login)
-                    .flashing("modal" -> "An account has been created. An administrator is going to unlock you soon.")
+                    .flashing("modal" -> "Your account has been created. An administrator is going to unlock you soon.")
                 }
               }
           }

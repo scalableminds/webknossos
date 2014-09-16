@@ -5,9 +5,9 @@ import scala.collection.breakOut
 import play.api.libs.json.Json
 import scala.async.Async._
 import scala.concurrent.Future
-import braingames.reactivemongo.DBAccessContext
+import com.scalableminds.util.reactivemongo.DBAccessContext
 import play.api.libs.concurrent.Execution.Implicits._
-import braingames.util.Fox
+import com.scalableminds.util.tools.Fox
 
 /**
  * Experience a user needs to hold to acquire a task. The task itself defines the minimum experience needed.

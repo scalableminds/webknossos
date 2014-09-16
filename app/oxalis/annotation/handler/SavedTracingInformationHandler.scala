@@ -2,17 +2,17 @@ package oxalis.annotation.handler
 
 import net.liftweb.common.Box
 import play.api.i18n.Messages
-import braingames.util.TextUtils._
+import com.scalableminds.util.tools.TextUtils._
 import models.annotation.{AnnotationDAO, AnnotationLike, Annotation}
-import braingames.reactivemongo.DBAccessContext
+import com.scalableminds.util.reactivemongo.DBAccessContext
 import scala.concurrent.Future
 import play.api.libs.concurrent.Execution.Implicits._
-import braingames.util.{FoxImplicits, Fox}
+import com.scalableminds.util.tools.{FoxImplicits, Fox}
 import models.user.User
 
 object SavedTracingInformationHandler extends AnnotationInformationHandler with FoxImplicits {
 
-  import braingames.mvc.BoxImplicits._
+  import com.scalableminds.util.mvc.BoxImplicits._
 
   type AType = Annotation
 

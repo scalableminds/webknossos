@@ -88,6 +88,9 @@ class Gui
       50, 500, 1, "Sphere Radius")
 
     @folders.push( @fColors = @gui.addFolder("Colors") )
+    @segmentationOpacityController =
+      @addSlider(@fColors, @user.getSettings(), "segmentationOpacity",
+        0, 100, 1, "Segment. Opacity")
     @colorControllers = []
     for binary, i in @model.getColorBinaries()
       @colorControllers.push(
@@ -118,9 +121,15 @@ class Gui
                           .onChange((v) => @setQuality(v))
 
     @folders.push(@fTDView = @gui.addFolder("3D View"))
-    @addCheckbox(@fTDView, @user.getSettings(), "displayTDViewXY", "Display XY-Plane")
-    @addCheckbox(@fTDView, @user.getSettings(), "displayTDViewYZ", "Display YZ-Plane")
-    @addCheckbox(@fTDView, @user.getSettings(), "displayTDViewXZ", "Display XZ-Plane")
+    @addCheckbox(@fTDView, @user.getSettings(), "tdViewDisplayPlanes", "Display Planes")
+
+    @folders.push(@fIsosurface = @gui.addFolder("Isosurface View"))
+    @addCheckbox(
+      @fIsosurface, @user.getSettings(), "isosurfaceDisplay", "Display Isosurface")
+    @addSlider(@fIsosurface, @user.getSettings(), "isosurfaceBBsize",
+      1, 10, 0.01, "Bounding Box size")
+    @addSlider(@fIsosurface, @user.getSettings(), "isosurfaceResolution",
+      40, 400, 1, "Resolution")
 
     if @settingsSkeleton?
 
@@ -281,7 +290,6 @@ class Gui
     for binary, i in @model.getColorBinaries()
       @settingsGeneral[binary.name + "_color"] = binary.color
 
-
   setQuality : (value) =>
 
     for i in [0...@qualityArray.length]
@@ -357,15 +365,20 @@ class Gui
     @setFolderElementVisibility( @clippingControllerArbitrary, false )
     @setFolderElementVisibility( @clippingController, true )
 
+    @setFolderVisibility(@fIsosurface, false)
+
     if      @mode == constants.MODE_PLANE_TRACING
       @hideFolders( [ @fFlightcontrols, @fCells ] )
-      @user.triggerAll()
+
     else if @mode == constants.MODE_ARBITRARY or mode == constants.MODE_ARBITRARY_PLANE
       @hideFolders( [ @fViewportcontrols, @fTDView, @fCells ] )
       @setFolderElementVisibility( @clippingControllerArbitrary, true )
       @setFolderElementVisibility( @clippingController, false )
-      @user.triggerAll()
+
     else if @mode == constants.MODE_VOLUME
       @hideFolders( [ @fTrees, @fNodes, @fFlightcontrols ] )
+      @setFolderVisibility(@fIsosurface, true)
 
+    @user.triggerAll()
+    @updateViewportWidth()
 

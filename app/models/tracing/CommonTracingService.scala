@@ -3,9 +3,9 @@ package models.tracing
 import models.annotation.AnnotationSettings
 import models.basics.SecuredBaseDAO
 import play.api.libs.json.Json
-import braingames.util.{Fox, FoxImplicits}
+import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import play.modules.reactivemongo.json.BSONFormats._
-import braingames.reactivemongo.DBAccessContext
+import com.scalableminds.util.reactivemongo.DBAccessContext
 import play.api.libs.concurrent.Execution.Implicits._
 import reactivemongo.core.commands.LastError
 

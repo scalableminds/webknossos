@@ -14,10 +14,10 @@ import akka.actor.Props
 import oxalis.user.{ActivityMonitor, UserActivity}
 import oxalis.view.AuthedSessionData
 import scala.concurrent.Future
-import braingames.util.{FoxImplicits, Fox}
+import com.scalableminds.util.tools.{FoxImplicits, Fox}
 import net.liftweb.common.{Full, Empty}
 import play.api.libs.concurrent.Execution.Implicits._
-import braingames.reactivemongo.GlobalAccessContext
+import com.scalableminds.util.reactivemongo.GlobalAccessContext
 import models.team.Role
 
 class AuthenticatedRequest[A](

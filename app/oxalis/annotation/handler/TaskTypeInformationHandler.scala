@@ -6,15 +6,15 @@ import play.api.i18n.Messages
 import models.annotation.{AnnotationRestrictions, TemporaryAnnotation}
 import models.user.User
 import models.tracing.skeleton.CompoundAnnotation
-import braingames.reactivemongo.DBAccessContext
+import com.scalableminds.util.reactivemongo.DBAccessContext
 import scala.concurrent.Future
 import play.api.libs.concurrent.Execution.Implicits._
-import braingames.util.{FoxImplicits, Fox}
+import com.scalableminds.util.tools.{FoxImplicits, Fox}
 import models.team.Role
 
 object TaskTypeInformationHandler extends AnnotationInformationHandler with FoxImplicits {
 
-  import braingames.mvc.BoxImplicits._
+  import com.scalableminds.util.mvc.BoxImplicits._
 
   type AType = TemporaryAnnotation
 

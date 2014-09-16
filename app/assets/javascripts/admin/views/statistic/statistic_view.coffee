@@ -8,7 +8,7 @@ app : app
 admin/models/statistic/time_statistic_model : TimeStatisticModel
 ###
 
-class StatisticView extends Backbone.Marionette.Layout
+class StatisticView extends Backbone.Marionette.LayoutView
 
   className : "statistics container wide"
   template : _.template("""

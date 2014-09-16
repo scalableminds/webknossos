@@ -1,21 +1,22 @@
 package controllers.admin
 
+import models.task.Task
 import play.api.mvc.Action
 import oxalis.security.{AuthenticatedRequest, Secured}
 import views.html
 import models.user._
 import oxalis.nml._
 import oxalis.nml.NMLParser
-import braingames.xml.Xml
+import com.scalableminds.util.xml.Xml
 import play.api.Logger
 import scala.xml.PrettyPrinter
 import models.tracing._
 import play.api.i18n.Messages
-import models.task.{TaskDAO, ProjectDAO, Project, Task}
+import models.task._
 import java.io.BufferedOutputStream
 import java.io.ByteArrayOutputStream
 import java.util.zip.ZipOutputStream
-import braingames.util._
+import com.scalableminds.util._
 import java.io.StringReader
 import java.io.InputStream
 import org.xml.sax.InputSource
@@ -41,6 +42,8 @@ import oxalis.nml.NML
 import models.annotation.AnnotationType
 import models.annotation.Annotation
 import play.api.libs.json._
+import com.scalableminds.util.tools.{TextUtils, Fox}
+import com.scalableminds.util.io.ZipIO
 
 import net.liftweb.common.Full
 import oxalis.nml.NML
@@ -82,11 +85,11 @@ object NMLIO extends Controller with Secured with TextUtils {
   }
 
   def upload = Authenticated.async(parse.multipartFormData) { implicit request =>
-    val parseResult = request.body.files.map(f => f.filename -> NMLService.extractFromNML(f.ref.file))
+    val parseResult = NMLService.extractFromFiles(request.body.files)
+
     val (parseFailed, parseSuccess) = splitResult(parseResult)
     if (parseFailed.size > 0) {
-      val errors = parseFailed.map {
-        fileName =>
+      val errors = parseFailed.map { fileName =>
           "error" -> Messages("nml.file.invalid", fileName)
       }
       Future.successful(JsonBadRequest(errors))
@@ -101,8 +104,7 @@ object NMLIO extends Controller with Secured with TextUtils {
       }
 
       createAnnotationFrom(request.user, nmls, AnnotationType.Explorational, tracingName)
-      .map {
-        annotation =>
+      .map { annotation =>
           JsonOk(
             Json.obj("annotation" -> Json.obj("typ" -> annotation.typ, "id" -> annotation.id)),
             Messages("nml.file.uploadSuccess")
@@ -148,6 +150,21 @@ object NMLIO extends Controller with Secured with TextUtils {
     for {
       task <- TaskDAO.findOneById(taskId) ?~> Messages("task.notFound")
       zip <- createTaskZip(task)
+    } yield Ok.sendFile(zip.file)
+  }
+
+  // TODO: secure
+  def taskTypeDownload(taskTypeId: String) = Authenticated.async { implicit request =>
+    def createTaskTypeZip(taskType: TaskType) =
+      for {
+        tasks <- TaskDAO.findAllByTaskType(taskType)
+        tracings <- Future.traverse(tasks)(_.annotations).map(_.flatten.filter(_.state.isFinished))
+        zip <- zipTracings(tracings, taskType.summary + "_nmls.zip")
+      } yield zip
+
+    for {
+      task <- TaskTypeDAO.findOneById(taskTypeId) ?~> Messages("taskType.notFound")
+      zip <- createTaskTypeZip(task)
     } yield Ok.sendFile(zip.file)
   }
 

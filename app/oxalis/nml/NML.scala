@@ -1,7 +1,7 @@
 package oxalis.nml
 
-import braingames.geometry.Point3D
-import braingames.geometry.Scale
+import com.scalableminds.util.geometry.Point3D
+import com.scalableminds.util.geometry.Scale
 
 case class NML(
   dataSetName: String,

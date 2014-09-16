@@ -1,12 +1,12 @@
 package models.tracing.skeleton
 
 import play.api.libs.json._
-import braingames.image.Color
+import com.scalableminds.util.image.Color
 import play.api.Logger
-import braingames.util.{Fox, FoxImplicits}
+import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import scala.concurrent.Future
 import play.api.libs.concurrent.Execution.Implicits._
-import braingames.reactivemongo.DBAccessContext
+import com.scalableminds.util.reactivemongo.DBAccessContext
 
 object TracingUpdater {
 
@@ -205,7 +205,7 @@ case class UpdateTracing(value: JsObject) extends TracingUpdater {
 
   import oxalis.nml.BranchPoint
   import oxalis.nml.Comment
-  import braingames.geometry.Point3D
+  import com.scalableminds.util.geometry.Point3D
 
   def createUpdate()(implicit ctx: DBAccessContext) = {
     val branchPoints = (value \ "branchPoints").as[List[BranchPoint]]

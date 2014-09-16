@@ -9,7 +9,7 @@ class SelectionView extends Backbone.Marionette.CollectionView
   tagName : "select"
   className: "form-control"
 
-  itemView : SelectionItemView
+  childView : SelectionItemView
 
   initialize : (options) ->
 
@@ -20,6 +20,9 @@ class SelectionView extends Backbone.Marionette.CollectionView
       => @render()
     )
 
+    if options.name
+
+      @$el.attr("name", options.name)
 
 
 

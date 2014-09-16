@@ -1,19 +1,19 @@
 package models.tracing.volume
 
-import braingames.geometry.{Point3D, BoundingBox}
+import com.scalableminds.util.geometry.{Point3D, BoundingBox}
 import models.annotation.{AnnotationLike, AnnotationContentService, AnnotationContent, AnnotationSettings}
 import models.basics.SecuredBaseDAO
 import models.binary.UserDataLayerDAO
 import models.binary.DataSet
 import java.io.InputStream
 import play.api.libs.json.{Json, JsValue}
-import braingames.reactivemongo.{DBAccessContext, GlobalAccessContext}
-import braingames.util.{FoxImplicits, Fox}
+import com.scalableminds.util.reactivemongo.{DBAccessContext, GlobalAccessContext}
+import com.scalableminds.util.tools.{FoxImplicits, Fox}
 import reactivemongo.bson.BSONObjectID
 import play.modules.reactivemongo.json.BSONFormats._
 import play.api.libs.concurrent.Execution.Implicits._
 import controllers.DataStoreHandler
-import braingames.binary.models.{DataLayer, UserDataLayer, DataSource}
+import com.scalableminds.braingames.binary.models.{DataLayer, UserDataLayer, DataSource}
 
 /**
  * Company: scalableminds
@@ -70,7 +70,7 @@ case class VolumeTracing(
       Json.obj(
         "activeCell" -> activeCellId,
         "customLayers" -> List(AnnotationContent.dataLayerWrites.writes(userDataLayer.dataLayer)),
-        "nextCell" -> userDataLayer.dataLayer.nextSegmentationId.getOrElse[Int](1),
+        "nextCell" -> userDataLayer.dataLayer.nextSegmentationId.getOrElse[Long](1),
         "zoomLevel" -> zoomLevel
       )
     }

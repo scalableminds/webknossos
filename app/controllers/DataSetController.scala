@@ -7,14 +7,16 @@ import views.html
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json._
 import scala.concurrent.Future
-import braingames.util.DefaultConverters._
+import com.scalableminds.util.tools.DefaultConverters._
 import play.api.templates.Html
 import play.api.libs.json.JsSuccess
 import play.api.cache.Cache
 import org.apache.commons.codec.binary.Base64
 import play.api.Play.current
 import scala.concurrent.duration._
-import braingames.util.ExtendedTypes.ExtendedString
+import com.scalableminds.util.tools.ExtendedTypes.ExtendedString
+import models.user.{User, UserService}
+import com.scalableminds.util.tools.Fox
 
 /**
  * Company: scalableminds
@@ -68,7 +70,7 @@ object DataSetController extends Controller with Secured {
     Ok(views.html.main()(Html.empty))
   }
 
-  def list = Authenticated.async{ implicit request =>
+  def list = UserAwareAction.async{ implicit request =>
     UsingFilters(
       Filter("isEditable", (value: Boolean, el: DataSet) =>
         el.isEditableBy(request.userOpt) && value || !el.isEditableBy(request.userOpt) && !value),
@@ -79,6 +81,15 @@ object DataSetController extends Controller with Secured {
         dataSets =>
           Ok(Writes.list(DataSet.dataSetPublicWrites(request.userOpt)).writes(filter.applyOn(dataSets)))
       }
+    }
+  }
+
+  def accessList(dataSetName: String) = Authenticated.async{ implicit request =>
+    for{
+      dataSet <- DataSetDAO.findOneBySourceName(dataSetName) ?~> Messages("dataSet.notFound")
+      users <- UserService.findByTeams(dataSet.allowedTeams)
+    } yield {
+      Ok(Writes.list(User.userCompactWrites(request.user)).writes(users))
     }
   }
 
@@ -116,6 +127,7 @@ object DataSetController extends Controller with Secured {
         for{
           dataSet <- DataSetDAO.findOneBySourceName(dataSetName) ?~> Messages("dataSet.notFound")
           _ <- allowedToAdministrate(request.user, dataSet).toFox
+          _ <- Fox.combined(teams.map(team => ensureTeamAdministration(request.user, team).toFox))
           _ <- DataSetService.updateTeams(dataSet, teams)
         } yield
           Ok

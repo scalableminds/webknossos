@@ -70,7 +70,6 @@ dataSet.import.notStarted=Dataset import couldn''t be started
 
 dataLayer.notFound=DataLayer not found
 dataLayer.forbidden=Access to this layer is not allowed.
-dataLayer.test=Test message
 
 dataToken.creationFailed=Creation of the data token failed.
 
@@ -124,6 +123,7 @@ tracing=Tracing
 annotation.invalid=Invalid tracing
 annotation.finished=Tracing is finished
 annotation.finish.confirm=Are you sure you want to permanently finish this tracing?
+annotation.reset.success=Annoation is resetted
 tracing.notFound=Tracing couldn''t be found
 annotation.review.assignFailed=Couldn''t assign reviewee
 annotation.review.notFound=There is no review for this tracing

@@ -1,11 +1,11 @@
 package models.tracing.volume
 
 import play.api.libs.json._
-import braingames.util.{Fox, FoxImplicits}
+import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import scala.concurrent.Future
 import play.api.Logger
 import play.api.libs.concurrent.Execution.Implicits._
-import braingames.reactivemongo.DBAccessContext
+import com.scalableminds.util.reactivemongo.DBAccessContext
 import models.binary.UserDataLayerDAO
 
 object TracingUpdater {
@@ -39,7 +39,7 @@ trait TracingUpdater extends FoxImplicits {
 
 case class UpdateTracing(value: JsObject) extends TracingUpdater {
 
-  import braingames.geometry.Point3D
+  import com.scalableminds.util.geometry.Point3D
 
   def createUpdate()(implicit ctx: DBAccessContext) = {
     val activeCellId = (value \ "activeCell").asOpt[Int]

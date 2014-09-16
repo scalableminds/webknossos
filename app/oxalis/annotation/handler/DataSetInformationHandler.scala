@@ -7,11 +7,11 @@ import net.liftweb.common.Box
 import play.api.i18n.Messages
 import models.tracing.skeleton.{TemporarySkeletonTracing, CompoundAnnotation}
 import models.binary.DataSetDAO
-import braingames.reactivemongo.DBAccessContext
+import com.scalableminds.util.reactivemongo.DBAccessContext
 import play.api.libs.concurrent.Execution.Implicits._
-import braingames.geometry.Point3D
+import com.scalableminds.util.geometry.Point3D
 import play.api.Logger
-import braingames.util.{FoxImplicits, Fox}
+import com.scalableminds.util.tools.{FoxImplicits, Fox}
 import scala.concurrent.Future
 import models.team.Role
 import models.tracing.skeleton.SkeletonTracing
@@ -24,7 +24,7 @@ import models.tracing.skeleton.SkeletonTracing
  */
 object DataSetInformationHandler extends AnnotationInformationHandler with FoxImplicits{
 
-  import braingames.mvc.BoxImplicits._
+  import com.scalableminds.util.mvc.BoxImplicits._
 
   type AType = TemporaryAnnotation
 

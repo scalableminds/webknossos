@@ -1,8 +1,8 @@
 package oxalis.nml
 
-import braingames.geometry.Point3D
+import com.scalableminds.util.geometry.Point3D
 import play.api.libs.json._
-import braingames.xml.{SynchronousXMLWrites, XMLWrites}
+import com.scalableminds.util.xml.{SynchronousXMLWrites, XMLWrites}
 
 case class Node(id: Int, position: Point3D, radius: Float = 120, viewport: Int = 1, resolution: Int = 1, bitDepth: Int = 0, interpolation: Boolean = false, timestamp: Long = System.currentTimeMillis)
 

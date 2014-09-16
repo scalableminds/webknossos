@@ -2,13 +2,13 @@ package models.tracing.skeleton
 
 import oxalis.nml._
 import oxalis.nml.utils._
-import braingames.geometry.Scale
-import braingames.geometry.{Point3D, BoundingBox}
+import com.scalableminds.util.geometry.Scale
+import com.scalableminds.util.geometry.{Point3D, BoundingBox}
 import play.api.libs.json._
 import play.api.libs.functional.syntax._
-import braingames.xml.XMLWrites
+import com.scalableminds.util.xml.XMLWrites
 import models.binary.DataSetDAO
-import braingames.xml.Xml
+import com.scalableminds.util.xml.Xml
 import models.annotation.{AnnotationType, ContentReference, AnnotationContent, AnnotationSettings}
 import play.api.i18n.Messages
 import controllers.admin.NMLIO
@@ -20,8 +20,8 @@ import models.annotation.AnnotationType._
 import scala.Some
 import oxalis.nml.NML
 import models.annotation.AnnotationType.AnnotationType
-import braingames.reactivemongo.GlobalDBAccess
-import braingames.util.{FoxImplicits, Fox}
+import com.scalableminds.util.reactivemongo.GlobalDBAccess
+import com.scalableminds.util.tools.{FoxImplicits, Fox}
 import net.liftweb.common.Full
 import java.io.InputStream
 

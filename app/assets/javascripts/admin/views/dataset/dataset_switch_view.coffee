@@ -6,7 +6,7 @@ views/spotlight_dataset_list_view : SpotlightDatasetListView
 admin/views/pagination_view : PaginationView
 ###
 
-class DatasetSwitchView extends Backbone.Marionette.Layout
+class DatasetSwitchView extends Backbone.Marionette.LayoutView
 
   template : _.template("""
     <div class="pull-right">
@@ -51,7 +51,7 @@ class DatasetSwitchView extends Backbone.Marionette.Layout
     datasetGalleryView = new SpotlightDatasetListView(collection : @model)
     @datasetPane.show(datasetGalleryView)
 
-    @pagination.close()
+    @pagination.empty()
 
 
   showAdvancedView : ->

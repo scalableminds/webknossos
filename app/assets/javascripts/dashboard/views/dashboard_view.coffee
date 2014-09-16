@@ -7,13 +7,13 @@ dashboard/views/tracked_time_view : TrackedTimeView
 admin/views/dataset/dataset_switch_view : DatasetSwitchView
 ###
 
-class DashboardView extends Backbone.Marionette.Layout
+class DashboardView extends Backbone.Marionette.LayoutView
 
   className : "container wide"
   id : "dashboard"
   template : _.template("""
     <% if (isAdminView) { %>
-      <h3>User: <%= user.firstName %> <%= user.lastName %></h3>
+      <h3>User: <%= user.get("firstName") %> <%= user.get("lastName") %></h3>
     <% } %>
     <div class="tabbable" id="tabbable-dashboard">
       <ul class="nav nav-tabs">
@@ -55,9 +55,10 @@ class DashboardView extends Backbone.Marionette.Layout
     "tabPane" : ".tab-pane"
 
 
-  initialize : (options) ->
+  initialize : ->
 
     @model.fetch().done( =>
+      @render()
       @showDatasets()
     )
 
@@ -84,3 +85,4 @@ class DashboardView extends Backbone.Marionette.Layout
 
     trackedTimeView = new TrackedTimeView(model : @model.get("loggedTime"))
     @tabPane.show(trackedTimeView)
+

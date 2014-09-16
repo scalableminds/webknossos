@@ -9,7 +9,7 @@ object Dependencies{
   val akkaVersion = "2.2.0"
   val reactiveVersion = "0.10.0"
   val reactivePlayVersion = "0.10.2"
-  val braingamesVersion = "5.5.8"
+  val braingamesVersion = "6.6.4-SNAPSHOT"
 
   val restFb = "com.restfb" % "restfb" % "1.6.11"
   val commonsIo = "commons-io" % "commons-io" % "2.4"
@@ -24,7 +24,6 @@ object Dependencies{
   val reactiveBson = "org.reactivemongo" %% "reactivemongo-bson-macros" % reactiveVersion
   val scalaReflect = "org.scala-lang" % "scala-reflect" % "2.10.0"
   val braingamesBinary = "com.scalableminds" %% "braingames-binary" % braingamesVersion
-  val braingamesUtil = "com.scalableminds" %% "braingames-util" % braingamesVersion
   val braingamesDatastore = "com.scalableminds" %% "braingames-datastore" % braingamesVersion
   val scalaAsync = "org.scala-lang.modules" %% "scala-async" % "0.9.0-M2"
   val airbrake = "eu.teamon" %% "play-airbrake" % "0.3.5-SCM"
@@ -148,7 +147,6 @@ object ApplicationBuild extends Build {
     reactiveBson,
     reactivePlay,
     scalaReflect,
-    braingamesUtil,
     braingamesBinary,
     braingamesDatastore,
     scalaAsync,

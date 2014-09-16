@@ -3,9 +3,9 @@ package models.team
 import play.api.libs.json._
 import reactivemongo.bson.BSONObjectID
 import play.modules.reactivemongo.json.BSONFormats._
-import braingames.reactivemongo.{DBAccessContext}
+import com.scalableminds.util.reactivemongo.{DBAccessContext}
 import models.basics.SecuredBaseDAO
-import braingames.util.{Fox, FoxImplicits}
+import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import models.user.{UserDAO, UserService, User}
 import play.api.libs.functional.syntax._
 import play.api.data.validation.ValidationError
@@ -13,12 +13,15 @@ import scala.util.{Failure, Success}
 import scala.concurrent.Future
 import play.api.libs.concurrent.Execution.Implicits._
 
-case class Team(name: String, roles: List[Role], owner: Option[BSONObjectID] = None, _id: BSONObjectID = BSONObjectID.generate) {
+case class Team(name: String, parent: Option[String], roles: List[Role], owner: Option[BSONObjectID] = None, _id: BSONObjectID = BSONObjectID.generate) {
 
   lazy val id = _id.stringify
 
   def isEditableBy(user: User) =
     owner.map(_ == user._id) getOrElse false
+
+  def couldBeAdministratedBy(user: User) =
+    parent.map(user.teamNames.contains) getOrElse true
 }
 
 object Team extends FoxImplicits {
@@ -41,8 +44,9 @@ object Team extends FoxImplicits {
 
   def teamPublicReads(requestingUser: User): Reads[Team] =
     ((__ \ "name").read[String](Reads.minLength[String](3)) and
-      (__ \ "roles").read[List[Role]]
-      )((name, roles) => Team(name, roles, Some(requestingUser._id)))
+      (__ \ "roles").read[List[Role]] and
+      (__ \ "parent").readNullable(Reads.minLength[String](3))
+      )((name, roles, parent) => Team(name, parent, roles, Some(requestingUser._id)))
 }
 
 object TeamService {

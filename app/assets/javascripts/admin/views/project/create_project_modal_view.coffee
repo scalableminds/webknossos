@@ -9,7 +9,7 @@ admin/models/team/team_collection : TeamCollection
 admin/models/project/project_model : ProjectModel
 ###
 
-class CreateProjectModalView extends Backbone.Marionette.Layout
+class CreateProjectModalView extends Backbone.Marionette.LayoutView
 
   className : "modal fade"
   template : _.template("""
@@ -22,7 +22,7 @@ class CreateProjectModalView extends Backbone.Marionette.Layout
         <div class="modal-body container-fluid">
           <form action="" method="POST" class="form-horizontal">
             <div class="form-group">
-              <label class="col-sm-2 for="team">Team</label>
+              <label class="col-sm-2" for="team">Team</label>
               <div class="col-sm-10 team">
               </div>
             </div>
@@ -68,12 +68,12 @@ class CreateProjectModalView extends Backbone.Marionette.Layout
 
     @userSelectionView = new SelectionView(
       collection : new UserCollection()
-      itemViewOptions :
+      childViewOptions :
         modelValue : -> return "#{@model.get("firstName")} #{@model.get("lastName")}"
     )
     @teamSelectionView = new SelectionView(
       collection : new TeamCollection()
-      itemViewOptions :
+      childViewOptions :
         modelValue: -> return "#{@model.get("name")}"
       data : "amIAnAdmin=true"
     )
@@ -102,8 +102,8 @@ class CreateProjectModalView extends Backbone.Marionette.Layout
 
       @projectCollection.create(project,
         wait : true
-        error : @handleXHRError
-        success : _.bind(@closeModal, @)
+        error : (model, xhr) -> Toast.message(xhr.responseJSON.messages)
+        success : _.bind(@destroyModal, @)
       )
 
     else
@@ -111,19 +111,12 @@ class CreateProjectModalView extends Backbone.Marionette.Layout
       @ui.name.focus()
 
 
-  closeModal : ->
+  destroyModal : ->
 
     # The event is neccesarry due to the 300ms CSS transition
-    @$el.on("hide.bs.modal", =>
-      @$el.off("hide.bs.modal")
+    @$el.on("hidden.bs.modal", =>
+      @$el.off("hidden.bs.modal")
       app.vent.trigger("CreateProjectModal:refresh") #update pagination
     )
     @$el.modal("hide")
 
-
-  handleXHRError : (model, xhr) ->
-
-    xhr.responseJSON.messages.forEach(
-      (message) ->
-        Toast.error(message.error)
-    )

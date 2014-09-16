@@ -1,4 +1,4 @@
-@(taskTypes: List[models.task.TaskType], dataSets: List[models.binary.DataSet], projects: List[models.task.Project], teams: List[String], nmlForm: Form[(String, models.user.Experience, Int, Int, String, String, braingames.geometry.BoundingBox)], taskForm: Form[(String, String, braingames.geometry.Point3D, models.user.Experience, Int, Int, String, String, braingames.geometry.BoundingBox)])(implicit session: oxalis.view.AuthedSessionData)
+@(taskTypes: List[models.task.TaskType], dataSets: List[models.binary.DataSet], projects: List[models.task.Project], teams: List[String], nmlForm: Form[(String, models.user.Experience, Int, Int, String, String, com.scalableminds.util.geometry.BoundingBox)], taskForm: Form[(String, String, com.scalableminds.util.geometry.Point3D, models.user.Experience, Int, Int, String, String, com.scalableminds.util.geometry.BoundingBox)])(implicit session: oxalis.view.AuthedSessionData)
 
 @main(){
   <div class="container task-types-administration">
@@ -19,13 +19,31 @@
                 <div class="input-group">
                   <span class="input-group-btn">
                     <span class="btn btn-primary btn-file">
-                      Browse… <input type="file" multiple="">
+                      Browse… <input type="file" multiple="" name="nmlFile">
                     </span>
                   </span>
-                  <input type="text" class="form-control" readonly="">
+                  <input type="text" class="file-info form-control" readonly="">
                 </div>
               </div>
             </div>
+
+            <script type="text/javascript">
+              require(["jquery"], function($) {
+                $("input[type=file]").on("change", function(evt){
+                  var files = this.files;
+                  if (files) {
+                    if (files.length > 1) {
+                      filePath = ""
+                      for (var i=0; i < this.files.length; i++)
+                        filePath += files[i].name + ", "
+                    } else {
+                      filePath = files[0].name
+                    }
+                    $(".file-info").val(filePath)
+                  }
+                })
+              })
+            </script>
 
             <div class="form-group">
               <div class="col-sm-9 col-sm-offset-3">

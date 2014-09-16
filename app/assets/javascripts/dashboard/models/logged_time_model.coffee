@@ -1,6 +1,7 @@
 ### define
 underscore : _
 backbone : Backbone
+format_utils : FormatUtils
 ###
 
 class LoggedTimeModel extends Backbone.Model
@@ -26,23 +27,10 @@ class LoggedTimeModel extends Backbone.Model
 
   getFormattedLogs : (loggedTime) ->
 
-    return loggedTime.map( (entry) ->
-
-      # TODO use momentjs.duration.format()
-      # https://github.com/moment/moment/issues/1048
-      t = moment.duration(seconds: entry.durationInSeconds)
-      [ days, hours, minutes ] = [ t.days(), t.hours(), t.minutes() ]
+    return loggedTime.map((entry) ->
       interval = entry.paymentInterval
-
       return {
-        time :
-          if days == 0 and hours == 0
-            "#{minutes}m"
-          else if days == 0
-            "#{hours}h #{minutes}m"
-          else
-            "#{days}d #{hours}h #{minutes}m"
-
+        time: FormatUtils.formatSeconds(entry.durationInSeconds)
         interval : interval.year + "-" + interval.month
       }
     ).sort( (a, b) -> a.interval > b.interval )

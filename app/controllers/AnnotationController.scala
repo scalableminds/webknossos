@@ -67,18 +67,13 @@ object AnnotationController extends Controller with Secured with TracingInformat
 
   def saveMerged(typ: String, id: String) = Authenticated.async { implicit request =>
       withAnnotation(AnnotationIdentifier(typ, id)) { annotation =>
-        Logger.error("Save merged id: " + id)
         for {
           dataSetName <- annotation.dataSetName ?~> Messages("dataSet.notSupplied")
           dataSet <- DataSetDAO.findOneBySourceName(dataSetName) ?~> Messages("dataSet.notFound")
           temporary <- annotation.temporaryDuplicate(true)
-          a = Logger.error("Temporary id: " + temporary.id)
           explorational = temporary.copy(typ = AnnotationType.Explorational)
-          b = Logger.error("Explorational id: " + explorational.id)
           savedAnnotation <- explorational.saveToDB
         } yield {
-          Logger.error("Saved id: " + savedAnnotation.id)
-          Logger.debug("Save merged annotation")
           Redirect(routes.AnnotationController.trace(savedAnnotation.typ, savedAnnotation.id))
         }
       }
@@ -175,10 +170,10 @@ object AnnotationController extends Controller with Secured with TracingInformat
           for {
             result <- handleUpdates(oldAnnotation, request.body)
           } yield {
-            JsonOk(result, "tracing.saved")
+            JsonOk(result, "annotation.saved")
           }
         else
-          new Fox(Future.successful(Full(JsonBadRequest(oldJs, "tracing.dirtyState"))))
+          new Fox(Future.successful(Full(JsonBadRequest(oldJs, "annotation.dirtyState"))))
       }
 
       def isUpdateable(annotationLike: AnnotationLike) = {
@@ -190,7 +185,7 @@ object AnnotationController extends Controller with Secured with TracingInformat
 
       for {
         oldAnnotation <- findAnnotation(typ, id)
-        updateableAnnotation <- isUpdateable(oldAnnotation) ?~> Messages("tracing.update.impossible")
+        updateableAnnotation <- isUpdateable(oldAnnotation) ?~> Messages("annotation.update.impossible")
         isAllowed <- isUpdateAllowed(oldAnnotation).toFox
         oldJs <- oldAnnotation.annotationInfo(Some(request.user))
         result <- executeIfAllowed(updateableAnnotation, isAllowed, oldJs)
@@ -241,13 +236,13 @@ object AnnotationController extends Controller with Secured with TracingInformat
     implicit request =>
       for {
         annotation <- AnnotationDAO.findOneById(id) ?~> Messages("annotation.notFound")
-        name <- postParameter("name") ?~> Messages("tracing.invalidName")
+        name <- postParameter("name") ?~> Messages("annotation.invalidName")
         updated <- annotation.muta.rename(name).toFox
         renamedJSON <- Annotation.transformToJson(updated)
       } yield {
         JsonOk(
           Json.obj("annotations" -> renamedJSON),
-          Messages("tracing.setName"))
+          Messages("annotation.setName"))
       }
   }
 

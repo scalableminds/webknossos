@@ -8,7 +8,9 @@ import models.annotation.AnnotationType._
 import models.task.{Project, Task, TaskDAO, TaskType}
 import models.tracing.skeleton.temporary.{TemporarySkeletonTracing, TemporarySkeletonTracingService}
 import models.tracing.skeleton.{SkeletonTracingService, SkeletonTracing, SkeletonTracingLike}
+import net.liftweb.common.{Empty, Box, Full, Failure}
 import play.api.Logger
+import play.api.i18n.Messages
 import play.api.libs.concurrent.Execution.Implicits._
 import reactivemongo.bson.BSONObjectID
 
@@ -23,30 +25,28 @@ object CompoundAnnotation extends Formatter with FoxImplicits {
     logTime("project composition", Logger.debug) {
       for {
         tasks <- TaskDAO.findAllByProject(project.name)
-        annotations <- Future.traverse(tasks)(_.annotations).map(_.flatten)
-      } yield {
-        createFromFinishedAnnotations(
+        annotations <- Future.traverse(tasks)(_.annotations).map(_.flatten).toFox
+        merged <- createFromFinishedAnnotations(
           project.name,
           _user,
           project.team,
           annotations,
-          AnnotationType.CompoundProject)
-      }
+          AnnotationType.CompoundProject) ?~> Messages("project.noAnnotaton")
+      } yield merged
     }
   }
 
   def createFromTask(task: Task, _user: Option[BSONObjectID])(implicit ctx: DBAccessContext) = {
     logTime("task composition", Logger.debug) {
       for {
-        annotations <- task.annotations
-      } yield {
-        createFromFinishedAnnotations(
+        annotations <- task.annotations.toFox
+        merged <- createFromFinishedAnnotations(
           task.id,
           _user,
           task.team,
           annotations,
-          AnnotationType.CompoundTask)
-      }
+          AnnotationType.CompoundTask) ?~> Messages("task.noAnnotaton")
+      } yield merged
     }
   }
 
@@ -54,15 +54,14 @@ object CompoundAnnotation extends Formatter with FoxImplicits {
     logTime("taskType composition", Logger.debug) {
       for {
         tasks <- TaskDAO.findAllByTaskType(taskType)
-        annotations <- Future.traverse(tasks)(_.annotations).map(_.flatten)
-      } yield {
-        createFromFinishedAnnotations(
+        annotations <- Future.traverse(tasks)(_.annotations).map(_.flatten).toFox
+        merged <- createFromFinishedAnnotations(
           taskType.id,
           _user,
           taskType.team,
           annotations,
-          AnnotationType.CompoundTaskType)
-      }
+          AnnotationType.CompoundTaskType) ?~> Messages("taskType.noAnnotaton")
+      } yield merged
     }
   }
 
@@ -70,7 +69,7 @@ object CompoundAnnotation extends Formatter with FoxImplicits {
   def createFromFinishedAnnotations(id: String, _user: Option[BSONObjectID], team: String, annotations: List[Annotation], typ: AnnotationType)(implicit ctx: DBAccessContext) =
     createFromAnnotations(id, _user, team, annotations.filter(filterFinishedAnnotations), typ, AnnotationState.Finished, AnnotationRestrictions.restrictEverything)
 
-  def createFromAnnotations(id: String, _user: Option[BSONObjectID], team: String, annotations: List[AnnotationLike], typ: AnnotationType, state: AnnotationState, restrictions: AnnotationRestrictions)(implicit ctx: DBAccessContext): TemporaryAnnotation = {
+  def createFromAnnotations(id: String, _user: Option[BSONObjectID], team: String, annotations: List[AnnotationLike], typ: AnnotationType, state: AnnotationState, restrictions: AnnotationRestrictions)(implicit ctx: DBAccessContext): Fox[TemporaryAnnotation] = {
     def renameAnnotationContents(annotations: List[AnnotationLike], processed: Vector[AnnotationContent]): Fox[List[AnnotationContent]] = {
       annotations match {
         case annotation :: tail =>
@@ -87,17 +86,19 @@ object CompoundAnnotation extends Formatter with FoxImplicits {
           Fox.successful(processed.toList)
       }
     }
-
-    TemporaryAnnotation(
-      id,
-      _user,
-      () => renameAnnotationContents(annotations, Vector.empty).flatMap(mergeAnnotationContent(_, id)),
-      None,
-      team,
-      state,
-      typ,
-      restrictions = restrictions
-    )
+    if(annotations.isEmpty)
+      Fox.empty
+    else
+      Fox.successful(TemporaryAnnotation(
+        id,
+        _user,
+        () => renameAnnotationContents(annotations, Vector.empty).flatMap(mergeAnnotationContent(_, id)),
+        None,
+        team,
+        state,
+        typ,
+        restrictions = restrictions
+      ))
   }
 
   private def mergeAnnotationContent(annotationContents: List[AnnotationContent], id: String)(implicit ctx: DBAccessContext): Fox[AnnotationContent] = {

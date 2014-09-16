@@ -50,7 +50,7 @@ class AnnotationMutations(val annotation: Annotation) extends AnnotationMutation
             val updated = await(AnnotationDAO.finish(annotation._id).futureBox)
             updated.map(_ -> Messages("task.finished"))
           } else
-            Failure(Messages("tracing.notEnoughNodes"))
+            Failure(Messages("annotation.notFinishable"))
       }
     }
 

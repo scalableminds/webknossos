@@ -109,11 +109,11 @@ class AnnotationStore extends Actor {
         for {
           ann <- annotation
           annSec <- annotationSec
+          mergedAnnotation <- AnnotationService.merge(readOnly, user._id, annSec.team, annSec.typ, ann, annSec)
         } yield {
-          val mergedAnnotation = AnnotationService.merge(readOnly, user._id, annSec.team, annSec.typ, ann, annSec)
 
           // Caching of merged annotation
-          val storedMerge = StoredResult(Option(mergedAnnotation))
+          val storedMerge = StoredResult(Some(mergedAnnotation))
           val mID = AnnotationIdentifier(mergedAnnotation.typ, mergedAnnotation.id)
           cachedAnnotations.send(_ + (mID -> storedMerge))
 

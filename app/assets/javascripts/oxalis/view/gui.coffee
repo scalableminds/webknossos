@@ -163,6 +163,48 @@ class Gui
     @fNodes?.open()
     @fCells?.open()
 
+    $("#dataset-name").text(@model.dataSetName)
+
+    $("#trace-position-input").on "change", (event) =>
+
+      @setPosFromString(event.target.value)
+      $("#trace-position-input").blur()
+
+    $("#trace-rotation-input").on "change", (event) =>
+
+      @setRotationFromString(event.target.value)
+      $("#trace-rotation-input").blur()
+
+    $("#trace-finish-button").click (event) =>
+
+      event.preventDefault()
+      @saveNow().done =>
+        if confirm("Are you sure you want to permanently finish this tracing?")
+          window.location.href = event.target.href
+
+
+    $("#trace-download-button").click (event) =>
+
+      event.preventDefault()
+      @saveNow().done =>
+          window.location.href = event.currentTarget.href
+
+    $("#trace-save-button").click (event) =>
+
+      event.preventDefault()
+      @saveNow()
+
+
+    @model.flycam.on
+      positionChanged : (position) =>
+        @updateGlobalPosition(position)
+      zoomStepChanged : =>
+        @updateViewportWidth()
+
+    @model.flycam3d.on
+      changed : =>
+        @updateViewportWidth()
+        @updateRotation()
 
     @model.skeletonTracing?.on
       newActiveNode       : => @update()

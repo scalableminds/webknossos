@@ -11,7 +11,7 @@ backbone.marionette : marionette
 ../constants : constants
 ###
 
-class LeftMenuView extends Backbone.Marionette.Layout
+class LeftMenuView extends Backbone.Marionette.LayoutView
 
   className : "container-fluid"
 

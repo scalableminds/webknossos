@@ -9,7 +9,7 @@ backbone.marionette : marionette
 oxalis/constants : constants
 ###
 
-class SettingsTabView extends Backbone.Marionette.Layout
+class SettingsTabView extends Backbone.Marionette.LayoutView
 
   className : "col-sm-12"
   id : "lefttabbar"

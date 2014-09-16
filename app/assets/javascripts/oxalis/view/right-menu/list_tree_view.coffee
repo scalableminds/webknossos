@@ -47,9 +47,9 @@ class ListTreeView extends Backbone.Marionette.CompositeView
     </div>
     """)
 
-  itemView : ListTreeItemView
-  itemViewContainer : "ul#tree-list"
-  itemViewOptions : ->
+  childView : ListTreeItemView
+  childViewContainer : "ul#tree-list"
+  childViewOptions : ->
     parent : @
     activeTreeId : @getActiveTree().treeId
 

@@ -28,9 +28,9 @@ class CommentTabView extends SortedCompositeView
     </div>
   """)
 
-  itemView : CommentTabItemView
-  itemViewContainer : "#comment-list"
-  itemViewOptions : ->
+  childView : CommentTabItemView
+  childViewContainer : "#comment-list"
+  childViewOptions : ->
     parent : @
     activeComment : @activeComment
   templateHelpers : ->

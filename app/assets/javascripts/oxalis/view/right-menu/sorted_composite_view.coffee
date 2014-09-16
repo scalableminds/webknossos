@@ -12,7 +12,7 @@ class SortedCompositeView extends Backbone.Marionette.CompositeView
 
   appendHtml: (collectionView, itemView, index) ->
 
-      childrenContainer = if collectionView.itemViewContainer then collectionView.$(collectionView.itemViewContainer) else collectionView.$el
+      childrenContainer = if collectionView.childViewContainer then collectionView.$(collectionView.childViewContainer) else collectionView.$el
       children = childrenContainer.children()
 
       if children.size() <= index

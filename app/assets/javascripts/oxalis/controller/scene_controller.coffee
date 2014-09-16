@@ -249,8 +249,8 @@ class SceneController
     @listenTo(user, "change:clippingDistance", (model, value) -> @setClippingDistance(value))
     @listenTo(user, "change:displayCrosshair", (model, value) -> @setDisplayCrosshair(value))
     @listenTo(user, "change:interpolation", (model, value) -> @setInterpolation(value))
-    @listenTo(user, "change:displayTDViewXY", (model, value) -> @setDisplaySV(constants.PLANE_XY, value))
-    @listenTo(user, "change:displayTDViewYZ", (model, value) -> @setDisplaySV(constants.PLANE_YZ, value))
-    @listenTo(user, "change:displayTDViewXZ", (model, value) -> @setDisplaySV(constants.PLANE_XZ, value))
+    @listenTo(user, "change:displayTDViewXY", (model, value) -> @setDisplayPlanes(value))
+    @listenTo(user, "change:displayTDViewYZ", (model, value) -> @setDisplayPlanes(value))
+    @listenTo(user, "change:displayTDViewXZ", (model, value) -> @setDisplayPlanes(value))
     @listenTo(app.vent, "segmentationInfoView:change", (value) -> setSegmentationAlpha(value))
 

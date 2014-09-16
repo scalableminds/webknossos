@@ -2,7 +2,7 @@
 backbone.marionette : marionette
 ###
 
-class TracingView extends Backbone.Marionette.Layout
+class TracingView extends Backbone.Marionette.LayoutView
 
   id : "render"
   template : _.template("""

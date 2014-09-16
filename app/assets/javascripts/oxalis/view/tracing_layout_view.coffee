@@ -9,7 +9,7 @@ oxalis/model : OxalisModel
 oxalis/constants : constants
 ###
 
-class TracingLayoutView extends Backbone.Marionette.Layout
+class TracingLayoutView extends Backbone.Marionette.LayoutView
 
   MARGIN : 40
 

@@ -5,7 +5,7 @@ backbone.marionette : marionette
 ./right-menu/list_tree_view : ListTreeView
 ###
 
-class RightMenuView extends Backbone.Marionette.Layout
+class RightMenuView extends Backbone.Marionette.LayoutView
 
   MARGIN : 40
   className : "flex-column-container"

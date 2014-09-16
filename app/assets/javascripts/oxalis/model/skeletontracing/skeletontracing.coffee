@@ -5,7 +5,6 @@ jquery : $
 underscore : _
 backbone : backbone
 libs/request : Request
-libs/event_mixin : EventMixin
 libs/color_generator : ColorGenerator
 ./tracepoint : TracePoint
 ./tracetree : TraceTree

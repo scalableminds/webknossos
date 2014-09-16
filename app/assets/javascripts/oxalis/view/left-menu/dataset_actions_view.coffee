@@ -101,7 +101,7 @@ class DatsetActionsView extends Backbone.Marionette.ItemView
 
     event.preventDefault()
     @saveNow().done =>
-        window.location.href = event.target.href
+        window.location.href = event.currentTarget.href
 
 
   saveTracing : (event) ->

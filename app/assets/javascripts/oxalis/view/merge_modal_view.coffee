@@ -16,6 +16,7 @@ routes : jsRoutes
 
 class MergeModalView extends Backbone.Marionette.LayoutView
 
+  className : "modal fade"
   template : _.template("""
     <div class="modal-dialog">
       <div class="modal-content">
@@ -88,13 +89,13 @@ class MergeModalView extends Backbone.Marionette.LayoutView
               </div>
             </div>
           </div>
-        </div>
-        <div class="modal-footer">
-            <div class="checkbox">
-              <label>
+          <hr>
+          <div class="checkbox">
+            <label>
               <input type="checkbox" id="checkbox-read-only" checked="checked">
               The merged tracing will be read-only.
-            </div>
+            </label>
+          </div>
         </div>
       </div>
     </div>
@@ -127,6 +128,7 @@ class MergeModalView extends Backbone.Marionette.LayoutView
 
 
   initialize : (options) ->
+
     @_model = options._model
     @nml = undefined
 
@@ -201,16 +203,6 @@ class MergeModalView extends Backbone.Marionette.LayoutView
     @merge(url)
 
 
-  destroyModal : ->
-
-    # The event is neccesarry due to the 300ms CSS transition
-    @$el.on("hidden.bs.modal", =>
-      @$el.off("hidden.bs.modal")
-      app.vent.trigger("CreateProjectModal:refresh") #update pagination
-    )
-    @$el.modal("hide")
-
-
   merge : (url) ->
 
     readOnly = document.getElementById('checkbox-read-only').checked
@@ -233,8 +225,6 @@ class MergeModalView extends Backbone.Marionette.LayoutView
         Toast.error(xhr.responseJSON.messages[0].error)
       else
         Toast.error("Error. Please try again.")
-    ).always( =>
-      @toggleIcon()
     )
 
 

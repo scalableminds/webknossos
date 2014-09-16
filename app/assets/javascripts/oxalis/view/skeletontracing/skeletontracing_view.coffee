@@ -125,9 +125,9 @@ class SkeletonTracingView extends View
 
   showMergeModal : ->
 
-    container = $("#modal")
-    modalView = new MergeModalView(el : container, _model : @model)
+    modalView = new MergeModalView(_model : @model)
     el = modalView.render().el
+    $("#merge-modal").html(el)
     modalView.show()
 
 

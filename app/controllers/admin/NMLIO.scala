@@ -115,10 +115,26 @@ object NMLIO extends Controller with Secured with TextUtils {
   }
 
   def zipTracings(annotations: List[Annotation], zipFileName: String)(implicit request: AuthenticatedRequest[_]) = {
-    Future.traverse(annotations)(_.muta.loadAnnotationContent().futureBox).map {
-      zipStreams =>
-        val zipped = TemporaryFile("annotationZips", normalize(zipFileName))
-        ZipIO.zip(zipStreams.flatten, new BufferedOutputStream(new FileOutputStream(zipped.file)))
+    val zipped = TemporaryFile("annotationZips", normalize(zipFileName))
+    val zipper = ZipIO.startZip(new BufferedOutputStream(new FileOutputStream(zipped.file)))
+
+    def annotationContent(annotations: List[Annotation]): Future[Boolean] = {
+      annotations match {
+        case head :: tail =>
+          head.muta.loadAnnotationContent().futureBox.flatMap {
+            case Full(fs) =>
+              zipper.addFile(fs)
+              annotationContent(tail)
+            case _ =>
+              annotationContent(tail)
+          }
+        case _ =>
+          Future.successful(true)
+      }
+    }
+
+    annotationContent(annotations).map{ _ =>
+        zipper.close
         zipped
     }
   }

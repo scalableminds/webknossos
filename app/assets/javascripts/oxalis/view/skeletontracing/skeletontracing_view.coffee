@@ -120,7 +120,7 @@ class SkeletonTracingView extends View
       @_tracingId   = $("#container").data("tracing-id")
       @_tracingType = $("#container").data("tracing-type")
 
-      $.ajax(url : "/annotations/#{@_tracingType}/#{@_tracingId}/isShared").done((shared) =>
+      $.ajax(url : "/sharedannotations/#{@_tracingType}/#{@_tracingId}/isShared").done((shared) =>
         if(shared.isShared)
           @showUnsharingOfTracingModal()
         else

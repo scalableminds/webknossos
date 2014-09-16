@@ -8,12 +8,12 @@ oxalis/constants : constants
 class NonBackboneRouter extends Backbone.Router
 
   routes :
-    "admin/tasks/overview"                    : "taskOverview"
-    "admin/taskTypes"                         : "hideLoading"
-    "annotations/:typ/:id"                    : "tracingTrace"
-    "annotations/share/:sharedId/sharedLink"  : "tracingTrace"
-    "datasets/:id/view"                       : "tracingView"
-    "*url"                                    : "hideLoading"
+    "admin/tasks/overview"               : "taskOverview"
+    "admin/taskTypes"                    : "hideLoading"
+    "annotations/:typ/:id"               : "tracingTrace"
+    "sharedannotations/:sharedId/share"  : "tracingTrace"
+    "datasets/:id/view"                  : "tracingView"
+    "*url"                               : "hideLoading"
 
   hideLoading : ->
 

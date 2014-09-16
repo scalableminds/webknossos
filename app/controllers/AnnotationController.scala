@@ -18,7 +18,7 @@ import play.api.libs.iteratee.Enumerator
 import models.binary.DataSetDAO
 import scala.concurrent.Future
 import models.user.time._
-import com.scalableminds.util.reactivemongo.DBAccessContext
+import com.scalableminds.util.reactivemongo.{GlobalAccessContext, DBAccessContext}
 import net.liftweb.common.Full
 import play.api.i18n.Messages.Message
 import com.scalableminds.util.tools.Fox
@@ -39,7 +39,9 @@ import play.api.libs.json.JsObject
  * Date: 01.06.13
  * Time: 02:09
  */
-object AnnotationController extends Controller with Secured with TracingInformationProvider {
+object AnnotationController extends AnnotationController
+
+trait AnnotationController extends Controller with Secured with TracingInformationProvider {
 
   implicit val timeout = Timeout(5 seconds)
 
@@ -47,18 +49,16 @@ object AnnotationController extends Controller with Secured with TracingInformat
     AnnotationLike.annotationLikeInfoWrites(annotation, Some(user), Nil)
 
   def info(typ: String, id: String) = UserAwareAction.async { implicit request =>
-    Logger.debug("----> info")
     val annotationId = AnnotationIdentifier(typ, id)
-      respondWithTracingInformation(annotationId).map { js =>
-          request.userOpt.map { user =>
-              UsedAnnotationDAO.use(user, annotationId)
-          }
-          Ok(js)
+    respondWithTracingInformation(annotationId).map { js =>
+      request.userOpt.map { user =>
+        UsedAnnotationDAO.use(user, annotationId)
       }
+      Ok(js)
+    }
   }
 
   def trace(typ: String, id: String) = Authenticated.async { implicit request =>
-    Logger.debug("trace")
     withAnnotation(AnnotationIdentifier(typ, id)) { annotation =>
       for {
         _ <- annotation.restrictions.allowAccess(request.user).failIfFalse(Messages("notAllowed")).toFox ~> 400
@@ -276,64 +276,4 @@ object AnnotationController extends Controller with Secured with TracingInformat
       }
   }
 
-  def saveShare(typ: String, id: String) = Authenticated.async(parse.json) { implicit request =>
-    request.body.validate[SharedAnnotationData].map {
-      case _ =>
-        val sharedAnnotationData = request.body.as[SharedAnnotationData]
-        val sharedAnnotation = SharedAnnotation(typ, id, sharedAnnotationData.sharedLink, sharedAnnotationData.restrictions)
-
-        SharedAnnotationDAO.insert(sharedAnnotation) // TODO check if saving into db was successful
-        Future.successful(JsonOk(Messages("sharedAnnotation.success")))
-    } recoverTotal {
-      e => Future.successful(JsonBadRequest(Messages("sharedAnnotation.failed")))
-    }
-  }
-
-  // todo - set restrictions to annotation
-  def getShare(sharedId: String) = UserAwareAction.async { implicit request =>
-    val httpUri = Play.application().configuration().getString("http.uri")
-    val sharedLink = s"$httpUri/annotations/share/$sharedId/sharedLink"
-    for {
-      sharedAnnotation <- SharedAnnotationDAO.findOneBySharedLink(sharedLink)
-      annotation <- findAnnotation(AnnotationIdentifier(sharedAnnotation.typ, sharedAnnotation.id))
-      // brakuje ustawienia praw
-    } yield {
-      Ok(htmlForAnnotation(annotation))
-    }
-  }
-
-  def deleteShare(typ: String, id: String) = Authenticated.async(parse.json) { implicit request =>
-    for {
-      sharedLink <- (request.body \ "sharedLink").asOpt[String].toFox
-      _ <- SharedAnnotationDAO.removeObj(typ, id, sharedLink)
-    } yield {
-      JsonOk(Messages("sharedAnnotation.deleted"))
-    }
-  }
-
-  def isShared(typ: String, id: String) = Authenticated.async { implicit request =>
-    for {
-      isShared <- SharedAnnotationDAO.isShared(typ, id)
-    } yield {
-      JsonOk(Json.obj("isShared" -> isShared))
-    }
-  }
-
-  def getSharedLink(typ: String, id: String) = Authenticated.async { implicit request =>
-    for {
-      sharedLink <- SharedAnnotationDAO.getSharedLink(typ, id)
-    } yield {
-      JsonOk(Json.obj("sharedLink" -> sharedLink))
-    }
-  }
-
-  def generateSharedLink(typ: String, id: String) = Authenticated.async { implicit request =>
-
-    val httpUri = Play.application().configuration().getString("http.uri")
-    val sharedId = java.util.UUID.randomUUID.toString
-    val sharedLink = s"$httpUri/annotations/share/$sharedId/sharedLink"
-
-    Future.successful(JsonOk(
-      Json.obj("sharedLink" -> sharedLink)))
-  }
 }

@@ -93,12 +93,12 @@ GET           /annotations/:typ/:id/download                                  co
 DELETE        /annotations/:typ/:id                                           controllers.AnnotationController.cancel(typ: String, id: String)
 
 # Shared tracing
-GET           /annotations/:typ/:id/generateLink                              controllers.AnnotationController.generateSharedLink(typ: String, id: String)
-POST          /annotations/:typ/:id/saveShare                                 controllers.AnnotationController.saveShare(typ: String, id: String)
-GET           /annotations/share/:sharedId/sharedLink                         controllers.AnnotationController.getShare(sharedId: String)
-POST          /annotations/:typ/:id/deleteShare                               controllers.AnnotationController.deleteShare(typ: String, id: String)
-GET           /annotations/:typ/:id/getSharedLink                             controllers.AnnotationController.getSharedLink(typ: String, id: String)
-GET           /annotations/:typ/:id/isShared                                  controllers.AnnotationController.isShared(typ: String, id: String)
+GET           /sharedannotations/:typ/:id/generateLink                        controllers.SharedAnnotationController.generateSharedLink(typ: String, id: String)
+POST          /sharedannotations/:typ/:id/saveShare                           controllers.SharedAnnotationController.saveShare(typ: String, id: String)
+GET           /sharedannotations/:sharedId/share/                             controllers.SharedAnnotationController.getShare(sharedId: String)
+POST          /sharedannotations/:typ/:id/deleteShare                         controllers.SharedAnnotationController.deleteShare(typ: String, id: String)
+GET           /sharedannotations/:typ/:id/getSharedLink                       controllers.SharedAnnotationController.getSharedLink(typ: String, id: String)
+GET           /sharedannotations/:typ/:id/isShared                            controllers.SharedAnnotationController.isShared(typ: String, id: String)
 
 #Admin pages
 GET           /admin/nml/upload                                               controllers.admin.NMLIO.uploadForm

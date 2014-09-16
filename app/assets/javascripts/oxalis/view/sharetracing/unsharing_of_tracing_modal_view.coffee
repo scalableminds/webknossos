@@ -60,7 +60,7 @@ class MergeModalView extends Backbone.Marionette.LayoutView
 
     @$el.modal("show")
 
-    $.ajax(url : "/annotations/#{@_tracingType}/#{@_tracingId}/getSharedLink").done((tracing) =>
+    $.ajax(url : "/sharedannotations/#{@_tracingType}/#{@_tracingId}/getSharedLink").done((tracing) =>
       @_sharedLink = tracing.sharedLink
       @ui.sharinglink.val(@_sharedLink)
     )
@@ -72,7 +72,7 @@ class MergeModalView extends Backbone.Marionette.LayoutView
     data = { "sharedLink" : link}
 
     $.ajax(
-      url : """/annotations/#{@_tracingType}/#{@_tracingId}/deleteShare"""
+      url : """/sharedannotations/#{@_tracingType}/#{@_tracingId}/deleteShare"""
       type: "POST"
       contentType: "application/json; charset=utf-8"
       data: JSON.stringify(data)

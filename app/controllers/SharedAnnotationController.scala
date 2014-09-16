@@ -31,7 +31,7 @@ trait SharedAnnotationController extends AnnotationController {
   // todo - set restrictions to annotation
   def getShare(sharedId: String) = UserAwareAction.async { implicit request =>
     val httpUri = Play.application().configuration().getString("http.uri")
-    val sharedLink = s"$httpUri/sharedannotations/$sharedId/shared"
+    val sharedLink = s"$httpUri/sharedannotations/$sharedId/share"
 
     for {
       sharedAnnotation <- SharedAnnotationDAO.findOneBySharedLink(sharedLink)
@@ -68,10 +68,9 @@ trait SharedAnnotationController extends AnnotationController {
   }
 
   def generateSharedLink(typ: String, id: String) = Authenticated.async { implicit request =>
-
     val httpUri = Play.application().configuration().getString("http.uri")
     val sharedId = java.util.UUID.randomUUID.toString
-    val sharedLink = s"$httpUri/sharedannotations/$sharedId/shared"
+    val sharedLink = s"$httpUri/sharedannotations/$sharedId/share"
 
     Future.successful(JsonOk(
       Json.obj("sharedLink" -> sharedLink)))

@@ -95,7 +95,7 @@ DELETE        /annotations/:typ/:id                                           co
 # Shared tracing
 GET           /sharedannotations/:typ/:id/generateLink                        controllers.SharedAnnotationController.generateSharedLink(typ: String, id: String)
 POST          /sharedannotations/:typ/:id/saveShare                           controllers.SharedAnnotationController.saveShare(typ: String, id: String)
-GET           /sharedannotations/:sharedId/share/                             controllers.SharedAnnotationController.getShare(sharedId: String)
+GET           /sharedannotations/:sharedId/share                              controllers.SharedAnnotationController.getShare(sharedId: String)
 POST          /sharedannotations/:typ/:id/deleteShare                         controllers.SharedAnnotationController.deleteShare(typ: String, id: String)
 GET           /sharedannotations/:typ/:id/getSharedLink                       controllers.SharedAnnotationController.getSharedLink(typ: String, id: String)
 GET           /sharedannotations/:typ/:id/isShared                            controllers.SharedAnnotationController.isShared(typ: String, id: String)

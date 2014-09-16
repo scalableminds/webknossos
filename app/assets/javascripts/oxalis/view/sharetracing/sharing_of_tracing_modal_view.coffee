@@ -8,6 +8,7 @@ routes : jsRoutes
 
 class MergeModalView extends Backbone.Marionette.LayoutView
 
+  className : "modal fade"
   template : _.template("""
     <div class="modal-dialog">
       <div class="modal-content">
@@ -94,7 +95,6 @@ class MergeModalView extends Backbone.Marionette.LayoutView
     # The event is neccesarry due to the 300ms CSS transition
     @$el.on("hidden.bs.modal", =>
       @$el.off("hidden.bs.modal")
-      app.vent.trigger("CreateProjectModal:refresh") #update pagination
     )
     @$el.modal("hide")
 

@@ -136,17 +136,17 @@ class SkeletonTracingView extends View
 
   showSharingOfTracingModal : ->
 
-    container = $("#modal")
-    modalView = new SharingOfTracingModalView(el : container, _model : @model)
+    modalView = new SharingOfTracingModalView(_model : @model)
     el = modalView.render().el
+    $("#container-modal").html(el)
     modalView.show()
 
 
   showUnsharingOfTracingModal : ->
 
-    container = $("#modal")
-    modalView = new UnsharingOfTracingModalView(el : container, _model : @model)
+    modalView = new UnsharingOfTracingModalView(_model : @model)
     el = modalView.render().el
+    $("#container-modal").html(el)
     modalView.show()
 
 

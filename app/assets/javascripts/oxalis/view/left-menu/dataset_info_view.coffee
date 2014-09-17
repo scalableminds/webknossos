@@ -2,6 +2,7 @@
 backbone.marionette : marionette
 app : app
 oxalis/constants : constants
+oxalis/controller/viewmodes/arbitrary_controller : ArbitraryController
 ###
 
 class DatsetActionsView extends Backbone.Marionette.ItemView

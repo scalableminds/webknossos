@@ -129,7 +129,7 @@ trait AnnotationController extends Controller with Secured with TracingInformati
         js match {
           case JsArray(jsUpdates) =>
             for {
-              updated <- annotation.muta.updateFromJson(jsUpdates) ?~> Messages("format.json.invalid")
+              updated <- annotation.muta.updateFromJson(jsUpdates)(GlobalAccessContext) ?~> Messages("format.json.invalid")
             } yield {
               TimeSpanService.logUserInteraction(request.userOpt, Some(updated))
               Json.obj("version" -> version)
@@ -168,7 +168,7 @@ trait AnnotationController extends Controller with Secured with TracingInformati
         oldAnnotation <- findAnnotation(typ, id)
         updateableAnnotation <- isUpdateable(oldAnnotation) ?~> Messages("tracing.update.impossible")
         isAllowed <- isUpdateAllowed(oldAnnotation).toFox
-        oldJs <- oldAnnotation.annotationInfo(request.userOpt)
+        oldJs <- oldAnnotation.annotationInfo(request.userOpt)(GlobalAccessContext)
         result <- executeIfAllowed(updateableAnnotation, isAllowed, oldJs)
       } yield {
         result

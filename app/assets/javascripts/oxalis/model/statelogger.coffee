@@ -77,11 +77,11 @@ class StateLogger
     @pipeline.executeAction( (prevVersion) =>
 
       Request.send(
-        url : "/sharedannotations/Share/#{@tracingId}/isShared"
+        url : "/sharedannotations/#{@tracingType}/#{@tracingId}/isShared"
         dataType : "json"
       ).pipe (shared) =>
 
-        tracingType = url = if(shared.isShared)
+        tracingType = if(shared.isShared)
           "Share"
         else
           @tracingType

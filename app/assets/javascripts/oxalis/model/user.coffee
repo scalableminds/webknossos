@@ -97,8 +97,13 @@ class User
 
   pushImpl : ->
 
-    $.ajax(url : "/sharedannotations/#{@_tracingType}/#{@_tracingId}/isShared").done((shared) =>
-      if unless shared.isShared
+    tracingId   = $("#container").data("tracing-id")
+    tracingType = $("#container").data("tracing-type")
+
+    $.ajax(url : "/sharedannotations/#{tracingType}/#{tracingId}/isShared").done((shared) =>
+
+      if not shared.isShared
+
         deferred = $.Deferred()
 
         console.log "Sending User Data:", @userSettings
@@ -115,5 +120,8 @@ class User
         ).always(-> deferred.resolve())
 
         deferred.promise()
+
+      else
+        console.log "Shared annotation"
     )
 

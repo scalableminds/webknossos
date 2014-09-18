@@ -55,9 +55,8 @@ class Model
 
   initialize : (controlMode, state) =>
 
-    tracingId = $("#container").data("tracing-id")
+    tracingId   = $("#container").data("tracing-id")
     tracingType = $("#container").data("tracing-type")
-
 
     Request.send(
       url : "/sharedannotations/#{tracingType}/#{tracingId}/isShared"

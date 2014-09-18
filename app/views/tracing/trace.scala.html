@@ -9,7 +9,7 @@
 
 @main( ){
   <div id="container" data-tracing-type="@annotation.typ" data-tracing-id="@annotation.id" class="hide clearfix">
-    <div id="main" role="main" data-url="@controllers.routes.AnnotationController.info(annotation.typ, annotation.id)">
+    <div id="main" role="main">
       <div id="left-menu">
         @if(annotation.restrictions.allowUpdate(session.userOpt)){
           <a href="#" class="btn btn-primary" id="trace-save-button">Save</a>
@@ -20,7 +20,9 @@
           @if(annotation.restrictions.allowFinish(session.userOpt)){
             <a href="@controllers.routes.AnnotationController.finishWithRedirect(annotation.typ, annotation.id)" class="btn btn-default btn-small" id="trace-finish-button"><i class="fa fa-check-circle-o"></i>Finish</a>
           }
-          <a href="@controllers.routes.AnnotationController.download(annotation.typ, annotation.id)" class="btn btn-default btn-small" id="trace-download-button"><i class="fa fa-download"></i>NML</a>
+          @if(annotation.restrictions.allowDownload(session.userOpt)) {
+            <a href="@controllers.routes.AnnotationController.download(annotation.typ, annotation.id)" class="btn btn-default btn-small" id="trace-download-button"><i class="fa fa-download"></i>NML</a>
+          }
           <a href="#help-modal" class="btn btn-default btn-small" data-toggle="modal"><i class="fa fa-question-circle"></i>Help</a>
         </div>
 

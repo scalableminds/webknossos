@@ -70,7 +70,7 @@ class MergeModalView extends Backbone.Marionette.LayoutView
     "click #mail-link-share" : "shareMail"
 
   ui :
-    "sharinglink"            : "#sharing-link"
+    "sharinglink" : "#sharing-link"
 
   initialize : (options) ->
 

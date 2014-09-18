@@ -77,7 +77,7 @@ object AnnotationService extends AnnotationContentProviders with BoxImplicits wi
       annotation.copy(
         _user = user._id,
         state = AnnotationState.InProgress,
-        typ = AnnotationType.Task).muta.copyDeepAndInsert()
+        typ = AnnotationType.Task)(_restrictions = None).muta.copyDeepAndInsert()
 
     for {
       annotationBase <- task.annotationBase

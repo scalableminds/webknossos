@@ -1,6 +1,6 @@
 package controllers
 
-import models.annotation.{SharedAnnotationDAO, SharedAnnotation, SharedAnnotationData}
+import models.annotation.{AnnotationType, SharedAnnotationDAO, SharedAnnotation, SharedAnnotationData}
 import oxalis.annotation.AnnotationIdentifier
 import play.Play
 import play.api.i18n.Messages
@@ -28,15 +28,13 @@ trait SharedAnnotationController extends AnnotationController {
     }
   }
 
-  // todo - set restrictions to annotation
   def getShare(sharedId: String) = UserAwareAction.async { implicit request =>
     val httpUri = Play.application().configuration().getString("http.uri")
     val sharedLink = s"$httpUri/sharedannotations/$sharedId/share"
 
     for {
       sharedAnnotation <- SharedAnnotationDAO.findOneBySharedLink(sharedLink)
-      annotation <- findAnnotation(AnnotationIdentifier(sharedAnnotation.typ, sharedAnnotation.id))
-    // brakuje ustawienia praw
+      annotation <- findAnnotation(AnnotationIdentifier(AnnotationType.Share, sharedAnnotation.id))
     } yield {
       Ok(htmlForAnnotation(annotation))
     }
@@ -51,7 +49,7 @@ trait SharedAnnotationController extends AnnotationController {
     }
   }
 
-  def isShared(typ: String, id: String) = Authenticated.async { implicit request =>
+  def isShared(typ: String, id: String) = UserAwareAction.async { implicit request =>
     for {
       isShared <- SharedAnnotationDAO.isShared(typ, id)
     } yield {

@@ -10,6 +10,7 @@ object AnnotationType {
   val CompoundTask = "CompoundTask"
   val CompoundProject = "CompoundProject"
   val CompoundTaskType = "CompoundTaskType"
+  val Share = "Share"
 
   val UserTracings = List(
     Task,
@@ -17,7 +18,8 @@ object AnnotationType {
     CompoundTask,
     CompoundProject,
     CompoundTaskType,
-    View)
+    View,
+    Share)
 
   // System types
   val TracingBase = "Tracing Base"

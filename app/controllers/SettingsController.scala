@@ -24,13 +24,16 @@ object SettingsController extends Controller with Secured {
       Ok(toJson(configuration))
   }
 
-  def update = Authenticated.async(parse.json(maxLength = 2048)) {
+  def update = UserAwareAction.async(parse.json(maxLength = 2048)) {
     implicit request =>
       for {
         settings <- request.body.asOpt[JsObject] ?~> Messages("user.settings.invalid")
-        _ <- UserService.updateSettings(request.user, UserSettings(settings.fields.toMap))
+        _ <- UserService.updateSettings(request.userOpt, UserSettings(settings.fields.toMap))
       } yield {
-        UserCache.invalidateUser(request.user.id)
+        request.userOpt.map { user =>
+          UserCache.invalidateUser(user.id)
+        }
+
         JsonOk(Messages("user.settings.updated"))
       }
   }

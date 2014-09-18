@@ -19,7 +19,10 @@ object AnnotationInformationHandler {
     AnnotationType.CompoundTask.toString ->
       TaskInformationHandler,
     AnnotationType.CompoundTaskType.toString ->
-      TaskTypeInformationHandler).withDefaultValue(SavedTracingInformationHandler)
+      TaskTypeInformationHandler,
+    AnnotationType.Share.toString ->
+      SharedAnnotationInformationHandler
+    ).withDefaultValue(SavedTracingInformationHandler)
 }
 
 trait AnnotationInformationHandler {

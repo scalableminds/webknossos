@@ -16,7 +16,16 @@ import models.team.Role
  * Time: 02:02
  */
 
-trait AnnotationBaseRestrictions
+trait AnnotationBaseRestrictions {
+  def allowAccess(user: Option[User]): Boolean
+  def allowUpdate(user: Option[User]): Boolean
+  def allowFinish(user: Option[User]): Boolean
+  def allowDownload(user: Option[User]): Boolean
+  def allowAccess(user: User): Boolean
+  def allowUpdate(user: User): Boolean
+  def allowFinish(user: User): Boolean
+  def allowDownload(user: User): Boolean
+}
 
 class AnnotationRestrictions extends AnnotationBaseRestrictions {
   def allowAccess(user: Option[User]): Boolean = false
@@ -38,7 +47,7 @@ class AnnotationRestrictions extends AnnotationBaseRestrictions {
 }
 
 object AnnotationRestrictions {
-  def writeAsJson(ar: AnnotationRestrictions, u: Option[User]) : JsObject =
+  def writeAsJson(ar: AnnotationBaseRestrictions, u: Option[User]) : JsObject =
     Json.obj(
       "allowAccess" -> ar.allowAccess(u),
       "allowUpdate" -> ar.allowUpdate(u),

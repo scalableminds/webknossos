@@ -9,7 +9,7 @@ import com.scalableminds.braingames.binary.models.{FallbackLayer, DataLayer}
 import models.binary.{DataStoreInfo, DataSet, DataSetDAO}
 import scala.concurrent.Future
 import play.api.libs.concurrent.Execution.Implicits._
-import com.scalableminds.util.reactivemongo.DBAccessContext
+import com.scalableminds.util.reactivemongo.{GlobalAccessContext, DBAccessContext}
 import com.scalableminds.util.tools.Fox
 import play.api.Logger
 import net.liftweb.common.Box
@@ -47,7 +47,9 @@ trait AnnotationContent {
 
   lazy val date = new Date(timestamp)
 
-  def dataSet(implicit ctx: DBAccessContext): Fox[DataSet] = DataSetDAO.findOneBySourceName(dataSetName)
+  def dataSet(implicit ctx: DBAccessContext): Fox[DataSet] = {
+    DataSetDAO.findOneBySourceName(dataSetName)(GlobalAccessContext)
+  }
 }
 
 object AnnotationContent {

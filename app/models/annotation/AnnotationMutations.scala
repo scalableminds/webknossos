@@ -49,7 +49,7 @@ trait AnnotationMutationsLike{
 class AnnotationMutations(val annotation: Annotation) extends AnnotationMutationsLike with AnnotationFileService with AnnotationContentProviders with BoxImplicits with FoxImplicits{
   type AType = Annotation
 
-  def finishAnnotation(user: User)(implicit ctx: DBAccessContext): Fox[(Annotation, String)] = {
+  def finishAnnotation(userOpt: Option[User])(implicit ctx: DBAccessContext): Fox[(Annotation, String)] = {
     def executeFinish(annotation: Annotation): Future[Box[(Annotation, String)]] = async {
       annotation match {
         case annotation if annotation._task.isEmpty =>
@@ -66,7 +66,7 @@ class AnnotationMutations(val annotation: Annotation) extends AnnotationMutation
     }
 
     def tryToFinish(): Fox[(Annotation, String)] = {
-      if (annotation.restrictions.allowFinish(user)) {
+      if (annotation.restrictions.allowFinish(userOpt)) {
         if (annotation.state.isInProgress) {
           executeFinish(annotation)
         } else
@@ -115,7 +115,7 @@ class AnnotationMutations(val annotation: Annotation) extends AnnotationMutation
     .flatMap { contentId =>
       val copied = annotation.copy(
         _id = BSONObjectID.generate,
-        _content = annotation._content.copy(_id = contentId))
+        _content = annotation._content.copy(_id = contentId))(_restrictions = None)
 
       AnnotationDAO.insert(copied).map(_ => copied)
     }

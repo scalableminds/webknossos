@@ -36,7 +36,7 @@ class MergeModalView extends Backbone.Marionette.LayoutView
     "click #submit-unsharing"  : "unshare"
 
   ui :
-    "sharinglink"            : "#sharing-link"
+    "sharinglink" : "#sharing-link"
 
 
   initialize : (options) ->

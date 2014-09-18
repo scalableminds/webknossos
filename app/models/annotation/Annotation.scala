@@ -1,5 +1,6 @@
 package models.annotation
 
+import models.annotation.AnnotationBaseRestrictions
 import models.basics._
 import models.task.{TaskService, TaskDAO, TaskType, Task}
 import play.api.libs.json.{Json, JsObject}
@@ -35,8 +36,8 @@ case class Annotation(
                        version: Int = 0,
                        _name: Option[String] = None,
                        created : Long = System.currentTimeMillis,
-                       _id: BSONObjectID = BSONObjectID.generate
-                     )
+                       _id: BSONObjectID = BSONObjectID.generate)
+                     (implicit _restrictions: Option[AnnotationBaseRestrictions] = None)
 
   extends AnnotationLike with FoxImplicits {
 
@@ -58,7 +59,10 @@ case class Annotation(
 
   val contentType = _content.contentType
 
-  val restrictions = AnnotationRestrictions.defaultAnnotationRestrictions(this)
+  def restrictions = _restrictions match {
+    case Some(restrictions) => restrictions
+    case None => AnnotationRestrictions.defaultAnnotationRestrictions(this)
+  }
 
   def isReadyToBeFinished(implicit ctx: DBAccessContext) = {
     // TODO: RF - rework
@@ -90,6 +94,7 @@ case class Annotation(
 }
 
 object Annotation {
+
   implicit val annotationFormat = Json.format[Annotation]
 
   def transformToJson(annotation: Annotation)(implicit ctx: DBAccessContext): Future[JsObject] = {

@@ -75,13 +75,24 @@ class StateLogger
     console.log "Sending data: ", @committedDiffs
 
     @pipeline.executeAction( (prevVersion) =>
+
       Request.send(
-        url : "/annotations/#{@tracingType}/#{@tracingId}?version=#{(prevVersion + 1)}"
-        method : "PUT"
-        data : @committedDiffs
-        contentType : "application/json"
-      ).pipe (response) ->
-        return response.version
+        url : "/sharedannotations/Share/#{@tracingId}/isShared"
+        dataType : "json"
+      ).pipe (shared) =>
+
+        tracingType = url = if(shared.isShared)
+          "Share"
+        else
+          @tracingType
+
+        Request.send(
+          url : "/annotations/#{tracingType}/#{@tracingId}?version=#{(prevVersion + 1)}"
+          method : "PUT"
+          data : @committedDiffs
+          contentType : "application/json"
+        ).pipe (response) =>
+          return response.version
     ).fail (responseObject) =>
 
       if responseObject.responseText? && responseObject.responseText != ""

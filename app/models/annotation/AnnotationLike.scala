@@ -45,7 +45,7 @@ trait AnnotationLike extends AnnotationStatistics {
 
   def state: AnnotationState
 
-  def restrictions: AnnotationRestrictions
+  def restrictions: AnnotationBaseRestrictions
 
   def version: Int
 

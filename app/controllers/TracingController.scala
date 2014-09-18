@@ -1,5 +1,6 @@
 package controllers
 
+import com.scalableminds.util.reactivemongo.DBAccessContext
 import play.api.libs.json._
 import oxalis.security.{UserAwareRequest, Secured, AuthenticatedRequest}
 import net.liftweb.common._
@@ -44,7 +45,7 @@ trait TracingInformationProvider extends play.api.http.Status with FoxImplicits 
     f.mapTo[Box[AnnotationLike]]
   }
 
-  def nameAnnotation(annotation: AnnotationLike)(implicit request: AuthenticatedRequest[_]) = {
+  def nameAnnotation(annotation: AnnotationLike)(implicit request: UserAwareRequest[_]) = {
     withInformationHandler(annotation.typ) {
       handler =>
         handler.nameForAnnotation(annotation)

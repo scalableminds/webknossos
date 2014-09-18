@@ -4,7 +4,7 @@ import play.api.libs.functional.syntax._
 import models.basics._
 import play.api.libs.json._
 import models.user.User
-import com.scalableminds.util.reactivemongo.{DefaultAccessDefinitions, DBAccessContext}
+import com.scalableminds.util.reactivemongo.{GlobalAccessContext, DefaultAccessDefinitions, DBAccessContext}
 import play.api.libs.concurrent.Execution.Implicits._
 import scala.Some
 import com.scalableminds.util.reactivemongo.AccessRestrictions.AllowIf
@@ -83,8 +83,9 @@ object DataSetDAO extends SecuredBaseDAO[DataSet] {
   def deleteAllSourcesExcept(names: Array[String])(implicit ctx: DBAccessContext) =
     remove(Json.obj("name" -> Json.obj("$nin" -> names)))
 
-  def findOneBySourceName(name: String)(implicit ctx: DBAccessContext) =
-    findOne(byNameQ(name))
+  def findOneBySourceName(name: String)(implicit ctx: DBAccessContext) = {
+    findOne(byNameQ(name))(GlobalAccessContext)
+  }
 
   def findAllOwnedBy(teams: List[String])(implicit ctx: DBAccessContext) =
     find(Json.obj("owningTeam" -> Json.obj("$in" -> teams))).cursor[DataSet].collect[List]()

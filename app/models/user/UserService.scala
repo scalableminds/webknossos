@@ -81,11 +81,13 @@ object UserService extends FoxImplicits {
     UserDAO.findOneByEmail(email)(GlobalAccessContext)
   }
 
-  def updateSettings(user: User, settings: UserSettings)(implicit ctx: DBAccessContext) = {
-    UserDAO.updateSettings(user, settings).map {
-      result =>
-        UserCache.invalidateUser(user.id)
-        result
+  def updateSettings(userOpt: Option[User], settings: UserSettings)(implicit ctx: DBAccessContext) = {
+    userOpt.map { user =>
+      UserDAO.updateSettings(user, settings).map {
+        result =>
+          UserCache.invalidateUser(user.id)
+          result
+      }
     }
   }
 

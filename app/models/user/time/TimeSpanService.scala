@@ -23,10 +23,12 @@ object TimeSpanService extends FoxImplicits{
 
   lazy val timeSpanTracker = Akka.system.actorOf(Props[TimeSpanTracker])
 
-  def logUserInteraction(user: User, annotation: Option[AnnotationLike])(implicit ctx: DBAccessContext) = {
+  def logUserInteraction(userOpt: Option[User], annotation: Option[AnnotationLike])(implicit ctx: DBAccessContext) = {
     val timestamp = System.currentTimeMillis
 
-    timeSpanTracker ! TrackTime(timestamp, user._id, annotation, ctx)
+    userOpt.map {
+      user => timeSpanTracker ! TrackTime(timestamp, user._id, annotation, ctx)
+    }
   }
 
   def loggedTimeOfUser[T](user: User, groupingF: TimeSpan => T, start: Option[Long] = None, end: Option[Long] = None)(implicit ctx: DBAccessContext): Fox[Map[T, Duration]] =

@@ -44,7 +44,7 @@ class MergeModalView extends Backbone.Marionette.LayoutView
     @_model       = options._model
     @_tracingId   = $("#container").data("tracing-id")
     @_tracingType = $("#container").data("tracing-type")
-    @_sharedLink  = undefined
+    @_sharedId    = undefined
 
 
   destroyModal : ->
@@ -61,15 +61,14 @@ class MergeModalView extends Backbone.Marionette.LayoutView
     @$el.modal("show")
 
     $.ajax(url : "/sharedannotations/#{@_tracingType}/#{@_tracingId}/getSharedLink").done((tracing) =>
-      @_sharedLink = tracing.sharedLink
-      @ui.sharinglink.val(@_sharedLink)
+      @_sharedId = tracing.sharedData.sharedId
+      @ui.sharinglink.val(tracing.sharedData.sharedLink)
     )
 
 
   unshare : ->
 
-    link = @_sharedLink
-    data = { "sharedLink" : link}
+    data = { "sharedId" : @_sharedId }
 
     $.ajax(
       url : """/sharedannotations/#{@_tracingType}/#{@_tracingId}/deleteShare"""

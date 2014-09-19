@@ -34,7 +34,6 @@ object SharedAnnotationInformationHandler extends AnnotationInformationHandler w
   }
 
   def provideAnnotation(annotationId: String, user: Option[User])(implicit ctx: DBAccessContext): Fox[Annotation] = {
-    println("proviceAnnotation SHARE")
     for {
       annotation <- AnnotationDAO.findOneById(annotationId)(GlobalAccessContext) ?~> Messages("annotation.notFound")
       sharedRestrictions <- SharedAnnotationDAO.getSharedRestrictionsById(annotationId)

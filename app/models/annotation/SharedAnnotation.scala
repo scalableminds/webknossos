@@ -4,6 +4,7 @@ import com.scalableminds.util.reactivemongo.DBAccessContext
 import com.scalableminds.util.tools.FoxImplicits
 import models.basics.SecuredBaseDAO
 import models.user.User
+import play.Play
 import play.api.Logger
 import play.api.libs.json.{Reads, OFormat, Json, JsObject}
 import reactivemongo.bson.BSONObjectID
@@ -18,21 +19,46 @@ import com.scalableminds.util.tools.{Fox, FoxImplicits}
  * Time: 12:39
  */
 
-case class SharedAnnotationData(val sharedLink: String, val restrictions: SharedAnnotationRestriction)
+object SharedLinkHandler {
+
+  val httpUri = Play.application().configuration().getString("http.uri")
+
+  def generateSharedData() = {
+    val sharedId = java.util.UUID.randomUUID.toString
+    val sharedLink = createLink(sharedId)
+
+    SharedSendData(sharedId, sharedLink)
+  }
+
+  def createLink(sharedId: String) = s"$httpUri/sharedannotations/$sharedId/share"
+}
+
+case class SharedSendData(sharedId: String, sharedLink: String)
+
+object SharedSendData {
+  implicit val sharedDataFormat = Json.format[SharedSendData]
+
+  implicit def sharedSendDataWrites: Writes[SharedSendData] = (
+    (__ \ "sharedId").write[String] and
+    (__ \ "sharedLink").write[String]
+    )(unlift(SharedSendData.unapply))
+}
+
+case class SharedAnnotationData(val sharedId: String, val restrictions: SharedAnnotationRestriction)
 
 object SharedAnnotationData {
 
   implicit val sharedAnnotationDataFormatter = Json.format[SharedAnnotationData]
 
   implicit def restrictionsWrites: Writes[SharedAnnotationData] = (
-    (__ \ "sharedLink").write[String] and
+    (__ \ "sharedId").write[String] and
     (__ \ "restrictions").write[SharedAnnotationRestriction]
     )(unlift(SharedAnnotationData.unapply))
 
 
 
   implicit def restrictionsReads: Reads[SharedAnnotationData] = (
-      (__ \ "sharedLink").read[String] and
+      (__ \ "sharedId").read[String] and
       (__ \ "restrictions").read[SharedAnnotationRestriction]
     )(SharedAnnotationData.apply _)
 }
@@ -76,7 +102,7 @@ object SharedAnnotationRestriction {
 
 case class SharedAnnotation(val typ: String = AnnotationType.Explorational,
                        val id: String,
-                       val sharedLink: String,
+                       val sharedId: String,
                        val restrictions: SharedAnnotationRestriction)
 
 object SharedAnnotation {
@@ -87,7 +113,7 @@ object SharedAnnotation {
     Json.obj(
       "typ" -> sharedAnnotation.typ,
       "id" -> sharedAnnotation.id,
-      "sharedLink" -> sharedAnnotation.sharedLink,
+      "sharedId" -> sharedAnnotation.sharedId,
       "restrictions" -> sharedAnnotation.restrictions
     )
   }
@@ -95,7 +121,7 @@ object SharedAnnotation {
   implicit def sharedAnnotationReads(): Reads[SharedAnnotation] = (
     (__ \ "typ").read[String] and
      (__ \ "id").read[String] and
-     (__ \ "sharedLink").read[String] and
+     (__ \ "sharedId").read[String] and
      (__ \ "restrictions").read[SharedAnnotationRestriction]
     )(SharedAnnotation.apply _)
 
@@ -139,21 +165,21 @@ object SharedAnnotationDAO
     }
   }
 
-  def removeObj(typ: String, id: String, sharedLink: String)(implicit ctx: DBAccessContext) = {
-    remove(Json.obj("typ" -> typ, "id" -> id, "sharedLink" -> sharedLink))
+  def removeObj(typ: String, id: String, sharedId: String)(implicit ctx: DBAccessContext) = {
+    remove(Json.obj("typ" -> typ, "id" -> id, "sharedId" -> sharedId))
   }
 
-  def getSharedLink(typ: String, id: String)(implicit ctx: DBAccessContext) = {
+  def getSharedId(typ: String, id: String)(implicit ctx: DBAccessContext) = {
     findOne(
       Json.obj(
         "typ" -> typ,
         "id" -> id)).map {
-      case a: SharedAnnotation => a.sharedLink
+      case a: SharedAnnotation => a.sharedId
       case _ => ""
     }
   }
 
-  def findOneBySharedLink(sharedLink: String)(implicit ctx: DBAccessContext) = {
-    findOne(Json.obj("sharedLink" -> sharedLink))
+  def findOneBySharedId(sharedId: String)(implicit ctx: DBAccessContext) = {
+    findOne(Json.obj("sharedId" -> sharedId))
   }
 }

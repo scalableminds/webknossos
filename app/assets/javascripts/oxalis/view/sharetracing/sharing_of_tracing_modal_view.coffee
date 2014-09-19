@@ -77,6 +77,7 @@ class MergeModalView extends Backbone.Marionette.LayoutView
     @_model       = options._model
     @_tracingId   = $("#container").data("tracing-id")
     @_tracingType = $("#container").data("tracing-type")
+    @_sharedId    = undefined
     @_sharedLink  = undefined
 
 
@@ -85,7 +86,8 @@ class MergeModalView extends Backbone.Marionette.LayoutView
     @$el.modal("show")
 
     $.ajax(url : "/sharedannotations/#{@_tracingType}/#{@_tracingId}/generateLink").done((tracing) =>
-      @_sharedLink = tracing.sharedLink
+      @_sharedId   = tracing.sharedData.sharedId
+      @_sharedLink = tracing.sharedData.sharedLink
       @ui.sharinglink.val(@_sharedLink)
     )
 
@@ -113,9 +115,8 @@ class MergeModalView extends Backbone.Marionette.LayoutView
     allowUpdate   = $('#checkbox-allow-update')  .prop('checked').toString()
     allowDownload = $('#checkbox-allow-download').prop('checked').toString()
     allowFinish   = $('#checkbox-allow-finish')  .prop('checked').toString()
-    link = @_sharedLink
 
-    data = { "sharedLink" : link, "restrictions" : { "allowAccess" : allowAccess, "allowUpdate" : allowUpdate, "allowDownload" : allowDownload, "allowFinish" : allowFinish} }
+    data = { "sharedId" : @_sharedId, "restrictions" : { "allowAccess" : allowAccess, "allowUpdate" : allowUpdate, "allowDownload" : allowDownload, "allowFinish" : allowFinish} }
 
     $.ajax(
       url : """/sharedannotations/#{@_tracingType}/#{@_tracingId}/saveShare"""

@@ -185,7 +185,7 @@ trait AnnotationController extends Controller with Secured with TracingInformati
 //    }
 //  }
 
-  def finish(typ: String, id: String) = UserAwareAction.async {
+  def finish(typ: String, id: String) = Authenticated.async {
     implicit request =>
       for {
         annotation <- AnnotationDAO.findOneById(id) ?~> Messages("annotation.notFound")
@@ -196,11 +196,11 @@ trait AnnotationController extends Controller with Secured with TracingInformati
       }
   }
 
-  def finishWithRedirect(typ: String, id: String) = Authenticated.async {
+  def finishWithRedirect(typ: String, id: String) = UserAwareAction.async {
     implicit request =>
       for {
-        annotation <- AnnotationDAO.findOneById(id) ?~> Messages("annotation.notFound")
-        finished <- annotation.muta.finishAnnotation(request.userOpt).futureBox
+        annotation <- AnnotationDAO.findOneById(id)(GlobalAccessContext) ?~> Messages("annotation.notFound")
+        finished <- annotation.muta.finishAnnotation(request.userOpt)(GlobalAccessContext).futureBox
       } yield {
         finished match {
           case Full((_, message)) =>

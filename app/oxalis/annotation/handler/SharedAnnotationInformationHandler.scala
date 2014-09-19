@@ -39,8 +39,7 @@ object SharedAnnotationInformationHandler extends AnnotationInformationHandler w
       annotation <- AnnotationDAO.findOneById(annotationId)(GlobalAccessContext) ?~> Messages("annotation.notFound")
       sharedRestrictions <- SharedAnnotationDAO.getSharedRestrictionsById(annotationId)
     } yield {
-      println(sharedRestrictions)
-      annotation.copy()(_restrictions = Some(sharedRestrictions))
+      annotation.copy(typ = AnnotationType.Share)(_restrictions = Some(sharedRestrictions))
     }
   }
 

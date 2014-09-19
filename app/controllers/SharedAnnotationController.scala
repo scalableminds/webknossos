@@ -34,7 +34,7 @@ trait SharedAnnotationController extends AnnotationController {
       sharedAnnotation <- SharedAnnotationDAO.findOneBySharedId(sharedId)
       annotation <- findAnnotation(AnnotationIdentifier(AnnotationType.Share, sharedAnnotation.id))
     } yield {
-      Ok(htmlForAnnotation(annotation))
+      Ok(htmlForAnnotation(annotation, isShared = true))
     }
   }
 

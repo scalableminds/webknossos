@@ -76,23 +76,20 @@ class StateLogger
 
     @pipeline.executeAction( (prevVersion) =>
 
+      isShared = $("#annotation-is-shared").data("annotation-isshared")
+
+      tracingType = if(isShared)
+        "Share"
+      else
+        @tracingType
+
       Request.send(
-        url : "/sharedannotations/#{@tracingType}/#{@tracingId}/isShared"
-        dataType : "json"
-      ).pipe (shared) =>
-
-        tracingType = if(shared.isShared)
-          "Share"
-        else
-          @tracingType
-
-        Request.send(
-          url : "/annotations/#{tracingType}/#{@tracingId}?version=#{(prevVersion + 1)}"
-          method : "PUT"
-          data : @committedDiffs
-          contentType : "application/json"
-        ).pipe (response) =>
-          return response.version
+        url : "/annotations/#{tracingType}/#{@tracingId}?version=#{(prevVersion + 1)}"
+        method : "PUT"
+        data : @committedDiffs
+        contentType : "application/json"
+      ).pipe (response) =>
+        return response.version
     ).fail (responseObject) =>
 
       if responseObject.responseText? && responseObject.responseText != ""

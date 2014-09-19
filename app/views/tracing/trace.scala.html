@@ -1,4 +1,4 @@
-@(annotation: models.annotation.AnnotationLike)(additionalHtml: Html)(implicit session: oxalis.view.SessionData)
+@(annotation: models.annotation.AnnotationLike, isShared: Boolean = false)(additionalHtml: Html)(implicit session: oxalis.view.SessionData)
 @import com.scalableminds.util.reactivemongo.GlobalAccessContext
 
 @import models.task.Task
@@ -9,6 +9,7 @@
 
 @main( ){
   <div id="container" data-tracing-type="@annotation.typ" data-tracing-id="@annotation.id" class="hide clearfix">
+    <div id="annotation-is-shared" data-annotation-isShared="@isShared" class="hide"></div>
     <div id="main" role="main">
       <div id="left-menu">
         @if(annotation.restrictions.allowUpdate(session.userOpt)){

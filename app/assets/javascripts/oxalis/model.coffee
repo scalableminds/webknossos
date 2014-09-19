@@ -57,54 +57,50 @@ class Model
 
     tracingId   = $("#container").data("tracing-id")
     tracingType = $("#container").data("tracing-type")
+    isShared    = $("#annotation-is-shared").data("annotation-isshared")
+
+    url = if(isShared)
+      "/annotations/Share/#{tracingId}/info"
+    else
+      "/annotations/#{tracingType}/#{tracingId}/info"
 
     Request.send(
-      url : "/sharedannotations/#{tracingType}/#{tracingId}/isShared"
+      url : url
       dataType : "json"
-    ).pipe (shared) =>
+    ).pipe (tracing) =>
 
-      url = if(shared.isShared)
-        "/annotations/Share/#{tracingId}/info"
-      else
-        "/annotations/#{tracingType}/#{tracingId}/info"
+      if tracing.error
+        Toast.error(tracing.error)
+        return {"error" : true}
 
-      Request.send(
-        url : url
-        dataType : "json"
-      ).pipe (tracing) =>
+      else unless tracing.content.dataSet
+        Toast.error("Selected dataset doesn't exist")
+        return {"error" : true}
 
-        if tracing.error
-          Toast.error(tracing.error)
-          return {"error" : true}
-
-        else unless tracing.content.dataSet
-          Toast.error("Selected dataset doesn't exist")
-          return {"error" : true}
-
-        else unless tracing.content.dataSet.dataLayers
-          datasetName = tracing.content.dataSet.name
-          if datasetName
-            Toast.error("Please, double check if you have the dataset '#{datasetName}' imported.")
-          else
-            Toast.error("Please, make sure you have a dataset imported.")
-          return {"error" : true}
-
+      else unless tracing.content.dataSet.dataLayers
+        datasetName = tracing.content.dataSet.name
+        if datasetName
+          Toast.error("Please, double check if you have the dataset '#{datasetName}' imported.")
         else
-          Request.send(
-            url : "/user/configuration"
-            dataType : "json"
-          ).pipe(
-            (user) =>
+          Toast.error("Please, make sure you have a dataset imported.")
+        return {"error" : true}
 
-              dataSet = tracing.content.dataSet
-              layers  = @getLayers(dataSet.dataLayers, tracing.content.contentData.customLayers)
-              $.when(
-                @getDataTokens(dataSet.dataStore.url, dataSet.name, layers)...
-              ).pipe =>
-                @initializeWithData(controlMode, state, tracingId, tracingType, tracing, user, layers)
+      else
+        Request.send(
+          url : "/user/configuration"
+          dataType : "json"
+        ).pipe(
+          (user) =>
 
-            -> Toast.error("Ooops. We couldn't communicate with our mother ship. Please try to reload this page.")
-          )
+            dataSet = tracing.content.dataSet
+            layers  = @getLayers(dataSet.dataLayers, tracing.content.contentData.customLayers)
+            $.when(
+              @getDataTokens(dataSet.dataStore.url, dataSet.name, layers)...
+            ).pipe =>
+              @initializeWithData(controlMode, state, tracingId, tracingType, tracing, user, layers)
+
+          -> Toast.error("Ooops. We couldn't communicate with our mother ship. Please try to reload this page.")
+        )
 
   initializeWithData : (controlMode, state, tracingId, tracingType, tracing, user, layers) ->
 

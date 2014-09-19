@@ -228,8 +228,8 @@ trait AnnotationController extends Controller with Secured with TracingInformati
       }
   }
 
-  def htmlForAnnotation(annotation: AnnotationLike)(implicit request: UserAwareRequest[_]) = {
-    html.tracing.trace(annotation)(Html.empty)
+  def htmlForAnnotation(annotation: AnnotationLike, isShared: Boolean = false)(implicit request: UserAwareRequest[_]) = {
+    html.tracing.trace(annotation, isShared)(Html.empty)
   }
 
   def annotationsForTask(taskId: String) = Authenticated.async { implicit request =>

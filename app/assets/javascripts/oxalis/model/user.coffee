@@ -97,31 +97,20 @@ class User
 
   pushImpl : ->
 
-    tracingId   = $("#container").data("tracing-id")
-    tracingType = $("#container").data("tracing-type")
+    deferred = $.Deferred()
 
-    $.ajax(url : "/sharedannotations/#{tracingType}/#{tracingId}/isShared").done((shared) =>
+    console.log "Sending User Data:", @userSettings
 
-      if not shared.isShared
+    Request.send(
+      url      : "/user/configuration"
+      type     : "POST"
+      dataType : "json"
+      data     : @userSettings
+    ).fail( =>
 
-        deferred = $.Deferred()
+      console.log "couldn't save userdata"
 
-        console.log "Sending User Data:", @userSettings
+    ).always(-> deferred.resolve())
 
-        Request.send(
-          url      : "/user/configuration"
-          type     : "POST"
-          dataType : "json"
-          data     : @userSettings
-        ).fail( =>
-
-          console.log "couldn't save userdata"
-
-        ).always(-> deferred.resolve())
-
-        deferred.promise()
-
-      else
-        console.log "Shared annotation"
-    )
+    deferred.promise()
 

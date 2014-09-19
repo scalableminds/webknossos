@@ -110,6 +110,14 @@ object SharedAnnotationDAO
   val collectionName = "sharedAnnotations"
   val formatter = SharedAnnotation.sharedAnnotationFormat
 
+  def finish(id: String)(implicit restrictions: SharedAnnotationRestriction = SharedAnnotationRestriction(allowAccess = "true", allowDownload = "false", allowUpdate = "false", allowFinish = "false"),
+                                  ctx: DBAccessContext) = {
+    update(
+      Json.obj("id" -> id),
+      Json.obj("$set" -> Json.obj("restrictions" -> restrictions))
+    )
+  }
+
   def getSharedRestrictionsById(id: String)(implicit ctx: DBAccessContext) = {
     find(
       Json.obj(

@@ -201,6 +201,7 @@ trait AnnotationController extends Controller with Secured with TracingInformati
       for {
         annotation <- AnnotationDAO.findOneById(id)(GlobalAccessContext) ?~> Messages("annotation.notFound")
         finished <- annotation.muta.finishAnnotation(request.userOpt)(GlobalAccessContext).futureBox
+        _ <- SharedAnnotationDAO.finish(id)(ctx = GlobalAccessContext)
       } yield {
         finished match {
           case Full((_, message)) =>

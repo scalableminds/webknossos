@@ -53,7 +53,7 @@ trait DataCache {
    * returns it.
    */
   def withCache(blockInfo: LoadBlock)(loadF: => Future[Box[Array[Byte]]]): Future[Box[Array[Byte]]] = {
-    //ensureCacheMaxSize
+    ensureCacheMaxSize
     val cachedBlockInfo = CachedBlock.from(blockInfo)
 
     cache.future.flatMap {

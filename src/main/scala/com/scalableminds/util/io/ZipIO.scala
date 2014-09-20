@@ -13,6 +13,24 @@ import java.io.FileOutputStream
 
 object ZipIO {
 
+  case class OpenZip(stream: ZipOutputStream){
+    def addFile(source: NamedFileStream) = {
+      stream.putNextEntry(new ZipEntry(source.normalizedName))
+      var buffer = new Array[Byte](1024)
+      var len = 0
+      do {
+        len = source.stream.read(buffer)
+        if (len > 0)
+          stream.write(buffer, 0, len)
+      } while (len > 0)
+      source.stream.close()
+      stream.closeEntry()
+    }
+
+    def close =
+      stream.close()
+  }
+
   /** The size of the byte or char buffer used in various methods. */
 
   class GZIPOutputStream(out: OutputStream, compressionLevel: Int) extends DefaultGZIPOutputStream(out) {
@@ -20,8 +38,15 @@ object ZipIO {
   }
 
   def zip(sources: Stream[NamedFileStream], out: OutputStream) = {
-    if (!sources.isEmpty)
-      writeZip(sources, new ZipOutputStream(out))
+    if (!sources.isEmpty){
+      val zip = OpenZip(new ZipOutputStream(out))
+      sources.foreach(zip.addFile)
+      zip.close
+    }
+  }
+
+  def startZip(out: OutputStream) = {
+    OpenZip(new ZipOutputStream(out))
   }
 
   def gzip(source: InputStream, out: OutputStream) = {
@@ -42,23 +67,6 @@ object ZipIO {
     val gzipped = File.createTempFile("temp", System.nanoTime().toString + "_" + f.getName())
     gzip(new FileInputStream(f), new FileOutputStream(gzipped))
     gzipped
-  }
-
-  private def writeZip(sources: Stream[NamedFileStream], zip: ZipOutputStream) = {
-    sources.foreach {
-      source =>
-        zip.putNextEntry(new ZipEntry(source.normalizedName))
-        var buffer = new Array[Byte](1024)
-        var len = 0
-        do {
-          len = source.stream.read(buffer)
-          if (len > 0)
-            zip.write(buffer, 0, len)
-        } while (len > 0)
-        source.stream.close()
-        zip.closeEntry()
-    }
-    zip.close()
   }
 
   def unzip(file: File): List[InputStream] = {

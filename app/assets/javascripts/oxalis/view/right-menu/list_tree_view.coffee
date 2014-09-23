@@ -7,8 +7,9 @@ backbone.marionette : marionette
 
 class ListTreeView extends Backbone.Marionette.CompositeView
 
+  id : "tree-navbar"
   template : _.template("""
-    <div id="tree-navbar">
+    <div>
       <div class="btn-group">
         <button class="btn btn-default" id="tree-create-button"><i class="fa fa-plus"></i>Create tree</button>
         <button class="btn btn-default" id="tree-delete-button"><i class="fa fa-trash-o"></i>Delete tree</button>
@@ -32,19 +33,17 @@ class ListTreeView extends Backbone.Marionette.CompositeView
           </li>
         </ul>
       </div>
-      <div class="input-group">
-        <span class="input-group-btn">
-          <button class="btn btn-default" id="tree-prev-button"><i class="fa fa-arrow-left"></i></button>
-        </span>
-        <input name="name" id="tree-name-input" class="form-control" maxlength="30" type="text" autocomplete="off">
-        <span class="input-group-btn">
-          <button class="btn btn-default" id="tree-next-button"><i class="fa fa-arrow-right"></i></button>
-        </span>
-      </div>
-      <div>
-      <ul id="tree-list"></ul>
-      </div>
     </div>
+    <div class="input-group">
+      <span class="input-group-btn">
+        <button class="btn btn-default" id="tree-prev-button"><i class="fa fa-arrow-left"></i></button>
+      </span>
+      <input name="name" id="tree-name-input" class="form-control" maxlength="30" type="text" autocomplete="off">
+      <span class="input-group-btn">
+        <button class="btn btn-default" id="tree-next-button"><i class="fa fa-arrow-right"></i></button>
+      </span>
+    </div>
+    <ul id="tree-list"></ul>
     """)
 
   childView : ListTreeItemView

@@ -23,9 +23,7 @@ class CommentTabView extends SortedCompositeView
         </button>
       </div>
     </div>
-    <div id="comment-container">
-      <ul id="comment-list"></ul>
-    </div>
+    <ul id="comment-list"></ul>
   """)
 
   childView : CommentTabItemView

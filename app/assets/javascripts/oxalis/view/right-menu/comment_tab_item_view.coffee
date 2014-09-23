@@ -34,6 +34,9 @@ class CommentTabItemView extends Backbone.Marionette.ItemView
   update : (@activeCommentId) ->
 
     @render()
+    # scroll to active one
+    if @model.get("node") == @activeCommentId
+      @el.scrollIntoView()
 
 
   setActiveNode : ->

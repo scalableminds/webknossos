@@ -3,7 +3,6 @@
 ../setting_views/slider_setting_view : SliderSettingView
 ../setting_views/button_setting_view : ButtonSettingView
 ./category_view : CategoryView
-../../../constants : constants
 ###
 
 class ColorsCategoryView extends CategoryView

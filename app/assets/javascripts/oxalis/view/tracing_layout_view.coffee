@@ -52,12 +52,15 @@ class TracingLayoutView extends Backbone.Marionette.LayoutView
 
     @listenTo(@, "render", @afterRender)
     @listenTo(app.vent, "planes:resize", @resize)
+    #$(window).on("resize", @resize.bind(@))
 
 
   resize : ->
 
     menuPosition = @ui.rightMenu.position()
-    @ui.rightMenu.width(window.innerWidth - menuPosition.left - @MARGIN)
+    newWidth = window.innerWidth - menuPosition.left - @MARGIN
+    if newWidth > 350
+      @ui.rightMenu.width(newWidth)
 
 
   afterRender : ->

@@ -362,7 +362,7 @@ class SkeletonTracing
       @trigger("newActiveNode", @activeNode.id)
     @stateLogger.push()
 
-    @trigger("newActiveTree")
+    @trigger("newActiveTree", @activeTree.treeId)
 
 
   getNewTreeColor : ->

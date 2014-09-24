@@ -166,6 +166,7 @@ class Model
     @computeBoundaries()
 
     @restrictions = tracing.restrictions
+    @settings = tracing.content.settings
     @mode = constants.MODE_PLANE_TRACING
 
     app.vent.trigger("model:sync")

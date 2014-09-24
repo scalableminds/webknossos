@@ -7,6 +7,7 @@ backbone.marionette : marionette
 ./arbitrary_user_settings_view : ArbitraryUserSettingsView
 ./dataset_settings_view : DatasetSettingsView
 oxalis/constants : constants
+oxalis/model/settings/backbone_to_oxalis_adapter_model : BackboneToOxalisAdapterModel
 ###
 
 class SettingsTabView extends Backbone.Marionette.LayoutView
@@ -45,8 +46,10 @@ class SettingsTabView extends Backbone.Marionette.LayoutView
 
     @options = options
 
-    @skeletonTracingSettingsView = new SkeletonTracingSettingsView(_model : options._model)
-    @volumeTracingSettingsView = new VolumeTracingSettingsView(_model : options._model)
+
+    backboneToOxalisAdapter = new BackboneToOxalisAdapterModel(_model : options._model)
+    @skeletonTracingSettingsView = new SkeletonTracingSettingsView(_model : backboneToOxalisAdapter)
+    @volumeTracingSettingsView = new VolumeTracingSettingsView(_model : backboneToOxalisAdapter)
 
     @planeUserSettingsView = new PlaneUserSettingsView(_model : options._model)
     @arbitraryUserSettingsView = new ArbitraryUserSettingsView(_model : options._model)

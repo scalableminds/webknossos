@@ -68,11 +68,11 @@ class SettingsTabView extends Backbone.Marionette.LayoutView
   changeViewMode : (mode) ->
 
     if mode == constants.MODE_PLANE_TRACING
-      @userSettings.show(@planeUserSettingsView)
-      @tracingSettings.show(@skeletonTracingSettingsView)
+      @userSettings.show(@planeUserSettingsView, preventDestroy : true)
+      @tracingSettings.show(@skeletonTracingSettingsView, preventDestroy : true)
     else if mode in constants.MODES_ARBITRARY
-      @userSettings.show(@arbitraryUserSettingsView)
-      @tracingSettings.show(@skeletonTracingSettingsView)
+      @userSettings.show(@arbitraryUserSettingsView, preventDestroy : true)
+      @tracingSettings.show(@skeletonTracingSettingsView, preventDestroy : true)
     else if mode == constants.MODE_VOLUME
-      @userSettings.show(@planeUserSettingsView)
-      @tracingSettings.show(@volumeTracingSettingsView)
+      @userSettings.show(@planeUserSettingsView, preventDestroy : true)
+      @tracingSettings.show(@volumeTracingSettingsView, preventDestroy : true)

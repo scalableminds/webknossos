@@ -43,12 +43,10 @@ class AbstractPlaneMaterialFactory extends AbstractMaterialFactory
   setupChangeListeners : ->
 
     @listenTo(@model.dataset, "change:brightness", (model, brightness) ->
-      console.log(brightness)
       @uniforms.brightness.value = brightness / 255
     )
 
     @listenTo(@model.dataset, "change:contrast", (model, contrast) ->
-      console.log(contrast)
       @uniforms.contrast.value = contrast
     )
 

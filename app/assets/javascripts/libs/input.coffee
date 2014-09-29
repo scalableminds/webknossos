@@ -243,6 +243,7 @@ class Input.Mouse
       x : event.pageX - @$target.offset().left
       y : event.pageY - @$target.offset().top
 
+    console.log("DEBUG:MOUSE:mouseDown", event)
     @handle("MouseDown", event)
 
 
@@ -253,6 +254,7 @@ class Input.Mouse
     else
       @mouseEnter(which : 0) if @isHit(event)
 
+    console.log("DEBUG:MOUSE:mouseMove", event)
     @handle( "MouseUp", event )
 
 
@@ -270,6 +272,7 @@ class Input.Mouse
 
     if delta?.x != 0 or delta?.y != 0
 
+      console.log("DEBUG:MOUSE:mouseMove", event)
       @handle( "MouseMove", event, delta )
 
       @lastPosition = @position

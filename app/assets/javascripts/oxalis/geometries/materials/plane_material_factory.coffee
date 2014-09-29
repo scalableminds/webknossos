@@ -73,6 +73,8 @@ class PlaneMaterialFactory extends AbstractPlaneMaterialFactory
     @material.setSegmentationAlpha = (alpha) =>
       @uniforms.alpha.value = alpha / 100
 
+    @material.side = THREE.DoubleSide
+
 
   setupChangeListeners : ->
 

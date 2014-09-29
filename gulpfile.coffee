@@ -94,7 +94,7 @@ gulp.task("combine:scripts:production", ->
 
 gulp.task("install:bower", ->
   return gulp.src("bower.json")
-    .pipe(exec("\"#{path.join(process.cwd(), "node_modules", ".bin", "bower")}\" install -f"))
+    .pipe(exec("\"#{path.join(process.cwd(), "node_modules", ".bin", "bower")}\" install"))
 )
 
 gulp.task("clean:tmp", ->

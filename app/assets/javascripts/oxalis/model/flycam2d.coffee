@@ -37,8 +37,8 @@ class Flycam2d
 
     @updateStoredValues()
 
-    # correct zoom values that are too high
-    @user.set("zoom", Math.min(@user.get("zoom"), Math.floor(@getMaxZoomStep())))
+    # correct zoom values that are too high or too low
+    @user.set("zoom", Math.max(0.01, Math.min(@user.get("zoom"), Math.floor(@getMaxZoomStep()))))
 
     @listenTo(@model.dataset, "change:quality", (model, quality) -> @setQuality(quality))
     # TODO move zoom into tracing settings

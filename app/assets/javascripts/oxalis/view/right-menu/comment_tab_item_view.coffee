@@ -1,6 +1,7 @@
 ### define
 backbone.marionette
 app : app
+libs/utils : Utils
 ###
 
 class CommentTabItemView extends Backbone.Marionette.ItemView
@@ -35,7 +36,7 @@ class CommentTabItemView extends Backbone.Marionette.ItemView
 
     @render()
     # scroll to active one
-    if @model.get("node") == @activeCommentId
+    if @model.get("node") == @activeCommentId and not Utils.isElementInViewport(@el)
       @el.scrollIntoView()
 
 

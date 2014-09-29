@@ -84,3 +84,20 @@ Utils =
         <i class="fa fa-spinner fa-spin fa-4x"></i>
         <br>Loading
       </div>"""
+
+
+  isElementInViewport : (el) ->
+
+    #special bonus for those using jQuery
+    if typeof jQuery == "function" && el instanceof jQuery
+      el = el[0]
+
+
+    rect = el.getBoundingClientRect()
+
+    return (
+      rect.top >= 0 &&
+      rect.left >= 0 &&
+      rect.bottom <= (window.innerHeight || document.documentElement.clientHeight) &&
+      rect.right <= (window.innerWidth || document.documentElement.clientWidth)
+    )

@@ -45,5 +45,5 @@ class ListTreeItemView extends Backbone.Marionette.ItemView
   onShow : ->
 
     # scroll to active tree
-    if @model.get("treeId") == @activeTreeId
+    if @model.get("treeId") == @activeTreeId and not Utils.isElementInViewport(@el)
       @el.scrollIntoView()

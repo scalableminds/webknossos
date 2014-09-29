@@ -43,8 +43,8 @@ class BackboneToOxalisAdapterModel extends Backbone.Model
 
       @listenTo(@skeletonTracingModel, "newTree", (id) -> @skeletonTracingAdapter.set("activeTreeId", id))
       @listenTo(@skeletonTracingModel, "newActiveTree", (id) -> @skeletonTracingAdapter.set("activeTreeId", id))
+      @listenTo(@skeletonTracingModel, "newActiveNode", (id) -> @skeletonTracingAdapter.set("activeNodeId", id))
       @listenTo(@skeletonTracingModel, "newActiveNodeRadius", (id) -> @skeletonTracingAdapter.set("radius", id))
-
 
 
       # ######################################
@@ -55,5 +55,21 @@ class BackboneToOxalisAdapterModel extends Backbone.Model
 
       @listenTo(@skeletonTracingAdapter, "change:somaClicking", (model, bool) ->
         @oxalisModel.user.set("newNodeNewTree")
+      )
+
+      @listenTo(@skeletonTracingAdapter, "change:activeNodeId", (model, id) ->
+        @skeletonTracingModel.setActiveNode(id)
+      )
+
+      @listenTo(@skeletonTracingAdapter, "change:particleSize", (model, size) ->
+        @oxalisModel.user.set("particleSize", size)
+      )
+
+      @listenTo(@skeletonTracingAdapter, "change:overrideNodeRadius", (model, bool) ->
+        @oxalisModel.user.set("overrideNodeRadius", bool)
+      )
+
+      @listenTo(@skeletonTracingAdapter, "change:radius", (model, radius) ->
+        @skeletonTracingModel.setActiveNodeRadius(radius)
       )
     )

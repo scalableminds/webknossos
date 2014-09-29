@@ -27,7 +27,7 @@ class View
 
   toggleTheme : ->
 
-    if @currentTheme is constants.THEME_BRIGHT
+    if @theme is constants.THEME_BRIGHT
       @setTheme(constants.THEME_DARK)
     else
       @setTheme(constants.THEME_BRIGHT)
@@ -35,6 +35,7 @@ class View
 
   setTheme : (theme) ->
 
+    @theme = theme
     app.vent.trigger("view:setTheme", theme)
 
     if theme is constants.THEME_BRIGHT
@@ -42,7 +43,6 @@ class View
     else
       $("body").attr('class', 'dark')
 
-    @currentTheme = theme
 
 
   isWebGlSupported : ->

@@ -1,5 +1,7 @@
 ### define
 backbone : Backbone
+app : app
+oxalis/constants : Constants
 libs/toast : Toast
 ###
 
@@ -35,7 +37,10 @@ class AbstractTreeRenderer
   drawTree : (tree, @activeNodeId) ->
     # clear Background
     @ctx.clearRect(0, 0, @canvas.width(), @canvas.height())
-    @vgColor = $(@canvas).css("color")
+    if app.oxalis.view.theme == Constants.THEME_BRIGHT
+      @vgColor = "black"
+    else
+      @vgColor = "white"
 
     unless tree?
       return

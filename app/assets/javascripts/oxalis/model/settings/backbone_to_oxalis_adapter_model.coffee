@@ -1,6 +1,7 @@
 ### define
 backbone : Backbone
 app : app
+oxalis/constants : Constants
 ###
 
 
@@ -25,51 +26,57 @@ class BackboneToOxalisAdapterModel extends Backbone.Model
     # Wait for OxalisModel to finish syncing
     @listenTo(app.vent, "model:sync", ->
 
-      # Update values after OxalisModel is done syncing
-      @skeletonTracingModel = @oxalisModel.skeletonTracing
+      if @oxalisModel.mode != Constants.MODE_VOLUME
 
-      @skeletonTracingAdapter.set("activeTreeId", @skeletonTracingModel.getActiveTreeId())
-      @skeletonTracingAdapter.set("activeNodeId", @skeletonTracingModel.getActiveNodeId())
-      @skeletonTracingAdapter.set("radius", @skeletonTracingModel.getActiveNodeRadius())
-      @skeletonTracingAdapter.set("overrideNodeRadius", @oxalisModel.user.get("overrideNodeRadius"))
-      @skeletonTracingAdapter.set("particleSize", @oxalisModel.user.get("particleSize"))
+        # Update values after OxalisModel is done syncing
+        @skeletonTracingModel = @oxalisModel.skeletonTracing
 
-      if @oxalisModel.settings.somaClicking
-        @skeletonTracingAdapter.set("somaClicking", @oxalisModel.user.get("newNodeNewTree"))
+        @skeletonTracingAdapter.set("activeTreeId", @skeletonTracingModel.getActiveTreeId())
+        @skeletonTracingAdapter.set("activeNodeId", @skeletonTracingModel.getActiveNodeId())
+        @skeletonTracingAdapter.set("radius", @skeletonTracingModel.getActiveNodeRadius())
+        @skeletonTracingAdapter.set("overrideNodeRadius", @oxalisModel.user.get("overrideNodeRadius"))
+        @skeletonTracingAdapter.set("particleSize", @oxalisModel.user.get("particleSize"))
+        @skeletonTracingAdapter.deleteActiveNode = @skeletonTracingModel.deleteActiveNode.bind(@skeletonTracingModel)
 
-
-      # ####################################
-      # Listen to changes in the OxalisModel
-
-      @listenTo(@skeletonTracingModel, "newTree", (id) -> @skeletonTracingAdapter.set("activeTreeId", id))
-      @listenTo(@skeletonTracingModel, "newActiveTree", (id) -> @skeletonTracingAdapter.set("activeTreeId", id))
-      @listenTo(@skeletonTracingModel, "newActiveNode", (id) -> @skeletonTracingAdapter.set("activeNodeId", id))
-      @listenTo(@skeletonTracingModel, "newActiveNodeRadius", (id) -> @skeletonTracingAdapter.set("radius", id))
+        if @oxalisModel.settings.somaClicking
+          @skeletonTracingAdapter.set("somaClicking", @oxalisModel.user.get("newNodeNewTree"))
 
 
-      # ######################################
-      # Listen to changes in the BackboneModel
-      @listenTo(@skeletonTracingAdapter, "change:activeTreeId", (model, id) ->
-        @skeletonTracingModel.setActiveTree(id)
-      )
+        # ####################################
+        # Listen to changes in the OxalisModel
 
-      @listenTo(@skeletonTracingAdapter, "change:somaClicking", (model, bool) ->
-        @oxalisModel.user.set("newNodeNewTree")
-      )
+        @listenTo(@skeletonTracingModel, "newTree", (id) -> @skeletonTracingAdapter.set("activeTreeId", id))
+        @listenTo(@skeletonTracingModel, "newActiveTree", (id) -> @skeletonTracingAdapter.set("activeTreeId", id))
+        @listenTo(@skeletonTracingModel, "newActiveNode", (id) -> @skeletonTracingAdapter.set("activeNodeId", id))
+        @listenTo(@skeletonTracingModel, "newActiveNodeRadius", (id) -> @skeletonTracingAdapter.set("radius", id))
 
-      @listenTo(@skeletonTracingAdapter, "change:activeNodeId", (model, id) ->
-        @skeletonTracingModel.setActiveNode(id)
-      )
 
-      @listenTo(@skeletonTracingAdapter, "change:particleSize", (model, size) ->
-        @oxalisModel.user.set("particleSize", size)
-      )
+        # ######################################
+        # Listen to changes in the BackboneModel
+        @listenTo(@skeletonTracingAdapter, "change:activeTreeId", (model, id) ->
+          @skeletonTracingModel.setActiveTree(id)
+        )
 
-      @listenTo(@skeletonTracingAdapter, "change:overrideNodeRadius", (model, bool) ->
-        @oxalisModel.user.set("overrideNodeRadius", bool)
-      )
+        @listenTo(@skeletonTracingAdapter, "change:somaClicking", (model, bool) ->
+          @oxalisModel.user.set("newNodeNewTree")
+        )
 
-      @listenTo(@skeletonTracingAdapter, "change:radius", (model, radius) ->
-        @skeletonTracingModel.setActiveNodeRadius(radius)
-      )
+        @listenTo(@skeletonTracingAdapter, "change:activeNodeId", (model, id) ->
+          @skeletonTracingModel.setActiveNode(id)
+        )
+
+        @listenTo(@skeletonTracingAdapter, "change:particleSize", (model, size) ->
+          @oxalisModel.user.set("particleSize", size)
+        )
+
+        @listenTo(@skeletonTracingAdapter, "change:overrideNodeRadius", (model, bool) ->
+          @oxalisModel.user.set("overrideNodeRadius", bool)
+        )
+
+        @listenTo(@skeletonTracingAdapter, "change:radius", (model, radius) ->
+          @skeletonTracingModel.setActiveNodeRadius(radius)
+        )
+
+      else
+
     )

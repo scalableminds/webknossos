@@ -92,8 +92,6 @@ class Controller
       stats = new Stats()
       $("body").append stats.domElement
 
-      #@gui = @createGui(restrictions, settings)
-
       @sceneController = new SceneController(
         @model.upperBoundary, @model.flycam, @model)
 
@@ -215,7 +213,6 @@ class Controller
       return
 
     @model.mode = newMode
-    #@gui.setMode(newMode)
 
 
   toggleFullScreen : ->

@@ -2,6 +2,7 @@
 ../setting_views/number_setting_view : NumberSettingView
 ../setting_views/checkbox_setting_view : CheckboxSettingView
 ../setting_views/slider_setting_view : SliderSettingView
+../setting_views/button_setting_view : ButtonSettingView
 ./category_view : CategoryView
 oxalis/constants : Constants
 ###
@@ -53,4 +54,13 @@ class NodeCategoryView extends CategoryView
         options :
           name : "overrideNodeRadius"
           displayName : "Override Radius"
+      )
+
+    "deleteActiveNode" : ->
+
+      return new ButtonSettingView(
+        model : @model
+        options :
+          displayName : "Delete Active Node"
+          callbackName : "deleteActiveNode"
       )

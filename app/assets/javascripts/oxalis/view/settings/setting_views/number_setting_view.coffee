@@ -31,7 +31,7 @@ class NumberSettingView extends AbstractSettingView
 
     super(options)
 
-    _.extend(@options,
+    _.defaults(@options,
       min : ""
       max : ""
       step : 1

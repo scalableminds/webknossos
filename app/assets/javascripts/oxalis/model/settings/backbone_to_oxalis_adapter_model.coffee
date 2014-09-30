@@ -2,6 +2,7 @@
 backbone : Backbone
 app : app
 oxalis/constants : Constants
+libs/utils : Utils
 ###
 
 
@@ -19,7 +20,9 @@ class BackboneToOxalisAdapterModel extends Backbone.Model
       radius : 0
       particleSize : 0
       overrideNodeRadius : true
+      boundingBox : "0, 0, 0, 0, 0, 0"
     )
+
     @volumneTracingAdapter = {}
 
 
@@ -75,6 +78,12 @@ class BackboneToOxalisAdapterModel extends Backbone.Model
 
         @listenTo(@skeletonTracingAdapter, "change:radius", (model, radius) ->
           @skeletonTracingModel.setActiveNodeRadius(radius)
+        )
+
+        @listenTo(@skeletonTracingAdapter, "change:boundingBox", (model, string) ->
+          bbArray = Utils.stringToNumberArray(string)
+          if bbArray?.length == 6
+            @oxalisModel.trigger("newBoundingBox", bbArray)
         )
 
       else

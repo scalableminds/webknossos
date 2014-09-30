@@ -10,7 +10,7 @@ oxalis/constants : Constants
 class NodeCategoryView extends CategoryView
 
 
-  caption : "Trees"
+  caption : "Nodes"
 
   subviewCreators :
 

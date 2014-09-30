@@ -10,8 +10,7 @@ app : app
 class ViewportCategoryView extends CategoryView
 
 
-  caption : "Viewportoptions"
-
+  caption : "Viewport Options"
 
   subviewCreators :
 

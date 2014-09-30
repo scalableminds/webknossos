@@ -1,0 +1,45 @@
+### define
+./abstract_setting_view : AbstractSettingView
+underscore : _
+###
+
+class TextInputSettingView extends AbstractSettingView
+
+
+  className : "text-setting-view row"
+
+
+  template : _.template("""
+    <div class="col-sm-5">
+      <%= displayName %>
+    </div>
+    <div class="col-sm-7">
+      <input class="form-control" type="text" pattern="<%= pattern %>" value="<%= value %>">
+    </div>
+  """)
+
+
+  ui :
+    text : "input[type=text]"
+
+
+  events :
+    "change @ui.text" : "handleChange"
+
+
+  initialize : (options) ->
+
+    super(options)
+
+    _.defaults(@options,
+      pattern : ""
+    )
+
+  handleChange : (evt) ->
+
+    @model.set(@options.name, evt.target.value)
+
+
+  update : (model, value) ->
+
+    @ui.text.val(value)

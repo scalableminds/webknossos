@@ -64,10 +64,6 @@ class PlaneController
     @TDViewControls = $('#TDViewControls')
     @TDViewControls.addClass("btn-group")
 
-    # TODO add to tracing model
-    # @gui.on
-    #   newBoundingBox : (bb) => @sceneController.setBoundingBox(bb)
-
     callbacks = [
       @cameraController.changeTDViewDiagonal,
       @cameraController.changeTDViewXY,

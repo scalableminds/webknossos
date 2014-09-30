@@ -1,4 +1,6 @@
 ### define
+backbone : Backbone
+underscore : _
 app : app
 ./model/binary : Binary
 ./model/skeletontracing/skeletontracing : SkeletonTracing
@@ -8,10 +10,10 @@ app : app
 ./model/scaleinfo : ScaleInfo
 ./model/flycam2d : Flycam2d
 ./model/flycam3d : Flycam3d
+./constants : constants
 libs/request : Request
 libs/toast : Toast
 libs/pipeline : Pipeline
-./constants : constants
 ###
 
 # This is the model. It takes care of the data including the
@@ -54,6 +56,8 @@ class Model
 
 
   initialize : (options) =>
+
+    _.extend(@, Backbone.Events)
 
     {tracingId, tracingType, controlMode, state} = options
 

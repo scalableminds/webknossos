@@ -14,7 +14,7 @@ three : THREE
 
 class SceneController
 
-  # This class collects all the meshes displayed in the Sceleton View and updates position and scale of each
+  # This class collects all the meshes displayed in the Skeleton View and updates position and scale of each
   # element depending on the provided flycam.
 
   CUBE_COLOR : 0x999999
@@ -246,6 +246,7 @@ class SceneController
   bindToEvents : ->
 
     user = @model.user
+    @listenTo(@model, "newBoundingBox", (bb) -> @setBoundingBox(bb))
     @listenTo(user, "change:clippingDistance", (model, value) -> @setClippingDistance(value))
     @listenTo(user, "change:displayCrosshair", (model, value) -> @setDisplayCrosshair(value))
     @listenTo(user, "change:interpolation", (model, value) -> @setInterpolation(value))

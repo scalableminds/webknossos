@@ -2,8 +2,9 @@
 backbone : Backbone
 underscore : _
 jquery : $
+app : app
 libs/request : Request
-three : THREE
+libs/toast : Toast
 ###
 
 class StateLogger
@@ -19,6 +20,8 @@ class StateLogger
     @committedCurrentState = true
 
     @failedPushCount = 0
+
+    @listenTo(app.vent, "saveEverything", @pushNow)
 
 
   pushDiff : (action, value, push = true) ->
@@ -64,6 +67,10 @@ class StateLogger
   pushNow : ->   # Interface for view & controller
 
     return @pushImpl(false)
+      .then(
+        -> Toast.success("Saved!")
+        -> Toast.error("Couldn't save. Please try again.")
+      )
 
 
   pushImpl : (notifyOnFailure) ->

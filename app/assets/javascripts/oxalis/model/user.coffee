@@ -1,7 +1,7 @@
 ### define
-libs/request : Request
 underscore : _
 backbone : Backbone
+app : app
 ###
 
 class User extends Backbone.Model
@@ -9,11 +9,10 @@ class User extends Backbone.Model
   url : "/api/user/userConfiguration"
 
 
-  constructor : ->
+  initialize : ->
 
     @listenTo(this, "change", @push)
-
-    super()
+    @listenTo(app.vent, "saveEverything", @save)
 
 
   getSettings : ->
@@ -37,13 +36,3 @@ class User extends Backbone.Model
       @trigger("change:#{property}", this, @get(property))
 
 
-  push : ->
-
-    $.when(@pushThrottled())
-
-
-  pushThrottled : ->
-
-    saveFkt = @save
-    @pushThrottled = _.throttle(_.mutexDeferred( saveFkt, -1), 10000)
-    @pushThrottled()

@@ -15,16 +15,9 @@ class SkeletonTacingController
   # functions that can be called by the specific view mode controller.
 
 
-  constructor : ( @model, @sceneController, @gui, @skeletonTracingView ) ->
+  constructor : ( @model, @sceneController, @skeletonTracingView ) ->
 
     _.extend(@, Backbone.Events)
-
-    # TODO add to tracing model
-    # @gui.on
-    #   deleteActiveNode : =>
-    #     @model.skeletonTracing.deleteActiveNode()
-    #   setActiveTree : (id) => @model.skeletonTracing.setActiveTree(id)
-    #   setActiveNode : (id) => @model.skeletonTracing.setActiveNode(id)
 
 
   setParticleSize : (delta) =>

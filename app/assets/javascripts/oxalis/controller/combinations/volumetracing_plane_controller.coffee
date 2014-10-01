@@ -13,9 +13,9 @@ class VolumeTacingPlaneController extends PlaneController
   # Tracing.
 
 
-  constructor : (@model, stats, @gui, @view, @sceneController, @volumeTracingController) ->
+  constructor : (@model, stats, @view, @sceneController, @volumeTracingController) ->
 
-    super(@model, stats, @gui, @view, @sceneController)
+    super(@model, stats, @view, @sceneController)
 
     @model.flycam.on
       positionChanged : =>

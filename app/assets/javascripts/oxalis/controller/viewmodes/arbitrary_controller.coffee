@@ -46,7 +46,7 @@ class ArbitraryController
       @keyboardOnce?.unbind()
 
 
-  constructor : (@model, stats, @gui, @view, @sceneController, @skeletonTracingController) ->
+  constructor : (@model, stats, @view, @sceneController, @skeletonTracingController) ->
 
     _.extend(this, Backbone.Events)
 

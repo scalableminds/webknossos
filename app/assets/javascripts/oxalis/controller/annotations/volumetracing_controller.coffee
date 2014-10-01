@@ -22,15 +22,11 @@ class VolumeTracingController
   CONTROL_MODE_TRACE : 1
 
 
-  constructor : ( @model, @sceneController, @gui, @volumeTracingView ) ->
+  constructor : ( @model, @sceneController, @volumeTracingView ) ->
 
     @inDeleteMode = false
     @controlMode = @CONTROL_MODE_MOVE
 
-    # TODO add to volumetracing model
-    # @gui.on
-    #   setActiveCell : (id) => @model.volumeTracing.setActiveCell(id)
-    #   createNewCell : => @model.volumeTracing.createCell()
 
     # Keyboard shortcuts
     new Input.KeyboardNoLoop(

@@ -107,21 +107,5 @@ class DatsetActionsView extends Backbone.Marionette.ItemView
   saveTracing : (event) ->
 
     event.preventDefault()
-    @saveNow()
-
-
-  #TODO this shouldn't be here
-  saveNow : =>
-
-    @_model.user.pushImpl()
-    model = @_model.skeletonTracing || @_model.volumeTracing
-
-    if @_model.restrictions.allowUpdate and model?
-      model.stateLogger.pushNow()
-        .then(
-          -> Toast.success("Saved!")
-          -> Toast.error("Couldn't save. Please try again.")
-        )
-    else
-      new $.Deferred().resolve()
+    app.vent.trigger("saveEverything")
 

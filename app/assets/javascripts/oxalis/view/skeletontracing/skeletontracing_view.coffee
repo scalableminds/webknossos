@@ -14,8 +14,6 @@ class SkeletonTracingView extends View
     _.extend(@, Backbone.Events)
 
 
-    @listenTo(@model.skeletonTracing, "newActiveNode", @updateActiveTree)
-
     @model.skeletonTracing.on({
       emptyBranchStack : =>
 
@@ -53,13 +51,3 @@ class SkeletonTracingView extends View
 
     modal.show("You just toggled the skeleton visibility. To toggle back, just hit the 1-Key.",
       [{id: "ok-button", label: "OK, Got it."}])
-
-
-  toggleIconVisibility : (isFirst, firstIcon, secondIcon) ->
-
-    if isFirst
-      firstIcon.show()
-      secondIcon.hide()
-    else
-      firstIcon.hide()
-      secondIcon.show()

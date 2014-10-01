@@ -100,25 +100,25 @@ class Controller
 
         @view = new SkeletonTracingView(@model)
         @annotationController = new SkeletonTracingController(
-          @model, @sceneController, @gui, @view )
+          @model, @sceneController, @view )
         @planeController = new SkeletonTracingPlaneController(
-          @model, stats, @gui, @view, @sceneController, @annotationController)
+          @model, stats, @view, @sceneController, @annotationController)
         @arbitraryController = new SkeletonTracingArbitraryController(
-          @model, stats, @gui, @view, @sceneController, @annotationController)
+          @model, stats, @view, @sceneController, @annotationController)
 
       else if @model.volumeTracing?
 
         @view = new VolumeTracingView(@model)
         @annotationController = new VolumeTracingController(
-          @model, @sceneController, @gui, @view )
+          @model, @sceneController, @view )
         @planeController = new VolumeTracingPlaneController(
-          @model, stats, @gui, @view, @sceneController, @annotationController)
+          @model, stats, @view, @sceneController, @annotationController)
 
       else # View mode
 
         @view = new View(@model)
         @planeController = new PlaneController(
-          @model, stats, @gui, @view, @sceneController)
+          @model, stats, @view, @sceneController)
 
       @initMouse()
       @initKeyboard()
@@ -194,7 +194,7 @@ class Controller
 
           event.preventDefault()
           event.stopPropagation()
-          #@gui.saveNow()
+          app.vent.trigger("saveEverything")
       } )
 
     new Input.KeyboardNoLoop( keyboardControls )

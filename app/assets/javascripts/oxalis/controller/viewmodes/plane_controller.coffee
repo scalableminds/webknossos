@@ -24,7 +24,6 @@ class PlaneController
   bindings : []
   model : null
   view : null
-  gui : null
 
   input :
     mouseControllers : []
@@ -42,7 +41,7 @@ class PlaneController
       @keyboardLoopDelayed?.unbind()
 
 
-  constructor : (@model, stats, @gui, @view, @sceneController) ->
+  constructor : (@model, stats, @view, @sceneController) ->
 
     _.extend(this, Backbone.Events)
 

@@ -54,9 +54,9 @@ class UrlManager
 
     { flycam, flycam3d } = @model
     state = _.map flycam.getPosition(), (e) -> Math.floor(e)
-    state.push( @controller.mode )
+    state.push( @model.mode )
 
-    if @controller.mode in constants.MODES_ARBITRARY
+    if @model.mode in constants.MODES_ARBITRARY
       state = state.concat( [flycam3d.getZoomStep().toFixed(2)] )
                    .concat( _.map flycam3d.getRotation(), (e) -> e.toFixed(2) )
 

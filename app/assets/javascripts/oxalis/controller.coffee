@@ -132,7 +132,7 @@ class Controller
         Toast.error("There was no valid allowed tracing mode specified.")
       else
         app.vent.trigger("changeViewMode", @allowedModes[0])
-      if @urlManager.initialState.mode?
+      if @urlManager.initialState.mode? and @urlManager.initialState.mode != @model.mode
         app.vent.trigger("changeViewMode", @urlManager.initialState.mode)
 
       # initial trigger

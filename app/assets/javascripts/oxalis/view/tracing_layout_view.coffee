@@ -36,10 +36,6 @@ class TracingLayoutView extends Backbone.Marionette.LayoutView
       _model : new OxalisModel()
       )
 
-    @leftMenuView = new LeftMenuView(@options)
-    @tracingView = new TracingView(@options)
-    @hasRightMenu = false
-
     @listenTo(@, "render", @afterRender)
     @listenTo(app.vent, "planes:resize", @resize)
     @listenTo(app.vent, "model:sync", @renderRegions)
@@ -60,6 +56,9 @@ class TracingLayoutView extends Backbone.Marionette.LayoutView
   renderRegions : ->
 
     @render()
+
+    @leftMenuView = new LeftMenuView(@options)
+    @tracingView = new TracingView(@options)
 
     @leftMenu.show(@leftMenuView, preventDestroy : true)
     @tracingContainer.show(@tracingView, preventDestroy : true)

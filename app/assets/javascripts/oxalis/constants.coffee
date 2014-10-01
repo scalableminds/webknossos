@@ -22,6 +22,9 @@ Constants =
   CONTROL_MODE_TRACE   : 0
   CONTROL_MODE_VIEW    : 1
 
+  VOLUME_MODE_MOVE     : 0
+  VOLUME_MODE_TRACE    : 1
+
   DEFAULT_SEG_ALPHA    : 20
 
   THEME_BRIGHT         : 0

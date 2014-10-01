@@ -1,6 +1,8 @@
 ### define
-../../model/dimensions : Dimensions
-../../constants : constants
+app : app
+backbone : Backbone
+oxalis/model/dimensions : Dimensions
+oxalis/constants : Constants
 libs/input : Input
 ###
 
@@ -18,31 +20,18 @@ class VolumeTracingController
   MERGE_MODE_CELL1  : 1
   MERGE_MODE_CELL2  : 2
 
-  CONTROL_MODE_MOVE : 0
-  CONTROL_MODE_TRACE : 1
-
-
   constructor : ( @model, @sceneController, @volumeTracingView ) ->
 
     @inDeleteMode = false
-    @controlMode = @CONTROL_MODE_MOVE
+    @controlMode = Constants.VOLUME_MODE_MOVE
 
+    _.extend(@, Backbone.Events)
+    @listenTo(app.vent, "changeVolumeMode", @setControlMode)
 
     # Keyboard shortcuts
     new Input.KeyboardNoLoop(
       "m" : => @toggleControlMode()
     )
-
-    # Control mode
-    @controlModeMapping =
-      "control-mode-move" : @CONTROL_MODE_MOVE
-      "control-mode-trace" : @CONTROL_MODE_TRACE
-
-    for control of @controlModeMapping
-
-      do (control) =>
-        $("#" + control).on "click", =>
-          @setControlMode(@controlModeMapping[control])
 
 
     # Merging
@@ -75,22 +64,19 @@ class VolumeTracingController
             @merge()
 
 
-  setControlMode : (@controlMode) ->
+  setControlMode : (controlMode) ->
 
-    # Set button class
-    for button in $("#control-mode .btn-group").children()
-
-      $(button).removeClass("btn-primary")
-      if @controlMode == @controlModeMapping[$(button).attr("id")]
-        $(button).addClass("btn-primary")
+    @controlMode = controlMode
 
 
   toggleControlMode : ->
 
-    if @controlMode == @CONTROL_MODE_MOVE
-      @setControlMode(@CONTROL_MODE_TRACE)
+    mode = if @controlMode == Constants.VOLUME_MODE_MOVE
+      Constants.VOLUME_MODE_TRACE
     else
-      @setControlMode(@CONTROL_MODE_MOVE)
+      Constants.VOLUME_MODE_MOVE
+
+    app.vent.trigger("changeVolumeMode", mode)
 
 
   merge : ->
@@ -107,7 +93,7 @@ class VolumeTracingController
   handleCellSelection : (cellId) ->
 
     if cellId > 0
-      if      @mergeMode == @MERGE_MODE_NORMAL
+      if @mergeMode == @MERGE_MODE_NORMAL
         @model.volumeTracing.setActiveCell( cellId )
       else if @mergeMode == @MERGE_MODE_CELL1
         $("#merge-cell1").val(cellId)

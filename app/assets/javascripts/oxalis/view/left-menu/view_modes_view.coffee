@@ -8,7 +8,7 @@ class ViewModesView extends Backbone.Marionette.ItemView
 
   className : "col-sm-12"
   template : _.template("""
-    <div class="btn-group btn-group-justified" id="mode-container">
+    <div class="btn-group btn-group-justified">
       <div class="btn-group">
         <button type="button" class="btn btn-default" id="mode-3planes">3 Planes</button>
       </div>
@@ -27,7 +27,7 @@ class ViewModesView extends Backbone.Marionette.ItemView
     "mode-arbitraryplane" : constants.MODE_ARBITRARY_PLANE
 
   events :
-    "click #mode-container>*" : "changeMode"
+    "click button" : "changeMode"
 
 
   initialize : (options) ->
@@ -43,7 +43,7 @@ class ViewModesView extends Backbone.Marionette.ItemView
 
   updateForMode : (mode) ->
 
-    @$("#mode-container button").removeClass("btn-primary")
+    @$("button").removeClass("btn-primary")
 
     buttonId = _.invert(@modeMapping)[mode]
     @$("##{buttonId}").addClass("btn-primary")

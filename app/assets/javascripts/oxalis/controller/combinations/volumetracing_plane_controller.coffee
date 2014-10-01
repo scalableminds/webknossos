@@ -1,5 +1,6 @@
 ### define
 underscore : _
+oxalis/constants : Constants
 ../viewmodes/plane_controller : PlaneController
 ../annotations/volumetracing_controller : VolumeTracingController
 ###
@@ -42,7 +43,7 @@ class VolumeTacingPlaneController extends PlaneController
 
       leftDownMove : (delta, pos, plane, event) =>
 
-        if @volumeTracingController.controlMode == VolumeTracingController::CONTROL_MODE_MOVE
+        if @volumeTracingController.controlMode == Constants.VOLUME_MODE_MOVE
           @move [
             delta.x * @model.user.getMouseInversionX() / @planeView.scaleFactor
             delta.y * @model.user.getMouseInversionY() / @planeView.scaleFactor

@@ -8,7 +8,8 @@ backbone.marionette : marionette
 ./left-menu/view_modes_view : ViewModesView
 ./left-menu/help_logo_view : HelpLogoView
 ./left-menu/segmentation_info_view : SegmentationInfoView
-../constants : constants
+./left-menu/volume_actions_view : VolumeActionsView
+../constants : Constants
 ###
 
 class LeftMenuView extends Backbone.Marionette.LayoutView
@@ -24,10 +25,8 @@ class LeftMenuView extends Backbone.Marionette.LayoutView
 
     <div id="dataset-position" class="row"></div>
 
-    <% if (!isTraceMode && !isViewMode) { %>
-      <div id="volume-actions" class="volume-controls">
-        <button class="btn btn-default" id="btn-merge">Merge cells</button>
-      </div>
+    <% if (isVolumeMode) { %>
+      <div id="volume-actions"></div>
     <% } %>
 
     <% if (isTraceMode) { %>
@@ -48,6 +47,7 @@ class LeftMenuView extends Backbone.Marionette.LayoutView
 
     isTraceMode : @isTraceMode()
     isViewMode : @isViewMode # spotlight aka public viewing
+    isVolumeMode : @isVolumeMode()
 
 
   regions :
@@ -58,6 +58,7 @@ class LeftMenuView extends Backbone.Marionette.LayoutView
     "viewModes" : "#view-modes"
     "helpLogo" : "#help-logo"
     "segmentationInfo" : "#segmentation-info"
+    "volumeActions" : "#volume-actions"
 
 
   initialize : (options) ->
@@ -68,8 +69,13 @@ class LeftMenuView extends Backbone.Marionette.LayoutView
 
     if @isTraceMode()
       @datasetActionsView = new DatasetActionsView(options)
-      @viewModesView = new ViewModesView(options)
       @settingsTabView = new SettingsTabView(_model : options._model)
+
+      if @isVolumeMode()
+        @volumeActionsView = new VolumeActionsView(options)
+      else
+        @viewModesView = new ViewModesView(options)
+
 
     else if @isViewMode()
       @helpLogoView = new HelpLogoView()
@@ -85,9 +91,13 @@ class LeftMenuView extends Backbone.Marionette.LayoutView
 
     if @isTraceMode()
       @datasetActionButtons.show(@datasetActionsView)
-      @viewModes.show(@viewModesView)
-
       @settingsTab.show(@settingsTabView)
+
+      if @isVolumeMode()
+        @volumeActions.show(@volumeActionsView)
+      else
+        @viewModes.show(@viewModesView)
+
 
     else if @isViewMode()
       @helpLogo.show(@helpLogoView)
@@ -96,7 +106,7 @@ class LeftMenuView extends Backbone.Marionette.LayoutView
 
   isTraceMode : ->
 
-    return @options.controlMode == constants.CONTROL_MODE_TRACE
+    return @options.controlMode == Constants.CONTROL_MODE_TRACE
 
 
   isViewMode : ->
@@ -104,22 +114,7 @@ class LeftMenuView extends Backbone.Marionette.LayoutView
     return not @isTraceMode()
 
 
-  #   <% if(task) { %>
-  #     <li><a href="#tab0" data-toggle="tab">Task</a></li>
-  #   <% } %>
-  #   @if(additionalHtml.body != ""){
-  #     <li class="active"><a href="#tab1" data-toggle="tab">Review</a></li>
-  #     <li>
-  #   } else {
-  #     <li class="active">
-  #   }
-  #   <a href="#tab2" data-toggle="tab">Options</a></li>
-  # </ul>
-  #
-  # <div class="tab-content">
-  #   <% if(task) { %>
-  #     <div class="tab-pane" id="tab0">
-  #       <h5><%=task.type.summary%></h5>
-  #       <%=task.type.description%>
-  #     </div>
-  #   <% } %>
+  isVolumeMode : ->
+
+    return @options._model.mode == Constants.MODE_VOLUME
+

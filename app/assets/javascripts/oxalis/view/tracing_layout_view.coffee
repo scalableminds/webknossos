@@ -6,7 +6,7 @@ app : app
 ./tracing_view : TracingView
 oxalis/controller : OxalisController
 oxalis/model : OxalisModel
-oxalis/constants : constants
+oxalis/Constants : Constants
 ###
 
 class TracingLayoutView extends Backbone.Marionette.LayoutView
@@ -16,10 +16,7 @@ class TracingLayoutView extends Backbone.Marionette.LayoutView
   template : _.template("""
     <div id="left-menu"></div>
     <div id="tracing"></div>
-
-    <% if (!isViewMode()) { %>
-      <div id="right-menu"></div>
-    <% } %>
+    <div id="right-menu"></div>
    """)
 
   ui :
@@ -29,10 +26,6 @@ class TracingLayoutView extends Backbone.Marionette.LayoutView
     "leftMenu" : "#left-menu"
     "rightMenu" : "#right-menu"
     "tracingContainer" : "#tracing"
-
-  templateHelpers : ->
-    isViewMode : ->
-      return @controleMode == constants.CONTROL_MODE_VIEW
 
 
   initialize : (options) ->
@@ -45,38 +38,37 @@ class TracingLayoutView extends Backbone.Marionette.LayoutView
 
     @leftMenuView = new LeftMenuView(@options)
     @tracingView = new TracingView(@options)
-
-    if @options.controlMode != constants.CONTROL_MODE_VIEW
-      @rightMenuView = new RightMenuView(@options)
-
+    @hasRightMenu = false
 
     @listenTo(@, "render", @afterRender)
     @listenTo(app.vent, "planes:resize", @resize)
+    @listenTo(app.vent, "model:sync", @renderRegions)
     #$(window).on("resize", @resize.bind(@))
-
-
-  resize : ->
-
-    menuPosition = @ui.rightMenu.position()
-    newWidth = window.innerWidth - menuPosition.left - @MARGIN
-    if newWidth > 350
-      @ui.rightMenu.width(newWidth)
-
-
-  afterRender : ->
-
-    @leftMenu.show(@leftMenuView)
-    @tracingContainer.show(@tracingView)
-
-    if @rightMenuView
-      @rightMenu.show(@rightMenuView)
 
     app.oxalis = new OxalisController(@options)
 
 
-  serializeData : ->
+  resize : ->
 
-    return @options
+    if @hasRightMenu
+      menuPosition = @ui.rightMenu.position()
+      newWidth = window.innerWidth - menuPosition.left - @MARGIN
+      if newWidth > 350
+        @ui.rightMenu.width(newWidth)
 
+
+  renderRegions : ->
+
+    @render()
+
+    @leftMenu.show(@leftMenuView, preventDestroy : true)
+    @tracingContainer.show(@tracingView, preventDestroy : true)
+
+    isTracingMode = @options.controlMode != Constants.CONTROL_MODE_VIEW
+    isSkeletonMode = @options._model.mode == Constants.MODE_PLANE_TRACING
+
+    if isTracingMode and isSkeletonMode
+      @rightMenuView = new RightMenuView(@options)
+      @rightMenu.show(@rightMenuView)
 
 

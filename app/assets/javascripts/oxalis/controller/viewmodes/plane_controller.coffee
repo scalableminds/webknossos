@@ -80,11 +80,6 @@ class PlaneController
 
     @model.user.triggerAll()
 
-    # hide contextmenu, while rightclicking a canvas
-    $("#render").bind "contextmenu", (event) ->
-      event.preventDefault()
-      return
-
     @initTrackballControls()
     @bindToEvents()
 

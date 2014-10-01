@@ -171,7 +171,7 @@ class Model
 
     @restrictions = tracing.restrictions
     @settings = tracing.content.settings
-    @mode = constants.MODE_PLANE_TRACING
+    @mode = if isVolumeTracing then constants.MODE_VOLUME else constants.MODE_PLANE_TRACING
 
     app.vent.trigger("model:sync")
 

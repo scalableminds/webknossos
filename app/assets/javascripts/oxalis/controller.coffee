@@ -120,7 +120,6 @@ class Controller
         @planeController = new PlaneController(
           @model, stats, @view, @sceneController)
 
-      @initMouse()
       @initKeyboard()
 
       for binaryName of @model.binary
@@ -138,14 +137,6 @@ class Controller
 
       # initial trigger
       @sceneController.setSegmentationAlpha($('#alpha-slider').data("slider-value") or @model.user.getSettings().segmentationOpacity)
-
-
-  initMouse : ->
-
-    # hide contextmenu, while rightclicking a canvas
-    $("#render").bind "contextmenu", (event) ->
-      event.preventDefault()
-      return
 
 
   initKeyboard : ->

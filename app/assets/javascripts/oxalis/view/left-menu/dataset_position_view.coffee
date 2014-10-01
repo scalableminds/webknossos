@@ -5,7 +5,7 @@ oxalis/constants : constants
 libs/utils : Utils
 ###
 
-class DatsetPositionView extends Backbone.Marionette.ItemView
+class DatasetPositionView extends Backbone.Marionette.ItemView
 
   className : "col-sm-12 stacked-input-group"
   template : _.template("""

@@ -1,5 +1,5 @@
 ### define
-backbone.marionette
+backbone.marionette : Marionette
 app : app
 libs/utils : Utils
 ###

@@ -1,10 +1,10 @@
 ### define
 app : app
+backbone.marionette : Marionette
 ./comment_tab_item_view : CommentTabItemView
-./sorted_composite_view : SortedCompositeView
 ###
 
-class CommentTabView extends SortedCompositeView
+class CommentTabView extends Backbone.Marionette.CompositeView
 
   template : _.template("""
     <div class="input-group" id="comment-navbar">

@@ -27,6 +27,7 @@ class Router extends Backbone.Router
     "taskTypes"                     : "taskTypes"
     "spotlight"                     : "spotlight"
     "tasks/overview"                : "taskOverview"
+    "*url"                          : "hideLoading"
 
 
   initialize : ->

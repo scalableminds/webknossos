@@ -72,7 +72,11 @@ class DatsetActionsView extends Backbone.Marionette.ItemView
 
   serializeData : ->
 
-    if @_model.restrictions
+    data =
+      tracingType : @tracingType
+      tracingId : @tracingId
+
+    return _.extend(data, @_model.restrictions)
 
 
   finishTracing : (event) ->

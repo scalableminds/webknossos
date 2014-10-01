@@ -6,7 +6,7 @@ app : app
 ./tracing_view : TracingView
 oxalis/controller : OxalisController
 oxalis/model : OxalisModel
-oxalis/Constants : Constants
+oxalis/constants : Constants
 ###
 
 class TracingLayoutView extends Backbone.Marionette.LayoutView

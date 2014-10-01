@@ -23,7 +23,9 @@ class BackboneToOxalisAdapterModel extends Backbone.Model
       boundingBox : "0, 0, 0, 0, 0, 0"
     )
 
-    @volumneTracingAdapter = {}
+    @volumeTracingAdapter = new Backbone.Model(
+      activeCellId : 0
+    )
 
 
     # Wait for OxalisModel to finish syncing
@@ -87,6 +89,24 @@ class BackboneToOxalisAdapterModel extends Backbone.Model
             @oxalisModel.trigger("newBoundingBox", bbArray)
         )
 
+      # VOLUME MODE
       else
 
+        # Update values after OxalisModel is done syncing
+        @volumeTracingModel = @oxalisModel.volumeTracing
+
+        @volumeTracingAdapter.set("activeCellId", @volumeTracingModel.getActiveCellId())
+        @volumeTracingAdapter.createCell = @volumeTracingModel.createCell.bind(@volumeTracingModel)
+
+
+        # ####################################
+        # Listen to changes in the OxalisModel
+        @listenTo(@volumeTracingModel, "newActiveCell", (id) -> @volumeTracingAdapter.set("activeCellId", id))
+
+
+        # ######################################
+        # Listen to changes in the BackboneModel
+        @listenTo(@volumeTracingAdapter, "change:activeCellId", (model, id) ->
+          @volumeTracingModel.setActiveCell(id)
+        )
     )

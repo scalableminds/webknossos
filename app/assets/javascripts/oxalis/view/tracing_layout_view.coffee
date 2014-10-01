@@ -38,7 +38,7 @@ class TracingLayoutView extends Backbone.Marionette.LayoutView
 
     @listenTo(@, "render", @afterRender)
     @listenTo(app.vent, "planes:resize", @resize)
-    @listenTo(app.vent, "model:sync", @renderRegions)
+    @listenTo(@options._model, "sync", @renderRegions)
     #$(window).on("resize", @resize.bind(@))
 
     app.oxalis = new OxalisController(@options)
@@ -46,7 +46,7 @@ class TracingLayoutView extends Backbone.Marionette.LayoutView
 
   resize : ->
 
-    if @hasRightMenu
+    if @isSkeletonMode()
       menuPosition = @ui.rightMenu.position()
       newWidth = window.innerWidth - menuPosition.left - @MARGIN
       if newWidth > 350
@@ -63,11 +63,18 @@ class TracingLayoutView extends Backbone.Marionette.LayoutView
     @leftMenu.show(@leftMenuView, preventDestroy : true)
     @tracingContainer.show(@tracingView, preventDestroy : true)
 
-    isTracingMode = @options.controlMode != Constants.CONTROL_MODE_VIEW
-    isSkeletonMode = @options._model.mode == Constants.MODE_PLANE_TRACING
 
-    if isTracingMode and isSkeletonMode
+    if @isTracingMode() and @isSkeletonMode()
       @rightMenuView = new RightMenuView(@options)
       @rightMenu.show(@rightMenuView)
 
+
+  isTracingMode : ->
+
+    return @options.controlMode != Constants.CONTROL_MODE_VIEW
+
+
+  isSkeletonMode : ->
+
+    return @options._model.mode == Constants.MODE_PLANE_TRACING
 

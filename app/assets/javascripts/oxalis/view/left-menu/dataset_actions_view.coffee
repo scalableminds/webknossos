@@ -69,24 +69,10 @@ class DatsetActionsView extends Backbone.Marionette.ItemView
 
     {@_model, @tracingType, @tracingId} = options
 
-    @listenTo(app.vent, "model:sync", ->
-
-      @render()
-    )
 
   serializeData : ->
 
-    #TODO refactor / remvove after deepmodel
-    defaults =
-      allowUpdate : false
-      allowFinish : false
-      tracingType : @tracingType
-      tracingId : @tracingId
-
     if @_model.restrictions
-      return _.extend(defaults, @_model.restrictions)
-    else
-      return defaults
 
 
   finishTracing : (event) ->

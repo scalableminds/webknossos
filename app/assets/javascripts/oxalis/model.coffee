@@ -31,6 +31,10 @@ class Model
   totalBuckets : []
   totalBytes : []
 
+  constructor : ->
+
+    _.extend(@, Backbone.Events)
+
 
   logConnectionInfo : =>
 
@@ -56,8 +60,6 @@ class Model
 
 
   initialize : (options) =>
-
-    _.extend(@, Backbone.Events)
 
     {tracingId, tracingType, controlMode, state} = options
 
@@ -173,7 +175,7 @@ class Model
     @settings = tracing.content.settings
     @mode = if isVolumeTracing then constants.MODE_VOLUME else constants.MODE_PLANE_TRACING
 
-    app.vent.trigger("model:sync")
+    @trigger("sync")
 
     return {"restrictions": tracing.restrictions, "settings": tracing.content.settings}
 

@@ -23,19 +23,17 @@ class AbstractTreeView extends Backbone.Marionette.ItemView
 
     @listenTo(app.vent, "planes:resize", @resize)
     @listenTo(app.vent, "view:setTheme", @drawTree)
-    @listenTo(app.vent, "model:sync", ->
 
-      @listenTo(@_model.skeletonTracing, "newActiveNode" , @drawTree)
-      @listenTo(@_model.skeletonTracing, "newActiveTree" , @drawTree)
-      @listenTo(@_model.skeletonTracing, "newTree" , @drawTree)
-      @listenTo(@_model.skeletonTracing, "mergeTree" , @drawTree)
-      @listenTo(@_model.skeletonTracing, "reloadTrees" , @drawTree)
-      @listenTo(@_model.skeletonTracing, "deleteTree" , @drawTree)
-      @listenTo(@_model.skeletonTracing, "deleteActiveNode" , @drawTree)
-      @listenTo(@_model.skeletonTracing, "newNode" , @drawTree)
+    @listenTo(@_model.skeletonTracing, "newActiveNode" , @drawTree)
+    @listenTo(@_model.skeletonTracing, "newActiveTree" , @drawTree)
+    @listenTo(@_model.skeletonTracing, "newTree" , @drawTree)
+    @listenTo(@_model.skeletonTracing, "mergeTree" , @drawTree)
+    @listenTo(@_model.skeletonTracing, "reloadTrees" , @drawTree)
+    @listenTo(@_model.skeletonTracing, "deleteTree" , @drawTree)
+    @listenTo(@_model.skeletonTracing, "deleteActiveNode" , @drawTree)
+    @listenTo(@_model.skeletonTracing, "newNode" , @drawTree)
 
-      @drawTree()
-    )
+    @drawTree()
 
 
   resize : ->

@@ -53,27 +53,22 @@ class CommentTabView extends SortedCompositeView
     @activeComment = new Backbone.Model()
     @isSortedAscending = true
 
-    @listenTo(app.vent, "model:sync", ->
-      @collection = @_model.skeletonTracing.comments
+    @collection = @_model.skeletonTracing.comments
 
-      # Marionette internal function
-      this._initialEvents()
+    # Marionette internal function
+    this._initialEvents()
 
-      # select the activeNode if there is a comment...
-      if comment = @collection.findWhere("node" : @getActiveNodeId())
-        @activeComment = comment
-      # ... or else set the first comment if one is available
-      else if comment = @collection.first()
-        @activeComment = comment
+    # select the activeNode if there is a comment...
+    if comment = @collection.findWhere("node" : @getActiveNodeId())
+      @activeComment = comment
+    # ... or else set the first comment if one is available
+    else if comment = @collection.first()
+      @activeComment = comment
 
-      # events
-      @listenTo(@_model.skeletonTracing, "newActiveNode", @updateInputElement)
-      @listenTo(@_model.skeletonTracing, "deleteComment", @deleteComment)
-      @listenTo(@collection, "sort", @render)
-
-      @render()
-    )
-
+    # events
+    @listenTo(@_model.skeletonTracing, "newActiveNode", @updateInputElement)
+    @listenTo(@_model.skeletonTracing, "deleteComment", @deleteComment)
+    @listenTo(@collection, "sort", @render)
 
 
   getActiveNodeId : ->

@@ -32,34 +32,22 @@ class DatsetActionsView extends Backbone.Marionette.ItemView
 
     {@_model, @controlMode, @tracingType} = options
 
-    @listenTo(app.vent, "model:sync", ->
-
-      @_model.flycam3d.on("changed", =>
-        @render()
-      )
-
-      @_model.flycam.on("zoomStepChanged", =>
-        @render()
-      )
-
+    @_model.flycam3d.on("changed", =>
       @render()
     )
 
+    @_model.flycam.on("zoomStepChanged", =>
+      @render()
+    )
+
+
   serializeData : ->
 
-    #TODO refactor / remove after deepmodel
-    defaults =
+    return {
       annotationType : @tracingType
-      zoomLevel : 0
-      dataSetName: ""
-
-    if @_model.flycam or @_model.flycam3d
-      _.extend(defaults,
-        zoomLevel : @calculateZoomLevel()
-        dataSetName :@_model.dataSetName
-      )
-
-    return defaults
+      zoomLevel : @calculateZoomLevel()
+      dataSetName :@_model.dataSetName
+    }
 
 
   calculateZoomLevel : ->

@@ -23,13 +23,9 @@ class SegmentationInfoView extends Backbone.Marionette.ItemView
     {@_model} = options
     @sliderValue = constants.DEFAULT_SEG_ALPHA
 
-    @listenTo(app.vent, "model:sync", ->
+    if segmentationBinary = @_model.getSegmentationBinary()
+      @listenTo(segmentationBinary.cube, "bucketLoaded", @render)
 
-      if segmentationBinary = @_model.getSegmentationBinary()
-        @listenTo(segmentationBinary.cube, "bucketLoaded", @render)
-
-      @render()
-    )
 
   setSegmentationAlpha : (event) ->
 

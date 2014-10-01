@@ -37,45 +37,40 @@ class DatasetPositionView extends Backbone.Marionette.ItemView
 
     {@_model, @controlMode} = options
 
-    @listenTo(app.vent, "model:sync", ->
-
-      # TODO make controlMode a property of the model and read from there
-      @listenTo(app.vent, "changeViewMode", (mode) ->
-        @controlMode = mode
-        @render()
-      )
-
-      # TODO MEASURE PERFORMANCE HIT BECAUSE OF CONSTANT RE-RENDER
-      @_model.flycam3d.on("changed", =>
-        @render()
-      )
-
-
-      @_model.flycam.on("positionChanged", =>
-        @render()
-      )
-
+    # TODO make controlMode a property of the model and read from there
+    @listenTo(app.vent, "changeViewMode", (mode) ->
+      @controlMode = mode
       @render()
     )
+
+    # TODO MEASURE PERFORMANCE HIT BECAUSE OF CONSTANT RE-RENDER
+    @_model.flycam3d.on("changed", =>
+      @render()
+    )
+
+
+    @_model.flycam.on("positionChanged", =>
+      @render()
+    )
+
+
 
   serializeData : ->
 
     #TODO refactor / remove after deepmodel
-    defaults =
-      position : [0,0,0]
-      rotation : [0,0,0]
+    data =
       controlMode : @controlMode
 
     if @_model.flycam
-      _.extend(defaults,
+      _.extend(data,
         position : @_model.flycam.getPosition()
       )
     if @_model.flycam3d
-      _.extend(defaults,
+      _.extend(data,
         rotation :@_model.flycam3d.getRotation()
       )
 
-    return defaults
+    return data
 
 
   # TODO MEASURE PERFORMANCE HIT BECAUSE OF CONSTANT RE-RENDER

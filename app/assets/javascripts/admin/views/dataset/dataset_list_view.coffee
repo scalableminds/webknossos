@@ -1,6 +1,6 @@
 ### define
 underscore : _
-backbone.marionette : marionette
+backbone.marionette : Marionette
 ./dataset_list_item_view : DatasetListItemView
 ./team_assignment_modal_view: TeamAssignmentModalView
 ###
@@ -8,7 +8,7 @@ backbone.marionette : marionette
 class DatasetListView extends Backbone.Marionette.CompositeView
 
   template : _.template("""
-    <table class="table table-double-striped table-details">
+    <table class="table table-double-striped ">
       <thead>
         <tr>
           <th class="details-toggle-all">
@@ -39,11 +39,8 @@ class DatasetListView extends Backbone.Marionette.CompositeView
     "modalWrapper" : "#modal-wrapper"
     "detailsToggle" : ".details-toggle-all"
 
-
   childView : DatasetListItemView
   childViewContainer: "table"
-
-  initialize : ->
 
     @collection.fetch(
       silent : true

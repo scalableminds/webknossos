@@ -76,21 +76,27 @@ body:-webkit-full-screen {
   white-space: nowrap;
 }
 
-.details-toggle,
-.details-toggle-all {
+.table-details {
 
-  cursor: pointer;
-
-  .caret-down {
-    display: none;
+  .details-row > td {
+    box-shadow: inset 0 0 10px rgba(180, 180, 180, .2);
   }
+  .details-toggle,
+  .details-toggle-all {
 
-  &.open {
-    .caret-right {
+    cursor: pointer;
+
+    .caret-down {
       display: none;
     }
-    .caret-down {
-      display: inline-block;
+
+    &.open {
+      .caret-right {
+        display: none;
+      }
+      .caret-down {
+        display: inline-block;
+      }
     }
   }
 }

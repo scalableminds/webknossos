@@ -8,7 +8,7 @@ backbone.marionette : Marionette
 class DatasetListView extends Backbone.Marionette.CompositeView
 
   template : _.template("""
-    <table class="table table-double-striped ">
+    <table class="table table-double-striped table-details">
       <thead>
         <tr>
           <th class="details-toggle-all">
@@ -41,6 +41,8 @@ class DatasetListView extends Backbone.Marionette.CompositeView
 
   childView : DatasetListItemView
   childViewContainer: "table"
+
+  initialize : ->
 
     @collection.fetch(
       silent : true

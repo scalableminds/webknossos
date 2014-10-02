@@ -252,7 +252,7 @@ $ ->
         5000
       )
 
-    newTarget = $("div.alert-error:not(.highlighted)").addClass("highlighted")
+    newTarget = $("div.alert-danger:not(.highlighted)").addClass("highlighted")
     if newTarget.length then highlight(newTarget)
 
   $("#alert-container").on "DOMSubtreeModified", (event) ->

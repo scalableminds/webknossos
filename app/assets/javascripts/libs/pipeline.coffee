@@ -79,10 +79,10 @@ class Pipeline
 
           if @retryCount > @options.maxRetry
             currentAction._deferred.reject(arguments...)
-
           else
             @actions.unshift( currentAction )
-            @executeNext()
+
+          @executeNext()
 
     else
 

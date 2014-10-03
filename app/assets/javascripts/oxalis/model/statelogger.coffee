@@ -84,6 +84,8 @@ class StateLogger
         return response.version
     ).fail (responseObject) =>
 
+      $('body').addClass('save-error')
+
       if responseObject.responseText? && responseObject.responseText != ""
         # restore whatever is send as the response
         try
@@ -104,4 +106,5 @@ class StateLogger
 
     .done =>
 
+      $('body').removeClass('save-error')
       @committedDiffs = []

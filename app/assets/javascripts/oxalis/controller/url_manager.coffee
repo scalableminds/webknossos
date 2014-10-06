@@ -1,4 +1,6 @@
 ### define
+app : app
+backbone : backbone
 ../constants : constants
 ###
 
@@ -17,6 +19,8 @@ class UrlManager
       => location.replace(@buildUrl())
       @MAX_UPDATE_INTERVAL
     )
+
+    _.extend(@, Backbone.Events)
 
 
   parseUrl : (url)->
@@ -48,6 +52,8 @@ class UrlManager
       changed : => @update()
     @model.flycam3d.on
       changed : => @update()
+
+    @listenTo(app.vent, "changeViewMode", @update)
 
 
   buildUrl : ->

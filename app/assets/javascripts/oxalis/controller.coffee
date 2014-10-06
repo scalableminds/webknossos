@@ -136,7 +136,7 @@ class Controller
         app.vent.trigger("changeViewMode", @urlManager.initialState.mode)
 
       # initial trigger
-      @sceneController.setSegmentationAlpha($('#alpha-slider').data("slider-value") or @model.user.get("segmentationOpacity")
+      @sceneController.setSegmentationAlpha($('#alpha-slider').data("slider-value") or @model.user.get("segmentationOpacity"))
 
 
   initKeyboard : ->

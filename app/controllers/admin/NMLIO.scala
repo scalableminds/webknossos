@@ -55,7 +55,7 @@ object NMLIO extends Controller with Secured with TextUtils {
 
   private def nameForNMLs(fileNames: Seq[String]) =
     if (fileNames.size == 1)
-      fileNames.headOption
+      fileNames.headOption.map(_.replaceAll("\\.nml$",""))
     else
       None
 
@@ -92,22 +92,14 @@ object NMLIO extends Controller with Secured with TextUtils {
 
     val (parseFailed, parseSuccess) = splitResult(files)
     if (parseFailed.size > 0) {
-      val errors = parseFailed.map {
-        fileName =>
-          "error" -> Messages("nml.file.invalid", fileName)
-      }
+      val errors = parseFailed.map(fileName => "error" -> Messages("nml.file.invalid", fileName))
       Future.successful(JsonBadRequest(errors))
     } else if (parseSuccess.size == 0) {
       Future.successful(JsonBadRequest(Messages("nml.file.noFile")))
     } else {
-      val tracingName = nameForNMLs(parseSuccess.map {
-        case (fileName, _) => fileName
-      })
-      val nmls = parseSuccess.map {
-        case (_, nml) => nml
-      }
+      val (fileNames, nmls) = parseSuccess.unzip
 
-      createAnnotationFrom(request.user, nmls, AnnotationType.Explorational, tracingName)
+      createAnnotationFrom(request.user, nmls, AnnotationType.Explorational, nameForNMLs(fileNames))
       .map {
         annotation =>
           JsonOk(

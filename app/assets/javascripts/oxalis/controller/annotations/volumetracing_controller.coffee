@@ -121,13 +121,14 @@ class VolumeTracingController
 
 
 
-  enterDeleteMode : (enter = true) ->
+  enterDeleteMode : ->
 
-    @inDeleteMode = enter
+    return if @inDeleteMode
 
-    if @inDeleteMode
-      @prevActiveCell = @model.volumeTracing.getActiveCellId()
-      @model.volumeTracing.setActiveCell(0)
+    @inDeleteMode = true
+
+    @prevActiveCell = @model.volumeTracing.getActiveCellId()
+    @model.volumeTracing.setActiveCell(0)
 
 
   restoreAfterDeleteMode : ->

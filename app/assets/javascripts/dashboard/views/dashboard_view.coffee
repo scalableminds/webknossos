@@ -57,10 +57,11 @@ class DashboardView extends Backbone.Marionette.LayoutView
 
   initialize : ->
 
-    @model.fetch().done( =>
+    @listenTo(@model, "sync", ->
       @render()
       @showDatasets()
     )
+    @model.fetch()
 
 
   showDatasets : ->

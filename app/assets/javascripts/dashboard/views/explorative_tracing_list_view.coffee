@@ -77,6 +77,8 @@ class ExplorativeTracingListView extends Backbone.Marionette.CompositeView
     formUploadIcon : "#form-upload-icon"
 
 
+  initialize : ->
+
   initialize : (options) ->
 
     @collection = @model.get("exploratoryAnnotations")

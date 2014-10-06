@@ -71,15 +71,13 @@ mongod --dbpath (your path)
 * node version **0.10.0+ is required**
 * your package managers' versions (e.g. `apt-get`) might be outdated
 * no node modules are required to be installed globally. but installing the following is handy for development
-  * [coffee-script (fork from scalable minds)](https://github.com/scalableminds/coffee-script)
+  * [coffee-script](https://github.com/jashkenas/coffeescript)
   * [less](http://lesscss.org/)
   * [bower](http://bower.io/)
   * [gulp](http://gulpjs.com/)
   
 ```bash
-npm install -g \
-  https://github.com/scalableminds/coffee-script/archive/master.tar.gz \
-  less bower gulp
+npm install -g coffee-script less bower gulp
 ```
 
 # Run

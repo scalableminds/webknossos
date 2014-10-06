@@ -3,10 +3,11 @@ underscore : _
 app : app
 backbone.marionette : marionette
 libs/toast : Toast
-./user_list_item_view : UserListItemView
+libs/behaviors/select_all_rows_behavior : SelectAllRows
 admin/views/user/team_role_modal_view : TeamRoleModalView
 admin/views/user/bulk_delete_modal_view : BulkDeleteModalView
 admin/views/user/experience_modal_view : ExperienceModalView
+./user_list_item_view : UserListItemView
 ###
 
 class UserListView extends Backbone.Marionette.CompositeView
@@ -62,6 +63,9 @@ class UserListView extends Backbone.Marionette.CompositeView
     "click #bulk-delete-modal" : "showBulkDeleteModal"
     "click #experience-modal" : "showExperienceModal"
 
+  behaviors:
+    SelectAllRows :
+      behaviorClass : SelectAllRows
 
   initialize : ->
 

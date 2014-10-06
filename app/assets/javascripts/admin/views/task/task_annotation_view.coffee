@@ -50,16 +50,16 @@ class TaskAnnotationView extends Backbone.Marionette.ItemView
     evt.preventDefault()
     $.ajax(
       url : $(evt.target).prop("href")
-    ).then(
+    ).done(
       (jsonData) =>
         if(jsonData)
           @model = new AnnotationModel(jsonData)
           @render()
-
+    ).always(
       (response) ->
-        if(response.responseJSON)
-          message = response.responseJSON.messages[0].error
-          Toast.error(message)
+        if(response)
+          message = response.messages
+          Toast.message(message)
     )
 
 

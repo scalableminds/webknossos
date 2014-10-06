@@ -34,9 +34,21 @@ class Router extends Backbone.Router
       url = $(evt.currentTarget).attr("href") or ""
       urlWithoutSlash = url.slice(1)
 
-      if @routes[urlWithoutSlash]
-        evt.preventDefault()
-        @navigate(url, { trigger: true })
+      # allow opening links in new tabs
+      if evt.metaKey or evt.ctrlKey
+        return
+
+      # allow target=_blank etc
+      if evt.currentTarget.target != ""
+        return
+
+      for route of @routes
+        regex = @_routeToRegExp(route)
+        if regex.test(urlWithoutSlash)
+          evt.preventDefault()
+          @navigate(url, trigger : true)
+
+          return
 
       return
 

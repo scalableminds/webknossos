@@ -1,15 +1,16 @@
 package controllers
 
+import models.user.User
 import play.api.libs.json._
 import oxalis.security.{UserAwareRequest, Secured, AuthenticatedRequest}
 import net.liftweb.common._
 import scala.concurrent.Future
 import scala.concurrent.duration._
-import oxalis.annotation.{RequestAnnotation, AnnotationIdentifier}
+import oxalis.annotation.{MergeAnnotation, RequestAnnotation, AnnotationIdentifier}
 import akka.pattern.ask
 import play.api.libs.concurrent.Execution.Implicits._
 import akka.util.Timeout
-import models.annotation.AnnotationLike
+import models.annotation.{Annotation, AnnotationLike}
 import models.annotation.AnnotationType._
 import oxalis.annotation.handler.AnnotationInformationHandler
 import com.scalableminds.util.tools.{FoxImplicits, Fox}
@@ -40,6 +41,21 @@ trait TracingInformationProvider extends play.api.http.Status with FoxImplicits 
   def findAnnotation(annotationId: AnnotationIdentifier)(implicit request: UserAwareRequest[_]): Fox[AnnotationLike] = {
     implicit val timeout = Timeout(5 seconds)
     val f = Application.annotationStore ? RequestAnnotation(annotationId, request.userOpt, authedRequestToDBAccess)
+
+    f.mapTo[Box[AnnotationLike]]
+  }
+
+  def withMergedAnnotation[T](typ: AnnotationType, id: String, mergedId: String, mergedTyp: String, readOnly: Boolean)(f: AnnotationLike => Fox[T])(implicit request: AuthenticatedRequest[_]): Fox[T] = {
+    mergeAnnotation(AnnotationIdentifier(typ, id), AnnotationIdentifier(mergedTyp, mergedId), readOnly).flatMap(f)
+  }
+
+  def mergeAnnotation(annotationId: AnnotationIdentifier, mergedAnnotationId: AnnotationIdentifier, readOnly: Boolean)(implicit request: AuthenticatedRequest[_]): Fox[AnnotationLike] = {
+    implicit val timeout = Timeout(5 seconds)
+
+    val annotation = Application.annotationStore ? RequestAnnotation(annotationId, request.userOpt, authedRequestToDBAccess)
+    val annotationSec = Application.annotationStore ? RequestAnnotation(mergedAnnotationId, request.userOpt, authedRequestToDBAccess)
+
+    val f = Application.annotationStore ? MergeAnnotation(annotation.mapTo[Box[AnnotationLike]], annotationSec.mapTo[Box[AnnotationLike]], readOnly, request.user, authedRequestToDBAccess)
 
     f.mapTo[Box[AnnotationLike]]
   }

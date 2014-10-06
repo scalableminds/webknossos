@@ -39,6 +39,10 @@ class Router extends Backbone.Router
       url = $(evt.currentTarget).attr("href") or ""
       urlWithoutSlash = url.slice(1)
 
+      # disable links beginning with #
+      if url.indexOf("#") == 0
+        return
+
       # allow opening links in new tabs
       if evt.metaKey or evt.ctrlKey
         return

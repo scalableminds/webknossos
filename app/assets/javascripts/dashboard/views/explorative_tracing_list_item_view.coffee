@@ -3,6 +3,7 @@ underscore : _
 backbone.marionette : marionette
 routes : routes
 libs/toast : Toast
+libs/behaviors/hover_show_hide_behavior : HoverShowHide
 ###
 
 class ExplorativeTracingListItemView extends Backbone.Marionette.ItemView
@@ -64,6 +65,10 @@ class ExplorativeTracingListItemView extends Backbone.Marionette.ItemView
   ui :
     "explorativeNameForm" : "#explorative-name-form"
     "explorativeNameInput": "#explorative-name-input"
+
+  behaviors :
+    HoverShowHide :
+      behaviorClass : HoverShowHide
 
 
   submitForm: ->

@@ -2,6 +2,7 @@
 underscore : _
 backbone.marionette : marionette
 libs/toast : Toast
+libs/behaviors/select_all_rows_behavior : SelectAllRows
 app : app
 ./team_list_item_view : TeamListItemView
 ./create_team_modal_view : CreateTeamModalView
@@ -38,9 +39,14 @@ class TeamListView extends Backbone.Marionette.CompositeView
     </form>
    <div class="modal-wrapper"></div>
   """)
+
   className : "team-administration container wide"
   childView : TeamListItemView
   childViewContainer : "tbody"
+
+  behaviors:
+    SelectAllRows :
+      behaviorClass : SelectAllRows
 
   ui :
     "modalWrapper" : ".modal-wrapper"

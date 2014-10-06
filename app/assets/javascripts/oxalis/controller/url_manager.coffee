@@ -27,7 +27,7 @@ class UrlManager
     if stateString?
 
       stateArray = stateString.split(",")
-      return unless stateArray.length >= 5
+      return state unless stateArray.length >= 5
 
       state.position = _.map stateArray.slice(0, 3), (e) -> +e
       state.mode     = +stateArray[3]

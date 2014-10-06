@@ -115,6 +115,7 @@ role.added=Added role to {0}
 
 
 tracing=Annotation
+tracing.notFound=Tracing couldn''t be found
 annotation.creationFailed=Failed to create annotation
 annotation.notFound=Annotation couldn''t be found
 annotation.invalid=Invalid annotation
@@ -124,6 +125,7 @@ annotation.saved=Annotation got saved
 annotation.setName=Successfully named annotation
 annotation.invalidName=Annotation name is invalid
 annotation.finish.confirm=Are you sure you want to permanently finish this tracing?
+annotation.reset.success=Annoation is resetted
 annotation.review.assignFailed=Couldn''t assign reviewee
 annotation.review.notFound=There is no review for this tracing
 annotation.review.assigned=You got assigned as reviewee

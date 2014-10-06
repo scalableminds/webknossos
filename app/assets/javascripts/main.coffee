@@ -5,7 +5,6 @@ require [
   "app"
   "main/errorHandling"
   "bootstrap"
-  "main/enhancements"
   "libs/core_ext"
 ], ($, _, Backbone, app, ErrorHandling) ->
 

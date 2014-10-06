@@ -60,10 +60,10 @@ trait TracingInformationProvider extends play.api.http.Status with FoxImplicits 
     f.mapTo[Box[AnnotationLike]]
   }
 
-  def nameAnnotation(annotation: AnnotationLike)(implicit request: AuthenticatedRequest[_]) = {
+  def nameAnnotation(annotation: AnnotationLike)(implicit request: AuthenticatedRequest[_]): Fox[String] = {
     withInformationHandler(annotation.typ) {
       handler =>
-        handler.nameForAnnotation(annotation)
+        annotation._name.toFox.orElse(handler.nameForAnnotation(annotation).toFox)
     }
   }
 

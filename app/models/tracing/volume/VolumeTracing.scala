@@ -55,9 +55,15 @@ case class VolumeTracing(
     }
   }
 
-  def temporaryDuplicate(id: String)(implicit ctx: DBAccessContext) = ???
+  def temporaryDuplicate(id: String)(implicit ctx: DBAccessContext) = {
+    // TODO: implement
+    Fox.failure("Not yet implemented")
+  }
 
-  def mergeWith(source: AnnotationContent)(implicit ctx: DBAccessContext) = ???
+  def mergeWith(source: AnnotationContent)(implicit ctx: DBAccessContext) = {
+    // TODO: implement
+    Fox.failure("Not yet implemented")
+  }
 
   def saveToDB(implicit ctx: DBAccessContext) = {
     VolumeTracingService.saveToDB(this)

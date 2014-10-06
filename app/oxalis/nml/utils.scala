@@ -18,4 +18,11 @@ object utils {
     else
       nodes.map(_.id).max
   }
+
+  def maxTreeId(trees: List[TreeLike]) = {
+    if (trees.isEmpty)
+      0
+    else
+      trees.map(_.treeId).max
+  }
 }

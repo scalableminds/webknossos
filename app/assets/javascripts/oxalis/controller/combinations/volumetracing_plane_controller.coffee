@@ -53,7 +53,8 @@ class VolumeTacingPlaneController extends PlaneController
 
       leftMouseDown : (pos, plane, event) =>
 
-        @volumeTracingController.enterDeleteMode( event.shiftKey )
+        if event.shiftKey
+          @volumeTracingController.enterDeleteMode()
         @model.volumeTracing.startEditing(plane)
 
       leftMouseUp : =>

@@ -46,7 +46,7 @@ object TaskService extends TaskAssignmentSimulation with TaskAssignment with Fox
     TaskDAO.logTime(time, task._id)
   }
 
-  def copyDeepAndInsert(source: Task, includeUserTracings: Boolean = true)(implicit ctx: DBAccessContext) = {
+  /*def copyDeepAndInsert(source: Task, includeUserTracings: Boolean = true)(implicit ctx: DBAccessContext) = {
     val task = source.copy(_id = BSONObjectID.generate)
 
     def executeCopy(annotations: List[Annotation]) = Fox.sequence(annotations.map{ annotation =>
@@ -63,5 +63,5 @@ object TaskService extends TaskAssignmentSimulation with TaskAssignment with Fox
     } yield {
       task
     }
-  }
+  } */
 }

@@ -136,12 +136,9 @@ case class WebSocketRESTServer(out: Channel[Array[Byte]]) extends FoxImplicits{
   def cancelRESTCall(uuid: String) = {
     openCalls().get(uuid).map {
       promise =>
-        promise.trySuccess(Failure("REST call timed out.")) match {
-          case true =>
-            Logger.warn("REST request timed out. UUID: " + uuid)
-          case false =>
-            Logger.debug("REST request couldn't get completed. UUID: " + uuid)
-        }
+        if(promise.trySuccess(Failure("REST call timed out.")))
+          Logger.warn("REST request timed out. UUID: " + uuid)
+        openCalls.send(_ - uuid)
     }
   }
 
@@ -150,15 +147,16 @@ case class WebSocketRESTServer(out: Channel[Array[Byte]]) extends FoxImplicits{
       val json = Json.parse(rawJson)
       json.validate[RESTResponse] match {
         case JsSuccess(response, _) =>
-          Logger.warn("Finished with REST result: " + response)
+          Logger.debug("Finished with REST result: " + response)
           openCalls().get(response.uuid).map {
             promise =>
               promise.trySuccess(Full(response)) match {
                 case true =>
                   Logger.debug("REST request completed. UUID: " + response.uuid)
                 case false =>
-                  Logger.warn("REST request timed out. UUID: " + response.uuid)
+                  Logger.warn("REST response was to slow. UUID: " + response.uuid)
               }
+              openCalls.send(_ - response.uuid)
           }
         case _ if (json \ "ping").asOpt[String].isDefined =>
           Logger.trace("Received a ping.")
@@ -186,7 +184,6 @@ object DataStoreController extends Controller with DataStoreActionHelper{
         case Full(dataStore) =>
           val (iterator, enumerator, restChannel) = WebSocketRESTServer.create
           DataStoreHandler.register(dataStore.name, restChannel)
-          // TODO: key logging needs to be removed
           Logger.debug(s"Key $name connected.")
           (iterator, enumerator)
         case _ =>

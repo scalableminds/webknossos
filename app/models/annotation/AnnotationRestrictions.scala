@@ -51,21 +51,21 @@ object AnnotationRestrictions {
       override def allowAccess(user: Option[User]) = {
         user.map {
           user =>
-            annotation._user == user._id || user.roleInTeam(annotation.team) == Some(Role.Admin)
+            annotation._user == Some(user._id) || user.roleInTeam(annotation.team) == Some(Role.Admin)
         } getOrElse false
       }
 
       override def allowUpdate(user: Option[User]) = {
         user.map {
           user =>
-            annotation._user == user._id && !annotation.state.isFinished
+            annotation._user == Some(user._id) && !annotation.state.isFinished
         } getOrElse false
       }
 
       override def allowFinish(user: Option[User]) = {
         user.map {
           user =>
-            (annotation._user == user._id || user.roleInTeam(annotation.team) == Some(Role.Admin)) && !annotation.state.isFinished
+            (annotation._user == Some(user._id) || user.roleInTeam(annotation.team) == Some(Role.Admin)) && !annotation.state.isFinished
         } getOrElse false
       }
 
@@ -77,14 +77,14 @@ object AnnotationRestrictions {
       }
     }
 
-  def readonlyMergedAnnotation() =
+  def readonlyAnnotation() =
     new AnnotationRestrictions {
       override def allowAccess(user: Option[User]) = true
       override def allowFinish(user: Option[User]) = true
       override def allowDownload(user: Option[User]) = true
     }
 
-  def updateableMergedAnnotation() =
+  def updateableAnnotation() =
     new AnnotationRestrictions {
       override def allowAccess(user: Option[User]) = true
       override def allowUpdate(user: Option[User]) = true

@@ -3,10 +3,11 @@ package models.annotation
 import models.user.User
 import com.scalableminds.util.reactivemongo.DBAccessContext
 import play.api.Logger
+import play.api.libs.json.Json
 import scala.collection.mutable.ListBuffer
 import scala.concurrent.Future
 import com.scalableminds.util.tools.{FoxImplicits, Fox}
-import models.tracing.skeleton.{CompoundAnnotation, SkeletonTracingService}
+import models.tracing.skeleton.SkeletonTracingService
 import play.api.libs.concurrent.Execution.Implicits._
 import models.task.{Task, TaskService}
 import com.scalableminds.util.geometry.{Point3D, BoundingBox}
@@ -16,6 +17,7 @@ import scala.Some
 import models.binary.DataSet
 import oxalis.nml.NML
 import com.scalableminds.util.mvc.BoxImplicits
+import play.modules.reactivemongo.json.BSONFormats._
 
 /**
  * Company: scalableminds
@@ -24,7 +26,7 @@ import com.scalableminds.util.mvc.BoxImplicits
  * Time: 12:39
  */
 
-object AnnotationService extends AnnotationContentProviders with BoxImplicits with FoxImplicits{
+object AnnotationService extends AnnotationContentProviders with BoxImplicits with FoxImplicits {
 
   def createExplorationalFor(user: User, dataSet: DataSet, contentType: String, id: String = "")(implicit ctx: DBAccessContext) =
     withProviderForContentType(contentType) { provider =>
@@ -32,7 +34,7 @@ object AnnotationService extends AnnotationContentProviders with BoxImplicits wi
         content <- provider.createFrom(dataSet).toFox
         contentReference = ContentReference.createFor(content)
         annotation = Annotation(
-          user._id,
+          Some(user._id),
           contentReference,
           team = user.teams.head.team, // TODO: refactor
           typ = AnnotationType.Explorational,
@@ -80,9 +82,9 @@ object AnnotationService extends AnnotationContentProviders with BoxImplicits wi
   def createAnnotationFor(user: User, task: Task)(implicit ctx: DBAccessContext): Fox[Annotation] = {
     def useAsTemplateAndInsert(annotation: Annotation) =
       annotation.copy(
-        _user = user._id,
+        _user = Some(user._id),
         state = AnnotationState.InProgress,
-        typ = AnnotationType.Task).muta.copyDeepAndInsert()
+        typ = AnnotationType.Task).temporaryDuplicate(false).flatMap(_.saveToDB)
 
     for {
       annotationBase <- task.annotationBase
@@ -97,21 +99,21 @@ object AnnotationService extends AnnotationContentProviders with BoxImplicits wi
     for {
       tracing <- SkeletonTracingService.createFrom(dataSetName, start, Some(boundingBox), true, settings)
       content = ContentReference.createFor(tracing)
-      _ <- AnnotationDAO.insert(Annotation(userId, content, team = task.team, typ = AnnotationType.TracingBase, _task = Some(task._id)))
+      _ <- AnnotationDAO.insert(Annotation(Some(userId), content, team = task.team, typ = AnnotationType.TracingBase, _task = Some(task._id)))
     } yield tracing
   }
 
   def createAnnotationBase(task: Task, userId: BSONObjectID, boundingBox: BoundingBox, settings: AnnotationSettings, nml: NML)(implicit ctx: DBAccessContext) = {
-    SkeletonTracingService.createFrom(nml, Some(boundingBox), settings).toFox.map {
+    SkeletonTracingService.createFrom(nml, Some(boundingBox), settings).toFox.flatMap {
       tracing =>
         val content = ContentReference.createFor(tracing)
-        AnnotationDAO.insert(Annotation(userId, content, team = task.team, typ = AnnotationType.TracingBase, _task = Some(task._id)))
+        AnnotationDAO.insert(Annotation(Some(userId), content, team = task.team, typ = AnnotationType.TracingBase, _task = Some(task._id)))
     }
   }
 
   def createFrom(_user: BSONObjectID, team: String, content: AnnotationContent, annotationType: AnnotationType, name: Option[String])(implicit ctx: DBAccessContext) = {
     val annotation = Annotation(
-      _user,
+      Some(_user),
       ContentReference.createFor(content),
       team = team,
       _name = name,
@@ -122,14 +124,42 @@ object AnnotationService extends AnnotationContentProviders with BoxImplicits wi
     }
   }
 
-  def merge(readOnly: Boolean, team: String, typ: AnnotationType, annotationsLike: AnnotationLike*)(implicit ctx: DBAccessContext): TemporaryAnnotation = {
-    val restrictions =
-      if(readOnly)
-        AnnotationRestrictions.readonlyMergedAnnotation()
-      else
-        AnnotationRestrictions.updateableMergedAnnotation()
+  def createFrom(temporary: TemporaryAnnotation, content: AnnotationContent, id: BSONObjectID)(implicit ctx: DBAccessContext) = {
+    val annotation = Annotation(
+      temporary._user,
+      ContentReference.createFor(content),
+      temporary._task,
+      temporary.team,
+      temporary.state,
+      temporary.typ,
+      temporary.version,
+      temporary._name,
+      temporary.created,
+      id)
 
-    CompoundAnnotation.createTemporaryAnnotation(team, annotationsLike.toList, BSONObjectID.generate.stringify, typ, restrictions)
+    saveToDB(annotation)
+  }
+
+  def merge(readOnly: Boolean, _user: BSONObjectID, team: String, typ: AnnotationType, annotationsLike: AnnotationLike*)(implicit ctx: DBAccessContext): Fox[TemporaryAnnotation] = {
+    val restrictions =
+      if (readOnly)
+        AnnotationRestrictions.readonlyAnnotation()
+      else
+        AnnotationRestrictions.updateableAnnotation()
+
+    CompoundAnnotation.createFromAnnotations(BSONObjectID.generate.stringify, Some(_user), team, annotationsLike.toList, typ, AnnotationState.InProgress, restrictions)
+  }
+
+  def saveToDB(annotation: Annotation)(implicit ctx: DBAccessContext): Fox[Annotation] = {
+    AnnotationDAO.update(
+      Json.obj("_id" -> annotation._id),
+      Json.obj(
+        "$set" -> AnnotationDAO.formatWithoutId(annotation),
+        "$setOnInsert" -> Json.obj("_id" -> annotation._id)
+      ),
+      upsert = true).map { _ =>
+      annotation
+    }
   }
 }
 

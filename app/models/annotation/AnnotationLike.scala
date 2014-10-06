@@ -1,18 +1,18 @@
 package models.annotation
 
 import models.annotation
-import models.user.User
-import models.task.Task
+import models.user.{UserService, User}
+import models.task.{TaskDAO, Task}
 import models.annotation.AnnotationType._
 import play.api.libs.json._
 import play.api.libs.functional.syntax._
 import scala.concurrent.Future
 import play.api.libs.concurrent.Execution.Implicits._
-import com.scalableminds.util.reactivemongo.DBAccessContext
+import com.scalableminds.util.reactivemongo.{GlobalAccessContext, DBAccessContext}
 import com.scalableminds.util.tools.{FoxImplicits, Fox}
 import reactivemongo.bson.BSONObjectID
 import play.api.Logger
-import models.tracing.skeleton.{CompoundAnnotation, AnnotationStatistics}
+import models.tracing.skeleton.AnnotationStatistics
 import oxalis.view.{ResourceActionCollection, ResourceAction}
 import play.api.libs.json.Json.JsValueWrapper
 import oxalis.mvc.FilterableJson
@@ -28,7 +28,10 @@ import org.joda.time.format.DateTimeFormat
 trait AnnotationLike extends AnnotationStatistics {
   def _name: Option[String]
 
-  def user: Fox[User]
+  def _user: Option[BSONObjectID]
+
+  def user: Fox[User] =
+    _user.toFox.flatMap(u => UserService.findOneById(u.stringify, useCache = true)(GlobalAccessContext))
 
   def team: String
 
@@ -36,13 +39,14 @@ trait AnnotationLike extends AnnotationStatistics {
 
   def content: Fox[AnnotationContent]
 
-  def _user: BSONObjectID
-
   def id: String
 
   def typ: AnnotationType
 
-  def task: Fox[Task]
+  def _task: Option[BSONObjectID]
+
+  def task: Fox[Task] =
+    _task.toFox.flatMap(id => TaskDAO.findOneById(id)(GlobalAccessContext))
 
   def state: AnnotationState
 
@@ -61,6 +65,9 @@ trait AnnotationLike extends AnnotationStatistics {
 
   def created : Long
 
+  def temporaryDuplicate(keepId: Boolean)(implicit ctx: DBAccessContext): Fox[TemporaryAnnotation]
+
+  def saveToDB(implicit ctx: DBAccessContext): Fox[AnnotationLike]
 }
 
 object AnnotationLike extends FoxImplicits with FilterableJson{

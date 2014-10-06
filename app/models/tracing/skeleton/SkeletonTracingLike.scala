@@ -62,40 +62,6 @@ trait SkeletonTracingLike extends AnnotationContent {
 
   override def contentData =
     SkeletonTracingLike.skeletonTracingLikeWrites(this)
-
-  /*private def applyUpdates(f: (Self => Fox[Self])*) = {
-    f.foldLeft(Fox.successful(self)) {
-      case (futureT, f) => futureT.flatMap(t => f(t))
-    }
-  }
-
-  private def updateWithAll[E](list: List[E])(f: (Self, E) => Fox[Self])(start: Self): Fox[Self] = {
-    list.foldLeft(Fox.successful(start)) {
-      case (fs, e) => fs.flatMap(s => f(s, e))
-    }
-  } */
-
-  /*def mergeWith(source: AnnotationContent): Fox[Self] = {
-    source match {
-      case source: SkeletonTracingLike =>
-        for {
-          sourceTrees <- source.trees
-          targetTrees <- trees
-          (preparedTrees: List[TreeLike], nodeMapping: FunctionalNodeMapping) = prepareTreesForMerge(sourceTrees, targetTrees)
-          result <- applyUpdates(
-            updateWithAll(preparedTrees){
-              case (tracing, tree) => tracing.insertTree(tree)
-            },
-            updateWithAll(source.branchPoints) {
-              case (tracing, branchPoint) => tracing.insertBranchPoint(branchPoint.copy(id = nodeMapping(branchPoint.id)))
-            },
-            updateWithAll(source.comments) {
-              case (tracing, comment) => tracing.insertComment(comment.copy(node = nodeMapping(comment.node)))
-            })
-        } yield result
-    }
-  } */
-
 }
 
 object SkeletonTracingLike extends FoxImplicits {

@@ -3,6 +3,7 @@
 ./category_views/controls_category_view : ControlsCategoryView
 ./category_views/viewport_category_view : ViewportCategoryView
 ./category_views/tdview_category_view : TDViewCategoryView
+./category_views/isosurface_category_view : IsosurfaceCategoryView
 ###
 
 class PlaneUserSettingsView extends SettingsView
@@ -29,3 +30,8 @@ class PlaneUserSettingsView extends SettingsView
     "tdview-category" : ->
 
       return new TDViewCategoryView({ @model })
+
+
+    "isosurface-category" : ->
+
+      return new IsosurfaceCategoryView({ @model })

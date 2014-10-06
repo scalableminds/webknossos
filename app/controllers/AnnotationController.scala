@@ -164,6 +164,9 @@ object AnnotationController extends Controller with Secured with TracingInformat
         }
       }
 
+      Logger.info(s"Tracing update [$typ - $id, $version]: ${request.body}")
+      AnnotationUpdateService.store(typ, id, version, request.body)
+
       for {
         oldAnnotation <- findAnnotation(typ, id)
         updateableAnnotation <- isUpdateable(oldAnnotation) ?~> Messages("tracing.update.impossible")

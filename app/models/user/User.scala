@@ -89,6 +89,7 @@ case class User(
 
   def isEditableBy(other: User) =
     other.hasAdminAccess && ( teams.isEmpty || other.adminTeamNames.exists(teamNames.contains))
+
 }
 
 object User {
@@ -113,6 +114,8 @@ object User {
       (__ \ "lastName").write[String] and
       (__ \ "teams").write[List[TeamMembership]])( u =>
       (u.id, u.email, u.firstName, u.lastName, u.teams))
+
+  val createNotVerifiedUser = User("","","", teams = Nil)
 }
 
 object UserDAO extends SecuredBaseDAO[User] {
@@ -161,7 +164,9 @@ object UserDAO extends SecuredBaseDAO[User] {
     findOne(Json.obj("email" -> email, "loginType" -> loginType))
 
   def auth(email: String, password: String)(implicit ctx: DBAccessContext): Fox[User] =
-    findOneByEmail(email).filter(user => verifyPassword(password, user.pwdHash))
+    findOneByEmail(email).filter { user =>
+      verifyPassword(password, user.pwdHash)
+    }
 
   def insert(user: User, isVerified: Boolean)(implicit ctx: DBAccessContext): Fox[User] = {
     if (isVerified) {
@@ -210,6 +215,10 @@ object UserDAO extends SecuredBaseDAO[User] {
 
   def updateTeams(_user: BSONObjectID, teams: List[TeamMembership])(implicit ctx: DBAccessContext) = {
     update(findByIdQ(_user), Json.obj("$set" -> Json.obj("teams" -> teams)))
+  }
+
+  def changePassword(_user: BSONObjectID, pswd: String)(implicit ctx: DBAccessContext) = {
+    update(findByIdQ(_user), Json.obj("$set" -> Json.obj("pwdHash" -> hashPassword(pswd))))
   }
 
   def verify(user: User)(implicit ctx: DBAccessContext) = {

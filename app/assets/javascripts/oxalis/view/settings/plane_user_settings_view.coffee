@@ -4,6 +4,7 @@
 ./category_views/viewport_category_view : ViewportCategoryView
 ./category_views/tdview_category_view : TDViewCategoryView
 ./category_views/isosurface_category_view : IsosurfaceCategoryView
+./category_views/segmentation_category_view : SegmentationCategoryView
 ###
 
 class PlaneUserSettingsView extends SettingsView
@@ -35,3 +36,8 @@ class PlaneUserSettingsView extends SettingsView
     "isosurface-category" : ->
 
       return new IsosurfaceCategoryView({ @model })
+
+
+    "segmentation-category" : ->
+
+      return new SegmentationCategoryView({ @model })

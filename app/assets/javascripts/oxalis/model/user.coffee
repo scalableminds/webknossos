@@ -11,8 +11,9 @@ class User extends Backbone.Model
 
   initialize : ->
 
-    @listenTo(this, "change", @push)
+    @listenTo(@, "change", @push)
     @listenTo(app.vent, "saveEverything", @save)
+    #@listenTo(@, "change", @save)
 
 
   getSettings : ->
@@ -33,6 +34,6 @@ class User extends Backbone.Model
   triggerAll : ->
 
     for property of @attributes
-      @trigger("change:#{property}", this, @get(property))
+      @trigger("change:#{property}", @, @get(property))
 
 

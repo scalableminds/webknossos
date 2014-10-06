@@ -1,7 +1,6 @@
 ### define
 ../setting_views/color_setting_view : ColorSettingView
 ../setting_views/slider_setting_view : SliderSettingView
-../setting_views/button_setting_view : ButtonSettingView
 ./category_view : CategoryView
 ###
 
@@ -36,7 +35,6 @@ class ColorsCategoryView extends CategoryView
           max : 5
           step : 0.1
       )
-
 
   initialize : ->
 

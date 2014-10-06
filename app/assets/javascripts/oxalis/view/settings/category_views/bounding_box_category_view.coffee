@@ -18,7 +18,7 @@ class boundingBoxCategory extends CategoryView
         options :
           name : "boundingBox"
           displayName : "Bounding Box"
-          pattern : "(\\d*\\s*,\\s*){5}\\d*"
+          pattern : "(\\d+\\s*,\\s*){5}\\d+"
       )
 
 

@@ -1,6 +1,7 @@
 ### define
 app : app
 backbone.marionette : Marionette
+libs/input : Input
 ./comment_tab_item_view : CommentTabItemView
 ###
 
@@ -28,9 +29,11 @@ class CommentTabView extends Backbone.Marionette.CompositeView
 
   childView : CommentTabItemView
   childViewContainer : "#comment-list"
+
   childViewOptions : ->
     parent : @
     activeComment : @activeComment
+
   templateHelpers : ->
     activeComment : @activeComment
     isSortedAscending : @isSortedAscending
@@ -69,6 +72,12 @@ class CommentTabView extends Backbone.Marionette.CompositeView
     @listenTo(@_model.skeletonTracing, "newActiveNode", @updateInputElement)
     @listenTo(@_model.skeletonTracing, "deleteComment", @deleteComment)
     @listenTo(@collection, "sort", @render)
+
+    # keyboard shortcuts
+    new Input.KeyboardNoLoop(
+      "n" : => @nextComment()
+      "p" : => @previousComment()
+    )
 
 
   getActiveNodeId : ->

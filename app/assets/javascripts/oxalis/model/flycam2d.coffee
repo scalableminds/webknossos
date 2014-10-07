@@ -193,8 +193,8 @@ class Flycam2d
     max      = []
 
     for i in [0..2]
-      min.push( position[i] - offset * @scaleInfo.baseVoxelFactors[i] )
-      max.push( position[i] + offset * @scaleInfo.baseVoxelFactors[i] )
+      min.push( position[i] - offset * app.scaleInfo.baseVoxelFactors[i] )
+      max.push( position[i] + offset * app.scaleInfo.baseVoxelFactors[i] )
 
     return { min, max }
 

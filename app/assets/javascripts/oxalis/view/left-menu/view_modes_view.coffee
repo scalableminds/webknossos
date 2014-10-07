@@ -6,9 +6,8 @@ oxalis/constants : constants
 
 class ViewModesView extends Backbone.Marionette.ItemView
 
-  className : "col-sm-12"
   template : _.template("""
-    <div class="btn-group btn-group-justified">
+    <div class="btn-group btn-group">
       <div class="btn-group">
         <button type="button" class="btn btn-default" id="mode-3planes">3 Planes</button>
       </div>

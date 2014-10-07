@@ -12,8 +12,6 @@ oxalis/model/settings/backbone_to_oxalis_adapter_model : BackboneToOxalisAdapter
 
 class SettingsTabView extends Backbone.Marionette.LayoutView
 
-  id : "lefttabbar"
-
   template : _.template("""
     <ul class="nav nav-tabs">
       <li>
@@ -42,9 +40,6 @@ class SettingsTabView extends Backbone.Marionette.LayoutView
 
 
   initialize : (options) ->
-
-    @options = options
-
 
     backboneToOxalisAdapter = new BackboneToOxalisAdapterModel(_model : options._model)
     @skeletonTracingSettingsView = new SkeletonTracingSettingsView(_model : backboneToOxalisAdapter)

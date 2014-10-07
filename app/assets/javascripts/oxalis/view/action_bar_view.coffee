@@ -16,18 +16,18 @@ class ActionBarView extends Backbone.Marionette.LayoutView
 
   template : _.template("""
     <% if (isTraceMode) { %>
-      <div id="dataset-actions" class="row"></div>
+      <div id="dataset-actions"></div>
     <% } %>
 
-    <div id="dataset-info" class="row"></div>
-    <div id="dataset-position" class="row"></div>
+    <div id="dataset-info"></div>
+    <div id="dataset-position"></div>
 
     <% if (isVolumeMode) { %>
       <div id="volume-actions"></div>
     <% } %>
 
     <% if (isTraceMode) { %>
-      <div id="view-modes" class="row"></div>
+      <div id="view-modes"></div>
     <% } %>
   """)
 
@@ -66,7 +66,7 @@ class ActionBarView extends Backbone.Marionette.LayoutView
 
   afterRender : ->
 
-    @datasetInfo.show(@datasetInfoView)
+    #@datasetInfo.show(@datasetInfoView)
     @datasetPosition.show(@datasetPositionView)
 
     if @isTraceMode()

@@ -7,18 +7,23 @@ libs/utils : Utils
 
 class DatasetPositionView extends Backbone.Marionette.ItemView
 
-  className : "col-sm-12 stacked-input-group"
+  tagName : "form"
+  className : "form-inline dataset-position-view"
   template : _.template("""
-    <div class="input-group">
-      <span class="input-group-addon">Position</span>
-      <input id="trace-position-input" class="form-control" type="text" value="<%= vec3ToString(position) %>">
-    </div>
-    <% if(isArbitrayMode()) { %>
+    <div class="form-group">
       <div class="input-group">
-        <span class="input-group-addon">Rotation</span>
-        <input id="trace-rotation-input" class="form-control" type="text" value="<%= vec3ToString(rotation) %>">
+        <span class="input-group-addon">Position</span>
+        <input id="trace-position-input" class="form-control" type="text" value="<%= vec3ToString(position) %>">
       </div>
-    <% } %>
+    </div>
+    <div class="form-group">
+      <% if(isArbitrayMode()) { %>
+        <div class="input-group">
+          <span class="input-group-addon">Rotation</span>
+          <input id="trace-rotation-input" class="form-control" type="text" value="<%= vec3ToString(rotation) %>">
+        </div>
+      <% } %>
+    </div>
   """)
 
   templateHelpers :

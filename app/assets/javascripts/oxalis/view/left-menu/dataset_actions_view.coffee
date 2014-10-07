@@ -8,21 +8,17 @@ libs/toast : Toast
 class DatsetActionsView extends Backbone.Marionette.ItemView
 
   template : _.template("""
-    <div class="col-sm-3">
-      <% if(allowUpdate){ %>
-        <a href="#" class="btn btn-primary" id="trace-save-button">Save</a>
-      <% } else { %>
-        <button class="btn btn-primary disabled">Read only</button>
-      <% } %>
-    </div>
-    <div class="col-sm-9">
-      <div class="btn-group btn-group-justified">
-        <% if(allowFinish) { %>
-          <a href="/annotations/<%= tracingType %>/<%= tracingId %>/finishAndRedirect" class="btn btn-default" id="trace-finish-button"><i class="fa fa-check-circle-o"></i>Finish</a>
-        <% } %>
-        <a href="/annotations/<%= tracingType %>/<%= tracingId %>/download" class="btn btn-default" id="trace-download-button"><i class="fa fa-download"></i>NML</a>
-        <a href="#help-modal" class="btn btn-default" data-toggle="modal"><i class="fa fa-question-circle"></i>Help</a>
-      </div>
+    <% if(allowUpdate){ %>
+      <a href="#" class="btn btn-primary" id="trace-save-button">Save</a>
+    <% } else { %>
+      <button class="btn btn-primary disabled">Read only</button>
+    <% } %>
+    <div class="btn-group btn-group">
+      <% if(allowFinish) { %>
+        <a href="/annotations/<%= tracingType %>/<%= tracingId %>/finishAndRedirect" class="btn btn-default" id="trace-finish-button"><i class="fa fa-check-circle-o"></i>Finish</a>
+      <% } %>
+      <a href="/annotations/<%= tracingType %>/<%= tracingId %>/download" class="btn btn-default" id="trace-download-button"><i class="fa fa-download"></i>NML</a>
+      <a href="#help-modal" class="btn btn-default" data-toggle="modal"><i class="fa fa-question-circle"></i>Help</a>
     </div>
 
     <div id="help-modal" class="modal fade">
@@ -59,7 +55,7 @@ class DatsetActionsView extends Backbone.Marionette.ItemView
         </div>
       </div>
     </div>
-    <div class="col-sm-3 btn btn-default" id="trace-merge-button">Merge Tracing</div>
+    <div class="btn btn-default" id="trace-merge-button">Merge Tracing</div>
     <div class="merge-modal-wrapper"></div>
   """)
 

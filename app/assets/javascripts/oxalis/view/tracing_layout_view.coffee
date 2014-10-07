@@ -62,15 +62,17 @@ class TracingLayoutView extends Backbone.Marionette.LayoutView
 
     actionBarView = new ActionBarView(@options)
     tracingView = new TracingView(@options)
-    settingsTabView = new SettingsTabView(@options)
 
-    #@actionBar.show(actionBarView, preventDestroy : true)
+    @actionBar.show(actionBarView, preventDestroy : true)
     @tracingContainer.show(tracingView, preventDestroy : true)
-    @settings.show(settingsTabView, preventDestroy : true)
 
-    if @isTracingMode() and @isSkeletonMode()
-      @rightMenuView = new RightMenuView(@options)
-      @rightMenu.show(@rightMenuView)
+    if @isTracingMode()
+      settingsTabView = new SettingsTabView(@options)
+      @settings.show(settingsTabView, preventDestroy : true)
+
+      if @isSkeletonMode()
+        @rightMenuView = new RightMenuView(@options)
+        @rightMenu.show(@rightMenuView)
 
 
   isTracingMode : ->

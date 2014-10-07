@@ -6,7 +6,6 @@ oxalis/constants : Constants
 
 class VolumeActionsView extends Backbone.Marionette.ItemView
 
-  className : "col-sm-12 row"
   template : _.template("""
     <p>Control mode:</p>
       <div class="btn-group">

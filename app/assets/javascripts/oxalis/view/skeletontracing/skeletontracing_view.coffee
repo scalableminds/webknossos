@@ -4,7 +4,6 @@ underscore : _
 libs/toast : Toast
 ../modal : modal
 ../../view : View
-../merge_modal_view : MergeModalView
 ###
 
 class SkeletonTracingView extends View

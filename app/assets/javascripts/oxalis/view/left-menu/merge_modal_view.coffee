@@ -3,7 +3,7 @@ underscore : _
 backbone.marionette : Marionette
 libs/toast : Toast
 app : app
-../model/skeletontracing/user_annotation_collection : UserAnnotationCollection
+oxalis/model/skeletontracing/user_annotation_collection : UserAnnotationCollection
 admin/views/selection_view : SelectionView
 admin/models/user/user_collection : UserCollection
 admin/models/team/team_collection : TeamCollection

@@ -6,7 +6,6 @@ class TracingView extends Backbone.Marionette.LayoutView
 
   id : "render"
   template : _.template("""
-    <div id="help-modal" class="modal fade"></div>
     <div id="modal" class="modal fade"></div>
     <div id="inputcatchers">
       <div id="planexy" class="inputcatcher"></div>

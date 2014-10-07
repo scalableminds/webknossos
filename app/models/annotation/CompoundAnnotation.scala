@@ -31,7 +31,7 @@ object CompoundAnnotation extends Formatter with FoxImplicits {
           _user,
           project.team,
           annotations,
-          AnnotationType.CompoundProject) ?~> Messages("project.noAnnotaton")
+          AnnotationType.CompoundProject) ?~> Messages("project.noAnnotation")
       } yield merged
     }
   }
@@ -45,7 +45,7 @@ object CompoundAnnotation extends Formatter with FoxImplicits {
           _user,
           task.team,
           annotations,
-          AnnotationType.CompoundTask) ?~> Messages("task.noAnnotaton")
+          AnnotationType.CompoundTask) ?~> Messages("task.noAnnotation")
       } yield merged
     }
   }
@@ -60,7 +60,7 @@ object CompoundAnnotation extends Formatter with FoxImplicits {
           _user,
           taskType.team,
           annotations,
-          AnnotationType.CompoundTaskType) ?~> Messages("taskType.noAnnotaton")
+          AnnotationType.CompoundTaskType) ?~> Messages("taskType.noAnnotation")
       } yield merged
     }
   }

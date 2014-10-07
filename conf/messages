@@ -172,7 +172,7 @@ task.bulk.notSupplied=No data supplied
 task.bulk.createSuccess=Successfully created {0} Tasks
 task.edit.toFewInstances=There are already more finished / in progress tracings
 task.editSuccess=Task successfully edited
-task.noAnnotations=We couldn''t find finished annotations for this task
+task.noAnnotation=We couldn''t find finished annotations for this task
 
 taskInstances=Task instances
 

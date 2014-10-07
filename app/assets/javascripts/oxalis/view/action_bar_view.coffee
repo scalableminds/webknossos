@@ -2,11 +2,10 @@
 underscore : _
 backbone.marionette : marionette
 ./settings/settings_tab_view : SettingsTabView
-./left-menu/dataset_actions_view : DatasetActionsView
-./left-menu/dataset_info_view : DatasetInfoView
-./left-menu/dataset_position_view : DatasetPositionView
-./left-menu/view_modes_view : ViewModesView
-./left-menu/volume_actions_view : VolumeActionsView
+./action-bar/dataset_actions_view : DatasetActionsView
+./action-bar/dataset_position_view : DatasetPositionView
+./action-bar/view_modes_view : ViewModesView
+./action-bar/volume_actions_view : VolumeActionsView
 ../constants : Constants
 ###
 
@@ -19,7 +18,6 @@ class ActionBarView extends Backbone.Marionette.LayoutView
       <div id="dataset-actions"></div>
     <% } %>
 
-    <div id="dataset-info"></div>
     <div id="dataset-position"></div>
 
     <% if (isVolumeMode) { %>
@@ -39,7 +37,6 @@ class ActionBarView extends Backbone.Marionette.LayoutView
 
   regions :
     "datasetActionButtons" : "#dataset-actions"
-    "datasetInfo" : "#dataset-info"
     "datasetPosition" : "#dataset-position"
     "viewModes" : "#view-modes"
     "volumeActions" : "#volume-actions"
@@ -48,7 +45,6 @@ class ActionBarView extends Backbone.Marionette.LayoutView
   initialize : (options) ->
 
     @options = options
-    @datasetInfoView = new DatasetInfoView(options)
     @datasetPositionView = new DatasetPositionView(options)
 
     if @isTraceMode()
@@ -66,7 +62,6 @@ class ActionBarView extends Backbone.Marionette.LayoutView
 
   afterRender : ->
 
-    #@datasetInfo.show(@datasetInfoView)
     @datasetPosition.show(@datasetPositionView)
 
     if @isTraceMode()

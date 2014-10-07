@@ -3,6 +3,7 @@ backbone.marionette : marionette
 ./right-menu/comment_tab_view : CommentTabView
 ./right-menu/abstract_tree_view : AbstractTreeView
 ./right-menu/list_tree_view : ListTreeView
+./right-menu/dataset_info_view : DatasetInfoView
 ###
 
 class RightMenuView extends Backbone.Marionette.LayoutView
@@ -20,11 +21,15 @@ class RightMenuView extends Backbone.Marionette.LayoutView
       <li>
         <a href="#tab-comments" data-toggle="tab">Comments</a>
       </li>
+      <li>
+        <a href="#tab-info" data-toggle="tab">Info</a>
+      </li>
     </ul>
     <div class="tab-content">
       <div class="tab-pane active" id="tab-abstract-tree"></div>
       <div class="tab-pane" id="tab-trees"></div>
       <div class="tab-pane" id="tab-comments"></div>
+      <div class="tab-pane" id="tab-info"></div>
     </div>
   """)
 
@@ -35,12 +40,14 @@ class RightMenuView extends Backbone.Marionette.LayoutView
     "commentTab" : "#tab-comments"
     "abstractTreeTab" : "#tab-abstract-tree"
     "listTreeTab" : "#tab-trees"
+    "datasetInfoTab" : "#tab-info"
 
   initialize : (options) ->
 
     @commentTabView = new CommentTabView(options)
     @abstractTreeView = new AbstractTreeView(options)
     @listTreeView = new ListTreeView(options)
+    @datasetInfoView = new DatasetInfoView(options)
 
     @listenTo(@, "render", @afterRender)
 
@@ -58,3 +65,5 @@ class RightMenuView extends Backbone.Marionette.LayoutView
       @commentTab.show(@commentTabView)
       @abstractTreeTab.show(@abstractTreeView)
       @listTreeTab.show(@listTreeView)
+      @datasetInfoTab.show(@datasetInfoView)
+

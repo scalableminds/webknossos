@@ -7,11 +7,9 @@ oxalis/constants : Constants
 class VolumeActionsView extends Backbone.Marionette.ItemView
 
   template : _.template("""
-    <p>Control mode:</p>
-      <div class="btn-group">
-        <button type="button" class="btn btn-default btn-primary" id="mode-move">Move</button>
-        <button type="button" class="btn btn-default" id="mode-trace">Trace</button>
-      </div>
+    <div class="btn-group">
+      <button type="button" class="btn btn-default btn-primary" id="mode-move">Move</button>
+      <button type="button" class="btn btn-default" id="mode-trace">Trace</button>
     </div>
   """)
 

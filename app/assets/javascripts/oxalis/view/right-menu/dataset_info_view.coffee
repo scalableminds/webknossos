@@ -5,13 +5,13 @@ oxalis/constants : constants
 oxalis/controller/viewmodes/arbitrary_controller : ArbitraryController
 ###
 
-class DatsetActionsView extends Backbone.Marionette.ItemView
+class DatsetInfoView extends Backbone.Marionette.ItemView
 
   className : "col-sm-12"
   id : "dataset"
   template : _.template("""
     <div class="well">
-      <p><% annotationType %></p>
+      <p><%= annotationType %></p>
       <p>DataSet: <%= dataSetName %></p>
       <p>Viewport width: <%= chooseUnit(zoomLevel) %></p>
     </div>

@@ -1,5 +1,7 @@
 package controllers.admin
 
+import reactivemongo.bson.BSONObjectID
+
 import scala.Array.canBuildFrom
 import scala.Option.option2Iterable
 import oxalis.security.AuthenticatedRequest
@@ -240,7 +242,15 @@ object TaskAdministration extends AdminController {
               _project = project.map(_.name))
             nmls.foreach {
               nml =>
-                TaskService.copyDeepAndInsert(baseTask).map { task =>
+                val task = Task(
+                  taskType._id,
+                  team,
+                  experience,
+                  priority,
+                  instances,
+                  _project = project.map(_.name),
+                  _id = BSONObjectID.generate)
+                TaskDAO.insert(task).flatMap { _ =>
                   AnnotationService.createAnnotationBase(task, request.user._id, boundingBox, taskType.settings, nml)
                 }
             }

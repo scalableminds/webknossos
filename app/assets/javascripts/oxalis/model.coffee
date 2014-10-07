@@ -61,10 +61,10 @@ class Model
 
   initialize : (options) =>
 
-    {tracingId, tracingType, controlMode, state} = options
+    {@tracingId, @tracingType, controlMode, state} = options
 
     Request.send(
-      url : "/annotations/#{tracingType}/#{tracingId}/info"
+      url : "/annotations/#{@tracingType}/#{@tracingId}/info"
       dataType : "json"
     ).pipe (tracing) =>
 
@@ -96,16 +96,16 @@ class Model
             $.when(
               @getDataTokens(dataSet.dataStore.url, dataSet.name, layers)...
             ).pipe =>
-              @initializeWithData(controlMode, state, tracingId, tracingType, tracing, layers)
+              @initializeWithData(controlMode, state, tracing, layers)
 
           -> Toast.error("Ooops. We couldn't communicate with our mother ship. Please try to reload this page.")
           )
         )
 
-  initializeWithData : (controlMode, state, tracingId, tracingType, tracing, layers) ->
+  initializeWithData : (controlMode, state, tracing, layers) ->
 
     $.assertExtendContext({
-      task: tracingId
+      task: @tracingId
       dataSet: tracing.content.dataSet.name
     })
 
@@ -134,7 +134,7 @@ class Model
 
     for layer in layers
       layer.bitDepth = parseInt( layer.elementClass.substring(4) )
-      @binary[layer.name] = new Binary(this, tracing, layer, tracingId, @updatePipeline)
+      @binary[layer.name] = new Binary(this, tracing, layer, @tracingId, @updatePipeline)
       zoomStepCount = Math.max(zoomStepCount, @binary[layer.name].cube.ZOOM_STEP_COUNT - 1)
 
     if @getColorBinaries().length == 0

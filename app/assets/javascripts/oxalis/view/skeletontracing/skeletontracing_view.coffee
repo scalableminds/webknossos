@@ -4,6 +4,7 @@ underscore : _
 libs/toast : Toast
 ../modal : modal
 ../../view : View
+../merge_modal_view : MergeModalView
 ###
 
 class SkeletonTracingView extends View
@@ -44,7 +45,6 @@ class SkeletonTracingView extends View
                 => return null)
               window.location.reload() )},
             {id : "cancel-button", label : "Cancel", callback : ( => @reloadDenied = true ) } ] )
-
 
 
   showFirstVisToggle : ->

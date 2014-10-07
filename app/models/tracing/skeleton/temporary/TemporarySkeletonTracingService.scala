@@ -1,68 +1,17 @@
-package models.tracing.skeleton
+/*
+ * Copyright (C) 20011-2014 Scalable minds UG (haftungsbeschränkt) & Co. KG. <http://scm.io>
+ */
+package models.tracing.skeleton.temporary
 
-import oxalis.nml.TreeLike
-import oxalis.nml.BranchPoint
-import com.scalableminds.util.geometry.Scale
 import com.scalableminds.util.geometry.{Point3D, BoundingBox}
-import oxalis.nml.Comment
-import oxalis.nml.NML
-import models.annotation._
-import play.api.libs.json.JsValue
-
-import models.binary.DataSetDAO
-import models.annotation.AnnotationType._
-import scala.Some
-import oxalis.nml.NML
-import models.annotation.AnnotationType.AnnotationType
-import scala.concurrent.Future
-import oxalis.nml.NML
-import scala.Some
 import com.scalableminds.util.reactivemongo.DBAccessContext
 import com.scalableminds.util.tools.Fox
-import models.binary.DataSet
-import models.basics.SecuredBaseDAO
-import play.api.libs.concurrent.Execution.Implicits._
-import com.scalableminds.util.tools.{FoxImplicits, Fox}
+import models.annotation.{AnnotationSettings, AnnotationContentService}
+import models.binary.{DataSet, DataSetDAO}
+import models.tracing.skeleton.{SkeletonTracingLike, SkeletonTracing}
 import net.liftweb.common.Full
-
-case class TemporarySkeletonTracing(
-                                     id: String,
-                                     dataSetName: String,
-                                     _trees: List[TreeLike],
-                                     branchPoints: List[BranchPoint],
-                                     timestamp: Long,
-                                     activeNodeId: Option[Int],
-                                     editPosition: Point3D,
-                                     zoomLevel: Double,
-                                     boundingBox: Option[BoundingBox],
-                                     comments: List[Comment] = Nil,
-                                     settings: AnnotationSettings = AnnotationSettings.skeletonDefault
-                                   ) extends SkeletonTracingLike with AnnotationContent {
-
-  type Self = TemporarySkeletonTracing
-
-  def task = None
-
-  def service = TemporarySkeletonTracingService
-
-  def trees = Fox.successful(_trees)
-
-  def allowAllModes =
-    this.copy(settings = settings.copy(allowedModes = AnnotationSettings.SKELETON_MODES))
-
-  def insertTree[TemporaryTracing](tree: TreeLike) =
-    Fox.successful(this.copy(_trees = tree :: _trees).asInstanceOf[TemporaryTracing])
-
-  def insertBranchPoint[Tracing](bp: BranchPoint) =
-    Fox.successful(this.copy(branchPoints = bp :: this.branchPoints).asInstanceOf[Tracing])
-
-  def insertComment[Tracing](c: Comment) =
-    Fox.successful(this.copy(comments = c :: this.comments).asInstanceOf[Tracing])
-
-  def updateFromJson(js: Seq[JsValue])(implicit ctx: DBAccessContext) = ???
-
-  def copyDeepAndInsert = ???
-}
+import oxalis.nml.NML
+import play.api.libs.concurrent.Execution.Implicits._
 
 object TemporarySkeletonTracingService extends AnnotationContentService {
   def createFrom(nml: NML, id: String, boundingBox: Option[BoundingBox], settings: AnnotationSettings = AnnotationSettings.default)(implicit ctx: DBAccessContext) = {
@@ -87,7 +36,7 @@ object TemporarySkeletonTracingService extends AnnotationContentService {
         box,
         nml.comments,
         settings)
-      }.toFox
+    }.toFox
   }
 
   def createFrom(tracing: SkeletonTracingLike, id: String)(implicit ctx: DBAccessContext) = {

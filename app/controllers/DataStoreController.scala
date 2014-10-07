@@ -136,12 +136,9 @@ case class WebSocketRESTServer(out: Channel[Array[Byte]]) extends FoxImplicits{
   def cancelRESTCall(uuid: String) = {
     openCalls().get(uuid).map {
       promise =>
-        promise.trySuccess(Failure("REST call timed out.")) match {
-          case true =>
-            Logger.warn("REST request timed out. UUID: " + uuid)
-          case false =>
-            Logger.debug("REST request couldn't get completed. UUID: " + uuid)
-        }
+        if(promise.trySuccess(Failure("REST call timed out.")))
+          Logger.warn("REST request timed out. UUID: " + uuid)
+        openCalls.send(_ - uuid)
     }
   }
 
@@ -157,8 +154,9 @@ case class WebSocketRESTServer(out: Channel[Array[Byte]]) extends FoxImplicits{
                 case true =>
                   Logger.debug("REST request completed. UUID: " + response.uuid)
                 case false =>
-                  Logger.warn("REST request timed out. UUID: " + response.uuid)
+                  Logger.warn("REST response was to slow. UUID: " + response.uuid)
               }
+              openCalls.send(_ - response.uuid)
           }
         case _ if (json \ "ping").asOpt[String].isDefined =>
           Logger.trace("Received a ping.")

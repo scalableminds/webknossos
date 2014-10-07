@@ -136,4 +136,5 @@ object Authentication extends Controller with Secured with ProvidesUnauthorizedS
       .withNewSession
       .flashing("success" -> Messages("user.logout.success"))
   }
+
 }

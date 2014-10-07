@@ -1,29 +1,24 @@
 package models.tracing.skeleton
 
 import com.scalableminds.util.geometry.{Point3D, BoundingBox}
+import models.annotation._
+import models.task.Task
+import CompoundAnnotation._
+import models.tracing.skeleton.temporary.{TemporarySkeletonTracingService, TemporarySkeletonTracing}
 import play.api.libs.json._
-import models.binary.DataSetDAO
-import models.user.{UsedAnnotationDAO, UsedAnnotation}
-import com.scalableminds.util.geometry.Scale
-import com.scalableminds.util.image.Color
+import models.user.{User, UsedAnnotationDAO, UsedAnnotation}
 import models.basics._
 import oxalis.nml._
-import models.binary.DataSet
 import models.annotation.{AnnotationState, AnnotationContentService, AnnotationSettings, AnnotationContent}
 import models.tracing.CommonTracingService
-import scala.Some
 import models.binary.DataSet
 import oxalis.nml.NML
 import com.scalableminds.util.reactivemongo.DBAccessContext
-import scala.tools.nsc.Global
 import com.scalableminds.util.reactivemongo.GlobalAccessContext
 import reactivemongo.bson.BSONObjectID
-import scala.concurrent.Future
 import play.api.libs.concurrent.Execution.Implicits._
 import play.modules.reactivemongo.json.BSONFormats._
 import com.scalableminds.util.tools.{FoxImplicits, Fox}
-import net.liftweb.common.Empty
-import play.api.Logger
 
 case class SkeletonTracing(
                             dataSetName: String,
@@ -48,40 +43,34 @@ case class SkeletonTracing(
   def allowAllModes =
     this.copy(settings = settings.copy(allowedModes = AnnotationSettings.SKELETON_MODES))
 
-  def trees: Fox[List[TreeLike]] = dbtrees.flatMap{ ts =>
+  def trees: Fox[List[TreeLike]] = DBTrees.flatMap{ ts =>
     Fox.combined(ts.map(t => t.toTree))
   }
 
-  def dbtrees = DBTreeDAO.findByTracing(_id)(GlobalAccessContext)
+  def DBTrees = DBTreeDAO.findByTracing(_id)(GlobalAccessContext)
 
   def tree(treeId: Int) = DBTreeDAO.findOneByTreeId(_id, treeId)(GlobalAccessContext)
 
   def maxNodeId = this.trees.map(oxalis.nml.utils.maxNodeId)
 
-  /**
-   * Tree modification
-   */
-  override def mergeWith(c: AnnotationContent): Fox[SkeletonTracing] = {
-    c match {
-      case c: SkeletonTracingLike =>
-        super.mergeWith(c)
-      case e =>
-        throw new Exception("Can't merge SkeletonTracing with: " + e)
-    }
+  def toTemporary(implicit ctx: DBAccessContext) =
+    temporaryDuplicate(id)
+
+  def temporaryDuplicate(id: String)(implicit ctx: DBAccessContext) = {
+    TemporarySkeletonTracingService.createFrom(self, id)
+  }
+
+  def saveToDB(implicit ctx: DBAccessContext) = {
+    SkeletonTracingService.saveToDB(this)
+  }
+
+  def mergeWith(c: AnnotationContent)(implicit ctx: DBAccessContext): Fox[AnnotationContent] = {
+    toTemporary.flatMap(_.mergeWith(c))
   }
 }
 
 trait SkeletonManipulations extends FoxImplicits {
   this: SkeletonTracing =>
-
-  def insertTree[Tracing](t: TreeLike): Fox[Tracing] =
-    DBTreeService.insert(this._id, t)(GlobalAccessContext).map { _ => this.asInstanceOf[Tracing] }
-
-  def insertBranchPoint[Tracing](bp: BranchPoint): Fox[Tracing] =
-    SkeletonTracingDAO.addBranchPoint(this._id, bp)(GlobalAccessContext).map(_.asInstanceOf[Tracing])
-
-  def insertComment[Tracing](c: Comment): Fox[Tracing] =
-    SkeletonTracingDAO.addComment(this._id, c)(GlobalAccessContext).map(_.asInstanceOf[Tracing])
 
   def updateFromJson(jsUpdates: Seq[JsValue])(implicit ctx: DBAccessContext): Fox[SkeletonTracing] = {
     val updates = jsUpdates.flatMap { json =>
@@ -97,17 +86,6 @@ trait SkeletonManipulations extends FoxImplicits {
     } else {
       Fox.empty
     }
-  }
-
-  def copyDeepAndInsert() = {
-    val copied = this.copy(
-      _id = BSONObjectID.generate,
-      branchPoints = Nil,
-      comments = Nil)
-    for {
-      _ <- SkeletonTracingDAO.insert(copied)(GlobalAccessContext)
-      result <- SkeletonTracingService.mergeWith(this, copied)(GlobalAccessContext)
-    } yield result
   }
 }
 
@@ -141,92 +119,6 @@ object SkeletonTracing {
       t.comments,
       t.settings
     )
-}
-
-object SkeletonTracingService extends AnnotationContentService with CommonTracingService {
-  val dao = SkeletonTracingDAO
-
-  type AType = SkeletonTracing
-
-  def createFrom(dataSetName: String, start: Point3D, boundingBox: Option[BoundingBox], insertStartAsNode: Boolean, settings: AnnotationSettings = AnnotationSettings.skeletonDefault)(implicit ctx: DBAccessContext): Fox[SkeletonTracing] = {
-    val trees =
-      if (insertStartAsNode)
-        List(Tree.createFrom(start))
-      else
-        Nil
-
-    val box: Option[BoundingBox] = boundingBox.flatMap {
-      box =>
-        if (box.isEmpty)
-          None
-        else
-          Some(box)
-    }
-
-    createFrom(
-      TemporarySkeletonTracing(
-        "",
-        dataSetName,
-        trees,
-        Nil,
-        System.currentTimeMillis(),
-        Some(1),
-        start,
-        SkeletonTracing.defaultZoomLevel,
-        box,
-        Nil,
-        settings))
-  }
-
-  def clearTracingData(tracingId: String)(implicit ctx: DBAccessContext) = {
-    SkeletonTracingDAO.withValidId(tracingId) { _tracing =>
-      for {
-        _ <- DBTreeService.removeByTracing(_tracing)
-        - <- SkeletonTracingDAO.resetBranchPoints(_tracing)
-        - <- SkeletonTracingDAO.resetComments(_tracing)
-        tracing <- SkeletonTracingDAO.findOneById(_tracing)
-      } yield tracing
-    }
-  }
-
-  def createFrom(tracingLike: SkeletonTracingLike)(implicit ctx: DBAccessContext): Fox[SkeletonTracing] = {
-    val tracing = SkeletonTracing.from(tracingLike)
-    for {
-      _ <- SkeletonTracingDAO.insert(tracing)
-      trees <- tracingLike.trees
-      - <- Fox.sequence(trees.map(tree => DBTreeService.insert(tracing._id, tree)))
-    } yield tracing
-  }
-
-  def createFrom(nmls: List[NML], boundingBox: Option[BoundingBox], settings: AnnotationSettings)(implicit ctx: DBAccessContext): Fox[SkeletonTracing] = {
-    TemporarySkeletonTracingService.createFrom(nmls, boundingBox, settings).flatMap{ temporary =>
-      createFrom(temporary)
-    }
-  }
-
-  def createFrom(nml: NML, boundingBox: Option[BoundingBox], settings: AnnotationSettings)(implicit ctx: DBAccessContext): Fox[SkeletonTracing] = {
-    createFrom(List(nml), boundingBox, settings)
-  }
-
-  def createFrom(dataSet: DataSet)(implicit ctx: DBAccessContext): Fox[SkeletonTracing] =
-    createFrom(dataSet.name, dataSet.defaultStart, None, false)
-
-  def mergeWith(source: SkeletonTracing, target: SkeletonTracing)(implicit ctx: DBAccessContext): Fox[SkeletonTracing] = {
-    target.mergeWith(source).flatMap { merged =>
-      SkeletonTracingDAO.update(target._id, merged).map { _ => merged }
-    }
-  }
-
-  def removeById(_skeleton: BSONObjectID)(implicit ctx: DBAccessContext) =
-    for {
-      _ <- UsedAnnotationDAO.removeAll(_skeleton.stringify)
-      _ <- DBTreeService.removeByTracing(_skeleton)
-      _ <- SkeletonTracingDAO.removeById(_skeleton)
-    } yield true
-
-
-  def findOneById(tracingId: String)(implicit ctx: DBAccessContext) =
-    SkeletonTracingDAO.findOneById(tracingId)
 }
 
 object SkeletonTracingDAO extends SecuredBaseDAO[SkeletonTracing] with FoxImplicits {

@@ -33,9 +33,11 @@ trait AnnotationContent {
 
   def settings: AnnotationSettings
 
-  def copyDeepAndInsert: Fox[Self]
+  def temporaryDuplicate(id: String)(implicit ctx: DBAccessContext): Fox[AnnotationContent]
 
-  def mergeWith(source: AnnotationContent): Fox[Self]
+  def saveToDB(implicit ctx: DBAccessContext): Fox[AnnotationContent]
+
+  def mergeWith(source: AnnotationContent)(implicit ctx: DBAccessContext): Fox[AnnotationContent]
 
   def contentType: String
 

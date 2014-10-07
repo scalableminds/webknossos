@@ -34,6 +34,8 @@ POST          /api/dataSetConfigurations/:dataSetName                         co
 GET           /user/tasks/request                                             controllers.TaskController.request
 GET           /users/:id/details                                              controllers.UserController.emptyWithWildcard(id)
 GET           /users                                                          controllers.UserController.empty
+GET           /user/password/reset                                            controllers.UserController.resetPassword
+POST          /user/password/reset                                            controllers.UserController.handleResetPassword
 
 GET           /api/users                                                      controllers.UserController.list
 GET           /api/user                                                       controllers.UserController.current
@@ -55,7 +57,6 @@ GET           /api/users/:id/annotations/download                             co
 # GET           /user/configuration/default                                   controllers.SettingsController.default
 # GET           /user/tasks/request                                           controllers.TaskController.request
 GET           /users/:id/details                                              controllers.UserController.emptyWithWildcard(id)
-
 
 
 # Team
@@ -106,6 +107,8 @@ GET           /annotations/:typ/:id                                           co
 GET           /annotations/:typ/:id/info                                      controllers.AnnotationController.info(typ: String, id: String)
 GET           /annotations/:typ/:id/download                                  controllers.AnnotationController.download(typ: String, id: String)
 DELETE        /annotations/:typ/:id                                           controllers.AnnotationController.cancel(typ: String, id: String)
+GET           /annotations/:typ/:id/merge/:mergedTyp/:mergedId/:readOnly      controllers.AnnotationController.merge(typ: String, id: String, mergedTyp: String, mergedId: String, readOnly: Boolean)
+GET           /annotations/:typ/:id/saveMerged                                controllers.AnnotationController.saveMerged(typ: String, id: String)
 
 #Admin pages
 GET           /admin/nml/upload                                               controllers.admin.NMLIO.uploadForm

@@ -46,7 +46,6 @@ class SkeletonTracingView extends View
             {id : "cancel-button", label : "Cancel", callback : ( => @reloadDenied = true ) } ] )
 
 
-
   showFirstVisToggle : ->
 
     modal.show("You just toggled the skeleton visibility. To toggle back, just hit the 1-Key.",

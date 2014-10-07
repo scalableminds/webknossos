@@ -12,7 +12,6 @@ oxalis/model/settings/backbone_to_oxalis_adapter_model : BackboneToOxalisAdapter
 
 class SettingsTabView extends Backbone.Marionette.LayoutView
 
-  className : "col-sm-12"
   id : "lefttabbar"
 
   template : _.template("""
@@ -57,12 +56,12 @@ class SettingsTabView extends Backbone.Marionette.LayoutView
     @datasetSettingsView = new DatasetSettingsView(_model : options._model)
 
     @listenTo(@, "render", @afterRender)
-    @listenTo(app.vent, "changeViewMode", @changeViewMode)
 
 
   afterRender : ->
 
       @datasetSettings.show(@datasetSettingsView)
+      @listenTo(app.vent, "changeViewMode", @changeViewMode)
 
 
   changeViewMode : (mode) ->

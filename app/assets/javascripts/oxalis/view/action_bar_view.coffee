@@ -6,13 +6,11 @@ backbone.marionette : marionette
 ./left-menu/dataset_info_view : DatasetInfoView
 ./left-menu/dataset_position_view : DatasetPositionView
 ./left-menu/view_modes_view : ViewModesView
-./left-menu/help_logo_view : HelpLogoView
-./left-menu/segmentation_info_view : SegmentationInfoView
 ./left-menu/volume_actions_view : VolumeActionsView
 ../constants : Constants
 ###
 
-class LeftMenuView extends Backbone.Marionette.LayoutView
+class ActionBarView extends Backbone.Marionette.LayoutView
 
   className : "container-fluid"
 
@@ -22,7 +20,6 @@ class LeftMenuView extends Backbone.Marionette.LayoutView
     <% } %>
 
     <div id="dataset-info" class="row"></div>
-
     <div id="dataset-position" class="row"></div>
 
     <% if (isVolumeMode) { %>
@@ -32,21 +29,11 @@ class LeftMenuView extends Backbone.Marionette.LayoutView
     <% if (isTraceMode) { %>
       <div id="view-modes" class="row"></div>
     <% } %>
-
-    <% if (isViewMode) { %>
-      <div id="segmentation-info" class="row"></div>
-      <div id="help-logo" class="row"></div>
-    <% } %>
-
-    <% if (isTraceMode) { %>
-      <div id="settings-tab" class="row"></div>
-    <% } %>
   """)
 
   templateHelpers : ->
 
     isTraceMode : @isTraceMode()
-    isViewMode : @isViewMode # spotlight aka public viewing
     isVolumeMode : @isVolumeMode()
 
 
@@ -54,10 +41,7 @@ class LeftMenuView extends Backbone.Marionette.LayoutView
     "datasetActionButtons" : "#dataset-actions"
     "datasetInfo" : "#dataset-info"
     "datasetPosition" : "#dataset-position"
-    "settingsTab" : "#settings-tab"
     "viewModes" : "#view-modes"
-    "helpLogo" : "#help-logo"
-    "segmentationInfo" : "#segmentation-info"
     "volumeActions" : "#volume-actions"
 
 
@@ -77,10 +61,6 @@ class LeftMenuView extends Backbone.Marionette.LayoutView
         @viewModesView = new ViewModesView(options)
 
 
-    else if @isViewMode()
-      @helpLogoView = new HelpLogoView()
-      @segmentationInfoView = new SegmentationInfoView(options)
-
     @listenTo(@, "render", @afterRender)
 
 
@@ -91,7 +71,6 @@ class LeftMenuView extends Backbone.Marionette.LayoutView
 
     if @isTraceMode()
       @datasetActionButtons.show(@datasetActionsView)
-      @settingsTab.show(@settingsTabView)
 
       if @isVolumeMode()
         @volumeActions.show(@volumeActionsView)
@@ -99,19 +78,9 @@ class LeftMenuView extends Backbone.Marionette.LayoutView
         @viewModes.show(@viewModesView)
 
 
-    else if @isViewMode()
-      @helpLogo.show(@helpLogoView)
-      @segmentationInfo.show(@segmentationInfoView)
-
-
   isTraceMode : ->
 
     return @options.controlMode == Constants.CONTROL_MODE_TRACE
-
-
-  isViewMode : ->
-
-    return not @isTraceMode()
 
 
   isVolumeMode : ->

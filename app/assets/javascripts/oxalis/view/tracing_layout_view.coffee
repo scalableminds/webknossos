@@ -1,7 +1,8 @@
 ### define
 backbone.marionette : marionette
 app : app
-./left_menu_view : LeftMenuView
+./action_bar_view : ActionBarView
+./settings/settings_tab_view : SettingsTabView
 ./right_menu_view : RightMenuView
 ./tracing_view : TracingView
 oxalis/controller : OxalisController
@@ -14,7 +15,8 @@ class TracingLayoutView extends Backbone.Marionette.LayoutView
   MARGIN : 40
 
   template : _.template("""
-    <div id="left-menu"></div>
+    <div id="action-bar"></div>
+    <div id="settings-menu"></div>
     <div id="tracing"></div>
     <div id="right-menu"></div>
    """)
@@ -23,9 +25,10 @@ class TracingLayoutView extends Backbone.Marionette.LayoutView
     "rightMenu" : "#right-menu"
 
   regions :
-    "leftMenu" : "#left-menu"
+    "actionBar" : "#action-bar"
     "rightMenu" : "#right-menu"
     "tracingContainer" : "#tracing"
+    "settings" : "#settings-menu"
 
 
   initialize : (options) ->
@@ -57,12 +60,13 @@ class TracingLayoutView extends Backbone.Marionette.LayoutView
 
     @render()
 
-    @leftMenuView = new LeftMenuView(@options)
-    @tracingView = new TracingView(@options)
+    actionBarView = new ActionBarView(@options)
+    tracingView = new TracingView(@options)
+    settingsTabView = new SettingsTabView(@options)
 
-    @leftMenu.show(@leftMenuView, preventDestroy : true)
-    @tracingContainer.show(@tracingView, preventDestroy : true)
-
+    #@actionBar.show(actionBarView, preventDestroy : true)
+    @tracingContainer.show(tracingView, preventDestroy : true)
+    @settings.show(settingsTabView, preventDestroy : true)
 
     if @isTracingMode() and @isSkeletonMode()
       @rightMenuView = new RightMenuView(@options)

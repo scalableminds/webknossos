@@ -1,13 +1,19 @@
-.nav-tabs {
-  margin-bottom: 0;
-  & > li > a {
-    padding-top: 4px;
-    padding-bottom: 4px;
-  }
-}
+#settings-menu {
 
-#lefttabbar {
   position: relative;
+  width: @left-menu-width;
+  padding: 10px 0px;
+  display: inline-block;
+  vertical-align: top;
+  white-space: normal;
+
+  .nav-tabs {
+    margin-bottom: 0;
+    & > li > a {
+      padding-top: 4px;
+      padding-bottom: 4px;
+    }
+  }
 
   .panel {
     border-radius: 0px;

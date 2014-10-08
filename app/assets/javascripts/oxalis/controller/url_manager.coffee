@@ -11,9 +11,8 @@ class UrlManager
 
   constructor : (@model) ->
 
-    url           = document.URL
-    @baseUrl      = url.match(/^([^#]*)#?/)[1]
-    @initialState = @parseUrl url
+    @baseUrl      = document.location.pathname
+    @initialState = @parseUrl()
 
     @update = _.throttle(
       => location.replace(@buildUrl())
@@ -23,9 +22,9 @@ class UrlManager
     _.extend(@, Backbone.Events)
 
 
-  parseUrl : (url)->
+  parseUrl : ->
 
-    stateString = url.match(/^.*#([\d.-]*(?:,[\d.-]*)*)$/)?[1]
+    stateString = location.hash.slice(1)
     state       =
       position : null
       mode : null
@@ -53,7 +52,7 @@ class UrlManager
     @model.flycam3d.on
       changed : => @update()
 
-    @listenTo(app.vent, "changeViewMode", @update)
+    #@listenTo(app.vent, "changeViewMode", @update)
 
 
   buildUrl : ->

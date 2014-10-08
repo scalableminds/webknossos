@@ -36,13 +36,16 @@ class Controller
   # controller - a controller for each row, each column and each
   # cross in this matrix.
 
-  view : null
-  planeController : null
-  arbitraryController : null
-  allowedModes : []
-
-
   constructor : (@controlMode) ->
+
+    _.extend(@,
+      view : null
+      planeController : null
+      arbitraryController : null
+      allowedModes : []
+    )
+
+    _.extend(@, Backbone.Events)
 
     unless @browserSupported()
       unless window.confirm("You are using an unsupported browser, please use the newest version of Chrome, Opera or Safari.\n\nTry anyways?")

@@ -9,9 +9,8 @@ class UrlManager
 
   constructor : (@controller, @model) ->
 
-    url           = document.URL
-    @baseUrl      = url.match(/^([^#]*)#?/)[1]
-    @initialState = @parseUrl url
+    @baseUrl      = document.location.pathname
+    @initialState = @parseUrl @baseUrl
 
     @update = _.throttle(
       => location.replace(@buildUrl())

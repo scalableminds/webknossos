@@ -30,10 +30,8 @@ class DatasetInfoView extends Backbone.Marionette.ItemView
 
   initialize : (options) ->
 
-    {@_model, @controlMode, @tracingType} = options
-
-    @listenTo(@_model.flycam3d, "changed", @render)
-    @listenTo(@_model.flycam, "zoomStepChanged", @render)
+    @listenTo(@model.flycam3d, "changed", @render)
+    @listenTo(@model.flycam, "zoomStepChanged", @render)
 
 
   serializeData : ->
@@ -41,18 +39,18 @@ class DatasetInfoView extends Backbone.Marionette.ItemView
     return {
       annotationType : @tracingType
       zoomLevel : @calculateZoomLevel()
-      dataSetName :@_model.get("dataset").get("name")
+      dataSetName :@model.get("dataset").get("name")
     }
 
 
   calculateZoomLevel : ->
 
-    if @_model.mode in constants.MODES_PLANE
-      zoom  = @_model.flycam.getPlaneScalingFactor()
+    if @model.mode in constants.MODES_PLANE
+      zoom  = @model.flycam.getPlaneScalingFactor()
       width = constants.PLANE_WIDTH
 
-    if @_model.mode in constants.MODES_ARBITRARY
-      zoom  = @_model.flycam3d.zoomStep
+    if @model.mode in constants.MODES_ARBITRARY
+      zoom  = @model.flycam3d.zoomStep
       width = ArbitraryController::WIDTH
 
     # unit is nm
@@ -61,6 +59,6 @@ class DatasetInfoView extends Backbone.Marionette.ItemView
 
   onDestroy : ->
 
-    @_model.flycam3d.off("changed")
-    @_model.flycam.off("zoomStepChanged")
+    @model.flycam3d.off("changed")
+    @model.flycam.off("zoomStepChanged")
 

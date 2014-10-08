@@ -44,12 +44,11 @@ class ActionBarView extends Backbone.Marionette.LayoutView
 
   initialize : (options) ->
 
-    @options = options
     @datasetPositionView = new DatasetPositionView(options)
 
     if @isTraceMode()
       @datasetActionsView = new DatasetActionsView(options)
-      @settingsTabView = new SettingsTabView(_model : options._model)
+      @settingsTabView = new SettingsTabView(options)
 
       if @isVolumeMode()
         @volumeActionsView = new VolumeActionsView(options)
@@ -75,10 +74,10 @@ class ActionBarView extends Backbone.Marionette.LayoutView
 
   isTraceMode : ->
 
-    return @options.controlMode == Constants.CONTROL_MODE_TRACE
+    return @model.get("controlMode") == Constants.CONTROL_MODE_TRACE
 
 
   isVolumeMode : ->
 
-    return @options._model.mode == Constants.MODE_VOLUME
+    return @model.get("mode") == Constants.MODE_VOLUME
 

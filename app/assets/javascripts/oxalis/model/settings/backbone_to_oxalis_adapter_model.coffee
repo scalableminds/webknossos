@@ -10,7 +10,7 @@ class BackboneToOxalisAdapterModel extends Backbone.Model
 
   initialize : (options) ->
 
-    @oxalisModel = options._model
+    @oxalisModel = options.model
 
     # Default Values for inital setup / rendering
     @skeletonTracingAdapter = new Backbone.Model(

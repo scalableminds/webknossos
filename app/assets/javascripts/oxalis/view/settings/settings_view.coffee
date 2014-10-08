@@ -19,9 +19,9 @@ class SettingsView extends Backbone.Marionette.ItemView
   """)
 
 
-  initialize : ({ @_model }) ->
+  initialize : ->
 
-    @model = @_model[@modelName]
+    @model = @model[@modelName]
 
     Backbone.Subviews.add(this)
 

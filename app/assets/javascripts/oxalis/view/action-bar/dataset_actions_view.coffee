@@ -8,13 +8,13 @@ libs/toast : Toast
 class DatsetActionsView extends Backbone.Marionette.ItemView
 
   template : _.template("""
-    <% if(allowUpdate){ %>
+    <% if(restrictions.allowUpdate){ %>
       <a href="#" class="btn btn-primary" id="trace-save-button">Save</a>
     <% } else { %>
       <button class="btn btn-primary disabled">Read only</button>
     <% } %>
     <div class="btn-group btn-group">
-      <% if(allowFinish) { %>
+      <% if(restrictions.allowFinish) { %>
         <a href="/annotations/<%= tracingType %>/<%= tracingId %>/finishAndRedirect" class="btn btn-default" id="trace-finish-button"><i class="fa fa-check-circle-o"></i>Finish</a>
       <% } %>
       <a href="/annotations/<%= tracingType %>/<%= tracingId %>/download" class="btn btn-default" id="trace-download-button"><i class="fa fa-download"></i>NML</a>
@@ -70,20 +70,6 @@ class DatsetActionsView extends Backbone.Marionette.ItemView
     "modalWrapper" : ".merge-modal-wrapper"
 
 
-  initialize : (options) ->
-
-    {@_model, @tracingType, @tracingId} = options
-
-
-  serializeData : ->
-
-    data =
-      tracingType : @tracingType
-      tracingId : @tracingId
-
-    return _.extend(data, @_model.restrictions)
-
-
   finishTracing : (event) ->
 
     event.preventDefault()
@@ -107,7 +93,7 @@ class DatsetActionsView extends Backbone.Marionette.ItemView
 
   mergeTracing : ->
 
-    modalView = new MergeModalView(_model : @_model)
+    modalView = new MergeModalView({@model})
     @ui.modalWrapper.html(modalView.render().el)
     modalView.show()
 

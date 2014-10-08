@@ -38,7 +38,7 @@ class Controller
 
   constructor : (options) ->
 
-    {@controlMode, _model: @model } = options
+    { @model } = options
 
     _.extend(@,
       view : null
@@ -162,7 +162,7 @@ class Controller
       "q" : => @toggleFullScreen()
     }
 
-    if @controlMode == constants.CONTROL_MODE_TRACE
+    if @model.get("controlMode") == constants.CONTROL_MODE_TRACE
       _.extend( keyboardControls, {
         #Set Mode, outcomment for release
         "shift + 1" : =>

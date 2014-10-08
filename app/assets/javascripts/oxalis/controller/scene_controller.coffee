@@ -253,5 +253,4 @@ class SceneController
     @listenTo(user, "change:displayTDViewXY", (model, value) -> @setDisplayPlanes(value))
     @listenTo(user, "change:displayTDViewYZ", (model, value) -> @setDisplayPlanes(value))
     @listenTo(user, "change:displayTDViewXZ", (model, value) -> @setDisplayPlanes(value))
-    @listenTo(app.vent, "segmentationInfoView:change", (value) -> setSegmentationAlpha(value))
 

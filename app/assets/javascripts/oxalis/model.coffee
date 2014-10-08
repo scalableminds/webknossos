@@ -137,29 +137,31 @@ class Model extends Backbone.Model
 
     @setDefaultBinaryColors()
 
-    @flycam = new Flycam2d(constants.PLANE_WIDTH, zoomStepCount, @)
-    @flycam3d = new Flycam3d(constants.DISTANCE_3D, dataset.get("scale"))
-    @listenTo(@flycam3d, "changed", (matrix, zoomStep) => @flycam.setPosition(matrix[12..14]))
-    @listenTo(@flycam, "positionChanged" : (position) => @flycam3d.setPositionSilent(position))
+    flycam = new Flycam2d(constants.PLANE_WIDTH, zoomStepCount, @)
+    flycam3d = new Flycam3d(constants.DISTANCE_3D, dataset.get("scale"))
+    @set("flycam", flycam)
+    @set("flycam3d", flycam3d)
+    @listenTo(flycam3d, "changed", (matrix, zoomStep) => flycam.setPosition(matrix[12..14]))
+    @listenTo(flycam, "positionChanged" : (position) => flycam3d.setPositionSilent(position))
 
     # init state
     state = @get("state")
-    @flycam.setPosition( state.position || tracing.content.editPosition )
+    flycam.setPosition( state.position || tracing.content.editPosition )
     if state.zoomStep?
-      @flycam.setZoomStep( state.zoomStep )
-      @flycam3d.setZoomStep( state.zoomStep )
+      flycam.setZoomStep( state.zoomStep )
+      flycam3d.setZoomStep( state.zoomStep )
     if state.rotation?
-      @flycam3d.setRotation( state.rotation )
+      flycam3d.setRotation( state.rotation )
 
     if @get("controlMode") == constants.CONTROL_MODE_TRACE
 
       if isVolumeTracing
         $.assert( @getSegmentationBinary()?,
           "Volume is allowed, but segmentation does not exist" )
-        @set("volumeTracing", new VolumeTracing(tracing, @flycam, @getSegmentationBinary(), @updatePipeline))
+        @set("volumeTracing", new VolumeTracing(tracing, flycam, @getSegmentationBinary(), @updatePipeline))
 
       else
-        @set("skeletonTracing", new SkeletonTracing(tracing, @flycam, @flycam3d, @user, @updatePipeline))
+        @set("skeletonTracing", new SkeletonTracing(tracing, flycam, flycam3d, @user, @updatePipeline))
 
     @computeBoundaries()
 

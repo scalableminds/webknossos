@@ -50,13 +50,12 @@ class CommentTabView extends Backbone.Marionette.CompositeView
     "click #comment-previous" : "previousComment"
 
 
-  initialize : (options) ->
+  initialize : ->
 
-    { @_model } = options
     @activeComment = new Backbone.Model()
     @isSortedAscending = true
 
-    @collection = @_model.skeletonTracing.comments
+    @collection = @model.skeletonTracing.comments
 
     # Marionette internal function
     this._initialEvents()
@@ -69,8 +68,8 @@ class CommentTabView extends Backbone.Marionette.CompositeView
       @activeComment = comment
 
     # events
-    @listenTo(@_model.skeletonTracing, "newActiveNode", @updateInputElement)
-    @listenTo(@_model.skeletonTracing, "deleteComment", @deleteComment)
+    @listenTo(@model.skeletonTracing, "newActiveNode", @updateInputElement)
+    @listenTo(@model.skeletonTracing, "deleteComment", @deleteComment)
     @listenTo(@collection, "sort", @render)
 
     # keyboard shortcuts
@@ -82,15 +81,15 @@ class CommentTabView extends Backbone.Marionette.CompositeView
 
   getActiveNodeId : ->
 
-    return @_model.skeletonTracing.getActiveNodeId()
+    return @model.skeletonTracing.getActiveNodeId()
 
 
   setActiveNode : (activeComment) ->
 
     @activeComment = activeComment
     nodeId = activeComment.get("node")
-    @_model.skeletonTracing.setActiveNode(nodeId)
-    @_model.skeletonTracing.centerActiveNode()
+    @model.skeletonTracing.setActiveNode(nodeId)
+    @model.skeletonTracing.centerActiveNode()
 
 
   updateInputElement : (nodeId) ->

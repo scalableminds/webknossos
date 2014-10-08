@@ -41,14 +41,14 @@ class SettingsTabView extends Backbone.Marionette.LayoutView
 
   initialize : (options) ->
 
-    backboneToOxalisAdapter = new BackboneToOxalisAdapterModel(_model : options._model)
-    @skeletonTracingSettingsView = new SkeletonTracingSettingsView(_model : backboneToOxalisAdapter)
-    @volumeTracingSettingsView = new VolumeTracingSettingsView(_model : backboneToOxalisAdapter)
+    backboneToOxalisAdapter = new BackboneToOxalisAdapterModel(options)
+    @skeletonTracingSettingsView = new SkeletonTracingSettingsView(model : backboneToOxalisAdapter)
+    @volumeTracingSettingsView = new VolumeTracingSettingsView(model : backboneToOxalisAdapter)
 
-    @planeUserSettingsView = new PlaneUserSettingsView(_model : options._model)
-    @arbitraryUserSettingsView = new ArbitraryUserSettingsView(_model : options._model)
+    @planeUserSettingsView = new PlaneUserSettingsView(options)
+    @arbitraryUserSettingsView = new ArbitraryUserSettingsView(options)
 
-    @datasetSettingsView = new DatasetSettingsView(_model : options._model)
+    @datasetSettingsView = new DatasetSettingsView(options)
 
     @listenTo(@, "render", @afterRender)
 

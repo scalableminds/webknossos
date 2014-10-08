@@ -28,7 +28,7 @@ class CommentTabItemView extends Backbone.Marionette.ItemView
     {activeComment, @parent} = options
     @activeCommentId = activeComment.get("node")
 
-    @listenTo(@parent._model.skeletonTracing, "newActiveNode", @update)
+    @listenTo(@parent.model.skeletonTracing, "newActiveNode", @update)
     @listenTo(@model, "change", @render)
 
 

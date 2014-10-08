@@ -36,12 +36,14 @@ class TracingLayoutView extends Backbone.Marionette.LayoutView
     @options = _.extend(
       {},
       options,
-      _model : new OxalisModel(options)
-      )
+      model : new OxalisModel(options)
+    )
+
+    @model = @options.model
 
     @listenTo(@, "render", @afterRender)
     @listenTo(app.vent, "planes:resize", @resize)
-    @listenTo(@options._model, "sync", @renderRegions)
+    @listenTo(@model, "sync", @renderRegions)
     #$(window).on("resize", @resize.bind(@))
 
     app.oxalis = new OxalisController(@options)
@@ -77,12 +79,12 @@ class TracingLayoutView extends Backbone.Marionette.LayoutView
 
   isTracingMode : ->
 
-    return @options.controlMode != Constants.CONTROL_MODE_VIEW
+    return @model.get("controlMode") != Constants.CONTROL_MODE_VIEW
 
 
   isSkeletonMode : ->
 
-    return @options._model.mode == Constants.MODE_PLANE_TRACING
+    return @model.get("mode") == Constants.MODE_PLANE_TRACING
 
 
   onDestroy : ->

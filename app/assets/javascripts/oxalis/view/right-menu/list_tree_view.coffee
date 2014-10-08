@@ -71,25 +71,24 @@ class ListTreeView extends Backbone.Marionette.CompositeView
 
   initialize : (options) ->
 
-    {@_model} = options
 
     @listenTo(@, "render", @updateSortIndicator)
     @refresh()
 
-    @listenTo(@_model.skeletonTracing, "deleteTree", @refresh)
-    @listenTo(@_model.skeletonTracing, "mergeTree", @refresh)
-    @listenTo(@_model.skeletonTracing, "newTree", @refresh)
-    @listenTo(@_model.skeletonTracing, "newTreeName", @refresh)
-    @listenTo(@_model.skeletonTracing, "reloadTrees", @refresh)
-    @listenTo(@_model.skeletonTracing, "deleteActiveNode", @updateTreesDebounced)
-    @listenTo(@_model.skeletonTracing, "newNode", @updateTreesDebounced)
-    @listenTo(@_model.skeletonTracing, "newTreeColor", @updateTreesDebounced)
-    @listenTo(@_model.skeletonTracing, "newActiveTree", @updateTreesDebounced)
-    @listenTo(@_model.skeletonTracing, "newActiveNode", @_renderChildren)
+    @listenTo(@model.skeletonTracing, "deleteTree", @refresh)
+    @listenTo(@model.skeletonTracing, "mergeTree", @refresh)
+    @listenTo(@model.skeletonTracing, "newTree", @refresh)
+    @listenTo(@model.skeletonTracing, "newTreeName", @refresh)
+    @listenTo(@model.skeletonTracing, "reloadTrees", @refresh)
+    @listenTo(@model.skeletonTracing, "deleteActiveNode", @updateTreesDebounced)
+    @listenTo(@model.skeletonTracing, "newNode", @updateTreesDebounced)
+    @listenTo(@model.skeletonTracing, "newTreeColor", @updateTreesDebounced)
+    @listenTo(@model.skeletonTracing, "newActiveTree", @updateTreesDebounced)
+    @listenTo(@model.skeletonTracing, "newActiveNode", @_renderChildren)
 
 
   setTreeName : (evt) ->
-    @_model.skeletonTracing.setTreeName(evt.target.value)
+    @model.skeletonTracing.setTreeName(evt.target.value)
 
 
   selectPreviousTree : ->
@@ -101,24 +100,24 @@ class ListTreeView extends Backbone.Marionette.CompositeView
 
 
   createNewTree : ->
-    @_model.skeletonTracing.createNewTree()
+    @model.skeletonTracing.createNewTree()
 
 
   deleteTree : ->
-    @_model.skeletonTracing.deleteTree(true)
+    @model.skeletonTracing.deleteTree(true)
 
 
   shuffleTreeColor : ->
-    @_model.skeletonTracing.shuffleTreeColor()
+    @model.skeletonTracing.shuffleTreeColor()
 
 
   shuffleAllTreeColors : ->
-    @_model.skeletonTracing.shuffleAllTreeColors()
+    @model.skeletonTracing.shuffleAllTreeColors()
 
 
   sortTrees : (evt) ->
     evt.preventDefault()
-    @_model.user.set("sortTreesByName", ($(evt.currentTarget).data("sort") == "name"))
+    @model.user.set("sortTreesByName", ($(evt.currentTarget).data("sort") == "name"))
 
     @refresh()
     @updateSortIndicator()
@@ -126,26 +125,26 @@ class ListTreeView extends Backbone.Marionette.CompositeView
 
   updateSortIndicator : ->
 
-    isSortedByName = @_model.user.get("sortTreesByName")
+    isSortedByName = @model.user.get("sortTreesByName")
     @ui.sortNameIcon.toggle(isSortedByName)
     @ui.sortTimeIcon.toggle(!isSortedByName)
 
 
   selectNextTree : (next) ->
 
-    @_model.skeletonTracing.selectNextTree(next)
-    @_model.skeletonTracing.centerActiveNode()
+    @model.skeletonTracing.selectNextTree(next)
+    @model.skeletonTracing.centerActiveNode()
     @updateName()
 
 
   getActiveTree : ->
 
-    return @_model.skeletonTracing.getTree()
+    return @model.skeletonTracing.getTree()
 
 
   refresh : ->
 
-    trees = @_model.skeletonTracing.getTreesSorted()
+    trees = @model.skeletonTracing.getTreesSorted()
     @collection = new Backbone.Collection(trees)
 
     @updateTreesDebounced()
@@ -175,5 +174,5 @@ class ListTreeView extends Backbone.Marionette.CompositeView
 
   setActiveTree : (treeId) ->
 
-    @_model.skeletonTracing.setActiveTree(treeId)
-    @_model.skeletonTracing.centerActiveNode()
+    @model.skeletonTracing.setActiveTree(treeId)
+    @model.skeletonTracing.centerActiveNode()

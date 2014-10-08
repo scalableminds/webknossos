@@ -40,29 +40,27 @@ class DatasetPositionView extends Backbone.Marionette.ItemView
 
   initialize : (options) ->
 
-    {@_model} = options
-
     # TODO make controlMode a property of the model and read from there
     @listenTo(app.vent, "changeViewMode", @render)
 
     # TODO MEASURE PERFORMANCE HIT BECAUSE OF CONSTANT RE-RENDER
-    @listenTo(@_model.flycam3d, "changed", @render)
-    @listenTo(@_model.flycam, "positionChanged", @render)
+    @listenTo(@model.get("flycam3d"), "changed", @render)
+    @listenTo(@model.get("flycam"), "positionChanged", @render)
 
 
   serializeData : ->
 
     #TODO refactor / remove after deepmodel
     data =
-      controlMode : @_model.controlMode
+      controlMode : @model.controlMode
 
-    if @_model.flycam
+    if @model.flycam
       _.extend(data,
-        position : @_model.flycam.getPosition()
+        position : @model.flycam.getPosition()
       )
-    if @_model.flycam3d
+    if @model.flycam3d
       _.extend(data,
-        rotation :@_model.flycam3d.getRotation()
+        rotation : @model.flycam3d.getRotation()
       )
 
     return data
@@ -73,7 +71,7 @@ class DatasetPositionView extends Backbone.Marionette.ItemView
 
     posArray = Utils.stringToNumberArray(event.target.value)
     if posArray.length == 3
-      @_model.flycam.setPosition(posArray)
+      @model.flycam.setPosition(posArray)
 
     @render()
 
@@ -82,13 +80,13 @@ class DatasetPositionView extends Backbone.Marionette.ItemView
 
     rotArray = Utils.stringToNumberArray(event.target.value)
     if rotArray.length == 3
-      @_model.flycam3d.setRotation rotArray
+      @model.flycam3d.setRotation rotArray
 
     @render()
 
 
   onDestroy : ->
 
-    @_model.flycam3d.off("changed")
-    @_model.flycam.off("positionChanged")
+    @model.flycam3d.off("changed")
+    @model.flycam.off("positionChanged")
 

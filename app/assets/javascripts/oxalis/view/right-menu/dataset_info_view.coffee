@@ -64,8 +64,8 @@ class DatsetInfoView extends Backbone.Marionette.ItemView
     return zoom * width * app.scaleInfo.baseVoxel
 
 
-  onClose : ->
+  onDestroy : ->
 
     @_model.flycam3d.off("changed")
-    @_model.flycam.off("changed")
+    @_model.flycam.off("zoomStepChanged")
 

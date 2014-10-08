@@ -97,8 +97,9 @@ class DatasetPositionView extends Backbone.Marionette.ItemView
     @render()
 
 
-  onClose : ->
+  onDestroy : ->
 
+    debugger
     @_model.flycam3d.off("changed")
-    @_model.flycam.off("changed")
+    @_model.flycam.off("positionChanged")
 

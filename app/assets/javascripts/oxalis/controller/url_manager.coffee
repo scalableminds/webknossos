@@ -10,7 +10,7 @@ class UrlManager
   constructor : (@controller, @model) ->
 
     @baseUrl      = document.location.pathname
-    @initialState = @parseUrl @baseUrl
+    @initialState = @parseUrl()
 
     @update = _.throttle(
       => location.replace(@buildUrl())
@@ -18,9 +18,9 @@ class UrlManager
     )
 
 
-  parseUrl : (url)->
+  parseUrl : ->
 
-    stateString = url.match(/^.*#([\d.-]*(?:,[\d.-]*)*)$/)?[1]
+    stateString = location.hash
     state       = {}
 
     if stateString?

@@ -1,13 +1,13 @@
 {
   "name": "oxalis",
-  "version": "0.17.84",
+  "version": "0.17.99",
   "dependencies": {
     "bootstrap": "~3.1.1",
     "jquery": "~2.0.3",
     "requirejs": "~2.1.1",
     "lodash": "~2.2.1",
     "backbone": "~1.1.0",
-    "backbone.marionette": "2.0.1",
+    "backbone.marionette": "~2.2.1",
     "font-awesome": "~4.0.3",
     "momentjs": "~2.5.1",
     "threejs-stats": "",
@@ -24,8 +24,10 @@
     "three": "https://raw.github.com/georgwiese/three.js/scm_oxalis/build/three.js",
     "ColorConverter": "https://raw.github.com/georgwiese/three.js/scm_oxalis/examples/js/math/ColorConverter.js",
     "TrackballControls": "https://raw.github.com/georgwiese/three.js/scm_oxalis/examples/js/controls/TrackballControls.js",
-    "c3": "0.1.25",
-    "marionette": "1.8.6"
+    "c3": "0.1.25"
   },
-  "devDependencies": {}
+  "devDependencies": {},
+  "resolutions": {
+    "backbone.marionette": "~2.2.1"
+  }
 }

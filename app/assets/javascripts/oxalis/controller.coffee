@@ -36,15 +36,16 @@ class Controller
   # controller - a controller for each row, each column and each
   # cross in this matrix.
 
-  view : null
-  planeController : null
-  arbitraryController : null
-  allowedModes : []
-
-
   constructor : (options) ->
 
     {@controlMode, _model: @model } = options
+
+    _.extend(@,
+      view : null
+      planeController : null
+      arbitraryController : null
+      allowedModes : []
+    )
 
     _.extend(@, Backbone.Events)
 
@@ -136,7 +137,7 @@ class Controller
         app.vent.trigger("changeViewMode", @urlManager.initialState.mode)
 
       # initial trigger
-      @sceneController.setSegmentationAlpha($('#alpha-slider').data("slider-value") or @model.user.get("segmentationOpacity"))
+      @sceneController.setSegmentationAlpha(@model.user.get("segmentationOpacity"))
 
 
   initKeyboard : ->

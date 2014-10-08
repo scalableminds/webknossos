@@ -139,12 +139,8 @@ class Model extends Backbone.Model
 
     @flycam = new Flycam2d(constants.PLANE_WIDTH, zoomStepCount, @)
     @flycam3d = new Flycam3d(constants.DISTANCE_3D, dataset.get("scale"))
-    @flycam3d.on
-      "changed" : (matrix, zoomStep) =>
-        @flycam.setPosition( matrix[12..14] )
-    @flycam.on
-      "positionChanged" : (position) =>
-        @flycam3d.setPositionSilent(position)
+    @listenTo(@flycam3d, "changed", (matrix, zoomStep) => @flycam.setPosition(matrix[12..14]))
+    @listenTo(@flycam, "positionChanged" : (position) => @flycam3d.setPositionSilent(position))
 
     # init state
     state = @get("state")

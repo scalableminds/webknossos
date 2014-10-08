@@ -42,8 +42,8 @@ class Skeleton
     @listenTo(@skeletonTracing, "setBranch", @setBranch)
     @listenTo(@skeletonTracing, "newTreeColor", @updateTreeColor)
     @listenTo(@skeletonTracing, "reloadTrees", (trees, finishedDeferred) ->
-      @skeletonTracing.once("finishedRender", =>
-        @skeletonTracing.once("finishedRender", =>
+      @listenToOnce(@skeletonTracing, "finishedRender", ->
+        @listenToOnce(@skeletonTracing, "finishedRender", ->
           @loadSkeletonFromModel(trees, finishedDeferred))
         @flycam.update())
       @flycam.update()
@@ -73,8 +73,8 @@ class Skeleton
     for tree in @skeletonTracing.getTrees()
       @createNewTree(tree.treeId, tree.color)
 
-    @skeletonTracing.once("finishedRender", =>
-      @skeletonTracing.once("finishedRender", =>
+    @listenToOnce(@skeletonTracing, "finishedRender", ->
+      @listenToOnce(@skeletonTracing, "finishedRender", ->
         @loadSkeletonFromModel())
       @flycam.update())
     @flycam.update()

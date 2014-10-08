@@ -1,4 +1,5 @@
 ### define
+backbone : backbone
 three : THREE
 m4x4 : M4x4
 v3 : V3
@@ -42,13 +43,12 @@ class ArbitraryPlane
 
   constructor : (@cam, @model, @width = 128) ->
 
+    _.extend(@, Backbone.Events)
+
     @mesh = @createMesh()
 
-    @cam.on "changed", =>
-      @isDirty = true
-
-    @model.flycam.on "positionChanged", =>
-      @isDirty = true
+    @listenTo(@cam, "changed", -> @isDirty = true)
+    @listenTo(@model.flycam, "positionChanged", -> @isDirty = true)
 
     for name, binary of @model.binary
       binary.cube.on "bucketLoaded", => @isDirty = true

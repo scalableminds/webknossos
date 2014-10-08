@@ -19,8 +19,7 @@ class SkeletonTracingPlaneController extends PlaneController
 
     super(@model, stats, @view, @sceneController)
 
-    @planeView.on
-      finishedRender : => @model.skeletonTracing.rendered()
+    @listenTo(@planeView, "finishedRender", @model.skeletonTracing.rendered)
 
 
   getPlaneMouseControls : (planeId) ->

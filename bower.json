@@ -1,6 +1,6 @@
 {
   "name": "oxalis",
-  "version": "0.17.99",
+  "version": "0.17.100",
   "dependencies": {
     "bootstrap": "~3.1.1",
     "jquery": "~2.0.3",
@@ -26,8 +26,5 @@
     "TrackballControls": "https://raw.github.com/georgwiese/three.js/scm_oxalis/examples/js/controls/TrackballControls.js",
     "c3": "0.1.25"
   },
-  "devDependencies": {},
-  "resolutions": {
-    "backbone.marionette": "~2.2.1"
-  }
+  "devDependencies": {}
 }

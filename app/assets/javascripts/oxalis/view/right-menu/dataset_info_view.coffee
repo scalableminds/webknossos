@@ -32,13 +32,8 @@ class DatsetInfoView extends Backbone.Marionette.ItemView
 
     {@_model, @controlMode, @tracingType} = options
 
-    @_model.flycam3d.on("changed", =>
-      @render()
-    )
-
-    @_model.flycam.on("zoomStepChanged", =>
-      @render()
-    )
+    @listenTo(@_model.flycam3d, "changed", @render)
+    @listenTo(@_model.flycam, "zoomStepChanged", @render)
 
 
   serializeData : ->

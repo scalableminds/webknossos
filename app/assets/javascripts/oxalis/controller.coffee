@@ -73,12 +73,12 @@ class Controller
       # Warn if segmentation data is not available
       if @model.getSegmentationBinary()?
         hasWarned = false
-        @model.flycam.on
-          zoomStepChanged : =>
-            if @model.flycam.getIntegerZoomStep() > 1 and not hasWarned
-              hasWarned = true
-              Toast.info(
-                "Segmentation data is only available at lower zoom levels.")
+        @listenTo(@model.flycam, "zoomStepChanged", =>
+          if @model.flycam.getIntegerZoomStep() > 1 and not hasWarned
+            hasWarned = true
+            Toast.info(
+              "Segmentation data is only available at lower zoom levels.")
+        )
 
       for allowedMode in @model.settings.allowedModes
         @allowedModes.push switch allowedMode

@@ -5,7 +5,7 @@ oxalis/constants : Constants
 ../annotations/volumetracing_controller : VolumeTracingController
 ###
 
-class VolumeTacingPlaneController extends PlaneController
+class VolumeTracingPlaneController extends PlaneController
 
   # See comment in Controller class on general controller architecture.
   #
@@ -18,23 +18,17 @@ class VolumeTacingPlaneController extends PlaneController
 
     super(@model, stats, @view, @sceneController)
 
-    @model.flycam.on
-      positionChanged : =>
-        @render3dCell @model.volumeTracing.getActiveCellId()
-      zoomStepChanged : =>
-        @render3dCell @model.volumeTracing.getActiveCellId()
+    @listenTo(@model.flycam, "positionChanged", =>
+      @render3dCell @model.volumeTracing.getActiveCellId()
+    )
+    @listenTo(@model.flycam, "zoomStepChanged", =>
+      @render3dCell @model.volumeTracing.getActiveCellId()
+    )
 
-    @model.user.on
-      isosurfaceDisplayChanged : =>
-        @render3dCell @model.volumeTracing.getActiveCellId()
-      isosurfaceBBsizeChanged : =>
-        @render3dCell @model.volumeTracing.getActiveCellId()
-      isosurfaceResolutionChanged : =>
-        @render3dCell @model.volumeTracing.getActiveCellId()
-
-    @model.volumeTracing.on
-      newActiveCell : (id) =>
-        @render3dCell id
+    @listenTo(@model.user, "isosurfaceDisplayChanged", -> @render3dCell @model.volumeTracing.getActiveCellId())
+    @listenTo(@model.user, "isosurfaceBBsizeChanged", -> @render3dCell @model.volumeTracing.getActiveCellId())
+    @listenTo(@model.user, "isosurfaceResolutionChanged", -> @render3dCell @model.volumeTracing.getActiveCellId())
+    @listenTo(@model.volumeTracing, "newActiveCell", (id) -> @render3dCell id)
 
 
   getPlaneMouseControls : (planeId) ->

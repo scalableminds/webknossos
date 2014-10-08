@@ -47,12 +47,9 @@ class UrlManager
 
   startUrlUpdater : ->
 
-    @model.flycam.on
-      changed : => @update()
-    @model.flycam3d.on
-      changed : => @update()
-
-    #@listenTo(app.vent, "changeViewMode", @update)
+    @listenTo(@model.flycam, "changed", @update)
+    @listenTo(@model.flycam3d, "changed", @update)
+    @listenTo(app.vent, "changeViewMode", @update)
 
 
   buildUrl : ->

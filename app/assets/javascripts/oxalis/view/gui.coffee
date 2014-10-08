@@ -1,6 +1,5 @@
 ### define
 libs/request : Request
-libs/event_mixin : EventMixin
 libs/toast : Toast
 libs/utils : Utils
 ../model/dimensions : Dimensions
@@ -14,7 +13,6 @@ class Gui
 
   constructor : (container, @model, @restrictions, @tracingSettings) ->
 
-    _.extend(this, new EventMixin())
 
     @updateGlobalPosition( @model.flycam.getPosition() )
     @updateRotation()
@@ -195,16 +193,14 @@ class Gui
       @saveNow()
 
 
-    @model.flycam.on
-      positionChanged : (position) =>
-        @updateGlobalPosition(position)
-      zoomStepChanged : =>
-        @updateViewportWidth()
+    @listenTo(@model.flycam, "positionChanged", (position) -> @updateGlobalPosition(position))
+    @listenTo(@model.flycam, "zoomStepChanged", @updateViewportWidth)
 
-    @model.flycam3d.on
+    @listenTo(@model.flycam3d.on
       changed : =>
         @updateViewportWidth()
         @updateRotation()
+    )
 
     @model.skeletonTracing?.on
       newActiveNode       : => @update()

@@ -9,6 +9,7 @@ import play.api.libs.concurrent._
 import com.scalableminds.util.geometry.Point3D
 import play.api.i18n.Messages
 import com.scalableminds.braingames.binary.models._
+import com.scalableminds.datastore.models._
 import com.scalableminds.braingames.binary._
 import com.scalableminds.util.reactivemongo.DBAccessContext
 import com.scalableminds.util.tools.{FoxImplicits, Fox}
@@ -321,6 +322,7 @@ trait BinaryDataWriteController extends BinaryDataCommonController {
                  cubeSize: Int,
                  parsedRequest: ParsedRequestCollection[ParsedDataWriteRequest]): Fox[Boolean] = {
     val dataWriteRequestCollection = createDataWriteRequestCollection(dataSource, dataLayer, cubeSize, parsedRequest)
+    dataWriteRequestCollection.requests.map(VolumeUpdateService.store)
     DataStorePlugin.binaryDataService.handleDataRequest(dataWriteRequestCollection).map(_ => true)
   }
 

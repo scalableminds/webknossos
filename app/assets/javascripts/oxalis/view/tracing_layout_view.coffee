@@ -84,3 +84,7 @@ class TracingLayoutView extends Backbone.Marionette.LayoutView
 
     return @options._model.mode == Constants.MODE_PLANE_TRACING
 
+
+  onDestroy : ->
+
+    app.oxalis = null

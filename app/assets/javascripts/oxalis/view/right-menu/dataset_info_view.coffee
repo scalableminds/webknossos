@@ -5,7 +5,7 @@ oxalis/constants : constants
 oxalis/controller/viewmodes/arbitrary_controller : ArbitraryController
 ###
 
-class DatsetInfoView extends Backbone.Marionette.ItemView
+class DatasetInfoView extends Backbone.Marionette.ItemView
 
   className : "col-sm-12"
   id : "dataset"

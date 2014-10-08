@@ -2,7 +2,6 @@
 jquery : $
 underscore : _
 backbone : Backbone
-oxalis/view/tracing_layout_view : TracingLayoutView
 oxalis/constants : constants
 ###
 
@@ -70,22 +69,30 @@ class Router extends Backbone.Router
     @$loadingSpinner.hide()
 
 
-  tracingView : (type, id)->
+  tracingView : (type, id) ->
 
-    @changeView(new TracingLayoutView(
-      tracingType: type
-      tracingId : id
-      controlMode : constants.CONTROL_MODE_TRACE
-    ))
+
+    require ["oxalis/view/tracing_layout_view"], (TracingLayoutView) =>
+
+      view = new TracingLayoutView(
+        tracingType: type
+        tracingId : id
+        controlMode : constants.CONTROL_MODE_TRACE
+      )
+      view.forcePageReload = true
+      @changeView(view)
 
 
   tracingViewPublic : (id) ->
 
-    @changeView(new TracingLayoutView(
-      tracingType: "View"
-      tracingId : id
-      controlMode : constants.CONTROL_MODE_VIEW
-    ))
+    require ["oxalis/view/tracing_layout_view"], (TracingLayoutView) =>
+      view = new TracingLayoutView(
+        tracingType: "View"
+        tracingId : id
+        controlMode : constants.CONTROL_MODE_VIEW
+      )
+      view.forcePageReload = true
+      @changeView(view)
 
 
   projects : ->
@@ -213,6 +220,10 @@ class Router extends Backbone.Router
           view.destroy()
         else
           view.remove()
+
+      if view.forcePageReload
+        @loadURL(location.href)
+
     else
       # we are probably coming from a URL that isn't a Backbone.View yet (or page reload)
       @$mainContainer.empty()

@@ -37,7 +37,7 @@ class DatasetInfoView extends Backbone.Marionette.ItemView
   serializeData : ->
 
     return {
-      annotationType : @tracingType
+      annotationType : @model.get("tracingType")
       zoomLevel : @calculateZoomLevel()
       dataSetName :@model.get("dataset").get("name")
     }

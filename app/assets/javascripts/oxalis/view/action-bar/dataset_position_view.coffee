@@ -13,20 +13,26 @@ class DatasetPositionView extends Backbone.Marionette.ItemView
     <div class="form-group">
       <div class="input-group">
         <span class="input-group-addon">Position</span>
-        <input id="trace-position-input" class="form-control" type="text" value="<%= vec3ToString(position) %>">
+        <input id="trace-position-input" class="form-control" type="text" value="<%= position() %>">
       </div>
     </div>
     <div class="form-group">
       <% if(isArbitrayMode()) { %>
         <div class="input-group">
           <span class="input-group-addon">Rotation</span>
-          <input id="trace-rotation-input" class="form-control" type="text" value="<%= vec3ToString(rotation) %>">
+          <input id="trace-rotation-input" class="form-control" type="text" value="<%= rotation() %>">
         </div>
       <% } %>
     </div>
   """)
 
   templateHelpers :
+    position : ->
+      @vec3ToString(@flycam.position)
+
+    rotation : ->
+      @vec3ToString(@flycam3d.rotation)
+
     vec3ToString : (vec3) ->
       return Math.floor(vec3[0]) + ", " + Math.floor(vec3[1]) + ", " + Math.floor(vec3[2])
 
@@ -40,7 +46,6 @@ class DatasetPositionView extends Backbone.Marionette.ItemView
 
   initialize : (options) ->
 
-    # TODO make controlMode a property of the model and read from there
     @listenTo(app.vent, "changeViewMode", @render)
 
     # TODO MEASURE PERFORMANCE HIT BECAUSE OF CONSTANT RE-RENDER
@@ -48,32 +53,11 @@ class DatasetPositionView extends Backbone.Marionette.ItemView
     @listenTo(@model.get("flycam"), "positionChanged", @render)
 
 
-  serializeData : ->
-
-    #TODO refactor / remove after deepmodel
-    data =
-      controlMode : @model.controlMode
-
-    if @model.flycam
-      _.extend(data,
-        position : @model.flycam.getPosition()
-      )
-    if @model.flycam3d
-      _.extend(data,
-        rotation : @model.flycam3d.getRotation()
-      )
-
-    return data
-
-
-  # TODO MEASURE PERFORMANCE HIT BECAUSE OF CONSTANT RE-RENDER
   changePosition : (event) ->
 
     posArray = Utils.stringToNumberArray(event.target.value)
     if posArray.length == 3
       @model.flycam.setPosition(posArray)
-
-    @render()
 
 
   changeRotation : (event) ->
@@ -81,8 +65,6 @@ class DatasetPositionView extends Backbone.Marionette.ItemView
     rotArray = Utils.stringToNumberArray(event.target.value)
     if rotArray.length == 3
       @model.flycam3d.setRotation rotArray
-
-    @render()
 
 
   onDestroy : ->

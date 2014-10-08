@@ -40,7 +40,7 @@ class Flycam2d
     # correct zoom values that are too high or too low
     @user.set("zoom", Math.max(0.01, Math.min(@user.get("zoom"), Math.floor(@getMaxZoomStep()))))
 
-    @listenTo(@model.dataset, "change:quality", (model, quality) -> @setQuality(quality))
+    @listenTo(@model.get("dataset"), "change:quality", (model, quality) -> @setQuality(quality))
     # TODO move zoom into tracing settings
     @listenTo(@user, "change:zoom", (model, zoomFactor) -> @zoom(Math.log(zoomFactor) / Math.LN2))
 

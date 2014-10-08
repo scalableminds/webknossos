@@ -9,7 +9,7 @@ class UrlManager
 
   MAX_UPDATE_INTERVAL : 2000
 
-  constructor : (@controller, @model) ->
+  constructor : (@model) ->
 
     url           = document.URL
     @baseUrl      = url.match(/^([^#]*)#?/)[1]

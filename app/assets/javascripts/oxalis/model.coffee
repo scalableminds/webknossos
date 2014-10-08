@@ -23,7 +23,7 @@ libs/pipeline : Pipeline
 # which you can react on.
 
 
-class Model
+class Model extends Backbone.Model
 
   timestamps : []
   buckets : []
@@ -31,12 +31,7 @@ class Model
   totalBuckets : []
   totalBytes : []
 
-  constructor : ->
-
-    _.extend(@, Backbone.Events)
-
-
-  logConnectionInfo : =>
+  logConnectionInfo : ->
 
     @timestamps.push(new Date().getTime())
 
@@ -59,14 +54,13 @@ class Model
     @totalBuckets.push(totalBuckets)
 
 
-  initialize : (options) =>
-
-    {@tracingId, @tracingType, controlMode, state} = options
+  fetch : (options) ->
 
     Request.send(
-      url : "/annotations/#{@tracingType}/#{@tracingId}/info"
+      url : "/annotations/#{@get("tracingType")}/#{@get("tracingId")}/info"
       dataType : "json"
     ).pipe (tracing) =>
+
 
       if tracing.error
         Toast.error(tracing.error)
@@ -77,44 +71,46 @@ class Model
         return {"error" : true}
 
       else unless tracing.content.dataSet.dataLayers
-        dataSetName = tracing.content.dataSet.name
-        if dataSetName
+        datasetName = tracing.content.dataSet.name
+        if datasetName
           Toast.error("Please, double check if you have the dataset '#{dataSetName}' imported.")
         else
           Toast.error("Please, make sure you have a dataset imported.")
         return {"error" : true}
 
       else
+
         @user = new User()
         @user.fetch().pipe( =>
 
-          @dataset = new Dataset(tracing.content.dataSet.name)
-          @dataset.fetch().pipe( =>
+          @set("dataset", new Dataset(tracing.content.dataSet))
+          @get("dataset").fetch().pipe( =>
 
-            dataSet = tracing.content.dataSet
-            layers  = @getLayers(dataSet.dataLayers, tracing.content.contentData.customLayers)
+            layers  = @getLayers(tracing.content.contentData.customLayers)
             $.when(
-              @getDataTokens(dataSet.dataStore.url, dataSet.name, layers)...
+              @getDataTokens(layers)...
             ).pipe =>
-              @initializeWithData(controlMode, state, tracing, layers)
+              @initializeWithData(tracing, layers)
 
           -> Toast.error("Ooops. We couldn't communicate with our mother ship. Please try to reload this page.")
           )
         )
 
-  initializeWithData : (controlMode, state, tracing, layers) ->
+
+  initializeWithData : (tracing, layers) ->
+
+    dataset = @get("dataset")
 
     $.assertExtendContext({
-      task: @tracingId
-      dataSet: tracing.content.dataSet.name
+      task: @get("tracingId")
+      dataSet: dataset.get("name")
     })
 
     console.log "tracing", tracing
     console.log "user", @user
 
-    dataSet = tracing.content.dataSet
     isVolumeTracing = "volume" in tracing.content.settings.allowedModes
-    app.scaleInfo = new ScaleInfo(dataSet.scale)
+    app.scaleInfo = new ScaleInfo(dataset.get("scale"))
     @updatePipeline = new Pipeline([tracing.version])
 
     if (bb = tracing.content.boundingBox)?
@@ -127,14 +123,13 @@ class Model
           ]
         }
 
-    @dataSetName = dataSet.name
-    @datasetPostfix = _.last(@dataSetName.split("_"))
+    @datasetName = dataset.name
     zoomStepCount = -Infinity
     @binary = {}
 
     for layer in layers
       layer.bitDepth = parseInt( layer.elementClass.substring(4) )
-      @binary[layer.name] = new Binary(this, tracing, layer, @tracingId, @updatePipeline)
+      @binary[layer.name] = new Binary(this, tracing, layer, @get("tracingId"), @updatePipeline)
       zoomStepCount = Math.max(zoomStepCount, @binary[layer.name].cube.ZOOM_STEP_COUNT - 1)
 
     if @getColorBinaries().length == 0
@@ -143,7 +138,7 @@ class Model
     @setDefaultBinaryColors()
 
     @flycam = new Flycam2d(constants.PLANE_WIDTH, zoomStepCount, @)
-    @flycam3d = new Flycam3d(constants.DISTANCE_3D, dataSet.scale)
+    @flycam3d = new Flycam3d(constants.DISTANCE_3D, dataset.get("scale"))
     @flycam3d.on
       "changed" : (matrix, zoomStep) =>
         @flycam.setPosition( matrix[12..14] )
@@ -152,6 +147,7 @@ class Model
         @flycam3d.setPositionSilent(position)
 
     # init state
+    state = @get("state")
     @flycam.setPosition( state.position || tracing.content.editPosition )
     if state.zoomStep?
       @flycam.setZoomStep( state.zoomStep )
@@ -159,28 +155,31 @@ class Model
     if state.rotation?
       @flycam3d.setRotation( state.rotation )
 
-    if controlMode == constants.CONTROL_MODE_TRACE
+    if @get("controlMode") == constants.CONTROL_MODE_TRACE
 
       if isVolumeTracing
         $.assert( @getSegmentationBinary()?,
           "Volume is allowed, but segmentation does not exist" )
-        @volumeTracing = new VolumeTracing(tracing, @flycam, @getSegmentationBinary(), @updatePipeline)
+        @set("volumeTracing", new VolumeTracing(tracing, @flycam, @getSegmentationBinary(), @updatePipeline))
 
       else
-        @skeletonTracing = new SkeletonTracing(tracing, @flycam, @flycam3d, @user, @updatePipeline)
+        @set("skeletonTracing", new SkeletonTracing(tracing, @flycam, @flycam3d, @user, @updatePipeline))
 
     @computeBoundaries()
 
-    @restrictions = tracing.restrictions
-    @settings = tracing.content.settings
-    @mode = if isVolumeTracing then constants.MODE_VOLUME else constants.MODE_PLANE_TRACING
+    @set("restrictions", tracing.restrictions)
+    @set("settings", tracing.content.settings)
+    @set("mode", if isVolumeTracing then constants.MODE_VOLUME else constants.MODE_PLANE_TRACING)
 
+    @initSettersGetter()
     @trigger("sync")
 
-    return {"restrictions": tracing.restrictions, "settings": tracing.content.settings}
+    return
 
+  getDataTokens : (layers) ->
 
-  getDataTokens : (dataStoreUrl, dataSetName, layers) ->
+    dataStoreUrl = @get("dataset").get("dataStore").url
+    dataSetName = @get("dataset").get("name")
 
     for layer in layers
       do (layer) ->
@@ -208,7 +207,8 @@ class Model
 
   setDefaultBinaryColors : ->
 
-    layerColors = @dataset.get("layerColors")
+    dataset = @get("dataset")
+    layerColors = dataset.get("layerColors")
     colorBinaries = @getColorBinaries()
 
     if colorBinaries.length == 1
@@ -222,12 +222,13 @@ class Model
         color = layerColors[binary.name]
       else
         color = defaultColors[i % defaultColors.length]
-      @dataset.set("layerColors.#{binary.name}", color)
+      dataset.set("layerColors.#{binary.name}", color)
 
 
-  getLayers : (layers, userLayers) ->
+  getLayers : (userLayers) ->
     # Overwrite or extend layers with userLayers
 
+    layers = @get("dataset").get("dataLayers")
     return layers unless userLayers?
 
     for userLayer in userLayers
@@ -252,3 +253,18 @@ class Model
       for i in [0..2]
         @lowerBoundary[i] = Math.min @lowerBoundary[i], binary.lowerBoundary[i]
         @upperBoundary[i] = Math.max @upperBoundary[i], binary.upperBoundary[i]
+
+
+
+  # Make the Model compatible between legacy Oxalis style and Backbone.Modela/Views
+  initSettersGetter : ->
+
+    _.forEach(@attributes, (value, key, attribute) =>
+
+      Object.defineProperty(@, key,
+        set : (val) ->
+          this.set(key, val)
+        , get : ->
+          return @get(key)
+      )
+    )

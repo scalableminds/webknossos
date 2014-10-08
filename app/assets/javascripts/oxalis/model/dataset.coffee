@@ -8,9 +8,9 @@ backbone-deep-model : DeepModel
 class Dataset extends Backbone.DeepModel
 
 
-  initialize : (dataSetName) ->
+  initialize : ->
 
-    @url = "/api/dataSetConfigurations/#{dataSetName}"
+    @url = "/api/dataSetConfigurations/#{@get('name')}"
     @listenTo(this, "change", @push)
 
 
@@ -23,12 +23,6 @@ class Dataset extends Backbone.DeepModel
       @set("brightness", defaultData.brightness)
       @set("contrast", defaultData.contrast)
     )
-
-
-  triggerAll : ->
-
-    for property of @attributes
-      @trigger("change:#{property}", this, @get(property))
 
 
   push : ->

@@ -44,7 +44,7 @@ class Controller
 
   constructor : (options) ->
 
-    {@controlMode, _model:@model } = options
+    {@controlMode, _model: @model } = options
 
     _.extend(@, Backbone.Events)
 
@@ -54,16 +54,16 @@ class Controller
 
     @fullScreen = false
 
-    @urlManager = new UrlManager(this, @model)
-    options.state = @urlManager.initialState
+    @urlManager = new UrlManager(@model)
+    @model.set("state", @urlManager.initialState)
 
-    @model.initialize(options).done ({restrictions, settings, error}) =>
+    @model.fetch().done (error) =>
 
       # Do not continue, when there was an error and we got no settings from the server
       if error
         return
 
-      unless restrictions.allowAccess
+      unless @model.restrictions.allowAccess
         Toast.Error "You are not allowed to access this tracing"
         return
 
@@ -79,7 +79,7 @@ class Controller
               Toast.info(
                 "Segmentation data is only available at lower zoom levels.")
 
-      for allowedMode in settings.allowedModes
+      for allowedMode in @model.settings.allowedModes
         @allowedModes.push switch allowedMode
           when "oxalis" then constants.MODE_PLANE_TRACING
           when "arbitrary" then constants.MODE_ARBITRARY

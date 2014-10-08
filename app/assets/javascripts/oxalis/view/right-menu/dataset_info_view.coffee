@@ -46,7 +46,7 @@ class DatsetInfoView extends Backbone.Marionette.ItemView
     return {
       annotationType : @tracingType
       zoomLevel : @calculateZoomLevel()
-      dataSetName :@_model.dataSetName
+      dataSetName :@_model.get("dataset").get("name")
     }
 
 

@@ -36,7 +36,7 @@ class TracingLayoutView extends Backbone.Marionette.LayoutView
     @options = _.extend(
       {},
       options,
-      _model : new OxalisModel()
+      _model : new OxalisModel(options)
       )
 
     @listenTo(@, "render", @afterRender)

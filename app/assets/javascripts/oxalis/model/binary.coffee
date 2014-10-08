@@ -43,8 +43,9 @@ class Binary
     @cube = new Cube(@upperBoundary, @layer.resolutions.length, @layer.bitDepth)
     @boundingBox = new BoundingBox(@model.boundingBox, @cube)
 
-    @pullQueue = new PullQueue(@model.dataSetName, @cube, @layer, tracingId, @boundingBox)
-    @pushQueue = new PushQueue(@model.dataSetName, @cube, @layer, tracingId, updatePipeline)
+    datasetName = @model.get("dataset").get("name")
+    @pullQueue = new PullQueue(datasetName, @cube, @layer, tracingId, @boundingBox)
+    @pushQueue = new PushQueue(datasetName, @cube, @layer, tracingId, updatePipeline)
     @cube.setPushQueue( @pushQueue )
 
     @pingStrategies = [new PingStrategy.DslSlow(@cube, @TEXTURE_SIZE_P)]
@@ -54,8 +55,8 @@ class Binary
     for planeId in constants.ALL_PLANES
       @planes.push( new Plane2D(planeId, @cube, @pullQueue, @TEXTURE_SIZE_P, @layer.bitDepth, @targetBitDepth, 32) )
 
-    @pullQueue.set4Bit(@model.dataset.get("fourBit"))
-    @listenTo(@model.dataset, "change:fourBit" , (model, is4Bit) -> @pullQueue.set4Bit(is4Bit) )
+    @pullQueue.set4Bit(@model.get("dataset").get("fourBit"))
+    @listenTo(@model.get("dataset"), "change:fourBit" , (model, is4Bit) -> @pullQueue.set4Bit(is4Bit) )
 
     @ping = _.throttle(@pingImpl, @PING_THROTTLE_TIME)
 

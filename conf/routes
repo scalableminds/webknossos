@@ -49,16 +49,6 @@ GET           /api/users/:id/annotations                                      co
 GET           /api/users/:id/annotations/download                             controllers.admin.NMLIO.userDownload(id: String)
 # GET         /api/users/:id/loginAs                                          controllers.UserController.loginAsUser(id: String)
 
-# TODO DOUBLE CHECK
-# User settings
-# GET           /users                                                        controllers.UserController.empty
-# POST          /user/configuration                                           controllers.SettingsController.update
-# GET           /user/configuration                                           controllers.SettingsController.read
-# GET           /user/configuration/default                                   controllers.SettingsController.default
-# GET           /user/tasks/request                                           controllers.TaskController.request
-GET           /users/:id/details                                              controllers.UserController.emptyWithWildcard(id)
-
-
 # Team
 GET           /teams                                                          controllers.TeamController.empty
 GET           /api/teams                                                      controllers.TeamController.list

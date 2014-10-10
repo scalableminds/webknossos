@@ -59,7 +59,6 @@ trait DataCache {
       val p = loadF
       p.map {
         case Full(box) =>
-          play.api.Logger.error("Placing sth into cache")
           cache send (_ + (cachedBlockInfo -> p))
         case _ =>
       }

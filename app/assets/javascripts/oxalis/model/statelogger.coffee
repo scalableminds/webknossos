@@ -9,6 +9,7 @@ three : THREE
 class StateLogger
 
   PUSH_THROTTLE_TIME : 30000 #30s
+  SAVE_RETRY_WAITING_TIME : 5000
 
   constructor : (@flycam, @version, @tracingId, @tracingType, @allowUpdate, @pipeline) ->
 
@@ -17,8 +18,6 @@ class StateLogger
     @committedDiffs = []
     @newDiffs = []
     @committedCurrentState = true
-
-    @failedPushCount = 0
 
 
   pushDiff : (action, value, push = true) ->
@@ -82,26 +81,41 @@ class StateLogger
         contentType : "application/json"
       ).pipe (response) ->
         return response.version
-    ).fail (responseObject) =>
+    ).fail((responseObject) => @pushFailCallback(responseObject, notifyOnFailure))
+    .done(=> @pushDoneCallback())
 
-      if responseObject.responseText? && responseObject.responseText != ""
-        # restore whatever is send as the response
-        try
-          response = JSON.parse(responseObject.responseText)
-        catch error
-          console.error "parsing failed."
-        if response?.messages?[0]?.error?
-          if response.messages[0].error == "tracing.dirtyState"
-            $(window).on(
-              "beforeunload"
-              =>return null)
-            alert("Sorry, but the current state is inconsistent. A reload is necessary.")
-            window.location.reload()
 
-      @push()
-      if notifyOnFailure
-        @trigger("pushFailed")
+  pushFailCallback : (responseObject, notifyOnFailure) ->
 
-    .done =>
+    $('body').addClass('save-error')
 
-      @committedDiffs = []
+    if responseObject.responseText? && responseObject.responseText != ""
+      # restore whatever is send as the response
+      try
+        response = JSON.parse(responseObject.responseText)
+      catch error
+        console.error "parsing failed."
+      if response?.messages?[0]?.error?
+        if response.messages[0].error == "tracing.dirtyState"
+          $(window).on(
+            "beforeunload"
+            =>return null)
+          alert("Sorry, but the current state is inconsistent. A reload is necessary.")
+          window.location.reload()
+
+    @push()
+    if notifyOnFailure
+      @trigger("pushFailed")
+
+    restart = =>
+      @pipeline.restart()
+          .fail((responseObject) => @pushFailCallback(responseObject, notifyOnFailure))
+          .done(=> @pushDoneCallback())
+
+    setTimeout(restart, @SAVE_RETRY_WAITING_TIME)
+
+
+  pushDoneCallback : ->
+
+    $('body').removeClass('save-error')
+    @committedDiffs = []

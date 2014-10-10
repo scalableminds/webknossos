@@ -2,16 +2,19 @@ package oxalis.annotation
 
 import akka.actor.Actor
 import akka.agent.Agent
-import scala.concurrent.Future
+import akka.util.Timeout
+import reactivemongo.bson.BSONObjectID
+import scala.concurrent.{Await, Future}
 import scala.concurrent.duration._
 import net.liftweb.common.Box
 import play.api.Logger
-import models.annotation.AnnotationLike
+import models.annotation.{Annotation, AnnotationService, AnnotationType, AnnotationLike}
 import oxalis.annotation.handler.AnnotationInformationHandler
 import com.scalableminds.util.reactivemongo.DBAccessContext
 import com.scalableminds.util.tools.Fox
 import play.api.libs.json.Json
 import models.user.User
+import net.liftweb.common.Failure
 
 case class AnnotationIdentifier(annotationType: String, identifier: String)
 
@@ -20,7 +23,7 @@ object AnnotationIdentifier{
 }
 
 case class RequestAnnotation(id: AnnotationIdentifier, user: Option[User], implicit val ctx: DBAccessContext)
-
+case class MergeAnnotation(annotation: Fox[AnnotationLike], annotationSec: Fox[AnnotationLike], readOnly: Boolean, user: User, implicit val ctx: DBAccessContext)
 case class StoredResult(result: Fox[AnnotationLike], timestamp: Long = System.currentTimeMillis)
 
 class AnnotationStore extends Actor {
@@ -48,6 +51,7 @@ class AnnotationStore extends Actor {
   def receive = {
     case RequestAnnotation(id, user, ctx) =>
       val s = sender
+
       cachedAnnotations()
         .get(id)
         .filterNot(isExpired(maxCacheTime))
@@ -59,6 +63,22 @@ class AnnotationStore extends Actor {
           s ! result
       }.recover {
         case e =>
+          s ! Failure("AnnotationStore ERROR: " + e)
+          Logger.error("AnnotationStore ERROR: " + e)
+          e.printStackTrace()
+      }
+    case MergeAnnotation(annotation, annotationSec,readOnly, user, ctx) =>
+      val s = sender
+
+      mergeAnnotation(annotation, annotationSec, readOnly, user)(ctx)
+        .futureBox
+        .map {
+        result =>
+          Logger.debug("Result " +  result)
+          s ! result
+      }.recover {
+        case e =>
+          s ! Failure("AnnotationStore ERROR: " + e)
           Logger.error("AnnotationStore ERROR: " + e)
           e.printStackTrace()
       }
@@ -82,5 +102,27 @@ class AnnotationStore extends Actor {
         Logger.error("Request Annotaton in AnnotationStore failed: " + e)
         throw e
     }
+  }
+
+    def mergeAnnotation(annotation: Fox[AnnotationLike], annotationSec: Fox[AnnotationLike], readOnly: Boolean, user: User)(implicit ctx: DBAccessContext) = {
+      try {
+        for {
+          ann <- annotation
+          annSec <- annotationSec
+          mergedAnnotation <- AnnotationService.merge(readOnly, user._id, annSec.team, annSec.typ, ann, annSec)
+        } yield {
+
+          // Caching of merged annotation
+          val storedMerge = StoredResult(Some(mergedAnnotation))
+          val mID = AnnotationIdentifier(mergedAnnotation.typ, mergedAnnotation.id)
+          cachedAnnotations.send(_ + (mID -> storedMerge))
+
+          mergedAnnotation
+        }
+      } catch {
+        case e: Exception =>
+          Logger.error("Request Annotaton in AnnotationStore failed: " + e)
+          throw e
+      }
   }
 }

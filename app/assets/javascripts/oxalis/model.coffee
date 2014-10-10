@@ -24,11 +24,11 @@ class Model
 
   initialize : (controlMode, state) =>
 
-    tracingId = $("#container").data("tracing-id")
-    tracingType = $("#container").data("tracing-type")
+    @tracingId = $("#container").data("tracing-id")
+    @tracingType = $("#container").data("tracing-type")
 
     Request.send(
-      url : "/annotations/#{tracingType}/#{tracingId}/info"
+      url : "/annotations/#{@tracingType}/#{@tracingId}/info"
       dataType : "json"
     ).pipe (tracing) =>
 
@@ -103,6 +103,7 @@ class Model
     for layer in layers
       layer.bitDepth = parseInt(layer.elementClass.substring(4))
       @binary[layer.name] = new Binary(this, tracing, layer, maxZoomStep, @updatePipeline, @connectionInfo)
+      zoomStepCount = Math.max(zoomStepCount, @binary[layer.name].cube.ZOOM_STEP_COUNT - 1)
 
     if @getColorBinaries().length == 0
       Toast.error("No data available! Something seems to be wrong with the dataset.")

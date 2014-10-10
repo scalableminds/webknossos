@@ -370,7 +370,7 @@ class Cube
         result += (1 << (8 * i)) * bucket[ voxelIndex + i]
 
       mapping = @getMappingByPosition( voxel )
-      if mapping?
+      if mapping? and mapping[result]?
         return mapping[result]
 
       return result
@@ -406,3 +406,4 @@ class Cube
       z >> @BUCKET_SIZE_P + zoomStep,
       zoomStep
     ]
+

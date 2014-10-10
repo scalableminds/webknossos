@@ -19,12 +19,14 @@ class Pipeline
     @nextArguments = firstArguments
     @retryCount    = 0
     @running       = false
+    @failed        = false
 
     _.defaults @options,
       maxRetry : 3
+      retryTimeMs : 1000
 
 
-  executeAction : ( action ) ->
+  executeAction : (action) ->
     # action : function that returns a
     #          $.Deferred object
 
@@ -49,14 +51,29 @@ class Pipeline
     return @executeAction(newAction)
 
 
-  executeActions : ( actionList ) ->
+  executeActions : (actionList) ->
 
     for action in actionList
       deferred = @executeAction(action)
     return deferred
 
 
-  executeNext : ->
+  restart : ->
+    # To restart the pipeline after it failed.
+    # Returns a new Deferred for the first item.
+
+    if @failed and @actions.length > 0
+      @failed = false
+      @retryCount = 0
+      @running = false
+
+      # Reinsert first action
+      return @executeAction(@actions.shift())
+
+    return new $.Deferred().resolve()
+
+
+  executeNext : =>
 
     currentAction = @actions.shift()
 
@@ -64,7 +81,7 @@ class Pipeline
 
       @running = true
 
-      currentAction( @nextArguments... )
+      currentAction(@nextArguments...)
         .done (response) =>
 
           currentAction._deferred.resolve(arguments...)
@@ -76,13 +93,13 @@ class Pipeline
         .fail (response) =>
 
           @retryCount++
+          @actions.unshift(currentAction)
 
-          if @retryCount > @options.maxRetry
+          if @retryCount >= @options.maxRetry
+            @failed = true
             currentAction._deferred.reject(arguments...)
-
           else
-            @actions.unshift( currentAction )
-            @executeNext()
+            setTimeout(@executeNext, @options.retryTimeMs)
 
     else
 

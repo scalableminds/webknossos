@@ -31,6 +31,11 @@ class VolumeTracingController
       setActiveCell : (id) => @model.volumeTracing.setActiveCell(id)
       createNewCell : => @model.volumeTracing.createCell()
 
+    @model.flycam.on
+      zoomStepChanged : =>
+        shouldWarn = @model.flycam.getIntegerZoomStep() > 0
+        $('body').toggleClass("zoomstep-warning", shouldWarn)
+
     # Keyboard shortcuts
     new Input.KeyboardNoLoop(
       "m" : => @toggleControlMode()
@@ -121,13 +126,14 @@ class VolumeTracingController
 
 
 
-  enterDeleteMode : (enter = true) ->
+  enterDeleteMode : ->
 
-    @inDeleteMode = enter
+    return if @inDeleteMode
 
-    if @inDeleteMode
-      @prevActiveCell = @model.volumeTracing.getActiveCellId()
-      @model.volumeTracing.setActiveCell(0)
+    @inDeleteMode = true
+
+    @prevActiveCell = @model.volumeTracing.getActiveCellId()
+    @model.volumeTracing.setActiveCell(0)
 
 
   restoreAfterDeleteMode : ->

@@ -10,7 +10,7 @@ libs/toast : Toast
 class ExplorativeTracingListView extends Backbone.Marionette.CompositeView
 
   template : _.template("""
-    <h3>Explorative Tracings</h3>
+    <h3>Explorative Annotations</h3>
     <% if (!isAdminView) {%>
       <div>
         <form action="<%= jsRoutes.controllers.admin.NMLIO.upload().url %>"
@@ -76,6 +76,8 @@ class ExplorativeTracingListView extends Backbone.Marionette.CompositeView
     formSpinnerIcon : "#form-spinner-icon"
     formUploadIcon : "#form-upload-icon"
 
+
+  initialize : ->
 
   initialize : (options) ->
 

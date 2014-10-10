@@ -37,7 +37,7 @@ class Binary
     @lowerBoundary  = topLeft
     @upperBoundary  = [ topLeft[0] + width, topLeft[1] + height, topLeft[2] + depth ]
 
-    @cube = new Cube(@upperBoundary, maxZoomStep, @layer.bitDepth)
+    @cube = new Cube(@upperBoundary, maxZoomStep + 1, @layer.bitDepth)
     @boundingBox = new BoundingBox(@model.boundingBox, @cube)
     @pullQueue = new PullQueue(@model.dataSetName, @cube, @layer, @tracing.id, @boundingBox, connectionInfo)
     @pushQueue = new PushQueue(@model.dataSetName, @cube, @layer, @tracing.id, updatePipeline)

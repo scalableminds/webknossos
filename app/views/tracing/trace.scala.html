@@ -22,6 +22,8 @@
           <a href="@controllers.routes.AnnotationController.download(annotation.typ, annotation.id)" class="btn btn-default btn-small" id="trace-download-button"><i class="fa fa-download"></i>NML</a>
           <a href="#help-modal" class="btn btn-default btn-small" data-toggle="modal"><i class="fa fa-question-circle"></i>Help</a>
         </div>
+        <div id="merge-button" class="btn btn-default form-control skeleton-controls">Merge</div>
+
         <div id="dataset" class="well well-sm">
             @annotation._name.getOrElse(annotation.typ)<br />
             DataSet: <span id="dataset-name"></span><br />
@@ -50,6 +52,10 @@
             <button type="button" class="btn btn-default" id="view-mode-sphere">Sphere</button>
             <button type="button" class="btn btn-default" id="view-mode-arbitraryplane">Arbitrary Plane</button>
           </div>
+        </div>
+
+        <div id="zoomstep-warning" class="volume-controls">
+          <p>Volume tracings are only fully supported at a smaller zoom level. Please zoom in to annotate.</p>
         </div>
 
         <div id="control-mode" class="volume-controls">
@@ -148,6 +154,7 @@
             </div>
           </div>
           <div id="modal" class="modal fade"></div>
+          <div id="merge-modal"></div>
           <div id="inputcatchers">
             <div id="planexy" class="inputcatcher"></div>
             <div id="planeyz" class="inputcatcher"></div>
@@ -220,9 +227,9 @@
                   <button class="btn btn-default" id="tree-next-button"><i class="fa fa-arrow-right"></i></button>
                 </span>
               </div>
-              <div>
-                <ul id="tree-list"></ul>
-              </div>
+            </div>
+            <div id="tree-list-container">
+              <ul id="tree-list"></ul>
             </div>
           </div>
           <div class="tab-pane" id="tab-comments">

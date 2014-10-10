@@ -9,9 +9,8 @@ class UrlManager
 
   constructor : (@controller, @model) ->
 
-    url           = document.URL
-    @baseUrl      = url.match(/^([^#]*)#?/)[1]
-    @initialState = @parseUrl url
+    @baseUrl      = document.location.pathname
+    @initialState = @parseUrl()
 
     @update = _.throttle(
       => location.replace(@buildUrl())
@@ -19,15 +18,15 @@ class UrlManager
     )
 
 
-  parseUrl : (url)->
+  parseUrl : ->
 
-    stateString = url.match(/^.*#([\d.-]*(?:,[\d.-]*)*)$/)?[1]
+    stateString = location.hash.slice(1)
     state       = {}
 
     if stateString?
 
       stateArray = stateString.split(",")
-      return unless stateArray.length >= 5
+      return state unless stateArray.length >= 5
 
       state.position = _.map stateArray.slice(0, 3), (e) -> +e
       state.mode     = +stateArray[3]

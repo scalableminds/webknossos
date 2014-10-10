@@ -31,6 +31,11 @@ class VolumeTracingController
       setActiveCell : (id) => @model.volumeTracing.setActiveCell(id)
       createNewCell : => @model.volumeTracing.createCell()
 
+    @model.flycam.on
+      zoomStepChanged : =>
+        shouldWarn = @model.flycam.getIntegerZoomStep() > 0
+        $('body').toggleClass("zoomstep-warning", shouldWarn)
+
     # Keyboard shortcuts
     new Input.KeyboardNoLoop(
       "m" : => @toggleControlMode()

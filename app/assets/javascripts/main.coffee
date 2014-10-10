@@ -10,11 +10,10 @@ require [
 
   ErrorHandling.initialize( throwAssertions: false, sendLocalErrors: false )
 
-  require ["main/router", "main/non_backbone_router"], (Router, NonBackboneRouter) ->
+  require ["main/router"], (Router) ->
 
     app.addInitializer( ->
 
-      new NonBackboneRouter() # handle all the routes that are not yet Backbone Views
       app.router = new Router()
       Backbone.history.start( pushState : true )
     )

@@ -26,7 +26,14 @@ class Router extends Backbone.Router
     "taskTypes"                     : "taskTypes"
     "spotlight"                     : "spotlight"
     "tasks/overview"                : "taskOverview"
+    "admin/taskTypes"               : "hideLoading"
     "*url"                          : "hideLoading"
+
+  whitelist : [
+    "help/keyboardshortcuts",
+    "help/faq",
+    "issues"
+  ]
 
 
   initialize : ->
@@ -37,6 +44,16 @@ class Router extends Backbone.Router
 
       url = $(evt.currentTarget).attr("href") or ""
       urlWithoutSlash = url.slice(1)
+
+      if newWindow = $(evt.target).data("newwindow")
+        [ width, height ] = newWindow.split("x")
+        window.open(url, "_blank", "width=#{width},height=#{height},location=no,menubar=no")
+        evt.preventDefault()
+        return
+
+      # let whitelisted url through
+      if _.contains(@whitelist, urlWithoutSlash)
+        return
 
       # disable links beginning with #
       if url.indexOf("#") == 0

@@ -124,7 +124,7 @@ class DataRequestActor(
           Future.successful(None)
       }
 
-      if (useCache) {
+      if (useCache && !loadBlock.dataLayer.isUserDataLayer) {
         withCache(loadBlock) {
           loadFromStore(dataStores)
         }

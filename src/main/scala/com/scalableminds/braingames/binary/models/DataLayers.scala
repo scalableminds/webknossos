@@ -49,6 +49,8 @@ case class DataLayer(
 
   def relativeBaseDir(binaryBase: String) = baseDir.replace(binaryBase, "")
 
+  def isUserDataLayer = baseDir.contains("userBinaryData")
+
   val interpolator = DataLayer.interpolationFromString(category)
 
   val resolutions = sections.flatMap(_.resolutions).distinct

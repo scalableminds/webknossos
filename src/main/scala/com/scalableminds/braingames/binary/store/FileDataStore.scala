@@ -63,8 +63,7 @@ class FileDataStore extends DataStore {
       val path = knossosFilePath(dataSetDir, dataSetId, resolution, block)
       try {
         path.toAbsolute.parent.map(_.createDirectory(failIfExists = false))
-        val binaryStream =
-          new FileOutputStream(path.path)
+        val binaryStream = new FileOutputStream(path.path)
         byteArrayToOutputStream(binaryStream, data)
       } catch {
         case e: FileNotFoundException =>

@@ -53,28 +53,18 @@ trait DataCache {
    * returns it.
    */
   def withCache(blockInfo: LoadBlock)(loadF: => Future[Box[Array[Byte]]]): Future[Box[Array[Byte]]] = {
-    ensureCacheMaxSize
     val cachedBlockInfo = CachedBlock.from(blockInfo)
 
-    cache.future.flatMap {
-      c =>
-        c.get(cachedBlockInfo).getOrElse {
-          val p = loadF
-          p.flatMap {
-            case Full(box) =>
-              cache send (x => if (x.contains(cachedBlockInfo)) { x } else { x + (cachedBlockInfo -> p) })
-              cache.future.flatMap {
-                _.get(cachedBlockInfo).getOrElse(Future.successful(Empty))
-              }
-            case _ => Future.successful(Empty)
-          }
-        }
+    cache().get(cachedBlockInfo).getOrElse {
+      val p = loadF
+      p.map {
+        case Full(box) =>
+          play.api.Logger.error("Placing sth into cache")
+          cache send (_ + (cachedBlockInfo -> p))
+        case _ =>
+      }
+      p
     }
-  }
-
-  def updateCache(blockInfo: LoadBlock, data: Future[Box[Array[Byte]]]) = {
-    val cachedBlockInfo = CachedBlock.from(blockInfo)
-    //cache send (_ + (cachedBlockInfo -> data))
   }
 
   /**
@@ -82,13 +72,13 @@ trait DataCache {
    * called before or after an item got inserted into the cache
    */
   def ensureCacheMaxSize {
-    // pretends to flood memory with to many files
+    // prevents flooding of memory with too many files
     if (cache().size > maxCacheSize)
       cache send (_.drop(dropCount))
   }
 
   /**
-   * Called when the store is restarted or going to get shutdown.
+   * Called when the store is restarted or going to get shutdown
    */
   def cleanUp() {
     cache send (_ => Map.empty)

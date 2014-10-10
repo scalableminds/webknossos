@@ -12,15 +12,20 @@ import scala.concurrent.ExecutionContext.Implicits._
 trait EmptyDataProvider {
   implicit val sys: ActorSystem
 
-  lazy val nullFiles = Agent[Map[(Int, Int), Array[Byte]]](Map.empty)
+  lazy val nullFiles = Agent[Map[Int, Array[Byte]]](Map.empty)
 
-  def loadNullBlock(dataSource: DataSource, dataLayer: DataLayer): Array[Byte] = {
-    nullFile(dataSource.blockSize, dataLayer.bytesPerElement)
+  def loadNullBlock(dataSource: DataSource, dataLayer: DataLayer, useCache: Boolean): Array[Byte] = {
+    val size = dataSource.blockSize * dataLayer.bytesPerElement
+    if (useCache)
+      nullFile(size)
+    else
+      new Array[Byte](size)
   }
 
-  def createNullArray(blockSize: Int, bytesPerElement: Int) =
-    new Array[Byte](blockSize * bytesPerElement)
-
-  def nullFile(blockSize: Int, bytesPerElement: Int) =
-    createNullArray(blockSize, bytesPerElement)
+  def nullFile(size: Int) =
+    nullFiles().get(size).getOrElse{
+      val nullFile = new Array[Byte](size)
+      nullFiles send (_ + (size -> nullFile))
+      nullFile
+    }
 }

@@ -28,6 +28,7 @@ import net.liftweb.common.Box
 import net.liftweb.common.{Failure => BoxFailure}
 import net.liftweb.common.Full
 import java.util.NoSuchElementException
+import scala.concurrent.Lock
 import com.scalableminds.util.tools.{FoxImplicits, Fox, BlockedArray3D}
 import com.scalableminds.util.tools.ExtendedTypes.ExtendedArraySeq
 import com.scalableminds.util.tools.ExtendedTypes.ExtendedDouble
@@ -47,11 +48,14 @@ class DataRequestActor(
 
   val sys = context.system
 
+  val writeLock = new Lock()
+
   implicit val ec = context.dispatcher
 
   val id = UUID.randomUUID().toString()
 
   implicit val dataBlockLoadTimeout = Timeout((conf.getInt("loadTimeout")) seconds)
+  implicit val dataBlockSaveTimeout = (conf.getInt("loadTimeout")) seconds
 
   // defines the maximum count of cached file handles
   val maxCacheSize = conf.getInt("cacheMaxSize")
@@ -90,7 +94,7 @@ class DataRequestActor(
       }
   }
 
-  def loadFromLayer(loadBlock: LoadBlock): Future[Box[Array[Byte]]] = {
+  def loadFromLayer(loadBlock: LoadBlock, useCache: Boolean): Future[Box[Array[Byte]]] = {
     if (loadBlock.dataLayerSection.doesContainBlock(loadBlock.block, loadBlock.dataSource.blockLength)) {
       def loadFromStore(dataStores: List[ActorRef]): Future[Box[Array[Byte]]] = dataStores match {
         case a :: tail =>
@@ -120,7 +124,11 @@ class DataRequestActor(
           Future.successful(None)
       }
 
-      withCache(loadBlock) {
+      if (useCache) {
+        withCache(loadBlock) {
+          loadFromStore(dataStores)
+        }
+      } else {
         loadFromStore(dataStores)
       }
     } else {
@@ -145,13 +153,13 @@ class DataRequestActor(
     }.getOrElse(Nil)
   }
 
-  def loadFromSomewhere(dataSource: DataSource, layer: DataLayer, requestedSection: Option[String], resolution: Int, block: Point3D): Future[Array[Byte]] = {
+  def loadFromSomewhere(dataSource: DataSource, layer: DataLayer, requestedSection: Option[String], resolution: Int, block: Point3D, useCache: Boolean): Future[Array[Byte]] = {
     var lastSection: Option[DataLayerSection] = None
     def loadFromSections(sections: Stream[(DataLayerSection, DataLayer)]): Future[Array[Byte]] = sections match {
       case (section, layer) #:: tail =>
         lastSection = Some(section)
         val loadBlock = LoadBlock(dataSource, layer, section, resolution, block)
-        loadFromLayer(loadBlock).flatMap {
+        loadFromLayer(loadBlock, useCache).flatMap {
           case Full(byteArray) =>
             Future.successful(byteArray)
           case net.liftweb.common.Failure(e, _, _) =>
@@ -161,11 +169,10 @@ class DataRequestActor(
             loadFromSections(tail)
         }
       case _ =>
-        val nullBlock = loadNullBlock(dataSource, layer)
+        val nullBlock = loadNullBlock(dataSource, layer, useCache)
         lastSection.map {
           section =>
           val loadBlock = LoadBlock(dataSource, layer, section, resolution, block)
-          updateCache(loadBlock, Future.successful(Full(nullBlock)))
         }
         Future.successful(nullBlock)
     }
@@ -178,7 +185,7 @@ class DataRequestActor(
     loadFromSections(sections)
   }
 
-  def loadBlocks(minBlock: Point3D, maxBlock: Point3D, dataRequest: DataRequest, layer: DataLayer) = {
+  def loadBlocks(minBlock: Point3D, maxBlock: Point3D, dataRequest: DataRequest, layer: DataLayer, useCache: Boolean = true) = {
     Future.traverse(minBlock to maxBlock) {
       p =>
         loadFromSomewhere(
@@ -186,7 +193,8 @@ class DataRequestActor(
           layer,
           dataRequest.dataSection,
           dataRequest.resolution,
-          p)
+          p,
+          useCache)
     }
   }
 
@@ -213,29 +221,39 @@ class DataRequestActor(
 
     val pointOffset = minBlock.scale(dataSource.blockLength)
 
-    loadBlocks(minBlock, maxBlock, dataRequest, layer)
-      .map {
-      blocks =>
-        BlockedArray3D(
-          blocks.toVector,
-          dataSource.blockLength, dataSource.blockLength, dataSource.blockLength,
-          maxBlock.x - minBlock.x + 1, maxBlock.y - minBlock.y + 1, maxBlock.z - minBlock.z + 1,
-          layer.bytesPerElement,
-          0.toByte)
-    }
-      .map {
-        block =>
-          dataRequest match {
-            case request: DataReadRequest =>
-              new DataBlockCutter(block, request, layer, pointOffset).cutOutRequestedData
-            case request: DataWriteRequest =>
-              ensureCopyInCache(minBlock, maxBlock, dataRequest, layer, block.underlying).map {
-                b =>
-                  val blocks = new DataBlockWriter(block.copy(underlying = b), request, layer, pointOffset).writeSuppliedData
-                  saveBlocks(minBlock, maxBlock, dataRequest, layer, blocks)
-              }
-              Array[Byte]()
-          }
+    dataRequest match {
+      case request: DataReadRequest =>
+        loadBlocks(minBlock, maxBlock, dataRequest, layer).map {
+          blocks =>
+            BlockedArray3D(
+              blocks.toVector,
+              dataSource.blockLength, dataSource.blockLength, dataSource.blockLength,
+              maxBlock.x - minBlock.x + 1, maxBlock.y - minBlock.y + 1, maxBlock.z - minBlock.z + 1,
+              layer.bytesPerElement,
+              0.toByte)
+        }.map{
+          block =>
+            new DataBlockCutter(block, request, layer, pointOffset).cutOutRequestedData
+        }
+      case request: DataWriteRequest =>
+        writeLock.acquire()
+        loadBlocks(minBlock, maxBlock, dataRequest, layer, useCache = false).map {
+          blocks =>
+            BlockedArray3D(
+              blocks.toVector,
+              dataSource.blockLength, dataSource.blockLength, dataSource.blockLength,
+              maxBlock.x - minBlock.x + 1, maxBlock.y - minBlock.y + 1, maxBlock.z - minBlock.z + 1,
+              layer.bytesPerElement,
+              0.toByte)
+        }.map{
+          block =>
+            val blocks = new DataBlockWriter(block, request, layer, pointOffset).writeSuppliedData
+            saveBlocks(minBlock, maxBlock, dataRequest, layer, blocks, writeLock).map {
+              r =>
+                writeLock.release()
+            }
+            Array[Byte]()
+        }
     }
   }
 
@@ -243,11 +261,12 @@ class DataRequestActor(
 
     def saveToStore(dataStores: List[ActorRef]): Future[Unit] = dataStores match {
       case a :: tail =>
-        (a ? saveBlock).mapTo[Unit].recoverWith {
+        val future = (a ? saveBlock).mapTo[Unit].recoverWith {
           case e: AskTimeoutException =>
             logger.warn(s"No response in time for block: (${saveBlock.dataSource.id}/${saveBlock.dataLayerSection.baseDir} ${saveBlock.block}) ${a.path}")
             saveToStore(tail)
         }
+        Await.result(future, dataBlockSaveTimeout)
         Future.successful(Unit)
       case _ =>
         Future.successful(Unit)
@@ -284,8 +303,8 @@ class DataRequestActor(
     saveToSections(sections)
   }
 
-  def saveBlocks(minBlock: Point3D, maxBlock: Point3D, dataRequest: DataRequest, layer: DataLayer, blocks: Vector[Array[Byte]]) = {
-    (minBlock to maxBlock, blocks).zipped foreach {
+  def saveBlocks(minBlock: Point3D, maxBlock: Point3D, dataRequest: DataRequest, layer: DataLayer, blocks: Vector[Array[Byte]], writeLock: Lock) = {
+    (minBlock to maxBlock, blocks).zipped map {
       (point, block) =>
         saveToSomewhere(
           dataRequest.dataSource,

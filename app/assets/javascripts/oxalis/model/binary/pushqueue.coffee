@@ -1,4 +1,5 @@
 ### define
+underscore : _
 libs/array_buffer_socket : ArrayBufferSocket
 libs/unit8array_builder : Uint8ArrayBuilder
 gzip : gzip
@@ -7,14 +8,13 @@ gzip : gzip
 class PushQueue
 
   BATCH_LIMIT : 1
-  BATCH_SIZE : 15
-  THROTTLE_TIME : 2000
+  BATCH_SIZE : 10
+  THROTTLE_TIME : 10000
 
 
   constructor : (@dataSetName, @cube, @layer, @tracingId, @updatePipeline, @sendData = true) ->
 
     @queue = []
-    @batchCount = 0
 
     @getParams =
       cubeSize : 1 << @cube.BUCKET_SIZE_P
@@ -68,23 +68,14 @@ class PushQueue
     unless @sendData
       return
 
-    while @batchCount < @BATCH_LIMIT and @queue.length
+    while @queue.length
 
-      batch = []
-
-      while batch.length < @BATCH_SIZE and @queue.length
-
-        bucket = @queue.splice(0, 1)[0]
-        batch.push bucket
-
-      @pushBatch(batch) if batch.length > 0
+      batchSize = Math.min(@BATCH_SIZE, @queue.length)
+      batch = @queue.splice(0, batchSize)
+      @pushBatch(batch)
 
 
   pushBatch : (batch) ->
-
-    @batchCount++
-
-    console.log "Pushing batch", batch
 
     transmitBufferBuilder = new Uint8ArrayBuilder()
     for bucket in batch
@@ -102,31 +93,12 @@ class PushQueue
 
     transmitBuffer = transmitBufferBuilder.build()
 
-    #console.log( "uncompressed transmitBuffer:", transmitBuffer.length, transmitBuffer )
-
-    gzip = new Zlib.Gzip( transmitBuffer )
-    transmitBuffer = gzip.compress()
-
-    #console.log( "compressed transmitBuffer:", transmitBuffer.length, transmitBuffer )
-
     @updatePipeline.executePassAlongAction =>
 
-      @getSendSocket().send( transmitBuffer )
-        .then(
-
-          (responseBuffer) =>
-
-            # TODO: define action
-
-          =>
-
-            for bucket in batch
-              @insertFront(bucket)
-
-      ).always =>
-
-        @batchCount--
-        @push()
+      console.log "Pushing batch", batch
+      gzip = new Zlib.Gzip(transmitBuffer)
+      transmitBuffer = gzip.compress()
+      @getSendSocket().send(transmitBuffer)
 
 
   getSendSocket : ->

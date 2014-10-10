@@ -35,11 +35,11 @@ object Application extends Controller with Secured {
         controllers.routes.javascript.AnnotationController.nameExplorativeAnnotation,
         controllers.routes.javascript.AnnotationController.createExplorational,
         controllers.routes.javascript.AnnotationController.download,
+        controllers.routes.javascript.AnnotationController.saveMerged,
         controllers.admin.routes.javascript.NMLIO.taskDownload,
         controllers.admin.routes.javascript.NMLIO.projectDownload,
         controllers.admin.routes.javascript.NMLIO.userDownload,
         controllers.admin.routes.javascript.TaskAdministration.delete
-
       )).as("text/javascript")
   }
 

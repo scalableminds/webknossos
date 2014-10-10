@@ -17,7 +17,7 @@ import com.scalableminds.util.reactivemongo.{GlobalAccessContext, DBAccessContex
 import com.scalableminds.util.security.SCrypt._
 import com.scalableminds.util.mail.Send
 import play.api.libs.concurrent.Execution.Implicits._
-import models.annotation.AnnotationService
+import models.annotation.{AnnotationType, AnnotationDAO, AnnotationService}
 
 object UserService extends FoxImplicits {
   val defaultUserEmail = "scmboy@scalableminds.com"
@@ -63,6 +63,17 @@ object UserService extends FoxImplicits {
     }
   }
 
+  def changePassword(user: User, newPassword: String)(implicit ctx: DBAccessContext) = {
+    if (user.verified)
+      Application.Mailer ! Send(DefaultMails.changePasswordMail(user.name, user.email))
+
+    UserDAO.changePassword(user._id, newPassword).map { result =>
+      UserCache.invalidateUser(user.id)
+      result
+    }
+
+  }
+
   def removeFromAllPossibleTeams(user: User, issuingUser: User)(implicit ctx: DBAccessContext) = {
     if (user.teamNames.diff(issuingUser.adminTeamNames).isEmpty) {
       // if a user doesn't belong to any team any more he gets deleted
@@ -80,6 +91,9 @@ object UserService extends FoxImplicits {
   def findOneByEmail(email: String): Fox[User] = {
     UserDAO.findOneByEmail(email)(GlobalAccessContext)
   }
+
+  def findFinishedTasksOf(user: User)(implicit ctx: DBAccessContext) =
+    AnnotationService.findTasksOf(user).map(_.flatMap(_._task))
 
   def updateSettings(user: User, settings: UserSettings)(implicit ctx: DBAccessContext) = {
     UserDAO.updateSettings(user, settings).map {

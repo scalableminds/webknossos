@@ -24,7 +24,7 @@ class DashboardView extends Backbone.Marionette.LayoutView
           <a href="#" id="tab-tasks" data-toggle="tab">Tasks</a>
         </li>
         <li>
-          <a href="#" id="tab-explorative" data-toggle="tab">Explorative Tracings</a>
+          <a href="#" id="tab-explorative" data-toggle="tab">Explorative Annotations</a>
         </li>
         <li>
           <a href="#" id="tab-tracked-time" data-toggle="tab">Tracked Time</a>
@@ -57,10 +57,11 @@ class DashboardView extends Backbone.Marionette.LayoutView
 
   initialize : ->
 
-    @model.fetch().done( =>
+    @listenTo(@model, "sync", ->
       @render()
       @showDatasets()
     )
+    @model.fetch()
 
 
   showDatasets : ->

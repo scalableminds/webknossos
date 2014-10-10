@@ -67,7 +67,6 @@ object InitialData extends GlobalDBAccess {
 
   def insert() = {
     insertUsers()
-    insertTaskAlgorithms()
     insertTeams()
     insertTasks()
     insertLocalDataStore()
@@ -86,17 +85,6 @@ object InitialData extends GlobalDBAccess {
           SCrypt.hashPassword("secret"),
           List(TeamMembership(mpi.name, Role.Admin)),
           UserSettings.defaultSettings))
-    }
-  }
-
-  def insertTaskAlgorithms() = {
-    TaskSelectionAlgorithmDAO.findAll.map {
-      alogrithms =>
-        if (alogrithms.isEmpty)
-          TaskSelectionAlgorithmDAO.insert(TaskSelectionAlgorithm(
-            """function simple(user, tasks){
-              |  return tasks[0];
-              |}""".stripMargin))
     }
   }
 

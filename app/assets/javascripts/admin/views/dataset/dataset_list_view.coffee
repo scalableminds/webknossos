@@ -1,6 +1,6 @@
 ### define
 underscore : _
-backbone.marionette : marionette
+backbone.marionette : Marionette
 ./dataset_list_item_view : DatasetListItemView
 ./team_assignment_modal_view: TeamAssignmentModalView
 ###
@@ -38,7 +38,6 @@ class DatasetListView extends Backbone.Marionette.CompositeView
   ui :
     "modalWrapper" : "#modal-wrapper"
     "detailsToggle" : ".details-toggle-all"
-
 
   childView : DatasetListItemView
   childViewContainer: "table"

@@ -11,7 +11,8 @@ class Dataset extends Backbone.DeepModel
   initialize : ->
 
     @url = "/api/dataSetConfigurations/#{@get('name')}"
-    @listenTo(this, "change", @push)
+    @listenTo(app.vent, "saveEverything", @save)
+    @listenTo(this, "change", -> @save())
 
 
   reset : =>
@@ -23,15 +24,3 @@ class Dataset extends Backbone.DeepModel
       @set("brightness", defaultData.brightness)
       @set("contrast", defaultData.contrast)
     )
-
-
-  push : ->
-
-    $.when(@pushThrottled())
-
-
-  pushThrottled : ->
-
-    saveFkt = @save
-    @pushThrottled = _.throttle(_.mutexDeferred( saveFkt, -1), 10000)
-    @pushThrottled()

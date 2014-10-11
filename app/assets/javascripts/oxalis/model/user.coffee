@@ -11,14 +11,8 @@ class User extends Backbone.Model
 
   initialize : ->
 
-    @listenTo(@, "change", @push)
     @listenTo(app.vent, "saveEverything", @save)
-    #@listenTo(@, "change", @save)
-
-
-  getSettings : ->
-
-    return @attributes
+    @listenTo(@, "change", -> @save())
 
 
   getMouseInversionX : ->

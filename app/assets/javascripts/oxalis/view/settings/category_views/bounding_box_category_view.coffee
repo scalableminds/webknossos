@@ -19,6 +19,7 @@ class boundingBoxCategory extends CategoryView
           name : "boundingBox"
           displayName : "Bounding Box"
           pattern : "(\\d+\\s*,\\s*){5}\\d+"
+          title : "Format: minX, minY, minZ, maxX, maxY, maxZ"
       )
 
 

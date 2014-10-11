@@ -14,7 +14,7 @@ class TextInputSettingView extends AbstractSettingView
       <%= displayName %>
     </div>
     <div class="col-sm-7">
-      <input class="form-control" type="text" pattern="<%= pattern %>" value="<%= value %>">
+      <input class="form-control" type="text" pattern="<%= pattern %>" title="<%= title %>" value="<%= value %>">
     </div>
   """)
 
@@ -33,6 +33,7 @@ class TextInputSettingView extends AbstractSettingView
 
     _.defaults(@options,
       pattern : ""
+      title : ""
     )
 
   handleChange : (evt) ->

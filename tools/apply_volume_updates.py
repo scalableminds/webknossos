@@ -120,8 +120,8 @@ def apply_updates(rootDir, layer, logfile, combine_func):
         print("Combining %s and %s" % (source, dest))
         combine_func(source, dest)
 
-#  raw_files = map(lambda f: f[:-4], filter(lambda f: f.endswith('.raw_000'), [f for (path,_,files) in os.walk(layerDir) for f in map(lambda f: path + '/' + f, files)]))
-#  map(merge_raw, raw_files)
+  raw_files = map(lambda f: f[:-4], filter(lambda f: f.endswith('.raw_000'), [f for (path,_,files) in os.walk(layerDir) for f in map(lambda f: path + '/' + f, files)]))
+  map(merge_raw, raw_files)
 
 # Parameters
 # rootDir: the script expects "userBinaryData" to be a subfolder of rootDir. The "userBinaryData" folder should contain the layer and the logging folder.
@@ -130,7 +130,8 @@ def apply_updates(rootDir, layer, logfile, combine_func):
 # combine_func: either "combine" to merge files or "replace" to take the newer file
 
 rootDir = '.'
-layer = '43a39e5f-c9aa-49d0-814c-a1389ce4efb4'
-logfile = 'oxalis-tiny.log'
+layer = 'd3d71518-a56f-4d81-94d8-290d01aa825d'
+logfile = 'oxalis.log'
+combine_func = replace
 
-apply_updates(rootDir, layer, logfile, combine)
+apply_updates(rootDir, layer, logfile, combine_func)

@@ -248,9 +248,8 @@ class DataRequestActor(
         }.map{
           block =>
             val blocks = new DataBlockWriter(block, request, layer, pointOffset).writeSuppliedData
-            saveBlocks(minBlock, maxBlock, dataRequest, layer, blocks, writeLock).map {
-              r =>
-                writeLock.release()
+            saveBlocks(minBlock, maxBlock, dataRequest, layer, blocks, writeLock).onComplete {
+              _ => writeLock.release()
             }
             Array[Byte]()
         }

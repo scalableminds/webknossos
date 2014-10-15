@@ -53,6 +53,7 @@ trait DataCache {
    * returns it.
    */
   def withCache(blockInfo: LoadBlock)(loadF: => Future[Box[Array[Byte]]]): Future[Box[Array[Byte]]] = {
+    ensureCacheMaxSize
     val cachedBlockInfo = CachedBlock.from(blockInfo)
 
     cache().get(cachedBlockInfo).getOrElse {

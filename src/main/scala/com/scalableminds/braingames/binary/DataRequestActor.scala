@@ -169,12 +169,7 @@ class DataRequestActor(
             loadFromSections(tail)
         }
       case _ =>
-        val nullBlock = loadNullBlock(dataSource, layer, useCache)
-        lastSection.map {
-          section =>
-          val loadBlock = LoadBlock(dataSource, layer, section, resolution, block)
-        }
-        Future.successful(nullBlock)
+        Future.successful(loadNullBlock(dataSource, layer, useCache))
     }
 
     val sections = Stream(layer.sections.map{(_, layer)}.filter {
@@ -196,6 +191,16 @@ class DataRequestActor(
           p,
           useCache)
     }
+  }
+
+  def withLock[T](f: => Future[T]): Future[T] = {
+    writeLock.acquire()
+    f.onComplete { result =>
+      if(result.isFailure)
+        logger.error(s"Saving block failed for. Error: $result")
+      writeLock.release()
+    }
+    f
   }
 
   def load(dataRequest: DataRequest): Future[Array[Byte]] = {
@@ -236,22 +241,21 @@ class DataRequestActor(
             new DataBlockCutter(block, request, layer, pointOffset).cutOutRequestedData
         }
       case request: DataWriteRequest =>
-        writeLock.acquire()
-        loadBlocks(minBlock, maxBlock, dataRequest, layer, useCache = false).map {
-          blocks =>
-            BlockedArray3D(
-              blocks.toVector,
-              dataSource.blockLength, dataSource.blockLength, dataSource.blockLength,
-              maxBlock.x - minBlock.x + 1, maxBlock.y - minBlock.y + 1, maxBlock.z - minBlock.z + 1,
-              layer.bytesPerElement,
-              0.toByte)
-        }.map{
-          block =>
-            val blocks = new DataBlockWriter(block, request, layer, pointOffset).writeSuppliedData
-            Future.sequence(saveBlocks(minBlock, maxBlock, dataRequest, layer, blocks, writeLock)).onComplete {
-              _ => writeLock.release()
-            }
-            Array[Byte]()
+        withLock {
+          loadBlocks(minBlock, maxBlock, dataRequest, layer, useCache = false).map {
+            blocks =>
+              BlockedArray3D(
+                blocks.toVector,
+                dataSource.blockLength, dataSource.blockLength, dataSource.blockLength,
+                maxBlock.x - minBlock.x + 1, maxBlock.y - minBlock.y + 1, maxBlock.z - minBlock.z + 1,
+                layer.bytesPerElement,
+                0.toByte)
+          }.map {
+            block =>
+              val blocks = new DataBlockWriter(block, request, layer, pointOffset).writeSuppliedData
+              Future.sequence(saveBlocks(minBlock, maxBlock, dataRequest, layer, blocks, writeLock))
+              Array[Byte]()
+          }
         }
     }
   }

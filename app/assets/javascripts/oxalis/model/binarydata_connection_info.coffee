@@ -33,7 +33,3 @@ class BinaryDataConnectionInfo
 
     @roundTripTime = (1 - @ROUND_TRIP_TIME_SMOOTHER) * @roundTripTime + @ROUND_TRIP_TIME_SMOOTHER * roundTripTime
     @bandwidth = (1 - @BANDWIDTH_SMOOTHER) * @bandwidth + @BANDWIDTH_SMOOTHER * bandwidth
-
-
-    report : ->
-      #TODO

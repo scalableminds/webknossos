@@ -39,6 +39,8 @@ class DatasetSwitchView extends Backbone.Marionette.LayoutView
   initialize : ->
 
     @collection = new DatasetCollection()
+
+    @listenTo(@, "render", @showGalleryView)
     @listenToOnce(@collection, "sync", @showGalleryView)
     @collection.fetch(silent : true)
 

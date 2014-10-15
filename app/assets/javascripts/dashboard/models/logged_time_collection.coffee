@@ -8,11 +8,15 @@ class LoggedTimeCollection extends Backbone.Collection
 
   url : ->
 
-    if userID = @get("userID")
-      return "/api/users/#{userID}/loggedTime"
+    if @userID
+      return "/api/users/#{@userID}/loggedTime"
     else
       return "/api/user/loggedTime"
 
+  initialize : (models, options) ->
+
+    @userID = options.userID
+    @model = Backbone.Model
 
   parse : (response) ->
 

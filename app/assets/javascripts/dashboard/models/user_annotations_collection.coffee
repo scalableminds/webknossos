@@ -12,10 +12,16 @@ class UserAnnotationsCollection extends Backbone.Collection
 
   url : ->
 
-    if userID = @get("userID")
-      return "/api/users/#{userID}/annotations"
+    if @userID
+      return "/api/users/#{@userID}/annotations"
     else
       return "/api/user/annotations"
+
+
+  initialize : (models, options) ->
+
+    @userID = options.userID
+    @model = Backbone.Model # important, override a property of the options object
 
 
   parse : (response) ->

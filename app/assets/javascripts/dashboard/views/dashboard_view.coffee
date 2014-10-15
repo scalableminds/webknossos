@@ -13,7 +13,7 @@ class DashboardView extends Backbone.Marionette.LayoutView
   id : "dashboard"
   template : _.template("""
     <% if (isAdminView) { %>
-      <h3>User: <%= user.get("firstName") %> <%= user.get("lastName") %></h3>
+      <h3>User: <%= firstName %> <%= lastName %></h3>
     <% } %>
     <div class="tabbable" id="tabbable-dashboard">
       <ul class="nav nav-tabs">
@@ -50,22 +50,19 @@ class DashboardView extends Backbone.Marionette.LayoutView
   regions :
     "tabPane" : ".tab-pane"
 
+  templateHelpers : ->
+    isAdminView : @model.id != undefined
 
-  initialize : (options) ->
 
-    @options = options
+  initialize : (@options) ->
+
+    @listenTo(@, "render", @showDatasets)
+
     @viewCache =
       datasetSwitchView : null
       taskListView : null
       explorativeTracingListView : null
       loggedTimeView : null
-
-    @listenTo(@, "render", @showDatasets)
-
-
-  serializeData : ->
-
-    return @options
 
 
   showDatasets : ->

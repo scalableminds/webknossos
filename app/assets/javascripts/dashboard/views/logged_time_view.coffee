@@ -16,7 +16,7 @@ class LoggedTimeView extends Backbone.Marionette.ItemView
   initialize : (options) ->
 
 
-    @collection = new LoggedTimeCollection()
+    @collection = new LoggedTimeCollection([], options)
     @listenTo(@collection, "sync", @addGraph)
     @collection.fetch()
 

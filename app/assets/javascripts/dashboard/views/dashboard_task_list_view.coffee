@@ -13,7 +13,7 @@ class DashboardTaskListView extends Backbone.Marionette.CompositeView
   template : _.template("""
     <h3>Tasks</h3>
     <% if (isAdminView) { %>
-      <a href="<%= jsRoutes.controllers.admin.NMLIO.userDownload(user.id).url %>"
+      <a href="<%= jsRoutes.controllers.admin.NMLIO.userDownload(id).url %>"
          class="btn btn-primary"
          title="download all finished tracings">
           <i class="fa fa-download"></i>download
@@ -47,10 +47,11 @@ class DashboardTaskListView extends Backbone.Marionette.CompositeView
 
   childView : DashboardTaskListItemView
   childViewOptions : ->
-    isAdminView : @isAdminView
+    isAdminView : @options.isAdminView
+
 
   templateHelpers : ->
-    isAdminView : @isAdminView
+    isAdminView : @options.isAdminView
 
 
   childViewContainer : "tbody"
@@ -65,10 +66,9 @@ class DashboardTaskListView extends Backbone.Marionette.CompositeView
     "click @ui.finishToggle" : "toggleFinished"
 
 
-  initialize : (options) ->
+  initialize : (@options) ->
 
     @showFinishedTasks = false
-    @isAdminView = options.isAdminView
     @collection = new UserTasksCollection()
 
     #@listenTo(@model.get("tasks"), "add", @addChildView, @)

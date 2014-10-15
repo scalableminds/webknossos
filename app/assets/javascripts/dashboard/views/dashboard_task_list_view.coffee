@@ -3,6 +3,7 @@ underscore : _
 backbone.marionette : marionette
 ./dashboard_task_list_item_view : DashboardTaskListItemView
 ./task_transfer_modal_view : TaskTransferModalView
+../models/user_tasks_collection : UserTasksCollection
 routes : routes
 libs/toast : Toast
 ###
@@ -46,7 +47,11 @@ class DashboardTaskListView extends Backbone.Marionette.CompositeView
 
   childView : DashboardTaskListItemView
   childViewOptions : ->
-    isAdminView : @model.get("isAdminView")
+    isAdminView : @isAdminView
+
+  templateHelpers : ->
+    isAdminView : @isAdminView
+
 
   childViewContainer : "tbody"
 
@@ -63,9 +68,10 @@ class DashboardTaskListView extends Backbone.Marionette.CompositeView
   initialize : (options) ->
 
     @showFinishedTasks = false
-    @collection = @model.getUnfinishedTasks()
+    @isAdminView = options.isAdminView
+    @collection = new UserTasksCollection()
 
-    @listenTo(@model.get("tasks"), "add", @addChildView, @)
+    #@listenTo(@model.get("tasks"), "add", @addChildView, @)
     @listenTo(app.vent, "TaskTransferModal:refresh", @refresh)
 
 
@@ -73,9 +79,9 @@ class DashboardTaskListView extends Backbone.Marionette.CompositeView
 
     @collection =
       if @showFinishedTasks
-        @model.getFinishedTasks()
+        @collection.getFinishedTasks()
       else
-        @model.getUnfinishedTasks()
+        @collection.getUnfinishedTasks()
 
     @render()
 
@@ -84,11 +90,11 @@ class DashboardTaskListView extends Backbone.Marionette.CompositeView
 
     event.preventDefault()
 
-    if @model.getUnfinishedTasks().length == 0 or confirm("Do you really want another task?")
+    if @collection.getUnfinishedTasks().length == 0 or confirm("Do you really want another task?")
 
       showMessages = (response) -> Toast.message(response.messages)
 
-      @model.getNewTask().done((response) =>
+      @collection.getNewTask().done((response) =>
         showMessages(response)
         @update()
       ).fail((xhr) ->
@@ -119,7 +125,7 @@ class DashboardTaskListView extends Backbone.Marionette.CompositeView
 
   refresh : ->
 
-    @model.fetch().done( =>
+    @collection.fetch().done( =>
       @update()
     )
 

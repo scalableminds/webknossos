@@ -3,7 +3,7 @@ underscore : _
 backbone.marionette : marionette
 dashboard/views/dashboard_task_list_view : DashboardTaskListView
 dashboard/views/explorative_tracing_list_view : ExplorativeTracingListView
-dashboard/views/tracked_time_view : TrackedTimeView
+dashboard/views/logged_time_view : LoggedTimeView
 admin/views/dataset/dataset_switch_view : DatasetSwitchView
 ###
 
@@ -27,7 +27,7 @@ class DashboardView extends Backbone.Marionette.LayoutView
           <a href="#" id="tab-explorative" data-toggle="tab">Explorative Annotations</a>
         </li>
         <li>
-          <a href="#" id="tab-tracked-time" data-toggle="tab">Tracked Time</a>
+          <a href="#" id="tab-logged-time" data-toggle="tab">Tracked Time</a>
         </li>
       </ul>
       <div class="tab-content">
@@ -37,10 +37,6 @@ class DashboardView extends Backbone.Marionette.LayoutView
   """)
 
   ui :
-    "tabDatasets" : "#tab-datasets"
-    "tabTasks" : "#tab-tasks"
-    "tabExplorative" : "#tab-explorative"
-    "tabTrackedTime" : "#tab-tracked-time"
     "tabPane" : ".tab-pane"
 
 
@@ -48,50 +44,54 @@ class DashboardView extends Backbone.Marionette.LayoutView
     "click #tab-datasets" : "showDatasets"
     "click #tab-tasks" : "showTasks"
     "click #tab-explorative" : "showExplorative"
-    "click #tab-tracked-time" : "showTrackedTime"
+    "click #tab-logged-time" : "showLoggedTime"
 
 
   regions :
     "tabPane" : ".tab-pane"
 
 
-  initialize : ->
+  initialize : (options) ->
 
-    @listenTo(@model, "sync", ->
-      @render()
-      @afterSync()
-    )
-    @model.fetch()
+    @options = options
+    @viewCache =
+      datasetSwitchView : null
+      taskListView : null
+      explorativeTracingListView : null
+      loggedTimeView : null
+
+    @listenTo(@, "render", @showDatasets)
 
 
-  afterSync : ->
+  serializeData : ->
 
-    if @activeTab
-      @tabPane.show(@activeTab)
-    else
-      @showDatasets()
+    return @options
 
 
   showDatasets : ->
 
-    @activeTab = new DatasetSwitchView(model : @model.get("dataSets"))
-    @tabPane.show(@activeTab)
+    unless view = @viewCache["datasetSwitchView"]
+      view = @viewCache["datasetSwitchView"] = new DatasetSwitchView(@options)
+    @tabPane.show(view, preventDestroy : true)
 
 
   showTasks : ->
 
-    @activeTab = new DashboardTaskListView(model : @model)
-    @tabPane.show(@activeTab)
+    unless view = @viewCache["taskListView"]
+      view = @viewCache["taskListView"] = new DashboardTaskListView(@options)
+    @tabPane.show(view, preventDestroy : true)
 
 
   showExplorative : ->
 
-    @activeTab = new ExplorativeTracingListView(model : @model)
-    @tabPane.show(@activeTab)
+    unless view = @viewCache["explorativeTracingListView"]
+      view = @viewCache["explorativeTracingListView"] = new ExplorativeTracingListView(@options)
+    @tabPane.show(view, preventDestroy : true)
 
 
-  showTrackedTime : ->
+  showLoggedTime : ->
 
-    @activeTab = new TrackedTimeView(model : @model.get("loggedTime"))
-    @tabPane.show(@activeTab)
+    unless view = @viewCache["loggedTimeView"]
+      view = @viewCache["loggedTimeView"] = new LoggedTimeView(@options)
+    @tabPane.show(view, preventDestroy : true)
 

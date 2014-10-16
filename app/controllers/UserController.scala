@@ -50,7 +50,7 @@ object UserController extends Controller with Secured with Dashboard with FoxImp
     for {
       content <- dashboardExploratoryAnnotations(request.user, request.user)
     } yield {
-      JsonOk(content)
+      Ok(content)
     }
   }
 
@@ -58,7 +58,7 @@ object UserController extends Controller with Secured with Dashboard with FoxImp
     for {
       content <- dashboardTaskAnnotations(request.user, request.user)
     } yield {
-      JsonOk(content)
+      Ok(content)
     }
   }
 
@@ -80,7 +80,7 @@ object UserController extends Controller with Secured with Dashboard with FoxImp
       user <- UserDAO.findOneById(userId) ?~> Messages("user.notFound")
       content <- dashboardExploratoryAnnotations(user, request.user)
     } yield {
-      JsonOk(content)
+      Ok(content)
     }
   }
 
@@ -89,7 +89,7 @@ object UserController extends Controller with Secured with Dashboard with FoxImp
       user <- UserDAO.findOneById(userId) ?~> Messages("user.notFound")
       content <- dashboardTaskAnnotations(user, request.user)
     } yield {
-      JsonOk(content)
+      Ok(content)
     }
   }
 

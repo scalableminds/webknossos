@@ -24,12 +24,6 @@ class UserTasksCollection extends Backbone.Collection
     @listenTo(@, "sync", @transformToCollection)
 
 
-  parse : (response) ->
-
-    @hasSynced = true
-    return response.taskAnnotations
-
-
   getFinishedTasks : ->
 
     return @

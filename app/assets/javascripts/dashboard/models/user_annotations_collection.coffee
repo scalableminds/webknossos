@@ -22,9 +22,3 @@ class UserAnnotationsCollection extends Backbone.Collection
 
     @userID = options.userID
     @model = Backbone.Model # important, override a property of the options object
-
-
-  parse : (response) ->
-
-    @hasSynced = true
-    return response.exploratoryAnnotations

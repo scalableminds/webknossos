@@ -3,6 +3,7 @@
 ./model/skeletontracing/skeletontracing : SkeletonTracing
 ./model/user : User
 ./model/volumetracing/volumetracing : VolumeTracing
+./model/binarydata_connection_info : ConnectionInfo
 ./model/scaleinfo : ScaleInfo
 ./model/flycam2d : Flycam2d
 ./model/flycam3d : Flycam3d
@@ -20,38 +21,6 @@ libs/pipeline : Pipeline
 
 
 class Model
-
-
-
-  timestamps : []
-  buckets : []
-  bytes : []
-  totalBuckets : []
-  totalBytes : []
-
-
-  logConnectionInfo : =>
-
-    @timestamps.push(new Date().getTime())
-
-    bytes = 0
-    buckets = 0
-    totalBytes = 0
-    totalBuckets = 0
-
-    for dataLayerName of @binary
-      bytes += @binary[dataLayerName].pullQueue.loadedBytes
-      buckets += @binary[dataLayerName].pullQueue.loadedBuckets
-      totalBytes += @binary[dataLayerName].pullQueue.totalLoadedBytes
-      totalBuckets += @binary[dataLayerName].pullQueue.totalLoadedBuckets
-      @binary[dataLayerName].pullQueue.loadedBytes = 0
-      @binary[dataLayerName].pullQueue.loadedBuckets = 0
-
-    @bytes.push(bytes)
-    @buckets.push(buckets)
-    @totalBytes.push(totalBytes)
-    @totalBuckets.push(totalBuckets)
-
 
   initialize : (controlMode, state) =>
 
@@ -85,7 +54,6 @@ class Model
           dataType : "json"
         ).pipe(
           (user) =>
-
             dataSet = tracing.content.dataSet
             layers  = @getLayers(dataSet.dataLayers, tracing.content.contentData.customLayers)
             $.when(
@@ -99,7 +67,7 @@ class Model
   initializeWithData : (controlMode, state, tracing, user, layers) ->
 
     $.assertExtendContext({
-      task: @tracingId
+      task: tracing.id
       dataSet: tracing.content.dataSet.name
     })
 
@@ -122,22 +90,26 @@ class Model
           ]
         }
 
+    @connectionInfo = new ConnectionInfo()
     @dataSetName = dataSet.name
     @datasetPostfix = _.last(@dataSetName.split("_"))
-    zoomStepCount = -Infinity
     @binary = {}
 
+    maxResolution = Math.max(_.union(layers.map((layer) ->
+      layer.resolutions
+    )...)...)
+    maxZoomStep = Math.log(maxResolution) / Math.LN2
+
     for layer in layers
-      layer.bitDepth = parseInt( layer.elementClass.substring(4) )
-      @binary[layer.name] = new Binary(this, tracing, layer, @tracingId, @updatePipeline)
-      zoomStepCount = Math.max(zoomStepCount, @binary[layer.name].cube.ZOOM_STEP_COUNT - 1)
+      layer.bitDepth = parseInt(layer.elementClass.substring(4))
+      @binary[layer.name] = new Binary(this, tracing, layer, maxZoomStep, @updatePipeline, @connectionInfo)
 
     if @getColorBinaries().length == 0
       Toast.error("No data available! Something seems to be wrong with the dataset.")
 
     @setDefaultBinaryColors()
 
-    @flycam = new Flycam2d(constants.PLANE_WIDTH, @scaleInfo, zoomStepCount, @user)
+    @flycam = new Flycam2d(constants.PLANE_WIDTH, @scaleInfo, maxZoomStep + 1, @user)
     @flycam3d = new Flycam3d(constants.DISTANCE_3D, dataSet.scale)
     @flycam3d.on
       "changed" : (matrix, zoomStep) =>
@@ -160,7 +132,6 @@ class Model
         $.assert( @getSegmentationBinary()?,
           "Volume is allowed, but segmentation does not exist" )
         @volumeTracing = new VolumeTracing(tracing, @flycam, @getSegmentationBinary(), @updatePipeline)
-
       else
         @skeletonTracing = new SkeletonTracing(tracing, @scaleInfo, @flycam, @flycam3d, @user, @updatePipeline)
 

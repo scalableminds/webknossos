@@ -24,30 +24,32 @@ class Binary
 
   direction : [0, 0, 0]
 
-
-  constructor : (@model, tracing, @layer, tracingId, updatePipeline) ->
+  constructor : (@model, @tracing, @layer, maxZoomStep, updatePipeline, @connectionInfo) ->
 
     _.extend(this, new EventMixin())
 
     @TEXTURE_SIZE_P = constants.TEXTURE_SIZE_P
     { @category, @name } = @layer
 
-    @lastPingTime   = new Date()
-    @queueStatus    = 0
     @targetBitDepth = if @category == "color" then @layer.bitDepth else 8
 
     {topLeft, width, height, depth} = @layer.maxCoordinates
     @lowerBoundary  = topLeft
     @upperBoundary  = [ topLeft[0] + width, topLeft[1] + height, topLeft[2] + depth ]
 
-    @cube = new Cube(@upperBoundary, @layer.resolutions.length, @layer.bitDepth)
+    @cube = new Cube(@upperBoundary, maxZoomStep + 1, @layer.bitDepth)
     @boundingBox = new BoundingBox(@model.boundingBox, @cube)
-    @pullQueue = new PullQueue(@model.dataSetName, @cube, @layer, tracingId, @boundingBox)
-    @pushQueue = new PushQueue(@model.dataSetName, @cube, @layer, tracingId, updatePipeline)
+    @pullQueue = new PullQueue(@model.dataSetName, @cube, @layer, @tracing.id, @boundingBox, connectionInfo)
+    @pushQueue = new PushQueue(@model.dataSetName, @cube, @layer, @tracing.id, updatePipeline)
     @cube.setPushQueue( @pushQueue )
 
-    @pingStrategies = [new PingStrategy.DslSlow(@cube, @TEXTURE_SIZE_P)]
-    @pingStrategies3d = [new PingStrategy3d.DslSlow()]
+    @pingStrategies = [
+      new PingStrategy.Skeleton(@cube, @TEXTURE_SIZE_P),
+      new PingStrategy.Volume(@cube, @TEXTURE_SIZE_P)
+    ]
+    @pingStrategies3d = [
+      new PingStrategy3d.DslSlow()
+    ]
 
     @planes = []
     for planeId in constants.ALL_PLANES
@@ -92,13 +94,8 @@ class Binary
       @lastArea     = area.slice()
 
       for strategy in @pingStrategies
-        if strategy.inVelocityRange(1) and strategy.inRoundTripTimeRange(@pullQueue.roundTripTime)
-
-          pullQueue = strategy.ping(position, @direction, zoomStep, area, activePlane) if zoomStep? and area? and activePlane?
-          @pullQueue.clear()
-          for entry in pullQueue
-            @pullQueue.insert(entry...)
-
+        if strategy.forContentType(@tracing.contentType) and strategy.inVelocityRange(@connectionInfo.bandwidth) and strategy.inRoundTripTimeRange(@connectionInfo.roundTripTime)
+          @pullQueue.queue = strategy.ping(position, @direction, zoomStep, area, activePlane) if zoomStep? and area? and activePlane?
           break
 
       @queueStatus
@@ -114,7 +111,7 @@ class Binary
   arbitraryPingImpl : (matrix) ->
 
     for strategy in @pingStrategies3d
-      if strategy.inVelocityRange(1) and strategy.inRoundTripTimeRange(@pullQueue.roundTripTime)
+      if strategy.forContentType(@tracing.contentType) and strategy.inVelocityRange(1) and strategy.inRoundTripTimeRange(@pullQueue.roundTripTime)
 
         pullQueue = strategy.ping(matrix)
 

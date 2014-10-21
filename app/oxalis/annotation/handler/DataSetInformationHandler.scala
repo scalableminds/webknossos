@@ -28,6 +28,8 @@ object DataSetInformationHandler extends AnnotationInformationHandler with FoxIm
   def dataSetRestrictions() =
     new AnnotationRestrictions {
       override def allowAccess(user: Option[User]) = true
+
+      override def allowDownload(user: Option[User]) = false
     }
 
   def provideAnnotation(dataSetName: String, user: Option[User])(implicit ctx: DBAccessContext): Fox[TemporaryAnnotation] = {
@@ -54,6 +56,7 @@ object DataSetInformationHandler extends AnnotationInformationHandler with FoxIm
         () => Future.successful(Some(content)),
         None,
         team,
+        None,
         typ = AnnotationType.View,
         restrictions = dataSetRestrictions())
     }

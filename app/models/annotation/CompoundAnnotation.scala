@@ -30,6 +30,7 @@ object CompoundAnnotation extends Formatter with FoxImplicits {
           project.name,
           _user,
           project.team,
+          controllers.admin.routes.NMLIO.projectDownload(project.name).url,
           annotations,
           AnnotationType.CompoundProject) ?~> Messages("project.noAnnotaton")
       } yield merged
@@ -44,6 +45,7 @@ object CompoundAnnotation extends Formatter with FoxImplicits {
           task.id,
           _user,
           task.team,
+          controllers.admin.routes.NMLIO.taskDownload(task.id).url,
           annotations,
           AnnotationType.CompoundTask) ?~> Messages("task.noAnnotaton")
       } yield merged
@@ -59,6 +61,7 @@ object CompoundAnnotation extends Formatter with FoxImplicits {
           taskType.id,
           _user,
           taskType.team,
+          controllers.admin.routes.NMLIO.taskTypeDownload(taskType.id).url,
           annotations,
           AnnotationType.CompoundTaskType) ?~> Messages("taskType.noAnnotaton")
       } yield merged
@@ -66,10 +69,10 @@ object CompoundAnnotation extends Formatter with FoxImplicits {
   }
 
 
-  def createFromFinishedAnnotations(id: String, _user: Option[BSONObjectID], team: String, annotations: List[Annotation], typ: AnnotationType)(implicit ctx: DBAccessContext) =
-    createFromAnnotations(id, _user, team, annotations.filter(filterFinishedAnnotations), typ, AnnotationState.Finished, AnnotationRestrictions.restrictEverything)
+  def createFromFinishedAnnotations(id: String, _user: Option[BSONObjectID], team: String, downloadUrl: String, annotations: List[Annotation], typ: AnnotationType)(implicit ctx: DBAccessContext) =
+    createFromAnnotations(id, _user, team, Some(downloadUrl), annotations.filter(filterFinishedAnnotations), typ, AnnotationState.Finished, AnnotationRestrictions.restrictEverything)
 
-  def createFromAnnotations(id: String, _user: Option[BSONObjectID], team: String, annotations: List[AnnotationLike], typ: AnnotationType, state: AnnotationState, restrictions: AnnotationRestrictions)(implicit ctx: DBAccessContext): Fox[TemporaryAnnotation] = {
+  def createFromAnnotations(id: String, _user: Option[BSONObjectID], team: String, downloadUrl: Option[String], annotations: List[AnnotationLike], typ: AnnotationType, state: AnnotationState, restrictions: AnnotationRestrictions)(implicit ctx: DBAccessContext): Fox[TemporaryAnnotation] = {
     def renameAnnotationContents(annotations: List[AnnotationLike], processed: Vector[AnnotationContent]): Fox[List[AnnotationContent]] = {
       annotations match {
         case annotation :: tail =>
@@ -95,6 +98,7 @@ object CompoundAnnotation extends Formatter with FoxImplicits {
         () => renameAnnotationContents(annotations, Vector.empty).flatMap(mergeAnnotationContent(_, id)),
         None,
         team,
+        downloadUrl,
         state,
         typ,
         restrictions = restrictions

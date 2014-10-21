@@ -23,7 +23,7 @@ class AnnotationRestrictions {
 
   def allowFinish(user: Option[User]): Boolean = false
 
-  def allowDownload(user: Option[User]): Boolean = false
+  def allowDownload(user: Option[User]): Boolean = allowAccess(user)
 
   def allowAccess(user: User): Boolean = allowAccess(Some(user))
 

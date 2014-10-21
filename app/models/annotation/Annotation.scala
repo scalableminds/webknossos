@@ -54,6 +54,8 @@ case class Annotation(
 
   val restrictions = AnnotationRestrictions.defaultAnnotationRestrictions(this)
 
+  def relativeDownloadUrl = Some(Annotation.relativeDownloadUrlOf(typ, id))
+
   def isReadyToBeFinished(implicit ctx: DBAccessContext) = {
     // TODO: RF - rework
     task
@@ -100,6 +102,9 @@ case class Annotation(
 
 object Annotation {
   implicit val annotationFormat = Json.format[Annotation]
+
+  def relativeDownloadUrlOf(typ: String, id: String) =
+    controllers.routes.AnnotationController.download(typ, id).url
 
   def transformToJson(annotation: Annotation)(implicit ctx: DBAccessContext): Future[JsObject] = {
     for {

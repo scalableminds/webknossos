@@ -26,6 +26,7 @@ case class TemporaryAnnotation(
                                 _content: () => Fox[AnnotationContent],
                                 _task: Option[BSONObjectID] = None,
                                 team: String,
+                                relativeDownloadUrl: Option[String],
                                 state: AnnotationState = AnnotationState.Finished,
                                 typ: AnnotationType = AnnotationType.CompoundProject,
                                 _name: Option[String] = None,
@@ -62,7 +63,7 @@ case class TemporaryAnnotation(
 object TemporaryAnnotationService {
   def createFrom(a: Annotation, id: String, _content: AnnotationContent): TemporaryAnnotation = {
     val content = () => Fox.successful(_content)
-    TemporaryAnnotation(id, a._user, content, a._task, a.team, a.state, a.typ, a._name, a.restrictions, a.version, a.created)
+    TemporaryAnnotation(id, a._user, content, a._task, a.team, a.relativeDownloadUrl, a.state, a.typ, a._name, a.restrictions, a.version, a.created)
   }
 }
 

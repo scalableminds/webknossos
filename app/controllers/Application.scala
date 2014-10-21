@@ -20,6 +20,12 @@ object Application extends Controller with Secured {
   lazy val annotationStore =
     Akka.system(app).actorFor("/user/annotationStore")
 
+  lazy val httpUri = app.configuration.getString("http.uri").get
+
+  def toAbsoluteUrl(relativeUrl: String) = {
+    httpUri + relativeUrl
+  }
+
   // -- Javascript routing
 
   def javascriptRoutes = Action { implicit request =>

@@ -69,9 +69,9 @@ class Controller
         Toast.Error "You are not allowed to access this tracing"
         return
 
-      if not tracing.restrictions.allowDownload
+      if not tracing.restrictions.allowDownload or not tracing.downloadUrl?
         $('#trace-download-button').attr("disabled", "disabled")
-      if tracing.downloadUrl?
+      else
         $('#trace-download-button').attr("href", tracing.downloadUrl)
 
       @urlManager.startUrlUpdater()

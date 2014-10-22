@@ -137,7 +137,7 @@ class Model
 
     @computeBoundaries()
 
-    {"restrictions": tracing.restrictions, "settings": tracing.content.settings}
+    return {tracing}
 
 
   getDataTokens : (dataStoreUrl, dataSetName, layers) ->

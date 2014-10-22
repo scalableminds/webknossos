@@ -59,15 +59,20 @@ class Controller
     @model = new Model()
     @urlManager = new UrlManager(this, @model)
 
-    @model.initialize( @controlMode, @urlManager.initialState ).done ({restrictions, settings, error}) =>
+    @model.initialize( @controlMode, @urlManager.initialState ).done ({tracing, error}) =>
 
       # Do not continue, when there was an error and we got no settings from the server
       if error
         return
 
-      unless restrictions.allowAccess
+      unless tracing.restrictions.allowAccess
         Toast.Error "You are not allowed to access this tracing"
         return
+
+      if not tracing.restrictions.allowDownload
+        $('#trace-download-button').attr("disabled", "disabled")
+      if tracing.downloadUrl?
+        $('#trace-download-button').attr("href", tracing.downloadUrl)
 
       @urlManager.startUrlUpdater()
 
@@ -81,7 +86,7 @@ class Controller
               Toast.info(
                 "Segmentation data is only available at lower zoom levels.")
 
-      for allowedMode in settings.allowedModes
+      for allowedMode in tracing.content.settings.allowedModes
         @allowedModes.push switch allowedMode
           when "oxalis" then constants.MODE_PLANE_TRACING
           when "arbitrary" then constants.MODE_ARBITRARY
@@ -94,7 +99,7 @@ class Controller
       stats = new Stats()
       $("body").append stats.domElement
 
-      @gui = @createGui(restrictions, settings)
+      @gui = @createGui(tracing.restrictions, tracing.content.settings)
 
       #TODO trigger on resize
       # set width / height for the right-side menu

@@ -187,7 +187,7 @@ class Gui
 
       event.preventDefault()
       @saveNow().done =>
-          window.location.href = event.currentTarget.href
+        window.location.href = event.currentTarget.href
 
     $("#trace-save-button").click (event) =>
 

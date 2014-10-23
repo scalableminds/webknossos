@@ -11,10 +11,10 @@ class DatasetSwitchView extends Backbone.Marionette.LayoutView
 
   template : _.template("""
     <div class="pull-right">
-      <a href="#" id="showAdvancedView" class="btn btn-default">
+      <a href="#" id="showAdvancedView" class="btn btn-default hidden">
         <i class="fa fa-th-list"></i>Show advanced view
       </a>
-      <a href="#" id="showGalleryView" class="btn btn-default hidden">
+      <a href="#" id="showGalleryView" class="btn btn-default">
         <i class="fa fa-th"></i>Show gallery view
       </a>
     </div>
@@ -41,8 +41,13 @@ class DatasetSwitchView extends Backbone.Marionette.LayoutView
     @collection = new DatasetCollection()
 
     @listenTo(@, "render", @showGalleryView)
+    @listenToOnce(@, "render", @toggleSwitchButtons)
     @listenToOnce(@collection, "sync", @showGalleryView)
-    @collection.fetch(silent : true)
+
+    @collection.fetch(
+      silent : true,
+      data : "isEditable=true"
+    )
 
 
   toggleSwitchButtons : ->
@@ -62,8 +67,11 @@ class DatasetSwitchView extends Backbone.Marionette.LayoutView
   showAdvancedView : ->
 
     @toggleSwitchButtons()
+
+    #always load Pagination first, for init. the right event handlers
+    paginationView = new PaginationView(collection: @collection)
+    @pagination.show(paginationView)
+
     datasetListView = new DatasetListView(collection: @collection)
     @datasetPane.show(datasetListView)
 
-    paginationView = new PaginationView(collection: @collection)
-    @pagination.show(paginationView)

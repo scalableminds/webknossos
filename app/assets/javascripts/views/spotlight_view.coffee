@@ -1,7 +1,7 @@
 ### define
 underscore : _
 backbone.marionette : marionette
-admin/models/dataset/dataset_collection : DatasetCollection
+dashboard/models/dataset/dataset_collection : DatasetCollection
 ./credits_view : CreditsView
 ./spotlight_dataset_list_view : SpotlightDatasetListView
 ###

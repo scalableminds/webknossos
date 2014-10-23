@@ -6,7 +6,7 @@ libs/toast : Toast
 libs/utils : Utils
 dashboard/views/explorative_tracing_list_item_view : ExplorativeTracingListItemView
 dashboard/models/user_annotations_collection : UserAnnotationsCollection
-admin/models/dataset/dataset_collection : DatasetCollection
+dashboard/models/dataset/dataset_collection : DatasetCollection
 ###
 
 class ExplorativeTracingListView extends Backbone.Marionette.CompositeView

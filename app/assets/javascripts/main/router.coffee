@@ -139,7 +139,7 @@ class Router extends Backbone.Router
 
   spotlight : ->
 
-    require(["views/spotlight_view", "admin/models/dataset/dataset_collection"], (SpotlightView, DatasetCollection) =>
+    require(["views/spotlight_view", "dashboard/models/dataset/dataset_collection"], (SpotlightView, DatasetCollection) =>
 
       collection = new DatasetCollection()
       view = new SpotlightView(model: collection)

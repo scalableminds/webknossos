@@ -4,7 +4,7 @@ app : app
 backbone.marionette : marionette
 libs/toast : Toast
 libs/template_helpers : TemplateHelpers
-admin/models/dataset/dataset_accesslist_collection : DatasetAccesslistCollection
+dashboard/models/dataset/dataset_accesslist_collection : DatasetAccesslistCollection
 ./dataset_access_view : DatasetAccessView
 ###
 

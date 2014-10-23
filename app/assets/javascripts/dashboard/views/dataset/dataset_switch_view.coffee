@@ -4,7 +4,7 @@ backbone.marionette : marionette
 ./dataset_list_view : DatasetListView
 views/spotlight_dataset_list_view : SpotlightDatasetListView
 admin/views/pagination_view : PaginationView
-admin/models/dataset/dataset_collection : DatasetCollection
+dashboard/models/dataset/dataset_collection : DatasetCollection
 ###
 
 class DatasetSwitchView extends Backbone.Marionette.LayoutView
@@ -14,7 +14,7 @@ class DatasetSwitchView extends Backbone.Marionette.LayoutView
       <a href="#" id="showAdvancedView" class="btn btn-default">
         <i class="fa fa-th-list"></i>Show advanced view
       </a>
-      <a href="#" id="showGalleryView" class="btn btn-default">
+      <a href="#" id="showGalleryView" class="btn btn-default hidden">
         <i class="fa fa-th"></i>Show gallery view
       </a>
     </div>
@@ -45,14 +45,9 @@ class DatasetSwitchView extends Backbone.Marionette.LayoutView
     @collection.fetch(silent : true)
 
 
-  onShow : ->
-
-    @ui.showAdvancedButton.hide()
-
-
   toggleSwitchButtons : ->
 
-    [@ui.showAdvancedButton, @ui.showGalleryButton].map((button) -> button.toggle())
+    [@ui.showAdvancedButton, @ui.showGalleryButton].map((button) -> button.toggleClass("hidden", "show"))
 
 
   showGalleryView : ->

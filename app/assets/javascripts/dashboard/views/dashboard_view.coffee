@@ -1,10 +1,10 @@
 ### define
 underscore : _
 backbone.marionette : marionette
-dashboard/views/dashboard_task_list_view : DashboardTaskListView
-dashboard/views/explorative_tracing_list_view : ExplorativeTracingListView
-dashboard/views/logged_time_view : LoggedTimeView
-admin/views/dataset/dataset_switch_view : DatasetSwitchView
+./dashboard_task_list_view : DashboardTaskListView
+./explorative_tracing_list_view : ExplorativeTracingListView
+./logged_time_view : LoggedTimeView
+./dataset/dataset_switch_view : DatasetSwitchView
 ###
 
 class DashboardView extends Backbone.Marionette.LayoutView

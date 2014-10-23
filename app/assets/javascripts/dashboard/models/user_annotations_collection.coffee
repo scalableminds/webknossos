@@ -21,4 +21,3 @@ class UserAnnotationsCollection extends Backbone.Collection
   initialize : (models, options) ->
 
     @userID = options.userID
-    @model = Backbone.Model # important, override a property of the options object

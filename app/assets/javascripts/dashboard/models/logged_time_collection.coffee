@@ -6,6 +6,8 @@ moment : moment
 
 class LoggedTimeCollection extends Backbone.Collection
 
+  comparator : (model) -> return -model.get("interval")
+
   url : ->
 
     if @userID
@@ -16,7 +18,7 @@ class LoggedTimeCollection extends Backbone.Collection
   initialize : (models, options) ->
 
     @userID = options.userID
-    @model = Backbone.Model
+
 
   parse : (response) ->
 
@@ -24,8 +26,9 @@ class LoggedTimeCollection extends Backbone.Collection
       (entry) ->
         interval = entry.paymentInterval
         return {
-          time: moment.duration(entry.durationInSeconds, "seconds").asMinutes()
           interval : moment("#{interval.year} #{interval.month}", "YYYY MM")
+          time: moment.duration(entry.durationInSeconds, "seconds")
         }
-    ).sort( (a, b) -> a.interval > b.interval )
+    )
+
 

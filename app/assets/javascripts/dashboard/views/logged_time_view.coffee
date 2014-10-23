@@ -2,37 +2,53 @@
 underscore : _
 backbone.marionette : marionette
 c3 : c3
-dashboard/views/dashboard_task_list_item_view : DashboardTaskListItemView
-../models/logged_time_collection : LoggedTimeCollection
+dashboard/views/logged_time_list_view : LoggedTimeListView
+dashboard/models/logged_time_collection : LoggedTimeCollection
 ###
 
-class LoggedTimeView extends Backbone.Marionette.ItemView
+class LoggedTimeView extends Backbone.Marionette.LayoutView
 
   template : _.template("""
     <h3>Tracked Time</h3>
-    <div id="graph"></div>
+    <div class="row-fluid">
+      <div class="col-sm-10">
+        <div id="time-graph"></div>
+      </div>
+      <div class="col-sm-2">
+        <div class="time-table"></div>
+      </div>
+    </div>
   """)
+
+  regions :
+    "timeTable" : ".time-table"
+
 
   initialize : (options) ->
 
 
-    @collection = new LoggedTimeCollection([], options)
+    @collection = new LoggedTimeCollection([], userID : @options.userID)
     @listenTo(@collection, "sync", @addGraph)
     @collection.fetch()
+
+
+  onRender : ->
+
+    @timeTable.show(new LoggedTimeListView({@collection}))
 
 
   addGraph : ->
 
     dates = @collection.map((item) -> return item.get("interval").toDate())
-    monthlyMinutes = @collection.map((item) -> return parseInt item.get("time"))
+    monthlyHours = @collection.map((item) -> return parseInt item.get("time").asHours())
 
     graph = c3.generate(
-      bindto : "#graph"
+      bindto : "#time-graph" #doesn't work with classes
       data:
         x: "date"
         columns: [
           ["date"].concat(dates)
-          ["monthlyMinutes"].concat(monthlyMinutes)
+          ["monthlyHours"].concat(monthlyHours)
         ]
       axis :
         x :

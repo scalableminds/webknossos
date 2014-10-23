@@ -51,7 +51,7 @@ class DashboardView extends Backbone.Marionette.LayoutView
     "tabPane" : ".tab-pane"
 
   templateHelpers : ->
-    isAdminView : @model.id != undefined
+    isAdminView : @options.isAdminView
 
 
   initialize : (@options) ->

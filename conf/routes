@@ -105,7 +105,8 @@ DELETE        /api/tasks/:id                                                  co
 
 GET           /tasks                                                          controllers.TaskController.empty
 GET           /tasks/overview                                                 controllers.admin.TaskAdministration.empty
-GET           /admin/tasks/create                                             controllers.admin.TaskAdministration.create
+
+GET           /admin/tasks/create                                             controllers.admin.TaskAdministration.empty
 POST          /admin/tasks/createBulk                                         controllers.admin.TaskAdministration.createBulk
 POST          /admin/tasks/createFromNML                                      controllers.admin.TaskAdministration.createFromNML
 POST          /admin/tasks/createFromForm                                     controllers.admin.TaskAdministration.createFromForm

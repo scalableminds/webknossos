@@ -16,6 +16,7 @@ class Router extends Backbone.Router
     "teams"                         : "teams"
     "statistics"                    : "statistics"
     "tasks"                         : "tasks"
+    "admin/tasks/create"            : "tasksCreate"
     "projects"                      : "projects"
     "dashboard"                     : "dashboard"
     "users/:id/details"             : "dashboard"
@@ -98,6 +99,24 @@ class Router extends Backbone.Router
   tasks : ->
 
     @showWithPagination("TaskListView", "TaskCollection")
+
+
+  ###*
+   * Load layout view that shows task-creation subviews
+   *
+   * @method tasksCreate
+   ###
+  tasksCreate : ->
+
+    require ["admin/views/task/task_create_view"], (TaskCreateView) =>
+      # create the task creation view
+      view = new TaskCreateView()
+
+      # show view
+      @changeView(view)
+
+      # auto-hide the loading spinner
+      @hideLoading()
 
   taskTypes : ->
 

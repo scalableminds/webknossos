@@ -135,7 +135,7 @@ class TaskCreateFromFormView extends Backbone.Marionette.LayoutView
     taskTypeSelectionView = new SelectionView(
       collection: new TaskTypeCollection()
       childViewOptions :
-        modelValue: -> return "#{@model.get("name")}"
+        modelValue: -> return "#{@model.get("summary")}"
       data : "amIAnAdmin=true"
       name: "taskType"
     )

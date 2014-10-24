@@ -134,7 +134,7 @@ gulp.task("build:version", ->
 )
 
 gulp.task("build", (callback) ->
-  runSequence(["install:bower", "clean:build", "build:version"], ["build:scripts", "build:styles"], callback)
+  runSequence(["install:bower", "clean:build"], ["build:scripts", "build:styles"], callback)
 )
 
 
@@ -144,7 +144,7 @@ gulp.task("debug:styles", ["compile:styles", "watch:styles"])
 gulp.task("debug:version", ["watch:version"])
 
 gulp.task("debug", (callback) ->
-  runSequence(["install:bower", "clean:build"], ["debug:scripts", "debug:styles", "debug:version"], callback)
+  runSequence(["install:bower", "clean:build"], ["debug:scripts", "debug:styles"], callback)
 )
 
 gulp.task("default", ["build"])

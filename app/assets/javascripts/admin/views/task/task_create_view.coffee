@@ -66,8 +66,8 @@ class TaskCreateView extends Backbone.Marionette.LayoutView
    ###
   showTabCreateFromNML: ->
 
-    @activeView = new TaskCreateFromNMLView()
-    @tabPane.show(@activeView)
+      @activeView = new TaskCreateFromNMLView()
+      @tabPane.show(@activeView)
 
 
   ###*
@@ -77,5 +77,15 @@ class TaskCreateView extends Backbone.Marionette.LayoutView
    ###
   showTabCreateBulkImport: ->
 
-    @activeView = new TaskCreateBulkImportView()
-    @tabPane.show(@activeView)
+      @activeView = new TaskCreateBulkImportView()
+      @tabPane.show(@activeView)
+
+  ###*
+  * Show default on startup
+  *
+  * @method onRender
+  ###
+  onRender: ->
+
+      @showTabCreateFromForm()
+

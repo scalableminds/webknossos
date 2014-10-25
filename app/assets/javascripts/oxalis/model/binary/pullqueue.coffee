@@ -53,7 +53,7 @@ class PullQueue
     while @batchCount < @BATCH_LIMIT and @queue.length
 
       items = @queue.splice(0, Math.min(@BATCH_SIZE, @queue.length))
-      batch = item.bucket for item in items
+      batch = (item.bucket for item in items)
       @pullBatch(batch)
 
 

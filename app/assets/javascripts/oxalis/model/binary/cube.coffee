@@ -192,7 +192,8 @@ class Cube
 
     cube = @cubes[address[3]].data
     bucketIndex = @getBucketIndexByZoomedAddress(address)
-    cube[bucketIndex] = @LOADING_PLACEHOLDER
+    if not cube[bucketIndex]?
+      cube[bucketIndex] = @LOADING_PLACEHOLDER
 
 
   setBucketByZoomedAddress : (address, bucketData) ->
@@ -229,8 +230,7 @@ class Cube
     if currentBucket?.temporal
       # Merge new data with previously existing bucketData
       for i in [0...@BUCKET_LENGTH]
-        currentBucket[i] = currentBucket[i] or bucketData[i]
-      bucketData = currentBucket
+        bucketData[i] = currentBucket[i] or bucketData[i]
 
     cube[bucketIndex] = bucketData
 
@@ -359,22 +359,13 @@ class Cube
 
     if voxelInCube
 
-      currentAddress = voxel.slice()
-      for zoomStep in [0...@ZOOM_STEP_COUNT]
+      { bucket, voxelIndex } = @getBucketAndVoxelIndex(voxel, 0, true)
 
-        { bucket, voxelIndex } = @getBucketAndVoxelIndex( currentAddress, zoomStep, true )
+      # Write label in little endian order
+      for i in [0...@BYTE_OFFSET]
+        bucket[voxelIndex + i] = (label >> (i * 8) ) & 0xff
 
-        # Write label in little endian order
-        for i in [0...@BYTE_OFFSET]
-          bucket[voxelIndex + i] = (label >> (i * 8) ) & 0xff
-
-        currentAddress = [
-          currentAddress[0] >> 1
-          currentAddress[1] >> 1
-          currentAddress[2] >> 1
-        ]
-
-      @pushQueue.insert( @positionToZoomedAddress( voxel ))
+      @pushQueue.insert(@positionToZoomedAddress(voxel))
 
 
   getDataValue : ( voxel ) ->

@@ -223,17 +223,30 @@ class Cube
       @trigger("bucketLoaded", address)
 
 
-  setBucketData : (cube, bucketIndex, bucketData) ->
+  setBucketData : (cube, bucketIndex, newBucketData) ->
 
-    currentBucket = cube[bucketIndex]
+    oldBucketData = cube[bucketIndex]
 
-    if currentBucket?.temporal
-      # Merge new data with previously existing bucketData
-      for i in [0...@BUCKET_LENGTH]
-        bucketData[i] = currentBucket[i] or bucketData[i]
+    if cube[bucketIndex]?.temporal
+      newBucketData = @mergeBucketData(newBucketData, oldBucketData)
 
-    cube[bucketIndex] = bucketData
-    currentBucket?.bucketReplacedCallback?()
+    cube[bucketIndex] = newBucketData
+    oldBucketData?.bucketReplacedCallback?()
+
+
+  mergeBucketData : (newBucketData, oldBucketData) ->
+
+    voxelPerBucket = 1 << @BUCKET_SIZE_P * 3
+    for i in [0...voxelPerBucket]
+
+      voxelData = (oldBucketData[i * @BYTE_OFFSET + j] for j in [0...@BYTE_OFFSET])
+      voxelEmpty = _.reduce(voxelData, ((memo, v) => memo and v == 0), true)
+
+      unless voxelEmpty
+        for j in [0...@BYTE_OFFSET]
+          newBucketData[i * @BYTE_OFFSET + j] = oldBucketData[i * @BYTE_OFFSET + j]
+
+    return newBucketData
 
 
   setArbitraryBucketByZoomedAddress : ([bucket_x, bucket_y, bucket_z, zoomStep], bucketData) ->

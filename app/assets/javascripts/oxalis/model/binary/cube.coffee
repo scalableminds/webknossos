@@ -146,7 +146,9 @@ class Cube
       if bucket? and bucket != @LOADING_PLACEHOLDER
         return bucket
       else if createIfUndefined
-        return cube[bucketIndex] = new Uint8Array(@BUCKET_LENGTH)
+        cube[bucketIndex] = new Uint8Array(@BUCKET_LENGTH)
+        cube[bucketIndex].createdForWrite = true
+        return cube[bucketIndex]
 
     return null
 
@@ -171,7 +173,10 @@ class Cube
     bucketIndex = @getBucketIndexByZoomedAddress(address)
 
     # if the bucket does not lie inside the dataset, return true
-    not bucketIndex? or cube[bucketIndex]?
+    if not bucketIndex?
+      return true
+
+    return cube[bucketIndex]? and not cube[bucketIndex].createdForWrite
 
 
   isBucketLoadedByZoomedAddress : (address) ->
@@ -202,7 +207,7 @@ class Cube
       bucketData.accessed = true
       bucketData.zoomStep = address[3]
 
-      cube[bucketIndex] = bucketData
+      @setBucketData(cube, bucketIndex, bucketData)
 
       # Generate identity mapping
       #mappingIndex = @getMappingIndexByZoomedAddress(address)
@@ -214,6 +219,19 @@ class Cube
 
       @setArbitraryBucketByZoomedAddress(address, bucketData) if address[3] <= @ARBITRARY_MAX_ZOOMSTEP
       @trigger("bucketLoaded", address)
+
+
+  setBucketData : (cube, bucketIndex, bucketData) ->
+
+    currentBucket = cube[bucketIndex]
+
+    if currentBucket?.createdForWrite
+      # Merge new data with previously existing bucketData
+      for i in [0...@BUCKET_LENGTH]
+        currentBucket[i] = currentBucket[i] or bucketData[i]
+      bucketData = currentBucket
+
+    cube[bucketIndex] = bucketData
 
 
   setArbitraryBucketByZoomedAddress : ([bucket_x, bucket_y, bucket_z, zoomStep], bucketData) ->

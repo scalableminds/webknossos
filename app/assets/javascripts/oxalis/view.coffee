@@ -1,9 +1,10 @@
 ### define
 jquery : $
-../libs/toast : Toast
+app : app
+libs/toast : Toast
+three : THREE
 ./constants : constants
 ./view/modal : modal
-three : THREE
 ###
 
 class View
@@ -26,7 +27,7 @@ class View
 
   toggleTheme : ->
 
-    if @currentTheme is constants.THEME_BRIGHT
+    if @theme is constants.THEME_BRIGHT
       @setTheme(constants.THEME_DARK)
     else
       @setTheme(constants.THEME_BRIGHT)
@@ -34,12 +35,14 @@ class View
 
   setTheme : (theme) ->
 
+    @theme = theme
+    app.vent.trigger("view:setTheme", theme)
+
     if theme is constants.THEME_BRIGHT
       $("body").attr('class', 'bright')
     else
       $("body").attr('class', 'dark')
 
-    @currentTheme = theme
 
 
   isWebGlSupported : ->

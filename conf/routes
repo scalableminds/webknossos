@@ -22,13 +22,18 @@ GET           /logout                                                         co
 GET           /register                                                       controllers.Authentication.register
 POST          /register                                                       controllers.Authentication.handleRegistration
 
-# User settings
-GET           /users                                                          controllers.UserController.empty
-POST          /user/configuration                                             controllers.SettingsController.update
-GET           /user/configuration                                             controllers.SettingsController.read
-GET           /user/configuration/default                                     controllers.SettingsController.default
+# Configurations
+GET           /api/userConfigurations/default                                 controllers.ConfigurationController.default
+GET           /api/user/userConfiguration                                     controllers.ConfigurationController.read
+POST          /api/user/userConfiguration                                     controllers.ConfigurationController.update
+GET           /api/dataSetConfigurations/default                              controllers.ConfigurationController.defaultDataSet
+GET           /api/dataSetConfigurations/:dataSetName                         controllers.ConfigurationController.readDataSet(dataSetName: String)
+POST          /api/dataSetConfigurations/:dataSetName                         controllers.ConfigurationController.updateDataSet(dataSetName: String)
+
+# Users
 GET           /user/tasks/request                                             controllers.TaskController.request
 GET           /users/:id/details                                              controllers.UserController.emptyWithWildcard(id)
+GET           /users                                                          controllers.UserController.empty
 GET           /user/password/reset                                            controllers.UserController.resetPassword
 POST          /user/password/reset                                            controllers.UserController.handleResetPassword
 
@@ -42,7 +47,7 @@ PUT           /api/users/:id                                                  co
 GET           /api/users/:id/loggedTime                                       controllers.UserController.userLoggedTime(id: String)
 GET           /api/users/:id/annotations                                      controllers.UserController.userAnnotations(id: String)
 GET           /api/users/:id/annotations/download                             controllers.admin.NMLIO.userDownload(id: String)
-# GET         /api/users/:id/loginAs                                      controllers.UserController.loginAsUser(id: String)
+# GET         /api/users/:id/loginAs                                          controllers.UserController.loginAsUser(id: String)
 
 # Team
 GET           /teams                                                          controllers.TeamController.empty
@@ -57,7 +62,7 @@ GET           /spotlight                                                      co
 
 # DataSets
 GET           /datasets                                                       controllers.DataSetController.empty
-# GET           /datasets/import                               controllers.DataSetController.importAll
+# GET           /datasets/import                                              controllers.DataSetController.importAll
 GET           /datasets/:dataSetName/view                                     controllers.DataSetController.view(dataSetName: String)
 
 GET           /api/datasets                                                   controllers.DataSetController.list

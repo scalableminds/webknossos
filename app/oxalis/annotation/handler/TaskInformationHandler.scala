@@ -26,7 +26,7 @@ object TaskInformationHandler extends AnnotationInformationHandler with FoxImpli
   def provideAnnotation(taskId: String, user: Option[User])(implicit ctx: DBAccessContext): Fox[TemporaryAnnotation] = {
     for {
       task <- TaskDAO.findOneById(taskId) ?~> Messages("task.notFound")
-      annotation <- CompoundAnnotation.createFromTask(task, user.map(_._id)) ?~> Messages("task.noAnnotations")
+      annotation <- CompoundAnnotation.createFromTask(task, user.map(_._id)) ?~> Messages("task.noAnnotation")
     } yield {
       annotation.copy(restrictions = taskAnnotationRestrictions(task))
     }

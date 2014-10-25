@@ -26,7 +26,7 @@ object ProjectInformationHandler extends AnnotationInformationHandler with FoxIm
   def provideAnnotation(projectName: String, user: Option[User])(implicit ctx: DBAccessContext): Fox[TemporaryAnnotation] = {
     for {
       project <- ProjectDAO.findOneByName(projectName) ?~> Messages("project.notFound")
-      annotation <- CompoundAnnotation.createFromProject(project, user.map(_._id)) ?~> Messages("project.noAnnotations")
+      annotation <- CompoundAnnotation.createFromProject(project, user.map(_._id)) ?~> Messages("project.noAnnotation")
     } yield {
       annotation.copy(restrictions = projectAnnotationRestrictions(project))
     }

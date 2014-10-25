@@ -3,12 +3,12 @@ import play.api.Logger
 import play.api.libs.json._
 
 trait BasicSettings{
-  def defaultSettings: { def settings: Map[String, JsValue]}
- 
-  def MaxSettings = defaultSettings.settings.size
+  def default: { def configuration: Map[String, JsValue]}
+
+  def MaxSettings = default.configuration.size
 
   def isValidSetting(field: Tuple2[String, JsValue]) = {
     val (key, _) = field
-    defaultSettings.settings.get(key)
+    default.configuration.get(key)
   }
 }

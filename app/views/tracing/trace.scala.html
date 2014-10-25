@@ -54,10 +54,14 @@
           </div>
         </div>
 
+<<<<<<< HEAD
         <div id="zoomstep-warning" class="volume-controls">
           <p>Volume tracings are only fully supported at a smaller zoom level. Please zoom in to annotate.</p>
         </div>
 
+=======
+        <div id="lefttabbar">
+>>>>>>> view
         <div id="control-mode" class="volume-controls">
           <p>Control mode:</p>
           <div class="btn-group">
@@ -77,7 +81,9 @@
               } else {
                 <li class="active">
               }
-              <a href="#tab2" data-toggle="tab">Options</a></li>
+              <a href="#dataset-settings-tab" data-toggle="tab"><i class="fa fa-cogs"></i> Dataset</a></li>
+              <li>
+              <a href="#user-settings-tab" data-toggle="tab"><i class="fa fa-cogs"></i> User</a></li>
             </ul>
 
             <div class="tab-content">
@@ -93,13 +99,11 @@
                     @additionalHtml
                   </div>
                 </div>
-                <div class="tab-pane" id="tab2" />
+                <div class="tab-pane" id="dataset-settings-tab"></div>
               } else {
-                <div class="tab-pane active" id="tab2" />
+                <div class="tab-pane active" id="dataset-settings-tab"></div>
               }
-                <div id="status"></div>
-                <div id="optionswindow"></div>
-              </div>
+              <div class="tab-pane" id="user-settings-tab"></div>
             </div>
 
         </div>

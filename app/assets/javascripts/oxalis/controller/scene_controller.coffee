@@ -1,11 +1,12 @@
 ### define
+app : app
+backbone : Backbone
 ../geometries/plane : Plane
 ../geometries/skeleton : Skeleton
 ../geometries/cube : Cube
 ../geometries/contourgeometry : ContourGeometry
 ../geometries/volumegeometry : VolumeGeometry
 ../model/dimensions : Dimensions
-../../libs/event_mixin : EventMixin
 ../constants : constants
 ../view/polygons/polygon_factory : PolygonFactory
 three : THREE
@@ -13,14 +14,14 @@ three : THREE
 
 class SceneController
 
-  # This class collects all the meshes displayed in the Sceleton View and updates position and scale of each
+  # This class collects all the meshes displayed in the Skeleton View and updates position and scale of each
   # element depending on the provided flycam.
 
   CUBE_COLOR : 0x999999
 
   constructor : (@upperBoundary, @flycam, @model) ->
 
-    _.extend(@, new EventMixin())
+    _.extend(this, Backbone.Events)
 
     @current          = 0
     @displayPlane     = [true, true, true]
@@ -31,7 +32,7 @@ class SceneController
     @volumeMeshes   = []
 
     @createMeshes()
-    @bind()
+    @bindToEvents()
 
 
   createMeshes : ->
@@ -152,26 +153,26 @@ class SceneController
       @planes[i].setScale(planeScale)
 
 
-  setTextRotation : (rotVec) =>
+  setTextRotation : (rotVec) ->
 
     # TODO: Implement
 
 
-  setDisplayCrosshair : (value) =>
+  setDisplayCrosshair : (value) ->
 
     for plane in @planes
       plane.setDisplayCrosshair value
     @flycam.update()
 
 
-  setClippingDistance : (value) =>
+  setClippingDistance : (value) ->
 
     # convert nm to voxel
     for i in constants.ALL_PLANES
-      @planeShift[i] = value * @model.scaleInfo.voxelPerNM[i]
+      @planeShift[i] = value * app.scaleInfo.voxelPerNM[i]
 
 
-  setInterpolation : (value) =>
+  setInterpolation : (value) ->
 
     for plane in @planes
       plane.setLinearInterpolationEnabled(value)
@@ -242,16 +243,14 @@ class SceneController
     @skeleton?.setSizeAttenuation(false)
 
 
-  bind : ->
+  bindToEvents : ->
 
-    @model.user.on({
-      clippingDistanceChanged : (value) =>
-        @setClippingDistance(value)
-      displayCrosshairChanged : (value) =>
-        @setDisplayCrosshair(value)
-      interpolationChanged : (value) =>
-        @setInterpolation(value)
-      tdViewDisplayPlanesChanged : (value) =>
-        @setDisplayPlanes value
-      segmentationOpacityChanged : (value) =>
-        @setSegmentationAlpha value  })
+    user = @model.user
+    @listenTo(@model, "newBoundingBox", (bb) -> @setBoundingBox(bb))
+    @listenTo(user, "change:clippingDistance", (model, value) -> @setClippingDistance(value))
+    @listenTo(user, "change:displayCrosshair", (model, value) -> @setDisplayCrosshair(value))
+    @listenTo(user, "change:interpolation", (model, value) -> @setInterpolation(value))
+    @listenTo(user, "change:displayTDViewXY", (model, value) -> @setDisplayPlanes(value))
+    @listenTo(user, "change:displayTDViewYZ", (model, value) -> @setDisplayPlanes(value))
+    @listenTo(user, "change:displayTDViewXZ", (model, value) -> @setDisplayPlanes(value))
+

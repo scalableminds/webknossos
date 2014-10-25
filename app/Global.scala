@@ -83,8 +83,8 @@ object InitialData extends GlobalDBAccess {
           "Boy",
           true,
           SCrypt.hashPassword("secret"),
-          List(TeamMembership(mpi.name, Role.Admin)),
-          UserSettings.defaultSettings))
+          List(TeamMembership(mpi.name, Role.Admin)))
+        )
     }
   }
 

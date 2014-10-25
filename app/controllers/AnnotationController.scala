@@ -83,7 +83,7 @@ object AnnotationController extends Controller with Secured with TracingInformat
       withAnnotation(AnnotationIdentifier(typ, id)) { annotation =>
           for {
             _ <- annotation.restrictions.allowAccess(request.user).failIfFalse(Messages("notAllowed")).toFox ~> 400
-          } yield Ok(htmlForAnnotation(annotation))
+          } yield Ok(empty)
       }
   }
 
@@ -240,8 +240,8 @@ object AnnotationController extends Controller with Secured with TracingInformat
       }
   }
 
-  def htmlForAnnotation(annotation: AnnotationLike)(implicit request: AuthenticatedRequest[_]) = {
-    html.tracing.trace(annotation)(Html.empty)
+  def empty(implicit request: AuthenticatedRequest[_]) = {
+    views.html.main()(Html.empty)
   }
 
   def annotationsForTask(taskId: String) = Authenticated.async { implicit request =>

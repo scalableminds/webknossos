@@ -1,5 +1,5 @@
 ### define
-../../libs/event_mixin : EventMixin
+app : app
 ./dimensions : Dimensions
 ../constants : constants
 ###
@@ -10,14 +10,15 @@ class Flycam2d
   MAX_TEXTURE_OFFSET  : 31     # maximum difference between requested coordinate and actual texture position
   MAX_ZOOM_THRESHOLD  : 2
 
-  scaleInfo : null
   viewportWidth : 0
 
-  constructor : (@viewportWidth, @scaleInfo, @zoomStepCount, @user) ->
+  constructor : (@viewportWidth, @zoomStepCount, @model) ->
 
-    _.extend(this, new EventMixin())
+    _.extend(this, Backbone.Events)
 
     console.log "ZoomStepCount: ", @zoomStepCount
+
+    @user = @model.user
 
     # Invariant: 2^zoomStep / 2^integerZoomStep <= 2^maxZoomDiff
     @maxZoomStepDiff = Math.min(Math.log(@MAX_ZOOM_THRESHOLD) / Math.LN2, Math.log((@TEXTURE_WIDTH-@MAX_TEXTURE_OFFSET)/@viewportWidth)/Math.LN2)
@@ -27,20 +28,21 @@ class Flycam2d
     # buffer: how many pixels is the texture larger than the canvas on each dimension?
     # --> two dimensional array with buffer[planeID][dimension], dimension: x->0, y->1
     @buffer = [[0, 0], [0, 0], [0, 0]]
-    @updateStoredValues()
     @position = [0, 0, 0]
     @direction = [0, 0, 1]
     @hasChanged = true
     @rayThreshold = [10, 10, 10, 100]
     @spaceDirection = [1, 1, 1]
-    @quality = 0        # offset of integer zoom step to the best-quality zoom level
+    @quality = 0 # offset of integer zoom step to the best-quality zoom level
+
+    @updateStoredValues()
 
     # correct zoom values that are too high or too low
     @user.set("zoom", Math.max(0.01, Math.min(@user.get("zoom"), Math.floor(@getMaxZoomStep()))))
 
-    @user.on
-      qualityChanged : (quality) => @setQuality(quality)
-      zoomChanged : (zoomFactor) => @zoom(Math.log(zoomFactor) / Math.LN2)
+    @listenTo(@model.get("dataset"), "change:quality", (model, quality) -> @setQuality(quality))
+    # TODO move zoom into tracing settings
+    @listenTo(@user, "change:zoom", (model, zoomFactor) -> @zoom(Math.log(zoomFactor) / Math.LN2))
 
     # Fire changed event every time
     _trigger = @trigger
@@ -88,7 +90,7 @@ class Flycam2d
     @zoomStep = zoomStep
     @hasChanged = true
     @updateStoredValues()
-    @trigger "zoomStepChanged", zoomStep
+    @trigger("zoomStepChanged", zoomStep)
 
 
   getMaxZoomStep : ->
@@ -99,7 +101,7 @@ class Flycam2d
   calculateBuffer : ->
 
     for planeID in [0..2]
-      scaleArray = Dimensions.transDim(@scaleInfo.baseVoxelFactors, planeID)
+      scaleArray = Dimensions.transDim(app.scaleInfo.baseVoxelFactors, planeID)
       pixelNeeded = @viewportWidth * @getTextureScalingFactor()
       @buffer[planeID] = [@TEXTURE_WIDTH - pixelNeeded * scaleArray[0],
                           @TEXTURE_WIDTH - pixelNeeded * scaleArray[1]]
@@ -113,7 +115,10 @@ class Flycam2d
 
   getIntegerZoomStep : ->
 
-    @integerZoomStep
+    unless @integerZoomStep
+      @calculateIntegerZoomStep()
+
+    return @integerZoomStep
 
 
   getTextureScalingFactor : ->
@@ -162,7 +167,7 @@ class Flycam2d
     vector = Dimensions.transDim(vector, planeID)
     ind = Dimensions.getIndices(planeID)
     zoomFactor = if increaseSpeedWithZoom then Math.pow(2, @zoomStep) else 1
-    scaleFactor = @scaleInfo.baseVoxelFactors
+    scaleFactor = app.scaleInfo.baseVoxelFactors
     delta = [ vector[0] * zoomFactor * scaleFactor[0],
               vector[1] * zoomFactor * scaleFactor[1],
               vector[2] * zoomFactor * scaleFactor[2]]
@@ -188,8 +193,8 @@ class Flycam2d
     max      = []
 
     for i in [0..2]
-      min.push( position[i] - offset * @scaleInfo.baseVoxelFactors[i] )
-      max.push( position[i] + offset * @scaleInfo.baseVoxelFactors[i] )
+      min.push( position[i] - offset * app.scaleInfo.baseVoxelFactors[i] )
+      max.push( position[i] + offset * app.scaleInfo.baseVoxelFactors[i] )
 
     return { min, max }
 
@@ -241,7 +246,7 @@ class Flycam2d
     # returns [left, top, right, bottom] array
 
     # convert scale vector to array in order to be able to use getIndices()
-    scaleArray = Dimensions.transDim( @scaleInfo.baseVoxelFactors, planeID )
+    scaleArray = Dimensions.transDim( app.scaleInfo.baseVoxelFactors, planeID )
     offsets    = @getOffsets(planeID)
     size       = @getTextureScalingFactor() * @viewportWidth
     # two pixels larger, just to fight rounding mistakes (important for mouse click conversion)
@@ -271,7 +276,7 @@ class Flycam2d
   getRayThreshold : (planeID) ->
 
     if planeID < 3
-      return @rayThreshold[planeID] * Math.pow(2, @zoomStep) * @scaleInfo.baseVoxel
+      return @rayThreshold[planeID] * Math.pow(2, @zoomStep) * app.scaleInfo.baseVoxel
     else
       return @rayThreshold[planeID]
 

@@ -1,9 +1,10 @@
 ### define
+app : app
+backbone : Backbone
 ../model : Model
 ../view : View
 ../model/dimensions : Dimensions
 ../constants : constants
-libs/event_mixin : EventMixin
 three : THREE
 ###
 
@@ -18,7 +19,7 @@ class CameraController
 
   constructor : (@cameras, @flycam, @model) ->
 
-    _.extend(@, new EventMixin())
+    _.extend(this, Backbone.Events)
 
     @updateCamViewport()
     for cam in @cameras
@@ -27,12 +28,12 @@ class CameraController
 
     @changeTDViewDiagonal(false)
 
-    @bind()
+    @bindToEvents()
 
   update : =>
     gPos = @flycam.getPosition()
     # camera porition's unit is nm, so convert it.
-    cPos = @model.scaleInfo.voxelToNm(gPos)
+    cPos = app.scaleInfo.voxelToNm(gPos)
     @cameras[constants.PLANE_XY].position = new THREE.Vector3(cPos[0], cPos[1], cPos[2])
     @cameras[constants.PLANE_YZ].position = new THREE.Vector3(cPos[0], cPos[1], cPos[2])
     @cameras[constants.PLANE_XZ].position = new THREE.Vector3(cPos[0], cPos[1], cPos[2])
@@ -47,13 +48,13 @@ class CameraController
     # CORRECTION: You're telling lies, you need to use the up vector...
 
     camera = @cameras[constants.TDView]
-    b = @model.scaleInfo.voxelToNm(@model.upperBoundary)
+    b = app.scaleInfo.voxelToNm(@model.upperBoundary)
 
-    pos = @model.scaleInfo.voxelToNm(@model.flycam.getPosition())
+    pos = app.scaleInfo.voxelToNm(@model.flycam.getPosition())
     time = 800
     to = {}
     notify = => @trigger("cameraPositionChanged")
-    getConvertedPosition = => return @model.scaleInfo.voxelToNm(@model.flycam.getPosition())
+    getConvertedPosition = => return app.scaleInfo.voxelToNm(@model.flycam.getPosition())
     from = {
       notify: notify
       getConvertedPosition: getConvertedPosition
@@ -222,12 +223,12 @@ class CameraController
 
   getClippingDistance : (planeID) ->
 
-    @camDistance * @model.scaleInfo.voxelPerNM[planeID]
+    @camDistance * app.scaleInfo.voxelPerNM[planeID]
 
 
   updateCamViewport : ->
 
-    scaleFactor = @model.scaleInfo.baseVoxel
+    scaleFactor = app.scaleInfo.baseVoxel
     boundary    = constants.VIEWPORT_WIDTH / 2 * @model.user.get("zoom")
     for i in [constants.PLANE_XY, constants.PLANE_YZ, constants.PLANE_XZ]
       @cameras[i].near = -@camDistance
@@ -237,8 +238,7 @@ class CameraController
     @flycam.update()
 
 
-  bind : ->
+  bindToEvents : ->
 
-    @model.user.on
-      clippingDistanceChanged : (value) => @setClippingDistance(value)
-      zoomChanged : (value) => @updateCamViewport()
+    @listenTo(@model.user, "change:clippingDistance", (model, value) -> @setClippingDistance(value))
+    @listenTo(@model.user, "change:zoom", (model, value) -> @updateCamViewport())

@@ -1,5 +1,5 @@
 ### define
-libs/event_mixin : EventMixin
+backbone : Backbone
 ###
 
 class Cube
@@ -44,7 +44,7 @@ class Cube
 
   constructor : (@upperBoundary, @ZOOM_STEP_COUNT, @BIT_DEPTH) ->
 
-    _.extend(@, new EventMixin())
+    _.extend(this, Backbone.Events)
 
     @LOOKUP_DEPTH_UP = @ZOOM_STEP_COUNT - 1
     @BUCKET_LENGTH   = (1 << @BUCKET_SIZE_P * 3) * (@BIT_DEPTH >> 3)

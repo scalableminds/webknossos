@@ -1,4 +1,5 @@
 ### define
+backbone : Backbone
 ./binary/interpolation_collector : InterpolationCollector
 ./binary/cube : Cube
 ./binary/pullqueue : PullQueue
@@ -8,7 +9,6 @@
 ./binary/ping_strategy_3d : PingStrategy3d
 ./binary/bounding_box : BoundingBox
 ../constants : constants
-libs/event_mixin : EventMixin
 ###
 
 class Binary
@@ -26,7 +26,7 @@ class Binary
 
   constructor : (@model, @tracing, @layer, maxZoomStep, updatePipeline, @connectionInfo) ->
 
-    _.extend(this, new EventMixin())
+    _.extend(this, Backbone.Events)
 
     @TEXTURE_SIZE_P = constants.TEXTURE_SIZE_P
     { @category, @name } = @layer
@@ -39,8 +39,10 @@ class Binary
 
     @cube = new Cube(@upperBoundary, maxZoomStep + 1, @layer.bitDepth)
     @boundingBox = new BoundingBox(@model.boundingBox, @cube)
-    @pullQueue = new PullQueue(@model.dataSetName, @cube, @layer, @tracing.id, @boundingBox, connectionInfo)
-    @pushQueue = new PushQueue(@model.dataSetName, @cube, @layer, @tracing.id, updatePipeline)
+
+    datasetName = @model.get("dataset").get("name")
+    @pullQueue = new PullQueue(datasetName, @cube, @layer, @tracing.id, @boundingBox, connectionInfo)
+    @pushQueue = new PushQueue(datasetName, @cube, @layer, @tracing.id, updatePipeline)
     @cube.setPushQueue( @pushQueue )
 
     @pingStrategies = [
@@ -55,21 +57,10 @@ class Binary
     for planeId in constants.ALL_PLANES
       @planes.push( new Plane2D(planeId, @cube, @pullQueue, @TEXTURE_SIZE_P, @layer.bitDepth, @targetBitDepth, 32) )
 
-    @model.user.on({
-      set4BitChanged : (is4Bit) => @pullQueue(is4Bit)
-    })
+    @pullQueue.set4Bit(@model.get("dataset").get("fourBit"))
+    @listenTo(@model.get("dataset"), "change:fourBit" , (model, is4Bit) -> @pullQueue.set4Bit(is4Bit) )
 
     @ping = _.throttle(@pingImpl, @PING_THROTTLE_TIME)
-
-
-  setColor : (@color) ->
-
-    @trigger "newColor", @color
-
-
-  setColorSettings : (brightness, contrast) ->
-
-    @trigger "newColorSettings", brightness, contrast
 
 
   pingStop : ->

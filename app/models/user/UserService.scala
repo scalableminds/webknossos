@@ -5,6 +5,7 @@ import scala.Some
 import scala.concurrent.{Future, Await}
 import scala.concurrent.duration._
 import oxalis.user.UserCache
+import models.configuration.{UserConfiguration, DataSetConfiguration}
 import models.team.{TeamDAO, Role, TeamMembership, Team}
 import reactivemongo.bson.BSONObjectID
 import play.api.i18n.Messages
@@ -92,11 +93,22 @@ object UserService extends FoxImplicits {
     UserDAO.findOneByEmail(email)(GlobalAccessContext)
   }
 
+  def updateUserConfiguration(user: User, configuration: UserConfiguration)(implicit ctx: DBAccessContext) = {
+    UserDAO.updateUserConfiguration(user, configuration).map {
+      result =>
+        UserCache.invalidateUser(user.id)
+        result
+    }
+  }
+
   def findFinishedTasksOf(user: User)(implicit ctx: DBAccessContext) =
     AnnotationService.findTasksOf(user).map(_.flatMap(_._task))
 
-  def updateSettings(user: User, settings: UserSettings)(implicit ctx: DBAccessContext) = {
-    UserDAO.updateSettings(user, settings).map {
+  def updateDataSetConfiguration(user: User, dataSetName: String, configuration: DataSetConfiguration)(implicit ctx: DBAccessContext) = {
+    UserDAO.updateDataSetConfiguration(user, dataSetName, configuration).map {
+
+  // def updateSettings(user: User, settings: UserSettings)(implicit ctx: DBAccessContext) = {
+  //   UserDAO.updateSettings(user, settings).map {
       result =>
         UserCache.invalidateUser(user.id)
         result

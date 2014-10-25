@@ -147,7 +147,8 @@ class Cube
         return bucket
       else if createIfUndefined
         cube[bucketIndex] = new Uint8Array(@BUCKET_LENGTH)
-        cube[bucketIndex].createdForWrite = true
+        cube[bucketIndex].temporal = true
+        @trigger("temporalBucketCreated", address)
         return cube[bucketIndex]
 
     return null
@@ -176,7 +177,7 @@ class Cube
     if not bucketIndex?
       return true
 
-    return cube[bucketIndex]? and not cube[bucketIndex].createdForWrite
+    return cube[bucketIndex]? and not cube[bucketIndex].temporal
 
 
   isBucketLoadedByZoomedAddress : (address) ->
@@ -225,7 +226,7 @@ class Cube
 
     currentBucket = cube[bucketIndex]
 
-    if currentBucket?.createdForWrite
+    if currentBucket?.temporal
       # Merge new data with previously existing bucketData
       for i in [0...@BUCKET_LENGTH]
         currentBucket[i] = currentBucket[i] or bucketData[i]

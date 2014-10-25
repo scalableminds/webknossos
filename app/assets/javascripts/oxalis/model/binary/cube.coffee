@@ -233,6 +233,7 @@ class Cube
         bucketData[i] = currentBucket[i] or bucketData[i]
 
     cube[bucketIndex] = bucketData
+    currentBucket?.bucketReplacedCallback?()
 
 
   setArbitraryBucketByZoomedAddress : ([bucket_x, bucket_y, bucket_z, zoomStep], bucketData) ->
@@ -365,7 +366,13 @@ class Cube
       for i in [0...@BYTE_OFFSET]
         bucket[voxelIndex + i] = (label >> (i * 8) ) & 0xff
 
-      @pushQueue.insert(@positionToZoomedAddress(voxel))
+      # Make sure temporal buckets are not saved before merged
+      if bucket.temporal
+        bucket.bucketReplacedCallback = =>
+          @pushQueue.insert(@positionToZoomedAddress(voxel))
+          @pushQueue.push()
+      else
+        @pushQueue.insert(@positionToZoomedAddress(voxel))
 
 
   getDataValue : ( voxel ) ->

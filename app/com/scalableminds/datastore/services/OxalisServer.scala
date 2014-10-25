@@ -5,22 +5,22 @@ package com.scalableminds.datastore.services
 
 import play.api.libs.json.{JsError, Json, JsValue}
 import com.scalableminds.braingames.binary.models.{DataLayer, DataSourceLike}
-import play.api.libs.ws.WS
 import com.scalableminds.braingames.binary.Logger._
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.http.HeaderNames
 import akka.actor.{ ActorSystem, Props }
 import com.scalableminds.util.rest.RESTCall
+import play.api.libs.ws.WS
 import play.api.mvc._
 import play.api.test.Helpers._
 import play.api.test.{ FakeRequest, FakeHeaders }
 import play.api.mvc.AnyContentAsJson
 import play.api.libs.json.JsSuccess
 import play.api.libs.iteratee.Iteratee
+import play.api.Play.current
 import scala.concurrent.Future
 import net.liftweb.common.{Failure, Full}
-import java.io.File
 
 class OxalisMessageHandler extends JsonMessageHandler {
 
@@ -32,7 +32,7 @@ class OxalisMessageHandler extends JsonMessageHandler {
     FakeRequest(call.method, path, FakeHeaders(call.headers.toList), AnyContentAsJson(call.body))
   }
 
-  def embedInRESTResponse(call: RESTCall, response: SimpleResult)(implicit codec: Codec): Future[Array[Byte]] = {
+  def embedInRESTResponse(call: RESTCall, response: Result)(implicit codec: Codec): Future[Array[Byte]] = {
 
     val headers = Json.stringify(Json.toJson(response.header.headers))
 

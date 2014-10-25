@@ -12,18 +12,18 @@ trait Controller extends PlayController with RemoteOriginHelpers with ExtendedCo
 
 trait RemoteOriginHelpers {
 
-  def AllowRemoteOrigin(f: => Future[SimpleResult]) =
+  def AllowRemoteOrigin(f: => Future[Result]) =
     f.map(addHeadersToResult)
 
-  def AllowRemoteOrigin(f: => SimpleResult) =
+  def AllowRemoteOrigin(f: => Result) =
     addHeadersToResult(f)
 
-  def addHeadersToResult(result: SimpleResult) =
+  def addHeadersToResult(result: Result) =
     result.withHeaders("Access-Control-Allow-Origin" -> "*")
 
   case class AllowRemoteOrigin[A](action: Action[A]) extends Action[A] {
 
-    def apply(request: Request[A]): Future[SimpleResult] =
+    def apply(request: Request[A]): Future[Result] =
       action(request).map(_.withHeaders("Access-Control-Allow-Origin" -> "*"))
 
     lazy val parser = action.parser

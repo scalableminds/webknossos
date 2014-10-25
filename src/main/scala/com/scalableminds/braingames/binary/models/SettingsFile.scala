@@ -3,12 +3,12 @@
  */
 package com.scalableminds.braingames.binary.models
 
-import java.io.File
+import java.nio.file.{Files, Path}
+
 import play.api.libs.json._
 import com.scalableminds.util.tools.JsonHelper._
 import net.liftweb.common._
 import net.liftweb.common.Box._
-import scalax.file.Path
 import com.scalableminds.util.io.FileIO
 
 trait SettingsFile[A] {
@@ -16,7 +16,7 @@ trait SettingsFile[A] {
 
   def settingsFileReads: Reads[A]
 
-  def settingsFileInFolder(p: Path) = p / settingsFileName
+  def settingsFileInFolder(p: Path) = p.resolve(settingsFileName)
 
   def fromSettingsFileIn(p: Path): Option[A] =
     extractSettingsFromFile(
@@ -24,7 +24,7 @@ trait SettingsFile[A] {
       settingsFileReads)
 
   def extractSettingsFromFile[T](path: Path, settingsReads: Reads[T]): Box[T] = {
-    if (path.isFile) {
+    if (Files.isRegularFile(path)) {
       JsonFromFile(path).flatMap {
         _.validate(settingsReads) match {
           case JsSuccess(e, _) => Full(e)
@@ -35,11 +35,12 @@ trait SettingsFile[A] {
       Empty
   }
 
-  def writeSettingsToFile[T](settings: T, path: Path)(implicit writer: Writes[T]) = {
-    path.fileOption.map(file =>
-      FileIO.printToFile(file) {
+  def writeSettingsToFile[T](settings: T, path: Path)(implicit writer: Writes[T]): Unit = {
+    if (!Files.isDirectory(path)) {
+      FileIO.printToFile(path.toFile) {
         printer =>
           printer.print(writer.writes(settings).toString)
-      })
+      }
+    }
   }
 }

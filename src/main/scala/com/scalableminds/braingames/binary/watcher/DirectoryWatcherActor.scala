@@ -3,15 +3,12 @@
  */
 package com.scalableminds.braingames.binary.watcher
 
-import scala.collection.mutable.HashMap
-import akka.actor._
+import java.nio.file.{Files, Paths, Path}
+import akka.actor.{Cancellable, Actor}
 import scala.concurrent.duration._
 import scala.concurrent.Future
 import com.typesafe.config.Config
 import akka.agent.Agent
-import java.nio.file.{Path => JavaPath, _}
-import scalax.file.Path
-import scala.Some
 
 case class StartWatching(path: Path, recursive: Boolean)
 
@@ -29,13 +26,13 @@ class DirectoryWatcherActor(config: Config, changeHandler: DirectoryChangeHandle
 
   def receive = {
     case StartWatching(path, recursive) =>
-      if (path.exists) {
+      if (Files.isDirectory(path)) {
         try {
-          start(Paths.get(path.path), recursive)
-          logger.info(s"Successfully watching ${path.path}.")
+          start(path, recursive)
+          logger.info(s"Successfully watching ${path.toString}.")
         } catch {
           case e: Exception =>
-            logger.error(s"Failed to watch ${path.path}. Error: ${e.getMessage}", e)
+            logger.error(s"Failed to watch ${path.toString}. Error: ${e.getMessage}", e)
         }
       } else {
         logger.error(s"Can't watch $path because it doesn't exist.")
@@ -46,7 +43,7 @@ class DirectoryWatcherActor(config: Config, changeHandler: DirectoryChangeHandle
   /**
    * The main directory watching thread
    */
-  def start(watchedJavaPath: JavaPath, recursive: Boolean): Unit = {
+  def start(watchedJavaPath: Path, recursive: Boolean): Unit = {
     Future{
       changeHandler.onStart(watchedJavaPath, recursive)
     }

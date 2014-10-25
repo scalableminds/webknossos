@@ -3,7 +3,8 @@
  */
 package com.scalableminds.braingames.binary.repository
 
-import scalax.file.{PathSet, PathMatcher, Path}
+import java.nio.file.{Paths, Files, Path}
+
 import com.scalableminds.braingames.binary.models._
 import javax.imageio.ImageIO
 import com.scalableminds.util.geometry.{BoundingBox, Scale, Point3D}
@@ -11,7 +12,9 @@ import java.io._
 import com.scalableminds.braingames.binary.store.{FileDataStore, DataStore}
 import com.scalableminds.braingames.binary.Logger._
 import java.awt.image.{BufferedImage, DataBufferByte, DataBufferInt}
+import com.scalableminds.util.io.PathUtils
 import com.scalableminds.util.tools.ProgressTracking.ProgressTracker
+import org.apache.commons.io.FileUtils
 import scala.collection.JavaConversions._
 import javax.imageio.spi.IIORegistry
 import com.twelvemonkeys.imageio.plugins.tiff.TIFFImageReaderSpi
@@ -70,15 +73,15 @@ trait TiffDataSourceTypeHandler extends DataSourceTypeHandler {
   }
 
   protected def prepareTargetPath(target: Path): Unit = {
-    target.deleteRecursively()
-    target.createDirectory()
+    FileUtils.deleteQuietly(target.toFile)
+    Files.createDirectories(target)
   }
 
   protected def elementClass(bytesPerPixel: Int) =
     s"uint${bytesPerPixel * 8}"
 
   def importDataSource(unusableDataSource: UnusableDataSource, progress: ProgressTracker): Option[DataSource] = {
-    val target = (unusableDataSource.sourceFolder / Target).toAbsolute
+    val target = (unusableDataSource.sourceFolder.resolve(Target)).toAbsolutePath
 
     prepareTargetPath(target)
 
@@ -86,7 +89,7 @@ trait TiffDataSourceTypeHandler extends DataSourceTypeHandler {
 
     Some(DataSource(
       unusableDataSource.id,
-      target.path,
+      target.toString,
       DefaultScale,
       dataLayers = layers))
   }
@@ -107,7 +110,7 @@ trait TiffDataSourceTypeHandler extends DataSourceTypeHandler {
     def extractLayer(rs: Seq[Regex]): Int = {
       rs match{
         case r :: tail =>
-          r.findFirstMatchIn(tiffFile.path).map(_.group(1).toInt) getOrElse extractLayer(tail)
+          r.findFirstMatchIn(tiffFile.toString).map(_.group(1).toInt) getOrElse extractLayer(tail)
         case _ =>
           DefaultLayer
       }
@@ -122,7 +125,7 @@ trait TiffDataSourceTypeHandler extends DataSourceTypeHandler {
         val depth = layerTiffs.size
         extractImageInfo(layerTiffs.toList) match {
           case Some(tiffInfo) =>
-            val rawImages = layerTiffs.toList.sortBy(_.name).toIterator.flatMap( t => tiffToRawImage(t))
+            val rawImages = layerTiffs.toList.sortBy(_.getFileName.toString).toIterator.flatMap( t => tiffToRawImage(t))
             Some(TiffLayer(layer, tiffInfo.width, tiffInfo.height, depth, tiffInfo.bytesPerPixel, rawImages))
           case _ =>
             logger.warn("No tiff files found")
@@ -139,7 +142,7 @@ trait TiffDataSourceTypeHandler extends DataSourceTypeHandler {
   }
 
   def convertToKnossosStructure(id: String, source: Path, targetRoot: Path, progress: ProgressTracker): Iterable[DataLayer] = {
-    val tiffs = (source ** "*.tif")
+    val tiffs = PathUtils.listFiles(source).filter(_.getFileName.toString.endsWith(".tif"))
 
     val layers = extractLayers(tiffs.toList)
     val namingSchema = namingSchemaFor(layers) _
@@ -155,7 +158,7 @@ trait TiffDataSourceTypeHandler extends DataSourceTypeHandler {
 
 
       val layerName = namingSchema(layer.layer)
-      val target = targetRoot / layerName
+      val target = targetRoot.resolve(layerName)
       TileToCubeWriter(id, 1, target, layer.depth, layer.bytesPerPixel, layer.tiffs, progressReporter _ ).convertToCubes()
       val boundingBox = BoundingBox(Point3D(0, 0, 0), layer.width, layer.height, layer.depth)
       KnossosMultiResCreator.createResolutions(target, target, id, layer.bytesPerPixel, 1, Resolutions.size, boundingBox).onFailure{
@@ -166,7 +169,7 @@ trait TiffDataSourceTypeHandler extends DataSourceTypeHandler {
       val section = DataLayerSection(layerName, layerName, Resolutions, boundingBox, boundingBox)
       val elements = elementClass(layer.bytesPerPixel)
 
-      DataLayer(layerName, DefaultLayerType.category, targetRoot.path, None, elements, false, None, List(section))
+      DataLayer(layerName, DefaultLayerType.category, targetRoot.toString, None, elements, false, None, List(section))
     }
   }
 
@@ -179,12 +182,12 @@ trait TiffDataSourceTypeHandler extends DataSourceTypeHandler {
 
     private def fileForPosition(block: Point3D): FileOutputStream = {
       val path = DataStore.knossosFilePath(folder, id, resolution, block)
-      path.createFile(failIfExists = false)
-      path.fileOption match {
+      PathUtils.createFile(path, failIfExists = false)
+      PathUtils.fileOption(path) match {
         case Some(f) =>
           new FileOutputStream(f, true)
         case None =>
-          throw new Exception("Couldn't open file: " + path.path)
+          throw new Exception("Couldn't open file: " + path)
       }
     }
 
@@ -289,7 +292,7 @@ trait TiffDataSourceTypeHandler extends DataSourceTypeHandler {
   }
 
   def tiffToRawImage(tiffFile: Path): Option[RawImage] = {
-    tiffFile.fileOption.map {
+    PathUtils.fileOption(tiffFile).map {
       file =>
         val tiff = convertIfNecessary(ImageIO.read(file))
         if (tiff == null) {

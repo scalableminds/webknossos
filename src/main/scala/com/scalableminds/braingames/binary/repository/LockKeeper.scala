@@ -3,8 +3,9 @@
  */
 package com.scalableminds.braingames.binary.repository
 
+import java.nio.file.{Files, Path}
+
 import akka.actor.{ActorSystem, Props, Actor}
-import scalax.file.Path
 import java.util.UUID
 import net.liftweb.common._
 import scala.concurrent.duration._
@@ -13,7 +14,7 @@ import com.scalableminds.util.tools.{FoxImplicits, Fox}
 import akka.pattern.ask
 import akka.util.Timeout
 import play.api.libs.concurrent.Execution.Implicits._
-import com.scalableminds.util.io.FileIO
+import com.scalableminds.util.io.{PathUtils, FileIO}
 
 trait LockKeeperHelper extends LockKeeperImpl {
   def withLock[T](folder: Path)(f: => T): Fox[T] = {
@@ -93,13 +94,13 @@ class LockKeeperActor extends Actor {
   def receive = {
     case AcquireLock(folder) =>
       sender ! refreshLock(folder)
-      pathsToRefresh ::= folder.toAbsolute
+      pathsToRefresh ::= folder.toAbsolutePath
 
     case RefreshLocks =>
       pathsToRefresh.map(refreshLock)
 
     case ReleaseLock(folder) =>
-      pathsToRefresh = pathsToRefresh.filterNot(_.isSame(folder.toAbsolute))
+      pathsToRefresh = pathsToRefresh.filterNot(PathUtils.isTheSame(_, folder))
       sender ! releaseLock(folder)
   }
 
@@ -130,10 +131,10 @@ class LockKeeperActor extends Actor {
   }
 
   private def lockFile(folder: Path) =
-    folder / LockFileName
+    folder.resolve(LockFileName)
 
   private def parseLockFile(folder: Path) = {
-    folder.fileOption.flatMap {
+    PathUtils.fileOption(folder).flatMap {
       file =>
         if(file.exists){
           val lockFileContent = scala.io.Source.fromFile(file).mkString.trim
@@ -144,14 +145,14 @@ class LockKeeperActor extends Actor {
   }
 
   private def deleteLockFile(folder: Path) = {
-    folder.deleteIfExists() match {
+    Files.deleteIfExists(folder) match {
       case true => Full(true)
       case false => Failure("Failed to delete lock file.")
     }
   }
 
   private def writeLockFile(folder: Path) = {
-    folder.fileOption.map {
+    PathUtils.fileOption(folder).map {
       file =>
         val lockFileContent = LockFileContent(OwnId, System.currentTimeMillis)
         FileIO.printToFile(file) {

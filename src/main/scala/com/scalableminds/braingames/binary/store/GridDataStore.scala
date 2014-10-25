@@ -118,7 +118,7 @@ class GridDataStore
   }
 
   def save(blockInfo: SaveBlock): Future[Unit] = {
-    Future.successful()
+    Future.successful(Unit)
   }
 }
 

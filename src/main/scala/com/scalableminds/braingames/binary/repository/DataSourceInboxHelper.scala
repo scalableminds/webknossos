@@ -3,14 +3,15 @@
  */
 package com.scalableminds.braingames.binary.repository
 
+import java.nio.file.Path
+
+import com.scalableminds.util.io.PathUtils
 import com.scalableminds.util.tools.{Fox, InProgress, FoxImplicits, ProgressTracking}
-import scalax.file.Path
 import com.scalableminds.braingames.binary.models.{FiledDataSource, UnusableDataSource, UsableDataSource}
 import play.api.libs.json.Json
 import org.apache.commons.io.FileUtils
 import com.scalableminds.braingames.binary.Logger._
 import com.scalableminds.util.tools.InProgress
-import scala.Some
 import net.liftweb.common.{Empty, Full, Failure}
 import play.api.libs.concurrent.Execution.Implicits._
 
@@ -21,7 +22,7 @@ trait DataSourceInboxHelper extends ProgressTracking with FoxImplicits with Lock
   def serverUrl: String
 
   protected def writeDataSourceToFile(path: Path, filedDataSource: FiledDataSource) = {
-    (path / DataSourceJson).fileOption.map {
+    PathUtils.fileOption(path.resolve(DataSourceJson)).map {
       file =>
         val json = Json.toJson(filedDataSource)
         FileUtils.write(file, Json.prettyPrint(json))
@@ -38,9 +39,9 @@ trait DataSourceInboxHelper extends ProgressTracking with FoxImplicits with Lock
     case _ => false
   }
 
-  def cleanUp(source: Path) = {
-    (source / DataSourceJson).deleteIfExists()
-    (source / "target").deleteRecursively()
+  def cleanUp(source: Path): Unit = {
+    FileUtils.deleteQuietly(source.resolve(DataSourceJson).toFile)
+    FileUtils.deleteQuietly(source.resolve("target").toFile)
   }
 
   def transformToDataSource(unusableDataSource: UnusableDataSource): Fox[UsableDataSource] = {

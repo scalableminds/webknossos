@@ -3,12 +3,10 @@
  */
 package com.scalableminds.braingames.binary.repository
 
-import scalax.file.{PathSet, PathMatcher, Path}
+import java.nio.file.{Files, Path}
+
 import com.scalableminds.braingames.binary.models._
 import com.scalableminds.util.geometry.{Scale, BoundingBox}
-import scala.Some
-import org.apache.commons.io.FileUtils
-import play.api.libs.json.Json
 import com.scalableminds.util.tools.ProgressTracking.ProgressTracker
 import com.scalableminds.util.io.PathUtils
 
@@ -32,8 +30,8 @@ trait KnossosDataSourceTypeHandler extends DataSourceTypeHandler {
     sectionSettingsMap.map {
       case (path, settings) =>
         DataLayerSection(
-          path.relativize(base).path,
-          settings.sectionId getOrElse path.name,
+          path.relativize(base).toString,
+          settings.sectionId getOrElse path.getFileName.toString,
           settings.resolutions,
           BoundingBox.createFrom(settings.bboxSmall),
           BoundingBox.createFrom(settings.bboxBig))
@@ -60,32 +58,32 @@ trait KnossosDataSourceTypeHandler extends DataSourceTypeHandler {
       settings <- DataLayerSettings.fromSettingsFileIn(layer)
     } yield {
       logger.info("Found Layer: " + settings)
-      val dataLayerPath = layer.toAbsolute.path
+      val dataLayerPath = layer.toAbsolutePath.toString
       val sections = extractSections(layer).toList
-      DataLayer(layer.name, settings.typ, dataLayerPath, settings.flags, settings.`class`, false, settings.fallback, sections)
+      DataLayer(layer.getFileName.toString, settings.typ, dataLayerPath, settings.flags, settings.`class`, false, settings.fallback, sections)
     }
   }
 
   protected def dataSourceFromFile(path: Path): Option[DataSource] = {
-    if (path.isDirectory) {
+    if (Files.isDirectory(path)) {
       val dataSource: DataSource = DataSourceSettings.fromSettingsFileIn(path) match {
         case Some(settings) =>
           DataSource(
-            settings.id getOrElse path.name,
-            path.toAbsolute.path,
+            settings.id getOrElse path.getFileName.toString,
+            path.toAbsolutePath.toString,
             settings.scale,
             settings.priority getOrElse 0,
             Nil)
         case _ =>
           DataSource(
-            path.name,
-            path.toAbsolute.path,
+            path.getFileName.toString,
+            path.toAbsolutePath.toString,
             Scale.default,
             0,
             Nil)
       }
 
-      val layers = extractLayers(path, path.toAbsolute.path)
+      val layers = extractLayers(path, path.toAbsolutePath.toString)
 
       Some(dataSource.copy(dataLayers = layers))
     } else

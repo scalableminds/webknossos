@@ -3,6 +3,10 @@
  */
 package com.scalableminds.braingames.binary.store
 
+import java.nio.file.{Paths, Path}
+
+import com.scalableminds.util.io.PathUtils
+
 import scala.concurrent.Future
 import akka.actor.Actor
 import scala.util._
@@ -10,7 +14,6 @@ import scala.concurrent.ExecutionContext.Implicits._
 import com.scalableminds.braingames.binary.{DataStoreBlock, LoadBlock, SaveBlock, MappingRequest}
 import net.liftweb.common.{Full, Empty, Box}
 import com.scalableminds.util.geometry.Point3D
-import scalax.file.Path
 import java.io.{File, FilenameFilter}
 
 /**
@@ -61,13 +64,13 @@ object DataStore {
     knossosFilePath(knossosBaseDir(dataInfo), dataInfo.dataSource.id, dataInfo.resolution, dataInfo.block)
 
   def knossosBaseDir(dataInfo: DataStoreBlock) =
-    Path.fromString(dataInfo.dataLayer.baseDir + "/" + dataInfo.dataLayerSection.baseDir)
+    Paths.get(dataInfo.dataLayer.baseDir + "/" + dataInfo.dataLayerSection.baseDir)
 
   def knossosDir(dataSetDir: Path, resolution: Int, block: Point3D) = {
     val x = "x%04d".format(block.x)
     val y = "y%04d".format(block.y)
     val z = "z%04d".format(block.z)
-    dataSetDir / resolution.toString / x / y / z
+    dataSetDir.resolve(resolution.toString).resolve(x).resolve(y).resolve(z)
   }
 
   def knossosFilePath(dataSetDir: Path, id: String, resolution: Int, block: Point3D) = {
@@ -75,16 +78,16 @@ object DataStore {
     val y = "y%04d".format(block.y)
     val z = "z%04d".format(block.z)
     val fileName = s"${id}_mag${resolution}_${x}_${y}_${z}.raw"
-    knossosDir(dataSetDir, resolution, block) / fileName
+    knossosDir(dataSetDir, resolution, block).resolve(fileName)
   }
 
   def knossosMappingFilePath(mappingRequest: MappingRequest) = {
     val fileName = s"${mappingRequest.dataSource.id}_${mappingRequest.dataLayer.name}_mapping.map"
-    Path.fromString(mappingRequest.dataSource.baseDir) / mappingRequest.dataLayer.name / fileName
+    Paths.get(mappingRequest.dataSource.baseDir).resolve(mappingRequest.dataLayer.name).resolve(fileName)
   }
 
   def fuzzyKnossosFile(dataSetDir: Path, id: String, resolution: Int, block: Point3D): Option[File] = {
-    knossosDir(dataSetDir, resolution, block).fileOption.flatMap {
+    PathUtils.fileOption(knossosDir(dataSetDir, resolution, block)).flatMap {
       dir =>
         Option(dir.listFiles(new FilenameFilter() {
           override def accept(dir: File, name: String): Boolean = {

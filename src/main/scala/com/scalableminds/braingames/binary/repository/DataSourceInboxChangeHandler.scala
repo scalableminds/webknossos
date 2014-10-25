@@ -3,15 +3,13 @@
  */
 package com.scalableminds.braingames.binary.repository
 
+import java.nio.file.{Paths, Files, PathMatcher, Path}
+
 import com.scalableminds.braingames.binary.models._
 import com.scalableminds.braingames.binary.watcher.DirectoryChangeHandler
 import com.scalableminds.util.tools.JsonHelper
-import java.nio.file.{Path => JavaPath}
-import scalax.file.{PathMatcher, Path}
-import net.liftweb.common.Full
 import play.api.libs.concurrent.Execution.Implicits._
 import net.liftweb.common.Full
-import play.api.Play
 import com.scalableminds.util.io.PathUtils
 
 protected class DataSourceInboxChangeHandler(dataSourceRepository: DataSourceRepository, serverUrl: String) extends DirectoryChangeHandler with PathUtils{
@@ -22,13 +20,13 @@ protected class DataSourceInboxChangeHandler(dataSourceRepository: DataSourceRep
 
   val maxRecursiveLayerDepth = 2
 
-  def onStart(jpath: JavaPath, recursive: Boolean): Unit = {
+  def onStart(path: Path, recursive: Boolean): Unit = {
     try{
-      val path = Path(jpath.toFile)
-      if (path.isDirectory) {
-        val foundInboxSources = path.children(PathMatcher.IsDirectory).toList.flatMap(teamAwareInboxSourcesIn)
+      if (path != null && Files.isDirectory(path)) {
+        val foundInboxSources = PathUtils.listDirectories(path).flatMap(teamAwareInboxSourcesIn)
         dataSourceRepository.updateDataSources(foundInboxSources)
         dataSourceRepository.updateInboxSources(foundInboxSources)
+
       }
     } catch {
       case e: Exception =>
@@ -36,20 +34,20 @@ protected class DataSourceInboxChangeHandler(dataSourceRepository: DataSourceRep
     }
   }
 
-  def onTick(path: JavaPath, recursive: Boolean): Unit = {
+  def onTick(path: Path, recursive: Boolean): Unit = {
     onStart(path, recursive)
   }
 
-  def onCreate(path: JavaPath): Unit = {
+  def onCreate(path: Path): Unit = {
     onStart(path.getParent, false)
   }
 
-  def onDelete(path: JavaPath): Unit = {
+  def onDelete(path: Path): Unit = {
     onStart(path.getParent, false)
   }
 
   def teamAwareInboxSourcesIn(path: Path): List[DataSourceLike] = {
-    val team = path.name
+    val team = path.getFileName.toString
     val inbox = PathUtils.listDirectories(path).map{ p =>
       dataSourceFromFolder(p, team)
     }
@@ -58,12 +56,12 @@ protected class DataSourceInboxChangeHandler(dataSourceRepository: DataSourceRep
   }
 
   def dataSourceFromFolder(path: Path, team: String): DataSourceLike = {
-    logger.info(s"Handling $team at ${path.path}")
-    JsonHelper.JsonFromFile(path / "datasource.json").flatMap( _.validate(FiledDataSource.filedDataSourceFormat).asOpt) match {
+    logger.info(s"Handling $team at $path")
+    JsonHelper.JsonFromFile(path.resolve("datasource.json")).flatMap( _.validate(FiledDataSource.filedDataSourceFormat).asOpt) match {
       case Full(filedDataSource) =>
         filedDataSource.toUsable(serverUrl)
       case _ =>
-        UnusableDataSource(serverUrl, path.name, path.toAbsolute.path, team, DataSourceTypeGuessers.guessRepositoryType(path).name)
+        UnusableDataSource(serverUrl, path.getFileName.toString, path.toAbsolutePath.toString, team, DataSourceTypeGuessers.guessRepositoryType(path).name)
     }
   }
 }

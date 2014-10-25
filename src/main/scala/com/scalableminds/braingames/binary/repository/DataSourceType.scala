@@ -3,18 +3,11 @@
  */
 package com.scalableminds.braingames.binary.repository
 
-import scalax.file.{PathMatcher, PathSet, Path}
-import scala.concurrent.Future
-import net.liftweb.common.Box
-import com.scalableminds.braingames.binary.models.{UsableDataSource, DataSourceLike, UnusableDataSource, DataSource}
-import play.api.libs.concurrent.Execution.Implicits._
-import play.api.libs.json.Json
-import org.apache.commons.io.FileUtils
-import com.scalableminds.braingames.binary.Logger._
-import com.scalableminds.util.geometry.Point3D
+import java.nio.file.Path
+
+import com.scalableminds.braingames.binary.models.{UnusableDataSource, DataSource}
+import com.scalableminds.util.io.PathUtils
 import com.scalableminds.util.tools.ProgressTracking.ProgressTracker
-import com.scalableminds.util.tools.{InProgress, FoxImplicits, Fox, ProgressTracking}
-import net.liftweb.common.{Empty, Full, Failure}
 
 trait DataSourceTypeHandler {
   def importDataSource(unusableDataSource: UnusableDataSource, progressTracker: ProgressTracker): Option[DataSource]
@@ -27,18 +20,18 @@ trait DataSourceTypeGuesser {
 
   private def lazyFileFinder(source: Path, excludeDirs: Seq[String]): Stream[Path] = {
     def tail = {
-      (source * PathMatcher.IsDirectory).filterNot( path => excludeDirs.contains(path.name)).foldLeft(Stream.empty[Path]){
+      PathUtils.listDirectories(source).filterNot( path => excludeDirs.contains(path.getFileName.toString)).foldLeft(Stream.empty[Path]){
         case (stream, path) =>
           stream ++ lazyFileFinder(path, excludeDirs)
       }
     }
-    (source * PathMatcher.IsFile).toStream ++ tail
+    PathUtils.listFiles(source).toStream ++ tail
   }
 
   def chanceOfInboxType(source: Path) = {
     lazyFileFinder(source, Seq("target"))
       .take(MaxNumberOfFilesForGuessing)
-      .filter(_.name.endsWith(fileExtension))
+      .filter(_.getFileName.toString.endsWith(fileExtension))
       .size.toFloat / MaxNumberOfFilesForGuessing
   }
 }

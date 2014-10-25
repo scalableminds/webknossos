@@ -3,7 +3,7 @@
  */
 package com.scalableminds.braingames.binary.models
 
-import scalax.file.Path
+import java.nio.file.{Paths, Path}
 import play.api.libs.json.{JsResult, JsValue, Format, Json}
 
 sealed trait DataSourceLike{
@@ -26,7 +26,7 @@ object DataSourceLike{
 }
 
 case class UnusableDataSource(serverUrl: String, id: String, baseDir: String, owningTeam: String, sourceType: String) extends DataSourceLike{
-  def sourceFolder: Path = Path.fromString(baseDir)
+  def sourceFolder: Path = Paths.get(baseDir)
 
   val isUsable = false
 }

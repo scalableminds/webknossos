@@ -3,14 +3,10 @@
  */
 package com.scalableminds.braingames.binary.models
 
-import play.api.libs.json.Reads
+import java.nio.file.{Paths, Files, Path}
+
 import com.scalableminds.util.geometry.{BoundingBox, Scale, Point3D}
-import com.scalableminds.util.geometry.Scale._
 import play.api.libs.json._
-import play.api.libs.functional.syntax._
-import com.scalableminds.braingames.binary.models._
-import java.io.File
-import scalax.file.Path
 
 case class DataSourceSettings(
   id: Option[String],
@@ -31,7 +27,7 @@ case class DataSource(
   def getByCategory(category: String) =
     dataLayers.find(_.category == category)
 
-  def sourceFolder = Path.fromString(baseDir)
+  def sourceFolder = Paths.get(baseDir)
 
   def relativeBaseDir(binaryBase: String) = baseDir.replace(binaryBase, "")
 

@@ -4,14 +4,15 @@
 package com.scalableminds.braingames.binary.store
 
 import java.io.{FileNotFoundException, InputStream, OutputStream, FileInputStream, FileOutputStream, File}
+import java.nio.file.{Files, Path}
+import com.scalableminds.util.io.PathUtils
+
 import scala.concurrent.Future
 import scala.concurrent.ExecutionContext.Implicits._
 import com.scalableminds.braingames.binary.{LoadBlock, SaveBlock, MappingRequest}
 import net.liftweb.common.Box
 import net.liftweb.common.Failure
-import scalax.file.Path
 import com.scalableminds.braingames.binary.Logger._
-import scalax.file.Path
 import com.scalableminds.util.geometry.Point3D
 
 class FileDataStoreActor extends DataStoreActor(new FileDataStore)
@@ -40,7 +41,7 @@ class FileDataStore extends DataStore {
   def load(path: Path, fileSize: Option[Int] = None, fallback: Option[File] = None): Future[Box[Array[Byte]]] = {
     Future {
       try {
-        path.fileOption
+        PathUtils.fileOption(path)
           .filter(_.exists())
           .orElse(fallback)
           .map { file =>
@@ -48,7 +49,7 @@ class FileDataStore extends DataStore {
           }
       } catch {
         case e: FileNotFoundException =>
-          logger.info("File data store couldn't find file: " + path.toAbsolute.path)
+          logger.info("File data store couldn't find file: " + path.toAbsolutePath)
           Failure("Couldn't find file: " + e)
       }
     }
@@ -62,12 +63,12 @@ class FileDataStore extends DataStore {
     Future {
       val path = knossosFilePath(dataSetDir, dataSetId, resolution, block)
       try {
-        path.toAbsolute.parent.map(_.createDirectory(failIfExists = false))
-        val binaryStream = new FileOutputStream(path.path)
+        PathUtils.parent(path.toAbsolutePath).map(p => Files.createDirectories(p))
+        val binaryStream = Files.newOutputStream(path)
         byteArrayToOutputStream(binaryStream, data)
       } catch {
         case e: FileNotFoundException =>
-          logger.error("File datastore couldn't write to file: " + path.toAbsolute.path)
+          logger.error("File datastore couldn't write to file: " + path.toAbsolutePath)
           Failure("Couldn't write to file: " + e)
       }
     }

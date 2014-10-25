@@ -3,6 +3,8 @@
  */
 package com.scalableminds.braingames.binary.api
 
+import java.nio.file.{Paths, Path}
+
 import akka.actor.ActorSystem
 import akka.agent.Agent
 import akka.actor.ActorRef
@@ -18,9 +20,7 @@ import com.scalableminds.braingames.binary.models._
 import akka.pattern.AskTimeoutException
 import com.typesafe.config.Config
 import net.liftweb.common.Box
-import scala.Some
 import com.scalableminds.braingames.binary.watcher.StartWatching
-import scalax.file.Path
 import com.scalableminds.braingames.binary.repository.DataSourceInbox
 import com.scalableminds.util.io.PathUtils
 
@@ -42,7 +42,7 @@ trait BinaryDataService extends DataSourceService with BinaryDataHelpers with Se
 
   lazy implicit val timeout = Timeout(config.getInt("braingames.binary.loadTimeout") seconds)
 
-  lazy val dataSourceRepositoryDir = PathUtils.ensureDirectory(Path.fromString(config.getString("braingames.binary.baseFolder")))
+  lazy val dataSourceRepositoryDir = PathUtils.ensureDirectory(Paths.get(config.getString("braingames.binary.baseFolder")))
 
   val binDataCache = Agent[Map[CachedBlock, Future[Box[Array[Byte]]]]](Map.empty)
 

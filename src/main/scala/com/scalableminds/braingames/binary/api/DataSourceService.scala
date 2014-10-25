@@ -3,14 +3,14 @@
  */
 package com.scalableminds.braingames.binary.api
 
+import java.nio.file.{Files, Paths}
+
 import com.scalableminds.braingames.binary.models._
 import java.util.UUID
 import com.typesafe.config.Config
-import scalax.file.Path
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.braingames.binary.repository.DataSourceInbox
 import play.api.libs.concurrent.Execution.Implicits._
-import play.api.i18n.Messages
 import com.scalableminds.util.io.PathUtils
 
 trait DataSourceService extends FoxImplicits{
@@ -19,9 +19,9 @@ trait DataSourceService extends FoxImplicits{
 
   def dataSourceInbox: DataSourceInbox
 
-  lazy val userBaseFolder = PathUtils.ensureDirectory(Path.fromString(config.getString("braingames.binary.userBaseFolder")))
+  lazy val userBaseFolder = PathUtils.ensureDirectory(Paths.get(config.getString("braingames.binary.userBaseFolder")))
 
-  def userDataLayerFolder(name: String) = userBaseFolder / name
+  def userDataLayerFolder(name: String) = userBaseFolder.resolve(name)
 
   def userDataLayerName() = {
     UUID.randomUUID().toString
@@ -30,13 +30,13 @@ trait DataSourceService extends FoxImplicits{
   def createUserDataLayer(baseDataSource: DataSource): UserDataLayer = {
     val category = DataLayer.SEGMENTATION.category
     val name = userDataLayerName()
-    val basePath = userDataLayerFolder(name).toAbsolute
+    val basePath = userDataLayerFolder(name).toAbsolutePath
     val sections = DataLayerSection("1", "1", List(1), baseDataSource.boundingBox, baseDataSource.boundingBox)
     val fallbackLayer = baseDataSource.getByCategory(category)
     val dataLayer = DataLayer(
       name,
       category,
-      basePath.path,
+      basePath.toString,
       None,
       fallbackLayer.map(l => l.elementClass).getOrElse(DataLayer.SEGMENTATION.defaultElementClass),
       isWritable = true,
@@ -44,7 +44,7 @@ trait DataSourceService extends FoxImplicits{
       sections = List(sections),
       nextSegmentationId = baseDataSource.getByCategory(category).flatMap(_.nextSegmentationId))
 
-    basePath.createDirectory()
+    PathUtils.ensureDirectory(basePath)
     UserDataLayer(baseDataSource.id, dataLayer)
   }
 

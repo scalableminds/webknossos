@@ -73,7 +73,7 @@ class DataRequestActor(
     case dataRequest: DataRequest =>
       val s = sender
       // This construct results in a parallel execution and catches all the errors
-      Future.successful().flatMap{ _ =>
+      Future.successful(true).flatMap{ _ =>
         load(dataRequest)
       }.onComplete{
         case Success(data) =>
@@ -295,7 +295,7 @@ class DataRequestActor(
 
       case _ =>
         System.err.println("Could not save userData to any section.")
-        Future.successful()
+        Future.successful(Unit)
     }
 
     val sections = Stream(layer.sections.filter {

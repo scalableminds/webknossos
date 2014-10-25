@@ -4,8 +4,6 @@
 package com.scalableminds.braingames.binary.models
 
 import play.api.libs.json.Json
-import java.io.File
-import scalax.file.Path
 
 case class DataLayerSettings(
   typ: String,

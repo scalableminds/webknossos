@@ -4,10 +4,10 @@
 package com.scalableminds.util.tools
 
 import java.nio.ByteBuffer
+import play.api.libs.ws.{WSAuthScheme, WSRequestHolder}
+
 import scala.math._
 import scala.reflect.ClassTag
-import play.api.libs.ws.WS.WSRequestHolder
-import com.ning.http.client.Realm.AuthScheme
 import scala.concurrent.Future
 import scala.concurrent.ExecutionContext.Implicits._
 import scala.collection.immutable.Queue
@@ -210,9 +210,9 @@ object ExtendedTypes {
   case class Auth(isEnabled: Boolean, username: String = "", password: String = "")
 
   implicit class ExtendedWSRequestHolder(r: WSRequestHolder) {
-    def withAuth(a: Auth) = {
+    def withAuth(a: Auth): WSRequestHolder = {
       if (a.isEnabled)
-        r.withAuth(a.username, a.password, AuthScheme.BASIC)
+        r.withAuth(a.username, a.password, WSAuthScheme.BASIC)
       else
         r
     }

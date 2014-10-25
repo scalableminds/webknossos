@@ -4,16 +4,22 @@
 package com.scalableminds.util.tools
 
 import java.io.File
+import java.nio.file._
 import scala.io.Source
 import play.api.libs.json._
 import net.liftweb.common._
-import scalax.file.Path
 
 object JsonHelper{
   lazy val logger = LazyLogger("braingames.json")
 
-  def JsonFromFile(path: Path): Box[JsValue] =
-    Box(path.fileOption).flatMap(f => JsonFromFile(f))
+  def JsonFromFile(path: Path): Box[JsValue] = {
+    val f = path.toFile
+    if(Files.exists(path) && !Files.isDirectory(path))
+      JsonFromFile(path.toFile)
+    else
+      Failure("Invalid path for json parsing.")
+
+  }
 
   def JsonFromFile(file: File): Box[JsValue] =
     try{

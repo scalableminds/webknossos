@@ -3,24 +3,22 @@
 */
 package com.scalableminds.util.mvc
 
-import play.api.mvc._
 import net.liftweb.common._
 import play.api.http.Status._
 import scala.concurrent.{ExecutionContext, Future}
 import play.api.libs.iteratee.Enumerator
 import play.api.libs.json.Json
 import play.api.http.{HeaderNames, Writeable}
-import play.api.templates.Html
 import play.api.http.Status
+import play.twirl.api._
 import net.liftweb.common.Full
-import play.api.mvc.SimpleResult
-import play.api.mvc.ResponseHeader
+import play.api.mvc.{Request, Result, ResponseHeader}
 import play.api.libs.json.JsObject
 import com.scalableminds.util.tools.{FoxImplicits, Fox}
 
-class ResultBox[T <: SimpleResult](b: Box[T]) {
+class ResultBox[T <: Result](b: Box[T]) {
 
-  def asResult: SimpleResult = b match {
+  def asResult: Result = b match {
     case Full(result) =>
       result
     case ParamFailure(msg, _, _, statusCode: Int) =>
@@ -33,10 +31,10 @@ class ResultBox[T <: SimpleResult](b: Box[T]) {
 }
 
 trait ResultImplicits {
-  implicit def fox2FutureResult[T <: SimpleResult](b: Fox[T])(implicit ec: ExecutionContext): Future[SimpleResult] =
+  implicit def fox2FutureResult[T <: Result](b: Fox[T])(implicit ec: ExecutionContext): Future[Result] =
     b.futureBox.map(new ResultBox(_).asResult)
 
-  implicit def futureBox2Result[T <: SimpleResult](b: Box[Future[T]])(implicit ec: ExecutionContext): Future[SimpleResult] = {
+  implicit def futureBox2Result[T <: Result](b: Box[Future[T]])(implicit ec: ExecutionContext): Future[Result] = {
     b match {
       case Full(f) =>
         f.map(value => new ResultBox(Full(value)).asResult)
@@ -47,17 +45,17 @@ trait ResultImplicits {
     }
   }
 
-  implicit def boxFuture2Result[T <: SimpleResult](f: Future[Box[T]])(implicit ec: ExecutionContext): Future[SimpleResult] = {
+  implicit def boxFuture2Result[T <: Result](f: Future[Box[T]])(implicit ec: ExecutionContext): Future[Result] = {
     f.map {
       b =>
         new ResultBox(b).asResult
     }
   }
 
-  implicit def box2Result[T <: SimpleResult](b: Box[T]): SimpleResult =
+  implicit def box2Result[T <: Result](b: Box[T]): Result =
     new ResultBox(b).asResult
 
-  implicit def box2ResultBox[T <: SimpleResult](b: Box[T]) = new ResultBox(b)
+  implicit def box2ResultBox[T <: Result](b: Box[T]) = new ResultBox(b)
 }
 
 trait BoxImplicits {
@@ -66,12 +64,12 @@ trait BoxImplicits {
 
 object BoxImplicits extends BoxImplicits
 
-class JsonResult(status: Int) extends SimpleResult(header = ResponseHeader(status), body = Enumerator(Array[Byte]())) with JsonResultAttribues {
+class JsonResult(status: Int) extends Result(header = ResponseHeader(status), body = Enumerator(Array[Byte]())) with JsonResultAttribues {
 
   val isSuccess = List(OK) contains status
 
   def createResult(content: JsObject)(implicit writeable: Writeable[JsObject]) =
-    SimpleResult(
+    Result(
       header = ResponseHeader(status, writeable.contentType.map(ct => Map(HeaderNames.CONTENT_TYPE -> ct)).getOrElse(Map.empty)),
       body = Enumerator(writeable.transform(content)))
 
@@ -87,29 +85,29 @@ class JsonResult(status: Int) extends SimpleResult(header = ResponseHeader(statu
   def apply(json: JsObject, messages: Seq[(String, String)]) =
     createResult(json ++ jsonMessages(messages))
 
-  def apply(messages: Seq[(String, String)]): SimpleResult =
+  def apply(messages: Seq[(String, String)]): Result =
     apply(Json.obj(), messages)
 
-  def apply(html: Html, json: JsObject, messages: Seq[(String, String)]): SimpleResult =
+  def apply(html: Html, json: JsObject, messages: Seq[(String, String)]): Result =
     apply(json ++ jsonHTMLResult(html), messages)
 
-  def apply(html: Html, json: JsObject, message: String): SimpleResult =
+  def apply(html: Html, json: JsObject, message: String): Result =
     apply(json ++ jsonHTMLResult(html), Seq(messageTypeFromStatus -> message))
 
-  def apply(json: JsObject, message: String): SimpleResult =
+  def apply(json: JsObject, message: String): Result =
     apply(json, Seq(messageTypeFromStatus -> message))
 
-  def apply(html: Html, messages: Seq[(String, String)]): SimpleResult =
+  def apply(html: Html, messages: Seq[(String, String)]): Result =
     apply(html, Json.obj(), messages)
 
-  def apply(html: Html, message: String): SimpleResult =
+  def apply(html: Html, message: String): Result =
     apply(html, Seq(messageTypeFromStatus -> message))
 
-  def apply(html: Html): SimpleResult =
+  def apply(html: Html): Result =
     apply(html, Seq.empty)
 
-  def apply(message: String): SimpleResult =
-    apply(Html.empty, message)
+  def apply(message: String): Result =
+    apply(Html(""), message)
 
   def jsonHTMLResult(html: Html) = {
     val htmlJson = html.body match {

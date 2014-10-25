@@ -11,6 +11,7 @@ trait GithubRequester {
   val GH = "https://api.github.com"
 
   def githubRequest(sub: String, prependHost: Boolean = true)(implicit token: String) = {
+    import play.api.Play.current
     Logger.trace(s"Using Github Token: $token to query $sub")
     val url =
       if (prependHost)

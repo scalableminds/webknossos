@@ -4,8 +4,8 @@
 package com.scalableminds.util.github
 
 import play.api.libs.json.Reads
+import play.api.libs.ws.WSRequestHolder
 import scala.concurrent.Future
-import play.api.libs.ws.WS.WSRequestHolder
 import play.api.http.Status
 import play.api.Logger
 import com.scalableminds.util.github.requesters.GithubRequester

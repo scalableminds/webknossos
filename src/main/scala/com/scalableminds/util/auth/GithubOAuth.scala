@@ -32,6 +32,7 @@ trait GithubOauth extends FoxImplicits {
       (__ \ 'token_type).read[String])(AccessToken.apply _)
 
   def requestAccessToken(code: String, minScope: List[String]): Fox[AccessToken] = {
+    import play.api.Play.current
     WS
       .url(GithubAccessTokenUri)
       .withHeaders(ACCEPT -> MimeTypes.JSON)

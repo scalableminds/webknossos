@@ -3,18 +3,62 @@
  */
 package com.scalableminds.util.io
 
-import scalax.file.{PathMatcher, Path}
+import java.io.{File, FilenameFilter}
+import java.nio.file
+import java.nio.file._
+import scala.collection.breakOut
 
 object PathUtils extends PathUtils
 
 trait PathUtils {
-  def listDirectories(p: Path) =
-    if (p.isDirectory) p.children(PathMatcher.IsDirectory).toList
-    else Nil
+
+  val directoryFilter = new FilenameFilter {
+    override def accept(dir: File, name: String): Boolean =
+      new File(dir, name).isDirectory
+  }
+
+
+  val fileFilter = new FilenameFilter {
+    override def accept(f: File, name: String): Boolean =
+      new File(f, name).isFile
+  }
+
+  def createFile(p: Path, failIfExists: Boolean) = {
+    try{
+      Files.createFile(p)
+      true
+    } catch{
+      case e: FileAlreadyExistsException => !failIfExists
+    }
+  }
+
+  def isTheSame(p1: Path, p2: Path) =
+    p1.toAbsolutePath.compareTo(p2.toAbsolutePath) == 0
+
+  def fileOption(p: Path): Option[File] =
+    if(Files.isDirectory(p))
+      Some(p.toFile)
+    else
+      None
+
+  def parent(p: Path): Option[Path] =
+    Option(p.getParent)
+
+  def listDirectories(p: Path): List[Path] =
+    if (Files.isDirectory(p))
+      p.toFile.list(directoryFilter).map(s => Paths.get(s))(breakOut)
+    else
+      Nil
+
+  def listFiles(p: Path): List[Path] =
+    if (Files.isDirectory(p))
+      p.toFile.list(fileFilter).map(s => Paths.get(s))(breakOut)
+    else
+      Nil
 
   def ensureDirectory(path: Path): Path = {
-    if (!path.exists || !path.isDirectory)
-      path.createDirectory(createParents = true, failIfExists = false)
+    if (!Files.exists(path) || !Files.isDirectory(path))
+      Files.createDirectories(path)
     path
   }
 }

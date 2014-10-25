@@ -3,12 +3,12 @@
 */
 package com.scalableminds.util.mvc
 
-import play.api.mvc.SimpleResult
+import play.api.mvc.Result
 import play.api.http.HeaderNames._
 
 trait WithHighlightableResult {
 
-  implicit class HighlightableResult(r: SimpleResult) {
+  implicit class HighlightableResult(r: Result) {
     def highlighting(elementId: String) = {
       val location = r.header.headers.get(LOCATION) getOrElse ""
       r.withHeaders(LOCATION -> s"$location#$elementId")

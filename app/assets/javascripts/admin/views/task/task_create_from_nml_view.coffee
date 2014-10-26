@@ -30,7 +30,41 @@ class TaskCreateFromNMLView extends Backbone.Marionette.LayoutView
       </div>
     </div>
   </div>
+
   """)
 
-  #events :
-  # put submit event here
+  events :
+    # track file picker changes
+    "change input[name=nmlFile]" : "updateFilenames"
+
+
+  ui :
+    # .file-info shows names of selected files
+    "fileInfo" : ".file-info"
+
+  ###*
+   * Event handler which updates ui so user can see filenames he selected
+   *
+   * @method updateFilenames
+   ###
+  updateFilenames : (evt) ->
+
+    # grab file list from event
+    files = evt.target.files
+
+    # do nothing if nothing selected
+    if files
+
+      # concat files comma separated
+      if files.length > 1
+
+        filePath = ""
+        for index in [0..file.length]
+          filePath += @files[index].name + ", "
+
+      # display a single file
+      else
+        filePath = files[0].name
+
+      # update ui
+      @ui.fileInfo.val(filePath)

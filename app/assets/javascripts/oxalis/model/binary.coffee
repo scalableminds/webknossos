@@ -59,6 +59,11 @@ class Binary
       set4BitChanged : (is4Bit) => @pullQueue(is4Bit)
     })
 
+    @cube.on(
+      temporalBucketCreated : (address) =>
+        @pullQueue.add({bucket: address, priority: PullQueue::PRIORITY_HIGHEST})
+    )
+
     @ping = _.throttle(@pingImpl, @PING_THROTTLE_TIME)
 
 
@@ -74,7 +79,7 @@ class Binary
 
   pingStop : ->
 
-    @pullQueue.clear()
+    @pullQueue.clearNormalPriorities()
 
 
   pingImpl : (position, {zoomStep, area, activePlane}) ->
@@ -95,7 +100,9 @@ class Binary
 
       for strategy in @pingStrategies
         if strategy.forContentType(@tracing.contentType) and strategy.inVelocityRange(@connectionInfo.bandwidth) and strategy.inRoundTripTimeRange(@connectionInfo.roundTripTime)
-          @pullQueue.queue = strategy.ping(position, @direction, zoomStep, area, activePlane) if zoomStep? and area? and activePlane?
+          if zoomStep? and area? and activePlane?
+            @pullQueue.clearNormalPriorities()
+            @pullQueue.addAll(strategy.ping(position, @direction, zoomStep, area, activePlane))
           break
 
       @queueStatus

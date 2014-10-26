@@ -9,7 +9,7 @@ import models.annotation._
 import play.api.libs.concurrent.Execution.Implicits._
 import net.liftweb.common._
 import views.html
-import play.api.templates.Html
+import play.twirl.api.Html
 import akka.util.Timeout
 import scala.concurrent.duration._
 import play.api.libs.iteratee.Enumerator
@@ -122,7 +122,7 @@ object AnnotationController extends Controller with Secured with TracingInformat
             content <- annotation.content ?~> Messages("annotation.content.empty")
             stream <- content.toDownloadStream
           } yield {
-            Ok.stream(Enumerator.fromStream(stream).andThen(Enumerator.eof[Array[Byte]])).withHeaders(
+            Ok.chunked(Enumerator.fromStream(stream).andThen(Enumerator.eof[Array[Byte]])).withHeaders(
               CONTENT_TYPE ->
                 "application/octet-stream",
               CONTENT_DISPOSITION ->
@@ -241,7 +241,7 @@ object AnnotationController extends Controller with Secured with TracingInformat
   }
 
   def htmlForAnnotation(annotation: AnnotationLike)(implicit request: AuthenticatedRequest[_]) = {
-    html.tracing.trace(annotation)(Html.empty)
+    html.tracing.trace(annotation)(Html(""))
   }
 
   def annotationsForTask(taskId: String) = Authenticated.async { implicit request =>

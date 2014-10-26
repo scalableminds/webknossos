@@ -1,15 +1,18 @@
+import com.typesafe.sbt.web.Import._
 import sbt._
 import sbt.Keys._
-import play.Project._
+import play.Play.autoImport._
+import PlayKeys._
+import play.twirl.sbt.Import._
 import sbt.Task
 import scala.concurrent.Future
 import scala.concurrent.ExecutionContext.Implicits.global
 
 object Dependencies{
-  val akkaVersion = "2.2.0"
-  val reactiveVersion = "0.10.0"
-  val reactivePlayVersion = "0.10.2"
-  val braingamesVersion = "6.9.3"
+  val akkaVersion = "2.3.5"
+  val reactiveVersion = "0.10.5.0.akka23"
+  val reactivePlayVersion = "0.10.5.0.akka23"
+  val braingamesVersion = "7.0.3-play23"
 
   val restFb = "com.restfb" % "restfb" % "1.6.11"
   val commonsIo = "commons-io" % "commons-io" % "2.4"
@@ -22,13 +25,13 @@ object Dependencies{
   val jerseyCore = "com.sun.jersey" % "jersey-core" % "1.8"
   val reactivePlay = "org.reactivemongo" %% "play2-reactivemongo" % reactivePlayVersion
   val reactiveBson = "org.reactivemongo" %% "reactivemongo-bson-macros" % reactiveVersion
-  val scalaReflect = "org.scala-lang" % "scala-reflect" % "2.10.0"
+  val scalaReflect = "org.scala-lang" % "scala-reflect" % "2.11.2"
   val braingamesBinary = "com.scalableminds" %% "braingames-binary" % braingamesVersion
   val braingamesDatastore = "com.scalableminds" %% "braingames-datastore" % braingamesVersion
-  val scalaAsync = "org.scala-lang.modules" %% "scala-async" % "0.9.0-M2"
-  val airbrake = "eu.teamon" %% "play-airbrake" % "0.3.5-SCM"
-  val mongev = "com.scalableminds" %% "play-mongev" % "0.2.8"
-  val playMetrics = "com.kenshoo" %% "metrics-play" % "0.1.3"
+  val scalaAsync = "org.scala-lang.modules" %% "scala-async" % "0.9.2"
+  val airbrake = "eu.teamon" %% "play-airbrake" % "0.4.0-SCM"
+  val mongev = "com.scalableminds" %% "play-mongev" % "0.3.0"
+  val playMetrics = "com.kenshoo" %% "metrics-play" % "2.3.0_0.1.7"
   val tiff = Seq(
       "com.twelvemonkeys.common" % "common-lang" % "3.0-rc5",
       "com.twelvemonkeys.common" % "common-io" % "3.0-rc5",
@@ -151,6 +154,7 @@ object ApplicationBuild extends Build {
     braingamesDatastore,
     scalaAsync,
     cache,
+    ws,
     airbrake,
     playMetrics,
     mongev)++tiff
@@ -169,21 +173,27 @@ object ApplicationBuild extends Build {
   )
 
   lazy val oxalisSettings = Seq(
-    templatesImport += "oxalis.view.helpers._",
-    templatesImport += "oxalis.view._",
-    scalaVersion := "2.10.3",
+    TwirlKeys.templateImports += "oxalis.view.helpers._",
+    TwirlKeys.templateImports += "oxalis.view._",
+    scalaVersion := "2.11.2",
+    version := appVersion,
     gulpPath := (Path("node_modules") / ".bin" / "gulp").getPath,
     npmPath := "npm",
+    libraryDependencies ++= oxalisDependencies,
     //requireJs := Seq("main"),
     //requireJsShim += "main.js",
     resolvers ++= dependencyResolvers,
     lessEntryPoints <<= (sourceDirectory in Compile)(base => base / "none"),
     coffeescriptEntryPoints <<= (sourceDirectory in Compile)(base => base / "none"),
     javascriptEntryPoints <<= (sourceDirectory in Compile)(base => base / "none"),
-    unmanagedResourceDirectories in Compile += target.value / "assets"
+    //unmanagedResourceDirectories in Compile += target.value / "assets"
+    sourceDirectory in Assets := file("none")
+
     // playAssetsDirectories += baseDirectory.value / "target" / "assets"
   )
 
-  lazy val oxalis: Project = play.Project(appName, appVersion, oxalisDependencies, settings = oxalisSettings ++ AssetCompilation.settings)
+  lazy val oxalis: Project = Project(appName, file("."))
+    .enablePlugins(play.PlayScala)
+    .settings((oxalisSettings ++ AssetCompilation.settings):_*)
 }
 

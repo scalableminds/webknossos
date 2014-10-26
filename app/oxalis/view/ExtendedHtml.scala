@@ -1,6 +1,6 @@
 package oxalis.view
 
-import play.api.templates.Html
+import play.twirl.api.Html
 
 class ExtendedHtml(html: Html) {
   def trim = Html(html.body.replace("\n","").trim)

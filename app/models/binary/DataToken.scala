@@ -15,7 +15,6 @@ import play.modules.reactivemongo.json.BSONFormats._
 import reactivemongo.api.indexes.{IndexType, Index}
 import play.api.libs.concurrent.Execution.Implicits._
 import oxalis.cleanup.CleanUpService
-import models.binary.DataTokenDAO
 import net.liftweb.common.Full
 import play.api.Logger
 

@@ -17,7 +17,7 @@ import scala.concurrent.Future
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import models.team._
 import play.api.libs.functional.syntax._
-import play.api.templates.Html
+import play.twirl.api.Html
 import com.scalableminds.util.tools.ExtendedTypes.ExtendedString
 import models.user.time._
 
@@ -26,12 +26,12 @@ import scala.text
 object UserController extends Controller with Secured with Dashboard with FoxImplicits{
 
   def empty = Authenticated{ implicit request =>
-    Ok(views.html.main()(Html.empty))
+    Ok(views.html.main()(Html("")))
   }
 
   // TODO: find a better way to ignore parameters
   def emptyWithWildcard(param: String) = Authenticated{ implicit request =>
-    Ok(views.html.main()(Html.empty))
+    Ok(views.html.main()(Html("")))
   }
 
   def current =  Authenticated { implicit request =>

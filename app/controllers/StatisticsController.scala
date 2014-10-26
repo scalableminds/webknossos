@@ -10,7 +10,7 @@ import play.api.libs.json.Json
 import com.scalableminds.util.tools.Fox
 import play.api.libs.concurrent.Execution.Implicits._
 import models.user.{User, UserDAO}
-import play.api.templates.Html
+import play.twirl.api.Html
 import scala.concurrent.duration.Duration
 import models.annotation.AnnotationDAO
 import com.scalableminds.util.reactivemongo.GlobalAccessContext
@@ -31,7 +31,7 @@ object StatisticsController extends Controller with Secured{
   }
 
   def empty = Authenticated{ implicit request =>
-    Ok(views.html.main()(Html.empty))
+    Ok(views.html.main()(Html("")))
   }
 
   def oxalis(interval: String, start: Option[Long], end: Option[Long]) = Authenticated.async{ implicit request =>

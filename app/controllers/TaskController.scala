@@ -17,14 +17,14 @@ import com.scalableminds.util.tools.Fox
 import net.liftweb.common.{Full, Failure}
 import com.scalableminds.util.reactivemongo.DBAccessContext
 import scala.concurrent.Future
-import play.api.templates.Html
+import play.twirl.api.Html
 
 object TaskController extends Controller with Secured {
 
   val MAX_OPEN_TASKS = current.configuration.getInt("oxalis.tasks.maxOpenPerUser") getOrElse 5
 
   def empty = Authenticated{ implicit request =>
-    Ok(views.html.main()(Html.empty))
+    Ok(views.html.main()(Html("")))
   }
 
   def list = Authenticated.async{ implicit request =>

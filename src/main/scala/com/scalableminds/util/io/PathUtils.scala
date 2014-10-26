@@ -46,13 +46,13 @@ trait PathUtils {
 
   def listDirectories(p: Path): List[Path] =
     if (Files.isDirectory(p))
-      p.toFile.list(directoryFilter).map(s => Paths.get(s))(breakOut)
+      p.toFile.list(directoryFilter).map(s => p.resolve(s))(breakOut)
     else
       Nil
 
   def listFiles(p: Path): List[Path] =
     if (Files.isDirectory(p))
-      p.toFile.list(fileFilter).map(s => Paths.get(s))(breakOut)
+      p.toFile.list(fileFilter).map(s => p.resolve(s))(breakOut)
     else
       Nil
 

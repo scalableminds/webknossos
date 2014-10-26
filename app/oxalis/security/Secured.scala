@@ -62,7 +62,7 @@ trait Secured extends FoxImplicits {
 
   private def autoLoginUser: Fox[User] = {
     // development setting: if the key is set, one gets logged in automatically
-    if (Play.configuration.getBoolean("application.enableAutoLogin").get)
+    if (Play.configuration.getBoolean("application.authentication.enableDevAutoLogin").get)
       UserService.defaultUser
     else
       Fox.empty

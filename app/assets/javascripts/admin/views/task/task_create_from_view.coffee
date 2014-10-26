@@ -12,8 +12,9 @@ admin/views/selection_view : SelectionView
 
 class TaskCreateFromView extends Backbone.Marionette.LayoutView
 
-  constructor: (@type) ->
+  constructor: (type) ->
     super
+    @isFromForm = type == "from_form"
 
   id : "create-from"
   template : _.template("""
@@ -21,7 +22,7 @@ class TaskCreateFromView extends Backbone.Marionette.LayoutView
     <div class="col-sm-12">
     <div class="well">
       <div class="col-sm-9 col-sm-offset-2">
-        <% if(this.type == "from_form") { %>
+        <% if(isFromForm) { %>
           <h3>Create Task</h3>
           <br/>
         <% } else { %>
@@ -102,6 +103,11 @@ class TaskCreateFromView extends Backbone.Marionette.LayoutView
   </div>
   """)
 
+  # make the variable available inside the underscore template
+  templateHelpers: ->
+
+    isFromForm : @isFromForm
+
   regions:
     "taskType" : ".taskType"
     "team"     : ".team"
@@ -157,7 +163,7 @@ class TaskCreateFromView extends Backbone.Marionette.LayoutView
     @team.show(teamSelectionView)
     @project.show(projectSelectionView)
 
-    if (@type == "from_nml")
+    if (@isFromForm)
       createFromNMLView = new TaskCreateFromNMLView()
       @subview.show(createFromNMLView)
     else

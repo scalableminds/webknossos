@@ -64,10 +64,9 @@ class OxalisMessageHandler extends JsonMessageHandler {
         route(request) match {
           case Some(f) =>
             logger.trace(s"Got a handler for WS REST request '${call.uuid}'. ")
-            f.flatMap {
-              response: SimpleResult =>
-                logger.trace(s"Rerouted WS REST request '${call.uuid}' finished.")
-                embedInRESTResponse(call, response).map(Right(_))
+            f.flatMap { response =>
+              logger.trace(s"Rerouted WS REST request '${call.uuid}' finished.")
+              embedInRESTResponse(call, response).map(Right(_))
             }
           case None =>
             logger.warn(s"Couldn't find handler for WS REST request '${call.uuid}'")

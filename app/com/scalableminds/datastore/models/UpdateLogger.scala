@@ -24,7 +24,7 @@ case class VolumeUpdate(
 
 object VolumeUpdateService{
   private def writeDataToFile(data: Array[Byte]) = {
-  	val userBackupFolder: Path = PathUtils.ensureDirectory(Paths.get("userBinaryData/logging"))
+  	val userBackupFolder = PathUtils.ensureDirectory(Paths.get("userBinaryData").resolve("logging"))
   	val backupFile = userBackupFolder.resolve(UUID.randomUUID().toString + ".raw")
   	val os = Files.newOutputStream(backupFile)
   	os.write(data)

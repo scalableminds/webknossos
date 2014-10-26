@@ -24,16 +24,16 @@ import java.util.concurrent.TimeoutException
 import akka.agent.Agent
 import scala.collection.immutable.Queue
 
-case class SendJson(js: JsValue, retryOnFailure: Boolean = true) extends WSMessage[String] {
-  def payload = Json.prettyPrint(js)
+case class SendJson(js: JsValue, retryOnFailure: Boolean = true)(implicit codec: Codec) extends WSMessage[Array[Byte]] {
+  def payload = codec.encode(Json.prettyPrint(js))
 }
 
 case class SendData(data: Array[Byte], retryOnFailure: Boolean = true) extends WSMessage[Array[Byte]] {
   def payload = data
 }
 
-case class SendString(s: String, retryOnFailure: Boolean = true) extends WSMessage[String] {
-  def payload = s
+case class SendString(s: String, retryOnFailure: Boolean = true)(implicit codec: Codec) extends WSMessage[Array[Byte]] {
+  def payload = codec.encode(s)
 }
 
 sealed trait WSMessage[T] {

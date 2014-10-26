@@ -2,6 +2,7 @@
 jquery : $
 underscore : _
 backbone : Backbone
+oxalis/constants : constants
 ###
 
 # #####
@@ -17,17 +18,30 @@ class Router extends Backbone.Router
     "statistics"                    : "statistics"
     "tasks"                         : "tasks"
     "projects"                      : "projects"
+    "annotations/:type/:id"         : "tracingView"
+    "datasets/:id/view"             : "tracingViewPublic"
     "dashboard"                     : "dashboard"
     "users/:id/details"             : "dashboard"
     "taskTypes/:id/edit"            : "editTaskType"
     "taskTypes"                     : "taskTypes"
     "spotlight"                     : "spotlight"
     "tasks/overview"                : "taskOverview"
+    "admin/taskTypes"               : "hideLoading"
+    "*url"                          : "hideLoading"
 
   whitelist : [
     "help/keyboardshortcuts",
     "help/faq",
     "issues"
+  ]
+
+  whitelist : [
+    "help/keyboardshortcuts",
+    "help/faq",
+    "issues",
+    "logout",
+    "login",
+    "user/password/reset"
   ]
 
   initialize : ->
@@ -46,6 +60,10 @@ class Router extends Backbone.Router
 
       # let whitelisted url through
       if _.contains(@whitelist, urlWithoutSlash)
+        return
+
+      # disable links beginning with #
+      if url.indexOf("#") == 0
         return
 
       # allow opening links in new tabs
@@ -73,6 +91,32 @@ class Router extends Backbone.Router
   hideLoading : ->
 
     @$loadingSpinner.hide()
+
+
+  tracingView : (type, id) ->
+
+
+    require ["oxalis/view/tracing_layout_view"], (TracingLayoutView) =>
+
+      view = new TracingLayoutView(
+        tracingType: type
+        tracingId : id
+        controlMode : constants.CONTROL_MODE_TRACE
+      )
+      view.forcePageReload = true
+      @changeView(view)
+
+
+  tracingViewPublic : (id) ->
+
+    require ["oxalis/view/tracing_layout_view"], (TracingLayoutView) =>
+      view = new TracingLayoutView(
+        tracingType: "View"
+        tracingId : id
+        controlMode : constants.CONTROL_MODE_VIEW
+      )
+      view.forcePageReload = true
+      @changeView(view)
 
 
   projects : ->
@@ -200,6 +244,10 @@ class Router extends Backbone.Router
           view.destroy()
         else
           view.remove()
+
+      if view.forcePageReload
+        @loadURL(location.href)
+
     else
       # we are probably coming from a URL that isn't a Backbone.View yet (or page reload)
       @$mainContainer.empty()

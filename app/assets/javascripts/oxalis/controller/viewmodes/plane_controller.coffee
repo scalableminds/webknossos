@@ -1,7 +1,8 @@
 ### define
+app : app
+backbone : Backbone
 jquery : $
 underscore : _
-libs/event_mixin : EventMixin
 libs/input : Input
 three.trackball : Trackball
 ../camera_controller : CameraController
@@ -23,7 +24,6 @@ class PlaneController
   bindings : []
   model : null
   view : null
-  gui : null
 
   input :
     mouseControllers : []
@@ -41,15 +41,15 @@ class PlaneController
       @keyboardLoopDelayed?.unbind()
 
 
-  constructor : (@model, stats, @gui, @view, @sceneController) ->
+  constructor : (@model, stats, @view, @sceneController) ->
 
-    _.extend(@, new EventMixin())
+    _.extend(this, Backbone.Events)
 
     @isStarted = false
 
     @flycam = @model.flycam
 
-    @oldNmPos = @model.scaleInfo.voxelToNm( @flycam.getPosition() )
+    @oldNmPos = app.scaleInfo.voxelToNm( @flycam.getPosition() )
 
     @planeView = new PlaneView(@model, @flycam, @view, stats)
 
@@ -62,9 +62,6 @@ class PlaneController
 
     @TDViewControls = $('#TDViewControls')
     @TDViewControls.addClass("btn-group")
-
-    @gui.on
-      newBoundingBox : (bb) => @sceneController.setBoundingBox(bb)
 
     callbacks = [
       @cameraController.changeTDViewDiagonal,
@@ -83,13 +80,8 @@ class PlaneController
 
     @model.user.triggerAll()
 
-    # hide contextmenu, while rightclicking a canvas
-    $("#render").bind "contextmenu", (event) ->
-      event.preventDefault()
-      return
-
     @initTrackballControls()
-    @bind()
+    @bindToEvents()
 
 
   initMouse : ->
@@ -134,7 +126,7 @@ class PlaneController
   initTrackballControls : ->
 
     view = $("#TDView")[0]
-    pos = @model.scaleInfo.voxelToNm(@flycam.getPosition())
+    pos = app.scaleInfo.voxelToNm(@flycam.getPosition())
     @controls = new THREE.TrackballControls(
       @planeView.getCameras()[constants.TDView],
       view,
@@ -145,30 +137,29 @@ class PlaneController
     @controls.noPan = true
 
     @controls.target.set(
-      @model.scaleInfo.voxelToNm(@flycam.getPosition())...)
+      app.scaleInfo.voxelToNm(@flycam.getPosition())...)
 
-    @flycam.on
-      positionChanged : (position) =>
+    @listenTo(@flycam, "positionChanged", (position) ->
 
-        nmPosition = @model.scaleInfo.voxelToNm(position)
+      nmPosition = app.scaleInfo.voxelToNm(position)
 
-        @controls.target.set( nmPosition... )
-        @controls.update()
+      @controls.target.set( nmPosition... )
+      @controls.update()
 
-        # As the previous step will also move the camera, we need to
-        # fix this by offsetting the viewport
+      # As the previous step will also move the camera, we need to
+      # fix this by offsetting the viewport
 
-        invertedDiff = []
-        for i in [0..2]
-          invertedDiff.push( @oldNmPos[i] - nmPosition[i] )
-        @oldNmPos = nmPosition
+      invertedDiff = []
+      for i in [0..2]
+        invertedDiff.push( @oldNmPos[i] - nmPosition[i] )
+      @oldNmPos = nmPosition
 
-        @cameraController.moveTDView(
-                new THREE.Vector3( invertedDiff... ))
+      @cameraController.moveTDView(
+        new THREE.Vector3( invertedDiff... )
+      )
+    )
 
-    @cameraController.on
-      cameraPositionChanged : =>
-        @controls.update()
+    @listenTo(@cameraController, "cameraPositionChanged", @controls.update)
 
 
   initKeyboard : ->
@@ -180,7 +171,7 @@ class PlaneController
 
     getMoveValue  = (timeFactor) =>
       if @activeViewport in [0..2]
-        return @model.user.get("moveValue") * timeFactor / @model.scaleInfo.baseVoxel / constants.FPS
+        return @model.user.get("moveValue") * timeFactor / app.scaleInfo.baseVoxel / constants.FPS
       else
         return constants.TDView_MOVE_SPEED * timeFactor / constants.FPS
 
@@ -212,9 +203,7 @@ class PlaneController
     , @model.user.get("keyboardDelay")
     )
 
-    @model.user.on({
-      keyboardDelayChanged : (value) => @input.keyboardLoopDelayed.delay = value
-      })
+    @listenTo(@model.user, "change:keyboardDelay", (model, value) -> @input.keyboardLoopDelayed.delay = value)
 
     @input.keyboardNoLoop = new Input.KeyboardNoLoop( @getKeyboardControls() )
 
@@ -234,8 +223,8 @@ class PlaneController
 
   init : ->
 
-    @cameraController.setClippingDistance @model.user.get("clippingDistance")
-    @sceneController.setClippingDistance @model.user.get("clippingDistance")
+    @cameraController.setClippingDistance(@model.user.get("clippingDistance"))
+    @sceneController.setClippingDistance(@model.user.get("clippingDistance"))
 
 
   start : (newMode) ->
@@ -260,28 +249,32 @@ class PlaneController
 
     @isStarted = false
 
-  bind : ->
+  bindToEvents : ->
 
-    @planeView.bind()
+    @planeView.bindToEvents()
 
-    @planeView.on
-      render : => @render()
-      renderCam : (id, event) => @sceneController.updateSceneForCam(id)
+    @listenTo(@planeView, "render", @render)
+    @listenTo(@planeView, "renderCam", @sceneController.updateSceneForCam)
 
-    @sceneController.on
-      newGeometries : (list, event) =>
+    @listenTo(@sceneController, "newGeometries", (list) ->
+      for geometry in list
+        @planeView.addGeometry(geometry)
+    )
+    @listenTo(@sceneController, "removeGeometries", (list) ->
+      for geometry in list
+        @planeView.removeGeometry(geometry)
+    )
+
+    # TODO check for ControleMode rather the Object existence
+    if @sceneController.skeleton
+      @listenTo(@sceneController.skeleton, "newGeometries", (list) ->
         for geometry in list
           @planeView.addGeometry(geometry)
-      removeGeometries : (list, event) =>
+      )
+      @listenTo(@sceneController.skeleton, "removeGeometries", (list) ->
         for geometry in list
           @planeView.removeGeometry(geometry)
-    @sceneController.skeleton?.on
-      newGeometries : (list, event) =>
-        for geometry in list
-          @planeView.addGeometry(geometry)
-      removeGeometries : (list, event) =>
-        for geometry in list
-          @planeView.removeGeometry(geometry)
+      )
 
 
   render : ->
@@ -413,7 +406,7 @@ class PlaneController
     curGlobalPos  = @flycam.getPosition()
     zoomFactor    = @flycam.getPlaneScalingFactor()
     scaleFactor   = @planeView.scaleFactor
-    planeRatio    = @model.scaleInfo.baseVoxelFactors
+    planeRatio    = app.scaleInfo.baseVoxelFactors
     position = switch @activeViewport
       when constants.PLANE_XY
         [ curGlobalPos[0] - (constants.VIEWPORT_WIDTH * scaleFactor / 2 - clickPos.x) / scaleFactor * planeRatio[0] * zoomFactor,

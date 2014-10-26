@@ -1,8 +1,7 @@
 ### define
-dat.gui : DatGui
 libs/request : Request
-libs/event_mixin : EventMixin
 libs/toast : Toast
+libs/utils : Utils
 ../model/dimensions : Dimensions
 ../constants : constants
 ../controller/viewmodes/arbitrary_controller : ArbitraryController
@@ -14,7 +13,6 @@ class Gui
 
   constructor : (container, @model, @restrictions, @tracingSettings) ->
 
-    _.extend(this, new EventMixin())
 
     @updateGlobalPosition( @model.flycam.getPosition() )
     @updateRotation()
@@ -23,9 +21,9 @@ class Gui
     @user = @model.user
     @qualityArray = ["high", "medium", "low"]
 
-    @brightnessContrastSettings = @user.getOrCreateBrightnessContrastSettings(
-      @model.datasetPostfix
-    )
+    # @brightnessContrastSettings = @user.getOrCreateBrightnessContrastSettings(
+    #   @model.datasetPostfix
+    # )
 
     somaClickingAllowed = @tracingSettings.somaClickingAllowed
 
@@ -33,8 +31,8 @@ class Gui
 
       boundingBox : "0, 0, 0, 0, 0, 0"
       fourBit : @user.get("fourBit")
-      brightness : @brightnessContrastSettings.brightness
-      contrast : @brightnessContrastSettings.contrast
+      #brightness : @brightnessContrastSettings.brightness
+      #contrast : @brightnessContrastSettings.contrast
       resetColorSettings : => @resetColorSettings()
       quality : @qualityArray[@user.get("quality")]
 
@@ -97,12 +95,12 @@ class Gui
         @addColorPicker(@fColors, @settingsGeneral, binary.name + "_color", "Color " + (i+1),
           @setColorSettings)
       )
-    @brightnessController =
-      @addSlider(@fColors, @settingsGeneral, "brightness",
-        -256, 256, 5, "Brightness", @setColorSettings)
-    @contrastController =
-      @addSlider(@fColors, @settingsGeneral, "contrast",
-        0.5, 5, 0.1, "Contrast", @setColorSettings)
+    # @brightnessController =
+    #   @addSlider(@fColors, @settingsGeneral, "brightness",
+    #     -256, 256, 5, "Brightness", @setColorSettings)
+    # @contrastController =
+    #   @addSlider(@fColors, @settingsGeneral, "contrast",
+    #     0.5, 5, 0.1, "Contrast", @setColorSettings)
     @addFunction(@fColors, @settingsGeneral, "resetColorSettings",
       "Reset")
 
@@ -195,16 +193,14 @@ class Gui
       @saveNow()
 
 
-    @model.flycam.on
-      positionChanged : (position) =>
-        @updateGlobalPosition(position)
-      zoomStepChanged : =>
-        @updateViewportWidth()
+    @listenTo(@model.flycam, "positionChanged", (position) -> @updateGlobalPosition(position))
+    @listenTo(@model.flycam, "zoomStepChanged", @updateViewportWidth)
 
-    @model.flycam3d.on
+    @listenTo(@model.flycam3d.on
       changed : =>
         @updateViewportWidth()
         @updateRotation()
+    )
 
     @model.skeletonTracing?.on
       newActiveNode       : => @update()
@@ -226,8 +222,7 @@ class Gui
       moveValue3dChanged : => @updateMoveValue3d()
       particleSizeChanged : => @updateParticleSize()
 
-    @model.getSegmentationBinary()?.cube.on
-      bucketLoaded : => @updateSegmentID()
+
 
     @createTooltips()
 
@@ -275,62 +270,11 @@ class Gui
                           .onChange(onChange)
 
 
-  saveNow : =>
-
-    @user.pushImpl()
-    model = @model.skeletonTracing || @model.volumeTracing
-
-    if @restrictions.allowUpdate and model?
-      model.stateLogger.pushNow()
-        .then(
-          -> Toast.success("Saved!")
-          -> Toast.error("Couldn't save. Please try again.")
-        )
-    else
-      new $.Deferred().resolve()
-
-
   setBoundingBox : (value) =>
 
-    bbArray = @stringToNumberArray( value )
+    bbArray = Utils.stringToNumberArray( value )
     if bbArray?.length == 6
       @trigger("newBoundingBox", bbArray)
-
-
-  setPosFromString : (posString) =>
-
-    posArray = @stringToNumberArray( posString )
-    if posArray?.length == 3
-      @model.flycam.setPosition(posArray)
-    else
-      @updateGlobalPosition(@model.flycam.getPosition())
-
-
-  setRotationFromString : (rotString) =>
-
-    rotArray = @stringToNumberArray( rotString )
-    if rotArray?.length == 3
-      @model.flycam3d.setRotation rotArray
-    else
-      @updateRotation()
-
-
-  stringToNumberArray : (s) ->
-
-    # remove leading/trailing whitespaces
-    s = s.trim()
-    # replace remaining whitespaces with commata
-    s = s.replace /,?\s+,?/g, ","
-    stringArray = s.split(",")
-
-    result = []
-    for e in stringArray
-      if not isNaN(newEl = parseFloat(e))
-        result.push(newEl)
-      else
-        return null
-
-    return result
 
 
   addTooltip : (element, title) ->
@@ -343,32 +287,6 @@ class Gui
       $(".cr.number.has-slider").tooltip({"title" : "Move mouse up or down while clicking the number to easily adjust the value"})
 
 
-  updateGlobalPosition : (globalPos) =>
-
-    stringPos = Math.floor(globalPos[0]) + ", " + Math.floor(globalPos[1]) + ", " + Math.floor(globalPos[2])
-    $("#trace-position-input").val(stringPos)
-    @updateSegmentID()
-
-
-  updateRotation : =>
-
-    rotation = _.map(
-      @model.flycam3d.getRotation(),
-      (r) -> r.toFixed(2)
-    )
-    stringRot = rotation.join(", ")
-    $("#trace-rotation-input").val(stringRot)
-
-  updateSegmentID : ->
-
-    if @model.getSegmentationBinary()?
-      segmentID = @model.getSegmentationBinary().cube.getDataValue( @model.flycam.getPosition() )
-      if segmentID?
-        $("#segment-id").html("<p>Segment ID: " + segmentID + "</p>")
-      else
-        $("#segment-id").html("<p>Segment ID: -</p>")
-
-
   set : (name, value, type) =>
 
     @user.set( name, (type) value)
@@ -376,12 +294,12 @@ class Gui
 
   setColorSettings : =>
 
-    for binary in @model.getColorBinaries()
-      binary.setColorSettings(@settingsGeneral.brightness, @settingsGeneral.contrast)
-      binary.setColor @settingsGeneral[binary.name + "_color"]
+    #for binary in @model.getColorBinaries()
+      #binary.setColorSettings(@settingsGeneral.brightness, @settingsGeneral.contrast)
+      #binary.setColor @settingsGeneral[binary.name + "_color"]
 
-    @brightnessContrastSettings.brightness = (Number) @settingsGeneral.brightness
-    @brightnessContrastSettings.contrast = (Number) @settingsGeneral.contrast
+    #@brightnessContrastSettings.brightness = (Number) @settingsGeneral.brightness
+    #@brightnessContrastSettings.contrast = (Number) @settingsGeneral.contrast
 
     @user.push()
     @model.flycam.update()
@@ -395,15 +313,15 @@ class Gui
     for controller in @colorControllers
       controller.updateDisplay()
 
-    @user.resetBrightnessContrastSettings(
-      @model.datasetPostfix
-    ).done (@brightnessContrastSettings) =>
+    # @user.resetBrightnessContrastSettings(
+    #   @model.datasetPostfix
+    # ).done (@brightnessContrastSettings) =>
 
-      @settingsGeneral.brightness = @brightnessContrastSettings.brightness
-      @settingsGeneral.contrast = @brightnessContrastSettings.contrast
-      @setColorSettings()
-      @brightnessController.updateDisplay()
-      @contrastController.updateDisplay()
+    #   @settingsGeneral.brightness = @brightnessContrastSettings.brightness
+    #   @settingsGeneral.contrast = @brightnessContrastSettings.contrast
+    #   @setColorSettings()
+    #   @brightnessController.updateDisplay()
+    #   @contrastController.updateDisplay()
 
 
   setupColors : ->
@@ -458,27 +376,6 @@ class Gui
       @settingsVolume.activeCellID = @model.volumeTracing.getActiveCellId()
       @activeCellIdController.updateDisplay()
 
-
-  updateViewportWidth : ->
-
-    if @mode in constants.MODES_PLANE
-      zoom  = @model.flycam.getPlaneScalingFactor()
-      width = constants.PLANE_WIDTH
-
-    if @mode in constants.MODES_ARBITRARY
-      zoom  = @model.flycam3d.zoomStep
-      width = ArbitraryController::WIDTH
-
-    nm = zoom * width * @model.scaleInfo.baseVoxel
-
-    if(nm<1000)
-      widthStr = nm.toFixed(0) + " nm</p>"
-    else if (nm<1000000)
-      widthStr = (nm / 1000).toFixed(1) + " μm</p>"
-    else
-      widthStr = (nm / 1000000).toFixed(1) + " mm</p>"
-
-    $("#zoomFactor").html("<p>Viewport width: " + widthStr )
 
 
   setFolderVisibility : (folder, visible) ->

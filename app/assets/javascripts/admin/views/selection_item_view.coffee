@@ -25,6 +25,7 @@ class SelectionItemView extends Backbone.Marionette.ItemView
       id : @model.get("id")
     }
 
+
   afterRender : ->
 
     @$el.attr(

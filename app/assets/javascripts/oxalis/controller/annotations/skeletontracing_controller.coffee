@@ -1,7 +1,8 @@
 ### define
-../../model/dimensions : Dimensions
-../../constants : constants
-../abstract_tree_controller : AbstractTreeController
+app : app
+backbone : backbone
+oxalis/model/dimensions : Dimensions
+oxalis/constants : constants
 ###
 
 class SkeletonTacingController
@@ -14,70 +15,9 @@ class SkeletonTacingController
   # functions that can be called by the specific view mode controller.
 
 
-  constructor : ( @model, @sceneController, @gui, @skeletonTracingView ) ->
+  constructor : ( @model, @sceneController, @skeletonTracingView ) ->
 
-    @abstractTreeController = new AbstractTreeController(@model)
-    @abstractTreeController.view.on
-      nodeClick : (id) => @setActiveNode(id, false, true)
-
-    @gui.on
-      deleteActiveNode : =>
-        @model.skeletonTracing.deleteActiveNode()
-      setActiveTree : (id) => @model.skeletonTracing.setActiveTree(id)
-      setActiveNode : (id) => @model.skeletonTracing.setActiveNode(id)
-
-    # Manage side bar input
-    $("#comment-input").on "change", (event) =>
-      @model.skeletonTracing.setComment(event.target.value)
-      $("#comment-input").blur()
-
-    $("#comment-previous").click =>
-      @prevComment()
-
-    $("#comment-next").click =>
-      @nextComment()
-
-    $("#tab-comments").on "click", "a[data-nodeid]", (event) =>
-      event.preventDefault()
-      @setActiveNode($(event.target).data("nodeid"), false, true)
-
-    $("#tree-name-submit").click (event) =>
-      @model.skeletonTracing.setTreeName($("#tree-name-input").val())
-
-    $("#tree-name-input").keypress (event) =>
-      if event.which == 13
-        $("#tree-name-submit").click()
-        $("#tree-name-input").blur()
-
-    $("#tree-prev-button").click (event) =>
-      @selectNextTree(false)
-
-    $("#tree-next-button").click (event) =>
-      @selectNextTree(true)
-
-    $("#tree-create-button").click =>
-      @model.skeletonTracing.createNewTree()
-
-    $("#tree-delete-button").click =>
-      @model.skeletonTracing.deleteTree(true)
-
-    $("#tree-list").on "click", "a[data-treeid]", (event) =>
-      event.preventDefault()
-      @setActiveTree($(event.currentTarget).data("treeid"), true)
-
-    $("#tree-color-shuffle").click =>
-      @model.skeletonTracing.shuffleTreeColor()
-
-    $("#tree-color-shuffle-all").click =>
-      @model.skeletonTracing.shuffleAllTreeColors()
-
-    $("#tree-sort").on "click", "a[data-sort]", (event) =>
-      event.preventDefault()
-      @model.user.set("sortTreesByName", ($(event.currentTarget).data("sort") == "name"))
-
-    $("#comment-sort").on "click", "a[data-sort]", (event) =>
-      event.preventDefault()
-      @model.user.set("sortCommentsAsc", ($(event.currentTarget).data("sort") == "asc"))
+    _.extend(@, Backbone.Events)
 
 
   setParticleSize : (delta) =>
@@ -107,6 +47,12 @@ class SkeletonTacingController
       @model.user.push()
 
 
+  setActiveNode : (nodeId, merge = false, centered = false) ->
+
+    @model.skeletonTracing.setActiveNode nodeId, merge
+    @model.skeletonTracing.centerActiveNode() if centered
+
+
   centerActiveNode : =>
 
     position = @model.skeletonTracing.getActiveNodePos()
@@ -114,41 +60,6 @@ class SkeletonTacingController
       @model.flycam.setPosition(position)
 
 
-  setActiveNode : (nodeId, merge = false, centered = false) ->
 
-    @model.skeletonTracing.setActiveNode nodeId, merge
-    @centerActiveNode() if centered
-
-
-  deleteActiveNode : =>
-
-    @model.skeletonTracing.deleteActiveNode()
-
-
-  setActiveTree : (treeId, centered) ->
-
-    @model.skeletonTracing.setActiveTree(treeId)
-    if centered
-      @centerActiveNode()
-
-
-  selectNextTree : (next) ->
-
-    @model.skeletonTracing.selectNextTree(next)
-    @centerActiveNode()
-
-
-  # Comments
-
-  prevComment : =>
-
-    @setActiveNode(
-      @model.skeletonTracing.nextCommentNodeID(false), false, true)
-
-
-  nextComment : =>
-
-    @setActiveNode(
-      @model.skeletonTracing.nextCommentNodeID(true), false, true)
 
 

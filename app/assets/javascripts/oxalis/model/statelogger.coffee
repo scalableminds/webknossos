@@ -1,9 +1,10 @@
 ### define
+backbone : Backbone
 underscore : _
 jquery : $
+app : app
 libs/request : Request
-libs/event_mixin : EventMixin
-three : THREE
+libs/toast : Toast
 ###
 
 class StateLogger
@@ -13,11 +14,13 @@ class StateLogger
 
   constructor : (@flycam, @version, @tracingId, @tracingType, @allowUpdate, @pipeline) ->
 
-    _.extend(this, new EventMixin())
+    _.extend(this, Backbone.Events)
 
     @committedDiffs = []
     @newDiffs = []
     @committedCurrentState = true
+
+    @listenTo(app.vent, "saveEverything", @pushNow)
 
 
   pushDiff : (action, value, push = true) ->
@@ -63,6 +66,10 @@ class StateLogger
   pushNow : ->   # Interface for view & controller
 
     return @pushImpl(false)
+      .then(
+        -> Toast.success("Saved!")
+        -> Toast.error("Couldn't save. Please try again.")
+      )
 
 
   pushImpl : (notifyOnFailure) ->

@@ -3,7 +3,7 @@ underscore : _
 backbone.marionette : Marionette
 libs/toast : Toast
 app : app
-../model/skeletontracing/user_annotation_collection : UserAnnotationCollection
+oxalis/model/skeletontracing/user_annotation_collection : UserAnnotationCollection
 admin/views/selection_view : SelectionView
 admin/models/user/user_collection : UserCollection
 admin/models/team/team_collection : TeamCollection
@@ -127,9 +127,8 @@ class MergeModalView extends Backbone.Marionette.LayoutView
     "fileInfo"             : ".file-info"
 
 
-  initialize : (options) ->
+  initialize : ->
 
-    @_model = options._model
     @nml = undefined
 
 
@@ -169,28 +168,28 @@ class MergeModalView extends Backbone.Marionette.LayoutView
   mergeTask : ->
 
     taskId = @ui.task.find("select :selected").val()
-    url = "/annotations/CompoundTask/#{taskId}/merge/#{@_model.tracingType}/#{@_model.tracingId}"
+    url = "/annotations/CompoundTask/#{taskId}/merge/#{@model.get("tracingType")}/#{@model.get("tracingId")}"
     @merge(url)
 
 
   mergeTaskType : ->
 
     taskTypeId = @ui.tasktype.find("select :selected").prop("id")
-    url = "/annotations/CompoundTaskType/#{taskTypeId}/merge/#{@_model.tracingType}/#{@_model.tracingId}"
+    url = "/annotations/CompoundTaskType/#{taskTypeId}/merge/#{@model.get("tracingType")}/#{@model.get("tracingId")}"
     @merge(url)
 
 
   mergeProject : ->
 
     projectId = @ui.project.find("select :selected").prop("id")
-    url = "/annotations/CompoundProject/#{projectId}/merge/#{@_model.tracingType}/#{@_model.tracingId}"
+    url = "/annotations/CompoundProject/#{projectId}/merge/#{@model.get("tracingType")}/#{@model.get("tracingId")}"
     @merge(url)
 
 
   mergeNml : ->
 
     if @nml
-      url = "/annotations/#{@nml.typ}/#{@nml.id}/merge/#{@_model.tracingType}/#{@_model.tracingId}"
+      url = "/annotations/#{@nml.typ}/#{@nml.id}/merge/#{@model.get("tracingType")}/#{@model.get("tracingId")}"
       @merge(url)
     else
       Toast.error("Please upload NML file")
@@ -199,7 +198,7 @@ class MergeModalView extends Backbone.Marionette.LayoutView
   mergeExplorative : ->
 
     explorativId = @ui.explorative.find("select :selected").val()
-    url = "/annotations/Explorational/#{explorativId}/merge/#{@_model.tracingType}/#{@_model.tracingId}"
+    url = "/annotations/Explorational/#{explorativId}/merge/#{@model.get("tracingType")}/#{@model.get("tracingId")}"
     @merge(url)
 
 

@@ -1,12 +1,12 @@
 ### define
 jquery : $
 underscore : _
-three.color : ColorConverter
+backbone : backbone
 libs/request : Request
-libs/event_mixin : EventMixin
 ./tracepoint : TracePoint
 ./tracetree : TraceTree
 ../../constants : constants
+oxalis/model/right-menu/comments_collection : CommentsCollection
 ###
 
 class TracingParser
@@ -17,7 +17,7 @@ class TracingParser
     @idCount = 1
     @treeIdCount = 1
     @trees = []
-    @comments = []
+    @comments = new CommentsCollection()
     @activeNode = null
     @activeTree = null
 
@@ -78,11 +78,9 @@ class TracingParser
         @skeletonTracing.branchStack.push(node)
 
 
-  setComments : (nodeList) ->
+  setComments : ->
 
-    for comment in @data.comments
-      comment.node = @skeletonTracing.findNodeInList(nodeList, comment.node)
-    @comments = @data.comments
+    @comments.add(@data.comments)
 
 
   parse : ->
@@ -92,7 +90,7 @@ class TracingParser
         idCount : 0
         treeIdCount : 0
         trees : []
-        comments : []
+        comments : new CommentsCollection()
         activeNode : null
         activeTree : null
       }
@@ -104,7 +102,7 @@ class TracingParser
       nodeList = nodeList.concat(tree.nodes)
 
     @setBranchpoints(nodeList)
-    @setComments(nodeList)
+    @setComments()
 
     return {
       @idCount

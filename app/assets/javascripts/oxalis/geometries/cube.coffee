@@ -1,4 +1,5 @@
 ### define
+backbone : backbone
 ../constants : constants
 ../model/dimensions : dimensions
 three : THREE
@@ -14,11 +15,12 @@ class Cube
     color              = properties.color             || 0x000000
     @showCrossSections = properties.showCrossSections || false
 
+    _.extend(@, Backbone.Events)
+
     @initialized = false
     @visible     = true
 
-    @model.flycam.on({
-      positionChanged : (pos) => @updatePosition(pos) })
+    @listenTo(@model.flycam, "positionChanged", (pos) => @updatePosition(pos))
 
     lineProperties = {color: color, linewidth: lineWidth}
 

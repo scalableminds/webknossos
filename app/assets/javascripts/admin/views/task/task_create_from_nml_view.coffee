@@ -55,16 +55,11 @@ class TaskCreateFromNMLView extends Backbone.Marionette.LayoutView
     # do nothing if nothing selected
     if files
 
+      filePath = files[0].name
+
       # concat files comma separated
-      if files.length > 1
-
-        filePath = ""
-        for index in [0..file.length]
-          filePath += @files[index].name + ", "
-
-      # display a single file
-      else
-        filePath = files[0].name
+      for index in [1..files.length-1]
+        filePath += ", " + files[index].name
 
       # update ui
       @ui.fileInfo.val(filePath)

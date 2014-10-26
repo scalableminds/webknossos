@@ -21,7 +21,7 @@ import play.twirl.api.Html
 
 object TaskController extends Controller with Secured {
 
-  val MAX_OPEN_TASKS = current.configuration.getInt("oxalis.tasks.maxOpenPerUser") getOrElse 5
+  val MAX_OPEN_TASKS = current.configuration.getInt("oxalis.tasks.maxOpenPerUser") getOrElse 2
 
   def empty = Authenticated{ implicit request =>
     Ok(views.html.main()(Html("")))

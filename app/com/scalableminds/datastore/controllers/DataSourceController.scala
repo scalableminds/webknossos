@@ -3,6 +3,8 @@
  */
 package com.scalableminds.datastore.controllers
 
+import net.liftweb.common.Failure
+import play.api.Logger
 import play.api.mvc.Action
 import com.scalableminds.util.mvc.ExtendedController
 import com.scalableminds.util.tools.{NotStarted, Finished, InProgress, ProgressState}
@@ -51,6 +53,9 @@ object DataSourceController extends Controller {
         startedImport.map{ usableDataSource =>
           DataSourceDAO.updateDataSource(usableDataSource)
           DataStorePlugin.binaryDataService.oxalisServer.reportDataSouce(usableDataSource)
+        }.futureBox.map{
+          case f: Failure =>
+            Logger.error("An error occoured: " + f)
         }
         progressToResult(InProgress(0))
       }

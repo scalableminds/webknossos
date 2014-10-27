@@ -25,13 +25,15 @@ class TaskCreateFromView extends Backbone.Marionette.LayoutView
         <% if(isFromForm) { %>
           <h3>Create Task</h3>
           <br/>
+        </div>
+        <form action="/admin/tasks/createFromForm" method="POST" class="form-horizontal">
         <% } else { %>
           <h3>Create Task from explorative SkeletonTracing</h3>
           <p>Every nml creates a new task. You can either upload a single NML file or a zipped collection of nml files (.zip).</p>
           <br/>
+        </div>
+        <form action="/admin/tasks/createFromNML" method="POST" class="form-horizontal">
         <% } %>
-      </div>
-      <form action="/admin/tasks/createFromForm" method="POST" class="form-horizontal">
 
         <div class=" form-group">
           <label class="col-sm-2 control-label" for="taskType">Task type</label>
@@ -135,10 +137,12 @@ class TaskCreateFromView extends Backbone.Marionette.LayoutView
   ###
   onRender: ->
 
+    # the value of the tasktype is the id and the displayed innerHTML is the summary
     taskTypeSelectionView = new SelectionView(
       collection: new TaskTypeCollection()
       childViewOptions :
-        modelValue: -> return "#{@model.get("summary")}"
+        modelValue: -> return "#{@model.get("id")}"
+        modelName: -> return "#{@model.get("summary")}"
       data : "amIAnAdmin=true"
       name: "taskType"
     )
@@ -164,11 +168,12 @@ class TaskCreateFromView extends Backbone.Marionette.LayoutView
     @project.show(projectSelectionView)
 
     if (@isFromForm)
-      createFromNMLView = new TaskCreateFromNMLView()
-      @subview.show(createFromNMLView)
-    else
       createFromFormView = new TaskCreateFromFormView()
       @subview.show(createFromFormView)
+    else
+      createFromNMLView = new TaskCreateFromNMLView()
+      @subview.show(createFromNMLView)
+
 
 
 

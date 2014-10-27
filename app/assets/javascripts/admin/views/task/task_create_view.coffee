@@ -2,8 +2,8 @@
 underscore : _
 backbone.marionette : marionette
 routes : routes
-./task_create_from_view : TaskCreateFromView
-./task_create_bulk_import_view : TaskCreateBulkImportView
+./task_create_subviews/task_create_from_view : TaskCreateFromView
+./task_create_subviews/task_create_bulk_import_view : TaskCreateBulkImportView
 ###
 
 class TaskCreateView extends Backbone.Marionette.LayoutView

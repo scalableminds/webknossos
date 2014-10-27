@@ -36,7 +36,7 @@ trait PathUtils {
     p1.toAbsolutePath.compareTo(p2.toAbsolutePath) == 0
 
   def fileOption(p: Path): Option[File] =
-    if(Files.isDirectory(p))
+    if(!Files.isDirectory(p))
       Some(p.toFile)
     else
       None

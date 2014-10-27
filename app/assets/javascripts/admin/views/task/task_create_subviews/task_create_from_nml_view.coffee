@@ -52,14 +52,8 @@ class TaskCreateFromNMLView extends Backbone.Marionette.LayoutView
     # grab file list from event
     files = evt.target.files
 
-    # do nothing if nothing selected
-    if files
+    # build list
+    filePath = _.pluck(files, "name").join(", ")
 
-      filePath = files[0].name
-
-      # concat files comma separated
-      for index in [1..files.length-1]
-        filePath += ", " + files[index].name
-
-      # update ui
-      @ui.fileInfo.val(filePath)
+    # update ui
+    @ui.fileInfo.val(filePath)

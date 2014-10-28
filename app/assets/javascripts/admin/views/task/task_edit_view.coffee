@@ -7,6 +7,7 @@ admin/models/team/team_collection : TeamCollection
 admin/models/project/project_collection : ProjectCollection
 admin/models/dataset/dataset_collection : DatasetCollection
 admin/views/selection_view : SelectionView
+libs/toast : Toast
 ###
 
 class TaskCreateView extends Backbone.Marionette.LayoutView
@@ -187,7 +188,17 @@ class TaskCreateView extends Backbone.Marionette.LayoutView
     @team.show(teamSelectionView)
     @project.show(projectSelectionView)
 
+    return
 
+  ###*
+   * Handle not-found errors.
+   *
+   * @method syncError
+   ###
   syncError : ->
+    # TODO: notify the user that the task was not found
+    Toast.error("The task was not found.")
 
-    alert("error")
+    window.app.router.navigate("tasks", {trigger: true})
+
+    return

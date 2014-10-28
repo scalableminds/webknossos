@@ -27,22 +27,7 @@ class Router extends Backbone.Router
     "spotlight"                     : "spotlight"
     "tasks/overview"                : "taskOverview"
     "admin/taskTypes"               : "hideLoading"
-    "*url"                          : "hideLoading"
 
-  whitelist : [
-    "help/keyboardshortcuts",
-    "help/faq",
-    "issues"
-  ]
-
-  whitelist : [
-    "help/keyboardshortcuts",
-    "help/faq",
-    "issues",
-    "logout",
-    "login",
-    "user/password/reset"
-  ]
 
   initialize : ->
 
@@ -56,10 +41,6 @@ class Router extends Backbone.Router
         [ width, height ] = newWindow.split("x")
         window.open(url, "_blank", "width=#{width},height=#{height},location=no,menubar=no")
         evt.preventDefault()
-        return
-
-      # let whitelisted url through
-      if _.contains(@whitelist, urlWithoutSlash)
         return
 
       # disable links beginning with #
@@ -90,7 +71,7 @@ class Router extends Backbone.Router
 
   hideLoading : ->
 
-    @$loadingSpinner.hide()
+    @$loadingSpinner.addClass("hidden")
 
 
   tracingView : (type, id) ->
@@ -224,7 +205,7 @@ class Router extends Backbone.Router
         @listenTo(collection, "sync", => @hideLoading())
       else
         view = new admin[view]()
-        @hideLoading()
+        setTimeout((=> @hideLoading()), 200)
 
       @changeView(view)
 
@@ -234,7 +215,7 @@ class Router extends Backbone.Router
     if @activeViews == views
       return
 
-    @$loadingSpinner.show()
+    @$loadingSpinner.removeClass("hidden")
 
     # Remove current views
     if @activeViews

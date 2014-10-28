@@ -20,9 +20,8 @@ class View
 
     @setTheme(constants.THEME_BRIGHT)
 
-    # disable loader, show oxalis
-    $("#loader").hide()
-    $("#container").removeClass("hide")
+    # disable loader
+    $("#loader").addClass("hidden")
 
 
   toggleTheme : ->

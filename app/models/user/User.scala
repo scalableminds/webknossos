@@ -7,6 +7,7 @@ import com.scalableminds.util.security.SCrypt._
 import play.api.libs.json.Json._
 import models.basics._
 import models.team._
+import models.configuration.{UserConfiguration, DataSetConfiguration}
 import com.scalableminds.util.reactivemongo._
 //import scala.concurrent.Future
 import play.api.libs.concurrent.Execution.Implicits._
@@ -28,7 +29,8 @@ case class User(
                  verified: Boolean = false,
                  pwdHash: String = "",
                  teams: List[TeamMembership],
-                 configuration: UserSettings = UserSettings.defaultSettings,
+                 userConfiguration: UserConfiguration = UserConfiguration.default,
+                 dataSetConfigurations: Map[String, DataSetConfiguration] = Map.empty,
                  experiences: Map[String, Int] = Map.empty,
                  lastActivity: Long = System.currentTimeMillis,
                  _id: BSONObjectID = BSONObjectID.generate) extends DBAccessContextPayload {
@@ -89,6 +91,7 @@ case class User(
 
   def isEditableBy(other: User) =
     other.hasAdminAccess && ( teams.isEmpty || other.adminTeamNames.exists(teamNames.contains))
+
 }
 
 object User {
@@ -113,6 +116,8 @@ object User {
       (__ \ "lastName").write[String] and
       (__ \ "teams").write[List[TeamMembership]])( u =>
       (u.id, u.email, u.firstName, u.lastName, u.teams))
+
+  val createNotVerifiedUser = User("","","", teams = Nil)
 }
 
 object UserDAO extends SecuredBaseDAO[User] {
@@ -161,7 +166,9 @@ object UserDAO extends SecuredBaseDAO[User] {
     findOne(Json.obj("email" -> email, "loginType" -> loginType))
 
   def auth(email: String, password: String)(implicit ctx: DBAccessContext): Fox[User] =
-    findOneByEmail(email).filter(user => verifyPassword(password, user.pwdHash))
+    findOneByEmail(email).filter { user =>
+      verifyPassword(password, user.pwdHash)
+    }
 
   def insert(user: User, isVerified: Boolean)(implicit ctx: DBAccessContext): Fox[User] = {
     if (isVerified) {
@@ -192,8 +199,12 @@ object UserDAO extends SecuredBaseDAO[User] {
     update(findByIdQ(_user), Json.obj("$inc" -> Json.obj(s"experiences.$domain" -> value)))
   }
 
-  def updateSettings(user: User, settings: UserSettings)(implicit ctx: DBAccessContext) = {
-    update(findByIdQ(user._id), Json.obj("$set" -> Json.obj("configuration.settings" -> settings.settings)))
+  def updateUserConfiguration(user: User, configuration: UserConfiguration)(implicit ctx: DBAccessContext) = {
+    update(findByIdQ(user._id), Json.obj("$set" -> Json.obj("userConfiguration.configuration" -> configuration.configuration)))
+  }
+
+  def updateDataSetConfiguration(user: User, dataSetName: String, configuration: DataSetConfiguration)(implicit ctx: DBAccessContext) = {
+    update(findByIdQ(user._id), Json.obj("$set" -> Json.obj(s"dataSetConfigurations.$dataSetName.configuration" -> configuration.configuration)))
   }
 
   def setExperience(_user: BSONObjectID, domain: String, value: Int)(implicit ctx: DBAccessContext) = {
@@ -210,6 +221,10 @@ object UserDAO extends SecuredBaseDAO[User] {
 
   def updateTeams(_user: BSONObjectID, teams: List[TeamMembership])(implicit ctx: DBAccessContext) = {
     update(findByIdQ(_user), Json.obj("$set" -> Json.obj("teams" -> teams)))
+  }
+
+  def changePassword(_user: BSONObjectID, pswd: String)(implicit ctx: DBAccessContext) = {
+    update(findByIdQ(_user), Json.obj("$set" -> Json.obj("pwdHash" -> hashPassword(pswd))))
   }
 
   def verify(user: User)(implicit ctx: DBAccessContext) = {

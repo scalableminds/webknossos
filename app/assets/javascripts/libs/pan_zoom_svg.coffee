@@ -1,7 +1,6 @@
 ### define
 jquery : $
 underscore : _
-libs/event_mixin : EventMixin
 ###
 
 
@@ -13,8 +12,6 @@ STEP = 0.01
 class PanZoomSVG
 
   constructor : (@$el) ->
-
-    EventMixin.extend(this)
 
     @buffer = 0
     @mouseDown = false

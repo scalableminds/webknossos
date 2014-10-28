@@ -1,4 +1,5 @@
 ### define
+app : app
 underscore : _
 ../viewmodes/plane_controller : PlaneController
 ../../constants : constants
@@ -14,12 +15,11 @@ class SkeletonTracingPlaneController extends PlaneController
   # Tracing.
 
 
-  constructor : (@model, stats, @gui, @view, @sceneController, @skeletonTracingController) ->
+  constructor : (@model, stats, @view, @sceneController, @skeletonTracingController) ->
 
-    super(@model, stats, @gui, @view, @sceneController)
+    super(@model, stats, @view, @sceneController)
 
-    @planeView.on
-      finishedRender : => @model.skeletonTracing.rendered()
+    @listenTo(@planeView, "finishedRender", @model.skeletonTracing.rendered)
 
 
   getPlaneMouseControls : (planeId) ->
@@ -59,13 +59,7 @@ class SkeletonTracingPlaneController extends PlaneController
       "b" : => @model.skeletonTracing.pushBranch()
       "j" : => @popBranch()
 
-      "s" : @skeletonTracingController.centerActiveNode
-
-      #Comments
-      "n" : => @skeletonTracingController.setActiveNode(
-        @model.skeletonTracing.nextCommentNodeID(true), false, true)
-      "p" : => @skeletonTracingController.setActiveNode(
-        @model.skeletonTracing.nextCommentNodeID(false), false, true)
+      "s" : => @skeletonTracingController.centerActiveNode()
 
 
   popBranch : =>
@@ -98,7 +92,7 @@ class SkeletonTracingPlaneController extends PlaneController
     raycaster = projector.pickingRay(vector, camera)
     raycaster.ray.threshold = @model.flycam.getRayThreshold(plane)
 
-    raycaster.ray.__scalingFactors = @model.scaleInfo.nmPerVoxel
+    raycaster.ray.__scalingFactors = app.scaleInfo.nmPerVoxel
 
     # identify clicked object
     intersects = raycaster.intersectObjects(@sceneController.skeleton.getAllNodes())
@@ -160,8 +154,8 @@ class SkeletonTracingPlaneController extends PlaneController
       @model.skeletonTracing.createNewTree()
       # make sure the tree was rendered two times before adding nodes,
       # otherwise our buffer optimizations won't work
-      @model.skeletonTracing.one("finishedRender", =>
-        @model.skeletonTracing.one("finishedRender", =>
+      @model.skeletonTracing.once("finishedRender", =>
+        @model.skeletonTracing.once("finishedRender", =>
           @model.skeletonTracing.addNode(position, constants.TYPE_USUAL,
             @activeViewport, @model.flycam.getIntegerZoomStep()))
         @planeView.draw())

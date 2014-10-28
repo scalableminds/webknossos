@@ -1,13 +1,12 @@
 package controllers.admin
 
+import play.api.mvc.Result
+import reactivemongo.bson.BSONObjectID
+
 import scala.Array.canBuildFrom
-import scala.Option.option2Iterable
 import oxalis.security.AuthenticatedRequest
-import oxalis.security.Secured
 import com.scalableminds.util.tools.ExtendedTypes.ExtendedString
 import com.scalableminds.util.geometry.{Point3D, BoundingBox}
-import models.binary.DataSet
-import models.tracing._
 import models.task._
 import models.user._
 import models.binary.DataSetDAO
@@ -15,31 +14,18 @@ import play.api.data.Form
 import play.api.data.Forms._
 import views.html
 import play.api.i18n.Messages
-import play.api.libs.concurrent._
 import play.api.libs.concurrent.Execution.Implicits._
-import java.lang.Cloneable
 import play.api.Logger
-import play.api.mvc.{SimpleResult, Result}
-import play.api.templates.Html
-import oxalis.annotation._
-import controllers.{Controller, Application}
-import models.annotation.{AnnotationService, Annotation, AnnotationDAO, AnnotationType}
+import play.twirl.api.Html
+import models.annotation.{AnnotationService, AnnotationDAO}
 import scala.concurrent.Future
 import oxalis.nml.NMLService
-import play.api.libs.json.{Json, JsObject, JsArray}
 import play.api.libs.json.Json._
-import play.api.libs.json.JsObject
-
 import play.api.libs.json._
 import play.api.libs.functional.syntax._
-
 import net.liftweb.common.{Empty, Failure, Full}
 import com.scalableminds.util.tools.Fox
-import play.api.mvc.SimpleResult
-import play.api.mvc.Request
-import play.api.mvc.AnyContent
 import com.scalableminds.util.reactivemongo.DBAccessContext
-import models.team.Team
 
 object TaskAdministration extends AdminController {
 
@@ -48,7 +34,7 @@ object TaskAdministration extends AdminController {
   type TaskForm = Form[(String, String, Point3D, Experience, Int, Int, String)]
 
   def empty = Authenticated{ implicit request =>
-    Ok(views.html.main()(Html.empty))
+    Ok(views.html.main()(Html("")))
   }
 
   def basicTaskForm(minTaskInstances: Int) = Form(
@@ -185,7 +171,7 @@ object TaskAdministration extends AdminController {
   }
 
   def editTaskForm(taskId: String) = Authenticated.async(parse.urlFormEncoded) { implicit request =>
-    def validateForm(task: Task): Fox[SimpleResult] =
+    def validateForm(task: Task): Fox[Result] =
       basicTaskForm(task.assignedInstances).bindFromRequest.fold(
         hasErrors = (formWithErrors => taskEditHtml(taskId, formWithErrors).map(h => BadRequest(h))),
         success = {
@@ -230,7 +216,7 @@ object TaskAdministration extends AdminController {
             project <- ProjectService.findIfNotEmpty(projectName) ?~> Messages("project.notFound")
             _ <- ensureTeamAdministration(request.user, team)
           } yield {
-            val nmls = NMLService.extractFromFile(nmlFile.ref.file, nmlFile.filename)
+            val nmls = NMLService.extractFromFile(nmlFile.ref.file, nmlFile.filename).flatten
             val baseTask = Task(
               taskType._id,
               team,
@@ -240,7 +226,15 @@ object TaskAdministration extends AdminController {
               _project = project.map(_.name))
             nmls.foreach {
               nml =>
-                TaskService.copyDeepAndInsert(baseTask).map { task =>
+                val task = Task(
+                  taskType._id,
+                  team,
+                  experience,
+                  priority,
+                  instances,
+                  _project = project.map(_.name),
+                  _id = BSONObjectID.generate)
+                TaskDAO.insert(task).flatMap { _ =>
                   AnnotationService.createAnnotationBase(task, request.user._id, boundingBox, taskType.settings, nml)
                 }
             }

@@ -1,5 +1,4 @@
 @import (inline) "../../../public/bower_components/bootstrap/dist/css/bootstrap.css";
-@import (inline) "../../../public/bower_components/seiyria-bootstrap-slider/css/bootstrap-slider.css";
 @import (inline) "../../../public/bower_components/c3/c3.css";
 @import "../../../public/bower_components/font-awesome/less/font-awesome.less";
 
@@ -15,8 +14,9 @@
 @import "_spotlight.less";
 @import "_dashboard.less";
 @import "trace_view/_tracing_view.less";
-@import "trace_view/_left_menu.less";
+@import "trace_view/_action_bar.less";
 @import "trace_view/_right_menu.less";
+@import "trace_view/_settings.less";
 @import "_help.less";
 
 
@@ -32,6 +32,9 @@ body {
 body:-webkit-full-screen {
   width: 100%;
   height: 100%;
+}
+.save-error .navbar {
+  background-color: #c00;
 }
 .navbar .navbar-brand {
   background: url(/assets/images/oxalis-white.png) 15px center no-repeat;
@@ -166,32 +169,32 @@ body:-webkit-full-screen {
 #stats {
   position: fixed;
   bottom: 0;
-  left: 0;
+  right: 0;
 }
 .bright {
   background : #fff;
   p {
     color : #000;
   }
-  #abstractTreeViewer {
-    color : #000;
-  }
   .inactive {
     border-color: #fff;
   }
 }
+
 .dark {
+  color: #fff;
   background : #000;
+
+  #dataset .well,
+  .panel-body {
+    background: #000;
+  }
+
   p {
     color : #fff;
   }
-  #abstractTreeViewer {
-    color : #fff;
-  }
-  .popover p {
-    color : #000;
-  }
-  .modal p {
+
+  .modal, .modal p{
     color : #000;
   }
   .inactive {
@@ -202,7 +205,9 @@ body:-webkit-full-screen {
 #loader-icon {
   position: absolute;
   top: 50%;
-  left: 50%;
+  margin-top: 20px;
+  width: 100%;
+  text-align: center;
   z-index: 1;
 }
 
@@ -214,7 +219,6 @@ body:-webkit-full-screen {
   width: 100%;
   background-color: white;
   color: white;
-  text-align: center;
   padding-top: 100px;
   opacity: 0.7;
   filter: alpha(opacity=50);
@@ -222,8 +226,6 @@ body:-webkit-full-screen {
 
 #main-container {
   margin-top: @navbar-height;
-}
-#main {
   white-space: nowrap;
 }
 
@@ -284,26 +286,6 @@ body:-webkit-full-screen {
   margin-top: 30px;
 }
 
-// Fixing datGUI from Bootstrap
-.dg {
-
-  font: 11px "Lucida Grande", sans-serif;
-
-  input, select, textarea {
-    height: auto;
-    font-size: 11px;
-    line-height: normal;
-    border-radius: 0;
-  }
-  select {
-    width: auto;
-    max-width: 100%;
-  }
-  .cr div div {
-    line-height: normal;
-  }
-}
-
 // Fixing font awesome
 .btn [class^="fa-"],
 .nav [class^="fa-"],
@@ -335,20 +317,14 @@ i {
   margin-right: 5px;
 }
 
-.btn-file input[type=file] {
-    position: absolute;
-    top: 0;
-    right: 0;
-    min-width: 100%;
-    min-height: 100%;
-    font-size: 999px;
-    text-align: right;
-    filter: alpha(opacity=0);
-    opacity: 0;
-    outline: none;
-    background: white;
-    cursor: inherit;
-    display: block;
+.v-center > .v-center-agent {
+  display: table-cell;
+  vertical-align: middle;
+}
+
+.v-center {
+  display: table;
+  height: 100%;
 }
 
 .dataset-region {

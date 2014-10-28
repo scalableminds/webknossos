@@ -1,10 +1,11 @@
 ### define
 underscore : _
+oxalis/constants : Constants
 ../viewmodes/plane_controller : PlaneController
 ../annotations/volumetracing_controller : VolumeTracingController
 ###
 
-class VolumeTacingPlaneController extends PlaneController
+class VolumeTracingPlaneController extends PlaneController
 
   # See comment in Controller class on general controller architecture.
   #
@@ -13,27 +14,21 @@ class VolumeTacingPlaneController extends PlaneController
   # Tracing.
 
 
-  constructor : (@model, stats, @gui, @view, @sceneController, @volumeTracingController) ->
+  constructor : (@model, stats, @view, @sceneController, @volumeTracingController) ->
 
-    super(@model, stats, @gui, @view, @sceneController)
+    super(@model, stats, @view, @sceneController)
 
-    @model.flycam.on
-      positionChanged : =>
-        @render3dCell @model.volumeTracing.getActiveCellId()
-      zoomStepChanged : =>
-        @render3dCell @model.volumeTracing.getActiveCellId()
+    @listenTo(@model.flycam, "positionChanged", =>
+      @render3dCell @model.volumeTracing.getActiveCellId()
+    )
+    @listenTo(@model.flycam, "zoomStepChanged", =>
+      @render3dCell @model.volumeTracing.getActiveCellId()
+    )
 
-    @model.user.on
-      isosurfaceDisplayChanged : =>
-        @render3dCell @model.volumeTracing.getActiveCellId()
-      isosurfaceBBsizeChanged : =>
-        @render3dCell @model.volumeTracing.getActiveCellId()
-      isosurfaceResolutionChanged : =>
-        @render3dCell @model.volumeTracing.getActiveCellId()
-
-    @model.volumeTracing.on
-      newActiveCell : (id) =>
-        @render3dCell id
+    @listenTo(@model.user, "isosurfaceDisplayChanged", -> @render3dCell @model.volumeTracing.getActiveCellId())
+    @listenTo(@model.user, "isosurfaceBBsizeChanged", -> @render3dCell @model.volumeTracing.getActiveCellId())
+    @listenTo(@model.user, "isosurfaceResolutionChanged", -> @render3dCell @model.volumeTracing.getActiveCellId())
+    @listenTo(@model.volumeTracing, "newActiveCell", (id) -> @render3dCell id)
 
 
   getPlaneMouseControls : (planeId) ->
@@ -42,7 +37,7 @@ class VolumeTacingPlaneController extends PlaneController
 
       leftDownMove : (delta, pos, plane, event) =>
 
-        if @volumeTracingController.controlMode == VolumeTracingController::CONTROL_MODE_MOVE
+        if @volumeTracingController.controlMode == Constants.VOLUME_MODE_MOVE
           @move [
             delta.x * @model.user.getMouseInversionX() / @planeView.scaleFactor
             delta.y * @model.user.getMouseInversionY() / @planeView.scaleFactor
@@ -53,7 +48,8 @@ class VolumeTacingPlaneController extends PlaneController
 
       leftMouseDown : (pos, plane, event) =>
 
-        @volumeTracingController.enterDeleteMode( event.shiftKey )
+        if event.shiftKey
+          @volumeTracingController.enterDeleteMode()
         @model.volumeTracing.startEditing(plane)
 
       leftMouseUp : =>

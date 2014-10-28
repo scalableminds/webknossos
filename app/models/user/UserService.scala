@@ -1,18 +1,14 @@
 package models.user
 
-import play.api.{Logger, Application}
-import scala.Some
-import scala.concurrent.{Future, Await}
-import scala.concurrent.duration._
+import play.api.Play
+import play.api.Play.current
 import oxalis.user.UserCache
-import models.team.{TeamDAO, Role, TeamMembership, Team}
+import models.configuration.{UserConfiguration, DataSetConfiguration}
+import models.team._
 import reactivemongo.bson.BSONObjectID
-import play.api.i18n.Messages
 import oxalis.mail.DefaultMails
 import com.scalableminds.util.tools.{FoxImplicits, Fox}
 import controllers.Application
-import com.scalableminds.util.mail.Send
-import net.liftweb.common.Failure
 import com.scalableminds.util.reactivemongo.{GlobalAccessContext, DBAccessContext}
 import com.scalableminds.util.security.SCrypt._
 import com.scalableminds.util.mail.Send
@@ -20,7 +16,7 @@ import play.api.libs.concurrent.Execution.Implicits._
 import models.annotation.AnnotationService
 
 object UserService extends FoxImplicits {
-  val defaultUserEmail = "scmboy@scalableminds.com"
+  val defaultUserEmail = Play.configuration.getString("application.authentication.defaultUser").get
 
   lazy val defaultUser = {
     UserDAO.findOneByEmail(defaultUserEmail)(GlobalAccessContext)
@@ -63,6 +59,17 @@ object UserService extends FoxImplicits {
     }
   }
 
+  def changePassword(user: User, newPassword: String)(implicit ctx: DBAccessContext) = {
+    if (user.verified)
+      Application.Mailer ! Send(DefaultMails.changePasswordMail(user.name, user.email))
+
+    UserDAO.changePassword(user._id, newPassword).map { result =>
+      UserCache.invalidateUser(user.id)
+      result
+    }
+
+  }
+
   def removeFromAllPossibleTeams(user: User, issuingUser: User)(implicit ctx: DBAccessContext) = {
     if (user.teamNames.diff(issuingUser.adminTeamNames).isEmpty) {
       // if a user doesn't belong to any team any more he gets deleted
@@ -81,8 +88,19 @@ object UserService extends FoxImplicits {
     UserDAO.findOneByEmail(email)(GlobalAccessContext)
   }
 
-  def updateSettings(user: User, settings: UserSettings)(implicit ctx: DBAccessContext) = {
-    UserDAO.updateSettings(user, settings).map {
+  def updateUserConfiguration(user: User, configuration: UserConfiguration)(implicit ctx: DBAccessContext) = {
+    UserDAO.updateUserConfiguration(user, configuration).map {
+      result =>
+        UserCache.invalidateUser(user.id)
+        result
+    }
+  }
+
+  def findFinishedTasksOf(user: User)(implicit ctx: DBAccessContext) =
+    AnnotationService.findTasksOf(user).map(_.flatMap(_._task))
+
+  def updateDataSetConfiguration(user: User, dataSetName: String, configuration: DataSetConfiguration)(implicit ctx: DBAccessContext) = {
+    UserDAO.updateDataSetConfiguration(user, dataSetName, configuration).map {
       result =>
         UserCache.invalidateUser(user.id)
         result

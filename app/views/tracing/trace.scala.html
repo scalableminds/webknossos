@@ -22,6 +22,8 @@
           <a href="@controllers.routes.AnnotationController.download(annotation.typ, annotation.id)" class="btn btn-default btn-small" id="trace-download-button"><i class="fa fa-download"></i>NML</a>
           <a href="#help-modal" class="btn btn-default btn-small" data-toggle="modal"><i class="fa fa-question-circle"></i>Help</a>
         </div>
+        <div id="merge-button" class="btn btn-default form-control skeleton-controls">Merge</div>
+
         <div id="dataset" class="well well-sm">
             @annotation._name.getOrElse(annotation.typ)<br />
             DataSet: <span id="dataset-name"></span><br />
@@ -52,6 +54,14 @@
           </div>
         </div>
 
+<<<<<<< HEAD
+        <div id="zoomstep-warning" class="volume-controls">
+          <p>Volume tracings are only fully supported at a smaller zoom level. Please zoom in to annotate.</p>
+        </div>
+
+=======
+        <div id="lefttabbar">
+>>>>>>> view
         <div id="control-mode" class="volume-controls">
           <p>Control mode:</p>
           <div class="btn-group">
@@ -71,7 +81,9 @@
               } else {
                 <li class="active">
               }
-              <a href="#tab2" data-toggle="tab">Options</a></li>
+              <a href="#dataset-settings-tab" data-toggle="tab"><i class="fa fa-cogs"></i> Dataset</a></li>
+              <li>
+              <a href="#user-settings-tab" data-toggle="tab"><i class="fa fa-cogs"></i> User</a></li>
             </ul>
 
             <div class="tab-content">
@@ -87,13 +99,11 @@
                     @additionalHtml
                   </div>
                 </div>
-                <div class="tab-pane" id="tab2" />
+                <div class="tab-pane" id="dataset-settings-tab"></div>
               } else {
-                <div class="tab-pane active" id="tab2" />
+                <div class="tab-pane active" id="dataset-settings-tab"></div>
               }
-                <div id="status"></div>
-                <div id="optionswindow"></div>
-              </div>
+              <div class="tab-pane" id="user-settings-tab"></div>
             </div>
 
         </div>
@@ -148,6 +158,7 @@
             </div>
           </div>
           <div id="modal" class="modal fade"></div>
+          <div id="merge-modal"></div>
           <div id="inputcatchers">
             <div id="planexy" class="inputcatcher"></div>
             <div id="planeyz" class="inputcatcher"></div>
@@ -220,9 +231,9 @@
                   <button class="btn btn-default" id="tree-next-button"><i class="fa fa-arrow-right"></i></button>
                 </span>
               </div>
-              <div>
-                <ul id="tree-list"></ul>
-              </div>
+            </div>
+            <div id="tree-list-container">
+              <ul id="tree-list"></ul>
             </div>
           </div>
           <div class="tab-pane" id="tab-comments">

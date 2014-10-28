@@ -7,7 +7,7 @@ import oxalis.security.Secured
 import com.scalableminds.util.reactivemongo.GlobalAccessContext
 import models.user.{User, UserService}
 import play.api.libs.concurrent.Execution.Implicits._
-import play.api.templates.Html
+import play.twirl.api.Html
 import scala.concurrent.Future
 import models.task.{Task, Project, ProjectService, ProjectDAO}
 import play.api.libs.json.{JsError, JsSuccess, Writes, Json}
@@ -17,7 +17,7 @@ import net.liftweb.common.{Empty, Failure, Full}
 object ProjectController extends Controller with Secured {
   def empty = Authenticated {
     implicit request =>
-      Ok(views.html.main()(Html.empty))
+      Ok(views.html.main()(Html("")))
   }
 
   def list = Authenticated.async {

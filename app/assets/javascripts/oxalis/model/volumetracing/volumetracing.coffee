@@ -1,7 +1,7 @@
 ### define
+backbone : Backbone
 ./volumecell : VolumeCell
 ./volumelayer : VolumeLayer
-libs/event_mixin : EventMixin
 ../dimensions : Dimensions
 libs/drawing : Drawing
 ./volumetracing_statelogger : VolumeTracingStateLogger
@@ -11,7 +11,7 @@ class VolumeTracing
 
   constructor : (tracing, @flycam, @binary, updatePipeline) ->
 
-    _.extend(@, new EventMixin())
+    _.extend(this, Backbone.Events)
 
     @contentData  = tracing.content.contentData
     @cells        = []
@@ -44,10 +44,11 @@ class VolumeTracing
 
 
   startEditing : (planeId) ->
-
     # Return, if layer was actually started
-    if currentLayer?
+
+    if currentLayer? or @flycam.getIntegerZoomStep() > 0
       return false
+
     pos = Dimensions.roundCoordinate(@flycam.getPosition())
     thirdDimValue = pos[Dimensions.thirdDimensionForPlane(planeId)]
     @currentLayer = new VolumeLayer(planeId, thirdDimValue)
@@ -60,7 +61,7 @@ class VolumeTracing
       return
 
     @currentLayer.addContour(pos)
-    @trigger "updateLayer", @currentLayer.getSmoothedContourList()
+    @trigger("updateLayer", @currentLayer.getSmoothedContourList())
 
   finishLayer : ->
 

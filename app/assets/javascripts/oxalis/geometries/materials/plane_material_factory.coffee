@@ -22,6 +22,11 @@ class PlaneMaterialFactory extends AbstractPlaneMaterialFactory
         value : 0
 
 
+  convertColor : (color) ->
+
+    return _.map color, (e) -> e / 255
+
+
   createTextures : ->
 
     # create textures
@@ -33,13 +38,14 @@ class PlaneMaterialFactory extends AbstractPlaneMaterialFactory
       @textures[shaderName].binaryCategory = binary.category
       @textures[shaderName].binaryName = binary.name
 
+    layerColors = @model.dataset.get("layerColors")
     for shaderName, texture of @textures
       @uniforms[shaderName + "_texture"] = {
         type : "t"
         value : texture
       }
       unless texture.binaryCategory == "segmentation"
-        color = _.map @model.binary[texture.binaryName].color, (e) -> e / 255
+        color = @convertColor(layerColors[texture.binaryName])
         @uniforms[shaderName + "_weight"] = {
           type : "f"
           value : 1
@@ -67,18 +73,20 @@ class PlaneMaterialFactory extends AbstractPlaneMaterialFactory
     @material.setSegmentationAlpha = (alpha) =>
       @uniforms.alpha.value = alpha / 100
 
+    @material.side = THREE.DoubleSide
+
 
   setupChangeListeners : ->
 
     super()
 
-    for binary in @model.getColorBinaries()
-      do (binary) =>
-        binary.on
-          newColor : (color) =>
-            color = _.map color, (e) -> e / 255
-            uniformName = @sanitizeName(binary.name) + "_color"
-            @uniforms[uniformName].value = new THREE.Vector3(color...)
+    @listenTo(@model.dataset, "change:layerColors change:layerColors.*" , (model, layerColors) ->
+      for name, color of layerColors
+        color = @convertColor(color)
+        uniformName = @sanitizeName(name) + "_color"
+        @uniforms[uniformName].value = new THREE.Vector3(color...)
+      return
+    )
 
 
   getFragmentShader : ->
@@ -102,32 +110,14 @@ class PlaneMaterialFactory extends AbstractPlaneMaterialFactory
       uniform float alpha, brightness, contrast;
       varying vec2 vUv;
 
-      /* Inspired from: https://github.com/McManning/WebGL-Platformer/blob/master/shaders/main.frag */
-      vec4 hsv_to_rgb(vec4 HSV)
+      /* Inspired from: http://lolengine.net/blog/2013/07/27/rgb-to-hsv-in-glsl */
+      vec3 hsv_to_rgb(vec4 HSV)
       {
-        vec4 RGB; /* = HSV.z; */
-
-        float h = HSV.x;
-        float s = HSV.y;
-        float v = HSV.z;
-
-        float i = floor(h);
-        float f = h - i;
-
-        float p = (1.0 - s);
-        float q = (1.0 - s * f);
-        float t = (1.0 - s * (1.0 - f));
-
-        if (i == 0.0) { RGB = vec4(1.0, t, p, 1.0); }
-        else if (i == 1.0) { RGB = vec4(q, 1.0, p, 1.0); }
-        else if (i == 2.0) { RGB = vec4(p, 1.0, t, 1.0); }
-        else if (i == 3.0) { RGB = vec4(p, q, 1.0, 1.0); }
-        else if (i == 4.0) { RGB = vec4(t, p, 1.0, 1.0); }
-        else /* i == -1 */ { RGB = vec4(1.0, p, q, 1.0); }
-
-        RGB *= v;
-
-        return RGB;
+        vec4 K;
+        vec3 p;
+        K = vec4(1.0, 2.0 / 3.0, 1.0 / 3.0, 3.0);
+        p = abs(fract(HSV.xxx + K.xyz) * 6.0 - K.www);
+        return HSV.z * mix(K.xxx, clamp(p - K.xxx, 0.0, 1.0), HSV.y);
       }
 
       void main() {
@@ -146,7 +136,6 @@ class PlaneMaterialFactory extends AbstractPlaneMaterialFactory
 
         <% if (isRgb) { %>
           vec3 data_color = texture2D( <%= layers[0] %>_texture, vUv * repeat + offset).xyz;
-
         <% } else { %>
           vec3 data_color = vec3(0.0, 0.0, 0.0);
 
@@ -172,7 +161,7 @@ class PlaneMaterialFactory extends AbstractPlaneMaterialFactory
 
         if ( id > 0.1 ) {
           vec4 HSV = vec4( mod( 6.0 * id * golden_ratio, 6.0), 1.0, 1.0, 1.0 );
-          gl_FragColor = mix( vec4(data_color, 1.0), hsv_to_rgb(HSV), alpha );
+          gl_FragColor = vec4(mix( data_color, hsv_to_rgb(HSV), alpha ), 1.0);
         } else {
           gl_FragColor = vec4(data_color, 1.0);
         }

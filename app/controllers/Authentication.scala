@@ -22,7 +22,7 @@ import net.liftweb.common.Full
 object Authentication extends Controller with Secured with ProvidesUnauthorizedSessionData {
   // -- Authentication
   val autoVerify =
-    Play.configuration.getBoolean("application.enableAutoVerify") getOrElse false
+    Play.configuration.getBoolean("application.authentication.enableDevAutoVerify") getOrElse false
 
   val registerForm: Form[(String, String, String, String, String)] = {
 
@@ -136,4 +136,5 @@ object Authentication extends Controller with Secured with ProvidesUnauthorizedS
       .withNewSession
       .flashing("success" -> Messages("user.logout.success"))
   }
+
 }

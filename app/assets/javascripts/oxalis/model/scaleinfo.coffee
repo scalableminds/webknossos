@@ -46,5 +46,3 @@ class ScaleInfo
     for i in [0..2]
       res *= baseVoxel
     return res
-
-

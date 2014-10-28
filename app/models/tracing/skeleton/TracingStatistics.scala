@@ -12,7 +12,7 @@ trait AnnotationStatistics extends FoxImplicits { this: AnnotationLike =>
     this.content.flatMap {
       case t: SkeletonTracing =>
         for {
-          trees <- t.dbtrees.toFox
+          trees <- t.DBTrees.toFox
           numberOfTrees = trees.size
           (numberOfNodes, numberOfEdges) <- trees.foldLeft(Fox.successful((0l, 0l))) {
             case (f, tree) =>

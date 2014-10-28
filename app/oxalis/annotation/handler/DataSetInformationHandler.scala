@@ -1,19 +1,16 @@
 package oxalis.annotation.handler
 
 import models.annotation.{AnnotationType, AnnotationRestrictions, TemporaryAnnotation}
-import models.task.Project
+import models.tracing.skeleton.temporary.TemporarySkeletonTracing
 import models.user.User
-import net.liftweb.common.Box
 import play.api.i18n.Messages
-import models.tracing.skeleton.{TemporarySkeletonTracing, CompoundAnnotation}
 import models.binary.DataSetDAO
 import com.scalableminds.util.reactivemongo.DBAccessContext
 import play.api.libs.concurrent.Execution.Implicits._
-import com.scalableminds.util.geometry.Point3D
 import play.api.Logger
 import com.scalableminds.util.tools.{FoxImplicits, Fox}
+import reactivemongo.bson.BSONObjectID
 import scala.concurrent.Future
-import models.team.Role
 import models.tracing.skeleton.SkeletonTracing
 
 /**
@@ -31,6 +28,8 @@ object DataSetInformationHandler extends AnnotationInformationHandler with FoxIm
   def dataSetRestrictions() =
     new AnnotationRestrictions {
       override def allowAccess(user: Option[User]) = true
+
+      override def allowDownload(user: Option[User]) = false
     }
 
   def provideAnnotation(dataSetName: String, user: Option[User])(implicit ctx: DBAccessContext): Fox[TemporaryAnnotation] = {
@@ -53,10 +52,13 @@ object DataSetInformationHandler extends AnnotationInformationHandler with FoxIm
 
       TemporaryAnnotation(
         dataSetName,
-        team,
+        user.map(_._id),
         () => Future.successful(Some(content)),
-        AnnotationType.View,
-        dataSetRestrictions())
+        None,
+        team,
+        None,
+        typ = AnnotationType.View,
+        restrictions = dataSetRestrictions())
     }
   }
 }

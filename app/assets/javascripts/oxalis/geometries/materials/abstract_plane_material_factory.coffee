@@ -8,6 +8,8 @@ class AbstractPlaneMaterialFactory extends AbstractMaterialFactory
 
   constructor : (@model, @tWidth) ->
 
+    _.extend(this, Backbone.Events)
+
     @minFilter = THREE.NearestFilter
     @maxFilter = THREE.NearestFilter
     super(@model)
@@ -17,17 +19,13 @@ class AbstractPlaneMaterialFactory extends AbstractMaterialFactory
 
     super()
 
-    settings = @model.user.getOrCreateBrightnessContrastSettings(
-      @model.datasetPostfix
-    )
-
     @uniforms = _.extend @uniforms,
       brightness :
         type : "f"
-        value : settings.brightness / 255
+        value : @model.dataset.get("brightness") / 255
       contrast :
         type : "f"
-        value : settings.contrast
+        value : @model.dataset.get("contrast")
 
     @createTextures()
 
@@ -44,12 +42,13 @@ class AbstractPlaneMaterialFactory extends AbstractMaterialFactory
 
   setupChangeListeners : ->
 
-    for binary in @model.getColorBinaries()
-      do (binary) =>
-        binary.on
-          newColorSettings : (brightness, contrast) =>
-            @uniforms.brightness.value = brightness / 255
-            @uniforms.contrast.value = contrast
+    @listenTo(@model.dataset, "change:brightness", (model, brightness) ->
+      @uniforms.brightness.value = brightness / 255
+    )
+
+    @listenTo(@model.dataset, "change:contrast", (model, contrast) ->
+      @uniforms.contrast.value = contrast
+    )
 
 
   createTextures : ->

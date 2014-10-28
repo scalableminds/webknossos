@@ -1,5 +1,5 @@
 ### define
-libs/event_mixin : EventMixin
+backbone : Backbone
 m4x4 : M4x4
 underscore : _
 three : THREE
@@ -33,7 +33,7 @@ class Flycam3d
 
   constructor : (@distance, scale) ->
 
-    _.extend(this, new EventMixin())
+    _.extend(this, Backbone.Events)
 
     @scale = @calculateScaleValues(scale)
 

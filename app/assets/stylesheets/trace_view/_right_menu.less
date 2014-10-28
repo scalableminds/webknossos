@@ -7,6 +7,9 @@
     margin-top: 5px;
     margin-bottom: 5px;
   }
+  .input-group {
+    margin: 10px 0px;
+  }
 
   // bootstrap doesn't support two button-groups on one side
   .input-group-btn:nth-of-type(2) .btn {
@@ -16,27 +19,32 @@
   }
 }
 
+.flex-column-container, #right-menu .tab-pane > div {
+  display: flex;
+  flex-direction: column;
+  flex-grow: 1;
+}
+
+
 #right-menu {
+
   display: inline-flex;
   flex-direction: column;
-  margin-top: 10px;
-  margin-left: 20px;
   width: 300px; // will be set dynamically in JS
+  margin: 10px;
   overflow: hidden;
+  height: calc(100vh ~"-" @navbar-height ~"-" 20px); // 20px = 2 * 10px margin
 
   .tab-content {
     display: flex;
     flex-grow: 1;
+    padding-top: 10px;
     flex-direction: column;
 
     .tab-pane {
       min-height: 100px;
       word-wrap: break-word;
       white-space: normal;
-
-      div {
-        margin-bottom: 10px;
-      }
 
       ul {
         list-style: none;
@@ -53,17 +61,17 @@
 
 }
 
+#comment-list, #tree-list {
+  overflow-y: auto;
+  flex-grow: 1;
+  height: 0;
+}
+
 #tree-list {
   .fa-angle-right {
     width: 11px;
     margin-left: 5px;
   }
-}
-
-#comment-container {
-  overflow-y: auto;
-  flex-grow: 1;
-  height: 0;
 }
 
 #comment-list {
@@ -74,3 +82,16 @@
     margin-left: 20px;
   }
 }
+
+#zoomstep-warning {
+  display: none;
+}
+
+.zoomstep-warning #zoomstep-warning {
+  display: block;
+  p {
+    font-weight: bold;
+    color: #a30;
+  }
+}
+

@@ -1,15 +1,17 @@
 ### define
+app : app
+backbone : Backbone
 jquery : $
 underscore : _
+backbone : backbone
 libs/request : Request
-libs/event_mixin : EventMixin
 libs/color_generator : ColorGenerator
 ./tracepoint : TracePoint
 ./tracetree : TraceTree
 ./skeletontracing_statelogger : SkeletonTracingStateLogger
 ../../constants : constants
 ./tracingparser : TracingParser
-three : THREE
+oxalis/model/right-menu/comments_collection : CommentsCollection
 ###
 
 class SkeletonTracing
@@ -22,14 +24,14 @@ class SkeletonTracing
 
   branchStack : []
   trees : []
-  comments : []
+  comments : new CommentsCollection()
   activeNode : null
   activeTree : null
   firstEdgeDirection : null
 
-  constructor : (tracing, @scaleInfo, @flycam, @flycam3d, @user, updatePipeline) ->
+  constructor : (tracing, @flycam, @flycam3d, @user, updatePipeline) ->
 
-    _.extend(this, new EventMixin())
+    _.extend(this, Backbone.Events)
 
     @doubleBranchPop = false
 
@@ -124,7 +126,7 @@ class SkeletonTracing
             @pushBranch()
         @doubleBranchPop = false
       offset += size
-    @trigger "reloadTrees"
+    @trigger("reloadTrees")
     console.log "[benchmark] done. Took me #{((new Date()).getTime() - startTime) / 1000} seconds."
 
 
@@ -146,7 +148,7 @@ class SkeletonTracing
     deferred = new $.Deferred()
     if @branchPointsAllowed
       if @branchStack.length and @doubleBranchPop
-        @trigger( "doubleBranch", =>
+        @trigger("doubleBranch", =>
           point = @branchStack.pop()
           @stateLogger.push()
           @setActiveNode(point.id)
@@ -191,21 +193,11 @@ class SkeletonTracing
     return id in (node.id for node in @branchStack)
 
 
-  rejectBranchDeferred : ->
-
-    @branchDeferred.reject()
-
-
-  resolveBranchDeferred : ->
-
-    @branchDeferred.resolve()
-
-
   addNode : (position, type, viewport, resolution, centered = true) ->
 
     if @ensureDirection(position)
 
-      radius = 10 * @scaleInfo.baseVoxel
+      radius = 10 * app.scaleInfo.baseVoxel
       if @activeNode then radius = @activeNode.radius
 
       metaInfo =
@@ -237,7 +229,7 @@ class SkeletonTracing
       @stateLogger.createNode(point, @activeTree.treeId)
 
       @trigger("newNode", centered)
-      @trigger("newActiveNode")
+      @trigger("newActiveNode", @activeNode.id)
     else
       @trigger("wrongDirection")
 
@@ -246,8 +238,8 @@ class SkeletonTracing
 
     if (!@branchPointsAllowed and @activeTree.nodes.length == 2 and
         @firstEdgeDirection and @activeTree.treeId == @trees[0].treeId)
-      sourceNodeNm = @scaleInfo.voxelToNm(@activeTree.nodes[1].pos)
-      targetNodeNm = @scaleInfo.voxelToNm(position)
+      sourceNodeNm = app.scaleInfo.voxelToNm(@activeTree.nodes[1].pos)
+      targetNodeNm = app.scaleInfo.voxelToNm(position)
       secondEdgeDirection = [targetNodeNm[0] - sourceNodeNm[0],
                              targetNodeNm[1] - sourceNodeNm[1],
                              targetNodeNm[2] - sourceNodeNm[2]]
@@ -279,7 +271,7 @@ class SkeletonTracing
 
   getActiveNodeRadius : ->
 
-    if @activeNode then @activeNode.radius else 10 * @scaleInfo.baseVoxel
+    if @activeNode then @activeNode.radius else 10 * app.scaleInfo.baseVoxel
 
 
   getActiveTreeId : ->
@@ -322,9 +314,9 @@ class SkeletonTracing
           @activeNode = node
           @activeTree = tree
           break
-    @stateLogger.push()
 
-    @trigger("newActiveNode")
+    @stateLogger.push()
+    @trigger("newActiveNode", @activeNode.id)
 
     if mergeTree
       @mergeTree(lastActiveNode, lastActiveTree)
@@ -336,78 +328,7 @@ class SkeletonTracing
       @activeNode.radius = Math.min( @MAX_RADIUS,
                             Math.max( @MIN_RADIUS, radius ) )
       @stateLogger.updateNode( @activeNode, @activeNode.treeId )
-      @trigger "newActiveNodeRadius", radius
-
-
-  setComment : (commentText) ->
-
-    if @activeNode
-      # remove any existing comments for that node
-      for i in [0...@comments.length]
-        if(@comments[i].node.id == @activeNode.id)
-          @comments.splice(i, 1)
-          @deletedCommentIndex = i
-          break
-      if commentText != ""
-        @comments.push({node: @activeNode, content: commentText})
-      @stateLogger.push()
-      @trigger("updateComments")
-
-
-  getComment : (nodeID) ->
-
-    unless nodeID? then nodeID = @activeNode.id if @activeNode
-    for comment in @comments
-      if comment.node.id == nodeID then return comment.content
-    return ""
-
-
-  deleteComment : (nodeID) ->
-
-    for i in [0...@comments.length]
-      if(@comments[i].node.id == nodeID)
-        @comments.splice(i, 1)
-        @stateLogger.push()
-        @trigger("updateComments")
-        break
-
-
-  nextCommentNodeID : (forward) ->
-
-    length = @comments.length
-    offset = if forward then 1 else -1
-
-    unless @activeNode
-      if length > 0 then return @comments[0].node.id
-
-    if length == 0
-      return null
-
-    for i in [0...@comments.length]
-      if @comments[i].node.id == @activeNode.id
-        return @comments[(length + i + offset) % length].node.id
-
-    if @deletedCommentIndex?
-      offset = if forward then 0 else -1
-      return @comments[(length + @deletedCommentIndex + offset) % length].node.id
-
-    return @comments[0].node.id
-
-
-  getComments : (ascendingOrder = true) =>
-
-    @comments.sort(@compareNodes)
-    if not ascendingOrder
-      return @comments.reverse()
-    return @comments
-
-
-  getPlainComments : =>
-
-    plainComments = []
-    for comment in @comments
-      plainComments.push({node: comment.node.id, content: comment.content})
-    plainComments
+      @trigger("newActiveNodeRadius", radius)
 
 
   selectNextTree : (forward) ->
@@ -421,6 +342,13 @@ class SkeletonTracing
     @setActiveTree(trees[ (i + diff) % trees.length ].treeId)
 
 
+  centerActiveNode : ->
+
+    position = @getActiveNodePos()
+    if position
+      @flycam.setPosition(position)
+
+
   setActiveTree : (id) ->
 
     for tree in @trees
@@ -431,10 +359,10 @@ class SkeletonTracing
       @activeNode = null
     else
       @activeNode = @activeTree.nodes[0]
+      @trigger("newActiveNode", @activeNode.id)
     @stateLogger.push()
 
-    @trigger("newActiveNode")
-    @trigger("newActiveTree")
+    @trigger("newActiveTree", @activeTree.treeId)
 
 
   getNewTreeColor : ->
@@ -482,7 +410,7 @@ class SkeletonTracing
     unless @finishedDeferred.state() == "resolved"
       return
 
-    @deleteComment(@activeNode.id)
+    @trigger("deleteComment", @activeNode.id)
     for neighbor in @activeNode.neighbors
       neighbor.removeNeighbor(@activeNode.id)
     @activeTree.removeNode(@activeNode.id)
@@ -554,7 +482,7 @@ class SkeletonTracing
     # remove branchpoints and comments, NOT when merging trees
     for node in tree.nodes
       if deleteBranchesAndComments
-        @deleteComment(node.id)
+        @trigger("deleteComment", node.id)
         @deleteBranch(node)
 
     if notifyServer
@@ -683,3 +611,7 @@ class SkeletonTracing
     if a.node.treeId > b.node.treeId
       return 1
     return a.node.id - b.node.id
+
+  getPlainComments : =>
+
+    return @comments.toJSON()

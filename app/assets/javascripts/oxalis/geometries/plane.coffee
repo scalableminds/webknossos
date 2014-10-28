@@ -1,4 +1,5 @@
 ### define
+app : app
 ../model : Model
 ../view : View
 ../model/dimensions : Dimensions
@@ -28,8 +29,8 @@ class Plane
     # planeWidth means that the plane should be that many voxels wide in the
     # dimension with the highest resolution. In all other dimensions, the plane
     # is smaller in voxels, so that it is squared in nm.
-    # --> model.scaleInfo.baseVoxel
-    scaleArray = Dimensions.transDim(@model.scaleInfo.baseVoxelFactors, @planeID)
+    # --> app.scaleInfo.baseVoxel
+    scaleArray = Dimensions.transDim(app.scaleInfo.baseVoxelFactors, @planeID)
     @scaleVector = new THREE.Vector3(scaleArray...)
 
     @createMeshes(planeWidth, textureWidth)

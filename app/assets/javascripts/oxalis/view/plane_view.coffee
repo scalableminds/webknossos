@@ -1,9 +1,10 @@
 ### define
+app : app
+backbone : Backbone
 jquery : $
 tween : TWEEN_LIB
 ../model/dimensions : Dimensions
 ../../libs/toast : Toast
-../../libs/event_mixin : EventMixin
 ../constants : constants
 ./modal : modal
 three : THREE
@@ -13,7 +14,7 @@ class PlaneView
 
   constructor : (@model, @flycam, @view, @stats) ->
 
-    _.extend(@, new EventMixin())
+    _.extend(this, Backbone.Events)
 
     { @renderer, @scene } = @view
     @running = false
@@ -55,7 +56,7 @@ class PlaneView
     # scene.scale does not have an effect.
     @group = new THREE.Object3D
     # The dimension(s) with the highest resolution will not be distorted
-    @group.scale = @model.scaleInfo.getNmPerVoxelVector()
+    @group.scale = app.scaleInfo.getNmPerVoxelVector()
     # Add scene to the group, all Geometries are than added to group
     @scene.add(@group)
 
@@ -68,13 +69,11 @@ class PlaneView
     @scene.add( directionalLight )
 
     # Attach the canvas to the container
-    @renderer.setSize 2*WIDTH+20, 2*HEIGHT+20
+    @renderer.setSize 2 * WIDTH + 20, 2 * HEIGHT + 20
     $(@renderer.domElement).attr("id": "render-canvas")
     container.append @renderer.domElement
 
     @setActiveViewport( constants.PLANE_XY )
-
-    @positionStats = $("#status")
 
     @first = true
     @newTextures = [true, true, true, true]
@@ -107,14 +106,19 @@ class PlaneView
 
     if @flycam.hasChanged or @flycam.hasNewTextures() or modelChanged
 
-      @trigger "render"
+      @trigger("render")
 
       # update postion and FPS displays
       @stats.update()
 
       # scale for retina displays
       f = @deviceScaleFactor
-      viewport = [[0, @curWidth+20], [@curWidth+20, @curWidth+20], [0, 0], [@curWidth+20, 0]]
+      viewport = [
+        [0, @curWidth + 20],
+        [@curWidth + 20, @curWidth + 20],
+        [0, 0],
+        [@curWidth + 20, 0]
+      ]
       @renderer.autoClear = true
 
       setupRenderArea = (x, y, width, color) =>
@@ -127,7 +131,7 @@ class PlaneView
       @renderer.clear()
 
       for i in constants.ALL_VIEWPORTS
-        @trigger "renderCam", i
+        @trigger("renderCam", i)
         setupRenderArea(
           viewport[i][0] * f, viewport[i][1] * f, @curWidth * f,
           constants.PLANE_COLORS[i]
@@ -137,7 +141,7 @@ class PlaneView
       @flycam.hasChanged = false
       @flycam.hasNewTexture = [false, false, false]
 
-      @trigger "finishedRender"
+      @trigger("finishedRender")
 
   addGeometry : (geometry) ->
     # Adds a new Three.js geometry to the scene.
@@ -165,6 +169,7 @@ class PlaneView
       constants.RESIZE_THROTTLE_TIME
     )
     @resizeThrottled()
+    app.vent.trigger("planes:resize")
 
 
   resize : ->
@@ -228,15 +233,17 @@ class PlaneView
        {id: "cancel-button", label: "Cancel"}])
 
 
-  bind : ->
+  bindToEvents : ->
 
-    @model.skeletonTracing?.on({
-      doubleBranch         : (callback) => @showBranchModal(callback)
-      mergeDifferentTrees  : ->
-        Toast.error("You can't merge nodes within the same tree", false) })
+    if @model.skeletonTracing
+      @listenTo(@model.skeletonTracing, "doubleBranch", @showBranchModal)
+      @listenTo(@model.skeletonTracing, "mergeDifferentTrees", ->
+        Toast.error("You can't merge nodes within the same tree", false)
+      )
 
-    @model.user.on
-      scaleChanged : (scale) => if @running then @scaleTrianglesPlane(scale)
+    @listenTo(@model.user, "change:scale", (model, scale) ->
+      if @running then @scaleTrianglesPlane(scale)
+    )
 
 
   stop : ->

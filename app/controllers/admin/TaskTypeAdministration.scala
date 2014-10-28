@@ -1,20 +1,14 @@
 package controllers.admin
 
-import play.mvc.Security.Authenticated
-import oxalis.security.{AuthenticatedRequest, Secured}
-import oxalis.annotation._
-import views._
 import models.task._
 import play.api.data.Forms._
 import play.api.data.Form
 import play.api.i18n.Messages
-import models.tracing._
-import play.api.templates.Html
-import controllers.{Controller, Application}
+import play.twirl.api.Html
 import models.annotation.AnnotationDAO
 import play.api.libs.concurrent.Execution.Implicits._
 import com.scalableminds.util.tools.Fox
-import play.api.mvc.SimpleResult
+import play.api.mvc.Result
 import scala.concurrent.Future
 import play.api.libs.json._
 
@@ -35,7 +29,7 @@ object TaskTypeAdministration extends AdminController {
       TaskType.fromForm)(TaskType.toForm)).fill(TaskType.empty)
 
   def empty = Authenticated{ implicit request =>
-    Ok(views.html.main()(Html.empty))
+    Ok(views.html.main()(Html("")))
   }
 
   def create = Authenticated.async(parse.urlFormEncoded) { implicit request =>
@@ -81,7 +75,7 @@ object TaskTypeAdministration extends AdminController {
   }
 
   def editTaskTypeForm(taskTypeId: String) = Authenticated.async(parse.urlFormEncoded) { implicit request =>
-    def evaluateForm(taskType: TaskType): Fox[SimpleResult] = {
+    def evaluateForm(taskType: TaskType): Fox[Result] = {
       val boundForm = taskTypeForm.bindFromRequest
       boundForm.fold(
         hasErrors = { formWithErrors =>

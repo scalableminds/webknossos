@@ -74,8 +74,8 @@ body:-webkit-full-screen {
   width: auto;
 }
 
-
-.nowrap * {
+// Only affect child items in tables
+td.nowrap * {
   white-space: nowrap;
 }
 
@@ -226,7 +226,6 @@ body:-webkit-full-screen {
 
 #main-container {
   margin-top: @navbar-height;
-  white-space: nowrap;
 }
 
 #credits {

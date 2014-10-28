@@ -14,6 +14,7 @@ class TracingLayoutView extends Backbone.Marionette.LayoutView
 
   MARGIN : 40
 
+  className : "text-nowrap"
   template : _.template("""
     <div id="action-bar"></div>
     <div id="settings-menu"></div>
@@ -44,7 +45,7 @@ class TracingLayoutView extends Backbone.Marionette.LayoutView
     @listenTo(@, "render", @afterRender)
     @listenTo(app.vent, "planes:resize", @resize)
     @listenTo(@model, "sync", @renderRegions)
-    #$(window).on("resize", @resize.bind(@))
+    $(window).on("resize", @resize.bind(@))
 
     app.oxalis = new OxalisController(@options)
 
@@ -54,7 +55,7 @@ class TracingLayoutView extends Backbone.Marionette.LayoutView
     if @isSkeletonMode()
       menuPosition = @ui.rightMenu.position()
       newWidth = window.innerWidth - menuPosition.left - @MARGIN
-      if newWidth > 350
+      if menuPosition.left < window.innerWidth and newWidth > 350
         @ui.rightMenu.width(newWidth)
 
 

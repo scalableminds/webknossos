@@ -165,21 +165,22 @@ class PlaneView
 
     # throttle resize to avoid annoying flickering
     @resizeThrottled = _.throttle(
-      => @resize()
+      =>
+        @resize()
+        app.vent.trigger("planes:resize")
       constants.RESIZE_THROTTLE_TIME
     )
     @resizeThrottled()
-    app.vent.trigger("planes:resize")
 
 
   resize : ->
 
     # Call this after the canvas was resized to fix the viewport
     canvas = $("#render-canvas")
-    WIDTH = (canvas.width()-20)/2
-    HEIGHT = (canvas.height()-20)/2
+    WIDTH = (canvas.width() - 20 ) / 2
+    HEIGHT = (canvas.height() - 20 ) / 2
 
-    @renderer.setSize( 2*WIDTH+20, 2*HEIGHT+20)
+    @renderer.setSize(2 * WIDTH + 20, 2 * HEIGHT + 20)
     for i in constants.ALL_VIEWPORTS
       @camera[i].aspect = WIDTH / HEIGHT
       @camera[i].updateProjectionMatrix()

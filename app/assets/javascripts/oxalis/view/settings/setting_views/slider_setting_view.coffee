@@ -30,9 +30,15 @@ class SliderSettingView extends AbstractSettingView
 
 
   events :
+    "input @ui.slider" : "updateText"
     "change @ui.slider" : "handleChange"
     "change @ui.text" : "handleChange"
     "dblclick @ui.slider" : "resetValue"
+
+
+  updateText : (evt) ->
+
+    @ui.text.val(evt.target.value)
 
 
   handleChange : (evt) ->

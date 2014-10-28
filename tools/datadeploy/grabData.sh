@@ -1,26 +1,32 @@
 #!/bin/bash
-
+set -e
 if [ $# -lt 1 ]; then
-  echo "Usage: $0 <ssh-username on levelcreator.org>"
+  echo "Usage: $0 <ssh-username on dev.oxalis.at>"
   exit 1
 fi
 
 USER=$1
-SERVER="levelcreator.org"
+SERVER="dev.oxalis.at"
 CONTROL_PATH="/tmp/%r@%h:%p"
-BINARY_DATA_DIR="/home/deployboy/binaryData"
+CONTROL_PATH_LITERAL="/tmp/$USER@$SERVER:22"
+BINARY_DATA_DIR="/srv/binaryData/Structure\ of\ Neocortical\ Circuits\ Group"
 LOCAL_BINARY_DATA_DIR="../../binaryData"
 
 echo "Select a dataset to download"
 echo "cancel with CTRL+C"
 
 function download_segmentation_oriented() {
-  echo "Which layer do you want to download?(including color data)"
-  select Layer in `ssh $USER@$SERVER -S $CONTROL_PATH ls $BINARY_DATA_DIR/$DataSet/segmentation | grep -P "^layer"`;
+  echo "Which section do you want to download?(including color data)"
+  select Section in `ssh $USER@$SERVER -S $CONTROL_PATH ls $BINARY_DATA_DIR/$DataSet/segmentation | grep -P "^section"`;
   do
-    ssh $USER@$SERVER find $BINARY_DATA_DIR/$DataSet/segmentation/$Layer -name "*.raw" -printf '+_%f\\n' > layerfiles
-    rsync -rtvuczm --progress --filter=._layerfiles --filter=+_*.json --filter=-_*.raw "$USER@$SERVER:$BINARY_DATA_DIR/$DataSet" $LOCAL_BINARY_DATA_DIR
-    rm layerfiles
+    ssh $USER@$SERVER -S $CONTROL_PATH "find $BINARY_DATA_DIR/$DataSet/segmentation/$Section -name '*.raw' -printf '+_%f\\n'" > sectionfiles
+    #loading json and directory structure
+    rsync -e "ssh -S $CONTROL_PATH" -rtvuczm --progress --filter=+_*.json --filter=-_*.raw "$USER@$SERVER:$BINARY_DATA_DIR/$DataSet" $LOCAL_BINARY_DATA_DIR
+    #loading color data
+    rsync -e "ssh -S $CONTROL_PATH" -rtvuczm --progress --filter=._sectionfiles --filter=-_*.raw "$USER@$SERVER:$BINARY_DATA_DIR/$DataSet/color" $LOCAL_BINARY_DATA_DIR/$DataSet
+    #loading segmentation
+    rsync -e "ssh -S $CONTROL_PATH" -rtvuczm --progress --filter=._sectionfiles --filter=-_*.raw "$USER@$SERVER:$BINARY_DATA_DIR/$DataSet/segmentation/$Section" $LOCAL_BINARY_DATA_DIR/$DataSet/segmentation
+    rm sectionfiles
     break
   done
 }
@@ -83,13 +89,15 @@ function download_block_range() {
       done
     done
   done
-  rsync -rtvuczm --progress --filter=._tempfilter --filter=+_*.json --filter=-_*.raw  "$USER@$SERVER:$BINARY_DATA_DIR/$DataSet" $LOCAL_BINARY_DATA_DIR
+  rsync -e "ssh -S $CONTROL_PATH" -rtvuczm --progress --filter=._tempfilter --filter=+_*.json --filter=-_*.raw  "$USER@$SERVER:$BINARY_DATA_DIR/$DataSet" $LOCAL_BINARY_DATA_DIR
   rm tempfilter
 }
+
+cd `dirname $0`
 echo "setting up ssh connection"
 ssh $USER@$SERVER -fN -M -S $CONTROL_PATH
 PS3="Your choice: "
-select DataSet in `ssh $USER@$SERVER ls $BINARY_DATA_DIR`;
+select DataSet in `ssh -S $CONTROL_PATH $USER@$SERVER ls $BINARY_DATA_DIR`;
 do
     echo "You picked $DataSet ($REPLY)"
     echo "Download full or partial dataset?"
@@ -97,7 +105,7 @@ do
     do
       case $Choice in
         "full")
-          rsync -rtvucz --progress "$USER@$SERVER:$BINARY_DATA_DIR/$DataSet" $LOCAL_BINARY_DATA_DIR
+          rsync -e "ssh -S $CONTROL_PATH" -rtvucz --progress "$USER@$SERVER:$BINARY_DATA_DIR/$DataSet" $LOCAL_BINARY_DATA_DIR
           ;;
         "partial")
           RANGE=4
@@ -127,3 +135,5 @@ do
     done
     break
 done
+
+rm $CONTROL_PATH_LITERAL

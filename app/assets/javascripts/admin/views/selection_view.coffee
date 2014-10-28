@@ -11,6 +11,9 @@ class SelectionView extends Backbone.Marionette.CollectionView
 
   childView : SelectionItemView
 
+  # keep track of the active option
+  active : null
+
   initialize : (options) ->
 
     @collection.fetch(
@@ -21,10 +24,16 @@ class SelectionView extends Backbone.Marionette.CollectionView
     )
 
     if options.name
-
       @$el.attr("name", options.name)
 
+    # set active option
+    if options.active
+      @active = options.active
 
+    # afterRender listener
+    @listenTo(@, "render", @afterRender)
 
+  afterRender : ->
 
-
+    if @active?
+      @$el.find("option[value=#{@active}]").attr("selected", "")

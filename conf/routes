@@ -101,7 +101,6 @@ POST          /admin/nml/upload                                               co
 
 # Admin Tasks
 GET           /api/tasks                                                      controllers.TaskController.list
-GET           /api/tasks/:id                                                  controllers.admin.TaskAdministration.get(id: String)
 DELETE        /api/tasks/:id                                                  controllers.admin.TaskAdministration.delete(id: String)
 
 GET           /tasks                                                          controllers.TaskController.empty

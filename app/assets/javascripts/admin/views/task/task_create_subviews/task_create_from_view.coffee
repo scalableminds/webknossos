@@ -12,9 +12,9 @@ admin/views/selection_view : SelectionView
 
 class TaskCreateFromView extends Backbone.Marionette.LayoutView
 
-  constructor: (type) ->
-    super
-    @isFromForm = type == "from_form"
+  # which type of form is created?
+  # from_form/ from_nml
+  type : null
 
   id : "create-from"
   template : _.template("""
@@ -22,12 +22,12 @@ class TaskCreateFromView extends Backbone.Marionette.LayoutView
     <div class="col-sm-12">
     <div class="well">
       <div class="col-sm-9 col-sm-offset-2">
-        <% if(isFromForm) { %>
+        <% if (type == "from_form") { %>
           <h3>Create Task</h3>
           <br/>
         </div>
         <form action="/admin/tasks/createFromForm" method="POST" class="form-horizontal">
-        <% } else { %>
+        <% } else if (type == "from_nml") { %>
           <h3>Create Task from explorative SkeletonTracing</h3>
           <p>Every nml creates a new task. You can either upload a single NML file or a zipped collection of nml files (.zip).</p>
           <br/>
@@ -105,10 +105,17 @@ class TaskCreateFromView extends Backbone.Marionette.LayoutView
   </div>
   """)
 
+  initialize: (options) ->
+
+    if options.type
+      @type = options.type
+
+    return
+
   # make the variable available inside the underscore template
   templateHelpers: ->
 
-    isFromForm : @isFromForm
+    type : @type
 
   regions:
     "taskType" : ".taskType"
@@ -167,14 +174,9 @@ class TaskCreateFromView extends Backbone.Marionette.LayoutView
     @team.show(teamSelectionView)
     @project.show(projectSelectionView)
 
-    if (@isFromForm)
+    if (@type == "from_form")
       createFromFormView = new TaskCreateFromFormView()
       @subview.show(createFromFormView)
     else
       createFromNMLView = new TaskCreateFromNMLView()
       @subview.show(createFromNMLView)
-
-
-
-
-

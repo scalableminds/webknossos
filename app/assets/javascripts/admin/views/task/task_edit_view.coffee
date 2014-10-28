@@ -123,19 +123,25 @@ class TaskCreateView extends Backbone.Marionette.LayoutView
     # TODO: remove this debug line
     console.log("initialize", @model)
 
-    @model
-      .fetch()
-      .done( =>
+    @listenTo(@model, 'sync', =>
         @render()
-      )
+        @afterSync()
+    )
 
+    # catch no-found errors
+    @listenTo(@model, 'error', =>
+        @syncError()
+    )
+    @model.fetch()
 
   ###*
-   * Render the SelectionViews based on the stored options
+   * Render the SelectionViews based on the stored options.
+   * Has to be after `model.sync()` so showing subviews won't break
+   * Marionette
    *
-   * @method onRender
+   * @method afterSync
    ###
-  onRender: ->
+  afterSync: ->
 
     # TODO: remove this debug line
     console.log("model", @model)
@@ -180,3 +186,8 @@ class TaskCreateView extends Backbone.Marionette.LayoutView
     @taskType.show(taskTypeSelectionView)
     @team.show(teamSelectionView)
     @project.show(projectSelectionView)
+
+
+  syncError : ->
+
+    alert("error")

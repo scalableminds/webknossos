@@ -126,7 +126,6 @@ class Model extends Backbone.Model
 
     @connectionInfo = new ConnectionInfo()
     @datasetName = dataset.name
-    zoomStepCount = -Infinity
     @binary = {}
 
     maxResolution = Math.max(_.union(layers.map((layer) ->
@@ -137,17 +136,14 @@ class Model extends Backbone.Model
     for layer in layers
       layer.bitDepth = parseInt(layer.elementClass.substring(4))
       @binary[layer.name] = new Binary(this, tracing, layer, maxZoomStep, @updatePipeline, @connectionInfo)
-#      @binary[layer.name] = new Binary(this, tracing, layer, @get("tracingId"), @updatePipeline)
- #     zoomStepCount = Math.max(zoomStepCount, @binary[layer.name].cube.ZOOM_STEP_COUNT - 1)
 
     if @getColorBinaries().length == 0
       Toast.error("No data available! Something seems to be wrong with the dataset.")
 
     @setDefaultBinaryColors()
 
-#    @flycam = new Flycam2d(constants.PLANE_WIDTH, @scaleInfo, maxZoomStep + 1, @user)
 
-    flycam = new Flycam2d(constants.PLANE_WIDTH, zoomStepCount, @)
+    flycam = new Flycam2d(constants.PLANE_WIDTH, maxZoomStep + 1, @)
     flycam3d = new Flycam3d(constants.DISTANCE_3D, dataset.get("scale"))
     @set("flycam", flycam)
     @set("flycam3d", flycam3d)

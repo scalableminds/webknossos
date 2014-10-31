@@ -7,6 +7,7 @@ app : app
 ./model/user : User
 ./model/dataset : Dataset
 ./model/volumetracing/volumetracing : VolumeTracing
+./model/binarydata_connection_info : ConnectionInfo
 ./model/scaleinfo : ScaleInfo
 ./model/flycam2d : Flycam2d
 ./model/flycam3d : Flycam3d
@@ -24,34 +25,6 @@ libs/pipeline : Pipeline
 
 
 class Model extends Backbone.Model
-
-  timestamps : []
-  buckets : []
-  bytes : []
-  totalBuckets : []
-  totalBytes : []
-
-  logConnectionInfo : ->
-
-    @timestamps.push(new Date().getTime())
-
-    bytes = 0
-    buckets = 0
-    totalBytes = 0
-    totalBuckets = 0
-
-    for dataLayerName of @binary
-      bytes += @binary[dataLayerName].pullQueue.loadedBytes
-      buckets += @binary[dataLayerName].pullQueue.loadedBuckets
-      totalBytes += @binary[dataLayerName].pullQueue.totalLoadedBytes
-      totalBuckets += @binary[dataLayerName].pullQueue.totalLoadedBuckets
-      @binary[dataLayerName].pullQueue.loadedBytes = 0
-      @binary[dataLayerName].pullQueue.loadedBuckets = 0
-
-    @bytes.push(bytes)
-    @buckets.push(buckets)
-    @totalBytes.push(totalBytes)
-    @totalBuckets.push(totalBuckets)
 
 
   fetch : (options) ->
@@ -87,6 +60,7 @@ class Model extends Backbone.Model
           @get("dataset").fetch().pipe( =>
 
             layers  = @getLayers(tracing.content.contentData.customLayers)
+
             $.when(
               @getDataTokens(layers)...
             ).pipe =>
@@ -123,21 +97,25 @@ class Model extends Backbone.Model
           ]
         }
 
-    @datasetName = dataset.name
-    zoomStepCount = -Infinity
+    @connectionInfo = new ConnectionInfo()
+    @dataSetName = dataSet.name
     @binary = {}
 
+    maxResolution = Math.max(_.union(layers.map((layer) ->
+      layer.resolutions
+    )...)...)
+    maxZoomStep = Math.log(maxResolution) / Math.LN2
+
     for layer in layers
-      layer.bitDepth = parseInt( layer.elementClass.substring(4) )
-      @binary[layer.name] = new Binary(this, tracing, layer, @get("tracingId"), @updatePipeline)
-      zoomStepCount = Math.max(zoomStepCount, @binary[layer.name].cube.ZOOM_STEP_COUNT - 1)
+      layer.bitDepth = parseInt(layer.elementClass.substring(4))
+      @binary[layer.name] = new Binary(this, tracing, layer, maxZoomStep, @updatePipeline, @connectionInfo)
 
     if @getColorBinaries().length == 0
       Toast.error("No data available! Something seems to be wrong with the dataset.")
 
     @setDefaultBinaryColors()
 
-    flycam = new Flycam2d(constants.PLANE_WIDTH, zoomStepCount, @)
+    flycam = new Flycam2d(constants.PLANE_WIDTH, maxZoomStep + 1, @)
     flycam3d = new Flycam3d(constants.DISTANCE_3D, dataset.get("scale"))
     @set("flycam", flycam)
     @set("flycam3d", flycam3d)

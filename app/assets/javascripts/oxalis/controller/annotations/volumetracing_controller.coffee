@@ -28,6 +28,11 @@ class VolumeTracingController
     _.extend(@, Backbone.Events)
     @listenTo(app.vent, "changeVolumeMode", @setControlMode)
 
+    @model.flycam.on
+      zoomStepChanged : =>
+        shouldWarn = @model.flycam.getIntegerZoomStep() > 0
+        $('body').toggleClass("zoomstep-warning", shouldWarn)
+
     # Keyboard shortcuts
     new Input.KeyboardNoLoop(
       "m" : => @toggleControlMode()

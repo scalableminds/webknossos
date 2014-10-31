@@ -1,5 +1,6 @@
 package models.annotation
 
+import controllers.Application
 import models.annotation
 import models.user.{UserService, User}
 import models.task.{TaskDAO, Task}
@@ -52,6 +53,8 @@ trait AnnotationLike extends AnnotationStatistics {
 
   def restrictions: AnnotationRestrictions
 
+  def relativeDownloadUrl: Option[String]
+
   def version: Int
 
   // def incrementVersion: AnnotationLike
@@ -96,7 +99,7 @@ object AnnotationLike extends FoxImplicits with FilterableJson{
       "restrictions" +> AnnotationRestrictions.writeAsJson(a.restrictions, user),
       "actions" +> a.actions(user),
       "formattedHash" +> Formatter.formatHash(a.id),
-
+      "downloadUrl" +> a.relativeDownloadUrl.map(Application.toAbsoluteUrl),
       "content" +> a.content.flatMap(AnnotationContent.writeAsJson(_)).getOrElse(JsNull),
       "contentType" +> a.content.map(_.contentType).getOrElse(""),
       "dataSetName" +> a.dataSetName

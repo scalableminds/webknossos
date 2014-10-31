@@ -25,10 +25,7 @@ class UrlManager
   parseUrl : ->
 
     stateString = location.hash.slice(1)
-    state       =
-      position : null
-      mode : null
-      zoomStep : null
+    state       = {}
 
     if stateString
 

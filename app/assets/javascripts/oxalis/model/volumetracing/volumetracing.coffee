@@ -44,10 +44,11 @@ class VolumeTracing
 
 
   startEditing : (planeId) ->
-
     # Return, if layer was actually started
-    if currentLayer?
+
+    if currentLayer? or @flycam.getIntegerZoomStep() > 0
       return false
+
     pos = Dimensions.roundCoordinate(@flycam.getPosition())
     thirdDimValue = pos[Dimensions.thirdDimensionForPlane(planeId)]
     @currentLayer = new VolumeLayer(planeId, thirdDimValue)

@@ -35,9 +35,13 @@ class Router extends Backbone.Router
     "issues"
   ]
 
+  whitelist : [
+    "help/keyboardshortcuts",
+    "help/faq",
+    "issues"
+  ]
 
   initialize : ->
-
 
     # handle all links and manage page changes (rather the reloading the whole site)
     $(document).on "click", "a", (evt) =>

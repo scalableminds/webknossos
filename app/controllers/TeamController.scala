@@ -10,14 +10,14 @@ import scala.concurrent.Future
 import play.api.i18n.Messages
 import models.binary.{DataSetDAO, DataSet}
 import net.liftweb.common.{Empty, Failure, Full}
-import play.api.templates.Html
+import play.twirl.api.Html
 import com.scalableminds.util.reactivemongo.GlobalAccessContext
 import com.scalableminds.util.tools.DefaultConverters._
 
 object TeamController extends Controller with Secured {
 
   def empty = Authenticated{ implicit request =>
-    Ok(views.html.main()(Html.empty))
+    Ok(views.html.main()(Html("")))
   }
 
   def isTeamOwner(team: Team, user: User) =

@@ -25,7 +25,7 @@ class UrlManager
   parseUrl : ->
 
     stateString = location.hash.slice(1)
-    state       = {}
+    state = {}
 
     if stateString
 

@@ -98,7 +98,7 @@ class Model extends Backbone.Model
         }
 
     @connectionInfo = new ConnectionInfo()
-    @dataSetName = dataSet.name
+    @datasetName = dataset.name
     @binary = {}
 
     maxResolution = Math.max(_.union(layers.map((layer) ->

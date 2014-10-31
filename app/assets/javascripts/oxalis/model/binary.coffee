@@ -41,8 +41,8 @@ class Binary
     @boundingBox = new BoundingBox(@model.boundingBox, @cube)
 
     datasetName = @model.get("dataset").get("name")
-    @pullQueue = new PullQueue(datasetName, @cube, @layer, tracingId, @boundingBox, connectionInfo)
-    @pushQueue = new PushQueue(datasetName, @cube, @layer, tracingId, updatePipeline)
+    @pullQueue = new PullQueue(datasetName, @cube, @layer, @tracing.id, @boundingBox, connectionInfo)
+    @pushQueue = new PushQueue(datasetName, @cube, @layer, @tracing.id, updatePipeline)
     @cube.setPushQueue( @pushQueue )
 
     @pingStrategies = [

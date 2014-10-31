@@ -2,7 +2,7 @@ package oxalis.thirdparty
 
 import com.scalableminds.util.security.SCrypt._
 import models.user.User
-import play.api.libs.ws.WS
+import play.api.libs.ws.{WSAuthScheme, WS}
 import com.ning.http.client.Realm.AuthScheme
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.Logger
@@ -34,7 +34,7 @@ object BrainTracing {
       val result = Promise[String]()
       WS
       .url(CREATE_URL)
-      .withAuth(USER, PW, AuthScheme.BASIC)
+      .withAuth(USER, PW, WSAuthScheme.BASIC)
       .withQueryString(
         "license" -> LICENSE,
         "firstname" -> user.firstName,
@@ -76,7 +76,7 @@ object BrainTracing {
           val taskType = await(taskTypeFox.futureBox)
           WS
           .url(LOGTIME_URL)
-          .withAuth(USER, PW, AuthScheme.BASIC)
+          .withAuth(USER, PW, WSAuthScheme.BASIC)
           .withQueryString(
             "license" -> LICENSE,
             "email" -> user.email,

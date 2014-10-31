@@ -390,7 +390,7 @@ class PlaneController
     scale = Math.min(constants.MAX_SCALE, scale)
     scale = Math.max(constants.MIN_SCALE, scale)
 
-    @model.user.set("scale", (Number) scale)
+    @model.user.set("scale", scale)
 
 
   scrollPlanes : (delta, type) =>

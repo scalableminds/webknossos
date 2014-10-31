@@ -74,8 +74,8 @@ body:-webkit-full-screen {
   width: auto;
 }
 
-
-.nowrap * {
+// Only affect child items in tables
+td.nowrap * {
   white-space: nowrap;
 }
 
@@ -208,7 +208,7 @@ body:-webkit-full-screen {
   margin-top: 20px;
   width: 100%;
   text-align: center;
-  z-index: 1;
+  z-index: 101;
 }
 
 #loader-background {
@@ -222,11 +222,11 @@ body:-webkit-full-screen {
   padding-top: 100px;
   opacity: 0.7;
   filter: alpha(opacity=50);
+  z-index: 100;
 }
 
 #main-container {
   margin-top: @navbar-height;
-  white-space: nowrap;
 }
 
 #credits {

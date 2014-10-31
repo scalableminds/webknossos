@@ -62,7 +62,7 @@ trait Secured extends FoxImplicits {
 
   private def autoLoginUser: Fox[User] = {
     // development setting: if the key is set, one gets logged in automatically
-    if (Play.configuration.getBoolean("application.enableAutoLogin").get)
+    if (Play.configuration.getBoolean("application.authentication.enableDevAutoLogin").get)
       UserService.defaultUser
     else
       Fox.empty
@@ -90,7 +90,7 @@ trait Secured extends FoxImplicits {
    */
 
   object Authenticated extends ActionBuilder[AuthenticatedRequest]{
-    def invokeBlock[A](request: Request[A], block: (AuthenticatedRequest[A]) => Future[SimpleResult]) = {
+    def invokeBlock[A](request: Request[A], block: (AuthenticatedRequest[A]) => Future[Result]) = {
       maybeUser(request).flatMap { user =>
         Secured.ActivityMonitor ! UserActivity(user, System.currentTimeMillis)
         if (user.verified)
@@ -102,7 +102,7 @@ trait Secured extends FoxImplicits {
   }
 
   object UserAwareAction extends ActionBuilder[UserAwareRequest] {
-    def invokeBlock[A](request: Request[A], block: (UserAwareRequest[A]) => Future[SimpleResult]) = {
+    def invokeBlock[A](request: Request[A], block: (UserAwareRequest[A]) => Future[Result]) = {
       maybeUser(request).filter(_.verified).futureBox.flatMap {
         case Full(user) =>
           Secured.ActivityMonitor ! UserActivity(user, System.currentTimeMillis)

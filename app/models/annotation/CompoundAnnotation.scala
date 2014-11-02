@@ -55,7 +55,7 @@ object CompoundAnnotation extends Formatter with FoxImplicits {
   def createFromTaskType(taskType: TaskType, _user: Option[BSONObjectID])(implicit ctx: DBAccessContext) = {
     logTime("taskType composition", Logger.debug) {
       for {
-        tasks <- TaskDAO.findAllByTaskType(taskType)
+        tasks <- TaskDAO.findAllByTaskType(taskType._id)
         annotations <- Future.traverse(tasks)(_.annotations).map(_.flatten).toFox
         merged <- createFromFinishedAnnotations(
           taskType.id,

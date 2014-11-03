@@ -15,6 +15,7 @@ class TaskCreateView extends Backbone.Marionette.LayoutView
   id : "task-edit"
   className : "container wide task-type-administration"
   # TODO: make the template DRY somehow :S
+  # TODO: test save
   template : _.template("""
   <h3>Edit Task</h3>
   All tracings of this task are going to get adjusted to this settings. This is espacially true when changing the Task type.<br /><br />
@@ -59,7 +60,7 @@ class TaskCreateView extends Backbone.Marionette.LayoutView
         <div class=" form-group">
           <label class="col-sm-2 control-label" for="taskInstances">Task instances</label>
           <div class="col-sm-9">
-            <input type="number" id="taskInstances" name="taskInstances" value="<%= instances %>" min="1" class="form-control">
+            <input type="number" id="taskInstances" name="taskInstances" value="<%= status.open %>" min="1" class="form-control">
             <span class="help-block errors"></span>
           </div>
         </div>
@@ -85,7 +86,7 @@ class TaskCreateView extends Backbone.Marionette.LayoutView
         <div class=" form-group">
           <label class="col-sm-2 control-label" for="start_point">Start</label>
           <div class="col-sm-9">
-            <input type="text" id="start_point" name="start.point" value="<%= start.point %>" class="form-control">
+            <input type="text" id="start_point" name="start.point" value="<%= editPosition %>" class="form-control">
             <span class="help-block errors"></span>
           </div>
         </div>
@@ -93,7 +94,7 @@ class TaskCreateView extends Backbone.Marionette.LayoutView
         <div class=" form-group">
           <label class="col-sm-2 control-label" for="boundingBox_box">Bounding Box</label>
           <div class="col-sm-9">
-            <input type="text" id="boundingBox_box" name="boundingBox.box" value="<%= boundingBox.box %>" class="form-control">
+            <input type="text" id="boundingBox" name="boundingBox" value="<%= boundingBox %>" class="form-control">
             <span class="help-block errors"></span>
           </div>
         </div>
@@ -103,7 +104,7 @@ class TaskCreateView extends Backbone.Marionette.LayoutView
             <button type="submit" class="form-control btn btn-primary">Save</button>
           </div>
           <div class="col-sm-2">
-            <a class="form-control btn btn-default" href="/tasks#<%= id %>">Cancel</a>
+            <a class="form-control btn btn-default" href="/tasks">Cancel</a>
           </div>
         </div>
       </form>
@@ -155,7 +156,7 @@ class TaskCreateView extends Backbone.Marionette.LayoutView
         modelName: -> return "#{@model.get("summary")}"
       data : "amIAnAdmin=true"
       name: "taskType"
-      active : @model.get("id")
+      active : @model.get("type").id
     )
 
     teamSelectionView = new SelectionView(
@@ -164,7 +165,7 @@ class TaskCreateView extends Backbone.Marionette.LayoutView
         modelValue: -> return "#{@model.get("name")}"
       data : "amIAnAdmin=true"
       name: "team"
-      active : @model.get("id")
+      active : @model.get("team")
     )
 
     projectSelectionView = new SelectionView(
@@ -173,6 +174,7 @@ class TaskCreateView extends Backbone.Marionette.LayoutView
         modelValue: -> return "#{@model.get("name")}"
       data : "amIAnAdmin=true"
       name: "project"
+      active : @model.get("projectName")
     )
 
     dataSetSelectionView = new SelectionView(
@@ -181,6 +183,7 @@ class TaskCreateView extends Backbone.Marionette.LayoutView
         modelValue: -> return "#{@model.get("name")}"
       data : "amIAnAdmin=true"
       name: "dataSet"
+      active : @model.get("dataSet")
     )
 
     @dataSet.show(dataSetSelectionView)

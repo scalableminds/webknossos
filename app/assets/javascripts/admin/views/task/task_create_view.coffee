@@ -54,7 +54,10 @@ class TaskCreateView extends Backbone.Marionette.LayoutView
   ###
   showTabCreateFromForm : ->
 
-    @activeView = new TaskCreateFromView({ type : "from_form" })
+    @activeView = new TaskCreateFromView(
+      type : "from_form"
+      model : @model
+    )
     @tabPane.show(@activeView)
 
   ###*
@@ -64,7 +67,10 @@ class TaskCreateView extends Backbone.Marionette.LayoutView
   ###
   showTabCreateFromNML : ->
 
-    @activeView = new TaskCreateFromView({ type : "from_nml"})
+    @activeView = new TaskCreateFromView(
+      type : "from_nml"
+      model : @model
+    )
     @tabPane.show(@activeView)
 
   ###*

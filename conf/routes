@@ -101,15 +101,15 @@ POST          /admin/nml/upload                                                 
 
 # Admin Tasks
 GET           /api/tasks                                                        controllers.TaskController.list
-# POST          /api/tasks                                                        controllers.TaskController.create
+POST          /api/tasks                                                        controllers.TaskController.create
 GET           /api/tasks/:id                                                    controllers.TaskController.read(id: String)
 DELETE        /api/tasks/:id                                                    controllers.TaskController.delete(id: String)
 
 GET           /tasks                                                            controllers.TaskController.empty
 GET           /tasks/overview                                                   controllers.admin.TaskAdministration.empty
+GET           /tasks/:id/edit                                                   controllers.UserController.emptyWithWildcard(id: String)
+GET           /tasks/create                                                     controllers.admin.TaskAdministration.empty
 
-
-GET           /admin/tasks/create                                               controllers.admin.TaskAdministration.empty
 #POST          /admin/tasks/createBulk                                           controllers.admin.TaskAdministration.createBulk
 #POST          /admin/tasks/createFromNML                                        controllers.admin.TaskAdministration.createFromNML
 #POST          /admin/tasks/createFromForm                                       controllers.admin.TaskAdministration.createFromForm

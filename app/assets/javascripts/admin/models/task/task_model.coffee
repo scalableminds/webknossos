@@ -4,33 +4,27 @@ format_utils : FormatUtils
 
 class TaskModel extends Backbone.Model
 
-  idAttribute : "_id.$oid"
-
   # TODO : build backend for
   # GET/ POST/ PUT/ DELETE
-  url : -> "/api/tasks/#{@get('id')}"
-
-  parse : (response) ->
-
-    # response.formattedHash = FormatUtils.formatHash(response.id)
-    # response.formattedShortText = FormatUtils.formatShortText(response.summary)
-
-    return response
 
   defaults :
-    priority : 100
-    instances : 10
-    _project : ""
     team : ""
-    _taskType :
-      $oid : null
+    formattedHash : ""
+    projectName : ""
+    type : null
+    dataSet : ""
+    editPosition : [0, 0, 0]
+    boundingBox : [0, 0, 0, 0, 0, 0]
     neededExperience :
       value : 0
       domain : ""
-    start :
-      point : "0, 0, 0"
-    boundingBox :
-      box : "0, 0, 0, 0, 0, 0"
+    priority : 100
+    created : FormatUtils.formatDate()
+    status :
+      open : 10
+      inProgress : 0
+      completed : 0
+    tracingTime : null
 
 
   destroy : ->

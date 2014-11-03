@@ -6,6 +6,7 @@ class TaskModel extends Backbone.Model
 
   # TODO : build backend for
   # GET/ POST/ PUT/ DELETE
+  url : -> "/api/tasks#{@get('id') != undefined ? '/' + @get('id') or ''}"
 
   defaults :
     team : ""

@@ -90,11 +90,14 @@ class MergeModalView extends Backbone.Marionette.LayoutView
             </div>
           </div>
           <hr>
-          <div class="checkbox">
+          <div class="checkbox hidden">
             <label>
-              <input type="checkbox" id="checkbox-read-only" checked="checked">
+              <input type="checkbox" id="checkbox-read-only">
               The merged tracing will be read-only.
             </label>
+          </div>
+          <div>
+            The merged tracing will be saved as an explorative tracing.
           </div>
         </div>
       </div>

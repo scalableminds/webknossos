@@ -20,8 +20,7 @@ class Flycam2d
 
     @user = @model.user
 
-    # Invariant: 2^zoomStep / 2^integerZoomStep <= 2^maxZoomDiff
-    @maxZoomStepDiff = Math.min(Math.log(@MAX_ZOOM_THRESHOLD) / Math.LN2, Math.log((@TEXTURE_WIDTH-@MAX_TEXTURE_OFFSET)/@viewportWidth)/Math.LN2)
+    @maxZoomStepDiff = @calculateMaxZoomStepDiff()
     @hasNewTexture = [false, false, false]
     @zoomStep = 0.0
     @integerZoomStep = 0
@@ -49,6 +48,16 @@ class Flycam2d
     @trigger = =>
       _trigger.apply(this, arguments)
       _trigger.call(this, "changed")
+
+
+  calculateMaxZoomStepDiff : ->
+    # Invariant: 2^zoomStep / 2^integerZoomStep <= 2^maxZoomDiff
+
+    zoomThreshold = Math.min(
+      @MAX_ZOOM_THRESHOLD,
+      (@TEXTURE_WIDTH - @MAX_TEXTURE_OFFSET) / @viewportWidth
+    )
+    return Math.log(zoomThreshold) / Math.LN2
 
 
   zoomByDelta : (delta) ->

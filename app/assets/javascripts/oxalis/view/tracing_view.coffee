@@ -36,7 +36,7 @@ class TracingView extends Backbone.Marionette.LayoutView
 
     @listenTo(@model.flycam, "zoomStepChanged", ->
       @$el.toggleClass("zoomstep-warning",
-        @model.volumeTracing? and @model.canDisplaySegmentationData())
+        @model.volumeTracing? and not @model.canDisplaySegmentationData())
     )
 
 

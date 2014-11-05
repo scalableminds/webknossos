@@ -222,7 +222,7 @@ class Model extends Backbone.Model
 
   canDisplaySegmentationData : ->
 
-    return @flycam.getIntegerZoomStep() > 0 or not @getSegmentationBinary()
+    return not @flycam.getIntegerZoomStep() > 0 or not @getSegmentationBinary()
 
 
   computeBoundaries : ->

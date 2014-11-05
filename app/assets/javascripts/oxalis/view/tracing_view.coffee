@@ -32,6 +32,13 @@ class TracingView extends Backbone.Marionette.LayoutView
     "contextmenu #inputcatchers" : "disableContextMenu"
 
 
+  initialize : ->
+
+    @listenTo(@model.flycam, "zoomStepChanged", ->
+      @$el.toggleClass("zoomstep-warning",
+        @model.volumeTracing? and @model.canDisplaySegmentationData())
+    )
+
 
   disableContextMenu : ->
 

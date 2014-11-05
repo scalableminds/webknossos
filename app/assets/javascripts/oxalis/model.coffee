@@ -220,6 +220,11 @@ class Model extends Backbone.Model
     return layers
 
 
+  canDisplaySegmentationData : ->
+
+    return @flycam.getIntegerZoomStep() > 0 or not @getSegmentationBinary()
+
+
   computeBoundaries : ->
 
     @lowerBoundary = [ Infinity,  Infinity,  Infinity]

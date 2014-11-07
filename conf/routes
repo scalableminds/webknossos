@@ -73,8 +73,13 @@ GET           /api/datastores/:name/datasources/:dataSet/layers/:layer        co
 GET           /api/datastores/:name/backchannel                               controllers.DataStoreController.backChannel(name: String, key: String)
 GET           /api/datastore                                                  controllers.DataStoreController.show()
 
+# Those routes are DEPRECATED and should NOT be used further
 GET           /dataToken/validate                                             controllers.DataTokenController.validate(token: String, dataSetName: String, dataLayerName: String)
 GET           /dataToken/generate                                             controllers.DataTokenController.generate(dataSetName: String, dataLayerName: String)
+# ------ instead use
+GET           /api/dataToken/validate                                         controllers.DataTokenController.validate(token: String, dataSetName: String, dataLayerName: String)
+GET           /api/dataToken/generate                                         controllers.DataTokenController.generate(dataSetName: String, dataLayerName: String)
+
 ->            /data/                                                          com.scalableminds.datastore.Routes
 
 # SkeletonTracing Stuff

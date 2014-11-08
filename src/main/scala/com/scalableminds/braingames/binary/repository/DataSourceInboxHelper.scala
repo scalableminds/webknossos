@@ -15,7 +15,7 @@ import com.scalableminds.util.tools.InProgress
 import net.liftweb.common.{Empty, Full, Failure}
 import play.api.libs.concurrent.Execution.Implicits._
 
-trait DataSourceInboxHelper extends ProgressTracking with FoxImplicits with LockKeeperHelper with SegmentationIdHelper{
+trait DataSourceInboxHelper extends ProgressTracking with FoxImplicits with LockKeeperHelper{
 
   val DataSourceJson = "datasource.json"
 
@@ -51,7 +51,6 @@ trait DataSourceInboxHelper extends ProgressTracking with FoxImplicits with Lock
       DataSourceTypeGuessers.guessRepositoryType(unusableDataSource.sourceFolder)
         .importDataSource(unusableDataSource, progressTrackerFor(importTrackerId(unusableDataSource.id)))
         .toFox
-        .flatMap(setNextSegmentationIds)
         .flatMap {
         dataSource =>
           writeDataSourceToFile(

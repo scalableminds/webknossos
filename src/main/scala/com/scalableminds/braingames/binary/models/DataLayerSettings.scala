@@ -8,6 +8,7 @@ import play.api.libs.json.Json
 case class DataLayerSettings(
   typ: String,
   `class`: String,
+  largestValue: Option[Long],
   flags: Option[List[String]],
   fallback: Option[FallbackLayer])
 

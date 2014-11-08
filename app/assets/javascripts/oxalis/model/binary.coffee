@@ -105,7 +105,6 @@ class Binary
             @pullQueue.addAll(strategy.ping(position, @direction, zoomStep, area, activePlane))
           break
 
-      @queueStatus
       @pullQueue.pull()
 
 
@@ -119,12 +118,8 @@ class Binary
 
     for strategy in @pingStrategies3d
       if strategy.forContentType(@tracing.contentType) and strategy.inVelocityRange(1) and strategy.inRoundTripTimeRange(@pullQueue.roundTripTime)
-
-        pullQueue = strategy.ping(matrix)
-
-        for entry in pullQueue
-          @pullQueue.insert(entry...)
-
+        @pullQueue.clearNormalPriorities()
+        @pullQueue.addAll(strategy.ping(matrix))
         break
 
     @pullQueue.pull()

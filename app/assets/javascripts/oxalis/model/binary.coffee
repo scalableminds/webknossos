@@ -60,12 +60,17 @@ class Binary
     @pullQueue.set4Bit(@model.get("dataset").get("fourBit"))
     @listenTo(@model.get("dataset"), "change:fourBit" , (model, is4Bit) -> @pullQueue.set4Bit(is4Bit) )
 
+    @cube.on(
+      temporalBucketCreated : (address) =>
+        @pullQueue.add({bucket: address, priority: PullQueue::PRIORITY_HIGHEST})
+    )
+
     @ping = _.throttle(@pingImpl, @PING_THROTTLE_TIME)
 
 
   pingStop : ->
 
-    @pullQueue.clear()
+    @pullQueue.clearNormalPriorities()
 
 
   pingImpl : (position, {zoomStep, area, activePlane}) ->
@@ -86,10 +91,11 @@ class Binary
 
       for strategy in @pingStrategies
         if strategy.forContentType(@tracing.contentType) and strategy.inVelocityRange(@connectionInfo.bandwidth) and strategy.inRoundTripTimeRange(@connectionInfo.roundTripTime)
-          @pullQueue.queue = strategy.ping(position, @direction, zoomStep, area, activePlane) if zoomStep? and area? and activePlane?
+          if zoomStep? and area? and activePlane?
+            @pullQueue.clearNormalPriorities()
+            @pullQueue.addAll(strategy.ping(position, @direction, zoomStep, area, activePlane))
           break
 
-      @queueStatus
       @pullQueue.pull()
 
 
@@ -103,12 +109,8 @@ class Binary
 
     for strategy in @pingStrategies3d
       if strategy.forContentType(@tracing.contentType) and strategy.inVelocityRange(1) and strategy.inRoundTripTimeRange(@pullQueue.roundTripTime)
-
-        pullQueue = strategy.ping(matrix)
-
-        for entry in pullQueue
-          @pullQueue.insert(entry...)
-
+        @pullQueue.clearNormalPriorities()
+        @pullQueue.addAll(strategy.ping(matrix))
         break
 
     @pullQueue.pull()

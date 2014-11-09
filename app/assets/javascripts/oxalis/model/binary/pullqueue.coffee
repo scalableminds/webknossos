@@ -10,6 +10,10 @@ class PullQueue
   BATCH_LIMIT : 6
   BATCH_SIZE : 3
 
+  # For buckets that should be loaded immediately and
+  # should never be removed from the queue
+  PRIORITY_HIGHEST : -1
+
   cube : null
   queue : null
 
@@ -39,22 +43,18 @@ class PullQueue
 
   pull : ->
     # Filter and sort queue, using negative priorities for sorting so .pop() can be used to get next bucket
-    @queue = _.filter(@queue, (item) => item.priority >= 0 and @boundingBox.containsBucket(item.bucket) )
-    @queue = _.sortBy(@queue, (item) -> -item.priority)
+    @queue = _.filter(@queue, (item) =>
+      (@boundingBox.containsBucket(item.bucket) and
+          not @cube.isBucketRequestedByZoomedAddress(item.bucket))
+    )
+    @queue = _.sortBy(@queue, (item) -> item.priority)
 
     # Starting to download some buckets
     while @batchCount < @BATCH_LIMIT and @queue.length
 
-      batch = []
-
-      while batch.length < @BATCH_SIZE and @queue.length
-
-        bucket = @queue.pop().bucket
-        unless @cube.isBucketRequestedByZoomedAddress(bucket)
-          batch.push bucket
-          @cube.requestBucketByZoomedAddress(bucket)
-
-      @pullBatch(batch) if batch.length > 0
+      items = @queue.splice(0, Math.min(@BATCH_SIZE, @queue.length))
+      batch = (item.bucket for item in items)
+      @pullBatch(batch)
 
 
   pullBatch : (batch) ->
@@ -64,6 +64,7 @@ class PullQueue
 
     transmitBuffer = []
     for bucket in batch
+      @cube.requestBucketByZoomedAddress(bucket)
       zoomStep = bucket[3]
       transmitBuffer.push(
         zoomStep
@@ -104,9 +105,19 @@ class PullQueue
       @pull()
 
 
-  clear : ->
+  clearNormalPriorities : ->
 
-    @queue = []
+    @queue = _.filter(@queue, (e) => e.priority == @PRIORITY_HIGHEST)
+
+
+  add : (item) ->
+
+    @queue.push(item)
+
+
+  addAll : (items) ->
+
+    @queue = @queue.concat(items)
 
 
   decode : (colors) ->

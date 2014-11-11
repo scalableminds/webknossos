@@ -10,23 +10,23 @@ class SkeletonTracingRightMenuView extends RightMenuView
 
   TABS : [
     {
-      id : 'tab-abstract-tree'
-      name : 'Tree Viewer'
+      id : "tab-abstract-tree"
+      name : "Tree Viewer"
       viewClass : AbstractTreeView
     }
     {
-      id : 'tab-trees'
-      name : 'Trees'
+      id : "tab-trees"
+      name : "Trees"
       viewClass : ListTreeView
     }
     {
-      id : 'tab-comments'
-      name : 'Comments'
+      id : "tab-comments"
+      name : "Comments"
       viewClass : CommentTabView
     }
     {
-      id : 'tab-info'
-      name : 'Info'
+      id : "tab-info"
+      name : "Info"
       viewClass : DatasetInfoView
     }
   ]

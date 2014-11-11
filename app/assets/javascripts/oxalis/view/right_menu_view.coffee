@@ -25,6 +25,7 @@ class RightMenuView extends Backbone.Marionette.LayoutView
 
   ui :
     "tabContentContainer" : ".tab-content"
+    "tabNavbarContainer" : ".nav-tabs"
 
 
   initialize : (options) ->
@@ -34,7 +35,7 @@ class RightMenuView extends Backbone.Marionette.LayoutView
     regions = {}
     @TABS.forEach (tab) =>
       tab.view = new tab.viewClass(options)
-      regions[tab.id] = '#' + tab.id
+      regions[tab.id] = "#" + tab.id
     @addRegions(regions)
 
 
@@ -48,8 +49,8 @@ class RightMenuView extends Backbone.Marionette.LayoutView
 
   afterRender : ->
 
-    @$('.nav-tabs').children().first().addClass('active')
-    @$('.tab-content').children().first().addClass('active')
+    @ui.tabContentContainer.children().first().addClass("active")
+    @ui.tabNavbarContainer.children().first().addClass("active")
 
     @TABS.forEach (tab) =>
       @[tab.id].show(tab.view)

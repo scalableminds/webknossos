@@ -23,7 +23,7 @@ import oxalis.nml.NMLService
 import play.api.libs.json.Json._
 import play.api.libs.json._
 import play.api.libs.functional.syntax._
-import net.liftweb.common.{Empty, Failure, Full}
+import net.liftweb.common.{Box, Empty, Failure, Full}
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.util.reactivemongo.DBAccessContext
 
@@ -63,8 +63,8 @@ object TaskAdministration extends AdminController {
       "project" -> text,
       "boundingBox" -> mapping(
       "box" -> text.verifying("boundingBox.invalid",
-        b => b.matches("([0-9]+),\\s*([0-9]+),\\s*([0-9]+)\\s*,\\s*([0-9]+),\\s*([0-9]+),\\s*([0-9]+)\\s*")))(BoundingBox.fromForm)(BoundingBox.toForm)
-    )).fill(("", Experience.empty, 100, 10, "", "", BoundingBox(Point3D(0, 0, 0), 0, 0, 0)))
+        b => b.matches("([0-9]+),\\s*([0-9]+),\\s*([0-9]+)\\s*,\\s*([0-9]+),\\s*([0-9]+),\\s*([0-9]+)\\s*")))(BoundingBox.fromForm)(b => b.map(BoundingBox.toForm).toOption.flatten)
+    )).fill(("", Experience.empty, 100, 10, "", "", Full(BoundingBox(Point3D(0, 0, 0), 0, 0, 0))))
 
   val taskMapping = tuple(
     "dataSet" -> text,
@@ -81,15 +81,15 @@ object TaskAdministration extends AdminController {
     "project" -> text,
     "boundingBox" -> mapping(
       "box" -> text.verifying("boundingBox.invalid",
-        b => b.matches("([0-9]+),\\s*([0-9]+),\\s*([0-9]+)\\s*,\\s*([0-9]+),\\s*([0-9]+),\\s*([0-9]+)\\s*")))(BoundingBox.fromForm)(BoundingBox.toForm)
+        b => b.matches("([0-9]+),\\s*([0-9]+),\\s*([0-9]+)\\s*,\\s*([0-9]+),\\s*([0-9]+),\\s*([0-9]+)\\s*")))(BoundingBox.fromForm)(b => b.map(BoundingBox.toForm).toOption.flatten)
   )
 
   val taskForm = Form(
-    taskMapping).fill("", "", Point3D(0, 0, 0), Experience.empty, 100, 10, "", "", BoundingBox(Point3D(0, 0, 0), 0, 0, 0))
+    taskMapping).fill("", "", Point3D(0, 0, 0), Experience.empty, 100, 10, "", "", Full(BoundingBox(Point3D(0, 0, 0), 0, 0, 0)))
 
   def taskCreateHTML(
-                      taskFromNMLForm: Form[(String, Experience, Int, Int, String, String, BoundingBox)],
-                      taskForm: Form[(String, String, Point3D, Experience, Int, Int, String, String, BoundingBox)]
+                      taskFromNMLForm: Form[(String, Experience, Int, Int, String, String, Box[BoundingBox])],
+                      taskForm: Form[(String, String, Point3D, Experience, Int, Int, String, String, Box[BoundingBox])]
                     )(implicit request: AuthenticatedRequest[_]) =
     for {
       dataSets <- DataSetDAO.findAll
@@ -142,8 +142,9 @@ object TaskAdministration extends AdminController {
           _ <- ensureTeamAdministration(request.user, team).toFox
           task = Task(taskType._id, team, experience, priority, instances, _project = project.map(_.name))
           _ <- TaskDAO.insert(task)
+          bb <- boundingBox
         } yield {
-          AnnotationService.createAnnotationBase(task, request.user._id, boundingBox, taskType.settings, dataSetName, start)
+          AnnotationService.createAnnotationBase(task, request.user._id, bb, taskType.settings, dataSetName, start)
           Redirect(controllers.routes.TaskController.empty)
           .flashing(
             FlashSuccess(Messages("task.createSuccess")))
@@ -215,6 +216,7 @@ object TaskAdministration extends AdminController {
             taskType <- TaskTypeDAO.findOneById(taskTypeId) ?~> Messages("taskType.notFound")
             project <- ProjectService.findIfNotEmpty(projectName) ?~> Messages("project.notFound")
             _ <- ensureTeamAdministration(request.user, team)
+            bb <- boundingBox
           } yield {
             val nmls = NMLService.extractFromFile(nmlFile.ref.file, nmlFile.filename).flatten
             val baseTask = Task(
@@ -235,7 +237,7 @@ object TaskAdministration extends AdminController {
                   _project = project.map(_.name),
                   _id = BSONObjectID.generate)
                 TaskDAO.insert(task).flatMap { _ =>
-                  AnnotationService.createAnnotationBase(task, request.user._id, boundingBox, taskType.settings, nml)
+                  AnnotationService.createAnnotationBase(task, request.user._id, bb, taskType.settings, nml)
                 }
             }
             Redirect(controllers.routes.TaskController.empty).flashing(
@@ -271,11 +273,11 @@ object TaskAdministration extends AdminController {
         maxZ <- params(15).toIntOpt ?~> "Invalid maxZ value"
         _ <- ensureTeamAdministration(request.user, team).toFox
         taskType <- TaskTypeDAO.findOneBySumnary(taskTypeSummary) ?~> Messages("taskType.notFound")
+        boundingBox<- BoundingBox.createFrom(Point3D(minX, minY, minZ), Point3D(maxX, maxY, maxZ))
       } yield {
         val dataSetName = params(0)
         val experience = Experience(params(2), experienceValue)
         val position = Point3D(x, y, z)
-        val boundingBox = BoundingBox.createFrom(Point3D(minX, minY, minZ), Point3D(maxX, maxY, maxZ))
         val task = Task(
           taskType._id,
           team,

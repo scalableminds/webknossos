@@ -3,6 +3,9 @@
  */
 package com.scalableminds.util.geometry
 
+import com.scalableminds.util.tools.Fox
+import net.liftweb.common.{Box, Empty, Full}
+
 case class BoundingBox(topLeft: Point3D, width: Int, height: Int, depth: Int) {
 
   val bottomRight = topLeft.move(width, height, depth)
@@ -79,18 +82,22 @@ object BoundingBox{
     }
   }
 
-  def createFrom(bbox: List[List[Int]]) = {
+  def createFrom(bbox: List[List[Int]]): Box[BoundingBox] = {
     if (bbox.size < 3 || bbox(0).size < 2 || bbox(1).size < 2 || bbox(2).size < 2)
-      throw new Exception("Invalid bbox")
-    BoundingBox(
-      Point3D(bbox(0)(0), bbox(1)(0), bbox(2)(0)),
-      bbox(0)(1) - bbox(0)(0),
-      bbox(1)(1) - bbox(1)(0),
-      bbox(2)(1) - bbox(2)(0))
+      Empty
+    else
+      Full(BoundingBox(
+        Point3D(bbox(0)(0), bbox(1)(0), bbox(2)(0)),
+        bbox(0)(1) - bbox(0)(0),
+        bbox(1)(1) - bbox(1)(0),
+        bbox(2)(1) - bbox(2)(0)))
   }
 
-  def createFrom(topLeft: Point3D, bottomRight: Point3D): BoundingBox =
-    BoundingBox(topLeft, bottomRight.x - topLeft.x, bottomRight.y - topLeft.y, bottomRight.z - topLeft.z)
+  def createFrom(topLeft: Point3D, bottomRight: Point3D): Box[BoundingBox] =
+    if(topLeft <= bottomRight)
+      Full(BoundingBox(topLeft, bottomRight.x - topLeft.x, bottomRight.y - topLeft.y, bottomRight.z - topLeft.z))
+    else
+      Empty
 
   def createFrom(width: Int, height: Int, deph: Int, topLeft: Point3D): BoundingBox =
     BoundingBox(topLeft, width, height, deph)

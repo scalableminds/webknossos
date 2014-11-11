@@ -19,6 +19,9 @@ case class Point3D(x: Int, y: Int, z: Int) {
   def scale(s: Float): Point3D =
     Point3D((x * s).toInt, (y * s).toInt, (z * s).toInt)
 
+  def <=(o: Point3D): Boolean =
+    x <= o.x && y <= o.y && z <= o.z
+
   def hasGreaterCoordinateAs(other: Point3D) =
     x > other.x || y > other.y || z > other.z
 

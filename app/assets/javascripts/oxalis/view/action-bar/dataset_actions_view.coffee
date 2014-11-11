@@ -8,16 +8,18 @@ libs/toast : Toast
 class DatsetActionsView extends Backbone.Marionette.ItemView
 
   template : _.template("""
-    <% if(restrictions.allowUpdate){ %>
+    <% if(tracing.restrictions.allowUpdate){ %>
       <a href="#" class="btn btn-primary" id="trace-save-button">Save</a>
     <% } else { %>
       <button class="btn btn-primary disabled">Read only</button>
     <% } %>
     <div class="btn-group btn-group">
-      <% if(restrictions.allowFinish) { %>
+      <% if(tracing.restrictions.allowFinish) { %>
         <a href="/annotations/<%= tracingType %>/<%= tracingId %>/finishAndRedirect" class="btn btn-default" id="trace-finish-button"><i class="fa fa-check-circle-o"></i>Finish</a>
       <% } %>
-      <a href="/annotations/<%= tracingType %>/<%= tracingId %>/download" class="btn btn-default" id="trace-download-button"><i class="fa fa-download"></i>NML</a>
+      <% if(tracing.restrictions.allowDownload || ! tracing.downloadUrl) { %>
+        <a href="<%= tracing.downloadUrl %>" class="btn btn-default" id="trace-download-button"><i class="fa fa-download"></i>NML</a>
+      <% } %>
       <a href="#help-modal" class="btn btn-default" data-toggle="modal"><i class="fa fa-question-circle"></i>Help</a>
     </div>
 
@@ -70,24 +72,25 @@ class DatsetActionsView extends Backbone.Marionette.ItemView
     "modalWrapper" : ".merge-modal-wrapper"
 
 
-  finishTracing : (event) ->
+  finishTracing : (evt) ->
 
-    event.preventDefault()
-    @saveNow().done =>
-      if confirm("Are you sure you want to permanently finish this tracing?")
-        window.location.href = event.target.href
-
-
-  downloadTracing : (event) ->
-
-    event.preventDefault()
-    @saveNow().done =>
-        window.location.href = event.currentTarget.href
+    evt.preventDefault()
+    @saveTracing()
+    if confirm("Are you sure you want to permanently finish this tracing?")
+      window.location.href = evt.currentTarget.href
 
 
-  saveTracing : (event) ->
+  downloadTracing : (evt) ->
 
-    event.preventDefault()
+    evt.preventDefault()
+    @saveTracing()
+    window.location.href = evt.currentTarget.href
+
+
+  saveTracing : (evt) ->
+
+    if evt
+      evt.preventDefault()
     app.vent.trigger("saveEverything")
 
 

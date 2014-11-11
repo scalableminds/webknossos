@@ -143,7 +143,7 @@ class Model extends Backbone.Model
 
     @computeBoundaries()
 
-    @set("restrictions", tracing.restrictions)
+    @set("tracing", tracing)
     @set("settings", tracing.content.settings)
     @set("mode", if isVolumeTracing then constants.MODE_VOLUME else constants.MODE_PLANE_TRACING)
 

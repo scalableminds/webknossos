@@ -64,13 +64,14 @@ class Controller
       if error
         return
 
-      unless @model.restrictions.allowAccess
+      unless @model.tracing.restrictions.allowAccess
         Toast.Error "You are not allowed to access this tracing"
         return
 
       @urlManager.startUrlUpdater()
 
       for allowedMode in @model.settings.allowedModes
+
         @allowedModes.push switch allowedMode
           when "oxalis" then constants.MODE_PLANE_TRACING
           when "arbitrary" then constants.MODE_ARBITRARY

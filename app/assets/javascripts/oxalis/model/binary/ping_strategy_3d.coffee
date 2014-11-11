@@ -34,7 +34,6 @@ class PingStrategy3d
   ping : ->
 
     throw "Needs to be implemented in subclass"
-    pullQueue : [ x0, y0, z0, zoomStep0, x1, y1, z1, zoomStep1 ]
 
 
   getExtentObject : (poly0, poly1, zoom0, zoom1) ->
@@ -95,7 +94,7 @@ class PingStrategy3d.DslSlow extends PingStrategy3d
       bucket_y = testAddresses[i++]
       bucket_z = testAddresses[i++]
 
-      pullQueue.push [[bucket_x, bucket_y, bucket_z, 1], 0]
+      pullQueue.push(bucket: [bucket_x, bucket_y, bucket_z, 1], priority: 0)
 
     #-----------
     matrix0 = M4x4.clone(matrix)
@@ -111,7 +110,7 @@ class PingStrategy3d.DslSlow extends PingStrategy3d
       bucket_y = testAddresses[i++]
       bucket_z = testAddresses[i++]
 
-      pullQueue.push [[bucket_x, bucket_y, bucket_z, 0], 0]
+      pullQueue.push(bucket: [bucket_x, bucket_y, bucket_z, 0], priority: 0)
     #-----------
 
     pullQueue

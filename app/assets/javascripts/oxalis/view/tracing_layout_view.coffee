@@ -4,7 +4,6 @@ app : app
 ./action_bar_view : ActionBarView
 ./settings/settings_tab_view : SettingsTabView
 ./skeletontracing/skeletontracing_right_menu_view : SkeletonTracingRightMenuView
-./right_menu_view : RightMenuView
 ./tracing_view : TracingView
 oxalis/controller : OxalisController
 oxalis/model : OxalisModel

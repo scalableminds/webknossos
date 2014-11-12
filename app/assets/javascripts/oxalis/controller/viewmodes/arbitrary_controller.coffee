@@ -163,7 +163,7 @@ class ArbitraryController
       "j" : => @popBranch()
 
       #Reset Matrix
-      "r" : => @cam.resetRotation()
+      "r" : => @cam.setRotation([0, 0, 0])
 
       #Recenter active node
       "y" : => @centerActiveNode()

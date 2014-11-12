@@ -272,8 +272,13 @@ class Flycam3d
 
     M4x4.scale(@scale, matrix2, matrix2)
 
-    @currentMatrix = M4x4.mul(matrix2, m)
+    @currentMatrix = @convertToJsArray(M4x4.mul(matrix2, m))
     updateMacro(@)
+
+
+  convertToJsArray : (floatXArray) ->
+
+    return Array.prototype.slice.call(floatXArray)
 
 
   getUp : ->

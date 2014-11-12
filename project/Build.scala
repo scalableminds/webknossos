@@ -12,7 +12,7 @@ object Dependencies{
   val akkaVersion = "2.3.5"
   val reactiveVersion = "0.10.5.0.akka23"
   val reactivePlayVersion = "0.10.5.0.akka23"
-  val braingamesVersion = "7.0.6-play23"
+  val braingamesVersion = "7.1.0-play23"
 
   val restFb = "com.restfb" % "restfb" % "1.6.11"
   val commonsIo = "commons-io" % "commons-io" % "2.4"

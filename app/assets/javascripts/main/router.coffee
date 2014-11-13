@@ -24,9 +24,13 @@ class Router extends Backbone.Router
     "spotlight"                     : "spotlight"
     "tasks/overview"                : "taskOverview"
 
+  whitelist : [
+    "help/keyboardshortcuts",
+    "help/faq",
+    "issues"
+  ]
 
   initialize : ->
-
 
     # handle all links and manage page changes (rather the reloading the whole site)
     $(document).on "click", "a", (evt) =>
@@ -34,9 +38,31 @@ class Router extends Backbone.Router
       url = $(evt.currentTarget).attr("href") or ""
       urlWithoutSlash = url.slice(1)
 
-      if @routes[urlWithoutSlash]
+      if newWindow = $(evt.target).data("newwindow")
+        [ width, height ] = newWindow.split("x")
+        window.open(url, "_blank", "width=#{width},height=#{height},location=no,menubar=no")
         evt.preventDefault()
-        @navigate(url, { trigger: true })
+        return
+
+      # let whitelisted url through
+      if _.contains(@whitelist, urlWithoutSlash)
+        return
+
+      # allow opening links in new tabs
+      if evt.metaKey or evt.ctrlKey
+        return
+
+      # allow target=_blank etc
+      if evt.currentTarget.target != ""
+        return
+
+      for route of @routes
+        regex = @_routeToRegExp(route)
+        if regex.test(urlWithoutSlash)
+          evt.preventDefault()
+          @navigate(url, trigger : true)
+
+          return
 
       return
 

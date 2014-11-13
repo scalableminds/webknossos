@@ -47,6 +47,9 @@ Toast =
         $messageElement.alertWithTimeout()
       $("#alert-container").append($messageElement)
 
+      if type == "danger"
+        @highlight($messageElement)
+
     return
 
 
@@ -69,3 +72,15 @@ Toast =
       @message("danger", message, sticky)
     else
       @message("danger", "Error :-/", sticky)
+
+
+  highlight : (target) ->
+
+    for i in [0..5]
+      target.animate({right: "+=10px"}, 30).animate({right: "-=10px"}, 30)
+    setTimeout(
+      => @highlight(target)
+      5000
+    )
+
+

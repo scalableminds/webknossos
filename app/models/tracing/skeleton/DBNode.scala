@@ -42,9 +42,9 @@ object DBNodeDAO extends SecuredBaseDAO[DBNode] {
   def removeAllOf(_tree: BSONObjectID)(implicit ctx: DBAccessContext) =
     remove("_treeId", _tree)
 
-  def updateNode(node: Node, treeOid: BSONObjectID)(implicit ctx: DBAccessContext) =
+  def updateNode(node: Node, _tree: BSONObjectID)(implicit ctx: DBAccessContext) =
     update(
-      Json.obj("_treeId" -> treeOid, "node.id" -> node.id),
+      Json.obj("_treeId" -> _tree, "node.id" -> node.id),
       Json.obj("$set" -> Json.obj("node" -> node)), upsert = false, multi = false)
 
   def moveAllNodes(_source: BSONObjectID, _target: BSONObjectID)(implicit ctx: DBAccessContext) =

@@ -78,7 +78,6 @@ class ArbitraryController
 
   render : (forceUpdate, event) ->
 
-    @model.logConnectionInfo()
     matrix = @cam.getMatrix()
     for binary in @model.getColorBinaries()
       binary.arbitraryPing(matrix)

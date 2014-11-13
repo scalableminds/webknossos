@@ -1,18 +1,18 @@
-gulp        = require("gulp")
-coffee      = require("gulp-coffee")
-less        = require("gulp-less")
-bump        = require("gulp-bump")
-clean       = require("gulp-clean")
-watch       = require("gulp-watch")
-exec        = require("gulp-exec")
-util        = require("gulp-util")
-gif         = require("gulp-if")
-plumber     = require("gulp-plumber")
-eventStream = require("event-stream")
-runSequence = require("run-sequence")
-path        = require("path")
-fs          = require("fs")
-
+gulp         = require("gulp")
+coffee       = require("gulp-coffee")
+less         = require("gulp-less")
+bump         = require("gulp-bump")
+clean        = require("gulp-clean")
+watch        = require("gulp-watch")
+exec         = require("gulp-exec")
+util         = require("gulp-util")
+gif          = require("gulp-if")
+plumber      = require("gulp-plumber")
+eventStream  = require("event-stream")
+runSequence  = require("run-sequence")
+path         = require("path")
+fs           = require("fs")
+requireSugar = require("require-sugar")
 
 paths =
   src :
@@ -43,6 +43,7 @@ handleError = (err) ->
 makeScripts = (dest) ->
   return eventStream.pipeline(
     plumber()
+    requireSugar()
     gif(
       (file) -> return path.extname(file.path) == ".coffee"
       coffee({}).on("error", handleError)

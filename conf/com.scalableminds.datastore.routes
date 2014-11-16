@@ -18,3 +18,6 @@ PUT         /datasets/:dataSetName/layers/:dataLayerName/data             com.sc
 
 # Segmentation Mapping
 GET         /datasets/:dataSetName/layers/:dataLayerName/mapping          com.scalableminds.datastore.controllers.BinaryDataController.requestSegmentationMapping(dataSetName: String, dataLayerName: String)
+
+# Volume download
+GET         /datasets/:dataSetName/layers/:dataLayerName/download         com.scalableminds.datastore.controllers.BinaryDataController.downloadDataLayer(dataSetName: String, dataLayerName: String)

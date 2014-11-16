@@ -32,8 +32,10 @@ import play.api.libs.json.Json
 import org.apache.commons.io.FileUtils
 import org.apache.commons.io.IOUtils
 import org.apache.commons.codec.binary.Base64
+import java.io.{PipedInputStream, PipedOutputStream}
+import play.api.libs.iteratee.Enumerator
 
-object BinaryDataController extends BinaryDataReadController with BinaryDataWriteController
+object BinaryDataController extends BinaryDataReadController with BinaryDataWriteController with BinaryDataDownloadController
 
 trait BinaryDataCommonController extends Controller with FoxImplicits{
   protected def getDataLayer(dataSource: DataSource, dataLayerName: String): Fox[DataLayer] = {
@@ -356,4 +358,28 @@ trait BinaryDataWriteController extends BinaryDataCommonController {
         }
       }
   }
+}
+
+trait BinaryDataDownloadController extends BinaryDataCommonController {
+
+  def downloadDataLayer(dataSetName: String, dataLayerName: String) = Action.async {
+    implicit request =>
+      AllowRemoteOrigin{
+        val inputStream = new PipedInputStream()
+        for {
+          usableDataSource <- DataSourceDAO.findUsableByName(dataSetName).toFox ?~> Messages("dataSet.notFound")
+          dataSource = usableDataSource.dataSource
+          dataLayer <- getDataLayer(dataSource, dataLayerName) ?~> Messages("dataLayer.notFound")
+          if (dataLayer.category == "segmentation")
+          result <- DataStorePlugin.binaryDataService.handleDownloadRequest(DataDownloadRequest(dataLayer, new PipedOutputStream(inputStream)))
+        } yield {
+          Ok.stream(Enumerator.fromStream(inputStream)).withHeaders(
+            CONTENT_TYPE ->
+              "application/octet-stream",
+            CONTENT_DISPOSITION ->
+              s"filename=${dataLayerName}.zip")
+        }
+      }
+  }
+
 }

@@ -40,7 +40,8 @@ class DataRequestActor(
   extends Actor
   with DataCache
   with FoxImplicits
-  with EmptyDataProvider {
+  with EmptyDataProvider
+  with DataDownloadHelper {
 
   import Logger._
 
@@ -92,6 +93,10 @@ class DataRequestActor(
           logger.error(s"DataRequestActor Error for request collection. Collection: $requests", e)
           s ! None
       }
+    case DataDownloadRequest(dataLayer, outputStream) =>
+      val s = sender
+      downloadDataLayer(dataLayer, outputStream)
+      s ! None
   }
 
   def loadFromLayer(loadBlock: LoadBlock, useCache: Boolean): Future[Box[Array[Byte]]] = {

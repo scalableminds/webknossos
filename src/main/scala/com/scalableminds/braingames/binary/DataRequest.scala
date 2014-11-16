@@ -4,6 +4,7 @@
 package com.scalableminds.braingames.binary
 
 import com.scalableminds.braingames.binary.models._
+import java.io.OutputStream
 
 trait AbstractDataRequest
 
@@ -36,6 +37,8 @@ case class DataWriteRequest(
   data: Array[Byte]) extends DataRequest
 
 case class DataRequestCollection(requests: Seq[DataRequest]) extends AbstractDataRequest
+
+case class DataDownloadRequest(dataLayer: DataLayer, outputStream: OutputStream)
 
 object DataRequestCollection {
   def apply(dataRequest: DataRequest): DataRequestCollection =

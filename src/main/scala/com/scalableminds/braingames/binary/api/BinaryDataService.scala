@@ -23,6 +23,7 @@ import net.liftweb.common.Box
 import com.scalableminds.braingames.binary.watcher.StartWatching
 import com.scalableminds.braingames.binary.repository.DataSourceInbox
 import com.scalableminds.util.io.PathUtils
+import com.scalableminds.braingames.binary.DataDownloadRequest
 
 trait BinaryDataService extends DataSourceService with BinaryDataHelpers with SegmentationMappingHelpers {
 
@@ -72,6 +73,10 @@ trait BinaryDataService extends DataSourceService with BinaryDataHelpers with Se
   }
 
   def handleDataRequest(request: AbstractDataRequest): Future[Option[Array[Byte]]] = {
+    askDataRequestActor(request)
+  }
+
+  def handleDownloadRequest(request: DataDownloadRequest) = {
     askDataRequestActor(request)
   }
 

@@ -21,6 +21,10 @@ class CameraController
 
     _.extend(this, Backbone.Events)
 
+    app.vent.on(
+      centerTDView : => @centerTDView()
+    )
+
     @updateCamViewport()
     for cam in @cameras
       cam.near = -1000000
@@ -200,30 +204,23 @@ class CameraController
 
   moveTDViewRaw : (moveVector) ->
 
-    @cameras[constants.TDView].left   += moveVector.x
-    @cameras[constants.TDView].right  += moveVector.x
-    @cameras[constants.TDView].top    += moveVector.y
-    @cameras[constants.TDView].bottom += moveVector.y
-    @cameras[constants.TDView].updateProjectionMatrix()
+    camera = @cameras[constants.TDView]
+    camera.left   += moveVector.x
+    camera.right  += moveVector.x
+    camera.top    += moveVector.y
+    camera.bottom += moveVector.y
+    camera.updateProjectionMatrix()
     @flycam.update()
 
 
-  centerPositionInTDView : (voxelPosition) ->
-    posVector = new THREE.Vector3(@model.scaleinfo.voxelToNm(@flycam.getPosition())...)
-    voxelPosVector = new THREE.Vector3(@model.scaleinfo.voxelToNm(voxelPosition)...)
-
-    voxelPosVector.sub(posVector)
-    voxelPosVector.sub(posVector * sdsad)
+  centerTDView : ->
 
     camera = @cameras[constants.TDView]
-    width = camera.right - camera.left
-    height = camera.bottom - camera.top
-
-    camera.left = -width / 2
-    camera.right = width / 2
-    camera.top = -height / 2
-    camera.bottom = height / 2
-    @flycam.update()
+    @moveTDViewRaw(
+      new THREE.Vector2(
+        -(camera.left + camera.right) / 2,
+        -(camera.top + camera.bottom) / 2)
+    )
 
 
   setClippingDistance : (value) ->

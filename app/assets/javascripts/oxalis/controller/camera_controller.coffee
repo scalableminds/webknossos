@@ -40,13 +40,6 @@ class CameraController
 
 
   changeTDView : (id, animate = true) ->
-    # In order for the rotation to be correct, it is not sufficient
-    # to just use THREEJS' lookAt() function, because it may still
-    # look at the plane in a wrong angle. Therefore, the rotation
-    # has to be hard coded.
-    #
-    # CORRECTION: You're telling lies, you need to use the up vector...
-
     camera = @cameras[constants.TDView]
     b = app.scaleInfo.voxelToNm(@model.upperBoundary)
 
@@ -212,6 +205,24 @@ class CameraController
     @cameras[constants.TDView].top    += moveVector.y
     @cameras[constants.TDView].bottom += moveVector.y
     @cameras[constants.TDView].updateProjectionMatrix()
+    @flycam.update()
+
+
+  centerPositionInTDView : (voxelPosition) ->
+    posVector = new THREE.Vector3(@model.scaleinfo.voxelToNm(@flycam.getPosition())...)
+    voxelPosVector = new THREE.Vector3(@model.scaleinfo.voxelToNm(voxelPosition)...)
+
+    voxelPosVector.sub(posVector)
+    voxelPosVector.sub(posVector * sdsad)
+
+    camera = @cameras[constants.TDView]
+    width = camera.right - camera.left
+    height = camera.bottom - camera.top
+
+    camera.left = -width / 2
+    camera.right = width / 2
+    camera.top = -height / 2
+    camera.bottom = height / 2
     @flycam.update()
 
 

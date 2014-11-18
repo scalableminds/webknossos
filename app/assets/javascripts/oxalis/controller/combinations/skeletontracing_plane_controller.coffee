@@ -59,7 +59,9 @@ class SkeletonTracingPlaneController extends PlaneController
       "b" : => @model.skeletonTracing.pushBranch()
       "j" : => @popBranch()
 
-      "s" : => @skeletonTracingController.centerActiveNode()
+      "s" : =>
+        @cameraController.centerPositionInTDView()
+        @skeletonTracingController.centerActiveNode()
 
 
   popBranch : =>

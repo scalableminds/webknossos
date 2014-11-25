@@ -95,8 +95,8 @@ class DataRequestActor(
       }
     case DataDownloadRequest(dataLayer, outputStream) =>
       val s = sender
-      downloadDataLayer(dataLayer, outputStream)
       s ! None
+      downloadDataLayer(dataLayer, outputStream)
   }
 
   def loadFromLayer(loadBlock: LoadBlock, useCache: Boolean): Future[Box[Array[Byte]]] = {

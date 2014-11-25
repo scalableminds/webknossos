@@ -15,9 +15,6 @@ class DatasetInfoView extends Backbone.Marionette.ItemView
       <p>DataSet: <%= dataSetName %></p>
       <p>Viewport width: <%= chooseUnit(zoomLevel) %></p>
     </div>
-    <div id="zoomstep-warning" class="volume-controls">
-      <p>Volume tracings are only fully supported at a smaller zoom level. Please zoom in to annotate.</p>
-    </div>
   """)
 
   templateHelpers :

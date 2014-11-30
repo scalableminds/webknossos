@@ -156,7 +156,6 @@ class PlaneView
 
 
   draw : ->
-
     # Apply a single draw
     @flycam.update()
 

@@ -141,7 +141,7 @@ class OxalisServer(
   }
 
   def requestUserAccess(token: String, dataSetName: String, dataLayerName: String) = {
-    oxalisWS(s"/dataToken/validate")
+    oxalisWS(s"/api/dataToken/validate")
       .withQueryString(
         "token" -> token,
         "dataSetName" -> dataSetName,
@@ -150,6 +150,19 @@ class OxalisServer(
       .map {
       result =>
         logger.trace(s"Querying dataToken validity: ${token}. Status: '${result.status}'")
+        result.status == OK
+    }
+  }
+
+  def requestDataSetAccess(token: String, dataSetName: String) = {
+    oxalisWS(s"/api/datasetToken/validate")
+      .withQueryString(
+        "token" -> token,
+        "dataSetName" -> dataSetName)
+      .get()
+      .map {
+      result =>
+        logger.trace(s"Querying dataset token validity: $token. Status: '${result.status}'")
         result.status == OK
     }
   }

@@ -42,11 +42,12 @@ object DataSet {
       (__ \ 'owningTeam).write[String] and
       (__ \ 'allowedTeams).write[List[String]] and
       (__ \ 'isActive).write[Boolean] and
+      (__ \ 'accessToken).write[Option[String]] and
       (__ \ 'isPublic).write[Boolean] and
       (__ \ 'description).write[Option[String]] and
       (__ \ 'created).write[Long] and
       (__ \ "isEditable").write[Boolean])(d =>
-    (d.name, d.dataSource, d.dataStoreInfo, d.sourceType, d.owningTeam, d.allowedTeams, d.isActive, d.isPublic, d.description, d.created, d.isEditableBy(user)))
+    (d.name, d.dataSource, d.dataStoreInfo, d.sourceType, d.owningTeam, d.allowedTeams, d.isActive, d.accessToken, d.isPublic, d.description, d.created, d.isEditableBy(user)))
 }
 
 object DataSetDAO extends SecuredBaseDAO[DataSet] {

@@ -36,7 +36,9 @@ object DataSetService extends FoxImplicits {
       sourceType,
       owningTeam,
       List(owningTeam),
-      isActive = isActive))(GlobalAccessContext)
+      isActive = isActive,
+      isPublic = false,
+      accessToken = None))(GlobalAccessContext)
   }
 
   def updateDataSource(dataStoreInfo: DataStoreInfo, usableDataSource: UsableDataSource)(implicit ctx: DBAccessContext): Fox[LastError] = {

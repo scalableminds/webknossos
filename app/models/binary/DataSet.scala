@@ -20,6 +20,7 @@ case class DataSet(
                     allowedTeams: List[String],
                     isActive: Boolean = false,
                     isPublic: Boolean = false,
+                    accessToken: Option[String],
                     description: Option[String] = None,
                     created: Long = System.currentTimeMillis()) {
 

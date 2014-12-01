@@ -121,7 +121,8 @@ trait BinaryDataReadController extends BinaryDataCommonController {
     implicit request =>
       AllowRemoteOrigin{
         val cubeSize = 128
-        val dataRequests = ParsedRequestCollection(Array(ParsedDataReadRequest(resolution,
+        val logRes = (math.log(resolution) / math.log(2)).toInt
+        val dataRequests = ParsedRequestCollection(Array(ParsedDataReadRequest(logRes,
           Point3D(x * cubeSize * resolution, y * cubeSize * resolution, z * cubeSize * resolution), false)))
         for {
           data <- requestData(dataSetName, dataLayerName, cubeSize, dataRequests) ?~> Messages("binary.data.notFound")

@@ -67,7 +67,7 @@ class Fox[+A](val futureBox: Future[Box[A]])(implicit ec: ExecutionContext) {
   def ~>[T](errorCode: => T) =
     new Fox(futureBox.map(_ ~> errorCode))
 
-  def orElse[B >: A](fox: Fox[B]): Fox[B] =
+  def orElse[B >: A](fox: => Fox[B]): Fox[B] =
     new Fox(futureBox.flatMap{
       case Full(t) => this.futureBox
       case _ => fox.futureBox

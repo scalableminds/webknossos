@@ -117,10 +117,9 @@ trait BinaryDataReadController extends BinaryDataCommonController {
    * Handles a request for binary data via a HTTP GET. Mostly used by knossos.
    */
 
-  def requestViaKnossos(dataSetName: String, dataLayerName: String, resolution: Int, x: Int, y: Int, z: Int) = TokenSecuredAction(dataSetName, dataLayerName).async {
+  def requestViaKnossos(dataSetName: String, dataLayerName: String, resolution: Int, x: Int, y: Int, z: Int, cubeSize: Int) = TokenSecuredAction(dataSetName, dataLayerName).async {
     implicit request =>
       AllowRemoteOrigin{
-        val cubeSize = 128
         val logRes = (math.log(resolution) / math.log(2)).toInt
         val dataRequests = ParsedRequestCollection(Array(ParsedDataReadRequest(logRes,
           Point3D(x * cubeSize * resolution, y * cubeSize * resolution, z * cubeSize * resolution), false)))

@@ -206,7 +206,7 @@ trait BinaryDataReadController extends BinaryDataCommonController {
       }
   }
 
-  private def requestImageThumbnail(
+  protected def requestImageThumbnail(
                     dataSetName: String,
                     dataLayerName: String,
                     width: Int,
@@ -240,7 +240,7 @@ trait BinaryDataReadController extends BinaryDataCommonController {
       }
   }
 
-  private def createDataRequestCollection(
+  protected def createDataRequestCollection(
                                            dataSource: DataSource,
                                            dataLayer: DataLayer,
                                            cubeSize: Int,
@@ -251,7 +251,7 @@ trait BinaryDataReadController extends BinaryDataCommonController {
   }
 
 
-  private def requestData(
+  protected def requestData(
                            dataSetName: String,
                            dataLayerName: String,
                            cubeSize: Int,
@@ -267,7 +267,7 @@ trait BinaryDataReadController extends BinaryDataCommonController {
     }
   }
 
-  private def requestData(
+  protected def requestData(
                            dataSetName: String,
                            dataLayerName: String,
                            position: Point3D,
@@ -297,7 +297,7 @@ trait BinaryDataReadController extends BinaryDataCommonController {
     }
   }
 
-  private def respondWithSpriteSheet(
+  protected def respondWithSpriteSheet(
                               dataSetName: String,
                               dataLayerName: String,
                               width: Int,
@@ -322,7 +322,7 @@ trait BinaryDataReadController extends BinaryDataCommonController {
     }
   }
 
-  private def respondWithImage(
+  protected def respondWithImage(
                                 dataSetName: String,
                                 dataLayerName: String,
                                 width: Int,
@@ -337,7 +337,7 @@ trait BinaryDataReadController extends BinaryDataCommonController {
 
 trait BinaryDataWriteController extends BinaryDataCommonController {
 
-  private def createDataWriteRequestCollection(
+  protected def createDataWriteRequestCollection(
                                         dataSource: DataSource,
                                         dataLayer: DataLayer,
                                         cubeSize: Int,
@@ -348,7 +348,7 @@ trait BinaryDataWriteController extends BinaryDataCommonController {
   }
 
 
-  private def writeData(
+  protected def writeData(
                  dataSource: DataSource,
                  dataLayer: DataLayer,
                  cubeSize: Int,

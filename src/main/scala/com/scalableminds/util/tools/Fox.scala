@@ -103,12 +103,12 @@ class Fox[+A](val futureBox: Future[Box[A]])(implicit ec: ExecutionContext) {
   def toFox = this
 
   /**
-   * Makes Box play better with Scala 2.8 for comprehensions
+   * Makes Fox play better with Scala 2.8 for comprehensions
    */
   def withFilter(p: A => Boolean): WithFilter = new WithFilter(p)
 
   /**
-   * Play NiceLike with the Scala 2.8 for comprehension
+   * Play Nice with the Scala 2.8 for comprehension
    */
   class WithFilter(p: A => Boolean) {
     def map[B](f: A => B): Fox[B] = self.filter(p).map(f)

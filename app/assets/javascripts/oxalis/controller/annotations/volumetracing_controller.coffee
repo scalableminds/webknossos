@@ -30,7 +30,8 @@ class VolumeTracingController
 
     # Keyboard shortcuts
     new Input.KeyboardNoLoop(
-      "m" : => @toggleControlMode()
+      "w" : => @toggleControlMode()
+      "1" : => @toggleControlMode()
     )
 
 

@@ -192,7 +192,7 @@ class ArbitraryController
 
   init : ->
 
-    @setClippingDistance(@model.user.get("clippingDistance"))
+    @setClippingDistance(@model.user.get("clippingDistanceArbitrary"))
     @arbitraryView.applyScale(0)
 
 

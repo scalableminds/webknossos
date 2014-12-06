@@ -574,9 +574,6 @@ class SkeletonTracing
     return result
 
 
-  rendered : -> @trigger("finishedRender")
-
-
   findNodeInList : (list, id) ->
     # Helper method used in initialization
 

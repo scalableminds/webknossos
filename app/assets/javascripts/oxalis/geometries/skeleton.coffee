@@ -41,13 +41,7 @@ class Skeleton
     @listenTo(@skeletonTracing, "newNode", @setWaypoint)
     @listenTo(@skeletonTracing, "setBranch", @setBranch)
     @listenTo(@skeletonTracing, "newTreeColor", @updateTreeColor)
-    @listenTo(@skeletonTracing, "reloadTrees", (trees, finishedDeferred) ->
-      @listenToOnce(@skeletonTracing, "finishedRender", ->
-        @listenToOnce(@skeletonTracing, "finishedRender", ->
-          @loadSkeletonFromModel(trees, finishedDeferred))
-        @flycam.update())
-      @flycam.update()
-    )
+    @listenTo(@skeletonTracing, "reloadTrees", @loadSkeletonFromModel)
 
     @listenTo(@model.user, "particleSizeChanged", @setParticleSize)
 
@@ -73,11 +67,7 @@ class Skeleton
     for tree in @skeletonTracing.getTrees()
       @createNewTree(tree.treeId, tree.color)
 
-    @listenToOnce(@skeletonTracing, "finishedRender", ->
-      @listenToOnce(@skeletonTracing, "finishedRender", ->
-        @loadSkeletonFromModel())
-      @flycam.update())
-    @flycam.update()
+    @loadSkeletonFromModel()
 
 
   loadSkeletonFromModel : (trees, finishedDeferred) ->

@@ -199,7 +199,6 @@ class ArbitraryController
   bindToEvents : ->
 
     @listenTo(@arbitraryView, "render", @render)
-    @listenTo(@arbitraryView, "finishedRender", @model.skeletonTracing.rendered)
 
     for name, binary of @model.binary
       @listenTo(binary.cube, "bucketLoaded", @arbitraryView.draw)

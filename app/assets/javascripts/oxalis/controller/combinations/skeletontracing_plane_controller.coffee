@@ -19,8 +19,6 @@ class SkeletonTracingPlaneController extends PlaneController
 
     super(@model, stats, @view, @sceneController)
 
-    @listenTo(@planeView, "finishedRender", @model.skeletonTracing.rendered)
-
 
   getPlaneMouseControls : (planeId) ->
 
@@ -152,14 +150,11 @@ class SkeletonTracingPlaneController extends PlaneController
 
     if @model.user.get("newNodeNewTree") == true
       @model.skeletonTracing.createNewTree()
-      # make sure the tree was rendered two times before adding nodes,
-      # otherwise our buffer optimizations won't work
-      @model.skeletonTracing.once("finishedRender", =>
-        @model.skeletonTracing.once("finishedRender", =>
-          @model.skeletonTracing.addNode(position, constants.TYPE_USUAL,
-            @activeViewport, @model.flycam.getIntegerZoomStep()))
-        @planeView.draw())
-      @planeView.draw()
-    else
-      @model.skeletonTracing.addNode(position, constants.TYPE_USUAL,
-        @activeViewport, @model.flycam.getIntegerZoomStep(), centered)
+
+    @model.skeletonTracing.addNode(
+        position,
+        constants.TYPE_USUAL,
+        @activeViewport,
+        @model.flycam.getIntegerZoomStep(),
+        centered
+    )

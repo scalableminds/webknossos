@@ -141,8 +141,6 @@ class PlaneView
       @flycam.hasChanged = false
       @flycam.hasNewTexture = [false, false, false]
 
-      @trigger("finishedRender")
-
   addGeometry : (geometry) ->
     # Adds a new Three.js geometry to the scene.
     # This provides the public interface to the GeometryFactory.

@@ -1,8 +1,10 @@
 ### define
+underscore : _
 backbone.marionette : marionette
 app : app
 libs/toast : Toast
 ./merge_modal_view : MergeModalView
+oxalis/constants : Constants
 ###
 
 class DatsetActionsView extends Backbone.Marionette.ItemView
@@ -57,9 +59,15 @@ class DatsetActionsView extends Backbone.Marionette.ItemView
         </div>
       </div>
     </div>
-    <div class="btn btn-default" id="trace-merge-button">Merge Tracing</div>
-    <div class="merge-modal-wrapper"></div>
+    <% if (isSkeletonMode) { %>
+      <div class="btn btn-default" id="trace-merge-button">Merge Tracing</div>
+      <div class="merge-modal-wrapper"></div>
+    <% } %>
   """)
+
+  templateHelpers : ->
+
+    isSkeletonMode : @isSkeletonMode()
 
   events :
     "click #trace-finish-button" : "finishTracing"
@@ -99,4 +107,9 @@ class DatsetActionsView extends Backbone.Marionette.ItemView
     modalView = new MergeModalView({@model})
     @ui.modalWrapper.html(modalView.render().el)
     modalView.show()
+
+
+  isSkeletonMode : ->
+
+    return _.contains(Constants.MODES_SKELETON, @model.get("mode"))
 

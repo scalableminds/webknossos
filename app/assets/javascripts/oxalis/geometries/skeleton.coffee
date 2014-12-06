@@ -126,16 +126,6 @@ class Skeleton
     treeGeometry = @getTreeGeometry(@skeletonTracing.getTree().treeId)
 
     treeGeometry.addNode(@skeletonTracing.getActiveNode())
-
-    # Animation to center waypoint position
-    position = @skeletonTracing.getActiveNodePos()
-    if centered
-      @waypointAnimation = new TWEEN.Tween({ globalPosX: curGlobalPos[0], globalPosY: curGlobalPos[1], globalPosZ: curGlobalPos[2], flycam: @flycam})
-      @waypointAnimation.to({globalPosX: position[0], globalPosY: position[1], globalPosZ: position[2]}, 200)
-      @waypointAnimation.onUpdate ->
-        @flycam.setPosition([@globalPosX, @globalPosY, @globalPosZ])
-      @waypointAnimation.start()
-
     @flycam.update()
 
 

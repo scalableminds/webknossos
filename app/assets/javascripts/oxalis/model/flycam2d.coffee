@@ -222,6 +222,10 @@ class Flycam2d
 
   setPositionSilent : (position) ->
 
+    for i in [0..2]
+      if not position[i]
+        position[i] = @position[i]
+
     @position = position
     @hasChanged = true
 

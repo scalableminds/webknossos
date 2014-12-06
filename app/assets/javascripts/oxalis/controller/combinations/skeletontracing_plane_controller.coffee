@@ -151,10 +151,42 @@ class SkeletonTracingPlaneController extends PlaneController
     if @model.user.get("newNodeNewTree") == true
       @model.skeletonTracing.createNewTree()
 
+    if not @model.skeletonTracing.getActiveNode()?
+      centered = true
+
     @model.skeletonTracing.addNode(
         position,
         constants.TYPE_USUAL,
         @activeViewport,
-        @model.flycam.getIntegerZoomStep(),
-        centered
+        @model.flycam.getIntegerZoomStep()
     )
+
+    if centered
+      @centerPositionAnimated(@model.skeletonTracing.getActiveNodePos())
+
+
+  centerPositionAnimated : (position) ->
+
+    # Let the user still manipulate the "third dimension" during animation
+    dimensionToSkip = dimensions.thirdDimensionForPlane(@activeViewport)
+
+    curGlobalPos = @flycam.getPosition()
+
+    (new TWEEN.Tween({
+        globalPosX: curGlobalPos[0]
+        globalPosY: curGlobalPos[1]
+        globalPosZ: curGlobalPos[2]
+        flycam: @flycam
+        dimensionToSkip: dimensionToSkip
+    }))
+    .to({
+        globalPosX: position[0]
+        globalPosY: position[1]
+        globalPosZ: position[2]
+      }, 200)
+    .onUpdate( ->
+        position = [@globalPosX, @globalPosY, @globalPosZ]
+        position[@dimensionToSkip] = null
+        @flycam.setPosition(position)
+      )
+    .start()

@@ -51,6 +51,7 @@ class MappingInfoView extends Backbone.Marionette.CompositeView
 
     @renderDebounced = _.debounce(@render, @RENDER_DEBOUNCE_TIME)
     @listenTo(@cube, "bucketLoaded", @renderDebounced)
+    @listenTo(@cube, "volumeLabeled", @renderDebounced)
     @listenTo(@cube, "newMapping", @render)
     @listenTo(@flycam, "positionChanged", @renderDebounced)
     @listenTo(@model, "change:enableMapping", ->

@@ -87,6 +87,7 @@ class Cube
   setMappingEnabled : (isEnabled) ->
 
     @currentMapping = if isEnabled then @mapping else @EMPTY_MAPPING
+    @trigger("newMapping")
 
 
   hasMapping : ->
@@ -348,7 +349,7 @@ class Cube
           if Math.sqrt((x-100) * (x-100) + (y-100) * (y-100) + (z-100) * (z-100)) <= 20
             @labelVoxel([x, y, z], 5)
 
-    @trigger("volumeLabled")
+    @trigger("volumeLabeled")
 
 
   labelVoxels : (iterator, label) ->
@@ -358,7 +359,7 @@ class Cube
       @labelVoxel(voxel, label)
 
     @pushQueue.push()
-    @trigger("volumeLabled")
+    @trigger("volumeLabeled")
 
 
   labelVoxel : (voxel, label) ->
@@ -384,7 +385,7 @@ class Cube
         @pushQueue.insert(@positionToZoomedAddress(voxel))
 
 
-  getDataValue : ( voxel, mapping=@currentMapping ) ->
+  getDataValue : ( voxel, mapping=@EMPTY_MAPPING ) ->
 
     { bucket, voxelIndex} = @getBucketAndVoxelIndex( voxel, 0 )
 
@@ -401,6 +402,11 @@ class Cube
       return result
 
     return 0
+
+
+  getMappedDataValue : (voxel) ->
+
+    return @getDataValue(voxel, @currentMapping)
 
 
   getBucketAndVoxelIndex : (voxel, zoomStep, createBucketIfUndefined = false ) ->

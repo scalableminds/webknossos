@@ -72,7 +72,7 @@ class Plane2D
           @dataTexture.ready &= not (u in [@dataTexture.area[0]..@dataTexture.area[2]] and v in [@dataTexture.area[1]..@dataTexture.area[3]])
     )
 
-    @listenTo(@cube, "volumeLabled", ->
+    @listenTo(@cube, "volumeLabeled", ->
       @dataTexture.tiles = new Array(@BUCKETS_PER_ROW * @BUCKETS_PER_ROW)
       @dataTexture.ready = false
     )

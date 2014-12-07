@@ -13,12 +13,12 @@ class CellCategoryView extends CategoryView
 
   subviewCreators :
 
-    "activeCellId" : ->
+    "mappedActiveCellId" : ->
 
       return new NumberSettingView(
         model : @model
         options :
-          name : "activeCellId"
+          name : "mappedActiveCellId"
           displayName : "Active Cell ID"
       )
 

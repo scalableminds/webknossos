@@ -47,6 +47,8 @@ class Plane2D
     @BUCKETS_PER_ROW = 1 << (@TEXTURE_SIZE_P - @cube.BUCKET_SIZE_P)
     @TEXTURE_SIZE = (1 << (@TEXTURE_SIZE_P << 1)) * (@TEXTURE_BIT_DEPTH >> 3)
 
+    @_forceRedraw = false
+
     for i in [0..@cube.LOOKUP_DEPTH_DOWN]
       @MAP_SIZE += 1 << (i << 1)
 
@@ -74,6 +76,11 @@ class Plane2D
       @dataTexture.tiles = new Array(@BUCKETS_PER_ROW * @BUCKETS_PER_ROW)
       @dataTexture.ready = false
     )
+
+
+  forceRedraw : ->
+
+    @_forceRedraw = true
 
 
   get : ({position, zoomStep, area}) ->
@@ -123,7 +130,7 @@ class Plane2D
     ]
 
     # If layer or zoomStep have changed, everything needs to be redrawn
-    unless _.isEqual(texture.layer, layer) and _.isEqual(texture.zoomStep, zoomStep)
+    if @_forceRedraw or not _.isEqual(texture.layer, layer) or not _.isEqual(texture.zoomStep, zoomStep)
       texture.layer = layer
       texture.zoomStep = zoomStep
       texture.topLeftBucket = topLeftBucket
@@ -132,6 +139,8 @@ class Plane2D
       texture.tiles = new Array(@BUCKETS_PER_ROW * @BUCKETS_PER_ROW)
       texture.buffer = new Uint8Array(@TEXTURE_SIZE)
       texture.ready = false
+
+      @_forceRedraw = false
 
     # If the top-left-bucket has changed, still visible tiles are copied to their new location
     unless _.isEqual(texture.topLeftBucket, topLeftBucket)
@@ -261,7 +270,7 @@ class Plane2D
       sourceOffset = (sourceOffsets[0] << @DELTA[@U]) + (sourceOffsets[1] << @DELTA[@V]) + (sourceOffsets[2] << @DELTA[@W])
 
       bucketData = @cube.getBucketDataByZoomedAddress(bucket)
-      mapping    = @cube.mapping
+      mapping    = @cube.currentMapping
       @cube.accessBuckets([bucket])
 
       @renderToBuffer(

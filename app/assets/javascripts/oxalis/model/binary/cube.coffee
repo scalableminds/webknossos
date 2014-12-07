@@ -16,11 +16,11 @@ class Cube
   ARBITRARY_MAX_ZOOMSTEP : 2
 
   LOADING_PLACEHOLDER : {}
+  EMPTY_MAPPING : []
 
   arbitraryCube : null
   dataCubes : null
   upperBoundary : null
-  mapping : []
 
   buckets : null
   bucketIterator : 0
@@ -53,6 +53,9 @@ class Cube
     @cubes = []
     @buckets = new Array(@MAXIMUM_BUCKET_COUNT)
 
+    @mapping = @EMPTY_MAPPING
+    @currentMapping = @mapping
+
     # Initializing the cube-arrays with boundaries
     cubeBoundary = [
       Math.ceil(@upperBoundary[0] / (1 << @BUCKET_SIZE_P))
@@ -79,6 +82,31 @@ class Cube
   setPushQueue : (pushQueue) ->
 
     @pushQueue = pushQueue
+
+
+  setMappingEnabled : (isEnabled) ->
+
+    @currentMapping = if isEnabled then @mapping else @EMPTY_MAPPING
+
+
+  hasMapping : ->
+
+    return @mapping.length != 0
+
+
+  setMapping : (newMapping) ->
+
+    # TODO: Remove, only for simulation purposes
+    if not newMapping.length
+      newMapping = new newMapping.constructor(1 << @BIT_DEPTH)
+      for i in [0...(1 << @BIT_DEPTH)]
+        newMapping[i] = if i == 0 then 0 else i + 1
+
+    if @currentMapping = @mapping
+      @currentMapping = newMapping
+    @mapping = newMapping
+
+    @trigger("newMapping")
 
 
   getArbitraryCube : ->
@@ -356,7 +384,7 @@ class Cube
         @pushQueue.insert(@positionToZoomedAddress(voxel))
 
 
-  getDataValue : ( voxel ) ->
+  getDataValue : ( voxel, mapping=@currentMapping ) ->
 
     { bucket, voxelIndex} = @getBucketAndVoxelIndex( voxel, 0 )
 
@@ -367,12 +395,12 @@ class Cube
       for i in [0...@BYTE_OFFSET]
         result += (1 << (8 * i)) * bucket[ voxelIndex + i]
 
-      if @mapping?[result]?
-        return @mapping[result]
+      if mapping?[result]?
+        return mapping[result]
 
       return result
 
-    return null
+    return 0
 
 
   getBucketAndVoxelIndex : (voxel, zoomStep, createBucketIfUndefined = false ) ->

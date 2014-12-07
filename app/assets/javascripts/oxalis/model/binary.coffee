@@ -68,6 +68,12 @@ class Binary
     @ping = _.throttle(@pingImpl, @PING_THROTTLE_TIME)
 
 
+  forcePlaneRedraw : ->
+
+    for plane in @planes
+      plane.forceRedraw()
+
+
   pingStop : ->
 
     @pullQueue.clearNormalPriorities()

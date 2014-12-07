@@ -102,7 +102,7 @@ class Cube
       for i in [0...(1 << @BIT_DEPTH)]
         newMapping[i] = if i == 0 then 0 else i + 1
 
-    if @currentMapping = @mapping
+    if @currentMapping == @mapping
       @currentMapping = newMapping
     @mapping = newMapping
 

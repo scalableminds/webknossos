@@ -110,6 +110,12 @@ class Cube
     @trigger("newMapping")
 
 
+  mapId : (idToMap) ->
+
+    mappedId = @currentMapping[idToMap]
+    return if mappedId? then mappedId else idToMap
+
+
   getArbitraryCube : ->
 
     @arbitraryCube

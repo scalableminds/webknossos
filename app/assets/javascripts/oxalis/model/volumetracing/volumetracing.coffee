@@ -92,9 +92,7 @@ class VolumeTracing
 
   getMappedActiveCellId : ->
 
-    cellId = @getActiveCellId()
-    mappedId = @binary.cube.currentMapping[cellId]
-    return if mappedId? then mappedId else cellId
+    return @binary.cube.mapId(@getActiveCellId())
 
 
   setActiveCell : (id) ->

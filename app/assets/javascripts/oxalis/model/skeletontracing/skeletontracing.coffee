@@ -193,7 +193,7 @@ class SkeletonTracing
     return id in (node.id for node in @branchStack)
 
 
-  addNode : (position, type, viewport, resolution, centered = true) ->
+  addNode : (position, type, viewport, resolution) ->
 
     if @ensureDirection(position)
 
@@ -221,14 +221,13 @@ class SkeletonTracing
         @activeNode = point
         point.type = @TYPE_BRANCH
         if @branchPointsAllowed
-          centered = true
           @pushBranch()
 
       @doubleBranchPop = false
 
       @stateLogger.createNode(point, @activeTree.treeId)
 
-      @trigger("newNode", centered)
+      @trigger("newNode")
       @trigger("newActiveNode", @activeNode.id)
     else
       @trigger("wrongDirection")
@@ -572,9 +571,6 @@ class SkeletonTracing
     for tree in @trees
       result = result.concat(tree.nodes)
     return result
-
-
-  rendered : -> @trigger("finishedRender")
 
 
   findNodeInList : (list, id) ->

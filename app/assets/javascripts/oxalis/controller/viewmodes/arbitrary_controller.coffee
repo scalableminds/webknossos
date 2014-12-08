@@ -192,14 +192,13 @@ class ArbitraryController
 
   init : ->
 
-    @setClippingDistance(@model.user.get("clippingDistance"))
+    @setClippingDistance(@model.user.get("clippingDistanceArbitrary"))
     @arbitraryView.applyScale(0)
 
 
   bindToEvents : ->
 
     @listenTo(@arbitraryView, "render", @render)
-    @listenTo(@arbitraryView, "finishedRender", @model.skeletonTracing.rendered)
 
     for name, binary of @model.binary
       @listenTo(binary.cube, "bucketLoaded", @arbitraryView.draw)

@@ -41,13 +41,7 @@ class Skeleton
     @listenTo(@skeletonTracing, "newNode", @setWaypoint)
     @listenTo(@skeletonTracing, "setBranch", @setBranch)
     @listenTo(@skeletonTracing, "newTreeColor", @updateTreeColor)
-    @listenTo(@skeletonTracing, "reloadTrees", (trees, finishedDeferred) ->
-      @listenToOnce(@skeletonTracing, "finishedRender", ->
-        @listenToOnce(@skeletonTracing, "finishedRender", ->
-          @loadSkeletonFromModel(trees, finishedDeferred))
-        @flycam.update())
-      @flycam.update()
-    )
+    @listenTo(@skeletonTracing, "reloadTrees", @loadSkeletonFromModel)
 
     @listenTo(@model.user, "particleSizeChanged", @setParticleSize)
 
@@ -73,11 +67,7 @@ class Skeleton
     for tree in @skeletonTracing.getTrees()
       @createNewTree(tree.treeId, tree.color)
 
-    @listenToOnce(@skeletonTracing, "finishedRender", ->
-      @listenToOnce(@skeletonTracing, "finishedRender", ->
-        @loadSkeletonFromModel())
-      @flycam.update())
-    @flycam.update()
+    @loadSkeletonFromModel()
 
 
   loadSkeletonFromModel : (trees, finishedDeferred) ->
@@ -136,16 +126,6 @@ class Skeleton
     treeGeometry = @getTreeGeometry(@skeletonTracing.getTree().treeId)
 
     treeGeometry.addNode(@skeletonTracing.getActiveNode())
-
-    # Animation to center waypoint position
-    position = @skeletonTracing.getActiveNodePos()
-    if centered
-      @waypointAnimation = new TWEEN.Tween({ globalPosX: curGlobalPos[0], globalPosY: curGlobalPos[1], globalPosZ: curGlobalPos[2], flycam: @flycam})
-      @waypointAnimation.to({globalPosX: position[0], globalPosY: position[1], globalPosZ: position[2]}, 200)
-      @waypointAnimation.onUpdate ->
-        @flycam.setPosition([@globalPosX, @globalPosY, @globalPosZ])
-      @waypointAnimation.start()
-
     @flycam.update()
 
 

@@ -7,7 +7,7 @@ oxalis/controller/viewmodes/arbitrary_controller : ArbitraryController
 
 class DatasetInfoView extends Backbone.Marionette.ItemView
 
-  className : "col-sm-12"
+  className : "col-sm-12 flex-column"
   id : "dataset"
   template : _.template("""
     <div class="well">

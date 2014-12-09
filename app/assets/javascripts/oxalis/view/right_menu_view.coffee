@@ -7,7 +7,7 @@ class RightMenuView extends Backbone.Marionette.LayoutView
   MARGIN : 40
   TABS : []
 
-  className : "flex-column-container"
+  className : "flex-column    "
   template : _.template("""
     <ul class="nav nav-tabs">
       <% TABS.forEach(function(tab) { %>
@@ -16,7 +16,7 @@ class RightMenuView extends Backbone.Marionette.LayoutView
         </li>
       <% }) %>
     </ul>
-    <div class="tab-content">
+    <div class="tab-content flex-column">
       <% TABS.forEach(function(tab) { %>
         <div class="tab-pane" id="<%= tab.id %>"></div>
       <% }) %>
@@ -37,14 +37,6 @@ class RightMenuView extends Backbone.Marionette.LayoutView
       tab.view = new tab.viewClass(options)
       regions[tab.id] = "#" + tab.id
     @addRegions(regions)
-
-
-  resize : ->
-
-    _.defer =>
-      # make tab content 100% height
-      tabContentPosition = @ui.tabContentContainer.position()
-      @ui.tabContentContainer.height(window.innerHeight - tabContentPosition.top - @MARGIN)
 
 
   afterRender : ->

@@ -12,6 +12,7 @@ oxalis/model/settings/backbone_to_oxalis_adapter_model : BackboneToOxalisAdapter
 
 class SettingsTabView extends Backbone.Marionette.LayoutView
 
+  className: "flex-column"
   template : _.template("""
     <ul class="nav nav-tabs">
       <li>
@@ -25,7 +26,7 @@ class SettingsTabView extends Backbone.Marionette.LayoutView
       </li>
     </ul>
 
-    <div class="tab-content">
+    <div class="tab-content flex-column">
       <div class="tab-pane" id="tracing-settings-tab"></div>
       <div class="tab-pane active" id="dataset-settings-tab"></div>
       <div class="tab-pane" id="user-settings-tab"></div>

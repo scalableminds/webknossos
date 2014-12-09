@@ -7,6 +7,7 @@ backbone.marionette : Marionette
 
 class DatasetListView extends Backbone.Marionette.CompositeView
 
+  className : "datasets"
   template : _.template("""
     <table class="table table-double-striped table-details">
       <thead>

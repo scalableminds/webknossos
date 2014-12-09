@@ -34,5 +34,5 @@ class LoggedTimeModel extends Backbone.Model
         interval : interval.year + "-" + (if interval.month < 10 then "0" else "") + interval.month
         months: interval.year * 12 + interval.month
       }
-    ).sort( (a, b) -> a.months < b.months )
+    ).sort( (a, b) -> b.months - a.months )
 

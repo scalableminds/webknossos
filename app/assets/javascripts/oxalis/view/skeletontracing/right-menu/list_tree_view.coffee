@@ -8,6 +8,7 @@ backbone.marionette : marionette
 class ListTreeView extends Backbone.Marionette.CompositeView
 
   id : "tree-navbar"
+  className : "flex-column"
   template : _.template("""
     <div>
       <div class="btn-group">

@@ -19,13 +19,6 @@
   }
 }
 
-.flex-column-container, #right-menu .tab-pane > div {
-  display: flex;
-  flex-direction: column;
-  flex-grow: 1;
-}
-
-
 #right-menu {
 
   display: inline-flex;
@@ -36,10 +29,7 @@
   height: calc(100vh ~"-" @navbar-height ~"-" 20px); // 20px = 2 * 10px margin
 
   .tab-content {
-    display: flex;
-    flex-grow: 1;
     padding-top: 10px;
-    flex-direction: column;
 
     .tab-pane {
       min-height: 100px;
@@ -50,12 +40,14 @@
         list-style: none;
         padding-left: 5px;
       }
+
+      & > div {
+        .flex-column
+      }
     }
 
-    .tab-pane.active{
-      display: flex;
-      flex-direction: column;
-      flex-grow: 1;
+    .tab-pane.active {
+      .flex-column
     }
   }
 

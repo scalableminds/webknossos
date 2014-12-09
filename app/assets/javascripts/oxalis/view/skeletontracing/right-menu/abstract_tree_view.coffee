@@ -7,6 +7,7 @@ oxalis/view/skeletontracing/abstract_tree_renderer : AbstractTreeRenderer
 
 class AbstractTreeView extends Backbone.Marionette.ItemView
 
+  className : "flex-column"
   template : _.template("""
       <canvas width="<%= width %>" height="<%= height %>" style="width: <%= width %>px; height: <%= height %>px">
     """)

@@ -11,6 +11,7 @@ class SkeletonTracingSettingsView extends SettingsView
 
 
   id : "tracing-settings"
+  className : "flex-column"
 
   modelName : "skeletonTracingAdapter"
 

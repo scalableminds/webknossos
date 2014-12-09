@@ -25,7 +25,7 @@ class CommentTabView extends Backbone.Marionette.CompositeView
         </button>
       </div>
     </div>
-    <ul id="comment-list"></ul>
+    <ul id="comment-list" class="flex-overflow"></ul>
   """)
 
   childView : CommentTabItemView

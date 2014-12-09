@@ -53,7 +53,6 @@ class DatasetPositionView extends Backbone.Marionette.ItemView
 
   serializeData : ->
 
-    console.log @viewMode
     return _.extend(@model, {
       isArbitrayMode : @viewMode in constants.MODES_ARBITRARY
     })

@@ -23,7 +23,7 @@ import com.scalableminds.braingames.binary.MappingRequest
 import scala.concurrent.Future
 import com.scalableminds.util.image.{JPEGWriter, ImageCreator, ImageCreatorParameters}
 import com.scalableminds.util.mvc.ExtendedController
-import com.scalableminds.datastore.services.{UserDataLayerService, UserAccessService, BinaryDataService}
+import com.scalableminds.datastore.services.{DataSetAccessService, UserDataLayerService, UserAccessService, BinaryDataService}
 import com.scalableminds.datastore.models.DataSourceDAO
 import play.api.mvc.BodyParsers.parse
 import play.api.libs.concurrent.Execution.Implicits._
@@ -48,16 +48,30 @@ trait BinaryDataCommonController extends Controller with FoxImplicits{
   case class TokenSecuredAction(dataSetName: String, dataLayerName: String) extends ActionBuilder[Request] {
 
     def invokeBlock[A](request: Request[A], block: (Request[A]) => Future[SimpleResult]) = {
-      val hasAccess = request.getQueryString("token").map{ token =>
-        UserAccessService.hasAccess(token, dataSetName, dataLayerName)
-      } getOrElse Future.successful(false)
 
-      hasAccess.flatMap{
+      hasUserAccess(request).flatMap{
         case true =>
           block(request)
         case false =>
-          Future.successful(Forbidden("Invalid access token."))
+          hasDataSetTokenAccess(request).flatMap{
+            case true =>
+              block(request)
+            case false =>
+              Future.successful(Forbidden("Invalid access token."))
+          }
       }
+    }
+
+    def hasUserAccess[A](request: Request[A]) = {
+      request.getQueryString("token").map{ token =>
+        UserAccessService.hasAccess(token, dataSetName, dataLayerName)
+      } getOrElse Future.successful(false)
+    }
+
+    def hasDataSetTokenAccess[A](request: Request[A]) = {
+      request.getQueryString("datasetToken").map{ layerToken =>
+        DataSetAccessService.hasAccess(layerToken, dataSetName)
+      } getOrElse Future.successful(false)
     }
   }
 
@@ -96,6 +110,24 @@ trait BinaryDataReadController extends BinaryDataCommonController {
           payload <- request.body.asBytes() ?~> Messages("binary.payload.notSupplied")
           requests <- BinaryProtocol.parseDataReadRequests(payload, containsHandle = false) ?~> Messages("binary.payload.invalid")
           data <- requestData(dataSetName, dataLayerName, cubeSize, requests) ?~> Messages("binary.data.notFound")
+        } yield {
+          Ok(data)
+        }
+      }
+  }
+
+  /**
+   * Handles a request for binary data via a HTTP GET. Mostly used by knossos.
+   */
+
+  def requestViaKnossos(dataSetName: String, dataLayerName: String, resolution: Int, x: Int, y: Int, z: Int, cubeSize: Int) = TokenSecuredAction(dataSetName, dataLayerName).async {
+    implicit request =>
+      AllowRemoteOrigin{
+        val logRes = (math.log(resolution) / math.log(2)).toInt
+        val dataRequests = ParsedRequestCollection(Array(ParsedDataReadRequest(logRes,
+          Point3D(x * cubeSize * resolution, y * cubeSize * resolution, z * cubeSize * resolution), false)))
+        for {
+          data <- requestData(dataSetName, dataLayerName, cubeSize, dataRequests) ?~> Messages("binary.data.notFound")
         } yield {
           Ok(data)
         }
@@ -177,7 +209,7 @@ trait BinaryDataReadController extends BinaryDataCommonController {
       }
   }
 
-  private def requestImageThumbnail(
+  protected def requestImageThumbnail(
                     dataSetName: String,
                     dataLayerName: String,
                     width: Int,
@@ -211,7 +243,7 @@ trait BinaryDataReadController extends BinaryDataCommonController {
       }
   }
 
-  private def createDataRequestCollection(
+  protected def createDataRequestCollection(
                                            dataSource: DataSource,
                                            dataLayer: DataLayer,
                                            cubeSize: Int,
@@ -222,7 +254,7 @@ trait BinaryDataReadController extends BinaryDataCommonController {
   }
 
 
-  private def requestData(
+  protected def requestData(
                            dataSetName: String,
                            dataLayerName: String,
                            cubeSize: Int,
@@ -238,7 +270,7 @@ trait BinaryDataReadController extends BinaryDataCommonController {
     }
   }
 
-  private def requestData(
+  protected def requestData(
                            dataSetName: String,
                            dataLayerName: String,
                            position: Point3D,
@@ -268,7 +300,7 @@ trait BinaryDataReadController extends BinaryDataCommonController {
     }
   }
 
-  private def respondWithSpriteSheet(
+  protected def respondWithSpriteSheet(
                               dataSetName: String,
                               dataLayerName: String,
                               width: Int,
@@ -293,7 +325,7 @@ trait BinaryDataReadController extends BinaryDataCommonController {
     }
   }
 
-  private def respondWithImage(
+  protected def respondWithImage(
                                 dataSetName: String,
                                 dataLayerName: String,
                                 width: Int,
@@ -308,7 +340,7 @@ trait BinaryDataReadController extends BinaryDataCommonController {
 
 trait BinaryDataWriteController extends BinaryDataCommonController {
 
-  private def createDataWriteRequestCollection(
+  protected def createDataWriteRequestCollection(
                                         dataSource: DataSource,
                                         dataLayer: DataLayer,
                                         cubeSize: Int,
@@ -319,7 +351,7 @@ trait BinaryDataWriteController extends BinaryDataCommonController {
   }
 
 
-  private def writeData(
+  protected def writeData(
                  dataSource: DataSource,
                  dataLayer: DataLayer,
                  cubeSize: Int,

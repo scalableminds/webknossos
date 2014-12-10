@@ -38,7 +38,7 @@ import play.api.libs.iteratee.Enumerator
 
 object BinaryDataController extends BinaryDataReadController with BinaryDataWriteController with BinaryDataDownloadController
 
-trait BinaryDataCommonController extends Controller with FoxImplicits{
+trait BinaryDataCommonController extends Controller with FoxImplicits {
   protected def getDataLayer(dataSource: DataSource, dataLayerName: String): Fox[DataLayer] = {
     dataSource.getDataLayer(dataLayerName).toFox orElse UserDataLayerService.findUserDataLayer(dataSource.id, dataLayerName)
   }
@@ -49,11 +49,11 @@ trait BinaryDataCommonController extends Controller with FoxImplicits{
 
     def invokeBlock[A](request: Request[A], block: (Request[A]) => Future[SimpleResult]) = {
 
-      hasUserAccess(request).flatMap{
+      hasUserAccess(request).flatMap {
         case true =>
           block(request)
         case false =>
-          hasDataSetTokenAccess(request).flatMap{
+          hasDataSetTokenAccess(request).flatMap {
             case true =>
               block(request)
             case false =>
@@ -63,13 +63,13 @@ trait BinaryDataCommonController extends Controller with FoxImplicits{
     }
 
     def hasUserAccess[A](request: Request[A]) = {
-      request.getQueryString("token").map{ token =>
+      request.getQueryString("token").map { token =>
         UserAccessService.hasAccess(token, dataSetName, dataLayerName)
       } getOrElse Future.successful(false)
     }
 
     def hasDataSetTokenAccess[A](request: Request[A]) = {
-      request.getQueryString("datasetToken").map{ layerToken =>
+      request.getQueryString("datasetToken").map { layerToken =>
         DataSetAccessService.hasAccess(layerToken, dataSetName)
       } getOrElse Future.successful(false)
     }
@@ -88,7 +88,7 @@ trait BinaryDataReadController extends BinaryDataCommonController {
                            z: Int,
                            resolution: Int) = TokenSecuredAction(dataSetName, dataLayerName).async {
     implicit request =>
-      AllowRemoteOrigin{
+      AllowRemoteOrigin {
         val dataRequests = ParsedRequestCollection(Array(ParsedDataReadRequest(resolution, Point3D(x, y, z), false)))
         for {
           data <- requestData(dataSetName, dataLayerName, cubeSize, dataRequests)
@@ -105,7 +105,7 @@ trait BinaryDataReadController extends BinaryDataCommonController {
 
   def requestViaAjax(dataSetName: String, dataLayerName: String, cubeSize: Int) = TokenSecuredAction(dataSetName, dataLayerName).async(parse.raw) {
     implicit request =>
-      AllowRemoteOrigin{
+      AllowRemoteOrigin {
         for {
           payload <- request.body.asBytes() ?~> Messages("binary.payload.notSupplied")
           requests <- BinaryProtocol.parseDataReadRequests(payload, containsHandle = false) ?~> Messages("binary.payload.invalid")
@@ -122,7 +122,7 @@ trait BinaryDataReadController extends BinaryDataCommonController {
 
   def requestViaKnossos(dataSetName: String, dataLayerName: String, resolution: Int, x: Int, y: Int, z: Int, cubeSize: Int) = TokenSecuredAction(dataSetName, dataLayerName).async {
     implicit request =>
-      AllowRemoteOrigin{
+      AllowRemoteOrigin {
         val logRes = (math.log(resolution) / math.log(2)).toInt
         val dataRequests = ParsedRequestCollection(Array(ParsedDataReadRequest(logRes,
           Point3D(x * cubeSize * resolution, y * cubeSize * resolution, z * cubeSize * resolution), false)))
@@ -144,8 +144,8 @@ trait BinaryDataReadController extends BinaryDataCommonController {
                           z: Int,
                           resolution: Int) = TokenSecuredAction(dataSetName, dataLayerName).async(parse.raw) {
     implicit request =>
-      AllowRemoteOrigin{
-        for{
+      AllowRemoteOrigin {
+        for {
           image <- respondWithSpriteSheet(dataSetName, dataLayerName, cubeSize, cubeSize, cubeSize, imagesPerRow, x, y, z, resolution)
         } yield {
           Ok.sendFile(image, true, _ => "test.jpg").withHeaders(
@@ -164,8 +164,8 @@ trait BinaryDataReadController extends BinaryDataCommonController {
                     z: Int,
                     resolution: Int) = TokenSecuredAction(dataSetName, dataLayerName).async(parse.raw) {
     implicit request =>
-      AllowRemoteOrigin{
-        for{
+      AllowRemoteOrigin {
+        for {
           image <- respondWithImage(dataSetName, dataLayerName, width, height, x, y, z, resolution)
         } yield {
           Ok.sendFile(image, true, _ => "test.jpg").withHeaders(
@@ -177,10 +177,10 @@ trait BinaryDataReadController extends BinaryDataCommonController {
   def contentTypeJpeg = play.api.libs.MimeTypes.forExtension("jpeg").getOrElse(play.api.http.ContentTypes.BINARY)
 
   def requestImageThumbnailJson(
-                             dataSetName: String,
-                             dataLayerName: String,
-                             width: Int,
-                             height: Int) = TokenSecuredAction(dataSetName, dataLayerName).async(parse.raw) {
+                                 dataSetName: String,
+                                 dataLayerName: String,
+                                 width: Int,
+                                 height: Int) = TokenSecuredAction(dataSetName, dataLayerName).async(parse.raw) {
     implicit request =>
       AllowRemoteOrigin {
         for {
@@ -199,7 +199,7 @@ trait BinaryDataReadController extends BinaryDataCommonController {
                                  width: Int,
                                  height: Int) = TokenSecuredAction(dataSetName, dataLayerName).async(parse.raw) {
     implicit request =>
-      AllowRemoteOrigin{
+      AllowRemoteOrigin {
         for {
           thumbnail <- requestImageThumbnail(dataSetName, dataLayerName, width, height)
         } yield {
@@ -210,44 +210,44 @@ trait BinaryDataReadController extends BinaryDataCommonController {
   }
 
   protected def requestImageThumbnail(
-                    dataSetName: String,
-                    dataLayerName: String,
-                    width: Int,
-                    height: Int) = {
+                                       dataSetName: String,
+                                       dataLayerName: String,
+                                       width: Int,
+                                       height: Int) = {
 
-      def bestResolution(dataLayer: DataLayer): Int = {
-        val wr = math.floor(math.log(dataLayer.boundingBox.width.toDouble / width) / math.log(2)).toInt
-        val hr = math.floor(math.log(dataLayer.boundingBox.height.toDouble / height) / math.log(2)).toInt
+    def bestResolution(dataLayer: DataLayer): Int = {
+      val wr = math.floor(math.log(dataLayer.boundingBox.width.toDouble / width) / math.log(2)).toInt
+      val hr = math.floor(math.log(dataLayer.boundingBox.height.toDouble / height) / math.log(2)).toInt
 
-        math.max(0, List(wr, hr, (dataLayer.resolutions.size-1)).min)
-      }
+      math.max(0, List(wr, hr, (dataLayer.resolutions.size - 1)).min)
+    }
 
-      def goodThumbnailParameters(dataLayer: DataLayer) = {
-        // Parameters that seem to be working good enough
-        val center = dataLayer.boundingBox.center
-        val resolution = bestResolution(dataLayer)
-        val x = center.x / math.pow(2, resolution) - width / 2
-        val y = center.y / math.pow(2, resolution) - height / 2
-        val z = center.z / math.pow(2, resolution)
-        (x.toInt, y.toInt, z.toInt, resolution)
-      }
+    def goodThumbnailParameters(dataLayer: DataLayer) = {
+      // Parameters that seem to be working good enough
+      val center = dataLayer.boundingBox.center
+      val resolution = bestResolution(dataLayer)
+      val x = center.x / math.pow(2, resolution) - width / 2
+      val y = center.y / math.pow(2, resolution) - height / 2
+      val z = center.z / math.pow(2, resolution)
+      (x.toInt, y.toInt, z.toInt, resolution)
+    }
 
-      for{
-        usableDataSource <- DataSourceDAO.findUsableByName(dataSetName) ?~> Messages("dataSource.unavailable")
-        dataSource = usableDataSource.dataSource
-        dataLayer <- getDataLayer(dataSource, dataLayerName)
-        (x,y,z, resolution) = goodThumbnailParameters(dataLayer)
-        image <- respondWithImage(dataSetName, dataLayerName, width, height, x, y, z, resolution)
-      } yield {
-        image
-      }
+    for {
+      usableDataSource <- DataSourceDAO.findUsableByName(dataSetName) ?~> Messages("dataSource.unavailable")
+      dataSource = usableDataSource.dataSource
+      dataLayer <- getDataLayer(dataSource, dataLayerName)
+      (x, y, z, resolution) = goodThumbnailParameters(dataLayer)
+      image <- respondWithImage(dataSetName, dataLayerName, width, height, x, y, z, resolution)
+    } yield {
+      image
+    }
   }
 
   protected def createDataRequestCollection(
-                                           dataSource: DataSource,
-                                           dataLayer: DataLayer,
-                                           cubeSize: Int,
-                                           parsedRequest: ParsedRequestCollection[ParsedDataReadRequest]) = {
+                                             dataSource: DataSource,
+                                             dataLayer: DataLayer,
+                                             cubeSize: Int,
+                                             parsedRequest: ParsedRequestCollection[ParsedDataReadRequest]) = {
     val dataRequests = parsedRequest.requests.map(r =>
       DataStorePlugin.binaryDataService.createDataReadRequest(dataSource, dataLayer, None, cubeSize, r))
     DataRequestCollection(dataRequests)
@@ -255,10 +255,10 @@ trait BinaryDataReadController extends BinaryDataCommonController {
 
 
   protected def requestData(
-                           dataSetName: String,
-                           dataLayerName: String,
-                           cubeSize: Int,
-                           parsedRequest: ParsedRequestCollection[ParsedDataReadRequest]): Fox[Array[Byte]] = {
+                             dataSetName: String,
+                             dataLayerName: String,
+                             cubeSize: Int,
+                             parsedRequest: ParsedRequestCollection[ParsedDataReadRequest]): Fox[Array[Byte]] = {
     for {
       usableDataSource <- DataSourceDAO.findUsableByName(dataSetName) ?~> Messages("datasource.unavailable")
       dataSource = usableDataSource.dataSource
@@ -271,14 +271,14 @@ trait BinaryDataReadController extends BinaryDataCommonController {
   }
 
   protected def requestData(
-                           dataSetName: String,
-                           dataLayerName: String,
-                           position: Point3D,
-                           width: Int,
-                           height: Int,
-                           depth: Int,
-                           resolutionExponent: Int,
-                           settings: DataRequestSettings): Fox[Array[Byte]] = {
+                             dataSetName: String,
+                             dataLayerName: String,
+                             position: Point3D,
+                             width: Int,
+                             height: Int,
+                             depth: Int,
+                             resolutionExponent: Int,
+                             settings: DataRequestSettings): Fox[Array[Byte]] = {
     for {
       usableDataSource <- DataSourceDAO.findUsableByName(dataSetName) ?~> Messages("datasource.unavailable")
       dataSource = usableDataSource.dataSource
@@ -301,16 +301,16 @@ trait BinaryDataReadController extends BinaryDataCommonController {
   }
 
   protected def respondWithSpriteSheet(
-                              dataSetName: String,
-                              dataLayerName: String,
-                              width: Int,
-                              height: Int,
-                              depth: Int,
-                              imagesPerRow: Int,
-                              x: Int,
-                              y: Int,
-                              z: Int,
-                              resolution: Int): Fox[File] = {
+                                        dataSetName: String,
+                                        dataLayerName: String,
+                                        width: Int,
+                                        height: Int,
+                                        depth: Int,
+                                        imagesPerRow: Int,
+                                        x: Int,
+                                        y: Int,
+                                        z: Int,
+                                        resolution: Int): Fox[File] = {
     val settings = DataRequestSettings(useHalfByte = false, skipInterpolation = false)
     for {
       usableDataSource <- DataSourceDAO.findUsableByName(dataSetName) ?~> Messages("dataSource.unavailable")
@@ -326,14 +326,14 @@ trait BinaryDataReadController extends BinaryDataCommonController {
   }
 
   protected def respondWithImage(
-                                dataSetName: String,
-                                dataLayerName: String,
-                                width: Int,
-                                height: Int,
-                                x: Int,
-                                y: Int,
-                                z: Int,
-                                resolution: Int) = {
+                                  dataSetName: String,
+                                  dataLayerName: String,
+                                  width: Int,
+                                  height: Int,
+                                  x: Int,
+                                  y: Int,
+                                  z: Int,
+                                  resolution: Int) = {
     respondWithSpriteSheet(dataSetName, dataLayerName, width, height, 1, 1, x, y, z, resolution)
   }
 }
@@ -341,10 +341,10 @@ trait BinaryDataReadController extends BinaryDataCommonController {
 trait BinaryDataWriteController extends BinaryDataCommonController {
 
   protected def createDataWriteRequestCollection(
-                                        dataSource: DataSource,
-                                        dataLayer: DataLayer,
-                                        cubeSize: Int,
-                                        parsedRequest: ParsedRequestCollection[ParsedDataWriteRequest]) = {
+                                                  dataSource: DataSource,
+                                                  dataLayer: DataLayer,
+                                                  cubeSize: Int,
+                                                  parsedRequest: ParsedRequestCollection[ParsedDataWriteRequest]) = {
     val dataRequests = parsedRequest.requests.map(r =>
       DataStorePlugin.binaryDataService.createDataWriteRequest(dataSource, dataLayer, None, cubeSize, r))
     DataRequestCollection(dataRequests)
@@ -352,10 +352,10 @@ trait BinaryDataWriteController extends BinaryDataCommonController {
 
 
   protected def writeData(
-                 dataSource: DataSource,
-                 dataLayer: DataLayer,
-                 cubeSize: Int,
-                 parsedRequest: ParsedRequestCollection[ParsedDataWriteRequest]): Fox[Boolean] = {
+                           dataSource: DataSource,
+                           dataLayer: DataLayer,
+                           cubeSize: Int,
+                           parsedRequest: ParsedRequestCollection[ParsedDataWriteRequest]): Fox[Boolean] = {
     val dataWriteRequestCollection = createDataWriteRequestCollection(dataSource, dataLayer, cubeSize, parsedRequest)
     dataWriteRequestCollection.requests.map(VolumeUpdateService.store)
     DataStorePlugin.binaryDataService.handleDataRequest(dataWriteRequestCollection).map(_ => true)
@@ -363,7 +363,7 @@ trait BinaryDataWriteController extends BinaryDataCommonController {
 
   def writeViaAjax(dataSetName: String, dataLayerName: String, cubeSize: Int) = TokenSecuredAction(dataSetName, dataLayerName).async(parse.raw(1048576)) {
     implicit request =>
-      AllowRemoteOrigin{
+      AllowRemoteOrigin {
         for {
           usableDataSource <- DataSourceDAO.findUsableByName(dataSetName).toFox ?~> Messages("dataSet.notFound")
           dataSource = usableDataSource.dataSource
@@ -379,7 +379,7 @@ trait BinaryDataWriteController extends BinaryDataCommonController {
 
   def requestSegmentationMapping(dataSetName: String, dataLayerName: String) = TokenSecuredAction(dataSetName, dataLayerName).async {
     implicit request =>
-      AllowRemoteOrigin{
+      AllowRemoteOrigin {
         for {
           usableDataSource <- DataSourceDAO.findUsableByName(dataSetName).toFox ?~> Messages("dataSet.notFound")
           dataSource = usableDataSource.dataSource
@@ -395,24 +395,32 @@ trait BinaryDataWriteController extends BinaryDataCommonController {
 
 trait BinaryDataDownloadController extends BinaryDataCommonController {
 
+  private def ensureLayerIsSegmentation(dataLayer: DataLayer) = {
+    if (dataLayer.category == "segmentation")
+      Fox.successful(true)
+    else
+      Fox.empty
+  }
+
   def downloadDataLayer(dataSetName: String, dataLayerName: String) = TokenSecuredAction(dataSetName, dataLayerName).async {
     implicit request =>
-      AllowRemoteOrigin{
-        val inputStream = new PipedInputStream()
+      AllowRemoteOrigin {
         for {
           usableDataSource <- DataSourceDAO.findUsableByName(dataSetName).toFox ?~> Messages("dataSet.notFound")
           dataSource = usableDataSource.dataSource
           dataLayer <- getDataLayer(dataSource, dataLayerName) ?~> Messages("dataLayer.notFound")
-          if (dataLayer.category == "segmentation")
-          result <- DataStorePlugin.binaryDataService.handleDownloadRequest(DataDownloadRequest(dataLayer, new PipedOutputStream(inputStream)))
+          _ <- ensureLayerIsSegmentation(dataLayer) ?~> Messages("dataLayer.download.segmentationOnly")
         } yield {
-          Ok.stream(Enumerator.fromStream(inputStream)).withHeaders(
+          val enumerator = Enumerator.outputStream { outputStream =>
+            DataStorePlugin.binaryDataService.downloadDataLayer(dataLayer, outputStream)
+          }
+          Ok.chunked(enumerator >>> Enumerator.eof).withHeaders(
             CONTENT_TYPE ->
-              "application/octet-stream",
+              "application/zip",
             CONTENT_DISPOSITION ->
-              s"filename=${dataLayerName}.zip")
+              s"attachment; filename=${dataLayerName}.zip")
+
         }
       }
   }
-
 }

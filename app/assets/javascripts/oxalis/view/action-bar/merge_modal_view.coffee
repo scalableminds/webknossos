@@ -215,10 +215,7 @@ class MergeModalView extends Backbone.Marionette.LayoutView
 
       Toast.message(annotation.messages)
 
-      redirectUrl = if readOnly
-        "/annotations/#{annotation.typ}/#{annotation.id}"
-      else
-        "/annotations/#{annotation.typ}/#{annotation.id}/saveMerged"
+      redirectUrl = "/annotations/#{annotation.typ}/#{annotation.id}"
 
       app.router.loadURL(redirectUrl)
 

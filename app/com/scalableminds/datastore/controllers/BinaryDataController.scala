@@ -13,6 +13,7 @@ import com.scalableminds.datastore.models._
 import com.scalableminds.braingames.binary._
 import com.scalableminds.util.reactivemongo.DBAccessContext
 import com.scalableminds.util.tools.{FoxImplicits, Fox}
+import play.api.libs.ws.WS
 import play.api.mvc.{SimpleResult, Action}
 import com.scalableminds.braingames.binary.ParsedDataReadRequest
 import com.scalableminds.braingames.binary.DataRequestSettings
@@ -362,7 +363,7 @@ trait BinaryDataWriteController extends BinaryDataCommonController {
 
 trait BinaryDataDownloadController extends BinaryDataCommonController {
 
-  def downloadDataLayer(dataSetName: String, dataLayerName: String) = Action.async {
+  def downloadDataLayer(dataSetName: String, dataLayerName: String) = TokenSecuredAction(dataSetName, dataLayerName).async {
     implicit request =>
       AllowRemoteOrigin{
         val inputStream = new PipedInputStream()

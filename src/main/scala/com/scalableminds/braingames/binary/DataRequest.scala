@@ -38,8 +38,6 @@ case class DataWriteRequest(
 
 case class DataRequestCollection(requests: Seq[DataRequest]) extends AbstractDataRequest
 
-case class DataDownloadRequest(dataLayer: DataLayer, outputStream: OutputStream)
-
 object DataRequestCollection {
   def apply(dataRequest: DataRequest): DataRequestCollection =
     DataRequestCollection(Array(dataRequest))

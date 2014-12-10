@@ -3,6 +3,7 @@
  */
 package com.scalableminds.braingames.binary.api
 
+import java.io.OutputStream
 import java.nio.file.{Paths, Path}
 
 import akka.actor.ActorSystem
@@ -23,9 +24,8 @@ import net.liftweb.common.Box
 import com.scalableminds.braingames.binary.watcher.StartWatching
 import com.scalableminds.braingames.binary.repository.DataSourceInbox
 import com.scalableminds.util.io.PathUtils
-import com.scalableminds.braingames.binary.DataDownloadRequest
 
-trait BinaryDataService extends DataSourceService with BinaryDataHelpers with SegmentationMappingHelpers {
+trait BinaryDataService extends DataSourceService with BinaryDataHelpers with SegmentationMappingHelpers with DataDownloadHelper{
 
   import Logger._
 
@@ -73,10 +73,6 @@ trait BinaryDataService extends DataSourceService with BinaryDataHelpers with Se
   }
 
   def handleDataRequest(request: AbstractDataRequest): Future[Option[Array[Byte]]] = {
-    askDataRequestActor(request)
-  }
-
-  def handleDownloadRequest(request: DataDownloadRequest) = {
     askDataRequestActor(request)
   }
 

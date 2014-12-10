@@ -45,7 +45,7 @@ trait KnossosDataSourceTypeHandler extends DataSourceTypeHandler {
     val sectionSettingsMap = extractSectionSettings(base)
     Box.listToListOfBoxes(sectionSettingsMap.map{
       case (path, settings) =>
-        createSection(path.relativize(base), settings)
+        createSection(base.relativize(path), settings)
     }.toList).toSingleBox("Failed to create sections")
   }
 

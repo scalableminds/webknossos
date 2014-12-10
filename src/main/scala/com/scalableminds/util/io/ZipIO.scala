@@ -27,7 +27,7 @@ object ZipIO {
       stream.closeEntry()
     }
 
-    def close =
+    def close() =
       stream.close()
   }
 
@@ -41,8 +41,9 @@ object ZipIO {
     if (!sources.isEmpty){
       val zip = OpenZip(new ZipOutputStream(out))
       sources.foreach(zip.addFile)
-      zip.close
-    }
+      zip.close()
+    } else
+      out.close()
   }
 
   def startZip(out: OutputStream) = {

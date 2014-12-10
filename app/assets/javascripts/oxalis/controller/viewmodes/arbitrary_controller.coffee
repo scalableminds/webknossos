@@ -114,7 +114,7 @@ class ArbitraryController
 
     @input.keyboard = new Input.Keyboard(
 
-      #Scale plane
+      # Scale plane
       "l"             : (timeFactor) => @arbitraryView.applyScale -@model.user.get("scaleValue")
       "k"             : (timeFactor) => @arbitraryView.applyScale  @model.user.get("scaleValue")
 

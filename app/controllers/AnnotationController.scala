@@ -112,7 +112,7 @@ object AnnotationController extends Controller with Secured with TracingInformat
             content <- annotation.content ?~> Messages("annotation.content.empty")
             stream <- content.toDownloadStream
           } yield {
-            Ok.chunked(Enumerator.fromStream(stream).andThen(Enumerator.eof[Array[Byte]])).withHeaders(
+            Ok.chunked(stream.andThen(Enumerator.eof[Array[Byte]])).withHeaders(
               CONTENT_TYPE ->
                 "application/octet-stream",
               CONTENT_DISPOSITION ->

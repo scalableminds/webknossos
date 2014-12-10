@@ -3,7 +3,7 @@
  */
 package com.scalableminds.braingames.binary
 
-import scala.collection.JavaConverters._
+import scala.collection.JavaConversions._
 import java.io.{File, OutputStream, FileInputStream}
 import org.apache.commons.io.FileUtils
 import org.apache.commons.io.filefilter.{SuffixFileFilter, TrueFileFilter}
@@ -15,12 +15,12 @@ trait DataDownloadHelper {
 
   def downloadDataLayer(dataLayer: DataLayer, outputStream: OutputStream): Unit = {
     try {
-      val files = FileUtils.listFiles(new File(dataLayer.baseDir), new SuffixFileFilter(".raw"), TrueFileFilter.INSTANCE).asScala
+      val files = FileUtils.listFiles(new File(dataLayer.baseDir), new SuffixFileFilter(".raw"), TrueFileFilter.INSTANCE)
       ZipIO.zip(
-        files.map {
+        files.toStream.map {
           file =>
             new NamedFileStream(new FileInputStream(file), file.getName())
-        }.toStream,
+        },
         outputStream)
     } catch {
       case e: Exception =>

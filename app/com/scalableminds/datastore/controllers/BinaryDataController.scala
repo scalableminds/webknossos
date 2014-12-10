@@ -418,7 +418,7 @@ trait BinaryDataDownloadController extends BinaryDataCommonController {
             CONTENT_TYPE ->
               "application/zip",
             CONTENT_DISPOSITION ->
-              s"attachment; filename=${dataLayerName}.zip")
+              s"filename=${dataLayerName}.zip")
 
         }
       }

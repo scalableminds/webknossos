@@ -60,7 +60,7 @@ class DatsetActionsView extends Backbone.Marionette.ItemView
       </div>
     </div>
     <% if (isSkeletonMode) { %>
-      <div class="btn btn-default" id="trace-merge-button">Merge Tracing</div>
+      <div class="btn btn-default" id="trace-merge-button"><i class="fa fa-folder-open"></i>Merge Tracing</div>
       <div class="merge-modal-wrapper"></div>
     <% } %>
   """)

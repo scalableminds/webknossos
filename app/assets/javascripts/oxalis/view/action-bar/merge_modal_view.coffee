@@ -97,7 +97,7 @@ class MergeModalView extends Backbone.Marionette.LayoutView
             </label>
           </div>
           <div>
-            The merged tracing will be saved as an explorative tracing.
+            The merged tracing will be saved as a new explorative tracing.
           </div>
         </div>
       </div>

@@ -9,12 +9,15 @@ import com.scalableminds.braingames.binary.models._
 import com.scalableminds.util.geometry.{Scale, BoundingBox}
 import com.scalableminds.util.tools.ProgressTracking.ProgressTracker
 import com.scalableminds.util.io.PathUtils
-import net.liftweb.common.{Empty, Box}
+import net.liftweb.common.{Empty, Box, Full}
+import org.apache.commons.io.FilenameUtils
 import scala.collection.breakOut
 
 object KnossosDataSourceType extends DataSourceType with KnossosDataSourceTypeHandler{
   val name = "knossos"
 
+  def mappingsDirectory = "mapping"
+  def mappingFileExtension = "map"
   def fileExtension = "raw"
 }
 
@@ -63,15 +66,26 @@ trait KnossosDataSourceTypeHandler extends DataSourceTypeHandler {
     extract(base).flatten.toMap
   }
 
+  protected def extractMappings(base: Path): Box[List[DataLayerMapping]] = {
+    Full(PathUtils.listFiles(base.resolve(KnossosDataSourceType.mappingsDirectory))
+      .toList
+      .filter(_.toString.toLowerCase.endsWith(s".${KnossosDataSourceType.mappingFileExtension}"))
+      .map {
+        mapping =>
+          DataLayerMapping(FilenameUtils.getBaseName(mapping.toString), mapping.toString)
+      })
+  }
+
   protected def extractLayers(path: Path, dataSourcePath: String) = {
     val result = PathUtils.listDirectories(path).toList.map { layer =>
       for {
         settings <- Box(DataLayerSettings.fromSettingsFileIn(layer))
         sections <- extractSections(layer)
+        mappings <- extractMappings(layer)
       } yield {
         logger.info("Found Layer: " + settings)
         val dataLayerPath = layer.toAbsolutePath.toString
-        DataLayer(layer.getFileName.toString, settings.typ, dataLayerPath, settings.flags, settings.`class`, false, settings.fallback, sections, settings.largestValue.map(_ + 1))
+        DataLayer(layer.getFileName.toString, settings.typ, dataLayerPath, settings.flags, settings.`class`, false, settings.fallback, sections, settings.largestValue.map(_ + 1), mappings)
       }
     }
     Box.listToListOfBoxes(result).toSingleBox("Failed to extract layers")

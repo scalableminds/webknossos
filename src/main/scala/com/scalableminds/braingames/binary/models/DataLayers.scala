@@ -44,12 +44,16 @@ case class DataLayer(
   isWritable: Boolean = false,
   fallback: Option[FallbackLayer] = None,
   sections: List[DataLayerSection] = Nil,
-  nextSegmentationId: Option[Long] = None
+  nextSegmentationId: Option[Long] = None,
+  mappings: List[DataLayerMapping] = List()
   ) extends DataLayerLike {
 
   def relativeBaseDir(binaryBase: String) = baseDir.replace(binaryBase, "")
 
   def isUserDataLayer = baseDir.contains("userBinaryData")
+
+  def getMapping(name: String) =
+    mappings.find(_.name == name)
 
   val interpolator = DataLayer.interpolationFromString(category)
 

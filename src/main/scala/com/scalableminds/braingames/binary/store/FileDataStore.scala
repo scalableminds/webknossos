@@ -75,7 +75,7 @@ class FileDataStore extends DataStore {
   }
 
   def load(request: MappingRequest): Future[Box[Array[Byte]]] = {
-    load(knossosMappingFilePath(request))
+    load(new File(request.dataLayerMapping.path).toPath)
   }
 }
 

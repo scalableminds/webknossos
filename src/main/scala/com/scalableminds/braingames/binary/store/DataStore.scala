@@ -81,11 +81,6 @@ object DataStore {
     knossosDir(dataSetDir, resolution, block).resolve(fileName)
   }
 
-  def knossosMappingFilePath(mappingRequest: MappingRequest) = {
-    val fileName = s"${mappingRequest.dataSource.id}_${mappingRequest.dataLayer.name}_mapping.map"
-    Paths.get(mappingRequest.dataSource.baseDir).resolve(mappingRequest.dataLayer.name).resolve(fileName)
-  }
-
   def fuzzyKnossosFile(dataSetDir: Path, id: String, resolution: Int, block: Point3D): Option[File] = {
     PathUtils.fileOption(knossosDir(dataSetDir, resolution, block)).flatMap {
       dir =>

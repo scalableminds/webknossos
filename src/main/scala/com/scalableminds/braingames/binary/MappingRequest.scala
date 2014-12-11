@@ -5,6 +5,4 @@ package com.scalableminds.braingames.binary
 
 import com.scalableminds.braingames.binary.models._
 
-case class MappingRequest(
-  dataSource: DataSource,
-  dataLayer: DataLayer)
+case class MappingRequest(dataLayer: DataLayer, dataLayerMapping: DataLayerMapping)

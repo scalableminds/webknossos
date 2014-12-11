@@ -70,16 +70,6 @@ class Controller
 
       @urlManager.startUrlUpdater()
 
-      # Warn if segmentation data is not available
-      if @model.getSegmentationBinary()?
-        hasWarned = false
-        @listenTo(@model.flycam, "zoomStepChanged", =>
-          if @model.flycam.getIntegerZoomStep() > 1 and not hasWarned
-            hasWarned = true
-            Toast.info(
-              "Segmentation data is only available at lower zoom levels.")
-        )
-
       for allowedMode in @model.settings.allowedModes
 
         @allowedModes.push switch allowedMode
@@ -139,6 +129,19 @@ class Controller
 
       # initial trigger
       @sceneController.setSegmentationAlpha(@model.user.get("segmentationOpacity"))
+
+      # Zoom step warning
+      @zoomStepWarningToast = null
+      @model.flycam.on
+        zoomStepChanged : =>
+          shouldWarn = not @model.canDisplaySegmentationData()
+          if shouldWarn and not @zoomStepWarningToast?
+            toastType = if @model.volumeTracing? then "danger" else "info"
+            @zoomStepWarningToast = Toast.message(toastType,
+              "Segmentation data is only fully supported at a smaller zoom level.", true)
+          else if not shouldWarn and @zoomStepWarningToast?
+            @zoomStepWarningToast.remove()
+            @zoomStepWarningToast = null
 
 
   initKeyboard : ->

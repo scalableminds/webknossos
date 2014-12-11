@@ -8,6 +8,7 @@ import play.api.libs.json.Json
 import java.security.SecureRandom
 import java.math.BigInteger
 import models.basics.SecuredBaseDAO
+import scala.concurrent.Future
 import scala.concurrent.duration._
 import com.scalableminds.util.reactivemongo.{GlobalAccessContext, DBAccessContext}
 import models.user.User
@@ -63,6 +64,12 @@ object DataTokenService {
       case _ =>
         false
     }
+  }
+
+  def validateDataSetToken(token: String, dataSetName: String): Future[Boolean] = {
+    DataSetDAO.findOneBySourceName(dataSetName)(GlobalAccessContext).map{ dataSource =>
+      dataSource.accessToken == Some(token)
+    } getOrElse false
   }
 }
 

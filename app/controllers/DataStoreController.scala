@@ -138,7 +138,7 @@ case class WebSocketRESTServer(out: Channel[Array[Byte]]) extends FoxImplicits{
       val json = Json.parse(rawJson)
       json.validate[RESTResponse] match {
         case JsSuccess(response, _) =>
-          Logger.debug("Finished with REST result: " + response)
+          Logger.debug(s"Finished REST call to '${response.path}'(${response.uuid}). Result: ${response.status} '${response.body.toString().take(100)}'")
           openCalls().get(response.uuid).map {
             promise =>
               promise.trySuccess(Full(response)) match {

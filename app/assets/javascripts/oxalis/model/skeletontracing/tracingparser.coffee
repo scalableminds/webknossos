@@ -78,9 +78,12 @@ class TracingParser
         @skeletonTracing.branchStack.push(node)
 
 
-  setComments : ->
+  setComments : (nodeList) ->
 
-    @comments.add(@data.comments)
+    filteredComments = _.filter(@data.comments, (comment) ->
+      _.some(nodeList, (node) -> node.id == comment.node)
+    )
+    @comments.add(filteredComments)
 
 
   parse : ->
@@ -102,7 +105,7 @@ class TracingParser
       nodeList = nodeList.concat(tree.nodes)
 
     @setBranchpoints(nodeList)
-    @setComments()
+    @setComments(nodeList)
 
     return {
       @idCount

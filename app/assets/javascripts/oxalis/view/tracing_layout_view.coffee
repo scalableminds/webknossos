@@ -3,7 +3,7 @@ backbone.marionette : marionette
 app : app
 ./action_bar_view : ActionBarView
 ./settings/settings_tab_view : SettingsTabView
-./right_menu_view : RightMenuView
+./skeletontracing/skeletontracing_right_menu_view : SkeletonTracingRightMenuView
 ./tracing_view : TracingView
 oxalis/controller : OxalisController
 oxalis/model : OxalisModel
@@ -74,7 +74,7 @@ class TracingLayoutView extends Backbone.Marionette.LayoutView
       @settings.show(settingsTabView, preventDestroy : true)
 
       if @isSkeletonMode()
-        @rightMenuView = new RightMenuView(@options)
+        @rightMenuView = new SkeletonTracingRightMenuView(@options)
         @rightMenu.show(@rightMenuView)
 
 

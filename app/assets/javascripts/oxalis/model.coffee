@@ -23,35 +23,8 @@ libs/pipeline : Pipeline
 # All public operations are **asynchronous**. We return a promise
 # which you can react on.
 
+
 class Model extends Backbone.Model
-
-  timestamps : []
-  buckets : []
-  bytes : []
-  totalBuckets : []
-  totalBytes : []
-
-  logConnectionInfo : ->
-
-    @timestamps.push(new Date().getTime())
-
-    bytes = 0
-    buckets = 0
-    totalBytes = 0
-    totalBuckets = 0
-
-    for dataLayerName of @binary
-      bytes += @binary[dataLayerName].pullQueue.loadedBytes
-      buckets += @binary[dataLayerName].pullQueue.loadedBuckets
-      totalBytes += @binary[dataLayerName].pullQueue.totalLoadedBytes
-      totalBuckets += @binary[dataLayerName].pullQueue.totalLoadedBuckets
-      @binary[dataLayerName].pullQueue.loadedBytes = 0
-      @binary[dataLayerName].pullQueue.loadedBuckets = 0
-
-    @bytes.push(bytes)
-    @buckets.push(buckets)
-    @totalBytes.push(totalBytes)
-    @totalBuckets.push(totalBuckets)
 
 
   fetch : (options) ->
@@ -141,7 +114,6 @@ class Model extends Backbone.Model
       Toast.error("No data available! Something seems to be wrong with the dataset.")
 
     @setDefaultBinaryColors()
-
 
     flycam = new Flycam2d(constants.PLANE_WIDTH, maxZoomStep + 1, @)
     flycam3d = new Flycam3d(constants.DISTANCE_3D, dataset.get("scale"))
@@ -246,6 +218,11 @@ class Model extends Backbone.Model
         layers.push(userLayer)
 
     return layers
+
+
+  canDisplaySegmentationData : ->
+
+    return not @flycam.getIntegerZoomStep() > 0 or not @getSegmentationBinary()
 
 
   computeBoundaries : ->

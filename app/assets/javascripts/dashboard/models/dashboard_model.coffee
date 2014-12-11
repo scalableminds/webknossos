@@ -66,9 +66,12 @@ class DashboardModel extends Backbone.Model
     exploratoryAnnotations = new Backbone.Collection()
     # Display newst first.
     exploratoryAnnotations.comparator = (a,b) ->
-      return a.get("created") < b.get("created")
+      if a.get("created") < b.get("created")
+        return 1
+      else if a.get("created") > b.get("created")
+        return -1
+      return 0
     exploratoryAnnotations.add(@get("exploratoryAnnotations"))
-
 
     @set("exploratoryAnnotations", exploratoryAnnotations)
 

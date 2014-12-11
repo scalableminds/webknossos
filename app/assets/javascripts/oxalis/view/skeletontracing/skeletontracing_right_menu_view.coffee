@@ -10,6 +10,11 @@ class SkeletonTracingRightMenuView extends RightMenuView
 
   TABS : [
     {
+      id : "tab-info"
+      name : "Info"
+      viewClass : DatasetInfoView
+    }
+    {
       id : "tab-abstract-tree"
       name : "Tree Viewer"
       viewClass : AbstractTreeView
@@ -23,11 +28,6 @@ class SkeletonTracingRightMenuView extends RightMenuView
       id : "tab-comments"
       name : "Comments"
       viewClass : CommentTabView
-    }
-    {
-      id : "tab-info"
-      name : "Info"
-      viewClass : DatasetInfoView
     }
   ]
 

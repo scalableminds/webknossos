@@ -17,7 +17,7 @@ class DatasetPositionView extends Backbone.Marionette.ItemView
       </div>
     </div>
     <div class="form-group">
-      <% if(isArbitrayMode()) { %>
+      <% if(isArbitrayMode) { %>
         <div class="input-group">
           <span class="input-group-addon">Rotation</span>
           <input id="trace-rotation-input" class="form-control" type="text" value="<%= rotation() %>">
@@ -28,16 +28,13 @@ class DatasetPositionView extends Backbone.Marionette.ItemView
 
   templateHelpers :
     position : ->
-      @vec3ToString(@flycam.position)
+      @vec3ToString(@flycam.getPosition())
 
     rotation : ->
-      @vec3ToString(@flycam3d.rotation)
+      @vec3ToString(@flycam3d.getRotation())
 
     vec3ToString : (vec3) ->
       return Math.floor(vec3[0]) + ", " + Math.floor(vec3[1]) + ", " + Math.floor(vec3[2])
-
-    isArbitrayMode : ->
-      return @controlMode in constants.MODES_ARBITRARY
 
   events :
     "change #trace-position-input" : "changePosition"
@@ -46,11 +43,24 @@ class DatasetPositionView extends Backbone.Marionette.ItemView
 
   initialize : (options) ->
 
-    @listenTo(app.vent, "changeViewMode", @render)
+    @viewMode = constants.MODE_PLANE_TRACING
+    @listenTo(app.vent, "changeViewMode", @updateViewMode)
 
     # TODO MEASURE PERFORMANCE HIT BECAUSE OF CONSTANT RE-RENDER
     @listenTo(@model.get("flycam3d"), "changed", @render)
     @listenTo(@model.get("flycam"), "positionChanged", @render)
+
+
+  serializeData : ->
+
+    return _.extend(@model, {
+      isArbitrayMode : @viewMode in constants.MODES_ARBITRARY
+    })
+
+
+  updateViewMode : (@viewMode) ->
+
+    @render()
 
 
   changePosition : (event) ->
@@ -58,6 +68,7 @@ class DatasetPositionView extends Backbone.Marionette.ItemView
     posArray = Utils.stringToNumberArray(event.target.value)
     if posArray.length == 3
       @model.flycam.setPosition(posArray)
+      app.vent.trigger("centerTDView")
 
 
   changeRotation : (event) ->

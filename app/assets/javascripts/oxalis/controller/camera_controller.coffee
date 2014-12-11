@@ -21,6 +21,10 @@ class CameraController
 
     _.extend(this, Backbone.Events)
 
+    app.vent.on(
+      centerTDView : => @centerTDView()
+    )
+
     @updateCamViewport()
     for cam in @cameras
       cam.near = -1000000
@@ -40,13 +44,6 @@ class CameraController
 
 
   changeTDView : (id, animate = true) ->
-    # In order for the rotation to be correct, it is not sufficient
-    # to just use THREEJS' lookAt() function, because it may still
-    # look at the plane in a wrong angle. Therefore, the rotation
-    # has to be hard coded.
-    #
-    # CORRECTION: You're telling lies, you need to use the up vector...
-
     camera = @cameras[constants.TDView]
     b = app.scaleInfo.voxelToNm(@model.upperBoundary)
 
@@ -207,12 +204,23 @@ class CameraController
 
   moveTDViewRaw : (moveVector) ->
 
-    @cameras[constants.TDView].left   += moveVector.x
-    @cameras[constants.TDView].right  += moveVector.x
-    @cameras[constants.TDView].top    += moveVector.y
-    @cameras[constants.TDView].bottom += moveVector.y
-    @cameras[constants.TDView].updateProjectionMatrix()
+    camera = @cameras[constants.TDView]
+    camera.left   += moveVector.x
+    camera.right  += moveVector.x
+    camera.top    += moveVector.y
+    camera.bottom += moveVector.y
+    camera.updateProjectionMatrix()
     @flycam.update()
+
+
+  centerTDView : ->
+
+    camera = @cameras[constants.TDView]
+    @moveTDViewRaw(
+      new THREE.Vector2(
+        -(camera.left + camera.right) / 2,
+        -(camera.top + camera.bottom) / 2)
+    )
 
 
   setClippingDistance : (value) ->

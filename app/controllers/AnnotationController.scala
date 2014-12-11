@@ -58,25 +58,15 @@ object AnnotationController extends Controller with Secured with TracingInformat
     withMergedAnnotation(typ, id, mergedId, mergedTyp, readOnly) { annotation =>
       for {
         _ <- annotation.restrictions.allowAccess(request.user).failIfFalse(Messages("notAllowed")).toFox ~> 400
-        json <- annotationJson(request.user, annotation)
+        temporary <- annotation.temporaryDuplicate(true)
+        explorational = temporary.copy(typ = AnnotationType.Explorational)
+        savedAnnotation <- explorational.saveToDB
+        json <- annotationJson(request.user, savedAnnotation)
       } yield {
+        //Redirect(routes.AnnotationController.trace(savedAnnotation.typ, savedAnnotation.id))
         JsonOk(json, Messages("annotation.merge.success"))
       }
     }
-  }
-
-  def saveMerged(typ: String, id: String) = Authenticated.async { implicit request =>
-      withAnnotation(AnnotationIdentifier(typ, id)) { annotation =>
-        for {
-          dataSetName <- annotation.dataSetName ?~> Messages("dataSet.notSupplied")
-          dataSet <- DataSetDAO.findOneBySourceName(dataSetName) ?~> Messages("dataSet.notFound")
-          temporary <- annotation.temporaryDuplicate(true)
-          explorational = temporary.copy(typ = AnnotationType.Explorational)
-          savedAnnotation <- explorational.saveToDB
-        } yield {
-          Redirect(routes.AnnotationController.trace(savedAnnotation.typ, savedAnnotation.id))
-        }
-      }
   }
 
   def trace(typ: String, id: String) = Authenticated.async { implicit request =>
@@ -122,7 +112,7 @@ object AnnotationController extends Controller with Secured with TracingInformat
             content <- annotation.content ?~> Messages("annotation.content.empty")
             stream <- content.toDownloadStream
           } yield {
-            Ok.chunked(Enumerator.fromStream(stream).andThen(Enumerator.eof[Array[Byte]])).withHeaders(
+            Ok.chunked(stream.andThen(Enumerator.eof[Array[Byte]])).withHeaders(
               CONTENT_TYPE ->
                 "application/octet-stream",
               CONTENT_DISPOSITION ->

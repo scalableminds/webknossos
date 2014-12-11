@@ -56,8 +56,6 @@ class MappingInfoView extends Backbone.Marionette.CompositeView
     @listenTo(@flycam, "positionChanged", @renderDebounced)
     @listenTo(@model, "change:enableMapping", ->
       @cube.setMappingEnabled(@model.get("enableMapping"))
-      @binary.forcePlaneRedraw()
-      @flycam.update()
     )
 
 

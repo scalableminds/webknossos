@@ -63,6 +63,9 @@ class Binary
     @cube.on(
       temporalBucketCreated : (address) =>
         @pullQueue.add({bucket: address, priority: PullQueue::PRIORITY_HIGHEST})
+      newMapping : =>
+        @forcePlaneRedraw()
+        @model.flycam.update()
     )
 
     @ping = _.throttle(@pingImpl, @PING_THROTTLE_TIME)

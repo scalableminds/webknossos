@@ -374,15 +374,15 @@ trait BinaryDataWriteController extends BinaryDataCommonController {
       }
   }
 
-  def requestSegmentationMapping(dataSetName: String, dataLayerName: String) = TokenSecuredAction(dataSetName, dataLayerName).async {
+  def requestSegmentationMapping(dataSetName: String, dataLayerName: String, dataLayerMappingName: String) = TokenSecuredAction(dataSetName, dataLayerName).async {
     implicit request =>
       AllowRemoteOrigin{
         for {
           usableDataSource <- DataSourceDAO.findUsableByName(dataSetName).toFox ?~> Messages("dataSet.notFound")
           dataSource = usableDataSource.dataSource
           dataLayer <- getDataLayer(dataSource, dataLayerName) ?~> Messages("dataLayer.notFound")
-          if (dataLayer.category == "segmentation")
-          result <- DataStorePlugin.binaryDataService.handleMappingRequest(MappingRequest(dataSource, dataLayer)).toFox
+          dataLayerMapping <- dataLayer.getMapping(dataLayerMappingName).toFox ?~> Messages("dataLayerMapping.notFound")
+          result <- DataStorePlugin.binaryDataService.handleMappingRequest(MappingRequest(dataLayer, dataLayerMapping)).toFox
         } yield {
           Ok(result)
         }

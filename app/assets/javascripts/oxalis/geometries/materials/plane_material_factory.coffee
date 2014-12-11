@@ -160,7 +160,7 @@ class PlaneMaterialFactory extends AbstractPlaneMaterialFactory
         /* Color map (<= to fight rounding mistakes) */
 
         if ( id > 0.1 ) {
-          vec4 HSV = vec4( mod( 6.0 * id * golden_ratio, 6.0), 1.0, 1.0, 1.0 );
+          vec4 HSV = vec4( mod( id * golden_ratio, 1.0), 1.0, 1.0, 1.0 );
           gl_FragColor = vec4(mix( data_color, hsv_to_rgb(HSV), alpha ), 1.0);
         } else {
           gl_FragColor = vec4(data_color, 1.0);

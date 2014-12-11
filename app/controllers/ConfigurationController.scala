@@ -39,7 +39,7 @@ object ConfigurationController extends Controller with Secured {
         conf = jsConfiguration.fields.toMap
         _ <- UserService.updateUserConfiguration(request.user, UserConfiguration(conf))
       } yield {
-        Ok(toJson(conf))
+        Ok
       }
   }
 

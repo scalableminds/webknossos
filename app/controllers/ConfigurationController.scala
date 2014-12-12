@@ -65,7 +65,7 @@ object ConfigurationController extends Controller with Secured {
         conf = jsConfiguration.fields.toMap
         _ <- UserService.updateDataSetConfiguration(request.user, dataSetName, DataSetConfiguration(conf))
       } yield {
-        Ok(toJson(conf))
+        Ok
       }
   }
 }

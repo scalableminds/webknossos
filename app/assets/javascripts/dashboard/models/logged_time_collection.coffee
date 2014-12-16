@@ -28,7 +28,8 @@ class LoggedTimeCollection extends Backbone.Collection
         return {
           interval : moment("#{interval.year} #{interval.month}", "YYYY MM")
           time: moment.duration(entry.durationInSeconds, "seconds")
+          months: interval.year * 12 + interval.month
         }
-    )
+    ).sort( (a, b) -> b.months - a.months )
 
 

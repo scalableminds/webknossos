@@ -9,8 +9,10 @@ class PullQueue
   # Constants
   BATCH_LIMIT : 6
   BATCH_SIZE : 3
-  ROUND_TRIP_TIME_SMOOTHER : .125
-  BUCKET_TIME_SMOOTHER : .125
+
+  # For buckets that should be loaded immediately and
+  # should never be removed from the queue
+  PRIORITY_HIGHEST : -1
 
   cube : null
   queue : null
@@ -20,18 +22,17 @@ class PullQueue
   batchCount : 0
   roundTripTime : 0
 
-  constructor : (@dataSetName, @cube, @layer, @tracingId, @boundingBox ) ->
+
+  constructor : (@dataSetName, @cube, @layer, @tracingId, @boundingBox, @connctionInfo) ->
 
     @queue = []
-    @loadedBucketList = []
-    @requestedBucketList = []
-    @loadedBuckets = 0
-    @loadedBytes = 0
-    @totalLoadedBuckets = 0
-    @totalLoadedBytes = 0
 
     if @layer.category == "segmentation"
-      Request.send(
+      @loadGlobalSegmentation()
+
+
+  loadGlobalSegmentation : ->
+    Request.send(
         url : "#{@layer.url}/data/datasets/#{@dataSetName}/layers/#{@layer.name}/mapping?token=#{@layer.token}"
         dataType : 'arraybuffer'
       ).then( (buffer) =>
@@ -39,83 +40,21 @@ class PullQueue
           @cube.mapping = new (if @layer.bitDepth == 16 then Uint16Array else Uint32Array)(buffer)
       )
 
-  swap : (a, b) ->
-
-    queue = @queue
-
-    tmp = queue[a]
-    queue[a] = queue[b]
-    queue[b] = tmp
-
-
-  siftUp :(pos) ->
-
-    queue = @queue
-
-    while pos and queue[pos].priority < queue[(pos - 1) >> 1].priority
-      parent = (pos - 1) >> 1
-      @swap(pos, parent)
-      pos = parent
-
-
-  siftDown : (pos) ->
-
-    queue = @queue
-
-    while (pos << 1) + 1 < queue.length
-      child = (pos << 1) + 1
-      child++ if child + 1 < queue.length and queue[child].priority > queue[child + 1].priority
-      break if queue[pos].priority < queue[child].priority
-      @swap(pos, child)
-      pos = child
-
-
-  insert : (bucket, priority) ->
-
-    return unless priority >= 0
-    return unless @boundingBox.containsBucket(bucket)
-
-    # Checking whether bucket is already loaded
-    unless @cube.isBucketRequestedByZoomedAddress(bucket)
-      @queue.push( { "bucket" : bucket, "priority" : priority } )
-      @siftUp(@queue.length - 1)
-
-
-  removeFirst : ->
-
-    # No buckets in the queue
-    return null unless @queue.length
-
-    # Receive and remove first itemfrom queue
-    first = @queue.splice(0, 1, @queue[@queue.length - 1])[0]
-    @queue.pop()
-    @siftDown(0)
-
-    first.bucket
-
-
-  clear : ->
-
-    @queue = []
-
 
   pull : ->
+    # Filter and sort queue, using negative priorities for sorting so .pop() can be used to get next bucket
+    @queue = _.filter(@queue, (item) =>
+      (@boundingBox.containsBucket(item.bucket) and
+          not @cube.isBucketRequestedByZoomedAddress(item.bucket))
+    )
+    @queue = _.sortBy(@queue, (item) -> item.priority)
 
     # Starting to download some buckets
     while @batchCount < @BATCH_LIMIT and @queue.length
 
-      batch = []
-
-      while batch.length < @BATCH_SIZE and @queue.length
-
-        bucket = @removeFirst()
-        unless @cube.isBucketRequestedByZoomedAddress(bucket)
-          batch.push bucket
-          @cube.requestBucketByZoomedAddress(bucket)
-          #console.log "Requested: ", bucket
-          @requestedBucketList.push(bucket)
-
-      @pullBatch(batch) if batch.length > 0
+      items = @queue.splice(0, Math.min(@BATCH_SIZE, @queue.length))
+      batch = (item.bucket for item in items)
+      @pullBatch(batch)
 
 
   pullBatch : (batch) ->
@@ -125,6 +64,7 @@ class PullQueue
 
     transmitBuffer = []
     for bucket in batch
+      @cube.requestBucketByZoomedAddress(bucket)
       zoomStep = bucket[3]
       transmitBuffer.push(
         zoomStep
@@ -142,28 +82,22 @@ class PullQueue
 
         (responseBuffer) =>
 
-          @updateConnectionInfo(new Date() - roundTripBeginTime, batch.length, responseBuffer.length)
+          @connctionInfo.log(@layer.name, roundTripBeginTime, batch.length, responseBuffer.length)
 
           offset = 0
 
           for bucket, i in batch
-
             if transmitBuffer[i * 5 + 1]
               bucketData = @decode(responseBuffer.subarray(offset, offset += (@cube.BUCKET_LENGTH >> 1)))
             else
               bucketData = responseBuffer.subarray(offset, offset += @cube.BUCKET_LENGTH)
 
-            @boundingBox.removeOutsideArea( bucket, bucketData )
-
-            @loadedBucketList.push(bucket)
+            @boundingBox.removeOutsideArea(bucket, bucketData)
             @cube.setBucketByZoomedAddress(bucket, bucketData)
 
         =>
-
           for bucket in batch
-
             @cube.setBucketByZoomedAddress(bucket, null)
-            #console.log "Failed: ", bucket
 
     ).always =>
 
@@ -171,17 +105,19 @@ class PullQueue
       @pull()
 
 
-  updateConnectionInfo : (roundTripTime, bucketCount, byteCount) ->
+  clearNormalPriorities : ->
 
-    if @roundTripTime?
-      @roundTripTime = (1 - @ROUND_TRIP_TIME_SMOOTHER) * @roundTripTime + @ROUND_TRIP_TIME_SMOOTHER * roundTripTime
-    else
-      @roundTripTime = roundTripTime
+    @queue = _.filter(@queue, (e) => e.priority == @PRIORITY_HIGHEST)
 
-    @loadedBuckets += bucketCount
-    @loadedBytes += byteCount
-    @totalLoadedBuckets += bucketCount
-    @totalLoadedBytes += byteCount
+
+  add : (item) ->
+
+    @queue.push(item)
+
+
+  addAll : (items) ->
+
+    @queue = @queue.concat(items)
 
 
   decode : (colors) ->
@@ -202,6 +138,7 @@ class PullQueue
 
   set4Bit : (@fourBit) ->
 
+
   getLoadSocket : ->
 
     if @socket? then @socket else @socket = new ArrayBufferSocket(
@@ -214,15 +151,3 @@ class PullQueue
       responseBufferType : Uint8Array
     )
 
-
-  getTestBucket : _.once ->
-
-    result = new Uint8Array(@cube.BUCKET_LENGTH)
-
-    index = 0
-    for i in [0...@cube.BUCKET_LENGTH / 3]
-      result[index++] = 255
-      result[index++] = 255
-      result[index++] = 0
-
-    result

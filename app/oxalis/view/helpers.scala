@@ -1,6 +1,6 @@
 package oxalis.view
 
-import play.api.templates.Html
+import play.twirl.api.Html
 import com.scalableminds.util.mvc.Formatter
 
 package object helpers

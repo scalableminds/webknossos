@@ -1,8 +1,8 @@
 ### define
+backbone : Backbone
 ./cube : Cube
 ./pullqueue : Queue
 ../dimensions : Dimensions
-../../../libs/event_mixin : EventMixin
 ###
 
 # Macros
@@ -42,7 +42,7 @@ class Plane2D
 
   constructor : (index, @cube, @queue, @TEXTURE_SIZE_P, @DATA_BIT_DEPTH, @TEXTURE_BIT_DEPTH, @MAPPED_DATA_BIT_DEPTH) ->
 
-    _.extend(@, new EventMixin())
+    _.extend(this, Backbone.Events)
 
     @BUCKETS_PER_ROW = 1 << (@TEXTURE_SIZE_P - @cube.BUCKET_SIZE_P)
     @TEXTURE_SIZE = (1 << (@TEXTURE_SIZE_P << 1)) * (@TEXTURE_BIT_DEPTH >> 3)
@@ -54,7 +54,7 @@ class Plane2D
 
     @dataTexture = { renderTile: @renderDataTile }
 
-    @cube.on "bucketLoaded", (bucket) =>
+    @listenTo(@cube, "bucketLoaded", (bucket) ->
 
       # Checking, whether the new bucket intersects with the current layer
       if @dataTexture.layer >> (@cube.BUCKET_SIZE_P + bucket[3]) == bucket[@W] and @dataTexture.topLeftBucket?
@@ -68,11 +68,12 @@ class Plane2D
           tile = [u, v]
           @dataTexture.tiles[tileIndexByTileMacro(@, tile)] = false
           @dataTexture.ready &= not (u in [@dataTexture.area[0]..@dataTexture.area[2]] and v in [@dataTexture.area[1]..@dataTexture.area[3]])
+    )
 
-    @cube.on "volumeLabled", =>
-
+    @listenTo(@cube, "volumeLabled", ->
       @dataTexture.tiles = new Array(@BUCKETS_PER_ROW * @BUCKETS_PER_ROW)
       @dataTexture.ready = false
+    )
 
 
   get : ({position, zoomStep, area}) ->
@@ -260,7 +261,7 @@ class Plane2D
       sourceOffset = (sourceOffsets[0] << @DELTA[@U]) + (sourceOffsets[1] << @DELTA[@V]) + (sourceOffsets[2] << @DELTA[@W])
 
       bucketData = @cube.getBucketDataByZoomedAddress(bucket)
-      mapping    = @cube.getMappingByZoomedAddress(bucket)
+      mapping    = @cube.mapping
       @cube.accessBuckets([bucket])
 
       @renderToBuffer(

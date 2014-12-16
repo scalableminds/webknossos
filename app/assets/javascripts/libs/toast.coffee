@@ -30,17 +30,18 @@ Toast =
       messages = type
       for message in messages
         if message.success?
-          @success(message.success)
+          return @success(message.success)
         if message.error?
-          @error(message.error)
+          return @error(message.error)
 
     else if _.isArray(message)
-      messages = messages
-      @message(type, message, sticky) for message in messages
+      messages = message
+      return (@message(type, message, sticky) for message in messages)
 
     else
       $messageElement = $("<div>", class : "alert alert-#{type} fade in").html(message)
-      $messageElement.prepend($("<button>", type : "button", class : "close", "data-dismiss" : "alert").html("&times;"))
+      $closeButton = $("<button>", type : "button", class : "close", "data-dismiss" : "alert").html("&times;")
+      $messageElement.prepend($closeButton)
       if sticky
         $messageElement.alert()
       else
@@ -50,28 +51,22 @@ Toast =
       if type == "danger"
         @highlight($messageElement)
 
-    return
+      return {remove : -> $closeButton.click()}
 
 
-  info : (message, sticky) ->
+  info : (message, sticky = false) ->
 
-    @message("info", message, sticky)
-
-
-  success : (message, sticky) ->
-
-    if message?
-      @message("success", message, sticky)
-    else
-      @message("success", "Success :-)", sticky)
+    return @message("info", message, sticky)
 
 
-  error : (message, sticky = true) ->
+  success : (message = "Success :-)", sticky = false) ->
 
-    if message?
-      @message("danger", message, sticky)
-    else
-      @message("danger", "Error :-/", sticky)
+    return @message("success", message, sticky)
+
+
+  error : (message = "Error :-/", sticky = true) ->
+
+    return @message("danger", message, sticky)
 
 
   highlight : (target) ->
@@ -82,5 +77,3 @@ Toast =
       => @highlight(target)
       5000
     )
-
-

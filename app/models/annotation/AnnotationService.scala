@@ -147,7 +147,7 @@ object AnnotationService extends AnnotationContentProviders with BoxImplicits wi
       else
         AnnotationRestrictions.updateableAnnotation()
 
-    CompoundAnnotation.createFromAnnotations(BSONObjectID.generate.stringify, Some(_user), team, annotationsLike.toList, typ, AnnotationState.InProgress, restrictions)
+    CompoundAnnotation.createFromAnnotations(BSONObjectID.generate.stringify, Some(_user), team, None, annotationsLike.toList, typ, AnnotationState.InProgress, restrictions)
   }
 
   def saveToDB(annotation: Annotation)(implicit ctx: DBAccessContext): Fox[Annotation] = {

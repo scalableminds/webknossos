@@ -59,7 +59,7 @@ class DashboardTaskListItemView extends Backbone.Marionette.ItemView
   initialize : (options) ->
 
     @model.set("isAdminView", options.isAdminView)
-    @model.on('change', @render)
+    @listenTo(@model, "change", @render)
 
 
   finish : ->

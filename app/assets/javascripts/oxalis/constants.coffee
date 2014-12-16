@@ -18,9 +18,13 @@ Constants =
   MODE_VOLUME          : 3
   MODES_PLANE          : [0, 3]
   MODES_ARBITRARY      : [1, 2]
+  MODES_SKELETON       : [0, 1, 2]
 
   CONTROL_MODE_TRACE   : 0
   CONTROL_MODE_VIEW    : 1
+
+  VOLUME_MODE_MOVE     : 0
+  VOLUME_MODE_TRACE    : 1
 
   DEFAULT_SEG_ALPHA    : 20
 

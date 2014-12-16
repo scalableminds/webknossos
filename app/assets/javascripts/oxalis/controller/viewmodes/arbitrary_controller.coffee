@@ -1,7 +1,8 @@
 ### define
+app : app
+backbone : Backbone
 jquery : $
 underscore : _
-libs/event_mixin : EventMixin
 libs/request : Request
 libs/input : Input
 ../../geometries/arbitrary_plane : ArbitraryPlane
@@ -45,16 +46,16 @@ class ArbitraryController
       @keyboardOnce?.unbind()
 
 
-  constructor : (@model, stats, @gui, @view, @sceneController, @skeletonTracingController) ->
+  constructor : (@model, stats, @view, @sceneController, @skeletonTracingController) ->
 
-    _.extend(this, new EventMixin())
+    _.extend(this, Backbone.Events)
 
     @isStarted = false
 
     @canvas = canvas = $("#render-canvas")
 
     @cam = @model.flycam3d
-    @arbitraryView = new ArbitraryView(canvas, @cam, stats, @view, @model.scaleInfo, @WIDTH)
+    @arbitraryView = new ArbitraryView(canvas, @cam, stats, @view, @WIDTH)
 
     @plane = new ArbitraryPlane(@cam, @model, @WIDTH)
     @arbitraryView.addGeometry @plane
@@ -66,11 +67,11 @@ class ArbitraryController
     @crosshair = new Crosshair(@cam, model.user.get("crosshairSize"))
     @arbitraryView.addGeometry(@crosshair)
 
-    @model.user.on
-      displayCrosshairChanged : (displayCrosshair) =>
-        @crosshair.setVisibility(displayCrosshair)
+    @listenTo(@model.user, "change:displayCrosshair", (model, value) ->
+      @crosshair.setVisibility(value)
+    )
 
-    @bind()
+    @bindToEvents()
     @arbitraryView.draw()
 
     @stop()
@@ -78,7 +79,6 @@ class ArbitraryController
 
   render : (forceUpdate, event) ->
 
-    @model.logConnectionInfo()
     matrix = @cam.getMatrix()
     for binary in @model.getColorBinaries()
       binary.arbitraryPing(matrix)
@@ -109,12 +109,12 @@ class ArbitraryController
 
     getVoxelOffset  = (timeFactor) =>
 
-      return @model.user.get("moveValue3d") * timeFactor / @model.scaleInfo.baseVoxel / constants.FPS
+      return @model.user.get("moveValue3d") * timeFactor / app.scaleInfo.baseVoxel / constants.FPS
 
 
     @input.keyboard = new Input.Keyboard(
 
-      #Scale plane
+      # Scale plane
       "l"             : (timeFactor) => @arbitraryView.applyScale -@model.user.get("scaleValue")
       "k"             : (timeFactor) => @arbitraryView.applyScale  @model.user.get("scaleValue")
 
@@ -163,7 +163,7 @@ class ArbitraryController
       "j" : => @popBranch()
 
       #Reset Matrix
-      "r" : => @cam.resetRotation()
+      "r" : => @cam.setRotation([0, 0, 0])
 
       #Recenter active node
       "y" : => @centerActiveNode()
@@ -192,29 +192,27 @@ class ArbitraryController
 
   init : ->
 
-    @setClippingDistance @model.user.get("clippingDistance")
+    @setClippingDistance(@model.user.get("clippingDistanceArbitrary"))
     @arbitraryView.applyScale(0)
 
 
-  bind : ->
+  bindToEvents : ->
 
-    @arbitraryView.on "render", (force, event) => @render(force, event)
-    @arbitraryView.on "finishedRender", => @model.skeletonTracing.rendered()
+    @listenTo(@arbitraryView, "render", @render)
 
     for name, binary of @model.binary
-      binary.cube.on "bucketLoaded", => @arbitraryView.draw()
+      @listenTo(binary.cube, "bucketLoaded", @arbitraryView.draw)
 
-    @model.user.on
-
-      crosshairSizeChanged : (value) =>
-        @crosshair.setScale(value)
-
-      sphericalCapRadiusChanged : (value) =>
-        @model.flycam3d.distance = value
-        @plane.setMode @mode
-
-      clippingDistanceArbitraryChanged : (value) =>
-        @setClippingDistance(value)
+    @listenTo(@model.user, "change:crosshairSize", (model, value) ->
+      @crosshair.setScale(value)
+    )
+    @listenTo(@model.user, "change:sphericalCapRadius" : (model, value) ->
+      @model.flycam3d.distance = value
+      @plane.setMode(@mode)
+    )
+    @listenTo(@model.user, "change:clippingDistanceArbitrary", (model, value) ->
+      @setClippingDistance(value)
+    )
 
 
   start : (@mode) ->
@@ -272,7 +270,7 @@ class ArbitraryController
     @model.user.set("moveValue3d", (Number) moveValue)
 
 
-  setParticleSize : (delta) =>
+  setParticleSize : (delta) ->
 
     particleSize = @model.user.get("particleSize") + delta
     particleSize = Math.min(constants.MAX_PARTICLE_SIZE, particleSize)
@@ -281,7 +279,7 @@ class ArbitraryController
     @model.user.set("particleSize", (Number) particleSize)
 
 
-  setClippingDistance : (value) =>
+  setClippingDistance : (value) ->
 
     @arbitraryView.setClippingDistance(value)
 
@@ -311,7 +309,7 @@ class ArbitraryController
           activeNode.pos[1] - parent.pos[1],
           activeNode.pos[2] - parent.pos[2]])
         if direction[0] or direction[1] or direction[2]
-          @cam.setDirection( @model.scaleInfo.voxelToNm( direction ))
+          @cam.setDirection(app.scaleInfo.voxelToNm(direction))
           break
         parent = parent.parent
 

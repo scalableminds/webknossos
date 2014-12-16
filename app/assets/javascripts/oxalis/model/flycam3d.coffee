@@ -1,5 +1,5 @@
 ### define
-libs/event_mixin : EventMixin
+backbone : Backbone
 m4x4 : M4x4
 underscore : _
 three : THREE
@@ -33,7 +33,7 @@ class Flycam3d
 
   constructor : (@distance, scale) ->
 
-    _.extend(this, new EventMixin())
+    _.extend(this, Backbone.Events)
 
     @scale = @calculateScaleValues(scale)
 
@@ -272,8 +272,13 @@ class Flycam3d
 
     M4x4.scale(@scale, matrix2, matrix2)
 
-    @currentMatrix = M4x4.mul(matrix2, m)
+    @currentMatrix = @convertToJsArray(M4x4.mul(matrix2, m))
     updateMacro(@)
+
+
+  convertToJsArray : (floatXArray) ->
+
+    return Array.prototype.slice.call(floatXArray)
 
 
   getUp : ->

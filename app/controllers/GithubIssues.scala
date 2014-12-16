@@ -12,7 +12,7 @@ import play.api.Play.current
 import play.api.i18n.Messages
 import oxalis.mail.DefaultMails
 import com.scalableminds.util.mail.Send
-import play.api.libs.ws.WS
+import play.api.libs.ws.{WSAuthScheme, WS}
 import com.ning.http.client.Realm
 import play.api.libs.concurrent.Execution.Implicits._
 import scala.concurrent.Future
@@ -53,7 +53,7 @@ object GithubIssues extends Controller with Secured {
     authentication match {
       case Some(GithubAuth(ghuser, key)) =>
         WS.url(githubUrl + "/repos/scalableminds/oxalis/issues")
-        .withAuth(ghuser, key, Realm.AuthScheme.BASIC)
+        .withAuth(ghuser, key, WSAuthScheme.BASIC)
         .post(issue).map { response =>
           response.status == CREATED
         }

@@ -1,6 +1,10 @@
 {
   "name": "oxalis",
+<<<<<<< HEAD
   "version": "0.17.136",
+=======
+  "version": "0.17.146",
+>>>>>>> dev
   "repository": {
     "type": "git",
     "url": "git://github.com/scalableminds/oxalis.git"

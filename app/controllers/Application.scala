@@ -8,7 +8,7 @@ import scala.concurrent.Future
 import models.user.{UsedAnnotationDAO, UsedAnnotation}
 import models.basics.Implicits._
 import play.api.libs.concurrent.Execution.Implicits._
-import play.api.templates.Html
+import play.twirl.api.Html
 import net.liftweb.common.Full
 
 object Application extends Controller with Secured {
@@ -19,6 +19,12 @@ object Application extends Controller with Secured {
 
   lazy val annotationStore =
     Akka.system(app).actorFor("/user/annotationStore")
+
+  lazy val httpUri = app.configuration.getString("http.uri").get
+
+  def toAbsoluteUrl(relativeUrl: String) = {
+    httpUri + relativeUrl
+  }
 
   // -- Javascript routing
 
@@ -35,7 +41,6 @@ object Application extends Controller with Secured {
         controllers.routes.javascript.AnnotationController.nameExplorativeAnnotation,
         controllers.routes.javascript.AnnotationController.createExplorational,
         controllers.routes.javascript.AnnotationController.download,
-        controllers.routes.javascript.AnnotationController.saveMerged,
         controllers.admin.routes.javascript.NMLIO.taskDownload,
         controllers.admin.routes.javascript.NMLIO.projectDownload,
         controllers.admin.routes.javascript.NMLIO.userDownload,
@@ -53,7 +58,7 @@ object Application extends Controller with Secured {
   }
 
   def emptyMain = Authenticated { implicit request =>
-    Ok(views.html.main()(Html.empty))
+    Ok(views.html.main()(Html("")))
   }
 
   def impressum = UserAwareAction { implicit request =>

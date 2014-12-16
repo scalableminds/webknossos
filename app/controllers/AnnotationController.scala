@@ -9,7 +9,7 @@ import models.annotation._
 import play.api.libs.concurrent.Execution.Implicits._
 import net.liftweb.common._
 import views.html
-import play.api.templates.Html
+import play.twirl.api.Html
 import akka.util.Timeout
 import scala.concurrent.duration._
 import play.api.libs.iteratee.Enumerator
@@ -58,32 +58,22 @@ object AnnotationController extends Controller with Secured with TracingInformat
     withMergedAnnotation(typ, id, mergedId, mergedTyp, readOnly) { annotation =>
       for {
         _ <- annotation.restrictions.allowAccess(request.user).failIfFalse(Messages("notAllowed")).toFox ~> 400
-        json <- annotationJson(request.user, annotation)
+        temporary <- annotation.temporaryDuplicate(true)
+        explorational = temporary.copy(typ = AnnotationType.Explorational)
+        savedAnnotation <- explorational.saveToDB
+        json <- annotationJson(request.user, savedAnnotation)
       } yield {
+        //Redirect(routes.AnnotationController.trace(savedAnnotation.typ, savedAnnotation.id))
         JsonOk(json, Messages("annotation.merge.success"))
       }
     }
-  }
-
-  def saveMerged(typ: String, id: String) = Authenticated.async { implicit request =>
-      withAnnotation(AnnotationIdentifier(typ, id)) { annotation =>
-        for {
-          dataSetName <- annotation.dataSetName ?~> Messages("dataSet.notSupplied")
-          dataSet <- DataSetDAO.findOneBySourceName(dataSetName) ?~> Messages("dataSet.notFound")
-          temporary <- annotation.temporaryDuplicate(true)
-          explorational = temporary.copy(typ = AnnotationType.Explorational)
-          savedAnnotation <- explorational.saveToDB
-        } yield {
-          Redirect(routes.AnnotationController.trace(savedAnnotation.typ, savedAnnotation.id))
-        }
-      }
   }
 
   def trace(typ: String, id: String) = Authenticated.async { implicit request =>
       withAnnotation(AnnotationIdentifier(typ, id)) { annotation =>
           for {
             _ <- annotation.restrictions.allowAccess(request.user).failIfFalse(Messages("notAllowed")).toFox ~> 400
-          } yield Ok(htmlForAnnotation(annotation))
+          } yield Ok(empty)
       }
   }
 
@@ -122,7 +112,7 @@ object AnnotationController extends Controller with Secured with TracingInformat
             content <- annotation.content ?~> Messages("annotation.content.empty")
             stream <- content.toDownloadStream
           } yield {
-            Ok.stream(Enumerator.fromStream(stream).andThen(Enumerator.eof[Array[Byte]])).withHeaders(
+            Ok.chunked(stream.andThen(Enumerator.eof[Array[Byte]])).withHeaders(
               CONTENT_TYPE ->
                 "application/octet-stream",
               CONTENT_DISPOSITION ->
@@ -240,8 +230,8 @@ object AnnotationController extends Controller with Secured with TracingInformat
       }
   }
 
-  def htmlForAnnotation(annotation: AnnotationLike)(implicit request: AuthenticatedRequest[_]) = {
-    html.tracing.trace(annotation)(Html.empty)
+  def empty(implicit request: AuthenticatedRequest[_]) = {
+    views.html.main()(Html(""))
   }
 
   def annotationsForTask(taskId: String) = Authenticated.async { implicit request =>

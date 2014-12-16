@@ -1,9 +1,9 @@
 ### define
+backbone : Backbone
 oxalis/constants : constants
 keyboard : KeyboardJS
 gamepad : GamepadJS
 jquery.mousewheel : JQ_MOUSE_WHEEL
-./event_mixin : EventMixin
 ###
 
 Input = {}
@@ -188,7 +188,7 @@ class Input.Mouse
 
   constructor : (@$target, initialBindings, @id) ->
 
-    _.extend(this, new EventMixin())
+    _.extend(this, Backbone.Events)
 
     @leftMouseButton  = new MouseButton( "left",  1, this, @id )
     @rightMouseButton = new MouseButton( "right", 3, this, @id )

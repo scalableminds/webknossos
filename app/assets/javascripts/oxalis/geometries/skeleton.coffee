@@ -1,7 +1,7 @@
 ### define
+backbone : Backbone
 ../model : Model
 ../model/dimensions : Dimensions
-../../libs/event_mixin : EventMixin
 ../../libs/resizable_buffer : ResizableBuffer
 ../constants : constants
 ./tree : Tree
@@ -16,7 +16,7 @@ class Skeleton
 
   constructor : (@flycam, @model) ->
 
-    _.extend(this, new EventMixin())
+    _.extend(this, Backbone.Events)
 
     @skeletonTracing    = @model.skeletonTracing
     @treeGeometries = []
@@ -26,39 +26,31 @@ class Skeleton
 
     @reset()
 
-    @skeletonTracing.on
-      newActiveNode : =>
-        @setActiveNode()
-        @setInactiveTreeVisibility(@showInactiveTrees)
-      newActiveNodeRadius : =>
-        @setActiveNodeRadius()
-      newTree : (treeId, treeColor) =>
-        @createNewTree(treeId, treeColor)
-        @setInactiveTreeVisibility(@showInactiveTrees)
-      deleteTree : (index) => @deleteTree(index)
-      deleteActiveNode : (node, treeId) => @deleteNode(node, treeId)
-      mergeTree : (lastTreeID, lastNode, activeNode) =>
-        @mergeTree(lastTreeID, lastNode, activeNode)
-      newNode : (centered) => @setWaypoint(centered)
-      setBranch : (isBranchPoint, node) =>
-        @setBranch(isBranchPoint, node)
-      reloadTrees : (trees, finishedDeferred) =>
-        @skeletonTracing.one("finishedRender", =>
-          @skeletonTracing.one("finishedRender", =>
-            @loadSkeletonFromModel(trees, finishedDeferred))
-          @flycam.update())
-        @flycam.update()
-      newTreeColor : (treeId) => @updateTreeColor(treeId)
+    @listenTo(@skeletonTracing, "newActiveNode", (nodeId) ->
+      @setActiveNode()
+      @setInactiveTreeVisibility(@showInactiveTrees)
+    )
+    @listenTo(@skeletonTracing, "newActiveNodeRadius", @setActiveNodeRadius)
+    @listenTo(@skeletonTracing, "newTree", (treeId, treeColor) ->
+      @createNewTree(treeId, treeColor)
+      @setInactiveTreeVisibility(@showInactiveTrees)
+    )
+    @listenTo(@skeletonTracing, "deleteTree", @deleteTree)
+    @listenTo(@skeletonTracing, "deleteActiveNode", @deleteNode)
+    @listenTo(@skeletonTracing, "mergeTree", @mergeTree)
+    @listenTo(@skeletonTracing, "newNode", @setWaypoint)
+    @listenTo(@skeletonTracing, "setBranch", @setBranch)
+    @listenTo(@skeletonTracing, "newTreeColor", @updateTreeColor)
+    @listenTo(@skeletonTracing, "reloadTrees", @loadSkeletonFromModel)
 
-    @model.user.on "particleSizeChanged", (particleSize) =>
-      @setParticleSize(particleSize)
+    @listenTo(@model.user, "particleSizeChanged", @setParticleSize)
 
 
   createNewTree : (treeId, treeColor) ->
 
     @treeGeometries.push( tree = new Tree(treeId, treeColor, @model) )
     @setActiveNode()
-    @trigger "newGeometries", tree.getMeshes()
+    @trigger("newGeometries", tree.getMeshes())
 
 
   # Will completely reload the trees from model.
@@ -67,7 +59,7 @@ class Skeleton
   reset : ->
 
     for tree in @treeGeometries
-      @trigger "removeGeometries", tree.getMeshes()
+      @trigger("removeGeometries", tree.getMeshes())
       tree.dispose()
 
     @treeGeometries = []
@@ -75,11 +67,7 @@ class Skeleton
     for tree in @skeletonTracing.getTrees()
       @createNewTree(tree.treeId, tree.color)
 
-    @skeletonTracing.one("finishedRender", =>
-      @skeletonTracing.one("finishedRender", =>
-        @loadSkeletonFromModel())
-      @flycam.update())
-    @flycam.update()
+    @loadSkeletonFromModel()
 
 
   loadSkeletonFromModel : (trees, finishedDeferred) ->
@@ -138,16 +126,6 @@ class Skeleton
     treeGeometry = @getTreeGeometry(@skeletonTracing.getTree().treeId)
 
     treeGeometry.addNode(@skeletonTracing.getActiveNode())
-
-    # Animation to center waypoint position
-    position = @skeletonTracing.getActiveNodePos()
-    if centered
-      @waypointAnimation = new TWEEN.Tween({ globalPosX: curGlobalPos[0], globalPosY: curGlobalPos[1], globalPosZ: curGlobalPos[2], flycam: @flycam})
-      @waypointAnimation.to({globalPosX: position[0], globalPosY: position[1], globalPosZ: position[2]}, 200)
-      @waypointAnimation.onUpdate ->
-        @flycam.setPosition([@globalPosX, @globalPosY, @globalPosZ])
-      @waypointAnimation.start()
-
     @flycam.update()
 
 
@@ -173,7 +151,7 @@ class Skeleton
 
     treeGeometry = @treeGeometries[index]
 
-    @trigger "removeGeometries", treeGeometry.getMeshes()
+    @trigger("removeGeometries", treeGeometry.getMeshes())
     treeGeometry.dispose()
     @treeGeometries.splice(index, 1)
 
@@ -269,4 +247,4 @@ class Skeleton
   setSizeAttenuation : (sizeAttenuation) ->
 
     for tree in @treeGeometries
-      tree.setSizeAttenuation( sizeAttenuation )
+      tree.setSizeAttenuation(sizeAttenuation)

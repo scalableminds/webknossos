@@ -1,4 +1,5 @@
 ### define
+backbone : Backbone
 three : THREE
 ###
 
@@ -6,6 +7,8 @@ class AbstractMaterialFactory
 
 
   constructor : (@model) ->
+
+    _.extend(this, Backbone.Events)
 
     @setupAttributesAndUniforms()
     @makeMaterial()

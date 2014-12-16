@@ -8,7 +8,7 @@ import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json._
 import scala.concurrent.Future
 import com.scalableminds.util.tools.DefaultConverters._
-import play.api.templates.Html
+import play.twirl.api.Html
 import play.api.libs.json.JsSuccess
 import play.api.cache.Cache
 import org.apache.commons.codec.binary.Base64
@@ -37,7 +37,7 @@ object DataSetController extends Controller with Secured {
       for {
         dataSet <- DataSetDAO.findOneBySourceName(dataSetName) ?~> Messages("dataSet.notFound")
       } yield {
-        Ok(html.tracing.view(dataSet))
+        Ok(views.html.main()(Html("")))
       }
   }
 
@@ -63,11 +63,11 @@ object DataSetController extends Controller with Secured {
   }
 
   def empty = Authenticated{ implicit request =>
-    Ok(views.html.main()(Html.empty))
+    Ok(views.html.main()(Html("")))
   }
 
   def userAwareEmpty = UserAwareAction { implicit request =>
-    Ok(views.html.main()(Html.empty))
+    Ok(views.html.main()(Html("")))
   }
 
   def list = UserAwareAction.async{ implicit request =>

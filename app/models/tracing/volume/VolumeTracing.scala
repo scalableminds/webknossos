@@ -3,12 +3,16 @@ package models.tracing.volume
 import com.scalableminds.util.geometry.{Point3D, BoundingBox}
 import models.annotation.{AnnotationLike, AnnotationContentService, AnnotationContent, AnnotationSettings}
 import models.basics.SecuredBaseDAO
-import models.binary.UserDataLayerDAO
-import models.binary.DataSet
-import java.io.InputStream
+import models.binary._
+import java.io.{PipedOutputStream, PipedInputStream, InputStream}
+import net.liftweb.common.{Failure, Full}
+import play.api.Logger
+import play.api.i18n.Messages
+import play.api.libs.iteratee.{Enumerator, Iteratee}
 import play.api.libs.json.{Json, JsValue}
 import com.scalableminds.util.reactivemongo.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.tools.{FoxImplicits, Fox}
+import play.api.libs.ws.WS
 import reactivemongo.bson.BSONObjectID
 import play.modules.reactivemongo.json.BSONFormats._
 import play.api.libs.concurrent.Execution.Implicits._
@@ -22,16 +26,16 @@ import com.scalableminds.braingames.binary.models.{DataLayer, UserDataLayer, Dat
  * Time: 11:23
  */
 case class VolumeTracing(
-  dataSetName: String,
-  userDataLayerName: String,
-  activeCellId: Option[Int] = None,
-  timestamp: Long = System.currentTimeMillis(),
-  editPosition: Point3D = Point3D(0,0,0),
-  zoomLevel: Double,
-  boundingBox: Option[BoundingBox] = None,
-  settings: AnnotationSettings = AnnotationSettings.volumeDefault,
-  _id: BSONObjectID = BSONObjectID.generate)
-  extends AnnotationContent {
+                          dataSetName: String,
+                          userDataLayerName: String,
+                          activeCellId: Option[Int] = None,
+                          timestamp: Long = System.currentTimeMillis(),
+                          editPosition: Point3D = Point3D(0, 0, 0),
+                          zoomLevel: Double,
+                          boundingBox: Option[BoundingBox] = None,
+                          settings: AnnotationSettings = AnnotationSettings.volumeDefault,
+                          _id: BSONObjectID = BSONObjectID.generate)
+  extends AnnotationContent with FoxImplicits{
 
   def id = _id.stringify
 
@@ -71,12 +75,37 @@ case class VolumeTracing(
 
   def contentType: String = VolumeTracing.contentType
 
-  def toDownloadStream: Fox[InputStream] = ???
+  def toDownloadStream(implicit ctx: DBAccessContext): Fox[Enumerator[Array[Byte]]] = {
+    import play.api.Play.current
+    def createStream(url: String): Fox[Enumerator[Array[Byte]]] = {
+      val futureResponse = WS
+        .url(url)
+        .withQueryString("token" -> DataTokenService.oxalisToken)
+        .getStream()
 
-  def downloadFileExtension: String = ???
+      futureResponse.map {
+        case (headers, body) =>
+          if(headers.status == 200) {
+            Full(body)
+          } else {
+            Failure("Failed to retrieve content from data store. Status: " + headers.status)
+          }
+      }
+    }
+
+    for{
+      dataSource <- DataSetDAO.findOneBySourceName(dataSetName) ?~> Messages("dataSet.notFound")
+      urlToVolumeData = s"${dataSource.dataStoreInfo.url}/data/datasets/${dataSetName}/layers/${userDataLayerName}/download"
+      inputStream <- createStream(urlToVolumeData)
+    } yield {
+      inputStream
+    }
+  }
+
+  def downloadFileExtension: String = ".zip"
 
   override def contentData = {
-    UserDataLayerDAO.findOneByName(userDataLayerName)(GlobalAccessContext).map{ userDataLayer =>
+    UserDataLayerDAO.findOneByName(userDataLayerName)(GlobalAccessContext).map { userDataLayer =>
       Json.obj(
         "activeCell" -> activeCellId,
         "customLayers" -> List(AnnotationContent.dataLayerWrites.writes(userDataLayer.dataLayer)),
@@ -87,7 +116,7 @@ case class VolumeTracing(
   }
 }
 
-object VolumeTracingService extends AnnotationContentService with FoxImplicits{
+object VolumeTracingService extends AnnotationContentService with FoxImplicits {
   type AType = VolumeTracing
 
   def dao = VolumeTracingDAO
@@ -121,7 +150,7 @@ object VolumeTracingService extends AnnotationContentService with FoxImplicits{
   def clearTracingData(id: String)(implicit ctx: DBAccessContext): Fox[VolumeTracingService.AType] = ???
 }
 
-object VolumeTracing{
+object VolumeTracing {
   implicit val volumeTracingFormat = Json.format[VolumeTracing]
 
   val contentType = "volumeTracing"

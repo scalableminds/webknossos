@@ -23,7 +23,7 @@ class AnnotationRestrictions {
 
   def allowFinish(user: Option[User]): Boolean = false
 
-  def allowDownload(user: Option[User]): Boolean = false
+  def allowDownload(user: Option[User]): Boolean = allowAccess(user)
 
   def allowAccess(user: User): Boolean = allowAccess(Some(user))
 
@@ -66,13 +66,6 @@ object AnnotationRestrictions {
         user.map {
           user =>
             (annotation._user == Some(user._id) || user.roleInTeam(annotation.team) == Some(Role.Admin)) && !annotation.state.isFinished
-        } getOrElse false
-      }
-
-      override def allowDownload(user: Option[User]) = {
-        user.map {
-          user =>
-            allowAccess(user)
         } getOrElse false
       }
     }

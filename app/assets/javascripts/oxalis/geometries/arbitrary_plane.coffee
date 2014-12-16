@@ -1,4 +1,5 @@
 ### define
+backbone : backbone
 three : THREE
 m4x4 : M4x4
 v3 : V3
@@ -42,13 +43,12 @@ class ArbitraryPlane
 
   constructor : (@cam, @model, @width = 128) ->
 
+    _.extend(@, Backbone.Events)
+
     @mesh = @createMesh()
 
-    @cam.on "changed", =>
-      @isDirty = true
-
-    @model.flycam.on "positionChanged", =>
-      @isDirty = true
+    @listenTo(@cam, "changed", -> @isDirty = true)
+    @listenTo(@model.flycam, "positionChanged", -> @isDirty = true)
 
     for name, binary of @model.binary
       binary.cube.on "bucketLoaded", => @isDirty = true
@@ -78,10 +78,10 @@ class ArbitraryPlane
 
       matrix = cam.getZoomedMatrix()
 
-      newVertices = M4x4.transformPointsAffine matrix, @queryVertices
+      newVertices = M4x4.transformPointsAffine(matrix, @queryVertices)
       newColors = @model.getColorBinaries()[0].getByVerticesSync(newVertices)
 
-      @textureMaterial.setData "color", newColors
+      @textureMaterial.setData("color", newColors)
 
       m = cam.getZoomedMatrix()
 
@@ -90,7 +90,7 @@ class ArbitraryPlane
                       m[2], m[6], m[10], m[14],
                       m[3], m[7], m[11], m[15]
 
-      mesh.matrix.multiply( new THREE.Matrix4().makeRotationY( Math.PI ))
+      mesh.matrix.multiply(new THREE.Matrix4().makeRotationY(Math.PI))
       mesh.matrixWorldNeedsUpdate = true
 
       @isDirty = false

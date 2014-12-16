@@ -1,5 +1,6 @@
 ### define
-libs/event_mixin : EventMixin
+app : app
+backbone : Backbone
 three : THREE
 stats : Stats
 jquery : $
@@ -23,9 +24,9 @@ class ArbitraryView
   camera : null
   cameraPosition : null
 
-  constructor : (canvas, @dataCam, @stats, @view, scaleInfo, width) ->
+  constructor : (canvas, @dataCam, @stats, @view, width) ->
 
-    _.extend(this, new EventMixin())
+    _.extend(this, Backbone.Events)
 
     # CAM_DISTANCE has to be calculates such that with cam
     # angle 45°, the plane of width 128 fits exactly in the
@@ -51,7 +52,7 @@ class ArbitraryView
 
     @group = new THREE.Object3D
     # The dimension(s) with the highest resolution will not be distorted
-    @group.scale = new THREE.Vector3(scaleInfo.nmPerVoxel...)
+    @group.scale = new THREE.Vector3(app.scaleInfo.nmPerVoxel...)
     # Add scene to the group, all Geometries are than added to group
     @scene.add(@group)
     @group.add(camera)
@@ -67,7 +68,6 @@ class ArbitraryView
         element.setVisibility true
 
       $("#arbitrary-info-canvas").show()
-      $('#trace-rotation').show()
 
       @resize()
       # start the rendering loop
@@ -86,7 +86,6 @@ class ArbitraryView
         element.setVisibility false
 
       $("#arbitrary-info-canvas").hide()
-      $('#trace-rotation').hide()
 
       $(window).off "resize", @resize
 
@@ -112,8 +111,8 @@ class ArbitraryView
                         m[2], m[6], m[10], m[14],
                         m[3], m[7], m[11], m[15]
 
-      camera.matrix.multiply( new THREE.Matrix4().makeRotationY( Math.PI ))
-      camera.matrix.multiply( new THREE.Matrix4().makeTranslation( @cameraPosition... ))
+      camera.matrix.multiply(new THREE.Matrix4().makeRotationY(Math.PI))
+      camera.matrix.multiply(new THREE.Matrix4().makeTranslation(@cameraPosition...))
       camera.matrixWorldNeedsUpdate = true
 
       f = @deviceScaleFactor
@@ -125,8 +124,6 @@ class ArbitraryView
       renderer.render scene, camera
 
       forceUpdate = false
-
-      @trigger("finishedRender")
 
     window.requestAnimationFrame => @animate()
 

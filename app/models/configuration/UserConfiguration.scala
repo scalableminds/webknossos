@@ -1,4 +1,4 @@
-package models.user
+package models.configuration
 
 import play.api.Play.current
 import com.scalableminds.util.security.SCrypt._
@@ -8,18 +8,19 @@ import play.api.libs.json.JsBoolean
 import play.api.libs.json._
 import models.basics.BasicSettings
 
-case class UserSettings(
-    settings: Map[String, JsValue]) {
+case class UserConfiguration(configuration: Map[String, JsValue]) {
 
-  def settingsOrDefaults = {
-    UserSettings.defaultSettings.settings ++ settings
+  def configurationOrDefaults = {
+    UserConfiguration.default.configuration ++ configuration
   }
+
 }
 
-object UserSettings extends BasicSettings{
-  implicit val userConfigurationFormat = Json.format[UserSettings]
+object UserConfiguration extends BasicSettings {
 
-  val defaultSettings = UserSettings(
+  implicit val userConfigurationFormat = Json.format[UserConfiguration]
+
+  val default = UserConfiguration(
     Map(
       "moveValue" -> JsNumber(300),
       "moveValue3d" -> JsNumber(300),
@@ -32,7 +33,6 @@ object UserSettings extends BasicSettings{
       "dynamicSpaceDirection" -> JsBoolean(true),
       "displayCrosshair" -> JsBoolean(true),
       "interpolation" -> JsBoolean(false),
-      "fourBit" -> JsBoolean(false),
       "brightnessContrastSettings" -> Json.obj(
         "default" -> Json.obj(
           "brightness" -> 0,
@@ -47,7 +47,6 @@ object UserSettings extends BasicSettings{
           "contrast" -> 2.4
         )
       ),
-      "quality" -> JsNumber(0),
       "zoom" -> JsNumber(2),
       "scale" -> JsNumber(1),
       "tdViewDisplayPlanes" -> JsBoolean(true),

@@ -3,6 +3,7 @@ package models.annotation
 import java.util.Date
 import com.scalableminds.util.geometry.{BoundingBox, Scale, Point3D}
 import java.io.InputStream
+import play.api.libs.iteratee.Enumerator
 import play.api.libs.json._
 import play.api.libs.functional.syntax._
 import com.scalableminds.braingames.binary.models.{FallbackLayer, DataLayer}
@@ -41,7 +42,7 @@ trait AnnotationContent {
 
   def contentType: String
 
-  def toDownloadStream: Fox[InputStream]
+  def toDownloadStream(implicit ctx: DBAccessContext): Fox[Enumerator[Array[Byte]]]
 
   def downloadFileExtension: String
 

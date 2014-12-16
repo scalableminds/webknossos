@@ -45,12 +45,6 @@ class DatasetListView extends Backbone.Marionette.CompositeView
 
   initialize : ->
 
-    # @collection.fetch(
-    #   silent : true
-    #   data : "isEditable=true"
-    # ).done( =>
-    #   @collection.goTo(1)
-    # )
     @collection.goTo(1)
 
     @listenTo(app.vent, "paginationView:filter", @filter)

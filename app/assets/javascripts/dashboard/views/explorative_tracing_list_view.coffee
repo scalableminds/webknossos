@@ -89,7 +89,6 @@ class ExplorativeTracingListView extends Backbone.Marionette.CompositeView
     @datasets = new DatasetCollection()
     @collection = new UserAnnotationsCollection([], userID : @options.userID)
 
-    #@listenTo(@collection, "sync", @render)
     $.when(
       @datasets.fetch(silent : true)
       @collection.fetch()

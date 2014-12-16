@@ -67,28 +67,26 @@ class DashboardView extends Backbone.Marionette.LayoutView
 
   showDatasets : ->
 
-    unless view = @viewCache["datasetSwitchView"]
-      view = @viewCache["datasetSwitchView"] = new DatasetSwitchView(@options)
-    @tabPane.show(view, preventDestroy : true)
+    @showTab("datasetSwitchView", DatasetSwitchView)
 
 
   showTasks : ->
 
-    unless view = @viewCache["taskListView"]
-      view = @viewCache["taskListView"] = new DashboardTaskListView(@options)
-    @tabPane.show(view, preventDestroy : true)
+    @showTab("taskListView", DashboardTaskListView)
 
 
   showExplorative : ->
 
-    unless view = @viewCache["explorativeTracingListView"]
-      view = @viewCache["explorativeTracingListView"] = new ExplorativeTracingListView(@options)
-    @tabPane.show(view, preventDestroy : true)
+    @showTab("explorativeTracingListView", ExplorativeTracingListView)
 
 
   showLoggedTime : ->
 
-    unless view = @viewCache["loggedTimeView"]
-      view = @viewCache["loggedTimeView"] = new LoggedTimeView(@options)
-    @tabPane.show(view, preventDestroy : true)
+    @showTab("loggedTimeView", LoggedTimeView)
 
+
+  showTab : (viewName, viewClass) ->
+
+    unless view = @viewCache[viewName]
+      view = @viewCache[viewName] = new viewClass(@options)
+    @tabPane.show(view, preventDestroy : true)

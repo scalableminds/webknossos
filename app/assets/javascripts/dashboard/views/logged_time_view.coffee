@@ -35,6 +35,8 @@ class LoggedTimeView extends Backbone.Marionette.LayoutView
   onRender : ->
 
     @timeTable.show(new LoggedTimeListView({@collection}))
+    if @collection.length > 0
+      _.defer( => @addGraph())
 
 
   addGraph : ->

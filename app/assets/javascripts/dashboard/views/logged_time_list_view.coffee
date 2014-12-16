@@ -30,9 +30,4 @@ class LoggedTimeListView extends Backbone.Marionette.ItemView
     FormatUtils : FormatUtils
 
 
-  initialize : ->
-
-    @listenTo(@collection, "sync", @render)
-
-
 

@@ -210,8 +210,11 @@ class Tree
       isActiveNode  = isActiveNode  || @model.skeletonTracing.getActiveNodeId() == id
       isBranchPoint = isBranchPoint || @model.skeletonTracing.isBranchPoint(id)
 
-      if not isActiveNode
+      if isActiveNode
+        color = @shiftHex(color, 1/4)
+      else
         color = @darkenHex(color)
+
       if isBranchPoint
         color = @invertHex(color)
 
@@ -257,8 +260,13 @@ class Tree
     ColorConverter.setHSV(new THREE.Color(), hsvColor.h, hsvColor.s, hsvColor.v).getHex()
 
 
-  invertHex : (hexColor) ->
+  shiftHex : (hexColor, shiftValue) ->
 
     hsvColor = ColorConverter.getHSV(new THREE.Color().setHex(hexColor))
-    hsvColor.h = (hsvColor.h + 0.5) % 1
+    hsvColor.h = (hsvColor.h + shiftValue) % 1
     ColorConverter.setHSV(new THREE.Color(), hsvColor.h, hsvColor.s, hsvColor.v).getHex()
+
+
+  invertHex : (hexColor) ->
+
+    @shiftHex(hexColor, 0.5)

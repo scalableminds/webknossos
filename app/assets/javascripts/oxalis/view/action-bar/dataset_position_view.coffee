@@ -68,6 +68,7 @@ class DatasetPositionView extends Backbone.Marionette.ItemView
     posArray = Utils.stringToNumberArray(event.target.value)
     if posArray.length == 3
       @model.flycam.setPosition(posArray)
+      app.vent.trigger("centerTDView")
 
 
   changeRotation : (event) ->

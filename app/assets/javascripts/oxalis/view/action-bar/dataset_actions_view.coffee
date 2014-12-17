@@ -20,7 +20,7 @@ class DatsetActionsView extends Backbone.Marionette.ItemView
         <a href="/annotations/<%= tracingType %>/<%= tracingId %>/finishAndRedirect" class="btn btn-default" id="trace-finish-button"><i class="fa fa-check-circle-o"></i>Finish</a>
       <% } %>
       <% if(tracing.restrictions.allowDownload || ! tracing.downloadUrl) { %>
-        <a href="<%= tracing.downloadUrl %>" class="btn btn-default" id="trace-download-button"><i class="fa fa-download"></i>Download</a>
+        <a class="btn btn-default" id="trace-download-button"><i class="fa fa-download"></i>Download</a>
       <% } %>
       <a href="#help-modal" class="btn btn-default" data-toggle="modal"><i class="fa fa-question-circle"></i>Help</a>
     </div>
@@ -60,7 +60,7 @@ class DatsetActionsView extends Backbone.Marionette.ItemView
       </div>
     </div>
     <% if (isSkeletonMode) { %>
-      <div class="btn btn-default" id="trace-merge-button">Merge Tracing</div>
+      <div class="btn btn-default" id="trace-merge-button"><i class="fa fa-folder-open"></i>Merge Tracing</div>
       <div class="merge-modal-wrapper"></div>
     <% } %>
   """)
@@ -92,7 +92,7 @@ class DatsetActionsView extends Backbone.Marionette.ItemView
 
     evt.preventDefault()
     @saveTracing()
-    window.location.href = evt.currentTarget.href
+    window.location.href = @model.tracing.downloadUrl
 
 
   saveTracing : (evt) ->

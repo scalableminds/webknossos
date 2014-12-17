@@ -4,6 +4,7 @@ app : app
 ./action_bar_view : ActionBarView
 ./settings/settings_tab_view : SettingsTabView
 ./skeletontracing/skeletontracing_right_menu_view : SkeletonTracingRightMenuView
+./volumetracing/volumetracing_right_menu_view : VolumeTracingRightMenuView
 ./tracing_view : TracingView
 oxalis/controller : OxalisController
 oxalis/model : OxalisModel
@@ -75,7 +76,10 @@ class TracingLayoutView extends Backbone.Marionette.LayoutView
 
       if @isSkeletonMode()
         @rightMenuView = new SkeletonTracingRightMenuView(@options)
-        @rightMenu.show(@rightMenuView)
+      else
+        @rightMenuView = new VolumeTracingRightMenuView(@options)
+
+      @rightMenu.show(@rightMenuView)
 
 
   isTracingMode : ->

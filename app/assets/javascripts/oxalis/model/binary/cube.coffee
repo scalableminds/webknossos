@@ -97,11 +97,11 @@ class Cube
 
   setMapping : (newMapping) ->
 
-    # TODO: Remove, only for simulation purposes
-    if not newMapping.length
-      newMapping = new newMapping.constructor(1 << @BIT_DEPTH)
-      for i in [0...(1 << @BIT_DEPTH)]
-        newMapping[i] = if i == 0 then 0 else i + 1
+    # Generate fake mapping
+    #if not newMapping.length
+    #  newMapping = new newMapping.constructor(1 << @BIT_DEPTH)
+    #  for i in [0...(1 << @BIT_DEPTH)]
+    #    newMapping[i] = if i == 0 then 0 else i + 1
 
     if @currentMapping == @mapping
       @currentMapping = newMapping

@@ -127,9 +127,6 @@ class Controller
       if @urlManager.initialState.mode? and @urlManager.initialState.mode != @model.mode
         app.vent.trigger("changeViewMode", @urlManager.initialState.mode)
 
-      # initial trigger
-      @sceneController.setSegmentationAlpha(@model.user.get("segmentationOpacity"))
-
       # Zoom step warning
       @zoomStepWarningToast = null
       @model.flycam.on

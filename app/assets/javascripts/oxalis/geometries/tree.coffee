@@ -47,6 +47,7 @@ class Tree
     @edgesBuffer.clear()
     @sizesBuffer.clear()
     @nodeIDs.clear()
+    @updateNodesColors()
 
 
   isEmpty : ->
@@ -177,7 +178,7 @@ class Tree
   updateNodesColors : ->
 
     @nodesColorBuffer.clear()
-    for i in [0..@nodeIDs.length]
+    for i in [0...@nodeIDs.length]
       @nodesColorBuffer.push(@getColor(@nodeIDs.get(i)))
 
     @updateGeometries()

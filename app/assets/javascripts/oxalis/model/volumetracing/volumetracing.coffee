@@ -28,7 +28,9 @@ class VolumeTracing
 
     @createCell(@contentData.activeCell)
 
-    @binary.cube.on("newMapping", => @trigger("newActiveCell", @getActiveCellId()))
+    @listenTo(@binary.cube, "newMapping", ->
+      @trigger("newActiveCell", @getActiveCellId())
+    )
 
     # For testing
     window.setAlpha = (v) -> Drawing.setAlpha(v)

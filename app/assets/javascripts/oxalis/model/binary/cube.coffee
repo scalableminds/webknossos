@@ -16,11 +16,11 @@ class Cube
   ARBITRARY_MAX_ZOOMSTEP : 2
 
   LOADING_PLACEHOLDER : {}
+  EMPTY_MAPPING : []
 
   arbitraryCube : null
   dataCubes : null
   upperBoundary : null
-  mapping : []
 
   buckets : null
   bucketIterator : 0
@@ -53,6 +53,9 @@ class Cube
     @cubes = []
     @buckets = new Array(@MAXIMUM_BUCKET_COUNT)
 
+    @mapping = @EMPTY_MAPPING
+    @currentMapping = @mapping
+
     # Initializing the cube-arrays with boundaries
     cubeBoundary = [
       Math.ceil(@upperBoundary[0] / (1 << @BUCKET_SIZE_P))
@@ -79,6 +82,38 @@ class Cube
   setPushQueue : (pushQueue) ->
 
     @pushQueue = pushQueue
+
+
+  setMappingEnabled : (isEnabled) ->
+
+    @currentMapping = if isEnabled then @mapping else @EMPTY_MAPPING
+    @trigger("newMapping")
+
+
+  hasMapping : ->
+
+    return @mapping.length != 0
+
+
+  setMapping : (newMapping) ->
+
+    # Generate fake mapping
+    #if not newMapping.length
+    #  newMapping = new newMapping.constructor(1 << @BIT_DEPTH)
+    #  for i in [0...(1 << @BIT_DEPTH)]
+    #    newMapping[i] = if i == 0 then 0 else i + 1
+
+    if @currentMapping == @mapping
+      @currentMapping = newMapping
+    @mapping = newMapping
+
+    @trigger("newMapping")
+
+
+  mapId : (idToMap) ->
+
+    mappedId = @currentMapping[idToMap]
+    return if mappedId? then mappedId else idToMap
 
 
   getArbitraryCube : ->
@@ -320,7 +355,7 @@ class Cube
           if Math.sqrt((x-100) * (x-100) + (y-100) * (y-100) + (z-100) * (z-100)) <= 20
             @labelVoxel([x, y, z], 5)
 
-    @trigger("volumeLabled")
+    @trigger("volumeLabeled")
 
 
   labelVoxels : (iterator, label) ->
@@ -330,7 +365,7 @@ class Cube
       @labelVoxel(voxel, label)
 
     @pushQueue.push()
-    @trigger("volumeLabled")
+    @trigger("volumeLabeled")
 
 
   labelVoxel : (voxel, label) ->
@@ -356,7 +391,7 @@ class Cube
         @pushQueue.insert(@positionToZoomedAddress(voxel))
 
 
-  getDataValue : ( voxel ) ->
+  getDataValue : ( voxel, mapping=@EMPTY_MAPPING ) ->
 
     { bucket, voxelIndex} = @getBucketAndVoxelIndex( voxel, 0 )
 
@@ -367,12 +402,17 @@ class Cube
       for i in [0...@BYTE_OFFSET]
         result += (1 << (8 * i)) * bucket[ voxelIndex + i]
 
-      if @mapping?[result]?
-        return @mapping[result]
+      if mapping?[result]?
+        return mapping[result]
 
       return result
 
-    return null
+    return 0
+
+
+  getMappedDataValue : (voxel) ->
+
+    return @getDataValue(voxel, @currentMapping)
 
 
   getBucketAndVoxelIndex : (voxel, zoomStep, createBucketIfUndefined = false ) ->

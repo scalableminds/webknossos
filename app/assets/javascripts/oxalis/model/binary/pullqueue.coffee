@@ -37,7 +37,9 @@ class PullQueue
         dataType : 'arraybuffer'
       ).then( (buffer) =>
         if buffer
-          @cube.mapping = new (if @layer.bitDepth == 16 then Uint16Array else Uint32Array)(buffer)
+          @cube.setMapping(
+            new (if @layer.bitDepth == 16 then Uint16Array else Uint32Array)(buffer)
+          )
       )
 
 

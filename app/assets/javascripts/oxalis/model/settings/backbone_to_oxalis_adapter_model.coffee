@@ -91,13 +91,15 @@ class BackboneToOxalisAdapterModel extends Backbone.Model
       # Update values after OxalisModel is done syncing
       @volumeTracingModel = @oxalisModel.volumeTracing
 
-      @volumeTracingAdapter.set("activeCellId", @volumeTracingModel.getActiveCellId())
+      @volumeTracingAdapter.set("mappedActiveCellId", @volumeTracingModel.getMappedActiveCellId())
       @volumeTracingAdapter.createCell = @volumeTracingModel.createCell.bind(@volumeTracingModel)
 
 
       # ####################################
       # Listen to changes in the OxalisModel
-      @listenTo(@volumeTracingModel, "newActiveCell", (id) -> @volumeTracingAdapter.set("activeCellId", id))
+      @listenTo(@volumeTracingModel, "newActiveCell", ->
+        @volumeTracingAdapter.set("mappedActiveCellId", @volumeTracingModel.getMappedActiveCellId())
+      )
 
 
       # ######################################

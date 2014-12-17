@@ -28,6 +28,10 @@ class VolumeTracing
 
     @createCell(@contentData.activeCell)
 
+    @listenTo(@binary.cube, "newMapping", ->
+      @trigger("newActiveCell", @getActiveCellId())
+    )
+
     # For testing
     window.setAlpha = (v) -> Drawing.setAlpha(v)
     window.setSmoothLength = (v) -> Drawing.setSmoothLength(v)
@@ -86,6 +90,11 @@ class VolumeTracing
       return @activeCell.id
     else
       return 0
+
+
+  getMappedActiveCellId : ->
+
+    return @binary.cube.mapId(@getActiveCellId())
 
 
   setActiveCell : (id) ->

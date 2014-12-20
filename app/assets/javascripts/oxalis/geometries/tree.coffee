@@ -15,7 +15,8 @@ class Tree
 
     edgeGeometry.addAttribute('position', Float32Array, 0, 3)
     nodeGeometry.addAttribute('position', Float32Array, 0, 3)
-    nodeGeometry.addAttribute('size', Float32Array, 0, 1)
+    nodeGeometry.addAttribute('sizeNm', Float32Array, 0, 1)
+    nodeGeometry.addAttribute('nodeScaleFactor', Float32Array, 0, 1)
     nodeGeometry.addAttribute('color', Float32Array, 0, 3)
 
     @nodeIDs = nodeGeometry.nodeIDs = new ResizableBuffer(1, 100, Int32Array)
@@ -24,7 +25,8 @@ class Tree
 
     @edgesBuffer = edgeGeometry.attributes.position._rBuffer = new ResizableBuffer(6)
     @nodesBuffer = nodeGeometry.attributes.position._rBuffer = new ResizableBuffer(3)
-    @sizesBuffer = nodeGeometry.attributes.size._rBuffer = new ResizableBuffer(1)
+    @sizesBuffer = nodeGeometry.attributes.sizeNm._rBuffer = new ResizableBuffer(1)
+    @scalesBuffer = nodeGeometry.attributes.nodeScaleFactor._rBuffer = new ResizableBuffer(1)
     @nodesColorBuffer = nodeGeometry.attributes.color._rBuffer = new ResizableBuffer(3)
 
     @edges = new THREE.Line(
@@ -46,6 +48,7 @@ class Tree
     @nodesBuffer.clear()
     @edgesBuffer.clear()
     @sizesBuffer.clear()
+    @scalesBuffer.clear()
     @nodeIDs.clear()
     @updateNodesColors()
 
@@ -59,6 +62,7 @@ class Tree
 
     @nodesBuffer.push(node.pos)
     @sizesBuffer.push([node.radius * 2])
+    @scalesBuffer.push([1.0])
     @nodeIDs.push([node.id])
     @nodesColorBuffer.push(@getColor(node.id))
 
@@ -97,6 +101,7 @@ class Tree
     swapLast( @nodeIDs, nodesIndex )
     swapLast( @nodesBuffer, nodesIndex )
     swapLast( @sizesBuffer, nodesIndex )
+    swapLast( @scalesBuffer, nodesIndex )
     swapLast( @nodesColorBuffer, nodesIndex )
 
     # Delete Edge by finding it in the array
@@ -126,6 +131,7 @@ class Tree
     merge("nodesBuffer")
     merge("edgesBuffer")
     merge("sizesBuffer")
+    merge("scalesBuffer")
     @edgesBuffer.push(@getEdgeArray(lastNode, activeNode))
 
     @updateNodesColors()
@@ -200,6 +206,40 @@ class Tree
         @sizesBuffer.set([radius * 2], i)
 
     @updateGeometries()
+
+
+  startNodeHighlightAnimation : (nodeId) ->
+
+    for i in [0..@nodeIDs.length]
+      if @nodeIDs.get(i) == nodeId
+        index = i
+
+    return unless index?
+
+    normal = 1.0
+    highlighted = 2.0
+
+    @animateNodeScale(normal, highlighted, index, =>
+      @animateNodeScale(highlighted, normal, index)
+    )
+
+
+  animateNodeScale : (from, to, index, onComplete = ->) ->
+
+    setScaleFactor = (factor) =>
+      @scalesBuffer.set([factor], index)
+    redraw = =>
+      @updateGeometries()
+      @model.flycam.update()
+    onUpdate = ->
+      setScaleFactor(@scaleFactor)
+      redraw()
+
+    (new TWEEN.Tween({scaleFactor : from}))
+      .to({scaleFactor : to}, 100)
+      .onUpdate(onUpdate)
+      .onComplete(onComplete)
+      .start()
 
 
   getColor : (id, isActiveNode, isBranchPoint) ->

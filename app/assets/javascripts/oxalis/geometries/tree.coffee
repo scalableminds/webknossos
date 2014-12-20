@@ -89,12 +89,7 @@ class Tree
       for i in [0...array.elementLength]
         array.getAllElements()[index * array.elementLength + i] = lastElement[i]
 
-    # Find index
-    for i in [0...@nodeIDs.getLength()]
-      if @nodeIDs.get(i) == node.id
-        nodesIndex = i
-        break
-
+    nodesIndex = @getNodeIndex(node.id)
     $.assert(nodesIndex?, "No node found.", { id : node.id, @nodeIDs })
 
     # swap IDs and nodes
@@ -192,35 +187,31 @@ class Tree
 
   updateNodeColor : (id, isActiveNode, isBranchPoint) ->
 
-    for i in [0..@nodeIDs.length]
-      if @nodeIDs.get(i) == id
-        @nodesColorBuffer.set(@getColor(id, isActiveNode, isBranchPoint), i)
+    @doWithNodeIndex(id, (index) =>
+      @nodesColorBuffer.set(@getColor(id, isActiveNode, isBranchPoint), index)
+    )
 
     @updateGeometries()
 
 
   updateNodeRadius : (id, radius) ->
 
-    for i in [0..@nodeIDs.length]
-      if @nodeIDs.get(i) == id
-        @sizesBuffer.set([radius * 2], i)
+    @doWithNodeIndex(id, (index) =>
+      @sizesBuffer.set([radius * 2], index)
+    )
 
     @updateGeometries()
 
 
   startNodeHighlightAnimation : (nodeId) ->
 
-    for i in [0..@nodeIDs.length]
-      if @nodeIDs.get(i) == nodeId
-        index = i
-
-    return unless index?
-
     normal = 1.0
     highlighted = 2.0
 
-    @animateNodeScale(normal, highlighted, index, =>
-      @animateNodeScale(highlighted, normal, index)
+    @doWithNodeIndex(nodeId, (index) =>
+      @animateNodeScale(normal, highlighted, index, =>
+        @animateNodeScale(highlighted, normal, index)
+      )
     )
 
 
@@ -283,6 +274,20 @@ class Tree
     console.log "nodesBuffer", @nodesBuffer.toString()
     console.log "edgesBuffer", @edgesBuffer.toString()
     console.log "sizesBuffer", @sizesBuffer.toString()
+
+
+  getNodeIndex : (nodeId) ->
+
+    for i in [0..@nodeIDs.length]
+      if @nodeIDs.get(i) == nodeId
+        return i
+
+
+  doWithNodeIndex : (nodeId, f) ->
+
+    index = @getNodeIndex(nodeId)
+    return unless index?
+    f(index)
 
 
   #### Color utility methods

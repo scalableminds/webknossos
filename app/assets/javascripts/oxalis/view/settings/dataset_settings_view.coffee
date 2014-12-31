@@ -10,7 +10,7 @@ class DatasetSettingsView extends SettingsView
   id : "dataset-settings"
 
 
-  modelName : "dataset"
+  modelName : "datasetConfiguration"
 
 
   subviewCreators :

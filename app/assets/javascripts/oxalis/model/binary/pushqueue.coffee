@@ -1,20 +1,24 @@
 ### define
 underscore : _
+jquery : $
 libs/array_buffer_socket : ArrayBufferSocket
 libs/unit8array_builder : Uint8ArrayBuilder
-gzip : gzip
+libs/deferred_worker : DeferredWorker
 ###
 
 class PushQueue
 
   BATCH_LIMIT : 1
-  BATCH_SIZE : 10
+  BATCH_SIZE : 32
   THROTTLE_TIME : 10000
 
 
   constructor : (@dataSetName, @cube, @layer, @tracingId, @updatePipeline, @sendData = true) ->
 
     @queue = []
+    @compressionWorker = new DeferredWorker(
+        '/assets/javascripts/oxalis/model/binary/gzip_worker.js'
+    )
 
     @getParams =
       cubeSize : 1 << @cube.BUCKET_SIZE_P
@@ -95,10 +99,16 @@ class PushQueue
 
     @updatePipeline.executePassAlongAction =>
 
-      console.log "Pushing batch", batch
-      gzip = new Zlib.Gzip(transmitBuffer)
-      transmitBuffer = gzip.compress()
-      @getSendSocket().send(transmitBuffer)
+      deferred = $.Deferred()
+      @compressionWorker
+        .execute(transmitBuffer)
+        .done( (result) =>
+          console.log "Compressing time:", result.time
+          @getSendSocket()
+            .send(result.buffer)
+            .done(-> deferred.resolve())
+        )
+      return deferred.promise()
 
 
   getSendSocket : ->

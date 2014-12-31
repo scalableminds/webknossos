@@ -34,6 +34,10 @@ class SceneController
     @createMeshes()
     @bindToEvents()
 
+    @listenTo(@model.user, "change:segmentationOpacity", (model, opacity) ->
+      @setSegmentationAlpha(opacity)
+    )
+
 
   createMeshes : ->
     # Cubes

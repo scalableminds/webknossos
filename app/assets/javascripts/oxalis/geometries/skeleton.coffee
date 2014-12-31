@@ -167,6 +167,7 @@ class Skeleton
     if (activeNode = @model.skeletonTracing.getActiveNode())?
       treeGeometry = @getTreeGeometry(activeNode.treeId)
       treeGeometry?.updateNodeColor(activeNode.id, true)
+      treeGeometry?.startNodeHighlightAnimation(activeNode.id)
 
     @lastActiveNode = activeNode
 

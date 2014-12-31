@@ -5,7 +5,7 @@ app : app
 ./model/binary : Binary
 ./model/skeletontracing/skeletontracing : SkeletonTracing
 ./model/user : User
-./model/dataset : Dataset
+./model/dataset_configuration : DatasetConfiguration
 ./model/volumetracing/volumetracing : VolumeTracing
 ./model/binarydata_connection_info : ConnectionInfo
 ./model/scaleinfo : ScaleInfo
@@ -34,6 +34,7 @@ class Model extends Backbone.Model
       dataType : "json"
     ).pipe (tracing) =>
 
+      @datasetName = tracing.content.dataSet.name
 
       if tracing.error
         Toast.error(tracing.error)
@@ -44,9 +45,8 @@ class Model extends Backbone.Model
         return {"error" : true}
 
       else unless tracing.content.dataSet.dataLayers
-        datasetName = tracing.content.dataSet.name
-        if datasetName
-          Toast.error("Please, double check if you have the dataset '#{dataSetName}' imported.")
+        if @datasetName
+          Toast.error("Please, double check if you have the dataset '#{@datasetName}' imported.")
         else
           Toast.error("Please, make sure you have a dataset imported.")
         return {"error" : true}
@@ -56,8 +56,9 @@ class Model extends Backbone.Model
         @user = new User()
         @user.fetch().pipe( =>
 
-          @set("dataset", new Dataset(tracing.content.dataSet))
-          @get("dataset").fetch().pipe( =>
+          @set("dataset", new Backbone.Model(tracing.content.dataSet))
+          @set("datasetConfiguration", new DatasetConfiguration({@datasetName}))
+          @get("datasetConfiguration").fetch().pipe( =>
 
             layers  = @getLayers(tracing.content.contentData.customLayers)
 
@@ -98,7 +99,6 @@ class Model extends Backbone.Model
         }
 
     @connectionInfo = new ConnectionInfo()
-    @datasetName = dataset.name
     @binary = {}
 
     maxResolution = Math.max(_.union(layers.map((layer) ->
@@ -155,12 +155,11 @@ class Model extends Backbone.Model
   getDataTokens : (layers) ->
 
     dataStoreUrl = @get("dataset").get("dataStore").url
-    dataSetName = @get("dataset").get("name")
 
     for layer in layers
-      do (layer) ->
+      do (layer) =>
         Request.send(
-          url : "/dataToken/generate?dataSetName=#{dataSetName}&dataLayerName=#{layer.name}"
+          url : "/dataToken/generate?dataSetName=#{@datasetName}&dataLayerName=#{layer.name}"
           dataType : "json"
         ).pipe (dataStore) ->
           layer.token = dataStore.token
@@ -183,8 +182,8 @@ class Model extends Backbone.Model
 
   setDefaultBinaryColors : ->
 
-    dataset = @get("dataset")
-    layerColors = dataset.get("layerColors")
+    datasetConfig = @get("datasetConfiguration")
+    layerColors = datasetConfig.get("layerColors")
     colorBinaries = @getColorBinaries()
 
     if colorBinaries.length == 1
@@ -198,7 +197,7 @@ class Model extends Backbone.Model
         color = layerColors[binary.name]
       else
         color = defaultColors[i % defaultColors.length]
-      dataset.set("layerColors.#{binary.name}", color)
+      datasetConfig.set("layerColors.#{binary.name}", color)
 
 
   getLayers : (userLayers) ->

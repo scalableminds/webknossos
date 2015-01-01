@@ -250,11 +250,12 @@ class DataRequestActor(
                 maxBlock.x - minBlock.x + 1, maxBlock.y - minBlock.y + 1, maxBlock.z - minBlock.z + 1,
                 layer.bytesPerElement,
                 0.toByte)
-          }.map {
+          }.flatMap {
             block =>
               val blocks = new DataBlockWriter(block, request, layer, pointOffset).writeSuppliedData
-              Future.sequence(saveBlocks(minBlock, maxBlock, dataRequest, layer, blocks, writeLock))
-              Array[Byte]()
+              Future.sequence(saveBlocks(minBlock, maxBlock, dataRequest, layer, blocks, writeLock)).map{
+                _ => Array[Byte]()
+              }
           }
         }
     }

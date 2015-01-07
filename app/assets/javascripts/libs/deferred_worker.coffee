@@ -3,24 +3,31 @@ jquery : $
 ###
 
 # Wraps WebWorker to return $.Deferred objects
+# The Worker has to accept {jobId, data} objects and
+# post messages with {jobId, result}
 class DeferredWorker
 
 
   constructor : (jsFilePath) ->
 
     @webWorker = new Worker(jsFilePath)
+    @jobs = {}
+    @jobIdCounter = 0
+
+    @webWorker.onmessage = (evt) => @onMessage(evt.data)
 
 
   execute : (data) ->
 
-    deferred = $.Deferred( =>
+    jobId = @jobIdCounter++
+    @jobs[jobId] = $.Deferred()
 
-      @webWorker.onmessage = (evt) ->
-        deferred.resolve(evt.data)
-      @webWorker.onError = (evt) ->
-        deferred.reject(evt)
+    @webWorker.postMessage({data, jobId})
 
-      @webWorker.postMessage(data)
-    )
+    return @jobs[jobId]
 
-    return deferred.promise()
+
+  onMessage : ({jobId, result}) ->
+
+    @jobs[jobId].resolve(result)
+    delete @jobs[jobId]

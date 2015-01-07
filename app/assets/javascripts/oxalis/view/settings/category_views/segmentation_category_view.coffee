@@ -21,3 +21,9 @@ class SegementationCategoryView extends CategoryView
           max : 100
           step : 1
       )
+
+
+  initialize : ->
+
+    super()
+    @hide() unless app.oxalis.model.getSegmentationBinary()?

@@ -22,10 +22,10 @@ class AbstractPlaneMaterialFactory extends AbstractMaterialFactory
     @uniforms = _.extend @uniforms,
       brightness :
         type : "f"
-        value : @model.dataset.get("brightness") / 255
+        value : @model.datasetConfiguration.get("brightness") / 255
       contrast :
         type : "f"
-        value : @model.dataset.get("contrast")
+        value : @model.datasetConfiguration.get("contrast")
 
     @createTextures()
 
@@ -42,11 +42,11 @@ class AbstractPlaneMaterialFactory extends AbstractMaterialFactory
 
   setupChangeListeners : ->
 
-    @listenTo(@model.dataset, "change:brightness", (model, brightness) ->
+    @listenTo(@model.datasetConfiguration, "change:brightness", (model, brightness) ->
       @uniforms.brightness.value = brightness / 255
     )
 
-    @listenTo(@model.dataset, "change:contrast", (model, contrast) ->
+    @listenTo(@model.datasetConfiguration, "change:contrast", (model, contrast) ->
       @uniforms.contrast.value = contrast
     )
 

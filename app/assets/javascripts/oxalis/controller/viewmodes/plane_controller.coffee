@@ -90,7 +90,7 @@ class PlaneController
       do (planeId) =>
         inputcatcher = $("#plane#{constants.PLANE_NAMES[planeId]}")
         @input.mouseControllers.push(
-          new Input.Mouse( inputcatcher, @getPlaneMouseControls(planeId), planeId ))
+          new Input.Mouse(inputcatcher, @getPlaneMouseControls(planeId), planeId))
 
     @input.mouseControllers.push(
       new Input.Mouse($("#TDView"), @getTDViewMouseControls(), constants.TDView ))
@@ -117,7 +117,9 @@ class PlaneController
           0
         ]
 
-      over : => @planeView.setActiveViewport( @activeViewport = planeId )
+      over : =>
+        $(':focus').blur()
+        @planeView.setActiveViewport( @activeViewport = planeId )
 
       scroll : @scrollPlanes
     }

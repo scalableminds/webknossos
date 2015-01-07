@@ -39,3 +39,13 @@ class CategoryView extends Backbone.Marionette.ItemView
   serializeData : ->
 
     return { @subviewCreators, @caption, tabId : _.uniqueId() }
+
+
+  hide : ->
+
+    @$el.hide()
+
+
+  show : ->
+
+    @$el.show()

@@ -3,6 +3,7 @@
 ../setting_views/checkbox_setting_view : CheckboxSettingView
 ../setting_views/slider_setting_view : SliderSettingView
 oxalis/constants : constants
+app : app
 ###
 
 class IsosurfaceCategoryView extends CategoryView
@@ -45,3 +46,9 @@ class IsosurfaceCategoryView extends CategoryView
           max : 400
           step : 1
       )
+
+
+  initialize : ->
+
+    super()
+    @hide() unless app.oxalis.model.volumeTracing?

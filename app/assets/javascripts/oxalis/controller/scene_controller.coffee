@@ -34,6 +34,10 @@ class SceneController
     @createMeshes()
     @bindToEvents()
 
+    @listenTo(@model.user, "change:segmentationOpacity", (model, opacity) ->
+      @setSegmentationAlpha(opacity)
+    )
+
 
   createMeshes : ->
     # Cubes
@@ -93,7 +97,8 @@ class SceneController
       @volumeMeshes = []
 
       for id of triangles
-        volume = new VolumeGeometry(triangles[id], parseInt(id))
+        mappedId = @model.getSegmentationBinary().cube.mapId(parseInt(id))
+        volume = new VolumeGeometry(triangles[id], mappedId)
         @volumeMeshes = @volumeMeshes.concat(volume.getMeshes())
 
       @trigger("newGeometries", @volumeMeshes)

@@ -15,7 +15,8 @@ class Tree
 
     edgeGeometry.addAttribute('position', Float32Array, 0, 3)
     nodeGeometry.addAttribute('position', Float32Array, 0, 3)
-    nodeGeometry.addAttribute('size', Float32Array, 0, 1)
+    nodeGeometry.addAttribute('sizeNm', Float32Array, 0, 1)
+    nodeGeometry.addAttribute('nodeScaleFactor', Float32Array, 0, 1)
     nodeGeometry.addAttribute('color', Float32Array, 0, 3)
 
     @nodeIDs = nodeGeometry.nodeIDs = new ResizableBuffer(1, 100, Int32Array)
@@ -24,7 +25,8 @@ class Tree
 
     @edgesBuffer = edgeGeometry.attributes.position._rBuffer = new ResizableBuffer(6)
     @nodesBuffer = nodeGeometry.attributes.position._rBuffer = new ResizableBuffer(3)
-    @sizesBuffer = nodeGeometry.attributes.size._rBuffer = new ResizableBuffer(1)
+    @sizesBuffer = nodeGeometry.attributes.sizeNm._rBuffer = new ResizableBuffer(1)
+    @scalesBuffer = nodeGeometry.attributes.nodeScaleFactor._rBuffer = new ResizableBuffer(1)
     @nodesColorBuffer = nodeGeometry.attributes.color._rBuffer = new ResizableBuffer(3)
 
     @edges = new THREE.Line(
@@ -46,7 +48,9 @@ class Tree
     @nodesBuffer.clear()
     @edgesBuffer.clear()
     @sizesBuffer.clear()
+    @scalesBuffer.clear()
     @nodeIDs.clear()
+    @updateNodesColors()
 
 
   isEmpty : ->
@@ -58,6 +62,7 @@ class Tree
 
     @nodesBuffer.push(node.pos)
     @sizesBuffer.push([node.radius * 2])
+    @scalesBuffer.push([1.0])
     @nodeIDs.push([node.id])
     @nodesColorBuffer.push(@getColor(node.id))
 
@@ -84,18 +89,14 @@ class Tree
       for i in [0...array.elementLength]
         array.getAllElements()[index * array.elementLength + i] = lastElement[i]
 
-    # Find index
-    for i in [0...@nodeIDs.getLength()]
-      if @nodeIDs.get(i) == node.id
-        nodesIndex = i
-        break
-
+    nodesIndex = @getNodeIndex(node.id)
     $.assert(nodesIndex?, "No node found.", { id : node.id, @nodeIDs })
 
     # swap IDs and nodes
     swapLast( @nodeIDs, nodesIndex )
     swapLast( @nodesBuffer, nodesIndex )
     swapLast( @sizesBuffer, nodesIndex )
+    swapLast( @scalesBuffer, nodesIndex )
     swapLast( @nodesColorBuffer, nodesIndex )
 
     # Delete Edge by finding it in the array
@@ -125,6 +126,7 @@ class Tree
     merge("nodesBuffer")
     merge("edgesBuffer")
     merge("sizesBuffer")
+    merge("scalesBuffer")
     @edgesBuffer.push(@getEdgeArray(lastNode, activeNode))
 
     @updateNodesColors()
@@ -177,7 +179,7 @@ class Tree
   updateNodesColors : ->
 
     @nodesColorBuffer.clear()
-    for i in [0..@nodeIDs.length]
+    for i in [0...@nodeIDs.length]
       @nodesColorBuffer.push(@getColor(@nodeIDs.get(i)))
 
     @updateGeometries()
@@ -185,20 +187,50 @@ class Tree
 
   updateNodeColor : (id, isActiveNode, isBranchPoint) ->
 
-    for i in [0..@nodeIDs.length]
-      if @nodeIDs.get(i) == id
-        @nodesColorBuffer.set(@getColor(id, isActiveNode, isBranchPoint), i)
+    @doWithNodeIndex(id, (index) =>
+      @nodesColorBuffer.set(@getColor(id, isActiveNode, isBranchPoint), index)
+    )
 
     @updateGeometries()
 
 
   updateNodeRadius : (id, radius) ->
 
-    for i in [0..@nodeIDs.length]
-      if @nodeIDs.get(i) == id
-        @sizesBuffer.set([radius * 2], i)
+    @doWithNodeIndex(id, (index) =>
+      @sizesBuffer.set([radius * 2], index)
+    )
 
     @updateGeometries()
+
+
+  startNodeHighlightAnimation : (nodeId) ->
+
+    normal = 1.0
+    highlighted = 2.0
+
+    @doWithNodeIndex(nodeId, (index) =>
+      @animateNodeScale(normal, highlighted, index, =>
+        @animateNodeScale(highlighted, normal, index)
+      )
+    )
+
+
+  animateNodeScale : (from, to, index, onComplete = ->) ->
+
+    setScaleFactor = (factor) =>
+      @scalesBuffer.set([factor], index)
+    redraw = =>
+      @updateGeometries()
+      @model.flycam.update()
+    onUpdate = ->
+      setScaleFactor(@scaleFactor)
+      redraw()
+
+    (new TWEEN.Tween({scaleFactor : from}))
+      .to({scaleFactor : to}, 100)
+      .onUpdate(onUpdate)
+      .onComplete(onComplete)
+      .start()
 
 
   getColor : (id, isActiveNode, isBranchPoint) ->
@@ -209,8 +241,11 @@ class Tree
       isActiveNode  = isActiveNode  || @model.skeletonTracing.getActiveNodeId() == id
       isBranchPoint = isBranchPoint || @model.skeletonTracing.isBranchPoint(id)
 
-      if not isActiveNode
+      if isActiveNode
+        color = @shiftHex(color, 1/4)
+      else
         color = @darkenHex(color)
+
       if isBranchPoint
         color = @invertHex(color)
 
@@ -241,6 +276,20 @@ class Tree
     console.log "sizesBuffer", @sizesBuffer.toString()
 
 
+  getNodeIndex : (nodeId) ->
+
+    for i in [0..@nodeIDs.length]
+      if @nodeIDs.get(i) == nodeId
+        return i
+
+
+  doWithNodeIndex : (nodeId, f) ->
+
+    index = @getNodeIndex(nodeId)
+    return unless index?
+    f(index)
+
+
   #### Color utility methods
 
   hexToRGB : (hexColor) ->
@@ -256,8 +305,13 @@ class Tree
     ColorConverter.setHSV(new THREE.Color(), hsvColor.h, hsvColor.s, hsvColor.v).getHex()
 
 
-  invertHex : (hexColor) ->
+  shiftHex : (hexColor, shiftValue) ->
 
     hsvColor = ColorConverter.getHSV(new THREE.Color().setHex(hexColor))
-    hsvColor.h = (hsvColor.h + 0.5) % 1
+    hsvColor.h = (hsvColor.h + shiftValue) % 1
     ColorConverter.setHSV(new THREE.Color(), hsvColor.h, hsvColor.s, hsvColor.v).getHex()
+
+
+  invertHex : (hexColor) ->
+
+    @shiftHex(hexColor, 0.5)

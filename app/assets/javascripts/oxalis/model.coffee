@@ -26,6 +26,11 @@ libs/pipeline : Pipeline
 
 class Model extends Backbone.Model
 
+  initialize : ->
+
+    # delegate saving
+    @listenTo(app.vent, "saveEverything", @saveAll)
+
 
   fetch : (options) ->
 
@@ -60,7 +65,7 @@ class Model extends Backbone.Model
           @set("datasetConfiguration", new DatasetConfiguration({@datasetName}))
           @get("datasetConfiguration").fetch().pipe( =>
 
-            layers  = @getLayers(tracing.content.contentData.customLayers)
+            layers = @getLayers(tracing.content.contentData.customLayers)
 
             $.when(
               @getDataTokens(layers)...
@@ -137,7 +142,6 @@ class Model extends Backbone.Model
         $.assert( @getSegmentationBinary()?,
           "Volume is allowed, but segmentation does not exist" )
         @set("volumeTracing", new VolumeTracing(tracing, flycam, @getSegmentationBinary(), @updatePipeline))
-
       else
         @set("skeletonTracing", new SkeletonTracing(tracing, flycam, flycam3d, @user, @updatePipeline))
 
@@ -234,6 +238,30 @@ class Model extends Backbone.Model
         @lowerBoundary[i] = Math.min @lowerBoundary[i], binary.lowerBoundary[i]
         @upperBoundary[i] = Math.max @upperBoundary[i], binary.upperBoundary[i]
 
+  # delegate save request to all submodules
+  saveAll : ->
+
+    submodels = []
+
+    if @user?
+      submodels.push[@user]
+
+    if @get("dataset")?
+      submodels.push[@get("dataset")]
+
+    if @get("datasetConfiguration")?
+      submodels.push[@get("datasetConfiguration")]
+
+    if @get("volumeTracing")?
+      submodels.push(@get("volumeTracing").stateLogger)
+
+    if @get("skeletonTracing")?
+      submodels.push(@get("skeletonTracing").stateLogger)
+
+      _.each(submodels, (model) ->
+        console.log(model)
+        model.save()
+      )
 
 
   # Make the Model compatible between legacy Oxalis style and Backbone.Modela/Views

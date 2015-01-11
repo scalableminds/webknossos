@@ -20,9 +20,6 @@ class StateLogger
     @newDiffs = []
     @committedCurrentState = true
 
-    @listenTo(app.vent, "saveEverything", @pushNow)
-
-
   pushDiff : (action, value, push = true) ->
 
     @newDiffs.push({
@@ -70,6 +67,13 @@ class StateLogger
         -> Toast.success("Saved!")
         -> Toast.error("Couldn't save. Please try again.")
       )
+
+  # alias for `pushNow`
+  # needed for save delegation by `Model`
+  # see `model.coffee`
+  save : ->
+
+      return @pushNow()
 
 
   pushImpl : (notifyOnFailure) ->

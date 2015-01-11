@@ -11,7 +11,6 @@ class DatasetConfiguration extends Backbone.DeepModel
   initialize : ({datasetName}) ->
 
     @url = "/api/dataSetConfigurations/#{datasetName}"
-    @listenTo(app.vent, "saveEverything", @save)
     @listenTo(this, "change", -> @save())
 
 

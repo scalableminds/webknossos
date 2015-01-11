@@ -30,13 +30,13 @@ object TaskController extends Controller with Secured {
 
   val taskJsonReads =
     ((__ \ 'dataSet).read[String] and
-      (__ \ 'taskType).read[String] and
-      (__ \ 'start).read[Point3D] and
-      (__ \ 'experience).read[Experience] and
+      (__ \ 'taskTypeId).read[String] and
+      (__ \ 'editPosition).read[Point3D] and
+      (__ \ 'neededExperience).read[Experience] and
       (__ \ 'priority).read[Int] and
-      (__ \ 'taskInstances).read[Int] and
+      (__ \ 'status).read[CompletionStatus] and
       (__ \ 'team).read[String] and
-      (__ \ 'project).read[String] and
+      (__ \ 'projectName).read[String] and
       (__ \ 'boundingBox).read[BoundingBox]).tupled
 
   def empty = Authenticated{ implicit request =>
@@ -56,13 +56,13 @@ object TaskController extends Controller with Secured {
     "something" match {
       case x =>
         request.body.validate(taskJsonReads) match {
-          case JsSuccess((dataSetName, taskTypeId, start, experience, priority, instances, team, projectName, boundingBox), _) =>
+          case JsSuccess((dataSetName, taskTypeId, start, experience, priority, status, team, projectName, boundingBox), _) =>
             for {
               dataSet <- DataSetDAO.findOneBySourceName(dataSetName) ?~> Messages("dataSet.notFound")
               taskType <- TaskTypeDAO.findOneById(taskTypeId) ?~> Messages("taskType.notFound")
               project <- ProjectService.findIfNotEmpty(projectName) ?~> Messages("project.notFound")
               _ <- ensureTeamAdministration(request.user, team).toFox
-              task = Task(taskType._id, team, experience, priority, instances, _project = project.map(_.name))
+              task = Task(taskType._id, team, experience, priority, status.open, _project = project.map(_.name))
               _ <- TaskDAO.insert(task)
             } yield {
               AnnotationService.createAnnotationBase(task, request.user._id, boundingBox, taskType.settings, dataSetName, start)
@@ -75,6 +75,8 @@ object TaskController extends Controller with Secured {
 
     }
   }
+
+  // TODO: update via HTML PUT
 
   def list = Authenticated.async{ implicit request =>
     for {

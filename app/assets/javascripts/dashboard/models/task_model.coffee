@@ -3,7 +3,7 @@ underscore : _
 backbone : Backbone
 ###
 
-class DashboardTaskModel extends Backbone.Model
+class TaskModel extends Backbone.Model
 
   parse : (annotation) ->
     # transform the annotation object which holds a task to a task object which holds its annotation

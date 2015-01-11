@@ -148,20 +148,23 @@ class Router extends Backbone.Router
 
   dashboard : (userID) ->
 
-    require ["dashboard/views/dashboard_view", "dashboard/models/dashboard_model"], (DashboardView, DashboardModel) =>
+    require ["dashboard/views/dashboard_view", "dashboard/models/user_model"], (DashboardView, UserModel) =>
 
       isAdminView = userID != null
 
-      model = new DashboardModel({ userID, isAdminView : isAdminView })
-      view = new DashboardView(model : model, isAdminView : isAdminView)
+      model = new UserModel(id : userID)
+      view = new DashboardView({ model, isAdminView, userID})
 
-      @changeView(view)
-      @listenTo(model, "sync", @hideLoading)
+      @listenTo(model, "sync", ->
+        @changeView(view)
+        @hideLoading()
+      )
 
+      model.fetch()
 
   spotlight : ->
 
-    require(["views/spotlight_view", "admin/models/dataset/dataset_collection"], (SpotlightView, DatasetCollection) =>
+    require(["views/spotlight_view", "dashboard/models/dataset/dataset_collection"], (SpotlightView, DatasetCollection) =>
 
       collection = new DatasetCollection()
       view = new SpotlightView(model: collection)
@@ -176,7 +179,7 @@ class Router extends Backbone.Router
     require(["admin/views/task/task_overview_view", "admin/models/task/task_overview_model"], (TaskOverviewView, TaskOverviewModel) =>
 
       model = new TaskOverviewModel()
-      view = new TaskOverviewView({model})
+      view = new TaskOverviewView({model, userID})
 
       @changeView(view)
       @listenTo(model, "sync", @hideLoading)

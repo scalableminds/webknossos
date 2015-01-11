@@ -48,9 +48,17 @@ object UserController extends Controller with Secured with Dashboard with FoxImp
 
   def annotations = Authenticated.async { implicit request =>
     for {
-      content <- dashboardInfo(request.user, request.user)
+      content <- dashboardExploratoryAnnotations(request.user, request.user)
     } yield {
-      JsonOk(content)
+      Ok(content)
+    }
+  }
+
+  def tasks = Authenticated.async { implicit request =>
+    for {
+      content <- dashboardTaskAnnotations(request.user, request.user)
+    } yield {
+      Ok(content)
     }
   }
 
@@ -70,9 +78,18 @@ object UserController extends Controller with Secured with Dashboard with FoxImp
   def userAnnotations(userId: String) = Authenticated.async{ implicit request =>
     for {
       user <- UserDAO.findOneById(userId) ?~> Messages("user.notFound")
-      content <- dashboardInfo(user, request.user)
+      content <- dashboardExploratoryAnnotations(user, request.user)
     } yield {
-      JsonOk(content)
+      Ok(content)
+    }
+  }
+
+  def userTasks(userId: String) = Authenticated.async{ implicit request =>
+    for {
+      user <- UserDAO.findOneById(userId) ?~> Messages("user.notFound")
+      content <- dashboardTaskAnnotations(user, request.user)
+    } yield {
+      Ok(content)
     }
   }
 

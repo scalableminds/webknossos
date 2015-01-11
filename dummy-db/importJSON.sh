@@ -6,10 +6,12 @@ PORT=${2:-27017}
 echo $DB
 echo $PORT
 
-for f in *.json
+LOCATION=$(dirname $0)
+
+for f in $LOCATION/*.json
 do
   # extract collection name from filename
-  collection=${f%.*}
+  collection=$(basename ${f%.*})
   echo "Importing $collection"
 
   mongoimport --db $DB --port $PORT --collection $collection --file $f

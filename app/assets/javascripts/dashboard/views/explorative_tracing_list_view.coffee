@@ -1,10 +1,12 @@
 ### define
+app : app
 underscore : _
 backbone.marionette : marionette
-app : app
-dashboard/views/explorative_tracing_list_item_view : ExplorativeTracingListItemView
-libs/input : Input
 libs/toast : Toast
+libs/utils : Utils
+dashboard/views/explorative_tracing_list_item_view : ExplorativeTracingListItemView
+dashboard/models/user_annotations_collection : UserAnnotationsCollection
+dashboard/models/dataset/dataset_collection : DatasetCollection
 ###
 
 class ExplorativeTracingListView extends Backbone.Marionette.CompositeView
@@ -33,7 +35,7 @@ class ExplorativeTracingListView extends Backbone.Marionette.CompositeView
               method="POST"
               class="form-inline inline-block">
           <select id="dataSetsSelect" name="dataSetName" class="form-control">
-            <% dataSets.forEach(function(d) { %>
+            <% datasets.forEach(function(d) { %>
               <option value="<%= d.get("name") %>"> <%= d.get("name") %> </option>
             <% }) %>
           </select>
@@ -77,15 +79,20 @@ class ExplorativeTracingListView extends Backbone.Marionette.CompositeView
     formUploadIcon : "#form-upload-icon"
 
 
-  initialize : ->
+  templateHelpers : ->
+    isAdminView : @options.isAdminView
+    datasets : @datasets
 
-  initialize : (options) ->
 
-    @collection = @model.get("exploratoryAnnotations")
+  initialize : (@options) ->
 
-    datasetCollection = @model.get("dataSets")
-    @listenTo(datasetCollection, "sync", @render)
-    datasetCollection.fetch(silent : true)
+    @datasets = new DatasetCollection()
+    @collection = new UserAnnotationsCollection([], userID : @options.userID)
+
+    $.when(
+      @datasets.fetch(silent : true)
+      @collection.fetch()
+    ).done(@render)
 
 
   selectFiles : (event) ->

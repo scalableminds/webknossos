@@ -1,7 +1,5 @@
 ### define
 admin/views/pagination_view : PaginationView
-admin/views/dataset/dataset_list_view : DatasetListView
-admin/models/dataset/dataset_collection : DatasetCollection
 admin/views/user/user_list_view : UserListView
 admin/models/user/user_collection : UserCollection
 admin/views/team/team_list_view : TeamListView
@@ -20,8 +18,6 @@ admin/views/statistic/statistic_view : StatisticView
 
 return {
   PaginationView
-  DatasetListView
-  DatasetCollection
   UserListView
   UserCollection
   TeamListView

@@ -1,10 +1,10 @@
 ### define
 underscore : _
 backbone.marionette : marionette
-dashboard/views/dashboard_task_list_view : DashboardTaskListView
-dashboard/views/explorative_tracing_list_view : ExplorativeTracingListView
-dashboard/views/tracked_time_view : TrackedTimeView
-admin/views/dataset/dataset_switch_view : DatasetSwitchView
+./dashboard_task_list_view : DashboardTaskListView
+./explorative_tracing_list_view : ExplorativeTracingListView
+./logged_time_view : LoggedTimeView
+./dataset/dataset_switch_view : DatasetSwitchView
 ###
 
 class DashboardView extends Backbone.Marionette.LayoutView
@@ -13,7 +13,7 @@ class DashboardView extends Backbone.Marionette.LayoutView
   id : "dashboard"
   template : _.template("""
     <% if (isAdminView) { %>
-      <h3>User: <%= user.get("firstName") %> <%= user.get("lastName") %></h3>
+      <h3>User: <%= firstName %> <%= lastName %></h3>
     <% } %>
     <div class="tabbable" id="tabbable-dashboard">
       <ul class="nav nav-tabs">
@@ -27,7 +27,7 @@ class DashboardView extends Backbone.Marionette.LayoutView
           <a href="#" id="tab-explorative" data-toggle="tab">Explorative Annotations</a>
         </li>
         <li>
-          <a href="#" id="tab-tracked-time" data-toggle="tab">Tracked Time</a>
+          <a href="#" id="tab-logged-time" data-toggle="tab">Tracked Time</a>
         </li>
       </ul>
       <div class="tab-content">
@@ -37,10 +37,6 @@ class DashboardView extends Backbone.Marionette.LayoutView
   """)
 
   ui :
-    "tabDatasets" : "#tab-datasets"
-    "tabTasks" : "#tab-tasks"
-    "tabExplorative" : "#tab-explorative"
-    "tabTrackedTime" : "#tab-tracked-time"
     "tabPane" : ".tab-pane"
 
 
@@ -48,50 +44,49 @@ class DashboardView extends Backbone.Marionette.LayoutView
     "click #tab-datasets" : "showDatasets"
     "click #tab-tasks" : "showTasks"
     "click #tab-explorative" : "showExplorative"
-    "click #tab-tracked-time" : "showTrackedTime"
+    "click #tab-logged-time" : "showLoggedTime"
 
 
   regions :
     "tabPane" : ".tab-pane"
 
-
-  initialize : ->
-
-    @listenTo(@model, "sync", ->
-      @render()
-      @afterSync()
-    )
-    @model.fetch()
+  templateHelpers : ->
+    isAdminView : @options.isAdminView
 
 
-  afterSync : ->
+  initialize : (@options) ->
 
-    if @activeTab
-      @tabPane.show(@activeTab)
-    else
-      @showDatasets()
+    @listenTo(@, "render", @showDatasets)
+
+    @viewCache =
+      datasetSwitchView : null
+      taskListView : null
+      explorativeTracingListView : null
+      loggedTimeView : null
 
 
   showDatasets : ->
 
-    @activeTab = new DatasetSwitchView(model : @model.get("dataSets"))
-    @tabPane.show(@activeTab)
+    @showTab("datasetSwitchView", DatasetSwitchView)
 
 
   showTasks : ->
 
-    @activeTab = new DashboardTaskListView(model : @model)
-    @tabPane.show(@activeTab)
+    @showTab("taskListView", DashboardTaskListView)
 
 
   showExplorative : ->
 
-    @activeTab = new ExplorativeTracingListView(model : @model)
-    @tabPane.show(@activeTab)
+    @showTab("explorativeTracingListView", ExplorativeTracingListView)
 
 
-  showTrackedTime : ->
+  showLoggedTime : ->
 
-    @activeTab = new TrackedTimeView(model : @model.get("loggedTime"))
-    @tabPane.show(@activeTab)
+    @showTab("loggedTimeView", LoggedTimeView)
 
+
+  showTab : (viewName, viewClass) ->
+
+    unless view = @viewCache[viewName]
+      view = @viewCache[viewName] = new viewClass(@options)
+    @tabPane.show(view, preventDestroy : true)

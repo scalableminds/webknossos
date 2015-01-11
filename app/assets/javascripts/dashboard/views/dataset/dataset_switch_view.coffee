@@ -4,13 +4,14 @@ backbone.marionette : marionette
 ./dataset_list_view : DatasetListView
 views/spotlight_dataset_list_view : SpotlightDatasetListView
 admin/views/pagination_view : PaginationView
+dashboard/models/dataset/dataset_collection : DatasetCollection
 ###
 
 class DatasetSwitchView extends Backbone.Marionette.LayoutView
 
   template : _.template("""
     <div class="pull-right">
-      <a href="#" id="showAdvancedView" class="btn btn-default">
+      <a href="#" id="showAdvancedView" class="btn btn-default hidden">
         <i class="fa fa-th-list"></i>Show advanced view
       </a>
       <a href="#" id="showGalleryView" class="btn btn-default">
@@ -35,20 +36,29 @@ class DatasetSwitchView extends Backbone.Marionette.LayoutView
     "datasetPane" : ".dataset-region"
     "pagination" : ".pagination"
 
-  onShow : ->
+  initialize : ->
 
-    @ui.showAdvancedButton.hide()
-    @showGalleryView()
+    @collection = new DatasetCollection()
+
+    @listenTo(@, "render", @showGalleryView)
+    @listenToOnce(@, "render", @toggleSwitchButtons)
+    @listenToOnce(@collection, "sync", @showGalleryView)
+
+    @collection.fetch(
+      silent : true,
+      data : "isEditable=true"
+    )
+
 
   toggleSwitchButtons : ->
 
-    [@ui.showAdvancedButton, @ui.showGalleryButton].map((button) -> button.toggle())
+    [@ui.showAdvancedButton, @ui.showGalleryButton].map((button) -> button.toggleClass("hidden", "show"))
 
 
   showGalleryView : ->
 
     @toggleSwitchButtons()
-    datasetGalleryView = new SpotlightDatasetListView(collection : @model)
+    datasetGalleryView = new SpotlightDatasetListView(collection : @collection)
     @datasetPane.show(datasetGalleryView)
 
     @pagination.empty()
@@ -57,8 +67,11 @@ class DatasetSwitchView extends Backbone.Marionette.LayoutView
   showAdvancedView : ->
 
     @toggleSwitchButtons()
-    datasetListView = new DatasetListView(collection: @model)
+
+    #always load Pagination first, for init. the right event handlers
+    paginationView = new PaginationView(collection: @collection)
+    @pagination.show(paginationView)
+
+    datasetListView = new DatasetListView(collection: @collection)
     @datasetPane.show(datasetListView)
 
-    paginationView = new PaginationView(collection: @model)
-    @pagination.show(paginationView)

@@ -6,5 +6,5 @@ underscore : _
 
 class DatasetCollection extends PaginationView
 
-  url : "/api/datasets?isActive=true"
+  url : "/api/datasets" # TODO: ?isActive=true breaks importing in advanced view
   model : DatasetModel

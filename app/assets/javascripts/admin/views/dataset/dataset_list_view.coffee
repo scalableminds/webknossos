@@ -46,12 +46,8 @@ class DatasetListView extends Backbone.Marionette.CompositeView
 
   initialize : ->
 
-    @listenTo(@collection, "sync", =>
-      @collection = new DatasetCollection(@collection
-        .sort((a, b) -> a.get("created") < b.get("created"))
-      )
-      @render()
-    )
+    @collection.setSort("created", {side: "client"})
+    #@collection.models.sort()
 
     @collection.fetch(
       silent : true

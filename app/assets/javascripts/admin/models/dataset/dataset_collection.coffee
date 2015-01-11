@@ -6,5 +6,5 @@ underscore : _
 
 class DatasetCollection extends PaginationView
 
-  url : "/api/datasets"
+  url : "/api/datasets?isActive=true"
   model : DatasetModel

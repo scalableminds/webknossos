@@ -26,12 +26,6 @@ libs/pipeline : Pipeline
 
 class Model extends Backbone.Model
 
-  initialize : ->
-
-    # delegate saving
-    @listenTo(app.vent, "saveEverything", @saveAll)
-
-
   fetch : (options) ->
 
     Request.send(
@@ -239,7 +233,7 @@ class Model extends Backbone.Model
         @upperBoundary[i] = Math.max @upperBoundary[i], binary.upperBoundary[i]
 
   # delegate save request to all submodules
-  saveAll : ->
+  save : ->
 
     submodels = []
 

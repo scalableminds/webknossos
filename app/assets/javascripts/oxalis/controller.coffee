@@ -187,7 +187,7 @@ class Controller
 
           event.preventDefault()
           event.stopPropagation()
-          app.vent.trigger("saveEverything")
+          @model.save()
       } )
 
     new Input.KeyboardNoLoop( keyboardControls )

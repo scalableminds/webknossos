@@ -236,6 +236,7 @@ class Model extends Backbone.Model
   save : ->
 
     submodels = []
+    dfds = []
 
     if @user?
       submodels.push[@user]
@@ -252,11 +253,11 @@ class Model extends Backbone.Model
     if @get("skeletonTracing")?
       submodels.push(@get("skeletonTracing").stateLogger)
 
-      _.each(submodels, (model) ->
-        console.log(model)
-        model.save()
-      )
+    _.each(submodels, (model) ->
+      dfds.push( model.save() )
+    )
 
+    return $.when.apply($, dfds)
 
   # Make the Model compatible between legacy Oxalis style and Backbone.Modela/Views
   initSettersGetter : ->

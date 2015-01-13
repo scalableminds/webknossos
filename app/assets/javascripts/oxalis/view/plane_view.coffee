@@ -77,7 +77,9 @@ class PlaneView
 
     @first = true
     @newTextures = [true, true, true, true]
-    # start the rendering loop
+
+    @needsRerender = true
+    app.vent.on("rerender", => @needsRerender = true)
 
 
   animate : ->
@@ -104,7 +106,7 @@ class PlaneView
       for plane in binary.planes
         modelChanged |= plane.hasChanged()
 
-    if @flycam.hasChanged or @flycam.hasNewTextures() or modelChanged
+    if @needsRerender or modelChanged or @flycam.hasNewTextures() #@flycam.hasChanged
 
       @trigger("render")
 
@@ -138,8 +140,9 @@ class PlaneView
         )
         @renderer.render @scene, @camera[i]
 
-      @flycam.hasChanged = false
-      @flycam.hasNewTexture = [false, false, false]
+      @needsRerender = false
+      #@flycam.hasChanged = false
+      #@flycam.hasNewTexture = [false, false, false]
 
   addGeometry : (geometry) ->
     # Adds a new Three.js geometry to the scene.

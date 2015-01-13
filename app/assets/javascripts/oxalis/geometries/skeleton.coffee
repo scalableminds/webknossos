@@ -15,7 +15,7 @@ class Skeleton
 
   COLOR_ACTIVE : 0xff0000
 
-  constructor : (@flycam, @model) ->
+  constructor : (@model) ->
 
     _.extend(this, Backbone.Events)
 

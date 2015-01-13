@@ -12,7 +12,7 @@ three : THREE
 
 class PlaneView
 
-  constructor : (@model, @flycam, @view, @stats) ->
+  constructor : (@model, @view, @stats) ->
 
     _.extend(this, Backbone.Events)
 

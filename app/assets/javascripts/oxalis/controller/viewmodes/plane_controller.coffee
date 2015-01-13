@@ -51,7 +51,7 @@ class PlaneController
 
     @oldNmPos = app.scaleInfo.voxelToNm( @flycam.getPosition() )
 
-    @planeView = new PlaneView(@model, @flycam, @view, stats)
+    @planeView = new PlaneView(@model, @view, stats)
 
     @activeViewport = constants.PLANE_XY
 

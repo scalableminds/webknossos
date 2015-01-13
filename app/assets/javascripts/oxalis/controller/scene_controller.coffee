@@ -63,7 +63,7 @@ class SceneController
       @contour = new ContourGeometry(@model.volumeTracing, @model.flycam)
 
     if @model.skeletonTracing?
-      @skeleton = new Skeleton(@flycam, @model)
+      @skeleton = new Skeleton(@model)
 
     # create Meshes
     @planes = new Array(3)

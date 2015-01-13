@@ -140,7 +140,7 @@ class Plane
 
   setSegmentationAlpha : (alpha) ->
     @plane.material.setSegmentationAlpha alpha
-    @flycam.update()
+    app.vent.trigger("rerender")
 
 
   getMeshes : =>

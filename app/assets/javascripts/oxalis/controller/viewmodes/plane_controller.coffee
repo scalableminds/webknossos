@@ -133,7 +133,7 @@ class PlaneController
       @planeView.getCameras()[constants.TDView],
       view,
       new THREE.Vector3(pos...),
-      => @flycam.update())
+      -> app.vent.trigger("rerender"))
 
     @controls.noZoom = true
     @controls.noPan = true

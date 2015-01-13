@@ -155,8 +155,7 @@ class PlaneView
 
 
   draw : ->
-    # Apply a single draw
-    @flycam.update()
+    app.vent.trigger("rerender")
 
 
   resizeThrottled : ->
@@ -217,7 +216,7 @@ class PlaneView
       else
         $(".inputcatcher").eq(i).removeClass("active").addClass("inactive")
 
-    @flycam.update()
+    @draw()
 
 
   getCameras : =>

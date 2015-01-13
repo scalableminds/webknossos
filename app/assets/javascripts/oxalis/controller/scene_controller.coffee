@@ -102,7 +102,7 @@ class SceneController
         @volumeMeshes = @volumeMeshes.concat(volume.getMeshes())
 
       @trigger("newGeometries", @volumeMeshes)
-      @flycam.update()
+      app.vent.trigger("rerender")
       @cellsDeferred = null
 
 
@@ -167,7 +167,7 @@ class SceneController
 
     for plane in @planes
       plane.setDisplayCrosshair value
-    @flycam.update()
+    app.vent.trigger("rerender")
 
 
   setClippingDistance : (value) ->
@@ -181,14 +181,14 @@ class SceneController
 
     for plane in @planes
       plane.setLinearInterpolationEnabled(value)
-    @flycam.update()
+    app.vent.trigger("rerender")
 
 
   setDisplayPlanes : (value) =>
 
     for i in [0..2]
       @displayPlane[i] = value
-    @flycam.update()
+    app.vent.trigger("rerender")
 
 
   getMeshes : =>

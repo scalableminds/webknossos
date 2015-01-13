@@ -101,13 +101,6 @@ class Skeleton
     app.vent.trigger("rerender")
 
 
-  setParticleSize : (size) ->
-
-    for tree in @treeGeometries
-      tree.setSize( size )
-    app.vent.trigger("rerender")
-
-
   updateTreeColor : (treeId) ->
 
     @getTreeGeometry(treeId).updateTreeColor()

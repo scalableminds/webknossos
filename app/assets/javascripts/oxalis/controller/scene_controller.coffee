@@ -34,10 +34,6 @@ class SceneController
     @createMeshes()
     @bindToEvents()
 
-    @listenTo(@model.user, "change:segmentationOpacity", (model, opacity) ->
-      @setSegmentationAlpha(opacity)
-    )
-
 
   createMeshes : ->
     # Cubes
@@ -175,6 +171,7 @@ class SceneController
     # convert nm to voxel
     for i in constants.ALL_PLANES
       @planeShift[i] = value * app.scaleInfo.voxelPerNM[i]
+    app.vent.trigger("rerender")
 
 
   setInterpolation : (value) ->
@@ -252,6 +249,9 @@ class SceneController
 
     user = @model.user
     @listenTo(@model, "newBoundingBox", (bb) -> @setBoundingBox(bb))
+    @listenTo(@model.user, "change:segmentationOpacity", (model, opacity) ->
+      @setSegmentationAlpha(opacity)
+    )
     @listenTo(user, "change:clippingDistance", (model, value) -> @setClippingDistance(value))
     @listenTo(user, "change:displayCrosshair", (model, value) -> @setDisplayCrosshair(value))
     @listenTo(user, "change:interpolation", (model, value) -> @setInterpolation(value))

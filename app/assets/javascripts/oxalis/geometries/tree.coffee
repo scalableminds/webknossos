@@ -143,12 +143,6 @@ class Tree
       return node2.pos.concat(node1.pos)
 
 
-  setSize : (size) ->
-
-    @nodes.material.size = size
-    @edges.material.linewidth = size / 4
-
-
   setSizeAttenuation : (sizeAttenuation) ->
 
     @nodes.material.sizeAttenuation = sizeAttenuation

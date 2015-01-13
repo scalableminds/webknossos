@@ -85,7 +85,7 @@ class PlaneMaterialFactory extends AbstractPlaneMaterialFactory
         color = @convertColor(color)
         uniformName = @sanitizeName(name) + "_color"
         @uniforms[uniformName].value = new THREE.Vector3(color...)
-      return
+      app.vent.trigger("rerender")
     )
 
 

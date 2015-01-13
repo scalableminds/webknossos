@@ -1,5 +1,4 @@
 ### define
-app : app
 underscore : _
 oxalis/constants : Constants
 ../viewmodes/plane_controller : PlaneController
@@ -96,7 +95,6 @@ class VolumeTracingPlaneController extends PlaneController
       bb = @model.flycam.getViewportBoundingBox()
       res = @model.user.get("isosurfaceResolution")
       @sceneController.showShapes(@scaleIsosurfaceBB(bb), res, id)
-    app.vent.trigger("rerender")
 
   scaleIsosurfaceBB : (bb) ->
     factor = @model.user.get("isosurfaceBBsize")

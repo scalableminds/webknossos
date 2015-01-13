@@ -36,6 +36,9 @@ object TaskService extends TaskAssignmentSimulation with TaskAssignment with Fox
     }
   }
 
+  def deleteAllWithTaskType(taskType: TaskType)(implicit ctx: DBAccessContext) =
+    TaskDAO.deleteAllWithTaskType(taskType)
+
   def assignOnce(t: Task)(implicit ctx: DBAccessContext) =
     TaskDAO.assignOnce(t._id)
 

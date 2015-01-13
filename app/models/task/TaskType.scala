@@ -2,6 +2,7 @@ package models.task
 
 import models.basics.SecuredBaseDAO
 import play.api.libs.json._
+import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.functional.syntax._
 import models.annotation.{AnnotationService, AnnotationSettings}
 import reactivemongo.bson.BSONObjectID
@@ -20,7 +21,16 @@ object TraceLimit {
   implicit val timeSpanFormat = Json.format[TraceLimit]
 }
 
-case class TaskType(summary: String, description: String, expectedTime: TraceLimit, team: String, settings: AnnotationSettings = AnnotationSettings.default, fileName: Option[String] = None, _id: BSONObjectID = BSONObjectID.generate) {
+case class TaskType(
+  summary: String,
+  description: String,
+  expectedTime: TraceLimit,
+  team: String,
+  settings: AnnotationSettings = AnnotationSettings.default,
+  fileName: Option[String] = None,
+  isActive: Boolean = true,
+  _id: BSONObjectID = BSONObjectID.generate) {
+
   val id = _id.stringify
 }
 
@@ -87,6 +97,16 @@ object TaskTypeDAO extends SecuredBaseDAO[TaskType] {
           DenyEveryone()
       }
     }
+  }
+
+  override def find(query: JsObject = Json.obj())(implicit ctx: DBAccessContext) =
+    super.find(query ++ Json.obj("isActive" -> true))
+
+  override def findOne(query: JsObject = Json.obj())(implicit ctx: DBAccessContext) =
+    super.findOne(query ++ Json.obj("isActive" -> true))
+
+  def findEvenDeletedById(id: BSONObjectID)(implicit ctx: DBAccessContext) = withExceptionCatcher{
+    super.find(Json.obj("_id" -> id)).one[TaskType]
   }
 
   def findOneBySumnary(summary: String)(implicit ctx: DBAccessContext) = {

@@ -21,7 +21,6 @@ class Flycam2d
     @user = @model.user
 
     @maxZoomStepDiff = @calculateMaxZoomStepDiff()
-    @hasNewTexture = [false, false, false]
     @zoomStep = 0.0
     @integerZoomStep = 0
     # buffer: how many pixels is the texture larger than the canvas on each dimension?
@@ -272,11 +271,6 @@ class Flycam2d
     for i in [0..2]
       result.push( @getArea(i) )
     return result
-
-
-  hasNewTextures : ->
-
-    (@hasNewTexture[constants.PLANE_XY] or @hasNewTexture[constants.PLANE_YZ] or @hasNewTexture[constants.PLANE_XZ])
 
 
   setRayThreshold : (cameraRight, cameraLeft) ->

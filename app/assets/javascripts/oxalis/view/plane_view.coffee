@@ -106,7 +106,7 @@ class PlaneView
       for plane in binary.planes
         modelChanged |= plane.hasChanged()
 
-    if @needsRerender or modelChanged or @flycam.hasNewTextures() #@flycam.hasChanged
+    if @needsRerender or modelChanged
 
       @trigger("render")
 
@@ -141,8 +141,6 @@ class PlaneView
         @renderer.render @scene, @camera[i]
 
       @needsRerender = false
-      #@flycam.hasChanged = false
-      #@flycam.hasNewTexture = [false, false, false]
 
   addGeometry : (geometry) ->
     # Adds a new Three.js geometry to the scene.

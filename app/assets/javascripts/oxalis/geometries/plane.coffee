@@ -97,7 +97,7 @@ class Plane
 
             if dataBuffer
               @plane.material.setData name, dataBuffer
-              @flycam.hasNewTexture[@planeID] = true
+              app.vent.trigger("rerender")
 
       @plane.material.setScaleParams(
         repeat :

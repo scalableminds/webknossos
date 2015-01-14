@@ -88,7 +88,7 @@ object TaskTypeAdministration extends AdminController {
           val updatedTaskType = t.copy(_id = taskType._id)
           for {
             _ <- TaskTypeDAO.update(taskType._id, updatedTaskType).toFox
-            tasks <- TaskDAO.findAllByTaskType(taskType).toFox
+            tasks <- TaskDAO.findAllByTaskType(taskType._id).toFox
             _ <- ensureTeamAdministration(request.user, updatedTaskType.team).toFox
           } yield {
             tasks.map(task => AnnotationDAO.updateAllUsingNewTaskType(task, updatedTaskType.settings))

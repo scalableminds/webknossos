@@ -32,8 +32,6 @@ object Application extends Controller with Secured {
     Ok(
       Routes.javascriptRouter("jsRoutes")(//fill in stuff which should be able to be called from js
         controllers.admin.routes.javascript.NMLIO.upload,
-        controllers.admin.routes.javascript.TaskAdministration.edit,
-        controllers.admin.routes.javascript.TaskAdministration.overviewData,
         controllers.routes.javascript.TaskController.request,
         controllers.routes.javascript.AnnotationController.annotationsForTask,
         controllers.routes.javascript.AnnotationController.trace,
@@ -43,8 +41,7 @@ object Application extends Controller with Secured {
         controllers.routes.javascript.AnnotationController.download,
         controllers.admin.routes.javascript.NMLIO.taskDownload,
         controllers.admin.routes.javascript.NMLIO.projectDownload,
-        controllers.admin.routes.javascript.NMLIO.userDownload,
-        controllers.admin.routes.javascript.TaskAdministration.delete
+        controllers.admin.routes.javascript.NMLIO.userDownload
       )).as("text/javascript")
   }
 

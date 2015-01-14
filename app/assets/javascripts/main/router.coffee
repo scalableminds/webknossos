@@ -17,6 +17,8 @@ class Router extends Backbone.Router
     "teams"                         : "teams"
     "statistics"                    : "statistics"
     "tasks"                         : "tasks"
+    "tasks/create"                  : "taskCreate"
+    "tasks/:id/edit"                : "taskEdit"
     "projects"                      : "projects"
     "annotations/:type/:id"         : "tracingView"
     "datasets/:id/view"             : "tracingViewPublic"
@@ -123,6 +125,45 @@ class Router extends Backbone.Router
   tasks : ->
 
     @showWithPagination("TaskListView", "TaskCollection")
+
+
+  ###*
+   * Load layout view that shows task-creation subviews
+   ###
+  taskCreate : ->
+
+    require ["admin/views/task/task_create_view", "admin/models/task/task_model"], (TaskCreateView, TaskModel) =>
+      # create an empty task model which will be populated in the create view
+      model = new TaskModel()
+
+      # create the task creation view
+      view = new TaskCreateView(model : model)
+
+      # show view
+      @changeView(view)
+
+      # auto-hide the loading spinner
+      @hideLoading()
+
+
+  ###*
+   * Load item view which displays an editable task.
+   ###
+  taskEdit : (taskID) ->
+
+    require ["admin/views/task/task_edit_view", "admin/models/task/task_model"], (TaskEditView, TaskModel) =>
+      # create and populate the task model
+      model = new TaskModel(id : taskID)
+
+      # create the task edit view
+      view = new TaskEditView(model : model)
+
+      # show view
+      @changeView(view)
+
+      # auto-hide the loading spinner
+      @hideLoading()
+
 
   taskTypes : ->
 

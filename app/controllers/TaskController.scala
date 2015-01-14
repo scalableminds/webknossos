@@ -1,5 +1,9 @@
 package controllers
 
+import com.scalableminds.util.geometry.{BoundingBox, Point3D}
+import controllers.admin.TaskAdministration._
+import models.binary.DataSetDAO
+import play.api.data.Forms._
 import play.api.libs.json.Json._
 import play.api.libs.json._
 import oxalis.security.Secured
@@ -18,14 +22,61 @@ import net.liftweb.common.{Full, Failure}
 import com.scalableminds.util.reactivemongo.DBAccessContext
 import scala.concurrent.Future
 import play.twirl.api.Html
+import play.api.libs.functional.syntax._
 
 object TaskController extends Controller with Secured {
 
   val MAX_OPEN_TASKS = current.configuration.getInt("oxalis.tasks.maxOpenPerUser") getOrElse 2
 
+  val taskJsonReads =
+    ((__ \ 'dataSet).read[String] and
+      (__ \ 'taskTypeId).read[String] and
+      (__ \ 'editPosition).read[Point3D] and
+      (__ \ 'neededExperience).read[Experience] and
+      (__ \ 'priority).read[Int] and
+      (__ \ 'status).read[CompletionStatus] and
+      (__ \ 'team).read[String] and
+      (__ \ 'projectName).read[String] and
+      (__ \ 'boundingBox).read[BoundingBox]).tupled
+
   def empty = Authenticated{ implicit request =>
     Ok(views.html.main()(Html("")))
   }
+
+  def read(taskId: String) = Authenticated.async{ implicit request =>
+    for{
+      task <- TaskDAO.findOneById(taskId) ?~> Messages("task.notFound")
+      js <- Task.transformToJson(task)
+    } yield {
+      Ok(js)
+    }
+  }
+
+  def create() = Authenticated.async(parse.json){ implicit request =>
+    "something" match {
+      case x =>
+        request.body.validate(taskJsonReads) match {
+          case JsSuccess((dataSetName, taskTypeId, start, experience, priority, status, team, projectName, boundingBox), _) =>
+            for {
+              dataSet <- DataSetDAO.findOneBySourceName(dataSetName) ?~> Messages("dataSet.notFound")
+              taskType <- TaskTypeDAO.findOneById(taskTypeId) ?~> Messages("taskType.notFound")
+              project <- ProjectService.findIfNotEmpty(projectName) ?~> Messages("project.notFound")
+              _ <- ensureTeamAdministration(request.user, team).toFox
+              task = Task(taskType._id, team, experience, priority, status.open, _project = project.map(_.name))
+              _ <- TaskDAO.insert(task)
+            } yield {
+              AnnotationService.createAnnotationBase(task, request.user._id, boundingBox, taskType.settings, dataSetName, start)
+              Redirect(controllers.routes.TaskController.empty)
+                .flashing(
+                  FlashSuccess(Messages("task.createSuccess")))
+                .highlighting(task.id)
+            }
+        }
+
+    }
+  }
+
+  // TODO: update via HTML PUT
 
   def list = Authenticated.async{ implicit request =>
     for {
@@ -33,6 +84,24 @@ object TaskController extends Controller with Secured {
       js <- Future.traverse(tasks)(Task.transformToJson)
     } yield {
       Ok(Json.toJson(js))
+    }
+  }
+
+  def listTasksForType(taskTypeId: String) = Authenticated.async { implicit request =>
+    for {
+      tasks <- TaskService.findAllByTaskType(taskTypeId)
+      js <- Future.traverse(tasks)(Task.transformToJson)
+    } yield {
+      Ok(Json.toJson(js))
+    }
+  }
+
+  def delete(taskId: String) = Authenticated.async { implicit request =>
+    for {
+      task <- TaskDAO.findOneById(taskId) ?~> Messages("task.notFound")
+      _ <- TaskService.remove(task._id)
+    } yield {
+      JsonOk(Messages("task.removed"))
     }
   }
 

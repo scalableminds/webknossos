@@ -168,7 +168,7 @@ object NMLIO extends Controller with Secured with TextUtils {
   def taskTypeDownload(taskTypeId: String) = Authenticated.async { implicit request =>
     def createTaskTypeZip(taskType: TaskType) =
       for {
-        tasks <- TaskDAO.findAllByTaskType(taskType)
+        tasks <- TaskDAO.findAllByTaskType(taskType._id)
         tracings <- Future.traverse(tasks)(_.annotations).map(_.flatten.filter(_.state.isFinished))
         zip <- zipTracings(tracings, taskType.summary + "_nmls.zip")
       } yield zip

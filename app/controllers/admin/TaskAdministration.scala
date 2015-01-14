@@ -87,39 +87,40 @@ object TaskAdministration extends AdminController {
   val taskForm = Form(
     taskMapping).fill("", "", Point3D(0, 0, 0), Experience.empty, 100, 10, "", "", Full(BoundingBox(Point3D(0, 0, 0), 0, 0, 0)))
 
-  def taskCreateHTML(
-                      taskFromNMLForm: Form[(String, Experience, Int, Int, String, String, Box[BoundingBox])],
-                      taskForm: Form[(String, String, Point3D, Experience, Int, Int, String, String, Box[BoundingBox])]
-                    )(implicit request: AuthenticatedRequest[_]) =
-    for {
-      dataSets <- DataSetDAO.findAll
-      projects <- ProjectDAO.findAll
-      taskTypes <- TaskTypeDAO.findAll
-    } yield {
-      html.admin.task.taskCreate(
-        taskTypes,
-        dataSets,
-        projects,
-        request.user.adminTeamNames,
-        taskFromNMLForm,
-        taskForm)
-    }
+  // def taskCreateHTML(
+  //                     taskFromNMLForm: Form[(String, Experience, Int, Int, String, String, Box[BoundingBox])],
+  //                     taskForm: Form[(String, String, Point3D, Experience, Int, Int, String, String, Box[BoundingBox])]
+  //                   )(implicit request: AuthenticatedRequest[_]) =
+  //   for {
+  //     dataSets <- DataSetDAO.findAll
+  //     projects <- ProjectDAO.findAll
+  //     taskTypes <- TaskTypeDAO.findAll
+  //   } yield {
+  //     html.admin.task.taskCreate(
+  //       taskTypes,
+  //       dataSets,
+  //       projects,
+  //       request.user.adminTeamNames,
+  //       taskFromNMLForm,
+  //       taskForm)
+  //   }
 
-  def taskEditHtml(taskId: String, taskForm: Form[(String, Experience, Int, Int, String, String)])(implicit request: AuthenticatedRequest[_]) =
-    for {
-      projects <- ProjectDAO.findAll
-      taskTypes <- TaskTypeDAO.findAll
-    } yield {
-      html.admin.task.taskEdit(
-        taskId,
-        taskTypes,
-        projects,
-        request.user.adminTeamNames,
-        taskForm)
-    }
+  // def taskEditHtml(taskId: String, taskForm: Form[(String, Experience, Int, Int, String, String)])(implicit request: AuthenticatedRequest[_]) =
+  //   for {
+  //     projects <- ProjectDAO.findAll
+  //     taskTypes <- TaskTypeDAO.findAll
+  //   } yield {
+  //     html.admin.task.taskEdit(
+  //       taskId,
+  //       taskTypes,
+  //       projects,
+  //       request.user.adminTeamNames,
+  //       taskForm)
+  //   }
 
   def create = Authenticated.async { implicit request =>
-    taskCreateHTML(taskFromNMLForm, taskForm).map(html => Ok(html))
+    Future.successful(Ok)
+    //taskCreateHTML(taskFromNMLForm, taskForm).map(html => Ok(html))
   }
 
   def delete(taskId: String) = Authenticated.async { implicit request =>
@@ -131,6 +132,7 @@ object TaskAdministration extends AdminController {
     }
   }
 
+  /*
   def createFromForm = Authenticated.async(parse.urlFormEncoded) { implicit request =>
     taskForm.bindFromRequest.fold(
     formWithErrors => taskCreateHTML(taskFromNMLForm, formWithErrors).map(html => BadRequest(html)), {
@@ -151,24 +153,6 @@ object TaskAdministration extends AdminController {
           .highlighting(task.id)
         }
     })
-  }
-
-  def edit(taskId: String) = Authenticated.async { implicit request =>
-    for {
-      task <- TaskDAO.findOneById(taskId) ?~> Messages("task.notFound")
-      _ <- ensureTeamAdministration(request.user, task.team).toFox
-      projectName <- task.project.map(_.name) getOrElse ""
-      form = basicTaskForm(task.assignedInstances).fill(
-        (task._taskType.stringify,
-          task.neededExperience,
-          task.priority,
-          task.instances,
-          task.team,
-          projectName))
-      html <- taskEditHtml(task.id, form)
-    } yield {
-      Ok(html)
-    }
   }
 
   def editTaskForm(taskId: String) = Authenticated.async(parse.urlFormEncoded) { implicit request =>
@@ -205,6 +189,8 @@ object TaskAdministration extends AdminController {
       result
     }
   }
+
+
 
   def createFromNML = Authenticated.async(parse.multipartFormData) { implicit request =>
     taskFromNMLForm.bindFromRequest.fold(
@@ -384,8 +370,8 @@ object TaskAdministration extends AdminController {
           "projects" -> allProjects
         )
       )
-    }
+
 
   }
-
+    */
 }

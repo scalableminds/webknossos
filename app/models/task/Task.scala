@@ -158,8 +158,8 @@ object TaskDAO extends SecuredBaseDAO[Task] with FoxImplicits {
     }))
   }
 
-  def findAllByTaskType(taskType: TaskType)(implicit ctx: DBAccessContext) = withExceptionCatcher{
-    find("_taskType", taskType._id).collect[List]()
+  def findAllByTaskType(_taskType: BSONObjectID)(implicit ctx: DBAccessContext) = withExceptionCatcher{
+    find("_taskType", _taskType).collect[List]()
   }
 
   def findAllByProject(project: String)(implicit ctx: DBAccessContext) = withExceptionCatcher{

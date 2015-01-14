@@ -15,6 +15,10 @@ class SelectionItemView extends Backbone.Marionette.ItemView
   initialize : (options) ->
 
     @modelValue = options.modelValue
+
+    # in the taskcreate form the tasktype select must distinguish between value and innerHTML
+    @modelName = options.modelName
+
     @listenTo(@, "render", @afterRender)
 
 
@@ -31,4 +35,9 @@ class SelectionItemView extends Backbone.Marionette.ItemView
     @$el.attr(
       id : @model.get("id")
       value : @modelValue()
+    ).html(
+      if @modelName?
+        @modelName()
+      else
+        @modelValue()
     )

@@ -3,6 +3,7 @@ underscore : _
 backbone.marionette : Marionette
 ./dataset_list_item_view : DatasetListItemView
 ./team_assignment_modal_view: TeamAssignmentModalView
+admin/models/dataset/dataset_collection : DatasetCollection
 ###
 
 class DatasetListView extends Backbone.Marionette.CompositeView
@@ -44,6 +45,9 @@ class DatasetListView extends Backbone.Marionette.CompositeView
   childViewContainer: "table"
 
   initialize : ->
+
+    @collection.comparator = (a, b) -> a.get("created") < b.get("created")
+    @collection.sort()
 
     @collection.fetch(
       silent : true

@@ -46,11 +46,11 @@ class DatasetListView extends Backbone.Marionette.CompositeView
   initialize : ->
 
     @collection.comparator = (a,b) ->
--      if a.get("created") < b.get("created")
--        return 1
--      else if a.get("created") > b.get("created")
--        return -1
--      return 0
+      if a.get("created") < b.get("created")
+        return 1
+      else if a.get("created") > b.get("created")
+        return -1
+      return 0
 
     @collection.fetch(
       silent : true

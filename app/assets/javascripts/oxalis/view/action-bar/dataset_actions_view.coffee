@@ -100,7 +100,7 @@ class DatasetActionsView extends Backbone.Marionette.ItemView
     if evt
       evt.preventDefault()
 
-    @model.save()
+    return @model.save()
 
   mergeTracing : ->
 

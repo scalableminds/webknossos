@@ -43,7 +43,7 @@ case class Task(
 
   lazy val id = _id.stringify
 
-  def taskType(implicit ctx: DBAccessContext) = TaskTypeDAO.findEvenDeletedById(_taskType)(GlobalAccessContext).toFox
+  def taskType(implicit ctx: DBAccessContext) = TaskTypeDAO.findOneById(_taskType, true)(GlobalAccessContext).toFox
 
   def project(implicit ctx: DBAccessContext) =
     _project.toFox.flatMap(name => ProjectDAO.findOneByName(name))
@@ -181,8 +181,11 @@ object TaskDAO extends SecuredBaseDAO[Task] with FoxImplicits {
   def findAllAssignable(implicit ctx: DBAccessContext) =
     findAll.map(_.filter(!_.isFullyAssigned))
 
-  def findEvenDeletedById(id: BSONObjectID)(implicit ctx: DBAccessContext) = withExceptionCatcher{
-    super.find(Json.obj("_id" -> id)).one[Task]
+  def findOneById(id: BSONObjectID, includeDeleted: Boolean = false)(implicit ctx: DBAccessContext) = withExceptionCatcher{
+    if(includeDeleted)
+      super.find(Json.obj("_id" -> id)).one[Task]
+    else
+      super.find(Json.obj("_id" -> id, "isActive" -> true)).one[Task]
   }
 
   def logTime(time: Long, _task: BSONObjectID)(implicit ctx: DBAccessContext) =

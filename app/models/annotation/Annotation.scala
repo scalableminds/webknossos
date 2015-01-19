@@ -33,7 +33,8 @@ case class Annotation(
                        version: Int = 0,
                        _name: Option[String] = None,
                        created : Long = System.currentTimeMillis,
-                       _id: BSONObjectID = BSONObjectID.generate
+                       _id: BSONObjectID = BSONObjectID.generate,
+                       isActive: Boolean = true
                      )
 
   extends AnnotationLike with FoxImplicits {
@@ -143,6 +144,14 @@ object AnnotationDAO
   underlying.indexesManager.ensure(Index(Seq("_task" -> IndexType.Ascending)))
   underlying.indexesManager.ensure(Index(Seq("_user" -> IndexType.Ascending)))
 
+  override def find(query: JsObject = Json.obj())(implicit ctx: DBAccessContext) = {
+    super.find(query ++ Json.obj("isActive" -> true))
+  }
+
+  override def findOne(query: JsObject = Json.obj())(implicit ctx: DBAccessContext) = {
+    super.findOne(query ++ Json.obj("isActive" -> true))
+  }
+
   def defaultFindForUserQ(_user: BSONObjectID, annotationType: AnnotationType) = Json.obj(
     "_user" -> _user,
     "state.isFinished" -> false,
@@ -164,7 +173,6 @@ object AnnotationDAO
       "state.isAssigned" -> true,
       "typ" -> annotationType)).cursor[Annotation].collect[List]()
   }
-
 
   def findForWithTypeOtherThan(_user: BSONObjectID, annotationTypes: List[AnnotationType])(implicit ctx: DBAccessContext) = withExceptionCatcher{
     find(Json.obj(
@@ -192,7 +200,7 @@ object AnnotationDAO
   }
 
   def removeAllWithTaskId(_task: BSONObjectID)(implicit ctx: DBAccessContext) =
-    remove(Json.obj("_task" -> _task))
+    update(Json.obj("_task" -> _task), Json.obj("$set" -> Json.obj("isActive" -> false)), false, true)
 
   def incrementVersion(_annotation: BSONObjectID)(implicit ctx: DBAccessContext) =
     findAndModify(
@@ -237,7 +245,7 @@ object AnnotationDAO
   }
 
   def countAll(implicit ctx: DBAccessContext) =
-    count(Json.obj())
+    count(Json.obj("isActive" -> true))
 
   def finish(_annotation: BSONObjectID)(implicit ctx: DBAccessContext) =
     findAndModify(

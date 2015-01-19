@@ -9,6 +9,8 @@ import play.api.libs.concurrent.Execution.Implicits._
 import models.user.{User, Experience}
 import scala.concurrent.Future
 import play.api.Logger
+import play.api.libs.json.Json
+import play.modules.reactivemongo.json.BSONFormats._
 import reactivemongo.core.commands.LastError
 
 /**
@@ -27,7 +29,7 @@ object TaskService extends TaskAssignmentSimulation with TaskAssignment with Fox
     TaskDAO.findAllAdministratable(user)
 
   def remove(_task: BSONObjectID)(implicit ctx: DBAccessContext) = {
-    TaskDAO.removeById(_task).flatMap{
+    TaskDAO.update(Json.obj("_id" -> _task), Json.obj("$set" -> Json.obj("isActive" -> false))).flatMap{
       case result if result.n > 0 =>
         AnnotationDAO.removeAllWithTaskId(_task)
       case _ =>

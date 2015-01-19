@@ -105,8 +105,11 @@ object TaskTypeDAO extends SecuredBaseDAO[TaskType] {
   override def findOne(query: JsObject = Json.obj())(implicit ctx: DBAccessContext) =
     super.findOne(query ++ Json.obj("isActive" -> true))
 
-  def findEvenDeletedById(id: BSONObjectID)(implicit ctx: DBAccessContext) = withExceptionCatcher{
-    super.find(Json.obj("_id" -> id)).one[TaskType]
+  def findOneById(id: BSONObjectID, includeDeleted: Boolean = false)(implicit ctx: DBAccessContext) = withExceptionCatcher{
+    if(includeDeleted)
+      super.find(Json.obj("_id" -> id)).one[TaskType]
+    else
+      super.find(Json.obj("_id" -> id, "isActive" -> true)).one[TaskType]
   }
 
   def findOneBySumnary(summary: String)(implicit ctx: DBAccessContext) = {

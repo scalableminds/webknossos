@@ -12,7 +12,7 @@ three : THREE
 
 class PlaneView
 
-  constructor : (@model, @flycam, @view, @stats) ->
+  constructor : (@model, @view, @stats) ->
 
     _.extend(this, Backbone.Events)
 
@@ -77,7 +77,9 @@ class PlaneView
 
     @first = true
     @newTextures = [true, true, true, true]
-    # start the rendering loop
+
+    @needsRerender = true
+    app.vent.on("rerender", => @needsRerender = true)
 
 
   animate : ->
@@ -104,7 +106,7 @@ class PlaneView
       for plane in binary.planes
         modelChanged |= plane.hasChanged()
 
-    if @flycam.hasChanged or @flycam.hasNewTextures() or modelChanged
+    if @needsRerender or modelChanged
 
       @trigger("render")
 
@@ -138,8 +140,7 @@ class PlaneView
         )
         @renderer.render @scene, @camera[i]
 
-      @flycam.hasChanged = false
-      @flycam.hasNewTexture = [false, false, false]
+      @needsRerender = false
 
   addGeometry : (geometry) ->
     # Adds a new Three.js geometry to the scene.
@@ -154,8 +155,7 @@ class PlaneView
 
 
   draw : ->
-    # Apply a single draw
-    @flycam.update()
+    app.vent.trigger("rerender")
 
 
   resizeThrottled : ->
@@ -216,7 +216,7 @@ class PlaneView
       else
         $(".inputcatcher").eq(i).removeClass("active").addClass("inactive")
 
-    @flycam.update()
+    @draw()
 
 
   getCameras : =>

@@ -1,4 +1,5 @@
 ### define
+app : app
 backbone : Backbone
 ../model/dimensions : Dimensions
 ../../libs/resizable_buffer : ResizableBuffer
@@ -59,7 +60,7 @@ class CellLayer
     @edge.vertexBuffer.push(edgePoint)
     @finalizeMesh(@edge)
 
-    @flycam.update()
+    app.vent.trigger("rerender")
 
 
   finalizeMesh : (mesh) ->

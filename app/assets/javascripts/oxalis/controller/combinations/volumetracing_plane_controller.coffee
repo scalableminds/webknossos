@@ -95,7 +95,6 @@ class VolumeTracingPlaneController extends PlaneController
       bb = @model.flycam.getViewportBoundingBox()
       res = @model.user.get("isosurfaceResolution")
       @sceneController.showShapes(@scaleIsosurfaceBB(bb), res, id)
-    @model.flycam.update()
 
   scaleIsosurfaceBB : (bb) ->
     factor = @model.user.get("isosurfaceBBsize")

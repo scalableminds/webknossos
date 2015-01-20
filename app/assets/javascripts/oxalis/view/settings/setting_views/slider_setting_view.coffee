@@ -1,7 +1,6 @@
 ### define
 ./abstract_setting_view : AbstractSettingView
 underscore : _
-app : app
 ###
 
 class SliderSettingView extends AbstractSettingView
@@ -46,7 +45,6 @@ class SliderSettingView extends AbstractSettingView
   handleChange : (evt) ->
 
     @model.set(@options.name, (Number) evt.target.value)
-    app.oxalis.model.flycam.update()
 
 
   update : (model, value) ->

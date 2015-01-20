@@ -5,12 +5,9 @@ backbone : Backbone
 
 class UserAnnotationsCollection extends Backbone.Collection
 
-  comparator = (a, b) ->
-    if a.get("created") < b.get("created")
-      return 1
-    else if a.get("created") > b.get("created")
-      return -1
-    return 0
+  comparator : (a, b) ->
+
+    return b.get("created").localeCompare(a.get("created"))
 
 
   url : ->

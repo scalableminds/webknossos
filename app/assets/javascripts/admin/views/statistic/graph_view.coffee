@@ -23,7 +23,7 @@ class GraphView extends Backbone.Marionette.ItemView
 
 
     dates = @model.get("tracingTimes").map((item) -> return moment(item.get("start")).format("YYYY-MM-DD"))
-    weeklyHours = @model.get("tracingTimes").map((item) -> return parseInt moment.duration(item.get("tracingTime")).asHours())
+    weeklyHours = @model.get("tracingTimes").map((item) -> return moment.duration(item.get("tracingTime")).asHours())
 
     graph = c3.generate(
       bindto : "#graph"

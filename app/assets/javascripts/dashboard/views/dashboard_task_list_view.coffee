@@ -70,6 +70,7 @@ class DashboardTaskListView extends Backbone.Marionette.CompositeView
 
     @showFinishedTasks = false
     @collection = new UserTasksCollection()
+    @collection.fetch()
 
     #@listenTo(@model.get("tasks"), "add", @addChildView, @)
     @listenTo(app.vent, "TaskTransferModal:refresh", @refresh)

@@ -19,10 +19,6 @@ class UserTasksCollection extends Backbone.Collection
   defaults :
       showFinishedTasks : false
 
-  initialize : (options) ->
-
-    @listenTo(@, "sync", @transformToCollection)
-
 
   getFinishedTasks : ->
 
@@ -31,16 +27,7 @@ class UserTasksCollection extends Backbone.Collection
 
   getUnfinishedTasks : ->
 
-    filteredTasks = @filter( (task) -> return !task.get("annotation").state.isFinished )
-    return new Backbone.Collection(filteredTasks)
-
-
-  transformToCollection : ->
-
-    tasks = @get("taskAnnotations").map( (el) ->
-      return DashboardTaskModel::parse(el)
-    )
-
+    return @filter( (task) -> return !task.get("annotation").state.isFinished )
 
 
   getNewTask : ->
@@ -49,8 +36,7 @@ class UserTasksCollection extends Backbone.Collection
 
     return newTask.fetch(
       url : @newTaskUrl
-      success :  ->
-        debugger
+      success :  =>
         @add(newTask)
     )
 

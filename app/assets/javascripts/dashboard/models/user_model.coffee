@@ -7,8 +7,8 @@ class UserModel extends Backbone.Model
 
 
   defaults:
-    "firstName" : ""
-    "lastName" : ""
+    firstName : ""
+    lastName : ""
 
   urlRoot : "/api/users"
 

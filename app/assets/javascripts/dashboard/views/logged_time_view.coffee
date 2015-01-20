@@ -47,7 +47,7 @@ class LoggedTimeView extends Backbone.Marionette.LayoutView
     if @collection.length > 0
 
       dates = @collection.map((item) -> return item.get("interval").toDate())
-      monthlyHours = @collection.map((item) -> return parseInt item.get("time").asHours())
+      monthlyHours = @collection.map((item) -> return item.get("time").asHours())
 
       graph = c3.generate(
         bindto : "#time-graph" #doesn't work with classes
@@ -71,4 +71,4 @@ class LoggedTimeView extends Backbone.Marionette.LayoutView
 
   serializeData : ->
 
-    return { items: _.partial(@serializeCollection, @collection).apply(@) }
+    return items: @serializeCollection(@collection)

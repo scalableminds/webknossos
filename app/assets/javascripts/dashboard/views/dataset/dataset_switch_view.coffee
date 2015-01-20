@@ -52,7 +52,7 @@ class DatasetSwitchView extends Backbone.Marionette.LayoutView
 
   toggleSwitchButtons : ->
 
-    [@ui.showAdvancedButton, @ui.showGalleryButton].map((button) -> button.toggleClass("hidden", "show"))
+    [@ui.showAdvancedButton, @ui.showGalleryButton].map((button) -> button.toggleClass("hidden show"))
 
 
   showGalleryView : ->

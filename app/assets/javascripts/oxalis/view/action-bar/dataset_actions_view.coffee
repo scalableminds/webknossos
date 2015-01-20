@@ -99,8 +99,8 @@ class DatasetActionsView extends Backbone.Marionette.ItemView
 
     if evt
       evt.preventDefault()
-    app.vent.trigger("saveEverything")
 
+    return @model.save()
 
   mergeTracing : ->
 

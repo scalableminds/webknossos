@@ -49,11 +49,13 @@ class PingStrategy
     }
 
 
-  getBucketArray : (center, range, area) ->
+  getBucketArray : (center, width, height) ->
 
-    buckets = []
-    for u in [-(range-area[0])..(area[2]-range)]
-      for v in [-(range-area[1])..(area[3]-range)]
+    uOffset = Math.ceil(width / 2)
+    vOffset = Math.ceil(height / 2)
+
+    for u in [-uOffset..uOffset]
+      for v in [-vOffset..vOffset]
         bucket = center.slice(0)
         bucket[@u] += u
         bucket[@v] += v
@@ -62,7 +64,7 @@ class PingStrategy
     buckets
 
 
-  ping : (position, direction, zoomStep, area, activePlane) ->
+  ping : (position, direction, zoomStep, areas, activePlane) ->
 
     pullQueue = []
 
@@ -71,14 +73,14 @@ class PingStrategy
 
       # Converting area from voxels to buckets
       bucketArea = [
-        area[plane][0] >> @cube.BUCKET_SIZE_P
-        area[plane][1] >> @cube.BUCKET_SIZE_P
-        area[plane][2] - 1 >> @cube.BUCKET_SIZE_P
-        area[plane][3] - 1 >> @cube.BUCKET_SIZE_P
+        areas[plane][0] >> @cube.BUCKET_SIZE_P
+        areas[plane][1] >> @cube.BUCKET_SIZE_P
+        areas[plane][2] - 1 >> @cube.BUCKET_SIZE_P
+        areas[plane][3] - 1 >> @cube.BUCKET_SIZE_P
       ]
 
       centerBucket = @cube.positionToZoomedAddress(position, zoomStep)
-      buckets = @getBucketArray(centerBucket, @TEXTURE_SIZE_P - 1, bucketArea)
+      buckets = @getBucketArray(centerBucket, bucketArea[2] - bucketArea[0], bucketArea[3] - bucketArea[1])
 
       for bucket in buckets
         if bucket?

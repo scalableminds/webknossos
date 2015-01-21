@@ -6,6 +6,7 @@ class PingStrategy
 
   # Constants
   TEXTURE_SIZE_P : 0
+  MAX_ZOOM_STEP_DIFF : 1
 
   velocityRangeStart : 0
   velocityRangeEnd : 0
@@ -75,9 +76,13 @@ class PingStrategy.BaseStrategy extends PingStrategy
   preloadingPriorityOffset : 0
 
 
-  ping : (position, direction, zoomStep, areas, activePlane) ->
+  ping : (position, direction, requestedZoomStep, areas, activePlane) ->
 
+    zoomStep = Math.min(requestedZoomStep, @cube.MAX_ZOOM_STEP)
+    zoomStepDiff = requestedZoomStep - zoomStep
     pullQueue = []
+
+    return unless zoomStepDiff <= @MAX_ZOOM_STEP_DIFF
 
     for plane in [0..2]
       [@u, @v, @w] = Dimensions.getIndices(plane)
@@ -89,9 +94,11 @@ class PingStrategy.BaseStrategy extends PingStrategy
         areas[plane][2] - 1 >> @cube.BUCKET_SIZE_P
         areas[plane][3] - 1 >> @cube.BUCKET_SIZE_P
       ]
+      width = (bucketArea[2] - bucketArea[0]) << zoomStepDiff
+      height = (bucketArea[3] - bucketArea[1]) << zoomStepDiff
 
       centerBucket = @cube.positionToZoomedAddress(position, zoomStep)
-      buckets = @getBucketArray(centerBucket, bucketArea[2] - bucketArea[0], bucketArea[3] - bucketArea[1])
+      buckets = @getBucketArray(centerBucket, width, height)
 
       for bucket in buckets
         if bucket?

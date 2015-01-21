@@ -18,8 +18,6 @@ class PingStrategy
   cube : null
 
   name : 'ABSTRACT'
-  preloadingSlides : 0
-  preloadingPriorityOffset : 0
 
 
   constructor : (@cube, @TEXTURE_SIZE_P) ->
@@ -51,6 +49,7 @@ class PingStrategy
 
   getBucketArray : (center, width, height) ->
 
+    buckets = []
     uOffset = Math.ceil(width / 2)
     vOffset = Math.ceil(height / 2)
 
@@ -62,6 +61,18 @@ class PingStrategy
         buckets.push if _.min(bucket) >= 0 then bucket else null
 
     buckets
+
+
+class PingStrategy.BaseStrategy extends PingStrategy
+
+  velocityRangeStart : 0
+  velocityRangeEnd : Infinity
+
+  roundTripTimeRangeStart : 0
+  roundTripTimeRangeEnd : Infinity
+
+  preloadingSlides : 0
+  preloadingPriorityOffset : 0
 
 
   ping : (position, direction, zoomStep, areas, activePlane) ->
@@ -96,13 +107,7 @@ class PingStrategy
     pullQueue
 
 
-class PingStrategy.Skeleton extends PingStrategy
-
-  velocityRangeStart : 0
-  velocityRangeEnd : Infinity
-
-  roundTripTimeRangeStart : 0
-  roundTripTimeRangeEnd : Infinity
+class PingStrategy.Skeleton extends PingStrategy.BaseStrategy
 
   contentTypes : ["skeletonTracing"]
 
@@ -110,13 +115,7 @@ class PingStrategy.Skeleton extends PingStrategy
   preloadingSlides : 2
 
 
-class PingStrategy.Volume extends PingStrategy
-
-  velocityRangeStart : 0
-  velocityRangeEnd : Infinity
-
-  roundTripTimeRangeStart : 0
-  roundTripTimeRangeEnd : Infinity
+class PingStrategy.Volume extends PingStrategy.BaseStrategy
 
   contentTypes : ["volumeTracing"]
 

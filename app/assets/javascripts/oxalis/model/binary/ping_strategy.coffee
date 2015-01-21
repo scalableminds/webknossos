@@ -82,7 +82,7 @@ class PingStrategy.BaseStrategy extends PingStrategy
     zoomStepDiff = requestedZoomStep - zoomStep
     pullQueue = []
 
-    return unless zoomStepDiff <= @MAX_ZOOM_STEP_DIFF
+    return pullQueue unless zoomStepDiff <= @MAX_ZOOM_STEP_DIFF
 
     for plane in [0..2]
       [@u, @v, @w] = Dimensions.getIndices(plane)

@@ -6,6 +6,7 @@ class PingStrategy
 
   # Constants
   TEXTURE_SIZE_P : 0
+  MAX_ZOOM_STEP_DIFF : 1
 
   velocityRangeStart : 0
   velocityRangeEnd : 0
@@ -47,11 +48,14 @@ class PingStrategy
     }
 
 
-  getBucketArray : (center, range, area) ->
+  getBucketArray : (center, width, height) ->
 
     buckets = []
-    for u in [-(range-area[0])..(area[2]-range)]
-      for v in [-(range-area[1])..(area[3]-range)]
+    uOffset = Math.ceil(width / 2)
+    vOffset = Math.ceil(height / 2)
+
+    for u in [-uOffset..uOffset]
+      for v in [-vOffset..vOffset]
         bucket = center.slice(0)
         bucket[@u] += u
         bucket[@v] += v
@@ -60,92 +64,71 @@ class PingStrategy
     buckets
 
 
-class PingStrategy.Skeleton extends PingStrategy
+class PingStrategy.BaseStrategy extends PingStrategy
 
   velocityRangeStart : 0
   velocityRangeEnd : Infinity
 
   roundTripTimeRangeStart : 0
   roundTripTimeRangeEnd : Infinity
+
+  preloadingSlides : 0
+  preloadingPriorityOffset : 0
+
+
+  ping : (position, direction, requestedZoomStep, areas, activePlane) ->
+
+    zoomStep = Math.min(requestedZoomStep, @cube.MAX_ZOOM_STEP)
+    zoomStepDiff = requestedZoomStep - zoomStep
+    pullQueue = []
+
+    return unless zoomStepDiff <= @MAX_ZOOM_STEP_DIFF
+
+    for plane in [0..2]
+      [@u, @v, @w] = Dimensions.getIndices(plane)
+
+      # Converting area from voxels to buckets
+      bucketArea = [
+        areas[plane][0] >> @cube.BUCKET_SIZE_P
+        areas[plane][1] >> @cube.BUCKET_SIZE_P
+        areas[plane][2] - 1 >> @cube.BUCKET_SIZE_P
+        areas[plane][3] - 1 >> @cube.BUCKET_SIZE_P
+      ]
+      width = (bucketArea[2] - bucketArea[0]) << zoomStepDiff
+      height = (bucketArea[3] - bucketArea[1]) << zoomStepDiff
+
+      centerBucket = @cube.positionToZoomedAddress(position, zoomStep)
+      buckets = @getBucketArray(centerBucket, width, height)
+
+      for bucket in buckets
+        if bucket?
+          priority = Math.abs(bucket[0] - centerBucket[0]) + Math.abs(bucket[1] - centerBucket[1]) + Math.abs(bucket[2] - centerBucket[2])
+          pullQueue.push({bucket: [bucket[0], bucket[1], bucket[2], zoomStep], priority: priority})
+          if plane == activePlane
+            # preload only for active plane
+            for slide in [0...@preloadingSlides]
+              if direction[@w] >= 0 then bucket[@w]++ else bucket[@w]--
+              preloadingPriority = (priority << (slide + 1)) + @preloadingPriorityOffset
+              pullQueue.push({bucket: [bucket[0], bucket[1], bucket[2], zoomStep], priority: preloadingPriority})
+
+    pullQueue
+
+
+class PingStrategy.Skeleton extends PingStrategy.BaseStrategy
 
   contentTypes : ["skeletonTracing"]
 
   name : 'SKELETON'
+  preloadingSlides : 2
 
 
-  ping : (position, direction, zoomStep, area, activePlane) ->
-
-    pullQueue = []
-
-    for plane in [0..2]
-      [@u, @v, @w] = Dimensions.getIndices(plane)
-
-      # Converting area from voxels to buckets
-      bucketArea = [
-        area[plane][0] >> @cube.BUCKET_SIZE_P
-        area[plane][1] >> @cube.BUCKET_SIZE_P
-        area[plane][2] - 1 >> @cube.BUCKET_SIZE_P
-        area[plane][3] - 1 >> @cube.BUCKET_SIZE_P
-      ]
-
-      centerBucket = @cube.positionToZoomedAddress(position, zoomStep)
-      buckets = @getBucketArray(centerBucket, @TEXTURE_SIZE_P - 1, bucketArea)
-
-      for bucket in buckets
-        if bucket?
-          priority = Math.abs(bucket[0] - centerBucket[0]) + Math.abs(bucket[1] - centerBucket[1]) + Math.abs(bucket[2] - centerBucket[2])
-          pullQueue.push({bucket: [bucket[0], bucket[1], bucket[2], zoomStep], priority: priority})
-          if plane == activePlane
-            # preload only for active plane
-            if direction[@w] >= 0 then bucket[@w]++ else bucket[@w]--
-            pullQueue.push({bucket: [bucket[0], bucket[1], bucket[2], zoomStep], priority: priority << 1})
-            if direction[@w] >= 0 then bucket[@w]++ else bucket[@w]--
-            pullQueue.push({bucket: [bucket[0], bucket[1], bucket[2], zoomStep], priority: priority << 2})
-
-    pullQueue
-
-
-class PingStrategy.Volume extends PingStrategy
-
-  velocityRangeStart : 0
-  velocityRangeEnd : Infinity
-
-  roundTripTimeRangeStart : 0
-  roundTripTimeRangeEnd : Infinity
+class PingStrategy.Volume extends PingStrategy.BaseStrategy
 
   contentTypes : ["volumeTracing"]
 
   name : 'VOLUME'
-
-
-  ping : (position, direction, zoomStep, area, activePlane) ->
-
-    pullQueue = []
-
-    for plane in [0..2]
-      [@u, @v, @w] = Dimensions.getIndices(plane)
-
-      # Converting area from voxels to buckets
-      bucketArea = [
-        area[plane][0] >> @cube.BUCKET_SIZE_P
-        area[plane][1] >> @cube.BUCKET_SIZE_P
-        area[plane][2] - 1 >> @cube.BUCKET_SIZE_P
-        area[plane][3] - 1 >> @cube.BUCKET_SIZE_P
-      ]
-
-      centerBucket = @cube.positionToZoomedAddress(position, zoomStep)
-      buckets = @getBucketArray(centerBucket, @TEXTURE_SIZE_P - 1, bucketArea)
-
-      for bucket in buckets
-        if bucket?
-          priority = Math.abs(bucket[0] - centerBucket[0]) + Math.abs(bucket[1] - centerBucket[1]) + Math.abs(bucket[2] - centerBucket[2])
-          pullQueue.push({bucket: [bucket[0], bucket[1], bucket[2], zoomStep], priority: priority})
-          if plane == activePlane
-            # preload only for active plane
-            if direction[@w] >= 0 then bucket[@w]++ else bucket[@w]--
-            pullQueue.push({bucket: [bucket[0], bucket[1], bucket[2], zoomStep], priority: (priority << 1) + 80})
-
-    pullQueue
+  preloadingSlides : 1
+  preloadingPriorityOffset : 80
 
 
 PingStrategy

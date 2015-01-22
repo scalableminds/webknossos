@@ -101,7 +101,7 @@ class PushQueue
 
       deferred = $.Deferred()
       @compressionWorker
-        .execute(transmitBuffer)
+        .execute(transmitBuffer, [transmitBuffer.buffer])
         .done( (result) =>
           console.log "Compressing time:", result.time
           @getSendSocket()

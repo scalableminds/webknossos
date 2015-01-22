@@ -17,17 +17,22 @@ class DeferredWorker
     @webWorker.onmessage = (evt) => @onMessage(evt.data)
 
 
-  execute : (data) ->
+  execute : (data, transferrables=[]) ->
 
     jobId = @jobIdCounter++
-    @jobs[jobId] = $.Deferred()
+    @jobs[jobId] = {
+      deferred : new $.Deferred()
+      startTime : (new Date()).getTime()
+    }
 
-    @webWorker.postMessage({data, jobId})
+    @webWorker.postMessage({data, jobId}, transferrables)
 
-    return @jobs[jobId]
+    return @jobs[jobId].deferred
 
 
   onMessage : ({jobId, result}) ->
 
-    @jobs[jobId].resolve(result)
+    @jobs[jobId].deferred.resolve(result)
+    time = (new Date()).getTime()
+    console.log "Job finished, took:", (time - @jobs[jobId].startTime)
     delete @jobs[jobId]

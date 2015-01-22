@@ -1,4 +1,5 @@
 ### define
+app : app
 three : THREE
 ./abstract_material_factory : AbstractMaterialFactory
 ###
@@ -44,10 +45,12 @@ class AbstractPlaneMaterialFactory extends AbstractMaterialFactory
 
     @listenTo(@model.datasetConfiguration, "change:brightness", (model, brightness) ->
       @uniforms.brightness.value = brightness / 255
+      app.vent.trigger("rerender")
     )
 
     @listenTo(@model.datasetConfiguration, "change:contrast", (model, contrast) ->
       @uniforms.contrast.value = contrast
+      app.vent.trigger("rerender")
     )
 
 

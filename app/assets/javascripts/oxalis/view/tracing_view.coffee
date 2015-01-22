@@ -40,7 +40,7 @@ class TracingView extends Backbone.Marionette.LayoutView
     )
 
 
-  disableContextMenu : ->
+  disableContextMenu : (event) ->
 
     # hide contextmenu, while rightclicking a canvas
     event.preventDefault()

@@ -100,14 +100,13 @@ class Model extends Backbone.Model
     @connectionInfo = new ConnectionInfo()
     @binary = {}
 
-    maxResolution = Math.max(_.union(layers.map((layer) ->
-      layer.resolutions
-    )...)...)
-    maxZoomStep = Math.log(maxResolution) / Math.LN2
+    maxZoomStep = -Infinity
 
     for layer in layers
       layer.bitDepth = parseInt(layer.elementClass.substring(4))
-      @binary[layer.name] = new Binary(this, tracing, layer, maxZoomStep, @updatePipeline, @connectionInfo)
+      maxLayerZoomStep = Math.log(Math.max(layer.resolutions...)) / Math.LN2
+      @binary[layer.name] = new Binary(this, tracing, layer, maxLayerZoomStep, @updatePipeline, @connectionInfo)
+      maxZoomStep = Math.max(maxZoomStep, maxLayerZoomStep)
 
     if @getColorBinaries().length == 0
       Toast.error("No data available! Something seems to be wrong with the dataset.")

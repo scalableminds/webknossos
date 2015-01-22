@@ -115,7 +115,7 @@ class Controller
       @initKeyboard()
 
       for binaryName of @model.binary
-        @listenTo(@model.binary[binaryName].cube, "bucketLoaded", -> @model.flycam.update)
+        @listenTo(@model.binary[binaryName].cube, "bucketLoaded", -> app.vent.trigger("rerender"))
 
       @listenTo(app.vent, "changeViewMode", @setMode)
 

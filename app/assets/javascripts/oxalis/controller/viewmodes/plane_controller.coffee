@@ -51,7 +51,7 @@ class PlaneController
 
     @oldNmPos = app.scaleInfo.voxelToNm( @flycam.getPosition() )
 
-    @planeView = new PlaneView(@model, @flycam, @view, stats)
+    @planeView = new PlaneView(@model, @view, stats)
 
     @activeViewport = constants.PLANE_XY
 
@@ -79,6 +79,7 @@ class PlaneController
       @planeView.addGeometry(mesh)
 
     @model.user.triggerAll()
+    @model.datasetConfiguration.triggerAll()
 
     @initTrackballControls()
     @bindToEvents()
@@ -133,7 +134,7 @@ class PlaneController
       @planeView.getCameras()[constants.TDView],
       view,
       new THREE.Vector3(pos...),
-      => @flycam.update())
+      -> app.vent.trigger("rerender"))
 
     @controls.noZoom = true
     @controls.noPan = true

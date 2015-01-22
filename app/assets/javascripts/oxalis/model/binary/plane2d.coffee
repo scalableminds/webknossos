@@ -58,6 +58,15 @@ class Plane2D
 
     @listenTo(@cube, "bucketLoaded", (bucket) ->
 
+      zoomStepDiff = @dataTexture.zoomStep - bucket[3]
+      if zoomStepDiff > 0
+        bucket = [
+          bucket[0] >> zoomStepDiff
+          bucket[1] >> zoomStepDiff
+          bucket[2] >> zoomStepDiff
+          @dataTexture.zoomStep
+        ]
+
       # Checking, whether the new bucket intersects with the current layer
       if @dataTexture.layer >> (@cube.BUCKET_SIZE_P + bucket[3]) == bucket[@W] and @dataTexture.topLeftBucket?
 

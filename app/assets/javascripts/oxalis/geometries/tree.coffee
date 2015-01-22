@@ -1,4 +1,5 @@
 ### define
+app : app
 ../../libs/resizable_buffer : ResizableBuffer
 three.color : ColorConverter
 ./materials/particle_material_factory : ParticleMaterialFactory
@@ -142,12 +143,6 @@ class Tree
       return node2.pos.concat(node1.pos)
 
 
-  setSize : (size) ->
-
-    @nodes.material.size = size
-    @edges.material.linewidth = size / 4
-
-
   setSizeAttenuation : (sizeAttenuation) ->
 
     @nodes.material.sizeAttenuation = sizeAttenuation
@@ -221,7 +216,7 @@ class Tree
       @scalesBuffer.set([factor], index)
     redraw = =>
       @updateGeometries()
-      @model.flycam.update()
+      app.vent.trigger("rerender")
     onUpdate = ->
       setScaleFactor(@scaleFactor)
       redraw()

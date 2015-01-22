@@ -47,6 +47,7 @@ class Cube
     _.extend(this, Backbone.Events)
 
     @LOOKUP_DEPTH_UP = @ZOOM_STEP_COUNT - 1
+    @MAX_ZOOM_STEP   = @ZOOM_STEP_COUNT - 1
     @BUCKET_LENGTH   = (1 << @BUCKET_SIZE_P * 3) * (@BIT_DEPTH >> 3)
     @BYTE_OFFSET     = (@BIT_DEPTH >> 3)
 

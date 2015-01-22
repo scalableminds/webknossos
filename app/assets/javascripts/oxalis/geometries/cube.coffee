@@ -1,4 +1,5 @@
 ### define
+app : app
 backbone : backbone
 ../constants : constants
 ../model/dimensions : dimensions
@@ -74,7 +75,7 @@ class Cube
 
     @initialized = true
     @updatePosition(@model.flycam.getPosition())
-    @model.flycam.update()
+    app.vent.trigger("rerender")
 
   updatePosition : (position) ->
 

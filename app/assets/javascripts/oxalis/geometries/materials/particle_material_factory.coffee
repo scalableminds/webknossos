@@ -52,14 +52,19 @@ class ParticleMaterialFactory extends AbstractMaterialFactory
 
     @listenTo(@model.user, "change:particleSize", (model, size) ->
       @uniforms.particleSize.value = size
+      app.vent.trigger("rerender")
     )
     @listenTo(@model.user, "change:scale", (model, scale) ->
       @uniforms.scale.value = scale
+      app.vent.trigger("rerender")
     )
-    @listenTo(@model.user, "change:overrideNodeRadius", @model.flycam.update)
+    @listenTo(@model.user, "change:overrideNodeRadius", ->
+      app.vent.trigger("rerender")
+    )
 
     @listenTo(@model.flycam, "zoomStepChanged", ->
       @uniforms.zoomFactor.value = @model.flycam.getPlaneScalingFactor()
+      app.vent.trigger("rerender")
     )
 
 

@@ -97,7 +97,7 @@ class Plane
 
             if dataBuffer
               @plane.material.setData name, dataBuffer
-              @flycam.hasNewTexture[@planeID] = true
+              app.vent.trigger("rerender")
 
       @plane.material.setScaleParams(
         repeat :
@@ -140,7 +140,7 @@ class Plane
 
   setSegmentationAlpha : (alpha) ->
     @plane.material.setSegmentationAlpha alpha
-    @flycam.hasChanged = true
+    app.vent.trigger("rerender")
 
 
   getMeshes : =>

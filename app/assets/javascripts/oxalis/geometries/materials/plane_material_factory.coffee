@@ -38,7 +38,7 @@ class PlaneMaterialFactory extends AbstractPlaneMaterialFactory
       @textures[shaderName].binaryCategory = binary.category
       @textures[shaderName].binaryName = binary.name
 
-    layerColors = @model.dataset.get("layerColors")
+    layerColors = @model.datasetConfiguration.get("layerColors")
     for shaderName, texture of @textures
       @uniforms[shaderName + "_texture"] = {
         type : "t"
@@ -80,12 +80,12 @@ class PlaneMaterialFactory extends AbstractPlaneMaterialFactory
 
     super()
 
-    @listenTo(@model.dataset, "change:layerColors change:layerColors.*" , (model, layerColors) ->
+    @listenTo(@model.datasetConfiguration, "change:layerColors change:layerColors.*" , (model, layerColors) ->
       for name, color of layerColors
         color = @convertColor(color)
         uniformName = @sanitizeName(name) + "_color"
         @uniforms[uniformName].value = new THREE.Vector3(color...)
-      return
+      app.vent.trigger("rerender")
     )
 
 

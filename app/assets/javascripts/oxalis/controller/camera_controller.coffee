@@ -141,7 +141,7 @@ class CameraController
     @flycam.setRayThreshold(@camera.right, @camera.left)
     @camera.updateProjectionMatrix()
     @notify()
-    @flycam.update()
+    app.vent.trigger("rerender")
 
 
   TDViewportSize : ->
@@ -173,7 +173,7 @@ class CameraController
     camera.updateProjectionMatrix()
 
     @flycam.setRayThreshold(camera.right, camera.left)
-    @flycam.update()
+    app.vent.trigger("rerender")
 
 
   moveTDViewX : (x) =>
@@ -210,7 +210,7 @@ class CameraController
     camera.top    += moveVector.y
     camera.bottom += moveVector.y
     camera.updateProjectionMatrix()
-    @flycam.update()
+    app.vent.trigger("rerender")
 
 
   centerTDView : ->
@@ -243,7 +243,7 @@ class CameraController
       @cameras[i].left  = @cameras[i].bottom = -boundary * scaleFactor
       @cameras[i].right = @cameras[i].top    =  boundary * scaleFactor
       @cameras[i].updateProjectionMatrix()
-    @flycam.update()
+    app.vent.trigger("rerender")
 
 
   bindToEvents : ->

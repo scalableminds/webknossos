@@ -21,7 +21,6 @@ class Flycam2d
     @user = @model.user
 
     @maxZoomStepDiff = @calculateMaxZoomStepDiff()
-    @hasNewTexture = [false, false, false]
     @zoomStep = 0.0
     @integerZoomStep = 0
     # buffer: how many pixels is the texture larger than the canvas on each dimension?
@@ -29,7 +28,6 @@ class Flycam2d
     @buffer = [[0, 0], [0, 0], [0, 0]]
     @position = [0, 0, 0]
     @direction = [0, 0, 1]
-    @hasChanged = true
     @rayThreshold = [10, 10, 10, 100]
     @spaceDirection = [1, 1, 1]
     @quality = 0 # offset of integer zoom step to the best-quality zoom level
@@ -39,7 +37,7 @@ class Flycam2d
     # correct zoom values that are too high or too low
     @user.set("zoom", Math.max(0.01, Math.min(@user.get("zoom"), Math.floor(@getMaxZoomStep()))))
 
-    @listenTo(@model.get("dataset"), "change:quality", (model, quality) -> @setQuality(quality))
+    @listenTo(@model.get("datasetConfiguration"), "change:quality", (model, quality) -> @setQuality(quality))
     # TODO move zoom into tracing settings
     @listenTo(@user, "change:zoom", (model, zoomFactor) -> @zoom(Math.log(zoomFactor) / Math.LN2))
 
@@ -78,7 +76,7 @@ class Flycam2d
     @quality = value
     for i in [0..2]
       @updateStoredValues()
-    @hasChanged = true
+    @update()
 
 
   calculateIntegerZoomStep : ->
@@ -97,7 +95,7 @@ class Flycam2d
   setZoomStep : (zoomStep) ->
 
     @zoomStep = zoomStep
-    @hasChanged = true
+    @update()
     @updateStoredValues()
     @trigger("zoomStepChanged", zoomStep)
 
@@ -227,7 +225,7 @@ class Flycam2d
         position[i] = @position[i]
 
     @position = position
-    @hasChanged = true
+    @update()
 
 
   setPosition : (position) ->
@@ -275,11 +273,6 @@ class Flycam2d
     return result
 
 
-  hasNewTextures : ->
-
-    (@hasNewTexture[constants.PLANE_XY] or @hasNewTexture[constants.PLANE_YZ] or @hasNewTexture[constants.PLANE_XZ])
-
-
   setRayThreshold : (cameraRight, cameraLeft) ->
 
     # in nm
@@ -296,6 +289,6 @@ class Flycam2d
 
   update : ->
 
-    @hasChanged = true
+    app.vent.trigger("rerender")
 
 

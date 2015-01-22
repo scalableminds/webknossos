@@ -57,15 +57,14 @@ class Binary
     for planeId in constants.ALL_PLANES
       @planes.push( new Plane2D(planeId, @cube, @pullQueue, @TEXTURE_SIZE_P, @layer.bitDepth, @targetBitDepth, 32) )
 
-    @pullQueue.set4Bit(@model.get("dataset").get("fourBit"))
-    @listenTo(@model.get("dataset"), "change:fourBit" , (model, is4Bit) -> @pullQueue.set4Bit(is4Bit) )
+    @pullQueue.set4Bit(@model.get("datasetConfiguration").get("fourBit"))
+    @listenTo(@model.get("datasetConfiguration"), "change:fourBit" , (model, is4Bit) -> @pullQueue.set4Bit(is4Bit) )
 
     @cube.on(
       temporalBucketCreated : (address) =>
         @pullQueue.add({bucket: address, priority: PullQueue::PRIORITY_HIGHEST})
       newMapping : =>
         @forcePlaneRedraw()
-        @model.flycam.update()
     )
 
     @ping = _.throttle(@pingImpl, @PING_THROTTLE_TIME)

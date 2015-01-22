@@ -1,4 +1,5 @@
 ### define
+app : app
 backbone : Backbone
 ../model : Model
 ../model/dimensions : Dimensions
@@ -14,7 +15,7 @@ class Skeleton
 
   COLOR_ACTIVE : 0xff0000
 
-  constructor : (@flycam, @model) ->
+  constructor : (@model) ->
 
     _.extend(this, Backbone.Events)
 
@@ -89,7 +90,7 @@ class Skeleton
     if finishedDeferred?
       finishedDeferred.resolve()
 
-    @flycam.update()
+    app.vent.trigger("rerender")
 
 
   setBranch : (isBranchPoint, node) ->
@@ -97,20 +98,13 @@ class Skeleton
     treeGeometry = @getTreeGeometry( node.treeId )
     treeGeometry.updateNodeColor(node.id, null, isBranchPoint)
 
-    @flycam.update()
-
-
-  setParticleSize : (size) ->
-
-    for tree in @treeGeometries
-      tree.setSize( size )
-    @flycam.update()
+    app.vent.trigger("rerender")
 
 
   updateTreeColor : (treeId) ->
 
     @getTreeGeometry(treeId).updateTreeColor()
-    @flycam.update()
+    app.vent.trigger("rerender")
 
 
   getMeshes : =>
@@ -122,11 +116,10 @@ class Skeleton
 
   setWaypoint : (centered) =>
 
-    curGlobalPos = @flycam.getPosition()
     treeGeometry = @getTreeGeometry(@skeletonTracing.getTree().treeId)
 
     treeGeometry.addNode(@skeletonTracing.getActiveNode())
-    @flycam.update()
+    app.vent.trigger("rerender")
 
 
   deleteNode : (node, treeId) ->
@@ -136,7 +129,7 @@ class Skeleton
     treeGeometry = @getTreeGeometry(treeId)
     treeGeometry.deleteNode(node)
 
-    @flycam.update()
+    app.vent.trigger("rerender")
 
 
   mergeTree : (lastTreeID, lastNode, activeNode) ->
@@ -155,7 +148,7 @@ class Skeleton
     treeGeometry.dispose()
     @treeGeometries.splice(index, 1)
 
-    @flycam.update()
+    app.vent.trigger("rerender")
 
 
   setActiveNode : ->
@@ -177,7 +170,7 @@ class Skeleton
     if (activeNode = @model.skeletonTracing.getActiveNode())?
       treeGeometry = @getTreeGeometry( activeNode.treeId )
       treeGeometry?.updateNodeRadius( activeNode.id, activeNode.radius )
-      @flycam.update()
+      app.vent.trigger("rerender")
 
 
   getAllNodes : ->
@@ -199,12 +192,12 @@ class Skeleton
 
     for mesh in @getMeshes()
       mesh.visible = isVisible && (if mesh.isVisible? then mesh.isVisible else true)
-    @flycam.update()
+    app.vent.trigger("rerender")
 
 
   setVisibility : (@isVisible) ->
 
-    @flycam.update()
+    app.vent.trigger("rerender")
 
 
   restoreVisibility : ->
@@ -242,7 +235,7 @@ class Skeleton
     treeGeometry = @getTreeGeometry(@skeletonTracing.getTree().treeId)
     treeGeometry.edges.isVisible = true
     treeGeometry.nodes.isVisible = true
-    @flycam.update()
+    app.vent.trigger("rerender")
 
 
   setSizeAttenuation : (sizeAttenuation) ->

@@ -79,7 +79,6 @@ class VolumeTracing
     console.log "Labeling time:", ((new Date()).getTime() - start)
 
     @currentLayer = null
-    @flycam.update()
 
     @trigger "volumeAnnotated"
 

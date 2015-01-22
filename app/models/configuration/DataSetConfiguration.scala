@@ -21,6 +21,7 @@ object DataSetConfiguration extends BasicSettings {
       "brightness" -> JsNumber(0),
       "contrast" -> JsNumber(1),
       "quality" -> JsNumber(0),
+      "interpolation" -> JsBoolean(false),
       "layerColors" -> JsObject(Seq.empty)))
 
 }

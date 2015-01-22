@@ -5,7 +5,7 @@ import play.api.mvc.Action
 import play.api._
 import play.api.libs.concurrent.Akka
 import scala.concurrent.Future
-import models.user.{UsedAnnotationDAO, UsedAnnotation}
+import models.user.{UsedAnnotationDAO, UsedAnnotation, UserAgentTrackingDAO}
 import models.basics.Implicits._
 import play.api.libs.concurrent.Execution.Implicits._
 import play.twirl.api.Html
@@ -49,6 +49,7 @@ object Application extends Controller with Secured {
   }
 
   def index() = UserAwareAction { implicit request =>
+    UserAgentTrackingDAO.trackUserAgent(request.userOpt.map(_._id), request.headers.get("user-agent").getOrElse("<none>"))
     request.userOpt match {
       case Some(user) =>
         Redirect("/dashboard")

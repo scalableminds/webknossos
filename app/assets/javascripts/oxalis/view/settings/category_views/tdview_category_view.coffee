@@ -12,29 +12,11 @@ class TDViewCategoryView extends CategoryView
 
   subviewCreators :
 
-    "displayTDViewXY" : ->
+    "tdViewDisplayPlanes" : ->
 
       return new CheckboxSettingView(
         model : @model
         options :
-          name : "displayTDViewXY"
-          displayName : "Display XY-Plane"
-      )
-
-    "displayTDViewYZ" : ->
-
-      return new CheckboxSettingView(
-        model : @model
-        options :
-          name : "displayTDViewYZ"
-          displayName : "Display YZ-Plane"
-      )
-
-    "displayTDViewXZ" : ->
-
-      return new CheckboxSettingView(
-        model : @model
-        options :
-          name : "displayTDViewXZ"
-          displayName : "Display XZ-Plane"
+          name : "tdViewDisplayPlanes"
+          displayName : "Display Planes"
       )

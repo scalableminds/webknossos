@@ -79,6 +79,7 @@ class PlaneController
       @planeView.addGeometry(mesh)
 
     @model.user.triggerAll()
+    @model.datasetConfiguration.triggerAll()
 
     @initTrackballControls()
     @bindToEvents()

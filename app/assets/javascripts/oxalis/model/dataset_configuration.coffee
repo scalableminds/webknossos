@@ -24,3 +24,9 @@ class DatasetConfiguration extends Backbone.DeepModel
       @set("brightness", defaultData.brightness)
       @set("contrast", defaultData.contrast)
     )
+
+
+  triggerAll : ->
+
+    for property of @attributes
+      @trigger("change:#{property}", @, @get(property))

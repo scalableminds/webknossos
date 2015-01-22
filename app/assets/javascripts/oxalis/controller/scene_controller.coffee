@@ -249,11 +249,13 @@ class SceneController
 
     user = @model.user
     @listenTo(@model, "newBoundingBox", (bb) -> @setBoundingBox(bb))
-    @listenTo(@model.user, "change:segmentationOpacity", (model, opacity) ->
+    @listenTo(user, "change:segmentationOpacity", (model, opacity) ->
       @setSegmentationAlpha(opacity)
     )
     @listenTo(user, "change:clippingDistance", (model, value) -> @setClippingDistance(value))
     @listenTo(user, "change:displayCrosshair", (model, value) -> @setDisplayCrosshair(value))
-    @listenTo(user, "change:interpolation", (model, value) -> @setInterpolation(value))
+    @listenTo(@model.datasetConfiguration, "change:interpolation", (model, value) ->
+      @setInterpolation(value)
+    )
     @listenTo(user, "change:tdViewDisplayPlanes", (model, value) -> @setDisplayPlanes(value))
 

@@ -32,7 +32,6 @@ object UserConfiguration extends BasicSettings {
       "clippingDistanceArbitrary" -> JsNumber(64),
       "dynamicSpaceDirection" -> JsBoolean(true),
       "displayCrosshair" -> JsBoolean(true),
-      "interpolation" -> JsBoolean(false),
       "brightnessContrastSettings" -> Json.obj(
         "default" -> Json.obj(
           "brightness" -> 0,

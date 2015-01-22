@@ -2,7 +2,7 @@
 underscore : _
 jquery : $
 libs/array_buffer_socket : ArrayBufferSocket
-libs/unit8array_builder : Uint8ArrayBuilder
+libs/uint8array_builder : Uint8ArrayBuilder
 libs/deferred_worker : DeferredWorker
 ###
 

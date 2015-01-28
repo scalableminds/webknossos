@@ -1,6 +1,6 @@
 ### define
 jquery : $
-lodash : _
+underscore : _
 ###
 
 # `WrappedDispatchedWorker` is a wrapper around the WebWorker API. First you
@@ -14,7 +14,7 @@ class WrappedDispatchedWorker
     if config.isBuild
       loader()
     else
-      loader( -> new WrappedDispatchedWorker(name, parentRequire.toUrl("lib/worker_plugin_worker.js")))
+      loader( -> new WrappedDispatchedWorker(name, parentRequire.toUrl("libs/worker_plugin_worker.js")))
     return
 
 

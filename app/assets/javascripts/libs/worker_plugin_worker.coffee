@@ -45,7 +45,7 @@ self.addEventListener(
       if event.data.type is "load"
 
         require(
-          [ "../#{event.data.payload}" ]
+          [ "#{event.data.payload}" ]
           (exportedModule) ->
 
             # load module into scope

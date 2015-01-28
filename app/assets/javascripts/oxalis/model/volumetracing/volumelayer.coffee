@@ -38,13 +38,18 @@ class VolumeLayer
 
   finish : ->
 
-    @addContour( @contourList[0] )
-    console.log "Centroid:", @getCentroid()
+    unless @isEmpty()
+      @addContour(@contourList[0])
+
+
+  isEmpty : ->
+
+    return @contourList.length == 0
 
 
   getVoxelIterator : ->
 
-    unless @minCoord
+    if @isEmpty()
       return { hasNext : false }
 
     minCoord2d = @get2DCoordinate(@minCoord)

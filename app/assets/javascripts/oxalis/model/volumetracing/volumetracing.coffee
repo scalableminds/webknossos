@@ -71,7 +71,7 @@ class VolumeTracing
 
   finishLayer : ->
 
-    unless @currentLayer?
+    if not @currentLayer? or @currentLayer.isEmpty()
       return
 
     start = (new Date()).getTime()
@@ -88,7 +88,6 @@ class VolumeTracing
 
 
   updateDirection : (centroid) ->
-    console.log @lastCentroid, centroid
     if @lastCentroid?
       @flycam.setDirection([
         centroid[0] - @lastCentroid[0]

@@ -19,7 +19,16 @@ class TaskCreateFromFormView extends Backbone.Marionette.LayoutView
     <div class=" form-group">
       <label class="col-sm-2 control-label" for="editPosition">Start</label>
       <div class="col-sm-9">
-        <input type="text" id="editPosition" name="editPosition" value="0, 0, 0" class="form-control">
+        <input
+          type="text"
+          id="editPosition"
+          name="editPosition"
+          placeholder="x, y, z"
+          title="x, y, z"
+          pattern="(\\s*\\d+\\s*,){2}(\\s*\\d+\\s*)"
+          value="0, 0, 0"
+          required=true
+          class="form-control">
         <span class="help-block errors"></span>
       </div>
     </div>
@@ -27,7 +36,17 @@ class TaskCreateFromFormView extends Backbone.Marionette.LayoutView
     <div class=" form-group">
       <label class="col-sm-2 control-label" for="boundingBox">Bounding Box</label>
       <div class="col-sm-9">
-        <input type="text" id="boundingBox" name="boundingBox" value="0, 0, 0, 0, 0, 0" class="form-control">
+        <span class="help-block hints"></span>
+        <input
+          type="text"
+          id="boundingBox"
+          name="boundingBox"
+          placeholder="topLeft.x, topLeft.y, topLeft.z, width, height, depth"
+          pattern="(\\s*\\d+\\s*,){5}(\\s*\\d+\\s*)"
+          title="topLeft.x, topLeft.y, topLeft.z, width, height, depth"
+          value="0, 0, 0, 0, 0, 0"
+          required=true
+          class="form-control">
         <span class="help-block errors"></span>
       </div>
     </div>
@@ -53,9 +72,23 @@ class TaskCreateFromFormView extends Backbone.Marionette.LayoutView
           parseInt( number.trim() )
         )
       # split string by comma delimiter, trim whitespace and cast to integer
-      boundingBox : _.map(@ui.boundingBox.val().split(","), (number) ->
+      boundingBox : do =>
+        intArray = _.map(@ui.boundingBox.val().split(","), (number) ->
           parseInt( number.trim() )
         )
+
+        # user input could be too short
+        # insert a 0 instead
+        return {
+          topLeft: [
+            intArray[0] || 0,
+            intArray[1] || 0,
+            intArray[2] || 0
+          ],
+          width: intArray[3] || 0,
+          height: intArray[4] || 0,
+          depth: intArray[5] || 0
+        }
     )
 
     # trigger selection view to update the model as well

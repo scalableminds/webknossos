@@ -123,6 +123,7 @@ GET           /api/tasks/:id                                                    
 DELETE        /api/tasks/:id                                                    controllers.TaskController.delete(id: String)
 
 GET           /tasks/:id/edit                                                   controllers.UserController.emptyWithWildcard(id: String)
+# show backbone views for task creation
 GET           /tasks/create                                                     controllers.admin.TaskAdministration.empty
 
 #POST          /admin/tasks/createBulk                                           controllers.admin.TaskAdministration.createBulk

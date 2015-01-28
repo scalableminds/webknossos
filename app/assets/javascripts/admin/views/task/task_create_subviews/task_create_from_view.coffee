@@ -8,6 +8,7 @@ admin/models/project/project_collection : ProjectCollection
 admin/views/selection_view : SelectionView
 ./task_create_from_form_view : TaskCreateFromFormView
 ./task_create_from_nml_view : TaskCreateFromNMLView
+libs/toast : Toast
 ###
 
 class TaskCreateFromView extends Backbone.Marionette.LayoutView
@@ -142,11 +143,10 @@ class TaskCreateFromView extends Backbone.Marionette.LayoutView
 
     # block submit button
     @ui.submitButton.prop("disabled", true)
+    @ui.submitButton.addClass("disabled")
 
     # load form contents into model
     @updateModel()
-
-    console.log(@model)
 
     # send form data to server
     # unblock submit button after model synched
@@ -154,8 +154,15 @@ class TaskCreateFromView extends Backbone.Marionette.LayoutView
     @model.save({},
       error : =>
         @ui.submitButton.prop("disabled", false)
+        @ui.submitButton.removeClass("disabled")
+
+        @showSaveError()
+
       success : =>
         @ui.submitButton.prop("disabled", false)
+        @ui.submitButton.removeClass("disabled")
+
+        @showSaveSuccess()
     )
 
     # prevent actual submitting
@@ -177,13 +184,10 @@ class TaskCreateFromView extends Backbone.Marionette.LayoutView
         # cannot nest model attributes
         # insert existign vars to maintain model defaults
         inProgress : @model.get("status").inProgress
-        complete : @model.get("status").complete
+        completed : @model.get("status").completed
       # parse priority, range 0 to 100, to integer
       priority : parseInt( @ui.priority.val() )
     )
-
-    # TODO: remove debug
-    console.log(@model)
 
     # update models from subviews
     @taskTypeSelectionView.updateModel()
@@ -196,10 +200,22 @@ class TaskCreateFromView extends Backbone.Marionette.LayoutView
     if @createFromNMLView?
       @createFromNMLView.updateModel()
 
-    # TODO: remove debug
-    console.log(@model)
-
     return
+
+
+  showSaveSuccess: ->
+
+    Toast.success('The task was successfully created')
+
+
+  showSaveError: ->
+
+    Toast.error('The task could not be created due to server errors.')
+
+
+  showInvalidData: ->
+
+    Toast.error('The form data is not correct.')
 
   ###*
   * Render the SelectionViews based on the stored options
@@ -216,7 +232,7 @@ class TaskCreateFromView extends Backbone.Marionette.LayoutView
         modelValue: -> return "#{@model.get("id")}"
         modelName: -> return "#{@model.get("summary")}"
       data : "amIAnAdmin=true"
-      name: "taskType"
+      name: "taskTypeId"
       parentModel : @model
     )
 

@@ -7,7 +7,7 @@ libs/toast : Toast
 oxalis/constants : Constants
 ###
 
-class DatsetActionsView extends Backbone.Marionette.ItemView
+class DatasetActionsView extends Backbone.Marionette.ItemView
 
   template : _.template("""
     <% if(tracing.restrictions.allowUpdate){ %>
@@ -99,8 +99,8 @@ class DatsetActionsView extends Backbone.Marionette.ItemView
 
     if evt
       evt.preventDefault()
-    app.vent.trigger("saveEverything")
 
+    return @model.save()
 
   mergeTracing : ->
 

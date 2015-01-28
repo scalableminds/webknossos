@@ -47,7 +47,7 @@ trait AnnotationLike extends AnnotationStatistics {
   def _task: Option[BSONObjectID]
 
   def task: Fox[Task] =
-    _task.toFox.flatMap(id => TaskDAO.findOneById(id)(GlobalAccessContext))
+    _task.toFox.flatMap(id => TaskDAO.findOneById(id, true)(GlobalAccessContext))
 
   def state: AnnotationState
 

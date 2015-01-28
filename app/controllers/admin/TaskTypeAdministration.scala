@@ -112,7 +112,9 @@ object TaskTypeAdministration extends AdminController {
       taskType <- TaskTypeDAO.findOneById(taskTypeId) ?~> Messages("taskType.notFound")
       _ <- ensureTeamAdministration(request.user, taskType.team)
     } yield {
-      TaskTypeDAO.removeById(taskType._id)
+      val updatedTaskType = taskType.copy(isActive = false)
+      TaskTypeDAO.update(taskType._id, updatedTaskType)
+      TaskService.deleteAllWithTaskType(taskType)
       JsonOk(Messages("taskType.deleted", taskType.summary))
     }
   }

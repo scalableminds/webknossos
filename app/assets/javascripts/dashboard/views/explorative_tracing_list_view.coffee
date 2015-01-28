@@ -33,7 +33,7 @@ class ExplorativeTracingListView extends Backbone.Marionette.CompositeView
               method="POST"
               class="form-inline inline-block">
           <select id="dataSetsSelect" name="dataSetName" class="form-control">
-            <% dataSets.forEach(function(d) { %>
+            <% activeDataSets.forEach(function(d) { %>
               <option value="<%= d.get("name") %>"> <%= d.get("name") %> </option>
             <% }) %>
           </select>
@@ -76,15 +76,18 @@ class ExplorativeTracingListView extends Backbone.Marionette.CompositeView
     formSpinnerIcon : "#form-spinner-icon"
     formUploadIcon : "#form-upload-icon"
 
-
-  initialize : ->
+  templateHelpers :
+    activeDataSets : [] # fills on @model.get("dataSets") sync event
 
   initialize : (options) ->
 
     @collection = @model.get("exploratoryAnnotations")
 
     datasetCollection = @model.get("dataSets")
-    @listenTo(datasetCollection, "sync", @render)
+    @listenTo(datasetCollection, "sync", (collection, dataSets) =>
+      @templateHelpers.activeDataSets = collection.filter( (dataset) -> dataset.get("isActive") )
+      @render()
+    )
     datasetCollection.fetch(silent : true)
 
 

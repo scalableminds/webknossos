@@ -66,10 +66,7 @@ object TaskController extends Controller with Secured {
               _ <- TaskDAO.insert(task)
             } yield {
               AnnotationService.createAnnotationBase(task, request.user._id, boundingBox, taskType.settings, dataSetName, start)
-              Redirect(controllers.routes.TaskController.empty)
-                .flashing(
-                  FlashSuccess(Messages("task.createSuccess")))
-                .highlighting(task.id)
+              Ok(Json.toJson(Messages("task.createSuccess")))
             }
         }
 

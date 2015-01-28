@@ -15,7 +15,11 @@ class TaskModel extends Backbone.Model
     type : null
     dataSet : ""
     editPosition : [0, 0, 0]
-    boundingBox : [0, 0, 0, 0, 0, 0]
+    boundingBox :
+      topLeft: [0,0,0]
+      width: 0
+      height: 0
+      depth: 0
     neededExperience :
       value : 0
       domain : ""
@@ -26,7 +30,6 @@ class TaskModel extends Backbone.Model
       inProgress : 0
       completed : 0
     tracingTime : null
-
 
   destroy : ->
 

@@ -3,7 +3,7 @@ underscore : _
 jquery : $
 libs/array_buffer_socket : ArrayBufferSocket
 libs/uint8array_builder : Uint8ArrayBuilder
-libs/deferred_worker : DeferredWorker
+libs/wrapped_worker_plugin!./gzip_worker : GzipWorker
 ###
 
 class PushQueue
@@ -16,9 +16,6 @@ class PushQueue
   constructor : (@dataSetName, @cube, @layer, @tracingId, @updatePipeline, @sendData = true) ->
 
     @queue = []
-    @compressionWorker = new DeferredWorker(
-        '/assets/javascripts/oxalis/model/binary/gzip_worker.js'
-    )
 
     @getParams =
       cubeSize : 1 << @cube.BUCKET_SIZE_P
@@ -100,14 +97,14 @@ class PushQueue
     @updatePipeline.executePassAlongAction =>
 
       deferred = $.Deferred()
-      @compressionWorker
-        .execute(transmitBuffer, [transmitBuffer.buffer])
-        .done( (result) =>
-          console.log "Compressing time:", result.time
-          @getSendSocket()
-            .send(result.buffer)
-            .done(-> deferred.resolve())
-        )
+      GzipWorker().send(
+        method : "compress"
+        args : [transmitBuffer]
+      ).done( (buffer) =>
+        @getSendSocket()
+         .send(buffer)
+         .done(-> deferred.resolve())
+      )
       return deferred.promise()
 
 

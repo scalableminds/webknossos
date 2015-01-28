@@ -96,16 +96,12 @@ class PushQueue
 
     @updatePipeline.executePassAlongAction =>
 
-      deferred = $.Deferred()
       GzipWorker().send(
         method : "compress"
         args : [transmitBuffer]
-      ).done( (buffer) =>
-        @getSendSocket()
-         .send(buffer)
-         .done(-> deferred.resolve())
+      ).then( (buffer) =>
+        @getSendSocket().send(buffer)
       )
-      return deferred.promise()
 
 
   getSendSocket : ->

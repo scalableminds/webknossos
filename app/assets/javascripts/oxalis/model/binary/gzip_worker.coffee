@@ -7,8 +7,5 @@ GzipWorker =
 
   compress : (input) ->
 
-    time = (new Date()).getTime()
-    gzip = new Zlib.Gzip(input)
-    output = gzip.compress()
-
+    output = (new Zlib.Gzip(input)).compress()
     return new $.Deferred().resolve(output)

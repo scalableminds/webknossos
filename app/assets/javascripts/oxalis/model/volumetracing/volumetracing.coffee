@@ -73,6 +73,7 @@ class VolumeTracing
       return
 
     start = (new Date()).getTime()
+    @currentLayer.finish()
     iterator = @currentLayer.getVoxelIterator()
     labelValue = if @activeCell then @activeCell.id else 0
     @binary.cube.labelVoxels(iterator, labelValue)

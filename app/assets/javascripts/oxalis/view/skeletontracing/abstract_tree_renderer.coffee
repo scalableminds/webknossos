@@ -158,10 +158,18 @@ class AbstractTreeRenderer
   drawNode : (x, y, id) ->
 
     @ctx.beginPath()
+
     @ctx.fillStyle = @vgColor
-    radius = if (id == @activeNodeId) then 2 * @NODE_RADIUS else @NODE_RADIUS
+    if @nodeHasComment(id)
+      @ctx.fillStyle = @commentColor
+
+    radius = @NODE_RADIUS
+    if id == @activeNodeId
+      radius = 2 * radius
+
     @ctx.arc(x, y, radius, 0, 2 * Math.PI)
     @ctx.fill()
+
     # put it in nodeList
     @nodeList.push({x : x, y : y, id : id})
 

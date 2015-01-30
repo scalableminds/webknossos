@@ -29,7 +29,7 @@ class SkeletonTracing
   activeTree : null
   firstEdgeDirection : null
 
-  constructor : (tracing, @flycam, @flycam3d, @user, updatePipeline) ->
+  constructor : (tracing, @flycam, @flycam3d, @user, @datasetConfig, updatePipeline) ->
 
     _.extend(this, Backbone.Events)
 
@@ -204,8 +204,8 @@ class SkeletonTracing
         timestamp : (new Date()).getTime()
         viewport : viewport
         resolution : resolution
-        bitDepth : if @user.get("fourBit") then 4 else 8
-        interpolation : @user.get("interpolation")
+        bitDepth : if @datasetConfig.get("fourBit") then 4 else 8
+        interpolation : @datasetConfig.get("interpolation")
 
       point = new TracePoint(type, @idCount++, position, radius, @activeTree.treeId, metaInfo)
       @activeTree.nodes.push(point)

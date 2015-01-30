@@ -55,7 +55,10 @@ class AbstractTreeView extends Backbone.Marionette.ItemView
   drawTree : ->
 
     if @model.skeletonTracing and @abstractTreeRenderer
-      @abstractTreeRenderer.drawTree(@model.skeletonTracing.getTree(), @model.skeletonTracing.getActiveNodeId())
+      @abstractTreeRenderer.drawTree(
+        @model.skeletonTracing.getTree(),
+        @model.skeletonTracing.getActiveNodeId(),
+        @model.skeletonTracing.comments)
 
 
   serializeData : ->

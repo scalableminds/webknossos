@@ -34,13 +34,18 @@ class AbstractTreeRenderer
     @canvas[0].height = height
 
 
-  drawTree : (tree, @activeNodeId) ->
+  drawTree : (tree, @activeNodeId, @comments) ->
+
     # clear Background
     @ctx.clearRect(0, 0, @canvas.width(), @canvas.height())
+
+    # apply color scheme
     if app.oxalis.view.theme == Constants.THEME_BRIGHT
       @vgColor = "black"
+      @commentColor = "red"
     else
       @vgColor = "white"
+      @commentColor = "blue"
 
     unless tree?
       return

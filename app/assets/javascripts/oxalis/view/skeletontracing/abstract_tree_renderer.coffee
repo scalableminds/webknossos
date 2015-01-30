@@ -260,3 +260,8 @@ class AbstractTreeRenderer
         return entry.id
 
 
+  nodeHasComment : (id) ->
+
+    return @comments.hasCommentWithNodeId(id)
+
+

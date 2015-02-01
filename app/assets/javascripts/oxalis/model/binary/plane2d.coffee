@@ -404,7 +404,7 @@ class Plane2D
     mapping = source.mapping
 
     bytesSrc       = @DATA_BIT_DEPTH >> 3
-    bytesSrcMapped = if mapping? then @MAPPED_DATA_BIT_DEPTH >> 3 else bytesSrc
+    bytesSrcMapped = if mapping? and mapping.length then @MAPPED_DATA_BIT_DEPTH >> 3 else bytesSrc
     bytesDest      = @TEXTURE_BIT_DEPTH >> 3
     shorten        = bytesDest < bytesSrcMapped
 

@@ -308,7 +308,10 @@ class Plane2D
     map = new Array(@MAP_SIZE)
     map[0] = undefined
 
-    for i in [Math.min(@cube.LOOKUP_DEPTH_UP, @cube.ZOOM_STEP_COUNT - zoomStep)...0]
+    maxZoomStepOffset = Math.max(0, Math.min(@cube.LOOKUP_DEPTH_UP,
+      @cube.ZOOM_STEP_COUNT - zoomStep - 1
+    ))
+    for i in [maxZoomStepOffset...0]
 
       bucket = [
         bucket_x >> i

@@ -136,7 +136,8 @@ class Model extends Backbone.Model
           "Volume is allowed, but segmentation does not exist" )
         @set("volumeTracing", new VolumeTracing(tracing, flycam, @getSegmentationBinary(), @updatePipeline))
       else
-        @set("skeletonTracing", new SkeletonTracing(tracing, flycam, flycam3d, @user, @updatePipeline))
+        @set("skeletonTracing", new SkeletonTracing(
+          tracing, flycam, flycam3d, @user, @get("datasetConfiguration"), @updatePipeline))
 
     @computeBoundaries()
 

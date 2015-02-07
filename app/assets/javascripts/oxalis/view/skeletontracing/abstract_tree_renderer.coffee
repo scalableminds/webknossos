@@ -55,6 +55,7 @@ class AbstractTreeRenderer
     # List of {x : ..., y : ..., id: ...} objects
     @nodeList = []
 
+    # set global mode
     mode = @MODE_NOCHAIN
 
     # TODO: Actually, I though that buildTree() is pretty heavy, but
@@ -90,54 +91,41 @@ class AbstractTreeRenderer
     @recordWidths(root)
     @drawTreeWithWidths(root, @NODE_RADIUS, @canvas.width() - @NODE_RADIUS, @nodeDistance, mode)
 
-  drawTreeWithWidths : (tree, left, right, top, mode = @MODE_NORMAL) ->
+  drawTreeWithWidths : (tree, left, right, top, mode) ->
 
     # get the decision point
     decisionPoint = @getNextDecisionPoint(tree)
-    # calculate m (middle that divides the left and right tree, if any)
-    if decisionPoint.children.length == 0
-      m = (left + right) / 2
-    else
-      c1 = decisionPoint.children[0]
-      c2 = decisionPoint.children[1]
-      m = (right - left) * c1.width / (c1.width + c2.width) + left
 
-    # Calculate the length of the 'chain' of nodes with one child,
-    # because they all share the root's x coordinate
-    chainCount = 0
-    subTree = tree
-    while subTree.children.length == 1
-      subTree = subTree.children[0]
-      chainCount++
+    # TODO: algorithm expects all decision points to be branch points
+    # though a normal point with comment only has one child --> refactor this
 
-    # if the decision point has (2) children, draw them and remember their position
-    if decisionPoint.children.length > 0
-      # Calculate the top of the children
-      if mode == @MODE_NORMAL or chainCount < 3
-        topC = top + (chainCount + 1) * @nodeDistance
-      else if mode == @MODE_NOCHAIN
-        topC = top + 3 * @nodeDistance
+    middle = @calculateTreeMiddle(decisionPoint, left, right)
+    chainCount = @calculateChainCount(tree)
+    rootX = middle # if decisionPoint is leaf, there's not much to do
 
-      c1 = @drawTreeWithWidths(decisionPoint.children[0], left,  m, topC, mode)
-      c2 = @drawTreeWithWidths(decisionPoint.children[1], m, right, topC, mode)
-      # set the root's x coordinate to be in between the decisionPoint's childs
-      xr = (c1[0] + c2[0]) / 2
+    # if the decision point has 2 children, draw them and remember their position
+    if decisionPoint.children.length > 1
+
+      topChildren = @calculateChildTreeTop(mode, chainCount, top)
+      c1 = @drawTreeWithWidths(decisionPoint.children[0], left,  middle, topChildren, mode)
+      c2 = @drawTreeWithWidths(decisionPoint.children[1], middle, right, topChildren, mode)
+
+      # set the root's x coordinate to be in between the decisionPoint's children
+      rootX = (c1.rootX + c2.rootX) / 2
+
       # draw edges from last node in 'chain' (or root, if chain empty)
       # and the decisionPoint's children
-      @drawEdge(xr, topC - @nodeDistance, c1[0], c1[1])
-      @drawEdge(xr, topC - @nodeDistance, c2[0], c2[1])
-    else
-      # if decisionPoint is leaf, there's not much to do
-      xr = m
+      @drawEdge(rootX, topChildren - @nodeDistance, c1.rootX, c1.top)
+      @drawEdge(rootX, topChildren - @nodeDistance, c2.rootX, c2.top)
 
     if mode == @MODE_NORMAL or chainCount < 3
       # Draw the chain and the root, connect them.
       node = tree
       for i in [0..chainCount]
-        @drawNode(xr, top + i * @nodeDistance, node.id)
+        @drawNode(rootX, top + i * @nodeDistance, node.id)
         node = node.children[0]
         if i != 0
-          @drawEdge(xr, top + (i - 1) * @nodeDistance, xr, top + i * @nodeDistance)
+          @drawEdge(rootX, top + (i - 1) * @nodeDistance, rootX, top + i * @nodeDistance)
 
     else if mode == @MODE_NOCHAIN
 
@@ -148,13 +136,49 @@ class AbstractTreeRenderer
         node = node.children[0]
 
       # Draw root, chain indicator and decision point
-      @drawNode(xr, top, tree.id)
-      @drawEdge(xr, top, xr, top + 0.5 * @nodeDistance)
-      @drawChainIndicator(xr, top + 0.5 * @nodeDistance, top + 1.5 * @nodeDistance, hasActiveNode)
-      @drawEdge(xr, top + 1.5 * @nodeDistance, xr, top + 2 * @nodeDistance)
-      @drawNode(xr, top + 2 * @nodeDistance, decisionPoint.id)
+      @drawNode(rootX, top, tree.id)
+      @drawEdge(rootX, top, rootX, top + 0.5 * @nodeDistance)
+      @drawChainIndicator(rootX, top + 0.5 * @nodeDistance, top + 1.5 * @nodeDistance, hasActiveNode)
+      @drawEdge(rootX, top + 1.5 * @nodeDistance, rootX, top + 2 * @nodeDistance)
+      @drawNode(rootX, top + 2 * @nodeDistance, decisionPoint.id)
 
-    return [xr, top]
+    return { rootX, top }
+
+  ###*
+   * calculate m (middle that divides the left and right tree, if any)
+   * @param  {Object} decisionPoint  a point which definitely has to be drawn
+   * @param  {Number} left           left border in pixels
+   * @param  {Number} right          right border in pixels
+   * @return {Number}                middle in pixels
+  ###
+  calculateTreeMiddle : (decisionPoint, left, right) ->
+
+    if decisionPoint.children.length < 2
+      return (left + right) / 2
+    else
+      child1 = decisionPoint.children[0]
+      child2 = decisionPoint.children[1]
+      return (right - left) * child1.width / (child1.width + child2.width) + left
+
+  # Calculate the length of the 'chain' of nodes with one child,
+  # because they all share the root's x coordinate
+  calculateChainCount : (tree) ->
+
+    chainCount = 0
+    subTree = tree
+    while subTree.children.length == 1
+      subTree = subTree.children[0]
+      chainCount++
+
+    return chainCount
+
+  # Calculate the top of the children
+  calculateChildTreeTop : (mode, chainCount, top) ->
+
+      if mode == @MODE_NORMAL or chainCount < 3
+        return top + (chainCount + 1) * @nodeDistance
+      else if mode == @MODE_NOCHAIN
+        return top + 3 * @nodeDistance
 
 
   drawNode : (x, y, id) ->

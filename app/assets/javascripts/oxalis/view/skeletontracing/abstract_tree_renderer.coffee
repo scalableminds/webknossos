@@ -15,6 +15,8 @@ class AbstractTreeRenderer
   MODE_NORMAL          : 0     # draw every node and the complete tree
   MODE_NOCHAIN         : 1     # draw only decision points
 
+  RENDER_COMMENTS      : false  # draw comments into tree
+
   constructor : ($canvas, width, height) ->
 
     _.extend(this, Backbone.Events)
@@ -262,6 +264,6 @@ class AbstractTreeRenderer
 
   nodeHasComment : (id) ->
 
-    return @comments.hasCommentWithNodeId(id)
+    return @RENDER_COMMENTS and @comments.hasCommentWithNodeId(id)
 
 

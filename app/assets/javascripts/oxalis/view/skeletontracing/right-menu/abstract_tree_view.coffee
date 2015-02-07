@@ -31,8 +31,7 @@ class AbstractTreeView extends Backbone.Marionette.ItemView
     @listenTo(@model.skeletonTracing, "deleteTree" , @drawTree)
     @listenTo(@model.skeletonTracing, "deleteActiveNode" , @drawTree)
     @listenTo(@model.skeletonTracing, "newNode" , @drawTree)
-
-    @drawTree()
+    @listenTo(@model.skeletonTracing, "updateComments" , @drawTree)
 
 
   resize : ->

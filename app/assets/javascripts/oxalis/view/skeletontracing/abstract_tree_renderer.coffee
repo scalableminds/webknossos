@@ -230,7 +230,13 @@ class AbstractTreeRenderer
     # Decision points will definitely be drawn.
 
     chainCount = 0
-    while !@nodeHasComment(tree.id) and tree.children.length == 1
+
+    # skip comment check on first node
+    if tree.children.length == 1
+        tree = tree.children[0]
+        chainCount++
+
+    while tree.children.length == 1 and !@nodeHasComment(tree.id)
       tree = tree.children[0]
       chainCount++
 

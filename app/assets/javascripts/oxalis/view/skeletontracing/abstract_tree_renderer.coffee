@@ -111,13 +111,7 @@ class AbstractTreeRenderer
 
     else if mode == @MODE_NOCHAIN
 
-      # Find out, if the chain contains an active node
-      node = tree.children[0]
-      hasActiveNode = false
-
-      for i in [0...(decision.chainCount - 1)]
-        hasActiveNode |= node.id == @activeNodeId
-        node = node.children[0]
+      hasActiveNode = @chainContainsActiveNode(tree, decision.node)
 
       # Draw root, chain indicator and decision point
       @drawNode(rootX, top, tree.id)
@@ -246,6 +240,21 @@ class AbstractTreeRenderer
       isBranch: tree.children.length > 1
       isLeaf: tree.children.length == 0
     }
+
+
+  chainContainsActiveNode : (root, decisionNode) ->
+
+      # Find out, if the chain contains an active node
+      node = root.children[0]
+      hasActiveNode = false
+
+      while node.id != decisionNode.id
+        if node.id == @activeNodeId
+          return true
+        node = node.children[0]
+
+      return false
+
 
 
   recordWidths : (tree) ->

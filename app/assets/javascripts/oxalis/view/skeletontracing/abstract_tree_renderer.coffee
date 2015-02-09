@@ -107,13 +107,7 @@ class AbstractTreeRenderer
       @drawEdge(rootX, topChildren - @nodeDistance, rightTree.rootX, rightTree.top)
 
     if mode == @MODE_NORMAL or decision.chainCount < 3
-      # Draw the chain and the root, connect them.
-      node = tree
-      for i in [0..decision.chainCount]
-        @drawNode(rootX, top + i * @nodeDistance, node.id)
-        node = node.children[0]
-        if i != 0
-          @drawEdge(rootX, top + (i - 1) * @nodeDistance, rootX, top + i * @nodeDistance)
+      @drawChainFromTo(top, rootX, tree, decision)
 
     else if mode == @MODE_NOCHAIN
 
@@ -216,6 +210,17 @@ class AbstractTreeRenderer
       @ctx.lineTo(x, top + (2 * i + 2) * dashLength)
     @ctx.stroke()
     @ctx.lineWidth = 1
+
+
+  drawChainFromTo : (top, left, root, decision) ->
+
+    # Draw the chain and the root, connect them.
+    node = root
+    for i in [0..decision.chainCount]
+      @drawNode(left, top + i * @nodeDistance, node.id)
+      node = node.children[0]
+      if i != 0
+        @drawEdge(left, top + (i - 1) * @nodeDistance, left, top + i * @nodeDistance)
 
 
   getNextDecision : (tree) ->

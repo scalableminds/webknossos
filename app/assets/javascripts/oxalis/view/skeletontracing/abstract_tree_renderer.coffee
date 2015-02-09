@@ -83,37 +83,33 @@ class AbstractTreeRenderer
     @recordWidths(root)
     @drawTreeWithWidths(root, @NODE_RADIUS, @canvas.width() - @NODE_RADIUS, @nodeDistance, mode)
 
+
   drawTreeWithWidths : (tree, left, right, top, mode) ->
 
     # get the decision point
-    decisionPoint = @getNextDecisionPoint(tree)
-
-    # TODO: algorithm expects all decision points to be branch points
-    # though a normal point with comment only has one child --> refactor this
-
-    middle = @calculateTreeMiddle(decisionPoint, left, right)
-    chainCount = @calculateChainCount(tree)
+    decision = @getNextDecision(tree)
+    middle = @calculateTreeMiddle(decision.node, left, right)
     rootX = middle # if decisionPoint is leaf, there's not much to do
 
     # if the decision point has 2 children, draw them and remember their position
-    if decisionPoint.children.length > 1
+    if decision.isBranch
 
-      topChildren = @calculateChildTreeTop(mode, chainCount, top)
-      c1 = @drawTreeWithWidths(decisionPoint.children[0], left,  middle, topChildren, mode)
-      c2 = @drawTreeWithWidths(decisionPoint.children[1], middle, right, topChildren, mode)
+      topChildren = @calculateChildTreeTop(mode, decision.chainCount, top)
+      leftTree = @drawTreeWithWidths(decision.node.children[0], left,  middle, topChildren, mode)
+      rightTree = @drawTreeWithWidths(decision.node.children[1], middle, right, topChildren, mode)
 
       # set the root's x coordinate to be in between the decisionPoint's children
-      rootX = (c1.rootX + c2.rootX) / 2
+      rootX = (leftTree.rootX + rightTree.rootX) / 2
 
       # draw edges from last node in 'chain' (or root, if chain empty)
       # and the decisionPoint's children
-      @drawEdge(rootX, topChildren - @nodeDistance, c1.rootX, c1.top)
-      @drawEdge(rootX, topChildren - @nodeDistance, c2.rootX, c2.top)
+      @drawEdge(rootX, topChildren - @nodeDistance, leftTree.rootX, leftTree.top)
+      @drawEdge(rootX, topChildren - @nodeDistance, rightTree.rootX, rightTree.top)
 
-    if mode == @MODE_NORMAL or chainCount < 3
+    if mode == @MODE_NORMAL or decision.chainCount < 3
       # Draw the chain and the root, connect them.
       node = tree
-      for i in [0..chainCount]
+      for i in [0..decision.chainCount]
         @drawNode(rootX, top + i * @nodeDistance, node.id)
         node = node.children[0]
         if i != 0
@@ -122,8 +118,10 @@ class AbstractTreeRenderer
     else if mode == @MODE_NOCHAIN
 
       # Find out, if the chain contains an active node
-      node = tree.children[0]; hasActiveNode = false
-      for i in [0...(chainCount - 1)]
+      node = tree.children[0]
+      hasActiveNode = false
+
+      for i in [0...(decision.chainCount - 1)]
         hasActiveNode |= node.id == @activeNodeId
         node = node.children[0]
 
@@ -132,7 +130,7 @@ class AbstractTreeRenderer
       @drawEdge(rootX, top, rootX, top + 0.5 * @nodeDistance)
       @drawChainIndicator(rootX, top + 0.5 * @nodeDistance, top + 1.5 * @nodeDistance, hasActiveNode)
       @drawEdge(rootX, top + 1.5 * @nodeDistance, rootX, top + 2 * @nodeDistance)
-      @drawNode(rootX, top + 2 * @nodeDistance, decisionPoint.id)
+      @drawNode(rootX, top + 2 * @nodeDistance, decision.node.id)
 
     return { rootX, top }
 
@@ -152,17 +150,6 @@ class AbstractTreeRenderer
       child2 = decisionPoint.children[1]
       return (right - left) * child1.width / (child1.width + child2.width) + left
 
-  # Calculate the length of the 'chain' of nodes with one child,
-  # because they all share the root's x coordinate
-  calculateChainCount : (tree) ->
-
-    chainCount = 0
-    subTree = tree
-    while subTree.children.length == 1
-      subTree = subTree.children[0]
-      chainCount++
-
-    return chainCount
 
   # Calculate the top of the children
   calculateChildTreeTop : (mode, chainCount, top) ->
@@ -232,12 +219,23 @@ class AbstractTreeRenderer
     @ctx.lineWidth = 1
 
 
-  getNextDecisionPoint : (tree) ->
+  getNextDecision : (tree) ->
 
     # Decision point is any point with point.children.length != 1
-    while tree.children.length == 1
+    # or any point that has a comment.
+    # Decision points will definitely be drawn.
+
+    chainCount = 0
+    while !@nodeHasComment(tree.id) and tree.children.length == 1
       tree = tree.children[0]
-    return tree
+      chainCount++
+
+    return {
+      node: tree,
+      chainCount,
+      isBranch: tree.children.length > 1
+      isLeaf: tree.children.length == 0
+    }
 
 
   recordWidths : (tree) ->
@@ -245,22 +243,28 @@ class AbstractTreeRenderer
     # Because any node with children.length == 1 has
     # the same width as its child, we can skip those.
 
+    decision = @getNextDecision(tree)
+
     # Leaves just have a width of one
-    decisionPoint = @getNextDecisionPoint(tree)
-    if decisionPoint.children.length == 0
-      decisionPoint.width = 1
+    if decision.isLeaf
+      decision.node.width = 1
       return 1
+
+    decisionPoint = decision.node
+
+    # edge case: system is made for binary trees only
+    # allow a maximum of two
+    if decision.node.children.length > 2
+      decision.node.children = decision.node.children[0...2]
 
     # Branchpoints are as wide as its children combined.
     # But actually, we need the width of the children
-    result = 0
-    if decisionPoint.children.length > 2
-      decisionPoint.children = decisionPoint.children[0...2]
-
-    for child in decisionPoint.children
+    width = 0
+    for child in decision.node.children
       child.width = @recordWidths(child)
-      result += child.width
-    return result
+      width += child.width
+
+    return width
 
 
   getMaxTreeDepth : (tree, mode = @MODE_NORMAL, count = 0) ->
@@ -268,22 +272,28 @@ class AbstractTreeRenderer
     unless tree
       return count
 
-    # One decision point
+    # current tree is a decision point
     count++
 
-    # Count non decision points
-    chainCount = 0
-    while tree.children.length == 1
-      tree = tree.children[0]
-      chainCount++
+    # find next decision point
+    decision = @getNextDecision(tree)
     if mode == @MODE_NOCHAIN
-      chainCount = Math.min(chainCount, 2)
-    count += chainCount
+      decision.chainCount = Math.min(decision.chainCount, 2)
+    count += decision.chainCount
 
-    if tree.children.length == 0
+    # bottom reached, done.
+    if decision.isLeaf
       return count
-    return Math.max(@getMaxTreeDepth(tree.children[0], mode, count),
-              @getMaxTreeDepth(tree.children[1], mode, count))
+
+    # traverse further and compare left & right subtree
+    if decision.isBranch
+      return Math.max(
+              @getMaxTreeDepth(decision.node.children[0], mode, count),
+              @getMaxTreeDepth(decision.node.children[1], mode, count)
+             )
+
+    # current decision point is a comment, follow the current chain
+    return @getMaxTreeDepth(decision.node.children[0], mode, count)
 
 
   getIdFromPos : (x, y) =>

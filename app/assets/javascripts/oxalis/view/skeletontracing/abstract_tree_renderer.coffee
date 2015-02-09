@@ -38,19 +38,11 @@ class AbstractTreeRenderer
 
   drawTree : (tree, @activeNodeId, @comments) ->
 
-    # clear Background
-    @ctx.clearRect(0, 0, @canvas.width(), @canvas.height())
-
-    # apply color scheme
-    if app.oxalis.view.theme == Constants.THEME_BRIGHT
-      @vgColor = "black"
-      @commentColor = "red"
-    else
-      @vgColor = "white"
-      @commentColor = "blue"
-
     unless tree?
       return
+
+    @clearBackground()
+    @setupColors()
 
     # List of {x : ..., y : ..., id: ...} objects
     @nodeList = []
@@ -179,6 +171,22 @@ class AbstractTreeRenderer
         return top + (chainCount + 1) * @nodeDistance
       else if mode == @MODE_NOCHAIN
         return top + 3 * @nodeDistance
+
+
+  clearBackground : ->
+
+    @ctx.clearRect(0, 0, @canvas.width(), @canvas.height())
+
+
+  setupColors : ->
+
+    # apply color scheme
+    if app.oxalis.view.theme == Constants.THEME_BRIGHT
+      @vgColor = "black"
+      @commentColor = "red"
+    else
+      @vgColor = "white"
+      @commentColor = "blue"
 
 
   drawNode : (x, y, id) ->

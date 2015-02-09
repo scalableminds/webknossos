@@ -15,7 +15,7 @@ class AbstractTreeRenderer
   MODE_NORMAL          : 0     # draw every node and the complete tree
   MODE_NOCHAIN         : 1     # draw only decision points
 
-  RENDER_COMMENTS      : false  # draw comments into tree
+  RENDER_COMMENTS      : true  # draw comments into tree
 
   constructor : ($canvas, width, height) ->
 

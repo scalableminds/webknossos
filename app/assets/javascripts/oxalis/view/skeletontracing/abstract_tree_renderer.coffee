@@ -86,55 +86,18 @@ class AbstractTreeRenderer
 
   drawTreeWithWidths : (tree, left, right, top, mode) ->
 
-    # get the decision point
     decision = @getNextDecision(tree)
-    middle = @calculateTreeMiddle(decision, left, right)
-    #middle = middle # if decisionPoint is leaf, there's not much to do
-    topChildren = @calculateChildTreeTop(mode, decision.chainCount, top)
+    middle = @calculateMiddle(left, right)
 
-    # if the decision point has 2 children, draw them and remember their position
     if decision.isBranch
-
-      leftTree = @drawTreeWithWidths(decision.node.children[0], left,  middle, topChildren, mode)
-      rightTree = @drawTreeWithWidths(decision.node.children[1], middle, right, topChildren, mode)
-
-      # set the root's x coordinate to be in between the decisionPoint's children
-      middle = (leftTree.middle + rightTree.middle) / 2
-
-      # draw edges from last node in 'chain' (or root, if chain empty)
-      # and the decisionPoint's children
-      @drawEdge(middle, topChildren - @nodeDistance, leftTree.middle, leftTree.top)
-      @drawEdge(middle, topChildren - @nodeDistance, rightTree.middle, rightTree.top)
-
+      middle = @drawBranch(decision, left, right, top, mode)
     else if !decision.isLeaf
-
-      childNode = decision.node.children[0]
-      nodeHasComment = @nodeHasComment(decision.node.id)
-
-      if nodeHasComment
-        childNode = decision.node
-        topChildren -= @nodeDistance
-
-      childTree = @drawTreeWithWidths(childNode, left, right, topChildren, mode)
-
-      if !nodeHasComment
-        @drawEdge(middle, topChildren - @nodeDistance, childTree.middle, childTree.top)
-
+      middle = @drawCommentChain(decision, left, right, top, mode)
 
     if mode == @MODE_NORMAL or decision.chainCount < 3
       @drawChainFromTo(top, middle, tree, decision)
-
     else if mode == @MODE_NOCHAIN
-
-      hasActiveNode = @chainContainsActiveNode(tree, decision.node)
-
-      # Draw root, chain indicator and decision point
-      @drawNode(middle, top, tree.id)
-      @drawEdge(middle, top, middle, top + 0.5 * @nodeDistance)
-      @drawChainIndicator(middle, top + 0.5 * @nodeDistance, top + 1.5 * @nodeDistance, hasActiveNode)
-      @drawEdge(middle, top + 1.5 * @nodeDistance, middle, top + 2 * @nodeDistance)
-      @drawNode(middle, top + 2 * @nodeDistance, decision.node.id)
-
+      @drawChainWithChainIndicatorFromTo(top, middle, tree, decision)
 
     return { middle, top }
 
@@ -146,12 +109,14 @@ class AbstractTreeRenderer
    * @param  {Number} right          right border in pixels
    * @return {Number}                middle in pixels
   ###
-  calculateTreeMiddle : (decision, left, right) ->
+  calculateBranchMiddle : (decision, left, right) ->
 
-    if decision.isBranch
-      leftChild = decision.node.children[0]
-      rightChild = decision.node.children[1]
-      return (right - left) * leftChild.width / (leftChild.width + rightChild.width) + left
+    leftChild = decision.node.children[0]
+    rightChild = decision.node.children[1]
+    return (right - left) * leftChild.width / (leftChild.width + rightChild.width) + left
+
+
+  calculateMiddle : (left, right) ->
 
     return (left + right) / 2
 
@@ -224,6 +189,43 @@ class AbstractTreeRenderer
     @ctx.lineWidth = 1
 
 
+  drawCommentChain : (decision, left, right, top, mode) ->
+
+    middle = @calculateMiddle(left, right)
+    topChild = @calculateChildTreeTop(mode, decision.chainCount, top)
+    childNode = decision.node.children[0]
+    nodeHasComment = @nodeHasComment(decision.node.id)
+
+    if nodeHasComment
+      childNode = decision.node
+      topChild -= @nodeDistance
+
+    childTree = @drawTreeWithWidths(childNode, left, right, topChild, mode)
+
+    if !nodeHasComment
+      @drawEdge(middle, topChild - @nodeDistance, childTree.middle, childTree.top)
+
+    return middle
+
+
+  drawBranch : (decision, left, right, top, mode) ->
+
+    branchMiddle = @calculateBranchMiddle(decision, left, right)
+    topChildren = @calculateChildTreeTop(mode, decision.chainCount, top)
+    leftTree = @drawTreeWithWidths(decision.node.children[0], left,  branchMiddle, topChildren, mode)
+    rightTree = @drawTreeWithWidths(decision.node.children[1], branchMiddle, right, topChildren, mode)
+
+    # set the root's x coordinate to be in between the decisionPoint's children
+    middle = @calculateMiddle(leftTree.middle, rightTree.middle)
+
+    # draw edges from last node in 'chain' (or root, if chain empty)
+    # and the decisionPoint's children
+    @drawEdge(middle, topChildren - @nodeDistance, leftTree.middle, leftTree.top)
+    @drawEdge(middle, topChildren - @nodeDistance, rightTree.middle, rightTree.top)
+
+    return middle
+
+
   drawChainFromTo : (top, left, root, decision) ->
 
     # Draw the chain and the root, connect them.
@@ -233,6 +235,18 @@ class AbstractTreeRenderer
       node = node.children[0]
       if i != 0
         @drawEdge(left, top + (i - 1) * @nodeDistance, left, top + i * @nodeDistance)
+
+
+  drawChainWithChainIndicatorFromTo : (top, middle, tree, decision) ->
+
+    hasActiveNode = @chainContainsActiveNode(tree, decision.node)
+
+    # Draw root, chain indicator and decision point
+    @drawNode(middle, top, tree.id)
+    @drawEdge(middle, top, middle, top + 0.5 * @nodeDistance)
+    @drawChainIndicator(middle, top + 0.5 * @nodeDistance, top + 1.5 * @nodeDistance, hasActiveNode)
+    @drawEdge(middle, top + 1.5 * @nodeDistance, middle, top + 2 * @nodeDistance)
+    @drawNode(middle, top + 2 * @nodeDistance, decision.node.id)
 
 
   getNextDecision : (tree) ->

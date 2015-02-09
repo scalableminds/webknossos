@@ -83,6 +83,9 @@ class AbstractTreeRenderer
     @recordWidths(root)
     @drawTreeWithWidths(root, @NODE_RADIUS, @canvas.width() - @NODE_RADIUS, @nodeDistance, mode)
 
+    # because of z layering all nodes have to be drawn last
+    @drawAllNodes()
+
 
   drawTreeWithWidths : (tree, left, right, top, mode) ->
 
@@ -161,9 +164,6 @@ class AbstractTreeRenderer
     @ctx.arc(x, y, radius, 0, 2 * Math.PI)
     @ctx.fill()
 
-    # put it in nodeList
-    @nodeList.push({x : x, y : y, id : id})
-
 
   drawEdge : (x1, y1, x2, y2) ->
 
@@ -231,7 +231,7 @@ class AbstractTreeRenderer
     # Draw the chain and the root, connect them.
     node = root
     for i in [0..decision.chainCount]
-      @drawNode(left, top + i * @nodeDistance, node.id)
+      @addNode(left, top + i * @nodeDistance, node.id)
       node = node.children[0]
       if i != 0
         @drawEdge(left, top + (i - 1) * @nodeDistance, left, top + i * @nodeDistance)
@@ -242,11 +242,23 @@ class AbstractTreeRenderer
     hasActiveNode = @chainContainsActiveNode(tree, decision.node)
 
     # Draw root, chain indicator and decision point
-    @drawNode(middle, top, tree.id)
+    @addNode(middle, top, tree.id)
     @drawEdge(middle, top, middle, top + 0.5 * @nodeDistance)
     @drawChainIndicator(middle, top + 0.5 * @nodeDistance, top + 1.5 * @nodeDistance, hasActiveNode)
     @drawEdge(middle, top + 1.5 * @nodeDistance, middle, top + 2 * @nodeDistance)
-    @drawNode(middle, top + 2 * @nodeDistance, decision.node.id)
+    @addNode(middle, top + 2 * @nodeDistance, decision.node.id)
+
+
+  addNode : (x, y, id) ->
+
+    # put it in nodeList
+    @nodeList.push({x : x, y : y, id : id})
+
+
+  drawAllNodes : ->
+
+    for {x, y, id} in @nodeList
+      @drawNode(x, y, id)
 
 
   getNextDecision : (tree) ->

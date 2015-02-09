@@ -89,55 +89,54 @@ class AbstractTreeRenderer
     # get the decision point
     decision = @getNextDecision(tree)
     middle = @calculateTreeMiddle(decision, left, right)
-    rootX = middle # if decisionPoint is leaf, there's not much to do
+    #middle = middle # if decisionPoint is leaf, there's not much to do
+    topChildren = @calculateChildTreeTop(mode, decision.chainCount, top)
 
     # if the decision point has 2 children, draw them and remember their position
     if decision.isBranch
 
-      topChildren = @calculateChildTreeTop(mode, decision.chainCount, top)
       leftTree = @drawTreeWithWidths(decision.node.children[0], left,  middle, topChildren, mode)
       rightTree = @drawTreeWithWidths(decision.node.children[1], middle, right, topChildren, mode)
 
       # set the root's x coordinate to be in between the decisionPoint's children
-      rootX = (leftTree.rootX + rightTree.rootX) / 2
+      middle = (leftTree.middle + rightTree.middle) / 2
 
       # draw edges from last node in 'chain' (or root, if chain empty)
       # and the decisionPoint's children
-      @drawEdge(rootX, topChildren - @nodeDistance, leftTree.rootX, leftTree.top)
-      @drawEdge(rootX, topChildren - @nodeDistance, rightTree.rootX, rightTree.top)
+      @drawEdge(middle, topChildren - @nodeDistance, leftTree.middle, leftTree.top)
+      @drawEdge(middle, topChildren - @nodeDistance, rightTree.middle, rightTree.top)
 
     else if !decision.isLeaf
 
       childNode = decision.node.children[0]
-      topChild = @calculateChildTreeTop(mode, decision.chainCount, top)
       nodeHasComment = @nodeHasComment(decision.node.id)
 
       if nodeHasComment
         childNode = decision.node
-        topChild -= @nodeDistance
+        topChildren -= @nodeDistance
 
-      childTree = @drawTreeWithWidths(childNode, left, right, topChild, mode)
+      childTree = @drawTreeWithWidths(childNode, left, right, topChildren, mode)
 
       if !nodeHasComment
-        @drawEdge(rootX, topChild - @nodeDistance, childTree.rootX, childTree.top)
+        @drawEdge(middle, topChildren - @nodeDistance, childTree.middle, childTree.top)
 
 
     if mode == @MODE_NORMAL or decision.chainCount < 3
-      @drawChainFromTo(top, rootX, tree, decision)
+      @drawChainFromTo(top, middle, tree, decision)
 
     else if mode == @MODE_NOCHAIN
 
       hasActiveNode = @chainContainsActiveNode(tree, decision.node)
 
       # Draw root, chain indicator and decision point
-      @drawNode(rootX, top, tree.id)
-      @drawEdge(rootX, top, rootX, top + 0.5 * @nodeDistance)
-      @drawChainIndicator(rootX, top + 0.5 * @nodeDistance, top + 1.5 * @nodeDistance, hasActiveNode)
-      @drawEdge(rootX, top + 1.5 * @nodeDistance, rootX, top + 2 * @nodeDistance)
-      @drawNode(rootX, top + 2 * @nodeDistance, decision.node.id)
+      @drawNode(middle, top, tree.id)
+      @drawEdge(middle, top, middle, top + 0.5 * @nodeDistance)
+      @drawChainIndicator(middle, top + 0.5 * @nodeDistance, top + 1.5 * @nodeDistance, hasActiveNode)
+      @drawEdge(middle, top + 1.5 * @nodeDistance, middle, top + 2 * @nodeDistance)
+      @drawNode(middle, top + 2 * @nodeDistance, decision.node.id)
 
 
-    return { rootX, top }
+    return { middle, top }
 
 
   ###*

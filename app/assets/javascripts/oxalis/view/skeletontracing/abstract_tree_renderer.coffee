@@ -136,7 +136,9 @@ class AbstractTreeRenderer
       @drawEdge(rootX, top + 1.5 * @nodeDistance, rootX, top + 2 * @nodeDistance)
       @drawNode(rootX, top + 2 * @nodeDistance, decision.node.id)
 
+
     return { rootX, top }
+
 
   ###*
    * calculate m (middle that divides the left and right tree, if any)
@@ -154,13 +156,14 @@ class AbstractTreeRenderer
 
     return (left + right) / 2
 
+
   # Calculate the top of the children
   calculateChildTreeTop : (mode, chainCount, top) ->
 
-      if mode == @MODE_NORMAL or chainCount < 3
-        return top + (chainCount + 1) * @nodeDistance
-      else if mode == @MODE_NOCHAIN
-        return top + 3 * @nodeDistance
+    if mode == @MODE_NORMAL or chainCount < 3
+      return top + (chainCount + 1) * @nodeDistance
+    else if mode == @MODE_NOCHAIN
+      return top + 3 * @nodeDistance
 
 
   clearBackground : ->
@@ -284,8 +287,6 @@ class AbstractTreeRenderer
     if decision.isLeaf
       decision.node.width = 1
       return 1
-
-    decisionPoint = decision.node
 
     # edge case: system is made for binary trees only
     # allow a maximum of two

@@ -106,6 +106,22 @@ class AbstractTreeRenderer
       @drawEdge(rootX, topChildren - @nodeDistance, leftTree.rootX, leftTree.top)
       @drawEdge(rootX, topChildren - @nodeDistance, rightTree.rootX, rightTree.top)
 
+    else if !decision.isLeaf
+
+      childNode = decision.node.children[0]
+      topChild = @calculateChildTreeTop(mode, decision.chainCount, top)
+      nodeHasComment = @nodeHasComment(decision.node.id)
+
+      if nodeHasComment
+        childNode = decision.node
+        topChild -= @nodeDistance
+
+      childTree = @drawTreeWithWidths(childNode, left, right, topChild, mode)
+
+      if !nodeHasComment
+        @drawEdge(rootX, topChild - @nodeDistance, childTree.rootX, childTree.top)
+
+
     if mode == @MODE_NORMAL or decision.chainCount < 3
       @drawChainFromTo(top, rootX, tree, decision)
 

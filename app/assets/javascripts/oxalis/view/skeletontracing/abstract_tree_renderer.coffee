@@ -88,7 +88,7 @@ class AbstractTreeRenderer
 
     # get the decision point
     decision = @getNextDecision(tree)
-    middle = @calculateTreeMiddle(decision.node, left, right)
+    middle = @calculateTreeMiddle(decision, left, right)
     rootX = middle # if decisionPoint is leaf, there's not much to do
 
     # if the decision point has 2 children, draw them and remember their position
@@ -136,20 +136,19 @@ class AbstractTreeRenderer
 
   ###*
    * calculate m (middle that divides the left and right tree, if any)
-   * @param  {Object} decisionPoint  a point which definitely has to be drawn
+   * @param  {Object} decision       a point which definitely has to be drawn
    * @param  {Number} left           left border in pixels
    * @param  {Number} right          right border in pixels
    * @return {Number}                middle in pixels
   ###
-  calculateTreeMiddle : (decisionPoint, left, right) ->
+  calculateTreeMiddle : (decision, left, right) ->
 
-    if decisionPoint.children.length < 2
-      return (left + right) / 2
-    else
-      child1 = decisionPoint.children[0]
-      child2 = decisionPoint.children[1]
-      return (right - left) * child1.width / (child1.width + child2.width) + left
+    if decision.isBranch
+      leftChild = decision.node.children[0]
+      rightChild = decision.node.children[1]
+      return (right - left) * leftChild.width / (leftChild.width + rightChild.width) + left
 
+    return (left + right) / 2
 
   # Calculate the top of the children
   calculateChildTreeTop : (mode, chainCount, top) ->

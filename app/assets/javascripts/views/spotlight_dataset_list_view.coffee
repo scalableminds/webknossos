@@ -21,4 +21,6 @@ class SpotlightDatasetListView extends Backbone.Marionette.CollectionView
     @collection.fetch(
       silent : true
       data: "isActive=true"
+      ).done( =>
+        @collection.goTo(1)
       )

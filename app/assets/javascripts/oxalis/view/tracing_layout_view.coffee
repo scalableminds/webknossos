@@ -9,6 +9,7 @@ app : app
 oxalis/controller : OxalisController
 oxalis/model : OxalisModel
 oxalis/constants : Constants
+offcanvas : offcanvas
 ###
 
 class TracingLayoutView extends Backbone.Marionette.LayoutView
@@ -18,9 +19,14 @@ class TracingLayoutView extends Backbone.Marionette.LayoutView
   className : "text-nowrap"
   template : _.template("""
     <div id="action-bar"></div>
-    <div id="settings-menu"></div>
-    <div id="tracing"></div>
-    <div id="right-menu"></div>
+    <button class="fa fa-arrow-left" data-toggle="offcanvas" data-target="#settings-menu-wrapper" data-canvas="#sliding-canvas" data-placement="left"></button>
+    <div id="sliding-canvas">
+      <div id="settings-menu-wrapper" class="navmenu-fixed-left offcanvas">
+        <div id="settings-menu"></div>
+      </div>
+      <div id="tracing"></div>
+      <div id="right-menu"></div>
+    </div>
    """)
 
   ui :
@@ -90,6 +96,11 @@ class TracingLayoutView extends Backbone.Marionette.LayoutView
   isSkeletonMode : ->
 
     return @model.get("mode") == Constants.MODE_PLANE_TRACING
+
+  toggleMenu : ->
+
+    @ui.rightMenu.offcanvas('toggle')
+    console.log(@ui.rightMenu.offcanvas)
 
 
   onDestroy : ->

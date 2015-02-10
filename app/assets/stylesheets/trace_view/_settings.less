@@ -1,9 +1,17 @@
-#settings-menu {
+// add the margin to the settings width
+@settings-wrapper-width: @left-menu-width + 20;
 
-  position: relative;
+#settings-menu-wrapper {
+  position: absolute;
+  width: @settings-wrapper-width;
+  transform: translate(-@settings-wrapper-width, 0);
+}
+
+#settings-menu {
+  position: absolute;
   width: @left-menu-width;
   padding: 10px 0px;
-  display: inline-block;
+  // display: inline-block;
   vertical-align: top;
   white-space: normal;
   .tab-menu;

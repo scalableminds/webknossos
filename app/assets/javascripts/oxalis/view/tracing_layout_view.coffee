@@ -44,12 +44,17 @@ class TracingLayoutView extends Backbone.Marionette.LayoutView
 
   ui :
     "rightMenu" : "#right-menu"
+    "slidingCanvas" : "#sliding-canvas"
 
   regions :
     "actionBar" : "#action-bar"
     "rightMenu" : "#right-menu"
     "tracingContainer" : "#tracing"
     "settings" : "#settings-menu"
+
+  events:
+    "hidden.bs.offcanvas #settings-menu-wrapper" : "doneSliding"
+    "shown.bs.offcanvas #settings-menu-wrapper" : "doneSliding"
 
 
   initialize : (options) ->
@@ -63,18 +68,24 @@ class TracingLayoutView extends Backbone.Marionette.LayoutView
     @model = @options.model
 
     @listenTo(@, "render", @afterRender)
-    @listenTo(app.vent, "planes:resize", @resize)
+    @listenTo(app.vent, "planes:resize", @resizeRightMenu)
     @listenTo(@model, "sync", @renderRegions)
-    $(window).on("resize", @resize.bind(@))
+    $(window).on("resize", @resizeRightMenu.bind(@))
 
     app.oxalis = new OxalisController(@options)
 
 
-  resize : ->
+  doneSliding : (evt) ->
+
+    @resizeRightMenu()
+
+
+  resizeRightMenu : ->
 
     if @isSkeletonMode()
       menuPosition = @ui.rightMenu.position()
-      newWidth = window.innerWidth - menuPosition.left - @MARGIN
+      slidingCanvasOffset = @ui.slidingCanvas.position().left
+      newWidth = window.innerWidth - menuPosition.left - slidingCanvasOffset - @MARGIN
       if menuPosition.left < window.innerWidth and newWidth > 350
         @ui.rightMenu.width(newWidth)
 

@@ -16,7 +16,13 @@ class ActionBarView extends Backbone.Marionette.LayoutView
   template : _.template("""
 
     <% if (isTraceMode) { %>
-      <a href="#" id="menu-toggle-button" class="btn btn-default" data-toggle="offcanvas" data-target="#settings-menu-wrapper" data-canvas="#sliding-canvas" data-placement="left"><i class="fa fa-bars"></i>Menu</a>
+      <a href="#" id="menu-toggle-button" class="btn btn-default"
+        data-toggle="offcanvas"
+        data-target="#settings-menu-wrapper"
+        data-canvas="#sliding-canvas"
+        data-placement="left"
+        data-autohide="false"
+        data-disable-scrolling="false"><i class="fa fa-bars"></i>Menu</a>
     <% } %>
 
     <% if (isTraceMode) { %>

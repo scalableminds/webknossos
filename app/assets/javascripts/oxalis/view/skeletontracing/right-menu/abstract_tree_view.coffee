@@ -73,3 +73,4 @@ class AbstractTreeView extends Backbone.Marionette.ItemView
     id = @abstractTreeRenderer.getIdFromPos(event.offsetX, event.offsetY)
     if id
       @model.skeletonTracing.trigger("newActiveNode", id)
+      @model.skeletonTracing.centerActiveNode()

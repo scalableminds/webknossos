@@ -154,7 +154,7 @@ class AbstractTreeRenderer
     @ctx.beginPath()
 
     @ctx.fillStyle = @vgColor
-    if @nodeHasComment(id)
+    if @nodeIdHasComment(id)
       @ctx.fillStyle = @commentColor
 
     radius = @NODE_RADIUS
@@ -274,7 +274,7 @@ class AbstractTreeRenderer
         tree = tree.children[0]
         chainCount++
 
-    while tree.children.length == 1 and !@nodeHasComment(tree.id)
+    while tree.children.length == 1 and !@nodeIdHasComment(tree.id)
       tree = tree.children[0]
       chainCount++
 
@@ -365,7 +365,7 @@ class AbstractTreeRenderer
         return entry.id
 
 
-  nodeHasComment : (id) ->
+  nodeIdHasComment : (id) ->
 
     return @RENDER_COMMENTS and @comments.hasCommentWithNodeId(id)
 

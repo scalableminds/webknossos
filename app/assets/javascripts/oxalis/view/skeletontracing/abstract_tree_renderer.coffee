@@ -236,12 +236,10 @@ class AbstractTreeRenderer
 
   drawChainWithChainIndicatorFromTo : (top, middle, tree, decision) ->
 
-    hasActiveNode = @chainContainsActiveNode(tree, decision.node)
-
     # Draw root, chain indicator and decision point
     @addNode(middle, top, tree.id)
     @drawEdge(middle, top, middle, top + 0.5 * @nodeDistance)
-    @drawChainIndicator(middle, top + 0.5 * @nodeDistance, top + 1.5 * @nodeDistance, hasActiveNode)
+    @drawChainIndicator(middle, top + 0.5 * @nodeDistance, top + 1.5 * @nodeDistance, decision.hasActiveNode)
     @drawEdge(middle, top + 1.5 * @nodeDistance, middle, top + 2 * @nodeDistance)
     @addNode(middle, top + 2 * @nodeDistance, decision.node.id)
 
@@ -266,6 +264,7 @@ class AbstractTreeRenderer
     # Decision points will definitely be drawn.
 
     chainCount = 0
+    hasActiveNode = false
 
     # skip comment check on first node
     if tree.children.length == 1
@@ -273,6 +272,8 @@ class AbstractTreeRenderer
         chainCount++
 
     while tree.children.length == 1 and !@nodeIdHasComment(tree.id)
+      if !hasActiveNode
+          hasActiveNode = tree.id == @activeNodeId
       tree = tree.children[0]
       chainCount++
 
@@ -281,22 +282,8 @@ class AbstractTreeRenderer
       chainCount,
       isBranch: tree.children.length > 1
       isLeaf: tree.children.length == 0
-      isComment: @nodeIdHasComment(tree.id)
+      hasActiveNode: hasActiveNode
     }
-
-
-  chainContainsActiveNode : (root, decisionNode) ->
-
-      # Find out, if the chain contains an active node
-      node = root.children[0]
-      hasActiveNode = false
-
-      while node.id != decisionNode.id
-        if node.id == @activeNodeId
-          return true
-        node = node.children[0]
-
-      return false
 
 
   recordWidths : (tree) ->

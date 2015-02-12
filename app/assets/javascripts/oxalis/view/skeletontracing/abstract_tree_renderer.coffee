@@ -251,7 +251,8 @@ class AbstractTreeRenderer
 
   getNextDecision : (tree) ->
 
-    # Decision point is any point with point.children.length != 1
+    # Decision point is any point with point.children.length == 2 (branch point)
+    # or leaves
     # or any point that has a comment.
     # Decision points will definitely be drawn.
 

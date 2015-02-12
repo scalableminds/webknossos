@@ -20,7 +20,6 @@ class TracingLayoutView extends Backbone.Marionette.LayoutView
 
   traceTemplate : _.template("""
     <div id="action-bar"></div>
-    <button class="fa fa-arrow-left" data-toggle="offcanvas" data-target="#settings-menu-wrapper" data-canvas="#sliding-canvas" data-placement="left"></button>
     <div id="sliding-canvas">
       <div id="settings-menu-wrapper" class="navmenu-fixed-left offcanvas">
         <div id="settings-menu"></div>

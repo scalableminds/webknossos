@@ -28,6 +28,10 @@ class AbstractTreeRenderer
     @height = height
     @nodeList = []
 
+  renderComments : (renderComments) ->
+
+    @RENDER_COMMENTS = renderComments
+
 
   setDimensions : ({width, height}) ->
 

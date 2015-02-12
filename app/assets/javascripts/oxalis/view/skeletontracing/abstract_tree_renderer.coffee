@@ -191,21 +191,9 @@ class AbstractTreeRenderer
 
   drawCommentChain : (decision, left, right, top, mode) ->
 
-    middle = @calculateMiddle(left, right)
-    topChild = @calculateChildTreeTop(mode, decision.chainCount, top)
-    childNode = decision.node.children[0]
-    nodeHasComment = @nodeHasComment(decision.node.id)
-
-    if nodeHasComment
-      childNode = decision.node
-      topChild -= @nodeDistance
-
-    childTree = @drawTreeWithWidths(childNode, left, right, topChild, mode)
-
-    if !nodeHasComment
-      @drawEdge(middle, topChild - @nodeDistance, childTree.middle, childTree.top)
-
-    return middle
+    topChild = @calculateChildTreeTop(mode, decision.chainCount, top) - @nodeDistance
+    extent = @drawTreeWithWidths(decision.node, left, right, topChild, mode)
+    return extent.middle
 
 
   drawBranch : (decision, left, right, top, mode) ->

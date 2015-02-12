@@ -300,7 +300,6 @@ class AbstractTreeRenderer
       return false
 
 
-
   recordWidths : (tree) ->
 
     # Because any node with children.length == 1 has
@@ -313,15 +312,11 @@ class AbstractTreeRenderer
       decision.node.width = 1
       return 1
 
-    # edge case: system is made for binary trees only
-    # allow a maximum of two
-    if decision.node.children.length > 2
-      decision.node.children = decision.node.children[0...2]
-
     # Branchpoints are as wide as its children combined.
     # But actually, we need the width of the children
+    # edge case: system is made for binary trees only
     width = 0
-    for child in decision.node.children
+    for child in decision.node.children[0...2]
       child.width = @recordWidths(child)
       width += child.width
 

@@ -128,13 +128,18 @@ class AbstractTreeRenderer
     return (left + right) / 2
 
 
-  # Calculate the top of the children
-  calculateChildTreeTop : (mode, chainCount, top) ->
+  calculateTop : (chainCount, top, mode) ->
 
     if mode == @MODE_NORMAL or chainCount < 3
-      return top + (chainCount + 1) * @nodeDistance
+      return top + chainCount * @nodeDistance
     else if mode == @MODE_NOCHAIN
-      return top + 3 * @nodeDistance
+      return top + 2 * @nodeDistance
+
+
+  # Calculate the top of the children
+  calculateChildTop : (chainCount, top, mode) ->
+
+    return @calculateTop(chainCount, top, mode) + @nodeDistance
 
 
   clearBackground : ->
@@ -195,7 +200,7 @@ class AbstractTreeRenderer
 
   drawCommentChain : (decision, left, right, top, mode) ->
 
-    topChild = @calculateChildTreeTop(mode, decision.chainCount, top) - @nodeDistance
+    topChild = @calculateTop(decision.chainCount, top, mode)
     extent = @drawTreeWithWidths(decision.node, left, right, topChild, mode)
     return extent.middle
 
@@ -203,7 +208,7 @@ class AbstractTreeRenderer
   drawBranch : (decision, left, right, top, mode) ->
 
     branchMiddle = @calculateBranchMiddle(decision, left, right)
-    topChildren = @calculateChildTreeTop(mode, decision.chainCount, top)
+    topChildren = @calculateChildTop(decision.chainCount, top, mode)
     leftTree = @drawTreeWithWidths(decision.node.children[0], left,  branchMiddle, topChildren, mode)
     rightTree = @drawTreeWithWidths(decision.node.children[1], branchMiddle, right, topChildren, mode)
 
@@ -276,6 +281,7 @@ class AbstractTreeRenderer
       chainCount,
       isBranch: tree.children.length > 1
       isLeaf: tree.children.length == 0
+      isComment: @nodeIdHasComment(tree.id)
     }
 
 

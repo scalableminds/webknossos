@@ -28,17 +28,6 @@ class AbstractTreeRenderer
     @height = height
     @nodeList = []
 
-  renderComments : (renderComments) ->
-
-    @RENDER_COMMENTS = renderComments
-
-
-  setDimensions : ({width, height}) ->
-
-    $(@canvas).css({width, height})
-    @canvas[0].width = width
-    @canvas[0].height = height
-
 
   drawTree : (tree, @activeNodeId, @comments) ->
 
@@ -109,6 +98,82 @@ class AbstractTreeRenderer
     return { middle, top }
 
 
+  getNextDecision : (tree) ->
+
+    # Decision point is any point with point.children.length == 2 (branch point)
+    # or leaves
+    # or any point that has a comment.
+    # Decision points will definitely be drawn.
+
+    chainCount = 0
+    hasActiveNode = false
+
+    # skip comment check on first node
+    if tree.children.length == 1
+        tree = tree.children[0]
+        chainCount++
+
+    while tree.children.length == 1 and !@nodeIdHasComment(tree.id)
+      if !hasActiveNode
+          hasActiveNode = tree.id == @activeNodeId
+      tree = tree.children[0]
+      chainCount++
+
+    return {
+      node: tree,
+      chainCount,
+      isBranch: tree.children.length > 1
+      isLeaf: tree.children.length == 0
+      hasActiveNode: hasActiveNode
+    }
+
+
+  drawBranch : (decision, left, right, top, mode) ->
+
+    branchMiddle = @calculateBranchMiddle(decision, left, right)
+    topChildren = @calculateChildTop(decision.chainCount, top, mode)
+    leftTree = @drawTreeWithWidths(decision.node.children[0], left,  branchMiddle, topChildren, mode)
+    rightTree = @drawTreeWithWidths(decision.node.children[1], branchMiddle, right, topChildren, mode)
+
+    # set the root's x coordinate to be in between the decisionPoint's children
+    middle = @calculateMiddle(leftTree.middle, rightTree.middle)
+
+    # draw edges from last node in 'chain' (or root, if chain empty)
+    # and the decisionPoint's children
+    @drawEdge(middle, topChildren - @nodeDistance, leftTree.middle, leftTree.top)
+    @drawEdge(middle, topChildren - @nodeDistance, rightTree.middle, rightTree.top)
+
+    return middle
+
+
+  drawCommentChain : (decision, left, right, top, mode) ->
+
+    topChild = @calculateTop(decision.chainCount, top, mode)
+    extent = @drawTreeWithWidths(decision.node, left, right, topChild, mode)
+    return extent.middle
+
+
+  drawChainFromTo : (top, left, root, decision) ->
+
+    # Draw the chain and the root, connect them.
+    node = root
+    for i in [0..decision.chainCount]
+      @addNode(left, top + i * @nodeDistance, node.id)
+      node = node.children[0]
+      if i != 0
+        @drawEdge(left, top + (i - 1) * @nodeDistance, left, top + i * @nodeDistance)
+
+
+  drawChainWithChainIndicatorFromTo : (top, middle, tree, decision) ->
+
+    # Draw root, chain indicator and decision point
+    @addNode(middle, top, tree.id)
+    @drawEdge(middle, top, middle, top + 0.5 * @nodeDistance)
+    @drawChainIndicator(middle, top + 0.5 * @nodeDistance, top + 1.5 * @nodeDistance, decision.hasActiveNode)
+    @drawEdge(middle, top + 1.5 * @nodeDistance, middle, top + 2 * @nodeDistance)
+    @addNode(middle, top + 2 * @nodeDistance, decision.node.id)
+
+
   ###*
    * calculate m (middle that divides the left and right tree, if any)
    * @param  {Object} decision       a point which definitely has to be drawn
@@ -142,20 +207,16 @@ class AbstractTreeRenderer
     return @calculateTop(chainCount, top, mode) + @nodeDistance
 
 
-  clearBackground : ->
+  addNode : (x, y, id) ->
 
-    @ctx.clearRect(0, 0, @canvas.width(), @canvas.height())
+    # put it in nodeList
+    @nodeList.push({x : x, y : y, id : id})
 
 
-  setupColors : ->
+  drawAllNodes : ->
 
-    # apply color scheme
-    if app.oxalis.view.theme == Constants.THEME_BRIGHT
-      @vgColor = "black"
-      @commentColor = "red"
-    else
-      @vgColor = "white"
-      @commentColor = "blue"
+    for {x, y, id} in @nodeList
+      @drawNode(x, y, id)
 
 
   drawNode : (x, y, id) ->
@@ -198,92 +259,9 @@ class AbstractTreeRenderer
     @ctx.lineWidth = 1
 
 
-  drawCommentChain : (decision, left, right, top, mode) ->
+  nodeIdHasComment : (id) ->
 
-    topChild = @calculateTop(decision.chainCount, top, mode)
-    extent = @drawTreeWithWidths(decision.node, left, right, topChild, mode)
-    return extent.middle
-
-
-  drawBranch : (decision, left, right, top, mode) ->
-
-    branchMiddle = @calculateBranchMiddle(decision, left, right)
-    topChildren = @calculateChildTop(decision.chainCount, top, mode)
-    leftTree = @drawTreeWithWidths(decision.node.children[0], left,  branchMiddle, topChildren, mode)
-    rightTree = @drawTreeWithWidths(decision.node.children[1], branchMiddle, right, topChildren, mode)
-
-    # set the root's x coordinate to be in between the decisionPoint's children
-    middle = @calculateMiddle(leftTree.middle, rightTree.middle)
-
-    # draw edges from last node in 'chain' (or root, if chain empty)
-    # and the decisionPoint's children
-    @drawEdge(middle, topChildren - @nodeDistance, leftTree.middle, leftTree.top)
-    @drawEdge(middle, topChildren - @nodeDistance, rightTree.middle, rightTree.top)
-
-    return middle
-
-
-  drawChainFromTo : (top, left, root, decision) ->
-
-    # Draw the chain and the root, connect them.
-    node = root
-    for i in [0..decision.chainCount]
-      @addNode(left, top + i * @nodeDistance, node.id)
-      node = node.children[0]
-      if i != 0
-        @drawEdge(left, top + (i - 1) * @nodeDistance, left, top + i * @nodeDistance)
-
-
-  drawChainWithChainIndicatorFromTo : (top, middle, tree, decision) ->
-
-    # Draw root, chain indicator and decision point
-    @addNode(middle, top, tree.id)
-    @drawEdge(middle, top, middle, top + 0.5 * @nodeDistance)
-    @drawChainIndicator(middle, top + 0.5 * @nodeDistance, top + 1.5 * @nodeDistance, decision.hasActiveNode)
-    @drawEdge(middle, top + 1.5 * @nodeDistance, middle, top + 2 * @nodeDistance)
-    @addNode(middle, top + 2 * @nodeDistance, decision.node.id)
-
-
-  addNode : (x, y, id) ->
-
-    # put it in nodeList
-    @nodeList.push({x : x, y : y, id : id})
-
-
-  drawAllNodes : ->
-
-    for {x, y, id} in @nodeList
-      @drawNode(x, y, id)
-
-
-  getNextDecision : (tree) ->
-
-    # Decision point is any point with point.children.length == 2 (branch point)
-    # or leaves
-    # or any point that has a comment.
-    # Decision points will definitely be drawn.
-
-    chainCount = 0
-    hasActiveNode = false
-
-    # skip comment check on first node
-    if tree.children.length == 1
-        tree = tree.children[0]
-        chainCount++
-
-    while tree.children.length == 1 and !@nodeIdHasComment(tree.id)
-      if !hasActiveNode
-          hasActiveNode = tree.id == @activeNodeId
-      tree = tree.children[0]
-      chainCount++
-
-    return {
-      node: tree,
-      chainCount,
-      isBranch: tree.children.length > 1
-      isLeaf: tree.children.length == 0
-      hasActiveNode: hasActiveNode
-    }
+    return @RENDER_COMMENTS and @comments.hasCommentWithNodeId(id)
 
 
   recordWidths : (tree) ->
@@ -346,8 +324,29 @@ class AbstractTreeRenderer
         return entry.id
 
 
-  nodeIdHasComment : (id) ->
+  clearBackground : ->
 
-    return @RENDER_COMMENTS and @comments.hasCommentWithNodeId(id)
+    @ctx.clearRect(0, 0, @canvas.width(), @canvas.height())
 
 
+  setupColors : ->
+
+    # apply color scheme
+    if app.oxalis.view.theme == Constants.THEME_BRIGHT
+      @vgColor = "black"
+      @commentColor = "red"
+    else
+      @vgColor = "white"
+      @commentColor = "blue"
+
+
+  renderComments : (renderComments) ->
+
+    @RENDER_COMMENTS = renderComments
+
+
+  setDimensions : ({width, height}) ->
+
+    $(@canvas).css({width, height})
+    @canvas[0].width = width
+    @canvas[0].height = height

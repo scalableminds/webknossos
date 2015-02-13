@@ -29,6 +29,14 @@ class AbstractTreeRenderer
     @nodeList = []
 
 
+  ###*
+   * Render function called by events and GUI.
+   * Draws the abstract tree, emphasizes the active node
+   * and highlights comments, if enabled.
+   * @param  {TracePoint} tree
+   * @param  {Number} @activeNodeId TracePoint id
+   * @param  {BackboneCollection} @comments
+  ###
   drawTree : (tree, @activeNodeId, @comments) ->
 
     unless tree?
@@ -80,6 +88,16 @@ class AbstractTreeRenderer
     @drawAllNodes()
 
 
+  ###*
+   * Draws a whole tree inside the given borders.
+   * Thus it fits on the canvas and scales as the tree grows.
+   * @param  {TracePoint} tree
+   * @param  {Number} left  left border in pixels
+   * @param  {Number} right right border in pixels
+   * @param  {Number} top   y coordinate in pixels
+   * @param  {Number} mode  @MODE_NORMAL or @MODE_NOCHAIN
+   * @return {Object}       new middle and top coordinates in pixels
+  ###
   drawTreeWithWidths : (tree, left, right, top, mode) ->
 
     decision = @getNextDecision(tree)
@@ -98,12 +116,16 @@ class AbstractTreeRenderer
     return { middle, top }
 
 
+  ###*
+   * Find the next node which have to be considered in an extra way.
+   * These are:
+   *   - branch points
+   *   - leaves
+   *   - commented nodes
+   * @param  {TracePoint} tree
+   * @return {Decision}
+  ###
   getNextDecision : (tree) ->
-
-    # Decision point is any point with point.children.length == 2 (branch point)
-    # or leaves
-    # or any point that has a comment.
-    # Decision points will definitely be drawn.
 
     chainCount = 0
     hasActiveNode = false
@@ -128,6 +150,15 @@ class AbstractTreeRenderer
     }
 
 
+  ###*
+   * Draw a branch point as well as the left and right subtree.
+   * @param  {Decision} decision
+   * @param  {Number} left     left border in pixels
+   * @param  {Number} right    right border in pixels
+   * @param  {Number} top      y coordinate in pixels
+   * @param  {Number} mode     @MODE_NORMAL or @MODE_NOCHAIN
+   * @return {Number}          new middle coordinate in pixels
+  ###
   drawBranch : (decision, left, right, top, mode) ->
 
     branchMiddle = @calculateBranchMiddle(decision, left, right)
@@ -146,6 +177,15 @@ class AbstractTreeRenderer
     return middle
 
 
+  ###*
+   * Draw a sequence of nodes which begins with a comment.
+   * @param  {Decision}        decision
+   * @param  {Number} left     left border in pixels
+   * @param  {Number} right    right border in pixels
+   * @param  {Number} top      y coordinate in pixels
+   * @param  {Number} mode     @MODE_NORMAL or @MODE_NOCHAIN
+   * @return {Number}          new middle coordinate in pixels
+  ###
   drawCommentChain : (decision, left, right, top, mode) ->
 
     topChild = @calculateTop(decision.chainCount, top, mode)
@@ -153,10 +193,17 @@ class AbstractTreeRenderer
     return extent.middle
 
 
-  drawChainFromTo : (top, left, root, decision) ->
+  ###*
+   * Draws a sequence of nodes and the edges in between.
+   * @param  {Number} top      y coordinate in pixels
+   * @param  {Number} left     x coordinate in pixels
+   * @param  {TracePoint} tree
+   * @param  {Decision} decision
+  ###
+  drawChainFromTo : (top, left, tree, decision) ->
 
-    # Draw the chain and the root, connect them.
-    node = root
+    # Draw the chain and the tree, connect them.
+    node = tree
     for i in [0..decision.chainCount]
       @addNode(left, top + i * @nodeDistance, node.id)
       node = node.children[0]
@@ -164,9 +211,15 @@ class AbstractTreeRenderer
         @drawEdge(left, top + (i - 1) * @nodeDistance, left, top + i * @nodeDistance)
 
 
+  ###*
+   * Draws the dashed chain indicator and the start and end nodes.
+   * @param  {Number} top      y coordinate in pixels
+   * @param  {Number} middle   middel x coordinate in pixels
+   * @param  {TracePoint} tree
+   * @param  {Decision} decision
+  ###
   drawChainWithChainIndicatorFromTo : (top, middle, tree, decision) ->
 
-    # Draw root, chain indicator and decision point
     @addNode(middle, top, tree.id)
     @drawEdge(middle, top, middle, top + 0.5 * @nodeDistance)
     @drawChainIndicator(middle, top + 0.5 * @nodeDistance, top + 1.5 * @nodeDistance, decision.hasActiveNode)
@@ -175,8 +228,9 @@ class AbstractTreeRenderer
 
 
   ###*
-   * calculate m (middle that divides the left and right tree, if any)
-   * @param  {Object} decision       a point which definitely has to be drawn
+   * Calculate middle that divides the left and right tree, if any.
+   * Middle is weighted accordingly to the subtrees` widths.
+   * @param  {Decision} decision
    * @param  {Number} left           left border in pixels
    * @param  {Number} right          right border in pixels
    * @return {Number}                middle in pixels
@@ -188,11 +242,24 @@ class AbstractTreeRenderer
     return (right - left) * leftChild.width / (leftChild.width + rightChild.width) + left
 
 
+  ###*
+   * Calculate middle of a left and right border.
+   * @param  {Number} left  left border in pixels
+   * @param  {Number} right right border in pixels
+   * @return {Number}       middle in pixels
+  ###
   calculateMiddle : (left, right) ->
 
     return (left + right) / 2
 
 
+  ###*
+   * Calculate the y coordinate of a node.
+   * @param  {Number} chainCount amount of chained nodes since the parent node
+   * @param  {Number} top        y coordinate of the parent node
+   * @param  {Number} mode       @MODE_NORMAL or @MODE_NOCHAIN
+   * @return {Number}            y coordinate of the current decision node
+  ###
   calculateTop : (chainCount, top, mode) ->
 
     if mode == @MODE_NORMAL or chainCount < 3
@@ -201,24 +268,45 @@ class AbstractTreeRenderer
       return top + 2 * @nodeDistance
 
 
-  # Calculate the top of the children
+  ###*
+   * Calculate the y coordinate of the first child of a node.
+   * @param  {Number} chainCount amount of chained nodes since the parent node
+   * @param  {Number} top        y coordinate of the parent node
+   * @param  {Number} mode       @MODE_NORMAL or @MODE_NOCHAIN
+   * @return {Number}            y coordinate of the current decision node's child
+  ###
   calculateChildTop : (chainCount, top, mode) ->
 
     return @calculateTop(chainCount, top, mode) + @nodeDistance
 
 
+  ###*
+   * Add a node to the node list, so it can be drawn later.
+   * @param {Number} x
+   * @param {Number} y
+   * @param {Number} id TracePoint id
+  ###
   addNode : (x, y, id) ->
 
-    # put it in nodeList
     @nodeList.push({x : x, y : y, id : id})
 
 
+  ###*
+   * Iterate the node list and draw all nodes onto the canvas.
+  ###
   drawAllNodes : ->
 
     for {x, y, id} in @nodeList
       @drawNode(x, y, id)
 
 
+  ###*
+   * Draw a single node onto the canvas.
+   * Take active state, theme and comment into consideration.
+   * @param  {Number} x
+   * @param  {Number} y
+   * @param  {Number} id TracePoint id
+  ###
   drawNode : (x, y, id) ->
 
     @ctx.beginPath()
@@ -235,6 +323,14 @@ class AbstractTreeRenderer
     @ctx.fill()
 
 
+  ###*
+   * Draw an edge of the tree (a connector line) onto the canvas.
+   * Take theme into consideration.
+   * @param  {Number} x1 start coordinate
+   * @param  {Number} y1
+   * @param  {Number} x2 end coordinate
+   * @param  {Number} y2
+  ###
   drawEdge : (x1, y1, x2, y2) ->
 
     @ctx.beginPath()
@@ -244,9 +340,16 @@ class AbstractTreeRenderer
     @ctx.stroke()
 
 
+  ###*
+   * Draw a dashed edge, which indicates a straight chain of nodes.
+   * Take active state and theme into consideration.
+   * @param  {Number} x
+   * @param  {Number} top         start y coordinate
+   * @param  {Number} bottom      end y coordinate
+   * @param  {Boolean} emphasize  draw in bold outline when active node is in the chain
+  ###
   drawChainIndicator : (x, top, bottom, emphasize = false) ->
 
-    # Draw a dashed line
     dashLength = (bottom - top) / 7
     if emphasize
       @ctx.lineWidth = 4
@@ -259,11 +362,22 @@ class AbstractTreeRenderer
     @ctx.lineWidth = 1
 
 
+  ###*
+   * Checks if a node is commented (RENDER_COMMENTS has to be true).
+   * @param  {Number} id TracePoint id
+   * @return {Boolean}    true if node is commented
+  ###
   nodeIdHasComment : (id) ->
 
     return @RENDER_COMMENTS and @comments.hasCommentWithNodeId(id)
 
 
+  ###*
+   * Traverse the tree and add a width property for each node
+   * which indicates the number of all leaves in the tree.
+   * @param  {TracePoint}   tree
+   * @return {Number}       width of the tree
+  ###
   recordWidths : (tree) ->
 
     # Because any node with children.length == 1 has
@@ -287,6 +401,13 @@ class AbstractTreeRenderer
     return width
 
 
+  ###*
+   * Recursively calculate the maximum depth of a TracePoint tree.
+   * @param  {TracePoint} tree
+   * @param  {Number} mode      @MODE_NORMAL or @MODE_NOCHAIN
+   * @param  {Number} count     helper count, current depth
+   * @return {Number}           depth of the tree
+  ###
   getMaxTreeDepth : (tree, mode = @MODE_NORMAL, count = 0) ->
 
     unless tree
@@ -316,6 +437,12 @@ class AbstractTreeRenderer
     return @getMaxTreeDepth(decision.node.children[0], mode, count)
 
 
+  ###*
+   * Get the id of a TracePoint from a position on the canvas.
+   * @param  {Number} x
+   * @param  {Number} y
+   * @return {Number}   TracePoint id
+  ###
   getIdFromPos : (x, y) =>
 
     for entry in @nodeList
@@ -324,11 +451,19 @@ class AbstractTreeRenderer
         return entry.id
 
 
+  ###*
+   * Clear the background of the canvas.
+  ###
   clearBackground : ->
 
     @ctx.clearRect(0, 0, @canvas.width(), @canvas.height())
 
 
+  ###*
+   * Apply a color theme according to the overall oxalis theme for
+   *  - comments
+   *  - nodes & edges
+  ###
   setupColors : ->
 
     # apply color scheme
@@ -340,11 +475,19 @@ class AbstractTreeRenderer
       @commentColor = "blue"
 
 
+  ###*
+   * Setter.
+   * @param  {Boolean} renderComments true, if abstract tree should show comments
+  ###
   renderComments : (renderComments) ->
 
     @RENDER_COMMENTS = renderComments
 
 
+  ###*
+   * Set width and height of the canvas object.
+   * @param {Object} {width, height} object contains width and height key
+  ###
   setDimensions : ({width, height}) ->
 
     $(@canvas).css({width, height})

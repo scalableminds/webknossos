@@ -22,6 +22,7 @@ class AbstractTreeView extends Backbone.Marionette.ItemView
 
     @listenTo(app.vent, "planes:resize", @resize)
     @listenTo(app.vent, "view:setTheme", @drawTree)
+    @listenTo(@model.user, "change:renderComments", @drawTree)
 
     @listenTo(@model.skeletonTracing, "newActiveNode" , @drawTree)
     @listenTo(@model.skeletonTracing, "newActiveTree" , @drawTree)
@@ -54,6 +55,7 @@ class AbstractTreeView extends Backbone.Marionette.ItemView
   drawTree : ->
 
     if @model.skeletonTracing and @abstractTreeRenderer
+      @abstractTreeRenderer.renderComments(@model.user.get("renderComments"))
       @abstractTreeRenderer.drawTree(
         @model.skeletonTracing.getTree(),
         @model.skeletonTracing.getActiveNodeId(),

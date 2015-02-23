@@ -49,8 +49,6 @@ class TaskCreateView extends Backbone.Marionette.LayoutView
 
   ###*
   * Activate Default Form View
-  *
-  * @method showTabCreateFromForm
   ###
   showTabCreateFromForm : ->
 
@@ -60,10 +58,9 @@ class TaskCreateView extends Backbone.Marionette.LayoutView
     )
     @tabPane.show(@activeView)
 
+
   ###*
   * Activate NML Form View
-  *
-  * @method showTabCreateFromNML
   ###
   showTabCreateFromNML : ->
 
@@ -73,20 +70,18 @@ class TaskCreateView extends Backbone.Marionette.LayoutView
     )
     @tabPane.show(@activeView)
 
+
   ###*
   * Activate Bulk Import View
-  *
-  * @method showTabCreateBulkImport
   ###
   showTabCreateBulkImport : ->
 
     @activeView = new TaskCreateBulkImportView()
     @tabPane.show(@activeView)
 
+
   ###*
   * Show default on startup
-  *
-  * @method onRender
   ###
   onRender : ->
 

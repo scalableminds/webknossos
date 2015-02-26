@@ -83,9 +83,12 @@ class TracingLayoutView extends Backbone.Marionette.LayoutView
   resizeRightMenu : ->
 
     if @isSkeletonMode()
+
       menuPosition = @ui.rightMenu.position()
       slidingCanvasOffset = @ui.slidingCanvas.position().left
+
       newWidth = window.innerWidth - menuPosition.left - slidingCanvasOffset - @MARGIN
+      
       if menuPosition.left < window.innerWidth and newWidth > 350
         @ui.rightMenu.width(newWidth)
 

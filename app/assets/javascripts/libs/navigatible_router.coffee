@@ -16,7 +16,7 @@ class NavigatibleRouter extends Backbone.Router
 
   historyStart: ->
 
-    @history.push({ fragment: Backbone.history.fragment, options: false })
+    @history.push({ fragment: Backbone.history.fragment, options: { trigger: true, replace: false } })
 
 
   hasHistory: ->

@@ -16,6 +16,8 @@ require [
 
       app.router = new Router()
       Backbone.history.start( pushState : true )
+      app.router.historyStart()
+
     )
 
     $ ->

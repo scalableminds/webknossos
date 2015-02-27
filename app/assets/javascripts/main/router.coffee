@@ -3,6 +3,7 @@ jquery : $
 underscore : _
 backbone : Backbone
 oxalis/constants : constants
+libs/navigatible_router : NavigatibleRouter
 ###
 
 # #####
@@ -10,7 +11,7 @@ oxalis/constants : constants
 # refactored to Backbone.View yet. All other routes, that require HTML to be
 # delivered by the Server are handled by the NonBackboneRouter.
 # #####
-class Router extends Backbone.Router
+class Router extends NavigatibleRouter
 
   routes :
     "users"                         : "users"

@@ -5,7 +5,7 @@
 class UrlManager
 
 
-  MAX_UPDATE_INTERVAL : 2000
+  MAX_UPDATE_INTERVAL : 1000
 
   constructor : (@controller, @model) ->
 
@@ -34,6 +34,11 @@ class UrlManager
 
       if stateArray.length >= 8
         state.rotation = _.map stateArray.slice(5, 8), (e) -> +e
+        if stateArray[8]?
+          state.activeNode = +stateArray[8]
+      else
+        if stateArray[5]?
+          state.activeNode = +stateArray[5]
 
     return state
 
@@ -44,6 +49,8 @@ class UrlManager
       changed : => @update()
     @model.flycam3d.on
       changed : => @update()
+    @model.skeletonTracing?.on
+      newActiveNode : => @update()
 
 
   buildUrl : ->
@@ -58,5 +65,9 @@ class UrlManager
 
     else
       state = state.concat( [flycam.getZoomStep().toFixed(2)] )
+
+    if @model.skeletonTracing?.getActiveNodeId()?
+      activeNode = @model.skeletonTracing.getActiveNodeId()
+      state = state.concat([activeNode])
 
     return @baseUrl + "#" + state.join(",")

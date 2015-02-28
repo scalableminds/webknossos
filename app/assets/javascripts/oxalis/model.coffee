@@ -117,14 +117,6 @@ class Model
       "positionChanged" : (position) =>
         @flycam3d.setPositionSilent(position)
 
-    # init state
-    @flycam.setPosition( state.position || tracing.content.editPosition )
-    if state.zoomStep?
-      @flycam.setZoomStep( state.zoomStep )
-      @flycam3d.setZoomStep( state.zoomStep )
-    if state.rotation?
-      @flycam3d.setRotation( state.rotation )
-
     if controlMode == constants.CONTROL_MODE_TRACE
 
       if isVolumeTracing
@@ -134,6 +126,7 @@ class Model
       else
         @skeletonTracing = new SkeletonTracing(tracing, @scaleInfo, @flycam, @flycam3d, @user, @updatePipeline)
 
+    @applyState(state, tracing)
     @computeBoundaries()
 
     return {tracing}
@@ -204,3 +197,15 @@ class Model
       for i in [0..2]
         @lowerBoundary[i] = Math.min @lowerBoundary[i], binary.lowerBoundary[i]
         @upperBoundary[i] = Math.max @upperBoundary[i], binary.upperBoundary[i]
+
+
+  applyState : (state, tracing) ->
+
+    @flycam.setPosition( state.position || tracing.content.editPosition )
+    if state.zoomStep?
+      @flycam.setZoomStep( state.zoomStep )
+      @flycam3d.setZoomStep( state.zoomStep )
+    if state.rotation?
+      @flycam3d.setRotation( state.rotation )
+    if state.activeNode?
+      @skeletonTracing?.setActiveNode(state.activeNode)

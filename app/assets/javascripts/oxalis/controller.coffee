@@ -148,7 +148,7 @@ class Controller
   modelFetchFail : (response) ->
 
     Toast.error(response.responseJSON.messages[0].error)
-    app.router.previous()
+
 
   initKeyboard : ->
 

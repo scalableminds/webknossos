@@ -13,11 +13,8 @@ require [
   require ["main/router"], (Router) ->
 
     app.addInitializer( ->
-
       app.router = new Router()
       Backbone.history.start( pushState : true )
-      app.router.historyStart()
-
     )
 
     $ ->

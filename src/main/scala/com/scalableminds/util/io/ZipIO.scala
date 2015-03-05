@@ -83,4 +83,18 @@ object ZipIO {
       .map(entry => zip.getInputStream(entry))
       .toList
   }
+
+  def unzipWithFilenames(file: File): List[(String, InputStream)] = {
+    unzipWithFilenames(new java.util.zip.ZipFile(file))
+  }
+
+  def unzipWithFilenames(zip: ZipFile): List[(String, InputStream)] = {
+    import collection.JavaConverters._
+    zip
+      .entries
+      .asScala
+      .filter(e => !e.isDirectory())
+      .map(entry => (entry.getName(), zip.getInputStream(entry)))
+      .toList
+  }  
 }

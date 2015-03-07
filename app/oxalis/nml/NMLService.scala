@@ -30,8 +30,16 @@ object NMLService {
   def extractFromNML(file: File): Box[NML] =
     NMLParser.parse(file)
 
-  def extractFromZip(file: File): List[Box[NML]] =
-    ZipIO.unzip(file).map(nml => NMLParser.parse(nml))
+  def extractFromZip(file: File): List[Box[NML]] = {
+    ZipIO.unzipWithFilenames(file).map{
+      case (filename, nml) =>
+        val prefix = filename.replaceAll("\\.[^.]*$", "") + "_"
+        NMLParser.parse(nml).map{
+          nml =>
+            nml.copy(trees = nml.trees.map(_.addNamePrefix(prefix)))
+        }
+    }
+  }
 
   def extractFromFile(file: File, fileName: String): List[Box[NML]] = {
     if (fileName.endsWith(".zip")) {

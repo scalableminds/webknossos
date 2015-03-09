@@ -74,6 +74,17 @@ object TaskController extends Controller with Secured {
   }
 
   // TODO: update via HTML PUT
+  // Tom please add new api here:
+  // def update(taskId: String)
+
+  def delete(taskId: String) = Authenticated.async { implicit request =>
+    for {
+      task <- TaskDAO.findOneById(taskId) ?~> Messages("task.notFound")
+      _ <- TaskService.remove(task._id)
+    } yield {
+      JsonOk(Messages("task.removed"))
+    }
+  }
 
   def list = Authenticated.async{ implicit request =>
     for {
@@ -90,15 +101,6 @@ object TaskController extends Controller with Secured {
       js <- Future.traverse(tasks)(Task.transformToJson)
     } yield {
       Ok(Json.toJson(js))
-    }
-  }
-
-  def delete(taskId: String) = Authenticated.async { implicit request =>
-    for {
-      task <- TaskDAO.findOneById(taskId) ?~> Messages("task.notFound")
-      _ <- TaskService.remove(task._id)
-    } yield {
-      JsonOk(Messages("task.removed"))
     }
   }
 

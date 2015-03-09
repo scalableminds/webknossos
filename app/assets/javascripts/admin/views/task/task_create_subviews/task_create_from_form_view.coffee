@@ -58,6 +58,35 @@ class TaskCreateFromFormView extends Backbone.Marionette.LayoutView
     # trigger selection view to update the model as well
     @dataSetSelectionView.updateModel()
 
+  ###*
+   * Submit Form via AJAX to server.
+   * @return {Boolean} false, prevent page reload
+  ###
+  submit: ->
+
+    # unblock submit button after model synched
+    # show a status flash message
+    @model.save({},
+      error : =>
+        @parent.ui.submitButton.prop("disabled", false)
+        @parent.ui.submitButton.removeClass("disabled")
+
+        @parent.showSaveError()
+
+      success : =>
+        @parent.ui.submitButton.prop("disabled", false)
+        @parent.ui.submitButton.removeClass("disabled")
+
+        if @CLEAR_ON_SUCCESS
+          @clearForm()
+          @parent.clearForm()
+
+        @parent.showSaveSuccess()
+    )
+
+    # prevent page reload
+    return false
+
   onRender: ->
 
     @dataSetSelectionView = new SelectionView(

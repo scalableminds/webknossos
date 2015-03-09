@@ -28,6 +28,18 @@ class TaskCreateFromNMLView extends Backbone.Marionette.LayoutView
   events :
     # track file picker changes
     "change input[name=nmlFile]" : "updateFilenames"
+  initialize: (options) ->
+
+    @parent = options.parent
+
+  ###*
+   * Submit NML Form via AJAX to server.
+   * @return {Boolean} false, prevent page reload
+  ###
+  submit: ->
+
+    # prevent page reload
+    return false
 
 
   ui :

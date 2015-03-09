@@ -152,8 +152,6 @@ class TaskCreateFromView extends Backbone.Marionette.LayoutView
 
   ###*
     * Submit form data as json.
-    *
-    * @method submit
     ###
   submit : ->
 
@@ -165,24 +163,8 @@ class TaskCreateFromView extends Backbone.Marionette.LayoutView
     @updateModel()
 
     # send form data to server
-    # unblock submit button after model synched
-    # show a status flash message
-    @model.save({},
-      error : =>
-        @ui.submitButton.prop("disabled", false)
-        @ui.submitButton.removeClass("disabled")
+    return @createSubview.submit()
 
-        @showSaveError()
-
-      success : =>
-        @ui.submitButton.prop("disabled", false)
-        @ui.submitButton.removeClass("disabled")
-
-        @showSaveSuccess()
-    )
-
-    # prevent actual submitting
-    return false
 
   ###*
    * Update the model with the value from form.
@@ -230,11 +212,9 @@ class TaskCreateFromView extends Backbone.Marionette.LayoutView
     @teamSelectionView.updateModel()
     @projectSelectionView.updateModel()
 
-    if @createFromFormView?
-      @createFromFormView.updateModel()
-
-    if @createFromNMLView?
-      @createFromNMLView.updateModel()
+    # update model of create-subview
+    if @createSubview.updateModel?
+      @createSubview.updateModel()
 
     return
 

@@ -2,11 +2,13 @@
 underscore : _
 backbone.marionette : marionette
 routes : routes
+fileupload : Fileupload
 ###
 
 class TaskCreateFromNMLView extends Backbone.Marionette.LayoutView
 
   id: "create-from-nml"
+  API_URL: "/api/tasks-nml"
 
   # clear all form inputs when task was successfully created
   CLEAR_ON_SUCCESS : true
@@ -31,15 +33,40 @@ class TaskCreateFromNMLView extends Backbone.Marionette.LayoutView
   events :
     # track file picker changes
     "change input[name=nmlFile]" : "updateFilenames"
+  ui:
+    "fileInfo": ".file-info" # shows names of selected files
+    "files": "#files" # actual file input
+
   initialize: (options) ->
 
     @parent = options.parent
+
+    # setup upload utility
+    @parent.ui.form.fileupload({
+      url: @API_URL
+      dataType: "json"
+      type: "POST"
+      multipart: true # enable multiple file uploads -- do we need this?
+      singleFileUploads: false # put all files into 1 xhr
+      autoUpload: false # upload on submit
+      start: => @fileuploadStart()
+      done: => @fileuploadDone()
+      fail: => @parent.showSaveError()
+      always: => @fileuploadAlways()
+    })
+
 
   ###*
    * Submit NML Form via AJAX to server.
    * @return {Boolean} false, prevent page reload
   ###
   submit: ->
+
+    # send files and remaining form data to server
+    @parent.ui.form.fileupload("send", {
+      files: @ui.files[0].files
+      formData: @model.attributes
+    })
 
     # prevent page reload
     return false
@@ -48,8 +75,38 @@ class TaskCreateFromNMLView extends Backbone.Marionette.LayoutView
   ui :
     # .file-info shows names of selected files
     "fileInfo" : ".file-info"
+  ###*
+   * Upload Start Hook.
+   * Change button text, so user know upload is going.
+  ###
+  fileuploadStart: ->
+
+    @parent.ui.submitButton.text("Uploading...")
+
 
   ###*
+   * Upload Success Hook.
+   * Show success message and clear form.
+  ###
+  fileuploadDone: ->
+    @parent.showSaveSuccess()
+
+    if @CLEAR_ON_SUCCESS
+      @clearForm()
+      @parent.clearForm()
+
+
+  ###*
+   * Upload Finish Hook.
+   * Enable button and set button text.
+  ###
+  fileuploadAlways: ->
+
+    @parent.ui.submitButton.prop("disabled", false)
+    @parent.ui.submitButton.removeClass("disabled")
+    @parent.ui.submitButton.text("Create")
+
+
   ###*
    * Clear all text inputs in the form.
   ###

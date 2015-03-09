@@ -119,6 +119,7 @@ GET           /tasks                                                            
 GET           /tasks/overview                                                   controllers.admin.TaskAdministration.empty
 
 POST          /api/tasks                                                        controllers.TaskController.create
+POST          /api/tasks-nml                                                    controllers.admin.TaskAdministration.empty
 GET           /api/tasks/:id                                                    controllers.TaskController.read(id: String)
 DELETE        /api/tasks/:id                                                    controllers.TaskController.delete(id: String)
 

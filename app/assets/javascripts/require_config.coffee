@@ -5,7 +5,8 @@ require.config(
   waitSeconds : 0
 
   paths :
-    "jquery"              : "../bower_components/jquery/jquery"
+    "jquery"              : "../bower_components/jquery/jquery.min"
+    "jquery-ui"           : "../bower_components/jquery-ui/jquery-ui.min"
     "underscore"          : "../bower_components/lodash/dist/lodash"
     "bootstrap"           : "../bower_components/bootstrap/dist/js/bootstrap"
     "coffee-script"       : "../bower_components/coffee-script/extras/coffee-script"
@@ -31,8 +32,14 @@ require.config(
     "v3"                  : "libs/v3"
     "m4x4"                : "libs/m4x4"
     "worker"              : "libs/worker_plugin"
+    "fileupload"          : "../bower_components/blueimp-file-upload/js/jquery.fileupload"
+    # special file upload vendor
+    "jquery.ui.widget"    : "../bower_components/blueimp-file-upload/js/vendor/jquery.ui.widget"
+    "fileupload-iframe"   : "../bower_components/blueimp-file-upload/js/jquery.iframe-transport"
+
 
   shim :
+    "fileupload" : [ "jquery-ui", "fileupload-iframe" ]
     "underscore" :
       exports : "_"
     "bootstrap" : [ "jquery" ]

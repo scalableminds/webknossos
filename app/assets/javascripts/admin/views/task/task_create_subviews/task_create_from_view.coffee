@@ -234,10 +234,20 @@ class TaskCreateFromView extends Backbone.Marionette.LayoutView
     Toast.error('The form data is not correct.')
 
   ###*
-  * Render the SelectionViews based on the stored options
-  * creates a subview based on the passed type: from_form / from_nml
-  *
-  * @method onRender
+   * Clear all text inputs in the form.
+  ###
+  clearForm: ->
+
+    @ui.neededExperience_domain.val("")
+    @ui.neededExperience_value.val("0")
+    @ui.priority.val("0")
+    @ui.status_open.val("10")
+    @ui.boundingBox.val("0, 0, 0, 0, 0, 0")
+
+
+  ###*
+  * Render the SelectionViews based on the stored options.
+  * Create a subview based on the passed type: from_form/ from_nml
   ###
   onRender: ->
 

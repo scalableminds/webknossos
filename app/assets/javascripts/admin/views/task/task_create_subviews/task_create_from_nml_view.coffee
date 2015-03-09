@@ -8,6 +8,9 @@ class TaskCreateFromNMLView extends Backbone.Marionette.LayoutView
 
   id: "create-from-nml"
 
+  # clear all form inputs when task was successfully created
+  CLEAR_ON_SUCCESS : true
+
   <div class="form-group">
     <label class="col-sm-2 control-label" for="nmlFile">Reference NML File</label>
     <div class="col-sm-9">
@@ -47,6 +50,13 @@ class TaskCreateFromNMLView extends Backbone.Marionette.LayoutView
     "fileInfo" : ".file-info"
 
   ###*
+  ###*
+   * Clear all text inputs in the form.
+  ###
+  clearForm: ->
+
+    @ui.files.val("")
+
 
   ###*
    * Event handler which updates ui so user can see filenames he selected

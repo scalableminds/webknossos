@@ -9,6 +9,10 @@ admin/views/selection_view : SelectionView
 class TaskCreateFromFormView extends Backbone.Marionette.LayoutView
 
   id : "create-from-form"
+
+  # clear all form inputs when task was successfully created
+  CLEAR_ON_SUCCESS : true
+
   template : _.template("""
     <div class=" form-group">
       <label class="col-sm-2 control-label" for="dataSet">Dataset</label>
@@ -86,6 +90,13 @@ class TaskCreateFromFormView extends Backbone.Marionette.LayoutView
 
     # prevent page reload
     return false
+
+  ###*
+   * Clear all text inputs in the form.
+  ###
+  clearForm: ->
+
+      @ui.editPosition.val("0, 0, 0")
 
   onRender: ->
 

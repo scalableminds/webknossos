@@ -27,14 +27,13 @@ class TaskCreateFromView extends Backbone.Marionette.LayoutView
           <h3>Create Task</h3>
           <br/>
         </div>
-        <form action="" method="POST" class="form-horizontal" onSubmit="return false;">
         <% } else if (type == "from_nml") { %>
           <h3>Create Task from explorative SkeletonTracing</h3>
           <p>Every nml creates a new task. You can either upload a single NML file or a zipped collection of nml files (.zip).</p>
           <br/>
         </div>
-        <form action="/admin/tasks/createFromNML" method="POST" class="form-horizontal">
         <% } %>
+        <form id="createForm" action="" method="POST" class="form-horizontal" onSubmit="return false;">
 
         <div class=" form-group">
           <label class="col-sm-2 control-label" for="taskType">Task type</label>
@@ -90,9 +89,25 @@ class TaskCreateFromView extends Backbone.Marionette.LayoutView
           </div>
         </div>
 
-        <div class="subview">
-
+        <div class=" form-group">
+          <label class="col-sm-2 control-label" for="boundingBox">Bounding Box</label>
+          <div class="col-sm-9">
+            <span class="help-block hints"></span>
+            <input
+              type="text"
+              id="boundingBox"
+              name="boundingBox"
+              placeholder="topLeft.x, topLeft.y, topLeft.z, width, height, depth"
+              pattern="(\\s*\\d+\\s*,){5}(\\s*\\d+\\s*)"
+              title="topLeft.x, topLeft.y, topLeft.z, width, height, depth"
+              value="0, 0, 0, 0, 0, 0"
+              required=true
+              class="form-control">
+            <span class="help-block errors"></span>
+          </div>
         </div>
+
+        <div class="subview"></div>
 
         <div class="form-group">
           <div class="col-sm-2 col-sm-offset-9">
@@ -132,6 +147,7 @@ class TaskCreateFromView extends Backbone.Marionette.LayoutView
     neededExperience_domain : "#experience_domain"
     priority : "#priority"
     status_open : "#status_open"
+    boundingBox : "#boundingBox"
     submitButton : "#submit"
 
   ###*
@@ -187,6 +203,26 @@ class TaskCreateFromView extends Backbone.Marionette.LayoutView
         completed : @model.get("status").completed
       # parse priority, range 0 to 100, to integer
       priority : parseInt( @ui.priority.val() )
+
+      # split string by comma delimiter, trim whitespace and cast to integer
+      # access from subview
+      boundingBox : do =>
+        intArray = _.map(@.ui.boundingBox.val().split(","), (number) ->
+          parseInt( number.trim() )
+        )
+
+        # user input could be too short
+        # insert a 0 instead
+        return {
+          topLeft: [
+            intArray[0] || 0,
+            intArray[1] || 0,
+            intArray[2] || 0
+          ],
+          width: intArray[3] || 0,
+          height: intArray[4] || 0,
+          depth: intArray[5] || 0
+        }
     )
 
     # update models from subviews

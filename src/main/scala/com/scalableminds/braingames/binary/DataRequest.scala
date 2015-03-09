@@ -4,6 +4,7 @@
 package com.scalableminds.braingames.binary
 
 import com.scalableminds.braingames.binary.models._
+import java.io.OutputStream
 
 trait AbstractDataRequest
 

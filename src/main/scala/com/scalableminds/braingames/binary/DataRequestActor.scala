@@ -195,12 +195,13 @@ class DataRequestActor(
 
   def withLock[T](f: => Future[T]): Future[T] = {
     writeLock.acquire()
-    f.onComplete { result =>
+    val r = f
+    r.onComplete { result =>
       if(result.isFailure)
         logger.error(s"Saving block failed for. Error: $result")
       writeLock.release()
     }
-    f
+    r
   }
 
   def load(dataRequest: DataRequest): Future[Array[Byte]] = {
@@ -250,11 +251,12 @@ class DataRequestActor(
                 maxBlock.x - minBlock.x + 1, maxBlock.y - minBlock.y + 1, maxBlock.z - minBlock.z + 1,
                 layer.bytesPerElement,
                 0.toByte)
-          }.map {
+          }.flatMap {
             block =>
               val blocks = new DataBlockWriter(block, request, layer, pointOffset).writeSuppliedData
-              Future.sequence(saveBlocks(minBlock, maxBlock, dataRequest, layer, blocks, writeLock))
-              Array[Byte]()
+              Future.sequence(saveBlocks(minBlock, maxBlock, dataRequest, layer, blocks, writeLock)).map {
+                _ => Array[Byte]()
+              }
           }
         }
     }

@@ -3,6 +3,7 @@
  */
 package com.scalableminds.braingames.binary.api
 
+import java.io.OutputStream
 import java.nio.file.{Paths, Path}
 
 import akka.actor.ActorSystem
@@ -24,7 +25,7 @@ import com.scalableminds.braingames.binary.watcher.StartWatching
 import com.scalableminds.braingames.binary.repository.DataSourceInbox
 import com.scalableminds.util.io.PathUtils
 
-trait BinaryDataService extends DataSourceService with BinaryDataHelpers with SegmentationMappingHelpers {
+trait BinaryDataService extends DataSourceService with BinaryDataHelpers with SegmentationMappingHelpers with DataDownloadHelper{
 
   import Logger._
 

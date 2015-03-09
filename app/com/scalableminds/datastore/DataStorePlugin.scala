@@ -6,7 +6,7 @@ package com.scalableminds.datastore
 import play.api.{Play, Logger, Plugin}
 import com.scalableminds.datastore.services.{DataSourceRepository, BinaryDataService}
 import scala.concurrent.duration._
-import akka.actor.{ActorSystem, PoisonPill}
+import akka.actor.{ActorSystem, PoisonPill, Props}
 
 class DataStorePlugin(app: play.api.Application) extends Plugin {
 

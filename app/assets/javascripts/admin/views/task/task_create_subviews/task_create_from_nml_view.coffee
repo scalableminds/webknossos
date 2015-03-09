@@ -13,6 +13,8 @@ class TaskCreateFromNMLView extends Backbone.Marionette.LayoutView
   # clear all form inputs when task was successfully created
   CLEAR_ON_SUCCESS : true
 
+  template: _.template("""
+
   <div class="form-group">
     <label class="col-sm-2 control-label" for="nmlFile">Reference NML File</label>
     <div class="col-sm-9">
@@ -20,7 +22,7 @@ class TaskCreateFromNMLView extends Backbone.Marionette.LayoutView
         <span class="input-group-btn">
           <span class="btn btn-primary btn-file">
             Browse…
-          <input type="file" multiple="" name="nmlFile" title="Please select at least one .nml file" required=true>
+          <input id="files" type="file" multiple="" name="nmlFiles[]" title="Please select at least one .nml file" required=true>
           </span>
         </span>
         <input type="text" class="file-info form-control" readonly="" required="">
@@ -30,9 +32,9 @@ class TaskCreateFromNMLView extends Backbone.Marionette.LayoutView
 
   """)
 
-  events :
-    # track file picker changes
-    "change input[name=nmlFile]" : "updateFilenames"
+  events:
+    "change #files": "updateFilenames" # track file picker changes
+
   ui:
     "fileInfo": ".file-info" # shows names of selected files
     "files": "#files" # actual file input
@@ -72,9 +74,6 @@ class TaskCreateFromNMLView extends Backbone.Marionette.LayoutView
     return false
 
 
-  ui :
-    # .file-info shows names of selected files
-    "fileInfo" : ".file-info"
   ###*
    * Upload Start Hook.
    * Change button text, so user know upload is going.
@@ -116,11 +115,9 @@ class TaskCreateFromNMLView extends Backbone.Marionette.LayoutView
 
 
   ###*
-   * Event handler which updates ui so user can see filenames he selected
-   *
-   * @method updateFilenames
+   * Event handler which updates ui so user can see selected filenames.
    ###
-  updateFilenames : (evt) ->
+  updateFilenames: (evt) ->
 
     # grab file list from event
     files = evt.target.files

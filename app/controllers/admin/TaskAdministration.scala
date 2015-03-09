@@ -190,8 +190,6 @@ object TaskAdministration extends AdminController {
     }
   }
 
-
-
   def createFromNML = Authenticated.async(parse.multipartFormData) { implicit request =>
     taskFromNMLForm.bindFromRequest.fold(
       hasErrors = (formWithErrors => taskCreateHTML(formWithErrors, taskForm).map(html => BadRequest(html))),

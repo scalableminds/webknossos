@@ -16,8 +16,8 @@ class TaskCreateFromView extends Backbone.Marionette.LayoutView
   # which type of form is created?
   # from_form/ from_nml
   type : null
-
   id : "create-from"
+
   template : _.template("""
   <div class="row">
     <div class="col-sm-12">
@@ -48,7 +48,7 @@ class TaskCreateFromView extends Backbone.Marionette.LayoutView
         <div class=" form-group">
           <label class="col-sm-2 control-label" for="experience_domain">Experience Domain</label>
           <div class="col-sm-9">
-            <input type="text" class="form-control" name="experience.domain" value="" id="experience_domain" data-source="[]" data-provide="typeahead" autocomplete="off">
+            <input type="text" class="form-control" name="experience.domain" value="" id="experience_domain" data-source="[]" data-provide="typeahead" autocomplete="off" placeholder="Enter a domain">
             <span class="help-block errors"></span>
           </div>
         </div>
@@ -121,17 +121,10 @@ class TaskCreateFromView extends Backbone.Marionette.LayoutView
   </div>
   """)
 
-  initialize: (options) ->
-
-    if options.type
-      @type = options.type
-
-    return
-
-  # make the variable available inside the underscore template
   templateHelpers: ->
 
     type : @type
+
 
   regions:
     "taskType" : ".taskType"
@@ -143,12 +136,18 @@ class TaskCreateFromView extends Backbone.Marionette.LayoutView
     "submit" : "submit"
 
   ui :
+    form: "#createForm"
     neededExperience_value : "#experience_value"
     neededExperience_domain : "#experience_domain"
     priority : "#priority"
     status_open : "#status_open"
     boundingBox : "#boundingBox"
     submitButton : "#submit"
+
+  initialize: (options) ->
+
+    @type = options.type
+
 
   ###*
     * Submit form data as json.
@@ -167,10 +166,11 @@ class TaskCreateFromView extends Backbone.Marionette.LayoutView
 
 
   ###*
-   * Update the model with the value from form.
+   * Update model with form values.
    ###
   updateModel : ->
 
+    # set and typecast form values into model
     @model.set(
       neededExperience :
         # parse minimum experience to integer
@@ -219,19 +219,28 @@ class TaskCreateFromView extends Backbone.Marionette.LayoutView
     return
 
 
+  ###*
+   * Toast a success message.
+  ###
   showSaveSuccess: ->
 
     Toast.success('The task was successfully created')
 
-
+  ###*
+   * Toast an error message.
+  ###
   showSaveError: ->
 
     Toast.error('The task could not be created due to server errors.')
 
 
+  ###*
+   * Toast an invalid data message.
+  ###
   showInvalidData: ->
 
     Toast.error('The form data is not correct.')
+
 
   ###*
    * Clear all text inputs in the form.
@@ -285,9 +294,13 @@ class TaskCreateFromView extends Backbone.Marionette.LayoutView
     @team.show(@teamSelectionView)
     @project.show(@projectSelectionView)
 
-    if (@type == "from_form")
-      @createFromFormView = new TaskCreateFromFormView(model : @model)
-      @subview.show(@createFromFormView)
+    # get create-subview type
+    if @type == "from_form"
+      @createSubview = new TaskCreateFromFormView(model: @model, parent: @)
+    else if @type == "from_nml"
+      @createSubview = new TaskCreateFromNMLView(model: @model, parent: @)
     else
-      @createFromNMLView = new TaskCreateFromNMLView(model : @model)
-      @subview.show(@createFromNMLView)
+      throw "Type #{@type} is not defined. Choose between \"from_form\" and \"from_nml\"."
+
+    # render the create-subview
+    @subview.show(@createSubview)

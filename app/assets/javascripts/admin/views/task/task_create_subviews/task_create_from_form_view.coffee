@@ -39,15 +39,18 @@ class TaskCreateFromFormView extends Backbone.Marionette.LayoutView
   """)
 
   regions:
-    "dataSet" : ".dataSet"
+    "dataSet": ".dataSet"
 
   ui:
     "editPosition": "#editPosition"
 
+  initialize: (options) ->
+
+    @parent = options.parent
+
+
   ###*
-   * Update the task model with inputs from form.
-   *
-   * @method updateModel
+   * Update the model with form data.
    ###
   updateModel : ->
 
@@ -56,11 +59,11 @@ class TaskCreateFromFormView extends Backbone.Marionette.LayoutView
       editPosition : _.map(@ui.editPosition.val().split(","), (number) ->
           parseInt( number.trim() )
         )
-        }
     )
 
     # trigger selection view to update the model as well
     @dataSetSelectionView.updateModel()
+
 
   ###*
    * Submit Form via AJAX to server.
@@ -91,6 +94,7 @@ class TaskCreateFromFormView extends Backbone.Marionette.LayoutView
     # prevent page reload
     return false
 
+
   ###*
    * Clear all text inputs in the form.
   ###
@@ -98,6 +102,10 @@ class TaskCreateFromFormView extends Backbone.Marionette.LayoutView
 
       @ui.editPosition.val("0, 0, 0")
 
+
+  ###*
+  * Render a dataset SelectionView.
+  ###
   onRender: ->
 
     @dataSetSelectionView = new SelectionView(

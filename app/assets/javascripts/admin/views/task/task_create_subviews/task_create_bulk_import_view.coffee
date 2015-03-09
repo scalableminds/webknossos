@@ -9,6 +9,7 @@ class TaskCreateBulkImportView extends Backbone.Marionette.ItemView
 
   id : "create-bulk-import"
   API_URL: "/admin/tasks/createBulk"
+
   template : _.template("""
   <div class="row">
     <div class="col-sm-12">

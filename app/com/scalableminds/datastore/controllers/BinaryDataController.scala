@@ -216,8 +216,10 @@ trait BinaryDataReadController extends BinaryDataCommonController {
                                        height: Int) = {
 
     def bestResolution(dataLayer: DataLayer): Int = {
-      val wr = math.floor(math.log(dataLayer.boundingBox.width.toDouble / width) / math.log(2)).toInt
-      val hr = math.floor(math.log(dataLayer.boundingBox.height.toDouble / height) / math.log(2)).toInt
+      // We want to make sure that the thumbnail only contains data, as much as possible but no black border
+      // To make sure there is no black border we are going to go with the second best resolution (hence the `- 1`)
+      val wr = math.floor(math.log(dataLayer.boundingBox.width.toDouble / width) / math.log(2)).toInt - 1
+      val hr = math.floor(math.log(dataLayer.boundingBox.height.toDouble / height) / math.log(2)).toInt - 1
 
       math.max(0, List(wr, hr, (dataLayer.resolutions.size - 1)).min)
     }

@@ -21,10 +21,10 @@
           @helper.select(form("team"), ("" -> "<None>") +: teams.map { t =>
             t.name -> t.name
           }, 'class -> "form-control")
-          @helper.inputText(form("email"), 'type -> "email", 'class -> "form-control")
-          @helper.inputText(form("firstName"), 'class -> "form-control")
-          @helper.inputText(form("lastName"), 'class -> "form-control")
-          @helper.inputPassword(form("password.main"), 'class -> "form-control")
+          @helper.inputText(form("email"), 'type -> "email", 'class -> "form-control", 'required -> "")
+          @helper.inputText(form("firstName"), 'class -> "form-control", 'required -> "")
+          @helper.inputText(form("lastName"), 'class -> "form-control", 'required -> "")
+          @helper.inputPassword(form("password.main"), 'class -> "form-control", 'pattern -> ".{8,}", 'required -> "", 'title -> "8 characters minimum")
           @helper.inputPassword(form("password.validation"), 'class -> "form-control")
 
           <div class="form-group">

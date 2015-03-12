@@ -119,7 +119,7 @@ object Authentication extends Controller with Secured with ProvidesUnauthorizedS
                 if (user.verified)
                   Redirect(controllers.routes.Application.index)
                 else
-                  Redirect("/dashboard")
+                  BadRequest(html.user.login(loginForm.bindFromRequest.withGlobalError("user.notVerified")))
               redirectLocation.withSession(Secured.createSession(user))
 
           }.getOrElse {

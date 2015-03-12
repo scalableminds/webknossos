@@ -64,7 +64,7 @@ object Authentication extends Controller with Secured with ProvidesUnauthorizedS
       val boundForm = registerForm.bindFromRequest
       boundForm.fold(
       formWithErrors =>
-        formHtml(registerForm).map(BadRequest(_)), {
+        formHtml(formWithErrors).map(BadRequest(_)), {
         case (team, email, firstName, lastName, password) => {
           UserService.findOneByEmail(email).futureBox.flatMap {
             case Full(_) =>

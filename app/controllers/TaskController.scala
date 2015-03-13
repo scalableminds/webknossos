@@ -73,9 +73,30 @@ object TaskController extends Controller with Secured {
     }
   }
 
-  // TODO: update via HTML PUT
-  // Tom please add new api here:
-  // def update(taskId: String)
+  def update(taskId: String) = Authenticated.async(parse.json) { implicit request =>
+    request.body.validate(taskJsonReads) match {
+      case JsSuccess((dataSetName, taskTypeId, start, experience, priority, status, team, projectName, boundingBox), _) =>
+        for {
+          task <- TaskDAO.findOneById(taskId) ?~> Messages("task.notFound")
+          _ <- ensureTeamAdministration(request.user, task.team).toFox
+
+          taskType <- TaskTypeDAO.findOneById(taskTypeId) ?~> Messages("taskType.notFound")
+          project <- ProjectService.findIfNotEmpty(projectName) ?~> Messages("project.notFound")
+
+          _ <- TaskDAO.update(
+            _task = task._id,
+            _taskType = taskType._id,
+            neededExperience = experience,
+            priority = priority,
+            instances = status.open,
+            team = team,
+            _project = project.map(_.name))
+        } yield {
+          AnnotationDAO.updateAllUsingNewTaskType(task, taskType.settings)
+          Ok(Json.toJson(Messages("task.editSuccess")))
+        }
+    }
+  }
 
   def delete(taskId: String) = Authenticated.async { implicit request =>
     for {

@@ -122,7 +122,7 @@ POST          /api/tasks                                                        
 POST          /api/tasks-nml                                                    controllers.admin.TaskAdministration.empty
 GET           /api/tasks/:id                                                    controllers.TaskController.read(id: String)
 DELETE        /api/tasks/:id                                                    controllers.TaskController.delete(id: String)
-#PUT           /api/tasks/:id                                                    controllers.TaskController.update
+PUT           /api/tasks/:id                                                    controllers.TaskController.update(id: String)
 
 GET           /tasks/:id/edit                                                   controllers.UserController.emptyWithWildcard(id: String)
 # show backbone views for task creation

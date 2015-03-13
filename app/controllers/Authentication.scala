@@ -34,7 +34,7 @@ object Authentication extends Controller with Secured with ProvidesUnauthorizedS
 
     val passwordField = tuple("main" -> text, "validation" -> text)
       .verifying("user.password.nomatch", pw => pw._1 == pw._2)
-      .verifying("user.password.tooshort", pw => pw._1.length >= 6)
+      .verifying("user.password.tooshort", pw => pw._1.length >= 8)
 
     Form(
       mapping(
@@ -119,7 +119,7 @@ object Authentication extends Controller with Secured with ProvidesUnauthorizedS
                 if (user.verified)
                   Redirect(controllers.routes.Application.index)
                 else
-                  Redirect("/dashboard")
+                  BadRequest(html.user.login(loginForm.bindFromRequest.withGlobalError("user.notVerified")))
               redirectLocation.withSession(Secured.createSession(user))
 
           }.getOrElse {

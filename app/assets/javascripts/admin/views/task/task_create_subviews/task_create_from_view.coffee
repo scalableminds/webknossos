@@ -189,7 +189,7 @@ class TaskCreateFromView extends Backbone.Marionette.LayoutView
       # split string by comma delimiter, trim whitespace and cast to integer
       # access from subview
       boundingBox : do =>
-        intArray = _.map(@.ui.boundingBox.val().split(","), (number) ->
+        intArray = _.map(@ui.boundingBox.val().split(","), (number) ->
           parseInt( number.trim() )
         )
 

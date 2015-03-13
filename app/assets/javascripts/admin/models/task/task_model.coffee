@@ -4,9 +4,11 @@ format_utils : FormatUtils
 
 class TaskModel extends Backbone.Model
 
-  # TODO : build backend for
-  # GET/ POST/ PUT/ DELETE
-  url : -> "/api/tasks#{@get('id') != undefined ? '/' + @get('id') or ''}"
+  url : ->
+    id = ''
+    if @get('id')?
+      id = '/' + @get('id')
+    return "/api/tasks#{id}"
 
   defaults :
     team : ""

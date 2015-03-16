@@ -112,7 +112,7 @@ class TaskCreateFromFormView extends Backbone.Marionette.LayoutView
       collection: new DatasetCollection()
       childViewOptions :
         modelValue: -> return "#{@model.get("name")}"
-      data : "amIAnAdmin=true"
+      data : "amIAnAdmin=true&isActive=true"
       name: "dataSet"
       parentModel : @model
     )

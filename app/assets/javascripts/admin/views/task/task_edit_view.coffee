@@ -305,7 +305,7 @@ class TaskCreateView extends Backbone.Marionette.LayoutView
       collection: new DatasetCollection()
       childViewOptions :
         modelValue: -> return "#{@model.get("name")}"
-      data : "amIAnAdmin=true"
+      data : "amIAnAdmin=true&isActive=true"
       name: "dataSet"
       parentModel : @model
     )
@@ -322,7 +322,7 @@ class TaskCreateView extends Backbone.Marionette.LayoutView
    * Handle not-found errors.
    ###
   syncError : ->
-    # TODO: notify the user that the task was not found
+
     Toast.error("The task was not found.")
     app.router.navigate("tasks", {trigger: true})
 

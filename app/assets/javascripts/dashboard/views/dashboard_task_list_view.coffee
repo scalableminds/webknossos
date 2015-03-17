@@ -26,7 +26,7 @@ class DashboardTaskListView extends Backbone.Marionette.CompositeView
     <% } %>
     <div class="divider-vertical"></div>
     <a href="#" id="toggle-finished" class="btn btn-default">
-      Show finished tasks
+      Show finished tasks only
     </a>
     <table class="table table-striped">
       <thead>
@@ -101,8 +101,8 @@ class DashboardTaskListView extends Backbone.Marionette.CompositeView
     @showFinishedTasks = not @showFinishedTasks
     @update()
 
-    verb = if @showFinishedTasks then "Hide" else "Show"
-    @ui.finishToggle.html("#{verb} finished tasks only")
+    verb = if @showFinishedTasks then "unfinished" else "finished"
+    @ui.finishToggle.html("Show #{verb} tasks only")
 
 
   transferTask : (evt) ->

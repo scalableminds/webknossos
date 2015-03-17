@@ -26,7 +26,7 @@ class DashboardTaskListView extends Backbone.Marionette.CompositeView
     <% } %>
     <div class="divider-vertical"></div>
     <a href="#" id="toggle-finished" class="btn btn-default">
-      Show finished tasks
+      Show finished tasks only
     </a>
     <table class="table table-striped">
       <thead>

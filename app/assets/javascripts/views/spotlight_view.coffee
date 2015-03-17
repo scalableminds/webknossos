@@ -12,7 +12,7 @@ class SpotlightView extends Backbone.Marionette.LayoutView
     <div class="container">
       <div id="oxalis-header">
         <img src="/assets/images/oxalis.svg">
-        <div><p>WebKnossos</p></div>
+        <div><p>webKnossos</p></div>
       </div>
       <div id="datasets"></div>
     </div>

@@ -10,7 +10,7 @@ class CreditsView extends Backbone.Marionette.ItemView
   id : "credits"
   template : _.template("""
     <div class="container">
-      <h3>WebKnossos Credits</h3>
+      <h3>webKnossos Credits</h3>
       <section class="row">
         <div class="col-sm-4">
           <h4>Max Planck Institute of Neurobiology</h4>
@@ -53,11 +53,11 @@ class CreditsView extends Backbone.Marionette.ItemView
         </div>
       </section>
       <section>
-        <p>WebKnossos is using Brainflight technology for real time data delivery, implemented by <em>scalable minds</em></p>
+        <p>webKnossos is using Brainflight technology for real time data delivery, implemented by <em>scalable minds</em></p>
       </section>
       <section>
         <p>
-          The WebKnossos frontend was partly inspired by Knossos:
+          The webKnossos frontend was partly inspired by Knossos:
         </p>
         <p>
           Helmstaedter, M., K.L. Briggman, and W. Denk,<br />

@@ -101,7 +101,7 @@ class DashboardTaskListView extends Backbone.Marionette.CompositeView
     @showFinishedTasks = not @showFinishedTasks
     @update()
 
-    verb = if @showFinishedTasks then "Hide" else "Show"
+    verb = if @showFinishedTasks then "Hide" else "Only show"
     @ui.finishToggle.html("#{verb} finished tasks")
 
 

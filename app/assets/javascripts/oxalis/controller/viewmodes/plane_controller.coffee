@@ -143,6 +143,7 @@ class PlaneController
 
     @controls.noZoom = true
     @controls.noPan = true
+    @controls.staticMoving = true
 
     @controls.target.set(
       @model.scaleInfo.voxelToNm(@flycam.getPosition())...)

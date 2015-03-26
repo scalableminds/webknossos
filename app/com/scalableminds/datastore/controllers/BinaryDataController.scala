@@ -228,9 +228,9 @@ trait BinaryDataReadController extends BinaryDataCommonController {
       // Parameters that seem to be working good enough
       val center = dataLayer.boundingBox.center
       val resolution = bestResolution(dataLayer)
-      val x = center.x / math.pow(2, resolution) - width / 2
-      val y = center.y / math.pow(2, resolution) - height / 2
-      val z = center.z / math.pow(2, resolution)
+      val x = center.x - width * math.pow(2, resolution) / 2
+      val y = center.y - height * math.pow(2, resolution) / 2
+      val z = center.z
       (x.toInt, y.toInt, z.toInt, resolution)
     }
 

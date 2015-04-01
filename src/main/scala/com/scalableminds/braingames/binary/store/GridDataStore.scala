@@ -22,7 +22,7 @@ import scala.concurrent.ExecutionContext.Implicits._
 import akka.actor.Actor
 import com.scalableminds.braingames.binary.models.DataSource
 import reactivemongo.api.MongoConnection
-import com.scalableminds.braingames.binary.{LoadBlock, SaveBlock}
+import com.scalableminds.braingames.binary.{LoadBlock, SaveBlock, MappingRequest}
 import net.liftweb.common.Box
 
 case class InsertBinary(dataSource: DataSource)
@@ -114,6 +114,10 @@ class GridDataStore
     */
     
     //Future.failed(new DataNotFoundException("GRIDFS2"))
+    Future.successful(None)
+  }
+
+  def load(request: MappingRequest): Future[Box[Array[Byte]]] = {
     Future.successful(None)
   }
 

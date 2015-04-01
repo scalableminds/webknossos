@@ -3,6 +3,4 @@
  */
 package com.scalableminds.braingames.binary
 
-import com.scalableminds.braingames.binary.models._
-
-case class MappingRequest(dataLayer: DataLayer, dataLayerMapping: DataLayerMapping)
+case class MappingRequest(dataLayerMappingPath: String)

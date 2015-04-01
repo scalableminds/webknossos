@@ -4,7 +4,7 @@
 package com.scalableminds.braingames.binary.store
 
 import java.io.{FileNotFoundException, InputStream, OutputStream, FileInputStream, FileOutputStream, File}
-import java.nio.file.{Files, Path}
+import java.nio.file.{Files, Path, Paths}
 import com.scalableminds.util.io.PathUtils
 
 import scala.concurrent.Future
@@ -53,6 +53,10 @@ class FileDataStore extends DataStore {
           Failure("Couldn't find file: " + e)
       }
     }
+  }
+
+  def load(request: MappingRequest) = {
+    load(Paths.get(request.dataLayerMappingPath))
   }
 
   def save(dataInfo: SaveBlock): Future[Unit] = {

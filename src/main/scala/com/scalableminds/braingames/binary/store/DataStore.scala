@@ -56,6 +56,8 @@ trait DataStore {
    * Saves the data of a given point to the data source
    */
   def save(dataInfo: SaveBlock): Future[Unit]
+
+  def load(request: MappingRequest): Future[Box[Array[Byte]]]
 }
 
 object DataStore {

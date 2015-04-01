@@ -133,14 +133,14 @@ trait KnossosDataSourceTypeHandler extends DataSourceTypeHandler {
   protected def normalizeMappings(base: Path, mappings: List[DataLayerMapping]): Box[List[DataLayerMapping]] = {
     Full(normalizeMappingsRec(mappings, Map()).map{
       mapping =>
-        val name = mapping.name.replaceAll("[^a-zA-Z0-9.-]", "_")
-        val path = base.resolve(s"target/$name.${KnossosDataSourceType.mappingFileExtension}")
+        val filename = mapping.name.replaceAll("[^a-zA-Z0-9.-]", "_")
+        val path = base.resolve(s"$filename.${KnossosDataSourceType.mappingFileExtension}")
         PathUtils.fileOption(path).map {
           file =>
             val json = Json.toJson(mapping)
             FileUtils.write(file, Json.prettyPrint(json))
         }
-        mapping.copy(name = name, path = Some(path.toString), classes = None)
+        mapping.copy(path = Some(path.toString), classes = None)
     })
   }
 
@@ -156,7 +156,7 @@ trait KnossosDataSourceTypeHandler extends DataSourceTypeHandler {
       }.toSingleBox("Error extracting mappings")
     
     PathUtils.ensureDirectory(targetDir)
-    mappings.flatMap(normalizeMappings(base, _))
+    mappings.flatMap(normalizeMappings(targetDir, _))
   }
 
   protected def extractLayers(path: Path, dataSourcePath: String) = {

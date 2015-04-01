@@ -29,6 +29,6 @@ class DataSourceRepository(implicit val system: ActorSystem) extends AbstractDat
         DataSourceDAO.removeByName(d.id)
         DataSourceDAO.insert(d)
     }
-    DataStorePlugin.current.map(_.binaryDataService.oxalisServer.reportDataSouces(dataSources))
+    DataStorePlugin.current.map(_.binaryDataService.oxalisServer.reportDataSources(dataSources))
   }
 }

@@ -12,6 +12,7 @@ GET         /datasets/:dataSetName/layers/:dataLayerName/image.jpg              
 GET         /datasets/:dataSetName/layers/:dataLayerName/thumbnail.json                        com.scalableminds.datastore.controllers.BinaryDataController.requestImageThumbnailJson(dataSetName: String, dataLayerName: String, width: Int, height: Int)
 GET         /datasets/:dataSetName/layers/:dataLayerName/thumbnail.jpg                         com.scalableminds.datastore.controllers.BinaryDataController.requestImageThumbnailJpeg(dataSetName: String, dataLayerName: String, width: Int, height: Int)
 POST        /datasets/:dataSetName/layers                                                      com.scalableminds.datastore.controllers.DataLayerController.create(dataSetName: String)
+GET         /datasets/:dataSetName/layers/:dataLayerName/mappings/:dataLayerMappingName        com.scalableminds.datastore.controllers.BinaryDataController.requestSegmentationMapping(dataSetName: String, dataLayerName: String, dataLayerMappingName: String)
 
 # Knossos compatibale routes
 GET         /datasets/:dataSetName/layers/:dataLayerName/mag:resolution/x:x/y:y/z:z/bucket.raw        com.scalableminds.datastore.controllers.BinaryDataController.requestViaKnossos(dataSetName: String, dataLayerName: String, resolution: Int, x: Int, y: Int, z: Int, cubeSize: Int)
@@ -19,10 +20,5 @@ GET         /datasets/:dataSetName/layers/:dataLayerName/mag:resolution/x:x/y:y/
 # Write data
 PUT         /datasets/:dataSetName/layers/:dataLayerName/data                                  com.scalableminds.datastore.controllers.BinaryDataController.writeViaAjax(dataSetName: String, dataLayerName: String, cubeSize: Int)
 
-# Segmentation Mapping
-GET         /datasets/:dataSetName/layers/:dataLayerName/mappings                              com.scalableminds.datastore.controllers.BinaryDataController.requestSegmentationMappings(dataSetName: String, dataLayerName: String)
-GET         /datasets/:dataSetName/layers/:dataLayerName/mappings/:dataLayerMappingName        com.scalableminds.datastore.controllers.BinaryDataController.requestSegmentationMapping(dataSetName: String, dataLayerName: String, dataLayerMappingName: String)
-
 # Volume download
 GET         /datasets/:dataSetName/layers/:dataLayerName/download                              com.scalableminds.datastore.controllers.BinaryDataController.downloadDataLayer(dataSetName: String, dataLayerName: String)
->>>>>>> master

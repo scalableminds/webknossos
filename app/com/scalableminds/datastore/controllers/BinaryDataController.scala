@@ -36,7 +36,11 @@ import org.apache.commons.codec.binary.Base64
 import java.io.{PipedInputStream, PipedOutputStream}
 import play.api.libs.iteratee.Enumerator
 
-object BinaryDataController extends BinaryDataReadController with BinaryDataWriteController with BinaryDataDownloadController
+object BinaryDataController
+  extends BinaryDataReadController
+  with BinaryDataWriteController
+  with BinaryDataDownloadController
+  with BinaryDataMappingController
 
 trait BinaryDataCommonController extends Controller with FoxImplicits {
   protected def getDataLayer(dataSource: DataSource, dataLayerName: String): Fox[DataLayer] = {
@@ -376,21 +380,6 @@ trait BinaryDataWriteController extends BinaryDataCommonController {
         } yield Ok
       }
   }
-
-  def requestSegmentationMapping(dataSetName: String, dataLayerName: String, dataLayerMappingName: String) = TokenSecuredAction(dataSetName, dataLayerName).async {
-    implicit request =>
-      AllowRemoteOrigin {
-        for {
-          usableDataSource <- DataSourceDAO.findUsableByName(dataSetName).toFox ?~> Messages("dataSet.notFound")
-          dataSource = usableDataSource.dataSource
-          dataLayer <- getDataLayer(dataSource, dataLayerName) ?~> Messages("dataLayer.notFound")
-          dataLayerMapping <- dataLayer.getMapping(dataLayerMappingName).toFox ?~> Messages("dataLayerMapping.notFound")
-          result <- DataStorePlugin.binaryDataService.handleMappingRequest(MappingRequest(dataLayer, dataLayerMapping)).toFox
-        } yield {
-          Ok(result)
-        }
-      }
-  }
 }
 
 trait BinaryDataDownloadController extends BinaryDataCommonController {
@@ -423,4 +412,29 @@ trait BinaryDataDownloadController extends BinaryDataCommonController {
         }
       }
   }
+}
+
+trait BinaryDataMappingController extends BinaryDataCommonController {
+
+  def requestSegmentationMappings(dataSetName: String, dataLayerName: String) = TokenSecuredAction(dataSetName, dataLayerName).async {
+    implicit request =>
+      AllowRemoteOrigin {
+        Future.successful(Ok)
+      }
+  }
+
+  def requestSegmentationMapping(dataSetName: String, dataLayerName: String, dataLayerMappingName: String) = TokenSecuredAction(dataSetName, dataLayerName).async {
+    implicit request =>
+      AllowRemoteOrigin {
+        for {
+          usableDataSource <- DataSourceDAO.findUsableByName(dataSetName).toFox ?~> Messages("dataSet.notFound")
+          dataSource = usableDataSource.dataSource
+          dataLayer <- getDataLayer(dataSource, dataLayerName) ?~> Messages("dataLayer.notFound")
+          dataLayerMapping <- dataLayer.getMapping(dataLayerMappingName).toFox ?~> Messages("dataLayerMapping.notFound")
+        } yield {
+          Ok(Json.toJson(dataLayerMapping))
+        }
+      }
+  }
+
 }

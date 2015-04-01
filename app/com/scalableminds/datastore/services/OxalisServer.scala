@@ -99,7 +99,7 @@ class OxalisServer(
       .withHeaders(HeaderNames.CONTENT_TYPE -> "application/json")
   }
 
-  def reportDataSouces(dataSources: List[DataSourceLike]) = {
+  def reportDataSources(dataSources: List[DataSourceLike]) = {
     logger.trace("reporting datasources " + dataSources.map(d => d.id + s" (${if(d.isUsable) "active" else "inactive"}})").mkString(", "))
     oxalisWS(s"/api/datastores/$name/datasources")
       .post(Json.toJson(dataSources))

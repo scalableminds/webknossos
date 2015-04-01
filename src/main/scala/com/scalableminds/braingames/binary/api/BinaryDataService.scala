@@ -25,7 +25,7 @@ import com.scalableminds.braingames.binary.watcher.StartWatching
 import com.scalableminds.braingames.binary.repository.DataSourceInbox
 import com.scalableminds.util.io.PathUtils
 
-trait BinaryDataService extends DataSourceService with BinaryDataHelpers with SegmentationMappingHelpers with DataDownloadHelper{
+trait BinaryDataService extends DataSourceService with BinaryDataHelpers with DataDownloadHelper{
 
   import Logger._
 

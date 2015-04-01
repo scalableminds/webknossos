@@ -73,10 +73,6 @@ class FileDataStore extends DataStore {
       }
     }
   }
-
-  def load(request: MappingRequest): Future[Box[Array[Byte]]] = {
-    load(new File(request.dataLayerMapping.path).toPath)
-  }
 }
 
 object FileDataStore {

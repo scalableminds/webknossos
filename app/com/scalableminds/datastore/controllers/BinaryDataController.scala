@@ -418,13 +418,6 @@ trait BinaryDataDownloadController extends BinaryDataCommonController {
 
 trait BinaryDataMappingController extends BinaryDataCommonController {
 
-  def requestSegmentationMappings(dataSetName: String, dataLayerName: String) = TokenSecuredAction(dataSetName, dataLayerName).async {
-    implicit request =>
-      AllowRemoteOrigin {
-        Future.successful(Ok)
-      }
-  }
-
   def requestSegmentationMapping(dataSetName: String, dataLayerName: String, dataLayerMappingName: String) = TokenSecuredAction(dataSetName, dataLayerName).async {
     implicit request =>
       AllowRemoteOrigin {
@@ -433,8 +426,10 @@ trait BinaryDataMappingController extends BinaryDataCommonController {
           dataSource = usableDataSource.dataSource
           dataLayer <- getDataLayer(dataSource, dataLayerName) ?~> Messages("dataLayer.notFound")
           dataLayerMapping <- dataLayer.getMapping(dataLayerMappingName).toFox ?~> Messages("dataLayerMapping.notFound")
+          mappingPath <- dataLayerMapping.path.toFox ?~> Messages("dataLayerMapping.notFound")
+          result <- DataStorePlugin.binaryDataService.handleMappingRequest(MappingRequest(mappingPath)) ?~> Messages("dataLayerMapping.notLoaded")
         } yield {
-          Ok(Json.toJson(dataLayerMapping))
+          Ok(result)
         }
       }
   }

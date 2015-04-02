@@ -7,6 +7,7 @@
 ./binary/ping_strategy : PingStrategy
 ./binary/ping_strategy_3d : PingStrategy3d
 ./binary/bounding_box : BoundingBox
+./binary/mappings : Mappings
 ../constants : constants
 libs/event_mixin : EventMixin
 ###
@@ -42,6 +43,7 @@ class Binary
     @pullQueue = new PullQueue(@model.dataSetName, @cube, @layer, @tracing.id, @boundingBox, connectionInfo)
     @pushQueue = new PushQueue(@model.dataSetName, @cube, @layer, @tracing.id, updatePipeline)
     @cube.setPushQueue( @pushQueue )
+    @mappings = new Mappings(@model.dataSetName, @layer)
 
     @pingStrategies = [
       new PingStrategy.Skeleton(@cube, @TEXTURE_SIZE_P),
@@ -75,6 +77,18 @@ class Binary
   setColorSettings : (brightness, contrast) ->
 
     @trigger "newColorSettings", brightness, contrast
+
+
+  setActiveMapping : (mappingName) ->
+
+    setMapping = (mapping) =>
+      @cube.setMapping(mapping)
+      @model.flycam.update()
+
+    if mappingName?
+      @mappings.getMappingArrayAsync(mappingName).then(setMapping)
+    else
+      setMapping([])
 
 
   pingStop : ->

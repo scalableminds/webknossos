@@ -6,6 +6,7 @@ libs/request : Request
 
 class Mappings
 
+
   constructor : (datasetName, layer) ->
 
     @mappings = _.indexBy(layer.mappings, "name")
@@ -29,7 +30,7 @@ class Mappings
   fetchMapping : (mappingName) ->
 
     if @mappings[mappingName].mappingObject?
-      return $.Deferred.resolve().promise()
+      return $.Deferred().resolve().promise()
 
     return Request.send(
       url: @baseUrl + mappingName + @getParams

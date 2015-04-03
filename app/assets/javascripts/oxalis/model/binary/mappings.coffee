@@ -14,6 +14,11 @@ class Mappings
     @getParams = "?token=#{layer.token}"
 
 
+  getMappingNames : ->
+
+    return _.keys(@mappings)
+
+
   getMappingArrayAsync : (mappingName) ->
 
     @fetchMappings(mappingName)

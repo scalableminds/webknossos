@@ -103,6 +103,8 @@ class Model
       @binary[layer.name] = new Binary(this, tracing, layer, maxLayerZoomStep, @updatePipeline, @connectionInfo)
       maxZoomStep = Math.max(maxZoomStep, maxLayerZoomStep)
 
+    @buildMappingsObject(layers)
+
     if @getColorBinaries().length == 0
       Toast.error("No data available! Something seems to be wrong with the dataset.")
 
@@ -130,6 +132,22 @@ class Model
     @computeBoundaries()
 
     return {tracing}
+
+
+  # For now, since we have no UI for this
+  buildMappingsObject : (layers) ->
+
+    mappings = {}
+
+    for layer in layers
+      do (layer) =>
+        mappings[layer.name] = {
+          getAll : => @binary[layer.name].mappings.getMappingNames()
+          getActive : => @binary[layer.name].activeMapping
+          activate : (mapping) => @binary[layer.name].setActiveMapping(mapping)
+        }
+
+    window.mappings = mappings
 
 
   getDataTokens : (dataStoreUrl, dataSetName, layers) ->

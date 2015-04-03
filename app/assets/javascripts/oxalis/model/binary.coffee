@@ -44,6 +44,7 @@ class Binary
     @pushQueue = new PushQueue(@model.dataSetName, @cube, @layer, @tracing.id, updatePipeline)
     @cube.setPushQueue( @pushQueue )
     @mappings = new Mappings(@model.dataSetName, @layer)
+    @activeMapping = null
 
     @pingStrategies = [
       new PingStrategy.Skeleton(@cube, @TEXTURE_SIZE_P),
@@ -80,6 +81,8 @@ class Binary
 
 
   setActiveMapping : (mappingName) ->
+
+    @activeMapping = mappingName
 
     setMapping = (mapping) =>
       @cube.setMapping(mapping)

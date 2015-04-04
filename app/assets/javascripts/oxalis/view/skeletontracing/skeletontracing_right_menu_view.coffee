@@ -3,7 +3,7 @@
 ./right-menu/comment_tab_view : CommentTabView
 ./right-menu/abstract_tree_view : AbstractTreeView
 ./right-menu/list_tree_view : ListTreeView
-./right-menu/dataset_info_view : DatasetInfoView
+../viewmode/right-menu/dataset_info_view : DatasetInfoView
 ###
 
 class SkeletonTracingRightMenuView extends AbstractTabView

@@ -74,12 +74,12 @@ class TracingLayoutView extends Backbone.Marionette.LayoutView
       settingsTabView = new SettingsTabView(@options)
       @settings.show(settingsTabView, preventDestroy : true)
 
-      if @isSkeletonMode()
-        @rightMenuView = new SkeletonTracingRightMenuView(@options)
-      else
-        @rightMenuView = new VolumeTracingRightMenuView(@options)
+    if @isSkeletonMode()
+      @rightMenuView = new SkeletonTracingRightMenuView(@options)
+    else if @isVolumeMode()
+      @rightMenuView = new VolumeTracingRightMenuView(@options)
 
-      @rightMenu.show(@rightMenuView)
+    @rightMenu.show(@rightMenuView)
 
 
   isTracingMode : ->
@@ -89,7 +89,12 @@ class TracingLayoutView extends Backbone.Marionette.LayoutView
 
   isSkeletonMode : ->
 
-    return @model.get("mode") == Constants.MODE_PLANE_TRACING
+    return @model.get("mode") == Constants.MODE_PLANE_TRACING && @isTracingMode()
+
+
+  isVolumeMode : ->
+
+    return @model.get("mode") == Constants.MODE_VOLUME && @isTracingMode()
 
 
   onDestroy : ->

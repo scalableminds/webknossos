@@ -30,7 +30,6 @@ class SettingsTabView extends Backbone.Marionette.LayoutView
       <div class="tab-pane active" id="dataset-settings-tab"></div>
       <div class="tab-pane" id="user-settings-tab"></div>
     </div>
-  </div>
   """)
 
   regions :
@@ -55,8 +54,8 @@ class SettingsTabView extends Backbone.Marionette.LayoutView
 
   afterRender : ->
 
-      @datasetSettings.show(@datasetSettingsView)
-      @listenTo(app.vent, "changeViewMode", @changeViewMode)
+    @datasetSettings.show(@datasetSettingsView)
+    @listenTo(app.vent, "changeViewMode", @changeViewMode)
 
 
   changeViewMode : (mode) ->

@@ -9,8 +9,8 @@ class ViewmodeTabView extends AbstractTabView
 
   TABS : [
     {
-      id : "tracing-settings-tab"
-      name : "Tracing"
+      id : "help-tab"
+      name : "Help"
       active : true
       viewClass : HelpLogoView
     }

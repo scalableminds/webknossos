@@ -2,7 +2,6 @@
 backbone.marionette : marionette
 app : app
 ./action_bar_view : ActionBarView
-./settings/tab_views/settings_tab_view : SettingsTabView
 ./settings/tab_views/skeleton_plane_tab_view : SkeletonPlaneTabView
 ./settings/tab_views/skeleton_arbitrary_tab_view : SkeletonArbitraryTabView
 ./settings/tab_views/volume_tab_view : VolumeTabView

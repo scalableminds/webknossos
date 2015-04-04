@@ -1,13 +1,12 @@
 ### define
 underscore : _
 backbone.marionette : marionette
-./skeleton_tracing_settings_view : SkeletonTracingSettingsView
-./volume_tracing_settings_view : VolumeTracingSettingsView
-./plane_user_settings_view : PlaneUserSettingsView
-./arbitrary_user_settings_view : ArbitraryUserSettingsView
-./dataset_settings_view : DatasetSettingsView
+../settings_views/skeleton_tracing_settings_view : SkeletonTracingSettingsView
+../settings_views/volume_tracing_settings_view : VolumeTracingSettingsView
+../settings_views/plane_user_settings_view : PlaneUserSettingsView
+../settings_views/arbitrary_user_settings_view : ArbitraryUserSettingsView
+../settings_views/dataset_settings_view : DatasetSettingsView
 oxalis/constants : constants
-oxalis/model/settings/backbone_to_oxalis_adapter_model : BackboneToOxalisAdapterModel
 ###
 
 class SettingsTabView extends Backbone.Marionette.LayoutView
@@ -40,9 +39,8 @@ class SettingsTabView extends Backbone.Marionette.LayoutView
 
   initialize : (options) ->
 
-    backboneToOxalisAdapter = new BackboneToOxalisAdapterModel(options)
-    @skeletonTracingSettingsView = new SkeletonTracingSettingsView(model : backboneToOxalisAdapter)
-    @volumeTracingSettingsView = new VolumeTracingSettingsView(model : backboneToOxalisAdapter)
+    @skeletonTracingSettingsView = new SkeletonTracingSettingsView(options)
+    @volumeTracingSettingsView = new VolumeTracingSettingsView(options)
 
     @planeUserSettingsView = new PlaneUserSettingsView(options)
     @arbitraryUserSettingsView = new ArbitraryUserSettingsView(options)

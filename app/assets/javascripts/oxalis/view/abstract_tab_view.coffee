@@ -12,7 +12,7 @@ class AbstractTabView extends Backbone.Marionette.LayoutView
     <ul class="nav nav-tabs">
       <% TABS.forEach(function(tab) { %>
         <li>
-          <a href="#<%= tab.id %>" data-toggle="tab"><%= tab.name %></a>
+          <a href="#<%= tab.id %>" data-toggle="tab"> <%= tab.iconString %> <%= tab.name %></a>
         </li>
       <% }) %>
     </ul>
@@ -33,8 +33,14 @@ class AbstractTabView extends Backbone.Marionette.LayoutView
     @listenTo(@, "render", @afterRender)
 
     regions = {}
-    @TABS.forEach (tab) =>
+    @activeTabIndex = 0
+    @TABS.forEach (tab, index) =>
+      if tab.active
+        @activeTabIndex = index
+
       tab.view = new tab.viewClass(options)
+      tab.iconString = if tab.iconClass then "<i class=\"#{tab.iconClass}\"></i>" else ""
+
       regions[tab.id] = "#" + tab.id
     @addRegions(regions)
 
@@ -49,8 +55,8 @@ class AbstractTabView extends Backbone.Marionette.LayoutView
 
   afterRender : ->
 
-    @ui.tabContentContainer.children().first().addClass("active")
-    @ui.tabNavbarContainer.children().first().addClass("active")
+    @$(@ui.tabContentContainer.children()[@activeTabIndex]).addClass("active")
+    @$(@ui.tabNavbarContainer.children()[@activeTabIndex]).addClass("active")
 
     @TABS.forEach (tab) =>
       @[tab.id].show(tab.view)

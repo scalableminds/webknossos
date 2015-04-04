@@ -2,7 +2,7 @@
 backbone.marionette : marionette
 underscore : _
 ./settings_view : SettingsView
-./category_views/cell_category_view : CellCategoryView
+../category_views/cell_category_view : CellCategoryView
 ###
 
 class VolumeTracingSettingsView extends SettingsView

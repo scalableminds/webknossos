@@ -4,6 +4,8 @@ app : app
 ./action_bar_view : ActionBarView
 ./settings/tab_views/settings_tab_view : SettingsTabView
 ./settings/tab_views/skeleton_plane_tab_view : SkeletonPlaneTabView
+./settings/tab_views/skeleton_arbitrary_tab_view : SkeletonArbitraryTabView
+./settings/tab_views/volume_tab_view : VolumeTabView
 ./skeletontracing/skeletontracing_right_menu_view : SkeletonTracingRightMenuView
 ./volumetracing/volumetracing_right_menu_view : VolumeTracingRightMenuView
 ./tracing_view : TracingView
@@ -46,6 +48,7 @@ class TracingLayoutView extends Backbone.Marionette.LayoutView
 
     @listenTo(@, "render", @afterRender)
     @listenTo(app.vent, "planes:resize", @resize)
+    @listenTo(app.vent, "changeViewMode", @renderSettings)
     @listenTo(@model, "sync", @renderRegions)
     $(window).on("resize", @resize.bind(@))
 
@@ -72,14 +75,23 @@ class TracingLayoutView extends Backbone.Marionette.LayoutView
     @tracingContainer.show(tracingView, preventDestroy : true)
 
     if @isSkeletonMode()
-      settingsTabView = new SkeletonPlaneTabView(@options)
       @rightMenuView = new SkeletonTracingRightMenuView(@options)
     else if @isVolumeMode()
-      settingsTabView = new SettingsTabView(@options)
       @rightMenuView = new VolumeTracingRightMenuView(@options)
 
-    @settings.show(settingsTabView, preventDestroy : true)
     @rightMenu.show(@rightMenuView)
+    @renderSettings()
+
+
+  renderSettings : ->
+
+    if @isSkeletonMode()
+      settingsTabClass = if @isArbitraryMode then SkeletonArbitraryTabView else SkeletonPlaneTabView
+      settingsTabView = new settingsTabClass(@options)
+    else if @isVolumeMode()
+      settingsTabView = new VolumeTabView(@options)
+
+    @settings.show(settingsTabView, preventDestroy : true)
 
 
   isTracingMode : ->
@@ -89,12 +101,17 @@ class TracingLayoutView extends Backbone.Marionette.LayoutView
 
   isSkeletonMode : ->
 
-    return @model.get("mode") == Constants.MODE_PLANE_TRACING && @isTracingMode()
+    return @model.get("mode") in Constants.MODES_SKELETON && @isTracingMode()
 
 
   isVolumeMode : ->
 
     return @model.get("mode") == Constants.MODE_VOLUME && @isTracingMode()
+
+
+  isArbitraryMode : ->
+
+    return @model.get("mode") in Constants.MODES_ARBITRARY
 
 
   onDestroy : ->

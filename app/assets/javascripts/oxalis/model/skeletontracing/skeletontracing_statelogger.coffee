@@ -1,5 +1,6 @@
 ### define
 ../statelogger : StateLogger
+three.color : ColorConverter
 ###
 
 class SkeletonTracingStateLogger extends StateLogger

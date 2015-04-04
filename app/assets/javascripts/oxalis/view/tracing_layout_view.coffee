@@ -2,10 +2,10 @@
 backbone.marionette : marionette
 app : app
 ./action_bar_view : ActionBarView
-./settings/tab_views/settings_tab_view : SettingsTabView
 ./settings/tab_views/skeleton_plane_tab_view : SkeletonPlaneTabView
 ./settings/tab_views/skeleton_arbitrary_tab_view : SkeletonArbitraryTabView
 ./settings/tab_views/volume_tab_view : VolumeTabView
+./settings/tab_views/viewmode_tab_view : ViewmodeTabView
 ./skeletontracing/skeletontracing_right_menu_view : SkeletonTracingRightMenuView
 ./volumetracing/volumetracing_right_menu_view : VolumeTracingRightMenuView
 ./tracing_view : TracingView
@@ -90,6 +90,8 @@ class TracingLayoutView extends Backbone.Marionette.LayoutView
       settingsTabView = new settingsTabClass(@options)
     else if @isVolumeMode()
       settingsTabView = new VolumeTabView(@options)
+    else
+      settingsTabView = new ViewmodeTabView(@options)
 
     @settings.show(settingsTabView, preventDestroy : true)
 

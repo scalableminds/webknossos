@@ -2,7 +2,7 @@
 backbone.marionette : marionette
 ###
 
-class RightMenuView extends Backbone.Marionette.LayoutView
+class AbstractTabView extends Backbone.Marionette.LayoutView
 
   MARGIN : 40
   TABS : []

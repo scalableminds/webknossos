@@ -1,9 +1,9 @@
 ### define
-../right_menu_view : RightMenuView
+../abstract_tab_view : AbstractTabView
 ./right-menu/mapping_info_view : MappingInfoView
 ###
 
-class SkeletonTracingRightMenuView extends RightMenuView
+class SkeletonTracingRightMenuView extends AbstractTabView
 
   TABS : [
     {

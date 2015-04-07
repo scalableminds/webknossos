@@ -8,7 +8,7 @@ oxalis/view/skeletontracing/abstract_tree_renderer : AbstractTreeRenderer
 class AbstractTreeView extends Backbone.Marionette.ItemView
 
   template : _.template("""
-      <canvas width="<%= width %>" height="<%= height %>" style="width: <%= width %>px; height: <%= height %>px">
+      <canvas id="abstract-tree-canvas">
     """)
 
   ui :
@@ -31,23 +31,23 @@ class AbstractTreeView extends Backbone.Marionette.ItemView
     @listenTo(@model.skeletonTracing, "deleteActiveNode" , @drawTree)
     @listenTo(@model.skeletonTracing, "newNode" , @drawTree)
 
+    @initialized = false
+    $(window).on("resize", => @drawTree())
+
     @drawTree()
 
 
   resize : ->
 
-    @width = @$el.width()
-    @height = @$el.height() - 10
-
-    #re-render with correct height/width
+    @initialized = true
     @render()
 
-    @abstractTreeRenderer = new AbstractTreeRenderer(
-      @ui.canvas,
-      @width,
-      @height
-    )
 
+  render : ->
+
+    super()
+    if @initialized
+      @abstractTreeRenderer = new AbstractTreeRenderer(@ui.canvas)
     @drawTree()
 
 
@@ -55,14 +55,6 @@ class AbstractTreeView extends Backbone.Marionette.ItemView
 
     if @model.skeletonTracing and @abstractTreeRenderer
       @abstractTreeRenderer.drawTree(@model.skeletonTracing.getTree(), @model.skeletonTracing.getActiveNodeId())
-
-
-  serializeData : ->
-
-    return {
-      width : @width || 300
-      height : @height || 300
-    }
 
 
   handleClick : (event) ->

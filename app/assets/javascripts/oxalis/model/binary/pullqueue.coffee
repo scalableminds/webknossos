@@ -136,7 +136,7 @@ class PullQueue
     newColors
 
 
-  set4Bit : (@fourBit) ->
+  setFourBit : (@fourBit) ->
 
 
   getLoadSocket : ->

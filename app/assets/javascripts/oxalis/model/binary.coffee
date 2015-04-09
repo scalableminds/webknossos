@@ -56,7 +56,7 @@ class Binary
       @planes.push( new Plane2D(planeId, @cube, @pullQueue, @TEXTURE_SIZE_P, @layer.bitDepth, @targetBitDepth, 32) )
 
     @model.user.on({
-      set4BitChanged : (is4Bit) => @pullQueue(is4Bit)
+      fourBitChanged : (fourBit) => @pullQueue.setFourBit(fourBit)
     })
 
     @cube.on(

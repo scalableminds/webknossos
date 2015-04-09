@@ -298,7 +298,7 @@ class Controller
     gui.update()
 
     for binary in @model.getColorBinaries()
-      binary.pullQueue.set4Bit(@model.user.get("fourBit"))
+      binary.pullQueue.setFourBit(@model.user.get("fourBit"))
 
     return gui
 

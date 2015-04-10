@@ -43,6 +43,8 @@ class MappingPrinter {
     printStringMember("parent", m.parent)
     printStringMember("path", m.path)
     printClasses("classes", m.classes)
+
+    w.close()
   }
 
   def print(m: DataLayerMapping, s: String): Unit =

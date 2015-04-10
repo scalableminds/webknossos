@@ -4,8 +4,10 @@
 package com.scalableminds.braingames.binary.repository
 
 import java.nio.file.{Files, Path}
+import java.io.FileWriter
 
 import com.scalableminds.braingames.binary.models._
+import com.scalableminds.braingames.binary.repository.mapping.{MappingPrinter, MappingParser}
 import com.scalableminds.util.geometry.{Scale, BoundingBox}
 import com.scalableminds.util.tools.ProgressTracking.ProgressTracker
 import com.scalableminds.util.tools.JsonHelper
@@ -70,7 +72,7 @@ trait KnossosDataSourceTypeHandler extends DataSourceTypeHandler {
 
   protected def normalizeClasses(classes: List[List[Long]], parentClasses: List[List[Long]]): Box[List[List[Long]]] = {
 
-    import scala.collection.mutable.{Map => MutableMap}
+/*    import scala.collection.mutable.{Map => MutableMap}
     
     def find(m: MutableMap[Long, Long])(key: Long): Long = {
       val parent = m.getOrElse(key, key)
@@ -104,7 +106,9 @@ trait KnossosDataSourceTypeHandler extends DataSourceTypeHandler {
       }
 
       Full(classesMap.mapValues(find(classesMap)).groupBy(_._2).values.map(_.keys.toList.sorted).toList)
-    }
+    }*/
+
+    Full(classes)
   }
 
   protected def normalizeMappingsRec(mappings: List[DataLayerMapping], finished: Map[String, DataLayerMapping]): List[DataLayerMapping] = {
@@ -137,8 +141,7 @@ trait KnossosDataSourceTypeHandler extends DataSourceTypeHandler {
         val path = base.resolve(s"$filename.${KnossosDataSourceType.mappingFileExtension}")
         PathUtils.fileOption(path).map {
           file =>
-            val json = Json.toJson(mapping)
-            FileUtils.write(file, Json.prettyPrint(json))
+            MappingPrinter.print(mapping, new FileWriter(file))
         }
         mapping.copy(path = Some(path.toString), classes = None)
     })
@@ -152,7 +155,7 @@ trait KnossosDataSourceTypeHandler extends DataSourceTypeHandler {
       .filter(_.toString.toLowerCase.endsWith(s".${KnossosDataSourceType.mappingFileExtension}"))
       .map {
         mappingFile =>
-          JsonHelper.JsonFromFile(mappingFile).flatMap(_.validate(DataLayerMapping.dataLayerMappingFormat).asOpt)
+          MappingParser.parse(mappingFile)
       }.toSingleBox("Error extracting mappings")
     
     PathUtils.ensureDirectory(targetDir)

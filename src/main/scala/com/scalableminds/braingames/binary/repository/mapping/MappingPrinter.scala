@@ -44,6 +44,8 @@ class MappingPrinter {
     printStringMember("path", m.path)
     printClasses("classes", m.classes)
 
+    printer.endObject()
+
     w.close()
   }
 

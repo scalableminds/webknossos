@@ -42,7 +42,9 @@ trait DataSourceService extends FoxImplicits{
       isWritable = true,
       fallback = fallbackLayer.map(l => FallbackLayer(baseDataSource.id, l.name)),
       sections = List(sections),
-      nextSegmentationId = baseDataSource.getByCategory(category).flatMap(_.nextSegmentationId))
+      nextSegmentationId = baseDataSource.getByCategory(category).flatMap(_.nextSegmentationId),
+      fallbackLayer.map(_.mappings).getOrElse(List())
+    )
 
     PathUtils.ensureDirectory(basePath)
     UserDataLayer(baseDataSource.id, dataLayer)

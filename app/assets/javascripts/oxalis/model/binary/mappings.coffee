@@ -40,8 +40,13 @@ class Mappings
     return Request.send(
       url: @baseUrl + mappingName + @getParams
       dataType: "json"
-    ).then (mapping) =>
-      @mappings[mappingName].mappingObject = mapping
+    ).then(
+      (mapping) =>
+        @mappings[mappingName].mappingObject = mapping
+        console.log("Done downloading:", mappingName)
+      (error) ->
+        console.error("Error downloading:", mappingName, error)
+    )
 
 
   getMappingArray : (mappingName) ->

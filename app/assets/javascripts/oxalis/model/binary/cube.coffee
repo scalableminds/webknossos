@@ -77,6 +77,11 @@ class Cube
       ]
 
 
+  setMapping : (@mapping) ->
+
+    @trigger("mappingChanged")
+
+
   setPushQueue : (pushQueue) ->
 
     @pushQueue = pushQueue

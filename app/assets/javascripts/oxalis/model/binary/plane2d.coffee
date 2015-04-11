@@ -78,10 +78,14 @@ class Plane2D
           @dataTexture.tiles[tileIndexByTileMacro(@, tile)] = false
           @dataTexture.ready &= not (u in [@dataTexture.area[0]..@dataTexture.area[2]] and v in [@dataTexture.area[1]..@dataTexture.area[3]])
 
-    @cube.on "volumeLabled", =>
+    @cube.on "volumeLabled", => @reset()
+    @cube.on "mappingChanged", => @reset()
 
-      @dataTexture.tiles = new Array(@BUCKETS_PER_ROW * @BUCKETS_PER_ROW)
-      @dataTexture.ready = false
+
+  reset : ->
+
+    @dataTexture.tiles = new Array(@BUCKETS_PER_ROW * @BUCKETS_PER_ROW)
+    @dataTexture.ready = false
 
 
   get : ({position, zoomStep, area}) ->

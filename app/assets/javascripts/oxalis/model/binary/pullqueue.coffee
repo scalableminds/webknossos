@@ -27,21 +27,6 @@ class PullQueue
 
     @queue = []
 
-    if @layer.category == "segmentation"
-      @loadGlobalSegmentation()
-
-
-  loadGlobalSegmentation : ->
-    Request.send(
-        url : "#{@layer.url}/data/datasets/#{@dataSetName}/layers/#{@layer.name}/mapping?token=#{@layer.token}"
-        dataType : 'arraybuffer'
-      ).then( (buffer) =>
-        if buffer
-          @cube.setMapping(
-            new (if @layer.bitDepth == 16 then Uint16Array else Uint32Array)(buffer)
-          )
-      )
-
 
   pull : ->
     # Filter and sort queue, using negative priorities for sorting so .pop() can be used to get next bucket
@@ -138,7 +123,7 @@ class PullQueue
     newColors
 
 
-  set4Bit : (@fourBit) ->
+  setFourBit : (@fourBit) ->
 
 
   getLoadSocket : ->

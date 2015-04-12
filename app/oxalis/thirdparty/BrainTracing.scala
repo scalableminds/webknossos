@@ -30,7 +30,7 @@ object BrainTracing {
   def register(user: User, password: String): Future[String] = {
     val pwHash = md5(password)
     // TODO: fix, make team dynamic
-    if (isActive && user.teamNames.contains("Structure of Neocortical Circuits Group")) {
+    if (isActive && user.teamNames.contains("Connectomics department")) {
       val result = Promise[String]()
       WS
       .url(CREATE_URL)
@@ -65,7 +65,7 @@ object BrainTracing {
   def logTime(user: User, time: Long, annotation: Option[AnnotationLike])(implicit ctx: DBAccessContext): Unit = {
     import scala.async.Async._
     // TODO: fix, make team dynamic
-    if (isActive && user.teamNames.contains("Structure of Neocortical Circuits Group")) {
+    if (isActive && user.teamNames.contains("Connectomics department")) {
       async {
         val task = await(annotation.toFox.flatMap(_.task).futureBox)
         val taskTypeFox = task.toFox.flatMap(_.taskType)

@@ -17,7 +17,7 @@ object DefaultMails {
    */
   val uri = conf.getString("http.uri") getOrElse ("http://localhost")
 
-  val defaultFrom = "no-reply@oxalis.at"
+  val defaultFrom = "no-reply@webknossos.org"
 
   val brainTracingMailingList = conf.getString("braintracing.mailinglist") getOrElse ("")
   val supportMail = conf.getString("scm.support.mail") getOrElse ("support@scm.io")

@@ -137,17 +137,14 @@ class Model
   # For now, since we have no UI for this
   buildMappingsObject : (layers) ->
 
-    mappings = {}
+    segmentationBinary = @getSegmentationBinary()
 
-    for layer in layers
-      do (layer) =>
-        mappings[layer.name] = {
-          getAll : => @binary[layer.name].mappings.getMappingNames()
-          getActive : => @binary[layer.name].activeMapping
-          activate : (mapping) => @binary[layer.name].setActiveMapping(mapping)
-        }
-
-    window.mappings = mappings
+    if segmentationBinary?
+      window.mappings = {
+        getAll : => segmentationBinary.mappings.getMappingNames()
+        getActive : => segmentationBinary.activeMapping
+        activate : (mapping) => segmentationBinary.setActiveMapping(mapping)
+      }
 
 
   getDataTokens : (dataStoreUrl, dataSetName, layers) ->

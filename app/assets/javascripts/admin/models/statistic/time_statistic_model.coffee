@@ -6,7 +6,7 @@ moment : moment
 
 class TimeStatisticModel extends Backbone.Model
 
-  url : "api/statistics/oxalis"
+  url : "api/statistics/webknossos"
 
   initialize : ->
 

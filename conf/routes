@@ -140,7 +140,7 @@ GET           /api/projects/:name/download                                    co
 GET           /api/projects/:name/tasks                                       controllers.ProjectController.tasksForProject(name: String)
 
 GET           /statistics                                                     controllers.StatisticsController.empty
-GET           /api/statistics/oxalis                                          controllers.StatisticsController.oxalis(interval: String, start: Option[Long], end: Option[Long])
+GET           /api/statistics/webknossos                                      controllers.StatisticsController.oxalis(interval: String, start: Option[Long], end: Option[Long])
 GET           /api/statistics/users                                           controllers.StatisticsController.users(interval: String, start: Option[Long], end: Option[Long], limit: Int)
 # Javascript routing
 GET           /assets/javascripts/routes.js                                   controllers.Application.javascriptRoutes

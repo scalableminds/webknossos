@@ -53,7 +53,7 @@ class UrlManager
     @listenTo(@model.flycam3d, "changed", @update)
     @listenTo(app.vent, "changeViewMode", @update)
 
-    if @model.skeletonTracing?
+    if @model.skeletonTracing
       @listenTo(@model.skeletonTracing, "newActiveNode", @update)
 
 

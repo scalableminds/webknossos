@@ -24,7 +24,7 @@ class BackboneToOxalisAdapterModel extends Backbone.Model
       activeCellId : 0
     )
 
-    if @oxalisModel.skeletonTracing?
+    if @oxalisModel.skeletonTracing
 
       # Update values after OxalisModel is done syncing
       @skeletonTracingModel = @oxalisModel.skeletonTracing
@@ -82,7 +82,7 @@ class BackboneToOxalisAdapterModel extends Backbone.Model
           @oxalisModel.trigger("newBoundingBox", bbArray)
       )
 
-    else if @oxalisModel.volumeTracing?
+    else if @oxalisModel.volumeTracing
 
       # Update values after OxalisModel is done syncing
       @volumeTracingModel = @oxalisModel.volumeTracing

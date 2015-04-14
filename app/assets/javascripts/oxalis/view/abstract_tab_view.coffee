@@ -1,5 +1,6 @@
 ### define
 backbone.marionette : marionette
+underscore : _
 ###
 
 class AbstractTabView extends Backbone.Marionette.LayoutView
@@ -12,7 +13,7 @@ class AbstractTabView extends Backbone.Marionette.LayoutView
     <ul class="nav nav-tabs">
       <% TABS.forEach(function(tab) { %>
         <li>
-          <a href="#<%= tab.id %>" data-toggle="tab"> <%= tab.iconString %> <%= tab.name %></a>
+          <a href="#<%= tab.id %>" data-toggle="tab" data-tab-id="<%= tab.id %>"> <%= tab.iconString %> <%= tab.name %></a>
         </li>
       <% }) %>
     </ul>
@@ -60,6 +61,12 @@ class AbstractTabView extends Backbone.Marionette.LayoutView
 
     @TABS.forEach (tab) =>
       @[tab.id].show(tab.view)
+
+    @$('a[data-toggle="tab"]').on('shown.bs.tab', (e) =>
+      tabId = $(e.target).data("tab-id")
+      tab = _.find(@TABS, (t) -> t.id == tabId)
+      tab.view.render()
+    )
 
 
   serializeData : ->

@@ -27,16 +27,17 @@ class AbstractTreeRenderer
     @nodeList = []
 
 
-  setDimensions : ({width, height}) ->
+  setDimensions : (width, height) ->
 
-    $(@canvas).css({width, height})
     @canvas[0].width = width
     @canvas[0].height = height
 
 
   drawTree : (tree, @activeNodeId) ->
-    # clear Background
-    @ctx.clearRect(0, 0, @canvas.width(), @canvas.height())
+    width = @canvas.width()
+    height = @canvas.height()
+    @setDimensions(width, height)
+    @ctx.clearRect(0, 0, width, height)
     if app.oxalis.view.theme == Constants.THEME_BRIGHT
       @vgColor = "black"
     else
@@ -66,7 +67,7 @@ class AbstractTreeRenderer
     unless root?
       return
 
-    @nodeDistance = Math.min(@canvas.height() / (@getMaxTreeDepth(root, mode) + 1), @MAX_NODE_DISTANCE)
+    @nodeDistance = Math.min(height / (@getMaxTreeDepth(root, mode) + 1), @MAX_NODE_DISTANCE)
 
     # The algorithm works as follows:
     # A tree is given a left and right border that it can use. If
@@ -81,7 +82,7 @@ class AbstractTreeRenderer
     # by recordWidths(), the second by drawTreeWithWidths().
 
     @recordWidths(root)
-    @drawTreeWithWidths(root, @NODE_RADIUS, @canvas.width() - @NODE_RADIUS, @nodeDistance, mode)
+    @drawTreeWithWidths(root, @NODE_RADIUS, width - @NODE_RADIUS, @nodeDistance / 2, mode)
 
   drawTreeWithWidths : (tree, left, right, top, mode = @MODE_NORMAL) ->
 

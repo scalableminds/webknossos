@@ -1,10 +1,10 @@
 ### define
 ./settings_view : SettingsView
-./category_views/controls_category_view : ControlsCategoryView
-./category_views/viewport_category_view : ViewportCategoryView
-./category_views/tdview_category_view : TDViewCategoryView
-./category_views/isosurface_category_view : IsosurfaceCategoryView
-./category_views/segmentation_category_view : SegmentationCategoryView
+../category_views/controls_category_view : ControlsCategoryView
+../category_views/viewport_category_view : ViewportCategoryView
+../category_views/tdview_category_view : TDViewCategoryView
+../category_views/isosurface_category_view : IsosurfaceCategoryView
+../category_views/segmentation_category_view : SegmentationCategoryView
 ###
 
 class PlaneUserSettingsView extends SettingsView

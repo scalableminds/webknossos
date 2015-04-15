@@ -35,7 +35,7 @@ trait TaskAssignment {
       available <- findAllAssignable(ctx)
       finished <- UserService.findFinishedTasksOf(user)
     } yield {
-      available.filter(task => !finished.contains(task._id) && task.hasEnoughExperience(user))
+      available.filter(task => !finished.contains(task._id) && task.hasEnoughExperience(user)).sortBy(-_.priority)
     }
   }
 

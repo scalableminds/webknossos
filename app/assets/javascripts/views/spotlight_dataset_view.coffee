@@ -14,7 +14,7 @@ class SpotlightDatasetView extends Backbone.Marionette.ItemView
         <img class="img-rounded" src="<%= thumbnailURL %>">
 
         <div class="link-row">
-          <a href="/datasets/<%= name %>/view" title="View tracing">
+          <a href="/datasets/<%= name %>/view" title="View dataset">
             <img src="/assets/images/eye.svg">
           </a>
           <a href="#" title="Create skeleton tracing" id="skeletonTraceLink">

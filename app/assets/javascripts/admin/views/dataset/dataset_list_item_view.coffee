@@ -65,9 +65,17 @@ class DatasetListItemView extends Backbone.Marionette.CompositeView
           </div>
         <% } %>
         <% if(isActive){ %>
-          <a href="/datasets/<%= name %>/view" >
-            <i class="fa fa-eye"></i>view
-          </a>
+          <div class="dataset-actions">
+            <a href="/datasets/<%= name %>/view" title="View dataset">
+              <img src="/assets/images/eye.svg"> View
+            </a>
+            <a href="#" title="Create skeleton tracing" id="skeletonTraceLink">
+              <img src="/assets/images/skeleton.svg"> Start Skeleton Tracing
+            </a>
+            <a href="#" title="Create volume tracing" id="volumeTraceLink">
+              <img src="/assets/images/volume.svg"> Start Volume Tracing
+            </a>
+          </div>
         <% } %>
       </td>
     </tr>

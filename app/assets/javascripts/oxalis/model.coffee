@@ -150,6 +150,9 @@ class Model extends Backbone.Model
     @initSettersGetter()
     @trigger("sync")
 
+    # no error
+    return
+
 
   # For now, since we have no UI for this
   buildMappingsObject : (layers) ->

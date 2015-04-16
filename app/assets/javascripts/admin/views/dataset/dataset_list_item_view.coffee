@@ -54,6 +54,10 @@ class DatasetListItemView extends Backbone.Marionette.CompositeView
           <span class="label label-default"><%= layer.category %> - <%= layer.elementClass %></span>
       <% }) %>
       <td class="nowrap">
+        <form action="<%= jsRoutes.controllers.AnnotationController.createExplorational().url %>" method="POST">
+          <input type="hidden" name="dataSetName" value="<%= name %>" />
+          <input type="hidden" name="contentType" id="contentTypeInput" />
+        </form>
         <% if(dataSource.needsImport){ %>
           <div>
             <a href="/api/datasets/<%= name %>/import" class=" import-dataset">
@@ -103,6 +107,8 @@ class DatasetListItemView extends Backbone.Marionette.CompositeView
   events :
     "click .import-dataset" : "startImport"
     "click .details-toggle" : "toggleDetails"
+    "click #skeletonTraceLink" : "startSkeletonTracing"
+    "click #volumeTraceLink" : "startVolumeTracing"
 
 
   ui:
@@ -111,6 +117,8 @@ class DatasetListItemView extends Backbone.Marionette.CompositeView
     "progressBar" : ".progress-bar"
     "detailsToggle" : ".details-toggle"
     "detailsRow" : ".details-row"
+    "form" : "form"
+    "contentTypeInput" : "#contentTypeInput"
 
 
 
@@ -178,3 +186,20 @@ class DatasetListItemView extends Backbone.Marionette.CompositeView
     else
       @ui.detailsRow.addClass("hide")
       @ui.detailsToggle.removeClass("open")
+
+
+  startSkeletonTracing : (event) ->
+
+    @submitForm("skeletonTracing", event)
+
+
+  startVolumeTracing : (event) ->
+
+    @submitForm("volumeTracing", event)
+
+
+  submitForm : (type, event) ->
+
+    event.preventDefault()
+    @ui.contentTypeInput.val(type)
+    @ui.form.submit()

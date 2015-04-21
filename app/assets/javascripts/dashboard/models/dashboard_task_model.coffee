@@ -1,9 +1,10 @@
 ### define
 underscore : _
 backbone : Backbone
+nested_obj_model : NestedObjModel
 ###
 
-class DashboardTaskModel extends Backbone.Model
+class DashboardTaskModel extends NestedObjModel
 
   parse : (annotation) ->
     # transform the annotation object which holds a task to a task object which holds its annotation

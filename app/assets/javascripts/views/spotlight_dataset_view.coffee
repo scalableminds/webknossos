@@ -14,7 +14,7 @@ class SpotlightDatasetView extends Backbone.Marionette.ItemView
         <img class="img-rounded" src="<%= thumbnailURL %>">
 
         <div class="link-row">
-          <a href="/datasets/<%= name %>/view" title="View tracing">
+          <a href="/datasets/<%= name %>/view" title="View dataset">
             <img src="/assets/images/eye.svg">
           </a>
           <a href="#" title="Create skeleton tracing" id="skeletonTraceLink">
@@ -33,9 +33,13 @@ class SpotlightDatasetView extends Backbone.Marionette.ItemView
 
       <div class="dataset-description col-sm-8">
         <h3><%= owningTeam %></h3>
-        <h4>Original data and segmentation</h4>
+
         <p><h4>Dataset: <%= name %></h4></p>
-        <p><%= description %></p>
+        <% if(description) { %>
+          <p><%= description %></p>
+        <% } else { %>
+          <p>Original data and segmentation</p>
+        <% } %>
       </div>
     </div>
   """)

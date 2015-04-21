@@ -108,6 +108,8 @@ class Model extends Backbone.Model
       @binary[layer.name] = new Binary(this, tracing, layer, maxLayerZoomStep, @updatePipeline, @connectionInfo)
       maxZoomStep = Math.max(maxZoomStep, maxLayerZoomStep)
 
+    @buildMappingsObject(layers)
+
     if @getColorBinaries().length == 0
       Toast.error("No data available! Something seems to be wrong with the dataset.")
 
@@ -148,7 +150,22 @@ class Model extends Backbone.Model
     @initSettersGetter()
     @trigger("sync")
 
+    # no error
     return
+
+
+  # For now, since we have no UI for this
+  buildMappingsObject : (layers) ->
+
+    segmentationBinary = @getSegmentationBinary()
+
+    if segmentationBinary?
+      window.mappings = {
+        getAll : => segmentationBinary.mappings.getMappingNames()
+        getActive : => segmentationBinary.activeMapping
+        activate : (mapping) => segmentationBinary.setActiveMapping(mapping)
+      }
+
 
   getDataTokens : (layers) ->
 

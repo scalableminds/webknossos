@@ -6,7 +6,6 @@
 ./category_views/isosurface_category_view : IsosurfaceCategoryView
 ./category_views/segmentation_category_view : SegmentationCategoryView
 ./category_views/abstracttree_category_view : AbstractTreeCategoryView
-
 ###
 
 class PlaneUserSettingsView extends SettingsView

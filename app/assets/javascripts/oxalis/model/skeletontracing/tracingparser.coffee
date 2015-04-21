@@ -1,5 +1,6 @@
 ### define
 jquery : $
+three.color : ColorConverter
 underscore : _
 backbone : backbone
 libs/request : Request

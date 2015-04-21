@@ -11,6 +11,7 @@ app : app
 ./model/scaleinfo : ScaleInfo
 ./model/flycam2d : Flycam2d
 ./model/flycam3d : Flycam3d
+./model/settings/backbone_to_oxalis_adapter_model : BackboneToOxalisAdapterModel
 ./constants : constants
 libs/request : Request
 libs/toast : Toast
@@ -122,15 +123,6 @@ class Model extends Backbone.Model
     @listenTo(flycam3d, "changed", (matrix, zoomStep) => flycam.setPosition(matrix[12..14]))
     @listenTo(flycam, "positionChanged" : (position) => flycam3d.setPositionSilent(position))
 
-    # init state
-    state = @get("state")
-    flycam.setPosition( state.position || tracing.content.editPosition )
-    if state.zoomStep?
-      flycam.setZoomStep( state.zoomStep )
-      flycam3d.setZoomStep( state.zoomStep )
-    if state.rotation?
-      flycam3d.setRotation( state.rotation )
-
     if @get("controlMode") == constants.CONTROL_MODE_TRACE
 
       if isVolumeTracing
@@ -141,11 +133,16 @@ class Model extends Backbone.Model
         @set("skeletonTracing", new SkeletonTracing(
           tracing, flycam, flycam3d, @user, @get("datasetConfiguration"), @updatePipeline))
 
+    @applyState(@get("state"), tracing)
     @computeBoundaries()
 
     @set("tracing", tracing)
     @set("settings", tracing.content.settings)
     @set("mode", if isVolumeTracing then constants.MODE_VOLUME else constants.MODE_PLANE_TRACING)
+
+    {skeletonTracingAdapter, volumeTracingAdapter} = new BackboneToOxalisAdapterModel(this)
+    @set("skeletonTracingAdapter", skeletonTracingAdapter)
+    @set("volumeTracingAdapter", volumeTracingAdapter)
 
     @initSettersGetter()
     @trigger("sync")
@@ -276,6 +273,7 @@ class Model extends Backbone.Model
 
     return $.when.apply($, dfds)
 
+
   # Make the Model compatible between legacy Oxalis style and Backbone.Modela/Views
   initSettersGetter : ->
 
@@ -288,3 +286,15 @@ class Model extends Backbone.Model
           return @get(key)
       )
     )
+
+
+  applyState : (state, tracing) ->
+
+    @get("flycam").setPosition( state.position || tracing.content.editPosition )
+    if state.zoomStep?
+      @get("flycam").setZoomStep( state.zoomStep )
+      @get("flycam3d").setZoomStep( state.zoomStep )
+    if state.rotation?
+      @get("flycam3d").setRotation( state.rotation )
+    if state.activeNode?
+      @get("skeletonTracing")?.setActiveNode(state.activeNode)

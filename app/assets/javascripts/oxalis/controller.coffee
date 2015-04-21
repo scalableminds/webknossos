@@ -172,8 +172,6 @@ class Controller
           app.vent.trigger("changeViewMode", constants.MODE_ARBITRARY)
         "shift + 3" : =>
           app.vent.trigger("changeViewMode", constants.MODE_ARBITRARY_PLANE)
-        "shift + 4" : =>
-          app.vent.trigger("changeViewMode", constants.MODE_VOLUME)
 
         "t" : =>
           @view.toggleTheme()

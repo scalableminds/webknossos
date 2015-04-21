@@ -1,12 +1,12 @@
 ### define
-../right_menu_view : RightMenuView
+../abstract_tab_view : AbstractTabView
 ./right-menu/comment_tab_view : CommentTabView
 ./right-menu/abstract_tree_view : AbstractTreeView
 ./right-menu/list_tree_view : ListTreeView
 ./right-menu/dataset_info_view : DatasetInfoView
 ###
 
-class SkeletonTracingRightMenuView extends RightMenuView
+class SkeletonTracingRightMenuView extends AbstractTabView
 
   TABS : [
     {

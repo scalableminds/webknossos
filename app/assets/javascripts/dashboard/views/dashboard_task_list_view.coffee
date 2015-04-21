@@ -5,6 +5,7 @@ backbone.marionette : marionette
 ./task_transfer_modal_view : TaskTransferModalView
 routes : routes
 libs/toast : Toast
+sort_table_behavior : SortTableBehavior
 ###
 
 class DashboardTaskListView extends Backbone.Marionette.CompositeView
@@ -31,10 +32,10 @@ class DashboardTaskListView extends Backbone.Marionette.CompositeView
     <table class="table table-striped">
       <thead>
         <tr>
-          <th># </th>
-          <th>Type </th>
-          <th>Project </th>
-          <th>Description </th>
+          <th data-sort="formattedHash"># </th>
+          <th data-sort="type.summary">Type </th>
+          <th data-sort="projectName">Project </th>
+          <th data-sort="type.description">Description </th>
           <th>Modes </th>
           <th></th>
         </tr>
@@ -58,6 +59,10 @@ class DashboardTaskListView extends Backbone.Marionette.CompositeView
     "click #new-task-button" : "newTask"
     "click #transfer-task" : "transferTask"
     "click @ui.finishToggle" : "toggleFinished"
+
+  behaviors:
+    SortTableBehavior:
+      behaviorClass: SortTableBehavior
 
 
   initialize : (options) ->

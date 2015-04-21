@@ -3,6 +3,7 @@ underscore : _
 backbone.marionette : Marionette
 ./dataset_list_item_view : DatasetListItemView
 ./team_assignment_modal_view: TeamAssignmentModalView
+sort_table_behavior : SortTableBehavior
 ###
 
 class DatasetListView extends Backbone.Marionette.CompositeView
@@ -16,13 +17,13 @@ class DatasetListView extends Backbone.Marionette.CompositeView
             <i class="caret-right"></i>
             <i class="caret-down"></i>
           </th>
-          <th>Name</th>
-          <th>Datastore</th>
+          <th data-sort="dataSource.baseDir">Name</th>
+          <th data-sort="dataStore.name">Datastore</th>
           <th>Scale</th>
-          <th>Owning Team</th>
-          <th>Allowed Teams</th>
-          <th>Active</th>
-          <th>Public</th>
+          <th data-sort="owningTeam">Owning Team</th>
+          <th data-sort="">Allowed Teams</th>
+          <th data-sort="isActive">Active</th>
+          <th data-sort="isPublic">Public</th>
           <th>Data Layers</th>
           <th>Actions</th>
         </tr>
@@ -43,10 +44,14 @@ class DatasetListView extends Backbone.Marionette.CompositeView
   childView : DatasetListItemView
   childViewContainer: "table"
 
+  behaviors:
+    SortTableBehavior:
+      behaviorClass: SortTableBehavior
+
   initialize : ->
 
-    @collection.sortAttribute = "created"
-    
+    @collection.sortBy("created")
+
     @collection.fetch(
       silent : true
       data : "isEditable=true"

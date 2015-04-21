@@ -47,29 +47,9 @@ class PaginationCollection extends Backbone.Paginator.clientPager
   firstPage : ->
 
     @goTo(1)
-
-
-  ##  collection attributes  ##
-
-  # sortAttribute: 'tralaa'
-  # sortDirection: 1
-
+    
 
   ##  collection methods  ##
 
   sortBy: (attribute) ->
-    # @sortAttribute = attribute
     @setSort(@sortAttribute, @sortDirection)
-  #
-  #
-  # comparator: (a, b) ->
-  #
-  #   a = a.get(@sortAttribute)
-  #   b = b.get(@sortAttribute)
-  #
-  #   if a == b then return 0
-  #
-  #   if @sortDirection == 1
-  #     return if a > b then 1 else -1
-  #   else
-  #     return if a < b then 1 else -1

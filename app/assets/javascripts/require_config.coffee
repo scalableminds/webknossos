@@ -33,6 +33,7 @@ require.config(
     "worker"              : "libs/worker_plugin"
     "wrapped_worker"      : "libs/wrapped_worker_plugin"
     "nested_obj_model"    : "libs/nested_obj_model"
+    "sort_table_behavior" : "libs/behaviors/sort_table_behavior"
 
   shim :
     "underscore" :

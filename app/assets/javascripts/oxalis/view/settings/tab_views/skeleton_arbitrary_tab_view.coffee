@@ -7,25 +7,26 @@ oxalis/view/abstract_tab_view : AbstractTabView
 
 class SkeletonArbitraryTabView extends AbstractTabView
 
-  TABS : [
-    {
-      id : "tracing-settings-tab"
-      name : "Tracing"
-      iconClass : "fa fa-cogs"
-      viewClass : SkeletonTracingSettingsView
-    }
-    {
-      id : "dataset-settings-tab"
-      name : "Dataset"
-      iconClass : "fa fa-cogs"
-      active : true
-      viewClass : DatasetSettingsView
-    }
-    {
-      id : "user-settings-tab"
-      name : "User"
-      iconClass : "fa fa-cogs"
-      viewClass : ArbitraryUserSettingsView
-    }
-  ]
+  getTabs : ->
+    [
+      {
+        id : "tracing-settings-tab"
+        name : "Tracing"
+        iconClass : "fa fa-cogs"
+        viewClass : SkeletonTracingSettingsView
+      }
+      {
+        id : "dataset-settings-tab"
+        name : "Dataset"
+        iconClass : "fa fa-cogs"
+        active : true
+        viewClass : DatasetSettingsView
+      }
+      {
+        id : "user-settings-tab"
+        name : "User"
+        iconClass : "fa fa-cogs"
+        viewClass : ArbitraryUserSettingsView
+      }
+    ]
 

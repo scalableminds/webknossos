@@ -7,25 +7,26 @@ oxalis/view/abstract_tab_view : AbstractTabView
 
 class VolumeTabView extends AbstractTabView
 
-  TABS : [
-    {
-      id : "tracing-settings-tab"
-      name : "Tracing"
-      iconClass : "fa fa-cogs"
-      viewClass : VolumeTracingSettingsView
-    }
-    {
-      id : "dataset-settings-tab"
-      name : "Dataset"
-      iconClass : "fa fa-cogs"
-      active : true
-      viewClass : DatasetSettingsView
-    }
-    {
-      id : "user-settings-tab"
-      name : "User"
-      iconClass : "fa fa-cogs"
-      viewClass : PlaneUserSettingsView
-    }
-  ]
+  getTabs : ->
+    [
+      {
+        id : "tracing-settings-tab"
+        name : "Tracing"
+        iconClass : "fa fa-cogs"
+        viewClass : VolumeTracingSettingsView
+      }
+      {
+        id : "dataset-settings-tab"
+        name : "Dataset"
+        iconClass : "fa fa-cogs"
+        active : true
+        viewClass : DatasetSettingsView
+      }
+      {
+        id : "user-settings-tab"
+        name : "User"
+        iconClass : "fa fa-cogs"
+        viewClass : PlaneUserSettingsView
+      }
+    ]
 

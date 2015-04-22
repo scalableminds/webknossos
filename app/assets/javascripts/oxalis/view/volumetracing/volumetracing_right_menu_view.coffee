@@ -3,12 +3,13 @@
 ./right-menu/mapping_info_view : MappingInfoView
 ###
 
-class SkeletonTracingRightMenuView extends AbstractTabView
+class VolumeTracingRightMenuView extends AbstractTabView
 
-  TABS : [
-    {
-      id : "volume-mapping-info"
-      name : "Mapping Info"
-      viewClass : MappingInfoView
-    }
-  ]
+  getTabs : ->
+    [
+      {
+        id : "volume-mapping-info"
+        name : "Mapping Info"
+        viewClass : MappingInfoView
+      }
+    ]

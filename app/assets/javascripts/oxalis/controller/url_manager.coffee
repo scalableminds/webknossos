@@ -7,7 +7,7 @@ backbone : backbone
 class UrlManager
 
 
-  MAX_UPDATE_INTERVAL : 2000
+  MAX_UPDATE_INTERVAL : 1000
 
   constructor : (@model) ->
 
@@ -74,5 +74,8 @@ class UrlManager
 
     else
       state = state.concat( [flycam.getZoomStep().toFixed(2)] )
+
+    if @model.skeletonTracing?.getActiveNodeId()?
+      state.push(@model.skeletonTracing.getActiveNodeId())
 
     return @baseUrl + "#" + state.join(",")

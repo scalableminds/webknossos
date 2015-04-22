@@ -17,7 +17,7 @@ class AbstractTabView extends Backbone.Marionette.LayoutView
         </li>
       <% }) %>
     </ul>
-    <div class="tab-content">
+    <div class="tab-content flex-column">
       <% TABS.forEach(function(tab) { %>
         <div class="tab-pane" id="<%= tab.id %>"></div>
       <% }) %>

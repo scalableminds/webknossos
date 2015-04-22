@@ -3,6 +3,7 @@ oxalis/view/abstract_tab_view : AbstractTabView
 ../settings_views/volume_tracing_settings_view : VolumeTracingSettingsView
 ../settings_views/plane_user_settings_view : PlaneUserSettingsView
 ../settings_views/dataset_settings_view : DatasetSettingsView
+oxalis/model/settings/backbone_to_oxalis_adapter_model : BackboneToOxalisAdapterModel
 ###
 
 class VolumeTabView extends AbstractTabView
@@ -14,6 +15,7 @@ class VolumeTabView extends AbstractTabView
         name : "Tracing"
         iconClass : "fa fa-cogs"
         viewClass : VolumeTracingSettingsView
+        options : { model: new BackboneToOxalisAdapterModel(@model)}
       }
       {
         id : "dataset-settings-tab"

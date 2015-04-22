@@ -11,7 +11,6 @@ app : app
 ./model/scaleinfo : ScaleInfo
 ./model/flycam2d : Flycam2d
 ./model/flycam3d : Flycam3d
-./model/settings/backbone_to_oxalis_adapter_model : BackboneToOxalisAdapterModel
 ./constants : constants
 libs/request : Request
 libs/toast : Toast
@@ -139,10 +138,6 @@ class Model extends Backbone.Model
     @set("tracing", tracing)
     @set("settings", tracing.content.settings)
     @set("mode", if isVolumeTracing then constants.MODE_VOLUME else constants.MODE_PLANE_TRACING)
-
-    {skeletonTracingAdapter, volumeTracingAdapter} = new BackboneToOxalisAdapterModel(this)
-    @set("skeletonTracingAdapter", skeletonTracingAdapter)
-    @set("volumeTracingAdapter", volumeTracingAdapter)
 
     @initSettersGetter()
     @trigger("sync")

@@ -3,6 +3,7 @@ oxalis/view/abstract_tab_view : AbstractTabView
 ../settings_views/skeleton_tracing_settings_view : SkeletonTracingSettingsView
 ../settings_views/plane_user_settings_view : PlaneUserSettingsView
 ../settings_views/dataset_settings_view : DatasetSettingsView
+oxalis/model/settings/backbone_to_oxalis_adapter_model : BackboneToOxalisAdapterModel
 ###
 
 class SkeletonPlaneTabView extends AbstractTabView
@@ -14,6 +15,7 @@ class SkeletonPlaneTabView extends AbstractTabView
         name : "Tracing"
         iconClass : "fa fa-cogs"
         viewClass : SkeletonTracingSettingsView
+        options : { model: new BackboneToOxalisAdapterModel(@model)}
       }
       {
         id : "dataset-settings-tab"

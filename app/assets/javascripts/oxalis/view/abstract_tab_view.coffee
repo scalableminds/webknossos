@@ -8,7 +8,7 @@ class AbstractTabView extends Backbone.Marionette.LayoutView
   MARGIN : 40
   TABS : []
 
-  className : "flex-column    "
+  className : "flex-column-container"
   template : _.template("""
     <ul class="nav nav-tabs">
       <% TABS.forEach(function(tab) { %>
@@ -17,7 +17,7 @@ class AbstractTabView extends Backbone.Marionette.LayoutView
         </li>
       <% }) %>
     </ul>
-    <div class="tab-content flex-column">
+    <div class="tab-content">
       <% TABS.forEach(function(tab) { %>
         <div class="tab-pane" id="<%= tab.id %>"></div>
       <% }) %>
@@ -44,6 +44,14 @@ class AbstractTabView extends Backbone.Marionette.LayoutView
 
       regions[tab.id] = "#" + tab.id
     @addRegions(regions)
+
+
+  resize : ->
+
+    _.defer =>
+      # make tab content 100% height
+      tabContentPosition = @ui.tabContentContainer.position()
+      @ui.tabContentContainer.height(window.innerHeight - tabContentPosition.top - @MARGIN)
 
 
   afterRender : ->

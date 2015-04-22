@@ -66,7 +66,7 @@ class AbstractTreeRenderer
     unless root?
       return
 
-    @nodeDistance = Math.min(@canvas.height() / (@getMaxTreeDepth(root, mode) + 1), @MAX_NODE_DISTANCE)
+    @nodeDistance = Math.min(height / (@getMaxTreeDepth(root, mode) + 1), @MAX_NODE_DISTANCE)
 
     # The algorithm works as follows:
     # A tree is given a left and right border that it can use. If

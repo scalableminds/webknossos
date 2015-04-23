@@ -55,7 +55,7 @@ class PullQueue
       zoomStep = bucket[3]
       transmitBuffer.push(
         zoomStep
-        if @fourBit and zoomStep == 0 then 1 else 0
+        if @shouldRequestFourBit(zoomStep) then 1 else 0
         bucket[0] << (zoomStep + @cube.BUCKET_SIZE_P)
         bucket[1] << (zoomStep + @cube.BUCKET_SIZE_P)
         bucket[2] << (zoomStep + @cube.BUCKET_SIZE_P)
@@ -124,6 +124,11 @@ class PullQueue
 
 
   setFourBit : (@fourBit) ->
+
+
+  shouldRequestFourBit : (zoomStep) ->
+
+    return @fourBit and zoomStep == 0 and @layer.category == "color"
 
 
   getLoadSocket : ->

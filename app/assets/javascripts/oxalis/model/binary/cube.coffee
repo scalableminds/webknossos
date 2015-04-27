@@ -20,7 +20,7 @@ class Cube
   arbitraryCube : null
   dataCubes : null
   upperBoundary : null
-  mapping : []
+  mapping : null
 
   buckets : null
   bucketIterator : 0

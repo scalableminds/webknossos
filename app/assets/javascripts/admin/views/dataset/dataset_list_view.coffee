@@ -10,7 +10,7 @@ class DatasetListView extends Backbone.Marionette.CompositeView
 
   className : "datasets"
   template : _.template("""
-    <table class="table table-double-striped table-details">
+    <table class="table table-double-striped table-details sortable-table">
       <thead>
         <tr>
           <th class="details-toggle-all">
@@ -21,7 +21,7 @@ class DatasetListView extends Backbone.Marionette.CompositeView
           <th data-sort="dataStore.name">Datastore</th>
           <th>Scale</th>
           <th data-sort="owningTeam">Owning Team</th>
-          <th data-sort="">Allowed Teams</th>
+          <th>Allowed Teams</th>
           <th data-sort="isActive">Active</th>
           <th data-sort="isPublic">Public</th>
           <th>Data Layers</th>

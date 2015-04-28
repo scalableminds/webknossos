@@ -29,7 +29,7 @@ class DashboardTaskListView extends Backbone.Marionette.CompositeView
     <a href="#" id="toggle-finished" class="btn btn-default">
       Show finished tasks only
     </a>
-    <table class="table table-striped">
+    <table class="table table-striped sortable-table">
       <thead>
         <tr>
           <th data-sort="formattedHash"># </th>

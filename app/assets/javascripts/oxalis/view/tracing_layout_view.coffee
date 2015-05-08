@@ -47,7 +47,7 @@ class TracingLayoutView extends Backbone.Marionette.LayoutView
 
     @listenTo(@, "render", @afterRender)
     @listenTo(app.vent, "planes:resize", @resize)
-    @listenTo(app.vent, "changeViewMode", @renderSettings)
+    @listenTo(@model, "change:mode", @renderSettings)
     @listenTo(@model, "sync", @renderRegions)
     $(window).on("resize", @resize.bind(@))
 

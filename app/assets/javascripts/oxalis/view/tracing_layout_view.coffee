@@ -85,7 +85,7 @@ class TracingLayoutView extends Backbone.Marionette.LayoutView
   renderSettings : ->
 
     if @isSkeletonMode()
-      settingsTabClass = if @isArbitraryMode then SkeletonArbitraryTabView else SkeletonPlaneTabView
+      settingsTabClass = if @isArbitraryMode() then SkeletonArbitraryTabView else SkeletonPlaneTabView
       settingsTabView = new settingsTabClass(@options)
     else if @isVolumeMode()
       settingsTabView = new VolumeTabView(@options)

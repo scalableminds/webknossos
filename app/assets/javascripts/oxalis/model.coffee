@@ -11,7 +11,6 @@ app : app
 ./model/scaleinfo : ScaleInfo
 ./model/flycam2d : Flycam2d
 ./model/flycam3d : Flycam3d
-./model/settings/backbone_to_oxalis_adapter_model : BackboneToOxalisAdapterModel
 ./constants : constants
 libs/request : Request
 libs/toast : Toast
@@ -26,7 +25,6 @@ libs/pipeline : Pipeline
 
 
 class Model extends Backbone.Model
-
 
   fetch : (options) ->
 
@@ -61,7 +59,7 @@ class Model extends Backbone.Model
           @set("datasetConfiguration", new DatasetConfiguration({@datasetName}))
           @get("datasetConfiguration").fetch().pipe( =>
 
-            layers  = @getLayers(tracing.content.contentData.customLayers)
+            layers = @getLayers(tracing.content.contentData.customLayers)
 
             $.when(
               @getDataTokens(layers)...
@@ -110,6 +108,8 @@ class Model extends Backbone.Model
       @binary[layer.name] = new Binary(this, tracing, layer, maxLayerZoomStep, @updatePipeline, @connectionInfo)
       maxZoomStep = Math.max(maxZoomStep, maxLayerZoomStep)
 
+    @buildMappingsObject(layers)
+
     if @getColorBinaries().length == 0
       Toast.error("No data available! Something seems to be wrong with the dataset.")
 
@@ -122,14 +122,12 @@ class Model extends Backbone.Model
     @listenTo(flycam3d, "changed", (matrix, zoomStep) => flycam.setPosition(matrix[12..14]))
     @listenTo(flycam, "positionChanged" : (position) => flycam3d.setPositionSilent(position))
 
-
     if @get("controlMode") == constants.CONTROL_MODE_TRACE
 
       if isVolumeTracing
         $.assert( @getSegmentationBinary()?,
           "Volume is allowed, but segmentation does not exist" )
         @set("volumeTracing", new VolumeTracing(tracing, flycam, @getSegmentationBinary(), @updatePipeline))
-
       else
         @set("skeletonTracing", new SkeletonTracing(
           tracing, flycam, flycam3d, @user, @get("datasetConfiguration"), @updatePipeline))
@@ -141,14 +139,25 @@ class Model extends Backbone.Model
     @set("settings", tracing.content.settings)
     @set("mode", if isVolumeTracing then constants.MODE_VOLUME else constants.MODE_PLANE_TRACING)
 
-    {skeletonTracingAdapter, volumeTracingAdapter} = new BackboneToOxalisAdapterModel(this)
-    @set("skeletonTracingAdapter", skeletonTracingAdapter)
-    @set("volumeTracingAdapter", volumeTracingAdapter)
-
     @initSettersGetter()
     @trigger("sync")
 
+    # no error
     return
+
+
+  # For now, since we have no UI for this
+  buildMappingsObject : (layers) ->
+
+    segmentationBinary = @getSegmentationBinary()
+
+    if segmentationBinary?
+      window.mappings = {
+        getAll : => segmentationBinary.mappings.getMappingNames()
+        getActive : => segmentationBinary.activeMapping
+        activate : (mapping) => segmentationBinary.setActiveMapping(mapping)
+      }
+
 
   getDataTokens : (layers) ->
 
@@ -231,6 +240,33 @@ class Model extends Backbone.Model
       for i in [0..2]
         @lowerBoundary[i] = Math.min @lowerBoundary[i], binary.lowerBoundary[i]
         @upperBoundary[i] = Math.max @upperBoundary[i], binary.upperBoundary[i]
+
+  # delegate save request to all submodules
+  save : ->
+
+    submodels = []
+    dfds = []
+
+    if @user?
+      submodels.push[@user]
+
+    if @get("dataset")?
+      submodels.push[@get("dataset")]
+
+    if @get("datasetConfiguration")?
+      submodels.push[@get("datasetConfiguration")]
+
+    if @get("volumeTracing")?
+      submodels.push(@get("volumeTracing").stateLogger)
+
+    if @get("skeletonTracing")?
+      submodels.push(@get("skeletonTracing").stateLogger)
+
+    _.each(submodels, (model) ->
+      dfds.push( model.save() )
+    )
+
+    return $.when.apply($, dfds)
 
 
   # Make the Model compatible between legacy Oxalis style and Backbone.Modela/Views

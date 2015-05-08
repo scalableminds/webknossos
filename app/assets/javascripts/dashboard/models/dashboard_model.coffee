@@ -45,7 +45,8 @@ class DashboardModel extends Backbone.Model
 
   getFinishedTasks : ->
 
-    return @get("tasks")
+    filteredTasks = @get("tasks").filter( (task) -> return task.get("annotation").state.isFinished )
+    return new Backbone.Collection(filteredTasks)
 
 
   getUnfinishedTasks : ->

@@ -26,7 +26,7 @@ object Authentication extends Controller with Secured with ProvidesUnauthorizedS
 
   val registerForm: Form[(String, String, String, String, String)] = {
 
-    def registerFormApply(team: String, email: String, firstName: String, lastName: String, password: Tuple2[String, String]) =
+    def registerFormApply(team: String, email: String, firstName: String, lastName: String, password: (String, String)) =
       (team, email.toLowerCase, firstName, lastName, password._1)
 
     def registerFormUnapply(user: (String, String, String, String, String)) =
@@ -34,7 +34,7 @@ object Authentication extends Controller with Secured with ProvidesUnauthorizedS
 
     val passwordField = tuple("main" -> text, "validation" -> text)
       .verifying("user.password.nomatch", pw => pw._1 == pw._2)
-      .verifying("user.password.tooshort", pw => pw._1.length >= 6)
+      .verifying("user.password.tooshort", pw => pw._1.length >= 8)
 
     Form(
       mapping(
@@ -64,7 +64,7 @@ object Authentication extends Controller with Secured with ProvidesUnauthorizedS
       val boundForm = registerForm.bindFromRequest
       boundForm.fold(
       formWithErrors =>
-        formHtml(registerForm).map(BadRequest(_)), {
+        formHtml(formWithErrors).map(BadRequest(_)), {
         case (team, email, firstName, lastName, password) => {
           UserService.findOneByEmail(email).futureBox.flatMap {
             case Full(_) =>
@@ -119,7 +119,7 @@ object Authentication extends Controller with Secured with ProvidesUnauthorizedS
                 if (user.verified)
                   Redirect(controllers.routes.Application.index)
                 else
-                  Redirect("/dashboard")
+                  BadRequest(html.user.login(loginForm.bindFromRequest.withGlobalError("user.notVerified")))
               redirectLocation.withSession(Secured.createSession(user))
 
           }.getOrElse {

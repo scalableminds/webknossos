@@ -9,6 +9,7 @@ class VolumeTracingSettingsView extends SettingsView
 
 
   id : "tracing-settings"
+  className: "flex-column"
 
   modelName : "volumeTracingAdapter"
 

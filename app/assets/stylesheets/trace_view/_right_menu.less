@@ -1,6 +1,10 @@
 // The menu items to the right side of the tracing view.
 // Currently tabs for comments / trees etc
 
+#abstract-tree-canvas {
+  flex-grow: 1;
+}
+
 #tab-trees {
   p {
     width: 260px;
@@ -19,52 +23,45 @@
   }
 }
 
-.flex-column-container, #right-menu .tab-pane > div {
-  display: flex;
-  flex-direction: column;
-  flex-grow: 1;
-}
-
-
-#right-menu {
-
+.tab-menu {
   display: inline-flex;
   flex-direction: column;
-  width: 351px; // will be set dynamically in JS
   margin: 10px;
   overflow: hidden;
   height: calc(100vh ~"-" @navbar-height ~"-" 20px); // 20px = 2 * 10px margin
 
-  .tab-content {
-    display: flex;
-    flex-grow: 1;
-    padding-top: 10px;
-    flex-direction: column;
-
-    .tab-pane {
-      min-height: 100px;
-      word-wrap: break-word;
-      white-space: normal;
-
-      ul {
-        list-style: none;
-        padding-left: 5px;
-      }
-    }
-
-    .tab-pane.active{
-      display: flex;
-      flex-direction: column;
-      flex-grow: 1;
-    }
+  .tab-pane {
+    min-height: 100px;
+    word-wrap: break-word;
+    white-space: normal;
   }
 
+  .tab-pane.active {
+    .flex-column;
+  }
 }
 
-#comment-list, #tree-list {
+.flex-overflow {
   overflow-y: auto;
   flex-grow: 1;
   height: 0;
+}
+
+#right-menu {
+
+  .tab-menu;
+  width: 351px; // will be set dynamically in JS
+
+  .nav-tabs {
+    margin-bottom: 20px;
+  }
+
+  .tab-pane {
+    ul {
+      list-style: none;
+      padding-left: 5px;
+    }
+  }
 }
 
 #tree-list {

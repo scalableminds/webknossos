@@ -1,23 +1,23 @@
 ### define
 backbone.marionette : marionette
+underscore : _
 ###
 
 class AbstractTabView extends Backbone.Marionette.LayoutView
 
   MARGIN : 40
-  TABS : []
 
-  className : "flex-column-container"
+  className : "flex-column"
   template : _.template("""
     <ul class="nav nav-tabs">
-      <% TABS.forEach(function(tab) { %>
+      <% tabs.forEach(function(tab) { %>
         <li>
-          <a href="#<%= tab.id %>" data-toggle="tab"> <%= tab.iconString %> <%= tab.name %></a>
+          <a href="#<%= tab.id %>" data-toggle="tab" data-tab-id="<%= tab.id %>"> <%= tab.iconString %> <%= tab.name %></a>
         </li>
       <% }) %>
     </ul>
-    <div class="tab-content">
-      <% TABS.forEach(function(tab) { %>
+    <div class="tab-content flex-column">
+      <% tabs.forEach(function(tab) { %>
         <div class="tab-pane" id="<%= tab.id %>"></div>
       <% }) %>
     </div>
@@ -34,23 +34,22 @@ class AbstractTabView extends Backbone.Marionette.LayoutView
 
     regions = {}
     @activeTabIndex = 0
-    @TABS.forEach (tab, index) =>
+    @tabs = @getTabs()
+    @tabs.forEach (tab, index) =>
       if tab.active
         @activeTabIndex = index
 
-      tab.view = new tab.viewClass(options)
+      tab.view = new tab.viewClass(tab.options || options)
       tab.iconString = if tab.iconClass then "<i class=\"#{tab.iconClass}\"></i>" else ""
 
       regions[tab.id] = "#" + tab.id
     @addRegions(regions)
 
 
-  resize : ->
+  # abstract method
+  getTabs : ->
 
-    _.defer =>
-      # make tab content 100% height
-      tabContentPosition = @ui.tabContentContainer.position()
-      @ui.tabContentContainer.height(window.innerHeight - tabContentPosition.top - @MARGIN)
+    return []
 
 
   afterRender : ->
@@ -58,11 +57,17 @@ class AbstractTabView extends Backbone.Marionette.LayoutView
     @$(@ui.tabContentContainer.children()[@activeTabIndex]).addClass("active")
     @$(@ui.tabNavbarContainer.children()[@activeTabIndex]).addClass("active")
 
-    @TABS.forEach (tab) =>
+    @tabs.forEach (tab) =>
       @[tab.id].show(tab.view)
+
+    @$('a[data-toggle="tab"]').on('shown.bs.tab', (e) =>
+      tabId = $(e.target).data("tab-id")
+      tab = _.find(@tabs, (t) -> t.id == tabId)
+      tab.view.render()
+    )
 
 
   serializeData : ->
 
-    return {@TABS}
+    return {@tabs}
 

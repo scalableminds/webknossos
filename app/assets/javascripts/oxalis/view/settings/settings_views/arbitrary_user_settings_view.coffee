@@ -8,6 +8,7 @@ class ArbitraryUserSettingsView extends SettingsView
 
 
   id : "user-settings"
+  className : "flex-column"
 
 
   modelName : "user"

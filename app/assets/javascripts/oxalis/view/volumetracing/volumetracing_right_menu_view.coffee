@@ -4,17 +4,18 @@
 ../viewmode/right-menu/dataset_info_view : DatasetInfoView
 ###
 
-class SkeletonTracingRightMenuView extends AbstractTabView
+class VolumeTracingRightMenuView extends AbstractTabView
 
-  TABS : [
-    {
-      id : "tab-info"
-      name : "Info"
-      viewClass : DatasetInfoView
-    }
-    {
-      id : "volume-mapping-info"
-      name : "Mapping Info"
-      viewClass : MappingInfoView
-    }
-  ]
+  getTabs : ->
+    [
+      {
+        id : "tab-info"
+        name : "Info"
+        viewClass : DatasetInfoView
+      }
+      {
+        id : "volume-mapping-info"
+        name : "Mapping Info"
+        viewClass : MappingInfoView
+      }
+    ]

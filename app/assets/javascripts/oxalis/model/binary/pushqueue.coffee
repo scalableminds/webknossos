@@ -1,14 +1,15 @@
 ### define
 underscore : _
+jquery : $
 libs/array_buffer_socket : ArrayBufferSocket
-libs/unit8array_builder : Uint8ArrayBuilder
-gzip : gzip
+libs/uint8array_builder : Uint8ArrayBuilder
+libs/wrapped_worker_plugin!./gzip_worker : GzipWorker
 ###
 
 class PushQueue
 
   BATCH_LIMIT : 1
-  BATCH_SIZE : 10
+  BATCH_SIZE : 32
   THROTTLE_TIME : 10000
 
 
@@ -95,10 +96,12 @@ class PushQueue
 
     @updatePipeline.executePassAlongAction =>
 
-      console.log "Pushing batch", batch
-      gzip = new Zlib.Gzip(transmitBuffer)
-      transmitBuffer = gzip.compress()
-      @getSendSocket().send(transmitBuffer)
+      GzipWorker().send(
+        method : "compress"
+        args : [transmitBuffer]
+      ).then( (buffer) =>
+        @getSendSocket().send(buffer)
+      )
 
 
   getSendSocket : ->

@@ -7,6 +7,7 @@ backbone.marionette : Marionette
 
 class DatasetListView extends Backbone.Marionette.CompositeView
 
+  className : "datasets"
   template : _.template("""
     <table class="table table-double-striped table-details">
       <thead>
@@ -43,6 +44,13 @@ class DatasetListView extends Backbone.Marionette.CompositeView
   childViewContainer: "table"
 
   initialize : ->
+
+    @collection.comparator = (a,b) ->
+      if a.get("created") < b.get("created")
+        return 1
+      else if a.get("created") > b.get("created")
+        return -1
+      return 0
 
     @collection.fetch(
       silent : true

@@ -24,6 +24,9 @@ class UrlManager
 
   parseUrl : ->
 
+    # State string format:
+    # x,y,z,mode,zoomStep[,rotX,rotY,rotZ][,activeNode]
+
     stateString = location.hash.slice(1)
     state = {}
 
@@ -38,8 +41,10 @@ class UrlManager
 
         if stateArray.length >= 8
           state.rotation = _.map stateArray.slice(5, 8), (e) -> +e
+
           if stateArray[8]?
             state.activeNode = +stateArray[8]
+
         else
           if stateArray[5]?
             state.activeNode = +stateArray[5]
@@ -53,7 +58,7 @@ class UrlManager
     @listenTo(@model.flycam3d, "changed", @update)
     @listenTo(app.vent, "changeViewMode", @update)
 
-    if @model.skeletonTracing?
+    if @model.skeletonTracing
       @listenTo(@model.skeletonTracing, "newActiveNode", @update)
 
 
@@ -71,7 +76,6 @@ class UrlManager
       state = state.concat( [flycam.getZoomStep().toFixed(2)] )
 
     if @model.skeletonTracing?.getActiveNodeId()?
-      activeNode = @model.skeletonTracing.getActiveNodeId()
-      state = state.concat([activeNode])
+      state.push(@model.skeletonTracing.getActiveNodeId())
 
     return @baseUrl + "#" + state.join(",")

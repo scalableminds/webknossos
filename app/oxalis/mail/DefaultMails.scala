@@ -17,7 +17,7 @@ object DefaultMails {
    */
   val uri = conf.getString("http.uri") getOrElse ("http://localhost")
 
-  val defaultFrom = "no-reply@oxalis.at"
+  val defaultFrom = "no-reply@webknossos.org"
 
   val brainTracingMailingList = conf.getString("braintracing.mailinglist") getOrElse ("")
   val supportMail = conf.getString("scm.support.mail") getOrElse ("support@scm.io")
@@ -60,8 +60,8 @@ object DefaultMails {
   def changePasswordMail(name: String, receiver: String) = {
     Mail(
       from = defaultFrom,
-      subject = "Your Oxalis password was changed. If this was not you, please get in contact with your admin immediately.",
-      bodyText = html.mail.validated(name).body,
+      subject = "Your Oxalis password was changed",
+      bodyText = html.mail.passwordChanged(name).body,
       recipients = List(receiver))
   }
 }

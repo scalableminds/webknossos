@@ -7,13 +7,16 @@ oxalis/controller/viewmodes/arbitrary_controller : ArbitraryController
 
 class DatasetInfoView extends Backbone.Marionette.ItemView
 
-  className : "col-sm-12"
+  className : "col-sm-12 flex-column"
   id : "dataset"
   template : _.template("""
     <div class="well">
       <p><%= annotationType %></p>
       <p>DataSet: <%= dataSetName %></p>
       <p>Viewport width: <%= chooseUnit(zoomLevel) %></p>
+      <% if(treeCount != null) { %>
+        <p>Total number of trees: <%= treeCount %></p>
+      <% } %>
     </div>
   """)
 
@@ -33,13 +36,19 @@ class DatasetInfoView extends Backbone.Marionette.ItemView
     @listenTo(@model.flycam3d, "changed", @render)
     @listenTo(@model.flycam, "zoomStepChanged", @render)
 
+    if @model.skeletonTracing
+      @listenTo(@model.skeletonTracing, "deleteTree", @render)
+      @listenTo(@model.skeletonTracing, "mergeTree", @render)
+      @listenTo(@model.skeletonTracing, "newTree", @render)
+
 
   serializeData : ->
 
     return {
       annotationType : @model.get("tracingType")
       zoomLevel : @calculateZoomLevel()
-      dataSetName :@model.get("dataset").get("name")
+      dataSetName : @model.get("dataset").get("name")
+      treeCount : @model.skeletonTracing?.trees.length
     }
 
 
@@ -61,4 +70,3 @@ class DatasetInfoView extends Backbone.Marionette.ItemView
 
     @model.flycam3d.off("changed")
     @model.flycam.off("zoomStepChanged")
-

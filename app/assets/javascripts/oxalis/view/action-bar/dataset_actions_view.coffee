@@ -7,7 +7,7 @@ libs/toast : Toast
 oxalis/constants : Constants
 ###
 
-class DatsetActionsView extends Backbone.Marionette.ItemView
+class DatasetActionsView extends Backbone.Marionette.ItemView
 
   template : _.template("""
     <% if(tracing.restrictions.allowUpdate){ %>
@@ -50,7 +50,7 @@ class DatsetActionsView extends Backbone.Marionette.ItemView
               </tbody>
             </table>
             <p>For a full list of all keyboard shortcuts <a href="/help/keyboardshortcuts">see the help section.</a></p>
-            <p>We encourage you to read the <a href="/help/faq">FAQ</a> or the <a href="#">tutorials</a> to completely understand how Oxalis works.</p>
+            <p>We encourage you to read the <a href="/help/faq">FAQ</a> or the <a href="#">tutorials</a> to completely understand how webKnossos works.</p>
             <p>All other settings like moving speed, clipping distance and particle size can be adjusted in the settings tab located to the left.</p>
           </div>
           <div class="modal-footer">
@@ -99,8 +99,8 @@ class DatsetActionsView extends Backbone.Marionette.ItemView
 
     if evt
       evt.preventDefault()
-    app.vent.trigger("saveEverything")
 
+    return @model.save()
 
   mergeTracing : ->
 

@@ -8,7 +8,7 @@ class DatasetSettingsView extends SettingsView
 
 
   id : "dataset-settings"
-
+  className : "flex-column"
 
   modelName : "datasetConfiguration"
 

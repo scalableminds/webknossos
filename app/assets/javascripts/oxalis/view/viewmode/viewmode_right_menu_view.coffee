@@ -5,11 +5,12 @@
 
 class ViewmodeRightMenuView extends AbstractTabView
 
-  TABS : [
-    {
-      id : "tab-info"
-      name : "Info"
-      viewClass : DatasetInfoView
-    }
-  ]
+  getTabs : ->
+    [
+      {
+        id : "tab-info"
+        name : "Info"
+        viewClass : DatasetInfoView
+      }
+    ]
 

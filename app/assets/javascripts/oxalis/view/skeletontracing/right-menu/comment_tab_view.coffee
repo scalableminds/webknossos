@@ -7,6 +7,7 @@ libs/input : Input
 
 class CommentTabView extends Backbone.Marionette.CompositeView
 
+  className : "flex-column"
   template : _.template("""
     <div class="input-group" id="comment-navbar">
       <div class="input-group-btn">
@@ -24,7 +25,7 @@ class CommentTabView extends Backbone.Marionette.CompositeView
         </button>
       </div>
     </div>
-    <ul id="comment-list"></ul>
+    <ul id="comment-list" class="flex-overflow"></ul>
   """)
 
   childView : CommentTabItemView

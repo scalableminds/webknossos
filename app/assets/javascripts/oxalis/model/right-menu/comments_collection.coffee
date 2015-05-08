@@ -10,6 +10,7 @@ class CommentsCollection extends Backbone.Collection
 
     @coefficient = 1
 
+
   comparator : (model) ->
 
     return model.get("node") * @coefficient
@@ -19,3 +20,13 @@ class CommentsCollection extends Backbone.Collection
 
     @coefficient = if isAscending then 1 else -1
     super()
+
+
+  findCommentByNodeId : (id) ->
+
+    return @findWhere({ node: id })
+
+
+  hasCommentWithNodeId : (id) ->
+
+    return @findCommentByNodeId(id) != undefined

@@ -11,7 +11,6 @@ class User extends Backbone.Model
 
   initialize : ->
 
-    @listenTo(app.vent, "saveEverything", @save)
     @listenTo(@, "change", -> @save())
 
 

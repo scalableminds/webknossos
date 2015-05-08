@@ -36,13 +36,14 @@ case class Task(
                  assignedInstances: Int = 0,
                  tracingTime: Option[Long] = None,
                  created: DateTime = DateTime.now(),
+                 isActive: Boolean = true,
                  _project: Option[String] = None,
                  _id: BSONObjectID = BSONObjectID.generate
                ) extends FoxImplicits {
 
   lazy val id = _id.stringify
 
-  def taskType(implicit ctx: DBAccessContext) = TaskTypeDAO.findOneById(_taskType)(GlobalAccessContext).toFox
+  def taskType(implicit ctx: DBAccessContext) = TaskTypeDAO.findOneById(_taskType, true)(GlobalAccessContext).toFox
 
   def project(implicit ctx: DBAccessContext) =
     _project.toFox.flatMap(name => ProjectDAO.findOneByName(name))
@@ -142,6 +143,14 @@ object TaskDAO extends SecuredBaseDAO[Task] with FoxImplicits {
     }
   }
 
+  override def find(query: JsObject = Json.obj())(implicit ctx: DBAccessContext) = {
+    super.find(query ++ Json.obj("isActive" -> true))
+  }
+
+  override def findOne(query: JsObject = Json.obj())(implicit ctx: DBAccessContext) = {
+    super.findOne(query ++ Json.obj("isActive" -> true))
+  }
+
   @deprecated(message = "This method shouldn't be used. Use TaskService.remove instead", "2.0")
   override def removeById(bson: BSONObjectID)(implicit ctx: DBAccessContext) = {
     super.removeById(bson)
@@ -158,6 +167,9 @@ object TaskDAO extends SecuredBaseDAO[Task] with FoxImplicits {
     }))
   }
 
+  def deleteAllWithTaskType(taskType: TaskType)(implicit ctx: DBAccessContext) =
+    update(Json.obj("_taskType" -> taskType._id), Json.obj("$set" -> Json.obj("isActive" -> false)))
+
   def findAllByTaskType(taskType: TaskType)(implicit ctx: DBAccessContext) = withExceptionCatcher{
     find("_taskType", taskType._id).collect[List]()
   }
@@ -168,6 +180,13 @@ object TaskDAO extends SecuredBaseDAO[Task] with FoxImplicits {
 
   def findAllAssignable(implicit ctx: DBAccessContext) =
     findAll.map(_.filter(!_.isFullyAssigned))
+
+  def findOneById(id: BSONObjectID, includeDeleted: Boolean = false)(implicit ctx: DBAccessContext) = withExceptionCatcher{
+    if(includeDeleted)
+      super.find(Json.obj("_id" -> id)).one[Task]
+    else
+      super.find(Json.obj("_id" -> id, "isActive" -> true)).one[Task]
+  }
 
   def logTime(time: Long, _task: BSONObjectID)(implicit ctx: DBAccessContext) =
     update(Json.obj("_id" -> _task), Json.obj("$inc" -> Json.obj("tracingTime" -> time)))

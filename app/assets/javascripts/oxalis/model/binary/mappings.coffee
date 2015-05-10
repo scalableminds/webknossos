@@ -98,3 +98,4 @@ class Mappings
     for entry in array
       min = Math.min(min, entry)
     return min
+

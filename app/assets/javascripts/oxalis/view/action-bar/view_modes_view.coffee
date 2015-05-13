@@ -31,13 +31,13 @@ class ViewModesView extends Backbone.Marionette.ItemView
 
   initialize : (options) ->
 
-    @listenTo(app.vent, "changeViewMode", @updateForMode)
+    @listenTo(@model, "change:mode", @updateForMode)
 
 
   changeMode : (evt) ->
 
     mode = @modeMapping[evt.target.id]
-    app.vent.trigger("changeViewMode", mode)
+    @model.setMode(mode)
 
 
   updateForMode : (mode) ->

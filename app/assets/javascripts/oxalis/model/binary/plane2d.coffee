@@ -81,10 +81,14 @@ class Plane2D
           @dataTexture.ready &= not (u in [@dataTexture.area[0]..@dataTexture.area[2]] and v in [@dataTexture.area[1]..@dataTexture.area[3]])
     )
 
-    @listenTo(@cube, "volumeLabeled", ->
-      @dataTexture.tiles = new Array(@BUCKETS_PER_ROW * @BUCKETS_PER_ROW)
-      @dataTexture.ready = false
-    )
+    @cube.on "volumeLabled", => @reset()
+    @cube.on "mappingChanged", => @reset()
+
+
+  reset : ->
+
+    @dataTexture.tiles = new Array(@BUCKETS_PER_ROW * @BUCKETS_PER_ROW)
+    @dataTexture.ready = false
 
 
   forceRedraw : ->
@@ -308,7 +312,10 @@ class Plane2D
     map = new Array(@MAP_SIZE)
     map[0] = undefined
 
-    for i in [Math.min(@cube.LOOKUP_DEPTH_UP, @cube.ZOOM_STEP_COUNT - zoomStep - 1)...0]
+    maxZoomStepOffset = Math.max(0, Math.min(@cube.LOOKUP_DEPTH_UP,
+      @cube.ZOOM_STEP_COUNT - zoomStep - 1
+    ))
+    for i in [maxZoomStepOffset...0]
 
       bucket = [
         bucket_x >> i
@@ -404,7 +411,7 @@ class Plane2D
     mapping = source.mapping
 
     bytesSrc       = @DATA_BIT_DEPTH >> 3
-    bytesSrcMapped = if mapping? then @MAPPED_DATA_BIT_DEPTH >> 3 else bytesSrc
+    bytesSrcMapped = if mapping? and mapping.length then @MAPPED_DATA_BIT_DEPTH >> 3 else bytesSrc
     bytesDest      = @TEXTURE_BIT_DEPTH >> 3
     shorten        = bytesDest < bytesSrcMapped
 
@@ -415,7 +422,7 @@ class Plane2D
       sourceValue = 0
       for b in [0...bytesSrc]
         sourceValue += (1 << (b * 8)) * source.buffer[ src + b ]
-      sourceValue = mapping[ sourceValue ] or sourceValue
+      sourceValue = mapping? and mapping[ sourceValue ] or sourceValue
 
       # If you have to shorten the data,
       # use the first none-zero byte unless all are zero

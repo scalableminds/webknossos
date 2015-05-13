@@ -16,7 +16,7 @@ class Cube
   ARBITRARY_MAX_ZOOMSTEP : 2
 
   LOADING_PLACEHOLDER : {}
-  EMPTY_MAPPING : []
+  EMPTY_MAPPING : null
 
   arbitraryCube : null
   dataCubes : null
@@ -80,6 +80,11 @@ class Cube
       ]
 
 
+  setMapping : (@mapping) ->
+
+    @trigger("mappingChanged")
+
+
   setPushQueue : (pushQueue) ->
 
     @pushQueue = pushQueue
@@ -93,7 +98,7 @@ class Cube
 
   hasMapping : ->
 
-    return @mapping.length != 0
+    return @mapping?
 
 
   setMapping : (newMapping) ->
@@ -113,8 +118,7 @@ class Cube
 
   mapId : (idToMap) ->
 
-    mappedId = @currentMapping[idToMap]
-    return if mappedId? then mappedId else idToMap
+    return if @currentMapping? and (mappedId = @currentMapping[idToMap])? then mappedId else idToMap
 
 
   getArbitraryCube : ->

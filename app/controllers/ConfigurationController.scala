@@ -55,7 +55,7 @@ object ConfigurationController extends Controller with Secured {
           .flatMap(_.dataSetConfigurations.get(dataSetName))
       }
         .getOrElse(DataSetConfiguration.default)
-        .map(configuration => Ok(toJson(configuration.configuration)))
+        .map(configuration => Ok(toJson(configuration.configurationOrDefaults)))
   }
 
   def updateDataSet(dataSetName: String) = Authenticated.async(parse.json(maxLength = 2048)) {

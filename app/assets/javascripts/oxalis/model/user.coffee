@@ -11,7 +11,7 @@ class User extends Backbone.Model
 
   initialize : ->
 
-    @listenTo(@, "change", -> @save())
+    @listenTo(@, "change", _.debounce((=> @save()), 500))
 
 
   getMouseInversionX : ->

@@ -9,7 +9,7 @@ class AbstractTreeView extends Backbone.Marionette.ItemView
 
   className : "flex-column"
   template : _.template("""
-      <canvas width="<%= width %>" height="<%= height %>" style="width: <%= width %>px; height: <%= height %>px">
+      <canvas id="abstract-tree-canvas">
     """)
 
   ui :
@@ -22,6 +22,7 @@ class AbstractTreeView extends Backbone.Marionette.ItemView
 
     @listenTo(app.vent, "planes:resize", @resize)
     @listenTo(app.vent, "view:setTheme", @drawTree)
+    @listenTo(@model.user, "change:renderComments", @drawTree)
 
     @listenTo(@model.skeletonTracing, "newActiveNode" , @drawTree)
     @listenTo(@model.skeletonTracing, "newActiveTree" , @drawTree)
@@ -31,39 +32,34 @@ class AbstractTreeView extends Backbone.Marionette.ItemView
     @listenTo(@model.skeletonTracing, "deleteTree" , @drawTree)
     @listenTo(@model.skeletonTracing, "deleteActiveNode" , @drawTree)
     @listenTo(@model.skeletonTracing, "newNode" , @drawTree)
+    @listenTo(@model.skeletonTracing, "updateComments" , @drawTree)
 
-    @drawTree()
+    @initialized = false
+    $(window).on("resize", => @drawTree())
 
 
   resize : ->
 
-    @width = @$el.width()
-    @height = @$el.height() - 10
-
-    #re-render with correct height/width
+    @initialized = true
     @render()
 
-    @abstractTreeRenderer = new AbstractTreeRenderer(
-      @ui.canvas,
-      @width,
-      @height
-    )
 
+  render : ->
+
+    super()
+    if @initialized
+      @abstractTreeRenderer = new AbstractTreeRenderer(@ui.canvas)
     @drawTree()
 
 
   drawTree : ->
 
     if @model.skeletonTracing and @abstractTreeRenderer
-      @abstractTreeRenderer.drawTree(@model.skeletonTracing.getTree(), @model.skeletonTracing.getActiveNodeId())
-
-
-  serializeData : ->
-
-    return {
-      width : @width || 300
-      height : @height || 300
-    }
+      @abstractTreeRenderer.renderComments(@model.user.get("renderComments"))
+      @abstractTreeRenderer.drawTree(
+        @model.skeletonTracing.getTree(),
+        @model.skeletonTracing.getActiveNodeId(),
+        @model.skeletonTracing.comments)
 
 
   handleClick : (event) ->
@@ -71,3 +67,4 @@ class AbstractTreeView extends Backbone.Marionette.ItemView
     id = @abstractTreeRenderer.getIdFromPos(event.offsetX, event.offsetY)
     if id
       @model.skeletonTracing.trigger("newActiveNode", id)
+      @model.skeletonTracing.centerActiveNode()

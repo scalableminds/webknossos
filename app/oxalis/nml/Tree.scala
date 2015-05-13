@@ -36,6 +36,10 @@ case class Tree(treeId: Int, nodes: Set[Node], edges: Set[Edge], color: Color, n
       nodes = nodes.map(node => node.copy(id = f(node.id))),
       edges = edges.map(edge => edge.copy(source = f(edge.source), target = f(edge.target))))
   }
+
+  def addNamePrefix(prefix: String) = {
+    this.copy(name = prefix + name)
+  }
 }
 
 object Tree {

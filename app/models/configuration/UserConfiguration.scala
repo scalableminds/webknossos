@@ -32,20 +32,6 @@ object UserConfiguration extends BasicSettings {
       "clippingDistanceArbitrary" -> JsNumber(64),
       "dynamicSpaceDirection" -> JsBoolean(true),
       "displayCrosshair" -> JsBoolean(true),
-      "brightnessContrastSettings" -> Json.obj(
-        "default" -> Json.obj(
-          "brightness" -> 0,
-          "contrast" -> 1
-        ),
-        "st08x2" -> Json.obj(
-          "brightness" -> 0,
-          "contrast" -> 2.4
-        ),
-        "07x2" -> Json.obj(
-          "brightness" -> 0,
-          "contrast" -> 2.4
-        )
-      ),
       "zoom" -> JsNumber(2),
       "scale" -> JsNumber(1),
       "tdViewDisplayPlanes" -> JsBoolean(true),
@@ -66,6 +52,7 @@ object UserConfiguration extends BasicSettings {
       "sortTreesByName" -> JsBoolean(false),
       "sortCommentsAsc" -> JsBoolean(true),
       "segmentationOpacity" -> JsNumber(20),
-      "sphericalCapRadius" -> JsNumber(140)))
+      "sphericalCapRadius" -> JsNumber(140),
+      "renderComments" -> JsBoolean(false)))
 
 }

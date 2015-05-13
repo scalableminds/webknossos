@@ -1,7 +1,6 @@
 ### define
 underscore : _
 backbone.marionette : marionette
-./settings/settings_tab_view : SettingsTabView
 ./action-bar/dataset_actions_view : DatasetActionsView
 ./action-bar/dataset_position_view : DatasetPositionView
 ./action-bar/view_modes_view : ViewModesView
@@ -59,7 +58,6 @@ class ActionBarView extends Backbone.Marionette.LayoutView
 
     if @isTraceMode()
       @datasetActionsView = new DatasetActionsView(options)
-      @settingsTabView = new SettingsTabView(options)
 
       if @isVolumeMode()
         @volumeActionsView = new VolumeActionsView(options)

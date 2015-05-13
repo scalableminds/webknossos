@@ -2,7 +2,9 @@
 backbone.marionette : marionette
 app : app
 ./action_bar_view : ActionBarView
-./settings/settings_tab_view : SettingsTabView
+./settings/tab_views/skeleton_plane_tab_view : SkeletonPlaneTabView
+./settings/tab_views/skeleton_arbitrary_tab_view : SkeletonArbitraryTabView
+./settings/tab_views/volume_tab_view : VolumeTabView
 ./skeletontracing/skeletontracing_right_menu_view : SkeletonTracingRightMenuView
 ./volumetracing/volumetracing_right_menu_view : VolumeTracingRightMenuView
 ./tracing_view : TracingView
@@ -69,6 +71,7 @@ class TracingLayoutView extends Backbone.Marionette.LayoutView
 
     @listenTo(@, "render", @afterRender)
     @listenTo(app.vent, "planes:resize", @resizeRightMenu)
+    @listenTo(@model, "change:mode", @renderSettings)
     @listenTo(@model, "sync", @renderRegions)
     $(window).on("resize", @resizeRightMenu.bind(@))
 
@@ -88,7 +91,7 @@ class TracingLayoutView extends Backbone.Marionette.LayoutView
       slidingCanvasOffset = @ui.slidingCanvas.position().left
 
       newWidth = window.innerWidth - menuPosition.left - slidingCanvasOffset - @MARGIN
-      
+
       if menuPosition.left < window.innerWidth and newWidth > 350
         @ui.rightMenu.width(newWidth)
 
@@ -103,16 +106,24 @@ class TracingLayoutView extends Backbone.Marionette.LayoutView
     @actionBar.show(actionBarView, preventDestroy : true)
     @tracingContainer.show(tracingView, preventDestroy : true)
 
-    if @isTracingMode()
-      settingsTabView = new SettingsTabView(@options)
-      @settings.show(settingsTabView, preventDestroy : true)
+    if @isSkeletonMode()
+      @rightMenuView = new SkeletonTracingRightMenuView(@options)
+    else if @isVolumeMode()
+      @rightMenuView = new VolumeTracingRightMenuView(@options)
 
-      if @isSkeletonMode()
-        @rightMenuView = new SkeletonTracingRightMenuView(@options)
-      else
-        @rightMenuView = new VolumeTracingRightMenuView(@options)
+    @rightMenu.show(@rightMenuView)
+    @renderSettings()
 
-      @rightMenu.show(@rightMenuView)
+
+  renderSettings : ->
+
+    if @isSkeletonMode()
+      settingsTabClass = if @isArbitraryMode() then SkeletonArbitraryTabView else SkeletonPlaneTabView
+      settingsTabView = new settingsTabClass(@options)
+    else if @isVolumeMode()
+      settingsTabView = new VolumeTabView(@options)
+
+    @settings.show(settingsTabView, preventDestroy : true)
 
 
   isTracingMode : ->
@@ -122,7 +133,17 @@ class TracingLayoutView extends Backbone.Marionette.LayoutView
 
   isSkeletonMode : ->
 
-    return @model.get("mode") == Constants.MODE_PLANE_TRACING
+    return @model.get("mode") in Constants.MODES_SKELETON && @isTracingMode()
+
+
+  isVolumeMode : ->
+
+    return @model.get("mode") == Constants.MODE_VOLUME && @isTracingMode()
+
+
+  isArbitraryMode : ->
+
+    return @model.get("mode") in Constants.MODES_ARBITRARY
 
 
   onDestroy : ->

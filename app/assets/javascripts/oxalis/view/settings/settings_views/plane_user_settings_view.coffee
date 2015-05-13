@@ -1,10 +1,11 @@
 ### define
 ./settings_view : SettingsView
-./category_views/controls_category_view : ControlsCategoryView
-./category_views/viewport_category_view : ViewportCategoryView
-./category_views/tdview_category_view : TDViewCategoryView
-./category_views/isosurface_category_view : IsosurfaceCategoryView
-./category_views/segmentation_category_view : SegmentationCategoryView
+../category_views/controls_category_view : ControlsCategoryView
+../category_views/viewport_category_view : ViewportCategoryView
+../category_views/tdview_category_view : TDViewCategoryView
+../category_views/isosurface_category_view : IsosurfaceCategoryView
+../category_views/segmentation_category_view : SegmentationCategoryView
+../category_views/abstracttree_category_view : AbstractTreeCategoryView
 ###
 
 class PlaneUserSettingsView extends SettingsView
@@ -41,3 +42,8 @@ class PlaneUserSettingsView extends SettingsView
     "segmentation-category" : ->
 
       return new SegmentationCategoryView({ @model })
+
+
+    "abstracttree-category" : ->
+
+      return new AbstractTreeCategoryView({ @model })

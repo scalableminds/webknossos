@@ -18,6 +18,7 @@ class VolumeTracing
     @activeCell   = null
     @currentLayer = null        # Layer currently edited
     @idCount      = @contentData.nextCell || 1
+    @lastCentroid = null
 
     @stateLogger  = new VolumeTracingStateLogger(
       @flycam, tracing.version, tracing.id, tracing.typ,
@@ -67,20 +68,33 @@ class VolumeTracing
     @currentLayer.addContour(pos)
     @trigger("updateLayer", @currentLayer.getSmoothedContourList())
 
+
   finishLayer : ->
 
-    unless @currentLayer?
+    if not @currentLayer? or @currentLayer.isEmpty()
       return
 
     start = (new Date()).getTime()
+    @currentLayer.finish()
     iterator = @currentLayer.getVoxelIterator()
     labelValue = if @activeCell then @activeCell.id else 0
     @binary.cube.labelVoxels(iterator, labelValue)
     console.log "Labeling time:", ((new Date()).getTime() - start)
 
+    @updateDirection(@currentLayer.getCentroid())
     @currentLayer = null
 
     @trigger "volumeAnnotated"
+
+
+  updateDirection : (centroid) ->
+    if @lastCentroid?
+      @flycam.setDirection([
+        centroid[0] - @lastCentroid[0]
+        centroid[1] - @lastCentroid[1]
+        centroid[2] - @lastCentroid[2]
+      ])
+    @lastCentroid = centroid
 
 
   getActiveCellId : ->

@@ -27,6 +27,7 @@ case class User(
                  lastName: String,
                  verified: Boolean = false,
                  pwdHash: String = "",
+                 md5hash: String = "",
                  teams: List[TeamMembership],
                  configuration: UserSettings = UserSettings.defaultSettings,
                  experiences: Map[String, Int] = Map.empty,

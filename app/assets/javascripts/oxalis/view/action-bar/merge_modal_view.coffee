@@ -64,7 +64,6 @@ class MergeModalView extends Backbone.Marionette.LayoutView
                     <div class="fileinput fileinput-new input-group" data-provides="fileinput">
                       <span class="btn btn-default btn-file">
                         <span class="fileinput-new">
-                          <input type="file" name="nmlFile" accept=".nml">
                           <i class="fa fa-upload" id="form-upload-icon"></i>
                           <i class="fa fa-spinner fa-spin hide" id="form-spinner-icon"></i>
                           Upload NML

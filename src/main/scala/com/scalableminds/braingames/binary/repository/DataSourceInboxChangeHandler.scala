@@ -31,6 +31,7 @@ protected class DataSourceInboxChangeHandler(dataSourceRepository: DataSourceRep
     } catch {
       case e: Exception =>
         logger.error("Failed to execute onStart. Exception: " + e.getMessage, e)
+        logger.error(e.getStackTrace.mkString("\n"))
     }
   }
 
@@ -48,11 +49,18 @@ protected class DataSourceInboxChangeHandler(dataSourceRepository: DataSourceRep
 
   def teamAwareInboxSourcesIn(path: Path): List[DataSourceLike] = {
     val team = path.getFileName.toString
-    val inbox = PathUtils.listDirectories(path).map{ p =>
-      dataSourceFromFolder(p, team)
+    val subdirs = PathUtils.listDirectories(path)
+    if(subdirs == Nil){
+      logger.error(s"Failed to read datasets for team $team. Empty path: $path")
+      Nil
+    } else {
+      val inbox = subdirs.map{ p =>
+        dataSourceFromFolder(p, team)
+      }
+      logger.info(s"Datasets for team $team: ${inbox.map(_.id).mkString(", ")}")
+      inbox  
     }
-    logger.info(s"Datasets for team $team: ${inbox.map(_.id).mkString(", ")}")
-    inbox
+    
   }
 
   def dataSourceFromFolder(path: Path, team: String): DataSourceLike = {

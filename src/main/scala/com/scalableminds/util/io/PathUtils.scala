@@ -45,14 +45,29 @@ trait PathUtils {
     Option(p.getParent)
 
   def listDirectories(p: Path): List[Path] =
-    if (Files.isDirectory(p))
-      p.toFile.list(directoryFilter).map(s => p.resolve(s))(breakOut)
+    if (Files.isDirectory(p)){
+      val dirs = p.toFile.list(directoryFilter)
+      if(dirs != null) {
+        dirs.map(s => p.resolve(s))(breakOut)
+      } else {
+        System.err.println("Failed to list files in directory: " + p.toString)
+        Nil
+      }
+    }
+      
     else
       Nil
 
   def listFiles(p: Path): List[Path] =
-    if (Files.isDirectory(p))
-      p.toFile.list(fileFilter).map(s => p.resolve(s))(breakOut)
+    if (Files.isDirectory(p)) {
+      val files = p.toFile.list(fileFilter)
+      if(files != null) {
+        files.map(s => p.resolve(s))(breakOut)
+      } else {
+        System.err.println("Failed to list files in directory: " + p.toString)
+        Nil
+      }
+    }
     else
       Nil
 

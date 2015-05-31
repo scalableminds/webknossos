@@ -151,8 +151,7 @@ object UserController extends Controller with Secured with Dashboard with FoxImp
           teams <- Fox.combined(assignedTeams.map(t => TeamDAO.findOneByName(t.team))) ?~> Messages("team.notFound")
           _ <- ensureProperTeamAdministration(user, assignedTeams.zip(teams))
         } yield {
-          val teams = user.teams.filterNot(t => assignedTeams.exists(_.team == t.team)) ::: assignedTeams
-          UserService.update(user, firstName, lastName, verified, teams, experiences)
+          UserService.update(user, firstName, lastName, verified, assignedTeams, experiences)
           Ok
         }
       case e: JsError =>

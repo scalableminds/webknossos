@@ -21,7 +21,7 @@ object TeamController extends Controller with Secured {
   def isTeamOwner(team: Team, user: User) =
     team.isEditableBy(user) match {
       case true  => Full(true)
-      case false => Failure(Messages("notAllowed"))
+      case false => Failure(Messages("team.noOwner"))
     }
 
   def list = Authenticated.async{ implicit request =>

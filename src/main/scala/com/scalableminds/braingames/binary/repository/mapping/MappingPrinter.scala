@@ -9,7 +9,7 @@ import org.scalastuff.json._
 
 import com.scalableminds.braingames.binary.models.DataLayerMapping
 
-class MappingPrinter {
+object MappingPrinter {
 
   private def printStringMember(name: String, valueOpt: Option[String])(implicit printer: JsonPrinter) {
     valueOpt.map{
@@ -54,15 +54,4 @@ class MappingPrinter {
 
   def print(m: DataLayerMapping, p: Path): Unit =
     print(m, p.toString)
-}
-
-object MappingPrinter {
-  def print(m: DataLayerMapping, w: Writer) =
-    new MappingPrinter().print(m, w)
-
-  def print(m: DataLayerMapping, s: String) = 
-    new MappingPrinter().print(m, s)
-
-  def print(m: DataLayerMapping, p: Path) = 
-    new MappingPrinter().print(m, p)
 }

@@ -135,7 +135,7 @@ trait KnossosDataSourceTypeHandler extends DataSourceTypeHandler {
   }
 
   protected def normalizeMappings(base: Path, mappings: List[DataLayerMapping]): Box[List[DataLayerMapping]] = {
-    Full(normalizeMappingsRec(mappings, Map()).map{
+    normalizeMappingsRec(mappings, Map.empty).map{
       mapping =>
         val filename = mapping.name.replaceAll("[^a-zA-Z0-9.-]", "_")
         val path = base.resolve(s"$filename.${KnossosDataSourceType.mappingFileExtension}")
@@ -143,8 +143,8 @@ trait KnossosDataSourceTypeHandler extends DataSourceTypeHandler {
           file =>
             MappingPrinter.print(mapping, new FileWriter(file))
         }
-        mapping.copy(path = Some(path.toString), classes = None)
-    })
+        Full(mapping.copy(path = Some(path.toString), classes = None))
+    }.toSingleBox("Error normalizing mappings")
   }
 
   protected def extractMappings(base: Path): Box[List[DataLayerMapping]] = {

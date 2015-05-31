@@ -43,7 +43,7 @@ trait DataSourceService extends FoxImplicits{
       fallback = fallbackLayer.map(l => FallbackLayer(baseDataSource.id, l.name)),
       sections = List(sections),
       nextSegmentationId = baseDataSource.getByCategory(category).flatMap(_.nextSegmentationId),
-      fallbackLayer.map(_.mappings).getOrElse(List())
+      fallbackLayer.map(_.mappings).getOrElse(List.empty)
     )
 
     PathUtils.ensureDirectory(basePath)

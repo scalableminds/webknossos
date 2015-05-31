@@ -6,7 +6,7 @@ package com.scalableminds.braingames.binary.models
 import play.api.libs.json._
 
 /*
-Note: This case class is not (de)serialized to/from JSON using the build-in JSON library
+Note: This case class is not only (de)serialized to/from JSON using the build-in JSON library
       but dedicated classes (MappingParser / MappingPrinter) for performance reasons.
       Whenever this class is changed, the parser and printer need to be changed accordingly.
 */

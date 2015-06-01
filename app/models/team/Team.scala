@@ -18,7 +18,7 @@ case class Team(name: String, parent: Option[String], roles: List[Role], owner: 
   lazy val id = _id.stringify
 
   def isEditableBy(user: User) =
-    owner.map(_ == user._id) getOrElse false
+    user.adminTeamNames.contains(name) || (parent.map(user.adminTeamNames.contains) getOrElse false)
 
   def couldBeAdministratedBy(user: User) =
     parent.map(user.teamNames.contains) getOrElse true

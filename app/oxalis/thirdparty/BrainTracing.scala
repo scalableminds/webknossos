@@ -27,8 +27,7 @@ object BrainTracing {
   val isActive = Play.configuration.getBoolean("braintracing.active") getOrElse false
   val logTimeForExplorative = Play.configuration.getBoolean("braintracing.logTimeForExplorative") getOrElse false
 
-  def register(user: User, password: String): Future[String] = {
-    val pwHash = md5(password)
+  def register(user: User): Future[String] = {
     // TODO: fix, make team dynamic
     if (isActive && user.teamNames.contains("Connectomics department")) {
       val result = Promise[String]()
@@ -40,7 +39,7 @@ object BrainTracing {
         "firstname" -> user.firstName,
         "lastname" -> user.lastName,
         "email" -> user.email,
-        "pword" -> pwHash)
+        "pword" -> user.md5hash)
       .get()
       .map { response =>
         result complete (response.status match {
@@ -55,7 +54,7 @@ object BrainTracing {
       }
       result.future
     } else {
-      Future.successful("braintracing.new")
+      Future.successful("braintracing.none")
     }
   }
 

@@ -70,7 +70,7 @@ class Mappings
 
       for mappingClass in mappingObject.classes
 
-        minId = Math.min(mappingClass...)
+        minId = @min(mappingClass)
         mappedId = mappingArray[minId] || minId
 
         for id in mappingClass
@@ -89,3 +89,12 @@ class Mappings
       mapping = @mappings[mapping.parent]
 
     return chain
+
+
+  # Since Math.min(array...) does not scale
+  min : (array) ->
+
+    min = Infinity
+    for entry in array
+      min = Math.min(min, entry)
+    return min

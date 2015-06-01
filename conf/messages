@@ -35,6 +35,7 @@ image.create.failed=Failed to create image
 team.created=Team got created
 team.name.alreadyTaken=The teams name is already in use.
 team.notAllowed=You are not part of this team. Project can''t be created.
+team.noOwner=This action is restricted to the creator of the team.
 
 user.verified={0} has been verified
 user.verifyFailed=Couldn''t verify user

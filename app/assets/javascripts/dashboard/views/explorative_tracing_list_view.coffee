@@ -44,6 +44,9 @@ class ExplorativeTracingListView extends Backbone.Marionette.CompositeView
             <i class="fa fa-search"></i>Open volume mode
           </button>
         </form>
+        <a href="#" id="toggle-view-archived" class="btn btn-default">
+          Show archived tracings
+        </a>
       </div>
     <% } %>
 
@@ -69,19 +72,22 @@ class ExplorativeTracingListView extends Backbone.Marionette.CompositeView
   events :
     "change input[type=file]" : "selectFiles"
     "submit @ui.uploadAndExploreForm" : "uploadFiles"
+    "click @ui.toggleViewArchived" : "toggleViewArchived"
 
   ui :
     tracingChooser : "#tracing-chooser"
     uploadAndExploreForm : "#upload-and-explore-form"
     formSpinnerIcon : "#form-spinner-icon"
     formUploadIcon : "#form-upload-icon"
+    toggleViewArchived : "#toggle-view-archived"
 
   templateHelpers :
     activeDataSets : [] # fills on @model.get("dataSets") sync event
 
   initialize : (options) ->
 
-    @collection = @model.get("exploratoryAnnotations")
+    @collection = @model.getAnnotations()
+    @showArchivedAnnotations = false
 
     datasetCollection = @model.get("dataSets")
     @listenTo(datasetCollection, "sync", (collection, dataSets) =>
@@ -125,3 +131,23 @@ class ExplorativeTracingListView extends Backbone.Marionette.CompositeView
     ).always( ->
       toggleIcon()
     )
+
+
+  update: ->
+    @collection =
+      if @showArchivedAnnotations
+        @model.getArchivedAnnotations()
+      else
+        @model.getAnnotations()
+
+    @render()
+
+  toggleViewArchived : (event) ->
+    event.preventDefault()
+    @showArchivedAnnotations = not @showArchivedAnnotations
+    @update()
+
+    verb = if @showArchivedAnnotations then "unarchived" else "archived"
+    @ui.toggleViewArchived.html("Show #{verb} tracings ")
+
+

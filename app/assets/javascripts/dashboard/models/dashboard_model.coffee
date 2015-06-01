@@ -55,6 +55,13 @@ class DashboardModel extends Backbone.Model
     return new Backbone.Collection(filteredTasks)
 
 
+  getAnnotations : ->
+    @get("exploratoryAnnotations")
+
+  getArchivedAnnotations : ->
+    @get("archivedAnnotations")
+    
+
   transformToCollection : ->
 
     tasks = @get("taskAnnotations").map( (el) ->
@@ -75,6 +82,18 @@ class DashboardModel extends Backbone.Model
     exploratoryAnnotations.add(@get("exploratoryAnnotations"))
 
     @set("exploratoryAnnotations", exploratoryAnnotations)
+
+    archivedAnnotations = new Backbone.Collection()
+    # Display newst first.
+    archivedAnnotations.comparator = (a,b) ->
+      if a.get("created") < b.get("created")
+        return 1
+      else if a.get("created") > b.get("created")
+        return -1
+      return 0
+    archivedAnnotations.add(@get("archivedAnnotations"))
+
+    @set("archivedAnnotations", archivedAnnotations)
 
 
   getNewTask : ->

@@ -17,7 +17,7 @@ class DatasetActionsView extends Backbone.Marionette.ItemView
     <% } %>
     <div class="btn-group btn-group">
       <% if(tracing.restrictions.allowFinish) { %>
-        <a href="/annotations/<%= tracingType %>/<%= tracingId %>/finishAndRedirect" class="btn btn-default" id="trace-finish-button"><i class="fa fa-check-circle-o"></i>Finish</a>
+        <a href="/annotations/<%= tracingType %>/<%= tracingId %>/finishAndRedirect" class="btn btn-default" id="trace-finish-button"><i class="fa fa-check-circle-o"></i>Archive</a>
       <% } %>
       <% if(tracing.restrictions.allowDownload || ! tracing.downloadUrl) { %>
         <a class="btn btn-default" id="trace-download-button"><i class="fa fa-download"></i>Download</a>

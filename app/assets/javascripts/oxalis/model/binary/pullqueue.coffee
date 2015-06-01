@@ -128,7 +128,7 @@ class PullQueue
 
   shouldRequestFourBit : (zoomStep) ->
 
-    return @fourBit and zoomStep == 0 and @layer.category == "color"
+    return @fourBit and @layer.category == "color"
 
 
   getLoadSocket : ->

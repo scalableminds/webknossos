@@ -53,10 +53,13 @@ trait Dashboard extends FoxImplicits {
     for {
       exploratoryAnnotations <- annotationsAsJson(AnnotationService.findExploratoryOf(user), user)
       tasksAnnotations <- annotationsAsJson(AnnotationService.findTasksOf(user), user)
+      finishedAnnotations <- annotationsAsJson(AnnotationService.findFinishedOf(user), user)
     } yield {
+      println(finishedAnnotations)
       Json.obj(
         "exploratoryAnnotations" -> exploratoryAnnotations.flatMap ( o => o),
-        "taskAnnotations" -> tasksAnnotations.flatMap ( o => o)
+        "taskAnnotations" -> tasksAnnotations.flatMap ( o => o),
+        "archivedAnnotations" -> finishedAnnotations.flatMap ( o => o)
       )
     }
 

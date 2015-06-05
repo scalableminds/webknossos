@@ -147,7 +147,7 @@ class Controller
 
   modelFetchFail : (response) ->
 
-    Toast.error(response.responseJSON.messages[0].error)
+    Toast.error(response.responseJSON.messages)
 
 
   initKeyboard : ->

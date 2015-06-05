@@ -35,6 +35,7 @@ image.create.failed=Failed to create image
 team.created=Team got created
 team.name.alreadyTaken=The teams name is already in use.
 team.notAllowed=You are not part of this team. Project can''t be created.
+team.noOwner=This action is restricted to the creator of the team.
 
 user.verified={0} has been verified
 user.verifyFailed=Couldn''t verify user
@@ -58,8 +59,7 @@ user.experience.increased=Increased experience of {0}
 user.experience.set=Set experience of {0}
 user.experience.removed=Removed experience from {0}
 
-
-braintracing.new=An account on braintracing.org was created for you. You can use the same credentials as on oxalis to login.
+braintracing.new=An account on braintracing.org was created for you. You can use the same credentials as on webKnossos to login.
 braintracing.error=We couldn''t atomatically create an account for you on braintracing.org. Please do it on your own.
 braintracing.exists=Great, you already have an account on braintracing.org. Please double check that you have uploaded all requested information.
 

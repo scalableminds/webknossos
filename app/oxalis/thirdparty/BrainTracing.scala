@@ -27,10 +27,9 @@ object BrainTracing {
   val isActive = Play.configuration.getBoolean("braintracing.active") getOrElse false
   val logTimeForExplorative = Play.configuration.getBoolean("braintracing.logTimeForExplorative") getOrElse false
 
-  def register(user: User, password: String): Future[String] = {
-    val pwHash = md5(password)
+  def register(user: User): Future[String] = {
     // TODO: fix, make team dynamic
-    if (isActive && user.teamNames.contains("Structure of Neocortical Circuits Group")) {
+    if (isActive && user.teamNames.contains("Connectomics department")) {
       val result = Promise[String]()
       WS
       .url(CREATE_URL)
@@ -40,7 +39,7 @@ object BrainTracing {
         "firstname" -> user.firstName,
         "lastname" -> user.lastName,
         "email" -> user.email,
-        "pword" -> pwHash)
+        "pword" -> user.md5hash)
       .get()
       .map { response =>
         result complete (response.status match {
@@ -55,7 +54,7 @@ object BrainTracing {
       }
       result.future
     } else {
-      Future.successful("braintracing.new")
+      Future.successful("braintracing.none")
     }
   }
 
@@ -65,7 +64,7 @@ object BrainTracing {
   def logTime(user: User, time: Long, annotation: Option[AnnotationLike])(implicit ctx: DBAccessContext): Unit = {
     import scala.async.Async._
     // TODO: fix, make team dynamic
-    if (isActive && user.teamNames.contains("Structure of Neocortical Circuits Group")) {
+    if (isActive && user.teamNames.contains("Connectomics department")) {
       async {
         val task = await(annotation.toFox.flatMap(_.task).futureBox)
         val taskTypeFox = task.toFox.flatMap(_.taskType)

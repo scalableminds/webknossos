@@ -31,7 +31,6 @@ class SettingsTabView extends Backbone.Marionette.LayoutView
       <div class="tab-pane active" id="dataset-settings-tab"></div>
       <div class="tab-pane" id="user-settings-tab"></div>
     </div>
-  </div>
   """)
 
   regions :
@@ -61,6 +60,7 @@ class SettingsTabView extends Backbone.Marionette.LayoutView
 
 
   changeViewMode : (mode) ->
+
 
     if mode == constants.MODE_PLANE_TRACING
       @userSettings.show(@planeUserSettingsView, preventDestroy : true)

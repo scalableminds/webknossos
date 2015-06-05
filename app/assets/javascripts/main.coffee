@@ -18,6 +18,8 @@ require [
     )
 
     $ ->
+      # show the bootstrap flash modal on load
+      $("#flashModal").modal("show")
 
       app.start()
 

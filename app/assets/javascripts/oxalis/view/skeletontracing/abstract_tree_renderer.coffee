@@ -17,15 +17,13 @@ class AbstractTreeRenderer
 
   RENDER_COMMENTS      : true  # draw comments into tree
 
-  constructor : ($canvas, width, height) ->
+  constructor : ($canvas) ->
 
     _.extend(this, Backbone.Events)
 
     @canvas = $canvas
     @ctx = $canvas[0].getContext("2d")
     @ctx.lineWidth = 1
-    @width = width
-    @height = height
     @nodeList = []
 
 
@@ -42,6 +40,7 @@ class AbstractTreeRenderer
     unless tree?
       return
 
+    @setDimensions(@canvas.width(), @canvas.height())
     @clearBackground()
     @setupColors()
 
@@ -60,7 +59,7 @@ class AbstractTreeRenderer
       console.log "Error:", e
       if e == "CyclicTree"
         if not @_cyclicTreeWarningIssued
-          Toast.error "Cyclic trees (Tree-ID: #{tree.treeId}) are not supported by Oxalis. Please check the .nml file."
+          Toast.error "Cyclic trees (Tree-ID: #{tree.treeId}) are not supported by webKnossos. Please check the .nml file."
           @_cyclicTreeWarningIssued = true
         return
 
@@ -82,7 +81,7 @@ class AbstractTreeRenderer
     # by recordWidths(), the second by drawTreeWithWidths().
 
     @recordWidths(root)
-    @drawTreeWithWidths(root, @NODE_RADIUS, @canvas.width() - @NODE_RADIUS, @nodeDistance, mode)
+    @drawTreeWithWidths(root, @NODE_RADIUS, @canvas.width() - @NODE_RADIUS, @nodeDistance / 2, mode)
 
     # because of z layering all nodes have to be drawn last
     @drawAllNodes()
@@ -486,10 +485,10 @@ class AbstractTreeRenderer
 
   ###*
    * Set width and height of the canvas object.
-   * @param {Object} {width, height} object contains width and height key
+   * @param {Number} width
+   * @param {Number} height
   ###
-  setDimensions : ({width, height}) ->
+  setDimensions : (width, height) ->
 
-    $(@canvas).css({width, height})
     @canvas[0].width = width
     @canvas[0].height = height

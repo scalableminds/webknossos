@@ -1,6 +1,7 @@
 ### define
 backbone.marionette : Marionette
 libs/utils : Utils
+three.color : ColorConverter
 ###
 
 class ListTreeItemView extends Backbone.Marionette.ItemView

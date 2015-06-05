@@ -1,5 +1,6 @@
 ### define
 app : app
+three : THREE
 underscore : _
 ../viewmodes/plane_controller : PlaneController
 ../../constants : constants

@@ -44,7 +44,7 @@ class DatasetPositionView extends Backbone.Marionette.ItemView
   initialize : (options) ->
 
     @viewMode = constants.MODE_PLANE_TRACING
-    @listenTo(app.vent, "changeViewMode", @updateViewMode)
+    @listenTo(@model, "change:mode", @updateViewMode)
 
     # TODO MEASURE PERFORMANCE HIT BECAUSE OF CONSTANT RE-RENDER
     @listenTo(@model.get("flycam3d"), "changed", @render)

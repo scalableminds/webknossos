@@ -121,15 +121,16 @@ class Controller
     for binaryName of @model.binary
       @listenTo(@model.binary[binaryName].cube, "bucketLoaded", -> app.vent.trigger("rerender"))
 
-    @listenTo(app.vent, "changeViewMode", @setMode)
+    @listenTo(@model, "change:mode", @setMode)
 
-    @allowedModes.sort()
-    if @allowedModes.length == 0
-      Toast.error("There was no valid allowed tracing mode specified.")
-    else
-      app.vent.trigger("changeViewMode", @allowedModes[0])
-    if @urlManager.initialState.mode? and @urlManager.initialState.mode != @model.mode
-      app.vent.trigger("changeViewMode", @urlManager.initialState.mode)
+      @allowedModes.sort()
+      if @allowedModes.length == 0
+        Toast.error("There was no valid allowed tracing mode specified.")
+      else
+        @model.setMode(@allowedModes[0])
+      if @urlManager.initialState.mode? and @urlManager.initialState.mode != @model.mode
+        @model.setMode(@urlManager.initialState.mode)
+
 
     # Zoom step warning
     @zoomStepWarningToast = null
@@ -176,13 +177,11 @@ class Controller
       _.extend( keyboardControls, {
         #Set Mode, outcomment for release
         "shift + 1" : =>
-          app.vent.trigger("changeViewMode", constants.MODE_PLANE_TRACING)
+          @model.setMode(constants.MODE_PLANE_TRACING)
         "shift + 2" : =>
-          app.vent.trigger("changeViewMode", constants.MODE_ARBITRARY)
+          @model.setMode(constants.MODE_ARBITRARY)
         "shift + 3" : =>
-          app.vent.trigger("changeViewMode", constants.MODE_ARBITRARY_PLANE)
-        "shift + 4" : =>
-          app.vent.trigger("changeViewMode", constants.MODE_VOLUME)
+          @model.setMode(constants.MODE_ARBITRARY_PLANE)
 
         "t" : =>
           @view.toggleTheme()
@@ -190,7 +189,7 @@ class Controller
         "m" : => # rotate allowed modes
 
           index = (@allowedModes.indexOf(@model.mode) + 1) % @allowedModes.length
-          app.vent.trigger("changeViewMode", @allowedModes[index])
+          @model.setMode(@allowedModes[index])
 
         "super + s, ctrl + s" : (event) =>
 

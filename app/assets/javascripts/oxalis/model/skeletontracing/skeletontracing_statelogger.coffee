@@ -1,5 +1,6 @@
 ### define
 ../statelogger : StateLogger
+jquery : $
 ###
 
 class SkeletonTracingStateLogger extends StateLogger
@@ -155,3 +156,6 @@ class SkeletonTracingStateLogger extends StateLogger
       }
       false
     )
+    $.assert(@newDiffs.length > 0, "newDiffs empty after concatUpdateTracing", {
+      @newDiffs
+    })

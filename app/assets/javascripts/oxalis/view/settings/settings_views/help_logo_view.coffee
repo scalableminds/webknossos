@@ -5,7 +5,7 @@ backbone.marionette : marionette
 
 class HelpLogoView extends Backbone.Marionette.ItemView
 
-  className : "col-sm-12"
+  className : "col-sm-12 help-logo-view"
   template : _.template("""
     <table class="table table-condensed table-nohead table-bordered">
       <tbody>

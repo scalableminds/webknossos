@@ -13,6 +13,17 @@ class ActionBarView extends Backbone.Marionette.LayoutView
   className : "container-fluid"
 
   template : _.template("""
+
+    <% if (isTraceMode) { %>
+      <a href="#" id="menu-toggle-button" class="btn btn-default"
+        data-toggle="offcanvas"
+        data-target="#settings-menu-wrapper"
+        data-canvas="#sliding-canvas"
+        data-placement="left"
+        data-autohide="false"
+        data-disable-scrolling="false"><i class="fa fa-bars"></i>Menu</a>
+    <% } %>
+
     <% if (isTraceMode) { %>
       <div id="dataset-actions"></div>
     <% } %>
@@ -78,4 +89,3 @@ class ActionBarView extends Backbone.Marionette.LayoutView
   isVolumeMode : ->
 
     return @model.get("mode") == Constants.MODE_VOLUME
-

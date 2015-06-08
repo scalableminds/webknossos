@@ -146,6 +146,11 @@ class Model extends Backbone.Model
     return
 
 
+  setMode : (@mode) ->
+
+    @trigger("change:mode", @mode)
+
+
   # For now, since we have no UI for this
   buildMappingsObject : (layers) ->
 

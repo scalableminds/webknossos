@@ -1,5 +1,6 @@
 package controllers
 
+import com.scalableminds.util.security.SCrypt
 import play.api._
 import play.api.mvc.{Request, Action}
 import play.api.data._
@@ -72,7 +73,7 @@ object Authentication extends Controller with Secured with ProvidesUnauthorizedS
             case _ =>
               for {
                 user <- UserService.insert(team, email, firstName, lastName, password, autoVerify)
-                brainDBResult <- BrainTracing.register(user, password)
+                brainDBResult <- BrainTracing.register(user)
               } yield {
                 Application.Mailer ! Send(
                   DefaultMails.registerMail(user.name, email, brainDBResult))

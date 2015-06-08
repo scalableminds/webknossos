@@ -107,8 +107,8 @@ class Controller
         if $("#right-menu").length
           menuPosition = $("#right-menu").position()
           MARGIN = 40
-          width = window.innerWidth - menuPosition.left - MARGIN
-          height = window.innerHeight - menuPosition.top - MARGIN
+          width = Math.max(300, window.innerWidth - menuPosition.left - MARGIN)
+          height = Math.max(300, window.innerHeight - menuPosition.top - MARGIN)
           tabHeight = height - $('#right-menu .nav').height() - 30
 
           $("#right-menu").width(width).height(height)

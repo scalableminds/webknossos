@@ -123,13 +123,13 @@ class Controller
 
     @listenTo(@model, "change:mode", @setMode)
 
-      @allowedModes.sort()
-      if @allowedModes.length == 0
-        Toast.error("There was no valid allowed tracing mode specified.")
-      else
-        @model.setMode(@allowedModes[0])
-      if @urlManager.initialState.mode? and @urlManager.initialState.mode != @model.mode
-        @model.setMode(@urlManager.initialState.mode)
+    @allowedModes.sort()
+    if @allowedModes.length == 0
+      Toast.error("There was no valid allowed tracing mode specified.")
+    else
+      @model.setMode(@allowedModes[0])
+    if @urlManager.initialState.mode? and @urlManager.initialState.mode != @model.mode
+      @model.setMode(@urlManager.initialState.mode)
 
 
     # Zoom step warning

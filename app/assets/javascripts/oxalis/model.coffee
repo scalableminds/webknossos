@@ -56,7 +56,10 @@ class Model extends Backbone.Model
         @user.fetch().pipe( =>
 
           @set("dataset", new Backbone.Model(tracing.content.dataSet))
-          @set("datasetConfiguration", new DatasetConfiguration({@datasetName}))
+          @set("datasetConfiguration", new DatasetConfiguration({
+            @datasetName
+            dataLayerNames : _.pluck(@get("dataset").get("dataLayers"), "name")
+          }))
           @get("datasetConfiguration").fetch().pipe( =>
 
             layers = @getLayers(tracing.content.contentData.customLayers)
@@ -112,8 +115,6 @@ class Model extends Backbone.Model
 
     if @getColorBinaries().length == 0
       Toast.error("No data available! Something seems to be wrong with the dataset.")
-
-    @setDefaultBinaryColors()
 
     flycam = new Flycam2d(constants.PLANE_WIDTH, maxZoomStep + 1, @)
     flycam3d = new Flycam3d(constants.DISTANCE_3D, dataset.get("scale"))
@@ -190,26 +191,6 @@ class Model extends Backbone.Model
     return _.find(@binary, (binary) ->
       binary.category == "segmentation"
     )
-
-
-  setDefaultBinaryColors : ->
-
-    datasetConfig = @get("datasetConfiguration")
-    layerColors = datasetConfig.get("layerColors")
-    colorBinaries = @getColorBinaries()
-
-    if colorBinaries.length == 1
-      defaultColors = [[255, 255, 255]]
-    else
-      defaultColors = [[255, 0, 0], [0, 255, 0], [0, 0, 255],
-                        [255, 255, 0], [0, 255, 255], [255, 0, 255]]
-
-    for binary, i in colorBinaries
-      if layerColors[binary.name]
-        color = layerColors[binary.name]
-      else
-        color = defaultColors[i % defaultColors.length]
-      datasetConfig.set("layerColors.#{binary.name}", color)
 
 
   getLayers : (userLayers) ->

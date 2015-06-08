@@ -83,6 +83,9 @@ class StateLogger
     @newDiffs = []
     @committedCurrentState = true
     console.log "Sending data: ", @committedDiffs
+    $.assert(@committedDiffs.length > 0, "Empty update sent to server!", {
+      @committedDiffs, @newDiffs
+    })
 
     @pipeline.executeAction( (prevVersion) =>
       Request.send(

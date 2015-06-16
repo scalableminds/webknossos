@@ -73,10 +73,7 @@ class AnnotationMutations(val annotation: Annotation) extends AnnotationMutation
   }
 
   def reopen()(implicit ctx: DBAccessContext) = {
-    if (annotation.typ == AnnotationType.Task)
-      AnnotationDAO.reopen(annotation._id)
-    else
-      Future.successful(None)
+    AnnotationDAO.reopen(annotation._id)
   }
 
   def finish()(implicit ctx: DBAccessContext) =

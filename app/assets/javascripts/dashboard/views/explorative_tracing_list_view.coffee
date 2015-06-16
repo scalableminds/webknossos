@@ -47,6 +47,9 @@ class ExplorativeTracingListView extends Backbone.Marionette.CompositeView
         <a href="#" id="toggle-view-archived" class="btn btn-default">
           Show archived tracings
         </a>
+        <a href="#" id="archive-all" class="btn btn-default">
+          Archive all
+        </a>
       </div>
     <% } %>
 
@@ -68,11 +71,14 @@ class ExplorativeTracingListView extends Backbone.Marionette.CompositeView
 
   childView : ExplorativeTracingListItemView
   childViewContainer : "tbody"
+  childViewOptions:
+    parentModel : null
 
   events :
     "change input[type=file]" : "selectFiles"
     "submit @ui.uploadAndExploreForm" : "uploadFiles"
     "click @ui.toggleViewArchived" : "toggleViewArchived"
+    "click @ui.archiveAllButton" : "archiveAll"
 
   ui :
     tracingChooser : "#tracing-chooser"
@@ -80,14 +86,21 @@ class ExplorativeTracingListView extends Backbone.Marionette.CompositeView
     formSpinnerIcon : "#form-spinner-icon"
     formUploadIcon : "#form-upload-icon"
     toggleViewArchived : "#toggle-view-archived"
+    archiveAllButton : "#archive-all"
 
   templateHelpers :
     activeDataSets : [] # fills on @model.get("dataSets") sync event
 
+
   initialize : (options) ->
 
-    @collection = @model.getAnnotations()
     @showArchivedAnnotations = false
+    @collection = @model.getAnnotations()
+    @filter = @getFilterForState()
+
+    @childViewOptions.parent = @
+
+    @templateHelpers.showArchiveAll = @showArchiveAll
 
     datasetCollection = @model.get("dataSets")
     @listenTo(datasetCollection, "sync", (collection, dataSets) =>
@@ -97,10 +110,30 @@ class ExplorativeTracingListView extends Backbone.Marionette.CompositeView
     datasetCollection.fetch(silent : true)
 
 
+  getFilterForState: () ->
+    if @showArchivedAnnotations
+      @isArchived
+    else
+      @isNotArchived
+
+
+  isArchived : (model) ->
+    model.attributes.state.isFinished
+
+
+  isNotArchived : (model) ->
+    !model.attributes.state.isFinished
+
+
   selectFiles : (event) ->
 
     if event.target.files.length
       @ui.uploadAndExploreForm.submit()
+
+
+  showArchiveAll : () ->
+    console.log("called")
+    !@showArchivedAnnotations
 
 
   uploadFiles : (event) ->
@@ -133,19 +166,24 @@ class ExplorativeTracingListView extends Backbone.Marionette.CompositeView
     )
 
 
-  update: ->
-    @collection =
-      if @showArchivedAnnotations
-        @model.getArchivedAnnotations()
-      else
-        @model.getAnnotations()
+  archiveAll : () ->
 
-    @render()
+
+  toggleState : ->
+    @showArchivedAnnotations = not @showArchivedAnnotations
+
+    if (@showArchivedAnnotations)
+      console.log(@ui.archiveAllButton)
+      @ui.archiveAllButton.hide()
+    else
+      @ui.archiveAllButton.show()
+
 
   toggleViewArchived : (event) ->
     event.preventDefault()
-    @showArchivedAnnotations = not @showArchivedAnnotations
-    @update()
+    @toggleState()
+    @filter = @getFilterForState()
+    @render()
 
     verb = if @showArchivedAnnotations then "unarchived" else "archived"
     @ui.toggleViewArchived.html("Show #{verb} tracings ")

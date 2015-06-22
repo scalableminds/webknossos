@@ -54,7 +54,7 @@ object Authentication extends Controller with Secured with ProvidesUnauthorizedS
   def formHtml(form: Form[(String, String, String, String, String)])(implicit session: SessionData) = {
     for {
       teams <- TeamDAO.findAll(DBAccessContext(None))
-    } yield html.user.register(form, teams)
+    } yield html.user.register(form, teams.filter(_.isRootTeam))
   }
 
   /**

@@ -22,6 +22,9 @@ case class Team(name: String, parent: Option[String], roles: List[Role], owner: 
 
   def couldBeAdministratedBy(user: User) =
     parent.map(user.teamNames.contains) getOrElse true
+
+  def isRootTeam =
+    parent.isEmpty
 }
 
 object Team extends FoxImplicits {

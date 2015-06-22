@@ -46,6 +46,8 @@ trait TiffDataSourceTypeHandler extends DataSourceTypeHandler {
     "_ch([0-9]+)"r
   )
 
+  lazy val IndexRxs = s"_([0-9]+)\\.${TiffDataSourceType.fileExtension}"r
+
   val DefaultScale = Scale(200, 200, 200)
 
   val DefaultLayerType = DataLayer.COLOR
@@ -87,11 +89,21 @@ trait TiffDataSourceTypeHandler extends DataSourceTypeHandler {
 
     val layers = convertToKnossosStructure(unusableDataSource.id, unusableDataSource.sourceFolder, target, progress).toList
 
-    Some(DataSource(
-      unusableDataSource.id,
-      target.toString,
-      DefaultScale,
-      dataLayers = layers))
+    DataSourceSettings.fromSettingsFileIn(unusableDataSource.sourceFolder) match {
+      case Some(settings) =>
+        Some(DataSource(
+          unusableDataSource.id,
+          target.toString,
+          settings.scale,
+          settings.priority getOrElse 0,
+          dataLayers = layers))
+      case _ =>
+        Some(DataSource(
+          unusableDataSource.id,
+          target.toString,
+          DefaultScale,
+          dataLayers = layers))
+    }
   }
 
   protected def extractImageInfo(tiffs: List[Path]): Option[RawImage] = {
@@ -120,12 +132,22 @@ trait TiffDataSourceTypeHandler extends DataSourceTypeHandler {
   }
 
   def extractLayers(tiffs: List[Path]): Iterable[TiffLayer] = {
+    
+    def compareTiffFiles(pathA: Path, pathB: Path) = {
+      (for {
+        indexA <- IndexRxs.findFirstMatchIn(pathA.toString).map(_.group(1).toInt)
+        indexB <- IndexRxs.findFirstMatchIn(pathB.toString).map(_.group(1).toInt)
+      } yield {
+        indexA < indexB
+      }) getOrElse(pathA.toString < pathB.toString)
+    }
+
     tiffs.groupBy(path => layerFromFileName(path)).flatMap{
       case (layer, layerTiffs) =>
         val depth = layerTiffs.size
         extractImageInfo(layerTiffs.toList) match {
           case Some(tiffInfo) =>
-            val rawImages = layerTiffs.toList.sortBy(_.getFileName.toString).toIterator.flatMap( t => tiffToRawImage(t))
+            val rawImages = layerTiffs.toList.sortWith(compareTiffFiles).toIterator.flatMap( t => tiffToRawImage(t))
             Some(TiffLayer(layer, tiffInfo.width, tiffInfo.height, depth, tiffInfo.bytesPerPixel, rawImages))
           case _ =>
             logger.warn("No tiff files found")

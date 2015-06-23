@@ -17,10 +17,12 @@ class DashboardView extends Backbone.Marionette.LayoutView
     <% } %>
     <div class="tabbable" id="tabbable-dashboard">
       <ul class="nav nav-tabs">
-        <li class="active">
-          <a href="#" id="tab-datasets" data-toggle="tab">Datasets</a>
-        </li>
-        <li>
+        <% if (!isAdminView) { %>
+          <li class="active">
+            <a href="#" id="tab-datasets" data-toggle="tab">Datasets</a>
+          </li>
+        <% } %>
+        <li <% if (isAdminView) { %> class="active" <% } %> >
           <a href="#" id="tab-tasks" data-toggle="tab">Tasks</a>
         </li>
         <li>
@@ -69,7 +71,11 @@ class DashboardView extends Backbone.Marionette.LayoutView
     if @activeTab
       @tabPane.show(@activeTab)
     else
-      @showDatasets()
+      if @model.attributes.isAdminView
+        @showTasks()
+      else
+        @showDatasets()
+
 
 
   showDatasets : ->

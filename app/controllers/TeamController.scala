@@ -19,7 +19,7 @@ object TeamController extends Controller with Secured {
   }
 
   def isTeamOwner(team: Team, user: User) =
-    team.isEditableBy(user) match {
+    team.owner == Some(user._id) match {
       case true  => Full(true)
       case false => Failure(Messages("team.noOwner"))
     }

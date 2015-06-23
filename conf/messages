@@ -35,7 +35,11 @@ image.create.failed=Failed to create image
 team.created=Team got created
 team.name.alreadyTaken=The teams name is already in use.
 team.notAllowed=You are not part of this team. Project can''t be created.
+team.nonExistentRole=Team {0} doesn''t contain role {1}.
+team.admin.notPossibleBy=User {1} can''t be assigned administrative rights in team {0} because he doesn't belong to the teams parent team.
 team.noOwner=This action is restricted to the creator of the team.
+team.admin.notAllowed=You are not allowed to administrate team {0}.
+team.notFound=Team could not be found.
 
 user.verified={0} has been verified
 user.verifyFailed=Couldn''t verify user

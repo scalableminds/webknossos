@@ -17,7 +17,7 @@ class ProjectTaskCollection extends Backbone.Collection
       (response) ->
         if response.tracingTime
           duration = moment.duration(response.tracingTime)
-          response.tracingTime = "#{utils.zeroPad(duration.hours(), 2)}:#{utils.zeroPad(duration.minutes(), 2)}"
+          response.tracingTime = "#{utils.zeroPad(duration.hours(), 2)}h #{utils.zeroPad(duration.minutes(), 2)}m"
         else
           response.tracingTime = "00:00"
 

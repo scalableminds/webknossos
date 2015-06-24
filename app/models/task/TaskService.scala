@@ -47,7 +47,7 @@ object TaskService extends TaskAssignmentSimulation with TaskAssignment with Fox
   def unassignOnce(t: Task)(implicit ctx: DBAccessContext) =
     TaskDAO.unassignOnce(t._id)
 
-  def logTime(time: Long, task: Task)(implicit ctx: DBAccessContext) = {
-    TaskDAO.logTime(time, task._id)
+  def logTime(time: Long, _task: BSONObjectID)(implicit ctx: DBAccessContext) = {
+    TaskDAO.logTime(time, _task)
   }
 }

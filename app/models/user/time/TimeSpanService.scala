@@ -4,6 +4,7 @@
 package models.user.time
 
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import models.task.TaskService
 import play.api.Play
 import play.api.libs.concurrent.Akka
 import akka.actor.{Actor, Props}
@@ -74,6 +75,11 @@ object TimeSpanService extends FoxImplicits{
           case Some(last) if isNotInterrupted(timestamp, annotation, last) =>
             val duration = timestamp - last.lastUpdate
             val updated = last.copy(lastUpdate = timestamp, time = last.time + duration)
+            // Log time to task
+            annotation.flatMap(_._task).foreach{ taskId =>
+              TaskService.logTime(duration, taskId)(GlobalAccessContext)
+            }
+            // Log time to user
             UserDAO.findOneById(_user)(GlobalAccessContext).map{ user =>
               BrainTracing.logTime(user, duration, annotation)(GlobalAccessContext)
             }

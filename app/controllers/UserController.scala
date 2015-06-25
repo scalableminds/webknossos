@@ -165,7 +165,7 @@ object UserController extends Controller with Secured with Dashboard with FoxImp
           val trimmedExperiences = experiences.map{ case (key, value) => key.trim -> value}
 
           val teamsWithoutUpdate = allTeams.filterNot{t =>
-            t.isEditableBy(issuingUser) || assignedTeams.find(_.team == t.name).isDefined
+            issuingUser.adminTeamNames.contains(t.name) || assignedTeams.find(_.team == t.name).isDefined
           }
           val updatedTeams = assignedTeams ++ user.teams.filter(teamsWithoutUpdate.contains)
 

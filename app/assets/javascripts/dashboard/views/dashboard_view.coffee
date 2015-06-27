@@ -69,6 +69,7 @@ class DashboardView extends Backbone.Marionette.LayoutView
   afterSync : ->
 
     if @activeTab
+      @refreshActiveTab()
       @tabPane.show(@activeTab)
     else
       if @model.attributes.isAdminView
@@ -80,24 +81,51 @@ class DashboardView extends Backbone.Marionette.LayoutView
 
   showDatasets : ->
 
-    @activeTab = new DatasetSwitchView(model : @model.get("dataSets"))
-    @tabPane.show(@activeTab)
+    @activeTab = {
+      tabHeader : @ui.tabDatasets
+      tabView : new DatasetSwitchView(model : @model.get("dataSets"))
+    }
+    @showTab(@activeTab)
 
 
   showTasks : ->
 
-    @activeTab = new DashboardTaskListView(model : @model)
-    @tabPane.show(@activeTab)
+    @activeTab = {
+      tabHeader : @ui.tabTasks
+      tabView : new DashboardTaskListView(model : @model)
+    }
+    @showTab(@activeTab)
 
 
   showExplorative : ->
 
-    @activeTab = new ExplorativeTracingListView(model : @model)
-    @tabPane.show(@activeTab)
+    @activeTab = {
+      tabHeader : @ui.tabExplorative
+      tabView : new ExplorativeTracingListView(model : @model)
+    }
+    @showTab(@activeTab)
 
 
   showTrackedTime : ->
 
-    @activeTab = new TrackedTimeView(model : @model.get("loggedTime"))
-    @tabPane.show(@activeTab)
+    @activeTab = {
+      tabHeader : @ui.tabTrackedTime
+      tabView : new TrackedTimeView(model : @model.get("loggedTime"))
+    }
+    @showTab(@activeTab)
+
+
+  refreshActiveTab : ->
+
+    # ensure that tabView is not destroyed
+    if @activeTab and @activeTab.tabView.isDestroyed
+      view = @activeTab.tabView
+      @activeTab.tabView = new view.constructor(view)
+
+
+  showTab : ({tabHeader, tabView}) ->
+
+    @$(".tabbable ul li").removeClass("active")
+    tabHeader.parent().addClass("active")
+    @tabPane.show(tabView)
 

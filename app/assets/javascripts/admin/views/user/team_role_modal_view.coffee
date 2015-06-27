@@ -78,6 +78,13 @@ class TeamRoleModal extends Backbone.Marionette.CompositeView
           # In case all teams were unselected
           teams = teams || []
 
+          # Add all teams for which we are not admin
+          teamNames = _.pluck(teams, "team")
+          otherTeams = _.filter(user.get("teams"),
+              (team) -> not _.contains(teamNames, team.team))
+          teams = teams.concat(otherTeams)
+          console.log(teams)
+
           # Verify user and update his teams
           user.save(
             "verified" : true

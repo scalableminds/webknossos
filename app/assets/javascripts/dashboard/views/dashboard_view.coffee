@@ -70,7 +70,7 @@ class DashboardView extends Backbone.Marionette.LayoutView
 
     if @activeTab
       @refreshActiveTab()
-      @tabPane.show(@activeTab)
+      @showTab(@activeTab)
     else
       if @model.attributes.isAdminView
         @showTasks()
@@ -82,7 +82,7 @@ class DashboardView extends Backbone.Marionette.LayoutView
   showDatasets : ->
 
     @activeTab = {
-      tabHeader : @ui.tabDatasets
+      tabHeaderId : "tab-datasets"
       tabView : new DatasetSwitchView(model : @model.get("dataSets"))
     }
     @showTab(@activeTab)
@@ -91,7 +91,7 @@ class DashboardView extends Backbone.Marionette.LayoutView
   showTasks : ->
 
     @activeTab = {
-      tabHeader : @ui.tabTasks
+      tabHeaderId : "tab-tasks"
       tabView : new DashboardTaskListView(model : @model)
     }
     @showTab(@activeTab)
@@ -100,7 +100,7 @@ class DashboardView extends Backbone.Marionette.LayoutView
   showExplorative : ->
 
     @activeTab = {
-      tabHeader : @ui.tabExplorative
+      tabHeaderId : "tab-explorative"
       tabView : new ExplorativeTracingListView(model : @model)
     }
     @showTab(@activeTab)
@@ -109,7 +109,7 @@ class DashboardView extends Backbone.Marionette.LayoutView
   showTrackedTime : ->
 
     @activeTab = {
-      tabHeader : @ui.tabTrackedTime
+      tabHeaderId : "tab-tracked-time"
       tabView : new TrackedTimeView(model : @model.get("loggedTime"))
     }
     @showTab(@activeTab)
@@ -123,9 +123,9 @@ class DashboardView extends Backbone.Marionette.LayoutView
       @activeTab.tabView = new view.constructor(view)
 
 
-  showTab : ({tabHeader, tabView}) ->
+  showTab : ({tabHeaderId, tabView}) ->
 
     @$(".tabbable ul li").removeClass("active")
-    tabHeader.parent().addClass("active")
+    @$("##{tabHeaderId}").parent().addClass("active")
     @tabPane.show(tabView)
 

@@ -38,14 +38,6 @@ class DashboardView extends Backbone.Marionette.LayoutView
     </div>
   """)
 
-  ui :
-    "tabDatasets" : "#tab-datasets"
-    "tabTasks" : "#tab-tasks"
-    "tabExplorative" : "#tab-explorative"
-    "tabTrackedTime" : "#tab-tracked-time"
-    "tabPane" : ".tab-pane"
-
-
   events :
     "click #tab-datasets" : "showDatasets"
     "click #tab-tasks" : "showTasks"

@@ -166,8 +166,9 @@ object UserController extends Controller with Secured with Dashboard with FoxImp
             issuingUser.adminTeamNames.contains(t.name) || assignedTeams.find(_.team == t.name).isDefined
           }
 
+          val trimmedExperiences = experiences.map{ case (key, value) => key.trim -> value} .toMap
           val updatedTeams = assignedTeams ++ user.teams.filter(teamsWithoutUpdate.contains)
-          UserService.update(user, firstName, lastName, verified, updatedTeams, experiences)
+          UserService.update(user, firstName, lastName, verified, updatedTeams, trimmedExperiences)
           Ok
         }
       case e: JsError =>

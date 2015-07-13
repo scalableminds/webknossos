@@ -67,28 +67,28 @@ class TeamRoleModal extends Backbone.Marionette.CompositeView
 
           # Find all selected teams
           teams = _.map(@$("input[type=checkbox]:checked"), (element) ->
-            teamId = $(element).data("teamid")
+            teamName = $(element).data("teamname")
             return {
               team : $(element).val()
               role :
-                name: @$("select[data-teamid=#{teamId}] :selected").val()
+                name: @$("select[data-teamname=\"#{teamName}\"] :selected").val()
             }
-          )
+          ) || []
 
-          # In case all teams were unselected
-          teams = teams || []
+          # Find unselected teams
+          removedTeamsNames = _.map(@$("input[type=checkbox]:not(:checked)"), (element) ->
+            return $(element).data("teamname")
+          ) || []
 
-          # Add all teams for which we are not admin
-          teamNames = _.pluck(teams, "team")
-          otherTeams = _.filter(user.get("teams"),
-              (team) -> not _.contains(teamNames, team.team))
-          teams = teams.concat(otherTeams)
-          console.log(teams)
+          # Add / remove teams
+          newTeams = _.extend(user.get("teams"), teams)
+          newTeams = _.filter(newTeams,
+              (team) -> not _.contains(removedTeamsNames, team.team))
 
           # Verify user and update his teams
           user.save(
             "verified" : true
-            "teams" : teams
+            teams : newTeams
           )
 
           return

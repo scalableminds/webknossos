@@ -38,14 +38,6 @@ class DashboardView extends Backbone.Marionette.LayoutView
     </div>
   """)
 
-  ui :
-    "tabDatasets" : "#tab-datasets"
-    "tabTasks" : "#tab-tasks"
-    "tabExplorative" : "#tab-explorative"
-    "tabTrackedTime" : "#tab-tracked-time"
-    "tabPane" : ".tab-pane"
-
-
   events :
     "click #tab-datasets" : "showDatasets"
     "click #tab-tasks" : "showTasks"
@@ -69,7 +61,8 @@ class DashboardView extends Backbone.Marionette.LayoutView
   afterSync : ->
 
     if @activeTab
-      @tabPane.show(@activeTab)
+      @refreshActiveTab()
+      @showTab(@activeTab)
     else
       if @model.attributes.isAdminView
         @showTasks()
@@ -80,24 +73,51 @@ class DashboardView extends Backbone.Marionette.LayoutView
 
   showDatasets : ->
 
-    @activeTab = new DatasetSwitchView(model : @model.get("dataSets"))
-    @tabPane.show(@activeTab)
+    @activeTab = {
+      tabHeaderId : "tab-datasets"
+      tabView : new DatasetSwitchView(model : @model.get("dataSets"))
+    }
+    @showTab(@activeTab)
 
 
   showTasks : ->
 
-    @activeTab = new DashboardTaskListView(model : @model)
-    @tabPane.show(@activeTab)
+    @activeTab = {
+      tabHeaderId : "tab-tasks"
+      tabView : new DashboardTaskListView(model : @model)
+    }
+    @showTab(@activeTab)
 
 
   showExplorative : ->
 
-    @activeTab = new ExplorativeTracingListView(model : @model)
-    @tabPane.show(@activeTab)
+    @activeTab = {
+      tabHeaderId : "tab-explorative"
+      tabView : new ExplorativeTracingListView(model : @model)
+    }
+    @showTab(@activeTab)
 
 
   showTrackedTime : ->
 
-    @activeTab = new TrackedTimeView(model : @model.get("loggedTime"))
-    @tabPane.show(@activeTab)
+    @activeTab = {
+      tabHeaderId : "tab-tracked-time"
+      tabView : new TrackedTimeView(model : @model.get("loggedTime"))
+    }
+    @showTab(@activeTab)
+
+
+  refreshActiveTab : ->
+
+    # ensure that tabView is not destroyed
+    if @activeTab and @activeTab.tabView.isDestroyed
+      view = @activeTab.tabView
+      @activeTab.tabView = new view.constructor(view)
+
+
+  showTab : ({tabHeaderId, tabView}) ->
+
+    @$(".tabbable ul li").removeClass("active")
+    @$("##{tabHeaderId}").parent().addClass("active")
+    @tabPane.show(tabView)
 

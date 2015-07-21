@@ -86,9 +86,11 @@ class TeamRoleModal extends Backbone.Marionette.CompositeView
               (team) -> not _.contains(removedTeamsNames, team.team))
 
           # Verify user and update his teams
-          user.save(
-            "verified" : true
-            teams : newTeams
+          user.save({
+              "verified" : true
+              teams : newTeams
+            },
+            @collection
           )
 
           return

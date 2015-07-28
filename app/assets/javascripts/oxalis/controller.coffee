@@ -58,87 +58,97 @@ class Controller
     @urlManager = new UrlManager(@model)
     @model.set("state", @urlManager.initialState)
 
-    @model.fetch().done (error) =>
+    @model.fetch()
+      .done( (error) => @modelFetchDone(error) )
+      .fail( (response) => @modelFetchFail(response) )
 
-      # Do not continue, when there was an error and we got no settings from the server
-      if error
-        return
+  modelFetchDone : (error) ->
 
-      unless @model.tracing.restrictions.allowAccess
-        Toast.Error "You are not allowed to access this tracing"
-        return
+    # Do not continue, when there was an error and we got no settings from the server
+    if error
+      return
 
-      @urlManager.startUrlUpdater()
+    unless @model.tracing.restrictions.allowAccess
+      Toast.Error "You are not allowed to access this tracing"
+      return
 
-      for allowedMode in @model.settings.allowedModes
+    @urlManager.startUrlUpdater()
 
-        @allowedModes.push switch allowedMode
-          when "oxalis" then constants.MODE_PLANE_TRACING
-          when "arbitrary" then constants.MODE_ARBITRARY
-          when "volume" then constants.MODE_VOLUME
+    for allowedMode in @model.settings.allowedModes
 
-      if constants.MODE_ARBITRARY in @allowedModes
-        @allowedModes.push(constants.MODE_ARBITRARY_PLANE)
+      @allowedModes.push switch allowedMode
+        when "oxalis" then constants.MODE_PLANE_TRACING
+        when "arbitrary" then constants.MODE_ARBITRARY
+        when "volume" then constants.MODE_VOLUME
 
-      # FPS stats
-      stats = new Stats()
-      $("body").append stats.domElement
+    if constants.MODE_ARBITRARY in @allowedModes
+      @allowedModes.push(constants.MODE_ARBITRARY_PLANE)
 
-      @sceneController = new SceneController(
-        @model.upperBoundary, @model.flycam, @model)
+    # FPS stats
+    stats = new Stats()
+    $("body").append stats.domElement
+
+    @sceneController = new SceneController(
+      @model.upperBoundary, @model.flycam, @model)
 
 
-      if @model.skeletonTracing?
+    if @model.skeletonTracing?
 
-        @view = new SkeletonTracingView(@model)
-        @annotationController = new SkeletonTracingController(
-          @model, @sceneController, @view )
-        @planeController = new SkeletonTracingPlaneController(
-          @model, stats, @view, @sceneController, @annotationController)
-        @arbitraryController = new SkeletonTracingArbitraryController(
-          @model, stats, @view, @sceneController, @annotationController)
+      @view = new SkeletonTracingView(@model)
+      @annotationController = new SkeletonTracingController(
+        @model, @sceneController, @view )
+      @planeController = new SkeletonTracingPlaneController(
+        @model, stats, @view, @sceneController, @annotationController)
+      @arbitraryController = new SkeletonTracingArbitraryController(
+        @model, stats, @view, @sceneController, @annotationController)
 
-      else if @model.volumeTracing?
+    else if @model.volumeTracing?
 
-        @view = new VolumeTracingView(@model)
-        @annotationController = new VolumeTracingController(
-          @model, @sceneController, @view )
-        @planeController = new VolumeTracingPlaneController(
-          @model, stats, @view, @sceneController, @annotationController)
+      @view = new VolumeTracingView(@model)
+      @annotationController = new VolumeTracingController(
+        @model, @sceneController, @view )
+      @planeController = new VolumeTracingPlaneController(
+        @model, stats, @view, @sceneController, @annotationController)
 
-      else # View mode
+    else # View mode
 
-        @view = new View(@model)
-        @planeController = new PlaneController(
-          @model, stats, @view, @sceneController)
+      @view = new View(@model)
+      @planeController = new PlaneController(
+        @model, stats, @view, @sceneController)
 
-      @initKeyboard()
+    @initKeyboard()
 
-      for binaryName of @model.binary
-        @listenTo(@model.binary[binaryName].cube, "bucketLoaded", -> app.vent.trigger("rerender"))
+    for binaryName of @model.binary
+      @listenTo(@model.binary[binaryName].cube, "bucketLoaded", -> app.vent.trigger("rerender"))
 
-      @listenTo(app.vent, "changeViewMode", @setMode)
+    @listenTo(@model, "change:mode", @setMode)
 
-      @allowedModes.sort()
-      if @allowedModes.length == 0
-        Toast.error("There was no valid allowed tracing mode specified.")
-      else
-        app.vent.trigger("changeViewMode", @allowedModes[0])
-      if @urlManager.initialState.mode? and @urlManager.initialState.mode != @model.mode
-        app.vent.trigger("changeViewMode", @urlManager.initialState.mode)
+    @allowedModes.sort()
+    if @allowedModes.length == 0
+      Toast.error("There was no valid allowed tracing mode specified.")
+    else
+      @model.setMode(@allowedModes[0])
+    if @urlManager.initialState.mode? and @urlManager.initialState.mode != @model.mode
+      @model.setMode(@urlManager.initialState.mode)
 
-      # Zoom step warning
-      @zoomStepWarningToast = null
-      @model.flycam.on
-        zoomStepChanged : =>
-          shouldWarn = not @model.canDisplaySegmentationData()
-          if shouldWarn and not @zoomStepWarningToast?
-            toastType = if @model.volumeTracing? then "danger" else "info"
-            @zoomStepWarningToast = Toast.message(toastType,
-              "Segmentation data is only fully supported at a smaller zoom level.", true)
-          else if not shouldWarn and @zoomStepWarningToast?
-            @zoomStepWarningToast.remove()
-            @zoomStepWarningToast = null
+
+    # Zoom step warning
+    @zoomStepWarningToast = null
+    @model.flycam.on
+      zoomStepChanged : =>
+        shouldWarn = not @model.canDisplaySegmentationData()
+        if shouldWarn and not @zoomStepWarningToast?
+          toastType = if @model.volumeTracing? then "danger" else "info"
+          @zoomStepWarningToast = Toast.message(toastType,
+            "Segmentation data is only fully supported at a smaller zoom level.", true)
+        else if not shouldWarn and @zoomStepWarningToast?
+          @zoomStepWarningToast.remove()
+          @zoomStepWarningToast = null
+
+
+  modelFetchFail : (response) ->
+
+    Toast.error(response.responseJSON.messages)
 
 
   initKeyboard : ->
@@ -167,13 +177,11 @@ class Controller
       _.extend( keyboardControls, {
         #Set Mode, outcomment for release
         "shift + 1" : =>
-          app.vent.trigger("changeViewMode", constants.MODE_PLANE_TRACING)
+          @model.setMode(constants.MODE_PLANE_TRACING)
         "shift + 2" : =>
-          app.vent.trigger("changeViewMode", constants.MODE_ARBITRARY)
+          @model.setMode(constants.MODE_ARBITRARY)
         "shift + 3" : =>
-          app.vent.trigger("changeViewMode", constants.MODE_ARBITRARY_PLANE)
-        "shift + 4" : =>
-          app.vent.trigger("changeViewMode", constants.MODE_VOLUME)
+          @model.setMode(constants.MODE_ARBITRARY_PLANE)
 
         "t" : =>
           @view.toggleTheme()
@@ -181,7 +189,7 @@ class Controller
         "m" : => # rotate allowed modes
 
           index = (@allowedModes.indexOf(@model.mode) + 1) % @allowedModes.length
-          app.vent.trigger("changeViewMode", @allowedModes[index])
+          @model.setMode(@allowedModes[index])
 
         "super + s, ctrl + s" : (event) =>
 

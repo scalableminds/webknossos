@@ -56,7 +56,10 @@ class Model extends Backbone.Model
         @user.fetch().pipe( =>
 
           @set("dataset", new Backbone.Model(tracing.content.dataSet))
-          @set("datasetConfiguration", new DatasetConfiguration({@datasetName}))
+          @set("datasetConfiguration", new DatasetConfiguration({
+            @datasetName
+            dataLayerNames : _.pluck(@get("dataset").get("dataLayers"), "name")
+          }))
           @get("datasetConfiguration").fetch().pipe( =>
 
             layers = @getLayers(tracing.content.contentData.customLayers)
@@ -108,10 +111,10 @@ class Model extends Backbone.Model
       @binary[layer.name] = new Binary(this, tracing, layer, maxLayerZoomStep, @updatePipeline, @connectionInfo)
       maxZoomStep = Math.max(maxZoomStep, maxLayerZoomStep)
 
+    @buildMappingsObject(layers)
+
     if @getColorBinaries().length == 0
       Toast.error("No data available! Something seems to be wrong with the dataset.")
-
-    @setDefaultBinaryColors()
 
     flycam = new Flycam2d(constants.PLANE_WIDTH, maxZoomStep + 1, @)
     flycam3d = new Flycam3d(constants.DISTANCE_3D, dataset.get("scale"))
@@ -119,15 +122,6 @@ class Model extends Backbone.Model
     @set("flycam3d", flycam3d)
     @listenTo(flycam3d, "changed", (matrix, zoomStep) => flycam.setPosition(matrix[12..14]))
     @listenTo(flycam, "positionChanged" : (position) => flycam3d.setPositionSilent(position))
-
-    # init state
-    state = @get("state")
-    flycam.setPosition( state.position || tracing.content.editPosition )
-    if state.zoomStep?
-      flycam.setZoomStep( state.zoomStep )
-      flycam3d.setZoomStep( state.zoomStep )
-    if state.rotation?
-      flycam3d.setRotation( state.rotation )
 
     if @get("controlMode") == constants.CONTROL_MODE_TRACE
 
@@ -139,6 +133,7 @@ class Model extends Backbone.Model
         @set("skeletonTracing", new SkeletonTracing(
           tracing, flycam, flycam3d, @user, @get("datasetConfiguration"), @updatePipeline))
 
+    @applyState(@get("state"), tracing)
     @computeBoundaries()
 
     @set("tracing", tracing)
@@ -148,7 +143,27 @@ class Model extends Backbone.Model
     @initSettersGetter()
     @trigger("sync")
 
+    # no error
     return
+
+
+  setMode : (@mode) ->
+
+    @trigger("change:mode", @mode)
+
+
+  # For now, since we have no UI for this
+  buildMappingsObject : (layers) ->
+
+    segmentationBinary = @getSegmentationBinary()
+
+    if segmentationBinary?
+      window.mappings = {
+        getAll : => segmentationBinary.mappings.getMappingNames()
+        getActive : => segmentationBinary.activeMapping
+        activate : (mapping) => segmentationBinary.setActiveMapping(mapping)
+      }
+
 
   getDataTokens : (layers) ->
 
@@ -176,26 +191,6 @@ class Model extends Backbone.Model
     return _.find(@binary, (binary) ->
       binary.category == "segmentation"
     )
-
-
-  setDefaultBinaryColors : ->
-
-    datasetConfig = @get("datasetConfiguration")
-    layerColors = datasetConfig.get("layerColors")
-    colorBinaries = @getColorBinaries()
-
-    if colorBinaries.length == 1
-      defaultColors = [[255, 255, 255]]
-    else
-      defaultColors = [[255, 0, 0], [0, 255, 0], [0, 0, 255],
-                        [255, 255, 0], [0, 255, 255], [255, 0, 255]]
-
-    for binary, i in colorBinaries
-      if layerColors[binary.name]
-        color = layerColors[binary.name]
-      else
-        color = defaultColors[i % defaultColors.length]
-      datasetConfig.set("layerColors.#{binary.name}", color)
 
 
   getLayers : (userLayers) ->
@@ -259,6 +254,7 @@ class Model extends Backbone.Model
 
     return $.when.apply($, dfds)
 
+
   # Make the Model compatible between legacy Oxalis style and Backbone.Modela/Views
   initSettersGetter : ->
 
@@ -271,3 +267,15 @@ class Model extends Backbone.Model
           return @get(key)
       )
     )
+
+
+  applyState : (state, tracing) ->
+
+    @get("flycam").setPosition( state.position || tracing.content.editPosition )
+    if state.zoomStep?
+      @get("flycam").setZoomStep( state.zoomStep )
+      @get("flycam3d").setZoomStep( state.zoomStep )
+    if state.rotation?
+      @get("flycam3d").setRotation( state.rotation )
+    if state.activeNode?
+      @get("skeletonTracing")?.setActiveNode(state.activeNode)

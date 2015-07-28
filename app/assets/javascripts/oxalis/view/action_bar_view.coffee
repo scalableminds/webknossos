@@ -1,7 +1,6 @@
 ### define
 underscore : _
 backbone.marionette : marionette
-./settings/settings_tab_view : SettingsTabView
 ./action-bar/dataset_actions_view : DatasetActionsView
 ./action-bar/dataset_position_view : DatasetPositionView
 ./action-bar/view_modes_view : ViewModesView
@@ -14,6 +13,17 @@ class ActionBarView extends Backbone.Marionette.LayoutView
   className : "container-fluid"
 
   template : _.template("""
+
+    <% if (isTraceMode) { %>
+      <a href="#" id="menu-toggle-button" class="btn btn-default"
+        data-toggle="offcanvas"
+        data-target="#settings-menu-wrapper"
+        data-canvas="#sliding-canvas"
+        data-placement="left"
+        data-autohide="false"
+        data-disable-scrolling="false"><i class="fa fa-bars"></i>Menu</a>
+    <% } %>
+
     <% if (isTraceMode) { %>
       <div id="dataset-actions"></div>
     <% } %>
@@ -48,7 +58,6 @@ class ActionBarView extends Backbone.Marionette.LayoutView
 
     if @isTraceMode()
       @datasetActionsView = new DatasetActionsView(options)
-      @settingsTabView = new SettingsTabView(options)
 
       if @isVolumeMode()
         @volumeActionsView = new VolumeActionsView(options)
@@ -80,4 +89,3 @@ class ActionBarView extends Backbone.Marionette.LayoutView
   isVolumeMode : ->
 
     return @model.get("mode") == Constants.MODE_VOLUME
-

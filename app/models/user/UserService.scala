@@ -2,6 +2,10 @@ package models.user
 
 import play.api.Play
 import play.api.Play.current
+import oxalis.thirdparty.BrainTracing
+import play.api.{Logger, Application}
+import scala.concurrent.{Future, Await}
+import scala.concurrent.duration._
 import oxalis.user.UserCache
 import models.configuration.{UserConfiguration, DataSetConfiguration}
 import models.team._
@@ -44,14 +48,17 @@ object UserService extends FoxImplicits {
     for {
       teamOpt <- TeamDAO.findOneByName(teamName)(GlobalAccessContext).futureBox
       teamMemberships = teamOpt.map(t => TeamMembership(t.name, Role.User)).toList
-      user = User(email, firstName, lastName, false, hashPassword(password), teamMemberships)
+      user = User(email, firstName, lastName, false, hashPassword(password), md5(password), teamMemberships)
       result <- UserDAO.insert(user, isVerified)(GlobalAccessContext).futureBox
     } yield result
 
   def update(user: User, firstName: String, lastName: String, verified: Boolean, teams: List[TeamMembership], experiences: Map[String, Int])(implicit ctx: DBAccessContext) = {
-    if (!user.verified && verified)
+    if (!user.verified && verified) {
       Application.Mailer ! Send(DefaultMails.verifiedMail(user.name, user.email))
-
+      if(user.teams.isEmpty){
+        BrainTracing.register(user)
+      }
+    }
     UserDAO.update(user._id, firstName, lastName, verified, teams, experiences).map {
       result =>
         UserCache.invalidateUser(user.id)

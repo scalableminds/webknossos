@@ -1,15 +1,30 @@
-#settings-menu {
+// add the margin-left to the settings width
+@settings-wrapper-width: @left-menu-width + 10;
 
-  position: relative;
+#settings-menu-wrapper {
+  position: absolute;
+  width: @settings-wrapper-width;
+  margin-right: 10px;
+  transform: translate(-@settings-wrapper-width, 0);
+  overflow: hidden;
+  z-index: 500;
+}
+
+#settings-menu {
   width: @left-menu-width;
   padding: 10px 0px;
-  display: inline-block;
   vertical-align: top;
   white-space: normal;
   .tab-menu;
 
   .nav-tabs {
     margin-bottom: 0px;
+  }
+
+  .tab-content {
+    .help-logo-view {
+      margin-top: 30px;
+    }
   }
 
   .panel {

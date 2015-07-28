@@ -1,5 +1,4 @@
 ### define
-three : THREE
 ###
 
 

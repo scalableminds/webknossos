@@ -47,7 +47,7 @@ class TaskTypeFormView extends Backbone.Marionette.LayoutView
             </div>
 
             <div class="col-sm-6 form-group pull-right">
-              <label class="col-sm-10 control-label" for="oxalisAllowed">Allow Oxalis</label>
+              <label class="col-sm-10 control-label" for="oxalisAllowed">Allow webKnossos</label>
               <div class="col-sm-2">
                 <input type="checkbox" id="oxalisAllowed" name="allowedModes[]" value="oxalis" checked>
                 <span></span>

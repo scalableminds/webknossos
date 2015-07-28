@@ -9,7 +9,7 @@ class AbstractTreeView extends Backbone.Marionette.ItemView
 
   className : "flex-column"
   template : _.template("""
-      <canvas width="<%= width %>" height="<%= height %>" style="width: <%= width %>px; height: <%= height %>px">
+      <canvas id="abstract-tree-canvas">
     """)
 
   ui :
@@ -34,21 +34,21 @@ class AbstractTreeView extends Backbone.Marionette.ItemView
     @listenTo(@model.skeletonTracing, "newNode" , @drawTree)
     @listenTo(@model.skeletonTracing, "updateComments" , @drawTree)
 
+    @initialized = false
+    $(window).on("resize", => @drawTree())
+
 
   resize : ->
 
-    @width = @$el.width()
-    @height = @$el.height() - 10
-
-    #re-render with correct height/width
+    @initialized = true
     @render()
 
-    @abstractTreeRenderer = new AbstractTreeRenderer(
-      @ui.canvas,
-      @width,
-      @height
-    )
 
+  render : ->
+
+    super()
+    if @initialized
+      @abstractTreeRenderer = new AbstractTreeRenderer(@ui.canvas)
     @drawTree()
 
 
@@ -60,14 +60,6 @@ class AbstractTreeView extends Backbone.Marionette.ItemView
         @model.skeletonTracing.getTree(),
         @model.skeletonTracing.getActiveNodeId(),
         @model.skeletonTracing.comments)
-
-
-  serializeData : ->
-
-    return {
-      width : @width || 300
-      height : @height || 300
-    }
 
 
   handleClick : (event) ->

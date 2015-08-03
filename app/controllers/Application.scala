@@ -38,6 +38,7 @@ object Application extends Controller with Secured {
         controllers.routes.javascript.AnnotationController.annotationsForTask,
         controllers.routes.javascript.AnnotationController.trace,
         controllers.routes.javascript.AnnotationController.finish,
+        controllers.routes.javascript.AnnotationController.finishAll,
         controllers.routes.javascript.AnnotationController.reopen,
         controllers.routes.javascript.AnnotationController.nameExplorativeAnnotation,
         controllers.routes.javascript.AnnotationController.createExplorational,

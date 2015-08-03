@@ -58,7 +58,7 @@ class ExplorativeTracingListItemView extends Backbone.Marionette.ItemView
           <a href="<%= jsRoutes.controllers.AnnotationController.reopen(typ, id).url %>"
              id="reopen-tracing">
             <i class="fa fa-folder-open"></i>
-            unarchive
+            reopen
           </a><br />
         <% } %>
       <% } %>

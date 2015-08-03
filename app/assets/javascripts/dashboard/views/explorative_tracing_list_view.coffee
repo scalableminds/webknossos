@@ -100,8 +100,6 @@ class ExplorativeTracingListView extends Backbone.Marionette.CompositeView
 
     @childViewOptions.parent = @
 
-    @templateHelpers.showArchiveAll = @showArchiveAll
-
     datasetCollection = @model.get("dataSets")
     @listenTo(datasetCollection, "sync", (collection, dataSets) =>
       @templateHelpers.activeDataSets = collection.filter( (dataset) -> dataset.get("isActive") )
@@ -131,18 +129,13 @@ class ExplorativeTracingListView extends Backbone.Marionette.CompositeView
       @ui.uploadAndExploreForm.submit()
 
 
-  showArchiveAll : () ->
-    console.log("called")
-    !@showArchivedAnnotations
-
-
   uploadFiles : (event) ->
 
     event.preventDefault()
 
     toggleIcon = =>
 
-      [@ui.formSpinnerIcon, @ui.formUploadIcon].forEach((ea) -> ea.toggleClass("hide"))
+      [@ui.formSpinnerIcon, @ui.formUploadIcon].forEach((each) -> each.toggleClass("hide"))
 
 
     toggleIcon()
@@ -166,17 +159,33 @@ class ExplorativeTracingListView extends Backbone.Marionette.CompositeView
     )
 
 
+  setAllFinished: ->
+    @collection.models.forEach((model) -> model.attributes.state.isFinished = true)
+
+
   archiveAll : () ->
+    unarchivedAnnoations = _.pluck(@collection.models, "id")
+    $.ajax(
+      url: jsRoutes.controllers.AnnotationController.finishAll("Explorational").url
+      type: "POST",
+      contentType: "application/json"
+      data: JSON.stringify({
+        annotations: unarchivedAnnoations
+      })
+    ).done( (data) =>
+      Toast.message(data.messages)
+      @setAllFinished()
+      @render()
+    ).fail( (xhr) ->
+      if xhr.responseJSON
+        Toast.message(xhr.responseJSON.messages)
+      else
+        Toast.message(xhr.statusText)
+    )
 
 
   toggleState : ->
     @showArchivedAnnotations = not @showArchivedAnnotations
-
-    if (@showArchivedAnnotations)
-      console.log(@ui.archiveAllButton)
-      @ui.archiveAllButton.hide()
-    else
-      @ui.archiveAllButton.show()
 
 
   toggleViewArchived : (event) ->
@@ -185,7 +194,13 @@ class ExplorativeTracingListView extends Backbone.Marionette.CompositeView
     @filter = @getFilterForState()
     @render()
 
-    verb = if @showArchivedAnnotations then "unarchived" else "archived"
+    if (@showArchivedAnnotations)
+      @ui.archiveAllButton.hide()
+    else
+      @ui.archiveAllButton.show()
+
+    verb = if @showArchivedAnnotations then "open" else "archived"
     @ui.toggleViewArchived.html("Show #{verb} tracings ")
+
 
 

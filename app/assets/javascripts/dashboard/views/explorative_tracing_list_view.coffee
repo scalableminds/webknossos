@@ -33,7 +33,7 @@ class ExplorativeTracingListView extends Backbone.Marionette.CompositeView
               method="POST"
               class="form-inline inline-block">
           <select id="dataSetsSelect" name="dataSetName" class="form-control">
-            <% activeDataSets.forEach(function(d) { %>
+            <% activeDataSets().forEach(function(d) { %>
               <option value="<%= d.get("name") %>"> <%= d.get("name") %> </option>
             <% }) %>
           </select>
@@ -45,11 +45,13 @@ class ExplorativeTracingListView extends Backbone.Marionette.CompositeView
           </button>
         </form>
         <a href="#" id="toggle-view-archived" class="btn btn-default">
-          Show archived tracings
+          <%= toggleViewArchivedText() %>
         </a>
+        <% if (showArchiveAllButton()) { %>
         <a href="#" id="archive-all" class="btn btn-default">
           Archive all
         </a>
+        <% } %>
       </div>
     <% } %>
 
@@ -88,8 +90,13 @@ class ExplorativeTracingListView extends Backbone.Marionette.CompositeView
     toggleViewArchived : "#toggle-view-archived"
     archiveAllButton : "#archive-all"
 
-  templateHelpers :
-    activeDataSets : [] # fills on @model.get("dataSets") sync event
+  templateHelpers : ->
+    activeDataSets : =>
+      @activeDataSets
+    showArchiveAllButton: =>
+      !@showArchivedAnnotations
+    toggleViewArchivedText: =>
+      @toggleViewArchivedText()
 
 
   initialize : (options) ->
@@ -100,9 +107,10 @@ class ExplorativeTracingListView extends Backbone.Marionette.CompositeView
 
     @childViewOptions.parent = @
 
+    @activeDataSets = []
     datasetCollection = @model.get("dataSets")
     @listenTo(datasetCollection, "sync", (collection, dataSets) =>
-      @templateHelpers.activeDataSets = collection.filter( (dataset) -> dataset.get("isActive") )
+      @activeDataSets = collection.filter( (dataset) -> dataset.get("isActive") )
       @render()
     )
     datasetCollection.fetch(silent : true)
@@ -164,13 +172,13 @@ class ExplorativeTracingListView extends Backbone.Marionette.CompositeView
 
 
   archiveAll : () ->
-    unarchivedAnnoations = _.pluck(@collection.models, "id")
+    unarchivedAnnoationIds = _.pluck(@collection.models, "id")
     $.ajax(
       url: jsRoutes.controllers.AnnotationController.finishAll("Explorational").url
       type: "POST",
       contentType: "application/json"
       data: JSON.stringify({
-        annotations: unarchivedAnnoations
+        annotations: unarchivedAnnoationIds
       })
     ).done( (data) =>
       Toast.message(data.messages)
@@ -188,19 +196,13 @@ class ExplorativeTracingListView extends Backbone.Marionette.CompositeView
     @showArchivedAnnotations = not @showArchivedAnnotations
 
 
+  toggleViewArchivedText : ->
+    verb = if @showArchivedAnnotations then "open" else "archived"
+    "Show #{verb} tracings "
+
+
   toggleViewArchived : (event) ->
     event.preventDefault()
     @toggleState()
     @filter = @getFilterForState()
     @render()
-
-    if (@showArchivedAnnotations)
-      @ui.archiveAllButton.hide()
-    else
-      @ui.archiveAllButton.show()
-
-    verb = if @showArchivedAnnotations then "open" else "archived"
-    @ui.toggleViewArchived.html("Show #{verb} tracings ")
-
-
-

@@ -14,7 +14,9 @@ class DatasetInfoView extends Backbone.Marionette.ItemView
       <p><%= annotationType %></p>
       <p>DataSet: <%= dataSetName %></p>
       <p>Viewport width: <%= chooseUnit(zoomLevel) %></p>
-      <p>Total number of trees: <%= treeCount %></p>
+      <% if(treeCount != null) { %>
+        <p>Total number of trees: <%= treeCount %></p>
+      <% } %>
     </div>
   """)
 
@@ -33,9 +35,11 @@ class DatasetInfoView extends Backbone.Marionette.ItemView
 
     @listenTo(@model.flycam3d, "changed", @render)
     @listenTo(@model.flycam, "zoomStepChanged", @render)
-    @listenTo(@model.skeletonTracing, "deleteTree", @render)
-    @listenTo(@model.skeletonTracing, "mergeTree", @render)
-    @listenTo(@model.skeletonTracing, "newTree", @render)
+
+    if @model.skeletonTracing
+      @listenTo(@model.skeletonTracing, "deleteTree", @render)
+      @listenTo(@model.skeletonTracing, "mergeTree", @render)
+      @listenTo(@model.skeletonTracing, "newTree", @render)
 
 
   serializeData : ->
@@ -44,7 +48,7 @@ class DatasetInfoView extends Backbone.Marionette.ItemView
       annotationType : @model.get("tracingType")
       zoomLevel : @calculateZoomLevel()
       dataSetName : @model.get("dataset").get("name")
-      treeCount : @model.skeletonTracing.trees.length
+      treeCount : @model.skeletonTracing?.trees.length
     }
 
 

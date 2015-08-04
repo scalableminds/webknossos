@@ -10,6 +10,8 @@ import oxalis.annotation.{MergeAnnotation, RequestAnnotation, AnnotationIdentifi
 import akka.pattern.ask
 import play.api.libs.concurrent.Execution.Implicits._
 import akka.util.Timeout
+import com.scalableminds.util.tools.ExtendedTypes.ExtendedBoolean
+import play.api.i18n.Messages
 import models.annotation.{Annotation, AnnotationLike}
 import models.annotation.AnnotationType._
 import oxalis.annotation.handler.AnnotationInformationHandler
@@ -70,7 +72,10 @@ trait TracingInformationProvider extends play.api.http.Status with FoxImplicits 
   def respondWithTracingInformation(annotationId: AnnotationIdentifier)(implicit request: UserAwareRequest[_]): Fox[JsValue] = {
     withAnnotation(annotationId) {
       annotation =>
-        annotation.annotationInfo(request.userOpt)
+        for {
+          _ <- annotation.restrictions.allowAccess(request.userOpt).failIfFalse(Messages("notAllowed")).toFox ~> 400
+          json <- annotation.annotationInfo(request.userOpt)
+        } yield json
     }
   }
 }

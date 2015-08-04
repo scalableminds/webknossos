@@ -5,8 +5,10 @@ app : app
 ./settings/tab_views/skeleton_plane_tab_view : SkeletonPlaneTabView
 ./settings/tab_views/skeleton_arbitrary_tab_view : SkeletonArbitraryTabView
 ./settings/tab_views/volume_tab_view : VolumeTabView
+./settings/tab_views/viewmode_tab_view : ViewmodeTabView
 ./skeletontracing/skeletontracing_right_menu_view : SkeletonTracingRightMenuView
 ./volumetracing/volumetracing_right_menu_view : VolumeTracingRightMenuView
+./viewmode/viewmode_right_menu_view : ViewmodeRightMenuView
 ./tracing_view : TracingView
 oxalis/controller : OxalisController
 oxalis/model : OxalisModel
@@ -110,6 +112,8 @@ class TracingLayoutView extends Backbone.Marionette.LayoutView
       @rightMenuView = new SkeletonTracingRightMenuView(@options)
     else if @isVolumeMode()
       @rightMenuView = new VolumeTracingRightMenuView(@options)
+    else
+      @rightMenuView = new ViewmodeRightMenuView(@options)
 
     @rightMenu.show(@rightMenuView)
     @renderSettings()
@@ -122,6 +126,8 @@ class TracingLayoutView extends Backbone.Marionette.LayoutView
       settingsTabView = new settingsTabClass(@options)
     else if @isVolumeMode()
       settingsTabView = new VolumeTabView(@options)
+    else
+      settingsTabView = new ViewmodeTabView(@options)
 
     @settings.show(settingsTabView, preventDestroy : true)
 

@@ -5,12 +5,15 @@ app : app
 ./settings/tab_views/skeleton_plane_tab_view : SkeletonPlaneTabView
 ./settings/tab_views/skeleton_arbitrary_tab_view : SkeletonArbitraryTabView
 ./settings/tab_views/volume_tab_view : VolumeTabView
+./settings/tab_views/viewmode_tab_view : ViewmodeTabView
 ./skeletontracing/skeletontracing_right_menu_view : SkeletonTracingRightMenuView
 ./volumetracing/volumetracing_right_menu_view : VolumeTracingRightMenuView
+./viewmode/viewmode_right_menu_view : ViewmodeRightMenuView
 ./tracing_view : TracingView
 oxalis/controller : OxalisController
 oxalis/model : OxalisModel
 oxalis/constants : Constants
+offcanvas : offcanvas
 ###
 
 class TracingLayoutView extends Backbone.Marionette.LayoutView
@@ -18,21 +21,44 @@ class TracingLayoutView extends Backbone.Marionette.LayoutView
   MARGIN : 40
 
   className : "text-nowrap"
-  template : _.template("""
+
+  traceTemplate : _.template("""
+    <div id="action-bar"></div>
+    <div id="sliding-canvas">
+      <div id="settings-menu-wrapper" class="navmenu-fixed-left offcanvas">
+        <div id="settings-menu"></div>
+      </div>
+      <div id="tracing"></div>
+      <div id="right-menu"></div>
+    </div>
+   """)
+
+  viewTemplate : _.template("""
     <div id="action-bar"></div>
     <div id="settings-menu"></div>
     <div id="tracing"></div>
     <div id="right-menu"></div>
-   """)
+  """)
+
+  getTemplate : ->
+    if @isTracingMode()
+      @traceTemplate
+    else
+      @viewTemplate
 
   ui :
     "rightMenu" : "#right-menu"
+    "slidingCanvas" : "#sliding-canvas"
 
   regions :
     "actionBar" : "#action-bar"
     "rightMenu" : "#right-menu"
     "tracingContainer" : "#tracing"
     "settings" : "#settings-menu"
+
+  events:
+    "hidden.bs.offcanvas #settings-menu-wrapper" : "doneSliding"
+    "shown.bs.offcanvas #settings-menu-wrapper" : "doneSliding"
 
 
   initialize : (options) ->
@@ -46,19 +72,28 @@ class TracingLayoutView extends Backbone.Marionette.LayoutView
     @model = @options.model
 
     @listenTo(@, "render", @afterRender)
-    @listenTo(app.vent, "planes:resize", @resize)
+    @listenTo(app.vent, "planes:resize", @resizeRightMenu)
     @listenTo(@model, "change:mode", @renderSettings)
     @listenTo(@model, "sync", @renderRegions)
-    $(window).on("resize", @resize.bind(@))
+    $(window).on("resize", @resizeRightMenu.bind(@))
 
     app.oxalis = new OxalisController(@options)
 
 
-  resize : ->
+  doneSliding : (evt) ->
+
+    @resizeRightMenu()
+
+
+  resizeRightMenu : ->
 
     if @isSkeletonMode()
+
       menuPosition = @ui.rightMenu.position()
-      newWidth = window.innerWidth - menuPosition.left - @MARGIN
+      slidingCanvasOffset = @ui.slidingCanvas.position().left
+
+      newWidth = window.innerWidth - menuPosition.left - slidingCanvasOffset - @MARGIN
+
       if menuPosition.left < window.innerWidth and newWidth > 350
         @ui.rightMenu.width(newWidth)
 
@@ -77,6 +112,8 @@ class TracingLayoutView extends Backbone.Marionette.LayoutView
       @rightMenuView = new SkeletonTracingRightMenuView(@options)
     else if @isVolumeMode()
       @rightMenuView = new VolumeTracingRightMenuView(@options)
+    else
+      @rightMenuView = new ViewmodeRightMenuView(@options)
 
     @rightMenu.show(@rightMenuView)
     @renderSettings()
@@ -89,6 +126,8 @@ class TracingLayoutView extends Backbone.Marionette.LayoutView
       settingsTabView = new settingsTabClass(@options)
     else if @isVolumeMode()
       settingsTabView = new VolumeTabView(@options)
+    else
+      settingsTabView = new ViewmodeTabView(@options)
 
     @settings.show(settingsTabView, preventDestroy : true)
 

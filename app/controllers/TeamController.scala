@@ -1,14 +1,12 @@
 package controllers
 
 import oxalis.security.Secured
-import models.team.{TeamService, Team, TeamDAO}
+import models.team._
 import play.api.libs.json.{JsError, JsSuccess, Writes, Json}
 import play.api.libs.concurrent.Execution.Implicits._
 import models.user.User
-import com.scalableminds.util.tools.ExtendedTypes.ExtendedString
 import scala.concurrent.Future
 import play.api.i18n.Messages
-import models.binary.{DataSetDAO, DataSet}
 import net.liftweb.common.{Empty, Failure, Full}
 import play.twirl.api.Html
 import com.scalableminds.util.reactivemongo.GlobalAccessContext
@@ -21,9 +19,9 @@ object TeamController extends Controller with Secured {
   }
 
   def isTeamOwner(team: Team, user: User) =
-    team.isEditableBy(user) match {
+    team.owner == Some(user._id) match {
       case true  => Full(true)
-      case false => Failure(Messages("notAllowed"))
+      case false => Failure(Messages("team.noOwner"))
     }
 
   def list = Authenticated.async{ implicit request =>

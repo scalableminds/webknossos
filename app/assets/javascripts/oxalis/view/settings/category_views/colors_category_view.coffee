@@ -1,6 +1,7 @@
 ### define
 ../setting_views/color_setting_view : ColorSettingView
 ../setting_views/slider_setting_view : SliderSettingView
+../setting_views/button_setting_view : ButtonSettingView
 ./category_view : CategoryView
 ###
 
@@ -11,6 +12,15 @@ class ColorsCategoryView extends CategoryView
 
 
   subviewCreators :
+
+    "reset" : ->
+
+      return new ButtonSettingView(
+        model : @model
+        options :
+          displayName : "Reset Color Settings"
+          callbackName : "reset"
+      )
 
     "brightness" : ->
 

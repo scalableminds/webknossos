@@ -16,10 +16,8 @@ class TeamListView extends Backbone.Marionette.CompositeView
       <table class="table table-striped">
         <thead>
           <tr>
-            <th>
-              <input type="checkbox" class="select-all-rows">
-            </th>
             <th>Name</th>
+            <th>Parent</th>
             <th>Owner</th>
             <th>Roles</th>
             <th>Actions</th>
@@ -69,7 +67,6 @@ class TeamListView extends Backbone.Marionette.CompositeView
 
 
   filter : (filterQuery) ->
-
     @collection.setFilter(["name", "owner"], filterQuery)
     @collection.pager()
 

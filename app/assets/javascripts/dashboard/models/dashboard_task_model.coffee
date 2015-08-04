@@ -10,6 +10,8 @@ class DashboardTaskModel extends Backbone.Model
 
     task = annotation.task
 
+    return unless task
+
     unless task.type
       task.type = @defaultTaskType(annotation)
 

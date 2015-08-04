@@ -23,6 +23,7 @@ class DashboardModel extends Backbone.Model
 
   initialize : (options) ->
 
+    @set("tasks", new Backbone.Collection())
     @listenTo(@, "sync", @transformToCollection)
 
 
@@ -57,9 +58,9 @@ class DashboardModel extends Backbone.Model
 
   transformToCollection : ->
 
-    tasks = @get("taskAnnotations").map( (el) ->
+    tasks = _.filter(@get("taskAnnotations").map( (el) ->
       return DashboardTaskModel::parse(el)
-    )
+    ))
 
     tasks = new Backbone.Collection(tasks, model : DashboardTaskModel )
     @set("tasks", tasks)

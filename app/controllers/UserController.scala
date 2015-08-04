@@ -140,6 +140,15 @@ object UserController extends Controller with Secured with Dashboard with FoxImp
     })
   }
 
+  def ensureRoleExistence(teams: List[(TeamMembership, Team)]) = {
+    Fox.combined(teams.map{
+      case (TeamMembership(_, role), team) if !team.roles.contains(role) =>
+        Fox.failure(Messages("team.nonExistentRole", team.name, role.name))
+      case (_, team) =>
+        Fox.successful(team)
+    })
+  }
+
   def update(userId: String) = Authenticated.async(parse.json) { implicit request =>
     val issuingUser = request.user
     request.body.validate(userUpdateReader) match{
@@ -147,11 +156,18 @@ object UserController extends Controller with Secured with Dashboard with FoxImp
         for{
           user <- UserDAO.findOneById(userId) ?~> Messages("user.notFound")
           _ <- allowedToAdministrate(issuingUser, user).toFox
-          _ <- Fox.combined(assignedTeams.map(t => ensureTeamAdministration(issuingUser, t.team)toFox)) ?~> Messages("team.admin.notAllowed")
+          _ <- Fox.combined(assignedTeams.map(t => ensureTeamAdministration(issuingUser, t.team)toFox))
           teams <- Fox.combined(assignedTeams.map(t => TeamDAO.findOneByName(t.team))) ?~> Messages("team.notFound")
+          allTeams <- Fox.sequenceOfFulls(user.teams.map(t => TeamDAO.findOneByName(t.team)))
+          _ <- ensureRoleExistence(assignedTeams.zip(teams))
           _ <- ensureProperTeamAdministration(user, assignedTeams.zip(teams))
         } yield {
-          UserService.update(user, firstName, lastName, verified, assignedTeams, experiences)
+          val teamsWithoutUpdate = allTeams.filterNot{t =>
+            issuingUser.adminTeamNames.contains(t.name) || assignedTeams.find(_.team == t.name).isDefined
+          }.map(_.name)
+          val trimmedExperiences = experiences.map{ case (key, value) => key.trim -> value}.toMap
+          val updatedTeams = assignedTeams ++ user.teams.filter(tm => teamsWithoutUpdate.contains(tm.team))
+          UserService.update(user, firstName, lastName, verified, updatedTeams, trimmedExperiences)
           Ok
         }
       case e: JsError =>

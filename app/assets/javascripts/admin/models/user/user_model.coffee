@@ -19,7 +19,7 @@ class UserModel extends Backbone.Model
     # If no options are present, the call is not part
     # of a server request.
     if @adminTeamCollection and options?
-      adminTeams = @adminTeamCollection.models.map(
+      adminTeams = @adminTeamCollection.map(
           (model) -> model.get("name"))
       attributes.teams = _.filter(attributes.teams,
           (team) -> team.team in adminTeams)

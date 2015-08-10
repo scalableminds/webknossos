@@ -81,8 +81,9 @@ class TeamRoleModal extends Backbone.Marionette.CompositeView
           ) || []
 
           # Add / remove teams
+          teamNames = _.pluck(teams, "team")
           for oldTeam in user.get("teams")
-            if not _.find(teams, (team) -> team.team == oldTeam.team)
+            if not (oldTeam.team in teamNames)
               teams.push(oldTeam)
           teams = _.filter(teams,
               (team) -> not _.contains(removedTeamsNames, team.team))

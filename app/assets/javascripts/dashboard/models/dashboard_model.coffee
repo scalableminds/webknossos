@@ -24,6 +24,7 @@ class DashboardModel extends Backbone.Model
 
   initialize : (options) ->
 
+    @set("tasks", new Backbone.Collection())
     @listenTo(@, "sync", @transformToCollection)
 
 

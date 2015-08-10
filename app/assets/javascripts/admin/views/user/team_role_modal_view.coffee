@@ -67,10 +67,11 @@ class TeamRoleModal extends Backbone.Marionette.CompositeView
 
           # Find all selected teams
           teams = _.map(@$("input[type=checkbox]:checked"), (element) ->
+            teamId = $(element).data("teamid")
             return {
               team : $(element).val()
               role :
-                name: @$("select   :selected").val()
+                name: @$("select[data-teamid=#{teamId}] :selected").val()
             }
           )
 

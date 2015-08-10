@@ -9,10 +9,17 @@ import scala.concurrent.Future
 import scala.concurrent.ExecutionContext.Implicits.global
 
 object Dependencies{
+<<<<<<< HEAD
   val akkaVersion = "2.3.8"
   val reactiveVersion = "0.10.5.0.akka23"
   val reactivePlayVersion = "0.10.5.0.akka23"
   val braingamesVersion = "7.6.6"
+=======
+  val akkaVersion = "2.2.0"
+  val reactiveVersion = "0.10.0"
+  val reactivePlayVersion = "0.10.2"
+  val braingamesVersion = "6.9.19-master-fix"
+>>>>>>> 41d3a600f152192bbf045e1964f5b8428768d6c0
 
   val restFb = "com.restfb" % "restfb" % "1.6.11"
   val commonsIo = "commons-io" % "commons-io" % "2.4"

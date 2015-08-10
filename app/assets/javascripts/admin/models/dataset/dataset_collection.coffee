@@ -8,3 +8,7 @@ class DatasetCollection extends PaginationView
 
   url : "/api/datasets"
   model : DatasetModel
+
+  getActiveDatasets : ->
+
+    return new DatasetCollection(@filter("isActive"))

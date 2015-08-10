@@ -81,14 +81,16 @@ class TeamRoleModal extends Backbone.Marionette.CompositeView
           ) || []
 
           # Add / remove teams
-          newTeams = _.extend(user.get("teams"), teams)
-          newTeams = _.filter(newTeams,
+          for oldTeam in user.get("teams")
+            if not _.find(teams, (team) -> team.team == oldTeam.team)
+              teams.push(oldTeam)
+          teams = _.filter(teams,
               (team) -> not _.contains(removedTeamsNames, team.team))
 
           # Verify user and update his teams
           user.save({
               "verified" : true
-              teams : newTeams
+              teams : teams
             },
             @collection
           )

@@ -38,8 +38,9 @@ Toast =
       messages = messages
       @message(type, message, sticky) for message in messages
 
-    else
-      $messageElement = $("<div>", class : "alert alert-#{type} fade in").html(message)
+    # Avoid duplicate messages
+    else if $(".alert-#{type}[data-id='#{message}']").length == 0
+      $messageElement = $("<div>", class : "alert alert-#{type} fade in", "data-id" : message).html(message)
       $messageElement.prepend($("<button>", type : "button", class : "close", "data-dismiss" : "alert").html("&times;"))
       if sticky
         $messageElement.alert()

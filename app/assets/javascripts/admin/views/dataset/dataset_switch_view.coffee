@@ -48,7 +48,8 @@ class DatasetSwitchView extends Backbone.Marionette.LayoutView
   showGalleryView : ->
 
     @toggleSwitchButtons()
-    datasetGalleryView = new SpotlightDatasetListView(collection : @model)
+    activeDatasets = @model.getActiveDatasets()
+    datasetGalleryView = new SpotlightDatasetListView(collection : activeDatasets)
     @datasetPane.show(datasetGalleryView)
 
     @pagination.empty()
@@ -57,6 +58,7 @@ class DatasetSwitchView extends Backbone.Marionette.LayoutView
   showAdvancedView : ->
 
     @toggleSwitchButtons()
+
     datasetListView = new DatasetListView(collection: @model)
     @datasetPane.show(datasetListView)
 

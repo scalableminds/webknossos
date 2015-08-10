@@ -99,7 +99,7 @@ class SkeletonTracingStateLogger extends StateLogger
       "New node can't have more than one neighbor", node.neighbors.length)
     if node.neighbors[0]
       $.assert(node.treeId == node.neighbors[0].treeId,
-        "Neighbot has different treeId",
+        "Neighbor has different treeId",
         {treeId1 : node.treeId, treeId2 : node.neighbors[0].treeId})
 
     needsEdge = node.neighbors.length == 1

@@ -20,6 +20,10 @@ class StateLogger
     @newDiffs = []
     @committedCurrentState = true
 
+    # Push state to server whenever a user moves
+    @listenTo(@flycam, "positionChanged", @push)
+
+
   pushDiff : (action, value, push = true) ->
 
     @newDiffs.push({

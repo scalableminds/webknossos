@@ -19,7 +19,7 @@ class SortTableBehavior extends Backbone.Marionette.Behavior
     sortableTableHeads.forEach((tableHeader) =>
       $tableHeader = $(tableHeader)
       @sortAttributes[$tableHeader.data().sort] = @options.sortDirection
-      $tableHeader.append("<div class='sort-icon-wrapper'></div>")
+      $tableHeader.append("<div class='sort-icon-wrapper'><span class='fa fa-sort sort-icon'></span></div>")
       $tableHeader.addClass("sortable-column")
     )
 
@@ -30,7 +30,7 @@ class SortTableBehavior extends Backbone.Marionette.Behavior
       if direction == "desc" then "asc" else "desc"
 
     if @lastSortAttribute != sortAttribute
-      @resetSorting
+      @resetSorting()
       @lastSortAttribute = sortAttribute
       sortDirection = @options.sortDirection
     else
@@ -40,19 +40,17 @@ class SortTableBehavior extends Backbone.Marionette.Behavior
     return sortDirection
 
 
-  removeSortIcon: () ->
-    $("thead").find(".sort-icon").remove()
+  resetSortIcon: (elem) ->
+    $(elem).find(".sort-icon").alterClass("fa-sort-*", "fa-sort")
 
 
   changeSortIcon: ($elem, sortDirection) ->
-    iconHtml = "<span class='fa fa-sort-#{sortDirection} sort-icon'></span>"
-    @removeSortIcon()
-    $elem.find("div").append(iconHtml)
+    $elem.find(".sort-icon").alterClass("fa-sort*", "fa-sort-#{sortDirection}")
 
 
   resetSorting: () ->
     @sortAttributes[@lastSortAttribute] = @options.sortDirection
-    @removeSortIcon()
+    $(".sortable-column").each((index, elem) => @resetSortIcon(elem))
 
 
   sortTable: ($elem, sortAttribute) ->

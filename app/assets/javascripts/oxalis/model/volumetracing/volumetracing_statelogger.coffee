@@ -9,11 +9,6 @@ class VolumeTracingStateLogger extends StateLogger
 
     super(flycam, version, tracingId, tracingType, allowUpdate, updatePipeline)
 
-    # For now, just save regularily
-    @flycam.on
-      positionChanged : =>
-        @push()
-
 
   pushDiff : (action, value, push = true) ->
 

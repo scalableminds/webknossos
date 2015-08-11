@@ -14,27 +14,27 @@ class ExplorativeTracingListView extends Backbone.Marionette.CompositeView
     <% if (!isAdminView) {%>
       <div>
         <form action="<%= jsRoutes.controllers.admin.NMLIO.upload().url %>"
-              method="POST"
-              enctype="multipart/form-data"
-              id="upload-and-explore-form"
-              class="form-inline inline-block">
-            <div class="fileinput fileinput-new" data-provides="fileinput">
-              <span class="btn btn-default btn-file">
-                <span class="fileinput-new">
-                  <i class="fa fa-upload" id="form-upload-icon"></i>
-                  <i class="fa fa-spinner fa-spin hide" id="form-spinner-icon"></i>
-                  Upload NML & explore
-                </span>
-                <input type="file" name="nmlFile" multiple>
+          method="POST"
+          enctype="multipart/form-data"
+          id="upload-and-explore-form"
+          class="form-inline inline-block">
+          <div class="fileinput fileinput-new" data-provides="fileinput">
+            <span class="btn btn-default btn-file">
+              <span class="fileinput-new">
+                <i class="fa fa-upload" id="form-upload-icon"></i>
+                <i class="fa fa-spinner fa-spin hide" id="form-spinner-icon"></i>
+                Upload NML & explore
               </span>
-            </div>
+              <input type="file" name="nmlFile" multiple accept=".nml">
+            </span>
+          </div>
         </form>
 
         <div class="divider-vertical"></div>
 
         <form action="<%= jsRoutes.controllers.AnnotationController.createExplorational().url %>"
-              method="POST"
-              class="form-inline inline-block">
+            method="POST"
+            class="form-inline inline-block">
           <select id="dataSetsSelect" name="dataSetName" class="form-control">
             <% activeDataSets.forEach(function(d) { %>
               <option value="<%= d.get("name") %>"> <%= d.get("name") %> </option>

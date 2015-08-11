@@ -1,10 +1,23 @@
-@( name: String )
+@(availableTaskCounts: List[(String, Int, String)])
 Hello Heiko,
 
+here is an overview of the available task for each user:
 
-
-http://webknossos.org
-
-Enjoy using webKnossos
+<table>
+  <thead>
+    <th>Name</th>
+    <th>Projects</th>
+    <th>Number of all assignable task</th>
+  </thead>
+  <tbody>
+    @availableTaskCounts.map { case (name, count, projects) =>
+      <tr>
+        <td>name</td>
+        <td>projects</td>
+        <td>count</td>
+      </tr>
+    }
+  </tbody>
+</table>
 
 Your webKnossos Team

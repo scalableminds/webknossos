@@ -60,7 +60,8 @@ class SortTableBehavior extends Backbone.Marionette.Behavior
 
 
   onClick: (evt) ->
-    $elem = $(evt.target)
+
+    $elem = if _.contains(evt.target.className, "sort-icon") then $(evt.target).closest("th") else $(evt.target)
     elemData = $elem.data()
     if "sort" not of elemData
       return

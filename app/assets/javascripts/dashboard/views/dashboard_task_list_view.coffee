@@ -5,7 +5,7 @@ backbone.marionette : marionette
 ./task_transfer_modal_view : TaskTransferModalView
 routes : routes
 libs/toast : Toast
-sort_table_behavior : SortTableBehavior
+libs/behaviors/sort_table_behavior : SortTableBehavior
 ###
 
 class DashboardTaskListView extends Backbone.Marionette.CompositeView

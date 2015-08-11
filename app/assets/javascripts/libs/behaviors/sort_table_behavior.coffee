@@ -14,7 +14,7 @@ class SortTableBehavior extends Backbone.Marionette.Behavior
   defaults:
     sortDirection: "asc"
 
-  onShow: () ->
+  onDomRefresh: ->
     sortableTableHeads = $("[data-sort]").toArray()
     sortableTableHeads.forEach((tableHeader) =>
       $tableHeader = $(tableHeader)
@@ -48,7 +48,7 @@ class SortTableBehavior extends Backbone.Marionette.Behavior
     $elem.find(".sort-icon").alterClass("fa-sort*", "fa-sort-#{sortDirection}")
 
 
-  resetSorting: () ->
+  resetSorting: ->
     @sortAttributes[@lastSortAttribute] = @options.sortDirection
     $(".sortable-column").each((index, elem) => @resetSortIcon(elem))
 

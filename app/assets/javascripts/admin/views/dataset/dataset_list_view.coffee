@@ -3,7 +3,7 @@ underscore : _
 backbone.marionette : Marionette
 ./dataset_list_item_view : DatasetListItemView
 ./team_assignment_modal_view: TeamAssignmentModalView
-sort_table_behavior : SortTableBehavior
+libs/behaviors/sort_table_behavior : SortTableBehavior
 ###
 
 class DatasetListView extends Backbone.Marionette.CompositeView
@@ -44,7 +44,7 @@ class DatasetListView extends Backbone.Marionette.CompositeView
   childView : DatasetListItemView
   childViewContainer: "table"
 
-  behaviors:
+  behaviors :
     SortTableBehavior:
       behaviorClass: SortTableBehavior
 

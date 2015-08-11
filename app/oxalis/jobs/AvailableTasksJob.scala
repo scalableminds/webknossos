@@ -10,7 +10,8 @@ import oxalis.mail.DefaultMails
 import scala.concurrent.duration._
 
 /**
- * Created by nico on 11/08/15.
+ * Actor which checks every fay if there are users without available tasks.
+ * If this is the case it sends an email with an overview of the available task count of each user.
  */
 class AvailableTasksJob extends Actor {
   import context.dispatcher
@@ -24,7 +25,6 @@ class AvailableTasksJob extends Actor {
       val availableTasksCountsFox = TaskController.getAllAvailableTaskCountsAndProjects()(GlobalAccessContext)
 
       availableTasksCountsFox foreach { availableTasks: Map[User, (Int, List[Project])] =>
-        println(availableTasks.exists { case (_, (count, _)) => count == 0 })
         if (availableTasks.exists { case (_ ,(count, _)) => count == 0 }) {
           val rows = (availableTasks map { case (user, (count, projects)) =>
             (user.name, count, projects.map(_.name).mkString(" "))

@@ -75,7 +75,7 @@ class DashboardView extends Backbone.Marionette.LayoutView
 
     @activeTab = {
       tabHeaderId : "tab-datasets"
-      tabView : new DatasetSwitchView(model : @model.get("dataSets"))
+      tabView : new DatasetSwitchView()
     }
     @showTab(@activeTab)
 

@@ -8,7 +8,6 @@ import models.task.Project
 import models.user.User
 import oxalis.mail.DefaultMails
 import scala.concurrent.duration._
-import akka.actor.Actor.Receive
 
 /**
  * Created by nico on 11/08/15.
@@ -16,19 +15,21 @@ import akka.actor.Actor.Receive
 class AvailableTasksJob extends Actor {
   import context.dispatcher
   val tick =
-    context.system.scheduler.schedule(10 seconds, 0 millis, self, "checkAvailableTasks")
+    context.system.scheduler.schedule(0 millis, 10 seconds, self, "checkAvailableTasks")
 
   override def postStop() = tick.cancel()
 
   override def receive: Receive = {
     case "checkAvailableTasks" =>
-      val availableTasksFox = TaskController.getAllAvailableTaskCountsAndProjects()(GlobalAccessContext)
+      val availableTasksCountsFox = TaskController.getAllAvailableTaskCountsAndProjects()(GlobalAccessContext)
 
-      availableTasksFox foreach { availableTasks: Map[User, (Int, List[Project])] =>
+      availableTasksCountsFox foreach { availableTasks: Map[User, (Int, List[Project])] =>
+        println(availableTasks.exists { case (_, (count, _)) => count == 0 })
         if (availableTasks.exists { case (_ ,(count, _)) => count == 0 }) {
           val rows = (availableTasks map { case (user, (count, projects)) =>
             (user.name, count, projects.map(_.name).mkString(" "))
           }).toList
+          val sortedRows = rows.sortBy { case (_, count, _) => count }
           Application.Mailer ! Send(DefaultMails.availableTaskCountMail(rows))
         }
       }

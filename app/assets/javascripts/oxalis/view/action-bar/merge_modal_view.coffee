@@ -2,6 +2,7 @@
 underscore : _
 backbone.marionette : Marionette
 libs/toast : Toast
+fileinput : Fileinput
 app : app
 oxalis/model/skeletontracing/user_annotation_collection : UserAnnotationCollection
 admin/views/selection_view : SelectionView
@@ -60,18 +61,23 @@ class MergeModalView extends Backbone.Marionette.LayoutView
                     method="POST"
                     enctype="multipart/form-data"
                     id="upload-and-explore-form"
-                    class="form-inline inline-block">
-                    <div class="input-group">
-                      <span class="input-group-btn">
-                        <span class="btn btn-primary btn-file">
-                          <input type="file" name="nmlFile" accept=".nml">
-                          <i class="fa fa-upload" id="form-upload-icon"></i>
-                          <i class="fa fa-spinner fa-spin hide" id="form-spinner-icon"></i>
+                    class="inline-block">
+
+                    <div class="fileinput fileinput-new input-group" data-provides="fileinput">
+                      <div class="form-control" data-trigger="fileinput">
+                        <span class="fileinput-filename"></span>
+                      </div>
+                      <span class="input-group-addon btn btn-default btn-file">
+                        <span class="fileinput-new">
+                          <i class="fa fa-upload"></i>
                           Upload NML
-                        </input>
                         </span>
+                        <span class="fileinput-exists">
+                          <i class="fa fa-upload hide" id="form-upload-icon"></i>
+                          <i class="fa fa-spinner fa-spin" id="form-spinner-icon"></i>
+                          Change</span>
+                        <input type="file" name="nmlFile" accept=".nml">
                       </span>
-                      <input type="text" class="file-info form-control" readonly="">
                     </div>
                 </form>
               </div>
@@ -118,6 +124,7 @@ class MergeModalView extends Backbone.Marionette.LayoutView
     "change input[type=file]"         : "selectFiles"
     "submit @ui.uploadAndExploreForm" : "uploadFiles"
     "click #explorative-merge"        : "mergeExplorative"
+    "change.bs.fileinput"             : "selectFiles"
 
   ui :
     "task"                 : ".task"
@@ -127,7 +134,7 @@ class MergeModalView extends Backbone.Marionette.LayoutView
     "uploadAndExploreForm" : "#upload-and-explore-form"
     "formSpinnerIcon"      : "#form-spinner-icon"
     "formUploadIcon"       : "#form-upload-icon"
-    "fileInfo"             : ".file-info"
+    "fileInput"            : ":file"
 
 
   initialize : ->
@@ -229,9 +236,8 @@ class MergeModalView extends Backbone.Marionette.LayoutView
 
   selectFiles : (event) ->
 
-    if event.target.files.length
+    if @ui.fileInput[0].files.length
       @ui.uploadAndExploreForm.submit()
-      @ui.fileInfo.val(event.target.files[0].name)
 
 
   toggleIcon : ->
@@ -242,8 +248,6 @@ class MergeModalView extends Backbone.Marionette.LayoutView
   uploadFiles : (event) ->
 
     event.preventDefault()
-
-    @toggleIcon()
 
     form = @ui.uploadAndExploreForm
 

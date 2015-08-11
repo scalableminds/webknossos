@@ -19,13 +19,16 @@ class ExplorativeTracingListView extends Backbone.Marionette.CompositeView
           enctype="multipart/form-data"
           id="upload-and-explore-form"
           class="form-inline inline-block">
-          <span class="btn-file btn btn-default">
-            <input type="file" name="nmlFile" multiple>
-              <i class="fa fa-upload" id="form-upload-icon"></i>
-              <i class="fa fa-spinner fa-spin hide" id="form-spinner-icon"></i>
-              Upload NML & explore
-            </input>
-          </span>
+          <div class="fileinput fileinput-new" data-provides="fileinput">
+            <span class="btn btn-default btn-file">
+              <span class="fileinput-new">
+                <i class="fa fa-upload" id="form-upload-icon"></i>
+                <i class="fa fa-spinner fa-spin hide" id="form-spinner-icon"></i>
+                Upload NML & explore
+              </span>
+              <input type="file" name="nmlFile" multiple accept=".nml">
+            </span>
+          </div>
         </form>
 
         <div class="divider-vertical"></div>

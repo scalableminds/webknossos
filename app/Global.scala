@@ -5,6 +5,7 @@ import com.scalableminds.datastore.services.BinaryDataService
 import models.binary.{DataStore, DataStoreDAO}
 import models.team._
 import net.liftweb.common.Full
+import oxalis.jobs.AvailableTasksJob
 import play.api._
 import play.api.libs.concurrent._
 import models.user._
@@ -49,6 +50,11 @@ object Global extends WithFilters(MetricsFilter) with GlobalSettings {
     Akka.system(app).actorOf(
       Props(new Mailer(conf)),
       name = "mailActor")
+
+    Akka.system(app).actorOf(
+      Props(new AvailableTasksJob()),
+      name = "availableTasksMailActor"
+    )
   }
 
   override def onError(request: RequestHeader, ex: Throwable) = {

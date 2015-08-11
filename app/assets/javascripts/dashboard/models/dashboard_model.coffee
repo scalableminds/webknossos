@@ -56,6 +56,7 @@ class DashboardModel extends Backbone.Model
     return @getFinishedTasks(false)
 
 
+
   transformToCollection : ->
 
     tasks = _.filter(@get("taskAnnotations").map( (el) ->

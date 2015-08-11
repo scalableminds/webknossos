@@ -1,9 +1,10 @@
 ### define
 underscore : _
 backbone : backbone
+nested_obj_model : NestedObjModel
 ###
 
-class DatasetModel extends Backbone.Model
+class DatasetModel extends NestedObjModel
 
   urlRoot : "/api/datasets"
   idAttribute : "name"

@@ -5,6 +5,7 @@ app : app
 dashboard/views/explorative_tracing_list_item_view : ExplorativeTracingListItemView
 libs/input : Input
 libs/toast : Toast
+libs/behaviors/sort_table_behavior : SortTableBehavior
 ###
 
 class ExplorativeTracingListView extends Backbone.Marionette.CompositeView
@@ -14,24 +15,24 @@ class ExplorativeTracingListView extends Backbone.Marionette.CompositeView
     <% if (!isAdminView) {%>
       <div>
         <form action="<%= jsRoutes.controllers.admin.NMLIO.upload().url %>"
-              method="POST"
-              enctype="multipart/form-data"
-              id="upload-and-explore-form"
-              class="form-inline inline-block">
-            <span class="btn-file btn btn-default">
-              <input type="file" name="nmlFile" multiple>
-                <i class="fa fa-upload" id="form-upload-icon"></i>
-                <i class="fa fa-spinner fa-spin hide" id="form-spinner-icon"></i>
-                Upload NML & explore
-              </input>
-            </span>
+          method="POST"
+          enctype="multipart/form-data"
+          id="upload-and-explore-form"
+          class="form-inline inline-block">
+          <span class="btn-file btn btn-default">
+            <input type="file" name="nmlFile" multiple>
+              <i class="fa fa-upload" id="form-upload-icon"></i>
+              <i class="fa fa-spinner fa-spin hide" id="form-spinner-icon"></i>
+              Upload NML & explore
+            </input>
+          </span>
         </form>
 
         <div class="divider-vertical"></div>
 
         <form action="<%= jsRoutes.controllers.AnnotationController.createExplorational().url %>"
-              method="POST"
-              class="form-inline inline-block">
+          method="POST"
+          class="form-inline inline-block">
           <select id="dataSetsSelect" name="dataSetName" class="form-control">
             <% dataSets.forEach(function(d) { %>
               <option value="<%= d.get("name") %>"> <%= d.get("name") %> </option>
@@ -47,15 +48,15 @@ class ExplorativeTracingListView extends Backbone.Marionette.CompositeView
       </div>
     <% } %>
 
-    <table class="table table-striped table-hover" id="explorative-tasks">
+    <table class="table table-striped table-hover sortable-table" id="explorative-tasks">
       <thead>
         <tr>
-          <th> # </th>
-          <th> Name </th>
-          <th> DataSet </th>
+          <th data-sort="formattedHash"> # </th>
+          <th data-sort="name"> Name </th>
+          <th data-sort="dataSource.id"> DataSet </th>
           <th> Stats </th>
           <th> Type </th>
-          <th> Created </th>
+          <th data-sort="created"> Created </th>
           <th> </th>
         </tr>
       </thead>
@@ -76,16 +77,21 @@ class ExplorativeTracingListView extends Backbone.Marionette.CompositeView
     formSpinnerIcon : "#form-spinner-icon"
     formUploadIcon : "#form-upload-icon"
 
+  templateHelpers : ->
+    activeDataSets : @datasetCollection.toArray()
 
-  initialize : ->
+  behaviors :
+    SortTableBehavior :
+      behaviorClass : SortTableBehavior
+
 
   initialize : (options) ->
 
     @collection = @model.get("exploratoryAnnotations")
 
-    datasetCollection = @model.get("dataSets")
-    @listenTo(datasetCollection, "sync", @render)
-    datasetCollection.fetch(silent : true)
+    @datasetCollection = @model.get("dataSets")
+    @listenTo(@datasetCollection, "sync", @render)
+    @datasetCollection.fetch({silent : true, data : "isActive=true"})
 
 
   selectFiles : (event) ->

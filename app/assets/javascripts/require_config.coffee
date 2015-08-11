@@ -33,6 +33,8 @@ require.config(
     "v3"                  : "libs/v3"
     "m4x4"                : "libs/m4x4"
     "worker"              : "libs/worker_plugin"
+    "wrapped_worker"      : "libs/wrapped_worker_plugin"
+    "nested_obj_model"    : "libs/nested_obj_model"
 
   shim :
     "underscore" :

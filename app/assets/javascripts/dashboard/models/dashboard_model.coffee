@@ -61,8 +61,9 @@ class DashboardModel extends Backbone.Model
 
 
   createCollection: (name) ->
-    collection = new Backbone.Collection()
+    collection = new PaginationCollection()
     # Display newst first.
+    collection.bootstrap()
     collection.sortBy("created")
     collection.add(@get(name))
     @set(name, collection)

@@ -63,12 +63,7 @@ class DashboardModel extends Backbone.Model
   createCollection: (name) ->
     collection = new Backbone.Collection()
     # Display newst first.
-    collection.comparator = (a,b) ->
-      if a.get("created") < b.get("created")
-        return 1
-      else if a.get("created") > b.get("created")
-        return -1
-      return 0
+    collection.sortBy("created")
     collection.add(@get(name))
     @set(name, collection)
 

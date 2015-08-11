@@ -44,6 +44,7 @@ class ExplorativeTracingListView extends Backbone.Marionette.CompositeView
             <i class="fa fa-search"></i>Open volume mode
           </button>
         </form>
+        <div class="divider-vertical"></div>
         <a href="#" id="toggle-view-archived" class="btn btn-default">
           <%= toggleViewArchivedText() %>
         </a>
@@ -92,7 +93,7 @@ class ExplorativeTracingListView extends Backbone.Marionette.CompositeView
 
   templateHelpers : ->
     activeDataSets : =>
-      @activeDataSets
+      return @datasetCollection.toArray()
     showArchiveAllButton: =>
       !@showArchivedAnnotations
     toggleViewArchivedText: =>
@@ -107,16 +108,13 @@ class ExplorativeTracingListView extends Backbone.Marionette.CompositeView
 
     @childViewOptions.parent = @
 
-    @activeDataSets = []
-    datasetCollection = @model.get("dataSets")
-    @listenTo(datasetCollection, "sync", (collection, dataSets) =>
-      @activeDataSets = collection.filter( (dataset) -> dataset.get("isActive") )
-      @render()
-    )
-    datasetCollection.fetch(silent : true)
+    @datasetCollection = @model.get("dataSets")
+    @listenTo(@datasetCollection, "sync", @render)
+    @datasetCollection.fetch({silent : true, data : "isActive=true"})
 
 
   getFilterForState: () ->
+
     if @showArchivedAnnotations
       @isArchived
     else
@@ -124,10 +122,12 @@ class ExplorativeTracingListView extends Backbone.Marionette.CompositeView
 
 
   isArchived : (model) ->
+
     model.attributes.state.isFinished
 
 
   isNotArchived : (model) ->
+
     !model.attributes.state.isFinished
 
 
@@ -168,11 +168,13 @@ class ExplorativeTracingListView extends Backbone.Marionette.CompositeView
 
 
   setAllFinished: ->
-    @collection.models.forEach((model) -> model.attributes.state.isFinished = true)
+
+    @collection.forEach((model) -> model.attributes.state.isFinished = true)
 
 
   archiveAll : () ->
-    unarchivedAnnoationIds = _.pluck(@collection.models, "id")
+
+    unarchivedAnnoationIds = @collection.pluck("id")
     $.ajax(
       url: jsRoutes.controllers.AnnotationController.finishAll("Explorational").url
       type: "POST",
@@ -193,15 +195,18 @@ class ExplorativeTracingListView extends Backbone.Marionette.CompositeView
 
 
   toggleState : ->
+
     @showArchivedAnnotations = not @showArchivedAnnotations
 
 
   toggleViewArchivedText : ->
+
     verb = if @showArchivedAnnotations then "open" else "archived"
     "Show #{verb} tracings "
 
 
   toggleViewArchived : (event) ->
+
     event.preventDefault()
     @toggleState()
     @filter = @getFilterForState()

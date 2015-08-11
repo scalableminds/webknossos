@@ -16,7 +16,7 @@ import play.api.Play.current
 import com.scalableminds.util.tools.Fox
 import net.liftweb.common.{Full, Failure}
 import com.scalableminds.util.reactivemongo.DBAccessContext
-import scala.concurrent.Future
+import scala.concurrent.{Promise, Future}
 import play.twirl.api.Html
 
 object TaskController extends Controller with Secured {
@@ -47,6 +47,22 @@ object TaskController extends Controller with Secured {
 
   def requestTaskFor(user: User)(implicit ctx: DBAccessContext) =
     TaskService.nextTaskForUser(user)
+
+  def getAvailableTaskCountFor(user: User)(implicit ctx: DBAccessContext): Fox[Int] =
+    TaskService.findAssignableFor(user).map(_.size)
+
+  def getAllAvailableTaskCounts()(implicit ctx: DBAccessContext): Fox[Map[User, Int]] = {
+    UserDAO.findAll
+      .flatMap { users =>
+        Future.sequence( users.map { user =>
+          val p = Promise[(User, Int)]()
+          val availableTaskCount = getAvailableTaskCountFor(user)
+          for (count: Int <- getAvailableTaskCountFor(user)) p success (user -> count)
+          p.future
+        })
+      }
+      .map(_.toMap[User, Int])
+  }
 
   def request = Authenticated.async { implicit request =>
     val user = request.user

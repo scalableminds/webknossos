@@ -81,7 +81,6 @@ class DashboardModel extends Backbone.Model
     @createCollection("allAnnotations")
 
 
-
   getNewTask : ->
 
     newTask = new DashboardTaskModel()

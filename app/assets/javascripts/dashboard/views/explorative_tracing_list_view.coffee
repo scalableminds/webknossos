@@ -103,6 +103,7 @@ class ExplorativeTracingListView extends Backbone.Marionette.CompositeView
     toggleViewArchivedText: =>
       @toggleViewArchivedText()
 
+
   behaviors :
     SortTableBehavior :
       behaviorClass : SortTableBehavior

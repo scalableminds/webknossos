@@ -39,27 +39,36 @@ class ExplorativeTracingListItemView extends Backbone.Marionette.ItemView
     <td><%= contentType + " - " + typ %></td>
     <td><%= created %></td>
     <td class="nowrap">
-      <a href="<%= jsRoutes.controllers.AnnotationController.trace(typ, id).url %>">
-        <i class="fa fa-random"></i>
-        <strong>trace</strong>
-      </a><br />
-      <a href="<%= jsRoutes.controllers.AnnotationController.download(typ, id).url %>">
-        <i class="fa fa-download"></i>
-        download
-      </a><br />
       <% if (typ == "Explorational"){ %>
-        <a href="<%= jsRoutes.controllers.AnnotationController.finish(typ, id).url %>"
-           id="finish-tracing">
-          <i class="fa fa-trash-o"></i>
-          delete
-        </a>
+        <% if (!state.isFinished) {%>
+          <a href="<%= jsRoutes.controllers.AnnotationController.trace(typ, id).url %>">
+            <i class="fa fa-random"></i>
+            <strong>trace</strong>
+          </a><br />
+          <a href="<%= jsRoutes.controllers.AnnotationController.download(typ, id).url %>">
+            <i class="fa fa-download"></i>
+            download
+          </a><br />
+          <a href="<%= jsRoutes.controllers.AnnotationController.finish(typ, id).url %>"
+             id="finish-tracing">
+            <i class="fa fa-archive"></i>
+            archive
+          </a><br />
+        <% } else {%>
+          <a href="<%= jsRoutes.controllers.AnnotationController.reopen(typ, id).url %>"
+             id="reopen-tracing">
+            <i class="fa fa-folder-open"></i>
+            reopen
+          </a><br />
+        <% } %>
       <% } %>
     </td>
   """)
 
   events :
     "submit #explorative-name-form" : "nameExplorativeAnnotation"
-    "click #finish-tracing" : "finishTracing"
+    "click #finish-tracing" : "finishOrOpenTracing"
+    "click #reopen-tracing" : "finishOrOpenTracing"
     "change @ui.explorativeNameInput" : "submitForm"
 
   ui :
@@ -95,16 +104,19 @@ class ExplorativeTracingListItemView extends Backbone.Marionette.ItemView
       Toast.message(xhr.responseJSON.messages)
     )
 
+  toggleState: (state) ->
+    state.isFinished = !state.isFinished
 
-  finishTracing : (event) ->
+
+  finishOrOpenTracing : (event) ->
 
     event.preventDefault()
     url = $(event.target).attr("href")
 
     $.get(url).done((response) =>
       Toast.message(response.messages)
-      @model.collection.remove(@model)
+      @toggleState(@model.attributes.state)
+      @options.parent.render()
     ).fail((xhr) ->
       Toast.message(xhr.responseJSON.messages)
     )
-

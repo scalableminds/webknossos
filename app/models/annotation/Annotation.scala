@@ -135,7 +135,7 @@ object Annotation {
 
 object AnnotationDAO
   extends SecuredBaseDAO[Annotation]
-  with FoxImplicits with MongoHelpers{
+  with FoxImplicits with MongoHelpers {
 
   val collectionName = "annotations"
 
@@ -182,6 +182,13 @@ object AnnotationDAO
       "typ" -> Json.obj("$nin" -> annotationTypes))).cursor[Annotation].collect[List]()
   }
 
+  def findFinishedFor(_user: BSONObjectID)(implicit ctx: DBAccessContext) = withExceptionCatcher {
+    find(Json.obj(
+    "_user" -> _user,
+    "state.isFinished" -> true
+    )).cursor[Annotation].collect[List]()
+  }
+
   def findOpenAnnotationFor(_user: BSONObjectID, annotationType: AnnotationType)(implicit ctx: DBAccessContext) =
     findOne(defaultFindForUserQ(_user, annotationType))
 
@@ -206,7 +213,7 @@ object AnnotationDAO
     findAndModify(
       Json.obj("_id" -> _annotation),
       Json.obj("$inc" -> Json.obj("version" -> 1)),
-      true)
+      returnNew = true)
 
   def findByTaskId(_task: BSONObjectID)(implicit ctx: DBAccessContext) = withExceptionCatcher{
     find("_task", _task).collect[List]()
@@ -251,13 +258,13 @@ object AnnotationDAO
     findAndModify(
       Json.obj("_id" -> _annotation),
       Json.obj("$set" -> Json.obj("state" -> AnnotationState.Finished)),
-      true)
+      returnNew = true)
 
   def rename(_annotation: BSONObjectID, name: String)(implicit ctx: DBAccessContext) =
     findAndModify(
       Json.obj("_id" -> _annotation),
       Json.obj("$set" -> Json.obj("_name" -> name)),
-      true)
+      returnNew = true)
 
   def reopen(_annotation: BSONObjectID)(implicit ctx: DBAccessContext) =
     updateState(_annotation, AnnotationState.InProgress)
@@ -269,7 +276,7 @@ object AnnotationDAO
     findAndModify(
       Json.obj("_id" -> _annotation),
       Json.obj("$set" -> Json.obj("state" -> state)),
-      true)
+      returnNew = true)
 
   def assignReviewer(_annotation: BSONObjectID, annotationReview: AnnotationReview)(implicit ctx: DBAccessContext) =
     findAndModify(
@@ -277,21 +284,21 @@ object AnnotationDAO
       Json.obj("$set" -> Json.obj(
         "state" -> AnnotationState.InReview,
         "review.-1" -> annotationReview)),
-      true)
+      returnNew = true)
 
   def addReviewComment(_annotation: BSONObjectID, comment: String)(implicit ctx: DBAccessContext) =
     findAndModify(
       Json.obj("_id" -> _annotation),
       Json.obj("$set" -> Json.obj(
         "review.0.comment" -> comment)),
-      true)
+      returnNew = true)
 
   def updateContent(_annotation: BSONObjectID, content: ContentReference)(implicit ctx: DBAccessContext) =
     findAndModify(
       Json.obj("_id" -> _annotation),
       Json.obj("$set" -> Json.obj(
         "_content" -> content)),
-      true)
+      returnNew = true)
 
   def unassignReviewer(_annotation: BSONObjectID)(implicit ctx: DBAccessContext) =
     findAndModify(
@@ -299,12 +306,12 @@ object AnnotationDAO
       Json.obj("$set" -> Json.obj(
         "state" -> AnnotationState.ReadyForReview),
         "$pop" -> Json.obj("review" -> -1)),
-      true)
+      returnNew = true)
 
   def transfer(_annotation: BSONObjectID, _user: BSONObjectID)(implicit ctx: DBAccessContext) =
     findAndModify(
       Json.obj("_id" -> _annotation),
       Json.obj("$set" -> Json.obj(
         "_user" -> _user)),
-      true)
+      returnNew = true)
 }

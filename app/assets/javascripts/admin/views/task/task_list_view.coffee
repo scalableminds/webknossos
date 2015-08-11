@@ -54,7 +54,7 @@ class TaskListView extends Backbone.Marionette.CompositeView
 
   initialize : ->
 
-    @listenTo(app.vent, "paginationView:filter", @filter)
+    @listenTo(app.vent, "paginationView:filter", @filterByQuery)
 
     @collection.fetch(
       silent : true #fucking important for pagination
@@ -69,6 +69,6 @@ class TaskListView extends Backbone.Marionette.CompositeView
     app.vent.trigger("taskListView:toggleDetails")
 
 
-  filter : (searchQuery) ->
+  filterByQuery : (searchQuery) ->
 
     @collection.setFilter(["team", "projectName", "id", "dataSet", "priority", "created"], searchQuery)

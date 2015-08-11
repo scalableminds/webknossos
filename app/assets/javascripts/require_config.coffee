@@ -29,10 +29,12 @@ require.config(
     "c3"                  : "../bower_components/c3/c3"
     "d3"                  : "../bower_components/d3/d3"
     "offcanvas"           : "../bower_components/jasny-bootstrap/js/offcanvas"
+    "fileinput"           : "../bower_components/jasny-bootstrap/js/fileinput"
     "v3"                  : "libs/v3"
     "m4x4"                : "libs/m4x4"
     "worker"              : "libs/worker_plugin"
     "wrapped_worker"      : "libs/wrapped_worker_plugin"
+    "nested_obj_model"    : "libs/nested_obj_model"
 
   shim :
     "underscore" :

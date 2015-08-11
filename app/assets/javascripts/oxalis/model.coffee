@@ -56,9 +56,11 @@ class Model extends Backbone.Model
         @user.fetch().pipe( =>
 
           @set("dataset", new Backbone.Model(tracing.content.dataSet))
+          colorLayers = _.filter( @get("dataset").get("dataLayers"),
+                                  (layer) -> layer.category == "color")
           @set("datasetConfiguration", new DatasetConfiguration({
             @datasetName
-            dataLayerNames : _.pluck(@get("dataset").get("dataLayers"), "name")
+            dataLayerNames : _.pluck(colorLayers, "name")
           }))
           @get("datasetConfiguration").fetch().pipe( =>
 

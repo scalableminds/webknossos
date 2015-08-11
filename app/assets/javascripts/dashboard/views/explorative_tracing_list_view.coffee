@@ -37,7 +37,7 @@ class ExplorativeTracingListView extends Backbone.Marionette.CompositeView
           method="POST"
           class="form-inline inline-block">
           <select id="dataSetsSelect" name="dataSetName" class="form-control">
-            <% activeDataSets.forEach(function(d) { %>
+            <% activeDataSets().forEach(function(d) { %>
               <option value="<%= d.get("name") %>"> <%= d.get("name") %> </option>
             <% }) %>
           </select>
@@ -48,6 +48,15 @@ class ExplorativeTracingListView extends Backbone.Marionette.CompositeView
             <i class="fa fa-search"></i>Open volume mode
           </button>
         </form>
+        <div class="divider-vertical"></div>
+        <a href="#" id="toggle-view-archived" class="btn btn-default">
+          <%= toggleViewArchivedText() %>
+        </a>
+        <% if (showArchiveAllButton()) { %>
+        <a href="#" id="archive-all" class="btn btn-default">
+          Archive all
+        </a>
+        <% } %>
       </div>
     <% } %>
 
@@ -69,19 +78,30 @@ class ExplorativeTracingListView extends Backbone.Marionette.CompositeView
 
   childView : ExplorativeTracingListItemView
   childViewContainer : "tbody"
+  childViewOptions:
+    parentModel : null
 
   events :
     "change input[type=file]" : "selectFiles"
     "submit @ui.uploadAndExploreForm" : "uploadFiles"
+    "click @ui.toggleViewArchived" : "toggleViewArchived"
+    "click @ui.archiveAllButton" : "archiveAll"
 
   ui :
     tracingChooser : "#tracing-chooser"
     uploadAndExploreForm : "#upload-and-explore-form"
     formSpinnerIcon : "#form-spinner-icon"
     formUploadIcon : "#form-upload-icon"
+    toggleViewArchived : "#toggle-view-archived"
+    archiveAllButton : "#archive-all"
 
   templateHelpers : ->
-    activeDataSets : @datasetCollection.toArray()
+    activeDataSets : =>
+      return @datasetCollection.toArray()
+    showArchiveAllButton: =>
+      !@showArchivedAnnotations
+    toggleViewArchivedText: =>
+      @toggleViewArchivedText()
 
   behaviors :
     SortTableBehavior :
@@ -90,11 +110,33 @@ class ExplorativeTracingListView extends Backbone.Marionette.CompositeView
 
   initialize : (options) ->
 
-    @collection = @model.get("exploratoryAnnotations")
+    @showArchivedAnnotations = false
+    @collection = @model.getAnnotations()
+    @filter = @getFilterForState()
+
+    @childViewOptions.parent = @
 
     @datasetCollection = @model.get("dataSets")
     @listenTo(@datasetCollection, "sync", @render)
     @datasetCollection.fetch({silent : true, data : "isActive=true"})
+
+
+  getFilterForState: () ->
+
+    if @showArchivedAnnotations
+      @isArchived
+    else
+      @isNotArchived
+
+
+  isArchived : (model) ->
+
+    model.attributes.state.isFinished
+
+
+  isNotArchived : (model) ->
+
+    !model.attributes.state.isFinished
 
 
   selectFiles : (event) ->
@@ -109,7 +151,7 @@ class ExplorativeTracingListView extends Backbone.Marionette.CompositeView
 
     toggleIcon = =>
 
-      [@ui.formSpinnerIcon, @ui.formUploadIcon].forEach((ea) -> ea.toggleClass("hide"))
+      [@ui.formSpinnerIcon, @ui.formUploadIcon].forEach((each) -> each.toggleClass("hide"))
 
 
     toggleIcon()
@@ -131,3 +173,49 @@ class ExplorativeTracingListView extends Backbone.Marionette.CompositeView
     ).always( ->
       toggleIcon()
     )
+
+
+  setAllFinished: ->
+
+    @collection.forEach((model) -> model.attributes.state.isFinished = true)
+
+
+  archiveAll : () ->
+
+    unarchivedAnnoationIds = @collection.pluck("id")
+    $.ajax(
+      url: jsRoutes.controllers.AnnotationController.finishAll("Explorational").url
+      type: "POST",
+      contentType: "application/json"
+      data: JSON.stringify({
+        annotations: unarchivedAnnoationIds
+      })
+    ).done( (data) =>
+      Toast.message(data.messages)
+      @setAllFinished()
+      @render()
+    ).fail( (xhr) ->
+      if xhr.responseJSON
+        Toast.message(xhr.responseJSON.messages)
+      else
+        Toast.message(xhr.statusText)
+    )
+
+
+  toggleState : ->
+
+    @showArchivedAnnotations = not @showArchivedAnnotations
+
+
+  toggleViewArchivedText : ->
+
+    verb = if @showArchivedAnnotations then "open" else "archived"
+    "Show #{verb} tracings "
+
+
+  toggleViewArchived : (event) ->
+
+    event.preventDefault()
+    @toggleState()
+    @filter = @getFilterForState()
+    @render()

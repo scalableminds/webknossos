@@ -71,10 +71,10 @@ class UserListView extends Backbone.Marionette.CompositeView
       @collection.goTo(1)
     )
 
-    @listenTo(app.vent, "paginationView:filter", @filter)
+    @listenTo(app.vent, "paginationView:filter", @filterByQuery)
 
 
-  filter : (filterQuery) ->
+  filterByQuery : (filterQuery) ->
 
     @collection.setFilter(["email", "firstName", "lastName"], filterQuery)
     @collection.pager()

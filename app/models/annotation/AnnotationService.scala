@@ -78,13 +78,16 @@ object AnnotationService extends AnnotationContentProviders with BoxImplicits wi
   def findExploratoryOf(user: User)(implicit ctx: DBAccessContext) =
     AnnotationDAO.findForWithTypeOtherThan(user._id, AnnotationType.Task :: AnnotationType.SystemTracings)
 
+  def findFinishedOf(user: User)(implicit ctx: DBAccessContext) =
+    AnnotationDAO.findFinishedFor(user._id)
+
 
   def createAnnotationFor(user: User, task: Task)(implicit ctx: DBAccessContext): Fox[Annotation] = {
     def useAsTemplateAndInsert(annotation: Annotation) =
       annotation.copy(
         _user = Some(user._id),
         state = AnnotationState.InProgress,
-        typ = AnnotationType.Task).temporaryDuplicate(false).flatMap(_.saveToDB)
+        typ = AnnotationType.Task).temporaryDuplicate(keepId = false).flatMap(_.saveToDB)
 
     for {
       annotationBase <- task.annotationBase
@@ -97,7 +100,7 @@ object AnnotationService extends AnnotationContentProviders with BoxImplicits wi
 
   def createAnnotationBase(task: Task, userId: BSONObjectID, boundingBox: BoundingBox, settings: AnnotationSettings, dataSetName: String, start: Point3D)(implicit ctx: DBAccessContext) = {
     for {
-      tracing <- SkeletonTracingService.createFrom(dataSetName, start, Some(boundingBox), true, settings)
+      tracing <- SkeletonTracingService.createFrom(dataSetName, start, Some(boundingBox), insertStartAsNode = true, settings)
       content = ContentReference.createFor(tracing)
       _ <- AnnotationDAO.insert(Annotation(Some(userId), content, team = task.team, typ = AnnotationType.TracingBase, _task = Some(task._id)))
     } yield tracing

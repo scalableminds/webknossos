@@ -13,10 +13,10 @@ import play.twirl.api.Html
 import akka.util.Timeout
 import scala.concurrent.duration._
 import play.api.libs.iteratee.Enumerator
-import models.binary.DataSetDAO
-import scala.concurrent.Future
+import models.binary.{DataSetService, DataSetDAO}
+import scala.concurrent._
 import models.user.time._
-import com.scalableminds.util.reactivemongo.DBAccessContext
+import com.scalableminds.util.reactivemongo.{GlobalAccessContext, DBAccessContext}
 import net.liftweb.common.Full
 import play.api.i18n.Messages.Message
 import com.scalableminds.util.tools.Fox
@@ -184,14 +184,37 @@ object AnnotationController extends Controller with Secured with TracingInformat
       }
   }
 
+  def finishAnnotation(typ: String, id: String, user: User)(implicit ctx: DBAccessContext): Fox[(JsObject, String)] = {
+    for {
+      annotation <- AnnotationDAO.findOneById(id) ?~> Messages("annotation.notFound")
+      (updated, message) <- annotation.muta.finishAnnotation(user)
+      json <- annotationJson(user, updated)
+    } yield (json, message)
+  }
+
   def finish(typ: String, id: String) = Authenticated.async {
     implicit request =>
       for {
-        annotation <- AnnotationDAO.findOneById(id) ?~> Messages("annotation.notFound")
-        (updated, message) <- annotation.muta.finishAnnotation(request.user)
-        json <- annotationJson(request.user, updated)
+        (json, message) <- finishAnnotation(typ, id, request.user)(GlobalAccessContext)
       } yield {
         JsonOk(json, message)
+      }
+  }
+
+  def finishAll(typ: String) = Authenticated.async(parse.json) {
+    implicit request =>
+      (request.body \ "annotations").validate[JsArray] match {
+        case JsSuccess(annotationIds, _) =>
+          val results: List[Fox[(JsObject, String)]] = (for {
+            jsValue <- annotationIds.value
+            id <- jsValue.asOpt[String]
+          } yield finishAnnotation(typ, id, request.user)(GlobalAccessContext)).toList
+
+          Fox.sequence(results) map { results =>
+            JsonOk(Messages("annotation.allFinished"))
+          }
+        case e: JsError =>
+          Future.successful(JsonBadRequest(JsError.toFlatJson(e)))
       }
   }
 

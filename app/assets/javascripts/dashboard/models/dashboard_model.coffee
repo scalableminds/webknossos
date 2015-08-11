@@ -57,6 +57,18 @@ class DashboardModel extends Backbone.Model
     return new PaginationCollection(filteredTasks)
 
 
+  getAnnotations : ->
+    @get("allAnnotations")
+
+
+  createCollection: (name) ->
+    collection = new Backbone.Collection()
+    # Display newst first.
+    collection.sortBy("created")
+    collection.add(@get(name))
+    @set(name, collection)
+
+
   transformToCollection : ->
 
     tasks = _.filter(@get("taskAnnotations").map( (el) ->
@@ -66,11 +78,8 @@ class DashboardModel extends Backbone.Model
     tasks = new PaginationCollection(tasks, model : DashboardTaskModel )
     @set("tasks", tasks)
 
-    exploratoryAnnotations = new PaginationCollection(@get("exploratoryAnnotations"))
-    exploratoryAnnotations.setSort("created", "desc")
-    # exploratoryAnnotations.add()
+    @createCollection("allAnnotations")
 
-    @set("exploratoryAnnotations", exploratoryAnnotations)
 
 
   getNewTask : ->

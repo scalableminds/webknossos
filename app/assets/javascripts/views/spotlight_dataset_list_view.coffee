@@ -11,16 +11,12 @@ class SpotlightDatasetListView extends Backbone.Marionette.CollectionView
 
   initialize : (options) ->
 
-    @collection.comparator = (a,b) ->
-      if a.get("created") < b.get("created")
-        return 1
-      else if a.get("created") > b.get("created")
-        return -1
-      return 0
-
+    # @collection.sortAttribute = "created"
+    @collection.sortBy("created")
+    
     @collection.fetch(
       silent : true
-      data: "isActive=true"
-      ).done( =>
-        @collection.goTo(1)
-      )
+      data : "isActive=true"
+    ).done( =>
+      @collection.goTo(1)
+    )

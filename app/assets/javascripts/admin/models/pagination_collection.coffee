@@ -11,6 +11,8 @@ backbone.paginator : Paginator
 
 class PaginationCollection extends Backbone.Paginator.clientPager
 
+  ##  pagination attributes  ##
+
   paginator_core :
     url : ->
       return this.url #use url from each individual collection
@@ -27,6 +29,9 @@ class PaginationCollection extends Backbone.Paginator.clientPager
 
   server_api = {}
 
+
+  ##  pagination methods  ##
+
   parse : (response) ->
 
     this.totalPages = Math.ceil(response.length / @perPage)
@@ -42,3 +47,9 @@ class PaginationCollection extends Backbone.Paginator.clientPager
   firstPage : ->
 
     @goTo(1)
+    
+
+  ##  collection methods  ##
+
+  sortBy: (attribute) ->
+    @setSort(@sortAttribute, @sortDirection)

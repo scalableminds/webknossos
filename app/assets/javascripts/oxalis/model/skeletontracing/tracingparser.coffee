@@ -29,7 +29,7 @@ class TracingParser
       # Create new tree
       tree = new TraceTree(
         treeData.id,
-        new THREE.Color().setRGB(treeData.color...).getHex(),
+        @convertColor(treeData.color),
         if treeData.name then treeData.name else "Tree#{('00'+treeData.id).slice(-3)}",
         treeData.timestamp)
 
@@ -68,6 +68,14 @@ class TracingParser
 
       @treeIdCount = Math.max(tree.treeId + 1, @treeIdCount)
       @trees.push(tree)
+
+
+  convertColor : (colorArray) ->
+
+    if colorArray?
+      return new THREE.Color().setRGB(colorArray...).getHex()
+
+    return null
 
 
   setBranchpoints : (nodeList) ->

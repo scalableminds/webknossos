@@ -12,7 +12,7 @@ class TeamRoleModalItem extends Backbone.Marionette.ItemView
     <div class="col-sm-8">
       <div class="checkbox">
         <label>
-          <input data-teamid="<%= id %>" type="checkbox" value="<%= name %>">
+          <input data-teamname="<%= name %>" type="checkbox" value="<%= name %>">
             <%= name %>
           </option>
         </label>
@@ -20,7 +20,7 @@ class TeamRoleModalItem extends Backbone.Marionette.ItemView
     </div>
     <div class="col-sm-4">
       <div>
-        <select data-teamid="<%= id %>" name="role" class="form-control">
+        <select data-teamname="<%= name %>" name="role" class="form-control">
           <option value="">Modify roles...</option>
             <% _.each(roles, function(role) { %>
               <option value="<%= role.name %>"><%= role.name %></option>

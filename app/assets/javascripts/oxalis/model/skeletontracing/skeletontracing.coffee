@@ -57,7 +57,12 @@ class SkeletonTracing
       @activeTree
     } = tracingParser.parse()
 
+    # Initialize tree colors
     @colorIdCounter = @treeIdCount
+
+    for tree in @trees
+      unless tree.color?
+        @shuffleTreeColor(tree)
 
     # ensure a tree is active
     unless @activeTree

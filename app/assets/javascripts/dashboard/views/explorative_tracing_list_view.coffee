@@ -5,6 +5,7 @@ app : app
 dashboard/views/explorative_tracing_list_item_view : ExplorativeTracingListItemView
 libs/input : Input
 libs/toast : Toast
+libs/behaviors/sort_table_behavior : SortTableBehavior
 ###
 
 class ExplorativeTracingListView extends Backbone.Marionette.CompositeView
@@ -33,8 +34,8 @@ class ExplorativeTracingListView extends Backbone.Marionette.CompositeView
         <div class="divider-vertical"></div>
 
         <form action="<%= jsRoutes.controllers.AnnotationController.createExplorational().url %>"
-            method="POST"
-            class="form-inline inline-block">
+          method="POST"
+          class="form-inline inline-block">
           <select id="dataSetsSelect" name="dataSetName" class="form-control">
             <% activeDataSets.forEach(function(d) { %>
               <option value="<%= d.get("name") %>"> <%= d.get("name") %> </option>
@@ -50,15 +51,15 @@ class ExplorativeTracingListView extends Backbone.Marionette.CompositeView
       </div>
     <% } %>
 
-    <table class="table table-striped table-hover" id="explorative-tasks">
+    <table class="table table-striped table-hover sortable-table" id="explorative-tasks">
       <thead>
         <tr>
-          <th> # </th>
-          <th> Name </th>
-          <th> DataSet </th>
+          <th data-sort="formattedHash"> # </th>
+          <th data-sort="name"> Name </th>
+          <th data-sort="dataSource.id"> DataSet </th>
           <th> Stats </th>
           <th> Type </th>
-          <th> Created </th>
+          <th data-sort="created"> Created </th>
           <th> </th>
         </tr>
       </thead>
@@ -79,19 +80,21 @@ class ExplorativeTracingListView extends Backbone.Marionette.CompositeView
     formSpinnerIcon : "#form-spinner-icon"
     formUploadIcon : "#form-upload-icon"
 
-  templateHelpers :
-    activeDataSets : [] # fills on @model.get("dataSets") sync event
+  templateHelpers : ->
+    activeDataSets : @datasetCollection.toArray()
+
+  behaviors :
+    SortTableBehavior :
+      behaviorClass : SortTableBehavior
+
 
   initialize : (options) ->
 
     @collection = @model.get("exploratoryAnnotations")
 
-    datasetCollection = @model.get("dataSets")
-    @listenTo(datasetCollection, "sync", (collection, dataSets) =>
-      @templateHelpers.activeDataSets = collection.filter( (dataset) -> dataset.get("isActive") )
-      @render()
-    )
-    datasetCollection.fetch(silent : true)
+    @datasetCollection = @model.get("dataSets")
+    @listenTo(@datasetCollection, "sync", @render)
+    @datasetCollection.fetch({silent : true, data : "isActive=true"})
 
 
   selectFiles : (event) ->

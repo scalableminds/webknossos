@@ -90,7 +90,7 @@ object UserController extends Controller with Secured with Dashboard with FoxImp
 
   // REST API
   def list = Authenticated.async{ implicit request =>
-    for{
+    for {
       users <- UserDAO.findAll
     } yield {
       val filtered = request.getQueryString("isEditable").flatMap(_.toBooleanOpt) match{
@@ -153,7 +153,7 @@ object UserController extends Controller with Secured with Dashboard with FoxImp
     val issuingUser = request.user
     request.body.validate(userUpdateReader) match{
       case JsSuccess((firstName, lastName, verified, assignedTeams, experiences), _) =>
-        for{
+        for {
           user <- UserDAO.findOneById(userId) ?~> Messages("user.notFound")
           _ <- allowedToAdministrate(issuingUser, user).toFox
           _ <- Fox.combined(assignedTeams.map(t => ensureTeamAdministration(issuingUser, t.team)toFox))

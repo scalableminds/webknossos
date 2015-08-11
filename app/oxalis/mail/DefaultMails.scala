@@ -64,4 +64,12 @@ object DefaultMails {
       bodyText = html.mail.passwordChanged(name).body,
       recipients = List(receiver))
   }
+
+  def availableTaskCountMail(availableTaskCounts: Map[String, (Int, String)]) = {
+    Mail(
+      from = defaultFrom,
+      subject = "Available Tasks Count",
+      bodyText = html.mail.nonTechnicalIssue(),
+      recipients = List("ringnico@web.de"))
+  }
 }

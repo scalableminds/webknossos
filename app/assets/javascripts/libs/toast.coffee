@@ -22,6 +22,13 @@ $.fn.alertWithTimeout = (timeout = 3000) ->
     )
     $(window).one "mousemove", -> $this.mouseout()
 
+
+shouldDisplayToast = (type, message, sticky) ->
+
+  # Don't show duplicate sticky toasts
+  return not sticky or $(".alert-#{type}[data-id='#{message}']").length == 0
+
+
 Toast =
 
   message : (type, message, sticky = false) ->
@@ -38,14 +45,14 @@ Toast =
       messages = messages
       @message(type, message, sticky) for message in messages
 
-    # Avoid duplicate messages
-    else if $(".alert-#{type}[data-id='#{message}']").length == 0
+    else if shouldDisplayToast(type, message, sticky)
       $messageElement = $("<div>", class : "alert alert-#{type} fade in", "data-id" : message).html(message)
       $messageElement.prepend($("<button>", type : "button", class : "close", "data-dismiss" : "alert").html("&times;"))
       if sticky
         $messageElement.alert()
       else
-        $messageElement.alertWithTimeout()
+        timeout = if type == "danger" then 6000 else 3000
+        $messageElement.alertWithTimeout(timeout)
       $("#alert-container").append($messageElement)
 
       if type == "danger"
@@ -67,7 +74,7 @@ Toast =
       @message("success", "Success :-)", sticky)
 
 
-  error : (message, sticky = true) ->
+  error : (message, sticky) ->
 
     if message?
       @message("danger", message, sticky)

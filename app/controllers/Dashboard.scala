@@ -57,7 +57,6 @@ trait Dashboard extends FoxImplicits {
     } yield {
       val annotations = exploratoryAnnotations ::: finishedAnnotations
       Json.obj(
-        "exploratoryAnnotations" -> exploratoryAnnotations.flatMap ( o => o),
         "taskAnnotations" -> tasksAnnotations.flatMap ( o => o),
         "allAnnotations" -> annotations.flatMap ( o => o)
       )

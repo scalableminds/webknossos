@@ -5,6 +5,7 @@ backbone : Backbone
 ./user_model : UserModel
 admin/models/dataset/dataset_collection : DatasetCollection
 dashboard/models/logged_time_model : LoggedTimeModel
+admin/models/pagination_collection : PaginationCollection
 ###
 
 class DashboardModel extends Backbone.Model
@@ -53,7 +54,7 @@ class DashboardModel extends Backbone.Model
   getUnfinishedTasks : ->
 
     filteredTasks = @get("tasks").filter( (task) -> return !task.get("annotation").state.isFinished )
-    return new Backbone.Collection(filteredTasks)
+    return new PaginationCollection(filteredTasks)
 
 
   getAnnotations : ->
@@ -70,14 +71,15 @@ class DashboardModel extends Backbone.Model
 
   transformToCollection : ->
 
-    tasks = @get("taskAnnotations").map( (el) ->
+    tasks = _.filter(@get("taskAnnotations").map( (el) ->
       return DashboardTaskModel::parse(el)
-    )
+    ))
 
-    tasks = new Backbone.Collection(tasks, model : DashboardTaskModel )
+    tasks = new PaginationCollection(tasks, model : DashboardTaskModel )
     @set("tasks", tasks)
 
     @createCollection("allAnnotations")
+
 
 
   getNewTask : ->

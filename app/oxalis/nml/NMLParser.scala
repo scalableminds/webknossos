@@ -192,7 +192,7 @@ object NMLParser {
     }
 
     private def parseColor(node: XMLNode) = {
-      parseColorOpt(node).getOrElse(DEFAULT_COLOR)
+      parseColorOpt(node)
     }
 
     private def parseName(node: XMLNode) = {

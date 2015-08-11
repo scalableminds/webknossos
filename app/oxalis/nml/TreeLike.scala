@@ -5,10 +5,11 @@ import com.scalableminds.util.xml.{SynchronousXMLWrites, XMLWrites, Xml}
 import play.api.libs.json.Writes
 import play.api.libs.json.Json
 import play.api.libs.concurrent.Execution.Implicits._
+import com.scalableminds.util.xml.XMLUtils._
 
 trait TreeLike {
   def treeId: Int
-  def color: Color
+  def color: Option[Color]
   def nodes: Set[Node]
   def edges: Set[Edge]
   def timestamp: Long
@@ -33,7 +34,7 @@ object TreeLike{
         nodes <- Xml.toXML(t.nodes.toSeq.sortBy(_.id))
         edges <- Xml.toXML(t.edges.toSeq)
       } yield {
-        <thing id={ t.treeId.toString } color.r={ t.color.r.toString } color.g={ t.color.g.toString } color.b={ t.color.b.toString } color.a={ t.color.a.toString } name={t.name}>
+        <thing id={ t.treeId.toString } color.r={ t.color.map(_.r.toString) } color.g={ t.color.map(_.g.toString) } color.b={ t.color.map(_.b.toString) } color.a={ t.color.map(_.a.toString) } name={t.name}>
           <nodes>
             { nodes}
           </nodes>

@@ -123,6 +123,7 @@ POST          /admin/tasks/createFromForm                                       
 GET           /admin/tasks/:id/edit                                             controllers.admin.TaskAdministration.edit(id: String)
 POST          /admin/tasks/:id                                                  controllers.admin.TaskAdministration.editTaskForm(id: String)
 GET           /api/tasks/overview                                               controllers.admin.TaskAdministration.overviewData
+GET           /api/tasks/availableCount                                         controllers.TaskController.requestAvailableTasks
 
 GET           /api/tasks/:id/download                                           controllers.admin.NMLIO.taskDownload(id: String)
 GET           /api/tasks/:id/annotations                                        controllers.AnnotationController.annotationsForTask(id: String)

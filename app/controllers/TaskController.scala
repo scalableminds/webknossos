@@ -13,13 +13,15 @@ import play.api.libs.concurrent.Execution.Implicits._
 import play.api.i18n.Messages
 import models.annotation.AnnotationService
 import play.api.Play.current
-import com.scalableminds.util.tools.Fox
+import com.scalableminds.util.tools.{FoxImplicits, Fox}
 import net.liftweb.common.{Full, Failure}
 import com.scalableminds.util.reactivemongo.DBAccessContext
 import scala.concurrent.{Promise, Future}
 import play.twirl.api.Html
+import scala.async.Async.{async, await}
+import net.liftweb.common.Box
 
-object TaskController extends Controller with Secured {
+object TaskController extends Controller with Secured with FoxImplicits {
 
   val MAX_OPEN_TASKS = current.configuration.getInt("oxalis.tasks.maxOpenPerUser") getOrElse 2
 
@@ -48,20 +50,52 @@ object TaskController extends Controller with Secured {
   def requestTaskFor(user: User)(implicit ctx: DBAccessContext) =
     TaskService.nextTaskForUser(user)
 
-  def getAvailableTaskCountFor(user: User)(implicit ctx: DBAccessContext): Fox[Int] =
-    TaskService.findAssignableFor(user).map(_.size)
+  def getAvailableTasksFor(user: User)(implicit ctx: DBAccessContext): Fox[List[Task]] =
+    TaskService.findAssignableFor(user)
 
-  def getAllAvailableTaskCounts()(implicit ctx: DBAccessContext): Fox[Map[User, Int]] = {
+  def getProjectsFor(tasks: List[Task])(implicit ctx: DBAccessContext) = {
+    val projects = Future.fold[Box[Project], Set[Project]](tasks.map(_.project.futureBox))(Set()) { (projects, project) =>
+      if (!project.isEmpty)
+        projects + project.openOrThrowException("Project should not be empty")
+      else
+        projects
+    }
+    projects map (_.toList)
+  }
+
+  def getAllAvailableTaskCountsAndProjects()(implicit ctx: DBAccessContext): Fox[Map[User, (Int, List[Project])]] = {
     UserDAO.findAll
       .flatMap { users =>
         Future.sequence( users.map { user =>
-          val p = Promise[(User, Int)]()
-          val availableTaskCount = getAvailableTaskCountFor(user)
-          for (count: Int <- getAvailableTaskCountFor(user)) p success (user -> count)
-          p.future
+          async  {
+            val tasks = await(getAvailableTasksFor(user).futureBox) openOr List()
+            val taskCount = tasks.size
+            val projects = await(getProjectsFor(tasks))
+            user ->(taskCount, projects)
+          }
         })
       }
-      .map(_.toMap[User, Int])
+      .map(_.toMap[User, (Int, List[Project])])
+  }
+
+  def createAvailableTasksJson(availableTasksMap: Map[User, (Int, List[Project])]): JsObject = {
+    JsObject(Seq(
+      "availableTasksCounts" -> JsArray(availableTasksMap.map { case (user, (taskCount, projects)) =>
+        JsObject(Seq(
+          "name" -> JsString(user.name),
+          "availableTaskCount" -> JsNumber(taskCount),
+          "projects" -> JsArray(projects.map(project => JsString(project.name)))
+        ))
+      }.toSeq)
+    ))
+  }
+
+  def requestAvailableTasks = Authenticated.async { implicit request =>
+    for {
+      availableTasksMap <- getAllAvailableTaskCountsAndProjects()
+    } yield {
+      JsonOk(createAvailableTasksJson(availableTasksMap))
+    }
   }
 
   def request = Authenticated.async { implicit request =>

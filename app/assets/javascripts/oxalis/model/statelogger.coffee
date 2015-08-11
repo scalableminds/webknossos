@@ -120,5 +120,6 @@ class StateLogger
 
   pushDoneCallback : ->
 
+    @trigger("pushDone")
     $('body').removeClass('save-error')
     @committedDiffs = []

@@ -23,10 +23,15 @@ $.fn.alertWithTimeout = (timeout = 3000) ->
     $(window).one "mousemove", -> $this.mouseout()
 
 
+getToasts = (type, message) ->
+
+  return $(".alert-#{type}[data-id='#{message}']")
+
+
 shouldDisplayToast = (type, message, sticky) ->
 
   # Don't show duplicate sticky toasts
-  return not sticky or $(".alert-#{type}[data-id='#{message}']").length == 0
+  return not sticky or getToasts(type, message).length == 0
 
 
 Toast =
@@ -92,3 +97,6 @@ Toast =
     )
 
 
+  delete : (type, message) ->
+
+    getToasts(type, message).alert("close")

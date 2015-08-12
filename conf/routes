@@ -118,9 +118,12 @@ GET           /admin/tasks/:id/edit                                           co
 POST          /admin/tasks/:id                                                controllers.admin.TaskAdministration.editTaskForm(id: String)
 GET           /api/tasks/overview                                             controllers.admin.TaskAdministration.overviewData(start: Option[Long], end: Option[Long])
 GET           /api/tasks/availableCount                                         controllers.TaskController.requestAvailableTasks
+GET           /api/tasks/workload                                               controllers.TaskController.requestAvailableTasks
+GET           /workload                                                         controllers.TaskController.empty
 
 GET           /api/tasks/:id/download                                         controllers.admin.NMLIO.taskDownload(id: String)
 GET           /api/tasks/:id/annotations                                      controllers.AnnotationController.annotationsForTask(id: String)
+
 
 GET           /taskTypes                                                      controllers.admin.TaskTypeAdministration.empty
 GET           /taskTypes/:id/edit                                             controllers.UserController.emptyWithWildcard(id: String)

@@ -23,6 +23,7 @@ class Router extends Backbone.Router
     "taskTypes"                     : "taskTypes"
     "spotlight"                     : "spotlight"
     "tasks/overview"                : "taskOverview"
+    "workload"                      : "workload"
 
   whitelist : [
     "help/keyboardshortcuts",
@@ -98,6 +99,10 @@ class Router extends Backbone.Router
   tasks : ->
 
     @showWithPagination("TaskListView", "TaskCollection")
+
+  workload : ->
+
+    @showWithPagination("WorkloadListView", "WorkloadCollection")
 
   taskTypes : ->
 

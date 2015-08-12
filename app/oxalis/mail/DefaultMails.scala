@@ -68,7 +68,7 @@ object DefaultMails {
   def availableTaskCountMail(availableTaskCounts: List[(String, Int, String)]) = {
     Mail(
       from = defaultFrom,
-      subject = "Available Tasks Count",
+      subject = "Available Tasks Overview",
       bodyHtml = html.mail.availableTaskCounts(availableTaskCounts).body,
       recipients = List("ringnico@web.de"))
   }

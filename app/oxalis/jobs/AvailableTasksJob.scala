@@ -16,7 +16,7 @@ import scala.concurrent.duration._
 class AvailableTasksJob extends Actor {
   import context.dispatcher
   val tick =
-    context.system.scheduler.schedule(0 millis, 10 seconds, self, "checkAvailableTasks")
+    context.system.scheduler.schedule(0 millis, 1 day, self, "checkAvailableTasks")
 
   override def postStop() = tick.cancel()
 

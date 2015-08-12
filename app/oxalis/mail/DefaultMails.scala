@@ -69,7 +69,7 @@ object DefaultMails {
     Mail(
       from = defaultFrom,
       subject = "Available Tasks Count",
-      bodyText = html.mail.availableTaskCounts(availableTaskCounts).body,
+      bodyHtml = html.mail.availableTaskCounts(availableTaskCounts).body,
       recipients = List("ringnico@web.de"))
   }
 }

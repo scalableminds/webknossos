@@ -45,16 +45,15 @@ class DashboardModel extends Backbone.Model
     return $.when.apply($, promises)
 
 
-  getFinishedTasks : ->
+  getFinishedTasks : (isFinished = true)->
 
-    filteredTasks = @get("tasks").filter( (task) -> return task.get("annotation").state.isFinished )
-    return new Backbone.Collection(filteredTasks)
+    filteredTasks = @get("tasks").filter( (task) -> return isFinished == task.get("annotation").state.isFinished )
+    return new PaginationCollection(filteredTasks)
 
 
   getUnfinishedTasks : ->
 
-    filteredTasks = @get("tasks").filter( (task) -> return !task.get("annotation").state.isFinished )
-    return new Backbone.Collection(filteredTasks)
+    return @getFinishedTasks(false)
 
 
   getAnnotations : ->
@@ -62,8 +61,9 @@ class DashboardModel extends Backbone.Model
 
 
   createCollection: (name) ->
-    collection = new Backbone.Collection()
+    collection = new PaginationCollection()
     # Display newst first.
+    collection.bootstrap()
     collection.sortBy("created")
     collection.add(@get(name))
     @set(name, collection)
@@ -76,10 +76,10 @@ class DashboardModel extends Backbone.Model
     ))
 
     tasks = new PaginationCollection(tasks, model : DashboardTaskModel )
+    tasks.bootstrap()
     @set("tasks", tasks)
 
     @createCollection("allAnnotations")
-
 
 
   getNewTask : ->

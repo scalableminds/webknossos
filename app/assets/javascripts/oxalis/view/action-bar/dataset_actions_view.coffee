@@ -46,6 +46,7 @@ class DatasetActionsView extends Backbone.Marionette.ItemView
                   <tr><td>Right click</td><td>Set tracepoint</td></tr>
                   <tr><td>F, D</td><td>Move along Z-Axis</td></tr>
                   <tr><td>I, O or Alt + Mousewheel</td><td>Zoom in/out</td></tr>
+                  <tr><td>Shift + Alt + Left click</td><td>Merge two trees</td></tr>
                   <tr><td>K, L</td><td>Scale up/down viewport size</td></tr>
                   <tr><td>B, J</td><td>Set/Jump to last branchpoint</td></tr>
                 </tbody>

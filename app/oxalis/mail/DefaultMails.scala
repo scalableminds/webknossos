@@ -65,11 +65,11 @@ object DefaultMails {
       recipients = List(receiver))
   }
 
-  def availableTaskCountMail(availableTaskCounts: List[(String, Int, String)]) = {
+  def availableTaskCountMail(tableRows: List[(String, Int, String)]) = {
     Mail(
       from = defaultFrom,
       subject = "Available Tasks Overview",
-      bodyHtml = html.mail.availableTaskCounts(availableTaskCounts).body,
+      bodyHtml = html.mail.availableTaskCounts(tableRows).body,
       recipients = List("ringnico@web.de"))
   }
 }

@@ -8,6 +8,8 @@ import models.task.Project
 import models.user.User
 import oxalis.mail.DefaultMails
 import scala.concurrent.duration._
+import play.api.Logger
+
 
 /**
  * Actor which checks every fay if there are users without available tasks.
@@ -22,9 +24,11 @@ class AvailableTasksJob extends Actor {
 
   override def receive: Receive = {
     case "checkAvailableTasks" =>
+      Logger.info("Daily check for users without any available tasks")
       val availableTasksCountsFox = TaskController.getAllAvailableTaskCountsAndProjects()(GlobalAccessContext)
 
       availableTasksCountsFox foreach { availableTasks: Map[User, (Int, List[Project])] =>
+        Logger.info("Found users without available tasks. Sending email.")
         if (availableTasks.exists { case (_ ,(count, _)) => count == 0 }) {
           val rows = (availableTasks map { case (user, (count, projects)) =>
             (user.name, count, projects.map(_.name).mkString(" "))

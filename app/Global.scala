@@ -51,10 +51,12 @@ object Global extends WithFilters(MetricsFilter) with GlobalSettings {
       Props(new Mailer(conf)),
       name = "mailActor")
 
-    Akka.system(app).actorOf(
-      Props(new AvailableTasksJob()),
-      name = "availableTasksMailActor"
-    )
+    if (conf.getBoolean("workload.active")) {
+      Akka.system(app).actorOf(
+        Props(new AvailableTasksJob()),
+        name = "availableTasksMailActor"
+      )
+    }
   }
 
   override def onError(request: RequestHeader, ex: Throwable) = {

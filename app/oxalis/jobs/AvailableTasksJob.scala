@@ -12,7 +12,7 @@ import play.api.Logger
 
 
 /**
- * Actor which checks every fay if there are users without available tasks.
+ * Actor which checks every day if there are users without available tasks.
  * If this is the case it sends an email with an overview of the available task count of each user.
  */
 class AvailableTasksJob extends Actor {

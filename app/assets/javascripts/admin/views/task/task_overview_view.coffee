@@ -5,6 +5,8 @@ worker!libs/viz.js : VizWorker
 libs/pan_zoom_svg  : PanZoomSVG
 moment : moment
 routes : routes
+daterangepicker : DateRangePicker
+rangeslider : RangeSlider
 ###
 
 class TaskOverviewView extends Backbone.Marionette.ItemView
@@ -23,6 +25,16 @@ class TaskOverviewView extends Backbone.Marionette.ItemView
         <label class="checkbox">
           <input type="checkbox" id="projectsCheckbox">Projects
         </label>
+        <label for="dateRangeInput">Date range</label>
+        <input type="text" class="form-control" id="dateRangeInput"/>
+        <label for="rangeSliderInput">Hour range</label>
+        <div id="rangeSliderInput"></div>
+        <div id="rangeSliderLabels">
+          <span id="rangeSliderLabel1"/>
+          <span id="rangeSliderLabel2"/>
+          <span id="rangeSliderLabel3"/>
+        </div>
+        <div id="colorLegend"></div>
       </div>
 
       <div class="graph well">
@@ -38,6 +50,11 @@ class TaskOverviewView extends Backbone.Marionette.ItemView
     "graph" : ".graph"
     "taskTypesCheckbox" : "#taskTypesCheckbox"
     "projectsCheckbox" : "#projectsCheckbox"
+    "dateRangeInput" : "#dateRangeInput"
+    "rangeSliderInput" : "#rangeSliderInput"
+    "rangeSliderLabel1" : "#rangeSliderLabel1"
+    "rangeSliderLabel2" : "#rangeSliderLabel2"
+    "rangeSliderLabel3" : "#rangeSliderLabel3"
 
 
   initialize : ->
@@ -48,7 +65,50 @@ class TaskOverviewView extends Backbone.Marionette.ItemView
   onRender : ->
 
     @ui.taskTypesCheckbox.prop("checked", true)
+    @initializeDateRangePicker()
+    @initializeRangeSlider()
     @paintGraph()
+
+
+  initializeDateRangePicker : ->
+
+    @ui.dateRangeInput.daterangepicker(
+      locale:
+        format: 'L'
+      startDate: moment().subtract(3, 'months').format("L")
+      endDate: moment().format("L")
+      opens: "left"
+    (start, end, label) =>
+      @paintGraph()
+    )
+    return
+
+
+  initializeRangeSlider : ->
+
+    RangeSlider.create(@ui.rangeSliderInput[0],
+      start: [0, 80]
+      connect: true
+      step: 1
+      range:
+        min: 0
+        max: 100 #TODO: Find min/max in data
+    )
+
+    @ui.rangeSliderInput[0].noUiSlider.on('update', (values, handle) =>
+      @ui.rangeSliderLabel1[0].innerHTML = "#{Math.round(+values[0])}h";
+      @ui.rangeSliderLabel2[0].innerHTML = "#{Math.round((+values[0] + +values[1]) / 2)}h";
+      @ui.rangeSliderLabel3[0].innerHTML = "#{Math.round(+values[1])}h";
+      @paintGraphDebounced()
+    )
+    return
+
+
+  paintGraphDebounced : ->
+
+    paintFkt = => @paintGraph()
+    @paintGraphDebounced = _.debounce(paintFkt, 500)
+    @paintGraphDebounced()
 
 
   paintGraph : ->

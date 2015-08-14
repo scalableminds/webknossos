@@ -8,6 +8,8 @@ backbone.paginator : Paginator
 #
 # Make sure to always call fetch() with the option 'silent: true' and use
 # strings instead of objects for the 'data' option.
+# If you create a new PaginationCollection without 'fetching' from the server
+# call the 'bootstrap()' method.
 
 class PaginationCollection extends Backbone.Paginator.clientPager
 
@@ -47,7 +49,7 @@ class PaginationCollection extends Backbone.Paginator.clientPager
   firstPage : ->
 
     @goTo(1)
-    
+
 
   ##  collection methods  ##
 

@@ -51,12 +51,12 @@ class ExplorativeTracingListView extends Backbone.Marionette.CompositeView
     <table class="table table-striped table-hover sortable-table" id="explorative-tasks">
       <thead>
         <tr>
-          <th data-sort="formattedHash"> # </th>
-          <th data-sort="name"> Name </th>
-          <th data-sort="dataSource.id"> DataSet </th>
+          <th> # </th>
+          <th> Name </th>
+          <th> DataSet </th>
           <th> Stats </th>
           <th> Type </th>
-          <th data-sort="created"> Created </th>
+          <th> Created </th>
           <th> </th>
         </tr>
       </thead>

@@ -7,6 +7,7 @@ moment : moment
 routes : routes
 daterangepicker : DateRangePicker
 rangeslider : RangeSlider
+libs/utils : Utils
 ###
 
 class TaskOverviewView extends Backbone.Marionette.ItemView
@@ -56,17 +57,55 @@ class TaskOverviewView extends Backbone.Marionette.ItemView
     "rangeSliderLabel2" : "#rangeSliderLabel2"
     "rangeSliderLabel3" : "#rangeSliderLabel3"
 
+  DEFAULT_TIME_PERIOD_UNIT : "month"
+  DEFAULT_TIME_PERIOD_TIME : 3
+  MS_PER_HOUR : 3600000
+
+  chosenMinHours : 0
+  chosenMaxHours : 24 * 356 * 100
+
 
   initialize : ->
 
-    @fetchPromise = @model.fetch()
+    defaultStartDate = moment().startOf("day").subtract(@DEFAULT_TIME_PERIOD_TIME, @DEFAULT_TIME_PERIOD_UNIT).valueOf()
+    defaultEndDate = moment().endOf("day").valueOf()
+    @fetchData(defaultStartDate, defaultEndDate)
+
+    @listenTo(@model, "change", @renderRangeSlider)
+
+
+  fetchData : (start, end) ->
+
+    @minMaxHours = {}
+    @fetchPromise = @model.fetch(
+      data:
+        start: start
+        end: end
+    )
+
+
+  getMinMaxHours : ->
+
+    if _.isEmpty(@minMaxHours)
+      minTime = Math.min(_.pluck(@model.attributes.userInfos, "workingTime")...)
+      maxTime = Math.max(_.pluck(@model.attributes.userInfos, "workingTime")...)
+
+      # Convert ms to h
+      @minMaxHours =
+        min: Math.floor(minTime / @MS_PER_HOUR)
+        max: Math.ceil(maxTime / @MS_PER_HOUR)
+      if @minMaxHours.min == @minMaxHours.max
+        @minMaxHours.max += 1
+
+
+    return @minMaxHours
 
 
   onRender : ->
 
     @ui.taskTypesCheckbox.prop("checked", true)
     @initializeDateRangePicker()
-    @initializeRangeSlider()
+    @renderRangeSlider()
     @paintGraph()
 
 
@@ -75,33 +114,47 @@ class TaskOverviewView extends Backbone.Marionette.ItemView
     @ui.dateRangeInput.daterangepicker(
       locale:
         format: 'L'
-      startDate: moment().subtract(3, 'months').format("L")
+      startDate: moment().subtract(@DEFAULT_TIME_PERIOD_TIME, @DEFAULT_TIME_PERIOD_UNIT).format("L")
       endDate: moment().format("L")
       opens: "left"
     (start, end, label) =>
+      @fetchData(start.valueOf(), end.valueOf())
       @paintGraph()
     )
     return
 
 
-  initializeRangeSlider : ->
+  renderRangeSlider : ->
 
-    RangeSlider.create(@ui.rangeSliderInput[0],
-      start: [0, 80]
-      connect: true
-      step: 1
-      range:
-        min: 0
-        max: 100 #TODO: Find min/max in data
-    )
+    sliderEl = @ui.rangeSliderInput[0]
 
-    @ui.rangeSliderInput[0].noUiSlider.on('update', (values, handle) =>
-      @ui.rangeSliderLabel1[0].innerHTML = "#{Math.round(+values[0])}h";
-      @ui.rangeSliderLabel2[0].innerHTML = "#{Math.round((+values[0] + +values[1]) / 2)}h";
-      @ui.rangeSliderLabel3[0].innerHTML = "#{Math.round(+values[1])}h";
-      @paintGraphDebounced()
+    @fetchPromise.done( =>
+      minMaxHours = @getMinMaxHours()
+
+      # Destroy existing instance to reconfigure
+      if sliderEl.noUiSlider
+        sliderEl.noUiSlider.destroy()
+
+      RangeSlider.create(sliderEl,
+        start: [
+          Math.max(minMaxHours.min, @chosenMinHours)
+          Math.min(minMaxHours.max, @chosenMaxHours)
+        ]
+        connect: true
+        step: 1
+        margin: 1
+        range: minMaxHours
+      )
+
+      sliderEl.noUiSlider.on('update', (values, handle) =>
+        @chosenMinHours = Math.round(+values[0])
+        @chosenMaxHours = Math.round(+values[1])
+        @ui.rangeSliderLabel1[0].innerHTML = "#{@chosenMinHours}h";
+        @ui.rangeSliderLabel2[0].innerHTML = "#{Utils.roundTo((+values[0] + +values[1]) / 2, 1)}h";
+        @ui.rangeSliderLabel3[0].innerHTML = "#{@chosenMaxHours}h";
+        @paintGraphDebounced()
+      )
     )
-    return
 
 
   paintGraphDebounced : ->
@@ -150,11 +203,18 @@ class TaskOverviewView extends Backbone.Marionette.ItemView
     $(@ui.projectsCheckbox).prop("checked")
 
 
+  doDrawUser : (user) ->
+
+    return @chosenMinHours <= user.workingHours <= @chosenMaxHours
+
+
   getSVG : ->
 
     @fetchPromise.then( =>
 
       { userInfos, taskTypes, projects } = @model.attributes
+      # move workingTime to user object and convert to hours
+      userInfos.map( (userInfo) => userInfo.user.workingHours = Utils.roundTo(userInfo.workingTime / @MS_PER_HOUR, 2) )
       # extract users and add full names
       @users = _.pluck(userInfos, "user")
       @users.map( (user) -> user.name = user.firstName + " " + user.lastName )
@@ -187,11 +247,13 @@ class TaskOverviewView extends Backbone.Marionette.ItemView
   buildNodes : (taskTypes, projects) ->
 
     svgUsers = @users.map( (user) =>
-      userName = user.firstName + " " + user.lastName
-      lastActivityDays = moment().diff(user.lastActivity, 'days')
-      color = @colorJet(Math.min(50, lastActivityDays) * (128 / 50) + 128)
+      if @doDrawUser(user)
+        userName = user.firstName + " " + user.lastName
+        workingHours = user.workingHours
+        minMaxHours = @getMinMaxHours()
+        color = @colorJet(128 - (workingHours - minMaxHours.min) * (128 / minMaxHours.max - minMaxHours.min) + 128)
 
-      @quoted(userName) + " [id="+ @quoted(user.id) + ", shape=box, fillcolor=" + @quoted(color) + "]"
+        @quoted(userName) + " [id="+ @quoted(user.id) + ", shape=box, fillcolor=" + @quoted(color) + "]"
     ).join(";")
 
     svgTaskTypes = ""
@@ -217,21 +279,21 @@ class TaskOverviewView extends Backbone.Marionette.ItemView
 
       svgTaskTypeEdges = userInfos.map( (userInfo) =>
         { user, taskTypes } = userInfo
-        taskTypes.map( (taskType) => @edge(user.name, taskType.summary))
+        taskTypes.map( (taskType) => @edge(user.name, taskType.summary)) if @doDrawUser(user)
       ).join(";")
 
       svgFutureTaskTypesEdges  = "edge [ color=blue ];"
       svgFutureTaskTypesEdges += userInfos.map( (userInfo) =>
         { user, futureTaskType } = userInfo
         if(futureTaskType)
-          @edge(user.name, futureTaskType.summary)
+          @edge(user.name, futureTaskType.summary) if @doDrawUser(user)
       ).join(";")
 
 
     if @doDrawProjects()
       svgProjectEdges = userInfos.map( (userInfo) =>
         { user, projects } = userInfo
-        projects.map( (project) => @edge(user.name, project.name))
+        projects.map( (project) => @edge(user.name, project.name)) if @doDrawUser(user)
       ).join(";")
 
 
@@ -268,9 +330,7 @@ class TaskOverviewView extends Backbone.Marionette.ItemView
 
   createUserTooltip : (user) ->
 
-    lastActivityDays = moment().diff(user.lastActivity, 'days')
-
-    ["Last Activity: #{lastActivityDays} days ago",
+    ["Working time: #{user.workingHours}h",
      "Experiences:",
       _.map(user.experiences, (domain, value) -> domain + " : " + value ).join("<br />")
     ].join("<br />")

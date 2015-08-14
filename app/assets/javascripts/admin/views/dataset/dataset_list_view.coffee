@@ -59,7 +59,7 @@ class DatasetListView extends Backbone.Marionette.CompositeView
       @collection.goTo(1)
     )
 
-    @listenTo(app.vent, "paginationView:filter", @filter)
+    @listenTo(app.vent, "paginationView:filter", @filterBySearch)
     @listenTo(app.vent, "TeamAssignmentModalView:refresh", @render)
 
 
@@ -82,7 +82,7 @@ class DatasetListView extends Backbone.Marionette.CompositeView
     @modalView = modalView
 
 
-  filter : (searchQuery) ->
+  filterBySearch : (searchQuery) ->
 
     @collection.setFilter(["name", "owningTeam"], searchQuery)
 

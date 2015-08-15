@@ -43,7 +43,7 @@ object DataSourceTypeGuessers extends DataSourceTypes{
 }
 
 trait DataSourceTypes{
-  val types = List(KnossosDataSourceType, TiffDataSourceType)
+  val types = List(KnossosDataSourceType, TiffDataSourceType, PngDataSourceType, JpegDataSourceType)
 }
 
 trait DataSourceType extends DataSourceTypeGuesser with DataSourceTypeHandler {

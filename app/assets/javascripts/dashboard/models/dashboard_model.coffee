@@ -5,7 +5,7 @@ backbone : Backbone
 ./user_model : UserModel
 admin/models/dataset/dataset_collection : DatasetCollection
 dashboard/models/logged_time_model : LoggedTimeModel
-admin/models/pagination_collection : PaginationCollection
+admin/models/sorted_collection : SortedCollection
 ###
 
 class DashboardModel extends Backbone.Model
@@ -48,7 +48,7 @@ class DashboardModel extends Backbone.Model
   getFinishedTasks : (isFinished = true)->
 
     filteredTasks = @get("tasks").filter( (task) -> return isFinished == task.get("annotation").state.isFinished )
-    return new PaginationCollection(filteredTasks)
+    return new SortedCollection(filteredTasks)
 
 
   getUnfinishedTasks : ->
@@ -62,11 +62,10 @@ class DashboardModel extends Backbone.Model
       return DashboardTaskModel::parse(el)
     ))
 
-    tasks = new PaginationCollection(tasks, model : DashboardTaskModel )
-    tasks.bootstrap()
+    tasks = new SortedCollection(tasks, model : DashboardTaskModel )
     @set("tasks", tasks)
 
-    exploratoryAnnotations = new PaginationCollection(@get("exploratoryAnnotations"))
+    exploratoryAnnotations = new SortedCollection(@get("exploratoryAnnotations"))
     exploratoryAnnotations.setSort("created", "desc")
 
     @set("exploratoryAnnotations", exploratoryAnnotations)

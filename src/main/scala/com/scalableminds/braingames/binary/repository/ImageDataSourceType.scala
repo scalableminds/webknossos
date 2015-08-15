@@ -253,8 +253,6 @@ trait ImageDataSourceTypeHandler extends DataSourceTypeHandler {
   }
 
   private class KnossosWriterCache(id: String, resolution: Int, folder: Path) {
-    var cache = Map.empty[Point3D, FileOutputStream]
-
     def get(block: Point3D): FileOutputStream = {
       fileForPosition(block)
     }
@@ -270,11 +268,6 @@ trait ImageDataSourceTypeHandler extends DataSourceTypeHandler {
           throw new Exception("Couldn't open file: " + path)
       }
     }
-
-    def closeAll() = {
-      cache.mapValues(_.close())
-      cache = Map.empty
-    }
   }
 
   case class TileToCubeWriter(id: String, resolutions: Int, target: Path, depth: Int, bytesPerPixel: Int, tiles: Iterator[RawImage], progressHook: Int => Unit) {
@@ -287,7 +280,6 @@ trait ImageDataSourceTypeHandler extends DataSourceTypeHandler {
           writeTile(tile, idx, fileCache)
           progressHook(idx)
       }
-      fileCache.closeAll()
     }
 
     case class FixedSizedImage(underlying: RawImage, targetWidth: Int, targetHeight: Int, zero: Byte = 0) {
@@ -313,8 +305,7 @@ trait ImageDataSourceTypeHandler extends DataSourceTypeHandler {
         }
       }
     }
-
-    private def writeTile(tile: RawImage, sliceNumber: Int, files: KnossosWriterCache): Unit = {
+    private def writeTile(tile: RawImage, layerNumber: Int, files: KnossosWriterCache): Unit = {
       // number of knossos buckets in x direction
       val xs = (tile.data.length.toFloat / bytesPerPixel / tile.height / CubeSize).ceil.toInt
       // number of knossos buckets in y direction
@@ -322,25 +313,37 @@ trait ImageDataSourceTypeHandler extends DataSourceTypeHandler {
 
       // the given array might not fill up the buckets at the border, but we need to make sure it does, otherwise
       // writing the data to the file would result in a bucket size less than 128
-      val filledTile = FixedSizedImage(tile, xs * CubeSize, ys * CubeSize, zero = 0)
+      val sliced = Array.fill(ys * xs)(new Array[Byte](bytesPerPixel * CubeSize * CubeSize))
 
-      val sliced: Array[Array[Byte]] = Array.fill(ys * xs)(Array.fill(CubeSize * CubeSize * bytesPerPixel)(0.toByte)) // (Vector.empty[Array[Byte]])
+      var windowIdx = 0
+      var counter = 0
+      val tileWidthInBytes = tile.width * bytesPerPixel
+      val windowSize = CubeSize * bytesPerPixel
 
-      (0 until (xs * ys * CubeSize)).foreach{ i =>
-        val x = i % xs
-        val y = i / xs / CubeSize
-        filledTile.copyTo(sliced(y * xs + x), destPos = (i / xs) % CubeSize * CubeSize, srcPos = i * CubeSize, length = CubeSize)
+      while(windowIdx < tile.data.length){
+        val x = counter % xs
+        val row = (counter / xs) % CubeSize
+        val y = counter / xs / CubeSize
+        val idx = y * xs + x
+
+        val actualBytesUsed =
+          math.min(windowSize, tileWidthInBytes - windowIdx % tileWidthInBytes)
+
+        val slice = tile.data.view(windowIdx, windowIdx + actualBytesUsed)
+        slice.copyToArray(sliced(idx), row * windowSize)
+
+        windowIdx += actualBytesUsed
+        counter += 1
       }
 
-      sliced.zipWithIndex.map {
+      sliced.zipWithIndex.par.foreach {
         case (cubeData, idx) =>
           val x = idx % xs
           val y = idx / xs
-          val file = files.get(Point3D(x, y, sliceNumber / CubeSize))
+          val file = files.get(Point3D(x, y, layerNumber / CubeSize))
           file.write(cubeData)
           file.close()
       }
     }
   }
-
 }

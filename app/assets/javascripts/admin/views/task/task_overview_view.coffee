@@ -71,6 +71,7 @@ class TaskOverviewView extends Backbone.Marionette.LayoutView
   DEFAULT_TIME_PERIOD_TIME : 3
   MS_PER_HOUR : 3600000
 
+  # These values will be configured by the user, using the RangeSlider
   chosenMinHours : 0
   chosenMaxHours : 24 * 356 * 100
 
@@ -96,6 +97,7 @@ class TaskOverviewView extends Backbone.Marionette.LayoutView
 
   getMinMaxHours : ->
 
+    # This function calculates the min/max working hours of the whole data set
     if _.isEmpty(@minMaxHours)
       minTime = Math.min(_.pluck(@model.attributes.userInfos, "workingTime")...)
       maxTime = Math.max(_.pluck(@model.attributes.userInfos, "workingTime")...)

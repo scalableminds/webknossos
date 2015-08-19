@@ -8,9 +8,11 @@ routes : routes
 daterangepicker : DateRangePicker
 rangeslider : RangeSlider
 libs/utils : Utils
+admin/models/team/team_collection : TeamCollection
+admin/views/selection_view : SelectionView
 ###
 
-class TaskOverviewView extends Backbone.Marionette.ItemView
+class TaskOverviewView extends Backbone.Marionette.LayoutView
 
   id : "task-overview"
   className : "container wide"
@@ -26,6 +28,8 @@ class TaskOverviewView extends Backbone.Marionette.ItemView
         <label class="checkbox">
           <input type="checkbox" id="projectsCheckbox">Projects
         </label>
+        <label for="team">Team</label>
+        <div class="team"></div>
         <label for="dateRangeInput">Date range</label>
         <input type="text" class="form-control" id="dateRangeInput"/>
         <label for="rangeSliderInput">Hour range</label>
@@ -43,6 +47,9 @@ class TaskOverviewView extends Backbone.Marionette.ItemView
       </div>
   """)
 
+  regions :
+    "teamRegion" : ".team"
+
   events :
     "change @ui.taskTypesCheckbox" : "selectionChanged"
     "change @ui.projectsCheckbox" : "selectionChanged"
@@ -51,11 +58,14 @@ class TaskOverviewView extends Backbone.Marionette.ItemView
     "graph" : ".graph"
     "taskTypesCheckbox" : "#taskTypesCheckbox"
     "projectsCheckbox" : "#projectsCheckbox"
+    "team" : ".team"
     "dateRangeInput" : "#dateRangeInput"
     "rangeSliderInput" : "#rangeSliderInput"
     "rangeSliderLabel1" : "#rangeSliderLabel1"
     "rangeSliderLabel2" : "#rangeSliderLabel2"
     "rangeSliderLabel3" : "#rangeSliderLabel3"
+
+  DEFAULT_TEAM : "Tracing crew"
 
   DEFAULT_TIME_PERIOD_UNIT : "month"
   DEFAULT_TIME_PERIOD_TIME : 3
@@ -97,14 +107,19 @@ class TaskOverviewView extends Backbone.Marionette.ItemView
       if @minMaxHours.min == @minMaxHours.max
         @minMaxHours.max += 1
 
-
     return @minMaxHours
+
+
+  updateSelectedTeam : ->
+
+    @team = @ui.team.find("select")[0].value
 
 
   onRender : ->
 
     @ui.taskTypesCheckbox.prop("checked", true)
     @initializeDateRangePicker()
+    @renderTeamDropdown()
     @renderRangeSlider()
     @paintGraph()
 
@@ -122,6 +137,32 @@ class TaskOverviewView extends Backbone.Marionette.ItemView
       @paintGraph()
     )
     return
+
+
+  renderTeamDropdown : ->
+
+    TeamSelectionView = SelectionView.extend(
+      events:
+        change: 'teamChanged'
+      teamChanged: =>
+        @updateSelectedTeam()
+        @paintGraph()
+    )
+
+    # sort the collection so the default team is the first one
+    teamCollection = new TeamCollection()
+    teamCollection.comparator = (teams) =>
+      if teams.get("name") == @DEFAULT_TEAM then 0 else 1
+
+    teamSelectionView = new TeamSelectionView(
+      collection: teamCollection
+      childViewOptions :
+        modelValue: -> return "#{@model.get("name")}"
+      name: "team"
+    )
+
+    @teamRegion.show(teamSelectionView)
+    @listenTo(teamSelectionView, "render", => @updateSelectedTeam())
 
 
   renderRangeSlider : ->
@@ -205,7 +246,10 @@ class TaskOverviewView extends Backbone.Marionette.ItemView
 
   doDrawUser : (user) ->
 
-    return @chosenMinHours <= user.workingHours <= @chosenMaxHours
+    isWithinWorkingHours = @chosenMinHours <= user.workingHours <= @chosenMaxHours
+    isInTeam = @team in _.pluck(user.teams, "team")
+
+    return isWithinWorkingHours and isInTeam
 
 
   getSVG : ->
@@ -308,7 +352,7 @@ class TaskOverviewView extends Backbone.Marionette.ItemView
     # get rid of the troublemaker. messes up transformations
     $svg[0].removeAttribute("viewBox")
 
-    $svg[0].setAttribute("width", "#{$(window).width() - 100}px")
+    $svg[0].setAttribute("width", "#{$(window).width() - 400}px")
     $svg[0].setAttribute("height", "#{$(window).height() - 50 - $svg.offset().top}px" )
     $svg.css("max-width", "100%")
 

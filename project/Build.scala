@@ -6,7 +6,7 @@ import scala.concurrent.Future
 import scala.concurrent.ExecutionContext.Implicits.global
 
 object Dependencies{
-  val braingamesVersion = "5.0.6-SNAPSHOT"
+  val braingamesVersion = "6.9.29-master-fix"
 
   val braingamesDataStore = "com.scalableminds" %% "braingames-datastore" % braingamesVersion
 }
@@ -22,7 +22,7 @@ object ApplicationBuild extends Build {
   import Resolvers._
 
   lazy val datastoreSettings = Seq(
-    scalaVersion := "2.10.2",
+    scalaVersion := "2.10.3",
       resolvers ++= Seq(
       scmRel,
       scmIntRel,

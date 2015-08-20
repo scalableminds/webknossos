@@ -62,7 +62,7 @@ class PaginationView extends Backbone.Marionette.ItemView
     "click .last" : "goLast"
     "click .first" : "goFirst"
     "click .page" : "goToPage"
-    "input input" : "filter"
+    "input input" : "filterBySearch"
 
 
   initialize : ->
@@ -100,7 +100,7 @@ class PaginationView extends Backbone.Marionette.ItemView
     @collection.goTo(page)
 
 
-  filter : ->
+  filterBySearch : ->
 
     # Only enable filtering after the collection has data
     if @collection.origModels
@@ -136,4 +136,4 @@ class PaginationView extends Backbone.Marionette.ItemView
     hash = location.hash.slice(1)
     if (hash)
       @ui.inputSearch.val(hash)
-      @filter()
+      @filterBySearch()

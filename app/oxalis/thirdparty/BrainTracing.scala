@@ -43,6 +43,8 @@ object BrainTracing {
       .get()
       .map { response =>
         result complete (response.status match {
+          case 200 if(isSilentFailure(response.body)) =>
+            Success("braintraceing.error")
           case 200 =>
             Success("braintracing.new")
           case 304 =>
@@ -61,7 +63,10 @@ object BrainTracing {
   private def inHours(millis: Long) =
     millis / (1000.0 * 60 * 60)
 
-  def logTime(user: User, time: Long, annotation: Option[AnnotationLike])(implicit ctx: DBAccessContext): Unit = {
+  private def isSilentFailure(result: String) =
+    result.contains("ist derzeit nicht verf&uuml;gbar.")
+
+  def logTime(user: User, time: Long, annotation: Option[AnnotationLike])(implicit ctx: DBAccessContext): Future[Boolean] = {
     import scala.async.Async._
     // TODO: fix, make team dynamic
     if (isActive && user.teamNames.contains("Connectomics department")) {
@@ -73,7 +78,7 @@ object BrainTracing {
           val hours = inHours(time)
           val projectName = await(project.map(_.name).getOrElse(""))
           val taskType = await(taskTypeFox.futureBox)
-          WS
+          await(WS
           .url(LOGTIME_URL)
           .withAuth(USER, PW, WSAuthScheme.BASIC)
           .withQueryString(
@@ -88,14 +93,23 @@ object BrainTracing {
           .get()
           .map { response =>
             response.status match {
-              case 200 =>
+              case 200 if(!isSilentFailure(response.body)) =>
                 Logger.trace(s"Logged time! User: ${user.email} Time: $hours")
+                true
+              case 200 =>
+                Logger.error(s"Time logging failed. SILENT FAILURE! Code 200 User: ${user.email} Time: $hours")
+                false
               case code =>
                 Logger.error(s"Time logging failed! Code $code User: ${user.email} Time: $hours")
+                false
             }
-          }
+          })
+        } else {
+          true
         }
       }
+    } else {
+      Future.successful(true)
     }
   }
 }

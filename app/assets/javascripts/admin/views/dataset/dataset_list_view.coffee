@@ -17,13 +17,13 @@ class DatasetListView extends Backbone.Marionette.CompositeView
             <i class="caret-right"></i>
             <i class="caret-down"></i>
           </th>
-          <th data-sort="dataSource.baseDir">Name</th>
-          <th data-sort="dataStore.name">Datastore</th>
+          <th>Name</th>
+          <th>Datastore</th>
           <th>Scale</th>
-          <th data-sort="owningTeam">Owning Team</th>
+          <th>Owning Team</th>
           <th>Allowed Teams</th>
-          <th data-sort="isActive">Active</th>
-          <th data-sort="isPublic">Public</th>
+          <th>Active</th>
+          <th>Public</th>
           <th>Data Layers</th>
           <th>Actions</th>
         </tr>
@@ -59,7 +59,7 @@ class DatasetListView extends Backbone.Marionette.CompositeView
       @collection.goTo(1)
     )
 
-    @listenTo(app.vent, "paginationView:filter", @filterByQuery)
+    @listenTo(app.vent, "paginationView:filter", @filterBySearch)
     @listenTo(app.vent, "TeamAssignmentModalView:refresh", @render)
 
 
@@ -82,7 +82,7 @@ class DatasetListView extends Backbone.Marionette.CompositeView
     @modalView = modalView
 
 
-  filterByQuery : (searchQuery) ->
+  filterBySearch : (searchQuery) ->
 
     @collection.setFilter(["name", "owningTeam"], searchQuery)
 

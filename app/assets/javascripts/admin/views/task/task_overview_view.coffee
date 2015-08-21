@@ -99,8 +99,8 @@ class TaskOverviewView extends Backbone.Marionette.LayoutView
 
     # This function calculates the min/max working hours of the whole data set
     if _.isEmpty(@minMaxHours)
-      minTime = Math.min(_.pluck(@model.attributes.userInfos, "workingTime")...)
-      maxTime = Math.max(_.pluck(@model.attributes.userInfos, "workingTime")...)
+      minTime = Math.min(_.pluck(@model.get("userInfos"), "workingTime")...)
+      maxTime = Math.max(_.pluck(@model.get("userInfos"), "workingTime")...)
 
       # Convert ms to h
       @minMaxHours =
@@ -144,8 +144,6 @@ class TaskOverviewView extends Backbone.Marionette.LayoutView
   renderTeamDropdown : ->
 
     TeamSelectionView = SelectionView.extend(
-      events:
-        change: 'teamChanged'
       teamChanged: =>
         @updateSelectedTeam()
         @paintGraph()
@@ -161,6 +159,8 @@ class TaskOverviewView extends Backbone.Marionette.LayoutView
       childViewOptions :
         modelValue: -> return "#{@model.get("name")}"
       name: "team"
+      events:
+        change: 'teamChanged'
     )
 
     @teamRegion.show(teamSelectionView)
@@ -192,9 +192,9 @@ class TaskOverviewView extends Backbone.Marionette.LayoutView
       sliderEl.noUiSlider.on('update', (values, handle) =>
         @chosenMinHours = Math.round(+values[0])
         @chosenMaxHours = Math.round(+values[1])
-        @ui.rangeSliderLabel1[0].innerHTML = "#{@chosenMinHours}h";
-        @ui.rangeSliderLabel2[0].innerHTML = "#{Utils.roundTo((+values[0] + +values[1]) / 2, 1)}h";
-        @ui.rangeSliderLabel3[0].innerHTML = "#{@chosenMaxHours}h";
+        @ui.rangeSliderLabel1.html("#{@chosenMinHours}h")
+        @ui.rangeSliderLabel2.html("#{Utils.roundTo((+values[0] + +values[1]) / 2, 1)}h")
+        @ui.rangeSliderLabel3.html("#{@chosenMaxHours}h")
         @paintGraphDebounced()
       )
     )
@@ -202,7 +202,7 @@ class TaskOverviewView extends Backbone.Marionette.LayoutView
 
   paintGraphDebounced : ->
 
-    paintFkt = => @paintGraph()
+    paintFkt = @paintGraph.bind(@)
     @paintGraphDebounced = _.debounce(paintFkt, 500)
     @paintGraphDebounced()
 
@@ -354,7 +354,8 @@ class TaskOverviewView extends Backbone.Marionette.LayoutView
     # get rid of the troublemaker. messes up transformations
     $svg[0].removeAttribute("viewBox")
 
-    $svg[0].setAttribute("width", "#{$(window).width() - 400}px")
+    # the svg should not overlay with the overview options
+    $svg[0].setAttribute("width", "#{$('.graph').width() - $('.overview-options').width()}px")
     $svg[0].setAttribute("height", "#{$(window).height() - 50 - $svg.offset().top}px" )
     $svg.css("max-width", "100%")
 

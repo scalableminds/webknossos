@@ -96,10 +96,11 @@ class SkeletonTracingView extends View
         @updateCommentsSortButton()
         @updateComments()
 
+    autoSaveFailureMessage = "Auto-Save failed!"
     @model.skeletonTracing.stateLogger.on
       pushFailed : =>
         if @reloadDenied
-          Toast.error("Auto-Save failed!")
+          Toast.error(autoSaveFailureMessage, true)
         else
           modal.show("Several attempts to reach our server have failed. You should reload the page
             to make sure that your work won't be lost.",
@@ -109,6 +110,8 @@ class SkeletonTracingView extends View
                 => return null)
               window.location.reload() )},
             {id : "cancel-button", label : "Cancel", callback : ( => @reloadDenied = true ) } ] )
+      pushDone : =>
+        Toast.delete("danger", autoSaveFailureMessage)
 
     $("a[href=#tab-comments]").on "shown", (event) =>
       @updateActiveComment()

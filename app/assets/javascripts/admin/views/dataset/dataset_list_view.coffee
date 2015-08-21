@@ -3,12 +3,13 @@ underscore : _
 backbone.marionette : Marionette
 ./dataset_list_item_view : DatasetListItemView
 ./team_assignment_modal_view: TeamAssignmentModalView
+libs/behaviors/sort_table_behavior : SortTableBehavior
 ###
 
 class DatasetListView extends Backbone.Marionette.CompositeView
 
   template : _.template("""
-    <table class="table table-double-striped table-details">
+    <table class="table table-double-striped table-details sortable-table">
       <thead>
         <tr>
           <th class="details-toggle-all">
@@ -42,14 +43,13 @@ class DatasetListView extends Backbone.Marionette.CompositeView
   childView : DatasetListItemView
   childViewContainer: "table"
 
+  behaviors :
+    SortTableBehavior:
+      behaviorClass: SortTableBehavior
+
   initialize : ->
 
-    @collection.comparator = (a,b) ->
-      if a.get("created") < b.get("created")
-        return 1
-      else if a.get("created") > b.get("created")
-        return -1
-      return 0
+    @collection.sortByAttribute("created")
 
 
     @collection.fetch(
@@ -59,7 +59,7 @@ class DatasetListView extends Backbone.Marionette.CompositeView
       @collection.goTo(1)
     )
 
-    @listenTo(app.vent, "paginationView:filter", @filter)
+    @listenTo(app.vent, "paginationView:filter", @filterBySearch)
     @listenTo(app.vent, "TeamAssignmentModalView:refresh", @render)
 
 
@@ -82,7 +82,7 @@ class DatasetListView extends Backbone.Marionette.CompositeView
     @modalView = modalView
 
 
-  filter : (searchQuery) ->
+  filterBySearch : (searchQuery) ->
 
     @collection.setFilter(["name", "owningTeam"], searchQuery)
 

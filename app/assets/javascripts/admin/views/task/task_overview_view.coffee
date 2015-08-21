@@ -150,9 +150,13 @@ class TaskOverviewView extends Backbone.Marionette.LayoutView
     )
 
     # sort the collection so the default team is the first one
-    teamCollection = new TeamCollection()
-    teamCollection.comparator = (teams) =>
-      if teams.get("name") == @DEFAULT_TEAM then 0 else 1
+    # don't bind the comparator function though as backbones sorting is
+    # checking for the number of arguments which could lead to strange behaviour when bound
+    defaultTeam = @DEFAULT_TEAM
+    teamCollection = new TeamCollection(null,
+      comparator: (teams) ->
+        if teams.get("name") == defaultTeam then 0 else 1
+    )
 
     teamSelectionView = new TeamSelectionView(
       collection: teamCollection

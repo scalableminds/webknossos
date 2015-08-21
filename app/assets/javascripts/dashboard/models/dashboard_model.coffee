@@ -5,6 +5,7 @@ backbone : Backbone
 ./user_model : UserModel
 admin/models/dataset/dataset_collection : DatasetCollection
 dashboard/models/logged_time_model : LoggedTimeModel
+admin/models/sorted_collection : SortedCollection
 ###
 
 class DashboardModel extends Backbone.Model
@@ -44,16 +45,15 @@ class DashboardModel extends Backbone.Model
     return $.when.apply($, promises)
 
 
-  getFinishedTasks : ->
+  getFinishedTasks : (isFinished = true)->
 
-    filteredTasks = @get("tasks").filter( (task) -> return task.get("annotation").state.isFinished )
-    return new Backbone.Collection(filteredTasks)
+    filteredTasks = @get("tasks").filter( (task) -> return isFinished == task.get("annotation").state.isFinished )
+    return new SortedCollection(filteredTasks)
 
 
   getUnfinishedTasks : ->
 
-    filteredTasks = @get("tasks").filter( (task) -> return !task.get("annotation").state.isFinished )
-    return new Backbone.Collection(filteredTasks)
+    return @getFinishedTasks(false)
 
 
   transformToCollection : ->
@@ -62,18 +62,11 @@ class DashboardModel extends Backbone.Model
       return DashboardTaskModel::parse(el)
     ))
 
-    tasks = new Backbone.Collection(tasks, model : DashboardTaskModel )
+    tasks = new SortedCollection(tasks, model : DashboardTaskModel )
     @set("tasks", tasks)
 
-    exploratoryAnnotations = new Backbone.Collection()
-    # Display newst first.
-    exploratoryAnnotations.comparator = (a,b) ->
-      if a.get("created") < b.get("created")
-        return 1
-      else if a.get("created") > b.get("created")
-        return -1
-      return 0
-    exploratoryAnnotations.add(@get("exploratoryAnnotations"))
+    exploratoryAnnotations = new SortedCollection(@get("exploratoryAnnotations"))
+    exploratoryAnnotations.setSort("created", "desc")
 
     @set("exploratoryAnnotations", exploratoryAnnotations)
 
@@ -87,4 +80,3 @@ class DashboardModel extends Backbone.Model
       success : (response) =>
         @get("tasks").add(newTask)
     )
-

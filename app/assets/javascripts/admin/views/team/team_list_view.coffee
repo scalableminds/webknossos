@@ -54,7 +54,7 @@ class TeamListView extends Backbone.Marionette.CompositeView
 
   initialize : ->
 
-    @listenTo(app.vent, "paginationView:filter", @filter)
+    @listenTo(app.vent, "paginationView:filter", @filterBySearch)
     @listenTo(app.vent, "CreateTeamModal:refresh", @refreshPagination)
 
 
@@ -66,7 +66,7 @@ class TeamListView extends Backbone.Marionette.CompositeView
     )
 
 
-  filter : (filterQuery) ->
+  filterBySearch : (filterQuery) ->
     @collection.setFilter(["name", "owner"], filterQuery)
     @collection.pager()
 

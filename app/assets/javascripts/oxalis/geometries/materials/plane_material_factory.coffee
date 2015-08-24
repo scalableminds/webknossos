@@ -136,6 +136,7 @@ class PlaneMaterialFactory extends AbstractPlaneMaterialFactory
 
         <% if (isRgb) { %>
           vec3 data_color = texture2D( <%= layers[0] %>_texture, vUv * repeat + offset).xyz;
+          data_color = (data_color + brightness - 0.5) * contrast + 0.5;
         <% } else { %>
           vec3 data_color = vec3(0.0, 0.0, 0.0);
 

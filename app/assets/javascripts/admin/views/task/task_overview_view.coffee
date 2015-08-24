@@ -160,7 +160,7 @@ class TaskOverviewView extends Backbone.Marionette.LayoutView
 
     teamSelectionView = new TeamSelectionView(
       collection: teamCollection
-      childViewOptions :
+      childViewOptions:
         modelValue: -> return "#{@model.get("name")}"
       name: "team"
       events:

@@ -91,14 +91,15 @@ class TaskOverviewView extends Backbone.Marionette.LayoutView
       data:
         start: start
         end: end
-    ).done( => @updateMinMaxHours() )
+    )
+    @updateMinMaxHours()
 
 
   getMinMaxHours : ->
 
     # This function calculates the min/max working hours of the users of the selected team
     if _.isEmpty(@minMaxHours)
-      selectedUsers = _.filter(@model.get("userInfos"), (userInfo) => @doDrawUser(userInfo.user))
+      selectedUsers = _.filter(@model.get("userInfos"), (userInfo) => @team in _.pluck(userInfo.user.teams, "team"))
       workingTimes = _.pluck(selectedUsers, "workingTime")
 
       if _.isEmpty(workingTimes) then workingTimes = [0]
@@ -117,8 +118,10 @@ class TaskOverviewView extends Backbone.Marionette.LayoutView
 
   updateMinMaxHours : ->
 
-    @minMaxHours = {}
-    @getMinMaxHours()
+    @fetchPromise.done( =>
+      @minMaxHours = {}
+      @getMinMaxHours()
+    )
 
 
   updateSelectedTeam : ->
@@ -157,7 +160,7 @@ class TaskOverviewView extends Backbone.Marionette.LayoutView
     TeamSelectionView = SelectionView.extend(
       teamChanged: =>
         @updateSelectedTeam()
-        @paintGraph()
+        @paintGraphDebounced()
     )
 
     # sort the collection so the default team is the first one

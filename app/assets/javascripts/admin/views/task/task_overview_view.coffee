@@ -87,20 +87,23 @@ class TaskOverviewView extends Backbone.Marionette.LayoutView
 
   fetchData : (start, end) ->
 
-    @minMaxHours = {}
     @fetchPromise = @model.fetch(
       data:
         start: start
         end: end
-    )
+    ).done( => @updateMinMaxHours() )
 
 
   getMinMaxHours : ->
 
-    # This function calculates the min/max working hours of the whole data set
+    # This function calculates the min/max working hours of the users of the selected team
     if _.isEmpty(@minMaxHours)
-      minTime = Math.min(_.pluck(@model.get("userInfos"), "workingTime")...)
-      maxTime = Math.max(_.pluck(@model.get("userInfos"), "workingTime")...)
+      selectedUsers = _.filter(@model.get("userInfos"), (userInfo) => @doDrawUser(userInfo.user))
+      workingTimes = _.pluck(selectedUsers, "workingTime")
+
+      if _.isEmpty(workingTimes) then workingTimes = [0]
+      minTime = Math.min(workingTimes...)
+      maxTime = Math.max(workingTimes...)
 
       # Convert ms to h
       @minMaxHours =
@@ -112,9 +115,17 @@ class TaskOverviewView extends Backbone.Marionette.LayoutView
     return @minMaxHours
 
 
+  updateMinMaxHours : ->
+
+    @minMaxHours = {}
+    @getMinMaxHours()
+
+
   updateSelectedTeam : ->
 
     @team = @ui.team.find("select")[0].value
+    @updateMinMaxHours()
+    @renderRangeSlider()
 
 
   onRender : ->
@@ -280,7 +291,7 @@ class TaskOverviewView extends Backbone.Marionette.LayoutView
 
     svgHead = """
               digraph G {
-                size="10,10";
+                size="16,9";
                 overlap=false;
                 graph [ bgcolor="transparent" ];
                 node  [ fontname="Helvetica, Arial, sans-serif",
@@ -296,7 +307,7 @@ class TaskOverviewView extends Backbone.Marionette.LayoutView
 
   buildNodes : (taskTypes, projects) ->
 
-    svgUsers = @users.map( (user) =>
+    svgUsers = _.compact(@users.map( (user) =>
       if @doDrawUser(user)
         userName = user.firstName + " " + user.lastName
         workingHours = user.workingHours
@@ -304,7 +315,7 @@ class TaskOverviewView extends Backbone.Marionette.LayoutView
         color = @colorJet(128 - (workingHours - minMaxHours.min) * (128 / minMaxHours.max - minMaxHours.min) + 128)
 
         @quoted(userName) + " [id="+ @quoted(user.id) + ", shape=box, fillcolor=" + @quoted(color) + "]"
-    ).join(";")
+    )).join(";")
 
     svgTaskTypes = ""
     svgProjects = ""
@@ -325,15 +336,17 @@ class TaskOverviewView extends Backbone.Marionette.LayoutView
     svgFutureTaskTypesEdges = ""
     svgProjectEdges = ""
 
+    selectedUserInfos = _.filter(userInfos, (userInfo) => @doDrawUser(userInfo.user))
+
     if @doDrawTaskTypes()
 
-      svgTaskTypeEdges = userInfos.map( (userInfo) =>
+      svgTaskTypeEdges = selectedUserInfos.map( (userInfo) =>
         { user, taskTypes } = userInfo
         taskTypes.map( (taskType) => @edge(user.name, taskType.summary)) if @doDrawUser(user)
       ).join(";")
 
       svgFutureTaskTypesEdges  = "edge [ color=blue ];"
-      svgFutureTaskTypesEdges += userInfos.map( (userInfo) =>
+      svgFutureTaskTypesEdges += selectedUserInfos.map( (userInfo) =>
         { user, futureTaskType } = userInfo
         if(futureTaskType)
           @edge(user.name, futureTaskType.summary) if @doDrawUser(user)
@@ -341,7 +354,7 @@ class TaskOverviewView extends Backbone.Marionette.LayoutView
 
 
     if @doDrawProjects()
-      svgProjectEdges = userInfos.map( (userInfo) =>
+      svgProjectEdges = selectedUserInfos.map( (userInfo) =>
         { user, projects } = userInfo
         projects.map( (project) => @edge(user.name, project.name)) if @doDrawUser(user)
       ).join(";")

@@ -11,7 +11,7 @@ class SpotlightDatasetListView extends Backbone.Marionette.CollectionView
 
   initialize : (options) ->
 
-    @collection.sortBy("created")
+    @collection.sortByAttribute("created")
 
     @collection.fetch(
       silent : true

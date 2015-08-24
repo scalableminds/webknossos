@@ -53,5 +53,5 @@ class PaginationCollection extends Backbone.Paginator.clientPager
 
   ##  collection methods  ##
 
-  sortBy: (attribute) ->
+  sortByAttribute: (attribute) ->
     @setSort(@sortAttribute, @sortDirection)

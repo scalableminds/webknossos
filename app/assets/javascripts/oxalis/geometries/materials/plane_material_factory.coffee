@@ -88,7 +88,7 @@ class PlaneMaterialFactory extends AbstractPlaneMaterialFactory
     colorLayerNames = _.map @model.getColorBinaries(), (b) => @sanitizeName(b.name)
     segmentationBinary = @model.getSegmentationBinary()
 
-    x = _.template(
+    return _.template(
       """
       <% _.each(layers, function(name) { %>
         uniform sampler2D <%= name %>_texture;
@@ -170,5 +170,4 @@ class PlaneMaterialFactory extends AbstractPlaneMaterialFactory
         segmentationName : @sanitizeName( segmentationBinary?.name )
         isRgb : @model.binary["color"]?.targetBitDepth == 24
       }
-      return x
     )

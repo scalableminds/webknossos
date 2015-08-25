@@ -57,24 +57,29 @@ class User
     return if @userSettings.inverseY then 1 else -1
 
 
-  getOrCreateBrightnessContrastSettings : (datasetPostfix) ->
+  getOrCreateBrightnessContrastColorSettings : (model) ->
 
-    settings = @get("brightnessContrastSettings")
-    settings[datasetPostfix] = settings[datasetPostfix] || _.clone settings["default"]
-    return settings[datasetPostfix]
+    settings = @get("brightnessContrastColorSettings")
+    datasetSettings = settings[model.datasetPostfix] || {}
+
+    for binary in model.getColorBinaries()
+      datasetSettings[binary.name] = datasetSettings[binary.name] || {}
+      _.defaults(datasetSettings[binary.name], settings.default)
+
+    settings[model.datasetPostfix] = datasetSettings
 
 
-  resetBrightnessContrastSettings : (datasetPostfix) ->
+  resetBrightnessContrastColorSettings : (model) ->
 
     Request.send(
       url : "/user/configuration/default"
       dataType : "json"
     ).then (defaultData) =>
 
-      @get("brightnessContrastSettings")[datasetPostfix] =
-        defaultData.brightnessContrastSettings[datasetPostfix]
+      @get("brightnessContrastColorSettings")[model.datasetPostfix] =
+        defaultData.brightnessContrastColorSettings[model.datasetPostfix]
 
-      return @getOrCreateBrightnessContrastSettings(datasetPostfix)
+      @getOrCreateBrightnessContrastColorSettings(model)
 
 
   triggerAll : ->

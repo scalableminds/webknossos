@@ -33,18 +33,20 @@ object UserSettings extends BasicSettings{
       "displayCrosshair" -> JsBoolean(true),
       "interpolation" -> JsBoolean(false),
       "fourBit" -> JsBoolean(false),
-      "brightnessContrastSettings" -> Json.obj(
+      "brightnessContrastColorSettings" -> Json.obj(
         "default" -> Json.obj(
           "brightness" -> 0,
           "contrast" -> 1
         ),
         "st08x2" -> Json.obj(
-          "brightness" -> 0,
-          "contrast" -> 2.4
+          "color" -> Json.obj(
+            "contrast" -> 2.4
+          )
         ),
         "07x2" -> Json.obj(
-          "brightness" -> 0,
-          "contrast" -> 2.4
+          "color" -> Json.obj(
+            "contrast" -> 2.4
+          )
         )
       ),
       "quality" -> JsNumber(0),

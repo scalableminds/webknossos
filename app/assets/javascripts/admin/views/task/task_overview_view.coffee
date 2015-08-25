@@ -314,8 +314,7 @@ class TaskOverviewView extends Backbone.Marionette.LayoutView
       if @doDrawUser(user)
         userName = user.firstName + " " + user.lastName
         workingHours = user.workingHours
-        minMaxHours = @getMinMaxHours()
-        color = @colorJet(128 - (workingHours - minMaxHours.min) * (128 / minMaxHours.max - minMaxHours.min) + 128)
+        color = @colorJet(128 - (workingHours - @chosenMinHours) * (128 / @chosenMaxHours - @chosenMinHours) + 128)
 
         @quoted(userName) + " [id="+ @quoted(user.id) + ", shape=box, fillcolor=" + @quoted(color) + "]"
     )).join(";")

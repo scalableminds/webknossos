@@ -65,11 +65,11 @@ object TaskController extends Controller with Secured with FoxImplicits {
     UserDAO.findAll
       .flatMap { users =>
         Future.sequence( users.map { user =>
-          async  {
+          async {
             val tasks = await(getAvailableTasksFor(user).futureBox) openOr List()
             val taskCount = tasks.size
             val projects = await(getProjectsFor(tasks))
-            user ->(taskCount, projects)
+            user -> (taskCount, projects)
           }
         })
       }

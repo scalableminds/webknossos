@@ -13,7 +13,7 @@ import scala.util.{Failure, Success}
 import scala.concurrent.Future
 import play.api.libs.concurrent.Execution.Implicits._
 
-case class Team(name: String, parent: Option[String], roles: List[Role], owner: Option[BSONObjectID] = None, behaveLikeRootTeam: Option[Boolean] = None, _id: BSONObjectID = BSONObjectID.generate) {
+case class Team(name: String, parent: Option[String], roles: List[Role], owner: Option[BSONObjectID] = None, behavesLikeRootTeam: Option[Boolean] = None, _id: BSONObjectID = BSONObjectID.generate) {
 
   lazy val id = _id.stringify
 
@@ -27,7 +27,7 @@ case class Team(name: String, parent: Option[String], roles: List[Role], owner: 
     parent.map(user.teamNames.contains) getOrElse true
 
   def isRootTeam =
-    behaveLikeRootTeam.getOrElse(parent.isEmpty)
+    behavesLikeRootTeam.getOrElse(parent.isEmpty)
 }
 
 object Team extends FoxImplicits {

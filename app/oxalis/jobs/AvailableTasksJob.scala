@@ -17,13 +17,16 @@ import play.api.Logger
  */
 class AvailableTasksJob extends Actor {
   import context.dispatcher
+
+  case object CheckAvailableTasks
+
   val tick =
-    context.system.scheduler.schedule(0 millis, 1 day, self, "checkAvailableTasks")
+    context.system.scheduler.schedule(0 millis, 1 day, self, CheckAvailableTasks)
 
   override def postStop() = tick.cancel()
 
   override def receive: Receive = {
-    case "checkAvailableTasks" =>
+    case CheckAvailableTasks =>
       Logger.info("Daily check for users without any available tasks")
       val availableTasksCountsFox = TaskController.getAllAvailableTaskCountsAndProjects()(GlobalAccessContext)
 

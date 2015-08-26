@@ -54,11 +54,9 @@ object TaskController extends Controller with Secured with FoxImplicits {
     TaskService.findAssignableFor(user)
 
   def getProjectsFor(tasks: List[Task])(implicit ctx: DBAccessContext) = {
-    val projects = Future.fold[Box[Project], Set[Project]](tasks.map(_.project.futureBox))(Set()) { (projects, project) =>
-      if (!project.isEmpty)
-        projects + project.openOrThrowException("Project should not be empty")
-      else
-        projects
+    val projects = Future.fold[Box[Project], Set[Project]](tasks.map(_.project.futureBox))(Set()) {
+      case (acc, Full(project)) => acc + project
+      case (acc, _) => acc
     }
     projects map (_.toList)
   }
@@ -78,23 +76,21 @@ object TaskController extends Controller with Secured with FoxImplicits {
       .map(_.toMap[User, (Int, List[Project])])
   }
 
-  def createAvailableTasksJson(availableTasksMap: Map[User, (Int, List[Project])]): JsObject = {
-    JsObject(Seq(
-      "availableTasksCounts" -> JsArray(availableTasksMap.map { case (user, (taskCount, projects)) =>
-        JsObject(Seq(
-          "name" -> JsString(user.name),
-          "availableTaskCount" -> JsNumber(taskCount),
-          "projects" -> JsArray(projects.map(project => JsString(project.name)))
-        ))
-      }.toSeq)
-    ))
-  }
+  def createAvailableTasksJson(availableTasksMap: Map[User, (Int, List[Project])]) =
+    Json.toJson(availableTasksMap.map { case (user, (taskCount, projects)) =>
+        Json.obj(
+          "name" -> user.name,
+          "availableTaskCount" -> taskCount,
+          "projects" -> projects.map(project => project.name)
+        )
+    })
+
 
   def requestAvailableTasks = Authenticated.async { implicit request =>
     for {
       availableTasksMap <- getAllAvailableTaskCountsAndProjects()
     } yield {
-      JsonOk(createAvailableTasksJson(availableTasksMap))
+      Ok(createAvailableTasksJson(availableTasksMap))
     }
   }
 

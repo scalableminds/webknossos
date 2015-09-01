@@ -22,7 +22,7 @@ trait DataSourceTypeGuesser {
     def tail = {
       PathUtils.listDirectories(source).filterNot( path => excludeDirs.contains(path.getFileName.toString)).foldLeft(Stream.empty[Path]){
         case (stream, path) =>
-          stream ++ lazyFileFinder(path, excludeDirs)
+          stream ++ PathUtils.listFiles(path) ++ lazyFileFinder(path, excludeDirs)
       }
     }
     PathUtils.listFiles(source).toStream ++ tail

@@ -37,7 +37,8 @@ trait DataSourceTypeGuesser {
 
 object DataSourceTypeGuessers extends DataSourceTypes{
   def guessRepositoryType(source: Path) = {
-    types.maxBy(_.chanceOfInboxType(source))
+    // HOTFIX: Always return knossos data type
+    KnossosDataSourceType // types.maxBy(_.chanceOfInboxType(source))
   }
 }
 

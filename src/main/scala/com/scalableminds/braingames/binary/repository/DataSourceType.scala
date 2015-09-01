@@ -4,7 +4,6 @@
 package com.scalableminds.braingames.binary.repository
 
 import java.nio.file.Path
-
 import com.scalableminds.braingames.binary.models.{UnusableDataSource, DataSource}
 import com.scalableminds.util.io.PathUtils
 import com.scalableminds.util.tools.ProgressTracking.ProgressTracker

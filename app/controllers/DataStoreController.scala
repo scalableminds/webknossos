@@ -179,12 +179,12 @@ object DataStoreController extends Controller with DataStoreActionHelper{
 
   def backChannel(name: String, key: String) = WebSocket.async[Array[Byte]] {
     implicit request =>
-      Logger.debug(s"Got a backchannel request for $name.")
+      Logger.info(s"Got a backchannel request for $name.")
       DataStoreDAO.findByKey(key)(GlobalAccessContext).futureBox.map {
         case Full(dataStore) =>
           val (iterator, enumerator, restChannel) = WebSocketRESTServer.create
           DataStoreHandler.register(dataStore.name, restChannel)
-          Logger.debug(s"Key $name connected.")
+          Logger.info(s"Key $name connected.")
           (iterator, enumerator)
         case _ =>
           Logger.warn(s"$name  tried to connect with invalid key '$key'.")

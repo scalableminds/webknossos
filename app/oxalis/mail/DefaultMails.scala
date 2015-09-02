@@ -21,6 +21,9 @@ object DefaultMails {
 
   val brainTracingMailingList = conf.getString("braintracing.mailinglist") getOrElse ("")
   val supportMail = conf.getString("scm.support.mail") getOrElse ("support@scm.io")
+
+  val workloadMail = conf.getString("workload.mail") getOrElse ("")
+
   /**
    * Creates a registration mail which should allow the user to verify his
    * account
@@ -63,5 +66,13 @@ object DefaultMails {
       subject = "Your Oxalis password was changed",
       bodyText = html.mail.passwordChanged(name).body,
       recipients = List(receiver))
+  }
+
+  def availableTaskCountMail(tableRows: List[(String, Int, String)]) = {
+    Mail(
+      from = defaultFrom,
+      subject = "Available Tasks Overview",
+      bodyHtml = html.mail.availableTaskCounts(tableRows).body,
+      recipients = List(workloadMail))
   }
 }

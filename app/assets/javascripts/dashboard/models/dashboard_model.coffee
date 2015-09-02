@@ -45,15 +45,20 @@ class DashboardModel extends Backbone.Model
     return $.when.apply($, promises)
 
 
-  getFinishedTasks : (isFinished = true)->
+  getTasksFiltered : (isFinished) ->
 
     filteredTasks = @get("tasks").filter( (task) -> return isFinished == task.get("annotation").state.isFinished )
     return new SortedCollection(filteredTasks)
 
 
+  getFinishedTasks : ->
+
+    return @getTasksFiltered(true)
+
+
   getUnfinishedTasks : ->
 
-    return @getFinishedTasks(false)
+    return @getTasksFiltered(false)
 
 
   getAnnotations : ->

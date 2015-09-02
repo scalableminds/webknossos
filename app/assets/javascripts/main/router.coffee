@@ -27,6 +27,7 @@ class Router extends Backbone.Router
     "spotlight"                     : "spotlight"
     "tasks/overview"                : "taskOverview"
     "admin/taskTypes"               : "hideLoading"
+    "workload"                      : "workload"
 
 
   initialize : ->
@@ -123,6 +124,10 @@ class Router extends Backbone.Router
   tasks : ->
 
     @showWithPagination("TaskListView", "TaskCollection")
+
+  workload : ->
+
+    @showWithPagination("WorkloadListView", "WorkloadCollection")
 
   taskTypes : ->
 

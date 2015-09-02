@@ -18,8 +18,6 @@ import net.liftweb.common.{Full, Failure}
 import com.scalableminds.util.reactivemongo.DBAccessContext
 import scala.concurrent.Future
 import play.api.templates.Html
-import scala.concurrent.{Promise, Future}
-import play.twirl.api.Html
 import scala.async.Async.{async, await}
 import net.liftweb.common.Box
 
@@ -28,7 +26,7 @@ object TaskController extends Controller with Secured with FoxImplicits {
   val MAX_OPEN_TASKS = current.configuration.getInt("oxalis.tasks.maxOpenPerUser") getOrElse 5
 
   def empty = Authenticated{ implicit request =>
-    Ok(views.html.main()(Html.empty))
+    Ok(views.html.main()(Html("")))
   }
 
   def list = Authenticated.async{ implicit request =>

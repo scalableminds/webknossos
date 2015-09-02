@@ -26,7 +26,7 @@ object TaskController extends Controller with Secured with FoxImplicits {
   val MAX_OPEN_TASKS = current.configuration.getInt("oxalis.tasks.maxOpenPerUser") getOrElse 5
 
   def empty = Authenticated{ implicit request =>
-    Ok(views.html.main()(Html("")))
+    Ok(views.html.main()(Html.empty))
   }
 
   def list = Authenticated.async{ implicit request =>

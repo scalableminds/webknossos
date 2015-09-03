@@ -26,6 +26,8 @@ class WorkloadListView extends Backbone.Marionette.CompositeView
 
   initialize : ->
 
+    @collection.setSort("availableTaskCount", "asc")
+
     @collection.fetch(
       silent : true
     ).done( =>

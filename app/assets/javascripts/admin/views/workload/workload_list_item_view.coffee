@@ -14,5 +14,5 @@ class WorkloadListItemView extends Backbone.Marionette.CompositeView
 
   templateHelpers: ->
     projectsString: ->
-      @projects.join(" ")
+      @projects.join(", ")
 

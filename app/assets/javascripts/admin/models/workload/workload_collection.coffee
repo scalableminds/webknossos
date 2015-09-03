@@ -9,4 +9,4 @@ class WorkloadCollection extends PaginationCollection
   url : "/api/tasks/workload"
 
   paginator_ui :
-    perPage : 50
+    perPage : 20

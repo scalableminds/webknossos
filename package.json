@@ -12,17 +12,29 @@
     "bower": "^1.4.1",
     "chalk": "^1.1.1",
     "coffee-loader": "^0.7.2",
+    "coffee-script": "^1.8.0",
     "event-stream": "~3.1.0",
     "exports-loader": "^0.6.2",
     "gulp": "~3.5.2",
+    "gulp-bump": "~0.1.5",
     "gulp-exec": "~1.0.4",
     "gulp-less": "~1.2.1",
+    "gulp-plumber": "~0.5.6",
+    "gulp-util": "^3.0.7",
+    "gulp-watch": "~0.5.0",
     "imports-loader": "^0.6.4",
+    "protractor": "^2.5.1",
+    "require-sugar": "^0.1.2",
+    "rimraf": "^2.4.3",
     "through2": "^2.0.0",
     "webpack": "^1.12.2",
     "worker-loader": "^0.6.0"
   },
   "scripts": {
-    "postinstall": "./node_modules/.bin/bower install -q && ./node_modules/.bin/bower update -q"
+    "postinstall": "./node_modules/.bin/bower install -q && ./node_modules/.bin/bower update -q",
+    "test": "./node_modules/.bin/protractor",
+    "prewebdriver": "npm run webdriver-update",
+    "webdriver": "./node_modules/.bin/webdriver-manager start",
+    "webdriver-update": "./node_modules/.bin/webdriver-manager update"
   }
 }

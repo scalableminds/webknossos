@@ -7,7 +7,7 @@ underscore : _
 class User
 
   # To add any user setting, you must define default values in
-  # UserConfiguration.scala
+  # UserSettings.scala
 
   constructor : (user) ->
 

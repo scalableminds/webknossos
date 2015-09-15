@@ -24,7 +24,7 @@ object SettingsController extends Controller with Secured {
       Ok(toJson(configuration))
   }
 
-  def update = Authenticated.async(parse.json(maxLength = 2048)) {
+  def update = Authenticated.async(parse.json(maxLength = 20480)) {
     implicit request =>
       for {
         settings <- request.body.asOpt[JsObject] ?~> Messages("user.settings.invalid")

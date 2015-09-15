@@ -32,7 +32,7 @@ object ConfigurationController extends Controller with Secured {
         .map(configuration => Ok(toJson(configuration)))
   }
 
-  def update = Authenticated.async(parse.json(maxLength = 2048)) {
+  def update = Authenticated.async(parse.json(maxLength = 20480)) {
     implicit request =>
       for {
         jsConfiguration <- request.body.asOpt[JsObject] ?~> Messages("user.configuration.invalid")
@@ -58,7 +58,7 @@ object ConfigurationController extends Controller with Secured {
         .map(configuration => Ok(toJson(configuration.configurationOrDefaults)))
   }
 
-  def updateDataSet(dataSetName: String) = Authenticated.async(parse.json(maxLength = 2048)) {
+  def updateDataSet(dataSetName: String) = Authenticated.async(parse.json(maxLength = 20480)) {
     implicit request =>
       for {
         jsConfiguration <- request.body.asOpt[JsObject] ?~> Messages("user.configuration.invalid")

@@ -261,7 +261,7 @@ class Flycam3d
 
     m = new THREE.Matrix4().lookAt(new THREE.Vector3(d...),
       new THREE.Vector3(0, 0, 0),
-      new THREE.Vector3(0, 1, 0)).elements
+      @getCurrentUpVector()).elements
 
     matrix2 = [
       1, 0, 0, 0,
@@ -274,6 +274,16 @@ class Flycam3d
 
     @currentMatrix = @convertToJsArray(M4x4.mul(matrix2, m))
     updateMacro(@)
+
+
+  getCurrentUpVector : ->
+
+    currentRotation = new THREE.Matrix4()
+    currentRotation.extractRotation(new THREE.Matrix4(@currentMatrix...))
+    up = new THREE.Vector3(0, 1, 0)
+    up.applyMatrix4(currentRotation)
+
+    return up
 
 
   convertToJsArray : (floatXArray) ->

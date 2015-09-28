@@ -10,6 +10,8 @@ Oxalis is a web-based annotation tool for large 3d image datasets.
 * [node.js 0.10.0+](http://nodejs.org/download/)
 * [git](http://git-scm.com/downloads)
 
+* Server needs ~5GB RAM
+
 # Installation
 ## OS X
 If you are using OS X try using this awesome installer:
@@ -30,6 +32,20 @@ launchctl load ~/Library/LaunchAgents/homebrew.mxcl.mongodb.plist
 # Checkout the Oxalis git repository
 git clone git@github.com:scalableminds/oxalis.git
 ```
+
+## Ubuntu 15.10
+
+```
+# Adding repository for Oracle java7
+sudo add-apt-repository ppa:webupd8team/java
+
+# Adding repository for sbt 
+echo "deb https://dl.bintray.com/sbt/debian /" | sudo tee -a /etc/apt/sources.list.d/sbt.list
+sudo apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv 642AC823
+
+# Installing everything
+sudo apt-get update
+sudo apt-get install mongodb-server nodejs nodejs-legacy scala npm sbt oracle-java7-installer
 
 
 ## Manual Installation

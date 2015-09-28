@@ -1,8 +1,9 @@
-![Oxalis logo](https://oxalis.at/assets/images/oxalis.svg)
-# Oxalis
-Oxalis is a web-based annotation tool for large 3d image datasets.
+# webKnossos
+Cellular-resolution connectomics is currently substantially limited by the throughput and efficiency of data analysis. Current solutions require an efficient integration of automated image analysis with massive manual data annotation. To scale such annotation efforts it is decisive to be able to crowd source data analysis online. Here we present **webKnossos** (former oxalis),
 
-# Dependencies
+![webKnossos logo](https://oxalis.at/assets/images/oxalis.svg)
+
+## Dependencies
 
 * [Java JDK 1.7 (Oracle version)](http://www.oracle.com/technetwork/java/javase/downloads/index.html)
 * [sbt](http://www.scala-sbt.org/)
@@ -10,8 +11,8 @@ Oxalis is a web-based annotation tool for large 3d image datasets.
 * [node.js 0.10.0+](http://nodejs.org/download/)
 * [git](http://git-scm.com/downloads)
 
-# Installation
-## OS X
+## Installation
+#### OS X
 If you are using OS X try using this awesome installer:
 https://gist.github.com/normanrz/9128496
 
@@ -27,22 +28,22 @@ brew install git node mongodb sbt
 # Start mongo
 launchctl load ~/Library/LaunchAgents/homebrew.mxcl.mongodb.plist
 
-# Checkout the Oxalis git repository
+# Checkout the webKnossos git repository
 git clone git@github.com:scalableminds/oxalis.git
 ```
 
-If you are installing oxalis in a virtual machine, please make sure you allocated **enough memory**. A good value is 5gb, you might get away with less.
+If you are installing *webKnossos* in a virtual machine, please make sure you allocated **enough memory**. A good value is 5gb, you might get away with less.
 
-## Manual Installation
+#### Manual Installation
 
-### Java
+##### Java
 - install Java JDK 1.7 (from Oracle, OpenJDK is currently not supported)
 - make sure `JAVA_HOME` and `JDK_HOME` are set and `PATH` contains path to JDK
 
-### sbt
+##### sbt
 See: http://www.scala-sbt.org/release/docs/Getting-Started/Setup.html
 
-### mongoDB
+##### mongoDB
 - install mongoDB from http://www.mongodb.org/downloads
 - mongoDB version **2.4.3+ is required**
 - your package managers' versions (e.g. `apt-get`) might be outdated
@@ -67,7 +68,7 @@ sudo vim /etc/environment
 mongod --dbpath (your path)
 ```
 
-### node.js
+##### node.js
 * install node from http://nodejs.org/download/
 * node version **0.10.0+ is required**
 * your package managers' versions (e.g. `apt-get`) might be outdated
@@ -81,15 +82,15 @@ mongod --dbpath (your path)
 npm install -g coffee-script less bower gulp
 ```
 
-# Run
+### Run
 ```bash
 sbt run
 ```
 
 Will fetch all Scala, Java and node dependencies and run the application on Port 9000.
 
-# Credits
+## Credits
 scalable minds - http://scm.io
 
-# License
+## License
 TBD

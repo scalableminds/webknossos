@@ -34,6 +34,22 @@ git clone git@github.com:scalableminds/oxalis.git
 
 If you are installing *webKnossos* in a virtual machine, please make sure you allocated **enough memory**. A good value is 5gb, you might get away with less.
 
+
+#### Ubuntu 15.10
+
+```
+# Adding repository for Oracle java7
+sudo add-apt-repository ppa:webupd8team/java
+
+# Adding repository for sbt 
+echo "deb https://dl.bintray.com/sbt/debian /" | sudo tee -a /etc/apt/sources.list.d/sbt.list
+sudo apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv 642AC823
+
+# Installing everything
+sudo apt-get update
+sudo apt-get install mongodb-server nodejs nodejs-legacy scala npm sbt oracle-java7-installer
+```
+
 #### Manual Installation
 
 ##### Java

@@ -31,6 +31,7 @@ launchctl load ~/Library/LaunchAgents/homebrew.mxcl.mongodb.plist
 git clone git@github.com:scalableminds/oxalis.git
 ```
 
+If you are installing oxalis in a virtual machine, please make sure you allocated **enough memory**. A good value is 5gb, you might get away with less.
 
 ## Manual Installation
 

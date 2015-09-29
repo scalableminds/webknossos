@@ -58,12 +58,6 @@ class Gui
 
     @folders = []
 
-    @folders.push( fControls = @gui.addFolder("Controls") )
-    @addCheckbox(fControls, @user.getSettings(), "inverseX", "Inverse X")
-    @addCheckbox(fControls, @user.getSettings(), "inverseY", "Inverse Y")
-    @addSlider(fControls, @user.getSettings(), "keyboardDelay",
-      0, 500, 10, "Keyboard delay (ms)" )
-
     @folders.push( @fViewportcontrols = @gui.addFolder("Viewportoptions") )
     @moveValueController = @addSlider(@fViewportcontrols, @user.getSettings(), "moveValue",
       constants.MIN_MOVE_VALUE, constants.MAX_MOVE_VALUE, 10, "Move Value (nm/s)")
@@ -72,6 +66,12 @@ class Gui
     @scaleController = @addSlider(@fViewportcontrols, @user.getSettings(), "scale", constants.MIN_SCALE,
       constants.MAX_SCALE, 0.1, "Viewport Scale")
     @addCheckbox(@fViewportcontrols, @user.getSettings(), "dynamicSpaceDirection", "d/f-Switching")
+
+    @folders.push( fControls = @gui.addFolder("Controls") )
+    @addCheckbox(fControls, @user.getSettings(), "inverseX", "Inverse X")
+    @addCheckbox(fControls, @user.getSettings(), "inverseY", "Inverse Y")
+    @addSlider(fControls, @user.getSettings(), "keyboardDelay",
+      0, 500, 10, "Keyboard delay (ms)" )
 
     @folders.push( @fFlightcontrols = @gui.addFolder("Flightoptions") )
     @addSlider(@fFlightcontrols, @user.getSettings(), "mouseRotateValue",

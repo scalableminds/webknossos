@@ -220,7 +220,7 @@ class Controller
       return
 
     keyboardControls = {
-      "q" : => @toggleFullScreen()
+      # "q" : => @toggleFullScreen()
     }
 
     if @controlMode == constants.CONTROL_MODE_TRACE

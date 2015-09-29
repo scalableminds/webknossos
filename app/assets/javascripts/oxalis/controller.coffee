@@ -309,5 +309,9 @@ class Controller
 
   browserSupported : ->
 
-    # right now only webkit-based browsers are supported
-    return window.webkitURL
+    userAgentContains = (substring) ->
+        navigator.userAgent.indexOf(substring) >= 0
+
+    # allow everything but IE
+    isIE = userAgentContains("MSIE") or userAgentContains("Trident")
+    return not isIE

@@ -67,12 +67,6 @@ class Gui
       constants.MAX_SCALE, 0.1, "Viewport Scale")
     @addCheckbox(@fViewportcontrols, @user.getSettings(), "dynamicSpaceDirection", "d/f-Switching")
 
-    @folders.push( fControls = @gui.addFolder("Controls") )
-    @addCheckbox(fControls, @user.getSettings(), "inverseX", "Inverse X")
-    @addCheckbox(fControls, @user.getSettings(), "inverseY", "Inverse Y")
-    @addSlider(fControls, @user.getSettings(), "keyboardDelay",
-      0, 500, 10, "Keyboard delay (ms)" )
-
     @folders.push( @fFlightcontrols = @gui.addFolder("Flightoptions") )
     @addSlider(@fFlightcontrols, @user.getSettings(), "mouseRotateValue",
       0.001, 0.02, 0.001, "Mouse Rotation")
@@ -108,6 +102,12 @@ class Gui
       )
     @addFunction(@fColors, @settingsGeneral, "resetColorSettings",
       "Reset")
+
+    @folders.push( fControls = @gui.addFolder("Controls") )
+    @addCheckbox(fControls, @user.getSettings(), "inverseX", "Inverse X")
+    @addCheckbox(fControls, @user.getSettings(), "inverseY", "Inverse Y")
+    @addSlider(fControls, @user.getSettings(), "keyboardDelay",
+      0, 500, 10, "Keyboard delay (ms)" )
 
     @folders.push( @fView = @gui.addFolder("View") )
     bbController = @fView.add(@settingsGeneral, "boundingBox").name("Bounding Box").onChange(@setBoundingBox)

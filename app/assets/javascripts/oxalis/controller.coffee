@@ -309,5 +309,9 @@ class Controller
 
   browserSupported : ->
 
+    userAgentContains = (substring) ->
+        navigator.userAgent.indexOf(substring) >= 0
+
     # allow everything but IE
-    return window.navigator.appName isnt "Microsoft Internet Explorer"
+    isIE = userAgentContains("MSIE") or userAgentContains("Trident")
+    return not isIE

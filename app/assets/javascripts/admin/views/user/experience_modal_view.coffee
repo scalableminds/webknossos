@@ -29,9 +29,6 @@ class ExperienceModal extends Backbone.Marionette.ItemView
           </div>
         </div>
         <div class="modal-footer">
-          <a href="#" class="increase-experience btn btn-primary">
-          Increase Experience
-          </a>
           <a href="#" class="set-experience btn btn-primary">
             Set Experience
           </a>

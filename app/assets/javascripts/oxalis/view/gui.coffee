@@ -67,18 +67,6 @@ class Gui
       constants.MAX_SCALE, 0.1, "Viewport Scale")
     @addCheckbox(@fViewportcontrols, @user.getSettings(), "dynamicSpaceDirection", "d/f-Switching")
 
-    @folders.push( @fFlightcontrols = @gui.addFolder("Flightoptions") )
-    @addSlider(@fFlightcontrols, @user.getSettings(), "mouseRotateValue",
-      0.001, 0.02, 0.001, "Mouse Rotation")
-    @addSlider(@fFlightcontrols, @user.getSettings(), "rotateValue",
-      0.001, 0.08, 0.001, "Keyboard Rotation Value")
-    @moveValue3dController = @addSlider(@fFlightcontrols, @user.getSettings(), "moveValue3d",
-      constants.MIN_MOVE_VALUE, constants.MAX_MOVE_VALUE, 10, "Move Value (nm/s)")
-    @addSlider(@fFlightcontrols, @user.getSettings(), "crosshairSize",
-      0.05, 0.5, 0.01, "Crosshair size")
-    @addSlider(@fFlightcontrols, @user.getSettings(), "sphericalCapRadius",
-      50, 500, 1, "Sphere Radius")
-
     @folders.push( @fColors = @gui.addFolder("Colors") )
     if @model.getSegmentationBinary()
       @segmentationOpacityController =
@@ -102,6 +90,18 @@ class Gui
       )
     @addFunction(@fColors, @settingsGeneral, "resetColorSettings",
       "Reset")
+
+    @folders.push( @fFlightcontrols = @gui.addFolder("Flightoptions") )
+    @addSlider(@fFlightcontrols, @user.getSettings(), "mouseRotateValue",
+      0.001, 0.02, 0.001, "Mouse Rotation")
+    @addSlider(@fFlightcontrols, @user.getSettings(), "rotateValue",
+      0.001, 0.08, 0.001, "Keyboard Rotation Value")
+    @moveValue3dController = @addSlider(@fFlightcontrols, @user.getSettings(), "moveValue3d",
+      constants.MIN_MOVE_VALUE, constants.MAX_MOVE_VALUE, 10, "Move Value (nm/s)")
+    @addSlider(@fFlightcontrols, @user.getSettings(), "crosshairSize",
+      0.05, 0.5, 0.01, "Crosshair size")
+    @addSlider(@fFlightcontrols, @user.getSettings(), "sphericalCapRadius",
+      50, 500, 1, "Sphere Radius")
 
     @folders.push( fControls = @gui.addFolder("Controls") )
     @addCheckbox(fControls, @user.getSettings(), "inverseX", "Inverse X")

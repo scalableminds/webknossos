@@ -25,7 +25,6 @@ class VolumeTracingController
   constructor : ( @model, @sceneController, @gui, @volumeTracingView ) ->
 
     @inDeleteMode = false
-    @controlMode = @CONTROL_MODE_MOVE
 
     @gui.on
       setActiveCell : (id) => @model.volumeTracing.setActiveCell(id)
@@ -51,6 +50,8 @@ class VolumeTracingController
       do (control) =>
         $("#" + control).on "click", =>
           @setControlMode(@controlModeMapping[control])
+
+    @setControlMode(@CONTROL_MODE_TRACE)
 
 
     # Merging

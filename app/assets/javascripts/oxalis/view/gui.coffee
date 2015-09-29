@@ -68,10 +68,6 @@ class Gui
     @addCheckbox(@fViewportcontrols, @user.getSettings(), "dynamicSpaceDirection", "d/f-Switching")
 
     @folders.push( @fColors = @gui.addFolder("Colors") )
-    if @model.getSegmentationBinary()
-      @segmentationOpacityController =
-        @addSlider(@fColors, @user.getSettings(), "segmentationOpacity",
-          0, 100, 1, "Segment. Opacity")
     @brightnessControllers = []
     @contrastControllers = []
     @colorControllers = []
@@ -88,6 +84,10 @@ class Gui
         @addSlider(@fColors, @settingsGeneral.brightnessContrastColor[binary.name], "contrast",
           0.5, 5, 0.1, "Contrast " + (i+1), @setColorSettings)
       )
+    if @model.getSegmentationBinary()
+      @segmentationOpacityController =
+        @addSlider(@fColors, @user.getSettings(), "segmentationOpacity",
+          0, 100, 1, "Segment. Opacity")
     @addFunction(@fColors, @settingsGeneral, "resetColorSettings",
       "Reset")
 

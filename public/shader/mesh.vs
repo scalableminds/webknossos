@@ -12,7 +12,7 @@ uniform mat4 normalMatrix;
 //shading
 uniform vec3 ambientLight;
 
-const int directionalLightCount = 1; // this is crap!!! 
+const int directionalLightCount = 1; // this is not good!!! 
 //how does one pass in constants during runtime?
 //modify the shader source and add a DEFINE numLights ???
 

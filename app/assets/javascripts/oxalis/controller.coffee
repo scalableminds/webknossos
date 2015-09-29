@@ -305,5 +305,5 @@ class Controller
 
   browserSupported : ->
 
-    # right now only webkit-based browsers are supported
-    return window.webkitURL
+    # allow everything but IE
+    return window.navigator.appName isnt "Microsoft Internet Explorer"

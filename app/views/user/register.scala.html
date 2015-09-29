@@ -24,7 +24,7 @@
           @helper.inputText(form("email"), 'type -> "email", 'class -> "form-control", 'required -> "")
           @helper.inputText(form("firstName"), 'class -> "form-control", 'required -> "")
           @helper.inputText(form("lastName"), 'class -> "form-control", 'required -> "")
-          @helper.inputPassword(form("password.main"), 'class -> "form-control", 'pattern -> ".{8,}", 'required -> "", 'title -> "8 characters minimum")
+          @helper.inputPassword(form("password.main"), 'class -> "form-control", 'pattern -> ".{1,}", 'required -> "", 'title -> "1 character minimum")
           @helper.inputPassword(form("password.validation"), 'class -> "form-control")
 
           <div class="form-group">

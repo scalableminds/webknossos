@@ -70,8 +70,8 @@ object Global extends WithFilters(MetricsFilter) with GlobalSettings {
  * in the sample application.
  */
 object InitialData extends GlobalDBAccess {
-
-  val mpi = Team("Connectomics department", None, RoleService.roles)
+  val orga_string="Connectomics Department"
+  val this_organization = Team(orga_string, None, RoleService.roles)
 
   def insert() = {
     insertUsers()
@@ -81,18 +81,19 @@ object InitialData extends GlobalDBAccess {
   }
 
   def insertUsers() = {
-    UserDAO.findOneByEmail("scmboy@scalableminds.com").futureBox.map {
+	var admin_mail="admin@" + orga_string.replaceAll(" ","_").toLowerCase() + ".net"
+    UserDAO.findOneByEmail(admin_mail).futureBox.map {
       case Full(_) =>
       case _ =>
-        Logger.info("Inserted default user scmboy")
+        Logger.info("Inserted default user admin")
         UserDAO.insert(User(
-          "scmboy@scalableminds.com",
-          "SCM",
-          "Boy",
+          admin_mail,
+          "Admin",
+          orga_string,
           true,
           SCrypt.hashPassword("secret"),
           SCrypt.md5("secret"),
-          List(TeamMembership(mpi.name, Role.Admin)),
+          List(TeamMembership(this_organization.name, Role.Admin)),
           UserSettings.defaultSettings))
     }
   }
@@ -101,7 +102,7 @@ object InitialData extends GlobalDBAccess {
     TeamDAO.findOne().futureBox.map {
       case Full(_) =>
       case _ =>
-        TeamDAO.insert(mpi)
+        TeamDAO.insert(this_organization)
     }
   }
 
@@ -113,7 +114,7 @@ object InitialData extends GlobalDBAccess {
             "ek_0563_BipolarCells",
             "Check those cells out!",
             TraceLimit(5, 10, 15),
-            mpi.name)
+            this_organization.name)
           TaskTypeDAO.insert(taskType)
         }
     }

@@ -92,7 +92,8 @@ object InitialData extends GlobalDBAccess {
           SCrypt.hashPassword("secret"),
           SCrypt.md5("secret"),
           List(TeamMembership(Organization.name, role)),
-          UserSettings.defaultSettings))
+          UserSettings.defaultSettings,
+		  experience:Map("trace-experience" -> 2)))
     }
   }
   def insertUsers() = {

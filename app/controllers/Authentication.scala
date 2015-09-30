@@ -77,8 +77,8 @@ object Authentication extends Controller with Secured with ProvidesUnauthorizedS
               } yield {
                 Application.Mailer ! Send(
                   DefaultMails.registerMail(user.name, email, brainDBResult))
-                //Application.Mailer ! Send(
-                //  DefaultMails.registerAdminNotifyerMail(user.name, email, brainDBResult))
+                Application.Mailer ! Send(
+                  DefaultMails.registerAdminNotifyerMail(user.name, email, brainDBResult))
                 if (autoVerify) {
                   Redirect(controllers.routes.Application.index)
                     .withSession(Secured.createSession(user))

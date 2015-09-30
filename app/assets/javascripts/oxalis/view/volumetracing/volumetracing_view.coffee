@@ -10,5 +10,3 @@ class VolumeTracingView extends View
     super(@model)
 
     $(".skeleton-controls").hide()
-	$("#newcell-button").on "click", (event) =>
-      @createNewCell()

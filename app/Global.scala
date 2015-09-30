@@ -70,8 +70,7 @@ object Global extends WithFilters(MetricsFilter) with GlobalSettings {
  * in the sample application.
  */
 object InitialData extends GlobalDBAccess {
-  val orga_string="Connectomics Department"
-  val this_organization = Team(orga_string, None, RoleService.roles)
+  val Organization = Team("Connectomics Department", None, RoleService.roles)
 
   def insert() = {
     insertUsers()
@@ -79,30 +78,34 @@ object InitialData extends GlobalDBAccess {
     insertTasks()
     insertLocalDataStore()
   }
-
-  def insertUsers() = {
-	var admin_mail="admin@" + orga_string.replaceAll(" ","_").toLowerCase() + ".net"
-    UserDAO.findOneByEmail(admin_mail).futureBox.map {
+  def insertSingleUser(name: String, role: Role) {
+	var MailAddress= name.replaceAll(" ","_").toLowerCase() + "@" + Organization.name.replaceAll(" ","_").toLowerCase() + ".net"
+    UserDAO.findOneByEmail(MailAddress).futureBox.map {
       case Full(_) =>
       case _ =>
-        Logger.info("Inserted default user admin")
+        Logger.info("Inserted user " + name)
         UserDAO.insert(User(
-          admin_mail,
-          "Admin",
-          orga_string,
+          MailAddress,
+          name,
+          Organization.name,
           true,
           SCrypt.hashPassword("secret"),
           SCrypt.md5("secret"),
-          List(TeamMembership(this_organization.name, Role.Admin)),
+          List(TeamMembership(Organization.name, role)),
           UserSettings.defaultSettings))
     }
   }
-
+  def insertUsers() = {
+    insertSingleUser("Admin",Role.admin)
+    for (i <- 1 to 5){
+	  insertSingleUser("User "+i.toString(),Role.user)
+	}
+  }
   def insertTeams() = {
     TeamDAO.findOne().futureBox.map {
       case Full(_) =>
       case _ =>
-        TeamDAO.insert(this_organization)
+        TeamDAO.insert(Organization)
     }
   }
 
@@ -114,7 +117,7 @@ object InitialData extends GlobalDBAccess {
             "ek_0563_BipolarCells",
             "Check those cells out!",
             TraceLimit(5, 10, 15),
-            this_organization.name)
+            Organization.name)
           TaskTypeDAO.insert(taskType)
         }
     }

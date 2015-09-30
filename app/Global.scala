@@ -1,7 +1,6 @@
-import akka.actor.{PoisonPill, Props}
+import akka.actor.Props
 import com.scalableminds.util.reactivemongo.GlobalDBAccess
 import com.scalableminds.util.security.SCrypt
-import com.scalableminds.datastore.services.BinaryDataService
 import models.binary.{DataStore, DataStoreDAO}
 import models.team._
 import net.liftweb.common.Full
@@ -29,8 +28,10 @@ object Global extends WithFilters(MetricsFilter) with GlobalSettings {
 
     startActors(conf.underlying, app)
 
-    if (conf.getBoolean("application.insertInitialData") getOrElse false) {
-      InitialData.insert()
+    conf.getConfig("application.initialData").map{ initialDataConf ⇒
+      if (initialDataConf.getBoolean("enabled") getOrElse false) {
+        new InitialData(initialDataConf).insert()
+      }
     }
     super.onStart(app)
   }
@@ -69,48 +70,80 @@ object Global extends WithFilters(MetricsFilter) with GlobalSettings {
  * Initial set of data to be imported
  * in the sample application.
  */
-object InitialData extends GlobalDBAccess {
-  val Organization = Team("Connectomics Department", None, RoleService.roles)
+class InitialData(conf: Configuration) extends GlobalDBAccess {
+  // Check if scm's default user should be added
+  val shouldInsertSCMBoy = conf.getBoolean("insertSCMBoy") getOrElse false
 
-  def insert() = {
+  // Define default team for the inserted data
+  val DefaultTeam = Team(conf.getString("defaultTeam").get, None, RoleService.roles)
+
+  /**
+   * Populate the DB with predefined data
+   */
+  def insert(): Unit = {
     insertUsers()
     insertTeams()
     insertTasks()
     insertLocalDataStore()
   }
-  def insertSingleUser(name: String, role: Role) {
-	var MailAddress= name.replaceAll(" ","_").toLowerCase() + "@" + Organization.name.replaceAll(" ","_").toLowerCase() + ".net"
-    UserDAO.findOneByEmail(MailAddress).futureBox.map {
+
+  /**
+   * Insert a single user into the database
+   * @param firstName users firstname
+   * @param lastName users lastname
+   * @param email users email
+   * @param role role of user
+   */
+  def insertSingleUser(firstName: String, lastName: String, email: String, role: Role): Unit = {
+    UserDAO.findOneByEmail(email).futureBox.map {
       case Full(_) =>
       case _ =>
-        Logger.info("Inserted user " + name)
+        Logger.info(s"Inserted user '$firstName $lastName'")
         UserDAO.insert(User(
-          MailAddress,
-          name,
-          Organization.name,
+          email,
+          firstName,
+          lastName,
           true,
           SCrypt.hashPassword("secret"),
           SCrypt.md5("secret"),
-          List(TeamMembership(Organization.name, role)),
+          List(TeamMembership(DefaultTeam.name, role)),
           UserSettings.defaultSettings,
-		  experience:Map("trace-experience" -> 2)))
-    }
-  }
-  def insertUsers() = {
-    insertSingleUser("Admin",Role.admin)
-    for (i <- 1 to 5){
-	  insertSingleUser("User "+i.toString(),Role.user)
-	}
-  }
-  def insertTeams() = {
-    TeamDAO.findOne().futureBox.map {
-      case Full(_) =>
-      case _ =>
-        TeamDAO.insert(Organization)
+          experiences = Map("trace-experience" -> 2)))
     }
   }
 
-  def insertTasks() = {
+  /**
+   * Insert predefined users into DB
+   */
+  def insertUsers(): Unit = {
+    if(shouldInsertSCMBoy)
+      insertSingleUser("SCM", "Boy", "scmboy@scalableminds.com", Role.Admin)
+
+    insertSingleUser("SCM", "Admin", "scmadmin@scalableminds.com", Role.Admin)
+
+    for (i <- 1 to 5){
+      val lastName = s"aUser$i"
+      val mailAddress = lastName.toLowerCase
+      val mailDomain = DefaultTeam.name.replaceAll(" ","_").toLowerCase + ".net"
+	    insertSingleUser("mpi", lastName, s"$mailAddress@$mailDomain", Role.User)
+	  }
+  }
+
+  /**
+   * Insert default team into DB if it doesn't exist
+   */
+  def insertTeams(): Unit = {
+    TeamDAO.findOne().futureBox.map {
+      case Full(_) =>
+      case _ =>
+        TeamDAO.insert(DefaultTeam)
+    }
+  }
+
+  /**
+   * Add some tasks to the DB if there are none
+   */
+  def insertTasks(): Unit = {
     TaskTypeDAO.findAll.map {
       types =>
         if (types.isEmpty) {
@@ -118,18 +151,20 @@ object InitialData extends GlobalDBAccess {
             "ek_0563_BipolarCells",
             "Check those cells out!",
             TraceLimit(5, 10, 15),
-            Organization.name)
+            DefaultTeam.name)
           TaskTypeDAO.insert(taskType)
         }
     }
   }
 
-  def insertLocalDataStore() = {
+  /**
+   * Insert the local datastore into the database
+   */
+  def insertLocalDataStore(): Unit = {
     DataStoreDAO.findOne(Json.obj("name" -> "localhost")).futureBox.map { maybeStore =>
       if (maybeStore.isEmpty) {
         DataStoreDAO.insert(DataStore("localhost", "", "something-secure"))
       }
     }
   }
-
 }

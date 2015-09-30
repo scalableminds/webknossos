@@ -80,16 +80,10 @@ class Gui
         @addSlider(@fColors, @settingsGeneral.brightnessContrastColor[binary.name], "contrast",
           0.5, 5, 0.1, "Contrast " + (i+1), @setColorSettings)
       )
-      @colorControllers.push(
-        @addColorPicker(@fColors, @settingsGeneral.brightnessContrastColor[binary.name], "color", "Color " + (i+1),
-          @setColorSettings)
-      )
     if @model.getSegmentationBinary()
       @segmentationOpacityController =
         @addSlider(@fColors, @user.getSettings(), "segmentationOpacity",
           0, 100, 1, "Segment. Opacity")
-    @addFunction(@fColors, @settingsGeneral, "resetColorSettings",
-      "Reset")
 
     @folders.push( @fFlightcontrols = @gui.addFolder("Flightoptions") )
     @addSlider(@fFlightcontrols, @user.getSettings(), "mouseRotateValue",

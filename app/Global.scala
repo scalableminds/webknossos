@@ -119,7 +119,7 @@ class InitialData(conf: Configuration) extends GlobalDBAccess {
     if(shouldInsertSCMBoy)
       insertSingleUser("SCM", "Boy", "scmboy@scalableminds.com", Role.Admin)
 
-    insertSingleUser("SCM", "Admin", "scmadmin@scalableminds.com", Role.Admin)
+    insertSingleUser("Andrew", "Admin", "admin@domain.com", Role.Admin)
 
     for (i <- 1 to 5){
       val lastName = s"aUser$i"

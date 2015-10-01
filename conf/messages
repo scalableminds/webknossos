@@ -88,10 +88,10 @@ boundingBox.box=Bounding Box
 boundingBox.invalid=Invalid bounding box
 
 experience=Experience
-experience.domain=Experience Domain
+experience.domain=Domain
 experience.domain.invalid=Invalid experience domain
 experience.value.invalid=Invalid experience value
-experience.value=Min Experience
+experience.value=Required level
 
 nmlFile=Reference NML File
 nml.file.uploadSuccess=Successfully uploaded file
@@ -103,6 +103,7 @@ owner=Owner
 
 priority=Priority
 
+projectOptional=Project (optional)
 project=Project
 projectName=Project Name
 project.name.alreadyTaken=Name already used

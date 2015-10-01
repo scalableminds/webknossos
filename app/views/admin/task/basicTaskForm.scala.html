@@ -9,7 +9,6 @@
 @helper.select(taskForm("taskType"), taskTypes.map { tt =>
   tt.id -> tt.summary
 }, Symbol("help-block") -> taskTypeHelpLink, 'class -> "form-control")
-<p>Experience (optional)</p>
 @helper.input(taskForm("experience.domain")) { (id, name, value, args) =>
   <input type="text" class="form-control" name="@name" value="@value" id="@id" data-source='[]' data-provide="typeahead" autocomplete="off" @toHtmlArgs(args)>
 }

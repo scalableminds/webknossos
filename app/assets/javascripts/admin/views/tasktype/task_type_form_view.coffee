@@ -75,7 +75,7 @@ class TaskTypeFormView extends Backbone.Marionette.LayoutView
 
             <div class="form-group">
               <div class="col-sm-9 col-sm-offset-3">
-                <button type="submit" class="form-control btn btn-primary">Create</button>
+                <button type="submit" class="form-control btn btn-primary">Submit</button>
               </div>
             </div>
         </div>

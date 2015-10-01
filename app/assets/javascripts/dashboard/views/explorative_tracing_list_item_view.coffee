@@ -29,7 +29,7 @@ class ExplorativeTracingListItemView extends Backbone.Marionette.ItemView
     <td><%= dataSetName %></td>
 
     <td>
-      <% if (stats) { %>
+      <% if (stats && (contentType == "skeletonTracing")) { %>
         <span title="Trees"><i class="fa fa-sitemap"></i><%= stats.numberOfTrees %>&nbsp;</span><br />
         <span title="Nodes"><i class="fa fa-bull"></i><%= stats.numberOfNodes %>&nbsp;</span><br />
         <span title="Edges"><i class="fa fa-arrows-h"></i><%= stats.numberOfEdges %></span>
@@ -43,6 +43,7 @@ class ExplorativeTracingListItemView extends Backbone.Marionette.ItemView
         <i class="fa fa-random"></i>
         <strong>trace</strong>
       </a><br />
+      <% if (contentType == "skeletonTracing") { %>
       <a href="<%= jsRoutes.controllers.AnnotationController.download(typ, id).url %>">
         <i class="fa fa-download"></i>
         download

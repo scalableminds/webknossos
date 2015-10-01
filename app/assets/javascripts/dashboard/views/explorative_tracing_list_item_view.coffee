@@ -48,6 +48,7 @@ class ExplorativeTracingListItemView extends Backbone.Marionette.ItemView
         <i class="fa fa-download"></i>
         download
       </a>
+      <% } %>
     </td>
   """)
 

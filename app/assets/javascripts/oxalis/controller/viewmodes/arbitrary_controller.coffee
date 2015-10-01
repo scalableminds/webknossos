@@ -29,7 +29,7 @@ class ArbitraryController
   model : null
   view : null
 
-  record : true
+  record : false
 
   input :
     mouse : null
@@ -76,7 +76,7 @@ class ArbitraryController
     @stop()
 
     # Toggle record
-    @setRecord(true)
+    @setRecord(false)
     $('#trace-mode-trace').on("click", =>
       @setRecord(true)
       $(":focus").blur()

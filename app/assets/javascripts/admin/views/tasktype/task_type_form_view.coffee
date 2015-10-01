@@ -54,7 +54,8 @@ class TaskTypeFormView extends Backbone.Marionette.LayoutView
               </div>
             </div>
 
-            <div class="col-sm-6 form-group pull-right">
+            <!-- Removed for review -->
+            <div class="col-sm-6 form-group pull-right" style="display:none">
               <label class="col-sm-10 control-label" for="somaClickingAllowed">Allow Soma clicking</label>
               <div class="col-sm-2">
                 <input type="checkbox" id="somaClickingAllowed" name="somaClickingAllowed" value="true" checked>
@@ -62,7 +63,8 @@ class TaskTypeFormView extends Backbone.Marionette.LayoutView
               </div>
             </div>
 
-            <div class="col-sm-6 form-group pull-right">
+            <!-- Removed for review -->
+            <div class="col-sm-6 form-group pull-right" style="display:none">
               <label class="col-sm-10 control-label" for="branchPointsAllowed">Allow Branchpoints</label>
               <div class="col-sm-2">
                 <input type="checkbox" id="branchPointsAllowed" name="branchPointsAllowed" value="true" checked>

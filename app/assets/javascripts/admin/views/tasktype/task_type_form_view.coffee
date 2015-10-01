@@ -39,7 +39,7 @@ class TaskTypeFormView extends Backbone.Marionette.LayoutView
           <div class="col-sm-6">
 
             <div class="col-sm-6 form-group pull-right">
-              <label class="col-sm-10 control-label" for="arbitraryAllowed">Allow Arbitrary</label>
+              <label class="col-sm-10 control-label" for="arbitraryAllowed">Allow Oblique Mode</label>
               <div class="col-sm-2">
                 <input type="checkbox" id="arbitraryAllowed" name="allowedModes[]" value="arbitrary" checked>
                 <span></span>
@@ -47,7 +47,7 @@ class TaskTypeFormView extends Backbone.Marionette.LayoutView
             </div>
 
             <div class="col-sm-6 form-group pull-right">
-              <label class="col-sm-10 control-label" for="oxalisAllowed">Allow webKnossos</label>
+              <label class="col-sm-10 control-label" for="oxalisAllowed">Allow Spherical Mode</label>
               <div class="col-sm-2">
                 <input type="checkbox" id="oxalisAllowed" name="allowedModes[]" value="oxalis" checked>
                 <span></span>

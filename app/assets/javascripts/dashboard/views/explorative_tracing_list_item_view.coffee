@@ -46,6 +46,7 @@ class ExplorativeTracingListItemView extends Backbone.Marionette.ItemView
       <a href="<%= jsRoutes.controllers.AnnotationController.download(typ, id).url %>">
         <i class="fa fa-download"></i>
         download
+      </a>
     </td>
   """)
 

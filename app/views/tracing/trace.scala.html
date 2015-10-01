@@ -57,12 +57,18 @@
 
         <div id="view-mode" class="skeleton-controls">
           <p>View mode:</p>
-          <div class="btn-group">
+          <div class="btn-group wide-toggle-button">
             <button type="button" class="btn btn-default btn-primary" id="view-mode-3planes">3 Planes</button>
             <button type="button" class="btn btn-default" id="view-mode-sphere">Sphere</button>
             <button type="button" class="btn btn-default" id="view-mode-arbitraryplane">Arbitrary Plane</button>
           </div>
-          <button type="button" class="btn btn-default" id="toggle-trace-mode">Toggle Trace / Watch</button>
+        </div>
+
+        <div class="skeleton-controls" id="trace-mode">
+          <div class="btn-group wide-toggle-button big-toggle-button">
+            <button type="button" class="btn btn-default" id="trace-mode-trace">Trace</button>
+            <button type="button" class="btn btn-default" id="trace-mode-watch">Watch</button>
+          </div>
         </div>
 
         <div id="zoomstep-warning" class="volume-controls">
@@ -71,7 +77,7 @@
 
         <div id="control-mode" class="volume-controls">
           <p>Control mode:</p>
-          <div class="btn-group">
+          <div class="btn-group wide-toggle-button big-toggle-button">
             <button type="button" class="btn btn-default" id="control-mode-move">Move</button>
             <button type="button" class="btn btn-default" id="control-mode-trace">Trace</button>
           </div>
@@ -163,8 +169,8 @@
                       <tr><td>M</td><td>Toggle Move / Trace mode</td></tr>
                     </tbody>
                   </table>
-                  <p>For a full list of all keyboard shortcuts <a href="/help/keyboardshortcuts">see the help section.</a></p>
-                  <p>We encourage you to read the <a href="/help/faq">FAQ</a> or the <a href="#">tutorials</a> to completely understand how webKnossos works.</p>
+                  <p>For a full list of all keyboard shortcuts <a target="_blank" href="/help/keyboardshortcuts">see the help section.</a></p>
+                  <p>We encourage you to read the <a target="_blank" href="/help/faq">tutorials</a> to completely understand how webKnossos works.</p>
                   <p>All other settings like moving speed, clipping distance and particle size can be adjusted in the settings tab located to the left.</p>
                 </div>
                 <div class="modal-footer">

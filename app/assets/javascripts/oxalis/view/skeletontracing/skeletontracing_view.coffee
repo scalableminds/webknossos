@@ -1,9 +1,11 @@
 ### define
 jquery : $
+underscore : _
 libs/toast : Toast
 ../modal : modal
 ../../view : View
 ../merge_modal_view : MergeModalView
+../../constants: constants
 ###
 
 class SkeletonTracingView extends View
@@ -120,6 +122,21 @@ class SkeletonTracingView extends View
 
     $("#merge-button").on "click", (event) =>
       @showMergeModal()
+
+    # set a node with static offset
+    $("#add-node-button").on "click", (event) =>
+      # create xy offset
+      position = @model.flycam.getPosition()
+      position[0] = position[0] + Math.pow(2, @model.flycam.getIntegerZoomStep())
+      position[1] = position[1] + Math.pow(2, @model.flycam.getIntegerZoomStep())
+
+      # add node
+      @model.skeletonTracing.addNode(
+        position,
+        constants.TYPE_USUAL,
+        constants.PLANE_XY, # xy viewport
+        @model.flycam.getIntegerZoomStep()
+      )
 
     @updateComments()
     @updateTrees()

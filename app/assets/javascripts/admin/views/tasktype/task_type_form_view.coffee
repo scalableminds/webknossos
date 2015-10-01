@@ -62,14 +62,6 @@ class TaskTypeFormView extends Backbone.Marionette.LayoutView
               </div>
             </div>
 
-            <div class="col-sm-6 form-group pull-right">
-              <label class="col-sm-10 control-label" for="branchPointsAllowed">Allow Branchpoints</label>
-              <div class="col-sm-2">
-                <input type="checkbox" id="branchPointsAllowed" name="branchPointsAllowed" value="true" checked>
-                <span></span>
-              </div>
-            </div>
-
             <div class="form-group">
               <label class="col-sm-8 control-label" for="expectedTime_maxHard">Time limit</label>
               <div class="col-sm-4">

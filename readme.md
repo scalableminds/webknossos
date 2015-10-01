@@ -1,6 +1,6 @@
 ![Oxalis logo](https://oxalis.at/assets/images/oxalis.svg)
-# Oxalis
-Oxalis is a web-based annotation tool for large 3d image datasets.
+# webKnossos
+webKnossos is a web-based annotation tool for large 3d image datasets.
 
 # Dependencies
 

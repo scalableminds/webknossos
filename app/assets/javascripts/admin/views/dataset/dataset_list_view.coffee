@@ -54,7 +54,6 @@ class DatasetListView extends Backbone.Marionette.CompositeView
 
     @collection.fetch(
       silent : true
-      data : "isEditable=true"
     ).done( =>
       @collection.goTo(1)
     )

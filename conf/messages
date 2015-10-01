@@ -103,8 +103,7 @@ owner=Owner
 
 priority=Priority
 
-projectOptional=Project (optional)
-project=Project
+project=Project (optional)
 projectName=Project Name
 project.name.alreadyTaken=Name already used
 project.name.invalidChars=Name contains invalid characters
@@ -191,4 +190,3 @@ taskType.noAnnotations=We couldn''t find finished annotations for this task type
 
 time.invalidFormat=Time couldn''t get parsed.
 point.invalidFormat=Invalid format. Use something like: 4, 63, 24
-

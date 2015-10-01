@@ -87,6 +87,9 @@ class TaskTypeFormView extends Backbone.Marionette.LayoutView
               </div>
             </div>
         </div>
+
+        <input type="hidden" id="expectedTime_maxTime" name="expectedTime.maxTime" value="100000" min="0" input-append="hours" class="form-control" required>
+        <input type="hidden" id="expectedTime_minTime" name="expectedTime.minTime" value="0" min="0" input-append="hours" class="form-control" required>
       </form>
     </div>
   """)
@@ -179,4 +182,3 @@ class TaskTypeFormView extends Backbone.Marionette.LayoutView
       name: "team"
     )
     @team.show(teamSelectionView)
-

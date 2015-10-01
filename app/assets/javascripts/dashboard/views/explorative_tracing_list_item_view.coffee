@@ -46,14 +46,7 @@ class ExplorativeTracingListItemView extends Backbone.Marionette.ItemView
       <a href="<%= jsRoutes.controllers.AnnotationController.download(typ, id).url %>">
         <i class="fa fa-download"></i>
         download
-      </a><br />
-      <% if (typ == "Explorational"){ %>
-        <a href="<%= jsRoutes.controllers.AnnotationController.finish(typ, id).url %>"
-           id="finish-tracing">
-          <i class="fa fa-trash-o"></i>
-          delete
-        </a>
-      <% } %>
+      </a>
     </td>
   """)
 

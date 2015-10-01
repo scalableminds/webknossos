@@ -55,43 +55,6 @@ class TaskTypeFormView extends Backbone.Marionette.LayoutView
             </div>
 
             <div class="col-sm-6 form-group pull-right">
-              <label class="col-sm-10 control-label" for="somaClickingAllowed">Allow Soma clicking</label>
-              <div class="col-sm-2">
-                <input type="checkbox" id="somaClickingAllowed" name="somaClickingAllowed" value="true" checked>
-                <span></span>
-              </div>
-            </div>
-
-            <div class="col-sm-6 form-group pull-right">
-              <label class="col-sm-10 control-label" for="branchPointsAllowed">Allow Branchpoints</label>
-              <div class="col-sm-2">
-                <input type="checkbox" id="branchPointsAllowed" name="branchPointsAllowed" value="true" checked>
-                <span></span>
-              </div>
-            </div>
-
-            <div class="form-group">
-              <label class="col-sm-8 control-label" for="expectedTime_minTime">Expected Time (min)</label>
-              <div class="col-sm-4">
-                <div class="input-group">
-                  <input type="number" id="expectedTime_minTime" name="expectedTime.minTime"
-                    value="5" min="0" input-append="hours" class="form-control" required>
-                  <span class="input-group-addon">hours</span>
-                </div>
-              </div>
-            </div>
-
-            <div class="form-group">
-              <label class="col-sm-8 control-label" for="expectedTime_maxTime">Expected Time (max)</label>
-              <div class="col-sm-4">
-                <div class="input-group">
-                  <input type="number" id="expectedTime_maxTime" name="expectedTime.maxTime"
-                    value="10" min="0" input-append="hours" class="form-control" required>
-                  <span class="input-group-addon">hours</span>
-                </div>
-              </div>
-            </div>
-
             <div class="form-group">
               <label class="col-sm-8 control-label" for="expectedTime_maxHard">Time limit</label>
               <div class="col-sm-4">
@@ -105,7 +68,7 @@ class TaskTypeFormView extends Backbone.Marionette.LayoutView
 
             <div class="form-group">
               <div class="col-sm-9 col-sm-offset-3">
-                <button type="submit" class="form-control btn btn-primary">Create</button>
+                <button type="submit" class="form-control btn btn-primary">Submit</button>
               </div>
             </div>
         </div>

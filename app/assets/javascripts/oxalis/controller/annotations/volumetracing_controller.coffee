@@ -44,6 +44,8 @@ class VolumeTracingController
       "m" : => @toggleControlMode()
     )
 
+    $('#trace-download-button').hide()
+
     # Control mode
     @controlModeMapping =
       "control-mode-move" : @CONTROL_MODE_MOVE

@@ -102,13 +102,16 @@ class StateLogger
       try
         response = JSON.parse(responseObject.responseText)
       catch error
-        console.error "parsing failed."
+        console.error "parsing failed.", response
       if response?.messages?[0]?.error?
-        if response.messages[0].error == "tracing.dirtyState"
-          $(window).on(
-            "beforeunload"
-            =>return null)
-          alert("Sorry, but the current state is inconsistent. A reload is necessary.")
+        if response.messages[0].error == "annotation.dirtyState"
+          $(window).off("beforeunload")
+          alert("""
+            It seems that you edited the tracing simultaneously in different windows.
+            Editing should be done in a single window only.
+
+            In order to restore the current window, a reload is necessary.
+          """)
           window.location.reload()
 
     @push()

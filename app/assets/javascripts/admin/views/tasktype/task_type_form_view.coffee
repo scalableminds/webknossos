@@ -71,28 +71,6 @@ class TaskTypeFormView extends Backbone.Marionette.LayoutView
             </div>
 
             <div class="form-group">
-              <label class="col-sm-8 control-label" for="expectedTime_minTime">Expected Time (min)</label>
-              <div class="col-sm-4">
-                <div class="input-group">
-                  <input type="number" id="expectedTime_minTime" name="expectedTime.minTime"
-                    value="5" min="0" input-append="hours" class="form-control" required>
-                  <span class="input-group-addon">hours</span>
-                </div>
-              </div>
-            </div>
-
-            <div class="form-group">
-              <label class="col-sm-8 control-label" for="expectedTime_maxTime">Expected Time (max)</label>
-              <div class="col-sm-4">
-                <div class="input-group">
-                  <input type="number" id="expectedTime_maxTime" name="expectedTime.maxTime"
-                    value="10" min="0" input-append="hours" class="form-control" required>
-                  <span class="input-group-addon">hours</span>
-                </div>
-              </div>
-            </div>
-
-            <div class="form-group">
               <label class="col-sm-8 control-label" for="expectedTime_maxHard">Time limit</label>
               <div class="col-sm-4">
                 <div class="input-group">
@@ -109,6 +87,9 @@ class TaskTypeFormView extends Backbone.Marionette.LayoutView
               </div>
             </div>
         </div>
+
+        <input type="hidden" id="expectedTime_maxTime" name="expectedTime.maxTime" value="100000" min="0" input-append="hours" class="form-control" required>
+        <input type="hidden" id="expectedTime_minTime" name="expectedTime.minTime" value="0" min="0" input-append="hours" class="form-control" required>
       </form>
     </div>
   """)
@@ -201,4 +182,3 @@ class TaskTypeFormView extends Backbone.Marionette.LayoutView
       name: "team"
     )
     @team.show(teamSelectionView)
-

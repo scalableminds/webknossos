@@ -13,7 +13,7 @@ import com.scalableminds.util.mvc.Formatter
 
 case class TraceLimit(min: Int, max: Int, maxHard: Int) {
 
-  override def toString = s"$min - $max, Limit: $maxHard"
+  override def toString = s"Limit: $maxHard"
 }
 
 object TraceLimit {

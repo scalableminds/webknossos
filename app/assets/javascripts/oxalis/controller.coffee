@@ -154,12 +154,16 @@ class Controller
 
 
       if @controlMode == constants.CONTROL_MODE_VIEW
-        $('#alpha-slider').slider().on "slide", (event) =>
 
-          alpha = event.value
-          if (alpha == 0)
-            @model.getSegmentationBinary().pingStop()
-          @sceneController.setSegmentationAlpha( alpha )
+        if @model.getSegmentationBinary()?
+          $('#alpha-slider').slider().on "slide", (event) =>
+
+            alpha = event.value
+            if (alpha == 0)
+              @model.getSegmentationBinary().pingStop()
+            @sceneController.setSegmentationAlpha( alpha )
+        else
+          $('#segmentation-slider').hide()
 
       @modeMapping =
         "view-mode-3planes"        : constants.MODE_PLANE_TRACING
@@ -305,5 +309,9 @@ class Controller
 
   browserSupported : ->
 
-    # right now only webkit-based browsers are supported
-    return window.webkitURL
+    userAgentContains = (substring) ->
+        navigator.userAgent.indexOf(substring) >= 0
+
+    # allow everything but IE
+    isIE = userAgentContains("MSIE") or userAgentContains("Trident")
+    return not isIE

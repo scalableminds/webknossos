@@ -58,12 +58,6 @@ class Gui
 
     @folders = []
 
-    @folders.push( fControls = @gui.addFolder("Controls") )
-    @addCheckbox(fControls, @user.getSettings(), "inverseX", "Inverse X")
-    @addCheckbox(fControls, @user.getSettings(), "inverseY", "Inverse Y")
-    @addSlider(fControls, @user.getSettings(), "keyboardDelay",
-      0, 500, 10, "Keyboard delay (ms)" )
-
     @folders.push( @fViewportcontrols = @gui.addFolder("Viewportoptions") )
     @moveValueController = @addSlider(@fViewportcontrols, @user.getSettings(), "moveValue",
       constants.MIN_MOVE_VALUE, constants.MAX_MOVE_VALUE, 10, "Move Value (nm/s)")
@@ -72,6 +66,30 @@ class Gui
     @scaleController = @addSlider(@fViewportcontrols, @user.getSettings(), "scale", constants.MIN_SCALE,
       constants.MAX_SCALE, 0.1, "Viewport Scale")
     @addCheckbox(@fViewportcontrols, @user.getSettings(), "dynamicSpaceDirection", "d/f-Switching")
+
+    @folders.push( @fColors = @gui.addFolder("Colors") )
+    @brightnessControllers = []
+    @contrastControllers = []
+    @colorControllers = []
+    for binary, i in @model.getColorBinaries()
+      @brightnessControllers.push(
+        @addSlider(@fColors, @settingsGeneral.brightnessContrastColor[binary.name], "brightness",
+          -256, 256, 5, "Brightness " + (i+1), @setColorSettings)
+      )
+      @contrastControllers.push(
+        @addSlider(@fColors, @settingsGeneral.brightnessContrastColor[binary.name], "contrast",
+          0.5, 5, 0.1, "Contrast " + (i+1), @setColorSettings)
+      )
+      @colorControllers.push(
+        @addColorPicker(@fColors, @settingsGeneral.brightnessContrastColor[binary.name], "color", "Color " + (i+1),
+          @setColorSettings)
+      )
+    if @model.getSegmentationBinary()
+      @segmentationOpacityController =
+        @addSlider(@fColors, @user.getSettings(), "segmentationOpacity",
+          0, 100, 1, "Segment. Opacity")
+    @addFunction(@fColors, @settingsGeneral, "resetColorSettings",
+      "Reset")
 
     @folders.push( @fFlightcontrols = @gui.addFolder("Flightoptions") )
     @addSlider(@fFlightcontrols, @user.getSettings(), "mouseRotateValue",
@@ -85,29 +103,11 @@ class Gui
     @addSlider(@fFlightcontrols, @user.getSettings(), "sphericalCapRadius",
       50, 500, 1, "Sphere Radius")
 
-    @folders.push( @fColors = @gui.addFolder("Colors") )
-    if @model.getSegmentationBinary()
-      @segmentationOpacityController =
-        @addSlider(@fColors, @user.getSettings(), "segmentationOpacity",
-          0, 100, 1, "Segment. Opacity")
-    @brightnessControllers = []
-    @contrastControllers = []
-    @colorControllers = []
-    for binary, i in @model.getColorBinaries()
-      @colorControllers.push(
-        @addColorPicker(@fColors, @settingsGeneral.brightnessContrastColor[binary.name], "color", "Color " + (i+1),
-          @setColorSettings)
-      )
-      @brightnessControllers.push(
-        @addSlider(@fColors, @settingsGeneral.brightnessContrastColor[binary.name], "brightness",
-          -256, 256, 5, "Brightness " + (i+1), @setColorSettings)
-      )
-      @contrastControllers.push(
-        @addSlider(@fColors, @settingsGeneral.brightnessContrastColor[binary.name], "contrast",
-          0.5, 5, 0.1, "Contrast " + (i+1), @setColorSettings)
-      )
-    @addFunction(@fColors, @settingsGeneral, "resetColorSettings",
-      "Reset")
+    @folders.push( fControls = @gui.addFolder("Controls") )
+    @addCheckbox(fControls, @user.getSettings(), "inverseX", "Inverse X")
+    @addCheckbox(fControls, @user.getSettings(), "inverseY", "Inverse Y")
+    @addSlider(fControls, @user.getSettings(), "keyboardDelay",
+      0, 500, 10, "Keyboard delay (ms)" )
 
     @folders.push( @fView = @gui.addFolder("View") )
     bbController = @fView.add(@settingsGeneral, "boundingBox").name("Bounding Box").onChange(@setBoundingBox)

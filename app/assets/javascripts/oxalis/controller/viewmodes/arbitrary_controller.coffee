@@ -29,7 +29,7 @@ class ArbitraryController
   model : null
   view : null
 
-  record : false
+  record : true
 
   input :
     mouse : null
@@ -74,6 +74,13 @@ class ArbitraryController
     @arbitraryView.draw()
 
     @stop()
+
+    # Toggle record
+    @setRecord(true)
+    $('#toggle-trace-mode').on("click", =>
+      @setRecord(not @record)
+      $(":focus").blur()
+    )
 
 
   render : (forceUpdate, event) ->
@@ -169,12 +176,9 @@ class ArbitraryController
 
       #Recording of Waypoints
       "z" : =>
-        @record = true
-        @infoPlane.updateInfo(true)
-        @setWaypoint()
+        @setRecord(true)
       "u" : =>
-        @record = false
-        @infoPlane.updateInfo(false)
+        @setRecord(false)
       #Comments
       "n" : => @setActiveNode(@model.skeletonTracing.nextCommentNodeID(false), true)
       "p" : => @setActiveNode(@model.skeletonTracing.nextCommentNodeID(true), true)
@@ -188,6 +192,14 @@ class ArbitraryController
         @centerActiveNode()
 
     , -1)
+
+
+  setRecord : (@record) ->
+
+    @infoPlane.updateInfo(@record)
+    if @record
+      @setWaypoint()
+
 
   init : ->
 

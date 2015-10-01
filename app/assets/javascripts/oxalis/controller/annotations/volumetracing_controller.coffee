@@ -35,6 +35,10 @@ class VolumeTracingController
         shouldWarn = @model.flycam.getIntegerZoomStep() > 0
         $('body').toggleClass("zoomstep-warning", shouldWarn)
 
+    $('#create-cell-button').on("click", =>
+      @model.volumeTracing.createCell()
+    )
+
     # Keyboard shortcuts
     new Input.KeyboardNoLoop(
       "m" : => @toggleControlMode()
@@ -52,7 +56,6 @@ class VolumeTracingController
           @setControlMode(@controlModeMapping[control])
 
     @setControlMode(@CONTROL_MODE_TRACE)
-
 
     # Merging
 

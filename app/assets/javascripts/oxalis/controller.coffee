@@ -97,7 +97,6 @@ class Controller
 
       # FPS stats
       stats = new Stats()
-      $("body").append stats.domElement
 
       @gui = @createGui(tracing.restrictions, tracing.content.settings)
 

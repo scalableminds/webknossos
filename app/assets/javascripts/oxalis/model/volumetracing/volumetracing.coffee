@@ -61,7 +61,7 @@ class VolumeTracing
       return
 
     @currentLayer.addContour(pos)
-    @trigger "updateLayer", @currentLayer.getSmoothedContourList()
+    @trigger "updateLayer", @getActiveCellId(), @currentLayer.getSmoothedContourList()
 
   finishLayer : ->
 

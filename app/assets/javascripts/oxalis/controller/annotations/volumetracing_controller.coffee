@@ -25,7 +25,6 @@ class VolumeTracingController
   constructor : ( @model, @sceneController, @gui, @volumeTracingView ) ->
 
     @inDeleteMode = false
-    @controlMode = @CONTROL_MODE_MOVE
 
     @gui.on
       setActiveCell : (id) => @model.volumeTracing.setActiveCell(id)
@@ -35,6 +34,10 @@ class VolumeTracingController
       zoomStepChanged : =>
         shouldWarn = @model.flycam.getIntegerZoomStep() > 0
         $('body').toggleClass("zoomstep-warning", shouldWarn)
+
+    $('#create-cell-button').on("click", =>
+      @model.volumeTracing.createCell()
+    )
 
     # Keyboard shortcuts
     new Input.KeyboardNoLoop(
@@ -52,6 +55,7 @@ class VolumeTracingController
         $("#" + control).on "click", =>
           @setControlMode(@controlModeMapping[control])
 
+    @setControlMode(@CONTROL_MODE_TRACE)
 
     # Merging
 

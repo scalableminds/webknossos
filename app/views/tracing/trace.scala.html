@@ -33,9 +33,14 @@
           <span class="input-group-addon">Position</span>
           <input id="trace-position-input" class="form-control" type="text">
         </div>
-        <div class="form-group">
+        <div class="form-group skeleton-controls">
           <button id="add-node-button" class="btn-primary btn btn-block">
             Add Node (Right-Click)
+          </button>
+        </div>
+        <div class="form-group volume-controls">
+          <button id="create-cell-button" class="btn-primary btn btn-block">
+            Create new cell (C)
           </button>
         </div>
         <div class="skeleton-controls">
@@ -60,7 +65,7 @@
         </div>
 
         <div class="skeleton-controls" id="trace-mode">
-          <div class="btn-group wide-toggle-button">
+          <div class="btn-group wide-toggle-button big-toggle-button">
             <button type="button" class="btn btn-default" id="trace-mode-trace">Trace</button>
             <button type="button" class="btn btn-default" id="trace-mode-watch">Watch</button>
           </div>
@@ -72,8 +77,8 @@
 
         <div id="control-mode" class="volume-controls">
           <p>Control mode:</p>
-          <div class="btn-group">
-            <button type="button" class="btn btn-default btn-primary" id="control-mode-move">Move</button>
+          <div class="btn-group wide-toggle-button big-toggle-button">
+            <button type="button" class="btn btn-default" id="control-mode-move">Move</button>
             <button type="button" class="btn btn-default" id="control-mode-trace">Trace</button>
           </div>
         </div>

@@ -19,7 +19,7 @@
           <a href="@controllers.routes.AnnotationController.download(annotation.typ, annotation.id)" class="btn btn-default btn-small" id="trace-download-button"><i class="fa fa-download"></i>NML</a>
           <a href="#help-modal" class="btn btn-default btn-small" data-toggle="modal"><i class="fa fa-question-circle"></i>Help</a>
         </div>
-        
+
         <div id="dataset" class="well well-sm">
             @annotation._name.getOrElse(annotation.typ)<br />
             DataSet: <span id="dataset-name"></span><br />
@@ -28,6 +28,11 @@
         <div class="input-group">
           <span class="input-group-addon">Position</span>
           <input id="trace-position-input" class="form-control" type="text">
+        </div>
+        <div class="form-group">
+          <button id="add-node-button" class="btn-primary btn btn-block">
+            Add Node (Right-Click)
+          </button>
         </div>
         <div class="skeleton-controls">
           <div class="input-group" id="trace-rotation">

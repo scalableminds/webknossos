@@ -18,7 +18,7 @@
               @Messages(error.message)
             </div>
           }
-          @helper.select(form("team"), ("" -> "<None>") +: teams.map { t =>
+          @helper.select(form("team"), teams.map { t =>
             t.name -> t.name
           }, 'class -> "form-control")
           @helper.inputText(form("email"), 'type -> "email", 'class -> "form-control", 'required -> "")
@@ -37,4 +37,3 @@
     </div>
   </div>
 }
-

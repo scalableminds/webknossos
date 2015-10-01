@@ -18,8 +18,8 @@ class TaskTypeListView extends Backbone.Marionette.CompositeView
             <th> Summary </th>
             <th> Description </th>
             <th> Modes </th>
-            <th> Expected Time </th>
-            <th> Attached File </th>
+            <th> Time </th>
+            <th></th>
             <th></th>
           </tr>
         </thead>

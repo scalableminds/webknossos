@@ -68,7 +68,8 @@ class ArbitraryView
 
       $("#arbitrary-info-canvas").show()
       $('#trace-rotation').show()
-      $('#toggle-trace-mode').show()
+      $('#trace-mode').show()
+      $('#add-node-button').hide()
 
       @resize()
       # start the rendering loop
@@ -88,7 +89,8 @@ class ArbitraryView
 
       $("#arbitrary-info-canvas").hide()
       $('#trace-rotation').hide()
-      $('#toggle-trace-mode').hide()
+      $('#trace-mode').hide()
+      $('#add-node-button').show()
 
       $(window).off "resize", @resize
 

@@ -19,7 +19,7 @@
           <a href="@controllers.routes.AnnotationController.download(annotation.typ, annotation.id)" class="btn btn-default btn-small" id="trace-download-button"><i class="fa fa-download"></i>NML</a>
           <a href="#help-modal" class="btn btn-default btn-small" data-toggle="modal"><i class="fa fa-question-circle"></i>Help</a>
         </div>
-        
+
         <div id="dataset" class="well well-sm">
             @annotation._name.getOrElse(annotation.typ)<br />
             DataSet: <span id="dataset-name"></span><br />
@@ -48,12 +48,18 @@
 
         <div id="view-mode" class="skeleton-controls">
           <p>View mode:</p>
-          <div class="btn-group">
+          <div class="btn-group wide-toggle-button">
             <button type="button" class="btn btn-default btn-primary" id="view-mode-3planes">Orthogonal</button>
             <button type="button" class="btn btn-default" id="view-mode-sphere">Spherical</button>
             <button type="button" class="btn btn-default" id="view-mode-arbitraryplane">Oblique</button>
           </div>
-          <button type="button" class="btn btn-default" id="toggle-trace-mode">Toggle Trace / Watch</button>
+        </div>
+
+        <div class="skeleton-controls" id="trace-mode">
+          <div class="btn-group wide-toggle-button">
+            <button type="button" class="btn btn-default" id="trace-mode-trace">Trace</button>
+            <button type="button" class="btn btn-default" id="trace-mode-watch">Watch</button>
+          </div>
         </div>
 
         <div id="zoomstep-warning" class="volume-controls">
@@ -155,7 +161,11 @@
                     </tbody>
                   </table>
                   <p>For a full list of all keyboard shortcuts <a target="_blank" href="/help/keyboardshortcuts">see the help section.</a></p>
+<<<<<<< HEAD
                   <p>Introductory  <a target="_blank" href="http://to.do">videos</a> are available.</p>
+=======
+                  <p>We encourage you to read the <a target="_blank" href="/help/faq">tutorials</a> to completely understand how webKnossos works.</p>
+>>>>>>> cf82193bb993667f4696a86a7b8a26493817ecf0
                   <p>All other settings like moving speed, clipping distance and particle size can be adjusted in the settings tab located to the left.</p>
                 </div>
                 <div class="modal-footer">

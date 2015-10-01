@@ -34,6 +34,10 @@ class VolumeTacingPlaneController extends PlaneController
     @model.volumeTracing.on
       newActiveCell : (id) =>
         @render3dCell id
+      volumeAnnotated : =>
+        id = @model.volumeTracing.getActiveCellId()
+        if id > 0
+          @render3dCell id
 
 
   getPlaneMouseControls : (planeId) ->

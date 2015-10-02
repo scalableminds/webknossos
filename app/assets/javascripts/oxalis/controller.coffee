@@ -155,6 +155,20 @@ class Controller
 
       if @controlMode == constants.CONTROL_MODE_VIEW
 
+        # Zoom Slider
+        slider = $('#zoom-slider').slider().on "slide", (event) =>
+          zoomValue = event.value / 100 * @model.flycam.getMaxZoomStep() + 0.01
+          @model.user.set("zoom", zoomValue)
+
+        updateSlider = (zoom) =>
+          sliderValue = Math.round((zoom - 0.01) / @model.flycam.getMaxZoomStep() * 100)
+          slider.slider("setValue", sliderValue)
+
+        @model.user.on(
+          zoomChanged : updateSlider
+        )
+
+        # Segmentation slider
         if @model.getSegmentationBinary()?
           $('#alpha-slider').slider().on "slide", (event) =>
 

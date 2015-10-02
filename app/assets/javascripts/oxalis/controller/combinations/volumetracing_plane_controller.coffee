@@ -60,6 +60,7 @@ class VolumeTacingPlaneController extends PlaneController
         if event.shiftKey
           @volumeTracingController.enterDeleteMode()
         @model.volumeTracing.startEditing(plane)
+        @adjustSegmentationOpacity()
 
       leftMouseUp : =>
 
@@ -74,6 +75,7 @@ class VolumeTacingPlaneController extends PlaneController
 
         @volumeTracingController.enterDeleteMode()
         @model.volumeTracing.startEditing(plane)
+        @adjustSegmentationOpacity()
 
       rightMouseUp : =>
 
@@ -86,6 +88,12 @@ class VolumeTacingPlaneController extends PlaneController
                   @calculateGlobalPos( pos ))
 
         @volumeTracingController.handleCellSelection( cellId )
+
+
+  adjustSegmentationOpacity : ->
+
+    if @model.user.get("segmentationOpacity") < 10
+      @model.user.set("segmentationOpacity", 50)
 
 
   getKeyboardControls : ->

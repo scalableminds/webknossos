@@ -62,7 +62,7 @@ class Gui
     @moveValueController = @addSlider(@fViewportcontrols, @user.getSettings(), "moveValue",
       constants.MIN_MOVE_VALUE, constants.MAX_MOVE_VALUE, 10, "Move Value (nm/s)")
     @zoomController = @addSlider(@fViewportcontrols, @user.getSettings(), "zoom",
-      0.01, @model.flycam.getMaxZoomStep(), 0.001, "Zoom")
+      0.01, @model.flycam.getMaxZoomStep() * 0.99, 0.001, "Zoom")
     @scaleController = @addSlider(@fViewportcontrols, @user.getSettings(), "scale", constants.MIN_SCALE,
       constants.MAX_SCALE, 0.1, "Viewport Scale")
     @addCheckbox(@fViewportcontrols, @user.getSettings(), "dynamicSpaceDirection", "d/f-Switching")

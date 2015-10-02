@@ -147,6 +147,7 @@ class Controller
 
       @initMouse()
       @initKeyboard()
+      @initUIElements()
 
       for binaryName of @model.binary
         @model.binary[binaryName].cube.on "bucketLoaded" : =>
@@ -256,6 +257,25 @@ class Controller
       } )
 
     new Input.KeyboardNoLoop( keyboardControls )
+
+
+  initUIElements : ->
+
+    @initAddScriptModal()
+
+
+  initAddScriptModal : ->
+
+    $("#add-script-link").removeClass("hide")
+    $("#add-script-button").click( (event) ->
+      try
+        eval($('#add-script-input').val())
+        # close modal if the script executed successfully
+        $('#script-modal').modal('hide')
+      catch error
+        alert(error)
+    )
+
 
   setMode : (newMode, force = false) ->
 

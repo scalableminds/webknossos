@@ -157,7 +157,7 @@ class Controller
       if @controlMode == constants.CONTROL_MODE_VIEW
 
         # Zoom Slider
-        logScaleBase = Math.pow(@model.flycam.getMaxZoomStep(), 1 / 100)
+        logScaleBase = Math.pow(@model.flycam.getMaxZoomStep() * 0.99, 1 / 100)
         slider = $('#zoom-slider').slider().on "slide", (event) =>
           zoomValue = Math.pow(logScaleBase, event.value)
           @model.user.set("zoom", zoomValue)

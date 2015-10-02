@@ -141,12 +141,8 @@ class Gui
       @folders.push( @fNodes = @gui.addFolder("Nodes") )
       @activeNodeIdController = @addNumber(@fNodes, @settingsSkeleton, "activeNodeID",
         1, 1, "Active Node ID", (value) => @trigger( "setActiveNode", value))
-      @radiusController = @addSlider(@fNodes, @settingsSkeleton, "radius",
-        @model.skeletonTracing.MIN_RADIUS, @model.skeletonTracing.MAX_RADIUS, 1, "Radius", (radius) =>
-          @model.skeletonTracing.setActiveNodeRadius( radius ))
       @particleSizeController = @addSlider(@fNodes, @user.getSettings(), "particleSize",
-        constants.MIN_PARTICLE_SIZE, constants.MAX_PARTICLE_SIZE, 1, "Particle Size")
-      @addCheckbox(@fNodes, @user.getSettings(), "overrideNodeRadius", "Override radius")
+        constants.MIN_PARTICLE_SIZE, constants.MAX_PARTICLE_SIZE, 1, "Node Size")
       @addFunction(@fNodes, @settingsSkeleton, "deleteActiveNode", "Delete Active Node")
 
     if @settingsVolume?

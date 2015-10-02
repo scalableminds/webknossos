@@ -91,9 +91,6 @@ class SkeletonTracingPlaneController extends PlaneController
 
     super(delta, type)
 
-    if type == "shift"
-      @skeletonTracingController.setRadius(delta)
-
 
   onClick : (position, shiftPressed, altPressed, plane) =>
 

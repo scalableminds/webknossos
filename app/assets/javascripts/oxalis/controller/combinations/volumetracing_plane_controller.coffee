@@ -61,6 +61,9 @@ class VolumeTacingPlaneController extends PlaneController
           @volumeTracingController.enterDeleteMode()
         @model.volumeTracing.startEditing(plane)
 
+        if @model.user.get("segmentationOpacity") < 10
+          @model.user.set("segmentationOpacity", 50)
+
       leftMouseUp : =>
 
         @model.volumeTracing.finishLayer()

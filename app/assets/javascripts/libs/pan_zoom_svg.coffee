@@ -45,22 +45,15 @@ class PanZoomSVG
 
   mouseWheelHandler : (event) =>
 
-    @mouseDown = true
-    @startMouse = @mouseToSVGLocalCoordinates(event)
-    @startMatrix = @svgElement.getCTM()
-
-
-  mouseWheelHandler : (event) =>
-
     event.preventDefault()
     return if @mouseDown
 
     buffer = @buffer
-    { wheelDelta, wheelDeltaX, wheelDeltaY, pageX, pageY } = event.originalEvent
+    { deltaY, pageX, pageY } = event.originalEvent
 
-    buffer += wheelDeltaY
+    buffer += deltaY
 
-    if wheelDeltaY < 0
+    if deltaY < 0
       @zoom -= STEP
     else
       @zoom += STEP

@@ -22,6 +22,18 @@ class SkeletonTracingPlaneController extends PlaneController
       finishedRender : => @model.skeletonTracing.rendered()
 
 
+  start : ->
+
+    super()
+    $('.skeleton-plane-controls').show()
+
+
+  stop : ->
+
+    super()
+    $('.skeleton-plane-controls').hide()
+
+
   getPlaneMouseControls : (planeId) ->
 
     return _.extend super(planeId),

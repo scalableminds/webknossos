@@ -225,6 +225,7 @@ class Gui
     @model.user.on
       scaleChanged : => @updateScale()
       zoomChanged : => @updateZoom()
+      segmentationOpacityChanged : => @updateSegmentation()
       moveValueChanged : => @updateMoveValue()
       moveValue3dChanged : => @updateMoveValue3d()
       particleSizeChanged : => @updateParticleSize()
@@ -447,6 +448,11 @@ class Gui
   updateZoom : =>
 
     @zoomController?.updateDisplay()
+
+
+  updateSegmentation : =>
+
+    @segmentationOpacityController?.updateDisplay()
 
 
   update : ->

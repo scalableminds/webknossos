@@ -8,7 +8,17 @@ backbone.marionette : marionette
 class TaskListView extends Backbone.Marionette.CompositeView
 
   template : _.template("""
-    <h3>Tasks</h3>
+    <div class="navbar navbar-default navbar-fixed-top">
+      <div class="navbar-form">
+        <div class="btn-group">
+          <a class="btn btn-primary" href="/admin/tasks/create">
+            <i class="fa fa-plus"></i>Create New Task
+          </a>
+        </div>
+      </div>
+    </div>
+
+  <h3>Tasks</h3>
     <table id="tasklist-table" class="table table-double-striped table-details">
       <thead>
         <tr>
@@ -28,15 +38,6 @@ class TaskListView extends Backbone.Marionette.CompositeView
          </tr>
       </thead>
     </table>
-    <div class="navbar navbar-default navbar-fixed-bottom">
-      <div class="navbar-form">
-        <div class="btn-group">
-          <a class="btn btn-primary" href="/admin/tasks/create">
-            <i class="fa fa-plus"></i>Create New Task
-          </a>
-        </div>
-      </div>
-    </div>
   """)
   className : "task-administration container wide"
   childView : TaskListItemView

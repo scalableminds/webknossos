@@ -24,7 +24,7 @@ class ProjectsListView extends Backbone.Marionette.CompositeView
     <div class="navbar navbar-default navbar-fixed-bottom">
       <div class="navbar-form">
         <div class="btn-group">
-          <a class="btn btn-primary show-modal" href="#">
+          <a class="btn btn-primary btn-xl show-modal" href="#">
             <i class="fa fa-plus"></i>Create New Project
           </a>
         </div>

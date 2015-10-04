@@ -147,8 +147,11 @@ class TaskTypeFormView extends Backbone.Marionette.LayoutView
     @ui.branchPointsAllowed.attr("checked", settings["branchPointsAllowed"])
     @ui.somaClickingAllowed.attr("checked", settings["somaClickingAllowed"])
 
-    inputStrings = ["expectedTime_maxHard"]
-    numValues = @model.get("expectedTime").match(/Limit: ([0-9]+)/).slice(1).map(parseFloat)
+    # TODO Replace once time changes have been ported to master
+    # inputStrings = ["expectedTime_maxHard"]
+    # numValues = @model.get("expectedTime").match(/Limit: ([0-9]+)/).slice(1).map(parseFloat)
+    inputStrings = ["expectedTime_minTime", "expectedTime_maxTime", "expectedTime_maxHard"]
+    numValues = @model.get("expectedTime").match(/([0-9]+) - ([0-9]+), Limit: ([0-9]+)/).slice(1).map(parseFloat)
 
     _.each(_.zip(inputStrings, numValues), (inputAndNum) =>
       [input, num] = inputAndNum

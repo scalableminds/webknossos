@@ -8,14 +8,13 @@ backbone.marionette : Marionette
 class ProjectsListView extends Backbone.Marionette.CompositeView
 
   template : _.template("""
-    <table class="table">
-	<tr><td><h3>Projects</h3></td><td><div class="btn-group">
+    <div class="btn-group">
           <a class="btn btn-primary show-modal" href="#">
             <i class="fa fa-plus"></i>Create New Project
           </a>
-    </div></td></tr>
-	</table>
-    <table class="table table-double-striped table-details" id="projectlist-table">
+    </div>
+	<h3>Projects</h3>
+	<table class="table table-double-striped table-details" id="projectlist-table">
       <thead>
         <tr>
           <th class="details-toggle-all"><i class="caret-right"></i><i class="caret-down"></i></th>

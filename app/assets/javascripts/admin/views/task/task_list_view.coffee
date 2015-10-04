@@ -9,12 +9,12 @@ class TaskListView extends Backbone.Marionette.CompositeView
 
   template : _.template("""
    
-  <h3>Tasks</h3>
      <div class="btn-group">
           <a class="btn btn-primary" href="/admin/tasks/create">
             <i class="fa fa-plus"></i>Create New Task
           </a>
         </div>
+  <h3>Tasks</h3>
        <table id="tasklist-table" class="table table-double-striped table-details">
       <thead>
         <tr>

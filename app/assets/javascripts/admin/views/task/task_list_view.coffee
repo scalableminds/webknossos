@@ -28,15 +28,6 @@ class TaskListView extends Backbone.Marionette.CompositeView
          </tr>
       </thead>
     </table>
-    <div class="navbar navbar-default navbar-fixed-bottom">
-      <div class="navbar-form">
-        <div class="btn-group">
-          <a class="btn btn-primary" href="/admin/tasks/create">
-            <i class="fa fa-plus"></i>Create New Task
-          </a>
-        </div>
-      </div>
-    </div>
   """)
   className : "task-administration container wide"
   childView : TaskListItemView
@@ -55,12 +46,18 @@ class TaskListView extends Backbone.Marionette.CompositeView
   initialize : ->
 
     @listenTo(app.vent, "paginationView:filter", @filterBySearch)
+    @listenTo(app.vent, "paginationView:addElement", @createNewTask)
 
     @collection.fetch(
       silent : true #fucking important for pagination
     ).done( =>
       @collection.goTo(1)
     )
+
+
+  createNewTask : ->
+
+    window.location.href = "/admin/tasks/create"
 
 
   toggleAllDetails : ->

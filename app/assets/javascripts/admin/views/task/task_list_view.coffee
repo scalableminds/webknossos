@@ -31,7 +31,7 @@ class TaskListView extends Backbone.Marionette.CompositeView
     <div class="navbar navbar-default navbar-fixed-bottom">
       <div class="navbar-form">
         <div class="btn-group">
-          <a class="btn btn-primary" href="/admin/tasks/create">
+          <a class="btn btn-primary btn-xl" href="/admin/tasks/create">
             <i class="fa fa-plus"></i>Create New Task
           </a>
         </div>

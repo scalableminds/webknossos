@@ -8,13 +8,8 @@ backbone.marionette : Marionette
 class ProjectsListView extends Backbone.Marionette.CompositeView
 
   template : _.template("""
-    <div class="btn-group">
-          <a class="btn btn-primary show-modal" href="#">
-            <i class="fa fa-plus"></i>Create New Project
-          </a>
-    </div>
-	<h3>Projects</h3>
-	<table class="table table-double-striped table-details" id="projectlist-table">
+    <h3>Projects</h3>
+    <table class="table table-double-striped table-details" id="projectlist-table">
       <thead>
         <tr>
           <th class="details-toggle-all"><i class="caret-right"></i><i class="caret-down"></i></th>
@@ -26,6 +21,15 @@ class ProjectsListView extends Backbone.Marionette.CompositeView
       </thead>
     </table>
     <div id="modal-wrapper"></div>
+    <div class="navbar navbar-default navbar-fixed-bottom">
+      <div class="navbar-form">
+        <div class="btn-group">
+          <a class="btn btn-primary show-modal" href="#">
+            <i class="fa fa-plus"></i>Create New Project
+          </a>
+        </div>
+      </div>
+    </div>
   """)
 
   className : "container wide project-administration"

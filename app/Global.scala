@@ -73,7 +73,7 @@ object Global extends WithFilters(MetricsFilter) with GlobalSettings {
 class InitialData(conf: Configuration) extends GlobalDBAccess {
   // Check if scm's default user should be added
   val shouldInsertSCMBoy = conf.getBoolean("insertSCMBoy") getOrElse false
-
+  val manyTeams = conf.getBoolean("manyTeams") getOrElse false
   // Define default team for the inserted data
   val DefaultTeam = Team(conf.getString("defaultTeam").get, None, RoleService.roles)
 
@@ -118,14 +118,12 @@ class InitialData(conf: Configuration) extends GlobalDBAccess {
   def insertUsers(): Unit = {
     if(shouldInsertSCMBoy)
       insertSingleUser("SCM", "Boy", "scmboy@scalableminds.com", Role.Admin)
-
-    insertSingleUser("Andrew", "Admin", "admin@domain.com", Role.Admin)
-
-    for (i <- 1 to 5){
-      val lastName = s"aUser$i"
-      val mailAddress = lastName.toLowerCase
-      val mailDomain = DefaultTeam.name.replaceAll(" ","_").toLowerCase + ".net"
-	    insertSingleUser("mpi", lastName, s"$mailAddress@$mailDomain", Role.User)
+    if (manyTeams)
+      for (i <- 1 to 5){
+        val lastName = s"aUser$i"
+        val mailAddress = lastName.toLowerCase
+        val mailDomain = DefaultTeam.name.replaceAll(" ","_").toLowerCase + ".net"
+        insertSingleUser("mpi", lastName, s"$mailAddress@$mailDomain", Role.User)
 	  }
   }
 
@@ -136,7 +134,12 @@ class InitialData(conf: Configuration) extends GlobalDBAccess {
     TeamDAO.findOne().futureBox.map {
       case Full(_) =>
       case _ =>
+	  
         TeamDAO.insert(DefaultTeam)
+		if (manyTeams) 
+		  for (i <- 2 to 5)
+			  TeamDAO.insert(Team("Team " + i.toString(), None, RoleService.roles))
+        
     }
   }
 

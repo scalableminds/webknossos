@@ -125,7 +125,9 @@ class PlaneController
           0
         ]
 
-      over : => @planeView.setActiveViewport( @activeViewport = planeId )
+      over : =>
+        $(':focus').blur()
+        @planeView.setActiveViewport( @activeViewport = planeId )
 
       scroll : @scrollPlanes
     }

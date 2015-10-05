@@ -1,4 +1,5 @@
 ### define
+libs/utils : utils
 ###
 TemplateHelpers =
 
@@ -17,3 +18,9 @@ TemplateHelpers =
       hash += string.charCodeAt(i)
 
     return hash % @COLOR_MAP.length
+
+
+  formatScale : (scaleArr) ->
+
+    scaleArrRounded = scaleArr.map((value) -> utils.roundTo(value, 2))
+    return "(" + scaleArrRounded.join(', ') + ")"

@@ -19,5 +19,5 @@ object Role {
 object RoleService {
   import Role._
 
-  def roles = List(User, Admin, Reviewer)
+  def roles = List(User, Admin)
 }

@@ -88,10 +88,10 @@ boundingBox.box=Bounding Box
 boundingBox.invalid=Invalid bounding box
 
 experience=Experience
-experience.domain=Experience Domain
+experience.domain=Experience (optional): Domain
 experience.domain.invalid=Invalid experience domain
 experience.value.invalid=Invalid experience value
-experience.value=Min Experience
+experience.value=Experience (optional): Min. Level
 
 nmlFile=Reference NML File
 nml.file.uploadSuccess=Successfully uploaded file
@@ -103,7 +103,7 @@ owner=Owner
 
 priority=Priority
 
-project=Project
+project=Project (optional)
 projectName=Project Name
 project.name.alreadyTaken=Name already used
 project.name.invalidChars=Name contains invalid characters
@@ -185,9 +185,7 @@ taskType.editSuccess=Task type successfully edited
 taskType.createSuccess=Task type successfully created
 taskType.notFound=Selected task type doesn''t exist
 taskType.deleted=Task type ''{0}'' successfully deleted
-taskType.emptyModeSelection=Please select at least one annotation mode
 taskType.noAnnotations=We couldn''t find finished annotations for this task type
 
 time.invalidFormat=Time couldn''t get parsed.
 point.invalidFormat=Invalid format. Use something like: 4, 63, 24
-

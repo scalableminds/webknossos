@@ -22,6 +22,18 @@ class SkeletonTracingPlaneController extends PlaneController
       finishedRender : => @model.skeletonTracing.rendered()
 
 
+  start : ->
+
+    super()
+    $('.skeleton-plane-controls').show()
+
+
+  stop : ->
+
+    super()
+    $('.skeleton-plane-controls').hide()
+
+
   getPlaneMouseControls : (planeId) ->
 
     return _.extend super(planeId),
@@ -78,9 +90,6 @@ class SkeletonTracingPlaneController extends PlaneController
   scrollPlanes : (delta, type) =>
 
     super(delta, type)
-
-    if type == "shift"
-      @skeletonTracingController.setRadius(delta)
 
 
   onClick : (position, shiftPressed, altPressed, plane) =>

@@ -26,7 +26,7 @@ class TaskListItemView extends Backbone.Marionette.CompositeView
         </a>
       </td>
       <td>
-        <a href="/admin/taskTypes#<%= type.summary %>">
+        <a href="/taskTypes#<%= type.summary %>">
           <%= type.summary %>
         </a>
       </td>

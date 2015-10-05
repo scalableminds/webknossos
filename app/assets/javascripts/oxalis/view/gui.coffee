@@ -62,7 +62,7 @@ class Gui
     @moveValueController = @addSlider(@fViewportcontrols, @user.getSettings(), "moveValue",
       constants.MIN_MOVE_VALUE, constants.MAX_MOVE_VALUE, 10, "Move Value (nm/s)")
     @zoomController = @addSlider(@fViewportcontrols, @user.getSettings(), "zoom",
-      0.01, @model.flycam.getMaxZoomStep(), 0.001, "Zoom")
+      0.01, @model.flycam.getMaxZoomStep() * 0.99, 0.001, "Zoom")
     @scaleController = @addSlider(@fViewportcontrols, @user.getSettings(), "scale", constants.MIN_SCALE,
       constants.MAX_SCALE, 0.1, "Viewport Scale")
     @addCheckbox(@fViewportcontrols, @user.getSettings(), "dynamicSpaceDirection", "d/f-Switching")
@@ -80,16 +80,10 @@ class Gui
         @addSlider(@fColors, @settingsGeneral.brightnessContrastColor[binary.name], "contrast",
           0.5, 5, 0.1, "Contrast " + (i+1), @setColorSettings)
       )
-      @colorControllers.push(
-        @addColorPicker(@fColors, @settingsGeneral.brightnessContrastColor[binary.name], "color", "Color " + (i+1),
-          @setColorSettings)
-      )
     if @model.getSegmentationBinary()
       @segmentationOpacityController =
         @addSlider(@fColors, @user.getSettings(), "segmentationOpacity",
           0, 100, 1, "Segment. Opacity")
-    @addFunction(@fColors, @settingsGeneral, "resetColorSettings",
-      "Reset")
 
     @folders.push( @fFlightcontrols = @gui.addFolder("Flightoptions") )
     @addSlider(@fFlightcontrols, @user.getSettings(), "mouseRotateValue",
@@ -147,12 +141,8 @@ class Gui
       @folders.push( @fNodes = @gui.addFolder("Nodes") )
       @activeNodeIdController = @addNumber(@fNodes, @settingsSkeleton, "activeNodeID",
         1, 1, "Active Node ID", (value) => @trigger( "setActiveNode", value))
-      @radiusController = @addSlider(@fNodes, @settingsSkeleton, "radius",
-        @model.skeletonTracing.MIN_RADIUS, @model.skeletonTracing.MAX_RADIUS, 1, "Radius", (radius) =>
-          @model.skeletonTracing.setActiveNodeRadius( radius ))
       @particleSizeController = @addSlider(@fNodes, @user.getSettings(), "particleSize",
-        constants.MIN_PARTICLE_SIZE, constants.MAX_PARTICLE_SIZE, 1, "Particle Size")
-      @addCheckbox(@fNodes, @user.getSettings(), "overrideNodeRadius", "Override radius")
+        constants.MIN_PARTICLE_SIZE, constants.MAX_PARTICLE_SIZE, 1, "Node Size")
       @addFunction(@fNodes, @settingsSkeleton, "deleteActiveNode", "Delete Active Node")
 
     if @settingsVolume?
@@ -225,6 +215,7 @@ class Gui
     @model.user.on
       scaleChanged : => @updateScale()
       zoomChanged : => @updateZoom()
+      segmentationOpacityChanged : => @updateSegmentation()
       moveValueChanged : => @updateMoveValue()
       moveValue3dChanged : => @updateMoveValue3d()
       particleSizeChanged : => @updateParticleSize()
@@ -449,6 +440,11 @@ class Gui
     @zoomController?.updateDisplay()
 
 
+  updateSegmentation : =>
+
+    @segmentationOpacityController?.updateDisplay()
+
+
   update : ->
 
     # Helper method to combine common update methods
@@ -459,7 +455,6 @@ class Gui
       @settingsSkeleton.radius       = @model.skeletonTracing.getActiveNodeRadius()
       @activeNodeIdController.updateDisplay()
       @activeTreeIdController.updateDisplay()
-      @radiusController.updateDisplay()
     if @settingsVolume?
       @settingsVolume.activeCellID = @model.volumeTracing.getActiveCellId()
       @activeCellIdController.updateDisplay()

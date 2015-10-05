@@ -88,16 +88,15 @@ class Controller
 
       for allowedMode in tracing.content.settings.allowedModes
         @allowedModes.push switch allowedMode
-          when "oxalis" then constants.MODE_PLANE_TRACING
-          when "arbitrary" then constants.MODE_ARBITRARY
+          when "spherical" then constants.MODE_ARBITRARY
+          when "oblique" then constants.MODE_ARBITRARY_PLANE
           when "volume" then constants.MODE_VOLUME
 
-      if constants.MODE_ARBITRARY in @allowedModes
-        @allowedModes.push(constants.MODE_ARBITRARY_PLANE)
+      # Plane tracing mode is always allowed
+      @allowedModes.push(constants.MODE_PLANE_TRACING)
 
       # FPS stats
       stats = new Stats()
-      $("body").append stats.domElement
 
       @gui = @createGui(tracing.restrictions, tracing.content.settings)
 
@@ -147,6 +146,7 @@ class Controller
 
       @initMouse()
       @initKeyboard()
+      @initUIElements()
 
       for binaryName of @model.binary
         @model.binary[binaryName].cube.on "bucketLoaded" : =>
@@ -155,6 +155,21 @@ class Controller
 
       if @controlMode == constants.CONTROL_MODE_VIEW
 
+        # Zoom Slider
+        logScaleBase = Math.pow(@model.flycam.getMaxZoomStep() * 0.99, 1 / 100)
+        slider = $('#zoom-slider').slider().on "slide", (event) =>
+          zoomValue = Math.pow(logScaleBase, event.value)
+          @model.user.set("zoom", zoomValue)
+
+        updateSlider = (zoom) =>
+          sliderValue = Math.log(zoom) / Math.log(logScaleBase)
+          slider.slider("setValue", sliderValue)
+
+        @model.user.on(
+          zoomChanged : updateSlider
+        )
+
+        # Segmentation slider
         if @model.getSegmentationBinary()?
           $('#alpha-slider').slider().on "slide", (event) =>
 
@@ -256,6 +271,25 @@ class Controller
       } )
 
     new Input.KeyboardNoLoop( keyboardControls )
+
+
+  initUIElements : ->
+
+    @initAddScriptModal()
+
+
+  initAddScriptModal : ->
+
+    $("#add-script-link").removeClass("hide")
+    $("#add-script-button").click( (event) ->
+      try
+        eval($('#add-script-input').val())
+        # close modal if the script executed successfully
+        $('#script-modal').modal('hide')
+      catch error
+        alert(error)
+    )
+
 
   setMode : (newMode, force = false) ->
 

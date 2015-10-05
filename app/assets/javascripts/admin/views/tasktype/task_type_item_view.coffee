@@ -23,14 +23,6 @@ class TaskTypeItemView extends Backbone.Marionette.CompositeView
           <span class="label label-default"><%= mode[0].toUpperCase() + mode.slice(1) %></span>
         <% }) %>
       </td>
-      <td>
-        <% if(settings.branchPointsAllowed) { %>
-          <span class="label label-default">Branchpoints</span>
-        <% } %>
-        <% if(settings.somaClickingAllowed) { %>
-          <span class="label label-default">Soma clicking</span>
-        <% } %>
-      </td>
       <td><%= expectedTime %></td>
       <td><%= fileName %></td>
       <td class="nowrap">

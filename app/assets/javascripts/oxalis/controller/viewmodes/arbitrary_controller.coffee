@@ -29,7 +29,7 @@ class ArbitraryController
   model : null
   view : null
 
-  record : true
+  record : false
 
   input :
     mouse : null
@@ -76,9 +76,13 @@ class ArbitraryController
     @stop()
 
     # Toggle record
-    @setRecord(true)
-    $('#toggle-trace-mode').on("click", =>
-      @setRecord(not @record)
+    @setRecord(false)
+    $('#trace-mode-trace').on("click", =>
+      @setRecord(true)
+      $(":focus").blur()
+    )
+    $('#trace-mode-watch').on("click", =>
+      @setRecord(false)
       $(":focus").blur()
     )
 
@@ -195,6 +199,12 @@ class ArbitraryController
 
 
   setRecord : (@record) ->
+
+    $('#trace-mode button').removeClass("btn-primary")
+    if @record
+      $('#trace-mode-trace').addClass("btn-primary")
+    else
+      $('#trace-mode-watch').addClass("btn-primary")
 
     @infoPlane.updateInfo(@record)
     if @record

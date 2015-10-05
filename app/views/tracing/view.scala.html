@@ -16,7 +16,12 @@
         <div id="zoomFactor"></div>
         <div id="segment-id"></div>
 
-        <div id="segmentation-slider" class="clearfix">
+        <div id="zoom-slider-container" class="clearfix oxalis-slider">
+          <p>Zoom:</p>
+            <input type="text" id="zoom-slider" class="col-sm-7" value="" data-slider-min="-100" data-slider-max="100" data-slider-step="1" data-slider-value="0" data-slider-orientation="horizontal" data-slider-selection="after" data-slider-tooltip="hide">
+        </div>
+
+        <div id="segmentation-slider" class="clearfix oxalis-slider">
           <p>Segmentation:</p>
             <input type="text" id="alpha-slider" class="col-sm-7" value="" data-slider-min="0" data-slider-max="100" data-slider-step="1" data-slider-value="20" data-slider-orientation="horizontal" data-slider-selection="after" data-slider-tooltip="hide">
         </div>

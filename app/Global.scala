@@ -18,7 +18,7 @@ import com.kenshoo.play.metrics._
 import com.codahale.metrics.JmxReporter
 import play.api.libs.json.Json
 import play.api.mvc._
-
+import scala.util.Random
 object Global extends WithFilters(MetricsFilter) with GlobalSettings {
 
   override def onStart(app: Application) {
@@ -76,7 +76,7 @@ class InitialData(conf: Configuration) extends GlobalDBAccess {
   val manyTeams = conf.getBoolean("manyTeams") getOrElse false
   // Define default team for the inserted data
   val DefaultTeam = Team(conf.getString("defaultTeam").get, None, RoleService.roles)
-
+  var teams:Array[Team] = new Array[Team](5);
   /**
    * Populate the DB with predefined data
    */
@@ -94,19 +94,22 @@ class InitialData(conf: Configuration) extends GlobalDBAccess {
    * @param email users email
    * @param role role of user
    */
-  def insertSingleUser(firstName: String, lastName: String, email: String, role: Role): Unit = {
+  def insertSingleUser(firstName: String, lastName: String, email: String, role: Role,team: Team, password: String): Unit = {
     UserDAO.findOneByEmail(email).futureBox.map {
+      val r =  scala.util.Random
       case Full(_) =>
       case _ =>
-        Logger.info(s"Inserted user '$firstName $lastName'")
+        var password : String
+        if = 
+        Logger.info(s"Inserted user '$firstName $lastName' with password $password")
         UserDAO.insert(User(
           email,
           firstName,
           lastName,
           true,
-          SCrypt.hashPassword("secret"),
-          SCrypt.md5("secret"),
-          List(TeamMembership(DefaultTeam.name, role)),
+          SCrypt.hashPassword(password),
+          SCrypt.md5(password),
+          List(TeamMembership(team.name, role)),
           UserSettings.defaultSettings,
           experiences = Map("trace-experience" -> 2)))
     }
@@ -117,14 +120,21 @@ class InitialData(conf: Configuration) extends GlobalDBAccess {
    */
   def insertUsers(): Unit = {
     if(shouldInsertSCMBoy)
-      insertSingleUser("SCM", "Boy", "scmboy@scalableminds.com", Role.Admin)
+      insertSingleUser("SCM", "Boy", "scmboy@scalableminds.com", Role.Admin,DefaultTeam, secret)
     if (manyTeams)
-      for (i <- 1 to 5){
-        val lastName = s"aUser$i"
-        val mailAddress = lastName.toLowerCase
-        val mailDomain = DefaultTeam.name.replaceAll(" ","_").toLowerCase + ".net"
-        insertSingleUser("mpi", lastName, s"$mailAddress@$mailDomain", Role.User)
-	  }
+      for (i <- 1 to 5) {
+        val lastName = "WebKnossos"
+        val firstName = "Admin " + i.toString()
+        val mailAddress = "admin" + i.toString()
+        val mailDomain = "webknossos.org"
+        val password = r.nextPrintableChar() + r.nextPrintableChar() + r.nextPrintableChar() + r.nextPrintableChar() + r.nextPrintableChar() //Sorryy
+        insertSingleUser(firstName, lastName, s"$mailAddress@$mailDomain", Role.Admin,teams(i-1))
+        for (j <- 1 to 5) {
+          val firstName = "User " + i.toString() + j.toString()
+          val mailAddress = "user" + i.toString() + j.toString()
+          insertSingleUser(firstName, lastName, s"$mailAddress@$mailDomain", Role.User,teams(i-1), password)
+        }
+      }
   }
 
   /**
@@ -136,9 +146,11 @@ class InitialData(conf: Configuration) extends GlobalDBAccess {
       case _ =>
 	  
         TeamDAO.insert(DefaultTeam)
-		if (manyTeams) 
+		if (manyTeams)
+      teams(0)=DefaultTeam
 		  for (i <- 2 to 5)
-			  TeamDAO.insert(Team("Team " + i.toString(), None, RoleService.roles))
+        teams(i-1)=Team("Team " + i.toString(), None, RoleService.roles)
+			  TeamDAO.insert(teams(i-1))
         
     }
   }

@@ -34,7 +34,7 @@ case class Annotation(
                        _name: Option[String] = None,
                        created : Long = System.currentTimeMillis,
                        _id: BSONObjectID = BSONObjectID.generate,
-                       readOnly: Boolean = false
+                       readOnly: Option[Boolean] = None
                      )
 
   extends AnnotationLike with FoxImplicits {
@@ -53,7 +53,7 @@ case class Annotation(
 
   val contentType = _content.contentType
 
-  val restrictions = if(readOnly)
+  val restrictions = if(readOnly.getOrElse(false))
       AnnotationRestrictions.readonlyAnnotation()
     else
       AnnotationRestrictions.defaultAnnotationRestrictions(this)
@@ -86,7 +86,7 @@ case class Annotation(
   }
 
   def makeReadOnly: AnnotationLike = {
-    this.copy(readOnly = true)
+    this.copy(readOnly = Some(true))
   }
 
   def saveToDB(implicit ctx: DBAccessContext): Fox[Annotation] = {

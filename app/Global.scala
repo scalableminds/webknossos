@@ -83,7 +83,7 @@ class InitialData(conf: Configuration) extends GlobalDBAccess {
   def insert(): Unit = {
     insertTeams()
     insertUsers()
-    insertTasks()
+    insertTaskTypes()
     insertLocalDataStore()
   }
 
@@ -158,16 +158,49 @@ class InitialData(conf: Configuration) extends GlobalDBAccess {
   /**
    * Add some tasks to the DB if there are none
    */
-  def insertTasks(): Unit = {
+  def insertTaskTypes(): Unit = {
+    if (manyTeams)
+      for (i <- 0 to 4)
+        insertTaskTypesPerTeam(team(i))
+    else
+      insertTaskTypesPerTeam(DefaultTeam)
+  }
+  def insertTaskTypesPerTeam(team: Team): Unit = {
     TaskTypeDAO.findAll.map {
       types =>
         if (types.isEmpty) {
-          val taskType = TaskType(
-            "ek_0563_BipolarCells",
-            "Check those cells out!",
+          
+          val noOtherModes=Array(false, false)
+          val yesOtherModes=Array(true, true)
+          val taskType1 = TaskType(
+            "orthogonalLong",
+            "Please use only orthogonal mode",
+            TraceLimit(5, 10, 20),
+            noOtherModes,
+            team.name)
+          TaskTypeDAO.insert(taskType1)
+          val taskType2 = TaskType(
+            "orthogonalShort",
+            "Please use only orthogonal mode and don't take too long",
+            TraceLimit(5, 10, 10),
+            noOtherModes,
+            team.name)
+          TaskTypeDAO.insert(taskType2)
+          val taskType3 = TaskType(
+            "allModesLong",
+            "Use any mode and don't take too long",
             TraceLimit(5, 10, 15),
-            DefaultTeam.name)
-          TaskTypeDAO.insert(taskType)
+            yesOtherModes,
+            team.name)
+          TaskTypeDAO.insert(taskType3)
+          val taskType4 = TaskType(
+            "allModesShort",
+            "Use any mode and don't take too long",
+            TraceLimit(5, 10, 10),
+            yesOtherModes,
+            team.name)
+          TaskTypeDAO.insert(taskType4)
+          
         }
     }
   }

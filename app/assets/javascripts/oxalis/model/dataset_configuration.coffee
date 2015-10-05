@@ -7,7 +7,6 @@ backbone-deep-model : DeepModel
 
 class DatasetConfiguration extends Backbone.DeepModel
 
-
   initialize : ({datasetName, @dataLayerNames}) ->
 
     @url = "/api/dataSetConfigurations/#{datasetName}"
@@ -19,14 +18,6 @@ class DatasetConfiguration extends Backbone.DeepModel
 
     @setDefaultBinaryColors(true)
 
-    Request.send(
-      url : "/api/dataSetConfigurations/default"
-      dataType : "json"
-    ).done( (defaultData) =>
-      @set("brightness", defaultData.brightness)
-      @set("contrast", defaultData.contrast)
-    )
-
 
   triggerAll : ->
 
@@ -36,7 +27,7 @@ class DatasetConfiguration extends Backbone.DeepModel
 
   setDefaultBinaryColors : (forceDefault = false) ->
 
-    layerColors = @get("layerColors")
+    layers = @get("layers")
 
     if @dataLayerNames.length == 1
       defaultColors = [[255, 255, 255]]
@@ -45,8 +36,14 @@ class DatasetConfiguration extends Backbone.DeepModel
                         [255, 255, 0], [0, 255, 255], [255, 0, 255]]
 
     for layerName, i in @dataLayerNames
-      if forceDefault or not layerColors[layerName]
-        color = defaultColors[i % defaultColors.length]
+      defaults =
+        color: defaultColors[i % defaultColors.length]
+        brightness: 0
+        contrast: 1
+
+      if forceDefault or not layers[layerName]
+        layer = defaults
       else
-        color = layerColors[layerName]
-      @set("layerColors.#{layerName}", color)
+        layer = _.defaults(layers[layerName], defaults)
+
+      @set("layers.#{layerName}", layer)

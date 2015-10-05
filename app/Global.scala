@@ -81,8 +81,8 @@ class InitialData(conf: Configuration) extends GlobalDBAccess {
    * Populate the DB with predefined data
    */
   def insert(): Unit = {
-    insertUsers()
     insertTeams()
+    insertUsers()
     insertTasks()
     insertLocalDataStore()
   }

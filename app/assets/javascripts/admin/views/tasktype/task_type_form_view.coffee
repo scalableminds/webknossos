@@ -39,17 +39,17 @@ class TaskTypeFormView extends Backbone.Marionette.LayoutView
           <div class="col-sm-6">
 
             <div class="col-sm-6 form-group pull-right">
-              <label class="col-sm-10 control-label" for="arbitraryAllowed">Allow Oblique Mode</label>
+              <label class="col-sm-10 control-label" for="obliqueAllowed">Allow Oblique Mode</label>
               <div class="col-sm-2">
-                <input type="checkbox" id="arbitraryAllowed" name="allowedModes[]" value="arbitrary" checked>
+                <input type="checkbox" id="obliqueAllowed" name="allowedModes[]" value="oblique" checked>
                 <span></span>
               </div>
             </div>
 
             <div class="col-sm-6 form-group pull-right">
-              <label class="col-sm-10 control-label" for="oxalisAllowed">Allow Spherical Mode</label>
+              <label class="col-sm-10 control-label" for="sphericalAllowed">Allow Spherical Mode</label>
               <div class="col-sm-2">
-                <input type="checkbox" id="oxalisAllowed" name="allowedModes[]" value="oxalis" checked>
+                <input type="checkbox" id="sphericalAllowed" name="allowedModes[]" value="spherical" checked>
                 <span></span>
               </div>
             </div>
@@ -107,8 +107,8 @@ class TaskTypeFormView extends Backbone.Marionette.LayoutView
     "form" : "form"
     "branchPointsAllowed" : "#branchPointsAllowed"
     "somaClickingAllowed" : "#somaClickingAllowed"
-    "oxalisAllowed" : "#oxalisAllowed"
-    "arbitraryAllowed" : "#arbitraryAllowed"
+    "obliqueAllowed" : "#obliqueAllowed"
+    "sphericalAllowed" : "#sphericalAllowed"
     "summary" : "#summary"
     "description" : "#description"
 
@@ -125,11 +125,14 @@ class TaskTypeFormView extends Backbone.Marionette.LayoutView
     @ui.description.val(@model.get("description"))
 
     settings = @model.get("settings")
-    @ui.oxalisAllowed.attr("checked", "oxalis" in settings.allowedModes)
-    @ui.arbitraryAllowed.attr("checked", "arbitrary" in settings.allowedModes)
+    @ui.obliqueAllowed.attr("checked", "oblique" in settings.allowedModes)
+    @ui.sphericalAllowed.attr("checked", "spherical" in settings.allowedModes)
     @ui.branchPointsAllowed.attr("checked", settings["branchPointsAllowed"])
     @ui.somaClickingAllowed.attr("checked", settings["somaClickingAllowed"])
 
+    # TODO Replace once time changes have been ported to master
+    # inputStrings = ["expectedTime_maxHard"]
+    # numValues = @model.get("expectedTime").match(/Limit: ([0-9]+)/).slice(1).map(parseFloat)
     inputStrings = ["expectedTime_minTime", "expectedTime_maxTime", "expectedTime_maxHard"]
     numValues = @model.get("expectedTime").match(/([0-9]+) - ([0-9]+), Limit: ([0-9]+)/).slice(1).map(parseFloat)
 

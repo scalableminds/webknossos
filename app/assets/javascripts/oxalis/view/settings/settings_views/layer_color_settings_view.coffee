@@ -6,10 +6,6 @@ underscore : _
 
 class LayerColorSettingsView extends Backbone.Marionette.ItemView
 
-
-  className : "panel"
-
-
   template : _.template("""
     <p><%= displayName %></p>
     <% _.forEach(subviewCreators, function (subview, key) { %>

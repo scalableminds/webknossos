@@ -45,7 +45,7 @@ class AbstractPlaneMaterialFactory extends AbstractMaterialFactory
   setupChangeListeners : ->
 
     @listenTo(@model.datasetConfiguration, "change", (model) ->
-      console.log(model.changed)
+
       for binaryName, changes of model.changed.layers or {}
         name = @sanitizeName(binaryName)
         if changes.brightness?

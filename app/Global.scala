@@ -76,16 +76,35 @@ class InitialData(conf: Configuration) extends GlobalDBAccess {
   val manyTeams = conf.getBoolean("manyTeams") getOrElse false
   // Define default team for the inserted data
   val DefaultTeam = Team(conf.getString("defaultTeam").get, None, RoleService.roles)
-  var teams:Array[Team] = new Array[Team](5);
+  
   /**
    * Populate the DB with predefined data
    */
   def insert(): Unit = {
-    insertTeams()
-    insertUsers()
-    insertTaskTypes()
+    if (manyTeams)
+      for (i <- 1 to 5)
+        insertPerTeam(Team("Team " + i.toString(), None, RoleService.roles),i)
+    else
+      insertPerTeam(DefaultTeam,1)
     insertLocalDataStore()
   }
+  def insertPerTeam(team: Team, teamNum: int) : Unit = {
+    TeamDAO.insert(team)
+    val admin = insertUsers(team, teamNum)
+    val projects = insertProjects(team, admin, "myproject")
+    val taskTypes = insertTaskTypes(team)
+    val task = (taskTypes(2), 
+      "retina",
+      1,
+      100,
+      2,
+      team,
+      projects(0), 
+      "100527_k0563",
+      [388, 2855, 4151],
+      [0, 0, 0, 0, 0, 0])
+    val annotation = Annotation(task,"public/nmls/alles_2_trees_corrected_094_1_8_633_fkramer_002.038.nml", finished=True)
+  }  
 
   /**
    * Insert a single user into the database
@@ -94,15 +113,12 @@ class InitialData(conf: Configuration) extends GlobalDBAccess {
    * @param email users email
    * @param role role of user
    */
-  def insertSingleUser(firstName: String, lastName: String, email: String, role: Role,team: Team, password: String): Unit = {
+  def insertSingleUser(firstName: String, lastName: String, email: String, role: Role,team: Team, password: String): User = {
     UserDAO.findOneByEmail(email).futureBox.map {
-      val r =  scala.util.Random
       case Full(_) =>
       case _ =>
-        var password : String
-        if = 
         Logger.info(s"Inserted user '$firstName $lastName' with password $password")
-        UserDAO.insert(User(
+        val user = User(
           email,
           firstName,
           lastName,
@@ -111,100 +127,78 @@ class InitialData(conf: Configuration) extends GlobalDBAccess {
           SCrypt.md5(password),
           List(TeamMembership(team.name, role)),
           UserSettings.defaultSettings,
-          experiences = Map("trace-experience" -> 2)))
+          experiences = Map("trace-experience" -> 2))
+        UserDAO.insert(user)
+        return user
     }
   }
 
   /**
    * Insert predefined users into DB
    */
-  def insertUsers(): Unit = {
+  def insertUsers(team: Team, teamNumber: int): User = {
     if(shouldInsertSCMBoy)
-      insertSingleUser("SCM", "Boy", "scmboy@scalableminds.com", Role.Admin,DefaultTeam, secret)
-    if (manyTeams)
-      for (i <- 1 to 5) {
-        val lastName = "WebKnossos"
-        val firstName = "Admin " + i.toString()
-        val mailAddress = "admin" + i.toString()
-        val mailDomain = "webknossos.org"
-        val password = r.nextPrintableChar() + r.nextPrintableChar() + r.nextPrintableChar() + r.nextPrintableChar() + r.nextPrintableChar() //Sorryy
-        insertSingleUser(firstName, lastName, s"$mailAddress@$mailDomain", Role.Admin,teams(i-1))
-        for (j <- 1 to 5) {
-          val firstName = "User " + i.toString() + j.toString()
-          val mailAddress = "user" + i.toString() + j.toString()
-          insertSingleUser(firstName, lastName, s"$mailAddress@$mailDomain", Role.User,teams(i-1), password)
-        }
-      }
-  }
-
-  /**
-   * Insert default team into DB if it doesn't exist
-   */
-  def insertTeams(): Unit = {
-    TeamDAO.findOne().futureBox.map {
-      case Full(_) =>
-      case _ =>
-	  
-        TeamDAO.insert(DefaultTeam)
-		if (manyTeams)
-      teams(0)=DefaultTeam
-		  for (i <- 2 to 5)
-        teams(i-1)=Team("Team " + i.toString(), None, RoleService.roles)
-			  TeamDAO.insert(teams(i-1))
-        
+      return insertSingleUser("SCM", "Boy", "scmboy@scalableminds.com", Role.Admin,DefaultTeam, secret)
+    val r =  scala.util.Random
+    val lastName = "WebKnossos"
+    val firstName = "Admin " + teamNumber.toString()
+    val mailAddress = "admin" + teamNumber.toString()
+    val mailDomain = "webknossos.org"
+    val password = r.nextPrintableChar() + r.nextPrintableChar() + r.nextPrintableChar() + r.nextPrintableChar() + r.nextPrintableChar() //Sorryy
+    val admin=insertSingleUser(firstName, lastName, s"$mailAddress@$mailDomain", Role.Admin,teams(i-1))
+    for (j <- 1 to 5) {
+      val firstNameUser = "User " + teamNumber.toString() + j.toString()
+      val mailAddressUser = "user" + teamNumber.toString() + j.toString()
+      insertSingleUser(firstNameUser, lastName, s"$mailAddressUser@$mailDomain", Role.User,team, password)
     }
   }
-
+  
   /**
    * Add some tasks to the DB if there are none
    */
-  def insertTaskTypes(): Unit = {
-    if (manyTeams)
-      for (i <- 0 to 4)
-        insertTaskTypesPerTeam(team(i))
-    else
-      insertTaskTypesPerTeam(DefaultTeam)
-  }
-  def insertTaskTypesPerTeam(team: Team): Unit = {
-    TaskTypeDAO.findAll.map {
-      types =>
-        if (types.isEmpty) {
-          
-          val noOtherModes=Array(false, false)
-          val yesOtherModes=Array(true, true)
-          val taskType1 = TaskType(
-            "orthogonalLong",
-            "Please use only orthogonal mode",
-            TraceLimit(5, 10, 20),
-            noOtherModes,
-            team.name)
-          TaskTypeDAO.insert(taskType1)
-          val taskType2 = TaskType(
-            "orthogonalShort",
-            "Please use only orthogonal mode and don't take too long",
-            TraceLimit(5, 10, 10),
-            noOtherModes,
-            team.name)
-          TaskTypeDAO.insert(taskType2)
-          val taskType3 = TaskType(
-            "allModesLong",
-            "Use any mode and don't take too long",
-            TraceLimit(5, 10, 15),
-            yesOtherModes,
-            team.name)
-          TaskTypeDAO.insert(taskType3)
-          val taskType4 = TaskType(
-            "allModesShort",
-            "Use any mode and don't take too long",
-            TraceLimit(5, 10, 10),
-            yesOtherModes,
-            team.name)
-          TaskTypeDAO.insert(taskType4)
-          
-        }
-    }
-  }
+  def insertTasks(taskType: TaskType, experienceDomain: String, experienceLevel: Int, priority: Int, taskInstances: Int, team:Team, project:Project, dataset: String, start: Array[Int], boundingBox: Array[Int]): Task = {
+    val task=Task(taskType, experienceDomain, experienceLevel, priority, taskInstances, team, project, dataset,start,boundingBox)
+    TaskDAO.insert(task)
+    return task
+  } 
 
+  def insertTaskTypesPerTeam(team: Team): Array[TaskType = {
+    var taskTypes:Array[TaskType] = new Array[TaskType](4)
+    val noOtherModes=[false, false]
+    val yesOtherModes=[true, true]
+    taskTypes(0) = TaskType(
+      "orthogonalLong",
+      "Please use only orthogonal mode",
+      TraceLimit(5, 10, 20),
+      noOtherModes,
+      team.name)
+    taskTypes(1) = TaskType(
+      "orthogonalShort",
+      "Please use only orthogonal mode and don't take too long",
+      TraceLimit(5, 10, 10),
+      noOtherModes,
+      team.name)
+    taskTypes(2) = TaskType(
+      "allModesLong",
+      "Use any mode",
+      TraceLimit(5, 10, 20),
+      yesOtherModes,
+      team.name)
+    taskTypes(3) = TaskType(
+      "allModesShort",
+      "Use any mode and don't take too long",
+      TraceLimit(5, 10, 10),
+      yesOtherModes,
+      team.name)
+    for (i <- 0 to 3) 
+      TaskTypeDAO.insert(taskTypes(i))
+    return taskTypes
+  }
+  def insertProjects(team: Team, owner: User, name: String): Project ={
+    val project = Project(team,owner,name)
+    ProjectDAO.insert(project)
+    return project
+  }
   /**
    * Insert the local datastore into the database
    */

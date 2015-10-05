@@ -80,7 +80,8 @@ class PolygonFactory
       if oldY + @voxelsToSkip < @endY
         return [@startX, oldY + @voxelsToSkip, oldZ]
       else
-        return [@startX, @startY, oldZ + @voxelsToSkip]
+        # For z coordinate, always sample in maximal resolution
+        return [@startX, @startY, oldZ + 1]
 
 
   updateTriangles : (result, position) ->

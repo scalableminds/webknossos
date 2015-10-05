@@ -5,6 +5,7 @@ backbone.marionette : marionette
 admin/models/dataset/dataset_collection : DatasetCollection
 views/spotlight_dataset_list_view : SpotlightDatasetListView
 admin/views/pagination_view : PaginationView
+libs/utils : utils
 ###
 
 class DatasetSwitchView extends Backbone.Marionette.LayoutView
@@ -40,6 +41,10 @@ class DatasetSwitchView extends Backbone.Marionette.LayoutView
 
     @ui.showAdvancedButton.hide()
     @showGalleryView()
+
+    # Hide advanced view for non-admin users
+    userTeams = @model.get("teams")
+    @ui.showAdvancedButton.hide() if not utils.isUserAdmin(userTeams)
 
   toggleSwitchButtons : ->
 

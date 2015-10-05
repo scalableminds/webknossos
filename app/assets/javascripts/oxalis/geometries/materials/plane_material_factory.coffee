@@ -92,6 +92,8 @@ class PlaneMaterialFactory extends AbstractPlaneMaterialFactory
       """
       <% _.each(layers, function(name) { %>
         uniform sampler2D <%= name %>_texture;
+        uniform float <%= name %>_brightness;
+        uniform float <%= name %>_contrast;
         uniform vec3 <%= name %>_color;
         uniform float <%= name %>_weight;
       <% }) %>
@@ -101,7 +103,7 @@ class PlaneMaterialFactory extends AbstractPlaneMaterialFactory
       <% } %>
 
       uniform vec2 offset, repeat;
-      uniform float alpha, brightness, contrast;
+      uniform float alpha;
       varying vec2 vUv;
 
       /* Inspired from: http://lolengine.net/blog/2013/07/27/rgb-to-hsv-in-glsl */
@@ -130,6 +132,7 @@ class PlaneMaterialFactory extends AbstractPlaneMaterialFactory
 
         <% if (isRgb) { %>
           vec3 data_color = texture2D( <%= layers[0] %>_texture, vUv * repeat + offset).xyz;
+          data_color = (data_color + <%= layers[0] %>_brightness - 0.5) * <%= layers[0] %>_contrast + 0.5;
         <% } else { %>
           vec3 data_color = vec3(0.0, 0.0, 0.0);
 
@@ -139,7 +142,7 @@ class PlaneMaterialFactory extends AbstractPlaneMaterialFactory
             color_value = texture2D( <%= name %>_texture, vUv * repeat + offset).r;
 
             /* Brightness / Contrast Transformation */
-            color_value = (color_value + brightness - 0.5) * contrast + 0.5;
+            color_value = (color_value + <%= name %>_brightness - 0.5) * <%= name %>_contrast + 0.5;
 
             /* Multiply with color and weight */
             data_color += color_value * <%= name %>_weight * <%= name %>_color;

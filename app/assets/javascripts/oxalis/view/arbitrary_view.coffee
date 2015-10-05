@@ -66,8 +66,11 @@ class ArbitraryView
         element.setVisibility = element.setVisibility || (v) -> this.visible = v
         element.setVisibility true
 
+      $('.skeleton-arbitrary-controls').show()
       $("#arbitrary-info-canvas").show()
       $('#trace-rotation').show()
+      $('#trace-mode').show()
+      $('#add-node-button').hide()
 
       @resize()
       # start the rendering loop
@@ -85,10 +88,13 @@ class ArbitraryView
         element.setVisibility = element.setVisibility || (v) -> this.visible = v
         element.setVisibility false
 
-      $("#arbitrary-info-canvas").hide()
-      $('#trace-rotation').hide()
-
       $(window).off "resize", @resize
+
+    $('.skeleton-arbitrary-controls').hide()
+    $("#arbitrary-info-canvas").hide()
+    $('#trace-rotation').hide()
+    $('#trace-mode').hide()
+    $('#add-node-button').show()
 
 
   animate : ->

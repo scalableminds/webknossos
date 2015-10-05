@@ -49,7 +49,7 @@ class DatasetListView extends Backbone.Marionette.CompositeView
 
   initialize : ->
 
-    @collection.sortBy("created")
+    @collection.sortByAttribute("created")
 
 
     @collection.fetch(

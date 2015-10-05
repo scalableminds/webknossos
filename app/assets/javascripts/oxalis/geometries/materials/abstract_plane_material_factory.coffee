@@ -17,17 +17,18 @@ class AbstractPlaneMaterialFactory extends AbstractMaterialFactory
 
     super()
 
-    settings = @model.user.getOrCreateBrightnessContrastSettings(
-      @model.datasetPostfix
+    settings = @model.user.getOrCreateBrightnessContrastColorSettings(
+      @model
     )
 
-    @uniforms = _.extend @uniforms,
-      brightness :
+    for binary in @model.getColorBinaries()
+      name = @sanitizeName(binary.name)
+      @uniforms[name + "_brightness"] =
         type : "f"
-        value : settings.brightness / 255
-      contrast :
+        value : settings[binary.name].brightness / 255
+      @uniforms[name + "_contrast"] =
         type : "f"
-        value : settings.contrast
+        value : settings[binary.name].contrast
 
     @createTextures()
 
@@ -48,8 +49,9 @@ class AbstractPlaneMaterialFactory extends AbstractMaterialFactory
       do (binary) =>
         binary.on
           newColorSettings : (brightness, contrast) =>
-            @uniforms.brightness.value = brightness / 255
-            @uniforms.contrast.value = contrast
+            name = @sanitizeName(binary.name)
+            @uniforms[name + "_brightness"].value = brightness / 255
+            @uniforms[name + "_contrast"].value = contrast
 
 
   createTextures : ->

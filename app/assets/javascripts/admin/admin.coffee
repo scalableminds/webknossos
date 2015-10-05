@@ -11,6 +11,8 @@ admin/models/task/task_collection : TaskCollection
 admin/views/project/project_list_view : ProjectListView
 admin/models/project/project_collection : ProjectCollection
 admin/views/statistic/statistic_view : StatisticView
+admin/views/workload/workload_list_view : WorkloadListView
+admin/models/workload/workload_collection : WorkloadCollection
 ###
 
 # ####
@@ -31,5 +33,7 @@ return {
   ProjectListView
   ProjectCollection
   StatisticView
+  WorkloadListView
+  WorkloadCollection
 }
 

@@ -9,7 +9,7 @@
     "backbone": "~1.1.0",
     "backbone.marionette": "~2.4.2",
     "font-awesome": "~4.0.3",
-    "momentjs": "~2.5.1",
+    "momentjs": "~2.9.0",
     "threejs-stats": "",
     "KeyboardJS": "~0.4.1",
     "dat.gui": "",
@@ -25,6 +25,8 @@
     "three": "https://raw.github.com/georgwiese/three.js/scm_oxalis/build/three.js",
     "ColorConverter": "https://raw.github.com/georgwiese/three.js/scm_oxalis/examples/js/math/ColorConverter.js",
     "TrackballControls": "https://raw.github.com/georgwiese/three.js/scm_oxalis/examples/js/controls/TrackballControls.js",
+    "bootstrap-daterangepicker": "~2.0.8",
+    "nouislider": "~8.0.2",
     "c3": "0.4.10"
   },
   "devDependencies": {}

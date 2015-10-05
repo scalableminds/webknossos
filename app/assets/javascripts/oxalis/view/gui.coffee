@@ -455,7 +455,6 @@ class Gui
       @settingsSkeleton.radius       = @model.skeletonTracing.getActiveNodeRadius()
       @activeNodeIdController.updateDisplay()
       @activeTreeIdController.updateDisplay()
-      @radiusController.updateDisplay()
     if @settingsVolume?
       @settingsVolume.activeCellID = @model.volumeTracing.getActiveCellId()
       @activeCellIdController.updateDisplay()

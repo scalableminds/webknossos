@@ -33,7 +33,17 @@ class VolumeTracing
     window.setSmoothLength = (v) -> Drawing.setSmoothLength(v)
 
 
+  # Should be called whenever the model is modified
+  # Returns whether the modification should be aborted
+  # ==> return if @handleModification()
+  handleModification : ->
+
+    return true
+
+
   createCell : (id) ->
+
+    return if @handleModification()
 
     unless id?
       id = @idCount++
@@ -46,6 +56,8 @@ class VolumeTracing
   startEditing : (planeId) ->
     # Return, if layer was actually started
 
+    return false if @handleModification()
+
     if currentLayer? or @flycam.getIntegerZoomStep() > 0
       return false
 
@@ -57,6 +69,8 @@ class VolumeTracing
 
   addToLayer : (pos) ->
 
+    return if @handleModification()
+
     unless @currentLayer?
       return
 
@@ -64,6 +78,8 @@ class VolumeTracing
     @trigger "updateLayer", @getActiveCellId(), @currentLayer.getSmoothedContourList()
 
   finishLayer : ->
+
+    return if @handleModification()
 
     unless @currentLayer?
       return

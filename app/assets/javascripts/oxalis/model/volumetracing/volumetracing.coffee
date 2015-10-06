@@ -3,6 +3,7 @@
 ./volumelayer : VolumeLayer
 libs/event_mixin : EventMixin
 ../dimensions : Dimensions
+../helpers/restriction_handler : RestrictionHandler
 libs/drawing : Drawing
 ./volumetracing_statelogger : VolumeTracingStateLogger
 ###
@@ -14,6 +15,8 @@ class VolumeTracing
     _.extend(@, new EventMixin())
 
     @contentData  = tracing.content.contentData
+    @restrictionHandler = new RestrictionHandler(tracing.restrictions)
+
     @cells        = []
     @activeCell   = null
     @currentLayer = null        # Layer currently edited
@@ -33,17 +36,7 @@ class VolumeTracing
     window.setSmoothLength = (v) -> Drawing.setSmoothLength(v)
 
 
-  # Should be called whenever the model is modified
-  # Returns whether the modification should be aborted
-  # ==> return if @handleModification()
-  handleModification : ->
-
-    return true
-
-
   createCell : (id) ->
-
-    return if @handleModification()
 
     unless id?
       id = @idCount++
@@ -56,7 +49,7 @@ class VolumeTracing
   startEditing : (planeId) ->
     # Return, if layer was actually started
 
-    return false if @handleModification()
+    return false if @restrictionHandler.handleUpdate()
 
     if currentLayer? or @flycam.getIntegerZoomStep() > 0
       return false
@@ -69,7 +62,7 @@ class VolumeTracing
 
   addToLayer : (pos) ->
 
-    return if @handleModification()
+    return if @restrictionHandler.handleUpdate()
 
     unless @currentLayer?
       return
@@ -77,9 +70,10 @@ class VolumeTracing
     @currentLayer.addContour(pos)
     @trigger "updateLayer", @getActiveCellId(), @currentLayer.getSmoothedContourList()
 
+
   finishLayer : ->
 
-    return if @handleModification()
+    return if @restrictionHandler.handleUpdate()
 
     unless @currentLayer?
       return

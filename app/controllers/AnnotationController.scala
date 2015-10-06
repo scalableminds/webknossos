@@ -79,13 +79,20 @@ object AnnotationController extends Controller with Secured with TracingInformat
       }
   }
 
-  def trace(typ: String, id: String) = Authenticated.async { implicit request =>
+  def trace(typ: String, id: String, readOnly: Boolean = false) = Authenticated.async { implicit request =>
       withAnnotation(AnnotationIdentifier(typ, id)) { annotation =>
           for {
             _ <- annotation.restrictions.allowAccess(request.user).failIfFalse(Messages("notAllowed")).toFox ~> 400
-          } yield Ok(htmlForAnnotation(annotation))
+          } yield {
+            if(readOnly)
+              Ok(htmlForAnnotation(annotation.makeReadOnly))
+            else
+              Ok(htmlForAnnotation(annotation))
+          }
       }
   }
+
+  def traceReadOnly(typ: String, id: String) = trace(typ, id, true)
 
   def reset(typ: String, id: String) = Authenticated.async { implicit request =>
     withAnnotation(AnnotationIdentifier(typ, id)) { annotation =>

@@ -3,6 +3,7 @@
  */
 package controllers
 
+import java.io.File
 import akka.agent.Agent
 import play.api.mvc._
 import play.api.libs.json.{JsError, JsSuccess, Json, JsValue}
@@ -66,6 +67,17 @@ object DataStoreHandler extends DataStoreBackChannelHandler{
     findByServer(dataSet.dataStoreInfo.name).toFox.flatMap {
       dataStore =>
         val call = RESTCall("POST", s"/data/datasets/${dataSet.name}/import", Map.empty, Map.empty, Json.obj())
+        dataStore.request(call)
+    }
+  }
+
+  def uploadDataSource(name: String, team: String, zipFile: File) = {
+    Logger.debug("Upload called for: " + name)
+    findByServer("localhost").toFox.flatMap {
+      dataStore =>
+        val call = RESTCall("POST", s"/data/datasets/upload", Map.empty, Map.empty, Json.obj(
+          "zipFile" -> ""
+        ))
         dataStore.request(call)
     }
   }

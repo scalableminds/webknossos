@@ -32,6 +32,7 @@ require.config(
     "d3"                  : "../bower_components/d3/d3"
     "daterangepicker"     : "../bower_components/bootstrap-daterangepicker/daterangepicker"
     "rangeslider"         : "../bower_components/nouislider/distribute/nouislider.min"
+    "clipboard"           : "../bower_components/clipboard/dist/clipboard.min"
     "v3"                  : "libs/v3"
     "m4x4"                : "libs/m4x4"
     "worker"              : "libs/worker_plugin"

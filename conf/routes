@@ -96,6 +96,7 @@ POST          /annotations/:typ/:id/transfer                                  co
 GET           /annotations/:typ/:id                                           controllers.AnnotationController.trace(typ: String, id: String)
 GET           /annotations/:typ/:id/readOnly                                  controllers.AnnotationController.traceReadOnly(typ: String, id: String)
 GET           /annotations/:typ/:id/info                                      controllers.AnnotationController.info(typ: String, id: String)
+GET           /annotations/:typ/:id/readOnly/info                             controllers.AnnotationController.infoReadOnly(typ: String, id: String)
 GET           /annotations/:typ/:id/download                                  controllers.AnnotationController.download(typ: String, id: String)
 DELETE        /annotations/:typ/:id                                           controllers.AnnotationController.cancel(typ: String, id: String)
 GET           /annotations/:typ/:id/merge/:mergedTyp/:mergedId/:readOnly      controllers.AnnotationController.merge(typ: String, id: String, mergedTyp: String, mergedId: String, readOnly: Boolean)

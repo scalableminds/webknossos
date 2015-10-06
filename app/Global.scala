@@ -90,10 +90,9 @@ class InitialData(conf: Configuration) extends GlobalDBAccess {
   }
   def insertPerTeam(team: Team, teamNum: int) : Unit = {
     TeamDAO.insert(team)
-    val admin = insertUsers(team, teamNum)
-    val projects = insertProjects(team, admin, "myproject")
+    val users = insertUsers(team, teamNum) // user 0 is admin
     val taskTypes = insertTaskTypes(team)
-    val task = (taskTypes(2), 
+    val task = insertTask(taskTypes(2), 
       "retina",
       1,
       100,
@@ -104,8 +103,28 @@ class InitialData(conf: Configuration) extends GlobalDBAccess {
       [388, 2855, 4151],
       [0, 0, 0, 0, 0, 0])
     val annotation = Annotation(task,"public/nmls/alles_2_trees_corrected_094_1_8_633_fkramer_002.038.nml", finished=True)
+    add_e2006(users, team, taskTypes(2))
   }  
-
+  
+  def add_e2006 (users:Array[User], team:Team, taskType:TaskType) : Unit = {
+    int counter = 0
+    val project = insertProject(team, users(0), "e2006_allcells")
+    for (file <- new File("public/nmls/e2006/").listFiles) { 
+      coords=file.fileName.split("_")
+      val task=insertTask(taskType
+        "retina",
+        1,
+        100,
+        1,
+        team,
+        project,
+        "e2006",
+        [coords(3), coords(4), coords(5)].toInt(),
+        [0, 0, 0, 0, 0, 0])
+        insertAnnotation(task,users(counter%5+1))
+      counter += 1
+    }
+  }
   /**
    * Insert a single user into the database
    * @param firstName users firstname
@@ -113,7 +132,7 @@ class InitialData(conf: Configuration) extends GlobalDBAccess {
    * @param email users email
    * @param role role of user
    */
-  def insertSingleUser(firstName: String, lastName: String, email: String, role: Role,team: Team, password: String): User = {
+  def insertSingleUser(firstName: String, lastName: String, email: String, role: Role,team: Team, password: String, experienceList: Something): User = {
     UserDAO.findOneByEmail(email).futureBox.map {
       case Full(_) =>
       case _ =>
@@ -127,7 +146,7 @@ class InitialData(conf: Configuration) extends GlobalDBAccess {
           SCrypt.md5(password),
           List(TeamMembership(team.name, role)),
           UserSettings.defaultSettings,
-          experiences = Map("trace-experience" -> 2))
+          experiences = experienceList
         UserDAO.insert(user)
         return user
     }
@@ -137,26 +156,35 @@ class InitialData(conf: Configuration) extends GlobalDBAccess {
    * Insert predefined users into DB
    */
   def insertUsers(team: Team, teamNumber: int): User = {
-    if(shouldInsertSCMBoy)
-      return insertSingleUser("SCM", "Boy", "scmboy@scalableminds.com", Role.Admin,DefaultTeam, secret)
+    var users:Array[User] = Array[User](11)
     val r =  scala.util.Random
     val lastName = "WebKnossos"
     val firstName = "Admin " + teamNumber.toString()
     val mailAddress = "admin" + teamNumber.toString()
     val mailDomain = "webknossos.org"
     val password = r.nextPrintableChar() + r.nextPrintableChar() + r.nextPrintableChar() + r.nextPrintableChar() + r.nextPrintableChar() //Sorryy
-    val admin=insertSingleUser(firstName, lastName, s"$mailAddress@$mailDomain", Role.Admin,teams(i-1))
+    if(shouldInsertSCMBoy) {
+      users(0) = insertSingleUser("SCM", "Boy", "scmboy@scalableminds.com", Role.Admin,DefaultTeam, secret)
+    } else {
+      users(0)=insertSingleUser(firstName, lastName, s"$mailAddress@$mailDomain", Role.Admin,teams(i-1))
+    }
     for (j <- 1 to 5) {
       val firstNameUser = "User " + teamNumber.toString() + j.toString()
       val mailAddressUser = "user" + teamNumber.toString() + j.toString()
-      insertSingleUser(firstNameUser, lastName, s"$mailAddressUser@$mailDomain", Role.User,team, password)
+      users(j) = insertSingleUser(firstNameUser, lastName, s"$mailAddressUser@$mailDomain", Role.User,team, password,Map("retina" -> 1)))
     }
+    for (j <- 6 to 10) {
+      val firstNameUser = "User " + teamNumber.toString() + j.toString()
+      val mailAddressUser = "user" + teamNumber.toString() + j.toString()
+      users(j) = insertSingleUser(firstNameUser, lastName, s"$mailAddressUser@$mailDomain", Role.User,team, password)
+    }
+    return users
   }
   
   /**
-   * Add some tasks to the DB if there are none
+   * Add a task
    */
-  def insertTasks(taskType: TaskType, experienceDomain: String, experienceLevel: Int, priority: Int, taskInstances: Int, team:Team, project:Project, dataset: String, start: Array[Int], boundingBox: Array[Int]): Task = {
+  def insertTask(taskType: TaskType, experienceDomain: String, experienceLevel: Int, priority: Int, taskInstances: Int, team:Team, project:Project, dataset: String, start: Array[Int], boundingBox: Array[Int]): Task = {
     val task=Task(taskType, experienceDomain, experienceLevel, priority, taskInstances, team, project, dataset,start,boundingBox)
     TaskDAO.insert(task)
     return task
@@ -194,7 +222,7 @@ class InitialData(conf: Configuration) extends GlobalDBAccess {
       TaskTypeDAO.insert(taskTypes(i))
     return taskTypes
   }
-  def insertProjects(team: Team, owner: User, name: String): Project ={
+  def insertProject(team: Team, owner: User, name: String): Project ={
     val project = Project(team,owner,name)
     ProjectDAO.insert(project)
     return project

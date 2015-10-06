@@ -92,18 +92,10 @@ class InitialData(conf: Configuration) extends GlobalDBAccess {
     TeamDAO.insert(team)
     val users = insertUsers(team, teamNum) // user 0 is admin
     val taskTypes = insertTaskTypes(team)
-    val task = insertTask(taskTypes(2), 
-      "retina",
-      1,
-      100,
-      2,
-      team,
-      projects(0), 
-      "100527_k0563",
-      [388, 2855, 4151],
-      [0, 0, 0, 0, 0, 0])
-    val annotation = Annotation(task,"public/nmls/alles_2_trees_corrected_094_1_8_633_fkramer_002.038.nml", finished=True)
     add_e2006(users, team, taskTypes(2))
+    add_ek0563(users, team, taskTypes)
+    add_cortex(users, team, taskTypes(2))
+    add_lm(users, team, taskTypes)
   }  
   
   def add_e2006 (users:Array[User], team:Team, taskType:TaskType) : Unit = {
@@ -121,9 +113,39 @@ class InitialData(conf: Configuration) extends GlobalDBAccess {
         "e2006",
         [coords(3), coords(4), coords(5)].toInt(),
         [0, 0, 0, 0, 0, 0])
-        insertAnnotation(task,users(counter%5+1))
+        insertAnnotation(file,task,users(counter%5+1), finished = True)
       counter += 1
     }
+  }
+  def add_ek0563(users:Array[User], team: Team, taskTypes:Array[TaskType]) : Unit = {
+    int counter = 0
+    for (file <- new File("public/nmls/cortex/"+types(type) +"/").listFiles) {
+      insertExplorativeAnnotation(file, users(counter%11))
+      counter += 1
+    }
+  }
+  def add_cortex(users:Array[User], team: Team, taskTypes:Array[TaskType]) : Unit = {
+    val project = insertProject(team, users(0), "cortex")
+    types = ["finished", "unfinished"]
+    int counter = 0
+    for (type <- 0 to 1)
+      for (file <- new File("public/nmls/cortex/"+types(type) +"/").listFiles) { 
+          coords=file.fileName.split("_")
+          val task=insertTask(taskType(1)
+          "cells_in_cortex",
+          1,
+          100,
+          1,
+          team,
+          project,
+          "2012-06-28_Cortex",
+          [coords(0), coords(1), coords(2)].toInt(),
+          [0, 0, 0, 0, 0, 0])
+          insertAnnotation(file, task,users(counter%5+6),finished=castBoolean(type))
+        counter += 1
+      }
+  }
+  def add_lm(users:Array[User], team: Team, taskTypes:Array[TaskType]) : Unit = {
   }
   /**
    * Insert a single user into the database
@@ -164,9 +186,9 @@ class InitialData(conf: Configuration) extends GlobalDBAccess {
     val mailDomain = "webknossos.org"
     val password = r.nextPrintableChar() + r.nextPrintableChar() + r.nextPrintableChar() + r.nextPrintableChar() + r.nextPrintableChar() //Sorryy
     if(shouldInsertSCMBoy) {
-      users(0) = insertSingleUser("SCM", "Boy", "scmboy@scalableminds.com", Role.Admin,DefaultTeam, secret)
+      users(0) = insertSingleUser("SCM", "Boy", "scmboy@scalableminds.com", Role.Admin,DefaultTeam, "secret")
     } else {
-      users(0)=insertSingleUser(firstName, lastName, s"$mailAddress@$mailDomain", Role.Admin,teams(i-1))
+      users(0)=insertSingleUser(firstName, lastName, s"$mailAddress@$mailDomain", Role.Admin,team,password)
     }
     for (j <- 1 to 5) {
       val firstNameUser = "User " + teamNumber.toString() + j.toString()
@@ -176,7 +198,7 @@ class InitialData(conf: Configuration) extends GlobalDBAccess {
     for (j <- 6 to 10) {
       val firstNameUser = "User " + teamNumber.toString() + j.toString()
       val mailAddressUser = "user" + teamNumber.toString() + j.toString()
-      users(j) = insertSingleUser(firstNameUser, lastName, s"$mailAddressUser@$mailDomain", Role.User,team, password)
+      users(j) = insertSingleUser(firstNameUser, lastName, s"$mailAddressUser@$mailDomain", Role.User,team, password,Map("cells_in_cortex" -> 1))
     }
     return users
   }

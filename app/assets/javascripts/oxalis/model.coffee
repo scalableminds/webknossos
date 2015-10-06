@@ -28,7 +28,7 @@ class Model
     @tracingType = $("#container").data("tracing-type")
 
     Request.send(
-      url : "/annotations/#{@tracingType}/#{@tracingId}/info"
+      url : location.pathname + "/info"
       dataType : "json"
     ).pipe (tracing) =>
 

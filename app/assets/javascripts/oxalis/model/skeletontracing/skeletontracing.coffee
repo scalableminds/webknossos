@@ -34,6 +34,7 @@ class SkeletonTracing
     @doubleBranchPop = false
 
     @data = tracing.content.contentData
+    @allowUpdate = tracing.restrictions.allowUpdate
 
     # initialize deferreds
     @finishedDeferred = new $.Deferred().resolve()
@@ -100,6 +101,14 @@ class SkeletonTracing
     )
 
 
+  # Should be called whenever the model is modified
+  # Returns whether the modification should be aborted
+  # ==> return if @handleModification()
+  handleModification : ->
+
+    return not @allowUpdate
+
+
   benchmark : (numberOfTrees = 1, numberOfNodesPerTree = 10000) ->
 
     console.log "[benchmark] start inserting #{numberOfNodesPerTree} nodes"
@@ -130,6 +139,8 @@ class SkeletonTracing
 
   pushBranch : ->
 
+    return if @handleModification()
+
     if @branchPointsAllowed
       if @activeNode
         @branchStack.push(@activeNode)
@@ -142,6 +153,8 @@ class SkeletonTracing
 
 
   popBranch : ->
+
+    return if @handleModification()
 
     deferred = new $.Deferred()
     if @branchPointsAllowed
@@ -176,6 +189,8 @@ class SkeletonTracing
 
   deleteBranch : (node) ->
 
+    return if @handleModification()
+
     if node.type != @TYPE_BRANCH then return
 
     i = 0
@@ -202,6 +217,8 @@ class SkeletonTracing
 
 
   addNode : (position, type, viewport, resolution, centered = true) ->
+
+    return if @handleModification()
 
     if @ensureDirection(position)
 
@@ -332,6 +349,8 @@ class SkeletonTracing
 
   setActiveNodeRadius : (radius) ->
 
+    return if @handleModification()
+
     if @activeNode?
       @activeNode.radius = Math.min( @MAX_RADIUS,
                             Math.max( @MIN_RADIUS, radius ) )
@@ -340,6 +359,8 @@ class SkeletonTracing
 
 
   setComment : (commentText) ->
+
+    return if @handleModification()
 
     if @activeNode
       # remove any existing comments for that node
@@ -363,6 +384,8 @@ class SkeletonTracing
 
 
   deleteComment : (nodeID) ->
+
+    return if @handleModification()
 
     for i in [0...@comments.length]
       if(@comments[i].node.id == nodeID)
@@ -444,6 +467,8 @@ class SkeletonTracing
 
   shuffleTreeColor : (tree) ->
 
+    return if @handleModification()
+
     tree = @activeTree unless tree
     tree.color = @getNewTreeColor()
 
@@ -454,11 +479,15 @@ class SkeletonTracing
 
   shuffleAllTreeColors : ->
 
+    return if @handleModification()
+
     for tree in @trees
       @shuffleTreeColor(tree)
 
 
   createNewTree : ->
+
+    return if @handleModification()
 
     tree = new TraceTree(
       @treeIdCount++,
@@ -475,6 +504,8 @@ class SkeletonTracing
 
 
   deleteActiveNode : ->
+
+    return if @handleModification()
 
     unless @activeNode
       return
@@ -531,6 +562,8 @@ class SkeletonTracing
 
   deleteTree : (notify, id, deleteBranchesAndComments, notifyServer) ->
 
+    return if @handleModification()
+
     if notify
       if confirm("Do you really want to delete the whole tree?")
         @reallyDeleteTree(id, deleteBranchesAndComments, notifyServer)
@@ -541,6 +574,8 @@ class SkeletonTracing
 
 
   reallyDeleteTree : (id, deleteBranchesAndComments = true, notifyServer = true) ->
+
+    return if @handleModification()
 
     unless id
       id = @activeTree.treeId
@@ -571,6 +606,8 @@ class SkeletonTracing
 
 
   mergeTree : (lastNode, lastTree) ->
+
+    return if @handleModification()
 
     unless lastNode
       return

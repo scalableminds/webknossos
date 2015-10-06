@@ -44,15 +44,17 @@ object AnnotationController extends Controller with Secured with TracingInformat
   def annotationJson(user: User, annotation: AnnotationLike)(implicit ctx: DBAccessContext): Fox[JsObject] =
     AnnotationLike.annotationLikeInfoWrites(annotation, Some(user), Nil)
 
-  def info(typ: String, id: String) = UserAwareAction.async { implicit request =>
+  def info(typ: String, id: String, readOnly: Boolean = false) = UserAwareAction.async { implicit request =>
       val annotationId = AnnotationIdentifier(typ, id)
-      respondWithTracingInformation(annotationId).map { js =>
+      respondWithTracingInformation(annotationId, readOnly).map { js =>
           request.userOpt.map { user =>
               UsedAnnotationDAO.use(user, annotationId)
           }
           Ok(js)
       }
   }
+
+  def infoReadOnly(typ: String, id: String) = info(typ, id, true)
 
   def merge(typ: String, id: String, mergedTyp: String, mergedId: String, readOnly: Boolean) = Authenticated.async { implicit request =>
     withMergedAnnotation(typ, id, mergedId, mergedTyp, readOnly) { annotation =>
@@ -79,13 +81,20 @@ object AnnotationController extends Controller with Secured with TracingInformat
       }
   }
 
-  def trace(typ: String, id: String) = Authenticated.async { implicit request =>
+  def trace(typ: String, id: String, readOnly: Boolean = false) = Authenticated.async { implicit request =>
       withAnnotation(AnnotationIdentifier(typ, id)) { annotation =>
           for {
             _ <- annotation.restrictions.allowAccess(request.user).failIfFalse(Messages("notAllowed")).toFox ~> 400
-          } yield Ok(htmlForAnnotation(annotation))
+          } yield {
+            if(readOnly)
+              Ok(htmlForAnnotation(annotation.makeReadOnly))
+            else
+              Ok(htmlForAnnotation(annotation))
+          }
       }
   }
+
+  def traceReadOnly(typ: String, id: String) = trace(typ, id, true)
 
   def reset(typ: String, id: String) = Authenticated.async { implicit request =>
     withAnnotation(AnnotationIdentifier(typ, id)) { annotation =>

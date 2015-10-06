@@ -50,6 +50,10 @@ case class TemporaryAnnotation(
     Fox.successful(temp)
   }
 
+  def makeReadOnly: AnnotationLike = {
+    this.copy(restrictions = AnnotationRestrictions.readonlyAnnotation())
+  }
+
   def saveToDB(implicit ctx: DBAccessContext): Fox[Annotation] = {
     for{
       c <- content

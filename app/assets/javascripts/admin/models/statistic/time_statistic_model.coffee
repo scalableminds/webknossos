@@ -10,26 +10,27 @@ class TimeStatisticModel extends Backbone.Model
 
   initialize : ->
 
-    @listenTo(@, "sync", =>
-      times = @get("tracingTimes")
-      @set("tracingTimes", new Backbone.Collection(times))
+    # set defaults
+    @set("tracingTimes", new Backbone.Collection([{
+      start : moment().startOf("week"),
+      end : moment().endOf("week"),
+      tracingTime : 0}])
     )
+
 
   parse : (response) ->
 
-    if _.isEmpty(response.tracingTimes)
-      response.tracingTimes.push(
-        start : moment().startOf("week")
-        end : moment().endOf("week")
-        tracingTime : 0
-      )
-    else
-      # deliberately ignore the last aka current month, since the data is not
-      # yet complete
-      response.tracingTimes = _.chain(response.tracingTimes)
+    # deliberately ignore the last aka current month, since the data is not
+    # yet complete
+    timings = response.tracingTimes
+    if timings.length > 1
+
+      timings = _.chain(response.tracingTimes)
         .sortBy((timeEntry) -> return timeEntry.start)
         .slice(0, -1)
         .value()
+
+    response.tracingTimes = new Backbone.Collection(timings)
 
     return response
 

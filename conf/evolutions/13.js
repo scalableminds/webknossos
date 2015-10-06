@@ -4,9 +4,9 @@
 db.skeletons.find().forEach(function(elem){
     modes = elem.settings.allowedModes;
     if(~modes.indexOf("arbitrary"))
-      elem.settings.allowedModes = [];
-    else
       elem.settings.allowedModes = ["oblique", "spherical"];
+    else
+      elem.settings.allowedModes = [];
     db.skeletons.save(elem);
 })
 

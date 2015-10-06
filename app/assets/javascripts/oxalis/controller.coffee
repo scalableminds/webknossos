@@ -1,6 +1,7 @@
 ### define
 jquery : $
 underscore : _
+stats : Stats
 ./controller/viewmodes/plane_controller : PlaneController
 ./controller/annotations/skeletontracing_controller : SkeletonTracingController
 ./controller/annotations/volumetracing_controller : VolumeTracingController
@@ -13,12 +14,13 @@ underscore : _
 ./view : View
 ./view/skeletontracing/skeletontracing_view : SkeletonTracingView
 ./view/volumetracing/volumetracing_view : VolumeTracingView
+./view/gui : Gui
+./view/share_modal_view : ShareModalView
+./constants : constants
 ../libs/event_mixin : EventMixin
 ../libs/input : Input
-./view/gui : Gui
 ../libs/toast : Toast
-./constants : constants
-stats : Stats
+
 ###
 
 class Controller
@@ -277,6 +279,18 @@ class Controller
   initUIElements : ->
 
     @initAddScriptModal()
+
+    $("#share-button").on "click", (event) =>
+
+      # save the progress
+      model = @model.skeletonTracing || @model.volumeTracing
+      model.stateLogger.pushImpl()
+
+      modalView = new ShareModalView(_model : @model)
+      el = modalView.render().el
+      $("#merge-modal").html(el)
+      modalView.show()
+
 
 
   initAddScriptModal : ->

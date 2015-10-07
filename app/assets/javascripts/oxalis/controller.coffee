@@ -90,12 +90,12 @@ class Controller
 
       for allowedMode in tracing.content.settings.allowedModes
         @allowedModes.push switch allowedMode
-          when "oxalis" then constants.MODE_PLANE_TRACING
-          when "arbitrary" then constants.MODE_ARBITRARY
+          when "flight" then constants.MODE_ARBITRARY
+          when "oblique" then constants.MODE_ARBITRARY_PLANE
           when "volume" then constants.MODE_VOLUME
 
-      if constants.MODE_ARBITRARY in @allowedModes
-        @allowedModes.push(constants.MODE_ARBITRARY_PLANE)
+      # Plane tracing mode is always allowed
+      @allowedModes.push(constants.MODE_PLANE_TRACING)
 
       # FPS stats
       stats = new Stats()

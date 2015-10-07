@@ -53,7 +53,8 @@ object TemporarySkeletonTracingService extends AnnotationContentService {
         tracing.editPosition,
         tracing.zoomLevel,
         tracing.boundingBox,
-        tracing.comments)
+        tracing.comments,
+        tracing.settings)
     }
   }
 

@@ -16,7 +16,7 @@
             }, 'class -> "form-control")
 
             <div class="form-group">
-              <label class="col-sm-3 control-label" for="zipFile">@Messages("dataSetFile")</label>
+              <label class="col-sm-3 control-label" for="zipFile">@Messages("dataSet.file")</label>
               <div class="col-sm-9">
                 <div class="input-group">
                   <span class="input-group-btn">
@@ -26,6 +26,9 @@
                   </span>
                   <input type="text" class="file-info form-control" readonly="">
                 </div>
+                @form.error("zipFile").map { error =>
+                    <span class="help-block errors">@error.message</span>
+                }
               </div>
             </div>
 

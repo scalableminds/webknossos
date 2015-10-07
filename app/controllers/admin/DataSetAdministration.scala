@@ -36,7 +36,7 @@ import play.api.libs.json.JsObject
 import play.api.libs.json._
 import play.api.libs.functional.syntax._
 
-import net.liftweb.common.{Empty, Failure, Full}
+import net.liftweb.common.{Empty, Failure, Full, ParamFailure}
 import com.scalableminds.util.tools.Fox
 import play.api.mvc.SimpleResult
 import play.api.mvc.Request
@@ -47,33 +47,47 @@ import models.user.time.{TimeSpan, TimeSpanService}
 
 object DataSetAdministration extends AdminController {
 
-  val uploadForm = Form(
+  def uploadForm(name: String, team: String) = Form(
     tuple(
       "name" -> nonEmptyText.verifying("dataSet.name.invalid",
-        n => n.matches("[A-Za-z0-9][A-Za-z0-9_-]*")),
+        n => n.matches("[A-Za-z0-9_]*")),
       "team" -> nonEmptyText
-    )).fill(("", ""))
+    )).fill((name, team))
+
+  val emptyForm = uploadForm("", "")
 
   def dataSetUploadHTML(form: Form[(String, String)])(implicit request: AuthenticatedRequest[_]) =
     html.admin.dataset.datasetUpload(request.user.adminTeamNames, form)
 
   def upload = Authenticated { implicit request =>
-    Ok(dataSetUploadHTML(uploadForm))
+    Ok(dataSetUploadHTML(emptyForm))
   }
 
   def uploadFromForm = Authenticated.async(parse.multipartFormData) { implicit request =>
-    uploadForm.bindFromRequest.fold(
+    emptyForm.bindFromRequest.fold(
       hasErrors = (formWithErrors => Future.successful(BadRequest(dataSetUploadHTML(formWithErrors)))),
       success = {
         case (name, team) =>
-          for {
-            zipFile <- request.body.file("zipFile").toFox ?~> Messages("zip.file.notFound")
-            _ <- ensureTeamAdministration(request.user, team).toFox
-            _ <- ensureNewDataSetName(name)
+          (for {
+            _ <- ensureNewDataSetName(name) ~> ("name" -> Messages("dataSet.name.alreadyTaken"))
+            _ <- ensureTeamAdministration(request.user, team).toFox ~> ("team" -> Messages("team.admin.notAllowed", team))
+            zipFile <- request.body.file("zipFile").toFox ~> ("zipFile" -> Messages("zip.file.notFound"))
+            _ <- DataStoreHandler.uploadDataSource(name, team, zipFile.ref.file)
           } yield {
-            DataStoreHandler.uploadDataSource(name, team, zipFile.ref.file)
             Redirect(controllers.routes.UserController.empty).flashing(
-              FlashSuccess(Messages("dataSet.uploadSuccess")))
+              FlashSuccess(Messages("dataSet.upload.success")))
+          }).futureBox.map {
+            case Full(r) => r
+            case Empty =>
+              Redirect(controllers.routes.UserController.empty).flashing(
+              //BadRequest(dataSetUploadHTML(uploadForm(name, team))).flashing(
+                FlashError(Messages("error.unknown")))
+            case error: ParamFailure[(String, String)] =>
+              BadRequest(dataSetUploadHTML(uploadForm(name, team).withError(error.param._1, error.param._2)))
+            case Failure(error,_,_) =>
+              Redirect(controllers.routes.UserController.empty).flashing(
+              //BadRequest(dataSetUploadHTML(uploadForm(name, team))).flashing(
+                FlashError(error))
           }
       })
   }

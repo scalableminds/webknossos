@@ -81,7 +81,7 @@ object DataSetAdministration extends AdminController {
             case Empty =>
               Redirect(controllers.routes.UserController.empty).flashing(
               //BadRequest(dataSetUploadHTML(uploadForm(name, team))).flashing(
-                FlashError(Messages("error.unknown")))
+                FlashError(Messages("dataStore.notConnected")))
             case error: ParamFailure[(String, String)] =>
               BadRequest(dataSetUploadHTML(uploadForm(name, team).withError(error.param._1, error.param._2)))
             case Failure(error,_,_) =>

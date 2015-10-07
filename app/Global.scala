@@ -184,7 +184,8 @@ class InitialData(conf: Configuration) extends GlobalDBAccess {
     val firstName = "Admin " + teamNumber.toString()
     val mailAddress = "admin" + teamNumber.toString()
     val mailDomain = "webknossos.org"
-    val password = r.nextPrintableChar() + r.nextPrintableChar() + r.nextPrintableChar() + r.nextPrintableChar() + r.nextPrintableChar() //Sorryy
+    val passwords=["guywx","xaupd","ajsbp","crhkd","npfyf"]
+    val password = passwords(teamNumber-1)
     if(shouldInsertSCMBoy) {
       users(0) = insertSingleUser("SCM", "Boy", "scmboy@scalableminds.com", Role.Admin,DefaultTeam, "secret")
     } else {

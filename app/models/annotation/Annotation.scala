@@ -33,7 +33,8 @@ case class Annotation(
                        version: Int = 0,
                        _name: Option[String] = None,
                        created : Long = System.currentTimeMillis,
-                       _id: BSONObjectID = BSONObjectID.generate
+                       _id: BSONObjectID = BSONObjectID.generate,
+                       readOnly: Option[Boolean] = None
                      )
 
   extends AnnotationLike with FoxImplicits {
@@ -52,7 +53,10 @@ case class Annotation(
 
   val contentType = _content.contentType
 
-  val restrictions = AnnotationRestrictions.defaultAnnotationRestrictions(this)
+  val restrictions = if(readOnly.getOrElse(false))
+      AnnotationRestrictions.readonlyAnnotation()
+    else
+      AnnotationRestrictions.defaultAnnotationRestrictions(this)
 
   def relativeDownloadUrl = Some(Annotation.relativeDownloadUrlOf(typ, id))
 
@@ -79,6 +83,10 @@ case class Annotation(
         if(keepId) this.id else BSONObjectID.generate.stringify,
         contentDuplicate)
     }
+  }
+
+  def makeReadOnly: AnnotationLike = {
+    this.copy(readOnly = Some(true))
   }
 
   def saveToDB(implicit ctx: DBAccessContext): Fox[Annotation] = {

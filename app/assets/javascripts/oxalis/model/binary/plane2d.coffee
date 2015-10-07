@@ -302,16 +302,17 @@ class Plane2D
     map = new Array(@MAP_SIZE)
     map[0] = undefined
 
-    for i in [Math.min(@cube.LOOKUP_DEPTH_UP, @cube.ZOOM_STEP_COUNT - zoomStep - 1)...0]
+    if zoomStep < @cube.ZOOM_STEP_COUNT
+      for i in [Math.min(@cube.LOOKUP_DEPTH_UP, @cube.ZOOM_STEP_COUNT - zoomStep - 1)...0]
 
-      bucket = [
-        bucket_x >> i
-        bucket_y >> i
-        bucket_z >> i
-        zoomStep + i
-      ]
+        bucket = [
+          bucket_x >> i
+          bucket_y >> i
+          bucket_z >> i
+          zoomStep + i
+        ]
 
-      map[0] = bucket if @cube.isBucketLoadedByZoomedAddress(bucket)
+        map[0] = bucket if @cube.isBucketLoadedByZoomedAddress(bucket)
 
     if zoomStep and @enhanceRenderMap(map, 0, [bucket_x, bucket_y, bucket_z, zoomStep], map[0], @cube.LOOKUP_DEPTH_DOWN)
 

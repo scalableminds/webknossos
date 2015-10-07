@@ -5,7 +5,6 @@ libs/toast : Toast
 ../modal : modal
 ../../view : View
 ../merge_modal_view : MergeModalView
-../share_modal_view : ShareModalView
 ../../constants: constants
 ###
 
@@ -121,9 +120,6 @@ class SkeletonTracingView extends View
     $("a[href=#tab-trees]").on "shown", (event) =>
       @updateActiveTree()
 
-    $("#share-button").on "click", (event) =>
-      @showShareModal()
-
     $("#merge-button").on "click", (event) =>
       @showMergeModal()
 
@@ -154,12 +150,6 @@ class SkeletonTracingView extends View
     $("#merge-modal").html(el)
     modalView.show()
 
-  showShareModal : ->
-
-    modalView = new ShareModalView(_model : @model)
-    el = modalView.render().el
-    $("#merge-modal").html(el)
-    modalView.show()
 
   updateComments : ->
 

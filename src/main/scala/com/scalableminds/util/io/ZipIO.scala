@@ -52,7 +52,7 @@ object ZipIO {
 
   def gzip(source: InputStream, out: OutputStream) = {
     val t = System.currentTimeMillis()
-    val gout = new GZIPOutputStream(out, Deflater.BEST_COMPRESSION);
+    val gout = new GZIPOutputStream(out, Deflater.BEST_COMPRESSION)
     var buffer = new Array[Byte](1024)
     var len = 0
     do {
@@ -96,5 +96,5 @@ object ZipIO {
       .filter(e => !e.isDirectory())
       .map(entry => (entry.getName(), zip.getInputStream(entry)))
       .toList
-  }  
+  }
 }

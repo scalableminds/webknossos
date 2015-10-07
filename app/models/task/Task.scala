@@ -91,6 +91,7 @@ object Task extends FoxImplicits {
       boundingBox <- task.annotationBase.flatMap(_.content.map(_.boundingBox)) getOrElse None
       status <- task.status
       taskType <- task.taskType.futureBox
+      ttJson <- Future.traverse(taskType.toOption.toSeq)(TaskType.transformToJson)
       projectName = task._project.getOrElse("")
     } yield {
       Json.obj(
@@ -98,7 +99,7 @@ object Task extends FoxImplicits {
         "team" -> task.team,
         "formattedHash" -> Formatter.formatHash(task.id),
         "projectName" -> projectName,
-        "type" -> taskType.toOption.map(TaskType.publicTaskTypeWrites.writes),
+        "type" -> ttJson.headOption,
         "dataSet" -> dataSetName,
         "editPosition" -> editPosition,
         "boundingBox" -> boundingBox,

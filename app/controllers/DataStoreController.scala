@@ -3,6 +3,10 @@
  */
 package controllers
 
+import org.apache.commons.io.FilenameUtils
+import org.apache.commons.codec.binary.Base64
+import org.apache.commons.io.FileUtils
+import java.io.File
 import akka.agent.Agent
 import play.api.mvc._
 import play.api.libs.json.{JsError, JsSuccess, Json, JsValue}
@@ -67,6 +71,24 @@ object DataStoreHandler extends DataStoreBackChannelHandler{
       dataStore =>
         val call = RESTCall("POST", s"/data/datasets/${dataSet.name}/import", Map.empty, Map.empty, Json.obj())
         dataStore.request(call)
+    }
+  }
+
+  def uploadDataSource(name: String, team: String, zipFile: File) = {
+    Logger.debug("Upload called for: " + name)
+    findByServer("localhost").toFox.flatMap {
+      dataStore =>
+        val fileExtension = FilenameUtils.getExtension(zipFile.getName())
+        val contentType = play.api.libs.MimeTypes.forExtension(fileExtension).getOrElse(play.api.http.ContentTypes.BINARY)
+        val upload = DataSourceUpload(name, team, contentType, Base64.encodeBase64String(FileUtils.readFileToByteArray(zipFile)))
+        val call = RESTCall("POST", s"/data/datasets/upload", Map.empty, Map.empty, Json.toJson(upload))
+        dataStore.request(call).flatMap{
+          response =>
+            (response.body \ "error").asOpt[String] match {
+              case Some(error) => Failure(error)
+              case _ => Full(Unit)
+            }
+        }
     }
   }
 }

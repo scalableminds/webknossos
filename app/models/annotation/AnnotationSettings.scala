@@ -13,10 +13,10 @@ case class AnnotationSettings(allowedModes: List[String] = SKELETON_MODES,
 
 object AnnotationSettings {
   val OBLIQUE = "oblique"
-  val SPHERICAL = "spherical"
+  val FLIGHT = "flight"
   val VOLUME = "volume"
 
-  val SKELETON_MODES = List(OBLIQUE, SPHERICAL)
+  val SKELETON_MODES = List(OBLIQUE, FLIGHT)
   val VOLUME_MODES = List(VOLUME)
 
   val default = AnnotationSettings()

@@ -90,7 +90,7 @@ class Controller
 
       for allowedMode in tracing.content.settings.allowedModes
         @allowedModes.push switch allowedMode
-          when "spherical" then constants.MODE_ARBITRARY
+          when "flight" then constants.MODE_ARBITRARY
           when "oblique" then constants.MODE_ARBITRARY_PLANE
           when "volume" then constants.MODE_VOLUME
 

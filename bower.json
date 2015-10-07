@@ -17,7 +17,7 @@
     "jquery-mousewheel": "~3.1.9",
     "gamepad.js": "*",
     "tweenjs": "r6",
-    "zlib": "git@github.com:imaya/zlib.js.git#0.2.0",
+    "zlib": "git://github.com/imaya/zlib.js.git#0.2.0",
     "backbone.paginator": "~0.8.1",
     "backbone.subviews": "https://raw.github.com/scalableminds/backbone.subviews/master/backbone.subviews.js",
     "backbone-deep-model": "~0.10.4",

@@ -82,7 +82,7 @@ gulp.task("combine:scripts:production", ->
 
 gulp.task("install:bower", ->
   return gulp.src("bower.json")
-    .pipe(exec("\"#{path.join(process.cwd(), "node_modules", ".bin", "bower")}\" install"))
+    .pipe(exec("\"#{path.join(process.cwd(), "node_modules", ".bin", "bower")}\" install --allow-root"))
 )
 
 gulp.task("clean:tmp", ->
@@ -127,4 +127,4 @@ gulp.task("debug", (callback) ->
 
 gulp.task("default", ["build"])
 
-fs.writeFile("target/gulp.pid", process.pid)
+fs.writeFile("target/gulp.pid", process.pid, ->)

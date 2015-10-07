@@ -81,6 +81,8 @@ dataSet.import.inProgress=Dataset import is in progress
 dataSet.import.notStarted=Dataset import couldn''t be started
 dataSet.upload.success=Dataset successfully uploaded
 
+dataStore.notConnected=Datastore not connected. Please try again in a few minutes.
+
 zip.file.notFound=No or invalid ZIP file specified
 zip.file.invalid=Uploaded ZIP file invalid or corrupted
 

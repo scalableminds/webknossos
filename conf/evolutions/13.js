@@ -4,7 +4,7 @@
 db.skeletons.find().forEach(function(elem){
     modes = elem.settings.allowedModes;
     if(~modes.indexOf("arbitrary"))
-      elem.settings.allowedModes = ["oblique", "spherical"];
+      elem.settings.allowedModes = ["oblique", "flight"];
     else
       elem.settings.allowedModes = [];
     db.skeletons.save(elem);
@@ -13,7 +13,7 @@ db.skeletons.find().forEach(function(elem){
 // --- !Downs
 db.skeletons.find().forEach(function(elem){
     modes = elem.settings.allowedModes;
-    if((~modes.indexOf("oblique")) || (~modes.indexOf("spherical")))
+    if((~modes.indexOf("oblique")) || (~modes.indexOf("flight")))
       elem.settings.allowedModes = ["oxalis", "arbitrary"];
     else
       elem.settings.allowedModes = ["oxalis"];

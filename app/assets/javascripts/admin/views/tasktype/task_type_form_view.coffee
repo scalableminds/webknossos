@@ -47,7 +47,7 @@ class TaskTypeFormView extends Backbone.Marionette.LayoutView
             </div>
 
             <div class="col-sm-6 form-group pull-right">
-              <label class="col-sm-10 control-label" for="sphericalAllowed">Allow Spherical Mode</label>
+              <label class="col-sm-10 control-label" for="sphericalAllowed">Allow Flight Mode</label>
               <div class="col-sm-2">
                 <input type="checkbox" id="sphericalAllowed" name="allowedModes[]" value="spherical" checked>
                 <span></span>

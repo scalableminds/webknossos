@@ -3,15 +3,15 @@
 */
 package com.scalableminds.util.reactivemongo
 
+import play.api.libs.iteratee.Enumerator
 import scala.concurrent.Future
 import reactivemongo.core.commands.{Update, Count, FindAndModify, LastError}
 import play.api.libs.json.{JsValue, JsObject, Json}
 import reactivemongo.bson.BSONDocument
 import scala.concurrent.ExecutionContext.Implicits._
-import reactivemongo.api.DefaultDB
+import reactivemongo.api.bulk
 import play.modules.reactivemongo.json.BSONFormats.BSONDocumentFormat
 import net.liftweb.common.{Empty, Failure}
-import reactivemongo.core.errors.GenericDatabaseException
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.util.reactivemongo.AccessRestrictions.{DenyEveryone, AllowIf}
 
@@ -40,6 +40,21 @@ trait SecuredCollection[T] extends AbstractCollection[T] with DBInteractionLogge
     }
   }
 
+  def bulkInsert(enumerator: Enumerator[JsObject], bulkSize: Int, bulkByteSize: Int)(implicit ctx: DBAccessContext): Fox[Int] = {
+    if (ctx.globalAccess || AccessDefinitions.isAllowedToInsert) {
+      withExceptionCatcher {
+        val future = underlying.bulkInsert(enumerator.map(el => el ++ AccessDefinitions.createACL(el)), bulkSize, bulkByteSize)
+        future.onFailure {
+          case e: Throwable =>
+            logger.error(s"Failed to bulkInsert Objects into mongo.", e)
+        }
+        future
+      }
+    } else {
+      AccessDeniedError
+    }
+  }
+  
   def find(query: JsObject = Json.obj())(implicit ctx: DBAccessContext) = {
     AccessDefinitions.findQueryFilter match {
       case _ if ctx.globalAccess =>

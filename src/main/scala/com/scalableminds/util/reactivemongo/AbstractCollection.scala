@@ -3,7 +3,9 @@
  */
 package com.scalableminds.util.reactivemongo
 
+import play.api.libs.iteratee.Enumerator
 import play.api.libs.json.{Json, JsObject}
+import reactivemongo.api.bulk
 import reactivemongo.core.commands.LastError
 import reactivemongo.api.collections.GenericQueryBuilder
 import reactivemongo.bson.BSONDocument
@@ -11,6 +13,8 @@ import com.scalableminds.util.tools.Fox
 
 trait AbstractCollection[T]{
   def insert(t: JsObject)(implicit ctx: DBAccessContext): Fox[LastError]
+
+  def bulkInsert(enumerator: Enumerator[JsObject], bulkSize: Int, bulkByteSize: Int)(implicit ctx: DBAccessContext): Fox[Int]
 
   def findOne(query: JsObject = Json.obj())(implicit ctx: DBAccessContext): Fox[T]
 

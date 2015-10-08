@@ -1,6 +1,7 @@
 ### define
 jquery : $
 underscore : _
+mjs : MJS
 libs/event_mixin : EventMixin
 libs/request : Request
 libs/input : Input
@@ -357,7 +358,7 @@ class ArbitraryController
       lastNodeMatrix[13] - matrix[13]
       lastNodeMatrix[14] - matrix[14]
     ]
-    vectorLength = V3.length(vector)
+    vectorLength = MJS.V3.length(vector)
 
     if vectorLength > 10
       @setWaypoint()

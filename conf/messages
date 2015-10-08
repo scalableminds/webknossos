@@ -1,6 +1,7 @@
 error.email=Please supply a valid email address
 error.required=Please supply all needed values
 error.minLength=Please use at least 3 characters.
+error.unknown=Unknown error
 
 notAllowed=You are not allowed to view this resource
 
@@ -11,6 +12,7 @@ binary.data.notSaved=Couldn''t save the data
 
 email=Email
 team=Team
+name=Name
 password=Password
 password_old=Old password
 password.main=Password
@@ -68,12 +70,21 @@ braintracing.error=We couldn''t atomatically create an account for you on braint
 braintracing.exists=Great, you already have an account on braintracing.org. Please double check that you have uploaded all requested information.
 
 dataSet=Dataset
+dataSet.file=Dataset ZIP File
 dataSet.notFound=Selected data set doesn''t exist
 dataSet.notSupplied=No data set supplied
+dataSet.name.invalid=A dataset name can only contain letters, digits and underscores
+dataSet.name.alreadyTaken=This dataset name is already in use.
 dataSet.source.notFound=The data source for the data source couldn''t be found
 dataSet.import.failed=Failed to import the dataset
 dataSet.import.inProgress=Dataset import is in progress
 dataSet.import.notStarted=Dataset import couldn''t be started
+dataSet.upload.success=Dataset successfully uploaded
+
+dataStore.notAvailable=Datastore not available. Please try again in a few minutes.
+
+zip.file.notFound=No or invalid ZIP file specified
+zip.file.invalid=Uploaded ZIP file invalid or corrupted
 
 dataLayer.notFound=DataLayer not found
 dataLayer.forbidden=Access to this layer is not allowed.

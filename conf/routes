@@ -106,6 +106,10 @@ GET           /annotations/:typ/:id/saveMerged                                co
 GET           /admin/nml/upload                                               controllers.admin.NMLIO.uploadForm
 POST          /admin/nml/upload                                               controllers.admin.NMLIO.upload
 
+# Admin datasets
+GET           /admin/datasets/upload                                          controllers.DataSetController.upload
+POST          /admin/datasets/upload                                          controllers.DataSetController.uploadFromForm
+
 # Admin Tasks
 GET           /api/tasks                                                      controllers.TaskController.list
 DELETE        /api/tasks/:id                                                  controllers.admin.TaskAdministration.delete(id: String)

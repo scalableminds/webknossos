@@ -66,11 +66,10 @@ class FileDataStore extends DataStore {
   def save(dataSetDir: Path, dataSetId: String, resolution: Int, block: Point3D, data: Array[Byte]): Future[Unit] = {
     Future {
       val path = knossosFilePath(dataSetDir, dataSetId, resolution, block)
-      logger.info(s"Attempting write to: ${path.path}")
+      logger.info(s"Attempting write to: $path")
       try {
         PathUtils.parent(path.toAbsolutePath).map(p => Files.createDirectories(p))
-        path.toAbsolute.parent.map(_.createDirectory(failIfExists = false))
-        logger.info(s"Attempting write to: ${path.path}")
+        logger.info(s"Attempting write to: $path")
         val binaryStream = Files.newOutputStream(path)
         logger.info("Created FileOutputStream")
         byteArrayToOutputStream(binaryStream, data)

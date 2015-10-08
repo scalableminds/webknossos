@@ -60,7 +60,6 @@ class DashboardModel extends Backbone.Model
 
     return @getTasksFiltered(false)
 
-<<<<<<< HEAD
 
   getAnnotations : ->
     @get("allAnnotations")
@@ -71,8 +70,6 @@ class DashboardModel extends Backbone.Model
     collection.sortBy("created")
     collection.add(@get(name))
     @set(name, collection)
-=======
->>>>>>> master
 
 
   transformToCollection : ->

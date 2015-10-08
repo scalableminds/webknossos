@@ -53,11 +53,6 @@ class ShareModalView extends Backbone.Marionette.ItemView
     "click input" : "copyUrl"
 
 
-  initialize : (options) ->
-
-    @_model = options._model
-
-
   show : ->
 
     @$el.modal("show")

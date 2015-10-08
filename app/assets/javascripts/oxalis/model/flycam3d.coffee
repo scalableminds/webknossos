@@ -1,7 +1,6 @@
 ### define
 underscore : _
 three : THREE
-libs/event_mixin : EventMixin
 mjs : MJS
 ###
 

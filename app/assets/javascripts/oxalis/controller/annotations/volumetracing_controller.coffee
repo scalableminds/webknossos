@@ -23,10 +23,7 @@ class VolumeTracingController
   constructor : ( @model, @sceneController, @volumeTracingView ) ->
 
     @inDeleteMode = false
-<<<<<<< HEAD
     @controlMode = Constants.VOLUME_MODE_MOVE
-=======
->>>>>>> master
 
     _.extend(@, Backbone.Events)
     @listenTo(app.vent, "changeVolumeMode", @setControlMode)
@@ -40,26 +37,6 @@ class VolumeTracingController
       "w" : => @toggleControlMode()
       "1" : => @toggleControlMode()
     )
-
-<<<<<<< HEAD
-=======
-    $('#trace-download-button').hide()
-
-    # Control mode
-    @controlModeMapping =
-      "control-mode-move" : @CONTROL_MODE_MOVE
-      "control-mode-trace" : @CONTROL_MODE_TRACE
-
-    for control of @controlModeMapping
-
-      do (control) =>
-        $("#" + control).on "click", =>
-          @setControlMode(@controlModeMapping[control])
-
-    @setControlMode(@CONTROL_MODE_TRACE)
->>>>>>> master
-
-    # Merging
 
     # no merging for now
     $("#btn-merge").hide()

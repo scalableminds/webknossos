@@ -20,10 +20,6 @@ class AbstractPlaneMaterialFactory extends AbstractMaterialFactory
 
     super()
 
-    settings = @model.user.getOrCreateBrightnessContrastColorSettings(
-      @model
-    )
-
     for binary in @model.getColorBinaries()
       name = @sanitizeName(binary.name)
       @uniforms[name + "_brightness"] =

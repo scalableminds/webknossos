@@ -39,7 +39,6 @@ class ExplorativeTracingListItemView extends Backbone.Marionette.ItemView
     <td><%= contentType + " - " + typ %></td>
     <td><%= created %></td>
     <td class="nowrap">
-<<<<<<< HEAD
       <% if (typ == "Explorational"){ %>
         <% if (!state.isFinished) {%>
           <a href="<%= jsRoutes.controllers.AnnotationController.trace(typ, id).url %>">
@@ -62,23 +61,6 @@ class ExplorativeTracingListItemView extends Backbone.Marionette.ItemView
             reopen
           </a><br />
         <% } %>
-=======
-      <a href="<%= jsRoutes.controllers.AnnotationController.trace(typ, id).url %>">
-        <i class="fa fa-random"></i>
-        <strong>trace</strong>
-      </a><br />
-      <% if (contentType == "skeletonTracing") { %>
-      <a href="<%= jsRoutes.controllers.AnnotationController.download(typ, id).url %>">
-        <i class="fa fa-download"></i>
-        download
-      </a><br />
-      <% } if (typ == "Explorational"){ %>
-        <a href="<%= jsRoutes.controllers.AnnotationController.finish(typ, id).url %>"
-           id="finish-tracing">
-          <i class="fa fa-trash-o"></i>
-          delete
-        </a>
->>>>>>> master
       <% } %>
     </td>
   """)

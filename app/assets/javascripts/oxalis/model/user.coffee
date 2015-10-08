@@ -26,31 +26,6 @@ class User extends Backbone.Model
     return if @get("inverseY") then 1 else -1
 
 
-  getOrCreateBrightnessContrastColorSettings : (model) ->
-
-    settings = @get("brightnessContrastColorSettings")
-    datasetSettings = settings[model.datasetPostfix] || {}
-
-    for binary in model.getColorBinaries()
-      datasetSettings[binary.name] = datasetSettings[binary.name] || {}
-      _.defaults(datasetSettings[binary.name], settings.default)
-
-    settings[model.datasetPostfix] = datasetSettings
-
-
-  resetBrightnessContrastColorSettings : (model) ->
-
-    Request.send(
-      url : "/user/configuration/default"
-      dataType : "json"
-    ).then (defaultData) =>
-
-      @get("brightnessContrastColorSettings")[model.datasetPostfix] =
-        defaultData.brightnessContrastColorSettings[model.datasetPostfix]
-
-      @getOrCreateBrightnessContrastColorSettings(model)
-
-
   triggerAll : ->
 
     for property of @attributes

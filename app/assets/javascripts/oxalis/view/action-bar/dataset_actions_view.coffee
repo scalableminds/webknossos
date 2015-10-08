@@ -23,6 +23,7 @@ class DatasetActionsView extends Backbone.Marionette.ItemView
       <% if(tracing.restrictions.allowDownload || ! tracing.downloadUrl) { %>
         <a class="btn btn-default" id="trace-download-button"><i class="fa fa-download"></i>Download</a>
       <% } %>
+      <button class="btn btn-default" id="trace-share-button"><i class="fa fa-share-alt"></i>Share</button>
       <a href="#help-modal" class="btn btn-default" data-toggle="modal"><i class="fa fa-question-circle"></i>Help</a>
     </div>
 
@@ -73,7 +74,6 @@ class DatasetActionsView extends Backbone.Marionette.ItemView
         </div>
       </div>
     </div>
-    <div class="btn btn-default" id="trace-share-button"><i class="fa fa-share-alt"></i>Share</div>
     <% if (isSkeletonMode) { %>
       <div class="btn btn-default" id="trace-merge-button"><i class="fa fa-folder-open"></i>Merge Tracing</div>
       <div class="merge-modal-wrapper"></div>
@@ -126,6 +126,10 @@ class DatasetActionsView extends Backbone.Marionette.ItemView
 
 
   shareTracing : ->
+
+      # save the progress
+      model = @model.skeletonTracing || @model.volumeTracing
+      model.stateLogger.pushImpl()
 
       modalView = new ShareModalView({@model})
       @ui.modalWrapper.html(modalView.render().el)

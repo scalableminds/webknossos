@@ -13,24 +13,21 @@ oxalis/constants : constants
 class Router extends Backbone.Router
 
   routes :
-    "users"                         : "users"
-    "teams"                         : "teams"
-    "statistics"                    : "statistics"
-    "tasks"                         : "tasks"
-    "projects"                      : "projects"
-    "annotations/:type/:id"         : "tracingView"
-    "datasets/:id/view"             : "tracingViewPublic"
-    "dashboard"                     : "dashboard"
-    "users/:id/details"             : "dashboard"
-    "taskTypes/:id/edit"            : "editTaskType"
-    "taskTypes"                     : "taskTypes"
-    "spotlight"                     : "spotlight"
-    "tasks/overview"                : "taskOverview"
-<<<<<<< HEAD
-    "admin/taskTypes"               : "hideLoading"
-=======
->>>>>>> master
-    "workload"                      : "workload"
+    "users"                             : "users"
+    "teams"                             : "teams"
+    "statistics"                        : "statistics"
+    "tasks"                             : "tasks"
+    "projects"                          : "projects"
+    "annotations/:type/:id(/readOnly)"  : "tracingView"
+    "datasets/:id/view"                 : "tracingViewPublic"
+    "dashboard"                         : "dashboard"
+    "users/:id/details"                 : "dashboard"
+    "taskTypes/:id/edit"                : "editTaskType"
+    "taskTypes"                         : "taskTypes"
+    "spotlight"                         : "spotlight"
+    "tasks/overview"                    : "taskOverview"
+    "admin/taskTypes"                   : "hideLoading"
+    "workload"                          : "workload"
 
 
   initialize : ->

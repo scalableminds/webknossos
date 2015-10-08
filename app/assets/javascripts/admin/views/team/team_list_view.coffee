@@ -44,10 +44,7 @@ class TeamListView extends Backbone.Marionette.CompositeView
 
     @listenTo(app.vent, "paginationView:filter", @filterBySearch)
     @listenTo(app.vent, "CreateTeamModal:refresh", @refreshPagination)
-<<<<<<< HEAD
-=======
     @listenTo(app.vent, "paginationView:addElement", @showModal)
->>>>>>> master
 
     @collection.fetch(
       data : "isEditable=true"

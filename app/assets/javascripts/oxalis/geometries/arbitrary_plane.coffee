@@ -77,7 +77,7 @@ class ArbitraryPlane
 
       matrix = cam.getZoomedMatrix()
 
-      newVertices = mjs.M4x4.transformPointsAffine matrix, @queryVertices
+      newVertices = MJS.M4x4.transformPointsAffine matrix, @queryVertices
       newColors = @model.getColorBinaries()[0].getByVerticesSync(newVertices)
 
       @textureMaterial.setData "color", newColors

@@ -61,7 +61,6 @@ trait PathUtils {
       Nil
 
   def listFiles(p: Path): List[Path] =
-<<<<<<< HEAD
     if (Files.isDirectory(p)) {
       val files = p.toFile.list(fileFilter)
       if(files != null) {
@@ -78,20 +77,5 @@ trait PathUtils {
     if (!Files.exists(path) || !Files.isDirectory(path))
       Files.createDirectories(path)
     path
-=======
-    if (p.isDirectory) p.children(PathMatcher.IsFile).toList
-    else Nil
-
-  def listFiles(directory: JPath): Iterator[JPath] = {
-    try {
-      val directoryStream = Files.newDirectoryStream(directory)
-
-      directoryStream.iterator().asScala
-    } catch {
-      case ex =>
-        Logger.error("Failed to list files for directory: " + directory.toAbsolutePath)
-        Iterator.empty
-    }
->>>>>>> c8bbcf8... working on hotfix for DS import
   }
 }

@@ -18,6 +18,7 @@ class Router extends Backbone.Router
     "tasks"                         : "tasks"
     "projects"                      : "projects"
     "dashboard"                     : "dashboard"
+    "datasets"                      : "dashboard"
     "users/:id/details"             : "dashboard"
     "taskTypes/:id/edit"            : "editTaskType"
     "taskTypes"                     : "taskTypes"

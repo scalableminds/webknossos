@@ -3,6 +3,8 @@
  */
 package com.scalableminds.datastore.controllers
 
+import java.nio.file.Path
+
 import net.liftweb.common.Failure
 import play.api.Logger
 import com.scalableminds.util.tools._
@@ -11,15 +13,16 @@ import com.scalableminds.util.tools.{NotStarted, Finished, InProgress, ProgressS
 import play.api.libs.json.{JsError, JsSuccess, Json, JsValue, JsString}
 import com.scalableminds.datastore.services.{DataSourceRepository, BinaryDataService}
 import play.api.libs.concurrent.Execution.Implicits._
+import play.api.mvc.Action
 import scala.concurrent.Future
 import play.api.i18n.Messages
 import com.scalableminds.datastore.DataStorePlugin
 import com.scalableminds.datastore.models.DataSourceDAO
 import com.scalableminds.braingames.binary.models.DataSourceUpload
 import java.io.{File, ByteArrayInputStream, FileOutputStream}
+import java.nio.file.Paths
 import org.apache.commons.codec.binary.Base64
 import org.apache.commons.io.FileUtils
-import scalax.file.Path
 import java.util.zip._
 import com.scalableminds.util.io.ZipIO
 import play.api.Play
@@ -84,14 +87,14 @@ object DataSourceController extends Controller {
     }
 
     while(entry != null) {
-      val path = baseDir.resolve(Path.fromString(entry.getName()))
+      val path = baseDir.resolve(entry.getName)
       if(!entry.getName().matches("[._].*")) {
         if(entry.isDirectory) {
           PathUtils.ensureDirectory(path)
         } else {
-          val out = new FileOutputStream(new File(path.path))
+          val out = new FileOutputStream(path.toFile)
 
-          var buffer = Array.fill(4096)(0.toByte)
+          val buffer = Array.fill(4096)(0.toByte)
           var bytesRead = zip.read(buffer)
           while(bytesRead != -1) {
             out.write(buffer, 0, bytesRead)
@@ -114,7 +117,7 @@ object DataSourceController extends Controller {
     implicit request =>
       request.body.validate[DataSourceUpload] match {
         case JsSuccess(upload, _) =>
-          val baseDir = Path.fromString(config.getString("braingames.binary.baseFolder")) / upload.team / upload.name
+          val baseDir = Paths.get(config.getString("braingames.binary.baseFolder")).resolve(upload.team).resolve(upload.name)
           (for {
             _ <- unzipDataSource(baseDir, upload.content).toFox ?~> Messages("zip.file.invalid")
             dataSource = DataStorePlugin.binaryDataService.dataSourceInbox.handler.dataSourceFromFolder(baseDir, upload.team)

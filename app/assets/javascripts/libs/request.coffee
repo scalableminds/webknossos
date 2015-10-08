@@ -19,19 +19,22 @@ Request =
 
       options.type = "POST" if options.type == "GET" and options.data
 
+      if options.data
+        options.data = JSON.stringify(options.data)
+        options.contentType = "application/json" unless options.contentType
+      else
+        if options.formData?
+          if options.formData instanceof FormData
+            options.data = options.formData
+          else
+            options.data = new FormData()
+            options.data.append(key, value) for key, value of options.formData
+
       xhr = new XMLHttpRequest()
       xhr.open options.type, options.url, true
       xhr.responseType = options.dataType if options.dataType?
       xhr.setRequestHeader("Content-Type", options.contentType) if options.contentType
       xhr.setRequestHeader("Content-Encoding", options.contentEncoding) if options.contentEncoding
-
-      if options.formData? and not options.data
-        if options.formData instanceof FormData
-          options.data = options.formData
-        else
-          options.data = new FormData()
-          options.data.append(key, value) for key, value of options.formData
-
 
       xhr.onload = ->
         if @status == 200

@@ -49,22 +49,27 @@ class PullQueue
 
     @batchCount++
 
-    transmitBuffer = []
+    requestData =
+      cubeSize: 1 << @cube.BUCKET_SIZE_P
+      buckets: []
+
     for bucket in batch
       @cube.requestBucketByZoomedAddress(bucket)
       zoomStep = bucket[3]
-      transmitBuffer.push(
-        zoomStep
-        if @shouldRequestFourBit(zoomStep) then 1 else 0
-        bucket[0] << (zoomStep + @cube.BUCKET_SIZE_P)
-        bucket[1] << (zoomStep + @cube.BUCKET_SIZE_P)
-        bucket[2] << (zoomStep + @cube.BUCKET_SIZE_P)
+      requestData.buckets.push(
+        position: [
+          bucket[0] << (zoomStep + @cube.BUCKET_SIZE_P)
+          bucket[1] << (zoomStep + @cube.BUCKET_SIZE_P)
+          bucket[2] << (zoomStep + @cube.BUCKET_SIZE_P)
+        ]
+        zoomStep: zoomStep
+        #fourBit: @shouldRequestFourBit()
       )
 
     # Measuring the time until response arrives to select appropriate preloading strategy
     roundTripBeginTime = new Date()
 
-    @getLoadSocket().send(transmitBuffer)
+    @getLoadSocket().send(requestData)
       .then(
 
         (responseBuffer) =>
@@ -126,7 +131,7 @@ class PullQueue
   setFourBit : (@fourBit) ->
 
 
-  shouldRequestFourBit : (zoomStep) ->
+  shouldRequestFourBit : ->
 
     return @fourBit and @layer.category == "color"
 
@@ -135,11 +140,8 @@ class PullQueue
 
     if @socket? then @socket else @socket = new ArrayBufferSocket(
       senders : [
-        # new ArrayBufferSocket.WebWorker("ws://#{document.location.host}/binary/ws?dataSetName=#{@dataSetName}&cubeSize=#{1 << @cube.BUCKET_SIZE_P}")
-        # new ArrayBufferSocket.WebSocket("ws://#{document.location.host}/binary/ws?dataSetName=#{@dataSetName}&cubeSize=#{1 << @cube.BUCKET_SIZE_P}")
-        new ArrayBufferSocket.XmlHttpRequest("#{@layer.url}/data/datasets/#{@dataSetName}/layers/#{@layer.name}/data?cubeSize=#{1 << @cube.BUCKET_SIZE_P}&token=#{@layer.token}")
+        new ArrayBufferSocket.XmlHttpRequest("#{@layer.url}/data/datasets/#{@dataSetName}/layers/#{@layer.name}/data?token=#{@layer.token}")
       ]
-      requestBufferType : Float32Array
       responseBufferType : Uint8Array
     )
 

@@ -1,9 +1,7 @@
-### define
-underscore : _
-app : app
-backbone.marionette : marionette
-./task_list_item_view : TaskListItemView
-###
+_                = require("underscore")
+app              = require("app")
+marionette       = require("backbone.marionette")
+TaskListItemView = require("./task_list_item_view")
 
 class TaskListView extends Backbone.Marionette.CompositeView
 
@@ -69,3 +67,5 @@ class TaskListView extends Backbone.Marionette.CompositeView
   filterBySearch : (searchQuery) ->
 
     @collection.setFilter(["team", "projectName", "id", "dataSet", "priority", "created"], searchQuery)
+
+module.exports = TaskListView

@@ -1,7 +1,5 @@
-### define
-backbone : Backbone
-libs/request : Request
-###
+Backbone = require("backbone")
+Request  = require("libs/request")
 
 
 class JsonSocket
@@ -156,4 +154,4 @@ class JsonSocket.Comet
     delete window[@globalCallbackName]
 
 
-JsonSocket
+module.exports = JsonSocket

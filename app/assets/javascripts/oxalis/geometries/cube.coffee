@@ -1,10 +1,8 @@
-### define
-app : app
-backbone : backbone
-../constants : constants
-../model/dimensions : dimensions
-three : THREE
-###
+app        = require("app")
+backbone   = require("backbone")
+constants  = require("../constants")
+dimensions = require("../model/dimensions")
+THREE      = require("three")
 
 class Cube
 
@@ -116,3 +114,6 @@ class Cube
   setVisibility : (visible) ->
 
     @visible = visible
+
+
+module.exports = Cube

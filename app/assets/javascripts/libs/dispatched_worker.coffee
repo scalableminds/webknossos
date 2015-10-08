@@ -1,17 +1,15 @@
-### define
-jquery : $
-underscore : _
-###
+$ = require("jquery")
+_ = require("underscore")
 
 # `DispatchedWorker` is a wrapper around the WebWorker API. First you
-# initialize it providing url of the javascript worker code. Afterwards
-# you can request work using `send` and wait for the result using the
-# returned deferred.
+# initialize it providing a worker object of the javascript worker code.
+# Afterwards you can request work using `send` and wait for the result
+# using the returned deferred.
 class DispatchedWorker
 
-  constructor : (url) ->
+  constructor : (workerClass) ->
 
-    @worker = new Worker(url)
+    @worker = new workerClass()
 
     @worker.onerror = (err) -> console?.error(err)
 
@@ -40,7 +38,7 @@ class DispatchedWorker
 
 class DispatchedWorker.Pool
 
-  constructor : (@url, @workerLimit = 3) ->
+  constructor : (@workerClass, @workerLimit = 3) ->
 
     @queue = []
     @workers = []
@@ -63,7 +61,7 @@ class DispatchedWorker.Pool
 
   spawnWorker : ->
 
-    worker = new DispatchedWorker(@url)
+    worker = new DispatchedWorker(@workerClass)
     worker.busy = false
 
     workerReset = =>
@@ -100,4 +98,4 @@ class DispatchedWorker.Pool
     @queue.push { data, deferred }
 
 
-DispatchedWorker
+module.exports = DispatchedWorker

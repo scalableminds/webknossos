@@ -1,9 +1,7 @@
-### define
-backbone.marionette : marionette
-app : app
-oxalis/constants : constants
-oxalis/controller/viewmodes/arbitrary_controller : ArbitraryController
-###
+marionette          = require("backbone.marionette")
+app                 = require("app")
+constants           = require("oxalis/constants")
+ArbitraryController = require("oxalis/controller/viewmodes/arbitrary_controller")
 
 class DatasetInfoView extends Backbone.Marionette.ItemView
 
@@ -70,3 +68,5 @@ class DatasetInfoView extends Backbone.Marionette.ItemView
 
     @model.flycam3d.off("changed")
     @model.flycam.off("zoomStepChanged")
+
+module.exports = DatasetInfoView

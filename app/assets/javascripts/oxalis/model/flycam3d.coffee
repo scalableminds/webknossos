@@ -1,8 +1,6 @@
-### define
-underscore : _
-three : THREE
-mjs : MJS
-###
+_     = require("underscore")
+THREE = require("three")
+MJS   = require("mjs")
 
 updateMacro = (_this) ->
 
@@ -300,3 +298,5 @@ class Flycam3d
 
     matrix = @currentMatrix
     [ matrix[0], matrix[1], matrix[2] ]
+
+module.exports = Flycam3d

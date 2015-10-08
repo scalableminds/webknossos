@@ -1,8 +1,6 @@
-### define
-underscore : _
-app : app
-backbone.marionette : marionette
-###
+_          = require("underscore")
+app        = require("app")
+marionette = require("backbone.marionette")
 
 class PaginationView extends Backbone.Marionette.ItemView
 
@@ -154,3 +152,6 @@ class PaginationView extends Backbone.Marionette.ItemView
     if (hash)
       @ui.inputSearch.val(hash)
       @filterBySearch()
+
+
+module.exports = PaginationView

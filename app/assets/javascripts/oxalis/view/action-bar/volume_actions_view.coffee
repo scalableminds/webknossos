@@ -1,8 +1,6 @@
-### define
-underscore : _
-backbone.marionette : marionette
-oxalis/constants : Constants
-###
+_          = require("underscore")
+marionette = require("backbone.marionette")
+Constants  = require("oxalis/constants")
 
 class VolumeActionsView extends Backbone.Marionette.ItemView
 
@@ -38,3 +36,5 @@ class VolumeActionsView extends Backbone.Marionette.ItemView
 
     buttonId = _.invert(@modeMapping)[mode]
     @$("##{buttonId}").addClass("btn-primary")
+
+module.exports = VolumeActionsView

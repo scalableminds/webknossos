@@ -1,9 +1,7 @@
-### define
-  underscore : _
-app : app
-backbone.marionette : marionette
-./workload_list_item_view : WorkloadListItemView
-###
+_                    = require("underscore")
+app                  = require("app")
+marionette           = require("backbone.marionette")
+WorkloadListItemView = require("./workload_list_item_view")
 
 class WorkloadListView extends Backbone.Marionette.CompositeView
 
@@ -42,3 +40,4 @@ class WorkloadListView extends Backbone.Marionette.CompositeView
     @collection.pager()
 
 
+module.exports = WorkloadListView

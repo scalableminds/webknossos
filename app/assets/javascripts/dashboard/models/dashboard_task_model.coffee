@@ -1,8 +1,6 @@
-### define
-underscore : _
-backbone : Backbone
-nested_obj_model : NestedObjModel
-###
+_              = require("underscore")
+Backbone       = require("backbone")
+NestedObjModel = require("nested_obj_model")
 
 class DashboardTaskModel extends NestedObjModel
 
@@ -45,3 +43,5 @@ class DashboardTaskModel extends NestedObjModel
     )
 
     return deferred.promise()
+
+module.exports = DashboardTaskModel

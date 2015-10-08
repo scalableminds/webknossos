@@ -1,7 +1,5 @@
-### define
-underscore : _
-backbone.marionette : marionette
-###
+_          = require("underscore")
+marionette = require("backbone.marionette")
 
 class SimpleTaskItemView extends Backbone.Marionette.CompositeView
 
@@ -46,3 +44,5 @@ class SimpleTaskItemView extends Backbone.Marionette.CompositeView
       </a>
     </td>
   """)
+
+module.exports = SimpleTaskItemView

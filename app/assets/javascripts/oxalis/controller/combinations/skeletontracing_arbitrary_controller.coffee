@@ -1,6 +1,4 @@
-### define
-../viewmodes/arbitrary_controller : ArbitraryController
-###
+ArbitraryController = require("../viewmodes/arbitrary_controller")
 
 class SkeletonTacingArbitraryController extends ArbitraryController
 
@@ -9,3 +7,5 @@ class SkeletonTacingArbitraryController extends ArbitraryController
   # Skeleton Tracing Arbitrary Controller:
   # Extends Arbitrary controller to add controls that are specific to Skeleton
   # Tracing.
+
+module.exports = SkeletonTacingArbitraryController

@@ -1,9 +1,7 @@
-### define
-underscore : _
-app : app
-backbone.marionette : marionette
-./list_tree_item_view : ListTreeItemView
-###
+_                = require("underscore")
+app              = require("app")
+marionette       = require("backbone.marionette")
+ListTreeItemView = require("./list_tree_item_view")
 
 class ListTreeView extends Backbone.Marionette.CompositeView
 
@@ -177,3 +175,6 @@ class ListTreeView extends Backbone.Marionette.CompositeView
 
     @model.skeletonTracing.setActiveTree(treeId)
     @model.skeletonTracing.centerActiveNode()
+
+
+module.exports = ListTreeView

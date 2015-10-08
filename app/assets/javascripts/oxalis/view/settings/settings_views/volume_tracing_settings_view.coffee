@@ -1,9 +1,7 @@
-### define
-backbone.marionette : marionette
-underscore : _
-./settings_view : SettingsView
-../category_views/cell_category_view : CellCategoryView
-###
+marionette       = require("backbone.marionette")
+_                = require("underscore")
+SettingsView     = require("./settings_view")
+CellCategoryView = require("../category_views/cell_category_view")
 
 class VolumeTracingSettingsView extends SettingsView
 
@@ -19,3 +17,5 @@ class VolumeTracingSettingsView extends SettingsView
     "cell-category" : ->
 
       return new CellCategoryView({ @model })
+
+module.exports = VolumeTracingSettingsView

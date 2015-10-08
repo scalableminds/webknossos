@@ -1,8 +1,6 @@
-### define
-backbone.marionette : marionette
-backbone.subviews : subviews
-underscore : _
-###
+marionette = require("backbone.marionette")
+subviews   = require("backbone.subviews")
+_          = require("underscore")
 
 class CategoryView extends Backbone.Marionette.ItemView
 
@@ -49,3 +47,5 @@ class CategoryView extends Backbone.Marionette.ItemView
   show : ->
 
     @$el.show()
+
+module.exports = CategoryView

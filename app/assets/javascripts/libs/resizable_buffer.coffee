@@ -1,4 +1,4 @@
-### define ###
+
 
 class ResizableBuffer
 
@@ -126,3 +126,6 @@ class ResizableBuffer
       result.push( "[ " + element.join(", ") + " ]" )
 
     return "(" + length + ") { " + result.join(", ") + " }"
+
+
+module.exports = ResizableBuffer

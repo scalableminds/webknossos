@@ -1,6 +1,4 @@
-### define
-underscore : _
-###
+_ = require("underscore")
 
 class BoundingBox
 
@@ -74,3 +72,5 @@ class BoundingBox
             bucketData[index + b] = 0
 
     return
+
+module.exports = BoundingBox

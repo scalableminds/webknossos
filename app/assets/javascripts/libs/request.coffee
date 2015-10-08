@@ -1,7 +1,5 @@
-### define
-jquery : $
-underscore : _
-###
+$ = require("jquery")
+_ = require("underscore")
 
 Request =
 
@@ -59,3 +57,5 @@ Request =
         options.contentType = "application/json" unless options.contentType
 
       $.ajax(options)
+
+module.exports = Request

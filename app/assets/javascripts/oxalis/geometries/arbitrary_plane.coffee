@@ -1,11 +1,9 @@
-### define
-backbone : backbone
-three : THREE
-mjs : MJS
-underscore : _
-oxalis/constants : constants
-./materials/arbitrary_plane_material_factory : ArbitraryPlaneMaterialFactory
-###
+backbone                      = require("backbone")
+THREE                         = require("three")
+MJS                           = require("mjs")
+_                             = require("underscore")
+constants                     = require("oxalis/constants")
+ArbitraryPlaneMaterialFactory = require("./materials/arbitrary_plane_material_factory")
 
 # Let's set up our trianglesplane.
 # It serves as a "canvas" where the brain images
@@ -170,3 +168,4 @@ class ArbitraryPlane
 
     plane
 
+module.exports = ArbitraryPlane

@@ -1,19 +1,17 @@
-### define
-underscore : _
-backbone.marionette : Marionette
-libs/toast : Toast
-fileinput : Fileinput
-app : app
-oxalis/model/skeletontracing/user_annotation_collection : UserAnnotationCollection
-admin/views/selection_view : SelectionView
-admin/models/user/user_collection : UserCollection
-admin/models/team/team_collection : TeamCollection
-admin/models/task/task_collection : TaskCollection
-admin/models/tasktype/task_type_collection : TaskTypeCollection
-admin/models/project/project_collection : ProjectCollection
-admin/models/project/project_model : ProjectModel
-routes : jsRoutes
-###
+_                        = require("underscore")
+Marionette               = require("backbone.marionette")
+Toast                    = require("libs/toast")
+Fileinput                = require("fileinput")
+app                      = require("app")
+UserAnnotationCollection = require("oxalis/model/skeletontracing/user_annotation_collection")
+SelectionView            = require("admin/views/selection_view")
+UserCollection           = require("admin/models/user/user_collection")
+TeamCollection           = require("admin/models/team/team_collection")
+TaskCollection           = require("admin/models/task/task_collection")
+TaskTypeCollection       = require("admin/models/tasktype/task_type_collection")
+ProjectCollection        = require("admin/models/project/project_collection")
+ProjectModel             = require("admin/models/project/project_model")
+jsRoutes                 = require("routes")
 
 class MergeModalView extends Backbone.Marionette.LayoutView
 
@@ -266,3 +264,4 @@ class MergeModalView extends Backbone.Marionette.LayoutView
       @toggleIcon()
     )
 
+module.exports = MergeModalView

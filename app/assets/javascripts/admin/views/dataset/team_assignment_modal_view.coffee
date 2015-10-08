@@ -1,10 +1,8 @@
-### define
-underscore : _
-app : app
-backbone.marionette : marionette
-admin/models/team/team_collection : TeamCollection
-./team_assignment_modal_item_view : TeamAssignmentModalItemView
-###
+_                           = require("underscore")
+app                         = require("app")
+marionette                  = require("backbone.marionette")
+TeamCollection              = require("admin/models/team/team_collection")
+TeamAssignmentModalItemView = require("./team_assignment_modal_item_view")
 
 class TeamAssignmentModalView extends Backbone.Marionette.CompositeView
 
@@ -81,3 +79,6 @@ class TeamAssignmentModalView extends Backbone.Marionette.CompositeView
       app.vent.trigger("TeamAssignmentModalView:refresh")
     )
     @$el.modal("hide")
+
+
+module.exports = TeamAssignmentModalView

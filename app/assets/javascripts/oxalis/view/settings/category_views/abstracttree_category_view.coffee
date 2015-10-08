@@ -1,7 +1,5 @@
-### define
-../setting_views/checkbox_setting_view : CheckboxSettingView
-./category_view : CategoryView
-###
+CheckboxSettingView = require("../setting_views/checkbox_setting_view")
+CategoryView        = require("./category_view")
 
 class AbstractTreeCategoryView extends CategoryView
 
@@ -17,3 +15,5 @@ class AbstractTreeCategoryView extends CategoryView
           name : "renderComments"
           displayName : "Render Comments"
       )
+
+module.exports = AbstractTreeCategoryView

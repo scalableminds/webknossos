@@ -1,7 +1,5 @@
-### define
-underscore : _
-backbone : Backbone
-###
+_        = require("underscore")
+Backbone = require("backbone")
 
 class TeamModel extends Backbone.Model
 
@@ -15,3 +13,5 @@ class TeamModel extends Backbone.Model
         {name : "user"}
     ]
     isEditable : "true"
+
+module.exports = TeamModel

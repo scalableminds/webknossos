@@ -1,6 +1,4 @@
-### define
-mjs : MJS
-###
+MJS = require("mjs")
 
 # Constants
 HEAP_SIZE = 1 << 25
@@ -511,4 +509,4 @@ class PolyhedronRasterizer.Master
 
 
 
-PolyhedronRasterizer
+module.exports = PolyhedronRasterizer

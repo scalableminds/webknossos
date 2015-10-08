@@ -1,18 +1,16 @@
-### define
-app : app
-backbone : Backbone
-jquery : $
-underscore : _
-libs/input : Input
-three.trackball : Trackball
-../camera_controller : CameraController
-../../model/dimensions : Dimensions
-../../view/plane_view : PlaneView
-../../constants : constants
-../annotations/skeletontracing_controller : SkeletonTracingController
-../annotations/volumetracing_controller : VolumeTracingController
-three : THREE
-###
+app                       = require("app")
+Backbone                  = require("backbone")
+$                         = require("jquery")
+_                         = require("underscore")
+Input                     = require("libs/input")
+Trackball                 = require("three.trackball")
+CameraController          = require("../camera_controller")
+Dimensions                = require("../../model/dimensions")
+PlaneView                 = require("../../view/plane_view")
+constants                 = require("../../constants")
+SkeletonTracingController = require("../annotations/skeletontracing_controller")
+VolumeTracingController   = require("../annotations/volumetracing_controller")
+THREE                     = require("three")
 
 class PlaneController
 
@@ -424,3 +422,5 @@ class PlaneController
         [ curGlobalPos[0] - (constants.VIEWPORT_WIDTH * scaleFactor / 2 - clickPos.x) / scaleFactor * planeRatio[0] * zoomFactor,
           curGlobalPos[1],
           curGlobalPos[2] - (constants.VIEWPORT_WIDTH * scaleFactor / 2 - clickPos.y) / scaleFactor * planeRatio[2] * zoomFactor ]
+
+module.exports = PlaneController

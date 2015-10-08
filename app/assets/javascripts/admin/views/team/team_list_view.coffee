@@ -1,12 +1,10 @@
-### define
-underscore : _
-backbone.marionette : marionette
-libs/toast : Toast
-libs/behaviors/select_all_rows_behavior : SelectAllRows
-app : app
-./team_list_item_view : TeamListItemView
-./create_team_modal_view : CreateTeamModalView
-###
+_                   = require("underscore")
+marionette          = require("backbone.marionette")
+Toast               = require("libs/toast")
+SelectAllRows       = require("libs/behaviors/select_all_rows_behavior")
+app                 = require("app")
+TeamListItemView    = require("./team_list_item_view")
+CreateTeamModalView = require("./create_team_modal_view")
 
 class TeamListView extends Backbone.Marionette.CompositeView
 
@@ -73,3 +71,6 @@ class TeamListView extends Backbone.Marionette.CompositeView
     @collection.pager()
     @collection.lastPage() # newly inserted items are on the last page
     @render()
+
+
+module.exports = TeamListView

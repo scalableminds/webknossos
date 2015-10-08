@@ -1,11 +1,9 @@
-### define
-app : app
-backbone : Backbone
-../model/dimensions : Dimensions
-../../libs/resizable_buffer : ResizableBuffer
-../constants : constants
-three : THREE
-###
+app             = require("app")
+Backbone        = require("backbone")
+Dimensions      = require("../model/dimensions")
+ResizableBuffer = require("../../libs/resizable_buffer")
+constants       = require("../constants")
+THREE           = require("three")
 
 class CellLayer
 
@@ -74,3 +72,4 @@ class CellLayer
     positionAttribute.numItems    = mesh.vertexBuffer.getLength() * 3
     positionAttribute.needsUpdate = true
 
+module.exports = CellLayer

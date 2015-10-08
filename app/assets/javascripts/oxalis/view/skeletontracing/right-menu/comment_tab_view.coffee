@@ -1,9 +1,7 @@
-### define
-app : app
-backbone.marionette : Marionette
-libs/input : Input
-./comment_tab_item_view : CommentTabItemView
-###
+app                = require("app")
+Marionette         = require("backbone.marionette")
+Input              = require("libs/input")
+CommentTabItemView = require("./comment_tab_item_view")
 
 class CommentTabView extends Backbone.Marionette.CompositeView
 
@@ -154,3 +152,4 @@ class CommentTabView extends Backbone.Marionette.CompositeView
       @collection.remove(comment)
       @trigger("updateComments")
 
+module.exports = CommentTabView

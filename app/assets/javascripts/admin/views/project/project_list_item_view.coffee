@@ -1,10 +1,8 @@
-### define
-underscore : _
-backbone.marionette : Marionette
-libs/toast : Toast
-./project_task_view : ProjectTaskView
-admin/models/project/project_task_collection : ProjectTaskCollection
-###
+_                     = require("underscore")
+Marionette            = require("backbone.marionette")
+Toast                 = require("libs/toast")
+ProjectTaskView       = require("./project_task_view")
+ProjectTaskCollection = require("../../models/project/project_task_collection")
 
 class ProjectListItemView extends Backbone.Marionette.CompositeView
 
@@ -91,3 +89,5 @@ class ProjectListItemView extends Backbone.Marionette.CompositeView
   handleXHRError : (model, xhr) ->
 
     Toast.message(xhr.responseJSON.messages)
+
+module.exports = ProjectListItemView

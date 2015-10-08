@@ -1,7 +1,5 @@
-### define
-jquery : $
-underscore : _
-###
+$ = require("jquery")
+_ = require("underscore")
 
 
 BUFFER_THRESHOLD = 50
@@ -144,3 +142,6 @@ class PanZoomSVG
   clamp : (value) ->
 
     Math.max(MIN_ZOOM, Math.min(value, MAX_ZOOM))
+
+
+module.exports = PanZoomSVG

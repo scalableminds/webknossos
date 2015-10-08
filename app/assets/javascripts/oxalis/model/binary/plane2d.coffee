@@ -1,9 +1,7 @@
-### define
-backbone : Backbone
-./cube : Cube
-./pullqueue : Queue
-../dimensions : Dimensions
-###
+Backbone   = require("backbone")
+Cube       = require("./cube")
+Queue      = require("./pullqueue")
+Dimensions = require("../dimensions")
 
 # Macros
 # should work as normal functions, as well
@@ -446,3 +444,5 @@ class Plane2D
         source.offset += source.rowDelta
 
     return
+
+module.exports = Plane2D

@@ -1,10 +1,10 @@
-### define
-underscore : _
-jquery : $
-libs/array_buffer_socket : ArrayBufferSocket
-libs/uint8array_builder : Uint8ArrayBuilder
-libs/wrapped_worker_plugin!./gzip_worker : GzipWorker
-###
+_                 = require("underscore")
+$                 = require("jquery")
+ArrayBufferSocket = require("libs/array_buffer_socket")
+Uint8ArrayBuilder = require("libs/uint8array_builder")
+GzipWorker        = require("worker!./gzip_worker")
+
+gzipWorkerHandle = null
 
 class PushQueue
 
@@ -96,7 +96,7 @@ class PushQueue
 
     @updatePipeline.executePassAlongAction =>
 
-      GzipWorker().send(
+      gzipWorkerHandle.send(
         method : "compress"
         args : [transmitBuffer]
       ).then( (buffer) =>
@@ -123,3 +123,5 @@ class PushQueue
       requestBufferType : Uint8Array
       responseBufferType : Uint8Array
     )
+
+module.exports = PushQueue

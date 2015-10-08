@@ -1,7 +1,5 @@
-### define
-three : THREE
-jquery : $
-###
+THREE = require("three")
+$     = require("jquery")
 
 # This loads and caches meshes.
 
@@ -50,4 +48,4 @@ class Mesh
 
     deferred.promise()
 
-
+module.exports = Mesh

@@ -1,7 +1,5 @@
-### define
-underscore : _
-backbone : Backbone
-###
+_        = require("underscore")
+Backbone = require("backbone")
 
 class NestedObjModel extends Backbone.Model
   get: (attributeString) ->
@@ -12,3 +10,5 @@ class NestedObjModel extends Backbone.Model
       (value, attribute) ->
         value[attribute]
       valueObj)
+
+module.exports = NestedObjModel

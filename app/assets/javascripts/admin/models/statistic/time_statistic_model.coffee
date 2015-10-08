@@ -1,8 +1,6 @@
-### define
-underscore : _
-backbone : backbone
-moment : moment
-###
+_        = require("underscore")
+backbone = require("backbone")
+moment   = require("moment")
 
 class TimeStatisticModel extends Backbone.Model
 
@@ -34,6 +32,6 @@ class TimeStatisticModel extends Backbone.Model
 
     return response
 
-
+module.exports = TimeStatisticModel
 
 

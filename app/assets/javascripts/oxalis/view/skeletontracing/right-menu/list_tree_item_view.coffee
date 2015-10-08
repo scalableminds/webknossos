@@ -1,8 +1,6 @@
-### define
-backbone.marionette : Marionette
-libs/utils : Utils
-three.color : ColorConverter
-###
+Marionette     = require("backbone.marionette")
+Utils          = require("libs/utils")
+ColorConverter = require("three.color")
 
 class ListTreeItemView extends Backbone.Marionette.ItemView
 
@@ -48,3 +46,5 @@ class ListTreeItemView extends Backbone.Marionette.ItemView
     # scroll to active tree
     if @model.get("treeId") == @activeTreeId and not Utils.isElementInViewport(@el)
       @el.scrollIntoView()
+
+module.exports = ListTreeItemView

@@ -1,10 +1,8 @@
-### define
-backbone : backbone
-backbone.marionette : marionette
-backbone.subviews : subviews
-underscore : _
-oxalis/view/settings/setting_views/checkbox_setting_view : CheckboxSettingView
-###
+backbone            = require("backbone")
+marionette          = require("backbone.marionette")
+subviews            = require("backbone.subviews")
+_                   = require("underscore")
+CheckboxSettingView = require("oxalis/view/settings/setting_views/checkbox_setting_view")
 
 class MappingInfoView extends Backbone.Marionette.CompositeView
 
@@ -68,3 +66,5 @@ class MappingInfoView extends Backbone.Marionette.CompositeView
       idWithMapping : @cube.getDataValue(pos, @cube.mapping)
       idWithoutMapping : @cube.getDataValue(pos, @cube.EMPTY_MAPPING)
     }
+
+module.exports = MappingInfoView

@@ -1,9 +1,7 @@
-### define
-underscore : _
-backbone.marionette : marionette
-admin/models/dataset/dataset_collection : DatasetCollection
-libs/template_helpers : TemplateHelpers
-###
+_                 = require("underscore")
+marionette        = require("backbone.marionette")
+DatasetCollection = require("admin/models/dataset/dataset_collection")
+TemplateHelpers   = require("libs/template_helpers")
 
 class SpotlightDatasetView extends Backbone.Marionette.ItemView
 
@@ -68,3 +66,6 @@ class SpotlightDatasetView extends Backbone.Marionette.ItemView
     event.preventDefault()
     @ui.contentTypeInput.val(type)
     @ui.form.submit()
+
+
+module.exports = SpotlightDatasetView

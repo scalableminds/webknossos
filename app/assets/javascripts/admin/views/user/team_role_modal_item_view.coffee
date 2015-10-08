@@ -1,8 +1,6 @@
-### define
-underscore : _
-backbone.marionette : marionette
-admin/models/team/team_collection : TeamCollection
-###
+_              = require("underscore")
+marionette     = require("backbone.marionette")
+TeamCollection = require("../../models/team/team_collection")
 
 class TeamRoleModalItem extends Backbone.Marionette.ItemView
 
@@ -42,3 +40,4 @@ class TeamRoleModalItem extends Backbone.Marionette.ItemView
 
     @ui.teamCheckbox.prop("checked", true)
 
+module.exports = TeamRoleModalItem

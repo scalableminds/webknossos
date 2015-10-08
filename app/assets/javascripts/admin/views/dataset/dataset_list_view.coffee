@@ -1,10 +1,8 @@
-### define
-underscore : _
-backbone.marionette : Marionette
-./dataset_list_item_view : DatasetListItemView
-./team_assignment_modal_view: TeamAssignmentModalView
-libs/behaviors/sort_table_behavior : SortTableBehavior
-###
+_                       = require("underscore")
+Marionette              = require("backbone.marionette")
+DatasetListItemView     = require("./dataset_list_item_view")
+TeamAssignmentModalView = require("./team_assignment_modal_view")
+SortTableBehavior       = require("libs/behaviors/sort_table_behavior")
 
 class DatasetListView extends Backbone.Marionette.CompositeView
 
@@ -90,3 +88,5 @@ class DatasetListView extends Backbone.Marionette.CompositeView
   onDestroy : ->
 
     @modalView?.destroy()
+
+module.exports = DatasetListView

@@ -1,10 +1,8 @@
-### define
-underscore : _
-app : app
-backbone.marionette : marionette
-admin/models/task/annotation_collection : AnnotationCollection
-./task_annotation_view: TaskAnnotationView
-###
+_                    = require("underscore")
+app                  = require("app")
+marionette           = require("backbone.marionette")
+AnnotationCollection = require("admin/models/task/annotation_collection")
+TaskAnnotationView   = require("./task_annotation_view")
 
 class TaskListItemView extends Backbone.Marionette.CompositeView
 
@@ -106,3 +104,4 @@ class TaskListItemView extends Backbone.Marionette.CompositeView
       @ui.detailsRow.addClass("hide")
       @ui.detailsToggle.removeClass("open")
 
+module.exports = TaskListItemView

@@ -1,8 +1,6 @@
-### define
-underscore : _
-../pagination_collection : PaginationCollection
-./project_model : ProjectModel
-###
+_                    = require("underscore")
+PaginationCollection = require("../pagination_collection")
+ProjectModel         = require("./project_model")
 
 class ProjectCollection extends PaginationCollection
 
@@ -10,3 +8,4 @@ class ProjectCollection extends PaginationCollection
   url : "/api/projects"
   idAttribute : "name"
 
+module.exports = ProjectCollection

@@ -1,7 +1,5 @@
-### define
-underscore : _
-backbone.marionette : marionette
-###
+_          = require("underscore")
+marionette = require("backbone.marionette")
 
 class HelpLogoView extends Backbone.Marionette.ItemView
 
@@ -26,3 +24,4 @@ class HelpLogoView extends Backbone.Marionette.ItemView
     </div>
   """)
 
+module.exports = HelpLogoView

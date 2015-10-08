@@ -1,8 +1,6 @@
-### define
-underscore : _
-../pagination_collection : PaginationCollection
-format_utils : FormatUtils
-###
+_                    = require("underscore")
+PaginationCollection = require("../pagination_collection")
+FormatUtils          = require("format_utils")
 
 class TaskCollection extends PaginationCollection
 
@@ -45,3 +43,5 @@ class TaskCollection extends PaginationCollection
 
         return response
     )
+
+module.exports = TaskCollection

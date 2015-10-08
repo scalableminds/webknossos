@@ -1,7 +1,5 @@
-### define
-underscore : _
-backbone : backbone
-###
+_        = require("underscore")
+backbone = require("backbone")
 
 class CommentsCollection extends Backbone.Collection
 
@@ -30,3 +28,5 @@ class CommentsCollection extends Backbone.Collection
   hasCommentWithNodeId : (id) ->
 
     return @findCommentByNodeId(id) != undefined
+
+module.exports = CommentsCollection

@@ -14,10 +14,10 @@
       data-airbrake-environment-name=@play.api.Play.current.configuration.getString("airbrake.environment")></script>
     @if(play.api.Play.current.mode == play.api.Mode.Dev) {
       <link href='@routes.Assets.at("fonts/fonts-local.css")' rel='stylesheet' type='text/css' media="screen">
-      <script type="text/javascript" src="@routes.Assets.at("bower_components/requirejs/require.js")"></script>
-      <script type="text/javascript" src="@routes.Assets.at("javascripts/require_config.js")"></script>
+      <script type="text/javascript" src="@routes.Assets.at("javascripts/routes.js")"></script>
       <script type="text/javascript" src="@routes.Assets.at("javascripts/main.js")"></script>
     } else {
+      <script type="text/javascript" src="@routes.Assets.at("javascripts/routes.js")"></script>
       <script type="text/javascript" src="@routes.Assets.at("javascripts/main.js")"></script>
       <link href='https://fonts.googleapis.com/css?family=Source+Sans+Pro' rel='stylesheet' type='text/css'>
     }

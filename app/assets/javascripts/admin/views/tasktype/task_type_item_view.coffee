@@ -1,10 +1,8 @@
-### define
-underscore : _
-backbone.marionette : marionette
-libs/toast : Toast
-./simple_task_item_view : SimpleTaskItemView
-admin/models/task/task_collection : TaskCollection
-###
+_                  = require("underscore")
+marionette         = require("backbone.marionette")
+Toast              = require("libs/toast")
+SimpleTaskItemView = require("./simple_task_item_view")
+TaskCollection     = require("../../models/task/task_collection")
 
 class TaskTypeItemView extends Backbone.Marionette.CompositeView
 
@@ -106,3 +104,6 @@ class TaskTypeItemView extends Backbone.Marionette.CompositeView
     else
       @ui.detailsRow.addClass("hide")
       @ui.detailsToggle.removeClass("open")
+
+
+module.exports = TaskTypeItemView

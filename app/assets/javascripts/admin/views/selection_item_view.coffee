@@ -1,7 +1,5 @@
-### define
-underscore : _
-backbone.marionette : Marionette
-###
+_          = require("underscore")
+Marionette = require("backbone.marionette")
 
 class SelectionItemView extends Backbone.Marionette.ItemView
 
@@ -32,3 +30,5 @@ class SelectionItemView extends Backbone.Marionette.ItemView
       id : @model.get("id")
       value : @modelValue()
     )
+
+module.exports = SelectionItemView

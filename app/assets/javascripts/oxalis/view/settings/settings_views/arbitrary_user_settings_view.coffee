@@ -1,8 +1,6 @@
-### define
-./settings_view : SettingsView
-../category_views/controls_category_view : ControlsCategoryView
-../category_views/flight_category_view : FlightCategoryView
-###
+SettingsView         = require("./settings_view")
+ControlsCategoryView = require("../category_views/controls_category_view")
+FlightCategoryView   = require("../category_views/flight_category_view")
 
 class ArbitraryUserSettingsView extends SettingsView
 
@@ -23,3 +21,5 @@ class ArbitraryUserSettingsView extends SettingsView
     "flight-category" : ->
 
       return new FlightCategoryView(model : @model)
+
+module.exports = ArbitraryUserSettingsView

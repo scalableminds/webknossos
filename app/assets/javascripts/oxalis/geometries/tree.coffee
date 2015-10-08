@@ -1,10 +1,8 @@
-### define
-app : app
-../../libs/resizable_buffer : ResizableBuffer
-three.color : ColorConverter
-./materials/particle_material_factory : ParticleMaterialFactory
-three : THREE
-###
+app                     = require("app")
+ResizableBuffer         = require("../../libs/resizable_buffer")
+ColorConverter          = require("three.color")
+ParticleMaterialFactory = require("./materials/particle_material_factory")
+THREE                   = require("three")
 
 class Tree
 
@@ -310,3 +308,5 @@ class Tree
   invertHex : (hexColor) ->
 
     @shiftHex(hexColor, 0.5)
+
+module.exports = Tree

@@ -1,5 +1,3 @@
-### define ###
-
 Constants =
 
   PLANE_XY             : 0
@@ -55,3 +53,5 @@ Constants =
   ZOOM_DIFF            : 0.1
 
   RESIZE_THROTTLE_TIME : 250
+
+module.exports = Constants

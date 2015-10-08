@@ -1,9 +1,7 @@
-### define
-underscore : _
-backbone.marionette : marionette
-admin/models/dataset/dataset_collection : DatasetCollection
-views/spotlight_dataset_view : SpotlightDatasetView
-###
+_                    = require("underscore")
+marionette           = require("backbone.marionette")
+DatasetCollection    = require("admin/models/dataset/dataset_collection")
+SpotlightDatasetView = require("views/spotlight_dataset_view")
 
 class SpotlightDatasetListView extends Backbone.Marionette.CollectionView
 
@@ -19,3 +17,5 @@ class SpotlightDatasetListView extends Backbone.Marionette.CollectionView
     ).done( =>
       @collection.goTo(1)
     )
+
+module.exports = SpotlightDatasetListView

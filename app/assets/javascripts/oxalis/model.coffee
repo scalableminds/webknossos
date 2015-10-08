@@ -1,21 +1,19 @@
-### define
-backbone : Backbone
-underscore : _
-app : app
-./model/binary : Binary
-./model/skeletontracing/skeletontracing : SkeletonTracing
-./model/user : User
-./model/dataset_configuration : DatasetConfiguration
-./model/volumetracing/volumetracing : VolumeTracing
-./model/binarydata_connection_info : ConnectionInfo
-./model/scaleinfo : ScaleInfo
-./model/flycam2d : Flycam2d
-./model/flycam3d : Flycam3d
-./constants : constants
-libs/request : Request
-libs/toast : Toast
-libs/pipeline : Pipeline
-###
+Backbone             = require("backbone")
+_                    = require("underscore")
+app                  = require("../app")
+Binary               = require("./model/binary")
+SkeletonTracing      = require("./model/skeletontracing/skeletontracing")
+User                 = require("./model/user")
+DatasetConfiguration = require("./model/dataset_configuration")
+VolumeTracing        = require("./model/volumetracing/volumetracing")
+ConnectionInfo       = require("./model/binarydata_connection_info")
+ScaleInfo            = require("./model/scaleinfo")
+Flycam2d             = require("./model/flycam2d")
+Flycam3d             = require("./model/flycam3d")
+constants            = require("./constants")
+Request              = require("../libs/request")
+Toast                = require("../libs/toast")
+Pipeline             = require("../libs/pipeline")
 
 # This is the model. It takes care of the data including the
 # communication with the server.
@@ -287,3 +285,6 @@ class Model extends Backbone.Model
       @get("flycam3d").setRotation( state.rotation )
     if state.activeNode?
       @get("skeletonTracing")?.setActiveNode(state.activeNode)
+
+
+module.exports = Model

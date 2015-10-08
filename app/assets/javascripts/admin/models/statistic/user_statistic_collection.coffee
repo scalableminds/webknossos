@@ -1,7 +1,5 @@
-### define
-underscore : _
-backbone : backbone
-###
+_        = require("underscore")
+backbone = require("backbone")
 
 class UserStatisticCollection extends Backbone.Collection
 
@@ -18,3 +16,4 @@ class UserStatisticCollection extends Backbone.Collection
     )
 
 
+module.exports = UserStatisticCollection

@@ -1,11 +1,9 @@
-### define
-underscore : _
-app : app
-backbone.marionette : marionette
-admin/models/team/team_collection : TeamCollection
-admin/views/selection_view : SelectionView
-libs/toast : Toast
-###
+_              = require("underscore")
+app            = require("app")
+marionette     = require("backbone.marionette")
+TeamCollection = require("../../models/team/team_collection")
+SelectionView  = require("../../views/selection_view")
+Toast          = require("libs/toast")
 
 class TaskTypeFormView extends Backbone.Marionette.LayoutView
 
@@ -205,3 +203,4 @@ class TaskTypeFormView extends Backbone.Marionette.LayoutView
     )
     @team.show(teamSelectionView)
 
+module.exports = TaskTypeFormView

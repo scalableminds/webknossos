@@ -28,20 +28,18 @@
             </div>
 
             <script type="text/javascript">
-              require(["jquery"], function($) {
-                $("input[type=file]").on("change", function(evt){
-                  var files = this.files;
-                  if (files) {
-                    if (files.length > 1) {
-                      filePath = ""
-                      for (var i=0; i < this.files.length; i++)
-                        filePath += files[i].name + ", "
-                    } else {
-                      filePath = files[0].name
-                    }
-                    $(".file-info").val(filePath)
+              $("input[type=file]").on("change", function(evt){
+                var files = this.files;
+                if (files) {
+                  if (files.length > 1) {
+                    filePath = ""
+                    for (var i=0; i < this.files.length; i++)
+                      filePath += files[i].name + ", "
+                  } else {
+                    filePath = files[0].name
                   }
-                })
+                  $(".file-info").val(filePath)
+                }
               })
             </script>
 

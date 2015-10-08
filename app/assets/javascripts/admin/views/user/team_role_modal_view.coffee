@@ -1,12 +1,10 @@
-### define
-underscore : _
-backbone.marionette : marionette
-libs/toast : Toast
-admin/models/team/team_collection : TeamCollection
-admin/views/user/team_role_modal_item_view : TeamRoleModalItem
-###
+_                 = require("underscore")
+marionette        = require("backbone.marionette")
+Toast             = require("libs/toast")
+TeamCollection    = require("../../models/team/team_collection")
+TeamRoleModalItem = require("../../views/user/team_role_modal_item_view")
 
-class TeamRoleModal extends Backbone.Marionette.CompositeView
+class TeamRoleModalView extends Backbone.Marionette.CompositeView
 
   tagName : "div"
   className : "modal fade"
@@ -141,3 +139,4 @@ class TeamRoleModal extends Backbone.Marionette.CompositeView
             ).prop('selected', true)
       )
 
+module.exports = TeamRoleModalView

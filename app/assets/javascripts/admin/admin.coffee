@@ -1,26 +1,24 @@
-### define
-admin/views/pagination_view : PaginationView
-admin/views/dataset/dataset_list_view : DatasetListView
-admin/models/dataset/dataset_collection : DatasetCollection
-admin/views/user/user_list_view : UserListView
-admin/models/user/user_collection : UserCollection
-admin/views/team/team_list_view : TeamListView
-admin/models/team/team_collection : TeamCollection
-admin/views/task/task_list_view : TaskListView
-admin/models/task/task_collection : TaskCollection
-admin/views/project/project_list_view : ProjectListView
-admin/models/project/project_collection : ProjectCollection
-admin/views/statistic/statistic_view : StatisticView
-admin/views/workload/workload_list_view : WorkloadListView
-admin/models/workload/workload_collection : WorkloadCollection
-###
+PaginationView     = require("./views/pagination_view")
+DatasetListView    = require("./views/dataset/dataset_list_view")
+DatasetCollection  = require("./models/dataset/dataset_collection")
+UserListView       = require("./views/user/user_list_view")
+UserCollection     = require("./models/user/user_collection")
+TeamListView       = require("./views/team/team_list_view")
+TeamCollection     = require("./models/team/team_collection")
+TaskListView       = require("./views/task/task_list_view")
+TaskCollection     = require("./models/task/task_collection")
+ProjectListView    = require("./views/project/project_list_view")
+ProjectCollection  = require("./models/project/project_collection")
+StatisticView      = require("./views/statistic/statistic_view")
+WorkloadListView   = require("./views/workload/workload_list_view")
+WorkloadCollection = require("./models/workload/workload_collection")
 
 # ####
 # This exports all the modules listed above and mainly the serves the purpose of
 # waiting to be combinend and minified with rjs.
 # ####
 
-return {
+module.exports = {
   PaginationView
   DatasetListView
   DatasetCollection

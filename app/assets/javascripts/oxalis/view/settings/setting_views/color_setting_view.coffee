@@ -1,8 +1,6 @@
-### define
-libs/utils : Utils
-./abstract_setting_view : AbstractSettingView
-underscore : _
-###
+Utils               = require("libs/utils")
+AbstractSettingView = require("./abstract_setting_view")
+_                   = require("underscore")
 
 class ColorSettingView extends AbstractSettingView
 
@@ -40,3 +38,5 @@ class ColorSettingView extends AbstractSettingView
   update : (model, value) ->
 
     @ui.colorpicker.val(Utils.rgbToHex(value))
+
+module.exports = ColorSettingView

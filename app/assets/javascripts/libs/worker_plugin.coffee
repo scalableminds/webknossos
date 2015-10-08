@@ -1,8 +1,6 @@
-### define
-libs/dispatched_worker : DispatchedWorker
-###
+DispatchedWorker = require("../libs/dispatched_worker")
 
-return {
+module.exports = {
   load : (name, parentRequire, load, config) ->
 
     load(new DispatchedWorker(parentRequire.toUrl(name)))

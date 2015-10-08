@@ -1,8 +1,6 @@
-### define
-underscore : _
-backbone : Backbone
-format_utils : FormatUtils
-###
+_           = require("underscore")
+Backbone    = require("backbone")
+FormatUtils = require("format_utils")
 
 class LoggedTimeModel extends Backbone.Model
 
@@ -36,3 +34,4 @@ class LoggedTimeModel extends Backbone.Model
       }
     ).sort( (a, b) -> b.months - a.months )
 
+module.exports = LoggedTimeModel

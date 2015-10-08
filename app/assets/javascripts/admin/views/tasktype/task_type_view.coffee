@@ -1,10 +1,8 @@
-### define
-underscore : _
-app : app
-backbone.marionette : marionette
-./task_type_list_view : TaskTypeListView
-./task_type_form_view : TaskTypeFormView
-###
+_                = require("underscore")
+app              = require("app")
+marionette       = require("backbone.marionette")
+TaskTypeListView = require("./task_type_list_view")
+TaskTypeFormView = require("./task_type_form_view")
 
 class TaskTypeView extends Backbone.Marionette.LayoutView
 
@@ -31,3 +29,5 @@ class TaskTypeView extends Backbone.Marionette.LayoutView
     @form.show(@formView)
     @list.show(@listView)
 
+
+module.exports = TaskTypeView

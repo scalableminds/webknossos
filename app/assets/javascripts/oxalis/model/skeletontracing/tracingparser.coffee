@@ -1,14 +1,12 @@
-### define
-jquery : $
-three.color : ColorConverter
-underscore : _
-backbone : backbone
-libs/request : Request
-./tracepoint : TracePoint
-./tracetree : TraceTree
-../../constants : constants
-oxalis/model/right-menu/comments_collection : CommentsCollection
-###
+$                  = require("jquery")
+ColorConverter     = require("three.color")
+_                  = require("underscore")
+backbone           = require("backbone")
+Request            = require("libs/request")
+TracePoint         = require("./tracepoint")
+TraceTree          = require("./tracetree")
+constants          = require("../../constants")
+CommentsCollection = require("oxalis/model/right-menu/comments_collection")
 
 class TracingParser
 
@@ -124,3 +122,5 @@ class TracingParser
       @activeNode
       @activeTree
     }
+
+module.exports = TracingParser

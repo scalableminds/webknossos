@@ -1,7 +1,5 @@
-### define
-underscore : _
-backbone.marionette : marionette
-###
+_          = require("underscore")
+marionette = require("backbone.marionette")
 
 class TeamAssignmentModalItemView extends Backbone.Marionette.ItemView
 
@@ -13,3 +11,5 @@ class TeamAssignmentModalItemView extends Backbone.Marionette.ItemView
       </label>
     </div>
   """)
+
+module.exports = TeamAssignmentModalItemView

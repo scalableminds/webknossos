@@ -1,11 +1,9 @@
-### define
-app : app
-three : THREE
-underscore : _
-../viewmodes/plane_controller : PlaneController
-../../constants : constants
-../../model/dimensions : dimensions
-###
+app             = require("app")
+THREE           = require("three")
+_               = require("underscore")
+PlaneController = require("../viewmodes/plane_controller")
+constants       = require("../../constants")
+dimensions      = require("../../model/dimensions")
 
 class SkeletonTracingPlaneController extends PlaneController
 
@@ -205,3 +203,6 @@ class SkeletonTracingPlaneController extends PlaneController
         @flycam.setPosition(position)
       )
     .start()
+
+
+module.exports = SkeletonTracingPlaneController

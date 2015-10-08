@@ -1,12 +1,10 @@
-### define
-underscore : _
-backbone.marionette : marionette
-app : app
-dashboard/views/explorative_tracing_list_item_view : ExplorativeTracingListItemView
-libs/input : Input
-libs/toast : Toast
-libs/behaviors/sort_table_behavior : SortTableBehavior
-###
+_                              = require("underscore")
+marionette                     = require("backbone.marionette")
+app                            = require("app")
+ExplorativeTracingListItemView = require("dashboard/views/explorative_tracing_list_item_view")
+Input                          = require("libs/input")
+Toast                          = require("libs/toast")
+SortTableBehavior              = require("libs/behaviors/sort_table_behavior")
 
 class ExplorativeTracingListView extends Backbone.Marionette.CompositeView
 
@@ -220,3 +218,6 @@ class ExplorativeTracingListView extends Backbone.Marionette.CompositeView
     @toggleState()
     @filter = @getFilterForState()
     @render()
+
+
+module.exports = ExplorativeTracingListView

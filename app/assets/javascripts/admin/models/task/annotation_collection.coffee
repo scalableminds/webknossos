@@ -1,8 +1,6 @@
-### define
-underscore : _
-backbone : backbone
-./annotation_model : AnnotationModel
-###
+_               = require("underscore")
+backbone        = require("backbone")
+AnnotationModel = require("./annotation_model")
 
 class AnnotationCollection extends Backbone.Collection
 
@@ -13,4 +11,4 @@ class AnnotationCollection extends Backbone.Collection
     @url = "/api/tasks/#{taskId}/annotations"
     super()
 
-
+module.exports = AnnotationCollection

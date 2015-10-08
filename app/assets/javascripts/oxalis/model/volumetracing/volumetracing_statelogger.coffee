@@ -1,6 +1,4 @@
-### define
-../statelogger : StateLogger
-###
+StateLogger = require("../statelogger")
 
 class VolumeTracingStateLogger extends StateLogger
 
@@ -30,3 +28,5 @@ class VolumeTracingStateLogger extends StateLogger
       }
       false
     )
+
+module.exports = VolumeTracingStateLogger

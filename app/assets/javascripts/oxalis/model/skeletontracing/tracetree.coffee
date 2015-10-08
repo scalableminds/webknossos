@@ -1,4 +1,4 @@
-### define ###
+
 
 class TraceTree
 
@@ -33,3 +33,5 @@ class TraceTree
       root.buildTree()
 
     return root
+
+module.exports = TraceTree

@@ -1,7 +1,5 @@
-### define
-./abstract_setting_view : AbstractSettingView
-underscore : _
-###
+AbstractSettingView = require("./abstract_setting_view")
+_                   = require("underscore")
 
 class SliderSettingView extends AbstractSettingView
 
@@ -58,3 +56,5 @@ class SliderSettingView extends AbstractSettingView
     if @model
       if reset = @model.reset
         reset()
+
+module.exports = SliderSettingView

@@ -1,7 +1,5 @@
-### define
-underscore : _
-backbone.paginator : Paginator
-###
+_         = require("underscore")
+Paginator = require("backbone.paginator")
 
 # A helper class to wrap the Backbone.Paginator lib and set some sensible
 # defaults
@@ -55,3 +53,5 @@ class PaginationCollection extends Backbone.Paginator.clientPager
 
   sortByAttribute: (attribute) ->
     @setSort(@sortAttribute, @sortDirection)
+
+module.exports = PaginationCollection

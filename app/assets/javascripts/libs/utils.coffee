@@ -1,7 +1,5 @@
-### define
-jquery : $
-underscore : _
-###
+$ = require("jquery")
+_ = require("underscore")
 
 Utils =
 
@@ -109,3 +107,5 @@ Utils =
     _.findIndex(userTeams, (team) ->
       team.role.name == "admin"
     ) >= 0
+
+module.exports = Utils

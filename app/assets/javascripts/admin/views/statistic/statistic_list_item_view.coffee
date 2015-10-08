@@ -1,7 +1,5 @@
-### define
-underscore : _
-backbone.marionette : marionette
-###
+_          = require("underscore")
+marionette = require("backbone.marionette")
 
 class StatisticListView extends Backbone.Marionette.ItemView
 
@@ -29,3 +27,5 @@ class StatisticListView extends Backbone.Marionette.ItemView
     while number.length < digits
       number = "0#{number}"
     number
+
+module.exports = StatisticListView

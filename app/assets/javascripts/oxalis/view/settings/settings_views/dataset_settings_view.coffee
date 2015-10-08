@@ -1,8 +1,6 @@
-### define
-./settings_view : SettingsView
-../category_views/colors_category_view : ColorsCategoryView
-../category_views/quality_category_view : QualityCategoryView
-###
+SettingsView        = require("./settings_view")
+ColorsCategoryView  = require("../category_views/colors_category_view")
+QualityCategoryView = require("../category_views/quality_category_view")
 
 class DatasetSettingsView extends SettingsView
 
@@ -22,3 +20,5 @@ class DatasetSettingsView extends SettingsView
     "quality-category" : ->
 
       return new QualityCategoryView(model : @model)
+
+module.exports = DatasetSettingsView

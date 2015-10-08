@@ -1,7 +1,5 @@
-### define
-backbone.marionette : marionette
-underscore : _
-###
+marionette = require("backbone.marionette")
+_          = require("underscore")
 
 class AbstractTabView extends Backbone.Marionette.LayoutView
 
@@ -71,3 +69,4 @@ class AbstractTabView extends Backbone.Marionette.LayoutView
 
     return {@tabs}
 
+module.exports = AbstractTabView

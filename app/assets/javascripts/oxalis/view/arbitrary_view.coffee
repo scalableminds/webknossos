@@ -1,12 +1,10 @@
-### define
-app : app
-backbone : Backbone
-three : THREE
-stats : Stats
-jquery : $
-underscore : _
-../constants : constants
-###
+app       = require("app")
+Backbone  = require("backbone")
+THREE     = require("three")
+Stats     = require("stats")
+$         = require("jquery")
+_         = require("underscore")
+constants = require("../constants")
 
 class ArbitraryView
 
@@ -190,3 +188,4 @@ class ArbitraryView
 
     @additionalInfo = info
 
+module.exports = ArbitraryView

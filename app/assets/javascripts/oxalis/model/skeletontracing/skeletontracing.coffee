@@ -1,19 +1,17 @@
-### define
-app : app
-backbone : Backbone
-jquery : $
-underscore : _
-backbone : backbone
-libs/request : Request
-libs/color_generator : ColorGenerator
-./tracepoint : TracePoint
-./tracetree : TraceTree
-./skeletontracing_statelogger : SkeletonTracingStateLogger
-../../constants : constants
-../helpers/restriction_handler : RestrictionHandler
-./tracingparser : TracingParser
-oxalis/model/right-menu/comments_collection : CommentsCollection
-###
+app                        = require("app")
+Backbone                   = require("backbone")
+$                          = require("jquery")
+_                          = require("underscore")
+backbone                   = require("backbone")
+Request                    = require("libs/request")
+ColorGenerator             = require("libs/color_generator")
+TracePoint                 = require("./tracepoint")
+TraceTree                  = require("./tracetree")
+SkeletonTracingStateLogger = require("./skeletontracing_statelogger")
+constants                  = require("../../constants")
+RestrictionHandler         = require("../helpers/restriction_handler")
+TracingParser              = require("./tracingparser")
+CommentsCollection         = require("oxalis/model/right-menu/comments_collection")
 
 class SkeletonTracing
 
@@ -717,3 +715,6 @@ class SkeletonTracing
   getPlainComments : =>
 
     return @comments.toJSON()
+
+
+module.exports = SkeletonTracing

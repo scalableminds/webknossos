@@ -1,9 +1,8 @@
-### define
-libs/request : Request
-underscore : _
-backbone : Backbone
-backbone-deep-model : DeepModel
-###
+Request   = require("libs/request")
+_         = require("underscore")
+Backbone  = require("backbone")
+DeepModel = require("backbone-deep-model")
+
 
 class DatasetConfiguration extends Backbone.DeepModel
 
@@ -47,3 +46,5 @@ class DatasetConfiguration extends Backbone.DeepModel
         layer = _.defaults(layers[layerName], defaults)
 
       @set("layers.#{layerName}", layer)
+
+module.exports = DatasetConfiguration

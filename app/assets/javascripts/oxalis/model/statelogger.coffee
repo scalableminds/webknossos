@@ -1,11 +1,9 @@
-### define
-backbone : Backbone
-underscore : _
-jquery : $
-app : app
-libs/request : Request
-libs/toast : Toast
-###
+Backbone = require("backbone")
+_        = require("underscore")
+$        = require("jquery")
+app      = require("app")
+Request  = require("libs/request")
+Toast    = require("libs/toast")
 
 class StateLogger
 
@@ -141,3 +139,5 @@ class StateLogger
     @trigger("pushDone")
     $('body').removeClass('save-error')
     @committedDiffs = []
+
+module.exports = StateLogger

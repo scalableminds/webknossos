@@ -1,7 +1,5 @@
-### define
-underscore : _
-moment : moment
-###
+_      = require("underscore")
+moment = require("moment")
 
 class FormatUtils
 
@@ -30,3 +28,5 @@ class FormatUtils
       text.slice(0, maxLength - 4) + " ..."
     else
       text
+
+module.exports = FormatUtils

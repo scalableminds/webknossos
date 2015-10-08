@@ -1,10 +1,8 @@
-### define
-underscore : _
-backbone.marionette : marionette
-routes : routes
-libs/toast : Toast
-libs/behaviors/hover_show_hide_behavior : HoverShowHide
-###
+_             = require("underscore")
+marionette    = require("backbone.marionette")
+routes        = require("routes")
+Toast         = require("libs/toast")
+HoverShowHide = require("libs/behaviors/hover_show_hide_behavior")
 
 class ExplorativeTracingListItemView extends Backbone.Marionette.ItemView
 
@@ -120,3 +118,5 @@ class ExplorativeTracingListItemView extends Backbone.Marionette.ItemView
     ).fail((xhr) ->
       Toast.message(xhr.responseJSON.messages)
     )
+
+module.exports = ExplorativeTracingListItemView

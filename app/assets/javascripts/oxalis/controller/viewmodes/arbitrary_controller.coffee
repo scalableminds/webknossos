@@ -1,16 +1,14 @@
-### define
-app : app
-backbone : Backbone
-jquery : $
-underscore : _
-libs/request : Request
-libs/input : Input
-../../geometries/arbitrary_plane : ArbitraryPlane
-../../geometries/crosshair : Crosshair
-../../view/arbitrary_view : ArbitraryView
-../../geometries/arbitrary_plane_info : ArbitraryPlaneInfo
-../../constants : constants
-###
+app                = require("app")
+Backbone           = require("backbone")
+$                  = require("jquery")
+_                  = require("underscore")
+Request            = require("libs/request")
+Input              = require("libs/input")
+ArbitraryPlane     = require("../../geometries/arbitrary_plane")
+Crosshair          = require("../../geometries/crosshair")
+ArbitraryView      = require("../../view/arbitrary_view")
+ArbitraryPlaneInfo = require("../../geometries/arbitrary_plane_info")
+constants          = require("../../constants")
 
 class ArbitraryController
 
@@ -361,3 +359,6 @@ class ArbitraryController
     if vectorLength > 10
       @setWaypoint()
       @lastNodeMatrix = matrix
+
+
+module.exports = ArbitraryController

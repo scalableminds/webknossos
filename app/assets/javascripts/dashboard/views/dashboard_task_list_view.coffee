@@ -1,12 +1,10 @@
-### define
-underscore : _
-backbone.marionette : marionette
-./dashboard_task_list_item_view : DashboardTaskListItemView
-./task_transfer_modal_view : TaskTransferModalView
-routes : routes
-libs/toast : Toast
-libs/behaviors/sort_table_behavior : SortTableBehavior
-###
+_                         = require("underscore")
+marionette                = require("backbone.marionette")
+DashboardTaskListItemView = require("./dashboard_task_list_item_view")
+TaskTransferModalView     = require("./task_transfer_modal_view")
+routes                    = require("routes")
+Toast                     = require("libs/toast")
+SortTableBehavior         = require("libs/behaviors/sort_table_behavior")
 
 class DashboardTaskListView extends Backbone.Marionette.CompositeView
 
@@ -131,3 +129,6 @@ class DashboardTaskListView extends Backbone.Marionette.CompositeView
   onDestroy : ->
 
     @modal?.destroy()
+
+
+module.exports = DashboardTaskListView

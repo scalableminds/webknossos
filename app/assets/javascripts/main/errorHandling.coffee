@@ -15,7 +15,22 @@ ErrorHandling =
 
   initializeAirbrake : ->
 
-    window.Airbrake = new airbrakeJs.Client({projectId: 95438, projectKey: "39c9330e5f01e1798722d309b7c6cda2"})
+    # read Airbrake config from DOM
+    # config is inject from backend
+    $scriptTag = $("[data-airbrake-project-id]")
+    projectId = $scriptTag.data("airbrake-project-id")
+    projectKey = $scriptTag.data("airbrake-project-key")
+    envName = $scriptTag.data("airbrake-environment-name")
+
+    window.Airbrake = new airbrakeJs.Client({
+      projectId : projectId
+      projectKey : projectKey
+    })
+
+    Airbrake.addFilter((notice) ->
+      notice.context.environment = envName
+      return notice
+    )
 
     unless @sendLocalErrors
 

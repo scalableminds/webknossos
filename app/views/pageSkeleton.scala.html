@@ -8,7 +8,10 @@
     <link rel="stylesheet" type="text/css" media="screen" href="@routes.Assets.at("stylesheets/main.css")">
 
     <script type="text/javascript"
-      src="@routes.Assets.at("bower_components/airbrake-js-client/dist/client.js")"></script>
+      src="@routes.Assets.at("bower_components/airbrake-js-client/dist/client.js")"
+      data-airbrake-project-id=@play.api.Play.current.configuration.getString("airbrake.projectID")
+      data-airbrake-project-key=@play.api.Play.current.configuration.getString("airbrake.projectKey")
+      data-airbrake-environment-name=@play.api.Play.current.configuration.getString("airbrake.environment")></script>
     @if(play.api.Play.current.mode == play.api.Mode.Dev) {
       <link href='@routes.Assets.at("fonts/fonts-local.css")' rel='stylesheet' type='text/css' media="screen">
       <script type="text/javascript" src="@routes.Assets.at("bower_components/requirejs/require.js")"></script>

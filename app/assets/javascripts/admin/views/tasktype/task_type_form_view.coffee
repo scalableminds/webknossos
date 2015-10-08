@@ -77,7 +77,7 @@ class TaskTypeFormView extends Backbone.Marionette.LayoutView
               <div class="col-sm-4">
                 <div class="input-group">
                   <input type="number" id="expectedTime_maxHard" name="expectedTime.maxHard"
-                    value="15" min="0" input-append="hours" class="form-control" required>
+                    value="15" min="1" input-append="hours" class="form-control" required>
                   <span class="input-group-addon">hours</span>
                 </div>
               </div>

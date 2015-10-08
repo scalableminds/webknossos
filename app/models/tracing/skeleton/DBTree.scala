@@ -50,8 +50,8 @@ object DBTreeService {
     val tree = DBTree.createFrom(_tracing, t)
     for {
       _ <- DBTreeDAO.insert(tree)
-      _ <- Fox.combined(t.nodes.map(n => DBNodeDAO.insert(DBNode(n, tree._id))).toList)
-      _ <- Fox.combined(t.edges.map(e => DBEdgeDAO.insert(DBEdge(e, tree._id))).toList)
+      _ <- DBNodeDAO.bulkInsert(t.nodes.map(DBNode(_, tree._id)).toSeq)
+      _ <- DBEdgeDAO.bulkInsert(t.edges.map(DBEdge(_, tree._id)).toSeq)
     } yield {
       tree
     }

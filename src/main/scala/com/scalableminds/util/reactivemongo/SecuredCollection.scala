@@ -5,7 +5,7 @@ package com.scalableminds.util.reactivemongo
 
 import play.api.libs.iteratee.Enumerator
 import scala.concurrent.Future
-import reactivemongo.core.commands.{Update, Count, FindAndModify, LastError}
+import reactivemongo.core.commands._
 import play.api.libs.json.{JsValue, JsObject, Json}
 import reactivemongo.bson.BSONDocument
 import scala.concurrent.ExecutionContext.Implicits._
@@ -43,7 +43,11 @@ trait SecuredCollection[T] extends AbstractCollection[T] with DBInteractionLogge
   def bulkInsert(enumerator: Enumerator[JsObject], bulkSize: Int, bulkByteSize: Int)(implicit ctx: DBAccessContext): Fox[Int] = {
     if (ctx.globalAccess || AccessDefinitions.isAllowedToInsert) {
       withExceptionCatcher {
-        val future = underlying.bulkInsert(enumerator.map(el => el ++ AccessDefinitions.createACL(el)), bulkSize, bulkByteSize)
+        val future = underlying.bulkInsert(
+          enumerator.map(el => el ++ AccessDefinitions.createACL(el)), 
+          writeConcern = GetLastError(), 
+          bulkSize = bulkSize, 
+          bulkByteSize = bulkByteSize)
         future.onFailure {
           case e: Throwable =>
             logger.error(s"Failed to bulkInsert Objects into mongo.", e)

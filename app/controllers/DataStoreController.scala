@@ -82,23 +82,20 @@ object DataStoreHandler extends DataStoreBackChannelHandler{
     Logger.debug("Upload called for: " + name)
     (for {
       localDatastore <- config.getString("datastore.name").toFox
-      dataStore <- findByServer(localDatastore)
+      dataStore <- findByServer(localDatastore).toFox
+      fileExtension = FilenameUtils.getExtension(zipFile.getName())
+      contentType = play.api.libs.MimeTypes.forExtension(fileExtension).getOrElse(play.api.http.ContentTypes.BINARY)
+      upload = DataSourceUpload(name, team, contentType, Base64.encodeBase64String(FileUtils.readFileToByteArray(zipFile)))
+      call = RESTCall("POST", s"/data/datasets/upload", Map.empty, Map.empty, Json.toJson(upload))
+      response <- dataStore.request(call)
     } yield {
-      val fileExtension = FilenameUtils.getExtension(zipFile.getName())
-      val contentType = play.api.libs.MimeTypes.forExtension(fileExtension).getOrElse(play.api.http.ContentTypes.BINARY)
-      val upload = DataSourceUpload(name, team, contentType, Base64.encodeBase64String(FileUtils.readFileToByteArray(zipFile)))
-      val call = RESTCall("POST", s"/data/datasets/upload", Map.empty, Map.empty, Json.toJson(upload))
-      dataStore.request(call).flatMap{
-        response =>
-          (response.body \ "error").asOpt[String] match {
-            case Some(error) => Failure(error)
-            case _ => Full(Unit)
-          }
+      (response.body \ "error").asOpt[String] match {
+        case Some(error) => Failure(error)
+        case _ => Full(Unit)
       }
     }).futureBox.map {
-        case Full(r) => r
-        case Empty =>
-          Failure(Messages("dataStore.notAvailable"))
+      case Full(r) => r
+      case Empty => Failure(Messages("dataStore.notAvailable"))
     }
   }
 }

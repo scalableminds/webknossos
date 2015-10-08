@@ -7,18 +7,20 @@ backbone : Backbone
 three : THREE
 ###
 
-COLOR_ARRAY      = [0xff0000, 0x00ff00, 0x0000ff, 0xffff00, 0x00ffff, 0xff00ff]
-
 class CellLayer
+
+  COLOR_NORMAL : new THREE.Color(0x000000)
+  COLOR_DELETE : new THREE.Color(0xff0000)
 
   constructor : (@volumeTracing, @flycam) ->
 
     _.extend(this, Backbone.Events)
 
-    @color = 0x000000
+    @color = @COLOR_NORMAL
 
     @listenTo(@volumeTracing, "volumeAnnotated", @reset)
     @listenTo(@volumeTracing, "updateLayer", (contourList) ->
+      @color = if cellId == 0 then @COLOR_DELETE else @COLOR_NORMAL
       @reset()
       for p in contourList
         @addEdgePoint(p)
@@ -33,7 +35,7 @@ class CellLayer
     edgeGeometry.addAttribute( 'position', Float32Array, 0, 3 )
     edgeGeometry.dynamic = true
 
-    @edge = new THREE.Line(edgeGeometry, new THREE.LineBasicMaterial({color: @color, linewidth: 2}), THREE.LineStrip)
+    @edge = new THREE.Line(edgeGeometry, new THREE.LineBasicMaterial({linewidth: 2}), THREE.LineStrip)
     @edge.vertexBuffer = new ResizableBuffer(3)
 
     @reset()
@@ -41,6 +43,7 @@ class CellLayer
 
   reset : ->
 
+    @edge.material.color = @color
     @edge.vertexBuffer.clear()
     @finalizeMesh(@edge)
 

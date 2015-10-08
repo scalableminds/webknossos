@@ -30,8 +30,10 @@ require.config(
     "d3"                  : "../bower_components/d3/d3"
     "offcanvas"           : "../bower_components/jasny-bootstrap/js/offcanvas"
     "fileinput"           : "../bower_components/jasny-bootstrap/js/fileinput"
-    "v3"                  : "libs/v3"
-    "m4x4"                : "libs/m4x4"
+    "daterangepicker"     : "../bower_components/bootstrap-daterangepicker/daterangepicker"
+    "rangeslider"         : "../bower_components/nouislider/distribute/nouislider.min"
+    "clipboard"           : "../bower_components/clipboard/dist/clipboard.min"
+    "mjs"                 : "../bower_components/mjs/src/mjs"
     "worker"              : "libs/worker_plugin"
     "wrapped_worker"      : "libs/wrapped_worker_plugin"
     "nested_obj_model"    : "libs/nested_obj_model"
@@ -52,10 +54,6 @@ require.config(
       exports : "Zlib"
     "stats" :
       exports : "Stats"
-    "v3" :
-      exports : "V3"
-    "m4x4" :
-      exports : "M4x4"
     "three.trackball" :
       deps : ["three"]
     "three.color" :

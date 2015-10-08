@@ -19,7 +19,7 @@ object TaskTypeAdministration extends AdminController {
       "summary" -> nonEmptyText(2, 50),
       "description" -> text,
       "team" -> nonEmptyText,
-      "allowedModes" -> seq(text).verifying("taskType.emptyModeSelection", l => !l.isEmpty),
+      "allowedModes" -> seq(text),
       "branchPointsAllowed" -> boolean,
       "somaClickingAllowed" -> boolean,
       "expectedTime" -> mapping(

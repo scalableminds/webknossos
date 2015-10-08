@@ -18,6 +18,7 @@ import net.liftweb.common.{Full, Failure}
 import com.scalableminds.util.reactivemongo.DBAccessContext
 import scala.concurrent.{Promise, Future}
 import play.twirl.api.Html
+import scala.concurrent.Future
 import scala.async.Async.{async, await}
 import net.liftweb.common.Box
 

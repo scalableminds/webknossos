@@ -23,12 +23,7 @@ class DatasetListItemView extends Backbone.Marionette.CompositeView
       </td>
       <td title="<%= dataSource.baseDir %>"><%= name %></td>
       <td><%= dataStore.name %></td>
-      <td>(
-        <%= dataSource.scale[0] %>,
-        <%= dataSource.scale[1] %>,
-        <%= dataSource.scale[2] %>
-        )
-      </td>
+      <td><%= TemplateHelpers.formatScale(dataSource.scale) %></td>
       <td><%= owningTeam %></td>
       <td class="team-label">
         <% _.map(allowedTeams, function(team){ %>

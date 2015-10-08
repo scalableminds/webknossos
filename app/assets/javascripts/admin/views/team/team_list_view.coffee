@@ -25,15 +25,6 @@ class TeamListView extends Backbone.Marionette.CompositeView
         </thead>
         <tbody></tbody>
       </table>
-      <div class="navbar navbar-default navbar-fixed-bottom">
-        <div class="navbar-form">
-          <div class="btn-group">
-            <a class="btn btn-primary" id="new-team">
-              <i class="fa fa-plus"></i>Add New Team
-            </a>
-          </div>
-        </div>
-      </div>
     </form>
    <div class="modal-wrapper"></div>
   """)
@@ -49,13 +40,14 @@ class TeamListView extends Backbone.Marionette.CompositeView
   ui :
     "modalWrapper" : ".modal-wrapper"
 
-  events :
-    "click #new-team" : "showModal"
-
   initialize : ->
 
     @listenTo(app.vent, "paginationView:filter", @filterBySearch)
     @listenTo(app.vent, "CreateTeamModal:refresh", @refreshPagination)
+<<<<<<< HEAD
+=======
+    @listenTo(app.vent, "paginationView:addElement", @showModal)
+>>>>>>> master
 
     @collection.fetch(
       data : "isEditable=true"

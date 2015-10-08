@@ -1,8 +1,12 @@
 ### define
 jquery : $
 underscore : _
+<<<<<<< HEAD
 app : app
 backbone : Backbone
+=======
+stats : Stats
+>>>>>>> master
 ./controller/viewmodes/plane_controller : PlaneController
 ./controller/annotations/skeletontracing_controller : SkeletonTracingController
 ./controller/annotations/volumetracing_controller : VolumeTracingController
@@ -15,10 +19,16 @@ backbone : Backbone
 ./view : View
 ./view/skeletontracing/skeletontracing_view : SkeletonTracingView
 ./view/volumetracing/volumetracing_view : VolumeTracingView
+<<<<<<< HEAD
+=======
+./view/gui : Gui
+./view/share_modal_view : ShareModalView
+./constants : constants
+../libs/event_mixin : EventMixin
+>>>>>>> master
 ../libs/input : Input
 ../libs/toast : Toast
-./constants : constants
-stats : Stats
+
 ###
 
 class Controller
@@ -62,7 +72,35 @@ class Controller
       .done( (error) => @modelFetchDone(error) )
       .fail( (response) => @modelFetchFail(response) )
 
+<<<<<<< HEAD
   modelFetchDone : (error) ->
+=======
+      if not tracing.restrictions.allowDownload or not tracing.downloadUrl?
+        $('#trace-download-button').attr("disabled", "disabled")
+      else
+        $('#trace-download-button').attr("href", tracing.downloadUrl)
+
+      @urlManager.startUrlUpdater()
+
+      # Warn if segmentation data is not available
+      if @model.getSegmentationBinary()?
+        hasWarned = false
+        @model.flycam.on
+          zoomStepChanged : =>
+            if @model.flycam.getIntegerZoomStep() > 1 and not hasWarned
+              hasWarned = true
+              Toast.info(
+                "Segmentation data is only available at lower zoom levels.")
+
+      for allowedMode in tracing.content.settings.allowedModes
+        @allowedModes.push switch allowedMode
+          when "flight" then constants.MODE_ARBITRARY
+          when "oblique" then constants.MODE_ARBITRARY_PLANE
+          when "volume" then constants.MODE_VOLUME
+
+      # Plane tracing mode is always allowed
+      @allowedModes.push(constants.MODE_PLANE_TRACING)
+>>>>>>> master
 
     # Do not continue, when there was an error and we got no settings from the server
     if error
@@ -104,11 +142,17 @@ class Controller
 
     else if @model.volumeTracing?
 
+<<<<<<< HEAD
       @view = new VolumeTracingView(@model)
       @annotationController = new VolumeTracingController(
         @model, @sceneController, @view )
       @planeController = new VolumeTracingPlaneController(
         @model, stats, @view, @sceneController, @annotationController)
+=======
+      @initMouse()
+      @initKeyboard()
+      @initUIElements()
+>>>>>>> master
 
     else # View mode
 
@@ -116,10 +160,39 @@ class Controller
       @planeController = new PlaneController(
         @model, stats, @view, @sceneController)
 
+<<<<<<< HEAD
     @initKeyboard()
 
     for binaryName of @model.binary
       @listenTo(@model.binary[binaryName].cube, "bucketLoaded", -> app.vent.trigger("rerender"))
+=======
+      if @controlMode == constants.CONTROL_MODE_VIEW
+
+        # Zoom Slider
+        logScaleBase = Math.pow(@model.flycam.getMaxZoomStep() * 0.99, 1 / 100)
+        slider = $('#zoom-slider').slider().on "slide", (event) =>
+          zoomValue = Math.pow(logScaleBase, event.value)
+          @model.user.set("zoom", zoomValue)
+
+        updateSlider = (zoom) =>
+          sliderValue = Math.log(zoom) / Math.log(logScaleBase)
+          slider.slider("setValue", sliderValue)
+
+        @model.user.on(
+          zoomChanged : updateSlider
+        )
+
+        # Segmentation slider
+        if @model.getSegmentationBinary()?
+          $('#alpha-slider').slider().on "slide", (event) =>
+
+            alpha = event.value
+            if (alpha == 0)
+              @model.getSegmentationBinary().pingStop()
+            @sceneController.setSegmentationAlpha( alpha )
+        else
+          $('#segmentation-slider').hide()
+>>>>>>> master
 
     @listenTo(@model, "change:mode", @setMode)
 
@@ -200,6 +273,37 @@ class Controller
 
     new Input.KeyboardNoLoop( keyboardControls )
 
+
+  initUIElements : ->
+
+    @initAddScriptModal()
+
+    $("#share-button").on "click", (event) =>
+
+      # save the progress
+      model = @model.skeletonTracing || @model.volumeTracing
+      model.stateLogger.pushImpl()
+
+      modalView = new ShareModalView(_model : @model)
+      el = modalView.render().el
+      $("#merge-modal").html(el)
+      modalView.show()
+
+
+
+  initAddScriptModal : ->
+
+    $("#add-script-link").removeClass("hide")
+    $("#add-script-button").click( (event) ->
+      try
+        eval($('#add-script-input').val())
+        # close modal if the script executed successfully
+        $('#script-modal').modal('hide')
+      catch error
+        alert(error)
+    )
+
+
   setMode : (newMode, force = false) ->
 
     if (newMode == constants.MODE_ARBITRARY or newMode == constants.MODE_ARBITRARY_PLANE) and (newMode in @allowedModes or force)
@@ -233,5 +337,9 @@ class Controller
 
   browserSupported : ->
 
-    # right now only webkit-based browsers are supported
-    return window.webkitURL
+    userAgentContains = (substring) ->
+        navigator.userAgent.indexOf(substring) >= 0
+
+    # allow everything but IE
+    isIE = userAgentContains("MSIE") or userAgentContains("Trident")
+    return not isIE

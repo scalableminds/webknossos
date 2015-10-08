@@ -4,6 +4,7 @@ backbone.marionette : marionette
 app : app
 libs/toast : Toast
 ./merge_modal_view : MergeModalView
+./share_modal_view : ShareModalView
 oxalis/constants : Constants
 ###
 
@@ -43,12 +44,13 @@ class DatasetActionsView extends Backbone.Marionette.ItemView
               <% if (isSkeletonMode) { %>
                 <tbody>
                   <tr><td>Left Mouse drag or Arrow keys</td><td>Move</td></tr>
-                  <tr><td>Right click</td><td>Set tracepoint</td></tr>
-                  <tr><td>F, D</td><td>Move along Z-Axis</td></tr>
                   <tr><td>I, O or Alt + Mousewheel</td><td>Zoom in/out</td></tr>
+                  <tr><td>F, D or Mousewheel</td><td>Move along Z-Axis</td></tr>
+                  <tr><td>Right click</td><td>Set node</td></tr>
                   <tr><td>Shift + Alt + Left click</td><td>Merge two trees</td></tr>
                   <tr><td>K, L</td><td>Scale up/down viewport size</td></tr>
                   <tr><td>B, J</td><td>Set/Jump to last branchpoint</td></tr>
+                  <tr><td>S</td><td>Center active node</td></tr>
                 </tbody>
               <% } else { %>
                 <tbody class="volume-controls">
@@ -61,9 +63,9 @@ class DatasetActionsView extends Backbone.Marionette.ItemView
                 </tbody>
               <% } %>
             </table>
-            <p>For a full list of all keyboard shortcuts <a href="/help/keyboardshortcuts">see the help section.</a></p>
-            <p>We encourage you to read the <a href="/help/faq">FAQ</a> or the <a href="#">tutorials</a> to completely understand how webKnossos works.</p>
-            <p>All other settings like moving speed, clipping distance and particle size can be adjusted in the settings tab located to the left.</p>
+            <p>For a full list of all keyboard shortcuts <a target="_blank" href="/help/keyboardshortcuts">see the help section.</a></p>
+            <p>We encourage you to read the <a target="_blank" href="/help/faq">tutorials</a> to completely understand how webKnossos works.</p>
+            <p>Introductory  <a target="_blank" href="http://to.do">videos</a> are available.</p>
           </div>
           <div class="modal-footer">
             <a href="#" class="btn btn-default" data-dismiss="modal">Close</a>
@@ -71,6 +73,7 @@ class DatasetActionsView extends Backbone.Marionette.ItemView
         </div>
       </div>
     </div>
+    <div class="btn btn-default" id="trace-share-button"><i class="fa fa-share-alt"></i>Share</div>
     <% if (isSkeletonMode) { %>
       <div class="btn btn-default" id="trace-merge-button"><i class="fa fa-folder-open"></i>Merge Tracing</div>
       <div class="merge-modal-wrapper"></div>
@@ -87,6 +90,7 @@ class DatasetActionsView extends Backbone.Marionette.ItemView
     "click #trace-save-button" : "saveTracing"
     "click #trace-finish-button" : "finishTracing"
     "click #trace-merge-button" : "mergeTracing"
+    "click #trace-share-button" : "shareTracing"
 
   ui :
     "modalWrapper" : ".merge-modal-wrapper"
@@ -119,6 +123,13 @@ class DatasetActionsView extends Backbone.Marionette.ItemView
     modalView = new MergeModalView({@model})
     @ui.modalWrapper.html(modalView.render().el)
     modalView.show()
+
+
+  shareTracing : ->
+
+      modalView = new ShareModalView({@model})
+      @ui.modalWrapper.html(modalView.render().el)
+      modalView.show()
 
 
   isSkeletonMode : ->

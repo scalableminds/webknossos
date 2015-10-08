@@ -26,6 +26,8 @@ import play.api.libs.functional.syntax._
 import net.liftweb.common.{Box, Empty, Failure, Full}
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.util.reactivemongo.DBAccessContext
+import models.team.Team
+import models.user.time.{TimeSpan, TimeSpanService}
 
 object TaskAdministration extends AdminController {
 
@@ -331,18 +333,20 @@ object TaskAdministration extends AdminController {
     user: User,
     taskTypes: List[TaskType],
     projects: List[Project],
-    futureTaskType: Option[TaskType])
+    futureTaskType: Option[TaskType],
+    workingTime: Long)
 
   object UserWithTaskInfos {
     def userInfosPublicWrites(requestingUser: User): Writes[UserWithTaskInfos] =
       ( (__ \ "user").write(User.userPublicWrites(requestingUser)) and
         (__ \ "taskTypes").write[List[TaskType]] and
         (__ \ "projects").write[List[Project]] and
-        (__ \ "futureTaskType").write[Option[TaskType]])( u =>
-        (u.user, u.taskTypes, u.projects, u.futureTaskType))
+        (__ \ "futureTaskType").write[Option[TaskType]] and
+        (__ \ "workingTime").write[Long])( u =>
+        (u.user, u.taskTypes, u.projects, u.futureTaskType, u.workingTime))
   }
 
-  def overviewData = Authenticated.async { implicit request =>
+  def overviewData(start: Option[Long], end: Option[Long]) = Authenticated.async { implicit request =>
 
     def getUserInfos(users: List[User]) = {
 
@@ -360,12 +364,14 @@ object TaskAdministration extends AdminController {
           projects <- Fox.sequenceOfFulls(tasks.map(_.project))
           taskTypes <- Fox.sequenceOfFulls(tasks.map(_.taskType))
           taskTypeMap <- futureTaskTypeMap getOrElse(Map.empty)
+          workingTime <- TimeSpanService.totalTimeOfUser(user, start, end).futureBox
         } yield {
           UserWithTaskInfos(
             user,
             taskTypes.distinct,
             projects.distinct,
-            taskTypeMap.get(user)
+            taskTypeMap.get(user),
+            workingTime.map(_.toMillis).toOption.getOrElse(0)
           )
         }
       }

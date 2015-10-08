@@ -25,10 +25,28 @@ class VolumeTracingPlaneController extends PlaneController
       @render3dCell @model.volumeTracing.getActiveCellId()
     )
 
+<<<<<<< HEAD
     @listenTo(@model.user, "isosurfaceDisplayChanged", -> @render3dCell @model.volumeTracing.getActiveCellId())
     @listenTo(@model.user, "isosurfaceBBsizeChanged", -> @render3dCell @model.volumeTracing.getActiveCellId())
     @listenTo(@model.user, "isosurfaceResolutionChanged", -> @render3dCell @model.volumeTracing.getActiveCellId())
     @listenTo(@model.volumeTracing, "newActiveCell", (id) -> @render3dCell id)
+=======
+    @model.user.on
+      isosurfaceDisplayChanged : =>
+        @render3dCell @model.volumeTracing.getActiveCellId()
+      isosurfaceBBsizeChanged : =>
+        @render3dCell @model.volumeTracing.getActiveCellId()
+      isosurfaceResolutionChanged : =>
+        @render3dCell @model.volumeTracing.getActiveCellId()
+
+    @model.volumeTracing.on
+      newActiveCell : (id) =>
+        @render3dCell id
+      volumeAnnotated : =>
+        id = @model.volumeTracing.getActiveCellId()
+        if id > 0
+          @render3dCell id
+>>>>>>> master
 
 
   getPlaneMouseControls : (planeId) ->
@@ -51,6 +69,7 @@ class VolumeTracingPlaneController extends PlaneController
         if event.shiftKey
           @volumeTracingController.enterDeleteMode()
         @model.volumeTracing.startEditing(plane)
+        @adjustSegmentationOpacity()
 
       leftMouseUp : =>
 
@@ -65,6 +84,7 @@ class VolumeTracingPlaneController extends PlaneController
 
         @volumeTracingController.enterDeleteMode()
         @model.volumeTracing.startEditing(plane)
+        @adjustSegmentationOpacity()
 
       rightMouseUp : =>
 
@@ -77,6 +97,12 @@ class VolumeTracingPlaneController extends PlaneController
                   @calculateGlobalPos( pos ))
 
         @volumeTracingController.handleCellSelection( cellId )
+
+
+  adjustSegmentationOpacity : ->
+
+    if @model.user.get("segmentationOpacity") < 10
+      @model.user.set("segmentationOpacity", 50)
 
 
   getKeyboardControls : ->

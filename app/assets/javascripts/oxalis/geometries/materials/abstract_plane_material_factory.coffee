@@ -20,6 +20,10 @@ class AbstractPlaneMaterialFactory extends AbstractMaterialFactory
 
     super()
 
+    settings = @model.user.getOrCreateBrightnessContrastColorSettings(
+      @model
+    )
+
     for binary in @model.getColorBinaries()
       name = @sanitizeName(binary.name)
       @uniforms[name + "_brightness"] =
@@ -28,6 +32,7 @@ class AbstractPlaneMaterialFactory extends AbstractMaterialFactory
       @uniforms[name + "_contrast"] =
         type : "f"
         value : @model.datasetConfiguration.get("layers.#{binary.name}.contrast")
+
 
     @createTextures()
 

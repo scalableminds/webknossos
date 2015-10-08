@@ -26,7 +26,10 @@ class Router extends Backbone.Router
     "taskTypes"                     : "taskTypes"
     "spotlight"                     : "spotlight"
     "tasks/overview"                : "taskOverview"
+<<<<<<< HEAD
     "admin/taskTypes"               : "hideLoading"
+=======
+>>>>>>> master
     "workload"                      : "workload"
 
 
@@ -103,7 +106,7 @@ class Router extends Backbone.Router
 
   projects : ->
 
-    @showWithPagination("ProjectListView", "ProjectCollection")
+    @showWithPagination("ProjectListView", "ProjectCollection", "Create New Project")
 
 
   statistics : ->
@@ -118,12 +121,16 @@ class Router extends Backbone.Router
 
   teams : ->
 
-    @showWithPagination("TeamListView", "TeamCollection")
+    @showWithPagination("TeamListView", "TeamCollection", "Add New Team")
 
 
   tasks : ->
 
-    @showWithPagination("TaskListView", "TaskCollection")
+    @showWithPagination("TaskListView", "TaskCollection", "Create New Task")
+
+  workload : ->
+
+    @showWithPagination("WorkloadListView", "WorkloadCollection")
 
   workload : ->
 
@@ -188,13 +195,13 @@ class Router extends Backbone.Router
     )
 
 
-  showWithPagination : (view, collection) ->
+  showWithPagination : (view, collection, addButtonText=null) ->
 
     require ["admin/admin"], (admin) =>
 
       collection = new admin[collection]()
       view = new admin[view](collection: collection)
-      paginationView = new admin.PaginationView(collection: collection)
+      paginationView = new admin.PaginationView({collection, addButtonText})
 
       @changeView(paginationView, view)
       @listenTo(collection, "sync", => @hideLoading())

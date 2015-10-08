@@ -108,5 +108,8 @@ Will fetch all Scala, Java and node dependencies and run the application on Port
 ## Credits
 scalable minds - http://scm.io
 
-## License
-TBD
+# License
+MIT
+
+Includes GraphViz by John Ellson et al. (http://www.graphviz.org/) under EPL
+

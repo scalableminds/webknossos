@@ -76,6 +76,17 @@ class ArbitraryController
 
     @stop()
 
+    # Toggle record
+    @setRecord(false)
+    $('#trace-mode-trace').on("click", =>
+      @setRecord(true)
+      $(":focus").blur()
+    )
+    $('#trace-mode-watch').on("click", =>
+      @setRecord(false)
+      $(":focus").blur()
+    )
+
 
   render : (forceUpdate, event) ->
 
@@ -170,12 +181,9 @@ class ArbitraryController
 
       #Recording of Waypoints
       "z" : =>
-        @record = true
-        @infoPlane.updateInfo(true)
-        @setWaypoint()
+        @setRecord(true)
       "u" : =>
-        @record = false
-        @infoPlane.updateInfo(false)
+        @setRecord(false)
       #Comments
       "n" : => @setActiveNode(@model.skeletonTracing.nextCommentNodeID(false), true)
       "p" : => @setActiveNode(@model.skeletonTracing.nextCommentNodeID(true), true)
@@ -189,6 +197,20 @@ class ArbitraryController
         @centerActiveNode()
 
     , -1)
+
+
+  setRecord : (@record) ->
+
+    $('#trace-mode button').removeClass("btn-primary")
+    if @record
+      $('#trace-mode-trace').addClass("btn-primary")
+    else
+      $('#trace-mode-watch').addClass("btn-primary")
+
+    @infoPlane.updateInfo(@record)
+    if @record
+      @setWaypoint()
+
 
   init : ->
 

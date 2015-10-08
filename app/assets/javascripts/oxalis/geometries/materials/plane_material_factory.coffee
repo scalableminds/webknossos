@@ -139,6 +139,7 @@ class PlaneMaterialFactory extends AbstractPlaneMaterialFactory
             color_value = texture2D( <%= name %>_texture, vUv * repeat + offset).r;
             /* Brightness / Contrast Transformation */
             color_value = (color_value + <%= name %>_brightness - 0.5) * <%= name %>_contrast + 0.5;
+
             /* Multiply with color and weight */
             data_color += color_value * <%= name %>_weight * <%= name %>_color;
           <% }) %> ;

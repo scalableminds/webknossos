@@ -28,8 +28,14 @@ class Model extends Backbone.Model
 
   fetch : (options) ->
 
+    if controlMode == constants.CONTROL_MODE_TRACE
+      # Include /readOnly part whenever it is in the pathname
+      infoUrl = location.pathname + "/info"
+    else
+      infoUrl = "/annotations/#{@tracingType}/#{@tracingId}/info"
+
     Request.send(
-      url : "/annotations/#{@get("tracingType")}/#{@get("tracingId")}/info"
+      url : infoUrl
       dataType : "json"
     ).pipe (tracing) =>
 

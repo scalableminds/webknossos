@@ -15,6 +15,8 @@ ErrorHandling =
 
   initializeAirbrake : ->
 
+    window.Airbrake = new airbrakeJs.Client({projectId: 95438, projectKey: "39c9330e5f01e1798722d309b7c6cda2"})
+
     unless @sendLocalErrors
 
       Airbrake.addFilter( (notice) ->
@@ -25,10 +27,10 @@ ErrorHandling =
 
       unless error?
         # older browsers don't deliver the error parameter
-        error = {error: {message: message, fileName: file, lineNumber: line}}
+        error = new Error(message, file, line)
 
       console.error(error)
-      Airbrake.push(error)
+      Airbrake.notify(error)
 
 
   initializeAssertions : ->
@@ -55,7 +57,7 @@ ErrorHandling =
         throw error
       else
         console.error(error)
-        Airbrake.push(error)
+        Airbrake.notify(error)
 
 
     $.assertExists = (variable, message, assertionContext) ->

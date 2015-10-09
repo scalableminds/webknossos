@@ -150,7 +150,7 @@ object DataSetController extends Controller with Secured {
       "team" -> nonEmptyText,
       "scale" -> mapping(
         "scale" -> text.verifying("scale.invalid",
-          p => p.matches("\\s*([0-9]+\\.[0-9]+),\\s*([0-9]+\\.[0-9]+),\\s*([0-9]+\\.[0-9]+)\\s*")))(Scale.fromForm)(Scale.toForm)
+          p => p.matches(Scale.formRx.toString)))(Scale.fromForm)(Scale.toForm)
     )).fill((name, team, scale))
 
   val emptyUploadForm = uploadForm("", "", Scale.default)

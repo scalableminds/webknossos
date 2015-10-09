@@ -107,11 +107,15 @@ class InitialData(conf: Configuration) extends GlobalDBAccess {
   }
 
   def insertSingleTeam(team: Team, teamNumber: Int = 1) {
-    TeamDAO.insert(team)
-    val (users, admin) = insertUsers(team, teamNumber) // user 0 is admin
-    val taskTypes = insertTaskTypesForTeam(team)
-    addEk0563(users, team)
-    addCortex(users, admin, team, taskTypes)
+    Await.result(TeamDAO.findOneByName(team.name).futureBox.map {
+      case Full(t) => t
+      case _ =>
+        TeamDAO.insert(team)
+        val (users, admin) = insertUsers(team, teamNumber)
+        val taskTypes = insertTaskTypesForTeam(team)
+        addEk0563(users, team)
+        addCortex(users, admin, team, taskTypes)
+    }, 10 seconds)
   }
 
   def insertExplorativeAnnotation(nmlFile: File, user: User) = {

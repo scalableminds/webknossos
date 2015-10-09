@@ -19,7 +19,7 @@
     "gamepad.js": "*",
     "jquery-bootpag": "1.0.4",
     "tweenjs": "r6",
-    "zlib": "git@github.com:imaya/zlib.js.git#0.2.0",
+    "zlib": "git://github.com/imaya/zlib.js.git#0.2.0",
     "backbone.paginator": "~0.8.1",
     "seiyria-bootstrap-slider": "~1.9.5",
     "three": "https://raw.github.com/georgwiese/three.js/scm_oxalis/build/three.js",
@@ -27,7 +27,10 @@
     "TrackballControls": "https://raw.github.com/georgwiese/three.js/scm_oxalis/examples/js/controls/TrackballControls.js",
     "bootstrap-daterangepicker": "~2.0.8",
     "nouislider": "~8.0.2",
-    "c3": "0.4.10"
+    "c3": "0.4.10",
+    "clipboard": "~1.4.0",
+    "mjs": "~0.0.6",
+    "airbrake-js-client": "~0.5.3"
   },
   "devDependencies": {}
 }

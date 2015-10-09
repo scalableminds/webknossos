@@ -3,6 +3,10 @@
  */
 package controllers
 
+import org.apache.commons.io.FilenameUtils
+import org.apache.commons.codec.binary.Base64
+import org.apache.commons.io.FileUtils
+import java.io.File
 import akka.agent.Agent
 import play.api.mvc._
 import play.api.libs.json.{JsError, JsSuccess, Json, JsValue}
@@ -20,8 +24,12 @@ import com.scalableminds.braingames.binary.models._
 import play.api.libs.concurrent.Execution.Implicits._
 import com.scalableminds.util.reactivemongo.{GlobalAccessContext, DBAccessContext}
 import com.scalableminds.util.rest.{RESTResponse, RESTCall}
+import play.api.Play
 
 object DataStoreHandler extends DataStoreBackChannelHandler{
+
+  lazy val config = Play.current.configuration
+
   def createUserDataLayer(dataStoreInfo: DataStoreInfo, base: DataSource): Fox[UserDataLayer] = {
     Logger.debug("Called to create user data source. Base: " + base.id + " Datastore: " + dataStoreInfo)
     findByServer(dataStoreInfo.name).toFox.flatMap {
@@ -67,6 +75,24 @@ object DataStoreHandler extends DataStoreBackChannelHandler{
       dataStore =>
         val call = RESTCall("POST", s"/data/datasets/${dataSet.name}/import", Map.empty, Map.empty, Json.obj())
         dataStore.request(call)
+    }
+  }
+
+  def uploadDataSource(upload: DataSourceUpload) = {
+    Logger.debug("Upload called for: " + upload.name)
+    (for {
+      localDatastore <- config.getString("datastore.name").toFox
+      dataStore <- findByServer(localDatastore).toFox
+      call = RESTCall("POST", s"/data/datasets/upload", Map.empty, Map.empty, Json.toJson(upload))
+      response <- dataStore.request(call)
+    } yield {
+      (response.body \ "error").asOpt[String] match {
+        case Some(error) => Failure(error)
+        case _ => Full(Unit)
+      }
+    }).futureBox.map {
+      case Full(r) => r
+      case Empty => Failure(Messages("dataStore.notAvailable"))
     }
   }
 }

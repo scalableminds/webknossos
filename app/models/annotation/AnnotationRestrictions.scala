@@ -1,12 +1,7 @@
 package models.annotation
 
 import models.user.User
-import play.api.libs.functional.syntax._
 import play.api.libs.json._
-import scala.async.Async._
-import scala.concurrent.Future
-import play.api.libs.concurrent.Execution.Implicits._
-import com.scalableminds.util.reactivemongo.GlobalAccessContext
 import models.team.Role
 
 /**

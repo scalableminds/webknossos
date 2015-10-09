@@ -1,7 +1,6 @@
 ### define
 three : THREE
-m4x4 : M4x4
-v3 : V3
+mjs : MJS
 underscore : _
 oxalis/constants : constants
 ./materials/arbitrary_plane_material_factory : ArbitraryPlaneMaterialFactory
@@ -78,7 +77,7 @@ class ArbitraryPlane
 
       matrix = cam.getZoomedMatrix()
 
-      newVertices = M4x4.transformPointsAffine matrix, @queryVertices
+      newVertices = MJS.M4x4.transformPointsAffine matrix, @queryVertices
       newColors = @model.getColorBinaries()[0].getByVerticesSync(newVertices)
 
       @textureMaterial.setData "color", newColors
@@ -117,9 +116,9 @@ class ArbitraryPlane
         vertex[1] = y - (Math.floor @width/2)
         vertex[2] = 0
 
-        vector = V3.sub(vertex, centerVertex, vector)
-        length = V3.length(vector)
-        vector = V3.scale(vector, sphericalCapRadius / length, vector)
+        vector = MJS.V3.sub(vertex, centerVertex, vector)
+        length = MJS.V3.length(vector)
+        vector = MJS.V3.scale(vector, sphericalCapRadius / length, vector)
 
         queryVertices[currentIndex++] = centerVertex[0] + vector[0]
         queryVertices[currentIndex++] = centerVertex[1] + vector[1]

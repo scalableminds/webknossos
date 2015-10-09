@@ -57,7 +57,7 @@ class TaskListView extends Backbone.Marionette.CompositeView
 
   createNewTask : ->
 
-    window.location.href = "/admin/tasks/create"
+    app.router.loadURL("/admin/tasks/create")
 
 
   toggleAllDetails : ->

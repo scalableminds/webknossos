@@ -1,5 +1,4 @@
 @(annotation: models.annotation.AnnotationLike)(additionalHtml: Html)(implicit session: oxalis.view.AuthedSessionData)
-@import com.scalableminds.util.reactivemongo.GlobalAccessContext
 
 @import models.task.Task
 @import models.annotation.AnnotationType
@@ -19,6 +18,7 @@
           <a href="@controllers.routes.AnnotationController.download(annotation.typ, annotation.id)" class="btn btn-default btn-small" id="trace-download-button"><i class="fa fa-download"></i>NML</a>
           <a href="#help-modal" class="btn btn-default btn-small" data-toggle="modal"><i class="fa fa-question-circle"></i>Help</a>
         </div>
+        <div id="share-button" class="btn btn-success form-control"><i class="fa fa-share-alt"></i>Share</div>
 
         <div id="dataset" class="well well-sm">
             <span class="small-text-fn">@annotation._name.getOrElse(annotation.typ)</span><br />
@@ -55,7 +55,7 @@
           <p>View mode:</p>
           <div class="btn-group wide-toggle-button">
             <button type="button" class="btn btn-default btn-primary" id="view-mode-3planes">Orthogonal</button>
-            <button type="button" class="btn btn-default" id="view-mode-sphere">Spherical</button>
+            <button type="button" class="btn btn-default" id="view-mode-sphere">Flight</button>
             <button type="button" class="btn btn-default" id="view-mode-arbitraryplane">Oblique</button>
           </div>
         </div>
@@ -179,7 +179,7 @@
                     </tbody>
                   </table>
                   <p>For a full list of all keyboard shortcuts <a target="_blank" href="/help/keyboardshortcuts">see the Further Help section.</a></p>
-                  <p>Introductory  <a target="_blank" href="http://to.do">videos</a> are available.</p>
+                  <p>Introductory  <a target="_blank" href="https://goo.gl/Hk53Rd">videos</a> are available.</p>
                  <!-- TODO: change url when feature is ready; quickfix to make tutorial screenshots -->
                   <p>All other settings like moving speed, clipping distance and particle size can be adjusted in the settings tab located to the left.</p>
                 </div>

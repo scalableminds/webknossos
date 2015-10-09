@@ -26,7 +26,7 @@ object SavedTracingInformationHandler extends AnnotationInformationHandler with 
         task <- annotation.task.map(_.id) getOrElse ("explorational")
       } yield {
         val id = oxalis.view.helpers.formatHash(annotation.id)
-        normalize(s"${dataSetName}__${task}__${userName}__${id}")
+        normalize(s"${dataSetName}__${userName}__${id}")
       }
     case a =>
       Future.successful(a.id)

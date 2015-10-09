@@ -94,7 +94,9 @@ GET           /annotations/:typ/:id/reset                                     co
 POST          /annotations/:typ/:id/transfer                                  controllers.AnnotationController.transfer(typ: String, id: String)
 
 GET           /annotations/:typ/:id                                           controllers.AnnotationController.trace(typ: String, id: String)
+GET           /annotations/:typ/:id/readOnly                                  controllers.AnnotationController.traceReadOnly(typ: String, id: String)
 GET           /annotations/:typ/:id/info                                      controllers.AnnotationController.info(typ: String, id: String)
+GET           /annotations/:typ/:id/readOnly/info                             controllers.AnnotationController.infoReadOnly(typ: String, id: String)
 GET           /annotations/:typ/:id/download                                  controllers.AnnotationController.download(typ: String, id: String)
 DELETE        /annotations/:typ/:id                                           controllers.AnnotationController.cancel(typ: String, id: String)
 GET           /annotations/:typ/:id/merge/:mergedTyp/:mergedId/:readOnly      controllers.AnnotationController.merge(typ: String, id: String, mergedTyp: String, mergedId: String, readOnly: Boolean)
@@ -103,6 +105,10 @@ GET           /annotations/:typ/:id/saveMerged                                co
 #Admin pages
 GET           /admin/nml/upload                                               controllers.admin.NMLIO.uploadForm
 POST          /admin/nml/upload                                               controllers.admin.NMLIO.upload
+
+# Admin datasets
+GET           /admin/datasets/upload                                          controllers.DataSetController.upload
+POST          /admin/datasets/upload                                          controllers.DataSetController.uploadFromForm
 
 # Admin Tasks
 GET           /api/tasks                                                      controllers.TaskController.list

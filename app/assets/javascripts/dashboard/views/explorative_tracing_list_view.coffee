@@ -51,12 +51,12 @@ class ExplorativeTracingListView extends Backbone.Marionette.CompositeView
     <table class="table table-striped table-hover sortable-table" id="explorative-tasks">
       <thead>
         <tr>
-          <th> # </th>
-          <th> Name </th>
-          <th> DataSet </th>
+          <th data-sort="formattedHash"> # </th>
+          <th data-sort="name"> Name </th>
+          <th data-sort="dataSource.id"> DataSet </th>
           <th> Stats </th>
           <th> Type </th>
-          <th> Created </th>
+          <th data-sort="created"> Created </th>
           <th> </th>
         </tr>
       </thead>
@@ -77,9 +77,6 @@ class ExplorativeTracingListView extends Backbone.Marionette.CompositeView
     formSpinnerIcon : "#form-spinner-icon"
     formUploadIcon : "#form-upload-icon"
 
-  templateHelpers : ->
-    activeDataSets : @datasetCollection.toArray()
-
   behaviors :
     SortTableBehavior :
       behaviorClass : SortTableBehavior
@@ -91,7 +88,7 @@ class ExplorativeTracingListView extends Backbone.Marionette.CompositeView
 
     @datasetCollection = @model.get("dataSets")
     @listenTo(@datasetCollection, "sync", @render)
-    @datasetCollection.fetch({silent : true, data : "isActive=true"})
+    @datasetCollection.fetch({data : "isActive=true"})
 
 
   selectFiles : (event) ->

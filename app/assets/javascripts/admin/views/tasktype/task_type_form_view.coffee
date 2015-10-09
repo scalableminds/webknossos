@@ -47,9 +47,9 @@ class TaskTypeFormView extends Backbone.Marionette.LayoutView
             </div>
 
             <div class="col-sm-6 form-group pull-right">
-              <label class="col-sm-10 control-label" for="sphericalAllowed">Allow Spherical Mode</label>
+              <label class="col-sm-10 control-label" for="flightAllowed">Allow Flight Mode</label>
               <div class="col-sm-2">
-                <input type="checkbox" id="sphericalAllowed" name="allowedModes[]" value="spherical" checked>
+                <input type="checkbox" id="flightAllowed" name="allowedModes[]" value="flight" checked>
                 <span></span>
               </div>
             </div>
@@ -77,7 +77,7 @@ class TaskTypeFormView extends Backbone.Marionette.LayoutView
               <div class="col-sm-4">
                 <div class="input-group">
                   <input type="number" id="expectedTime_maxHard" name="expectedTime.maxHard"
-                    value="15" min="0" input-append="hours" class="form-control" required>
+                    value="15" min="1" input-append="hours" class="form-control" required>
                   <span class="input-group-addon">hours</span>
                 </div>
               </div>
@@ -108,7 +108,7 @@ class TaskTypeFormView extends Backbone.Marionette.LayoutView
     "branchPointsAllowed" : "#branchPointsAllowed"
     "somaClickingAllowed" : "#somaClickingAllowed"
     "obliqueAllowed" : "#obliqueAllowed"
-    "sphericalAllowed" : "#sphericalAllowed"
+    "flightAllowed" : "#flightAllowed"
     "summary" : "#summary"
     "description" : "#description"
 
@@ -126,7 +126,7 @@ class TaskTypeFormView extends Backbone.Marionette.LayoutView
 
     settings = @model.get("settings")
     @ui.obliqueAllowed.attr("checked", "oblique" in settings.allowedModes)
-    @ui.sphericalAllowed.attr("checked", "spherical" in settings.allowedModes)
+    @ui.flightAllowed.attr("checked", "flight" in settings.allowedModes)
     @ui.branchPointsAllowed.attr("checked", settings["branchPointsAllowed"])
     @ui.somaClickingAllowed.attr("checked", settings["somaClickingAllowed"])
 

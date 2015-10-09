@@ -82,7 +82,7 @@ class PaginationView extends Backbone.Marionette.ItemView
 
   serializeData : ->
 
-    {@addButtonText}
+    return {@addButtonText}
 
 
   goFirst : ->

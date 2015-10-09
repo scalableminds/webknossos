@@ -3,6 +3,7 @@ underscore : _
 backbone.marionette : marionette
 ./dataset_list_view : DatasetListView
 admin/models/dataset/dataset_collection : DatasetCollection
+admin/models/pagination_collection : PaginationCollection
 views/spotlight_dataset_list_view : SpotlightDatasetListView
 admin/views/pagination_view : PaginationView
 libs/utils : utils
@@ -65,7 +66,10 @@ class DatasetSwitchView extends Backbone.Marionette.LayoutView
 
   showAdvancedView : ->
 
-    collection = new DatasetCollection()
+    collection = new PaginationCollection()
+    collection.model = DatasetCollection::model
+    collection.url = DatasetCollection::url
+
     @toggleSwitchButtons()
     datasetListView = new DatasetListView(collection: collection)
     @datasetPane.show(datasetListView)

@@ -51,7 +51,6 @@ case class Point3D(x: Int, y: Int, z: Int) {
     } yield {
       Point3D(x, y, z)
     }
-
 }
 
 object Point3D {

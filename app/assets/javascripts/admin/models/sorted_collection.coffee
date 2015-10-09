@@ -11,6 +11,11 @@ backbone : Backbone
 
 class SortedCollection extends Backbone.Collection
 
+  sortByAttribute : (args...) ->
+
+    return @setSort(args...)
+
+
   setSort : (criteria, sortDirection) ->
 
     # Set your comparator function, pass the criteria.

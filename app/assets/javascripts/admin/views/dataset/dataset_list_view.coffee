@@ -51,7 +51,6 @@ class DatasetListView extends Backbone.Marionette.CompositeView
 
     @collection.sortByAttribute("created")
 
-
     @collection.fetch(
       silent : true
       data : "isEditable=true"

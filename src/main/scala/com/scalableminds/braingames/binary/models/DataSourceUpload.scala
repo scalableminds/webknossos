@@ -8,9 +8,9 @@ import play.api.libs.json.Json
 case class DataSourceUpload(
   name: String,
   team: String,
-  mimeType: String,
-  content: String
-  )
+  filePath: String,
+  settings: Option[DataSourceSettings]
+)
 
 object DataSourceUpload {
   implicit val dataSourceUploadFormat = Json.format[DataSourceUpload]

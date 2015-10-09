@@ -12,10 +12,7 @@ class SpotlightDatasetListView extends Backbone.Marionette.CollectionView
     @collection.sortByAttribute("created")
 
     @collection.fetch(
-      silent : true
       data : "isActive=true"
-    ).done( =>
-      @collection.goTo(1)
     )
 
 module.exports = SpotlightDatasetListView

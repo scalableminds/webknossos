@@ -9,7 +9,7 @@ import play.api.libs.concurrent.Execution.Implicits._
 import play.api.Logger
 import models.user.{User, Experience}
 import models.annotation._
-import play.api.libs.json.{Json, JsObject}
+import play.api.libs.json.{JsNull, Json, JsObject}
 import com.scalableminds.util.mvc.Formatter
 import scala.concurrent.duration._
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
@@ -19,7 +19,6 @@ import play.modules.reactivemongo.json.BSONFormats._
 import org.joda.time.DateTime
 import org.joda.time.format.DateTimeFormat
 import java.text.SimpleDateFormat
-import play.api.libs.json.JsObject
 import scala.async.Async._
 import akka.actor.Props
 import akka.routing.RoundRobinRouter
@@ -91,7 +90,7 @@ object Task extends FoxImplicits {
       editPosition <- task.annotationBase.flatMap(_.content.map(_.editPosition)) getOrElse Point3D(1, 1, 1)
       boundingBox <- task.annotationBase.flatMap(_.content.map(_.boundingBox)) getOrElse None
       status <- task.status
-      taskType <- task.taskType.futureBox
+      ttJson <- task.taskType.flatMap(tt => TaskType.transformToJson(tt).toFox) getOrElse JsNull
       projectName = task._project.getOrElse("")
     } yield {
       Json.obj(
@@ -99,7 +98,7 @@ object Task extends FoxImplicits {
         "team" -> task.team,
         "formattedHash" -> Formatter.formatHash(task.id),
         "projectName" -> projectName,
-        "type" -> taskType.toOption.map(TaskType.publicTaskTypeWrites.writes),
+        "type" -> ttJson,
         "dataSet" -> dataSetName,
         "editPosition" -> editPosition,
         "boundingBox" -> boundingBox,

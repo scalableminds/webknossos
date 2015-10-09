@@ -35,7 +35,7 @@ class ExplorativeTracingListView extends Backbone.Marionette.CompositeView
           method="POST"
           class="form-inline inline-block">
           <select id="dataSetsSelect" name="dataSetName" class="form-control">
-            <% activeDataSets().forEach(function(d) { %>
+            <% dataSets.forEach(function(d) { %>
               <option value="<%= d.get("name") %>"> <%= d.get("name") %> </option>
             <% }) %>
           </select>
@@ -94,8 +94,6 @@ class ExplorativeTracingListView extends Backbone.Marionette.CompositeView
     archiveAllButton : "#archive-all"
 
   templateHelpers : ->
-    activeDataSets : =>
-      return @datasetCollection.toArray()
     showArchiveAllButton: =>
       !@showArchivedAnnotations
     toggleViewArchivedText: =>
@@ -117,7 +115,7 @@ class ExplorativeTracingListView extends Backbone.Marionette.CompositeView
 
     @datasetCollection = @model.get("dataSets")
     @listenTo(@datasetCollection, "sync", @render)
-    @datasetCollection.fetch({silent : true, data : "isActive=true"})
+    @datasetCollection.fetch({data : "isActive=true"})
 
 
   getFilterForState: () ->

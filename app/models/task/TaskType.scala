@@ -13,7 +13,7 @@ import models.user.User
 import com.scalableminds.util.reactivemongo.AccessRestrictions.{DenyEveryone, AllowIf}
 import com.scalableminds.util.mvc.Formatter
 import scala.async.Async._
-import com.scalableminds.util.reactivemongo.{DefaultAccessDefinitions, GlobalAccessContext, DBAccessContext}
+import com.scalableminds.util.reactivemongo.{DefaultAccessDefinitions, DBAccessContext}
 import scala.concurrent.Future
 
 case class TraceLimit(min: Int, max: Int, maxHard: Int) {

@@ -77,9 +77,6 @@ class ExplorativeTracingListView extends Backbone.Marionette.CompositeView
     formSpinnerIcon : "#form-spinner-icon"
     formUploadIcon : "#form-upload-icon"
 
-  templateHelpers : ->
-    activeDataSets : @datasetCollection.toArray()
-
   behaviors :
     SortTableBehavior :
       behaviorClass : SortTableBehavior
@@ -91,7 +88,7 @@ class ExplorativeTracingListView extends Backbone.Marionette.CompositeView
 
     @datasetCollection = @model.get("dataSets")
     @listenTo(@datasetCollection, "sync", @render)
-    @datasetCollection.fetch({silent : true, data : "isActive=true"})
+    @datasetCollection.fetch({data : "isActive=true"})
 
 
   selectFiles : (event) ->

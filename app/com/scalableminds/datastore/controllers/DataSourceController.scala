@@ -20,14 +20,8 @@ import com.scalableminds.datastore.DataStorePlugin
 import com.scalableminds.datastore.models.DataSourceDAO
 import com.scalableminds.braingames.binary.models.DataSourceUpload
 import java.io.{File, ByteArrayInputStream, FileOutputStream}
-<<<<<<< HEAD
 import java.nio.file.Paths
-import org.apache.commons.io.FileUtils
-import java.util.zip._
-=======
 import org.apache.commons.io.{FileUtils, IOUtils}
-import scalax.file.Path
->>>>>>> 3330e73... changed unzipping, #610
 import com.scalableminds.util.io.ZipIO
 import play.api.Play
 import com.scalableminds.util.io.PathUtils
@@ -89,9 +83,10 @@ object DataSourceController extends Controller {
       Logger.warn(s"Unzipping uploaded dataset: $filePath")
       ZipIO.unzipWithFilenames(new File(filePath)).map{
         case (name, in) =>
-          val path = baseDir.resolve(Path.fromString(name))
-          path.parent.map(PathUtils.ensureDirectory(_))
-          val out = new FileOutputStream(new File(path.path))
+          val path = baseDir.resolve(Paths.get(name))
+          if (path.getParent() != null)
+            PathUtils.ensureDirectory(path.getParent())
+          val out = new FileOutputStream(new File(path.toString))
           IOUtils.copy(in, out)
           in.close()
           out.close()

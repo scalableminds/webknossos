@@ -12,7 +12,8 @@ case class Scale(x: Float, y: Float, z: Float){
 }
 
 object Scale{
-  val formRx = "\\s*([0-9]+\\.[0-9]+),\\s*([0-9]+\\.[0-9]+),\\s*([0-9]+\\.[0-9]+)\\s*".r
+  val comp = "\\s*([0-9]+(?:\\.[0-9]+)?)"
+  val formRx = s"$comp,$comp,$comp\\s*".r
 
   val scaleReads =
     (__.read[List[Float]]).filter(_.size >= 3).map{ l =>

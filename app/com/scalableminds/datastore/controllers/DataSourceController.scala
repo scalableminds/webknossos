@@ -20,8 +20,11 @@ import com.scalableminds.datastore.DataStorePlugin
 import com.scalableminds.datastore.models.DataSourceDAO
 import com.scalableminds.braingames.binary.models.DataSourceUpload
 import java.io.{File, ByteArrayInputStream, FileOutputStream}
+<<<<<<< HEAD
 import java.nio.file.Paths
 import org.apache.commons.codec.binary.Base64
+=======
+>>>>>>> f26db70... passing uploaded dataset via filename; added for-support for scale, #610
 import org.apache.commons.io.FileUtils
 import java.util.zip._
 import com.scalableminds.util.io.ZipIO
@@ -29,6 +32,7 @@ import play.api.Play
 import com.scalableminds.util.io.PathUtils
 import com.scalableminds.braingames.binary.models._
 import net.liftweb.common.{Box, Empty, Full, Failure}
+import java.io._
 
 object DataSourceController extends Controller {
 
@@ -78,8 +82,8 @@ object DataSourceController extends Controller {
       }
   } 
 
-  private def unzipDataSource(baseDir: Path, content: String): Box[Unit] = {
-    val zip = new ZipInputStream(new ByteArrayInputStream(Base64.decodeBase64(content)))
+  private def unzipDataSource(baseDir: Path, filePath: String): Box[Unit] = {
+    val zip = new ZipInputStream(new FileInputStream(filePath))
     var entry: ZipEntry = zip.getNextEntry()
 
     if(entry == null) {
@@ -113,13 +117,17 @@ object DataSourceController extends Controller {
     Full()
   }
 
-  def upload() = Action.async(parse.json(maxLength = 1024 * 1024 * 1024)) {
+  def upload() = Action.async(parse.json) {
     implicit request =>
       request.body.validate[DataSourceUpload] match {
         case JsSuccess(upload, _) =>
           val baseDir = Paths.get(config.getString("braingames.binary.baseFolder")).resolve(upload.team).resolve(upload.name)
+          PathUtils.ensureDirectory(baseDir)
+          upload.settings.map(DataSourceSettings.writeSettingsToFile(_,
+            DataSourceSettings.settingsFileInFolder(baseDir)))
+          
           (for {
-            _ <- unzipDataSource(baseDir, upload.content).toFox ?~> Messages("zip.file.invalid")
+            _ <- unzipDataSource(baseDir, upload.filePath).toFox ?~> Messages("zip.file.invalid")
             dataSource = DataStorePlugin.binaryDataService.dataSourceInbox.handler.dataSourceFromFolder(baseDir, upload.team)
             importingDataSource <- DataStorePlugin.binaryDataService.dataSourceInbox.importDataSource(dataSource)
             usableDataSource <- importingDataSource

@@ -29,8 +29,7 @@ trait DataSourceTypeGuesser {
 object DataSourceTypeGuessers extends DataSourceTypes{
   def lazyFileFinder(source: Path, excludeDirs: Seq[String]): Stream[Path] = {
     Logger.trace(s"accessing files of $source")
-    Option(PathUtils.listFiles(source)).getOrElse(Nil)
-      .toStream #::: {
+    PathUtils.listFiles(source).toStream #::: {
       if (source.toFile.isDirectory && !excludeDirs.contains(source.getFileName.toString) && !source.toFile.isHidden) {
         Logger.trace(s"accessing direc of $source")
         PathUtils.listDirectories(source).toStream.flatMap(d => lazyFileFinder(d, excludeDirs))
@@ -41,9 +40,8 @@ object DataSourceTypeGuessers extends DataSourceTypes{
   }
   
   def guessRepositoryType(source: Path) = {
-//    val paths = lazyFileFinder(Paths.get(source.toAbsolute.path), Seq("target"))
-//    types.maxBy(_.chanceOfInboxType(paths))
-    KnossosDataSourceType
+    val paths = lazyFileFinder(Paths.get(source.toAbsolute.path), Seq("target"))
+    types.maxBy(_.chanceOfInboxType(paths))
   }
 }
 

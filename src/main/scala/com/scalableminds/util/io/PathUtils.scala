@@ -15,10 +15,11 @@ object PathUtils extends PathUtils
 trait PathUtils {
 
   val directoryFilter = new FilenameFilter {
-    override def accept(dir: File, name: String): Boolean =
-      new File(dir, name).isDirectory
+    override def accept(dir: File, name: String): Boolean = {
+      val f = new File(dir, name)
+      f.isDirectory && !f.isHidden
+    }
   }
-
 
   val fileFilter = new FilenameFilter {
     override def accept(f: File, name: String): Boolean =

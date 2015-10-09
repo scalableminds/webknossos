@@ -90,7 +90,7 @@ dataLayer.notFound=DataLayer not found
 dataLayer.forbidden=Access to this layer is not allowed.
 
 scale.scale=Scale
-scale.invalid=Invalid scale format
+scale.invalid=Specify dataset scale like "XX, YY, ZZ"
 
 dataToken.creationFailed=Creation of the data token failed.
 

@@ -60,18 +60,19 @@ trait PathUtils {
     else
       Nil
 
-  def listFiles(p: Path): List[Path] =
-    if (Files.isDirectory(p)) {
-      val files = p.toFile.list(fileFilter)
-      if(files != null) {
-        files.map(s => p.resolve(s))(breakOut)
-      } else {
-        System.err.println("Failed to list files in directory: " + p.toString)
+  def listFiles(directory: Path): List[Path] = {
+    try {
+      val directoryStream = Files.newDirectoryStream(directory)
+
+      val r = directoryStream.iterator().asScala.toList
+      directoryStream.close()
+      r.filter(_.toFile.isFile)
+    } catch {
+      case ex =>
+        Logger.error("Failed to list files for directory: " + directory.toAbsolutePath)
         Nil
-      }
     }
-    else
-      Nil
+  }
 
   def ensureDirectory(path: Path): Path = {
     if (!Files.exists(path) || !Files.isDirectory(path))

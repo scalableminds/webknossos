@@ -1,4 +1,4 @@
-utils = require("../libs/utils")
+utils = require("./utils")
 
 
 TemplateHelpers =

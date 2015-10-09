@@ -5,7 +5,7 @@ ResizableBuffer = require("../../libs/resizable_buffer")
 constants       = require("../constants")
 THREE           = require("three")
 
-class CellLayer
+class ContourGeometry
 
   COLOR_NORMAL : new THREE.Color(0x000000)
   COLOR_DELETE : new THREE.Color(0xff0000)
@@ -72,4 +72,4 @@ class CellLayer
     positionAttribute.numItems    = mesh.vertexBuffer.getLength() * 3
     positionAttribute.needsUpdate = true
 
-module.exports = CellLayer
+module.exports = ContourGeometry

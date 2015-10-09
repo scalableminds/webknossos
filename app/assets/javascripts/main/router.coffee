@@ -75,8 +75,9 @@ class Router extends Backbone.Router
 
   tracingView : (type, id) ->
 
+    # Webpack messes up `this` binding, so we'll do it explicitly
     self = this
-    require ["oxalis/view/tracing_layout_view"], (TracingLayoutView) ->
+    require(["oxalis/view/tracing_layout_view"], (TracingLayoutView) ->
 
       view = new TracingLayoutView(
         tracingType: type
@@ -85,6 +86,7 @@ class Router extends Backbone.Router
       )
       view.forcePageReload = true
       self.changeView(view)
+    )
 
 
   tracingViewPublic : (id) ->

@@ -2,7 +2,7 @@ _              = require("lodash")
 marionette     = require("backbone.marionette")
 TeamCollection = require("admin/models/team/team_collection")
 
-class TeamRoleModalItem extends Backbone.Marionette.ItemView
+class TeamRoleModalItemView extends Backbone.Marionette.ItemView
 
   tagName : "div"
   className : "row-fluid"
@@ -40,4 +40,4 @@ class TeamRoleModalItem extends Backbone.Marionette.ItemView
 
     @ui.teamCheckbox.prop("checked", true)
 
-module.exports = TeamRoleModalItem
+module.exports = TeamRoleModalItemView

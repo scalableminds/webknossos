@@ -1,7 +1,7 @@
 _          = require("lodash")
 marionette = require("backbone.marionette")
 
-class StatisticListView extends Backbone.Marionette.ItemView
+class StatisticListItemView extends Backbone.Marionette.ItemView
 
   tagName : "tr"
   template : _.template("""
@@ -28,4 +28,4 @@ class StatisticListView extends Backbone.Marionette.ItemView
       number = "0#{number}"
     number
 
-module.exports = StatisticListView
+module.exports = StatisticListItemView

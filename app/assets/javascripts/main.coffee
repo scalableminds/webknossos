@@ -2,7 +2,7 @@ $             = require("jquery")
 _             = require("lodash")
 Backbone      = require("backbone")
 app           = require("./app")
-ErrorHandling = require("./main/errorHandling")
+ErrorHandling = require("./main/error_handling")
 require("bootstrap")
 require("./libs/core_ext")
 

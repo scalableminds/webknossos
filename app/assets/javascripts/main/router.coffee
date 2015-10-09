@@ -21,6 +21,7 @@ class Router extends Backbone.Router
     "annotations/:type/:id(/readOnly)"  : "tracingView"
     "datasets/:id/view"                 : "tracingViewPublic"
     "dashboard"                         : "dashboard"
+    "datasets"                          : "dashboard"
     "users/:id/details"                 : "dashboard"
     "taskTypes/:id/edit"                : "editTaskType"
     "taskTypes"                         : "taskTypes"

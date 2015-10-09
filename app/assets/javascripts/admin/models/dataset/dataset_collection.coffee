@@ -1,10 +1,10 @@
 ### define
 underscore : _
-../pagination_collection : PaginationCollection
+../sorted_collection : SortedCollection
 ./dataset_model : DatasetModel
 ###
 
-class DatasetCollection extends PaginationCollection
+class DatasetCollection extends SortedCollection
 
-  url : "/api/datasets" # TODO: ?isActive=true breaks importing in advanced view
+  url : "/api/datasets"
   model : DatasetModel

@@ -12,4 +12,8 @@ case class CompletionStatus(open: Int, inProgress: Int, completed: Int)
 
 object CompletionStatus {
   implicit val completionStatusFormat = Json.format[CompletionStatus]
+
+  def combine(a: CompletionStatus, b: CompletionStatus) =
+    CompletionStatus(a.open + b.open, a.inProgress + b.inProgress, a.completed + b.completed)
+
 }

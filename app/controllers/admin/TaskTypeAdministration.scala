@@ -23,9 +23,9 @@ object TaskTypeAdministration extends AdminController {
       "branchPointsAllowed" -> boolean,
       "somaClickingAllowed" -> boolean,
       "expectedTime" -> mapping(
-        "minTime" -> number,
-        "maxTime" -> number,
-        "maxHard" -> number)(TraceLimit.apply)(TraceLimit.unapply))(
+        "minTime" -> number(min = 1),
+        "maxTime" -> number(min = 1),
+        "maxHard" -> number(min = 1))(TraceLimit.apply)(TraceLimit.unapply))(
       TaskType.fromForm)(TaskType.toForm)).fill(TaskType.empty)
 
   def empty = Authenticated{ implicit request =>
@@ -47,9 +47,10 @@ object TaskTypeAdministration extends AdminController {
         for{
           _ <- ensureTeamAdministration(request.user, t.team).toFox
           _ <- TaskTypeDAO.insert(t)
+          ttJson <- TaskType.transformToJson(t).toFox
         } yield {
           JsonOk(
-            Json.obj("newTaskType" -> TaskType.publicTaskTypeWrites.writes(t)),
+            Json.obj("newTaskType" -> ttJson),
             Messages("taskType.createSuccess")
           )
         }
@@ -58,10 +59,11 @@ object TaskTypeAdministration extends AdminController {
 
   def get(taskTypeId: String) = Authenticated.async{ implicit request =>
     for {
-      taskType <- TaskTypeDAO.findOneById(taskTypeId) ?~> Messages("taskType.notFound")
-      _ <- ensureTeamAdministration(request.user, taskType.team)
+      taskType <- TaskTypeDAO.findOneById(taskTypeId).toFox ?~> Messages("taskType.notFound")
+      _ <- ensureTeamAdministration(request.user, taskType.team).toFox
+      ttJson <- TaskType.transformToJson(taskType).toFox
     } yield {
-      Ok(Json.toJson(TaskType.publicTaskTypeWrites.writes(taskType)))
+      Ok(ttJson)
     }
   }
 
@@ -69,8 +71,9 @@ object TaskTypeAdministration extends AdminController {
   def list = Authenticated.async{ implicit request =>
     for {
       taskTypes <- TaskTypeDAO.findAll
+      ttJsons <- Future.traverse(taskTypes)(TaskType.transformToJson)
     } yield {
-      Ok(Json.toJson(taskTypes.map(TaskType.publicTaskTypeWrites.writes)))
+      Ok(Json.toJson(ttJsons))
     }
   }
 

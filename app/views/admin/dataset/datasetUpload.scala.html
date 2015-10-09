@@ -16,8 +16,7 @@
             }, 'class -> "form-control")
 
             @helper.inputText(form("scale.scale"), 'type -> "text", 'class -> "form-control", 'pattern -> com.scalableminds.util.geometry.Scale.formRx.toString, 'title -> Messages("scale.invalid"))
-
-            <div class="form-group">
+            <div class="@{if(form("zipFile").hasErrors) { "has-error" }} form-group">
               <label class="col-sm-3 control-label" for="zipFile">@Messages("dataSet.file")</label>
               <div class="col-sm-9">
                 <div class="input-group">

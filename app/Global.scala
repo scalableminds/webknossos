@@ -1,10 +1,13 @@
 import akka.actor.Props
+import com.scalableminds.util.geometry.{Point3D, BoundingBox}
 import com.scalableminds.util.reactivemongo.GlobalDBAccess
 import com.scalableminds.util.security.SCrypt
 import models.binary.{DataStore, DataStoreDAO}
 import models.team._
+import models.tracing.skeleton.SkeletonTracingService
 import net.liftweb.common.Full
 import oxalis.jobs.AvailableTasksJob
+import oxalis.nml.NMLService
 import play.api._
 import play.api.libs.concurrent._
 import models.user._
@@ -77,92 +80,111 @@ object Global extends WithFilters(MetricsFilter) with GlobalSettings {
  * in the sample application.
  */
 class InitialData(conf: Configuration) extends GlobalDBAccess {
+
+  type AdminUser = User
   // Check if scm's default user should be added
-  val shouldInsertSCMBoy = conf.getBoolean("insertSCMBoy") getOrElse false
-  val manyTeams = conf.getBoolean("manyTeams") getOrElse false
+  val ShouldInsertSCMBoy = conf.getBoolean("insertSCMBoy") getOrElse false
+  // Let's create as many teams as specified in the configuration
+  val NumberOfTeams = conf.getInt("numberOfTeams") getOrElse 1
   // Define default team for the inserted data
   val DefaultTeam = Team(conf.getString("defaultTeam").get, None, RoleService.roles)
+
+  val DefaultPasswords = List("guywx","xaupd","ajsbp","crhkd","npfyf")
 
   /**
    * Populate the DB with predefined data
    */
   def insert() {
-    if (manyTeams)
-      for (i <- 1 to 5)
-        insertPerTeam(Team(s"Team $i", None, RoleService.roles), i)
-    else
-      insertPerTeam(DefaultTeam, 1)
+    insertTeams()
     insertLocalDataStore()
   }
 
-  def insertPerTeam(team: Team, teamNum: Int) {
+  def insertTeams(): Unit = {
+    if (NumberOfTeams > 1)
+      (1 to NumberOfTeams).foreach(i => insertSingleTeam(Team(s"Team $i", None, RoleService.roles), i))
+    else
+      insertSingleTeam(DefaultTeam)
+  }
+
+  def insertSingleTeam(team: Team, teamNumber: Int = 1) {
     TeamDAO.insert(team)
-    val users = insertUsers(team, teamNum) // user 0 is admin
-    val taskTypes = insertTaskTypesPerTeam(team)
-    add_e2006(users, team, taskTypes(2))
-    add_ek0563(users, team, taskTypes)
-    add_cortex(users, team, taskTypes)// was add_cortex(users, team, taskTypes(2))
-    add_lm(users, team, taskTypes)
+    val (users, admin) = insertUsers(team, teamNumber) // user 0 is admin
+    val taskTypes = insertTaskTypesForTeam(team)
+    addEk0563(users, team)
+    addCortex(users, admin, team, taskTypes)
   }
 
-  def add_e2006(users: Array[User], team: Team, taskType: TaskType) {
-    var counter = 0
-    val project = insertProject(team, users(0), "e2006_allcells")
+  def insertExplorativeAnnotation(nmlFile: File, user: User) = {
+    NMLService.extractFromNML(nmlFile) match {
+      case Full(nml) =>
+        SkeletonTracingService.createFrom(List(nml), None, AnnotationSettings.skeletonDefault).toFox.flatMap {
+          content =>
+            AnnotationService.createFrom(
+              user._id,
+              user.teams.head.team, //TODO: refactor
+              content,
+              AnnotationType.Explorational,
+              Some(nmlFile.getName))
+        }
+      case _ =>
+        Logger.error(s"Invalid nml in file '${nmlFile.getAbsolutePath}'")
+    }
+  }
 
-    for (file <- new File("public/nmls/e2006/").listFiles) {
+  def insertTaskAnnotation(task: Task, taskType: TaskType, nmlFile: File, user: User, annotationState: AnnotationState) = {
+    NMLService.extractFromNML(nmlFile) match {
+      case Full(nml) =>
+        SkeletonTracingService.createFrom(List(nml), None, taskType.settings).toFox.flatMap {
+          content =>
+            val annotation = Annotation(
+              Some(user._id),
+              ContentReference.createFor(content),
+              team = user.teams.head.team,
+              _task = Some(task._id),
+              _name = Some(nmlFile.getName),
+              typ = AnnotationType.Task,
+              state = annotationState)
+
+            AnnotationDAO.insert(annotation).map { _ =>
+              annotation
+            }
+        }
+      case _ =>
+        Logger.error(s"Invalid nml in file '${nmlFile.getAbsolutePath}'")
+    }
+  }
+
+  def addEk0563(users: List[User], team: Team) {
+    new File(s"public/nmls/ek0563/").listFiles.zipWithIndex.foreach{
+      case (nmlFile, idx) =>
+        insertExplorativeAnnotation(nmlFile, users(idx % 10))
+    }
+  }
+
+  def addCortex(users: List[User], admin: AdminUser, team: Team, taskTypes: List[TaskType]) {
+    val project = insertProject(team, admin, "cortex")
+    val taskType = taskTypes.find(_.summary == "orthogonalShort").get
+    for {
+      typ <- List("finished", "unfinished")
+      (file, idx) <- new File(s"public/nmls/cortex/$typ/").listFiles.zipWithIndex
+    } yield {
       val coords = file.getName.split("_")
       val task = insertTask(
+        admin,
         taskType,
-        "retina",
-        1,
-        100,
-        1,
-        team,
-        project,
-        "e2006",
-        coords.drop(3).take(3).map(_.toInt),
-        Array.fill(6)(0))
-      //insertAnnotation(file, task, users(counter % 5 + 1), finished = True) NOT DEFINED
-      counter += 1
-    }
-  }
-
-  def add_ek0563(users:Array[User], team: Team, taskTypes: Array[TaskType]) {
-    var counter = 0
-    for {
-      typ <- List("finished", "unfinished")
-      file <- new File(s"public/nmls/cortex/$typ/").listFiles
-    } yield {
-      // insertExplorativeAnnotation(file, users(counter % 11)) NOT DEFINED
-      counter += 1
-    }
-  }
-
-  def add_cortex(users:Array[User], team: Team, taskTypes: Array[TaskType]) {
-    val project = insertProject(team, users(0), "cortex")
-    var counter = 0
-    for {
-      typ <- List("finished", "unfinished")
-      file <- new File(s"public/nmls/cortex/$typ/").listFiles
-    } yield {
-      val coords = file.getName.split("_")
-      val task = insertTask(
-        taskTypes(1),
         "cells_in_cortex",
         1,
         100,
         1,
+        1,
         team,
         project,
         "2012-06-28_Cortex",
-        coords.take(3).map(_.toInt),
-        Array.fill(6)(0))
-      //insertAnnotation(file, task, users(counter % 5 + 6), finished = typ == "finished") NOT DEFINED
-      counter += 1
+        Point3D.fromArray(coords.take(3).map(_.toInt)).get,
+        BoundingBox(topLeft = Point3D(0,0,0), width = 0, height = 0, depth = 0))
+      val annotationState = if(typ == "finished") AnnotationState.Finished else AnnotationState.InProgress
+      insertTaskAnnotation(task, taskType, file, users(idx % 5 + 5), annotationState)
     }
-  }
-
-  def add_lm(users:Array[User], team: Team, taskTypes: Array[TaskType]) {
   }
 
   def insertSingleUser(firstName: String, lastName: String, email: String, role: Role,team: Team, password: String, experienceList: Map[String, Int]): User = {
@@ -182,92 +204,104 @@ class InitialData(conf: Configuration) extends GlobalDBAccess {
           experiences = experienceList
         )
         UserDAO.insert(user)
-        return user
-    }, 5 seconds)
+        user
+    }, 10 seconds)
   }
 
   /**
    * Insert predefined users into DB
    */
-  def insertUsers(team: Team, teamNumber: Int): Array[User] = {
-    var users: Array[User] = Array.fill(11)(null)
-    val r =  scala.util.Random
-    val lastName = "WebKnossos"
-    val firstName = s"Admin $teamNumber"
-    val mailAddress = "admin$teamNumber"
-    val mailDomain = "webknossos.org"
-    val passwords = List("guywx","xaupd","ajsbp","crhkd","npfyf")
-    val password = passwords(teamNumber - 1)
+  def insertUsers(team: Team, teamNumber: Int): (List[User], AdminUser) = {
+    var users = List.empty[User]
 
-    if(shouldInsertSCMBoy) {
-      users(0) = insertSingleUser("SCM", "Boy", "scmboy@scalableminds.com", Role.Admin, DefaultTeam, "secret", Map.empty) // <- welche Experiences sollen hier hin?
-    } else {
-      users(0) = insertSingleUser(firstName, lastName, s"$mailAddress@$mailDomain", Role.Admin, team, password, Map.empty) // <- welche Experiences sollen hier hin?
-    }
+    val lastName = "WebKnossos"
+    val mailDomain = "webknossos.org"
+    val password = DefaultPasswords((teamNumber - 1) % NumberOfTeams)
+
+    val adminUser =
+      if(ShouldInsertSCMBoy) {
+        insertSingleUser("SCM", "Boy", "scmboy@scalableminds.com", Role.Admin, DefaultTeam, "secret", Map.empty) // <- welche Experiences sollen hier hin?
+      } else {
+        val firstName = s"Admin $teamNumber"
+        val mailAddress = s"admin$teamNumber"
+        insertSingleUser(firstName, lastName, s"$mailAddress@$mailDomain", Role.Admin, team, password, Map.empty) // <- welche Experiences sollen hier hin?
+      }
 
     for (j <- 1 to 5) {
       val firstNameUser = s"User $teamNumber$j"
       val mailAddressUser = s"user$teamNumber$j"
-      users(j) = insertSingleUser(firstNameUser, lastName, s"$mailAddressUser@$mailDomain", Role.User, team, password, Map("retina" -> 1))
+      users ::= insertSingleUser(firstNameUser, lastName, s"$mailAddressUser@$mailDomain", Role.User, team, password, Map("retina" -> 1))
     }
 
     for (j <- 6 to 10) {
       val firstNameUser = "User " + teamNumber.toString() + j.toString()
       val mailAddressUser = "user" + teamNumber.toString() + j.toString()
-      users(j) = insertSingleUser(firstNameUser, lastName, s"$mailAddressUser@$mailDomain", Role.User, team, password, Map("cells_in_cortex" -> 1))
+      users ::= insertSingleUser(firstNameUser, lastName, s"$mailAddressUser@$mailDomain", Role.User, team, password, Map("cells_in_cortex" -> 1))
     }
-    return users
+
+    (users, adminUser)
   }
 
   /**
    * Add a task
    */
-  def insertTask(taskType: TaskType, experienceDomain: String, experienceLevel: Int, priority: Int, taskInstances: Int, team: Team, project: Project, dataset: String, start: Array[Int], boundingBox: Array[Int]): Task = {
+  def insertTask(admin: AdminUser,
+                 taskType: TaskType,
+                 experienceDomain: String,
+                 experienceLevel: Int,
+                 priority: Int,
+                 taskInstances: Int,
+                 assignedInstances: Int,
+                 team: Team,
+                 project: Project,
+                 dataSetName: String,
+                 start: Point3D,
+                 boundingBox: BoundingBox): Task = {
     // val task = Task(taskType._id, team.name, Experience(experienceDomain, experienceLevel), priority, taskInstances, 0, project, dataset,start,boundingBox)
     // I am not sure, what you tried to do here
-    val task = Task(taskType._id, team.name, Experience(experienceDomain, experienceLevel), priority, taskInstances, 0, _project = Some(project.name))
+    val task = Task(taskType._id, team.name, Experience(experienceDomain, experienceLevel), priority, taskInstances, assignedInstances, _project = Some(project.name))
     TaskDAO.insert(task)
-    return task
+    AnnotationService.createAnnotationBase(task, admin._id, boundingBox, taskType.settings, dataSetName, start)
+    task
   }
 
-  def insertTaskTypesPerTeam(team: Team): Array[TaskType] = {
-    var taskTypes: Array[TaskType] = new Array[TaskType](4)
+  def insertTaskTypesForTeam(team: Team): List[TaskType] = {
     val noOtherModes = AnnotationSettings(allowedModes = List())
     val yesOtherModes = AnnotationSettings.default
 
-    taskTypes(0) = TaskType(
-      "orthogonalLong",
-      "Please use only orthogonal mode",
-      TraceLimit(5, 10, 20),
-      team.name,
-      noOtherModes)
-    taskTypes(1) = TaskType(
-      "orthogonalShort",
-      "Please use only orthogonal mode and don't take too long",
-      TraceLimit(5, 10, 10),
-      team.name,
-      noOtherModes)
-    taskTypes(2) = TaskType(
-      "allModesLong",
-      "Use any mode",
-      TraceLimit(5, 10, 20),
-      team.name,
-      yesOtherModes)
-    taskTypes(3) = TaskType(
-      "allModesShort",
-      "Use any mode and don't take too long",
-      TraceLimit(5, 10, 10),
-      team.name,
-      yesOtherModes)
-    for (i <- 0 to 3)
-      TaskTypeDAO.insert(taskTypes(i))
-    return taskTypes
+    val taskTypes = List(
+      TaskType(
+        "orthogonalLong",
+        "Please use only orthogonal mode",
+        TraceLimit(5, 10, 20),
+        team.name,
+        noOtherModes),
+      TaskType(
+        "orthogonalShort",
+        "Please use only orthogonal mode and don't take too long",
+        TraceLimit(5, 10, 10),
+        team.name,
+        noOtherModes),
+      TaskType(
+        "allModesLong",
+        "Use any mode",
+        TraceLimit(5, 10, 20),
+        team.name,
+        yesOtherModes),
+      TaskType(
+        "allModesShort",
+        "Use any mode and don't take too long",
+        TraceLimit(5, 10, 10),
+        team.name,
+        yesOtherModes))
+    taskTypes.foreach(TaskTypeDAO.insert)
+    taskTypes
   }
 
   def insertProject(team: Team, owner: User, name: String): Project ={
     val project = Project(name, team.name, owner._id)
     ProjectDAO.insert(project)
-    return project
+    project
   }
 
   /**

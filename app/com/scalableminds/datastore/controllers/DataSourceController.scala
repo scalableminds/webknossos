@@ -20,11 +20,7 @@ import com.scalableminds.datastore.DataStorePlugin
 import com.scalableminds.datastore.models.DataSourceDAO
 import com.scalableminds.braingames.binary.models.DataSourceUpload
 import java.io.{File, ByteArrayInputStream, FileOutputStream}
-<<<<<<< HEAD
 import java.nio.file.Paths
-import org.apache.commons.codec.binary.Base64
-=======
->>>>>>> f26db70... passing uploaded dataset via filename; added for-support for scale, #610
 import org.apache.commons.io.FileUtils
 import java.util.zip._
 import com.scalableminds.util.io.ZipIO

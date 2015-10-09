@@ -78,14 +78,11 @@ object DataStoreHandler extends DataStoreBackChannelHandler{
     }
   }
 
-  def uploadDataSource(name: String, team: String, zipFile: File) = {
-    Logger.debug("Upload called for: " + name)
+  def uploadDataSource(upload: DataSourceUpload) = {
+    Logger.debug("Upload called for: " + upload.name)
     (for {
       localDatastore <- config.getString("datastore.name").toFox
       dataStore <- findByServer(localDatastore).toFox
-      fileExtension = FilenameUtils.getExtension(zipFile.getName())
-      contentType = play.api.libs.MimeTypes.forExtension(fileExtension).getOrElse(play.api.http.ContentTypes.BINARY)
-      upload = DataSourceUpload(name, team, contentType, Base64.encodeBase64String(FileUtils.readFileToByteArray(zipFile)))
       call = RESTCall("POST", s"/data/datasets/upload", Map.empty, Map.empty, Json.toJson(upload))
       response <- dataStore.request(call)
     } yield {

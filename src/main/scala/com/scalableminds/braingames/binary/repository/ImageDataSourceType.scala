@@ -216,26 +216,29 @@ trait ImageDataSourceTypeHandler extends DataSourceTypeHandler {
       convertedImage
     }
 
-    image.getType match {
-      case BufferedImage.TYPE_BYTE_INDEXED =>
-        convertTo(BufferedImage.TYPE_BYTE_GRAY)
-      case _ =>
-        image
-    }
+    if (image != null) {
+      image.getType match {
+        case BufferedImage.TYPE_BYTE_INDEXED =>
+          convertTo(BufferedImage.TYPE_BYTE_GRAY)
+        case _ =>
+          image
+      }
+    } else image
   }
 
   def toRawImage(imageFile: Path): Option[RawImage] = {
-    PathUtils.fileOption(imageFile).map {
+    PathUtils.fileOption(imageFile).flatMap {
       file =>
         val image = convertIfNecessary(ImageIO.read(file))
         if (image == null) {
           logger.error("Couldn't load image file. " + ImageIO.getImageReaders(file).toList.map(_.getClass.toString))
-          throw new Exception("Couldn't load image file due to missing reader.")
+          //throw new Exception("Couldn't load image file due to missing reader.")
+          None
         } else {
           val raster = image.getRaster
           val data = (raster.getDataBuffer().asInstanceOf[DataBufferByte]).getData()
           val bytesPerPixel = imageTypeToByteDepth(image.getType)
-          RawImage(image.getWidth, image.getHeight, bytesPerPixel, data)
+          Some(RawImage(image.getWidth, image.getHeight, bytesPerPixel, data))
         }
     }
   }

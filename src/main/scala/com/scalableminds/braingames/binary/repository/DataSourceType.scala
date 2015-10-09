@@ -41,8 +41,9 @@ object DataSourceTypeGuessers extends DataSourceTypes{
   }
   
   def guessRepositoryType(source: Path) = {
-    val paths = lazyFileFinder(source, Seq("target"))
-    types.maxBy(_.chanceOfInboxType(paths))
+//    val paths = lazyFileFinder(Paths.get(source.toAbsolute.path), Seq("target"))
+//    types.maxBy(_.chanceOfInboxType(paths))
+    KnossosDataSourceType
   }
 }
 

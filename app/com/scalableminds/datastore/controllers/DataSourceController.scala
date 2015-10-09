@@ -20,15 +20,21 @@ import com.scalableminds.datastore.DataStorePlugin
 import com.scalableminds.datastore.models.DataSourceDAO
 import com.scalableminds.braingames.binary.models.DataSourceUpload
 import java.io.{File, ByteArrayInputStream, FileOutputStream}
+<<<<<<< HEAD
 import java.nio.file.Paths
 import org.apache.commons.io.FileUtils
 import java.util.zip._
+=======
+import org.apache.commons.io.{FileUtils, IOUtils}
+import scalax.file.Path
+>>>>>>> 3330e73... changed unzipping, #610
 import com.scalableminds.util.io.ZipIO
 import play.api.Play
 import com.scalableminds.util.io.PathUtils
 import com.scalableminds.braingames.binary.models._
 import net.liftweb.common.{Box, Empty, Full, Failure}
 import java.io._
+import play.api.Logger
 
 object DataSourceController extends Controller {
 
@@ -79,38 +85,24 @@ object DataSourceController extends Controller {
   } 
 
   private def unzipDataSource(baseDir: Path, filePath: String): Box[Unit] = {
-    val zip = new ZipInputStream(new FileInputStream(filePath))
-    var entry: ZipEntry = zip.getNextEntry()
-
-    if(entry == null) {
-      return Empty
-    }
-
-    while(entry != null) {
-      val path = baseDir.resolve(entry.getName)
-      if(!entry.getName().matches("[._].*")) {
-        if(entry.isDirectory) {
-          PathUtils.ensureDirectory(path)
-        } else {
-          val out = new FileOutputStream(path.toFile)
-
-          val buffer = Array.fill(4096)(0.toByte)
-          var bytesRead = zip.read(buffer)
-          while(bytesRead != -1) {
-            out.write(buffer, 0, bytesRead)
-            bytesRead = zip.read(buffer)
-          }
-
+    try {
+      Logger.warn(s"Unzipping uploaded dataset: $filePath")
+      ZipIO.unzipWithFilenames(new File(filePath)).map{
+        case (name, in) =>
+          val path = baseDir.resolve(Path.fromString(name))
+          path.parent.map(PathUtils.ensureDirectory(_))
+          val out = new FileOutputStream(new File(path.path))
+          IOUtils.copy(in, out)
+          in.close()
           out.close()
-        }
+        case _ =>
       }
-
-      zip.closeEntry()
-      entry = zip.getNextEntry()      
+      Full()
+    } catch {
+      case e: Exception =>
+        Logger.warn(s"Error unzipping uploaded dataset at $filePath: ${e.toString}")
+        Failure(Messages("zip.file.invalid"))
     }
-
-    zip.close()
-    Full()
   }
 
   def upload() = Action.async(parse.json) {
@@ -123,7 +115,7 @@ object DataSourceController extends Controller {
             DataSourceSettings.settingsFileInFolder(baseDir)))
           
           (for {
-            _ <- unzipDataSource(baseDir, upload.filePath).toFox ?~> Messages("zip.file.invalid")
+            _ <- unzipDataSource(baseDir, upload.filePath).toFox
             dataSource = DataStorePlugin.binaryDataService.dataSourceInbox.handler.dataSourceFromFolder(baseDir, upload.team)
             importingDataSource <- DataStorePlugin.binaryDataService.dataSourceInbox.importDataSource(dataSource)
             usableDataSource <- importingDataSource

@@ -1,6 +1,6 @@
 MJS = require("mjs")
 $   = require("jquery")
-_   = require("underscore")
+_   = require("lodash")
 
 # Applies an affine transformation matrix on an array of points.
 MJS.M4x4.transformPointsAffine = (m, points, r = new Float32Array(points.length)) ->

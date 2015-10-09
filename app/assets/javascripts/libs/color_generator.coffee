@@ -1,3 +1,4 @@
+THREE          = require("three")
 ColorConverter = require("three.color")
 
 GOLDEN_RATIO = 0.618033988749895

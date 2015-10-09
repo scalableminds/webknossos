@@ -1,9 +1,9 @@
-_              = require("underscore")
+_              = require("lodash")
 app            = require("app")
 Toast          = require("libs/toast")
-TeamModel      = require("../../models/team/team_model")
-TeamCollection = require("../../models/team/team_collection")
-SelectionView  = require("../../views/selection_view")
+TeamModel      = require("admin/models/team/team_model")
+TeamCollection = require("admin/models/team/team_collection")
+SelectionView  = require("admin/views/selection_view")
 
 class CreateTeamModalView extends Backbone.Marionette.LayoutView
 

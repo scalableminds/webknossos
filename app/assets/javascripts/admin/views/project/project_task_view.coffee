@@ -1,4 +1,4 @@
-_          = require("underscore")
+_          = require("lodash")
 Marionette = require("backbone.marionette")
 
 class ProjectTaskView extends Backbone.Marionette.ItemView

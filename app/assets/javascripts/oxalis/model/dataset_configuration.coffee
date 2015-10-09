@@ -1,5 +1,5 @@
 Request   = require("libs/request")
-_         = require("underscore")
+_         = require("lodash")
 Backbone  = require("backbone")
 DeepModel = require("backbone-deep-model")
 

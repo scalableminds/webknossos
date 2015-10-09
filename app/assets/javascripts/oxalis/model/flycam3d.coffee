@@ -1,4 +1,4 @@
-_     = require("underscore")
+_     = require("lodash")
 THREE = require("three")
 MJS   = require("mjs")
 
@@ -35,8 +35,8 @@ class Flycam3d
     @scale = @calculateScaleValues(scale)
 
     @reset()
-    @distanceVecNegative = [0, 0, -distance]
-    @distanceVecPositive = [0, 0, distance]
+    @distanceVecNegative = [0, 0, -@distance]
+    @distanceVecPositive = [0, 0, @distance]
 
 
   calculateScaleValues : (scale) ->

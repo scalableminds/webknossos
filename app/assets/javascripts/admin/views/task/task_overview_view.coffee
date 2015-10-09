@@ -1,4 +1,4 @@
-_                = require("underscore")
+_                = require("lodash")
 marionette       = require("backbone.marionette")
 VizWorker        = require("worker!libs/viz.js")
 PanZoomSVG       = require("libs/pan_zoom_svg")

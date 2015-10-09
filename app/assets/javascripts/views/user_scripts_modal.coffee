@@ -1,4 +1,4 @@
-_          = require("underscore")
+_          = require("lodash")
 Marionette = require("backbone.marionette")
 
 class UserScriptsModalView extends Backbone.Marionette.ItemView

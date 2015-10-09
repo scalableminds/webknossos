@@ -1,4 +1,4 @@
-_                    = require("underscore")
+_                    = require("lodash")
 PaginationCollection = require("../pagination_collection")
 ProjectModel         = require("./project_model")
 

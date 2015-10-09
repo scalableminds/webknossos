@@ -1,4 +1,4 @@
-_             = require("underscore")
+_             = require("lodash")
 TaskTypeModel = require("./task_type_model")
 
 class TaskTypeCollection extends Backbone.Collection

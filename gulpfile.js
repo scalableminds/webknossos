@@ -23,13 +23,14 @@ paths = {
 var bowerPath = __dirname + "/public/bower_components/";
 var scriptPaths = {
   "jquery"              : bowerPath + "jquery/jquery",
-  "underscore"          : bowerPath + "lodash/dist/lodash",
+  "lodash"              : bowerPath + "lodash/dist/lodash",
+  "underscore"          : bowerPath + "underscore/underscore",
   "bootstrap"           : bowerPath + "bootstrap/dist/js/bootstrap",
   "coffee-script"       : bowerPath + "coffee-script/extras/coffee-script",
   "backbone.marionette" : bowerPath + "backbone.marionette/lib/backbone.marionette",
   "backbone.paginator"  : bowerPath + "backbone.paginator/dist/backbone.paginator",
   "backbone.subviews"   : bowerPath + "backbone.subviews/index",
-  "backbone-deep-model" : bowerPath + "backbone-deep-model/distribution/deep-model.min",
+  "backbone-deep-model" : bowerPath + "backbone-deep-model/distribution/deep-model",
   "backbone"            : bowerPath + "backbone/backbone",
   "gzip"                : bowerPath + "zlib/bin/gzip.min",
   "three"               : bowerPath + "three/index",
@@ -94,6 +95,13 @@ function makeScripts(watch, done) {
     module: {
       loaders: [
         { test: /\.coffee$/, loader: "coffee-loader" },
+        { test: scriptPaths["three.color"], loader: "imports?THREE=three!exports?THREE.ColorConverter" },
+        { test: scriptPaths["three.trackball"], loader: "imports?THREE=three" },
+        { test: scriptPaths["three"], loader: "exports?THREE" },
+        { test: scriptPaths["backbone-deep-model"], loader: "imports?_=underscore" },
+        { test: scriptPaths["stats"], loader: "exports?Stats" },
+        { test: scriptPaths["tween"], loader: "exports?TWEEN" },
+        { test: scriptPaths["gzip"], loader: "exports?this.Zlib" },
         // {
         //   test: /\.jsx?$/,
         //   exclude: /(node_modules|bower_components)/,
@@ -114,11 +122,9 @@ function makeScripts(watch, done) {
     ],
     plugins: [
       // new webpack.optimize.CommonsChunkPlugin('common.js'),
-      new webpack.ProvidePlugin({
-        $: "jquery",
-      //   jQuery: "jquery",
-      //   Backgrid: "backgrid"
-      })
+      // new webpack.ProvidePlugin({
+      //   $: "jquery",
+      // })
     ],
     devtool: "source-map",
     debug: true,

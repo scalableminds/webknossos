@@ -1,9 +1,9 @@
-_                           = require("underscore")
+_                           = require("lodash")
 app                         = require("app")
 marionette                  = require("backbone.marionette")
 Toast                       = require("libs/toast")
 TemplateHelpers             = require("libs/template_helpers")
-DatasetAccesslistCollection = require("../../models/dataset/dataset_accesslist_collection")
+DatasetAccesslistCollection = require("admin/models/dataset/dataset_accesslist_collection")
 DatasetAccessView           = require("./dataset_access_view")
 
 class DatasetListItemView extends Backbone.Marionette.CompositeView

@@ -1,4 +1,4 @@
-_                = require("underscore")
+_                = require("lodash")
 app              = require("app")
 marionette       = require("backbone.marionette")
 TaskTypeListView = require("./task_type_list_view")

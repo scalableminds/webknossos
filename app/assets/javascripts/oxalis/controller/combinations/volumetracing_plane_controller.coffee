@@ -1,4 +1,4 @@
-_                       = require("underscore")
+_                       = require("lodash")
 Constants               = require("oxalis/constants")
 PlaneController         = require("../viewmodes/plane_controller")
 VolumeTracingController = require("../annotations/volumetracing_controller")

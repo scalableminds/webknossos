@@ -1,6 +1,5 @@
-require("libs/jquery.1.8.deferred-stand-alone.min")
-
-gzip   = require("gzip")
+$      = require("libs/jquery.1.8.deferred-stand-alone.min")
+Zlib   = require("gzip")
 helper = require("libs/wrapped_dispatched_worker_helper")
 
 GzipWorker =

@@ -1,4 +1,4 @@
-_                          = require("underscore")
+_                          = require("lodash")
 marionette                 = require("backbone.marionette")
 DashboardTaskListView      = require("dashboard/views/dashboard_task_list_view")
 ExplorativeTracingListView = require("dashboard/views/explorative_tracing_list_view")

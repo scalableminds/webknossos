@@ -1,5 +1,5 @@
 $ = require("jquery")
-_ = require("underscore")
+_ = require("lodash")
 
 # `DispatchedWorker` is a wrapper around the WebWorker API. First you
 # initialize it providing a worker object of the javascript worker code.
@@ -19,21 +19,25 @@ class DispatchedWorker
 
     deferred = new $.Deferred()
 
-    workerHandle = Math.random()
+    _.defer(=>
 
-    workerMessageCallback = ({ data : packet }) =>
+      workerHandle = Math.random()
 
-      if packet.workerHandle == workerHandle
-        @worker.removeEventListener("message", workerMessageCallback, false)
-        if packet.error
-          deferred.reject(packet.error)
-        else
-          deferred.resolve(packet.payload)
+      workerMessageCallback = ({ data : packet }) =>
 
-    @worker.addEventListener("message", workerMessageCallback, false)
-    @worker.postMessage { workerHandle, payload }
+        if packet.workerHandle == workerHandle
+          @worker.removeEventListener("message", workerMessageCallback, false)
+          if packet.error
+            deferred.reject(packet.error)
+          else
+            deferred.resolve(packet.payload)
 
-    deferred.promise()
+      @worker.addEventListener("message", workerMessageCallback, false)
+      @worker.postMessage { workerHandle, payload }
+    )
+
+
+    return deferred.promise()
 
 
 class DispatchedWorker.Pool

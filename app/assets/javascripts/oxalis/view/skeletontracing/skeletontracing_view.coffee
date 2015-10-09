@@ -1,5 +1,5 @@
 $     = require("jquery")
-_     = require("underscore")
+_     = require("lodash")
 Toast = require("libs/toast")
 modal = require("../modal")
 View  = require("../../view")

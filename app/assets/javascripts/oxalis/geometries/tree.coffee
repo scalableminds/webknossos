@@ -1,8 +1,9 @@
 app                     = require("app")
 ResizableBuffer         = require("../../libs/resizable_buffer")
-ColorConverter          = require("three.color")
 ParticleMaterialFactory = require("./materials/particle_material_factory")
 THREE                   = require("three")
+TWEEN                   = require("tween")
+ColorConverter          = require("three.color")
 
 class Tree
 

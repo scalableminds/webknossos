@@ -1,7 +1,7 @@
 Utils      = require("libs/utils")
 marionette = require("backbone.marionette")
 subviews   = require("backbone.subviews")
-_          = require("underscore")
+_          = require("lodash")
 
 class SettingsView extends Backbone.Marionette.ItemView
 

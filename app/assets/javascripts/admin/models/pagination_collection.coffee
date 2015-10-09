@@ -1,4 +1,4 @@
-_         = require("underscore")
+_         = require("lodash")
 Paginator = require("backbone.paginator")
 
 # A helper class to wrap the Backbone.Paginator lib and set some sensible

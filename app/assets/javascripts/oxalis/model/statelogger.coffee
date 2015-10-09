@@ -1,5 +1,5 @@
 Backbone = require("backbone")
-_        = require("underscore")
+_        = require("lodash")
 $        = require("jquery")
 app      = require("app")
 Request  = require("libs/request")

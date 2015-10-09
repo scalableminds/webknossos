@@ -1,4 +1,4 @@
-_          = require("underscore")
+_          = require("lodash")
 marionette = require("backbone.marionette")
 
 class StatisticListView extends Backbone.Marionette.ItemView

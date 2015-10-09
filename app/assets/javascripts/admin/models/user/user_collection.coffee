@@ -1,4 +1,4 @@
-_                    = require("underscore")
+_                    = require("lodash")
 Backbone             = require("backbone")
 UserModel            = require("./user_model")
 PaginationCollection = require("../pagination_collection")

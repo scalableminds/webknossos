@@ -1,4 +1,4 @@
-_                   = require("underscore")
+_                   = require("lodash")
 marionette          = require("backbone.marionette")
 DatasetActionsView  = require("./action-bar/dataset_actions_view")
 DatasetPositionView = require("./action-bar/dataset_position_view")

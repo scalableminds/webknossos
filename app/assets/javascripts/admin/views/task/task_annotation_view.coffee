@@ -1,8 +1,8 @@
-_               = require("underscore")
+_               = require("lodash")
 moment          = require("moment")
 Toast           = require("libs/toast")
 marionette      = require("backbone.marionette")
-AnnotationModel = require("../../models/task/annotation_model")
+AnnotationModel = require("admin/models/task/annotation_model")
 
 class TaskAnnotationView extends Backbone.Marionette.ItemView
 

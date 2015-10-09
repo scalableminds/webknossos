@@ -1,4 +1,4 @@
-_       = require("underscore")
+_       = require("lodash")
 $       = require("jquery")
 Request = require("libs/request")
 

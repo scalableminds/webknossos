@@ -1,5 +1,3 @@
-
-
 class TraceTree
 
   constructor : (@treeId, @color, @name, @timestamp) ->

@@ -1,8 +1,8 @@
-_                     = require("underscore")
+_                     = require("lodash")
 Marionette            = require("backbone.marionette")
 Toast                 = require("libs/toast")
 ProjectTaskView       = require("./project_task_view")
-ProjectTaskCollection = require("../../models/project/project_task_collection")
+ProjectTaskCollection = require("admin/models/project/project_task_collection")
 
 class ProjectListItemView extends Backbone.Marionette.CompositeView
 

@@ -1,4 +1,4 @@
-_                      = require("underscore")
+_                      = require("lodash")
 Marionette             = require("backbone.marionette")
 ProjectListItemView    = require("./project_list_item_view")
 CreateProjectModalView = require("./create_project_modal_view")

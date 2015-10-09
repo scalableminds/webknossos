@@ -1,4 +1,4 @@
-_           = require("underscore")
+_           = require("lodash")
 FormatUtils = require("format_utils")
 
 class TaskTypeModel extends Backbone.Model

@@ -1,7 +1,7 @@
 app                = require("app")
 Backbone           = require("backbone")
 $                  = require("jquery")
-_                  = require("underscore")
+_                  = require("lodash")
 Request            = require("libs/request")
 Input              = require("libs/input")
 ArbitraryPlane     = require("../../geometries/arbitrary_plane")
@@ -9,6 +9,8 @@ Crosshair          = require("../../geometries/crosshair")
 ArbitraryView      = require("../../view/arbitrary_view")
 ArbitraryPlaneInfo = require("../../geometries/arbitrary_plane_info")
 constants          = require("../../constants")
+MJS                = require("mjs")
+
 
 class ArbitraryController
 
@@ -62,7 +64,7 @@ class ArbitraryController
 
     @input = _.extend({}, @input)
 
-    @crosshair = new Crosshair(@cam, model.user.get("crosshairSize"))
+    @crosshair = new Crosshair(@cam, @model.user.get("crosshairSize"))
     @arbitraryView.addGeometry(@crosshair)
 
     @listenTo(@model.user, "change:displayCrosshair", (model, value) ->
@@ -354,7 +356,7 @@ class ArbitraryController
       lastNodeMatrix[13] - matrix[13]
       lastNodeMatrix[14] - matrix[14]
     ]
-    vectorLength = V3.length(vector)
+    vectorLength = MJS.V3.length(vector)
 
     if vectorLength > 10
       @setWaypoint()

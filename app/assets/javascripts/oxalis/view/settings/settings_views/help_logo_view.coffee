@@ -1,4 +1,4 @@
-_          = require("underscore")
+_          = require("lodash")
 marionette = require("backbone.marionette")
 
 class HelpLogoView extends Backbone.Marionette.ItemView

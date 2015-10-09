@@ -1,6 +1,6 @@
 Utils               = require("libs/utils")
 AbstractSettingView = require("./abstract_setting_view")
-_                   = require("underscore")
+_                   = require("lodash")
 
 class ColorSettingView extends AbstractSettingView
 

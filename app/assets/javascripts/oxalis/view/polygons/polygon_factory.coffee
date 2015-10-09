@@ -1,5 +1,5 @@
 tlt = require("./tlt")
-_   = require("underscore")
+_   = require("lodash")
 
 # This class is capable of turning voxel data into triangles
 # Based on the marching cubes algorithm

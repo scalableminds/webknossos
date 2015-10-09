@@ -1,6 +1,6 @@
 SliderSettingView = require("../setting_views/slider_setting_view")
 ColorSettingView  = require("../setting_views/color_setting_view")
-_                 = require("underscore")
+_                 = require("lodash")
 
 class LayerColorSettingsView extends Backbone.Marionette.ItemView
 

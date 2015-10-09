@@ -1,4 +1,4 @@
-_                        = require("underscore")
+_                        = require("lodash")
 marionette               = require("backbone.marionette")
 DatasetListView          = require("./dataset_list_view")
 DatasetCollection        = require("admin/models/dataset/dataset_collection")

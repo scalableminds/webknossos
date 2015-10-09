@@ -1,6 +1,6 @@
 marionette = require("backbone.marionette")
 subviews   = require("backbone.subviews")
-_          = require("underscore")
+_          = require("lodash")
 
 class CategoryView extends Backbone.Marionette.ItemView
 

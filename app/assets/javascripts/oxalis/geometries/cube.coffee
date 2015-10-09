@@ -40,6 +40,8 @@ class Cube
 
   setCorners : (@min, @max) ->
 
+    { min, max } = this
+
     vec = (x, y, z) ->
       new THREE.Vector3(x, y, z)
 

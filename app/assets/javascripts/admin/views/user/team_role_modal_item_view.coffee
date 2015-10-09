@@ -1,6 +1,6 @@
-_              = require("underscore")
+_              = require("lodash")
 marionette     = require("backbone.marionette")
-TeamCollection = require("../../models/team/team_collection")
+TeamCollection = require("admin/models/team/team_collection")
 
 class TeamRoleModalItem extends Backbone.Marionette.ItemView
 

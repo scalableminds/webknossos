@@ -1,5 +1,5 @@
 Request = require("libs/request")
-_       = require("underscore")
+_       = require("lodash")
 
 class ArrayBufferSocket
 

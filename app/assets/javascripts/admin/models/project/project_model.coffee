@@ -1,4 +1,4 @@
-_        = require("underscore")
+_        = require("lodash")
 backbone = require("backbone")
 
 class ProjectModel extends Backbone.Model

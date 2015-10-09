@@ -1,6 +1,7 @@
 app             = require("app")
 THREE           = require("three")
-_               = require("underscore")
+TWEEN           = require("tween")
+_               = require("lodash")
 PlaneController = require("../viewmodes/plane_controller")
 constants       = require("../../constants")
 dimensions      = require("../../model/dimensions")

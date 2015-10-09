@@ -1,4 +1,4 @@
-_                    = require("underscore")
+_                    = require("lodash")
 app                  = require("app")
 AbstractTreeRenderer = require("oxalis/view/skeletontracing/abstract_tree_renderer")
 

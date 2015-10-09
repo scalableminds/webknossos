@@ -3,7 +3,7 @@ Backbone  = require("backbone")
 THREE     = require("three")
 Stats     = require("stats")
 $         = require("jquery")
-_         = require("underscore")
+_         = require("lodash")
 constants = require("../constants")
 
 class ArbitraryView

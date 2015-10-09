@@ -32,7 +32,7 @@ class ArbitraryPlaneInfo
 
     { context, WIDTH, HEIGHT, ALPHA, LINE_WIDTH } = @
 
-    if isRecording
+    if @isRecording
       text = "TRACING"
       backColor = "rgba(95, 183, 105, #{ALPHA})"
     else

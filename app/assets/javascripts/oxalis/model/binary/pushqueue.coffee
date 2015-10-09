@@ -1,10 +1,11 @@
-_                 = require("underscore")
-$                 = require("jquery")
-ArrayBufferSocket = require("libs/array_buffer_socket")
-Uint8ArrayBuilder = require("libs/uint8array_builder")
-GzipWorker        = require("worker!./gzip_worker")
+_                       = require("lodash")
+$                       = require("jquery")
+ArrayBufferSocket       = require("libs/array_buffer_socket")
+Uint8ArrayBuilder       = require("libs/uint8array_builder")
+WrappedDispatchedWorker = require("libs/wrapped_dispatched_worker")
+GzipWorker              = require("worker!./gzip_worker")
 
-gzipWorkerHandle = null
+gzipWorkerHandle = new WrappedDispatchedWorker(GzipWorker)
 
 class PushQueue
 
@@ -19,7 +20,7 @@ class PushQueue
 
     @getParams =
       cubeSize : 1 << @cube.BUCKET_SIZE_P
-      annotationId : tracingId
+      annotationId : @tracingId
 
     @push = _.throttle @pushImpl, @THROTTLE_TIME
 

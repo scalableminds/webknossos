@@ -1,11 +1,11 @@
-_              = require("underscore")
+_              = require("lodash")
 Marionette     = require("backbone.marionette")
 Toast          = require("libs/toast")
 app            = require("app")
-SelectionView  = require("../../views/selection_view")
-UserCollection = require("../../models/user/user_collection")
-TeamCollection = require("../../models/team/team_collection")
-ProjectModel   = require("../../models/project/project_model")
+SelectionView  = require("admin/views/selection_view")
+UserCollection = require("admin/models/user/user_collection")
+TeamCollection = require("admin/models/team/team_collection")
+ProjectModel   = require("admin/models/project/project_model")
 
 class CreateProjectModalView extends Backbone.Marionette.LayoutView
 

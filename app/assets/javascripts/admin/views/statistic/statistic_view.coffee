@@ -1,4 +1,4 @@
-_                  = require("underscore")
+_                  = require("lodash")
 marionette         = require("backbone.marionette")
 app                = require("app")
 GraphView          = require("./graph_view")

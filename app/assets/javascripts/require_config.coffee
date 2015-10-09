@@ -6,7 +6,7 @@ require.config(
 
   paths :
     "jquery"              : "../bower_components/jquery/jquery"
-    "underscore"          : "../bower_components/lodash/dist/lodash"
+    "lodash"          : "../bower_components/lodash/dist/lodash"
     "bootstrap"           : "../bower_components/bootstrap/dist/js/bootstrap"
     "coffee-script"       : "../bower_components/coffee-script/extras/coffee-script"
     "backbone.marionette" : "../bower_components/backbone.marionette/lib/backbone.marionette"
@@ -39,7 +39,7 @@ require.config(
     "nested_obj_model"    : "libs/nested_obj_model"
 
   shim :
-    "underscore" :
+    "lodash" :
       exports : "_"
     "bootstrap" : [ "jquery" ]
     "ace" :
@@ -60,9 +60,9 @@ require.config(
       deps : ["three"]
       exports : "THREE.ColorConverter"
     "backbone" :
-      deps : [ "jquery", "underscore" ]
+      deps : [ "jquery", "lodash" ]
       exports : "Backbone"
-    "backbone.marionette" : [ "backbone", "underscore" ]
-    "backbone.paginator" : [ "backbone", "underscore" ]
+    "backbone.marionette" : [ "backbone", "lodash" ]
+    "backbone.paginator" : [ "backbone", "lodash" ]
 
 )

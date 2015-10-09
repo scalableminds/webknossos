@@ -1,4 +1,4 @@
-_                            = require("underscore")
+_                            = require("lodash")
 marionette                   = require("backbone.marionette")
 SkeletonTracingSettingsView  = require("./skeleton_tracing_settings_view")
 VolumeTracingSettingsView    = require("./volume_tracing_settings_view")

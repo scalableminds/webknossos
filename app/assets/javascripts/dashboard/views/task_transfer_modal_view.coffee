@@ -1,5 +1,5 @@
 $              = require("jquery")
-_              = require("underscore")
+_              = require("lodash")
 Marionette     = require("backbone.marionette")
 Toast          = require("libs/toast")
 Request        = require("libs/request")

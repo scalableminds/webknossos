@@ -1,7 +1,7 @@
 backbone                      = require("backbone")
 THREE                         = require("three")
 MJS                           = require("mjs")
-_                             = require("underscore")
+_                             = require("lodash")
 constants                     = require("oxalis/constants")
 ArbitraryPlaneMaterialFactory = require("./materials/arbitrary_plane_material_factory")
 
@@ -50,7 +50,7 @@ class ArbitraryPlane
     for name, binary of @model.binary
       binary.cube.on "bucketLoaded", => @isDirty = true
 
-    throw "width needs to be a power of 2" unless Math.log(width) / Math.LN2 % 1 != 1
+    throw "width needs to be a power of 2" unless Math.log(@width) / Math.LN2 % 1 != 1
 
 
   setMode : ( mode, radius ) ->

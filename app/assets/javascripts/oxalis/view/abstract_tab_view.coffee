@@ -1,5 +1,5 @@
 marionette = require("backbone.marionette")
-_          = require("underscore")
+_          = require("lodash")
 
 class AbstractTabView extends Backbone.Marionette.LayoutView
 

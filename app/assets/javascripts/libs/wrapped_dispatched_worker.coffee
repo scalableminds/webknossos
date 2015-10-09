@@ -1,4 +1,4 @@
-_ = require("underscore")
+_ = require("lodash")
 
 # `WrappedDispatchedWorker` is a wrapper around the WebWorker API. First you
 # initialize it providing url of the javascript worker code. Afterwards

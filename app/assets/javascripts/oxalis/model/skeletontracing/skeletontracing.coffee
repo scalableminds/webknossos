@@ -1,7 +1,7 @@
 app                        = require("app")
 Backbone                   = require("backbone")
 $                          = require("jquery")
-_                          = require("underscore")
+_                          = require("lodash")
 backbone                   = require("backbone")
 Request                    = require("libs/request")
 ColorGenerator             = require("libs/color_generator")

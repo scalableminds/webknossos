@@ -1,5 +1,5 @@
 AbstractSettingView = require("./abstract_setting_view")
-_                   = require("underscore")
+_                   = require("lodash")
 
 class ButtonSettingView extends Backbone.Marionette.ItemView
 

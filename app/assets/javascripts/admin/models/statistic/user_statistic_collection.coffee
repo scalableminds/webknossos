@@ -1,4 +1,4 @@
-_        = require("underscore")
+_        = require("lodash")
 backbone = require("backbone")
 
 class UserStatisticCollection extends Backbone.Collection

@@ -1,4 +1,4 @@
-_              = require("underscore")
+_              = require("lodash")
 backbone       = require("backbone")
 NestedObjModel = require("nested_obj_model")
 

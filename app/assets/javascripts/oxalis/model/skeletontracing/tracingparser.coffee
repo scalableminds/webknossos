@@ -1,6 +1,7 @@
 $                  = require("jquery")
+THREE              = require("three")
 ColorConverter     = require("three.color")
-_                  = require("underscore")
+_                  = require("lodash")
 backbone           = require("backbone")
 Request            = require("libs/request")
 TracePoint         = require("./tracepoint")

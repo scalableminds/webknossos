@@ -1,5 +1,5 @@
 marionette = require("backbone.marionette")
-_          = require("underscore")
+_          = require("lodash")
 
 class AbstractSettingView extends Backbone.Marionette.ItemView
 

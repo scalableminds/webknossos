@@ -1,4 +1,4 @@
-_                    = require("underscore")
+_                    = require("lodash")
 PaginationCollection = require("../pagination_collection")
 DatasetModel         = require("./dataset_model")
 

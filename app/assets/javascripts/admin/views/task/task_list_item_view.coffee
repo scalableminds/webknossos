@@ -1,4 +1,4 @@
-_                    = require("underscore")
+_                    = require("lodash")
 app                  = require("app")
 marionette           = require("backbone.marionette")
 AnnotationCollection = require("admin/models/task/annotation_collection")

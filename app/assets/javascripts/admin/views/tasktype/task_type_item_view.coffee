@@ -1,8 +1,8 @@
-_                  = require("underscore")
+_                  = require("lodash")
 marionette         = require("backbone.marionette")
 Toast              = require("libs/toast")
 SimpleTaskItemView = require("./simple_task_item_view")
-TaskCollection     = require("../../models/task/task_collection")
+TaskCollection     = require("admin/models/task/task_collection")
 
 class TaskTypeItemView extends Backbone.Marionette.CompositeView
 

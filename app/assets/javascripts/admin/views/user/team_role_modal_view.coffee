@@ -1,8 +1,8 @@
-_                 = require("underscore")
+_                 = require("lodash")
 marionette        = require("backbone.marionette")
 Toast             = require("libs/toast")
-TeamCollection    = require("../../models/team/team_collection")
-TeamRoleModalItem = require("../../views/user/team_role_modal_item_view")
+TeamCollection    = require("admin/models/team/team_collection")
+TeamRoleModalItem = require("admin/views/user/team_role_modal_item_view")
 
 class TeamRoleModalView extends Backbone.Marionette.CompositeView
 

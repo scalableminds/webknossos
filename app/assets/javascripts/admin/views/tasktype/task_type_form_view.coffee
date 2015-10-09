@@ -1,8 +1,8 @@
-_              = require("underscore")
+_              = require("lodash")
 app            = require("app")
 marionette     = require("backbone.marionette")
-TeamCollection = require("../../models/team/team_collection")
-SelectionView  = require("../../views/selection_view")
+TeamCollection = require("admin/models/team/team_collection")
+SelectionView  = require("admin/views/selection_view")
 Toast          = require("libs/toast")
 
 class TaskTypeFormView extends Backbone.Marionette.LayoutView

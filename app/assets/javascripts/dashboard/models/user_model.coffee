@@ -1,4 +1,4 @@
-_        = require("underscore")
+_        = require("lodash")
 Backbone = require("backbone")
 
 class UserModel extends Backbone.Model

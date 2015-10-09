@@ -1,4 +1,4 @@
-_               = require("underscore")
+_               = require("lodash")
 marionette      = require("backbone.marionette")
 TemplateHelpers = require("libs/template_helpers")
 

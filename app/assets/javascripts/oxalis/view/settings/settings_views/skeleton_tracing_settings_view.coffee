@@ -1,5 +1,5 @@
 marionette          = require("backbone.marionette")
-_                   = require("underscore")
+_                   = require("lodash")
 SettingsView        = require("./settings_view")
 TreeCategoryView    = require("../category_views/tree_category_view")
 NodeCategoryView    = require("../category_views/node_category_view")

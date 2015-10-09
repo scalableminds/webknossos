@@ -1,4 +1,4 @@
-_                        = require("underscore")
+_                        = require("lodash")
 Marionette               = require("backbone.marionette")
 Toast                    = require("libs/toast")
 Fileinput                = require("fileinput")

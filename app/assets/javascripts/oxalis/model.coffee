@@ -1,5 +1,5 @@
 Backbone             = require("backbone")
-_                    = require("underscore")
+_                    = require("lodash")
 app                  = require("../app")
 Binary               = require("./model/binary")
 SkeletonTracing      = require("./model/skeletontracing/skeletontracing")

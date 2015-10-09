@@ -1,4 +1,4 @@
-_                 = require("underscore")
+_                 = require("lodash")
 Marionette        = require("backbone.marionette")
 SelectionItemView = require("./selection_item_view")
 

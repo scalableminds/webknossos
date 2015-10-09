@@ -1,4 +1,4 @@
-_                   = require("underscore")
+_                   = require("lodash")
 marionette          = require("backbone.marionette")
 Toast               = require("libs/toast")
 SelectAllRows       = require("libs/behaviors/select_all_rows_behavior")

@@ -13,9 +13,11 @@
     "chalk": "^1.1.1",
     "coffee-loader": "^0.7.2",
     "event-stream": "~3.1.0",
+    "exports-loader": "^0.6.2",
     "gulp": "~3.5.2",
     "gulp-exec": "~1.0.4",
     "gulp-less": "~1.2.1",
+    "imports-loader": "^0.6.4",
     "through2": "^2.0.0",
     "webpack": "^1.12.2",
     "worker-loader": "^0.6.0"

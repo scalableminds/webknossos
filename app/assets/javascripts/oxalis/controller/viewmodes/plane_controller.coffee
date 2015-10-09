@@ -1,7 +1,7 @@
 app                       = require("app")
 Backbone                  = require("backbone")
 $                         = require("jquery")
-_                         = require("underscore")
+_                         = require("lodash")
 Input                     = require("libs/input")
 Trackball                 = require("three.trackball")
 CameraController          = require("../camera_controller")

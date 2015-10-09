@@ -1,4 +1,4 @@
-_                  = require("underscore")
+_                  = require("lodash")
 Backbone           = require("backbone")
 DashboardTaskModel = require("./dashboard_task_model")
 UserModel          = require("./user_model")

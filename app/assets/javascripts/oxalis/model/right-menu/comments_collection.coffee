@@ -1,4 +1,4 @@
-_        = require("underscore")
+_        = require("lodash")
 backbone = require("backbone")
 
 class CommentsCollection extends Backbone.Collection

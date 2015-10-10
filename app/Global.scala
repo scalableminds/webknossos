@@ -152,6 +152,16 @@ class InitialData(conf: Configuration) extends GlobalDBAccess {
             AnnotationDAO.insert(annotation).map { _ =>
               annotation
             }
+            val current = System.currentTimeMillis
+            val timeSpan = TimeSpan(
+              1000,
+              current, 
+              current,
+              user._id,
+              Some("autoadded"),
+              Some(annotation._name))
+            TimeSpanDAO.insert(timeSpan)
+              
         }
       case _ =>
         Logger.error(s"Invalid nml in file '${nmlFile.getAbsolutePath}'")

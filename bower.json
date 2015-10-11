@@ -4,7 +4,6 @@
   "dependencies": {
     "bootstrap": "~3.3.0",
     "jquery": "~2.0.3",
-    "requirejs": "~2.1.1",
     "lodash": "~2.2.1",
     "backbone": "~1.2.3",
     "backbone.marionette": "~2.4.2",
@@ -12,8 +11,6 @@
     "momentjs": "~2.9.0",
     "threejs-stats": "",
     "KeyboardJS": "~0.4.1",
-    "coffee-script": "~1.4.0",
-    "ace-builds": "ace-builds#~1.1.1",
     "jquery-mousewheel": "~3.1.9",
     "gamepad.js": "*",
     "tweenjs": "~16.3.1",
@@ -35,7 +32,6 @@
   "devDependencies": {},
   "resolutions": {
     "underscore": ">=1.7.0",
-    "backbone": "1.0.0 - 1.2.3",
-    "tweenjs": "~16.3.1"
+    "backbone": "1.0.0 - 1.2.3"
   }
 }

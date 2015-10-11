@@ -89,6 +89,9 @@ zip.file.invalid=Uploaded ZIP file invalid or corrupted
 dataLayer.notFound=DataLayer not found
 dataLayer.forbidden=Access to this layer is not allowed.
 
+scale.scale=Scale
+scale.invalid=Specify dataset scale like "XX, YY, ZZ"
+
 dataToken.creationFailed=Creation of the data token failed.
 
 cellId=Cell Id

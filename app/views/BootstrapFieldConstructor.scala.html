@@ -1,6 +1,6 @@
 @(elements: helper.FieldElements)
 
-<div class="@if(elements.hasErrors) { error } form-group">
+<div class="@if(elements.hasErrors) { has-error } form-group">
     <label class="col-sm-3 control-label" for="@elements.id">@elements.label</label>
     <div class="col-sm-9">
         @elements.args.get(Symbol("input-append")).map{ append =>

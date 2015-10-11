@@ -240,9 +240,7 @@ class Controller
       event.preventDefault() if (event.which == 32 or event.which == 18 or 37 <= event.which <= 40) and !$(":focus").length
       return
 
-    keyboardControls = {
-      # "q" : => @toggleFullScreen()
-    }
+    keyboardControls = {}
 
     if @controlMode == constants.CONTROL_MODE_TRACE
       _.extend( keyboardControls, {

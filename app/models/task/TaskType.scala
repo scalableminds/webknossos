@@ -65,19 +65,22 @@ object TaskType {
       tt.settings.somaClickingAllowed,
       tt.expectedTime))
 
-    def transformToJson(tt: TaskType)(implicit ctx: DBAccessContext): Future[JsObject] = {
+  def transformToJson(tt: TaskType)(implicit ctx: DBAccessContext) = {
+    Json.obj(
+      "id" -> tt.id,
+      "summary" -> tt.summary,
+      "description" -> tt.description,
+      "team" -> tt.team,
+      "settings" -> Json.toJson(tt.settings),
+      "fileName" -> tt.fileName,
+      "expectedTime" -> tt.expectedTime.toString
+    )
+  }
+
+  def transformToJsonWithStatus(tt: TaskType)(implicit ctx: DBAccessContext): Future[JsObject] = {
       tt.status.map {
         status =>
-          Json.obj(
-            "id" -> tt.id,
-            "summary" -> tt.summary,
-            "description" -> tt.description,
-            "team" -> tt.team,
-            "settings" -> Json.toJson(tt.settings),
-            "fileName" -> tt.fileName,
-            "expectedTime" -> tt.expectedTime.toString,
-            "status" -> Json.toJson(status)
-          )
+          transformToJson(tt) + ("status" -> Json.toJson(status))
       }
     }
 }

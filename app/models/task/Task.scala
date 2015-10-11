@@ -86,9 +86,9 @@ object Task extends FoxImplicits {
 
   def transformToJson(task: Task)(implicit ctx: DBAccessContext): Future[JsObject] = {
     for {
-      dataSetName <- task.annotationBase.flatMap(_.dataSetName) getOrElse ""
-      editPosition <- task.annotationBase.flatMap(_.content.map(_.editPosition)) getOrElse Point3D(1, 1, 1)
-      boundingBox <- task.annotationBase.flatMap(_.content.map(_.boundingBox)) getOrElse None
+//      dataSetName <- task.annotationBase.flatMap(_.dataSetName) getOrElse ""
+//      editPosition <- task.annotationBase.flatMap(_.content.map(_.editPosition)) getOrElse Point3D(1, 1, 1)
+//      boundingBox <- task.annotationBase.flatMap(_.content.map(_.boundingBox)) getOrElse None
       status <- task.status
       ttJson <- task.taskType.flatMap(tt => TaskType.transformToJson(tt).toFox) getOrElse JsNull
       projectName = task._project.getOrElse("")
@@ -99,9 +99,10 @@ object Task extends FoxImplicits {
         "formattedHash" -> Formatter.formatHash(task.id),
         "projectName" -> projectName,
         "type" -> ttJson,
-        "dataSet" -> dataSetName,
-        "editPosition" -> editPosition,
-        "boundingBox" -> boundingBox,
+        "dataSet" -> "<unknown>", //dataSetName,
+        "editPosition" -> Json.arr(0,0,0),
+        "boundingBox" -> Json.obj(
+          "topLeft" -> Json.arr(0,0,0), "width" -> 0, "height" ->  0, "depth" -> 0),
         "neededExperience" -> task.neededExperience,
         "priority" -> task.priority,
         "created" -> DateTimeFormat.forPattern("yyyy-MM-dd HH:mm").print(task.created),

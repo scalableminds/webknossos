@@ -40,7 +40,9 @@ object Global extends WithFilters(MetricsFilter) with GlobalSettings {
 
     conf.getConfig("application.initialData").map{ initialDataConf ⇒
       if (initialDataConf.getBoolean("enabled") getOrElse false) {
-        new InitialData(initialDataConf).insert()
+        Future {
+          new InitialData(initialDataConf).insert()
+        }
       }
     }
     super.onStart(app)

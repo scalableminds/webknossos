@@ -61,7 +61,7 @@ case class Task(
   def unassigneOnce = this.copy(assignedInstances = assignedInstances - 1)
 
   def status(implicit ctx: DBAccessContext) = async{
-    val inProgress = await(annotations).filter(!_.state.isFinished).size
+    val inProgress = await(AnnotationService.countUnfinishedAnnotationsFor(this) getOrElse 0)
     CompletionStatus(
       open = instances - assignedInstances,
       inProgress = inProgress,
@@ -89,7 +89,7 @@ object Task extends FoxImplicits {
       editPosition <- task.annotationBase.flatMap(_.content.map(_.editPosition)) getOrElse Point3D(1, 1, 1)
       boundingBox <- task.annotationBase.flatMap(_.content.map(_.boundingBox)) getOrElse None
       status <- task.status
-      ttJson <- task.taskType.flatMap(tt => TaskType.transformToJson(tt).toFox) getOrElse JsNull
+      tt <- task.taskType.map(TaskType.transformToJson) getOrElse JsNull
       projectName = task._project.getOrElse("")
     } yield {
       Json.obj(
@@ -97,7 +97,7 @@ object Task extends FoxImplicits {
         "team" -> task.team,
         "formattedHash" -> Formatter.formatHash(task.id),
         "projectName" -> projectName,
-        "type" -> ttJson,
+        "type" -> tt,
         "dataSet" -> dataSetName,
         "editPosition" -> editPosition,
         "boundingBox" -> boundingBox,

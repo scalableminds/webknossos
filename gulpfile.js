@@ -9,13 +9,13 @@ var webpack      = require("webpack");
 
 paths = {
   src : {
-    css : "app/assets/stylesheets/main.less",
-    dir : "app/assets/**/*",
+    css : __dirname + "/app/assets/stylesheets/main.less",
+    dir : __dirname + "/app/assets/**/*",
     js : __dirname + "/app/assets/javascripts"
   },
   dest : {
     js : __dirname + "/public/javascripts",
-    css : "public/stylesheets"
+    css : __dirname + "/public/stylesheets"
   }
 };
 
@@ -41,7 +41,7 @@ var scriptPaths = {
   "keyboard"            : bowerPath + "KeyboardJS/keyboard",
   "gamepad"             : bowerPath + "gamepad.js/gamepad",
   "jquery.mousewheel"   : bowerPath + "jquery-mousewheel/jquery.mousewheel",
-  "tween"               : bowerPath + "tweenjs/build/Tween",
+  "tween"               : bowerPath + "tweenjs/src/Tween",
   "moment"              : bowerPath + "momentjs/moment",
   "require"             : bowerPath + "requirejs/require",
   "c3"                  : bowerPath + "c3/c3",
@@ -100,7 +100,6 @@ function makeScripts(watch, done) {
         { test: scriptPaths["three"], loader: "exports?THREE" },
         { test: scriptPaths["backbone-deep-model"], loader: "imports?_=underscore" },
         { test: scriptPaths["stats"], loader: "exports?Stats" },
-        { test: scriptPaths["tween"], loader: "exports?TWEEN" },
         { test: scriptPaths["gzip"], loader: "exports?this.Zlib" },
         // {
         //   test: /\.jsx?$/,

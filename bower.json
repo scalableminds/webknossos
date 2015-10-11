@@ -16,7 +16,7 @@
     "ace-builds": "ace-builds#~1.1.1",
     "jquery-mousewheel": "~3.1.9",
     "gamepad.js": "*",
-    "tweenjs": "r6",
+    "tweenjs": "~16.3.1",
     "zlib": "git@github.com:imaya/zlib.js.git#0.2.0",
     "backbone.paginator": "~0.8.1",
     "backbone.subviews": "https://raw.github.com/scalableminds/backbone.subviews/master/backbone.subviews.js",
@@ -35,6 +35,7 @@
   "devDependencies": {},
   "resolutions": {
     "underscore": ">=1.7.0",
-    "backbone": "1.0.0 - 1.2.3"
+    "backbone": "1.0.0 - 1.2.3",
+    "tweenjs": "~16.3.1"
   }
 }

@@ -40,7 +40,11 @@ class SpotlightDatasetView extends Backbone.Marionette.ItemView
         <% if(description) { %>
           <p><%= description %></p>
         <% } else { %>
-          <p>Original data and segmentation</p>
+          <% if(hasSegmentation) { %>
+            <p>Original data and segmentation</p>
+          <% } else { %>
+            <p>Original data</p>
+          <% } %>
         <% } %>
       </div>
     </div>

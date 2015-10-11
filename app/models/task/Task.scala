@@ -89,7 +89,7 @@ object Task extends FoxImplicits {
       editPosition <- task.annotationBase.flatMap(_.content.map(_.editPosition)) getOrElse Point3D(1, 1, 1)
       boundingBox <- task.annotationBase.flatMap(_.content.map(_.boundingBox)) getOrElse None
       status <- task.status
-      tt <- task.taskType
+      tt <- task.taskType.map(TaskType.transformToJson) getOrElse JsNull
       projectName = task._project.getOrElse("")
     } yield {
       Json.obj(
@@ -97,7 +97,7 @@ object Task extends FoxImplicits {
         "team" -> task.team,
         "formattedHash" -> Formatter.formatHash(task.id),
         "projectName" -> projectName,
-        "type" -> TaskType.transformToJson(tt),
+        "type" -> tt,
         "dataSet" -> dataSetName,
         "editPosition" -> editPosition,
         "boundingBox" -> boundingBox,

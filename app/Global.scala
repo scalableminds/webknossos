@@ -27,6 +27,7 @@ import scala.concurrent.Future
 import scala.concurrent._
 import scala.concurrent.duration._
 import models.annotation._
+import models.user.time._
 
 object Global extends WithFilters(MetricsFilter) with GlobalSettings {
 
@@ -155,13 +156,13 @@ class InitialData(conf: Configuration) extends GlobalDBAccess {
             val current = System.currentTimeMillis
             val timeSpan = TimeSpan(
               1000,
-              current, 
+              current,
               current,
               user._id,
               Some("autoadded"),
-              Some(annotation._name))
+              annotation._name)
             TimeSpanDAO.insert(timeSpan)
-              
+
         }
       case _ =>
         Logger.error(s"Invalid nml in file '${nmlFile.getAbsolutePath}'")

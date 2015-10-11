@@ -19,6 +19,9 @@ class DatasetModel extends NestedObjModel
         scale : []
         dataLayers : []
 
+    response.hasSegmentation = _.some(response.dataSource.dataLayers,
+      (layer) -> layer.category == "segmentation")
+
     response.thumbnailURL = @createThumbnailURL(response.name, response.dataSource.dataLayers)
 
     return response

@@ -49,8 +49,8 @@ var scriptPaths = {
   "offcanvas"           : bowerPath + "jasny-bootstrap/js/offcanvas",
   "fileinput"           : bowerPath + "jasny-bootstrap/js/fileinput",
   "daterangepicker"     : bowerPath + "bootstrap-daterangepicker/daterangepicker",
-  "rangeslider"         : bowerPath + "nouislider/distribute/nouislider.min",
-  "clipboard"           : bowerPath + "clipboard/dist/clipboard.min",
+  "rangeslider"         : bowerPath + "nouislider/distribute/nouislider",
+  "clipboard"           : bowerPath + "clipboard/dist/clipboard",
   "mjs"                 : bowerPath + "mjs/src/mjs",
   "worker"              : "libs/worker_plugin",
   "wrapped_worker"      : "libs/wrapped_worker_plugin",
@@ -62,27 +62,22 @@ var scriptPaths = {
 // Helper functions
 function logger() {
   return through2.obj(function (file, enc, callback) {
-    console.log(">>", chalk.yellow(path.relative(process.cwd(), file.path)));
+    logFile(file.path);
     callback(null, file);
   });
 }
+function logFile(filepath) {
+  console.log(">>", chalk.yellow(path.relative(process.cwd(), filepath)));
+}
 
 function handleError(err) {
-  console.log(chalk.red("!!"), err.toString());
+  console.error(err.toString());
 }
 
 
-
-// DEPENDENCIES
-gulp.task("install:bower", function () {
-  return gulp.src("bower.json")
-    .pipe(exec(path.join(process.cwd(), "node_modules", ".bin", "bower") + " install -q"));
-});
-
-
 // SCRIPTS
-function makeScripts(watch, done) {
-  webpack({
+function makeScripts() {
+  return webpack({
     entry: {
       main: paths.src.js + "/main.coffee"
     },
@@ -119,34 +114,41 @@ function makeScripts(watch, done) {
     externals: [
       { "routes": "var jsRoutes" }
     ],
-    plugins: [
-      // new webpack.optimize.CommonsChunkPlugin('common.js'),
-      // new webpack.ProvidePlugin({
-      //   $: "jquery",
-      // })
-    ],
     devtool: "source-map",
-    debug: true,
-    watch: watch
-  }, function (err, stats) {
-    if (stats.compilation.assets) {
-      Object.keys(stats.compilation.assets).forEach(function (asset) {
-        console.log(">>", paths.dest.js + "/" + asset);
-      })
-    }
-    stats.compilation.missingDependencies.forEach(function (dep) {
-      console.error("Missing dependency:", dep);
-    });
-    done(err);
-  });
+    debug: true
+  })
 }
 
-gulp.task("scripts", ["install:bower"], function (done) {
-  makeScripts(false, done);
+gulp.task("scripts", function (done) {
+  makeScripts().run(function (err, stats) {
+    if (err) {
+      done(err);
+    } else {
+      if (stats.compilation.assets) {
+        Object.keys(stats.compilation.assets).forEach(function (asset) {
+          logFile(path.join(paths.dest.js, asset));
+        });
+      }
+    }
+  });
 });
 
-gulp.task("watch:scripts", ["install:bower"], function (done) {
-  makeScripts(true, function () {});
+gulp.task("watch:scripts", function (done) {
+  makeScripts().watch(200, function (err, stats) {
+    if (err) {
+      console.error(err.toString());
+    } else {
+      if (stats.compilation.errors && stats.compilation.errors.length) {
+        stats.compilation.errors.forEach(function (err) {
+          console.error(err.toString());
+        });
+      } else if (stats.compilation.assets) {
+        Object.keys(stats.compilation.assets).forEach(function (asset) {
+          logFile(path.join(paths.dest.js, asset));
+        });
+      }
+    }
+  });
 });
 
 
@@ -159,14 +161,14 @@ gulp.task("styles", function () {
 });
 
 
-gulp.task("watch:styles", ["install:bower", "styles"], function (done) {
+gulp.task("watch:styles", ["styles"], function (done) {
   gulp.watch(paths.src.dir + "/**/*", ["styles"]);
 });
 
 
 // ENTRY
 gulp.task("debug", ["watch:styles", "watch:scripts"]);
-gulp.task("build", ["install:bower", "styles", "scripts"]);
+gulp.task("build", ["styles", "scripts"]);
 gulp.task("default", ["build"]);
 
 fs.writeFileSync("target/gulp.pid", process.pid, "utf8");

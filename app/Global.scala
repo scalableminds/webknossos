@@ -116,7 +116,7 @@ class InitialData(conf: Configuration) extends GlobalDBAccess {
         val taskTypes = insertTaskTypesForTeam(team)
         addEk0563(users, team)
         addCortex(users, admin, team, taskTypes)
-    }, 10 seconds)
+    }, 100 seconds)
   }
 
   def insertExplorativeAnnotation(nmlFile: File, user: User) = {
@@ -220,7 +220,7 @@ class InitialData(conf: Configuration) extends GlobalDBAccess {
         )
         UserDAO.insert(user)
         user
-    }, 10 seconds)
+    }, 100 seconds)
   }
 
   /**

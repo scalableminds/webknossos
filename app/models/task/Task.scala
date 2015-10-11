@@ -61,7 +61,7 @@ case class Task(
   def unassigneOnce = this.copy(assignedInstances = assignedInstances - 1)
 
   def status(implicit ctx: DBAccessContext) = async{
-    val inProgress = 0//await(annotations).filter(!_.state.isFinished).size
+    val inProgress = await(AnnotationService.countUnfinishedAnnotationsFor(this) getOrElse 0)
     CompletionStatus(
       open = instances - assignedInstances,
       inProgress = inProgress,

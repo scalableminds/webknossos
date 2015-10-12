@@ -235,7 +235,7 @@ class InitialData(conf: Configuration, app: Application) extends GlobalDBAccess 
         1,
         team,
         project,
-        "e2006",
+        "2015-10-05-FD0129_2_confocal_crop",
         Point3D.fromArray(coords).get,
         BoundingBox(topLeft = Point3D(0,0,0), width = 0, height = 0, depth = 0))
     }

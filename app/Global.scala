@@ -246,7 +246,7 @@ class InitialData(conf: Configuration, app: Application) extends GlobalDBAccess 
     val taskType = taskTypes.find(_.summary == "allModesShort").get
     for {
       typ <- List("unfinished", "finished")
-      (file, idx) <- fileFor("cortex/$typ").listFiles.zipWithIndex
+      (file, idx) <- fileFor(s"cortex/$typ").listFiles.zipWithIndex
     } yield {
       val coords = file.getName.split("_")
       val task = insertTask(

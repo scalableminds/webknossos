@@ -226,7 +226,7 @@ class InitialData(conf: Configuration) extends GlobalDBAccess {
         team,
         project,
         "e2006",
-        coords,
+        Point3D.fromArray(coords).get, 
         BoundingBox(topLeft = Point3D(0,0,0), width = 0, height = 0, depth = 0))
       
     }

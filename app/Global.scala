@@ -116,8 +116,8 @@ class InitialData(conf: Configuration) extends GlobalDBAccess {
         TeamDAO.insert(team)
         val (users, admin) = insertUsers(team, teamNumber)
         val taskTypes = insertTaskTypesForTeam(team)
-        addEk0563(users, team)
-        addE2006(users, team)
+        addEk0563(users, admin, team)
+        addE2006(users, admin, team)
         addCortex(users, admin, team, taskTypes)
     }, 100 seconds)
   }
@@ -171,36 +171,81 @@ class InitialData(conf: Configuration) extends GlobalDBAccess {
         Logger.error(s"Invalid nml in file '${nmlFile.getAbsolutePath}'")
     }
   }
-
-  def addEk0563(users: List[User], team: Team) {
+  def addEk0563Single(users:List[User], admin: User, nmlFile: File) {
+    for (j <- 0 to 9) {
+      insertExplorativeAnnotation(nmlFile, users(j))
+    }
+    insertExplorativeAnnotation(nmlFile, admin)
+  }
+  def addEk0563(users: List[User], admin: User, team: Team) {
     new File(s"public/nmls/ek0563/").listFiles.zipWithIndex.foreach{
-      case (nmlFile, idx) =>
-        insertExplorativeAnnotation(nmlFile, users(idx % 10))
+      case (nmlFile, idx) => 
+        addEk0563Single(users, admin, nmlFile)
     }
   }
-  def addE2006(users: List[User], team: Team) {
-  //  val project = insertProject(team, admin, "e2006_project")
-  //  new File(s"/home/mhlab/e2006_nml/").listFiles.zipWithIndex.foreach{
-  //    case (nmlFile, idx) =>
-  //      insertExplorativeAnnotation(nmlFile, users(idx % 10))
-  //  }
-  }
-
-  def addCortex(users: List[User], admin: AdminUser, team: Team, taskTypes: List[TaskType]) {
-    val project = insertProject(team, admin, "cortex")
-    val taskType = taskTypes.find(_.summary == "orthogonalShort").get
-    for {
-      typ <- List("finished", "unfinished")
+  def addE2006(users: List[User], admin, team: Team) {
+    val project = insertProject(team, admin, "e2006_project")
+    val taskType = taskTypes.find(_.summary == "allModesLong").get
+    for {    
       (file, idx) <- new File(s"public/nmls/cortex/$typ/").listFiles.zipWithIndex
     } yield {
       val coords = file.getName.split("_")
       val task = insertTask(
         admin,
         taskType,
-        "cells_in_cortex",
+        "retina_experience",
         1,
         100,
+        3,
         1,
+        team,
+        project,
+        "e2006",
+        Point3D.fromArray(coords.take(3).map(_.toInt)).get,
+        BoundingBox(topLeft = Point3D(0,0,0), width = 0, height = 0, depth = 0))
+      val annotationState = if (idx % 10 == 0) AnnotationState.InProgress else AnnotationState.Finished
+      val thisUser = if (idx %12 ==0) admin else users(idx % 5)
+      insertTaskAnnotation(task, taskType, file, , annotationState)
+    }
+  }
+  def addFluoro(users: List[User], admin, team: Team) {
+    val project = insertProject(team, admin, "fluoro_project")
+    val taskType = taskTypes.find(_.summary == "orthogonalShort").get
+    val coordsAll=Array(Array(285, 1428, 67), Array(407, 1136, 67), Array(626, 1030, 67), Array(744, 874, 67), Array(949, 668, 67), Array(857, 450, 67), Array(674, 730, 67), Array(512, 522, 67), Array(378, 690, 67), Array(271, 872, 67), Array(87, 630, 67), Array(204, 356, 67), Array(360, 188, 67), Array(647, 284, 67), Array(887, 166, 67), Array(909, 534, 67), Array(802, 730, 67), Array(582, 812, 67), Array(517, 742, 67), Array(231, 954, 67))
+    for (i <- 0 to 19)
+      val coords = coordsAll(i)
+      val task = insertTask(
+        admin,
+        taskType,
+        "fluoro_experience",
+        1,
+        100,
+        3,
+        1,
+        team,
+        project,
+        "e2006",
+        coords,
+        BoundingBox(topLeft = Point3D(0,0,0), width = 0, height = 0, depth = 0))
+      
+    }
+  }
+
+  def addCortex(users: List[User], admin: AdminUser, team: Team, taskTypes: List[TaskType]) {
+    val project = insertProject(team, admin, "cortex_project")
+    val taskType = taskTypes.find(_.summary == "allModesShort").get
+    for {
+      typ <- List("unfinished", "finished")
+      (file, idx) <- new File(s"public/nmls/cortex/$typ/").listFiles.zipWithIndex
+    } yield {
+      val coords = file.getName.split("_")
+      val task = insertTask(
+        admin,
+        taskType,
+        "cortex_experience",
+        1,
+        100,
+        3,
         1,
         team,
         project,
@@ -249,19 +294,19 @@ class InitialData(conf: Configuration) extends GlobalDBAccess {
       } else {
         val firstName = s"Admin $teamNumber"
         val mailAddress = s"admin$teamNumber"
-        insertSingleUser(firstName, lastName, s"$mailAddress@$mailDomain", Role.Admin, team, password, Map.empty) // <- welche Experiences sollen hier hin?
+        insertSingleUser(firstName, lastName, s"$mailAddress@$mailDomain", Role.Admin, team, password, Map("retina_experience" -> 2, "fluoro_experience" -> 3)) // <- welche Experiences sollen hier hin?
       }
 
     for (j <- 0 to 4) {
       val firstNameUser = s"User $teamNumber$j"
       val mailAddressUser = s"user$teamNumber$j"
-      users ::= insertSingleUser(firstNameUser, lastName, s"$mailAddressUser@$mailDomain", Role.User, team, password, Map("retina" -> 1))
+      users ::= insertSingleUser(firstNameUser, lastName, s"$mailAddressUser@$mailDomain", Role.User, team, password, Map("retina_experience" -> 1, "fluoro_experience" -> 2))
     }
 
     for (j <- 5 to 9) {
       val firstNameUser = "User " + teamNumber.toString() + j.toString()
       val mailAddressUser = "user" + teamNumber.toString() + j.toString()
-      users ::= insertSingleUser(firstNameUser, lastName, s"$mailAddressUser@$mailDomain", Role.User, team, password, Map("cells_in_cortex" -> 1))
+      users ::= insertSingleUser(firstNameUser, lastName, s"$mailAddressUser@$mailDomain", Role.User, team, password, Map("cortex_experience" -> 1, "fluoro_experience" -> 1))
     }
 
     (users, adminUser)

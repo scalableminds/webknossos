@@ -33,9 +33,7 @@ class SpotlightDatasetView extends Backbone.Marionette.ItemView
       </form>
 
       <div class="dataset-description col-sm-8">
-        <h3><%= owningTeam %></h3>
-
-        <p><h4>Dataset: <%= name %></h4></p>
+        <h3>Dataset: <%= name %></h3>
         <p>Scale: <%= TemplateHelpers.formatScale(dataSource.scale) %></p>
         <% if(description) { %>
           <p><%= description %></p>

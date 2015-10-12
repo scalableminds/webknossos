@@ -16,7 +16,7 @@ import play.api.i18n.Messages
 import oxalis.mail.DefaultMails
 import oxalis.view.{SessionData, ProvidesUnauthorizedSessionData, UnAuthedSessionData}
 import scala.concurrent.Future
-import models.team.TeamDAO
+import models.team.{TeamService, TeamDAO}
 import com.scalableminds.util.reactivemongo.DBAccessContext
 import net.liftweb.common.Full
 
@@ -53,8 +53,8 @@ object Authentication extends Controller with Secured with ProvidesUnauthorizedS
 
   def formHtml(form: Form[(String, String, String, String, String)])(implicit session: SessionData) = {
     for {
-      teams <- TeamDAO.findAll(DBAccessContext(None))
-    } yield html.user.register(form, teams.filter(_.isRootTeam))
+      teams <- TeamService.rootTeams()
+    } yield html.user.register(form, teams)
   }
 
   /**

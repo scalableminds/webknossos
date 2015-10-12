@@ -169,8 +169,9 @@ class InitialData(conf: Configuration, app: Application) extends GlobalDBAccess 
               annotation
             }
             val current = System.currentTimeMillis
+            val r = scala.util.Random
             val timeSpan = TimeSpan(
-              1000,
+              r.nextInt(3600000),
               current,
               current,
               user._id,

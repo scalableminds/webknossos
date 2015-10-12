@@ -106,7 +106,7 @@ object DataSourceController extends Controller {
       }
 
       zip.closeEntry()
-      entry = zip.getNextEntry()      
+      entry = zip.getNextEntry()
     }
 
     zip.close()
@@ -115,9 +115,11 @@ object DataSourceController extends Controller {
 
   def upload() = Action.async(parse.json) {
     implicit request =>
+      Logger.warn("Dataset upload to store called.")
       request.body.validate[DataSourceUpload] match {
         case JsSuccess(upload, _) =>
           val baseDir = Paths.get(config.getString("braingames.binary.baseFolder")).resolve(upload.team).resolve(upload.name)
+          Logger.warn(s"Uploading dataset into '$baseDir'")
           PathUtils.ensureDirectory(baseDir)
           upload.settings.map(DataSourceSettings.writeSettingsToFile(_,
             DataSourceSettings.settingsFileInFolder(baseDir)))

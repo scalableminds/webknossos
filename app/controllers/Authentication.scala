@@ -130,6 +130,22 @@ object Authentication extends Controller with Secured with ProvidesUnauthorizedS
   }
 
   /**
+   * Authenticate as a different user
+   */
+  def switchTo(email: String) = Authenticated.async {
+    implicit request =>
+      if(request.user.isSuperUser){
+        UserService.findOneByEmail(email).map { user =>
+          Logger.info(s"[Superuser] user switch (${request.user.email} -> $email)")
+          Redirect(controllers.routes.Application.index).withSession(Secured.createSession(user))
+        }
+      } else {
+        Logger.warn(s"User tried to switch (${request.user.email} -> $email) but is no Superuser!")
+        Future.successful(BadRequest(html.user.login(loginForm.withGlobalError("user.login.failed"))(sessionDataAuthenticated(request))))
+      }
+  }
+
+  /**
    * Logout and clean the session.
    */
   def logout = Action {

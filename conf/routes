@@ -18,6 +18,7 @@ GET           /help/keyboardshortcuts                                         co
 # Authentication
 GET           /login                                                          controllers.Authentication.login
 POST          /login                                                          controllers.Authentication.authenticate
+GET           /switch                                                         controllers.Authentication.switchTo(to: String)
 GET           /logout                                                         controllers.Authentication.logout
 GET           /register                                                       controllers.Authentication.register
 POST          /register                                                       controllers.Authentication.handleRegistration

@@ -32,6 +32,7 @@ case class User(
                  configuration: UserSettings = UserSettings.defaultSettings,
                  experiences: Map[String, Int] = Map.empty,
                  lastActivity: Long = System.currentTimeMillis,
+                 _isSuperUser: Option[Boolean] = None,
                  _id: BSONObjectID = BSONObjectID.generate) extends DBAccessContextPayload {
 
   val dao = User
@@ -41,6 +42,8 @@ case class User(
   def teamsWithRole(role: Role) = teams.filter(_.role == role)
 
   def teamNames = teams.map(_.team)
+
+  def isSuperUser = _isSuperUser getOrElse false
 
   val name = firstName + " " + lastName
 

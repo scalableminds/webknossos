@@ -4,7 +4,7 @@
     <scale x="12.0" y="12.0" z="24.0"/>
     <offset x="0" y="0" z="0"/>
     <time ms="1382950327498"/>
-    &lt;activeNode id=488/&gt;
+    <activeNode id=488/>
     <editPosition x="1105" y="5213" z="820"/>
   </parameters>
   <thing id="1" color.r="0.25" color.g="0.5" color.b="0.5" color.a="1.0" name="Tree001">

@@ -4,7 +4,7 @@
     <scale x="12.0" y="12.0" z="24.0"/>
     <offset x="0" y="0" z="0"/>
     <time ms="1382618532328"/>
-    &lt;activeNode id=1039/&gt;
+    <activeNode id=1039/>
     <editPosition x="2479" y="3325" z="5039"/>
   </parameters>
   <thing 

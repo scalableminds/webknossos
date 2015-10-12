@@ -117,6 +117,7 @@ class InitialData(conf: Configuration) extends GlobalDBAccess {
         val (users, admin) = insertUsers(team, teamNumber)
         val taskTypes = insertTaskTypesForTeam(team)
         addEk0563(users, team)
+        addE2006(users, team)
         addCortex(users, admin, team, taskTypes)
     }, 100 seconds)
   }
@@ -176,6 +177,13 @@ class InitialData(conf: Configuration) extends GlobalDBAccess {
       case (nmlFile, idx) =>
         insertExplorativeAnnotation(nmlFile, users(idx % 10))
     }
+  }
+  def addE2006(users: List[User], team: Team) {
+  //  val project = insertProject(team, admin, "e2006_project")
+  //  new File(s"/home/mhlab/e2006_nml/").listFiles.zipWithIndex.foreach{
+  //    case (nmlFile, idx) =>
+  //      insertExplorativeAnnotation(nmlFile, users(idx % 10))
+  //  }
   }
 
   def addCortex(users: List[User], admin: AdminUser, team: Team, taskTypes: List[TaskType]) {
@@ -244,13 +252,13 @@ class InitialData(conf: Configuration) extends GlobalDBAccess {
         insertSingleUser(firstName, lastName, s"$mailAddress@$mailDomain", Role.Admin, team, password, Map.empty) // <- welche Experiences sollen hier hin?
       }
 
-    for (j <- 1 to 5) {
+    for (j <- 0 to 4) {
       val firstNameUser = s"User $teamNumber$j"
       val mailAddressUser = s"user$teamNumber$j"
       users ::= insertSingleUser(firstNameUser, lastName, s"$mailAddressUser@$mailDomain", Role.User, team, password, Map("retina" -> 1))
     }
 
-    for (j <- 6 to 10) {
+    for (j <- 5 to 9) {
       val firstNameUser = "User " + teamNumber.toString() + j.toString()
       val mailAddressUser = "user" + teamNumber.toString() + j.toString()
       users ::= insertSingleUser(firstNameUser, lastName, s"$mailAddressUser@$mailDomain", Role.User, team, password, Map("cells_in_cortex" -> 1))

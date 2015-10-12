@@ -31,7 +31,7 @@ object UserSettings extends BasicSettings{
       "clippingDistanceArbitrary" -> JsNumber(64),
       "dynamicSpaceDirection" -> JsBoolean(true),
       "displayCrosshair" -> JsBoolean(true),
-      "interpolation" -> JsBoolean(false),
+      "interpolation" -> JsBoolean(true),
       "fourBit" -> JsBoolean(false),
       "brightnessContrastColorSettings" -> Json.obj(
         "default" -> Json.obj(
@@ -39,6 +39,11 @@ object UserSettings extends BasicSettings{
           "contrast" -> 1
         ),
         "st08x2" -> Json.obj(
+          "color" -> Json.obj(
+            "contrast" -> 2.4
+          )
+        ),
+        "e2006" -> Json.obj(
           "color" -> Json.obj(
             "contrast" -> 2.4
           )

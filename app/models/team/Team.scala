@@ -1,9 +1,10 @@
 package models.team
 
+import com.scalableminds.util.reactivemongo.AccessRestrictions.{DenyEveryone, AllowIf}
 import play.api.libs.json._
 import reactivemongo.bson.BSONObjectID
 import play.modules.reactivemongo.json.BSONFormats._
-import com.scalableminds.util.reactivemongo.{DBAccessContext}
+import com.scalableminds.util.reactivemongo.{GlobalAccessContext, DefaultAccessDefinitions, DBAccessContext}
 import models.basics.SecuredBaseDAO
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import models.user.{UserDAO, UserService, User}
@@ -66,6 +67,10 @@ object TeamService {
   def remove(team: Team)(implicit ctx: DBAccessContext) = {
     TeamDAO.removeById(team._id)
   }
+
+  def rootTeams() = {
+    TeamDAO.findRootTeams()(GlobalAccessContext)
+  }
 }
 
 object TeamDAO extends SecuredBaseDAO[Team] with FoxImplicits {
@@ -73,6 +78,29 @@ object TeamDAO extends SecuredBaseDAO[Team] with FoxImplicits {
 
   implicit val formatter = Team.teamFormat
 
+  override val AccessDefinitions = new DefaultAccessDefinitions{
+
+    override def findQueryFilter(implicit ctx: DBAccessContext) = {
+      ctx.data match{
+        case Some(user: User) =>
+          AllowIf(Json.obj(
+            "$or" -> Json.arr(
+              Json.obj("name" -> Json.obj("$in" -> user.teamNames)),
+              Json.obj("parent"-> Json.obj("$in" -> user.teamNames)))
+          ))
+        case _ =>
+          DenyEveryone()
+      }
+    }
+  }
+
   def findOneByName(name: String)(implicit ctx: DBAccessContext) =
     findOne("name", name)
+
+  def findRootTeams()(implicit ctx: DBAccessContext) = withExceptionCatcher {
+    find(Json.obj("$or" -> Json.arr(
+      Json.obj("behavesLikeRootTeam" -> true),
+      Json.obj("parent" -> Json.obj("$exists" -> false)))
+    )).cursor[Team].collect[List]()
+  }
 }

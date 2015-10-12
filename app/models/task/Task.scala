@@ -61,7 +61,7 @@ case class Task(
   def unassigneOnce = this.copy(assignedInstances = assignedInstances - 1)
 
   def status(implicit ctx: DBAccessContext) = async{
-    val inProgress = 0//await(annotations).filter(!_.state.isFinished).size
+    val inProgress = await(AnnotationService.countUnfinishedAnnotationsFor(this) getOrElse 0)
     CompletionStatus(
       open = instances - assignedInstances,
       inProgress = inProgress,
@@ -85,11 +85,11 @@ object Task extends FoxImplicits {
 
   def transformToJson(task: Task)(implicit ctx: DBAccessContext): Future[JsObject] = {
     for {
-//      dataSetName <- task.annotationBase.flatMap(_.dataSetName) getOrElse ""
-//      editPosition <- task.annotationBase.flatMap(_.content.map(_.editPosition)) getOrElse Point3D(1, 1, 1)
-//      boundingBox <- task.annotationBase.flatMap(_.content.map(_.boundingBox)) getOrElse None
+      dataSetName <- task.annotationBase.flatMap(_.dataSetName) getOrElse ""
+      editPosition <- task.annotationBase.flatMap(_.content.map(_.editPosition)) getOrElse Point3D(1, 1, 1)
+      boundingBox <- task.annotationBase.flatMap(_.content.map(_.boundingBox)) getOrElse None
       status <- task.status
-      ttJson <- task.taskType.flatMap(tt => TaskType.transformToJson(tt).toFox) getOrElse JsNull
+      tt <- task.taskType.map(TaskType.transformToJson) getOrElse JsNull
       projectName = task._project.getOrElse("")
     } yield {
       Json.obj(
@@ -97,11 +97,10 @@ object Task extends FoxImplicits {
         "team" -> task.team,
         "formattedHash" -> Formatter.formatHash(task.id),
         "projectName" -> projectName,
-        "type" -> ttJson,
-        "dataSet" -> "<unknown>", //dataSetName,
-        "editPosition" -> Json.arr(0,0,0),
-        "boundingBox" -> Json.obj(
-          "topLeft" -> Json.arr(0,0,0), "width" -> 0, "height" ->  0, "depth" -> 0),
+        "type" -> tt,
+        "dataSet" -> dataSetName,
+        "editPosition" -> editPosition,
+        "boundingBox" -> boundingBox,
         "neededExperience" -> task.neededExperience,
         "priority" -> task.priority,
         "created" -> DateTimeFormat.forPattern("yyyy-MM-dd HH:mm").print(task.created),

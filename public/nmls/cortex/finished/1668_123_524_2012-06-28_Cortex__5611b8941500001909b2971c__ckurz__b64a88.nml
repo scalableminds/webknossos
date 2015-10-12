@@ -1,0 +1,74 @@
+<things>
+  <parameters>
+    <experiment name="2012-06-28_Cortex"/>
+    <scale x="12.0" y="12.0" z="24.0"/>
+    <offset x="0" y="0" z="0"/>
+    <time ms="1444123247963"/>
+    <activeNode id="22"/>
+    <editPosition x="1681" y="176" z="512"/>
+    <zoomLevel zoom="0.19999999999996304"/>
+  </parameters>
+  <thing id="1" color.r="1.0" color.g="0.0" color.b="0.0" color.a="1.0" name="Tree001">
+    <nodes>
+      <node 
+      id="3" radius="120.0" x="1670" y="125" z="519" inVp="2" inMag="0" bitDepth="4" interpolation="false" time="1444122928144">
+</node>
+      <node 
+      id="4" radius="120.0" x="1672" y="136" z="518" inVp="2" inMag="0" bitDepth="4" interpolation="false" time="1444122929848">
+</node>
+      <node 
+      id="5" radius="120.0" x="1679" y="145" z="516" inVp="2" inMag="0" bitDepth="4" interpolation="false" time="1444122931085">
+</node>
+      <node 
+      id="6" radius="120.0" x="1683" y="153" z="517" inVp="2" inMag="0" bitDepth="4" interpolation="false" time="1444122932292">
+</node>
+      <node 
+      id="8" radius="120.0" x="1683" y="157" z="518" inVp="2" inMag="0" bitDepth="4" interpolation="false" time="1444123005475">
+</node>
+      <node 
+      id="9" radius="120.0" x="1682" y="162" z="517" inVp="2" inMag="0" bitDepth="4" interpolation="false" time="1444123006477">
+</node>
+      <node 
+      id="10" radius="120.0" x="1681" y="168" z="517" inVp="2" inMag="0" bitDepth="4" interpolation="false" time="1444123007414">
+</node>
+      <node 
+      id="16" radius="120.0" x="1667" y="119" z="518" inVp="2" inMag="0" bitDepth="4" interpolation="false" time="1444123165059">
+</node>
+      <node 
+      id="17" radius="120.0" x="1665" y="117" z="519" inVp="2" inMag="0" bitDepth="4" interpolation="false" time="1444123166711">
+</node>
+      <node 
+      id="18" radius="120.0" x="1663" y="114" z="521" inVp="2" inMag="0" bitDepth="4" interpolation="false" time="1444123167911">
+</node>
+      <node 
+      id="19" radius="120.0" x="1661" y="108" z="521" inVp="2" inMag="0" bitDepth="4" interpolation="false" time="1444123169192">
+</node>
+      <node 
+      id="20" radius="120.0" x="1658" y="103" z="522" inVp="2" inMag="0" bitDepth="4" interpolation="false" time="1444123170460">
+</node>
+      <node 
+      id="21" radius="120.0" x="1656" y="98" z="523" inVp="2" inMag="0" bitDepth="4" interpolation="false" time="1444123171580">
+</node>
+      <node 
+      id="22" radius="120.0" x="1681" y="176" z="517" inVp="4" inMag="0" bitDepth="4" interpolation="false" time="1444123226264">
+</node>
+    </nodes>
+    <edges>
+      <edge source="9" target="10"/>
+      <edge source="8" target="9"/>
+      <edge source="18" target="19"/>
+      <edge source="3" target="4"/>
+      <edge source="6" target="8"/>
+      <edge source="4" target="5"/>
+      <edge source="19" target="20"/>
+      <edge source="16" target="17"/>
+      <edge source="20" target="21"/>
+      <edge source="10" target="22"/>
+      <edge source="3" target="16"/>
+      <edge source="17" target="18"/>
+      <edge source="5" target="6"/>
+    </edges>
+  </thing>
+  <branchpoints> </branchpoints>
+  <comments> </comments>
+</things>

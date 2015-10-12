@@ -213,7 +213,7 @@ class InitialData(conf: Configuration) extends GlobalDBAccess {
     val project = insertProject(team, admin, "fluoro_project")
     val taskType = taskTypes.find(_.summary == "orthogonalShort").get
     val coordsAll=Array(Array(285, 1428, 67), Array(407, 1136, 67), Array(626, 1030, 67), Array(744, 874, 67), Array(949, 668, 67), Array(857, 450, 67), Array(674, 730, 67), Array(512, 522, 67), Array(378, 690, 67), Array(271, 872, 67), Array(87, 630, 67), Array(204, 356, 67), Array(360, 188, 67), Array(647, 284, 67), Array(887, 166, 67), Array(909, 534, 67), Array(802, 730, 67), Array(582, 812, 67), Array(517, 742, 67), Array(231, 954, 67))
-    for (i <- 0 to 19)
+    for (i <- 0 to 19) {
       val coords = coordsAll(i)
       val task = insertTask(
         admin,

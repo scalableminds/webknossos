@@ -113,9 +113,11 @@ class InitialData(conf: Configuration, app: Application) extends GlobalDBAccess 
 
   def fileFor(path: String) = {
     val f = new File(s"$NMLFolder/$path")
-    if(!f.exists())
+    if(!f.exists()) {
       Logger.warn(s"Couldn't locate '${f.getAbsolutePath}'")
-    f
+      None
+    } else
+      Some(f)
   }
 
   def insertSingleTeam(team: Team, teamNumber: Int = 1) {
@@ -188,7 +190,7 @@ class InitialData(conf: Configuration, app: Application) extends GlobalDBAccess 
   }
 
   def addEk0563(users: List[User], admin: User, team: Team) {
-    fileFor("ek0563").listFiles.zipWithIndex.foreach{
+    fileFor("ek0563").toSeq.flatMap(_.listFiles).zipWithIndex.foreach{
       case (nmlFile, idx) =>
         addEk0563Single(users, admin, nmlFile)
     }
@@ -198,7 +200,7 @@ class InitialData(conf: Configuration, app: Application) extends GlobalDBAccess 
     val project = insertProject(team, admin, "e2006_project")
     val taskType = taskTypes.find(_.summary == "allModesLong").get
     for {
-      (file, idx) <- fileFor("e2006_nml").listFiles.zipWithIndex
+      (file, idx) <- fileFor("e2006_nml").toSeq.flatMap(_.listFiles).zipWithIndex
     } yield {
       val coords = file.getName.split("_")
       val task = insertTask(
@@ -246,7 +248,7 @@ class InitialData(conf: Configuration, app: Application) extends GlobalDBAccess 
     val taskType = taskTypes.find(_.summary == "allModesShort").get
     for {
       typ <- List("unfinished", "finished")
-      (file, idx) <- fileFor(s"cortex/$typ").listFiles.zipWithIndex
+      (file, idx) <- fileFor(s"cortex/$typ").toSeq.flatMap(_.listFiles).zipWithIndex
     } yield {
       val coords = file.getName.split("_")
       val task = insertTask(

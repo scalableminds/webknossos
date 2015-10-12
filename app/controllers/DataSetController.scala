@@ -20,7 +20,7 @@ import com.scalableminds.util.tools.Fox
 import play.api.data.Form
 import play.api.data.Forms._
 import oxalis.security.AuthenticatedRequest
-import com.scalableminds.util.reactivemongo.DBAccessContext
+import com.scalableminds.util.reactivemongo.{GlobalAccessContext, DBAccessContext}
 import net.liftweb.common.{Empty, Failure, Full, ParamFailure}
 import com.scalableminds.util.geometry.{Scale, Point3D}
 import com.scalableminds.braingames.binary.models._
@@ -194,7 +194,7 @@ object DataSetController extends Controller with Secured {
   }
 
   private def ensureNewDataSetName(name: String)(implicit ctx: DBAccessContext) = {
-    DataSetService.findDataSource(name).futureBox.map {
+    DataSetService.findDataSource(name)(GlobalAccessContext).futureBox.map {
       case Empty   => Full(true)
       case Full(_) => Failure(Messages("dataSet.name.alreadyTaken"))
     }

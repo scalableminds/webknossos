@@ -243,6 +243,10 @@ class Router extends Backbone.Router
     for view in views
       @$mainContainer.append(view.render().el)
 
+    # Google Analytics
+    if ga?
+      ga("send", "pageview", location.pathname)
+
     return
 
   loadURL : (url) ->

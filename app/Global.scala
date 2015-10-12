@@ -41,7 +41,7 @@ object Global extends WithFilters(MetricsFilter) with GlobalSettings {
     conf.getConfig("application.initialData").map{ initialDataConf ⇒
       if (initialDataConf.getBoolean("enabled") getOrElse false) {
         Future {
-          new InitialData(initialDataConf).insert()
+          new InitialData(initialDataConf, app).insert()
         }
       }
     }
@@ -82,7 +82,7 @@ object Global extends WithFilters(MetricsFilter) with GlobalSettings {
  * Initial set of data to be imported
  * in the sample application.
  */
-class InitialData(conf: Configuration) extends GlobalDBAccess {
+class InitialData(conf: Configuration, app: Application) extends GlobalDBAccess {
 
   type AdminUser = User
   // Check if scm's default user should be added
@@ -98,8 +98,8 @@ class InitialData(conf: Configuration) extends GlobalDBAccess {
    * Populate the DB with predefined data
    */
   def insert() {
-    insertTeams()
     insertLocalDataStore()
+    insertTeams()
   }
 
   def insertTeams(): Unit = {
@@ -107,6 +107,20 @@ class InitialData(conf: Configuration) extends GlobalDBAccess {
       (1 to NumberOfTeams).foreach(i => insertSingleTeam(Team(s"Team $i", None, RoleService.roles), i))
     else
       insertSingleTeam(DefaultTeam)
+  }
+
+  def loadFile(fileName: String) = {
+    app.resource(fileName).map(n => new File(n.getFile)) match {
+      case Some(file) if file.exists =>
+        Some(file)
+      case x =>
+        Logger.warn(s"Couldn't locate file: $fileName. Tried $x")
+        None
+    }
+  }
+
+  def loadFilesInDirectory(fileName: String) = {
+    loadFile(fileName).toSeq.flatMap(_.listFiles)
   }
 
   def insertSingleTeam(team: Team, teamNumber: Int = 1) {
@@ -172,22 +186,23 @@ class InitialData(conf: Configuration) extends GlobalDBAccess {
         Logger.error(s"Invalid nml in file '${nmlFile.getAbsolutePath}'")
     }
   }
+
   def addEk0563Single(users:List[User], admin: User, nmlFile: File) {
-    for (j <- 0 to 9) {
-      insertExplorativeAnnotation(nmlFile, users(j))
-    }
+    users.foreach(user => insertExplorativeAnnotation(nmlFile, user))
     insertExplorativeAnnotation(nmlFile, admin)
   }
+
   def addEk0563(users: List[User], admin: User, team: Team) {
-    new File(s"public/nmls/ek0563/").listFiles.zipWithIndex.foreach{
-      case (nmlFile, idx) => 
+    loadFilesInDirectory(s"public/nmls/ek0563/").zipWithIndex.foreach{
+      case (nmlFile, idx) =>
         addEk0563Single(users, admin, nmlFile)
     }
   }
+
   def addE2006(users: List[User], admin: User, team: Team, taskTypes: List[TaskType]) {
     val project = insertProject(team, admin, "e2006_project")
     val taskType = taskTypes.find(_.summary == "allModesLong").get
-    for {    
+    for {
       (file, idx) <- new File(s"/home/mhlab/e2006_nml/").listFiles.zipWithIndex
     } yield {
       val coords = file.getName.split("_")
@@ -226,9 +241,8 @@ class InitialData(conf: Configuration) extends GlobalDBAccess {
         team,
         project,
         "e2006",
-        Point3D.fromArray(coords).get, 
+        Point3D.fromArray(coords).get,
         BoundingBox(topLeft = Point3D(0,0,0), width = 0, height = 0, depth = 0))
-      
     }
   }
 
@@ -237,7 +251,7 @@ class InitialData(conf: Configuration) extends GlobalDBAccess {
     val taskType = taskTypes.find(_.summary == "allModesShort").get
     for {
       typ <- List("unfinished", "finished")
-      (file, idx) <- new File(s"public/nmls/cortex/$typ/").listFiles.zipWithIndex
+      (file, idx) <- loadFilesInDirectory(s"public/nmls/cortex/$typ/").zipWithIndex
     } yield {
       val coords = file.getName.split("_")
       val task = insertTask(

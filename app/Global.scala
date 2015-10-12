@@ -94,6 +94,8 @@ class InitialData(conf: Configuration, app: Application) extends GlobalDBAccess 
 
   val DefaultPasswords = List("guywx","xaupd","ajsbp","crhkd","npfyf")
 
+  val NMLFolder = conf.getString("nmlFolder") getOrElse "public/nmls"
+
   /**
    * Populate the DB with predefined data
    */
@@ -109,18 +111,11 @@ class InitialData(conf: Configuration, app: Application) extends GlobalDBAccess 
       insertSingleTeam(DefaultTeam)
   }
 
-  def loadFile(fileName: String) = {
-    app.resource(fileName).map(n => new File(n.getFile)) match {
-      case Some(file) if file.exists =>
-        Some(file)
-      case x =>
-        Logger.warn(s"Couldn't locate file: $fileName. Tried $x")
-        None
-    }
-  }
-
-  def loadFilesInDirectory(fileName: String) = {
-    loadFile(fileName).toSeq.flatMap(_.listFiles)
+  def fileFor(path: String) = {
+    val f = new File(s"$NMLFolder/$path")
+    if(!f.exists())
+      Logger.warn(s"Couldn't locate '${f.getAbsolutePath}'")
+    f
   }
 
   def insertSingleTeam(team: Team, teamNumber: Int = 1) {
@@ -193,7 +188,7 @@ class InitialData(conf: Configuration, app: Application) extends GlobalDBAccess 
   }
 
   def addEk0563(users: List[User], admin: User, team: Team) {
-    loadFilesInDirectory(s"public/nmls/ek0563/").zipWithIndex.foreach{
+    fileFor("ek0563").listFiles.zipWithIndex.foreach{
       case (nmlFile, idx) =>
         addEk0563Single(users, admin, nmlFile)
     }
@@ -203,7 +198,7 @@ class InitialData(conf: Configuration, app: Application) extends GlobalDBAccess 
     val project = insertProject(team, admin, "e2006_project")
     val taskType = taskTypes.find(_.summary == "allModesLong").get
     for {
-      (file, idx) <- new File(s"/home/mhlab/e2006_nml/").listFiles.zipWithIndex
+      (file, idx) <- fileFor("e2006_nml").listFiles.zipWithIndex
     } yield {
       val coords = file.getName.split("_")
       val task = insertTask(
@@ -251,7 +246,7 @@ class InitialData(conf: Configuration, app: Application) extends GlobalDBAccess 
     val taskType = taskTypes.find(_.summary == "allModesShort").get
     for {
       typ <- List("unfinished", "finished")
-      (file, idx) <- loadFilesInDirectory(s"public/nmls/cortex/$typ/").zipWithIndex
+      (file, idx) <- fileFor("cortex/$typ").listFiles.zipWithIndex
     } yield {
       val coords = file.getName.split("_")
       val task = insertTask(

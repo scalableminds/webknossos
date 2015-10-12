@@ -188,7 +188,7 @@ class InitialData(conf: Configuration) extends GlobalDBAccess {
     val project = insertProject(team, admin, "e2006_project")
     val taskType = taskTypes.find(_.summary == "allModesLong").get
     for {    
-      (file, idx) <- new File(s"public/nmls/cortex/$typ/").listFiles.zipWithIndex
+      (file, idx) <- new File(s"/home/mhlab/e2006_nml/").listFiles.zipWithIndex
     } yield {
       val coords = file.getName.split("_")
       val task = insertTask(
@@ -206,7 +206,7 @@ class InitialData(conf: Configuration) extends GlobalDBAccess {
         BoundingBox(topLeft = Point3D(0,0,0), width = 0, height = 0, depth = 0))
       val annotationState = if (idx % 10 == 0) AnnotationState.InProgress else AnnotationState.Finished
       val thisUser = if (idx %12 ==0) admin else users(idx % 5)
-      insertTaskAnnotation(task, taskType, file, , annotationState)
+      insertTaskAnnotation(task, taskType, file, thisUser, annotationState)
     }
   }
   def addFluoro(users: List[User], admin: User, team: Team, taskTypes: List[TaskType]) {

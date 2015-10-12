@@ -117,8 +117,9 @@ class InitialData(conf: Configuration) extends GlobalDBAccess {
         val (users, admin) = insertUsers(team, teamNumber)
         val taskTypes = insertTaskTypesForTeam(team)
         addEk0563(users, admin, team)
-        addE2006(users, admin, team)
+        addE2006(users, admin, team, taskTypes)
         addCortex(users, admin, team, taskTypes)
+        addFluoro(users, admin, team, taskTypes)
     }, 100 seconds)
   }
 
@@ -183,7 +184,7 @@ class InitialData(conf: Configuration) extends GlobalDBAccess {
         addEk0563Single(users, admin, nmlFile)
     }
   }
-  def addE2006(users: List[User], admin, team: Team) {
+  def addE2006(users: List[User], admin, team: Team, taskTypes: List[TaskType]) {
     val project = insertProject(team, admin, "e2006_project")
     val taskType = taskTypes.find(_.summary == "allModesLong").get
     for {    
@@ -208,7 +209,7 @@ class InitialData(conf: Configuration) extends GlobalDBAccess {
       insertTaskAnnotation(task, taskType, file, , annotationState)
     }
   }
-  def addFluoro(users: List[User], admin, team: Team) {
+  def addFluoro(users: List[User], admin, team: Team, taskTypes: List[TaskType]) {
     val project = insertProject(team, admin, "fluoro_project")
     val taskType = taskTypes.find(_.summary == "orthogonalShort").get
     val coordsAll=Array(Array(285, 1428, 67), Array(407, 1136, 67), Array(626, 1030, 67), Array(744, 874, 67), Array(949, 668, 67), Array(857, 450, 67), Array(674, 730, 67), Array(512, 522, 67), Array(378, 690, 67), Array(271, 872, 67), Array(87, 630, 67), Array(204, 356, 67), Array(360, 188, 67), Array(647, 284, 67), Array(887, 166, 67), Array(909, 534, 67), Array(802, 730, 67), Array(582, 812, 67), Array(517, 742, 67), Array(231, 954, 67))

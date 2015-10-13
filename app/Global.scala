@@ -354,6 +354,12 @@ class InitialData(conf: Configuration, app: Application) extends GlobalDBAccess 
 
     val taskTypes = List(
       TaskType(
+        "unrestricted",
+        "Use any mode without time limit",
+        TraceLimit(5, 10, 99),
+        team.name,
+        noOtherModes),
+      TaskType(
         "orthogonalLong",
         "Please use only orthogonal mode",
         TraceLimit(5, 10, 20),

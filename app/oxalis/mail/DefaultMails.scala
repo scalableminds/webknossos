@@ -47,7 +47,7 @@ object DefaultMails {
   def verifiedMail(name: String, receiver: String) =
     Mail(
       from = defaultFrom,
-      subject = "Your account on " + uri + "got activated",
+      subject = "Your account on " + uri + " got activated",
       bodyText = html.mail.validated(name).body,
       recipients = List(receiver))
 

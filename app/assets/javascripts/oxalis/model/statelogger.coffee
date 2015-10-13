@@ -72,6 +72,9 @@ class StateLogger
 
   pushImpl : (notifyOnFailure) ->
 
+    if not @allowUpdate
+      return new $.Deferred().resolve().promise()
+
     @concatUpdateTracing()
     @committedDiffs = @committedDiffs.concat(@newDiffs)
     @newDiffs = []

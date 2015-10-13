@@ -18,6 +18,7 @@ GET           /help/keyboardshortcuts                                         co
 # Authentication
 GET           /login                                                          controllers.Authentication.login
 POST          /login                                                          controllers.Authentication.authenticate
+GET           /switch                                                         controllers.Authentication.switchTo(to: String)
 GET           /logout                                                         controllers.Authentication.logout
 GET           /register                                                       controllers.Authentication.register
 POST          /register                                                       controllers.Authentication.handleRegistration
@@ -91,6 +92,7 @@ GET           /annotations/:typ/:id/finishAndRedirect                         co
 GET           /annotations/:typ/:id/finish                                    controllers.AnnotationController.finish(typ: String, id: String)
 GET           /annotations/:typ/:id/reopen                                    controllers.AnnotationController.reopen(typ: String, id: String)
 GET           /annotations/:typ/:id/reset                                     controllers.AnnotationController.reset(typ: String, id: String)
+GET           /annotations/:typ/:id/revert                                    controllers.AnnotationController.revert(typ: String, id: String, version: Int)
 POST          /annotations/:typ/:id/transfer                                  controllers.AnnotationController.transfer(typ: String, id: String)
 
 GET           /annotations/:typ/:id                                           controllers.AnnotationController.trace(typ: String, id: String)

@@ -250,6 +250,13 @@ object AnnotationDAO
         Json.obj("state.isAssigned" -> true),
         Json.obj("state.isFinished" -> true))))
 
+  def countUnfinishedByTaskIdAndType(_task: BSONObjectID, annotationType: AnnotationType)(implicit ctx: DBAccessContext) =
+    count(Json.obj(
+      "_task" -> _task,
+      "typ" -> annotationType,
+      "state.isAssigned" -> true,
+      "state.isFinished" -> false))
+
   def unassignAnnotationsOfUser(_user: BSONObjectID)(implicit ctx: DBAccessContext) =
     update(
       Json.obj(

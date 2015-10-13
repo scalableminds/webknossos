@@ -52,6 +52,9 @@ object AnnotationService extends AnnotationContentProviders with BoxImplicits wi
   def annotationsFor(task: Task)(implicit ctx: DBAccessContext) =
     AnnotationDAO.findByTaskIdAndType(task._id, AnnotationType.Task).cursor[Annotation].collect[List]()
 
+  def countUnfinishedAnnotationsFor(task: Task)(implicit ctx: DBAccessContext) =
+    AnnotationDAO.countUnfinishedByTaskIdAndType(task._id, AnnotationType.Task)
+
   def freeAnnotationsOfUser(user: User)(implicit ctx: DBAccessContext) = {
     for {
       annotations <- AnnotationDAO.findOpenAnnotationsFor(user._id, AnnotationType.Task)

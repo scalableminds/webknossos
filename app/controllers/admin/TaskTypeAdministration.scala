@@ -29,9 +29,7 @@ object TaskTypeAdministration extends AdminController {
       "branchPointsAllowed" -> boolean,
       "somaClickingAllowed" -> boolean,
       "expectedTime" -> mapping(
-        "minTime" -> number(min = 1),
-        "maxTime" -> number(min = 1),
-        "maxHard" -> number(min = 1))(TraceLimit.apply)(TraceLimit.unapply))(
+        "maxHard" -> number(min = 1))((t) => TraceLimit(1, t, t))(tl => Some(tl.maxHard)))(
       TaskType.fromForm)(TaskType.toForm)).fill(TaskType.empty)
 
   def empty = Authenticated{ implicit request =>

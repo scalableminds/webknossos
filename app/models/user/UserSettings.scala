@@ -48,6 +48,11 @@ object UserSettings extends BasicSettings{
             "contrast" -> 2.4
           )
         ),
+        "2012-06-28_Cortex" -> Json.obj(
+          "color" -> Json.obj(
+            "contrast" -> 2.0
+          )
+        ),
         "07x2" -> Json.obj(
           "color" -> Json.obj(
             "contrast" -> 2.4

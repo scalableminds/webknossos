@@ -235,7 +235,7 @@ class InitialData(conf: Configuration, app: Application) extends GlobalDBAccess 
         1,
         100,
         3,
-        1,
+        0,
         team,
         project,
         "2015-10-05-FD0129_2_confocal_crop",

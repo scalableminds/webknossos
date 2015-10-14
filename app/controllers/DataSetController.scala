@@ -163,34 +163,40 @@ object DataSetController extends Controller with Secured {
     Ok(dataSetUploadHTML(emptyUploadForm))
   }
 
-  def uploadFromForm = Authenticated.async(parse.multipartFormData) { implicit request =>
+  def uploadFromForm = Authenticated.async(parse.maxLength(1024 * 1024 * 1024, parse.multipartFormData)) { implicit request =>
 
     case class FormFailure(field: String, message: String)
 
-    emptyUploadForm.bindFromRequest.fold(
-      hasErrors = (formWithErrors => Future.successful(BadRequest(dataSetUploadHTML(formWithErrors)))),
-      success = {
-        case (name, team, scale) =>
-          (for {
-            _ <- ensureNewDataSetName(name).toFox ~> FormFailure("name", Messages("dataSet.name.alreadyTaken"))
-            _ <- ensureTeamAdministration(request.user, team).toFox ~> FormFailure("team", Messages("team.admin.notAllowed", team))
-            zipFile <- request.body.file("zipFile").toFox ~> FormFailure("zipFile", Messages("zip.file.notFound"))
-            settings = DataSourceSettings(None, scale, None)
-            upload = DataSourceUpload(name, team, zipFile.ref.file.getAbsolutePath(), Some(settings))
-            _ <- DataStoreHandler.uploadDataSource(upload).toFox
-          } yield {
-            Redirect(controllers.routes.DataSetController.empty).flashing(
-              FlashSuccess(Messages("dataSet.upload.success")))
-          }).futureBox.map {
-            case Full(r) => r
-            case error: ParamFailure[FormFailure] =>
-              BadRequest(dataSetUploadHTML(uploadForm(name, team, scale).withError(error.param.field, error.param.message)))
-            case Failure(error,_,_) =>
-              Redirect(controllers.routes.DataSetController.empty).flashing(
-              //BadRequest(dataSetUploadHTML(uploadForm(name, team, scale))).flashing(
-                FlashError(error))
-          }
-      })
+    request.body match {
+      case Right(formData) =>
+        emptyUploadForm.bindFromRequest(formData.dataParts).fold(
+          hasErrors = (formWithErrors => Future.successful(BadRequest(dataSetUploadHTML(formWithErrors)))),
+          success = {
+            case (name, team, scale) =>
+              (for {
+                _ <- ensureNewDataSetName(name).toFox ~> FormFailure("name", Messages("dataSet.name.alreadyTaken"))
+                _ <- ensureTeamAdministration(request.user, team).toFox ~> FormFailure("team", Messages("team.admin.notAllowed", team))
+                zipFile <- formData.file("zipFile").toFox ~> FormFailure("zipFile", Messages("zip.file.notFound"))
+                settings = DataSourceSettings(None, scale, None)
+                upload = DataSourceUpload(name, team, zipFile.ref.file.getAbsolutePath(), Some(settings))
+                _ <- DataStoreHandler.uploadDataSource(upload).toFox
+              } yield {
+                Redirect(controllers.routes.DataSetController.empty).flashing(
+                  FlashSuccess(Messages("dataSet.upload.success")))
+              }).futureBox.map {
+                case Full(r) => r
+                case error: ParamFailure[FormFailure] =>
+                  BadRequest(dataSetUploadHTML(uploadForm(name, team, scale).withError(error.param.field, error.param.message)))
+                case Failure(error,_,_) =>
+                  Redirect(controllers.routes.DataSetController.empty).flashing(
+                  //BadRequest(dataSetUploadHTML(uploadForm(name, team, scale))).flashing(
+                    FlashError(error))
+              }
+        })
+
+      case Left(_) =>
+        Future.successful(BadRequest(dataSetUploadHTML(emptyUploadForm.withError("zipFile", Messages("zip.file.tooLarge")))))
+    }
   }
 
   private def ensureNewDataSetName(name: String)(implicit ctx: DBAccessContext) = {

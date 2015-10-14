@@ -170,10 +170,11 @@ class InitialData(conf: Configuration, app: Application) extends GlobalDBAccess 
             }
             val current = System.currentTimeMillis
             val r = scala.util.Random
+            val addTime = current - 1000000L * r.nextInt(31400)
             val timeSpan = TimeSpan(
-              r.nextInt(3600000),
-              current - 1000000L * r.nextInt(31400),
-              current - 1000000L * r.nextInt(31400),
+              r.nextInt(3600000) + 1,
+              addTime,
+              addTime,
               user._id,
               Some("autoadded"),
               annotation._name)

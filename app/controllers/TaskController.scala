@@ -39,12 +39,12 @@ object TaskController extends Controller with Secured with FoxImplicits {
   }
 
   def ensureMaxNumberOfOpenTasks(user: User)(implicit ctx: DBAccessContext): Fox[Int] = {
-    AnnotationService.countOpenTasks(user).flatMap{ numberOfOpen => Future.successful(
+    AnnotationService.countOpenTasks(user).flatMap{ numberOfOpen =>
       if (numberOfOpen < MAX_OPEN_TASKS)
-        Full(numberOfOpen)
+        Fox.successful(numberOfOpen)
       else
-        Failure(Messages("task.tooManyOpenOnes"))
-    )}
+        Fox.failure(Messages("task.tooManyOpenOnes"))
+    }
   }
 
   def requestTaskFor(user: User)(implicit ctx: DBAccessContext) =
@@ -53,13 +53,8 @@ object TaskController extends Controller with Secured with FoxImplicits {
   def getAvailableTasksFor(user: User)(implicit ctx: DBAccessContext): Fox[List[Task]] =
     TaskService.findAssignableFor(user)
 
-  def getProjectsFor(tasks: List[Task])(implicit ctx: DBAccessContext) = {
-    val projects = Future.fold[Box[Project], Set[Project]](tasks.map(_.project.futureBox))(Set()) {
-      case (acc, Full(project)) => acc + project
-      case (acc, _) => acc
-    }
-    projects map (_.toList)
-  }
+  def getProjectsFor(tasks: List[Task])(implicit ctx: DBAccessContext): Future[List[Project]] =
+    Fox.sequenceOfFulls(tasks.map(_.project)).map(_.distinct)
 
   def getAllAvailableTaskCountsAndProjects()(implicit ctx: DBAccessContext): Fox[Map[User, (Int, List[Project])]] = {
     UserDAO.findAll
@@ -81,10 +76,9 @@ object TaskController extends Controller with Secured with FoxImplicits {
         Json.obj(
           "name" -> user.name,
           "availableTaskCount" -> taskCount,
-          "projects" -> projects.map(project => project.name)
+          "projects" -> projects.map(_.name)
         )
     })
-
 
   def requestAvailableTasks = Authenticated.async { implicit request =>
     for {

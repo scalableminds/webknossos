@@ -177,15 +177,6 @@ object UserController extends Controller with Secured with Dashboard with FoxImp
     }
   }
 
-  //  def loginAsUser(userId: String) = Authenticated(permission = Some(Permission("admin.ghost"))).async { implicit request =>
-  //    for {
-  //      user <- UserDAO.findOneById(userId) ?~> Messages("user.notFound")
-  //    } yield {
-  //      Redirect(controllers.routes.UserController.dashboard)
-  //      .withSession(Secured.createSession(user))
-  //    }
-  //  }
-
   val resetForm: Form[(String, String)] = {
 
     def resetFormApply(oldPassword: String, password: Tuple2[String, String]) =

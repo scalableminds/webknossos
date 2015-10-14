@@ -3,16 +3,17 @@
  */
 package controllers
 
-import oxalis.security.Secured
 import com.scalableminds.util.reactivemongo.GlobalAccessContext
-import models.user.{User, UserService}
-import play.api.libs.concurrent.Execution.Implicits._
-import play.api.templates.Html
-import scala.concurrent.Future
-import models.task.{Task, Project, ProjectService, ProjectDAO}
-import play.api.libs.json.{JsError, JsSuccess, Writes, Json}
+import models.task.{Project, ProjectDAO, ProjectService, Task}
+import models.user.User
+import net.liftweb.common.{Empty, Full}
+import oxalis.security.Secured
 import play.api.i18n.Messages
-import net.liftweb.common.{Empty, Failure, Full}
+import play.api.libs.concurrent.Execution.Implicits._
+import play.api.libs.json.{JsError, JsSuccess, Json}
+import play.api.templates.Html
+
+import scala.concurrent.Future
 
 object ProjectController extends Controller with Secured {
   def empty = Authenticated {

@@ -29,7 +29,7 @@ object UserSettings extends BasicSettings{
       "mouseRotateValue" -> JsNumber(0.004),
       "clippingDistance" -> JsNumber(50),
       "clippingDistanceArbitrary" -> JsNumber(64),
-      "dynamicSpaceDirection" -> JsBoolean(true),
+      "dynamicSpaceDirection" -> JsBoolean(false),
       "displayCrosshair" -> JsBoolean(true),
       "interpolation" -> JsBoolean(true),
       "fourBit" -> JsBoolean(false),

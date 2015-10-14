@@ -85,6 +85,7 @@ dataStore.notAvailable=Datastore not available. Please try again in a few minute
 
 zip.file.notFound=No or invalid ZIP file specified
 zip.file.invalid=Uploaded ZIP file invalid or corrupted
+zip.file.tooLarge=The ZIP file must not be larger than 1GB
 
 dataLayer.notFound=DataLayer not found
 dataLayer.forbidden=Access to this layer is not allowed.

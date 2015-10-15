@@ -133,13 +133,13 @@ class Binary
 
   arbitraryPingImpl : (matrix) ->
 
-    #for strategy in @pingStrategies3d
-    #  if strategy.forContentType(@tracing.contentType) and strategy.inVelocityRange(1) and strategy.inRoundTripTimeRange(@pullQueue.roundTripTime)
-    #    @pullQueue.clearNormalPriorities()
-    #    @pullQueue.addAll(strategy.ping(matrix))
-    #    break
+    for strategy in @pingStrategies3d
+      if strategy.forContentType(@tracing.contentType) and strategy.inVelocityRange(1) and strategy.inRoundTripTimeRange(@pullQueue.roundTripTime)
+        @pullQueue.clearNormalPriorities()
+        @pullQueue.addAll(strategy.ping(matrix))
+        break
 
-    #@pullQueue.pull()
+    @pullQueue.pull()
 
 
   getByVerticesSync : (vertices) ->

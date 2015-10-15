@@ -1,10 +1,11 @@
 ### define
 underscore : _
 backbone.marionette : Marionette
+fileinput : Fileinput
 libs/toast : Toast
+libs/request : Request
 admin/views/selection_view : SelectionView
 admin/models/team/team_collection : TeamCollection
-fileinput : Fileinput
 ###
 
 class DatasetUploadView extends Backbone.Marionette.LayoutView
@@ -17,7 +18,7 @@ class DatasetUploadView extends Backbone.Marionette.LayoutView
           <div class=" form-group">
             <label class="col-sm-3 control-label" for="name">Name</label>
             <div class="col-sm-9">
-            <input type="text" id="name" name="name" value="" class="form-control">
+            <input type="text" required name="name" value="" class="form-control">
               <span class="help-block errors"></span>
             </div>
           </div>
@@ -30,7 +31,7 @@ class DatasetUploadView extends Backbone.Marionette.LayoutView
           <div class=" form-group">
             <label class="col-sm-3 control-label" for="scale_scale">Scale</label>
             <div class="col-sm-9">
-              <input type="text" id="scale_scale" name="scale.scale" value="12.0, 12.0, 24.0" class="form-control" pattern="\s*([0-9]+(?:\.[0-9]+)?),\s*([0-9]+(?:\.[0-9]+)?),\s*([0-9]+(?:\.[0-9]+)?)\s*" title="Specify dataset scale like &quot;XX, YY, ZZ&quot;">
+              <input type="text" required name="scale.scale" value="12.0, 12.0, 24.0" class="form-control" pattern="\\s*([0-9]+(?:\.[0-9]+)?),\\s*([0-9]+(?:\\.[0-9]+)?),\\s*([0-9]+(?:\\.[0-9]+)?)\\s*" title="Specify dataset scale like &quot;XX, YY, ZZ&quot;">
               <span class="help-block errors"></span>
             </div>
           </div>
@@ -44,9 +45,9 @@ class DatasetUploadView extends Backbone.Marionette.LayoutView
                   <span class="fileinput-filename"></span>
                 </div>
                 <span class="input-group-addon btn btn-default btn-file">
-                  <span class="fileinput-new">Browse...</span>
+                  <span class="fileinput-new btn-default">Browse...</span>
                   <span class="fileinput-exists">Change</span>
-                  <input type="file" accept="application/zip" name="zipFile">
+                  <input type="file" required accept="application/zip" name="zipFile">
                 </span>
                 <a href="#" class="input-group-addon btn btn-default fileinput-exists" data-dismiss="fileinput">Remove</a>
               </div>
@@ -79,6 +80,7 @@ class DatasetUploadView extends Backbone.Marionette.LayoutView
     @teamSelectionView = new SelectionView(
       viewComparator: "name"
       collection : new TeamCollection()
+      name : "team"
       childViewOptions :
         modelValue: -> return "#{@model.get("name")}"
       data : "amIAnAdmin=true"
@@ -88,4 +90,24 @@ class DatasetUploadView extends Backbone.Marionette.LayoutView
   onRender : ->
 
     @team.show(@teamSelectionView)
+
+
+  uploadDataset : (evt) ->
+
+    evt.preventDefault()
+    form = @ui.form[0]
+
+    if form.checkValidity()
+
+      Request.send(
+        url : "/api/datasets/upload"
+        method : "POST"
+        formData : new FormData(form)
+      ).then(
+        =>
+          Toast.message("Success")
+        (xhr) =>
+          Toast.message(xhr.responseJSON.messages)
+      )
+
 

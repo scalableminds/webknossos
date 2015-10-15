@@ -13,9 +13,11 @@ class DatasetSwitchView extends Backbone.Marionette.LayoutView
 
   template : _.template("""
     <div class="pull-right">
-      <a href="/admin/datasets/upload" class="btn btn-primary">
-        <i class="fa fa-plus"></i>Upload Dataset
-      </a>
+      <% if(isAdmin()) { %>
+        <a href="/admin/datasets/upload" class="btn btn-primary">
+          <i class="fa fa-plus"></i>Upload Dataset
+        </a>
+      <% } %>
       <a href="#" id="showAdvancedView" class="btn btn-default">
         <i class="fa fa-th-list"></i>Show advanced view
       </a>
@@ -40,6 +42,14 @@ class DatasetSwitchView extends Backbone.Marionette.LayoutView
   regions :
     "datasetPane" : ".dataset-region"
     "pagination" : ".pagination"
+
+
+  templateHelpers : ->
+
+    isAdmin : =>
+      userTeams = @model.get("teams")
+      return utils.isUserAdmin(userTeams)
+
 
   onShow : ->
 

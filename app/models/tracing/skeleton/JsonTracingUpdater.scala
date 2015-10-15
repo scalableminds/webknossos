@@ -54,7 +54,7 @@ case class CreateTree(value: JsObject) extends TracingUpdater {
     val timestamp = (value \ "timestamp").as[Long]
     val name = (value \ "name").asOpt[String] getOrElse (DBTree.nameFromId(id))
     TracingUpdate { t =>
-      DBTreeDAO.insert(DBTree(t._id, id, color, timestamp, name)).map(_ => t)
+      DBTreeDAO.insert(DBTree(t._id, id, color, timestamp, name)).map(_ => t) ?~> "Failed to insert tree."
     }
   }
 }
@@ -64,7 +64,7 @@ case class DeleteTree(value: JsObject) extends TracingUpdater {
     val id = (value \ "id").as[Int]
     TracingUpdate { t =>
       t.tree(id).toFox.flatMap { tree =>
-        DBTreeService.remove(tree._id).map(_ => t)
+        DBTreeService.remove(tree._id).map(_ => t) ?~> "Failed to remove tree."
       }
     }
   }
@@ -78,9 +78,9 @@ case class UpdateTree(value: JsObject) extends TracingUpdater {
     val name = (value \ "name").asOpt[String] getOrElse (DBTree.nameFromId(id))
     TracingUpdate { t =>
       for{
-        tree <- t.tree(id).toFox
+        tree <- t.tree(id).toFox ?~> "Failed to access tree."
         updated = tree.copy(color = color orElse tree.color, treeId = updatedId, name = name)
-        _ <- DBTreeDAO.update(tree._id, updated)
+        _ <- DBTreeDAO.update(tree._id, updated) ?~> "Failed to update tree."
       } yield t
     }
   }
@@ -92,11 +92,11 @@ case class MergeTree(value: JsObject) extends TracingUpdater {
     val targetId = (value \ "targetId").as[Int]
     TracingUpdate { t =>
       for {
-        source <- t.tree(sourceId).toFox
-        target <- t.tree(targetId).toFox
-        _ <- DBNodeDAO.moveAllNodes(source._id, target._id)
-        _ <- DBEdgeDAO.moveAllEdges(source._id, target._id)
-        _ <- DBTreeService.remove(source._id)
+        source <- t.tree(sourceId).toFox ?~> "Failed to access source tree."
+        target <- t.tree(targetId).toFox ?~> "Failed to access target tree."
+        _ <- DBNodeDAO.moveAllNodes(source._id, target._id) ?~> "Failed to move all nodes."
+        _ <- DBEdgeDAO.moveAllEdges(source._id, target._id) ?~> "Failed to move all edges."
+        _ <- DBTreeService.remove(source._id) ?~> "Failed to remove source tree."
       } yield t
     }
   }
@@ -112,9 +112,9 @@ case class MoveTreeComponent(value: JsObject) extends TracingUpdater {
     val targetId = (value \ "targetId").as[Int]
     TracingUpdate { t =>
       for {
-        source <- t.tree(sourceId).toFox
-        target <- t.tree(targetId).toFox
-        _ <- DBTreeService.moveTreeComponent(nodeIds, source._id, target._id)
+        source <- t.tree(sourceId).toFox ?~> "Failed to access source tree."
+        target <- t.tree(targetId).toFox ?~> "Failed to access target tree."
+        _ <- DBTreeService.moveTreeComponent(nodeIds, source._id, target._id) ?~> "Failed to move tree compontents."
       } yield t
     }
   }
@@ -129,8 +129,8 @@ case class CreateNode(value: JsObject) extends TracingUpdater {
     val treeId = (value \ "treeId").as[Int]
     TracingUpdate { t =>
       for {
-        tree <- t.tree(treeId).toFox
-        _ <- DBNodeDAO.insert(DBNode(node, tree._id))
+        tree <- t.tree(treeId).toFox ?~> "Failed to access tree."
+        _ <- DBNodeDAO.insert(DBNode(node, tree._id)) ?~> "Failed to insert node into tree."
       } yield t
     }
   }
@@ -145,9 +145,9 @@ case class DeleteNode(value: JsObject) extends TracingUpdater {
     val treeId = (value \ "treeId").as[Int]
     TracingUpdate { t =>
       for {
-        tree <- t.tree(treeId).toFox
-        _ <- DBNodeDAO.remove(nodeId, tree._id)
-        _ <- DBEdgeDAO.deleteEdgesOfNode(nodeId, tree._id)
+        tree <- t.tree(treeId).toFox ?~> "Failed to access tree."
+        _ <- DBNodeDAO.remove(nodeId, tree._id) ?~> "Failed to remove node."
+        _ <- DBEdgeDAO.deleteEdgesOfNode(nodeId, tree._id) ?~> "Failed to remove edges of node."
       } yield t
     }
   }
@@ -162,8 +162,8 @@ case class UpdateNode(value: JsObject) extends TracingUpdater {
     val treeId = (value \ "treeId").as[Int]
     TracingUpdate { t =>
       for {
-        tree <- t.tree(treeId).toFox
-        _ <- DBNodeDAO.updateNode(node, tree._id)
+        tree <- t.tree(treeId).toFox ?~> "Failed to access tree."
+        _ <- DBNodeDAO.updateNode(node, tree._id) ?~> "Failed to update node."
       } yield t
     }
   }
@@ -178,8 +178,8 @@ case class CreateEdge(value: JsObject) extends TracingUpdater {
     val treeId = (value \ "treeId").as[Int]
     TracingUpdate { t =>
       for {
-        tree <- t.tree(treeId).toFox
-        _ <- DBEdgeDAO.insert(DBEdge(edge, tree._id))
+        tree <- t.tree(treeId).toFox ?~> "Failed to access tree."
+        _ <- DBEdgeDAO.insert(DBEdge(edge, tree._id)) ?~> "Failed to insert edge."
       } yield t
     }
   }
@@ -194,8 +194,8 @@ case class DeleteEdge(value: JsObject) extends TracingUpdater {
     val treeId = (value \ "treeId").as[Int]
     TracingUpdate { t =>
       for {
-        tree <- t.tree(treeId).toFox
-        _ <- DBEdgeDAO.remove(edge, tree._id)
+        tree <- t.tree(treeId).toFox ?~> "Failed to access tree."
+        _ <- DBEdgeDAO.remove(edge, tree._id) ?~> "Failed to remove edge."
       } yield t
     }
   }
@@ -220,7 +220,7 @@ case class UpdateTracing(value: JsObject) extends TracingUpdater {
         activeNodeId = activeNodeId,
         editPosition = editPosition,
         zoomLevel = zoomLevel)
-      SkeletonTracingDAO.update(t._id, updated).map(_ => updated)
+      SkeletonTracingDAO.update(t._id, updated).map(_ => updated) ?~> "Failed to update tracing."
     }
   }
 }

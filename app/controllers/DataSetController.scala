@@ -20,8 +20,10 @@ import com.scalableminds.util.tools.Fox
 import play.api.data.Form
 import play.api.data.Forms._
 import oxalis.security.AuthenticatedRequest
-import com.scalableminds.util.reactivemongo.DBAccessContext
+import com.scalableminds.util.reactivemongo.{GlobalAccessContext, DBAccessContext}
 import net.liftweb.common.{Empty, Failure, Full, ParamFailure}
+import com.scalableminds.util.geometry.{Scale, Point3D}
+import com.scalableminds.braingames.binary.models._
 
 /**
  * Company: scalableminds
@@ -132,25 +134,29 @@ object DataSetController extends Controller with Secured {
         for{
           dataSet <- DataSetDAO.findOneBySourceName(dataSetName) ?~> Messages("dataSet.notFound")
           _ <- allowedToAdministrate(request.user, dataSet).toFox
+          teamsWithoutUpdate = dataSet.allowedTeams.filterNot(t => ensureTeamAdministration(request.user, t) openOr false)
           _ <- Fox.combined(teams.map(team => ensureTeamAdministration(request.user, team).toFox))
-          _ <- DataSetService.updateTeams(dataSet, teams)
+          _ <- DataSetService.updateTeams(dataSet, teams ++ teamsWithoutUpdate)
         } yield
-          Ok
+          Ok(Json.toJson(teams ++ teamsWithoutUpdate))
       case e: JsError =>
         Future.successful(BadRequest(JsError.toFlatJson(e)))
     }
   }
 
-  def uploadForm(name: String, team: String) = Form(
+  def uploadForm(name: String, team: String, scale: Scale) = Form(
     tuple(
       "name" -> nonEmptyText.verifying("dataSet.name.invalid",
         n => n.matches("[A-Za-z0-9_]*")),
-      "team" -> nonEmptyText
-    )).fill((name, team))
+      "team" -> nonEmptyText,
+      "scale" -> mapping(
+        "scale" -> text.verifying("scale.invalid",
+          p => p.matches(Scale.formRx.toString)))(Scale.fromForm)(Scale.toForm)
+    )).fill((name, team, scale))
 
-  val emptyUploadForm = uploadForm("", "")
+  val emptyUploadForm = uploadForm("", "", Scale.default)
 
-  def dataSetUploadHTML(form: Form[(String, String)])(implicit request: AuthenticatedRequest[_]) =
+  def dataSetUploadHTML(form: Form[(String, String, Scale)])(implicit request: AuthenticatedRequest[_]) =
     html.admin.dataset.datasetUpload(request.user.adminTeamNames, form)
 
   def upload = Authenticated{ implicit request =>
@@ -164,29 +170,31 @@ object DataSetController extends Controller with Secured {
     emptyUploadForm.bindFromRequest.fold(
       hasErrors = (formWithErrors => Future.successful(BadRequest(dataSetUploadHTML(formWithErrors)))),
       success = {
-        case (name, team) =>
+        case (name, team, scale) =>
           (for {
-            _ <- ensureNewDataSetName(name)
+            _ <- ensureNewDataSetName(name).toFox ~> FormFailure("name", Messages("dataSet.name.alreadyTaken"))
             _ <- ensureTeamAdministration(request.user, team).toFox ~> FormFailure("team", Messages("team.admin.notAllowed", team))
             zipFile <- request.body.file("zipFile").toFox ~> FormFailure("zipFile", Messages("zip.file.notFound"))
-            _ <- DataStoreHandler.uploadDataSource(name, team, zipFile.ref.file)
+            settings = DataSourceSettings(None, scale, None)
+            upload = DataSourceUpload(name, team, zipFile.ref.file.getAbsolutePath(), Some(settings))
+            _ <- DataStoreHandler.uploadDataSource(upload).toFox
           } yield {
             Redirect(controllers.routes.DataSetController.empty).flashing(
               FlashSuccess(Messages("dataSet.upload.success")))
           }).futureBox.map {
             case Full(r) => r
             case error: ParamFailure[FormFailure] =>
-              BadRequest(dataSetUploadHTML(uploadForm(name, team).withError(error.param.field, error.param.message)))
+              BadRequest(dataSetUploadHTML(uploadForm(name, team, scale).withError(error.param.field, error.param.message)))
             case Failure(error,_,_) =>
               Redirect(controllers.routes.DataSetController.empty).flashing(
-              //BadRequest(dataSetUploadHTML(uploadForm(name, team))).flashing(
+              //BadRequest(dataSetUploadHTML(uploadForm(name, team, scale))).flashing(
                 FlashError(error))
           }
       })
   }
 
   private def ensureNewDataSetName(name: String)(implicit ctx: DBAccessContext) = {
-    DataSetService.findDataSource(name).futureBox.map {
+    DataSetService.findDataSource(name)(GlobalAccessContext).futureBox.map {
       case Empty   => Full(true)
       case Full(_) => Failure(Messages("dataSet.name.alreadyTaken"))
     }

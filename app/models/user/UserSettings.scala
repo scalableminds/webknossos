@@ -63,7 +63,7 @@ object UserSettings extends BasicSettings{
       "zoom" -> JsNumber(2),
       "scale" -> JsNumber(1),
       "tdViewDisplayPlanes" -> JsBoolean(true),
-      "isosurfaceDisplay" -> JsBoolean(false),
+      "isosurfaceDisplay" -> JsBoolean(true),
       "isosurfaceBBsize" -> JsNumber(1),
       "isosurfaceResolution" -> JsNumber(80),
       "newNodeNewTree" -> JsBoolean(false),

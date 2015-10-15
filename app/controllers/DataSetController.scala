@@ -160,7 +160,7 @@ object DataSetController extends Controller with Secured {
     html.admin.dataset.datasetUpload(request.user.adminTeamNames, form)
 
   def upload = Authenticated{ implicit request =>
-    Ok(dataSetUploadHTML(emptyUploadForm))
+    Ok(views.html.main()(Html.empty))
   }
 
   def uploadFromForm = Authenticated.async(parse.maxLength(1024 * 1024 * 1024, parse.multipartFormData)) { implicit request =>

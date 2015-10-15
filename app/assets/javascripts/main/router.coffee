@@ -19,6 +19,7 @@ class Router extends Backbone.Router
     "projects"                      : "projects"
     "dashboard"                     : "dashboard"
     "datasets"                      : "dashboard"
+    "datasets/upload"               : "datasetUpload"
     "users/:id/details"             : "dashboard"
     "taskTypes/:id/edit"            : "editTaskType"
     "taskTypes"                     : "taskTypes"
@@ -87,6 +88,11 @@ class Router extends Backbone.Router
     @showAdminView("StatisticView")
 
 
+  datasetUpload : ->
+
+    @showAdminView("DatasetUploadView")
+
+
   users : ->
 
     @showWithPagination("UserListView", "UserCollection")
@@ -101,9 +107,11 @@ class Router extends Backbone.Router
 
     @showWithPagination("TaskListView", "TaskCollection", "Create New Task")
 
+
   workload : ->
 
     @showWithPagination("WorkloadListView", "WorkloadCollection")
+
 
   taskTypes : ->
 

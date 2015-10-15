@@ -88,11 +88,16 @@ class Controller
               Toast.info(
                 "Segmentation data is only available at lower zoom levels.")
 
+
       for allowedMode in tracing.content.settings.allowedModes
-        @allowedModes.push switch allowedMode
-          when "flight" then constants.MODE_ARBITRARY
-          when "oblique" then constants.MODE_ARBITRARY_PLANE
-          when "volume" then constants.MODE_VOLUME
+
+        if @model.getColorBinaries()[0].cube.BIT_DEPTH == 8
+          switch allowedMode
+            when "flight" then @allowedModes.push(constants.MODE_ARBITRARY)
+            when "oblique" then @allowedModes.push(constants.MODE_ARBITRARY_PLANE)
+
+        switch allowedMode
+          when "volume" then @allowedModes.push(constants.MODE_VOLUME)
 
       # Plane tracing mode is always allowed
       @allowedModes.push(constants.MODE_PLANE_TRACING)

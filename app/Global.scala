@@ -359,7 +359,7 @@ class InitialData(conf: Configuration, app: Application) extends GlobalDBAccess 
         "Use any mode without time limit",
         TraceLimit(5, 10, 99),
         team.name,
-        noOtherModes),
+        yesOtherModes),
       TaskType(
         "orthogonalLong",
         "Please use only orthogonal mode",

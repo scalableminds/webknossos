@@ -133,22 +133,29 @@ class Binary
 
   arbitraryPingImpl : (matrix) ->
 
-    for strategy in @pingStrategies3d
-      if strategy.forContentType(@tracing.contentType) and strategy.inVelocityRange(1) and strategy.inRoundTripTimeRange(@pullQueue.roundTripTime)
-        @pullQueue.clearNormalPriorities()
-        @pullQueue.addAll(strategy.ping(matrix))
-        break
+    #for strategy in @pingStrategies3d
+    #  if strategy.forContentType(@tracing.contentType) and strategy.inVelocityRange(1) and strategy.inRoundTripTimeRange(@pullQueue.roundTripTime)
+    #    @pullQueue.clearNormalPriorities()
+    #    @pullQueue.addAll(strategy.ping(matrix))
+    #    break
 
-    @pullQueue.pull()
+    #@pullQueue.pull()
 
 
   getByVerticesSync : (vertices) ->
     # A synchronized implementation of `get`. Cuz its faster.
 
-    { buffer, accessedBuckets } = InterpolationCollector.bulkCollect(
+    { buffer, accessedBuckets, missingBuckets } = InterpolationCollector.bulkCollect(
       vertices
       @cube.getArbitraryCube()
     )
+
+    @pullQueue.addAll(missingBuckets.map(
+      (bucket) ->
+        bucket: bucket
+        priority: PullQueue::PRIORITY_HIGHEST
+    ))
+    @pullQueue.pull()
 
     @cube.accessBuckets(accessedBuckets)
 

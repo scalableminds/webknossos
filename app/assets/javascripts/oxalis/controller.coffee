@@ -94,8 +94,9 @@ class Controller
           when "oblique" then constants.MODE_ARBITRARY_PLANE
           when "volume" then constants.MODE_VOLUME
 
-      # Plane tracing mode is always allowed
-      @allowedModes.push(constants.MODE_PLANE_TRACING)
+      if not @model.volumeTracing?
+        # Plane tracing mode is always allowed (except in VOLUME mode)
+        @allowedModes.push(constants.MODE_PLANE_TRACING)
 
       # FPS stats
       stats = new Stats()

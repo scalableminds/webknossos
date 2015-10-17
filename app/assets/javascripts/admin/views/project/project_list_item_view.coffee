@@ -16,7 +16,11 @@ class ProjectListItemView extends Backbone.Marionette.CompositeView
       </td>
       <td><%= name %></td>
       <td><%= team %></td>
-      <td><%= owner.firstName %> <%= owner.lastName %></td>
+      <% if(owner.email) { %>
+        <td><%= owner.firstName %> <%= owner.lastName %> (<%= owner.email %>)</td>
+      <% } else { %>
+        <td>-</td>
+      <% } %>
       <td class="nowrap">
         <% if (status.completed > 0) { %>
           <a href="/annotations/CompoundProject/<%= name %>" title="View all finished tracings">

@@ -45,7 +45,7 @@ class DatasetUploadView extends Backbone.Marionette.LayoutView
                   <span class="fileinput-filename"></span>
                 </div>
                 <span class="input-group-addon btn btn-default btn-file">
-                  <span class="fileinput-new btn-default">Browse...</span>
+                  <span class="fileinput-new">Browse...</span>
                   <span class="fileinput-exists">Change</span>
                   <input type="file" required accept="application/zip" name="zipFile">
                 </span>

@@ -158,16 +158,15 @@ object UserController extends Controller with Secured with Dashboard with FoxImp
           _ <- allowedToAdministrate(issuingUser, user).toFox
           teams <- Fox.combined(assignedTeams.map(t => TeamDAO.findOneByName(t.team))) ?~> Messages("team.notFound")
           allTeams <- Fox.sequenceOfFulls(user.teams.map(t => TeamDAO.findOneByName(t.team)))
-          teamsWithoutUpdate = allTeams.filterNot{t =>
-            issuingUser.adminTeamNames.contains(t.name) || assignedTeams.find(_.team == t.name).isDefined
-          }.map(_.name)
-          teamsWithUpdate = user.teams.filterNot(tm => teamsWithoutUpdate.contains(tm.team))
-          _ <- Fox.combined(teamsWithUpdate.map(t => ensureTeamAdministration(issuingUser, t.team)toFox))
+          (teamsWithUpdate, teamsWithoutUpdate) = user.teams.partition{t =>
+            issuingUser.adminTeamNames.contains(t.team) && !assignedTeams.contains(t)
+          }
+          _ <- Fox.combined(teamsWithUpdate.map(t => ensureTeamAdministration(issuingUser, t.team).toFox))
           _ <- ensureRoleExistence(assignedTeams.zip(teams))
           _ <- ensureProperTeamAdministration(user, assignedTeams.zip(teams))
         } yield {
           val trimmedExperiences = experiences.map{ case (key, value) => key.trim -> value}.toMap
-          val updatedTeams = assignedTeams ++ user.teams.filter(tm => teamsWithoutUpdate.contains(tm.team))
+          val updatedTeams = assignedTeams.filter(t => teamsWithUpdate.exists(_.team == t.team)) ++ teamsWithUpdate
           UserService.update(user, firstName, lastName, verified, updatedTeams, trimmedExperiences)
           Ok
         }

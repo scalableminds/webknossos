@@ -1,6 +1,4 @@
-### define
-three : THREE
-###
+THREE = require("three")
 
 class Crosshair
 
@@ -121,3 +119,5 @@ class Crosshair
     mesh.doubleSided = true
 
     mesh
+
+module.exports = Crosshair

@@ -1,6 +1,4 @@
-### define
-libs/toast : Toast
-###
+Toast = require("libs/toast")
 
 class RestrictionHandler
 
@@ -25,3 +23,5 @@ class RestrictionHandler
         Toast.error(@UPDATE_ERROR, true)
         @issuedUpdateError = true
       return true
+
+module.exports = RestrictionHandler

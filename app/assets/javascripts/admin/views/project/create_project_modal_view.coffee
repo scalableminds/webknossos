@@ -1,13 +1,11 @@
-### define
-underscore : _
-backbone.marionette : Marionette
-libs/toast : Toast
-app : app
-admin/views/selection_view : SelectionView
-admin/models/user/user_collection : UserCollection
-admin/models/team/team_collection : TeamCollection
-admin/models/project/project_model : ProjectModel
-###
+_              = require("lodash")
+Marionette     = require("backbone.marionette")
+Toast          = require("libs/toast")
+app            = require("app")
+SelectionView  = require("admin/views/selection_view")
+UserCollection = require("admin/models/user/user_collection")
+TeamCollection = require("admin/models/team/team_collection")
+ProjectModel   = require("admin/models/project/project_model")
 
 class CreateProjectModalView extends Backbone.Marionette.LayoutView
 
@@ -120,3 +118,4 @@ class CreateProjectModalView extends Backbone.Marionette.LayoutView
     )
     @$el.modal("hide")
 
+module.exports = CreateProjectModalView

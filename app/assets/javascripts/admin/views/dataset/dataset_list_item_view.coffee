@@ -1,12 +1,10 @@
-### define
-underscore : _
-app : app
-backbone.marionette : marionette
-libs/toast : Toast
-libs/template_helpers : TemplateHelpers
-admin/models/dataset/dataset_accesslist_collection : DatasetAccesslistCollection
-./dataset_access_view : DatasetAccessView
-###
+_                           = require("lodash")
+app                         = require("app")
+marionette                  = require("backbone.marionette")
+Toast                       = require("libs/toast")
+TemplateHelpers             = require("libs/template_helpers")
+DatasetAccesslistCollection = require("admin/models/dataset/dataset_accesslist_collection")
+DatasetAccessView           = require("./dataset_access_view")
 
 class DatasetListItemView extends Backbone.Marionette.CompositeView
 
@@ -198,3 +196,5 @@ class DatasetListItemView extends Backbone.Marionette.CompositeView
     event.preventDefault()
     @ui.contentTypeInput.val(type)
     @ui.form.submit()
+
+module.exports = DatasetListItemView

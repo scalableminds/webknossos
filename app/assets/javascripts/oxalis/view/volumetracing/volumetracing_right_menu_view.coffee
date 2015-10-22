@@ -1,8 +1,6 @@
-### define
-../abstract_tab_view : AbstractTabView
-./right-menu/mapping_info_view : MappingInfoView
-../viewmode/right-menu/dataset_info_view : DatasetInfoView
-###
+AbstractTabView = require("../abstract_tab_view")
+MappingInfoView = require("./right-menu/mapping_info_view")
+DatasetInfoView = require("../viewmode/right-menu/dataset_info_view")
 
 class VolumeTracingRightMenuView extends AbstractTabView
 
@@ -19,3 +17,5 @@ class VolumeTracingRightMenuView extends AbstractTabView
         viewClass : MappingInfoView
       }
     ]
+
+module.exports = VolumeTracingRightMenuView

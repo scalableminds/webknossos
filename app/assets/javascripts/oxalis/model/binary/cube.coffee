@@ -1,6 +1,4 @@
-### define
-backbone : Backbone
-###
+Backbone = require("backbone")
 
 class Cube
 
@@ -449,3 +447,4 @@ class Cube
       zoomStep
     ]
 
+module.exports = Cube

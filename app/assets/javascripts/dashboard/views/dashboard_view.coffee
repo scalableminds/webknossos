@@ -1,11 +1,9 @@
-### define
-underscore : _
-backbone.marionette : marionette
-dashboard/views/dashboard_task_list_view : DashboardTaskListView
-dashboard/views/explorative_tracing_list_view : ExplorativeTracingListView
-dashboard/views/tracked_time_view : TrackedTimeView
-admin/views/dataset/dataset_switch_view : DatasetSwitchView
-###
+_                          = require("lodash")
+marionette                 = require("backbone.marionette")
+DashboardTaskListView      = require("dashboard/views/dashboard_task_list_view")
+ExplorativeTracingListView = require("dashboard/views/explorative_tracing_list_view")
+TrackedTimeView            = require("dashboard/views/tracked_time_view")
+DatasetSwitchView          = require("admin/views/dataset/dataset_switch_view")
 
 class DashboardView extends Backbone.Marionette.LayoutView
 
@@ -121,3 +119,4 @@ class DashboardView extends Backbone.Marionette.LayoutView
     @$("##{tabHeaderId}").parent().addClass("active")
     @tabPane.show(tabView)
 
+module.exports = DashboardView

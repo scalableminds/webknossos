@@ -1,9 +1,7 @@
-### define
-underscore : _
-backbone.marionette : marionette
-###
+_          = require("lodash")
+marionette = require("backbone.marionette")
 
-class ExperienceModal extends Backbone.Marionette.ItemView
+class ExperienceModalView extends Backbone.Marionette.ItemView
 
   tagName : "div"
   className : "modal fade"
@@ -132,3 +130,4 @@ class ExperienceModal extends Backbone.Marionette.ItemView
 
     @$el.modal("hide")
 
+module.exports = ExperienceModalView

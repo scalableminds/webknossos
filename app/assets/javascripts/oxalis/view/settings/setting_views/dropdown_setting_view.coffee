@@ -1,7 +1,5 @@
-### define
-./abstract_setting_view : AbstractSettingView
-underscore : _
-###
+AbstractSettingView = require("./abstract_setting_view")
+_                   = require("lodash")
 
 class DropdownSettingView extends AbstractSettingView
 
@@ -43,3 +41,5 @@ class DropdownSettingView extends AbstractSettingView
   update : (model, value) ->
 
     @ui.select.val(parseInt(value, 10))
+
+module.exports = DropdownSettingView

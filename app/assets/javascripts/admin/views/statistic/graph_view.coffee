@@ -1,10 +1,8 @@
-### define
-underscore : _
-app : app
-backbone.marionette : marionette
-c3: c3
-moment : moment
-###
+_          = require("lodash")
+app        = require("app")
+marionette = require("backbone.marionette")
+c3         = require("c3")
+moment     = require("moment")
 
 class GraphView extends Backbone.Marionette.ItemView
 
@@ -50,3 +48,5 @@ class GraphView extends Backbone.Marionette.ItemView
   selectDataPoint : (data) ->
 
     app.vent.trigger("graphView:updatedSelection", data)
+
+module.exports = GraphView

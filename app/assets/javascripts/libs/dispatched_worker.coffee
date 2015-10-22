@@ -1,17 +1,15 @@
-### define
-jquery : $
-underscore : _
-###
+$ = require("jquery")
+_ = require("lodash")
 
 # `DispatchedWorker` is a wrapper around the WebWorker API. First you
-# initialize it providing url of the javascript worker code. Afterwards
-# you can request work using `send` and wait for the result using the
-# returned deferred.
+# initialize it providing a worker object of the javascript worker code.
+# Afterwards you can request work using `send` and wait for the result
+# using the returned deferred.
 class DispatchedWorker
 
-  constructor : (url) ->
+  constructor : (workerClass) ->
 
-    @worker = new Worker(url)
+    @worker = new workerClass()
 
     @worker.onerror = (err) -> console?.error(err)
 
@@ -21,26 +19,30 @@ class DispatchedWorker
 
     deferred = new $.Deferred()
 
-    workerHandle = Math.random()
+    _.defer(=>
 
-    workerMessageCallback = ({ data : packet }) =>
+      workerHandle = Math.random()
 
-      if packet.workerHandle == workerHandle
-        @worker.removeEventListener("message", workerMessageCallback, false)
-        if packet.error
-          deferred.reject(packet.error)
-        else
-          deferred.resolve(packet.payload)
+      workerMessageCallback = ({ data : packet }) =>
 
-    @worker.addEventListener("message", workerMessageCallback, false)
-    @worker.postMessage { workerHandle, payload }
+        if packet.workerHandle == workerHandle
+          @worker.removeEventListener("message", workerMessageCallback, false)
+          if packet.error
+            deferred.reject(packet.error)
+          else
+            deferred.resolve(packet.payload)
 
-    deferred.promise()
+      @worker.addEventListener("message", workerMessageCallback, false)
+      @worker.postMessage { workerHandle, payload }
+    )
+
+
+    return deferred.promise()
 
 
 class DispatchedWorker.Pool
 
-  constructor : (@url, @workerLimit = 3) ->
+  constructor : (@workerClass, @workerLimit = 3) ->
 
     @queue = []
     @workers = []
@@ -63,7 +65,7 @@ class DispatchedWorker.Pool
 
   spawnWorker : ->
 
-    worker = new DispatchedWorker(@url)
+    worker = new DispatchedWorker(@workerClass)
     worker.busy = false
 
     workerReset = =>
@@ -100,4 +102,4 @@ class DispatchedWorker.Pool
     @queue.push { data, deferred }
 
 
-DispatchedWorker
+module.exports = DispatchedWorker

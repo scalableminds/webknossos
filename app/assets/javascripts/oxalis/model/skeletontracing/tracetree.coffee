@@ -1,5 +1,3 @@
-### define ###
-
 class TraceTree
 
   constructor : (@treeId, @color, @name, @timestamp) ->
@@ -33,3 +31,5 @@ class TraceTree
       root.buildTree()
 
     return root
+
+module.exports = TraceTree

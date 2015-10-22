@@ -1,7 +1,5 @@
-### define
-underscore : _
-format_utils : FormatUtils
-###
+_           = require("lodash")
+FormatUtils = require("format_utils")
 
 class TaskTypeModel extends Backbone.Model
 
@@ -20,3 +18,4 @@ class TaskTypeModel extends Backbone.Model
     options = url : "/api/taskTypes/#{@get('id')}/delete"
     super(options)
 
+module.exports = TaskTypeModel

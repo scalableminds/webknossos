@@ -1,13 +1,11 @@
-### define
-underscore : _
-app : app
-backbone.marionette : marionette
-libs/toast : Toast
-libs/behaviors/select_all_rows_behavior : SelectAllRows
-admin/views/user/team_role_modal_view : TeamRoleModalView
-admin/views/user/experience_modal_view : ExperienceModalView
-./user_list_item_view : UserListItemView
-###
+_                   = require("lodash")
+app                 = require("app")
+marionette          = require("backbone.marionette")
+Toast               = require("libs/toast")
+SelectAllRows       = require("libs/behaviors/select_all_rows_behavior")
+TeamRoleModalView   = require("admin/views/user/team_role_modal_view")
+ExperienceModalView = require("admin/views/user/experience_modal_view")
+UserListItemView    = require("./user_list_item_view")
 
 class UserListView extends Backbone.Marionette.CompositeView
 
@@ -108,3 +106,4 @@ class UserListView extends Backbone.Marionette.CompositeView
 
     @modalView?.destroy()
 
+module.exports = UserListView

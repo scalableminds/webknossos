@@ -1,11 +1,9 @@
-### define
-backbone : backbone
-three : THREE
-mjs : MJS
-underscore : _
-oxalis/constants : constants
-./materials/arbitrary_plane_material_factory : ArbitraryPlaneMaterialFactory
-###
+backbone                      = require("backbone")
+THREE                         = require("three")
+MJS                           = require("mjs")
+_                             = require("lodash")
+constants                     = require("oxalis/constants")
+ArbitraryPlaneMaterialFactory = require("./materials/arbitrary_plane_material_factory")
 
 # Let's set up our trianglesplane.
 # It serves as a "canvas" where the brain images
@@ -52,7 +50,7 @@ class ArbitraryPlane
     for name, binary of @model.binary
       binary.cube.on "bucketLoaded", => @isDirty = true
 
-    throw "width needs to be a power of 2" unless Math.log(width) / Math.LN2 % 1 != 1
+    throw "width needs to be a power of 2" unless Math.log(@width) / Math.LN2 % 1 != 1
 
 
   setMode : ( mode, radius ) ->
@@ -170,3 +168,4 @@ class ArbitraryPlane
 
     plane
 
+module.exports = ArbitraryPlane

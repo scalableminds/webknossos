@@ -1,8 +1,6 @@
-### define
-underscore : _
-jquery : $
-libs/request : Request
-###
+_       = require("lodash")
+$       = require("jquery")
+Request = require("libs/request")
 
 class Mappings
 
@@ -98,3 +96,5 @@ class Mappings
     for entry in array
       min = Math.min(min, entry)
     return min
+
+module.exports = Mappings

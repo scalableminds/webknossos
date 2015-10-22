@@ -1,7 +1,5 @@
-### define
-jquery : $
-underscore : _
-###
+$ = require("jquery")
+_ = require("lodash")
 
 
 class Pipeline
@@ -104,3 +102,5 @@ class Pipeline
     else
 
       @running = false
+
+module.exports = Pipeline

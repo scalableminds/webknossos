@@ -1,10 +1,8 @@
-### define
-oxalis/view/abstract_tab_view : AbstractTabView
-../settings_views/skeleton_tracing_settings_view : SkeletonTracingSettingsView
-../settings_views/arbitrary_user_settings_view : ArbitraryUserSettingsView
-../settings_views/dataset_settings_view : DatasetSettingsView
-oxalis/model/settings/backbone_to_oxalis_adapter_model : BackboneToOxalisAdapterModel
-###
+AbstractTabView              = require("oxalis/view/abstract_tab_view")
+SkeletonTracingSettingsView  = require("../settings_views/skeleton_tracing_settings_view")
+ArbitraryUserSettingsView    = require("../settings_views/arbitrary_user_settings_view")
+DatasetSettingsView          = require("../settings_views/dataset_settings_view")
+BackboneToOxalisAdapterModel = require("oxalis/model/settings/backbone_to_oxalis_adapter_model")
 
 class SkeletonArbitraryTabView extends AbstractTabView
 
@@ -32,3 +30,4 @@ class SkeletonArbitraryTabView extends AbstractTabView
       }
     ]
 
+module.exports = SkeletonArbitraryTabView

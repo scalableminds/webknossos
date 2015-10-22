@@ -1,9 +1,7 @@
-### define
-underscore : _
-backbone : Backbone
-./user_model : UserModel
-../pagination_collection : PaginationCollection
-###
+_                    = require("lodash")
+Backbone             = require("backbone")
+UserModel            = require("./user_model")
+PaginationCollection = require("../pagination_collection")
 
 class UserCollection extends PaginationCollection
 
@@ -12,3 +10,5 @@ class UserCollection extends PaginationCollection
 
   paginator_ui :
     perPage : 50
+
+module.exports = UserCollection

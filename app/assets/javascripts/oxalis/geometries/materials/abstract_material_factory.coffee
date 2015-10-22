@@ -1,7 +1,5 @@
-### define
-backbone : Backbone
-three : THREE
-###
+Backbone = require("backbone")
+THREE    = require("three")
 
 class AbstractMaterialFactory
 
@@ -45,3 +43,6 @@ class AbstractMaterialFactory
 
 
   getFragmentShader : ->
+
+
+module.exports = AbstractMaterialFactory

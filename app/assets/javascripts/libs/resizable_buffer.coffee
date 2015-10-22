@@ -1,4 +1,4 @@
-### define ###
+
 
 class ResizableBuffer
 
@@ -6,7 +6,7 @@ class ResizableBuffer
 
   constructor : (@elementLength, initialCapacity = 100, @bufferType = Float32Array) ->
 
-    @capacity = initialCapacity * elementLength
+    @capacity = initialCapacity * @elementLength
     @buffer = new @bufferType(@capacity)
 
     @length = 0
@@ -126,3 +126,6 @@ class ResizableBuffer
       result.push( "[ " + element.join(", ") + " ]" )
 
     return "(" + length + ") { " + result.join(", ") + " }"
+
+
+module.exports = ResizableBuffer

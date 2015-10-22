@@ -1,9 +1,7 @@
-### define
-./category_view : CategoryView
-../setting_views/text_input_setting_view : TextInputSettingView
-###
+CategoryView         = require("./category_view")
+TextInputSettingView = require("../setting_views/text_input_setting_view")
 
-class boundingBoxCategory extends CategoryView
+class BoundingBoxCategory extends CategoryView
 
 
   caption : "Bounding Box"
@@ -23,3 +21,4 @@ class boundingBoxCategory extends CategoryView
       )
 
 
+module.exports = BoundingBoxCategory

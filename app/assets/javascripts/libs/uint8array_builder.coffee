@@ -1,6 +1,3 @@
-### define
-###
-
 class Uint8ArrayBuilder
 
 
@@ -29,3 +26,6 @@ class Uint8ArrayBuilder
       offset += array.byteLength
 
     return result
+
+
+module.exports = Uint8ArrayBuilder

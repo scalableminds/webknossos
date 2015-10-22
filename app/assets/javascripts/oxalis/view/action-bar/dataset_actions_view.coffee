@@ -1,12 +1,10 @@
-### define
-underscore : _
-backbone.marionette : marionette
-app : app
-libs/toast : Toast
-./merge_modal_view : MergeModalView
-./share_modal_view : ShareModalView
-oxalis/constants : Constants
-###
+_              = require("lodash")
+marionette     = require("backbone.marionette")
+app            = require("app")
+Toast          = require("libs/toast")
+MergeModalView = require("./merge_modal_view")
+ShareModalView = require("./share_modal_view")
+Constants      = require("oxalis/constants")
 
 class DatasetActionsView extends Backbone.Marionette.ItemView
 
@@ -140,3 +138,4 @@ class DatasetActionsView extends Backbone.Marionette.ItemView
 
     return _.contains(Constants.MODES_SKELETON, @model.get("mode"))
 
+module.exports = DatasetActionsView

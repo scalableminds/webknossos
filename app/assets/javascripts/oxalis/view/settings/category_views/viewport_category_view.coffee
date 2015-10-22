@@ -1,11 +1,9 @@
-### define
-app : app
-../setting_views/checkbox_setting_view : CheckboxSettingView
-../setting_views/slider_setting_view : SliderSettingView
-../setting_views/dropdown_setting_view : DropdownSettingView
-./category_view : CategoryView
-../../../constants : constants
-###
+app                 = require("app")
+CheckboxSettingView = require("../setting_views/checkbox_setting_view")
+SliderSettingView   = require("../setting_views/slider_setting_view")
+DropdownSettingView = require("../setting_views/dropdown_setting_view")
+CategoryView        = require("./category_view")
+constants           = require("../../../constants")
 
 class ViewportCategoryView extends CategoryView
 
@@ -79,3 +77,5 @@ class ViewportCategoryView extends CategoryView
           name : "displayCrosshair"
           displayName : "Show Crosshairs"
       )
+
+module.exports = ViewportCategoryView

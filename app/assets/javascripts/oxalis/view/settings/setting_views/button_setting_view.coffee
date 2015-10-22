@@ -1,7 +1,5 @@
-### define
-./abstract_setting_view : AbstractSettingView
-underscore : _
-###
+AbstractSettingView = require("./abstract_setting_view")
+_                   = require("lodash")
 
 class ButtonSettingView extends Backbone.Marionette.ItemView
 
@@ -30,3 +28,5 @@ class ButtonSettingView extends Backbone.Marionette.ItemView
   handleClick : ->
 
     @model[@options.callbackName]()
+
+module.exports = ButtonSettingView

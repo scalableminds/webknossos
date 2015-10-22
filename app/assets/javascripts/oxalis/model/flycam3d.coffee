@@ -1,8 +1,6 @@
-### define
-underscore : _
-three : THREE
-mjs : MJS
-###
+_     = require("lodash")
+THREE = require("three")
+MJS   = require("mjs")
 
 updateMacro = (_this) ->
 
@@ -37,8 +35,8 @@ class Flycam3d
     @scale = @calculateScaleValues(scale)
 
     @reset()
-    @distanceVecNegative = [0, 0, -distance]
-    @distanceVecPositive = [0, 0, distance]
+    @distanceVecNegative = [0, 0, -@distance]
+    @distanceVecPositive = [0, 0, @distance]
 
 
   calculateScaleValues : (scale) ->
@@ -300,3 +298,5 @@ class Flycam3d
 
     matrix = @currentMatrix
     [ matrix[0], matrix[1], matrix[2] ]
+
+module.exports = Flycam3d

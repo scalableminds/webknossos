@@ -1,13 +1,12 @@
-### define
-underscore : _
-backbone.marionette : marionette
-./dataset_list_view : DatasetListView
-admin/models/dataset/dataset_collection : DatasetCollection
-admin/models/pagination_collection : PaginationCollection
-views/spotlight_dataset_list_view : SpotlightDatasetListView
-admin/views/pagination_view : PaginationView
-libs/utils : utils
-###
+_                        = require("lodash")
+marionette               = require("backbone.marionette")
+DatasetListView          = require("./dataset_list_view")
+DatasetCollection        = require("admin/models/dataset/dataset_collection")
+SpotlightDatasetListView = require("views/spotlight_dataset_list_view")
+PaginationCollection     = require("admin/models/pagination_collection")
+PaginationView           = require("admin/views/pagination_view")
+utils                    = require("libs/utils")
+
 
 class DatasetSwitchView extends Backbone.Marionette.LayoutView
 
@@ -86,3 +85,5 @@ class DatasetSwitchView extends Backbone.Marionette.LayoutView
 
     paginationView = new PaginationView(collection: collection)
     @pagination.show(paginationView)
+
+module.exports = DatasetSwitchView

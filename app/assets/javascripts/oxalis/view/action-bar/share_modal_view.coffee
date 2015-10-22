@@ -1,8 +1,6 @@
-### define
-underscore : _
-backbone.marionette : Marionette
-clipboard : Clipboard
-###
+_          = require("lodash")
+Marionette = require("backbone.marionette")
+Clipboard  = require("clipboard")
 
 class ShareModalView extends Backbone.Marionette.ItemView
 
@@ -77,3 +75,4 @@ class ShareModalView extends Backbone.Marionette.ItemView
 
     @clipboard.destroy()
 
+module.exports = ShareModalView

@@ -1,16 +1,14 @@
-### define
-app : app
-backbone : Backbone
-../geometries/plane : Plane
-../geometries/skeleton : Skeleton
-../geometries/cube : Cube
-../geometries/contourgeometry : ContourGeometry
-../geometries/volumegeometry : VolumeGeometry
-../model/dimensions : Dimensions
-../constants : constants
-../view/polygons/polygon_factory : PolygonFactory
-three : THREE
-###
+app             = require("app")
+Backbone        = require("backbone")
+Plane           = require("../geometries/plane")
+Skeleton        = require("../geometries/skeleton")
+Cube            = require("../geometries/cube")
+ContourGeometry = require("../geometries/contourgeometry")
+VolumeGeometry  = require("../geometries/volumegeometry")
+Dimensions      = require("../model/dimensions")
+constants       = require("../constants")
+PolygonFactory  = require("../view/polygons/polygon_factory")
+THREE           = require("three")
 
 class SceneController
 
@@ -259,3 +257,4 @@ class SceneController
     )
     @listenTo(user, "change:tdViewDisplayPlanes", (model, value) -> @setDisplayPlanes(value))
 
+module.exports = SceneController

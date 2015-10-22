@@ -1,8 +1,6 @@
-### define
-underscore : _
-backbone.marionette : marionette
-routes : routes
-###
+_          = require("lodash")
+marionette = require("backbone.marionette")
+routes     = require("routes")
 
 class CreditsView extends Backbone.Marionette.ItemView
 
@@ -79,3 +77,6 @@ class CreditsView extends Backbone.Marionette.ItemView
         </p>
     </div>
   """)
+
+
+module.exports = CreditsView

@@ -1,12 +1,10 @@
-### define
-underscore : _
-backbone : Backbone
-./dashboard_task_model : DashboardTaskModel
-./user_model : UserModel
-admin/models/dataset/dataset_collection : DatasetCollection
-dashboard/models/logged_time_model : LoggedTimeModel
-admin/models/sorted_collection : SortedCollection
-###
+_                  = require("lodash")
+Backbone           = require("backbone")
+DashboardTaskModel = require("./dashboard_task_model")
+UserModel          = require("./user_model")
+DatasetCollection  = require("admin/models/dataset/dataset_collection")
+LoggedTimeModel    = require("dashboard/models/logged_time_model")
+SortedCollection   = require("admin/models/sorted_collection")
 
 class DashboardModel extends Backbone.Model
 
@@ -93,3 +91,5 @@ class DashboardModel extends Backbone.Model
       success : (response) =>
         @get("tasks").add(newTask)
     )
+
+module.exports = DashboardModel

@@ -1,7 +1,5 @@
-### define
-underscore : _
-backbone.marionette : Marionette
-###
+_          = require("lodash")
+Marionette = require("backbone.marionette")
 
 class ProjectTaskView extends Backbone.Marionette.ItemView
 
@@ -45,3 +43,5 @@ class ProjectTaskView extends Backbone.Marionette.ItemView
       </a>
     </td>
   """)
+
+module.exports = ProjectTaskView

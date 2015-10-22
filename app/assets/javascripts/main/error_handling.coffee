@@ -1,7 +1,5 @@
-### define
-jquery : $
-underscore : _
-###
+$ = require("jquery")
+_ = require("lodash")
 
 ErrorHandling =
 
@@ -105,3 +103,5 @@ ErrorHandling =
 
 
     return trimmedCallstack.join("\n")
+
+module.exports = ErrorHandling

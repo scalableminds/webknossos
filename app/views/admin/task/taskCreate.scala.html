@@ -28,16 +28,18 @@
             </div>
 
             <script type="text/javascript">
-              require(["jquery"], function($) {
-                $("input[type=file]").on("change", function(evt){
+              $(function () {
+                $("input[type=file]").on("change", function(evt) {
                   var files = this.files;
                   if (files) {
                     var fileNames = [];
-                    for (var i=0; i < this.files.length; i++)
-                        fileNames.push(files[i].name)
-                    $(".file-info").val(fileNames.join(", "))                  }
-                })
-              })
+                    for (var i=0; i < this.files.length; i++) {
+                      fileNames.push(files[i].name);
+                    }
+                    $(".file-info").val(fileNames.join(", "));
+                  }
+                });
+              });
             </script>
 
             <div class="form-group">

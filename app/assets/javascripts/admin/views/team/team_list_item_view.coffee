@@ -1,8 +1,6 @@
-### define
-underscore : _
-backbone.marionette : marionette
-libs/template_helpers : TemplateHelpers
-###
+_               = require("lodash")
+marionette      = require("backbone.marionette")
+TemplateHelpers = require("libs/template_helpers")
 
 class TeamListItemView extends Backbone.Marionette.ItemView
 
@@ -41,3 +39,4 @@ class TeamListItemView extends Backbone.Marionette.ItemView
       @model.destroy()
 
 
+module.exports = TeamListItemView

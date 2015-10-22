@@ -1,9 +1,7 @@
-### define
-backbone.marionette : marionette
-app : app
-oxalis/constants : constants
-libs/utils : Utils
-###
+marionette = require("backbone.marionette")
+app        = require("app")
+constants  = require("oxalis/constants")
+Utils      = require("libs/utils")
 
 class DatasetPositionView extends Backbone.Marionette.ItemView
 
@@ -83,3 +81,4 @@ class DatasetPositionView extends Backbone.Marionette.ItemView
     @model.flycam3d.off("changed")
     @model.flycam.off("positionChanged")
 
+module.exports = DatasetPositionView

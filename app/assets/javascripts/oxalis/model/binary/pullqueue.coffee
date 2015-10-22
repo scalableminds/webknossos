@@ -63,7 +63,7 @@ class PullQueue
           bucket[2] << (zoomStep + @cube.BUCKET_SIZE_P)
         ]
         zoomStep: zoomStep
-        #fourBit: @shouldRequestFourBit()
+        fourBit: @shouldRequestFourBit()
       )
 
     # Measuring the time until response arrives to select appropriate preloading strategy
@@ -79,8 +79,8 @@ class PullQueue
           offset = 0
 
           for bucket, i in batch
-            if transmitBuffer[i * 5 + 1]
-              bucketData = @decode(responseBuffer.subarray(offset, offset += (@cube.BUCKET_LENGTH >> 1)))
+            if bucket.fourBit
+              bucketData = @decode4bit(responseBuffer.subarray(offset, offset += (@cube.BUCKET_LENGTH >> 1)))
             else
               bucketData = responseBuffer.subarray(offset, offset += @cube.BUCKET_LENGTH)
 
@@ -112,7 +112,7 @@ class PullQueue
     @queue = @queue.concat(items)
 
 
-  decode : (colors) ->
+  decode4Bit : (colors) ->
 
     # Expand 4-bit data
     newColors = new Uint8Array(colors.length << 1)

@@ -6,6 +6,7 @@ package com.scalableminds.datastore.controllers
 import play.api._
 import play.api.Play.current
 import play.api.libs.concurrent._
+import play.api.libs.json._
 import com.scalableminds.util.geometry.Point3D
 import play.api.i18n.Messages
 import com.scalableminds.braingames.binary.models._
@@ -15,10 +16,7 @@ import com.scalableminds.util.reactivemongo.DBAccessContext
 import com.scalableminds.util.tools.{FoxImplicits, Fox}
 import play.api.libs.ws.WS
 import play.api.mvc.{SimpleResult, Action}
-import com.scalableminds.braingames.binary.ParsedDataReadRequest
 import com.scalableminds.braingames.binary.DataRequestSettings
-import com.scalableminds.braingames.binary.ParsedDataWriteRequest
-import com.scalableminds.braingames.binary.ParsedRequestCollection
 import com.scalableminds.braingames.binary.MappingRequest
 import scala.concurrent.Future
 import com.scalableminds.util.image.{JPEGWriter, ImageCreator, ImageCreatorParameters}
@@ -29,7 +27,6 @@ import play.api.mvc.BodyParsers.parse
 import play.api.libs.concurrent.Execution.Implicits._
 import com.scalableminds.datastore.DataStorePlugin
 import java.io.File
-import play.api.libs.json.Json
 import org.apache.commons.io.FileUtils
 import org.apache.commons.io.IOUtils
 import org.apache.commons.codec.binary.Base64
@@ -43,8 +40,14 @@ object BinaryDataController
   with BinaryDataMappingController
 
 trait BinaryDataCommonController extends Controller with FoxImplicits {
-  protected def getDataLayer(dataSource: DataSource, dataLayerName: String): Fox[DataLayer] = {
-    dataSource.getDataLayer(dataLayerName).toFox orElse UserDataLayerService.findUserDataLayer(dataSource.id, dataLayerName)
+  protected def getDataSourceAndDataLayer(dataSetName: String, dataLayerName: String): Fox[(DataSource, DataLayer)] = {
+    for {
+      usableDataSource <- DataSourceDAO.findUsableByName(dataSetName) ?~> Messages("dataSource.unavailable")
+      dataSource = usableDataSource.dataSource
+      dataLayer <- dataSource.getDataLayer(dataLayerName).toFox orElse UserDataLayerService.findUserDataLayer(dataSource.id, dataLayerName) ?~> Messages("dataLayer.notFound")
+    } yield {
+      (dataSource, dataLayer)
+    }
   }
 
   import play.api.mvc._
@@ -93,9 +96,8 @@ trait BinaryDataReadController extends BinaryDataCommonController {
                            resolution: Int) = TokenSecuredAction(dataSetName, dataLayerName).async {
     implicit request =>
       AllowRemoteOrigin {
-        val dataRequests = ParsedRequestCollection(Array(ParsedDataReadRequest(resolution, Point3D(x, y, z), false)))
         for {
-          data <- requestData(dataSetName, dataLayerName, cubeSize, dataRequests)
+          data <- requestData(dataSetName, dataLayerName, Point3D(x, y, z), cubeSize, cubeSize, cubeSize, resolution)
         } yield {
           Ok(data)
         }
@@ -107,15 +109,18 @@ trait BinaryDataReadController extends BinaryDataCommonController {
    * POST body is specified in the BinaryProtokoll.parseAjax functions.
    */
 
-  def requestViaAjax(dataSetName: String, dataLayerName: String, cubeSize: Int) = TokenSecuredAction(dataSetName, dataLayerName).async(parse.raw) {
+  def requestViaAjax(dataSetName: String, dataLayerName: String) = TokenSecuredAction(dataSetName, dataLayerName).async(parse.json) {
     implicit request =>
       AllowRemoteOrigin {
-        for {
-          payload <- request.body.asBytes() ?~> Messages("binary.payload.notSupplied")
-          requests <- BinaryProtocol.parseDataReadRequests(payload, containsHandle = false) ?~> Messages("binary.payload.invalid")
-          data <- requestData(dataSetName, dataLayerName, cubeSize, requests) ?~> Messages("binary.data.notFound")
-        } yield {
-          Ok(data)
+        request.body.validate[BinaryDataRequest] match {
+          case JsSuccess(dataRequest, _) =>
+            for {
+              data <- requestData(dataSetName, dataLayerName, dataRequest)
+            } yield {
+              Ok(data)
+            }
+          case e: JsError =>
+            Future.successful(JsonBadRequest(JsError.toFlatJson(e)))
         }
       }
   }
@@ -128,10 +133,9 @@ trait BinaryDataReadController extends BinaryDataCommonController {
     implicit request =>
       AllowRemoteOrigin {
         val logRes = (math.log(resolution) / math.log(2)).toInt
-        val dataRequests = ParsedRequestCollection(Array(ParsedDataReadRequest(logRes,
-          Point3D(x * cubeSize * resolution, y * cubeSize * resolution, z * cubeSize * resolution), false)))
+        val position = Point3D(x * cubeSize * resolution, y * cubeSize * resolution, z * cubeSize * resolution)
         for {
-          data <- requestData(dataSetName, dataLayerName, cubeSize, dataRequests) ?~> Messages("binary.data.notFound")
+          data <- requestData(dataSetName, dataLayerName, position, cubeSize, cubeSize, cubeSize, logRes) ?~> Messages("binary.data.notFound")
         } yield {
           Ok(data)
         }
@@ -213,6 +217,65 @@ trait BinaryDataReadController extends BinaryDataCommonController {
       }
   }
 
+  protected def requestData(
+                             dataSetName: String,
+                             dataLayerName: String,
+                             request: BinaryDataRequest): Fox[Array[Byte]] = {
+
+    def createDataRequestCollection(
+                                             dataSource: DataSource,
+                                             dataLayer: DataLayer,
+                                             request: BinaryDataRequest) = {
+      val dataRequests = request.buckets.map(b =>
+        DataStorePlugin.binaryDataService.createDataReadRequest(
+          dataSource,
+          dataLayer,
+          None,
+          request.cubeSize,
+          request.cubeSize,
+          request.cubeSize,
+          b.position,
+          b.zoomStep,
+          DataRequestSettings(b.fourBit getOrElse false, false)))
+      DataRequestCollection(dataRequests)
+    }
+
+    for {
+      (dataSource, dataLayer) <- getDataSourceAndDataLayer(dataSetName, dataLayerName)
+      dataRequestCollection = createDataRequestCollection(dataSource, dataLayer, request)
+      data <- DataStorePlugin.binaryDataService.handleDataRequest(dataRequestCollection) ?~> "Data request couldn't get handled"
+    } yield {
+      data
+    }
+  }
+
+  protected def requestData(
+                             dataSetName: String,
+                             dataLayerName: String,
+                             position: Point3D,
+                             width: Int,
+                             height: Int,
+                             depth: Int,
+                             resolutionExponent: Int,
+                             settings: DataRequestSettings = DataRequestSettings.default): Fox[Array[Byte]] = {
+    for {
+      (dataSource, dataLayer) <- getDataSourceAndDataLayer(dataSetName, dataLayerName)
+      dataRequestCollection = DataStorePlugin.binaryDataService.createDataReadRequest(
+        dataSource,
+        dataLayer,
+        None,
+        width,
+        height,
+        depth,
+        position,
+        resolutionExponent,
+        settings)
+      data <- DataStorePlugin.binaryDataService.handleDataRequest(dataRequestCollection) ?~> "Data request couldn't get handled"
+    } yield {
+      data
+    }
+  }
+
   protected def requestImageThumbnail(
                                        dataSetName: String,
                                        dataLayerName: String,
@@ -239,70 +302,11 @@ trait BinaryDataReadController extends BinaryDataCommonController {
     }
 
     for {
-      usableDataSource <- DataSourceDAO.findUsableByName(dataSetName) ?~> Messages("dataSource.unavailable")
-      dataSource = usableDataSource.dataSource
-      dataLayer <- getDataLayer(dataSource, dataLayerName)
+      (dataSource, dataLayer) <- getDataSourceAndDataLayer(dataSetName, dataLayerName)
       (x, y, z, resolution) = goodThumbnailParameters(dataLayer)
       image <- respondWithImage(dataSetName, dataLayerName, width, height, x, y, z, resolution)
     } yield {
       image
-    }
-  }
-
-  protected def createDataRequestCollection(
-                                             dataSource: DataSource,
-                                             dataLayer: DataLayer,
-                                             cubeSize: Int,
-                                             parsedRequest: ParsedRequestCollection[ParsedDataReadRequest]) = {
-    val dataRequests = parsedRequest.requests.map(r =>
-      DataStorePlugin.binaryDataService.createDataReadRequest(dataSource, dataLayer, None, cubeSize, r))
-    DataRequestCollection(dataRequests)
-  }
-
-
-  protected def requestData(
-                             dataSetName: String,
-                             dataLayerName: String,
-                             cubeSize: Int,
-                             parsedRequest: ParsedRequestCollection[ParsedDataReadRequest]): Fox[Array[Byte]] = {
-    for {
-      usableDataSource <- DataSourceDAO.findUsableByName(dataSetName) ?~> Messages("datasource.unavailable")
-      dataSource = usableDataSource.dataSource
-      dataLayer <- getDataLayer(dataSource, dataLayerName) ?~> Messages("dataLayer.notFound")
-      dataRequestCollection = createDataRequestCollection(dataSource, dataLayer, cubeSize, parsedRequest)
-      data <- DataStorePlugin.binaryDataService.handleDataRequest(dataRequestCollection) ?~> "Data request couldn't get handled"
-    } yield {
-      data
-    }
-  }
-
-  protected def requestData(
-                             dataSetName: String,
-                             dataLayerName: String,
-                             position: Point3D,
-                             width: Int,
-                             height: Int,
-                             depth: Int,
-                             resolutionExponent: Int,
-                             settings: DataRequestSettings): Fox[Array[Byte]] = {
-    for {
-      usableDataSource <- DataSourceDAO.findUsableByName(dataSetName) ?~> Messages("datasource.unavailable")
-      dataSource = usableDataSource.dataSource
-      dataLayer <- getDataLayer(dataSource, dataLayerName) ?~> Messages("dataLayer.notFound")
-
-      dataRequestCollection = DataStorePlugin.binaryDataService.createDataReadRequest(
-        dataSource,
-        dataLayer,
-        None,
-        width,
-        height,
-        depth,
-        position,
-        resolutionExponent,
-        settings)
-      data <- DataStorePlugin.binaryDataService.handleDataRequest(dataRequestCollection) ?~> "Data request couldn't get handled"
-    } yield {
-      data
     }
   }
 
@@ -317,13 +321,10 @@ trait BinaryDataReadController extends BinaryDataCommonController {
                                         y: Int,
                                         z: Int,
                                         resolution: Int): Fox[File] = {
-    val settings = DataRequestSettings(useHalfByte = false, skipInterpolation = false)
     for {
-      usableDataSource <- DataSourceDAO.findUsableByName(dataSetName) ?~> Messages("dataSource.unavailable")
-      dataSource = usableDataSource.dataSource
-      dataLayer <- getDataLayer(dataSource, dataLayerName) ?~> Messages("dataLayer.notFound")
+      (dataSource, dataLayer) <- getDataSourceAndDataLayer(dataSetName, dataLayerName)
       params = ImageCreatorParameters(dataLayer.bytesPerElement, width, height, imagesPerRow)
-      data <- requestData(dataSetName, dataLayerName, Point3D(x, y, z), width, height, depth, resolution, settings) ?~> Messages("binary.data.notFound")
+      data <- requestData(dataSetName, dataLayerName, Point3D(x, y, z), width, height, depth, resolution) ?~> Messages("binary.data.notFound")
       spriteSheet <- ImageCreator.spriteSheetFor(data, params) ?~> Messages("image.create.failed")
       firstSheet <- spriteSheet.pages.headOption ?~> "Couldn'T create spritesheet"
     } yield {
@@ -346,7 +347,7 @@ trait BinaryDataReadController extends BinaryDataCommonController {
 
 trait BinaryDataWriteController extends BinaryDataCommonController {
 
-  protected def createDataWriteRequestCollection(
+/*  protected def createDataWriteRequestCollection(
                                                   dataSource: DataSource,
                                                   dataLayer: DataLayer,
                                                   cubeSize: Int,
@@ -355,9 +356,9 @@ trait BinaryDataWriteController extends BinaryDataCommonController {
       DataStorePlugin.binaryDataService.createDataWriteRequest(dataSource, dataLayer, None, cubeSize, r))
     DataRequestCollection(dataRequests)
   }
+*/
 
-
-  protected def writeData(
+  /*protected def writeData(
                            dataSource: DataSource,
                            dataLayer: DataLayer,
                            cubeSize: Int,
@@ -366,19 +367,17 @@ trait BinaryDataWriteController extends BinaryDataCommonController {
     dataWriteRequestCollection.requests.map(VolumeUpdateService.store)
     DataStorePlugin.binaryDataService.handleDataRequest(dataWriteRequestCollection).map(_ => true)
   }
-
+*/
   def writeViaAjax(dataSetName: String, dataLayerName: String, cubeSize: Int) = TokenSecuredAction(dataSetName, dataLayerName).async(parse.raw(1048576)) {
     implicit request =>
       AllowRemoteOrigin {
         for {
-          usableDataSource <- DataSourceDAO.findUsableByName(dataSetName).toFox ?~> Messages("dataSet.notFound")
-          dataSource = usableDataSource.dataSource
-          dataLayer <- getDataLayer(dataSource, dataLayerName) ?~> Messages("dataLayer.notFound")
+          (dataSource, dataLayer) <- getDataSourceAndDataLayer(dataSetName, dataLayerName)
           if (dataLayer.isWritable)
           payloadBodySize = cubeSize * cubeSize * cubeSize * dataLayer.bytesPerElement
-          payload <- request.body.asBytes() ?~> Messages("binary.payload.notSupplied")
-          requests <- BinaryProtocol.parseDataWriteRequests(payload, payloadBodySize, containsHandle = false) ?~> Messages("binary.payload.invalid")
-          _ <- writeData(dataSource, dataLayer, cubeSize, requests)
+          //payload <- request.body.asBytes() ?~> Messages("binary.payload.notSupplied")
+          //requests <- BinaryProtocol.parseDataWriteRequests(payload, payloadBodySize, containsHandle = false) ?~> Messages("binary.payload.invalid")
+          //_ <- writeData(dataSource, dataLayer, cubeSize, requests)
         } yield Ok
       }
   }
@@ -397,9 +396,7 @@ trait BinaryDataDownloadController extends BinaryDataCommonController {
     implicit request =>
       AllowRemoteOrigin {
         for {
-          usableDataSource <- DataSourceDAO.findUsableByName(dataSetName).toFox ?~> Messages("dataSet.notFound")
-          dataSource = usableDataSource.dataSource
-          dataLayer <- getDataLayer(dataSource, dataLayerName) ?~> Messages("dataLayer.notFound")
+          (dataSource, dataLayer) <- getDataSourceAndDataLayer(dataSetName, dataLayerName)
           _ <- ensureLayerIsSegmentation(dataLayer) ?~> Messages("dataLayer.download.segmentationOnly")
         } yield {
           val enumerator = Enumerator.outputStream { outputStream =>
@@ -422,9 +419,7 @@ trait BinaryDataMappingController extends BinaryDataCommonController {
     implicit request =>
       AllowRemoteOrigin {
         for {
-          usableDataSource <- DataSourceDAO.findUsableByName(dataSetName).toFox ?~> Messages("dataSet.notFound")
-          dataSource = usableDataSource.dataSource
-          dataLayer <- getDataLayer(dataSource, dataLayerName) ?~> Messages("dataLayer.notFound")
+          (dataSource, dataLayer) <- getDataSourceAndDataLayer(dataSetName, dataLayerName)
           dataLayerMapping <- dataLayer.getMapping(dataLayerMappingName).toFox ?~> Messages("dataLayerMapping.notFound")
           mappingPath <- dataLayerMapping.path.toFox ?~> Messages("dataLayerMapping.notFound")
           result <- DataStorePlugin.binaryDataService.handleMappingRequest(MappingRequest(mappingPath)) ?~> Messages("dataLayerMapping.notLoaded")

@@ -3,7 +3,7 @@
 # ~~~~
 
 # Read data
-POST        /datasets/:dataSetName/layers/:dataLayerName/data                                  com.scalableminds.datastore.controllers.BinaryDataController.requestViaAjax(dataSetName: String, dataLayerName: String, cubeSize: Int)
+POST        /datasets/:dataSetName/layers/:dataLayerName/data                                  com.scalableminds.datastore.controllers.BinaryDataController.requestViaAjax(dataSetName: String, dataLayerName: String)
 POST        /datasets/:dataSetName/import                                                      com.scalableminds.datastore.controllers.DataSourceController.startImport(dataSetName: String)
 GET         /datasets/:dataSetName/import                                                      com.scalableminds.datastore.controllers.DataSourceController.importProgress(dataSetName: String)
 GET         /datasets/:dataSetName/layers/:dataLayerName/data                                  com.scalableminds.datastore.controllers.BinaryDataController.requestViaAjaxDebug(dataSetName: String, dataLayerName: String, cubeSize: Int, x: Int, y: Int, z: Int, resolution: Int)

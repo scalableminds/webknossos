@@ -158,9 +158,10 @@ object UserController extends Controller with Secured with Dashboard with FoxImp
           _ <- allowedToAdministrate(issuingUser, user).toFox
           teams <- Fox.combined(assignedTeams.map(t => TeamDAO.findOneByName(t.team))) ?~> Messages("team.notFound")
           allTeams <- Fox.sequenceOfFulls(user.teams.map(t => TeamDAO.findOneByName(t.team)))
-          (teamsWithUpdate, teamsWithoutUpdate) = user.teams.partition{t =>
+          (oldTeamsWithUpdate, teamsWithoutUpdate) = user.teams.partition{t =>
             issuingUser.adminTeamNames.contains(t.team) && !assignedTeams.contains(t)
           }
+          teamsWithUpdate = oldTeamsWithUpdate ++ assignedTeams.filterNot(t => user.teams.exists(_.team == t.team))
           _ <- Fox.combined(teamsWithUpdate.map(t => ensureTeamAdministration(issuingUser, t.team).toFox))
           _ <- ensureRoleExistence(assignedTeams.zip(teams))
           _ <- ensureProperTeamAdministration(user, assignedTeams.zip(teams))

@@ -1,16 +1,14 @@
-### define
-backbone : Backbone
-./binary/interpolation_collector : InterpolationCollector
-./binary/cube : Cube
-./binary/pullqueue : PullQueue
-./binary/pushqueue : PushQueue
-./binary/plane2d : Plane2D
-./binary/ping_strategy : PingStrategy
-./binary/ping_strategy_3d : PingStrategy3d
-./binary/bounding_box : BoundingBox
-./binary/mappings : Mappings
-../constants : constants
-###
+Backbone               = require("backbone")
+InterpolationCollector = require("./binary/interpolation_collector")
+Cube                   = require("./binary/cube")
+PullQueue              = require("./binary/pullqueue")
+PushQueue              = require("./binary/pushqueue")
+Plane2D                = require("./binary/plane2d")
+PingStrategy           = require("./binary/ping_strategy")
+PingStrategy3d         = require("./binary/ping_strategy_3d")
+BoundingBox            = require("./binary/bounding_box")
+Mappings               = require("./binary/mappings")
+constants              = require("../constants")
 
 class Binary
 
@@ -42,7 +40,7 @@ class Binary
     @boundingBox = new BoundingBox(@model.boundingBox, @cube)
 
     datasetName = @model.get("dataset").get("name")
-    @pullQueue = new PullQueue(datasetName, @cube, @layer, @tracing.id, @boundingBox, connectionInfo)
+    @pullQueue = new PullQueue(datasetName, @cube, @layer, @tracing.id, @boundingBox, @connectionInfo)
     @pushQueue = new PushQueue(datasetName, @cube, @layer, @tracing.id, updatePipeline)
     @cube.setPushQueue( @pushQueue )
     @mappings = new Mappings(@model.dataSetName, @layer)
@@ -166,3 +164,5 @@ class Binary
     @cube.accessBuckets(accessedBuckets)
 
     buffer
+
+module.exports = Binary

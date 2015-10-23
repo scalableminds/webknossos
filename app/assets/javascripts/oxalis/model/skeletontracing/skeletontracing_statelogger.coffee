@@ -1,8 +1,7 @@
-### define
-../statelogger : StateLogger
-three.color : ColorConverter
-jquery : $
-###
+StateLogger    = require("../statelogger")
+THREE          = require("three")
+ColorConverter = require("three.color")
+$              = require("jquery")
 
 class SkeletonTracingStateLogger extends StateLogger
 
@@ -160,3 +159,6 @@ class SkeletonTracingStateLogger extends StateLogger
     $.assert(@newDiffs.length > 0, "newDiffs empty after concatUpdateTracing", {
       @newDiffs
     })
+
+
+module.exports = SkeletonTracingStateLogger

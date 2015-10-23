@@ -1,7 +1,5 @@
-### define
-libs/request : Request
-underscore : _
-###
+Request = require("libs/request")
+_       = require("lodash")
 
 class ArrayBufferSocket
 
@@ -325,4 +323,4 @@ class ArrayBufferSocket.XmlHttpRequest
 
   close : ->
 
-ArrayBufferSocket
+module.exports = ArrayBufferSocket

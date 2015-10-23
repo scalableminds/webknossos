@@ -1,10 +1,8 @@
-### define
-./category_view : CategoryView
-../setting_views/checkbox_setting_view : CheckboxSettingView
-../setting_views/slider_setting_view : SliderSettingView
-oxalis/constants : constants
-app : app
-###
+CategoryView        = require("./category_view")
+CheckboxSettingView = require("../setting_views/checkbox_setting_view")
+SliderSettingView   = require("../setting_views/slider_setting_view")
+constants           = require("oxalis/constants")
+app                 = require("app")
 
 class IsosurfaceCategoryView extends CategoryView
 
@@ -52,3 +50,5 @@ class IsosurfaceCategoryView extends CategoryView
 
     super()
     @hide() unless app.oxalis.model.volumeTracing?
+
+module.exports = IsosurfaceCategoryView

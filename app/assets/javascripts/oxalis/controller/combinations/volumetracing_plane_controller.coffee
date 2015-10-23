@@ -1,9 +1,7 @@
-### define
-underscore : _
-oxalis/constants : Constants
-../viewmodes/plane_controller : PlaneController
-../annotations/volumetracing_controller : VolumeTracingController
-###
+_                       = require("lodash")
+Constants               = require("oxalis/constants")
+PlaneController         = require("../viewmodes/plane_controller")
+VolumeTracingController = require("../annotations/volumetracing_controller")
 
 class VolumeTracingPlaneController extends PlaneController
 
@@ -28,7 +26,10 @@ class VolumeTracingPlaneController extends PlaneController
     @listenTo(@model.user, "isosurfaceDisplayChanged", -> @render3dCell @model.volumeTracing.getActiveCellId())
     @listenTo(@model.user, "isosurfaceBBsizeChanged", -> @render3dCell @model.volumeTracing.getActiveCellId())
     @listenTo(@model.user, "isosurfaceResolutionChanged", -> @render3dCell @model.volumeTracing.getActiveCellId())
-    @listenTo(@model.volumeTracing, "newActiveCell", (id) -> @render3dCell id)
+    @listenTo(@model.volumeTracing, "newActiveCell", (id) ->
+      id = @model.volumeTracing.getActiveCellId()
+      if id > 0
+        @render3dCell id)
 
 
   getPlaneMouseControls : (planeId) ->
@@ -51,6 +52,7 @@ class VolumeTracingPlaneController extends PlaneController
         if event.shiftKey
           @volumeTracingController.enterDeleteMode()
         @model.volumeTracing.startEditing(plane)
+        @adjustSegmentationOpacity()
 
       leftMouseUp : =>
 
@@ -65,6 +67,7 @@ class VolumeTracingPlaneController extends PlaneController
 
         @volumeTracingController.enterDeleteMode()
         @model.volumeTracing.startEditing(plane)
+        @adjustSegmentationOpacity()
 
       rightMouseUp : =>
 
@@ -77,6 +80,12 @@ class VolumeTracingPlaneController extends PlaneController
                   @calculateGlobalPos( pos ))
 
         @volumeTracingController.handleCellSelection( cellId )
+
+
+  adjustSegmentationOpacity : ->
+
+    if @model.user.get("segmentationOpacity") < 10
+      @model.user.set("segmentationOpacity", 50)
 
 
   getKeyboardControls : ->
@@ -104,3 +113,5 @@ class VolumeTracingPlaneController extends PlaneController
       bb.min[i] -= diff
       bb.max[i] += diff
     return bb
+
+module.exports = VolumeTracingPlaneController

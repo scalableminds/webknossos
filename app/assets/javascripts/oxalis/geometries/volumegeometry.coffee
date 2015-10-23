@@ -1,7 +1,5 @@
-### define
-three : THREE
-libs/color_generator : ColorGenerator
-###
+THREE          = require("three")
+ColorGenerator = require("libs/color_generator")
 
 class VolumeGeometry
 
@@ -43,3 +41,6 @@ class VolumeGeometry
   getMeshes : ->
 
     return [@mesh]
+
+
+module.exports = VolumeGeometry

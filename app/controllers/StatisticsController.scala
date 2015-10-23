@@ -13,8 +13,6 @@ import models.user.{User, UserDAO}
 import play.twirl.api.Html
 import scala.concurrent.duration.Duration
 import models.annotation.AnnotationDAO
-import com.scalableminds.util.reactivemongo.GlobalAccessContext
-import models.tracing.skeleton.DBNodeDAO
 
 object StatisticsController extends Controller with Secured{
   val intervalHandler = Map(
@@ -39,16 +37,14 @@ object StatisticsController extends Controller with Secured{
       case Some(handler) =>
         for{
           times <- TimeSpanService.loggedTimePerInterval(handler, start, end)
-          numberOfAnnotations <- AnnotationDAO.countAll(GlobalAccessContext)
-          numberOfUsers <- UserDAO.count(Json.obj())(GlobalAccessContext)
-          numberOfNodes <- DBNodeDAO.count(Json.obj())(GlobalAccessContext)
+          numberOfAnnotations <- AnnotationDAO.countAll
+          numberOfUsers <- UserDAO.count(Json.obj())
         } yield {
           Ok(Json.obj(
             "name" -> "oxalis",
             "tracingTimes" -> intervalTracingTimeJson(times),
             "numberOfAnnotations" -> numberOfAnnotations,
-            "numberOfUsers" -> numberOfUsers,
-            "numberOfNodes" -> numberOfNodes
+            "numberOfUsers" -> numberOfUsers
           ))
         }
       case _ =>

@@ -1,7 +1,5 @@
-### define
-underscore : _
-backbone : backbone
-###
+_        = require("lodash")
+backbone = require("backbone")
 
 class DatasetAccesslistCollection extends Backbone.Collection
 
@@ -9,3 +7,4 @@ class DatasetAccesslistCollection extends Backbone.Collection
     @url = "/api/datasets/#{datasetId}/accessList"
     super()
 
+module.exports = DatasetAccesslistCollection

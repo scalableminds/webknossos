@@ -1,18 +1,17 @@
-### define
-app : app
-backbone : Backbone
-jquery : $
-underscore : _
-backbone : backbone
-libs/request : Request
-libs/color_generator : ColorGenerator
-./tracepoint : TracePoint
-./tracetree : TraceTree
-./skeletontracing_statelogger : SkeletonTracingStateLogger
-../../constants : constants
-./tracingparser : TracingParser
-oxalis/model/right-menu/comments_collection : CommentsCollection
-###
+app                        = require("app")
+Backbone                   = require("backbone")
+$                          = require("jquery")
+_                          = require("lodash")
+backbone                   = require("backbone")
+Request                    = require("libs/request")
+ColorGenerator             = require("libs/color_generator")
+TracePoint                 = require("./tracepoint")
+TraceTree                  = require("./tracetree")
+SkeletonTracingStateLogger = require("./skeletontracing_statelogger")
+constants                  = require("../../constants")
+RestrictionHandler         = require("../helpers/restriction_handler")
+TracingParser              = require("./tracingparser")
+CommentsCollection         = require("oxalis/model/right-menu/comments_collection")
 
 class SkeletonTracing
 
@@ -36,6 +35,7 @@ class SkeletonTracing
     @doubleBranchPop = false
 
     @data = tracing.content.contentData
+    @restrictionHandler = new RestrictionHandler(tracing.restrictions)
 
     # initialize deferreds
     @finishedDeferred = new $.Deferred().resolve()
@@ -137,6 +137,8 @@ class SkeletonTracing
 
   pushBranch : ->
 
+    return if @restrictionHandler.handleUpdate()
+
     if @branchPointsAllowed
       if @activeNode
         @branchStack.push(@activeNode)
@@ -149,6 +151,8 @@ class SkeletonTracing
 
 
   popBranch : ->
+
+    return if @restrictionHandler.handleUpdate()
 
     deferred = new $.Deferred()
     if @branchPointsAllowed
@@ -183,6 +187,8 @@ class SkeletonTracing
 
   deleteBranch : (node) ->
 
+    return if @restrictionHandler.handleUpdate()
+
     if node.type != @TYPE_BRANCH then return
 
     i = 0
@@ -199,6 +205,8 @@ class SkeletonTracing
 
 
   addNode : (position, type, viewport, resolution) ->
+
+    return if @restrictionHandler.handleUpdate()
 
     if @ensureDirection(position)
 
@@ -328,11 +336,88 @@ class SkeletonTracing
 
   setActiveNodeRadius : (radius) ->
 
+    return if @restrictionHandler.handleUpdate()
+
     if @activeNode?
       @activeNode.radius = Math.min( @MAX_RADIUS,
                             Math.max( @MIN_RADIUS, radius ) )
       @stateLogger.updateNode( @activeNode, @activeNode.treeId )
       @trigger("newActiveNodeRadius", radius)
+
+
+  setComment : (commentText) ->
+
+    return if @restrictionHandler.handleUpdate()
+
+    if @activeNode
+      # remove any existing comments for that node
+      for i in [0...@comments.length]
+        if(@comments[i].node.id == @activeNode.id)
+          @comments.splice(i, 1)
+          @deletedCommentIndex = i
+          break
+      if commentText != ""
+        @comments.push({node: @activeNode, content: commentText})
+      @stateLogger.push()
+      @trigger("updateComments")
+
+
+  getComment : (nodeID) ->
+
+    unless nodeID? then nodeID = @activeNode.id if @activeNode
+    for comment in @comments
+      if comment.node.id == nodeID then return comment.content
+    return ""
+
+
+  deleteComment : (nodeID) ->
+
+    return if @restrictionHandler.handleUpdate()
+
+    for i in [0...@comments.length]
+      if(@comments[i].node.id == nodeID)
+        @comments.splice(i, 1)
+        @stateLogger.push()
+        @trigger("updateComments")
+        break
+
+
+  nextCommentNodeID : (forward) ->
+
+    length = @comments.length
+    offset = if forward then 1 else -1
+
+    unless @activeNode
+      if length > 0 then return @comments[0].node.id
+
+    if length == 0
+      return null
+
+    for i in [0...@comments.length]
+      if @comments[i].node.id == @activeNode.id
+        return @comments[(length + i + offset) % length].node.id
+
+    if @deletedCommentIndex?
+      offset = if forward then 0 else -1
+      return @comments[(length + @deletedCommentIndex + offset) % length].node.id
+
+    return @comments[0].node.id
+
+
+  getComments : (ascendingOrder = true) =>
+
+    @comments.sort(@compareNodes)
+    if not ascendingOrder
+      return @comments.reverse()
+    return @comments
+
+
+  getPlainComments : =>
+
+    plainComments = []
+    for comment in @comments
+      plainComments.push({node: comment.node.id, content: comment.content})
+    plainComments
 
 
   selectNextTree : (forward) ->
@@ -376,6 +461,8 @@ class SkeletonTracing
 
   shuffleTreeColor : (tree) ->
 
+    return if @restrictionHandler.handleUpdate()
+
     tree = @activeTree unless tree
     tree.color = @getNewTreeColor()
 
@@ -386,11 +473,15 @@ class SkeletonTracing
 
   shuffleAllTreeColors : ->
 
+    return if @restrictionHandler.handleUpdate()
+
     for tree in @trees
       @shuffleTreeColor(tree)
 
 
   createNewTree : ->
+
+    return if @restrictionHandler.handleUpdate()
 
     tree = new TraceTree(
       @treeIdCount++,
@@ -407,6 +498,8 @@ class SkeletonTracing
 
 
   deleteActiveNode : ->
+
+    return if @restrictionHandler.handleUpdate()
 
     unless @activeNode
       return
@@ -463,6 +556,8 @@ class SkeletonTracing
 
   deleteTree : (notify, id, deleteBranchesAndComments, notifyServer) ->
 
+    return if @restrictionHandler.handleUpdate()
+
     if notify
       if confirm("Do you really want to delete the whole tree?")
         @reallyDeleteTree(id, deleteBranchesAndComments, notifyServer)
@@ -473,6 +568,8 @@ class SkeletonTracing
 
 
   reallyDeleteTree : (id, deleteBranchesAndComments = true, notifyServer = true) ->
+
+    return if @restrictionHandler.handleUpdate()
 
     unless id
       id = @activeTree.treeId
@@ -503,6 +600,8 @@ class SkeletonTracing
 
 
   mergeTree : (lastNode, lastTree) ->
+
+    return if @restrictionHandler.handleUpdate()
 
     unless lastNode
       return
@@ -616,3 +715,6 @@ class SkeletonTracing
   getPlainComments : =>
 
     return @comments.toJSON()
+
+
+module.exports = SkeletonTracing

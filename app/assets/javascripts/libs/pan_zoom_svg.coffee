@@ -1,7 +1,5 @@
-### define
-jquery : $
-underscore : _
-###
+$ = require("jquery")
+_ = require("lodash")
 
 
 BUFFER_THRESHOLD = 50
@@ -19,16 +17,16 @@ class PanZoomSVG
     @oldMouse = null
     @zoom = 1
 
-    $el
+    @$el
       .on("mousedown", @mouseDownHandler)
       .on("mouseup", @mouseUpHandler)
       .on("mousemove", @mouseMoveHandler)
       .on("mousewheel", @mouseWheelHandler)
 
     #find the first group to apply all transformations to
-    @svgElement = $el.find("#graph1")[0]
-    @offset = $el.offset()
-    @svgRoot = $el[0]
+    @svgElement = @$el.find("#graph0")[0]
+    @offset = @$el.offset()
+    @svgRoot = @$el[0]
 
   mouseUpHandler : => @mouseDown = false; return
 
@@ -42,22 +40,15 @@ class PanZoomSVG
 
   mouseWheelHandler : (event) =>
 
-    @mouseDown = true
-    @startMouse = @mouseToSVGLocalCoordinates(event)
-    @startMatrix = @svgElement.getCTM()
-
-
-  mouseWheelHandler : (event) =>
-
     event.preventDefault()
     return if @mouseDown
 
     buffer = @buffer
-    { wheelDelta, wheelDeltaX, wheelDeltaY, pageX, pageY } = event.originalEvent
+    { deltaY, pageX, pageY } = event.originalEvent
 
-    buffer += wheelDeltaY
+    buffer += deltaY
 
-    if wheelDeltaY < 0
+    if deltaY < 0
       @zoom -= STEP
     else
       @zoom += STEP
@@ -145,9 +136,12 @@ class PanZoomSVG
   setCTM : (matrix) ->
 
     matrixString = "#{matrix.a} #{matrix.b} #{matrix.c} #{matrix.d} #{matrix.e} #{matrix.f}"
-    @$el.find("#graph1").attr("transform", "matrix(#{matrixString})")
+    @$el.find("#graph0").attr("transform", "matrix(#{matrixString})")
 
 
   clamp : (value) ->
 
     Math.max(MIN_ZOOM, Math.min(value, MAX_ZOOM))
+
+
+module.exports = PanZoomSVG

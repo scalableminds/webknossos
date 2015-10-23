@@ -1,9 +1,7 @@
-### define
-backbone : Backbone
-app : app
-oxalis/constants : Constants
-libs/toast : Toast
-###
+Backbone  = require("backbone")
+app       = require("app")
+Constants = require("oxalis/constants")
+Toast     = require("libs/toast")
 
 
 class AbstractTreeRenderer
@@ -492,3 +490,6 @@ class AbstractTreeRenderer
 
     @canvas[0].width = width
     @canvas[0].height = height
+
+
+module.exports = AbstractTreeRenderer

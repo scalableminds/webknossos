@@ -1,10 +1,8 @@
-### define
-underscore : _
-backbone.marionette : marionette
-routes : routes
-libs/toast : Toast
-libs/behaviors/hover_show_hide_behavior : HoverShowHide
-###
+_             = require("lodash")
+marionette    = require("backbone.marionette")
+routes        = require("routes")
+Toast         = require("libs/toast")
+HoverShowHide = require("libs/behaviors/hover_show_hide_behavior")
 
 class ExplorativeTracingListItemView extends Backbone.Marionette.ItemView
 
@@ -29,7 +27,7 @@ class ExplorativeTracingListItemView extends Backbone.Marionette.ItemView
     <td><%= dataSetName %></td>
 
     <td>
-      <% if (stats) { %>
+      <% if (stats && (contentType == "skeletonTracing")) { %>
         <span title="Trees"><i class="fa fa-sitemap"></i><%= stats.numberOfTrees %>&nbsp;</span><br />
         <span title="Nodes"><i class="fa fa-bull"></i><%= stats.numberOfNodes %>&nbsp;</span><br />
         <span title="Edges"><i class="fa fa-arrows-h"></i><%= stats.numberOfEdges %></span>
@@ -120,3 +118,5 @@ class ExplorativeTracingListItemView extends Backbone.Marionette.ItemView
     ).fail((xhr) ->
       Toast.message(xhr.responseJSON.messages)
     )
+
+module.exports = ExplorativeTracingListItemView

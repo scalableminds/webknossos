@@ -1,7 +1,5 @@
-### define
-../abstract_tab_view : AbstractTabView
-./right-menu/dataset_info_view : DatasetInfoView
-###
+AbstractTabView = require("../abstract_tab_view")
+DatasetInfoView = require("./right-menu/dataset_info_view")
 
 class ViewmodeRightMenuView extends AbstractTabView
 
@@ -14,3 +12,4 @@ class ViewmodeRightMenuView extends AbstractTabView
       }
     ]
 
+module.exports = ViewmodeRightMenuView

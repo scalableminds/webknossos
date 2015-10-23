@@ -1,10 +1,11 @@
-### define
-underscore : _
-../pagination_collection : PaginationCollection
-./dataset_model : DatasetModel
-###
+_                    = require("lodash")
+SortedCollection     = require("../sorted_collection")
+DatasetModel         = require("./dataset_model")
 
-class DatasetCollection extends PaginationCollection
 
-  url : "/api/datasets" # TODO: ?isActive=true breaks importing in advanced view
+class DatasetCollection extends SortedCollection
+
+  url : "/api/datasets"
   model : DatasetModel
+
+module.exports = DatasetCollection

@@ -1,10 +1,8 @@
-### define
-underscore : _
-backbone.marionette : marionette
-libs/toast : Toast
-./simple_task_item_view : SimpleTaskItemView
-admin/models/task/task_collection : TaskCollection
-###
+_                  = require("lodash")
+marionette         = require("backbone.marionette")
+Toast              = require("libs/toast")
+SimpleTaskItemView = require("./simple_task_item_view")
+TaskCollection     = require("admin/models/task/task_collection")
 
 class TaskTypeItemView extends Backbone.Marionette.CompositeView
 
@@ -34,15 +32,17 @@ class TaskTypeItemView extends Backbone.Marionette.CompositeView
       <td><%= expectedTime %></td>
       <td><%= fileName %></td>
       <td class="nowrap">
-        <a href="/annotations/CompoundTaskType/<%= id %>" title="view all finished tracings">
-          <i class="fa fa-random"></i>view
-        </a> <br />
         <a href="/taskTypes/<%= id %>/edit" >
           <i class="fa fa-pencil"></i>edit
         </a> <br />
-        <a href="/api/taskTypes/<%= id %>/download" >
-          <i class="fa fa-download"></i>download
-        </a> <br />
+        <% if (status.completed > 0) { %>
+          <a href="/annotations/CompoundTaskType/<%= id %>" title="view all finished tracings">
+            <i class="fa fa-random"></i>view
+          </a> <br />
+          <a href="/api/taskTypes/<%= id %>/download" >
+            <i class="fa fa-download"></i>download
+          </a> <br />
+        <% } %>
         <a href="#" class="delete">
           <i class="fa fa-trash-o"></i>delete
         </a>
@@ -106,3 +106,6 @@ class TaskTypeItemView extends Backbone.Marionette.CompositeView
     else
       @ui.detailsRow.addClass("hide")
       @ui.detailsToggle.removeClass("open")
+
+
+module.exports = TaskTypeItemView

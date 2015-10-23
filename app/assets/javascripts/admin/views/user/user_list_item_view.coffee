@@ -1,9 +1,7 @@
-### define
-underscore : _
-backbone.marionette : marionette
-admin/views/user/team_role_modal_view : TeamRoleModalView
-libs/template_helpers : TemplateHelpers
-###
+_                 = require("lodash")
+marionette        = require("backbone.marionette")
+TeamRoleModalView = require("admin/views/user/team_role_modal_view")
+TemplateHelpers   = require("libs/template_helpers")
 
 class UserListItemView extends Backbone.Marionette.ItemView
 
@@ -72,3 +70,4 @@ class UserListItemView extends Backbone.Marionette.ItemView
     #HACKY
     $("#team-role-modal").click()
 
+module.exports = UserListItemView

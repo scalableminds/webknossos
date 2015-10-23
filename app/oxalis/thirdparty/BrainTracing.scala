@@ -1,6 +1,5 @@
 package oxalis.thirdparty
 
-import com.scalableminds.util.security.SCrypt._
 import models.user.User
 import play.api.libs.ws.{WSAuthScheme, WS}
 import com.ning.http.client.Realm.AuthScheme
@@ -11,10 +10,8 @@ import play.api.Play
 import scala.concurrent.Promise
 import scala.concurrent.Future
 import scala.util._
-import play.api.libs.concurrent.Akka
-import models.annotation.{AnnotationLike, AnnotationDAO}
-import models.tracing.skeleton.SkeletonTracing
-import com.scalableminds.util.reactivemongo.{DBAccessContext, GlobalAccessContext}
+import models.annotation.AnnotationLike
+import com.scalableminds.util.reactivemongo.{DBAccessContext}
 
 object BrainTracing {
   val URL = "http://braintracing.org/"

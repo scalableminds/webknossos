@@ -1,7 +1,5 @@
-### define
-backbone.marionette : marionette
-libs/template_helpers : TemplateHelpers
-###
+marionette      = require("backbone.marionette")
+TemplateHelpers = require("libs/template_helpers")
 
 class DatasetAccessView extends Backbone.Marionette.ItemView
 
@@ -18,3 +16,5 @@ class DatasetAccessView extends Backbone.Marionette.ItemView
 
   templateHelpers :
     TemplateHelpers : TemplateHelpers
+
+module.exports = DatasetAccessView

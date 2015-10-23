@@ -1,7 +1,5 @@
-### define
-underscore : _
-backbone.marionette : marionette
-###
+_          = require("lodash")
+marionette = require("backbone.marionette")
 
 class SimpleTaskItemView extends Backbone.Marionette.CompositeView
 
@@ -40,9 +38,13 @@ class SimpleTaskItemView extends Backbone.Marionette.CompositeView
       Tracked Time: <%= formattedTracingTime %>
     </td>
     <td class="nowrap">
-      <a href="/api/tasks/<%= id %>/download" title="download all finished tracings">
-        <i class="fa fa-download"></i>
-        download
-      </a>
+      <% if (status.completed > 0) { %>
+        <a href="/api/tasks/<%= id %>/download" title="download all finished tracings">
+          <i class="fa fa-download"></i>
+          download
+        </a>
+      <% } %>
     </td>
   """)
+
+module.exports = SimpleTaskItemView

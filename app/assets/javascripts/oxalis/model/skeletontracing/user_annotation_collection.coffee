@@ -1,8 +1,6 @@
-### define
-underscore : _
-backbone : Backbone
-admin/models/pagination_collection : PaginationCollection
-###
+_                    = require("lodash")
+Backbone             = require("backbone")
+PaginationCollection = require("admin/models/pagination_collection")
 
 class UserAnnotationCollection extends PaginationCollection
 
@@ -19,3 +17,5 @@ class UserAnnotationCollection extends PaginationCollection
   parse : (respones) ->
 
     return respones.exploratoryAnnotations
+
+module.exports = UserAnnotationCollection

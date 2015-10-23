@@ -1,7 +1,5 @@
-### define
-jquery : $
-../../view : View
-###
+$    = require("jquery")
+View = require("../../view")
 
 class VolumeTracingView extends View
 
@@ -10,3 +8,7 @@ class VolumeTracingView extends View
     super(@model)
 
     $(".skeleton-controls").hide()
+    $(".skeleton-plane-controls").hide()
+    $(".skeleton-arbitrary-controls").hide()
+
+module.exports = VolumeTracingView

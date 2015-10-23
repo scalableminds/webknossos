@@ -1,25 +1,24 @@
-require [
-  "jquery"
-  "underscore"
-  "backbone"
-  "app"
-  "main/errorHandling"
-  "bootstrap"
-  "libs/core_ext"
-], ($, _, Backbone, app, ErrorHandling) ->
+$             = require("jquery")
+_             = require("lodash")
+Backbone      = require("backbone")
+app           = require("./app")
+ErrorHandling = require("./main/error_handling")
+require("bootstrap")
+require("./libs/core_ext")
 
-  ErrorHandling.initialize( throwAssertions: false, sendLocalErrors: false )
 
-  require ["main/router"], (Router) ->
+ErrorHandling.initialize( throwAssertions: false, sendLocalErrors: false )
 
-    app.addInitializer( ->
-      app.router = new Router()
-      Backbone.history.start( pushState : true )
-    )
+Router = require("./main/router")
 
-    $ ->
-      # show the bootstrap flash modal on load
-      $("#flashModal").modal("show")
+app.addInitializer( ->
+  app.router = new Router()
+  Backbone.history.start( pushState : true )
+)
 
-      app.start()
+$ ->
+  # show the bootstrap flash modal on load
+  $("#flashModal").modal("show")
+
+  app.start()
 

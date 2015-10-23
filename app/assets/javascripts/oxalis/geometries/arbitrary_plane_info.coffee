@@ -1,7 +1,3 @@
-### define
-###
-
-
 class ArbitraryPlaneInfo
 
   WIDTH : 110
@@ -36,7 +32,7 @@ class ArbitraryPlaneInfo
 
     { context, WIDTH, HEIGHT, ALPHA, LINE_WIDTH } = @
 
-    if isRecording
+    if @isRecording
       text = "TRACING"
       backColor = "rgba(95, 183, 105, #{ALPHA})"
     else
@@ -75,3 +71,6 @@ class ArbitraryPlaneInfo
     context.fill()  if fill
     context.fillStyle = "rgba(255, 255, 255, #{ALPHA})"
     context.fillText(text, WIDTH * 0.5, HEIGHT * 0.5 + 3)
+
+
+module.exports = ArbitraryPlaneInfo

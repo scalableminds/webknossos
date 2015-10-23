@@ -1,20 +1,18 @@
-### define
-backbone.marionette : marionette
-app : app
-./action_bar_view : ActionBarView
-./settings/tab_views/skeleton_plane_tab_view : SkeletonPlaneTabView
-./settings/tab_views/skeleton_arbitrary_tab_view : SkeletonArbitraryTabView
-./settings/tab_views/volume_tab_view : VolumeTabView
-./settings/tab_views/viewmode_tab_view : ViewmodeTabView
-./skeletontracing/skeletontracing_right_menu_view : SkeletonTracingRightMenuView
-./volumetracing/volumetracing_right_menu_view : VolumeTracingRightMenuView
-./viewmode/viewmode_right_menu_view : ViewmodeRightMenuView
-./tracing_view : TracingView
-oxalis/controller : OxalisController
-oxalis/model : OxalisModel
-oxalis/constants : Constants
-offcanvas : offcanvas
-###
+marionette                   = require("backbone.marionette")
+app                          = require("app")
+ActionBarView                = require("./action_bar_view")
+SkeletonPlaneTabView         = require("./settings/tab_views/skeleton_plane_tab_view")
+SkeletonArbitraryTabView     = require("./settings/tab_views/skeleton_arbitrary_tab_view")
+VolumeTabView                = require("./settings/tab_views/volume_tab_view")
+ViewmodeTabView              = require("./settings/tab_views/viewmode_tab_view")
+SkeletonTracingRightMenuView = require("./skeletontracing/skeletontracing_right_menu_view")
+VolumeTracingRightMenuView   = require("./volumetracing/volumetracing_right_menu_view")
+ViewmodeRightMenuView        = require("./viewmode/viewmode_right_menu_view")
+TracingView                  = require("./tracing_view")
+OxalisController             = require("oxalis/controller")
+OxalisModel                  = require("oxalis/model")
+Constants                    = require("oxalis/constants")
+offcanvas                    = require("offcanvas")
 
 class TracingLayoutView extends Backbone.Marionette.LayoutView
 
@@ -155,3 +153,5 @@ class TracingLayoutView extends Backbone.Marionette.LayoutView
   onDestroy : ->
 
     app.oxalis = null
+
+module.exports = TracingLayoutView

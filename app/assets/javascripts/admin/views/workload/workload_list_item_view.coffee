@@ -1,8 +1,6 @@
-### define
-underscore : _
-backbone.marionette : Marionette
-admin/models/workload/workload_collection : WorkloadCollection
-###
+_                  = require("lodash")
+Marionette         = require("backbone.marionette")
+WorkloadCollection = require("admin/models/workload/workload_collection")
 
 class WorkloadListItemView extends Backbone.Marionette.CompositeView
   tagName : "tr"
@@ -16,3 +14,5 @@ class WorkloadListItemView extends Backbone.Marionette.CompositeView
     projectsString: ->
       @projects.join(", ")
 
+
+module.exports = WorkloadListItemView

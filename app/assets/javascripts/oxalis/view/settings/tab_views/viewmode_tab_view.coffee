@@ -1,9 +1,7 @@
-### define
-oxalis/view/abstract_tab_view : AbstractTabView
-../settings_views/help_logo_view : HelpLogoView
-../settings_views/plane_user_settings_view : PlaneUserSettingsView
-../settings_views/dataset_settings_view : DatasetSettingsView
-###
+AbstractTabView       = require("oxalis/view/abstract_tab_view")
+HelpLogoView          = require("../settings_views/help_logo_view")
+PlaneUserSettingsView = require("../settings_views/plane_user_settings_view")
+DatasetSettingsView   = require("../settings_views/dataset_settings_view")
 
 class ViewmodeTabView extends AbstractTabView
 
@@ -28,3 +26,5 @@ class ViewmodeTabView extends AbstractTabView
         viewClass : PlaneUserSettingsView
       }
     ]
+
+module.exports = ViewmodeTabView

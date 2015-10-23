@@ -1,6 +1,4 @@
-### define
-backbone : Backbone
-###
+Backbone = require("backbone")
 
 # A helper class to wrap the Backbone.Paginator lib and set some sensible
 # defaults
@@ -10,6 +8,11 @@ backbone : Backbone
 # If you create
 
 class SortedCollection extends Backbone.Collection
+
+  sortByAttribute : (args...) ->
+
+    return @setSort(args...)
+
 
   setSort : (criteria, sortDirection) ->
 
@@ -34,3 +37,4 @@ class SortedCollection extends Backbone.Collection
       else
         return 0
 
+module.exports = SortedCollection

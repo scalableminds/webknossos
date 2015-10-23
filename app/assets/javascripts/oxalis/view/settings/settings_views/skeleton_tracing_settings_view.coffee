@@ -1,11 +1,9 @@
-### define
-backbone.marionette : marionette
-underscore : _
-./settings_view : SettingsView
-../category_views/tree_category_view : TreeCategoryView
-../category_views/node_category_view : NodeCategoryView
-../category_views/bounding_box_category_view : BoundingBoxCategory
-###
+marionette          = require("backbone.marionette")
+_                   = require("lodash")
+SettingsView        = require("./settings_view")
+TreeCategoryView    = require("../category_views/tree_category_view")
+NodeCategoryView    = require("../category_views/node_category_view")
+BoundingBoxCategory = require("../category_views/bounding_box_category_view")
 
 class SkeletonTracingSettingsView extends SettingsView
 
@@ -30,3 +28,5 @@ class SkeletonTracingSettingsView extends SettingsView
     "boundingBox-category" : ->
 
       return new BoundingBoxCategory({ @model })
+
+module.exports = SkeletonTracingSettingsView

@@ -1,9 +1,7 @@
-### define
-underscore : _
-backbone.marionette : marionette
-admin/models/dataset/dataset_collection : DatasetCollection
-views/spotlight_dataset_view : SpotlightDatasetView
-###
+_                    = require("lodash")
+marionette           = require("backbone.marionette")
+DatasetCollection    = require("admin/models/dataset/dataset_collection")
+SpotlightDatasetView = require("views/spotlight_dataset_view")
 
 class SpotlightDatasetListView extends Backbone.Marionette.CollectionView
 
@@ -11,11 +9,10 @@ class SpotlightDatasetListView extends Backbone.Marionette.CollectionView
 
   initialize : (options) ->
 
-    @collection.sortBy("created")
+    @collection.sortByAttribute("created")
 
     @collection.fetch(
-      silent : true
       data : "isActive=true"
-    ).done( =>
-      @collection.goTo(1)
     )
+
+module.exports = SpotlightDatasetListView

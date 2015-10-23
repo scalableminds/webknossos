@@ -1,8 +1,6 @@
-### define
-../setting_views/checkbox_setting_view : CheckboxSettingView
-../setting_views/slider_setting_view : SliderSettingView
-./category_view : CategoryView
-###
+CheckboxSettingView = require("../setting_views/checkbox_setting_view")
+SliderSettingView   = require("../setting_views/slider_setting_view")
+CategoryView        = require("./category_view")
 
 class ControlsCategoryView extends CategoryView
 
@@ -41,3 +39,5 @@ class ControlsCategoryView extends CategoryView
           max : 500
           step : 1
       )
+
+module.exports = ControlsCategoryView

@@ -1,6 +1,4 @@
-### define
-backbone.marionette : Marionette
-###
+Marionette = require("backbone.marionette")
 
 class SortTableBehavior extends Backbone.Marionette.Behavior
 
@@ -67,3 +65,5 @@ class SortTableBehavior extends Backbone.Marionette.Behavior
       return
     else
       @sortTable($elem, elemData.sort)
+
+module.exports = SortTableBehavior

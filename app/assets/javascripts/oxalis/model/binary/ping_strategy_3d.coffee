@@ -1,7 +1,5 @@
-### define
-./polyhedron_rasterizer : PolyhedronRasterizer
-m4x4 : M4x4
-###
+PolyhedronRasterizer = require("./polyhedron_rasterizer")
+MJS                  = require("mjs")
 
 class PingStrategy3d
 
@@ -81,7 +79,7 @@ class PingStrategy3d.DslSlow extends PingStrategy3d
     pullQueue = []
 
     #-----------
-    matrix1 = M4x4.clone(matrix)
+    matrix1 = MJS.M4x4.clone(matrix)
     @modifyMatrixForPoly matrix1, 1
 
     polyhedron1 = @pingPolyhedron1.transformAffine(matrix1)
@@ -97,7 +95,7 @@ class PingStrategy3d.DslSlow extends PingStrategy3d
       pullQueue.push(bucket: [bucket_x, bucket_y, bucket_z, 1], priority: 0)
 
     #-----------
-    matrix0 = M4x4.clone(matrix)
+    matrix0 = MJS.M4x4.clone(matrix)
     @modifyMatrixForPoly matrix0, 0
 
     polyhedron0 = @pingPolyhedron0.transformAffine(matrix0)
@@ -117,4 +115,4 @@ class PingStrategy3d.DslSlow extends PingStrategy3d
     #priority 0 is highests
 
 
-PingStrategy3d
+module.exports = PingStrategy3d

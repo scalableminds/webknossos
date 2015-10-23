@@ -1,7 +1,5 @@
-### define
-three : THREE
-./abstract_plane_material_factory : AbstractPlaneMaterialFactory
-###
+THREE                        = require("three")
+AbstractPlaneMaterialFactory = require("./abstract_plane_material_factory")
 
 class PlaneMaterialFactory extends AbstractPlaneMaterialFactory
 
@@ -139,6 +137,7 @@ class PlaneMaterialFactory extends AbstractPlaneMaterialFactory
             color_value = texture2D( <%= name %>_texture, vUv * repeat + offset).r;
             /* Brightness / Contrast Transformation */
             color_value = (color_value + <%= name %>_brightness - 0.5) * <%= name %>_contrast + 0.5;
+
             /* Multiply with color and weight */
             data_color += color_value * <%= name %>_weight * <%= name %>_color;
           <% }) %> ;
@@ -159,3 +158,5 @@ class PlaneMaterialFactory extends AbstractPlaneMaterialFactory
         isRgb : @model.binary["color"]?.targetBitDepth == 24
       }
     )
+
+module.exports = PlaneMaterialFactory

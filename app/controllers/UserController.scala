@@ -166,7 +166,7 @@ object UserController extends Controller with Secured with Dashboard with FoxImp
           _ <- ensureProperTeamAdministration(user, assignedTeams.zip(teams))
         } yield {
           val trimmedExperiences = experiences.map{ case (key, value) => key.trim -> value}.toMap
-          val updatedTeams = assignedTeams.filter(t => teamsWithUpdate.exists(_.team == t.team)) ++ teamsWithUpdate
+          val updatedTeams = assignedTeams.filter(t => teamsWithUpdate.exists(_.team == t.team)) ++ teamsWithoutUpdate
           UserService.update(user, firstName, lastName, verified, updatedTeams, trimmedExperiences)
           Ok
         }

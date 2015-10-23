@@ -8,6 +8,7 @@ import sbt.Task
 import scala.concurrent.Future
 import scala.concurrent.ExecutionContext.Implicits.global
 
+
 object Dependencies{
   val akkaVersion = "2.3.8"
   val reactiveVersion = "0.10.5.0.akka23"
@@ -63,7 +64,7 @@ object AssetCompilation {
   }
 
   import SettingsKeys._
-  import com.typesafe.sbt.packager.universal.Keys._
+  import com.typesafe.sbt.packager.Keys._
 
   def isWindowsSystem = System.getProperty("os.name").startsWith("Windows")
 
@@ -132,6 +133,7 @@ object ApplicationBuild extends Build {
   import Dependencies._
   import Resolvers._
   import AssetCompilation.SettingsKeys._
+  import com.typesafe.sbt.packager.Keys._
 
   val appName =  "oxalis"
 
@@ -192,8 +194,10 @@ object ApplicationBuild extends Build {
     // playAssetsDirectories += baseDirectory.value / "target" / "assets"
   )
 
+  lazy val dockerSettings = Seq()
+
   lazy val oxalis: Project = Project(appName, file("."))
     .enablePlugins(play.PlayScala)
-    .settings((oxalisSettings ++ AssetCompilation.settings):_*)
+    .settings((oxalisSettings ++ AssetCompilation.settings ++ dockerSettings):_*)
 }
 

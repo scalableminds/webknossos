@@ -1,6 +1,4 @@
-### define
-underscore : _
-###
+_ = require("lodash")
 
 templateFill = (str, params) ->
 
@@ -280,4 +278,4 @@ InterpolationCollector =
   )
 
 
-
+module.exports = InterpolationCollector

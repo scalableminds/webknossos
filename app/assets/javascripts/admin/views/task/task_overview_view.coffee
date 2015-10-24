@@ -1,16 +1,17 @@
-### define
-underscore : _
-backbone.marionette : marionette
-worker!libs/viz.js : VizWorker
-libs/pan_zoom_svg  : PanZoomSVG
-moment : moment
-routes : routes
-daterangepicker : DateRangePicker
-rangeslider : RangeSlider
-libs/utils : Utils
-admin/models/team/team_collection : TeamCollection
-admin/views/selection_view : SelectionView
-###
+_                = require("lodash")
+marionette       = require("backbone.marionette")
+VizWorker        = require("worker!libs/viz.js")
+PanZoomSVG       = require("libs/pan_zoom_svg")
+DispatchedWorker = require("libs/dispatched_worker")
+moment           = require("moment")
+routes           = require("routes")
+DateRangePicker  = require("daterangepicker")
+RangeSlider      = require("rangeslider")
+Utils            = require("libs/utils")
+TeamCollection   = require("admin/models/team/team_collection")
+SelectionView    = require("admin/views/selection_view")
+
+vizWorkerHandle = new DispatchedWorker(VizWorker)
 
 class TaskOverviewView extends Backbone.Marionette.LayoutView
 
@@ -228,7 +229,7 @@ class TaskOverviewView extends Backbone.Marionette.LayoutView
   paintGraph : ->
 
     @getSVG().done( (graphSource) =>
-      VizWorker.send(
+      vizWorkerHandle.send(
         source : graphSource
         format : "svg"
         layoutEngine : "neato"
@@ -428,3 +429,4 @@ class TaskOverviewView extends Backbone.Marionette.LayoutView
 
   edge : (a, b) -> @quoted(a) + "->" + @quoted(b)
 
+module.exports = TaskOverviewView

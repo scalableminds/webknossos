@@ -1,7 +1,5 @@
-### define
-./abstract_setting_view : AbstractSettingView
-underscore : _
-###
+AbstractSettingView = require("./abstract_setting_view")
+_                   = require("lodash")
 
 class NumberSettingView extends AbstractSettingView
 
@@ -46,3 +44,5 @@ class NumberSettingView extends AbstractSettingView
   update : (model, value) ->
 
     @ui.number.val(value)
+
+module.exports = NumberSettingView

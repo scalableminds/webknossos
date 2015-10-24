@@ -1,9 +1,7 @@
-### define
-underscore : _
-backbone.marionette : marionette
-admin/models/dataset/dataset_collection : DatasetCollection
-libs/template_helpers : TemplateHelpers
-###
+_                 = require("lodash")
+marionette        = require("backbone.marionette")
+DatasetCollection = require("admin/models/dataset/dataset_collection")
+TemplateHelpers   = require("libs/template_helpers")
 
 class SpotlightDatasetView extends Backbone.Marionette.ItemView
 
@@ -40,7 +38,11 @@ class SpotlightDatasetView extends Backbone.Marionette.ItemView
         <% if(description) { %>
           <p><%= description %></p>
         <% } else { %>
-          <p>Original data and segmentation</p>
+          <% if(hasSegmentation) { %>
+            <p>Original data and segmentation</p>
+          <% } else { %>
+            <p>Original data</p>
+          <% } %>
         <% } %>
       </div>
     </div>
@@ -68,3 +70,6 @@ class SpotlightDatasetView extends Backbone.Marionette.ItemView
     event.preventDefault()
     @ui.contentTypeInput.val(type)
     @ui.form.submit()
+
+
+module.exports = SpotlightDatasetView

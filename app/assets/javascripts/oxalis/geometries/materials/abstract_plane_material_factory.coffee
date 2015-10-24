@@ -1,8 +1,6 @@
-### define
-app : app
-three : THREE
-./abstract_material_factory : AbstractMaterialFactory
-###
+app                     = require("app")
+THREE                   = require("three")
+AbstractMaterialFactory = require("./abstract_material_factory")
 
 class AbstractPlaneMaterialFactory extends AbstractMaterialFactory
 
@@ -93,3 +91,5 @@ class AbstractPlaneMaterialFactory extends AbstractMaterialFactory
                         modelViewMatrix *
                         vec4(position,1.0); }
     """
+
+module.exports = AbstractPlaneMaterialFactory

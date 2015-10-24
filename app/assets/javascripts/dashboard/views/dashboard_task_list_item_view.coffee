@@ -1,8 +1,6 @@
-### define
-underscore : _
-backbone.marionette : marionette
-libs/toast : Toast
-###
+_          = require("lodash")
+marionette = require("backbone.marionette")
+Toast      = require("libs/toast")
 
 class DashboardTaskListItemView extends Backbone.Marionette.ItemView
 
@@ -69,3 +67,6 @@ class DashboardTaskListItemView extends Backbone.Marionette.ItemView
       @model.finish().fail( (response) ->
         Toast.message(response.messages)
       )
+
+
+module.exports = DashboardTaskListItemView

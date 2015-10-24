@@ -1,9 +1,7 @@
-### define
-underscore : _
-backbone.marionette : Marionette
-./project_list_item_view : ProjectListItemView
-./create_project_modal_view : CreateProjectModalView
-###
+_                      = require("lodash")
+Marionette             = require("backbone.marionette")
+ProjectListItemView    = require("./project_list_item_view")
+CreateProjectModalView = require("./create_project_modal_view")
 
 class ProjectsListView extends Backbone.Marionette.CompositeView
 
@@ -73,3 +71,4 @@ class ProjectsListView extends Backbone.Marionette.CompositeView
     @collection.lastPage() # newly inserted items are on the last page
     @render()
 
+module.exports = ProjectsListView

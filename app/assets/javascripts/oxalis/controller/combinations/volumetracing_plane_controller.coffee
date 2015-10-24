@@ -1,9 +1,7 @@
-### define
-underscore : _
-oxalis/constants : Constants
-../viewmodes/plane_controller : PlaneController
-../annotations/volumetracing_controller : VolumeTracingController
-###
+_                       = require("lodash")
+Constants               = require("oxalis/constants")
+PlaneController         = require("../viewmodes/plane_controller")
+VolumeTracingController = require("../annotations/volumetracing_controller")
 
 class VolumeTracingPlaneController extends PlaneController
 
@@ -115,3 +113,5 @@ class VolumeTracingPlaneController extends PlaneController
       bb.min[i] -= diff
       bb.max[i] += diff
     return bb
+
+module.exports = VolumeTracingPlaneController

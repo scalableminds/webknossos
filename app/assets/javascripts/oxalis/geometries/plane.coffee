@@ -1,12 +1,10 @@
-### define
-app : app
-../model : Model
-../view : View
-../model/dimensions : Dimensions
-../constants : constants
-three : THREE
-./materials/plane_material_factory : PlaneMaterialFactory
-###
+app                  = require("app")
+Model                = require("../model")
+View                 = require("../view")
+Dimensions           = require("../model/dimensions")
+constants            = require("../constants")
+THREE                = require("three")
+PlaneMaterialFactory = require("./materials/plane_material_factory")
 
 class Plane
 
@@ -153,3 +151,5 @@ class Plane
     @plane.material.setColorInterpolation(
       if enabled then THREE.LinearFilter else THREE.NearestFilter
     )
+
+module.exports = Plane

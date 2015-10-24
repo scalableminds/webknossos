@@ -1,8 +1,6 @@
-### define
-underscore : _
-backbone.marionette : marionette
-oxalis/constants : Constants
-###
+_          = require("lodash")
+marionette = require("backbone.marionette")
+Constants  = require("oxalis/constants")
 
 # TODO FINISH MERGE
 
@@ -60,3 +58,5 @@ class SkeletonActionsView extends Backbone.Marionette.ItemView
       constants.PLANE_XY, # xy viewport
       @model.flycam.getIntegerZoomStep()
     )
+
+module.exports = SkeletonActionsView

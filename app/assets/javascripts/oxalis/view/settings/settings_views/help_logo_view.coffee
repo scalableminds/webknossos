@@ -1,7 +1,5 @@
-### define
-underscore : _
-backbone.marionette : marionette
-###
+_          = require("lodash")
+marionette = require("backbone.marionette")
 
 class HelpLogoView extends Backbone.Marionette.ItemView
 
@@ -15,7 +13,6 @@ class HelpLogoView extends Backbone.Marionette.ItemView
         <tr><td>Left Mouse drag or Arrow keys</td><td>Move</td></tr>
         <tr><td>Right click drag in 3D View</td><td>Rotate 3D View</td></tr>
         <tr><td>K,L</td><td>Scale up/down viewports</td></tr>
-        <tr><td>Q</td><td>Fullscreen</td></tr>
       </tbody>
     </table>
     <div>
@@ -26,3 +23,4 @@ class HelpLogoView extends Backbone.Marionette.ItemView
     </div>
   """)
 
+module.exports = HelpLogoView

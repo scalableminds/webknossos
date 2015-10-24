@@ -1,8 +1,6 @@
-### define
-backbone : Backbone
-app : app
-libs/utils : Utils
-###
+Backbone = require("backbone")
+app      = require("app")
+Utils    = require("libs/utils")
 
 
 class BackboneToOxalisAdapterModel extends Backbone.Model
@@ -103,3 +101,5 @@ class BackboneToOxalisAdapterModel extends Backbone.Model
       @listenTo(@volumeTracingAdapter, "change:activeCellId", (model, id) ->
         @volumeTracingModel.setActiveCell(id)
       )
+
+module.exports = BackboneToOxalisAdapterModel

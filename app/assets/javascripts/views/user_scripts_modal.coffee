@@ -1,7 +1,5 @@
-### define
-underscore : _
-backbone.marionette : Marionette
-###
+_          = require("lodash")
+Marionette = require("backbone.marionette")
 
 class UserScriptsModalView extends Backbone.Marionette.ItemView
 
@@ -23,3 +21,5 @@ class UserScriptsModalView extends Backbone.Marionette.ItemView
       </div>
     </div>
   """)
+
+module.exports = UserScriptsModalView

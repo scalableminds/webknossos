@@ -1,8 +1,6 @@
-### define
-backbone.marionette : marionette
-app : app
-oxalis/constants : constants
-###
+marionette = require("backbone.marionette")
+app        = require("app")
+constants  = require("oxalis/constants")
 
 class ViewModesView extends Backbone.Marionette.ItemView
 
@@ -47,3 +45,4 @@ class ViewModesView extends Backbone.Marionette.ItemView
     buttonId = _.invert(@modeMapping)[mode]
     @$("##{buttonId}").addClass("btn-primary")
 
+module.exports = ViewModesView

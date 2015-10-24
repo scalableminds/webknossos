@@ -1,6 +1,4 @@
-### define
-mjs : MJS
-###
+MJS = require("mjs")
 
 # Constants
 HEAP_SIZE = 1 << 25
@@ -78,7 +76,7 @@ class PolyhedronRasterizer
   constructor : (@vertices, @indices) ->
 
     @calcExtent()
-    { min_x, min_y, min_z, delta_z, delta_y, shift_z } = @
+    { min_x, min_y, min_z, delta_z, delta_y, shift_z, vertices } = @
 
     @bufferLength = bufferLength = delta_z << shift_z
     @buffer = buffer = new Int32Array(HEAP, 0, bufferLength)
@@ -511,4 +509,4 @@ class PolyhedronRasterizer.Master
 
 
 
-PolyhedronRasterizer
+module.exports = PolyhedronRasterizer

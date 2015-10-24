@@ -1,7 +1,5 @@
-### define
-../dimensions : Dimensions
-libs/drawing : Drawing
-###
+Dimensions = require("../dimensions")
+Drawing    = require("libs/drawing")
 
 
 class VolumeLayer
@@ -227,3 +225,4 @@ class VolumeLayer
 
     return @get3DCoordinate([cx, cy])
 
+module.exports = VolumeLayer

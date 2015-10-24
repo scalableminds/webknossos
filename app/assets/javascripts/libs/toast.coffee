@@ -1,7 +1,5 @@
-### define
-jquery : $
-bootstrap : Bootstrap
-###
+$         = require("jquery")
+Bootstrap = require("bootstrap")
 
 $.fn.alertWithTimeout = (timeout = 3000) ->
 
@@ -95,3 +93,6 @@ Toast =
   delete : (type, message) ->
 
     getToasts(type, message).alert("close")
+
+
+module.exports = Toast

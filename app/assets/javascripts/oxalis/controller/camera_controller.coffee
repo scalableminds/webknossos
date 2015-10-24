@@ -1,12 +1,11 @@
-### define
-app : app
-backbone : Backbone
-../model : Model
-../view : View
-../model/dimensions : Dimensions
-../constants : constants
-three : THREE
-###
+app        = require("app")
+Backbone   = require("backbone")
+Model      = require("../model")
+View       = require("../view")
+Dimensions = require("../model/dimensions")
+constants  = require("../constants")
+THREE      = require("three")
+TWEEN      = require("tween")
 
 class CameraController
 
@@ -250,3 +249,6 @@ class CameraController
 
     @listenTo(@model.user, "change:clippingDistance", (model, value) -> @setClippingDistance(value))
     @listenTo(@model.user, "change:zoom", (model, value) -> @updateCamViewport())
+
+
+module.exports = CameraController

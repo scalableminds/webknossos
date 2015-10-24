@@ -1,12 +1,10 @@
-### define
-backbone : Backbone
-./volumecell : VolumeCell
-./volumelayer : VolumeLayer
-../dimensions : Dimensions
-../helpers/restriction_handler : RestrictionHandler
-libs/drawing : Drawing
-./volumetracing_statelogger : VolumeTracingStateLogger
-###
+Backbone                 = require("backbone")
+VolumeCell               = require("./volumecell")
+VolumeLayer              = require("./volumelayer")
+Dimensions               = require("../dimensions")
+RestrictionHandler       = require("../helpers/restriction_handler")
+Drawing                  = require("libs/drawing")
+VolumeTracingStateLogger = require("./volumetracing_statelogger")
 
 class VolumeTracing
 
@@ -129,3 +127,5 @@ class VolumeTracing
       @createCell(id)
 
     @trigger "newActiveCell", id
+
+module.exports = VolumeTracing

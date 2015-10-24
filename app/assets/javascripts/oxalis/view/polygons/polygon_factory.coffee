@@ -1,7 +1,5 @@
-### define
-./tlt : tlt
-underscore : _
-###
+tlt = require("./tlt")
+_   = require("lodash")
 
 # This class is capable of turning voxel data into triangles
 # Based on the marching cubes algorithm
@@ -136,3 +134,5 @@ class PolygonFactory
                           vertex[2] * @voxelsToSkip + z ] )
 
         triangleList.push(vertices)
+
+module.exports = PolygonFactory

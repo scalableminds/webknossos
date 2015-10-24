@@ -1,16 +1,15 @@
-### define
-app : app
-backbone : Backbone
-jquery : $
-underscore : _
-mjs : MJS
-libs/input : Input
-../../geometries/arbitrary_plane : ArbitraryPlane
-../../geometries/crosshair : Crosshair
-../../view/arbitrary_view : ArbitraryView
-../../geometries/arbitrary_plane_info : ArbitraryPlaneInfo
-../../constants : constants
-###
+app                = require("app")
+Backbone           = require("backbone")
+$                  = require("jquery")
+_                  = require("lodash")
+Input              = require("libs/input")
+ArbitraryPlane     = require("../../geometries/arbitrary_plane")
+Crosshair          = require("../../geometries/crosshair")
+ArbitraryView      = require("../../view/arbitrary_view")
+ArbitraryPlaneInfo = require("../../geometries/arbitrary_plane_info")
+constants          = require("../../constants")
+MJS                = require("mjs")
+
 
 class ArbitraryController
 
@@ -64,7 +63,7 @@ class ArbitraryController
 
     @input = _.extend({}, @input)
 
-    @crosshair = new Crosshair(@cam, model.user.get("crosshairSize"))
+    @crosshair = new Crosshair(@cam, @model.user.get("crosshairSize"))
     @arbitraryView.addGeometry(@crosshair)
 
     @listenTo(@model.user, "change:displayCrosshair", (model, value) ->
@@ -361,3 +360,6 @@ class ArbitraryController
     if vectorLength > 10
       @setWaypoint()
       @lastNodeMatrix = matrix
+
+
+module.exports = ArbitraryController

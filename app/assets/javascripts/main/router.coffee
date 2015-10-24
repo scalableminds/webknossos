@@ -1,9 +1,7 @@
-### define
-jquery : $
-underscore : _
-backbone : Backbone
-oxalis/constants : constants
-###
+$         = require("jquery")
+_         = require("lodash")
+Backbone  = require("backbone")
+constants = require("oxalis/constants")
 
 # #####
 # This Router contains all the routes for views that have been
@@ -78,8 +76,9 @@ class Router extends Backbone.Router
 
   tracingView : (type, id) ->
 
-
-    require ["oxalis/view/tracing_layout_view"], (TracingLayoutView) =>
+    # Webpack messes up `this` binding, so we'll do it explicitly
+    self = this
+    require(["oxalis/view/tracing_layout_view"], (TracingLayoutView) ->
 
       view = new TracingLayoutView(
         tracingType: type
@@ -87,19 +86,22 @@ class Router extends Backbone.Router
         controlMode : constants.CONTROL_MODE_TRACE
       )
       view.forcePageReload = true
-      @changeView(view)
+      self.changeView(view)
+    )
 
 
   tracingViewPublic : (id) ->
 
-    require ["oxalis/view/tracing_layout_view"], (TracingLayoutView) =>
+    self = this
+    require(["oxalis/view/tracing_layout_view"], (TracingLayoutView) ->
       view = new TracingLayoutView(
         tracingType: "View"
         tracingId : id
         controlMode : constants.CONTROL_MODE_VIEW
       )
       view.forcePageReload = true
-      @changeView(view)
+      self.changeView(view)
+    )
 
 
   projects : ->
@@ -136,88 +138,97 @@ class Router extends Backbone.Router
 
   taskTypes : ->
 
-    require ["admin/views/tasktype/task_type_view", "admin/models/tasktype/task_type_collection"], (TaskTypeView, TaskTypeCollection) =>
+    self = this
+    require(["admin/views/tasktype/task_type_view", "admin/models/tasktype/task_type_collection"], (TaskTypeView, TaskTypeCollection) ->
 
       collection = new TaskTypeCollection()
       view = new TaskTypeView(collection: collection)
-      @changeView(view)
-
-      @hideLoading()
+      self.changeView(view)
+      self.hideLoading()
+    )
 
 
   editTaskType : (taskTypeID) ->
 
-    require ["admin/views/tasktype/task_type_form_view", "admin/models/tasktype/task_type_model"], (TaskTypeFormView, TaskTypeModel) =>
+    self = this
+    require(["admin/views/tasktype/task_type_form_view", "admin/models/tasktype/task_type_model"], (TaskTypeFormView, TaskTypeModel) =>
 
       model = new TaskTypeModel({id : taskTypeID})
       view = new TaskTypeFormView(model : model, isEditForm : true)
-      @changeView(view)
+      self.changeView(view)
+      self.hideLoading()
+    )
 
-      @hideLoading()
 
+  dashboard : (userID) =>
 
-  dashboard : (userID) ->
-
-    require ["dashboard/views/dashboard_view", "dashboard/models/dashboard_model"], (DashboardView, DashboardModel) =>
+    self = this
+    require(["dashboard/views/dashboard_view", "dashboard/models/dashboard_model"], (DashboardView, DashboardModel) ->
 
       isAdminView = userID != null
 
       model = new DashboardModel({ userID, isAdminView : isAdminView })
       view = new DashboardView(model : model, isAdminView : isAdminView)
 
-      @changeView(view)
-      @listenTo(model, "sync", @hideLoading)
-
+      self.changeView(view)
+      self.listenTo(model, "sync", self.hideLoading)
+    )
 
   spotlight : ->
 
-    require(["views/spotlight_view", "admin/models/dataset/dataset_collection"], (SpotlightView, DatasetCollection) =>
+    self = this
+    require(["views/spotlight_view", "admin/models/dataset/dataset_collection"], (SpotlightView, DatasetCollection) ->
 
       collection = new DatasetCollection()
       view = new SpotlightView(model: collection)
 
-      @changeView(view)
-      @listenTo(collection, "sync", @hideLoading)
+      self.changeView(view)
+      self.listenTo(collection, "sync", self.hideLoading)
     )
 
 
   taskOverview : ->
 
-    require(["admin/views/task/task_overview_view", "admin/models/task/task_overview_model"], (TaskOverviewView, TaskOverviewModel) =>
+    self = this
+    require(["admin/views/task/task_overview_view", "admin/models/task/task_overview_model"], (TaskOverviewView, TaskOverviewModel) ->
 
       model = new TaskOverviewModel()
       view = new TaskOverviewView({model})
 
-      @changeView(view)
-      @listenTo(model, "sync", @hideLoading)
+      self.changeView(view)
+      self.listenTo(model, "sync", self.hideLoading)
     )
 
 
   showWithPagination : (view, collection, addButtonText=null) ->
 
-    require ["admin/admin"], (admin) =>
+    self = this
+    require(["admin/admin"], (admin) ->
 
       collection = new admin[collection]()
       view = new admin[view](collection: collection)
       paginationView = new admin.PaginationView({collection, addButtonText})
 
-      @changeView(paginationView, view)
-      @listenTo(collection, "sync", => @hideLoading())
+      self.changeView(paginationView, view)
+      self.listenTo(collection, "sync", => self.hideLoading())
+    )
 
 
   showAdminView : (view, collection) ->
 
-    require ["admin/admin"], (admin) =>
+    self = this
+    require(["admin/admin"], (admin) ->
 
       if collection
         collection = new admin[collection]()
         view = new admin[view](collection : collection)
-        @listenTo(collection, "sync", => @hideLoading())
+        self.listenTo(collection, "sync", => self.hideLoading())
       else
         view = new admin[view]()
-        setTimeout((=> @hideLoading()), 200)
+        setTimeout((=> self.hideLoading()), 200)
 
-      @changeView(view)
+      self.changeView(view)
+    )
 
 
   changeView : (views...) ->
@@ -248,8 +259,14 @@ class Router extends Backbone.Router
     for view in views
       @$mainContainer.append(view.render().el)
 
+    # Google Analytics
+    if ga?
+      ga("send", "pageview", location.pathname)
+
     return
 
   loadURL : (url) ->
 
     window.location = url
+
+module.exports = Router

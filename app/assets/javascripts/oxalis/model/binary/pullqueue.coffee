@@ -1,8 +1,6 @@
-### define
-./cube : Cube
-libs/array_buffer_socket : ArrayBufferSocket
-libs/request : Request
-###
+Cube              = require("./cube")
+ArrayBufferSocket = require("libs/array_buffer_socket")
+Request           = require("libs/request")
 
 class PullQueue
 
@@ -143,3 +141,4 @@ class PullQueue
       responseBufferType : Uint8Array
     )
 
+module.exports = PullQueue

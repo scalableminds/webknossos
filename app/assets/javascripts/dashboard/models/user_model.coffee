@@ -1,7 +1,5 @@
-### define
-underscore : _
-backbone : Backbone
-###
+_        = require("lodash")
+Backbone = require("backbone")
 
 class UserModel extends Backbone.Model
 
@@ -16,3 +14,5 @@ class UserModel extends Backbone.Model
   initialize : (options) ->
 
     @set("id", options.id)
+
+module.exports = UserModel

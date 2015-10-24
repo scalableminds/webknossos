@@ -1,9 +1,7 @@
-### define
-underscore : _
-backbone.marionette : marionette
-###
+_          = require("lodash")
+marionette = require("backbone.marionette")
 
-class ExperienceModal extends Backbone.Marionette.ItemView
+class ExperienceModalView extends Backbone.Marionette.ItemView
 
   tagName : "div"
   className : "modal fade"
@@ -22,7 +20,7 @@ class ExperienceModal extends Backbone.Marionette.ItemView
             </div>
           </div>
           <div class="form-group">
-            <label class="col-sm-2 control-label" for="experience-value">Value</label>
+            <label class="col-sm-2 control-label" for="experience-value">Level</label>
             <div class="col-sm-10">
               <input type="number" class="form-control" name="experience-value" value="0">
             </div>
@@ -132,3 +130,4 @@ class ExperienceModal extends Backbone.Marionette.ItemView
 
     @$el.modal("hide")
 
+module.exports = ExperienceModalView

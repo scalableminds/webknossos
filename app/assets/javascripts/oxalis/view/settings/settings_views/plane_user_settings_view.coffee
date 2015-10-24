@@ -1,12 +1,10 @@
-### define
-./settings_view : SettingsView
-../category_views/controls_category_view : ControlsCategoryView
-../category_views/viewport_category_view : ViewportCategoryView
-../category_views/tdview_category_view : TDViewCategoryView
-../category_views/isosurface_category_view : IsosurfaceCategoryView
-../category_views/segmentation_category_view : SegmentationCategoryView
-../category_views/abstracttree_category_view : AbstractTreeCategoryView
-###
+SettingsView             = require("./settings_view")
+ControlsCategoryView     = require("../category_views/controls_category_view")
+ViewportCategoryView     = require("../category_views/viewport_category_view")
+TDViewCategoryView       = require("../category_views/tdview_category_view")
+IsosurfaceCategoryView   = require("../category_views/isosurface_category_view")
+SegmentationCategoryView = require("../category_views/segmentation_category_view")
+AbstractTreeCategoryView = require("../category_views/abstracttree_category_view")
 
 class PlaneUserSettingsView extends SettingsView
 
@@ -47,3 +45,5 @@ class PlaneUserSettingsView extends SettingsView
     "abstracttree-category" : ->
 
       return new AbstractTreeCategoryView({ @model })
+
+module.exports = PlaneUserSettingsView

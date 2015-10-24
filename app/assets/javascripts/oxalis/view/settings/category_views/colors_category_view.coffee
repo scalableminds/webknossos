@@ -1,8 +1,6 @@
-### define
-../settings_views/layer_color_settings_view : LayerColorSettingsView
-../setting_views/button_setting_view : ButtonSettingView
-./category_view : CategoryView
-###
+LayerColorSettingsView = require("../settings_views/layer_color_settings_view")
+ButtonSettingView      = require("../setting_views/button_setting_view")
+CategoryView           = require("./category_view")
 
 class ColorsCategoryView extends CategoryView
 
@@ -35,3 +33,5 @@ class ColorsCategoryView extends CategoryView
         )
 
     super()
+
+module.exports = ColorsCategoryView

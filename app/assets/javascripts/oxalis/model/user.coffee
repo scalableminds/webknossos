@@ -1,8 +1,6 @@
-### define
-underscore : _
-backbone : Backbone
-app : app
-###
+_        = require("lodash")
+Backbone = require("backbone")
+app      = require("app")
 
 class User extends Backbone.Model
 
@@ -31,4 +29,4 @@ class User extends Backbone.Model
     for property of @attributes
       @trigger("change:#{property}", @, @get(property))
 
-
+module.exports = User

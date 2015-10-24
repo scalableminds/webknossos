@@ -1,5 +1,3 @@
-### define ###
-
 # This is a class with static methods and constants dealing with drawing
 # lines and filling polygons
 
@@ -8,7 +6,7 @@
 SMOOTH_LENGTH = 4
 SMOOTH_ALPHA  = 0.2
 
-Drawing =
+Drawing = {
 
   # Source: http://en.wikipedia.org/wiki/Bresenham's_line_algorithm#Simplification
   drawLine2d : (x, y, x1, y1, draw) ->
@@ -152,3 +150,7 @@ Drawing =
 
   setSmoothLength : (v) -> @smoothLength = v
   setAlpha : (v) -> @alpha = v
+
+}
+
+module.exports = Drawing

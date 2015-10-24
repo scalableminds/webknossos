@@ -1,6 +1,4 @@
-### define
-jquery : $
-###
+$ = require("jquery")
 
 Modal =
 
@@ -45,3 +43,5 @@ Modal =
   hide : ->
 
     $("#modal").modal("hide")
+
+module.exports = Modal

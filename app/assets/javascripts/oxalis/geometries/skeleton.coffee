@@ -1,12 +1,10 @@
-### define
-app : app
-backbone : Backbone
-../model : Model
-../model/dimensions : Dimensions
-../../libs/resizable_buffer : ResizableBuffer
-../constants : constants
-./tree : Tree
-###
+app             = require("app")
+Backbone        = require("backbone")
+Model           = require("../model")
+Dimensions      = require("../model/dimensions")
+ResizableBuffer = require("../../libs/resizable_buffer")
+constants       = require("../constants")
+Tree            = require("./tree")
 
 class Skeleton
 
@@ -242,3 +240,5 @@ class Skeleton
 
     for tree in @treeGeometries
       tree.setSizeAttenuation(sizeAttenuation)
+
+module.exports = Skeleton

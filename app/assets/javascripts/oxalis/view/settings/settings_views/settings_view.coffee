@@ -1,9 +1,7 @@
-### define
-libs/utils : Utils
-backbone.marionette : marionette
-backbone.subviews : subviews
-underscore : _
-###
+Utils      = require("libs/utils")
+marionette = require("backbone.marionette")
+subviews   = require("backbone.subviews")
+_          = require("lodash")
 
 class SettingsView extends Backbone.Marionette.ItemView
 
@@ -37,3 +35,5 @@ class SettingsView extends Backbone.Marionette.ItemView
   serializeData : ->
 
     return { @subviewCreators }
+
+module.exports = SettingsView

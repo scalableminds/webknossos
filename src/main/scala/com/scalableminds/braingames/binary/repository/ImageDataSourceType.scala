@@ -69,7 +69,7 @@ trait ImageDataSourceTypeHandler extends DataSourceTypeHandler {
 
   def fileExtension: String
 
-  lazy val IndexRxs = s"_([0-9]+)\\.${fileExtension}" r
+  lazy val IndexRxs = s"""_([0-9]+)\\.${fileExtension}"""r
 
   val DefaultScale = Scale(200, 200, 200)
 

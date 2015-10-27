@@ -1,9 +1,6 @@
-### define
-backbone : Backbone
-m4x4 : M4x4
-underscore : _
-three : THREE
-###
+_     = require("lodash")
+THREE = require("three")
+MJS   = require("mjs")
 
 updateMacro = (_this) ->
 
@@ -14,9 +11,9 @@ updateMacro = (_this) ->
 transformationWithDistanceMacro = (_this, transformationFn, transformationArg1, transformationArg2) ->
 
   { currentMatrix } = _this
-  M4x4.translate(_this.distanceVecNegative, currentMatrix, currentMatrix)
+  MJS.M4x4.translate(_this.distanceVecNegative, currentMatrix, currentMatrix)
   transformationFn.call(_this, transformationArg1, transformationArg2)
-  M4x4.translate(_this.distanceVecPositive, currentMatrix, currentMatrix)
+  MJS.M4x4.translate(_this.distanceVecPositive, currentMatrix, currentMatrix)
   updateMacro(_this)
 
 
@@ -38,8 +35,8 @@ class Flycam3d
     @scale = @calculateScaleValues(scale)
 
     @reset()
-    @distanceVecNegative = [0, 0, -distance]
-    @distanceVecPositive = [0, 0, distance]
+    @distanceVecNegative = [0, 0, -@distance]
+    @distanceVecPositive = [0, 0, @distance]
 
 
   calculateScaleValues : (scale) ->
@@ -63,7 +60,7 @@ class Flycam3d
       0, 0, 1, 0,
       0, 0, 0, 1
     ]
-    M4x4.scale(scale, m, m)
+    MJS.M4x4.scale(scale, m, m)
     @currentMatrix = m
 
     if position? and not resetPosition
@@ -114,24 +111,24 @@ class Flycam3d
 
   getMatrix : ->
 
-    M4x4.clone @currentMatrix
+    MJS.M4x4.clone @currentMatrix
 
 
   getZoomedMatrix : ->
 
     matrix = @getMatrix()
-    M4x4.scale1(@zoomStep, matrix, matrix)
+    MJS.M4x4.scale1(@zoomStep, matrix, matrix)
 
 
   setMatrix : (matrix) ->
 
-    @currentMatrix = M4x4.clone(matrix)
+    @currentMatrix = MJS.M4x4.clone(matrix)
     updateMacro(@)
 
 
   move : (vector) ->
 
-    M4x4.translate(vector, @currentMatrix, @currentMatrix)
+    MJS.M4x4.translate(vector, @currentMatrix, @currentMatrix)
     updateMacro(@)
 
 
@@ -185,7 +182,7 @@ class Flycam3d
 
   rotateOnAxisSilent : (angle, axis) ->
 
-    M4x4.rotate(angle, axis, @currentMatrix, @currentMatrix)
+    MJS.M4x4.rotate(angle, axis, @currentMatrix, @currentMatrix)
 
 
   rotateOnAxisDistance : (angle, axis) ->
@@ -261,7 +258,7 @@ class Flycam3d
 
     m = new THREE.Matrix4().lookAt(new THREE.Vector3(d...),
       new THREE.Vector3(0, 0, 0),
-      new THREE.Vector3(0, 1, 0)).elements
+      @getCurrentUpVector()).elements
 
     matrix2 = [
       1, 0, 0, 0,
@@ -270,10 +267,20 @@ class Flycam3d
       pos[0], pos[1], pos[2], 1
     ]
 
-    M4x4.scale(@scale, matrix2, matrix2)
+    MJS.M4x4.scale(@scale, matrix2, matrix2)
 
-    @currentMatrix = @convertToJsArray(M4x4.mul(matrix2, m))
+    @currentMatrix = @convertToJsArray(MJS.M4x4.mul(matrix2, m))
     updateMacro(@)
+
+
+  getCurrentUpVector : ->
+
+    currentRotation = new THREE.Matrix4()
+    currentRotation.extractRotation(new THREE.Matrix4(@currentMatrix...))
+    up = new THREE.Vector3(0, 1, 0)
+    up.applyMatrix4(currentRotation)
+
+    return up
 
 
   convertToJsArray : (floatXArray) ->
@@ -291,3 +298,5 @@ class Flycam3d
 
     matrix = @currentMatrix
     [ matrix[0], matrix[1], matrix[2] ]
+
+module.exports = Flycam3d

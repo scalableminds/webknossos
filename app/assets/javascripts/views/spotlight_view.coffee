@@ -1,10 +1,8 @@
-### define
-underscore : _
-backbone.marionette : marionette
-admin/models/dataset/dataset_collection : DatasetCollection
-./credits_view : CreditsView
-./spotlight_dataset_list_view : SpotlightDatasetListView
-###
+_                        = require("lodash")
+marionette               = require("backbone.marionette")
+DatasetCollection        = require("admin/models/dataset/dataset_collection")
+CreditsView              = require("./credits_view")
+SpotlightDatasetListView = require("./spotlight_dataset_list_view")
 
 class SpotlightView extends Backbone.Marionette.LayoutView
 
@@ -41,3 +39,5 @@ class SpotlightView extends Backbone.Marionette.LayoutView
     @datasets.show(@spotlightDatasetListView)
     @credits.show(@creditsView)
 
+
+module.exports = SpotlightView

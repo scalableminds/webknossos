@@ -1,8 +1,6 @@
-### define
-backbone.marionette : Marionette
-###
+Marionette = require("backbone.marionette")
 
-class HowerShowHideBehavior extends Backbone.Marionette.Behavior
+class HoverShowHideBehavior extends Backbone.Marionette.Behavior
 
   events :
     "mouseenter .hover-dynamic" : "mouseEnter"
@@ -29,3 +27,5 @@ class HowerShowHideBehavior extends Backbone.Marionette.Behavior
         @$(evt.target).parents(".hover-dynamic").find(".hover-show").addClass("hide")
         @$(evt.target).parents(".hover-dynamic").find(".hover-hide").removeClass("hide")
       , 200)
+
+module.exports = HoverShowHideBehavior

@@ -1,7 +1,5 @@
-### define
-jquery : $
-underscore : _
-###
+$ = require("jquery")
+_ = require("lodash")
 
 Utils =
 
@@ -101,3 +99,13 @@ Utils =
       rect.bottom <= (window.innerHeight || document.documentElement.clientHeight) &&
       rect.right <= (window.innerWidth || document.documentElement.clientWidth)
     )
+
+
+  # this is insecure and must not be used for security related functionality
+  isUserAdmin : (userTeams) ->
+
+    _.findIndex(userTeams, (team) ->
+      team.role.name == "admin"
+    ) >= 0
+
+module.exports = Utils

@@ -1,10 +1,8 @@
-### define
-jquery : $
-underscore : _
-libs/toast : Toast
-../modal : modal
-../../view : View
-###
+$     = require("jquery")
+_     = require("lodash")
+Toast = require("libs/toast")
+modal = require("../modal")
+View  = require("../../view")
 
 class SkeletonTracingView extends View
 
@@ -44,3 +42,5 @@ class SkeletonTracingView extends View
 
     modal.show("You just toggled the skeleton visibility. To toggle back, just hit the 1-Key.",
       [{id: "ok-button", label: "OK, Got it."}])
+
+module.exports = SkeletonTracingView

@@ -1,7 +1,5 @@
-### define
-three : THREE
-./abstract_plane_material_factory : AbstractPlaneMaterialFactory
-###
+THREE                        = require("three")
+AbstractPlaneMaterialFactory = require("./abstract_plane_material_factory")
 
 class ArbitraryPlaneMaterialFactory extends AbstractPlaneMaterialFactory
 
@@ -32,7 +30,7 @@ class ArbitraryPlaneMaterialFactory extends AbstractPlaneMaterialFactory
     return _.template(
       """
       uniform sampler2D <%= colorName %>_texture;
-      uniform float brightness, contrast;
+      uniform float <%= colorName %>_brightness, <%= colorName %>_contrast;
       varying vec2 vUv;
 
       void main()
@@ -43,7 +41,7 @@ class ArbitraryPlaneMaterialFactory extends AbstractPlaneMaterialFactory
         color_value = texture2D( <%= colorName %>_texture, vUv).r;
 
         /* Brightness / Contrast Transformation */
-        color_value = (color_value + brightness - 0.5) * contrast + 0.5;
+        color_value = (color_value + <%= colorName %>_brightness - 0.5) * <%= colorName %>_contrast + 0.5;
 
         /* Set frag color */
         gl_FragColor = vec4(color_value, color_value, color_value, 1.0);
@@ -51,3 +49,5 @@ class ArbitraryPlaneMaterialFactory extends AbstractPlaneMaterialFactory
       """
       { @colorName }
     )
+
+module.exports = ArbitraryPlaneMaterialFactory

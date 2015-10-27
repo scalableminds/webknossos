@@ -1,10 +1,8 @@
-### define
-underscore : _
-moment : moment
-libs/toast : Toast
-backbone.marionette : marionette
-admin/models/task/annotation_model : AnnotationModel
-###
+_               = require("lodash")
+moment          = require("moment")
+Toast           = require("libs/toast")
+marionette      = require("backbone.marionette")
+AnnotationModel = require("admin/models/task/annotation_model")
 
 class TaskAnnotationView extends Backbone.Marionette.ItemView
 
@@ -43,6 +41,9 @@ class TaskAnnotationView extends Backbone.Marionette.ItemView
     "click .isAjax" : "callAjax"
     "click .delete-annotation" : "deleteAnnotation"
 
+  modelEvents :
+    "change" : "render"
+
 
   # some actions are real links and some need to be send as ajax calls to the server
   callAjax : (evt) ->
@@ -53,8 +54,7 @@ class TaskAnnotationView extends Backbone.Marionette.ItemView
     ).done(
       (jsonData) =>
         if(jsonData)
-          @model = new AnnotationModel(jsonData)
-          @render()
+          @model.set(jsonData)
     ).always(
       (response) ->
         if(response)
@@ -67,5 +67,5 @@ class TaskAnnotationView extends Backbone.Marionette.ItemView
 
     if window.confirm("Do you really want to delete this annotation?")
       @model.destroy()
-      @render()
 
+module.exports = TaskAnnotationView

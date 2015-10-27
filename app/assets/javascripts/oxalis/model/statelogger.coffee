@@ -1,11 +1,9 @@
-### define
-backbone : Backbone
-underscore : _
-jquery : $
-app : app
-libs/request : Request
-libs/toast : Toast
-###
+Backbone = require("backbone")
+_        = require("lodash")
+$        = require("jquery")
+app      = require("app")
+Request  = require("libs/request")
+Toast    = require("libs/toast")
 
 class StateLogger
 
@@ -82,6 +80,9 @@ class StateLogger
 
   pushImpl : (notifyOnFailure) ->
 
+    if not @allowUpdate
+      return new $.Deferred().resolve().promise()
+
     @concatUpdateTracing()
     @committedDiffs = @committedDiffs.concat(@newDiffs)
     @newDiffs = []
@@ -112,13 +113,16 @@ class StateLogger
       try
         response = JSON.parse(responseObject.responseText)
       catch error
-        console.error "parsing failed."
+        console.error "parsing failed.", response
       if response?.messages?[0]?.error?
-        if response.messages[0].error == "tracing.dirtyState"
-          $(window).on(
-            "beforeunload"
-            =>return null)
-          alert("Sorry, but the current state is inconsistent. A reload is necessary.")
+        if response.messages[0].error == "annotation.dirtyState"
+          $(window).off("beforeunload")
+          alert("""
+            It seems that you edited the tracing simultaneously in different windows.
+            Editing should be done in a single window only.
+
+            In order to restore the current window, a reload is necessary.
+          """)
           window.location.reload()
 
     @push()
@@ -138,3 +142,5 @@ class StateLogger
     @trigger("pushDone")
     $('body').removeClass('save-error')
     @committedDiffs = []
+
+module.exports = StateLogger

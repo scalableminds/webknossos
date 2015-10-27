@@ -1,12 +1,13 @@
-### define
-jquery : $
-underscore : _
-###
+$                       = require("jquery")
+_                       = require("lodash")
+WrappedDispatchedWorker = require("libs/wrapped_dispatched_worker")
+GzipWorker              = require("worker!./gzip_worker")
 
 Request =
 
-  send : (options) ->
+  gzipWorker : new WrappedDispatchedWorker(GzipWorker)
 
+  send : (options) ->
     options.type ||= options.method
 
     if options.dataType == "blob" or options.dataType == "arraybuffer" or options.formData?
@@ -16,8 +17,6 @@ Request =
       return deferred.reject("No url defined").promise() unless options.url
 
       _.defaults(options, type: "GET", data: null)
-
-      options.type = "POST" if options.type == "GET" and options.data
 
       if options.data
         options.data = JSON.stringify(options.data)
@@ -29,6 +28,12 @@ Request =
           else
             options.data = new FormData()
             options.data.append(key, value) for key, value of options.formData
+        else if options.multipartData?
+          options.data = options.multipartData
+          options.contentType = "multipart/mixed; boundary=#{options.multipartBoundary}"
+
+      options.contentEncoding = "gzip" if options.compress and not options.contentEncoding
+      options.type = "POST" if options.type == "GET" and options.data
 
       xhr = new XMLHttpRequest()
       xhr.open options.type, options.url, true
@@ -45,7 +50,15 @@ Request =
       xhr.onerror = (err) ->
         deferred.reject(err)
 
-      xhr.send(options.data)
+      if options.compress
+        @gzipWorker.send(
+          method : "compress"
+          args : [options.data]
+        ).then( (buffer) =>
+          xhr.send(buffer)
+        )
+      else
+        xhr.send(options.data)
 
       if options.timeout?
         setTimeout(
@@ -62,3 +75,5 @@ Request =
         options.contentType = "application/json" unless options.contentType
 
       $.ajax(options)
+
+module.exports = Request

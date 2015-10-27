@@ -1,9 +1,7 @@
-### define
-underscore : _
-backbone.marionette : Marionette
-./project_list_item_view : ProjectListItemView
-./create_project_modal_view : CreateProjectModalView
-###
+_                      = require("lodash")
+Marionette             = require("backbone.marionette")
+ProjectListItemView    = require("./project_list_item_view")
+CreateProjectModalView = require("./create_project_modal_view")
 
 class ProjectsListView extends Backbone.Marionette.CompositeView
 
@@ -21,15 +19,6 @@ class ProjectsListView extends Backbone.Marionette.CompositeView
       </thead>
     </table>
     <div id="modal-wrapper"></div>
-    <div class="navbar navbar-default navbar-fixed-bottom">
-      <div class="navbar-form">
-        <div class="btn-group">
-          <a class="btn btn-primary show-modal" href="#">
-            <i class="fa fa-plus"></i>Create New Project
-          </a>
-        </div>
-      </div>
-    </div>
   """)
 
   className : "container wide project-administration"
@@ -38,7 +27,6 @@ class ProjectsListView extends Backbone.Marionette.CompositeView
 
   events :
     "click @ui.detailsToggle" : "toggleAllDetails"
-    "click .show-modal" : "showModal"
 
   ui :
     "modalWrapper" : "#modal-wrapper"
@@ -55,6 +43,7 @@ class ProjectsListView extends Backbone.Marionette.CompositeView
 
     @listenTo(app.vent, "paginationView:filter", @filterBySearch)
     @listenTo(app.vent, "CreateProjectModal:refresh", @refreshPagination)
+    @listenTo(app.vent, "paginationView:addElement", @showModal)
 
 
   filterBySearch : (searchQuery) ->
@@ -82,3 +71,4 @@ class ProjectsListView extends Backbone.Marionette.CompositeView
     @collection.lastPage() # newly inserted items are on the last page
     @render()
 
+module.exports = ProjectsListView

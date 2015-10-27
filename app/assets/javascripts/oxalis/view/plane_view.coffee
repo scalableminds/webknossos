@@ -1,14 +1,12 @@
-### define
-app : app
-backbone : Backbone
-jquery : $
-tween : TWEEN_LIB
-../model/dimensions : Dimensions
-../../libs/toast : Toast
-../constants : constants
-./modal : modal
-three : THREE
-###
+app        = require("app")
+Backbone   = require("backbone")
+$          = require("jquery")
+TWEEN      = require("tween")
+Dimensions = require("../model/dimensions")
+Toast      = require("../../libs/toast")
+constants  = require("../constants")
+modal      = require("./modal")
+THREE      = require("three")
 
 class PlaneView
 
@@ -264,3 +262,4 @@ class PlaneView
 
     @animate()
 
+module.exports = PlaneView

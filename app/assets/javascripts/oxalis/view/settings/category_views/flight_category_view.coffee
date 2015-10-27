@@ -1,9 +1,7 @@
-### define
-../setting_views/slider_setting_view : SliderSettingView
-../setting_views/checkbox_setting_view : CheckboxSettingView
-./category_view : CategoryView
-../../../constants : constants
-###
+SliderSettingView   = require("../setting_views/slider_setting_view")
+CheckboxSettingView = require("../setting_views/checkbox_setting_view")
+CategoryView        = require("./category_view")
+constants           = require("../../../constants")
 
 class FlightCategoryView extends CategoryView
 
@@ -93,3 +91,5 @@ class FlightCategoryView extends CategoryView
           name : "displayCrosshair"
           displayName : "Show Crosshair"
       )
+
+module.exports = FlightCategoryView

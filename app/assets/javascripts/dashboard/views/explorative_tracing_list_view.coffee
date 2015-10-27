@@ -1,12 +1,10 @@
-### define
-underscore : _
-backbone.marionette : marionette
-app : app
-dashboard/views/explorative_tracing_list_item_view : ExplorativeTracingListItemView
-libs/input : Input
-libs/toast : Toast
-libs/behaviors/sort_table_behavior : SortTableBehavior
-###
+_                              = require("lodash")
+marionette                     = require("backbone.marionette")
+app                            = require("app")
+ExplorativeTracingListItemView = require("dashboard/views/explorative_tracing_list_item_view")
+Input                          = require("libs/input")
+Toast                          = require("libs/toast")
+SortTableBehavior              = require("libs/behaviors/sort_table_behavior")
 
 class ExplorativeTracingListView extends Backbone.Marionette.CompositeView
 
@@ -37,7 +35,7 @@ class ExplorativeTracingListView extends Backbone.Marionette.CompositeView
           method="POST"
           class="form-inline inline-block">
           <select id="dataSetsSelect" name="dataSetName" class="form-control">
-            <% activeDataSets().forEach(function(d) { %>
+            <% dataSets.forEach(function(d) { %>
               <option value="<%= d.get("name") %>"> <%= d.get("name") %> </option>
             <% }) %>
           </select>
@@ -63,12 +61,12 @@ class ExplorativeTracingListView extends Backbone.Marionette.CompositeView
     <table class="table table-striped table-hover sortable-table" id="explorative-tasks">
       <thead>
         <tr>
-          <th> # </th>
-          <th> Name </th>
-          <th> DataSet </th>
+          <th data-sort="formattedHash"> # </th>
+          <th data-sort="name"> Name </th>
+          <th data-sort="dataSource.id"> DataSet </th>
           <th> Stats </th>
           <th> Type </th>
-          <th> Created </th>
+          <th data-sort="created"> Created </th>
           <th> </th>
         </tr>
       </thead>
@@ -96,8 +94,6 @@ class ExplorativeTracingListView extends Backbone.Marionette.CompositeView
     archiveAllButton : "#archive-all"
 
   templateHelpers : ->
-    activeDataSets : =>
-      return @datasetCollection.toArray()
     showArchiveAllButton: =>
       !@showArchivedAnnotations
     toggleViewArchivedText: =>
@@ -119,7 +115,7 @@ class ExplorativeTracingListView extends Backbone.Marionette.CompositeView
 
     @datasetCollection = @model.get("dataSets")
     @listenTo(@datasetCollection, "sync", @render)
-    @datasetCollection.fetch({silent : true, data : "isActive=true"})
+    @datasetCollection.fetch({data : "isActive=true"})
 
 
   getFilterForState: () ->
@@ -220,3 +216,6 @@ class ExplorativeTracingListView extends Backbone.Marionette.CompositeView
     @toggleState()
     @filter = @getFilterForState()
     @render()
+
+
+module.exports = ExplorativeTracingListView

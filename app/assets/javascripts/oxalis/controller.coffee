@@ -1,25 +1,24 @@
-### define
-jquery : $
-underscore : _
-app : app
-backbone : Backbone
-./controller/viewmodes/plane_controller : PlaneController
-./controller/annotations/skeletontracing_controller : SkeletonTracingController
-./controller/annotations/volumetracing_controller : VolumeTracingController
-./controller/combinations/skeletontracing_arbitrary_controller : SkeletonTracingArbitraryController
-./controller/combinations/skeletontracing_plane_controller : SkeletonTracingPlaneController
-./controller/combinations/volumetracing_plane_controller : VolumeTracingPlaneController
-./controller/scene_controller : SceneController
-./controller/url_manager : UrlManager
-./model : Model
-./view : View
-./view/skeletontracing/skeletontracing_view : SkeletonTracingView
-./view/volumetracing/volumetracing_view : VolumeTracingView
-../libs/input : Input
-../libs/toast : Toast
-./constants : constants
-stats : Stats
-###
+$                                  = require("jquery")
+_                                  = require("lodash")
+app                                = require("../app")
+Backbone                           = require("backbone")
+Stats                              = require("stats")
+PlaneController                    = require("./controller/viewmodes/plane_controller")
+SkeletonTracingController          = require("./controller/annotations/skeletontracing_controller")
+VolumeTracingController            = require("./controller/annotations/volumetracing_controller")
+SkeletonTracingArbitraryController = require("./controller/combinations/skeletontracing_arbitrary_controller")
+SkeletonTracingPlaneController     = require("./controller/combinations/skeletontracing_plane_controller")
+VolumeTracingPlaneController       = require("./controller/combinations/volumetracing_plane_controller")
+SceneController                    = require("./controller/scene_controller")
+UrlManager                         = require("./controller/url_manager")
+Model                              = require("./model")
+View                               = require("./view")
+SkeletonTracingView                = require("./view/skeletontracing/skeletontracing_view")
+VolumeTracingView                  = require("./view/volumetracing/volumetracing_view")
+constants                          = require("./constants")
+Input                              = require("../libs/input")
+Toast                              = require("../libs/toast")
+
 
 class Controller
 
@@ -77,8 +76,8 @@ class Controller
     for allowedMode in @model.settings.allowedModes
 
       @allowedModes.push switch allowedMode
-        when "oxalis" then constants.MODE_PLANE_TRACING
-        when "arbitrary" then constants.MODE_ARBITRARY
+        when "flight" then constants.MODE_PLANE_TRACING
+        when "oblique" then constants.MODE_ARBITRARY
         when "volume" then constants.MODE_VOLUME
 
     if constants.MODE_ARBITRARY in @allowedModes
@@ -169,9 +168,7 @@ class Controller
       event.preventDefault() if (event.which == 32 or event.which == 18 or 37 <= event.which <= 40) and !$(":focus").length
       return
 
-    keyboardControls = {
-      "q" : => @toggleFullScreen()
-    }
+    keyboardControls = {}
 
     if @model.get("controlMode") == constants.CONTROL_MODE_TRACE
       _.extend( keyboardControls, {
@@ -199,6 +196,7 @@ class Controller
       } )
 
     new Input.KeyboardNoLoop( keyboardControls )
+
 
   setMode : (newMode, force = false) ->
 
@@ -233,5 +231,12 @@ class Controller
 
   browserSupported : ->
 
-    # right now only webkit-based browsers are supported
-    return window.webkitURL
+    userAgentContains = (substring) ->
+        navigator.userAgent.indexOf(substring) >= 0
+
+    # allow everything but IE
+    isIE = userAgentContains("MSIE") or userAgentContains("Trident")
+    return not isIE
+
+
+module.exports = Controller

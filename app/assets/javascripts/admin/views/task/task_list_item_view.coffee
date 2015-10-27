@@ -1,10 +1,8 @@
-### define
-underscore : _
-app : app
-backbone.marionette : marionette
-admin/models/task/annotation_collection : AnnotationCollection
-./task_annotation_view: TaskAnnotationView
-###
+_                    = require("lodash")
+app                  = require("app")
+marionette           = require("backbone.marionette")
+AnnotationCollection = require("admin/models/task/annotation_collection")
+TaskAnnotationView   = require("./task_annotation_view")
 
 class TaskListItemView extends Backbone.Marionette.CompositeView
 
@@ -47,8 +45,10 @@ class TaskListItemView extends Backbone.Marionette.CompositeView
       </td>
       <td class="nowrap">
         <a href="/admin/tasks/<%= id %>/edit"><i class="fa fa-pencil"></i>edit</a><br>
-        <a href="/annotations/CompoundTask/<%= id %>" title="view all finished tracings"><i class="fa fa-random"></i>view</a><br>
-        <a href="/api/tasks/<%= id %>/download" title="download all finished tracings"><i class="fa fa-download"></i>download</a><br>
+        <% if (status.completed > 0) { %>
+          <a href="/annotations/CompoundTask/<%= id %>" title="view all finished tracings"><i class="fa fa-random"></i>view</a><br>
+          <a href="/api/tasks/<%= id %>/download" title="download all finished tracings"><i class="fa fa-download"></i>download</a><br>
+        <% } %>
         <a href="#" class="delete"><i class="fa fa-trash-o"></i>delete</a>
       </td>
     </tr>
@@ -106,3 +106,4 @@ class TaskListItemView extends Backbone.Marionette.CompositeView
       @ui.detailsRow.addClass("hide")
       @ui.detailsToggle.removeClass("open")
 
+module.exports = TaskListItemView

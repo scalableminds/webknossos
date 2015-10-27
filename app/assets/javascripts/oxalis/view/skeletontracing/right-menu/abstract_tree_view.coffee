@@ -1,8 +1,6 @@
-### define
-underscore : _
-app : app
-oxalis/view/skeletontracing/abstract_tree_renderer : AbstractTreeRenderer
-###
+_                    = require("lodash")
+app                  = require("app")
+AbstractTreeRenderer = require("oxalis/view/skeletontracing/abstract_tree_renderer")
 
 
 class AbstractTreeView extends Backbone.Marionette.ItemView
@@ -68,3 +66,6 @@ class AbstractTreeView extends Backbone.Marionette.ItemView
     if id
       @model.skeletonTracing.trigger("newActiveNode", id)
       @model.skeletonTracing.centerActiveNode()
+
+
+module.exports = AbstractTreeView

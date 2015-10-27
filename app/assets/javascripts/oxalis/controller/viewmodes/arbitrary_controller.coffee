@@ -1,16 +1,15 @@
-### define
-app : app
-backbone : Backbone
-jquery : $
-underscore : _
-libs/request : Request
-libs/input : Input
-../../geometries/arbitrary_plane : ArbitraryPlane
-../../geometries/crosshair : Crosshair
-../../view/arbitrary_view : ArbitraryView
-../../geometries/arbitrary_plane_info : ArbitraryPlaneInfo
-../../constants : constants
-###
+app                = require("app")
+Backbone           = require("backbone")
+$                  = require("jquery")
+_                  = require("lodash")
+Input              = require("libs/input")
+ArbitraryPlane     = require("../../geometries/arbitrary_plane")
+Crosshair          = require("../../geometries/crosshair")
+ArbitraryView      = require("../../view/arbitrary_view")
+ArbitraryPlaneInfo = require("../../geometries/arbitrary_plane_info")
+constants          = require("../../constants")
+MJS                = require("mjs")
+
 
 class ArbitraryController
 
@@ -64,7 +63,7 @@ class ArbitraryController
 
     @input = _.extend({}, @input)
 
-    @crosshair = new Crosshair(@cam, model.user.get("crosshairSize"))
+    @crosshair = new Crosshair(@cam, @model.user.get("crosshairSize"))
     @arbitraryView.addGeometry(@crosshair)
 
     @listenTo(@model.user, "change:displayCrosshair", (model, value) ->
@@ -75,6 +74,17 @@ class ArbitraryController
     @arbitraryView.draw()
 
     @stop()
+
+    # Toggle record
+    @setRecord(false)
+    $('#trace-mode-trace').on("click", =>
+      @setRecord(true)
+      $(":focus").blur()
+    )
+    $('#trace-mode-watch').on("click", =>
+      @setRecord(false)
+      $(":focus").blur()
+    )
 
 
   render : (forceUpdate, event) ->
@@ -170,12 +180,9 @@ class ArbitraryController
 
       #Recording of Waypoints
       "z" : =>
-        @record = true
-        @infoPlane.updateInfo(true)
-        @setWaypoint()
+        @setRecord(true)
       "u" : =>
-        @record = false
-        @infoPlane.updateInfo(false)
+        @setRecord(false)
       #Comments
       "n" : => @setActiveNode(@model.skeletonTracing.nextCommentNodeID(false), true)
       "p" : => @setActiveNode(@model.skeletonTracing.nextCommentNodeID(true), true)
@@ -189,6 +196,20 @@ class ArbitraryController
         @centerActiveNode()
 
     , -1)
+
+
+  setRecord : (@record) ->
+
+    $('#trace-mode button').removeClass("btn-primary")
+    if @record
+      $('#trace-mode-trace').addClass("btn-primary")
+    else
+      $('#trace-mode-watch').addClass("btn-primary")
+
+    @infoPlane.updateInfo(@record)
+    if @record
+      @setWaypoint()
+
 
   init : ->
 
@@ -334,8 +355,11 @@ class ArbitraryController
       lastNodeMatrix[13] - matrix[13]
       lastNodeMatrix[14] - matrix[14]
     ]
-    vectorLength = V3.length(vector)
+    vectorLength = MJS.V3.length(vector)
 
     if vectorLength > 10
       @setWaypoint()
       @lastNodeMatrix = matrix
+
+
+module.exports = ArbitraryController

@@ -1,8 +1,6 @@
-### define
-app : app
-./dimensions : Dimensions
-../constants : constants
-###
+app        = require("app")
+Dimensions = require("./dimensions")
+constants  = require("../constants")
 
 class Flycam2d
 
@@ -291,4 +289,4 @@ class Flycam2d
 
     app.vent.trigger("rerender")
 
-
+module.exports = Flycam2d

@@ -1,12 +1,10 @@
-### define
-app : app
-backbone : Backbone
-three : THREE
-stats : Stats
-jquery : $
-underscore : _
-../constants : constants
-###
+app       = require("app")
+Backbone  = require("backbone")
+THREE     = require("three")
+Stats     = require("stats")
+$         = require("jquery")
+_         = require("lodash")
+constants = require("../constants")
 
 class ArbitraryView
 
@@ -67,6 +65,7 @@ class ArbitraryView
         element.setVisibility = element.setVisibility || (v) -> this.visible = v
         element.setVisibility true
 
+      $('.skeleton-arbitrary-controls').show()
       $("#arbitrary-info-canvas").show()
 
       @resize()
@@ -85,9 +84,10 @@ class ArbitraryView
         element.setVisibility = element.setVisibility || (v) -> this.visible = v
         element.setVisibility false
 
-      $("#arbitrary-info-canvas").hide()
-
       $(window).off "resize", @resize
+
+      $('.skeleton-arbitrary-controls').hide()
+      $("#arbitrary-info-canvas").hide()
 
 
   animate : ->
@@ -188,3 +188,4 @@ class ArbitraryView
 
     @additionalInfo = info
 
+module.exports = ArbitraryView

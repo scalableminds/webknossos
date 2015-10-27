@@ -1,7 +1,5 @@
-### define
-./abstract_setting_view : AbstractSettingView
-underscore : _
-###
+AbstractSettingView = require("./abstract_setting_view")
+_                   = require("lodash")
 
 class TextInputSettingView extends AbstractSettingView
 
@@ -44,3 +42,5 @@ class TextInputSettingView extends AbstractSettingView
   update : (model, value) ->
 
     @ui.text.val(value)
+
+module.exports = TextInputSettingView

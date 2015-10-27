@@ -1,10 +1,8 @@
-### define
-oxalis/view/abstract_tab_view : AbstractTabView
-../settings_views/volume_tracing_settings_view : VolumeTracingSettingsView
-../settings_views/plane_user_settings_view : PlaneUserSettingsView
-../settings_views/dataset_settings_view : DatasetSettingsView
-oxalis/model/settings/backbone_to_oxalis_adapter_model : BackboneToOxalisAdapterModel
-###
+AbstractTabView              = require("oxalis/view/abstract_tab_view")
+VolumeTracingSettingsView    = require("../settings_views/volume_tracing_settings_view")
+PlaneUserSettingsView        = require("../settings_views/plane_user_settings_view")
+DatasetSettingsView          = require("../settings_views/dataset_settings_view")
+BackboneToOxalisAdapterModel = require("oxalis/model/settings/backbone_to_oxalis_adapter_model")
 
 class VolumeTabView extends AbstractTabView
 
@@ -32,3 +30,4 @@ class VolumeTabView extends AbstractTabView
       }
     ]
 
+module.exports = VolumeTabView

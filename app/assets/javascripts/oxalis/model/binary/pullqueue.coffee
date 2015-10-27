@@ -1,14 +1,13 @@
-### define
-./cube : Cube
-libs/array_buffer_socket : ArrayBufferSocket
-libs/request : Request
-###
+Cube              = require("./cube")
+Request           = require("libs/request")
+MultipartData     = require("libs/multipart_data")
 
 class PullQueue
 
   # Constants
   BATCH_LIMIT : 6
   BATCH_SIZE : 3
+  MESSAGE_TIMEOUT : 10000
 
   # For buckets that should be loaded immediately and
   # should never be removed from the queue
@@ -49,27 +48,27 @@ class PullQueue
 
     @batchCount++
 
-    requestData =
-      cubeSize: 1 << @cube.BUCKET_SIZE_P
-      buckets: []
+    requestData = new MultipartData()
 
     for bucket in batch
       @cube.requestBucketByZoomedAddress(bucket)
       zoomStep = bucket[3]
-      requestData.buckets.push(
-        position: [
-          bucket[0] << (zoomStep + @cube.BUCKET_SIZE_P)
-          bucket[1] << (zoomStep + @cube.BUCKET_SIZE_P)
-          bucket[2] << (zoomStep + @cube.BUCKET_SIZE_P)
-        ]
-        zoomStep: zoomStep
-        fourBit: @shouldRequestFourBit()
-      )
+
+      requestData.addPart(
+        "X-Bucket": JSON.stringify(
+          position: [
+            bucket[0] << (zoomStep + @cube.BUCKET_SIZE_P)
+            bucket[1] << (zoomStep + @cube.BUCKET_SIZE_P)
+            bucket[2] << (zoomStep + @cube.BUCKET_SIZE_P)
+          ]
+          zoomStep: zoomStep
+          cubeSize: 1 << @cube.BUCKET_SIZE_P
+          fourBit: @shouldRequestFourBit()))
 
     # Measuring the time until response arrives to select appropriate preloading strategy
     roundTripBeginTime = new Date()
 
-    @getLoadSocket().send(requestData)
+    @sendRequest(requestData)
       .then(
 
         (responseBuffer) =>
@@ -136,12 +135,22 @@ class PullQueue
     return @fourBit and @layer.category == "color"
 
 
-  getLoadSocket : ->
+  sendRequest : (multipartData) ->
 
-    if @socket? then @socket else @socket = new ArrayBufferSocket(
-      senders : [
-        new ArrayBufferSocket.XmlHttpRequest("#{@layer.url}/data/datasets/#{@dataSetName}/layers/#{@layer.name}/data?token=#{@layer.token}")
-      ]
-      responseBufferType : Uint8Array
+    multipartData.dataPromise().then((data) =>
+      Request.send(
+        multipartData : data
+        multipartBoundary : multipartData.boundary
+        url : "#{@layer.url}/data/datasets/#{@dataSetName}/layers/#{@layer.name}/data?token=#{@layer.token}"
+        dataType : 'arraybuffer'
+        timeout : @MESSAGE_TIMEOUT
+        compress : true
+      ).then (buffer) ->
+        if buffer
+          new Uint8Array(buffer)
+        else
+          []
     )
 
+
+module.exports = PullQueue

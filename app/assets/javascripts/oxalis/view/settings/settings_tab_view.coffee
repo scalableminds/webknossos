@@ -1,14 +1,12 @@
-### define
-underscore : _
-backbone.marionette : marionette
-./skeleton_tracing_settings_view : SkeletonTracingSettingsView
-./volume_tracing_settings_view : VolumeTracingSettingsView
-./plane_user_settings_view : PlaneUserSettingsView
-./arbitrary_user_settings_view : ArbitraryUserSettingsView
-./dataset_settings_view : DatasetSettingsView
-oxalis/constants : constants
-oxalis/model/settings/backbone_to_oxalis_adapter_model : BackboneToOxalisAdapterModel
-###
+_                            = require("lodash")
+marionette                   = require("backbone.marionette")
+SkeletonTracingSettingsView  = require("./skeleton_tracing_settings_view")
+VolumeTracingSettingsView    = require("./volume_tracing_settings_view")
+PlaneUserSettingsView        = require("./plane_user_settings_view")
+ArbitraryUserSettingsView    = require("./arbitrary_user_settings_view")
+DatasetSettingsView          = require("./dataset_settings_view")
+constants                    = require("oxalis/constants")
+BackboneToOxalisAdapterModel = require("oxalis/model/settings/backbone_to_oxalis_adapter_model")
 
 class SettingsTabView extends Backbone.Marionette.LayoutView
 
@@ -71,3 +69,6 @@ class SettingsTabView extends Backbone.Marionette.LayoutView
     else if mode == constants.MODE_VOLUME
       @userSettings.show(@planeUserSettingsView, preventDestroy : true)
       @tracingSettings.show(@volumeTracingSettingsView, preventDestroy : true)
+
+
+module.exports = SettingsTabView

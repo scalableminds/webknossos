@@ -1,10 +1,8 @@
-### define
-backbone : Backbone
-oxalis/constants : constants
-keyboard : KeyboardJS
-gamepad : GamepadJS
-jquery.mousewheel : JQ_MOUSE_WHEEL
-###
+Backbone       = require("backbone")
+constants      = require("oxalis/constants")
+KeyboardJS     = require("keyboard")
+GamepadJS      = require("gamepad")
+JQ_MOUSE_WHEEL = require("jquery.mousewheel")
 
 Input = {}
 # This is the main Input implementation.
@@ -501,4 +499,4 @@ class Input.Gamepad
       if Math.abs(value) > @DEADZONE then value / @SLOWDOWN_FACTOR else 0
 
 
-Input
+module.exports = Input

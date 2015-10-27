@@ -1,11 +1,9 @@
-### define
-underscore : _
-backbone.marionette : marionette
-app : app
-moment : moment
-./statistic_list_item_view : StatisticListItemView
-admin/models/statistic/user_statistic_collection : UserStatisticCollection
-###
+_                       = require("lodash")
+marionette              = require("backbone.marionette")
+app                     = require("app")
+moment                  = require("moment")
+StatisticListItemView   = require("./statistic_list_item_view")
+UserStatisticCollection = require("admin/models/statistic/user_statistic_collection")
 
 class StatisticListView extends Backbone.Marionette.CompositeView
 
@@ -66,3 +64,5 @@ class StatisticListView extends Backbone.Marionette.CompositeView
         limit : 5
       reset : true
     )
+
+module.exports = StatisticListView

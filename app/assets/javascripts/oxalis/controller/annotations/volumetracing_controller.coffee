@@ -1,10 +1,8 @@
-### define
-app : app
-backbone : Backbone
-oxalis/model/dimensions : Dimensions
-oxalis/constants : Constants
-libs/input : Input
-###
+app        = require("app")
+Backbone   = require("backbone")
+Dimensions = require("oxalis/model/dimensions")
+Constants  = require("oxalis/constants")
+Input      = require("libs/input")
 
 class VolumeTracingController
 
@@ -28,14 +26,15 @@ class VolumeTracingController
     _.extend(@, Backbone.Events)
     @listenTo(app.vent, "changeVolumeMode", @setControlMode)
 
+    $('#create-cell-button').on("click", =>
+      @model.volumeTracing.createCell()
+    )
+
     # Keyboard shortcuts
     new Input.KeyboardNoLoop(
       "w" : => @toggleControlMode()
       "1" : => @toggleControlMode()
     )
-
-
-    # Merging
 
     # no merging for now
     $("#btn-merge").hide()
@@ -125,3 +124,5 @@ class VolumeTracingController
   drawVolume : (pos) ->
 
     @model.volumeTracing.addToLayer(pos)
+
+module.exports = VolumeTracingController

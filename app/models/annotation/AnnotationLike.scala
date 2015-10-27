@@ -70,6 +70,8 @@ trait AnnotationLike extends AnnotationStatistics {
 
   def temporaryDuplicate(keepId: Boolean)(implicit ctx: DBAccessContext): Fox[TemporaryAnnotation]
 
+  def makeReadOnly: AnnotationLike
+
   def saveToDB(implicit ctx: DBAccessContext): Fox[AnnotationLike]
 }
 

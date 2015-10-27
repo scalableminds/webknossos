@@ -1,4 +1,4 @@
-### define ###
+
 
 class TracePoint
 
@@ -71,3 +71,4 @@ class TracePoint
         @neighbors.splice(i, 1)
         return
 
+module.exports = TracePoint

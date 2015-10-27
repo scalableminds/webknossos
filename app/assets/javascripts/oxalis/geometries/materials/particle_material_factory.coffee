@@ -1,8 +1,6 @@
-### define
-app : app
-three : THREE
-./abstract_material_factory : AbstractMaterialFactory
-###
+app                     = require("app")
+THREE                   = require("three")
+AbstractMaterialFactory = require("./abstract_material_factory")
 
 class ParticleMaterialFactory extends AbstractMaterialFactory
 
@@ -107,3 +105,5 @@ class ParticleMaterialFactory extends AbstractMaterialFactory
           gl_FragColor = vec4( vColor, 1.0 );
       }
     """
+
+module.exports = ParticleMaterialFactory

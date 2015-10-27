@@ -1,12 +1,12 @@
-### define
-underscore : _
-backbone : Backbone
-app : app
-###
+_        = require("lodash")
+Backbone = require("backbone")
+app      = require("app")
 
 class User extends Backbone.Model
 
   url : "/api/user/userConfiguration"
+  # To add any user setting, you must define default values in
+  # UserSettings.scala
 
 
   initialize : ->
@@ -29,4 +29,4 @@ class User extends Backbone.Model
     for property of @attributes
       @trigger("change:#{property}", @, @get(property))
 
-
+module.exports = User

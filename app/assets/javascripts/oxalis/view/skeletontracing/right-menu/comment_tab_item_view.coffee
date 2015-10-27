@@ -1,8 +1,6 @@
-### define
-backbone.marionette : Marionette
-app : app
-libs/utils : Utils
-###
+Marionette = require("backbone.marionette")
+app        = require("app")
+Utils      = require("libs/utils")
 
 class CommentTabItemView extends Backbone.Marionette.ItemView
 
@@ -44,4 +42,4 @@ class CommentTabItemView extends Backbone.Marionette.ItemView
 
     @parent.setActiveNode(@model)
 
-
+module.exports = CommentTabItemView

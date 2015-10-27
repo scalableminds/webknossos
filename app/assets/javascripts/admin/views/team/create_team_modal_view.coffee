@@ -1,11 +1,9 @@
-### define
-underscore : _
-app : app
-libs/toast : Toast
-admin/models/team/team_model : TeamModel
-admin/models/team/team_collection : TeamCollection
-admin/views/selection_view : SelectionView
-###
+_              = require("lodash")
+app            = require("app")
+Toast          = require("libs/toast")
+TeamModel      = require("admin/models/team/team_model")
+TeamCollection = require("admin/models/team/team_collection")
+SelectionView  = require("admin/views/selection_view")
 
 class CreateTeamModalView extends Backbone.Marionette.LayoutView
 
@@ -91,3 +89,4 @@ class CreateTeamModalView extends Backbone.Marionette.LayoutView
     )
     @$el.modal("hide")
 
+module.exports = CreateTeamModalView

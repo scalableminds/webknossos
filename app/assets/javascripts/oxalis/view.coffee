@@ -1,11 +1,9 @@
-### define
-jquery : $
-app : app
-libs/toast : Toast
-three : THREE
-./constants : constants
-./view/modal : modal
-###
+$         = require("jquery")
+app       = require("../app")
+Toast     = require("../libs/toast")
+THREE     = require("three")
+constants = require("./constants")
+modal     = require("./view/modal")
 
 class View
 
@@ -47,3 +45,5 @@ class View
   isWebGlSupported : ->
 
     return window.WebGLRenderingContext and document.createElement('canvas').getContext('experimental-webgl')
+
+module.exports = View

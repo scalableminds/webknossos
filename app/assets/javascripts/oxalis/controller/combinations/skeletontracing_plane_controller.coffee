@@ -1,11 +1,10 @@
-### define
-app : app
-three : THREE
-underscore : _
-../viewmodes/plane_controller : PlaneController
-../../constants : constants
-../../model/dimensions : dimensions
-###
+app             = require("app")
+THREE           = require("three")
+TWEEN           = require("tween")
+_               = require("lodash")
+PlaneController = require("../viewmodes/plane_controller")
+constants       = require("../../constants")
+dimensions      = require("../../model/dimensions")
 
 class SkeletonTracingPlaneController extends PlaneController
 
@@ -19,6 +18,18 @@ class SkeletonTracingPlaneController extends PlaneController
   constructor : (@model, stats, @view, @sceneController, @skeletonTracingController) ->
 
     super(@model, stats, @view, @sceneController)
+
+
+  start : ->
+
+    super()
+    $('.skeleton-plane-controls').show()
+
+
+  stop : ->
+
+    super()
+    $('.skeleton-plane-controls').hide()
 
 
   getPlaneMouseControls : (planeId) ->
@@ -193,3 +204,6 @@ class SkeletonTracingPlaneController extends PlaneController
         @flycam.setPosition(position)
       )
     .start()
+
+
+module.exports = SkeletonTracingPlaneController

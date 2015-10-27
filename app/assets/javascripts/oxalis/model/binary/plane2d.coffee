@@ -1,9 +1,7 @@
-### define
-backbone : Backbone
-./cube : Cube
-./pullqueue : Queue
-../dimensions : Dimensions
-###
+Backbone   = require("backbone")
+Cube       = require("./cube")
+Queue      = require("./pullqueue")
+Dimensions = require("../dimensions")
 
 # Macros
 # should work as normal functions, as well
@@ -315,16 +313,18 @@ class Plane2D
     maxZoomStepOffset = Math.max(0, Math.min(@cube.LOOKUP_DEPTH_UP,
       @cube.ZOOM_STEP_COUNT - zoomStep - 1
     ))
-    for i in [maxZoomStepOffset...0]
 
-      bucket = [
-        bucket_x >> i
-        bucket_y >> i
-        bucket_z >> i
-        zoomStep + i
-      ]
+    if zoomStep < @cube.ZOOM_STEP_COUNT
+      for i in [maxZoomStepOffset...0]
 
-      map[0] = bucket if @cube.isBucketLoadedByZoomedAddress(bucket)
+        bucket = [
+          bucket_x >> i
+          bucket_y >> i
+          bucket_z >> i
+          zoomStep + i
+        ]
+
+        map[0] = bucket if @cube.isBucketLoadedByZoomedAddress(bucket)
 
     if zoomStep and @enhanceRenderMap(map, 0, [bucket_x, bucket_y, bucket_z, zoomStep], map[0], @cube.LOOKUP_DEPTH_DOWN)
 
@@ -444,3 +444,5 @@ class Plane2D
         source.offset += source.rowDelta
 
     return
+
+module.exports = Plane2D

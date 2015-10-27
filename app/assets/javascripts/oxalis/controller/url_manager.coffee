@@ -1,8 +1,6 @@
-### define
-app : app
-backbone : backbone
-../constants : constants
-###
+app       = require("app")
+backbone  = require("backbone")
+constants = require("../constants")
 
 class UrlManager
 
@@ -79,3 +77,5 @@ class UrlManager
       state.push(@model.skeletonTracing.getActiveNodeId())
 
     return @baseUrl + "#" + state.join(",")
+
+module.exports = UrlManager

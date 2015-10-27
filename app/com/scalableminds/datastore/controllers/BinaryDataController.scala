@@ -32,6 +32,8 @@ import org.apache.commons.io.IOUtils
 import org.apache.commons.codec.binary.Base64
 import java.io.{PipedInputStream, PipedOutputStream}
 import play.api.libs.iteratee.Enumerator
+import com.scalableminds.datastore.models.DataProtocol
+import net.liftweb.common._
 
 object BinaryDataController
   extends BinaryDataReadController
@@ -106,21 +108,26 @@ trait BinaryDataReadController extends BinaryDataCommonController {
 
   /**
    * Handles a request for binary data via a HTTP POST. The content of the
-   * POST body is specified in the BinaryProtokoll.parseAjax functions.
+   * POST body is specified in the DataProtocol.readRequestParser BodyParser.
    */
 
-  def requestViaAjax(dataSetName: String, dataLayerName: String) = TokenSecuredAction(dataSetName, dataLayerName).async(parse.json) {
+  def requestViaAjax(dataSetName: String, dataLayerName: String) = TokenSecuredAction(dataSetName, dataLayerName).async(DataProtocol.readRequestParser) {
+    
+    def validateRequests(requests: Seq[Box[DataProtocolReadRequest]]) = {
+      requests.find(!_.isDefined) match {
+        case Some(Failure(msg, _, _)) => Failure(msg)
+        case Some(Empty) => Empty
+        case None => Full(requests.flatten.toList)
+      }
+    }
+
     implicit request =>
       AllowRemoteOrigin {
-        request.body.validate[BinaryDataRequest] match {
-          case JsSuccess(dataRequest, _) =>
-            for {
-              data <- requestData(dataSetName, dataLayerName, dataRequest)
-            } yield {
-              Ok(data)
-            }
-          case e: JsError =>
-            Future.successful(JsonBadRequest(JsError.toFlatJson(e)))
+        for {
+          requests <- validateRequests(request.body).toFox
+          data <- requestData(dataSetName, dataLayerName, requests)
+        } yield {
+          Ok(data)
         }
       }
   }
@@ -220,29 +227,29 @@ trait BinaryDataReadController extends BinaryDataCommonController {
   protected def requestData(
                              dataSetName: String,
                              dataLayerName: String,
-                             request: BinaryDataRequest): Fox[Array[Byte]] = {
+                             requests: List[DataProtocolReadRequest]): Fox[Array[Byte]] = {
 
-    def createDataRequestCollection(
+    def createRequestCollection(
                                              dataSource: DataSource,
                                              dataLayer: DataLayer,
-                                             request: BinaryDataRequest) = {
-      val dataRequests = request.buckets.map(b =>
+                                             requests: List[DataProtocolReadRequest]) = {
+      val dataRequests = requests.map(r =>
         DataStorePlugin.binaryDataService.createDataReadRequest(
           dataSource,
           dataLayer,
           None,
-          request.cubeSize,
-          request.cubeSize,
-          request.cubeSize,
-          b.position,
-          b.zoomStep,
-          DataRequestSettings(b.fourBit getOrElse false, false)))
+          r.cubeSize,
+          r.cubeSize,
+          r.cubeSize,
+          r.position,
+          r.zoomStep,
+          DataRequestSettings(r.fourBit getOrElse false, false)))
       DataRequestCollection(dataRequests)
     }
 
     for {
       (dataSource, dataLayer) <- getDataSourceAndDataLayer(dataSetName, dataLayerName)
-      dataRequestCollection = createDataRequestCollection(dataSource, dataLayer, request)
+      dataRequestCollection = createRequestCollection(dataSource, dataLayer, requests)
       data <- DataStorePlugin.binaryDataService.handleDataRequest(dataRequestCollection) ?~> "Data request couldn't get handled"
     } yield {
       data
@@ -347,37 +354,47 @@ trait BinaryDataReadController extends BinaryDataCommonController {
 
 trait BinaryDataWriteController extends BinaryDataCommonController {
 
-/*  protected def createDataWriteRequestCollection(
-                                                  dataSource: DataSource,
-                                                  dataLayer: DataLayer,
-                                                  cubeSize: Int,
-                                                  parsedRequest: ParsedRequestCollection[ParsedDataWriteRequest]) = {
-    val dataRequests = parsedRequest.requests.map(r =>
-      DataStorePlugin.binaryDataService.createDataWriteRequest(dataSource, dataLayer, None, cubeSize, r))
+  protected def createRequestCollection(
+       dataSource: DataSource,
+       dataLayer: DataLayer,
+       requests: List[DataProtocolWriteRequest]) = {
+    val dataRequests = requests.map(r =>
+      DataStorePlugin.binaryDataService.createDataWriteRequest(
+        dataSource,
+        dataLayer,
+        None,
+        r.header.cubeSize,
+        r.header.cubeSize,
+        r.header.cubeSize,
+        r.header.position,
+        r.header.zoomStep,
+        r.data))
     DataRequestCollection(dataRequests)
   }
-*/
 
-  /*protected def writeData(
-                           dataSource: DataSource,
-                           dataLayer: DataLayer,
-                           cubeSize: Int,
-                           parsedRequest: ParsedRequestCollection[ParsedDataWriteRequest]): Fox[Boolean] = {
-    val dataWriteRequestCollection = createDataWriteRequestCollection(dataSource, dataLayer, cubeSize, parsedRequest)
-    dataWriteRequestCollection.requests.map(VolumeUpdateService.store)
-    DataStorePlugin.binaryDataService.handleDataRequest(dataWriteRequestCollection).map(_ => true)
+  protected def validateRequests(requests: Seq[Box[DataProtocolWriteRequest]], dataLayer: DataLayer) = {
+    requests.foldLeft[Box[List[DataProtocolWriteRequest]]](Full(List.empty)){
+        case (Failure(msg, _, _), _) => Failure(msg)
+        case (_, Failure(msg, _, _)) => Failure(msg)
+        case (Empty, _) | (_, Empty) => Empty
+        case (Full(rs), Full(r)) =>
+          val expectedDataSize = r.header.cubeSize * r.header.cubeSize * r.header.cubeSize * dataLayer.bytesPerElement
+          if(r.data.size == expectedDataSize)
+              Full(rs :+ r)
+          else
+              Failure("Wrong payload length.")
+    }
   }
-*/
-  def writeViaAjax(dataSetName: String, dataLayerName: String, cubeSize: Int) = TokenSecuredAction(dataSetName, dataLayerName).async(parse.raw(1048576)) {
+
+  def writeViaAjax(dataSetName: String, dataLayerName: String) = TokenSecuredAction(dataSetName, dataLayerName).async(DataProtocol.writeRequestParser) {
     implicit request =>
       AllowRemoteOrigin {
         for {
           (dataSource, dataLayer) <- getDataSourceAndDataLayer(dataSetName, dataLayerName)
           if (dataLayer.isWritable)
-          payloadBodySize = cubeSize * cubeSize * cubeSize * dataLayer.bytesPerElement
-          //payload <- request.body.asBytes() ?~> Messages("binary.payload.notSupplied")
-          //requests <- BinaryProtocol.parseDataWriteRequests(payload, payloadBodySize, containsHandle = false) ?~> Messages("binary.payload.invalid")
-          //_ <- writeData(dataSource, dataLayer, cubeSize, requests)
+          requests <- validateRequests(request.body, dataLayer).toFox
+          dataRequestCollection = createRequestCollection(dataSource, dataLayer, requests)
+          _ <- DataStorePlugin.binaryDataService.handleDataRequest(dataRequestCollection) ?~> "Data request couldn't get handled"
         } yield Ok
       }
   }
@@ -385,19 +402,12 @@ trait BinaryDataWriteController extends BinaryDataCommonController {
 
 trait BinaryDataDownloadController extends BinaryDataCommonController {
 
-  private def ensureLayerIsSegmentation(dataLayer: DataLayer) = {
-    if (dataLayer.category == "segmentation")
-      Fox.successful(true)
-    else
-      Fox.empty
-  }
-
   def downloadDataLayer(dataSetName: String, dataLayerName: String) = TokenSecuredAction(dataSetName, dataLayerName).async {
     implicit request =>
       AllowRemoteOrigin {
         for {
           (dataSource, dataLayer) <- getDataSourceAndDataLayer(dataSetName, dataLayerName)
-          _ <- ensureLayerIsSegmentation(dataLayer) ?~> Messages("dataLayer.download.segmentationOnly")
+          if (dataLayer.category == "segmentation")
         } yield {
           val enumerator = Enumerator.outputStream { outputStream =>
             DataStorePlugin.binaryDataService.downloadDataLayer(dataLayer, outputStream)

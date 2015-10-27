@@ -4,7 +4,7 @@
 package com.scalableminds.datastore.models
 
 import com.scalableminds.braingames.binary.models.{UsableDataSource, DataSourceLike, DataSource}
-import play.api.Play
+import play.api.{Logger, Play}
 import com.scalableminds.datastore.DataStorePlugin
 
 case class DataSourceServer(serverAddress: String, serverId: String)
@@ -51,7 +51,9 @@ object DataSourceDAO extends TemporaryStore[DataSourceLike] {
   def findUsableByName(name: String): Option[UsableDataSource] =
     find(name).flatMap {
       case ds: UsableDataSource => Some(ds)
-      case _ => None
+      case r =>
+        Logger.warn(s"Couldn't find DS. Searched for: '$name'. Got: $r" )
+        None
     }
 
   def removeByName(name: String) =

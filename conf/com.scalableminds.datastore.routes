@@ -18,7 +18,13 @@ GET         /datasets/:dataSetName/layers/:dataLayerName/mappings/:dataLayerMapp
 GET         /datasets/:dataSetName/layers/:dataLayerName/mag:resolution/x:x/y:y/z:z/bucket.raw        com.scalableminds.datastore.controllers.BinaryDataController.requestViaKnossos(dataSetName: String, dataLayerName: String, resolution: Int, x: Int, y: Int, z: Int, cubeSize: Int)
 
 # Write data
-PUT         /datasets/:dataSetName/layers/:dataLayerName/data                                  com.scalableminds.datastore.controllers.BinaryDataController.writeViaAjax(dataSetName: String, dataLayerName: String, cubeSize: Int)
+PUT         /datasets/:dataSetName/layers/:dataLayerName/data                                  com.scalableminds.datastore.controllers.BinaryDataController.writeViaAjax(dataSetName: String, dataLayerName: String)
 
 # Volume download
 GET         /datasets/:dataSetName/layers/:dataLayerName/download                              com.scalableminds.datastore.controllers.BinaryDataController.downloadDataLayer(dataSetName: String, dataLayerName: String)
+
+# Segmentation Mapping
+GET         /datasets/:dataSetName/layers/:dataLayerName/mappings/:dataLayerMappingName        com.scalableminds.datastore.controllers.BinaryDataController.requestSegmentationMapping(dataSetName: String, dataLayerName: String, dataLayerMappingName: String)
+
+# Upload
+POST         /datasets/upload                                             com.scalableminds.datastore.controllers.DataSourceController.upload()

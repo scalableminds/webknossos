@@ -151,20 +151,24 @@ class JsonWSTunnel(
   private def initializeWS(): WebSock = {
     val w = new WebSock(self, serverUrl)
 
-    for {
-      keyStoreInfo <- webSocketSecurityInfo.keyStoreInfo
-    } {
-      val storetype = "JKS";
-
-      val ks = KeyStore.getInstance(storetype);
-      ks.load(new FileInputStream(keyStoreInfo.keyStore), keyStoreInfo.keyStorePassword.toCharArray());
-
-      val tmf = TrustManagerFactory.getInstance("SunX509");
-      tmf.init(ks);
-
+    if(webSocketSecurityInfo.secured){
       val sslContext = SSLContext.getInstance("TLS");
-      sslContext.init(null, tmf.getTrustManagers(), null);
+      webSocketSecurityInfo.keyStoreInfo.map{keyStoreInfo =>
+        //load keystore for self signed certificate
+        val storetype = "JKS";
 
+        val ks = KeyStore.getInstance(storetype);
+        ks.load(new FileInputStream(keyStoreInfo.keyStore), keyStoreInfo.keyStorePassword.toCharArray());
+
+        val tmf = TrustManagerFactory.getInstance("SunX509");
+        tmf.init(ks);
+        tmf
+      } match {
+        case Some(tmf) =>
+          sslContext.init(null, tmf.getTrustManagers, null);
+        case _ =>
+          sslContext.init(null, null, null);
+      }
       w.setWebSocketFactory(new DefaultSSLWebSocketClientFactory(sslContext));
     }
     w

@@ -460,19 +460,16 @@ class SkeletonTracing
 
   shuffleTreeColor : (tree) ->
 
-    return if @restrictionHandler.handleUpdate()
-
     tree = @activeTree unless tree
     tree.color = @getNewTreeColor()
 
-    @stateLogger.updateTree(tree)
+    if @restrictionHandler.handleUpdate()
+      @stateLogger.updateTree(tree)
 
     @trigger("newTreeColor", tree.treeId)
 
 
   shuffleAllTreeColors : ->
-
-    return if @restrictionHandler.handleUpdate()
 
     for tree in @trees
       @shuffleTreeColor(tree)

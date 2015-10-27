@@ -1,7 +1,32 @@
+// Update to support new dataset settings
+
 // --- !Ups
-db.users.update({}, {$rename: {"configuration.settings": "userConfiguration.configuration"}}, {multi: true})
-db.users.update({}, {$unset: {"configuration": 0, "userConfiguration.configuration.brightnessContrastSettings": 0, "userConfiguration.configuration.fourBit": 0, "userConfiguration.configuration.quality": 0, "userConfiguration.configuration.interpolation": 0}, $set: {dataSetConfigurations: {}}}, {multi: true})
+db.users.find().forEach(function(elem){
+    settings = elem.configuration.settings.brightnessContrastSettings;
+    for(dataset in settings) {
+      if(dataset != "default") {
+        settings[dataset] = {color: settings[dataset]};
+      }
+    }
+    elem.configuration.settings.brightnessContrastColorSettings = elem.configuration.settings.brightnessContrastSettings;
+    delete elem.configuration.settings.brightnessContrastSettings;
+    db.users.save(elem);
+})
 
 // --- !Downs
-db.users.update({}, {$rename: {"userConfiguration.configuration": "configuration.settings"}}, {multi: true})
-db.users.update({}, {$unset: {dataSetConfigurations: 0, userConfiguration: 0}, $set: {"configuration.settings.brightnessContrastSettings": {"default": {brightness: 0, contrast: 1}, "st08x2": {brightness: 0, contrast: 2.4}, "07x2": {brightness: 0, contrast: 2.4}, "Cortex": {brightness: 55, contrast: 1}}, "configuration.settings.fourBit": false, "configuration.settings.quality": 0, "configuration.settings.interpolation": false}}, {multi: true})
+db.users.find().forEach(function(elem){
+    settings = elem.configuration.settings.brightnessContrastColorSettings;
+    for(dataset in settings) {
+      if(dataset != "default") {
+        keys = [];
+        for(key in settings[dataset]) {
+          keys.push(key);
+        }
+        settings[dataset] = settings[dataset][keys[0]];
+      }
+    }
+    elem.configuration.settings.brightnessContrastSettings = elem.configuration.settings.brightnessContrastColorSettings;
+    delete elem.configuration.settings.brightnessContrastColorSettings;
+    db.users.save(elem);
+})
+

@@ -1,9 +1,21 @@
+// Update to support new tracing modes
+
 // --- !Ups
-db.taskTypes.update({}, {$set: {"isActive": true}}, {multi: true})
-db.tasks.update({}, {$set: {"isActive": true}}, {multi: true})
-db.annotations.update({}, {$set: {"isActive": true}}, {multi: true})
+db.skeletons.find().forEach(function(elem){
+    modes = elem.settings.allowedModes;
+    if(~modes.indexOf("arbitrary"))
+      elem.settings.allowedModes = ["oblique", "flight"];
+    else
+      elem.settings.allowedModes = [];
+    db.skeletons.save(elem);
+})
 
 // --- !Downs
-db.taskTypes.update({}, {$unset: {"isActive": 0}}, {multi: true})
-db.tasks.update({}, {$unset: {"isActive": 0}}, {multi: true})
-db.annotations.update({}, {$unset: {"isActive": 0}}, {multi: true})
+db.skeletons.find().forEach(function(elem){
+    modes = elem.settings.allowedModes;
+    if((~modes.indexOf("oblique")) || (~modes.indexOf("flight")))
+      elem.settings.allowedModes = ["oxalis", "arbitrary"];
+    else
+      elem.settings.allowedModes = ["oxalis"];
+    db.skeletons.save(elem);
+});

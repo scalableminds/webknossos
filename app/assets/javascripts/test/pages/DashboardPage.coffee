@@ -1,28 +1,43 @@
 path = require 'path'
 waitForFile = require '../helpers/waitForFile'
-EC = protractor.ExpectedConditions
+Page = require './Page'
 
 
-class DashboardPage
+explorativeTab = '#tab-explorative'
+tasksTab = '#tab-tasks'
+tasks = '.tab-content tbody'
+newTaskButton = '#new-task-button'
+# coffeelint: disable=max_line_length
+downloadButton = '#explorative-tasks a[href="/annotations/Explorational/562b9336a6f09eba008c52bf/download"]'
+# coffeelint: enable=max_line_length
+
+class DashboardPage extends Page
   @SAMPLE_NML_PATH = 'testdata__explorational__sboy__8c52bf.nml'
 
   get: ->
     browser.get '/dashboard'
 
-  ### DOM OBJECTS ###
-  explorativeTab = element By.css '#tab-explorative'
-  # coffeelint: disable=max_line_length
-  downloadButton = element By.css '#explorative-tasks a[href="/annotations/Explorational/562b9336a6f09eba008c52bf/download"]'
-  # coffeelint: enable=max_line_length
-
   ### ACTIONS ###
   openExplorativeTab: ->
-    return @waitForTab()
-      .then (tab) -> tab.click()
+    return @clickElement explorativeTab
+
+  openTasksTab: ->
+    return @clickElement tasksTab
 
   clickDownloadButton: ->
-    return @waitForButton()
-      .then (btn) -> btn.click()
+    return @clickElement downloadButton
+
+  clickGetTaskButton: ->
+    return @clickElement newTaskButton
+
+  getTasks: ->
+    return @openTasksTab()
+      .then => @waitForSelector tasks
+      .then (tasks) -> tasks.$$('tr')
+
+  getNewTask: ->
+    return @openTasksTab()
+      .then => @clickGetTaskButton()
 
   downloadSampleNML: ->
     return @openExplorativeTab()
@@ -30,16 +45,6 @@ class DashboardPage
       .then => waitForFile @getSampleNMLPath()
 
   ### HELPERS ###
-  waitForTab: ->
-    isPresent = EC.visibilityOf explorativeTab
-    return browser.wait isPresent, 5000
-      .then -> return explorativeTab
-
-  waitForButton: ->
-    isPresent = EC.visibilityOf downloadButton
-    return browser.wait isPresent, 5000
-      .then -> return downloadButton
-
   getSampleNMLPath: ->
     return path.join(
       browser.params.DOWNLOAD_DIRECTORY

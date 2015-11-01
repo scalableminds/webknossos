@@ -1,40 +1,67 @@
+path = require 'path'
+rmdir = require './helpers/rimraf-promised'
+readFile = require './helpers/readFile-promised'
+waitForSelector = require './helpers/waitForSelector'
+DashboardPage = require './pages/DashboardPage'
 
-describe 'Dashboard View', ->
-  EC = protractor.ExpectedConditions
 
-  findTabs = ->
-    tabs = element(By.id('tabbable-dashboard'))
-    isVisible = EC.visibilityOf tabs
-
-    return browser.wait isVisible, 5000
-      .then -> return tabs
-
+describe 'Dashboard', ->
+  page = null
   beforeEach ->
-    browser.get '/dashboard'
+    page = new DashboardPage()
+    page.get()
 
-  it 'should have webKnossos page title', ->
-    expect(browser.getTitle()).toEqual('webKnossos')
+  describe 'Tasks', ->
+    it 'should open tasks', (done) ->
+      page.openTasksTab()
+        .then -> waitForSelector '.tab-content h3'
+        .then (title) ->
+          expect(title.getText()).toBe('Tasks')
+          done()
 
-  it 'should use gallery view by default', (done) ->
-    findTabs()
-      .then (tabs) ->
-        pagination = tabs.element(By.className('pagination'))
-        dataset = tabs.element(By.className('dataset-region'))
+    it 'should have no available tasks', (done) ->
+      page.openTasksTab()
+        .then -> page.getTasks()
+        .then (tasks) ->
+          expect(tasks.length).toBe(0)
+          done()
 
-        expect(pagination.isPresent()).toBeFalse
-        expect(dataset.isPresent()).toBeFalse
-        done()
+    it 'should get a new task', (done) ->
+      page.getNewTask()
+        .then -> page.getTasks()
+        .then (tasks) ->
+          # TODO: load a new task and assert a task to be present
+          # exepect(tasks.length).toBe(1)
+          done()
 
-  it 'should show "advanced view" button by default', (done) ->
-    advancedViewButton = element(By.id('showAdvancedView'))
-    galleryViewButton = element(By.id('showGalleryView'))
-    isVisible = EC.and(
-      EC.visibilityOf advancedViewButton,
-      EC.visibilityOf galleryViewButton
-    )
+  describe 'NML Download', ->
+    it 'should download an NML file', (done) ->
+      testFile = path.join(
+        __dirname,
+        'testFiles',
+        DashboardPage.SAMPLE_NML_PATH
+      )
 
-    browser.wait isVisible, 5000
-      .then ->
-        expect(advancedViewButton.isDisplayed()).toBeTruthy
-        expect(galleryViewButton.isDisplayed()).toBeFalse
-        done()
+      # remove tmp dir
+      rmdir browser.params.DOWNLOAD_DIRECTORY
+        # download file
+        .then -> return page.downloadSampleNML()
+
+        # read files for comparison
+        .then -> return readFile page.getSampleNMLPath()
+        .then (fileContentDownload) ->
+          return readFile testFile
+            .then (fileContentCheck) ->
+              return { fileContentDownload, fileContentCheck }
+
+        # compare files
+        .then ({ fileContentCheck, fileContentDownload }) ->
+          expect(fileContentDownload).toBeTruthy()
+          expect(fileContentCheck).toBeTruthy()
+
+          # this expect will crash the app if file contents do not exist
+          if (fileContentCheck && fileContentDownload)
+            expect(fileContentDownload.equals(fileContentCheck)).toBeTruthy()
+
+          done()
+        .catch (error) -> throw error

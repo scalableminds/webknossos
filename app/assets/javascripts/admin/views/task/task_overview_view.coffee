@@ -1,8 +1,6 @@
 ### define
 underscore : _
 backbone.marionette : marionette
-worker!libs/viz.js : VizWorker
-libs/pan_zoom_svg  : PanZoomSVG
 moment : moment
 routes : routes
 daterangepicker : DateRangePicker
@@ -10,6 +8,8 @@ rangeslider : RangeSlider
 libs/utils : Utils
 admin/models/team/team_collection : TeamCollection
 admin/views/selection_view : SelectionView
+d3 : d3
+cola : cola
 ###
 
 class TaskOverviewView extends Backbone.Marionette.LayoutView
@@ -34,12 +34,12 @@ class TaskOverviewView extends Backbone.Marionette.LayoutView
         <input type="text" class="form-control" id="dateRangeInput"/>
         <label for="rangeSliderInput">Hour range</label>
         <div id="rangeSliderInput"></div>
+        <div id="colorLegend"></div>
         <div id="rangeSliderLabels">
           <span id="rangeSliderLabel1"/>
           <span id="rangeSliderLabel2"/>
           <span id="rangeSliderLabel3"/>
         </div>
-        <div id="colorLegend"></div>
       </div>
 
       <div class="graph well">
@@ -74,6 +74,13 @@ class TaskOverviewView extends Backbone.Marionette.LayoutView
   # These values will be configured by the user, using the RangeSlider
   chosenMinHours : 0
   chosenMaxHours : 24 * 356 * 100
+
+  # Graph constants
+  FORCE_LAYOUT_TIMEOUT : 10000
+  RECT_HEIGHT : 30
+  TEXT_PADDING : 10
+  OPTIONS_MARGIN : 30
+  FUTURE_TASK_EDGE_COLOR : "#3091E6"
 
 
   initialize : ->
@@ -137,7 +144,8 @@ class TaskOverviewView extends Backbone.Marionette.LayoutView
     @initializeDateRangePicker()
     @renderTeamDropdown()
     @renderRangeSlider()
-    @paintGraph()
+    _.defer(@buildGraph.bind(@))
+    @paintGraphDebounced()
 
 
   initializeDateRangePicker : ->
@@ -150,7 +158,7 @@ class TaskOverviewView extends Backbone.Marionette.LayoutView
       opens: "left"
     (start, end, label) =>
       @fetchData(start.valueOf(), end.valueOf())
-      @paintGraph()
+      @paintGraphDebounced()
     )
     return
 
@@ -227,27 +235,8 @@ class TaskOverviewView extends Backbone.Marionette.LayoutView
 
   paintGraph : ->
 
-    @getSVG().done( (graphSource) =>
-      VizWorker.send(
-        source : graphSource
-        format : "svg"
-        layoutEngine : "neato"
-      ).then(
-        (svgResult) =>
+    @renderSVG()
 
-          # remove error messages
-          startIndex = svgResult.indexOf("<?xml")
-          svgResult = svgResult.slice(startIndex, svgResult.length - 1)
-
-          @ui.graph.html(svgResult)
-
-          @setupPopovers()
-          @setupPanZoom()
-
-        (error) =>
-          @ui.graph.html("<i class=\"fa fa-warning-sign\"></i>#{error.replace(/\n/g,"<br>")}")
-      )
-    )
 
   selectionChanged : ->
 
@@ -272,11 +261,12 @@ class TaskOverviewView extends Backbone.Marionette.LayoutView
     return isWithinWorkingHours and isInTeam
 
 
-  getSVG : ->
+  renderSVG : ->
 
     @fetchPromise.then( =>
 
       { userInfos, taskTypes, projects } = @model.attributes
+      @userInfos = userInfos
       # move workingTime to user object and convert to hours
       userInfos.map( (userInfo) => userInfo.user.workingHours = Utils.roundTo(userInfo.workingTime / @MS_PER_HOUR, 2) )
       # extract users and add full names
@@ -284,101 +274,205 @@ class TaskOverviewView extends Backbone.Marionette.LayoutView
       @users.map( (user) -> user.name = user.firstName + " " + user.lastName )
 
       nodes = @buildNodes(taskTypes, projects)
-      edges = @buildEdges(userInfos)
+      edges = @buildEdges(userInfos, nodes)
 
-      @buildGraph(nodes, edges)
+      @updateGraph(nodes, edges)
     )
 
 
-  buildGraph : (nodes, edges) ->
+  buildGraph : ->
 
-    svgHead = """
-              digraph G {
-                size="16,9";
-                overlap=false;
-                graph [ bgcolor="transparent" ];
-                node  [ fontname="Helvetica, Arial, sans-serif",
-                        fontsize=10.5,
-                        style=filled,
-                        fillcolor="#ffffff",
-                        pencolor="black"
-                      ];
-              """
-    svgTail = "}"
-    svgHead + nodes + edges + svgTail
+    width  = $('.graph').width() - @OPTIONS_MARGIN - $('.overview-options').width()
+    height = $(window).height() - 50 - $(".graph").offset().top
+
+    @svg = d3.select('.graph')
+      .html("")
+      .append('svg')
+      .attr('width', width)
+      .attr('height', height)
+
+    @container = @svg.append("g")
+
+    @svgEdges = @container.append('svg:g').selectAll('path')
+    @svgNodes = @container.append('svg:g').selectAll('g')
+
+    @setupPanAndZoom()
+
+    return
+
+
+  updateGraph : (nodes, edges) ->
+
+    # initialize nodes with random position as this yields faster results
+    nodes.forEach( (n) =>
+      n.x = Math.random() * @svg.attr("width")
+      n.y = Math.random() * @svg.attr("height")
+    )
+
+    RECT_HEIGHT = @RECT_HEIGHT
+
+    # stop existing force layout and cancel its timeout
+    @force.stop() if @force
+    clearTimeout(@forceTimeout) if @forceTimeout
+
+    # clear old selection data and svg elements
+    @svgEdges.remove()
+    @svgEdges = @svgEdges.data([])
+    @svgNodes.remove()
+    @svgNodes = @svgNodes.data([])
+
+    # append the svg path elements
+    @svgEdges = @svgEdges.data(edges)
+    @svgEdges.enter().append('svg:path')
+      .attr('class', 'link')
+      .attr('stroke', (d) -> d.color )
+      .attr('stroke-dasharray', (d) => if d.color is @FUTURE_TASK_EDGE_COLOR then '10,10')
+
+    # append the container for the svg node elements
+    @svgNodes = @svgNodes.data(nodes, (d) -> d.id)
+    svgNodesContainer = @svgNodes.enter().append('svg:g')
+    svgNodesContainer.attr('id', (d) -> d.id )
+
+    # add the label to the svg node container
+    _this = @
+    svgNodesContainer.append('svg:text')
+      .attr('class', 'id')
+      .text( (d) -> d.text )
+      .each( (d) -> 
+        d.width = @getBBox().width + _this.TEXT_PADDING
+        d.height = RECT_HEIGHT
+      )
+      .attr('x', (d) -> d.width / 2 )
+      .attr('y', RECT_HEIGHT / 2)
+
+    # add the rectangle to the svg node container
+    svgNodesContainer.insert('svg:rect', ':first-child')
+      .attr('class', 'node')
+      .attr('width', (d) -> d.width )
+      .attr('height', RECT_HEIGHT)
+      .attr('rx', (d) -> if d.type is "user" then 3 else 10 )
+      .attr('ry', (d) -> if d.type is "user" then 3 else 10 )
+      .style('fill', (d) -> if d.color then d.color else 'white')
+      .style('stroke', (d) -> if d.color then d3.rgb(d.color).darker().toString() else 'black')
+
+    @zoomOnce = _.once(=> @zoomToFitScreen())
+
+    # the force layout needs to be newly created every time
+    # using the old one leads to incorrect layouts as colajs seems to mistakenly use old state
+    @force = cola.d3adaptor()
+      .size([@svg.attr("width"), @svg.attr("height")])
+      .nodes(nodes)
+      .links(edges)
+      .symmetricDiffLinkLengths(200)
+      .avoidOverlaps(true)
+      .convergenceThreshold(0.10)
+      .on('tick', @tick.bind(@))
+
+    # unconstrained, user-constrained, overlap-constrained iterations
+    @force.start(15, 0, 10)
+
+    # stop force layout calculation after FORCE_LAYOUT_TIMEOUT ms
+    @forceTimeout = setTimeout(@force.stop.bind(@force), @FORCE_LAYOUT_TIMEOUT)
+
+    @setupPopovers()
+
+
+  tick : ->
+
+    # update the position of the edges
+    # distribute the start and end point on the x-axis depending on their direction
+    @svgEdges.attr('d', (d) ->
+      deltaX = d.target.x - d.source.x
+      deltaY = d.target.y - d.source.y
+      dist = Math.sqrt(deltaX * deltaX + deltaY * deltaY)
+      normX = deltaX / dist
+      padding = 25
+      sourceX = d.source.x + (padding * normX)
+      sourceY = d.source.y
+      targetX = d.target.x - (padding * normX)
+      targetY = d.target.y
+      return 'M' + sourceX + ',' + sourceY + 'L' + targetX + ',' + targetY
+    )
+
+    # update the position of the nodes
+    @svgNodes.attr('transform', (d) ->
+      return 'translate(' + (d.x - d.width / 2) + ',' + (d.y - d.height / 2) + ')'
+    )
+
+    # this will only be called after the first tick
+    @zoomOnce()
 
 
   buildNodes : (taskTypes, projects) ->
 
-    svgUsers = _.compact(@users.map( (user) =>
+    nodes = []
+
+    nodes = nodes.concat(_.compact(@users.map( (user) =>
       if @doDrawUser(user)
-        userName = user.firstName + " " + user.lastName
-        workingHours = user.workingHours
-        color = @colorJet(128 - (workingHours - @chosenMinHours) * (128 / (@chosenMaxHours - @chosenMinHours)) + 128)
-
-        @quoted(userName) + " [id="+ @quoted(user.id) + ", shape=box, fillcolor=" + @quoted(color) + "]"
-    )).join(";")
-
-    svgTaskTypes = ""
-    svgProjects = ""
+        id: user.id
+        text: user.firstName + " " + user.lastName
+        color: @color((user.workingHours - @chosenMinHours) / (@chosenMaxHours - @chosenMinHours))
+        type: "user"
+    )))
 
     if @doDrawTaskTypes()
-      svgTaskTypes = taskTypes.map( (taskType) => @quoted(taskType.summary)).join(";")
+      nodes = nodes.concat(taskTypes.map( (taskType) ->
+        id: taskType._id.$oid
+        text: taskType.summary
+        type: "taskType"
+      ))
 
     if @doDrawProjects()
-      svgProjects = projects.map( (project) => @quoted(project.name)).join(";")
+      nodes = nodes.concat(projects.map( (project) ->
+        id: project._id.$oid
+        text: project.name
+        type: "project"
+      ))
+
+    nodes
 
 
-    svgTaskTypes + svgUsers + svgProjects
+  buildEdges : (userInfos, nodes) ->
 
+    edges = []
 
-  buildEdges : (userInfos) ->
-
-    svgTaskTypeEdges = ""
-    svgFutureTaskTypesEdges = ""
-    svgProjectEdges = ""
-
+    # only draw edges for users that are displayed in the graph
     selectedUserInfos = _.filter(userInfos, (userInfo) => @doDrawUser(userInfo.user))
 
     if @doDrawTaskTypes()
 
-      svgTaskTypeEdges = selectedUserInfos.map( (userInfo) =>
+      # task type edges
+      edges = edges.concat(_.flatten(selectedUserInfos.map( (userInfo) =>
         { user, taskTypes } = userInfo
-        taskTypes.map( (taskType) => @edge(user.name, taskType.summary)) if @doDrawUser(user)
-      ).join(";")
+        taskTypes.map( (taskType) => @edge(user.id, taskType._id.$oid, nodes)) if @doDrawUser(user)
+      )))
 
-      svgFutureTaskTypesEdges  = "edge [ color=blue ];"
-      svgFutureTaskTypesEdges += selectedUserInfos.map( (userInfo) =>
+      # future task type edges
+      edges = edges.concat(_.flatten(selectedUserInfos.map( (userInfo) =>
         { user, futureTaskType } = userInfo
         if(futureTaskType)
-          @edge(user.name, futureTaskType.summary) if @doDrawUser(user)
-      ).join(";")
+          @edge(user.id, futureTaskType._id.$oid, nodes, @FUTURE_TASK_EDGE_COLOR) if @doDrawUser(user)
+      )))
 
-
+    # project edges
     if @doDrawProjects()
-      svgProjectEdges = selectedUserInfos.map( (userInfo) =>
+      edges = edges.concat(_.flatten(selectedUserInfos.map( (userInfo) =>
         { user, projects } = userInfo
-        projects.map( (project) => @edge(user.name, project.name)) if @doDrawUser(user)
-      ).join(";")
+        projects.map( (project) => @edge(user.id, project._id.$oid, nodes)) if @doDrawUser(user)
+      )))
+
+    _.compact(edges)
 
 
-    svgTaskTypeEdges + svgProjectEdges + svgFutureTaskTypesEdges
+  setupPanAndZoom : ->
 
+    @zoom = d3.behavior.zoom()
+      .scaleExtent([0.1, 10])
+      .on("zoom", =>
+        @container.attr("transform", "translate(" + d3.event.translate + ")scale(" + d3.event.scale + ")")
+      )
 
-  setupPanZoom : ->
-
-    # reset some attributes before invoking panZoom plugin
-    $svg = @$(".graph.well").find("svg")
-
-    # get rid of the troublemaker. messes up transformations
-    $svg[0].removeAttribute("viewBox")
-
-    # the svg should not overlay with the overview options
-    $svg[0].setAttribute("width", "#{$('.graph').width() - $('.overview-options').width()}px")
-    $svg[0].setAttribute("height", "#{$(window).height() - 50 - $svg.offset().top}px" )
-    $svg.css("max-width", "100%")
-
-    new PanZoomSVG($svg)
+    @svg.call(@zoom)
 
 
   setupPopovers : ->
@@ -402,29 +496,38 @@ class TaskOverviewView extends Backbone.Marionette.LayoutView
     ].join("<br />")
 
 
+  zoomToFitScreen : ->
+
+    transitionDuration = 400
+
+    bounds = @container.node().getBBox()
+    fullWidth = @svg.node().clientWidth
+    fullHeight = @svg.node().clientHeight
+    width = bounds.width
+    height = bounds.height
+    midX = bounds.x + width / 2
+    midY = bounds.y + height / 2
+    return if width == 0 || height == 0 # nothing to fit
+    scale = 0.90 / Math.max(width / fullWidth, height / fullHeight)
+    translate = [fullWidth / 2 - scale * midX, fullHeight / 2 - scale * midY]
+
+    @container
+      .transition()
+      .duration(transitionDuration || 0)
+      .call(@zoom.translate(translate).scale(scale).event)
+
+
 
   # utility functions
 
-  colorJet : (value) ->
-
-    fourValue = value / 64
-
-    clamp = (value, min, max) -> return Math.min(Math.max(value, min), max)
-
-    componentToHex = (c) ->
-      hex = Math.floor(c * 255).toString(16)
-      if hex.length == 1 then "0" + hex else hex
-
-    rgbToHex = (r, g, b) -> "#" + [r, g, b].map(componentToHex).join("")
-
-    r = clamp(Math.min(fourValue - 1.5, -fourValue + 4.5), 0, 1)
-    g = clamp(Math.min(fourValue - 0.5, -fourValue + 3.5), 0, 1)
-    b = clamp(Math.min(fourValue + 0.5, -fourValue + 2.5), 0, 1)
-
-    rgbToHex(r, g, b)
+  color : do ->
+    # Red -> Yellow -> Green
+    d3.scale.linear()
+    .domain([0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1])
+    .range(["#a50026","#d73027","#f46d43","#fdae61","#fee08b","#ffffbf","#d9ef8b","#a6d96a","#66bd63","#1a9850","#006837"])
 
 
-  quoted : (str) -> '"' + str + '"'
-
-  edge : (a, b) -> @quoted(a) + "->" + @quoted(b)
-
+  edge : (idA, idB, nodes, color="black") ->
+    source : _.find(nodes, "id" : idA)
+    target : _.find(nodes, "id" : idB)
+    color : color

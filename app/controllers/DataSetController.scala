@@ -37,7 +37,7 @@ object DataSetController extends Controller with Secured {
   val ThumbnailWidth = 200
   val ThumbnailHeight = 200
 
-  val ThumbnailCacheDuration = 1 hour
+  val ThumbnailCacheDuration = 1 day
 
   def view(dataSetName: String) = UserAwareAction.async {
     implicit request =>
@@ -52,7 +52,9 @@ object DataSetController extends Controller with Secured {
     implicit request =>
 
       def imageFromCacheIfPossible(dataSet: DataSet) =
-        Cache.getOrElse(s"thumbnail-$dataSetName*$dataLayerName", ThumbnailCacheDuration.toSeconds.toInt) {
+        // We don't want all images to expire at the same time. Therefore, we add a day of randomness, hence the 86400
+        Cache.getOrElse(s"thumbnail-$dataSetName*$dataLayerName",
+          ThumbnailCacheDuration.toSeconds.toInt + (math.random * 86400).toInt) {
           DataStoreHandler.requestDataLayerThumbnail(dataSet, dataLayerName, ThumbnailWidth, ThumbnailHeight)
         }
 

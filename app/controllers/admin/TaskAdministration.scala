@@ -43,6 +43,8 @@ import play.api.mvc.AnyContent
 import com.scalableminds.util.reactivemongo.DBAccessContext
 import models.team.Team
 import models.user.time.{TimeSpan, TimeSpanService}
+import scala.concurrent.duration._
+import scala.concurrent.duration
 
 object TaskAdministration extends AdminController {
 
@@ -96,17 +98,18 @@ object TaskAdministration extends AdminController {
     "taskInstances" -> number,
     "team" -> nonEmptyText,
     "project" -> text,
+    "isForAnonymous" -> boolean,
     "boundingBox" -> mapping(
       "box" -> text.verifying("boundingBox.invalid",
         b => b.matches("([0-9]+),\\s*([0-9]+),\\s*([0-9]+)\\s*,\\s*([0-9]+),\\s*([0-9]+),\\s*([0-9]+)\\s*")))(BoundingBox.fromForm)(BoundingBox.toForm)
   )
 
   val taskForm = Form(
-    taskMapping).fill("", "", Point3D(0, 0, 0), Experience.empty, 100, 10, "", "", BoundingBox(Point3D(0, 0, 0), 0, 0, 0))
+    taskMapping).fill("", "", Point3D(0, 0, 0), Experience.empty, 100, 10, "", "", false, BoundingBox(Point3D(0, 0, 0), 0, 0, 0))
 
   def taskCreateHTML(
                       taskFromNMLForm: Form[(String, Experience, Int, Int, String, String, BoundingBox)],
-                      taskForm: Form[(String, String, Point3D, Experience, Int, Int, String, String, BoundingBox)]
+                      taskForm: Form[(String, String, Point3D, Experience, Int, Int, String, String, Boolean, BoundingBox)]
                     )(implicit request: AuthenticatedRequest[_]) =
     for {
       dataSets <- DataSetDAO.findAll
@@ -148,10 +151,23 @@ object TaskAdministration extends AdminController {
     }
   }
 
+  def createAnonymousUsersAndTasksInstances(task: Task)(implicit request: AuthenticatedRequest[_]) =
+    Fox.sequenceOfFulls((1 to task.instances).toList.map { i =>
+      Logger.warn(s"Creating user $i")
+      for {
+        user <- UserService.insertAnonymousUser(task.team, task.neededExperience)
+        loginToken <- UserService.createLoginToken(user, validDuration = 30 days)
+        annotation <- AnnotationService.createAnnotationFor(user, task)
+      } yield {
+        val url = controllers.routes.AnnotationController.trace(annotation.typ, annotation.id).absoluteURL(secure = true)
+        Logger.warn(url + "?loginToken=" + loginToken)
+      }
+    })
+
   def createFromForm = Authenticated.async(parse.urlFormEncoded) { implicit request =>
     taskForm.bindFromRequest.fold(
     formWithErrors => taskCreateHTML(taskFromNMLForm, formWithErrors).map(html => BadRequest(html)), {
-      case (dataSetName, taskTypeId, start, experience, priority, instances, team, projectName, boundingBox) =>
+      case (dataSetName, taskTypeId, start, experience, priority, instances, team, projectName, isForAnonymous, boundingBox) =>
         for {
           dataSet <- DataSetDAO.findOneBySourceName(dataSetName) ?~> Messages("dataSet.notFound")
           taskType <- TaskTypeDAO.findOneById(taskTypeId) ?~> Messages("taskType.notFound")
@@ -161,10 +177,15 @@ object TaskAdministration extends AdminController {
           _ <- TaskDAO.insert(task)
         } yield {
           AnnotationService.createAnnotationBase(task, request.user._id, boundingBox, taskType.settings, dataSetName, start)
-          Redirect(controllers.routes.TaskController.empty)
-          .flashing(
-            FlashSuccess(Messages("task.createSuccess")))
-          .highlighting(task.id)
+          if(isForAnonymous){
+            createAnonymousUsersAndTasksInstances(task)
+            Ok
+          } else {
+            Redirect(controllers.routes.TaskController.empty)
+            .flashing(
+              FlashSuccess(Messages("task.createSuccess")))
+            .highlighting(task.id)
+          }
         }
     })
   }

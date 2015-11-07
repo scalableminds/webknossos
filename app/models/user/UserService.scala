@@ -1,5 +1,7 @@
 package models.user
 
+import java.util.UUID
+
 import oxalis.thirdparty.BrainTracing
 import play.api.{Logger, Application}
 import scala.Some
@@ -52,6 +54,26 @@ object UserService extends FoxImplicits {
       user = User(email, firstName, lastName, false, hashPassword(password), md5(password), teamMemberships)
       result <- UserDAO.insert(user, isVerified)(GlobalAccessContext).futureBox
     } yield result
+
+  def insertAnonymousUser(teamName: String, experience: Experience): Fox[User] = {
+    val userName = UUID.randomUUID().toString
+    for {
+      teamOpt <- TeamDAO.findOneByName(teamName)(GlobalAccessContext).futureBox
+      teamMemberships = teamOpt.map(t => TeamMembership(t.name, Role.User)).toList
+      user = User(
+        userName,
+        "Anonymous", "User",
+        verified = true,
+        pwdHash = "",
+        md5hash = "",
+        teams = teamMemberships,
+        _isAnonymous = Some(true),
+        experiences = experience.toMap)
+      result <- UserDAO.insert(user, isVerified = true)(GlobalAccessContext).futureBox
+    } yield {
+      result
+    }
+  }
 
   def update(user: User, firstName: String, lastName: String, verified: Boolean, teams: List[TeamMembership], experiences: Map[String, Int])(implicit ctx: DBAccessContext) = {
     if (!user.verified && verified) {
@@ -109,6 +131,19 @@ object UserService extends FoxImplicits {
 
   def auth(email: String, password: String): Fox[User] =
     UserDAO.auth(email, password)(GlobalAccessContext)
+
+  def authByToken(token: String)(implicit ctx: DBAccessContext): Fox[User] = {
+    Logger.warn("Trying to auth with token: " + token)
+    LoginTokenDAO.findBy(token).flatMap { loginToken =>
+      UserDAO.findOneById(loginToken._user)
+    }
+  }
+
+  def createLoginToken(user: User, validDuration: Duration)(implicit ctx: DBAccessContext): Fox[String] = {
+    val token = UUID.randomUUID().toString
+    val expirationTime = System.currentTimeMillis + validDuration.toMillis
+    LoginTokenDAO.insert(LoginToken(user._id, token, expirationTime)).map( _ => token)
+  }
 
   def increaseExperience(_user: BSONObjectID, domain: String, value: Int)(implicit ctx: DBAccessContext) = {
     UserDAO.increaseExperience(_user, domain.trim, value)

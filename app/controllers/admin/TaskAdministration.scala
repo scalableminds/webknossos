@@ -153,18 +153,31 @@ object TaskAdministration extends AdminController {
 
   def createAnonymousUsersAndTasksInstances(task: Task)(implicit request: AuthenticatedRequest[_]) =
     Fox.sequenceOfFulls((1 to task.instances).toList.map { i =>
-      Logger.warn(s"Creating user $i")
       for {
         user <- UserService.insertAnonymousUser(task.team, task.neededExperience)
         loginToken <- UserService.createLoginToken(user, validDuration = 30 days)
         annotation <- AnnotationService.createAnnotationFor(user, task)
       } yield {
         val url = controllers.routes.AnnotationController.trace(annotation.typ, annotation.id).absoluteURL(secure = true)
-        Logger.warn(url + "?loginToken=" + loginToken)
+        url + "?loginToken=" + loginToken
       }
     })
 
   def createFromForm = Authenticated.async(parse.urlFormEncoded) { implicit request =>
+    def createResult(isForAnonymous: Boolean, task: Task): Fox[SimpleResult] = {
+      if(isForAnonymous){
+        createAnonymousUsersAndTasksInstances(task).map{ links =>
+          Ok(s"Created task with id: ${task.id}. Links:\n" + links.mkString("\n"))
+        }
+      } else {
+        Fox.successful(
+          Redirect(controllers.routes.TaskController.empty)
+            .flashing(
+              FlashSuccess(Messages("task.createSuccess")))
+            .highlighting(task.id))
+      }
+    }
+
     taskForm.bindFromRequest.fold(
     formWithErrors => taskCreateHTML(taskFromNMLForm, formWithErrors).map(html => BadRequest(html)), {
       case (dataSetName, taskTypeId, start, experience, priority, instances, team, projectName, isForAnonymous, boundingBox) =>
@@ -175,17 +188,10 @@ object TaskAdministration extends AdminController {
           _ <- ensureTeamAdministration(request.user, team).toFox
           task = Task(taskType._id, team, experience, priority, instances, _project = project.map(_.name))
           _ <- TaskDAO.insert(task)
+          _ <- AnnotationService.createAnnotationBase(task, request.user._id, boundingBox, taskType.settings, dataSetName, start)
+          result <- createResult(isForAnonymous, task)
         } yield {
-          AnnotationService.createAnnotationBase(task, request.user._id, boundingBox, taskType.settings, dataSetName, start)
-          if(isForAnonymous){
-            createAnonymousUsersAndTasksInstances(task)
-            Ok
-          } else {
-            Redirect(controllers.routes.TaskController.empty)
-            .flashing(
-              FlashSuccess(Messages("task.createSuccess")))
-            .highlighting(task.id)
-          }
+          result
         }
     })
   }

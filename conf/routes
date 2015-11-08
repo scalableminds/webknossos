@@ -7,6 +7,7 @@ GET           /                                                               co
 GET           /dashboard                                                      controllers.UserController.empty
 GET           /impressum                                                      controllers.Application.impressum
 GET           /info                                                           controllers.Application.info
+GET           /thankyou                                                       controllers.Application.thankyou
 
 # Github Issues integration
 GET           /issues                                                         controllers.GithubIssues.index

@@ -65,6 +65,10 @@ object Application extends Controller with Secured {
     Ok(views.html.info())
   }
 
+  def thankyou() = UserAwareAction { implicit request =>
+    Ok(views.html.thankyou())
+  }
+
   def emptyMain = Authenticated { implicit request =>
     Ok(views.html.main()(Html.empty))
   }

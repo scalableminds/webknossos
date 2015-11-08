@@ -90,9 +90,9 @@ object AnnotationService extends AnnotationContentProviders with BoxImplicits wi
         typ = AnnotationType.Task).temporaryDuplicate(false).flatMap(_.saveToDB)
 
     for {
-      annotationBase <- task.annotationBase
-      _ <- TaskService.assignOnce(task).toFox
-      result <- useAsTemplateAndInsert(annotationBase).toFox
+      annotationBase <- task.annotationBase ?~> "Failed to retrieve annotation base."
+      _ <- TaskService.assignOnce(task).toFox ?~> "Failed to assign task once."
+      result <- useAsTemplateAndInsert(annotationBase).toFox ?~> "Failed to use annotation base as template."
     } yield {
       result
     }
@@ -100,9 +100,9 @@ object AnnotationService extends AnnotationContentProviders with BoxImplicits wi
 
   def createAnnotationBase(task: Task, userId: BSONObjectID, boundingBox: BoundingBox, settings: AnnotationSettings, dataSetName: String, start: Point3D)(implicit ctx: DBAccessContext) = {
     for {
-      tracing <- SkeletonTracingService.createFrom(dataSetName, start, Some(boundingBox), true, settings)
+      tracing <- SkeletonTracingService.createFrom(dataSetName, start, Some(boundingBox), true, settings) ?~> "Failed to create skeleton tracing."
       content = ContentReference.createFor(tracing)
-      _ <- AnnotationDAO.insert(Annotation(Some(userId), content, team = task.team, typ = AnnotationType.TracingBase, _task = Some(task._id)))
+      _ <- AnnotationDAO.insert(Annotation(Some(userId), content, team = task.team, typ = AnnotationType.TracingBase, _task = Some(task._id))) ?~> "Failed to insert annotation."
     } yield tracing
   }
 

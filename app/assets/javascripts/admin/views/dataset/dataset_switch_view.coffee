@@ -60,6 +60,7 @@ class DatasetSwitchView extends Backbone.Marionette.LayoutView
     userTeams = @model.get("teams")
     @ui.showAdvancedButton.hide() if not utils.isUserAdmin(userTeams)
 
+
   toggleSwitchButtons : ->
 
     [@ui.showAdvancedButton, @ui.showGalleryButton].map((button) -> button.toggle())
@@ -67,21 +68,20 @@ class DatasetSwitchView extends Backbone.Marionette.LayoutView
 
   showGalleryView : ->
 
-    @toggleSwitchButtons()
-    datasetGalleryView = new SpotlightDatasetListView(collection : new DatasetCollection())
-    @datasetPane.show(datasetGalleryView)
-
-    @pagination.empty()
+    @showPaginatedDatasetView(SpotlightDatasetListView)
 
 
   showAdvancedView : ->
 
-    collection = new PaginationCollection()
-    collection.model = DatasetCollection::model
-    collection.url = DatasetCollection::url
+    @showPaginatedDatasetView(DatasetListView)
+
+
+  showPaginatedDatasetView : (DatasetView) ->
 
     @toggleSwitchButtons()
-    datasetListView = new DatasetListView(collection: collection)
+    collection = new DatasetCollection()
+
+    datasetListView = new DatasetView(collection: collection)
     @datasetPane.show(datasetListView)
 
     paginationView = new PaginationView(collection: collection)

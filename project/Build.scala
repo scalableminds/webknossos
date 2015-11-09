@@ -33,7 +33,7 @@ object Dependencies{
   val braingamesBinary = "com.scalableminds" %% "braingames-binary" % braingamesVersion
   val braingamesDatastore = "com.scalableminds" %% "braingames-datastore" % braingamesVersion
   val scalaAsync = "org.scala-lang.modules" %% "scala-async" % "0.9.2"
-  val airbrake = "eu.teamon" %% "play-airbrake" % "0.5.0-SCM"
+  val airbrake = "com.scalableminds" %% "play-airbrake" % "0.5.0"
   val mongev = "com.scalableminds" %% "play-mongev" % "0.4.1"
   val playMetrics = "com.kenshoo" %% "metrics-play" % "2.4.0_0.4.1"
   val tiff = Seq(
@@ -57,7 +57,6 @@ object Resolvers {
   val scmRel = Resolver.url("Scalableminds REL Repo", url("http://scalableminds.github.com/releases/"))(Resolver.ivyStylePatterns)
   val scmIntRel = "scm.io intern releases repo" at "http://maven.scm.io/releases/"
   val scmIntSnaps = "scm.io intern snapshots repo" at "http://maven.scm.io/snapshots/"
-  val teamon = "teamon.eu repo" at "http://repo.teamon.eu"
 }
 
 object AssetCompilation {
@@ -173,8 +172,7 @@ object ApplicationBuild extends Build {
     typesafeRel,
     scmRel,
     scmIntRel,
-    scmIntSnaps,
-    teamon
+    scmIntSnaps
   )
 
   lazy val oxalisSettings = Seq(

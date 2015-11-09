@@ -1,8 +1,10 @@
 package controllers
 
+import javax.inject.Inject
+
 import oxalis.security.{AuthenticatedRequest, Secured}
 import models.user.{UsedAnnotationDAO, User, UserDAO}
-import play.api.i18n.Messages
+import play.api.i18n.{MessagesApi, Messages}
 import play.api.libs.json._
 import play.api.Logger
 import models.annotation._
@@ -37,7 +39,7 @@ import play.api.libs.json.JsObject
  * Date: 01.06.13
  * Time: 02:09
  */
-object AnnotationController extends Controller with Secured with TracingInformationProvider {
+class AnnotationController @Inject() (val messagesApi: MessagesApi) extends Controller with Secured with TracingInformationProvider {
 
   implicit val timeout = Timeout(5 seconds)
 

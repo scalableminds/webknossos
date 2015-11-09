@@ -50,7 +50,7 @@ trait TracingUpdater extends FoxImplicits {
 case class CreateTree(value: JsObject) extends TracingUpdater {
   def createUpdate()(implicit ctx: DBAccessContext) = {
     val id = (value \ "id").as[Int]
-    val color = (value \ "color").as[Option[Color]]
+    val color = (value \ "color").asOpt[Color]
     val timestamp = (value \ "timestamp").as[Long]
     val name = (value \ "name").asOpt[String] getOrElse (DBTree.nameFromId(id))
     TracingUpdate { t =>
@@ -74,7 +74,7 @@ case class UpdateTree(value: JsObject) extends TracingUpdater {
   def createUpdate()(implicit ctx: DBAccessContext) = {
     val id = (value \ "id").as[Int]
     val updatedId = (value \ "updatedId").asOpt[Int] getOrElse id
-    val color = (value \ "color").as[Option[Color]]
+    val color = (value \ "color").asOpt[Color]
     val name = (value \ "name").asOpt[String] getOrElse (DBTree.nameFromId(id))
     TracingUpdate { t =>
       for{

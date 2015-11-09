@@ -4,7 +4,7 @@ import models.user.{UserService, User}
 import play.api.mvc._
 import play.api.mvc.BodyParsers
 import play.api.mvc.Results._
-import play.api.i18n.Messages
+import play.api.i18n.{I18nSupport, Messages}
 import play.api.mvc.Request
 import play.api.Play
 import play.api.Play.current
@@ -47,7 +47,7 @@ object Secured {
 /**
  * Provide security features
  */
-trait Secured extends FoxImplicits {
+trait Secured extends FoxImplicits with I18nSupport{
   /**
    * Defines the access role which is used if no role is passed to an
    * authenticated action

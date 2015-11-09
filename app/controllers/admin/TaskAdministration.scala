@@ -1,5 +1,7 @@
 package controllers.admin
 
+import javax.inject.Inject
+
 import play.api.mvc.Result
 import reactivemongo.bson.BSONObjectID
 
@@ -13,7 +15,7 @@ import models.binary.DataSetDAO
 import play.api.data.Form
 import play.api.data.Forms._
 import views.html
-import play.api.i18n.Messages
+import play.api.i18n.{MessagesApi, Messages}
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.Logger
 import play.twirl.api.Html
@@ -29,7 +31,7 @@ import com.scalableminds.util.reactivemongo.DBAccessContext
 import models.team.Team
 import models.user.time.{TimeSpan, TimeSpanService}
 
-object TaskAdministration extends AdminController {
+class TaskAdministration @Inject() (val messagesApi: MessagesApi) extends AdminController {
 
   val taskFromNMLForm = nmlTaskForm(minTaskInstances = 1)
 

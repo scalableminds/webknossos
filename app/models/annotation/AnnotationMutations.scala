@@ -43,14 +43,14 @@ class AnnotationMutations(val annotation: Annotation) extends AnnotationMutation
       annotation match {
         case annotation if annotation._task.isEmpty =>
           val updated = await(annotation.muta.finish().futureBox)
-          updated.map(_ -> Messages("annotation.finished"))
+          updated.map(_ -> "annotation.finished")
         case annotation =>
           val isReadyToBeFinished = await(annotation.isReadyToBeFinished)
           if (isReadyToBeFinished) {
             val updated = await(AnnotationDAO.finish(annotation._id).futureBox)
-            updated.map(_ -> Messages("task.finished"))
+            updated.map(_ -> "task.finished")
           } else
-            Failure(Messages("annotation.notFinishable"))
+            Failure("annotation.notFinishable")
       }
     }
 
@@ -59,9 +59,9 @@ class AnnotationMutations(val annotation: Annotation) extends AnnotationMutation
         if (annotation.state.isInProgress) {
           executeFinish(annotation)
         } else
-          Future.successful(Failure(Messages("annotation.notInProgress")))
+          Future.successful(Failure("annotation.notInProgress"))
       } else
-        Future.successful(Failure(Messages("annotation.notPossible")))
+        Future.successful(Failure("annotation.notPossible"))
     }
 
     tryToFinish().map {

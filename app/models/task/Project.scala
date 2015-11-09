@@ -48,7 +48,7 @@ object Project {
     }
 
   val projectPublicReads: Reads[Project] =
-    ((__ \ 'name).read[String](Reads.minLength[String](3) keepAnd Reads.pattern("^[a-zA-Z0-9_-]*$".r, Messages("project.name.invalidChars"))) and
+    ((__ \ 'name).read[String](Reads.minLength[String](3) keepAnd Reads.pattern("^[a-zA-Z0-9_-]*$".r, "project.name.invalidChars")) and
       (__ \ 'team).read[String] and
       (__ \ 'owner).read[String](StringObjectIdReads("owner")))((name, team, owner) => Project(name, team, BSONObjectID(owner)))
 }

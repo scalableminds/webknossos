@@ -1,8 +1,9 @@
 package controllers.admin
 
+import javax.inject.Inject
+
 import models.task.Task
 import play.api.libs.Files
-import play.api.mvc.{MultipartFormData, Action, SimpleResult, ResponseHeader}
 import oxalis.security.{AuthenticatedRequest, Secured}
 import views.html
 import models.user._
@@ -12,7 +13,7 @@ import com.scalableminds.util.xml.Xml
 import play.api.Logger
 import scala.xml.PrettyPrinter
 import models.tracing._
-import play.api.i18n.Messages
+import play.api.i18n.{MessagesApi, Messages}
 import models.task._
 import java.io.BufferedOutputStream
 import java.io.ByteArrayOutputStream
@@ -47,7 +48,7 @@ import java.util.zip.ZipFile
 import net.liftweb.common.Full
 import oxalis.nml.NML
 
-object NMLIO extends Controller with Secured with TextUtils {
+class NMLIO @Inject() (val messagesApi: MessagesApi) extends Controller with Secured with TextUtils {
 
   def uploadForm = Authenticated{ implicit request =>
     Ok(html.admin.nml.nmlupload())

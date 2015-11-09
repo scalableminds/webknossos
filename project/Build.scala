@@ -2,17 +2,20 @@ import com.typesafe.sbt.web.Import._
 import sbt._
 import sbt.Keys._
 import play.Play.autoImport._
+import play.sbt.PlayImport
 import PlayKeys._
 import play.twirl.sbt.Import._
+import play.sbt.routes.RoutesKeys._
 import sbt.Task
 import scala.concurrent.Future
 import scala.concurrent.ExecutionContext.Implicits.global
 
 object Dependencies{
-  val akkaVersion = "2.3.8"
-  val reactiveVersion = "0.10.5.0.akka23"
-  val reactivePlayVersion = "0.10.5.0.akka23"
-  val braingamesVersion = "7.7.6"
+  val akkaVersion = "2.4.0"
+  val reactiveVersion = "0.11.7"
+  val reactivePlayVersion = "0.11.2.play24"
+  val braingamesVersion = "8.0.0-SNAPSHOT"
+  val twelvemonkeys = "3.2"
 
   val restFb = "com.restfb" % "restfb" % "1.6.11"
   val commonsIo = "commons-io" % "commons-io" % "2.4"
@@ -21,6 +24,7 @@ object Dependencies{
   val akkaTest = "com.typesafe.akka" %% "akka-testkit" % akkaVersion
   val akkaAgent = "com.typesafe.akka" %% "akka-agent" % akkaVersion
   val akkaRemote = "com.typesafe.akka" %% "akka-remote" % akkaVersion
+  val akkaLogging = "com.typesafe.akka" %% "akka-slf4j" % akkaVersion
   val jerseyClient = "com.sun.jersey" % "jersey-client" % "1.8"
   val jerseyCore = "com.sun.jersey" % "jersey-core" % "1.8"
   val reactivePlay = "org.reactivemongo" %% "play2-reactivemongo" % reactivePlayVersion
@@ -29,17 +33,17 @@ object Dependencies{
   val braingamesBinary = "com.scalableminds" %% "braingames-binary" % braingamesVersion
   val braingamesDatastore = "com.scalableminds" %% "braingames-datastore" % braingamesVersion
   val scalaAsync = "org.scala-lang.modules" %% "scala-async" % "0.9.2"
-  val airbrake = "eu.teamon" %% "play-airbrake" % "0.4.0-SCM"
-  val mongev = "com.scalableminds" %% "play-mongev" % "0.3.0"
-  val playMetrics = "com.kenshoo" %% "metrics-play" % "2.3.0_0.1.7"
+  val airbrake = "eu.teamon" %% "play-airbrake" % "0.5.0-SCM"
+  val mongev = "com.scalableminds" %% "play-mongev" % "0.4.1"
+  val playMetrics = "com.kenshoo" %% "metrics-play" % "2.4.0_0.4.1"
   val tiff = Seq(
-      "com.twelvemonkeys.common" % "common-lang" % "3.0-rc5",
-      "com.twelvemonkeys.common" % "common-io" % "3.0-rc5",
-      "com.twelvemonkeys.common" % "common-image" % "3.0-rc5",
-      "com.twelvemonkeys.imageio" %  "imageio-core" % "3.0-rc5",
-      "com.twelvemonkeys.imageio" %  "imageio-metadata" % "3.0-rc5",
-      "com.twelvemonkeys.imageio" % "imageio-jpeg" % "3.0-rc5",
-      "com.twelvemonkeys.imageio" % "imageio-tiff" % "3.0-rc5"
+      "com.twelvemonkeys.common" % "common-lang" % twelvemonkeys,
+      "com.twelvemonkeys.common" % "common-io" % twelvemonkeys,
+      "com.twelvemonkeys.common" % "common-image" % twelvemonkeys,
+      "com.twelvemonkeys.imageio" %  "imageio-core" % twelvemonkeys,
+      "com.twelvemonkeys.imageio" %  "imageio-metadata" % twelvemonkeys,
+      "com.twelvemonkeys.imageio" % "imageio-jpeg" % twelvemonkeys,
+      "com.twelvemonkeys.imageio" % "imageio-tiff" % twelvemonkeys
     )
 }
 
@@ -63,7 +67,7 @@ object AssetCompilation {
   }
 
   import SettingsKeys._
-  import com.typesafe.sbt.packager.universal.Keys._
+  import com.typesafe.sbt.packager.Keys._
 
   def isWindowsSystem = System.getProperty("os.name").startsWith("Windows")
 
@@ -145,6 +149,7 @@ object ApplicationBuild extends Build {
     akkaTest,
     akkaAgent,
     akkaRemote,
+    akkaLogging,
     jerseyClient,
     jerseyCore,
     reactiveBson,
@@ -175,17 +180,15 @@ object ApplicationBuild extends Build {
   lazy val oxalisSettings = Seq(
     TwirlKeys.templateImports += "oxalis.view.helpers._",
     TwirlKeys.templateImports += "oxalis.view._",
-    scalaVersion := "2.11.2",
+    scalaVersion := "2.11.7",
     version := appVersion,
     gulpPath := (Path("node_modules") / ".bin" / "gulp").getPath,
     npmPath := "npm",
+    routesGenerator := InjectedRoutesGenerator,
     libraryDependencies ++= oxalisDependencies,
     //requireJs := Seq("main"),
     //requireJsShim += "main.js",
     resolvers ++= dependencyResolvers,
-    lessEntryPoints <<= (sourceDirectory in Compile)(base => base / "none"),
-    coffeescriptEntryPoints <<= (sourceDirectory in Compile)(base => base / "none"),
-    javascriptEntryPoints <<= (sourceDirectory in Compile)(base => base / "none"),
     //unmanagedResourceDirectories in Compile += target.value / "assets"
     sourceDirectory in Assets := file("none")
 

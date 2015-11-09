@@ -1,9 +1,11 @@
 package controllers.admin
 
+import javax.inject.Inject
+
 import models.task._
 import play.api.data.Forms._
 import play.api.data.Form
-import play.api.i18n.Messages
+import play.api.i18n.{MessagesApi, Messages}
 import play.twirl.api.Html
 import models.annotation.AnnotationDAO
 import play.api.libs.concurrent.Execution.Implicits._
@@ -12,7 +14,7 @@ import play.api.mvc.Result
 import scala.concurrent.Future
 import play.api.libs.json._
 
-object TaskTypeAdministration extends AdminController {
+class TaskTypeAdministration @Inject() (val messagesApi: MessagesApi) extends AdminController {
 
   val taskTypeForm = Form(
     mapping(

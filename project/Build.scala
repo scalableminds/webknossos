@@ -57,6 +57,7 @@ object Resolvers {
   val scmRel = Resolver.url("Scalableminds REL Repo", url("http://scalableminds.github.com/releases/"))(Resolver.ivyStylePatterns)
   val scmIntRel = "scm.io intern releases repo" at "http://maven.scm.io/releases/"
   val scmIntSnaps = "scm.io intern snapshots repo" at "http://maven.scm.io/snapshots/"
+  val bintray = "scalaz-bintray" at "http://dl.bintray.com/scalaz/releases"
 }
 
 object AssetCompilation {
@@ -161,7 +162,8 @@ object ApplicationBuild extends Build {
     ws,
     airbrake,
     playMetrics,
-    mongev)++tiff
+    mongev,
+    specs2 % Test)++tiff
 
   val dependencyResolvers = Seq(
     novusRel,
@@ -172,7 +174,8 @@ object ApplicationBuild extends Build {
     typesafeRel,
     scmRel,
     scmIntRel,
-    scmIntSnaps
+    scmIntSnaps,
+    bintray
   )
 
   lazy val oxalisSettings = Seq(

@@ -178,7 +178,7 @@ class DataSetController @Inject() (val messagesApi: MessagesApi) extends Control
             _ <- ensureTeamAdministration(request.user, team).toFox ~> FormFailure("team", Messages("team.admin.notAllowed", team))
             zipFile <- request.body.file("zipFile").toFox ~> FormFailure("zipFile", Messages("zip.file.notFound"))
             settings = DataSourceSettings(None, scale, None)
-            upload = DataSourceUpload(name, team, zipFile.ref.file.getAbsolutePath(), Some(settings))
+            upload = DataSourceUpload(name, team, zipFile.ref.file.getAbsolutePath, Some(settings))
             _ <- DataStoreHandler.uploadDataSource(upload).toFox
           } yield {
             Redirect(controllers.routes.DataSetController.empty).flashing(

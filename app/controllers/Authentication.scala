@@ -24,6 +24,7 @@ import com.scalableminds.util.reactivemongo.DBAccessContext
 import net.liftweb.common.Full
 
 class Authentication @Inject() (val messagesApi: MessagesApi) extends Controller with Secured with ProvidesUnauthorizedSessionData {
+
   lazy val Mailer =
     Akka.system(play.api.Play.current).actorSelection("/user/mailActor")
 

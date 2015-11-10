@@ -9,11 +9,11 @@ import java.nio.file.{Paths, Path}
 import akka.actor.ActorSystem
 import akka.agent.Agent
 import akka.actor.ActorRef
+import akka.routing.RoundRobinPool
 import com.scalableminds.braingames.binary._
 import scala.concurrent.Future
 import akka.actor.Props
 import akka.pattern.ask
-import akka.routing.RoundRobinRouter
 import com.scalableminds.braingames.binary.watcher._
 import akka.util.Timeout
 import scala.concurrent.duration._
@@ -55,7 +55,7 @@ trait BinaryDataService extends DataSourceService with BinaryDataHelpers with Da
       dataSourceRepository)
 
     system.actorOf(props
-      .withRouter(new RoundRobinRouter(nrOfBinRequestActors)), "dataRequestActor")
+      .withRouter(new RoundRobinPool(nrOfBinRequestActors)), "dataRequestActor")
   }
 
   var repositoryWatcher: Option[ActorRef] = None

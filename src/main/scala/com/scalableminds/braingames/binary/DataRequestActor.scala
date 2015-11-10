@@ -3,6 +3,7 @@
  */
 package com.scalableminds.braingames.binary
 
+import akka.routing.RoundRobinPool
 import com.scalableminds.util.geometry.Point3D
 import akka.agent.Agent
 import akka.actor._
@@ -15,7 +16,6 @@ import akka.util.Timeout
 import scala.util._
 import scala.concurrent.duration._
 import scala.concurrent.Future
-import akka.routing.RoundRobinRouter
 import java.util.UUID
 import com.typesafe.config.Config
 import com.scalableminds.braingames.binary.models.DataLayer
@@ -66,7 +66,7 @@ class DataRequestActor(
   implicit val system = context.system
 
   lazy val dataStores = List[ActorRef](
-    system.actorOf(Props[FileDataStoreActor].withRouter(new RoundRobinRouter(3)), s"${id}__fileDataStore")
+    system.actorOf(Props[FileDataStoreActor].withRouter(new RoundRobinPool(3)), s"${id}__fileDataStore")
   )
 
   def receive = {

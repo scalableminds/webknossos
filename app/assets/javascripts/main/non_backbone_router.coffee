@@ -63,12 +63,6 @@ class NonBackboneRouter extends Backbone.Router
 
     app.router.setReloadFlag()
 
-    $('[href="/dashboard"]').click(->
-      # Temporary hack to circumvent backbones routing.
-      # This ensures that the tracing view is completely unloaded.
-      location.href = "/dashboard"
-    )
-
     require [
       "oxalis/controller"
       "slider"

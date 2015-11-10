@@ -20,6 +20,11 @@ case class Send(mail: Mail)
  * "org.apache.commons" % "commons-mail" % "1.2"
  */
 
+object Mailer {
+  
+  
+}
+
 class Mailer(conf: Config) extends Actor {
 
   val enabled = conf.getBoolean("mail.enabled")

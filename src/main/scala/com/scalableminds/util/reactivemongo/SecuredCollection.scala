@@ -3,19 +3,22 @@
 */
 package com.scalableminds.util.reactivemongo
 
-import play.api.libs.iteratee.Enumerator
-import scala.concurrent.Future
-import reactivemongo.core.commands._
-import play.api.libs.json.{JsValue, JsObject, Json}
-import reactivemongo.bson.BSONDocument
-import scala.concurrent.ExecutionContext.Implicits._
-import reactivemongo.api.bulk
-import play.modules.reactivemongo.json.BSONFormats.BSONDocumentFormat
-import net.liftweb.common.{Empty, Failure}
+import com.scalableminds.util.reactivemongo.AccessRestrictions.{AllowIf, DenyEveryone}
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
-import com.scalableminds.util.reactivemongo.AccessRestrictions.{DenyEveryone, AllowIf}
+import net.liftweb.common.Failure
+import play.api.libs.json.{JsObject, JsValue, Json}
+import play.modules.reactivemongo.json.BSONFormats.BSONDocumentFormat
+import play.modules.reactivemongo.json.JSONSerializationPack
+import reactivemongo.api.commands.{GetLastError, LastError, WriteResult}
+import reactivemongo.bson.BSONDocument
+import play.modules.reactivemongo.json._
 
-trait SecuredCollection[T] extends AbstractCollection[T] with DBInteractionLogger with MongoHelpers with DBAccess with WithJsonFormatter[T] with ExceptionCatchers with FoxImplicits{
+import scala.concurrent.ExecutionContext.Implicits._
+import scala.concurrent.Future
+
+trait SecuredCollection[T] extends AbstractCollection[T] with DBInteractionLogger with MongoHelpers with DBAccess with WithJsonFormatter[T] with ExceptionCatchers with FoxImplicits {
+
+  val pack = JSONSerializationPack
 
   def AccessDefinitions: DBAccessDefinition
 
@@ -25,7 +28,7 @@ trait SecuredCollection[T] extends AbstractCollection[T] with DBInteractionLogge
     Json.obj("$and" -> Json.arr(a, b))
   }
 
-  def insert(js: JsObject)(implicit ctx: DBAccessContext): Fox[LastError] = {
+  def insert(js: JsObject)(implicit ctx: DBAccessContext): Fox[WriteResult] = {
     if (ctx.globalAccess || AccessDefinitions.isAllowedToInsert) {
       withFailureHandler {
         val future = underlying.insert(js ++ AccessDefinitions.createACL(js))
@@ -40,25 +43,24 @@ trait SecuredCollection[T] extends AbstractCollection[T] with DBInteractionLogge
     }
   }
 
-  def bulkInsert(enumerator: Enumerator[JsObject], bulkSize: Int, bulkByteSize: Int)(implicit ctx: DBAccessContext): Fox[Int] = {
+  def bulkInsert(enumerator: Stream[JsObject])(implicit ctx: DBAccessContext): Fox[Int] = {
     if (ctx.globalAccess || AccessDefinitions.isAllowedToInsert) {
       withExceptionCatcher {
         val future = underlying.bulkInsert(
-          enumerator.map(el => el ++ AccessDefinitions.createACL(el)), 
-          writeConcern = GetLastError(), 
-          bulkSize = bulkSize, 
-          bulkByteSize = bulkByteSize)
+          enumerator.map(el => el ++ AccessDefinitions.createACL(el)),
+          ordered = false,
+          writeConcern = GetLastError.Acknowledged)
         future.onFailure {
           case e: Throwable =>
             logger.error(s"Failed to bulkInsert Objects into mongo.", e)
         }
-        future
+        future.map(_.n)
       }
     } else {
       AccessDeniedError
     }
   }
-  
+
   def find(query: JsObject = Json.obj())(implicit ctx: DBAccessContext) = {
     AccessDefinitions.findQueryFilter match {
       case _ if ctx.globalAccess =>
@@ -73,11 +75,11 @@ trait SecuredCollection[T] extends AbstractCollection[T] with DBInteractionLogge
     }
   }
 
-  def findOne(query: JsObject = Json.obj())(implicit ctx: DBAccessContext) = withExceptionCatcher{
+  def findOne(query: JsObject = Json.obj())(implicit ctx: DBAccessContext) = withExceptionCatcher {
     find(query).one[T]
   }
 
-  def update(query: JsObject, update: JsObject, upsert: Boolean = false, multi: Boolean = false)(implicit ctx: DBAccessContext): Fox[LastError] = {
+  def update(query: JsObject, update: JsObject, upsert: Boolean = false, multi: Boolean = false)(implicit ctx: DBAccessContext): Fox[WriteResult] = {
     val isUpsertAllowed = upsert && (ctx.globalAccess || AccessDefinitions.isAllowedToInsert)
     val u =
       if (isUpsertAllowed)
@@ -103,7 +105,7 @@ trait SecuredCollection[T] extends AbstractCollection[T] with DBInteractionLogge
     }
   }
 
-  def remove(js: JsObject)(implicit ctx: DBAccessContext): Fox[LastError] = {
+  def remove(js: JsObject)(implicit ctx: DBAccessContext): Fox[WriteResult] = {
     AccessDefinitions.removeQueryFilter match {
       case _ if ctx.globalAccess =>
         withFailureHandler(underlying.remove(js))
@@ -116,7 +118,7 @@ trait SecuredCollection[T] extends AbstractCollection[T] with DBInteractionLogge
 
   def count(query: JsObject)(implicit ctx: DBAccessContext): Fox[Int] = {
     def executeCount(q: JsObject) = withExceptionCatcher {
-      db.command(Count(underlying.name, Some(BSONDocumentFormat.reads(q).get)))
+      underlying.count(Some(q))
     }
 
     AccessDefinitions.findQueryFilter match {
@@ -138,10 +140,7 @@ trait SecuredCollection[T] extends AbstractCollection[T] with DBInteractionLogge
         update
 
     def executeFindAndModify(q: JsObject) = {
-      db.command(
-        FindAndModify(underlying.name,
-          BSONDocumentFormat.reads(q).get,
-          Update(BSONDocumentFormat.reads(u).get, returnNew), upsert = isUpsertAllowed))
+      underlying.findAndUpdate(q, u, returnNew, isUpsertAllowed).map(_.result[BSONDocument])
     }
 
     withExceptionCatcher {

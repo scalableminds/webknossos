@@ -5,7 +5,7 @@ package com.scalableminds.util.reactivemongo
 
 import net.liftweb.common.{Full, Empty, Failure}
 import scala.concurrent.Future
-import reactivemongo.core.commands.LastError
+import reactivemongo.api.commands.{WriteResult, LastError}
 import reactivemongo.core.errors.GenericDatabaseException
 import play.api.libs.concurrent.Execution.Implicits._
 import com.scalableminds.util.tools.{FoxImplicits, Fox}
@@ -17,9 +17,9 @@ trait ExceptionCatchers extends DBInteractionLogger with FoxImplicits {
       Failure(e.getMessage, Some(e), Empty)
   }
 
-  def withFailureHandler(e: => Future[LastError]): Fox[LastError] =
+  def withFailureHandler(e: => Future[WriteResult]): Fox[WriteResult] =
     e.map {
-      case LastError(false, err, code, errMsg, _, _, _) =>
+      case LastError(false, errMsg, code, _, _, err, _, _, _, _, _, _) =>
         Failure(s"$errMsg ($err)", Full(GenericDatabaseException(errMsg orElse err getOrElse "", code)), Empty)
       case lastError =>
         Full(lastError)

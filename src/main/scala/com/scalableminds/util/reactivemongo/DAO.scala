@@ -4,8 +4,8 @@
 package com.scalableminds.util.reactivemongo
 
 import play.api.libs.json.Writes
+import reactivemongo.api.commands.{WriteResult, LastError}
 import reactivemongo.bson.BSONObjectID
-import reactivemongo.core.commands.LastError
 import com.scalableminds.util.tools.Fox
 
 trait DAO[T]{
@@ -22,7 +22,7 @@ trait DAO[T]{
 
   def findOneById(bid: BSONObjectID)(implicit ctx: DBAccessContext): Fox[T]
 
-  def removeById(id: String)(implicit ctx: DBAccessContext): Fox[LastError]
+  def removeById(id: String)(implicit ctx: DBAccessContext): Fox[WriteResult]
 
-  def removeAll(implicit ctx: DBAccessContext): Fox[LastError]
+  def removeAll(implicit ctx: DBAccessContext): Fox[WriteResult]
 }

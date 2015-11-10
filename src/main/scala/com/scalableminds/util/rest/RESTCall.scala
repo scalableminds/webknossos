@@ -9,7 +9,7 @@ import java.util.UUID
 case class RESTCall(
                      method: String,
                      path: String,
-                     headers: Map[String, Seq[String]],
+                     headers: Map[String, String],
                      queryStrings: Map[String, String],
                      body: JsValue,
                      uuid: String = UUID.randomUUID().toString)

@@ -5,6 +5,7 @@ package com.scalableminds.util.mvc
 
 import net.liftweb.common._
 import play.api.http.Status._
+import play.api.i18n.{I18nSupport, Messages}
 import scala.concurrent.{ExecutionContext, Future}
 import play.api.libs.iteratee.Enumerator
 import play.api.libs.json.Json
@@ -16,46 +17,46 @@ import play.api.mvc.{Request, Result, ResponseHeader}
 import play.api.libs.json.JsObject
 import com.scalableminds.util.tools.{FoxImplicits, Fox}
 
-class ResultBox[T <: Result](b: Box[T]) {
+trait ResultBox extends I18nSupport{
 
-  def asResult: Result = b match {
+  def asResult[T <: Result](b: Box[T]): Result = b match {
     case Full(result) =>
       result
     case ParamFailure(msg, _, _, statusCode: Int) =>
-      new JsonResult(statusCode)(msg)
+      new JsonResult(statusCode)(Messages(msg))
     case Failure(msg, _, _) =>
-      new JsonResult(BAD_REQUEST)(msg)
+      new JsonResult(BAD_REQUEST)(Messages(msg))
     case Empty =>
       new JsonResult(NOT_FOUND)("Couldn't find the requested resource.")
   }
 }
 
-trait ResultImplicits {
+trait ResultImplicits extends ResultBox with I18nSupport{
   implicit def fox2FutureResult[T <: Result](b: Fox[T])(implicit ec: ExecutionContext): Future[Result] =
-    b.futureBox.map(new ResultBox(_).asResult)
+    b.futureBox.map(asResult)
 
   implicit def futureBox2Result[T <: Result](b: Box[Future[T]])(implicit ec: ExecutionContext): Future[Result] = {
     b match {
       case Full(f) =>
-        f.map(value => new ResultBox(Full(value)).asResult)
+        f.map(value => asResult(Full(value)))
       case Empty =>
-        Future.successful(new ResultBox(Empty).asResult)
+        Future.successful(asResult(Empty))
       case f: Failure =>
-        Future.successful(new ResultBox(f).asResult)
+        Future.successful(asResult(f))
     }
   }
 
   implicit def boxFuture2Result[T <: Result](f: Future[Box[T]])(implicit ec: ExecutionContext): Future[Result] = {
     f.map {
       b =>
-        new ResultBox(b).asResult
+        asResult(b)
     }
   }
 
   implicit def box2Result[T <: Result](b: Box[T]): Result =
-    new ResultBox(b).asResult
+    asResult(b)
 
-  implicit def box2ResultBox[T <: Result](b: Box[T]) = new ResultBox(b)
+//  implicit def box2ResultBox[T <: Result](b: Box[T]) = new ResultBox(b)
 }
 
 trait BoxImplicits {
@@ -152,3 +153,4 @@ trait ExtendedController
   with WithHighlightableResult
   with PostRequestHelpers
   with WithFilters
+  with I18nSupport

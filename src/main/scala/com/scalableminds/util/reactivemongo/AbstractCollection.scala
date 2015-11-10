@@ -5,24 +5,24 @@ package com.scalableminds.util.reactivemongo
 
 import play.api.libs.iteratee.Enumerator
 import play.api.libs.json.{Json, JsObject}
-import reactivemongo.api.bulk
-import reactivemongo.core.commands.LastError
 import reactivemongo.api.collections.GenericQueryBuilder
+import reactivemongo.api.commands.{WriteResult, LastError}
 import reactivemongo.bson.BSONDocument
 import com.scalableminds.util.tools.Fox
+import play.modules.reactivemongo.json.JSONSerializationPack
 
 trait AbstractCollection[T]{
-  def insert(t: JsObject)(implicit ctx: DBAccessContext): Fox[LastError]
+  def insert(t: JsObject)(implicit ctx: DBAccessContext): Fox[WriteResult]
 
-  def bulkInsert(enumerator: Enumerator[JsObject], bulkSize: Int, bulkByteSize: Int)(implicit ctx: DBAccessContext): Fox[Int]
+  def bulkInsert(enumerator: Stream[JsObject])(implicit ctx: DBAccessContext): Fox[Int]
 
   def findOne(query: JsObject = Json.obj())(implicit ctx: DBAccessContext): Fox[T]
 
-  def find(query: JsObject = Json.obj())(implicit ctx: DBAccessContext): GenericQueryBuilder[JsObject, play.api.libs.json.Reads, play.api.libs.json.Writes]
+  def find(query: JsObject = Json.obj())(implicit ctx: DBAccessContext): GenericQueryBuilder[JSONSerializationPack.type]
 
-  def update(query: JsObject, update: JsObject, upsert: Boolean = false, multi: Boolean = false)(implicit ctx: DBAccessContext): Fox[LastError]
+  def update(query: JsObject, update: JsObject, upsert: Boolean = false, multi: Boolean = false)(implicit ctx: DBAccessContext): Fox[WriteResult]
 
-  def remove(js: JsObject)(implicit ctx: DBAccessContext): Fox[LastError]
+  def remove(js: JsObject)(implicit ctx: DBAccessContext): Fox[WriteResult]
 
   def count(query: JsObject)(implicit ctx: DBAccessContext): Fox[Int]
 

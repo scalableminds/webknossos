@@ -5,14 +5,15 @@ package com.scalableminds.util.reactivemongo
 
 import net.liftweb.common.{Failure, Full}
 import play.api.libs.json._
+import play.modules.reactivemongo.json.JSONSerializationPack
+import reactivemongo.api.commands.{WriteResult, LastError}
 import reactivemongo.bson.BSONObjectID
 import play.modules.reactivemongo.json.BSONFormats._
 import play.api.libs.json.Writes
 import scala.concurrent.ExecutionContext.Implicits._
-import reactivemongo.core.commands._
 import reactivemongo.api.collections.GenericQueryBuilder
 import scala.Some
-import reactivemongo.api.{bulk, Cursor, QueryOpts}
+import reactivemongo.api.{Cursor, QueryOpts}
 import play.api.libs.json.JsObject
 import com.scalableminds.util.tools.Fox
 import play.api.libs.iteratee.Enumerator
@@ -31,7 +32,7 @@ trait CollectionHelpers[T] extends DAO[T] with MongoHelpers with DBInteractionLo
   def defaultOrderBy = "_id"
 
   def errorFromMsg(msg: String) = {
-    LastError(ok = false, None, None, Some(msg), None, 0, false)
+    LastError(ok = false, Some(msg), None, None, 0, None, false, None, None, false, None, None)
   }
 
   def findHeadOption[V](attribute: String, value: V)(implicit w: Writes[V], ctx: DBAccessContext): Fox[T] = withExceptionCatcher {
@@ -66,7 +67,7 @@ trait CollectionHelpers[T] extends DAO[T] with MongoHelpers with DBInteractionLo
   //    this.find(query).cursor[T]
   //  }
 
-  def remove[V](attribute: String, value: V)(implicit w: Writes[V], ctx: DBAccessContext): Fox[LastError] = {
+  def remove[V](attribute: String, value: V)(implicit w: Writes[V], ctx: DBAccessContext): Fox[WriteResult] = {
     remove(Json.obj(attribute -> w.writes(value)))
   }
 
@@ -78,7 +79,7 @@ trait CollectionHelpers[T] extends DAO[T] with MongoHelpers with DBInteractionLo
       orderBy)
   }
 
-  def takeSome(q: GenericQueryBuilder[JsObject, Reads, Writes], offset: Int, limit: Int, orderBy: String = defaultOrderBy) = withExceptionCatcher {
+  def takeSome(q: GenericQueryBuilder[JSONSerializationPack.type], offset: Int, limit: Int, orderBy: String = defaultOrderBy) = withExceptionCatcher {
     val options = QueryOpts(skipN = offset, batchSizeN = limit)
     val document = Json.obj(
       orderBy -> 1)
@@ -135,16 +136,16 @@ trait CollectionHelpers[T] extends DAO[T] with MongoHelpers with DBInteractionLo
     remove(Json.obj())
   }
 
-  def update(id: BSONObjectID, t: T)(implicit ctx: DBAccessContext): Fox[LastError] = {
+  def update(id: BSONObjectID, t: T)(implicit ctx: DBAccessContext): Fox[WriteResult] = {
     update(Json.obj("_id" -> id), formatter.writes(t))
   }
 
-  def insert(t: T)(implicit ctx: DBAccessContext): Fox[LastError] = {
+  def insert(t: T)(implicit ctx: DBAccessContext): Fox[WriteResult] = {
     insert(formatter.writes(t))
   }
 
-  def bulkInsert(t: Seq[T], bulkSize: Int = bulk.MaxDocs, bulkByteSize: Int = bulk.MaxBulkSize)(implicit ctx: DBAccessContext): Fox[Int] = {
-    bulkInsert(Enumerator.enumerate(t.map(formatter.writes)), bulkSize, bulkByteSize).flatMap{
+  def bulkInsert(t: Seq[T])(implicit ctx: DBAccessContext): Fox[Int] = {
+    bulkInsert(t.toStream.map(formatter.writes)).flatMap{
       case insertedElements if insertedElements == t.size =>
         Full(insertedElements)
       case x =>

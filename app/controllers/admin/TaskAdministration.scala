@@ -178,7 +178,7 @@ class TaskAdministration @Inject() (val messagesApi: MessagesApi) extends AdminC
   def editTaskForm(taskId: String) = Authenticated.async(parse.urlFormEncoded) { implicit request =>
     def validateForm(task: Task): Fox[Result] =
       basicTaskForm(task.assignedInstances).bindFromRequest.fold(
-        hasErrors = (formWithErrors => taskEditHtml(taskId, formWithErrors).map(h => BadRequest(h))),
+        hasErrors = formWithErrors => taskEditHtml(taskId, formWithErrors).map(h => BadRequest(h)),
         success = {
           case (taskTypeId, experience, priority, instances, team, projectName) =>
             for {
@@ -212,7 +212,7 @@ class TaskAdministration @Inject() (val messagesApi: MessagesApi) extends AdminC
 
   def createFromNML = Authenticated.async(parse.multipartFormData) { implicit request =>
     taskFromNMLForm.bindFromRequest.fold(
-      hasErrors = (formWithErrors => taskCreateHTML(formWithErrors, taskForm).map(html => BadRequest(html))),
+      hasErrors = formWithErrors => taskCreateHTML(formWithErrors, taskForm).map(html => BadRequest(html)),
       success = {
         case (taskTypeId, experience, priority, instances, team, projectName, boundingBox) =>
           for {
@@ -222,7 +222,9 @@ class TaskAdministration @Inject() (val messagesApi: MessagesApi) extends AdminC
             _ <- ensureTeamAdministration(request.user, team)
             bb <- boundingBox
           } yield {
-            val nmls = NMLService.extractFromFile(nmlFile.ref.file, nmlFile.filename).flatten
+            val nmls = NMLService.extractFromFile(nmlFile.ref.file, nmlFile.filename)
+            var numCreated = 0
+
             val baseTask = Task(
               taskType._id,
               team,
@@ -230,8 +232,9 @@ class TaskAdministration @Inject() (val messagesApi: MessagesApi) extends AdminC
               priority,
               instances,
               _project = project.map(_.name))
+
             nmls.foreach {
-              nml =>
+              case NMLService.NMLParseSuccess(_, nml) =>
                 val task = Task(
                   taskType._id,
                   team,
@@ -243,9 +246,12 @@ class TaskAdministration @Inject() (val messagesApi: MessagesApi) extends AdminC
                 TaskDAO.insert(task).flatMap { _ =>
                   AnnotationService.createAnnotationBase(task, request.user._id, bb, taskType.settings, nml)
                 }
+                numCreated += 1
+              case _ =>
+
             }
             Redirect(controllers.routes.TaskController.empty).flashing(
-              FlashSuccess(Messages("task.bulk.createSuccess", nmls.size)))
+              FlashSuccess(Messages("task.bulk.createSuccess", numCreated)))
           }
       })
   }
@@ -318,9 +324,6 @@ class TaskAdministration @Inject() (val messagesApi: MessagesApi) extends AdminC
     }
   }
 
-  def dataSetNamesForTasks(tasks: List[Task])(implicit ctx: DBAccessContext) =
-    Future.traverse(tasks)(_.annotationBase.flatMap(_.dataSetName getOrElse "").futureBox.map(_.toOption))
-
   def tasksForType(taskTypeId: String) = Authenticated.async { implicit request =>
     for {
       taskType <- TaskTypeDAO.findOneById(taskTypeId) ?~> Messages("taskType.notFound")
@@ -365,7 +368,7 @@ class TaskAdministration @Inject() (val messagesApi: MessagesApi) extends AdminC
           tasks <- Fox.sequenceOfFulls(annotations.map(_.task))
           projects <- Fox.sequenceOfFulls(tasks.map(_.project))
           taskTypes <- Fox.sequenceOfFulls(tasks.map(_.taskType))
-          taskTypeMap <- futureTaskTypeMap getOrElse(Map.empty)
+          taskTypeMap <- futureTaskTypeMap.getOrElse(Map.empty)
           workingTime <- TimeSpanService.totalTimeOfUser(user, start, end).futureBox
         } yield {
           UserWithTaskInfos(

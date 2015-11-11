@@ -2,29 +2,15 @@ package controllers
 
 import javax.inject.Inject
 
+import models.user.UserAgentTrackingDAO
 import oxalis.security.Secured
+import play.api._
 import play.api.i18n.MessagesApi
 import play.api.mvc.Action
-import play.api._
-import play.api.libs.concurrent.Akka
-import scala.concurrent.Future
-import models.user.{UsedAnnotationDAO, UsedAnnotation, UserAgentTrackingDAO}
-import models.basics.Implicits._
-import play.api.libs.concurrent.Execution.Implicits._
 import play.api.routing.JavaScriptReverseRouter
 import play.twirl.api.Html
-import net.liftweb.common.Full
 
-class Application @Inject() (val messagesApi: MessagesApi) extends Controller with Secured {
-  lazy val app = play.api.Play.current
-
-  lazy val Mailer =
-    Akka.system(app).actorSelection("/user/mailActor")
-
-  lazy val annotationStore =
-    Akka.system(app).actorSelection("/user/annotationStore")
-
-  // -- Javascript routing
+class Application @Inject()(val messagesApi: MessagesApi) extends Controller with Secured {
 
   def javascriptRoutes = Action { implicit request =>
     Ok(
@@ -53,7 +39,7 @@ class Application @Inject() (val messagesApi: MessagesApi) extends Controller wi
     request.userOpt match {
       case Some(user) =>
         Redirect("/dashboard")
-      case _ =>
+      case _          =>
         Redirect("/spotlight")
     }
   }

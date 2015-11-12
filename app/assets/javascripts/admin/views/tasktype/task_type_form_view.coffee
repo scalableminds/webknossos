@@ -75,8 +75,8 @@ class TaskTypeFormView extends Backbone.Marionette.LayoutView
               <div class="col-sm-4">
                 <div class="input-group">
                   <input type="number" id="expectedTime_minTime" name="expectedTime.minTime"
-                    value="5" min="1" input-append="hours" class="form-control" required>
-                  <span class="input-group-addon">hours</span>
+                    value="300" min="1" input-append="minutes" class="form-control" required>
+                  <span class="input-group-addon">minutes</span>
                 </div>
               </div>
             </div>
@@ -86,8 +86,8 @@ class TaskTypeFormView extends Backbone.Marionette.LayoutView
               <div class="col-sm-4">
                 <div class="input-group">
                   <input type="number" id="expectedTime_maxTime" name="expectedTime.maxTime"
-                    value="10" min="1" input-append="hours" class="form-control" required>
-                  <span class="input-group-addon">hours</span>
+                    value="600" min="1" input-append="minutes" class="form-control" required>
+                  <span class="input-group-addon">minutes</span>
                 </div>
               </div>
             </div>
@@ -97,8 +97,8 @@ class TaskTypeFormView extends Backbone.Marionette.LayoutView
               <div class="col-sm-4">
                 <div class="input-group">
                   <input type="number" id="expectedTime_maxHard" name="expectedTime.maxHard"
-                    value="15" min="1" input-append="hours" class="form-control" required>
-                  <span class="input-group-addon">hours</span>
+                    value="900" min="1" input-append="minutes" class="form-control" required>
+                  <span class="input-group-addon">minutes</span>
                 </div>
               </div>
             </div>

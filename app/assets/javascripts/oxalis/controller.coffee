@@ -216,6 +216,8 @@ class Controller
       if @urlManager.initialState.mode?
         @setMode( @urlManager.initialState.mode )
 
+      @initTimeLimit(tracing.task.type.expectedTime, tracing.user) if tracing.task
+
       # initial trigger
       @sceneController.setSegmentationAlpha($('#alpha-slider').data("slider-value") or @model.user.getSettings().segmentationOpacity)
 
@@ -367,3 +369,26 @@ class Controller
     # allow everything but IE
     isIE = userAgentContains("MSIE") or userAgentContains("Trident")
     return not isIE
+
+
+  initTimeLimit : (timeString, user) ->
+
+    finishTracing = =>
+      # save the progress
+      model = @model.skeletonTracing || @model.volumeTracing
+      model.stateLogger.pushNow().done( ->
+        window.location.href = $("#trace-finish-button").attr("href")
+      )
+
+    hardLimitRe = /Limit: ([0-9]+)/
+    # parse hard time limit and convert from min to ms
+    timeLimit = parseInt(timeString.match(hardLimitRe)[1]) * 60 * 1000 or 0
+    console.log("TimeLimit is #{timeLimit/60/1000} min") if user is "Anonymous User"
+
+    # only enable hard time limit for anonymous users so far
+    if timeLimit and user is "Anonymous User"
+
+      setTimeout( ->
+        window.alert("Time limit is reached, thanks for tracing!")
+        finishTracing()
+      , timeLimit)

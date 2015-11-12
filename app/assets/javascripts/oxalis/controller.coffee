@@ -6,6 +6,7 @@ stats : Stats
 ./controller/annotations/skeletontracing_controller : SkeletonTracingController
 ./controller/annotations/volumetracing_controller : VolumeTracingController
 ./controller/combinations/skeletontracing_arbitrary_controller : SkeletonTracingArbitraryController
+./controller/combinations/minimal_skeletontracing_arbitrary_controller : MinimalArbitraryController
 ./controller/combinations/skeletontracing_plane_controller : SkeletonTracingPlaneController
 ./controller/combinations/volumetracing_plane_controller : VolumeTracingPlaneController
 ./controller/scene_controller : SceneController
@@ -135,7 +136,8 @@ class Controller
           @model, @sceneController, @gui, @view )
         @planeController = new SkeletonTracingPlaneController(
           @model, stats, @gui, @view, @sceneController, @annotationController)
-        @arbitraryController = new SkeletonTracingArbitraryController(
+        ArbitraryController = if @model.isAnonymous then MinimalArbitraryController else SkeletonTracingArbitraryController
+        @arbitraryController = new ArbitraryController(
           @model, stats, @gui, @view, @sceneController, @annotationController)
 
       else if @model.volumeTracing?
@@ -216,7 +218,7 @@ class Controller
       if @urlManager.initialState.mode?
         @setMode( @urlManager.initialState.mode )
 
-      @initTimeLimit(tracing.task.type.expectedTime, tracing.user) if tracing.task
+      @initTimeLimit(tracing.task.type.expectedTime) if tracing.task
 
       # initial trigger
       @sceneController.setSegmentationAlpha($('#alpha-slider').data("slider-value") or @model.user.getSettings().segmentationOpacity)
@@ -232,14 +234,16 @@ class Controller
 
   initKeyboard : ->
 
-    $(document).keypress (event) ->
+    # no help menu for minimal mode
+    if not @model.isAnonymous
+      $(document).keypress (event) ->
 
-      if $(event.target).is("input")
-        # don't summon help modal when the user types into an input field
-        return
+        if $(event.target).is("input")
+          # don't summon help modal when the user types into an input field
+          return
 
-      if event.shiftKey && event.which == 63
-        $("#help-modal").modal('toggle')
+        if event.shiftKey && event.which == 63
+          $("#help-modal").modal('toggle')
 
 
 
@@ -371,7 +375,7 @@ class Controller
     return not isIE
 
 
-  initTimeLimit : (timeString, user) ->
+  initTimeLimit : (timeString) ->
 
     finishTracing = =>
       # save the progress
@@ -383,10 +387,10 @@ class Controller
     hardLimitRe = /Limit: ([0-9]+)/
     # parse hard time limit and convert from min to ms
     timeLimit = parseInt(timeString.match(hardLimitRe)[1]) * 60 * 1000 or 0
-    console.log("TimeLimit is #{timeLimit/60/1000} min") if user is "Anonymous User"
+    console.log("TimeLimit is #{timeLimit/60/1000} min") if @model.isAnonymous
 
     # only enable hard time limit for anonymous users so far
-    if timeLimit and user is "Anonymous User"
+    if timeLimit and @model.isAnonymous
 
       setTimeout( ->
         window.alert("Time limit is reached, thanks for tracing!")

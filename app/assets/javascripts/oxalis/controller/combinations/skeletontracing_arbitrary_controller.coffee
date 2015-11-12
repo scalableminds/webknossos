@@ -2,7 +2,7 @@
 ../viewmodes/arbitrary_controller : ArbitraryController
 ###
 
-class SkeletonTacingArbitraryController extends ArbitraryController
+class SkeletonTracingArbitraryController extends ArbitraryController
 
   # See comment in Controller class on general controller architecture.
   #

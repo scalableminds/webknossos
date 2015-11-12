@@ -86,6 +86,8 @@ class Model
     @scaleInfo = new ScaleInfo(dataSet.scale)
     @updatePipeline = new Pipeline([tracing.version])
 
+    @isAnonymous = tracing.user is "Anonymous User"
+
     if (bb = tracing.content.boundingBox)?
         @boundingBox = {
           min : bb.topLeft

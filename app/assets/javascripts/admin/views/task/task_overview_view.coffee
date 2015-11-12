@@ -152,7 +152,7 @@ class TaskOverviewView extends Backbone.Marionette.LayoutView
 
     @ui.dateRangeInput.daterangepicker(
       locale:
-        format: 'L'
+        format: "L"
       startDate: moment().subtract(@DEFAULT_TIME_PERIOD_TIME, @DEFAULT_TIME_PERIOD_UNIT).format("L")
       endDate: moment().format("L")
       opens: "left"
@@ -186,7 +186,7 @@ class TaskOverviewView extends Backbone.Marionette.LayoutView
         modelValue: -> return "#{@model.get("name")}"
       name: "team"
       events:
-        change: 'teamChanged'
+        change: "teamChanged"
     )
 
     @teamRegion.show(teamSelectionView)
@@ -215,7 +215,7 @@ class TaskOverviewView extends Backbone.Marionette.LayoutView
         range: minMaxHours
       )
 
-      sliderEl.noUiSlider.on('update', (values, handle) =>
+      sliderEl.noUiSlider.on("update", (values, handle) =>
         @chosenMinHours = Math.round(+values[0])
         @chosenMaxHours = Math.round(+values[1])
         @ui.rangeSliderLabel1.html("#{@chosenMinHours}h")
@@ -281,19 +281,19 @@ class TaskOverviewView extends Backbone.Marionette.LayoutView
 
   buildGraph : ->
 
-    width  = $('.graph').width() - @OPTIONS_MARGIN - $('.overview-options').width()
+    width  = $(".graph").width() - @OPTIONS_MARGIN - $(".overview-options").width()
     height = $(window).height() - 50 - $(".graph").offset().top
 
-    @svg = d3.select('.graph')
+    @svg = d3.select(".graph")
       .html("")
-      .append('svg')
-      .attr('width', width)
-      .attr('height', height)
+      .append("svg")
+      .attr("width", width)
+      .attr("height", height)
 
-    @container = @svg.append("g")
+    @container = @svg.append("svg:g")
 
-    @svgEdges = @container.append('svg:g').selectAll('path')
-    @svgNodes = @container.append('svg:g').selectAll('g')
+    @svgEdges = @container.append("svg:g").selectAll("path")
+    @svgNodes = @container.append("svg:g").selectAll("g")
 
     @setupPanAndZoom()
 
@@ -323,36 +323,36 @@ class TaskOverviewView extends Backbone.Marionette.LayoutView
 
     # append the svg path elements
     @svgEdges = @svgEdges.data(edges)
-      .enter().append('svg:path')
-      .attr('class', 'link')
-      .attr('stroke', (d) -> d.color )
-      .attr('stroke-dasharray', (d) => if d.color is @FUTURE_TASK_EDGE_COLOR then '10,10')
+      .enter().append("svg:path")
+      .attr("class", "link")
+      .attr("stroke", (d) -> d.color )
+      .attr("stroke-dasharray", (d) => if d.color is @FUTURE_TASK_EDGE_COLOR then "10,10")
 
     # append the container for the svg node elements
     @svgNodes = @svgNodes.data(nodes, (d) -> d.id)
-    svgNodesContainer = @svgNodes.enter().append('svg:g')
-      .attr('id', (d) -> d.id )
+    svgNodesContainer = @svgNodes.enter().append("svg:g")
+      .attr("id", (d) -> d.id )
 
     # add the label to the svg node container
-    svgNodesContainer.append('svg:text')
-      .attr('class', 'id')
+    svgNodesContainer.append("svg:text")
+      .attr("class", "id")
       .text( (d) -> d.text )
       .each( (d) -> 
         d.width = @getBBox().width + TEXT_PADDING
         d.height = RECT_HEIGHT
       )
-      .attr('x', (d) -> d.width / 2 )
-      .attr('y', RECT_HEIGHT / 2)
+      .attr("x", (d) -> d.width / 2 )
+      .attr("y", RECT_HEIGHT / 2)
 
     # add the rectangle to the svg node container
-    svgNodesContainer.insert('svg:rect', ':first-child')
-      .attr('class', 'node')
-      .attr('width', (d) -> d.width )
-      .attr('height', RECT_HEIGHT)
-      .attr('rx', (d) -> if d.type is "user" then 3 else 10 )
-      .attr('ry', (d) -> if d.type is "user" then 3 else 10 )
-      .style('fill', (d) -> if d.color then d.color else 'white')
-      .style('stroke', (d) -> if d.color then d3.rgb(d.color).darker().toString() else 'black')
+    svgNodesContainer.insert("svg:rect", ":first-child")
+      .attr("class", "node")
+      .attr("width", (d) -> d.width )
+      .attr("height", RECT_HEIGHT)
+      .attr("rx", (d) -> if d.type is "user" then 3 else 10 )
+      .attr("ry", (d) -> if d.type is "user" then 3 else 10 )
+      .style("fill", (d) -> if d.color then d.color else "white")
+      .style("stroke", (d) -> if d.color then d3.rgb(d.color).darker().toString() else "black")
 
     @zoomOnce = _.once(=> @zoomToFitScreen())
 
@@ -365,7 +365,7 @@ class TaskOverviewView extends Backbone.Marionette.LayoutView
       .symmetricDiffLinkLengths(200)
       .avoidOverlaps(true)
       .convergenceThreshold(0.10)
-      .on('tick', @tick.bind(@))
+      .on("tick", @tick.bind(@))
 
     # unconstrained, user-constrained, overlap-constrained iterations
     @force.start(15, 0, 10)
@@ -380,7 +380,7 @@ class TaskOverviewView extends Backbone.Marionette.LayoutView
 
     # update the position of the edges
     # distribute the start and end point on the x-axis depending on their direction
-    @svgEdges.attr('d', (d) ->
+    @svgEdges.attr("d", (d) ->
       deltaX = d.target.x - d.source.x
       deltaY = d.target.y - d.source.y
       dist = Math.sqrt(deltaX * deltaX + deltaY * deltaY)
@@ -391,12 +391,12 @@ class TaskOverviewView extends Backbone.Marionette.LayoutView
       sourceY = d.source.y
       targetX = d.target.x - (targetPadding * normX)
       targetY = d.target.y
-      return 'M' + sourceX + ',' + sourceY + 'L' + targetX + ',' + targetY
+      return "M#{sourceX},#{sourceY}L#{targetX},#{targetY}"
     )
 
     # update the position of the nodes
-    @svgNodes.attr('transform', (d) ->
-      return 'translate(' + (d.x - d.width / 2) + ',' + (d.y - d.height / 2) + ')'
+    @svgNodes.attr("transform", (d) ->
+      return "translate(#{d.x - d.width / 2},#{d.y - d.height / 2})"
     )
 
     # this will only be called after the first tick
@@ -469,7 +469,7 @@ class TaskOverviewView extends Backbone.Marionette.LayoutView
     @zoom = d3.behavior.zoom()
       .scaleExtent([0.1, 10])
       .on("zoom", =>
-        @container.attr("transform", "translate(" + d3.event.translate + ")scale(" + d3.event.scale + ")")
+        @container.attr("transform", "translate(#{d3.event.translate})scale(#{d3.event.scale})")
       )
 
     @svg.call(@zoom)
@@ -483,7 +483,7 @@ class TaskOverviewView extends Backbone.Marionette.LayoutView
         html: true,
         trigger: "hover",
         content: @createUserTooltip(user),
-        container: 'body'
+        container: "body"
       )
     )
 

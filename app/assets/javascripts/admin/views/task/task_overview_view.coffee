@@ -266,7 +266,6 @@ class TaskOverviewView extends Backbone.Marionette.LayoutView
     @fetchPromise.then( =>
 
       { userInfos, taskTypes, projects } = @model.attributes
-      @userInfos = userInfos
       # move workingTime to user object and convert to hours
       userInfos.map( (userInfo) => userInfo.user.workingHours = Utils.roundTo(userInfo.workingTime / @MS_PER_HOUR, 2) )
       # extract users and add full names
@@ -310,6 +309,7 @@ class TaskOverviewView extends Backbone.Marionette.LayoutView
     )
 
     RECT_HEIGHT = @RECT_HEIGHT
+    TEXT_PADDING = @TEXT_PADDING
 
     # stop existing force layout and cancel its timeout
     @force.stop() if @force
@@ -323,7 +323,7 @@ class TaskOverviewView extends Backbone.Marionette.LayoutView
 
     # append the svg path elements
     @svgEdges = @svgEdges.data(edges)
-    @svgEdges.enter().append('svg:path')
+      .enter().append('svg:path')
       .attr('class', 'link')
       .attr('stroke', (d) -> d.color )
       .attr('stroke-dasharray', (d) => if d.color is @FUTURE_TASK_EDGE_COLOR then '10,10')
@@ -331,15 +331,14 @@ class TaskOverviewView extends Backbone.Marionette.LayoutView
     # append the container for the svg node elements
     @svgNodes = @svgNodes.data(nodes, (d) -> d.id)
     svgNodesContainer = @svgNodes.enter().append('svg:g')
-    svgNodesContainer.attr('id', (d) -> d.id )
+      .attr('id', (d) -> d.id )
 
     # add the label to the svg node container
-    _this = @
     svgNodesContainer.append('svg:text')
       .attr('class', 'id')
       .text( (d) -> d.text )
       .each( (d) -> 
-        d.width = @getBBox().width + _this.TEXT_PADDING
+        d.width = @getBBox().width + TEXT_PADDING
         d.height = RECT_HEIGHT
       )
       .attr('x', (d) -> d.width / 2 )
@@ -386,10 +385,11 @@ class TaskOverviewView extends Backbone.Marionette.LayoutView
       deltaY = d.target.y - d.source.y
       dist = Math.sqrt(deltaX * deltaX + deltaY * deltaY)
       normX = deltaX / dist
-      padding = 25
-      sourceX = d.source.x + (padding * normX)
+      sourcePadding = Math.min(25, d.source.width / 2)
+      targetPadding = Math.min(25, d.target.width / 2)
+      sourceX = d.source.x + (sourcePadding * normX)
       sourceY = d.source.y
-      targetX = d.target.x - (padding * normX)
+      targetX = d.target.x - (targetPadding * normX)
       targetY = d.target.y
       return 'M' + sourceX + ',' + sourceY + 'L' + targetX + ',' + targetY
     )
@@ -429,7 +429,7 @@ class TaskOverviewView extends Backbone.Marionette.LayoutView
         type: "project"
       ))
 
-    nodes
+    return nodes
 
 
   buildEdges : (userInfos, nodes) ->
@@ -461,7 +461,7 @@ class TaskOverviewView extends Backbone.Marionette.LayoutView
         projects.map( (project) => @edge(user.id, project._id.$oid, nodes)) if @doDrawUser(user)
       )))
 
-    _.compact(edges)
+    return _.compact(edges)
 
 
   setupPanAndZoom : ->

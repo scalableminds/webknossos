@@ -47,6 +47,8 @@ class DatasetListView extends Backbone.Marionette.CompositeView
     SortTableBehavior:
       behaviorClass: SortTableBehavior
 
+  DATASETS_PER_PAGE : 30
+
   initialize : ->
 
     @collection.sortByAttribute("created")
@@ -56,6 +58,7 @@ class DatasetListView extends Backbone.Marionette.CompositeView
       data : "isEditable=true"
     ).done( =>
       @collection.goTo(1)
+      @collection.howManyPer(@DATASETS_PER_PAGE)
     )
 
     @listenTo(app.vent, "paginationView:filter", @filterBySearch)

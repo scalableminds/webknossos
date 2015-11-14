@@ -175,7 +175,8 @@ object ApplicationBuild extends Build {
   lazy val oxalisSettings = Seq(
     TwirlKeys.templateImports += "oxalis.view.helpers._",
     TwirlKeys.templateImports += "oxalis.view._",
-    scalaVersion := "2.11.2",
+    scalaVersion := "2.11.4",
+    scalacOptions += "-target:jvm-1.8",
     version := appVersion,
     gulpPath := (Path("node_modules") / ".bin" / "gulp").getPath,
     npmPath := "npm",

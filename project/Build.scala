@@ -172,6 +172,7 @@ object ApplicationBuild extends Build {
     templatesImport += "oxalis.view.helpers._",
     templatesImport += "oxalis.view._",
     scalaVersion := "2.10.3",
+    javacOptions ++= Seq("-source", "1.7", "-target", "1.7"),
     scalacOptions += "-target:jvm-1.7",
     gulpPath := (Path("node_modules") / ".bin" / "gulp").getPath,
     npmPath := "npm",

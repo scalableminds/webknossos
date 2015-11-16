@@ -6,9 +6,9 @@ jquery : $
 class SkeletonTracingStateLogger extends StateLogger
 
 
-  constructor : (flycam, version, tracingId, tracingType, allowUpdate, updatePipeline, @skeletonTracing) ->
+  constructor : (flycam, version, tracingId, tracingType, allowUpdate, @skeletonTracing) ->
 
-    super(flycam, version, tracingId, tracingType, allowUpdate, updatePipeline)
+    super(flycam, version, tracingId, tracingType, allowUpdate)
 
 
   #### TREES

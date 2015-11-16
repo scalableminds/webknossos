@@ -204,7 +204,7 @@ object AnnotationController extends Controller with Secured with TracingInformat
     if (annotation.restrictions.allowUpdate(request.user))
       Full(version == annotation.version + 1)
     else
-      Failure("notAllowed") ~> 403
+      Failure(Messages("notAllowed")) ~> 403
   }
 
   def updateWithJson(typ: String, id: String, version: Int) = Authenticated.async(parse.json(maxLength = 2097152)) { implicit request =>

@@ -33,7 +33,8 @@ require.config(
     "daterangepicker"     : "../bower_components/bootstrap-daterangepicker/daterangepicker"
     "rangeslider"         : "../bower_components/nouislider/distribute/nouislider.min"
     "clipboard"           : "../bower_components/clipboard/dist/clipboard.min"
-    "mjs"                  : "../bower_components/mjs/src/mjs"
+    "mjs"                 : "../bower_components/mjs/src/mjs"
+    "cola"                : "../bower_components/webcola/WebCola/cola.min"
     "worker"              : "libs/worker_plugin"
     "wrapped_worker"      : "libs/wrapped_worker_plugin"
     "nested_obj_model"    : "libs/nested_obj_model"
@@ -65,5 +66,7 @@ require.config(
       exports : "Backbone"
     "backbone.marionette" : [ "backbone", "underscore" ]
     "backbone.paginator" : [ "backbone", "underscore" ]
+    "cola" :
+      exports : "cola"
 
 )

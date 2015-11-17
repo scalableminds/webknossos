@@ -95,6 +95,10 @@ class Controller
           switch allowedMode
             when "flight" then @allowedModes.push(constants.MODE_ARBITRARY)
             when "oblique" then @allowedModes.push(constants.MODE_ARBITRARY_PLANE)
+        else
+            # flight and oblique mode do not work with non-uint8 data
+            if allowedMode is "flight" or allowedMode is "oblique"
+              Toast.error("#{allowedMode} mode was allowed but does not work with more-than-8-bit data.")
 
         switch allowedMode
           when "orthogonal" then @allowedModes.push(constants.MODE_PLANE_TRACING)

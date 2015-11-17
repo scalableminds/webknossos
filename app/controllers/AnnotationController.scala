@@ -41,8 +41,8 @@ object AnnotationController extends Controller with Secured with TracingInformat
 
   implicit val timeout = Timeout(5 seconds)
 
-  def annotationJson(user: User, annotation: AnnotationLike)(implicit ctx: DBAccessContext): Fox[JsObject] =
-    AnnotationLike.annotationLikeInfoWrites(annotation, Some(user), Nil)
+  def annotationJson(user: User, annotation: AnnotationLike, exclude: List[String] = Nil)(implicit ctx: DBAccessContext): Fox[JsObject] =
+    AnnotationLike.annotationLikeInfoWrites(annotation, Some(user), exclude)
 
   def info(typ: String, id: String, readOnly: Boolean = false) = UserAwareAction.async { implicit request =>
       val annotationId = AnnotationIdentifier(typ, id)
@@ -284,7 +284,7 @@ object AnnotationController extends Controller with Secured with TracingInformat
       task <- TaskDAO.findOneById(taskId) ?~> Messages("task.notFound")
       _ <- ensureTeamAdministration(request.user, task.team).toFox
       annotations <- task.annotations
-      jsons <- Fox.sequence(annotations.map(annotationJson(request.user, _)))
+      jsons <- Fox.sequence(annotations.map(annotationJson(request.user, _, exclude = List("content"))))
     } yield {
       Ok(JsArray(jsons.flatten))
     }

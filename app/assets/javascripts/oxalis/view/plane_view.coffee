@@ -238,9 +238,10 @@ class PlaneView
 
   stop : ->
 
-    $(".inputcatcher").hide()
+    if @running
+      $(window).off "resize", => @.resize()
 
-    $(window).off "resize", => @.resize()
+    $(".inputcatcher").hide()
 
     @running = false
 

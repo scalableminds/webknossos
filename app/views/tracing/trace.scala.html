@@ -8,7 +8,7 @@
 @main( ){
   <div id="container" data-tracing-type="@annotation.typ" data-tracing-id="@annotation.id" class="hide clearfix">
     <div id="main" role="main" data-url="@controllers.routes.AnnotationController.info(annotation.typ, annotation.id)">
-      <div id="left-menu" @if(session.user.isAnonymous) {class="hide"}>
+      <div id="left-menu">
         @if(annotation.restrictions.allowUpdate(session.user)){
           <a href="#" class="btn btn-primary" id="trace-save-button">Save</a>
         } else {
@@ -217,7 +217,7 @@
           </div>
         </div>
       </div>
-      <div id="right-menu" class="skeleton-controls @if(session.user.isAnonymous) {hide}">
+      <div id="right-menu" class="skeleton-controls">
         <ul class="nav nav-tabs">
           <li>
             <a href="#tab-tree" data-toggle="tab">Tree Viewer</a>

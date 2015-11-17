@@ -10,9 +10,9 @@ libs/toast : Toast
 
 class SkeletonTracingView extends View
 
-  constructor : (@model) ->
+  constructor : (@model, advancedOptionsAllowed) ->
 
-    super(@model)
+    super(@model, advancedOptionsAllowed)
 
     $('.volume-controls').hide()
 

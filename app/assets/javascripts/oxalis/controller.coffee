@@ -93,11 +93,11 @@ class Controller
 
         if @model.getColorBinaries()[0].cube.BIT_DEPTH == 8
           switch allowedMode
-            when "orthogonal" then @allowedModes.push(constants.MODE_PLANE_TRACING)
             when "flight" then @allowedModes.push(constants.MODE_ARBITRARY)
             when "oblique" then @allowedModes.push(constants.MODE_ARBITRARY_PLANE)
 
         switch allowedMode
+          when "orthogonal" then @allowedModes.push(constants.MODE_PLANE_TRACING)
           when "volume" then @allowedModes.push(constants.MODE_VOLUME)
 
       # FPS stats

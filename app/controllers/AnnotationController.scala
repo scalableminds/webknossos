@@ -219,7 +219,7 @@ object AnnotationController extends Controller with Secured with TracingInformat
           new Fox(Future.successful(Full(JsonBadRequest(oldJs, "annotation.dirtyState"))))
       }
 
-      Logger.info(s"Tracing update [$typ - $id, $version]: ${request.body}")
+      //Logger.info(s"Tracing update [$typ - $id, $version]: ${request.body}")
       AnnotationUpdateService.store(typ, id, version, request.body)
 
       for {

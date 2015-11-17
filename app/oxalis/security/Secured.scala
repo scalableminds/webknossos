@@ -56,7 +56,7 @@ trait Secured extends FoxImplicits {
    * Tries to extract the user from a request
    */
   def maybeUser(implicit request: RequestHeader): Fox[User] =
-    userFromSession orElse userFromToken orElse autoLoginUser
+    userFromToken orElse userFromSession orElse autoLoginUser
 
   private def autoLoginUser: Fox[User] = {
     // development setting: if the key is set, one gets logged in automatically
@@ -96,7 +96,7 @@ trait Secured extends FoxImplicits {
    */
   trait AuthHelpers {
     def executeAndEnsureSession[A](user: User, request: Request[A], block: (AuthenticatedRequest[A]) => Future[SimpleResult]): Future[SimpleResult] =
-      if (request.session.get(Secured.SessionInformationKey).isDefined)
+      if (request.session.get(Secured.SessionInformationKey) == Some(user.id))
         block(new AuthenticatedRequest(user, request))
       else
         block(new AuthenticatedRequest(user, request)).map { r =>

@@ -418,7 +418,7 @@ object TaskAdministration extends AdminController {
     }
 
     for {
-      users <- UserService.findAll
+      users <- UserService.findAllNonAnonymous()
       userInfos <- getUserInfos(users)
       allTaskTypes <- TaskTypeDAO.findAll
       allProjects <- ProjectDAO.findAll

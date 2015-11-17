@@ -3,6 +3,7 @@ package models.user
 import java.util.UUID
 
 import oxalis.thirdparty.BrainTracing
+import play.api.libs.json.Json
 import play.api.{Logger, Application}
 import scala.Some
 import scala.concurrent.{Future, Await}
@@ -32,8 +33,15 @@ object UserService extends FoxImplicits {
   def findAll()(implicit ctx: DBAccessContext) =
     UserDAO.findAll
 
+  def findAllNonAnonymous()(implicit ctx: DBAccessContext) =
+    UserDAO.findAllNonAnonymous
+
   def findByTeams(teams: List[String])(implicit ctx: DBAccessContext) = {
     UserDAO.findByTeams(teams)
+  }
+
+  def countNonAnonymousUsers()(implicit ctx: DBAccessContext) = {
+    UserDAO.countNonAnonymousUsers
   }
 
   def findOneById(id: String, useCache: Boolean)(implicit ctx: DBAccessContext): Fox[User] = {

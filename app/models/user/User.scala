@@ -229,6 +229,14 @@ object UserDAO extends SecuredBaseDAO[User] {
     update(findByIdQ(_user), Json.obj("$set" -> Json.obj("pwdHash" -> hashPassword(pswd))))
   }
 
+  def findAllNonAnonymous(implicit ctx: DBAccessContext) = {
+    find(Json.obj("_isAnonymous" -> Json.obj("$ne" -> true))).cursor[User].collect[List]()
+  }
+
+  def countNonAnonymousUsers(implicit ctx: DBAccessContext) = {
+    count(Json.obj("_isAnonymous" -> Json.obj("$ne" -> true)))
+  }
+
   def verify(user: User)(implicit ctx: DBAccessContext) = {
     update(
       Json.obj("email" -> user.email),

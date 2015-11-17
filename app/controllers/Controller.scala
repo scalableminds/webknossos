@@ -39,9 +39,9 @@ with models.basics.Implicits {
       case false => Failure(Messages("notAllowed"))
     }
 
-  case class Filter[A, T](name: String, predicate: (A, T) => Boolean)(implicit converter: Converter[String, A]) {
+  case class Filter[A, T](name: String, predicate: (A, T) => Boolean, default: Option[String] = None)(implicit converter: Converter[String, A]) {
     def applyOn(list: List[T])(implicit request: Request[_]): List[T] = {
-      request.getQueryString(name).flatMap(converter.convert) match {
+      request.getQueryString(name).orElse(default).flatMap(converter.convert) match {
         case Some(attr) => list.filter(predicate(attr, _))
         case _ => list
       }

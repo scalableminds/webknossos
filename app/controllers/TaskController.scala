@@ -57,7 +57,7 @@ object TaskController extends Controller with Secured with FoxImplicits {
     Fox.sequenceOfFulls(tasks.map(_.project)).map(_.distinct)
 
   def getAllAvailableTaskCountsAndProjects()(implicit ctx: DBAccessContext): Fox[Map[User, (Int, List[Project])]] = {
-    UserDAO.findAll
+    UserDAO.findAllNonAnonymous
       .flatMap { users =>
         Future.sequence( users.map { user =>
           async {
@@ -73,11 +73,11 @@ object TaskController extends Controller with Secured with FoxImplicits {
 
   def createAvailableTasksJson(availableTasksMap: Map[User, (Int, List[Project])]) =
     Json.toJson(availableTasksMap.map { case (user, (taskCount, projects)) =>
-        Json.obj(
-          "name" -> user.name,
-          "availableTaskCount" -> taskCount,
-          "projects" -> projects.map(_.name)
-        )
+      Json.obj(
+        "name" -> user.name,
+        "availableTaskCount" -> taskCount,
+        "projects" -> projects.map(_.name)
+      )
     })
 
   def requestAvailableTasks = Authenticated.async { implicit request =>

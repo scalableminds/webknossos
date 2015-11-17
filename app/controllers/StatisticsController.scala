@@ -9,7 +9,7 @@ import play.api.i18n.Messages
 import play.api.libs.json.Json
 import com.scalableminds.util.tools.Fox
 import play.api.libs.concurrent.Execution.Implicits._
-import models.user.{User, UserDAO}
+import models.user.{UserService, User, UserDAO}
 import play.api.templates.Html
 import scala.concurrent.duration.Duration
 import models.annotation.AnnotationDAO
@@ -38,7 +38,7 @@ object StatisticsController extends Controller with Secured{
         for{
           times <- TimeSpanService.loggedTimePerInterval(handler, start, end)
           numberOfAnnotations <- AnnotationDAO.countAll
-          numberOfUsers <- UserDAO.count(Json.obj())
+          numberOfUsers <- UserService.countNonAnonymousUsers()
         } yield {
           Ok(Json.obj(
             "name" -> "oxalis",

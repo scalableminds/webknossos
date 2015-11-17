@@ -93,15 +93,12 @@ class Controller
 
         if @model.getColorBinaries()[0].cube.BIT_DEPTH == 8
           switch allowedMode
+            when "orthogonal" then @allowedModes.push(constants.MODE_PLANE_TRACING)
             when "flight" then @allowedModes.push(constants.MODE_ARBITRARY)
             when "oblique" then @allowedModes.push(constants.MODE_ARBITRARY_PLANE)
 
         switch allowedMode
           when "volume" then @allowedModes.push(constants.MODE_VOLUME)
-
-      if not @model.volumeTracing?
-        # Plane tracing mode is always allowed (except in VOLUME mode)
-        @allowedModes.push(constants.MODE_PLANE_TRACING)
 
       # FPS stats
       stats = new Stats()
@@ -129,20 +126,22 @@ class Controller
         @model.upperBoundary, @model.flycam, @model)
 
 
+      advancedOptionsAllowed = tracing.content.settings.advancedOptionsAllowed
       if @model.skeletonTracing?
 
-        @view = new SkeletonTracingView(@model)
+        @view = new SkeletonTracingView(@model, advancedOptionsAllowed)
         @annotationController = new SkeletonTracingController(
           @model, @sceneController, @gui, @view )
         @planeController = new SkeletonTracingPlaneController(
           @model, stats, @gui, @view, @sceneController, @annotationController)
-        ArbitraryController = if @model.isAnonymous then MinimalArbitraryController else SkeletonTracingArbitraryController
+        ArbitraryController =
+          if advancedOptionsAllowed then SkeletonTracingArbitraryController else MinimalArbitraryController
         @arbitraryController = new ArbitraryController(
           @model, stats, @gui, @view, @sceneController, @annotationController)
 
       else if @model.volumeTracing?
 
-        @view = new VolumeTracingView(@model)
+        @view = new VolumeTracingView(@model, advancedOptionsAllowed)
         @annotationController = new VolumeTracingController(
           @model, @sceneController, @gui, @view )
         @planeController = new VolumeTracingPlaneController(
@@ -150,12 +149,12 @@ class Controller
 
       else # View mode
 
-        @view = new View(@model)
+        @view = new View(@model, advancedOptionsAllowed)
         @planeController = new PlaneController(
           @model, stats, @gui, @view, @sceneController)
 
       @initMouse()
-      @initKeyboard()
+      @initKeyboard(advancedOptionsAllowed)
       @initUIElements()
 
       for binaryName of @model.binary
@@ -218,7 +217,9 @@ class Controller
       if @urlManager.initialState.mode?
         @setMode( @urlManager.initialState.mode )
 
-      @initTimeLimit(tracing.task.type.expectedTime) if tracing.task
+      # only enable hard time limit for anonymous users so far
+      if tracing.task and tracing.user is "Anonymous User"
+        @initTimeLimit(tracing.task.type.expectedTime)
 
       # initial trigger
       @sceneController.setSegmentationAlpha($('#alpha-slider').data("slider-value") or @model.user.getSettings().segmentationOpacity)
@@ -232,10 +233,10 @@ class Controller
       return
 
 
-  initKeyboard : ->
+  initKeyboard : (advancedOptionsAllowed) ->
 
     # no help menu for minimal mode
-    if not @model.isAnonymous
+    if advancedOptionsAllowed
       $(document).keypress (event) ->
 
         if $(event.target).is("input")
@@ -384,14 +385,17 @@ class Controller
         window.location.href = $("#trace-finish-button").attr("href")
       )
 
-    hardLimitRe = /Limit: ([0-9]+)/
     # parse hard time limit and convert from min to ms
+    hardLimitRe = /Limit: ([0-9]+)/
     timeLimit = parseInt(timeString.match(hardLimitRe)[1]) * 60 * 1000 or 0
-    console.log("TimeLimit is #{timeLimit/60/1000} min") if @model.isAnonymous
 
-    # only enable hard time limit for anonymous users so far
-    if timeLimit and @model.isAnonymous
+    # setTimeout uses signed 32-bit integers, an overflow would cause immediate timeout execution
+    if timeLimit >= Math.pow(2, 32) / 2
+      Toast.error("Time limit was reduced as it cannot be bigger than 35791 minutes.")
+      timeLimit = Math.pow(2, 32) / 2 - 1
+    console.log("TimeLimit is #{timeLimit/60/1000} min")
 
+    if timeLimit
       setTimeout( ->
         window.alert("Time limit is reached, thanks for tracing!")
         finishTracing()

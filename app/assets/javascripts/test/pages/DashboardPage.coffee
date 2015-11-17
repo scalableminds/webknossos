@@ -1,51 +1,81 @@
-path = require 'path'
-waitForFile = require '../helpers/waitForFile'
-Page = require './Page'
+path = require("path")
+waitForFile = require("../helpers/waitForFile")
+Page = require("./Page")
+Download = require("../helpers/ajaxDownload")
 
 
-explorativeTab = '#tab-explorative'
-tasksTab = '#tab-tasks'
-tasks = '.tab-content tbody'
-newTaskButton = '#new-task-button'
+explorativeTab = "#tab-explorative"
+tasksTab = "#tab-tasks"
+tasks = ".tab-content tbody"
+newTaskButton = "#new-task-button"
 # coffeelint: disable=max_line_length
-downloadButton = '#explorative-tasks a[href="/annotations/Explorational/562b9336a6f09eba008c52bf/download"]'
+downloadButton = "#explorative-tasks a[href=\"/annotations/Explorational/562b9336a6f09eba008c52bf/download\"]"
 # coffeelint: enable=max_line_length
+downloadUrl = "/annotations/Explorational/562b9336a6f09eba008c52bf/download"
+
 
 class DashboardPage extends Page
-  @SAMPLE_NML_PATH = 'testdata__explorational__sboy__8c52bf.nml'
 
-  get: ->
-    browser.get '/dashboard'
+  @SAMPLE_NML_PATH = "testdata__explorational__sboy__8c52bf.nml"
+
+  get : ->
+
+    browser.get("/dashboard")
+
 
   ### ACTIONS ###
-  openExplorativeTab: ->
-    return @clickElement explorativeTab
 
-  openTasksTab: ->
-    return @clickElement tasksTab
+  openExplorativeTab : ->
 
-  clickDownloadButton: ->
-    return @clickElement downloadButton
+    return @clickElement(explorativeTab)
 
-  clickGetTaskButton: ->
-    return @clickElement newTaskButton
 
-  getTasks: ->
+  openTasksTab : ->
+
+    return @clickElement(tasksTab)
+
+
+  clickDownloadButton : ->
+
+    return @clickElement(downloadButton)
+
+
+  clickGetTaskButton : ->
+
+    return @clickElement(newTaskButton)
+
+
+  getTasks : ->
+
     return @openTasksTab()
-      .then => @waitForSelector tasks
-      .then (tasks) -> tasks.$$('tr')
+      .then => @waitForSelector(tasks)
+      .then( (tasks) -> tasks.$$("tr") )
 
-  getNewTask: ->
+
+  getNewTask : ->
+
     return @openTasksTab()
-      .then => @clickGetTaskButton()
+      .then( => @clickGetTaskButton() )
 
-  downloadSampleNML: ->
+
+  downloadSampleNML : ->
+
     return @openExplorativeTab()
-      .then => @clickDownloadButton()
-      .then => waitForFile @getSampleNMLPath()
+      .then( => @clickDownloadButton() )
+      .then( => waitForFile(@getSampleNMLPath()) )
+
+
+  downloadSampleNMLViaAjax : ->
+
+    return Download
+      .text()
+      .from(downloadUrl)
+
 
   ### HELPERS ###
-  getSampleNMLPath: ->
+
+  getSampleNMLPath : ->
+
     return path.join(
       browser.params.DOWNLOAD_DIRECTORY
       DashboardPage.SAMPLE_NML_PATH

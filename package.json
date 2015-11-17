@@ -28,6 +28,7 @@
     "rimraf": "^2.4.3",
     "through2": "^2.0.0",
     "webpack": "^1.12.2",
+    "fetch": "^0.3.6",
     "worker-loader": "^0.6.0"
   },
   "scripts": {

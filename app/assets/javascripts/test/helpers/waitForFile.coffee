@@ -1,9 +1,10 @@
-fs = require 'fs'
+fs = require("fs")
 
 
 waitForFile = (path) ->
+
   return browser.driver.wait(
-    -> return fs.existsSync path,
+    -> return fs.existsSync(path),
     30000
   )
 

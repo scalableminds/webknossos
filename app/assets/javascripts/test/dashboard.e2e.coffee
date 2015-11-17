@@ -6,27 +6,35 @@ DashboardPage = require './pages/DashboardPage'
 
 
 describe 'Dashboard', ->
+
   page = null
   beforeEach ->
     page = new DashboardPage()
     page.get()
 
+
   describe 'Tasks', ->
+
     it 'should open tasks', (done) ->
+
       page.openTasksTab()
         .then -> waitForSelector '.tab-content h3'
         .then (title) ->
           expect(title.getText()).toBe('Tasks')
           done()
 
+
     it 'should have no available tasks', (done) ->
+
       page.openTasksTab()
         .then -> page.getTasks()
         .then (tasks) ->
           expect(tasks.length).toBe(0)
           done()
 
+
     it 'should get a new task', (done) ->
+
       page.getNewTask()
         .then -> page.getTasks()
         .then (tasks) ->
@@ -34,34 +42,46 @@ describe 'Dashboard', ->
           # exepect(tasks.length).toBe(1)
           done()
 
+
   describe 'NML Download', ->
+
+    testFile = path.join(
+      __dirname,
+      'testFiles',
+      DashboardPage.SAMPLE_NML_PATH
+    )
+
     it 'should download an NML file', (done) ->
-      testFile = path.join(
-        __dirname,
-        'testFiles',
-        DashboardPage.SAMPLE_NML_PATH
-      )
 
       # remove tmp dir
       rmdir browser.params.DOWNLOAD_DIRECTORY
+
         # download file
-        .then -> return page.downloadSampleNML()
+        .then( -> return page.downloadSampleNML() )
 
-        # read files for comparison
-        .then -> return readFile page.getSampleNMLPath()
-        .then (fileContentDownload) ->
-          return readFile testFile
-            .then (fileContentCheck) ->
-              return { fileContentDownload, fileContentCheck }
+        # when we got here, waitForFile succeeded
+        # which means file was actually downloaded
+        .then( -> done() )
 
-        # compare files
-        .then ({ fileContentCheck, fileContentDownload }) ->
-          expect(fileContentDownload).toBeTruthy()
-          expect(fileContentCheck).toBeTruthy()
 
-          # this expect will crash the app if file contents do not exist
-          if (fileContentCheck && fileContentDownload)
-            expect(fileContentDownload.equals(fileContentCheck)).toBeTruthy()
+    it 'should contain correct NML data', (done) ->
 
+      # download file via ajax request
+      page.downloadSampleNMLViaAjax()
+
+        # read check file
+        .then( (nmlContent) ->
+          return readFile(testFile, 'utf8')
+            .then( (fileContent) ->
+              return { fileContent, nmlContent }
+            )
+        )
+
+        # compare download and test file
+        .then( ({ fileContent, nmlContent }) ->
+          expect(nmlContent).toEqual(fileContent)
           done()
-        .catch (error) -> throw error
+        )
+
+        # error handling
+        .catch( (error) -> throw error )

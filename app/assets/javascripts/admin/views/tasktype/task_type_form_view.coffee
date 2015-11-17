@@ -37,6 +37,29 @@ class TaskTypeFormView extends Backbone.Marionette.LayoutView
 
           </div>
           <div class="col-sm-6">
+            <div class="col-sm-6 form-group pull-right">
+              <label class="col-sm-10 control-label" for="somaClickingAllowed">Allow Soma clicking</label>
+              <div class="col-sm-2">
+                <input type="checkbox" id="somaClickingAllowed" name="somaClickingAllowed" value="true" checked>
+                <span></span>
+              </div>
+            </div>
+
+            <div class="col-sm-6 form-group pull-right">
+              <label class="col-sm-10 control-label" for="orthogonalAllowed">Allow Orthogonal Mode</label>
+              <div class="col-sm-2">
+                <input type="checkbox" id="orthogonalAllowed" name="allowedModes[]" value="orthogonal" checked>
+                <span></span>
+              </div>
+            </div>
+
+            <div class="col-sm-6 form-group pull-right">
+              <label class="col-sm-10 control-label" for="branchPointsAllowed">Allow Branchpoints</label>
+              <div class="col-sm-2">
+                <input type="checkbox" id="branchPointsAllowed" name="branchPointsAllowed" value="true" checked>
+                <span></span>
+              </div>
+            </div>
 
             <div class="col-sm-6 form-group pull-right">
               <label class="col-sm-10 control-label" for="obliqueAllowed">Allow Oblique Mode</label>
@@ -47,25 +70,17 @@ class TaskTypeFormView extends Backbone.Marionette.LayoutView
             </div>
 
             <div class="col-sm-6 form-group pull-right">
+              <label class="col-sm-10 control-label" for="advancedOptionsAllowed">Advanced Tracing Options</label>
+              <div class="col-sm-2">
+                <input type="checkbox" id="advancedOptionsAllowed" name="advancedOptionsAllowed" value="true" checked>
+                <span></span>
+              </div>
+            </div>
+
+            <div class="col-sm-6 form-group pull-right">
               <label class="col-sm-10 control-label" for="flightAllowed">Allow Flight Mode</label>
               <div class="col-sm-2">
                 <input type="checkbox" id="flightAllowed" name="allowedModes[]" value="flight" checked>
-                <span></span>
-              </div>
-            </div>
-
-            <div class="col-sm-6 form-group pull-right">
-              <label class="col-sm-10 control-label" for="somaClickingAllowed">Allow Soma clicking</label>
-              <div class="col-sm-2">
-                <input type="checkbox" id="somaClickingAllowed" name="somaClickingAllowed" value="true" checked>
-                <span></span>
-              </div>
-            </div>
-
-            <div class="col-sm-6 form-group pull-right">
-              <label class="col-sm-10 control-label" for="branchPointsAllowed">Allow Branchpoints</label>
-              <div class="col-sm-2">
-                <input type="checkbox" id="branchPointsAllowed" name="branchPointsAllowed" value="true" checked>
                 <span></span>
               </div>
             </div>
@@ -124,6 +139,8 @@ class TaskTypeFormView extends Backbone.Marionette.LayoutView
     "form" : "form"
     "branchPointsAllowed" : "#branchPointsAllowed"
     "somaClickingAllowed" : "#somaClickingAllowed"
+    "advancedOptionsAllowed" : "#advancedOptionsAllowed"
+    "orthogonalAllowed" : "#orthogonalAllowed"
     "obliqueAllowed" : "#obliqueAllowed"
     "flightAllowed" : "#flightAllowed"
     "summary" : "#summary"
@@ -142,9 +159,11 @@ class TaskTypeFormView extends Backbone.Marionette.LayoutView
     @ui.description.val(@model.get("description"))
 
     settings = @model.get("settings")
+    @ui.orthogonalAllowed.attr("checked", "orthogonal" in settings.allowedModes)
     @ui.obliqueAllowed.attr("checked", "oblique" in settings.allowedModes)
     @ui.flightAllowed.attr("checked", "flight" in settings.allowedModes)
     @ui.branchPointsAllowed.attr("checked", settings["branchPointsAllowed"])
+    @ui.advancedOptionsAllowed.attr("checked", settings["advancedOptionsAllowed"])
     @ui.somaClickingAllowed.attr("checked", settings["somaClickingAllowed"])
 
     # TODO Replace once time changes have been ported to master

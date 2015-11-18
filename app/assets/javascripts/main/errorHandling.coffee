@@ -1,6 +1,7 @@
 ### define
 jquery : $
 underscore : _
+../libs/toast : Toast
 ###
 
 ErrorHandling =
@@ -66,6 +67,8 @@ ErrorHandling =
 
       error.params = assertionContext
       error.stack = @trimCallstack(error.stack)
+
+      Toast.error("Assertion violated - #{message}")
 
       if @throwAssertions
         # error will be automatically pushed to airbrake due to global handler

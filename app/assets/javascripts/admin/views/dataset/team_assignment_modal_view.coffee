@@ -39,12 +39,12 @@ class TeamAssignmentModalView extends Backbone.Marionette.CompositeView
 
   initialize : (args) ->
 
-    @collection = new TeamCollection()
-    @collection.fetch(
-      silent : true   #required for PaginationCollections
-    ).done( =>
-      @collection.goTo(1)
-    )
+    teamCollection = new Backbone.Collection()
+    teamCollection.url = "api/teams"
+
+    @collection = teamCollection
+    @collection.fetch()
+
     @dataset = args.dataset
 
     @listenTo(@, "add:child", @prefillModal)

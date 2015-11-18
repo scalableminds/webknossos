@@ -94,7 +94,7 @@ class Router extends Backbone.Router
 
   teams : ->
 
-    @showWithPagination("TeamListView", "TeamCollection", "Add New Team")
+    @showWithPagination("TeamListView", "PaginatedTeamCollection", "Add New Team")
 
 
   tasks : ->

@@ -1,7 +1,6 @@
 ### define
 underscore : _
 backbone.marionette : marionette
-admin/models/team/team_collection : TeamCollection
 ###
 
 class TeamRoleModalItem extends Backbone.Marionette.ItemView

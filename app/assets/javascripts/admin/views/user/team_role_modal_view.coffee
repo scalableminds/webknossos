@@ -45,9 +45,6 @@ class TeamRoleModal extends Backbone.Marionette.CompositeView
     @collection = new TeamCollection()
     @collection.fetch(
       data: "amIAnAdmin=true"
-      silent : true
-    ).done(=>
-      @collection.goTo(1)
     )
     @userCollection = args.userCollection
 

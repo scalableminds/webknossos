@@ -5,7 +5,7 @@ admin/models/dataset/dataset_collection : DatasetCollection
 admin/views/user/user_list_view : UserListView
 admin/models/user/user_collection : UserCollection
 admin/views/team/team_list_view : TeamListView
-admin/models/team/team_collection : TeamCollection
+admin/models/team/paginated_team_collection : PaginatedTeamCollection
 admin/views/task/task_list_view : TaskListView
 admin/models/task/task_collection : TaskCollection
 admin/views/project/project_list_view : ProjectListView
@@ -27,7 +27,7 @@ return {
   UserListView
   UserCollection
   TeamListView
-  TeamCollection
+  PaginatedTeamCollection
   TaskListView
   TaskCollection
   ProjectListView

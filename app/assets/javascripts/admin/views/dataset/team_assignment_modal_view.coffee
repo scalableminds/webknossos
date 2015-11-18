@@ -39,10 +39,7 @@ class TeamAssignmentModalView extends Backbone.Marionette.CompositeView
 
   initialize : (args) ->
 
-    teamCollection = new Backbone.Collection()
-    teamCollection.url = "api/teams"
-
-    @collection = teamCollection
+    @collection = new TeamCollection()
     @collection.fetch()
 
     @dataset = args.dataset

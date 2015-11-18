@@ -41,3 +41,12 @@ class MinimalSkeletonTracingArbitraryController extends ArbitraryController
       "h"             : (timeFactor) => @changeMoveValue(25)
       "g"             : (timeFactor) => @changeMoveValue(-25)
     )
+
+    @input.keyboardOnce = new Input.Keyboard(
+
+      #Delete active node and recenter last node
+      "shift + space" : =>
+        @model.skeletonTracing.deleteActiveNode()
+        @centerActiveNode()
+
+    , -1)

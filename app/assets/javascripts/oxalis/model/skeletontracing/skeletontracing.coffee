@@ -95,7 +95,7 @@ class SkeletonTracing
       "beforeunload"
       =>
         if !@stateLogger.stateSaved() and @stateLogger.allowUpdate
-          @stateLogger.pushImpl(false)
+          @stateLogger.pushNow(false)
           return "You haven't saved your progress, please give us 2 seconds to do so and and then leave this site."
         else
           return

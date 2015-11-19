@@ -287,7 +287,7 @@ class Controller
 
       # save the progress
       model = @model.skeletonTracing || @model.volumeTracing
-      model.stateLogger.pushImpl()
+      model.stateLogger.pushNow()
 
       modalView = new ShareModalView(_model : @model)
       el = modalView.render().el

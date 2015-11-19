@@ -30,8 +30,10 @@ trait DataLayerSectionLike {
   /**
    * Checks if a point is inside the whole data set boundary.
    */
-  def doesContainBlock(point: Point3D, blockLength: Int) =
-    bboxBig.contains(point.scale((v, _) => v * blockLength))
+  def doesContainBlock(point: Point3D, blockLength: Int) = {
+    val topLeft = point.scale((v, _) => v * blockLength)
+    bboxBig.intersects(BoundingBox(topLeft, blockLength, blockLength, blockLength))
+  }
 }
 
 object DataLayerSection{

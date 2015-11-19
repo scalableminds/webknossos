@@ -3,18 +3,20 @@
  */
 package com.scalableminds.datastore.controllers
 
+import javax.inject.Inject
+
 import play.api._
 import play.api.Play.current
 import play.api.libs.concurrent._
 import com.scalableminds.util.geometry.Point3D
-import play.api.i18n.Messages
+import play.api.i18n.{I18nSupport, MessagesApi, Messages}
 import com.scalableminds.braingames.binary.models._
 import com.scalableminds.datastore.models._
 import com.scalableminds.braingames.binary._
 import com.scalableminds.util.reactivemongo.DBAccessContext
 import com.scalableminds.util.tools.{FoxImplicits, Fox}
 import play.api.libs.ws.WS
-import play.api.mvc.{SimpleResult, Action}
+import play.api.mvc.Action
 import com.scalableminds.braingames.binary.ParsedDataReadRequest
 import com.scalableminds.braingames.binary.DataRequestSettings
 import com.scalableminds.braingames.binary.ParsedDataWriteRequest
@@ -36,13 +38,13 @@ import org.apache.commons.codec.binary.Base64
 import java.io.{PipedInputStream, PipedOutputStream}
 import play.api.libs.iteratee.Enumerator
 
-object BinaryDataController
+class BinaryDataController @Inject() (val messagesApi: MessagesApi)
   extends BinaryDataReadController
   with BinaryDataWriteController
   with BinaryDataDownloadController
   with BinaryDataMappingController
 
-trait BinaryDataCommonController extends Controller with FoxImplicits {
+trait BinaryDataCommonController extends Controller with FoxImplicits with I18nSupport{
   protected def getDataLayer(dataSource: DataSource, dataLayerName: String): Fox[DataLayer] = {
     dataSource.getDataLayer(dataLayerName).toFox orElse UserDataLayerService.findUserDataLayer(dataSource.id, dataLayerName)
   }
@@ -51,7 +53,7 @@ trait BinaryDataCommonController extends Controller with FoxImplicits {
 
   case class TokenSecuredAction(dataSetName: String, dataLayerName: String) extends ActionBuilder[Request] {
 
-    def invokeBlock[A](request: Request[A], block: (Request[A]) => Future[SimpleResult]) = {
+    def invokeBlock[A](request: Request[A], block: (Request[A]) => Future[Result]) = {
 
       hasUserAccess(request).flatMap {
         case true =>

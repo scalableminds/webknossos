@@ -29,7 +29,7 @@ class OxalisMessageHandler extends JsonMessageHandler {
 
   def requestFromRESTCall[T](call: RESTCall) = {
     val path = call.path + queryStringToString(call.queryStrings)
-    FakeRequest(call.method, path, FakeHeaders(call.headers.toList), AnyContentAsJson(call.body))
+    FakeRequest(call.method, path, FakeHeaders(call.headers.toSeq), AnyContentAsJson(call.body))
   }
 
   def embedInRESTResponse(call: RESTCall, response: Result)(implicit codec: Codec): Future[Array[Byte]] = {

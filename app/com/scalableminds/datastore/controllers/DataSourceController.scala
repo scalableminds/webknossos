@@ -4,6 +4,7 @@
 package com.scalableminds.datastore.controllers
 
 import java.nio.file.Path
+import javax.inject.Inject
 
 import net.liftweb.common.Failure
 import play.api.Logger
@@ -15,7 +16,7 @@ import com.scalableminds.datastore.services.{DataSourceRepository, BinaryDataSer
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.mvc.Action
 import scala.concurrent.Future
-import play.api.i18n.Messages
+import play.api.i18n.{MessagesApi, Messages}
 import com.scalableminds.datastore.DataStorePlugin
 import com.scalableminds.datastore.models.DataSourceDAO
 import com.scalableminds.braingames.binary.models.DataSourceUpload
@@ -30,7 +31,7 @@ import net.liftweb.common.{Box, Empty, Full, Failure}
 import java.io._
 import play.api.Logger
 
-object DataSourceController extends Controller {
+class DataSourceController @Inject() (val messagesApi: MessagesApi) extends Controller {
 
   lazy val config = Play.current.configuration.underlying
 
@@ -102,9 +103,11 @@ object DataSourceController extends Controller {
 
   def upload() = Action.async(parse.json) {
     implicit request =>
+      Logger.warn("Dataset upload to store called.")
       request.body.validate[DataSourceUpload] match {
         case JsSuccess(upload, _) =>
           val baseDir = Paths.get(config.getString("braingames.binary.baseFolder")).resolve(upload.team).resolve(upload.name)
+          Logger.warn(s"Uploading dataset into '$baseDir'")
           PathUtils.ensureDirectory(baseDir)
           upload.settings.map(DataSourceSettings.writeSettingsToFile(_,
             DataSourceSettings.settingsFileInFolder(baseDir)))

@@ -3,12 +3,13 @@
  */
 package com.scalableminds.datastore
 
-import play.api.{Play, Logger, Plugin}
-import com.scalableminds.datastore.services.{DataSourceRepository, BinaryDataService}
-import scala.concurrent.duration._
-import akka.actor.{ActorSystem, PoisonPill, Props}
+import javax.inject.Inject
 
-class DataStorePlugin(app: play.api.Application) extends Plugin {
+import akka.actor.ActorSystem
+import com.scalableminds.datastore.services.{BinaryDataService, DataSourceRepository}
+import play.api.{Play, Plugin}
+
+class DataStorePlugin @Inject()(implicit app: play.api.Application) extends Plugin {
 
   implicit val system = ActorSystem("datastore")
 
@@ -21,7 +22,7 @@ class DataStorePlugin(app: play.api.Application) extends Plugin {
   }
 
   override def onStop() {
-    system.shutdown()
+    system.terminate()
   }
 }
 

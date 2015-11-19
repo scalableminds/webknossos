@@ -29,6 +29,7 @@ class MinimalSkeletonTracingArbitraryController extends ArbitraryController
       "space"         : (timeFactor) =>
         @cam.move [0, 0, getVoxelOffset(timeFactor)]
         @moved()
+      "alt + space"   : (timeFactor) => @cam.move [0, 0, -getVoxelOffset(timeFactor)]
 
       #Recenter active node
       "y" : => @centerActiveNode()
@@ -40,6 +41,12 @@ class MinimalSkeletonTracingArbitraryController extends ArbitraryController
       #Change move value
       "h"             : (timeFactor) => @changeMoveValue(25)
       "g"             : (timeFactor) => @changeMoveValue(-25)
+
+      #Rotate in distance
+      "left"          : (timeFactor) => @cam.yaw @model.user.get("rotateValue") * timeFactor, @mode == constants.MODE_ARBITRARY
+      "right"         : (timeFactor) => @cam.yaw -@model.user.get("rotateValue") * timeFactor, @mode == constants.MODE_ARBITRARY
+      "up"            : (timeFactor) => @cam.pitch -@model.user.get("rotateValue") * timeFactor, @mode == constants.MODE_ARBITRARY
+      "down"          : (timeFactor) => @cam.pitch @model.user.get("rotateValue") * timeFactor, @mode == constants.MODE_ARBITRARY
     )
 
     @input.keyboardOnce = new Input.Keyboard(

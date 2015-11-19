@@ -16,6 +16,11 @@ case class BoundingBox(topLeft: Point3D, width: Int, height: Int, depth: Int) {
 
   }
 
+  def intersects(other: BoundingBox) =
+    topLeft.x < other.bottomRight.x && other.topLeft.x < bottomRight.x &&
+    topLeft.y < other.bottomRight.y && other.topLeft.y < bottomRight.y &&
+    topLeft.z < other.bottomRight.z && other.topLeft.z < bottomRight.z
+
   def combineWith(other: BoundingBox) = {
     val x = math.min(other.topLeft.x, topLeft.x)
     val y = math.min(other.topLeft.y, topLeft.y)

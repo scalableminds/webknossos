@@ -29,8 +29,7 @@ trait DataSourceTypeGuesser {
 object DataSourceTypeGuessers extends DataSourceTypes{
   def lazyFileFinder(source: Path, excludeDirs: Seq[String]): Stream[Path] = {
     Logger.trace(s"accessing files of $source")
-    Option(PathUtils.listFiles(source)).getOrElse(Nil)
-      .toStream #::: {
+    PathUtils.listFiles(source).toStream #::: {
       if (source.toFile.isDirectory && !excludeDirs.contains(source.getFileName.toString) && !source.toFile.isHidden) {
         Logger.trace(s"accessing direc of $source")
         PathUtils.listDirectories(source).toStream.flatMap(d => lazyFileFinder(d, excludeDirs))

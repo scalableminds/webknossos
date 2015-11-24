@@ -1,4 +1,4 @@
-fetch = require("fetch")
+fetch = require("isomorphic-fetch")
 
 
 ###

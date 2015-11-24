@@ -8,10 +8,8 @@ explorativeTab = "#tab-explorative"
 tasksTab = "#tab-tasks"
 tasks = ".tab-content tbody"
 newTaskButton = "#new-task-button"
-# coffeelint: disable=max_line_length
-downloadButton = "#explorative-tasks a[href=\"/annotations/Explorational/562b9336a6f09eba008c52bf/download\"]"
-# coffeelint: enable=max_line_length
 downloadUrl = "/annotations/Explorational/562b9336a6f09eba008c52bf/download"
+downloadButton = "#explorative-tasks a[href=\"#{downloadUrl}\"]"
 
 
 class DashboardPage extends Page

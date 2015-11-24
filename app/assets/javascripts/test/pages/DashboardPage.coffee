@@ -47,20 +47,20 @@ class DashboardPage extends Page
 
     return @openTasksTab()
       .then => @waitForSelector(tasks)
-      .then( (tasks) -> tasks.$$("tr") )
+      .then((tasks) -> tasks.$$("tr"))
 
 
   getNewTask : ->
 
     return @openTasksTab()
-      .then( => @clickGetTaskButton() )
+      .then( => @clickGetTaskButton())
 
 
   downloadSampleNML : ->
 
     return @openExplorativeTab()
-      .then( => @clickDownloadButton() )
-      .then( => waitForFile(@getSampleNMLPath()) )
+      .then( => @clickDownloadButton())
+      .then( => waitForFile(@getSampleNMLPath()))
 
 
   downloadSampleNMLViaAjax : ->

@@ -222,11 +222,12 @@ class Model
 
   applyState : (state, tracing) ->
 
-    @flycam.setPosition( state.position || tracing.content.editPosition )
+    @flycam.setPosition(state.position || tracing.content.editPosition)
     if state.zoomStep?
-      @flycam.setZoomStep( state.zoomStep )
-      @flycam3d.setZoomStep( state.zoomStep )
-    if state.rotation?
-      @flycam3d.setRotation( state.rotation )
+      @flycam.setZoomStep(state.zoomStep)
+      @flycam3d.setZoomStep(state.zoomStep)
+    rotation = state.rotation || tracing.content.editRotation
+    if rotation?
+      @flycam3d.setRotation(rotation)
     if state.activeNode?
       @skeletonTracing?.setActiveNode(state.activeNode)

@@ -5,6 +5,7 @@ app : app
 dashboard/views/explorative_tracing_list_item_view : ExplorativeTracingListItemView
 libs/input : Input
 libs/toast : Toast
+libs/request : Request
 libs/behaviors/sort_table_behavior : SortTableBehavior
 ###
 
@@ -110,18 +111,13 @@ class ExplorativeTracingListView extends Backbone.Marionette.CompositeView
 
     form = @ui.uploadAndExploreForm
 
-    $.ajax(
-      url : form.attr("action")
+    Request.multipartForm(
+      form.attr("action")
       data : new FormData(form[0])
-      type : "POST"
-      processData : false
-      contentType : false
-    ).done( (data) ->
+    ).then( (data) ->
       url = "/annotations/" + data.annotation.typ + "/" + data.annotation.id
       app.router.loadURL(url)
       Toast.message(data.messages)
-    ).fail( (xhr) ->
-      Toast.message(xhr.responseJSON.messages)
     ).always( ->
       toggleIcon()
     )

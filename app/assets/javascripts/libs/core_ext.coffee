@@ -354,3 +354,7 @@ $.fn.alterClass = ( removals, additions ) ->
 
   return if not additions then self else self.addClass( additions )
 
+
+Promise.prototype.always = (func) ->
+
+  @then(func, func)

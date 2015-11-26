@@ -31,7 +31,8 @@
     "clipboard": "~1.4.0",
     "mjs": "~0.0.6",
     "airbrake-js-client": "~0.5.3",
-    "webcola": "~3.1.0"
+    "webcola": "~3.1.0",
+    "fetch": "~0.10.1"
   },
   "devDependencies": {}
 }

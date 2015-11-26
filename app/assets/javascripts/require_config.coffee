@@ -35,6 +35,7 @@ require.config(
     "clipboard"           : "../bower_components/clipboard/dist/clipboard.min"
     "mjs"                 : "../bower_components/mjs/src/mjs"
     "cola"                : "../bower_components/webcola/WebCola/cola.min"
+    "fetch"               : "../bower_components/fetch/fetch"
     "worker"              : "libs/worker_plugin"
     "wrapped_worker"      : "libs/wrapped_worker_plugin"
     "nested_obj_model"    : "libs/nested_obj_model"

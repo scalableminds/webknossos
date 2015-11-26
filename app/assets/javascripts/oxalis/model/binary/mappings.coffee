@@ -37,9 +37,8 @@ class Mappings
     if @mappings[mappingName].mappingObject?
       return $.Deferred().resolve().promise()
 
-    return Request.send(
-      url: @baseUrl + mappingName + @getParams
-      dataType: "json"
+    Request.arraybuffer(
+      @baseUrl + mappingName + @getParams
     ).then(
       (mapping) =>
         @mappings[mappingName].mappingObject = mapping

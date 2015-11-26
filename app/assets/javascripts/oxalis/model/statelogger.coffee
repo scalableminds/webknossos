@@ -81,16 +81,24 @@ class StateLogger
       @newDiffs
     })
 
-    Request.send(
-      url : "/annotations/#{@tracingType}/#{@tracingId}?version=#{(@version + 1)}"
+    deferred = $.Deferred()
+
+    Request.json(
+      "/annotations/#{@tracingType}/#{@tracingId}?version=#{(@version + 1)}"
       method : "PUT"
       data : @newDiffs
-      contentType : "application/json"
-    ).then((response) =>
-      @newDiffs = @newDiffs.slice(diffsCurrentLength)
-      @version = response.version
-    ).fail((responseObject) => @pushFailCallback(responseObject, notifyOnFailure))
-    .done(=> @pushDoneCallback())
+    ).then(
+      (response) =>
+        @newDiffs = @newDiffs.slice(diffsCurrentLength)
+        @version = response.version
+        @pushDoneCallback()
+      (responseObject) =>
+        @pushFailCallback(responseObject, notifyOnFailure)
+    ).always( ->
+      deferred.resolve()
+    )
+
+    deferred.promise()
 
 
   pushFailCallback : (responseObject, notifyOnFailure) ->

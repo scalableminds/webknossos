@@ -70,6 +70,7 @@ class PullQueue
     ).then(
       (responseBuffer) =>
 
+        responseBuffer = new Uint8Array(responseBuffer)
         @connctionInfo.log(@layer.name, roundTripBeginTime, batch.length, responseBuffer.length)
 
         offset = 0

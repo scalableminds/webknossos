@@ -7,7 +7,8 @@ fetch : Fetch
 
 Request =
 
-  # nothing / json in, json out
+  # IN:  nothing / json
+  # OUT: json
   json : (url, options = {}) ->
 
     @triggerRequest(
@@ -15,7 +16,7 @@ Request =
       options
       (data) ->
         method : "POST"
-        body : JSON.stringify(data)
+        body : if typeof(data) == "string" then data else JSON.stringify(data)
         headers :
           "Content-Type" : "application/json"
       (response) ->
@@ -23,7 +24,8 @@ Request =
     )
 
 
-  # formdata in, json out
+  # IN:  multipart formdata
+  # OUT: json
   multipartForm : (url, options = {}) ->
 
     @triggerRequest(
@@ -44,19 +46,16 @@ Request =
     )
 
 
+  # IN:  url-encoded formdata
+  # OUT: json
   urlEncodedForm : (url, options = {}) ->
 
     @triggerRequest(
       url
       options
       (data) ->
-        if typeof(data) == "string"
-          formData = data
-        else
-          formData = data.serialize()
-
         method : "POST"
-        body : formData
+        body : if typeof(data) == "string" then data else data.serialize()
         headers :
           "Content-Type" : "application/x-www-form-urlencoded"
       (response) ->
@@ -64,6 +63,8 @@ Request =
     )
 
 
+  # IN:  arraybuffer
+  # OUT: arraybuffer
   arraybuffer : (url, options = {}) ->
 
     @triggerRequest(
@@ -75,9 +76,7 @@ Request =
         headers :
           "Content-Type" : "application/octet-stream"
       (response) ->
-        response.arrayBuffer().then( (data) ->
-          new Uint8Array(data)
-        )
+        response.arrayBuffer()
     )
 
 

@@ -71,7 +71,7 @@ Request =
       options
       (data) ->
         method : "POST"
-        body : if data instanceof ArrayBuffer then data else data.buffer
+        body : if data instanceof ArrayBuffer then data else data.buffer.slice(0, data.byteLength)
         headers :
           "Content-Type" : "application/octet-stream"
       (response) ->

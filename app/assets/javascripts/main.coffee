@@ -5,9 +5,8 @@ require [
   "app"
   "main/errorHandling"
   "bootstrap"
-  "libs/core_ext"
   "fetch"
-  "promise"
+  "libs/core_ext"
 ], ($, _, Backbone, app, ErrorHandling) ->
 
   ErrorHandling.initialize( throwAssertions: false, sendLocalErrors: false )
@@ -26,4 +25,3 @@ require [
       $("#flashModal").modal("show")
 
       app.start()
-

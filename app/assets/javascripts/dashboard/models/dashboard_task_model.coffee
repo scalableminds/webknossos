@@ -33,15 +33,8 @@ class DashboardTaskModel extends NestedObjModel
     annotation = @get("annotation")
     url = "/annotations/#{annotation.typ}/#{annotation.id}/finish"
 
-    deferred = new $.Deferred()
-
-    Request.json(url).then(
+    Request.json(url).$().then(
       (response) =>
         @get("annotation").state.isFinished = true
         @trigger("change")
-        deferred.resolve(response)
-      (error) ->
-        deferred.reject(error)
     )
-
-    return deferred.promise()

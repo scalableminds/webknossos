@@ -361,8 +361,18 @@ Promise.prototype.always = (func) ->
 
   @then(func, func)
 
-# Converts a native
+
+# Wraps a native Promise as a jQuery deferred.
+# http://api.jquery.com/category/deferred-object/
 Promise.prototype.$ = ->
 
+  deferred = new $.Deferred()
 
-  @then(func, func)
+  @then(
+    (success) ->
+      deferred.resolve(success)
+    (error) ->
+      deferred.reject(error)
+  )
+
+  deferred.promise()

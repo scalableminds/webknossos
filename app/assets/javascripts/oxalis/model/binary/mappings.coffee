@@ -38,21 +38,15 @@ class Mappings
     if @mappings[mappingName].mappingObject?
       return $.Deferred().resolve().promise()
 
-    deferred = $.Deferred()
-
     Request.json(
       @baseUrl + mappingName + @getParams
-    ).then(
+    ).$().then(
       (mapping) =>
         @mappings[mappingName].mappingObject = mapping
         console.log("Done downloading:", mappingName)
-        deferred.resolve(mapping)
       (error) ->
         console.error("Error downloading:", mappingName, error)
-        deferred.reject(error)
     )
-
-    deferred.promise()
 
 
   getMappingArray : (mappingName) ->

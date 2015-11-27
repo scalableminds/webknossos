@@ -6,6 +6,8 @@ require [
   "main/errorHandling"
   "bootstrap"
   "libs/core_ext"
+  "fetch"
+  "promise"
 ], ($, _, Backbone, app, ErrorHandling) ->
 
   ErrorHandling.initialize( throwAssertions: false, sendLocalErrors: false )

@@ -2,7 +2,6 @@
 jquery : $
 underscore : _
 libs/toast : Toast
-fetch : Fetch
 ###
 
 Request =

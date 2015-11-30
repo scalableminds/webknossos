@@ -14,6 +14,7 @@ class StateLogger
   constructor : (@flycam, @version, @tracingId, @tracingType, @allowUpdate) ->
 
     _.extend(this, new EventMixin())
+    @mutexedPush = _.mutexDeferred(@pushImpl, -1)
 
     @newDiffs = []
 
@@ -57,14 +58,13 @@ class StateLogger
     # Pushes the buffered tracing to the server. Pushing happens at most
     # every 30 seconds.
 
-    saveFkt = => @pushImpl(true)
-    @pushThrottled = _.throttle(_.mutexDeferred( saveFkt, -1), @PUSH_THROTTLE_TIME)
+    @pushThrottled = _.throttle(@mutexedPush, @PUSH_THROTTLE_TIME)
     @pushThrottled()
 
 
   pushNow : ->   # Interface for view & controller
 
-    return @pushImpl(false)
+    return @mutexedPush(false)
 
 
   pushImpl : (notifyOnFailure) ->

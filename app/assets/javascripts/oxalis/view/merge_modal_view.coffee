@@ -7,7 +7,6 @@ app : app
 ../model/skeletontracing/user_annotation_collection : UserAnnotationCollection
 admin/views/selection_view : SelectionView
 admin/models/user/user_collection : UserCollection
-admin/models/team/team_collection : TeamCollection
 admin/models/task/task_collection : TaskCollection
 admin/models/tasktype/task_type_collection : TaskTypeCollection
 admin/models/project/project_collection : ProjectCollection

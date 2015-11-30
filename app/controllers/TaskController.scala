@@ -94,7 +94,7 @@ object TaskController extends Controller with Secured with FoxImplicits {
       _ <- ensureMaxNumberOfOpenTasks(user)
       task <- requestTaskFor(user) ?~> Messages("task.unavailable")
       annotation <- AnnotationService.createAnnotationFor(user, task) ?~> Messages("annotation.creationFailed")
-      annotationJSON <- AnnotationLike.annotationLikeInfoWrites(annotation, Some(user), List("content", "actions"))
+      annotationJSON <- AnnotationLike.annotationLikeInfoWrites(annotation, Some(user), exclude = List("content", "actions"))
     } yield {
       JsonOk(annotationJSON)
     }

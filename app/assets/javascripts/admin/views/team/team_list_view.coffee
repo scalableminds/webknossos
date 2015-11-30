@@ -2,6 +2,7 @@
 underscore : _
 backbone.marionette : marionette
 libs/toast : Toast
+libs/behaviors/select_all_rows_behavior : SelectAllRows
 app : app
 ./team_list_item_view : TeamListItemView
 ./create_team_modal_view : CreateTeamModalView
@@ -15,10 +16,8 @@ class TeamListView extends Backbone.Marionette.CompositeView
       <table class="table table-striped">
         <thead>
           <tr>
-            <th>
-              <input type="checkbox" class="select-all-rows">
-            </th>
             <th>Name</th>
+            <th>Parent</th>
             <th>Owner</th>
             <th>Roles</th>
             <th>Actions</th>
@@ -26,33 +25,26 @@ class TeamListView extends Backbone.Marionette.CompositeView
         </thead>
         <tbody></tbody>
       </table>
-      <div class="navbar navbar-default navbar-fixed-bottom">
-        <div class="navbar-form">
-          <div class="btn-group">
-            <a class="btn btn-primary" id="new-team">
-              <i class="fa fa-plus"></i>Add New Team
-            </a>
-          </div>
-        </div>
-      </div>
     </form>
    <div class="modal-wrapper"></div>
   """)
+
   className : "team-administration container wide"
   childView : TeamListItemView
   childViewContainer : "tbody"
 
+  behaviors:
+    SelectAllRows :
+      behaviorClass : SelectAllRows
+
   ui :
     "modalWrapper" : ".modal-wrapper"
 
-  events :
-    "click #new-team" : "showModal"
-
   initialize : ->
 
-    @listenTo(app.vent, "paginationView:filter", @filter)
+    @listenTo(app.vent, "paginationView:filter", @filterBySearch)
     @listenTo(app.vent, "CreateTeamModal:refresh", @refreshPagination)
-
+    @listenTo(app.vent, "paginationView:addElement", @showModal)
 
     @collection.fetch(
       data : "isEditable=true"
@@ -62,8 +54,7 @@ class TeamListView extends Backbone.Marionette.CompositeView
     )
 
 
-  filter : (filterQuery) ->
-
+  filterBySearch : (filterQuery) ->
     @collection.setFilter(["name", "owner"], filterQuery)
     @collection.pager()
 

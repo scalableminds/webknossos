@@ -10,7 +10,7 @@
           <legend>Sign up</legend>
 
           <div class="alert alert-info">
-            Not a member of the listed teams? Contact oxalis@@scalableminds.com to get more information about how to get to use oxalis.
+            Not a member of the listed teams? Contact webknossos@@scalableminds.com to get more information about how to get to use webKnossos.
           </div>
 
           @form.errors.map { error =>
@@ -21,10 +21,10 @@
           @helper.select(form("team"), ("" -> "<None>") +: teams.map { t =>
             t.name -> t.name
           }, 'class -> "form-control")
-          @helper.inputText(form("email"), 'type -> "email", 'class -> "form-control")
-          @helper.inputText(form("firstName"), 'class -> "form-control")
-          @helper.inputText(form("lastName"), 'class -> "form-control")
-          @helper.inputPassword(form("password.main"), 'class -> "form-control")
+          @helper.inputText(form("email"), 'type -> "email", 'class -> "form-control", 'required -> "")
+          @helper.inputText(form("firstName"), 'class -> "form-control", 'required -> "")
+          @helper.inputText(form("lastName"), 'class -> "form-control", 'required -> "")
+          @helper.inputPassword(form("password.main"), 'class -> "form-control", 'pattern -> ".{8,}", 'required -> "", 'title -> "8 characters minimum")
           @helper.inputPassword(form("password.validation"), 'class -> "form-control")
 
           <div class="form-group">

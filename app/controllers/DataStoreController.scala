@@ -3,6 +3,10 @@
  */
 package controllers
 
+import org.apache.commons.io.FilenameUtils
+import org.apache.commons.codec.binary.Base64
+import org.apache.commons.io.FileUtils
+import java.io.File
 import akka.agent.Agent
 import play.api.mvc._
 import play.api.libs.json.{JsError, JsSuccess, Json, JsValue}
@@ -20,8 +24,12 @@ import com.scalableminds.braingames.binary.models._
 import play.api.libs.concurrent.Execution.Implicits._
 import com.scalableminds.util.reactivemongo.{GlobalAccessContext, DBAccessContext}
 import com.scalableminds.util.rest.{RESTResponse, RESTCall}
+import play.api.Play
 
 object DataStoreHandler extends DataStoreBackChannelHandler{
+
+  lazy val config = Play.current.configuration
+
   def createUserDataLayer(dataStoreInfo: DataStoreInfo, base: DataSource): Fox[UserDataLayer] = {
     Logger.debug("Called to create user data source. Base: " + base.id + " Datastore: " + dataStoreInfo)
     findByServer(dataStoreInfo.name).toFox.flatMap {
@@ -67,6 +75,24 @@ object DataStoreHandler extends DataStoreBackChannelHandler{
       dataStore =>
         val call = RESTCall("POST", s"/data/datasets/${dataSet.name}/import", Map.empty, Map.empty, Json.obj())
         dataStore.request(call)
+    }
+  }
+
+  def uploadDataSource(upload: DataSourceUpload) = {
+    Logger.debug("Upload called for: " + upload.name)
+    (for {
+      localDatastore <- config.getString("datastore.name").toFox
+      dataStore <- findByServer(localDatastore).toFox
+      call = RESTCall("POST", s"/data/datasets/upload", Map.empty, Map.empty, Json.toJson(upload))
+      response <- dataStore.request(call)
+    } yield {
+      (response.body \ "error").asOpt[String] match {
+        case Some(error) => Failure(error)
+        case _ => Full(Unit)
+      }
+    }).futureBox.map {
+      case Full(r) => r
+      case Empty => Failure(Messages("dataStore.notAvailable"))
     }
   }
 }
@@ -136,12 +162,9 @@ case class WebSocketRESTServer(out: Channel[Array[Byte]]) extends FoxImplicits{
   def cancelRESTCall(uuid: String) = {
     openCalls().get(uuid).map {
       promise =>
-        promise.trySuccess(Failure("REST call timed out.")) match {
-          case true =>
-            Logger.warn("REST request timed out. UUID: " + uuid)
-          case false =>
-            Logger.debug("REST request couldn't get completed. UUID: " + uuid)
-        }
+        if(promise.trySuccess(Failure("REST call timed out.")))
+          Logger.warn("REST request timed out. UUID: " + uuid)
+        openCalls.send(_ - uuid)
     }
   }
 
@@ -150,15 +173,16 @@ case class WebSocketRESTServer(out: Channel[Array[Byte]]) extends FoxImplicits{
       val json = Json.parse(rawJson)
       json.validate[RESTResponse] match {
         case JsSuccess(response, _) =>
-          Logger.warn("Finished with REST result: " + response)
+          Logger.debug("Finished with REST result: " + response)
           openCalls().get(response.uuid).map {
             promise =>
               promise.trySuccess(Full(response)) match {
                 case true =>
                   Logger.debug("REST request completed. UUID: " + response.uuid)
                 case false =>
-                  Logger.warn("REST request timed out. UUID: " + response.uuid)
+                  Logger.warn("REST response was to slow. UUID: " + response.uuid)
               }
+              openCalls.send(_ - response.uuid)
           }
         case _ if (json \ "ping").asOpt[String].isDefined =>
           Logger.trace("Received a ping.")
@@ -181,13 +205,12 @@ object DataStoreController extends Controller with DataStoreActionHelper{
 
   def backChannel(name: String, key: String) = WebSocket.async[Array[Byte]] {
     implicit request =>
-      Logger.debug(s"Got a backchannel request for $name.")
+      Logger.info(s"Got a backchannel request for $name.")
       DataStoreDAO.findByKey(key)(GlobalAccessContext).futureBox.map {
         case Full(dataStore) =>
           val (iterator, enumerator, restChannel) = WebSocketRESTServer.create
           DataStoreHandler.register(dataStore.name, restChannel)
-          // TODO: key logging needs to be removed
-          Logger.debug(s"Key $name connected.")
+          Logger.info(s"Key $name connected.")
           (iterator, enumerator)
         case _ =>
           Logger.warn(s"$name  tried to connect with invalid key '$key'.")

@@ -1,6 +1,7 @@
 ### define
 jquery : $
 underscore : _
+stats : Stats
 ./controller/viewmodes/plane_controller : PlaneController
 ./controller/annotations/skeletontracing_controller : SkeletonTracingController
 ./controller/annotations/volumetracing_controller : VolumeTracingController
@@ -13,12 +14,13 @@ underscore : _
 ./view : View
 ./view/skeletontracing/skeletontracing_view : SkeletonTracingView
 ./view/volumetracing/volumetracing_view : VolumeTracingView
+./view/gui : Gui
+./view/share_modal_view : ShareModalView
+./constants : constants
 ../libs/event_mixin : EventMixin
 ../libs/input : Input
-./view/gui : Gui
 ../libs/toast : Toast
-./constants : constants
-stats : Stats
+
 ###
 
 class Controller
@@ -36,13 +38,16 @@ class Controller
   # controller - a controller for each row, each column and each
   # cross in this matrix.
 
-  view : null
-  planeController : null
-  arbitraryController : null
-  allowedModes : []
-
-
   constructor : (@controlMode) ->
+
+    _.extend(@,
+      view : null
+      planeController : null
+      arbitraryController : null
+      allowedModes : []
+    )
+
+    _.extend(@, Backbone.Events)
 
     unless @browserSupported()
       unless window.confirm("You are using an unsupported browser, please use the newest version of Chrome, Opera or Safari.\n\nTry anyways?")
@@ -56,15 +61,20 @@ class Controller
     @model = new Model()
     @urlManager = new UrlManager(this, @model)
 
-    @model.initialize( @controlMode, @urlManager.initialState ).done ({restrictions, settings, error}) =>
+    @model.initialize( @controlMode, @urlManager.initialState ).done ({tracing, error}) =>
 
       # Do not continue, when there was an error and we got no settings from the server
       if error
         return
 
-      unless restrictions.allowAccess
+      unless tracing.restrictions.allowAccess
         Toast.Error "You are not allowed to access this tracing"
         return
+
+      if not tracing.restrictions.allowDownload or not tracing.downloadUrl?
+        $('#trace-download-button').attr("disabled", "disabled")
+      else
+        $('#trace-download-button').attr("href", tracing.downloadUrl)
 
       @urlManager.startUrlUpdater()
 
@@ -78,20 +88,25 @@ class Controller
               Toast.info(
                 "Segmentation data is only available at lower zoom levels.")
 
-      for allowedMode in settings.allowedModes
-        @allowedModes.push switch allowedMode
-          when "oxalis" then constants.MODE_PLANE_TRACING
-          when "arbitrary" then constants.MODE_ARBITRARY
-          when "volume" then constants.MODE_VOLUME
+      for allowedMode in tracing.content.settings.allowedModes
 
-      if constants.MODE_ARBITRARY in @allowedModes
-        @allowedModes.push(constants.MODE_ARBITRARY_PLANE)
+        if @model.getColorBinaries()[0].cube.BIT_DEPTH == 8
+          switch allowedMode
+            when "flight" then @allowedModes.push(constants.MODE_ARBITRARY)
+            when "oblique" then @allowedModes.push(constants.MODE_ARBITRARY_PLANE)
+
+        switch allowedMode
+          when "volume" then @allowedModes.push(constants.MODE_VOLUME)
+
+      if not @model.volumeTracing?
+        # Plane tracing mode is always allowed (except in VOLUME mode)
+        @allowedModes.push(constants.MODE_PLANE_TRACING)
 
       # FPS stats
       stats = new Stats()
       $("body").append stats.domElement
 
-      @gui = @createGui(restrictions, settings)
+      @gui = @createGui(tracing.restrictions, tracing.content.settings)
 
       #TODO trigger on resize
       # set width / height for the right-side menu
@@ -99,8 +114,8 @@ class Controller
         if $("#right-menu").length
           menuPosition = $("#right-menu").position()
           MARGIN = 40
-          width = window.innerWidth - menuPosition.left - MARGIN
-          height = window.innerHeight - menuPosition.top - MARGIN
+          width = Math.max(300, window.innerWidth - menuPosition.left - MARGIN)
+          height = Math.max(300, window.innerHeight - menuPosition.top - MARGIN)
           tabHeight = height - $('#right-menu .nav').height() - 30
 
           $("#right-menu").width(width).height(height)
@@ -139,6 +154,7 @@ class Controller
 
       @initMouse()
       @initKeyboard()
+      @initUIElements()
 
       for binaryName of @model.binary
         @model.binary[binaryName].cube.on "bucketLoaded" : =>
@@ -146,12 +162,31 @@ class Controller
 
 
       if @controlMode == constants.CONTROL_MODE_VIEW
-        $('#alpha-slider').slider().on "slide", (event) =>
 
-          alpha = event.value
-          if (alpha == 0)
-            @model.getSegmentationBinary().pingStop()
-          @sceneController.setSegmentationAlpha( alpha )
+        # Zoom Slider
+        logScaleBase = Math.pow(@model.flycam.getMaxZoomStep() * 0.99, 1 / 100)
+        slider = $('#zoom-slider').slider().on "slide", (event) =>
+          zoomValue = Math.pow(logScaleBase, event.value)
+          @model.user.set("zoom", zoomValue)
+
+        updateSlider = (zoom) =>
+          sliderValue = Math.log(zoom) / Math.log(logScaleBase)
+          slider.slider("setValue", sliderValue)
+
+        @model.user.on(
+          zoomChanged : updateSlider
+        )
+
+        # Segmentation slider
+        if @model.getSegmentationBinary()?
+          $('#alpha-slider').slider().on "slide", (event) =>
+
+            alpha = event.value
+            if (alpha == 0)
+              @model.getSegmentationBinary().pingStop()
+            @sceneController.setSegmentationAlpha( alpha )
+        else
+          $('#segmentation-slider').hide()
 
       @modeMapping =
         "view-mode-3planes"        : constants.MODE_PLANE_TRACING
@@ -211,9 +246,7 @@ class Controller
       event.preventDefault() if (event.which == 32 or event.which == 18 or 37 <= event.which <= 40) and !$(":focus").length
       return
 
-    keyboardControls = {
-      "q" : => @toggleFullScreen()
-    }
+    keyboardControls = {}
 
     if @controlMode == constants.CONTROL_MODE_TRACE
       _.extend( keyboardControls, {
@@ -244,6 +277,37 @@ class Controller
       } )
 
     new Input.KeyboardNoLoop( keyboardControls )
+
+
+  initUIElements : ->
+
+    @initAddScriptModal()
+
+    $("#share-button").on "click", (event) =>
+
+      # save the progress
+      model = @model.skeletonTracing || @model.volumeTracing
+      model.stateLogger.pushNow()
+
+      modalView = new ShareModalView(_model : @model)
+      el = modalView.render().el
+      $("#merge-modal").html(el)
+      modalView.show()
+
+
+
+  initAddScriptModal : ->
+
+    $("#add-script-link").removeClass("hide")
+    $("#add-script-button").click( (event) ->
+      try
+        eval($('#add-script-input').val())
+        # close modal if the script executed successfully
+        $('#script-modal').modal('hide')
+      catch error
+        alert(error)
+    )
+
 
   setMode : (newMode, force = false) ->
 
@@ -290,12 +354,16 @@ class Controller
     gui.update()
 
     for binary in @model.getColorBinaries()
-      binary.pullQueue.set4Bit(@model.user.get("fourBit"))
+      binary.pullQueue.setFourBit(@model.user.get("fourBit"))
 
     return gui
 
 
   browserSupported : ->
 
-    # right now only webkit-based browsers are supported
-    return window.webkitURL
+    userAgentContains = (substring) ->
+        navigator.userAgent.indexOf(substring) >= 0
+
+    # allow everything but IE
+    isIE = userAgentContains("MSIE") or userAgentContains("Trident")
+    return not isIE

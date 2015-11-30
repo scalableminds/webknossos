@@ -31,7 +31,8 @@ class LoggedTimeModel extends Backbone.Model
       interval = entry.paymentInterval
       return {
         time: FormatUtils.formatSeconds(entry.durationInSeconds)
-        interval : interval.year + "-" + interval.month
+        interval : interval.year + "-" + (if interval.month < 10 then "0" else "") + interval.month
+        months: interval.year * 12 + interval.month
       }
-    ).sort( (a, b) -> a.interval > b.interval )
+    ).sort( (a, b) -> b.months - a.months )
 

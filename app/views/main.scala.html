@@ -19,10 +19,10 @@
     <div id="alert-container">
       @session.flash.data.map{ f =>
         @if(f._1 == "modal"){
-          <div class="modal modal-message fade">
+          <div id="flashModal" class="modal modal-message fade" role="dialog" aria-describedby="modalDescription" aria-hidden="true">
             <div class="modal-dialog">
               <div class="modal-content">
-                <div class="modal-body">
+                <div class="modal-body" id="modalDescription">
                   <p>@f._2</p>
                 </div>
                 <div class="modal-footer">
@@ -38,6 +38,23 @@
           </div>
         }
       }
+    </div>
+    <div id="script-modal" class="modal fade">
+      <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+          <div class="modal-header">
+            <button type="button" class="close" data-dismiss="modal">&times;</button>
+            <h3>Add user script</h3>
+          </div>
+          <div class="modal-body" id="help-modal-body">
+            <textarea id="add-script-input" rows="10"></textarea>
+          </div>
+          <div class="modal-footer">
+            <a href="#" id="add-script-button" class="btn btn-default">Add</a>
+            <a href="#" class="btn btn-default" data-dismiss="modal">Close</a>
+          </div>
+        </div>
+      </div>
     </div>
     <div id="main-container" data-template="@callingTemplate">
       <div id="loader">

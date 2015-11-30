@@ -30,9 +30,14 @@ require.config(
     "require"             : "../bower_components/requirejs/require"
     "c3"                  : "../bower_components/c3/c3"
     "d3"                  : "../bower_components/d3/d3"
-    "v3"                  : "libs/v3"
-    "m4x4"                : "libs/m4x4"
+    "daterangepicker"     : "../bower_components/bootstrap-daterangepicker/daterangepicker"
+    "rangeslider"         : "../bower_components/nouislider/distribute/nouislider.min"
+    "clipboard"           : "../bower_components/clipboard/dist/clipboard.min"
+    "mjs"                 : "../bower_components/mjs/src/mjs"
+    "cola"                : "../bower_components/webcola/WebCola/cola.min"
     "worker"              : "libs/worker_plugin"
+    "wrapped_worker"      : "libs/wrapped_worker_plugin"
+    "nested_obj_model"    : "libs/nested_obj_model"
 
   shim :
     "underscore" :
@@ -51,10 +56,6 @@ require.config(
       exports : "Zlib"
     "stats" :
       exports : "Stats"
-    "v3" :
-      exports : "V3"
-    "m4x4" :
-      exports : "M4x4"
     "three.trackball" :
       deps : ["three"]
     "three.color" :
@@ -65,5 +66,7 @@ require.config(
       exports : "Backbone"
     "backbone.marionette" : [ "backbone", "underscore" ]
     "backbone.paginator" : [ "backbone", "underscore" ]
+    "cola" :
+      exports : "cola"
 
 )

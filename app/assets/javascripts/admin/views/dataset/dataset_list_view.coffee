@@ -1,28 +1,28 @@
 ### define
 underscore : _
-backbone.marionette : marionette
+backbone.marionette : Marionette
 ./dataset_list_item_view : DatasetListItemView
 ./team_assignment_modal_view: TeamAssignmentModalView
+libs/behaviors/sort_table_behavior : SortTableBehavior
 ###
 
 class DatasetListView extends Backbone.Marionette.CompositeView
 
   template : _.template("""
-    <h3>DataSets</h3>
-    <table class="table table-double-striped table-details">
+    <table class="table table-double-striped table-details sortable-table">
       <thead>
         <tr>
           <th class="details-toggle-all">
             <i class="caret-right"></i>
             <i class="caret-down"></i>
           </th>
-          <th>Name</th>
-          <th>Datastore</th>
+          <th data-sort="dataSource.baseDir">Name</th>
+          <th data-sort="dataStore.name">Datastore</th>
           <th>Scale</th>
-          <th>Owning Team</th>
+          <th data-sort="owningTeam">Owning Team</th>
           <th>Allowed Teams</th>
-          <th>Active</th>
-          <th>Public</th>
+          <th data-sort="isActive">Active</th>
+          <th data-sort="isPublic">Public</th>
           <th>Data Layers</th>
           <th>Actions</th>
         </tr>
@@ -40,20 +40,28 @@ class DatasetListView extends Backbone.Marionette.CompositeView
     "modalWrapper" : "#modal-wrapper"
     "detailsToggle" : ".details-toggle-all"
 
-
   childView : DatasetListItemView
   childViewContainer: "table"
 
+  behaviors :
+    SortTableBehavior:
+      behaviorClass: SortTableBehavior
+
+  DATASETS_PER_PAGE : 30
+
   initialize : ->
+
+    @collection.sortByAttribute("created")
 
     @collection.fetch(
       silent : true
       data : "isEditable=true"
     ).done( =>
       @collection.goTo(1)
+      @collection.howManyPer(@DATASETS_PER_PAGE)
     )
 
-    @listenTo(app.vent, "paginationView:filter", @filter)
+    @listenTo(app.vent, "paginationView:filter", @filterBySearch)
     @listenTo(app.vent, "TeamAssignmentModalView:refresh", @render)
 
 
@@ -76,7 +84,7 @@ class DatasetListView extends Backbone.Marionette.CompositeView
     @modalView = modalView
 
 
-  filter : (searchQuery) ->
+  filterBySearch : (searchQuery) ->
 
     @collection.setFilter(["name", "owningTeam"], searchQuery)
 

@@ -1,5 +1,6 @@
 package controllers
 
+import com.scalableminds.util.security.SCrypt
 import play.api._
 import play.api.mvc.{Request, Action}
 import play.api.data._
@@ -15,7 +16,7 @@ import play.api.i18n.Messages
 import oxalis.mail.DefaultMails
 import oxalis.view.{SessionData, ProvidesUnauthorizedSessionData, UnAuthedSessionData}
 import scala.concurrent.Future
-import models.team.TeamDAO
+import models.team.{TeamService, TeamDAO}
 import com.scalableminds.util.reactivemongo.DBAccessContext
 import net.liftweb.common.Full
 
@@ -34,7 +35,7 @@ object Authentication extends Controller with Secured with ProvidesUnauthorizedS
 
     val passwordField = tuple("main" -> text, "validation" -> text)
       .verifying("user.password.nomatch", pw => pw._1 == pw._2)
-      .verifying("user.password.tooshort", pw => pw._1.length >= 6)
+      .verifying("user.password.tooshort", pw => pw._1.length >= 8)
 
     Form(
       mapping(
@@ -52,7 +53,7 @@ object Authentication extends Controller with Secured with ProvidesUnauthorizedS
 
   def formHtml(form: Form[(String, String, String, String, String)])(implicit session: SessionData) = {
     for {
-      teams <- TeamDAO.findAll(DBAccessContext(None))
+      teams <- TeamService.rootTeams()
     } yield html.user.register(form, teams)
   }
 
@@ -64,7 +65,7 @@ object Authentication extends Controller with Secured with ProvidesUnauthorizedS
       val boundForm = registerForm.bindFromRequest
       boundForm.fold(
       formWithErrors =>
-        formHtml(registerForm).map(BadRequest(_)), {
+        formHtml(formWithErrors).map(BadRequest(_)), {
         case (team, email, firstName, lastName, password) => {
           UserService.findOneByEmail(email).futureBox.flatMap {
             case Full(_) =>
@@ -72,7 +73,7 @@ object Authentication extends Controller with Secured with ProvidesUnauthorizedS
             case _ =>
               for {
                 user <- UserService.insert(team, email, firstName, lastName, password, autoVerify)
-                brainDBResult <- BrainTracing.register(user, password)
+                brainDBResult <- BrainTracing.register(user)
               } yield {
                 Application.Mailer ! Send(
                   DefaultMails.registerMail(user.name, email, brainDBResult))
@@ -119,13 +120,29 @@ object Authentication extends Controller with Secured with ProvidesUnauthorizedS
                 if (user.verified)
                   Redirect(controllers.routes.Application.index)
                 else
-                  Redirect("/dashboard")
+                  BadRequest(html.user.login(loginForm.bindFromRequest.withGlobalError("user.notVerified")))
               redirectLocation.withSession(Secured.createSession(user))
 
           }.getOrElse {
             BadRequest(html.user.login(loginForm.bindFromRequest.withGlobalError("user.login.failed")))
           }
       })
+  }
+
+  /**
+   * Authenticate as a different user
+   */
+  def switchTo(email: String) = Authenticated.async {
+    implicit request =>
+      if(request.user.isSuperUser){
+        UserService.findOneByEmail(email).map { user =>
+          Logger.info(s"[Superuser] user switch (${request.user.email} -> $email)")
+          Redirect(controllers.routes.Application.index).withSession(Secured.createSession(user))
+        }
+      } else {
+        Logger.warn(s"User tried to switch (${request.user.email} -> $email) but is no Superuser!")
+        Future.successful(BadRequest(html.user.login(loginForm.withGlobalError("user.login.failed"))(sessionDataAuthenticated(request))))
+      }
   }
 
   /**
@@ -136,4 +153,5 @@ object Authentication extends Controller with Secured with ProvidesUnauthorizedS
       .withNewSession
       .flashing("success" -> Messages("user.logout.success"))
   }
+
 }

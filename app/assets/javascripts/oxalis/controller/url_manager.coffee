@@ -5,13 +5,12 @@
 class UrlManager
 
 
-  MAX_UPDATE_INTERVAL : 2000
+  MAX_UPDATE_INTERVAL : 1000
 
   constructor : (@controller, @model) ->
 
-    url           = document.URL
-    @baseUrl      = url.match(/^([^#]*)#?/)[1]
-    @initialState = @parseUrl url
+    @baseUrl      = document.location.pathname
+    @initialState = @parseUrl()
 
     @update = _.throttle(
       => location.replace(@buildUrl())
@@ -19,15 +18,15 @@ class UrlManager
     )
 
 
-  parseUrl : (url)->
+  parseUrl : ->
 
-    stateString = url.match(/^.*#([\d.-]*(?:,[\d.-]*)*)$/)?[1]
+    stateString = location.hash.slice(1)
     state       = {}
 
     if stateString?
 
       stateArray = stateString.split(",")
-      return unless stateArray.length >= 5
+      return state unless stateArray.length >= 5
 
       state.position = _.map stateArray.slice(0, 3), (e) -> +e
       state.mode     = +stateArray[3]
@@ -35,6 +34,11 @@ class UrlManager
 
       if stateArray.length >= 8
         state.rotation = _.map stateArray.slice(5, 8), (e) -> +e
+        if stateArray[8]?
+          state.activeNode = +stateArray[8]
+      else
+        if stateArray[5]?
+          state.activeNode = +stateArray[5]
 
     return state
 
@@ -45,6 +49,8 @@ class UrlManager
       changed : => @update()
     @model.flycam3d.on
       changed : => @update()
+    @model.skeletonTracing?.on
+      newActiveNode : => @update()
 
 
   buildUrl : ->
@@ -59,5 +65,9 @@ class UrlManager
 
     else
       state = state.concat( [flycam.getZoomStep().toFixed(2)] )
+
+    if @model.skeletonTracing?.getActiveNodeId()?
+      activeNode = @model.skeletonTracing.getActiveNodeId()
+      state = state.concat([activeNode])
 
     return @baseUrl + "#" + state.join(",")

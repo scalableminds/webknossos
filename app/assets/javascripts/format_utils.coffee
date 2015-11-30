@@ -1,5 +1,6 @@
 ### define
 underscore : _
+moment : moment
 ###
 
 class FormatUtils

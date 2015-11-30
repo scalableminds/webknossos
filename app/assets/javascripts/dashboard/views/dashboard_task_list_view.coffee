@@ -5,6 +5,7 @@ backbone.marionette : marionette
 ./task_transfer_modal_view : TaskTransferModalView
 routes : routes
 libs/toast : Toast
+libs/behaviors/sort_table_behavior : SortTableBehavior
 ###
 
 class DashboardTaskListView extends Backbone.Marionette.CompositeView
@@ -26,15 +27,15 @@ class DashboardTaskListView extends Backbone.Marionette.CompositeView
     <% } %>
     <div class="divider-vertical"></div>
     <a href="#" id="toggle-finished" class="btn btn-default">
-      Show finished tasks
+      Show finished tasks only
     </a>
-    <table class="table table-striped">
+    <table class="table table-striped sortable-table">
       <thead>
         <tr>
-          <th># </th>
-          <th>Type </th>
-          <th>Project </th>
-          <th>Description </th>
+          <th data-sort="formattedHash"># </th>
+          <th data-sort="type.summary">Type </th>
+          <th data-sort="projectName">Project </th>
+          <th data-sort="type.description">Description </th>
           <th>Modes </th>
           <th></th>
         </tr>
@@ -58,6 +59,10 @@ class DashboardTaskListView extends Backbone.Marionette.CompositeView
     "click #new-task-button" : "newTask"
     "click #transfer-task" : "transferTask"
     "click @ui.finishToggle" : "toggleFinished"
+
+  behaviors:
+    SortTableBehavior:
+      behaviorClass: SortTableBehavior
 
 
   initialize : (options) ->
@@ -101,8 +106,8 @@ class DashboardTaskListView extends Backbone.Marionette.CompositeView
     @showFinishedTasks = not @showFinishedTasks
     @update()
 
-    verb = if @showFinishedTasks then "Hide" else "Show"
-    @ui.finishToggle.html("#{verb} finished tasks")
+    verb = if @showFinishedTasks then "unfinished" else "finished"
+    @ui.finishToggle.html("Show #{verb} tasks only")
 
 
   transferTask : (evt) ->

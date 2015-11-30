@@ -1,12 +1,11 @@
 ### define
-m4x4 : M4x4
-v3 : V3
+mjs : MJS
 jquery : $
 underscore : _
 ###
 
 # Applies an affine transformation matrix on an array of points.
-M4x4.transformPointsAffine = (m, points, r = new Float32Array(points.length)) ->
+MJS.M4x4.transformPointsAffine = (m, points, r = new Float32Array(points.length)) ->
 
   m00 = m[0]
   m01 = m[1]
@@ -34,7 +33,7 @@ M4x4.transformPointsAffine = (m, points, r = new Float32Array(points.length)) ->
 
 
 # Applies a transformation matrix on an array of points.
-M4x4.transformPoints = (m, points, r = new Float32Array(points.length)) ->
+MJS.M4x4.transformPoints = (m, points, r = new Float32Array(points.length)) ->
 
   for i in [0...points.length] by 3
     v0 = points[i]
@@ -54,7 +53,7 @@ M4x4.transformPoints = (m, points, r = new Float32Array(points.length)) ->
   r
 
 
-M4x4.inverse = (mat, dest = new Float32Array(16)) ->
+MJS.M4x4.inverse = (mat, dest = new Float32Array(16)) ->
 
   # cache matrix values
   a00 = mat[0]
@@ -110,7 +109,7 @@ M4x4.inverse = (mat, dest = new Float32Array(16)) ->
   return dest
 
 
-M4x4.extractTranslation = (m, r = new Float32Array(3)) ->
+MJS.M4x4.extractTranslation = (m, r = new Float32Array(3)) ->
 
   r[0] = m[12]
   r[1] = m[13]
@@ -118,7 +117,7 @@ M4x4.extractTranslation = (m, r = new Float32Array(3)) ->
   r
 
 
-V3.round = (v, r = new Float32Array(3)) ->
+MJS.V3.round = (v, r = new Float32Array(3)) ->
 
   r[0] = Math.round(v[0])
   r[1] = Math.round(v[1])
@@ -126,7 +125,7 @@ V3.round = (v, r = new Float32Array(3)) ->
   r
 
 
-V3.toString = (v) ->
+MJS.V3.toString = (v) ->
 
   "#{v[0]},#{v[1]},#{v[2]}"
 
@@ -316,4 +315,42 @@ $.whenWithProgress = (args...) ->
   else if deferred != firstParam
     deferred.resolveWith( deferred, if length then [ firstParam ] else [] )
   promise
+
+
+###
+ *jQuery alterClass plugin
+ *
+ * Remove element classes with wildcard matching. Optionally add classes:
+ *   $( '#foo' ).alterClass( 'foo-* bar-*', 'foobar' )
+ *
+ * Copyright (c) 2011 Pete Boere (the-echoplex.net)
+ * Free under terms of the MIT license: http://www.opensource.org/licenses/mit-license.php
+*
+*###
+
+$.fn.alterClass = ( removals, additions ) ->
+
+  self = this
+
+  if removals.indexOf( '*' ) == -1
+    # Use native jQuery methods if there is no wildcard matching
+    self.removeClass( removals )
+    return if not additions  then self else self.addClass( additions )
+
+
+  patt = new RegExp( '\\s' +
+    removals.
+    replace( /\*/g, '[A-Za-z0-9-_]+' ).
+    split( ' ' ).
+    join( '\\s|\\s' ) + '\\s', 'g' );
+
+  self.each( ( i, it ) ->
+    cn = ' ' + it.className + ' '
+    while ( patt.test( cn ) )
+      cn = cn.replace( patt, ' ')
+
+    it.className = $.trim( cn )
+  )
+
+  return if not additions then self else self.addClass( additions )
 

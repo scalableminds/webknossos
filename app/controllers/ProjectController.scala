@@ -3,16 +3,17 @@
  */
 package controllers
 
-import oxalis.security.Secured
 import com.scalableminds.util.reactivemongo.GlobalAccessContext
-import models.user.{User, UserService}
-import play.api.libs.concurrent.Execution.Implicits._
-import play.api.templates.Html
-import scala.concurrent.Future
-import models.task.{Task, Project, ProjectService, ProjectDAO}
-import play.api.libs.json.{JsError, JsSuccess, Writes, Json}
+import models.task.{Project, ProjectDAO, ProjectService, Task}
+import models.user.User
+import net.liftweb.common.{Empty, Full}
+import oxalis.security.Secured
 import play.api.i18n.Messages
-import net.liftweb.common.{Empty, Failure, Full}
+import play.api.libs.concurrent.Execution.Implicits._
+import play.api.libs.json.{JsError, JsSuccess, Json}
+import play.api.templates.Html
+
+import scala.concurrent.Future
 
 object ProjectController extends Controller with Secured {
   def empty = Authenticated {
@@ -24,7 +25,7 @@ object ProjectController extends Controller with Secured {
     implicit request =>
       for {
         projects <- ProjectDAO.findAll
-        js <- Future.traverse(projects)(Project.projectPublicWrites(_, request.user))
+        js <- Future.traverse(projects)(Project.projectPublicWritesWithStatus(_, request.user))
       } yield {
         Ok(Json.toJson(js))
       }
@@ -54,7 +55,7 @@ object ProjectController extends Controller with Secured {
         case JsSuccess(project, _) =>
           ProjectDAO.findOneByName(project.name)(GlobalAccessContext).futureBox.flatMap {
             case Empty if request.user.adminTeamNames.contains(project.team) =>
-              ProjectDAO.insert(project).flatMap(_ => Project.projectPublicWrites(project, request.user)).map {
+              ProjectDAO.insert(project).flatMap(_ => Project.projectPublicWritesWithStatus(project, request.user)).map {
                 js =>
                   Ok(js)
               }

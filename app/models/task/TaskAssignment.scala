@@ -1,22 +1,10 @@
 package models.task
 
 import play.api.Play._
-import scala.Some
-import akka.util.Timeout
-import play.api.libs.concurrent.Akka
-import akka.actor.Props
-import com.scalableminds.util.js.{JS, JsExecutionActor}
-import models.user.User
-import models.annotation.{AnnotationType, AnnotationDAO}
-import scala.concurrent.Future
-import com.scalableminds.util.reactivemongo.{DBAccessContext, GlobalAccessContext}
-import play.api.Logger
-import akka.pattern.AskTimeoutException
+import models.user.{UserService, User}
+import com.scalableminds.util.reactivemongo.DBAccessContext
 import play.api.libs.concurrent.Execution.Implicits._
-import akka.pattern.ask
-import scala.concurrent.duration._
 import com.scalableminds.util.tools.Fox
-import net.liftweb.common.{Failure, Empty, Full}
 
 /**
  * Company: scalableminds
@@ -30,42 +18,18 @@ trait TaskAssignment {
 
   val conf = current.configuration
 
-  implicit val timeout = Timeout((conf.getInt("js.defaultTimeout") getOrElse 5) seconds) // needed for `?` below
-
-  val jsExecutionActor = Akka.system.actorOf(Props[JsExecutionActor])
-
   def findAssignableFor(user: User)(implicit ctx: DBAccessContext) = {
-    val finishedTasks = AnnotationDAO.findFor(user._id, AnnotationType.Task).map(_.flatMap(_._task))
-    val availableTasks = findAllAssignable
-
     for {
-      available <- availableTasks
-      finished <- finishedTasks
+      available <- findAllAssignable(ctx)
+      finished <- UserService.findFinishedTasksOf(user)
     } yield {
-      available.filter(t =>
-        !finished.contains(t._id) && t.hasEnoughExperience(user))
+      available.filter(task => !finished.contains(task._id) && task.hasEnoughExperience(user)).sortBy(-_.priority)
     }
   }
 
-  protected def nextTaskForUser(user: User, futureTasks: Fox[List[Task]]): Fox[Task] = futureTasks.flatMap {
-    case Nil =>
-      Fox.empty
-    case tasks =>
-      val params = Map("user" -> user, "tasks" -> tasks.toArray)
-      TaskSelectionAlgorithmDAO.current(GlobalAccessContext).flatMap {
-      current =>
-        (jsExecutionActor ? JS(current.js, params))
-          .mapTo[Future[Task]].flatMap(f => f.map(t => Full(t))).recover {
-          case e: Exception =>
-            Logger.error("JS Execution error: " + e.getMessage)
-            Failure("JS Execution error", Full(e), Empty)
-        }
-    }
-  }
+  protected def nextTaskForUser(user: User, futureTasks: Fox[List[Task]]): Fox[Task] =
+    futureTasks.flatMap(_.headOption)
 
-  def nextTaskForUser(user: User)(implicit ctx: DBAccessContext): Fox[Task] = {
-    nextTaskForUser(
-      user,
-      findAssignableFor(user))
-  }
+  def nextTaskForUser(user: User)(implicit ctx: DBAccessContext): Fox[Task] =
+    nextTaskForUser(user, findAssignableFor(user))
 }

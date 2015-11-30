@@ -1,6 +1,7 @@
 ### define
 jquery : $
 underscore : _
+mjs : MJS
 libs/event_mixin : EventMixin
 libs/request : Request
 libs/input : Input
@@ -75,10 +76,20 @@ class ArbitraryController
 
     @stop()
 
+    # Toggle record
+    @setRecord(false)
+    $('#trace-mode-trace').on("click", =>
+      @setRecord(true)
+      $(":focus").blur()
+    )
+    $('#trace-mode-watch').on("click", =>
+      @setRecord(false)
+      $(":focus").blur()
+    )
+
 
   render : (forceUpdate, event) ->
 
-    @model.logConnectionInfo()
     matrix = @cam.getMatrix()
     for binary in @model.getColorBinaries()
       binary.arbitraryPing(matrix)
@@ -114,7 +125,7 @@ class ArbitraryController
 
     @input.keyboard = new Input.Keyboard(
 
-      #Scale plane
+      # Scale plane
       "l"             : (timeFactor) => @arbitraryView.applyScale -@model.user.get("scaleValue")
       "k"             : (timeFactor) => @arbitraryView.applyScale  @model.user.get("scaleValue")
 
@@ -163,19 +174,16 @@ class ArbitraryController
       "j" : => @popBranch()
 
       #Reset Matrix
-      "r" : => @cam.resetRotation()
+      "r" : => @cam.setRotation([0, 0, 0])
 
       #Recenter active node
       "y" : => @centerActiveNode()
 
       #Recording of Waypoints
       "z" : =>
-        @record = true
-        @infoPlane.updateInfo(true)
-        @setWaypoint()
+        @setRecord(true)
       "u" : =>
-        @record = false
-        @infoPlane.updateInfo(false)
+        @setRecord(false)
       #Comments
       "n" : => @setActiveNode(@model.skeletonTracing.nextCommentNodeID(false), true)
       "p" : => @setActiveNode(@model.skeletonTracing.nextCommentNodeID(true), true)
@@ -189,6 +197,20 @@ class ArbitraryController
         @centerActiveNode()
 
     , -1)
+
+
+  setRecord : (@record) ->
+
+    $('#trace-mode button').removeClass("btn-primary")
+    if @record
+      $('#trace-mode-trace').addClass("btn-primary")
+    else
+      $('#trace-mode-watch').addClass("btn-primary")
+
+    @infoPlane.updateInfo(@record)
+    if @record
+      @setWaypoint()
+
 
   init : ->
 
@@ -336,7 +358,7 @@ class ArbitraryController
       lastNodeMatrix[13] - matrix[13]
       lastNodeMatrix[14] - matrix[14]
     ]
-    vectorLength = V3.length(vector)
+    vectorLength = MJS.V3.length(vector)
 
     if vectorLength > 10
       @setWaypoint()

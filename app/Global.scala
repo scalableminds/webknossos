@@ -5,6 +5,7 @@ import com.scalableminds.datastore.services.BinaryDataService
 import models.binary.{DataStore, DataStoreDAO}
 import models.team._
 import net.liftweb.common.Full
+import oxalis.jobs.AvailableTasksJob
 import play.api._
 import play.api.libs.concurrent._
 import models.user._
@@ -49,6 +50,13 @@ object Global extends WithFilters(MetricsFilter) with GlobalSettings {
     Akka.system(app).actorOf(
       Props(new Mailer(conf)),
       name = "mailActor")
+
+    if (conf.getBoolean("workload.active")) {
+      Akka.system(app).actorOf(
+        Props(new AvailableTasksJob()),
+        name = "availableTasksMailActor"
+      )
+    }
   }
 
   override def onError(request: RequestHeader, ex: Throwable) = {
@@ -63,11 +71,10 @@ object Global extends WithFilters(MetricsFilter) with GlobalSettings {
  */
 object InitialData extends GlobalDBAccess {
 
-  val mpi = Team("Structure of Neocortical Circuits Group", None, RoleService.roles)
+  val mpi = Team("Connectomics department", None, RoleService.roles)
 
   def insert() = {
     insertUsers()
-    insertTaskAlgorithms()
     insertTeams()
     insertTasks()
     insertLocalDataStore()
@@ -84,19 +91,9 @@ object InitialData extends GlobalDBAccess {
           "Boy",
           true,
           SCrypt.hashPassword("secret"),
+          SCrypt.md5("secret"),
           List(TeamMembership(mpi.name, Role.Admin)),
           UserSettings.defaultSettings))
-    }
-  }
-
-  def insertTaskAlgorithms() = {
-    TaskSelectionAlgorithmDAO.findAll.map {
-      alogrithms =>
-        if (alogrithms.isEmpty)
-          TaskSelectionAlgorithmDAO.insert(TaskSelectionAlgorithm(
-            """function simple(user, tasks){
-              |  return tasks[0];
-              |}""".stripMargin))
     }
   }
 

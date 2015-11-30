@@ -3,7 +3,7 @@ underscore : _
 jquery : $
 libs/request : Request
 libs/event_mixin : EventMixin
-three : THREE
+libs/toast : Toast
 ###
 
 class StateLogger
@@ -11,13 +11,17 @@ class StateLogger
   PUSH_THROTTLE_TIME : 30000 #30s
   SAVE_RETRY_WAITING_TIME : 5000
 
-  constructor : (@flycam, @version, @tracingId, @tracingType, @allowUpdate, @pipeline) ->
+  constructor : (@flycam, @version, @tracingId, @tracingType, @allowUpdate) ->
 
     _.extend(this, new EventMixin())
+    @mutexedPush = _.mutexDeferred(@pushImpl, -1)
 
-    @committedDiffs = []
     @newDiffs = []
-    @committedCurrentState = true
+
+    # Push state to server whenever a user moves
+    @flycam.on
+      positionChanged : =>
+        @push()
 
 
   pushDiff : (action, value, push = true) ->
@@ -41,13 +45,12 @@ class StateLogger
 
   stateSaved : ->
 
-    return @committedCurrentState and @committedDiffs.length == 0
+    return @newDiffs.length == 0
 
 
   push : ->
 
     if @allowUpdate
-      @committedCurrentState = false
       @pushThrottled()
 
 
@@ -55,32 +58,37 @@ class StateLogger
     # Pushes the buffered tracing to the server. Pushing happens at most
     # every 30 seconds.
 
-    saveFkt = => @pushImpl(true)
-    @pushThrottled = _.throttle(_.mutexDeferred( saveFkt, -1), @PUSH_THROTTLE_TIME)
+    @pushThrottled = _.throttle(@mutexedPush, @PUSH_THROTTLE_TIME)
     @pushThrottled()
 
 
   pushNow : ->   # Interface for view & controller
 
-    return @pushImpl(false)
+    return @mutexedPush(false)
 
 
   pushImpl : (notifyOnFailure) ->
 
-    @concatUpdateTracing()
-    @committedDiffs = @committedDiffs.concat(@newDiffs)
-    @newDiffs = []
-    @committedCurrentState = true
-    console.log "Sending data: ", @committedDiffs
+    if not @allowUpdate
+      return new $.Deferred().resolve().promise()
 
-    @pipeline.executeAction( (prevVersion) =>
-      Request.send(
-        url : "/annotations/#{@tracingType}/#{@tracingId}?version=#{(prevVersion + 1)}"
-        method : "PUT"
-        data : @committedDiffs
-        contentType : "application/json"
-      ).pipe (response) ->
-        return response.version
+    # TODO: remove existing updateTracing
+    @concatUpdateTracing()
+
+    diffsCurrentLength = @newDiffs.length
+    console.log "Sending data: ", @newDiffs
+    $.assert(@newDiffs.length > 0, "Empty update sent to server!", {
+      @newDiffs
+    })
+
+    Request.send(
+      url : "/annotations/#{@tracingType}/#{@tracingId}?version=#{(@version + 1)}"
+      method : "PUT"
+      data : @newDiffs
+      contentType : "application/json"
+    ).then((response) =>
+      @newDiffs = @newDiffs.slice(diffsCurrentLength)
+      @version = response.version
     ).fail((responseObject) => @pushFailCallback(responseObject, notifyOnFailure))
     .done(=> @pushDoneCallback())
 
@@ -94,28 +102,28 @@ class StateLogger
       try
         response = JSON.parse(responseObject.responseText)
       catch error
-        console.error "parsing failed."
+        console.error "parsing failed.", response
       if response?.messages?[0]?.error?
-        if response.messages[0].error == "tracing.dirtyState"
-          $(window).on(
-            "beforeunload"
-            =>return null)
-          alert("Sorry, but the current state is inconsistent. A reload is necessary.")
+        if response.messages[0].error == "annotation.dirtyState"
+          $(window).off("beforeunload")
+          alert("""
+            It seems that you edited the tracing simultaneously in different windows.
+            Editing should be done in a single window only.
+
+            In order to restore the current window, a reload is necessary.
+          """)
           window.location.reload()
 
-    @push()
+        else
+          Toast.message(response.messages)
+
+
+    setTimeout((=> @pushNow()), @SAVE_RETRY_WAITING_TIME)
     if notifyOnFailure
       @trigger("pushFailed")
-
-    restart = =>
-      @pipeline.restart()
-          .fail((responseObject) => @pushFailCallback(responseObject, notifyOnFailure))
-          .done(=> @pushDoneCallback())
-
-    setTimeout(restart, @SAVE_RETRY_WAITING_TIME)
 
 
   pushDoneCallback : ->
 
+    @trigger("pushDone")
     $('body').removeClass('save-error')
-    @committedDiffs = []

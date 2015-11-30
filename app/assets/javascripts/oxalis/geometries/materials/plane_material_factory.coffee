@@ -67,6 +67,8 @@ class PlaneMaterialFactory extends AbstractPlaneMaterialFactory
     @material.setSegmentationAlpha = (alpha) =>
       @uniforms.alpha.value = alpha / 100
 
+    @material.side = THREE.DoubleSide
+
 
   setupChangeListeners : ->
 
@@ -90,6 +92,8 @@ class PlaneMaterialFactory extends AbstractPlaneMaterialFactory
       """
       <% _.each(layers, function(name) { %>
         uniform sampler2D <%= name %>_texture;
+        uniform float <%= name %>_brightness;
+        uniform float <%= name %>_contrast;
         uniform vec3 <%= name %>_color;
         uniform float <%= name %>_weight;
       <% }) %>
@@ -99,35 +103,17 @@ class PlaneMaterialFactory extends AbstractPlaneMaterialFactory
       <% } %>
 
       uniform vec2 offset, repeat;
-      uniform float alpha, brightness, contrast;
+      uniform float alpha;
       varying vec2 vUv;
 
-      /* Inspired from: https://github.com/McManning/WebGL-Platformer/blob/master/shaders/main.frag */
-      vec4 hsv_to_rgb(vec4 HSV)
+      /* Inspired from: http://lolengine.net/blog/2013/07/27/rgb-to-hsv-in-glsl */
+      vec3 hsv_to_rgb(vec4 HSV)
       {
-        vec4 RGB; /* = HSV.z; */
-
-        float h = HSV.x;
-        float s = HSV.y;
-        float v = HSV.z;
-
-        float i = floor(h);
-        float f = h - i;
-
-        float p = (1.0 - s);
-        float q = (1.0 - s * f);
-        float t = (1.0 - s * (1.0 - f));
-
-        if (i == 0.0) { RGB = vec4(1.0, t, p, 1.0); }
-        else if (i == 1.0) { RGB = vec4(q, 1.0, p, 1.0); }
-        else if (i == 2.0) { RGB = vec4(p, 1.0, t, 1.0); }
-        else if (i == 3.0) { RGB = vec4(p, q, 1.0, 1.0); }
-        else if (i == 4.0) { RGB = vec4(t, p, 1.0, 1.0); }
-        else /* i == -1 */ { RGB = vec4(1.0, p, q, 1.0); }
-
-        RGB *= v;
-
-        return RGB;
+        vec4 K;
+        vec3 p;
+        K = vec4(1.0, 2.0 / 3.0, 1.0 / 3.0, 3.0);
+        p = abs(fract(HSV.xxx + K.xyz) * 6.0 - K.www);
+        return HSV.z * mix(K.xxx, clamp(p - K.xxx, 0.0, 1.0), HSV.y);
       }
 
       void main() {
@@ -146,7 +132,7 @@ class PlaneMaterialFactory extends AbstractPlaneMaterialFactory
 
         <% if (isRgb) { %>
           vec3 data_color = texture2D( <%= layers[0] %>_texture, vUv * repeat + offset).xyz;
-
+          data_color = (data_color + <%= layers[0] %>_brightness - 0.5) * <%= layers[0] %>_contrast + 0.5;
         <% } else { %>
           vec3 data_color = vec3(0.0, 0.0, 0.0);
 
@@ -156,7 +142,7 @@ class PlaneMaterialFactory extends AbstractPlaneMaterialFactory
             color_value = texture2D( <%= name %>_texture, vUv * repeat + offset).r;
 
             /* Brightness / Contrast Transformation */
-            color_value = (color_value + brightness - 0.5) * contrast + 0.5;
+            color_value = (color_value + <%= name %>_brightness - 0.5) * <%= name %>_contrast + 0.5;
 
             /* Multiply with color and weight */
             data_color += color_value * <%= name %>_weight * <%= name %>_color;
@@ -171,8 +157,8 @@ class PlaneMaterialFactory extends AbstractPlaneMaterialFactory
         /* Color map (<= to fight rounding mistakes) */
 
         if ( id > 0.1 ) {
-          vec4 HSV = vec4( mod( 6.0 * id * golden_ratio, 6.0), 1.0, 1.0, 1.0 );
-          gl_FragColor = mix( vec4(data_color, 1.0), hsv_to_rgb(HSV), alpha );
+          vec4 HSV = vec4( mod( id * golden_ratio, 1.0), 1.0, 1.0, 1.0 );
+          gl_FragColor = vec4(mix( data_color, hsv_to_rgb(HSV), alpha ), 1.0);
         } else {
           gl_FragColor = vec4(data_color, 1.0);
         }

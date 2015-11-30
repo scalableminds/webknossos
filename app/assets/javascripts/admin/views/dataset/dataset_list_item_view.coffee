@@ -23,12 +23,7 @@ class DatasetListItemView extends Backbone.Marionette.CompositeView
       </td>
       <td title="<%= dataSource.baseDir %>"><%= name %></td>
       <td><%= dataStore.name %></td>
-      <td>(
-        <%= dataSource.scale[0] %>,
-        <%= dataSource.scale[1] %>,
-        <%= dataSource.scale[2] %>
-        )
-      </td>
+      <td><%= TemplateHelpers.formatScale(dataSource.scale) %></td>
       <td><%= owningTeam %></td>
       <td class="team-label">
         <% _.map(allowedTeams, function(team){ %>
@@ -54,6 +49,10 @@ class DatasetListItemView extends Backbone.Marionette.CompositeView
           <span class="label label-default"><%= layer.category %> - <%= layer.elementClass %></span>
       <% }) %>
       <td class="nowrap">
+        <form action="<%= jsRoutes.controllers.AnnotationController.createExplorational().url %>" method="POST">
+          <input type="hidden" name="dataSetName" value="<%= name %>" />
+          <input type="hidden" name="contentType" id="contentTypeInput" />
+        </form>
         <% if(dataSource.needsImport){ %>
           <div>
             <a href="/api/datasets/<%= name %>/import" class=" import-dataset">
@@ -65,9 +64,17 @@ class DatasetListItemView extends Backbone.Marionette.CompositeView
           </div>
         <% } %>
         <% if(isActive){ %>
-          <a href="/datasets/<%= name %>/view" >
-            <i class="fa fa-eye"></i>view
-          </a>
+          <div class="dataset-actions">
+            <a href="/datasets/<%= name %>/view" title="View dataset">
+              <img src="/assets/images/eye.svg"> view
+            </a>
+            <a href="#" title="Create skeleton tracing" id="skeletonTraceLink">
+              <img src="/assets/images/skeleton.svg"> start Skeleton Tracing
+            </a>
+            <a href="#" title="Create volume tracing" id="volumeTraceLink">
+              <img src="/assets/images/volume.svg"> start Volume Tracing
+            </a>
+          </div>
         <% } %>
       </td>
     </tr>
@@ -95,6 +102,8 @@ class DatasetListItemView extends Backbone.Marionette.CompositeView
   events :
     "click .import-dataset" : "startImport"
     "click .details-toggle" : "toggleDetails"
+    "click #skeletonTraceLink" : "startSkeletonTracing"
+    "click #volumeTraceLink" : "startVolumeTracing"
 
 
   ui:
@@ -103,6 +112,8 @@ class DatasetListItemView extends Backbone.Marionette.CompositeView
     "progressBar" : ".progress-bar"
     "detailsToggle" : ".details-toggle"
     "detailsRow" : ".details-row"
+    "form" : "form"
+    "contentTypeInput" : "#contentTypeInput"
 
 
 
@@ -170,3 +181,20 @@ class DatasetListItemView extends Backbone.Marionette.CompositeView
     else
       @ui.detailsRow.addClass("hide")
       @ui.detailsToggle.removeClass("open")
+
+
+  startSkeletonTracing : (event) ->
+
+    @submitForm("skeletonTracing", event)
+
+
+  startVolumeTracing : (event) ->
+
+    @submitForm("volumeTracing", event)
+
+
+  submitForm : (type, event) ->
+
+    event.preventDefault()
+    @ui.contentTypeInput.val(type)
+    @ui.form.submit()

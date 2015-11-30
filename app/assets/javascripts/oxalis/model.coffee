@@ -3,6 +3,7 @@
 ./model/skeletontracing/skeletontracing : SkeletonTracing
 ./model/user : User
 ./model/volumetracing/volumetracing : VolumeTracing
+./model/binarydata_connection_info : ConnectionInfo
 ./model/scaleinfo : ScaleInfo
 ./model/flycam2d : Flycam2d
 ./model/flycam3d : Flycam3d
@@ -21,45 +22,19 @@ libs/pipeline : Pipeline
 
 class Model
 
-
-
-  timestamps : []
-  buckets : []
-  bytes : []
-  totalBuckets : []
-  totalBytes : []
-
-
-  logConnectionInfo : =>
-
-    @timestamps.push(new Date().getTime())
-
-    bytes = 0
-    buckets = 0
-    totalBytes = 0
-    totalBuckets = 0
-
-    for dataLayerName of @binary
-      bytes += @binary[dataLayerName].pullQueue.loadedBytes
-      buckets += @binary[dataLayerName].pullQueue.loadedBuckets
-      totalBytes += @binary[dataLayerName].pullQueue.totalLoadedBytes
-      totalBuckets += @binary[dataLayerName].pullQueue.totalLoadedBuckets
-      @binary[dataLayerName].pullQueue.loadedBytes = 0
-      @binary[dataLayerName].pullQueue.loadedBuckets = 0
-
-    @bytes.push(bytes)
-    @buckets.push(buckets)
-    @totalBytes.push(totalBytes)
-    @totalBuckets.push(totalBuckets)
-
-
   initialize : (controlMode, state) =>
 
-    tracingId = $("#container").data("tracing-id")
-    tracingType = $("#container").data("tracing-type")
+    @tracingId = $("#container").data("tracing-id")
+    @tracingType = $("#container").data("tracing-type")
+
+    if controlMode == constants.CONTROL_MODE_TRACE
+      # Include /readOnly part whenever it is in the pathname
+      infoUrl = location.pathname + "/info"
+    else
+      infoUrl = "/annotations/#{@tracingType}/#{@tracingId}/info"
 
     Request.send(
-      url : "/annotations/#{tracingType}/#{tracingId}/info"
+      url : infoUrl
       dataType : "json"
     ).pipe (tracing) =>
 
@@ -85,21 +60,20 @@ class Model
           dataType : "json"
         ).pipe(
           (user) =>
-
             dataSet = tracing.content.dataSet
             layers  = @getLayers(dataSet.dataLayers, tracing.content.contentData.customLayers)
             $.when(
               @getDataTokens(dataSet.dataStore.url, dataSet.name, layers)...
             ).pipe =>
-              @initializeWithData(controlMode, state, tracingId, tracingType, tracing, user, layers)
+              @initializeWithData(controlMode, state, tracing, user, layers)
 
           -> Toast.error("Ooops. We couldn't communicate with our mother ship. Please try to reload this page.")
         )
 
-  initializeWithData : (controlMode, state, tracingId, tracingType, tracing, user, layers) ->
+  initializeWithData : (controlMode, state, tracing, user, layers) ->
 
     $.assertExtendContext({
-      task: tracingId
+      task: tracing.id
       dataSet: tracing.content.dataSet.name
     })
 
@@ -122,22 +96,27 @@ class Model
           ]
         }
 
+    @connectionInfo = new ConnectionInfo()
     @dataSetName = dataSet.name
     @datasetPostfix = _.last(@dataSetName.split("_"))
-    zoomStepCount = -Infinity
     @binary = {}
 
+    maxZoomStep = -Infinity
+
     for layer in layers
-      layer.bitDepth = parseInt( layer.elementClass.substring(4) )
-      @binary[layer.name] = new Binary(this, tracing, layer, tracingId, @updatePipeline)
-      zoomStepCount = Math.max(zoomStepCount, @binary[layer.name].cube.ZOOM_STEP_COUNT - 1)
+      layer.bitDepth = parseInt(layer.elementClass.substring(4))
+      maxLayerZoomStep = Math.log(Math.max(layer.resolutions...)) / Math.LN2
+      @binary[layer.name] = new Binary(this, tracing, layer, maxLayerZoomStep, @updatePipeline, @connectionInfo)
+      maxZoomStep = Math.max(maxZoomStep, maxLayerZoomStep)
+
+    @buildMappingsObject(layers)
 
     if @getColorBinaries().length == 0
       Toast.error("No data available! Something seems to be wrong with the dataset.")
 
     @setDefaultBinaryColors()
 
-    @flycam = new Flycam2d(constants.PLANE_WIDTH, @scaleInfo, zoomStepCount, @user)
+    @flycam = new Flycam2d(constants.PLANE_WIDTH, @scaleInfo, maxZoomStep + 1, @user)
     @flycam3d = new Flycam3d(constants.DISTANCE_3D, dataSet.scale)
     @flycam3d.on
       "changed" : (matrix, zoomStep) =>
@@ -146,27 +125,32 @@ class Model
       "positionChanged" : (position) =>
         @flycam3d.setPositionSilent(position)
 
-    # init state
-    @flycam.setPosition( state.position || tracing.content.editPosition )
-    if state.zoomStep?
-      @flycam.setZoomStep( state.zoomStep )
-      @flycam3d.setZoomStep( state.zoomStep )
-    if state.rotation?
-      @flycam3d.setRotation( state.rotation )
-
     if controlMode == constants.CONTROL_MODE_TRACE
 
       if isVolumeTracing
         $.assert( @getSegmentationBinary()?,
           "Volume is allowed, but segmentation does not exist" )
         @volumeTracing = new VolumeTracing(tracing, @flycam, @getSegmentationBinary(), @updatePipeline)
-
       else
         @skeletonTracing = new SkeletonTracing(tracing, @scaleInfo, @flycam, @flycam3d, @user, @updatePipeline)
 
+    @applyState(state, tracing)
     @computeBoundaries()
 
-    {"restrictions": tracing.restrictions, "settings": tracing.content.settings}
+    return {tracing}
+
+
+  # For now, since we have no UI for this
+  buildMappingsObject : (layers) ->
+
+    segmentationBinary = @getSegmentationBinary()
+
+    if segmentationBinary?
+      window.mappings = {
+        getAll : => segmentationBinary.mappings.getMappingNames()
+        getActive : => segmentationBinary.activeMapping
+        activate : (mapping) => segmentationBinary.setActiveMapping(mapping)
+      }
 
 
   getDataTokens : (dataStoreUrl, dataSetName, layers) ->
@@ -234,3 +218,15 @@ class Model
       for i in [0..2]
         @lowerBoundary[i] = Math.min @lowerBoundary[i], binary.lowerBoundary[i]
         @upperBoundary[i] = Math.max @upperBoundary[i], binary.upperBoundary[i]
+
+
+  applyState : (state, tracing) ->
+
+    @flycam.setPosition( state.position || tracing.content.editPosition )
+    if state.zoomStep?
+      @flycam.setZoomStep( state.zoomStep )
+      @flycam3d.setZoomStep( state.zoomStep )
+    if state.rotation?
+      @flycam3d.setRotation( state.rotation )
+    if state.activeNode?
+      @skeletonTracing?.setActiveNode(state.activeNode)

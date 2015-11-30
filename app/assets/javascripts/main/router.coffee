@@ -18,15 +18,21 @@ class Router extends Backbone.Router
     "tasks"                         : "tasks"
     "projects"                      : "projects"
     "dashboard"                     : "dashboard"
+    "datasets"                      : "dashboard"
     "users/:id/details"             : "dashboard"
     "taskTypes/:id/edit"            : "editTaskType"
     "taskTypes"                     : "taskTypes"
     "spotlight"                     : "spotlight"
     "tasks/overview"                : "taskOverview"
+    "workload"                      : "workload"
 
+  whitelist : [
+    "help/keyboardshortcuts",
+    "help/faq",
+    "issues"
+  ]
 
   initialize : ->
-
 
     # handle all links and manage page changes (rather the reloading the whole site)
     $(document).on "click", "a", (evt) =>
@@ -34,9 +40,31 @@ class Router extends Backbone.Router
       url = $(evt.currentTarget).attr("href") or ""
       urlWithoutSlash = url.slice(1)
 
-      if @routes[urlWithoutSlash]
+      if newWindow = $(evt.target).data("newwindow")
+        [ width, height ] = newWindow.split("x")
+        window.open(url, "_blank", "width=#{width},height=#{height},location=no,menubar=no")
         evt.preventDefault()
-        @navigate(url, { trigger: true })
+        return
+
+      # let whitelisted url through
+      if _.contains(@whitelist, urlWithoutSlash)
+        return
+
+      # allow opening links in new tabs
+      if evt.metaKey or evt.ctrlKey
+        return
+
+      # allow target=_blank etc
+      if evt.currentTarget.target != ""
+        return
+
+      for route of @routes
+        regex = @_routeToRegExp(route)
+        if regex.test(urlWithoutSlash)
+          evt.preventDefault()
+          @navigate(url, trigger : true)
+
+          return
 
       return
 
@@ -51,7 +79,7 @@ class Router extends Backbone.Router
 
   projects : ->
 
-    @showWithPagination("ProjectListView", "ProjectCollection")
+    @showWithPagination("ProjectListView", "ProjectCollection", "Create New Project")
 
 
   statistics : ->
@@ -66,12 +94,18 @@ class Router extends Backbone.Router
 
   teams : ->
 
-    @showWithPagination("TeamListView", "TeamCollection")
+    @showWithPagination("TeamListView", "PaginatedTeamCollection", "Add New Team")
 
 
   tasks : ->
 
-    @showWithPagination("TaskListView", "TaskCollection")
+    @showWithPagination("TaskListView", "TaskCollection", "Create New Task")
+
+
+  workload : ->
+
+    @showWithPagination("WorkloadListView", "WorkloadCollection")
+
 
   taskTypes : ->
 
@@ -132,13 +166,13 @@ class Router extends Backbone.Router
     )
 
 
-  showWithPagination : (view, collection) ->
+  showWithPagination : (view, collection, addButtonText=null) ->
 
     require ["admin/admin"], (admin) =>
 
       collection = new admin[collection]()
       view = new admin[view](collection: collection)
-      paginationView = new admin.PaginationView(collection: collection)
+      paginationView = new admin.PaginationView({collection, addButtonText})
 
       @changeView(paginationView, view)
       @listenTo(collection, "sync", => @hideLoading())
@@ -159,12 +193,23 @@ class Router extends Backbone.Router
       @changeView(view)
 
 
+  setReloadFlag : ->
+
+    # DO NOT MERGE FORCE RELOAD INTO DEV #895
+    @forcePageReload = true
+
+
   changeView : (views...) ->
 
     if @activeViews == views
       return
 
     @$loadingSpinner.show()
+
+    # DO NOT MERGE FORCE RELOAD INTO DEV #895
+    if @forcePageReload
+      location.reload()
+
 
     # Remove current views
     if @activeViews

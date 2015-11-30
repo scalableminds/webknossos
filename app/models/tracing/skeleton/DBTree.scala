@@ -13,6 +13,9 @@ import scala.async.Async._
 import play.api.libs.concurrent.Execution.Implicits._
 import reactivemongo.api.indexes.{IndexType, Index}
 import com.scalableminds.util.tools.Fox
+import play.api.libs.functional.syntax._
+import play.api.libs.json.Json._
+import play.api.libs.json._
 
 case class DBTree(_tracing: BSONObjectID, treeId: Int, color: Color, timestamp: Long = System.currentTimeMillis, name: String = "", _id: BSONObjectID = BSONObjectID.generate) {
   val dao = DBTree
@@ -47,8 +50,8 @@ object DBTreeService {
     val tree = DBTree.createFrom(_tracing, t)
     for {
       _ <- DBTreeDAO.insert(tree)
-      _ <- Fox.combined(t.nodes.map(n => DBNodeDAO.insert(DBNode(n, tree._id))).toList)
-      _ <- Fox.combined(t.edges.map(e => DBEdgeDAO.insert(DBEdge(e, tree._id))).toList)
+      _ <- DBNodeDAO.bulkInsert(t.nodes.map(DBNode(_, tree._id)).toSeq)
+      _ <- DBEdgeDAO.bulkInsert(t.edges.map(DBEdge(_, tree._id)).toSeq)
     } yield {
       tree
     }
@@ -85,16 +88,21 @@ object DBTreeService {
 object DBTree {
   implicit val dbTreeFormat = Json.format[DBTree]
 
+  val dbTreeUpdateWrites: Writes[DBTree] =
+    ((__ \ "color").write[Color] and
+      (__ \ "timestamp").write[Long] and
+      (__ \ "name").write[String])(tree => (tree.color, tree.timestamp, tree.name))
+
   def empty(_tracing: BSONObjectID) = DBTree(_tracing, 1, Color(1, 0, 0, 0), System.currentTimeMillis(), nameFromId(1))
 
   def nameFromId(treeId: Int) = "Tree%03d".format(treeId)
 
   def createFrom(tracingId: BSONObjectID, t: TreeLike) = {
     val name =
-      if (t.name == "")
-        DBTree.nameFromId(t.treeId)
-      else
+      if (t.name != "")
         t.name
+      else
+        DBTree.nameFromId(t.treeId)
     DBTree(tracingId, t.treeId, t.color, t.timestamp, name)
   }
 
@@ -110,10 +118,6 @@ object DBTreeDAO extends SecuredBaseDAO[DBTree] {
 
   underlying.indexesManager.ensure(Index(Seq("_tracing" -> IndexType.Ascending)))
 
-  /*def createAndInsertDeepCopy(t: DBTree): DBTree = {
-    createAndInsertDeepCopy(t, t._tracing, 0)
-  }*/
-
   def insertEmptyTree(_tracing: BSONObjectID)(implicit ctx: DBAccessContext) =
     insert(DBTree.empty(_tracing))
 
@@ -126,4 +130,10 @@ object DBTreeDAO extends SecuredBaseDAO[DBTree] {
 
   def findOneByTreeId(_tracing: BSONObjectID, treeId: Int)(implicit ctx: DBAccessContext) =
     findOne(Json.obj("_tracing" -> _tracing, "treeId" -> treeId))
+
+  def updateOrInsert(_tracing: BSONObjectID, tree: DBTree)(implicit ctx: DBAccessContext) =
+    update(
+      Json.obj("_tracing" -> _tracing, "treeId" -> tree.treeId),
+      Json.obj("$set" -> DBTree.dbTreeUpdateWrites.writes(tree),
+               "$setOnInsert" -> formatter.writes(tree)))
 }

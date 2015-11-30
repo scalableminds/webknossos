@@ -1,5 +1,5 @@
 ### define
-m4x4 : M4x4
+mjs : MJS
 ###
 
 # Constants
@@ -152,7 +152,7 @@ class PolyhedronRasterizer
   #    vertices1[--i] = vertices[i] + min_x
   #
   #  new PolyhedronRasterizer(
-  #    M4x4.transformPointsAffine(matrix, vertices1, vertices1),
+  #    MJS.M4x4.transformPointsAffine(matrix, vertices1, vertices1),
   #    @indices
   #  )
 
@@ -460,11 +460,11 @@ class PolyhedronRasterizer.Master
     { vertices, indices } = @
 
     transformedPolyhdron = new PolyhedronRasterizer(
-      M4x4.transformPointsAffine(matrix, vertices, new Int32Array(vertices.length)),
+      MJS.M4x4.transformPointsAffine(matrix, vertices, new Int32Array(vertices.length)),
       indices
     )
 
-    orientationVector = M4x4.transformLineAffine(matrix, [0, 0, 1], [0, 0, 0])
+    orientationVector = MJS.M4x4.transformLineAffine(matrix, [0, 0, 1], [0, 0, 0])
 
     transformedPolyhdron.orientation = if orientationVector[2] < 0 then -1 else 1
 

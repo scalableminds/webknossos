@@ -1,6 +1,7 @@
 ### define
 jquery : $
 underscore : _
+../libs/toast : Toast
 ###
 
 ErrorHandling =
@@ -15,6 +16,23 @@ ErrorHandling =
 
   initializeAirbrake : ->
 
+    # read Airbrake config from DOM
+    # config is inject from backend
+    $scriptTag = $("[data-airbrake-project-id]")
+    projectId = $scriptTag.data("airbrake-project-id")
+    projectKey = $scriptTag.data("airbrake-project-key")
+    envName = $scriptTag.data("airbrake-environment-name")
+
+    window.Airbrake = new airbrakeJs.Client({
+      projectId : projectId
+      projectKey : projectKey
+    })
+
+    Airbrake.addFilter((notice) ->
+      notice.context.environment = envName
+      return notice
+    )
+
     unless @sendLocalErrors
 
       Airbrake.addFilter( (notice) ->
@@ -25,10 +43,10 @@ ErrorHandling =
 
       unless error?
         # older browsers don't deliver the error parameter
-        error = {error: {message: message, fileName: file, lineNumber: line}}
+        error = new Error(message, file, line)
 
       console.error(error)
-      Airbrake.push(error)
+      Airbrake.notify(error)
 
 
   initializeAssertions : ->
@@ -50,12 +68,14 @@ ErrorHandling =
       error.params = assertionContext
       error.stack = @trimCallstack(error.stack)
 
+      Toast.error("Assertion violated - #{message}")
+
       if @throwAssertions
         # error will be automatically pushed to airbrake due to global handler
         throw error
       else
         console.error(error)
-        Airbrake.push(error)
+        Airbrake.notify(error)
 
 
     $.assertExists = (variable, message, assertionContext) ->

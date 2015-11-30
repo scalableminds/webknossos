@@ -3,17 +3,20 @@
 ./volumelayer : VolumeLayer
 libs/event_mixin : EventMixin
 ../dimensions : Dimensions
+../helpers/restriction_handler : RestrictionHandler
 libs/drawing : Drawing
 ./volumetracing_statelogger : VolumeTracingStateLogger
 ###
 
 class VolumeTracing
 
-  constructor : (tracing, @flycam, @binary, updatePipeline) ->
+  constructor : (tracing, @flycam, @binary) ->
 
     _.extend(@, new EventMixin())
 
     @contentData  = tracing.content.contentData
+    @restrictionHandler = new RestrictionHandler(tracing.restrictions)
+
     @cells        = []
     @activeCell   = null
     @currentLayer = null        # Layer currently edited
@@ -22,7 +25,6 @@ class VolumeTracing
     @stateLogger  = new VolumeTracingStateLogger(
       @flycam, tracing.version, tracing.id, tracing.typ,
       tracing.restrictions.allowUpdate,
-      updatePipeline,
       this, @binary.pushQueue
     )
 
@@ -46,6 +48,8 @@ class VolumeTracing
   startEditing : (planeId) ->
     # Return, if layer was actually started
 
+    return false if @restrictionHandler.handleUpdate()
+
     if currentLayer? or @flycam.getIntegerZoomStep() > 0
       return false
 
@@ -57,13 +61,18 @@ class VolumeTracing
 
   addToLayer : (pos) ->
 
+    return if @restrictionHandler.handleUpdate()
+
     unless @currentLayer?
       return
 
     @currentLayer.addContour(pos)
-    @trigger "updateLayer", @currentLayer.getSmoothedContourList()
+    @trigger "updateLayer", @getActiveCellId(), @currentLayer.getSmoothedContourList()
+
 
   finishLayer : ->
+
+    return if @restrictionHandler.handleUpdate()
 
     unless @currentLayer?
       return

@@ -2,17 +2,18 @@
 jquery : $
 underscore : _
 backbone : Backbone
+app : app
 oxalis/constants : constants
 ###
 
 class NonBackboneRouter extends Backbone.Router
 
   routes :
-    "admin/tasks/overview"          : "taskOverview"
-    "admin/taskTypes"               : "hideLoading"
-    "annotations/:typ/:id"          : "tracingTrace"
-    "datasets/:id/view"             : "tracingView"
-    "*url"                          : "hideLoading"
+    "admin/tasks/overview"            : "taskOverview"
+    "admin/taskTypes"                 : "hideLoading"
+    "annotations/:typ/:id(/readOnly)" : "tracingTrace"
+    "datasets/:id/view"               : "tracingView"
+    "*url"                            : "hideLoading"
 
 
   hideLoading : ->
@@ -22,11 +23,7 @@ class NonBackboneRouter extends Backbone.Router
 
   tracingTrace : ->
 
-    $('[href="/dashboard"]').click(->
-      # Temporary hack to circumvent backbones routing.
-      # This ensures that the tracing view is completely unloaded.
-      location.href = "/dashboard"
-    )
+    app.router.setReloadFlag()
 
     require [
       "oxalis/controller"
@@ -64,11 +61,7 @@ class NonBackboneRouter extends Backbone.Router
 
   tracingView : ->
 
-    $('[href="/dashboard"]').click(->
-      # Temporary hack to circumvent backbones routing.
-      # This ensures that the tracing view is completely unloaded.
-      location.href = "/dashboard"
-    )
+    app.router.setReloadFlag()
 
     require [
       "oxalis/controller"
@@ -81,6 +74,8 @@ class NonBackboneRouter extends Backbone.Router
 
 
   taskOverview : ->
+
+    app.router.setReloadFlag()
 
     require ["admin/views/task/task_overview_view"], (TaskOverviewView) =>
 

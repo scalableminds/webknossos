@@ -1,30 +1,27 @@
-gulp        = require("gulp")
-coffee      = require("gulp-coffee")
-less        = require("gulp-less")
-bump        = require("gulp-bump")
-clean       = require("gulp-clean")
-watch       = require("gulp-watch")
-exec        = require("gulp-exec")
-util        = require("gulp-util")
-gif         = require("gulp-if")
-plumber     = require("gulp-plumber")
-eventStream = require("event-stream")
-runSequence = require("run-sequence")
-path        = require("path")
-fs          = require("fs")
-
+gulp         = require("gulp")
+coffee       = require("gulp-coffee")
+less         = require("gulp-less")
+clean        = require("gulp-clean")
+watch        = require("gulp-watch")
+exec         = require("gulp-exec")
+util         = require("gulp-util")
+gif          = require("gulp-if")
+plumber      = require("gulp-plumber")
+eventStream  = require("event-stream")
+runSequence  = require("run-sequence")
+path         = require("path")
+fs           = require("fs")
+requireSugar = require("require-sugar")
 
 paths =
   src :
     css : "app/assets/stylesheets/main.less"
     css_watch : "app/assets/stylesheets/**/*.less"
     js : "app/assets/javascripts/**/*.{coffee,js}"
-    version : "#{__dirname}/version"
   dest :
     js_tmp : "public/javascripts_tmp"
     js : "public/javascripts"
     css : "public/stylesheets"
-    version : "./{bower,package}.json"
 
 
 logger = ->
@@ -43,6 +40,7 @@ handleError = (err) ->
 makeScripts = (dest) ->
   return eventStream.pipeline(
     plumber()
+    requireSugar()
     gif(
       (file) -> return path.extname(file.path) == ".coffee"
       coffee({}).on("error", handleError)
@@ -60,16 +58,6 @@ makeStyles = (dest) ->
     )
     .pipe(gulp.dest(dest))
     .pipe(logger())
-
-
-bumpVersion = (src) ->
-  return src.on("data", (versionFile) ->
-    versionString = versionFile.contents.toString("utf8")
-    gulp.src(paths.dest.version)
-      .pipe(bump(version : versionString))
-      .pipe(gulp.dest("./"))
-      .pipe(logger())
-  )
 
 
 
@@ -119,31 +107,22 @@ gulp.task("watch:styles", ->
   )
 )
 
-gulp.task("watch:version", ->
-  return bumpVersion(watch(glob : paths.src.version, name : "Version-Watcher"))
-)
-
-
 gulp.task("build:scripts", (callback) ->
   runSequence("compile:scripts:production", "combine:scripts:production", "clean:tmp", callback)
 )
 gulp.task("build:styles", ["compile:styles"])
-gulp.task("build:version", ->
-  return bumpVersion(gulp.src(paths.src.version))
-)
 
 gulp.task("build", (callback) ->
-  runSequence(["install:bower", "clean:build", "build:version"], ["build:scripts", "build:styles"], callback)
+  runSequence(["install:bower", "clean:build"], ["build:scripts", "build:styles"], callback)
 )
 
 
 
 gulp.task("debug:scripts", ["watch:scripts:development"])
 gulp.task("debug:styles", ["compile:styles", "watch:styles"])
-gulp.task("debug:version", ["watch:version"])
 
 gulp.task("debug", (callback) ->
-  runSequence(["install:bower", "clean:build"], ["debug:scripts", "debug:styles", "debug:version"], callback)
+  runSequence(["install:bower", "clean:build"], ["debug:scripts", "debug:styles"], callback)
 )
 
 gulp.task("default", ["build"])

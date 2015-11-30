@@ -1,8 +1,11 @@
 ### define
 jquery : $
+underscore : _
 libs/toast : Toast
 ../modal : modal
 ../../view : View
+../merge_modal_view : MergeModalView
+../../constants: constants
 ###
 
 class SkeletonTracingView extends View
@@ -95,10 +98,11 @@ class SkeletonTracingView extends View
         @updateCommentsSortButton()
         @updateComments()
 
+    autoSaveFailureMessage = "Auto-Save failed!"
     @model.skeletonTracing.stateLogger.on
       pushFailed : =>
         if @reloadDenied
-          Toast.error("Auto-Save failed!")
+          Toast.error(autoSaveFailureMessage, true)
         else
           modal.show("Several attempts to reach our server have failed. You should reload the page
             to make sure that your work won't be lost.",
@@ -108,16 +112,43 @@ class SkeletonTracingView extends View
                 => return null)
               window.location.reload() )},
             {id : "cancel-button", label : "Cancel", callback : ( => @reloadDenied = true ) } ] )
+      pushDone : =>
+        Toast.delete("danger", autoSaveFailureMessage)
 
     $("a[href=#tab-comments]").on "shown", (event) =>
       @updateActiveComment()
     $("a[href=#tab-trees]").on "shown", (event) =>
       @updateActiveTree()
 
+    $("#merge-button").on "click", (event) =>
+      @showMergeModal()
+
+    # set a node with static offset
+    $("#add-node-button").on "click", (event) =>
+      # create xy offset
+      position = @model.flycam.getPosition()
+      position[0] = position[0] + Math.pow(2, @model.flycam.getIntegerZoomStep())
+      position[1] = position[1] + Math.pow(2, @model.flycam.getIntegerZoomStep())
+
+      # add node
+      @model.skeletonTracing.addNode(
+        position,
+        constants.TYPE_USUAL,
+        constants.PLANE_XY, # xy viewport
+        @model.flycam.getIntegerZoomStep()
+      )
+
     @updateComments()
     @updateTrees()
     @updateTreesSortButton()
     @updateCommentsSortButton()
+
+  showMergeModal : ->
+
+    modalView = new MergeModalView(_model : @model)
+    el = modalView.render().el
+    $("#merge-modal").html(el)
+    modalView.show()
 
 
   updateComments : ->

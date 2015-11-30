@@ -2,14 +2,21 @@
 underscore : _
 backbone.marionette : marionette
 ./dataset_list_view : DatasetListView
+admin/models/dataset/dataset_collection : DatasetCollection
 views/spotlight_dataset_list_view : SpotlightDatasetListView
 admin/views/pagination_view : PaginationView
+libs/utils : utils
 ###
 
 class DatasetSwitchView extends Backbone.Marionette.LayoutView
 
   template : _.template("""
     <div class="pull-right">
+      <% if(isAdmin()) { %>
+        <a href="/admin/datasets/upload" class="btn btn-primary">
+          <i class="fa fa-plus"></i>Upload Dataset
+        </a>
+      <% } %>
       <a href="#" id="showAdvancedView" class="btn btn-default">
         <i class="fa fa-th-list"></i>Show advanced view
       </a>
@@ -19,7 +26,7 @@ class DatasetSwitchView extends Backbone.Marionette.LayoutView
     </div>
 
     <h3>Datasets</h3>
-    <div class="pagination"></div>
+    <div class="pagination-region"></div>
     <div class="dataset-region"></div>
   """)
 
@@ -33,12 +40,25 @@ class DatasetSwitchView extends Backbone.Marionette.LayoutView
 
   regions :
     "datasetPane" : ".dataset-region"
-    "pagination" : ".pagination"
+    "pagination" : ".pagination-region"
+
+
+  templateHelpers : ->
+
+    isAdmin : =>
+      userTeams = @model.get("teams")
+      return utils.isUserAdmin(userTeams)
+
 
   onShow : ->
 
     @ui.showAdvancedButton.hide()
     @showGalleryView()
+
+    # Hide advanced view for non-admin users
+    userTeams = @model.get("teams")
+    @ui.showAdvancedButton.hide() if not utils.isUserAdmin(userTeams)
+
 
   toggleSwitchButtons : ->
 
@@ -47,18 +67,21 @@ class DatasetSwitchView extends Backbone.Marionette.LayoutView
 
   showGalleryView : ->
 
-    @toggleSwitchButtons()
-    datasetGalleryView = new SpotlightDatasetListView(collection : @model)
-    @datasetPane.show(datasetGalleryView)
-
-    @pagination.empty()
+    @showPaginatedDatasetView(SpotlightDatasetListView)
 
 
   showAdvancedView : ->
 
+    @showPaginatedDatasetView(DatasetListView)
+
+
+  showPaginatedDatasetView : (DatasetView) ->
+
     @toggleSwitchButtons()
-    datasetListView = new DatasetListView(collection: @model)
+    collection = new DatasetCollection()
+
+    datasetListView = new DatasetView(collection: collection)
     @datasetPane.show(datasetListView)
 
-    paginationView = new PaginationView(collection: @model)
+    paginationView = new PaginationView(collection: collection)
     @pagination.show(paginationView)

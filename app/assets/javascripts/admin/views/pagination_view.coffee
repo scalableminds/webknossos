@@ -39,13 +39,19 @@ class PaginationView extends Backbone.Marionette.ItemView
             <a href="#"><i class="fa fa-angle-double-right"></i></a>
           </li>
         </ul>
+
+        <% if (addButtonText) { %>
+          <a class="btn btn-success add-button" href="#">
+            <i class="fa fa-plus"></i><%= addButtonText %>
+          </a>
+        <% } %>
       </div>
-       <div class="col-sm-3">
-          <div class="input-group search-container">
-            <input type="search" class="form-control search-query" placeholder="Search" value="">
-            <span class="input-group-addon"><i class="fa fa-search"></i></span>
-          </div>
+      <div class="col-sm-3">
+        <div class="input-group search-container">
+          <input type="search" class="form-control search-query" placeholder="Search" value="">
+          <span class="input-group-addon"><i class="fa fa-search"></i></span>
         </div>
+      </div>
     </div>
   """)
 
@@ -62,15 +68,21 @@ class PaginationView extends Backbone.Marionette.ItemView
     "click .last" : "goLast"
     "click .first" : "goFirst"
     "click .page" : "goToPage"
-    "input input" : "filter"
+    "click .add-button" : "addElement"
+    "input input" : "filterBySearch"
 
 
-  initialize : ->
+  initialize : ({@collection, @addButtonText}) ->
 
     @listenTo(@collection, "reset", @collectionSynced)
     @listenTo(@collection, "remove", @refresh)
     @listenTo(@collection, "add", @afterAdd)
     @listenToOnce(@collection, "reset", @searchByHash)
+
+
+  serializeData : ->
+
+    return {@addButtonText}
 
 
   goFirst : ->
@@ -100,7 +112,12 @@ class PaginationView extends Backbone.Marionette.ItemView
     @collection.goTo(page)
 
 
-  filter : ->
+  addElement : ->
+
+    app.vent.trigger("paginationView:addElement")
+
+
+  filterBySearch : ->
 
     # Only enable filtering after the collection has data
     if @collection.origModels
@@ -136,4 +153,4 @@ class PaginationView extends Backbone.Marionette.ItemView
     hash = location.hash.slice(1)
     if (hash)
       @ui.inputSearch.val(hash)
-      @filter()
+      @filterBySearch()

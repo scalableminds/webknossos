@@ -3,6 +3,7 @@ underscore : _
 backbone.marionette : marionette
 routes : routes
 libs/toast : Toast
+libs/behaviors/hover_show_hide_behavior : HoverShowHide
 ###
 
 class ExplorativeTracingListItemView extends Backbone.Marionette.ItemView
@@ -28,7 +29,7 @@ class ExplorativeTracingListItemView extends Backbone.Marionette.ItemView
     <td><%= dataSetName %></td>
 
     <td>
-      <% if (stats) { %>
+      <% if (stats && (contentType == "skeletonTracing")) { %>
         <span title="Trees"><i class="fa fa-sitemap"></i><%= stats.numberOfTrees %>&nbsp;</span><br />
         <span title="Nodes"><i class="fa fa-bull"></i><%= stats.numberOfNodes %>&nbsp;</span><br />
         <span title="Edges"><i class="fa fa-arrows-h"></i><%= stats.numberOfEdges %></span>
@@ -42,11 +43,12 @@ class ExplorativeTracingListItemView extends Backbone.Marionette.ItemView
         <i class="fa fa-random"></i>
         <strong>trace</strong>
       </a><br />
+      <% if (contentType == "skeletonTracing") { %>
       <a href="<%= jsRoutes.controllers.AnnotationController.download(typ, id).url %>">
         <i class="fa fa-download"></i>
         download
       </a><br />
-      <% if (typ == "Explorational"){ %>
+      <% } if (typ == "Explorational"){ %>
         <a href="<%= jsRoutes.controllers.AnnotationController.finish(typ, id).url %>"
            id="finish-tracing">
           <i class="fa fa-trash-o"></i>
@@ -64,6 +66,10 @@ class ExplorativeTracingListItemView extends Backbone.Marionette.ItemView
   ui :
     "explorativeNameForm" : "#explorative-name-form"
     "explorativeNameInput": "#explorative-name-input"
+
+  behaviors :
+    HoverShowHide :
+      behaviorClass : HoverShowHide
 
 
   submitForm: ->

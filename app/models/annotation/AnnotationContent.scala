@@ -11,6 +11,7 @@ import scala.concurrent.Future
 import play.api.libs.concurrent.Execution.Implicits._
 import com.scalableminds.util.reactivemongo.DBAccessContext
 import com.scalableminds.util.tools.Fox
+import com.scalableminds.braingames.binary.models.DataLayerMapping
 import play.api.Logger
 import net.liftweb.common.Box
 
@@ -33,9 +34,11 @@ trait AnnotationContent {
 
   def settings: AnnotationSettings
 
-  def copyDeepAndInsert: Fox[Self]
+  def temporaryDuplicate(id: String)(implicit ctx: DBAccessContext): Fox[AnnotationContent]
 
-  def mergeWith(source: AnnotationContent): Fox[Self]
+  def saveToDB(implicit ctx: DBAccessContext): Fox[AnnotationContent]
+
+  def mergeWith(source: AnnotationContent)(implicit ctx: DBAccessContext): Fox[AnnotationContent]
 
   def contentType: String
 
@@ -60,8 +63,9 @@ object AnnotationContent {
       (__ \ 'maxCoordinates).write[BoundingBox] and
       (__ \ 'resolutions).write[List[Int]] and
       (__ \ 'fallback).write[Option[FallbackLayer]] and
-      (__ \ 'elementClass).write[String])(l =>
-      (l.name, l.category, l.maxCoordinates, l.resolutions, l.fallback, l.elementClass))
+      (__ \ 'elementClass).write[String] and
+      (__ \ 'mappings).write[List[DataLayerMapping]])(l =>
+      (l.name, l.category, l.maxCoordinates, l.resolutions, l.fallback, l.elementClass, l.mappings))
 
   implicit val dataSetWrites: Writes[DataSet] =
     ((__ \ 'name).write[String] and

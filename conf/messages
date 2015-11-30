@@ -1,6 +1,7 @@
 error.email=Please supply a valid email address
 error.required=Please supply all needed values
 error.minLength=Please use at least 3 characters.
+error.unknown=Unknown error
 
 notAllowed=You are not allowed to view this resource
 
@@ -11,7 +12,9 @@ binary.data.notSaved=Couldn''t save the data
 
 email=Email
 team=Team
+name=Name
 password=Password
+password_old=Old password
 password.main=Password
 password.validation=Password (again)
 firstName=First Name
@@ -34,6 +37,11 @@ image.create.failed=Failed to create image
 team.created=Team got created
 team.name.alreadyTaken=The teams name is already in use.
 team.notAllowed=You are not part of this team. Project can''t be created.
+team.nonExistentRole=Team {0} doesn''t contain role {1}.
+team.admin.notPossibleBy=User {1} can''t be assigned administrative rights in team {0} because he doesn't belong to the teams parent team.
+team.noOwner=This action is restricted to the creator of the team.
+team.admin.notAllowed=You are not allowed to administrate team {0}.
+team.notFound=Team could not be found.
 
 user.verified={0} has been verified
 user.verifyFailed=Couldn''t verify user
@@ -45,6 +53,8 @@ user.bulk.empty=No user has been chosen
 user.bulk.failedFor=Operation failed for {0}
 user.password.nomatch=Passwords don''t match
 user.password.tooshort=Password too short
+user.resetPassword.failed=Invalid old password
+user.resetPassword.success=Your password was successfully changed
 user.email.alreadyInUse=This email address is already in use
 user.login.failed=Invalid email or password
 user.login.success=You are now logged in
@@ -55,20 +65,33 @@ user.experience.increased=Increased experience of {0}
 user.experience.set=Set experience of {0}
 user.experience.removed=Removed experience from {0}
 
-braintracing.new=An account on braintracing.org was created for you. You can use the same credentials as on oxalis to login.
+braintracing.new=An account on braintracing.org was created for you. You can use the same credentials as on webKnossos to login.
 braintracing.error=We couldn''t atomatically create an account for you on braintracing.org. Please do it on your own.
 braintracing.exists=Great, you already have an account on braintracing.org. Please double check that you have uploaded all requested information.
 
 dataSet=Dataset
+dataSet.file=Dataset ZIP File
 dataSet.notFound=Selected data set doesn''t exist
 dataSet.notSupplied=No data set supplied
+dataSet.name.invalid=A dataset name can only contain letters, digits and underscores
+dataSet.name.alreadyTaken=This dataset name is already in use.
 dataSet.source.notFound=The data source for the data source couldn''t be found
 dataSet.import.failed=Failed to import the dataset
 dataSet.import.inProgress=Dataset import is in progress
 dataSet.import.notStarted=Dataset import couldn''t be started
+dataSet.upload.success=Dataset successfully uploaded
+
+dataStore.notAvailable=Datastore not available. Please try again in a few minutes.
+
+zip.file.notFound=No or invalid ZIP file specified
+zip.file.invalid=Uploaded ZIP file invalid or corrupted
+zip.file.tooLarge=The ZIP file must not be larger than 1GB
 
 dataLayer.notFound=DataLayer not found
 dataLayer.forbidden=Access to this layer is not allowed.
+
+scale.scale=Scale
+scale.invalid=Specify dataset scale like "XX, YY, ZZ"
 
 dataToken.creationFailed=Creation of the data token failed.
 
@@ -80,10 +103,10 @@ boundingBox.box=Bounding Box
 boundingBox.invalid=Invalid bounding box
 
 experience=Experience
-experience.domain=Experience Domain
+experience.domain=Domain
 experience.domain.invalid=Invalid experience domain
 experience.value.invalid=Invalid experience value
-experience.value=Min Experience
+experience.value=Required level
 
 nmlFile=Reference NML File
 nml.file.uploadSuccess=Successfully uploaded file
@@ -95,34 +118,37 @@ owner=Owner
 
 priority=Priority
 
-project=Project
+project=Project (optional)
 projectName=Project Name
 project.name.alreadyTaken=Name already used
 project.name.invalidChars=Name contains invalid characters
-project.remove.confirm=Do you really want to delete this project? All tracings and tasks connected to this project will be deleted.
+project.remove.confirm=Do you really want to delete this project? All annotations and tasks connected to this project will be deleted.
 project.remove.notAllowed=You are not allowed to remove this project. Talk to the owner.
 project.remove.success=Project got removed
 project.remove.failure=Project couldn''t get removed
 project.notFound=Project couldn''t be found
 project.nameInvalid=Project names can only contain alphanumeric characters, _ and -
 project.createSuccess=Project successfully created
+project.noAnnotations=We couldn''t find annotations for this project
 
 role.invalid=Invalid role
 role.removed=Removed role from {0}
 role.added=Added role to {0}
 
-training.domain=Trainings Domain
-training.gain=Experience Gain
-training.loss=Experience Loss
 
-annotation.creationFailed=Failed to create tracing
-annotation.notFound=Annotation couldn''t be found
 
-tracing=Tracing
-annotation.invalid=Invalid tracing
-annotation.finished=Tracing is finished
-annotation.finish.confirm=Are you sure you want to permanently finish this tracing?
+tracing=Annotation
 tracing.notFound=Tracing couldn''t be found
+annotation.creationFailed=Failed to create annotation
+annotation.notFound=Annotation couldn''t be found
+annotation.invalid=Invalid annotation
+annotation.finished=Annotation is finished
+annotation.reopened=Tracing got reopened
+annotation.saved=Annotation got saved
+annotation.setName=Successfully named annotation
+annotation.invalidName=Annotation name is invalid
+annotation.finish.confirm=Are you sure you want to permanently finish this tracing?
+annotation.reset.success=Annoation is resetted
 annotation.review.assignFailed=Couldn''t assign reviewee
 annotation.review.notFound=There is no review for this tracing
 annotation.review.assigned=You got assigned as reviewee
@@ -130,19 +156,15 @@ annotation.review.unassigned=You got unassigned from this training
 annotation.review.notReady=Tracing is not ready for review
 annotation.review.finishFailed=You can''t review this tracing
 annotation.review.finished=Review finished
-tracing.task.notFound=Couldn''t find task for tracing
-tracing.training.notFound=Couldn''t find training for tracing
-tracing.download.notAllowed=You can''t download this tracing
-tracing.user.notFound=Couldn''t find a user for the tracing
-tracing.open.notFound=No open tracing found
-annotation.notPossible=Couldn''t access tracing
-tracing.notEnoughNodes=There are not enough nodes in the tracing to finish it
+annotation.download.notAllowed=You can''t download this tracing
+annotation.notPossible=Couldn''t access annotation
+annotation.notFinishable=Before you can finish the annotation, you need to annotate something
 annotation.notInProgress=The tracing is not in progress and can''t be finished
-tracing.setName=Successfully named tracing
-tracing.invalidName=Tracing name is invalid
-tracing.reset.success=Reseted tracing to base
-tracing.reset.failed=Couldn't reset tracing to base
-annotation.reopened=Tracing got reopened
+annotation.reset.success=Reset tracing to base was successful
+annotation.reset.failed=Couldn''t reset tracing to base
+annotation.merge.success=Merging successfully done
+annotation.dirtyState=Annotation is not up to date. YOu can''t make any changes
+annotation.update.impossible=This annotation can''t be updated (read only)
 
 issue.summary.notSupplied=No summary supplied
 issue.description.notSupplied=No description supplied
@@ -169,6 +191,7 @@ task.bulk.notSupplied=No data supplied
 task.bulk.createSuccess=Successfully created {0} Tasks
 task.edit.toFewInstances=There are already more finished / in progress tracings
 task.editSuccess=Task successfully edited
+task.noAnnotations=We couldn''t find finished annotations for this task
 
 taskInstances=Task instances
 
@@ -177,10 +200,7 @@ taskType.editSuccess=Task type successfully edited
 taskType.createSuccess=Task type successfully created
 taskType.notFound=Selected task type doesn''t exist
 taskType.deleted=Task type ''{0}'' successfully deleted
-taskType.emptyModeSelection=Please select at least one tracing mode
-
-game.notFound=Specified game couldn''t be found
+taskType.noAnnotations=We couldn''t find finished annotations for this task type
 
 time.invalidFormat=Time couldn''t get parsed.
 point.invalidFormat=Invalid format. Use something like: 4, 63, 24
-

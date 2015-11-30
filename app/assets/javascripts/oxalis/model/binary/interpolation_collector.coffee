@@ -118,6 +118,15 @@ subPointMacro = _.template(
     <%= output %> = bucket[pointIndex];
 
   } else {
+    if(bucketIndex < buckets.length && missingBuckets.length < 100) {
+
+      missingBuckets.push([
+        Math.floor(bucketIndex / sizeZY),
+        Math.floor((bucketIndex % sizeZY) / sizeZ),
+        bucketIndex % sizeZ,
+        0
+      ])
+    }
     continue;
   }
   """
@@ -217,6 +226,7 @@ InterpolationCollector =
       """
       var buffer = new Uint8Array(vertices.length / 3);
       var accessedBuckets = [];
+      var missingBuckets = [];
       var x, y, z;
       var sub_x, sub_y, sub_z;
       var output0, output1, output2, output3, output4, output5, output6, output7, x0, y0, z0, xd, yd, zd, baseBucketIndex, basePointIndex;
@@ -270,7 +280,8 @@ InterpolationCollector =
 
       return {
 	buffer : buffer,
-	accessedBuckets : accessedBuckets
+	accessedBuckets : accessedBuckets,
+  missingBuckets : missingBuckets
       };
 
       //# sourceURL=/oxalis/model/binary/interpolation_collector/bulkCollect

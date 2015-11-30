@@ -17,14 +17,16 @@ class DashboardView extends Backbone.Marionette.LayoutView
     <% } %>
     <div class="tabbable" id="tabbable-dashboard">
       <ul class="nav nav-tabs">
-        <li class="active">
-          <a href="#" id="tab-datasets" data-toggle="tab">Datasets</a>
-        </li>
-        <li>
+        <% if (!isAdminView) { %>
+          <li class="active">
+            <a href="#" id="tab-datasets" data-toggle="tab">Datasets</a>
+          </li>
+        <% } %>
+        <li <% if (isAdminView) { %> class="active" <% } %> >
           <a href="#" id="tab-tasks" data-toggle="tab">Tasks</a>
         </li>
         <li>
-          <a href="#" id="tab-explorative" data-toggle="tab">Explorative Tracings</a>
+          <a href="#" id="tab-explorative" data-toggle="tab">Explorative Annotations</a>
         </li>
         <li>
           <a href="#" id="tab-tracked-time" data-toggle="tab">Tracked Time</a>
@@ -35,14 +37,6 @@ class DashboardView extends Backbone.Marionette.LayoutView
       </div>
     </div>
   """)
-
-  ui :
-    "tabDatasets" : "#tab-datasets"
-    "tabTasks" : "#tab-tasks"
-    "tabExplorative" : "#tab-explorative"
-    "tabTrackedTime" : "#tab-tracked-time"
-    "tabPane" : ".tab-pane"
-
 
   events :
     "click #tab-datasets" : "showDatasets"
@@ -57,32 +51,73 @@ class DashboardView extends Backbone.Marionette.LayoutView
 
   initialize : ->
 
-    @model.fetch().done( =>
+    @listenTo(@model, "sync", ->
       @render()
-      @showDatasets()
+      @afterSync()
     )
+    @model.fetch()
+
+
+  afterSync : ->
+
+    if @activeTab
+      @refreshActiveTab()
+      @showTab(@activeTab)
+    else
+      if @model.attributes.isAdminView
+        @showTasks()
+      else
+        @showDatasets()
+
 
 
   showDatasets : ->
 
-    spotlightDatasetListView = new DatasetSwitchView(model : @model.get("dataSets"))
-    @tabPane.show(spotlightDatasetListView)
+    @activeTab = {
+      tabHeaderId : "tab-datasets"
+      tabView : new DatasetSwitchView(model : @model.get("user"))
+    }
+    @showTab(@activeTab)
 
 
   showTasks : ->
 
-    dashboardTaskListView = new DashboardTaskListView(model : @model)
-    @tabPane.show(dashboardTaskListView)
+    @activeTab = {
+      tabHeaderId : "tab-tasks"
+      tabView : new DashboardTaskListView(model : @model)
+    }
+    @showTab(@activeTab)
 
 
   showExplorative : ->
 
-    explorativeTracingListView = new ExplorativeTracingListView(model : @model)
-    @tabPane.show(explorativeTracingListView)
+    @activeTab = {
+      tabHeaderId : "tab-explorative"
+      tabView : new ExplorativeTracingListView(model : @model)
+    }
+    @showTab(@activeTab)
 
 
   showTrackedTime : ->
 
-    trackedTimeView = new TrackedTimeView(model : @model.get("loggedTime"))
-    @tabPane.show(trackedTimeView)
+    @activeTab = {
+      tabHeaderId : "tab-tracked-time"
+      tabView : new TrackedTimeView(model : @model.get("loggedTime"))
+    }
+    @showTab(@activeTab)
+
+
+  refreshActiveTab : ->
+
+    # ensure that tabView is not destroyed
+    if @activeTab and @activeTab.tabView.isDestroyed
+      view = @activeTab.tabView
+      @activeTab.tabView = new view.constructor(view)
+
+
+  showTab : ({tabHeaderId, tabView}) ->
+
+    @$(".tabbable ul li").removeClass("active")
+    @$("##{tabHeaderId}").parent().addClass("active")
+    @tabPane.show(tabView)
 

@@ -1,5 +1,6 @@
 package models.user
 
+import oxalis.thirdparty.BrainTracing
 import play.api.{Logger, Application}
 import scala.Some
 import scala.concurrent.{Future, Await}
@@ -17,13 +18,17 @@ import com.scalableminds.util.reactivemongo.{GlobalAccessContext, DBAccessContex
 import com.scalableminds.util.security.SCrypt._
 import com.scalableminds.util.mail.Send
 import play.api.libs.concurrent.Execution.Implicits._
-import models.annotation.AnnotationService
+import models.annotation.{AnnotationType, AnnotationDAO, AnnotationService}
 
 object UserService extends FoxImplicits {
   val defaultUserEmail = "scmboy@scalableminds.com"
 
   lazy val defaultUser = {
     UserDAO.findOneByEmail(defaultUserEmail)(GlobalAccessContext)
+  }
+
+  def removeTeamFromUsers(team: Team)(implicit ctx: DBAccessContext) = {
+    UserDAO.removeTeamFromUsers(team.name)
   }
 
   def findAll()(implicit ctx: DBAccessContext) =
@@ -48,19 +53,33 @@ object UserService extends FoxImplicits {
     for {
       teamOpt <- TeamDAO.findOneByName(teamName)(GlobalAccessContext).futureBox
       teamMemberships = teamOpt.map(t => TeamMembership(t.name, Role.User)).toList
-      user = User(email, firstName, lastName, false, hashPassword(password), teamMemberships)
+      user = User(email, firstName, lastName, false, hashPassword(password), md5(password), teamMemberships)
       result <- UserDAO.insert(user, isVerified)(GlobalAccessContext).futureBox
     } yield result
 
   def update(user: User, firstName: String, lastName: String, verified: Boolean, teams: List[TeamMembership], experiences: Map[String, Int])(implicit ctx: DBAccessContext) = {
-    if (!user.verified && verified)
+    if (!user.verified && verified) {
       Application.Mailer ! Send(DefaultMails.verifiedMail(user.name, user.email))
-
+      if(user.teams.isEmpty){
+        BrainTracing.register(user)
+      }
+    }
     UserDAO.update(user._id, firstName, lastName, verified, teams, experiences).map {
       result =>
         UserCache.invalidateUser(user.id)
         result
     }
+  }
+
+  def changePassword(user: User, newPassword: String)(implicit ctx: DBAccessContext) = {
+    if (user.verified)
+      Application.Mailer ! Send(DefaultMails.changePasswordMail(user.name, user.email))
+
+    UserDAO.changePassword(user._id, newPassword).map { result =>
+      UserCache.invalidateUser(user.id)
+      result
+    }
+
   }
 
   def removeFromAllPossibleTeams(user: User, issuingUser: User)(implicit ctx: DBAccessContext) = {
@@ -80,6 +99,9 @@ object UserService extends FoxImplicits {
   def findOneByEmail(email: String): Fox[User] = {
     UserDAO.findOneByEmail(email)(GlobalAccessContext)
   }
+
+  def findFinishedTasksOf(user: User)(implicit ctx: DBAccessContext) =
+    AnnotationService.findTasksOf(user).map(_.flatMap(_._task))
 
   def updateSettings(user: User, settings: UserSettings)(implicit ctx: DBAccessContext) = {
     UserDAO.updateSettings(user, settings).map {

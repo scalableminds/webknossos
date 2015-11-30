@@ -43,6 +43,9 @@ class TaskAnnotationView extends Backbone.Marionette.ItemView
     "click .isAjax" : "callAjax"
     "click .delete-annotation" : "deleteAnnotation"
 
+  modelEvents :
+    "change" : "render"
+
 
   # some actions are real links and some need to be send as ajax calls to the server
   callAjax : (evt) ->
@@ -50,16 +53,15 @@ class TaskAnnotationView extends Backbone.Marionette.ItemView
     evt.preventDefault()
     $.ajax(
       url : $(evt.target).prop("href")
-    ).then(
+    ).done(
       (jsonData) =>
         if(jsonData)
-          @model = new AnnotationModel(jsonData)
-          @render()
-
+          @model.set(jsonData)
+    ).always(
       (response) ->
-        if(response.responseJSON)
-          message = response.responseJSON.messages[0].error
-          Toast.error(message)
+        if(response)
+          message = response.messages
+          Toast.message(message)
     )
 
 
@@ -67,5 +69,4 @@ class TaskAnnotationView extends Backbone.Marionette.ItemView
 
     if window.confirm("Do you really want to delete this annotation?")
       @model.destroy()
-      @render()
 

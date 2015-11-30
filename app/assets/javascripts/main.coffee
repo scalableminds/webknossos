@@ -5,7 +5,6 @@ require [
   "app"
   "main/errorHandling"
   "bootstrap"
-  "main/enhancements"
   "libs/core_ext"
 ], ($, _, Backbone, app, ErrorHandling) ->
 
@@ -21,6 +20,8 @@ require [
     )
 
     $ ->
+      # show the bootstrap flash modal on load
+      $("#flashModal").modal("show")
 
       app.start()
 

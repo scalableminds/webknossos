@@ -21,15 +21,6 @@ class ProjectsListView extends Backbone.Marionette.CompositeView
       </thead>
     </table>
     <div id="modal-wrapper"></div>
-    <div class="navbar navbar-default navbar-fixed-bottom">
-      <div class="navbar-form">
-        <div class="btn-group">
-          <a class="btn btn-primary show-modal" href="#">
-            <i class="fa fa-plus"></i>Create New Project
-          </a>
-        </div>
-      </div>
-    </div>
   """)
 
   className : "container wide project-administration"
@@ -38,7 +29,6 @@ class ProjectsListView extends Backbone.Marionette.CompositeView
 
   events :
     "click @ui.detailsToggle" : "toggleAllDetails"
-    "click .show-modal" : "showModal"
 
   ui :
     "modalWrapper" : "#modal-wrapper"
@@ -53,11 +43,12 @@ class ProjectsListView extends Backbone.Marionette.CompositeView
       @collection.goTo(1)
     )
 
-    @listenTo(app.vent, "paginationView:filter", @filter)
+    @listenTo(app.vent, "paginationView:filter", @filterBySearch)
     @listenTo(app.vent, "CreateProjectModal:refresh", @refreshPagination)
+    @listenTo(app.vent, "paginationView:addElement", @showModal)
 
 
-  filter : (searchQuery) ->
+  filterBySearch : (searchQuery) ->
 
     @collection.setFilter(["name", "team"], searchQuery)
 

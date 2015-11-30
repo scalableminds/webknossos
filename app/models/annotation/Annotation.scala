@@ -1,8 +1,9 @@
 package models.annotation
 
+import com.scalableminds.util.reactivemongo.AccessRestrictions.{DenyEveryone, AllowIf}
 import models.basics._
 import models.task.{TaskService, TaskDAO, TaskType, Task}
-import play.api.libs.json.{Json, JsObject}
+import play.api.libs.json._
 import models.user.{UserService, UserDAO, User}
 import AnnotationType._
 import org.joda.time.format.DateTimeFormat
@@ -11,22 +12,20 @@ import com.scalableminds.util.mvc.Formatter
 import oxalis.nml.NML
 import com.scalableminds.util.geometry.Point3D
 import java.util.Date
-import play.api.libs.json.{Json, JsValue}
 import play.api.Logger
-import models.tracing.skeleton.{SkeletonTracingService, AnnotationStatistics, SkeletonTracing, TemporarySkeletonTracing}
 import models.basics.Implicits._
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import play.api.libs.concurrent.Execution.Implicits._
 import scala.concurrent.Future
 import reactivemongo.bson.BSONObjectID
-import com.scalableminds.util.reactivemongo.{DBAccessContext, GlobalAccessContext}
+import com.scalableminds.util.reactivemongo.{DefaultAccessDefinitions, MongoHelpers, DBAccessContext, GlobalAccessContext}
 import play.modules.reactivemongo.json.BSONFormats._
 import reactivemongo.api.indexes.{IndexType, Index}
 import oxalis.view.{ResourceAction, ResourceActionCollection}
 import models.team.Role
 
 case class Annotation(
-                       _user: BSONObjectID,
+                       _user: Option[BSONObjectID],
                        _content: ContentReference,
                        _task: Option[BSONObjectID] = None,
                        team: String,
@@ -35,7 +34,8 @@ case class Annotation(
                        version: Int = 0,
                        _name: Option[String] = None,
                        created : Long = System.currentTimeMillis,
-                       _id: BSONObjectID = BSONObjectID.generate
+                       _id: BSONObjectID = BSONObjectID.generate,
+                       readOnly: Option[Boolean] = None
                      )
 
   extends AnnotationLike with FoxImplicits {
@@ -50,15 +50,16 @@ case class Annotation(
 
   val name = _name getOrElse ""
 
-  def task = _task.toFox.flatMap(id => TaskDAO.findOneById(id)(GlobalAccessContext))
-
-  def user = UserService.findOneById(_user.stringify, useCache = true)(GlobalAccessContext)
-
   def content = _content.resolveAs[AnnotationContent](GlobalAccessContext).toFox
 
   val contentType = _content.contentType
 
-  val restrictions = AnnotationRestrictions.defaultAnnotationRestrictions(this)
+  val restrictions = if(readOnly.getOrElse(false))
+      AnnotationRestrictions.readonlyAnnotation()
+    else
+      AnnotationRestrictions.defaultAnnotationRestrictions(this)
+
+  def relativeDownloadUrl = Some(Annotation.relativeDownloadUrlOf(typ, id))
 
   def isReadyToBeFinished(implicit ctx: DBAccessContext) = {
     // TODO: RF - rework
@@ -74,11 +75,31 @@ case class Annotation(
     this.copy(_task = None, typ = AnnotationType.Orphan)
   }
 
+  def temporaryDuplicate(keepId: Boolean)(implicit ctx: DBAccessContext) = {
+    for{
+      contentDuplicate <- content.flatMap(c => c.temporaryDuplicate(if(keepId) c.id else BSONObjectID.generate.stringify))
+    } yield {
+      TemporaryAnnotationService.createFrom(
+        this,
+        if(keepId) this.id else BSONObjectID.generate.stringify,
+        contentDuplicate)
+    }
+  }
+
+  def makeReadOnly: AnnotationLike = {
+    this.copy(readOnly = Some(true))
+  }
+
+  def saveToDB(implicit ctx: DBAccessContext): Fox[Annotation] = {
+    AnnotationService.saveToDB(this)
+  }
+
   def actions(userOpt: Option[User]) = {
     import controllers.admin.routes._
     import controllers.routes._
+    val traceOrView = if(restrictions.allowUpdate(userOpt)) "trace" else "view"
     val basicActions = List(
-      ResourceAction("trace", AnnotationController.trace(typ,id), icon = Some("fa fa-random")),
+      ResourceAction(traceOrView, AnnotationController.trace(typ,id), icon = Some("fa fa-random")),
       ResourceAction(ResourceAction.Finish, AnnotationController.finish(typ, id), condition = !state.isFinished, icon = Some("fa fa-check-circle-o"), isAjax = true, clazz = "trace-finish"),
       ResourceAction("reopen", AnnotationController.reopen(typ, id), condition = state.isFinished, icon = Some("fa fa-share"), isAjax = true),
       ResourceAction(ResourceAction.Download, AnnotationController.download(typ, id), icon = Some("fa fa-download")),
@@ -91,6 +112,9 @@ case class Annotation(
 
 object Annotation {
   implicit val annotationFormat = Json.format[Annotation]
+
+  def relativeDownloadUrlOf(typ: String, id: String) =
+    controllers.routes.AnnotationController.download(typ, id).url
 
   def transformToJson(annotation: Annotation)(implicit ctx: DBAccessContext): Future[JsObject] = {
     for {
@@ -120,7 +144,7 @@ object Annotation {
 
 object AnnotationDAO
   extends SecuredBaseDAO[Annotation]
-  with FoxImplicits {
+  with FoxImplicits with MongoHelpers{
 
   val collectionName = "annotations"
 
@@ -128,6 +152,35 @@ object AnnotationDAO
 
   underlying.indexesManager.ensure(Index(Seq("_task" -> IndexType.Ascending)))
   underlying.indexesManager.ensure(Index(Seq("_user" -> IndexType.Ascending)))
+
+  override val AccessDefinitions = new DefaultAccessDefinitions{
+
+    override def findQueryFilter(implicit ctx: DBAccessContext) = {
+      ctx.data match{
+        case Some(user: User) =>
+          AllowIf(Json.obj(
+            "$or" -> Json.arr(
+              Json.obj("team" -> Json.obj("$in" -> user.teamNames)),
+              Json.obj("_user"-> user._id))
+          ))
+        case _ =>
+          DenyEveryone()
+      }
+    }
+
+    override def removeQueryFilter(implicit ctx: DBAccessContext) = {
+      ctx.data match{
+        case Some(user: User) =>
+          AllowIf(Json.obj(
+            "$or" -> Json.arr(
+              Json.obj("team" -> Json.obj("$in" -> user.adminTeamNames)),
+              Json.obj("_user"-> user._id))
+            ))
+        case _ =>
+          DenyEveryone()
+      }
+    }
+  }
 
   def defaultFindForUserQ(_user: BSONObjectID, annotationType: AnnotationType) = Json.obj(
     "_user" -> _user,
@@ -197,6 +250,13 @@ object AnnotationDAO
       "$or" -> Json.arr(
         Json.obj("state.isAssigned" -> true),
         Json.obj("state.isFinished" -> true))))
+
+  def countUnfinishedByTaskIdAndType(_task: BSONObjectID, annotationType: AnnotationType)(implicit ctx: DBAccessContext) =
+    count(Json.obj(
+      "_task" -> _task,
+      "typ" -> annotationType,
+      "state.isAssigned" -> true,
+      "state.isFinished" -> false))
 
   def unassignAnnotationsOfUser(_user: BSONObjectID)(implicit ctx: DBAccessContext) =
     update(

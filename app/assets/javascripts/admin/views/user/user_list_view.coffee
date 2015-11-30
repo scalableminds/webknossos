@@ -3,10 +3,10 @@ underscore : _
 app : app
 backbone.marionette : marionette
 libs/toast : Toast
-./user_list_item_view : UserListItemView
+libs/behaviors/select_all_rows_behavior : SelectAllRows
 admin/views/user/team_role_modal_view : TeamRoleModalView
-admin/views/user/bulk_delete_modal_view : BulkDeleteModalView
 admin/views/user/experience_modal_view : ExperienceModalView
+./user_list_item_view : UserListItemView
 ###
 
 class UserListView extends Backbone.Marionette.CompositeView
@@ -38,9 +38,6 @@ class UserListView extends Backbone.Marionette.CompositeView
             <a class="btn btn-default" id="team-role-modal">
               <i class="fa fa-group"></i>Edit Teams
             </a>
-            <a class="btn btn-default" id="bulk-delete-modal">
-              <i class="fa fa-trash-o"></i>Delete
-            </a>
             <a class="btn btn-default" id="experience-modal">
               <i class="fa fa-trophy"></i>Change Experience
             </a>
@@ -59,9 +56,11 @@ class UserListView extends Backbone.Marionette.CompositeView
 
   events :
     "click #team-role-modal" : "showTeamRoleModal"
-    "click #bulk-delete-modal" : "showBulkDeleteModal"
     "click #experience-modal" : "showExperienceModal"
 
+  behaviors:
+    SelectAllRows :
+      behaviorClass : SelectAllRows
 
   initialize : ->
 
@@ -72,10 +71,10 @@ class UserListView extends Backbone.Marionette.CompositeView
       @collection.goTo(1)
     )
 
-    @listenTo(app.vent, "paginationView:filter", @filter)
+    @listenTo(app.vent, "paginationView:filter", @filterBySearch)
 
 
-  filter : (filterQuery) ->
+  filterBySearch : (filterQuery) ->
 
     @collection.setFilter(["email", "firstName", "lastName"], filterQuery)
     @collection.pager()
@@ -84,11 +83,6 @@ class UserListView extends Backbone.Marionette.CompositeView
   showTeamRoleModal : ->
 
     @showModal(TeamRoleModalView)
-
-
-  showBulkDeleteModal : ->
-
-    @showModal(BulkDeleteModalView)
 
 
   showExperienceModal : ->

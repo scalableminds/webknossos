@@ -7,6 +7,7 @@
 ./binary/ping_strategy : PingStrategy
 ./binary/ping_strategy_3d : PingStrategy3d
 ./binary/bounding_box : BoundingBox
+./binary/mappings : Mappings
 ../constants : constants
 libs/event_mixin : EventMixin
 ###
@@ -24,38 +25,47 @@ class Binary
 
   direction : [0, 0, 0]
 
-
-  constructor : (@model, tracing, @layer, tracingId, updatePipeline) ->
+  constructor : (@model, @tracing, @layer, maxZoomStep, updatePipeline, @connectionInfo) ->
 
     _.extend(this, new EventMixin())
 
     @TEXTURE_SIZE_P = constants.TEXTURE_SIZE_P
     { @category, @name } = @layer
 
-    @lastPingTime   = new Date()
-    @queueStatus    = 0
     @targetBitDepth = if @category == "color" then @layer.bitDepth else 8
 
     {topLeft, width, height, depth} = @layer.maxCoordinates
     @lowerBoundary  = topLeft
     @upperBoundary  = [ topLeft[0] + width, topLeft[1] + height, topLeft[2] + depth ]
 
-    @cube = new Cube(@upperBoundary, @layer.resolutions.length, @layer.bitDepth)
+    @cube = new Cube(@upperBoundary, maxZoomStep + 1, @layer.bitDepth)
     @boundingBox = new BoundingBox(@model.boundingBox, @cube)
-    @pullQueue = new PullQueue(@model.dataSetName, @cube, @layer, tracingId, @boundingBox)
-    @pushQueue = new PushQueue(@model.dataSetName, @cube, @layer, tracingId, updatePipeline)
+    @pullQueue = new PullQueue(@model.dataSetName, @cube, @layer, @tracing.id, @boundingBox, connectionInfo)
+    @pushQueue = new PushQueue(@model.dataSetName, @cube, @layer, @tracing.id, updatePipeline)
     @cube.setPushQueue( @pushQueue )
+    @mappings = new Mappings(@model.dataSetName, @layer)
+    @activeMapping = null
 
-    @pingStrategies = [new PingStrategy.DslSlow(@cube, @TEXTURE_SIZE_P)]
-    @pingStrategies3d = [new PingStrategy3d.DslSlow()]
+    @pingStrategies = [
+      new PingStrategy.Skeleton(@cube, @TEXTURE_SIZE_P),
+      new PingStrategy.Volume(@cube, @TEXTURE_SIZE_P)
+    ]
+    @pingStrategies3d = [
+      new PingStrategy3d.DslSlow()
+    ]
 
     @planes = []
     for planeId in constants.ALL_PLANES
       @planes.push( new Plane2D(planeId, @cube, @pullQueue, @TEXTURE_SIZE_P, @layer.bitDepth, @targetBitDepth, 32) )
 
     @model.user.on({
-      set4BitChanged : (is4Bit) => @pullQueue(is4Bit)
+      fourBitChanged : (fourBit) => @pullQueue.setFourBit(fourBit)
     })
+
+    @cube.on(
+      temporalBucketCreated : (address) =>
+        @pullQueue.add({bucket: address, priority: PullQueue::PRIORITY_HIGHEST})
+    )
 
     @ping = _.throttle(@pingImpl, @PING_THROTTLE_TIME)
 
@@ -70,9 +80,23 @@ class Binary
     @trigger "newColorSettings", brightness, contrast
 
 
+  setActiveMapping : (mappingName) ->
+
+    @activeMapping = mappingName
+
+    setMapping = (mapping) =>
+      @cube.setMapping(mapping)
+      @model.flycam.update()
+
+    if mappingName?
+      @mappings.getMappingArrayAsync(mappingName).then(setMapping)
+    else
+      setMapping([])
+
+
   pingStop : ->
 
-    @pullQueue.clear()
+    @pullQueue.clearNormalPriorities()
 
 
   pingImpl : (position, {zoomStep, area, activePlane}) ->
@@ -92,16 +116,12 @@ class Binary
       @lastArea     = area.slice()
 
       for strategy in @pingStrategies
-        if strategy.inVelocityRange(1) and strategy.inRoundTripTimeRange(@pullQueue.roundTripTime)
-
-          pullQueue = strategy.ping(position, @direction, zoomStep, area, activePlane) if zoomStep? and area? and activePlane?
-          @pullQueue.clear()
-          for entry in pullQueue
-            @pullQueue.insert(entry...)
-
+        if strategy.forContentType(@tracing.contentType) and strategy.inVelocityRange(@connectionInfo.bandwidth) and strategy.inRoundTripTimeRange(@connectionInfo.roundTripTime)
+          if zoomStep? and area? and activePlane?
+            @pullQueue.clearNormalPriorities()
+            @pullQueue.addAll(strategy.ping(position, @direction, zoomStep, area, activePlane))
           break
 
-      @queueStatus
       @pullQueue.pull()
 
 
@@ -114,13 +134,9 @@ class Binary
   arbitraryPingImpl : (matrix) ->
 
     for strategy in @pingStrategies3d
-      if strategy.inVelocityRange(1) and strategy.inRoundTripTimeRange(@pullQueue.roundTripTime)
-
-        pullQueue = strategy.ping(matrix)
-
-        for entry in pullQueue
-          @pullQueue.insert(entry...)
-
+      if strategy.forContentType(@tracing.contentType) and strategy.inVelocityRange(1) and strategy.inRoundTripTimeRange(@pullQueue.roundTripTime)
+        @pullQueue.clearNormalPriorities()
+        @pullQueue.addAll(strategy.ping(matrix))
         break
 
     @pullQueue.pull()
@@ -129,10 +145,17 @@ class Binary
   getByVerticesSync : (vertices) ->
     # A synchronized implementation of `get`. Cuz its faster.
 
-    { buffer, accessedBuckets } = InterpolationCollector.bulkCollect(
+    { buffer, accessedBuckets, missingBuckets } = InterpolationCollector.bulkCollect(
       vertices
       @cube.getArbitraryCube()
     )
+
+    @pullQueue.addAll(missingBuckets.map(
+      (bucket) ->
+        bucket: bucket
+        priority: PullQueue::PRIORITY_HIGHEST
+    ))
+    @pullQueue.pull()
 
     @cube.accessBuckets(accessedBuckets)
 

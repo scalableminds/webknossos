@@ -1,9 +1,10 @@
 ### define
 underscore : _
 backbone : backbone
+nested_obj_model : NestedObjModel
 ###
 
-class DatasetModel extends Backbone.Model
+class DatasetModel extends NestedObjModel
 
   urlRoot : "/api/datasets"
   idAttribute : "name"
@@ -17,6 +18,9 @@ class DatasetModel extends Backbone.Model
         baseDir : ""
         scale : []
         dataLayers : []
+
+    response.hasSegmentation = _.some(response.dataSource.dataLayers,
+      (layer) -> layer.category == "segmentation")
 
     response.thumbnailURL = @createThumbnailURL(response.name, response.dataSource.dataLayers)
 

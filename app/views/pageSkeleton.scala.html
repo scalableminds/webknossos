@@ -3,12 +3,12 @@
 <!doctype html>
 <html>
   <head>
-    <title>Oxalis</title>
+    <title>webKnossos</title>
     <link rel="shortcut icon" type="image/png" href="@routes.Assets.at("images/favicon.png")">
     <link rel="stylesheet" type="text/css" media="screen" href="@routes.Assets.at("stylesheets/main.css")">
 
     <script type="text/javascript"
-      src="@routes.Assets.at("javascripts/libs/airbrake.min.js")"
+      src="@routes.Assets.at("bower_components/airbrake-js-client/dist/client.js")"
       data-airbrake-project-id=@play.api.Play.current.configuration.getString("airbrake.projectID")
       data-airbrake-project-key=@play.api.Play.current.configuration.getString("airbrake.projectKey")
       data-airbrake-environment-name=@play.api.Play.current.configuration.getString("airbrake.environment")></script>

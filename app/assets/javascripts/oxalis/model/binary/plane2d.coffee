@@ -56,6 +56,15 @@ class Plane2D
 
     @cube.on "bucketLoaded", (bucket) =>
 
+      zoomStepDiff = @dataTexture.zoomStep - bucket[3]
+      if zoomStepDiff > 0
+        bucket = [
+          bucket[0] >> zoomStepDiff
+          bucket[1] >> zoomStepDiff
+          bucket[2] >> zoomStepDiff
+          @dataTexture.zoomStep
+        ]
+
       # Checking, whether the new bucket intersects with the current layer
       if @dataTexture.layer >> (@cube.BUCKET_SIZE_P + bucket[3]) == bucket[@W] and @dataTexture.topLeftBucket?
 
@@ -69,10 +78,14 @@ class Plane2D
           @dataTexture.tiles[tileIndexByTileMacro(@, tile)] = false
           @dataTexture.ready &= not (u in [@dataTexture.area[0]..@dataTexture.area[2]] and v in [@dataTexture.area[1]..@dataTexture.area[3]])
 
-    @cube.on "volumeLabled", =>
+    @cube.on "volumeLabled", => @reset()
+    @cube.on "mappingChanged", => @reset()
 
-      @dataTexture.tiles = new Array(@BUCKETS_PER_ROW * @BUCKETS_PER_ROW)
-      @dataTexture.ready = false
+
+  reset : ->
+
+    @dataTexture.tiles = new Array(@BUCKETS_PER_ROW * @BUCKETS_PER_ROW)
+    @dataTexture.ready = false
 
 
   get : ({position, zoomStep, area}) ->
@@ -289,16 +302,17 @@ class Plane2D
     map = new Array(@MAP_SIZE)
     map[0] = undefined
 
-    for i in [Math.min(@cube.LOOKUP_DEPTH_UP, @cube.ZOOM_STEP_COUNT - zoomStep - 1)...0]
+    if zoomStep < @cube.ZOOM_STEP_COUNT
+      for i in [Math.min(@cube.LOOKUP_DEPTH_UP, @cube.ZOOM_STEP_COUNT - zoomStep - 1)...0]
 
-      bucket = [
-        bucket_x >> i
-        bucket_y >> i
-        bucket_z >> i
-        zoomStep + i
-      ]
+        bucket = [
+          bucket_x >> i
+          bucket_y >> i
+          bucket_z >> i
+          zoomStep + i
+        ]
 
-      map[0] = bucket if @cube.isBucketLoadedByZoomedAddress(bucket)
+        map[0] = bucket if @cube.isBucketLoadedByZoomedAddress(bucket)
 
     if zoomStep and @enhanceRenderMap(map, 0, [bucket_x, bucket_y, bucket_z, zoomStep], map[0], @cube.LOOKUP_DEPTH_DOWN)
 
@@ -396,8 +410,7 @@ class Plane2D
       sourceValue = 0
       for b in [0...bytesSrc]
         sourceValue += (1 << (b * 8)) * source.buffer[ src + b ]
-      if mapping?
-        sourceValue = mapping[ sourceValue ]
+      sourceValue = mapping? and mapping[ sourceValue ] or sourceValue
 
       # If you have to shorten the data,
       # use the first none-zero byte unless all are zero

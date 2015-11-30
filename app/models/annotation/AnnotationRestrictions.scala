@@ -1,12 +1,7 @@
 package models.annotation
 
 import models.user.User
-import play.api.libs.functional.syntax._
 import play.api.libs.json._
-import scala.async.Async._
-import scala.concurrent.Future
-import play.api.libs.concurrent.Execution.Implicits._
-import com.scalableminds.util.reactivemongo.GlobalAccessContext
 import models.team.Role
 
 /**
@@ -23,7 +18,7 @@ class AnnotationRestrictions {
 
   def allowFinish(user: Option[User]): Boolean = false
 
-  def allowDownload(user: Option[User]): Boolean = false
+  def allowDownload(user: Option[User]): Boolean = allowAccess(user)
 
   def allowAccess(user: User): Boolean = allowAccess(Some(user))
 
@@ -51,21 +46,21 @@ object AnnotationRestrictions {
       override def allowAccess(user: Option[User]) = {
         user.map {
           user =>
-            annotation._user == user._id || user.roleInTeam(annotation.team) == Some(Role.Admin)
+            annotation._user == Some(user._id) || user.roleInTeam(annotation.team) == Some(Role.Admin)
         } getOrElse false
       }
 
       override def allowUpdate(user: Option[User]) = {
         user.map {
           user =>
-            annotation._user == user._id && !annotation.state.isFinished
+            annotation._user == Some(user._id) && !annotation.state.isFinished
         } getOrElse false
       }
 
       override def allowFinish(user: Option[User]) = {
         user.map {
           user =>
-            (annotation._user == user._id || user.roleInTeam(annotation.team) == Some(Role.Admin)) && !annotation.state.isFinished
+            (annotation._user == Some(user._id) || user.roleInTeam(annotation.team) == Some(Role.Admin)) && !annotation.state.isFinished
         } getOrElse false
       }
 
@@ -75,5 +70,20 @@ object AnnotationRestrictions {
             allowAccess(user)
         } getOrElse false
       }
+    }
+
+  def readonlyAnnotation() =
+    new AnnotationRestrictions {
+      override def allowAccess(user: Option[User]) = true
+      override def allowFinish(user: Option[User]) = true
+      override def allowDownload(user: Option[User]) = true
+    }
+
+  def updateableAnnotation() =
+    new AnnotationRestrictions {
+      override def allowAccess(user: Option[User]) = true
+      override def allowUpdate(user: Option[User]) = true
+      override def allowFinish(user: Option[User]) = true
+      override def allowDownload(user: Option[User]) = true
     }
 }

@@ -18,6 +18,7 @@ GET           /help/keyboardshortcuts                                         co
 # Authentication
 GET           /login                                                          controllers.Authentication.login
 POST          /login                                                          controllers.Authentication.authenticate
+GET           /switch                                                         controllers.Authentication.switchTo(to: String)
 GET           /logout                                                         controllers.Authentication.logout
 GET           /register                                                       controllers.Authentication.register
 POST          /register                                                       controllers.Authentication.handleRegistration
@@ -29,6 +30,8 @@ GET           /user/configuration                                             co
 GET           /user/configuration/default                                     controllers.SettingsController.default
 GET           /user/tasks/request                                             controllers.TaskController.request
 GET           /users/:id/details                                              controllers.UserController.emptyWithWildcard(id)
+GET           /user/password/reset                                            controllers.UserController.resetPassword
+POST          /user/password/reset                                            controllers.UserController.handleResetPassword
 
 GET           /api/users                                                      controllers.UserController.list
 GET           /api/user                                                       controllers.UserController.current
@@ -41,7 +44,6 @@ GET           /api/users/:id/loggedTime                                       co
 GET           /api/users/:id/annotations                                      controllers.UserController.userAnnotations(id: String)
 GET           /api/users/:id/annotations/download                             controllers.admin.NMLIO.userDownload(id: String)
 # GET         /api/users/:id/loginAs                                      controllers.UserController.loginAsUser(id: String)
-
 
 # Team
 GET           /teams                                                          controllers.TeamController.empty
@@ -73,8 +75,13 @@ GET           /api/datastores/:name/datasources/:dataSet/layers/:layer        co
 GET           /api/datastores/:name/backchannel                               controllers.DataStoreController.backChannel(name: String, key: String)
 GET           /api/datastore                                                  controllers.DataStoreController.show()
 
+# Those routes are DEPRECATED and should NOT be used further
 GET           /dataToken/validate                                             controllers.DataTokenController.validate(token: String, dataSetName: String, dataLayerName: String)
 GET           /dataToken/generate                                             controllers.DataTokenController.generate(dataSetName: String, dataLayerName: String)
+# ------ instead use
+GET           /api/dataToken/validate                                         controllers.DataTokenController.validate(token: String, dataSetName: String, dataLayerName: String)
+GET           /api/dataToken/generate                                         controllers.DataTokenController.generate(dataSetName: String, dataLayerName: String)
+
 ->            /data/                                                          com.scalableminds.datastore.Routes
 
 # SkeletonTracing Stuff
@@ -85,16 +92,25 @@ GET           /annotations/:typ/:id/finishAndRedirect                         co
 GET           /annotations/:typ/:id/finish                                    controllers.AnnotationController.finish(typ: String, id: String)
 GET           /annotations/:typ/:id/reopen                                    controllers.AnnotationController.reopen(typ: String, id: String)
 GET           /annotations/:typ/:id/reset                                     controllers.AnnotationController.reset(typ: String, id: String)
+GET           /annotations/:typ/:id/revert                                    controllers.AnnotationController.revert(typ: String, id: String, version: Int)
 POST          /annotations/:typ/:id/transfer                                  controllers.AnnotationController.transfer(typ: String, id: String)
 
 GET           /annotations/:typ/:id                                           controllers.AnnotationController.trace(typ: String, id: String)
+GET           /annotations/:typ/:id/readOnly                                  controllers.AnnotationController.traceReadOnly(typ: String, id: String)
 GET           /annotations/:typ/:id/info                                      controllers.AnnotationController.info(typ: String, id: String)
+GET           /annotations/:typ/:id/readOnly/info                             controllers.AnnotationController.infoReadOnly(typ: String, id: String)
 GET           /annotations/:typ/:id/download                                  controllers.AnnotationController.download(typ: String, id: String)
 DELETE        /annotations/:typ/:id                                           controllers.AnnotationController.cancel(typ: String, id: String)
+GET           /annotations/:typ/:id/merge/:mergedTyp/:mergedId/:readOnly      controllers.AnnotationController.merge(typ: String, id: String, mergedTyp: String, mergedId: String, readOnly: Boolean)
+GET           /annotations/:typ/:id/saveMerged                                controllers.AnnotationController.saveMerged(typ: String, id: String)
 
 #Admin pages
 GET           /admin/nml/upload                                               controllers.admin.NMLIO.uploadForm
 POST          /admin/nml/upload                                               controllers.admin.NMLIO.upload
+
+# Admin datasets
+GET           /admin/datasets/upload                                          controllers.DataSetController.upload
+POST          /admin/datasets/upload                                          controllers.DataSetController.uploadFromForm
 
 # Admin Tasks
 GET           /api/tasks                                                      controllers.TaskController.list
@@ -108,7 +124,9 @@ POST          /admin/tasks/createFromNML                                      co
 POST          /admin/tasks/createFromForm                                     controllers.admin.TaskAdministration.createFromForm
 GET           /admin/tasks/:id/edit                                           controllers.admin.TaskAdministration.edit(id: String)
 POST          /admin/tasks/:id                                                controllers.admin.TaskAdministration.editTaskForm(id: String)
-GET           /api/tasks/overview                                             controllers.admin.TaskAdministration.overviewData
+GET           /api/tasks/overview                                             controllers.admin.TaskAdministration.overviewData(start: Option[Long], end: Option[Long])
+GET           /api/tasks/workload                                             controllers.TaskController.requestAvailableTasks
+GET           /workload                                                       controllers.TaskController.empty
 
 GET           /api/tasks/:id/download                                         controllers.admin.NMLIO.taskDownload(id: String)
 GET           /api/tasks/:id/annotations                                      controllers.AnnotationController.annotationsForTask(id: String)
@@ -132,7 +150,7 @@ GET           /api/projects/:name/download                                    co
 GET           /api/projects/:name/tasks                                       controllers.ProjectController.tasksForProject(name: String)
 
 GET           /statistics                                                     controllers.StatisticsController.empty
-GET           /api/statistics/oxalis                                          controllers.StatisticsController.oxalis(interval: String, start: Option[Long], end: Option[Long])
+GET           /api/statistics/webknossos                                      controllers.StatisticsController.oxalis(interval: String, start: Option[Long], end: Option[Long])
 GET           /api/statistics/users                                           controllers.StatisticsController.users(interval: String, start: Option[Long], end: Option[Long], limit: Int)
 # Javascript routing
 GET           /assets/javascripts/routes.js                                   controllers.Application.javascriptRoutes

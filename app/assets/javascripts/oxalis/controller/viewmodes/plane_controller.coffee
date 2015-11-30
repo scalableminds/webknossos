@@ -125,7 +125,9 @@ class PlaneController
           0
         ]
 
-      over : => @planeView.setActiveViewport( @activeViewport = planeId )
+      over : =>
+        $(':focus').blur()
+        @planeView.setActiveViewport( @activeViewport = planeId )
 
       scroll : @scrollPlanes
     }
@@ -143,6 +145,7 @@ class PlaneController
 
     @controls.noZoom = true
     @controls.noPan = true
+    @controls.staticMoving = true
 
     @controls.target.set(
       @model.scaleInfo.voxelToNm(@flycam.getPosition())...)
@@ -285,8 +288,6 @@ class PlaneController
 
 
   render : ->
-
-    @model.logConnectionInfo()
 
     for dataLayerName of @model.binary
       if (@sceneController.pingDataLayer(dataLayerName))

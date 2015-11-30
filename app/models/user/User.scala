@@ -27,10 +27,12 @@ case class User(
                  lastName: String,
                  verified: Boolean = false,
                  pwdHash: String = "",
+                 md5hash: String = "",
                  teams: List[TeamMembership],
                  configuration: UserSettings = UserSettings.defaultSettings,
                  experiences: Map[String, Int] = Map.empty,
                  lastActivity: Long = System.currentTimeMillis,
+                 _isSuperUser: Option[Boolean] = None,
                  _id: BSONObjectID = BSONObjectID.generate) extends DBAccessContextPayload {
 
   val dao = User
@@ -40,6 +42,8 @@ case class User(
   def teamsWithRole(role: Role) = teams.filter(_.role == role)
 
   def teamNames = teams.map(_.team)
+
+  def isSuperUser = _isSuperUser getOrElse false
 
   val name = firstName + " " + lastName
 
@@ -89,6 +93,7 @@ case class User(
 
   def isEditableBy(other: User) =
     other.hasAdminAccess && ( teams.isEmpty || other.adminTeamNames.exists(teamNames.contains))
+
 }
 
 object User {
@@ -113,6 +118,8 @@ object User {
       (__ \ "lastName").write[String] and
       (__ \ "teams").write[List[TeamMembership]])( u =>
       (u.id, u.email, u.firstName, u.lastName, u.teams))
+
+  val createNotVerifiedUser = User("","","", teams = Nil)
 }
 
 object UserDAO extends SecuredBaseDAO[User] {
@@ -161,7 +168,9 @@ object UserDAO extends SecuredBaseDAO[User] {
     findOne(Json.obj("email" -> email, "loginType" -> loginType))
 
   def auth(email: String, password: String)(implicit ctx: DBAccessContext): Fox[User] =
-    findOneByEmail(email).filter(user => verifyPassword(password, user.pwdHash))
+    findOneByEmail(email).filter { user =>
+      verifyPassword(password, user.pwdHash)
+    }
 
   def insert(user: User, isVerified: Boolean)(implicit ctx: DBAccessContext): Fox[User] = {
     if (isVerified) {
@@ -212,9 +221,20 @@ object UserDAO extends SecuredBaseDAO[User] {
     update(findByIdQ(_user), Json.obj("$set" -> Json.obj("teams" -> teams)))
   }
 
+  def changePassword(_user: BSONObjectID, pswd: String)(implicit ctx: DBAccessContext) = {
+    update(findByIdQ(_user), Json.obj("$set" -> Json.obj("pwdHash" -> hashPassword(pswd))))
+  }
+
   def verify(user: User)(implicit ctx: DBAccessContext) = {
     update(
       Json.obj("email" -> user.email),
       Json.obj("$set" -> Json.obj("verified" -> true)))
+  }
+
+  def removeTeamFromUsers(team: String)(implicit ctx: DBAccessContext) = {
+    update(
+      Json.obj("teams.team" -> team), Json.obj("$pull" -> Json.obj("teams" -> Json.obj("team" -> team))),
+      multi = true
+    )
   }
 }

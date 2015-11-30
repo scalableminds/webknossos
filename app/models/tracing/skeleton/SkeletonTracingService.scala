@@ -3,7 +3,7 @@
  */
 package models.tracing.skeleton
 
-import com.scalableminds.util.geometry.{BoundingBox, Point3D}
+import com.scalableminds.util.geometry.{Vector3D, BoundingBox, Point3D}
 import com.scalableminds.util.reactivemongo.DBAccessContext
 import com.scalableminds.util.tools.Fox
 import models.annotation.CompoundAnnotation._
@@ -24,7 +24,15 @@ object SkeletonTracingService extends AnnotationContentService with CommonTracin
 
   type AType = SkeletonTracing
 
-  def createFrom(dataSetName: String, start: Point3D, boundingBox: Option[BoundingBox], insertStartAsNode: Boolean, settings: AnnotationSettings = AnnotationSettings.skeletonDefault)(implicit ctx: DBAccessContext): Fox[SkeletonTracing] = {
+  def createFrom(
+    dataSetName: String,
+    start: Point3D,
+    rotation: Vector3D,
+    boundingBox: Option[BoundingBox],
+    insertStartAsNode: Boolean,
+    settings: AnnotationSettings = AnnotationSettings.skeletonDefault)
+    (implicit ctx: DBAccessContext): Fox[SkeletonTracing] = {
+
     val trees =
       if (insertStartAsNode)
         List(Tree.createFrom(start))
@@ -48,6 +56,7 @@ object SkeletonTracingService extends AnnotationContentService with CommonTracin
         System.currentTimeMillis(),
         Some(1),
         start,
+        rotation,
         SkeletonTracing.defaultZoomLevel,
         box,
         Nil,
@@ -85,7 +94,7 @@ object SkeletonTracingService extends AnnotationContentService with CommonTracin
   }
 
   def createFrom(dataSet: DataSet)(implicit ctx: DBAccessContext): Fox[SkeletonTracing] =
-    createFrom(dataSet.name, dataSet.defaultStart, None, false)
+    createFrom(dataSet.name, dataSet.defaultStart, dataSet.defaultRotation, None, insertStartAsNode = false)
 
   def removeById(_skeleton: BSONObjectID)(implicit ctx: DBAccessContext) =
     for {

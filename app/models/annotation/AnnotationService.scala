@@ -10,7 +10,7 @@ import com.scalableminds.util.tools.{FoxImplicits, Fox}
 import models.tracing.skeleton.SkeletonTracingService
 import play.api.libs.concurrent.Execution.Implicits._
 import models.task.{Task, TaskService}
-import com.scalableminds.util.geometry.{Point3D, BoundingBox}
+import com.scalableminds.util.geometry.{Vector3D, Point3D, BoundingBox}
 import reactivemongo.bson.BSONObjectID
 import models.annotation.AnnotationType._
 import scala.Some
@@ -87,7 +87,7 @@ object AnnotationService extends AnnotationContentProviders with BoxImplicits wi
       annotation.copy(
         _user = Some(user._id),
         state = AnnotationState.InProgress,
-        typ = AnnotationType.Task).temporaryDuplicate(false).flatMap(_.saveToDB)
+        typ = AnnotationType.Task).temporaryDuplicate(keepId = false).flatMap(_.saveToDB)
 
     for {
       annotationBase <- task.annotationBase ?~> "Failed to retrieve annotation base."
@@ -98,9 +98,17 @@ object AnnotationService extends AnnotationContentProviders with BoxImplicits wi
     }
   }
 
-  def createAnnotationBase(task: Task, userId: BSONObjectID, boundingBox: BoundingBox, settings: AnnotationSettings, dataSetName: String, start: Point3D)(implicit ctx: DBAccessContext) = {
+  def createAnnotationBase(
+    task: Task,
+    userId: BSONObjectID,
+    boundingBox: BoundingBox,
+    settings: AnnotationSettings,
+    dataSetName: String,
+    start: Point3D,
+    rotation: Vector3D)(implicit ctx: DBAccessContext) = {
+
     for {
-      tracing <- SkeletonTracingService.createFrom(dataSetName, start, Some(boundingBox), true, settings) ?~> "Failed to create skeleton tracing."
+      tracing <- SkeletonTracingService.createFrom(dataSetName, start, rotation, Some(boundingBox), insertStartAsNode = true, settings) ?~> "Failed to create skeleton tracing."
       content = ContentReference.createFor(tracing)
       _ <- AnnotationDAO.insert(Annotation(Some(userId), content, team = task.team, typ = AnnotationType.TracingBase, _task = Some(task._id))) ?~> "Failed to insert annotation."
     } yield tracing

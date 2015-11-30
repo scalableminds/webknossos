@@ -98,6 +98,7 @@ dataToken.creationFailed=Creation of the data token failed.
 cellId=Cell Id
 
 start.point=Start
+rotation.vector=Start Rotation
 
 boundingBox.box=Bounding Box
 boundingBox.invalid=Invalid bounding box

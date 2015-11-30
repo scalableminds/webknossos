@@ -3,7 +3,7 @@
  */
 package models.tracing.skeleton.temporary
 
-import com.scalableminds.util.geometry.{Point3D, BoundingBox}
+import com.scalableminds.util.geometry.{Vector3D, Point3D, BoundingBox}
 import com.scalableminds.util.reactivemongo.DBAccessContext
 import com.scalableminds.util.tools.Fox
 import models.annotation.{AnnotationSettings, AnnotationContentService}
@@ -32,6 +32,7 @@ object TemporarySkeletonTracingService extends AnnotationContentService {
         System.currentTimeMillis(),
         nml.activeNodeId,
         _,
+        Vector3D(0,0,1),
         SkeletonTracing.defaultZoomLevel,
         box,
         nml.comments,
@@ -51,6 +52,7 @@ object TemporarySkeletonTracingService extends AnnotationContentService {
         System.currentTimeMillis(),
         tracing.activeNodeId,
         tracing.editPosition,
+        tracing.editRotation,
         tracing.zoomLevel,
         tracing.boundingBox,
         tracing.comments,

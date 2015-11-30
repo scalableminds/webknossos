@@ -44,6 +44,7 @@ object DataSetInformationHandler extends AnnotationInformationHandler with FoxIm
         System.currentTimeMillis(),
         Some(0),
         dataSet.defaultStart,
+        dataSet.defaultRotation,
         SkeletonTracing.defaultZoomLevel,
         None
       )

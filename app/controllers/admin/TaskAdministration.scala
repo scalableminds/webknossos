@@ -358,7 +358,7 @@ object TaskAdministration extends AdminController {
         results.flatMap{
           case Full((dataSetName, position, boundingBox, taskType, task)) =>
             TaskDAO.insert(task)
-            AnnotationService.createAnnotationBase(task, request.user._id, boundingBox, taskType.settings, dataSetName, position, Vector3D(0,0,1))
+            AnnotationService.createAnnotationBase(task, request.user._id, boundingBox, taskType.settings, dataSetName, position, Vector3D(0,0,0))
             Full(task)
           case f: Failure =>
             Logger.warn("Failure while creating bulk tasks: " + f)

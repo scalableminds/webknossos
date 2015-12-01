@@ -44,7 +44,7 @@ class SkeletonTracing
     ############ Load Tree from @data ##############
 
     @stateLogger = new SkeletonTracingStateLogger(
-      @flycam, tracing.version, tracing.id, tracing.typ,
+      @flycam, @flycam3d, tracing.version, tracing.id, tracing.typ,
       tracing.restrictions.allowUpdate, updatePipeline, this)
 
     tracingParser = new TracingParser(@, @data)

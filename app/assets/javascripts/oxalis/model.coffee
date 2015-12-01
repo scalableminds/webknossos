@@ -130,7 +130,7 @@ class Model
       if isVolumeTracing
         $.assert( @getSegmentationBinary()?,
           "Volume is allowed, but segmentation does not exist" )
-        @volumeTracing = new VolumeTracing(tracing, @flycam, @getSegmentationBinary(), @updatePipeline)
+        @volumeTracing = new VolumeTracing(tracing, @flycam, @flycam3d, @getSegmentationBinary(), @updatePipeline)
       else
         @skeletonTracing = new SkeletonTracing(tracing, @scaleInfo, @flycam, @flycam3d, @user, @updatePipeline)
 

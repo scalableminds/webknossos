@@ -255,7 +255,7 @@ class Flycam3d
     [ matrix[8], matrix[9], matrix[10] ]
 
 
-  setDirection : (d) ->
+  setDirectionSilent : (d) ->
 
     pos = @getPosition()
 
@@ -273,6 +273,14 @@ class Flycam3d
     MJS.M4x4.scale(@scale, matrix2, matrix2)
 
     @currentMatrix = @convertToJsArray(MJS.M4x4.mul(matrix2, m))
+
+    # return the new rotation
+    return @getRotation()
+
+
+  setDirection : (d) ->
+
+    setDirectionSilent(d)
     updateMacro(@)
 
 

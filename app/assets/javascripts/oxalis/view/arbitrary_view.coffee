@@ -101,6 +101,8 @@ class ArbitraryView
 
     return unless @isRunning
 
+    TWEEN.update()
+
     if @trigger("render", @forceUpdate) or @forceUpdate
 
       { camera, stats, geometries, renderer, scene } = @

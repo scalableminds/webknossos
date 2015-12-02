@@ -324,18 +324,33 @@ class ArbitraryController
 
     activeNode = @model.skeletonTracing.getActiveNode()
     if activeNode
-      @cam.setPosition(activeNode.pos)
+      newPos = activeNode.pos
       parent = activeNode.parent
       while parent
-        # set right direction
+        # obtain last direction
         direction = ([
           activeNode.pos[0] - parent.pos[0],
           activeNode.pos[1] - parent.pos[1],
           activeNode.pos[2] - parent.pos[2]])
         if direction[0] or direction[1] or direction[2]
-          @cam.setDirection( @model.scaleInfo.voxelToNm( direction ))
           break
         parent = parent.parent
+
+      # animate the change to the new position and new rotation (if given)
+      curPos = @cam.getPosition()
+      curRotation = @cam.getRotation()
+      newRotation = @getShortestRotationToDirection(curRotation, direction)
+      waypointAnimation = new TWEEN.Tween(
+        {x: curPos[0], y: curPos[1], z: curPos[2], rx: curRotation[0], ry: curRotation[1], rz: curRotation[2], cam: @cam, directionChanged: direction})
+      waypointAnimation.to(
+        {x: newPos[0], y: newPos[1], z: newPos[2], rx: newRotation[0], ry: newRotation[1], rz: newRotation[2]}, 200)
+      waypointAnimation.onUpdate( ->
+        @cam.setPosition([@x, @y, @z])
+        @cam.setRotation([@rx, @ry, @rz]) if @directionChanged
+      )
+      waypointAnimation.start()
+
+      @cam.update()
 
 
   setActiveNode : (nodeId, centered, mergeTree) ->
@@ -363,3 +378,18 @@ class ArbitraryController
     if vectorLength > 10
       @setWaypoint()
       @lastNodeMatrix = matrix
+
+
+  getShortestRotationToDirection : (curRotation, direction) ->
+
+    # if there is no direction supplied, don't rotate
+    newRotation = curRotation
+    if direction
+      newRotation = @cam.setDirectionSilent(@model.scaleInfo.voxelToNm(direction))
+      for i in [0..2]
+        # a rotation about more than 180° is shorter when rotating the other direction
+        if newRotation[i] - curRotation[i] >= 180
+          newRotation[i] -= 360
+        else if newRotation[i] - curRotation[i] <= -180
+          newRotation[i] += 360
+    return newRotation

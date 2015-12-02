@@ -32,7 +32,7 @@ object TemporarySkeletonTracingService extends AnnotationContentService {
         System.currentTimeMillis(),
         nml.activeNodeId,
         _,
-        Vector3D(0,0,1),
+        Vector3D(0,0,0),
         SkeletonTracing.defaultZoomLevel,
         box,
         nml.comments,

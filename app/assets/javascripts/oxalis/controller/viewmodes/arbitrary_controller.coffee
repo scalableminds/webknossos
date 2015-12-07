@@ -272,7 +272,7 @@ class ArbitraryController
 
   addNode : (position) =>
 
-    @model.skeletonTracing.addNode(position, constants.TYPE_USUAL, constants.ARBITRARY_VIEW, 0)
+    @model.skeletonTracing.addNode(position, constants.TYPE_USUAL, constants.ARBITRARY_VIEW, 0, false)
 
 
   setWaypoint : () =>

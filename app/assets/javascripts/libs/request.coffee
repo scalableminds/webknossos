@@ -1,5 +1,4 @@
 ### define
-jquery : $
 underscore : _
 libs/toast : Toast
 ###
@@ -131,9 +130,7 @@ Request =
     if error instanceof Response
       error.json().then(
         (json) ->
-          json.messages.map((message) ->
-            Toast.error(message.error)
-          )
+          Toast.message(json)
           Promise.reject(json)
         (error) ->
           Toast.error(error)

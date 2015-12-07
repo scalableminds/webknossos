@@ -77,7 +77,8 @@ class SkeletonTracingStateLogger extends StateLogger
       treeId : treeId,
       id: node.id,
       radius: node.radius,
-      position : node.pos
+      position : node.pos,
+      rotation : node.rotation
 
 
   edgeObject : (node, treeId) ->

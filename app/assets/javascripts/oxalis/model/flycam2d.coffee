@@ -149,6 +149,14 @@ class Flycam2d
     @spaceDirection
 
 
+  getRotation : (planeID) ->
+
+    return switch planeID
+      when constants.PLANE_XY then [0, 0, 0]
+      when constants.PLANE_YZ then [0, 270, 0]
+      when constants.PLANE_XZ then [90, 0, 0]
+
+
   move : (p, planeID) ->  #move by whatever is stored in this vector
 
     if(planeID?)          # if planeID is given, use it to manipulate z

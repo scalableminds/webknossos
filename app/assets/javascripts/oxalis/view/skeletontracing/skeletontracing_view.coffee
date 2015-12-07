@@ -133,6 +133,7 @@ class SkeletonTracingView extends View
       # add node
       @model.skeletonTracing.addNode(
         position,
+        @model.flycam.getRotation(constants.PLANE_XY),
         constants.TYPE_USUAL,
         constants.PLANE_XY, # xy viewport
         @model.flycam.getIntegerZoomStep()

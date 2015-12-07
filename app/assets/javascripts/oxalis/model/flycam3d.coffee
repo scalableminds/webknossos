@@ -249,41 +249,6 @@ class Flycam3d
     @pitch -x * Math.PI / 180
 
 
-  getDirection : ->
-
-    matrix = @currentMatrix
-    [ matrix[8], matrix[9], matrix[10] ]
-
-
-  setDirectionSilent : (d) ->
-
-    pos = @getPosition()
-
-    m = new THREE.Matrix4().lookAt(new THREE.Vector3(d...),
-      new THREE.Vector3(0, 0, 0),
-      @getCurrentUpVector()).elements
-
-    matrix2 = [
-      1, 0, 0, 0,
-      0, 1, 0, 0,
-      0, 0, 1, 0,
-      pos[0], pos[1], pos[2], 1
-    ]
-
-    MJS.M4x4.scale(@scale, matrix2, matrix2)
-
-    @currentMatrix = @convertToJsArray(MJS.M4x4.mul(matrix2, m))
-
-    # return the new rotation
-    return @getRotation()
-
-
-  setDirection : (d) ->
-
-    @setDirectionSilent(d)
-    updateMacro(@)
-
-
   getCurrentUpVector : ->
 
     currentRotation = new THREE.Matrix4()

@@ -270,20 +270,21 @@ class ArbitraryController
       when "shift" then @setParticleSize(delta)
 
 
-  addNode : (position) =>
+  addNode : (position, rotation) =>
 
-    @model.skeletonTracing.addNode(position, constants.TYPE_USUAL, constants.ARBITRARY_VIEW, 0, false)
+    @model.skeletonTracing.addNode(position, rotation, constants.TYPE_USUAL, constants.ARBITRARY_VIEW, 0, false)
 
 
-  setWaypoint : () =>
+  setWaypoint : =>
 
     unless @record
       return
 
     position  = @cam.getPosition()
-    activeNodePos = @model.skeletonTracing.getActiveNodePos()
+    rotation = @cam.getRotation()
 
-    @addNode(position)
+    @addNode(position, rotation)
+
 
   changeMoveValue : (delta) ->
 
@@ -324,29 +325,20 @@ class ArbitraryController
 
     activeNode = @model.skeletonTracing.getActiveNode()
     if activeNode
-      newPos = activeNode.pos
-      parent = activeNode.parent
-      while parent
-        # obtain last direction
-        direction = ([
-          activeNode.pos[0] - parent.pos[0],
-          activeNode.pos[1] - parent.pos[1],
-          activeNode.pos[2] - parent.pos[2]])
-        if direction[0] or direction[1] or direction[2]
-          break
-        parent = parent.parent
-
-      # animate the change to the new position and new rotation (if given)
+      # animate the change to the new position and new rotation
       curPos = @cam.getPosition()
+      newPos = @model.skeletonTracing.getActiveNodePos()
       curRotation = @cam.getRotation()
-      newRotation = @getShortestRotationToDirection(curRotation, direction)
+      newRotation = @model.skeletonTracing.getActiveNodeRotation()
+      newRotation = @getShortestRotation(curRotation, newRotation)
+
       waypointAnimation = new TWEEN.Tween(
-        {x: curPos[0], y: curPos[1], z: curPos[2], rx: curRotation[0], ry: curRotation[1], rz: curRotation[2], cam: @cam, directionChanged: direction})
+        {x: curPos[0], y: curPos[1], z: curPos[2], rx: curRotation[0], ry: curRotation[1], rz: curRotation[2], cam: @cam})
       waypointAnimation.to(
         {x: newPos[0], y: newPos[1], z: newPos[2], rx: newRotation[0], ry: newRotation[1], rz: newRotation[2]}, 200)
       waypointAnimation.onUpdate( ->
         @cam.setPosition([@x, @y, @z])
-        @cam.setRotation([@rx, @ry, @rz]) if @directionChanged
+        @cam.setRotation([@rx, @ry, @rz])
       )
       waypointAnimation.start()
 
@@ -356,7 +348,8 @@ class ArbitraryController
   setActiveNode : (nodeId, centered, mergeTree) ->
 
     @model.skeletonTracing.setActiveNode(nodeId, mergeTree)
-    @cam.setPosition @model.skeletonTracing.getActiveNodePos()
+    @cam.setPosition(@model.skeletonTracing.getActiveNodePos())
+    @cam.setRotation(@model.skeletonTracing.getActiveNodeRotation())
 
 
   moved : ->
@@ -380,16 +373,12 @@ class ArbitraryController
       @lastNodeMatrix = matrix
 
 
-  getShortestRotationToDirection : (curRotation, direction) ->
+  getShortestRotation : (curRotation, newRotation) ->
 
-    # if there is no direction supplied, don't rotate
-    newRotation = curRotation
-    if direction
-      newRotation = @cam.setDirectionSilent(@model.scaleInfo.voxelToNm(direction))
-      for i in [0..2]
-        # a rotation about more than 180° is shorter when rotating the other direction
-        if newRotation[i] - curRotation[i] >= 180
-          newRotation[i] -= 360
-        else if newRotation[i] - curRotation[i] <= -180
-          newRotation[i] += 360
+    for i in [0..2]
+      # a rotation about more than 180° is shorter when rotating the other direction
+      if newRotation[i] - curRotation[i] > 180
+        newRotation[i] -= 360
+      else if newRotation[i] - curRotation[i] < -180
+        newRotation[i] += 360
     return newRotation

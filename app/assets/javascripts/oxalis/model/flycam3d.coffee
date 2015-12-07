@@ -280,7 +280,7 @@ class Flycam3d
 
   setDirection : (d) ->
 
-    setDirectionSilent(d)
+    @setDirectionSilent(d)
     updateMacro(@)
 
 

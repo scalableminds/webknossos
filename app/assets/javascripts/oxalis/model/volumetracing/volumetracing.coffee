@@ -10,7 +10,7 @@ libs/drawing : Drawing
 
 class VolumeTracing
 
-  constructor : (tracing, @flycam, @flycam3d, @binary, updatePipeline) ->
+  constructor : (tracing, @flycam, @flycam3d, @binary) ->
 
     _.extend(@, new EventMixin())
 
@@ -25,7 +25,6 @@ class VolumeTracing
     @stateLogger  = new VolumeTracingStateLogger(
       @flycam, @flycam3d, tracing.version, tracing.id, tracing.typ,
       tracing.restrictions.allowUpdate,
-      updatePipeline,
       this, @binary.pushQueue
     )
 

@@ -1,10 +1,13 @@
 ### define
 underscore : _
-../sorted_collection : SortedCollection
+../pagination_collection : PaginationCollection
 ./dataset_model : DatasetModel
 ###
 
-class DatasetCollection extends SortedCollection
+class DatasetCollection extends PaginationCollection
 
   url : "/api/datasets"
   model : DatasetModel
+
+  paginator_ui :
+    perPage : 10

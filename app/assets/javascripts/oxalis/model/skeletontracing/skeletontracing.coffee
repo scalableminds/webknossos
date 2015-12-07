@@ -28,7 +28,7 @@ class SkeletonTracing
   activeTree : null
   firstEdgeDirection : null
 
-  constructor : (tracing, @scaleInfo, @flycam, @flycam3d, @user, updatePipeline) ->
+  constructor : (tracing, @scaleInfo, @flycam, @flycam3d, @user) ->
 
     _.extend(this, new EventMixin())
 
@@ -45,7 +45,7 @@ class SkeletonTracing
 
     @stateLogger = new SkeletonTracingStateLogger(
       @flycam, @flycam3d, tracing.version, tracing.id, tracing.typ,
-      tracing.restrictions.allowUpdate, updatePipeline, this)
+      tracing.restrictions.allowUpdate, this)
 
     tracingParser = new TracingParser(@, @data)
     {
@@ -94,7 +94,7 @@ class SkeletonTracing
       "beforeunload"
       =>
         if !@stateLogger.stateSaved() and @stateLogger.allowUpdate
-          @stateLogger.pushImpl(false)
+          @stateLogger.pushNow(false)
           return "You haven't saved your progress, please give us 2 seconds to do so and and then leave this site."
         else
           return

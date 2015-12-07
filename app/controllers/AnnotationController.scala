@@ -41,8 +41,8 @@ object AnnotationController extends Controller with Secured with TracingInformat
 
   implicit val timeout = Timeout(5 seconds)
 
-  def annotationJson(user: User, annotation: AnnotationLike)(implicit ctx: DBAccessContext): Fox[JsObject] =
-    AnnotationLike.annotationLikeInfoWrites(annotation, Some(user), Nil)
+  def annotationJson(user: User, annotation: AnnotationLike, exclude: List[String] = Nil)(implicit ctx: DBAccessContext): Fox[JsObject] =
+    AnnotationLike.annotationLikeInfoWrites(annotation, Some(user), exclude)
 
   def info(typ: String, id: String, readOnly: Boolean = false) = UserAwareAction.async { implicit request =>
       val annotationId = AnnotationIdentifier(typ, id)
@@ -204,7 +204,7 @@ object AnnotationController extends Controller with Secured with TracingInformat
     if (annotation.restrictions.allowUpdate(request.user))
       Full(version == annotation.version + 1)
     else
-      Failure("notAllowed") ~> 403
+      Failure(Messages("notAllowed")) ~> 403
   }
 
   def updateWithJson(typ: String, id: String, version: Int) = Authenticated.async(parse.json(maxLength = 2097152)) { implicit request =>
@@ -219,7 +219,7 @@ object AnnotationController extends Controller with Secured with TracingInformat
           new Fox(Future.successful(Full(JsonBadRequest(oldJs, "annotation.dirtyState"))))
       }
 
-      Logger.info(s"Tracing update [$typ - $id, $version]: ${request.body}")
+      //Logger.info(s"Tracing update [$typ - $id, $version]: ${request.body}")
       AnnotationUpdateService.store(typ, id, version, request.body)
 
       for {
@@ -286,7 +286,7 @@ object AnnotationController extends Controller with Secured with TracingInformat
       task <- TaskDAO.findOneById(taskId) ?~> Messages("task.notFound")
       _ <- ensureTeamAdministration(request.user, task.team).toFox
       annotations <- task.annotations
-      jsons <- Fox.sequence(annotations.map(annotationJson(request.user, _)))
+      jsons <- Fox.sequence(annotations.map(annotationJson(request.user, _, exclude = List("content"))))
     } yield {
       Ok(JsArray(jsons.flatten))
     }

@@ -54,7 +54,7 @@ object SkeletonTracingService extends AnnotationContentService with CommonTracin
         trees,
         Nil,
         System.currentTimeMillis(),
-        Some(1),
+        if(insertStartAsNode) Some(1) else None,
         start,
         rotation,
         SkeletonTracing.defaultZoomLevel,

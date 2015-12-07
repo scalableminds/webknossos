@@ -9,7 +9,7 @@ object Dependencies{
   val akkaVersion = "2.2.0"
   val reactiveVersion = "0.10.0"
   val reactivePlayVersion = "0.10.2"
-  val braingamesVersion = "6.10.9-master-fix"
+  val braingamesVersion = "6.10.11-master-fix"
 
   val restFb = "com.restfb" % "restfb" % "1.6.11"
   val commonsIo = "commons-io" % "commons-io" % "2.4"
@@ -172,6 +172,8 @@ object ApplicationBuild extends Build {
     templatesImport += "oxalis.view.helpers._",
     templatesImport += "oxalis.view._",
     scalaVersion := "2.10.3",
+    javacOptions ++= Seq("-source", "1.7", "-target", "1.7"),
+    scalacOptions += "-target:jvm-1.7",
     gulpPath := (Path("node_modules") / ".bin" / "gulp").getPath,
     npmPath := "npm",
     //requireJs := Seq("main"),

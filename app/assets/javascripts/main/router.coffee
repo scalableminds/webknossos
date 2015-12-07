@@ -94,16 +94,18 @@ class Router extends Backbone.Router
 
   teams : ->
 
-    @showWithPagination("TeamListView", "TeamCollection", "Add New Team")
+    @showWithPagination("TeamListView", "PaginatedTeamCollection", "Add New Team")
 
 
   tasks : ->
 
     @showWithPagination("TaskListView", "TaskCollection", "Create New Task")
 
+
   workload : ->
 
     @showWithPagination("WorkloadListView", "WorkloadCollection")
+
 
   taskTypes : ->
 
@@ -191,12 +193,23 @@ class Router extends Backbone.Router
       @changeView(view)
 
 
+  setReloadFlag : ->
+
+    # DO NOT MERGE FORCE RELOAD INTO DEV #895
+    @forcePageReload = true
+
+
   changeView : (views...) ->
 
     if @activeViews == views
       return
 
     @$loadingSpinner.show()
+
+    # DO NOT MERGE FORCE RELOAD INTO DEV #895
+    if @forcePageReload
+      location.reload()
+
 
     # Remove current views
     if @activeViews

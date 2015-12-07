@@ -242,4 +242,11 @@ object UserDAO extends SecuredBaseDAO[User] {
       Json.obj("email" -> user.email),
       Json.obj("$set" -> Json.obj("verified" -> true)))
   }
+
+  def removeTeamFromUsers(team: String)(implicit ctx: DBAccessContext) = {
+    update(
+      Json.obj("teams.team" -> team), Json.obj("$pull" -> Json.obj("teams" -> Json.obj("team" -> team))),
+      multi = true
+    )
+  }
 }

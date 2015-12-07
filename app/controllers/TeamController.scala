@@ -5,6 +5,7 @@ import models.team._
 import play.api.libs.json.{JsError, JsSuccess, Writes, Json}
 import play.api.libs.concurrent.Execution.Implicits._
 import models.user.User
+import models.user.UserService
 import scala.concurrent.Future
 import play.api.i18n.Messages
 import net.liftweb.common.{Empty, Failure, Full}
@@ -48,6 +49,7 @@ object TeamController extends Controller with Secured {
       team <- TeamDAO.findOneById(id)
       _ <- isTeamOwner(team, request.user).toFox
       _ <- TeamService.remove(team)
+      _ <- UserService.removeTeamFromUsers(team)
     } yield {
       JsonOk(Messages("team.deleted"))
     }

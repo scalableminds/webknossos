@@ -29,5 +29,6 @@ fdescribe 'Register', ->
       page.signUpWithCompleteForm()
         .then( -> page.getModalText())
         .then((text) ->
-          expect(text).toEqual(page.signUpSuccessText)
+          expect(text).toEqual(RegisterPage.signUpSuccessText)
+          done()
         )

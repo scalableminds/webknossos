@@ -38,9 +38,9 @@ class Mappings
     if @mappings[mappingName].mappingObject?
       return $.Deferred().resolve().promise()
 
-    Request.json(
+    Request.$(Request.json(
       @baseUrl + mappingName + @getParams
-    ).$().then(
+    )).then(
       (mapping) =>
         @mappings[mappingName].mappingObject = mapping
         console.log("Done downloading:", mappingName)

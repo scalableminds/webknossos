@@ -114,10 +114,12 @@ class ExplorativeTracingListView extends Backbone.Marionette.CompositeView
     Request.multipartForm(
       form.attr("action")
       data : new FormData(form[0])
-    ).then( (data) ->
-      url = "/annotations/" + data.annotation.typ + "/" + data.annotation.id
-      app.router.loadURL(url)
-      Toast.message(data.messages)
-    ).always( ->
-      toggleIcon()
+    ).then(
+      (data) ->
+        url = "/annotations/" + data.annotation.typ + "/" + data.annotation.id
+        app.router.loadURL(url)
+        Toast.message(data.messages)
+        toggleIcon()
+      ->
+        toggleIcon()
     )

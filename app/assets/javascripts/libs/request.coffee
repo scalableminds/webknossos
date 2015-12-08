@@ -1,4 +1,5 @@
 ### define
+jquery : $
 underscore : _
 libs/toast : Toast
 ###
@@ -139,3 +140,26 @@ Request =
     else
       Toast.error(error)
       Promise.reject(error)
+
+
+  # Extends the native Promise API with `always` functionality similar to jQuery.
+  # http://api.jquery.com/deferred.always/
+  always : (promise, func) ->
+
+    promise.then(func, func)
+
+
+  # Wraps a native Promise as a jQuery deferred.
+  # http://api.jquery.com/category/deferred-object/
+  $ : (promise) ->
+
+    deferred = new $.Deferred()
+
+    promise.then(
+      (success) ->
+        deferred.resolve(success)
+      (error) ->
+        deferred.reject(error)
+    )
+
+    deferred.promise()

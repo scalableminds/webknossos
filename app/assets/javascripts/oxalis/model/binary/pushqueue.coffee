@@ -96,10 +96,10 @@ class PushQueue
       gzip = new Zlib.Gzip(transmitBuffer)
       transmitBuffer = gzip.compress()
 
-      Request.arraybuffer(
+      Request.$(Request.arraybuffer(
         @url
         data: transmitBuffer
         method: "PUT"
         headers:
           "Content-Encoding": "gzip"
-      ).$()
+      ))

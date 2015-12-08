@@ -84,13 +84,14 @@ class PullQueue
           @boundingBox.removeOutsideArea(bucket, bucketData)
           @cube.setBucketByZoomedAddress(bucket, bucketData)
 
+        @batchCount--
+        @pull()
+
       =>
         for bucket in batch
           @cube.setBucketByZoomedAddress(bucket, null)
-
-    ).always( =>
-      @batchCount--
-      @pull()
+        @batchCount--
+        @pull()
     )
 
 

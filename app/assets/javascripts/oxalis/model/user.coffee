@@ -108,11 +108,10 @@ class User
       data : @userSettings
     ).then(
       ->
+        deferred.resolve()
       ->
         console.log("couldn't save userdata")
         deferred.resolve()
-    ).always( ->
-      deferred.resolve()
     )
 
     deferred.promise()

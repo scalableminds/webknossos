@@ -6,6 +6,7 @@ require [
   "main/errorHandling"
   "bootstrap"
   "fetch"
+  "promise"
   "libs/core_ext"
 ], ($, _, Backbone, app, ErrorHandling) ->
 

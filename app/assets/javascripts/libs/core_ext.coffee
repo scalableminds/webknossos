@@ -353,26 +353,3 @@ $.fn.alterClass = ( removals, additions ) ->
   )
 
   return if not additions then self else self.addClass( additions )
-
-
-# Extends the native Promise API with `always` functionality similar to jQuery.
-# http://api.jquery.com/deferred.always/
-Promise.prototype.always = (func) ->
-
-  @then(func, func)
-
-
-# Wraps a native Promise as a jQuery deferred.
-# http://api.jquery.com/category/deferred-object/
-Promise.prototype.$ = ->
-
-  deferred = new $.Deferred()
-
-  @then(
-    (success) ->
-      deferred.resolve(success)
-    (error) ->
-      deferred.reject(error)
-  )
-
-  deferred.promise()

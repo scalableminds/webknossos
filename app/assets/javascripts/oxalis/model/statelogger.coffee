@@ -92,10 +92,10 @@ class StateLogger
         @newDiffs = @newDiffs.slice(diffsCurrentLength)
         @version = response.version
         @pushDoneCallback()
+        deferred.resolve()
       (responseObject) =>
         @pushFailCallback(responseObject, notifyOnFailure)
-    ).always( ->
-      deferred.resolve()
+        deferred.resolve()
     )
 
     deferred.promise()

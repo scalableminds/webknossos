@@ -1,6 +1,5 @@
 StateLogger    = require("../statelogger")
 THREE          = require("three")
-ColorConverter = require("three.color")
 $              = require("jquery")
 utils          = require("libs/utils")
 

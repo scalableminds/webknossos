@@ -1,12 +1,8 @@
-$                  = require("jquery")
-THREE              = require("three")
-ColorConverter     = require("three.color")
 _                  = require("lodash")
-backbone           = require("backbone")
-Request            = require("libs/request")
+THREE              = require("three")
 TracePoint         = require("./tracepoint")
 TraceTree          = require("./tracetree")
-constants          = require("../../constants")
+Toast              = require("libs/toast")
 CommentsCollection = require("oxalis/model/right-menu/comments_collection")
 
 class TracingParser

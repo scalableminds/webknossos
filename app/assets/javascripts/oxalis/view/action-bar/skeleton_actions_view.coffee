@@ -58,8 +58,8 @@ class SkeletonActionsView extends Backbone.Marionette.ItemView
       position,
       constants.TYPE_USUAL,
       constants.PLANE_XY, # xy viewport
-      @model.flycam.getIntegerZoomStep()
-      if datasetConfig.get("fourBit") then 4 else 8
+      @model.flycam.getIntegerZoomStep(),
+      if datasetConfig.get("fourBit") then 4 else 8,
       datasetConfig.get("interpolation")
     )
 

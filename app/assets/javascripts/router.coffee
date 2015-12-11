@@ -20,6 +20,7 @@ class Router extends Backbone.Router
     "datasets/:id/view"                 : "tracingViewPublic"
     "dashboard"                         : "dashboard"
     "datasets"                          : "dashboard"
+    "datasets/upload"                   : "datasetUpload"
     "users/:id/details"                 : "dashboard"
     "taskTypes/:id/edit"                : "editTaskType"
     "taskTypes"                         : "taskTypes"
@@ -28,6 +29,11 @@ class Router extends Backbone.Router
     "admin/taskTypes"                   : "hideLoading"
     "workload"                          : "workload"
 
+  whitelist : [
+    "help/keyboardshortcuts",
+    "help/faq",
+    "issues"
+  ]
 
   initialize : ->
 
@@ -112,6 +118,11 @@ class Router extends Backbone.Router
   statistics : ->
 
     @showAdminView("StatisticView")
+
+
+  datasetUpload : ->
+
+    @showAdminView("DatasetUploadView")
 
 
   users : ->

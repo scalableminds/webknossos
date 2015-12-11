@@ -1,6 +1,7 @@
 PaginationView              = require("./views/pagination_view")
 DatasetListView             = require("./views/dataset/dataset_list_view")
 DatasetCollection           = require("./models/dataset/dataset_collection")
+DatasetUploadView           = require("./admin/views/dataset/dataset_upload_view")
 UserListView                = require("./views/user/user_list_view")
 UserCollection              = require("./models/user/user_collection")
 TeamListView                = require("./views/team/team_list_view")
@@ -34,5 +35,6 @@ module.exports = {
   StatisticView
   WorkloadListView
   WorkloadCollection
+  DatasetUploadView
 }
 

@@ -38,7 +38,8 @@ class RegisterPage extends Page
 
   getAlerts : ->
 
-    return @waitForSelector(alertDanger)
+    return $$(alertDanger)
+      .then((alerts) -> return alerts)
 
 
   getModalText : ->

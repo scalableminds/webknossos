@@ -1,76 +1,52 @@
-class ArbitraryPlaneInfo
+marionette = require("backbone.marionette")
 
-  WIDTH : 110
-  HEIGHT : 40
-  ALPHA : 0.8
-  LINE_WIDTH : 3
+class ArbitraryPlaneInfo extends Backbone.Marionette.ItemView
 
-  distance : 0
-  context : null
-  canvas : null
+  NOT_RECORDING_CLASS : "not-recording"
+  NOT_RECORDING : "Watching"
+  RECORDING_CLASS : "Recording"
+  RECORDING : "RECORDING"
 
-  isRecording : false
+  tagName: "div"
+  id: "arbitrary-info-canvas"
+  className: ->
+    if @model.get("isRecording")
+      return @RECORDING_CLASS
+    else
+      return @NOT_RECORDING_CLASS
+
+  template : _.template("""
+    <span class="recording-text">
+      <%= recordingText %>
+    </span>
+  """)
 
   constructor : ->
 
-    { WIDTH, HEIGHT } = @
+    @model = new Backbone.Model({
+      isRecording : false,
+      recordingText : @NOT_RECORDING
+    })
 
-    canvas = document.createElement("canvas")
-    canvas.width = WIDTH
-    canvas.height = HEIGHT
-
-    @context = canvas.getContext("2d")
-
-    @updateInfo(false)
-
-    $(canvas).attr("id": "arbitrary-info-canvas")
-    $(canvas).css(position: "absolute", left: 10, top: 10)
-    $("#render").append(canvas)
+    super()
 
 
-  updateInfo : (@isRecording) ->
+  initialize : ->
 
-    { context, WIDTH, HEIGHT, ALPHA, LINE_WIDTH } = @
+    @listenTo(@model, "change", @render)
 
-    if @isRecording
-      text = "TRACING"
-      backColor = "rgba(95, 183, 105, #{ALPHA})"
-    else
-      text = "WATCHING"
-      backColor = "rgba(100, 100, 100, #{ALPHA})"
 
-    context.textAlign = "center"
-    context.font = "13px Calibri"
-    context.fillStyle = "rgba(0, 0, 0, 0)"
-    context.clearRect(0, 0, WIDTH, HEIGHT)
-    context.fillStyle = backColor
+  updateInfo : (isRecording) ->
 
-    stroke = true
-    radius = 20
-    x = LINE_WIDTH
-    y = LINE_WIDTH
-    fill = true
-    rWidth = WIDTH - LINE_WIDTH * 2
-    rHeight = HEIGHT - LINE_WIDTH * 2
+    @model.set({
+      isRecording : isRecording,
+      recordingText : if isRecording then @RECORDING else @NOT_RECORDING
+    })
 
-    context.lineWidth = LINE_WIDTH
-    context.strokeStyle = "rgba(255, 255, 255, #{ALPHA})"
-
-    context.beginPath()
-    context.moveTo x + radius, y
-    context.lineTo x + rWidth - radius, y
-    context.quadraticCurveTo x + rWidth, y, x + rWidth, y + radius
-    context.lineTo x + rWidth, y + rHeight - radius
-    context.quadraticCurveTo x + rWidth, y + rHeight, x + rWidth - radius, y + rHeight
-    context.lineTo x + radius, y + rHeight
-    context.quadraticCurveTo x, y + rHeight, x, y + rHeight - radius
-    context.lineTo x, y + radius
-    context.quadraticCurveTo x, y, x + radius, y
-    context.closePath()
-    context.stroke()  if stroke
-    context.fill()  if fill
-    context.fillStyle = "rgba(255, 255, 255, #{ALPHA})"
-    context.fillText(text, WIDTH * 0.5, HEIGHT * 0.5 + 3)
+    @$el
+      .removeClass(@NOT_RECORDING_CLASS)
+      .removeClass(@RECORDING_CLASS)
+      .addClass(@className())
 
 
 module.exports = ArbitraryPlaneInfo

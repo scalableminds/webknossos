@@ -1,7 +1,7 @@
 marionette = require("backbone.marionette")
 app        = require("app")
 constants  = require("oxalis/constants")
-Utils      = require("libs/utils")
+utils      = require("libs/utils")
 
 class DatasetPositionView extends Backbone.Marionette.ItemView
 
@@ -32,7 +32,8 @@ class DatasetPositionView extends Backbone.Marionette.ItemView
       @vec3ToString(@flycam3d.getRotation())
 
     vec3ToString : (vec3) ->
-      return Math.floor(vec3[0]) + ", " + Math.floor(vec3[1]) + ", " + Math.floor(vec3[2])
+      vec3 = utils.floorArray(vec3)
+      return vec3[0] + ", " + vec3[1] + ", " + vec3[2]
 
   events :
     "change #trace-position-input" : "changePosition"
@@ -63,7 +64,7 @@ class DatasetPositionView extends Backbone.Marionette.ItemView
 
   changePosition : (event) ->
 
-    posArray = Utils.stringToNumberArray(event.target.value)
+    posArray = utils.stringToNumberArray(event.target.value)
     if posArray.length == 3
       @model.flycam.setPosition(posArray)
       app.vent.trigger("centerTDView")
@@ -71,7 +72,7 @@ class DatasetPositionView extends Backbone.Marionette.ItemView
 
   changeRotation : (event) ->
 
-    rotArray = Utils.stringToNumberArray(event.target.value)
+    rotArray = utils.stringToNumberArray(event.target.value)
     if rotArray.length == 3
       @model.flycam3d.setRotation rotArray
 

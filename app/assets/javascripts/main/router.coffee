@@ -121,20 +121,23 @@ class Router extends Backbone.Router
 
   teams : ->
 
-    @showWithPagination("TeamListView", "TeamCollection", "Add New Team")
+    @showWithPagination("TeamListView", "PaginatedTeamCollection", "Add New Team")
 
 
   tasks : ->
 
     @showWithPagination("TaskListView", "TaskCollection", "Create New Task")
 
-  workload : ->
-
-    @showWithPagination("WorkloadListView", "WorkloadCollection")
 
   workload : ->
 
     @showWithPagination("WorkloadListView", "WorkloadCollection")
+
+
+  workload : ->
+
+    @showWithPagination("WorkloadListView", "WorkloadCollection")
+
 
   taskTypes : ->
 
@@ -182,10 +185,10 @@ class Router extends Backbone.Router
   spotlight : ->
 
     self = this
-    require(["views/spotlight_view", "admin/models/dataset/dataset_collection"], (SpotlightView, DatasetCollection) ->
+    require(["views/spotlight_view", "admin/models/dataset/paginated_dataset_collection"], (SpotlightView, PaginatedDatasetCollection) ->
 
-      collection = new DatasetCollection()
-      view = new SpotlightView(model: collection)
+      collection = new PaginatedDatasetCollection()
+      view = new SpotlightView(collection: collection)
 
       self.changeView(view)
       self.listenTo(collection, "sync", self.hideLoading)
@@ -205,14 +208,14 @@ class Router extends Backbone.Router
     )
 
 
-  showWithPagination : (view, collection, addButtonText=null) ->
+  showWithPagination : (view, collection, addButtonText = null) ->
 
     self = this
     require(["admin/admin"], (admin) ->
 
       collection = new admin[collection]()
       view = new admin[view](collection: collection)
-      paginationView = new admin.PaginationView({collection, addButtonText})
+      paginationView = new admin.PaginationView({ collection, addButtonText })
 
       self.changeView(paginationView, view)
       self.listenTo(collection, "sync", => self.hideLoading())
@@ -234,7 +237,6 @@ class Router extends Backbone.Router
 
       self.changeView(view)
     )
-
 
   changeView : (views...) ->
 

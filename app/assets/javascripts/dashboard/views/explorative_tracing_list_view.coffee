@@ -1,8 +1,9 @@
 _                              = require("lodash")
-marionette                     = require("backbone.marionette")
+Marionette                     = require("backbone.marionette")
 app                            = require("app")
 Input                          = require("libs/input")
 Toast                          = require("libs/toast")
+Request                        = require("libs/request")
 SortTableBehavior              = require("libs/behaviors/sort_table_behavior")
 ExplorativeTracingListItemView = require("./explorative_tracing_list_item_view")
 UserAnnotationsCollection      = require("../models/user_annotations_collection")
@@ -64,7 +65,7 @@ class ExplorativeTracingListView extends Backbone.Marionette.CompositeView
   childView : ExplorativeTracingListItemView
   childViewContainer : "tbody"
   childViewOptions:
-    parentModel : null
+    parent : null
 
   events :
     "change input[type=file]" : "selectFiles"
@@ -95,7 +96,7 @@ class ExplorativeTracingListView extends Backbone.Marionette.CompositeView
 
   initialize : (@options) ->
 
-    @childViewOptions.parentModel = this
+    @childViewOptions.parent = this
 
     @collection = new UserAnnotationsCollection([], userID : @options.userID)
 
@@ -133,29 +134,26 @@ class ExplorativeTracingListView extends Backbone.Marionette.CompositeView
 
     event.preventDefault()
 
-    toggleIcon = =>
+    toggleIcon = (state) =>
 
-      [@ui.formSpinnerIcon, @ui.formUploadIcon].forEach((each) -> each.toggleClass("hide"))
+      @ui.formSpinnerIcon.toggleClass("hide", state)
+      @ui.formUploadIcon.toggleClass("hide", !state)
 
 
-    toggleIcon()
+    toggleIcon(false)
 
     form = @ui.uploadAndExploreForm
 
-    $.ajax(
-      url : form.attr("action")
-      data : new FormData(form[0])
-      type : "POST"
-      processData : false
-      contentType : false
-    ).done( (data) ->
-      url = "/annotations/" + data.annotation.typ + "/" + data.annotation.id
-      app.router.loadURL(url)
-      Toast.message(data.messages)
-    ).fail( (xhr) ->
-      Toast.message(xhr.responseJSON.messages)
-    ).always( ->
-      toggleIcon()
+    Request.always(
+      Request.multipartForm(
+        form.attr("action")
+        data : new FormData(form[0])
+      ).then((data) ->
+        url = "/annotations/" + data.annotation.typ + "/" + data.annotation.id
+        app.router.loadURL(url)
+        Toast.message(data.messages)
+      )
+      -> toggleIcon(true)
     )
 
 

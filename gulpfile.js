@@ -28,7 +28,7 @@ var scriptPaths = {
   "bootstrap"           : bowerPath + "bootstrap/dist/js/bootstrap",
   "coffee-script"       : bowerPath + "coffee-script/extras/coffee-script",
   "backbone.marionette" : bowerPath + "backbone.marionette/lib/backbone.marionette",
-  "backbone.paginator"  : bowerPath + "backbone.paginator/dist/backbone.paginator",
+  "backbone.paginator"  : bowerPath + "backbone.paginator/lib/backbone.paginator",
   "backbone.subviews"   : bowerPath + "backbone.subviews/index",
   "backbone-deep-model" : bowerPath + "backbone-deep-model/distribution/deep-model",
   "backbone"            : bowerPath + "backbone/backbone",
@@ -46,17 +46,17 @@ var scriptPaths = {
   "require"             : bowerPath + "requirejs/require",
   "c3"                  : bowerPath + "c3/c3",
   "d3"                  : bowerPath + "d3/d3",
+  "cola"                : bowerPath + "webcola/WebCola/cola",
   "offcanvas"           : bowerPath + "jasny-bootstrap/js/offcanvas",
   "fileinput"           : bowerPath + "jasny-bootstrap/js/fileinput",
   "daterangepicker"     : bowerPath + "bootstrap-daterangepicker/daterangepicker",
   "rangeslider"         : bowerPath + "nouislider/distribute/nouislider",
   "clipboard"           : bowerPath + "clipboard/dist/clipboard",
   "mjs"                 : bowerPath + "mjs/src/mjs",
-  "worker"              : "libs/worker_plugin",
-  "wrapped_worker"      : "libs/wrapped_worker_plugin",
-  "nested_obj_model"    : "libs/nested_obj_model",
+  "fetch"               : bowerPath + "fetch/fetch",
+  "promise"             : bowerPath + "es6-promise/promise.min",
+  "nested_obj_model"    : "libs/nested_obj_model"
 };
-
 
 
 // Helper functions

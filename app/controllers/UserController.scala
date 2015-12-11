@@ -177,16 +177,16 @@ class UserController @Inject() (val messagesApi: MessagesApi) extends Controller
           _ <- allowedToAdministrate(issuingUser, user).toFox
           teams <- Fox.combined(assignedTeams.map(t => TeamDAO.findOneByName(t.team))) ?~> Messages("team.notFound")
           allTeams <- Fox.sequenceOfFulls(user.teams.map(t => TeamDAO.findOneByName(t.team)))
-          teamsWithoutUpdate = allTeams.filterNot{t =>
-            issuingUser.adminTeamNames.contains(t.name) || assignedTeams.find(_.team == t.name).isDefined
-          }.map(_.name)
-          teamsWithUpdate = user.teams.filter(tm => teamsWithoutUpdate.contains(tm.team))
-          _ <- Fox.combined(teamsWithUpdate.map(t => ensureTeamAdministration(issuingUser, t.team)toFox))
+          (oldTeamsWithUpdate, teamsWithoutUpdate) = user.teams.partition{t =>
+            issuingUser.adminTeamNames.contains(t.team) && !assignedTeams.contains(t)
+          }
+          teamsWithUpdate = oldTeamsWithUpdate ++ assignedTeams.filterNot(t => user.teams.exists(_.team == t.team))
+          _ <- Fox.combined(teamsWithUpdate.map(t => ensureTeamAdministration(issuingUser, t.team).toFox))
           _ <- ensureRoleExistence(assignedTeams.zip(teams))
           _ <- ensureProperTeamAdministration(user, assignedTeams.zip(teams))
         } yield {
           val trimmedExperiences = experiences.map{ case (key, value) => key.trim -> value}.toMap
-          val updatedTeams = assignedTeams ++ teamsWithUpdate
+          val updatedTeams = assignedTeams.filter(t => teamsWithUpdate.exists(_.team == t.team)) ++ teamsWithoutUpdate
           UserService.update(user, firstName, lastName, verified, updatedTeams, trimmedExperiences)
           Ok
         }

@@ -30,3 +30,4 @@ class User extends Backbone.Model
       @trigger("change:#{property}", @, @get(property))
 
 module.exports = User
+

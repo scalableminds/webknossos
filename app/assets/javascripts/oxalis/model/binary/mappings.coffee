@@ -19,8 +19,9 @@ class Mappings
 
   getMappingArrayAsync : (mappingName) ->
 
-    @fetchMappings(mappingName)
-        .then => @getMappingArray(mappingName)
+    @fetchMappings(mappingName).then( =>
+      @getMappingArray(mappingName)
+    )
 
 
   fetchMappings : (mappingName) ->
@@ -35,10 +36,9 @@ class Mappings
     if @mappings[mappingName].mappingObject?
       return $.Deferred().resolve().promise()
 
-    return Request.send(
-      url: @baseUrl + mappingName + @getParams
-      dataType: "json"
-    ).then(
+    Request.$(Request.json(
+      @baseUrl + mappingName + @getParams
+    )).then(
       (mapping) =>
         @mappings[mappingName].mappingObject = mapping
         console.log("Done downloading:", mappingName)

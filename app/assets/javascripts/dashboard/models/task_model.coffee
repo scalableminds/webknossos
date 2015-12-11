@@ -1,6 +1,6 @@
 _              = require("lodash")
-Backbone       = require("backbone")
 NestedObjModel = require("nested_obj_model")
+Request        = require("libs/request")
 
 class DashboardTaskModel extends NestedObjModel
 
@@ -30,18 +30,11 @@ class DashboardTaskModel extends NestedObjModel
     annotation = @get("annotation")
     url = "/annotations/#{annotation.typ}/#{annotation.id}/finish"
 
-    deferred = new $.Deferred()
-
-    $.get(url).success( (response) =>
-
-      @get("annotation").state.isFinished = true
-      @trigger("change")
-      deferred.resolve(response)
-
-    ).fail( (xhr) ->
-      deferred.reject(xhr.responseJSON)
+    return Request.$(Request.json(url)).then(
+      (response) =>
+        @get("annotation").state.isFinished = true
+        @trigger("change")
     )
 
-    return deferred.promise()
 
 module.exports = DashboardTaskModel

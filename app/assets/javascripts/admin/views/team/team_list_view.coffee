@@ -46,9 +46,6 @@ class TeamListView extends Backbone.Marionette.CompositeView
 
     @collection.fetch(
       data : "isEditable=true"
-      silent : true
-    ).done( =>
-      @collection.goTo(1)
     )
 
 

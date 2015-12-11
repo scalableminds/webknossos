@@ -115,7 +115,6 @@ class DatasetListItemView extends Backbone.Marionette.CompositeView
     "contentTypeInput" : "#contentTypeInput"
 
 
-
   initialize : ->
 
     @listenTo(@model, "change", @render)
@@ -136,10 +135,10 @@ class DatasetListItemView extends Backbone.Marionette.CompositeView
       if evt
         evt.preventDefault()
 
-      $.ajax(
-        url : @importUrl
+      Request.json(
+        @importUrl
         method: method
-      ).done( (responseJSON) =>
+      ).then( (responseJSON) =>
           if responseJSON.status == "inProgress"
             @ui.importLink.hide()
             @ui.progressbarContainer.removeClass("hide")
@@ -149,9 +148,7 @@ class DatasetListItemView extends Backbone.Marionette.CompositeView
 
     updateProgress : ->
 
-      $.ajax(
-        url: @importUrl
-      ).done( (responseJSON) =>
+      Request.json(@importUrl).then( (responseJSON) =>
         value = responseJSON.progress * 100
         if value
           @ui.progressBar.width("#{value}%")

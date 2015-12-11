@@ -10,6 +10,7 @@ import scala.Some
 import com.scalableminds.util.reactivemongo.AccessRestrictions.AllowIf
 import com.scalableminds.braingames.binary.models.DataSource
 import com.scalableminds.util.geometry.Point3D
+import play.utils.UriEncoding
 
 case class DataSet(
                     name: String,
@@ -23,6 +24,9 @@ case class DataSet(
                     accessToken: Option[String],
                     description: Option[String] = None,
                     created: Long = System.currentTimeMillis()) {
+
+  def urlEncodedName: String =
+    UriEncoding.encodePathSegment(name, "UTF-8")
 
   def isEditableBy(user: Option[User]) =
     user.map(_.adminTeamNames.contains(owningTeam)) getOrElse false

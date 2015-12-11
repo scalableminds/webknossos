@@ -38,11 +38,8 @@ class TeamAssignmentModalView extends Backbone.Marionette.CompositeView
   initialize : (args) ->
 
     @collection = new TeamCollection()
-    @collection.fetch(
-      silent : true   #required for PaginationCollections
-    ).done( =>
-      @collection.goTo(1)
-    )
+    @collection.fetch()
+
     @dataset = args.dataset
 
     @listenTo(@, "add:child", @prefillModal)
@@ -61,11 +58,9 @@ class TeamAssignmentModalView extends Backbone.Marionette.CompositeView
 
     @dataset.set("allowedTeams", allowedTeams)
 
-    $.ajax(
-      url: """/api/datasets/#{@dataset.get("name")}/teams"""
-      type: "POST"
-      contentType: "application/json; charset=utf-8"
-      data: JSON.stringify(allowedTeams)
+    Request.json(
+      """/api/datasets/#{@dataset.get("name")}/teams"""
+      data: allowedTeams
     )
 
     @destroyModal()

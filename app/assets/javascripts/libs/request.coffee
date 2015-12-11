@@ -1,61 +1,166 @@
-$ = require("jquery")
-_ = require("lodash")
+$     = require("jquery")
+_     = require("lodash")
+Toast = require("libs/toast")
+
 
 Request =
 
-  send : (options) ->
+  # IN:  nothing / json
+  # OUT: json
+  json : (url, options = {}) ->
 
-    options.type ||= options.method
+    @triggerRequest(
+      url
+      options
+      (data) ->
+        method : "POST"
+        body : if typeof(data) == "string" then data else JSON.stringify(data)
+        headers :
+          "Content-Type" : "application/json"
+      (response) ->
+        response.json()
+    )
 
-    if options.dataType == "blob" or options.dataType == "arraybuffer" or options.formData?
 
-      deferred = $.Deferred()
+  # IN:  multipart formdata
+  # OUT: json
+  multipartForm : (url, options = {}) ->
 
-      return deferred.reject("No url defined").promise() unless options.url
-
-      _.defaults(options, type: "GET", data: null)
-
-      options.type = "POST" if options.type == "GET" and options.data
-
-      xhr = new XMLHttpRequest()
-      xhr.open options.type, options.url, true
-      xhr.responseType = options.dataType if options.dataType?
-      xhr.setRequestHeader("Content-Type", options.contentType) if options.contentType
-      xhr.setRequestHeader("Content-Encoding", options.contentEncoding) if options.contentEncoding
-
-      if options.formData? and not options.data
-        if options.formData instanceof FormData
-          options.data = options.formData
+    @triggerRequest(
+      url
+      options
+      (data) ->
+        if data instanceof FormData
+          formData = data
         else
-          options.data = new FormData()
-          options.data.append(key, value) for key, value of options.formData
+          formData = new FormData()
+          for key of options.data
+            formData.append(key, options.data[key])
+
+        method : "POST"
+        body : formData
+      (response) ->
+        response.json()
+    )
 
 
-      xhr.onload = ->
-        if @status == 200
-          deferred.resolve(@response)
-        else
-          deferred.reject(xhr)
+  # IN:  url-encoded formdata
+  # OUT: json
+  urlEncodedForm : (url, options = {}) ->
 
-      xhr.onerror = (err) ->
-        deferred.reject(err)
+    @triggerRequest(
+      url
+      options
+      (data) ->
+        method : "POST"
+        body : if typeof(data) == "string" then data else data.serialize()
+        headers :
+          "Content-Type" : "application/x-www-form-urlencoded"
+      (response) ->
+        response.json()
+    )
 
-      xhr.send(options.data)
 
-      if options.timeout?
+  # IN:  arraybuffer
+  # OUT: arraybuffer
+  arraybuffer : (url, options = {}) ->
+
+    @triggerRequest(
+      url
+      options
+      (data) ->
+        method : "POST"
+        body : if data instanceof ArrayBuffer then data else data.buffer.slice(0, data.byteLength)
+        headers :
+          "Content-Type" : "application/octet-stream"
+      (response) ->
+        response.arrayBuffer()
+    )
+
+
+  triggerRequest : (url, options, requestDataHandler, responseDataHandler) ->
+
+    defaultOptions =
+      method : "GET"
+      credentials : "same-origin"
+      headers : {}
+
+    if options.data?
+      requestOptions = requestDataHandler(options.data)
+    else
+      requestOptions = headers: {}
+
+    _.defaults(options, requestOptions, defaultOptions)
+    _.defaults(options.headers, requestOptions.headers, defaultOptions.headers)
+
+    headers = new Headers()
+    for name of options.headers
+      headers.set(name, options.headers[name])
+
+    options.headers = headers
+
+    fetchPromise = fetch(url, options)
+      .then(@handleStatus)
+      .then(responseDataHandler)
+      .catch(@handleError)
+
+    if options.timeout?
+      timeoutPromise = new Promise( (resolve, reject) ->
         setTimeout(
-          -> deferred.reject("timeout")
+          ->
+            reject("timeout")
           options.timeout
         )
-
-      deferred.promise()
-
+      )
+      Promise.race([fetchPromise, timeoutPromise])
     else
+      fetchPromise
 
-      if options.data
-        options.data = JSON.stringify(options.data)
-        options.contentType = "application/json" unless options.contentType
 
-      $.ajax(options)
+  handleStatus : (response) ->
+
+    if 200 <= response.status < 300
+      Promise.resolve(response)
+    else
+      Promise.reject(response)
+
+
+  handleError : (error) ->
+
+    if error instanceof Response
+      error.json().then(
+        (json) ->
+          Toast.message(json)
+          Promise.reject(json)
+        (error) ->
+          Toast.error(error)
+          Promise.reject(error)
+      )
+    else
+      Toast.error(error)
+      Promise.reject(error)
+
+
+  # Extends the native Promise API with `always` functionality similar to jQuery.
+  # http://api.jquery.com/deferred.always/
+  always : (promise, func) ->
+
+    promise.then(func, func)
+
+
+  # Wraps a native Promise as a jQuery deferred.
+  # http://api.jquery.com/category/deferred-object/
+  $ : (promise) ->
+
+    deferred = new $.Deferred()
+
+    promise.then(
+      (success) ->
+        deferred.resolve(success)
+      (error) ->
+        deferred.reject(error)
+    )
+
+    return deferred.promise()
 
 module.exports = Request

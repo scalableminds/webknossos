@@ -2,7 +2,6 @@ Backbone       = require("backbone")
 constants      = require("oxalis/constants")
 KeyboardJS     = require("keyboard")
 GamepadJS      = require("gamepad")
-JQ_MOUSE_WHEEL = require("jquery.mousewheel")
 
 Input = {}
 # This is the main Input implementation.
@@ -44,17 +43,20 @@ class Input.KeyboardNoLoop
       return (eventHasCtrl and not bindingHasCtrl) or
         (eventHasShift and not bindingHasShift)
 
-    binding = KeyboardJS.on(key,
+    binding = [key,
       (event) =>
         callback(event) unless $(":focus").length or shouldIgnore(event)
         return
-    )
+    ]
+
+    KeyboardJS.bind(binding...)
+
     @bindings.push(binding)
 
 
   unbind : ->
 
-    binding.clear() for binding in @bindings
+    KeyboardJS.unbind(binding...) for binding in @bindings
     return
 
 
@@ -77,8 +79,7 @@ class Input.Keyboard
 
   attach : (key, callback) ->
 
-    binding = KeyboardJS.on(
-      key
+    binding = [key,
       (event) =>
         # When first pressed, insert the callback into
         # keyCallbackMap and start the buttonLoop.
@@ -115,7 +116,10 @@ class Input.Keyboard
           delete @keyCallbackMap[key]
 
         return
-    )
+    ]
+
+    KeyboardJS.bind(binding...)
+
     @bindings.push(binding)
 
 
@@ -140,7 +144,7 @@ class Input.Keyboard
 
   unbind : ->
 
-    binding.clear() for binding in @bindings
+    KeyboardJS.unbind(binding...) for binding in @bindings
     return
 
 

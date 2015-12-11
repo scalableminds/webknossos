@@ -5,6 +5,7 @@ Toast                       = require("libs/toast")
 TemplateHelpers             = require("libs/template_helpers")
 DatasetAccesslistCollection = require("admin/models/dataset/dataset_accesslist_collection")
 DatasetAccessView           = require("./dataset_access_view")
+Request                     = require("libs/request")
 
 
 class DatasetListItemView extends Backbone.Marionette.CompositeView

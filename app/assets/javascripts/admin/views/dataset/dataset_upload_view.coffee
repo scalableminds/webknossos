@@ -1,12 +1,10 @@
-### define
-underscore : _
-backbone.marionette : Marionette
-fileinput : Fileinput
-libs/toast : Toast
-libs/request : Request
-admin/views/selection_view : SelectionView
-admin/models/team/team_collection : TeamCollection
-###
+_               = require("lodash")
+Marionette      = require("backbone.marionette")
+Fileinput       = require("fileinput")
+Toast           = require("libs/toast")
+Request         = require("libs/request")
+SelectionView   = require("admin/views/selection_view")
+TeamCollection  = require("admin/models/team/team_collection")
 
 class DatasetUploadView extends Backbone.Marionette.LayoutView
 
@@ -117,3 +115,6 @@ class DatasetUploadView extends Backbone.Marionette.LayoutView
         =>
           @ui.spinner.addClass("hidden")
       )
+
+
+module.exports = DatasetUploadView

@@ -41,7 +41,7 @@ If you are installing *webKnossos* in a virtual machine, please make sure you al
 # Adding repository for Oracle java7
 sudo add-apt-repository ppa:webupd8team/java
 
-# Adding repository for sbt 
+# Adding repository for sbt
 echo "deb https://dl.bintray.com/sbt/debian /" | sudo tee -a /etc/apt/sources.list.d/sbt.list
 sudo apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv 642AC823
 
@@ -80,7 +80,7 @@ sudo vim /etc/environment
 - logout and login again to reload environment.
 - set up database dir (create (your path)/data/db where you want to save your database)
 
-```bash	
+```bash
 mongod --dbpath (your path)
 ```
 
@@ -93,7 +93,7 @@ mongod --dbpath (your path)
   * [less](http://lesscss.org/)
   * [bower](http://bower.io/)
   * [gulp](http://gulpjs.com/)
-  
+
 ```bash
 npm install -g coffee-script less bower gulp
 ```
@@ -105,6 +105,15 @@ sbt run
 
 Will fetch all Scala, Java and node dependencies and run the application on Port 9000.
 
+## Test
+```bash
+./start
+gulp webdriver
+gulp test
+```
+
+Will run acceptance-tests against the running server instance on Port 9000.
+
 ## Credits
 scalable minds - http://scm.io
 
@@ -112,4 +121,3 @@ scalable minds - http://scm.io
 MIT
 
 Includes GraphViz by John Ellson et al. (http://www.graphviz.org/) under EPL
-

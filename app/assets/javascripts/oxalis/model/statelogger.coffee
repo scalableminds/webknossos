@@ -1,9 +1,10 @@
-Backbone = require("backbone")
-_        = require("lodash")
-$        = require("jquery")
-app      = require("app")
-Request  = require("libs/request")
-Toast    = require("libs/toast")
+Backbone      = require("backbone")
+_             = require("lodash")
+$             = require("jquery")
+app           = require("app")
+Request       = require("libs/request")
+Toast         = require("libs/toast")
+ErrorHandling = require("libs/error_handling")
 
 class StateLogger
 
@@ -84,7 +85,7 @@ class StateLogger
 
     diffsCurrentLength = @newDiffs.length
     console.log "Sending data: ", @newDiffs
-    $.assert(@newDiffs.length > 0, "Empty update sent to server!", {
+    ErrorHandling.assert(@newDiffs.length > 0, "Empty update sent to server!", {
       @newDiffs
     })
 

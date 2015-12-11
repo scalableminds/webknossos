@@ -1,9 +1,9 @@
 app             = require("app")
 Backbone        = require("backbone")
-Dimensions      = require("../model/dimensions")
-ResizableBuffer = require("../../libs/resizable_buffer")
-constants       = require("../constants")
+ResizableBuffer = require("libs/resizable_buffer")
 THREE           = require("three")
+Dimensions      = require("../model/dimensions")
+constants       = require("../constants")
 
 class ContourGeometry
 

@@ -86,7 +86,6 @@ class DatasetActionsView extends Backbone.Marionette.ItemView
     "click #trace-finish-button" : "finishTracing"
     "click #trace-download-button" : "downloadTracing"
     "click #trace-save-button" : "saveTracing"
-    "click #trace-finish-button" : "finishTracing"
     "click #trace-merge-button" : "mergeTracing"
     "click #trace-share-button" : "shareTracing"
 

@@ -130,7 +130,7 @@ Request =
     if error instanceof Response
       error.json().then(
         (json) ->
-          Toast.message(json)
+          Toast.message(json.messages)
           Promise.reject(json)
         (error) ->
           Toast.error(error)

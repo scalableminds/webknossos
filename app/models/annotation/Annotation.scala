@@ -212,10 +212,10 @@ object AnnotationDAO
       "typ" -> annotationType)).cursor[Annotation].collect[List]()
   }
 
-  def findForWithTypeOtherThan(_user: BSONObjectID, annotationTypes: List[AnnotationType])(implicit ctx: DBAccessContext) = withExceptionCatcher{
+  def findForWithTypeOtherThan(_user: BSONObjectID, isFinished: Boolean, annotationTypes: List[AnnotationType])(implicit ctx: DBAccessContext) = withExceptionCatcher{
     find(Json.obj(
       "_user" -> _user,
-      "state.isFinished" -> false,
+      "state.isFinished" -> isFinished,
       "state.isAssigned" -> true,
       "typ" -> Json.obj("$nin" -> annotationTypes))).cursor[Annotation].collect[List]()
   }

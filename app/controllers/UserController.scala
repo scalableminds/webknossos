@@ -48,9 +48,9 @@ class UserController @Inject() (val messagesApi: MessagesApi) extends Controller
     }
   }
 
-  def annotations = Authenticated.async { implicit request =>
+  def annotations(isFinished: Boolean) = Authenticated.async { implicit request =>
     for {
-      content <- dashboardExploratoryAnnotations(request.user, request.user)
+      content <- dashboardExploratoryAnnotations(request.user, request.user, isFinished)
     } yield {
       Ok(content)
     }
@@ -77,10 +77,10 @@ class UserController @Inject() (val messagesApi: MessagesApi) extends Controller
     }
   }
 
-  def userAnnotations(userId: String) = Authenticated.async{ implicit request =>
+  def userAnnotations(userId: String, isFinished: Boolean) = Authenticated.async{ implicit request =>
     for {
       user <- UserDAO.findOneById(userId) ?~> Messages("user.notFound")
-      content <- dashboardExploratoryAnnotations(user, request.user)
+      content <- dashboardExploratoryAnnotations(user, request.user, isFinished)
     } yield {
       Ok(content)
     }

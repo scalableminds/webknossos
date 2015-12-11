@@ -84,8 +84,8 @@ object AnnotationService extends AnnotationContentProviders with BoxImplicits wi
   def findTasksOf(user: User)(implicit ctx: DBAccessContext) =
     AnnotationDAO.findFor(user._id, AnnotationType.Task)
 
-  def findExploratoryOf(user: User)(implicit ctx: DBAccessContext) =
-    AnnotationDAO.findForWithTypeOtherThan(user._id, AnnotationType.Task :: AnnotationType.SystemTracings)
+  def findExploratoryOf(user: User, isFinished: Boolean)(implicit ctx: DBAccessContext) =
+    AnnotationDAO.findForWithTypeOtherThan(user._id, isFinished, AnnotationType.Task :: AnnotationType.SystemTracings)
 
   def findFinishedOf(user: User)(implicit ctx: DBAccessContext) =
     AnnotationDAO.findFinishedFor(user._id)

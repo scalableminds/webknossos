@@ -2,6 +2,8 @@
 underscore : _
 backbone.marionette : marionette
 app : app
+admin/models/dataset/dataset_collection : DatasetCollection
+admin/views/selection_view : SelectionView
 dashboard/views/explorative_tracing_list_item_view : ExplorativeTracingListItemView
 libs/input : Input
 libs/toast : Toast
@@ -34,11 +36,7 @@ class ExplorativeTracingListView extends Backbone.Marionette.CompositeView
         <form action="<%= jsRoutes.controllers.AnnotationController.createExplorational().url %>"
           method="POST"
           class="form-inline inline-block">
-          <select id="dataSetsSelect" name="dataSetName" class="form-control">
-            <% dataSets.forEach(function(d) { %>
-              <option value="<%= d.get("name") %>"> <%= d.get("name") %> </option>
-            <% }) %>
-          </select>
+          <div class="dataset-selection inline-block"></div>
           <button type="submit" class="btn btn-default" name="contentType" value="skeletonTracing">
             <i class="fa fa-search"></i>Open skeleton mode
           </button>
@@ -87,9 +85,23 @@ class ExplorativeTracingListView extends Backbone.Marionette.CompositeView
 
     @collection = @model.get("exploratoryAnnotations")
 
-    @datasetCollection = @model.get("dataSets")
-    @listenTo(@datasetCollection, "sync", @render)
-    @datasetCollection.fetch({data : "isActive=true"})
+    @datasetSelectionView = new SelectionView(
+      viewComparator: "name"
+      collection : new DatasetCollection()
+      name : "dataSetName"
+      childViewOptions :
+        modelValue: -> return "#{@model.get("name")}"
+      data : "isActive=true"
+    )
+
+    @datasetRegion = new Marionette.Region(
+      el : ".dataset-selection"
+    )
+
+
+  onShow : ->
+
+    @datasetRegion.show(@datasetSelectionView)
 
 
   selectFiles : (event) ->

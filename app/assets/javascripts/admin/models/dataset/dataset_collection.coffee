@@ -1,13 +1,10 @@
 ### define
 underscore : _
-../pagination_collection : PaginationCollection
+backbone : Backbone
 ./dataset_model : DatasetModel
 ###
 
-class DatasetCollection extends PaginationCollection
+class DatasetCollection extends Backbone.Collection
 
   url : "/api/datasets"
   model : DatasetModel
-
-  paginator_ui :
-    perPage : 10

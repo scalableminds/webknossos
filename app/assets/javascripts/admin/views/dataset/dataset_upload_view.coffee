@@ -112,13 +112,11 @@ class DatasetUploadView extends Backbone.Marionette.LayoutView
         formData : new FormData(form)
         dataType : "json"
       ).then(
-        =>
-          Toast.message("Success")
-        (xhr) =>
-          Toast.message(xhr.response.messages)
+        ->
+          Toast.success()
+        (xhr) ->
+          Toast.error(xhr.response.messages)
       ).always(
         =>
           @ui.spinner.addClass("hidden")
       )
-
-

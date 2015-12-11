@@ -11,13 +11,12 @@ class UserAnnotationsCollection extends Backbone.Collection
   url : ->
 
     if @userID
-      return "/api/users/#{@userID}/annotations"
+      return "/api/users/#{@userID}/annotations?isFinished=#{@isFinished}"
     else
-      return "/api/user/annotations"
-
+      return "/api/user/annotations?isFinished=#{@isFinished}"
 
   initialize : (models, options) ->
-
+    @isFinished = options.isFinished || false
     @userID = options.userID
 
 

@@ -35,10 +35,16 @@ class ExplorativeTracingListView extends Backbone.Marionette.CompositeView
 
         <div class="divider-vertical"></div>
 
-        <a href="#" id="toggle-view-archived" class="btn btn-default">
-          <%= toggleViewArchivedText() %>
+        <% if (showArchivedAnnotations) { %>
+        <a href="#" id="toggle-view-open" class="btn btn-default">
+          <i class="fa fa-spinner fa-spin hide" id="toggle-view-spinner-icon"></i>
+            Show open tracings
         </a>
-        <% if (showArchiveAllButton()) { %>
+        <% } else {%>
+        <a href="#" id="toggle-view-archived" class="btn btn-default">
+          <i class="fa fa-spinner fa-spin hide" id="toggle-view-spinner-icon"></i>
+          Show archived tracings
+        </a>
         <a href="#" id="archive-all" class="btn btn-default">
           Archive all
         </a>
@@ -70,7 +76,8 @@ class ExplorativeTracingListView extends Backbone.Marionette.CompositeView
   events :
     "change input[type=file]" : "selectFiles"
     "submit @ui.uploadAndExploreForm" : "uploadFiles"
-    "click @ui.toggleViewArchived" : "toggleViewArchived"
+    "click @ui.toggleViewArchivedButton" : "fetchArchivedAnnotations"
+    "click @ui.toggleViewOpenButton" : "fetchOpenAnnotations"
     "click @ui.archiveAllButton" : "archiveAll"
 
   ui :
@@ -78,16 +85,14 @@ class ExplorativeTracingListView extends Backbone.Marionette.CompositeView
     uploadAndExploreForm : "#upload-and-explore-form"
     formSpinnerIcon : "#form-spinner-icon"
     formUploadIcon : "#form-upload-icon"
-    toggleViewArchived : "#toggle-view-archived"
+    toggleViewArchivedButton : "#toggle-view-archived"
+    toggleViewOpenButton : "#toggle-view-open"
+    toggleViewSpinner : "#toggle-view-spinner-icon"
     archiveAllButton : "#archive-all"
 
   templateHelpers : ->
     isAdminView : @options.isAdminView
-    showArchiveAllButton: =>
-      !@showArchivedAnnotations
-    toggleViewArchivedText: =>
-      @toggleViewArchivedText()
-
+    showArchivedAnnotations : @showArchivedAnnotations
 
   behaviors :
     SortTableBehavior :
@@ -97,31 +102,10 @@ class ExplorativeTracingListView extends Backbone.Marionette.CompositeView
   initialize : (@options) ->
 
     @childViewOptions.parent = this
-
     @collection = new UserAnnotationsCollection([], userID : @options.userID)
 
     @showArchivedAnnotations = false
-    @filter = @getFilterForState()
-
     @collection.fetch()
-
-
-  getFilterForState: () ->
-
-    if @showArchivedAnnotations
-      @isArchived
-    else
-      @isNotArchived
-
-
-  isArchived : (model) ->
-
-    model.attributes.state.isFinished
-
-
-  isNotArchived : (model) ->
-
-    !model.attributes.state.isFinished
 
 
   selectFiles : (event) ->
@@ -157,11 +141,6 @@ class ExplorativeTracingListView extends Backbone.Marionette.CompositeView
     )
 
 
-  setAllFinished: ->
-
-    @collection.forEach((model) -> model.attributes.state.isFinished = true)
-
-
   archiveAll : () ->
 
     unarchivedAnnoationIds = @collection.pluck("id")
@@ -174,7 +153,7 @@ class ExplorativeTracingListView extends Backbone.Marionette.CompositeView
       })
     ).done( (data) =>
       Toast.message(data.messages)
-      @setAllFinished()
+      @collection.reset()
       @render()
     ).fail( (xhr) ->
       if xhr.responseJSON
@@ -183,24 +162,22 @@ class ExplorativeTracingListView extends Backbone.Marionette.CompositeView
         Toast.message(xhr.statusText)
     )
 
+  fetchArchivedAnnotations : ->
+    @ui.toggleViewSpinner.toggleClass("hide", false)
+    @showArchivedAnnotations = true
+    @collection.isFinished = true
+    @collection.fetch().then(=> @render())
 
-  toggleState : ->
-
-    @showArchivedAnnotations = not @showArchivedAnnotations
-
+  fetchOpenAnnotations : ->
+    @ui.toggleViewSpinner.toggleClass("hide", false)
+    @showArchivedAnnotations = false
+    @collection.isFinished = false
+    @collection.fetch().then(=> @render())
 
   toggleViewArchivedText : ->
 
     verb = if @showArchivedAnnotations then "open" else "archived"
     "Show #{verb} tracings "
-
-
-  toggleViewArchived : (event) ->
-
-    event.preventDefault()
-    @toggleState()
-    @filter = @getFilterForState()
-    @render()
 
 
 module.exports = ExplorativeTracingListView

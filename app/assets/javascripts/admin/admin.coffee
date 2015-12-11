@@ -1,5 +1,5 @@
 PaginationView              = require("./views/pagination_view")
-DatasetListView             = require("./views/dataset/dataset_list_view")
+DatasetListView             = require("../dashboard/views/dataset/dataset_list_view")
 DatasetCollection           = require("./models/dataset/dataset_collection")
 PaginatedDatasetCollection  = require("./models/dataset/paginated_dataset_collection")
 UserListView                = require("./views/user/user_list_view")

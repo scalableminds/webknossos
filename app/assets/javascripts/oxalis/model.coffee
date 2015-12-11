@@ -30,7 +30,7 @@ class Model extends Backbone.Model
       # Include /readOnly part whenever it is in the pathname
       infoUrl = location.pathname + "/info"
     else
-      infoUrl = "/annotations/#{@tracingType}/#{@tracingId}/info"
+      infoUrl = "/annotations/#{@get('tracingType')}/#{@get('tracingId')}/info"
 
     Request.send(
       url : infoUrl

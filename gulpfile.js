@@ -99,9 +99,6 @@ function makeScripts() {
         //   exclude: /(node_modules|bower_components)/,
         //   loader: 'babel'
         // }
-      ],
-      noParse: [
-        paths.src.js + "/libs/viz.js"
       ]
     },
     resolve: {

@@ -161,7 +161,7 @@ class AnnotationController @Inject()(val messagesApi: MessagesApi) extends Contr
           Json.obj("version" -> version)
         }
       case t                  =>
-        Logger.info("Tried: " + t)
+        Logger.info("Failed to handle json update. Tried: " + t)
         Failure(Messages("format.json.invalid"))
     }
   }

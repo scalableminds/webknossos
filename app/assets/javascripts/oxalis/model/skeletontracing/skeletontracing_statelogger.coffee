@@ -2,6 +2,7 @@ StateLogger    = require("../statelogger")
 THREE          = require("three")
 ColorConverter = require("three.color")
 $              = require("jquery")
+utils          = require("libs/utils")
 
 class SkeletonTracingStateLogger extends StateLogger
 
@@ -77,7 +78,7 @@ class SkeletonTracingStateLogger extends StateLogger
       treeId : treeId,
       id: node.id,
       radius: node.radius,
-      position : node.pos
+      position : utils.floorArray(node.pos)
 
 
   edgeObject : (node, treeId) ->
@@ -151,7 +152,7 @@ class SkeletonTracingStateLogger extends StateLogger
         branchPoints : branchPoints
         comments : @skeletonTracing.getPlainComments()
         activeNode : @skeletonTracing.getActiveNodeId()
-        editPosition : @flycam.getPosition()
+        editPosition : utils.floorArray(@flycam.getPosition())
         zoomLevel : @flycam.getZoomStep()
       }
       false

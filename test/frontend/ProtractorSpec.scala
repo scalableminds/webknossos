@@ -3,7 +3,7 @@
  */
 package frontend
 
-import scala.concurrent.Await
+import scala.concurrent.{Future, Await}
 import scala.sys.process.ProcessIO
 
 import play.api.libs.ws.WS
@@ -27,10 +27,11 @@ class ProtractorSpec extends Specification {
 
   private def runProtractorTests: Int = {
     import sys.process._
-
-    "protractor functional-test/config/ft.conf.js"
-    .run(getProcessIO)
-    .exitValue()
+    val webdriver = "npm run webdriver".run(getProcessIO)
+    Thread.sleep(5000)
+    val result = "npm test".run(getProcessIO).exitValue()
+    webdriver.destroy()
+    result
   }
 
   private def getProcessIO: ProcessIO = {

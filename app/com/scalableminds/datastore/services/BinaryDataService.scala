@@ -9,7 +9,9 @@ import akka.actor.ActorSystem
 import com.scalableminds.braingames.binary.Logger._
 import java.io.File
 
-class BinaryDataService(val dataSourceRepository: DataSourceRepository)(implicit val system: ActorSystem) extends AbstractBinaryDataService {
+import play.api.i18n.MessagesApi
+
+class BinaryDataService(val dataSourceRepository: DataSourceRepository)(val messagesApi: MessagesApi)(implicit val system: ActorSystem) extends AbstractBinaryDataService {
   lazy val oxalisUrl = Play.current.configuration.getString("datastore.oxalis.uri") getOrElse "localhost:9000"
 
   lazy val isOxalisSecured = Play.current.configuration.getBoolean("datastore.oxalis.secured") getOrElse false

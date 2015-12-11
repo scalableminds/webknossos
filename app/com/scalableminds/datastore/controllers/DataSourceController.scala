@@ -41,13 +41,18 @@ class DataSourceController @Inject() (val messagesApi: MessagesApi) extends Cont
         "operation" -> "import",
         "status" -> "inProgress",
         "progress" -> p))
-    case Finished(success) =>
+    case Finished(Full(_)) | Finished(Empty) =>
       JsonOk(Json.obj(
         "operation" -> "import",
-        "status" -> (if (success) "finished" else "failed"),
-        "progress" -> 1))
-    case NotStarted =>
+        "status" -> "finished",
+        "progress" -> 1), Seq(jsonSuccess -> Messages("dataSet.import.success")))
+    case Finished(Failure(msg, _,_)) =>
       JsonOk(Json.obj(
+        "operation" -> "import",
+        "status" -> "failed",
+        "progress" -> 1), Seq(jsonError -> msg))
+    case NotStarted =>
+      JsonBadRequest(Json.obj(
         "operation" -> "import",
         "status" -> "notStarted",
         "progress" -> 0))
@@ -93,7 +98,7 @@ class DataSourceController @Inject() (val messagesApi: MessagesApi) extends Cont
           out.close()
         case _ =>
       }
-      Full()
+      Full(Unit)
     } catch {
       case e: Exception =>
         Logger.warn(s"Error unzipping uploaded dataset at $filePath: ${e.toString}")

@@ -7,15 +7,16 @@ import javax.inject.Inject
 
 import akka.actor.ActorSystem
 import com.scalableminds.datastore.services.{BinaryDataService, DataSourceRepository}
+import play.api.i18n.MessagesApi
 import play.api.{Play, Plugin}
 
-class DataStorePlugin @Inject()(implicit app: play.api.Application) extends Plugin {
+class DataStorePlugin @Inject()(val messagesApi: MessagesApi)(implicit app: play.api.Application) extends Plugin {
 
   implicit val system = ActorSystem("datastore")
 
   val dataSourceRepository = new DataSourceRepository
 
-  val binaryDataService = new BinaryDataService(dataSourceRepository)
+  val binaryDataService = new BinaryDataService(dataSourceRepository)(messagesApi)
 
   override def onStart() {
     binaryDataService.start()

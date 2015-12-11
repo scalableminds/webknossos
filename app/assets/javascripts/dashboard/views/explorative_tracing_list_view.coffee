@@ -87,6 +87,7 @@ class ExplorativeTracingListView extends Backbone.Marionette.CompositeView
     @datasetSelectionView = new SelectionView(
       viewComparator: "name"
       collection : new DatasetCollection()
+      name : "dataSetName"
       childViewOptions :
         modelValue: -> return "#{@model.get("name")}"
       data : "isActive=true"

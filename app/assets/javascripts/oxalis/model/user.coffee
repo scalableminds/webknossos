@@ -99,19 +99,9 @@ class User
 
   pushImpl : ->
 
-    deferred = $.Deferred()
-
     console.log "Sending User Data:", @userSettings
 
-    Request.json(
+    return Request.json(
       "/user/configuration"
       data : @userSettings
-    ).then(
-      ->
-        deferred.resolve()
-      ->
-        console.log("couldn't save userdata")
-        deferred.resolve()
     )
-
-    deferred.promise()

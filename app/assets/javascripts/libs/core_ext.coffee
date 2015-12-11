@@ -253,7 +253,10 @@ _.mixin(
           setTimeout((->
             deferred = null if deferred == _deferred
           ), timeout)
-        deferred.always -> deferred = null
+        deferred.then(
+          -> deferred = null
+          -> deferred = null
+        )
         deferred
 
       else

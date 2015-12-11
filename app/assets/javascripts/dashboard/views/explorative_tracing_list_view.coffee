@@ -114,24 +114,24 @@ class ExplorativeTracingListView extends Backbone.Marionette.CompositeView
 
     event.preventDefault()
 
-    toggleIcon = =>
+    toggleIcon = (state) =>
 
-      [@ui.formSpinnerIcon, @ui.formUploadIcon].forEach((ea) -> ea.toggleClass("hide"))
+      @ui.formSpinnerIcon.toggleClass("hide", state)
+      @ui.formUploadIcon.toggleClass("hide", !state)
 
 
-    toggleIcon()
+    toggleIcon(false)
 
     form = @ui.uploadAndExploreForm
 
-    Request.multipartForm(
-      form.attr("action")
-      data : new FormData(form[0])
-    ).then(
-      (data) ->
+    Request.always(
+      Request.multipartForm(
+        form.attr("action")
+        data : new FormData(form[0])
+      ).then((data) ->
         url = "/annotations/" + data.annotation.typ + "/" + data.annotation.id
         app.router.loadURL(url)
         Toast.message(data.messages)
-        toggleIcon()
-      ->
-        toggleIcon()
+      )
+      -> toggleIcon(true)
     )

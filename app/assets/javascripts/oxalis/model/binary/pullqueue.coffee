@@ -64,32 +64,31 @@ class PullQueue
     # Measuring the time until response arrives to select appropriate preloading strategy
     roundTripBeginTime = new Date()
 
-    Request.arraybuffer(
-      @url
-      data: new Float32Array(transmitBuffer)
-    ).then(
-      (responseBuffer) =>
+    Request.always(
+      Request.arraybuffer(
+        @url
+        data: new Float32Array(transmitBuffer)
+      ).then(
+        (responseBuffer) =>
 
-        responseBuffer = new Uint8Array(responseBuffer)
-        @connctionInfo.log(@layer.name, roundTripBeginTime, batch.length, responseBuffer.length)
+          responseBuffer = new Uint8Array(responseBuffer)
+          @connctionInfo.log(@layer.name, roundTripBeginTime, batch.length, responseBuffer.length)
 
-        offset = 0
+          offset = 0
 
-        for bucket, i in batch
-          if transmitBuffer[i * 5 + 1]
-            bucketData = @decode(responseBuffer.subarray(offset, offset += (@cube.BUCKET_LENGTH >> 1)))
-          else
-            bucketData = responseBuffer.subarray(offset, offset += @cube.BUCKET_LENGTH)
+          for bucket, i in batch
+            if transmitBuffer[i * 5 + 1]
+              bucketData = @decode(responseBuffer.subarray(offset, offset += (@cube.BUCKET_LENGTH >> 1)))
+            else
+              bucketData = responseBuffer.subarray(offset, offset += @cube.BUCKET_LENGTH)
 
-          @boundingBox.removeOutsideArea(bucket, bucketData)
-          @cube.setBucketByZoomedAddress(bucket, bucketData)
-
-        @batchCount--
-        @pull()
-
+            @boundingBox.removeOutsideArea(bucket, bucketData)
+            @cube.setBucketByZoomedAddress(bucket, bucketData)
+        =>
+          for bucket in batch
+            @cube.setBucketByZoomedAddress(bucket, null)
+      )
       =>
-        for bucket in batch
-          @cube.setBucketByZoomedAddress(bucket, null)
         @batchCount--
         @pull()
     )

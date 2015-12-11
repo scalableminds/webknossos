@@ -6,6 +6,7 @@ DatasetCollection              = require("admin/models/dataset/dataset_collectio
 ExplorativeTracingListItemView = require("dashboard/views/explorative_tracing_list_item_view")
 Input                          = require("libs/input")
 Toast                          = require("libs/toast")
+Request                        = require("libs/request")
 SortTableBehavior              = require("libs/behaviors/sort_table_behavior")
 
 class ExplorativeTracingListView extends Backbone.Marionette.CompositeView
@@ -158,29 +159,26 @@ class ExplorativeTracingListView extends Backbone.Marionette.CompositeView
 
     event.preventDefault()
 
-    toggleIcon = =>
+    toggleIcon = (state) =>
 
-      [@ui.formSpinnerIcon, @ui.formUploadIcon].forEach((each) -> each.toggleClass("hide"))
+      @ui.formSpinnerIcon.toggleClass("hide", state)
+      @ui.formUploadIcon.toggleClass("hide", !state)
 
 
-    toggleIcon()
+    toggleIcon(false)
 
     form = @ui.uploadAndExploreForm
 
-    $.ajax(
-      url : form.attr("action")
-      data : new FormData(form[0])
-      type : "POST"
-      processData : false
-      contentType : false
-    ).done( (data) ->
-      url = "/annotations/" + data.annotation.typ + "/" + data.annotation.id
-      app.router.loadURL(url)
-      Toast.message(data.messages)
-    ).fail( (xhr) ->
-      Toast.message(xhr.responseJSON.messages)
-    ).always( ->
-      toggleIcon()
+    Request.always(
+      Request.multipartForm(
+        form.attr("action")
+        data : new FormData(form[0])
+      ).then((data) ->
+        url = "/annotations/" + data.annotation.typ + "/" + data.annotation.id
+        app.router.loadURL(url)
+        Toast.message(data.messages)
+      )
+      -> toggleIcon(true)
     )
 
 

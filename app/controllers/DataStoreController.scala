@@ -11,6 +11,7 @@ import org.apache.commons.io.FileUtils
 import java.io.File
 import akka.agent.Agent
 import play.api.mvc.WebSocket.FrameFormatter
+import play.api.http.Status
 import play.api.mvc._
 import play.api.libs.json.{JsError, JsSuccess, Json, JsValue}
 import play.api.libs.iteratee.{Enumerator, Iteratee, Concurrent}
@@ -48,7 +49,7 @@ object DataStoreHandler extends DataStoreBackChannelHandler {
     Logger.debug("Thumbnail called for: " + dataSet.name + " Layer: " + dataLayerName)
     val call = RESTCall(
       "GET",
-      s"/data/datasets/${dataSet.name}/layers/$dataLayerName/thumbnail.json",
+      s"/data/datasets/${dataSet.urlEncodedName}/layers/$dataLayerName/thumbnail.json",
       Map.empty,
       Map("token" -> DataTokenService.oxalisToken, "width" -> width.toString, "height" -> height.toString),
       Json.obj())
@@ -60,13 +61,13 @@ object DataStoreHandler extends DataStoreBackChannelHandler {
 
   def progressForImport(dataSet: DataSet): Fox[RESTResponse] = {
     Logger.debug("Import rogress called for: " + dataSet.name)
-    val call = RESTCall("GET", s"/data/datasets/${dataSet.name}/import", Map.empty, Map.empty, Json.obj())
+    val call = RESTCall("GET", s"/data/datasets/${dataSet.urlEncodedName}/import", Map.empty, Map.empty, Json.obj())
     sendRequest(dataSet.dataStoreInfo.name, call)
   }
 
   def importDataSource(dataSet: DataSet): Fox[RESTResponse] = {
     Logger.debug("Import called for: " + dataSet.name)
-    val call = RESTCall("POST", s"/data/datasets/${dataSet.name}/import", Map.empty, Map.empty, Json.obj())
+    val call = RESTCall("POST", s"/data/datasets/${dataSet.urlEncodedName}/import", Map.empty, Map.empty, Json.obj())
     sendRequest(dataSet.dataStoreInfo.name, call)
   }
 
@@ -139,7 +140,7 @@ case class WebSocketRESTServer(out: Channel[Array[Byte]]) extends FoxImplicits{
     try{
       val promise = Promise[Box[RESTResponse]]()
       openCalls.send(_ + (call.uuid -> promise))
-      Logger.debug(s"About to send WS REST call to '${call.method} ${call.path}'")
+      Logger.trace(s"About to send WS REST call to '${call.method} ${call.path}'")
       val data: Array[Byte] = codec.encode(Json.stringify(RESTCall.restCallFormat.writes(call)))
       out.push(data)
       system.scheduler.scheduleOnce(RESTCallTimeout)(cancelRESTCall(call.uuid))
@@ -165,12 +166,13 @@ case class WebSocketRESTServer(out: Channel[Array[Byte]]) extends FoxImplicits{
       val json = Json.parse(rawJson)
       json.validate[RESTResponse] match {
         case JsSuccess(response, _) =>
-          Logger.debug(s"Finished REST call to '${response.path}'(${response.uuid}). Result: ${response.status} '${response.body.toString().take(100)}'")
+          if(response.status != Status.OK.toString)
+            Logger.warn(s"Failed (Code: "+response.status+") REST call to '${response.path}'(${response.uuid}). Result: '${response.body.toString().take(500)}'")
           openCalls().get(response.uuid).map {
             promise =>
               promise.trySuccess(Full(response)) match {
                 case true =>
-                  Logger.debug("REST request completed. UUID: " + response.uuid)
+                  Logger.trace("REST request completed. UUID: " + response.uuid)
                 case false =>
                   Logger.warn("REST response was to slow. UUID: " + response.uuid)
               }

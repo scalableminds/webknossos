@@ -67,18 +67,13 @@ class TaskTransferModalView extends Backbone.Marionette.LayoutView
     evt.preventDefault()
 
     userID = @$("select :selected").attr("id")
-    Request.send(
-      url : @url
-      method : "POST"
-      data :
+    Request.json(
+      @url,
+      data:
         "userId" : userID
-    ).then(
-      =>
-        @destroyModal()
-      (xhr) =>
-        Toast.message(xhr.responseJSON.messages)
+    ).then( =>
+      @destroyModal()
     )
-
 
 
   destroyModal : ->

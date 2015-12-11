@@ -233,24 +233,12 @@ class Router extends Backbone.Router
       self.changeView(view)
     )
 
-
-  setReloadFlag : ->
-
-    # DO NOT MERGE FORCE RELOAD INTO DEV #895
-    @forcePageReload = true
-
-
   changeView : (views...) ->
 
     if @activeViews == views
       return
 
     @$loadingSpinner.removeClass("hidden")
-
-    # DO NOT MERGE FORCE RELOAD INTO DEV #895
-    if @forcePageReload
-      location.reload()
-
 
     # Remove current views
     if @activeViews

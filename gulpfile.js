@@ -53,6 +53,8 @@ var scriptPaths = {
   "rangeslider"         : bowerPath + "nouislider/distribute/nouislider",
   "clipboard"           : bowerPath + "clipboard/dist/clipboard",
   "mjs"                 : bowerPath + "mjs/src/mjs",
+  "fetch"               : bowerPath + "fetch/fetch"
+  "promise"             : bowerPath + "es6-promise/promise.min"
   "nested_obj_model"    : "libs/nested_obj_model",
 };
 

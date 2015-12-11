@@ -63,18 +63,20 @@ class Model extends Backbone.Model
             @datasetName
             dataLayerNames : _.pluck(colorLayers, "name")
           }))
-          @get("datasetConfiguration").fetch().then( =>
+          @get("datasetConfiguration").fetch().then(
+            =>
 
-            layers = @getLayers(tracing.content.contentData.customLayers)
+              layers = @getLayers(tracing.content.contentData.customLayers)
 
-            Promise.all(
-              @getDataTokens(layers)...
-            ).then =>
-              @initializeWithData(tracing, layers)
+              Promise.all(
+                @getDataTokens(layers)...
+              ).then =>
+                @initializeWithData(tracing, layers)
 
-          -> Toast.error("Ooops. We couldn't communicate with our mother ship. Please try to reload this page.")
-          )
+            -> Toast.error("Ooops. We couldn't communicate with our mother ship. Please try to reload this page.")
+            )
         )
+      )
 
 
   initializeWithData : (tracing, layers) ->
@@ -232,7 +234,7 @@ class Model extends Backbone.Model
   save : ->
 
     submodels = []
-    dfds = []
+    deferreds = []
 
     if @user?
       submodels.push[@user]
@@ -250,10 +252,10 @@ class Model extends Backbone.Model
       submodels.push(@get("skeletonTracing").stateLogger)
 
     _.each(submodels, (model) ->
-      dfds.push( model.save() )
+      deferreds.push( model.save() )
     )
 
-    return $.when.apply($, dfds)
+    return $.when.apply($, deferreds)
 
 
   # Make the Model compatible between legacy Oxalis style and Backbone.Modela/Views

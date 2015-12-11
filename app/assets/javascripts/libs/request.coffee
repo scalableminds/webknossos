@@ -1,6 +1,6 @@
 $     = require("jquery")
 _     = require("lodash")
-Toast = require("lib/toast")
+Toast = require("libs/toast")
 
 
 Request =

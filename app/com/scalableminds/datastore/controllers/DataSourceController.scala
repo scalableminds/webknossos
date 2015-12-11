@@ -52,7 +52,7 @@ class DataSourceController @Inject() (val messagesApi: MessagesApi) extends Cont
         "status" -> "failed",
         "progress" -> 1), Seq(jsonError -> msg))
     case NotStarted =>
-      JsonBadRequest(Json.obj(
+      JsonOk(Json.obj(
         "operation" -> "import",
         "status" -> "notStarted",
         "progress" -> 0))

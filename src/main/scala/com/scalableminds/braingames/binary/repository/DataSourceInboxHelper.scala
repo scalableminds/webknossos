@@ -59,17 +59,17 @@ trait DataSourceInboxHelper extends ProgressTracking with FoxImplicits with Lock
       }.futureBox.map{
         case Full(r) =>
           logger.info("Datasource import finished for " + unusableDataSource.id)
-          finishTrackerFor(importTrackerId(unusableDataSource.id), true)
+          finishTrackerFor(importTrackerId(unusableDataSource.id), success = true)
           Full(r.toUsable(serverUrl))
         case _ =>
           logger.warn("Datasource import failed for " + unusableDataSource.id)
-          finishTrackerFor(importTrackerId(unusableDataSource.id), false)
+          finishTrackerFor(importTrackerId(unusableDataSource.id), success = false)
           Empty
       }.toFox
     }.flatMap(x => x).futureBox.recover {
       case e: Exception =>
         logger.error("Failed to import dataset: " + e.getMessage, e)
-        finishTrackerFor(importTrackerId(unusableDataSource.id), false)
+        finishTrackerFor(importTrackerId(unusableDataSource.id), success = false)
         Failure("Failed to import dataset.", Full(e), Empty)
     }
   }

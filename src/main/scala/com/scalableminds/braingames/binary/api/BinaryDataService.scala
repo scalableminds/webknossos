@@ -39,7 +39,7 @@ trait BinaryDataService extends DataSourceService with BinaryDataHelpers with Da
 
   lazy implicit val executor = system.dispatcher
 
-  def dataSourceInbox = DataSourceInbox.create(dataSourceRepository, serverUrl, system)
+  lazy val dataSourceInbox = DataSourceInbox.create(dataSourceRepository, serverUrl, system)
 
   lazy implicit val timeout = Timeout(config.getInt("braingames.binary.loadTimeout") seconds)
 

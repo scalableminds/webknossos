@@ -120,4 +120,3 @@ scalable minds - http://scm.io
 # License
 MIT
 
-Includes GraphViz by John Ellson et al. (http://www.graphviz.org/) under EPL

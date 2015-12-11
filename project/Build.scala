@@ -182,6 +182,7 @@ object ApplicationBuild extends Build {
     TwirlKeys.templateImports += "oxalis.view.helpers._",
     TwirlKeys.templateImports += "oxalis.view._",
     scalaVersion := "2.11.7",
+    scalacOptions += "-target:jvm-1.8",
     version := appVersion,
     gulpPath := (Path("node_modules") / ".bin" / "gulp").getPath,
     npmPath := "npm",

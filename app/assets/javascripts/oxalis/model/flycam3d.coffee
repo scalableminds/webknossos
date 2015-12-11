@@ -21,7 +21,7 @@ class Flycam3d
 
   ZOOM_STEP_INTERVAL : 1.1
   ZOOM_STEP_MIN : 0.5
-  ZOOM_STEP_MAX : 10
+  ZOOM_STEP_MAX : 5
 
   zoomStep : 1
   hasChanged : true

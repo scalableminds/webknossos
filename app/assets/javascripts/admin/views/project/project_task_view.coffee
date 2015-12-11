@@ -38,9 +38,11 @@ class ProjectTaskView extends Backbone.Marionette.ItemView
       Traced Time: <%= tracingTime %>
     </td>
     <td class="nowrap">
-      <a href="/api/tasks/<%= id %>/download" title="Download all finished tracings">
-        <i class="fa fa-download"></i>download
-      </a>
+      <% if (status.completed > 0) { %>
+        <a href="/api/tasks/<%= id %>/download" title="Download all finished tracings">
+          <i class="fa fa-download"></i>download
+        </a>
+      <% } %>
     </td>
   """)
 

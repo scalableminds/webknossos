@@ -35,7 +35,7 @@ object TracingUpdater {
       Some(updater.createUpdate())
     } catch {
       case e: java.lang.RuntimeException =>
-        Logger.error("Invalid json: " + e)
+        Logger.error("Invalid json: " + e + "\n While trying to parse:\n" + Json.prettyPrint(js))
         None
     }
   }

@@ -27,7 +27,8 @@
     "c3": "0.4.10",
     "clipboard": "~1.4.0",
     "mjs": "~0.0.6",
-    "airbrake-js-client": "~0.5.3"
+    "airbrake-js-client": "~0.5.3",
+    "webcola": "~3.1.0"
   },
   "devDependencies": {},
   "resolutions": {

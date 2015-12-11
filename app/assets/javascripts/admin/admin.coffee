@@ -25,7 +25,7 @@ module.exports = {
   UserListView
   UserCollection
   TeamListView
-  TeamCollection
+  PaginatedTeamCollection
   TaskListView
   TaskCollection
   ProjectListView

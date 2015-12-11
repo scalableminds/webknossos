@@ -16,12 +16,24 @@
 
   svg a:hover {
     text-decoration: none;
+    pointer-events: all;
     &[href] {
       cursor: pointer;
     }
   }
   .popover {
     width: 400px;
+  }
+
+  path {
+    fill: none;
+    stroke-width: 2px;
+  }
+
+  text {
+     alignment-baseline: middle;
+     text-anchor: middle;
+     color: white;
   }
 
   .overview-options {
@@ -35,9 +47,10 @@
     }
 
     #colorLegend {
-      margin-top: 5px;
+      margin-top: 15px;
+      border-radius: 4px;
       height: 30px;
-      background: linear-gradient(to right, #7f0000 0%,#ff7f00 50%,#7fff7f 100%);
+      background: linear-gradient(to right, #a50026 0%,#d73027 10%,#f46d43 20%,#fdae61 30%,#fee08b 40%,#ffffbf 50%,#d9ef8b 60%,#a6d96a 70%,#66bd63 80%,#1a9850 90%,#006837 100%);
     }
 
     #rangeSliderLabels {

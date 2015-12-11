@@ -57,6 +57,12 @@ case class TemporarySkeletonTracing(
   def updateFromJson(js: Seq[JsValue])(implicit ctx: DBAccessContext) = ???
 
   def mergeWith(annotationContent: AnnotationContent)(implicit ctx: DBAccessContext): Fox[TemporarySkeletonTracing] = {
+    def mergeBoundingBoxes(aOpt: Option[BoundingBox], bOpt: Option[BoundingBox]) =
+      for {
+        a <- aOpt
+        b <- bOpt
+      } yield a.combineWith(b)
+
     annotationContent match {
       case s: SkeletonTracingLike =>
         s.trees.map{ sourceTrees =>
@@ -64,7 +70,8 @@ case class TemporarySkeletonTracing(
           val mergedTrees = mergeTrees(sourceTrees, _trees, nodeMapping)
           val mergedBranchPoints = branchPoints ::: s.branchPoints.map(b => b.copy(id = nodeMapping(b.id)))
           val mergedComments = comments ::: s.comments.map(c => c.copy(node = nodeMapping(c.node)))
-          this.copy(_trees = mergedTrees, branchPoints = mergedBranchPoints, comments = mergedComments)
+          val mergedBoundingBox = mergeBoundingBoxes(boundingBox, s.boundingBox)
+          this.copy(_trees = mergedTrees, branchPoints = mergedBranchPoints, comments = mergedComments, boundingBox = mergedBoundingBox)
         }
       case s =>
         Fox.failure("Can't merge annotation content of a different type into TemporarySkeletonTracing. Tried to merge " + s.id)

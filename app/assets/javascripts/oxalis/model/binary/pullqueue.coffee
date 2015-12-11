@@ -1,6 +1,5 @@
 ### define
 ./cube : Cube
-libs/array_buffer_socket : ArrayBufferSocket
 libs/request : Request
 ###
 
@@ -26,13 +25,14 @@ class PullQueue
   constructor : (@dataSetName, @cube, @layer, @tracingId, @boundingBox, @connctionInfo) ->
 
     @queue = []
+    @url = "#{@layer.url}/data/datasets/#{@dataSetName}/layers/#{@layer.name}/data?cubeSize=#{1 << @cube.BUCKET_SIZE_P}&token=#{@layer.token}"
 
 
   pull : ->
     # Filter and sort queue, using negative priorities for sorting so .pop() can be used to get next bucket
     @queue = _.filter(@queue, (item) =>
-      (@boundingBox.containsBucket(item.bucket) and
-          not @cube.isBucketRequestedByZoomedAddress(item.bucket))
+      @boundingBox.containsBucket(item.bucket) and
+        not @cube.isBucketRequestedByZoomedAddress(item.bucket)
     )
     @queue = _.sortBy(@queue, (item) -> item.priority)
 
@@ -64,11 +64,14 @@ class PullQueue
     # Measuring the time until response arrives to select appropriate preloading strategy
     roundTripBeginTime = new Date()
 
-    @getLoadSocket().send(transmitBuffer)
-      .then(
-
+    Request.always(
+      Request.arraybuffer(
+        @url
+        data: new Float32Array(transmitBuffer)
+      ).then(
         (responseBuffer) =>
 
+          responseBuffer = new Uint8Array(responseBuffer)
           @connctionInfo.log(@layer.name, roundTripBeginTime, batch.length, responseBuffer.length)
 
           offset = 0
@@ -81,15 +84,14 @@ class PullQueue
 
             @boundingBox.removeOutsideArea(bucket, bucketData)
             @cube.setBucketByZoomedAddress(bucket, bucketData)
-
         =>
           for bucket in batch
             @cube.setBucketByZoomedAddress(bucket, null)
-
-    ).always =>
-
-      @batchCount--
-      @pull()
+      )
+      =>
+        @batchCount--
+        @pull()
+    )
 
 
   clearNormalPriorities : ->
@@ -129,17 +131,3 @@ class PullQueue
   shouldRequestFourBit : (zoomStep) ->
 
     return @fourBit and @layer.category == "color"
-
-
-  getLoadSocket : ->
-
-    if @socket? then @socket else @socket = new ArrayBufferSocket(
-      senders : [
-        # new ArrayBufferSocket.WebWorker("ws://#{document.location.host}/binary/ws?dataSetName=#{@dataSetName}&cubeSize=#{1 << @cube.BUCKET_SIZE_P}")
-        # new ArrayBufferSocket.WebSocket("ws://#{document.location.host}/binary/ws?dataSetName=#{@dataSetName}&cubeSize=#{1 << @cube.BUCKET_SIZE_P}")
-        new ArrayBufferSocket.XmlHttpRequest("#{@layer.url}/data/datasets/#{@dataSetName}/layers/#{@layer.name}/data?cubeSize=#{1 << @cube.BUCKET_SIZE_P}&token=#{@layer.token}")
-      ]
-      requestBufferType : Float32Array
-      responseBufferType : Uint8Array
-    )
-

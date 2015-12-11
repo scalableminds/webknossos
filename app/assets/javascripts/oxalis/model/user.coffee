@@ -71,15 +71,12 @@ class User
 
   resetBrightnessContrastColorSettings : (model) ->
 
-    Request.send(
-      url : "/user/configuration/default"
-      dataType : "json"
-    ).then (defaultData) =>
-
+    Request.json("/user/configuration/default").then( (defaultData) =>
       @get("brightnessContrastColorSettings")[model.datasetPostfix] =
         defaultData.brightnessContrastColorSettings[model.datasetPostfix]
 
       @getOrCreateBrightnessContrastColorSettings(model)
+    )
 
 
   triggerAll : ->
@@ -102,19 +99,9 @@ class User
 
   pushImpl : ->
 
-    deferred = $.Deferred()
-
     console.log "Sending User Data:", @userSettings
 
-    Request.send(
-      url      : "/user/configuration"
-      type     : "POST"
-      dataType : "json"
-      data     : @userSettings
-    ).fail( =>
-
-      console.log "couldn't save userdata"
-
-    ).always(-> deferred.resolve())
-
-    deferred.promise()
+    return Request.json(
+      "/user/configuration"
+      data : @userSettings
+    )

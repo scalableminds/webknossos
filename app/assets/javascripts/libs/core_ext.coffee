@@ -253,7 +253,10 @@ _.mixin(
           setTimeout((->
             deferred = null if deferred == _deferred
           ), timeout)
-        deferred.always -> deferred = null
+        deferred.then(
+          -> deferred = null
+          -> deferred = null
+        )
         deferred
 
       else
@@ -353,4 +356,3 @@ $.fn.alterClass = ( removals, additions ) ->
   )
 
   return if not additions then self else self.addClass( additions )
-

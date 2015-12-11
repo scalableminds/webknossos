@@ -33,10 +33,7 @@ class Model
     else
       infoUrl = "/annotations/#{@tracingType}/#{@tracingId}/info"
 
-    Request.send(
-      url : infoUrl
-      dataType : "json"
-    ).pipe (tracing) =>
+    Request.json(infoUrl).then( (tracing) =>
 
       if tracing.error
         Toast.error(tracing.error)
@@ -55,20 +52,17 @@ class Model
         return {"error" : true}
 
       else
-        Request.send(
-          url : "/user/configuration"
-          dataType : "json"
-        ).pipe(
+        Request.json("/user/configuration").then(
           (user) =>
             dataSet = tracing.content.dataSet
             layers  = @getLayers(dataSet.dataLayers, tracing.content.contentData.customLayers)
-            $.when(
-              @getDataTokens(dataSet.dataStore.url, dataSet.name, layers)...
-            ).pipe =>
+            Promise.all(
+              @getDataTokens(dataSet.dataStore.url, dataSet.name, layers)
+            ).then =>
               @initializeWithData(controlMode, state, tracing, user, layers)
 
           -> Toast.error("Ooops. We couldn't communicate with our mother ship. Please try to reload this page.")
-        )
+        ))
 
   initializeWithData : (controlMode, state, tracing, user, layers) ->
 
@@ -157,12 +151,10 @@ class Model
 
     for layer in layers
       do (layer) ->
-        Request.send(
-          url : "/dataToken/generate?dataSetName=#{dataSetName}&dataLayerName=#{layer.name}"
-          dataType : "json"
-        ).pipe (dataStore) ->
+        Request.json("/dataToken/generate?dataSetName=#{dataSetName}&dataLayerName=#{layer.name}").then( (dataStore) ->
           layer.token = dataStore.token
           layer.url   = dataStoreUrl
+        )
 
 
   getColorBinaries : ->

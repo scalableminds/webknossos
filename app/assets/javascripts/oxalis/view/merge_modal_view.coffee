@@ -2,6 +2,7 @@
 underscore : _
 backbone.marionette : Marionette
 libs/toast : Toast
+libs/request : Request
 app : app
 ../model/skeletontracing/user_annotation_collection : UserAnnotationCollection
 admin/views/selection_view : SelectionView
@@ -139,7 +140,7 @@ class MergeModalView extends Backbone.Marionette.LayoutView
 
     @$el.modal("show")
 
-    $.ajax(url : "/api/user").done((user) =>
+    Request.json("/api/user").then( (user) =>
       @taskSelectionView = new SelectionView(
         collection : new  TaskCollection()
         childViewOptions :
@@ -209,9 +210,7 @@ class MergeModalView extends Backbone.Marionette.LayoutView
 
     readOnly = document.getElementById('checkbox-read-only').checked
 
-    $.ajax(
-      url: "#{url}/#{readOnly}"
-    ).done( (annotation) ->
+    Request.json("#{url}/#{readOnly}").then( (annotation) ->
 
       Toast.message(annotation.messages)
 
@@ -222,11 +221,6 @@ class MergeModalView extends Backbone.Marionette.LayoutView
 
       app.router.loadURL(redirectUrl)
 
-    ).fail( (xhr) ->
-      if xhr.responseJSON
-        Toast.error(xhr.responseJSON.messages[0].error)
-      else
-        Toast.error("Error. Please try again.")
     )
 
 
@@ -237,31 +231,27 @@ class MergeModalView extends Backbone.Marionette.LayoutView
       @ui.fileInfo.val(event.target.files[0].name)
 
 
-  toggleIcon : ->
+  toggleIcon : (state) ->
 
-    [@ui.formSpinnerIcon, @ui.formUploadIcon].forEach((ea) -> ea.toggleClass("hide"))
+    @ui.formSpinnerIcon.toggleClass("hide", state)
+    @ui.formUploadIcon.toggleClass("hide", !state)
 
 
   uploadFiles : (event) ->
 
     event.preventDefault()
 
-    @toggleIcon()
+    @toggleIcon(false)
 
     form = @ui.uploadAndExploreForm
 
-    $.ajax(
-      url : form.attr("action")
-      data : new FormData(form[0])
-      type : "POST"
-      processData : false
-      contentType : false
-    ).done( (data) =>
-      @nml = data.annotation
-      Toast.message(data.messages)
-    ).fail( (xhr) ->
-      Toast.message(xhr.responseJSON.messages)
-    ).always( =>
-      @toggleIcon()
+    Request.always(
+      Request.multipartForm(
+        form.attr("action")
+        data : new FormData(form[0])
+      ).then((data) =>
+        @nml = data.annotation
+        Toast.message(data.messages)
+      )
+      => @toggleIcon(true)
     )
-

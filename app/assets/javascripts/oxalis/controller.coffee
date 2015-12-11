@@ -54,8 +54,10 @@ class Controller
     @model.set("state", @urlManager.initialState)
 
     @model.fetch()
-      .done( (error) => @modelFetchDone(error) )
-      .fail( (response) => @modelFetchFail(response) )
+      .then(
+        (error) => @modelFetchDone(error)
+        (response) => @modelFetchFail(response)
+      )
 
 
   modelFetchDone : (error) ->
@@ -73,12 +75,12 @@ class Controller
     for allowedMode in @model.settings.allowedModes
 
       if @model.getColorBinaries()[0].cube.BIT_DEPTH == 8
-        @allowedModes.push switch allowedMode
-          when "flight" then constants.MODE_ARBITRARY
-          when "oblique" then constants.MODE_ARBITRARY_PLANE
+        switch allowedMode
+          when "flight" then @allowedModes.push(constants.MODE_ARBITRARY)
+          when "oblique" then @allowedModes.push(constants.MODE_ARBITRARY_PLANE)
 
-      @allowedModes.push switch allowedMode
-        when "volume" then constants.MODE_VOLUME
+      switch allowedMode
+        when "volume" then @allowedModes.push(constants.MODE_VOLUME)
 
     if not @model.volumeTracing?
       # Plane tracing mode is always allowed (except in VOLUME mode)
@@ -187,7 +189,7 @@ class Controller
 
         "m" : => # rotate allowed modes
 
-          index = (@allowedModes.indexOf(@model.mode) + 1) % @allowedModes.length
+          index = (@allowedModes.indexOf(@model.get("mode")) + 1) % @allowedModes.length
           @model.setMode(@allowedModes[index])
 
         "super + s, ctrl + s" : (event) =>

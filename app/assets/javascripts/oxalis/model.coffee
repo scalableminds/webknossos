@@ -32,7 +32,7 @@ class Model extends Backbone.Model
     else
       infoUrl = "/annotations/#{@get('tracingType')}/#{@get('tracingId')}/info"
 
-    Request.json(infoUrl).then( (tracing) =>
+    return Request.json(infoUrl).then( (tracing) =>
 
       @datasetName = tracing.content.dataSet.name
 
@@ -69,7 +69,7 @@ class Model extends Backbone.Model
               layers = @getLayers(tracing.content.contentData.customLayers)
 
               Promise.all(
-                @getDataTokens(layers)...
+                @getDataTokens(layers)
               ).then =>
                 @initializeWithData(tracing, layers)
 
@@ -175,8 +175,8 @@ class Model extends Backbone.Model
     dataStoreUrl = @get("dataset").get("dataStore").url
 
     for layer in layers
-      do (layer) ->
-        Request.json("/dataToken/generate?dataSetName=#{dataSetName}&dataLayerName=#{layer.name}").then( (dataStore) ->
+      do (layer) =>
+        Request.json("/dataToken/generate?dataSetName=#{@datasetName}&dataLayerName=#{layer.name}").then( (dataStore) ->
           layer.token = dataStore.token
           layer.url   = dataStoreUrl
         )

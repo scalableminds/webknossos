@@ -183,7 +183,7 @@ class Cube
     if not bucketIndex?
       return true
 
-    return cube[bucketIndex]? and cube[bucketIndex].requested
+    return cube[bucketIndex]? and not cube[bucketIndex].temporal
 
 
   isBucketLoadedByZoomedAddress : (address) ->
@@ -200,7 +200,6 @@ class Cube
     bucketIndex = @getBucketIndexByZoomedAddress(address)
     if not cube[bucketIndex]?
       cube[bucketIndex] = @LOADING_PLACEHOLDER
-    cube[bucketIndex].requested = true
 
 
   setBucketByZoomedAddress : (address, bucketData) ->
@@ -246,15 +245,14 @@ class Cube
     voxelPerBucket = 1 << @BUCKET_SIZE_P * 3
     for i in [0...voxelPerBucket]
 
-      newVoxel = (newBucketData[i * @BYTE_OFFSET + j] for j in [0...@BYTE_OFFSET])
-      oldVoxel = (oldBucketData[i * @BYTE_OFFSET + j] for j in [0...@BYTE_OFFSET])
-      oldVoxelEmpty = _.reduce(oldVoxel, ((memo, v) => memo and v == 0), true)
+      voxelData = (oldBucketData[i * @BYTE_OFFSET + j] for j in [0...@BYTE_OFFSET])
+      voxelEmpty = _.reduce(voxelData, ((memo, v) => memo and v == 0), true)
 
-      if oldVoxelEmpty
+      unless voxelEmpty
         for j in [0...@BYTE_OFFSET]
-          oldBucketData[i * @BYTE_OFFSET + j] = newBucketData[i * @BYTE_OFFSET + j]
+          newBucketData[i * @BYTE_OFFSET + j] = oldBucketData[i * @BYTE_OFFSET + j]
 
-    return oldBucketData
+    return newBucketData
 
 
   setArbitraryBucketByZoomedAddress : ([bucket_x, bucket_y, bucket_z, zoomStep], bucketData) ->

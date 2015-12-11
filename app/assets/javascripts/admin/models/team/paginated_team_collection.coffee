@@ -1,9 +1,6 @@
-### define
-underscore : _
-backbone : Backbone
-./team_model : TeamModel
-../pagination_collection : PaginationCollection
-###
+TeamModel = require("./team_model")
+PaginationCollection = require("../pagination_collection")
+
 
 class PaginatedTeamCollection extends PaginationCollection
 

@@ -1,15 +1,14 @@
 StateLogger    = require("../statelogger")
 THREE          = require("three")
-ColorConverter = require("three.color")
 $              = require("jquery")
 utils          = require("libs/utils")
 
 class SkeletonTracingStateLogger extends StateLogger
 
 
-  constructor : (flycam, version, tracingId, tracingType, allowUpdate, updatePipeline, @skeletonTracing) ->
+  constructor : (flycam, version, tracingId, tracingType, allowUpdate, @skeletonTracing) ->
 
-    super(flycam, version, tracingId, tracingType, allowUpdate, updatePipeline)
+    super(flycam, version, tracingId, tracingType, allowUpdate)
 
 
   #### TREES

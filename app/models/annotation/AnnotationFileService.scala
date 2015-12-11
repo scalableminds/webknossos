@@ -88,7 +88,7 @@ trait AnnotationFileService extends FoxImplicits {
   def annotationToInputStream(): Fox[InputStream] = {
     annotation.content.flatMap {
       case t: SkeletonTracingLike =>
-        NMLService.toNML(t).map(IOUtils.toInputStream).toFox
+        NMLService.toNML(t).map(s => IOUtils.toInputStream(s, "utf-8")).toFox
       case _ =>
         throw new Exception("Invalid content!")
     }

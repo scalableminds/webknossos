@@ -8,7 +8,7 @@ VolumeTracingStateLogger = require("./volumetracing_statelogger")
 
 class VolumeTracing
 
-  constructor : (tracing, @flycam, @binary, updatePipeline) ->
+  constructor : (tracing, @flycam, @binary) ->
 
     _.extend(this, Backbone.Events)
 
@@ -24,7 +24,6 @@ class VolumeTracing
     @stateLogger  = new VolumeTracingStateLogger(
       @flycam, tracing.version, tracing.id, tracing.typ,
       tracing.restrictions.allowUpdate,
-      updatePipeline,
       this, @binary.pushQueue
     )
 

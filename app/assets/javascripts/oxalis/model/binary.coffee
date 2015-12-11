@@ -156,10 +156,17 @@ class Binary
   getByVerticesSync : (vertices) ->
     # A synchronized implementation of `get`. Cuz its faster.
 
-    { buffer, accessedBuckets } = InterpolationCollector.bulkCollect(
+    { buffer, accessedBuckets, missingBuckets } = InterpolationCollector.bulkCollect(
       vertices
       @cube.getArbitraryCube()
     )
+
+    @pullQueue.addAll(missingBuckets.map(
+      (bucket) ->
+        bucket: bucket
+        priority: PullQueue::PRIORITY_HIGHEST
+    ))
+    @pullQueue.pull()
 
     @cube.accessBuckets(accessedBuckets)
 

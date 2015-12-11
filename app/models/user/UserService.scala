@@ -30,6 +30,10 @@ object UserService extends FoxImplicits {
     UserDAO.findOneByEmail(defaultUserEmail)(GlobalAccessContext)
   }
 
+  def removeTeamFromUsers(team: Team)(implicit ctx: DBAccessContext) = {
+    UserDAO.removeTeamFromUsers(team.name)
+  }
+
   def findAll()(implicit ctx: DBAccessContext) =
     UserDAO.findAll
 

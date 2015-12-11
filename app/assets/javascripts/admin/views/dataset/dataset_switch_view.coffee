@@ -1,12 +1,11 @@
-_                        = require("lodash")
-marionette               = require("backbone.marionette")
-DatasetListView          = require("./dataset_list_view")
-DatasetCollection        = require("admin/models/dataset/dataset_collection")
-SpotlightDatasetListView = require("views/spotlight_dataset_list_view")
-PaginationCollection     = require("admin/models/pagination_collection")
-PaginationView           = require("admin/views/pagination_view")
-utils                    = require("libs/utils")
-
+_                           = require("lodash")
+marionette                  = require("backbone.marionette")
+DatasetListView             = require("./dataset_list_view")
+PaginatedDatasetCollection  = require("admin/models/dataset/paginated_dataset_collection")
+SpotlightDatasetListView    = require("views/spotlight_dataset_list_view")
+PaginationCollection        = require("admin/models/pagination_collection")
+PaginationView              = require("admin/views/pagination_view")
+utils                       = require("libs/utils")
 
 class DatasetSwitchView extends Backbone.Marionette.LayoutView
 
@@ -26,7 +25,7 @@ class DatasetSwitchView extends Backbone.Marionette.LayoutView
     </div>
 
     <h3>Datasets</h3>
-    <div class="pagination"></div>
+    <div class="pagination-region"></div>
     <div class="dataset-region"></div>
   """)
 
@@ -40,7 +39,7 @@ class DatasetSwitchView extends Backbone.Marionette.LayoutView
 
   regions :
     "datasetPane" : ".dataset-region"
-    "pagination" : ".pagination"
+    "pagination" : ".pagination-region"
 
 
   templateHelpers : ->
@@ -59,6 +58,7 @@ class DatasetSwitchView extends Backbone.Marionette.LayoutView
     userTeams = @model.get("teams")
     @ui.showAdvancedButton.hide() if not utils.isUserAdmin(userTeams)
 
+
   toggleSwitchButtons : ->
 
     [@ui.showAdvancedButton, @ui.showGalleryButton].map((button) -> button.toggle())
@@ -66,21 +66,20 @@ class DatasetSwitchView extends Backbone.Marionette.LayoutView
 
   showGalleryView : ->
 
-    @toggleSwitchButtons()
-    datasetGalleryView = new SpotlightDatasetListView(collection : new DatasetCollection())
-    @datasetPane.show(datasetGalleryView)
-
-    @pagination.empty()
+    @showPaginatedDatasetView(SpotlightDatasetListView)
 
 
   showAdvancedView : ->
 
-    collection = new PaginationCollection()
-    collection.model = DatasetCollection::model
-    collection.url = DatasetCollection::url
+    @showPaginatedDatasetView(DatasetListView)
+
+
+  showPaginatedDatasetView : (DatasetView) ->
 
     @toggleSwitchButtons()
-    datasetListView = new DatasetListView(collection: collection)
+    collection = new PaginatedDatasetCollection()
+
+    datasetListView = new DatasetView(collection: collection)
     @datasetPane.show(datasetListView)
 
     paginationView = new PaginationView(collection: collection)

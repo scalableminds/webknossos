@@ -48,10 +48,6 @@ class Controller
 
     _.extend(@, Backbone.Events)
 
-    unless @browserSupported()
-      unless window.confirm("You are using an unsupported browser, please use the newest version of Chrome, Opera or Safari.\n\nTry anyways?")
-        window.history.back()
-
     @fullScreen = false
 
     @urlManager = new UrlManager(@model)
@@ -75,13 +71,18 @@ class Controller
 
     for allowedMode in @model.settings.allowedModes
 
+      if @model.getColorBinaries()[0].cube.BIT_DEPTH == 8
+        @allowedModes.push switch allowedMode
+          when "flight" then constants.MODE_ARBITRARY
+          when "oblique" then constants.MODE_ARBITRARY_PLANE
+
       @allowedModes.push switch allowedMode
-        when "flight" then constants.MODE_PLANE_TRACING
-        when "oblique" then constants.MODE_ARBITRARY
         when "volume" then constants.MODE_VOLUME
 
-    if constants.MODE_ARBITRARY in @allowedModes
-      @allowedModes.push(constants.MODE_ARBITRARY_PLANE)
+    if not @model.volumeTracing?
+      # Plane tracing mode is always allowed (except in VOLUME mode)
+      @allowedModes.push(constants.MODE_PLANE_TRACING)
+
 
     # FPS stats
     stats = new Stats()
@@ -212,31 +213,6 @@ class Controller
       return
 
     @model.mode = newMode
-
-
-  toggleFullScreen : ->
-
-    if @fullScreen
-      cancelFullscreen = document.webkitCancelFullScreen or document.mozCancelFullScreen or document.cancelFullScreen
-      @fullScreen = false
-      if cancelFullscreen
-        cancelFullscreen.call(document)
-    else
-      body = $("body")[0]
-      requestFullscreen = body.webkitRequestFullScreen or body.mozRequestFullScreen or body.requestFullScreen
-      @fullScreen = true
-      if requestFullscreen
-        requestFullscreen.call(body, body.ALLOW_KEYBOARD_INPUT)
-
-
-  browserSupported : ->
-
-    userAgentContains = (substring) ->
-        navigator.userAgent.indexOf(substring) >= 0
-
-    # allow everything but IE
-    isIE = userAgentContains("MSIE") or userAgentContains("Trident")
-    return not isIE
 
 
 module.exports = Controller

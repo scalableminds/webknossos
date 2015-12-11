@@ -26,7 +26,7 @@ class ProjectController @Inject() (val messagesApi: MessagesApi) extends Control
     implicit request =>
       for {
         projects <- ProjectDAO.findAll
-        js <- Future.traverse(projects)(Project.projectPublicWrites(_, request.user))
+        js <- Future.traverse(projects)(Project.projectPublicWritesWithStatus(_, request.user))
       } yield {
         Ok(Json.toJson(js))
       }
@@ -56,7 +56,7 @@ class ProjectController @Inject() (val messagesApi: MessagesApi) extends Control
         case JsSuccess(project, _) =>
           ProjectDAO.findOneByName(project.name)(GlobalAccessContext).futureBox.flatMap {
             case Empty if request.user.adminTeamNames.contains(project.team) =>
-              ProjectDAO.insert(project).flatMap(_ => Project.projectPublicWrites(project, request.user)).map {
+              ProjectDAO.insert(project).flatMap(_ => Project.projectPublicWritesWithStatus(project, request.user)).map {
                 js =>
                   Ok(js)
               }

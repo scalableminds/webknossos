@@ -55,8 +55,8 @@ class TracingParser
           sourceNode.appendNext(targetNode)
           targetNode.appendNext(sourceNode)
         else
-          $.assertExists(sourceNode, "source node is null", {"edge" : edge})
-          $.assertExists(targetNode, "target node is null", {"edge" : edge})
+          Toast.error("Node with id #{edge.source} doesn't exist. Ignored edge due to missing source node.") if not sourceNode
+          Toast.error("Node with id #{edge.target} doesn't exist. Ignored edge due to missing target node.") if not targetNode
 
       # Set active Node
       activeNodeT = @skeletonTracing.findNodeInList(tree.nodes, @data.activeNode)
@@ -67,6 +67,9 @@ class TracingParser
 
       @treeIdCount = Math.max(tree.treeId + 1, @treeIdCount)
       @trees.push(tree)
+
+    if @data.activeNode and not @activeNode
+      Toast.error("Node with id #{@data.activeNode} doesn't exist. Ignored active node.")
 
 
   convertColor : (colorArray) ->
@@ -84,6 +87,8 @@ class TracingParser
       if node
         node.type = @skeletonTracing.TYPE_BRANCH
         @skeletonTracing.branchStack.push(node)
+      else
+        Toast.error("Node with id #{branchpoint.id} doesn't exist. Ignored branchpoint.")
 
 
   setComments : (nodeList) ->

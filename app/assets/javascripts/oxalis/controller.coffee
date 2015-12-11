@@ -54,8 +54,10 @@ class Controller
     @model.set("state", @urlManager.initialState)
 
     @model.fetch()
-      .done( (error) => @modelFetchDone(error) )
-      .fail( (response) => @modelFetchFail(response) )
+      .then(
+        (error) => @modelFetchDone(error)
+        (response) => @modelFetchFail(response)
+      )
 
 
   modelFetchDone : (error) ->

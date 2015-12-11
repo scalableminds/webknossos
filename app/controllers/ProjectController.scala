@@ -3,18 +3,20 @@
  */
 package controllers
 
+import javax.inject.Inject
+
 import com.scalableminds.util.reactivemongo.GlobalAccessContext
 import models.task.{Project, ProjectDAO, ProjectService, Task}
 import models.user.User
 import net.liftweb.common.{Empty, Full}
 import oxalis.security.Secured
-import play.api.i18n.Messages
+import play.api.i18n.{MessagesApi, Messages}
 import play.api.libs.concurrent.Execution.Implicits._
 import play.twirl.api.Html
 import play.api.libs.json.{JsError, JsSuccess, Json}
 import scala.concurrent.Future
 
-object ProjectController extends Controller with Secured {
+class ProjectController @Inject() (val messagesApi: MessagesApi) extends Controller with Secured {
   def empty = Authenticated {
     implicit request =>
       Ok(views.html.main()(Html("")))

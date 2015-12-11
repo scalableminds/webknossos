@@ -1,7 +1,10 @@
 package controllers
 
+import javax.inject.Inject
+
 import com.scalableminds.util.security.SCrypt
 import play.api._
+import play.api.libs.concurrent.Akka
 import play.api.mvc.{Request, Action}
 import play.api.data._
 import play.api.Play.current
@@ -12,7 +15,7 @@ import oxalis.security.Secured
 import com.scalableminds.util.mail._
 import oxalis.thirdparty.BrainTracing
 import play.api.libs.concurrent.Execution.Implicits._
-import play.api.i18n.Messages
+import play.api.i18n.{MessagesApi, Messages}
 import oxalis.mail.DefaultMails
 import oxalis.view.{SessionData, ProvidesUnauthorizedSessionData, UnAuthedSessionData}
 import scala.concurrent.Future
@@ -20,7 +23,11 @@ import models.team.{TeamService, TeamDAO}
 import com.scalableminds.util.reactivemongo.DBAccessContext
 import net.liftweb.common.Full
 
-object Authentication extends Controller with Secured with ProvidesUnauthorizedSessionData {
+class Authentication @Inject() (val messagesApi: MessagesApi) extends Controller with Secured with ProvidesUnauthorizedSessionData {
+
+  lazy val Mailer =
+    Akka.system(play.api.Play.current).actorSelection("/user/mailActor")
+
   // -- Authentication
   val autoVerify =
     Play.configuration.getBoolean("application.authentication.enableDevAutoVerify") getOrElse false
@@ -75,9 +82,9 @@ object Authentication extends Controller with Secured with ProvidesUnauthorizedS
                 user <- UserService.insert(team, email, firstName, lastName, password, autoVerify)
                 brainDBResult <- BrainTracing.register(user)
               } yield {
-                Application.Mailer ! Send(
+                Mailer ! Send(
                   DefaultMails.registerMail(user.name, email, brainDBResult))
-                Application.Mailer ! Send(
+                Mailer ! Send(
                   DefaultMails.registerAdminNotifyerMail(user.name, email, brainDBResult))
                 if (autoVerify) {
                   Redirect(controllers.routes.Application.index)
@@ -141,7 +148,8 @@ object Authentication extends Controller with Secured with ProvidesUnauthorizedS
         }
       } else {
         Logger.warn(s"User tried to switch (${request.user.email} -> $email) but is no Superuser!")
-        Future.successful(BadRequest(html.user.login(loginForm.withGlobalError("user.login.failed"))(sessionDataAuthenticated(request))))
+        Future.successful(
+          BadRequest(html.user.login(loginForm.withGlobalError("user.login.failed"))(sessionDataAuthenticated(request), request2Messages(request))))
       }
   }
 

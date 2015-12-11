@@ -1,8 +1,10 @@
 package controllers
 
+import javax.inject.Inject
+
 import oxalis.security.Secured
 import models.binary._
-import play.api.i18n.Messages
+import play.api.i18n.{MessagesApi, Messages}
 import views.html
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json._
@@ -32,7 +34,7 @@ import com.scalableminds.braingames.binary.models._
  * Time: 17:58
  */
 
-object DataSetController extends Controller with Secured {
+class DataSetController @Inject() (val messagesApi: MessagesApi) extends Controller with Secured {
 
   val ThumbnailWidth = 200
   val ThumbnailHeight = 200
@@ -58,7 +60,7 @@ object DataSetController extends Controller with Secured {
 
       for {
         dataSet <- DataSetDAO.findOneBySourceName(dataSetName) ?~> Messages("dataSet.notFound")
-        layer <- DataStoreController.getDataLayer(dataSet, dataLayerName) ?~> Messages("dataLayer.notFound")
+        layer <- DataSetService.getDataLayer(dataSet, dataLayerName) ?~> Messages("dataLayer.notFound")
         image <- imageFromCacheIfPossible(dataSet) ?~> Messages("dataLayer.thumbnailFailed")
       } yield {
         val data = Base64.decodeBase64(image)
@@ -176,7 +178,7 @@ object DataSetController extends Controller with Secured {
             _ <- ensureTeamAdministration(request.user, team).toFox ~> FormFailure("team", Messages("team.admin.notAllowed", team))
             zipFile <- request.body.file("zipFile").toFox ~> FormFailure("zipFile", Messages("zip.file.notFound"))
             settings = DataSourceSettings(None, scale, None)
-            upload = DataSourceUpload(name, team, zipFile.ref.file.getAbsolutePath(), Some(settings))
+            upload = DataSourceUpload(name, team, zipFile.ref.file.getAbsolutePath, Some(settings))
             _ <- DataStoreHandler.uploadDataSource(upload).toFox
           } yield {
             Redirect(controllers.routes.DataSetController.empty).flashing(

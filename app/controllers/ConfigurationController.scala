@@ -1,8 +1,10 @@
 package controllers
 
+import javax.inject.Inject
+
 import oxalis.security.Secured
 import play.api.mvc.Action
-import play.api.i18n.Messages
+import play.api.i18n.{MessagesApi, Messages}
 import models.configuration.{UserConfiguration, DataSetConfiguration}
 import models.user.UserService
 import oxalis.user.UserCache
@@ -15,7 +17,7 @@ import scala.concurrent.Future
 /**
  * Created by tombocklisch on 03.02.14.
  */
-object ConfigurationController extends Controller with Secured {
+class ConfigurationController @Inject() (val messagesApi: MessagesApi) extends Controller with Secured {
 
   def default = Action {
     implicit request =>

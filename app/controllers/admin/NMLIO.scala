@@ -1,136 +1,59 @@
 package controllers.admin
 
-import models.task.Task
-import play.api.libs.Files
-import play.api.mvc.{MultipartFormData, Action, SimpleResult, ResponseHeader}
-import oxalis.security.{AuthenticatedRequest, Secured}
-import views.html
-import models.user._
-import oxalis.nml._
-import oxalis.nml.NMLParser
-import com.scalableminds.util.xml.Xml
-import play.api.Logger
-import scala.xml.PrettyPrinter
-import models.tracing._
-import play.api.i18n.Messages
-import models.task._
-import java.io.BufferedOutputStream
-import java.io.ByteArrayOutputStream
-import java.util.zip.ZipOutputStream
-import com.scalableminds.util._
-import java.io.StringReader
-import java.io.InputStream
-import org.xml.sax.InputSource
-import java.io.File
-import play.api.libs.Files.TemporaryFile
-import java.io.FileOutputStream
-import org.apache.commons.io.IOUtils
-import net.liftweb.common._
-import java.io.FileInputStream
-import java.nio.channels.Channels
-import models.annotation._
-import models.annotation.AnnotationType._
-import models.tracing.skeleton.{SkeletonTracingService, SkeletonTracing, SkeletonTracingLike}
-import oxalis.annotation.handler.SavedTracingInformationHandler
-import play.api.libs.concurrent.Execution.Implicits._
+import javax.inject.Inject
+
 import scala.concurrent.Future
-import play.api.Play
+
 import controllers.Controller
-import net.liftweb.common.Full
-import oxalis.nml.NML
-import models.annotation.AnnotationType
-import models.annotation.Annotation
+import models.annotation.{AnnotationType, _}
+import models.task.{Task, _}
+import models.user._
+import oxalis.nml.NMLService.NMLParseSuccess
+import oxalis.nml._
+import oxalis.security.Secured
+import play.api.i18n.{Messages, MessagesApi}
+import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json._
-import com.scalableminds.util.tools.{TextUtils, Fox}
-import com.scalableminds.util.io.ZipIO
-import java.util.zip.ZipFile
-import net.liftweb.common.Full
-import oxalis.nml.NML
+import views.html
 
-object NMLIO extends Controller with Secured with TextUtils {
+class NMLIO @Inject()(val messagesApi: MessagesApi) extends Controller with Secured {
 
-  def uploadForm = Authenticated{ implicit request =>
+  def uploadForm = Authenticated { implicit request =>
     Ok(html.admin.nml.nmlupload())
   }
 
   private def nameForNMLs(fileNames: Seq[String]) =
     if (fileNames.size == 1)
-      fileNames.headOption.map(_.replaceAll("\\.nml$",""))
+      fileNames.headOption.map(_.replaceAll("\\.nml$", ""))
     else
       None
 
-  def splitResult(r: Seq[(String, Box[NML])]) = {
-    r.foldLeft((List[String](), List[(String, NML)]())) {
-      case ((failed, successful), (fileName, nmlBox)) =>
-        nmlBox match {
-          case Full(nml) =>
-            (failed, (fileName -> nml) :: successful)
-          case _ =>
-            (fileName :: failed, successful)
-        }
-    }
-  }
-
-  def createAnnotationFrom(user: User, nmls: List[NML], typ: AnnotationType, name: Option[String])(implicit request: AuthenticatedRequest[_]): Fox[Annotation] = {
-    SkeletonTracingService.createFrom(nmls, None, AnnotationSettings.skeletonDefault).toFox.flatMap {
-      content =>
-        AnnotationService.createFrom(
-          user._id,
-          user.teams.head.team, //TODO: refactor
-          content,
-          typ,
-          name)
-    }
-  }
-
   def upload = Authenticated.async(parse.multipartFormData) { implicit request =>
-    val files = request.body.files.flatMap(f => f.contentType match {
-      case Some("application/zip") => NMLService.extractFromZip(f.ref.file).map(x => f.filename -> x)
-      case _ => List((f.filename, NMLService.extractFromNML(f.ref.file)))
+    val parsedFiles = request.body.files.flatMap(f => f.contentType match {
+      case Some("application/zip") => NMLService.extractFromZip(f.ref.file, Some(f.filename))
+      case _                       => List(NMLService.extractFromNML(f.ref.file, Some(f.filename)))
     })
 
-    val (parseFailed, parseSuccess) = splitResult(files)
-    if (parseFailed.size > 0) {
+    val (parseSuccess, parseFailed) = parsedFiles.partition { case x: NMLParseSuccess => true; case _ => false }
+
+    if (parseFailed.nonEmpty) {
       val errors = parseFailed.map(fileName => "error" -> Messages("nml.file.invalid", fileName))
       Future.successful(JsonBadRequest(errors))
-    } else if (parseSuccess.size == 0) {
+    } else if (parseSuccess.isEmpty) {
       Future.successful(JsonBadRequest(Messages("nml.file.noFile")))
     } else {
-      val (fileNames, nmls) = parseSuccess.unzip
+      val fileNames = parseSuccess.map(_.fileName)
+      val nmls = parseSuccess.flatMap(_.nml).toList
 
-      createAnnotationFrom(request.user, nmls, AnnotationType.Explorational, nameForNMLs(fileNames))
+      AnnotationService
+      .createAnnotationFrom(request.user, nmls, AnnotationType.Explorational, nameForNMLs(fileNames))
       .map { annotation =>
-          JsonOk(
-            Json.obj("annotation" -> Json.obj("typ" -> annotation.typ, "id" -> annotation.id)),
-            Messages("nml.file.uploadSuccess")
-          )
+        JsonOk(
+          Json.obj("annotation" -> Json.obj("typ" -> annotation.typ, "id" -> annotation.id)),
+          Messages("nml.file.uploadSuccess")
+        )
       }
       .getOrElse(JsonBadRequest(Messages("nml.file.invalid")))
-    }
-  }
-
-  def zipTracings(annotations: List[Annotation], zipFileName: String)(implicit request: AuthenticatedRequest[_]) = {
-    val zipped = TemporaryFile("annotationZips", normalize(zipFileName))
-    val zipper = ZipIO.startZip(new BufferedOutputStream(new FileOutputStream(zipped.file)))
-
-    def annotationContent(annotations: List[Annotation]): Future[Boolean] = {
-      annotations match {
-        case head :: tail =>
-          head.muta.loadAnnotationContent().futureBox.flatMap {
-            case Full(fs) =>
-              zipper.addFile(fs)
-              annotationContent(tail)
-            case _ =>
-              annotationContent(tail)
-          }
-        case _ =>
-          Future.successful(true)
-      }
-    }
-
-    annotationContent(annotations).map{ _ =>
-        zipper.close
-        zipped
     }
   }
 
@@ -139,8 +62,8 @@ object NMLIO extends Controller with Secured with TextUtils {
     def createProjectZip(project: Project) =
       for {
         tasks <- TaskDAO.findAllByProject(project.name)
-        tracings <- Future.traverse(tasks)(_.annotations).map(_.flatten.filter(_.state.isFinished))
-        zip <- zipTracings(tracings, projectName + "_nmls.zip")
+        annotations <- Future.traverse(tasks)(_.annotations).map(_.flatten.filter(_.state.isFinished))
+        zip <- AnnotationService.zipAnnotations(annotations, projectName + "_nmls.zip")
       } yield zip
 
     for {
@@ -155,7 +78,7 @@ object NMLIO extends Controller with Secured with TextUtils {
   def taskDownload(taskId: String) = Authenticated.async { implicit request =>
     def createTaskZip(task: Task) = task.annotations.flatMap { annotations =>
       val finished = annotations.filter(_.state.isFinished)
-      zipTracings(finished, task.id + "_nmls.zip")
+      AnnotationService.zipAnnotations(finished, task.id + "_nmls.zip")
     }
 
     for {
@@ -170,7 +93,7 @@ object NMLIO extends Controller with Secured with TextUtils {
       for {
         tasks <- TaskDAO.findAllByTaskType(taskType)
         tracings <- Future.traverse(tasks)(_.annotations).map(_.flatten.filter(_.state.isFinished))
-        zip <- zipTracings(tracings, taskType.summary + "_nmls.zip")
+        zip <- AnnotationService.zipAnnotations(tracings, taskType.summary + "_nmls.zip")
       } yield zip
 
     for {
@@ -184,7 +107,7 @@ object NMLIO extends Controller with Secured with TextUtils {
     for {
       user <- UserService.findOneById(userId, useCache = true) ?~> Messages("user.notFound")
       annotations <- AnnotationService.findTasksOf(user).map(_.filter(_.state.isFinished))
-      zipped <- zipTracings(annotations, user.abreviatedName + "_nmls.zip")
+      zipped <- AnnotationService.zipAnnotations(annotations, user.abreviatedName + "_nmls.zip")
     } yield {
       Ok.sendFile(zipped.file)
     }

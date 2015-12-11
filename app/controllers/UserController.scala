@@ -1,5 +1,7 @@
 package controllers
 
+import javax.inject.Inject
+
 import com.scalableminds.util.security.SCrypt._
 import oxalis.security.Secured
 import models.user._
@@ -7,7 +9,7 @@ import play.api.data._
 import play.api.data.Forms._
 import play.api.libs.json.Json._
 import play.api.libs.json._
-import play.api.i18n.Messages
+import play.api.i18n.{MessagesApi, Messages}
 import play.api.libs.concurrent.Execution.Implicits._
 import com.scalableminds.util.tools.ExtendedTypes.ExtendedList
 import com.scalableminds.util.tools.ExtendedTypes.ExtendedBoolean
@@ -23,7 +25,7 @@ import models.user.time._
 
 import scala.text
 
-object UserController extends Controller with Secured with Dashboard with FoxImplicits{
+class UserController @Inject() (val messagesApi: MessagesApi) extends Controller with Secured with Dashboard with FoxImplicits{
 
   def empty = Authenticated{ implicit request =>
     Ok(views.html.main()(Html("")))

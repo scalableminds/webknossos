@@ -1,12 +1,14 @@
 package models.task
 
+import scala.async.Async._
+
 import models.annotation.{AnnotationService, Annotation, AnnotationType, AnnotationDAO}
 import com.scalableminds.util.reactivemongo.DBAccessContext
 import reactivemongo.bson.BSONObjectID
 
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import play.api.libs.concurrent.Execution.Implicits._
-import models.user.{User, Experience}
+import models.user.{UserDAO, User, Experience}
 import scala.concurrent.Future
 import play.api.Logger
 import play.api.libs.json.Json
@@ -50,4 +52,25 @@ object TaskService extends TaskAssignmentSimulation with TaskAssignment with Fox
   def logTime(time: Long, _task: BSONObjectID)(implicit ctx: DBAccessContext) = {
     TaskDAO.logTime(time, _task)
   }
+
+  def getProjectsFor(tasks: List[Task])(implicit ctx: DBAccessContext): Future[List[Project]] =
+    Fox.sequenceOfFulls(tasks.map(_.project)).map(_.distinct)
+
+  def getAllAvailableTaskCountsAndProjects()(implicit ctx: DBAccessContext): Fox[Map[User, (Int, List[Project])]] = {
+    UserDAO.findAll
+    .flatMap { users =>
+      Future.sequence( users.map { user =>
+        async {
+          val tasks = await(TaskService.findAssignableFor(user).futureBox) openOr List()
+          val taskCount = tasks.size
+          val projects = await(TaskService.getProjectsFor(tasks))
+          user -> (taskCount, projects)
+        }
+      })
+    }
+    .map(_.toMap[User, (Int, List[Project])])
+  }
+
+  def dataSetNamesForTasks(tasks: List[Task])(implicit ctx: DBAccessContext) =
+    Future.traverse(tasks)(_.annotationBase.flatMap(_.dataSetName getOrElse "").futureBox.map(_.toOption))
 }

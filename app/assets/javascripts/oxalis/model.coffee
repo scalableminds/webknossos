@@ -71,7 +71,8 @@ class Model extends Backbone.Model
               Promise.all(
                 @getDataTokens(layers)
               ).then =>
-                @initializeWithData(tracing, layers)
+                error = @initializeWithData(tracing, layers)
+                return error if error
 
             -> Toast.error("Ooops. We couldn't communicate with our mother ship. Please try to reload this page.")
             )
@@ -120,6 +121,7 @@ class Model extends Backbone.Model
 
     if @getColorBinaries().length == 0
       Toast.error("No data available! Something seems to be wrong with the dataset.")
+      return {"error" : true}
 
     flycam = new Flycam2d(constants.PLANE_WIDTH, maxZoomStep + 1, @)
     flycam3d = new Flycam3d(constants.DISTANCE_3D, dataset.get("scale"))

@@ -1,15 +1,15 @@
 $             = require("jquery")
 _             = require("lodash")
 Backbone      = require("backbone")
+ErrorHandling = require("libs/error_handling")
 app           = require("./app")
-ErrorHandling = require("./main/error_handling")
 require("bootstrap")
 require("fetch")
 require("./libs/core_ext")
 
 ErrorHandling.initialize( throwAssertions: false, sendLocalErrors: false )
 
-Router = require("./main/router")
+Router = require("./router")
 
 app.addInitializer( ->
   app.router = new Router()

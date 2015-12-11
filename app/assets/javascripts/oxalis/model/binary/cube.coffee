@@ -1,4 +1,5 @@
 Backbone = require("backbone")
+ErrorHandling = require("libs/Error_handling")
 
 class Cube
 
@@ -126,7 +127,7 @@ class Cube
 
   getBucketIndexByZoomedAddress : ( address ) ->
 
-    $.assertExists(@cubes[address[3]], "Cube for given zoomStep does not exist"
+    ErrorHandling.assertExists(@cubes[address[3]], "Cube for given zoomStep does not exist"
       cubeCount: @cubes.length
       zoomStep: address[3]
       zoomStepCount: @ZOOM_STEP_COUNT

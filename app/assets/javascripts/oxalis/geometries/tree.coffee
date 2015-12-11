@@ -1,9 +1,10 @@
 app                     = require("app")
-ResizableBuffer         = require("../../libs/resizable_buffer")
-ParticleMaterialFactory = require("./materials/particle_material_factory")
+ResizableBuffer         = require("libs/resizable_buffer")
+ErrorHandling           = require("libs/error_handling")
 THREE                   = require("three")
 TWEEN                   = require("tween")
 ColorConverter          = require("three.color")
+ParticleMaterialFactory = require("./materials/particle_material_factory")
 
 class Tree
 
@@ -90,7 +91,7 @@ class Tree
         array.getAllElements()[index * array.elementLength + i] = lastElement[i]
 
     nodesIndex = @getNodeIndex(node.id)
-    $.assert(nodesIndex?, "No node found.", { id : node.id, @nodeIDs })
+    ErrorHandling.assert(nodesIndex?, "No node found.", { id : node.id, @nodeIDs })
 
     # swap IDs and nodes
     swapLast( @nodeIDs, nodesIndex )
@@ -110,7 +111,7 @@ class Tree
         edgesIndex = i
         break
 
-    $.assert(found, "No edge found.", { found, edgeArray, nodesIndex })
+    ErrorHandling.assert(found, "No edge found.", { found, edgeArray, nodesIndex })
 
     swapLast(@edgesBuffer, edgesIndex)
 

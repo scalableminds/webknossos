@@ -11,9 +11,10 @@ ScaleInfo            = require("./model/scaleinfo")
 Flycam2d             = require("./model/flycam2d")
 Flycam3d             = require("./model/flycam3d")
 constants            = require("./constants")
-Request              = require("../libs/request")
-Toast                = require("../libs/toast")
-Pipeline             = require("../libs/pipeline")
+Request              = require("libs/request")
+Toast                = require("libs/toast")
+Pipeline             = require("libs/pipeline")
+ErrorHandling        = require("libs/error_handling")
 
 # This is THE model. It takes care of the data including the
 # communication with the server.
@@ -32,7 +33,7 @@ class Model extends Backbone.Model
     else
       infoUrl = "/annotations/#{@get('tracingType')}/#{@get('tracingId')}/info"
 
-    return Request.json(infoUrl).then( (tracing) =>
+    Request.json(infoUrl).then( (tracing) =>
 
       @datasetName = tracing.content.dataSet.name
 
@@ -84,7 +85,7 @@ class Model extends Backbone.Model
 
     dataset = @get("dataset")
 
-    $.assertExtendContext({
+    ErrorHandling.assertExtendContext({
       task: @get("tracingId")
       dataSet: dataset.get("name")
     })
@@ -133,7 +134,7 @@ class Model extends Backbone.Model
     if @get("controlMode") == constants.CONTROL_MODE_TRACE
 
       if isVolumeTracing
-        $.assert( @getSegmentationBinary()?,
+        ErrorHandling.assert( @getSegmentationBinary()?,
           "Volume is allowed, but segmentation does not exist" )
         @set("volumeTracing", new VolumeTracing(tracing, flycam, @getSegmentationBinary(), @updatePipeline))
       else

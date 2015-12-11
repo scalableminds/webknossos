@@ -4,6 +4,7 @@
 package com.scalableminds.util.tools
 
 import akka.agent.Agent
+import net.liftweb.common.Box
 import play.api.libs.concurrent.Execution.Implicits._
 import com.scalableminds.util.tools.ProgressTracking.ProgressTracker
 import scala.collection.immutable.Queue
@@ -17,7 +18,7 @@ object ProgressTracking {
 
 trait ProgressState
 
-case class Finished(success: Boolean) extends ProgressState
+case class Finished(result: Box[Boolean]) extends ProgressState
 
 case class InProgress(progress: Double) extends ProgressState
 
@@ -48,9 +49,9 @@ trait ProgressTracking {
   protected def progressTrackerFor(key: String) =
     new ProgressTrackerImpl(key)
 
-  protected def finishTrackerFor(key: String, success: Boolean): Unit = {
+  protected def finishTrackerFor(key: String, result: Box[Boolean]): Unit = {
     progress.send(_ - key)
-    finishedProgress.send( _.enqueueCapped(key -> Finished(success), Max))
+    finishedProgress.send( _.enqueueCapped(key -> Finished(result), Max))
   }
 
   protected def clearAllTrackers(key: String): Unit = {

@@ -46,8 +46,6 @@ require.config(
     "slider" : [ "bootstrap" ]
     "ace" :
       exports : "ace"
-    "libs/viz" :
-      exports : "Viz"
     "routes" :
       exports : "jsRoutes"
     "three" :

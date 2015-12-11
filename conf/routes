@@ -109,8 +109,8 @@ GET           /admin/nml/upload                                               co
 POST          /admin/nml/upload                                               controllers.admin.NMLIO.upload
 
 # Admin datasets
-GET           /admin/datasets/upload                                          controllers.DataSetController.upload
-POST          /admin/datasets/upload                                          controllers.DataSetController.uploadFromForm
+GET           /datasets/upload                                                controllers.DataSetController.empty
+POST          /api/datasets/upload                                            controllers.DataSetController.upload
 
 # Admin Tasks
 GET           /api/tasks                                                      controllers.TaskController.list

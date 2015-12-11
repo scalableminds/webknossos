@@ -1,5 +1,6 @@
 ### define
 admin/views/pagination_view : PaginationView
+admin/views/dataset/dataset_upload_view : DatasetUploadView
 admin/views/dataset/dataset_list_view : DatasetListView
 admin/models/dataset/dataset_collection : DatasetCollection
 admin/views/user/user_list_view : UserListView
@@ -35,5 +36,6 @@ return {
   StatisticView
   WorkloadListView
   WorkloadCollection
+  DatasetUploadView
 }
 

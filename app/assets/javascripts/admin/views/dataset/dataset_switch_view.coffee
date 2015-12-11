@@ -13,7 +13,7 @@ class DatasetSwitchView extends Backbone.Marionette.LayoutView
   template : _.template("""
     <div class="pull-right">
       <% if(isAdmin()) { %>
-        <a href="/admin/datasets/upload" class="btn btn-primary">
+        <a href="/datasets/upload" class="btn btn-primary">
           <i class="fa fa-plus"></i>Upload Dataset
         </a>
       <% } %>

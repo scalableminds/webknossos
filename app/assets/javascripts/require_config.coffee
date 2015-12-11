@@ -37,6 +37,7 @@ require.config(
     "cola"                : "../bower_components/webcola/WebCola/cola.min"
     "fetch"               : "../bower_components/fetch/fetch"
     "promise"             : "../bower_components/es6-promise/promise.min"
+    "fileinput"           : "../bower_components/jasny-bootstrap/js/fileinput"
     "worker"              : "libs/worker_plugin"
     "wrapped_worker"      : "libs/wrapped_worker_plugin"
     "nested_obj_model"    : "libs/nested_obj_model"

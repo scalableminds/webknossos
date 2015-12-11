@@ -150,19 +150,25 @@ class DatasetListItemView extends Backbone.Marionette.CompositeView
 
     updateProgress : ->
 
-      Request.json(@importUrl).then( (responseJSON) =>
-        value = responseJSON.progress * 100
-        if value
-          @ui.progressBar.width("#{value}%")
+      Request
+        .json(@importUrl)
+        .then( (responseJSON) =>
+          value = responseJSON.progress * 100
+          if value
+            @ui.progressBar.width("#{value}%")
 
-        switch responseJSON.status
-          when "finished"
-            @model.fetch()
-          when "notStarted", "inProgress"
-            window.setTimeout((=> @updateProgress()), 100)
-          when "failed"
-            Toast.error("Ups. Import Failed.")
-      )
+          switch responseJSON.status
+            when "finished"
+              @model.fetch()
+              Toast.message(responseJSON.messages)
+            when "notStarted", "inProgress"
+              window.setTimeout((=> @updateProgress()), 100)
+            when "failed"
+              @ui.importLink.show()
+              @ui.progressbarContainer.addClass("hide")
+              # TODO: color table row which contains error
+              # TODO: insert error message in import-link cell
+        )
 
 
   toggleDetails : ->

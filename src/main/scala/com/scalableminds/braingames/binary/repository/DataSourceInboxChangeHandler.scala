@@ -4,15 +4,17 @@
 package com.scalableminds.braingames.binary.repository
 
 import java.nio.file.{Paths, Files, PathMatcher, Path}
+import javax.inject.Inject
 
 import com.scalableminds.braingames.binary.models._
 import com.scalableminds.braingames.binary.watcher.DirectoryChangeHandler
 import com.scalableminds.util.tools.JsonHelper
+import play.api.i18n.MessagesApi
 import play.api.libs.concurrent.Execution.Implicits._
 import net.liftweb.common.Full
 import com.scalableminds.util.io.PathUtils
 
-protected class DataSourceInboxChangeHandler(dataSourceRepository: DataSourceRepository, serverUrl: String) extends DirectoryChangeHandler with PathUtils{
+protected class DataSourceInboxChangeHandler(dataSourceRepository: DataSourceRepository, serverUrl: String)(val messagesApi: MessagesApi) extends DirectoryChangeHandler with PathUtils{
 
   import com.scalableminds.braingames.binary.Logger._
 
@@ -69,7 +71,8 @@ protected class DataSourceInboxChangeHandler(dataSourceRepository: DataSourceRep
       case Full(filedDataSource) =>
         filedDataSource.toUsable(serverUrl)
       case _ =>
-        UnusableDataSource(serverUrl, path.getFileName.toString, path.toAbsolutePath.toString, team, DataSourceTypeGuessers.guessRepositoryType(path).name)
+        UnusableDataSource(serverUrl, path.getFileName.toString, path.toAbsolutePath.toString, team, 
+          new DataSourceTypeGuessers(messagesApi).guessRepositoryType(path).name)
     }
   }
 }

@@ -18,7 +18,7 @@ trait SettingsFile[A] {
 
   def settingsFileInFolder(p: Path) = p.resolve(settingsFileName)
 
-  def fromSettingsFileIn(p: Path): Option[A] =
+  def fromSettingsFileIn(p: Path): Box[A] =
     extractSettingsFromFile(
       settingsFileInFolder(p),
       settingsFileReads)

@@ -4,6 +4,8 @@
 package com.scalableminds.braingames.binary.repository
 
 import java.nio.file.{Files, Path}
+import javax.inject.Inject
+import play.api.i18n.{I18nSupport, MessagesApi, Messages}
 import java.io.FileWriter
 
 import com.scalableminds.braingames.binary.models._
@@ -17,20 +19,22 @@ import org.apache.commons.io.{FileUtils, FilenameUtils}
 import scala.collection.breakOut
 import play.api.libs.json._
 
-object KnossosDataSourceType extends DataSourceType with KnossosDataSourceTypeHandler{
+class KnossosDataSourceType(val messagesApi: MessagesApi) extends DataSourceType with KnossosDataSourceTypeHandler{
   val name = "knossos"
-
-  def mappingsDirectory = "mappings"
-  def mappingFileExtension = "json"
-  def fileExtension = "raw"
 }
 
-trait KnossosDataSourceTypeHandler extends DataSourceTypeHandler {
+trait KnossosDataSourceTypeHandler extends DataSourceTypeHandler with I18nSupport{
   import com.scalableminds.braingames.binary.Logger._
 
   private val maxRecursiveLayerDepth = 2
+  
+  def mappingsDirectory = "mappings"
+  
+  def mappingFileExtension = "json"
+  
+  def fileExtension = "raw"
 
-  def importDataSource(unusableDataSource: UnusableDataSource, progressTracker: ProgressTracker): Option[DataSource] = {
+  def importDataSource(unusableDataSource: UnusableDataSource, progressTracker: ProgressTracker): Box[DataSource] = {
     dataSourceFromFile(unusableDataSource.sourceFolder)
   }
 
@@ -138,8 +142,8 @@ trait KnossosDataSourceTypeHandler extends DataSourceTypeHandler {
     normalizeMappingsRec(mappings, Map.empty).map{
       mapping =>
         val filename = mapping.name.replaceAll("[^a-zA-Z0-9.-]", "_")
-        val path = base.resolve(s"$filename.${KnossosDataSourceType.mappingFileExtension}")
-        PathUtils.fileOption(path).map {
+        val path = base.resolve(s"$filename.${mappingFileExtension}")
+        PathUtils.fileOption(path).foreach {
           file =>
             MappingPrinter.print(mapping, new FileWriter(file))
         }
@@ -148,39 +152,41 @@ trait KnossosDataSourceTypeHandler extends DataSourceTypeHandler {
   }
 
   protected def extractMappings(base: Path): Box[List[DataLayerMapping]] = {
-    val sourceDir = base.resolve(KnossosDataSourceType.mappingsDirectory)
+    val sourceDir = base.resolve(mappingsDirectory)
     val targetDir = sourceDir.resolve("target")
 
-    val mappings = PathUtils.listFiles(base.resolve(KnossosDataSourceType.mappingsDirectory))
-      .filter(_.toString.toLowerCase.endsWith(s".${KnossosDataSourceType.mappingFileExtension}"))
+    val mappings = PathUtils.listFiles(base.resolve(mappingsDirectory))
+      .filter(_.toString.toLowerCase.endsWith(s".${mappingFileExtension}"))
       .map {
         mappingFile =>
           MappingParser.parse(mappingFile)
-      }.toSingleBox("Error extracting mappings")
+      }.toSingleBox(Messages("dataSet.import.layerMappingFailed"))
     
     PathUtils.ensureDirectory(targetDir)
     mappings.flatMap(normalizeMappings(targetDir, _))
   }
 
-  protected def extractLayers(path: Path, dataSourcePath: String) = {
-    val result = PathUtils.listDirectories(path).toList.map { layer =>
-      for {
-        settings <- Box(DataLayerSettings.fromSettingsFileIn(layer))
-        sections <- extractSections(layer)
-        mappings <- extractMappings(layer)
-      } yield {
-        logger.info("Found Layer: " + settings)
-        val dataLayerPath = layer.toAbsolutePath.toString
-        DataLayer(layer.getFileName.toString, settings.typ, dataLayerPath, settings.flags, settings.`class`, false, settings.fallback, sections, settings.largestValue.map(_ + 1), mappings)
-      }
+  protected def extractLayer(layer: Path, dataSourcePath: String) = {
+    for {
+      settings <- DataLayerSettings.fromSettingsFileIn(layer)
+      sections <- extractSections(layer)
+      mappings <- extractMappings(layer)
+    } yield {
+      logger.info("Found Layer: " + settings)
+      val dataLayerPath = layer.toAbsolutePath.toString
+      DataLayer(layer.getFileName.toString, settings.typ, dataLayerPath, settings.flags, settings.`class`, isWritable=false, settings.fallback, sections, settings.largestValue.map(_ + 1), mappings)
     }
-    Box.listToListOfBoxes(result).toSingleBox("Failed to extract layers")
+  }
+
+  protected def extractLayers(path: Path, dataSourcePath: String) = {
+    val parsedLayerSettings = PathUtils.listDirectories(path).map(layerPath => extractLayer(layerPath, dataSourcePath))
+    parsedLayerSettings.toSingleBox(Messages("dataSet.import.layerSettingsFailed"))
   }
 
   protected def dataSourceFromFile(path: Path): Box[DataSource] = {
     if (Files.isDirectory(path)) {
       val dataSource: DataSource = DataSourceSettings.fromSettingsFileIn(path) match {
-        case Some(settings) =>
+        case Full(settings) =>
           DataSource(
             settings.id getOrElse path.getFileName.toString,
             path.toAbsolutePath.toString,
@@ -200,6 +206,6 @@ trait KnossosDataSourceTypeHandler extends DataSourceTypeHandler {
         dataSource.copy(dataLayers = layers)
       }
     } else
-      Empty
+      Failure(Messages("dataSet.import.directoryEmpty"))
   }
 }

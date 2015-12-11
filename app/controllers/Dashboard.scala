@@ -49,18 +49,19 @@ trait Dashboard extends FoxImplicits {
   }
 
 
-  def dashboardInfo(user: User, requestingUser: User)(implicit ctx: DBAccessContext) = {
+  def dashboardExploratoryAnnotations(user: User, requestingUser: User)(implicit ctx: DBAccessContext) = {
+    for {
+      exploratoryAnnotations <- annotationsAsJson(AnnotationService.findExploratoryOf(user), user)
+    } yield {
+      JsArray(exploratoryAnnotations.flatten)
+    }
+ }
+
+ def dashboardTaskAnnotations(user: User, requestingUser: User)(implicit ctx: DBAccessContext) = {
     for {
       tasksAnnotations <- annotationsAsJson(AnnotationService.findTasksOf(user), user)
-      exploratoryAnnotations <- annotationsAsJson(AnnotationService.findExploratoryOf(user), user)
-      finishedAnnotations <- annotationsAsJson(AnnotationService.findFinishedOf(user), user)
     } yield {
-      val annotations = exploratoryAnnotations ::: finishedAnnotations
-      Json.obj(
-        "taskAnnotations" -> tasksAnnotations.flatMap ( o => o),
-        "allAnnotations" -> annotations.flatMap ( o => o)
-      )
+      JsArray(tasksAnnotations.flatten)
     }
-
  }
 }

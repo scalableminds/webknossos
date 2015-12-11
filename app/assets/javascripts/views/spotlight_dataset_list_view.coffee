@@ -1,7 +1,8 @@
 _                    = require("lodash")
-marionette           = require("backbone.marionette")
+Marionette           = require("backbone.marionette")
 DatasetCollection    = require("admin/models/dataset/dataset_collection")
 SpotlightDatasetView = require("views/spotlight_dataset_view")
+
 
 class SpotlightDatasetListView extends Backbone.Marionette.CollectionView
 
@@ -9,10 +10,16 @@ class SpotlightDatasetListView extends Backbone.Marionette.CollectionView
 
   initialize : (options) ->
 
-    @collection.sortByAttribute("created")
+    # @collection.fetch(
+    #   data : "isActive=true"
+    # )
 
-    @collection.fetch(
-      data : "isActive=true"
+    @listenTo(@collection, "sync", =>
+      return new Backbone.Collection(@collection)
+        .filter((dataset) -> dataset.get("isActive"))
+        .sort((a, b) ->
+          return a.get("created").localeCompare(b.get("created"))
+        )
     )
 
 module.exports = SpotlightDatasetListView

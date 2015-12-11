@@ -1,5 +1,4 @@
 PaginationView     = require("./views/pagination_view")
-DatasetListView    = require("./views/dataset/dataset_list_view")
 DatasetCollection  = require("./models/dataset/dataset_collection")
 UserListView       = require("./views/user/user_list_view")
 UserCollection     = require("./models/user/user_collection")
@@ -20,12 +19,10 @@ WorkloadCollection = require("./models/workload/workload_collection")
 
 module.exports = {
   PaginationView
-  DatasetListView
   DatasetCollection
   UserListView
   UserCollection
   TeamListView
-  TeamCollection
   TaskListView
   TaskCollection
   ProjectListView
@@ -34,4 +31,3 @@ module.exports = {
   WorkloadListView
   WorkloadCollection
 }
-

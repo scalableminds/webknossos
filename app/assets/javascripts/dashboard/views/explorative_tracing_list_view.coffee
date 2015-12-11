@@ -1,10 +1,13 @@
 _                              = require("lodash")
 marionette                     = require("backbone.marionette")
 app                            = require("app")
-ExplorativeTracingListItemView = require("dashboard/views/explorative_tracing_list_item_view")
 Input                          = require("libs/input")
 Toast                          = require("libs/toast")
 SortTableBehavior              = require("libs/behaviors/sort_table_behavior")
+ExplorativeTracingListItemView = require("./explorative_tracing_list_item_view")
+UserAnnotationsCollection      = require("../models/user_annotations_collection")
+DatasetCollection              = require("admin/models/dataset/dataset_collection")
+
 
 class ExplorativeTracingListView extends Backbone.Marionette.CompositeView
 
@@ -31,22 +34,6 @@ class ExplorativeTracingListView extends Backbone.Marionette.CompositeView
 
         <div class="divider-vertical"></div>
 
-        <form action="<%= jsRoutes.controllers.AnnotationController.createExplorational().url %>"
-          method="POST"
-          class="form-inline inline-block">
-          <select id="dataSetsSelect" name="dataSetName" class="form-control">
-            <% dataSets.forEach(function(d) { %>
-              <option value="<%= d.get("name") %>"> <%= d.get("name") %> </option>
-            <% }) %>
-          </select>
-          <button type="submit" class="btn btn-default" name="contentType" value="skeletonTracing">
-            <i class="fa fa-search"></i>Open skeleton mode
-          </button>
-          <button type="submit" class="btn btn-default" name="contentType" value="volumeTracing">
-            <i class="fa fa-search"></i>Open volume mode
-          </button>
-        </form>
-        <div class="divider-vertical"></div>
         <a href="#" id="toggle-view-archived" class="btn btn-default">
           <%= toggleViewArchivedText() %>
         </a>
@@ -94,6 +81,7 @@ class ExplorativeTracingListView extends Backbone.Marionette.CompositeView
     archiveAllButton : "#archive-all"
 
   templateHelpers : ->
+    isAdminView : @options.isAdminView
     showArchiveAllButton: =>
       !@showArchivedAnnotations
     toggleViewArchivedText: =>
@@ -105,17 +93,16 @@ class ExplorativeTracingListView extends Backbone.Marionette.CompositeView
       behaviorClass : SortTableBehavior
 
 
-  initialize : (options) ->
+  initialize : (@options) ->
+
+    @childViewOptions.parentModel = this
+
+    @collection = new UserAnnotationsCollection([], userID : @options.userID)
 
     @showArchivedAnnotations = false
-    @collection = @model.getAnnotations()
     @filter = @getFilterForState()
 
-    @childViewOptions.parent = @
-
-    @datasetCollection = @model.get("dataSets")
-    @listenTo(@datasetCollection, "sync", @render)
-    @datasetCollection.fetch({data : "isActive=true"})
+    @collection.fetch()
 
 
   getFilterForState: () ->

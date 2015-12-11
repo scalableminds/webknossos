@@ -3,6 +3,7 @@ marionette        = require("backbone.marionette")
 DatasetCollection = require("admin/models/dataset/dataset_collection")
 TemplateHelpers   = require("libs/template_helpers")
 
+
 class SpotlightDatasetView extends Backbone.Marionette.ItemView
 
   className : "dataset panel panel-default"

@@ -48,12 +48,11 @@ class DatasetListView extends Backbone.Marionette.CompositeView
 
   initialize : ->
 
-    @collection.sortByAttribute("created")
-
     @collection.fetch(
       silent : true
       data : "isEditable=true"
     ).done( =>
+      @collection.sortByAttribute("created")
       @collection.goTo(1)
     )
 

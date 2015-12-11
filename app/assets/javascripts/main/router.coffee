@@ -163,16 +163,21 @@ class Router extends Backbone.Router
   dashboard : (userID) =>
 
     self = this
-    require(["dashboard/views/dashboard_view", "dashboard/models/dashboard_model"], (DashboardView, DashboardModel) ->
+    require(["dashboard/views/dashboard_view", "dashboard/models/user_model"], (DashboardView, UserModel) ->
 
       isAdminView = userID != null
 
-      model = new DashboardModel({ userID, isAdminView : isAdminView })
-      view = new DashboardView(model : model, isAdminView : isAdminView)
+      model = new UserModel(id : userID)
+      view = new DashboardView({ model, isAdminView, userID})
 
-      self.changeView(view)
-      self.listenTo(model, "sync", self.hideLoading)
+      self.listenTo(model, "sync", ->
+        self.changeView(view)
+        self.hideLoading()
+      )
+
+      model.fetch()
     )
+
 
   spotlight : ->
 
@@ -193,7 +198,7 @@ class Router extends Backbone.Router
     require(["admin/views/task/task_overview_view", "admin/models/task/task_overview_model"], (TaskOverviewView, TaskOverviewModel) ->
 
       model = new TaskOverviewModel()
-      view = new TaskOverviewView({model})
+      view = new TaskOverviewView({model, userID})
 
       self.changeView(view)
       self.listenTo(model, "sync", self.hideLoading)

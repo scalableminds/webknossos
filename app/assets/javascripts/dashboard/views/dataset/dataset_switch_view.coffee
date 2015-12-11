@@ -12,17 +12,17 @@ class DatasetSwitchView extends Backbone.Marionette.LayoutView
 
   template : _.template("""
     <div class="pull-right">
-      <% if(isAdmin()) { %>
+      <% if(isAdmin) { %>
         <a href="/admin/datasets/upload" class="btn btn-primary">
           <i class="fa fa-plus"></i>Upload Dataset
         </a>
+        <a href="#" id="showAdvancedView" class="btn btn-default">
+          <i class="fa fa-th-list"></i>Show advanced view
+        </a>
+        <a href="#" id="showGalleryView" class="btn btn-default">
+          <i class="fa fa-th"></i>Show gallery view
+        </a>
       <% } %>
-      <a href="#" id="showAdvancedView" class="btn btn-default">
-        <i class="fa fa-th-list"></i>Show advanced view
-      </a>
-      <a href="#" id="showGalleryView" class="btn btn-default">
-        <i class="fa fa-th"></i>Show gallery view
-      </a>
     </div>
 
     <h3>Datasets</h3>
@@ -45,29 +45,38 @@ class DatasetSwitchView extends Backbone.Marionette.LayoutView
 
   templateHelpers : ->
 
-    isAdmin : =>
-      userTeams = @model.get("teams")
-      return utils.isUserAdmin(userTeams)
+    isAdmin : utils.isUserAdmin(@model)
+
+
+  initialize : ->
+
+    @collection = new DatasetCollection()
+
+    @listenTo(@, "render", @showGalleryView)
+    @listenToOnce(@, "render", => @toggleSwitchButtons(true))
+    @listenToOnce(@collection, "sync", @showGalleryView)
+
+    @collection.fetch(
+      silent : true,
+      data : "isEditable=true"
+    )
 
 
   onShow : ->
-
-    @ui.showAdvancedButton.hide()
-    @showGalleryView()
-
     # Hide advanced view for non-admin users
     userTeams = @model.get("teams")
-    @ui.showAdvancedButton.hide() if not utils.isUserAdmin(userTeams)
 
-  toggleSwitchButtons : ->
 
-    [@ui.showAdvancedButton, @ui.showGalleryButton].map((button) -> button.toggle())
+  toggleSwitchButtons : (state) ->
+
+    @ui.showGalleryButton.toggleClass("hide", !state)
+    @ui.showAdvancedButton.toggleClass("hide", state)
 
 
   showGalleryView : ->
 
-    @toggleSwitchButtons()
-    datasetGalleryView = new SpotlightDatasetListView(collection : new DatasetCollection())
+    @toggleSwitchButtons(false)
+    datasetGalleryView = new SpotlightDatasetListView(collection : @collection)
     @datasetPane.show(datasetGalleryView)
 
     @pagination.empty()
@@ -79,11 +88,14 @@ class DatasetSwitchView extends Backbone.Marionette.LayoutView
     collection.model = DatasetCollection::model
     collection.url = DatasetCollection::url
 
-    @toggleSwitchButtons()
-    datasetListView = new DatasetListView(collection: collection)
+    @toggleSwitchButtons(true)
+
+    #always load Pagination first, for init. the right event handlers
+    paginationView = new PaginationView(collection: @collection)
+    @pagination.show(paginationView)
+
+    datasetListView = new DatasetListView(collection: @collection)
     @datasetPane.show(datasetListView)
 
-    paginationView = new PaginationView(collection: collection)
-    @pagination.show(paginationView)
 
 module.exports = DatasetSwitchView

@@ -4,6 +4,7 @@ DatasetCollection        = require("admin/models/dataset/dataset_collection")
 CreditsView              = require("./credits_view")
 SpotlightDatasetListView = require("./spotlight_dataset_list_view")
 
+
 class SpotlightView extends Backbone.Marionette.LayoutView
 
   template : _.template("""

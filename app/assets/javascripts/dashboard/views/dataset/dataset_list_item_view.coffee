@@ -6,6 +6,7 @@ TemplateHelpers             = require("libs/template_helpers")
 DatasetAccesslistCollection = require("admin/models/dataset/dataset_accesslist_collection")
 DatasetAccessView           = require("./dataset_access_view")
 
+
 class DatasetListItemView extends Backbone.Marionette.CompositeView
 
 
@@ -196,5 +197,6 @@ class DatasetListItemView extends Backbone.Marionette.CompositeView
     event.preventDefault()
     @ui.contentTypeInput.val(type)
     @ui.form.submit()
+
 
 module.exports = DatasetListItemView

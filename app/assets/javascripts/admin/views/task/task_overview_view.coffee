@@ -1,6 +1,5 @@
 _                = require("lodash")
 marionette       = require("backbone.marionette")
-VizWorker        = require("worker!libs/viz.js")
 PanZoomSVG       = require("libs/pan_zoom_svg")
 DispatchedWorker = require("libs/dispatched_worker")
 moment           = require("moment")
@@ -11,7 +10,6 @@ Utils            = require("libs/utils")
 TeamCollection   = require("admin/models/team/team_collection")
 SelectionView    = require("admin/views/selection_view")
 
-vizWorkerHandle = new DispatchedWorker(VizWorker)
 
 class TaskOverviewView extends Backbone.Marionette.LayoutView
 

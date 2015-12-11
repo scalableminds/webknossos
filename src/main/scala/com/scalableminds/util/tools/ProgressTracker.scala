@@ -10,20 +10,10 @@ import scala.collection.immutable.Queue
 import com.scalableminds.util.tools.ExtendedTypes._
 
 object ProgressTracking {
-
-  trait IncrementalTracker extends ProgressTracker{
-    def max: Int
-    def completedOne() = {
-
-    }
-  }
-
   trait ProgressTracker {
     def track(d: Double): Unit
   }
-
 }
-
 
 trait ProgressState
 
@@ -39,7 +29,7 @@ trait ProgressTracking {
 
   lazy val finishedProgress = Agent[Queue[(String, Finished)]](Queue.empty)
 
-  val Max = 50
+  val Max = 50000
 
   protected class ProgressTrackerImpl(key: String) extends ProgressTracker {
     progress.send(_ + (key -> 0))
@@ -51,7 +41,7 @@ trait ProgressTracking {
   protected def progressFor(key: String): ProgressState =
     progress()
       .get(key)
-      .map(InProgress(_))
+      .map(InProgress)
       .orElse(finishedProgress().find(_._1 == key).map(_._2))
       .getOrElse(NotStarted)
 

@@ -4,8 +4,8 @@ Backbone      = require("backbone")
 app           = require("./app")
 ErrorHandling = require("./main/error_handling")
 require("bootstrap")
+require("fetch")
 require("./libs/core_ext")
-
 
 ErrorHandling.initialize( throwAssertions: false, sendLocalErrors: false )
 

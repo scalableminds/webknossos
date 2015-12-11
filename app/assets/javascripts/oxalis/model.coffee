@@ -15,7 +15,7 @@ Request              = require("../libs/request")
 Toast                = require("../libs/toast")
 Pipeline             = require("../libs/pipeline")
 
-# This is the model. It takes care of the data including the
+# This is THE model. It takes care of the data including the
 # communication with the server.
 
 # All public operations are **asynchronous**. We return a promise
@@ -32,10 +32,7 @@ class Model extends Backbone.Model
     else
       infoUrl = "/annotations/#{@get('tracingType')}/#{@get('tracingId')}/info"
 
-    Request.send(
-      url : infoUrl
-      dataType : "json"
-    ).pipe (tracing) =>
+    Request.json(infoUrl).then( (tracing) =>
 
       @datasetName = tracing.content.dataSet.name
 
@@ -57,7 +54,7 @@ class Model extends Backbone.Model
       else
 
         @user = new User()
-        @user.fetch().pipe( =>
+        @user.fetch().then( =>
 
           @set("dataset", new Backbone.Model(tracing.content.dataSet))
           colorLayers = _.filter( @get("dataset").get("dataLayers"),
@@ -66,13 +63,13 @@ class Model extends Backbone.Model
             @datasetName
             dataLayerNames : _.pluck(colorLayers, "name")
           }))
-          @get("datasetConfiguration").fetch().pipe( =>
+          @get("datasetConfiguration").fetch().then( =>
 
             layers = @getLayers(tracing.content.contentData.customLayers)
 
-            $.when(
+            Promise.all(
               @getDataTokens(layers)...
-            ).pipe =>
+            ).then =>
               @initializeWithData(tracing, layers)
 
           -> Toast.error("Ooops. We couldn't communicate with our mother ship. Please try to reload this page.")
@@ -176,13 +173,11 @@ class Model extends Backbone.Model
     dataStoreUrl = @get("dataset").get("dataStore").url
 
     for layer in layers
-      do (layer) =>
-        Request.send(
-          url : "/dataToken/generate?dataSetName=#{@datasetName}&dataLayerName=#{layer.name}"
-          dataType : "json"
-        ).pipe (dataStore) ->
+      do (layer) ->
+        Request.json("/dataToken/generate?dataSetName=#{dataSetName}&dataLayerName=#{layer.name}").then( (dataStore) ->
           layer.token = dataStore.token
           layer.url   = dataStoreUrl
+        )
 
 
   getColorBinaries : ->

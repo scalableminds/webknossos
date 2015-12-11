@@ -1,8 +1,10 @@
 _             = require("lodash")
-marionette    = require("backbone.marionette")
+Marionette    = require("backbone.marionette")
 routes        = require("routes")
 Toast         = require("libs/toast")
 HoverShowHide = require("libs/behaviors/hover_show_hide_behavior")
+Toast         = require("libs/toast")
+Request       = require("libs/request")
 
 class ExplorativeTracingListItemView extends Backbone.Marionette.ItemView
 
@@ -89,17 +91,14 @@ class ExplorativeTracingListItemView extends Backbone.Marionette.ItemView
     target = $(event.target)
     url = target.attr("action")
 
-    $.ajax(
-      url : url
-      type: "post",
-      data: target.serialize(),
-    ).done((response) =>
+    Request.urlEncodedForm(
+      url
+      data: target
+    ).then( (response) =>
       Toast.message(response.messages)
       newName = @$("input[name='name']").val()
       @model.set("name", newName)
       @render()
-    ).fail((xhr) ->
-      Toast.message(xhr.responseJSON.messages)
     )
 
   toggleState: (state) ->
@@ -111,9 +110,10 @@ class ExplorativeTracingListItemView extends Backbone.Marionette.ItemView
     event.preventDefault()
     url = $(event.target).attr("href")
 
-    $.get(url).done((response) =>
+    Request.json(url).then( (response) =>
       Toast.message(response.messages)
       @toggleState(@model.attributes.state)
+      @model.collection.remove(@model)
       @options.parent.render()
     ).fail((xhr) ->
       Toast.message(xhr.responseJSON.messages)

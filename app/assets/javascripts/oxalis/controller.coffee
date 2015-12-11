@@ -61,6 +61,7 @@ class Controller
       .done( (error) => @modelFetchDone(error) )
       .fail( (response) => @modelFetchFail(response) )
 
+
   modelFetchDone : (error) ->
 
     # Do not continue, when there was an error and we got no settings from the server

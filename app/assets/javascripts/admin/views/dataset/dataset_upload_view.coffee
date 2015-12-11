@@ -55,7 +55,10 @@ class DatasetUploadView extends Backbone.Marionette.LayoutView
           </div>
           <div class="form-group">
             <div class="col-sm-9 col-sm-offset-3">
-              <button type="submit" class="form-control btn btn-primary">Import</button>
+              <button type="submit" class="form-control btn btn-primary">
+                <i class="fa fa-spinner fa-spin hidden"/>
+                Import
+              </button>
             </div>
           </div>
         </form>
@@ -73,7 +76,8 @@ class DatasetUploadView extends Backbone.Marionette.LayoutView
     "change input[type=file]" : "createProject"
 
   ui :
-    "form" : "form"
+    form : "form"
+    spinner : ".fa-spinner"
 
   initialize : ->
 
@@ -99,6 +103,9 @@ class DatasetUploadView extends Backbone.Marionette.LayoutView
 
     if form.checkValidity()
 
+      Toast.info("Uploading datasets", false)
+      @ui.spinner.removeClass("hidden")
+
       Request.send(
         url : "/api/datasets/upload"
         method : "POST"
@@ -109,6 +116,9 @@ class DatasetUploadView extends Backbone.Marionette.LayoutView
           Toast.message("Success")
         (xhr) =>
           Toast.message(xhr.response.messages)
+      ).always(
+        =>
+          @ui.spinner.addClass("hidden")
       )
 
 

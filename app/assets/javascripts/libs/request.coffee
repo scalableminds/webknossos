@@ -85,25 +85,37 @@ Request =
       method : "GET"
       credentials : "same-origin"
       headers : {}
+      doNotCatch : false
 
     if options.data?
       requestOptions = requestDataHandler(options.data)
     else
       requestOptions = headers: {}
 
-    _.defaults(options, requestOptions, defaultOptions)
-    _.defaults(options.headers, requestOptions.headers, defaultOptions.headers)
+    options = _.assign(
+      {},
+      defaultOptions,
+      options,
+      requestOptions
+    )
+    _headers = _.assign(
+      {},
+      defaultOptions.headers,
+      options.headers,
+      requestOptions.headers
+    )
 
     headers = new Headers()
-    for name of options.headers
-      headers.set(name, options.headers[name])
-
+    for name of _headers
+      headers.set(name, _headers[name])
     options.headers = headers
 
     fetchPromise = fetch(url, options)
       .then(@handleStatus)
       .then(responseDataHandler)
-      .catch(@handleError)
+
+    if not options.doNotCatch
+      fetchPromise = fetchPromise.catch(@handleError)
 
     if options.timeout?
       timeoutPromise = new Promise( (resolve, reject) ->
@@ -113,17 +125,17 @@ Request =
           options.timeout
         )
       )
-      Promise.race([fetchPromise, timeoutPromise])
-    else
-      fetchPromise
+      return Promise.race([fetchPromise, timeoutPromise])
+
+    return fetchPromise
 
 
   handleStatus : (response) ->
 
     if 200 <= response.status < 300
-      Promise.resolve(response)
-    else
-      Promise.reject(response)
+      return Promise.resolve(response)
+
+    return Promise.reject(response)
 
 
   handleError : (error) ->

@@ -1,9 +1,8 @@
 _                    = require("lodash")
-SortedCollection     = require("../sorted_collection")
+PaginationCollection = require("../pagination_collection")
 DatasetModel         = require("./dataset_model")
 
-
-class DatasetCollection extends SortedCollection
+class DatasetCollection extends PaginationCollection
 
   url : "/api/datasets"
   model : DatasetModel

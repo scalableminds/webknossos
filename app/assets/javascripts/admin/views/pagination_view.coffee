@@ -9,32 +9,32 @@ class PaginationView extends Backbone.Marionette.ItemView
       <div class="col-sm-9">
         <ul class="pagination">
           <li class="first <% if (Pagination.currentPage == 1) { %> disabled <% } %>">
-            <a href="#"><i class="fa fa-angle-double-left"></i></a>
+            <a><i class="fa fa-angle-double-left"></i></a>
           </li>
           <li class="prev <% if (Pagination.currentPage == 1) { %> disabled <% } %>"">
-            <a href="#"><i class="fa fa-angle-left"></i></a>
+            <a><i class="fa fa-angle-left"></i></a>
           </li>
           <% if (Pagination.lastPage == 1){ %>
             <li class="active">
               <span>1</span>
             <li>
           <% } %>
-          <% _.each (Pagination.pageSet, function (p) { %>
+          <% _.each(pageRange, function (p) { %>
             <% if (Pagination.currentPage == p) { %>
               <li class="active">
                 <span><%= p %></span>
               </li>
             <% } else { %>
               <li>
-                <a href="#" class="page"><%= p %></a>
+                <a class="page"><%= p %></a>
               </li>
             <% } %>
           <% }); %>
           <li class="next <% if (Pagination.currentPage >= Pagination.lastPage) { %> disabled <% } %>">
-            <a href="#"><i class="fa fa-angle-right"></i></a>
+            <a><i class="fa fa-angle-right"></i></a>
           </li>
           <li class="last <% if (Pagination.currentPage >= Pagination.lastPage) { %> disabled <% } %>">
-            <a href="#"><i class="fa fa-angle-double-right"></i></a>
+            <a><i class="fa fa-angle-double-right"></i></a>
           </li>
         </ul>
 
@@ -54,8 +54,12 @@ class PaginationView extends Backbone.Marionette.ItemView
   """)
 
   className : "container wide"
-  templateHelpers :
-    Pagination : {}
+  templateHelpers : ->
+    pageRange : _.range(
+      Math.max(@collection.state.firstPage, @collection.state.currentPage - 5),
+      Math.min(@collection.state.lastPage, @collection.state.currentPage + 5))
+    Pagination : @collection.state
+    addButtonText : @options.addButtonText
 
   ui :
     "inputSearch" : ".search-query"
@@ -70,44 +74,34 @@ class PaginationView extends Backbone.Marionette.ItemView
     "input input" : "filterBySearch"
 
 
-  initialize : ({@collection, @addButtonText}) ->
+  initialize : ->
 
-    @listenTo(@collection, "reset", @collectionSynced)
-    @listenTo(@collection, "remove", @refresh)
     @listenTo(@collection, "add", @afterAdd)
     @listenToOnce(@collection, "reset", @searchByHash)
 
 
-  serializeData : ->
+  goFirst : (evt) ->
+    @collection.getFirstPage()
 
-    return {@addButtonText}
+  goLast : (evt) ->
+    @collection.getLastPage()
 
-
-  goFirst : ->
-
-    @collection.firstPage()
-
-
-  goLast : ->
-
-    @collection.lastPage()
-
-
-  goBack : ->
-
-    @collection.prevPage()
-
+  goBack : (evt) ->
+    pagination = @collection.state
+    if pagination.currentPage > pagination.firstPage
+      @collection.getPreviousPage()
 
   goNext : ->
-
-    @collection.nextPage()
+    pagination = @collection.state
+    if pagination.currentPage < pagination.lastPage
+      @collection.getNextPage()
 
 
   goToPage : (evt) ->
 
     evt.preventDefault()
     page = $(evt.target).text()
-    @collection.goTo(page)
+    @collection.getPage(page)
 
 
   addElement : ->
@@ -117,32 +111,17 @@ class PaginationView extends Backbone.Marionette.ItemView
 
   filterBySearch : ->
 
-    # Only enable filtering after the collection has data
-    if @collection.origModels
+    # implement actually filtering on the collection in each respective view
+    # in order to set correct fields for filtering
+    filterQuery = @ui.inputSearch.val()
+    app.vent.trigger("paginationView:filter", filterQuery)
 
-      # implement actually filtering on the collection in each respective view
-      # in order to set correct fields for filtering
-      filterQuery = @ui.inputSearch.val()
-      app.vent.trigger("paginationView:filter", filterQuery)
-
-      @ui.inputSearch.focus()
-      @ui.inputSearch.val(filterQuery)
-
-
-  collectionSynced : (evt) ->
-
-    @templateHelpers.Pagination = @collection.info()
-    @render()
-
-
-  refresh : ->
-
-    @collection.pager()
+    @ui.inputSearch.focus()
+    @ui.inputSearch.val(filterQuery)
 
 
   afterAdd : ->
 
-    @refresh()
     @goLast()
 
 

@@ -24,11 +24,8 @@ class WorkloadListView extends Backbone.Marionette.CompositeView
 
   initialize : ->
 
-    @collection.fetch(
-      silent : true
-    ).done( =>
-      @collection.setSort("availableTaskCount", "asc")
-      @collection.goTo(1)
+    @collection.fetch().done( =>
+      @collection.setSorting("availableTaskCount", 1)
     )
 
     @listenTo(app.vent, "paginationView:filter", @filterByQuery)

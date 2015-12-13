@@ -64,9 +64,6 @@ class UserListView extends Backbone.Marionette.CompositeView
 
     @collection.fetch(
       data : "isEditable=true"
-      silent : true
-    ).done( =>
-      @collection.goTo(1)
     )
 
     @listenTo(app.vent, "paginationView:filter", @filterBySearch)

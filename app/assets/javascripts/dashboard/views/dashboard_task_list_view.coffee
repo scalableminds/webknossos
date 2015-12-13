@@ -5,13 +5,14 @@ TaskTransferModalView     = require("./task_transfer_modal_view")
 routes                    = require("routes")
 Toast                     = require("libs/toast")
 SortTableBehavior         = require("libs/behaviors/sort_table_behavior")
+UserTasksCollection       = require("../models/user_tasks_collection")
 
 class DashboardTaskListView extends Backbone.Marionette.CompositeView
 
   template : _.template("""
     <h3>Tasks</h3>
     <% if (isAdminView) { %>
-      <a href="<%= jsRoutes.controllers.admin.NMLIO.userDownload(user.id).url %>"
+      <a href="<%= jsRoutes.controllers.admin.NMLIO.userDownload(id).url %>"
          class="btn btn-primary"
          title="download all finished tracings">
           <i class="fa fa-download"></i>download
@@ -45,7 +46,12 @@ class DashboardTaskListView extends Backbone.Marionette.CompositeView
 
   childView : DashboardTaskListItemView
   childViewOptions : ->
-    isAdminView : @model.get("isAdminView")
+    isAdminView : @options.isAdminView
+
+
+  templateHelpers : ->
+    isAdminView : @options.isAdminView
+
 
   childViewContainer : "tbody"
 
@@ -63,22 +69,25 @@ class DashboardTaskListView extends Backbone.Marionette.CompositeView
       behaviorClass: SortTableBehavior
 
 
-  initialize : (options) ->
+  initialize : (@options) ->
 
     @showFinishedTasks = false
-    @collection = @model.getUnfinishedTasks()
+    @collection = new UserTasksCollection()
+    @collection.fetch()
 
-    @listenTo(@model.get("tasks"), "add", @addChildView, @)
+    @filter = UserTasksCollection::unfinishedTasksFilter
+
+    #@listenTo(@model.get("tasks"), "add", @addChildView, @)
     @listenTo(app.vent, "TaskTransferModal:refresh", @refresh)
 
 
   update : ->
 
-    @collection =
+    @filter =
       if @showFinishedTasks
-        @model.getFinishedTasks()
+        UserTasksCollection::finishedTasksFilter
       else
-        @model.getUnfinishedTasks()
+        UserTasksCollection::unfinishedTasksFilter
 
     @render()
 
@@ -87,11 +96,11 @@ class DashboardTaskListView extends Backbone.Marionette.CompositeView
 
     event.preventDefault()
 
-    if @model.getUnfinishedTasks().length == 0 or confirm("Do you really want another task?")
+    if @collection.filter(UserTasksCollection::unfinishedTasksFilter).length == 0 or confirm("Do you really want another task?")
 
       showMessages = (response) -> Toast.message(response.messages)
 
-      @model.getNewTask().done((response) =>
+      @collection.getNewTask().done((response) =>
         showMessages(response)
         @update()
       ).fail((xhr) ->
@@ -122,7 +131,7 @@ class DashboardTaskListView extends Backbone.Marionette.CompositeView
 
   refresh : ->
 
-    @model.fetch().done( =>
+    @collection.fetch().done( =>
       @update()
     )
 

@@ -1,18 +1,21 @@
 package controllers
 
+import javax.inject.Inject
+
 import oxalis.security.Secured
 import models.team._
 import play.api.libs.json.{JsError, JsSuccess, Writes, Json}
 import play.api.libs.concurrent.Execution.Implicits._
 import models.user.User
+import models.user.UserService
 import scala.concurrent.Future
-import play.api.i18n.Messages
+import play.api.i18n.{MessagesApi, Messages}
 import net.liftweb.common.{Empty, Failure, Full}
 import play.twirl.api.Html
 import com.scalableminds.util.reactivemongo.GlobalAccessContext
 import com.scalableminds.util.tools.DefaultConverters._
 
-object TeamController extends Controller with Secured {
+class TeamController @Inject()(val messagesApi: MessagesApi) extends Controller with Secured {
 
   def empty = Authenticated{ implicit request =>
     Ok(views.html.main()(Html("")))
@@ -48,6 +51,7 @@ object TeamController extends Controller with Secured {
       team <- TeamDAO.findOneById(id)
       _ <- isTeamOwner(team, request.user).toFox
       _ <- TeamService.remove(team)
+      _ <- UserService.removeTeamFromUsers(team)
     } yield {
       JsonOk(Messages("team.deleted"))
     }

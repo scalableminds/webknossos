@@ -32,6 +32,11 @@ Utils =
       array.reduce(( (r, a) -> r + a ), 0)
 
 
+  floorArray : (array) ->
+
+    return array.map( (a) -> Math.floor(a) )
+
+
   roundTo : (value, digits) ->
 
     digitMultiplier = Math.pow(10, digits)
@@ -102,10 +107,12 @@ Utils =
 
 
   # this is insecure and must not be used for security related functionality
-  isUserAdmin : (userTeams) ->
-
-    _.findIndex(userTeams, (team) ->
-      team.role.name == "admin"
-    ) >= 0
+  isUserAdmin : (user) ->
+    if not user?
+      return false
+    else
+      return _.findIndex(user.get("teams"), (team) ->
+        team.role.name == "admin"
+      ) >= 0
 
 module.exports = Utils

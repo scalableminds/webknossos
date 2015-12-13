@@ -187,7 +187,7 @@ class Flycam2d
 
   getPosition : ->
 
-    @position
+    return @position
 
 
   getViewportBoundingBox : ->

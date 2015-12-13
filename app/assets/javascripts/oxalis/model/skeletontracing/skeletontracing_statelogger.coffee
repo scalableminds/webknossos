@@ -1,14 +1,14 @@
 StateLogger    = require("../statelogger")
 THREE          = require("three")
-ColorConverter = require("three.color")
-$              = require("jquery")
+utils          = require("libs/utils")
+ErrorHandling  = require("libs/error_handling")
 
 class SkeletonTracingStateLogger extends StateLogger
 
 
-  constructor : (flycam, version, tracingId, tracingType, allowUpdate, updatePipeline, @skeletonTracing) ->
+  constructor : (flycam, version, tracingId, tracingType, allowUpdate, @skeletonTracing) ->
 
-    super(flycam, version, tracingId, tracingType, allowUpdate, updatePipeline)
+    super(flycam, version, tracingId, tracingType, allowUpdate)
 
 
   #### TREES
@@ -49,14 +49,14 @@ class SkeletonTracingStateLogger extends StateLogger
     for node in sourceTree.nodes
       found |= (node.id == lastNodeId)
       treeIds.push(node.id)
-    $.assert(found, "lastNodeId not in sourceTree",
+    ErrorHandling.assert(found, "lastNodeId not in sourceTree",
       {sourceTreeNodeIds : treeIds, lastNodeId : lastNodeId})
 
     found = false; treeIds = []
     for node in targetTree.nodes
       found |= (node.id == activeNodeId)
       treeIds.push(node.id)
-    $.assert(found, "activeNodeId not in targetTree",
+    ErrorHandling.assert(found, "activeNodeId not in targetTree",
       {targetTreeNodeIds : treeIds, activeNodeId : activeNodeId})
 
     # Copy all edges and nodes from sourceTree to
@@ -77,12 +77,12 @@ class SkeletonTracingStateLogger extends StateLogger
       treeId : treeId,
       id: node.id,
       radius: node.radius,
-      position : node.pos
+      position : utils.floorArray(node.pos)
 
 
   edgeObject : (node, treeId) ->
 
-    $.assert(node.neighbors.length == 1,
+    ErrorHandling.assert(node.neighbors.length == 1,
       "Node has to have exactly one neighbor", node.neighbors.length)
 
     return {
@@ -94,10 +94,10 @@ class SkeletonTracingStateLogger extends StateLogger
 
   createNode : (node, treeId) ->
 
-    $.assert(node.neighbors.length <= 1,
+    ErrorHandling.assert(node.neighbors.length <= 1,
       "New node can't have more than one neighbor", node.neighbors.length)
     if node.neighbors[0]
-      $.assert(node.treeId == node.neighbors[0].treeId,
+      ErrorHandling.assert(node.treeId == node.neighbors[0].treeId,
         "Neighbor has different treeId",
         {treeId1 : node.treeId, treeId2 : node.neighbors[0].treeId})
 
@@ -151,12 +151,12 @@ class SkeletonTracingStateLogger extends StateLogger
         branchPoints : branchPoints
         comments : @skeletonTracing.getPlainComments()
         activeNode : @skeletonTracing.getActiveNodeId()
-        editPosition : @flycam.getPosition()
+        editPosition : utils.floorArray(@flycam.getPosition())
         zoomLevel : @flycam.getZoomStep()
       }
       false
     )
-    $.assert(@newDiffs.length > 0, "newDiffs empty after concatUpdateTracing", {
+    ErrorHandling.assert(@newDiffs.length > 0, "newDiffs empty after concatUpdateTracing", {
       @newDiffs
     })
 

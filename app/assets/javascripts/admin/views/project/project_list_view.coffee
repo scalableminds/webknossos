@@ -35,11 +35,7 @@ class ProjectsListView extends Backbone.Marionette.CompositeView
 
   initialize : ->
 
-    @collection.fetch(
-      silent : true
-    ).done( =>
-      @collection.goTo(1)
-    )
+    @collection.fetch()
 
     @listenTo(app.vent, "paginationView:filter", @filterBySearch)
     @listenTo(app.vent, "CreateProjectModal:refresh", @refreshPagination)

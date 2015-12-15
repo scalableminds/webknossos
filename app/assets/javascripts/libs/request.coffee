@@ -17,8 +17,7 @@ Request =
         body : if typeof(data) == "string" then data else JSON.stringify(data)
         headers :
           "Content-Type" : "application/json"
-      (response) ->
-        response.json()
+      @handleEmptyJsonResponse
     )
 
 
@@ -39,8 +38,7 @@ Request =
 
         method : "POST"
         body : formData
-      (response) ->
-        response.json()
+      @handleEmptyJsonResponse
     )
 
 
@@ -56,8 +54,7 @@ Request =
         body : if typeof(data) == "string" then data else data.serialize()
         headers :
           "Content-Type" : "application/x-www-form-urlencoded"
-      (response) ->
-        response.json()
+      @handleEmptyJsonResponse
     )
 
 
@@ -138,7 +135,15 @@ Request =
       )
     else
       Toast.error(error)
-      Promise.reject(error)
+
+
+  handleEmptyJsonResponse : (response) ->
+
+    contentLength = parseInt(response.headers.get("Content-Length"))
+    if contentLength == 0
+      Promise.resolve({})
+    else
+      response.json()
 
 
   # Extends the native Promise API with `always` functionality similar to jQuery.

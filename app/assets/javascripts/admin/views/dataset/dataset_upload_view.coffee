@@ -13,7 +13,7 @@ class DatasetUploadView extends Backbone.Marionette.LayoutView
   template : _.template("""
     <div class="row">
       <div class="col-md-6">
-        <h3>Import Dataset</h3>
+        <h3>Upload Dataset</h3>
         <form action="/api/datasets/upload" method="POST" class="form-horizontal" enctype="multipart/form-data">
           <div class=" form-group">
             <label class="col-sm-3 control-label" for="name">Name</label>
@@ -106,17 +106,14 @@ class DatasetUploadView extends Backbone.Marionette.LayoutView
       Toast.info("Uploading datasets", false)
       @ui.spinner.removeClass("hidden")
 
-      Request.send(
-        url : "/api/datasets/upload"
-        method : "POST"
-        formData : new FormData(form)
-        dataType : "json"
-      ).then(
-        ->
-          Toast.success()
-        (xhr) ->
-          Toast.error(xhr.response.messages)
-      ).always(
+      Request.multipartForm("/api/datasets/upload",
+        data : new FormData(form)
+      )
+      .then(
+        -> Toast.success()
+        -> # NOOP
+      )
+      .then(
         =>
           @ui.spinner.addClass("hidden")
       )

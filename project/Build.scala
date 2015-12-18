@@ -11,10 +11,10 @@ import scala.concurrent.Future
 import scala.concurrent.ExecutionContext.Implicits.global
 
 object Dependencies{
-  val akkaVersion = "2.4.0"
+  val akkaVersion = "2.4.1"
   val reactiveVersion = "0.11.7"
-  val reactivePlayVersion = "0.11.2.play24"
-  val braingamesVersion = "8.0.1"
+  val reactivePlayVersion = "0.11.7.play24"
+  val braingamesVersion = "8.0.8"
   val twelvemonkeys = "3.2"
 
   val restFb = "com.restfb" % "restfb" % "1.6.11"
@@ -35,7 +35,6 @@ object Dependencies{
   val scalaAsync = "org.scala-lang.modules" %% "scala-async" % "0.9.2"
   val airbrake = "com.scalableminds" %% "play-airbrake" % "0.5.0"
   val mongev = "com.scalableminds" %% "play-mongev" % "0.4.1"
-  val playMetrics = "com.kenshoo" %% "metrics-play" % "2.4.0_0.4.1"
   val tiff = Seq(
       "com.twelvemonkeys.common" % "common-lang" % twelvemonkeys,
       "com.twelvemonkeys.common" % "common-io" % twelvemonkeys,
@@ -161,7 +160,6 @@ object ApplicationBuild extends Build {
     cache,
     ws,
     airbrake,
-    playMetrics,
     mongev,
     specs2 % Test)++tiff
 

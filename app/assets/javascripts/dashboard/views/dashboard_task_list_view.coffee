@@ -96,8 +96,6 @@ class DashboardTaskListView extends Backbone.Marionette.CompositeView
       @model.getNewTask().done((response) =>
         showMessages(response)
         @update()
-      ).fail((xhr) ->
-        showMessages(xhr.responseJSON)
       )
 
 

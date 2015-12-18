@@ -90,8 +90,6 @@ class TaskTypeItemView extends Backbone.Marionette.CompositeView
     if window.confirm("Do you really want to delete this task type?")
       @model.destroy().done((response) =>
         Toast.message(response.messages)
-      ).fail((xhr) ->
-        Toast.message(xhr.responseJSON.messages)
       )
 
   toggleDetails : ->

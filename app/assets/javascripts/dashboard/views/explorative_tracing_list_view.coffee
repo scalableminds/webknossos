@@ -94,14 +94,18 @@ class ExplorativeTracingListView extends Backbone.Marionette.CompositeView
       data : "isActive=true"
     )
 
-    @datasetRegion = new Marionette.Region(
-      el : ".dataset-selection"
-    )
+    # NO DEV: Don't merge to dev
+    if not @model.get("isAdminView")
+      @datasetRegion = new Marionette.Region(
+        el : ".dataset-selection"
+      )
 
 
   onShow : ->
 
-    @datasetRegion.show(@datasetSelectionView)
+    # NO DEV: Don't merge to dev
+    if @datasetRegion
+      @datasetRegion.show(@datasetSelectionView)
 
 
   selectFiles : (event) ->

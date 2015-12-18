@@ -166,9 +166,6 @@ class DatasetListItemView extends Backbone.Marionette.CompositeView
         .then( (json) => @importFailed(json))
     )
 
-  onRender : ->
-
-    console.log("goo")
 
   importFailed : (response) ->
 

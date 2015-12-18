@@ -1,10 +1,9 @@
 ### define
-underscore : _
-backbone : Backbone
+../sorted_collection : SortedCollection
 ./dataset_model : DatasetModel
 ###
 
-class DatasetCollection extends Backbone.Collection
+class DatasetCollection extends SortedCollection
 
   url : "/api/datasets"
   model : DatasetModel

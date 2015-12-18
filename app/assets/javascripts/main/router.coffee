@@ -150,9 +150,9 @@ class Router extends Backbone.Router
 
   spotlight : ->
 
-    require(["views/spotlight_view", "admin/models/dataset/dataset_collection"], (SpotlightView, DatasetCollection) =>
+    require(["views/spotlight_view", "admin/models/dataset/paginated_dataset_collection"], (SpotlightView, PaginatedDatasetCollection) =>
 
-      collection = new DatasetCollection()
+      collection = new PaginatedDatasetCollection()
       view = new SpotlightView(model: collection)
 
       @changeView(view)

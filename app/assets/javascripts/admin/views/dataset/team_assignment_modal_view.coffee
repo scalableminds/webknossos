@@ -61,7 +61,7 @@ class TeamAssignmentModalView extends Backbone.Marionette.CompositeView
 
     @dataset.set("allowedTeams", allowedTeams)
 
-    Request.json(
+    Request.sendJSONReceiveJSON(
       """/api/datasets/#{@dataset.get("name")}/teams"""
       data: allowedTeams
     )

@@ -16,7 +16,7 @@ require [
   require ["main/router", "main/non_backbone_router"], (Router, NonBackboneRouter) ->
 
     app.addInitializer( ->
-      Request.json("/api/user")
+      Request.receiveJSON("/api/user")
         .then((user) ->
           app.currentUser = user
           ErrorHandling.setCurrentUser(user)

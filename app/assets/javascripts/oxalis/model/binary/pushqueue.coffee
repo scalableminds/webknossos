@@ -96,7 +96,7 @@ class PushQueue
       gzip = new Zlib.Gzip(transmitBuffer)
       transmitBuffer = gzip.compress()
 
-      Request.$(Request.arraybuffer(
+      Request.$(Request.sendArraybufferReceiveArraybuffer(
         @url
         data: transmitBuffer
         method: "PUT"

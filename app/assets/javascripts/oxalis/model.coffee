@@ -33,7 +33,7 @@ class Model
     else
       infoUrl = "/annotations/#{@tracingType}/#{@tracingId}/info"
 
-    Request.json(infoUrl).then( (tracing) =>
+    Request.receiveJSON(infoUrl).then( (tracing) =>
 
       if tracing.error
         Toast.error(tracing.error)
@@ -52,7 +52,7 @@ class Model
         return {"error" : true}
 
       else
-        Request.json("/user/configuration").then(
+        Request.receiveJSON("/user/configuration").then(
           (user) =>
             dataSet = tracing.content.dataSet
             layers  = @getLayers(dataSet.dataLayers, tracing.content.contentData.customLayers)
@@ -151,7 +151,7 @@ class Model
 
     for layer in layers
       do (layer) ->
-        Request.json("/dataToken/generate?dataSetName=#{dataSetName}&dataLayerName=#{layer.name}").then( (dataStore) ->
+        Request.receiveJSON("/dataToken/generate?dataSetName=#{dataSetName}&dataLayerName=#{layer.name}").then( (dataStore) ->
           layer.token = dataStore.token
           layer.url   = dataStoreUrl
         )

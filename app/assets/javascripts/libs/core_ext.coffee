@@ -370,7 +370,7 @@ Backbone.ajax = (options) ->
     else
       throw new Error("options.data is expected to be a string for a GET request!")
 
-  return Request.$(Request.json(
+  return Request.$(Request.sendJSONReceiveJSON(
     options.url
     method : options.type
     data : options.data

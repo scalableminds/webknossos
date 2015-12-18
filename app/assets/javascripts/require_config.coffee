@@ -6,7 +6,7 @@ require.config(
 
   paths :
     "jquery"              : "../bower_components/jquery/jquery"
-    "underscore"          : "../bower_components/lodash/dist/lodash"
+    "underscore"          : "../bower_components/lodash/lodash"
     "bootstrap"           : "../bower_components/bootstrap/dist/js/bootstrap"
     "slider"              : "../bower_components/seiyria-bootstrap-slider/js/bootstrap-slider"
     "coffee-script"       : "../bower_components/coffee-script/extras/coffee-script"

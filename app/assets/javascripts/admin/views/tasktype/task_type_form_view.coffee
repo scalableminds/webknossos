@@ -175,7 +175,7 @@ class TaskTypeFormView extends Backbone.Marionette.LayoutView
       else
         "/api/taskTypes"
 
-    Request.urlEncodedForm(
+    Request.sendUrlEncodedFormReceiveJSON(
       url
       data: target
     ).then( (response) =>

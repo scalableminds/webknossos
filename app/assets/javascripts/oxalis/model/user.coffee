@@ -71,7 +71,7 @@ class User
 
   resetBrightnessContrastColorSettings : (model) ->
 
-    Request.$(Request.json("/user/configuration/default").then( (defaultData) =>
+    Request.$(Request.receiveJSON("/user/configuration/default").then( (defaultData) =>
       @get("brightnessContrastColorSettings")[model.datasetPostfix] =
         defaultData.brightnessContrastColorSettings[model.datasetPostfix]
 
@@ -101,7 +101,7 @@ class User
 
     console.log "Sending User Data:", @userSettings
 
-    return Request.json(
+    return Request.sendJSONReceiveJSON(
       "/user/configuration"
       data : @userSettings
     )

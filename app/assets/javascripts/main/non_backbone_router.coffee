@@ -38,9 +38,8 @@ class NonBackboneRouter extends Backbone.Router
         templateOutput = _.template(templateSource)(data)
         leftTabBar.html(templateOutput)
 
-      Request.json(
+      Request.receiveJSON(
         dataUrl
-        method: 'GET'
       ).then(
         (info) ->
           if info.task

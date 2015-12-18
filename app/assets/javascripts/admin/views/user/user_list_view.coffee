@@ -92,7 +92,7 @@ class UserListView extends Backbone.Marionette.CompositeView
 
   showModal : (modalView) ->
 
-    if @$("input[type=checkbox]:checked").length > 0
+    if @$("tbody input[type=checkbox]:checked").length > 0
       modalView = new modalView({userCollection : @collection})
       modalView.render()
       @ui.modalWrapper.html(modalView.el)

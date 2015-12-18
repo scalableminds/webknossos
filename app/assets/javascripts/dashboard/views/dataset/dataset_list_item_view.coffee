@@ -136,7 +136,7 @@ class DatasetListItemView extends Backbone.Marionette.CompositeView
       if evt
         evt.preventDefault()
 
-      Request.json(
+      Request.receiveJSON(
         @importUrl
         method: method
       ).then( (responseJSON) =>
@@ -149,7 +149,7 @@ class DatasetListItemView extends Backbone.Marionette.CompositeView
 
     updateProgress : ->
 
-      Request.json(@importUrl).then( (responseJSON) =>
+      Request.receiveJSON(@importUrl).then( (responseJSON) =>
         value = responseJSON.progress * 100
         if value
           @ui.progressBar.width("#{value}%")

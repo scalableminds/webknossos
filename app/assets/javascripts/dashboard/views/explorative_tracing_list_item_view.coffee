@@ -91,7 +91,7 @@ class ExplorativeTracingListItemView extends Backbone.Marionette.ItemView
     target = $(event.target)
     url = target.attr("action")
 
-    Request.urlEncodedForm(
+    Request.sendUrlEncodedFormReceiveJSON(
       url
       data: target
     ).then( (response) =>
@@ -110,7 +110,7 @@ class ExplorativeTracingListItemView extends Backbone.Marionette.ItemView
     event.preventDefault()
     url = $(event.target).attr("href")
 
-    Request.json(url).then( (response) =>
+    Request.receiveJSON(url).then( (response) =>
       Toast.message(response.messages)
       @toggleState(@model.attributes.state)
       @model.collection.remove(@model)

@@ -91,7 +91,7 @@ class StateLogger
 
     deferred = $.Deferred()
 
-    Request.json(
+    Request.sendJSONReceiveJSON(
       "/annotations/#{@tracingType}/#{@tracingId}?version=#{(@version + 1)}"
       method : "PUT"
       data : @newDiffs

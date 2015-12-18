@@ -33,7 +33,7 @@ class Model extends Backbone.Model
     else
       infoUrl = "/annotations/#{@get('tracingType')}/#{@get('tracingId')}/info"
 
-    Request.json(infoUrl).then( (tracing) =>
+    Request.receiveJSON(infoUrl).then( (tracing) =>
 
       @datasetName = tracing.content.dataSet.name
 
@@ -88,6 +88,7 @@ class Model extends Backbone.Model
     ErrorHandling.assertExtendContext({
       task: @get("tracingId")
       dataSet: dataset.get("name")
+
     })
 
     console.log "tracing", tracing
@@ -179,7 +180,7 @@ class Model extends Backbone.Model
 
     for layer in layers
       do (layer) =>
-        Request.json("/dataToken/generate?dataSetName=#{@datasetName}&dataLayerName=#{layer.name}").then( (dataStore) ->
+        Request.receiveJSON("/dataToken/generate?dataSetName=#{@datasetName}&dataLayerName=#{layer.name}").then( (dataStore) ->
           layer.token = dataStore.token
           layer.url   = dataStoreUrl
         )

@@ -1,12 +1,12 @@
 _                        = require("lodash")
-marionette               = require("backbone.marionette")
-DatasetCollection        = require("admin/models/dataset/dataset_collection")
+Marionette               = require("backbone.marionette")
 CreditsView              = require("./credits_view")
 SpotlightDatasetListView = require("./spotlight_dataset_list_view")
 PaginationView           = require("admin/views/pagination_view")
 
 class SpotlightView extends Backbone.Marionette.LayoutView
 
+  className : "spotlight-view"
   template : _.template("""
     <div class="container">
       <div id="oxalis-header">
@@ -29,6 +29,7 @@ class SpotlightView extends Backbone.Marionette.LayoutView
 
     @paginationView = new PaginationView(collection: @collection)
     @spotlightDatasetListView = new SpotlightDatasetListView(collection : @collection)
+
     @creditsView = new CreditsView()
 
     @collection.fetch({ data : "isEditable=true" })

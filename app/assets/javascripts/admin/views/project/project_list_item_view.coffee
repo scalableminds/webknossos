@@ -72,7 +72,6 @@ class ProjectListItemView extends Backbone.Marionette.CompositeView
     if window.confirm("Do you really want to delete this project?")
       xhr = @model.destroy(
         wait : true
-        error: @handleXHRError
       )
 
 
@@ -90,10 +89,5 @@ class ProjectListItemView extends Backbone.Marionette.CompositeView
     else
       @ui.detailsRow.addClass("hide")
       @ui.detailsToggle.removeClass("open")
-
-
-  handleXHRError : (model, xhr) ->
-
-    Toast.message(xhr.responseJSON.messages)
 
 module.exports = ProjectListItemView

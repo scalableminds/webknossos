@@ -19,6 +19,7 @@ import play.api.mvc.AnyContentAsJson
 import play.api.libs.json.JsSuccess
 import play.api.libs.iteratee.Iteratee
 import play.api.Play.current
+import play.utils.UriEncoding
 import scala.concurrent.Future
 import net.liftweb.common.{Failure, Full}
 
@@ -93,6 +94,9 @@ class OxalisServer(
 
   val webSocket = system.actorOf(Props(new JsonWSTunnel(webSocketUrl, new OxalisMessageHandler, webSocketSecurityInfo)))
 
+  def dataSourceNameToURL(dataSourceName: String) =
+    UriEncoding.encodePathSegment(dataSourceName, "UTF-8")
+  
   def oxalisWS(path: String) = {
     WS.url(s"$httpUrl$path")
       .withQueryString("key" -> key)
@@ -115,7 +119,7 @@ class OxalisServer(
   }
 
   def reportDataSouce(dataSource: DataSourceLike) = {
-    oxalisWS(s"/api/datastores/$name/datasources/${dataSource.id}")
+    oxalisWS(s"/api/datastores/$name/datasources/${dataSourceNameToURL(dataSource.id)}")
       .post(Json.toJson(dataSource))
       .map {
       result =>
@@ -125,7 +129,7 @@ class OxalisServer(
   }
 
   def requestUserDataLayer(dataSetName: String, dataLayerName: String): Fox[DataLayer] = {
-    oxalisWS(s"/api/datastores/$name/datasources/$dataSetName/layers/$dataLayerName")
+    oxalisWS(s"/api/datastores/$name/datasources/${dataSourceNameToURL(dataSetName)}/layers/$dataLayerName")
       .get()
       .map {
       result =>

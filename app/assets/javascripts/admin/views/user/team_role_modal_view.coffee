@@ -81,14 +81,12 @@ class TeamRoleModalView extends Backbone.Marionette.CompositeView
             if not (oldTeam.team in teamNames)
               teams.push(oldTeam)
           teams = _.filter(teams,
-              (team) -> not _.contains(removedTeamsNames, team.team))
+            (team) -> not _.contains(removedTeamsNames, team.team))
 
           # Verify user and update his teams
-          user.save({
-              "verified" : true
-              teams : teams
-            },
-            @collection
+          user.save(
+            "verified" : true
+            teams : teams
           )
 
           return

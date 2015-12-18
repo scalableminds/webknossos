@@ -1,5 +1,5 @@
 _                 = require("lodash")
-marionette        = require("backbone.marionette")
+Marionette        = require("backbone.marionette")
 TeamRoleModalView = require("admin/views/user/team_role_modal_view")
 TemplateHelpers   = require("libs/template_helpers")
 

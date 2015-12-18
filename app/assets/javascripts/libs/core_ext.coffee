@@ -1,6 +1,8 @@
-MJS = require("mjs")
-$   = require("jquery")
-_   = require("lodash")
+MJS       = require("mjs")
+$         = require("jquery")
+Backbone  = require("backbone")
+_         = require("lodash")
+Request   = require("libs/request")
 
 # Applies an affine transformation matrix on an array of points.
 MJS.M4x4.transformPointsAffine = (m, points, r = new Float32Array(points.length)) ->
@@ -354,3 +356,20 @@ $.fn.alterClass = ( removals, additions ) ->
   )
 
   return if not additions then self else self.addClass( additions )
+
+
+# changes Backbone ajax to use Request library instead of jquery ajax
+Backbone.ajax = (options) ->
+  # Backbone uses the data attribute for url parameters when performing a GET request
+  if options.data? and options.type == "GET"
+    if _.isString(options.data)
+      options.url += "?#{options.data}"
+      delete options.data
+    else
+      throw new Error("options.data is expected to be a string for a GET request!")
+
+  return Request.$(Request.sendJSONReceiveJSON(
+    options.url
+    method : options.type
+    data : options.data
+  )).then( options.success, options.error )

@@ -63,7 +63,7 @@ class PullQueue
     roundTripBeginTime = new Date()
 
     Request.always(
-      Request.arraybuffer(
+      Request.sendArraybufferReceiveArraybuffer(
         @url
         data: new Float32Array(transmitBuffer)
       ).then(

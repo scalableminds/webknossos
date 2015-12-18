@@ -37,7 +37,7 @@ class Mappings
     if @mappings[mappingName].mappingObject?
       return $.Deferred().resolve().promise()
 
-    Request.$(Request.json(
+    Request.$(Request.receiveJSON(
       @baseUrl + mappingName + @getParams
     )).then(
       (mapping) =>

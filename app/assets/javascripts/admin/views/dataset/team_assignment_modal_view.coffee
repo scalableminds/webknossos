@@ -2,6 +2,7 @@
 underscore : _
 app : app
 backbone.marionette : marionette
+libs/request : Request
 admin/models/team/team_collection : TeamCollection
 ./team_assignment_modal_item_view : TeamAssignmentModalItemView
 ###

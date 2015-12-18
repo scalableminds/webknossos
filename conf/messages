@@ -85,9 +85,9 @@ dataSet.import.failedWithoutError=Import of dataset {0} failed
 dataSet.import.failedWithError=Import of the dataset failed with error: {0}
 dataSet.import.directoryEmpty=Import failed because the dataset directory is empty
 
-dataSource.notFound=The datasource could not be found
-dataSource.import.alreadyFinished=The import of that dataset is already finished
-dataSource.import.alreadyInProgress=The import of that dataset is already in progress
+dataSource.notFound=Datasource not found on datastore server
+dataSource.import.alreadyFinished=Import of the dataset already finished
+dataSource.import.alreadyInProgress=Import of the dataset already in progress
 
 dataStore.notAvailable=Datastore not available. Please try again in a few minutes.
 

@@ -364,8 +364,11 @@ $.fn.alterClass = ( removals, additions ) ->
 Backbone.ajax = (options) ->
   # Backbone uses the data attribute for url parameters when performing a GET request
   if options.data? and options.type == "GET"
-    options.url += "?#{options.data}"
-    delete options.data
+    if _.isString(options.data)
+      options.url += "?#{options.data}"
+      delete options.data
+    else
+      throw new Error("options.data is expected to be a string for a GET request!")
 
   return Request.$(Request.json(
     options.url

@@ -150,14 +150,14 @@ class Router extends Backbone.Router
 
   spotlight : ->
 
-    require(["views/spotlight_view", "admin/models/dataset/paginated_dataset_collection"], (SpotlightView, PaginatedDatasetCollection) =>
+   require(["views/spotlight_view", "admin/models/dataset/paginated_dataset_collection"], (SpotlightView, PaginatedDatasetCollection) =>
 
-      collection = new PaginatedDatasetCollection()
-      view = new SpotlightView(model: collection)
+     collection = new PaginatedDatasetCollection()
+     view = new SpotlightView(collection: collection)
 
-      @changeView(view)
-      @listenTo(collection, "sync", @hideLoading)
-    )
+     @changeView(view)
+     @listenTo(collection, "sync", self.hideLoading)
+   )
 
 
   taskOverview : ->

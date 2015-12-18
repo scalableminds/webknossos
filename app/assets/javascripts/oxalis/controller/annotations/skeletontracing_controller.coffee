@@ -41,13 +41,9 @@ class SkeletonTacingController
       event.preventDefault()
       @setActiveNode($(event.target).data("nodeid"), false, true)
 
-    $("#tree-name-submit").click (event) =>
-      @model.skeletonTracing.setTreeName($("#tree-name-input").val())
-
-    $("#tree-name-input").keypress (event) =>
-      if event.which == 13
-        $("#tree-name-submit").click()
-        $("#tree-name-input").blur()
+    $("#tree-name-input").on "change", (event) =>
+      @model.skeletonTracing.setTreeName(event.target.value)
+      $("#tree-name-input").blur()
 
     $("#tree-prev-button").click (event) =>
       @selectNextTree(false)

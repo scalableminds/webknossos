@@ -44,7 +44,6 @@ object ZipIO {
       zip.close()
     } else
       out.close()
-    }
   }
 
   def startZip(out: OutputStream) = {

@@ -71,7 +71,6 @@ class CreateTeamModalView extends Backbone.Marionette.LayoutView
     )
     @teamCollection.create(team,
       wait: true
-      error : (model, xhr) -> Toast.message(xhr.responseJSON.messages)
       success: _.bind(@destroyModal, @)
     )
 

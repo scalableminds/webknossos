@@ -136,6 +136,7 @@ Request =
       )
     else
       Toast.error(error)
+      Promise.reject(error)
 
 
   handleEmptyJsonResponse : (response) ->

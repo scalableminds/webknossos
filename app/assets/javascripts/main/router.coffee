@@ -156,7 +156,7 @@ class Router extends Backbone.Router
      view = new SpotlightView(collection: collection)
 
      @changeView(view)
-     @listenTo(collection, "sync", self.hideLoading)
+     @listenTo(collection, "sync", @hideLoading)
    )
 
 

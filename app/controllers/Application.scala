@@ -55,7 +55,7 @@ object Application extends Controller with Secured {
       case Some(user) =>
         Redirect("/dashboard")
       case _ =>
-        Redirect("/login")
+        Redirect("/spotlight")
     }
   }
 

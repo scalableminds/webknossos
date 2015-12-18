@@ -71,12 +71,12 @@ class User
 
   resetBrightnessContrastColorSettings : (model) ->
 
-    Request.json("/user/configuration/default").then( (defaultData) =>
+    Request.$(Request.json("/user/configuration/default").then( (defaultData) =>
       @get("brightnessContrastColorSettings")[model.datasetPostfix] =
         defaultData.brightnessContrastColorSettings[model.datasetPostfix]
 
       @getOrCreateBrightnessContrastColorSettings(model)
-    )
+    ))
 
 
   triggerAll : ->

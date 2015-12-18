@@ -114,24 +114,26 @@ Request =
       method : "GET"
       credentials : "same-origin"
       headers : {}
+      doNotCatch : false
 
     options = _.defaultsDeep(options, defaultOptions)
 
     headers = new Headers()
     for name of options.headers
       headers.set(name, options.headers[name])
-
     options.headers = headers
 
     fetchPromise = fetch(url, options)
       .then(@handleStatus)
       .then(responseDataHandler)
-      .catch(@handleError)
+
+    if not options.doNotCatch
+      fetchPromise = fetchPromise.catch(@handleError)
 
     if options.timeout?
-      Promise.race([ fetchPromise, @timeoutPromise(options.timeout) ])
+      return Promise.race([ fetchPromise, @timeoutPromise(options.timeout) ])
     else
-      fetchPromise
+      return fetchPromise
 
 
   timeoutPromise : (timeout) ->
@@ -145,9 +147,9 @@ Request =
   handleStatus : (response) ->
 
     if 200 <= response.status < 400
-      Promise.resolve(response)
-    else
-      Promise.reject(response)
+      return Promise.resolve(response)
+
+    return Promise.reject(response)
 
 
   handleError : (error) ->

@@ -57,7 +57,6 @@ class DatasetListView extends Backbone.Marionette.CompositeView
       silent : true
       data : "isEditable=true"
     ).done( =>
-      @collection.goTo(1)
       @collection.howManyPer(@DATASETS_PER_PAGE)
     )
 

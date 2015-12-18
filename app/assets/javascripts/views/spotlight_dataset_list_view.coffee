@@ -1,7 +1,6 @@
 ### define
 underscore : _
 backbone.marionette : marionette
-admin/models/dataset/dataset_collection : DatasetCollection
 views/spotlight_dataset_view : SpotlightDatasetView
 ###
 

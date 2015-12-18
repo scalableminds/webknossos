@@ -374,7 +374,7 @@ Backbone.ajax = (options) ->
       )
       delete options.data
     else
-      throw new Error("options.data is expected to be a string or objectfor a GET request!")
+      throw new Error("options.data is expected to be a string or object for a GET request!")
 
   return Request.$(Request.sendJSONReceiveJSON(
     options.url

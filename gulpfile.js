@@ -23,7 +23,7 @@ paths = {
 var bowerPath = __dirname + "/public/bower_components/";
 var scriptPaths = {
   "jquery"              : bowerPath + "jquery/jquery",
-  "lodash"              : bowerPath + "lodash/dist/lodash",
+  "lodash"              : bowerPath + "lodash/lodash",
   "underscore"          : bowerPath + "underscore/underscore",
   "bootstrap"           : bowerPath + "bootstrap/dist/js/bootstrap",
   "coffee-script"       : bowerPath + "coffee-script/extras/coffee-script",

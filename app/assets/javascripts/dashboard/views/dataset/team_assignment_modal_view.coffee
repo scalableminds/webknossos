@@ -1,8 +1,10 @@
 _                           = require("lodash")
 app                         = require("app")
-marionette                  = require("backbone.marionette")
+Request                     = require("libs/request")
+Marionette                  = require("backbone.marionette")
 TeamCollection              = require("admin/models/team/team_collection")
 TeamAssignmentModalItemView = require("./team_assignment_modal_item_view")
+
 
 class TeamAssignmentModalView extends Backbone.Marionette.CompositeView
 
@@ -58,7 +60,7 @@ class TeamAssignmentModalView extends Backbone.Marionette.CompositeView
 
     @dataset.set("allowedTeams", allowedTeams)
 
-    Request.json(
+    Request.sendJSONReceiveJSON(
       """/api/datasets/#{@dataset.get("name")}/teams"""
       data: allowedTeams
     )

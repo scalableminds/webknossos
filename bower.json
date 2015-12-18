@@ -4,7 +4,7 @@
   "dependencies": {
     "bootstrap": "~3.3.0",
     "jquery": "~2.0.3",
-    "lodash": "~2.2.1",
+    "lodash": "~3.10.1",
     "backbone": "~1.2.3",
     "backbone.marionette": "~2.4.2",
     "font-awesome": "~4.4",

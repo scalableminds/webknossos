@@ -145,7 +145,7 @@ class MergeModalView extends Backbone.Marionette.LayoutView
 
     @$el.modal("show")
 
-    Request.json("/api/user").then( (user) =>
+    Request.receiveJSON("/api/user").then( (user) =>
       @taskSelectionView = new SelectionView(
         collection : new  TaskCollection()
         childViewOptions :
@@ -215,7 +215,7 @@ class MergeModalView extends Backbone.Marionette.LayoutView
 
     readOnly = document.getElementById('checkbox-read-only').checked
 
-    Request.json("#{url}/#{readOnly}").then( (annotation) ->
+    Request.receiveJSON("#{url}/#{readOnly}").then( (annotation) ->
 
       Toast.message(annotation.messages)
 
@@ -246,7 +246,7 @@ class MergeModalView extends Backbone.Marionette.LayoutView
     form = @ui.uploadAndExploreForm
 
     Request.always(
-      Request.multipartForm(
+      Request.sendMultipartFormReceiveJSON(
         form.attr("action")
         data : new FormData(form[0])
       ).then((data) =>

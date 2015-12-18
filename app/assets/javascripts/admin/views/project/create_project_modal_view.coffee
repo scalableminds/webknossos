@@ -102,7 +102,6 @@ class CreateProjectModalView extends Backbone.Marionette.LayoutView
 
       @projectCollection.create(project,
         wait : true
-        error : (model, xhr) -> Toast.message(xhr.responseJSON.messages)
         success : _.bind(@destroyModal, @)
       )
 

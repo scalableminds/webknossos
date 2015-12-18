@@ -25,6 +25,7 @@ module.exports = {
   PaginationView
   DatasetCollection
   PaginatedDatasetCollection
+  PaginatedTeamCollection
   UserListView
   UserCollection
   TeamListView

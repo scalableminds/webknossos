@@ -87,6 +87,20 @@ ErrorHandling =
     @assert(false, message + " (#{actual} != #{wanted})", assertionContext)
 
 
+  setCurrentUser : (user) ->
+
+    Airbrake.addFilter((notice) ->
+      notice.context.user = _.pick(user, [
+        "id",
+        "email",
+        "firstName",
+        "lastName",
+        "verified"
+      ])
+      return notice
+    )
+
+
   trimCallstack : (callstack) ->
 
     # cut function calls caused by ErrorHandling so that Airbrake won't cluster all assertions into one group

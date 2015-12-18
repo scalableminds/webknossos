@@ -12,11 +12,11 @@ import play.api.i18n.{MessagesApi, Messages, I18nSupport}
 import play.api.libs.concurrent.Execution.Implicits._
 
 object DataSourceInbox{
-  def create(repo: DataSourceRepository, server: String, s: ActorSystem)(messagesApi: MessagesApi) = new DataSourceInbox {
-    def messagesApi = messagesApi
+  def create(repo: DataSourceRepository, server: String, s: ActorSystem)(mApi: MessagesApi) = new DataSourceInbox {
+    def messagesApi = mApi
     
     val dataSourceInboxHelper = new DataSourceInboxHelper {
-      def messagesApi = messagesApi
+      def messagesApi = mApi
       
       val system = s
       val serverUrl = server

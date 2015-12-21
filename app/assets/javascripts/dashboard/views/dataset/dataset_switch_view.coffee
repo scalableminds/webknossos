@@ -54,7 +54,7 @@ class DatasetSwitchView extends Backbone.Marionette.LayoutView
     @listenToOnce(@, "render", => @toggleSwitchButtons(true))
     @listenToOnce(@collection, "sync", @showGalleryView)
 
-    @collection.fetch(data : "isEditable=true")
+    @collection.fetch()
 
 
   toggleSwitchButtons : (state) ->

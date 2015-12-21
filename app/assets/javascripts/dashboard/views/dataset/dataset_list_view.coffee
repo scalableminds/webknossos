@@ -30,6 +30,7 @@ class DatasetListView extends Backbone.Marionette.CompositeView
     <div id="modal-wrapper"></div>
   """)
 
+
   events :
     "click .team-label" : "showModal"
     "click .details-toggle-all" : "toggleAllDetails"
@@ -80,6 +81,8 @@ class DatasetListView extends Backbone.Marionette.CompositeView
 
     @collection.setFilter(["name", "owningTeam"], searchQuery)
 
+  # Marionette's CollectionView filter
+  filter : (child, index, collection) -> return child.get("isEditable")
 
   onDestroy : ->
 

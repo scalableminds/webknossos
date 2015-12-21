@@ -1,5 +1,6 @@
 package controllers
 
+import models.team.TeamDAO
 import oxalis.security.Secured
 import models.binary._
 import play.api.i18n.Messages
@@ -136,11 +137,12 @@ object DataSetController extends Controller with Secured {
         for{
           dataSet <- DataSetDAO.findOneBySourceName(dataSetName) ?~> Messages("dataSet.notFound")
           _ <- allowedToAdministrate(request.user, dataSet).toFox
-          teamsWithoutUpdate = dataSet.allowedTeams.filterNot(t => ensureTeamAdministration(request.user, t) openOr false)
-          _ <- Fox.combined(teams.map(team => ensureTeamAdministration(request.user, team).toFox))
-          _ <- DataSetService.updateTeams(dataSet, teams ++ teamsWithoutUpdate)
+          userTeams <- TeamDAO.findAll.map(_.filter(team => team.isEditableBy(request.user)))
+          teamsWithoutUpdate = dataSet.allowedTeams.filterNot(t => userTeams.exists(_.name == t))
+          teamsWithUpdate = teams.filter(t => userTeams.exists(_.name == t))
+          _ <- DataSetService.updateTeams(dataSet, teamsWithUpdate ++ teamsWithoutUpdate)
         } yield
-          Ok(Json.toJson(teams ++ teamsWithoutUpdate))
+          Ok(Json.toJson(teamsWithUpdate ++ teamsWithoutUpdate))
       case e: JsError =>
         Future.successful(BadRequest(JsError.toFlatJson(e)))
     }

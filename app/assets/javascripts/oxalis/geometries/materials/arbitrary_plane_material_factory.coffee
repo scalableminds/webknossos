@@ -49,5 +49,4 @@ class ArbitraryPlaneMaterialFactory extends AbstractPlaneMaterialFactory
         gl_FragColor = vec4(color_value, color_value, color_value, 1.0);
       }
       """
-      { @colorName }
-    )
+    )(colorName : @colorName)

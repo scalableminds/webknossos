@@ -41,7 +41,9 @@ class TeamAssignmentModalView extends Backbone.Marionette.CompositeView
   initialize : (args) ->
 
     @collection = new TeamCollection()
-    @collection.fetch()
+    @collection.fetch(
+      data : "amIAnAdmin=true"
+    )
 
     @dataset = args.dataset
 

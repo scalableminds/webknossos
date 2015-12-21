@@ -16,7 +16,7 @@ class DatasetListItemView extends Backbone.Marionette.CompositeView
     "data-dataset-name" : @model.get("name")
 
   template : _.template("""
-    <tr>
+    <tr class="dataset-row">
       <td class="details-toggle" href="#">
         <i class="caret-right"></i>
         <i class="caret-down"></i>
@@ -58,9 +58,12 @@ class DatasetListItemView extends Backbone.Marionette.CompositeView
             <a href="/api/datasets/<%= name %>/import" class=" import-dataset">
               <i class="fa fa-plus-circle"></i>import
             </a>
-              <div class="progress progress-striped hide">
-                <div class="progress-bar" style="width: 0%;"></div>
-              </div>
+            <div class="progress progress-striped hide">
+              <div class="progress-bar" style="width: 0%;"></div>
+            </div>
+            <div class="import-error">
+              <span class="text-danger"></span>
+            </div>
           </div>
         <% } %>
         <% if(isActive){ %>
@@ -107,6 +110,9 @@ class DatasetListItemView extends Backbone.Marionette.CompositeView
 
 
   ui:
+    "row" : ".dataset-row"
+    "importError" : ".import-error"
+    "errorText" : ".import-error .text-danger"
     "importLink" : ".import-dataset"
     "progressbarContainer" : ".progress"
     "progressBar" : ".progress-bar"
@@ -117,6 +123,8 @@ class DatasetListItemView extends Backbone.Marionette.CompositeView
 
 
   initialize : ->
+
+    # by default there is no import error
 
     @listenTo(@model, "change", @render)
     @listenTo(app.vent, "datasetListView:toggleDetails", @toggleDetails)
@@ -131,38 +139,63 @@ class DatasetListItemView extends Backbone.Marionette.CompositeView
     )
 
 
-   startImport : (evt, method = "POST") ->
+  startImport : (evt, method = "POST") ->
 
-      if evt
-        evt.preventDefault()
+    if evt
+      evt.preventDefault()
 
-      Request.receiveJSON(
-        @importUrl
-        method: method
-      ).then( (responseJSON) =>
-          if responseJSON.status == "inProgress"
-            @ui.importLink.hide()
-            @ui.progressbarContainer.removeClass("hide")
-            @updateProgress()
-      )
+    Request.receiveJSON(
+      @importUrl
+      method: method
+      doNotCatch: true
+    )
+    .then( (responseJSON) =>
+      if responseJSON.status == "inProgress"
+        @ui.row.removeClass('import-failed')
+        @ui.importLink.hide()
+        @ui.progressbarContainer.removeClass("hide")
+        @ui.importError.addClass("hide")
+        @updateProgress()
+      if responseJSON.status == "failed"
+        @importFailed(responseJSON)
+    )
+    .catch( (response) =>
+      response
+        .json()
+        .then( (json) => @importFailed(json))
+    )
 
 
-    updateProgress : ->
+  importFailed : (response) ->
 
-      Request.receiveJSON(@importUrl).then( (responseJSON) =>
+    @ui.importLink.show()
+    @ui.progressbarContainer.addClass("hide")
+    @ui.row.addClass('import-failed')
+    @ui.importError.removeClass("hide")
+
+    # apply single error
+    if response.messages?[0]?.error
+      @ui.errorText.text(response.messages[0].error)
+
+
+  updateProgress : ->
+
+    Request
+      .receiveJSON(@importUrl)
+      .then( (responseJSON) =>
         value = responseJSON.progress * 100
         if value
           @ui.progressBar.width("#{value}%")
 
         switch responseJSON.status
           when "finished"
-            @model.fetch()
+            @model.fetch().then(@render.bind(@))
+            Toast.message(responseJSON.messages)
           when "notStarted", "inProgress"
             window.setTimeout((=> @updateProgress()), 100)
           when "failed"
-            Toast.error("Ups. Import Failed.")
+            @importFailed(responseJSON)
       )
-
 
   toggleDetails : ->
 

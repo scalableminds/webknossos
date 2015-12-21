@@ -212,7 +212,7 @@ class Router extends Backbone.Router
     require(["admin/views/task/task_overview_view", "admin/models/task/task_overview_model"], (TaskOverviewView, TaskOverviewModel) ->
 
       model = new TaskOverviewModel()
-      view = new TaskOverviewView({model, userID})
+      view = new TaskOverviewView({model})
 
       self.changeView(view)
       self.listenTo(model, "sync", self.hideLoading)

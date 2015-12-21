@@ -104,7 +104,7 @@ class DatasetUploadView extends Backbone.Marionette.LayoutView
       Toast.info("Uploading datasets", false)
       @ui.spinner.removeClass("hidden")
 
-      Request.multipartForm("/api/datasets/upload",
+      Request.sendMultipartFormReceiveJSON("/api/datasets/upload",
         data : new FormData(form)
       )
       .then(

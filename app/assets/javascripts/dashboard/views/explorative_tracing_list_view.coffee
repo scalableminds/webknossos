@@ -129,7 +129,7 @@ class ExplorativeTracingListView extends Backbone.Marionette.CompositeView
     form = @ui.uploadAndExploreForm
 
     Request.always(
-      Request.multipartForm(
+      Request.sendMultipartFormReceiveJSON(
         form.attr("action")
         data : new FormData(form[0])
       ).then((data) ->

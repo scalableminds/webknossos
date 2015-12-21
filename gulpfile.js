@@ -45,7 +45,6 @@ var scriptPaths = {
   "require"             : bowerPath + "requirejs/require",
   "c3"                  : bowerPath + "c3/c3",
   "d3"                  : bowerPath + "d3/d3",
-  "cola"                : bowerPath + "webcola/WebCola/cola",
   "offcanvas"           : bowerPath + "jasny-bootstrap/js/offcanvas",
   "fileinput"           : bowerPath + "jasny-bootstrap/js/fileinput",
   "daterangepicker"     : bowerPath + "bootstrap-daterangepicker/daterangepicker",

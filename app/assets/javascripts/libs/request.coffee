@@ -11,7 +11,7 @@ Request =
 
     return @triggerRequest(
       url,
-      _.defaultsDeep(options, {headers : {"Accept": "application/json" }})
+      _.defaultsDeep(options, { headers : { "Accept": "application/json" }}),
       @handleEmptyJsonResponse
     )
 
@@ -20,6 +20,13 @@ Request =
   # OUT: json
   sendJSONReceiveJSON : (url, options = {}) ->
 
+    # Sanity check
+    # Requests without body should not send 'json' header and use 'receiveJSON' instead
+    if not options.data
+      if options.method == "POST" or options.method == "PUT"
+        console.warn("Sending POST/PUT request without body", url)
+      return @receiveJSON(url, options)
+
     body = if typeof(options.data) == "string"
         options.data
       else
@@ -27,12 +34,12 @@ Request =
 
     return @receiveJSON(
       url,
-      _.defaultsDeep(options,
+      _.defaultsDeep(options, {
         method : "POST"
         body : body
         headers :
           "Content-Type" : "application/json"
-      )
+      })
     )
 
 
@@ -40,7 +47,7 @@ Request =
   # OUT: json
   sendMultipartFormReceiveJSON : (url, options = {}) ->
 
-    body = if options. instanceof FormData
+    body = if options.data instanceof FormData
         options.data
       else
         formData = new FormData()
@@ -50,10 +57,10 @@ Request =
 
     return @receiveJSON(
       url,
-      _.defaultsDeep(options,
+      _.defaultsDeep(options, {
         method : "POST"
-        body : formData
-      )
+        body : body
+      })
     )
 
 
@@ -61,7 +68,7 @@ Request =
   # OUT: json
   sendUrlEncodedFormReceiveJSON : (url, options = {}) ->
 
-    body = if typeof(options.data) == "string"
+    body = if typeof options.data == "string"
         options.data
       else
         options.data.serialize()
@@ -113,24 +120,26 @@ Request =
       method : "GET"
       credentials : "same-origin"
       headers : {}
+      doNotCatch : false
 
     options = _.defaultsDeep(options, defaultOptions)
 
     headers = new Headers()
     for name of options.headers
       headers.set(name, options.headers[name])
-
     options.headers = headers
 
     fetchPromise = fetch(url, options)
       .then(@handleStatus)
       .then(responseDataHandler)
-      .catch(@handleError)
+
+    if not options.doNotCatch
+      fetchPromise = fetchPromise.catch(@handleError)
 
     if options.timeout?
-      Promise.race([ fetchPromise, @timeoutPromise(options.timeout) ])
+      return Promise.race([ fetchPromise, @timeoutPromise(options.timeout) ])
     else
-      fetchPromise
+      return fetchPromise
 
 
   timeoutPromise : (timeout) ->
@@ -144,9 +153,9 @@ Request =
   handleStatus : (response) ->
 
     if 200 <= response.status < 400
-      Promise.resolve(response)
-    else
-      Promise.reject(response)
+      return Promise.resolve(response)
+
+    return Promise.reject(response)
 
 
   handleError : (error) ->

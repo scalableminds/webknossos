@@ -37,5 +37,8 @@
     "prewebdriver": "npm run webdriver-update",
     "webdriver": "./node_modules/.bin/webdriver-manager start",
     "webdriver-update": "./node_modules/.bin/webdriver-manager update"
+  },
+  "dependencies": {
+    "webcola": "^3.1.3"
   }
 }

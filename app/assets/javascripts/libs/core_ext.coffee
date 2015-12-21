@@ -360,13 +360,20 @@ $.fn.alterClass = ( removals, additions ) ->
 
 # changes Backbone ajax to use Request library instead of jquery ajax
 Backbone.ajax = (options) ->
+
   # Backbone uses the data attribute for url parameters when performing a GET request
   if options.data? and options.type == "GET"
     if _.isString(options.data)
       options.url += "?#{options.data}"
       delete options.data
+
+    else if _.isObject(options.data)
+      params = _.map(options.data, (value, key) -> return "#{key}=#{value}").join("&")
+      options.url += "?#{params}"
+
+      delete options.data
     else
-      throw new Error("options.data is expected to be a string for a GET request!")
+      throw new Error("options.data is expected to be a string or object for a GET request!")
 
   return Request.$(Request.sendJSONReceiveJSON(
     options.url

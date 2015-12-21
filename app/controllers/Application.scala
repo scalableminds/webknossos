@@ -39,7 +39,7 @@ class Application @Inject()(val messagesApi: MessagesApi) extends Controller wit
     request.userOpt match {
       case Some(user) =>
         Redirect("/dashboard")
-      case _          =>
+      case _ =>
         Redirect("/spotlight")
     }
   }

@@ -1,6 +1,6 @@
 _                    = require("lodash")
 app                  = require("app")
-marionette           = require("backbone.marionette")
+Marionette           = require("backbone.marionette")
 WorkloadListItemView = require("./workload_list_item_view")
 
 class WorkloadListView extends Backbone.Marionette.CompositeView

@@ -1,7 +1,7 @@
 _                = require("lodash")
 marionette       = require("backbone.marionette")
 d3               = require("d3")
-cola             = require("cola")
+cola             = require("webcola")
 moment           = require("moment")
 routes           = require("routes")
 DateRangePicker  = require("daterangepicker")

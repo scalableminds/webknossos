@@ -21,6 +21,13 @@ Request =
   # OUT: json
   sendJSONReceiveJSON : (url, options = {}) ->
 
+    # Sanity check
+    # Requests without body should not send 'json' header and use 'receiveJSON' instead
+    if not options.data
+      if options.method == "POST" or options.method == "PUT"
+        console.warn("Sending POST/PUT request without body", url)
+      return @receiveJSON(url, options)
+
     body = if typeof(options.data) == "string"
         options.data
       else

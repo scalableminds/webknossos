@@ -2,7 +2,7 @@ app                     = require("app")
 ResizableBuffer         = require("libs/resizable_buffer")
 ErrorHandling           = require("libs/error_handling")
 THREE                   = require("three")
-TWEEN                   = require("tween")
+TWEEN                   = require("tween.js")
 ColorConverter          = require("three.color")
 ParticleMaterialFactory = require("./materials/particle_material_factory")
 

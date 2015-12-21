@@ -2,7 +2,7 @@ $                                  = require("jquery")
 _                                  = require("lodash")
 app                                = require("../app")
 Backbone                           = require("backbone")
-Stats                              = require("stats")
+Stats                              = require("stats.js")
 PlaneController                    = require("./controller/viewmodes/plane_controller")
 SkeletonTracingController          = require("./controller/annotations/skeletontracing_controller")
 VolumeTracingController            = require("./controller/annotations/volumetracing_controller")
@@ -56,7 +56,7 @@ class Controller
     @model.fetch()
       .then(
         (error) => @modelFetchDone(error)
-        (response) => @modelFetchFail(response)
+      #(response) => @modelFetchFail(response)
       )
 
 

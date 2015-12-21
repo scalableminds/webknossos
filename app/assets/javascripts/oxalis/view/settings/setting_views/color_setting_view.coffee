@@ -1,6 +1,7 @@
+_                   = require("lodash")
+Marionette          = require("backbone.marionette")
 Utils               = require("libs/utils")
 AbstractSettingView = require("./abstract_setting_view")
-_                   = require("lodash")
 
 class ColorSettingView extends AbstractSettingView
 

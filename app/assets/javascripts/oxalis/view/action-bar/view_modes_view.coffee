@@ -1,8 +1,8 @@
-marionette = require("backbone.marionette")
+Marionette = require("backbone.marionette")
 app        = require("app")
 constants  = require("oxalis/constants")
 
-class ViewModesView extends Backbone.Marionette.ItemView
+class ViewModesView extends Marionette.ItemView
 
   template : _.template("""
     <div class="btn-group btn-group">

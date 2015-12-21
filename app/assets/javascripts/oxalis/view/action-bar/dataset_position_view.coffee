@@ -1,9 +1,9 @@
-marionette = require("backbone.marionette")
+Marionette = require("backbone.marionette")
 app        = require("app")
 constants  = require("oxalis/constants")
 utils      = require("libs/utils")
 
-class DatasetPositionView extends Backbone.Marionette.ItemView
+class DatasetPositionView extends Marionette.ItemView
 
   tagName : "form"
   className : "form-inline dataset-position-view"

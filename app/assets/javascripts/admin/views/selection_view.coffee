@@ -2,7 +2,7 @@ _                 = require("lodash")
 Marionette        = require("backbone.marionette")
 SelectionItemView = require("./selection_item_view")
 
-class SelectionView extends Backbone.Marionette.CollectionView
+class SelectionView extends Marionette.CollectionView
 
   tagName : "select"
   className: "form-control"

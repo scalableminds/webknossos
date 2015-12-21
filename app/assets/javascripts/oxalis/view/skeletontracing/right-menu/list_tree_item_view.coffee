@@ -2,7 +2,7 @@ Marionette     = require("backbone.marionette")
 Utils          = require("libs/utils")
 ColorConverter = require("three.color")
 
-class ListTreeItemView extends Backbone.Marionette.ItemView
+class ListTreeItemView extends Marionette.ItemView
 
   tagName : "li"
   template : _.template("""

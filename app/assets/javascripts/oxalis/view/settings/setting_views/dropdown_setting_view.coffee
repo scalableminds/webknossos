@@ -1,5 +1,6 @@
-AbstractSettingView = require("./abstract_setting_view")
 _                   = require("lodash")
+Marionette          = require("backbone.marionette")
+AbstractSettingView = require("./abstract_setting_view")
 
 class DropdownSettingView extends AbstractSettingView
 

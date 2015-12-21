@@ -1,5 +1,5 @@
 _                            = require("lodash")
-marionette                   = require("backbone.marionette")
+Marionette                   = require("backbone.marionette")
 SkeletonTracingSettingsView  = require("./skeleton_tracing_settings_view")
 VolumeTracingSettingsView    = require("./volume_tracing_settings_view")
 PlaneUserSettingsView        = require("./plane_user_settings_view")
@@ -8,7 +8,7 @@ DatasetSettingsView          = require("./dataset_settings_view")
 constants                    = require("oxalis/constants")
 BackboneToOxalisAdapterModel = require("oxalis/model/settings/backbone_to_oxalis_adapter_model")
 
-class SettingsTabView extends Backbone.Marionette.LayoutView
+class SettingsTabView extends Marionette.LayoutView
 
   className: "flex-column"
   template : _.template("""

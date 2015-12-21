@@ -3,7 +3,7 @@ app                  = require("app")
 Marionette           = require("backbone.marionette")
 WorkloadListItemView = require("./workload_list_item_view")
 
-class WorkloadListView extends Backbone.Marionette.CompositeView
+class WorkloadListView extends Marionette.CompositeView
 
   template : _.template("""
     <h3>Workload</h3>

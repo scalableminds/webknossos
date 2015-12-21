@@ -1,5 +1,5 @@
 _                           = require("lodash")
-marionette                  = require("backbone.marionette")
+Marionette                  = require("backbone.marionette")
 DatasetListView             = require("./dataset_list_view")
 PaginatedDatasetCollection  = require("admin/models/dataset/paginated_dataset_collection")
 SpotlightDatasetListView    = require("views/spotlight_dataset_list_view")
@@ -7,7 +7,7 @@ PaginationCollection        = require("admin/models/pagination_collection")
 PaginationView              = require("admin/views/pagination_view")
 utils                       = require("libs/utils")
 
-class DatasetSwitchView extends Backbone.Marionette.LayoutView
+class DatasetSwitchView extends Marionette.LayoutView
 
   template : _.template("""
     <div class="pull-right">

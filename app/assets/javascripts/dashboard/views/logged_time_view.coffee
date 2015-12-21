@@ -1,11 +1,11 @@
 _                    = require("lodash")
-marionette           = require("backbone.marionette")
+Marionette           = require("backbone.marionette")
 c3                   = require("c3")
 LoggedTimeListView   = require("./logged_time_list_view")
 LoggedTimeCollection = require("../models/logged_time_collection")
 
 
-class LoggedTimeView extends Backbone.Marionette.LayoutView
+class LoggedTimeView extends Marionette.LayoutView
 
   template : _.template("""
     <h3>Tracked Time</h3>

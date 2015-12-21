@@ -6,7 +6,7 @@ TeamCollection              = require("admin/models/team/team_collection")
 TeamAssignmentModalItemView = require("./team_assignment_modal_item_view")
 
 
-class TeamAssignmentModalView extends Backbone.Marionette.CompositeView
+class TeamAssignmentModalView extends Marionette.CompositeView
 
   className : "modal fade"
   template : _.template("""

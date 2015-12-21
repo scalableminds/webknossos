@@ -4,10 +4,13 @@ Backbone      = require("backbone")
 ErrorHandling = require("libs/error_handling")
 Request       = require("libs/request")
 app           = require("./app")
+
 require("bootstrap")
-require("fetch")
-require("promise")
-require("./libs/core_ext")
+require("jasny-bootstrap")
+require("bootstrap-daterangepicker")
+require("whatwg-fetch")
+require("es6-promise")
+require("libs/core_ext")
 
 ErrorHandling.initialize( throwAssertions: false, sendLocalErrors: false )
 

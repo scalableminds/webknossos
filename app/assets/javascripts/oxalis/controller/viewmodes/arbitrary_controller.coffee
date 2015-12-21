@@ -8,7 +8,7 @@ Crosshair          = require("../../geometries/crosshair")
 ArbitraryView      = require("../../view/arbitrary_view")
 ArbitraryPlaneInfo = require("../../geometries/arbitrary_plane_info")
 constants          = require("../../constants")
-MJS                = require("mjs")
+{M4x4, V3}         = require("mjs")()
 
 
 class ArbitraryController
@@ -355,7 +355,7 @@ class ArbitraryController
       lastNodeMatrix[13] - matrix[13]
       lastNodeMatrix[14] - matrix[14]
     ]
-    vectorLength = MJS.V3.length(vector)
+    vectorLength = V3.length(vector)
 
     if vectorLength > 10
       @setWaypoint()

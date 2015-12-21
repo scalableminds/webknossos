@@ -2,7 +2,7 @@ _          = require("lodash")
 Marionette = require("backbone.marionette")
 Clipboard  = require("clipboard")
 
-class ShareModalView extends Backbone.Marionette.ItemView
+class ShareModalView extends Marionette.ItemView
 
   className : "modal fade"
   template : _.template("""

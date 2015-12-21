@@ -10,7 +10,7 @@ UserAnnotationsCollection      = require("../models/user_annotations_collection"
 DatasetCollection              = require("admin/models/dataset/dataset_collection")
 
 
-class ExplorativeTracingListView extends Backbone.Marionette.CompositeView
+class ExplorativeTracingListView extends Marionette.CompositeView
 
   template : _.template("""
     <h3>Explorative Annotations</h3>

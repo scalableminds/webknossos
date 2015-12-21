@@ -1,10 +1,10 @@
 _                = require("lodash")
 app              = require("app")
-marionette       = require("backbone.marionette")
+Marionette       = require("backbone.marionette")
 TaskTypeListView = require("./task_type_list_view")
 TaskTypeFormView = require("./task_type_form_view")
 
-class TaskTypeView extends Backbone.Marionette.LayoutView
+class TaskTypeView extends Marionette.LayoutView
 
   className : "container task-types-administration"
 

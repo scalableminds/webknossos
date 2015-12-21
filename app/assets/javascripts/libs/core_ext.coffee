@@ -1,11 +1,11 @@
-MJS       = require("mjs")
-$         = require("jquery")
-Backbone  = require("backbone")
-_         = require("lodash")
-Request   = require("libs/request")
+{M4x4, V3}  = require("mjs")()
+$           = require("jquery")
+Backbone    = require("backbone")
+_           = require("lodash")
+Request     = require("libs/request")
 
 # Applies an affine transformation matrix on an array of points.
-MJS.M4x4.transformPointsAffine = (m, points, r = new Float32Array(points.length)) ->
+M4x4.transformPointsAffine = (m, points, r = new Float32Array(points.length)) ->
 
   m00 = m[0]
   m01 = m[1]
@@ -33,7 +33,7 @@ MJS.M4x4.transformPointsAffine = (m, points, r = new Float32Array(points.length)
 
 
 # Applies a transformation matrix on an array of points.
-MJS.M4x4.transformPoints = (m, points, r = new Float32Array(points.length)) ->
+M4x4.transformPoints = (m, points, r = new Float32Array(points.length)) ->
 
   for i in [0...points.length] by 3
     v0 = points[i]
@@ -53,7 +53,7 @@ MJS.M4x4.transformPoints = (m, points, r = new Float32Array(points.length)) ->
   r
 
 
-MJS.M4x4.inverse = (mat, dest = new Float32Array(16)) ->
+M4x4.inverse = (mat, dest = new Float32Array(16)) ->
 
   # cache matrix values
   a00 = mat[0]
@@ -109,7 +109,7 @@ MJS.M4x4.inverse = (mat, dest = new Float32Array(16)) ->
   return dest
 
 
-MJS.M4x4.extractTranslation = (m, r = new Float32Array(3)) ->
+M4x4.extractTranslation = (m, r = new Float32Array(3)) ->
 
   r[0] = m[12]
   r[1] = m[13]
@@ -117,7 +117,7 @@ MJS.M4x4.extractTranslation = (m, r = new Float32Array(3)) ->
   r
 
 
-MJS.V3.round = (v, r = new Float32Array(3)) ->
+V3.round = (v, r = new Float32Array(3)) ->
 
   r[0] = Math.round(v[0])
   r[1] = Math.round(v[1])
@@ -125,7 +125,7 @@ MJS.V3.round = (v, r = new Float32Array(3)) ->
   r
 
 
-MJS.V3.toString = (v) ->
+V3.toString = (v) ->
 
   "#{v[0]},#{v[1]},#{v[2]}"
 

@@ -1,12 +1,12 @@
 _                  = require("lodash")
-marionette         = require("backbone.marionette")
+Marionette         = require("backbone.marionette")
 app                = require("app")
 GraphView          = require("./graph_view")
 StatisticListView  = require("./statistic_list_view")
 AchievementView    = require("./achievement_view")
 TimeStatisticModel = require("admin/models/statistic/time_statistic_model")
 
-class StatisticView extends Backbone.Marionette.LayoutView
+class StatisticView extends Marionette.LayoutView
 
   className : "statistics container wide"
   template : _.template("""

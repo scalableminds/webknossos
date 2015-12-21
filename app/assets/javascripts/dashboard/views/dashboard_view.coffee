@@ -1,12 +1,12 @@
 _                          = require("lodash")
-marionette                 = require("backbone.marionette")
+Marionette                 = require("backbone.marionette")
 DashboardTaskListView      = require("./dashboard_task_list_view")
 ExplorativeTracingListView = require("./explorative_tracing_list_view")
 LoggedTimeView             = require("./logged_time_view")
 DatasetSwitchView          = require("./dataset/dataset_switch_view")
 
 
-class DashboardView extends Backbone.Marionette.LayoutView
+class DashboardView extends Marionette.LayoutView
 
   className : "container wide"
   id : "dashboard"

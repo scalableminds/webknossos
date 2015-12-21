@@ -1,6 +1,6 @@
 Marionette = require("backbone.marionette")
 
-class SortTableBehavior extends Backbone.Marionette.Behavior
+class SortTableBehavior extends Marionette.Behavior
 
   events :
     "click thead" : "onClick"

@@ -1,9 +1,9 @@
 _                = require("lodash")
 app              = require("app")
-marionette       = require("backbone.marionette")
+Marionette       = require("backbone.marionette")
 ListTreeItemView = require("./list_tree_item_view")
 
-class ListTreeView extends Backbone.Marionette.CompositeView
+class ListTreeView extends Marionette.CompositeView
 
   id : "tree-navbar"
   className : "flex-column"

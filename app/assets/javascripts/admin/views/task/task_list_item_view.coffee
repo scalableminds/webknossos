@@ -1,10 +1,10 @@
 _                    = require("lodash")
 app                  = require("app")
-marionette           = require("backbone.marionette")
+Marionette           = require("backbone.marionette")
 AnnotationCollection = require("admin/models/task/annotation_collection")
 TaskAnnotationView   = require("./task_annotation_view")
 
-class TaskListItemView extends Backbone.Marionette.CompositeView
+class TaskListItemView extends Marionette.CompositeView
 
   tagName : "tbody"
   attributes : ->

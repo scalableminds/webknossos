@@ -1,12 +1,12 @@
 _                   = require("lodash")
-marionette          = require("backbone.marionette")
+Marionette          = require("backbone.marionette")
 DatasetActionsView  = require("./action-bar/dataset_actions_view")
 DatasetPositionView = require("./action-bar/dataset_position_view")
 ViewModesView       = require("./action-bar/view_modes_view")
 VolumeActionsView   = require("./action-bar/volume_actions_view")
 Constants           = require("../constants")
 
-class ActionBarView extends Backbone.Marionette.LayoutView
+class ActionBarView extends Marionette.LayoutView
 
   className : "container-fluid"
 

@@ -1,7 +1,7 @@
 app       = require("app")
 Backbone  = require("backbone")
 THREE     = require("three")
-Stats     = require("stats")
+Stats     = require("stats.js")
 $         = require("jquery")
 _         = require("lodash")
 constants = require("../constants")

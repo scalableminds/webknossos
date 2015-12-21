@@ -1,8 +1,8 @@
 _               = require("lodash")
-marionette      = require("backbone.marionette")
+Marionette      = require("backbone.marionette")
 TemplateHelpers = require("libs/template_helpers")
 
-class TeamListItemView extends Backbone.Marionette.ItemView
+class TeamListItemView extends Marionette.ItemView
 
   tagName : "tr"
   template : _.template("""

@@ -1,10 +1,10 @@
 _                  = require("lodash")
-marionette         = require("backbone.marionette")
+Marionette         = require("backbone.marionette")
 Toast              = require("libs/toast")
 SimpleTaskItemView = require("./simple_task_item_view")
 TaskCollection     = require("admin/models/task/task_collection")
 
-class TaskTypeItemView extends Backbone.Marionette.CompositeView
+class TaskTypeItemView extends Marionette.CompositeView
 
   template : _.template("""
     <tr id="<%= id %>">

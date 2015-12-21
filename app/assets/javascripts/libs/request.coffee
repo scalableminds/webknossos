@@ -12,7 +12,7 @@ Request =
 
     return @triggerRequest(
       url,
-      _.defaultsDeep(options, {headers : {"Accept": "application/json" }})
+      _.defaultsDeep(options, { headers : { "Accept": "application/json" }}),
       @handleEmptyJsonResponse
     )
 
@@ -35,12 +35,12 @@ Request =
 
     return @receiveJSON(
       url,
-      _.defaultsDeep(options,
+      _.defaultsDeep(options, {
         method : "POST"
         body : body
         headers :
           "Content-Type" : "application/json"
-      )
+      })
     )
 
 
@@ -48,7 +48,7 @@ Request =
   # OUT: json
   sendMultipartFormReceiveJSON : (url, options = {}) ->
 
-    body = if options. instanceof FormData
+    body = if options.data instanceof FormData
         options.data
       else
         formData = new FormData()
@@ -58,10 +58,10 @@ Request =
 
     return @receiveJSON(
       url,
-      _.defaultsDeep(options,
+      _.defaultsDeep(options, {
         method : "POST"
-        body : formData
-      )
+        body : body
+      })
     )
 
 
@@ -69,7 +69,7 @@ Request =
   # OUT: json
   sendUrlEncodedFormReceiveJSON : (url, options = {}) ->
 
-    body = if typeof(options.data) == "string"
+    body = if typeof options.data == "string"
         options.data
       else
         options.data.serialize()

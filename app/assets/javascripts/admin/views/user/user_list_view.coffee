@@ -72,7 +72,6 @@ class UserListView extends Backbone.Marionette.CompositeView
   filterBySearch : (filterQuery) ->
 
     @collection.setFilter(["email", "firstName", "lastName"], filterQuery)
-    @collection.pager()
 
 
   showTeamRoleModal : ->

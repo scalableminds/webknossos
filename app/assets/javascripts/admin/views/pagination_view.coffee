@@ -8,25 +8,20 @@ class PaginationView extends Backbone.Marionette.ItemView
     <div class="row">
       <div class="col-sm-9">
         <ul class="pagination">
-          <li class="first <% if (Pagination.currentPage == 1) { %> disabled <% } %>">
+          <li class="first <% if (Pagination.currentPage == 0) { %> disabled <% } %>">
             <a><i class="fa fa-angle-double-left"></i></a>
           </li>
-          <li class="prev <% if (Pagination.currentPage == 1) { %> disabled <% } %>"">
+          <li class="prev <% if (Pagination.currentPage == 0) { %> disabled <% } %>"">
             <a><i class="fa fa-angle-left"></i></a>
           </li>
-          <% if (Pagination.lastPage == 1){ %>
-            <li class="active">
-              <span>1</span>
-            <li>
-          <% } %>
-          <% _.each(pageRange, function (p) { %>
-            <% if (Pagination.currentPage == p) { %>
+          <% _.each(pageRange, function (pageIndex) { %>
+            <% if (Pagination.currentPage == pageIndex) { %>
               <li class="active">
-                <span><%= p %></span>
+                <span><%= pageIndex + 1 %></span>
               </li>
             <% } else { %>
               <li>
-                <a class="page"><%= p %></a>
+                <a class="page"><%= pageIndex + 1 %></a>
               </li>
             <% } %>
           <% }); %>
@@ -55,10 +50,11 @@ class PaginationView extends Backbone.Marionette.ItemView
 
   className : "container wide"
   templateHelpers : ->
+    paginationInfo = @collection.getPaginationInfo()
     pageRange : _.range(
-      Math.max(@collection.state.firstPage, @collection.state.currentPage - 5),
-      Math.min(@collection.state.lastPage, @collection.state.currentPage + 5))
-    Pagination : @collection.state
+      Math.max(paginationInfo.firstPage, paginationInfo.currentPage - 5),
+      Math.min(paginationInfo.lastPage, paginationInfo.currentPage + 5) + 1)
+    Pagination : paginationInfo
     addButtonText : @options.addButtonText
 
   ui :
@@ -69,43 +65,44 @@ class PaginationView extends Backbone.Marionette.ItemView
     "click .next" : "goNext"
     "click .last" : "goLast"
     "click .first" : "goFirst"
-    "click .page" : "goToPage"
+    "click .page" : "handleClickPage"
     "click .add-button" : "addElement"
     "input input" : "filterBySearch"
 
 
   initialize : ->
 
-    @listenTo(@collection, "add", @afterAdd)
     @listenToOnce(@collection, "reset", @searchByHash)
+    @listenTo(@collection, "reset", @render)
 
 
   goFirst : (evt) ->
+    evt?.preventDefault()
     @collection.getFirstPage()
 
   goLast : (evt) ->
+    evt?.preventDefault()
     @collection.getLastPage()
 
   goBack : (evt) ->
-    pagination = @collection.state
-    if pagination.currentPage > pagination.firstPage
-      @collection.getPreviousPage()
+    evt?.preventDefault()
+    @collection.getPreviousPage()
 
-  goNext : ->
-    pagination = @collection.state
-    if pagination.currentPage < pagination.lastPage
-      @collection.getNextPage()
+  goNext : (evt) ->
+    evt?.preventDefault()
+    @collection.getNextPage()
 
 
-  goToPage : (evt) ->
-
-    evt.preventDefault()
+  handleClickPage : (evt) ->
+    evt?.preventDefault()
     page = $(evt.target).text()
+    @collection.getPage(parseInt(page) - 1)
+
+  goToPage : (page) ->
     @collection.getPage(page)
 
 
   addElement : ->
-
     app.vent.trigger("paginationView:addElement")
 
 
@@ -118,11 +115,6 @@ class PaginationView extends Backbone.Marionette.ItemView
 
     @ui.inputSearch.focus()
     @ui.inputSearch.val(filterQuery)
-
-
-  afterAdd : ->
-
-    @goLast()
 
 
   searchByHash : ->

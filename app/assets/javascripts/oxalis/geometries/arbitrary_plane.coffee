@@ -1,7 +1,7 @@
 _                             = require("lodash")
 backbone                      = require("backbone")
 THREE                         = require("three")
-{M4x4, V3}                    = require("mjs")()
+{M4x4, V3}                    = require("libs/mjs")
 constants                     = require("oxalis/constants")
 ArbitraryPlaneMaterialFactory = require("./materials/arbitrary_plane_material_factory")
 

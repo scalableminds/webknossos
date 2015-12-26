@@ -1,6 +1,6 @@
 _           = require("lodash")
 THREE       = require("three")
-{M4x4, V3}  = require("mjs")()
+{M4x4, V3}  = require("libs/mjs")
 
 updateMacro = (_this) ->
 

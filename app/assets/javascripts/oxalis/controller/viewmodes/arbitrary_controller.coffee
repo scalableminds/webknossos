@@ -8,7 +8,7 @@ Crosshair          = require("../../geometries/crosshair")
 ArbitraryView      = require("../../view/arbitrary_view")
 ArbitraryPlaneInfo = require("../../geometries/arbitrary_plane_info")
 constants          = require("../../constants")
-{M4x4, V3}         = require("mjs")()
+{M4x4, V3}         = require("libs/mjs")
 
 
 class ArbitraryController

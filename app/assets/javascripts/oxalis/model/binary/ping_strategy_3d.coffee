@@ -1,5 +1,5 @@
 PolyhedronRasterizer = require("./polyhedron_rasterizer")
-{M4x4, V3}           = require("mjs")()
+{M4x4, V3}           = require("libs/mjs")
 
 class PingStrategy3d
 

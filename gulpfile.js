@@ -24,17 +24,12 @@ paths = {
 
 var nodePath = __dirname + "/node_modules/";
 var scriptPaths = {
-  "boostrap"            : nodePath + "boostrap/dist/boostrap",
-  "backbone.wreqr"      : nodePath + "backbone.marionette/node_modules/backbone.wreqr/lib/backbone.wreqr.js",
-  "backbone.paginator"  : nodePath + "backbone.paginator/lib/backbone.paginator",
-  "backbone.subviews"   : nodePath + "backbone.subviews/index",
   "backbone-deep-model" : nodePath + "backbone-deep-model/distribution/deep-model",
   "gzip"                : nodePath + "zlibjs/bin/gzip.min",
   "three"               : nodePath + "three.js/build/three",
   "three.color"         : nodePath + "three.js/examples/js/math/ColorConverter",
   "three.trackball"     : nodePath + "three.js/examples/js/controls/TrackballControls",
   "jasny-bootstrap"     : nodePath + "jasny-bootstrap/dist/js/jasny-bootstrap",
-  "jQuery"              : nodePath + "jquery/dist/jquery",
 };
 
 
@@ -108,7 +103,7 @@ function makeScripts() {
       }),
 
       // Use lodash in place of underscore
-      //new webpack.NormalModuleReplacementPlugin(/underscore/, 'lodash'),
+      new webpack.NormalModuleReplacementPlugin(/underscore/, 'lodash'),
     ]
   })
 }
@@ -118,7 +113,9 @@ gulp.task("scripts", function (done) {
     if (err) {
       done(err);
     } else {
-      if (stats.compilation.assets) {
+      if (stats.compilation.errors && stats.compilation.errors.length) {
+        done(stats.compilation.errors);
+      } else if (stats.compilation.assets) {
         Object.keys(stats.compilation.assets).forEach(function (asset) {
           logFile(path.join(paths.dest.js, asset));
         });

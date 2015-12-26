@@ -1,4 +1,4 @@
-{M4x4, V3}  = require("mjs")()
+{M4x4, V3}  = require("libs/mjs")
 
 # Constants
 HEAP_SIZE = 1 << 25

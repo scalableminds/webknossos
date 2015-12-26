@@ -102,8 +102,8 @@ function makeScripts() {
         _ : "lodash"
       }),
 
-      // Use lodash in place of underscore
-      new webpack.NormalModuleReplacementPlugin(/underscore/, 'lodash'),
+      // // Use lodash in place of underscore
+      // new webpack.NormalModuleReplacementPlugin(/underscore/, 'lodash'),
     ]
   })
 }

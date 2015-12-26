@@ -38,6 +38,7 @@ public/bower_components
 public/javascripts
 public/javascripts_tmp
 public/stylesheets
+public/fonts/fontawesome
 aws.conf
 aws.conf.disabled
 /knowledge

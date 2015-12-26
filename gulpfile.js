@@ -11,12 +11,14 @@ paths = {
   src : {
     css : __dirname + "/app/assets/stylesheets/main.less",
     dir : __dirname + "/app/assets/**/*",
-    js : __dirname + "/app/assets/javascripts"
+    js : __dirname + "/app/assets/javascripts",
+    fontawesome : __dirname + "/node_modules/font-awesome/fonts/*",
   },
   dest : {
     js : __dirname + "/public/javascripts",
-    css : __dirname + "/public/stylesheets"
-  }
+    css : __dirname + "/public/stylesheets",
+    fontawesome : __dirname + "/public/fonts/fontawesome",
+  },
 };
 
 
@@ -152,15 +154,22 @@ gulp.task("styles", function () {
     .pipe(logger());
 });
 
+// FONT AWESOME
+gulp.task("fontawesome", function () {
+  return gulp.src(paths.src.fontawesome)
+    .pipe(gulp.dest(paths.dest.fontawesome))
+    .pipe(logger());
+});
 
-gulp.task("watch:styles", ["styles"], function (done) {
-  gulp.watch(paths.src.dir + "/**/*", ["styles"]);
+
+gulp.task("watch:styles", ["styles", "fontawesome"], function (done) {
+  gulp.watch(paths.src.dir + "/**/*", ["styles", "fontawesome"]);
 });
 
 
 // ENTRY
 gulp.task("debug", ["watch:styles", "watch:scripts"]);
-gulp.task("build", ["styles", "scripts"]);
+gulp.task("build", ["styles", "scripts", "fontawesome"]);
 gulp.task("default", ["build"]);
 
 fs.writeFileSync("target/gulp.pid", process.pid, "utf8");

@@ -98,7 +98,7 @@ class ExplorativeTracingListItemView extends Backbone.Marionette.ItemView
   finishTracing : (event) ->
 
     event.preventDefault()
-    url = $(event.target).attr("href")
+    url = $(event.target).attr("href") || $(event.target.parentElement).attr("href")
 
     Request.receiveJSON(url).then( (response) =>
       Toast.message(response.messages)

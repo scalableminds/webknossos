@@ -162,12 +162,17 @@ Request =
   handleError : (error) ->
 
     if error instanceof Response
-      error.json().then(
-        (json) ->
-          Toast.message(json.messages)
-          Promise.reject(json)
+      error.text().then(
+        (text) ->
+          try
+            json = JSON.parse(text)
+            Toast.message(json.message)
+            Promise.reject(json)
+          catch error
+            Toast.error(text)
+            Promise.reject(text)
         (error) ->
-          Toast.error(error)
+          Toast.error(error.toString())
           Promise.reject(error)
       )
     else

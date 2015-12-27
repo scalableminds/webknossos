@@ -8,7 +8,7 @@ RangeSlider      = require("nouislider")
 Utils            = require("libs/utils")
 TeamCollection   = require("admin/models/team/team_collection")
 SelectionView    = require("admin/views/selection_view")
-
+DateRangePicker  = require("bootstrap-daterangepicker")
 
 class TaskOverviewView extends Marionette.LayoutView
 
@@ -147,16 +147,16 @@ class TaskOverviewView extends Marionette.LayoutView
 
 
   initializeDateRangePicker : ->
-
-    @ui.dateRangeInput.daterangepicker(
-      locale:
-        format: "L"
-      startDate: moment().subtract(@DEFAULT_TIME_PERIOD_TIME, @DEFAULT_TIME_PERIOD_UNIT).format("L")
-      endDate: moment().format("L")
-      opens: "left"
-    (start, end, label) =>
-      @fetchData(start.valueOf(), end.valueOf())
-      @paintGraphDebounced()
+    new DateRangePicker.daterangepicker(@ui.dateRangeInput[0], {
+        locale:
+          format: "L"
+        startDate: moment().subtract(@DEFAULT_TIME_PERIOD_TIME, @DEFAULT_TIME_PERIOD_UNIT).format("L")
+        endDate: moment().format("L")
+        opens: "left"
+      },
+      (start, end, label) =>
+        @fetchData(start.valueOf(), end.valueOf())
+        @paintGraphDebounced()
     )
     return
 

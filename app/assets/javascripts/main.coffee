@@ -7,7 +7,6 @@ app           = require("./app")
 
 require("bootstrap")
 require("jasny-bootstrap")
-require("bootstrap-daterangepicker")
 require("whatwg-fetch")
 require("es6-promise")
 require("libs/core_ext")

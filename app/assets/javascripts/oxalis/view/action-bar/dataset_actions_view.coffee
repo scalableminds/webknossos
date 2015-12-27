@@ -96,16 +96,18 @@ class DatasetActionsView extends Backbone.Marionette.ItemView
   finishTracing : (evt) ->
 
     evt.preventDefault()
-    @saveTracing()
-    if confirm("Are you sure you want to permanently finish this tracing?")
-      window.location.href = evt.currentTarget.href
+    @saveTracing().then(=>
+      if confirm("Are you sure you want to permanently finish this tracing?")
+        window.location.href = evt.currentTarget.href
+    )
 
 
   downloadTracing : (evt) ->
 
     evt.preventDefault()
-    @saveTracing()
-    window.location.href = @model.tracing.downloadUrl
+    @saveTracing().then( =>
+      window.open(@model.tracing.downloadUrl, "_blank")
+    )
 
 
   saveTracing : (evt) ->

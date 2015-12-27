@@ -18,7 +18,6 @@ class TaskCollection extends PaginationCollection
 
   parse : (respones) ->
 
-    debugger
     return _.map(respones,
       (response) ->
 

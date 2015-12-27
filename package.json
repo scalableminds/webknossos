@@ -43,7 +43,6 @@
     "backbone-deep-model": "^0.10.4",
     "backbone-subviews": "^0.7.4",
     "backbone.marionette": "^2.4.4",
-    "backbone.paginator": "^2.0.2",
     "backbone.wreqr": "^1.3.5",
     "bootstrap": "^3.3.6",
     "bootstrap-daterangepicker": "^2.1.17",

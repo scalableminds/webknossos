@@ -57,7 +57,7 @@ class ExplorativeTracingListView extends Marionette.CompositeView
         <tr>
           <th data-sort="formattedHash"> # </th>
           <th data-sort="name"> Name </th>
-          <th data-sort="dataSource.id"> DataSet </th>
+          <th data-sort="dataSetName"> DataSet </th>
           <th> Stats </th>
           <th> Type </th>
           <th data-sort="created"> Created </th>

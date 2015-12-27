@@ -3,10 +3,10 @@ DatasetModel = require("admin/models/dataset/dataset_model")
 
 class PaginatedDatasetCollection extends PaginationCollection
 
-  url : "/api/datasets"
-  model : DatasetModel
+  url: "/api/datasets"
+  model: DatasetModel
 
-  paginator_ui :
-    perPage : 10
+  state:
+    pageSize : 10
 
 module.exports = PaginatedDatasetCollection

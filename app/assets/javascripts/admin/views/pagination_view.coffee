@@ -74,6 +74,7 @@ class PaginationView extends Backbone.Marionette.ItemView
 
     @listenToOnce(@collection, "reset", @searchByHash)
     @listenTo(@collection, "reset", @render)
+    @listenTo(this, "render", @afterRender)
 
 
   goFirst : (evt) ->
@@ -114,7 +115,12 @@ class PaginationView extends Backbone.Marionette.ItemView
     app.vent.trigger("paginationView:filter", filterQuery)
 
     @ui.inputSearch.focus()
-    @ui.inputSearch.val(filterQuery)
+    @ui.inputSearch.val(@collection.state.filterQuery)
+
+
+  afterRender : ->
+
+    @ui.inputSearch.val(@collection.state.filterQuery)
 
 
   searchByHash : ->

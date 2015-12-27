@@ -64,7 +64,7 @@ class DatasetActionsView extends Backbone.Marionette.ItemView
             </table>
             <p>For a full list of all keyboard shortcuts <a target="_blank" href="/help/keyboardshortcuts">see the help section.</a></p>
             <p>We encourage you to read the <a target="_blank" href="/help/faq">tutorials</a> to completely understand how webKnossos works.</p>
-            <p>Introductory  <a target="_blank" href="http://to.do">videos</a> are available.</p>
+            <!--<p>Introductory  <a target="_blank" href="http://to.do">videos</a> are available.</p>-->
           </div>
           <div class="modal-footer">
             <a href="#" class="btn btn-default" data-dismiss="modal">Close</a>

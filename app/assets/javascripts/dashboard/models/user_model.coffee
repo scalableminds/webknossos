@@ -7,7 +7,12 @@ class UserModel extends Backbone.Model
     firstName : ""
     lastName : ""
 
-  urlRoot : "/api/user"
+  url : ->
+    if userID = @get("userID")
+      return "/api/users/#{userID}"
+    else
+      return "/api/user"
+
 
   initialize : (options) ->
 

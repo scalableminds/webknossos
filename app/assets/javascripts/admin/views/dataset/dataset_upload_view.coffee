@@ -114,6 +114,7 @@ class DatasetUploadView extends Backbone.Marionette.LayoutView
       .then(
         =>
           @ui.spinner.addClass("hidden")
+          app.router.navigate("/dashboard", { trigger: true })
       )
 
 

@@ -6,11 +6,13 @@ var through2     = require("through2");
 var path         = require("path");
 var fs           = require("fs");
 var webpack      = require("webpack");
+var chokidar     = require("chokidar");
+
 
 paths = {
   src : {
     css : __dirname + "/app/assets/stylesheets/main.less",
-    dir : __dirname + "/app/assets/**/*",
+    dir : __dirname + "/app/assets",
     js : __dirname + "/app/assets/javascripts"
   },
   dest : {
@@ -157,7 +159,9 @@ gulp.task("styles", function () {
 
 
 gulp.task("watch:styles", ["styles"], function (done) {
-  gulp.watch(paths.src.dir + "/**/*", ["styles"]);
+  chokidar.watch(paths.src.dir, { ignoreInitial: true }).on('all', function () {
+    gulp.start("styles");
+  });
 });
 
 

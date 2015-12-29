@@ -10,20 +10,18 @@ class TeamListView extends Backbone.Marionette.CompositeView
 
   template : _.template("""
     <h3>Teams</h3>
-    <form method="post">
-      <table class="table table-striped">
-        <thead>
-          <tr>
-            <th>Name</th>
-            <th>Parent</th>
-            <th>Owner</th>
-            <th>Roles</th>
-            <th>Actions</th>
-          </tr>
-        </thead>
-        <tbody></tbody>
-      </table>
-    </form>
+    <table class="table table-striped">
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Parent</th>
+          <th>Owner</th>
+          <th>Roles</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
    <div class="modal-wrapper"></div>
   """)
 

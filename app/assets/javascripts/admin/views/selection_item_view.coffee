@@ -6,7 +6,7 @@ class SelectionItemView extends Backbone.Marionette.ItemView
   tagName : "option"
 
   template : _.template("""
-    <%= value %>
+    <%- value %>
   """)
 
 

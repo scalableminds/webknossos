@@ -6,8 +6,8 @@ class CommentTabItemView extends Backbone.Marionette.ItemView
 
   tagName : "li"
   template : _.template("""
-    <i class="fa <%= isActive() %>"></i>
-    <a href="#"><%= node %> <%= content %></a>
+    <i class="fa <%- isActive() %>"></i>
+    <a href="#"><%- node %> <%- content %></a>
    """)
 
   events :

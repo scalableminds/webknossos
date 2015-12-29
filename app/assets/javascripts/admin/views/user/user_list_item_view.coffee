@@ -13,20 +13,20 @@ class UserListItemView extends Backbone.Marionette.ItemView
 
   template : _.template("""
     <td>
-      <input type="checkbox" name="id" value="<%= id %>" class="select-row">
+      <input type="checkbox" name="id" value="<%- id %>" class="select-row">
     </td>
-    <td><%= lastName %></td>
-    <td><%= firstName %></td>
-    <td><%= email %></td>
+    <td><%- lastName %></td>
+    <td><%- firstName %></td>
+    <td><%- email %></td>
     <td>
       <% _.each(experiences, function(value, domain){ %>
-        <span class="label label-default"><%= domain %> : <%= value %></span>
+        <span class="label label-default"><%- domain %> : <%- value %></span>
       <% }) %>
     </td>
     <td class="no-wrap">
       <% _.each(teams, function(team){ %>
-        <%= team.team %>
-        <span class="label label-default" style="background-color: <%= TemplateHelpers.stringToColor(team.role.name) %>"><%= team.role.name %></span><br/>
+        <%- team.team %>
+        <span class="label label-default" style="background-color: <%- TemplateHelpers.stringToColor(team.role.name) %>"><%- team.role.name %></span><br/>
       <% }) %>
     </td>
     <td>
@@ -37,10 +37,10 @@ class UserListItemView extends Backbone.Marionette.ItemView
       <% } %>
     </td>
     <td class="nowrap">
-      <a href="/users/<%= id %>/details"><i class="fa fa-user"></i>show Tracings</a><br />
-      <a href="/api/users/<%= id %>/annotations/download" title="download all finished tracings"><i class="fa fa-download"></i>download </a><br />
+      <a href="/users/<%- id %>/details"><i class="fa fa-user"></i>show Tracings</a><br />
+      <a href="/api/users/<%- id %>/annotations/download" title="download all finished tracings"><i class="fa fa-download"></i>download </a><br />
       <a href="#" class="delete-user"><i class="fa fa-trash-o"></i>delete </a><br />
-      <!--<a href="/admin/users/<%= id %>/loginAs"><i class="fa fa-signin"></i>log in as User </a>-->
+      <!--<a href="/admin/users/<%- id %>/loginAs"><i class="fa fa-signin"></i>log in as User </a>-->
     </td>
   """)
 

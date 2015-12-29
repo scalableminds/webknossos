@@ -11,14 +11,14 @@ class DatasetPositionView extends Backbone.Marionette.ItemView
     <div class="form-group">
       <div class="input-group">
         <span class="input-group-addon">Position</span>
-        <input id="trace-position-input" class="form-control" type="text" value="<%= position() %>">
+        <input id="trace-position-input" class="form-control" type="text" value="<%- position() %>">
       </div>
     </div>
     <div class="form-group">
       <% if(isArbitrayMode) { %>
         <div class="input-group">
           <span class="input-group-addon">Rotation</span>
-          <input id="trace-rotation-input" class="form-control" type="text" value="<%= rotation() %>">
+          <input id="trace-rotation-input" class="form-control" type="text" value="<%- rotation() %>">
         </div>
       <% } %>
     </div>

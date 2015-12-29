@@ -9,10 +9,10 @@ class TextInputSettingView extends AbstractSettingView
 
   template : _.template("""
     <div class="col-sm-5">
-      <%= displayName %>
+      <%- displayName %>
     </div>
     <div class="col-sm-7">
-      <input class="form-control" type="text" pattern="<%= pattern %>" title="<%= title %>" value="<%= value %>">
+      <input class="form-control" type="text" pattern="<%- pattern %>" title="<%- title %>" value="<%- value %>">
     </div>
   """)
 

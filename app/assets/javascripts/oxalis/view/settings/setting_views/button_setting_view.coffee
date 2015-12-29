@@ -9,7 +9,7 @@ class ButtonSettingView extends Backbone.Marionette.ItemView
 
   template : _.template("""
     <div class="col-sm-12">
-      <button type="button" class="btn btn-block btn-default"><%= displayName %></button>
+      <button type="button" class="btn btn-block btn-default"><%- displayName %></button>
     </div>
   """)
 

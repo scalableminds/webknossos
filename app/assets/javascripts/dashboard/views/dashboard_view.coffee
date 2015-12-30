@@ -54,7 +54,10 @@ class DashboardView extends Marionette.LayoutView
 
   initialize : (@options) ->
 
-    @listenTo(@, "render", @showDatasets)
+    if @options.isAdminView
+      @listenTo(@, "render", @showTasks)
+    else
+      @listenTo(@, "render", @showDatasets)
 
     @viewCache =
       datasetSwitchView : null

@@ -6,10 +6,10 @@ class DatasetAccessView extends Marionette.ItemView
   tagName : "tr"
 
   template : _.template("""
-    <td><%= firstName %> <%= lastName %></td>
+    <td><%- firstName %> <%- lastName %></td>
     <td>
       <% teams.forEach(function(team){ %>
-        <span class="label label-default" style="background-color: <%= TemplateHelpers.stringToColor(team.team) %>"><%= team.team %></span>
+        <span class="label label-default" style="background-color: <%= TemplateHelpers.stringToColor(team.team) %>"><%- team.team %></span>
       <% }) %>
     </td>
   """)

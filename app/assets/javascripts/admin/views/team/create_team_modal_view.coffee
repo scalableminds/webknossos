@@ -12,12 +12,12 @@ class CreateTeamModalView extends Marionette.LayoutView
   template : _.template("""
     <div class="modal-dialog">
       <div class="modal-content">
-        <div class="modal-header">
-          <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
-          <h3>Add a New Team</h3>
-        </div>
-        <div class="modal-body container-fluid">
-          <form class="form-horizontal">
+        <form class="form-horizontal">
+          <div class="modal-header">
+            <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+            <h3>Add a New Team</h3>
+          </div>
+          <div class="modal-body container-fluid">
             <div class="form-group">
               <label class="col-sm-2 control-label" for="inputName">Name</label>
               <div class="col-sm-10">
@@ -30,12 +30,12 @@ class CreateTeamModalView extends Marionette.LayoutView
                 <input type="text" class="form-control" id="" placeholder="Name" required autofocus>
               </div>
             </div>
-          </form>
-        </div>
-        <div class="modal-footer">
-          <a href="#" class="btn btn-primary">Add</a>
-          <a href="#" class="btn btn-default" data-dismiss="modal">Close</a>
-        </div>
+          </div>
+          <div class="modal-footer">
+            <button type="submit" class="btn btn-primary">Add</button>
+            <a href="#" class="btn btn-default" data-dismiss="modal">Close</a>
+          </div>
+        </form>
       </div>
     </div>
   """)
@@ -44,7 +44,7 @@ class CreateTeamModalView extends Marionette.LayoutView
     "inputName" : "#inputName"
 
   events :
-    "click .btn-primary" : "addNewTeam"
+    "submit form" : "addNewTeam"
 
   regions :
     "parentTeams" : ".parent-teams"
@@ -62,7 +62,9 @@ class CreateTeamModalView extends Marionette.LayoutView
     )
 
 
-  addNewTeam : ->
+  addNewTeam : (evt) ->
+
+    evt.preventDefault()
 
     team = new TeamModel(
       name : @ui.inputName.val(),

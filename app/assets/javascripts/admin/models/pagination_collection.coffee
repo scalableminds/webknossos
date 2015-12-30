@@ -27,6 +27,7 @@ class PaginationCollection
       currentPage: 0
       sorting: null
       filter: null
+      filterQuery: ""
     )
 
     @length = Math.min(@state.pageSize, @fullCollection.length)
@@ -96,12 +97,14 @@ class PaginationCollection
   setFilter: (fields, query) ->
 
     if query == '' or not _.isString(query)
+      @state.filterQuery = ""
       @state.filter = null
     else
       words = _.map(query.match(/\w+/ig), (element) -> element.toLowerCase())
       pattern = "(" + _.uniq(words).join("|") + ")"
       regexp = new RegExp(pattern, "igm")
 
+      @state.filterQuery = query
       @state.filter = (model) ->
         return _.any(fields, (fieldName) ->
           value = model.get(fieldName)

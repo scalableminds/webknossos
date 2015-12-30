@@ -6,13 +6,15 @@ var through2     = require("through2");
 var path         = require("path");
 var fs           = require("fs");
 var webpack      = require("webpack");
+var chokidar     = require("chokidar");
+
 
 paths = {
   src : {
     css : __dirname + "/app/assets/stylesheets/main.less",
-    dir : __dirname + "/app/assets/**/*",
+    dir : __dirname + "/app/assets",
     js : __dirname + "/app/assets/javascripts",
-    fontawesome : __dirname + "/node_modules/font-awesome/fonts/*",
+    fontawesome : __dirname + "/node_modules/font-awesome/fonts",
   },
   dest : {
     js : __dirname + "/public/javascripts",
@@ -159,8 +161,10 @@ gulp.task("fontawesome", function () {
 });
 
 
-gulp.task("watch:styles", ["styles", "fontawesome"], function (done) {
-  gulp.watch(paths.src.dir + "/**/*", ["styles", "fontawesome"]);
+gulp.task("watch:styles", ["styles"], function (done) {
+  chokidar.watch(paths.src.dir, { ignoreInitial: true }).on('all', function () {
+    gulp.start("styles");
+  });
 });
 
 

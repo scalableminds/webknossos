@@ -21,7 +21,6 @@
     "gulp-less": "~1.2.1",
     "gulp-plumber": "~0.5.6",
     "gulp-util": "^3.0.7",
-    "gulp-watch": "~0.5.0",
     "imports-loader": "^0.6.4",
     "isomorphic-fetch": "^2.2.0",
     "napa": "^2.2.0",
@@ -30,7 +29,8 @@
     "rimraf": "^2.4.3",
     "through2": "^2.0.0",
     "webpack": "^1.12.2",
-    "worker-loader": "^0.6.0"
+    "worker-loader": "^0.6.0",
+    "chokidar": "^1.4.1"
   },
   "scripts": {
     "install": "napa georgwiese/three.js"

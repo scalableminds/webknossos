@@ -4,7 +4,7 @@ class UserCollection extends PaginationCollection
 
   url : "/api/users"
 
-  paginator_ui :
-    perPage : 50
+  state :
+    pageSize : 50
 
 module.exports = UserCollection

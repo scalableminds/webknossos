@@ -21,11 +21,12 @@ class TeamController @Inject()(val messagesApi: MessagesApi) extends Controller 
     Ok(views.html.main()(Html("")))
   }
 
-  def isTeamOwner(team: Team, user: User) =
-    team.owner == Some(user._id) match {
-      case true  => Full(true)
-      case false => Failure(Messages("team.noOwner"))
-    }
+  def isTeamOwner(team: Team, user: User) = {
+    if(team.owner.contains(user._id))
+      Full(true)
+    else
+      Failure(Messages("team.noOwner"))
+  }
 
   def list = Authenticated.async{ implicit request =>
     UsingFilters(

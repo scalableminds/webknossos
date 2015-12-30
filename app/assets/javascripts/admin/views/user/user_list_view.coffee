@@ -11,38 +11,36 @@ class UserListView extends Backbone.Marionette.CompositeView
 
   template : _.template("""
     <h3>Users</h3>
-    <form method="post">
-      <table class="table table-striped">
-        <thead>
-          <tr>
-            <th>
-              <input type="checkbox" class="select-all-rows">
-            </th>
-            <th>Last name</th>
-            <th>First name</th>
-            <th>Email</th>
-            <th>Experiences</th>
-            <th>Teams - Role</th>
-            <th>Verified</th>
-            <th></th>
-          </tr>
-        </thead>
-        <tbody></tbody>
-      </table>
+    <table class="table table-striped">
+      <thead>
+        <tr>
+          <th>
+            <input type="checkbox" class="select-all-rows">
+          </th>
+          <th>Last name</th>
+          <th>First name</th>
+          <th>Email</th>
+          <th>Experiences</th>
+          <th>Teams - Role</th>
+          <th>Verified</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
 
-      <div class="navbar navbar-default navbar-fixed-bottom">
-        <div class="navbar-form">
-          <div class="btn-group">
-            <a class="btn btn-default" id="team-role-modal">
-              <i class="fa fa-group"></i>Edit Teams
-            </a>
-            <a class="btn btn-default" id="experience-modal">
-              <i class="fa fa-trophy"></i>Change Experience
-            </a>
-          </div>
+    <div class="navbar navbar-default navbar-fixed-bottom">
+      <div class="navbar-form">
+        <div class="btn-group">
+          <a class="btn btn-default" id="team-role-modal">
+            <i class="fa fa-group"></i>Edit Teams
+          </a>
+          <a class="btn btn-default" id="experience-modal">
+            <i class="fa fa-trophy"></i>Change Experience
+          </a>
         </div>
       </div>
-    </form>
+    </div>
     <div id="modal-wrapper"></div>
   """)
   className : "user-administration-table container wide"
@@ -72,7 +70,6 @@ class UserListView extends Backbone.Marionette.CompositeView
   filterBySearch : (filterQuery) ->
 
     @collection.setFilter(["email", "firstName", "lastName"], filterQuery)
-    @collection.pager()
 
 
   showTeamRoleModal : ->

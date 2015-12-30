@@ -379,4 +379,7 @@ Backbone.ajax = (options) ->
     options.url
     method : options.type
     data : options.data
-  )).then( options.success, options.error )
+  ))
+    # Needs to be done/fail because we don't care about the return value of the callbacks
+    .done(options.success)
+    .fail(options.error)

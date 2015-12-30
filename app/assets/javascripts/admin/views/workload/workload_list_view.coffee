@@ -34,7 +34,6 @@ class WorkloadListView extends Backbone.Marionette.CompositeView
   filterByQuery : (filterQuery) ->
 
     @collection.setFilter(["name", "projects"], filterQuery)
-    @collection.pager()
 
 
 module.exports = WorkloadListView

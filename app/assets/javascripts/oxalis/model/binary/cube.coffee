@@ -1,5 +1,5 @@
 Backbone = require("backbone")
-ErrorHandling = require("libs/Error_handling")
+ErrorHandling = require("libs/error_handling")
 
 class Cube
 

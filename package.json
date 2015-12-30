@@ -39,6 +39,7 @@
     "webdriver-update": "./node_modules/.bin/webdriver-manager update"
   },
   "dependencies": {
+    "chokidar": "^1.4.1",
     "webcola": "^3.1.3"
   }
 }

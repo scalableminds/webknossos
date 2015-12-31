@@ -490,7 +490,7 @@ class Gui
     else
       widthStr = (nm / 1000000).toFixed(1) + " mm</p>"
 
-    $("#zoomFactor").html("<p>Viewport width: " + widthStr )
+    $("#zoomFactor").html("<div>Viewport width: #{widthStr} </div>")
 
 
   setFolderVisibility : (folder, visible) ->

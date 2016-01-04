@@ -19,11 +19,6 @@ class UserTasksCollection extends SortedCollection
       showFinishedTasks : false
 
 
-  finishedTasksFilter : (task) ->
-
-    return task.get("annotation").state.isFinished
-
-
   unfinishedTasksFilter : (task) ->
 
     return !task.get("annotation").state.isFinished

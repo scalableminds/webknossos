@@ -32,7 +32,7 @@ class SpotlightView extends Backbone.Marionette.LayoutView
 
     @creditsView = new CreditsView()
 
-    @collection.fetch({ data : "isEditable=true" })
+    @collection.fetch({ data : "isActive=true" })
     @listenTo(@, "render", @show)
 
 

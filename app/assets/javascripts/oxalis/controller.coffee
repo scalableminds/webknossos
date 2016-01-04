@@ -56,7 +56,6 @@ class Controller
     @model.fetch()
       .then(
         (error) => @modelFetchDone(error)
-        (response) => @modelFetchFail(response)
       )
 
 
@@ -147,11 +146,6 @@ class Controller
         else if not shouldWarn and @zoomStepWarningToast?
           @zoomStepWarningToast.remove()
           @zoomStepWarningToast = null
-
-
-  modelFetchFail : (response) ->
-
-    Toast.error(response.responseJSON.messages)
 
 
   initKeyboard : ->

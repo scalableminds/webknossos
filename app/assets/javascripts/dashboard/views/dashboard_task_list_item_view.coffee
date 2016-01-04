@@ -64,9 +64,7 @@ class DashboardTaskListItemView extends Backbone.Marionette.ItemView
 
     if confirm("Are you sure you want to permanently finish this tracing?")
 
-      @model.finish().fail( (response) ->
-        Toast.message(response.messages)
-      )
+      @model.finish()
 
 
 module.exports = DashboardTaskListItemView

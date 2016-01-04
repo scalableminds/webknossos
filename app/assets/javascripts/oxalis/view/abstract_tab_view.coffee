@@ -10,7 +10,7 @@ class AbstractTabView extends Backbone.Marionette.LayoutView
     <ul class="nav nav-tabs">
       <% tabs.forEach(function(tab) { %>
         <li>
-          <a href="#<%- tab.id %>" data-toggle="tab" data-tab-id="<%- tab.id %>"> <%- tab.iconString %> <%- tab.name %></a>
+          <a href="#<%- tab.id %>" data-toggle="tab" data-tab-id="<%- tab.id %>"> <%= tab.iconString %> <%- tab.name %></a>
         </li>
       <% }) %>
     </ul>

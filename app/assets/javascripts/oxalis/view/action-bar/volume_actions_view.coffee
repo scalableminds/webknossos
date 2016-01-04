@@ -8,6 +8,7 @@ class VolumeActionsView extends Backbone.Marionette.ItemView
     <div class="btn-group">
       <button type="button" class="btn btn-default btn-primary" id="mode-move">Move</button>
       <button type="button" class="btn btn-default" id="mode-trace">Trace</button>
+      <button type="button" class="btn btn-default" id="create-cell">Create new cell (C)</button>
     </div>
   """)
 

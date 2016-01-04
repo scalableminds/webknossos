@@ -3,7 +3,7 @@ Backbone           = require("backbone")
 
 class PaginationCollection
 
-  constructor: (models, options) ->
+  constructor : (models, options) ->
 
     _.extend(this, Backbone.Events)
 
@@ -23,11 +23,11 @@ class PaginationCollection
 
     @currentModels = @fullCollection.models.slice()
     @state = _.defaults(_.clone(@state) ? {},
-      pageSize: 10
-      currentPage: 0
-      sorting: null
-      filter: null
-      filterQuery: ""
+      pageSize : 10
+      currentPage : 0
+      sorting : null
+      filter : null
+      filterQuery : ""
     )
 
     @length = Math.min(@state.pageSize, @fullCollection.length)
@@ -39,37 +39,37 @@ class PaginationCollection
     @listenTo(@fullCollection, "sync", @_passthroughEvent("sync"))
 
 
-  add: ->
+  add : ->
     @fullCollection.add.apply(@fullCollection, arguments)
 
-  remove: ->
+  remove : ->
     @fullCollection.remove.apply(@fullCollection, arguments)
 
-  set: ->
+  set : ->
     @fullCollection.set.apply(@fullCollection, arguments)
 
-  fetch: ->
+  fetch : ->
     @fullCollection.fetch.apply(@fullCollection, arguments)
 
-  create: ->
+  create : ->
     @fullCollection.create.apply(@fullCollection, arguments)
 
-  reset: ->
+  reset : ->
     @fullCollection.reset.apply(@fullCollection, arguments)
 
 
-  setPageSize: (pageSize) ->
+  setPageSize : (pageSize) ->
     @state.pageSize = pageSize
     @_reset()
     return
 
 
-  setSorting: (field, order) ->
+  setSorting : (field, order) ->
     @setSort(field, order)
     return
 
 
-  setSort: (field, order) ->
+  setSort : (field, order) ->
 
     if order == "asc"
       order = 1
@@ -94,7 +94,7 @@ class PaginationCollection
     return
 
 
-  setFilter: (fields, query) ->
+  setFilter : (fields, query) ->
 
     if query == '' or not _.isString(query)
       @state.filterQuery = ""
@@ -115,30 +115,30 @@ class PaginationCollection
     return
 
 
-  at: (index) ->
+  at : (index) ->
     return @currentModels[index]
 
-  get: (index) ->
+  get : (index) ->
     return @at(index)
 
-  clone: ->
+  clone : ->
     clonedCollection = new PaginationCollection(null, {
-      fullCollection: @fullCollection
+      fullCollection : @fullCollection
     })
     clonedCollection.setPageSize(@state.pageSize)
     return clonedCollection
 
 
-  _lastPageIndex: ->
+  _lastPageIndex : ->
     return Math.ceil(@currentModels.length / @state.pageSize) - 1
 
-  _passthroughEvent: (eventType) ->
+  _passthroughEvent : (eventType) ->
     return (args...) ->
       @_reset()
       @trigger(eventType, args...)
       return
 
-  _resetModels: ->
+  _resetModels : ->
     models = @fullCollection.models.slice()
 
     if @state.filter?
@@ -155,7 +155,7 @@ class PaginationCollection
     return
 
 
-  _reset: ->
+  _reset : ->
     @_resetModels()
     @models = @currentModels.slice(
       @state.currentPage * @state.pageSize,
@@ -168,43 +168,48 @@ class PaginationCollection
     return
 
 
-  getPaginationInfo: ->
+  getPaginationInfo : ->
     return {
-      firstPage: 0
-      lastPage: @_lastPageIndex()
-      currentPage: @state.currentPage
-      pageSize: @state.pageSize
+      firstPage : 0
+      lastPage : @_lastPageIndex()
+      currentPage : @state.currentPage
+      pageSize : @state.pageSize
     }
 
 
-  getPreviousPage: ->
+  getPreviousPage : ->
     @getPage(@state.currentPage - 1)
     return
 
 
-  getNextPage: ->
+  getNextPage : ->
     @getPage(@state.currentPage + 1)
     return
 
 
-  getFirstPage: ->
+  getFirstPage : ->
     @getPage(0)
     return
 
 
-  getLastPage: ->
+  getLastPage : ->
     @getPage(@_lastPageIndex())
     return
 
 
-  getPage: (pageIndex) ->
+  getPage : (pageIndex) ->
     if 0 <= pageIndex < Math.ceil(@currentModels.length / @state.pageSize)
       @state.currentPage = pageIndex
       @_reset()
     return
 
-  toJSON: ->
+  toJSON : ->
     @models.map((model) -> model.toJSON())
+
+
+  findWhere : ->
+
+    return @fullCollection.findWhere.apply(@fullCollection, arguments)
 
 
 module.exports = PaginationCollection

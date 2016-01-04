@@ -56,7 +56,7 @@ class MergeModalView extends Backbone.Marionette.LayoutView
             <label for="nml">NML</label>
             <div class="row">
               <div class="col-md-10">
-                <form action="<%= jsRoutes.controllers.admin.NMLIO.upload().url %>"
+                <form action="<%- jsRoutes.controllers.admin.NMLIO.upload().url %>"
                     method="POST"
                     enctype="multipart/form-data"
                     id="upload-and-explore-form"

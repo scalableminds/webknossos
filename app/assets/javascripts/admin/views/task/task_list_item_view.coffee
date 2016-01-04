@@ -16,38 +16,38 @@ class TaskListItemView extends Backbone.Marionette.CompositeView
         <i class="caret-right"></i>
         <i class="caret-down"></i>
       </td>
-      <td><%= formattedHash %></td>
-      <td><%= team %></td>
+      <td><%- formattedHash %></td>
+      <td><%- team %></td>
       <td>
-        <a href="/projects#<%= projectName %>">
-          <%= projectName %>
+        <a href="/projects#<%- projectName %>">
+          <%- projectName %>
         </a>
       </td>
       <td>
-        <a href="/taskTypes#<%= type.summary %>">
-          <%= type.summary %>
+        <a href="/taskTypes#<%- type.summary %>">
+          <%- type.summary %>
         </a>
       </td>
-      <td><%= dataSet %></td>
-      <td>(<%= editPosition %>)</td>
-      <td>(<%= boundingBox.join(", ") %>)</td>
+      <td><%- dataSet %></td>
+      <td>(<%- editPosition %>)</td>
+      <td>(<%- boundingBox.join(", ") %>)</td>
       <td>
         <% if (neededExperience.domain != "" || neededExperience.value > 0) { %>
-          <span class="label label-default"><%= neededExperience.domain %> : <%= neededExperience.value %></span>
+          <span class="label label-default"><%- neededExperience.domain %> : <%- neededExperience.value %></span>
         <% } %>
       </td>
-      <td><%= priority %></td>
-      <td><%= created %></td>
+      <td><%- priority %></td>
+      <td><%- created %></td>
       <td>
-        <i class="fa fa-play-circle"></i><%= status.open %><br>
-        <i class="fa fa-random"></i><%= status.inProgress %><br>
-        <i class="fa fa-check-circle-o"></i><%= status.completed %>
+        <i class="fa fa-play-circle"></i><%- status.open %><br>
+        <i class="fa fa-random"></i><%- status.inProgress %><br>
+        <i class="fa fa-check-circle-o"></i><%- status.completed %>
       </td>
       <td class="nowrap">
-        <a href="/admin/tasks/<%= id %>/edit"><i class="fa fa-pencil"></i>edit</a><br>
+        <a href="/admin/tasks/<%- id %>/edit"><i class="fa fa-pencil"></i>edit</a><br>
         <% if (status.completed > 0) { %>
-          <a href="/annotations/CompoundTask/<%= id %>" title="view all finished tracings"><i class="fa fa-random"></i>view</a><br>
-          <a href="/api/tasks/<%= id %>/download" title="download all finished tracings"><i class="fa fa-download"></i>download</a><br>
+          <a href="/annotations/CompoundTask/<%- id %>" title="view all finished tracings"><i class="fa fa-random"></i>view</a><br>
+          <a href="/api/tasks/<%- id %>/download" title="download all finished tracings"><i class="fa fa-download"></i>download</a><br>
         <% } %>
         <a href="#" class="delete"><i class="fa fa-trash-o"></i>delete</a>
       </td>

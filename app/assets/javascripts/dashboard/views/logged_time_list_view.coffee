@@ -16,8 +16,8 @@ class LoggedTimeListView extends Backbone.Marionette.ItemView
       <tbody>
         <% items.forEach(function(item) { %>
           <tr>
-            <td><%= moment(item.interval).format("MM/YYYY") %></td>
-            <td><%= FormatUtils.formatSeconds(item.time.asSeconds()) %></td>
+            <td><%- moment(item.interval).format("MM/YYYY") %></td>
+            <td><%- FormatUtils.formatSeconds(item.time.asSeconds()) %></td>
           </tr>
         <% }) %>
       </tbody>

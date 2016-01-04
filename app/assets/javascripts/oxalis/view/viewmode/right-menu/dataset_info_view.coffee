@@ -9,11 +9,11 @@ class DatasetInfoView extends Backbone.Marionette.ItemView
   id : "dataset"
   template : _.template("""
     <div class="well">
-      <p><%= annotationType %></p>
-      <p>DataSet: <%= dataSetName %></p>
-      <p>Viewport width: <%= chooseUnit(zoomLevel) %></p>
+      <p><%- annotationType %></p>
+      <p>DataSet: <%- dataSetName %></p>
+      <p>Viewport width: <%- chooseUnit(zoomLevel) %></p>
       <% if(treeCount != null) { %>
-        <p>Total number of trees: <%= treeCount %></p>
+        <p>Total number of trees: <%- treeCount %></p>
       <% } %>
     </div>
   """)

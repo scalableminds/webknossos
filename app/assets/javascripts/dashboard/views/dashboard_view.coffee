@@ -12,7 +12,7 @@ class DashboardView extends Backbone.Marionette.LayoutView
   id : "dashboard"
   template : _.template("""
     <% if (isAdminView) { %>
-      <h3>User: <%= firstName %> <%= lastName %></h3>
+      <h3>User: <%- firstName %> <%- lastName %></h3>
     <% } %>
     <div class="tabbable" id="tabbable-dashboard">
       <ul class="nav nav-tabs">

@@ -5,9 +5,9 @@ _                 = require("lodash")
 class LayerColorSettingsView extends Backbone.Marionette.ItemView
 
   template : _.template("""
-    <p><%= displayName %></p>
+    <p><%- displayName %></p>
     <% _.forEach(subviewCreators, function (subview, key) { %>
-      <div data-subview="<%= key %>"></div>
+      <div data-subview="<%- key %>"></div>
     <% }) %>
   """)
 

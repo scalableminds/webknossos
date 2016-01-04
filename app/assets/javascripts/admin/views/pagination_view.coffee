@@ -17,11 +17,11 @@ class PaginationView extends Backbone.Marionette.ItemView
           <% _.each(pageRange, function (pageIndex) { %>
             <% if (Pagination.currentPage == pageIndex) { %>
               <li class="active">
-                <span><%= pageIndex + 1 %></span>
+                <span><%- pageIndex + 1 %></span>
               </li>
             <% } else { %>
               <li>
-                <a class="page"><%= pageIndex + 1 %></a>
+                <a class="page"><%- pageIndex + 1 %></a>
               </li>
             <% } %>
           <% }); %>
@@ -35,7 +35,7 @@ class PaginationView extends Backbone.Marionette.ItemView
 
         <% if (addButtonText) { %>
           <a class="btn btn-success add-button" href="#">
-            <i class="fa fa-plus"></i><%= addButtonText %>
+            <i class="fa fa-plus"></i><%- addButtonText %>
           </a>
         <% } %>
       </div>

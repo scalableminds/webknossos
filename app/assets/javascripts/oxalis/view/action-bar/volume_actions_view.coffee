@@ -8,6 +8,8 @@ class VolumeActionsView extends Backbone.Marionette.ItemView
     <div class="btn-group">
       <button type="button" class="btn btn-default btn-primary" id="mode-move">Move</button>
       <button type="button" class="btn btn-default" id="mode-trace">Trace</button>
+    </div>
+    <div class="btn-group">
       <button type="button" class="btn btn-default" id="create-cell">Create new cell (C)</button>
     </div>
   """)
@@ -17,12 +19,18 @@ class VolumeActionsView extends Backbone.Marionette.ItemView
     "mode-move" : Constants.VOLUME_MODE_MOVE
 
   events :
-    "click button" : "changeMode"
+    "click [id^=mode]" : "changeMode"
+    "click #create-cell" : "createCell"
 
 
   initialize : (options) ->
 
     @listenTo(app.vent, "changeVolumeMode", @updateForMode)
+
+
+  createCell : ->
+
+    throw new Error("TODO. Not implemented yet.")
 
 
   changeMode : (evt) ->

@@ -92,8 +92,6 @@ class DashboardTaskListView extends Backbone.Marionette.CompositeView
 
     if @collection.filter(UserTasksCollection::unfinishedTasksFilter).length == 0 or confirm("Do you really want another task?")
 
-      showMessages = (response) -> Toast.message(response.messages)
-
       @collection.getNewTask()
 
 

@@ -101,29 +101,20 @@ class StateLogger
     deferred.promise()
 
 
-  pushFailCallback : (responseObject, notifyOnFailure) ->
+  pushFailCallback : (response, notifyOnFailure) ->
 
     $('body').addClass('save-error')
 
-    if responseObject.responseText? && responseObject.responseText != ""
-      # restore whatever is send as the response
-      try
-        response = JSON.parse(responseObject.responseText)
-      catch error
-        console.error "parsing failed.", response
-      if response?.messages?[0]?.error?
-        if response.messages[0].error == "annotation.dirtyState"
-          $(window).off("beforeunload")
-          alert("""
-            It seems that you edited the tracing simultaneously in different windows.
-            Editing should be done in a single window only.
+    if response.messages?[0].error?
+      if response.messages[0].error == "Annotation is not up to date. You can't make any changes"
+        $(window).off("beforeunload")
+        alert("""
+          It seems that you edited the tracing simultaneously in different windows.
+          Editing should be done in a single window only.
 
-            In order to restore the current window, a reload is necessary.
-          """)
-          window.location.reload()
-
-        else
-          Toast.message(response.messages)
+          In order to restore the current window, a reload is necessary.
+        """)
+        window.location.reload()
 
 
     setTimeout((=> @pushNow()), @SAVE_RETRY_WAITING_TIME)

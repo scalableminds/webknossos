@@ -168,7 +168,7 @@ annotation.notFinishable=Before you can finish the annotation, you need to annot
 annotation.notInProgress=The tracing is not in progress and can''t be finished
 annotation.reset.failed=Couldn''t reset tracing to base
 annotation.merge.success=Merging successfully done
-annotation.dirtyState=Annotation is not up to date. YOu can''t make any changes
+annotation.dirtyState=Annotation is not up to date. You can''t make any changes
 annotation.update.impossible=This annotation can''t be updated (read only)
 
 issue.summary.notSupplied=No summary supplied

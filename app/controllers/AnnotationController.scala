@@ -216,7 +216,7 @@ object AnnotationController extends Controller with Secured with TracingInformat
             JsonOk(result, "annotation.saved")
           }
         else
-          new Fox(Future.successful(Full(JsonBadRequest(oldJs, "annotation.dirtyState"))))
+          new Fox(Future.successful(Full(JsonBadRequest(oldJs, Messages("annotation.dirtyState")))))
       }
 
       //Logger.info(s"Tracing update [$typ - $id, $version]: ${request.body}")

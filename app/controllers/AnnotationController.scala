@@ -1,7 +1,9 @@
 package controllers
 
+import com.scalableminds.util.mvc.JsonResult
 import oxalis.security.{AuthenticatedRequest, Secured}
 import models.user.{UsedAnnotationDAO, User, UserDAO}
+import play.api.http.Status._
 import play.api.i18n.Messages
 import play.api.libs.json._
 import play.api.Logger
@@ -216,7 +218,7 @@ object AnnotationController extends Controller with Secured with TracingInformat
             JsonOk(result, "annotation.saved")
           }
         else
-          new Fox(Future.successful(Full(JsonBadRequest(oldJs, Messages("annotation.dirtyState")))))
+          new Fox(Future.successful(Full(new JsonResult(CONFLICT)(oldJs, Messages("annotation.dirtyState")))))
       }
 
       //Logger.info(s"Tracing update [$typ - $id, $version]: ${request.body}")

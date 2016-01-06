@@ -4,12 +4,12 @@ class ArbitraryPlaneInfo extends Backbone.Marionette.ItemView
 
   NOT_RECORDING_CLASS : "not-recording"
   NOT_RECORDING : "Watching"
-  RECORDING_CLASS : "Recording"
+  RECORDING_CLASS : "recording"
   RECORDING : "RECORDING"
 
-  tagName: "div"
-  id: "arbitrary-info-canvas"
-  className: ->
+  tagName : "div"
+  id : "arbitrary-info-canvas"
+  className : ->
     if @model.get("isRecording")
       return @RECORDING_CLASS
     else
@@ -23,6 +23,7 @@ class ArbitraryPlaneInfo extends Backbone.Marionette.ItemView
 
   constructor : ->
 
+    # Initialize Model in constructor so it is already available for className()
     @model = new Backbone.Model({
       isRecording : false,
       recordingText : @NOT_RECORDING

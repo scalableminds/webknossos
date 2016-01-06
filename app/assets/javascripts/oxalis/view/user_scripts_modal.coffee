@@ -22,4 +22,19 @@ class UserScriptsModalView extends Backbone.Marionette.ItemView
     </div>
   """)
 
+  ui :
+    "inputBox" : "#add-script-input"
+
+  events :
+    "click #add-script-button" : "handleAddClick"
+
+
+  show : ->
+    @$el.modal("show")
+
+
+  handleAddClick : ->
+    eval(@ui.inputBox.val())
+
+
 module.exports = UserScriptsModalView

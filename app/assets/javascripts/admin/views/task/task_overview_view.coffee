@@ -1,7 +1,7 @@
 _                = require("lodash")
 marionette       = require("backbone.marionette")
 d3               = require("d3")
-cola             = require("cola")
+cola             = require("webcola")
 moment           = require("moment")
 routes           = require("routes")
 DateRangePicker  = require("daterangepicker")
@@ -9,6 +9,7 @@ RangeSlider      = require("rangeslider")
 Utils            = require("libs/utils")
 TeamCollection   = require("admin/models/team/team_collection")
 SelectionView    = require("admin/views/selection_view")
+
 
 class TaskOverviewView extends Backbone.Marionette.LayoutView
 

@@ -9,11 +9,11 @@ class AchievementView extends Backbone.Marionette.ItemView
       <tbod>
         <tr>
           <td>Number of Annotations</td>
-          <td><%= numberOfAnnotations %></td>
+          <td><%- numberOfAnnotations %></td>
         </tr>
         <tr>
           <td>Number of Users</td>
-          <td><%= numberOfUsers %></td>
+          <td><%- numberOfUsers %></td>
         </tr>
       </tbody>
     </table>

@@ -9,18 +9,17 @@ class DatasetInfoView extends Backbone.Marionette.ItemView
   id : "dataset"
   template : _.template("""
     <div class="well">
-      <p><%= annotationType %></p>
-      <p>DataSet: <%= dataSetName %></p>
-      <p>Viewport width: <%= chooseUnit(zoomLevel) %></p>
+      <p><%- annotationType %></p>
+      <p>DataSet: <%- dataSetName %></p>
+      <p>Viewport width: <%- chooseUnit(zoomLevel) %></p>
       <% if(treeCount != null) { %>
-        <p>Total number of trees: <%= treeCount %></p>
+        <p>Total number of trees: <%- treeCount %></p>
       <% } %>
     </div>
   """)
 
   templateHelpers :
     chooseUnit : ->
-
       if(@zoomLevel < 1000)
         return @zoomLevel.toFixed(0) + " nm"
       else if (@zoomLevel < 1000000)
@@ -42,8 +41,14 @@ class DatasetInfoView extends Backbone.Marionette.ItemView
 
   serializeData : ->
 
+    annotationType = @model.get("tracingType")
+    task = @model.get("tracing").task
+
+    # In case we have a task display its id as well
+    if task then annotationType += " #{task.formattedHash}"
+
     return {
-      annotationType : @model.get("tracingType")
+      annotationType : annotationType
       zoomLevel : @calculateZoomLevel()
       dataSetName : @model.get("dataset").get("name")
       treeCount : @model.skeletonTracing?.trees.length

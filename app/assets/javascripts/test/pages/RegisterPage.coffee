@@ -4,7 +4,8 @@ signupButton = "button[type=submit]"
 alertDanger =  "div.alert-danger"
 
 class RegisterPage extends Page
-  @signUpSuccessText = "Your account has been created. An administrator is going to unlock you soon."
+  @signUpSuccessText = "Your account has been created. " +
+    "An administrator is going to unlock you soon."
 
   get : ->
 
@@ -37,13 +38,14 @@ class RegisterPage extends Page
 
   getAlerts : ->
 
-    return @waitForSelector(alertDanger)
+    return $$(alertDanger)
+      .then((alerts) -> return alerts)
 
 
   getModalText : ->
 
-    return @waitForSelector("#flashModal .modal-body p")
-      .then((body) -> return body.getText())
+    return @waitForSelector("#modalDescription > p")
+      .then((body) -> return body.getInnerHtml())
 
 
 

@@ -10,19 +10,15 @@ class SpotlightDatasetListView extends Backbone.Marionette.CollectionView
   initialize : (options) ->
 
     @listenTo(app.vent, "paginationView:filter", @filterBySearch)
+    @collection.setSorting("created")
 
-    @collection.sortByAttribute("created")
-
-    @collection.fetch(
-      data : "isActive=true"
-      silent : true
-    ).done( =>
-      @collection.goTo(1)
-    )
 
   filterBySearch : (searchQuery) ->
 
     @collection.setFilter(["name", "owningTeam", "description"], searchQuery)
+
+  # Marionette's CollectionView filter
+  filter : (child, index, collection) -> return child.get("isActive")
 
 module.exports = SpotlightDatasetListView
 

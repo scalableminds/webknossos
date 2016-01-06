@@ -20,6 +20,7 @@ class Router extends Backbone.Router
     "datasets/:id/view"                 : "tracingViewPublic"
     "dashboard"                         : "dashboard"
     "datasets"                          : "dashboard"
+    "datasets/upload"                   : "datasetUpload"
     "users/:id/details"                 : "dashboard"
     "taskTypes/:id/edit"                : "editTaskType"
     "taskTypes"                         : "taskTypes"
@@ -28,6 +29,11 @@ class Router extends Backbone.Router
     "admin/taskTypes"                   : "hideLoading"
     "workload"                          : "workload"
 
+  whitelist : [
+    "help/keyboardshortcuts",
+    "help/faq",
+    "issues"
+  ]
 
   initialize : ->
 
@@ -114,6 +120,11 @@ class Router extends Backbone.Router
     @showAdminView("StatisticView")
 
 
+  datasetUpload : ->
+
+    @showAdminView("DatasetUploadView")
+
+
   users : ->
 
     @showWithPagination("UserListView", "UserCollection")
@@ -166,24 +177,29 @@ class Router extends Backbone.Router
   dashboard : (userID) =>
 
     self = this
-    require(["dashboard/views/dashboard_view", "dashboard/models/dashboard_model"], (DashboardView, DashboardModel) ->
+    require(["dashboard/views/dashboard_view", "dashboard/models/user_model"], (DashboardView, UserModel) ->
 
       isAdminView = userID != null
 
-      model = new DashboardModel({ userID, isAdminView : isAdminView })
-      view = new DashboardView(model : model, isAdminView : isAdminView)
+      model = new UserModel(id : userID)
+      view = new DashboardView({ model, isAdminView, userID})
 
-      self.changeView(view)
-      self.listenTo(model, "sync", self.hideLoading)
+      self.listenTo(model, "sync", ->
+        self.changeView(view)
+        self.hideLoading()
+      )
+
+      model.fetch()
     )
+
 
   spotlight : ->
 
     self = this
-    require(["views/spotlight_view", "admin/models/dataset/dataset_collection"], (SpotlightView, DatasetCollection) ->
+    require(["views/spotlight_view", "admin/models/dataset/paginated_dataset_collection"], (SpotlightView, PaginatedDatasetCollection) ->
 
-      collection = new DatasetCollection()
-      view = new SpotlightView(model: collection)
+      collection = new PaginatedDatasetCollection()
+      view = new SpotlightView(collection: collection)
 
       self.changeView(view)
       self.listenTo(collection, "sync", self.hideLoading)
@@ -203,14 +219,14 @@ class Router extends Backbone.Router
     )
 
 
-  showWithPagination : (view, collection, addButtonText=null) ->
+  showWithPagination : (view, collection, addButtonText = null) ->
 
     self = this
     require(["admin/admin"], (admin) ->
 
       collection = new admin[collection]()
       view = new admin[view](collection: collection)
-      paginationView = new admin.PaginationView({collection, addButtonText})
+      paginationView = new admin.PaginationView({ collection, addButtonText })
 
       self.changeView(paginationView, view)
       self.listenTo(collection, "sync", => self.hideLoading())

@@ -6,11 +6,13 @@ var through2     = require("through2");
 var path         = require("path");
 var fs           = require("fs");
 var webpack      = require("webpack");
+var chokidar     = require("chokidar");
+
 
 paths = {
   src : {
     css : __dirname + "/app/assets/stylesheets/main.less",
-    dir : __dirname + "/app/assets/**/*",
+    dir : __dirname + "/app/assets",
     js : __dirname + "/app/assets/javascripts"
   },
   dest : {
@@ -23,12 +25,12 @@ paths = {
 var bowerPath = __dirname + "/public/bower_components/";
 var scriptPaths = {
   "jquery"              : bowerPath + "jquery/jquery",
-  "lodash"              : bowerPath + "lodash/dist/lodash",
+  "lodash"              : bowerPath + "lodash/lodash",
   "underscore"          : bowerPath + "underscore/underscore",
   "bootstrap"           : bowerPath + "bootstrap/dist/js/bootstrap",
   "coffee-script"       : bowerPath + "coffee-script/extras/coffee-script",
   "backbone.marionette" : bowerPath + "backbone.marionette/lib/backbone.marionette",
-  "backbone.paginator"  : bowerPath + "backbone.paginator/dist/backbone.paginator",
+  "backbone.paginator"  : bowerPath + "backbone.paginator/lib/backbone.paginator",
   "backbone.subviews"   : bowerPath + "backbone.subviews/index",
   "backbone-deep-model" : bowerPath + "backbone-deep-model/distribution/deep-model",
   "backbone"            : bowerPath + "backbone/backbone",
@@ -45,7 +47,6 @@ var scriptPaths = {
   "require"             : bowerPath + "requirejs/require",
   "c3"                  : bowerPath + "c3/c3",
   "d3"                  : bowerPath + "d3/d3",
-  "cola"                : bowerPath + "webcola/WebCola/cola",
   "offcanvas"           : bowerPath + "jasny-bootstrap/js/offcanvas",
   "fileinput"           : bowerPath + "jasny-bootstrap/js/fileinput",
   "daterangepicker"     : bowerPath + "bootstrap-daterangepicker/daterangepicker",
@@ -54,7 +55,7 @@ var scriptPaths = {
   "mjs"                 : bowerPath + "mjs/src/mjs",
   "fetch"               : bowerPath + "fetch/fetch",
   "promise"             : bowerPath + "es6-promise/promise.min",
-  "nested_obj_model"    : "libs/nested_obj_model",
+  "nested_obj_model"    : "libs/nested_obj_model"
 };
 
 
@@ -158,7 +159,9 @@ gulp.task("styles", function () {
 
 
 gulp.task("watch:styles", ["styles"], function (done) {
-  gulp.watch(paths.src.dir + "/**/*", ["styles"]);
+  chokidar.watch(paths.src.dir, { ignoreInitial: true }).on('all', function () {
+    gulp.start("styles");
+  });
 });
 
 

@@ -10,10 +10,10 @@ class ExplorativeTracingListItemView extends Backbone.Marionette.ItemView
 
   tagName : "tr"
   template : _.template("""
-    <td><%= formattedHash %></td>
+    <td><%- formattedHash %></td>
     <td class="explorative-name-column hover-dynamic">
-      <span class="hover-hide" id="explorative-tracing-name"><%= name %></span>
-      <form action="<%= jsRoutes.controllers.AnnotationController.nameExplorativeAnnotation(typ, id).url %>"
+      <span class="hover-hide" id="explorative-tracing-name"><%- name %></span>
+      <form action="<%- jsRoutes.controllers.AnnotationController.nameExplorativeAnnotation(typ, id).url %>"
         method="POST" class="hover-show hide" id="explorative-name-form">
         <div class="input-append">
           <input class="input-medium hover-input form-control"
@@ -21,41 +21,41 @@ class ExplorativeTracingListItemView extends Backbone.Marionette.ItemView
                  id="explorative-name-input"
                  maxlength="50"
                  type="text"
-                 value="<%= name %>"
+                 value="<%- name %>"
                  autocomplete="off">
         </div>
       </form>
     </td>
-    <td><%= dataSetName %></td>
+    <td><%- dataSetName %></td>
 
     <td>
       <% if (stats && (contentType == "skeletonTracing")) { %>
-        <span title="Trees"><i class="fa fa-sitemap"></i><%= stats.numberOfTrees %>&nbsp;</span><br />
-        <span title="Nodes"><i class="fa fa-bull"></i><%= stats.numberOfNodes %>&nbsp;</span><br />
-        <span title="Edges"><i class="fa fa-arrows-h"></i><%= stats.numberOfEdges %></span>
+        <span title="Trees"><i class="fa fa-sitemap"></i><%- stats.numberOfTrees %>&nbsp;</span><br />
+        <span title="Nodes"><i class="fa fa-bull"></i><%- stats.numberOfNodes %>&nbsp;</span><br />
+        <span title="Edges"><i class="fa fa-arrows-h"></i><%- stats.numberOfEdges %></span>
       <% } %>
     </td>
 
-    <td><%= contentType + " - " + typ %></td>
-    <td><%= created %></td>
+    <td><%- contentType + " - " + typ %></td>
+    <td><%- created %></td>
     <td class="nowrap">
       <% if (typ == "Explorational"){ %>
         <% if (!state.isFinished) {%>
-          <a href="<%= jsRoutes.controllers.AnnotationController.trace(typ, id).url %>">
+          <a href="<%- jsRoutes.controllers.AnnotationController.trace(typ, id).url %>">
             <i class="fa fa-random"></i>
             <strong>trace</strong>
           </a><br />
-          <a href="<%= jsRoutes.controllers.AnnotationController.download(typ, id).url %>">
+          <a href="<%- jsRoutes.controllers.AnnotationController.download(typ, id).url %>">
             <i class="fa fa-download"></i>
             download
           </a><br />
-          <a href="<%= jsRoutes.controllers.AnnotationController.finish(typ, id).url %>"
+          <a href="<%- jsRoutes.controllers.AnnotationController.finish(typ, id).url %>"
              id="finish-tracing">
             <i class="fa fa-archive"></i>
             archive
           </a><br />
         <% } else {%>
-          <a href="<%= jsRoutes.controllers.AnnotationController.reopen(typ, id).url %>"
+          <a href="<%- jsRoutes.controllers.AnnotationController.reopen(typ, id).url %>"
              id="reopen-tracing">
             <i class="fa fa-folder-open"></i>
             reopen
@@ -91,7 +91,7 @@ class ExplorativeTracingListItemView extends Backbone.Marionette.ItemView
     target = $(event.target)
     url = target.attr("action")
 
-    Request.urlEncodedForm(
+    Request.sendUrlEncodedFormReceiveJSON(
       url
       data: target
     ).then( (response) =>
@@ -108,9 +108,9 @@ class ExplorativeTracingListItemView extends Backbone.Marionette.ItemView
   finishOrOpenTracing : (event) ->
 
     event.preventDefault()
-    url = $(event.target).attr("href")
+    url = $(event.target).attr("href") || $(event.target.parentElement).attr("href")
 
-    Request.json(url).then( (response) =>
+    Request.receiveJSON(url).then( (response) =>
       Toast.message(response.messages)
       @toggleState(@model.attributes.state)
       @model.collection.remove(@model)

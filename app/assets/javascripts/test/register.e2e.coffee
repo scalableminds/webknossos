@@ -5,7 +5,7 @@ waitForSelector = require './helpers/waitForSelector'
 RegisterPage = require './pages/RegisterPage'
 
 
-fdescribe 'Register', ->
+describe 'Register', ->
 
   page = null
   beforeEach ->
@@ -20,7 +20,7 @@ fdescribe 'Register', ->
       page.signUpWithInclompleteForm()
         .then( -> return page.getAlerts() )
         .then((alerts) ->
-          expect(alerts.length).toBe(4)
+          expect(alerts.length).toBe(6)
           done()
         )
 
@@ -29,5 +29,6 @@ fdescribe 'Register', ->
       page.signUpWithCompleteForm()
         .then( -> page.getModalText())
         .then((text) ->
-          expect(text).toEqual(page.signUpSuccessText)
+          expect(text).toEqual(RegisterPage.signUpSuccessText)
+          done()
         )

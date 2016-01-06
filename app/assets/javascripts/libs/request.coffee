@@ -5,140 +5,187 @@ Toast = require("libs/toast")
 
 Request =
 
-  # IN:  nothing / json
+  # IN:  nothing
   # OUT: json
-  json : (url, options = {}) ->
+  receiveJSON : (url, options = {}) ->
 
-    @triggerRequest(
-      url
-      options
-      (data) ->
+    return @triggerRequest(
+      url,
+      _.defaultsDeep(options, { headers : { "Accept": "application/json" }}),
+      @handleEmptyJsonResponse
+    )
+
+
+  # IN:  json
+  # OUT: json
+  sendJSONReceiveJSON : (url, options = {}) ->
+
+    # Sanity check
+    # Requests without body should not send 'json' header and use 'receiveJSON' instead
+    if not options.data
+      if options.method == "POST" or options.method == "PUT"
+        console.warn("Sending POST/PUT request without body", url)
+      return @receiveJSON(url, options)
+
+    body = if typeof(options.data) == "string"
+        options.data
+      else
+        JSON.stringify(options.data)
+
+    return @receiveJSON(
+      url,
+      _.defaultsDeep(options, {
         method : "POST"
-        body : if typeof(data) == "string" then data else JSON.stringify(data)
+        body : body
         headers :
           "Content-Type" : "application/json"
-      (response) ->
-        response.json()
+      })
     )
 
 
   # IN:  multipart formdata
   # OUT: json
-  multipartForm : (url, options = {}) ->
+  sendMultipartFormReceiveJSON : (url, options = {}) ->
 
-    @triggerRequest(
-      url
-      options
-      (data) ->
-        if data instanceof FormData
-          formData = data
-        else
-          formData = new FormData()
-          for key of options.data
-            formData.append(key, options.data[key])
+    body = if options.data instanceof FormData
+        options.data
+      else
+        formData = new FormData()
+        for key of options.data
+          formData.append(key, options.data[key])
+        formData
 
+    return @receiveJSON(
+      url,
+      _.defaultsDeep(options, {
         method : "POST"
-        body : formData
-      (response) ->
-        response.json()
+        body : body
+      })
     )
 
 
   # IN:  url-encoded formdata
   # OUT: json
-  urlEncodedForm : (url, options = {}) ->
+  sendUrlEncodedFormReceiveJSON : (url, options = {}) ->
 
-    @triggerRequest(
-      url
-      options
-      (data) ->
+    body = if typeof options.data == "string"
+        options.data
+      else
+        options.data.serialize()
+
+    return @receiveJSON(
+      url,
+      _.defaultsDeep(options,
         method : "POST"
-        body : if typeof(data) == "string" then data else data.serialize()
+        body : body
         headers :
           "Content-Type" : "application/x-www-form-urlencoded"
-      (response) ->
-        response.json()
+      )
     )
 
 
-  # IN:  arraybuffer
-  # OUT: arraybuffer
-  arraybuffer : (url, options = {}) ->
+  receiveArraybuffer : (url, options = {}) ->
 
-    @triggerRequest(
-      url
-      options
-      (data) ->
-        method : "POST"
-        body : if data instanceof ArrayBuffer then data else data.buffer.slice(0, data.byteLength)
-        headers :
-          "Content-Type" : "application/octet-stream"
+    return @triggerRequest(
+      url,
+      _.defaultsDeep(options, { headers : { "Accept": "application/octet-stream" }})
       (response) ->
         response.arrayBuffer()
     )
 
 
-  triggerRequest : (url, options, requestDataHandler, responseDataHandler) ->
+  # IN:  arraybuffer
+  # OUT: arraybuffer
+  sendArraybufferReceiveArraybuffer : (url, options = {}) ->
+
+    body = if options.data instanceof ArrayBuffer
+        options.data
+      else
+        options.data.buffer.slice(0, options.data.byteLength)
+
+    return @receiveArraybuffer(
+      url,
+      _.defaultsDeep(options,
+        method : "POST"
+        body : body
+        headers :
+          "Content-Type" : "application/octet-stream"
+      )
+    )
+
+
+  triggerRequest : (url, options, responseDataHandler) ->
 
     defaultOptions =
       method : "GET"
       credentials : "same-origin"
       headers : {}
+      doNotCatch : false
 
-    if options.data?
-      requestOptions = requestDataHandler(options.data)
-    else
-      requestOptions = headers: {}
-
-    _.defaults(options, requestOptions, defaultOptions)
-    _.defaults(options.headers, requestOptions.headers, defaultOptions.headers)
+    options = _.defaultsDeep(options, defaultOptions)
 
     headers = new Headers()
     for name of options.headers
       headers.set(name, options.headers[name])
-
     options.headers = headers
 
     fetchPromise = fetch(url, options)
       .then(@handleStatus)
       .then(responseDataHandler)
-      .catch(@handleError)
+
+    if not options.doNotCatch
+      fetchPromise = fetchPromise.catch(@handleError)
 
     if options.timeout?
-      timeoutPromise = new Promise( (resolve, reject) ->
-        setTimeout(
-          ->
-            reject("timeout")
-          options.timeout
-        )
-      )
-      Promise.race([fetchPromise, timeoutPromise])
+      return Promise.race([ fetchPromise, @timeoutPromise(options.timeout) ])
     else
-      fetchPromise
+      return fetchPromise
 
+
+  timeoutPromise : (timeout) ->
+    return new Promise( (resolve, reject) ->
+      setTimeout(
+        -> reject("timeout")
+        timeout
+      )
+    )
 
   handleStatus : (response) ->
 
-    if 200 <= response.status < 300
-      Promise.resolve(response)
-    else
-      Promise.reject(response)
+    if 200 <= response.status < 400
+      return Promise.resolve(response)
+
+    return Promise.reject(response)
 
 
   handleError : (error) ->
 
     if error instanceof Response
-      error.json().then(
-        (json) ->
-          Toast.message(json.messages)
-          Promise.reject(json)
+      error.text().then(
+        (text) ->
+          try
+            json = JSON.parse(text)
+            Toast.message(json.messages)
+            Promise.reject(json)
+          catch error
+            Toast.error(text)
+            Promise.reject(text)
         (error) ->
-          Toast.error(error)
+          Toast.error(error.toString())
           Promise.reject(error)
       )
     else
       Toast.error(error)
       Promise.reject(error)
+
+
+  handleEmptyJsonResponse : (response) ->
+
+    contentLength = parseInt(response.headers.get("Content-Length"))
+    if contentLength == 0
+      Promise.resolve({})
+    else
+      response.json()
 
 
   # Extends the native Promise API with `always` functionality similar to jQuery.

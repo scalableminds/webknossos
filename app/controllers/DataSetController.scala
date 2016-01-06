@@ -2,6 +2,7 @@ package controllers
 
 import javax.inject.Inject
 
+import models.team.TeamDAO
 import oxalis.security.Secured
 import models.binary._
 import play.api.i18n.{MessagesApi, Messages}
@@ -138,17 +139,18 @@ class DataSetController @Inject() (val messagesApi: MessagesApi) extends Control
         for{
           dataSet <- DataSetDAO.findOneBySourceName(dataSetName) ?~> Messages("dataSet.notFound")
           _ <- allowedToAdministrate(request.user, dataSet).toFox
-          teamsWithoutUpdate = dataSet.allowedTeams.filterNot(t => ensureTeamAdministration(request.user, t) openOr false)
-          _ <- Fox.combined(teams.map(team => ensureTeamAdministration(request.user, team).toFox))
-          _ <- DataSetService.updateTeams(dataSet, teams ++ teamsWithoutUpdate)
+          userTeams <- TeamDAO.findAll.map(_.filter(team => team.isEditableBy(request.user)))
+          teamsWithoutUpdate = dataSet.allowedTeams.filterNot(t => userTeams.exists(_.name == t))
+          teamsWithUpdate = teams.filter(t => userTeams.exists(_.name == t))
+          _ <- DataSetService.updateTeams(dataSet, teamsWithUpdate ++ teamsWithoutUpdate)
         } yield
-          Ok(Json.toJson(teams ++ teamsWithoutUpdate))
+          Ok(Json.toJson(teamsWithUpdate ++ teamsWithoutUpdate))
       case e: JsError =>
         Future.successful(BadRequest(JsError.toFlatJson(e)))
     }
   }
 
-  def uploadForm(name: String, team: String, scale: Scale) = Form(
+  def uploadForm = Form(
     tuple(
       "name" -> nonEmptyText.verifying("dataSet.name.invalid",
         n => n.matches("[A-Za-z0-9_]*")),
@@ -156,50 +158,34 @@ class DataSetController @Inject() (val messagesApi: MessagesApi) extends Control
       "scale" -> mapping(
         "scale" -> text.verifying("scale.invalid",
           p => p.matches(Scale.formRx.toString)))(Scale.fromForm)(Scale.toForm)
-    )).fill((name, team, scale))
+    )).fill(("", "", Scale.default))
 
-  val emptyUploadForm = uploadForm("", "", Scale.default)
-
-  def dataSetUploadHTML(form: Form[(String, String, Scale)])(implicit request: AuthenticatedRequest[_]) =
-    html.admin.dataset.datasetUpload(request.user.adminTeamNames, form)
-
-  def upload = Authenticated{ implicit request =>
-    Ok(dataSetUploadHTML(emptyUploadForm))
-  }
-
-  def uploadFromForm = Authenticated.async(parse.maxLength(1024 * 1024 * 1024, parse.multipartFormData)) { implicit request =>
-
-    case class FormFailure(field: String, message: String)
+  def upload = Authenticated.async(parse.maxLength(1024 * 1024 * 1024, parse.multipartFormData)) { implicit request =>
 
     request.body match {
       case Right(formData) =>
-        emptyUploadForm.bindFromRequest(formData.dataParts).fold(
-          hasErrors = (formWithErrors => Future.successful(BadRequest(dataSetUploadHTML(formWithErrors)))),
+        uploadForm.bindFromRequest(formData.dataParts).fold(
+          hasErrors = (formWithErrors => Future.successful(JsonBadRequest(formWithErrors.errors.head.message))),
           success = {
             case (name, team, scale) =>
               (for {
-                _ <- ensureNewDataSetName(name).toFox ~> FormFailure("name", Messages("dataSet.name.alreadyTaken"))
-                _ <- ensureTeamAdministration(request.user, team).toFox ~> FormFailure("team", Messages("team.admin.notAllowed", team))
-                zipFile <- formData.file("zipFile").toFox ~> FormFailure("zipFile", Messages("zip.file.notFound"))
+                _ <- ensureNewDataSetName(name).toFox ~> Messages("dataSet.name.alreadyTaken")
+                _ <- ensureTeamAdministration(request.user, team).toFox ~> Messages("team.admin.notAllowed", team)
+                zipFile <- formData.file("zipFile").toFox ~> Messages("zip.file.notFound")
                 settings = DataSourceSettings(None, scale, None)
                 upload = DataSourceUpload(name, team, zipFile.ref.file.getAbsolutePath(), Some(settings))
                 _ <- DataStoreHandler.uploadDataSource(upload).toFox
               } yield {
-                Redirect(controllers.routes.DataSetController.empty).flashing(
-                  FlashSuccess(Messages("dataSet.upload.success")))
+                Ok
               }).futureBox.map {
                 case Full(r) => r
-                case error: ParamFailure[FormFailure] =>
-                  BadRequest(dataSetUploadHTML(uploadForm(name, team, scale).withError(error.param.field, error.param.message)))
                 case Failure(error,_,_) =>
-                  Redirect(controllers.routes.DataSetController.empty).flashing(
-                  //BadRequest(dataSetUploadHTML(uploadForm(name, team, scale))).flashing(
-                    FlashError(error))
+                  JsonBadRequest(error)
               }
         })
 
       case Left(_) =>
-        Future.successful(BadRequest(dataSetUploadHTML(emptyUploadForm.withError("zipFile", Messages("zip.file.tooLarge")))))
+        Future.successful(JsonBadRequest(Messages("zip.file.tooLarge")))
     }
   }
 

@@ -35,14 +35,10 @@ class ProjectsListView extends Backbone.Marionette.CompositeView
 
   initialize : ->
 
-    @collection.fetch(
-      silent : true
-    ).done( =>
-      @collection.goTo(1)
-    )
+    @collection.fetch()
 
     @listenTo(app.vent, "paginationView:filter", @filterBySearch)
-    @listenTo(app.vent, "CreateProjectModal:refresh", @refreshPagination)
+    @listenTo(app.vent, "CreateProjectModal:refresh", @render)
     @listenTo(app.vent, "paginationView:addElement", @showModal)
 
 
@@ -63,12 +59,5 @@ class ProjectsListView extends Backbone.Marionette.CompositeView
     @ui.modalWrapper.html(modalView.render().el)
 
     modalView.show()
-
-
-  refreshPagination : ->
-
-    @collection.pager()
-    @collection.lastPage() # newly inserted items are on the last page
-    @render()
 
 module.exports = ProjectsListView

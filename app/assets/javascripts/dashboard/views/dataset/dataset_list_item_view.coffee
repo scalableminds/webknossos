@@ -5,6 +5,8 @@ Toast                       = require("libs/toast")
 TemplateHelpers             = require("libs/template_helpers")
 DatasetAccesslistCollection = require("admin/models/dataset/dataset_accesslist_collection")
 DatasetAccessView           = require("./dataset_access_view")
+Request                     = require("libs/request")
+
 
 class DatasetListItemView extends Backbone.Marionette.CompositeView
 
@@ -14,18 +16,18 @@ class DatasetListItemView extends Backbone.Marionette.CompositeView
     "data-dataset-name" : @model.get("name")
 
   template : _.template("""
-    <tr>
+    <tr class="dataset-row">
       <td class="details-toggle" href="#">
         <i class="caret-right"></i>
         <i class="caret-down"></i>
       </td>
-      <td title="<%= dataSource.baseDir %>"><%= name %></td>
-      <td><%= dataStore.name %></td>
-      <td><%= TemplateHelpers.formatScale(dataSource.scale) %></td>
-      <td><%= owningTeam %></td>
+      <td title="<%- dataSource.baseDir %>"><%- name %></td>
+      <td><%- dataStore.name %></td>
+      <td><%- TemplateHelpers.formatScale(dataSource.scale) %></td>
+      <td><%- owningTeam %></td>
       <td class="team-label">
         <% _.map(allowedTeams, function(team){ %>
-          <span class="label label-default" style="background-color: <%= TemplateHelpers.stringToColor(team) %>"><%= team %></span>
+          <span class="label label-default" style="background-color: <%- TemplateHelpers.stringToColor(team) %>"><%- team %></span>
         <% }) %>
       </td>
       <td>
@@ -44,26 +46,29 @@ class DatasetListItemView extends Backbone.Marionette.CompositeView
       </td>
       <td>
       <% _.map(dataSource.dataLayers, function(layer){ %>
-          <span class="label label-default"><%= layer.category %> - <%= layer.elementClass %></span>
+          <span class="label label-default"><%- layer.category %> - <%- layer.elementClass %></span>
       <% }) %>
       <td class="nowrap">
-        <form action="<%= jsRoutes.controllers.AnnotationController.createExplorational().url %>" method="POST">
-          <input type="hidden" name="dataSetName" value="<%= name %>" />
+        <form action="<%- jsRoutes.controllers.AnnotationController.createExplorational().url %>" method="POST">
+          <input type="hidden" name="dataSetName" value="<%- name %>" />
           <input type="hidden" name="contentType" id="contentTypeInput" />
         </form>
         <% if(dataSource.needsImport){ %>
           <div>
-            <a href="/api/datasets/<%= name %>/import" class=" import-dataset">
+            <a href="/api/datasets/<%- name %>/import" class=" import-dataset">
               <i class="fa fa-plus-circle"></i>import
             </a>
-              <div class="progress progress-striped hide">
-                <div class="progress-bar" style="width: 0%;"></div>
-              </div>
+            <div class="progress progress-striped hide">
+              <div class="progress-bar" style="width: 0%;"></div>
+            </div>
+            <div class="import-error">
+              <span class="text-danger"></span>
+            </div>
           </div>
         <% } %>
         <% if(isActive){ %>
           <div class="dataset-actions">
-            <a href="/datasets/<%= name %>/view" title="View dataset">
+            <a href="/datasets/<%- name %>/view" title="View dataset">
               <img src="/assets/images/eye.svg"> view
             </a>
             <a href="#" title="Create skeleton tracing" id="skeletonTraceLink">
@@ -105,6 +110,9 @@ class DatasetListItemView extends Backbone.Marionette.CompositeView
 
 
   ui:
+    "row" : ".dataset-row"
+    "importError" : ".import-error"
+    "errorText" : ".import-error .text-danger"
     "importLink" : ".import-dataset"
     "progressbarContainer" : ".progress"
     "progressBar" : ".progress-bar"
@@ -115,6 +123,8 @@ class DatasetListItemView extends Backbone.Marionette.CompositeView
 
 
   initialize : ->
+
+    # by default there is no import error
 
     @listenTo(@model, "change", @render)
     @listenTo(app.vent, "datasetListView:toggleDetails", @toggleDetails)
@@ -129,38 +139,63 @@ class DatasetListItemView extends Backbone.Marionette.CompositeView
     )
 
 
-   startImport : (evt, method = "POST") ->
+  startImport : (evt, method = "POST") ->
 
-      if evt
-        evt.preventDefault()
+    if evt
+      evt.preventDefault()
 
-      Request.json(
-        @importUrl
-        method: method
-      ).then( (responseJSON) =>
-          if responseJSON.status == "inProgress"
-            @ui.importLink.hide()
-            @ui.progressbarContainer.removeClass("hide")
-            @updateProgress()
-      )
+    Request.receiveJSON(
+      @importUrl
+      method: method
+      doNotCatch: true
+    )
+    .then( (responseJSON) =>
+      if responseJSON.status == "inProgress"
+        @ui.row.removeClass('import-failed')
+        @ui.importLink.hide()
+        @ui.progressbarContainer.removeClass("hide")
+        @ui.importError.addClass("hide")
+        @updateProgress()
+      if responseJSON.status == "failed"
+        @importFailed(responseJSON)
+    )
+    .catch( (response) =>
+      response
+        .json()
+        .then( (json) => @importFailed(json))
+    )
 
 
-    updateProgress : ->
+  importFailed : (response) ->
 
-      Request.json(@importUrl).then( (responseJSON) =>
+    @ui.importLink.show()
+    @ui.progressbarContainer.addClass("hide")
+    @ui.row.addClass('import-failed')
+    @ui.importError.removeClass("hide")
+
+    # apply single error
+    if response.messages?[0]?.error
+      @ui.errorText.text(response.messages[0].error)
+
+
+  updateProgress : ->
+
+    Request
+      .receiveJSON(@importUrl)
+      .then( (responseJSON) =>
         value = responseJSON.progress * 100
         if value
           @ui.progressBar.width("#{value}%")
 
         switch responseJSON.status
           when "finished"
-            @model.fetch()
+            @model.fetch().then(@render.bind(@))
+            Toast.message(responseJSON.messages)
           when "notStarted", "inProgress"
             window.setTimeout((=> @updateProgress()), 100)
           when "failed"
-            Toast.error("Ups. Import Failed.")
+            @importFailed(responseJSON)
       )
-
 
   toggleDetails : ->
 
@@ -193,5 +228,6 @@ class DatasetListItemView extends Backbone.Marionette.CompositeView
     event.preventDefault()
     @ui.contentTypeInput.val(type)
     @ui.form.submit()
+
 
 module.exports = DatasetListItemView

@@ -1,4 +1,3 @@
-$ = require("jquery")
 _ = require("lodash")
 
 ErrorHandling =
@@ -8,7 +7,6 @@ ErrorHandling =
     { @throwAssertions, @sendLocalErrors } = options
 
     @initializeAirbrake()
-    @initializeAssertions()
 
 
   initializeAirbrake : ->
@@ -46,49 +44,61 @@ ErrorHandling =
       Airbrake.notify(error)
 
 
-  initializeAssertions : ->
+
+  assertExtendContext : (additionalContext) ->
+
+    # since the context isn't displayed on Airbrake.io, we use the params-attribute
+    Airbrake.addParams(additionalContext)
 
 
-    $.assertExtendContext = (additionalContext) ->
+  assert : (bool, message, assertionContext) =>
 
-      # since the context isn't displayed on Airbrake.io, we use the params-attribute
-      Airbrake.addParams(additionalContext)
+    if bool
+      return
 
+    error = new Error("Assertion violated - " + message)
 
-    $.assert = (bool, message, assertionContext) =>
+    error.params = assertionContext
+    error.stack = @trimCallstack(error.stack)
 
-      if bool
-        return
+    Toast.error("Assertion violated - #{message}")
 
-      error = new Error("Assertion violated - " + message)
-
-      error.params = assertionContext
-      error.stack = @trimCallstack(error.stack)
-
-      Toast.error("Assertion violated - #{message}")
-
-      if @throwAssertions
-        # error will be automatically pushed to airbrake due to global handler
-        throw error
-      else
-        console.error(error)
-        Airbrake.notify(error)
+    if @throwAssertions
+      # error will be automatically pushed to airbrake due to global handler
+      throw error
+    else
+      console.error(error)
+      Airbrake.notify(error)
 
 
-    $.assertExists = (variable, message, assertionContext) ->
+  assertExists : (variable, message, assertionContext) ->
 
-      if variable?
-        return
+    if variable?
+      return
 
-      $.assert(false, message + " (variable is #{variable})", assertionContext)
+    @assert(false, message + " (variable is #{variable})", assertionContext)
 
 
-    $.assertEquals = (actual, wanted, message, assertionContext) ->
+  assertEquals : (actual, wanted, message, assertionContext) ->
 
-      if actual == wanted
-        return
+    if actual == wanted
+      return
 
-      $.assert(false, message + " (#{actual} != #{wanted})", assertionContext)
+    @assert(false, message + " (#{actual} != #{wanted})", assertionContext)
+
+
+  setCurrentUser : (user) ->
+
+    Airbrake.addFilter((notice) ->
+      notice.context.user = _.pick(user, [
+        "id",
+        "email",
+        "firstName",
+        "lastName",
+        "verified"
+      ])
+      return notice
+    )
 
 
   trimCallstack : (callstack) ->
@@ -103,7 +113,7 @@ ErrorHandling =
 
         trimmedCallstack.push(line)
 
-
     return trimmedCallstack.join("\n")
+
 
 module.exports = ErrorHandling

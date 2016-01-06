@@ -30,6 +30,7 @@ class DatasetListView extends Backbone.Marionette.CompositeView
     <div id="modal-wrapper"></div>
   """)
 
+
   events :
     "click .team-label" : "showModal"
     "click .details-toggle-all" : "toggleAllDetails"
@@ -50,15 +51,8 @@ class DatasetListView extends Backbone.Marionette.CompositeView
 
   initialize : ->
 
-    @collection.sortByAttribute("created")
-
-    @collection.fetch(
-      silent : true
-      data : "isEditable=true"
-    ).done( =>
-      @collection.goTo(1)
-      @collection.howManyPer(@DATASETS_PER_PAGE)
-    )
+    @collection.setSorting("created")
+    @collection.setPageSize(@DATASETS_PER_PAGE)
 
     @listenTo(app.vent, "paginationView:filter", @filterBySearch)
     @listenTo(app.vent, "TeamAssignmentModalView:refresh", @render)
@@ -87,6 +81,8 @@ class DatasetListView extends Backbone.Marionette.CompositeView
 
     @collection.setFilter(["name", "owningTeam"], searchQuery)
 
+  # Marionette's CollectionView filter
+  filter : (child, index, collection) -> return child.get("isEditable")
 
   onDestroy : ->
 

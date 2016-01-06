@@ -12,10 +12,7 @@ class SelectionView extends Backbone.Marionette.CollectionView
   initialize : (options) ->
 
     @collection.fetch(
-      silent : true
       data : options.data
-    ).done(
-      => @render()
     )
 
     if options.name

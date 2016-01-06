@@ -8,6 +8,7 @@
     "type": "git",
     "url": "git://github.com/scalableminds/oxalis.git"
   },
+  "license": "MIT",
   "devDependencies": {
     "bower": "^1.4.1",
     "chalk": "^1.1.1",
@@ -37,5 +38,9 @@
     "prewebdriver": "npm run webdriver-update",
     "webdriver": "./node_modules/.bin/webdriver-manager start",
     "webdriver-update": "./node_modules/.bin/webdriver-manager update"
+  },
+  "dependencies": {
+    "chokidar": "^1.4.1",
+    "webcola": "^3.1.3"
   }
 }

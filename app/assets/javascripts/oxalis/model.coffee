@@ -11,9 +11,10 @@ ScaleInfo            = require("./model/scaleinfo")
 Flycam2d             = require("./model/flycam2d")
 Flycam3d             = require("./model/flycam3d")
 constants            = require("./constants")
-Request              = require("../libs/request")
-Toast                = require("../libs/toast")
-Pipeline             = require("../libs/pipeline")
+Request              = require("libs/request")
+Toast                = require("libs/toast")
+Pipeline             = require("libs/pipeline")
+ErrorHandling        = require("libs/error_handling")
 
 # This is THE model. It takes care of the data including the
 # communication with the server.
@@ -32,7 +33,7 @@ class Model extends Backbone.Model
     else
       infoUrl = "/annotations/#{@get('tracingType')}/#{@get('tracingId')}/info"
 
-    return Request.json(infoUrl).then( (tracing) =>
+    Request.receiveJSON(infoUrl).then( (tracing) =>
 
       @datasetName = tracing.content.dataSet.name
 
@@ -65,13 +66,14 @@ class Model extends Backbone.Model
           }))
           @get("datasetConfiguration").fetch().then(
             =>
-
               layers = @getLayers(tracing.content.contentData.customLayers)
 
               Promise.all(
                 @getDataTokens(layers)
-              ).then =>
-                @initializeWithData(tracing, layers)
+              ).then( =>
+                error = @initializeWithData(tracing, layers)
+                return error if error
+              )
 
             -> Toast.error("Ooops. We couldn't communicate with our mother ship. Please try to reload this page.")
             )
@@ -83,9 +85,10 @@ class Model extends Backbone.Model
 
     dataset = @get("dataset")
 
-    $.assertExtendContext({
+    ErrorHandling.assertExtendContext({
       task: @get("tracingId")
       dataSet: dataset.get("name")
+
     })
 
     console.log "tracing", tracing
@@ -120,6 +123,7 @@ class Model extends Backbone.Model
 
     if @getColorBinaries().length == 0
       Toast.error("No data available! Something seems to be wrong with the dataset.")
+      return {"error" : true}
 
     flycam = new Flycam2d(constants.PLANE_WIDTH, maxZoomStep + 1, @)
     flycam3d = new Flycam3d(constants.DISTANCE_3D, dataset.get("scale"))
@@ -131,7 +135,7 @@ class Model extends Backbone.Model
     if @get("controlMode") == constants.CONTROL_MODE_TRACE
 
       if isVolumeTracing
-        $.assert( @getSegmentationBinary()?,
+        ErrorHandling.assert( @getSegmentationBinary()?,
           "Volume is allowed, but segmentation does not exist" )
         @set("volumeTracing", new VolumeTracing(tracing, flycam, @getSegmentationBinary(), @updatePipeline))
       else
@@ -176,7 +180,7 @@ class Model extends Backbone.Model
 
     for layer in layers
       do (layer) =>
-        Request.json("/dataToken/generate?dataSetName=#{@datasetName}&dataLayerName=#{layer.name}").then( (dataStore) ->
+        Request.receiveJSON("/dataToken/generate?dataSetName=#{@datasetName}&dataLayerName=#{layer.name}").then( (dataStore) ->
           layer.token = dataStore.token
           layer.url   = dataStoreUrl
         )

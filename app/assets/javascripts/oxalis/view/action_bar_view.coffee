@@ -4,6 +4,7 @@ DatasetActionsView  = require("./action-bar/dataset_actions_view")
 DatasetPositionView = require("./action-bar/dataset_position_view")
 ViewModesView       = require("./action-bar/view_modes_view")
 VolumeActionsView   = require("./action-bar/volume_actions_view")
+SkeletonActionsView = require("./action-bar/skeleton_actions_view")
 Constants           = require("../constants")
 
 class ActionBarView extends Backbone.Marionette.LayoutView
@@ -34,6 +35,7 @@ class ActionBarView extends Backbone.Marionette.LayoutView
 
     <% if (isTraceMode) { %>
       <div id="view-modes"></div>
+      <div id="skeleton-actions"></div>
     <% } %>
   """)
 
@@ -48,6 +50,7 @@ class ActionBarView extends Backbone.Marionette.LayoutView
     "datasetPosition" : "#dataset-position"
     "viewModes" : "#view-modes"
     "volumeActions" : "#volume-actions"
+    "skeletonActions" : "#skeleton-actions"
 
 
   initialize : (options) ->
@@ -61,6 +64,7 @@ class ActionBarView extends Backbone.Marionette.LayoutView
         @volumeActionsView = new VolumeActionsView(options)
       else
         @viewModesView = new ViewModesView(options)
+        @skeletonActionsView = new SkeletonActionsView(options)
 
 
     @listenTo(@, "render", @afterRender)
@@ -77,6 +81,7 @@ class ActionBarView extends Backbone.Marionette.LayoutView
         @volumeActions.show(@volumeActionsView)
       else
         @viewModes.show(@viewModesView)
+        @skeletonActions.show(@skeletonActionsView)
 
 
   isTraceMode : ->

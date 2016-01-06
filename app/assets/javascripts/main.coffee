@@ -1,20 +1,32 @@
 $             = require("jquery")
 _             = require("lodash")
 Backbone      = require("backbone")
+ErrorHandling = require("libs/error_handling")
+Request       = require("libs/request")
 app           = require("./app")
-ErrorHandling = require("./main/error_handling")
 require("bootstrap")
 require("fetch")
+require("promise")
 require("./libs/core_ext")
 
 ErrorHandling.initialize( throwAssertions: false, sendLocalErrors: false )
 
-Router = require("./main/router")
+Router = require("./router")
 
 app.addInitializer( ->
   app.router = new Router()
   Backbone.history.start( pushState : true )
 )
+
+app.addInitializer( ->
+  Request.receiveJSON("/api/user", doNotCatch : true)
+    .then((user) ->
+      app.currentUser = user
+      ErrorHandling.setCurrentUser(user)
+      return
+    ).catch((error) -> return)
+)
+
 
 $ ->
   # show the bootstrap flash modal on load

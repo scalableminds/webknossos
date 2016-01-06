@@ -8,7 +8,7 @@ UserStatisticCollection = require("admin/models/statistic/user_statistic_collect
 class StatisticListView extends Backbone.Marionette.CompositeView
 
   template : _.template("""
-    <h3>Best Tracers for week <%= startDate.format("DD.MM") %> - <%= endDate.format("DD.MM.YYYY") %></h3>
+    <h3>Best Tracers for week <%- startDate.format("DD.MM") %> - <%- endDate.format("DD.MM.YYYY") %></h3>
     <table class="table-striped table">
       <thead>
         <tr>

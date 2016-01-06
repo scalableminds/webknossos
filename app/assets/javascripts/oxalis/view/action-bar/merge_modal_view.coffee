@@ -56,7 +56,7 @@ class MergeModalView extends Backbone.Marionette.LayoutView
             <label for="nml">NML</label>
             <div class="row">
               <div class="col-md-10">
-                <form action="<%= jsRoutes.controllers.admin.NMLIO.upload().url %>"
+                <form action="<%- jsRoutes.controllers.admin.NMLIO.upload().url %>"
                     method="POST"
                     enctype="multipart/form-data"
                     id="upload-and-explore-form"
@@ -145,7 +145,7 @@ class MergeModalView extends Backbone.Marionette.LayoutView
 
     @$el.modal("show")
 
-    Request.json("/api/user").then( (user) =>
+    Request.receiveJSON("/api/user").then( (user) =>
       @taskSelectionView = new SelectionView(
         collection : new  TaskCollection()
         childViewOptions :
@@ -215,7 +215,7 @@ class MergeModalView extends Backbone.Marionette.LayoutView
 
     readOnly = document.getElementById('checkbox-read-only').checked
 
-    Request.json("#{url}/#{readOnly}").then( (annotation) ->
+    Request.receiveJSON("#{url}/#{readOnly}").then( (annotation) ->
 
       Toast.message(annotation.messages)
 
@@ -246,7 +246,7 @@ class MergeModalView extends Backbone.Marionette.LayoutView
     form = @ui.uploadAndExploreForm
 
     Request.always(
-      Request.multipartForm(
+      Request.sendMultipartFormReceiveJSON(
         form.attr("action")
         data : new FormData(form[0])
       ).then((data) =>

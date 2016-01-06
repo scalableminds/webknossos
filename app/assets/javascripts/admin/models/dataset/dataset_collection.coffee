@@ -1,8 +1,7 @@
-_                    = require("lodash")
 SortedCollection     = require("../sorted_collection")
 DatasetModel         = require("./dataset_model")
 
-class DatasetCollection extends Backbone.Collection
+class DatasetCollection extends SortedCollection
 
   url : "/api/datasets"
   model : DatasetModel

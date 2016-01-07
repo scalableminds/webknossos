@@ -1,9 +1,10 @@
 _                          = require("lodash")
 marionette                 = require("backbone.marionette")
-DashboardTaskListView      = require("dashboard/views/dashboard_task_list_view")
-ExplorativeTracingListView = require("dashboard/views/explorative_tracing_list_view")
-TrackedTimeView            = require("dashboard/views/tracked_time_view")
-DatasetSwitchView          = require("admin/views/dataset/dataset_switch_view")
+DashboardTaskListView      = require("./dashboard_task_list_view")
+ExplorativeTracingListView = require("./explorative_tracing_list_view")
+LoggedTimeView             = require("./logged_time_view")
+DatasetSwitchView          = require("./dataset/dataset_switch_view")
+
 
 class DashboardView extends Backbone.Marionette.LayoutView
 
@@ -11,7 +12,7 @@ class DashboardView extends Backbone.Marionette.LayoutView
   id : "dashboard"
   template : _.template("""
     <% if (isAdminView) { %>
-      <h3>User: <%= user.get("firstName") %> <%= user.get("lastName") %></h3>
+      <h3>User: <%= firstName %> <%= lastName %></h3>
     <% } %>
     <div class="tabbable" id="tabbable-dashboard">
       <ul class="nav nav-tabs">
@@ -27,7 +28,7 @@ class DashboardView extends Backbone.Marionette.LayoutView
           <a href="#" id="tab-explorative" data-toggle="tab">Explorative Annotations</a>
         </li>
         <li>
-          <a href="#" id="tab-tracked-time" data-toggle="tab">Tracked Time</a>
+          <a href="#" id="tab-logged-time" data-toggle="tab">Tracked Time</a>
         </li>
       </ul>
       <div class="tab-content">
@@ -36,87 +37,60 @@ class DashboardView extends Backbone.Marionette.LayoutView
     </div>
   """)
 
-  events :
-    "click #tab-datasets" : "showDatasets"
-    "click #tab-tasks" : "showTasks"
-    "click #tab-explorative" : "showExplorative"
-    "click #tab-tracked-time" : "showTrackedTime"
-
-
   regions :
     "tabPane" : ".tab-pane"
 
 
-  initialize : ->
-
-    @listenTo(@model, "sync", ->
-      @render()
-      @afterSync()
-    )
-    @model.fetch()
+  events :
+    "click #tab-datasets" : "showDatasets"
+    "click #tab-tasks" : "showTasks"
+    "click #tab-explorative" : "showExplorative"
+    "click #tab-logged-time" : "showLoggedTime"
 
 
-  afterSync : ->
+  templateHelpers : ->
+    isAdminView : @options.isAdminView
 
-    if @activeTab
-      @refreshActiveTab()
-      @showTab(@activeTab)
+
+  initialize : (@options) ->
+
+    if @options.isAdminView
+      @listenTo(@, "render", @showTasks)
     else
-      if @model.attributes.isAdminView
-        @showTasks()
-      else
-        @showDatasets()
+      @listenTo(@, "render", @showDatasets)
 
+    @viewCache =
+      datasetSwitchView : null
+      taskListView : null
+      explorativeTracingListView : null
+      loggedTimeView : null
 
 
   showDatasets : ->
 
-    @activeTab = {
-      tabHeaderId : "tab-datasets"
-      tabView : new DatasetSwitchView(model : @model.get("user"))
-    }
-    @showTab(@activeTab)
+    @showTab("datasetSwitchView", DatasetSwitchView)
 
 
   showTasks : ->
 
-    @activeTab = {
-      tabHeaderId : "tab-tasks"
-      tabView : new DashboardTaskListView(model : @model)
-    }
-    @showTab(@activeTab)
+    @showTab("taskListView", DashboardTaskListView)
 
 
   showExplorative : ->
 
-    @activeTab = {
-      tabHeaderId : "tab-explorative"
-      tabView : new ExplorativeTracingListView(model : @model)
-    }
-    @showTab(@activeTab)
+    @showTab("explorativeTracingListView", ExplorativeTracingListView)
 
 
-  showTrackedTime : ->
+  showLoggedTime : ->
 
-    @activeTab = {
-      tabHeaderId : "tab-tracked-time"
-      tabView : new TrackedTimeView(model : @model.get("loggedTime"))
-    }
-    @showTab(@activeTab)
+    @showTab("loggedTimeView", LoggedTimeView)
 
 
-  refreshActiveTab : ->
+  showTab : (viewName, viewClass) ->
 
-    # ensure that tabView is not destroyed
-    if @activeTab and @activeTab.tabView.isDestroyed
-      view = @activeTab.tabView
-      @activeTab.tabView = new view.constructor(view)
+    unless view = @viewCache[viewName]
+      view = @viewCache[viewName] = new viewClass(@options)
+    @tabPane.show(view, preventDestroy : true)
 
-
-  showTab : ({tabHeaderId, tabView}) ->
-
-    @$(".tabbable ul li").removeClass("active")
-    @$("##{tabHeaderId}").parent().addClass("active")
-    @tabPane.show(tabView)
 
 module.exports = DashboardView

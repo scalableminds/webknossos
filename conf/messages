@@ -76,15 +76,24 @@ dataSet.notSupplied=No data set supplied
 dataSet.name.invalid=A dataset name can only contain letters, digits and underscores
 dataSet.name.alreadyTaken=This dataset name is already in use.
 dataSet.source.notFound=The data source for the data source couldn''t be found
+dataSet.import.success=The import of the dataset was successful
 dataSet.import.failed=Failed to import the dataset
 dataSet.import.inProgress=Dataset import is in progress
 dataSet.import.notStarted=Dataset import couldn''t be started
 dataSet.upload.success=Dataset successfully uploaded
+dataSet.import.failedWithoutError=Import of dataset {0} failed
+dataSet.import.failedWithError=Import of the dataset failed with error: {0}
+dataSet.import.directoryEmpty=Import failed because the dataset directory is empty
+
+dataSource.notFound=Datasource not found on datastore server
+dataSource.import.alreadyFinished=Import of the dataset already finished
+dataSource.import.alreadyInProgress=Import of the dataset already in progress
 
 dataStore.notAvailable=Datastore not available. Please try again in a few minutes.
 
 zip.file.notFound=No or invalid ZIP file specified
 zip.file.invalid=Uploaded ZIP file invalid or corrupted
+zip.file.tooLarge=The ZIP file must not be larger than 1GB
 
 dataLayer.notFound=DataLayer not found
 dataLayer.forbidden=Access to this layer is not allowed.

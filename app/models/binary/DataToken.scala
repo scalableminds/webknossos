@@ -47,7 +47,7 @@ object DataTokenService {
   val oxalisToken = DataToken.generateRandomToken
 
   CleanUpService.register("deletion of expired dataTokens", DataToken.expirationTime millis){
-    DataTokenDAO.removeExpiredTokens()(GlobalAccessContext).map(r => s"deleted ${r.updated}")
+    DataTokenDAO.removeExpiredTokens()(GlobalAccessContext).map(r => s"deleted ${r.n}")
   }
 
   def generate(user: Option[User], dataSetName: String, dataLayerName: String)(implicit ctx: DBAccessContext) = {

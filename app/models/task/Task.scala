@@ -14,6 +14,7 @@ import com.scalableminds.util.mvc.Formatter
 import scala.concurrent.duration._
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.util.reactivemongo.{DefaultAccessDefinitions, GlobalAccessContext, DBAccessContext}
+import reactivemongo.api.commands.WriteResult
 import reactivemongo.bson.BSONObjectID
 import play.modules.reactivemongo.json.BSONFormats._
 import org.joda.time.DateTime
@@ -21,7 +22,6 @@ import org.joda.time.format.DateTimeFormat
 import java.text.SimpleDateFormat
 import scala.async.Async._
 import akka.actor.Props
-import akka.routing.RoundRobinRouter
 import reactivemongo.api.indexes.{IndexType, Index}
 import reactivemongo.core.commands.LastError
 import com.scalableminds.util.reactivemongo.AccessRestrictions.{AllowIf, DenyEveryone}
@@ -205,7 +205,7 @@ object TaskDAO extends SecuredBaseDAO[Task] with FoxImplicits {
              instances: Int,
              team: String,
              _project: Option[String]
-            )(implicit ctx: DBAccessContext): Fox[LastError] =
+            )(implicit ctx: DBAccessContext): Fox[WriteResult] =
     update(
       Json.obj("_id" -> _task),
       Json.obj("$set" ->

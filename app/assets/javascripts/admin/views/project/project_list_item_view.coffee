@@ -14,14 +14,20 @@ class ProjectListItemView extends Backbone.Marionette.CompositeView
       </td>
       <td><%= name %></td>
       <td><%= team %></td>
-      <td><%= owner.firstName %> <%= owner.lastName %></td>
+      <% if(owner.email) { %>
+        <td><%= owner.firstName %> <%= owner.lastName %> (<%= owner.email %>)</td>
+      <% } else { %>
+        <td>-</td>
+      <% } %>
       <td class="nowrap">
-        <a href="/annotations/CompoundProject/<%= name %>" title="View all finished tracings">
-          <i class="fa fa-random"></i>view
-        </a><br/>
-        <a href="/api/projects/<%= name %>/download" title="Download all finished tracings">
-          <i class="fa fa-download"></i>download
-        </a><br/>
+        <% if (status.completed > 0) { %>
+          <a href="/annotations/CompoundProject/<%= name %>" title="View all finished tracings">
+            <i class="fa fa-random"></i>view
+          </a><br/>
+          <a href="/api/projects/<%= name %>/download" title="Download all finished tracings">
+            <i class="fa fa-download"></i>download
+          </a><br/>
+        <% } %>
         <a href="#" class="delete">
           <i class="fa fa-trash-o"></i>delete
         </a>
@@ -66,7 +72,6 @@ class ProjectListItemView extends Backbone.Marionette.CompositeView
     if window.confirm("Do you really want to delete this project?")
       xhr = @model.destroy(
         wait : true
-        error: @handleXHRError
       )
 
 
@@ -84,10 +89,5 @@ class ProjectListItemView extends Backbone.Marionette.CompositeView
     else
       @ui.detailsRow.addClass("hide")
       @ui.detailsToggle.removeClass("open")
-
-
-  handleXHRError : (model, xhr) ->
-
-    Toast.message(xhr.responseJSON.messages)
 
 module.exports = ProjectListItemView

@@ -11,11 +11,12 @@ ScaleInfo            = require("./model/scaleinfo")
 Flycam2d             = require("./model/flycam2d")
 Flycam3d             = require("./model/flycam3d")
 constants            = require("./constants")
-Request              = require("../libs/request")
-Toast                = require("../libs/toast")
-Pipeline             = require("../libs/pipeline")
+Request              = require("libs/request")
+Toast                = require("libs/toast")
+Pipeline             = require("libs/pipeline")
+ErrorHandling        = require("libs/error_handling")
 
-# This is the model. It takes care of the data including the
+# This is THE model. It takes care of the data including the
 # communication with the server.
 
 # All public operations are **asynchronous**. We return a promise
@@ -30,12 +31,9 @@ class Model extends Backbone.Model
       # Include /readOnly part whenever it is in the pathname
       infoUrl = location.pathname + "/info"
     else
-      infoUrl = "/annotations/#{@tracingType}/#{@tracingId}/info"
+      infoUrl = "/annotations/#{@get('tracingType')}/#{@get('tracingId')}/info"
 
-    Request.send(
-      url : infoUrl
-      dataType : "json"
-    ).pipe (tracing) =>
+    Request.receiveJSON(infoUrl).then( (tracing) =>
 
       @datasetName = tracing.content.dataSet.name
 
@@ -57,7 +55,7 @@ class Model extends Backbone.Model
       else
 
         @user = new User()
-        @user.fetch().pipe( =>
+        @user.fetch().then( =>
 
           @set("dataset", new Backbone.Model(tracing.content.dataSet))
           colorLayers = _.filter( @get("dataset").get("dataLayers"),
@@ -66,27 +64,31 @@ class Model extends Backbone.Model
             @datasetName
             dataLayerNames : _.pluck(colorLayers, "name")
           }))
-          @get("datasetConfiguration").fetch().pipe( =>
+          @get("datasetConfiguration").fetch().then(
+            =>
+              layers = @getLayers(tracing.content.contentData.customLayers)
 
-            layers = @getLayers(tracing.content.contentData.customLayers)
+              Promise.all(
+                @getDataTokens(layers)
+              ).then( =>
+                error = @initializeWithData(tracing, layers)
+                return error if error
+              )
 
-            $.when(
-              @getDataTokens(layers)...
-            ).pipe =>
-              @initializeWithData(tracing, layers)
-
-          -> Toast.error("Ooops. We couldn't communicate with our mother ship. Please try to reload this page.")
-          )
+            -> Toast.error("Ooops. We couldn't communicate with our mother ship. Please try to reload this page.")
+            )
         )
+      )
 
 
   initializeWithData : (tracing, layers) ->
 
     dataset = @get("dataset")
 
-    $.assertExtendContext({
+    ErrorHandling.assertExtendContext({
       task: @get("tracingId")
       dataSet: dataset.get("name")
+
     })
 
     console.log "tracing", tracing
@@ -121,6 +123,7 @@ class Model extends Backbone.Model
 
     if @getColorBinaries().length == 0
       Toast.error("No data available! Something seems to be wrong with the dataset.")
+      return {"error" : true}
 
     flycam = new Flycam2d(constants.PLANE_WIDTH, maxZoomStep + 1, @)
     flycam3d = new Flycam3d(constants.DISTANCE_3D, dataset.get("scale"))
@@ -132,7 +135,7 @@ class Model extends Backbone.Model
     if @get("controlMode") == constants.CONTROL_MODE_TRACE
 
       if isVolumeTracing
-        $.assert( @getSegmentationBinary()?,
+        ErrorHandling.assert( @getSegmentationBinary()?,
           "Volume is allowed, but segmentation does not exist" )
         @set("volumeTracing", new VolumeTracing(tracing, flycam, @getSegmentationBinary(), @updatePipeline))
       else
@@ -177,12 +180,10 @@ class Model extends Backbone.Model
 
     for layer in layers
       do (layer) =>
-        Request.send(
-          url : "/dataToken/generate?dataSetName=#{@datasetName}&dataLayerName=#{layer.name}"
-          dataType : "json"
-        ).pipe (dataStore) ->
+        Request.receiveJSON("/dataToken/generate?dataSetName=#{@datasetName}&dataLayerName=#{layer.name}").then( (dataStore) ->
           layer.token = dataStore.token
           layer.url   = dataStoreUrl
+        )
 
 
   getColorBinaries : ->
@@ -237,7 +238,7 @@ class Model extends Backbone.Model
   save : ->
 
     submodels = []
-    dfds = []
+    deferreds = []
 
     if @user?
       submodels.push[@user]
@@ -255,10 +256,10 @@ class Model extends Backbone.Model
       submodels.push(@get("skeletonTracing").stateLogger)
 
     _.each(submodels, (model) ->
-      dfds.push( model.save() )
+      deferreds.push( model.save() )
     )
 
-    return $.when.apply($, dfds)
+    return $.when.apply($, deferreds)
 
 
   # Make the Model compatible between legacy Oxalis style and Backbone.Modela/Views

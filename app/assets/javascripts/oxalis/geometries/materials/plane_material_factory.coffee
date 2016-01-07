@@ -150,8 +150,9 @@ class PlaneMaterialFactory extends AbstractPlaneMaterialFactory
         } else {
           gl_FragColor = vec4(data_color, 1.0);
         }
-      }"""
-      {
+      }
+      """
+    )({
         layers : colorLayerNames
         hasSegmentation : segmentationBinary?
         segmentationName : @sanitizeName( segmentationBinary?.name )

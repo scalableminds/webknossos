@@ -1,10 +1,14 @@
 _                              = require("lodash")
-marionette                     = require("backbone.marionette")
+Marionette                     = require("backbone.marionette")
 app                            = require("app")
-ExplorativeTracingListItemView = require("dashboard/views/explorative_tracing_list_item_view")
 Input                          = require("libs/input")
 Toast                          = require("libs/toast")
+Request                        = require("libs/request")
 SortTableBehavior              = require("libs/behaviors/sort_table_behavior")
+ExplorativeTracingListItemView = require("./explorative_tracing_list_item_view")
+UserAnnotationsCollection      = require("../models/user_annotations_collection")
+DatasetCollection              = require("admin/models/dataset/dataset_collection")
+
 
 class ExplorativeTracingListView extends Backbone.Marionette.CompositeView
 
@@ -31,26 +35,16 @@ class ExplorativeTracingListView extends Backbone.Marionette.CompositeView
 
         <div class="divider-vertical"></div>
 
-        <form action="<%= jsRoutes.controllers.AnnotationController.createExplorational().url %>"
-          method="POST"
-          class="form-inline inline-block">
-          <select id="dataSetsSelect" name="dataSetName" class="form-control">
-            <% dataSets.forEach(function(d) { %>
-              <option value="<%= d.get("name") %>"> <%= d.get("name") %> </option>
-            <% }) %>
-          </select>
-          <button type="submit" class="btn btn-default" name="contentType" value="skeletonTracing">
-            <i class="fa fa-search"></i>Open skeleton mode
-          </button>
-          <button type="submit" class="btn btn-default" name="contentType" value="volumeTracing">
-            <i class="fa fa-search"></i>Open volume mode
-          </button>
-        </form>
-        <div class="divider-vertical"></div>
-        <a href="#" id="toggle-view-archived" class="btn btn-default">
-          <%= toggleViewArchivedText() %>
+        <% if (showArchivedAnnotations) { %>
+        <a href="#" id="toggle-view-open" class="btn btn-default">
+          <i class="fa fa-spinner fa-spin hide" id="toggle-view-spinner-icon"></i>
+            Show open tracings
         </a>
-        <% if (showArchiveAllButton()) { %>
+        <% } else {%>
+        <a href="#" id="toggle-view-archived" class="btn btn-default">
+          <i class="fa fa-spinner fa-spin hide" id="toggle-view-spinner-icon"></i>
+          Show archived tracings
+        </a>
         <a href="#" id="archive-all" class="btn btn-default">
           Archive all
         </a>
@@ -63,7 +57,7 @@ class ExplorativeTracingListView extends Backbone.Marionette.CompositeView
         <tr>
           <th data-sort="formattedHash"> # </th>
           <th data-sort="name"> Name </th>
-          <th data-sort="dataSource.id"> DataSet </th>
+          <th data-sort="dataSetName"> DataSet </th>
           <th> Stats </th>
           <th> Type </th>
           <th data-sort="created"> Created </th>
@@ -77,12 +71,13 @@ class ExplorativeTracingListView extends Backbone.Marionette.CompositeView
   childView : ExplorativeTracingListItemView
   childViewContainer : "tbody"
   childViewOptions:
-    parentModel : null
+    parent : null
 
   events :
     "change input[type=file]" : "selectFiles"
     "submit @ui.uploadAndExploreForm" : "uploadFiles"
-    "click @ui.toggleViewArchived" : "toggleViewArchived"
+    "click @ui.toggleViewArchivedButton" : "fetchArchivedAnnotations"
+    "click @ui.toggleViewOpenButton" : "fetchOpenAnnotations"
     "click @ui.archiveAllButton" : "archiveAll"
 
   ui :
@@ -90,50 +85,27 @@ class ExplorativeTracingListView extends Backbone.Marionette.CompositeView
     uploadAndExploreForm : "#upload-and-explore-form"
     formSpinnerIcon : "#form-spinner-icon"
     formUploadIcon : "#form-upload-icon"
-    toggleViewArchived : "#toggle-view-archived"
+    toggleViewArchivedButton : "#toggle-view-archived"
+    toggleViewOpenButton : "#toggle-view-open"
+    toggleViewSpinner : "#toggle-view-spinner-icon"
     archiveAllButton : "#archive-all"
 
   templateHelpers : ->
-    showArchiveAllButton: =>
-      !@showArchivedAnnotations
-    toggleViewArchivedText: =>
-      @toggleViewArchivedText()
-
+    isAdminView : @options.isAdminView
+    showArchivedAnnotations : @showArchivedAnnotations
 
   behaviors :
     SortTableBehavior :
       behaviorClass : SortTableBehavior
 
 
-  initialize : (options) ->
+  initialize : (@options) ->
+
+    @childViewOptions.parent = this
+    @collection = new UserAnnotationsCollection([], userID : @options.userID)
 
     @showArchivedAnnotations = false
-    @collection = @model.getAnnotations()
-    @filter = @getFilterForState()
-
-    @childViewOptions.parent = @
-
-    @datasetCollection = @model.get("dataSets")
-    @listenTo(@datasetCollection, "sync", @render)
-    @datasetCollection.fetch({data : "isActive=true"})
-
-
-  getFilterForState: () ->
-
-    if @showArchivedAnnotations
-      @isArchived
-    else
-      @isNotArchived
-
-
-  isArchived : (model) ->
-
-    model.attributes.state.isFinished
-
-
-  isNotArchived : (model) ->
-
-    !model.attributes.state.isFinished
+    @collection.fetch()
 
 
   selectFiles : (event) ->
@@ -146,35 +118,27 @@ class ExplorativeTracingListView extends Backbone.Marionette.CompositeView
 
     event.preventDefault()
 
-    toggleIcon = =>
+    toggleIcon = (state) =>
 
-      [@ui.formSpinnerIcon, @ui.formUploadIcon].forEach((each) -> each.toggleClass("hide"))
+      @ui.formSpinnerIcon.toggleClass("hide", state)
+      @ui.formUploadIcon.toggleClass("hide", !state)
 
 
-    toggleIcon()
+    toggleIcon(false)
 
     form = @ui.uploadAndExploreForm
 
-    $.ajax(
-      url : form.attr("action")
-      data : new FormData(form[0])
-      type : "POST"
-      processData : false
-      contentType : false
-    ).done( (data) ->
-      url = "/annotations/" + data.annotation.typ + "/" + data.annotation.id
-      app.router.loadURL(url)
-      Toast.message(data.messages)
-    ).fail( (xhr) ->
-      Toast.message(xhr.responseJSON.messages)
-    ).always( ->
-      toggleIcon()
+    Request.always(
+      Request.sendMultipartFormReceiveJSON(
+        form.attr("action")
+        data : new FormData(form[0])
+      ).then((data) ->
+        url = "/annotations/" + data.annotation.typ + "/" + data.annotation.id
+        app.router.loadURL(url)
+        Toast.message(data.messages)
+      )
+      -> toggleIcon(true)
     )
-
-
-  setAllFinished: ->
-
-    @collection.forEach((model) -> model.attributes.state.isFinished = true)
 
 
   archiveAll : () ->
@@ -189,7 +153,7 @@ class ExplorativeTracingListView extends Backbone.Marionette.CompositeView
       })
     ).done( (data) =>
       Toast.message(data.messages)
-      @setAllFinished()
+      @collection.reset()
       @render()
     ).fail( (xhr) ->
       if xhr.responseJSON
@@ -198,24 +162,22 @@ class ExplorativeTracingListView extends Backbone.Marionette.CompositeView
         Toast.message(xhr.statusText)
     )
 
+  fetchArchivedAnnotations : ->
+    @ui.toggleViewSpinner.toggleClass("hide", false)
+    @showArchivedAnnotations = true
+    @collection.isFinished = true
+    @collection.fetch().then(=> @render())
 
-  toggleState : ->
-
-    @showArchivedAnnotations = not @showArchivedAnnotations
-
+  fetchOpenAnnotations : ->
+    @ui.toggleViewSpinner.toggleClass("hide", false)
+    @showArchivedAnnotations = false
+    @collection.isFinished = false
+    @collection.fetch().then(=> @render())
 
   toggleViewArchivedText : ->
 
     verb = if @showArchivedAnnotations then "open" else "archived"
     "Show #{verb} tracings "
-
-
-  toggleViewArchived : (event) ->
-
-    event.preventDefault()
-    @toggleState()
-    @filter = @getFilterForState()
-    @render()
 
 
 module.exports = ExplorativeTracingListView

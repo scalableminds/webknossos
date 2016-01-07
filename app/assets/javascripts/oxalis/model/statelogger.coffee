@@ -1,22 +1,22 @@
-Backbone = require("backbone")
-_        = require("lodash")
-$        = require("jquery")
-app      = require("app")
-Request  = require("libs/request")
-Toast    = require("libs/toast")
+Backbone      = require("backbone")
+_             = require("lodash")
+$             = require("jquery")
+app           = require("app")
+Request       = require("libs/request")
+Toast         = require("libs/toast")
+ErrorHandling = require("libs/error_handling")
 
 class StateLogger
 
   PUSH_THROTTLE_TIME : 30000 #30s
   SAVE_RETRY_WAITING_TIME : 5000
 
-  constructor : (@flycam, @version, @tracingId, @tracingType, @allowUpdate, @pipeline) ->
+  constructor : (@flycam, @version, @tracingId, @tracingType, @allowUpdate) ->
 
     _.extend(this, Backbone.Events)
+    @mutexedPush = _.mutexDeferred(@pushImpl, -1)
 
-    @committedDiffs = []
     @newDiffs = []
-    @committedCurrentState = true
 
     # Push state to server whenever a user moves
     @listenTo(@flycam, "positionChanged", @push)
@@ -43,13 +43,12 @@ class StateLogger
 
   stateSaved : ->
 
-    return @committedCurrentState and @committedDiffs.length == 0
+    return @newDiffs.length == 0
 
 
   push : ->
 
     if @allowUpdate
-      @committedCurrentState = false
       @pushThrottled()
 
 
@@ -57,18 +56,16 @@ class StateLogger
     # Pushes the buffered tracing to the server. Pushing happens at most
     # every 30 seconds.
 
-    saveFkt = => @pushImpl(true)
-    @pushThrottled = _.throttle(_.mutexDeferred( saveFkt, -1), @PUSH_THROTTLE_TIME)
+    @pushThrottled = _.throttle(@mutexedPush, @PUSH_THROTTLE_TIME)
     @pushThrottled()
 
 
   pushNow : ->   # Interface for view & controller
 
-    return @pushImpl(false)
-      .then(
-        -> Toast.success("Saved!")
-        -> Toast.error("Couldn't save. Please try again.")
-      )
+    return @mutexedPush(false).then(
+      -> Toast.success("Saved!")
+      -> Toast.error("Couldn't save. Please try again.")
+    )
 
   # alias for `pushNow`
   # needed for save delegation by `Model`
@@ -83,25 +80,33 @@ class StateLogger
     if not @allowUpdate
       return new $.Deferred().resolve().promise()
 
+    # TODO: remove existing updateTracing
     @concatUpdateTracing()
-    @committedDiffs = @committedDiffs.concat(@newDiffs)
-    @newDiffs = []
-    @committedCurrentState = true
-    console.log "Sending data: ", @committedDiffs
-    $.assert(@committedDiffs.length > 0, "Empty update sent to server!", {
-      @committedDiffs, @newDiffs
+
+    diffsCurrentLength = @newDiffs.length
+    console.log "Sending data: ", @newDiffs
+    ErrorHandling.assert(@newDiffs.length > 0, "Empty update sent to server!", {
+      @newDiffs
     })
 
-    @pipeline.executeAction( (prevVersion) =>
-      Request.send(
-        url : "/annotations/#{@tracingType}/#{@tracingId}?version=#{(prevVersion + 1)}"
-        method : "PUT"
-        data : @committedDiffs
-        contentType : "application/json"
-      ).pipe (response) ->
-        return response.version
-    ).fail((responseObject) => @pushFailCallback(responseObject, notifyOnFailure))
-    .done(=> @pushDoneCallback())
+    deferred = $.Deferred()
+
+    Request.sendJSONReceiveJSON(
+      "/annotations/#{@tracingType}/#{@tracingId}?version=#{(@version + 1)}"
+      method : "PUT"
+      data : @newDiffs
+    ).then(
+      (response) =>
+        @newDiffs = @newDiffs.slice(diffsCurrentLength)
+        @version = response.version
+        @pushDoneCallback()
+        deferred.resolve()
+      (responseObject) =>
+        @pushFailCallback(responseObject, notifyOnFailure)
+        deferred.resolve()
+    )
+
+    deferred.promise()
 
 
   pushFailCallback : (responseObject, notifyOnFailure) ->
@@ -125,22 +130,19 @@ class StateLogger
           """)
           window.location.reload()
 
-    @push()
+        else
+          Toast.message(response.messages)
+
+
+    setTimeout((=> @pushNow()), @SAVE_RETRY_WAITING_TIME)
     if notifyOnFailure
       @trigger("pushFailed")
-
-    restart = =>
-      @pipeline.restart()
-          .fail((responseObject) => @pushFailCallback(responseObject, notifyOnFailure))
-          .done(=> @pushDoneCallback())
-
-    setTimeout(restart, @SAVE_RETRY_WAITING_TIME)
 
 
   pushDoneCallback : ->
 
     @trigger("pushDone")
     $('body').removeClass('save-error')
-    @committedDiffs = []
+
 
 module.exports = StateLogger

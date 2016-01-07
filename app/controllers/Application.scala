@@ -1,36 +1,20 @@
 package controllers
 
+import javax.inject.Inject
+
+import models.user.UserAgentTrackingDAO
 import oxalis.security.Secured
-import play.api.mvc.Action
 import play.api._
-import play.api.libs.concurrent.Akka
-import scala.concurrent.Future
-import models.user.{UsedAnnotationDAO, UsedAnnotation, UserAgentTrackingDAO}
-import models.basics.Implicits._
-import play.api.libs.concurrent.Execution.Implicits._
+import play.api.i18n.MessagesApi
+import play.api.mvc.Action
+import play.api.routing.JavaScriptReverseRouter
 import play.twirl.api.Html
-import net.liftweb.common.Full
 
-object Application extends Controller with Secured {
-  lazy val app = play.api.Play.current
-
-  lazy val Mailer =
-    Akka.system(app).actorFor("/user/mailActor")
-
-  lazy val annotationStore =
-    Akka.system(app).actorFor("/user/annotationStore")
-
-  lazy val httpUri = app.configuration.getString("http.uri").get
-
-  def toAbsoluteUrl(relativeUrl: String) = {
-    httpUri + relativeUrl
-  }
-
-  // -- Javascript routing
+class Application @Inject()(val messagesApi: MessagesApi) extends Controller with Secured {
 
   def javascriptRoutes = Action { implicit request =>
     Ok(
-      Routes.javascriptRouter("jsRoutes")(//fill in stuff which should be able to be called from js
+      JavaScriptReverseRouter("jsRoutes")(//fill in stuff which should be able to be called from js
         controllers.admin.routes.javascript.NMLIO.upload,
         controllers.admin.routes.javascript.TaskAdministration.edit,
         controllers.admin.routes.javascript.TaskAdministration.overviewData,

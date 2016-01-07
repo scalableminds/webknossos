@@ -1,40 +1,30 @@
 Backbone = require("backbone")
 
-# A helper class to wrap the Backbone.Paginator lib and set some sensible
-# defaults
-#
-# Make sure to always call fetch() with the option 'silent: true' and use
-# strings instead of objects for the 'data' option.
-# If you create
-
 class SortedCollection extends Backbone.Collection
 
-  sortByAttribute : (args...) ->
+  setSort : (field, sortDirection) ->
 
-    return @setSort(args...)
+    if sortDirection == "asc"
+      sortDirection = 1
+    if sortDirection == "desc"
+      sortDirection = -1
 
+    # Set your comparator function, pass the field.
+    @comparator = (left, right) ->
+      leftValue  = left.get(field)
+      rightValue = right.get(field)
+      return if _.isString(leftValue) && _.isString(rightValue)
+          if sortDirection > 0
+            leftValue.localeCompare(rightValue)
+          else
+            rightValue.localeCompare(leftValue)
+        else
+          if sortDirection > 0
+            leftValue - rightValue
+          else
+            rightValue - leftValue
 
-  setSort : (criteria, sortDirection) ->
-
-    # Set your comparator function, pass the criteria.
-    @comparator = @criteriaComparator(criteria, sortDirection)
     @sort()
 
-
-  # Backbone.Collecetion's sort is overloaded. Needs 2 params for the right version.
-  criteriaComparator : (criteria, sortDirection = "asc") ->
-
-    return (a, b) ->
-      aSortVal = a.get(criteria);
-      bSortVal = b.get(criteria);
-
-      # Whatever your sorting criteria.
-      if  aSortVal < bSortVal
-        return if sortDirection == "asc" then -1 else 1
-
-      if aSortVal > bSortVal
-        return if sortDirection == "asc" then 1 else -1
-      else
-        return 0
 
 module.exports = SortedCollection

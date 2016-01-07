@@ -20,7 +20,7 @@ class RestrictionHandler
 
     else
       if not @issuedUpdateError
-        Toast.error(@UPDATE_ERROR, true)
+        Toast.error(@UPDATE_ERROR)
         @issuedUpdateError = true
       return true
 

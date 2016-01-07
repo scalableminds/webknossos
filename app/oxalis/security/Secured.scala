@@ -1,10 +1,11 @@
 package oxalis.security
 
+import com.scalableminds.util.mvc.JsonResult
 import models.user.{UserService, User}
 import play.api.mvc._
 import play.api.mvc.BodyParsers
 import play.api.mvc.Results._
-import play.api.i18n.Messages
+import play.api.i18n.{I18nSupport, Messages}
 import play.api.mvc.Request
 import play.api.Play
 import play.api.Play.current
@@ -19,6 +20,7 @@ import net.liftweb.common.{Full, Empty}
 import play.api.libs.concurrent.Execution.Implicits._
 import com.scalableminds.util.reactivemongo.GlobalAccessContext
 import models.team.Role
+import play.api.http.Status._
 
 class AuthenticatedRequest[A](
                                val user: User, override val request: Request[A]
@@ -47,7 +49,7 @@ object Secured {
 /**
  * Provide security features
  */
-trait Secured extends FoxImplicits {
+trait Secured extends FoxImplicits with I18nSupport{
   /**
    * Defines the access role which is used if no role is passed to an
    * authenticated action
@@ -117,8 +119,10 @@ trait Secured extends FoxImplicits {
    * Redirect to login if the user in not authorized.
    */
   private def onUnauthorized(request: RequestHeader) =
-    Results.Redirect(routes.Authentication.login)
-
+    if (request.path.startsWith("/api/"))
+      new JsonResult(FORBIDDEN)(Messages("notAllowed"))
+    else
+      Results.Redirect(routes.Authentication.login)
   // --
 
   /**

@@ -51,12 +51,16 @@ class SkeletonActionsView extends Backbone.Marionette.ItemView
     position[0] = position[0] + Math.pow(2, @model.flycam.getIntegerZoomStep())
     position[1] = position[1] + Math.pow(2, @model.flycam.getIntegerZoomStep())
 
+    datasetConfig = @model.get("datasetConfiguration")
+
     # add node
     @model.skeletonTracing.addNode(
       position,
       constants.TYPE_USUAL,
       constants.PLANE_XY, # xy viewport
-      @model.flycam.getIntegerZoomStep()
+      @model.flycam.getIntegerZoomStep(),
+      if datasetConfig.get("fourBit") then 4 else 8,
+      datasetConfig.get("interpolation")
     )
 
 module.exports = SkeletonActionsView

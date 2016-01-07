@@ -98,8 +98,9 @@ case class Annotation(
   def actions(userOpt: Option[User]) = {
     import controllers.admin.routes._
     import controllers.routes._
+    val traceOrView = if(restrictions.allowUpdate(userOpt)) "trace" else "view"
     val basicActions = List(
-      ResourceAction("trace", AnnotationController.trace(typ,id), icon = Some("fa fa-random")),
+      ResourceAction(traceOrView, AnnotationController.trace(typ,id), icon = Some("fa fa-random")),
       ResourceAction(ResourceAction.Finish, AnnotationController.finish(typ, id), condition = !state.isFinished, icon = Some("fa fa-check-circle-o"), isAjax = true, clazz = "trace-finish"),
       ResourceAction("reopen", AnnotationController.reopen(typ, id), condition = state.isFinished, icon = Some("fa fa-share"), isAjax = true),
       ResourceAction(ResourceAction.Download, AnnotationController.download(typ, id), icon = Some("fa fa-download")),
@@ -212,10 +213,10 @@ object AnnotationDAO
       "typ" -> annotationType)).cursor[Annotation].collect[List]()
   }
 
-  def findForWithTypeOtherThan(_user: BSONObjectID, annotationTypes: List[AnnotationType])(implicit ctx: DBAccessContext) = withExceptionCatcher{
+  def findForWithTypeOtherThan(_user: BSONObjectID, isFinished: Boolean, annotationTypes: List[AnnotationType])(implicit ctx: DBAccessContext) = withExceptionCatcher{
     find(Json.obj(
       "_user" -> _user,
-      "state.isFinished" -> false,
+      "state.isFinished" -> isFinished,
       "state.isAssigned" -> true,
       "typ" -> Json.obj("$nin" -> annotationTypes))).cursor[Annotation].collect[List]()
   }

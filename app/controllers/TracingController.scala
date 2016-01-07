@@ -1,6 +1,9 @@
 package controllers
 
+import javax.inject.Inject
+
 import models.user.User
+import play.api.libs.concurrent.Akka
 import play.api.libs.json._
 import oxalis.security.{UserAwareRequest, Secured, AuthenticatedRequest}
 import net.liftweb.common._
@@ -11,18 +14,21 @@ import akka.pattern.ask
 import play.api.libs.concurrent.Execution.Implicits._
 import akka.util.Timeout
 import com.scalableminds.util.tools.ExtendedTypes.ExtendedBoolean
-import play.api.i18n.Messages
+import play.api.i18n.{I18nSupport, MessagesApi, Messages}
 import models.annotation.{Annotation, AnnotationLike}
 import models.annotation.AnnotationType._
 import oxalis.annotation.handler.AnnotationInformationHandler
 import com.scalableminds.util.tools.{FoxImplicits, Fox}
 import play.api.Logger
 
-object TracingController extends Controller with Secured with TracingInformationProvider
+class TracingController @Inject() (val messagesApi: MessagesApi) extends Controller with Secured with TracingInformationProvider
 
-trait TracingInformationProvider extends play.api.http.Status with FoxImplicits with models.basics.Implicits {
+trait TracingInformationProvider extends play.api.http.Status with FoxImplicits with models.basics.Implicits with I18nSupport{
 
   import AnnotationInformationHandler._
+
+  lazy val annotationStore =
+    Akka.system(play.api.Play.current).actorSelection("/user/annotationStore")
 
   def withInformationHandler[A, T](tracingType: String)(f: AnnotationInformationHandler => T)(implicit request: UserAwareRequest[_]): T = {
     f(informationHandlers(tracingType))
@@ -42,7 +48,7 @@ trait TracingInformationProvider extends play.api.http.Status with FoxImplicits 
 
   def findAnnotation(annotationId: AnnotationIdentifier)(implicit request: UserAwareRequest[_]): Fox[AnnotationLike] = {
     implicit val timeout = Timeout(5 seconds)
-    val f = Application.annotationStore ? RequestAnnotation(annotationId, request.userOpt, authedRequestToDBAccess)
+    val f = annotationStore ? RequestAnnotation(annotationId, request.userOpt, authedRequestToDBAccess)
 
     f.mapTo[Box[AnnotationLike]]
   }
@@ -54,10 +60,10 @@ trait TracingInformationProvider extends play.api.http.Status with FoxImplicits 
   def mergeAnnotation(annotationId: AnnotationIdentifier, mergedAnnotationId: AnnotationIdentifier, readOnly: Boolean)(implicit request: AuthenticatedRequest[_]): Fox[AnnotationLike] = {
     implicit val timeout = Timeout(5 seconds)
 
-    val annotation = Application.annotationStore ? RequestAnnotation(annotationId, request.userOpt, authedRequestToDBAccess)
-    val annotationSec = Application.annotationStore ? RequestAnnotation(mergedAnnotationId, request.userOpt, authedRequestToDBAccess)
+    val annotation = annotationStore ? RequestAnnotation(annotationId, request.userOpt, authedRequestToDBAccess)
+    val annotationSec = annotationStore ? RequestAnnotation(mergedAnnotationId, request.userOpt, authedRequestToDBAccess)
 
-    val f = Application.annotationStore ? MergeAnnotation(annotation.mapTo[Box[AnnotationLike]], annotationSec.mapTo[Box[AnnotationLike]], readOnly, request.user, authedRequestToDBAccess)
+    val f = annotationStore ? MergeAnnotation(annotation.mapTo[Box[AnnotationLike]], annotationSec.mapTo[Box[AnnotationLike]], readOnly, request.user, authedRequestToDBAccess)
 
     f.mapTo[Box[AnnotationLike]]
   }

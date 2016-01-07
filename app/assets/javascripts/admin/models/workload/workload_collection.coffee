@@ -6,7 +6,7 @@ class WorkloadCollection extends PaginationCollection
 
   url : "/api/tasks/workload"
 
-  paginator_ui :
-    perPage : 20
+  state :
+    pageSize : 20
 
 module.exports = WorkloadCollection

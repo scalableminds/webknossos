@@ -6,11 +6,13 @@ var through2     = require("through2");
 var path         = require("path");
 var fs           = require("fs");
 var webpack      = require("webpack");
+var chokidar     = require("chokidar");
+
 
 paths = {
   src : {
     css : __dirname + "/app/assets/stylesheets/main.less",
-    dir : __dirname + "/app/assets/**/*",
+    dir : __dirname + "/app/assets",
     js : __dirname + "/app/assets/javascripts"
   },
   dest : {
@@ -23,12 +25,12 @@ paths = {
 var bowerPath = __dirname + "/public/bower_components/";
 var scriptPaths = {
   "jquery"              : bowerPath + "jquery/jquery",
-  "lodash"              : bowerPath + "lodash/dist/lodash",
+  "lodash"              : bowerPath + "lodash/lodash",
   "underscore"          : bowerPath + "underscore/underscore",
   "bootstrap"           : bowerPath + "bootstrap/dist/js/bootstrap",
   "coffee-script"       : bowerPath + "coffee-script/extras/coffee-script",
   "backbone.marionette" : bowerPath + "backbone.marionette/lib/backbone.marionette",
-  "backbone.paginator"  : bowerPath + "backbone.paginator/dist/backbone.paginator",
+  "backbone.paginator"  : bowerPath + "backbone.paginator/lib/backbone.paginator",
   "backbone.subviews"   : bowerPath + "backbone.subviews/index",
   "backbone-deep-model" : bowerPath + "backbone-deep-model/distribution/deep-model",
   "backbone"            : bowerPath + "backbone/backbone",
@@ -38,9 +40,8 @@ var scriptPaths = {
   "three.trackball"     : bowerPath + "TrackballControls/index",
   "stats"               : bowerPath + "threejs-stats/Stats",
   "ace"                 : bowerPath + "ace-builds/src-min-noconflict/ace",
-  "keyboard"            : bowerPath + "KeyboardJS/keyboard",
+  "keyboard"            : bowerPath + "KeyboardJS/dist/keyboard",
   "gamepad"             : bowerPath + "gamepad.js/gamepad",
-  "jquery.mousewheel"   : bowerPath + "jquery-mousewheel/jquery.mousewheel",
   "tween"               : bowerPath + "tweenjs/src/Tween",
   "moment"              : bowerPath + "momentjs/moment",
   "require"             : bowerPath + "requirejs/require",
@@ -52,11 +53,10 @@ var scriptPaths = {
   "rangeslider"         : bowerPath + "nouislider/distribute/nouislider",
   "clipboard"           : bowerPath + "clipboard/dist/clipboard",
   "mjs"                 : bowerPath + "mjs/src/mjs",
-  "worker"              : "libs/worker_plugin",
-  "wrapped_worker"      : "libs/wrapped_worker_plugin",
-  "nested_obj_model"    : "libs/nested_obj_model",
+  "fetch"               : bowerPath + "fetch/fetch",
+  "promise"             : bowerPath + "es6-promise/promise.min",
+  "nested_obj_model"    : "libs/nested_obj_model"
 };
-
 
 
 // Helper functions
@@ -101,9 +101,6 @@ function makeScripts() {
         //   exclude: /(node_modules|bower_components)/,
         //   loader: 'babel'
         // }
-      ],
-      noParse: [
-        paths.src.js + "/libs/viz.js"
       ]
     },
     resolve: {
@@ -162,7 +159,9 @@ gulp.task("styles", function () {
 
 
 gulp.task("watch:styles", ["styles"], function (done) {
-  gulp.watch(paths.src.dir + "/**/*", ["styles"]);
+  chokidar.watch(paths.src.dir, { ignoreInitial: true }).on('all', function () {
+    gulp.start("styles");
+  });
 });
 
 

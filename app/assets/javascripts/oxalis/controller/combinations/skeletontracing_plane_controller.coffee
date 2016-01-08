@@ -1,6 +1,6 @@
 app             = require("app")
 THREE           = require("three")
-TWEEN           = require("tween")
+TWEEN           = require("tween.js")
 _               = require("lodash")
 PlaneController = require("../viewmodes/plane_controller")
 constants       = require("../../constants")

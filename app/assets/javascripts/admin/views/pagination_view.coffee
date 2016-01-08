@@ -1,8 +1,8 @@
 _          = require("lodash")
 app        = require("app")
-marionette = require("backbone.marionette")
+Marionette = require("backbone.marionette")
 
-class PaginationView extends Backbone.Marionette.ItemView
+class PaginationView extends Marionette.ItemView
 
   template : _.template("""
     <div class="row">

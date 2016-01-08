@@ -7,7 +7,7 @@ UserCollection = require("admin/models/user/user_collection")
 TeamCollection = require("admin/models/team/team_collection")
 ProjectModel   = require("admin/models/project/project_model")
 
-class CreateProjectModalView extends Backbone.Marionette.LayoutView
+class CreateProjectModalView extends Marionette.LayoutView
 
   className : "modal fade"
   template : _.template("""

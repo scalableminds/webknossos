@@ -1,7 +1,7 @@
 app        = require("app")
 Backbone   = require("backbone")
 $          = require("jquery")
-TWEEN      = require("tween")
+TWEEN      = require("tween.js")
 Dimensions = require("../model/dimensions")
 Toast      = require("../../libs/toast")
 constants  = require("../constants")

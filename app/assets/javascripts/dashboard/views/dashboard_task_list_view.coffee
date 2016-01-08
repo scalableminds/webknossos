@@ -1,5 +1,5 @@
 _                         = require("lodash")
-marionette                = require("backbone.marionette")
+Marionette                = require("backbone.marionette")
 DashboardTaskListItemView = require("./dashboard_task_list_item_view")
 TaskTransferModalView     = require("./task_transfer_modal_view")
 routes                    = require("routes")
@@ -7,7 +7,7 @@ Toast                     = require("libs/toast")
 SortTableBehavior         = require("libs/behaviors/sort_table_behavior")
 UserTasksCollection       = require("../models/user_tasks_collection")
 
-class DashboardTaskListView extends Backbone.Marionette.CompositeView
+class DashboardTaskListView extends Marionette.CompositeView
 
   template : _.template("""
     <h3>Tasks</h3>

@@ -1,7 +1,7 @@
-marionette = require("backbone.marionette")
+Marionette = require("backbone.marionette")
 _          = require("lodash")
 
-class AbstractTabView extends Backbone.Marionette.LayoutView
+class AbstractTabView extends Marionette.LayoutView
 
   MARGIN : 40
 

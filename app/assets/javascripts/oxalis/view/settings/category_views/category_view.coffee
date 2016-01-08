@@ -1,8 +1,8 @@
-marionette = require("backbone.marionette")
-subviews   = require("backbone.subviews")
 _          = require("lodash")
+Marionette = require("backbone.marionette")
+Subviews   = require("backbone-subviews")
 
-class CategoryView extends Backbone.Marionette.ItemView
+class CategoryView extends Marionette.ItemView
 
 
   template : _.template("""
@@ -31,7 +31,7 @@ class CategoryView extends Backbone.Marionette.ItemView
 
   initialize : ->
 
-    Backbone.Subviews.add(this)
+    Subviews.add(this)
 
 
   serializeData : ->

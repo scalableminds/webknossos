@@ -4,7 +4,7 @@ DatasetListItemView     = require("./dataset_list_item_view")
 TeamAssignmentModalView = require("./team_assignment_modal_view")
 SortTableBehavior       = require("libs/behaviors/sort_table_behavior")
 
-class DatasetListView extends Backbone.Marionette.CompositeView
+class DatasetListView extends Marionette.CompositeView
 
   className : "datasets"
   template : _.template("""

@@ -1,6 +1,7 @@
 Marionette = require("backbone.marionette")
 
-class SelectAllRowsBehavior extends Backbone.Marionette.Behavior
+class SelectAllRowsBehavior extends Marionette.Behavior
+
 
   events :
     "change input.select-all-rows" : "selectAllRows"

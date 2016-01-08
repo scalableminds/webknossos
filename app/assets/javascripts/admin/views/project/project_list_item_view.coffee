@@ -4,7 +4,7 @@ Toast                 = require("libs/toast")
 ProjectTaskView       = require("./project_task_view")
 ProjectTaskCollection = require("admin/models/project/project_task_collection")
 
-class ProjectListItemView extends Backbone.Marionette.CompositeView
+class ProjectListItemView extends Marionette.CompositeView
 
   template : _.template("""
     <tr id="<%- name %>">

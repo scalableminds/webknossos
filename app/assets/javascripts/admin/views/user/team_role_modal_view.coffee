@@ -1,10 +1,10 @@
 _                 = require("lodash")
-marionette        = require("backbone.marionette")
+Marionette        = require("backbone.marionette")
 Toast             = require("libs/toast")
 TeamCollection    = require("admin/models/team/team_collection")
 TeamRoleModalItem = require("admin/views/user/team_role_modal_item_view")
 
-class TeamRoleModalView extends Backbone.Marionette.CompositeView
+class TeamRoleModalView extends Marionette.CompositeView
 
   tagName : "div"
   className : "modal fade"

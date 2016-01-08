@@ -6,7 +6,7 @@ SelectionView  = require("admin/views/selection_view")
 Toast          = require("libs/toast")
 Request        = require("libs/request")
 
-class TaskTypeFormView extends Backbone.Marionette.LayoutView
+class TaskTypeFormView extends Marionette.LayoutView
 
   template : _.template("""
     <div class="well clearfix">

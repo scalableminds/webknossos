@@ -1,7 +1,7 @@
+_                             = require("lodash")
 backbone                      = require("backbone")
 THREE                         = require("three")
-MJS                           = require("mjs")
-_                             = require("lodash")
+{M4x4, V3}                    = require("libs/mjs")
 constants                     = require("oxalis/constants")
 ArbitraryPlaneMaterialFactory = require("./materials/arbitrary_plane_material_factory")
 
@@ -75,7 +75,7 @@ class ArbitraryPlane
 
       matrix = cam.getZoomedMatrix()
 
-      newVertices = MJS.M4x4.transformPointsAffine matrix, @queryVertices
+      newVertices = M4x4.transformPointsAffine matrix, @queryVertices
       newColors = @model.getColorBinaries()[0].getByVerticesSync(newVertices)
 
       @textureMaterial.setData("color", newColors)
@@ -114,9 +114,9 @@ class ArbitraryPlane
         vertex[1] = y - (Math.floor @width/2)
         vertex[2] = 0
 
-        vector = MJS.V3.sub(vertex, centerVertex, vector)
-        length = MJS.V3.length(vector)
-        vector = MJS.V3.scale(vector, sphericalCapRadius / length, vector)
+        vector = V3.sub(vertex, centerVertex, vector)
+        length = V3.length(vector)
+        vector = V3.scale(vector, sphericalCapRadius / length, vector)
 
         queryVertices[currentIndex++] = centerVertex[0] + vector[0]
         queryVertices[currentIndex++] = centerVertex[1] + vector[1]

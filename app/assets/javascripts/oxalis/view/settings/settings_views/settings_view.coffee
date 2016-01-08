@@ -1,9 +1,9 @@
-Utils      = require("libs/utils")
-marionette = require("backbone.marionette")
-subviews   = require("backbone.subviews")
 _          = require("lodash")
+Utils      = require("libs/utils")
+Marionette = require("backbone.marionette")
+Subviews   = require("backbone-subviews")
 
-class SettingsView extends Backbone.Marionette.ItemView
+class SettingsView extends Marionette.ItemView
 
 
   template : _.template("""
@@ -21,7 +21,7 @@ class SettingsView extends Backbone.Marionette.ItemView
 
     @model = @model[@modelName]
 
-    Backbone.Subviews.add(this)
+    Subviews.add(this)
 
 
   render : ->

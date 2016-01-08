@@ -5,7 +5,7 @@ View       = require("../view")
 Dimensions = require("../model/dimensions")
 constants  = require("../constants")
 THREE      = require("three")
-TWEEN      = require("tween")
+TWEEN      = require("tween.js")
 
 class CameraController
 

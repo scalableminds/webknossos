@@ -1,11 +1,12 @@
 _              = require("lodash")
 app            = require("app")
+Marionette     = require("backbone.marionette")
 Toast          = require("libs/toast")
 TeamModel      = require("admin/models/team/team_model")
 TeamCollection = require("admin/models/team/team_collection")
 SelectionView  = require("admin/views/selection_view")
 
-class CreateTeamModalView extends Backbone.Marionette.LayoutView
+class CreateTeamModalView extends Marionette.LayoutView
 
   className : "modal fade"
   template : _.template("""

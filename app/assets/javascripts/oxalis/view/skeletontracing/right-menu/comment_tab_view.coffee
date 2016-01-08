@@ -3,7 +3,7 @@ Marionette         = require("backbone.marionette")
 Input              = require("libs/input")
 CommentTabItemView = require("./comment_tab_item_view")
 
-class CommentTabView extends Backbone.Marionette.CompositeView
+class CommentTabView extends Marionette.CompositeView
 
   className : "flex-column"
   template : _.template("""

@@ -1,4 +1,4 @@
-marionette          = require("backbone.marionette")
+Marionette          = require("backbone.marionette")
 _                   = require("lodash")
 SettingsView        = require("./settings_view")
 TreeCategoryView    = require("../category_views/tree_category_view")

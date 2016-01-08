@@ -1,9 +1,9 @@
-marionette          = require("backbone.marionette")
+Marionette          = require("backbone.marionette")
 app                 = require("app")
 constants           = require("oxalis/constants")
 ArbitraryController = require("oxalis/controller/viewmodes/arbitrary_controller")
 
-class DatasetInfoView extends Backbone.Marionette.ItemView
+class DatasetInfoView extends Marionette.ItemView
 
   className : "col-sm-12 flex-column"
   id : "dataset"

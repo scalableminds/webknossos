@@ -1,9 +1,9 @@
 _           = require("lodash")
-marionette  = require("backbone.marionette")
+Marionette  = require("backbone.marionette")
 moment      = require("moment")
 FormatUtils = require("format_utils")
 
-class LoggedTimeListView extends Backbone.Marionette.ItemView
+class LoggedTimeListView extends Marionette.ItemView
 
   template : _.template("""
     <table class="table-striped table-hover table">

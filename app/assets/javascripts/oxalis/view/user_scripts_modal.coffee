@@ -1,7 +1,7 @@
 _          = require("lodash")
 Marionette = require("backbone.marionette")
 
-class UserScriptsModalView extends Backbone.Marionette.ItemView
+class UserScriptsModalView extends Marionette.ItemView
 
   className : "modal fade"
   template : _.template("""

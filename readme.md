@@ -91,11 +91,10 @@ mongod --dbpath (your path)
 * no node modules are required to be installed globally. but installing the following is handy for development
   * [coffee-script](https://github.com/jashkenas/coffeescript)
   * [less](http://lesscss.org/)
-  * [bower](http://bower.io/)
   * [gulp](http://gulpjs.com/)
 
 ```bash
-npm install -g coffee-script less bower gulp
+npm install -g coffee-script less gulp
 ```
 
 ### Run

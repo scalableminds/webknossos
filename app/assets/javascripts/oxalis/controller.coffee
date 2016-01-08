@@ -186,11 +186,16 @@ class Controller
           index = (@allowedModes.indexOf(@model.get("mode")) + 1) % @allowedModes.length
           @model.setMode(@allowedModes[index])
 
-        "super + s, ctrl + s" : (event) =>
-
+        "super + s" : (event) =>
           event.preventDefault()
           event.stopPropagation()
           @model.save()
+
+        "ctrl + s" : (event) =>
+          event.preventDefault()
+          event.stopPropagation()
+          @model.save()
+
       } )
 
     new Input.KeyboardNoLoop( keyboardControls )

@@ -2,6 +2,7 @@ Backbone       = require("backbone")
 constants      = require("oxalis/constants")
 KeyboardJS     = require("keyboardjs")
 
+
 Input = {}
 # This is the main Input implementation.
 # Although all keys, buttons and sensor are mapped in
@@ -77,6 +78,17 @@ class Input.Keyboard
 
   attach : (key, callback) ->
 
+    # Workaround: KeyboardJS fires event for "C" even if you press
+    # "Ctrl + C".
+    shouldIgnore = (event) ->
+      bindingHasCtrl  = key.toLowerCase().indexOf("ctrl") != -1
+      bindingHasShift = key.toLowerCase().indexOf("shift") != -1
+      eventHasCtrl  = event.ctrl or event.metaKey
+      eventHasShift = event.shiftKey
+      return (eventHasCtrl and not bindingHasCtrl) or
+        (eventHasShift and not bindingHasShift)
+
+
     binding = [key,
       (event) =>
         # When first pressed, insert the callback into
@@ -89,7 +101,7 @@ class Input.Keyboard
 
         returnValue = undefined
 
-        unless @keyCallbackMap[key]? or $(":focus").length
+        unless @keyCallbackMap[key]? or $(":focus").length or shouldIgnore(event)
 
           callback(1, true)
           # reset lastTime
@@ -203,7 +215,7 @@ class Input.Mouse
       "mousedown" : @mouseDown
       "mouseenter" : @mouseEnter
       "mouseleave" : @mouseLeave
-      "mousewheel" : @mouseWheel
+      "wheel" : @mouseWheel
 
     @on(initialBindings)
     @attach = @on
@@ -219,7 +231,7 @@ class Input.Mouse
       "mousedown" : @mouseDown
       "mouseenter" : @mouseEnter
       "mouseleave" : @mouseLeave
-      "mousewheel" : @mouseWheel
+      "wheel" : @mouseWheel
 
 
   isHit : (event) ->
@@ -302,9 +314,10 @@ class Input.Mouse
     return event.which != 0
 
 
-  mouseWheel : (event, delta) =>
+  mouseWheel : (event) =>
 
     event.preventDefault()
+    delta = event.originalEvent.wheelDeltaY
     if event.shiftKey
       @trigger("scroll", delta, "shift")
     else if event.altKey

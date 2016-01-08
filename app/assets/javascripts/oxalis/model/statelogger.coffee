@@ -105,16 +105,16 @@ class StateLogger
 
     $('body').addClass('save-error')
 
-    if response.messages?[0].error?
-      if response.messages[0].error == "Annotation is not up to date. You can't make any changes"
-        $(window).off("beforeunload")
-        alert("""
-          It seems that you edited the tracing simultaneously in different windows.
-          Editing should be done in a single window only.
+    # HTTP Code 409 'conflict' for dirty state
+    if response.status == 409
+      $(window).off("beforeunload")
+      alert("""
+        It seems that you edited the tracing simultaneously in different windows.
+        Editing should be done in a single window only.
 
-          In order to restore the current window, a reload is necessary.
-        """)
-        window.location.reload()
+        In order to restore the current window, a reload is necessary.
+      """)
+      window.location.reload()
 
 
     setTimeout((=> @pushNow()), @SAVE_RETRY_WAITING_TIME)

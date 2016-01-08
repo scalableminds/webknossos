@@ -166,6 +166,10 @@ Request =
         (text) ->
           try
             json = JSON.parse(text)
+
+            # Propagate HTTP status code for further processing down the road
+            json.status = error.status
+
             Toast.message(json.messages)
             Promise.reject(json)
           catch error

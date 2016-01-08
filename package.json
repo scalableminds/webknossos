@@ -9,6 +9,7 @@
     "type": "git",
     "url": "git://github.com/scalableminds/oxalis.git"
   },
+  "license": "MIT",
   "devDependencies": {
     "chalk": "^1.1.1",
     "coffee-loader": "^0.7.2",

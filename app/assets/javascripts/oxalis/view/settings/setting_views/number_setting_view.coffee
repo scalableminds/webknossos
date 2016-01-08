@@ -10,10 +10,10 @@ class NumberSettingView extends AbstractSettingView
 
   template : _.template("""
     <div class="col-sm-5">
-      <%= displayName %>
+      <%- displayName %>
     </div>
     <div class="col-sm-7">
-      <input class="form-control" type="number" min="<%= min %>" max="<%= max %>" step="<%= step %>" value="<%= value %>">
+      <input class="form-control" type="number" min="<%- min %>" max="<%- max %>" step="<%- step %>" value="<%- value %>">
     </div>
   """)
 

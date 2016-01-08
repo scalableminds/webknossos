@@ -62,15 +62,7 @@ case class Annotation(
 
   def relativeDownloadUrl = Some(Annotation.relativeDownloadUrlOf(typ, id))
 
-  def isReadyToBeFinished(implicit ctx: DBAccessContext) = {
-    // TODO: RF - rework
-    task
-    .flatMap(_.annotationBase.toFox.flatMap(_.statisticsForAnnotation()).map(_.numberOfNodes))
-    .getOrElse(1L)
-    .flatMap { nodesInBase =>
-      this.statisticsForAnnotation().map(_.numberOfNodes > nodesInBase) getOrElse true
-    }
-  }
+  def isReadyToBeFinished(implicit ctx: DBAccessContext) = Future.successful(true)
 
   def removeTask = {
     this.copy(_task = None, typ = AnnotationType.Orphan)

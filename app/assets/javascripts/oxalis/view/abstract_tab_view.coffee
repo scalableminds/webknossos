@@ -10,13 +10,13 @@ class AbstractTabView extends Marionette.LayoutView
     <ul class="nav nav-tabs">
       <% tabs.forEach(function(tab) { %>
         <li>
-          <a href="#<%= tab.id %>" data-toggle="tab" data-tab-id="<%= tab.id %>"> <%= tab.iconString %> <%= tab.name %></a>
+          <a href="#<%- tab.id %>" data-toggle="tab" data-tab-id="<%- tab.id %>"> <%= tab.iconString %> <%- tab.name %></a>
         </li>
       <% }) %>
     </ul>
     <div class="tab-content flex-column">
       <% tabs.forEach(function(tab) { %>
-        <div class="tab-pane" id="<%= tab.id %>"></div>
+        <div class="tab-pane" id="<%- tab.id %>"></div>
       <% }) %>
     </div>
   """)

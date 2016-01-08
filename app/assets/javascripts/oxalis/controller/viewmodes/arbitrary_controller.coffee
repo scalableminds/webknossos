@@ -59,7 +59,11 @@ class ArbitraryController
     @plane = new ArbitraryPlane(@cam, @model, @WIDTH)
     @arbitraryView.addGeometry @plane
 
+    # render HTML element to indicate recording status
     @infoPlane = new ArbitraryPlaneInfo()
+    @infoPlane.render()
+    $("#render").append(@infoPlane.el)
+
 
     @input = _.extend({}, @input)
 

@@ -17,8 +17,8 @@ class TrackedTimeView extends Marionette.CompositeView
       <tbody>
       <% _.each(formattedLogs, function(entry) { %>
         <tr>
-          <td> <%= entry.interval %> </td>
-          <td> <%= entry.time %> </td>
+          <td> <%- entry.interval %> </td>
+          <td> <%- entry.time %> </td>
         </tr>
       <% }) %>
       </tbody>

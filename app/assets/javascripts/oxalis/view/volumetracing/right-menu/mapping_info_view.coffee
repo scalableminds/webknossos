@@ -12,10 +12,10 @@ class MappingInfoView extends Marionette.CompositeView
   template : _.template("""
     <div class="well">
       <% if (hasMapping) { %>
-        <p>ID without mapping: <%= idWithoutMapping %></p>
-        <p>ID with mapping: <%= idWithMapping %></p>
+        <p>ID without mapping: <%- idWithoutMapping %></p>
+        <p>ID with mapping: <%- idWithMapping %></p>
       <% } else { %>
-        <p>ID at current position: <%= idWithoutMapping %></p>
+        <p>ID at current position: <%- idWithoutMapping %></p>
       <% } %>
     </div>
     <% if (hasMapping) { %>

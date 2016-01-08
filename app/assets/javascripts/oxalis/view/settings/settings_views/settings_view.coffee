@@ -10,7 +10,7 @@ class SettingsView extends Marionette.ItemView
     <div class="panel-group flex-overflow">
 
       <% _.forEach(subviewCreators, function (subview, key) { %>
-        <div data-subview="<%= key %>"></div>
+        <div data-subview="<%- key %>"></div>
       <% }) %>
 
     </div>

@@ -5,8 +5,8 @@ class StatisticListItemView extends Marionette.ItemView
 
   tagName : "tr"
   template : _.template("""
-    <td><%= user.firstName %> <%= user.lastName %></td>
-    <td><%= hours %>h <%= remainingMinutes %>m</td>
+    <td><%- user.firstName %> <%- user.lastName %></td>
+    <td><%- hours %>h <%- remainingMinutes %>m</td>
   """)
 
 

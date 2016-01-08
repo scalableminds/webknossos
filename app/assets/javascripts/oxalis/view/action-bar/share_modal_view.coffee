@@ -18,7 +18,7 @@ class ShareModalView extends Marionette.ItemView
             <div class="row">
               <div class="col-md-12">
                 <div class="input-group">
-                  <input type="text" class="form-control" readonly value="<%= geturl() %>"></input>
+                  <input type="text" class="form-control" readonly value="<%- geturl() %>"></input>
                   <span class="input-group-btn">
                     <button class="btn btn-default copy-btn" type="button"><i class="fa fa-copy"></i>Copy</button>
                   </span>

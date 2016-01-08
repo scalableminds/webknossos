@@ -10,15 +10,15 @@ class SliderSettingView extends AbstractSettingView
 
   template : _.template("""
     <div class="col-sm-5">
-      <%= displayName %>
+      <%- displayName %>
     </div>
     <div class="col-sm-3 no-gutter v-center">
       <div class="v-center-agent">
-        <input type="range" min="<%= min %>" max="<%= max %>" step="<%= step %>" value="<%= value %>">
+        <input type="range" min="<%- min %>" max="<%- max %>" step="<%- step %>" value="<%- value %>">
       </div>
     </div>
     <div class="col-sm-4">
-      <input class="form-control" type="number" min="<%= min %>" max="<%= max %>" step="<%= step %>" value="<%= value %>">
+      <input class="form-control" type="number" min="<%- min %>" max="<%- max %>" step="<%- step %>" value="<%- value %>">
     </div>
   """)
 

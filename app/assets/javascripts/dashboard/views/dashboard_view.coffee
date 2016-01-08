@@ -12,7 +12,7 @@ class DashboardView extends Marionette.LayoutView
   id : "dashboard"
   template : _.template("""
     <% if (isAdminView) { %>
-      <h3>User: <%= firstName %> <%= lastName %></h3>
+      <h3>User: <%- firstName %> <%- lastName %></h3>
     <% } %>
     <div class="tabbable" id="tabbable-dashboard">
       <ul class="nav nav-tabs">
@@ -23,13 +23,16 @@ class DashboardView extends Marionette.LayoutView
         <% } %>
         <li <% if (isAdminView) { %> class="active" <% } %> >
           <a href="#" id="tab-tasks" data-toggle="tab">Tasks</a>
+        <li <% if (isAdminView) { %> class="active" <% } %> >
         </li>
         <li>
           <a href="#" id="tab-explorative" data-toggle="tab">Explorative Annotations</a>
         </li>
-        <li>
-          <a href="#" id="tab-logged-time" data-toggle="tab">Tracked Time</a>
-        </li>
+        <% if (isAdminView) { %>
+          <li>
+            <a href="#" id="tab-logged-time" data-toggle="tab">Tracked Time</a>
+          </li>
+        <% } %>
       </ul>
       <div class="tab-content">
         <div class="tab-pane active"></div>

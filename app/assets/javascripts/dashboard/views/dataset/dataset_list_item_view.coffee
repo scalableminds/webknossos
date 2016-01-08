@@ -21,13 +21,13 @@ class DatasetListItemView extends Marionette.CompositeView
         <i class="caret-right"></i>
         <i class="caret-down"></i>
       </td>
-      <td title="<%= dataSource.baseDir %>"><%= name %></td>
-      <td><%= dataStore.name %></td>
-      <td><%= TemplateHelpers.formatScale(dataSource.scale) %></td>
-      <td><%= owningTeam %></td>
+      <td title="<%- dataSource.baseDir %>"><%- name %></td>
+      <td><%- dataStore.name %></td>
+      <td><%- TemplateHelpers.formatScale(dataSource.scale) %></td>
+      <td><%- owningTeam %></td>
       <td class="team-label">
         <% _.map(allowedTeams, function(team){ %>
-          <span class="label label-default" style="background-color: <%= TemplateHelpers.stringToColor(team) %>"><%= team %></span>
+          <span class="label label-default" style="background-color: <%- TemplateHelpers.stringToColor(team) %>"><%- team %></span>
         <% }) %>
       </td>
       <td>
@@ -46,16 +46,16 @@ class DatasetListItemView extends Marionette.CompositeView
       </td>
       <td>
       <% _.map(dataSource.dataLayers, function(layer){ %>
-          <span class="label label-default"><%= layer.category %> - <%= layer.elementClass %></span>
+          <span class="label label-default"><%- layer.category %> - <%- layer.elementClass %></span>
       <% }) %>
       <td class="nowrap">
-        <form action="<%= jsRoutes.controllers.AnnotationController.createExplorational().url %>" method="POST">
-          <input type="hidden" name="dataSetName" value="<%= name %>" />
+        <form action="<%- jsRoutes.controllers.AnnotationController.createExplorational().url %>" method="POST">
+          <input type="hidden" name="dataSetName" value="<%- name %>" />
           <input type="hidden" name="contentType" id="contentTypeInput" />
         </form>
         <% if(dataSource.needsImport){ %>
           <div>
-            <a href="/api/datasets/<%= name %>/import" class=" import-dataset">
+            <a href="/api/datasets/<%- name %>/import" class=" import-dataset">
               <i class="fa fa-plus-circle"></i>import
             </a>
             <div class="progress progress-striped hide">
@@ -68,7 +68,7 @@ class DatasetListItemView extends Marionette.CompositeView
         <% } %>
         <% if(isActive){ %>
           <div class="dataset-actions">
-            <a href="/datasets/<%= name %>/view" title="View dataset">
+            <a href="/datasets/<%- name %>/view" title="View dataset">
               <img src="/assets/images/eye.svg"> view
             </a>
             <a href="#" title="Create skeleton tracing" id="skeletonTraceLink">

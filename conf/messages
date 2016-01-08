@@ -143,8 +143,6 @@ role.invalid=Invalid role
 role.removed=Removed role from {0}
 role.added=Added role to {0}
 
-
-
 tracing=Annotation
 tracing.notFound=Tracing couldn''t be found
 annotation.creationFailed=Failed to create annotation
@@ -157,7 +155,7 @@ annotation.saved=Annotation got saved
 annotation.setName=Successfully named annotation
 annotation.invalidName=Annotation name is invalid
 annotation.finish.confirm=Are you sure you want to permanently finish this tracing?
-annotation.reset.success=Annoation is resetted
+annotation.reset.success=Annotation was successfully reset
 annotation.review.assignFailed=Couldn''t assign reviewee
 annotation.review.notFound=There is no review for this tracing
 annotation.review.assigned=You got assigned as reviewee
@@ -169,10 +167,9 @@ annotation.download.notAllowed=You can''t download this tracing
 annotation.notPossible=Couldn''t access annotation
 annotation.notFinishable=Before you can finish the annotation, you need to annotate something
 annotation.notInProgress=The tracing is not in progress and can''t be finished
-annotation.reset.success=Reset tracing to base was successful
 annotation.reset.failed=Couldn''t reset tracing to base
 annotation.merge.success=Merging successfully done
-annotation.dirtyState=Annotation is not up to date. YOu can''t make any changes
+annotation.dirtyState=Annotation is not up to date. You can''t make any changes
 annotation.update.impossible=This annotation can''t be updated (read only)
 
 issue.summary.notSupplied=No summary supplied

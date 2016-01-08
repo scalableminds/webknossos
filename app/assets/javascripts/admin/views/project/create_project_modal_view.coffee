@@ -67,6 +67,7 @@ class CreateProjectModalView extends Marionette.LayoutView
       viewComparator: "firstName"
       collection : new UserCollection()
       childViewOptions :
+        defaultItem : {email : app.currentUser.email}
         modelValue : -> return "#{@model.get("firstName")} #{@model.get("lastName")} (#{@model.get("email")})"
     )
     @teamSelectionView = new SelectionView(
@@ -97,7 +98,6 @@ class CreateProjectModalView extends Marionette.LayoutView
         name : @ui.name.val()
         team : @ui.team.find("select :selected").val()
       )
-
 
       @projectCollection.create(project,
         wait : true

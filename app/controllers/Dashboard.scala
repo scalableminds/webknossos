@@ -49,7 +49,7 @@ trait Dashboard extends FoxImplicits {
   }
 
 
-  def dashboardExploratoryAnnotations(user: User, requestingUser: User, isFinished: Boolean)(implicit ctx: DBAccessContext) = {
+  def dashboardExploratoryAnnotations(user: User, requestingUser: User, isFinished: Option[Boolean])(implicit ctx: DBAccessContext) = {
     for {
       exploratoryAnnotations <- annotationsAsJson(AnnotationService.findExploratoryOf(user, isFinished), user)
     } yield {

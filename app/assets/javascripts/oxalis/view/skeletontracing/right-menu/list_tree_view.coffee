@@ -1,6 +1,7 @@
 _                = require("lodash")
 app              = require("app")
 Marionette       = require("backbone.marionette")
+Backbone         = require("backbone")
 ListTreeItemView = require("./list_tree_item_view")
 
 class ListTreeView extends Marionette.CompositeView
@@ -70,6 +71,7 @@ class ListTreeView extends Marionette.CompositeView
 
   initialize : (options) ->
 
+    @collection = new Backbone.Collection()
 
     @listenTo(@, "render", @updateSortIndicator)
     @refresh()
@@ -144,31 +146,15 @@ class ListTreeView extends Marionette.CompositeView
   refresh : ->
 
     trees = @model.skeletonTracing.getTreesSorted()
-    @collection = new Backbone.Collection(trees)
+    @collection.reset(trees)
 
-    @updateTreesDebounced()
+    #@updateTreesDebounced()
 
 
   updateName : ->
 
       name = @getActiveTree().name
       @ui.treeNameInput.val(name)
-
-
-  updateTreesDebounced : ->
-    # avoid lags caused by frequent DOM modification
-
-    @updateTreesDebounced = _.debounce(
-      =>
-        @updateName()
-        @_renderChildren()
-      200
-    )
-    @updateTreesDebounced()
-
-    # animate scrolling to the new tree
-    # $("#tree-list").animate({
-    #   scrollTop: newIcon.offset().top - $("#tree-list").offset().top + $("#tree-list").scrollTop()}, 250)
 
 
   setActiveTree : (treeId) ->

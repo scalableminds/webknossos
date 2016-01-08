@@ -68,7 +68,7 @@ class TeamRoleModalView extends Marionette.CompositeView
               role :
                 name: @$("select[data-teamname=\"#{teamName}\"] :selected").val()
             }
-          ) || []
+          , @) || []
 
           # Find unselected teams
           removedTeamsNames = _.map(@$("input[type=checkbox]:not(:checked)"), (element) ->

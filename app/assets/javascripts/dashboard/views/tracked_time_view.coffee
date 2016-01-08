@@ -1,9 +1,9 @@
 _                         = require("lodash")
-marionette                = require("backbone.marionette")
+Marionette                = require("backbone.marionette")
 DashboardTaskListItemView = require("./dashboard_task_list_item_view")
 routes                    = require("routes")
 
-class TrackedTimeView extends Backbone.Marionette.CompositeView
+class TrackedTimeView extends Marionette.CompositeView
 
   template : _.template("""
     <h3>Tracked Time</h3>

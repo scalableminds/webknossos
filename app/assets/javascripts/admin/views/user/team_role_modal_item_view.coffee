@@ -1,8 +1,8 @@
 _              = require("lodash")
-marionette     = require("backbone.marionette")
+Marionette     = require("backbone.marionette")
 TeamCollection = require("admin/models/team/team_collection")
 
-class TeamRoleModalItemView extends Backbone.Marionette.ItemView
+class TeamRoleModalItemView extends Marionette.ItemView
 
   tagName : "div"
   className : "row-fluid"

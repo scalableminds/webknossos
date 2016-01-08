@@ -1,7 +1,7 @@
 _          = require("lodash")
 Marionette = require("backbone.marionette")
 
-class ProjectTaskView extends Backbone.Marionette.ItemView
+class ProjectTaskView extends Marionette.ItemView
 
   tagName : "tr"
   template : _.template("""

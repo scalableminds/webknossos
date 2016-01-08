@@ -1,12 +1,12 @@
 _              = require("lodash")
-marionette     = require("backbone.marionette")
+Marionette     = require("backbone.marionette")
 app            = require("app")
 Toast          = require("libs/toast")
 MergeModalView = require("./merge_modal_view")
 ShareModalView = require("./share_modal_view")
 Constants      = require("oxalis/constants")
 
-class DatasetActionsView extends Backbone.Marionette.ItemView
+class DatasetActionsView extends Marionette.ItemView
 
   template : _.template("""
     <% if(tracing.restrictions.allowUpdate){ %>

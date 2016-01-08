@@ -1,8 +1,8 @@
 _          = require("lodash")
-marionette = require("backbone.marionette")
+Marionette = require("backbone.marionette")
 Constants  = require("oxalis/constants")
 
-class VolumeActionsView extends Backbone.Marionette.ItemView
+class VolumeActionsView extends Marionette.ItemView
 
   template : _.template("""
     <div class="btn-group">

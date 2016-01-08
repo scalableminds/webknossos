@@ -8,7 +8,7 @@ Crosshair          = require("../../geometries/crosshair")
 ArbitraryView      = require("../../view/arbitrary_view")
 ArbitraryPlaneInfo = require("../../geometries/arbitrary_plane_info")
 constants          = require("../../constants")
-MJS                = require("mjs")
+{M4x4, V3}         = require("libs/mjs")
 
 
 class ArbitraryController
@@ -128,6 +128,8 @@ class ArbitraryController
 
     @input.keyboard = new Input.Keyboard(
 
+      # KeyboardJS is sensitive to ordering (complex combos first)
+
       # Scale plane
       "l"             : (timeFactor) => @arbitraryView.applyScale -@model.user.get("scaleValue")
       "k"             : (timeFactor) => @arbitraryView.applyScale  @model.user.get("scaleValue")
@@ -142,17 +144,17 @@ class ArbitraryController
         @moved()
       "alt + space"   : (timeFactor) => @cam.move [0, 0, -getVoxelOffset(timeFactor)]
 
-      #Rotate in distance
-      "left"          : (timeFactor) => @cam.yaw @model.user.get("rotateValue") * timeFactor, @mode == constants.MODE_ARBITRARY
-      "right"         : (timeFactor) => @cam.yaw -@model.user.get("rotateValue") * timeFactor, @mode == constants.MODE_ARBITRARY
-      "up"            : (timeFactor) => @cam.pitch -@model.user.get("rotateValue") * timeFactor, @mode == constants.MODE_ARBITRARY
-      "down"          : (timeFactor) => @cam.pitch @model.user.get("rotateValue") * timeFactor, @mode == constants.MODE_ARBITRARY
-
       #Rotate at centre
       "shift + left"  : (timeFactor) => @cam.yaw @model.user.get("rotateValue") * timeFactor
       "shift + right" : (timeFactor) => @cam.yaw -@model.user.get("rotateValue") * timeFactor
       "shift + up"    : (timeFactor) => @cam.pitch @model.user.get("rotateValue") * timeFactor
       "shift + down"  : (timeFactor) => @cam.pitch -@model.user.get("rotateValue") * timeFactor
+
+      #Rotate in distance
+      "left"          : (timeFactor) => @cam.yaw @model.user.get("rotateValue") * timeFactor, @mode == constants.MODE_ARBITRARY
+      "right"         : (timeFactor) => @cam.yaw -@model.user.get("rotateValue") * timeFactor, @mode == constants.MODE_ARBITRARY
+      "up"            : (timeFactor) => @cam.pitch -@model.user.get("rotateValue") * timeFactor, @mode == constants.MODE_ARBITRARY
+      "down"          : (timeFactor) => @cam.pitch @model.user.get("rotateValue") * timeFactor, @mode == constants.MODE_ARBITRARY
 
       #Zoom in/out
       "i"             : (timeFactor) => @cam.zoomIn()
@@ -359,7 +361,7 @@ class ArbitraryController
       lastNodeMatrix[13] - matrix[13]
       lastNodeMatrix[14] - matrix[14]
     ]
-    vectorLength = MJS.V3.length(vector)
+    vectorLength = V3.length(vector)
 
     if vectorLength > 10
       @setWaypoint()

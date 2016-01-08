@@ -13,49 +13,25 @@ paths = {
   src : {
     css : __dirname + "/app/assets/stylesheets/main.less",
     dir : __dirname + "/app/assets",
-    js : __dirname + "/app/assets/javascripts"
+    js : __dirname + "/app/assets/javascripts",
+    fontawesome : __dirname + "/node_modules/font-awesome/fonts/**",
   },
   dest : {
     js : __dirname + "/public/javascripts",
-    css : __dirname + "/public/stylesheets"
-  }
+    css : __dirname + "/public/stylesheets",
+    fontawesome : __dirname + "/public/fonts/fontawesome",
+  },
 };
 
 
-var bowerPath = __dirname + "/public/bower_components/";
+var nodePath = __dirname + "/node_modules/";
 var scriptPaths = {
-  "jquery"              : bowerPath + "jquery/jquery",
-  "lodash"              : bowerPath + "lodash/lodash",
-  "underscore"          : bowerPath + "underscore/underscore",
-  "bootstrap"           : bowerPath + "bootstrap/dist/js/bootstrap",
-  "coffee-script"       : bowerPath + "coffee-script/extras/coffee-script",
-  "backbone.marionette" : bowerPath + "backbone.marionette/lib/backbone.marionette",
-  "backbone.paginator"  : bowerPath + "backbone.paginator/lib/backbone.paginator",
-  "backbone.subviews"   : bowerPath + "backbone.subviews/index",
-  "backbone-deep-model" : bowerPath + "backbone-deep-model/distribution/deep-model",
-  "backbone"            : bowerPath + "backbone/backbone",
-  "gzip"                : bowerPath + "zlib/bin/gzip.min",
-  "three"               : bowerPath + "three/index",
-  "three.color"         : bowerPath + "ColorConverter/index",
-  "three.trackball"     : bowerPath + "TrackballControls/index",
-  "stats"               : bowerPath + "threejs-stats/Stats",
-  "ace"                 : bowerPath + "ace-builds/src-min-noconflict/ace",
-  "keyboard"            : bowerPath + "KeyboardJS/dist/keyboard",
-  "gamepad"             : bowerPath + "gamepad.js/gamepad",
-  "tween"               : bowerPath + "tweenjs/src/Tween",
-  "moment"              : bowerPath + "momentjs/moment",
-  "require"             : bowerPath + "requirejs/require",
-  "c3"                  : bowerPath + "c3/c3",
-  "d3"                  : bowerPath + "d3/d3",
-  "offcanvas"           : bowerPath + "jasny-bootstrap/js/offcanvas",
-  "fileinput"           : bowerPath + "jasny-bootstrap/js/fileinput",
-  "daterangepicker"     : bowerPath + "bootstrap-daterangepicker/daterangepicker",
-  "rangeslider"         : bowerPath + "nouislider/distribute/nouislider",
-  "clipboard"           : bowerPath + "clipboard/dist/clipboard",
-  "mjs"                 : bowerPath + "mjs/src/mjs",
-  "fetch"               : bowerPath + "fetch/fetch",
-  "promise"             : bowerPath + "es6-promise/promise.min",
-  "nested_obj_model"    : "libs/nested_obj_model"
+  "backbone-deep-model" : nodePath + "backbone-deep-model/distribution/deep-model",
+  "gzip"                : nodePath + "zlibjs/bin/gzip.min",
+  "three"               : nodePath + "three.js/build/three",
+  "three.color"         : nodePath + "three.js/examples/js/math/ColorConverter",
+  "three.trackball"     : nodePath + "three.js/examples/js/controls/TrackballControls",
+  "jasny-bootstrap"     : nodePath + "jasny-bootstrap/dist/js/jasny-bootstrap",
 };
 
 
@@ -88,13 +64,20 @@ function makeScripts() {
       publicPath:        "/assets/javascripts/"
     },
     module: {
+      // Reduce compilation time by telling webpack to not parse these libraries.
+      // Only add libraries that have no dependencies eg. no require, define or similar calls.
+      noParse: [
+        /lodash/,
+        /jquery/,
+      ],
       loaders: [
         { test: /\.coffee$/, loader: "coffee-loader" },
+        //{ test: scriptPaths["backbone.marionette"], loader: "imports?backbone.wreqr" },
         { test: scriptPaths["three.color"], loader: "imports?THREE=three!exports?THREE.ColorConverter" },
         { test: scriptPaths["three.trackball"], loader: "imports?THREE=three" },
         { test: scriptPaths["three"], loader: "exports?THREE" },
         { test: scriptPaths["backbone-deep-model"], loader: "imports?_=underscore" },
-        { test: scriptPaths["stats"], loader: "exports?Stats" },
+        //{ test: scriptPaths["stats"], loader: "exports?Stats" },
         { test: scriptPaths["gzip"], loader: "exports?this.Zlib" },
         // {
         //   test: /\.jsx?$/,
@@ -112,7 +95,18 @@ function makeScripts() {
       { "routes": "var jsRoutes" }
     ],
     devtool: "source-map",
-    debug: true
+    debug: true,
+    plugins: [
+      new webpack.ProvidePlugin({
+        $ : "jquery",
+        jQuery : "jquery",
+        "window.jQuery" : "jquery",
+        _ : "lodash"
+      }),
+
+      // // Use lodash in place of underscore
+      // new webpack.NormalModuleReplacementPlugin(/underscore/, 'lodash'),
+    ]
   })
 }
 
@@ -121,7 +115,9 @@ gulp.task("scripts", function (done) {
     if (err) {
       done(err);
     } else {
-      if (stats.compilation.assets) {
+      if (stats.compilation.errors && stats.compilation.errors.length) {
+        done(stats.compilation.errors);
+      } else if (stats.compilation.assets) {
         Object.keys(stats.compilation.assets).forEach(function (asset) {
           logFile(path.join(paths.dest.js, asset));
         });
@@ -157,6 +153,13 @@ gulp.task("styles", function () {
     .pipe(logger());
 });
 
+// FONT AWESOME
+gulp.task("fontawesome", function () {
+  return gulp.src(paths.src.fontawesome)
+    .pipe(gulp.dest(paths.dest.fontawesome))
+    .pipe(logger());
+});
+
 
 gulp.task("watch:styles", ["styles"], function (done) {
   chokidar.watch(paths.src.dir, { ignoreInitial: true }).on('all', function () {
@@ -166,8 +169,8 @@ gulp.task("watch:styles", ["styles"], function (done) {
 
 
 // ENTRY
-gulp.task("debug", ["watch:styles", "watch:scripts"]);
-gulp.task("build", ["styles", "scripts"]);
+gulp.task("debug", ["watch:styles", "watch:scripts", "fontawesome"]);
+gulp.task("build", ["styles", "scripts", "fontawesome"]);
 gulp.task("default", ["build"]);
 
 fs.writeFileSync("target/gulp.pid", process.pid, "utf8");

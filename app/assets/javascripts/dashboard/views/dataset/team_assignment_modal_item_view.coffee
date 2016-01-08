@@ -1,7 +1,7 @@
 _          = require("lodash")
-marionette = require("backbone.marionette")
+Marionette = require("backbone.marionette")
 
-class TeamAssignmentModalItemView extends Backbone.Marionette.ItemView
+class TeamAssignmentModalItemView extends Marionette.ItemView
 
   tagName : "li"
   template : _.template("""

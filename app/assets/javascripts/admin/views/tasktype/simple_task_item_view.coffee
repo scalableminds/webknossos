@@ -1,7 +1,7 @@
 _          = require("lodash")
-marionette = require("backbone.marionette")
+Marionette = require("backbone.marionette")
 
-class SimpleTaskItemView extends Backbone.Marionette.CompositeView
+class SimpleTaskItemView extends Marionette.CompositeView
 
   tagName : "tr"
   template : _.template("""

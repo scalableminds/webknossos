@@ -1,7 +1,7 @@
-marionette = require("backbone.marionette")
 _          = require("lodash")
+Marionette = require("backbone.marionette")
 
-class AbstractSettingView extends Backbone.Marionette.ItemView
+class AbstractSettingView extends Marionette.ItemView
 
 
   initialize : ({ @model, @options }) ->

@@ -1,12 +1,12 @@
 _                   = require("lodash")
-marionette          = require("backbone.marionette")
+Marionette          = require("backbone.marionette")
 Toast               = require("libs/toast")
 SelectAllRows       = require("libs/behaviors/select_all_rows_behavior")
 app                 = require("app")
 TeamListItemView    = require("./team_list_item_view")
 CreateTeamModalView = require("./create_team_modal_view")
 
-class TeamListView extends Backbone.Marionette.CompositeView
+class TeamListView extends Marionette.CompositeView
 
   template : _.template("""
     <h3>Teams</h3>

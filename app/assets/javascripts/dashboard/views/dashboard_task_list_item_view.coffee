@@ -1,8 +1,8 @@
 _          = require("lodash")
-marionette = require("backbone.marionette")
+Marionette = require("backbone.marionette")
 Toast      = require("libs/toast")
 
-class DashboardTaskListItemView extends Backbone.Marionette.ItemView
+class DashboardTaskListItemView extends Marionette.ItemView
 
   tagName : "tr"
 

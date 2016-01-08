@@ -14,7 +14,7 @@ paths = {
     css : __dirname + "/app/assets/stylesheets/main.less",
     dir : __dirname + "/app/assets",
     js : __dirname + "/app/assets/javascripts",
-    fontawesome : __dirname + "/node_modules/font-awesome/fonts",
+    fontawesome : __dirname + "/node_modules/font-awesome/fonts/**",
   },
   dest : {
     js : __dirname + "/public/javascripts",
@@ -169,7 +169,7 @@ gulp.task("watch:styles", ["styles"], function (done) {
 
 
 // ENTRY
-gulp.task("debug", ["watch:styles", "watch:scripts"]);
+gulp.task("debug", ["watch:styles", "watch:scripts", "fontawesome"]);
 gulp.task("build", ["styles", "scripts", "fontawesome"]);
 gulp.task("default", ["build"]);
 

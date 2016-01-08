@@ -128,6 +128,8 @@ class ArbitraryController
 
     @input.keyboard = new Input.Keyboard(
 
+      # KeyboardJS is sensitive to ordering (complex combos first)
+
       # Scale plane
       "l"             : (timeFactor) => @arbitraryView.applyScale -@model.user.get("scaleValue")
       "k"             : (timeFactor) => @arbitraryView.applyScale  @model.user.get("scaleValue")
@@ -142,17 +144,17 @@ class ArbitraryController
         @moved()
       "alt + space"   : (timeFactor) => @cam.move [0, 0, -getVoxelOffset(timeFactor)]
 
-      #Rotate in distance
-      "left"          : (timeFactor) => @cam.yaw @model.user.get("rotateValue") * timeFactor, @mode == constants.MODE_ARBITRARY
-      "right"         : (timeFactor) => @cam.yaw -@model.user.get("rotateValue") * timeFactor, @mode == constants.MODE_ARBITRARY
-      "up"            : (timeFactor) => @cam.pitch -@model.user.get("rotateValue") * timeFactor, @mode == constants.MODE_ARBITRARY
-      "down"          : (timeFactor) => @cam.pitch @model.user.get("rotateValue") * timeFactor, @mode == constants.MODE_ARBITRARY
-
       #Rotate at centre
       "shift + left"  : (timeFactor) => @cam.yaw @model.user.get("rotateValue") * timeFactor
       "shift + right" : (timeFactor) => @cam.yaw -@model.user.get("rotateValue") * timeFactor
       "shift + up"    : (timeFactor) => @cam.pitch @model.user.get("rotateValue") * timeFactor
       "shift + down"  : (timeFactor) => @cam.pitch -@model.user.get("rotateValue") * timeFactor
+
+      #Rotate in distance
+      "left"          : (timeFactor) => @cam.yaw @model.user.get("rotateValue") * timeFactor, @mode == constants.MODE_ARBITRARY
+      "right"         : (timeFactor) => @cam.yaw -@model.user.get("rotateValue") * timeFactor, @mode == constants.MODE_ARBITRARY
+      "up"            : (timeFactor) => @cam.pitch -@model.user.get("rotateValue") * timeFactor, @mode == constants.MODE_ARBITRARY
+      "down"          : (timeFactor) => @cam.pitch @model.user.get("rotateValue") * timeFactor, @mode == constants.MODE_ARBITRARY
 
       #Zoom in/out
       "i"             : (timeFactor) => @cam.zoomIn()

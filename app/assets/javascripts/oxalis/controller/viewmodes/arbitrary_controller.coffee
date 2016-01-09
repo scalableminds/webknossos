@@ -79,6 +79,8 @@ class ArbitraryController
 
     @stop()
 
+    @crosshair.setVisibility(@model.user.get("displayCrosshair"))
+
     # Toggle record
     @setRecord(false)
     $('#trace-mode-trace').on("click", =>

@@ -275,7 +275,11 @@ class ArbitraryController
 
   addNode : (position) =>
 
-    @model.skeletonTracing.addNode(position, constants.TYPE_USUAL, constants.ARBITRARY_VIEW, 0)
+    datasetConfig = @model.get("datasetConfiguration")
+    fourBit = if datasetConfig.get("fourBit") then 4 else 8
+    interpolation = datasetConfig.get("interpolation")
+
+    @model.skeletonTracing.addNode(position, constants.TYPE_USUAL, constants.ARBITRARY_VIEW, 0, fourBit, interpolation)
 
 
   setWaypoint : () =>

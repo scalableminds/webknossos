@@ -25,9 +25,6 @@ class ParticleMaterialFactory extends AbstractMaterialFactory
       showRadius :
         type : "i"
         value : 1
-      devicePixelRatio :
-        type : "f"
-        value : window.devicePixelRatio || 1
 
     @attributes = _.extend @attributes,
       sizeNm :
@@ -74,7 +71,6 @@ class ParticleMaterialFactory extends AbstractMaterialFactory
       uniform float particleSize;
       uniform float scale;
       uniform int   showRadius;
-      uniform float devicePixelRatio;
       varying vec3 vColor;
       attribute float sizeNm;
       attribute float nodeScaleFactor;
@@ -87,7 +83,7 @@ class ParticleMaterialFactory extends AbstractMaterialFactory
             gl_PointSize = max(
                 sizeNm / zoomFactor / baseVoxel,
                 particleSize
-              ) * devicePixelRatio * scale * nodeScaleFactor;
+              ) * scale * nodeScaleFactor;
           else
             gl_PointSize = particleSize * nodeScaleFactor;
           gl_Position = projectionMatrix * mvPosition;

@@ -6,15 +6,18 @@ import oxalis.view.ProvidesSessionData
 import com.scalableminds.util.mvc.ExtendedController
 import models.user.User
 import net.liftweb.common.{Failure, Full}
-import play.api.i18n.Messages
+import play.api.i18n.{MessagesApi, I18nSupport, Messages}
 import models.binary.DataSet
 import com.scalableminds.util.tools.Converter
 import play.api.libs.json._
 
-class Controller extends PlayController
+trait Controller extends PlayController
 with ExtendedController
 with ProvidesSessionData
-with models.basics.Implicits {
+with models.basics.Implicits
+with I18nSupport
+{
+  def messagesApi: MessagesApi
 
   implicit def AuthenticatedRequest2Request[T](r: AuthenticatedRequest[T]) =
     r.request
@@ -22,7 +25,7 @@ with models.basics.Implicits {
   def ensureTeamAdministration(user: User, team: String) = {
     user.adminTeams.exists(_.team == team) match {
       case true => Full(true)
-      case false => Failure(Messages("notAllowed"))
+      case false => Failure(Messages("team.admin.notAllowed", team))
     }
   }
 

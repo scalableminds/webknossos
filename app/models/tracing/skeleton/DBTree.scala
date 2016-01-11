@@ -17,7 +17,7 @@ import play.api.libs.functional.syntax._
 import play.api.libs.json.Json._
 import play.api.libs.json._
 
-case class DBTree(_tracing: BSONObjectID, treeId: Int, color: Color, timestamp: Long = System.currentTimeMillis, name: String = "", _id: BSONObjectID = BSONObjectID.generate) {
+case class DBTree(_tracing: BSONObjectID, treeId: Int, color: Option[Color], timestamp: Long = System.currentTimeMillis, name: String = "", _id: BSONObjectID = BSONObjectID.generate) {
   val dao = DBTree
 
   def id = _id.stringify
@@ -50,8 +50,8 @@ object DBTreeService {
     val tree = DBTree.createFrom(_tracing, t)
     for {
       _ <- DBTreeDAO.insert(tree)
-      _ <- Fox.combined(t.nodes.map(n => DBNodeDAO.insert(DBNode(n, tree._id))).toList)
-      _ <- Fox.combined(t.edges.map(e => DBEdgeDAO.insert(DBEdge(e, tree._id))).toList)
+      _ <- DBNodeDAO.bulkInsert(t.nodes.map(DBNode(_, tree._id)).toSeq)
+      _ <- DBEdgeDAO.bulkInsert(t.edges.map(DBEdge(_, tree._id)).toSeq)
     } yield {
       tree
     }
@@ -89,11 +89,11 @@ object DBTree {
   implicit val dbTreeFormat = Json.format[DBTree]
 
   val dbTreeUpdateWrites: Writes[DBTree] =
-    ((__ \ "color").write[Color] and
+    ((__ \ "color").writeNullable[Color] and
       (__ \ "timestamp").write[Long] and
       (__ \ "name").write[String])(tree => (tree.color, tree.timestamp, tree.name))
 
-  def empty(_tracing: BSONObjectID) = DBTree(_tracing, 1, Color(1, 0, 0, 0), System.currentTimeMillis(), nameFromId(1))
+  def empty(_tracing: BSONObjectID) = DBTree(_tracing, 1, None, System.currentTimeMillis(), nameFromId(1))
 
   def nameFromId(treeId: Int) = "Tree%03d".format(treeId)
 

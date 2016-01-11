@@ -3,9 +3,11 @@
  */
 package controllers
 
+import javax.inject.Inject
+
 import oxalis.security.Secured
 import models.user.time.{TimeSpan, TimeSpanService}
-import play.api.i18n.Messages
+import play.api.i18n.{MessagesApi, Messages}
 import play.api.libs.json.Json
 import com.scalableminds.util.tools.Fox
 import play.api.libs.concurrent.Execution.Implicits._
@@ -13,10 +15,8 @@ import models.user.{User, UserDAO}
 import play.twirl.api.Html
 import scala.concurrent.duration.Duration
 import models.annotation.AnnotationDAO
-import com.scalableminds.util.reactivemongo.GlobalAccessContext
-import models.tracing.skeleton.DBNodeDAO
 
-object StatisticsController extends Controller with Secured{
+class StatisticsController @Inject() (val messagesApi: MessagesApi) extends Controller with Secured{
   val intervalHandler = Map(
     "month" -> TimeSpan.groupByMonth _,
     "week" -> TimeSpan.groupByWeek _
@@ -39,16 +39,14 @@ object StatisticsController extends Controller with Secured{
       case Some(handler) =>
         for{
           times <- TimeSpanService.loggedTimePerInterval(handler, start, end)
-          numberOfAnnotations <- AnnotationDAO.countAll(GlobalAccessContext)
-          numberOfUsers <- UserDAO.count(Json.obj())(GlobalAccessContext)
-          numberOfNodes <- DBNodeDAO.count(Json.obj())(GlobalAccessContext)
+          numberOfAnnotations <- AnnotationDAO.countAll
+          numberOfUsers <- UserDAO.count(Json.obj())
         } yield {
           Ok(Json.obj(
             "name" -> "oxalis",
             "tracingTimes" -> intervalTracingTimeJson(times),
             "numberOfAnnotations" -> numberOfAnnotations,
-            "numberOfUsers" -> numberOfUsers,
-            "numberOfNodes" -> numberOfNodes
+            "numberOfUsers" -> numberOfUsers
           ))
         }
       case _ =>

@@ -1,12 +1,10 @@
-### define
-backbone : backbone
-backbone.marionette : marionette
-backbone.subviews : subviews
-underscore : _
-oxalis/view/settings/setting_views/checkbox_setting_view : CheckboxSettingView
-###
+backbone            = require("backbone")
+Marionette          = require("backbone.marionette")
+subviews            = require("backbone-subviews")
+_                   = require("lodash")
+CheckboxSettingView = require("oxalis/view/settings/setting_views/checkbox_setting_view")
 
-class MappingInfoView extends Backbone.Marionette.CompositeView
+class MappingInfoView extends Marionette.CompositeView
 
   RENDER_DEBOUNCE_TIME : 200
 
@@ -14,10 +12,10 @@ class MappingInfoView extends Backbone.Marionette.CompositeView
   template : _.template("""
     <div class="well">
       <% if (hasMapping) { %>
-        <p>ID without mapping: <%= idWithoutMapping %></p>
-        <p>ID with mapping: <%= idWithMapping %></p>
+        <p>ID without mapping: <%- idWithoutMapping %></p>
+        <p>ID with mapping: <%- idWithMapping %></p>
       <% } else { %>
-        <p>ID at current position: <%= idWithoutMapping %></p>
+        <p>ID at current position: <%- idWithoutMapping %></p>
       <% } %>
     </div>
     <% if (hasMapping) { %>
@@ -68,3 +66,5 @@ class MappingInfoView extends Backbone.Marionette.CompositeView
       idWithMapping : @cube.getDataValue(pos, @cube.mapping)
       idWithoutMapping : @cube.getDataValue(pos, @cube.EMPTY_MAPPING)
     }
+
+module.exports = MappingInfoView

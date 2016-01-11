@@ -1,6 +1,3 @@
-### define
-###
-
 #### Triangle Lookup Table
 
 # The marching cube algorithm requires a
@@ -268,3 +265,5 @@ tlt = [
   [[[0.5, 0, 0], [0, 0, 0.5], [0, 0.5, 0]]],  # 254
   []  # 255
 ]
+
+module.exports = tlt

@@ -1,9 +1,8 @@
-### define
-backbone : backbone
-../constants : constants
-../model/dimensions : dimensions
-three : THREE
-###
+app        = require("app")
+backbone   = require("backbone")
+constants  = require("../constants")
+dimensions = require("../model/dimensions")
+THREE      = require("three")
 
 class Cube
 
@@ -41,6 +40,8 @@ class Cube
 
   setCorners : (@min, @max) ->
 
+    { min, max } = this
+
     vec = (x, y, z) ->
       new THREE.Vector3(x, y, z)
 
@@ -74,7 +75,7 @@ class Cube
 
     @initialized = true
     @updatePosition(@model.flycam.getPosition())
-    @model.flycam.update()
+    app.vent.trigger("rerender")
 
   updatePosition : (position) ->
 
@@ -115,3 +116,6 @@ class Cube
   setVisibility : (visible) ->
 
     @visible = visible
+
+
+module.exports = Cube

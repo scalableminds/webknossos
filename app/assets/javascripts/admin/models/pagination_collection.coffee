@@ -1,44 +1,215 @@
-### define
-underscore : _
-backbone.paginator : Paginator
-###
+_                  = require("lodash")
+Backbone           = require("backbone")
 
-# A helper class to wrap the Backbone.Paginator lib and set some sensible
-# defaults
-#
-# Make sure to always call fetch() with the option 'silent: true' and use
-# strings instead of objects for the 'data' option.
+class PaginationCollection
 
-class PaginationCollection extends Backbone.Paginator.clientPager
+  constructor : (models, options) ->
 
-  paginator_core :
-    url : ->
-      return this.url #use url from each individual collection
-    type : "GET"
-    dataType : "json"
-    cache : true
+    _.extend(this, Backbone.Events)
 
-  paginator_ui :
-    firstPage : 1
-    currentPage : 1
-    perPage : 10
-    pagesInRange : 4
+    if options?.fullCollection
+      @fullCollection = options.fullCollection
+    else
+      @fullCollection = new Backbone.Collection(models, options)
+
+    if @model?
+      @fullCollection.model = @model
+    if @url?
+      @fullCollection.url   = @url
+    if @parse?
+      @fullCollection.parse = @parse
+    if @idAttribute?
+      @fullCollection.idAttribute = @idAttribute
+
+    @currentModels = @fullCollection.models.slice()
+    @state = _.defaults(_.clone(@state) ? {},
+      pageSize : 10
+      currentPage : 0
+      sorting : null
+      filter : null
+      filterQuery : ""
+    )
+
+    @length = Math.min(@state.pageSize, @fullCollection.length)
+    @models = @currentModels.slice(0, @length)
+
+    @listenTo(@fullCollection, "reset", @_reset)
+    @listenTo(@fullCollection, "add", @_passthroughEvent("add"))
+    @listenTo(@fullCollection, "remove", @_passthroughEvent("remove"))
+    @listenTo(@fullCollection, "sync", @_passthroughEvent("sync"))
 
 
-  server_api = {}
+  add : ->
+    @fullCollection.add.apply(@fullCollection, arguments)
 
-  parse : (response) ->
+  remove : ->
+    @fullCollection.remove.apply(@fullCollection, arguments)
 
-    this.totalPages = Math.ceil(response.length / @perPage)
-    return response;
+  set : ->
+    @fullCollection.set.apply(@fullCollection, arguments)
+
+  fetch : ->
+    @fullCollection.fetch.apply(@fullCollection, arguments)
+
+  create : ->
+    @fullCollection.create.apply(@fullCollection, arguments)
+
+  reset : ->
+    @fullCollection.reset.apply(@fullCollection, arguments)
 
 
-  lastPage : ->
+  setPageSize : (pageSize) ->
+    @state.pageSize = pageSize
+    @_reset()
+    return
 
-    lastPage = @info().totalPages
-    @goTo(lastPage)
+
+  setSorting : (field, order) ->
+    @setSort(field, order)
+    return
 
 
-  firstPage : ->
+  setSort : (field, order) ->
 
-    @goTo(1)
+    if order == "asc"
+      order = 1
+    if order == "desc"
+      order = -1
+
+    @state.sorting = (left, right) ->
+      leftValue  = left.get(field)
+      rightValue = right.get(field)
+      return if _.isString(leftValue) && _.isString(rightValue)
+          if order > 0
+            leftValue.localeCompare(rightValue)
+          else
+            rightValue.localeCompare(leftValue)
+        else
+          if order > 0
+            leftValue - rightValue
+          else
+            rightValue - leftValue
+
+    @_reset()
+    return
+
+
+  setFilter : (fields, query) ->
+
+    if query == '' or not _.isString(query)
+      @state.filterQuery = ""
+      @state.filter = null
+    else
+      words = _.map(query.match(/\w+/ig), (element) -> element.toLowerCase())
+      pattern = "(" + _.uniq(words).join("|") + ")"
+      regexp = new RegExp(pattern, "igm")
+
+      @state.filterQuery = query
+      @state.filter = (model) ->
+        return _.any(fields, (fieldName) ->
+          value = model.get(fieldName)
+          return if value? then regexp.test(value) else false
+        )
+
+    @_reset()
+    return
+
+
+  at : (index) ->
+    return @currentModels[index]
+
+  get : (index) ->
+    return @at(index)
+
+  clone : ->
+    clonedCollection = new PaginationCollection(null, {
+      fullCollection : @fullCollection
+    })
+    clonedCollection.setPageSize(@state.pageSize)
+    return clonedCollection
+
+
+  _lastPageIndex : ->
+    return Math.ceil(@currentModels.length / @state.pageSize) - 1
+
+  _passthroughEvent : (eventType) ->
+    return (args...) ->
+      @_reset()
+      @trigger(eventType, args...)
+      return
+
+  _resetModels : ->
+    models = @fullCollection.models.slice()
+
+    if @state.filter?
+      models = models.filter(@state.filter)
+
+    if @state.sorting?
+      models = models.sort(@state.sorting)
+
+    @currentModels = models
+    @state.currentPage = Math.max(0, Math.min(
+      @_lastPageIndex(),
+      @state.currentPage))
+
+    return
+
+
+  _reset : ->
+    @_resetModels()
+    @models = @currentModels.slice(
+      @state.currentPage * @state.pageSize,
+      Math.min(
+        (@state.currentPage + 1) * @state.pageSize,
+        @currentModels.length))
+
+    @length = @models.length
+    @trigger("reset")
+    return
+
+
+  getPaginationInfo : ->
+    return {
+      firstPage : 0
+      lastPage : @_lastPageIndex()
+      currentPage : @state.currentPage
+      pageSize : @state.pageSize
+    }
+
+
+  getPreviousPage : ->
+    @getPage(@state.currentPage - 1)
+    return
+
+
+  getNextPage : ->
+    @getPage(@state.currentPage + 1)
+    return
+
+
+  getFirstPage : ->
+    @getPage(0)
+    return
+
+
+  getLastPage : ->
+    @getPage(@_lastPageIndex())
+    return
+
+
+  getPage : (pageIndex) ->
+    if 0 <= pageIndex < Math.ceil(@currentModels.length / @state.pageSize)
+      @state.currentPage = pageIndex
+      @_reset()
+    return
+
+  toJSON : ->
+    @models.map((model) -> model.toJSON())
+
+
+  findWhere : ->
+
+    return @fullCollection.findWhere.apply(@fullCollection, arguments)
+
+
+module.exports = PaginationCollection

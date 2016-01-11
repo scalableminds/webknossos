@@ -1,42 +1,27 @@
-### define
-underscore : _
-backbone.marionette : marionette
-libs/toast : Toast
-libs/behaviors/select_all_rows_behavior : SelectAllRows
-app : app
-./team_list_item_view : TeamListItemView
-./create_team_modal_view : CreateTeamModalView
-###
+_                   = require("lodash")
+Marionette          = require("backbone.marionette")
+Toast               = require("libs/toast")
+SelectAllRows       = require("libs/behaviors/select_all_rows_behavior")
+app                 = require("app")
+TeamListItemView    = require("./team_list_item_view")
+CreateTeamModalView = require("./create_team_modal_view")
 
-class TeamListView extends Backbone.Marionette.CompositeView
+class TeamListView extends Marionette.CompositeView
 
   template : _.template("""
     <h3>Teams</h3>
-    <form method="post">
-      <table class="table table-striped">
-        <thead>
-          <tr>
-            <th>
-              <input type="checkbox" class="select-all-rows">
-            </th>
-            <th>Name</th>
-            <th>Owner</th>
-            <th>Roles</th>
-            <th>Actions</th>
-          </tr>
-        </thead>
-        <tbody></tbody>
-      </table>
-      <div class="navbar navbar-default navbar-fixed-bottom">
-        <div class="navbar-form">
-          <div class="btn-group">
-            <a class="btn btn-primary" id="new-team">
-              <i class="fa fa-plus"></i>Add New Team
-            </a>
-          </div>
-        </div>
-      </div>
-    </form>
+    <table class="table table-striped">
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Parent</th>
+          <th>Owner</th>
+          <th>Roles</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
    <div class="modal-wrapper"></div>
   """)
 
@@ -51,27 +36,20 @@ class TeamListView extends Backbone.Marionette.CompositeView
   ui :
     "modalWrapper" : ".modal-wrapper"
 
-  events :
-    "click #new-team" : "showModal"
-
   initialize : ->
 
-    @listenTo(app.vent, "paginationView:filter", @filter)
-    @listenTo(app.vent, "CreateTeamModal:refresh", @refreshPagination)
-
+    @listenTo(app.vent, "paginationView:filter", @filterBySearch)
+    @listenTo(app.vent, "CreateTeamModal:refresh", @render)
+    @listenTo(app.vent, "paginationView:addElement", @showModal)
 
     @collection.fetch(
       data : "isEditable=true"
-      silent : true
-    ).done( =>
-      @collection.goTo(1)
     )
 
 
-  filter : (filterQuery) ->
+  filterBySearch : (filterQuery) ->
 
     @collection.setFilter(["name", "owner"], filterQuery)
-    @collection.pager()
 
 
   showModal : (modalView) ->
@@ -82,8 +60,4 @@ class TeamListView extends Backbone.Marionette.CompositeView
     modalView.show()
 
 
-  refreshPagination : ->
-
-    @collection.pager()
-    @collection.lastPage() # newly inserted items are on the last page
-    @render()
+module.exports = TeamListView

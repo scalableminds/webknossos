@@ -3,21 +3,20 @@
  */
 package controllers
 
+import javax.inject.Inject
+
 import play.api.Logger
 import play.api.mvc.Action
 import models.binary._
-import com.scalableminds.util.reactivemongo.{DBAccessContext, GlobalAccessContext}
-import net.liftweb.common.Full
+import com.scalableminds.util.reactivemongo.DBAccessContext
 import oxalis.security.Secured
-import scala.concurrent.Future
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.braingames.binary.models.DataLayer
-import net.liftweb.common.Full
-import play.api.i18n.Messages
+import play.api.i18n.{MessagesApi, Messages}
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json.Json
 
-object DataTokenController extends Controller with Secured{
+class DataTokenController @Inject() (val messagesApi: MessagesApi) extends Controller with Secured{
 
   def ensureAccessToLayer(dataSet: DataSet, dataLayerName: String)(implicit ctx: DBAccessContext): Fox[DataLayer] = {
     dataSet.dataSource.flatMap(_.getDataLayer(dataLayerName))

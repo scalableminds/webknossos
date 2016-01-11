@@ -1,7 +1,5 @@
-### define
-./polyhedron_rasterizer : PolyhedronRasterizer
-m4x4 : M4x4
-###
+PolyhedronRasterizer = require("./polyhedron_rasterizer")
+{M4x4, V3}           = require("libs/mjs")
 
 class PingStrategy3d
 
@@ -117,4 +115,4 @@ class PingStrategy3d.DslSlow extends PingStrategy3d
     #priority 0 is highests
 
 
-PingStrategy3d
+module.exports = PingStrategy3d

@@ -1,12 +1,10 @@
-### define
-underscore : _
-app : app
-backbone.marionette : marionette
-admin/models/task/annotation_collection : AnnotationCollection
-./task_annotation_view: TaskAnnotationView
-###
+_                    = require("lodash")
+app                  = require("app")
+Marionette           = require("backbone.marionette")
+AnnotationCollection = require("admin/models/task/annotation_collection")
+TaskAnnotationView   = require("./task_annotation_view")
 
-class TaskListItemView extends Backbone.Marionette.CompositeView
+class TaskListItemView extends Marionette.CompositeView
 
   tagName : "tbody"
   attributes : ->
@@ -18,37 +16,50 @@ class TaskListItemView extends Backbone.Marionette.CompositeView
         <i class="caret-right"></i>
         <i class="caret-down"></i>
       </td>
-      <td><%= formattedHash %></td>
-      <td><%= team %></td>
+      <td><%- formattedHash %></td>
+      <td><%- team %></td>
       <td>
-        <a href="/projects#<%= projectName %>">
-          <%= projectName %>
+        <a href="/projects#<%- projectName %>">
+          <%- projectName %>
         </a>
       </td>
       <td>
+<<<<<<< HEAD
         <a href="/taskTypes#<%= type.summary %>">
           <%= type.summary %>
+=======
+        <a href="/taskTypes#<%- type.summary %>">
+          <%- type.summary %>
+>>>>>>> dev
         </a>
       </td>
-      <td><%= dataSet %></td>
-      <td>(<%= editPosition %>)</td>
-      <td>(<%= boundingBox.join(", ") %>)</td>
+      <td><%- dataSet %></td>
+      <td>(<%- editPosition %>)</td>
+      <td>(<%- boundingBox.join(", ") %>)</td>
       <td>
         <% if (neededExperience.domain != "" || neededExperience.value > 0) { %>
-          <span class="label label-default"><%= neededExperience.domain %> : <%= neededExperience.value %></span>
+          <span class="label label-default"><%- neededExperience.domain %> : <%- neededExperience.value %></span>
         <% } %>
       </td>
-      <td><%= priority %></td>
-      <td><%= created %></td>
+      <td><%- priority %></td>
+      <td><%- created %></td>
       <td>
-        <i class="fa fa-play-circle"></i><%= status.open %><br>
-        <i class="fa fa-random"></i><%= status.inProgress %><br>
-        <i class="fa fa-check-circle-o"></i><%= status.completed %>
+        <i class="fa fa-play-circle"></i><%- status.open %><br>
+        <i class="fa fa-random"></i><%- status.inProgress %><br>
+        <i class="fa fa-check-circle-o"></i><%- status.completed %>
       </td>
       <td class="nowrap">
+<<<<<<< HEAD
         <a href="/tasks/<%= id %>/edit"><i class="fa fa-pencil"></i>edit</a><br>
         <a href="/annotations/CompoundTask/<%= id %>" title="view all finished tracings"><i class="fa fa-random"></i>view</a><br>
         <a href="/api/tasks/<%= id %>/download" title="download all finished tracings"><i class="fa fa-download"></i>download</a><br>
+=======
+        <a href="/admin/tasks/<%- id %>/edit"><i class="fa fa-pencil"></i>edit</a><br>
+        <% if (status.completed > 0) { %>
+          <a href="/annotations/CompoundTask/<%- id %>" title="view all finished tracings"><i class="fa fa-random"></i>view</a><br>
+          <a href="/api/tasks/<%- id %>/download" title="download all finished tracings"><i class="fa fa-download"></i>download</a><br>
+        <% } %>
+>>>>>>> dev
         <a href="#" class="delete"><i class="fa fa-trash-o"></i>delete</a>
       </td>
     </tr>
@@ -106,3 +117,4 @@ class TaskListItemView extends Backbone.Marionette.CompositeView
       @ui.detailsRow.addClass("hide")
       @ui.detailsToggle.removeClass("open")
 
+module.exports = TaskListItemView

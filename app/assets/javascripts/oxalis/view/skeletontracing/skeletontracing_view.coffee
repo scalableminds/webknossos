@@ -1,10 +1,8 @@
-### define
-jquery : $
-underscore : _
-libs/toast : Toast
-../modal : modal
-../../view : View
-###
+$     = require("jquery")
+_     = require("lodash")
+Toast = require("libs/toast")
+modal = require("../modal")
+View  = require("../../view")
 
 class SkeletonTracingView extends View
 
@@ -22,9 +20,10 @@ class SkeletonTracingView extends View
       Toast.error("You're tracing in the wrong direction"))
 
 
+    autoSaveFailureMessage = "Auto-Save failed!"
     @listenTo(@model.skeletonTracing.stateLogger, "pushFailed", ->
       if @reloadDenied
-        Toast.error("Auto-Save failed!")
+        Toast.error(autoSaveFailureMessage,  true)
       else
         modal.show("Several attempts to reach our server have failed. You should reload the page
           to make sure that your work won't be lost.",
@@ -35,8 +34,13 @@ class SkeletonTracingView extends View
             window.location.reload() )},
           {id : "cancel-button", label : "Cancel", callback : ( => @reloadDenied = true ) } ] )
     )
+    @listenTo(@model.skeletonTracing.stateLogger, "pushDone", ->
+      Toast.delete("danger", autoSaveFailureMessage))
+
 
   showFirstVisToggle : ->
 
     modal.show("You just toggled the skeleton visibility. To toggle back, just hit the 1-Key.",
       [{id: "ok-button", label: "OK, Got it."}])
+
+module.exports = SkeletonTracingView

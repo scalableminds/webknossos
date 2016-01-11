@@ -1,7 +1,5 @@
-### define
-underscore : _
-moment : moment
-###
+_      = require("lodash")
+moment = require("moment")
 
 class FormatUtils
 
@@ -32,6 +30,7 @@ class FormatUtils
     else
       text
 
+<<<<<<< HEAD
 
   ###*
    * Return current date and time
@@ -39,3 +38,6 @@ class FormatUtils
   @formatDate : ->
 
     return moment().format("YYYY-MM-DD HH:mm")
+=======
+module.exports = FormatUtils
+>>>>>>> dev

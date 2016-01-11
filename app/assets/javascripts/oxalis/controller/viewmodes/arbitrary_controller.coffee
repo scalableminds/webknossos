@@ -1,16 +1,15 @@
-### define
-app : app
-backbone : Backbone
-jquery : $
-underscore : _
-libs/request : Request
-libs/input : Input
-../../geometries/arbitrary_plane : ArbitraryPlane
-../../geometries/crosshair : Crosshair
-../../view/arbitrary_view : ArbitraryView
-../../geometries/arbitrary_plane_info : ArbitraryPlaneInfo
-../../constants : constants
-###
+app                = require("app")
+Backbone           = require("backbone")
+$                  = require("jquery")
+_                  = require("lodash")
+Input              = require("libs/input")
+ArbitraryPlane     = require("../../geometries/arbitrary_plane")
+Crosshair          = require("../../geometries/crosshair")
+ArbitraryView      = require("../../view/arbitrary_view")
+ArbitraryPlaneInfo = require("../../geometries/arbitrary_plane_info")
+constants          = require("../../constants")
+{M4x4, V3}         = require("libs/mjs")
+
 
 class ArbitraryController
 
@@ -60,11 +59,15 @@ class ArbitraryController
     @plane = new ArbitraryPlane(@cam, @model, @WIDTH)
     @arbitraryView.addGeometry @plane
 
+    # render HTML element to indicate recording status
     @infoPlane = new ArbitraryPlaneInfo()
+    @infoPlane.render()
+    $("#render").append(@infoPlane.el)
+
 
     @input = _.extend({}, @input)
 
-    @crosshair = new Crosshair(@cam, model.user.get("crosshairSize"))
+    @crosshair = new Crosshair(@cam, @model.user.get("crosshairSize"))
     @arbitraryView.addGeometry(@crosshair)
 
     @listenTo(@model.user, "change:displayCrosshair", (model, value) ->
@@ -75,6 +78,19 @@ class ArbitraryController
     @arbitraryView.draw()
 
     @stop()
+
+    @crosshair.setVisibility(@model.user.get("displayCrosshair"))
+
+    # Toggle record
+    @setRecord(false)
+    $('#trace-mode-trace').on("click", =>
+      @setRecord(true)
+      $(":focus").blur()
+    )
+    $('#trace-mode-watch').on("click", =>
+      @setRecord(false)
+      $(":focus").blur()
+    )
 
 
   render : (forceUpdate, event) ->
@@ -114,6 +130,8 @@ class ArbitraryController
 
     @input.keyboard = new Input.Keyboard(
 
+      # KeyboardJS is sensitive to ordering (complex combos first)
+
       # Scale plane
       "l"             : (timeFactor) => @arbitraryView.applyScale -@model.user.get("scaleValue")
       "k"             : (timeFactor) => @arbitraryView.applyScale  @model.user.get("scaleValue")
@@ -128,17 +146,17 @@ class ArbitraryController
         @moved()
       "alt + space"   : (timeFactor) => @cam.move [0, 0, -getVoxelOffset(timeFactor)]
 
-      #Rotate in distance
-      "left"          : (timeFactor) => @cam.yaw @model.user.get("rotateValue") * timeFactor, @mode == constants.MODE_ARBITRARY
-      "right"         : (timeFactor) => @cam.yaw -@model.user.get("rotateValue") * timeFactor, @mode == constants.MODE_ARBITRARY
-      "up"            : (timeFactor) => @cam.pitch -@model.user.get("rotateValue") * timeFactor, @mode == constants.MODE_ARBITRARY
-      "down"          : (timeFactor) => @cam.pitch @model.user.get("rotateValue") * timeFactor, @mode == constants.MODE_ARBITRARY
-
       #Rotate at centre
       "shift + left"  : (timeFactor) => @cam.yaw @model.user.get("rotateValue") * timeFactor
       "shift + right" : (timeFactor) => @cam.yaw -@model.user.get("rotateValue") * timeFactor
       "shift + up"    : (timeFactor) => @cam.pitch @model.user.get("rotateValue") * timeFactor
       "shift + down"  : (timeFactor) => @cam.pitch -@model.user.get("rotateValue") * timeFactor
+
+      #Rotate in distance
+      "left"          : (timeFactor) => @cam.yaw @model.user.get("rotateValue") * timeFactor, @mode == constants.MODE_ARBITRARY
+      "right"         : (timeFactor) => @cam.yaw -@model.user.get("rotateValue") * timeFactor, @mode == constants.MODE_ARBITRARY
+      "up"            : (timeFactor) => @cam.pitch -@model.user.get("rotateValue") * timeFactor, @mode == constants.MODE_ARBITRARY
+      "down"          : (timeFactor) => @cam.pitch @model.user.get("rotateValue") * timeFactor, @mode == constants.MODE_ARBITRARY
 
       #Zoom in/out
       "i"             : (timeFactor) => @cam.zoomIn()
@@ -170,12 +188,9 @@ class ArbitraryController
 
       #Recording of Waypoints
       "z" : =>
-        @record = true
-        @infoPlane.updateInfo(true)
-        @setWaypoint()
+        @setRecord(true)
       "u" : =>
-        @record = false
-        @infoPlane.updateInfo(false)
+        @setRecord(false)
       #Comments
       "n" : => @setActiveNode(@model.skeletonTracing.nextCommentNodeID(false), true)
       "p" : => @setActiveNode(@model.skeletonTracing.nextCommentNodeID(true), true)
@@ -189,6 +204,20 @@ class ArbitraryController
         @centerActiveNode()
 
     , -1)
+
+
+  setRecord : (@record) ->
+
+    $('#trace-mode button').removeClass("btn-primary")
+    if @record
+      $('#trace-mode-trace').addClass("btn-primary")
+    else
+      $('#trace-mode-watch').addClass("btn-primary")
+
+    @infoPlane.updateInfo(@record)
+    if @record
+      @setWaypoint()
+
 
   init : ->
 
@@ -248,7 +277,11 @@ class ArbitraryController
 
   addNode : (position) =>
 
-    @model.skeletonTracing.addNode(position, constants.TYPE_USUAL, constants.ARBITRARY_VIEW, 0)
+    datasetConfig = @model.get("datasetConfiguration")
+    fourBit = if datasetConfig.get("fourBit") then 4 else 8
+    interpolation = datasetConfig.get("interpolation")
+
+    @model.skeletonTracing.addNode(position, constants.TYPE_USUAL, constants.ARBITRARY_VIEW, 0, fourBit, interpolation)
 
 
   setWaypoint : () =>
@@ -339,3 +372,6 @@ class ArbitraryController
     if vectorLength > 10
       @setWaypoint()
       @lastNodeMatrix = matrix
+
+
+module.exports = ArbitraryController

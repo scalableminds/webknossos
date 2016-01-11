@@ -9,20 +9,19 @@ import play.api.libs.concurrent.Execution.Implicits._
 import play.api.Logger
 import models.user.{User, Experience}
 import models.annotation._
-import play.api.libs.json.{Json, JsObject}
+import play.api.libs.json.{JsNull, Json, JsObject}
 import com.scalableminds.util.mvc.Formatter
 import scala.concurrent.duration._
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.util.reactivemongo.{DefaultAccessDefinitions, GlobalAccessContext, DBAccessContext}
+import reactivemongo.api.commands.WriteResult
 import reactivemongo.bson.BSONObjectID
 import play.modules.reactivemongo.json.BSONFormats._
 import org.joda.time.DateTime
 import org.joda.time.format.DateTimeFormat
 import java.text.SimpleDateFormat
-import play.api.libs.json.JsObject
 import scala.async.Async._
 import akka.actor.Props
-import akka.routing.RoundRobinRouter
 import reactivemongo.api.indexes.{IndexType, Index}
 import reactivemongo.core.commands.LastError
 import com.scalableminds.util.reactivemongo.AccessRestrictions.{AllowIf, DenyEveryone}
@@ -36,13 +35,14 @@ case class Task(
                  assignedInstances: Int = 0,
                  tracingTime: Option[Long] = None,
                  created: DateTime = DateTime.now(),
+                 isActive: Boolean = true,
                  _project: Option[String] = None,
                  _id: BSONObjectID = BSONObjectID.generate
                ) extends FoxImplicits {
 
   lazy val id = _id.stringify
 
-  def taskType(implicit ctx: DBAccessContext) = TaskTypeDAO.findOneById(_taskType)(GlobalAccessContext).toFox
+  def taskType(implicit ctx: DBAccessContext) = TaskTypeDAO.findOneById(_taskType, true)(GlobalAccessContext).toFox
 
   def project(implicit ctx: DBAccessContext) =
     _project.toFox.flatMap(name => ProjectDAO.findOneByName(name))
@@ -62,7 +62,7 @@ case class Task(
   def unassigneOnce = this.copy(assignedInstances = assignedInstances - 1)
 
   def status(implicit ctx: DBAccessContext) = async{
-    val inProgress = await(annotations).filter(!_.state.isFinished).size
+    val inProgress = await(AnnotationService.countUnfinishedAnnotationsFor(this) getOrElse 0)
     CompletionStatus(
       open = instances - assignedInstances,
       inProgress = inProgress,
@@ -90,7 +90,7 @@ object Task extends FoxImplicits {
       editPosition <- task.annotationBase.flatMap(_.content.map(_.editPosition)) getOrElse Point3D(1, 1, 1)
       boundingBox <- task.annotationBase.flatMap(_.content.map(_.boundingBox)) getOrElse None
       status <- task.status
-      taskType <- task.taskType.futureBox
+      tt <- task.taskType.map(TaskType.transformToJson) getOrElse JsNull
       projectName = task._project.getOrElse("")
     } yield {
       Json.obj(
@@ -98,7 +98,7 @@ object Task extends FoxImplicits {
         "team" -> task.team,
         "formattedHash" -> Formatter.formatHash(task.id),
         "projectName" -> projectName,
-        "type" -> taskType.toOption.map(TaskType.publicTaskTypeWrites.writes),
+        "type" -> tt,
         "dataSet" -> dataSetName,
         "editPosition" -> editPosition,
         "boundingBox" -> boundingBox,
@@ -142,6 +142,14 @@ object TaskDAO extends SecuredBaseDAO[Task] with FoxImplicits {
     }
   }
 
+  override def find(query: JsObject = Json.obj())(implicit ctx: DBAccessContext) = {
+    super.find(query ++ Json.obj("isActive" -> true))
+  }
+
+  override def findOne(query: JsObject = Json.obj())(implicit ctx: DBAccessContext) = {
+    super.findOne(query ++ Json.obj("isActive" -> true))
+  }
+
   @deprecated(message = "This method shouldn't be used. Use TaskService.remove instead", "2.0")
   override def removeById(bson: BSONObjectID)(implicit ctx: DBAccessContext) = {
     super.removeById(bson)
@@ -162,12 +170,22 @@ object TaskDAO extends SecuredBaseDAO[Task] with FoxImplicits {
     find("_taskType", _taskType).collect[List]()
   }
 
+  def deleteAllWithTaskType(taskType: TaskType)(implicit ctx: DBAccessContext) =
+    update(Json.obj("_taskType" -> taskType._id), Json.obj("$set" -> Json.obj("isActive" -> false)))
+
   def findAllByProject(project: String)(implicit ctx: DBAccessContext) = withExceptionCatcher{
     find("_project", project).collect[List]()
   }
 
   def findAllAssignable(implicit ctx: DBAccessContext) =
     findAll.map(_.filter(!_.isFullyAssigned))
+
+  def findOneById(id: BSONObjectID, includeDeleted: Boolean = false)(implicit ctx: DBAccessContext) = withExceptionCatcher{
+    if(includeDeleted)
+      super.find(Json.obj("_id" -> id)).one[Task]
+    else
+      super.find(Json.obj("_id" -> id, "isActive" -> true)).one[Task]
+  }
 
   def logTime(time: Long, _task: BSONObjectID)(implicit ctx: DBAccessContext) =
     update(Json.obj("_id" -> _task), Json.obj("$inc" -> Json.obj("tracingTime" -> time)))
@@ -187,7 +205,7 @@ object TaskDAO extends SecuredBaseDAO[Task] with FoxImplicits {
              instances: Int,
              team: String,
              _project: Option[String]
-            )(implicit ctx: DBAccessContext): Fox[LastError] =
+            )(implicit ctx: DBAccessContext): Fox[WriteResult] =
     update(
       Json.obj("_id" -> _task),
       Json.obj("$set" ->

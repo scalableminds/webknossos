@@ -1,23 +1,24 @@
-### define
-backbone : Backbone
-../model/dimensions : Dimensions
-../../libs/resizable_buffer : ResizableBuffer
-../constants : constants
-three : THREE
-###
+app             = require("app")
+Backbone        = require("backbone")
+ResizableBuffer = require("libs/resizable_buffer")
+THREE           = require("three")
+Dimensions      = require("../model/dimensions")
+constants       = require("../constants")
 
-COLOR_ARRAY      = [0xff0000, 0x00ff00, 0x0000ff, 0xffff00, 0x00ffff, 0xff00ff]
+class ContourGeometry
 
-class CellLayer
+  COLOR_NORMAL : new THREE.Color(0x000000)
+  COLOR_DELETE : new THREE.Color(0xff0000)
 
   constructor : (@volumeTracing, @flycam) ->
 
     _.extend(this, Backbone.Events)
 
-    @color = 0x000000
+    @color = @COLOR_NORMAL
 
     @listenTo(@volumeTracing, "volumeAnnotated", @reset)
     @listenTo(@volumeTracing, "updateLayer", (contourList) ->
+      @color = if cellId == 0 then @COLOR_DELETE else @COLOR_NORMAL
       @reset()
       for p in contourList
         @addEdgePoint(p)
@@ -32,7 +33,7 @@ class CellLayer
     edgeGeometry.addAttribute( 'position', Float32Array, 0, 3 )
     edgeGeometry.dynamic = true
 
-    @edge = new THREE.Line(edgeGeometry, new THREE.LineBasicMaterial({color: @color, linewidth: 2}), THREE.LineStrip)
+    @edge = new THREE.Line(edgeGeometry, new THREE.LineBasicMaterial({linewidth: 2}), THREE.LineStrip)
     @edge.vertexBuffer = new ResizableBuffer(3)
 
     @reset()
@@ -40,6 +41,7 @@ class CellLayer
 
   reset : ->
 
+    @edge.material.color = @color
     @edge.vertexBuffer.clear()
     @finalizeMesh(@edge)
 
@@ -59,7 +61,7 @@ class CellLayer
     @edge.vertexBuffer.push(edgePoint)
     @finalizeMesh(@edge)
 
-    @flycam.update()
+    app.vent.trigger("rerender")
 
 
   finalizeMesh : (mesh) ->
@@ -70,3 +72,4 @@ class CellLayer
     positionAttribute.numItems    = mesh.vertexBuffer.getLength() * 3
     positionAttribute.needsUpdate = true
 
+module.exports = ContourGeometry

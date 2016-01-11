@@ -1,21 +1,19 @@
-### define
-backbone.marionette : marionette
-app : app
-oxalis/constants : constants
-###
+Marionette = require("backbone.marionette")
+app        = require("app")
+constants  = require("oxalis/constants")
 
-class ViewModesView extends Backbone.Marionette.ItemView
+class ViewModesView extends Marionette.ItemView
 
   template : _.template("""
     <div class="btn-group btn-group">
       <div class="btn-group">
-        <button type="button" class="btn btn-default" id="mode-3planes">3 Planes</button>
+        <button type="button" class="btn btn-default" id="mode-3planes">Orthogonal</button>
       </div>
       <div class="btn-group">
-        <button type="button" class="btn btn-default" id="mode-sphere">Sphere</button>
+        <button type="button" class="btn btn-default" id="mode-sphere">Flight</button>
       </div>
       <div class="btn-group">
-        <button type="button" class="btn btn-default" id="mode-arbitraryplane">Arbitrary Plane</button>
+        <button type="button" class="btn btn-default" id="mode-arbitraryplane">Oblique</button>
       </div>
     </div>
   """)
@@ -31,13 +29,13 @@ class ViewModesView extends Backbone.Marionette.ItemView
 
   initialize : (options) ->
 
-    @listenTo(app.vent, "changeViewMode", @updateForMode)
+    @listenTo(@model, "change:mode", @updateForMode)
 
 
   changeMode : (evt) ->
 
     mode = @modeMapping[evt.target.id]
-    app.vent.trigger("changeViewMode", mode)
+    @model.setMode(mode)
 
 
   updateForMode : (mode) ->
@@ -47,3 +45,4 @@ class ViewModesView extends Backbone.Marionette.ItemView
     buttonId = _.invert(@modeMapping)[mode]
     @$("##{buttonId}").addClass("btn-primary")
 
+module.exports = ViewModesView

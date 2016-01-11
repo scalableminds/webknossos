@@ -1,12 +1,11 @@
-### define
-app : app
-backbone : Backbone
-../model : Model
-../view : View
-../model/dimensions : Dimensions
-../constants : constants
-three : THREE
-###
+app        = require("app")
+Backbone   = require("backbone")
+Model      = require("../model")
+View       = require("../view")
+Dimensions = require("../model/dimensions")
+constants  = require("../constants")
+THREE      = require("three")
+TWEEN      = require("tween.js")
 
 class CameraController
 
@@ -141,7 +140,7 @@ class CameraController
     @flycam.setRayThreshold(@camera.right, @camera.left)
     @camera.updateProjectionMatrix()
     @notify()
-    @flycam.update()
+    app.vent.trigger("rerender")
 
 
   TDViewportSize : ->
@@ -173,7 +172,7 @@ class CameraController
     camera.updateProjectionMatrix()
 
     @flycam.setRayThreshold(camera.right, camera.left)
-    @flycam.update()
+    app.vent.trigger("rerender")
 
 
   moveTDViewX : (x) =>
@@ -210,7 +209,7 @@ class CameraController
     camera.top    += moveVector.y
     camera.bottom += moveVector.y
     camera.updateProjectionMatrix()
-    @flycam.update()
+    app.vent.trigger("rerender")
 
 
   centerTDView : ->
@@ -243,10 +242,13 @@ class CameraController
       @cameras[i].left  = @cameras[i].bottom = -boundary * scaleFactor
       @cameras[i].right = @cameras[i].top    =  boundary * scaleFactor
       @cameras[i].updateProjectionMatrix()
-    @flycam.update()
+    app.vent.trigger("rerender")
 
 
   bindToEvents : ->
 
     @listenTo(@model.user, "change:clippingDistance", (model, value) -> @setClippingDistance(value))
     @listenTo(@model.user, "change:zoom", (model, value) -> @updateCamViewport())
+
+
+module.exports = CameraController

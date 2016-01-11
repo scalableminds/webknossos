@@ -1,25 +1,24 @@
-### define
-jquery : $
-underscore : _
-app : app
-backbone : Backbone
-./controller/viewmodes/plane_controller : PlaneController
-./controller/annotations/skeletontracing_controller : SkeletonTracingController
-./controller/annotations/volumetracing_controller : VolumeTracingController
-./controller/combinations/skeletontracing_arbitrary_controller : SkeletonTracingArbitraryController
-./controller/combinations/skeletontracing_plane_controller : SkeletonTracingPlaneController
-./controller/combinations/volumetracing_plane_controller : VolumeTracingPlaneController
-./controller/scene_controller : SceneController
-./controller/url_manager : UrlManager
-./model : Model
-./view : View
-./view/skeletontracing/skeletontracing_view : SkeletonTracingView
-./view/volumetracing/volumetracing_view : VolumeTracingView
-../libs/input : Input
-../libs/toast : Toast
-./constants : constants
-stats : Stats
-###
+$                                  = require("jquery")
+_                                  = require("lodash")
+app                                = require("../app")
+Backbone                           = require("backbone")
+Stats                              = require("stats.js")
+PlaneController                    = require("./controller/viewmodes/plane_controller")
+SkeletonTracingController          = require("./controller/annotations/skeletontracing_controller")
+VolumeTracingController            = require("./controller/annotations/volumetracing_controller")
+SkeletonTracingArbitraryController = require("./controller/combinations/skeletontracing_arbitrary_controller")
+SkeletonTracingPlaneController     = require("./controller/combinations/skeletontracing_plane_controller")
+VolumeTracingPlaneController       = require("./controller/combinations/volumetracing_plane_controller")
+SceneController                    = require("./controller/scene_controller")
+UrlManager                         = require("./controller/url_manager")
+Model                              = require("./model")
+View                               = require("./view")
+SkeletonTracingView                = require("./view/skeletontracing/skeletontracing_view")
+VolumeTracingView                  = require("./view/volumetracing/volumetracing_view")
+constants                          = require("./constants")
+Input                              = require("../libs/input")
+Toast                              = require("../libs/toast")
+
 
 class Controller
 
@@ -49,96 +48,104 @@ class Controller
 
     _.extend(@, Backbone.Events)
 
-    unless @browserSupported()
-      unless window.confirm("You are using an unsupported browser, please use the newest version of Chrome, Opera or Safari.\n\nTry anyways?")
-        window.history.back()
-
     @fullScreen = false
 
     @urlManager = new UrlManager(@model)
     @model.set("state", @urlManager.initialState)
 
-    @model.fetch().done (error) =>
-
-      # Do not continue, when there was an error and we got no settings from the server
-      if error
-        return
-
-      unless @model.tracing.restrictions.allowAccess
-        Toast.Error "You are not allowed to access this tracing"
-        return
-
-      @urlManager.startUrlUpdater()
-
-      for allowedMode in @model.settings.allowedModes
-
-        @allowedModes.push switch allowedMode
-          when "oxalis" then constants.MODE_PLANE_TRACING
-          when "arbitrary" then constants.MODE_ARBITRARY
-          when "volume" then constants.MODE_VOLUME
-
-      if constants.MODE_ARBITRARY in @allowedModes
-        @allowedModes.push(constants.MODE_ARBITRARY_PLANE)
-
-      # FPS stats
-      stats = new Stats()
-      $("body").append stats.domElement
-
-      @sceneController = new SceneController(
-        @model.upperBoundary, @model.flycam, @model)
+    @model.fetch()
+      .then(
+        (error) => @modelFetchDone(error)
+      )
 
 
-      if @model.skeletonTracing?
+  modelFetchDone : (error) ->
 
-        @view = new SkeletonTracingView(@model)
-        @annotationController = new SkeletonTracingController(
-          @model, @sceneController, @view )
-        @planeController = new SkeletonTracingPlaneController(
-          @model, stats, @view, @sceneController, @annotationController)
-        @arbitraryController = new SkeletonTracingArbitraryController(
-          @model, stats, @view, @sceneController, @annotationController)
+    # Do not continue, when there was an error and we got no settings from the server
+    if error
+      return
 
-      else if @model.volumeTracing?
+    unless @model.tracing.restrictions.allowAccess
+      Toast.Error "You are not allowed to access this tracing"
+      return
 
-        @view = new VolumeTracingView(@model)
-        @annotationController = new VolumeTracingController(
-          @model, @sceneController, @view )
-        @planeController = new VolumeTracingPlaneController(
-          @model, stats, @view, @sceneController, @annotationController)
+    @urlManager.startUrlUpdater()
 
-      else # View mode
+    for allowedMode in @model.settings.allowedModes
 
-        @view = new View(@model)
-        @planeController = new PlaneController(
-          @model, stats, @view, @sceneController)
+      if @model.getColorBinaries()[0].cube.BIT_DEPTH == 8
+        switch allowedMode
+          when "flight" then @allowedModes.push(constants.MODE_ARBITRARY)
+          when "oblique" then @allowedModes.push(constants.MODE_ARBITRARY_PLANE)
 
-      @initKeyboard()
+      switch allowedMode
+        when "volume" then @allowedModes.push(constants.MODE_VOLUME)
 
-      for binaryName of @model.binary
-        @listenTo(@model.binary[binaryName].cube, "bucketLoaded", -> @model.flycam.update)
+    if not @model.volumeTracing?
+      # Plane tracing mode is always allowed (except in VOLUME mode)
+      @allowedModes.push(constants.MODE_PLANE_TRACING)
 
-      @listenTo(app.vent, "changeViewMode", @setMode)
 
-      @allowedModes.sort()
-      if @allowedModes.length == 0
-        Toast.error("There was no valid allowed tracing mode specified.")
-      else
-        app.vent.trigger("changeViewMode", @allowedModes[0])
-      if @urlManager.initialState.mode? and @urlManager.initialState.mode != @model.mode
-        app.vent.trigger("changeViewMode", @urlManager.initialState.mode)
+    # FPS stats
+    stats = new Stats()
+    $("body").append stats.domElement
 
-      # Zoom step warning
-      @zoomStepWarningToast = null
-      @model.flycam.on
-        zoomStepChanged : =>
-          shouldWarn = not @model.canDisplaySegmentationData()
-          if shouldWarn and not @zoomStepWarningToast?
-            toastType = if @model.volumeTracing? then "danger" else "info"
-            @zoomStepWarningToast = Toast.message(toastType,
-              "Segmentation data is only fully supported at a smaller zoom level.", true)
-          else if not shouldWarn and @zoomStepWarningToast?
-            @zoomStepWarningToast.remove()
-            @zoomStepWarningToast = null
+    @sceneController = new SceneController(
+      @model.upperBoundary, @model.flycam, @model)
+
+
+    if @model.skeletonTracing?
+
+      @view = new SkeletonTracingView(@model)
+      @annotationController = new SkeletonTracingController(
+        @model, @sceneController, @view )
+      @planeController = new SkeletonTracingPlaneController(
+        @model, stats, @view, @sceneController, @annotationController)
+      @arbitraryController = new SkeletonTracingArbitraryController(
+        @model, stats, @view, @sceneController, @annotationController)
+
+    else if @model.volumeTracing?
+
+      @view = new VolumeTracingView(@model)
+      @annotationController = new VolumeTracingController(
+        @model, @sceneController, @view )
+      @planeController = new VolumeTracingPlaneController(
+        @model, stats, @view, @sceneController, @annotationController)
+
+    else # View mode
+
+      @view = new View(@model)
+      @planeController = new PlaneController(
+        @model, stats, @view, @sceneController)
+
+    @initKeyboard()
+
+    for binaryName of @model.binary
+      @listenTo(@model.binary[binaryName].cube, "bucketLoaded", -> app.vent.trigger("rerender"))
+
+    @listenTo(@model, "change:mode", @setMode)
+
+    @allowedModes.sort()
+    if @allowedModes.length == 0
+      Toast.error("There was no valid allowed tracing mode specified.")
+    else
+      @model.setMode(@allowedModes[0])
+    if @urlManager.initialState.mode? and @urlManager.initialState.mode != @model.mode
+      @model.setMode(@urlManager.initialState.mode)
+
+
+    # Zoom step warning
+    @zoomStepWarningToast = null
+    @model.flycam.on
+      zoomStepChanged : =>
+        shouldWarn = not @model.canDisplaySegmentationData()
+        if shouldWarn and not @zoomStepWarningToast?
+          toastType = if @model.volumeTracing? then "danger" else "info"
+          @zoomStepWarningToast = Toast.message(toastType,
+            "Segmentation data is only fully supported at a smaller zoom level.", true)
+        else if not shouldWarn and @zoomStepWarningToast?
+          @zoomStepWarningToast.remove()
+          @zoomStepWarningToast = null
 
 
   initKeyboard : ->
@@ -159,38 +166,40 @@ class Controller
       event.preventDefault() if (event.which == 32 or event.which == 18 or 37 <= event.which <= 40) and !$(":focus").length
       return
 
-    keyboardControls = {
-      "q" : => @toggleFullScreen()
-    }
+    keyboardControls = {}
 
     if @model.get("controlMode") == constants.CONTROL_MODE_TRACE
       _.extend( keyboardControls, {
         #Set Mode, outcomment for release
         "shift + 1" : =>
-          app.vent.trigger("changeViewMode", constants.MODE_PLANE_TRACING)
+          @model.setMode(constants.MODE_PLANE_TRACING)
         "shift + 2" : =>
-          app.vent.trigger("changeViewMode", constants.MODE_ARBITRARY)
+          @model.setMode(constants.MODE_ARBITRARY)
         "shift + 3" : =>
-          app.vent.trigger("changeViewMode", constants.MODE_ARBITRARY_PLANE)
-        "shift + 4" : =>
-          app.vent.trigger("changeViewMode", constants.MODE_VOLUME)
+          @model.setMode(constants.MODE_ARBITRARY_PLANE)
 
         "t" : =>
           @view.toggleTheme()
 
         "m" : => # rotate allowed modes
 
-          index = (@allowedModes.indexOf(@model.mode) + 1) % @allowedModes.length
-          app.vent.trigger("changeViewMode", @allowedModes[index])
+          index = (@allowedModes.indexOf(@model.get("mode")) + 1) % @allowedModes.length
+          @model.setMode(@allowedModes[index])
 
-        "super + s, ctrl + s" : (event) =>
-
+        "super + s" : (event) =>
           event.preventDefault()
           event.stopPropagation()
-          app.vent.trigger("saveEverything")
+          @model.save()
+
+        "ctrl + s" : (event) =>
+          event.preventDefault()
+          event.stopPropagation()
+          @model.save()
+
       } )
 
     new Input.KeyboardNoLoop( keyboardControls )
+
 
   setMode : (newMode, force = false) ->
 
@@ -208,22 +217,4 @@ class Controller
     @model.mode = newMode
 
 
-  toggleFullScreen : ->
-
-    if @fullScreen
-      cancelFullscreen = document.webkitCancelFullScreen or document.mozCancelFullScreen or document.cancelFullScreen
-      @fullScreen = false
-      if cancelFullscreen
-        cancelFullscreen.call(document)
-    else
-      body = $("body")[0]
-      requestFullscreen = body.webkitRequestFullScreen or body.mozRequestFullScreen or body.requestFullScreen
-      @fullScreen = true
-      if requestFullscreen
-        requestFullscreen.call(body, body.ALLOW_KEYBOARD_INPUT)
-
-
-  browserSupported : ->
-
-    # right now only webkit-based browsers are supported
-    return window.webkitURL
+module.exports = Controller

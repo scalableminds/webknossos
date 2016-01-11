@@ -3,7 +3,6 @@ package oxalis.annotation.handler
 import models.annotation.{AnnotationType, AnnotationRestrictions, TemporaryAnnotation}
 import models.tracing.skeleton.temporary.TemporarySkeletonTracing
 import models.user.User
-import play.api.i18n.Messages
 import models.binary.DataSetDAO
 import com.scalableminds.util.reactivemongo.DBAccessContext
 import play.api.libs.concurrent.Execution.Implicits._
@@ -34,7 +33,7 @@ object DataSetInformationHandler extends AnnotationInformationHandler with FoxIm
 
   def provideAnnotation(dataSetName: String, user: Option[User])(implicit ctx: DBAccessContext): Fox[TemporaryAnnotation] = {
     for {
-      dataSet <- DataSetDAO.findOneBySourceName(dataSetName) ?~> Messages("dataSet.notFound")
+      dataSet <- DataSetDAO.findOneBySourceName(dataSetName) ?~> "dataSet.notFound"
     } yield {
       val content = TemporarySkeletonTracing(
         dataSetName,

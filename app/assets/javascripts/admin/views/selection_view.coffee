@@ -1,10 +1,8 @@
-### define
-underscore : _
-backbone.marionette : Marionette
-./selection_item_view : SelectionItemView
-###
+_                 = require("lodash")
+Marionette        = require("backbone.marionette")
+SelectionItemView = require("./selection_item_view")
 
-class SelectionView extends Backbone.Marionette.CollectionView
+class SelectionView extends Marionette.CollectionView
 
   tagName : "select"
   className: "form-control"
@@ -26,10 +24,7 @@ class SelectionView extends Backbone.Marionette.CollectionView
   initialize : (options) ->
 
     @collection.fetch(
-      silent : true
       data : options.data
-    ).done(
-      => @render()
     )
 
     if options.name
@@ -79,10 +74,14 @@ class SelectionView extends Backbone.Marionette.CollectionView
    ###
   updateModel : ->
 
+<<<<<<< HEAD
     # TODO: remove
     console.log('parentModel', @$el.attr("name"), @parentModel)
 
     if @parentModel?
       @parentModel.set(@$el.attr("name"), @getActive())
+=======
+module.exports = SelectionView
+>>>>>>> dev
 
     return

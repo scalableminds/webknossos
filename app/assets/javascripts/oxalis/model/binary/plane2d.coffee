@@ -1,9 +1,7 @@
-### define
-backbone : Backbone
-./cube : Cube
-./pullqueue : Queue
-../dimensions : Dimensions
-###
+Backbone   = require("backbone")
+Cube       = require("./cube")
+Queue      = require("./pullqueue")
+Dimensions = require("../dimensions")
 
 # Macros
 # should work as normal functions, as well
@@ -58,6 +56,15 @@ class Plane2D
 
     @listenTo(@cube, "bucketLoaded", (bucket) ->
 
+      zoomStepDiff = @dataTexture.zoomStep - bucket[3]
+      if zoomStepDiff > 0
+        bucket = [
+          bucket[0] >> zoomStepDiff
+          bucket[1] >> zoomStepDiff
+          bucket[2] >> zoomStepDiff
+          @dataTexture.zoomStep
+        ]
+
       # Checking, whether the new bucket intersects with the current layer
       if @dataTexture.layer >> (@cube.BUCKET_SIZE_P + bucket[3]) == bucket[@W] and @dataTexture.topLeftBucket?
 
@@ -72,10 +79,14 @@ class Plane2D
           @dataTexture.ready &= not (u in [@dataTexture.area[0]..@dataTexture.area[2]] and v in [@dataTexture.area[1]..@dataTexture.area[3]])
     )
 
-    @listenTo(@cube, "volumeLabeled", ->
-      @dataTexture.tiles = new Array(@BUCKETS_PER_ROW * @BUCKETS_PER_ROW)
-      @dataTexture.ready = false
-    )
+    @cube.on "volumeLabled", => @reset()
+    @cube.on "mappingChanged", => @reset()
+
+
+  reset : ->
+
+    @dataTexture.tiles = new Array(@BUCKETS_PER_ROW * @BUCKETS_PER_ROW)
+    @dataTexture.ready = false
 
 
   forceRedraw : ->
@@ -299,16 +310,21 @@ class Plane2D
     map = new Array(@MAP_SIZE)
     map[0] = undefined
 
-    for i in [Math.min(@cube.LOOKUP_DEPTH_UP, @cube.ZOOM_STEP_COUNT - zoomStep - 1)...0]
+    maxZoomStepOffset = Math.max(0, Math.min(@cube.LOOKUP_DEPTH_UP,
+      @cube.ZOOM_STEP_COUNT - zoomStep - 1
+    ))
 
-      bucket = [
-        bucket_x >> i
-        bucket_y >> i
-        bucket_z >> i
-        zoomStep + i
-      ]
+    if zoomStep < @cube.ZOOM_STEP_COUNT
+      for i in [maxZoomStepOffset...0]
 
-      map[0] = bucket if @cube.isBucketLoadedByZoomedAddress(bucket)
+        bucket = [
+          bucket_x >> i
+          bucket_y >> i
+          bucket_z >> i
+          zoomStep + i
+        ]
+
+        map[0] = bucket if @cube.isBucketLoadedByZoomedAddress(bucket)
 
     if zoomStep and @enhanceRenderMap(map, 0, [bucket_x, bucket_y, bucket_z, zoomStep], map[0], @cube.LOOKUP_DEPTH_DOWN)
 
@@ -395,7 +411,7 @@ class Plane2D
     mapping = source.mapping
 
     bytesSrc       = @DATA_BIT_DEPTH >> 3
-    bytesSrcMapped = if mapping? then @MAPPED_DATA_BIT_DEPTH >> 3 else bytesSrc
+    bytesSrcMapped = if mapping? and mapping.length then @MAPPED_DATA_BIT_DEPTH >> 3 else bytesSrc
     bytesDest      = @TEXTURE_BIT_DEPTH >> 3
     shorten        = bytesDest < bytesSrcMapped
 
@@ -406,7 +422,7 @@ class Plane2D
       sourceValue = 0
       for b in [0...bytesSrc]
         sourceValue += (1 << (b * 8)) * source.buffer[ src + b ]
-      sourceValue = mapping[ sourceValue ] or sourceValue
+      sourceValue = mapping? and mapping[ sourceValue ] or sourceValue
 
       # If you have to shorten the data,
       # use the first none-zero byte unless all are zero
@@ -428,3 +444,5 @@ class Plane2D
         source.offset += source.rowDelta
 
     return
+
+module.exports = Plane2D

@@ -1,6 +1,5 @@
 package oxalis.thirdparty
 
-import com.scalableminds.util.security.SCrypt._
 import models.user.User
 import play.api.libs.ws.{WSAuthScheme, WS}
 import com.ning.http.client.Realm.AuthScheme
@@ -11,10 +10,8 @@ import play.api.Play
 import scala.concurrent.Promise
 import scala.concurrent.Future
 import scala.util._
-import play.api.libs.concurrent.Akka
-import models.annotation.{AnnotationLike, AnnotationDAO}
-import models.tracing.skeleton.SkeletonTracing
-import com.scalableminds.util.reactivemongo.{DBAccessContext, GlobalAccessContext}
+import models.annotation.AnnotationLike
+import com.scalableminds.util.reactivemongo.{DBAccessContext}
 
 object BrainTracing {
   val URL = "http://braintracing.org/"
@@ -27,10 +24,9 @@ object BrainTracing {
   val isActive = Play.configuration.getBoolean("braintracing.active") getOrElse false
   val logTimeForExplorative = Play.configuration.getBoolean("braintracing.logTimeForExplorative") getOrElse false
 
-  def register(user: User, password: String): Future[String] = {
-    val pwHash = md5(password)
+  def register(user: User): Future[String] = {
     // TODO: fix, make team dynamic
-    if (isActive && user.teamNames.contains("Structure of Neocortical Circuits Group")) {
+    if (isActive && user.teamNames.contains("Connectomics department")) {
       val result = Promise[String]()
       WS
       .url(CREATE_URL)
@@ -40,10 +36,12 @@ object BrainTracing {
         "firstname" -> user.firstName,
         "lastname" -> user.lastName,
         "email" -> user.email,
-        "pword" -> pwHash)
+        "pword" -> user.md5hash)
       .get()
       .map { response =>
         result complete (response.status match {
+          case 200 if(isSilentFailure(response.body)) =>
+            Success("braintraceing.error")
           case 200 =>
             Success("braintracing.new")
           case 304 =>
@@ -55,17 +53,20 @@ object BrainTracing {
       }
       result.future
     } else {
-      Future.successful("braintracing.new")
+      Future.successful("braintracing.none")
     }
   }
 
   private def inHours(millis: Long) =
     millis / (1000.0 * 60 * 60)
 
-  def logTime(user: User, time: Long, annotation: Option[AnnotationLike])(implicit ctx: DBAccessContext): Unit = {
+  private def isSilentFailure(result: String) =
+    result.contains("ist derzeit nicht verf&uuml;gbar.")
+
+  def logTime(user: User, time: Long, annotation: Option[AnnotationLike])(implicit ctx: DBAccessContext): Future[Boolean] = {
     import scala.async.Async._
     // TODO: fix, make team dynamic
-    if (isActive && user.teamNames.contains("Structure of Neocortical Circuits Group")) {
+    if (isActive && user.teamNames.contains("Connectomics department")) {
       async {
         val task = await(annotation.toFox.flatMap(_.task).futureBox)
         val taskTypeFox = task.toFox.flatMap(_.taskType)
@@ -74,7 +75,7 @@ object BrainTracing {
           val hours = inHours(time)
           val projectName = await(project.map(_.name).getOrElse(""))
           val taskType = await(taskTypeFox.futureBox)
-          WS
+          await(WS
           .url(LOGTIME_URL)
           .withAuth(USER, PW, WSAuthScheme.BASIC)
           .withQueryString(
@@ -89,14 +90,23 @@ object BrainTracing {
           .get()
           .map { response =>
             response.status match {
-              case 200 =>
+              case 200 if(!isSilentFailure(response.body)) =>
                 Logger.trace(s"Logged time! User: ${user.email} Time: $hours")
+                true
+              case 200 =>
+                Logger.error(s"Time logging failed. SILENT FAILURE! Code 200 User: ${user.email} Time: $hours")
+                false
               case code =>
                 Logger.error(s"Time logging failed! Code $code User: ${user.email} Time: $hours")
+                false
             }
-          }
+          })
+        } else {
+          true
         }
       }
+    } else {
+      Future.successful(true)
     }
   }
 }

@@ -1,24 +1,19 @@
-### define
-underscore : _
-libs/array_buffer_socket : ArrayBufferSocket
-libs/unit8array_builder : Uint8ArrayBuilder
-gzip : gzip
-###
+_                       = require("lodash")
+Uint8ArrayBuilder       = require("libs/uint8array_builder")
+Request                 = require("libs/request")
+gzip                    = require("gzip")
 
 class PushQueue
 
   BATCH_LIMIT : 1
-  BATCH_SIZE : 10
+  BATCH_SIZE : 32
   THROTTLE_TIME : 10000
 
 
   constructor : (@dataSetName, @cube, @layer, @tracingId, @updatePipeline, @sendData = true) ->
 
+    @url = "#{@layer.url}/data/datasets/#{@dataSetName}/layers/#{@layer.name}/data?cubeSize=#{1 << @cube.BUCKET_SIZE_P}&annotationId=#{@tracingId}&token=#{@layer.token}"
     @queue = []
-
-    @getParams =
-      cubeSize : 1 << @cube.BUCKET_SIZE_P
-      annotationId : tracingId
 
     @push = _.throttle @pushImpl, @THROTTLE_TIME
 
@@ -98,25 +93,13 @@ class PushQueue
       console.log "Pushing batch", batch
       gzip = new Zlib.Gzip(transmitBuffer)
       transmitBuffer = gzip.compress()
-      @getSendSocket().send(transmitBuffer)
 
+      Request.$(Request.sendArraybufferReceiveArraybuffer(
+        @url
+        data: transmitBuffer
+        method: "PUT"
+        headers:
+          "Content-Encoding": "gzip"
+      ))
 
-  getSendSocket : ->
-
-    cubeSize = 1 << @cube.BUCKET_SIZE_P
-
-    params = @getParams
-
-    params.token = @layer.token
-
-    if @socket? then @socket else @socket = new ArrayBufferSocket(
-      senders : [
-        new ArrayBufferSocket.XmlHttpRequest(
-          "#{@layer.url}/data/datasets/#{@dataSetName}/layers/#{@layer.name}/data",
-          params,
-          "PUT", "gzip"
-        )
-      ]
-      requestBufferType : Uint8Array
-      responseBufferType : Uint8Array
-    )
+module.exports = PushQueue

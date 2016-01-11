@@ -1,18 +1,16 @@
-### define
-app : app
-backbone : Backbone
-jquery : $
-underscore : _
-libs/input : Input
-three.trackball : Trackball
-../camera_controller : CameraController
-../../model/dimensions : Dimensions
-../../view/plane_view : PlaneView
-../../constants : constants
-../annotations/skeletontracing_controller : SkeletonTracingController
-../annotations/volumetracing_controller : VolumeTracingController
-three : THREE
-###
+app                       = require("app")
+Backbone                  = require("backbone")
+$                         = require("jquery")
+_                         = require("lodash")
+Input                     = require("libs/input")
+Trackball                 = require("three.trackball")
+CameraController          = require("../camera_controller")
+Dimensions                = require("../../model/dimensions")
+PlaneView                 = require("../../view/plane_view")
+constants                 = require("../../constants")
+SkeletonTracingController = require("../annotations/skeletontracing_controller")
+VolumeTracingController   = require("../annotations/volumetracing_controller")
+THREE                     = require("three")
 
 class PlaneController
 
@@ -51,7 +49,7 @@ class PlaneController
 
     @oldNmPos = app.scaleInfo.voxelToNm( @flycam.getPosition() )
 
-    @planeView = new PlaneView(@model, @flycam, @view, stats)
+    @planeView = new PlaneView(@model, @view, stats)
 
     @activeViewport = constants.PLANE_XY
 
@@ -79,6 +77,7 @@ class PlaneController
       @planeView.addGeometry(mesh)
 
     @model.user.triggerAll()
+    @model.datasetConfiguration.triggerAll()
 
     @initTrackballControls()
     @bindToEvents()
@@ -133,10 +132,11 @@ class PlaneController
       @planeView.getCameras()[constants.TDView],
       view,
       new THREE.Vector3(pos...),
-      => @flycam.update())
+      -> app.vent.trigger("rerender"))
 
     @controls.noZoom = true
     @controls.noPan = true
+    @controls.staticMoving = true
 
     @controls.target.set(
       app.scaleInfo.voxelToNm(@flycam.getPosition())...)
@@ -193,14 +193,15 @@ class PlaneController
 
     @input.keyboardLoopDelayed = new Input.Keyboard(
 
-      "space"         : (timeFactor, first) => @moveZ( getMoveValue(timeFactor)    , first)
-      "f"             : (timeFactor, first) => @moveZ( getMoveValue(timeFactor)    , first)
-      "d"             : (timeFactor, first) => @moveZ(-getMoveValue(timeFactor)    , first)
+      # KeyboardJS is sensitive to ordering (complex combos first)
       "shift + f"     : (timeFactor, first) => @moveZ( getMoveValue(timeFactor) * 5, first)
       "shift + d"     : (timeFactor, first) => @moveZ(-getMoveValue(timeFactor) * 5, first)
 
       "shift + space" : (timeFactor, first) => @moveZ(-getMoveValue(timeFactor)    , first)
       "ctrl + space"  : (timeFactor, first) => @moveZ(-getMoveValue(timeFactor)    , first)
+      "space"         : (timeFactor, first) => @moveZ( getMoveValue(timeFactor)    , first)
+      "f"             : (timeFactor, first) => @moveZ( getMoveValue(timeFactor)    , first)
+      "d"             : (timeFactor, first) => @moveZ(-getMoveValue(timeFactor)    , first)
 
     , @model.user.get("keyboardDelay")
     )
@@ -422,3 +423,5 @@ class PlaneController
         [ curGlobalPos[0] - (constants.VIEWPORT_WIDTH * scaleFactor / 2 - clickPos.x) / scaleFactor * planeRatio[0] * zoomFactor,
           curGlobalPos[1],
           curGlobalPos[2] - (constants.VIEWPORT_WIDTH * scaleFactor / 2 - clickPos.y) / scaleFactor * planeRatio[2] * zoomFactor ]
+
+module.exports = PlaneController

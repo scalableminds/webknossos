@@ -1,16 +1,20 @@
-### define
-underscore : _
-backbone.marionette : Marionette
-###
+_          = require("lodash")
+Marionette = require("backbone.marionette")
 
-class SelectionItemView extends Backbone.Marionette.ItemView
+class SelectionItemView extends Marionette.ItemView
 
   tagName : "option"
+  attributes : ->
+    if @options.defaultItem
+      [[key, value]] = _.pairs(@options.defaultItem)
+      if @model.get(key) == value
+        return selected : true
+      else
+        return {}
 
   template : _.template("""
-    <%= value %>
+    <%- value %>
   """)
-
 
   initialize : (options) ->
 
@@ -41,3 +45,5 @@ class SelectionItemView extends Backbone.Marionette.ItemView
       else
         @modelValue()
     )
+
+module.exports = SelectionItemView

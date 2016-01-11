@@ -1,6 +1,7 @@
 error.email=Please supply a valid email address
 error.required=Please supply all needed values
 error.minLength=Please use at least 3 characters.
+error.unknown=Unknown error
 
 notAllowed=You are not allowed to view this resource
 
@@ -11,6 +12,7 @@ binary.data.notSaved=Couldn''t save the data
 
 email=Email
 team=Team
+name=Name
 password=Password
 password_old=Old password
 password.main=Password
@@ -35,6 +37,11 @@ image.create.failed=Failed to create image
 team.created=Team got created
 team.name.alreadyTaken=The teams name is already in use.
 team.notAllowed=You are not part of this team. Project can''t be created.
+team.nonExistentRole=Team {0} doesn''t contain role {1}.
+team.admin.notPossibleBy=User {1} can''t be assigned administrative rights in team {0} because he doesn't belong to the teams parent team.
+team.noOwner=This action is restricted to the creator of the team.
+team.admin.notAllowed=You are not allowed to administrate team {0}.
+team.notFound=Team could not be found.
 
 user.verified={0} has been verified
 user.verifyFailed=Couldn''t verify user
@@ -58,21 +65,41 @@ user.experience.increased=Increased experience of {0}
 user.experience.set=Set experience of {0}
 user.experience.removed=Removed experience from {0}
 
-
-braintracing.new=An account on braintracing.org was created for you. You can use the same credentials as on oxalis to login.
+braintracing.new=An account on braintracing.org was created for you. You can use the same credentials as on webKnossos to login.
 braintracing.error=We couldn''t atomatically create an account for you on braintracing.org. Please do it on your own.
 braintracing.exists=Great, you already have an account on braintracing.org. Please double check that you have uploaded all requested information.
 
 dataSet=Dataset
+dataSet.file=Dataset ZIP File
 dataSet.notFound=Selected data set doesn''t exist
 dataSet.notSupplied=No data set supplied
+dataSet.name.invalid=A dataset name can only contain letters, digits and underscores
+dataSet.name.alreadyTaken=This dataset name is already in use.
 dataSet.source.notFound=The data source for the data source couldn''t be found
+dataSet.import.success=The import of the dataset was successful
 dataSet.import.failed=Failed to import the dataset
 dataSet.import.inProgress=Dataset import is in progress
 dataSet.import.notStarted=Dataset import couldn''t be started
+dataSet.upload.success=Dataset successfully uploaded
+dataSet.import.failedWithoutError=Import of dataset {0} failed
+dataSet.import.failedWithError=Import of the dataset failed with error: {0}
+dataSet.import.directoryEmpty=Import failed because the dataset directory is empty
+
+dataSource.notFound=Datasource not found on datastore server
+dataSource.import.alreadyFinished=Import of the dataset already finished
+dataSource.import.alreadyInProgress=Import of the dataset already in progress
+
+dataStore.notAvailable=Datastore not available. Please try again in a few minutes.
+
+zip.file.notFound=No or invalid ZIP file specified
+zip.file.invalid=Uploaded ZIP file invalid or corrupted
+zip.file.tooLarge=The ZIP file must not be larger than 1GB
 
 dataLayer.notFound=DataLayer not found
 dataLayer.forbidden=Access to this layer is not allowed.
+
+scale.scale=Scale
+scale.invalid=Specify dataset scale like "XX, YY, ZZ"
 
 dataToken.creationFailed=Creation of the data token failed.
 
@@ -84,10 +111,10 @@ boundingBox.box=Bounding Box
 boundingBox.invalid=Invalid bounding box
 
 experience=Experience
-experience.domain=Experience Domain
+experience.domain=Domain
 experience.domain.invalid=Invalid experience domain
 experience.value.invalid=Invalid experience value
-experience.value=Min Experience
+experience.value=Required level
 
 nmlFile=Reference NML File
 nml.file.uploadSuccess=Successfully uploaded file
@@ -99,7 +126,7 @@ owner=Owner
 
 priority=Priority
 
-project=Project
+project=Project (optional)
 projectName=Project Name
 project.name.alreadyTaken=Name already used
 project.name.invalidChars=Name contains invalid characters
@@ -116,20 +143,19 @@ role.invalid=Invalid role
 role.removed=Removed role from {0}
 role.added=Added role to {0}
 
-
-
 tracing=Annotation
 tracing.notFound=Tracing couldn''t be found
 annotation.creationFailed=Failed to create annotation
 annotation.notFound=Annotation couldn''t be found
 annotation.invalid=Invalid annotation
 annotation.finished=Annotation is finished
-annotation.reopened=Tracing got reopened
+annotation.allFinished=All Annotation are finished
+annotation.reopened=Annotation got reopened
 annotation.saved=Annotation got saved
 annotation.setName=Successfully named annotation
 annotation.invalidName=Annotation name is invalid
 annotation.finish.confirm=Are you sure you want to permanently finish this tracing?
-annotation.reset.success=Annoation is resetted
+annotation.reset.success=Annotation was successfully reset
 annotation.review.assignFailed=Couldn''t assign reviewee
 annotation.review.notFound=There is no review for this tracing
 annotation.review.assigned=You got assigned as reviewee
@@ -141,10 +167,9 @@ annotation.download.notAllowed=You can''t download this tracing
 annotation.notPossible=Couldn''t access annotation
 annotation.notFinishable=Before you can finish the annotation, you need to annotate something
 annotation.notInProgress=The tracing is not in progress and can''t be finished
-annotation.reset.success=Reset tracing to base was successful
 annotation.reset.failed=Couldn''t reset tracing to base
 annotation.merge.success=Merging successfully done
-annotation.dirtyState=Annotation is not up to date. YOu can''t make any changes
+annotation.dirtyState=Annotation is not up to date. You can''t make any changes
 annotation.update.impossible=This annotation can''t be updated (read only)
 
 issue.summary.notSupplied=No summary supplied
@@ -181,9 +206,7 @@ taskType.editSuccess=Task type successfully edited
 taskType.createSuccess=Task type successfully created
 taskType.notFound=Selected task type doesn''t exist
 taskType.deleted=Task type ''{0}'' successfully deleted
-taskType.emptyModeSelection=Please select at least one annotation mode
 taskType.noAnnotations=We couldn''t find finished annotations for this task type
 
 time.invalidFormat=Time couldn''t get parsed.
 point.invalidFormat=Invalid format. Use something like: 4, 63, 24
-

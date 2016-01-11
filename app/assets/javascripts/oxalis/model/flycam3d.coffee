@@ -1,9 +1,6 @@
-### define
-backbone : Backbone
-m4x4 : M4x4
-underscore : _
-three : THREE
-###
+_           = require("lodash")
+THREE       = require("three")
+{M4x4, V3}  = require("libs/mjs")
 
 updateMacro = (_this) ->
 
@@ -24,7 +21,7 @@ class Flycam3d
 
   ZOOM_STEP_INTERVAL : 1.1
   ZOOM_STEP_MIN : 0.5
-  ZOOM_STEP_MAX : 10
+  ZOOM_STEP_MAX : 5
 
   zoomStep : 1
   hasChanged : true
@@ -38,8 +35,8 @@ class Flycam3d
     @scale = @calculateScaleValues(scale)
 
     @reset()
-    @distanceVecNegative = [0, 0, -distance]
-    @distanceVecPositive = [0, 0, distance]
+    @distanceVecNegative = [0, 0, -@distance]
+    @distanceVecPositive = [0, 0, @distance]
 
 
   calculateScaleValues : (scale) ->
@@ -261,7 +258,7 @@ class Flycam3d
 
     m = new THREE.Matrix4().lookAt(new THREE.Vector3(d...),
       new THREE.Vector3(0, 0, 0),
-      new THREE.Vector3(0, 1, 0)).elements
+      @getCurrentUpVector()).elements
 
     matrix2 = [
       1, 0, 0, 0,
@@ -274,6 +271,16 @@ class Flycam3d
 
     @currentMatrix = @convertToJsArray(M4x4.mul(matrix2, m))
     updateMacro(@)
+
+
+  getCurrentUpVector : ->
+
+    currentRotation = new THREE.Matrix4()
+    currentRotation.extractRotation(new THREE.Matrix4(@currentMatrix...))
+    up = new THREE.Vector3(0, 1, 0)
+    up.applyMatrix4(currentRotation)
+
+    return up
 
 
   convertToJsArray : (floatXArray) ->
@@ -291,3 +298,5 @@ class Flycam3d
 
     matrix = @currentMatrix
     [ matrix[0], matrix[1], matrix[2] ]
+
+module.exports = Flycam3d

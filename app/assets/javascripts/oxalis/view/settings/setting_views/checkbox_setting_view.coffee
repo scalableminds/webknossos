@@ -1,7 +1,6 @@
-### define
-./abstract_setting_view : AbstractSettingView
-underscore : _
-###
+_                   = require("lodash")
+Marionette          = require("backbone.marionette")
+AbstractSettingView = require("./abstract_setting_view")
 
 class CheckboxSettingView extends AbstractSettingView
 
@@ -10,10 +9,10 @@ class CheckboxSettingView extends AbstractSettingView
 
   template : _.template("""
     <div class="col-sm-5">
-      <%= displayName %>
+      <%- displayName %>
     </div>
     <div class="col-sm-1">
-      <input type="checkbox" <%= boolToChecked(value) %>>
+      <input type="checkbox" <%- boolToChecked(value) %>>
     </div>
     <div class="col-sm-6"><div>
   """)
@@ -40,3 +39,5 @@ class CheckboxSettingView extends AbstractSettingView
   update : (model, value) ->
 
     @ui.checkbox.prop("checked", value)
+
+module.exports = CheckboxSettingView

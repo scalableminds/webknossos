@@ -1,7 +1,5 @@
-### define
-three : THREE
-./abstract_plane_material_factory : AbstractPlaneMaterialFactory
-###
+THREE                        = require("three")
+AbstractPlaneMaterialFactory = require("./abstract_plane_material_factory")
 
 class PlaneMaterialFactory extends AbstractPlaneMaterialFactory
 
@@ -38,14 +36,13 @@ class PlaneMaterialFactory extends AbstractPlaneMaterialFactory
       @textures[shaderName].binaryCategory = binary.category
       @textures[shaderName].binaryName = binary.name
 
-    layerColors = @model.datasetConfiguration.get("layerColors")
     for shaderName, texture of @textures
       @uniforms[shaderName + "_texture"] = {
         type : "t"
         value : texture
       }
       unless texture.binaryCategory == "segmentation"
-        color = @convertColor(layerColors[texture.binaryName])
+        color = @convertColor(@model.datasetConfiguration.get("layers.#{texture.binaryName}.color"))
         @uniforms[shaderName + "_weight"] = {
           type : "f"
           value : 1
@@ -80,12 +77,14 @@ class PlaneMaterialFactory extends AbstractPlaneMaterialFactory
 
     super()
 
-    @listenTo(@model.datasetConfiguration, "change:layerColors change:layerColors.*" , (model, layerColors) ->
-      for name, color of layerColors
-        color = @convertColor(color)
-        uniformName = @sanitizeName(name) + "_color"
-        @uniforms[uniformName].value = new THREE.Vector3(color...)
-      return
+    @listenTo(@model.datasetConfiguration, "change" , (model) ->
+      for binaryName, changes of model.changed.layers or {}
+        name = @sanitizeName(binaryName)
+        if changes.color?
+          color = @convertColor(changes.color)
+          @uniforms[name + "_color"].value = new THREE.Vector3(color...)
+
+      app.vent.trigger("rerender")
     )
 
 
@@ -98,18 +97,17 @@ class PlaneMaterialFactory extends AbstractPlaneMaterialFactory
       """
       <% _.each(layers, function(name) { %>
         uniform sampler2D <%= name %>_texture;
+        uniform float <%= name %>_brightness;
+        uniform float <%= name %>_contrast;
         uniform vec3 <%= name %>_color;
         uniform float <%= name %>_weight;
       <% }) %>
-
       <% if (hasSegmentation) { %>
         uniform sampler2D <%= segmentationName %>_texture;
       <% } %>
-
       uniform vec2 offset, repeat;
-      uniform float alpha, brightness, contrast;
+      uniform float alpha;
       varying vec2 vUv;
-
       /* Inspired from: http://lolengine.net/blog/2013/07/27/rgb-to-hsv-in-glsl */
       vec3 hsv_to_rgb(vec4 HSV)
       {
@@ -119,46 +117,33 @@ class PlaneMaterialFactory extends AbstractPlaneMaterialFactory
         p = abs(fract(HSV.xxx + K.xyz) * 6.0 - K.www);
         return HSV.z * mix(K.xxx, clamp(p - K.xxx, 0.0, 1.0), HSV.y);
       }
-
       void main() {
         float golden_ratio = 0.618033988749895;
         float color_value  = 0.0;
-
         <% if (hasSegmentation) { %>
           vec4 volume_color = texture2D(<%= segmentationName %>_texture, vUv * repeat + offset);
           float id = (volume_color.r * 255.0);
         <% } else { %>
           float id = 0.0;
         <% } %>
-
-
         /* Get Color Value(s) */
-
         <% if (isRgb) { %>
           vec3 data_color = texture2D( <%= layers[0] %>_texture, vUv * repeat + offset).xyz;
+          data_color = (data_color + <%= layers[0] %>_brightness - 0.5) * <%= layers[0] %>_contrast + 0.5;
         <% } else { %>
           vec3 data_color = vec3(0.0, 0.0, 0.0);
-
           <% _.each(layers, function(name){ %>
-
             /* Get grayscale value */
             color_value = texture2D( <%= name %>_texture, vUv * repeat + offset).r;
-
             /* Brightness / Contrast Transformation */
-            color_value = (color_value + brightness - 0.5) * contrast + 0.5;
+            color_value = (color_value + <%= name %>_brightness - 0.5) * <%= name %>_contrast + 0.5;
 
             /* Multiply with color and weight */
             data_color += color_value * <%= name %>_weight * <%= name %>_color;
-
           <% }) %> ;
-
           data_color = clamp(data_color, 0.0, 1.0);
-
         <% } %>
-
-
         /* Color map (<= to fight rounding mistakes) */
-
         if ( id > 0.1 ) {
           vec4 HSV = vec4( mod( id * golden_ratio, 1.0), 1.0, 1.0, 1.0 );
           gl_FragColor = vec4(mix( data_color, hsv_to_rgb(HSV), alpha ), 1.0);
@@ -167,10 +152,12 @@ class PlaneMaterialFactory extends AbstractPlaneMaterialFactory
         }
       }
       """
-      {
+    )({
         layers : colorLayerNames
         hasSegmentation : segmentationBinary?
         segmentationName : @sanitizeName( segmentationBinary?.name )
         isRgb : @model.binary["color"]?.targetBitDepth == 24
       }
     )
+
+module.exports = PlaneMaterialFactory

@@ -1,7 +1,6 @@
-### define
-underscore : _
-backbone : backbone
-###
+_        = require("lodash")
+backbone = require("backbone")
+utils    = require("libs/utils")
 
 class ProjectTaskCollection extends Backbone.Collection
 
@@ -15,9 +14,12 @@ class ProjectTaskCollection extends Backbone.Collection
     return _.map(responses,
       (response) ->
         if response.tracingTime
-          duration = moment.duration(response.tracing)
-
-        response.tracingTime = "00:00" || "#{duration.hours()}:#{duration.minutes()}"
+          duration = moment.duration(response.tracingTime)
+          response.tracingTime = "#{utils.zeroPad(duration.hours(), 2)}h #{utils.zeroPad(duration.minutes(), 2)}m"
+        else
+          response.tracingTime = "00:00"
 
         return response
     )
+
+module.exports = ProjectTaskCollection

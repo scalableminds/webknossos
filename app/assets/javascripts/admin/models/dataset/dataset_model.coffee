@@ -1,9 +1,8 @@
-### define
-underscore : _
-backbone : backbone
-###
+_              = require("lodash")
+backbone       = require("backbone")
+NestedObjModel = require("libs/nested_obj_model")
 
-class DatasetModel extends Backbone.Model
+class DatasetModel extends NestedObjModel
 
   urlRoot : "/api/datasets"
   idAttribute : "name"
@@ -18,6 +17,9 @@ class DatasetModel extends Backbone.Model
         scale : []
         dataLayers : []
 
+    response.hasSegmentation = _.some(response.dataSource.dataLayers,
+      (layer) -> layer.category == "segmentation")
+
     response.thumbnailURL = @createThumbnailURL(response.name, response.dataSource.dataLayers)
 
     return response
@@ -27,3 +29,5 @@ class DatasetModel extends Backbone.Model
 
     if colorLayer = _.findWhere(layers, category : "color")
       return "/api/datasets/#{datasetName}/layers/#{colorLayer.name}/thumbnail"
+
+module.exports = DatasetModel

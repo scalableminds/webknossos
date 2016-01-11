@@ -1,16 +1,11 @@
-### define
-backbone : Backbone
-app : app
-oxalis/constants : Constants
-libs/utils : Utils
-###
+Backbone = require("backbone")
+app      = require("app")
+Utils    = require("libs/utils")
 
 
 class BackboneToOxalisAdapterModel extends Backbone.Model
 
-  initialize : (options) ->
-
-    @oxalisModel = options.model
+  initialize : (@oxalisModel) ->
 
     # Default Values for inital setup / rendering
     @skeletonTracingAdapter = new Backbone.Model(
@@ -27,7 +22,7 @@ class BackboneToOxalisAdapterModel extends Backbone.Model
       activeCellId : 0
     )
 
-    if @oxalisModel.mode != Constants.MODE_VOLUME
+    if @oxalisModel.skeletonTracing
 
       # Update values after OxalisModel is done syncing
       @skeletonTracingModel = @oxalisModel.skeletonTracing
@@ -85,8 +80,7 @@ class BackboneToOxalisAdapterModel extends Backbone.Model
           @oxalisModel.trigger("newBoundingBox", bbArray)
       )
 
-    # VOLUME MODE
-    else
+    else if @oxalisModel.volumeTracing
 
       # Update values after OxalisModel is done syncing
       @volumeTracingModel = @oxalisModel.volumeTracing
@@ -107,3 +101,5 @@ class BackboneToOxalisAdapterModel extends Backbone.Model
       @listenTo(@volumeTracingAdapter, "change:activeCellId", (model, id) ->
         @volumeTracingModel.setActiveCell(id)
       )
+
+module.exports = BackboneToOxalisAdapterModel

@@ -1,9 +1,7 @@
-### define
-oxalis/constants : constants
-./category_view : CategoryView
-../setting_views/number_setting_view : NumberSettingView
-../setting_views/button_setting_view : ButtonSettingView
-###
+constants         = require("oxalis/constants")
+CategoryView      = require("./category_view")
+NumberSettingView = require("../setting_views/number_setting_view")
+ButtonSettingView = require("../setting_views/button_setting_view")
 
 class CellCategoryView extends CategoryView
 
@@ -30,3 +28,5 @@ class CellCategoryView extends CategoryView
           displayName : "Create new Cell"
           callbackName : "createCell"
       )
+
+module.exports = CellCategoryView

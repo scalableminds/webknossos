@@ -2,6 +2,8 @@ package models.user
 
 import play.api.Play.current
 import com.scalableminds.util.security.SCrypt._
+import reactivemongo.api.commands.WriteResult
+
 //import scala.collection.mutable.Stack
 //import play.api.libs.json.{Json, JsValue}
 import play.api.libs.json.Json._
@@ -28,11 +30,13 @@ case class User(
                  lastName: String,
                  verified: Boolean = false,
                  pwdHash: String = "",
+                 md5hash: String = "",
                  teams: List[TeamMembership],
                  userConfiguration: UserConfiguration = UserConfiguration.default,
                  dataSetConfigurations: Map[String, DataSetConfiguration] = Map.empty,
                  experiences: Map[String, Int] = Map.empty,
                  lastActivity: Long = System.currentTimeMillis,
+                 _isSuperUser: Option[Boolean] = None,
                  _id: BSONObjectID = BSONObjectID.generate) extends DBAccessContextPayload {
 
   val dao = User
@@ -42,6 +46,8 @@ case class User(
   def teamsWithRole(role: Role) = teams.filter(_.role == role)
 
   def teamNames = teams.map(_.team)
+
+  def isSuperUser = _isSuperUser getOrElse false
 
   val name = firstName + " " + lastName
 
@@ -178,7 +184,7 @@ object UserDAO extends SecuredBaseDAO[User] {
       insert(user).map(_ => user)
   }
 
-  def update(_user: BSONObjectID, firstName: String, lastName: String, verified: Boolean, teams: List[TeamMembership], experiences: Map[String, Int])(implicit ctx: DBAccessContext): Fox[LastError] =
+  def update(_user: BSONObjectID, firstName: String, lastName: String, verified: Boolean, teams: List[TeamMembership], experiences: Map[String, Int])(implicit ctx: DBAccessContext): Fox[WriteResult] =
     update(findByIdQ(_user), Json.obj("$set" -> Json.obj(
       "firstName" -> firstName,
       "lastName" -> lastName,
@@ -200,11 +206,11 @@ object UserDAO extends SecuredBaseDAO[User] {
   }
 
   def updateUserConfiguration(user: User, configuration: UserConfiguration)(implicit ctx: DBAccessContext) = {
-    update(findByIdQ(user._id), Json.obj("$set" -> Json.obj("userConfiguration.configuration" -> configuration.configuration)))
+    update(findByIdQ(user._id), Json.obj("$set" -> Json.obj("userConfiguration.configuration" -> configuration.configurationOrDefaults)))
   }
 
   def updateDataSetConfiguration(user: User, dataSetName: String, configuration: DataSetConfiguration)(implicit ctx: DBAccessContext) = {
-    update(findByIdQ(user._id), Json.obj("$set" -> Json.obj(s"dataSetConfigurations.$dataSetName.configuration" -> configuration.configuration)))
+    update(findByIdQ(user._id), Json.obj("$set" -> Json.obj(s"dataSetConfigurations.$dataSetName.configuration" -> configuration.configurationOrDefaults)))
   }
 
   def setExperience(_user: BSONObjectID, domain: String, value: Int)(implicit ctx: DBAccessContext) = {
@@ -231,5 +237,12 @@ object UserDAO extends SecuredBaseDAO[User] {
     update(
       Json.obj("email" -> user.email),
       Json.obj("$set" -> Json.obj("verified" -> true)))
+  }
+
+  def removeTeamFromUsers(team: String)(implicit ctx: DBAccessContext) = {
+    update(
+      Json.obj("teams.team" -> team), Json.obj("$pull" -> Json.obj("teams" -> Json.obj("team" -> team))),
+      multi = true
+    )
   }
 }

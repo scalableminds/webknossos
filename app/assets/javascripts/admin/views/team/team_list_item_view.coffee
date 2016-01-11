@@ -1,26 +1,24 @@
-### define
-underscore : _
-backbone.marionette : marionette
-libs/template_helpers : TemplateHelpers
-###
+_               = require("lodash")
+Marionette      = require("backbone.marionette")
+TemplateHelpers = require("libs/template_helpers")
 
-class TeamListItemView extends Backbone.Marionette.ItemView
+class TeamListItemView extends Marionette.ItemView
 
   tagName : "tr"
   template : _.template("""
-    <td>
-      <input type="checkbox" name="name" value="<%= name %>" class="select-row">
-    </td>
-    <td><%= name %></td>
-    <td><%= owner.firstName %> <%= owner.lastName %></td>
+    <td><%- name %></td>
+    <td><% if(parent){ %><%- parent %><% } %></td>
+    <td><% if(owner){ %> <%- owner.firstName %> <%- owner.lastName %> <% }else{ %> - <% } %></td>
     <td>
       <% _.each(roles, function(role){ %>
-          <span class="label label-default" style="background-color: <%= TemplateHelpers.stringToColor(role.name) %>"><%= role.name %></span>
+          <span class="label label-default" style="background-color: <%- TemplateHelpers.stringToColor(role.name) %>"><%- role.name %></span>
       <% }) %>
     </td>
     </td>
     <td class="nowrap">
-      <a href="#" class="delete"><i class="fa fa-trash-o"></i>delete</a>
+      <% if(amIOwner){ %>
+        <a href="#" class="delete"><i class="fa fa-trash-o"></i>delete</a>
+      <% } %>
     </td>
   """)
 
@@ -41,3 +39,4 @@ class TeamListItemView extends Backbone.Marionette.ItemView
       @model.destroy()
 
 
+module.exports = TeamListItemView

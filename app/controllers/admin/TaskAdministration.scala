@@ -1,5 +1,7 @@
 package controllers.admin
 
+import javax.inject.Inject
+
 import play.api.mvc.Result
 import reactivemongo.bson.BSONObjectID
 
@@ -13,7 +15,7 @@ import models.binary.DataSetDAO
 import play.api.data.Form
 import play.api.data.Forms._
 import views.html
-import play.api.i18n.Messages
+import play.api.i18n.{MessagesApi, Messages}
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.Logger
 import play.twirl.api.Html
@@ -26,8 +28,10 @@ import play.api.libs.functional.syntax._
 import net.liftweb.common.{Box, Empty, Failure, Full}
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.util.reactivemongo.DBAccessContext
+import models.team.Team
+import models.user.time.{TimeSpan, TimeSpanService}
 
-object TaskAdministration extends AdminController {
+class TaskAdministration @Inject() (val messagesApi: MessagesApi) extends AdminController {
 
   val taskFromNMLForm = nmlTaskForm(minTaskInstances = 1)
 
@@ -158,7 +162,7 @@ object TaskAdministration extends AdminController {
   def editTaskForm(taskId: String) = Authenticated.async(parse.urlFormEncoded) { implicit request =>
     def validateForm(task: Task): Fox[Result] =
       basicTaskForm(task.assignedInstances).bindFromRequest.fold(
-        hasErrors = (formWithErrors => taskEditHtml(taskId, formWithErrors).map(h => BadRequest(h))),
+        hasErrors = formWithErrors => taskEditHtml(taskId, formWithErrors).map(h => BadRequest(h)),
         success = {
           case (taskTypeId, experience, priority, instances, team, projectName) =>
             for {
@@ -192,7 +196,7 @@ object TaskAdministration extends AdminController {
 
   def createFromNML = Authenticated.async(parse.multipartFormData) { implicit request =>
     taskFromNMLForm.bindFromRequest.fold(
-      hasErrors = (formWithErrors => taskCreateHTML(formWithErrors, taskForm).map(html => BadRequest(html))),
+      hasErrors = formWithErrors => taskCreateHTML(formWithErrors, taskForm).map(html => BadRequest(html)),
       success = {
         case (taskTypeId, experience, priority, instances, team, projectName, boundingBox) =>
           for {
@@ -202,7 +206,9 @@ object TaskAdministration extends AdminController {
             _ <- ensureTeamAdministration(request.user, team)
             bb <- boundingBox
           } yield {
-            val nmls = NMLService.extractFromFile(nmlFile.ref.file, nmlFile.filename).flatten
+            val nmls = NMLService.extractFromFile(nmlFile.ref.file, nmlFile.filename)
+            var numCreated = 0
+
             val baseTask = Task(
               taskType._id,
               team,
@@ -210,8 +216,9 @@ object TaskAdministration extends AdminController {
               priority,
               instances,
               _project = project.map(_.name))
+
             nmls.foreach {
-              nml =>
+              case NMLService.NMLParseSuccess(_, nml) =>
                 val task = Task(
                   taskType._id,
                   team,
@@ -223,9 +230,12 @@ object TaskAdministration extends AdminController {
                 TaskDAO.insert(task).flatMap { _ =>
                   AnnotationService.createAnnotationBase(task, request.user._id, bb, taskType.settings, nml)
                 }
+                numCreated += 1
+              case _ =>
+
             }
             Redirect(controllers.routes.TaskController.empty).flashing(
-              FlashSuccess(Messages("task.bulk.createSuccess", nmls.size)))
+              FlashSuccess(Messages("task.bulk.createSuccess", numCreated)))
           }
       })
   }
@@ -298,9 +308,6 @@ object TaskAdministration extends AdminController {
     }
   }
 
-  def dataSetNamesForTasks(tasks: List[Task])(implicit ctx: DBAccessContext) =
-    Future.traverse(tasks)(_.annotationBase.flatMap(_.dataSetName getOrElse "").futureBox.map(_.toOption))
-
   def tasksForType(taskTypeId: String) = Authenticated.async { implicit request =>
     for {
       taskType <- TaskTypeDAO.findOneById(taskTypeId) ?~> Messages("taskType.notFound")
@@ -315,18 +322,20 @@ object TaskAdministration extends AdminController {
     user: User,
     taskTypes: List[TaskType],
     projects: List[Project],
-    futureTaskType: Option[TaskType])
+    futureTaskType: Option[TaskType],
+    workingTime: Long)
 
   object UserWithTaskInfos {
     def userInfosPublicWrites(requestingUser: User): Writes[UserWithTaskInfos] =
       ( (__ \ "user").write(User.userPublicWrites(requestingUser)) and
         (__ \ "taskTypes").write[List[TaskType]] and
         (__ \ "projects").write[List[Project]] and
-        (__ \ "futureTaskType").write[Option[TaskType]])( u =>
-        (u.user, u.taskTypes, u.projects, u.futureTaskType))
+        (__ \ "futureTaskType").write[Option[TaskType]] and
+        (__ \ "workingTime").write[Long])( u =>
+        (u.user, u.taskTypes, u.projects, u.futureTaskType, u.workingTime))
   }
 
-  def overviewData = Authenticated.async { implicit request =>
+  def overviewData(start: Option[Long], end: Option[Long]) = Authenticated.async { implicit request =>
 
     def getUserInfos(users: List[User]) = {
 
@@ -343,13 +352,15 @@ object TaskAdministration extends AdminController {
           tasks <- Fox.sequenceOfFulls(annotations.map(_.task))
           projects <- Fox.sequenceOfFulls(tasks.map(_.project))
           taskTypes <- Fox.sequenceOfFulls(tasks.map(_.taskType))
-          taskTypeMap <- futureTaskTypeMap getOrElse(Map.empty)
+          taskTypeMap <- futureTaskTypeMap.getOrElse(Map.empty)
+          workingTime <- TimeSpanService.totalTimeOfUser(user, start, end).futureBox
         } yield {
           UserWithTaskInfos(
             user,
             taskTypes.distinct,
             projects.distinct,
-            taskTypeMap.get(user)
+            taskTypeMap.get(user),
+            workingTime.map(_.toMillis).toOption.getOrElse(0)
           )
         }
       }

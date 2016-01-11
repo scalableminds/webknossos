@@ -1,6 +1,10 @@
 package controllers
 
+import javax.inject.Inject
+
+import com.scalableminds.util.security.SCrypt
 import play.api._
+import play.api.libs.concurrent.Akka
 import play.api.mvc.{Request, Action}
 import play.api.data._
 import play.api.Play.current
@@ -11,15 +15,19 @@ import oxalis.security.Secured
 import com.scalableminds.util.mail._
 import oxalis.thirdparty.BrainTracing
 import play.api.libs.concurrent.Execution.Implicits._
-import play.api.i18n.Messages
+import play.api.i18n.{MessagesApi, Messages}
 import oxalis.mail.DefaultMails
 import oxalis.view.{SessionData, ProvidesUnauthorizedSessionData, UnAuthedSessionData}
 import scala.concurrent.Future
-import models.team.TeamDAO
+import models.team.{TeamService, TeamDAO}
 import com.scalableminds.util.reactivemongo.DBAccessContext
 import net.liftweb.common.Full
 
-object Authentication extends Controller with Secured with ProvidesUnauthorizedSessionData {
+class Authentication @Inject() (val messagesApi: MessagesApi) extends Controller with Secured with ProvidesUnauthorizedSessionData {
+
+  lazy val Mailer =
+    Akka.system(play.api.Play.current).actorSelection("/user/mailActor")
+
   // -- Authentication
   val autoVerify =
     Play.configuration.getBoolean("application.authentication.enableDevAutoVerify") getOrElse false
@@ -34,7 +42,7 @@ object Authentication extends Controller with Secured with ProvidesUnauthorizedS
 
     val passwordField = tuple("main" -> text, "validation" -> text)
       .verifying("user.password.nomatch", pw => pw._1 == pw._2)
-      .verifying("user.password.tooshort", pw => pw._1.length >= 6)
+      .verifying("user.password.tooshort", pw => pw._1.length >= 8)
 
     Form(
       mapping(
@@ -52,7 +60,7 @@ object Authentication extends Controller with Secured with ProvidesUnauthorizedS
 
   def formHtml(form: Form[(String, String, String, String, String)])(implicit session: SessionData) = {
     for {
-      teams <- TeamDAO.findAll(DBAccessContext(None))
+      teams <- TeamService.rootTeams()
     } yield html.user.register(form, teams)
   }
 
@@ -72,11 +80,11 @@ object Authentication extends Controller with Secured with ProvidesUnauthorizedS
             case _ =>
               for {
                 user <- UserService.insert(team, email, firstName, lastName, password, autoVerify)
-                brainDBResult <- BrainTracing.register(user, password)
+                brainDBResult <- BrainTracing.register(user)
               } yield {
-                Application.Mailer ! Send(
+                Mailer ! Send(
                   DefaultMails.registerMail(user.name, email, brainDBResult))
-                Application.Mailer ! Send(
+                Mailer ! Send(
                   DefaultMails.registerAdminNotifyerMail(user.name, email, brainDBResult))
                 if (autoVerify) {
                   Redirect(controllers.routes.Application.index)
@@ -119,13 +127,30 @@ object Authentication extends Controller with Secured with ProvidesUnauthorizedS
                 if (user.verified)
                   Redirect(controllers.routes.Application.index)
                 else
-                  Redirect("/dashboard")
+                  BadRequest(html.user.login(loginForm.bindFromRequest.withGlobalError("user.notVerified")))
               redirectLocation.withSession(Secured.createSession(user))
 
           }.getOrElse {
             BadRequest(html.user.login(loginForm.bindFromRequest.withGlobalError("user.login.failed")))
           }
       })
+  }
+
+  /**
+   * Authenticate as a different user
+   */
+  def switchTo(email: String) = Authenticated.async {
+    implicit request =>
+      if(request.user.isSuperUser){
+        UserService.findOneByEmail(email).map { user =>
+          Logger.info(s"[Superuser] user switch (${request.user.email} -> $email)")
+          Redirect(controllers.routes.Application.index).withSession(Secured.createSession(user))
+        }
+      } else {
+        Logger.warn(s"User tried to switch (${request.user.email} -> $email) but is no Superuser!")
+        Future.successful(
+          BadRequest(html.user.login(loginForm.withGlobalError("user.login.failed"))(sessionDataAuthenticated(request), request2Messages(request))))
+      }
   }
 
   /**

@@ -1,13 +1,12 @@
-### define
-underscore : _
-app : app
-backbone.marionette : marionette
-admin/models/team/team_collection : TeamCollection
-admin/views/selection_view : SelectionView
-libs/toast : Toast
-###
+_              = require("lodash")
+app            = require("app")
+Marionette     = require("backbone.marionette")
+TeamCollection = require("admin/models/team/team_collection")
+SelectionView  = require("admin/views/selection_view")
+Toast          = require("libs/toast")
+Request        = require("libs/request")
 
-class TaskTypeFormView extends Backbone.Marionette.LayoutView
+class TaskTypeFormView extends Marionette.LayoutView
 
   template : _.template("""
     <div class="well clearfix">
@@ -39,17 +38,17 @@ class TaskTypeFormView extends Backbone.Marionette.LayoutView
           <div class="col-sm-6">
 
             <div class="col-sm-6 form-group pull-right">
-              <label class="col-sm-10 control-label" for="arbitraryAllowed">Allow Arbitrary</label>
+              <label class="col-sm-10 control-label" for="obliqueAllowed">Allow Oblique Mode</label>
               <div class="col-sm-2">
-                <input type="checkbox" id="arbitraryAllowed" name="allowedModes[]" value="arbitrary" checked>
+                <input type="checkbox" id="obliqueAllowed" name="allowedModes[]" value="oblique" checked>
                 <span></span>
               </div>
             </div>
 
             <div class="col-sm-6 form-group pull-right">
-              <label class="col-sm-10 control-label" for="oxalisAllowed">Allow Oxalis</label>
+              <label class="col-sm-10 control-label" for="flightAllowed">Allow Flight Mode</label>
               <div class="col-sm-2">
-                <input type="checkbox" id="oxalisAllowed" name="allowedModes[]" value="oxalis" checked>
+                <input type="checkbox" id="flightAllowed" name="allowedModes[]" value="flight" checked>
                 <span></span>
               </div>
             </div>
@@ -75,7 +74,7 @@ class TaskTypeFormView extends Backbone.Marionette.LayoutView
               <div class="col-sm-4">
                 <div class="input-group">
                   <input type="number" id="expectedTime_minTime" name="expectedTime.minTime"
-                    value="5" min="0" input-append="hours" class="form-control" required>
+                    value="5" min="1" input-append="hours" class="form-control" required>
                   <span class="input-group-addon">hours</span>
                 </div>
               </div>
@@ -86,7 +85,7 @@ class TaskTypeFormView extends Backbone.Marionette.LayoutView
               <div class="col-sm-4">
                 <div class="input-group">
                   <input type="number" id="expectedTime_maxTime" name="expectedTime.maxTime"
-                    value="10" min="0" input-append="hours" class="form-control" required>
+                    value="10" min="1" input-append="hours" class="form-control" required>
                   <span class="input-group-addon">hours</span>
                 </div>
               </div>
@@ -97,7 +96,7 @@ class TaskTypeFormView extends Backbone.Marionette.LayoutView
               <div class="col-sm-4">
                 <div class="input-group">
                   <input type="number" id="expectedTime_maxHard" name="expectedTime.maxHard"
-                    value="15" min="0" input-append="hours" class="form-control" required>
+                    value="15" min="1" input-append="hours" class="form-control" required>
                   <span class="input-group-addon">hours</span>
                 </div>
               </div>
@@ -124,8 +123,8 @@ class TaskTypeFormView extends Backbone.Marionette.LayoutView
     "form" : "form"
     "branchPointsAllowed" : "#branchPointsAllowed"
     "somaClickingAllowed" : "#somaClickingAllowed"
-    "oxalisAllowed" : "#oxalisAllowed"
-    "arbitraryAllowed" : "#arbitraryAllowed"
+    "obliqueAllowed" : "#obliqueAllowed"
+    "flightAllowed" : "#flightAllowed"
     "summary" : "#summary"
     "description" : "#description"
 
@@ -142,11 +141,14 @@ class TaskTypeFormView extends Backbone.Marionette.LayoutView
     @ui.description.val(@model.get("description"))
 
     settings = @model.get("settings")
-    @ui.oxalisAllowed.attr("checked", "oxalis" in settings.allowedModes)
-    @ui.arbitraryAllowed.attr("checked", "arbitrary" in settings.allowedModes)
+    @ui.obliqueAllowed.attr("checked", "oblique" in settings.allowedModes)
+    @ui.flightAllowed.attr("checked", "flight" in settings.allowedModes)
     @ui.branchPointsAllowed.attr("checked", settings["branchPointsAllowed"])
     @ui.somaClickingAllowed.attr("checked", settings["somaClickingAllowed"])
 
+    # TODO Replace once time changes have been ported to master
+    # inputStrings = ["expectedTime_maxHard"]
+    # numValues = @model.get("expectedTime").match(/Limit: ([0-9]+)/).slice(1).map(parseFloat)
     inputStrings = ["expectedTime_minTime", "expectedTime_maxTime", "expectedTime_maxHard"]
     numValues = @model.get("expectedTime").match(/([0-9]+) - ([0-9]+), Limit: ([0-9]+)/).slice(1).map(parseFloat)
 
@@ -171,11 +173,10 @@ class TaskTypeFormView extends Backbone.Marionette.LayoutView
       else
         "/api/taskTypes"
 
-    $.ajax(
-      url : url
-      type: "post",
-      data: target.serialize(),
-    ).done((response) =>
+    Request.sendUrlEncodedFormReceiveJSON(
+      url
+      data: target
+    ).then( (response) =>
       Toast.message(response.messages)
 
       if @options.isEditForm
@@ -183,11 +184,6 @@ class TaskTypeFormView extends Backbone.Marionette.LayoutView
       else
         @collection.addJSON(response.newTaskType)
         @render()
-    ).fail((xhr) ->
-      mainMessage = xhr.responseJSON.messages[0]
-      detailedErrors = _.values(xhr.responseJSON.errors)
-      mainMessage.error += detailedErrors
-      Toast.message([mainMessage])
     )
 
 
@@ -202,3 +198,4 @@ class TaskTypeFormView extends Backbone.Marionette.LayoutView
     )
     @team.show(teamSelectionView)
 
+module.exports = TaskTypeFormView

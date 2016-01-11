@@ -1,11 +1,9 @@
-### define
-underscore : _
-app : app
-backbone.marionette : marionette
-./task_list_item_view : TaskListItemView
-###
+_                = require("lodash")
+app              = require("app")
+Marionette       = require("backbone.marionette")
+TaskListItemView = require("./task_list_item_view")
 
-class TaskListView extends Backbone.Marionette.CompositeView
+class TaskListView extends Marionette.CompositeView
 
   template : _.template("""
     <h3>Tasks</h3>
@@ -28,6 +26,7 @@ class TaskListView extends Backbone.Marionette.CompositeView
          </tr>
       </thead>
     </table>
+<<<<<<< HEAD
     <div class="navbar navbar-default navbar-fixed-bottom">
       <div class="navbar-form">
         <div class="btn-group">
@@ -37,6 +36,8 @@ class TaskListView extends Backbone.Marionette.CompositeView
         </div>
       </div>
     </div>
+=======
+>>>>>>> dev
   """)
   className : "task-administration container wide"
   childView : TaskListItemView
@@ -54,13 +55,15 @@ class TaskListView extends Backbone.Marionette.CompositeView
 
   initialize : ->
 
-    @listenTo(app.vent, "paginationView:filter", @filter)
+    @listenTo(app.vent, "paginationView:filter", @filterBySearch)
+    @listenTo(app.vent, "paginationView:addElement", @createNewTask)
 
-    @collection.fetch(
-      silent : true #fucking important for pagination
-    ).done( =>
-      @collection.goTo(1)
-    )
+    @collection.fetch()
+
+
+  createNewTask : ->
+
+    app.router.loadURL("/admin/tasks/create")
 
 
   toggleAllDetails : ->
@@ -69,6 +72,8 @@ class TaskListView extends Backbone.Marionette.CompositeView
     app.vent.trigger("taskListView:toggleDetails")
 
 
-  filter : (searchQuery) ->
+  filterBySearch : (searchQuery) ->
 
     @collection.setFilter(["team", "projectName", "id", "dataSet", "priority", "created"], searchQuery)
+
+module.exports = TaskListView

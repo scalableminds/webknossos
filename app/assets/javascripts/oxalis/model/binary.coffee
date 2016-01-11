@@ -1,15 +1,15 @@
-### define
-backbone : Backbone
-./binary/interpolation_collector : InterpolationCollector
-./binary/cube : Cube
-./binary/pullqueue : PullQueue
-./binary/pushqueue : PushQueue
-./binary/plane2d : Plane2D
-./binary/ping_strategy : PingStrategy
-./binary/ping_strategy_3d : PingStrategy3d
-./binary/bounding_box : BoundingBox
-../constants : constants
-###
+Backbone               = require("backbone")
+InterpolationCollector = require("./binary/interpolation_collector")
+Cube                   = require("./binary/cube")
+PullQueue              = require("./binary/pullqueue")
+PushQueue              = require("./binary/pushqueue")
+Plane2D                = require("./binary/plane2d")
+PingStrategy           = require("./binary/ping_strategy")
+PingStrategy3d         = require("./binary/ping_strategy_3d")
+BoundingBox            = require("./binary/bounding_box")
+Mappings               = require("./binary/mappings")
+Pipeline               = require("libs/pipeline")
+constants              = require("../constants")
 
 class Binary
 
@@ -24,7 +24,7 @@ class Binary
 
   direction : [0, 0, 0]
 
-  constructor : (@model, @tracing, @layer, maxZoomStep, updatePipeline, @connectionInfo) ->
+  constructor : (@model, @tracing, @layer, maxZoomStep, @connectionInfo) ->
 
     _.extend(this, Backbone.Events)
 
@@ -40,10 +40,14 @@ class Binary
     @cube = new Cube(@upperBoundary, maxZoomStep + 1, @layer.bitDepth)
     @boundingBox = new BoundingBox(@model.boundingBox, @cube)
 
+    updatePipeline = new Pipeline([@tracing.version])
+
     datasetName = @model.get("dataset").get("name")
-    @pullQueue = new PullQueue(datasetName, @cube, @layer, @tracing.id, @boundingBox, connectionInfo)
+    @pullQueue = new PullQueue(datasetName, @cube, @layer, @tracing.id, @boundingBox, @connectionInfo)
     @pushQueue = new PushQueue(datasetName, @cube, @layer, @tracing.id, updatePipeline)
     @cube.setPushQueue( @pushQueue )
+    @mappings = new Mappings(@model.dataSetName, @layer)
+    @activeMapping = null
 
     @pingStrategies = [
       new PingStrategy.Skeleton(@cube, @TEXTURE_SIZE_P),
@@ -57,15 +61,14 @@ class Binary
     for planeId in constants.ALL_PLANES
       @planes.push( new Plane2D(planeId, @cube, @pullQueue, @TEXTURE_SIZE_P, @layer.bitDepth, @targetBitDepth, 32) )
 
-    @pullQueue.set4Bit(@model.get("datasetConfiguration").get("fourBit"))
-    @listenTo(@model.get("datasetConfiguration"), "change:fourBit" , (model, is4Bit) -> @pullQueue.set4Bit(is4Bit) )
+    @pullQueue.setFourBit(@model.get("datasetConfiguration").get("fourBit"))
+    @listenTo(@model.get("datasetConfiguration"), "change:fourBit" , (model, fourBit) -> @pullQueue.setFourBit(fourBit) )
 
     @cube.on(
       temporalBucketCreated : (address) =>
         @pullQueue.add({bucket: address, priority: PullQueue::PRIORITY_HIGHEST})
       newMapping : =>
         @forcePlaneRedraw()
-        @model.flycam.update()
     )
 
     @ping = _.throttle(@pingImpl, @PING_THROTTLE_TIME)
@@ -75,6 +78,34 @@ class Binary
 
     for plane in @planes
       plane.forceRedraw()
+
+
+  setActiveMapping : (mappingName) ->
+
+    @activeMapping = mappingName
+
+    setMapping = (mapping) =>
+      @cube.setMapping(mapping)
+      @model.flycam.update()
+
+    if mappingName?
+      @mappings.getMappingArrayAsync(mappingName).then(setMapping)
+    else
+      setMapping([])
+
+
+  setActiveMapping : (mappingName) ->
+
+    @activeMapping = mappingName
+
+    setMapping = (mapping) =>
+      @cube.setMapping(mapping)
+      @model.flycam.update()
+
+    if mappingName?
+      @mappings.getMappingArrayAsync(mappingName).then(setMapping)
+    else
+      setMapping([])
 
 
   pingStop : ->
@@ -128,11 +159,20 @@ class Binary
   getByVerticesSync : (vertices) ->
     # A synchronized implementation of `get`. Cuz its faster.
 
-    { buffer, accessedBuckets } = InterpolationCollector.bulkCollect(
+    { buffer, accessedBuckets, missingBuckets } = InterpolationCollector.bulkCollect(
       vertices
       @cube.getArbitraryCube()
     )
 
+    @pullQueue.addAll(missingBuckets.map(
+      (bucket) ->
+        bucket: bucket
+        priority: PullQueue::PRIORITY_HIGHEST
+    ))
+    @pullQueue.pull()
+
     @cube.accessBuckets(accessedBuckets)
 
     buffer
+
+module.exports = Binary

@@ -5,6 +5,7 @@ import models.annotation._
 import models.task.Task
 import CompoundAnnotation._
 import models.tracing.skeleton.temporary.{TemporarySkeletonTracingService, TemporarySkeletonTracing}
+import play.api.Logger
 import play.api.libs.json._
 import models.user.{User, UsedAnnotationDAO, UsedAnnotation}
 import models.basics._
@@ -84,6 +85,7 @@ trait SkeletonManipulations extends FoxImplicits {
         _ <- SkeletonTracingDAO.update(updatedTracing._id, updatedTracing.copy(timestamp = System.currentTimeMillis))(GlobalAccessContext)
       } yield updatedTracing
     } else {
+      Logger.warn("Failed to parse all update commands from json.")
       Fox.empty
     }
   }

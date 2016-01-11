@@ -1,16 +1,14 @@
-### define
-app : app
-backbone : Backbone
-../geometries/plane : Plane
-../geometries/skeleton : Skeleton
-../geometries/cube : Cube
-../geometries/contourgeometry : ContourGeometry
-../geometries/volumegeometry : VolumeGeometry
-../model/dimensions : Dimensions
-../constants : constants
-../view/polygons/polygon_factory : PolygonFactory
-three : THREE
-###
+app             = require("app")
+Backbone        = require("backbone")
+Plane           = require("../geometries/plane")
+Skeleton        = require("../geometries/skeleton")
+Cube            = require("../geometries/cube")
+ContourGeometry = require("../geometries/contourgeometry")
+VolumeGeometry  = require("../geometries/volumegeometry")
+Dimensions      = require("../model/dimensions")
+constants       = require("../constants")
+PolygonFactory  = require("../view/polygons/polygon_factory")
+THREE           = require("three")
 
 class SceneController
 
@@ -33,10 +31,6 @@ class SceneController
 
     @createMeshes()
     @bindToEvents()
-
-    @listenTo(@model.user, "change:segmentationOpacity", (model, opacity) ->
-      @setSegmentationAlpha(opacity)
-    )
 
 
   createMeshes : ->
@@ -63,7 +57,7 @@ class SceneController
       @contour = new ContourGeometry(@model.volumeTracing, @model.flycam)
 
     if @model.skeletonTracing?
-      @skeleton = new Skeleton(@flycam, @model)
+      @skeleton = new Skeleton(@model)
 
     # create Meshes
     @planes = new Array(3)
@@ -102,7 +96,7 @@ class SceneController
         @volumeMeshes = @volumeMeshes.concat(volume.getMeshes())
 
       @trigger("newGeometries", @volumeMeshes)
-      @flycam.update()
+      app.vent.trigger("rerender")
       @cellsDeferred = null
 
 
@@ -167,7 +161,7 @@ class SceneController
 
     for plane in @planes
       plane.setDisplayCrosshair value
-    @flycam.update()
+    app.vent.trigger("rerender")
 
 
   setClippingDistance : (value) ->
@@ -175,20 +169,21 @@ class SceneController
     # convert nm to voxel
     for i in constants.ALL_PLANES
       @planeShift[i] = value * app.scaleInfo.voxelPerNM[i]
+    app.vent.trigger("rerender")
 
 
   setInterpolation : (value) ->
 
     for plane in @planes
       plane.setLinearInterpolationEnabled(value)
-    @flycam.update()
+    app.vent.trigger("rerender")
 
 
   setDisplayPlanes : (value) =>
 
     for i in [0..2]
       @displayPlane[i] = value
-    @flycam.update()
+    app.vent.trigger("rerender")
 
 
   getMeshes : =>
@@ -252,10 +247,14 @@ class SceneController
 
     user = @model.user
     @listenTo(@model, "newBoundingBox", (bb) -> @setBoundingBox(bb))
+    @listenTo(user, "change:segmentationOpacity", (model, opacity) ->
+      @setSegmentationAlpha(opacity)
+    )
     @listenTo(user, "change:clippingDistance", (model, value) -> @setClippingDistance(value))
     @listenTo(user, "change:displayCrosshair", (model, value) -> @setDisplayCrosshair(value))
-    @listenTo(user, "change:interpolation", (model, value) -> @setInterpolation(value))
-    @listenTo(user, "change:displayTDViewXY", (model, value) -> @setDisplayPlanes(value))
-    @listenTo(user, "change:displayTDViewYZ", (model, value) -> @setDisplayPlanes(value))
-    @listenTo(user, "change:displayTDViewXZ", (model, value) -> @setDisplayPlanes(value))
+    @listenTo(@model.datasetConfiguration, "change:interpolation", (model, value) ->
+      @setInterpolation(value)
+    )
+    @listenTo(user, "change:tdViewDisplayPlanes", (model, value) -> @setDisplayPlanes(value))
 
+module.exports = SceneController

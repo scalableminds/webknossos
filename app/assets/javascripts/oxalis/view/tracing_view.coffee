@@ -1,8 +1,6 @@
-### define
-backbone.marionette : marionette
-###
+Marionette = require("backbone.marionette")
 
-class TracingView extends Backbone.Marionette.LayoutView
+class TracingView extends Marionette.LayoutView
 
   id : "render"
   template : _.template("""
@@ -40,8 +38,10 @@ class TracingView extends Backbone.Marionette.LayoutView
     )
 
 
-  disableContextMenu : ->
+  disableContextMenu : (event) ->
 
     # hide contextmenu, while rightclicking a canvas
     event.preventDefault()
     return
+
+module.exports = TracingView

@@ -1,8 +1,6 @@
-### define
-../setting_views/checkbox_setting_view : CheckboxSettingView
-./category_view : CategoryView
-../../../constants : constants
-###
+CheckboxSettingView = require("../setting_views/checkbox_setting_view")
+CategoryView        = require("./category_view")
+constants           = require("../../../constants")
 
 class TDViewCategoryView extends CategoryView
 
@@ -12,29 +10,13 @@ class TDViewCategoryView extends CategoryView
 
   subviewCreators :
 
-    "displayTDViewXY" : ->
+    "tdViewDisplayPlanes" : ->
 
       return new CheckboxSettingView(
         model : @model
         options :
-          name : "displayTDViewXY"
-          displayName : "Display XY-Plane"
+          name : "tdViewDisplayPlanes"
+          displayName : "Display Planes"
       )
 
-    "displayTDViewYZ" : ->
-
-      return new CheckboxSettingView(
-        model : @model
-        options :
-          name : "displayTDViewYZ"
-          displayName : "Display YZ-Plane"
-      )
-
-    "displayTDViewXZ" : ->
-
-      return new CheckboxSettingView(
-        model : @model
-        options :
-          name : "displayTDViewXZ"
-          displayName : "Display XZ-Plane"
-      )
+module.exports = TDViewCategoryView

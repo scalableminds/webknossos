@@ -1,8 +1,6 @@
-### define
-./abstract_setting_view : AbstractSettingView
-underscore : _
-app : app
-###
+_                   = require("lodash")
+Marionette          = require("backbone.marionette")
+AbstractSettingView = require("./abstract_setting_view")
 
 class SliderSettingView extends AbstractSettingView
 
@@ -12,15 +10,15 @@ class SliderSettingView extends AbstractSettingView
 
   template : _.template("""
     <div class="col-sm-5">
-      <%= displayName %>
+      <%- displayName %>
     </div>
     <div class="col-sm-3 no-gutter v-center">
       <div class="v-center-agent">
-        <input type="range" min="<%= min %>" max="<%= max %>" step="<%= step %>" value="<%= value %>">
+        <input type="range" min="<%- min %>" max="<%- max %>" step="<%- step %>" value="<%- value %>">
       </div>
     </div>
     <div class="col-sm-4">
-      <input class="form-control" type="number" min="<%= min %>" max="<%= max %>" step="<%= step %>" value="<%= value %>">
+      <input class="form-control" type="number" min="<%- min %>" max="<%- max %>" step="<%- step %>" value="<%- value %>">
     </div>
   """)
 
@@ -46,7 +44,6 @@ class SliderSettingView extends AbstractSettingView
   handleChange : (evt) ->
 
     @model.set(@options.name, (Number) evt.target.value)
-    app.oxalis.model.flycam.update()
 
 
   update : (model, value) ->
@@ -60,3 +57,5 @@ class SliderSettingView extends AbstractSettingView
     if @model
       if reset = @model.reset
         reset()
+
+module.exports = SliderSettingView

@@ -1,11 +1,9 @@
-### define
-app : app
-backbone : backbone
-oxalis/model/dimensions : Dimensions
-oxalis/constants : constants
-###
+app        = require("app")
+backbone   = require("backbone")
+Dimensions = require("oxalis/model/dimensions")
+constants  = require("oxalis/constants")
 
-class SkeletonTacingController
+class SkeletonTracingController
 
   # See comment in Controller class on general controller architecture.
   #
@@ -59,7 +57,7 @@ class SkeletonTacingController
     if position
       @model.flycam.setPosition(position)
 
-
+module.exports = SkeletonTracingController
 
 
 

@@ -1,23 +1,21 @@
-### define
-backbone : Backbone
-underscore : _
-app : app
-./model/binary : Binary
-./model/skeletontracing/skeletontracing : SkeletonTracing
-./model/user : User
-./model/dataset_configuration : DatasetConfiguration
-./model/volumetracing/volumetracing : VolumeTracing
-./model/binarydata_connection_info : ConnectionInfo
-./model/scaleinfo : ScaleInfo
-./model/flycam2d : Flycam2d
-./model/flycam3d : Flycam3d
-./constants : constants
-libs/request : Request
-libs/toast : Toast
-libs/pipeline : Pipeline
-###
+Backbone             = require("backbone")
+_                    = require("lodash")
+app                  = require("../app")
+Binary               = require("./model/binary")
+SkeletonTracing      = require("./model/skeletontracing/skeletontracing")
+User                 = require("./model/user")
+DatasetConfiguration = require("./model/dataset_configuration")
+VolumeTracing        = require("./model/volumetracing/volumetracing")
+ConnectionInfo       = require("./model/binarydata_connection_info")
+ScaleInfo            = require("./model/scaleinfo")
+Flycam2d             = require("./model/flycam2d")
+Flycam3d             = require("./model/flycam3d")
+constants            = require("./constants")
+Request              = require("libs/request")
+Toast                = require("libs/toast")
+ErrorHandling        = require("libs/error_handling")
 
-# This is the model. It takes care of the data including the
+# This is THE model. It takes care of the data including the
 # communication with the server.
 
 # All public operations are **asynchronous**. We return a promise
@@ -26,13 +24,15 @@ libs/pipeline : Pipeline
 
 class Model extends Backbone.Model
 
-
   fetch : (options) ->
 
-    Request.send(
-      url : "/annotations/#{@get("tracingType")}/#{@get("tracingId")}/info"
-      dataType : "json"
-    ).pipe (tracing) =>
+    if @get("controlMode") == constants.CONTROL_MODE_TRACE
+      # Include /readOnly part whenever it is in the pathname
+      infoUrl = location.pathname + "/info"
+    else
+      infoUrl = "/annotations/#{@get('tracingType')}/#{@get('tracingId')}/info"
+
+    Request.receiveJSON(infoUrl).then( (tracing) =>
 
       @datasetName = tracing.content.dataSet.name
 
@@ -54,31 +54,40 @@ class Model extends Backbone.Model
       else
 
         @user = new User()
-        @user.fetch().pipe( =>
+        @user.fetch().then( =>
 
           @set("dataset", new Backbone.Model(tracing.content.dataSet))
-          @set("datasetConfiguration", new DatasetConfiguration({@datasetName}))
-          @get("datasetConfiguration").fetch().pipe( =>
+          colorLayers = _.filter( @get("dataset").get("dataLayers"),
+                                  (layer) -> layer.category == "color")
+          @set("datasetConfiguration", new DatasetConfiguration({
+            @datasetName
+            dataLayerNames : _.pluck(colorLayers, "name")
+          }))
+          @get("datasetConfiguration").fetch().then(
+            =>
+              layers = @getLayers(tracing.content.contentData.customLayers)
 
-            layers  = @getLayers(tracing.content.contentData.customLayers)
+              Promise.all(
+                @getDataTokens(layers)
+              ).then( =>
+                error = @initializeWithData(tracing, layers)
+                return error if error
+              )
 
-            $.when(
-              @getDataTokens(layers)...
-            ).pipe =>
-              @initializeWithData(tracing, layers)
-
-          -> Toast.error("Ooops. We couldn't communicate with our mother ship. Please try to reload this page.")
-          )
+            -> Toast.error("Ooops. We couldn't communicate with our mother ship. Please try to reload this page.")
+            )
         )
+      )
 
 
   initializeWithData : (tracing, layers) ->
 
     dataset = @get("dataset")
 
-    $.assertExtendContext({
+    ErrorHandling.assertExtendContext({
       task: @get("tracingId")
       dataSet: dataset.get("name")
+
     })
 
     console.log "tracing", tracing
@@ -86,7 +95,6 @@ class Model extends Backbone.Model
 
     isVolumeTracing = "volume" in tracing.content.settings.allowedModes
     app.scaleInfo = new ScaleInfo(dataset.get("scale"))
-    @updatePipeline = new Pipeline([tracing.version])
 
     if (bb = tracing.content.boundingBox)?
         @boundingBox = {
@@ -101,19 +109,19 @@ class Model extends Backbone.Model
     @connectionInfo = new ConnectionInfo()
     @binary = {}
 
-    maxResolution = Math.max(_.union(layers.map((layer) ->
-      layer.resolutions
-    )...)...)
-    maxZoomStep = Math.log(maxResolution) / Math.LN2
+    maxZoomStep = -Infinity
 
     for layer in layers
       layer.bitDepth = parseInt(layer.elementClass.substring(4))
-      @binary[layer.name] = new Binary(this, tracing, layer, maxZoomStep, @updatePipeline, @connectionInfo)
+      maxLayerZoomStep = Math.log(Math.max(layer.resolutions...)) / Math.LN2
+      @binary[layer.name] = new Binary(this, tracing, layer, maxLayerZoomStep, @connectionInfo)
+      maxZoomStep = Math.max(maxZoomStep, maxLayerZoomStep)
+
+    @buildMappingsObject(layers)
 
     if @getColorBinaries().length == 0
       Toast.error("No data available! Something seems to be wrong with the dataset.")
-
-    @setDefaultBinaryColors()
+      return {"error" : true}
 
     flycam = new Flycam2d(constants.PLANE_WIDTH, maxZoomStep + 1, @)
     flycam3d = new Flycam3d(constants.DISTANCE_3D, dataset.get("scale"))
@@ -122,25 +130,16 @@ class Model extends Backbone.Model
     @listenTo(flycam3d, "changed", (matrix, zoomStep) => flycam.setPosition(matrix[12..14]))
     @listenTo(flycam, "positionChanged" : (position) => flycam3d.setPositionSilent(position))
 
-    # init state
-    state = @get("state")
-    flycam.setPosition( state.position || tracing.content.editPosition )
-    if state.zoomStep?
-      flycam.setZoomStep( state.zoomStep )
-      flycam3d.setZoomStep( state.zoomStep )
-    if state.rotation?
-      flycam3d.setRotation( state.rotation )
-
     if @get("controlMode") == constants.CONTROL_MODE_TRACE
 
       if isVolumeTracing
-        $.assert( @getSegmentationBinary()?,
+        ErrorHandling.assert( @getSegmentationBinary()?,
           "Volume is allowed, but segmentation does not exist" )
-        @set("volumeTracing", new VolumeTracing(tracing, flycam, @getSegmentationBinary(), @updatePipeline))
-
+        @set("volumeTracing", new VolumeTracing(tracing, flycam, @getSegmentationBinary()))
       else
-        @set("skeletonTracing", new SkeletonTracing(tracing, flycam, flycam3d, @user, @updatePipeline))
+        @set("skeletonTracing", new SkeletonTracing(tracing, flycam, flycam3d, @user))
 
+    @applyState(@get("state"), tracing)
     @computeBoundaries()
 
     @set("tracing", tracing)
@@ -150,7 +149,27 @@ class Model extends Backbone.Model
     @initSettersGetter()
     @trigger("sync")
 
+    # no error
     return
+
+
+  setMode : (@mode) ->
+
+    @trigger("change:mode", @mode)
+
+
+  # For now, since we have no UI for this
+  buildMappingsObject : (layers) ->
+
+    segmentationBinary = @getSegmentationBinary()
+
+    if segmentationBinary?
+      window.mappings = {
+        getAll : => segmentationBinary.mappings.getMappingNames()
+        getActive : => segmentationBinary.activeMapping
+        activate : (mapping) => segmentationBinary.setActiveMapping(mapping)
+      }
+
 
   getDataTokens : (layers) ->
 
@@ -158,12 +177,10 @@ class Model extends Backbone.Model
 
     for layer in layers
       do (layer) =>
-        Request.send(
-          url : "/dataToken/generate?dataSetName=#{@datasetName}&dataLayerName=#{layer.name}"
-          dataType : "json"
-        ).pipe (dataStore) ->
+        Request.receiveJSON("/dataToken/generate?dataSetName=#{@datasetName}&dataLayerName=#{layer.name}").then( (dataStore) ->
           layer.token = dataStore.token
           layer.url   = dataStoreUrl
+        )
 
 
   getColorBinaries : ->
@@ -178,26 +195,6 @@ class Model extends Backbone.Model
     return _.find(@binary, (binary) ->
       binary.category == "segmentation"
     )
-
-
-  setDefaultBinaryColors : ->
-
-    datasetConfig = @get("datasetConfiguration")
-    layerColors = datasetConfig.get("layerColors")
-    colorBinaries = @getColorBinaries()
-
-    if colorBinaries.length == 1
-      defaultColors = [[255, 255, 255]]
-    else
-      defaultColors = [[255, 0, 0], [0, 255, 0], [0, 0, 255],
-                        [255, 255, 0], [0, 255, 255], [255, 0, 255]]
-
-    for binary, i in colorBinaries
-      if layerColors[binary.name]
-        color = layerColors[binary.name]
-      else
-        color = defaultColors[i % defaultColors.length]
-      datasetConfig.set("layerColors.#{binary.name}", color)
 
 
   getLayers : (userLayers) ->
@@ -234,6 +231,32 @@ class Model extends Backbone.Model
         @lowerBoundary[i] = Math.min @lowerBoundary[i], binary.lowerBoundary[i]
         @upperBoundary[i] = Math.max @upperBoundary[i], binary.upperBoundary[i]
 
+  # delegate save request to all submodules
+  save : ->
+
+    submodels = []
+    deferreds = []
+
+    if @user?
+      submodels.push[@user]
+
+    if @get("dataset")?
+      submodels.push[@get("dataset")]
+
+    if @get("datasetConfiguration")?
+      submodels.push[@get("datasetConfiguration")]
+
+    if @get("volumeTracing")?
+      submodels.push(@get("volumeTracing").stateLogger)
+
+    if @get("skeletonTracing")?
+      submodels.push(@get("skeletonTracing").stateLogger)
+
+    _.each(submodels, (model) ->
+      deferreds.push( model.save() )
+    )
+
+    return $.when.apply($, deferreds)
 
 
   # Make the Model compatible between legacy Oxalis style and Backbone.Modela/Views
@@ -248,3 +271,18 @@ class Model extends Backbone.Model
           return @get(key)
       )
     )
+
+
+  applyState : (state, tracing) ->
+
+    @get("flycam").setPosition( state.position || tracing.content.editPosition )
+    if state.zoomStep?
+      @get("flycam").setZoomStep( state.zoomStep )
+      @get("flycam3d").setZoomStep( state.zoomStep )
+    if state.rotation?
+      @get("flycam3d").setRotation( state.rotation )
+    if state.activeNode?
+      @get("skeletonTracing")?.setActiveNode(state.activeNode)
+
+
+module.exports = Model

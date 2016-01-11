@@ -1,18 +1,16 @@
-### define
-app : app
-backbone : Backbone
-jquery : $
-tween : TWEEN_LIB
-../model/dimensions : Dimensions
-../../libs/toast : Toast
-../constants : constants
-./modal : modal
-three : THREE
-###
+app        = require("app")
+Backbone   = require("backbone")
+$          = require("jquery")
+TWEEN      = require("tween.js")
+Dimensions = require("../model/dimensions")
+Toast      = require("../../libs/toast")
+constants  = require("../constants")
+modal      = require("./modal")
+THREE      = require("three")
 
 class PlaneView
 
-  constructor : (@model, @flycam, @view, @stats) ->
+  constructor : (@model, @view, @stats) ->
 
     _.extend(this, Backbone.Events)
 
@@ -26,7 +24,6 @@ class PlaneView
     # Create a 4x4 grid
     @curWidth = WIDTH = HEIGHT = constants.VIEWPORT_WIDTH
     @scaleFactor = 1
-    @deviceScaleFactor = window.devicePixelRatio || 1
 
     # Initialize main THREE.js components
     @camera   = new Array(4)
@@ -77,7 +74,9 @@ class PlaneView
 
     @first = true
     @newTextures = [true, true, true, true]
-    # start the rendering loop
+
+    @needsRerender = true
+    app.vent.on("rerender", => @needsRerender = true)
 
 
   animate : ->
@@ -104,15 +103,13 @@ class PlaneView
       for plane in binary.planes
         modelChanged |= plane.hasChanged()
 
-    if @flycam.hasChanged or @flycam.hasNewTextures() or modelChanged
+    if @needsRerender or modelChanged
 
       @trigger("render")
 
       # update postion and FPS displays
       @stats.update()
 
-      # scale for retina displays
-      f = @deviceScaleFactor
       viewport = [
         [0, @curWidth + 20],
         [@curWidth + 20, @curWidth + 20],
@@ -133,13 +130,12 @@ class PlaneView
       for i in constants.ALL_VIEWPORTS
         @trigger("renderCam", i)
         setupRenderArea(
-          viewport[i][0] * f, viewport[i][1] * f, @curWidth * f,
+          viewport[i][0], viewport[i][1], @curWidth,
           constants.PLANE_COLORS[i]
         )
         @renderer.render @scene, @camera[i]
 
-      @flycam.hasChanged = false
-      @flycam.hasNewTexture = [false, false, false]
+      @needsRerender = false
 
   addGeometry : (geometry) ->
     # Adds a new Three.js geometry to the scene.
@@ -154,8 +150,7 @@ class PlaneView
 
 
   draw : ->
-    # Apply a single draw
-    @flycam.update()
+    app.vent.trigger("rerender")
 
 
   resizeThrottled : ->
@@ -216,7 +211,7 @@ class PlaneView
       else
         $(".inputcatcher").eq(i).removeClass("active").addClass("inactive")
 
-    @flycam.update()
+    @draw()
 
 
   getCameras : =>
@@ -264,3 +259,4 @@ class PlaneView
 
     @animate()
 
+module.exports = PlaneView

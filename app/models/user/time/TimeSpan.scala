@@ -58,6 +58,6 @@ object TimeSpan {
   }
 
   def groupByWeek(timeSpan: TimeSpan) = {
-    Week(timeSpan.created.getWeekOfWeekyear, timeSpan.created.getYear)
+    Week(timeSpan.created.getWeekOfWeekyear, timeSpan.created.getWeekyear)
   }
 }

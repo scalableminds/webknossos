@@ -1,9 +1,10 @@
-### define
-../../libs/resizable_buffer : ResizableBuffer
-three.color : ColorConverter
-./materials/particle_material_factory : ParticleMaterialFactory
-three : THREE
-###
+app                     = require("app")
+ResizableBuffer         = require("libs/resizable_buffer")
+ErrorHandling           = require("libs/error_handling")
+THREE                   = require("three")
+TWEEN                   = require("tween.js")
+ColorConverter          = require("three.color")
+ParticleMaterialFactory = require("./materials/particle_material_factory")
 
 class Tree
 
@@ -90,7 +91,7 @@ class Tree
         array.getAllElements()[index * array.elementLength + i] = lastElement[i]
 
     nodesIndex = @getNodeIndex(node.id)
-    $.assert(nodesIndex?, "No node found.", { id : node.id, @nodeIDs })
+    ErrorHandling.assert(nodesIndex?, "No node found.", { id : node.id, @nodeIDs })
 
     # swap IDs and nodes
     swapLast( @nodeIDs, nodesIndex )
@@ -110,7 +111,7 @@ class Tree
         edgesIndex = i
         break
 
-    $.assert(found, "No edge found.", { found, edgeArray, nodesIndex })
+    ErrorHandling.assert(found, "No edge found.", { found, edgeArray, nodesIndex })
 
     swapLast(@edgesBuffer, edgesIndex)
 
@@ -140,12 +141,6 @@ class Tree
       return node1.pos.concat(node2.pos)
     else
       return node2.pos.concat(node1.pos)
-
-
-  setSize : (size) ->
-
-    @nodes.material.size = size
-    @edges.material.linewidth = size / 4
 
 
   setSizeAttenuation : (sizeAttenuation) ->
@@ -221,7 +216,7 @@ class Tree
       @scalesBuffer.set([factor], index)
     redraw = =>
       @updateGeometries()
-      @model.flycam.update()
+      app.vent.trigger("rerender")
     onUpdate = ->
       setScaleFactor(@scaleFactor)
       redraw()
@@ -315,3 +310,5 @@ class Tree
   invertHex : (hexColor) ->
 
     @shiftHex(hexColor, 0.5)
+
+module.exports = Tree

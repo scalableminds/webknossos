@@ -1,9 +1,7 @@
-### define
-../setting_views/checkbox_setting_view : CheckboxSettingView
-../setting_views/dropdown_setting_view : DropdownSettingView
-./category_view : CategoryView
-../../../constants : constants
-###
+CheckboxSettingView = require("../setting_views/checkbox_setting_view")
+DropdownSettingView = require("../setting_views/dropdown_setting_view")
+CategoryView        = require("./category_view")
+constants           = require("../../../constants")
 
 class QualityCategoryView extends CategoryView
 
@@ -40,3 +38,5 @@ class QualityCategoryView extends CategoryView
           displayName : "Quality"
           options : ["high", "medium", "low"]
       )
+
+module.exports = QualityCategoryView

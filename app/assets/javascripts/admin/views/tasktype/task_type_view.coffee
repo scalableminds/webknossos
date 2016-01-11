@@ -1,12 +1,10 @@
-### define
-underscore : _
-app : app
-backbone.marionette : marionette
-./task_type_list_view : TaskTypeListView
-./task_type_form_view : TaskTypeFormView
-###
+_                = require("lodash")
+app              = require("app")
+Marionette       = require("backbone.marionette")
+TaskTypeListView = require("./task_type_list_view")
+TaskTypeFormView = require("./task_type_form_view")
 
-class TaskTypeView extends Backbone.Marionette.LayoutView
+class TaskTypeView extends Marionette.LayoutView
 
   className : "container task-types-administration"
 
@@ -31,3 +29,5 @@ class TaskTypeView extends Backbone.Marionette.LayoutView
     @form.show(@formView)
     @list.show(@listView)
 
+
+module.exports = TaskTypeView

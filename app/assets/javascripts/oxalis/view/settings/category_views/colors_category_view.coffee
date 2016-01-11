@@ -1,8 +1,6 @@
-### define
-../setting_views/color_setting_view : ColorSettingView
-../setting_views/slider_setting_view : SliderSettingView
-./category_view : CategoryView
-###
+LayerColorSettingsView = require("../settings_views/layer_color_settings_view")
+ButtonSettingView      = require("../setting_views/button_setting_view")
+CategoryView           = require("./category_view")
 
 class ColorsCategoryView extends CategoryView
 
@@ -12,39 +10,28 @@ class ColorsCategoryView extends CategoryView
 
   subviewCreators :
 
-    "brightness" : ->
+    "reset" : ->
 
-      return new SliderSettingView(
+      return new ButtonSettingView(
         model : @model
         options :
-          name : "brightness"
-          displayName : "Brightness"
-          min : -256
-          max : 256
-          step : 5
+          displayName : "Reset Color Settings"
+          callbackName : "reset"
       )
 
-    "contrast" : ->
-
-      return new SliderSettingView(
-        model : @model
-        options :
-          name : "contrast"
-          displayName : "Contrast"
-          min : 0.5
-          max : 5
-          step : 0.1
-      )
 
   initialize : ->
 
-    for key, color of @model.get("layerColors")
+    for key in @model.get("dataLayerNames")
 
-      @subviewCreators[key] = -> new ColorSettingView(
-        model : @model
-        options :
-          name : "layerColors.#{key}"
-          displayName : "Layer: #{key}"
-      )
+      do (key) =>
+        @subviewCreators[key] = -> new LayerColorSettingsView(
+          model : @model
+          options :
+            name : "layers.#{key}"
+            displayName : "Layer: #{key}"
+        )
 
     super()
+
+module.exports = ColorsCategoryView

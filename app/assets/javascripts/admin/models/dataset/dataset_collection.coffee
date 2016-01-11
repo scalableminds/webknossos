@@ -1,10 +1,9 @@
-### define
-underscore : _
-../pagination_collection : PaginationCollection
-./dataset_model : DatasetModel
-###
+SortedCollection     = require("../sorted_collection")
+DatasetModel         = require("./dataset_model")
 
-class DatasetCollection extends PaginationCollection
+class DatasetCollection extends SortedCollection
 
-  url : "/api/datasets" # TODO: ?isActive=true breaks importing in advanced view
+  url : "/api/datasets"
   model : DatasetModel
+
+module.exports = DatasetCollection

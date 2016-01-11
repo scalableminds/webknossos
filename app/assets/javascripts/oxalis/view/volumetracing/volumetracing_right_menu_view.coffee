@@ -1,14 +1,21 @@
-### define
-../right_menu_view : RightMenuView
-./right-menu/mapping_info_view : MappingInfoView
-###
+AbstractTabView = require("../abstract_tab_view")
+MappingInfoView = require("./right-menu/mapping_info_view")
+DatasetInfoView = require("../viewmode/right-menu/dataset_info_view")
 
-class SkeletonTracingRightMenuView extends RightMenuView
+class VolumeTracingRightMenuView extends AbstractTabView
 
-  TABS : [
-    {
-      id : "volume-mapping-info"
-      name : "Mapping Info"
-      viewClass : MappingInfoView
-    }
-  ]
+  getTabs : ->
+    [
+      {
+        id : "tab-info"
+        name : "Info"
+        viewClass : DatasetInfoView
+      }
+      {
+        id : "volume-mapping-info"
+        name : "Mapping Info"
+        viewClass : MappingInfoView
+      }
+    ]
+
+module.exports = VolumeTracingRightMenuView

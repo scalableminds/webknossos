@@ -1,7 +1,5 @@
-### define
-underscore : _
-backbone : backbone
-###
+_        = require("lodash")
+backbone = require("backbone")
 
 class CommentsCollection extends Backbone.Collection
 
@@ -9,6 +7,7 @@ class CommentsCollection extends Backbone.Collection
   intitalize : ->
 
     @coefficient = 1
+
 
   comparator : (model) ->
 
@@ -19,3 +18,15 @@ class CommentsCollection extends Backbone.Collection
 
     @coefficient = if isAscending then 1 else -1
     super()
+
+
+  findCommentByNodeId : (id) ->
+
+    return @findWhere({ node: id })
+
+
+  hasCommentWithNodeId : (id) ->
+
+    return @findCommentByNodeId(id) != undefined
+
+module.exports = CommentsCollection

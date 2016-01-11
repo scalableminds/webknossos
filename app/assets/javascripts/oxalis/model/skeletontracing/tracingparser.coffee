@@ -1,13 +1,9 @@
-### define
-jquery : $
-underscore : _
-backbone : backbone
-libs/request : Request
-./tracepoint : TracePoint
-./tracetree : TraceTree
-../../constants : constants
-oxalis/model/right-menu/comments_collection : CommentsCollection
-###
+_                  = require("lodash")
+THREE              = require("three")
+TracePoint         = require("./tracepoint")
+TraceTree          = require("./tracetree")
+Toast              = require("libs/toast")
+CommentsCollection = require("oxalis/model/right-menu/comments_collection")
 
 class TracingParser
 
@@ -28,7 +24,7 @@ class TracingParser
       # Create new tree
       tree = new TraceTree(
         treeData.id,
-        new THREE.Color().setRGB(treeData.color...).getHex(),
+        @convertColor(treeData.color),
         if treeData.name then treeData.name else "Tree#{('00'+treeData.id).slice(-3)}",
         treeData.timestamp)
 
@@ -55,8 +51,8 @@ class TracingParser
           sourceNode.appendNext(targetNode)
           targetNode.appendNext(sourceNode)
         else
-          $.assertExists(sourceNode, "source node is null", {"edge" : edge})
-          $.assertExists(targetNode, "target node is null", {"edge" : edge})
+          Toast.error("Node with id #{edge.source} doesn't exist. Ignored edge due to missing source node.") if not sourceNode
+          Toast.error("Node with id #{edge.target} doesn't exist. Ignored edge due to missing target node.") if not targetNode
 
       # Set active Node
       activeNodeT = @skeletonTracing.findNodeInList(tree.nodes, @data.activeNode)
@@ -68,6 +64,17 @@ class TracingParser
       @treeIdCount = Math.max(tree.treeId + 1, @treeIdCount)
       @trees.push(tree)
 
+    if @data.activeNode and not @activeNode
+      Toast.error("Node with id #{@data.activeNode} doesn't exist. Ignored active node.")
+
+
+  convertColor : (colorArray) ->
+
+    if colorArray?
+      return new THREE.Color().setRGB(colorArray...).getHex()
+
+    return null
+
 
   setBranchpoints : (nodeList) ->
 
@@ -76,6 +83,8 @@ class TracingParser
       if node
         node.type = @skeletonTracing.TYPE_BRANCH
         @skeletonTracing.branchStack.push(node)
+      else
+        Toast.error("Node with id #{branchpoint.id} doesn't exist. Ignored branchpoint.")
 
 
   setComments : (nodeList) ->
@@ -115,3 +124,5 @@ class TracingParser
       @activeNode
       @activeTree
     }
+
+module.exports = TracingParser

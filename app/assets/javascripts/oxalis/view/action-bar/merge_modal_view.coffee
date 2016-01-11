@@ -1,20 +1,19 @@
-### define
-underscore : _
-backbone.marionette : Marionette
-libs/toast : Toast
-app : app
-oxalis/model/skeletontracing/user_annotation_collection : UserAnnotationCollection
-admin/views/selection_view : SelectionView
-admin/models/user/user_collection : UserCollection
-admin/models/team/team_collection : TeamCollection
-admin/models/task/task_collection : TaskCollection
-admin/models/tasktype/task_type_collection : TaskTypeCollection
-admin/models/project/project_collection : ProjectCollection
-admin/models/project/project_model : ProjectModel
-routes : jsRoutes
-###
+_                        = require("lodash")
+Marionette               = require("backbone.marionette")
+Toast                    = require("libs/toast")
+Request                  = require("libs/request")
+app                      = require("app")
+UserAnnotationCollection = require("oxalis/model/skeletontracing/user_annotation_collection")
+SelectionView            = require("admin/views/selection_view")
+UserCollection           = require("admin/models/user/user_collection")
+TeamCollection           = require("admin/models/team/team_collection")
+TaskCollection           = require("admin/models/task/task_collection")
+TaskTypeCollection       = require("admin/models/tasktype/task_type_collection")
+ProjectCollection        = require("admin/models/project/project_collection")
+ProjectModel             = require("admin/models/project/project_model")
+jsRoutes                 = require("routes")
 
-class MergeModalView extends Backbone.Marionette.LayoutView
+class MergeModalView extends Marionette.LayoutView
 
   className : "modal fade"
   template : _.template("""
@@ -56,22 +55,27 @@ class MergeModalView extends Backbone.Marionette.LayoutView
             <label for="nml">NML</label>
             <div class="row">
               <div class="col-md-10">
-                <form action="<%= jsRoutes.controllers.admin.NMLIO.upload().url %>"
+                <form action="<%- jsRoutes.controllers.admin.NMLIO.upload().url %>"
                     method="POST"
                     enctype="multipart/form-data"
                     id="upload-and-explore-form"
-                    class="form-inline inline-block">
-                    <div class="input-group">
-                      <span class="input-group-btn">
-                        <span class="btn btn-primary btn-file">
-                          <input type="file" name="nmlFile" accept=".nml">
-                          <i class="fa fa-upload" id="form-upload-icon"></i>
-                          <i class="fa fa-spinner fa-spin hide" id="form-spinner-icon"></i>
+                    class="inline-block">
+
+                    <div class="fileinput fileinput-new input-group" data-provides="fileinput">
+                      <div class="form-control" data-trigger="fileinput">
+                        <span class="fileinput-filename"></span>
+                      </div>
+                      <span class="input-group-addon btn btn-default btn-file">
+                        <span class="fileinput-new">
+                          <i class="fa fa-upload"></i>
                           Upload NML
-                        </input>
                         </span>
+                        <span class="fileinput-exists">
+                          <i class="fa fa-upload hide" id="form-upload-icon"></i>
+                          <i class="fa fa-spinner fa-spin" id="form-spinner-icon"></i>
+                          Change</span>
+                        <input type="file" name="nmlFile" accept=".nml">
                       </span>
-                      <input type="text" class="file-info form-control" readonly="">
                     </div>
                 </form>
               </div>
@@ -118,6 +122,7 @@ class MergeModalView extends Backbone.Marionette.LayoutView
     "change input[type=file]"         : "selectFiles"
     "submit @ui.uploadAndExploreForm" : "uploadFiles"
     "click #explorative-merge"        : "mergeExplorative"
+    "change.bs.fileinput"             : "selectFiles"
 
   ui :
     "task"                 : ".task"
@@ -127,7 +132,7 @@ class MergeModalView extends Backbone.Marionette.LayoutView
     "uploadAndExploreForm" : "#upload-and-explore-form"
     "formSpinnerIcon"      : "#form-spinner-icon"
     "formUploadIcon"       : "#form-upload-icon"
-    "fileInfo"             : ".file-info"
+    "fileInput"            : ":file"
 
 
   initialize : ->
@@ -139,7 +144,7 @@ class MergeModalView extends Backbone.Marionette.LayoutView
 
     @$el.modal("show")
 
-    $.ajax(url : "/api/user").done((user) =>
+    Request.receiveJSON("/api/user").then( (user) =>
       @taskSelectionView = new SelectionView(
         collection : new  TaskCollection()
         childViewOptions :
@@ -209,9 +214,7 @@ class MergeModalView extends Backbone.Marionette.LayoutView
 
     readOnly = document.getElementById('checkbox-read-only').checked
 
-    $.ajax(
-      url: "#{url}/#{readOnly}"
-    ).done( (annotation) ->
+    Request.receiveJSON("#{url}/#{readOnly}").then( (annotation) ->
 
       Toast.message(annotation.messages)
 
@@ -219,46 +222,37 @@ class MergeModalView extends Backbone.Marionette.LayoutView
 
       app.router.loadURL(redirectUrl)
 
-    ).fail( (xhr) ->
-      if xhr.responseJSON
-        Toast.error(xhr.responseJSON.messages[0].error)
-      else
-        Toast.error("Error. Please try again.")
     )
 
 
   selectFiles : (event) ->
 
-    if event.target.files.length
+    if @ui.fileInput[0].files.length
       @ui.uploadAndExploreForm.submit()
-      @ui.fileInfo.val(event.target.files[0].name)
 
 
-  toggleIcon : ->
+  toggleIcon : (state) ->
 
-    [@ui.formSpinnerIcon, @ui.formUploadIcon].forEach((ea) -> ea.toggleClass("hide"))
+    @ui.formSpinnerIcon.toggleClass("hide", state)
+    @ui.formUploadIcon.toggleClass("hide", !state)
 
 
   uploadFiles : (event) ->
 
     event.preventDefault()
-
-    @toggleIcon()
+    @toggleIcon(false)
 
     form = @ui.uploadAndExploreForm
 
-    $.ajax(
-      url : form.attr("action")
-      data : new FormData(form[0])
-      type : "POST"
-      processData : false
-      contentType : false
-    ).done( (data) =>
-      @nml = data.annotation
-      Toast.message(data.messages)
-    ).fail( (xhr) ->
-      Toast.message(xhr.responseJSON.messages)
-    ).always( =>
-      @toggleIcon()
+    Request.always(
+      Request.sendMultipartFormReceiveJSON(
+        form.attr("action")
+        data : new FormData(form[0])
+      ).then((data) =>
+        @nml = data.annotation
+        Toast.message(data.messages)
+      )
+      => @toggleIcon(true)
     )
 
+module.exports = MergeModalView

@@ -1,11 +1,9 @@
-### definegoo
-../setting_views/number_setting_view : NumberSettingView
-../setting_views/checkbox_setting_view : CheckboxSettingView
-../setting_views/slider_setting_view : SliderSettingView
-../setting_views/button_setting_view : ButtonSettingView
-./category_view : CategoryView
-oxalis/constants : Constants
-###
+NumberSettingView   = require("../setting_views/number_setting_view")
+CheckboxSettingView = require("../setting_views/checkbox_setting_view")
+SliderSettingView   = require("../setting_views/slider_setting_view")
+ButtonSettingView   = require("../setting_views/button_setting_view")
+CategoryView        = require("./category_view")
+Constants           = require("oxalis/constants")
 
 class NodeCategoryView extends CategoryView
 
@@ -64,3 +62,6 @@ class NodeCategoryView extends CategoryView
           displayName : "Delete Active Node"
           callbackName : "deleteActiveNode"
       )
+
+
+module.exports = NodeCategoryView

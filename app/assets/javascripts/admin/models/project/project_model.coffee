@@ -1,9 +1,7 @@
-### define
-underscore : _
-backbone : backbone
-###
+_        = require("lodash")
+backbone = require("backbone")
 
-class ProjectCollection extends Backbone.Model
+class ProjectModel extends Backbone.Model
 
   urlRoot : "/api/projects"
 
@@ -24,3 +22,4 @@ class ProjectCollection extends Backbone.Model
     _.extend(options, {url : "/api/projects/#{@get("name")}"})
     super(options)
 
+module.exports = ProjectModel

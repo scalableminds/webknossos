@@ -1,16 +1,11 @@
-### define
-../statelogger : StateLogger
-###
+StateLogger = require("../statelogger")
 
 class VolumeTracingStateLogger extends StateLogger
 
 
-  constructor : (flycam, version, tracingId, tracingType, allowUpdate, updatePipeline, @volumeTracing, @pushQueue) ->
+  constructor : (flycam, version, tracingId, tracingType, allowUpdate, @volumeTracing, @pushQueue) ->
 
-    super(flycam, version, tracingId, tracingType, allowUpdate, updatePipeline)
-
-    # For now, just save regularily
-    @listenTo(@flycam, "positionChanged", @push)
+    super(flycam, version, tracingId, tracingType, allowUpdate)
 
 
   pushDiff : (action, value, push = true) ->
@@ -33,3 +28,5 @@ class VolumeTracingStateLogger extends StateLogger
       }
       false
     )
+
+module.exports = VolumeTracingStateLogger

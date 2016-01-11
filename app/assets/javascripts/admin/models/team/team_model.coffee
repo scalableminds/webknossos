@@ -1,17 +1,17 @@
-### define
-underscore : _
-backbone : Backbone
-###
+_        = require("lodash")
+Backbone = require("backbone")
 
 class TeamModel extends Backbone.Model
 
   urlRoot : "/api/teams"
-  
+
   defaults :
     name : ""
     owner : ""
     roles : [
-        name : "admin"
-        name : "user"
+        {name : "admin"},
+        {name : "user"}
     ]
     isEditable : "true"
+
+module.exports = TeamModel

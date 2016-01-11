@@ -1,26 +1,50 @@
-### define
-libs/request : Request
-underscore : _
-backbone : Backbone
-backbone-deep-model : DeepModel
-###
+Request   = require("libs/request")
+_         = require("lodash")
+Backbone  = require("backbone")
+DeepModel = require("backbone-deep-model")
+
 
 class DatasetConfiguration extends Backbone.DeepModel
 
-
-  initialize : ({datasetName}) ->
+  initialize : ({datasetName, @dataLayerNames}) ->
 
     @url = "/api/dataSetConfigurations/#{datasetName}"
-    @listenTo(app.vent, "saveEverything", @save)
-    @listenTo(this, "change", -> @save())
+    @listenTo(@, "change", _.debounce((=> @save()), 500))
+    @listenTo(@, "sync", => @setDefaultBinaryColors())
 
 
   reset : =>
 
-    Request.send(
-      url : "/api/dataSetConfigurations/default"
-      dataType : "json"
-    ).done( (defaultData) =>
-      @set("brightness", defaultData.brightness)
-      @set("contrast", defaultData.contrast)
-    )
+    @setDefaultBinaryColors(true)
+
+
+  triggerAll : ->
+
+    for property of @attributes
+      @trigger("change:#{property}", @, @get(property))
+
+
+  setDefaultBinaryColors : (forceDefault = false) ->
+
+    layers = @get("layers")
+
+    if @dataLayerNames.length == 1
+      defaultColors = [[255, 255, 255]]
+    else
+      defaultColors = [[255, 0, 0], [0, 255, 0], [0, 0, 255],
+                        [255, 255, 0], [0, 255, 255], [255, 0, 255]]
+
+    for layerName, i in @dataLayerNames
+      defaults =
+        color: defaultColors[i % defaultColors.length]
+        brightness: 0
+        contrast: 1
+
+      if forceDefault or not layers[layerName]
+        layer = defaults
+      else
+        layer = _.defaults(layers[layerName], defaults)
+
+      @set("layers.#{layerName}", layer)
+
+module.exports = DatasetConfiguration

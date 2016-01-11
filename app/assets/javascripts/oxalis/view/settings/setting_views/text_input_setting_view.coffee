@@ -1,7 +1,6 @@
-### define
-./abstract_setting_view : AbstractSettingView
-underscore : _
-###
+_                   = require("lodash")
+Marionette          = require("backbone.marionette")
+AbstractSettingView = require("./abstract_setting_view")
 
 class TextInputSettingView extends AbstractSettingView
 
@@ -11,10 +10,10 @@ class TextInputSettingView extends AbstractSettingView
 
   template : _.template("""
     <div class="col-sm-5">
-      <%= displayName %>
+      <%- displayName %>
     </div>
     <div class="col-sm-7">
-      <input class="form-control" type="text" pattern="<%= pattern %>" title="<%= title %>" value="<%= value %>">
+      <input class="form-control" type="text" pattern="<%- pattern %>" title="<%- title %>" value="<%- value %>">
     </div>
   """)
 
@@ -44,3 +43,5 @@ class TextInputSettingView extends AbstractSettingView
   update : (model, value) ->
 
     @ui.text.val(value)
+
+module.exports = TextInputSettingView

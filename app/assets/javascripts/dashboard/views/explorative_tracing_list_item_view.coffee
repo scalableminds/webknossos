@@ -1,19 +1,19 @@
-### define
-underscore : _
-backbone.marionette : marionette
-routes : routes
-libs/toast : Toast
-libs/behaviors/hover_show_hide_behavior : HoverShowHide
-###
+_             = require("lodash")
+Marionette    = require("backbone.marionette")
+routes        = require("routes")
+Toast         = require("libs/toast")
+HoverShowHide = require("libs/behaviors/hover_show_hide_behavior")
+Toast         = require("libs/toast")
+Request       = require("libs/request")
 
-class ExplorativeTracingListItemView extends Backbone.Marionette.ItemView
+class ExplorativeTracingListItemView extends Marionette.ItemView
 
   tagName : "tr"
   template : _.template("""
-    <td><%= formattedHash %></td>
+    <td><%- formattedHash %></td>
     <td class="explorative-name-column hover-dynamic">
-      <span class="hover-hide" id="explorative-tracing-name"><%= name %></span>
-      <form action="<%= jsRoutes.controllers.AnnotationController.nameExplorativeAnnotation(typ, id).url %>"
+      <span class="hover-hide" id="explorative-tracing-name"><%- name %></span>
+      <form action="<%- jsRoutes.controllers.AnnotationController.nameExplorativeAnnotation(typ, id).url %>"
         method="POST" class="hover-show hide" id="explorative-name-form">
         <div class="input-append">
           <input class="input-medium hover-input form-control"
@@ -21,45 +21,54 @@ class ExplorativeTracingListItemView extends Backbone.Marionette.ItemView
                  id="explorative-name-input"
                  maxlength="50"
                  type="text"
-                 value="<%= name %>"
+                 value="<%- name %>"
                  autocomplete="off">
         </div>
       </form>
     </td>
-    <td><%= dataSetName %></td>
+    <td><%- dataSetName %></td>
 
     <td>
-      <% if (stats) { %>
-        <span title="Trees"><i class="fa fa-sitemap"></i><%= stats.numberOfTrees %>&nbsp;</span><br />
-        <span title="Nodes"><i class="fa fa-bull"></i><%= stats.numberOfNodes %>&nbsp;</span><br />
-        <span title="Edges"><i class="fa fa-arrows-h"></i><%= stats.numberOfEdges %></span>
+      <% if (stats && (contentType == "skeletonTracing")) { %>
+        <span title="Trees"><i class="fa fa-sitemap"></i><%- stats.numberOfTrees %>&nbsp;</span><br />
+        <span title="Nodes"><i class="fa fa-bull"></i><%- stats.numberOfNodes %>&nbsp;</span><br />
+        <span title="Edges"><i class="fa fa-arrows-h"></i><%- stats.numberOfEdges %></span>
       <% } %>
     </td>
 
-    <td><%= contentType + " - " + typ %></td>
-    <td><%= created %></td>
+    <td><%- contentType + " - " + typ %></td>
+    <td><%- created %></td>
     <td class="nowrap">
-      <a href="<%= jsRoutes.controllers.AnnotationController.trace(typ, id).url %>">
-        <i class="fa fa-random"></i>
-        <strong>trace</strong>
-      </a><br />
-      <a href="<%= jsRoutes.controllers.AnnotationController.download(typ, id).url %>">
-        <i class="fa fa-download"></i>
-        download
-      </a><br />
       <% if (typ == "Explorational"){ %>
-        <a href="<%= jsRoutes.controllers.AnnotationController.finish(typ, id).url %>"
-           id="finish-tracing">
-          <i class="fa fa-trash-o"></i>
-          delete
-        </a>
+        <% if (!state.isFinished) {%>
+          <a href="<%- jsRoutes.controllers.AnnotationController.trace(typ, id).url %>">
+            <i class="fa fa-random"></i>
+            <strong>trace</strong>
+          </a><br />
+          <a href="<%- jsRoutes.controllers.AnnotationController.download(typ, id).url %>">
+            <i class="fa fa-download"></i>
+            download
+          </a><br />
+          <a href="<%- jsRoutes.controllers.AnnotationController.finish(typ, id).url %>"
+             id="finish-tracing">
+            <i class="fa fa-archive"></i>
+            archive
+          </a><br />
+        <% } else {%>
+          <a href="<%- jsRoutes.controllers.AnnotationController.reopen(typ, id).url %>"
+             id="reopen-tracing">
+            <i class="fa fa-folder-open"></i>
+            reopen
+          </a><br />
+        <% } %>
       <% } %>
     </td>
   """)
 
   events :
     "submit #explorative-name-form" : "nameExplorativeAnnotation"
-    "click #finish-tracing" : "finishTracing"
+    "click #finish-tracing" : "finishOrOpenTracing"
+    "click #reopen-tracing" : "finishOrOpenTracing"
     "change @ui.explorativeNameInput" : "submitForm"
 
   ui :
@@ -82,29 +91,32 @@ class ExplorativeTracingListItemView extends Backbone.Marionette.ItemView
     target = $(event.target)
     url = target.attr("action")
 
-    $.ajax(
-      url : url
-      type: "post",
-      data: target.serialize(),
-    ).done((response) =>
+    Request.sendUrlEncodedFormReceiveJSON(
+      url
+      data: target
+    ).then( (response) =>
       Toast.message(response.messages)
       newName = @$("input[name='name']").val()
       @model.set("name", newName)
       @render()
-    ).fail((xhr) ->
-      Toast.message(xhr.responseJSON.messages)
     )
 
+  toggleState: (state) ->
+    state.isFinished = !state.isFinished
 
-  finishTracing : (event) ->
+
+  finishOrOpenTracing : (event) ->
 
     event.preventDefault()
-    url = $(event.target).attr("href")
+    url = $(event.target).attr("href") || $(event.target.parentElement).attr("href")
 
-    $.get(url).done((response) =>
+    Request.receiveJSON(url).then( (response) =>
       Toast.message(response.messages)
+      @toggleState(@model.attributes.state)
       @model.collection.remove(@model)
+      @options.parent.render()
     ).fail((xhr) ->
       Toast.message(xhr.responseJSON.messages)
     )
 
+module.exports = ExplorativeTracingListItemView

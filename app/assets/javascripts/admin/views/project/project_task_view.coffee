@@ -1,47 +1,49 @@
-### define
-underscore : _
-backbone.marionette : Marionette
-###
+_          = require("lodash")
+Marionette = require("backbone.marionette")
 
-class ProjectTaskView extends Backbone.Marionette.ItemView
+class ProjectTaskView extends Marionette.ItemView
 
   tagName : "tr"
   template : _.template("""
     <td>
-      <a href="/tasks#<%= id %>">
-        <%= id.slice(-6) %>
+      <a href="/tasks#<%- id %>">
+        <%- id.slice(-6) %>
       </a>
     </td>
     <td>
-      <% if(type){ %>
+      <% if(type) { %>
         <a href="/taskTypes#<% type.id %>">
-          <%= type.summary %>
+          <%- type.summary %>
         </a>
       <% } %>
     </td>
     <td>
-      <%= dataSet %>
+      <%- dataSet %>
     </td>
     <td>
       <span title="Unassigned">
-        <i class="fa fa-play-circle"></i><%= status.open %> open
+        <i class="fa fa-play-circle"></i><%- status.open %> open
       </span>
       |
       <span title="in Progress">
-        <i class="fa fa-random"></i><%= status.inProgress %> active
+        <i class="fa fa-random"></i><%- status.inProgress %> active
       </span>
       |
       <span title="Completed">
-        <i class="fa fa-check-circle-o"></i><%= status.completed %> done
+        <i class="fa fa-check-circle-o"></i><%- status.completed %> done
       </span>
 
     </td>
     <td>
-      Traced Time: <%= tracingTime %>
+      Traced Time: <%- tracingTime %>
     </td>
     <td class="nowrap">
-      <a href="/api/tasks/<%= id %>/download" title="Download all finished tracings">
-        <i class="fa fa-download"></i>download
-      </a>
+      <% if (status.completed > 0) { %>
+        <a href="/api/tasks/<%- id %>/download" title="Download all finished tracings">
+          <i class="fa fa-download"></i>download
+        </a>
+      <% } %>
     </td>
   """)
+
+module.exports = ProjectTaskView

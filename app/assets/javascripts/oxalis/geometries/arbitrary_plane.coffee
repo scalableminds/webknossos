@@ -1,12 +1,9 @@
-### define
-backbone : backbone
-three : THREE
-m4x4 : M4x4
-v3 : V3
-underscore : _
-oxalis/constants : constants
-./materials/arbitrary_plane_material_factory : ArbitraryPlaneMaterialFactory
-###
+_                             = require("lodash")
+backbone                      = require("backbone")
+THREE                         = require("three")
+{M4x4, V3}                    = require("libs/mjs")
+constants                     = require("oxalis/constants")
+ArbitraryPlaneMaterialFactory = require("./materials/arbitrary_plane_material_factory")
 
 # Let's set up our trianglesplane.
 # It serves as a "canvas" where the brain images
@@ -53,7 +50,7 @@ class ArbitraryPlane
     for name, binary of @model.binary
       binary.cube.on "bucketLoaded", => @isDirty = true
 
-    throw "width needs to be a power of 2" unless Math.log(width) / Math.LN2 % 1 != 1
+    throw "width needs to be a power of 2" unless Math.log(@width) / Math.LN2 % 1 != 1
 
 
   setMode : ( mode, radius ) ->
@@ -78,7 +75,7 @@ class ArbitraryPlane
 
       matrix = cam.getZoomedMatrix()
 
-      newVertices = M4x4.transformPointsAffine(matrix, @queryVertices)
+      newVertices = M4x4.transformPointsAffine matrix, @queryVertices
       newColors = @model.getColorBinaries()[0].getByVerticesSync(newVertices)
 
       @textureMaterial.setData("color", newColors)
@@ -171,3 +168,4 @@ class ArbitraryPlane
 
     plane
 
+module.exports = ArbitraryPlane

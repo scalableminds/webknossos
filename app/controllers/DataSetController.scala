@@ -1,8 +1,11 @@
 package controllers
 
+import javax.inject.Inject
+
+import models.team.TeamDAO
 import oxalis.security.Secured
 import models.binary._
-import play.api.i18n.Messages
+import play.api.i18n.{MessagesApi, Messages}
 import views.html
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json._
@@ -17,6 +20,13 @@ import scala.concurrent.duration._
 import com.scalableminds.util.tools.ExtendedTypes.ExtendedString
 import models.user.{User, UserService}
 import com.scalableminds.util.tools.Fox
+import play.api.data.Form
+import play.api.data.Forms._
+import oxalis.security.AuthenticatedRequest
+import com.scalableminds.util.reactivemongo.{GlobalAccessContext, DBAccessContext}
+import net.liftweb.common.{Empty, Failure, Full, ParamFailure}
+import com.scalableminds.util.geometry.{Scale, Point3D}
+import com.scalableminds.braingames.binary.models._
 
 /**
  * Company: scalableminds
@@ -25,12 +35,12 @@ import com.scalableminds.util.tools.Fox
  * Time: 17:58
  */
 
-object DataSetController extends Controller with Secured {
+class DataSetController @Inject() (val messagesApi: MessagesApi) extends Controller with Secured {
 
   val ThumbnailWidth = 200
   val ThumbnailHeight = 200
 
-  val ThumbnailCacheDuration = 1 hour
+  val ThumbnailCacheDuration = 1 day
 
   def view(dataSetName: String) = UserAwareAction.async {
     implicit request =>
@@ -45,13 +55,15 @@ object DataSetController extends Controller with Secured {
     implicit request =>
 
       def imageFromCacheIfPossible(dataSet: DataSet) =
-        Cache.getOrElse(s"thumbnail-$dataSetName*$dataLayerName", ThumbnailCacheDuration.toSeconds.toInt) {
+        // We don't want all images to expire at the same time. Therefore, we add a day of randomness, hence the 86400
+        Cache.getOrElse(s"thumbnail-$dataSetName*$dataLayerName",
+          ThumbnailCacheDuration.toSeconds.toInt + (math.random * 86400).toInt) {
           DataStoreHandler.requestDataLayerThumbnail(dataSet, dataLayerName, ThumbnailWidth, ThumbnailHeight)
         }
 
       for {
         dataSet <- DataSetDAO.findOneBySourceName(dataSetName) ?~> Messages("dataSet.notFound")
-        layer <- DataStoreController.getDataLayer(dataSet, dataLayerName) ?~> Messages("dataLayer.notFound")
+        layer <- DataSetService.getDataLayer(dataSet, dataLayerName) ?~> Messages("dataLayer.notFound")
         image <- imageFromCacheIfPossible(dataSet) ?~> Messages("dataLayer.thumbnailFailed")
       } yield {
         val data = Base64.decodeBase64(image)
@@ -127,13 +139,62 @@ object DataSetController extends Controller with Secured {
         for{
           dataSet <- DataSetDAO.findOneBySourceName(dataSetName) ?~> Messages("dataSet.notFound")
           _ <- allowedToAdministrate(request.user, dataSet).toFox
-          _ <- Fox.combined(teams.map(team => ensureTeamAdministration(request.user, team).toFox))
-          _ <- DataSetService.updateTeams(dataSet, teams)
+          userTeams <- TeamDAO.findAll.map(_.filter(team => team.isEditableBy(request.user)))
+          teamsWithoutUpdate = dataSet.allowedTeams.filterNot(t => userTeams.exists(_.name == t))
+          teamsWithUpdate = teams.filter(t => userTeams.exists(_.name == t))
+          _ <- DataSetService.updateTeams(dataSet, teamsWithUpdate ++ teamsWithoutUpdate)
         } yield
-          Ok
+          Ok(Json.toJson(teamsWithUpdate ++ teamsWithoutUpdate))
       case e: JsError =>
         Future.successful(BadRequest(JsError.toFlatJson(e)))
     }
   }
+
+  def uploadForm = Form(
+    tuple(
+      "name" -> nonEmptyText.verifying("dataSet.name.invalid",
+        n => n.matches("[A-Za-z0-9_]*")),
+      "team" -> nonEmptyText,
+      "scale" -> mapping(
+        "scale" -> text.verifying("scale.invalid",
+          p => p.matches(Scale.formRx.toString)))(Scale.fromForm)(Scale.toForm)
+    )).fill(("", "", Scale.default))
+
+  def upload = Authenticated.async(parse.maxLength(1024 * 1024 * 1024, parse.multipartFormData)) { implicit request =>
+
+    request.body match {
+      case Right(formData) =>
+        uploadForm.bindFromRequest(formData.dataParts).fold(
+          hasErrors = (formWithErrors => Future.successful(JsonBadRequest(formWithErrors.errors.head.message))),
+          success = {
+            case (name, team, scale) =>
+              (for {
+                _ <- ensureNewDataSetName(name).toFox ~> Messages("dataSet.name.alreadyTaken")
+                _ <- ensureTeamAdministration(request.user, team).toFox ~> Messages("team.admin.notAllowed", team)
+                zipFile <- formData.file("zipFile").toFox ~> Messages("zip.file.notFound")
+                settings = DataSourceSettings(None, scale, None)
+                upload = DataSourceUpload(name, team, zipFile.ref.file.getAbsolutePath(), Some(settings))
+                _ <- DataStoreHandler.uploadDataSource(upload).toFox
+              } yield {
+                Ok
+              }).futureBox.map {
+                case Full(r) => r
+                case Failure(error,_,_) =>
+                  JsonBadRequest(error)
+              }
+        })
+
+      case Left(_) =>
+        Future.successful(JsonBadRequest(Messages("zip.file.tooLarge")))
+    }
+  }
+
+  private def ensureNewDataSetName(name: String)(implicit ctx: DBAccessContext) = {
+    DataSetService.findDataSource(name)(GlobalAccessContext).futureBox.map {
+      case Empty   => Full(true)
+      case Full(_) => Failure(Messages("dataSet.name.alreadyTaken"))
+    }
+  }
+
 }
 

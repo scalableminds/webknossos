@@ -1,9 +1,7 @@
-### define
-underscore : _
-backbone.marionette : marionette
-###
+_          = require("lodash")
+Marionette = require("backbone.marionette")
 
-class ExperienceModal extends Backbone.Marionette.ItemView
+class ExperienceModalView extends Marionette.ItemView
 
   tagName : "div"
   className : "modal fade"
@@ -22,7 +20,7 @@ class ExperienceModal extends Backbone.Marionette.ItemView
             </div>
           </div>
           <div class="form-group">
-            <label class="col-sm-2 control-label" for="experience-value">Value</label>
+            <label class="col-sm-2 control-label" for="experience-value">Level</label>
             <div class="col-sm-10">
               <input type="number" class="form-control" name="experience-value" value="0">
             </div>
@@ -74,12 +72,11 @@ class ExperienceModal extends Backbone.Marionette.ItemView
       users = @findUsers()
 
       for user in users
-        experiences = user.get("experiences")
+        experiences = _.clone(user.get("experiences"))
         if _.isNumber(experiences[domain])
           delete experiences[domain]
 
-        user.save("experiences" : experiences)
-        user.trigger("change") #Backbone doesn't support nested models
+        user.save({ experiences : experiences }, { wait : true })
 
         @hideModal()
 
@@ -95,13 +92,12 @@ class ExperienceModal extends Backbone.Marionette.ItemView
       users = @findUsers()
 
       for user in users
-        experiences = user.get("experiences")
+        experiences = _.clone(user.get("experiences"))
         if _.isNumber(experiences[domain]) and not setOnly
           experiences[domain] += value
         else
           experiences[domain] = value
-        user.save("experiences" : experiences)
-        user.trigger("change") #Backbone doesn't support nested models
+        user.save({ experiences : experiences }, { wait : true })
 
         @hideModal()
 
@@ -128,7 +124,9 @@ class ExperienceModal extends Backbone.Marionette.ItemView
 
     return isValid
 
+
   hideModal : ->
 
     @$el.modal("hide")
 
+module.exports = ExperienceModalView

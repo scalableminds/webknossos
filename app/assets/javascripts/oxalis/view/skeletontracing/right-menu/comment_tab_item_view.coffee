@@ -1,15 +1,13 @@
-### define
-backbone.marionette : Marionette
-app : app
-libs/utils : Utils
-###
+Marionette = require("backbone.marionette")
+app        = require("app")
+Utils      = require("libs/utils")
 
-class CommentTabItemView extends Backbone.Marionette.ItemView
+class CommentTabItemView extends Marionette.ItemView
 
   tagName : "li"
   template : _.template("""
-    <i class="fa <%= isActive() %>"></i>
-    <a href="#"><%= node %> <%= content %></a>
+    <i class="fa <%- isActive() %>"></i>
+    <a href="#"><%- node %> <%- content %></a>
    """)
 
   events :
@@ -44,4 +42,4 @@ class CommentTabItemView extends Backbone.Marionette.ItemView
 
     @parent.setActiveNode(@model)
 
-
+module.exports = CommentTabItemView

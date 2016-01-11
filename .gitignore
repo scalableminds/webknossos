@@ -38,7 +38,9 @@ public/bower_components
 public/javascripts
 public/javascripts_tmp
 public/stylesheets
+public/fonts
 aws.conf
 aws.conf.disabled
 /knowledge
 conf/github.conf
+tmp/

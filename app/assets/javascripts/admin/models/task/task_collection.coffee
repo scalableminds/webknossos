@@ -1,28 +1,24 @@
-### define
-underscore : _
-../pagination_collection : PaginationCollection
-format_utils : FormatUtils
-###
+_                    = require("lodash")
+PaginationCollection = require("../pagination_collection")
+FormatUtils          = require("format_utils")
 
 class TaskCollection extends PaginationCollection
 
-  constructor : (forTaskTypeID) ->
+  initialize : (options = {}) ->
 
-    super()
+    @taskTypeId = options.taskTypeId
 
-    # We cannot use @url as a method since the Backbone.Paginator.clientPager
-    # ignores the context which is necessary to read forTaskTypeID.
-    # TODO: Check if this is still an issue with a newer version of backbone.paginator.
-    @url =
-      if forTaskTypeID
-        "/api/taskTypes/#{forTaskTypeID}/tasks"
-      else
-        "/api/tasks"
+
+  url : ->
+    if @taskTypeId
+      "/api/taskTypes/#{@taskTypeId}/tasks"
+    else
+      "/api/tasks"
 
 
   parse : (respones) ->
 
-    _.map(respones,
+    return _.map(respones,
       (response) ->
 
         # apply some defaults
@@ -45,3 +41,5 @@ class TaskCollection extends PaginationCollection
 
         return response
     )
+
+module.exports = TaskCollection

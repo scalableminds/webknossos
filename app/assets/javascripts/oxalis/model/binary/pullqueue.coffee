@@ -1,8 +1,5 @@
-### define
-./cube : Cube
-libs/array_buffer_socket : ArrayBufferSocket
-libs/request : Request
-###
+Cube              = require("./cube")
+Request           = require("libs/request")
 
 class PullQueue
 
@@ -26,28 +23,14 @@ class PullQueue
   constructor : (@dataSetName, @cube, @layer, @tracingId, @boundingBox, @connctionInfo) ->
 
     @queue = []
-
-    if @layer.category == "segmentation"
-      @loadGlobalSegmentation()
-
-
-  loadGlobalSegmentation : ->
-    Request.send(
-        url : "#{@layer.url}/data/datasets/#{@dataSetName}/layers/#{@layer.name}/mapping?token=#{@layer.token}"
-        dataType : 'arraybuffer'
-      ).then( (buffer) =>
-        if buffer
-          @cube.setMapping(
-            new (if @layer.bitDepth == 16 then Uint16Array else Uint32Array)(buffer)
-          )
-      )
+    @url = "#{@layer.url}/data/datasets/#{@dataSetName}/layers/#{@layer.name}/data?cubeSize=#{1 << @cube.BUCKET_SIZE_P}&token=#{@layer.token}"
 
 
   pull : ->
     # Filter and sort queue, using negative priorities for sorting so .pop() can be used to get next bucket
     @queue = _.filter(@queue, (item) =>
-      (@boundingBox.containsBucket(item.bucket) and
-          not @cube.isBucketRequestedByZoomedAddress(item.bucket))
+      @boundingBox.containsBucket(item.bucket) and
+        not @cube.isBucketRequestedByZoomedAddress(item.bucket)
     )
     @queue = _.sortBy(@queue, (item) -> item.priority)
 
@@ -70,7 +53,7 @@ class PullQueue
       zoomStep = bucket[3]
       transmitBuffer.push(
         zoomStep
-        if @fourBit and zoomStep == 0 then 1 else 0
+        if @shouldRequestFourBit(zoomStep) then 1 else 0
         bucket[0] << (zoomStep + @cube.BUCKET_SIZE_P)
         bucket[1] << (zoomStep + @cube.BUCKET_SIZE_P)
         bucket[2] << (zoomStep + @cube.BUCKET_SIZE_P)
@@ -79,11 +62,14 @@ class PullQueue
     # Measuring the time until response arrives to select appropriate preloading strategy
     roundTripBeginTime = new Date()
 
-    @getLoadSocket().send(transmitBuffer)
-      .then(
-
+    Request.always(
+      Request.sendArraybufferReceiveArraybuffer(
+        @url
+        data: new Float32Array(transmitBuffer)
+      ).then(
         (responseBuffer) =>
 
+          responseBuffer = new Uint8Array(responseBuffer)
           @connctionInfo.log(@layer.name, roundTripBeginTime, batch.length, responseBuffer.length)
 
           offset = 0
@@ -96,15 +82,14 @@ class PullQueue
 
             @boundingBox.removeOutsideArea(bucket, bucketData)
             @cube.setBucketByZoomedAddress(bucket, bucketData)
-
         =>
           for bucket in batch
             @cube.setBucketByZoomedAddress(bucket, null)
-
-    ).always =>
-
-      @batchCount--
-      @pull()
+      )
+      =>
+        @batchCount--
+        @pull()
+    )
 
 
   clearNormalPriorities : ->
@@ -138,18 +123,12 @@ class PullQueue
     newColors
 
 
-  set4Bit : (@fourBit) ->
+  setFourBit : (@fourBit) ->
 
 
-  getLoadSocket : ->
+  shouldRequestFourBit : (zoomStep) ->
 
-    if @socket? then @socket else @socket = new ArrayBufferSocket(
-      senders : [
-        # new ArrayBufferSocket.WebWorker("ws://#{document.location.host}/binary/ws?dataSetName=#{@dataSetName}&cubeSize=#{1 << @cube.BUCKET_SIZE_P}")
-        # new ArrayBufferSocket.WebSocket("ws://#{document.location.host}/binary/ws?dataSetName=#{@dataSetName}&cubeSize=#{1 << @cube.BUCKET_SIZE_P}")
-        new ArrayBufferSocket.XmlHttpRequest("#{@layer.url}/data/datasets/#{@dataSetName}/layers/#{@layer.name}/data?cubeSize=#{1 << @cube.BUCKET_SIZE_P}&token=#{@layer.token}")
-      ]
-      requestBufferType : Float32Array
-      responseBufferType : Uint8Array
-    )
+    return @fourBit and @layer.category == "color"
 
+
+module.exports = PullQueue

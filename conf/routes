@@ -18,6 +18,7 @@ GET           /help/keyboardshortcuts                                           
 # Authentication
 GET           /login                                                            controllers.Authentication.login
 POST          /login                                                            controllers.Authentication.authenticate
+GET           /switch                                                           controllers.Authentication.switchTo(to: String)
 GET           /logout                                                           controllers.Authentication.logout
 GET           /register                                                         controllers.Authentication.register
 POST          /register                                                         controllers.Authentication.handleRegistration
@@ -39,15 +40,16 @@ POST          /user/password/reset                                              
 
 GET           /api/users                                                        controllers.UserController.list
 GET           /api/user                                                         controllers.UserController.current
-GET           /api/user/annotations                                             controllers.UserController.annotations
+GET           /api/user/tasks                                                   controllers.UserController.tasks
+GET           /api/user/annotations                                             controllers.UserController.annotations(isFinished: Option[Boolean])
 GET           /api/user/loggedTime                                              controllers.UserController.loggedTime
 GET           /api/users/:id                                                    controllers.UserController.user(id: String)
 DELETE        /api/users/:id                                                    controllers.UserController.delete(id: String)
 PUT           /api/users/:id                                                    controllers.UserController.update(id: String)
+GET           /api/users/:id/tasks                                              controllers.UserController.userTasks(id: String)
 GET           /api/users/:id/loggedTime                                         controllers.UserController.userLoggedTime(id: String)
-GET           /api/users/:id/annotations                                        controllers.UserController.userAnnotations(id: String)
+GET           /api/users/:id/annotations                                        controllers.UserController.userAnnotations(id: String, isFinished: Option[Boolean])
 GET           /api/users/:id/annotations/download                               controllers.admin.NMLIO.userDownload(id: String)
-# GET         /api/users/:id/loginAs                                          controllers.UserController.loginAsUser(id: String)
 
 # Team
 GET           /teams                                                            controllers.TeamController.empty
@@ -95,12 +97,15 @@ PUT           /annotations/:typ/:id                                             
 POST          /annotations/:typ/:id/name                                        controllers.AnnotationController.nameExplorativeAnnotation(typ: String, id: String)
 GET           /annotations/:typ/:id/finishAndRedirect                           controllers.AnnotationController.finishWithRedirect(typ: String, id: String)
 GET           /annotations/:typ/:id/finish                                      controllers.AnnotationController.finish(typ: String, id: String)
+POST          /annotations/:typ/finish                                          controllers.AnnotationController.finishAll(typ: String)
 GET           /annotations/:typ/:id/reopen                                      controllers.AnnotationController.reopen(typ: String, id: String)
 GET           /annotations/:typ/:id/reset                                       controllers.AnnotationController.reset(typ: String, id: String)
+GET           /annotations/:typ/:id/revert                                      controllers.AnnotationController.revert(typ: String, id: String, version: Int)
 POST          /annotations/:typ/:id/transfer                                    controllers.AnnotationController.transfer(typ: String, id: String)
 
 GET           /annotations/:typ/:id                                             controllers.AnnotationController.trace(typ: String, id: String)
 GET           /annotations/:typ/:id/info                                        controllers.AnnotationController.info(typ: String, id: String)
+GET           /annotations/:typ/:id/readOnly/info                               controllers.AnnotationController.infoReadOnly(typ: String, id: String)
 GET           /annotations/:typ/:id/download                                    controllers.AnnotationController.download(typ: String, id: String)
 DELETE        /annotations/:typ/:id                                             controllers.AnnotationController.cancel(typ: String, id: String)
 GET           /annotations/:typ/:id/merge/:mergedTyp/:mergedId/:readOnly        controllers.AnnotationController.merge(typ: String, id: String, mergedTyp: String, mergedId: String, readOnly: Boolean)
@@ -109,6 +114,10 @@ GET           /annotations/:typ/:id/merge/:mergedTyp/:mergedId/:readOnly        
 #Admin pages
 GET           /admin/nml/upload                                                 controllers.admin.NMLIO.uploadForm
 POST          /admin/nml/upload                                                 controllers.admin.NMLIO.upload
+
+# Admin datasets
+GET           /datasets/upload                                                  controllers.DataSetController.empty
+POST          /api/datasets/upload                                              controllers.DataSetController.upload
 
 # Admin Tasks
 GET           /api/tasks                                                        controllers.TaskController.list
@@ -137,6 +146,8 @@ GET           /tasks/create                                                     
 #GET           /admin/tasks/:id/edit                                             controllers.UserController.emptyWithWildcard(id: String)
 #POST          /admin/tasks/:id                                                  controllers.admin.TaskAdministration.editTaskForm(id: String)
 #GET           /api/tasks/overview                                               controllers.admin.TaskAdministration.overviewData
+GET           /api/tasks/workload                                               controllers.TaskController.requestAvailableTasks
+GET           /workload                                                         controllers.TaskController.empty
 
 GET           /api/tasks/:id/download                                           controllers.admin.NMLIO.taskDownload(id: String)
 GET           /api/tasks/:id/annotations                                        controllers.AnnotationController.annotationsForTask(id: String)
@@ -163,8 +174,9 @@ GET           /api/projects/:name/download                                      
 GET           /api/projects/:name/tasks                                         controllers.ProjectController.tasksForProject(name: String)
 
 GET           /statistics                                                       controllers.StatisticsController.empty
-GET           /api/statistics/oxalis                                            controllers.StatisticsController.oxalis(interval: String, start: Option[Long], end: Option[Long])
+GET           /api/statistics/webknossos                                        controllers.StatisticsController.oxalis(interval: String, start: Option[Long], end: Option[Long])
 GET           /api/statistics/users                                             controllers.StatisticsController.users(interval: String, start: Option[Long], end: Option[Long], limit: Int)
+
 # Javascript routing
 GET           /assets/javascripts/routes.js                                     controllers.Application.javascriptRoutes
 

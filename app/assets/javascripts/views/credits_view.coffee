@@ -1,28 +1,26 @@
-### define
-underscore : _
-backbone.marionette : marionette
-routes : routes
-###
+_          = require("lodash")
+Marionette = require("backbone.marionette")
+routes     = require("routes")
 
-class CreditsView extends Backbone.Marionette.ItemView
+class CreditsView extends Marionette.ItemView
 
   className : "well"
   id : "credits"
   template : _.template("""
     <div class="container">
-      <h3>Oxalis Credits</h3>
+      <h3>webKnossos Credits</h3>
       <section class="row">
         <div class="col-sm-4">
-          <h4>Max Planck Institute of Neurobiology</h4>
+          <h4>Max Planck Institute for Brain Research</h4>
           <p>
-            Structure Of Neocortical Circuits<br />
-            <a href="http://www.neuro.mpg.de/helmstaedter">http://www.neuro.mpg.de/helmstaedter</a>
+            Department of Connectomics<br />
+            <a href="http://www.brain.mpg.de/connectomics">http://www.brain.mpg.de/connectomics</a>
           </p>
           <ul>
             <li>Moritz Helmstaedter</li>
             <li>Manuel Berning</li>
             <li>Kevin Boergens</li>
-            <li>Helge Feddersen</li>
+            <li>Heiko Wissler</li>
           </ul>
         </div>
         <div class="col-sm-4">
@@ -41,11 +39,11 @@ class CreditsView extends Backbone.Marionette.ItemView
           </ul>
         </div>
         <div class="col-sm-3">
-          <a href="http://www.neuro.mpg.de/helmstaedter">
+          <a href="http://www.brain.mpg.de/connectomics">
             <img class="img-responsive" src="assets/images/Max-Planck-Gesellschaft.svg">
           </a>
-          <a href="http://www.neuro.mpg.de/helmstaedter">
-            <img class="img-responsive" src="assets/images/Logo_MPI_cut.svg">
+          <a href="http://www.brain.mpg.de/connectomics">
+            <img class="img-responsive" src="assets/images/MPI-brain-research.png">
           </a>
           <a href="http://www.scm.io">
             <img class="img-responsive" src="assets/images/scalableminds_logo.svg">
@@ -53,11 +51,11 @@ class CreditsView extends Backbone.Marionette.ItemView
         </div>
       </section>
       <section>
-        <p>Oxalis is using Brainflight technology for real time data delivery, implemented by <em>scalable minds</em></p>
+        <p>webKnossos is using Brainflight technology for real time data delivery, implemented by <em>scalable minds</em></p>
       </section>
       <section>
         <p>
-          The Oxalis frontend was partly inspired by Knossos:
+          The webKnossos frontend was inspired by Knossos:
         </p>
         <p>
           Helmstaedter, M., K.L. Briggman, and W. Denk,<br />
@@ -68,13 +66,17 @@ class CreditsView extends Backbone.Marionette.ItemView
       </section>
       <section>
         <p>
-          For more information about our project, visit <a href="http://www.brainflight.net">http://www.brainflight.net</a>.
+          For more information about our project, visit <a href="http://www.brainflight.net">http://www.brainflight.net</a> and
+          <a href="http://www.brain.mpg.de/connectomics">http://www.brain.mpg.de/connectomics</a>
         </p>
 
-        <p>&copy; Max Planck Institut of Neurobiology, Structure Of Neocortical Circuits</p>
+        <p>&copy; Max Planck Institut for Brain Research</p>
       </section>
         <p>
           <a href="/impressum">Legal notice</a>
         </p>
     </div>
   """)
+
+
+module.exports = CreditsView

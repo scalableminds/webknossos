@@ -1,10 +1,10 @@
-import akka.actor.{PoisonPill, Props}
+import akka.actor.Props
 import com.scalableminds.util.reactivemongo.GlobalDBAccess
 import com.scalableminds.util.security.SCrypt
-import com.scalableminds.datastore.services.BinaryDataService
 import models.binary.{DataStore, DataStoreDAO}
 import models.team._
 import net.liftweb.common.Full
+import oxalis.jobs.AvailableTasksJob
 import play.api._
 import play.api.libs.concurrent._
 import models.user._
@@ -14,17 +14,13 @@ import com.scalableminds.util.mail.Mailer
 import play.api.libs.concurrent.Execution.Implicits._
 import com.typesafe.config.Config
 import play.airbrake.Airbrake
-import com.kenshoo.play.metrics._
-import com.codahale.metrics.JmxReporter
 import play.api.libs.json.Json
 import play.api.mvc._
 
-object Global extends WithFilters(MetricsFilter) with GlobalSettings {
+object Global extends GlobalSettings {
 
   override def onStart(app: Application) {
     val conf = app.configuration
-
-    startJMX()
 
     startActors(conf.underlying, app)
 
@@ -32,13 +28,6 @@ object Global extends WithFilters(MetricsFilter) with GlobalSettings {
       InitialData.insert()
     }
     super.onStart(app)
-  }
-
-  def startJMX() = {
-    JmxReporter
-      .forRegistry(MetricsRegistry.default)
-      .build
-      .start
   }
 
   def startActors(conf: Config, app: Application) {
@@ -49,6 +38,13 @@ object Global extends WithFilters(MetricsFilter) with GlobalSettings {
     Akka.system(app).actorOf(
       Props(new Mailer(conf)),
       name = "mailActor")
+
+    if (conf.getBoolean("workload.active")) {
+      Akka.system(app).actorOf(
+        Props(new AvailableTasksJob()),
+        name = "availableTasksMailActor"
+      )
+    }
   }
 
   override def onError(request: RequestHeader, ex: Throwable) = {
@@ -63,7 +59,7 @@ object Global extends WithFilters(MetricsFilter) with GlobalSettings {
  */
 object InitialData extends GlobalDBAccess {
 
-  val mpi = Team("Structure of Neocortical Circuits Group", None, RoleService.roles)
+  val mpi = Team("Connectomics department", None, RoleService.roles)
 
   def insert() = {
     insertUsers()
@@ -83,6 +79,7 @@ object InitialData extends GlobalDBAccess {
           "Boy",
           true,
           SCrypt.hashPassword("secret"),
+          SCrypt.md5("secret"),
           List(TeamMembership(mpi.name, Role.Admin)))
         )
     }

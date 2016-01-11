@@ -1,21 +1,25 @@
-### define
-underscore : _
-backbone.marionette : marionette
-admin/models/dataset/dataset_collection : DatasetCollection
-views/spotlight_dataset_view : SpotlightDatasetView
-###
+_                    = require("lodash")
+Marionette           = require("backbone.marionette")
+DatasetCollection    = require("admin/models/dataset/dataset_collection")
+SpotlightDatasetView = require("views/spotlight_dataset_view")
 
-class SpotlightDatasetListView extends Backbone.Marionette.CollectionView
+class SpotlightDatasetListView extends Marionette.CollectionView
 
   childView : SpotlightDatasetView
 
   initialize : (options) ->
 
-    @listenTo(@collection, "sync", =>
-      @collection = new DatasetCollection(@collection
-        .filter((dataset) -> dataset.get("isActive"))
-        .sort((a, b) -> a.get("created") < b.get("created"))
-      )
-      @render()
-    )
-    @collection.fetch(silent : true)
+    @listenTo(app.vent, "paginationView:filter", @filterBySearch)
+    @collection.setSorting("created")
+
+
+  filterBySearch : (searchQuery) ->
+
+    @collection.setFilter(["name", "owningTeam", "description"], searchQuery)
+
+  # Marionette's CollectionView filter
+  filter : (child, index, collection) -> return child.get("isActive")
+
+module.exports = SpotlightDatasetListView
+
+

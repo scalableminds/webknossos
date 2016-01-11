@@ -1,13 +1,12 @@
-### define
-app : app
-backbone : backbone
-../constants : constants
-###
+app       = require("app")
+backbone  = require("backbone")
+constants = require("../constants")
+{V3}      = require("libs/mjs")
 
 class UrlManager
 
 
-  MAX_UPDATE_INTERVAL : 2000
+  MAX_UPDATE_INTERVAL : 1000
 
   constructor : (@model) ->
 
@@ -24,6 +23,9 @@ class UrlManager
 
   parseUrl : ->
 
+    # State string format:
+    # x,y,z,mode,zoomStep[,rotX,rotY,rotZ][,activeNode]
+
     stateString = location.hash.slice(1)
     state = {}
 
@@ -39,6 +41,13 @@ class UrlManager
         if stateArray.length >= 8
           state.rotation = _.map stateArray.slice(5, 8), (e) -> +e
 
+          if stateArray[8]?
+            state.activeNode = +stateArray[8]
+
+        else
+          if stateArray[5]?
+            state.activeNode = +stateArray[5]
+
     return state
 
 
@@ -46,13 +55,16 @@ class UrlManager
 
     @listenTo(@model.flycam, "changed", @update)
     @listenTo(@model.flycam3d, "changed", @update)
-    @listenTo(app.vent, "changeViewMode", @update)
+    @listenTo(@model, "change:mode", @update)
+
+    if @model.skeletonTracing
+      @listenTo(@model.skeletonTracing, "newActiveNode", @update)
 
 
   buildUrl : ->
 
     { flycam, flycam3d } = @model
-    state = _.map flycam.getPosition(), (e) -> Math.floor(e)
+    state = V3.floor(flycam.getPosition())
     state.push( @model.mode )
 
     if @model.mode in constants.MODES_ARBITRARY
@@ -62,4 +74,9 @@ class UrlManager
     else
       state = state.concat( [flycam.getZoomStep().toFixed(2)] )
 
+    if @model.skeletonTracing?.getActiveNodeId()?
+      state.push(@model.skeletonTracing.getActiveNodeId())
+
     return @baseUrl + "#" + state.join(",")
+
+module.exports = UrlManager

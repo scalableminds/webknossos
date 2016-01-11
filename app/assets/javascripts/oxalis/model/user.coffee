@@ -1,18 +1,17 @@
-### define
-underscore : _
-backbone : Backbone
-app : app
-###
+_        = require("lodash")
+Backbone = require("backbone")
+app      = require("app")
 
 class User extends Backbone.Model
 
   url : "/api/user/userConfiguration"
+  # To add any user setting, you must define default values in
+  # UserSettings.scala
 
 
   initialize : ->
 
-    @listenTo(app.vent, "saveEverything", @save)
-    @listenTo(@, "change", -> @save())
+    @listenTo(@, "change", _.debounce((=> @save()), 500))
 
 
   getMouseInversionX : ->
@@ -25,9 +24,30 @@ class User extends Backbone.Model
     return if @get("inverseY") then 1 else -1
 
 
+  getOrCreateBrightnessContrastColorSettings : (model) ->
+
+    settings = @get("brightnessContrastColorSettings")
+    datasetSettings = settings[model.datasetPostfix] || {}
+
+    for binary in model.getColorBinaries()
+      datasetSettings[binary.name] = datasetSettings[binary.name] || {}
+      _.defaults(datasetSettings[binary.name], settings.default)
+
+    settings[model.datasetPostfix] = datasetSettings
+
+
+  resetBrightnessContrastColorSettings : (model) ->
+
+    Request.$(Request.receiveJSON("/user/configuration/default").then( (defaultData) =>
+      @get("brightnessContrastColorSettings")[model.datasetPostfix] =
+        defaultData.brightnessContrastColorSettings[model.datasetPostfix]
+
+      @getOrCreateBrightnessContrastColorSettings(model)
+    ))
+
   triggerAll : ->
 
     for property of @attributes
       @trigger("change:#{property}", @, @get(property))
 
-
+module.exports = User

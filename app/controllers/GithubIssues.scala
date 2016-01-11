@@ -1,41 +1,47 @@
 package controllers
 
+import javax.inject.Inject
+
+import com.ning.http.client.Realm
+import com.scalableminds.util.mail.Send
+import models.user.User
+import oxalis.mail.DefaultMails
+import oxalis.security.Secured
+import play.api.Play.current
+import play.api.i18n.{MessagesApi, Messages}
+import play.api.libs.concurrent.Akka
+import play.api.libs.ws.{WSAuthScheme, WS}
+import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json.Json._
 import play.api.libs.json._
-import oxalis.security.Secured
-import play.api.mvc._
-import play.api.Logger
-import models.user.User
+import play.api.{Logger, Play}
 import views.html
-import play.api.Play
-import play.api.Play.current
-import play.api.i18n.Messages
-import oxalis.mail.DefaultMails
-import com.scalableminds.util.mail.Send
-import play.api.libs.ws.{WSAuthScheme, WS}
-import com.ning.http.client.Realm
-import play.api.libs.concurrent.Execution.Implicits._
 import scala.concurrent.Future
 
 case class GithubAuth(user: String, key: String)
 
-object GithubIssues extends Controller with Secured {
+class GithubIssues @Inject() (val messagesApi: MessagesApi) extends Controller with Secured {
+
+  lazy val Mailer =
+    Akka.system(play.api.Play.current).actorSelection("/user/mailActor")
 
   val conf = Play.configuration
 
   val githubUrl = "https://api.github.com"
+
   val authentication = for {
     user <- conf.getString("issues.github.user")
     key <- conf.getString("issues.github.key")
   } yield GithubAuth(user, key)
 
   val assignee = conf.getString("issues.github.defaultAssignee")
+
   val branchName = conf.getString("application.branch") getOrElse "master"
 
   if (authentication.isEmpty)
     Logger.warn("Github authentication configuration is missing.")
 
-  def index = Authenticated{ implicit request =>
+  def index = Authenticated { implicit request =>
     Ok(html.issue.index())
   }
 
@@ -52,9 +58,10 @@ object GithubIssues extends Controller with Secured {
 
     authentication match {
       case Some(GithubAuth(ghuser, key)) =>
-        WS.url(githubUrl + "/repos/scalableminds/oxalis/issues")
-        .withAuth(ghuser, key, WSAuthScheme.BASIC)
-        .post(issue).map { response =>
+        WS
+          .url(githubUrl + "/repos/scalableminds/oxalis/issues")
+          .withAuth(ghuser, key, WSAuthScheme.BASIC)
+          .post(issue).map { response =>
           response.status == CREATED
         }
       case _ =>
@@ -64,7 +71,7 @@ object GithubIssues extends Controller with Secured {
 
   def mailIssue(user: User, summary: String, description: String) {
     val mail = DefaultMails.issueMail(user.name, user.email, summary, description)
-    Application.Mailer ! Send(mail)
+    Mailer ! Send(mail)
   }
 
   def handleSubmission(user: User, summary: String, description: String, issueType: String) = {

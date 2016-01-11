@@ -1,19 +1,28 @@
-### define
-underscore : _
-backbone.marionette : marionette
-./settings/settings_tab_view : SettingsTabView
-./action-bar/dataset_actions_view : DatasetActionsView
-./action-bar/dataset_position_view : DatasetPositionView
-./action-bar/view_modes_view : ViewModesView
-./action-bar/volume_actions_view : VolumeActionsView
-../constants : Constants
-###
+_                   = require("lodash")
+Marionette          = require("backbone.marionette")
+DatasetActionsView  = require("./action-bar/dataset_actions_view")
+DatasetPositionView = require("./action-bar/dataset_position_view")
+ViewModesView       = require("./action-bar/view_modes_view")
+VolumeActionsView   = require("./action-bar/volume_actions_view")
+SkeletonActionsView = require("./action-bar/skeleton_actions_view")
+Constants           = require("../constants")
 
-class ActionBarView extends Backbone.Marionette.LayoutView
+class ActionBarView extends Marionette.LayoutView
 
   className : "container-fluid"
 
   template : _.template("""
+
+    <% if (isTraceMode) { %>
+      <a href="#" id="menu-toggle-button" class="btn btn-default"
+        data-toggle="offcanvas"
+        data-target="#settings-menu-wrapper"
+        data-canvas="#sliding-canvas"
+        data-placement="left"
+        data-autohide="false"
+        data-disable-scrolling="false"><i class="fa fa-bars"></i>Menu</a>
+    <% } %>
+
     <% if (isTraceMode) { %>
       <div id="dataset-actions"></div>
     <% } %>
@@ -26,6 +35,7 @@ class ActionBarView extends Backbone.Marionette.LayoutView
 
     <% if (isTraceMode) { %>
       <div id="view-modes"></div>
+      <div id="skeleton-actions"></div>
     <% } %>
   """)
 
@@ -40,6 +50,7 @@ class ActionBarView extends Backbone.Marionette.LayoutView
     "datasetPosition" : "#dataset-position"
     "viewModes" : "#view-modes"
     "volumeActions" : "#volume-actions"
+    "skeletonActions" : "#skeleton-actions"
 
 
   initialize : (options) ->
@@ -48,12 +59,12 @@ class ActionBarView extends Backbone.Marionette.LayoutView
 
     if @isTraceMode()
       @datasetActionsView = new DatasetActionsView(options)
-      @settingsTabView = new SettingsTabView(options)
 
       if @isVolumeMode()
         @volumeActionsView = new VolumeActionsView(options)
       else
         @viewModesView = new ViewModesView(options)
+        @skeletonActionsView = new SkeletonActionsView(options)
 
 
     @listenTo(@, "render", @afterRender)
@@ -70,6 +81,7 @@ class ActionBarView extends Backbone.Marionette.LayoutView
         @volumeActions.show(@volumeActionsView)
       else
         @viewModes.show(@viewModesView)
+        @skeletonActions.show(@skeletonActionsView)
 
 
   isTraceMode : ->
@@ -81,3 +93,5 @@ class ActionBarView extends Backbone.Marionette.LayoutView
 
     return @model.get("mode") == Constants.MODE_VOLUME
 
+
+module.exports = ActionBarView

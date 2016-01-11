@@ -1,54 +1,46 @@
-### define
-underscore : _
-app : app
-backbone.marionette : marionette
-libs/toast : Toast
-libs/behaviors/select_all_rows_behavior : SelectAllRows
-admin/views/user/team_role_modal_view : TeamRoleModalView
-admin/views/user/bulk_delete_modal_view : BulkDeleteModalView
-admin/views/user/experience_modal_view : ExperienceModalView
-./user_list_item_view : UserListItemView
-###
+_                   = require("lodash")
+app                 = require("app")
+Marionette          = require("backbone.marionette")
+Toast               = require("libs/toast")
+SelectAllRows       = require("libs/behaviors/select_all_rows_behavior")
+TeamRoleModalView   = require("admin/views/user/team_role_modal_view")
+ExperienceModalView = require("admin/views/user/experience_modal_view")
+UserListItemView    = require("./user_list_item_view")
 
-class UserListView extends Backbone.Marionette.CompositeView
+class UserListView extends Marionette.CompositeView
 
   template : _.template("""
     <h3>Users</h3>
-    <form method="post">
-      <table class="table table-striped">
-        <thead>
-          <tr>
-            <th>
-              <input type="checkbox" class="select-all-rows">
-            </th>
-            <th>Last name</th>
-            <th>First name</th>
-            <th>Email</th>
-            <th>Experiences</th>
-            <th>Teams - Role</th>
-            <th>Verified</th>
-            <th></th>
-          </tr>
-        </thead>
-        <tbody></tbody>
-      </table>
+    <table class="table table-striped">
+      <thead>
+        <tr>
+          <th>
+            <input type="checkbox" class="select-all-rows">
+          </th>
+          <th>Last name</th>
+          <th>First name</th>
+          <th>Email</th>
+          <th>Experiences</th>
+          <th>Teams - Role</th>
+          <th>Verified</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
 
-      <div class="navbar navbar-default navbar-fixed-bottom">
-        <div class="navbar-form">
-          <div class="btn-group">
-            <a class="btn btn-default" id="team-role-modal">
-              <i class="fa fa-group"></i>Edit Teams
-            </a>
-            <a class="btn btn-default" id="bulk-delete-modal">
-              <i class="fa fa-trash-o"></i>Delete
-            </a>
-            <a class="btn btn-default" id="experience-modal">
-              <i class="fa fa-trophy"></i>Change Experience
-            </a>
-          </div>
+    <div class="navbar navbar-default navbar-fixed-bottom">
+      <div class="navbar-form">
+        <div class="btn-group">
+          <a class="btn btn-default" id="team-role-modal">
+            <i class="fa fa-group"></i>Edit Teams
+          </a>
+          <a class="btn btn-default" id="experience-modal">
+            <i class="fa fa-trophy"></i>Change Experience
+          </a>
         </div>
       </div>
-    </form>
+    </div>
     <div id="modal-wrapper"></div>
   """)
   className : "user-administration-table container wide"
@@ -60,7 +52,6 @@ class UserListView extends Backbone.Marionette.CompositeView
 
   events :
     "click #team-role-modal" : "showTeamRoleModal"
-    "click #bulk-delete-modal" : "showBulkDeleteModal"
     "click #experience-modal" : "showExperienceModal"
 
   behaviors:
@@ -71,28 +62,19 @@ class UserListView extends Backbone.Marionette.CompositeView
 
     @collection.fetch(
       data : "isEditable=true"
-      silent : true
-    ).done( =>
-      @collection.goTo(1)
     )
 
-    @listenTo(app.vent, "paginationView:filter", @filter)
+    @listenTo(app.vent, "paginationView:filter", @filterBySearch)
 
 
-  filter : (filterQuery) ->
+  filterBySearch : (filterQuery) ->
 
     @collection.setFilter(["email", "firstName", "lastName"], filterQuery)
-    @collection.pager()
 
 
   showTeamRoleModal : ->
 
     @showModal(TeamRoleModalView)
-
-
-  showBulkDeleteModal : ->
-
-    @showModal(BulkDeleteModalView)
 
 
   showExperienceModal : ->
@@ -102,7 +84,7 @@ class UserListView extends Backbone.Marionette.CompositeView
 
   showModal : (modalView) ->
 
-    if @$("input[type=checkbox]:checked").length > 0
+    if @$("tbody input[type=checkbox]:checked").length > 0
       modalView = new modalView({userCollection : @collection})
       modalView.render()
       @ui.modalWrapper.html(modalView.el)
@@ -118,3 +100,4 @@ class UserListView extends Backbone.Marionette.CompositeView
 
     @modalView?.destroy()
 
+module.exports = UserListView

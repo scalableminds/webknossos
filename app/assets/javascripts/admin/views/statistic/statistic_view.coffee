@@ -1,14 +1,12 @@
-### define
-underscore : _
-backbone.marionette : marionette
-app : app
-./graph_view : GraphView
-./statistic_list_view : StatisticListView
-./achievement_view : AchievementView
-admin/models/statistic/time_statistic_model : TimeStatisticModel
-###
+_                  = require("lodash")
+Marionette         = require("backbone.marionette")
+app                = require("app")
+GraphView          = require("./graph_view")
+StatisticListView  = require("./statistic_list_view")
+AchievementView    = require("./achievement_view")
+TimeStatisticModel = require("admin/models/statistic/time_statistic_model")
 
-class StatisticView extends Backbone.Marionette.LayoutView
+class StatisticView extends Marionette.LayoutView
 
   className : "statistics container wide"
   template : _.template("""
@@ -54,3 +52,4 @@ class StatisticView extends Backbone.Marionette.LayoutView
     @achievements.show(@achievementView)
 
 
+module.exports = StatisticView

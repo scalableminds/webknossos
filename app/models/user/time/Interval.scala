@@ -47,7 +47,7 @@ object Month {
 
 case class Week(week: Int, year: Int) extends Interval with Ordered[Week] {
 
-  def compare(p: Week): Int = (12 * (year - p.year) + (week - p.week))
+  def compare(p: Week): Int = 12 * (year - p.year) + (week - p.week)
 
   override def <(that: Week): Boolean = (this compare that) < 0
 

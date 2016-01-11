@@ -1,18 +1,18 @@
 package models.annotation
 
-import com.scalableminds.util.io.NamedFileStream
-import com.scalableminds.util.tools.{Fox, FoxImplicits}
-import com.scalableminds.util.reactivemongo.DBAccessContext
-import play.api.libs.json.JsValue
-import com.scalableminds.util.mvc.BoxImplicits
-import models.user.{UsedAnnotationDAO, User}
-import scala.concurrent.Future
-import net.liftweb.common.{Failure, Box}
 import scala.async.Async._
-import play.api.i18n.Messages
+import scala.concurrent.Future
+
+import com.scalableminds.util.io.NamedFileStream
+import com.scalableminds.util.mvc.BoxImplicits
+import com.scalableminds.util.reactivemongo.DBAccessContext
+import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import models.task.TaskService
-import reactivemongo.bson.BSONObjectID
+import models.user.{UsedAnnotationDAO, User}
+import net.liftweb.common.{Box, Failure}
 import play.api.libs.concurrent.Execution.Implicits._
+import play.api.libs.json.JsValue
+import reactivemongo.bson.BSONObjectID
 
 /**
  * Company: scalableminds
@@ -20,7 +20,7 @@ import play.api.libs.concurrent.Execution.Implicits._
  * Date: 21.01.14
  * Time: 14:06
  */
-trait AnnotationMutationsLike{
+trait AnnotationMutationsLike {
 
   type AType <: AnnotationLike
 
@@ -35,7 +35,13 @@ trait AnnotationMutationsLike{
   def loadAnnotationContent()(implicit ctx: DBAccessContext): Fox[NamedFileStream]
 }
 
-class AnnotationMutations(val annotation: Annotation) extends AnnotationMutationsLike with AnnotationFileService with AnnotationContentProviders with BoxImplicits with FoxImplicits{
+class AnnotationMutations(val annotation: Annotation)
+  extends AnnotationMutationsLike
+  with AnnotationFileService
+  with AnnotationContentProviders
+  with BoxImplicits
+  with FoxImplicits {
+
   type AType = Annotation
 
   def finishAnnotation(user: User)(implicit ctx: DBAccessContext): Fox[(Annotation, String)] = {
@@ -43,14 +49,14 @@ class AnnotationMutations(val annotation: Annotation) extends AnnotationMutation
       annotation match {
         case annotation if annotation._task.isEmpty =>
           val updated = await(annotation.muta.finish().futureBox)
-          updated.map(_ -> Messages("annotation.finished"))
-        case annotation =>
+          updated.map(_ -> "annotation.finished")
+        case annotation                             =>
           val isReadyToBeFinished = await(annotation.isReadyToBeFinished)
           if (isReadyToBeFinished) {
             val updated = await(AnnotationDAO.finish(annotation._id).futureBox)
-            updated.map(_ -> Messages("task.finished"))
+            updated.map(_ -> "task.finished")
           } else
-            Failure(Messages("annotation.notFinishable"))
+              Failure("annotation.notFinishable")
       }
     }
 
@@ -59,9 +65,9 @@ class AnnotationMutations(val annotation: Annotation) extends AnnotationMutation
         if (annotation.state.isInProgress) {
           executeFinish(annotation)
         } else
-          Future.successful(Failure(Messages("annotation.notInProgress")))
+            Future.successful(Failure("annotation.notInProgress"))
       } else
-        Future.successful(Failure(Messages("annotation.notPossible")))
+          Future.successful(Failure("annotation.notPossible"))
     }
 
     tryToFinish().map {
@@ -73,10 +79,7 @@ class AnnotationMutations(val annotation: Annotation) extends AnnotationMutation
   }
 
   def reopen()(implicit ctx: DBAccessContext) = {
-    if (annotation.typ == AnnotationType.Task)
-      AnnotationDAO.reopen(annotation._id)
-    else
-      Future.successful(None)
+    AnnotationDAO.reopen(annotation._id)
   }
 
   def finish()(implicit ctx: DBAccessContext) =

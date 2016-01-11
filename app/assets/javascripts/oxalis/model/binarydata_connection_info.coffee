@@ -1,6 +1,3 @@
-### define
-###
-
 class BinaryDataConnectionInfo
 
   ROUND_TRIP_TIME_SMOOTHER : .125
@@ -33,3 +30,5 @@ class BinaryDataConnectionInfo
 
     @roundTripTime = (1 - @ROUND_TRIP_TIME_SMOOTHER) * @roundTripTime + @ROUND_TRIP_TIME_SMOOTHER * roundTripTime
     @bandwidth = (1 - @BANDWIDTH_SMOOTHER) * @bandwidth + @BANDWIDTH_SMOOTHER * bandwidth
+
+module.exports = BinaryDataConnectionInfo

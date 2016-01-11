@@ -1,9 +1,10 @@
 package models.team
 
+import com.scalableminds.util.reactivemongo.AccessRestrictions.{DenyEveryone, AllowIf}
 import play.api.libs.json._
 import reactivemongo.bson.BSONObjectID
 import play.modules.reactivemongo.json.BSONFormats._
-import com.scalableminds.util.reactivemongo.{DBAccessContext}
+import com.scalableminds.util.reactivemongo.{GlobalAccessContext, DefaultAccessDefinitions, DBAccessContext}
 import models.basics.SecuredBaseDAO
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import models.user.{UserDAO, UserService, User}
@@ -13,15 +14,21 @@ import scala.util.{Failure, Success}
 import scala.concurrent.Future
 import play.api.libs.concurrent.Execution.Implicits._
 
-case class Team(name: String, parent: Option[String], roles: List[Role], owner: Option[BSONObjectID] = None, _id: BSONObjectID = BSONObjectID.generate) {
+case class Team(name: String, parent: Option[String], roles: List[Role], owner: Option[BSONObjectID] = None, behavesLikeRootTeam: Option[Boolean] = None, _id: BSONObjectID = BSONObjectID.generate) {
 
   lazy val id = _id.stringify
 
   def isEditableBy(user: User) =
+    user.adminTeamNames.contains(name) || (parent.map(user.adminTeamNames.contains) getOrElse false)
+
+  def isOwner(user: User) =
     owner.map(_ == user._id) getOrElse false
 
   def couldBeAdministratedBy(user: User) =
     parent.map(user.teamNames.contains) getOrElse true
+
+  def isRootTeam =
+    behavesLikeRootTeam.getOrElse(parent.isEmpty)
 }
 
 object Team extends FoxImplicits {
@@ -35,10 +42,12 @@ object Team extends FoxImplicits {
       Json.obj(
         "id" -> team.id,
         "name" -> team.name,
+        "parent" -> team.parent,
         "roles" -> team.roles,
         "owner" -> owner.toOption,
         "amIAnAdmin" -> requestingUser.adminTeamNames.contains(team.name),
-        "isEditable" -> team.isEditableBy(requestingUser)
+        "isEditable" -> team.isEditableBy(requestingUser),
+        "amIOwner" -> team.isOwner(requestingUser)
       )
     }
 
@@ -58,6 +67,10 @@ object TeamService {
   def remove(team: Team)(implicit ctx: DBAccessContext) = {
     TeamDAO.removeById(team._id)
   }
+
+  def rootTeams() = {
+    TeamDAO.findRootTeams()(GlobalAccessContext)
+  }
 }
 
 object TeamDAO extends SecuredBaseDAO[Team] with FoxImplicits {
@@ -65,6 +78,29 @@ object TeamDAO extends SecuredBaseDAO[Team] with FoxImplicits {
 
   implicit val formatter = Team.teamFormat
 
+  override val AccessDefinitions = new DefaultAccessDefinitions{
+
+    override def findQueryFilter(implicit ctx: DBAccessContext) = {
+      ctx.data match{
+        case Some(user: User) =>
+          AllowIf(Json.obj(
+            "$or" -> Json.arr(
+              Json.obj("name" -> Json.obj("$in" -> user.teamNames)),
+              Json.obj("parent"-> Json.obj("$in" -> user.teamNames)))
+          ))
+        case _ =>
+          DenyEveryone()
+      }
+    }
+  }
+
   def findOneByName(name: String)(implicit ctx: DBAccessContext) =
     findOne("name", name)
+
+  def findRootTeams()(implicit ctx: DBAccessContext) = withExceptionCatcher {
+    find(Json.obj("$or" -> Json.arr(
+      Json.obj("behavesLikeRootTeam" -> true),
+      Json.obj("parent" -> Json.obj("$exists" -> false)))
+    )).cursor[Team].collect[List]()
+  }
 }

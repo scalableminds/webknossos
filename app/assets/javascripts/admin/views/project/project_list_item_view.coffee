@@ -1,29 +1,33 @@
-### define
-underscore : _
-backbone.marionette : Marionette
-libs/toast : Toast
-./project_task_view : ProjectTaskView
-admin/models/project/project_task_collection : ProjectTaskCollection
-###
+_                     = require("lodash")
+Marionette            = require("backbone.marionette")
+Toast                 = require("libs/toast")
+ProjectTaskView       = require("./project_task_view")
+ProjectTaskCollection = require("admin/models/project/project_task_collection")
 
-class ProjectListItemView extends Backbone.Marionette.CompositeView
+class ProjectListItemView extends Marionette.CompositeView
 
   template : _.template("""
-    <tr id="<%= name %>">
-      <td class="details-toggle" href="/admin/projects/<%= name %>/tasks">
+    <tr id="<%- name %>">
+      <td class="details-toggle" href="/admin/projects/<%- name %>/tasks">
         <i class="caret-right"></i>
         <i class="caret-down"></i>
       </td>
-      <td><%= name %></td>
-      <td><%= team %></td>
-      <td><%= owner.firstName %> <%= owner.lastName %></td>
+      <td><%- name %></td>
+      <td><%- team %></td>
+      <% if(owner.email) { %>
+        <td><%- owner.firstName %> <%- owner.lastName %> (<%- owner.email %>)</td>
+      <% } else { %>
+        <td>-</td>
+      <% } %>
       <td class="nowrap">
-        <a href="/annotations/CompoundProject/<%= name %>" title="View all finished tracings">
-          <i class="fa fa-random"></i>view
-        </a><br/>
-        <a href="/api/projects/<%= name %>/download" title="Download all finished tracings">
-          <i class="fa fa-download"></i>download
-        </a><br/>
+        <% if (status.completed > 0) { %>
+          <a href="/annotations/CompoundProject/<%- name %>" title="View all finished tracings">
+            <i class="fa fa-random"></i>view
+          </a><br/>
+          <a href="/api/projects/<%- name %>/download" title="Download all finished tracings">
+            <i class="fa fa-download"></i>download
+          </a><br/>
+        <% } %>
         <a href="#" class="delete">
           <i class="fa fa-trash-o"></i>delete
         </a>
@@ -68,7 +72,6 @@ class ProjectListItemView extends Backbone.Marionette.CompositeView
     if window.confirm("Do you really want to delete this project?")
       xhr = @model.destroy(
         wait : true
-        error: @handleXHRError
       )
 
 
@@ -87,7 +90,4 @@ class ProjectListItemView extends Backbone.Marionette.CompositeView
       @ui.detailsRow.addClass("hide")
       @ui.detailsToggle.removeClass("open")
 
-
-  handleXHRError : (model, xhr) ->
-
-    Toast.message(xhr.responseJSON.messages)
+module.exports = ProjectListItemView

@@ -9,6 +9,25 @@
     z-index: 10;
   }
 
+  .not-recording,
+  .recording {
+    position: absolute;
+    top: 12px;
+    left: 12px;
+    padding: 4px 8px;
+    border-radius: 4px;
+
+    .recording-text {
+      color: white;
+    }
+  }
+  .not-recording {
+    background-color: red;
+  }
+  .recording {
+    background-color: green;
+  }
+
   #inputcatchers {
     position: absolute;
     width: 100%;
@@ -67,4 +86,8 @@
   .zoomstep-warning {
     border: 5px solid red;
   }
+}
+
+#sliding-canvas #tracing {
+  margin-left: 10px;
 }

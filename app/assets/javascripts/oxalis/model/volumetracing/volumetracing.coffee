@@ -1,28 +1,29 @@
-### define
-backbone : Backbone
-./volumecell : VolumeCell
-./volumelayer : VolumeLayer
-../dimensions : Dimensions
-libs/drawing : Drawing
-./volumetracing_statelogger : VolumeTracingStateLogger
-###
+Backbone                 = require("backbone")
+VolumeCell               = require("./volumecell")
+VolumeLayer              = require("./volumelayer")
+Dimensions               = require("../dimensions")
+RestrictionHandler       = require("../helpers/restriction_handler")
+Drawing                  = require("libs/drawing")
+VolumeTracingStateLogger = require("./volumetracing_statelogger")
 
 class VolumeTracing
 
-  constructor : (tracing, @flycam, @binary, updatePipeline) ->
+  constructor : (tracing, @flycam, @binary) ->
 
     _.extend(this, Backbone.Events)
 
     @contentData  = tracing.content.contentData
+    @restrictionHandler = new RestrictionHandler(tracing.restrictions)
+
     @cells        = []
     @activeCell   = null
     @currentLayer = null        # Layer currently edited
     @idCount      = @contentData.nextCell || 1
+    @lastCentroid = null
 
     @stateLogger  = new VolumeTracingStateLogger(
       @flycam, tracing.version, tracing.id, tracing.typ,
       tracing.restrictions.allowUpdate,
-      updatePipeline,
       this, @binary.pushQueue
     )
 
@@ -50,6 +51,8 @@ class VolumeTracing
   startEditing : (planeId) ->
     # Return, if layer was actually started
 
+    return false if @restrictionHandler.handleUpdate()
+
     if currentLayer? or @flycam.getIntegerZoomStep() > 0
       return false
 
@@ -61,27 +64,43 @@ class VolumeTracing
 
   addToLayer : (pos) ->
 
+    return if @restrictionHandler.handleUpdate()
+
     unless @currentLayer?
       return
 
     @currentLayer.addContour(pos)
-    @trigger("updateLayer", @currentLayer.getSmoothedContourList())
+    @trigger "updateLayer", @getActiveCellId(), @currentLayer.getSmoothedContourList()
+
 
   finishLayer : ->
 
-    unless @currentLayer?
+    return if @restrictionHandler.handleUpdate()
+
+    if not @currentLayer? or @currentLayer.isEmpty()
       return
 
     start = (new Date()).getTime()
+    @currentLayer.finish()
     iterator = @currentLayer.getVoxelIterator()
     labelValue = if @activeCell then @activeCell.id else 0
     @binary.cube.labelVoxels(iterator, labelValue)
     console.log "Labeling time:", ((new Date()).getTime() - start)
 
+    @updateDirection(@currentLayer.getCentroid())
     @currentLayer = null
-    @flycam.update()
 
     @trigger "volumeAnnotated"
+
+
+  updateDirection : (centroid) ->
+    if @lastCentroid?
+      @flycam.setDirection([
+        centroid[0] - @lastCentroid[0]
+        centroid[1] - @lastCentroid[1]
+        centroid[2] - @lastCentroid[2]
+      ])
+    @lastCentroid = centroid
 
 
   getActiveCellId : ->
@@ -107,3 +126,5 @@ class VolumeTracing
       @createCell(id)
 
     @trigger "newActiveCell", id
+
+module.exports = VolumeTracing

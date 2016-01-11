@@ -1,13 +1,9 @@
-### define
-three.color : ColorConverter
-###
+THREE          = require("three")
+ColorConverter = require("three.color")
 
 GOLDEN_RATIO = 0.618033988749895
 
-
-ColorGenerator =
-
-
+ColorGenerator = {
   distinctColorForId : (id) ->
 
     hue = id * GOLDEN_RATIO
@@ -15,3 +11,6 @@ ColorGenerator =
     return ColorConverter.setHSV(
       new THREE.Color(), hue, 1, 1
     ).getHex()
+}
+
+module.exports = ColorGenerator

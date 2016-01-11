@@ -1,9 +1,9 @@
 package controllers
 
 import com.scalableminds.util.geometry.{BoundingBox, Point3D}
-import controllers.admin.TaskAdministration._
 import models.binary.DataSetDAO
 import play.api.data.Forms._
+import javax.inject.Inject
 import play.api.libs.json.Json._
 import play.api.libs.json._
 import oxalis.security.Secured
@@ -14,17 +14,20 @@ import models.annotation._
 import views._
 import play.api.libs.concurrent._
 import play.api.libs.concurrent.Execution.Implicits._
-import play.api.i18n.Messages
+import play.api.i18n.{MessagesApi, Messages}
 import models.annotation.AnnotationService
 import play.api.Play.current
-import com.scalableminds.util.tools.Fox
+import com.scalableminds.util.tools.{FoxImplicits, Fox}
 import net.liftweb.common.{Full, Failure}
 import com.scalableminds.util.reactivemongo.DBAccessContext
-import scala.concurrent.Future
+import scala.concurrent.{Promise, Future}
 import play.twirl.api.Html
 import play.api.libs.functional.syntax._
+import scala.concurrent.Future
+import scala.async.Async.{async, await}
+import net.liftweb.common.Box
 
-object TaskController extends Controller with Secured {
+class TaskController @Inject() (val messagesApi: MessagesApi) extends Controller with Secured with FoxImplicits {
 
   val MAX_OPEN_TASKS = current.configuration.getInt("oxalis.tasks.maxOpenPerUser") getOrElse 2
 
@@ -126,26 +129,40 @@ object TaskController extends Controller with Secured {
   }
 
   def ensureMaxNumberOfOpenTasks(user: User)(implicit ctx: DBAccessContext): Fox[Int] = {
-    AnnotationService.countOpenTasks(user).flatMap{ numberOfOpen => Future.successful(
+    AnnotationService.countOpenTasks(user).flatMap{ numberOfOpen =>
       if (numberOfOpen < MAX_OPEN_TASKS)
-        Full(numberOfOpen)
+        Fox.successful(numberOfOpen)
       else
-        Failure(Messages("task.tooManyOpenOnes"))
-    )}
+        Fox.failure(Messages("task.tooManyOpenOnes"))
+    }
   }
 
-  def requestTaskFor(user: User)(implicit ctx: DBAccessContext) =
-    TaskService.nextTaskForUser(user)
+  def createAvailableTasksJson(availableTasksMap: Map[User, (Int, List[Project])]) =
+    Json.toJson(availableTasksMap.map { case (user, (taskCount, projects)) =>
+        Json.obj(
+          "name" -> user.name,
+          "availableTaskCount" -> taskCount,
+          "projects" -> projects.map(_.name)
+        )
+    })
+
+  def requestAvailableTasks = Authenticated.async { implicit request =>
+    for {
+      availableTasksMap <- TaskService.getAllAvailableTaskCountsAndProjects()
+    } yield {
+      Ok(createAvailableTasksJson(availableTasksMap))
+    }
+  }
 
   def request = Authenticated.async { implicit request =>
     val user = request.user
     for {
       _ <- ensureMaxNumberOfOpenTasks(user)
-      task <- requestTaskFor(user) ?~> Messages("task.unavailable")
+      task <- TaskService.nextTaskForUser(user) ?~> Messages("task.unavailable")
       annotation <- AnnotationService.createAnnotationFor(user, task) ?~> Messages("annotation.creationFailed")
-      annotationJSON <- AnnotationLike.annotationLikeInfoWrites(annotation, Some(user), List("content", "actions"))
+      annotationJSON <- AnnotationLike.annotationLikeInfoWrites(annotation, Some(user), exclude = List("content", "actions"))
     } yield {
-      JsonOk(annotationJSON)
+      JsonOk(annotationJSON, Messages("task.assigned"))
     }
   }
 }

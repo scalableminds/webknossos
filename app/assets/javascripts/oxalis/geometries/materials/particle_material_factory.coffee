@@ -1,8 +1,6 @@
-### define
-app : app
-three : THREE
-./abstract_material_factory : AbstractMaterialFactory
-###
+app                     = require("app")
+THREE                   = require("three")
+AbstractMaterialFactory = require("./abstract_material_factory")
 
 class ParticleMaterialFactory extends AbstractMaterialFactory
 
@@ -27,9 +25,6 @@ class ParticleMaterialFactory extends AbstractMaterialFactory
       showRadius :
         type : "i"
         value : 1
-      devicePixelRatio :
-        type : "f"
-        value : window.devicePixelRatio || 1
 
     @attributes = _.extend @attributes,
       sizeNm :
@@ -52,14 +47,19 @@ class ParticleMaterialFactory extends AbstractMaterialFactory
 
     @listenTo(@model.user, "change:particleSize", (model, size) ->
       @uniforms.particleSize.value = size
+      app.vent.trigger("rerender")
     )
     @listenTo(@model.user, "change:scale", (model, scale) ->
       @uniforms.scale.value = scale
+      app.vent.trigger("rerender")
     )
-    @listenTo(@model.user, "change:overrideNodeRadius", @model.flycam.update)
+    @listenTo(@model.user, "change:overrideNodeRadius", ->
+      app.vent.trigger("rerender")
+    )
 
     @listenTo(@model.flycam, "zoomStepChanged", ->
       @uniforms.zoomFactor.value = @model.flycam.getPlaneScalingFactor()
+      app.vent.trigger("rerender")
     )
 
 
@@ -71,7 +71,6 @@ class ParticleMaterialFactory extends AbstractMaterialFactory
       uniform float particleSize;
       uniform float scale;
       uniform int   showRadius;
-      uniform float devicePixelRatio;
       varying vec3 vColor;
       attribute float sizeNm;
       attribute float nodeScaleFactor;
@@ -84,7 +83,7 @@ class ParticleMaterialFactory extends AbstractMaterialFactory
             gl_PointSize = max(
                 sizeNm / zoomFactor / baseVoxel,
                 particleSize
-              ) * devicePixelRatio * scale * nodeScaleFactor;
+              ) * scale * nodeScaleFactor;
           else
             gl_PointSize = particleSize * nodeScaleFactor;
           gl_Position = projectionMatrix * mvPosition;
@@ -102,3 +101,5 @@ class ParticleMaterialFactory extends AbstractMaterialFactory
           gl_FragColor = vec4( vColor, 1.0 );
       }
     """
+
+module.exports = ParticleMaterialFactory

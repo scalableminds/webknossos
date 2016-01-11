@@ -1,22 +1,10 @@
 package models.task
 
 import play.api.Play._
-import scala.Some
-import akka.util.Timeout
-import play.api.libs.concurrent.Akka
-import akka.actor.Props
-import com.scalableminds.util.js.{JS, JsExecutionActor}
 import models.user.{UserService, User}
-import models.annotation.{AnnotationType, AnnotationDAO}
-import scala.concurrent.Future
-import com.scalableminds.util.reactivemongo.{DBAccessContext, GlobalAccessContext}
-import play.api.Logger
-import akka.pattern.AskTimeoutException
+import com.scalableminds.util.reactivemongo.DBAccessContext
 import play.api.libs.concurrent.Execution.Implicits._
-import akka.pattern.ask
-import scala.concurrent.duration._
 import com.scalableminds.util.tools.Fox
-import net.liftweb.common.{Failure, Empty, Full}
 
 /**
  * Company: scalableminds
@@ -35,7 +23,7 @@ trait TaskAssignment {
       available <- findAllAssignable(ctx)
       finished <- UserService.findFinishedTasksOf(user)
     } yield {
-      available.filter(task => !finished.contains(task._id) && task.hasEnoughExperience(user))
+      available.filter(task => !finished.contains(task._id) && task.hasEnoughExperience(user)).sortBy(-_.priority)
     }
   }
 

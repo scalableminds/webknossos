@@ -32,7 +32,7 @@ require.config(
     "d3"                  : "../bower_components/d3/d3"
     "daterangepicker"     : "../bower_components/bootstrap-daterangepicker/daterangepicker"
     "rangeslider"         : "../bower_components/nouislider/distribute/nouislider.min"
-    "clipboard"           : "../bower_components/clipboard/dist/clipboard.min"
+    "clipboard"           : "../bower_components/clipboard.js/clipboard.min"
     "mjs"                 : "../bower_components/mjs/src/mjs"
     "cola"                : "../bower_components/webcola/WebCola/cola.min"
     "fetch"               : "../bower_components/fetch/fetch"

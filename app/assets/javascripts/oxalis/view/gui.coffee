@@ -1,5 +1,6 @@
 ### define
 dat.gui : DatGui
+clipboard : Clipboard
 libs/request : Request
 libs/event_mixin : EventMixin
 libs/toast : Toast
@@ -167,6 +168,15 @@ class Gui
     @fCells?.open()
 
     $("#dataset-name").text(@model.dataSetName)
+
+    $(".trace-position-copy-button").on "click", ->
+      event.preventDefault()
+      positionString = $("#trace-position-input").val()
+      Clipboard.copy(positionString).then(
+        ->
+          Toast.success("Position copied to clipboard")
+      )
+
 
     $("#trace-position-input").on "change", (event) =>
 

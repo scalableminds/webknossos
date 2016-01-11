@@ -9,7 +9,6 @@
     "type": "git",
     "url": "git://github.com/scalableminds/oxalis.git"
   },
-  "license": "MIT",
   "devDependencies": {
     "chalk": "^1.1.1",
     "coffee-loader": "^0.7.2",
@@ -48,7 +47,7 @@
     "bootstrap": "^3.3.6",
     "bootstrap-daterangepicker": "^2.1.17",
     "c3": "^0.4.10",
-    "clipboard": "^1.5.5",
+    "clipboard-js": "^0.2.0",
     "d3": "^3.5.12",
     "es6-promise": "^3.0.2",
     "font-awesome": "^4.5.0",

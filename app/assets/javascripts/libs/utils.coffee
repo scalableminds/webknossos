@@ -32,16 +32,6 @@ Utils =
       array.reduce(( (r, a) -> r + a ), 0)
 
 
-  floorArray : (array) ->
-
-    return array.map( (a) -> Math.floor(a) )
-
-
-  roundArray : (array) ->
-
-    return array.map( (a) -> Math.round(a) )
-
-
   roundTo : (value, digits) ->
 
     digitMultiplier = Math.pow(10, digits)

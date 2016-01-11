@@ -110,7 +110,7 @@ M4x4.extractTranslation = (m, r = new Float32Array(3)) ->
   r[0] = m[12]
   r[1] = m[13]
   r[2] = m[14]
-  r
+  return r
 
 
 V3.round = (v, r = new Float32Array(3)) ->
@@ -118,11 +118,16 @@ V3.round = (v, r = new Float32Array(3)) ->
   r[0] = Math.round(v[0])
   r[1] = Math.round(v[1])
   r[2] = Math.round(v[2])
-  r
+  return r
+
+
+V3.floor = (v) ->
+
+  return v.map((number) -> Math.floor(number))
 
 
 V3.toString = (v) ->
 
-  "#{v[0]},#{v[1]},#{v[2]}"
+  return v.join(", ")
 
 module.exports = { M4x4, V2, V3 }

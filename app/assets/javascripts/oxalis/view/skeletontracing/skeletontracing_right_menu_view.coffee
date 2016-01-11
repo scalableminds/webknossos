@@ -27,6 +27,7 @@ class SkeletonTracingRightMenuView extends AbstractTabView
         id : "tab-comments"
         name : "Comments"
         viewClass : CommentTabView
+        active : true
       }
     ]
 

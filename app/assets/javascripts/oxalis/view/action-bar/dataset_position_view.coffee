@@ -1,7 +1,10 @@
 Marionette = require("backbone.marionette")
+Clipboard  = require("clipboard-js")
 app        = require("app")
 constants  = require("oxalis/constants")
 utils      = require("libs/utils")
+Toast      = require("libs/toast")
+{V3}       = require("libs/mjs")
 
 class DatasetPositionView extends Marionette.ItemView
 
@@ -10,7 +13,9 @@ class DatasetPositionView extends Marionette.ItemView
   template : _.template("""
     <div class="form-group">
       <div class="input-group">
-        <span class="input-group-addon">Position</span>
+        <span class="input-group-btn">
+          <button class="btn btn-primary">Position</button>
+        </span>
         <input id="trace-position-input" class="form-control" type="text" value="<%- position() %>">
       </div>
     </div>
@@ -26,19 +31,20 @@ class DatasetPositionView extends Marionette.ItemView
 
   templateHelpers :
     position : ->
-      utils.floorArray(@flycam.getPosition()).join(", ")
+      V3.floor(@flycam.getPosition()).join(", ")
 
     rotation : ->
-      utils.roundArray(@flycam3d.getRotation()).join(", ")
+      V3.round(@flycam3d.getRotation()).join(", ")
 
 
   events :
     "change #trace-position-input" : "changePosition"
     "change #trace-rotation-input" : "changeRotation"
+    "click button" : "copyToClipboard"
 
   ui :
-    tracePositionInput : "#trace-position-input"
-    traceRotationInput : "#trace-rotation-input"
+    "positionInput" : "#trace-position-input"
+    "rotationInput" : "#trace-rotation-input"
 
 
   initialize : (options) ->
@@ -69,10 +75,10 @@ class DatasetPositionView extends Marionette.ItemView
     if posArray.length == 3
       @model.flycam.setPosition(posArray)
       app.vent.trigger("centerTDView")
-      @ui.tracePositionInput.get(0).setCustomValidity("")
+      @ui.positionInput.get(0).setCustomValidity("")
     else
-      @ui.tracePositionInput.get(0).setCustomValidity("Please supply a valid position, like 1,1,1!")
-      @ui.tracePositionInput.get(0).reportValidity()
+      @ui.positionInput.get(0).setCustomValidity("Please supply a valid position, like 1,1,1!")
+      @ui.positionInput.get(0).reportValidity()
     return
 
 
@@ -81,12 +87,21 @@ class DatasetPositionView extends Marionette.ItemView
     rotArray = utils.stringToNumberArray(event.target.value)
     if rotArray.length == 3
       @model.flycam3d.setRotation(rotArray)
-      @ui.traceRotationInput.get(0).setCustomValidity("")
+      @ui.rotationInput.get(0).setCustomValidity("")
     else
-      @ui.traceRotationInput.get(0).setCustomValidity("Please supply a valid rotation, like 1,1,1!")
-      @ui.traceRotationInput.get(0).reportValidity()
+      @ui.rotationInput.get(0).setCustomValidity("Please supply a valid rotation, like 1,1,1!")
+      @ui.rotationInput.get(0).reportValidity()
     return
 
+
+  copyToClipboard : (evt) ->
+
+    evt.preventDefault()
+
+    positionString = @ui.positionInput.val()
+    Clipboard.copy(positionString).then(
+      -> Toast.success("Position copied to clipboard")
+    )
 
   onDestroy : ->
 

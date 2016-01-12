@@ -24,13 +24,8 @@ class TaskListItemView extends Marionette.CompositeView
         </a>
       </td>
       <td>
-<<<<<<< HEAD
-        <a href="/taskTypes#<%= type.summary %>">
-          <%= type.summary %>
-=======
         <a href="/taskTypes#<%- type.summary %>">
           <%- type.summary %>
->>>>>>> dev
         </a>
       </td>
       <td><%- dataSet %></td>
@@ -49,17 +44,11 @@ class TaskListItemView extends Marionette.CompositeView
         <i class="fa fa-check-circle-o"></i><%- status.completed %>
       </td>
       <td class="nowrap">
-<<<<<<< HEAD
-        <a href="/tasks/<%= id %>/edit"><i class="fa fa-pencil"></i>edit</a><br>
-        <a href="/annotations/CompoundTask/<%= id %>" title="view all finished tracings"><i class="fa fa-random"></i>view</a><br>
-        <a href="/api/tasks/<%= id %>/download" title="download all finished tracings"><i class="fa fa-download"></i>download</a><br>
-=======
-        <a href="/admin/tasks/<%- id %>/edit"><i class="fa fa-pencil"></i>edit</a><br>
+        <a href="/tasks/<%- id %>/edit"><i class="fa fa-pencil"></i>edit</a><br>
         <% if (status.completed > 0) { %>
           <a href="/annotations/CompoundTask/<%- id %>" title="view all finished tracings"><i class="fa fa-random"></i>view</a><br>
           <a href="/api/tasks/<%- id %>/download" title="download all finished tracings"><i class="fa fa-download"></i>download</a><br>
         <% } %>
->>>>>>> dev
         <a href="#" class="delete"><i class="fa fa-trash-o"></i>delete</a>
       </td>
     </tr>

@@ -74,14 +74,10 @@ class SelectionView extends Marionette.CollectionView
    ###
   updateModel : ->
 
-<<<<<<< HEAD
     # TODO: remove
     console.log('parentModel', @$el.attr("name"), @parentModel)
 
     if @parentModel?
       @parentModel.set(@$el.attr("name"), @getActive())
-=======
-module.exports = SelectionView
->>>>>>> dev
 
-    return
+module.exports = SelectionView

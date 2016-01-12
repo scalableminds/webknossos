@@ -26,7 +26,6 @@ class TaskListView extends Marionette.CompositeView
          </tr>
       </thead>
     </table>
-<<<<<<< HEAD
     <div class="navbar navbar-default navbar-fixed-bottom">
       <div class="navbar-form">
         <div class="btn-group">
@@ -36,8 +35,6 @@ class TaskListView extends Marionette.CompositeView
         </div>
       </div>
     </div>
-=======
->>>>>>> dev
   """)
   className : "task-administration container wide"
   childView : TaskListItemView
@@ -63,7 +60,7 @@ class TaskListView extends Marionette.CompositeView
 
   createNewTask : ->
 
-    app.router.loadURL("/admin/tasks/create")
+    app.router.loadURL("/tasks/create")
 
 
   toggleAllDetails : ->

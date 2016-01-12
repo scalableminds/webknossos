@@ -11,29 +11,12 @@ constants = require("oxalis/constants")
 class Router extends Backbone.Router
 
   routes :
-<<<<<<< HEAD:app/assets/javascripts/main/router.coffee
-    "users"                         : "users"
-    "teams"                         : "teams"
-    "statistics"                    : "statistics"
-    "tasks"                         : "tasks"
-    "tasks/create"                  : "taskCreate"
-    "tasks/:id/edit"                : "taskEdit"
-    "projects"                      : "projects"
-    "annotations/:type/:id"         : "tracingView"
-    "datasets/:id/view"             : "tracingViewPublic"
-    "dashboard"                     : "dashboard"
-    "users/:id/details"             : "dashboard"
-    "taskTypes/:id/edit"            : "editTaskType"
-    "taskTypes"                     : "taskTypes"
-    "spotlight"                     : "spotlight"
-    "tasks/overview"                : "taskOverview"
-    "admin/taskTypes"               : "hideLoading"
-
-=======
     "users"                             : "users"
     "teams"                             : "teams"
     "statistics"                        : "statistics"
     "tasks"                             : "tasks"
+    "tasks/create"                      : "taskCreate"
+    "tasks/:id/edit"                    : "taskEdit"
     "projects"                          : "projects"
     "annotations/:type/:id(/readOnly)"  : "tracingView"
     "datasets/:id/view"                 : "tracingViewPublic"
@@ -45,7 +28,7 @@ class Router extends Backbone.Router
     "taskTypes"                         : "taskTypes"
     "spotlight"                         : "spotlight"
     "tasks/overview"                    : "taskOverview"
-    "admin/taskTypes"                   : "hideLoading"
+    "admin/taskTypes"                   : "hideLoadingSpinner"
     "workload"                          : "workload"
 
   whitelist : [
@@ -53,7 +36,6 @@ class Router extends Backbone.Router
     "help/faq",
     "issues"
   ]
->>>>>>> dev:app/assets/javascripts/router.coffee
 
   initialize : ->
 
@@ -95,7 +77,7 @@ class Router extends Backbone.Router
     @$mainContainer = $("#main-container")
 
 
-  hideLoading : ->
+  hideLoadingSpinner : ->
 
     @$loadingSpinner.addClass("hidden")
 
@@ -176,38 +158,30 @@ class Router extends Backbone.Router
    ###
   taskCreate : ->
 
-    require ["admin/views/task/task_create_view", "admin/models/task/task_model"], (TaskCreateView, TaskModel) =>
-      # create an empty task model which will be populated in the create view
-      model = new TaskModel()
+    self = this
+    require(["admin/views/task/task_create_view", "admin/models/task/task_model"], (TaskCreateView, TaskModel) ->
 
-      # create the task creation view
+      model = new TaskModel()
       view = new TaskCreateView(model : model)
 
-      # show view
-      @changeView(view)
-
-      # auto-hide the loading spinner
-      @hideLoading()
-
+      self.changeView(view)
+      self.hideLoadingSpinner()
+    )
 
   ###*
    * Load item view which displays an editable task.
    ###
   taskEdit : (taskID) ->
 
-    require ["admin/views/task/task_edit_view", "admin/models/task/task_model"], (TaskEditView, TaskModel) =>
-      # create and populate the task model
-      model = new TaskModel(id : taskID)
+    self = this
+    require(["admin/views/task/task_edit_view", "admin/models/task/task_model"], (TaskEditView, TaskModel) ->
 
-      # create the task edit view
+      model = new TaskModel(id : taskID)
       view = new TaskEditView(model : model)
 
-      # show view
-      @changeView(view)
-
-      # auto-hide the loading spinner
-      @hideLoading()
-
+      self.changeView(view)
+      self.hideLoadingSpinner()
+    )
 
   taskTypes : ->
 
@@ -217,7 +191,7 @@ class Router extends Backbone.Router
       collection = new TaskTypeCollection()
       view = new TaskTypeView(collection: collection)
       self.changeView(view)
-      self.hideLoading()
+      self.hideLoadingSpinner()
     )
 
 
@@ -229,7 +203,7 @@ class Router extends Backbone.Router
       model = new TaskTypeModel({id : taskTypeID})
       view = new TaskTypeFormView(model : model, isEditForm : true)
       self.changeView(view)
-      self.hideLoading()
+      self.hideLoadingSpinner()
     )
 
 
@@ -245,7 +219,7 @@ class Router extends Backbone.Router
 
       self.listenTo(model, "sync", ->
         self.changeView(view)
-        self.hideLoading()
+        self.hideLoadingSpinner()
       )
 
       model.fetch()
@@ -261,7 +235,7 @@ class Router extends Backbone.Router
       view = new SpotlightView(collection: collection)
 
       self.changeView(view)
-      self.listenTo(collection, "sync", self.hideLoading)
+      self.listenTo(collection, "sync", self.hideLoadingSpinner)
     )
 
 
@@ -274,7 +248,7 @@ class Router extends Backbone.Router
       view = new TaskOverviewView({model})
 
       self.changeView(view)
-      self.listenTo(model, "sync", self.hideLoading)
+      self.listenTo(model, "sync", self.hideLoadingSpinner)
     )
 
 
@@ -288,7 +262,7 @@ class Router extends Backbone.Router
       paginationView = new admin.PaginationView({ collection, addButtonText })
 
       self.changeView(paginationView, view)
-      self.listenTo(collection, "sync", => self.hideLoading())
+      self.listenTo(collection, "sync", => self.hideLoadingSpinner())
     )
 
 
@@ -300,10 +274,10 @@ class Router extends Backbone.Router
       if collection
         collection = new admin[collection]()
         view = new admin[view](collection : collection)
-        self.listenTo(collection, "sync", => self.hideLoading())
+        self.listenTo(collection, "sync", => self.hideLoadingSpinner())
       else
         view = new admin[view]()
-        setTimeout((=> self.hideLoading()), 200)
+        setTimeout((=> self.hideLoadingSpinner()), 200)
 
       self.changeView(view)
     )

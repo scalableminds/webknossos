@@ -1,12 +1,11 @@
-### define
-underscore : _
-backbone.marionette : marionette
-routes : routes
-admin/models/dataset/dataset_collection : DatasetCollection
-admin/views/selection_view : SelectionView
-###
+_                 = require("underscore")
+Marionette        = require("backbone.marionette")
+routes            = require("routes")
+DatasetCollection = require("admin/models/dataset/dataset_collection")
+SelectionView     = require("admin/views/selection_view")
 
-class TaskCreateFromFormView extends Backbone.Marionette.LayoutView
+
+class TaskCreateFromFormView extends Marionette.LayoutView
 
   id : "create-from-form"
 
@@ -118,3 +117,5 @@ class TaskCreateFromFormView extends Backbone.Marionette.LayoutView
     )
 
     @dataSet.show(@dataSetSelectionView)
+
+module.exports = TaskCreateFromFormView

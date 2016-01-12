@@ -1,6 +1,5 @@
-### define
-format_utils : FormatUtils
-###
+Backbone = require("backbone")
+FormatUtils = require("libs/format_utils")
 
 class TaskModel extends Backbone.Model
 
@@ -37,3 +36,6 @@ class TaskModel extends Backbone.Model
 
     options = url : "/api/tasks/#{@get('id')}/delete"
     super(options)
+
+
+module.exports = TaskModel

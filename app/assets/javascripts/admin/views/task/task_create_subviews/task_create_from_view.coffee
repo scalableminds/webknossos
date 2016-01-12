@@ -1,17 +1,15 @@
-### define
-underscore : _
-backbone.marionette : marionette
-routes : routes
-admin/models/tasktype/task_type_collection : TaskTypeCollection
-admin/models/team/team_collection : TeamCollection
-admin/models/project/project_collection : ProjectCollection
-admin/views/selection_view : SelectionView
-./task_create_from_form_view : TaskCreateFromFormView
-./task_create_from_nml_view : TaskCreateFromNMLView
-libs/toast : Toast
-###
+_                       = require("underscore")
+Marionette              = require("backbone.marionette")
+routes                  = require("routes")
+TaskTypeCollection      = require("admin/models/tasktype/task_type_collection")
+TeamCollection          = require("admin/models/team/team_collection")
+ProjectCollection       = require("admin/models/project/project_collection")
+SelectionView           = require("admin/views/selection_view")
+TaskCreateFromFormView  = require("./task_create_from_form_view")
+TaskCreateFromNMLView   = require("./task_create_from_nml_view")
+Toast                   = require("libs/toast")
 
-class TaskCreateFromView extends Backbone.Marionette.LayoutView
+class TaskCreateFromView extends Marionette.LayoutView
 
   # which type of form is created?
   # from_form/ from_nml
@@ -247,11 +245,13 @@ class TaskCreateFromView extends Backbone.Marionette.LayoutView
   ###
   clearForm: ->
 
-    @ui.neededExperience_domain.val("")
-    @ui.neededExperience_value.val("0")
-    @ui.priority.val("0")
-    @ui.status_open.val("10")
-    @ui.boundingBox.val("0, 0, 0, 0, 0, 0")
+    debugger
+    @ui.form[0].reset()
+    # @ui.neededExperience_domain.val("")
+    # @ui.neededExperience_value.val("0")
+    # @ui.priority.val("0")
+    # @ui.status_open.val("10")
+    # @ui.boundingBox.val("0, 0, 0, 0, 0, 0")
 
 
   ###*
@@ -304,3 +304,6 @@ class TaskCreateFromView extends Backbone.Marionette.LayoutView
 
     # render the create-subview
     @subview.show(@createSubview)
+
+
+module.exports = TaskCreateFromView

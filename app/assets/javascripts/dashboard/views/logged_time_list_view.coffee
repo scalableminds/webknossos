@@ -1,7 +1,7 @@
 _           = require("lodash")
 Marionette  = require("backbone.marionette")
 moment      = require("moment")
-FormatUtils = require("format_utils")
+FormatUtils = require("libs/format_utils")
 
 class LoggedTimeListView extends Marionette.ItemView
 

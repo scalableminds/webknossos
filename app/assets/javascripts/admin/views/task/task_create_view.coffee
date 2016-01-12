@@ -1,12 +1,10 @@
-### define
-underscore : _
-backbone.marionette : marionette
-routes : routes
-./task_create_subviews/task_create_from_view : TaskCreateFromView
-./task_create_subviews/task_create_bulk_import_view : TaskCreateBulkImportView
-###
+_                         = require("underscore")
+Marionette                = require("backbone.marionette")
+routes                    = require("routes")
+TaskCreateFromView        = require("./task_create_subviews/task_create_from_view")
+TaskCreateBulkImportView  = require("./task_create_subviews/task_create_bulk_import_view")
 
-class TaskCreateView extends Backbone.Marionette.LayoutView
+class TaskCreateView extends Marionette.LayoutView
 
   # keep track of the active view
   activeView : null
@@ -86,3 +84,5 @@ class TaskCreateView extends Backbone.Marionette.LayoutView
   onRender : ->
 
     @showTabCreateFromForm()
+
+module.exports = TaskCreateView

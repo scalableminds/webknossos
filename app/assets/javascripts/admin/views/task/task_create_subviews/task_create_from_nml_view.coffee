@@ -1,11 +1,10 @@
-### define
-underscore : _
-backbone.marionette : marionette
-routes : routes
-fileupload : Fileupload
-###
+_             = require("underscore")
+Marionette    = require("backbone.marionette")
+routes        = require("routes")
+Toast         = require("libs/toast")
+Request       = require("libs/request")
 
-class TaskCreateFromNMLView extends Backbone.Marionette.LayoutView
+class TaskCreateFromNMLView extends Marionette.LayoutView
 
   id: "create-from-nml"
   API_URL: "/api/tasks-nml"
@@ -18,44 +17,27 @@ class TaskCreateFromNMLView extends Backbone.Marionette.LayoutView
   <div class="form-group">
     <label class="col-sm-2 control-label" for="nmlFile">Reference NML File</label>
     <div class="col-sm-9">
-      <div class="input-group">
-        <span class="input-group-btn">
-          <span class="btn btn-primary btn-file">
-            Browse…
-          <input id="files" type="file" multiple="" name="nmlFiles[]" title="Please select at least one .nml file" required=true>
-          </span>
+      <div class="fileinput fileinput-new input-group" data-provides="fileinput">
+        <div class="form-control" data-trigger="fileinput">
+          <i class="fa fa-file fileinput-exists"></i>
+          <span class="fileinput-filename"></span>
+        </div>
+        <span class="input-group-addon btn btn-default btn-file">
+          <span class="fileinput-new">Browse...</span>
+          <span class="fileinput-exists">Change</span>
+          <input type="file" multiple="" name="nmlFiles[]" title="Please select at least one .nml file" required=true>
         </span>
-        <input type="text" class="file-info form-control" readonly="" required="">
+        <a href="#" class="input-group-addon btn btn-default fileinput-exists" data-dismiss="fileinput">Remove</a>
       </div>
     </div>
   </div>
 
+
   """)
-
-  events:
-    "change #files": "updateFilenames" # track file picker changes
-
-  ui:
-    "fileInfo": ".file-info" # shows names of selected files
-    "files": "#files" # actual file input
 
   initialize: (options) ->
 
     @parent = options.parent
-
-    # setup upload utility
-    @parent.ui.form.fileupload({
-      url: @API_URL
-      dataType: "json"
-      type: "POST"
-      multipart: true # enable multiple file uploads -- do we need this?
-      singleFileUploads: false # put all files into 1 xhr
-      autoUpload: false # upload on submit
-      start: => @fileuploadStart()
-      done: => @fileuploadDone()
-      fail: => @parent.showSaveError()
-      always: => @fileuploadAlways()
-    })
 
 
   ###*
@@ -64,23 +46,33 @@ class TaskCreateFromNMLView extends Backbone.Marionette.LayoutView
   ###
   submit: ->
 
-    # send files and remaining form data to server
-    @parent.ui.form.fileupload("send", {
-      files: @ui.files[0].files
-      formData: @model.attributes
-    })
+    form = @parent.ui.form[0]
+
+    if form.checkValidity()
+
+      Toast.info("Uploading NML", false)
+      @parent.ui.submitButton.text("Uploading...")
+
+      Request.sendMultipartFormReceiveJSON("/api/tasks-nml",
+        data : new FormData(form)
+      )
+      .then(
+        => @fileuploadDone()
+        -> # NOOP
+      )
+      .then(
+        =>
+          @fileuploadAlways()
+      )
+
+    # # send files and remaining form data to server
+    # @parent.ui.form.fileupload("send", {
+    #   files: @ui.files[0].files
+    #   formData: @model.attributes
+    # })
 
     # prevent page reload
     return false
-
-
-  ###*
-   * Upload Start Hook.
-   * Change button text, so user know upload is going.
-  ###
-  fileuploadStart: ->
-
-    @parent.ui.submitButton.text("Uploading...")
 
 
   ###*
@@ -91,7 +83,6 @@ class TaskCreateFromNMLView extends Backbone.Marionette.LayoutView
     @parent.showSaveSuccess()
 
     if @CLEAR_ON_SUCCESS
-      @clearForm()
       @parent.clearForm()
 
 
@@ -106,24 +97,4 @@ class TaskCreateFromNMLView extends Backbone.Marionette.LayoutView
     @parent.ui.submitButton.text("Create")
 
 
-  ###*
-   * Clear all text inputs in the form.
-  ###
-  clearForm: ->
-
-    @ui.files.val("")
-
-
-  ###*
-   * Event handler which updates ui so user can see selected filenames.
-   ###
-  updateFilenames: (evt) ->
-
-    # grab file list from event
-    files = evt.target.files
-
-    # build list
-    filePath = _.pluck(files, "name").join(", ")
-
-    # update ui
-    @ui.fileInfo.val(filePath)
+module.exports = TaskCreateFromNMLView

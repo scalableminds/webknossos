@@ -1,11 +1,9 @@
-### define
-underscore : _
-backbone.marionette : marionette
-routes : routes
-libs/toast : Toast
-###
+_          = require("underscore")
+Marionette = require("backbone.marionette")
+routes     = require("routes")
+Toast      = require("libs/toast")
 
-class TaskCreateBulkImportView extends Backbone.Marionette.ItemView
+class TaskCreateBulkImportView extends Marionette.ItemView
 
   id : "create-bulk-import"
   API_URL: "/admin/tasks/createBulk"
@@ -177,3 +175,5 @@ class TaskCreateBulkImportView extends Backbone.Marionette.ItemView
         depth: maxZ
       projectName
     }
+
+module.exports = TaskCreateBulkImportView

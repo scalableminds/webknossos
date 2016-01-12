@@ -1,16 +1,14 @@
-### define
-underscore : _
-backbone.marionette : marionette
-routes : routes
-admin/models/tasktype/task_type_collection : TaskTypeCollection
-admin/models/team/team_collection : TeamCollection
-admin/models/project/project_collection : ProjectCollection
-admin/models/dataset/dataset_collection : DatasetCollection
-admin/views/selection_view : SelectionView
-libs/toast : Toast
-###
+_                  = require("underscore")
+Marionette         = require("backbone.marionette")
+routes             = require("routes")
+TaskTypeCollection = require("admin/models/tasktype/task_type_collection")
+TeamCollection     = require("admin/models/team/team_collection")
+ProjectCollection  = require("admin/models/project/project_collection")
+DatasetCollection  = require("admin/models/dataset/dataset_collection")
+SelectionView      = require("admin/views/selection_view")
+Toast              = require("libs/toast")
 
-class TaskCreateView extends Backbone.Marionette.LayoutView
+class TaskCreateView extends Marionette.LayoutView
 
   id : "task-edit"
   className : "container wide task-type-administration"
@@ -327,3 +325,5 @@ class TaskCreateView extends Backbone.Marionette.LayoutView
     app.router.navigate("tasks", {trigger: true})
 
     return
+
+module.exports = TaskCreateView

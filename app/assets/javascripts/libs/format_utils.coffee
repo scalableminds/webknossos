@@ -30,7 +30,6 @@ class FormatUtils
     else
       text
 
-<<<<<<< HEAD
 
   ###*
    * Return current date and time
@@ -38,6 +37,5 @@ class FormatUtils
   @formatDate : ->
 
     return moment().format("YYYY-MM-DD HH:mm")
-=======
+
 module.exports = FormatUtils
->>>>>>> dev

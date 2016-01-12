@@ -49,7 +49,7 @@ object AnnotationController extends Controller with Secured with TracingInformat
   def info(typ: String, id: String, readOnly: Boolean = false) = UserAwareAction.async { implicit request =>
       val annotationId = AnnotationIdentifier(typ, id)
       respondWithTracingInformation(annotationId, readOnly).map { js =>
-          request.userOpt.map { user =>
+          request.userOpt.foreach { user =>
               UsedAnnotationDAO.use(user, annotationId)
           }
           Ok(js)
@@ -89,7 +89,7 @@ object AnnotationController extends Controller with Secured with TracingInformat
       _ <- AnnotationUpdateService.removeAll(typ, id)
     } yield {
       AnnotationUpdateService.store(typ, id, updateableAnnotation.version + 1, combinedUpdate)
-      Logger.info(s"REVERTED using update [$typ - $id, $version]: ${combinedUpdate}")
+      Logger.info(s"REVERTED using update [$typ - $id, $version]: $combinedUpdate")
       JsonOk(result, "annotation.reverted")
     }
   }
@@ -99,7 +99,7 @@ object AnnotationController extends Controller with Secured with TracingInformat
         for {
           dataSetName <- annotation.dataSetName ?~> Messages("dataSet.notSupplied")
           dataSet <- DataSetDAO.findOneBySourceName(dataSetName) ?~> Messages("dataSet.notFound")
-          temporary <- annotation.temporaryDuplicate(true)
+          temporary <- annotation.temporaryDuplicate(keepId = true)
           explorational = temporary.copy(typ = AnnotationType.Explorational)
           savedAnnotation <- explorational.saveToDB
         } yield {

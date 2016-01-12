@@ -1,6 +1,7 @@
+_                   = require("lodash")
+Marionette          = require("backbone.marionette")
 Utils               = require("libs/utils")
 AbstractSettingView = require("./abstract_setting_view")
-_                   = require("lodash")
 
 class ColorSettingView extends AbstractSettingView
 
@@ -10,10 +11,10 @@ class ColorSettingView extends AbstractSettingView
 
   template : _.template("""
     <div class="col-sm-5">
-      <%= displayName %>
+      <%- displayName %>
     </div>
     <div class="col-sm-4 col-sm-offset-3">
-      <input class="form-control" type="color" value="<%= rgbToHex(value) %>">
+      <input class="form-control" type="color" value="<%- rgbToHex(value) %>">
     </div>
   """)
 

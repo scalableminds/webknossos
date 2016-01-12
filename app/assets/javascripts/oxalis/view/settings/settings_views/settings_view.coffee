@@ -1,16 +1,16 @@
-Utils      = require("libs/utils")
-marionette = require("backbone.marionette")
-subviews   = require("backbone.subviews")
 _          = require("lodash")
+Utils      = require("libs/utils")
+Marionette = require("backbone.marionette")
+Subviews   = require("backbone-subviews")
 
-class SettingsView extends Backbone.Marionette.ItemView
+class SettingsView extends Marionette.ItemView
 
 
   template : _.template("""
     <div class="panel-group flex-overflow">
 
       <% _.forEach(subviewCreators, function (subview, key) { %>
-        <div data-subview="<%= key %>"></div>
+        <div data-subview="<%- key %>"></div>
       <% }) %>
 
     </div>
@@ -21,7 +21,7 @@ class SettingsView extends Backbone.Marionette.ItemView
 
     @model = @model[@modelName]
 
-    Backbone.Subviews.add(this)
+    Subviews.add(this)
 
 
   render : ->

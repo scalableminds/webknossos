@@ -1,7 +1,7 @@
-marionette      = require("backbone.marionette")
+Marionette      = require("backbone.marionette")
 TemplateHelpers = require("libs/template_helpers")
 
-class DatasetAccessView extends Backbone.Marionette.ItemView
+class DatasetAccessView extends Marionette.ItemView
 
   tagName : "tr"
 
@@ -9,7 +9,7 @@ class DatasetAccessView extends Backbone.Marionette.ItemView
     <td><%- firstName %> <%- lastName %></td>
     <td>
       <% teams.forEach(function(team){ %>
-        <span class="label label-default" style="background-color: <%= TemplateHelpers.stringToColor(team.team) %>"><%- team.team %></span>
+        <span class="label label-default" style="background-color: <%- TemplateHelpers.stringToColor(team.team) %>"><%- team.team %></span>
       <% }) %>
     </td>
   """)

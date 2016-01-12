@@ -4,9 +4,9 @@ import javax.inject.Inject
 
 import scala.async.Async._
 import scala.concurrent._
-import scala.concurrent.duration._
 
 import akka.util.Timeout
+import com.scalableminds.util.mvc.JsonResult
 import com.scalableminds.util.reactivemongo.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.tools.ExtendedTypes.ExtendedBoolean
 import com.scalableminds.util.tools.Fox
@@ -24,6 +24,7 @@ import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.iteratee.Enumerator
 import play.api.libs.json.{JsArray, JsObject, _}
 import play.twirl.api.Html
+import scala.concurrent.duration._
 
 /**
  * Company: scalableminds
@@ -189,7 +190,7 @@ class AnnotationController @Inject()(val messagesApi: MessagesApi) extends Contr
           JsonOk(result, "annotation.saved")
         }
       else
-        new Fox(Future.successful(Full(JsonBadRequest(oldJs, "annotation.dirtyState"))))
+        new Fox(Future.successful(Full(new JsonResult(CONFLICT)(oldJs, Messages("annotation.dirtyState")))))
     }
 
     // Logger.info(s"Tracing update [$typ - $id, $version]: ${request.body}")

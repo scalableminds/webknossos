@@ -1,8 +1,9 @@
 _          = require("lodash")
 Marionette = require("backbone.marionette")
-Clipboard  = require("clipboard")
+Clipboard  = require("clipboard-js")
+Toast      = require("libs/toast")
 
-class ShareModalView extends Backbone.Marionette.ItemView
+class ShareModalView extends Marionette.ItemView
 
   className : "modal fade"
   template : _.template("""
@@ -18,7 +19,7 @@ class ShareModalView extends Backbone.Marionette.ItemView
             <div class="row">
               <div class="col-md-12">
                 <div class="input-group">
-                  <input type="text" class="form-control" readonly value="<%= geturl() %>"></input>
+                  <input type="text" class="form-control" readonly value="<%- getUrl() %>"></input>
                   <span class="input-group-btn">
                     <button class="btn btn-default copy-btn" type="button"><i class="fa fa-copy"></i>Copy</button>
                   </span>
@@ -35,8 +36,16 @@ class ShareModalView extends Backbone.Marionette.ItemView
   """)
 
   templateHelpers :
+    getUrl : -> return ShareModalView::getUrl()
 
-    geturl : ->
+
+  events :
+    "click input" : "copyToClipboard"
+    "click .copy-btn" : "copyToClipboard"
+
+
+  getUrl : ->
+
       loc = window.location
 
       # in readonly mode the pathname already contains "/readonly"
@@ -47,32 +56,16 @@ class ShareModalView extends Backbone.Marionette.ItemView
       return url
 
 
-  events :
-    "click input" : "copyUrl"
-
-
   show : ->
 
     @$el.modal("show")
 
 
-  copyUrl : ->
+  copyToClipboard : ->
 
-    @$el.find(".copy-btn").click()
-
-
-  onRender : ->
-
-    @clipboard = new Clipboard(".copy-btn" , {
-      target : =>
-        @$el.find("input")[0]
-    })
-
-    @$el.on("hidden.bs.modal", => @destroy())
-
-
-  onDestroy : ->
-
-    @clipboard.destroy()
+    url = @getUrl()
+    Clipboard.copy(url).then(
+      -> Toast.success("Position copied to clipboard")
+    )
 
 module.exports = ShareModalView

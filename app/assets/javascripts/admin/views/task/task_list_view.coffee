@@ -1,9 +1,9 @@
 _                = require("lodash")
 app              = require("app")
-marionette       = require("backbone.marionette")
+Marionette       = require("backbone.marionette")
 TaskListItemView = require("./task_list_item_view")
 
-class TaskListView extends Backbone.Marionette.CompositeView
+class TaskListView extends Marionette.CompositeView
 
   template : _.template("""
     <h3>Tasks</h3>

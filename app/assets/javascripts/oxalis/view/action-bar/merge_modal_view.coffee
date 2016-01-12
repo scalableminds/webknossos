@@ -2,7 +2,6 @@ _                        = require("lodash")
 Marionette               = require("backbone.marionette")
 Toast                    = require("libs/toast")
 Request                  = require("libs/request")
-Fileinput                = require("fileinput")
 app                      = require("app")
 UserAnnotationCollection = require("oxalis/model/skeletontracing/user_annotation_collection")
 SelectionView            = require("admin/views/selection_view")
@@ -14,7 +13,7 @@ ProjectCollection        = require("admin/models/project/project_collection")
 ProjectModel             = require("admin/models/project/project_model")
 jsRoutes                 = require("routes")
 
-class MergeModalView extends Backbone.Marionette.LayoutView
+class MergeModalView extends Marionette.LayoutView
 
   className : "modal fade"
   template : _.template("""
@@ -56,7 +55,7 @@ class MergeModalView extends Backbone.Marionette.LayoutView
             <label for="nml">NML</label>
             <div class="row">
               <div class="col-md-10">
-                <form action="<%= jsRoutes.controllers.admin.NMLIO.upload().url %>"
+                <form action="<%- jsRoutes.controllers.admin.NMLIO.upload().url %>"
                     method="POST"
                     enctype="multipart/form-data"
                     id="upload-and-explore-form"

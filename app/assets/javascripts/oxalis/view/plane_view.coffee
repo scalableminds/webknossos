@@ -1,7 +1,7 @@
 app        = require("app")
 Backbone   = require("backbone")
 $          = require("jquery")
-TWEEN      = require("tween")
+TWEEN      = require("tween.js")
 Dimensions = require("../model/dimensions")
 Toast      = require("../../libs/toast")
 constants  = require("../constants")
@@ -24,7 +24,6 @@ class PlaneView
     # Create a 4x4 grid
     @curWidth = WIDTH = HEIGHT = constants.VIEWPORT_WIDTH
     @scaleFactor = 1
-    @deviceScaleFactor = window.devicePixelRatio || 1
 
     # Initialize main THREE.js components
     @camera   = new Array(4)
@@ -111,8 +110,6 @@ class PlaneView
       # update postion and FPS displays
       @stats.update()
 
-      # scale for retina displays
-      f = @deviceScaleFactor
       viewport = [
         [0, @curWidth + 20],
         [@curWidth + 20, @curWidth + 20],
@@ -133,7 +130,7 @@ class PlaneView
       for i in constants.ALL_VIEWPORTS
         @trigger("renderCam", i)
         setupRenderArea(
-          viewport[i][0] * f, viewport[i][1] * f, @curWidth * f,
+          viewport[i][0], viewport[i][1], @curWidth,
           constants.PLANE_COLORS[i]
         )
         @renderer.render @scene, @camera[i]

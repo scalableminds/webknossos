@@ -3,7 +3,7 @@ Marionette             = require("backbone.marionette")
 ProjectListItemView    = require("./project_list_item_view")
 CreateProjectModalView = require("./create_project_modal_view")
 
-class ProjectsListView extends Backbone.Marionette.CompositeView
+class ProjectsListView extends Marionette.CompositeView
 
   template : _.template("""
     <h3>Projects</h3>

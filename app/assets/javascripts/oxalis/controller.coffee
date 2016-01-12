@@ -2,7 +2,7 @@ $                                  = require("jquery")
 _                                  = require("lodash")
 app                                = require("../app")
 Backbone                           = require("backbone")
-Stats                              = require("stats")
+Stats                              = require("stats.js")
 PlaneController                    = require("./controller/viewmodes/plane_controller")
 SkeletonTracingController          = require("./controller/annotations/skeletontracing_controller")
 VolumeTracingController            = require("./controller/annotations/volumetracing_controller")
@@ -56,7 +56,6 @@ class Controller
     @model.fetch()
       .then(
         (error) => @modelFetchDone(error)
-        (response) => @modelFetchFail(response)
       )
 
 
@@ -149,11 +148,6 @@ class Controller
           @zoomStepWarningToast = null
 
 
-  modelFetchFail : (response) ->
-
-    Toast.error(response.responseJSON.messages)
-
-
   initKeyboard : ->
 
     $(document).keypress (event) ->
@@ -192,11 +186,16 @@ class Controller
           index = (@allowedModes.indexOf(@model.get("mode")) + 1) % @allowedModes.length
           @model.setMode(@allowedModes[index])
 
-        "super + s, ctrl + s" : (event) =>
-
+        "super + s" : (event) =>
           event.preventDefault()
           event.stopPropagation()
           @model.save()
+
+        "ctrl + s" : (event) =>
+          event.preventDefault()
+          event.stopPropagation()
+          @model.save()
+
       } )
 
     new Input.KeyboardNoLoop( keyboardControls )

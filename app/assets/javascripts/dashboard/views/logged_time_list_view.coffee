@@ -1,9 +1,9 @@
 _           = require("lodash")
-marionette  = require("backbone.marionette")
+Marionette  = require("backbone.marionette")
 moment      = require("moment")
 FormatUtils = require("format_utils")
 
-class LoggedTimeListView extends Backbone.Marionette.ItemView
+class LoggedTimeListView extends Marionette.ItemView
 
   template : _.template("""
     <table class="table-striped table-hover table">
@@ -16,8 +16,8 @@ class LoggedTimeListView extends Backbone.Marionette.ItemView
       <tbody>
         <% items.forEach(function(item) { %>
           <tr>
-            <td><%= moment(item.interval).format("MM/YYYY") %></td>
-            <td><%= FormatUtils.formatSeconds(item.time.asSeconds()) %></td>
+            <td><%- moment(item.interval).format("MM/YYYY") %></td>
+            <td><%- FormatUtils.formatSeconds(item.time.asSeconds()) %></td>
           </tr>
         <% }) %>
       </tbody>

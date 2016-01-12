@@ -10,13 +10,13 @@ UserAnnotationsCollection      = require("../models/user_annotations_collection"
 DatasetCollection              = require("admin/models/dataset/dataset_collection")
 
 
-class ExplorativeTracingListView extends Backbone.Marionette.CompositeView
+class ExplorativeTracingListView extends Marionette.CompositeView
 
   template : _.template("""
     <h3>Explorative Annotations</h3>
     <% if (!isAdminView) {%>
       <div>
-        <form action="<%= jsRoutes.controllers.admin.NMLIO.upload().url %>"
+        <form action="<%- jsRoutes.controllers.admin.NMLIO.upload().url %>"
           method="POST"
           enctype="multipart/form-data"
           id="upload-and-explore-form"

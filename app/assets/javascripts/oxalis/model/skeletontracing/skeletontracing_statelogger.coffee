@@ -1,6 +1,6 @@
 StateLogger    = require("../statelogger")
 THREE          = require("three")
-utils          = require("libs/utils")
+{V3}           = require("libs/mjs")
 ErrorHandling  = require("libs/error_handling")
 
 class SkeletonTracingStateLogger extends StateLogger
@@ -77,7 +77,7 @@ class SkeletonTracingStateLogger extends StateLogger
       treeId : treeId,
       id: node.id,
       radius: node.radius,
-      position : utils.floorArray(node.pos)
+      position : V3.floor(node.pos)
 
 
   edgeObject : (node, treeId) ->
@@ -151,7 +151,7 @@ class SkeletonTracingStateLogger extends StateLogger
         branchPoints : branchPoints
         comments : @skeletonTracing.getPlainComments()
         activeNode : @skeletonTracing.getActiveNodeId()
-        editPosition : utils.floorArray(@flycam.getPosition())
+        editPosition : V3.floor(@flycam.getPosition())
         zoomLevel : @flycam.getZoomStep()
       }
       false

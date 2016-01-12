@@ -4,7 +4,7 @@ CreditsView              = require("./credits_view")
 SpotlightDatasetListView = require("./spotlight_dataset_list_view")
 PaginationView           = require("admin/views/pagination_view")
 
-class SpotlightView extends Backbone.Marionette.LayoutView
+class SpotlightView extends Marionette.LayoutView
 
   className : "spotlight-view"
   template : _.template("""
@@ -32,7 +32,7 @@ class SpotlightView extends Backbone.Marionette.LayoutView
 
     @creditsView = new CreditsView()
 
-    @collection.fetch({ data : "isEditable=true" })
+    @collection.fetch({ data : "isActive=true" })
     @listenTo(@, "render", @show)
 
 

@@ -8,6 +8,7 @@ PingStrategy           = require("./binary/ping_strategy")
 PingStrategy3d         = require("./binary/ping_strategy_3d")
 BoundingBox            = require("./binary/bounding_box")
 Mappings               = require("./binary/mappings")
+Pipeline               = require("libs/pipeline")
 constants              = require("../constants")
 
 class Binary
@@ -23,7 +24,7 @@ class Binary
 
   direction : [0, 0, 0]
 
-  constructor : (@model, @tracing, @layer, maxZoomStep, updatePipeline, @connectionInfo) ->
+  constructor : (@model, @tracing, @layer, maxZoomStep, @connectionInfo) ->
 
     _.extend(this, Backbone.Events)
 
@@ -38,6 +39,8 @@ class Binary
 
     @cube = new Cube(@upperBoundary, maxZoomStep + 1, @layer.bitDepth)
     @boundingBox = new BoundingBox(@model.boundingBox, @cube)
+
+    updatePipeline = new Pipeline([@tracing.version])
 
     datasetName = @model.get("dataset").get("name")
     @pullQueue = new PullQueue(datasetName, @cube, @layer, @tracing.id, @boundingBox, @connectionInfo)

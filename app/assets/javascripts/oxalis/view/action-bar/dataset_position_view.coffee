@@ -1,24 +1,29 @@
-marionette = require("backbone.marionette")
+Marionette = require("backbone.marionette")
+Clipboard  = require("clipboard-js")
 app        = require("app")
 constants  = require("oxalis/constants")
 utils      = require("libs/utils")
+Toast      = require("libs/toast")
+{V3}       = require("libs/mjs")
 
-class DatasetPositionView extends Backbone.Marionette.ItemView
+class DatasetPositionView extends Marionette.ItemView
 
   tagName : "form"
   className : "form-inline dataset-position-view"
   template : _.template("""
     <div class="form-group">
       <div class="input-group">
-        <span class="input-group-addon">Position</span>
-        <input id="trace-position-input" class="form-control" type="text" value="<%= position() %>">
+        <span class="input-group-btn">
+          <button class="btn btn-primary">Position</button>
+        </span>
+        <input id="trace-position-input" class="form-control" type="text" value="<%- position() %>">
       </div>
     </div>
     <div class="form-group">
       <% if(isArbitrayMode) { %>
         <div class="input-group">
           <span class="input-group-addon">Rotation</span>
-          <input id="trace-rotation-input" class="form-control" type="text" value="<%= rotation() %>">
+          <input id="trace-rotation-input" class="form-control" type="text" value="<%- rotation() %>">
         </div>
       <% } %>
     </div>
@@ -32,12 +37,16 @@ class DatasetPositionView extends Backbone.Marionette.ItemView
       @vec3ToString(@flycam3d.getRotation())
 
     vec3ToString : (vec3) ->
-      vec3 = utils.floorArray(vec3)
-      return vec3[0] + ", " + vec3[1] + ", " + vec3[2]
+      vec3 = V3.floor(vec3)
+      return V3.toString(vec3)
 
   events :
     "change #trace-position-input" : "changePosition"
     "change #trace-rotation-input" : "changeRotation"
+    "click button" : "copyToClipboard"
+
+  ui :
+    "positionInput" : "#trace-position-input"
 
 
   initialize : (options) ->
@@ -76,6 +85,15 @@ class DatasetPositionView extends Backbone.Marionette.ItemView
     if rotArray.length == 3
       @model.flycam3d.setRotation rotArray
 
+
+  copyToClipboard : (evt) ->
+
+    evt.preventDefault()
+
+    positionString = @ui.positionInput.val()
+    Clipboard.copy(positionString).then(
+      -> Toast.success("Position copied to clipboard")
+    )
 
   onDestroy : ->
 

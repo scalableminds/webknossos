@@ -1,4 +1,4 @@
-marionette                   = require("backbone.marionette")
+Marionette                   = require("backbone.marionette")
 app                          = require("app")
 ActionBarView                = require("./action_bar_view")
 SkeletonPlaneTabView         = require("./settings/tab_views/skeleton_plane_tab_view")
@@ -13,9 +13,8 @@ TracingView                  = require("./tracing_view")
 OxalisController             = require("oxalis/controller")
 OxalisModel                  = require("oxalis/model")
 Constants                    = require("oxalis/constants")
-offcanvas                    = require("offcanvas")
 
-class TracingLayoutView extends Backbone.Marionette.LayoutView
+class TracingLayoutView extends Marionette.LayoutView
 
   MARGIN : 40
 

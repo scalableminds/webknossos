@@ -193,14 +193,15 @@ class PlaneController
 
     @input.keyboardLoopDelayed = new Input.Keyboard(
 
-      "space"         : (timeFactor, first) => @moveZ( getMoveValue(timeFactor)    , first)
-      "f"             : (timeFactor, first) => @moveZ( getMoveValue(timeFactor)    , first)
-      "d"             : (timeFactor, first) => @moveZ(-getMoveValue(timeFactor)    , first)
+      # KeyboardJS is sensitive to ordering (complex combos first)
       "shift + f"     : (timeFactor, first) => @moveZ( getMoveValue(timeFactor) * 5, first)
       "shift + d"     : (timeFactor, first) => @moveZ(-getMoveValue(timeFactor) * 5, first)
 
       "shift + space" : (timeFactor, first) => @moveZ(-getMoveValue(timeFactor)    , first)
       "ctrl + space"  : (timeFactor, first) => @moveZ(-getMoveValue(timeFactor)    , first)
+      "space"         : (timeFactor, first) => @moveZ( getMoveValue(timeFactor)    , first)
+      "f"             : (timeFactor, first) => @moveZ( getMoveValue(timeFactor)    , first)
+      "d"             : (timeFactor, first) => @moveZ(-getMoveValue(timeFactor)    , first)
 
     , @model.user.get("keyboardDelay")
     )

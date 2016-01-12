@@ -13,7 +13,6 @@ Flycam3d             = require("./model/flycam3d")
 constants            = require("./constants")
 Request              = require("libs/request")
 Toast                = require("libs/toast")
-Pipeline             = require("libs/pipeline")
 ErrorHandling        = require("libs/error_handling")
 
 # This is THE model. It takes care of the data including the
@@ -96,7 +95,6 @@ class Model extends Backbone.Model
 
     isVolumeTracing = "volume" in tracing.content.settings.allowedModes
     app.scaleInfo = new ScaleInfo(dataset.get("scale"))
-    @updatePipeline = new Pipeline([tracing.version])
 
     if (bb = tracing.content.boundingBox)?
         @boundingBox = {
@@ -116,7 +114,7 @@ class Model extends Backbone.Model
     for layer in layers
       layer.bitDepth = parseInt(layer.elementClass.substring(4))
       maxLayerZoomStep = Math.log(Math.max(layer.resolutions...)) / Math.LN2
-      @binary[layer.name] = new Binary(this, tracing, layer, maxLayerZoomStep, @updatePipeline, @connectionInfo)
+      @binary[layer.name] = new Binary(this, tracing, layer, maxLayerZoomStep, @connectionInfo)
       maxZoomStep = Math.max(maxZoomStep, maxLayerZoomStep)
 
     @buildMappingsObject(layers)
@@ -137,10 +135,9 @@ class Model extends Backbone.Model
       if isVolumeTracing
         ErrorHandling.assert( @getSegmentationBinary()?,
           "Volume is allowed, but segmentation does not exist" )
-        @set("volumeTracing", new VolumeTracing(tracing, flycam, @getSegmentationBinary(), @updatePipeline))
+        @set("volumeTracing", new VolumeTracing(tracing, flycam, @getSegmentationBinary()))
       else
-        @set("skeletonTracing", new SkeletonTracing(
-          tracing, flycam, flycam3d, @user, @get("datasetConfiguration"), @updatePipeline))
+        @set("skeletonTracing", new SkeletonTracing(tracing, flycam, flycam3d, @user))
 
     @applyState(@get("state"), tracing)
     @computeBoundaries()

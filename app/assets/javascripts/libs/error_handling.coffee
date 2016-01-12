@@ -1,4 +1,5 @@
 _ = require("lodash")
+AirbrakeClient = require("airbrake-js")
 
 ErrorHandling =
 
@@ -18,7 +19,7 @@ ErrorHandling =
     projectKey = $scriptTag.data("airbrake-project-key")
     envName = $scriptTag.data("airbrake-environment-name")
 
-    window.Airbrake = new airbrakeJs.Client({
+    window.Airbrake = new AirbrakeClient({
       projectId : projectId
       projectKey : projectKey
     })
@@ -48,7 +49,7 @@ ErrorHandling =
   assertExtendContext : (additionalContext) ->
 
     # since the context isn't displayed on Airbrake.io, we use the params-attribute
-    Airbrake.addParams(additionalContext)
+    Airbrake.addFilter(additionalContext)
 
 
   assert : (bool, message, assertionContext) =>

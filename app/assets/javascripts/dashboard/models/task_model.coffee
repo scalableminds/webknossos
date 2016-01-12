@@ -1,5 +1,5 @@
 _              = require("lodash")
-NestedObjModel = require("nested_obj_model")
+NestedObjModel = require("libs/nested_obj_model")
 Request        = require("libs/request")
 
 class DashboardTaskModel extends NestedObjModel

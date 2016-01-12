@@ -2,15 +2,15 @@ Marionette     = require("backbone.marionette")
 Utils          = require("libs/utils")
 ColorConverter = require("three.color")
 
-class ListTreeItemView extends Backbone.Marionette.ItemView
+class ListTreeItemView extends Marionette.ItemView
 
   tagName : "li"
   template : _.template("""
-    <i class="fa <%= getIcon() %>"></i>
+    <i class="fa <%- getIcon() %>"></i>
     <a href="#" data-treeid="1">
-      <span title="Node count" class="inline-block" style="width: 50px;"><%= nodes.length %></span>
-      <i class="fa fa-circle" style="color: #<%= intToHex(color) %>"></i>
-      <span title="Tree Name"><%= name %></span>
+      <span title="Node count" class="inline-block" style="width: 50px;"><%- nodes.length %></span>
+      <i class="fa fa-circle" style="color: #<%- intToHex(color) %>"></i>
+      <span title="Tree Name"><%- name %></span>
     </a>
   """)
 

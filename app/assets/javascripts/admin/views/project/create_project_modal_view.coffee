@@ -7,7 +7,7 @@ UserCollection = require("admin/models/user/user_collection")
 TeamCollection = require("admin/models/team/team_collection")
 ProjectModel   = require("admin/models/project/project_model")
 
-class CreateProjectModalView extends Backbone.Marionette.LayoutView
+class CreateProjectModalView extends Marionette.LayoutView
 
   className : "modal fade"
   template : _.template("""
@@ -67,6 +67,7 @@ class CreateProjectModalView extends Backbone.Marionette.LayoutView
       viewComparator: "firstName"
       collection : new UserCollection()
       childViewOptions :
+        defaultItem : {email : app.currentUser.email}
         modelValue : -> return "#{@model.get("firstName")} #{@model.get("lastName")} (#{@model.get("email")})"
     )
     @teamSelectionView = new SelectionView(
@@ -97,7 +98,6 @@ class CreateProjectModalView extends Backbone.Marionette.LayoutView
         name : @ui.name.val()
         team : @ui.team.find("select :selected").val()
       )
-
 
       @projectCollection.create(project,
         wait : true

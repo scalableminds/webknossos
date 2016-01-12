@@ -28,7 +28,7 @@ class SkeletonTracing
   activeTree : null
   firstEdgeDirection : null
 
-  constructor : (tracing, @scaleInfo, @flycam, @flycam3d, @user) ->
+  constructor : (tracing, @flycam, @flycam3d, @user) ->
 
     _.extend(this, Backbone.Events)
 

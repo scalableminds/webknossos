@@ -1,7 +1,7 @@
 app       = require("app")
 Backbone  = require("backbone")
 THREE     = require("three")
-Stats     = require("stats")
+Stats     = require("stats.js")
 $         = require("jquery")
 _         = require("lodash")
 constants = require("../constants")
@@ -37,7 +37,6 @@ class ArbitraryView
     @container = $(canvas)
     @width  = @container.width()
     @height = @container.height()
-    @deviceScaleFactor = window.devicePixelRatio || 1
 
     { @renderer, @scene } = @view
 
@@ -120,9 +119,8 @@ class ArbitraryView
       camera.matrix.multiply(new THREE.Matrix4().makeTranslation(@cameraPosition...))
       camera.matrixWorldNeedsUpdate = true
 
-      f = @deviceScaleFactor
-      renderer.setViewport(0, 0, @width * f, @height * f)
-      renderer.setScissor(0, 0, @width * f, @height * f)
+      renderer.setViewport(0, 0, @width, @height)
+      renderer.setScissor(0, 0, @width, @height)
       renderer.enableScissorTest(true)
       renderer.setClearColor(0xFFFFFF, 1);
 

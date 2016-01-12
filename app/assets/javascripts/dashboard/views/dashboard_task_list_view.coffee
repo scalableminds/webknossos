@@ -1,5 +1,5 @@
 _                         = require("lodash")
-marionette                = require("backbone.marionette")
+Marionette                = require("backbone.marionette")
 DashboardTaskListItemView = require("./dashboard_task_list_item_view")
 TaskTransferModalView     = require("./task_transfer_modal_view")
 routes                    = require("routes")
@@ -7,12 +7,12 @@ Toast                     = require("libs/toast")
 SortTableBehavior         = require("libs/behaviors/sort_table_behavior")
 UserTasksCollection       = require("../models/user_tasks_collection")
 
-class DashboardTaskListView extends Backbone.Marionette.CompositeView
+class DashboardTaskListView extends Marionette.CompositeView
 
   template : _.template("""
     <h3>Tasks</h3>
     <% if (isAdminView) { %>
-      <a href="<%= jsRoutes.controllers.admin.NMLIO.userDownload(id).url %>"
+      <a href="<%- jsRoutes.controllers.admin.NMLIO.userDownload(id).url %>"
          class="btn btn-primary"
          title="download all finished tracings">
           <i class="fa fa-download"></i>download
@@ -26,7 +26,7 @@ class DashboardTaskListView extends Backbone.Marionette.CompositeView
     <% } %>
     <div class="divider-vertical"></div>
     <a href="#" id="toggle-finished" class="btn btn-default">
-      Show finished tasks only
+      Show <%= getFinishVerb() %> tasks only
     </a>
     <table class="table table-striped sortable-table">
       <thead>
@@ -44,6 +44,7 @@ class DashboardTaskListView extends Backbone.Marionette.CompositeView
     <div class="modal-container"></div>
   """)
 
+  childViewContainer : "tbody"
   childView : DashboardTaskListItemView
   childViewOptions : ->
     isAdminView : @options.isAdminView
@@ -51,18 +52,17 @@ class DashboardTaskListView extends Backbone.Marionette.CompositeView
 
   templateHelpers : ->
     isAdminView : @options.isAdminView
+    getFinishVerb : =>
+      return if @showFinishedTasks then "unfinished" else "finished"
 
-
-  childViewContainer : "tbody"
 
   ui :
-    "finishToggle" : "#toggle-finished"
     "modalContainer" : ".modal-container"
 
   events :
     "click #new-task-button" : "newTask"
     "click #transfer-task" : "transferTask"
-    "click @ui.finishToggle" : "toggleFinished"
+    "click #toggle-finished" : "toggleFinished"
 
   behaviors:
     SortTableBehavior:
@@ -75,22 +75,16 @@ class DashboardTaskListView extends Backbone.Marionette.CompositeView
     @collection = new UserTasksCollection()
     @collection.fetch()
 
-    @filter = UserTasksCollection::unfinishedTasksFilter
-
-    #@listenTo(@model.get("tasks"), "add", @addChildView, @)
     @listenTo(app.vent, "TaskTransferModal:refresh", @refresh)
 
 
-  update : ->
+  # Marionette's CollectionView filter
+  filter : (child, index, collection) ->
 
-    @filter =
-      if @showFinishedTasks
-        UserTasksCollection::finishedTasksFilter
-      else
-        UserTasksCollection::unfinishedTasksFilter
-
-    @render()
-
+    if @showFinishedTasks
+      return child.get("annotation").state.isFinished
+    else
+      return !child.get("annotation").state.isFinished
 
   newTask : (event) ->
 
@@ -98,21 +92,13 @@ class DashboardTaskListView extends Backbone.Marionette.CompositeView
 
     if @collection.filter(UserTasksCollection::unfinishedTasksFilter).length == 0 or confirm("Do you really want another task?")
 
-      showMessages = (response) -> Toast.message(response.messages)
-
-      @collection.getNewTask().done((response) =>
-        showMessages(response)
-        @update()
-      )
+      @collection.getNewTask()
 
 
   toggleFinished : ->
 
     @showFinishedTasks = not @showFinishedTasks
-    @update()
-
-    verb = if @showFinishedTasks then "unfinished" else "finished"
-    @ui.finishToggle.html("Show #{verb} tasks only")
+    @render()
 
 
   transferTask : (evt) ->
@@ -130,7 +116,7 @@ class DashboardTaskListView extends Backbone.Marionette.CompositeView
   refresh : ->
 
     @collection.fetch().done( =>
-      @update()
+      @render()
     )
 
   onDestroy : ->

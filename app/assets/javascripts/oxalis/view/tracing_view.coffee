@@ -1,6 +1,6 @@
-marionette = require("backbone.marionette")
+Marionette = require("backbone.marionette")
 
-class TracingView extends Backbone.Marionette.LayoutView
+class TracingView extends Marionette.LayoutView
 
   id : "render"
   template : _.template("""

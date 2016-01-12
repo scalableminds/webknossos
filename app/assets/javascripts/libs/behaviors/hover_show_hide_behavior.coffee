@@ -1,6 +1,6 @@
 Marionette = require("backbone.marionette")
 
-class HoverShowHideBehavior extends Backbone.Marionette.Behavior
+class HoverShowHideBehavior extends Marionette.Behavior
 
   events :
     "mouseenter .hover-dynamic" : "mouseEnter"

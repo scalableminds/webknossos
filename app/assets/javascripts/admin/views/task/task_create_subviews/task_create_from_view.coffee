@@ -1,4 +1,4 @@
-_                       = require("underscore")
+_                       = require("lodash")
 Marionette              = require("backbone.marionette")
 routes                  = require("routes")
 TaskTypeCollection      = require("admin/models/tasktype/task_type_collection")
@@ -222,14 +222,14 @@ class TaskCreateFromView extends Marionette.LayoutView
   ###
   showSaveSuccess: ->
 
-    Toast.success('The task was successfully created')
+    Toast.success("The task was successfully created")
 
   ###*
    * Toast an error message.
   ###
   showSaveError: ->
 
-    Toast.error('The task could not be created due to server errors.')
+    Toast.error("The task could not be created due to server errors.")
 
 
   ###*
@@ -237,7 +237,7 @@ class TaskCreateFromView extends Marionette.LayoutView
   ###
   showInvalidData: ->
 
-    Toast.error('The form data is not correct.')
+    Toast.error("The form data is not correct.")
 
 
   ###*

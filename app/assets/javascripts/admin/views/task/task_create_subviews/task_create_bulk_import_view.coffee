@@ -1,12 +1,12 @@
-_          = require("underscore")
+_          = require("lodash")
 Marionette = require("backbone.marionette")
 routes     = require("routes")
 Toast      = require("libs/toast")
+Request    = require("libs/request")
 
 class TaskCreateBulkImportView extends Marionette.ItemView
 
   id : "create-bulk-import"
-  API_URL: "/admin/tasks/createBulk"
 
   template : _.template("""
   <div class="row">
@@ -43,42 +43,46 @@ class TaskCreateBulkImportView extends Marionette.ItemView
   ###
   submit : ->
 
-    if !@isValidData(@ui.bulkText.val())
+    bulkText = @ui.bulkText.val()
+
+    if !@isValidData(bulkText)
       @showInvalidData()
       return
 
-    console.log(@formatData(@ui.bulkText.val()))
+    requests = @parseText(bulkText).map((task) ->
+      return Request.sendJSONReceiveJSON(
+        "/api/tasks",
+        data : task
+      )
+    )
 
-    $.post({
-      url: @API_URL,
-      data: @formatData(@ui.bulkText.val())
-    })
-    .success((response) =>
-      if response.status == 200
-        @showSaveSuccess()
-      else
-        @showSaveError()
-    )
-    .error( =>
-      @showSaveError()
-    )
+    Promise.all(requests)
+      .then(
+        =>
+          if response.status == 200
+            @showSaveSuccess()
+          else
+            @showSaveError()
+        =>
+          @showSaveError()
+      )
 
     return
 
 
   showSaveSuccess: ->
 
-    Toast.success('The tasks were successfully created')
+    Toast.success("The tasks were successfully created")
 
 
   showSaveError: ->
 
-    Toast.error('The tasks could not be created due to server errors.')
+    Toast.error("The tasks could not be created due to server errors.")
 
 
   showInvalidData: ->
 
-    Toast.error('The form data is not correct.')
+    Toast.error("The form data is not correct.")
 
 
   splitToLines: (string) ->
@@ -88,9 +92,7 @@ class TaskCreateBulkImportView extends Marionette.ItemView
 
   splitToWords: (string) ->
 
-    # using _.trim instead of anonymous function would be awesome
-    # but current lodash version is too old
-    return _.map(string.split(","), (val) -> return val.trim() )
+    return string.split(",").map(_.trim)
 
 
   isValidData: (bulkText) ->
@@ -123,7 +125,7 @@ class TaskCreateBulkImportView extends Marionette.ItemView
     return true
 
 
-  formatData: (bulkText) ->
+  parseText: (bulkText) ->
 
     return _.map(@splitToLines(bulkText), @formatLine, @)
 

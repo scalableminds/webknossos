@@ -1,4 +1,4 @@
-_                         = require("underscore")
+_                         = require("lodash")
 Marionette                = require("backbone.marionette")
 routes                    = require("routes")
 TaskCreateFromView        = require("./task_create_subviews/task_create_from_view")

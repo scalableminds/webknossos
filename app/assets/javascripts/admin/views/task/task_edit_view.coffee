@@ -1,4 +1,4 @@
-_                  = require("underscore")
+_                  = require("lodash")
 Marionette         = require("backbone.marionette")
 routes             = require("routes")
 TaskTypeCollection = require("admin/models/tasktype/task_type_collection")

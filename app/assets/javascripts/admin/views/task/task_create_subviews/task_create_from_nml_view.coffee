@@ -1,4 +1,4 @@
-_             = require("underscore")
+_             = require("lodash")
 Marionette    = require("backbone.marionette")
 routes        = require("routes")
 Toast         = require("libs/toast")
@@ -53,23 +53,17 @@ class TaskCreateFromNMLView extends Marionette.LayoutView
       Toast.info("Uploading NML", false)
       @parent.ui.submitButton.text("Uploading...")
 
-      Request.sendMultipartFormReceiveJSON("/api/tasks-nml",
+      Request.sendMultipartFormReceiveJSON("/api/tasks",
         data : new FormData(form)
       )
       .then(
         => @fileuploadDone()
-        -> # NOOP
+        -> console.log(arguments)
       )
       .then(
         =>
           @fileuploadAlways()
       )
-
-    # # send files and remaining form data to server
-    # @parent.ui.form.fileupload("send", {
-    #   files: @ui.files[0].files
-    #   formData: @model.attributes
-    # })
 
     # prevent page reload
     return false
@@ -80,6 +74,8 @@ class TaskCreateFromNMLView extends Marionette.LayoutView
    * Show success message and clear form.
   ###
   fileuploadDone: ->
+
+    debugger
     @parent.showSaveSuccess()
 
     if @CLEAR_ON_SUCCESS

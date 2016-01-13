@@ -36,6 +36,8 @@ class CreditsView extends Marionette.ItemView
             <li>Thomas Werkmeister</li>
             <li>Daniel Werner</li>
             <li>Georg Wiese</li>
+            <li>Sven Mischkewitz</li>
+            <li>Nico Ring</li>
           </ul>
         </div>
         <div class="col-sm-3">

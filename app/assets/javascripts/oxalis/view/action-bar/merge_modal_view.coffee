@@ -85,7 +85,7 @@ class MergeModalView extends Marionette.LayoutView
             </div>
           </div>
           <div class="form-group">
-            <label for="explorative">Explorativs</label>
+            <label for="explorative">Explorative annotations</label>
             <div class="row">
               <div class="col-md-10 explorative"></div>
               <div class="col-md-2">

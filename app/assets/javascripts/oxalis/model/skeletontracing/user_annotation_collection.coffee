@@ -13,8 +13,4 @@ class UserAnnotationCollection extends PaginationCollection
     super()
 
 
-  parse : (respones) ->
-
-    return respones.exploratoryAnnotations
-
 module.exports = UserAnnotationCollection

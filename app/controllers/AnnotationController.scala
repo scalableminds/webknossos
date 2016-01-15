@@ -187,7 +187,7 @@ class AnnotationController @Inject()(val messagesApi: MessagesApi) extends Contr
         for {
           result <- handleUpdates(oldAnnotation, request.body, version)
         } yield {
-          JsonOk(result, "annotation.saved")
+          JsonOk(result, Messages("annotation.saved"))
         }
       else
         new Fox(Future.successful(Full(new JsonResult(CONFLICT)(oldJs, Messages("annotation.dirtyState")))))
@@ -219,7 +219,7 @@ class AnnotationController @Inject()(val messagesApi: MessagesApi) extends Contr
     for {
       (json, message) <- finishAnnotation(typ, id, request.user)(GlobalAccessContext)
     } yield {
-      JsonOk(json, message)
+      JsonOk(json, Messages(message))
     }
   }
 

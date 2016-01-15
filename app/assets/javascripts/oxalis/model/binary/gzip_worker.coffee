@@ -6,6 +6,6 @@ GzipWorker =
 
   compress : (input) ->
 
-    return new $.Deferred().resolve(pako.deflate(input))
+    return new $.Deferred().resolve(pako.gzip(input))
 
 helper(GzipWorker)

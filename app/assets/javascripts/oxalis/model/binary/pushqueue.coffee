@@ -91,7 +91,7 @@ class PushQueue
     @updatePipeline.executePassAlongAction =>
 
       console.log "Pushing batch", batch
-      transmitBuffer = pako.deflate(transmitBuffer)
+      transmitBuffer = pako.gzip(transmitBuffer)
 
       Request.$(Request.sendArraybufferReceiveArraybuffer(
         @url

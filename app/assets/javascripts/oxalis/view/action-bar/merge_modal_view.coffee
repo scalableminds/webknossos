@@ -21,7 +21,7 @@ class MergeModalView extends Marionette.LayoutView
       <div class="modal-content">
         <div class="modal-header">
           <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
-          <h3>Merge</h3>
+          <h4 class="modal-title">Merge</h4>
         </div>
         <div class="modal-body container-fluid">
           <div class="form-group">
@@ -146,7 +146,9 @@ class MergeModalView extends Marionette.LayoutView
 
     Request.receiveJSON("/api/user").then( (user) =>
       @taskSelectionView = new SelectionView(
-        collection : new  TaskCollection()
+        collection : new  TaskCollection(null, {
+          dataSetName : @model.get("tracing").dataSetName
+        })
         childViewOptions :
           modelValue: -> return "#{@model.get("id")}"
       )
@@ -161,7 +163,10 @@ class MergeModalView extends Marionette.LayoutView
           modelValue: -> return "#{@model.get("name")}"
       )
       @explorativSelectionView = new SelectionView(
-        collection : new UserAnnotationCollection({ id : user.id, dataSetName : @model.get("tracing").dataSetName })
+        collection : new UserAnnotationCollection(null, {
+          userId : user.id,
+          dataSetName : @model.get("tracing").dataSetName
+        })
         childViewOptions :
           modelValue: -> return "#{@model.get("id")}"
       )

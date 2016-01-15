@@ -5,11 +5,16 @@ class UserAnnotationCollection extends Backbone.Collection
 
   url : -> "/api/users/#{@userId}/annotations"
 
-  constructor : ({ id : @userId, @dataSetName }) ->
-    super()
+  initialize : (models, options) ->
+
+    @userId = options.userId
+    @dataSetName = options.dataSetName
 
   parse : (response) ->
-    return _.filter(response, dataSetName : @dataSetName)
+    if @dataSetName
+      return _.filter(response, dataSetName : @dataSetName)
+    else
+      return response
 
 
 module.exports = UserAnnotationCollection

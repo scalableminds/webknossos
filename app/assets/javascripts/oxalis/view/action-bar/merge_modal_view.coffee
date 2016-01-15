@@ -161,7 +161,7 @@ class MergeModalView extends Marionette.LayoutView
           modelValue: -> return "#{@model.get("name")}"
       )
       @explorativSelectionView = new SelectionView(
-        collection : new UserAnnotationCollection(id : user.id)
+        collection : new UserAnnotationCollection({ id : user.id, dataSetName : @model.get("tracing").dataSetName })
         childViewOptions :
           modelValue: -> return "#{@model.get("id")}"
       )

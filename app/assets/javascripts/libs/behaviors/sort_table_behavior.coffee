@@ -12,12 +12,6 @@ class SortTableBehavior extends Marionette.Behavior
   defaults :
     sortDirection : "asc"
 
-  initialize : ->
-
-    # disable auto-rerender after sorting
-    # we will deal with this manually
-    this.view.sort = false
-
 
   onDomRefresh : ->
 

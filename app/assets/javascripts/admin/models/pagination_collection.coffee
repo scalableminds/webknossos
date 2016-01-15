@@ -11,6 +11,8 @@ class PaginationCollection
       @fullCollection = options.fullCollection
     else
       @fullCollection = new Backbone.Collection(models, options)
+      if @initialize
+        @initialize.call(@fullCollection, models, options)
 
     if @model?
       @fullCollection.model = @model

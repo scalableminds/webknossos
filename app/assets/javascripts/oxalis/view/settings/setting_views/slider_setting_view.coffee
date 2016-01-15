@@ -14,7 +14,7 @@ class SliderSettingView extends AbstractSettingView
     </div>
     <div class="col-sm-3 no-gutter v-center">
       <div class="v-center-agent">
-        <input type="range" min="<%- min %>" max="<%- max %>" step="<%- step %>" value="<%- value %>">
+        <input type="range" min="<%- min %>" max="<%- max %>" step="<%- step %>" value="<%- typeof logScaleBase != "undefined" ? Math.log(value) / Math.log(logScaleBase) : value %>">
       </div>
     </div>
     <div class="col-sm-4">
@@ -30,26 +30,33 @@ class SliderSettingView extends AbstractSettingView
 
   events :
     "input @ui.slider" : "handleSliderChange"
-    "change @ui.slider" : "handleChange"
-    "change @ui.text" : "handleChange"
+    "change @ui.slider" : "handleSliderChange"
+    "change @ui.text" : "handleTextboxChange"
     "dblclick @ui.slider" : "resetValue"
 
 
   handleSliderChange : (evt) ->
 
-    @ui.text.val(evt.target.value)
-    @handleChange(evt)
+    value = parseFloat(evt.target.value)
+    if @options.logScaleBase?
+      value = Math.pow(@options.logScaleBase, value)
+    @ui.text.val(value)
+    @model.set(@options.name, value)
 
 
-  handleChange : (evt) ->
+  handleTextboxChange : (evt) ->
 
-    @model.set(@options.name, (Number) evt.target.value)
+    @model.set(@options.name, parseFloat(evt.value))
 
 
   update : (model, value) ->
 
-    @ui.slider.val(parseFloat(value))
-    @ui.text.val(parseFloat(value))
+    value = parseFloat(value)
+    @ui.text.val(value)
+
+    if @options.logScaleBase
+      value = Math.log(value) / Math.log(@options.logScaleBase)
+    @ui.slider.val(value)
 
 
   resetValue : (evt) ->

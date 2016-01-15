@@ -11,7 +11,7 @@ class UserScriptsModalView extends Marionette.ItemView
           <button type="button" class="close" data-dismiss="modal">&times;</button>
           <h3>Add user script</h3>
         </div>
-        <div class="modal-body" id="help-modal-body">
+        <div class="modal-body">
           <textarea id="add-script-input" rows="10"></textarea>
         </div>
         <div class="modal-footer">

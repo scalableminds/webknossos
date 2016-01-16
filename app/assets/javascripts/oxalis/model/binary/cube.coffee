@@ -188,7 +188,7 @@ class Cube
     cube = @cubes[address[3]].data
     bucketIndex = @getBucketIndexByZoomedAddress(address)
 
-    # if the bucket does not lie inside the dataset, return true
+    # if the bucket does not lie inside the dataset, we do not want to request it and return true
     if not bucketIndex?
       return true
 
@@ -223,6 +223,7 @@ class Cube
 
       @bucketCount++
       bucketData.accessed = true
+      bucketData.requested = true
       bucketData.zoomStep = address[3]
 
       @setBucketData(cube, bucketIndex, bucketData)

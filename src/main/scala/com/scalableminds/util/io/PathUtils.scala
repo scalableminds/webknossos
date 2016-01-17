@@ -47,33 +47,24 @@ trait PathUtils {
   def parent(p: Path): Option[Path] =
     Option(p.getParent)
 
-  def listDirectories(p: Path): List[Path] =
-    if (Files.isDirectory(p)){
-      val dirs = p.toFile.list(directoryFilter)
-      if(dirs != null) {
-        dirs.map(s => p.resolve(s))(breakOut)
-      } else {
-        System.err.println("Failed to list files in directory: " + p.toString)
-        Nil
-      }
-    }
-      
-    else
-      Nil
-
-  def listFiles(directory: Path): List[Path] = {
+  def listDirectoryEntries(directory: Path, recursive: Boolean, filterPred: Path => Boolean): List[Path] =
     try {
-      val directoryStream = Files.newDirectoryStream(directory)
-
-      val r = directoryStream.iterator().asScala.toList
+      val maxDepth = if(recursive) Int.MaxValue else 1
+      val directoryStream = Files.walk(directory, maxDepth, FileVisitOption.FOLLOW_LINKS)
+      val r = directoryStream.iterator().asScala.drop(1).filter(filterPred).toList
       directoryStream.close()
-      r.filter(_.toFile.isFile)
+      r
     } catch {
       case ex =>
-        Logger.error("Failed to list files for directory: " + directory.toAbsolutePath)
+        Logger.error("Failed to list directories for directory: " + directory.toAbsolutePath)
         Nil
     }
-  }
+
+  def listDirectories(directory: Path, recursive: Boolean = false): List[Path] =
+    listDirectoryEntries(directory, recursive, Files.isDirectory(_))
+
+  def listFiles(directory: Path, recursive: Boolean = false): List[Path] =
+    listDirectoryEntries(directory, recursive, !Files.isDirectory(_))
 
   def ensureDirectory(path: Path): Path = {
     if (!Files.exists(path) || !Files.isDirectory(path))

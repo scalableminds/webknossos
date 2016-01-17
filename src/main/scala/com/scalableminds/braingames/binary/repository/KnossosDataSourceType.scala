@@ -184,6 +184,7 @@ trait KnossosDataSourceTypeHandler extends DataSourceTypeHandler with I18nSuppor
   }
 
   protected def dataSourceFromFile(path: Path): Box[DataSource] = {
+
     if (Files.isDirectory(path)) {
       val dataSource: DataSource = DataSourceSettings.fromSettingsFileIn(path) match {
         case Full(settings) =>

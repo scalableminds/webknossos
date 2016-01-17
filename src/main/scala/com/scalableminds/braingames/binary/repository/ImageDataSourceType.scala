@@ -176,7 +176,7 @@ trait ImageDataSourceTypeHandler extends DataSourceTypeHandler {
   }
 
   def convertToKnossosStructure(id: String, source: Path, targetRoot: Path, progress: ProgressTracker): Iterable[DataLayer] = {
-    val images = PathUtils.listFiles(source).filter(_.getFileName.toString.endsWith("." + fileExtension))
+    val images = PathUtils.listFiles(source, true).filter(_.getFileName.toString.endsWith("." + fileExtension))
 
     val layers = extractLayers(images.toList)
     val namingSchema = namingSchemaFor(layers) _

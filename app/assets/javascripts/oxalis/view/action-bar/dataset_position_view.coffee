@@ -1,24 +1,29 @@
-marionette = require("backbone.marionette")
+Marionette = require("backbone.marionette")
+Clipboard  = require("clipboard-js")
 app        = require("app")
 constants  = require("oxalis/constants")
-Utils      = require("libs/utils")
+utils      = require("libs/utils")
+Toast      = require("libs/toast")
+{V3}       = require("libs/mjs")
 
-class DatasetPositionView extends Backbone.Marionette.ItemView
+class DatasetPositionView extends Marionette.ItemView
 
-  tagName : "form"
+  tagName : "div"
   className : "form-inline dataset-position-view"
   template : _.template("""
     <div class="form-group">
       <div class="input-group">
-        <span class="input-group-addon">Position</span>
-        <input id="trace-position-input" class="form-control" type="text" value="<%= position() %>">
+        <span class="input-group-btn">
+          <button class="btn btn-primary">Position</button>
+        </span>
+        <input id="trace-position-input" class="form-control" type="text" value="<%- position() %>">
       </div>
     </div>
     <div class="form-group">
       <% if(isArbitrayMode) { %>
         <div class="input-group">
           <span class="input-group-addon">Rotation</span>
-          <input id="trace-rotation-input" class="form-control" type="text" value="<%= rotation() %>">
+          <input id="trace-rotation-input" class="form-control" type="text" value="<%- rotation() %>">
         </div>
       <% } %>
     </div>
@@ -26,17 +31,20 @@ class DatasetPositionView extends Backbone.Marionette.ItemView
 
   templateHelpers :
     position : ->
-      @vec3ToString(@flycam.getPosition())
+      V3.floor(@flycam.getPosition()).join(", ")
 
     rotation : ->
-      @vec3ToString(@flycam3d.getRotation())
+      V3.round(@flycam3d.getRotation()).join(", ")
 
-    vec3ToString : (vec3) ->
-      return Math.floor(vec3[0]) + ", " + Math.floor(vec3[1]) + ", " + Math.floor(vec3[2])
 
   events :
     "change #trace-position-input" : "changePosition"
     "change #trace-rotation-input" : "changeRotation"
+    "click button" : "copyToClipboard"
+
+  ui :
+    "positionInput" : "#trace-position-input"
+    "rotationInput" : "#trace-rotation-input"
 
 
   initialize : (options) ->
@@ -63,18 +71,37 @@ class DatasetPositionView extends Backbone.Marionette.ItemView
 
   changePosition : (event) ->
 
-    posArray = Utils.stringToNumberArray(event.target.value)
+    posArray = utils.stringToNumberArray(event.target.value)
     if posArray.length == 3
       @model.flycam.setPosition(posArray)
       app.vent.trigger("centerTDView")
+      @ui.positionInput.get(0).setCustomValidity("")
+    else
+      @ui.positionInput.get(0).setCustomValidity("Please supply a valid position, like 1,1,1!")
+      @ui.positionInput.get(0).reportValidity()
+    return
 
 
   changeRotation : (event) ->
 
-    rotArray = Utils.stringToNumberArray(event.target.value)
+    rotArray = utils.stringToNumberArray(event.target.value)
     if rotArray.length == 3
-      @model.flycam3d.setRotation rotArray
+      @model.flycam3d.setRotation(rotArray)
+      @ui.rotationInput.get(0).setCustomValidity("")
+    else
+      @ui.rotationInput.get(0).setCustomValidity("Please supply a valid rotation, like 1,1,1!")
+      @ui.rotationInput.get(0).reportValidity()
+    return
 
+
+  copyToClipboard : (evt) ->
+
+    evt.preventDefault()
+
+    positionString = @ui.positionInput.val()
+    Clipboard.copy(positionString).then(
+      -> Toast.success("Position copied to clipboard")
+    )
 
   onDestroy : ->
 

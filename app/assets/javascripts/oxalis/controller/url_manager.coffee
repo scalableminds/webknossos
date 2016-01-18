@@ -1,6 +1,7 @@
 app       = require("app")
 backbone  = require("backbone")
 constants = require("../constants")
+{V3}      = require("libs/mjs")
 
 class UrlManager
 
@@ -63,7 +64,7 @@ class UrlManager
   buildUrl : ->
 
     { flycam, flycam3d } = @model
-    state = _.map flycam.getPosition(), (e) -> Math.floor(e)
+    state = V3.floor(flycam.getPosition())
     state.push( @model.mode )
 
     if @model.mode in constants.MODES_ARBITRARY

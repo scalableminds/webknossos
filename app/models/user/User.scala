@@ -2,6 +2,8 @@ package models.user
 
 import play.api.Play.current
 import com.scalableminds.util.security.SCrypt._
+import reactivemongo.api.commands.WriteResult
+
 //import scala.collection.mutable.Stack
 //import play.api.libs.json.{Json, JsValue}
 import play.api.libs.json.Json._
@@ -182,7 +184,7 @@ object UserDAO extends SecuredBaseDAO[User] {
       insert(user).map(_ => user)
   }
 
-  def update(_user: BSONObjectID, firstName: String, lastName: String, verified: Boolean, teams: List[TeamMembership], experiences: Map[String, Int])(implicit ctx: DBAccessContext): Fox[LastError] =
+  def update(_user: BSONObjectID, firstName: String, lastName: String, verified: Boolean, teams: List[TeamMembership], experiences: Map[String, Int])(implicit ctx: DBAccessContext): Fox[WriteResult] =
     update(findByIdQ(_user), Json.obj("$set" -> Json.obj(
       "firstName" -> firstName,
       "lastName" -> lastName,
@@ -235,5 +237,12 @@ object UserDAO extends SecuredBaseDAO[User] {
     update(
       Json.obj("email" -> user.email),
       Json.obj("$set" -> Json.obj("verified" -> true)))
+  }
+
+  def removeTeamFromUsers(team: String)(implicit ctx: DBAccessContext) = {
+    update(
+      Json.obj("teams.team" -> team), Json.obj("$pull" -> Json.obj("teams" -> Json.obj("team" -> team))),
+      multi = true
+    )
   }
 }

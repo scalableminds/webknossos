@@ -1,9 +1,9 @@
 app             = require("app")
 Backbone        = require("backbone")
-Dimensions      = require("../model/dimensions")
-ResizableBuffer = require("../../libs/resizable_buffer")
-constants       = require("../constants")
+ResizableBuffer = require("libs/resizable_buffer")
 THREE           = require("three")
+Dimensions      = require("../model/dimensions")
+constants       = require("../constants")
 
 class ContourGeometry
 
@@ -17,8 +17,7 @@ class ContourGeometry
     @color = @COLOR_NORMAL
 
     @listenTo(@volumeTracing, "volumeAnnotated", @reset)
-    @listenTo(@volumeTracing, "updateLayer", (contourList) ->
-      cellId = 1
+    @listenTo(@volumeTracing, "updateLayer", (cellId, contourList) ->
       @color = if cellId == 0 then @COLOR_DELETE else @COLOR_NORMAL
       @reset()
       for p in contourList

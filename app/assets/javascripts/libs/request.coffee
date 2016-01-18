@@ -1,79 +1,224 @@
-$                       = require("jquery")
-_                       = require("lodash")
-WrappedDispatchedWorker = require("libs/wrapped_dispatched_worker")
-GzipWorker              = require("worker!./gzip_worker")
+$     = require("jquery")
+_     = require("lodash")
+Toast = require("libs/toast")
+pako  = require("pako")
 
 Request =
 
-  gzipWorker : new WrappedDispatchedWorker(GzipWorker)
+  # IN:  nothing
+  # OUT: json
+  receiveJSON : (url, options = {}) ->
 
-  send : (options) ->
-    options.type ||= options.method
+    return @triggerRequest(
+      url,
+      _.defaultsDeep(options, { headers : { "Accept": "application/json" }}),
+      @handleEmptyJsonResponse
+    )
 
-    if options.dataType == "blob" or options.dataType == "arraybuffer" or options.formData?
 
-      deferred = $.Deferred()
+  # IN:  json
+  # OUT: json
+  sendJSONReceiveJSON : (url, options = {}) ->
 
-      return deferred.reject("No url defined").promise() unless options.url
+    # Sanity check
+    # Requests without body should not send 'json' header and use 'receiveJSON' instead
+    if not options.data
+      if options.method == "POST" or options.method == "PUT"
+        console.warn("Sending POST/PUT request without body", url)
+      return @receiveJSON(url, options)
 
-      _.defaults(options, type: "GET", data: null)
-
-      if options.data
-        options.data = JSON.stringify(options.data)
-        options.contentType = "application/json" unless options.contentType
+    body = if typeof(options.data) == "string"
+        options.data
       else
-        if options.formData?
-          if options.formData instanceof FormData
-            options.data = options.formData
-          else
-            options.data = new FormData()
-            options.data.append(key, value) for key, value of options.formData
-        else if options.multipartData?
-          options.data = options.multipartData
-          options.contentType = "multipart/mixed; boundary=#{options.multipartBoundary}"
+        JSON.stringify(options.data)
 
-      options.contentEncoding = "gzip" if options.compress and not options.contentEncoding
-      options.type = "POST" if options.type == "GET" and options.data
+    return @receiveJSON(
+      url,
+      _.defaultsDeep(options, {
+        method : "POST"
+        body : body
+        headers :
+          "Content-Type" : "application/json"
+      })
+    )
 
-      xhr = new XMLHttpRequest()
-      xhr.open options.type, options.url, true
-      xhr.responseType = options.dataType if options.dataType?
-      xhr.setRequestHeader("Content-Type", options.contentType) if options.contentType
-      xhr.setRequestHeader("Content-Encoding", options.contentEncoding) if options.contentEncoding
 
-      xhr.onload = ->
-        if @status == 200
-          deferred.resolve(@response)
-        else
-          deferred.reject(xhr)
+  # IN:  multipart formdata
+  # OUT: json
+  sendMultipartFormReceiveJSON : (url, options = {}) ->
 
-      xhr.onerror = (err) ->
-        deferred.reject(err)
-
-      if options.compress
-        @gzipWorker.send(
-          method : "compress"
-          args : [options.data]
-        ).then( (buffer) =>
-          xhr.send(buffer)
-        )
+    body = if options.data instanceof FormData
+        options.data
       else
-        xhr.send(options.data)
+        formData = new FormData()
+        for key of options.data
+          formData.append(key, options.data[key])
+        formData
 
-      if options.timeout?
-        setTimeout(
-          -> deferred.reject("timeout")
-          options.timeout
-        )
+    return @receiveJSON(
+      url,
+      _.defaultsDeep(options, {
+        method : "POST"
+        body : body
+      })
+    )
 
-      deferred.promise()
 
+  # IN:  url-encoded formdata
+  # OUT: json
+  sendUrlEncodedFormReceiveJSON : (url, options = {}) ->
+
+    body = if typeof options.data == "string"
+        options.data
+      else
+        options.data.serialize()
+
+    return @receiveJSON(
+      url,
+      _.defaultsDeep(options,
+        method : "POST"
+        body : body
+        headers :
+          "Content-Type" : "application/x-www-form-urlencoded"
+      )
+    )
+
+
+  receiveArraybuffer : (url, options = {}) ->
+
+    return @triggerRequest(
+      url,
+      _.defaultsDeep(options, { headers : { "Accept": "application/octet-stream" }})
+      (response) ->
+        response.arrayBuffer()
+    )
+
+
+  # IN:  arraybuffer
+  # OUT: arraybuffer
+  sendArraybufferReceiveArraybuffer : (url, options = {}) ->
+
+    body = if options.data instanceof ArrayBuffer
+        options.data
+      else
+        options.data.buffer.slice(0, options.data.byteLength)
+
+    if options.compress
+      body = pako.gzip(body)
+      options.headers["Content-Encoding"] = "gzip"
+
+    return @receiveArraybuffer(
+      url,
+      _.defaultsDeep(options,
+        method : "POST"
+        body : body
+        headers :
+          "Content-Type" : "application/octet-stream"
+      )
+    )
+
+
+  triggerRequest : (url, options, responseDataHandler) ->
+
+    defaultOptions =
+      method : "GET"
+      credentials : "same-origin"
+      headers : {}
+      doNotCatch : false
+
+    options = _.defaultsDeep(options, defaultOptions)
+
+    headers = new Headers()
+    for name of options.headers
+      headers.set(name, options.headers[name])
+    options.headers = headers
+
+    fetchPromise = fetch(url, options)
+      .then(@handleStatus)
+      .then(responseDataHandler)
+
+    if not options.doNotCatch
+      fetchPromise = fetchPromise.catch(@handleError)
+
+    if options.timeout?
+      return Promise.race([ fetchPromise, @timeoutPromise(options.timeout) ])
     else
+      return fetchPromise
 
-      if options.data
-        options.data = JSON.stringify(options.data)
-        options.contentType = "application/json" unless options.contentType
 
-      $.ajax(options)
+  timeoutPromise : (timeout) ->
+
+    return new Promise( (resolve, reject) ->
+      setTimeout(
+        -> reject("timeout")
+        timeout
+      )
+    )
+
+
+  handleStatus : (response) ->
+
+    if 200 <= response.status < 400
+      return Promise.resolve(response)
+
+    return Promise.reject(response)
+
+
+  handleError : (error) ->
+
+    if error instanceof Response
+      error.text().then(
+        (text) ->
+          try
+            json = JSON.parse(text)
+
+            # Propagate HTTP status code for further processing down the road
+            json.status = error.status
+
+            Toast.message(json.messages)
+            Promise.reject(json)
+          catch error
+            Toast.error(text)
+            Promise.reject(text)
+        (error) ->
+          Toast.error(error.toString())
+          Promise.reject(error)
+      )
+    else
+      Toast.error(error)
+      Promise.reject(error)
+
+
+  handleEmptyJsonResponse : (response) ->
+
+    contentLength = parseInt(response.headers.get("Content-Length"))
+    if contentLength == 0
+      Promise.resolve({})
+    else
+      response.json()
+
+
+  # Extends the native Promise API with `always` functionality similar to jQuery.
+  # http://api.jquery.com/deferred.always/
+  always : (promise, func) ->
+
+    promise.then(func, func)
+
+
+  # Wraps a native Promise as a jQuery deferred.
+  # http://api.jquery.com/category/deferred-object/
+  $ : (promise) ->
+
+    deferred = new $.Deferred()
+
+    promise.then(
+      (success) ->
+        deferred.resolve(success)
+      (error) ->
+        deferred.reject(error)
+    )
+
+    return deferred.promise()
+
 
 module.exports = Request

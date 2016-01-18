@@ -1,4 +1,4 @@
-marionette                   = require("backbone.marionette")
+Marionette                   = require("backbone.marionette")
 app                          = require("app")
 ActionBarView                = require("./action_bar_view")
 SkeletonPlaneTabView         = require("./settings/tab_views/skeleton_plane_tab_view")
@@ -8,13 +8,13 @@ ViewmodeTabView              = require("./settings/tab_views/viewmode_tab_view")
 SkeletonTracingRightMenuView = require("./skeletontracing/skeletontracing_right_menu_view")
 VolumeTracingRightMenuView   = require("./volumetracing/volumetracing_right_menu_view")
 ViewmodeRightMenuView        = require("./viewmode/viewmode_right_menu_view")
+UserScriptsModalView         = require("./user_scripts_modal")
 TracingView                  = require("./tracing_view")
 OxalisController             = require("oxalis/controller")
 OxalisModel                  = require("oxalis/model")
 Constants                    = require("oxalis/constants")
-offcanvas                    = require("offcanvas")
 
-class TracingLayoutView extends Backbone.Marionette.LayoutView
+class TracingLayoutView extends Marionette.LayoutView
 
   MARGIN : 40
 
@@ -29,6 +29,7 @@ class TracingLayoutView extends Backbone.Marionette.LayoutView
       <div id="tracing"></div>
       <div id="right-menu"></div>
     </div>
+    <div class="modal-wrapper"></div>
    """)
 
   viewTemplate : _.template("""
@@ -36,6 +37,7 @@ class TracingLayoutView extends Backbone.Marionette.LayoutView
     <div id="settings-menu"></div>
     <div id="tracing"></div>
     <div id="right-menu"></div>
+    <div class="modal-wrapper"></div>
   """)
 
   getTemplate : ->
@@ -53,6 +55,7 @@ class TracingLayoutView extends Backbone.Marionette.LayoutView
     "rightMenu" : "#right-menu"
     "tracingContainer" : "#tracing"
     "settings" : "#settings-menu"
+    "modalWrapper" : ".modal-wrapper"
 
   events:
     "hidden.bs.offcanvas #settings-menu-wrapper" : "doneSliding"
@@ -74,6 +77,10 @@ class TracingLayoutView extends Backbone.Marionette.LayoutView
     @listenTo(@model, "change:mode", @renderSettings)
     @listenTo(@model, "sync", @renderRegions)
     $(window).on("resize", @resizeRightMenu.bind(@))
+
+    $("#add-script-link")
+      .removeClass("hide")
+      .on("click", @showUserScriptsModal)
 
     app.oxalis = new OxalisController(@options)
 
@@ -117,6 +124,14 @@ class TracingLayoutView extends Backbone.Marionette.LayoutView
     @renderSettings()
 
 
+  showUserScriptsModal : (event) =>
+
+    event.preventDefault()
+    modalView = new UserScriptsModalView()
+    @modalWrapper.show(modalView)
+    modalView.show()
+
+
   renderSettings : ->
 
     if @isSkeletonMode()
@@ -152,6 +167,9 @@ class TracingLayoutView extends Backbone.Marionette.LayoutView
 
   onDestroy : ->
 
+    $("#add-script-link")
+      .addClass("hide")
+      .off("click")
     app.oxalis = null
 
 module.exports = TracingLayoutView

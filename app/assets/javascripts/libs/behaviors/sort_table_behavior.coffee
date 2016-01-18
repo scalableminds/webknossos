@@ -1,6 +1,6 @@
 Marionette = require("backbone.marionette")
 
-class SortTableBehavior extends Backbone.Marionette.Behavior
+class SortTableBehavior extends Marionette.Behavior
 
   events :
     "click thead" : "onClick"
@@ -11,12 +11,6 @@ class SortTableBehavior extends Backbone.Marionette.Behavior
 
   defaults :
     sortDirection : "asc"
-
-  initialize : ->
-
-    # disable auto-rerender after sorting
-    # we will deal with this manually
-    this.view.sort = false
 
 
   onDomRefresh : ->

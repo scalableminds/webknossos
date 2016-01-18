@@ -1,10 +1,10 @@
 _                 = require("lodash")
-marionette        = require("backbone.marionette")
+Marionette        = require("backbone.marionette")
 Toast             = require("libs/toast")
 TeamCollection    = require("admin/models/team/team_collection")
 TeamRoleModalItem = require("admin/views/user/team_role_modal_item_view")
 
-class TeamRoleModalView extends Backbone.Marionette.CompositeView
+class TeamRoleModalView extends Marionette.CompositeView
 
   tagName : "div"
   className : "modal fade"
@@ -43,9 +43,6 @@ class TeamRoleModalView extends Backbone.Marionette.CompositeView
     @collection = new TeamCollection()
     @collection.fetch(
       data: "amIAnAdmin=true"
-      silent : true
-    ).done(=>
-      @collection.goTo(1)
     )
     @userCollection = args.userCollection
 
@@ -71,7 +68,7 @@ class TeamRoleModalView extends Backbone.Marionette.CompositeView
               role :
                 name: @$("select[data-teamname=\"#{teamName}\"] :selected").val()
             }
-          ) || []
+          , @) || []
 
           # Find unselected teams
           removedTeamsNames = _.map(@$("input[type=checkbox]:not(:checked)"), (element) ->
@@ -84,14 +81,12 @@ class TeamRoleModalView extends Backbone.Marionette.CompositeView
             if not (oldTeam.team in teamNames)
               teams.push(oldTeam)
           teams = _.filter(teams,
-              (team) -> not _.contains(removedTeamsNames, team.team))
+            (team) -> not _.contains(removedTeamsNames, team.team))
 
           # Verify user and update his teams
-          user.save({
-              "verified" : true
-              teams : teams
-            },
-            @collection
+          user.save(
+            "verified" : true
+            teams : teams
           )
 
           return

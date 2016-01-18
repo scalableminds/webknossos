@@ -1,5 +1,7 @@
 package controllers
 
+import javax.inject.Inject
+
 import play.api.libs.json.Json._
 import play.api.libs.json._
 import oxalis.security.Secured
@@ -10,7 +12,7 @@ import models.annotation._
 import views._
 import play.api.libs.concurrent._
 import play.api.libs.concurrent.Execution.Implicits._
-import play.api.i18n.Messages
+import play.api.i18n.{MessagesApi, Messages}
 import models.annotation.AnnotationService
 import play.api.Play.current
 import com.scalableminds.util.tools.{FoxImplicits, Fox}
@@ -22,7 +24,7 @@ import scala.concurrent.Future
 import scala.async.Async.{async, await}
 import net.liftweb.common.Box
 
-object TaskController extends Controller with Secured with FoxImplicits {
+class TaskController @Inject() (val messagesApi: MessagesApi) extends Controller with Secured with FoxImplicits {
 
   val MAX_OPEN_TASKS = current.configuration.getInt("oxalis.tasks.maxOpenPerUser") getOrElse 2
 
@@ -48,30 +50,6 @@ object TaskController extends Controller with Secured with FoxImplicits {
     }
   }
 
-  def requestTaskFor(user: User)(implicit ctx: DBAccessContext) =
-    TaskService.nextTaskForUser(user)
-
-  def getAvailableTasksFor(user: User)(implicit ctx: DBAccessContext): Fox[List[Task]] =
-    TaskService.findAssignableFor(user)
-
-  def getProjectsFor(tasks: List[Task])(implicit ctx: DBAccessContext): Future[List[Project]] =
-    Fox.sequenceOfFulls(tasks.map(_.project)).map(_.distinct)
-
-  def getAllAvailableTaskCountsAndProjects()(implicit ctx: DBAccessContext): Fox[Map[User, (Int, List[Project])]] = {
-    UserDAO.findAll
-      .flatMap { users =>
-        Future.sequence( users.map { user =>
-          async {
-            val tasks = await(getAvailableTasksFor(user).futureBox) openOr List()
-            val taskCount = tasks.size
-            val projects = await(getProjectsFor(tasks))
-            user -> (taskCount, projects)
-          }
-        })
-      }
-      .map(_.toMap[User, (Int, List[Project])])
-  }
-
   def createAvailableTasksJson(availableTasksMap: Map[User, (Int, List[Project])]) =
     Json.toJson(availableTasksMap.map { case (user, (taskCount, projects)) =>
         Json.obj(
@@ -83,7 +61,7 @@ object TaskController extends Controller with Secured with FoxImplicits {
 
   def requestAvailableTasks = Authenticated.async { implicit request =>
     for {
-      availableTasksMap <- getAllAvailableTaskCountsAndProjects()
+      availableTasksMap <- TaskService.getAllAvailableTaskCountsAndProjects()
     } yield {
       Ok(createAvailableTasksJson(availableTasksMap))
     }
@@ -93,11 +71,11 @@ object TaskController extends Controller with Secured with FoxImplicits {
     val user = request.user
     for {
       _ <- ensureMaxNumberOfOpenTasks(user)
-      task <- requestTaskFor(user) ?~> Messages("task.unavailable")
+      task <- TaskService.nextTaskForUser(user) ?~> Messages("task.unavailable")
       annotation <- AnnotationService.createAnnotationFor(user, task) ?~> Messages("annotation.creationFailed")
-      annotationJSON <- AnnotationLike.annotationLikeInfoWrites(annotation, Some(user), List("content", "actions"))
+      annotationJSON <- AnnotationLike.annotationLikeInfoWrites(annotation, Some(user), exclude = List("content", "actions"))
     } yield {
-      JsonOk(annotationJSON)
+      JsonOk(annotationJSON, Messages("task.assigned"))
     }
   }
 }

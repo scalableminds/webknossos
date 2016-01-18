@@ -40,7 +40,7 @@ case class TaskType(
 
   def status(implicit ctx: DBAccessContext) = {
     for {
-      tasks <- TaskDAO.findAllByTaskType(this) getOrElse(List())
+      tasks <- TaskDAO.findAllByTaskType(this) getOrElse(List.empty)
       taskStatus <- Future.sequence(tasks.map(_.status))
     } yield {
       taskStatus.fold(CompletionStatus(0, 0, 0))(CompletionStatus.combine)

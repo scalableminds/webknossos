@@ -28,7 +28,7 @@ class SkeletonTracing
   activeTree : null
   firstEdgeDirection : null
 
-  constructor : (tracing, @flycam, @flycam3d, @user, @datasetConfig, updatePipeline) ->
+  constructor : (tracing, @flycam, @flycam3d, @user) ->
 
     _.extend(this, Backbone.Events)
 
@@ -45,7 +45,7 @@ class SkeletonTracing
 
     @stateLogger = new SkeletonTracingStateLogger(
       @flycam, tracing.version, tracing.id, tracing.typ,
-      tracing.restrictions.allowUpdate, updatePipeline, this)
+      tracing.restrictions.allowUpdate, this)
 
     tracingParser = new TracingParser(@, @data)
     {
@@ -73,7 +73,7 @@ class SkeletonTracing
 
     tracingType = tracing.typ
     if (tracingType == "Task") and @getNodeListOfAllTrees().length == 0
-      @addNode(tracing.content.editPosition, @TYPE_USUAL, 0, 0)
+      @addNode(tracing.content.editPosition, @TYPE_USUAL, 0, 0, 4, false)
 
     @branchPointsAllowed = tracing.content.settings.branchPointsAllowed
     if not @branchPointsAllowed
@@ -100,7 +100,7 @@ class SkeletonTracing
       "beforeunload"
       =>
         if !@stateLogger.stateSaved() and @stateLogger.allowUpdate
-          @stateLogger.pushImpl(false)
+          @stateLogger.pushNow(false)
           return "You haven't saved your progress, please give us 2 seconds to do so and and then leave this site."
         else
           return
@@ -204,7 +204,7 @@ class SkeletonTracing
     return id in (node.id for node in @branchStack)
 
 
-  addNode : (position, type, viewport, resolution) ->
+  addNode : (position, type, viewport, resolution, bitDepth, interpolation) ->
 
     return if @restrictionHandler.handleUpdate()
 
@@ -217,8 +217,8 @@ class SkeletonTracing
         timestamp : (new Date()).getTime()
         viewport : viewport
         resolution : resolution
-        bitDepth : if @datasetConfig.get("fourBit") then 4 else 8
-        interpolation : @datasetConfig.get("interpolation")
+        bitDepth : bitDepth
+        interpolation : interpolation
 
       point = new TracePoint(type, @idCount++, position, radius, @activeTree.treeId, metaInfo)
       @activeTree.nodes.push(point)
@@ -461,19 +461,16 @@ class SkeletonTracing
 
   shuffleTreeColor : (tree) ->
 
-    return if @restrictionHandler.handleUpdate()
-
     tree = @activeTree unless tree
     tree.color = @getNewTreeColor()
 
-    @stateLogger.updateTree(tree)
+    if @restrictionHandler.handleUpdate()
+      @stateLogger.updateTree(tree)
 
     @trigger("newTreeColor", tree.treeId)
 
 
   shuffleAllTreeColors : ->
-
-    return if @restrictionHandler.handleUpdate()
 
     for tree in @trees
       @shuffleTreeColor(tree)

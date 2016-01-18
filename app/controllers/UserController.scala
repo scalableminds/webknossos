@@ -1,5 +1,7 @@
 package controllers
 
+import javax.inject.Inject
+
 import com.scalableminds.util.security.SCrypt._
 import oxalis.security.Secured
 import models.user._
@@ -7,7 +9,7 @@ import play.api.data._
 import play.api.data.Forms._
 import play.api.libs.json.Json._
 import play.api.libs.json._
-import play.api.i18n.Messages
+import play.api.i18n.{MessagesApi, Messages}
 import play.api.libs.concurrent.Execution.Implicits._
 import com.scalableminds.util.tools.ExtendedTypes.ExtendedList
 import com.scalableminds.util.tools.ExtendedTypes.ExtendedBoolean
@@ -23,7 +25,7 @@ import models.user.time._
 
 import scala.text
 
-object UserController extends Controller with Secured with Dashboard with FoxImplicits{
+class UserController @Inject() (val messagesApi: MessagesApi) extends Controller with Secured with Dashboard with FoxImplicits{
 
   def empty = Authenticated{ implicit request =>
     Ok(views.html.main()(Html("")))
@@ -46,11 +48,19 @@ object UserController extends Controller with Secured with Dashboard with FoxImp
     }
   }
 
-  def annotations = Authenticated.async { implicit request =>
+  def annotations(isFinished: Option[Boolean]) = Authenticated.async { implicit request =>
     for {
-      content <- dashboardInfo(request.user, request.user)
+      content <- dashboardExploratoryAnnotations(request.user, request.user, isFinished)
     } yield {
-      JsonOk(content)
+      Ok(content)
+    }
+  }
+
+  def tasks = Authenticated.async { implicit request =>
+    for {
+      content <- dashboardTaskAnnotations(request.user, request.user)
+    } yield {
+      Ok(content)
     }
   }
 
@@ -67,12 +77,21 @@ object UserController extends Controller with Secured with Dashboard with FoxImp
     }
   }
 
-  def userAnnotations(userId: String) = Authenticated.async{ implicit request =>
+  def userAnnotations(userId: String, isFinished: Option[Boolean]) = Authenticated.async{ implicit request =>
     for {
       user <- UserDAO.findOneById(userId) ?~> Messages("user.notFound")
-      content <- dashboardInfo(user, request.user)
+      content <- dashboardExploratoryAnnotations(user, request.user, isFinished)
     } yield {
-      JsonOk(content)
+      Ok(content)
+    }
+  }
+
+  def userTasks(userId: String) = Authenticated.async{ implicit request =>
+    for {
+      user <- UserDAO.findOneById(userId) ?~> Messages("user.notFound")
+      content <- dashboardTaskAnnotations(user, request.user)
+    } yield {
+      Ok(content)
     }
   }
 
@@ -158,16 +177,16 @@ object UserController extends Controller with Secured with Dashboard with FoxImp
           _ <- allowedToAdministrate(issuingUser, user).toFox
           teams <- Fox.combined(assignedTeams.map(t => TeamDAO.findOneByName(t.team))) ?~> Messages("team.notFound")
           allTeams <- Fox.sequenceOfFulls(user.teams.map(t => TeamDAO.findOneByName(t.team)))
-          teamsWithoutUpdate = allTeams.filterNot{t =>
-            issuingUser.adminTeamNames.contains(t.name) || assignedTeams.find(_.team == t.name).isDefined
-          }.map(_.name)
-          teamsWithUpdate = user.teams.filter(tm => teamsWithoutUpdate.contains(tm.team))
-          _ <- Fox.combined(teamsWithUpdate.map(t => ensureTeamAdministration(issuingUser, t.team)toFox))
+          (oldTeamsWithUpdate, teamsWithoutUpdate) = user.teams.partition{t =>
+            issuingUser.adminTeamNames.contains(t.team) && !assignedTeams.contains(t)
+          }
+          teamsWithUpdate = oldTeamsWithUpdate ++ assignedTeams.filterNot(t => user.teams.exists(_.team == t.team))
+          _ <- Fox.combined(teamsWithUpdate.map(t => ensureTeamAdministration(issuingUser, t.team).toFox))
           _ <- ensureRoleExistence(assignedTeams.zip(teams))
           _ <- ensureProperTeamAdministration(user, assignedTeams.zip(teams))
         } yield {
           val trimmedExperiences = experiences.map{ case (key, value) => key.trim -> value}.toMap
-          val updatedTeams = assignedTeams ++ teamsWithUpdate
+          val updatedTeams = assignedTeams.filter(t => teamsWithUpdate.exists(_.team == t.team)) ++ teamsWithoutUpdate
           UserService.update(user, firstName, lastName, verified, updatedTeams, trimmedExperiences)
           Ok
         }

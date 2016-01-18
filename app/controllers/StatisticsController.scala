@@ -3,9 +3,11 @@
  */
 package controllers
 
+import javax.inject.Inject
+
 import oxalis.security.Secured
 import models.user.time.{TimeSpan, TimeSpanService}
-import play.api.i18n.Messages
+import play.api.i18n.{MessagesApi, Messages}
 import play.api.libs.json.Json
 import com.scalableminds.util.tools.Fox
 import play.api.libs.concurrent.Execution.Implicits._
@@ -14,7 +16,7 @@ import play.twirl.api.Html
 import scala.concurrent.duration.Duration
 import models.annotation.AnnotationDAO
 
-object StatisticsController extends Controller with Secured{
+class StatisticsController @Inject() (val messagesApi: MessagesApi) extends Controller with Secured{
   val intervalHandler = Map(
     "month" -> TimeSpan.groupByMonth _,
     "week" -> TimeSpan.groupByWeek _

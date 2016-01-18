@@ -1,9 +1,9 @@
 _                    = require("lodash")
 app                  = require("app")
-marionette           = require("backbone.marionette")
+Marionette           = require("backbone.marionette")
 WorkloadListItemView = require("./workload_list_item_view")
 
-class WorkloadListView extends Backbone.Marionette.CompositeView
+class WorkloadListView extends Marionette.CompositeView
 
   template : _.template("""
     <h3>Workload</h3>
@@ -24,11 +24,8 @@ class WorkloadListView extends Backbone.Marionette.CompositeView
 
   initialize : ->
 
-    @collection.fetch(
-      silent : true
-    ).done( =>
-      @collection.setSort("availableTaskCount", "asc")
-      @collection.goTo(1)
+    @collection.fetch().done( =>
+      @collection.setSorting("availableTaskCount", 1)
     )
 
     @listenTo(app.vent, "paginationView:filter", @filterByQuery)
@@ -37,7 +34,6 @@ class WorkloadListView extends Backbone.Marionette.CompositeView
   filterByQuery : (filterQuery) ->
 
     @collection.setFilter(["name", "projects"], filterQuery)
-    @collection.pager()
 
 
 module.exports = WorkloadListView

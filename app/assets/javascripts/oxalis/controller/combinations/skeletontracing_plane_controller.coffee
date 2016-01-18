@@ -1,6 +1,6 @@
 app             = require("app")
 THREE           = require("three")
-TWEEN           = require("tween")
+TWEEN           = require("tween.js")
 _               = require("lodash")
 PlaneController = require("../viewmodes/plane_controller")
 constants       = require("../../constants")
@@ -168,11 +168,15 @@ class SkeletonTracingPlaneController extends PlaneController
     if not @model.skeletonTracing.getActiveNode()?
       centered = true
 
+    datasetConfig = @model.get("datasetConfiguration")
+
     @model.skeletonTracing.addNode(
-        position,
-        constants.TYPE_USUAL,
-        @activeViewport,
-        @model.flycam.getIntegerZoomStep()
+      position,
+      constants.TYPE_USUAL,
+      @activeViewport,
+      @model.flycam.getIntegerZoomStep(),
+      if datasetConfig.get("fourBit") then 4 else 8,
+      datasetConfig.get("interpolation")
     )
 
     if centered

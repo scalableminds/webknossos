@@ -2,7 +2,7 @@ _                 = require("lodash")
 Marionette        = require("backbone.marionette")
 SelectionItemView = require("./selection_item_view")
 
-class SelectionView extends Backbone.Marionette.CollectionView
+class SelectionView extends Marionette.CollectionView
 
   tagName : "select"
   className: "form-control"
@@ -12,10 +12,7 @@ class SelectionView extends Backbone.Marionette.CollectionView
   initialize : (options) ->
 
     @collection.fetch(
-      silent : true
       data : options.data
-    ).done(
-      => @render()
     )
 
     if options.name

@@ -1,24 +1,24 @@
 _                  = require("lodash")
-marionette         = require("backbone.marionette")
+Marionette         = require("backbone.marionette")
 Toast              = require("libs/toast")
 SimpleTaskItemView = require("./simple_task_item_view")
 TaskCollection     = require("admin/models/task/task_collection")
 
-class TaskTypeItemView extends Backbone.Marionette.CompositeView
+class TaskTypeItemView extends Marionette.CompositeView
 
   template : _.template("""
-    <tr id="<%= id %>">
+    <tr id="<%- id %>">
       <td class="details-toggle" href="#">
         <i class="caret-right"></i>
         <i class="caret-down"></i>
       </td>
-      <td><%= formattedHash %></td>
-      <td><%= team %></td>
-      <td><%= summary %></td>
-      <td><%= formattedShortText %></td>
+      <td><%- formattedHash %></td>
+      <td><%- team %></td>
+      <td><%- summary %></td>
+      <td><%- formattedShortText %></td>
       <td>
         <% _.each(settings.allowedModes, function (mode) { %>
-          <span class="label label-default"><%= mode[0].toUpperCase() + mode.slice(1) %></span>
+          <span class="label label-default"><%- mode[0].toUpperCase() + mode.slice(1) %></span>
         <% }) %>
       </td>
       <td>
@@ -29,17 +29,17 @@ class TaskTypeItemView extends Backbone.Marionette.CompositeView
           <span class="label label-default">Soma clicking</span>
         <% } %>
       </td>
-      <td><%= expectedTime %></td>
-      <td><%= fileName %></td>
+      <td><%- expectedTime %></td>
+      <td><%- fileName %></td>
       <td class="nowrap">
-        <a href="/taskTypes/<%= id %>/edit" >
+        <a href="/taskTypes/<%- id %>/edit" >
           <i class="fa fa-pencil"></i>edit
         </a> <br />
         <% if (status.completed > 0) { %>
-          <a href="/annotations/CompoundTaskType/<%= id %>" title="view all finished tracings">
+          <a href="/annotations/CompoundTaskType/<%- id %>" title="view all finished tracings">
             <i class="fa fa-random"></i>view
           </a> <br />
-          <a href="/api/taskTypes/<%= id %>/download" >
+          <a href="/api/taskTypes/<%- id %>/download" >
             <i class="fa fa-download"></i>download
           </a> <br />
         <% } %>
@@ -73,7 +73,7 @@ class TaskTypeItemView extends Backbone.Marionette.CompositeView
   initialize : ->
 
     @listenTo(app.vent, "taskTypeListView:toggleDetails", @toggleDetails)
-    @collection = new TaskCollection(@model.get("id"))
+    @collection = new TaskCollection(null, taskTypeId : @model.get("id"))
 
     # minimize the toggle view on item deletion
     @listenTo(@collection, "remove", (item) =>
@@ -88,8 +88,6 @@ class TaskTypeItemView extends Backbone.Marionette.CompositeView
     if window.confirm("Do you really want to delete this task type?")
       @model.destroy().done((response) =>
         Toast.message(response.messages)
-      ).fail((xhr) ->
-        Toast.message(xhr.responseJSON.messages)
       )
 
   toggleDetails : ->

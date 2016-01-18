@@ -7,7 +7,7 @@ app            = require("app")
 SelectionView  = require("admin/views/selection_view")
 UserCollection = require("admin/models/user/user_collection")
 
-class TaskTransferModalView extends Backbone.Marionette.LayoutView
+class TaskTransferModalView extends Marionette.LayoutView
 
   className : "modal fade"
   template : _.template("""
@@ -67,18 +67,13 @@ class TaskTransferModalView extends Backbone.Marionette.LayoutView
     evt.preventDefault()
 
     userID = @$("select :selected").attr("id")
-    Request.send(
-      url : @url
-      method : "POST"
-      data :
+    Request.sendJSONReceiveJSON(
+      @url,
+      data:
         "userId" : userID
-    ).then(
-      =>
-        @destroyModal()
-      (xhr) =>
-        Toast.message(xhr.responseJSON.messages)
+    ).then( =>
+      @destroyModal()
     )
-
 
 
   destroyModal : ->

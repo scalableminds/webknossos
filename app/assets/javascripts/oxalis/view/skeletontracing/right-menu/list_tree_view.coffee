@@ -1,9 +1,10 @@
 _                = require("lodash")
 app              = require("app")
-marionette       = require("backbone.marionette")
+Marionette       = require("backbone.marionette")
+Backbone         = require("backbone")
 ListTreeItemView = require("./list_tree_item_view")
 
-class ListTreeView extends Backbone.Marionette.CompositeView
+class ListTreeView extends Marionette.CompositeView
 
   id : "tree-navbar"
   className : "flex-column"
@@ -14,8 +15,8 @@ class ListTreeView extends Backbone.Marionette.CompositeView
         <button class="btn btn-default" id="tree-delete-button"><i class="fa fa-trash-o"></i>Delete tree</button>
       </div>
       <div class="btn-group pull-right">
-        <button class="btn btn-default" id="tree-color-shuffle" title="Change color"><i class="fa fa-adjust"></i></button>
-        <button class="btn btn-default" id="tree-color-shuffle-all" title="Shuffle all Colors"><i class="fa fa-random"></i></button>
+        <button class="btn btn-default" id="tree-color-shuffle" title="Change color"><i class="fa fa-adjust"></i>Change Color</button>
+        <button class="btn btn-default" id="tree-color-shuffle-all" title="Shuffle all Colors"><i class="fa fa-random"></i>Shuffle Colors</button>
         <button class="btn btn-default dropdown-toggle" data-toggle="dropdown" id="tree-sort-button" title="Sort">
           <i class="fa fa-sort-alpha-asc"></i>
         </button>
@@ -70,6 +71,7 @@ class ListTreeView extends Backbone.Marionette.CompositeView
 
   initialize : (options) ->
 
+    @collection = new Backbone.Collection()
 
     @listenTo(@, "render", @updateSortIndicator)
     @refresh()
@@ -81,7 +83,7 @@ class ListTreeView extends Backbone.Marionette.CompositeView
     @listenTo(@model.skeletonTracing, "reloadTrees", @refresh)
     @listenTo(@model.skeletonTracing, "deleteActiveNode", @updateTreesDebounced)
     @listenTo(@model.skeletonTracing, "newNode", @updateTreesDebounced)
-    @listenTo(@model.skeletonTracing, "newTreeColor", @updateTreesDebounced)
+    @listenTo(@model.skeletonTracing, "newTreeColor", @refresh)
     @listenTo(@model.skeletonTracing, "newActiveTree", @updateTreesDebounced)
     @listenTo(@model.skeletonTracing, "newActiveNode", @_renderChildren)
 
@@ -144,31 +146,15 @@ class ListTreeView extends Backbone.Marionette.CompositeView
   refresh : ->
 
     trees = @model.skeletonTracing.getTreesSorted()
-    @collection = new Backbone.Collection(trees)
+    @collection.reset(trees)
 
-    @updateTreesDebounced()
+    #@updateTreesDebounced()
 
 
   updateName : ->
 
       name = @getActiveTree().name
       @ui.treeNameInput.val(name)
-
-
-  updateTreesDebounced : ->
-    # avoid lags caused by frequent DOM modification
-
-    @updateTreesDebounced = _.debounce(
-      =>
-        @updateName()
-        @_renderChildren()
-      200
-    )
-    @updateTreesDebounced()
-
-    # animate scrolling to the new tree
-    # $("#tree-list").animate({
-    #   scrollTop: newIcon.offset().top - $("#tree-list").offset().top + $("#tree-list").scrollTop()}, 250)
 
 
   setActiveTree : (treeId) ->

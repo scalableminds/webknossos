@@ -37,7 +37,7 @@ object DefaultMails {
       bodyText = html.mail.registerAdminNotify(name, brainDBResult).body,
       recipients = List(newUserMailingList))
 
-  def registerMail(name: String, receiver: String, brainDBresult: String) =
+  def registerMail(name: String, receiver: String, brainDBresult: String)(implicit messages: Messages) =
     Mail(
       from = defaultFrom,
       subject = "Thanks for your registration on " + uri,

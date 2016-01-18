@@ -1,11 +1,12 @@
 _              = require("lodash")
 app            = require("app")
-marionette     = require("backbone.marionette")
+Marionette     = require("backbone.marionette")
 TeamCollection = require("admin/models/team/team_collection")
 SelectionView  = require("admin/views/selection_view")
 Toast          = require("libs/toast")
+Request        = require("libs/request")
 
-class TaskTypeFormView extends Backbone.Marionette.LayoutView
+class TaskTypeFormView extends Marionette.LayoutView
 
   template : _.template("""
     <div class="well clearfix">
@@ -172,11 +173,10 @@ class TaskTypeFormView extends Backbone.Marionette.LayoutView
       else
         "/api/taskTypes"
 
-    $.ajax(
-      url : url
-      type: "post",
-      data: target.serialize(),
-    ).done((response) =>
+    Request.sendUrlEncodedFormReceiveJSON(
+      url
+      data: target
+    ).then( (response) =>
       Toast.message(response.messages)
 
       if @options.isEditForm
@@ -184,11 +184,6 @@ class TaskTypeFormView extends Backbone.Marionette.LayoutView
       else
         @collection.addJSON(response.newTaskType)
         @render()
-    ).fail((xhr) ->
-      mainMessage = xhr.responseJSON.messages[0]
-      detailedErrors = _.values(xhr.responseJSON.errors)
-      mainMessage.error += detailedErrors
-      Toast.message([mainMessage])
     )
 
 

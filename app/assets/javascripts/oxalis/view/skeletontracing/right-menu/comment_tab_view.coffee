@@ -3,7 +3,7 @@ Marionette         = require("backbone.marionette")
 Input              = require("libs/input")
 CommentTabItemView = require("./comment_tab_item_view")
 
-class CommentTabView extends Backbone.Marionette.CompositeView
+class CommentTabView extends Marionette.CompositeView
 
   className : "flex-column"
   template : _.template("""
@@ -11,7 +11,7 @@ class CommentTabView extends Backbone.Marionette.CompositeView
       <div class="input-group-btn">
         <button class="btn btn-default" id="comment-previous"><i class="fa fa-arrow-left"></i></button>
       </div>
-      <input class="form-control" id="comment-input" type="text" value="<%= activeComment.get("content") %>" placeholder="Add comment">
+      <input class="form-control" id="comment-input" type="text" value="<%- activeComment.get("content") %>" placeholder="Add comment">
       <div class="input-group-btn">
         <button class="btn btn-default" id="comment-next"><i class="fa fa-arrow-right"></i></button>
         <button class="btn btn-default" id="comment-sort" title="sort">

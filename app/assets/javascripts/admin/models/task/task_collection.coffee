@@ -4,44 +4,47 @@ FormatUtils          = require("format_utils")
 
 class TaskCollection extends PaginationCollection
 
-  constructor : (forTaskTypeID) ->
+  initialize : (models, options = {}) ->
 
-    super()
+    @taskTypeId = options.taskTypeId
+    @dataSetName = options.dataSetName
 
-    # We cannot use @url as a method since the Backbone.Paginator.clientPager
-    # ignores the context which is necessary to read forTaskTypeID.
-    # TODO: Check if this is still an issue with a newer version of backbone.paginator.
-    @url =
-      if forTaskTypeID
-        "/api/taskTypes/#{forTaskTypeID}/tasks"
+
+  url : ->
+    if @taskTypeId
+      "/api/taskTypes/#{@taskTypeId}/tasks"
+    else
+      "/api/tasks"
+
+
+  parse : (responses) ->
+
+    responses = responses.map((response) ->
+      # apply some defaults
+      response.type =
+        summary : response.type?.summary || "<deleted>"
+      response.formattedTracingTime = FormatUtils.formatSeconds(response.tracingTime? or 0)
+
+      # convert bounding box
+      if response.boundingBox?
+
+        { topLeft, width, height, depth } = response.boundingBox
+        response.boundingBox = topLeft.concat [
+          topLeft[0] + width
+          topLeft[1] + height
+          topLeft[2] + depth
+        ]
+
       else
-        "/api/tasks"
+        response.boundingBox = []
 
-
-  parse : (respones) ->
-
-    _.map(respones,
-      (response) ->
-
-        # apply some defaults
-        response.type =
-          summary : response.type?.summary || "<deleted>"
-        response.formattedTracingTime = FormatUtils.formatSeconds(response.tracingTime? or 0)
-
-        # convert bounding box
-        if response.boundingBox?
-
-          { topLeft, width, height, depth } = response.boundingBox
-          response.boundingBox = topLeft.concat [
-            topLeft[0] + width
-            topLeft[1] + height
-            topLeft[2] + depth
-          ]
-
-        else
-          response.boundingBox = []
-
-        return response
+      return response
     )
+
+    if @dataSetName
+      return _.filter(responses, dataSet : @dataSetName)
+    else
+      return responses
+
 
 module.exports = TaskCollection

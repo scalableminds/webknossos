@@ -1,13 +1,15 @@
+_                 = require("lodash")
+Marionette        = require("backbone.marionette")
+Subviews          = require("backbone-subviews")
 SliderSettingView = require("../setting_views/slider_setting_view")
 ColorSettingView  = require("../setting_views/color_setting_view")
-_                 = require("lodash")
 
-class LayerColorSettingsView extends Backbone.Marionette.ItemView
+class LayerColorSettingsView extends Marionette.ItemView
 
   template : _.template("""
-    <p><%= displayName %></p>
+    <p><%- displayName %></p>
     <% _.forEach(subviewCreators, function (subview, key) { %>
-      <div data-subview="<%= key %>"></div>
+      <div data-subview="<%- key %>"></div>
     <% }) %>
   """)
 
@@ -57,6 +59,6 @@ class LayerColorSettingsView extends Backbone.Marionette.ItemView
 
   initialize : ({ @model, @options }) ->
 
-    Backbone.Subviews.add(this)
+    Subviews.add(this)
 
 module.exports = LayerColorSettingsView

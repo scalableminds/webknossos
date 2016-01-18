@@ -1,8 +1,8 @@
 app             = require("app")
 Backbone        = require("backbone")
+ErrorHandling   = require("libs/error_handling")
 Model           = require("../model")
 Dimensions      = require("../model/dimensions")
-ResizableBuffer = require("../../libs/resizable_buffer")
 constants       = require("../constants")
 Tree            = require("./tree")
 
@@ -122,7 +122,7 @@ class Skeleton
 
   deleteNode : (node, treeId) ->
 
-    $.assertEquals(node.neighbors.length, 1, "Node needs to have exactly 1 neighbor.")
+    ErrorHandling.assertEquals(node.neighbors.length, 1, "Node needs to have exactly 1 neighbor.")
 
     treeGeometry = @getTreeGeometry(treeId)
     treeGeometry.deleteNode(node)

@@ -2,7 +2,7 @@ $                                  = require("jquery")
 _                                  = require("lodash")
 app                                = require("../app")
 Backbone                           = require("backbone")
-Stats                              = require("stats")
+Stats                              = require("stats.js")
 PlaneController                    = require("./controller/viewmodes/plane_controller")
 SkeletonTracingController          = require("./controller/annotations/skeletontracing_controller")
 VolumeTracingController            = require("./controller/annotations/volumetracing_controller")
@@ -48,18 +48,16 @@ class Controller
 
     _.extend(@, Backbone.Events)
 
-    unless @browserSupported()
-      unless window.confirm("You are using an unsupported browser, please use the newest version of Chrome, Opera or Safari.\n\nTry anyways?")
-        window.history.back()
-
     @fullScreen = false
 
     @urlManager = new UrlManager(@model)
     @model.set("state", @urlManager.initialState)
 
     @model.fetch()
-      .done( (error) => @modelFetchDone(error) )
-      .fail( (response) => @modelFetchFail(response) )
+      .then(
+        (error) => @modelFetchDone(error)
+      )
+
 
   modelFetchDone : (error) ->
 
@@ -75,13 +73,18 @@ class Controller
 
     for allowedMode in @model.settings.allowedModes
 
-      @allowedModes.push switch allowedMode
-        when "flight" then constants.MODE_PLANE_TRACING
-        when "oblique" then constants.MODE_ARBITRARY
-        when "volume" then constants.MODE_VOLUME
+      if @model.getColorBinaries()[0].cube.BIT_DEPTH == 8
+        switch allowedMode
+          when "flight" then @allowedModes.push(constants.MODE_ARBITRARY)
+          when "oblique" then @allowedModes.push(constants.MODE_ARBITRARY_PLANE)
 
-    if constants.MODE_ARBITRARY in @allowedModes
-      @allowedModes.push(constants.MODE_ARBITRARY_PLANE)
+      switch allowedMode
+        when "volume" then @allowedModes.push(constants.MODE_VOLUME)
+
+    if not @model.volumeTracing?
+      # Plane tracing mode is always allowed (except in VOLUME mode)
+      @allowedModes.push(constants.MODE_PLANE_TRACING)
+
 
     # FPS stats
     stats = new Stats()
@@ -145,23 +148,7 @@ class Controller
           @zoomStepWarningToast = null
 
 
-  modelFetchFail : (response) ->
-
-    Toast.error(response.responseJSON.messages)
-
-
   initKeyboard : ->
-
-    $(document).keypress (event) ->
-
-      if $(event.target).is("input")
-        # don't summon help modal when the user types into an input field
-        return
-
-      if event.shiftKey && event.which == 63
-        $("#help-modal").modal('toggle')
-
-
 
     # avoid scrolling while pressing space
     $(document).keydown (event) ->
@@ -185,14 +172,19 @@ class Controller
 
         "m" : => # rotate allowed modes
 
-          index = (@allowedModes.indexOf(@model.mode) + 1) % @allowedModes.length
+          index = (@allowedModes.indexOf(@model.get("mode")) + 1) % @allowedModes.length
           @model.setMode(@allowedModes[index])
 
-        "super + s, ctrl + s" : (event) =>
-
+        "super + s" : (event) =>
           event.preventDefault()
           event.stopPropagation()
           @model.save()
+
+        "ctrl + s" : (event) =>
+          event.preventDefault()
+          event.stopPropagation()
+          @model.save()
+
       } )
 
     new Input.KeyboardNoLoop( keyboardControls )
@@ -212,31 +204,6 @@ class Controller
       return
 
     @model.mode = newMode
-
-
-  toggleFullScreen : ->
-
-    if @fullScreen
-      cancelFullscreen = document.webkitCancelFullScreen or document.mozCancelFullScreen or document.cancelFullScreen
-      @fullScreen = false
-      if cancelFullscreen
-        cancelFullscreen.call(document)
-    else
-      body = $("body")[0]
-      requestFullscreen = body.webkitRequestFullScreen or body.mozRequestFullScreen or body.requestFullScreen
-      @fullScreen = true
-      if requestFullscreen
-        requestFullscreen.call(body, body.ALLOW_KEYBOARD_INPUT)
-
-
-  browserSupported : ->
-
-    userAgentContains = (substring) ->
-        navigator.userAgent.indexOf(substring) >= 0
-
-    # allow everything but IE
-    isIE = userAgentContains("MSIE") or userAgentContains("Trident")
-    return not isIE
 
 
 module.exports = Controller

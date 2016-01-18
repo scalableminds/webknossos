@@ -7,7 +7,6 @@ import models.binary._
 import java.io.{PipedOutputStream, PipedInputStream, InputStream}
 import net.liftweb.common.{Failure, Full}
 import play.api.Logger
-import play.api.i18n.Messages
 import play.api.libs.iteratee.{Enumerator, Iteratee}
 import play.api.libs.json.{Json, JsValue}
 import com.scalableminds.util.reactivemongo.{DBAccessContext, GlobalAccessContext}
@@ -94,7 +93,7 @@ case class VolumeTracing(
     }
 
     for{
-      dataSource <- DataSetDAO.findOneBySourceName(dataSetName) ?~> Messages("dataSet.notFound")
+      dataSource <- DataSetDAO.findOneBySourceName(dataSetName) ?~> "dataSet.notFound"
       urlToVolumeData = s"${dataSource.dataStoreInfo.url}/data/datasets/${dataSetName}/layers/${userDataLayerName}/download"
       inputStream <- createStream(urlToVolumeData)
     } yield {

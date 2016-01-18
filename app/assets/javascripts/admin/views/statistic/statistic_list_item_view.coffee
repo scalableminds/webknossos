@@ -1,12 +1,12 @@
 _          = require("lodash")
-marionette = require("backbone.marionette")
+Marionette = require("backbone.marionette")
 
-class StatisticListItemView extends Backbone.Marionette.ItemView
+class StatisticListItemView extends Marionette.ItemView
 
   tagName : "tr"
   template : _.template("""
-    <td><%= user.firstName %> <%= user.lastName %></td>
-    <td><%= hours %>h <%= remainingMinutes %>m</td>
+    <td><%- user.firstName %> <%- user.lastName %></td>
+    <td><%- hours %>h <%- remainingMinutes %>m</td>
   """)
 
 

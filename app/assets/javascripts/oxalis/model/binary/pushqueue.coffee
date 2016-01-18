@@ -12,11 +12,8 @@ class PushQueue
 
   constructor : (@dataSetName, @cube, @layer, @tracingId, @updatePipeline, @sendData = true) ->
 
+    @url = "#{@layer.url}/data/datasets/#{@dataSetName}/layers/#{@layer.name}/data?cubeSize=#{1 << @cube.BUCKET_SIZE_P}&annotationId=#{@tracingId}&token=#{@layer.token}"
     @queue = []
-
-    @getParams =
-      cubeSize : 1 << @cube.BUCKET_SIZE_P
-      annotationId : @tracingId
 
     @push = _.throttle @pushImpl, @THROTTLE_TIME
 
@@ -93,22 +90,16 @@ class PushQueue
 
     @updatePipeline.executePassAlongAction =>
 
-      @sendRequest(transmitData)
-
-
-  sendRequest : (multipartData) ->
-
-    multipartData.dataPromise().then((data) =>
-      Request.send(
-        multipartData : data
-        multipartBoundary : multipartData.boundary
-        type : "PUT"
-        url : "#{@layer.url}/data/datasets/#{@dataSetName}/layers/#{@layer.name}/data?token=#{@layer.token}"
-        dataType : 'arraybuffer'
-        timeout : @MESSAGE_TIMEOUT
-        compress : true
+      transmitData.dataPromise().then((data) =>
+        Request.sendArraybufferReceiveArraybuffer("#{@layer.url}/data/datasets/#{@dataSetName}/layers/#{@layer.name}/data?token=#{@layer.token}",
+          method : "PUT"
+          data : data
+          headers :
+            "Content-Type" : "multipart/mixed; boundary=#{transmitData.boundary}"
+          timeout : @MESSAGE_TIMEOUT
+          compress : true
+        )
       )
-    )
 
 
 module.exports = PushQueue

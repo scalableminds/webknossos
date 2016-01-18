@@ -1,7 +1,8 @@
-AbstractSettingView = require("./abstract_setting_view")
 _                   = require("lodash")
+Marionette          = require("backbone.marionette")
+AbstractSettingView = require("./abstract_setting_view")
 
-class ButtonSettingView extends Backbone.Marionette.ItemView
+class ButtonSettingView extends Marionette.ItemView
 
 
   className : "button-setting-view row"
@@ -9,7 +10,7 @@ class ButtonSettingView extends Backbone.Marionette.ItemView
 
   template : _.template("""
     <div class="col-sm-12">
-      <button type="button" class="btn btn-block btn-default"><%= displayName %></button>
+      <button type="button" class="btn btn-block btn-default"><%- displayName %></button>
     </div>
   """)
 

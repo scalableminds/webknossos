@@ -1,26 +1,26 @@
-marionette = require("backbone.marionette")
-subviews   = require("backbone.subviews")
 _          = require("lodash")
+Marionette = require("backbone.marionette")
+Subviews   = require("backbone-subviews")
 
-class CategoryView extends Backbone.Marionette.ItemView
+class CategoryView extends Marionette.ItemView
 
 
   template : _.template("""
     <div class="panel panel-default">
-      <div class="panel-heading" data-toggle="collapse" data-target="#user-settings-<%= tabId %>">
+      <div class="panel-heading" data-toggle="collapse" data-target="#user-settings-<%- tabId %>">
         <h4 class="panel-title">
           <a>
             <i class="caret-down"></i>
             <i class="caret-right"></i>
-            <%= caption %>
+            <%- caption %>
           </a>
         </h4>
       </div>
-      <div id="user-settings-<%= tabId %>" class="panel-collapse collapse in">
+      <div id="user-settings-<%- tabId %>" class="panel-collapse collapse in">
         <div class="panel-body">
 
           <% _.forEach(subviewCreators, function (subview, key) { %>
-            <div data-subview="<%= key %>"></div>
+            <div data-subview="<%- key %>"></div>
           <% }) %>
 
         </div>
@@ -31,7 +31,7 @@ class CategoryView extends Backbone.Marionette.ItemView
 
   initialize : ->
 
-    Backbone.Subviews.add(this)
+    Subviews.add(this)
 
 
   serializeData : ->

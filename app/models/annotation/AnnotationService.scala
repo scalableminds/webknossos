@@ -1,12 +1,18 @@
 package models.annotation
 
+import java.io.{FileOutputStream, BufferedOutputStream}
+
+import com.scalableminds.util.io.ZipIO
 import models.user.User
 import com.scalableminds.util.reactivemongo.DBAccessContext
+import net.liftweb.common.Full
+import oxalis.security.AuthenticatedRequest
 import play.api.Logger
+import play.api.libs.Files.TemporaryFile
 import play.api.libs.json.Json
 import scala.collection.mutable.ListBuffer
 import scala.concurrent.Future
-import com.scalableminds.util.tools.{FoxImplicits, Fox}
+import com.scalableminds.util.tools.{TextUtils, FoxImplicits, Fox}
 import models.tracing.skeleton.SkeletonTracingService
 import play.api.libs.concurrent.Execution.Implicits._
 import models.task.{Task, TaskService}
@@ -26,7 +32,7 @@ import play.modules.reactivemongo.json.BSONFormats._
  * Time: 12:39
  */
 
-object AnnotationService extends AnnotationContentProviders with BoxImplicits with FoxImplicits {
+object AnnotationService extends AnnotationContentProviders with BoxImplicits with FoxImplicits with TextUtils{
 
   def createExplorationalFor(user: User, dataSet: DataSet, contentType: String, id: String = "")(implicit ctx: DBAccessContext) =
     withProviderForContentType(contentType) { provider =>
@@ -78,8 +84,8 @@ object AnnotationService extends AnnotationContentProviders with BoxImplicits wi
   def findTasksOf(user: User)(implicit ctx: DBAccessContext) =
     AnnotationDAO.findFor(user._id, AnnotationType.Task)
 
-  def findExploratoryOf(user: User)(implicit ctx: DBAccessContext) =
-    AnnotationDAO.findForWithTypeOtherThan(user._id, AnnotationType.Task :: AnnotationType.SystemTracings)
+  def findExploratoryOf(user: User, isFinished: Option[Boolean])(implicit ctx: DBAccessContext) =
+    AnnotationDAO.findForWithTypeOtherThan(user._id, isFinished, AnnotationType.Task :: AnnotationType.SystemTracings)
 
   def findFinishedOf(user: User)(implicit ctx: DBAccessContext) =
     AnnotationDAO.findFinishedFor(user._id)
@@ -165,6 +171,43 @@ object AnnotationService extends AnnotationContentProviders with BoxImplicits wi
       ),
       upsert = true).map { _ =>
       annotation
+    }
+  }
+
+  def createAnnotationFrom(user: User, nmls: List[NML], typ: AnnotationType, name: Option[String])(implicit ctx: DBAccessContext): Fox[Annotation] = {
+    SkeletonTracingService.createFrom(nmls, None, AnnotationSettings.skeletonDefault).toFox.flatMap {
+      content =>
+        AnnotationService.createFrom(
+          user._id,
+          user.teams.head.team, //TODO: refactor
+          content,
+          typ,
+          name)
+    }
+  }
+
+  def zipAnnotations(annotations: List[Annotation], zipFileName: String)(implicit ctx: DBAccessContext) = {
+    val zipped = TemporaryFile("annotationZips", normalize(zipFileName))
+    val zipper = ZipIO.startZip(new BufferedOutputStream(new FileOutputStream(zipped.file)))
+
+    def annotationContent(annotations: List[Annotation]): Future[Boolean] = {
+      annotations match {
+        case head :: tail =>
+          head.muta.loadAnnotationContent().futureBox.flatMap {
+            case Full(fs) =>
+              zipper.addFile(fs)
+              annotationContent(tail)
+            case _ =>
+              annotationContent(tail)
+          }
+        case _ =>
+          Future.successful(true)
+      }
+    }
+
+    annotationContent(annotations).map{ _ =>
+      zipper.close()
+      zipped
     }
   }
 }

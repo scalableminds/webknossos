@@ -1,9 +1,9 @@
 _                         = require("lodash")
-marionette                = require("backbone.marionette")
-DashboardTaskListItemView = require("dashboard/views/dashboard_task_list_item_view")
+Marionette                = require("backbone.marionette")
+DashboardTaskListItemView = require("./dashboard_task_list_item_view")
 routes                    = require("routes")
 
-class TrackedTimeView extends Backbone.Marionette.CompositeView
+class TrackedTimeView extends Marionette.CompositeView
 
   template : _.template("""
     <h3>Tracked Time</h3>
@@ -17,8 +17,8 @@ class TrackedTimeView extends Backbone.Marionette.CompositeView
       <tbody>
       <% _.each(formattedLogs, function(entry) { %>
         <tr>
-          <td> <%= entry.interval %> </td>
-          <td> <%= entry.time %> </td>
+          <td> <%- entry.interval %> </td>
+          <td> <%- entry.time %> </td>
         </tr>
       <% }) %>
       </tbody>

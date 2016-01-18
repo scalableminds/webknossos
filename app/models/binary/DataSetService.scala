@@ -9,10 +9,11 @@ import play.api.libs.concurrent.Akka
 import net.liftweb.common.Full
 import scala.Some
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
-import com.scalableminds.braingames.binary.models.{DataSource, UnusableDataSource, DataSourceLike, UsableDataSource}
+import com.scalableminds.braingames.binary.models._
 import play.api.i18n.Messages
 import play.api.libs.concurrent.Execution.Implicits._
 import controllers.DataStoreHandler
+import reactivemongo.api.commands.WriteResult
 import reactivemongo.core.commands.LastError
 import com.scalableminds.util.rest.RESTResponse
 
@@ -41,14 +42,14 @@ object DataSetService extends FoxImplicits {
       accessToken = None))(GlobalAccessContext)
   }
 
-  def updateDataSource(dataStoreInfo: DataStoreInfo, usableDataSource: UsableDataSource)(implicit ctx: DBAccessContext): Fox[LastError] = {
+  def updateDataSource(dataStoreInfo: DataStoreInfo, usableDataSource: UsableDataSource)(implicit ctx: DBAccessContext): Fox[WriteResult] = {
     DataSetDAO.findOneBySourceName(usableDataSource.id)(GlobalAccessContext).futureBox.flatMap {
       case Full(dataSet) if (dataSet.dataStoreInfo.name == dataStoreInfo.name) =>
         DataSetDAO.updateDataSource(usableDataSource.id, dataStoreInfo, usableDataSource.dataSource)(GlobalAccessContext).futureBox
       case Full(_) =>
         // TODO: There is a problem here. The dataset name is already in use. We are not going to update that datasource.
         // this should be somehow populated to the user to inform him that he needs to rename the datasource
-        Fox.failure(Messages("dataset.name.alreadyInUse")).futureBox
+        Fox.failure("dataset.name.alreadyInUse").futureBox
       case _ =>
         createDataSet(
           usableDataSource.id,
@@ -62,6 +63,12 @@ object DataSetService extends FoxImplicits {
 
   def importDataSet(dataSet: DataSet)(implicit ctx: DBAccessContext): Fox[RESTResponse] = {
     DataStoreHandler.importDataSource(dataSet)
+  }
+
+  def getDataLayer(dataSet: DataSet, dataLayerName: String)(implicit ctx: DBAccessContext): Fox[DataLayer] = {
+    dataSet
+    .dataSource.flatMap(_.getDataLayer(dataLayerName)).toFox
+    .orElse(UserDataLayerDAO.findOneByName(dataLayerName).filter(_.dataSourceName == dataSet.name).map(_.dataLayer))
   }
 
   def findDataSource(name: String)(implicit ctx: DBAccessContext) =

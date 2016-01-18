@@ -1,46 +1,41 @@
 _          = require("lodash")
 app        = require("app")
-marionette = require("backbone.marionette")
+Marionette = require("backbone.marionette")
 
-class PaginationView extends Backbone.Marionette.ItemView
+class PaginationView extends Marionette.ItemView
 
   template : _.template("""
     <div class="row">
       <div class="col-sm-9">
         <ul class="pagination">
-          <li class="first <% if (Pagination.currentPage == 1) { %> disabled <% } %>">
-            <a href="#"><i class="fa fa-angle-double-left"></i></a>
+          <li class="first <% if (Pagination.currentPage == 0) { %> disabled <% } %>">
+            <a><i class="fa fa-angle-double-left"></i></a>
           </li>
-          <li class="prev <% if (Pagination.currentPage == 1) { %> disabled <% } %>"">
-            <a href="#"><i class="fa fa-angle-left"></i></a>
+          <li class="prev <% if (Pagination.currentPage == 0) { %> disabled <% } %>"">
+            <a><i class="fa fa-angle-left"></i></a>
           </li>
-          <% if (Pagination.lastPage == 1){ %>
-            <li class="active">
-              <span>1</span>
-            <li>
-          <% } %>
-          <% _.each (Pagination.pageSet, function (p) { %>
-            <% if (Pagination.currentPage == p) { %>
+          <% _.each(pageRange, function (pageIndex) { %>
+            <% if (Pagination.currentPage == pageIndex) { %>
               <li class="active">
-                <span><%= p %></span>
+                <span><%- pageIndex + 1 %></span>
               </li>
             <% } else { %>
               <li>
-                <a href="#" class="page"><%= p %></a>
+                <a class="page"><%- pageIndex + 1 %></a>
               </li>
             <% } %>
           <% }); %>
           <li class="next <% if (Pagination.currentPage >= Pagination.lastPage) { %> disabled <% } %>">
-            <a href="#"><i class="fa fa-angle-right"></i></a>
+            <a><i class="fa fa-angle-right"></i></a>
           </li>
           <li class="last <% if (Pagination.currentPage >= Pagination.lastPage) { %> disabled <% } %>">
-            <a href="#"><i class="fa fa-angle-double-right"></i></a>
+            <a><i class="fa fa-angle-double-right"></i></a>
           </li>
         </ul>
 
         <% if (addButtonText) { %>
           <a class="btn btn-success add-button" href="#">
-            <i class="fa fa-plus"></i><%= addButtonText %>
+            <i class="fa fa-plus"></i><%- addButtonText %>
           </a>
         <% } %>
       </div>
@@ -54,8 +49,13 @@ class PaginationView extends Backbone.Marionette.ItemView
   """)
 
   className : "container wide"
-  templateHelpers :
-    Pagination : {}
+  templateHelpers : ->
+    paginationInfo = @collection.getPaginationInfo()
+    pageRange : _.range(
+      Math.max(paginationInfo.firstPage, paginationInfo.currentPage - 4),
+      Math.min(paginationInfo.lastPage, paginationInfo.currentPage + 4) + 1)
+    Pagination : paginationInfo
+    addButtonText : @options.addButtonText
 
   ui :
     "inputSearch" : ".search-query"
@@ -65,85 +65,62 @@ class PaginationView extends Backbone.Marionette.ItemView
     "click .next" : "goNext"
     "click .last" : "goLast"
     "click .first" : "goFirst"
-    "click .page" : "goToPage"
+    "click .page" : "handleClickPage"
     "click .add-button" : "addElement"
     "input input" : "filterBySearch"
 
 
-  initialize : ({@collection, @addButtonText}) ->
+  initialize : ->
 
-    @listenTo(@collection, "reset", @collectionSynced)
-    @listenTo(@collection, "remove", @refresh)
-    @listenTo(@collection, "add", @afterAdd)
     @listenToOnce(@collection, "reset", @searchByHash)
+    @listenTo(@collection, "reset", @render)
+    @listenTo(this, "render", @afterRender)
 
 
-  serializeData : ->
+  goFirst : (evt) ->
+    evt?.preventDefault()
+    @collection.getFirstPage()
 
-    return {@addButtonText}
+  goLast : (evt) ->
+    evt?.preventDefault()
+    @collection.getLastPage()
 
+  goBack : (evt) ->
+    evt?.preventDefault()
+    @collection.getPreviousPage()
 
-  goFirst : ->
-
-    @collection.firstPage()
-
-
-  goLast : ->
-
-    @collection.lastPage()
-
-
-  goBack : ->
-
-    @collection.prevPage()
+  goNext : (evt) ->
+    evt?.preventDefault()
+    @collection.getNextPage()
 
 
-  goNext : ->
-
-    @collection.nextPage()
-
-
-  goToPage : (evt) ->
-
-    evt.preventDefault()
+  handleClickPage : (evt) ->
+    evt?.preventDefault()
     page = $(evt.target).text()
-    @collection.goTo(page)
+    @collection.getPage(parseInt(page) - 1)
+
+  goToPage : (page) ->
+    @collection.getPage(page)
 
 
   addElement : ->
-
     app.vent.trigger("paginationView:addElement")
 
 
   filterBySearch : ->
 
-    # Only enable filtering after the collection has data
-    if @collection.origModels
+    # implement actually filtering on the collection in each respective view
+    # in order to set correct fields for filtering
+    filterQuery = @ui.inputSearch.val()
+    app.vent.trigger("paginationView:filter", filterQuery)
 
-      # implement actually filtering on the collection in each respective view
-      # in order to set correct fields for filtering
-      filterQuery = @ui.inputSearch.val()
-      app.vent.trigger("paginationView:filter", filterQuery)
-
-      @ui.inputSearch.focus()
-      @ui.inputSearch.val(filterQuery)
+    @ui.inputSearch.focus()
+    @ui.inputSearch.val(@collection.state.filterQuery)
 
 
-  collectionSynced : (evt) ->
+  afterRender : ->
 
-    @templateHelpers.Pagination = @collection.info()
-    @render()
-
-
-  refresh : ->
-
-    @collection.pager()
-
-
-  afterAdd : ->
-
-    @refresh()
-    @goLast()
+    @ui.inputSearch.val(@collection.state.filterQuery)
 
 
   searchByHash : ->

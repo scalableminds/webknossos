@@ -1,8 +1,7 @@
 Backbone       = require("backbone")
 constants      = require("oxalis/constants")
-KeyboardJS     = require("keyboard")
-GamepadJS      = require("gamepad")
-JQ_MOUSE_WHEEL = require("jquery.mousewheel")
+KeyboardJS     = require("keyboardjs")
+
 
 Input = {}
 # This is the main Input implementation.
@@ -11,7 +10,6 @@ Input = {}
 # So far we provide the following input methods:
 # * Mouse
 # * Keyboard
-# * Gamepad
 # * MotionSensor / Gyroscope
 
 # Each input method is contained in its own module. We tried to
@@ -44,17 +42,20 @@ class Input.KeyboardNoLoop
       return (eventHasCtrl and not bindingHasCtrl) or
         (eventHasShift and not bindingHasShift)
 
-    binding = KeyboardJS.on(key,
+    binding = [key,
       (event) =>
         callback(event) unless $(":focus").length or shouldIgnore(event)
         return
-    )
+    ]
+
+    KeyboardJS.bind(binding...)
+
     @bindings.push(binding)
 
 
   unbind : ->
 
-    binding.clear() for binding in @bindings
+    KeyboardJS.unbind(binding...) for binding in @bindings
     return
 
 
@@ -77,8 +78,18 @@ class Input.Keyboard
 
   attach : (key, callback) ->
 
-    binding = KeyboardJS.on(
-      key
+    # Workaround: KeyboardJS fires event for "C" even if you press
+    # "Ctrl + C".
+    shouldIgnore = (event) ->
+      bindingHasCtrl  = key.toLowerCase().indexOf("ctrl") != -1
+      bindingHasShift = key.toLowerCase().indexOf("shift") != -1
+      eventHasCtrl  = event.ctrl or event.metaKey
+      eventHasShift = event.shiftKey
+      return (eventHasCtrl and not bindingHasCtrl) or
+        (eventHasShift and not bindingHasShift)
+
+
+    binding = [key,
       (event) =>
         # When first pressed, insert the callback into
         # keyCallbackMap and start the buttonLoop.
@@ -90,7 +101,7 @@ class Input.Keyboard
 
         returnValue = undefined
 
-        unless @keyCallbackMap[key]? or $(":focus").length
+        unless @keyCallbackMap[key]? or $(":focus").length or shouldIgnore(event)
 
           callback(1, true)
           # reset lastTime
@@ -115,7 +126,10 @@ class Input.Keyboard
           delete @keyCallbackMap[key]
 
         return
-    )
+    ]
+
+    KeyboardJS.bind(binding...)
+
     @bindings.push(binding)
 
 
@@ -140,7 +154,7 @@ class Input.Keyboard
 
   unbind : ->
 
-    binding.clear() for binding in @bindings
+    KeyboardJS.unbind(binding...) for binding in @bindings
     return
 
 
@@ -201,7 +215,7 @@ class Input.Mouse
       "mousedown" : @mouseDown
       "mouseenter" : @mouseEnter
       "mouseleave" : @mouseLeave
-      "mousewheel" : @mouseWheel
+      "wheel" : @mouseWheel
 
     @on(initialBindings)
     @attach = @on
@@ -217,7 +231,7 @@ class Input.Mouse
       "mousedown" : @mouseDown
       "mouseenter" : @mouseEnter
       "mouseleave" : @mouseLeave
-      "mousewheel" : @mouseWheel
+      "wheel" : @mouseWheel
 
 
   isHit : (event) ->
@@ -300,9 +314,10 @@ class Input.Mouse
     return event.which != 0
 
 
-  mouseWheel : (event, delta) =>
+  mouseWheel : (event) =>
 
     event.preventDefault()
+    delta = event.originalEvent.wheelDeltaY
     if event.shiftKey
       @trigger("scroll", delta, "shift")
     else if event.altKey
@@ -392,111 +407,5 @@ class Input.Deviceorientation
         callback?(distance)
 
       setTimeout( (=> @buttonLoop()), @delay )
-
-
-# Last but not least, the gamepad module.
-# The current gamepad API for the browser forces us
-# to constantly poll the Gamepad object to evaluate
-# the state of a button.
-# In order to abstract the gamepad from different vendors,
-# operation systems and browsers we rely on the GamepadJS lib.
-# All "thumb sticks" return values -1...1 whereas all other buttons
-# return 0 or 1.
-
-class Input.Gamepad
-
-  # http://robhawkes.github.com/gamepad-demo/
-  # https://github.com/jbuck/input.js/
-  # http://www.gamepadjs.com/
-
-  DEADZONE : 0.35
-  SLOWDOWN_FACTOR : 20
-
-  gamepad : null
-  delay :  1000 / 30
-  buttonCallbackMap : {}
-  buttonNameMap :
-    "ButtonA" : "faceButton0"
-    "ButtonB" : "faceButton1"
-    "ButtonX" : "faceButton2"
-    "ButtonY" : "faceButton3"
-    "ButtonStart"  : "start"
-    "ButtonSelect" : "select"
-
-    "ButtonLeftTrigger"  : " leftShoulder0"
-    "ButtonRightTrigger" : "rightShoulder0"
-    "ButtonLeftShoulder" : "leftShoulder1"
-    "ButtonRightShoulder": "rightShoulder1"
-
-    "ButtonUp"    : "dpadUp"
-    "ButtonDown"  : "dpadDown"
-    "ButtonLeft"  : "dpadLeft"
-    "ButtonRight" : "dpadRight"
-
-    "ButtonLeftStick"  : "leftStickButton"
-    "ButtonRightStick" : "rightStickButton"
-    "LeftStickX" : "leftStickX"
-    "LeftStickY" : "leftStickY"
-    "RightStickX": "rightStickX"
-    "RightStickY": "rightStickY"
-
-
-  constructor : (bindings) ->
-
-    if GamepadJS.supported
-
-      for own key, callback of bindings
-        @attach( @buttonNameMap[key] , callback )
-      _.defer => @gamepadLoop()
-
-    else
-     console.log "Your browser does not support gamepads!"
-
-
-  attach : (button, callback)  ->
-
-      @buttonCallbackMap[button] = callback
-
-
-  unbind : ->
-
-    @buttonCallbackMap = null
-
-
-  gamepadLoop : ->
-    # actively poll the state of gameoad object as returned
-    # by the GamepadJS library.
-
-    #stops the loop caused by unbind
-    return unless @buttonCallbackMap
-
-    _pad = GamepadJS.getStates()
-    @gamepad = _pad[0]
-
-    if @gamepad?
-      for button, callback of @buttonCallbackMap
-        unless @gamepad[button] == 0
-          # axes
-          if button in ["leftStickX", "rightStickX"]
-            value = @gamepad[button]
-            callback -@filterDeadzone(value)
-
-          else if button in ["leftStickY", "rightStickY"]
-                  value = @gamepad[button]
-                  callback @filterDeadzone(value)
-          #buttons
-          else
-            callback()
-
-
-    setTimeout( (=> @gamepadLoop()), @delay)
-
-
-  # FIXME
-  # as far as I know the gamepad.js lib already provides values for deadzones
-  filterDeadzone : (value) ->
-
-      if Math.abs(value) > @DEADZONE then value / @SLOWDOWN_FACTOR else 0
-
 
 module.exports = Input

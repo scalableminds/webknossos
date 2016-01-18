@@ -1,9 +1,9 @@
-@import (inline) "../../../public/bower_components/bootstrap/dist/css/bootstrap.css";
-@import (inline) "../../../public/bower_components/c3/c3.css";
-@import (inline) "../../../public/bower_components/bootstrap-daterangepicker/daterangepicker.css";
-@import (inline) "../../../public/bower_components/nouislider/distribute/nouislider.min.css";
-@import "../../../public/bower_components/font-awesome/less/font-awesome.less";
-@import "../../../public/bower_components/jasny-bootstrap/less/build/jasny-bootstrap.less";
+@import (inline) "../../../node_modules/bootstrap/dist/css/bootstrap.css";
+@import (inline) "../../../node_modules/c3/c3.css";
+@import (inline) "../../../node_modules/bootstrap-daterangepicker/daterangepicker.css";
+@import (inline) "../../../node_modules/nouislider/distribute/nouislider.min.css";
+@import "../../../node_modules/font-awesome/less/font-awesome.less";
+@import "../../../node_modules/jasny-bootstrap/less/build/jasny-bootstrap.less";
 
 @import "_variables.less";
 @import "admin/_user.less";
@@ -213,6 +213,11 @@ td.nowrap * {
   width: 100%;
   text-align: center;
   z-index: 101;
+
+  i.fa-spin {
+    animation: fa-spin 1s infinite linear;
+    animation-timing-function: steps(8);
+  }
 }
 
 #loader-background {
@@ -245,10 +250,6 @@ td.nowrap * {
   img {
     margin-bottom: 15px;
   }
-}
-
-#help-modal-body {
-  max-height: 800px;
 }
 
 #oxalis-header {

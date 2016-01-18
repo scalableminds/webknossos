@@ -28,6 +28,15 @@ case class Project(name: String, team: String, _owner: BSONObjectID, _id: BSONOb
   def id = _id.stringify
 
   def tasks(implicit ctx: DBAccessContext) = TaskDAO.findAllByProject(name)(GlobalAccessContext)
+
+  def status(implicit ctx: DBAccessContext) = {
+    for {
+      t <- tasks getOrElse(List.empty)
+      taskStatus <- Future.sequence(t.map(_.status))
+    } yield {
+      taskStatus.fold(CompletionStatus(0, 0, 0))(CompletionStatus.combine)
+    }
+  }
 }
 
 object Project {
@@ -47,8 +56,16 @@ object Project {
       )
     }
 
+  def projectPublicWritesWithStatus(project: Project, requestingUser: User)(implicit ctx: DBAccessContext): Future[JsObject] =
+    for {
+      status <- project.status
+      projectJson <- projectPublicWrites(project, requestingUser)
+    } yield {
+      projectJson + ("status" -> Json.toJson(status))
+    }
+
   val projectPublicReads: Reads[Project] =
-    ((__ \ 'name).read[String](Reads.minLength[String](3) keepAnd Reads.pattern("^[a-zA-Z0-9_-]*$".r, Messages("project.name.invalidChars"))) and
+    ((__ \ 'name).read[String](Reads.minLength[String](3) keepAnd Reads.pattern("^[a-zA-Z0-9_-]*$".r, "project.name.invalidChars")) and
       (__ \ 'team).read[String] and
       (__ \ 'owner).read[String](StringObjectIdReads("owner")))((name, team, owner) => Project(name, team, BSONObjectID(owner)))
 }

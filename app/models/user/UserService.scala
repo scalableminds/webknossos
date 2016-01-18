@@ -3,6 +3,7 @@ package models.user
 import play.api.Play
 import play.api.Play.current
 import oxalis.thirdparty.BrainTracing
+import play.api.libs.concurrent.Akka
 import play.api.{Logger, Application}
 import scala.concurrent.{Future, Await}
 import scala.concurrent.duration._
@@ -20,10 +21,17 @@ import play.api.libs.concurrent.Execution.Implicits._
 import models.annotation.AnnotationService
 
 object UserService extends FoxImplicits {
+  lazy val Mailer =
+    Akka.system(play.api.Play.current).actorSelection("/user/mailActor")
+
   val defaultUserEmail = Play.configuration.getString("application.authentication.defaultUser").get
 
   lazy val defaultUser = {
     UserDAO.findOneByEmail(defaultUserEmail)(GlobalAccessContext)
+  }
+
+  def removeTeamFromUsers(team: Team)(implicit ctx: DBAccessContext) = {
+    UserDAO.removeTeamFromUsers(team.name)
   }
 
   def findAll()(implicit ctx: DBAccessContext) =
@@ -54,7 +62,7 @@ object UserService extends FoxImplicits {
 
   def update(user: User, firstName: String, lastName: String, verified: Boolean, teams: List[TeamMembership], experiences: Map[String, Int])(implicit ctx: DBAccessContext) = {
     if (!user.verified && verified) {
-      Application.Mailer ! Send(DefaultMails.verifiedMail(user.name, user.email))
+      Mailer ! Send(DefaultMails.verifiedMail(user.name, user.email))
       if(user.teams.isEmpty){
         BrainTracing.register(user)
       }
@@ -68,7 +76,7 @@ object UserService extends FoxImplicits {
 
   def changePassword(user: User, newPassword: String)(implicit ctx: DBAccessContext) = {
     if (user.verified)
-      Application.Mailer ! Send(DefaultMails.changePasswordMail(user.name, user.email))
+      Mailer ! Send(DefaultMails.changePasswordMail(user.name, user.email))
 
     UserDAO.changePassword(user._id, newPassword).map { result =>
       UserCache.invalidateUser(user.id)

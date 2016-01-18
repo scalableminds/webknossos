@@ -61,6 +61,8 @@ user.login.success=You are now logged in
 user.logout.success=You have successfully logged out
 user.configuration.invalid=Couldn''t parse configuration
 user.configuration.updated=Your configuration got updated
+user.configuration.dataset.invalid=Dataset configuration is invalid
+user.configuration.dataset.updated=Dataset configuration updated
 user.experience.increased=Increased experience of {0}
 user.experience.set=Set experience of {0}
 user.experience.removed=Removed experience from {0}
@@ -76,15 +78,24 @@ dataSet.notSupplied=No data set supplied
 dataSet.name.invalid=A dataset name can only contain letters, digits and underscores
 dataSet.name.alreadyTaken=This dataset name is already in use.
 dataSet.source.notFound=The data source for the data source couldn''t be found
+dataSet.import.success=The import of the dataset was successful
 dataSet.import.failed=Failed to import the dataset
 dataSet.import.inProgress=Dataset import is in progress
 dataSet.import.notStarted=Dataset import couldn''t be started
 dataSet.upload.success=Dataset successfully uploaded
+dataSet.import.failedWithoutError=Import of dataset {0} failed
+dataSet.import.failedWithError=Import of the dataset failed with error: {0}
+dataSet.import.directoryEmpty=Import failed because the dataset directory is empty
+
+dataSource.notFound=Datasource not found on datastore server
+dataSource.import.alreadyFinished=Import of the dataset already finished
+dataSource.import.alreadyInProgress=Import of the dataset already in progress
 
 dataStore.notAvailable=Datastore not available. Please try again in a few minutes.
 
 zip.file.notFound=No or invalid ZIP file specified
 zip.file.invalid=Uploaded ZIP file invalid or corrupted
+zip.file.tooLarge=The ZIP file must not be larger than 1GB
 
 dataLayer.notFound=DataLayer not found
 dataLayer.forbidden=Access to this layer is not allowed.
@@ -134,8 +145,6 @@ role.invalid=Invalid role
 role.removed=Removed role from {0}
 role.added=Added role to {0}
 
-
-
 tracing=Annotation
 tracing.notFound=Tracing couldn''t be found
 annotation.creationFailed=Failed to create annotation
@@ -148,7 +157,7 @@ annotation.saved=Annotation got saved
 annotation.setName=Successfully named annotation
 annotation.invalidName=Annotation name is invalid
 annotation.finish.confirm=Are you sure you want to permanently finish this tracing?
-annotation.reset.success=Annoation is resetted
+annotation.reset.success=Annotation was successfully reset
 annotation.review.assignFailed=Couldn''t assign reviewee
 annotation.review.notFound=There is no review for this tracing
 annotation.review.assigned=You got assigned as reviewee
@@ -160,10 +169,9 @@ annotation.download.notAllowed=You can''t download this tracing
 annotation.notPossible=Couldn''t access annotation
 annotation.notFinishable=Before you can finish the annotation, you need to annotate something
 annotation.notInProgress=The tracing is not in progress and can''t be finished
-annotation.reset.success=Reset tracing to base was successful
 annotation.reset.failed=Couldn''t reset tracing to base
 annotation.merge.success=Merging successfully done
-annotation.dirtyState=Annotation is not up to date. YOu can''t make any changes
+annotation.dirtyState=Annotation is not up to date. You can''t make any changes
 annotation.update.impossible=This annotation can''t be updated (read only)
 
 issue.summary.notSupplied=No summary supplied

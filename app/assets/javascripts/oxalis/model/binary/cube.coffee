@@ -1,4 +1,5 @@
 Backbone = require("backbone")
+ErrorHandling = require("libs/error_handling")
 
 class Cube
 
@@ -126,7 +127,7 @@ class Cube
 
   getBucketIndexByZoomedAddress : ( address ) ->
 
-    $.assertExists(@cubes[address[3]], "Cube for given zoomStep does not exist"
+    ErrorHandling.assertExists(@cubes[address[3]], "Cube for given zoomStep does not exist"
       cubeCount: @cubes.length
       zoomStep: address[3]
       zoomStepCount: @ZOOM_STEP_COUNT
@@ -187,11 +188,11 @@ class Cube
     cube = @cubes[address[3]].data
     bucketIndex = @getBucketIndexByZoomedAddress(address)
 
-    # if the bucket does not lie inside the dataset, return true
+    # if the bucket does not lie inside the dataset, we do not want to request it and return true
     if not bucketIndex?
       return true
 
-    return cube[bucketIndex]? and not cube[bucketIndex].temporal
+    return cube[bucketIndex]? and cube[bucketIndex].requested
 
 
   isBucketLoadedByZoomedAddress : (address) ->
@@ -208,6 +209,7 @@ class Cube
     bucketIndex = @getBucketIndexByZoomedAddress(address)
     if not cube[bucketIndex]?
       cube[bucketIndex] = @LOADING_PLACEHOLDER
+    cube[bucketIndex].requested = true
 
 
   setBucketByZoomedAddress : (address, bucketData) ->
@@ -221,6 +223,7 @@ class Cube
 
       @bucketCount++
       bucketData.accessed = true
+      bucketData.requested = true
       bucketData.zoomStep = address[3]
 
       @setBucketData(cube, bucketIndex, bucketData)
@@ -245,14 +248,15 @@ class Cube
     voxelPerBucket = 1 << @BUCKET_SIZE_P * 3
     for i in [0...voxelPerBucket]
 
-      voxelData = (oldBucketData[i * @BYTE_OFFSET + j] for j in [0...@BYTE_OFFSET])
-      voxelEmpty = _.reduce(voxelData, ((memo, v) => memo and v == 0), true)
+      newVoxel = (newBucketData[i * @BYTE_OFFSET + j] for j in [0...@BYTE_OFFSET])
+      oldVoxel = (oldBucketData[i * @BYTE_OFFSET + j] for j in [0...@BYTE_OFFSET])
+      oldVoxelEmpty = _.reduce(oldVoxel, ((memo, v) => memo and v == 0), true)
 
-      unless voxelEmpty
+      if oldVoxelEmpty
         for j in [0...@BYTE_OFFSET]
-          newBucketData[i * @BYTE_OFFSET + j] = oldBucketData[i * @BYTE_OFFSET + j]
+          oldBucketData[i * @BYTE_OFFSET + j] = newBucketData[i * @BYTE_OFFSET + j]
 
-    return newBucketData
+    return oldBucketData
 
 
   setArbitraryBucketByZoomedAddress : ([bucket_x, bucket_y, bucket_z, zoomStep], bucketData) ->

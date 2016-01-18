@@ -1,6 +1,6 @@
 _              = require("lodash")
 backbone       = require("backbone")
-NestedObjModel = require("nested_obj_model")
+NestedObjModel = require("libs/nested_obj_model")
 
 class DatasetModel extends NestedObjModel
 

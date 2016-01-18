@@ -1,7 +1,6 @@
 package oxalis.annotation.handler
 
 import net.liftweb.common.Box
-import play.api.i18n.Messages
 import com.scalableminds.util.tools.TextUtils._
 import models.annotation.{AnnotationDAO, AnnotationLike, Annotation}
 import com.scalableminds.util.reactivemongo.DBAccessContext
@@ -34,7 +33,7 @@ object SavedTracingInformationHandler extends AnnotationInformationHandler with 
 
   def provideAnnotation(annotationId: String, user: Option[User])(implicit ctx: DBAccessContext): Fox[Annotation] = {
     for {
-      annotation <- AnnotationDAO.findOneById(annotationId) ?~> Messages("annotation.notFound")
+      annotation <- AnnotationDAO.findOneById(annotationId) ?~> "annotation.notFound"
     } yield {
       annotation
     }

@@ -25,13 +25,14 @@ class PullQueue
   constructor : (@dataSetName, @cube, @layer, @tracingId, @boundingBox, @connctionInfo) ->
 
     @queue = []
+    @url = "#{@layer.url}/data/datasets/#{@dataSetName}/layers/#{@layer.name}/data?cubeSize=#{1 << @cube.BUCKET_SIZE_P}&token=#{@layer.token}"
 
 
   pull : ->
     # Filter and sort queue, using negative priorities for sorting so .pop() can be used to get next bucket
     @queue = _.filter(@queue, (item) =>
-      (@boundingBox.containsBucket(item.bucket) and
-          not @cube.isBucketRequestedByZoomedAddress(item.bucket))
+      @boundingBox.containsBucket(item.bucket) and
+        not @cube.isBucketRequestedByZoomedAddress(item.bucket)
     )
     @queue = _.sortBy(@queue, (item) -> item.priority)
 
@@ -68,32 +69,39 @@ class PullQueue
     # Measuring the time until response arrives to select appropriate preloading strategy
     roundTripBeginTime = new Date()
 
-    @sendRequest(requestData)
-      .then(
+    Request.always(
+      requestData.dataPromise().then((data) =>
+        Request.sendArraybufferReceiveArraybuffer("#{@layer.url}/data/datasets/#{@dataSetName}/layers/#{@layer.name}/data?token=#{@layer.token}",
+          data : data
+          headers :
+            "Content-Type" : "multipart/mixed; boundary=#{requestData.boundary}"
+          timeout : @MESSAGE_TIMEOUT
+          compress : true
+        ).then(
+          (responseBuffer) =>
+            responseBuffer = new Uint8Array(responseBuffer)
+            @connctionInfo.log(@layer.name, roundTripBeginTime, batch.length, responseBuffer.length)
 
-        (responseBuffer) =>
+            offset = 0
 
-          @connctionInfo.log(@layer.name, roundTripBeginTime, batch.length, responseBuffer.length)
+            for bucket, i in batch
+              if bucket.fourBit
+                bucketData = @decode4bit(responseBuffer.subarray(offset, offset += (@cube.BUCKET_LENGTH >> 1)))
+              else
+                bucketData = responseBuffer.subarray(offset, offset += @cube.BUCKET_LENGTH)
 
-          offset = 0
+              @boundingBox.removeOutsideArea(bucket, bucketData)
+              @cube.setBucketByZoomedAddress(bucket, bucketData)
 
-          for bucket, i in batch
-            if bucket.fourBit
-              bucketData = @decode4bit(responseBuffer.subarray(offset, offset += (@cube.BUCKET_LENGTH >> 1)))
-            else
-              bucketData = responseBuffer.subarray(offset, offset += @cube.BUCKET_LENGTH)
-
-            @boundingBox.removeOutsideArea(bucket, bucketData)
-            @cube.setBucketByZoomedAddress(bucket, bucketData)
-
-        =>
-          for bucket in batch
-            @cube.setBucketByZoomedAddress(bucket, null)
-
-    ).always =>
-
-      @batchCount--
-      @pull()
+          =>
+            for bucket in batch
+              @cube.setBucketByZoomedAddress(bucket, null)
+        )
+      )
+      =>
+        @batchCount--
+        @pull()
+    )
 
 
   clearNormalPriorities : ->
@@ -133,24 +141,6 @@ class PullQueue
   shouldRequestFourBit : ->
 
     return @fourBit and @layer.category == "color"
-
-
-  sendRequest : (multipartData) ->
-
-    multipartData.dataPromise().then((data) =>
-      Request.send(
-        multipartData : data
-        multipartBoundary : multipartData.boundary
-        url : "#{@layer.url}/data/datasets/#{@dataSetName}/layers/#{@layer.name}/data?token=#{@layer.token}"
-        dataType : 'arraybuffer'
-        timeout : @MESSAGE_TIMEOUT
-        compress : true
-      ).then (buffer) ->
-        if buffer
-          new Uint8Array(buffer)
-        else
-          []
-    )
 
 
 module.exports = PullQueue

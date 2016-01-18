@@ -16,7 +16,7 @@ import play.api.Logger
 import models.tracing.skeleton.AnnotationStatistics
 import oxalis.view.{ResourceActionCollection, ResourceAction}
 import play.api.libs.json.Json.JsValueWrapper
-import oxalis.mvc.FilterableJson
+import oxalis.mvc.{UrlHelper, FilterableJson}
 import com.scalableminds.util.mvc.Formatter
 import org.joda.time.format.DateTimeFormat
 
@@ -75,7 +75,7 @@ trait AnnotationLike extends AnnotationStatistics {
   def saveToDB(implicit ctx: DBAccessContext): Fox[AnnotationLike]
 }
 
-object AnnotationLike extends FoxImplicits with FilterableJson{
+object AnnotationLike extends FoxImplicits with FilterableJson with UrlHelper{
 
   def stateLabel(annotation: AnnotationLike, user: Option[User]) = {
     annotation.state match {
@@ -101,7 +101,7 @@ object AnnotationLike extends FoxImplicits with FilterableJson{
       "restrictions" +> AnnotationRestrictions.writeAsJson(a.restrictions, user),
       "actions" +> a.actions(user),
       "formattedHash" +> Formatter.formatHash(a.id),
-      "downloadUrl" +> a.relativeDownloadUrl.map(Application.toAbsoluteUrl),
+      "downloadUrl" +> a.relativeDownloadUrl.map(toAbsoluteUrl),
       "content" +> a.content.flatMap(AnnotationContent.writeAsJson(_)).getOrElse(JsNull),
       "contentType" +> a.content.map(_.contentType).getOrElse(""),
       "dataSetName" +> a.dataSetName

@@ -3,10 +3,13 @@ Backbone = require("backbone")
 
 class UserModel extends Backbone.Model
 
-  urlRoot : ->
+  defaults:
+    firstName : ""
+    lastName : ""
 
-    if @get("id")
-      return "/api/users/"
+  url : ->
+    if userID = @get("userID")
+      return "/api/users/#{userID}"
     else
       return "/api/user"
 
@@ -14,5 +17,10 @@ class UserModel extends Backbone.Model
   initialize : (options) ->
 
     @set("id", options.id)
+
+    # If we don't have a user ID, there is nothing to do and we trigger the
+    # right events to the keep the control flow going
+    unless @get("id")
+      @trigger("sync")
 
 module.exports = UserModel

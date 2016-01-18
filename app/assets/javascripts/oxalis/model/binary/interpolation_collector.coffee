@@ -116,10 +116,18 @@ subPointMacro = _.template(
     <%= output %> = bucket[pointIndex];
 
   } else {
+    if(bucketIndex < buckets.length && missingBuckets.length < 100) {
+
+      missingBuckets.push([
+        Math.floor(bucketIndex / sizeZY),
+        Math.floor((bucketIndex % sizeZY) / sizeZ),
+        bucketIndex % sizeZ,
+        0
+      ])
+    }
     continue;
   }
   """
-  null
   { imports : { pointIndexMacro } }
 )
 
@@ -204,10 +212,8 @@ collectLoopMacro = _.template(
     """
     ["x", "y", "z", "buffer", "j", "buckets", "min_x", "min_y", "min_z", "max_x", "max_y", "max_z", "sizeZ", "sizeZY"]
   )
-  null
   { imports : { trilinearMacro, subPointMacro } }
 )
-
 InterpolationCollector =
   bulkCollect : new Function(
     "vertices", "buckets",
@@ -215,6 +221,7 @@ InterpolationCollector =
       """
       var buffer = new Uint8Array(vertices.length / 3);
       var accessedBuckets = [];
+      var missingBuckets = [];
       var x, y, z;
       var sub_x, sub_y, sub_z;
       var output0, output1, output2, output3, output4, output5, output6, output7, x0, y0, z0, xd, yd, zd, baseBucketIndex, basePointIndex;
@@ -253,28 +260,28 @@ InterpolationCollector =
           y = vertices[--i];
           x = vertices[--i];
 
-	  j++;
+          j++;
 
-	  <%= collectLoopMacro({
-	    x : "x", y : "y", z : "z",
-	    buffer : "buffer",
-	    j : "j", buckets : "buckets",
-	    min_x : "min_x", min_y : "min_y", min_z : "min_z",
-	    max_x : "max_x", max_y : "max_y", max_z : "max_z",
+          <%= collectLoopMacro({
+            x : "x", y : "y", z : "z",
+            buffer : "buffer",
+            j : "j", buckets : "buckets",
+            min_x : "min_x", min_y : "min_y", min_z : "min_z",
+            max_x : "max_x", max_y : "max_y", max_z : "max_z",
             sizeZ : "sizeZ", sizeZY : "sizeZY"
           }) %>
         }
       }
 
       return {
-	buffer : buffer,
-	accessedBuckets : accessedBuckets
+        buffer : buffer,
+        accessedBuckets : accessedBuckets,
+        missingBuckets : missingBuckets
       };
 
       //# sourceURL=/oxalis/model/binary/interpolation_collector/bulkCollect
       """
-      { collectLoopMacro }
-    )
+    )({collectLoopMacro})
   )
 
 

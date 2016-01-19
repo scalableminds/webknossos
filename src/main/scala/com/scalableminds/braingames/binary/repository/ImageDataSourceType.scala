@@ -56,7 +56,9 @@ object JpegDataSourceType extends DataSourceType with ImageDataSourceTypeHandler
 
 case class ImageLayer(layer: Int, width: Int, height: Int, depth: Int, bytesPerPixel: Int, images: Iterator[RawImage])
 
-case class RawImage(width: Int, height: Int, bytesPerPixel: Int, data: Array[Byte])
+case class ImageInfo(width: Int, height: Int, bytesPerPixel: Int)
+
+case class RawImage(info: ImageInfo, data: Array[Byte])
 
 case class StackInfo(boundingBox: BoundingBox, bytesPerPixel: Int)
 
@@ -118,16 +120,11 @@ trait ImageDataSourceTypeHandler extends DataSourceTypeHandler {
     }
   }
 
-  protected def extractImageInfo(images: List[Path]): Option[RawImage] = {
-    images match {
-      case head :: tail =>
-        toRawImage(head) match {
-          case Some(raw) => Some(raw)
-          case _ => extractImageInfo(tail)
-        }
-      case _ =>
-        None
-    }
+  protected def extractImageInfo(images: List[Path]): Option[ImageInfo] = {
+    images.map(toImageInfo).flatten.reduceOption(
+      (a: ImageInfo, b: ImageInfo) =>
+        ImageInfo(math.max(a.width, b.width), math.max(a.height, b.height), math.max(a.bytesPerPixel, b.bytesPerPixel))
+    )
   }
 
   def layerFromFileName(file: Path) = {
@@ -239,7 +236,22 @@ trait ImageDataSourceTypeHandler extends DataSourceTypeHandler {
           val raster = image.getRaster
           val data = (raster.getDataBuffer().asInstanceOf[DataBufferByte]).getData()
           val bytesPerPixel = imageTypeToByteDepth(image.getType)
-          Some(RawImage(image.getWidth, image.getHeight, bytesPerPixel, data))
+          Some(RawImage(ImageInfo(image.getWidth, image.getHeight, bytesPerPixel), data))
+        }
+    }
+  }
+
+  def toImageInfo(imageFile: Path): Option[ImageInfo] = {
+    PathUtils.fileOption(imageFile).flatMap {
+      file =>
+        val image = ImageIO.read(file)
+        if (image == null) {
+          logger.error("Couldn't load image file. " + ImageIO.getImageReaders(file).toList.map(_.getClass.toString))
+          //throw new Exception("Couldn't load image file due to missing reader.")
+          None
+        } else {
+          val bytesPerPixel = imageTypeToByteDepth(image.getType)
+          Some(ImageInfo(image.getWidth, image.getHeight, bytesPerPixel))
         }
     }
   }
@@ -287,8 +299,8 @@ trait ImageDataSourceTypeHandler extends DataSourceTypeHandler {
     }
 
     case class FixedSizedImage(underlying: RawImage, targetWidth: Int, targetHeight: Int, zero: Byte = 0) {
-      val uw = underlying.width
-      val uh = underlying.height
+      val uw = underlying.info.width
+      val uh = underlying.info.height
 
       def copyTo(other: Array[Byte], destPos: Int, srcPos: Int, length: Int) = {
         var i = 0
@@ -311,9 +323,9 @@ trait ImageDataSourceTypeHandler extends DataSourceTypeHandler {
     }
     private def writeTile(tile: RawImage, layerNumber: Int, files: KnossosWriterCache): Unit = {
       // number of knossos buckets in x direction
-      val xs = (tile.data.length.toFloat / bytesPerPixel / tile.height / CubeSize).ceil.toInt
+      val xs = (tile.data.length.toFloat / bytesPerPixel / tile.info.height / CubeSize).ceil.toInt
       // number of knossos buckets in y direction
-      val ys = (tile.data.length.toFloat / bytesPerPixel / tile.width / CubeSize).ceil.toInt
+      val ys = (tile.data.length.toFloat / bytesPerPixel / tile.info.width / CubeSize).ceil.toInt
 
       // the given array might not fill up the buckets at the border, but we need to make sure it does, otherwise
       // writing the data to the file would result in a bucket size less than 128
@@ -321,7 +333,7 @@ trait ImageDataSourceTypeHandler extends DataSourceTypeHandler {
 
       var windowIdx = 0
       var counter = 0
-      val tileWidthInBytes = tile.width * bytesPerPixel
+      val tileWidthInBytes = tile.info.width * bytesPerPixel
       val windowSize = CubeSize * bytesPerPixel
 
       while(windowIdx < tile.data.length){

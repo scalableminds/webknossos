@@ -17,6 +17,7 @@ import com.scalableminds.util.io.PathUtils
 import com.scalableminds.util.tools.ProgressTracking.ProgressTracker
 import com.twelvemonkeys.imageio.plugins.tiff.TIFFImageReaderSpi
 import org.apache.commons.io.FileUtils
+import net.liftweb.common.{Box, Full}
 import play.api.libs.concurrent.Execution.Implicits._
 
 import scala.collection.JavaConversions._
@@ -93,7 +94,7 @@ trait ImageDataSourceTypeHandler extends DataSourceTypeHandler {
   protected def elementClass(bytesPerPixel: Int) =
     s"uint${bytesPerPixel * 8}"
 
-  def importDataSource(unusableDataSource: UnusableDataSource, progress: ProgressTracker): Option[DataSource] = {
+  def importDataSource(unusableDataSource: UnusableDataSource, progress: ProgressTracker): Box[DataSource] = {
     val target = (unusableDataSource.sourceFolder.resolve(Target)).toAbsolutePath
 
     prepareTargetPath(target)
@@ -101,15 +102,15 @@ trait ImageDataSourceTypeHandler extends DataSourceTypeHandler {
     val layers = convertToKnossosStructure(unusableDataSource.id, unusableDataSource.sourceFolder, target, progress).toList
 
     DataSourceSettings.fromSettingsFileIn(unusableDataSource.sourceFolder) match {
-      case Some(settings) =>
-        Some(DataSource(
+      case Full(settings) =>
+        Full(DataSource(
           unusableDataSource.id,
           target.toString,
           settings.scale,
           settings.priority getOrElse 0,
           dataLayers = layers))
       case _ =>
-        Some(DataSource(
+        Full(DataSource(
           unusableDataSource.id,
           target.toString,
           DefaultScale,
@@ -175,7 +176,7 @@ trait ImageDataSourceTypeHandler extends DataSourceTypeHandler {
   }
 
   def convertToKnossosStructure(id: String, source: Path, targetRoot: Path, progress: ProgressTracker): Iterable[DataLayer] = {
-    val images = PathUtils.listFiles(source).filter(_.getFileName.toString.endsWith("." + fileExtension))
+    val images = PathUtils.listFiles(source, true).filter(_.getFileName.toString.endsWith("." + fileExtension))
 
     val layers = extractLayers(images.toList)
     val namingSchema = namingSchemaFor(layers) _
@@ -195,7 +196,7 @@ trait ImageDataSourceTypeHandler extends DataSourceTypeHandler {
         val boundingBox = BoundingBox(Point3D(0, 0, 0), layer.width, layer.height, layer.depth)
         KnossosMultiResCreator.createResolutions(target, target, id, layer.bytesPerPixel, 1, Resolutions.size, boundingBox).onFailure {
           case e: Exception =>
-            logger.error(s"An error occourd while trying to down scale target of image stack $id. ${e.getMessage}", e)
+            logger.error(s"An error occurred while trying to down scale target of image stack $id. ${e.getMessage}", e)
         }
 
         val section = DataLayerSection(layerName, layerName, Resolutions, boundingBox, boundingBox)
@@ -209,33 +210,36 @@ trait ImageDataSourceTypeHandler extends DataSourceTypeHandler {
     def convertTo(targetType: Int) = {
       logger.debug(s"Converting image from type ${image.getType} to $targetType")
       val convertedImage = new BufferedImage(
-        image.getWidth(),
-        image.getHeight(),
+        image.getWidth,
+        image.getHeight,
         targetType)
       convertedImage.setData(image.getRaster)
       convertedImage
     }
 
-    image.getType match {
-      case BufferedImage.TYPE_BYTE_INDEXED =>
-        convertTo(BufferedImage.TYPE_BYTE_GRAY)
-      case _ =>
-        image
-    }
+    if (image != null) {
+      image.getType match {
+        case BufferedImage.TYPE_BYTE_INDEXED =>
+          convertTo(BufferedImage.TYPE_BYTE_GRAY)
+        case _ =>
+          image
+      }
+    } else image
   }
 
   def toRawImage(imageFile: Path): Option[RawImage] = {
-    PathUtils.fileOption(imageFile).map {
+    PathUtils.fileOption(imageFile).flatMap {
       file =>
         val image = convertIfNecessary(ImageIO.read(file))
         if (image == null) {
           logger.error("Couldn't load image file. " + ImageIO.getImageReaders(file).toList.map(_.getClass.toString))
-          throw new Exception("Couldn't load image file due to missing reader.")
+          //throw new Exception("Couldn't load image file due to missing reader.")
+          None
         } else {
           val raster = image.getRaster
           val data = (raster.getDataBuffer().asInstanceOf[DataBufferByte]).getData()
           val bytesPerPixel = imageTypeToByteDepth(image.getType)
-          RawImage(image.getWidth, image.getHeight, bytesPerPixel, data)
+          Some(RawImage(image.getWidth, image.getHeight, bytesPerPixel, data))
         }
     }
   }

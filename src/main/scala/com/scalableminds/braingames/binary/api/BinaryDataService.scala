@@ -9,11 +9,12 @@ import java.nio.file.{Paths, Path}
 import akka.actor.ActorSystem
 import akka.agent.Agent
 import akka.actor.ActorRef
+import akka.routing.RoundRobinPool
 import com.scalableminds.braingames.binary._
+import play.api.i18n.I18nSupport
 import scala.concurrent.Future
 import akka.actor.Props
 import akka.pattern.ask
-import akka.routing.RoundRobinRouter
 import com.scalableminds.braingames.binary.watcher._
 import akka.util.Timeout
 import scala.concurrent.duration._
@@ -25,7 +26,7 @@ import com.scalableminds.braingames.binary.watcher.StartWatching
 import com.scalableminds.braingames.binary.repository.DataSourceInbox
 import com.scalableminds.util.io.PathUtils
 
-trait BinaryDataService extends DataSourceService with BinaryDataHelpers with DataLayerMappingHelpers with DataDownloadHelper{
+trait BinaryDataService extends DataSourceService with BinaryDataHelpers with DataLayerMappingHelpers with DataDownloadHelper with I18nSupport{
 
   import Logger._
 
@@ -39,7 +40,7 @@ trait BinaryDataService extends DataSourceService with BinaryDataHelpers with Da
 
   lazy implicit val executor = system.dispatcher
 
-  def dataSourceInbox = DataSourceInbox.create(dataSourceRepository, serverUrl, system)
+  lazy val dataSourceInbox = DataSourceInbox.create(dataSourceRepository, serverUrl, system)(messagesApi)
 
   lazy implicit val timeout = Timeout(config.getInt("braingames.binary.loadTimeout") seconds)
 
@@ -55,7 +56,7 @@ trait BinaryDataService extends DataSourceService with BinaryDataHelpers with Da
       dataSourceRepository)
 
     system.actorOf(props
-      .withRouter(new RoundRobinRouter(nrOfBinRequestActors)), "dataRequestActor")
+      .withRouter(new RoundRobinPool(nrOfBinRequestActors)), "dataRequestActor")
   }
 
   var repositoryWatcher: Option[ActorRef] = None

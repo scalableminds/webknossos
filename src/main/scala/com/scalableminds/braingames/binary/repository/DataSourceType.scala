@@ -4,13 +4,16 @@
 package com.scalableminds.braingames.binary.repository
 
 import java.nio.file.Path
+import javax.inject.Inject
 import com.scalableminds.braingames.binary.models.{UnusableDataSource, DataSource}
 import com.scalableminds.util.io.PathUtils
 import com.scalableminds.util.tools.ProgressTracking.ProgressTracker
+import net.liftweb.common.Box
 import play.api.Logger
+import play.api.i18n.MessagesApi
 
 trait DataSourceTypeHandler {
-  def importDataSource(unusableDataSource: UnusableDataSource, progressTracker: ProgressTracker): Option[DataSource]
+  def importDataSource(unusableDataSource: UnusableDataSource, progressTracker: ProgressTracker): Box[DataSource]
 }
 
 trait DataSourceTypeGuesser {
@@ -21,16 +24,17 @@ trait DataSourceTypeGuesser {
   def chanceOfInboxType(filelist: Stream[Path]) = {
     filelist
       .take(MaxNumberOfFilesForGuessing)
-      .filter(_.getFileName.toString.endsWith(fileExtension))
-      .size.toFloat / MaxNumberOfFilesForGuessing
+      .count(_.getFileName.toString.endsWith(fileExtension))
+      .toFloat / MaxNumberOfFilesForGuessing
   }
 }
 
-object DataSourceTypeGuessers extends DataSourceTypes{
+class DataSourceTypeGuessers(val messagesApi: MessagesApi) {
+  val types = List(new KnossosDataSourceType(messagesApi), TiffDataSourceType, PngDataSourceType, JpegDataSourceType)
+  
   def lazyFileFinder(source: Path, excludeDirs: Seq[String]): Stream[Path] = {
     Logger.trace(s"accessing files of $source")
-    Option(PathUtils.listFiles(source)).getOrElse(Nil)
-      .toStream #::: {
+    PathUtils.listFiles(source).toStream #::: {
       if (source.toFile.isDirectory && !excludeDirs.contains(source.getFileName.toString) && !source.toFile.isHidden) {
         Logger.trace(s"accessing direc of $source")
         PathUtils.listDirectories(source).toStream.flatMap(d => lazyFileFinder(d, excludeDirs))
@@ -44,10 +48,6 @@ object DataSourceTypeGuessers extends DataSourceTypes{
     val paths = lazyFileFinder(source, Seq("target"))
     types.maxBy(_.chanceOfInboxType(paths))
   }
-}
-
-trait DataSourceTypes{
-  val types = List(KnossosDataSourceType, TiffDataSourceType, PngDataSourceType, JpegDataSourceType)
 }
 
 trait DataSourceType extends DataSourceTypeGuesser with DataSourceTypeHandler {

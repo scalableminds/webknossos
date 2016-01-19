@@ -7,6 +7,7 @@ import java.nio.file.Path
 
 import com.scalableminds.util.io.PathUtils
 import com.scalableminds.util.tools.{Fox, InProgress, FoxImplicits, ProgressTracking}
+import play.api.i18n.{I18nSupport, Messages}
 import com.scalableminds.braingames.binary.models.{FiledDataSource, UnusableDataSource, UsableDataSource}
 import play.api.libs.json.Json
 import org.apache.commons.io.FileUtils
@@ -15,7 +16,7 @@ import com.scalableminds.util.tools.InProgress
 import net.liftweb.common.{Empty, Full, Failure}
 import play.api.libs.concurrent.Execution.Implicits._
 
-trait DataSourceInboxHelper extends ProgressTracking with FoxImplicits with LockKeeperHelper{
+trait DataSourceInboxHelper extends ProgressTracking with FoxImplicits with LockKeeperHelper with I18nSupport{
 
   val DataSourceJson = "datasource.json"
 
@@ -48,7 +49,7 @@ trait DataSourceInboxHelper extends ProgressTracking with FoxImplicits with Lock
     withLock(unusableDataSource.sourceFolder){
       clearAllTrackers(importTrackerId(unusableDataSource.id))
       cleanUp(unusableDataSource.sourceFolder)
-      DataSourceTypeGuessers.guessRepositoryType(unusableDataSource.sourceFolder)
+      new DataSourceTypeGuessers(messagesApi).guessRepositoryType(unusableDataSource.sourceFolder)
         .importDataSource(unusableDataSource, progressTrackerFor(importTrackerId(unusableDataSource.id)))
         .toFox
         .flatMap {
@@ -59,18 +60,18 @@ trait DataSourceInboxHelper extends ProgressTracking with FoxImplicits with Lock
       }.futureBox.map{
         case Full(r) =>
           logger.info("Datasource import finished for " + unusableDataSource.id)
-          finishTrackerFor(importTrackerId(unusableDataSource.id), true)
           Full(r.toUsable(serverUrl))
         case _ =>
           logger.warn("Datasource import failed for " + unusableDataSource.id)
-          finishTrackerFor(importTrackerId(unusableDataSource.id), false)
-          Empty
+          Failure(Messages("dataSet.import.failedWithoutError", unusableDataSource.id))
       }.toFox
     }.flatMap(x => x).futureBox.recover {
       case e: Exception =>
         logger.error("Failed to import dataset: " + e.getMessage, e)
-        finishTrackerFor(importTrackerId(unusableDataSource.id), false)
-        Failure("Failed to import dataset.", Full(e), Empty)
+        Failure(Messages("dataSet.import.failedWithError", e.getMessage), Full(e), Empty)
+    }.map{ result =>
+      finishTrackerFor(importTrackerId(unusableDataSource.id), result.map(_ => true))
+      result
     }
   }
 }

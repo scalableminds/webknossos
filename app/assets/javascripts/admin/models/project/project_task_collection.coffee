@@ -1,6 +1,7 @@
 _        = require("lodash")
 backbone = require("backbone")
 utils    = require("libs/utils")
+moment   = require("moment")
 
 class ProjectTaskCollection extends Backbone.Collection
 

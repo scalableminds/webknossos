@@ -28,7 +28,7 @@
   flex-direction: column;
   margin: 10px;
   overflow: hidden;
-  height: calc(100vh ~"-" @navbar-height ~"-" 20px); // 20px = 2 * 10px margin
+  height: calc(100vh ~"-" @navbar-height ~"-" 20px ~"-" @action-bar-height); // 20px = 2 * 10px margin
 
   .tab-pane {
     min-height: 100px;
@@ -50,6 +50,7 @@
 #right-menu {
 
   .tab-menu;
+  padding: 10px 0px;
   width: 351px; // will be set dynamically in JS
 
   .nav-tabs {

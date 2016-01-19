@@ -3,19 +3,21 @@
  */
 package com.scalableminds.datastore.controllers
 
+import javax.inject.Inject
+
 import play.api._
 import play.api.Play.current
 import play.api.libs.concurrent._
 import play.api.libs.json._
 import com.scalableminds.util.geometry.Point3D
-import play.api.i18n.Messages
+import play.api.i18n.{I18nSupport, MessagesApi, Messages}
 import com.scalableminds.braingames.binary.models._
 import com.scalableminds.datastore.models._
 import com.scalableminds.braingames.binary._
 import com.scalableminds.util.reactivemongo.DBAccessContext
 import com.scalableminds.util.tools.{FoxImplicits, Fox}
 import play.api.libs.ws.WS
-import play.api.mvc.{SimpleResult, Action}
+import play.api.mvc.Action
 import com.scalableminds.braingames.binary.DataRequestSettings
 import com.scalableminds.braingames.binary.MappingRequest
 import scala.concurrent.Future
@@ -35,13 +37,14 @@ import play.api.libs.iteratee.Enumerator
 import com.scalableminds.datastore.models.DataProtocol
 import net.liftweb.common._
 
-object BinaryDataController
+class BinaryDataController @Inject() (val messagesApi: MessagesApi)
   extends BinaryDataReadController
   with BinaryDataWriteController
   with BinaryDataDownloadController
   with BinaryDataMappingController
 
-trait BinaryDataCommonController extends Controller with FoxImplicits {
+trait BinaryDataCommonController extends Controller with FoxImplicits with I18nSupport{
+
   protected def getDataSourceAndDataLayer(dataSetName: String, dataLayerName: String): Fox[(DataSource, DataLayer)] = {
     for {
       usableDataSource <- DataSourceDAO.findUsableByName(dataSetName) ?~> Messages("dataSource.unavailable")
@@ -56,7 +59,7 @@ trait BinaryDataCommonController extends Controller with FoxImplicits {
 
   case class TokenSecuredAction(dataSetName: String, dataLayerName: String) extends ActionBuilder[Request] {
 
-    def invokeBlock[A](request: Request[A], block: (Request[A]) => Future[SimpleResult]) = {
+    def invokeBlock[A](request: Request[A], block: (Request[A]) => Future[Result]) = {
 
       hasUserAccess(request).flatMap {
         case true =>
@@ -124,7 +127,7 @@ trait BinaryDataReadController extends BinaryDataCommonController {
     implicit request =>
       AllowRemoteOrigin {
         for {
-          requests <- validateRequests(request.body).toFox
+          requests <- validateRequests(request.body.files.map(_.ref)).toFox
           data <- requestData(dataSetName, dataLayerName, requests)
         } yield {
           Ok(data)
@@ -392,7 +395,7 @@ trait BinaryDataWriteController extends BinaryDataCommonController {
         for {
           (dataSource, dataLayer) <- getDataSourceAndDataLayer(dataSetName, dataLayerName)
           if (dataLayer.isWritable)
-          requests <- validateRequests(request.body, dataLayer).toFox
+          requests <- validateRequests(request.body.files.map(_.ref), dataLayer).toFox
           dataRequestCollection = createRequestCollection(dataSource, dataLayer, requests)
           _ <- DataStorePlugin.binaryDataService.handleDataRequest(dataRequestCollection) ?~> "Data request couldn't get handled"
         } yield Ok

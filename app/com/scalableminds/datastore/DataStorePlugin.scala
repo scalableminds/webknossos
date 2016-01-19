@@ -3,25 +3,34 @@
  */
 package com.scalableminds.datastore
 
-import play.api.{Play, Logger, Plugin}
-import com.scalableminds.datastore.services.{DataSourceRepository, BinaryDataService}
-import scala.concurrent.duration._
-import akka.actor.{ActorSystem, PoisonPill, Props}
+import javax.inject.Inject
 
-class DataStorePlugin(app: play.api.Application) extends Plugin {
+import akka.actor.ActorSystem
+import com.scalableminds.braingames.binary.Logger
+import com.scalableminds.datastore.services.{BinaryDataService, DataSourceRepository}
+import play.api.i18n.MessagesApi
+import play.api.{Play, Plugin}
+
+class DataStorePlugin @Inject()(implicit app: play.api.Application, messagesApi: MessagesApi) extends Plugin {
 
   implicit val system = ActorSystem("datastore")
 
-  val dataSourceRepository = new DataSourceRepository
+  lazy val dataSourceRepository = new DataSourceRepository
 
-  val binaryDataService = new BinaryDataService(dataSourceRepository)
+  lazy val binaryDataService = new BinaryDataService(dataSourceRepository)(messagesApi)
 
   override def onStart() {
-    binaryDataService.start()
+    try {
+      binaryDataService.start()
+    } catch {
+      case e: Exception =>
+        Logger.logger.error("EXCEPTION ON DataStorePlugin START: " + e.getMessage)
+      
+    }
   }
 
   override def onStop() {
-    system.shutdown()
+    system.terminate()
   }
 }
 

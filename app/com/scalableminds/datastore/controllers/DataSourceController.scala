@@ -4,6 +4,7 @@
 package com.scalableminds.datastore.controllers
 
 import java.nio.file.Path
+import javax.inject.Inject
 
 import net.liftweb.common.Failure
 import play.api.Logger
@@ -15,22 +16,22 @@ import com.scalableminds.datastore.services.{DataSourceRepository, BinaryDataSer
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.mvc.Action
 import scala.concurrent.Future
-import play.api.i18n.Messages
+import play.api.i18n.{MessagesApi, Messages}
 import com.scalableminds.datastore.DataStorePlugin
 import com.scalableminds.datastore.models.DataSourceDAO
 import com.scalableminds.braingames.binary.models.DataSourceUpload
 import java.io.{File, ByteArrayInputStream, FileOutputStream}
 import java.nio.file.Paths
-import org.apache.commons.io.FileUtils
-import java.util.zip._
+import org.apache.commons.io.{FileUtils, IOUtils}
 import com.scalableminds.util.io.ZipIO
 import play.api.Play
 import com.scalableminds.util.io.PathUtils
 import com.scalableminds.braingames.binary.models._
 import net.liftweb.common.{Box, Empty, Full, Failure}
 import java.io._
+import play.api.Logger
 
-object DataSourceController extends Controller {
+class DataSourceController @Inject() (val messagesApi: MessagesApi) extends Controller {
 
   lazy val config = Play.current.configuration.underlying
 
@@ -40,11 +41,16 @@ object DataSourceController extends Controller {
         "operation" -> "import",
         "status" -> "inProgress",
         "progress" -> p))
-    case Finished(success) =>
+    case Finished(Full(_)) | Finished(Empty) =>
       JsonOk(Json.obj(
         "operation" -> "import",
-        "status" -> (if (success) "finished" else "failed"),
-        "progress" -> 1))
+        "status" -> "finished",
+        "progress" -> 1), Seq(jsonSuccess -> Messages("dataSet.import.success")))
+    case Finished(Failure(msg, _,_)) =>
+      JsonOk(Json.obj(
+        "operation" -> "import",
+        "status" -> "failed",
+        "progress" -> 1), Seq(jsonError -> msg))
     case NotStarted =>
       JsonOk(Json.obj(
         "operation" -> "import",
@@ -79,51 +85,40 @@ object DataSourceController extends Controller {
   } 
 
   private def unzipDataSource(baseDir: Path, filePath: String): Box[Unit] = {
-    val zip = new ZipInputStream(new FileInputStream(filePath))
-    var entry: ZipEntry = zip.getNextEntry()
-
-    if(entry == null) {
-      return Empty
-    }
-
-    while(entry != null) {
-      val path = baseDir.resolve(entry.getName)
-      if(!entry.getName().matches("[._].*")) {
-        if(entry.isDirectory) {
-          PathUtils.ensureDirectory(path)
-        } else {
-          val out = new FileOutputStream(path.toFile)
-
-          val buffer = Array.fill(4096)(0.toByte)
-          var bytesRead = zip.read(buffer)
-          while(bytesRead != -1) {
-            out.write(buffer, 0, bytesRead)
-            bytesRead = zip.read(buffer)
-          }
-
+    try {
+      Logger.warn(s"Unzipping uploaded dataset: $filePath")
+      ZipIO.unzipWithFilenames(new File(filePath)).map{
+        case (name, in) =>
+          val path = baseDir.resolve(Paths.get(name))
+          if (path.getParent() != null)
+            PathUtils.ensureDirectory(path.getParent())
+          val out = new FileOutputStream(new File(path.toString))
+          IOUtils.copy(in, out)
+          in.close()
           out.close()
-        }
+        case _ =>
       }
-
-      zip.closeEntry()
-      entry = zip.getNextEntry()      
+      Full(Unit)
+    } catch {
+      case e: Exception =>
+        Logger.warn(s"Error unzipping uploaded dataset at $filePath: ${e.toString}")
+        Failure(Messages("zip.file.invalid"))
     }
-
-    zip.close()
-    Full()
   }
 
   def upload() = Action.async(parse.json) {
     implicit request =>
+      Logger.warn("Dataset upload to store called.")
       request.body.validate[DataSourceUpload] match {
         case JsSuccess(upload, _) =>
           val baseDir = Paths.get(config.getString("braingames.binary.baseFolder")).resolve(upload.team).resolve(upload.name)
+          Logger.warn(s"Uploading dataset into '$baseDir'")
           PathUtils.ensureDirectory(baseDir)
           upload.settings.map(DataSourceSettings.writeSettingsToFile(_,
             DataSourceSettings.settingsFileInFolder(baseDir)))
           
           (for {
-            _ <- unzipDataSource(baseDir, upload.filePath).toFox ?~> Messages("zip.file.invalid")
+            _ <- unzipDataSource(baseDir, upload.filePath).toFox
             dataSource = DataStorePlugin.binaryDataService.dataSourceInbox.handler.dataSourceFromFolder(baseDir, upload.team)
             importingDataSource <- DataStorePlugin.binaryDataService.dataSourceInbox.importDataSource(dataSource)
             usableDataSource <- importingDataSource

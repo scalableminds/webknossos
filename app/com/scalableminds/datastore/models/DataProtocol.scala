@@ -4,10 +4,10 @@
 package com.scalableminds.datastore.models
 
 import play.api.libs.json._
-import play.api.mvc.BodyParsers
+import play.api.mvc.BodyParsers._
 import play.api.mvc.MultipartFormData._
+import play.core.parsers.Multipart.PartHandler
 import play.api.libs.iteratee._
-import play.api.mvc.BodyParsers.parse
 import play.api.libs.concurrent.Execution.Implicits._
 import net.liftweb.common._
 
@@ -38,6 +38,8 @@ object DataProtocol {
       }
   }
 
+  def filePart[A](ref: A) = FilePart("", "", None, ref)
+
   def parseReadHeader(header: Option[String]): Box[DataProtocolReadRequest] = {
     for {
       bucket <- Box(header) ?~ "X-Bucket header is missing."
@@ -52,21 +54,24 @@ object DataProtocol {
   }
 
   def readRequestIteratee(request: DataProtocolReadRequest) = {
-    Cont[Array[Byte], Box[DataProtocolReadRequest]] {
+    Cont[Array[Byte], FilePart[Box[DataProtocolReadRequest]]] {
       case Input.El(Array()) =>
-        Done(Full(request), Input.Empty)
+        Done(filePart(Full(request)), Input.Empty)
       case _ =>
-        Done(Failure("Found unexpected data."), Input.Empty)
+        Done(filePart(Failure("Found unexpected data.")), Input.Empty)
     }
   }
 
-  val readRequestParser = parse.Multipart.multipartParser {
-    headers =>
+
+  val readRequestParser = parse.multipartFormData(new PartHandler[FilePart[Box[DataProtocolReadRequest]]]{
+    def apply(headers: Map[String, String]) = {
       parseReadHeader(headers.get("x-bucket")) match {
         case Full(r) => readRequestIteratee(r)
-        case f: Failure => Done[Array[Byte], Box[DataProtocolReadRequest]](f, Input.Empty)
+        case f: Failure => Done[Array[Byte], FilePart[Box[DataProtocolReadRequest]]](filePart(f), Input.Empty)
       }
-  }
+    }
+    def isDefinedAt(headers: Map[String, String]) = true
+  })
 
   def parseWriteHeader(header: Option[String]): Box[DataProtocolWriteRequestHeader] = {
     for {
@@ -81,23 +86,25 @@ object DataProtocol {
     }
   }
 
-  def writeRequestIteratee(header: DataProtocolWriteRequestHeader): Iteratee[Array[Byte], Box[DataProtocolWriteRequest]] = {
-    Iteratee.fold[Array[Byte], Box[DataProtocolWriteRequest]](Full(DataProtocolWriteRequest(header, Array.empty))) {
-      (box, data) =>
-        box match {
+  def writeRequestIteratee(header: DataProtocolWriteRequestHeader): Iteratee[Array[Byte], FilePart[Box[DataProtocolWriteRequest]]] = {
+    Iteratee.fold[Array[Byte], FilePart[Box[DataProtocolWriteRequest]]](filePart(Full(DataProtocolWriteRequest(header, Array.empty)))) {
+      (part, data) =>
+        part.ref match {
           case Full(request) =>
-            Full(DataProtocolWriteRequest(request.header, Array.concat(request.data, data)))
+            filePart(Full(DataProtocolWriteRequest(request.header, Array.concat(request.data, data))))
           case _ =>
-            box
+            part
         }
     }
   }
 
-  val writeRequestParser = parse.Multipart.multipartParser {
-    headers =>
+  val writeRequestParser = parse.multipartFormData(new PartHandler[FilePart[Box[DataProtocolWriteRequest]]]{
+    def apply(headers: Map[String, String]) = {
       parseWriteHeader(headers.get("x-bucket")) match {
         case Full(r) => writeRequestIteratee(r)
-        case f: Failure => Done[Array[Byte], Box[DataProtocolWriteRequest]](f, Input.Empty)
+        case f: Failure => Done[Array[Byte], FilePart[Box[DataProtocolWriteRequest]]](filePart(f), Input.Empty)
       }
-  }
+    }
+    def isDefinedAt(headers: Map[String, String]) = true
+  })
 }

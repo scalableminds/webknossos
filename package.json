@@ -33,7 +33,7 @@
     "chokidar": "^1.4.1"
   },
   "scripts": {
-    "install": "napa georgwiese/three.js"
+    "install": "napa georgwiese/three.js#scm_oxalis:three.js"
   },
   "peerDependencies": {
     "backbone": "^1.2.3"

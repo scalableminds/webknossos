@@ -15,35 +15,36 @@ class PlaneUserSettingsView extends SettingsView
   modelName : "user"
 
 
-  subviewCreators :
+  subviewCreatorsList : [
+    [
+      "controls-category", ->
+        return new ControlsCategoryView({ @model })
+    ]
 
-    "controls-category" : ->
+    [
+      "viewport-category", ->
+        return new ViewportCategoryView({ @model })
+    ]
 
-      return new ControlsCategoryView({ @model })
+    [
+      "tdview-category", ->
+        return new TDViewCategoryView({ @model })
+    ]
 
+    [
+      "isosurface-category", ->
+        return new IsosurfaceCategoryView({ @model })
+    ]
 
-    "viewport-category" : ->
+    [
+      "segmentation-category", ->
+        return new SegmentationCategoryView({ @model })
+    ]
 
-      return new ViewportCategoryView({ @model })
-
-
-    "tdview-category" : ->
-
-      return new TDViewCategoryView({ @model })
-
-
-    "isosurface-category" : ->
-
-      return new IsosurfaceCategoryView({ @model })
-
-
-    "segmentation-category" : ->
-
-      return new SegmentationCategoryView({ @model })
-
-
-    "abstracttree-category" : ->
-
-      return new AbstractTreeCategoryView({ @model })
+    [
+      "abstracttree-category", ->
+        return new AbstractTreeCategoryView({ @model })
+    ]
+  ]
 
 module.exports = PlaneUserSettingsView

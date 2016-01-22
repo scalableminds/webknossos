@@ -41,12 +41,14 @@ class CategoryView extends Marionette.ItemView
 
     unless @subviewCreatorsList?
       throw new Error(
-          "Subclasses of CategoryView must specify subviewCreatorsList")
+        "Subclasses of CategoryView must specify subviewCreatorsList")
 
     # subviewCreators hash needed for Subviews extension
-    @subviewCreators = {}
-    for [key, value] in @subviewCreatorsList
-      @subviewCreators[key] = value
+    @subviewCreators = _.transform(
+      @subviewCreatorsList
+      (result, [key, value]) -> result[key] = value
+      {}
+    )
 
     Subviews.add(this)
 

@@ -161,7 +161,6 @@ class PaginationCollection
 
 
   _reset : ->
-    console.log("reset")
     @_resetModels()
     @models = @currentModels.slice(
       @state.currentPage * @state.pageSize,

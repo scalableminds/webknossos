@@ -48,9 +48,9 @@ class DatasetActionsView extends Marionette.ItemView
   finishTracing : (evt) ->
 
     evt.preventDefault()
-    @saveTracing().then(=>
+    @saveTracing().then( =>
       if confirm("Are you sure you want to permanently finish this tracing?")
-        window.location.href = evt.currentTarget.href
+        app.router.loadURL(evt.currentTarget.href)
     )
 
 

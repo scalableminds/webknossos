@@ -5,11 +5,12 @@ import oxalis.security.AuthenticatedRequest
 import oxalis.view.ProvidesSessionData
 import com.scalableminds.util.mvc.ExtendedController
 import models.user.User
-import net.liftweb.common.{Failure, Full}
+import net.liftweb.common.{ParamFailure, Box, Failure, Full}
 import play.api.i18n.{MessagesApi, I18nSupport, Messages}
 import models.binary.DataSet
-import com.scalableminds.util.tools.Converter
+import com.scalableminds.util.tools.{Fox, Converter}
 import play.api.libs.json._
+import scala.concurrent.ExecutionContext.Implicits.global
 
 trait Controller extends PlayController
 with ExtendedController
@@ -19,7 +20,7 @@ with I18nSupport
 {
   def messagesApi: MessagesApi
 
-  implicit def AuthenticatedRequest2Request[T](r: AuthenticatedRequest[T]) =
+  implicit def AuthenticatedRequest2Request[T](r: AuthenticatedRequest[T]): Request[T] =
     r.request
 
   def ensureTeamAdministration(user: User, team: String) = {
@@ -71,4 +72,23 @@ with I18nSupport
         }
       )
     )
+
+  def bulk2StatusJson(futureResults: List[Fox[String]]) = {
+    def singleResult2Status(e: Box[String]) =
+      e match {
+        case Full(s)                                 =>
+          Json.obj("status" -> OK, jsonSuccess -> s)
+        case ParamFailure(msg, _, _, errorCode: Int) =>
+          Json.obj("status" -> errorCode, jsonError -> msg)
+        case Failure(msg, _, _)                      =>
+          Json.obj("status" -> BAD_REQUEST, jsonError -> msg)
+      }
+    Fox.sequence(futureResults).map { results =>
+      val successful = results.count(_.isDefined)
+      val errors = results.exists(_.isEmpty)
+      val items = results.map(singleResult2Status)
+      Json.obj("errors" -> errors, "successful" -> successful, "items" -> Json.arr(items))
+    }
+  }
+
 }

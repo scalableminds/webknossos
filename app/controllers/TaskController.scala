@@ -2,30 +2,22 @@ package controllers
 
 import com.scalableminds.util.geometry.{BoundingBox, Point3D}
 import models.binary.DataSetDAO
-import play.api.data.Forms._
 import javax.inject.Inject
 import play.api.libs.json.Json._
-import play.api.libs.json._
-import oxalis.security.Secured
-import play.api.Logger
+import oxalis.security.{AuthenticatedRequest, Secured}
 import models.user._
 import models.task._
 import models.annotation._
-import views._
-import play.api.libs.concurrent._
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.i18n.{MessagesApi, Messages}
 import models.annotation.AnnotationService
 import play.api.Play.current
 import com.scalableminds.util.tools.{FoxImplicits, Fox}
-import net.liftweb.common.{Full, Failure}
 import com.scalableminds.util.reactivemongo.DBAccessContext
-import scala.concurrent.{Promise, Future}
 import play.twirl.api.Html
-import play.api.libs.functional.syntax._
 import scala.concurrent.Future
-import scala.async.Async.{async, await}
-import net.liftweb.common.Box
+import play.api.libs.json._
+import play.api.libs.functional.syntax._
 
 class TaskController @Inject() (val messagesApi: MessagesApi) extends Controller with Secured with FoxImplicits {
 
@@ -55,24 +47,38 @@ class TaskController @Inject() (val messagesApi: MessagesApi) extends Controller
     }
   }
 
-  def create() = Authenticated.async(parse.json){ implicit request =>
-    "something" match {
-      case x =>
-        request.body.validate(taskJsonReads) match {
-          case JsSuccess((dataSetName, taskTypeId, start, experience, priority, status, team, projectName, boundingBox), _) =>
-            for {
-              dataSet <- DataSetDAO.findOneBySourceName(dataSetName) ?~> Messages("dataSet.notFound")
-              taskType <- TaskTypeDAO.findOneById(taskTypeId) ?~> Messages("taskType.notFound")
-              project <- ProjectService.findIfNotEmpty(projectName) ?~> Messages("project.notFound")
-              _ <- ensureTeamAdministration(request.user, team).toFox
-              task = Task(taskType._id, team, experience, priority, status.open, _project = project.map(_.name))
-              _ <- TaskDAO.insert(task)
-            } yield {
-              AnnotationService.createAnnotationBase(task, request.user._id, boundingBox, taskType.settings, dataSetName, start)
-              Ok(Json.toJson(Messages("task.createSuccess")))
-            }
+  def createSingleTask(input: (String, String, Point3D, Experience, Int, CompletionStatus, String, String, BoundingBox))(implicit request: AuthenticatedRequest[_]) =
+    input match {
+      case (dataSetName, taskTypeId, start, experience, priority, status, team, projectName, boundingBox) =>
+        for {
+          dataSet <- DataSetDAO.findOneBySourceName(dataSetName) ?~> Messages("dataSet.notFound")
+          taskType <- TaskTypeDAO.findOneById(taskTypeId) ?~> Messages("taskType.notFound")
+          project <- ProjectService.findIfNotEmpty(projectName) ?~> Messages("project.notFound")
+          _ <- ensureTeamAdministration(request.user, team).toFox
+          task = Task(taskType._id, team, experience, priority, status.open, _project = project.map(_.name))
+          _ <- TaskDAO.insert(task)
+        } yield {
+          AnnotationService.createAnnotationBase(task, request.user._id, boundingBox, taskType.settings, dataSetName, start)
+          task
         }
+    }
 
+  def bulkCreate(implicit request: AuthenticatedRequest[JsValue]) = {
+    request.body.validate(Reads.list(taskJsonReads)) match {
+      case JsSuccess(parsed, _) =>
+        val results = parsed.map(p => createSingleTask(p).map(_ => Messages("task.createSuccess")))
+        bulk2StatusJson(results).map(js => JsonOk(js, Messages("task.bulk.processed")))
+      case _ =>
+        Future.successful(JsonBadRequest("Invalid task create json"))
+    }
+  }
+
+  def create() = Authenticated.async(parse.json){ implicit request =>
+    request.body.validate(taskJsonReads) match {
+      case JsSuccess(parsed, _) =>
+        createSingleTask(parsed).map(_ =>  JsonOk(Messages("task.createSuccess")))
+      case _ =>
+        bulkCreate(request)
     }
   }
 

@@ -256,22 +256,6 @@ class Router extends Backbone.Router
 
     @$loadingSpinner.removeClass("hidden")
 
-    # Remove current views
-    if @activeViews
-      for view in @activeViews
-        # prefer Marionette's.destroy() function to Backbone's remove()
-        if view.destroy
-          view.destroy()
-        else
-          view.remove()
-
-      if view.forcePageReload
-        @loadURL(location.href)
-
-    else
-      # we are probably coming from a URL that isn't a Backbone.View yet (or page reload)
-      @$mainContainer.empty()
-
     # Add new views
     @activeViews = views
     for view in views
@@ -283,8 +267,38 @@ class Router extends Backbone.Router
 
     return
 
+
+  execute : ->
+
+    # Remove current views
+    if @activeViews
+      for view in @activeViews
+        # prefer Marionette's.destroy() function to Backbone's remove()
+        if view.destroy
+          view.destroy()
+        else
+          view.remove()
+
+        if view.forcePageReload
+          @reload()
+          return
+      @activeViews = []
+
+    else
+      # we are probably coming from a URL that isn't a Backbone.View yet (or page reload)
+      @$mainContainer.empty()
+
+    super
+
+
   loadURL : (url) ->
 
-    window.location = url
+    window.location.href = url
+
+
+  reload : ->
+
+    window.location.reload()
+
 
 module.exports = Router

@@ -14,7 +14,6 @@ class Cube
   MAXIMUM_BUCKET_COUNT : 5000
   ARBITRARY_MAX_ZOOMSTEP : 2
 
-  LOADING_PLACEHOLDER : {}
   EMPTY_MAPPING : null
 
   arbitraryCube : null
@@ -44,6 +43,8 @@ class Cube
   constructor : (@upperBoundary, @ZOOM_STEP_COUNT, @BIT_DEPTH) ->
 
     _.extend(this, Backbone.Events)
+
+    @NULL_BUCKET = new NullBucket(@BIT_DEPTH)
 
     @LOOKUP_DEPTH_UP = @ZOOM_STEP_COUNT - 1
     @MAX_ZOOM_STEP   = @ZOOM_STEP_COUNT - 1
@@ -84,9 +85,7 @@ class Cube
     @trigger("mappingChanged")
 
 
-  setPushQueue : (pushQueue) ->
-
-    @pushQueue = pushQueue
+  setPushQueue : (@pushQueue) ->
 
 
   setMappingEnabled : (isEnabled) ->
@@ -125,138 +124,44 @@ class Cube
     @arbitraryCube
 
 
-  getBucketIndexByZoomedAddress : ( address ) ->
+  getBucketIndexByZoomedAddress : ([x, y, z, zoomStep]) ->
 
-    ErrorHandling.assertExists(@cubes[address[3]], "Cube for given zoomStep does not exist"
+    ErrorHandling.assertExists(@cubes[zoomStep], "Cube for given zoomStep does not exist"
       cubeCount: @cubes.length
-      zoomStep: address[3]
+      zoomStep: zoomStep
       zoomStepCount: @ZOOM_STEP_COUNT
     )
 
-    return @getIndexFromZoomedAddress( address, @cubes[address[3]].boundary )
+    boundary = @cubes[zoomStep].boundary
 
+    if  x >= 0 and x < boundary[0] and
+        y >= 0 and y < boundary[1] and
+        z >= 0 and z < boundary[2]
 
-  getIndexFromZoomedAddress : ([x, y, z, zoomStep], boundary) ->
-
-    if x >= 0 and x < boundary[0] and
-    y >= 0 and y < boundary[1] and
-    z >= 0 and z < boundary[2] and
-    zoomStep >= 0 and zoomStep < @ZOOM_STEP_COUNT
-
-      x * boundary[2] * boundary[1] +
-      y * boundary[2] +
-      z
+      return x * boundary[2] * boundary[1] + y * boundary[2] + z
 
     else
 
-      undefined
+      return undefined
 
 
   getVoxelIndexByVoxelOffset : ([x, y, z]) ->
 
-    x +
-    y * (1 << @BUCKET_SIZE_P) +
-    z * (1 << @BUCKET_SIZE_P * 2)
+    return x + y * (1 << @BUCKET_SIZE_P) + z * (1 << @BUCKET_SIZE_P * 2)
 
 
-  getBucketDataByZoomedAddress : (address, createIfUndefined = false) ->
-
-    if address[3] >= @ZOOM_STEP_COUNT
-      return null
+  getBucketByZoomedAddress : (address) ->
 
     cube = @cubes[address[3]].data
     bucketIndex = @getBucketIndexByZoomedAddress(address)
 
     if bucketIndex?
-      bucket = cube[bucketIndex]
-      if bucket? and bucket != @LOADING_PLACEHOLDER
-        return bucket
-      else if createIfUndefined
-        cube[bucketIndex] = new Uint8Array(@BUCKET_LENGTH)
-        cube[bucketIndex].temporal = true
-        @trigger("temporalBucketCreated", address)
-        return cube[bucketIndex]
+      unless cube[bucketIndex]?
+        cube[bucketIndex] = new Bucket(@BIT_DEPTH)
+        @addBucketToGarbageCollection(address)
+      return cube[bucketIndex]
 
-    return null
-
-
-  isBucketRequestedByZoomedAddress : (address) ->
-
-    if address[3] >= @ZOOM_STEP_COUNT
-      return true
-
-    cube = @cubes[address[3]].data
-    bucketIndex = @getBucketIndexByZoomedAddress(address)
-
-    # if the bucket does not lie inside the dataset, we do not want to request it and return true
-    if not bucketIndex?
-      return true
-
-    return cube[bucketIndex]? and cube[bucketIndex].requested
-
-
-  isBucketLoadedByZoomedAddress : (address) ->
-
-    @getBucketDataByZoomedAddress(address)?
-
-
-  requestBucketByZoomedAddress : (address) ->
-
-    # return if no request is needed
-    return if @isBucketRequestedByZoomedAddress(address)
-
-    cube = @cubes[address[3]].data
-    bucketIndex = @getBucketIndexByZoomedAddress(address)
-    if not cube[bucketIndex]?
-      cube[bucketIndex] = @LOADING_PLACEHOLDER
-    cube[bucketIndex].requested = true
-
-
-  setBucketByZoomedAddress : (address, bucketData) ->
-
-    if bucketData?
-
-      cube = @cubes[address[3]].data
-      bucketIndex = @getBucketIndexByZoomedAddress(address)
-
-      @addBucketToGarbageCollection(address)
-
-      @bucketCount++
-      bucketData.accessed = true
-      bucketData.requested = true
-      bucketData.zoomStep = address[3]
-
-      @setBucketData(cube, bucketIndex, bucketData)
-
-      @setArbitraryBucketByZoomedAddress(address, bucketData) if address[3] <= @ARBITRARY_MAX_ZOOMSTEP
-      @trigger("bucketLoaded", address)
-
-
-  setBucketData : (cube, bucketIndex, newBucketData) ->
-
-    oldBucketData = cube[bucketIndex]
-
-    if cube[bucketIndex]?.temporal
-      newBucketData = @mergeBucketData(newBucketData, oldBucketData)
-
-    cube[bucketIndex] = newBucketData
-    cube[bucketIndex].requested = true
-    oldBucketData?.bucketReplacedCallback?()
-
-
-  mergeBucketData : (newBucketData, oldBucketData) ->
-
-    voxelPerBucket = 1 << @BUCKET_SIZE_P * 3
-    for i in [0...voxelPerBucket]
-
-      oldVoxel = (oldBucketData[i * @BYTE_OFFSET + j] for j in [0...@BYTE_OFFSET])
-      oldVoxelEmpty = _.reduce(oldVoxel, ((memo, v) => memo and v == 0), true)
-
-      if oldVoxelEmpty
-        for j in [0...@BYTE_OFFSET]
-          oldBucketData[i * @BYTE_OFFSET + j] = newBucketData[i * @BYTE_OFFSET + j]
-
-    return oldBucketData
+    return @NULL_BUCKET
 
 
   setArbitraryBucketByZoomedAddress : ([bucket_x, bucket_y, bucket_z, zoomStep], bucketData) ->
@@ -287,10 +192,12 @@ class Cube
     for address in addressList
 
       bucket = @getBucketDataByZoomedAddress(address)
-      bucket.accessed = true if bucket?
+      bucket.access()
 
 
   addBucketToGarbageCollection : (address) ->
+
+    @bucketCount++
 
     unless @bucketCount < @MAXIMUM_BUCKET_COUNT
 
@@ -385,17 +292,15 @@ class Cube
 
       { bucket, voxelIndex } = @getBucketAndVoxelIndex(voxel, 0, true)
 
-      # Write label in little endian order
-      for i in [0...@BYTE_OFFSET]
-        bucket[voxelIndex + i] = (label >> (i * 8) ) & 0xff
-
-      # Make sure temporal buckets are not saved before merged
-      if bucket.temporal
-        bucket.bucketReplacedCallback = =>
-          @pushQueue.insert(@positionToZoomedAddress(voxel))
-          @pushQueue.push()
-      else
+      mergedCallback = =>
         @pushQueue.insert(@positionToZoomedAddress(voxel))
+        @pushQueue.push()
+
+      bucket.label (data, mergedCallback) ->
+
+        # Write label in little endian order
+        for i in [0...@BYTE_OFFSET]
+          data[voxelIndex + i] = (label >> (i * 8) ) & 0xff
 
 
   getDataValue : ( voxel, mapping=@EMPTY_MAPPING ) ->

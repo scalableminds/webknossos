@@ -65,8 +65,6 @@ class Binary
     @listenTo(@model.get("datasetConfiguration"), "change:fourBit" , (model, fourBit) -> @pullQueue.setFourBit(fourBit) )
 
     @cube.on(
-      temporalBucketCreated : (address) =>
-        @pullQueue.add({bucket: address, priority: PullQueue::PRIORITY_HIGHEST})
       newMapping : =>
         @forcePlaneRedraw()
     )

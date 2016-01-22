@@ -150,17 +150,6 @@ class Controller
 
   initKeyboard : ->
 
-    $(document).keypress (event) ->
-
-      if $(event.target).is("input")
-        # don't summon help modal when the user types into an input field
-        return
-
-      if event.shiftKey && event.which == 63
-        $("#help-modal").modal('toggle')
-
-
-
     # avoid scrolling while pressing space
     $(document).keydown (event) ->
       event.preventDefault() if (event.which == 32 or event.which == 18 or 37 <= event.which <= 40) and !$(":focus").length

@@ -188,7 +188,7 @@ class Cube
     cube = @cubes[address[3]].data
     bucketIndex = @getBucketIndexByZoomedAddress(address)
 
-    # if the bucket does not lie inside the dataset, return true
+    # if the bucket does not lie inside the dataset, we do not want to request it and return true
     if not bucketIndex?
       return true
 
@@ -223,6 +223,7 @@ class Cube
 
       @bucketCount++
       bucketData.accessed = true
+      bucketData.requested = true
       bucketData.zoomStep = address[3]
 
       @setBucketData(cube, bucketIndex, bucketData)
@@ -239,6 +240,7 @@ class Cube
       newBucketData = @mergeBucketData(newBucketData, oldBucketData)
 
     cube[bucketIndex] = newBucketData
+    cube[bucketIndex].requested = true
     oldBucketData?.bucketReplacedCallback?()
 
 
@@ -247,7 +249,6 @@ class Cube
     voxelPerBucket = 1 << @BUCKET_SIZE_P * 3
     for i in [0...voxelPerBucket]
 
-      newVoxel = (newBucketData[i * @BYTE_OFFSET + j] for j in [0...@BYTE_OFFSET])
       oldVoxel = (oldBucketData[i * @BYTE_OFFSET + j] for j in [0...@BYTE_OFFSET])
       oldVoxelEmpty = _.reduce(oldVoxel, ((memo, v) => memo and v == 0), true)
 

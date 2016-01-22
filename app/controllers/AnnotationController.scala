@@ -42,7 +42,7 @@ class AnnotationController @Inject()(val messagesApi: MessagesApi) extends Contr
   def info(typ: String, id: String, readOnly: Boolean = false) = UserAwareAction.async { implicit request =>
     val annotationId = AnnotationIdentifier(typ, id)
     respondWithTracingInformation(annotationId, readOnly).map { js =>
-      request.userOpt.map { user =>
+      request.userOpt.foreach { user =>
         UsedAnnotationDAO.use(user, annotationId)
       }
       Ok(js)
@@ -90,7 +90,7 @@ class AnnotationController @Inject()(val messagesApi: MessagesApi) extends Contr
       _ <- AnnotationUpdateService.removeAll(typ, id)
     } yield {
       AnnotationUpdateService.store(typ, id, updateableAnnotation.version + 1, combinedUpdate)
-      Logger.info(s"REVERTED using update [$typ - $id, $version]: ${combinedUpdate}")
+      Logger.info(s"REVERTED using update [$typ - $id, $version]: $combinedUpdate")
       JsonOk(result, "annotation.reverted")
     }
   }
@@ -187,7 +187,7 @@ class AnnotationController @Inject()(val messagesApi: MessagesApi) extends Contr
         for {
           result <- handleUpdates(oldAnnotation, request.body, version)
         } yield {
-          JsonOk(result, "annotation.saved")
+          JsonOk(result, Messages("annotation.saved"))
         }
       else
         new Fox(Future.successful(Full(new JsonResult(CONFLICT)(oldJs, Messages("annotation.dirtyState")))))
@@ -219,7 +219,7 @@ class AnnotationController @Inject()(val messagesApi: MessagesApi) extends Contr
     for {
       (json, message) <- finishAnnotation(typ, id, request.user)(GlobalAccessContext)
     } yield {
-      JsonOk(json, message)
+      JsonOk(json, Messages(message))
     }
   }
 

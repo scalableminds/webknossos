@@ -1,7 +1,7 @@
 _                       = require("lodash")
 Uint8ArrayBuilder       = require("libs/uint8array_builder")
 Request                 = require("libs/request")
-gzip                    = require("gzip")
+pako                    = require("pako")
 
 class PushQueue
 
@@ -91,8 +91,7 @@ class PushQueue
     @updatePipeline.executePassAlongAction =>
 
       console.log "Pushing batch", batch
-      gzip = new Zlib.Gzip(transmitBuffer)
-      transmitBuffer = gzip.compress()
+      transmitBuffer = pako.gzip(transmitBuffer)
 
       Request.$(Request.sendArraybufferReceiveArraybuffer(
         @url

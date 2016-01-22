@@ -52,8 +52,8 @@ class PaginationView extends Marionette.ItemView
   templateHelpers : ->
     paginationInfo = @collection.getPaginationInfo()
     pageRange : _.range(
-      Math.max(paginationInfo.firstPage, paginationInfo.currentPage - 5),
-      Math.min(paginationInfo.lastPage, paginationInfo.currentPage + 5) + 1)
+      Math.max(paginationInfo.firstPage, paginationInfo.currentPage - 4),
+      Math.min(paginationInfo.lastPage, paginationInfo.currentPage + 4) + 1)
     Pagination : paginationInfo
     addButtonText : @options.addButtonText
 

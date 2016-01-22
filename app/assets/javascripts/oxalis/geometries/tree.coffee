@@ -34,7 +34,7 @@ class Tree
       edgeGeometry,
       new THREE.LineBasicMaterial({
         color: @darkenHex( treeColor ),
-        linewidth: @model.user.get("particleSize") / 4}),
+        linewidth: @getLineWidth()}),
       THREE.LinePieces
     )
 
@@ -249,6 +249,7 @@ class Tree
 
   showRadius : (show) ->
 
+    @edges.material.linewidth = @getLineWidth()
     @particleMaterial.setShowRadius(show)
 
 
@@ -283,6 +284,11 @@ class Tree
     index = @getNodeIndex(nodeId)
     return unless index?
     f(index)
+
+
+  getLineWidth : ->
+
+    return @model.user.get("particleSize") / 4
 
 
   #### Color utility methods

@@ -8,7 +8,7 @@ Toast      = require("libs/toast")
 
 class DatasetPositionView extends Marionette.ItemView
 
-  tagName : "form"
+  tagName : "div"
   className : "form-inline dataset-position-view"
   template : _.template("""
     <div class="form-group">
@@ -31,14 +31,11 @@ class DatasetPositionView extends Marionette.ItemView
 
   templateHelpers :
     position : ->
-      @vec3ToString(@flycam.getPosition())
+      V3.floor(@flycam.getPosition()).join(", ")
 
     rotation : ->
-      @vec3ToString(@flycam3d.getRotation())
+      V3.round(@flycam3d.getRotation()).join(", ")
 
-    vec3ToString : (vec3) ->
-      vec3 = V3.floor(vec3)
-      return V3.toString(vec3)
 
   events :
     "change #trace-position-input" : "changePosition"
@@ -47,6 +44,7 @@ class DatasetPositionView extends Marionette.ItemView
 
   ui :
     "positionInput" : "#trace-position-input"
+    "rotationInput" : "#trace-rotation-input"
 
 
   initialize : (options) ->
@@ -77,13 +75,23 @@ class DatasetPositionView extends Marionette.ItemView
     if posArray.length == 3
       @model.flycam.setPosition(posArray)
       app.vent.trigger("centerTDView")
+      @ui.positionInput.get(0).setCustomValidity("")
+    else
+      @ui.positionInput.get(0).setCustomValidity("Please supply a valid position, like 1,1,1!")
+      @ui.positionInput.get(0).reportValidity()
+    return
 
 
   changeRotation : (event) ->
 
     rotArray = utils.stringToNumberArray(event.target.value)
     if rotArray.length == 3
-      @model.flycam3d.setRotation rotArray
+      @model.flycam3d.setRotation(rotArray)
+      @ui.rotationInput.get(0).setCustomValidity("")
+    else
+      @ui.rotationInput.get(0).setCustomValidity("Please supply a valid rotation, like 1,1,1!")
+      @ui.rotationInput.get(0).reportValidity()
+    return
 
 
   copyToClipboard : (evt) ->

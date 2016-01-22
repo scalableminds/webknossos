@@ -125,7 +125,10 @@ class CommentTabView extends Marionette.CompositeView
 
   nextComment : ->
 
-    nextComment = @collection.find((model) => model.get("node") > @activeComment.get("node"))
+    activeComment = @activeComment
+    nextComment = @collection.find( ((model) -> @comparator(model) > @comparator(activeComment)), @collection)
+    # try to wrap around if no next comment was found
+    nextComment = @collection.at(0) if not nextComment
     if nextComment
 
       @setActiveNode(nextComment)
@@ -133,7 +136,10 @@ class CommentTabView extends Marionette.CompositeView
 
   previousComment : ->
 
-    previousComment = _.findLast(@collection.models, (model) => model.get("node") < @activeComment.get("node"))
+    activeComment = @activeComment
+    previousComment = _.findLast(@collection.models, ((model) -> @comparator(model) < @comparator(activeComment)), @collection)
+    # try to wrap around if no previous comment was found
+    previousComment = @collection.at(@collection.length - 1) if not previousComment
     if previousComment
 
       @setActiveNode(previousComment)

@@ -11,6 +11,8 @@ class PaginationCollection
       @fullCollection = options.fullCollection
     else
       @fullCollection = new Backbone.Collection(models, options)
+      if @initialize
+        @initialize.call(@fullCollection, models, options)
 
     if @model?
       @fullCollection.model = @model
@@ -37,6 +39,9 @@ class PaginationCollection
     @listenTo(@fullCollection, "add", @_passthroughEvent("add"))
     @listenTo(@fullCollection, "remove", @_passthroughEvent("remove"))
     @listenTo(@fullCollection, "sync", @_passthroughEvent("sync"))
+
+    @_reset = _.debounce(@_reset, 50)
+    return
 
 
   add : ->

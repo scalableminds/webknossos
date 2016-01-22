@@ -4,9 +4,10 @@ FormatUtils          = require("format_utils")
 
 class TaskCollection extends PaginationCollection
 
-  initialize : (options = {}) ->
+  initialize : (models, options = {}) ->
 
     @taskTypeId = options.taskTypeId
+    @dataSetName = options.dataSetName
 
 
   url : ->
@@ -16,30 +17,34 @@ class TaskCollection extends PaginationCollection
       "/api/tasks"
 
 
-  parse : (respones) ->
+  parse : (responses) ->
 
-    return _.map(respones,
-      (response) ->
+    responses = responses.map((response) ->
+      # apply some defaults
+      response.type =
+        summary : response.type?.summary || "<deleted>"
+      response.formattedTracingTime = FormatUtils.formatSeconds(response.tracingTime? or 0)
 
-        # apply some defaults
-        response.type =
-          summary : response.type?.summary || "<deleted>"
-        response.formattedTracingTime = FormatUtils.formatSeconds(response.tracingTime? or 0)
+      # convert bounding box
+      if response.boundingBox?
 
-        # convert bounding box
-        if response.boundingBox?
+        { topLeft, width, height, depth } = response.boundingBox
+        response.boundingBox = topLeft.concat [
+          topLeft[0] + width
+          topLeft[1] + height
+          topLeft[2] + depth
+        ]
 
-          { topLeft, width, height, depth } = response.boundingBox
-          response.boundingBox = topLeft.concat [
-            topLeft[0] + width
-            topLeft[1] + height
-            topLeft[2] + depth
-          ]
+      else
+        response.boundingBox = []
 
-        else
-          response.boundingBox = []
-
-        return response
+      return response
     )
+
+    if @dataSetName
+      return _.filter(responses, dataSet : @dataSetName)
+    else
+      return responses
+
 
 module.exports = TaskCollection

@@ -1,8 +1,15 @@
 package controllers
 
+import java.io.File
+
 import com.scalableminds.util.geometry.{BoundingBox, Point3D}
+import com.scalableminds.util.mvc.JsonResult
 import models.binary.DataSetDAO
 import javax.inject.Inject
+import net.liftweb.common.Full
+import oxalis.nml.NMLService
+import play.api.data.Form
+import play.api.data.Forms._
 import play.api.libs.json.Json._
 import oxalis.security.{AuthenticatedRequest, Secured}
 import models.user._
@@ -14,12 +21,14 @@ import models.annotation.AnnotationService
 import play.api.Play.current
 import com.scalableminds.util.tools.{FoxImplicits, Fox}
 import com.scalableminds.util.reactivemongo.DBAccessContext
+import play.api.mvc.AnyContent
 import play.twirl.api.Html
 import scala.concurrent.Future
 import play.api.libs.json._
 import play.api.libs.functional.syntax._
+import reactivemongo.bson.BSONObjectID
 
-class TaskController @Inject() (val messagesApi: MessagesApi) extends Controller with Secured with FoxImplicits {
+class TaskController @Inject() (val messagesApi: MessagesApi) extends Controller with Secured with FoxImplicits with TaskFromNMLCreation{
 
   val MAX_OPEN_TASKS = current.configuration.getInt("oxalis.tasks.maxOpenPerUser") getOrElse 2
 
@@ -63,22 +72,34 @@ class TaskController @Inject() (val messagesApi: MessagesApi) extends Controller
         }
     }
 
-  def bulkCreate(implicit request: AuthenticatedRequest[JsValue]) = {
-    request.body.validate(Reads.list(taskJsonReads)) match {
+  def bulkCreate(json: JsValue)(implicit request: AuthenticatedRequest[_]) = {
+    json.validate(Reads.list(taskJsonReads)) match {
       case JsSuccess(parsed, _) =>
-        val results = parsed.map(p => createSingleTask(p).map(_ => Messages("task.createSuccess")))
+        val results = parsed.map(p => createSingleTask(p).map(_ => Messages("task.create.success")))
         bulk2StatusJson(results).map(js => JsonOk(js, Messages("task.bulk.processed")))
-      case _ =>
-        Future.successful(JsonBadRequest("Invalid task create json"))
+      case errors: JsError =>
+        Future.successful(JsonBadRequest(jsonErrorWrites(errors), Messages("format.json.invalid")))
     }
   }
 
-  def create() = Authenticated.async(parse.json){ implicit request =>
-    request.body.validate(taskJsonReads) match {
-      case JsSuccess(parsed, _) =>
-        createSingleTask(parsed).map(_ =>  JsonOk(Messages("task.createSuccess")))
-      case _ =>
-        bulkCreate(request)
+  def create(`type`: String = "default") = Authenticated.async{ implicit request =>
+    `type` match {
+      case "default" =>
+        val r = request.body.asJson
+        .map{json => json.validate(taskJsonReads) match {
+          case JsSuccess(parsed, _) =>
+            createSingleTask(parsed).map(_ => JsonOk(Messages("task.create.success")))
+          case errors: JsError =>
+            Fox.successful(JsonBadRequest(jsonErrorWrites(errors), Messages("task.create.failed")))
+        }}
+        .getOrElse(Fox.successful(JsonBadRequest(Messages("format.json.invalid"))))
+        r
+      case "nml" =>
+        createFromNML(request)
+      case "bulk" =>
+        request.body.asJson
+        .map(json => bulkCreate(json))
+        .getOrElse(Fox.successful(JsonBadRequest(Messages("format.json.invalid"))))
     }
   }
 
@@ -170,5 +191,74 @@ class TaskController @Inject() (val messagesApi: MessagesApi) extends Controller
     } yield {
       JsonOk(annotationJSON, Messages("task.assigned"))
     }
+  }
+}
+
+trait TaskFromNMLCreation extends Controller{
+  import play.api.data.Form
+  import play.api.data.Forms._
+
+  val taskFromNMLForm = nmlTaskForm(minTaskInstances = 1)
+
+  def nmlTaskForm(minTaskInstances: Int) = Form(
+    tuple(
+      "taskType" -> text,
+      "experience" -> mapping(
+        "domain" -> text,
+        "value" -> number)(Experience.fromForm)(Experience.unapply),
+      "priority" -> number,
+      "taskInstances" -> number.verifying("task.edit.toFewInstances",
+        taskInstances => taskInstances >= minTaskInstances),
+      "team" -> nonEmptyText,
+      "project" -> text,
+      "boundingBox" -> mapping(
+        "box" -> text.verifying("boundingBox.invalid",
+          b => b.matches("([0-9]+),\\s*([0-9]+),\\s*([0-9]+)\\s*,\\s*([0-9]+),\\s*([0-9]+),\\s*([0-9]+)\\s*")))(BoundingBox.fromForm)(b => b.map(BoundingBox.toForm).toOption.flatten)
+    )).fill(("", Experience.empty, 100, 10, "", "", Full(BoundingBox(Point3D(0, 0, 0), 0, 0, 0))))
+
+  def createFromNML(implicit request: AuthenticatedRequest[AnyContent]) = {
+    taskFromNMLForm.bindFromRequest.fold(
+      hasErrors = formWithErrors => Fox.successful(JsonBadRequest(Json.obj("errors" -> formWithErrors.errorsAsJson), Messages("invalid"))),
+      success = {
+        case (taskTypeId, experience, priority, instances, team, projectName, boundingBox) =>
+          for {
+            body <- request.body.asMultipartFormData ?~> Messages("invalid")
+            nmlFile <- body.file("nmlFile") ?~> Messages("nml.file.notFound")
+            taskType <- TaskTypeDAO.findOneById(taskTypeId) ?~> Messages("taskType.notFound")
+            project <- ProjectService.findIfNotEmpty(projectName) ?~> Messages("project.notFound")
+            _ <- ensureTeamAdministration(request.user, team)
+            bb <- boundingBox
+          } yield {
+            val nmls = NMLService.extractFromFile(nmlFile.ref.file, nmlFile.filename)
+            var numCreated = 0
+
+            val baseTask = Task(
+              taskType._id,
+              team,
+              experience,
+              priority,
+              instances,
+              _project = project.map(_.name))
+
+            nmls.foreach {
+              case NMLService.NMLParseSuccess(_, nml) =>
+                val task = Task(
+                  taskType._id,
+                  team,
+                  experience,
+                  priority,
+                  instances,
+                  _project = project.map(_.name),
+                  _id = BSONObjectID.generate)
+                TaskDAO.insert(task).flatMap { _ =>
+                  AnnotationService.createAnnotationBase(task, request.user._id, bb, taskType.settings, nml)
+                }
+                numCreated += 1
+              case _ =>
+
+            }
+            JsonOk(Messages("task.bulk.createSuccess", numCreated))
+          }
+      })
   }
 }

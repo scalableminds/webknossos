@@ -125,17 +125,16 @@ GET           /api/tasks                                                        
 # DELETE        /api/tasks/:id                                                    controllers.admin.TaskAdministration.delete(id: String)
 
 GET           /tasks                                                            controllers.TaskController.empty
-GET           /tasks/overview                                                   controllers.admin.TaskAdministration.empty
+GET           /tasks/overview                                                   controllers.TaskController.empty
+GET           /tasks/create                                                     controllers.TaskController.empty
 
-POST          /api/tasks                                                        controllers.TaskController.create
-POST          /api/tasks-nml                                                    controllers.admin.TaskAdministration.empty
+POST          /api/tasks                                                        controllers.TaskController.create(type: String)
 GET           /api/tasks/:id                                                    controllers.TaskController.read(id: String)
 DELETE        /api/tasks/:id                                                    controllers.TaskController.delete(id: String)
 PUT           /api/tasks/:id                                                    controllers.TaskController.update(id: String)
 
 GET           /tasks/:id/edit                                                   controllers.UserController.emptyWithWildcard(id: String)
 # show backbone views for task creation
-GET           /tasks/create                                                     controllers.admin.TaskAdministration.empty
 
 #POST          /admin/tasks/createBulk                                           controllers.admin.TaskAdministration.createBulk
 #POST          /admin/tasks/createFromNML                                        controllers.admin.TaskAdministration.createFromNML

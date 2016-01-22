@@ -179,7 +179,10 @@ issue.type.invalid=Invalid issue type
 issue.submit.success=Successfully submitted issue.
 issue.submit.failure=Failed to submit issue
 
-task.createSuccess=Task successfully created
+task.create.success=Task successfully created
+task.create.faliled=Failed to create Task
+task.create.invalidContent=Invalid request content
+task.bulk.processed=Tasks successfully processed
 task.finished=Task is finished
 task.cancelled=Task got cancelled
 task.passedToReview=Task is now getting reviewed. This may take some time.

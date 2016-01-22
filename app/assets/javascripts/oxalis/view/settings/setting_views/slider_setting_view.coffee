@@ -46,7 +46,7 @@ class SliderSettingView extends AbstractSettingView
 
   handleTextboxChange : (evt) ->
 
-    @model.set(@options.name, parseFloat(evt.value))
+    @model.set(@options.name, parseFloat(evt.target.value))
 
 
   update : (model, value) ->

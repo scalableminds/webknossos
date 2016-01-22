@@ -9,24 +9,29 @@ class CellCategoryView extends CategoryView
   caption : "Cells"
 
 
-  subviewCreators :
+  subviewCreatorsList : [
 
-    "mappedActiveCellId" : ->
+    [
+      "mappedActiveCellId", ->
 
-      return new NumberSettingView(
-        model : @model
-        options :
-          name : "mappedActiveCellId"
-          displayName : "Active Cell ID"
-      )
+        return new NumberSettingView(
+          model : @model
+          options :
+            name : "mappedActiveCellId"
+            displayName : "Active Cell ID"
+        )
+    ]
 
-    "createCell" : ->
+    [
+      "createCell", ->
 
-      return new ButtonSettingView(
-        model : @model
-        options :
-          displayName : "Create new Cell"
-          callbackName : "createCell"
-      )
+        return new ButtonSettingView(
+          model : @model
+          options :
+            displayName : "Create new Cell"
+            callbackName : "createCell"
+        )
+    ]
+  ]
 
 module.exports = CellCategoryView

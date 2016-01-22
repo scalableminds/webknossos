@@ -7,24 +7,29 @@ class TreeCategoryView extends CategoryView
 
   caption : "Trees"
 
-  subviewCreators :
+  subviewCreatorsList : [
 
-    "activeTree" : ->
+    [
+      "activeTree", ->
 
-      return new NumberSettingView(
-        model : @model
-        options :
-          name : "activeTreeId"
-          displayName : "Active Tree ID"
-      )
+        return new NumberSettingView(
+          model : @model
+          options :
+            name : "activeTreeId"
+            displayName : "Active Tree ID"
+        )
+    ]
 
-    "somaClicking" : ->
+    [
+      "somaClicking", ->
 
-      return new CheckboxSettingView(
-        model : @model
-        options :
-          name : "somaClicking"
-          displayName : "Soma Clicking"
-      )
+        return new CheckboxSettingView(
+          model : @model
+          options :
+            name : "somaClicking"
+            displayName : "Soma Clicking"
+        )
+    ]
+  ]
 
 module.exports = TreeCategoryView

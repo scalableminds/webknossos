@@ -6,19 +6,22 @@ class SegementationCategoryView extends CategoryView
 
   caption : "Segmentation"
 
-  subviewCreators :
+  subviewCreatorsList : [
 
-    "segmentOpacity" : ->
+    [
+      "segmentOpacity", ->
 
-      return new SliderSettingView(
-        model : @model
-        options :
-          name : "segmentationOpacity"
-          displayName : "Segement Opacity"
-          min : 0
-          max : 100
-          step : 1
-      )
+        return new SliderSettingView(
+          model : @model
+          options :
+            name : "segmentationOpacity"
+            displayName : "Segement Opacity"
+            min : 0
+            max : 100
+            step : 1
+        )
+    ]
+  ]
 
 
   initialize : ->

@@ -8,16 +8,19 @@ class ColorsCategoryView extends CategoryView
   caption : "Colors"
 
 
-  subviewCreators :
+  subviewCreatorsList : [
 
-    "reset" : ->
+    [
+      "reset", ->
 
-      return new ButtonSettingView(
-        model : @model
-        options :
-          displayName : "Reset Color Settings"
-          callbackName : "reset"
-      )
+        return new ButtonSettingView(
+          model : @model
+          options :
+            displayName : "Reset Color Settings"
+            callbackName : "reset"
+        )
+    ]
+  ]
 
 
   initialize : ->
@@ -25,12 +28,12 @@ class ColorsCategoryView extends CategoryView
     for key in @model.get("dataLayerNames")
 
       do (key) =>
-        @subviewCreators[key] = -> new LayerColorSettingsView(
+        @subviewCreatorsList.push([key, -> new LayerColorSettingsView(
           model : @model
           options :
             name : "layers.#{key}"
             displayName : "Layer: #{key}"
-        )
+        )])
 
     super()
 

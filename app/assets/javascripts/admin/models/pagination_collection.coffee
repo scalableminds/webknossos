@@ -40,6 +40,9 @@ class PaginationCollection
     @listenTo(@fullCollection, "remove", @_passthroughEvent("remove"))
     @listenTo(@fullCollection, "sync", @_passthroughEvent("sync"))
 
+    @_reset = _.debounce(@_reset, 50)
+    return
+
 
   add : ->
     @fullCollection.add.apply(@fullCollection, arguments)
@@ -158,6 +161,7 @@ class PaginationCollection
 
 
   _reset : ->
+    console.log("reset")
     @_resetModels()
     @models = @currentModels.slice(
       @state.currentPage * @state.pageSize,

@@ -124,46 +124,6 @@ class Cube
     @arbitraryCube
 
 
-  getBucketIndexByZoomedAddress : ([x, y, z, zoomStep]) ->
-
-    ErrorHandling.assertExists(@cubes[zoomStep], "Cube for given zoomStep does not exist"
-      cubeCount: @cubes.length
-      zoomStep: zoomStep
-      zoomStepCount: @ZOOM_STEP_COUNT
-    )
-
-    boundary = @cubes[zoomStep].boundary
-
-    if  x >= 0 and x < boundary[0] and
-        y >= 0 and y < boundary[1] and
-        z >= 0 and z < boundary[2]
-
-      return x * boundary[2] * boundary[1] + y * boundary[2] + z
-
-    else
-
-      return undefined
-
-
-  getVoxelIndexByVoxelOffset : ([x, y, z]) ->
-
-    return x + y * (1 << @BUCKET_SIZE_P) + z * (1 << @BUCKET_SIZE_P * 2)
-
-
-  getBucketByZoomedAddress : (address) ->
-
-    cube = @cubes[address[3]].data
-    bucketIndex = @getBucketIndexByZoomedAddress(address)
-
-    if bucketIndex?
-      unless cube[bucketIndex]?
-        cube[bucketIndex] = new Bucket(@BIT_DEPTH)
-        @addBucketToGarbageCollection(address)
-      return cube[bucketIndex]
-
-    return @NULL_BUCKET
-
-
   setArbitraryBucketByZoomedAddress : ([bucket_x, bucket_y, bucket_z, zoomStep], bucketData) ->
 
     cube = @arbitraryCube
@@ -187,11 +147,46 @@ class Cube
           cube[bucketIndex] = bucketData if not bucket? or bucket.zoomStep > zoomStep
 
 
+  getBucketIndexByZoomedAddress : ([x, y, z, zoomStep]) ->
+
+    ErrorHandling.assertExists(@cubes[zoomStep], "Cube for given zoomStep does not exist"
+      cubeCount: @cubes.length
+      zoomStep: zoomStep
+      zoomStepCount: @ZOOM_STEP_COUNT
+    )
+
+    boundary = @cubes[zoomStep].boundary
+
+    if  x >= 0 and x < boundary[0] and
+        y >= 0 and y < boundary[1] and
+        z >= 0 and z < boundary[2]
+
+      return x * boundary[2] * boundary[1] + y * boundary[2] + z
+
+    else
+
+      return undefined
+
+
+  getBucketByZoomedAddress : (address) ->
+
+    cube = @cubes[address[3]].data
+    bucketIndex = @getBucketIndexByZoomedAddress(address)
+
+    if bucketIndex?
+      unless cube[bucketIndex]?
+        cube[bucketIndex] = new Bucket(@BIT_DEPTH)
+        @addBucketToGarbageCollection(address)
+      return cube[bucketIndex]
+
+    return @NULL_BUCKET
+
+
   accessBuckets : (addressList) ->
 
     for address in addressList
 
-      bucket = @getBucketDataByZoomedAddress(address)
+      bucket = @getBucketByZoomedAddress(address)
       bucket.access()
 
 
@@ -329,21 +324,14 @@ class Cube
 
   getBucketAndVoxelIndex : (voxel, zoomStep, createBucketIfUndefined = false ) ->
 
-    address     = @positionToZoomedAddress( voxel, zoomStep )
-    voxelOffset = @getVoxelOffset( voxel )
+    address = @positionToZoomedAddress( voxel, zoomStep )
+
+    [x, y, z] = voxel.map((v) -> v & 0b11111)
+    voxelIndex = x + y * (1 << @BUCKET_SIZE_P) + z * (1 << @BUCKET_SIZE_P * 2)
 
     return {
-      bucket : @getBucketDataByZoomedAddress(address, createBucketIfUndefined)
-      voxelIndex : @BYTE_OFFSET * @getVoxelIndexByVoxelOffset(voxelOffset) }
-
-
-  getVoxelOffset : ( [x, y, z] ) ->
-
-    return [
-      x & 0b11111
-      y & 0b11111
-      z & 0b11111
-    ]
+      bucket : @getBucketByZoomedAddress(address, createBucketIfUndefined)
+      voxelIndex : @BYTE_OFFSET * voxelIndex }
 
 
   positionToZoomedAddress : ([x, y, z], zoomStep = 0) ->

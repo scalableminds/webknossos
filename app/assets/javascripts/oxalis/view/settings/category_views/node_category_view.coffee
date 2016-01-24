@@ -30,7 +30,7 @@ class NodeCategoryView extends CategoryView
           displayName : "Radius"
           min: 1
           max: 5000
-          step: 10
+          step: 1
       )
 
     "particleSize" : ->

@@ -37,16 +37,19 @@ class SliderSettingView extends AbstractSettingView
 
   handleSliderChange : (evt) ->
 
-    value = parseFloat(evt.target.value)
-    if @options.logScaleBase?
-      value = Math.pow(@options.logScaleBase, value)
+    value = @getSliderValue()
     @ui.text.val(value)
     @model.set(@options.name, value)
 
 
   handleTextboxChange : (evt) ->
 
-    @model.set(@options.name, parseFloat(evt.target.value))
+    value = parseFloat(evt.target.value)
+    if @options.min <= value <= @options.max
+      @model.set(@options.name, value)
+    else
+      # reset to slider value
+      @update(@model, @getSliderValue())
 
 
   update : (model, value) ->
@@ -57,6 +60,14 @@ class SliderSettingView extends AbstractSettingView
     if @options.logScaleBase
       value = Math.log(value) / Math.log(@options.logScaleBase)
     @ui.slider.val(value)
+
+
+  getSliderValue : ->
+
+    value = @ui.slider.val()
+    if @options.logScaleBase?
+      value = Math.pow(@options.logScaleBase, value)
+    return value
 
 
   resetValue : (evt) ->

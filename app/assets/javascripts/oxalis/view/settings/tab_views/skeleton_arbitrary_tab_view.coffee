@@ -13,7 +13,7 @@ class SkeletonArbitraryTabView extends AbstractTabView
         name : "Tracing"
         iconClass : "fa fa-cogs"
         viewClass : SkeletonTracingSettingsView
-        options : { model: new BackboneToOxalisAdapterModel(@model)}
+        options : { model: @adapterModel}
       }
       {
         id : "dataset-settings-tab"

@@ -1,20 +1,20 @@
 _                    = require("lodash")
 Backbone             = require("backbone")
-PaginationCollection = require("admin/models/pagination_collection")
 
-class UserAnnotationCollection extends PaginationCollection
+class UserAnnotationCollection extends Backbone.Collection
 
-  constructor : (userId) ->
-    # We cannot use @url as a method since the Backbone.Paginator.clientPager
-    # ignores the context which is necessary to read forTaskTypeID.
-    # TODO: Check if this is still an issue with a newer version of backbone.paginator.
-    @url = "/api/users/#{userId.id}/annotations"
+  url : -> "/api/users/#{@userId}/annotations"
 
-    super()
+  initialize : (models, options) ->
 
+    @userId = options.userId
+    @dataSetName = options.dataSetName
 
-  parse : (respones) ->
+  parse : (response) ->
+    if @dataSetName
+      return _.filter(response, dataSetName : @dataSetName)
+    else
+      return response
 
-    return respones.exploratoryAnnotations
 
 module.exports = UserAnnotationCollection

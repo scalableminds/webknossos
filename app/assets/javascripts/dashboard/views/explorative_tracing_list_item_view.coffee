@@ -115,8 +115,6 @@ class ExplorativeTracingListItemView extends Marionette.ItemView
       @toggleState(@model.attributes.state)
       @model.collection.remove(@model)
       @options.parent.render()
-    ).fail((xhr) ->
-      Toast.message(xhr.responseJSON.messages)
     )
 
 module.exports = ExplorativeTracingListItemView

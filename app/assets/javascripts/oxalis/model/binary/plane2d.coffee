@@ -79,7 +79,7 @@ class Plane2D
           @dataTexture.ready &= not (u in [@dataTexture.area[0]..@dataTexture.area[2]] and v in [@dataTexture.area[1]..@dataTexture.area[3]])
     )
 
-    @cube.on "volumeLabled", => @reset()
+    @cube.on "volumeLabeled", => @reset()
     @cube.on "mappingChanged", => @reset()
 
 

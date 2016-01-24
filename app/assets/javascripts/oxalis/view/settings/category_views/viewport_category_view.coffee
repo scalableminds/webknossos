@@ -31,9 +31,10 @@ class ViewportCategoryView extends CategoryView
         options :
           name : "zoom"
           displayName : "Zoom"
-          min : 0.01
-          max : 4 #TODO @model.flycam.getMaxZoomStep()
-          step : 0.001
+          min : -100
+          max : 100
+          step : 1
+          logScaleBase : Math.pow(20, 0.01) # TODO: Math.pow(@model.flycam.getMaxZoomStep(), 0.01)
       )
 
     "scale" : ->

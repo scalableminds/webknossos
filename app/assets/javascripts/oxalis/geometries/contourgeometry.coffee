@@ -17,7 +17,7 @@ class ContourGeometry
     @color = @COLOR_NORMAL
 
     @listenTo(@volumeTracing, "volumeAnnotated", @reset)
-    @listenTo(@volumeTracing, "updateLayer", (contourList) ->
+    @listenTo(@volumeTracing, "updateLayer", (cellId, contourList) ->
       @color = if cellId == 0 then @COLOR_DELETE else @COLOR_NORMAL
       @reset()
       for p in contourList

@@ -160,33 +160,26 @@ class DataSetController @Inject() (val messagesApi: MessagesApi) extends Control
           p => p.matches(Scale.formRx.toString)))(Scale.fromForm)(Scale.toForm)
     )).fill(("", "", Scale.default))
 
-  def upload = Authenticated.async(parse.maxLength(1024 * 1024 * 1024, parse.multipartFormData)) { implicit request =>
-
-    request.body match {
-      case Right(formData) =>
-        uploadForm.bindFromRequest(formData.dataParts).fold(
-          hasErrors = (formWithErrors => Future.successful(JsonBadRequest(formWithErrors.errors.head.message))),
-          success = {
-            case (name, team, scale) =>
-              (for {
-                _ <- ensureNewDataSetName(name).toFox ~> Messages("dataSet.name.alreadyTaken")
-                _ <- ensureTeamAdministration(request.user, team).toFox ~> Messages("team.admin.notAllowed", team)
-                zipFile <- formData.file("zipFile").toFox ~> Messages("zip.file.notFound")
-                settings = DataSourceSettings(None, scale, None)
-                upload = DataSourceUpload(name, team, zipFile.ref.file.getAbsolutePath(), Some(settings))
-                _ <- DataStoreHandler.uploadDataSource(upload).toFox
-              } yield {
-                Ok
-              }).futureBox.map {
-                case Full(r) => r
-                case Failure(error,_,_) =>
-                  JsonBadRequest(error)
-              }
-        })
-
-      case Left(_) =>
-        Future.successful(JsonBadRequest(Messages("zip.file.tooLarge")))
-    }
+  def upload = Authenticated.async(parse.multipartFormData) { implicit request =>
+    uploadForm.bindFromRequest(request.body.dataParts).fold(
+      hasErrors = (formWithErrors => Future.successful(JsonBadRequest(formWithErrors.errors.head.message))),
+      success = {
+        case (name, team, scale) =>
+          (for {
+            _ <- ensureNewDataSetName(name).toFox ~> Messages("dataSet.name.alreadyTaken")
+            _ <- ensureTeamAdministration(request.user, team).toFox ~> Messages("team.admin.notAllowed", team)
+            zipFile <- request.body.file("zipFile").toFox ~> Messages("zip.file.notFound")
+            settings = DataSourceSettings(None, scale, None)
+            upload = DataSourceUpload(name, team, zipFile.ref.file.getAbsolutePath(), Some(settings))
+            _ <- DataStoreHandler.uploadDataSource(upload).toFox
+          } yield {
+            Ok
+          }).futureBox.map {
+            case Full(r) => r
+            case Failure(error,_,_) =>
+              JsonBadRequest(error)
+          }
+    })
   }
 
   private def ensureNewDataSetName(name: String)(implicit ctx: DBAccessContext) = {

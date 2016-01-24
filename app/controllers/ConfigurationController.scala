@@ -15,7 +15,7 @@ import play.api.libs.concurrent.Execution.Implicits._
 import scala.concurrent.Future
 
 /**
- * Created by tombocklisch on 03.02.14.
+ * Controller that handles the CRUD api for configurations (mostly settings for the tracing view)
  */
 class ConfigurationController @Inject() (val messagesApi: MessagesApi) extends Controller with Secured {
 
@@ -41,7 +41,7 @@ class ConfigurationController @Inject() (val messagesApi: MessagesApi) extends C
         conf = jsConfiguration.fields.toMap
         _ <- UserService.updateUserConfiguration(request.user, UserConfiguration(conf))
       } yield {
-        Ok
+        JsonOk(Messages("user.configuration.updated"))
       }
   }
 
@@ -63,11 +63,11 @@ class ConfigurationController @Inject() (val messagesApi: MessagesApi) extends C
   def updateDataSet(dataSetName: String) = Authenticated.async(parse.json(maxLength = 20480)) {
     implicit request =>
       for {
-        jsConfiguration <- request.body.asOpt[JsObject] ?~> Messages("user.configuration.invalid")
+        jsConfiguration <- request.body.asOpt[JsObject] ?~> Messages("user.configuration.dataset.invalid")
         conf = jsConfiguration.fields.toMap
         _ <- UserService.updateDataSetConfiguration(request.user, dataSetName, DataSetConfiguration(conf))
       } yield {
-        Ok
+        JsonOk(Messages("user.configuration.dataset.updated"))
       }
   }
 }

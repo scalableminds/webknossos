@@ -84,7 +84,7 @@ class PushQueue
         ])
       )
       transmitBufferBuilder.push(
-        @cube.getBucketDataByZoomedAddress( bucket ))
+        @cube.getBucketByZoomedAddress(bucket).data)
 
     transmitBuffer = transmitBufferBuilder.build()
 

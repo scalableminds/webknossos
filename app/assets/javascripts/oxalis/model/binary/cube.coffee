@@ -1,5 +1,6 @@
 Backbone = require("backbone")
 ErrorHandling = require("libs/error_handling")
+{Bucket, NullBucket} = require("./bucket")
 
 class Cube
 
@@ -147,6 +148,11 @@ class Cube
           cube[bucketIndex] = bucketData if not bucket? or bucket.zoomStep > zoomStep
 
 
+  getVoxelIndexByVoxelOffset : ([x, y, z]) ->
+
+    return x + y * (1 << @BUCKET_SIZE_P) + z * (1 << @BUCKET_SIZE_P * 2)
+
+
   getBucketIndexByZoomedAddress : ([x, y, z, zoomStep]) ->
 
     ErrorHandling.assertExists(@cubes[zoomStep], "Cube for given zoomStep does not exist"
@@ -212,7 +218,7 @@ class Cube
 
     cube = @cubes[address[3]].data
     bucketIndex = @getBucketIndexByZoomedAddress(address)
-    bucket = @getBucketDataByZoomedAddress(address)
+    bucket = @getBucketByZoomedAddress(address).data
 
     cube[bucketIndex] = null
     @collectArbitraryBucket(address, bucket) if address[3] <= @ARBITRARY_MAX_ZOOMSTEP
@@ -230,7 +236,8 @@ class Cube
       zoomStep + 1
     ]
 
-    while substituteAddress[3] <= @ARBITRARY_MAX_ZOOMSTEP and not (substitute = @getBucketDataByZoomedAddress(substituteAddress))?
+    while (substituteAddress[3] <= @ARBITRARY_MAX_ZOOMSTEP and
+           not (substitute = @getBucketByZoomedAddress(substituteAddress).data)?)
 
           substituteAddress[0] >>= 1
           substituteAddress[1] >>= 1

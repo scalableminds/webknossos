@@ -30,7 +30,7 @@ class PullQueue
     # Filter and sort queue, using negative priorities for sorting so .pop() can be used to get next bucket
     @queue = _.filter(@queue, (item) =>
       @boundingBox.containsBucket(item.bucket) and
-        not @cube.isBucketRequestedByZoomedAddress(item.bucket)
+        @cube.getBucketByZoomedAddress(item.bucket).needsRequest()
     )
     @queue = _.sortBy(@queue, (item) -> item.priority)
 
@@ -49,7 +49,10 @@ class PullQueue
 
     transmitBuffer = []
     for bucket in batch
-      @cube.requestBucketByZoomedAddress(bucket)
+      # TODO: Remove duplicates
+      unless @cube.getBucketByZoomedAddress(bucket).needsRequest()
+        continue
+      @cube.getBucketByZoomedAddress(bucket).pull()
       zoomStep = bucket[3]
       transmitBuffer.push(
         zoomStep
@@ -58,6 +61,9 @@ class PullQueue
         bucket[1] << (zoomStep + @cube.BUCKET_SIZE_P)
         bucket[2] << (zoomStep + @cube.BUCKET_SIZE_P)
       )
+
+    if transmitBuffer.length == 0
+      return
 
     # Measuring the time until response arrives to select appropriate preloading strategy
     roundTripBeginTime = new Date()
@@ -81,10 +87,7 @@ class PullQueue
               bucketData = responseBuffer.subarray(offset, offset += @cube.BUCKET_LENGTH)
 
             @boundingBox.removeOutsideArea(bucket, bucketData)
-            @cube.setBucketByZoomedAddress(bucket, bucketData)
-        =>
-          for bucket in batch
-            @cube.setBucketByZoomedAddress(bucket, null)
+            @cube.getBucketByZoomedAddress(bucket).receiveData(bucketData)
       )
       =>
         @batchCount--

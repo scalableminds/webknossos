@@ -39,6 +39,11 @@ class Bucket
     return @state == @STATE_UNREQUESTED
 
 
+  isLoaded : ->
+
+    return @state == @STATE_LOADED
+
+
   label : (labelFunc, mergedCallback) ->
 
     @dirty = true
@@ -116,3 +121,4 @@ class NullBucket extends Bucket
 
   label : (_) ->  # Do nothing
 
+module.exports = {Bucket, NullBucket}

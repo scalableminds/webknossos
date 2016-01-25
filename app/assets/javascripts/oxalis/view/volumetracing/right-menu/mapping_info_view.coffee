@@ -24,17 +24,16 @@ class MappingInfoView extends Marionette.CompositeView
     """)
 
 
-  subviewCreators : [
-    [
-      "enableMapping", ->
-        return new CheckboxSettingView(
-          model : @model
-          options :
-            name : "enableMapping"
-            displayName : "Enable Mapping"
-        )
-    ]
-  ]
+  subviewCreators :
+
+    "enableMapping" : ->
+
+      return new CheckboxSettingView(
+        model : @model
+        options :
+          name : "enableMapping"
+          displayName : "Enable Mapping"
+      )
 
 
   initialize : ({model : oxalisModel}) ->

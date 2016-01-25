@@ -7,18 +7,21 @@ class BoundingBoxCategory extends CategoryView
   caption : "Bounding Box"
 
 
-  subviewCreators :
+  subviewCreatorsList : [
 
-    "boundingbox" : ->
+    [
+      "boundingbox", ->
 
-      return new TextInputSettingView(
-        model : @model
-        options :
-          name : "boundingBox"
-          displayName : "Bounding Box"
-          pattern : "(\\d+\\s*,\\s*){5}\\d+"
-          title : "Format: minX, minY, minZ, maxX, maxY, maxZ"
-      )
+        return new TextInputSettingView(
+          model : @model
+          options :
+            name : "boundingBox"
+            displayName : "Bounding Box"
+            pattern : "(\\d+\\s*,\\s*){5}\\d+"
+            title : "Format: minX, minY, minZ, maxX, maxY, maxZ"
+        )
+    ]
+  ]
 
 
 module.exports = BoundingBoxCategory

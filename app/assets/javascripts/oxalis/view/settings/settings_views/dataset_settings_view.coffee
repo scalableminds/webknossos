@@ -11,14 +11,17 @@ class DatasetSettingsView extends SettingsView
   modelName : "datasetConfiguration"
 
 
-  subviewCreators :
+  subviewCreatorsList : [
 
-    "colors-category" : ->
+    [
+      "colors-category", ->
+        return new ColorsCategoryView(model : @model)
+    ]
 
-      return new ColorsCategoryView(model : @model)
-
-    "quality-category" : ->
-
-      return new QualityCategoryView(model : @model)
+    [
+      "quality-category", ->
+        return new QualityCategoryView(model : @model)
+    ]
+  ]
 
 module.exports = DatasetSettingsView

@@ -8,36 +8,43 @@ class ControlsCategoryView extends CategoryView
   caption : "Controls"
 
 
-  subviewCreators :
+  subviewCreatorsList : [
 
-    "inverseX" : ->
+    [
+      "inverseX", ->
 
-      return new CheckboxSettingView(
-        model : @model
-        options :
-          name : "inverseX"
-          displayName : "Inverse X"
-      )
+        return new CheckboxSettingView(
+          model : @model
+          options :
+            name : "inverseX"
+            displayName : "Inverse X"
+        )
+    ]
 
-    "inverseY" : ->
+    [
+      "inverseY", ->
 
-      return new CheckboxSettingView(
-        model : @model
-        options :
-          name : "inverseY"
-          displayName : "Inverse Y"
-      )
+        return new CheckboxSettingView(
+          model : @model
+          options :
+            name : "inverseY"
+            displayName : "Inverse Y"
+        )
+    ]
 
-    "keyboardDelay" : ->
+    [
+      "keyboardDelay", ->
 
-      return new SliderSettingView(
-        model : @model
-        options :
-          name : "keyboardDelay"
-          displayName : "Keyboard delay (ms)"
-          min : 0
-          max : 500
-          step : 1
-      )
+        return new SliderSettingView(
+          model : @model
+          options :
+            name : "keyboardDelay"
+            displayName : "Keyboard delay (ms)"
+            min : 0
+            max : 500
+            step : 1
+        )
+    ]
+  ]
 
 module.exports = ControlsCategoryView

@@ -3,7 +3,15 @@ Marionette = require("backbone.marionette")
 Subviews   = require("backbone-subviews")
 
 class CategoryView extends Marionette.ItemView
-
+  # Abstract class to create category views. Subclasses must specify
+  # `subviewCreatorsList` like so:
+  #
+  # subviewCreatorsList: [
+  #   [
+  #     "unique_view_id", ->
+  #       # Create & return subview
+  #   ]
+  # ]
 
   template : _.template("""
     <div class="panel panel-default">
@@ -19,8 +27,8 @@ class CategoryView extends Marionette.ItemView
       <div id="user-settings-<%- tabId %>" class="panel-collapse collapse in">
         <div class="panel-body">
 
-          <% _.forEach(subviewCreators, function (subview, key) { %>
-            <div data-subview="<%- key %>"></div>
+          <% _.forEach(subviewCreatorsList, function (key_value_pair) { %>
+            <div data-subview="<%- key_value_pair[0] %>"></div>
           <% }) %>
 
         </div>
@@ -31,12 +39,23 @@ class CategoryView extends Marionette.ItemView
 
   initialize : ->
 
+    unless @subviewCreatorsList?
+      throw new Error(
+        "Subclasses of CategoryView must specify subviewCreatorsList")
+
+    # subviewCreators hash needed for Subviews extension
+    @subviewCreators = _.transform(
+      @subviewCreatorsList
+      (result, [key, value]) -> result[key] = value
+      {}
+    )
+
     Subviews.add(this)
 
 
   serializeData : ->
 
-    return { @subviewCreators, @caption, tabId : _.uniqueId() }
+    return { @subviewCreatorsList, @caption, tabId : _.uniqueId() }
 
 
   hide : ->

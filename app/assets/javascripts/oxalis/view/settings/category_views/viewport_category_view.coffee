@@ -10,73 +10,86 @@ class ViewportCategoryView extends CategoryView
 
   caption : "Viewport Options"
 
-  subviewCreators :
+  subviewCreatorsList : [
 
-    "moveValue" : ->
+    [
+      "moveValue", ->
 
-      return new SliderSettingView(
-        model : @model
-        options :
-          name : "moveValue"
-          displayName : "Move Value (nm/s)"
-          min : constants.MIN_MOVE_VALUE
-          max : constants.MAX_MOVE_VALUE
-          step : 10
-      )
+        return new SliderSettingView(
+          model : @model
+          options :
+            name : "moveValue"
+            displayName : "Move Value (nm/s)"
+            min : constants.MIN_MOVE_VALUE
+            max : constants.MAX_MOVE_VALUE
+            step : 10
+        )
+    ]
 
-    "zoom" : ->
+    [
+      "zoom", ->
 
-      return new SliderSettingView(
-        model : @model
-        options :
-          name : "zoom"
-          displayName : "Zoom"
-          min : -100
-          max : 100
-          step : 1
-          logScaleBase : Math.pow(20, 0.01) # TODO: Math.pow(@model.flycam.getMaxZoomStep(), 0.01)
-      )
+        return new SliderSettingView(
+          model : @model
+          options :
+            name : "zoom"
+            displayName : "Zoom"
+            min : -100
+            max : 100
+            step : 1
+            logScaleBase : Math.pow(20, 0.01) # TODO: Math.pow(@model.flycam.getMaxZoomStep(), 0.01)
+        )
+    ]
 
-    "scale" : ->
+    [
+      "scale", ->
 
-      return new SliderSettingView(
-        model : @model
-        options :
-          name : "scale"
-          displayName : "Viewport Scale"
-          min : constants.MIN_SCALE
-          max : constants.MAX_SCALE
-          step : 0.1
-      )
+        return new SliderSettingView(
+          model : @model
+          options :
+            name : "scale"
+            displayName : "Viewport Scale"
+            min : constants.MIN_SCALE
+            max : constants.MAX_SCALE
+            step : 0.1
+        )
+    ]
 
-    "clippingDistance" : ->
+    [
+      "clippingDistance", ->
 
-      return new SliderSettingView(
-        model : @model
-        options :
-          name : "clippingDistance"
-          displayName : "Clipping Distance"
-          min : 1
-          max : 1000 * app.scaleInfo.baseVoxel
-          step : 1
-      )
+        return new SliderSettingView(
+          model : @model
+          options :
+            name : "clippingDistance"
+            displayName : "Clipping Distance"
+            min : 1
+            max : 1000 * app.scaleInfo.baseVoxel
+            step : 1
+        )
+    ]
 
-    "dynamicSpaceDirection" : ->
+    [
+      "dynamicSpaceDirection", ->
 
-      return new CheckboxSettingView(
-        model : @model
-        options :
-          name : "dynamicSpaceDirection"
-          displayName : "d/f-Switching"
-      )
+        return new CheckboxSettingView(
+          model : @model
+          options :
+            name : "dynamicSpaceDirection"
+            displayName : "d/f-Switching"
+        )
+    ]
 
-    "displayCrosshair" : ->
+    [
+      "displayCrosshair", ->
 
-      return new CheckboxSettingView(
-        model : @model
-        options :
-          name : "displayCrosshair"
-          displayName : "Show Crosshairs"
-      )
+        return new CheckboxSettingView(
+          model : @model
+          options :
+            name : "displayCrosshair"
+            displayName : "Show Crosshairs"
+        )
+    ]
+  ]
 
 module.exports = ViewportCategoryView

@@ -1,25 +1,24 @@
-FROM 1science/sbt:0.13.8-oracle-jre-8
+FROM java:8-jre
 
-# Install node
-RUN apk add --update nodejs curl make gcc g++ binutils python linux-headers paxctl libgcc libstdc++ && \
-  npm install -g gulp
+# Install mongo tools for evolutions
+RUN apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv EA312927 \
+  && echo "deb http://repo.mongodb.org/apt/debian wheezy/mongodb-org/3.2 main" | tee /etc/apt/sources.list.d/mongodb-org-3.2.list \
+  && apt-get update \
+  && apt-get install -y mongodb-org-shell=3.2.1 mongodb-org-tools=3.2.1
+
+ENV PROJECT "webknossos"
 
 RUN mkdir -p /srv/webknossos
 WORKDIR /srv/webknossos
 
-ADD package.json package.json
-RUN npm install && \
-  apk del curl make gcc g++ binutils python linux-headers paxctl
+COPY target/universal/stage .
+COPY buildtools/cmd.sh .
 
-ADD project project
-ADD version version
-RUN sbt exit
+RUN groupadd -r app-user \
+  && useradd -r -g app-user app-user \
+  && mkdir disk \
+  && chown -R app-user .
 
-RUN mkdir -p ~/.sbt/0.13 && \
-  echo "scalacOptions ++= Seq(\"-Xmax-classfile-name\",\"72\")" > ~/.sbt/0.13/local.sbt
+USER app-user
 
-ADD . .
-# RUN gulp
-RUN sbt compile
-
-CMD [ "sbt", "run" ]
+CMD [ "./cmd.sh" ]

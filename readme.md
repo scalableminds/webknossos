@@ -5,7 +5,7 @@ Cellular-resolution connectomics is currently substantially limited by the throu
 
 ## Dependencies
 
-* [Java JDK 1.7 (Oracle version)](http://www.oracle.com/technetwork/java/javase/downloads/index.html)
+* [Java JDK 1.8 (Oracle version)](http://www.oracle.com/technetwork/java/javase/downloads/index.html)
 * [sbt](http://www.scala-sbt.org/)
 * [mongoDB 2.4.3+](http://www.mongodb.org/downloads)
 * [node.js 0.10.0+](http://nodejs.org/download/)

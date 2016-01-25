@@ -181,11 +181,19 @@ class Cube
 
     if bucketIndex?
       unless cube[bucketIndex]?
-        cube[bucketIndex] = new Bucket(@BIT_DEPTH)
-        @addBucketToGarbageCollection(address)
+        cube[bucketIndex] = @createBucket(address)
       return cube[bucketIndex]
 
     return @NULL_BUCKET
+
+
+  createBucket : (address) ->
+
+    bucket = new Bucket(@BIT_DEPTH)
+    bucket.on
+      bucketLoaded : => @trigger("bucketLoaded", address)
+    @addBucketToGarbageCollection(address)
+    return bucket
 
 
   accessBuckets : (addressList) ->

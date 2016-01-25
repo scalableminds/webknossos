@@ -1,3 +1,4 @@
+Backbone = require("backbone")
 
 class Bucket
 
@@ -10,6 +11,8 @@ class Bucket
 
 
   constructor : (@BIT_DEPTH) ->
+
+    _.extend(this, Backbone.Events)
 
     @BUCKET_LENGTH = (1 << @BUCKET_SIZE_P * 3) * (@BIT_DEPTH >> 3)
     @BYTE_OFFSET   = (@BIT_DEPTH >> 3)
@@ -79,6 +82,7 @@ class Bucket
           @mergedCallback()
         else
           @data = data
+        @trigger("bucketLoaded")
         @STATE_LOADED
       else
         @unexpectedState()

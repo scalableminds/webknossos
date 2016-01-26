@@ -1,13 +1,13 @@
-_                       = require("lodash")
-Uint8ArrayBuilder       = require("libs/uint8array_builder")
-Request                 = require("libs/request")
-pako                    = require("pako")
+Cube              = require("./cube")
+Request           = require("libs/request")
+MultipartData     = require("libs/multipart_data")
 
 class PushQueue
 
   BATCH_LIMIT : 1
   BATCH_SIZE : 32
   THROTTLE_TIME : 10000
+  MESSAGE_TIMEOUT : 10000
 
 
   constructor : (@dataSetName, @cube, @layer, @tracingId, @updatePipeline, @sendData = true) ->
@@ -72,33 +72,34 @@ class PushQueue
 
   pushBatch : (batch) ->
 
-    transmitBufferBuilder = new Uint8ArrayBuilder()
+    transmitData = new MultipartData()
+
     for bucket in batch
       zoomStep = bucket[3]
-      transmitBufferBuilder.push(
-        new Float32Array([
-          zoomStep
-          bucket[0] << (zoomStep + @cube.BUCKET_SIZE_P)
-          bucket[1] << (zoomStep + @cube.BUCKET_SIZE_P)
-          bucket[2] << (zoomStep + @cube.BUCKET_SIZE_P)
-        ])
-      )
-      transmitBufferBuilder.push(
-        @cube.getBucketByZoomedAddress(bucket).data)
 
-    transmitBuffer = transmitBufferBuilder.build()
+      transmitData.addPart(
+          "X-Bucket": JSON.stringify(
+            position: [
+              bucket[0] << (zoomStep + @cube.BUCKET_SIZE_P)
+              bucket[1] << (zoomStep + @cube.BUCKET_SIZE_P)
+              bucket[2] << (zoomStep + @cube.BUCKET_SIZE_P)
+            ]
+            zoomStep: zoomStep
+            cubeSize: 1 << @cube.BUCKET_SIZE_P),
+          @cube.getBucketByZoomedAddress(bucket).data)
 
     @updatePipeline.executePassAlongAction =>
 
-      console.log "Pushing batch", batch
-      transmitBuffer = pako.gzip(transmitBuffer)
+      transmitData.dataPromise().then((data) =>
+        Request.sendArraybufferReceiveArraybuffer("#{@layer.url}/data/datasets/#{@dataSetName}/layers/#{@layer.name}/data?token=#{@layer.token}",
+          method : "PUT"
+          data : data
+          headers :
+            "Content-Type" : "multipart/mixed; boundary=#{transmitData.boundary}"
+          timeout : @MESSAGE_TIMEOUT
+          compress : true
+        )
+      )
 
-      Request.$(Request.sendArraybufferReceiveArraybuffer(
-        @url
-        data: transmitBuffer
-        method: "PUT"
-        headers:
-          "Content-Encoding": "gzip"
-      ))
 
 module.exports = PushQueue

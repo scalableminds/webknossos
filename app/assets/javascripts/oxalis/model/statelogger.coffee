@@ -122,7 +122,7 @@ class StateLogger
 
         In order to restore the current window, a reload is necessary.
       """)
-      window.location.reload()
+      app.router.reload()
 
 
     setTimeout((=> @pushNow()), @SAVE_RETRY_WAITING_TIME)

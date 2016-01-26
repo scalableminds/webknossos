@@ -9,34 +9,41 @@ class QualityCategoryView extends CategoryView
   caption : "Quality"
 
 
-  subviewCreators :
+  subviewCreatorsList : [
 
-    "fourBit" : ->
+    [
+      "fourBit", ->
 
-      return new CheckboxSettingView(
-        model : @model
-        options :
-          name : "fourBit"
-          displayName : "4 Bit"
-      )
+        return new CheckboxSettingView(
+          model : @model
+          options :
+            name : "fourBit"
+            displayName : "4 Bit"
+        )
+    ]
 
-    "interpolation" : ->
+    [
+      "interpolation", ->
 
-      return new CheckboxSettingView(
-        model : @model
-        options :
-          name : "interpolation"
-          displayName : "Interpolation"
-      )
+        return new CheckboxSettingView(
+          model : @model
+          options :
+            name : "interpolation"
+            displayName : "Interpolation"
+        )
+    ]
 
-    "quality" : ->
+    [
+      "quality", ->
 
-      return new DropdownSettingView(
-        model : @model
-        options :
-          name : "quality"
-          displayName : "Quality"
-          options : ["high", "medium", "low"]
-      )
+        return new DropdownSettingView(
+          model : @model
+          options :
+            name : "quality"
+            displayName : "Quality"
+            options : ["high", "medium", "low"]
+        )
+    ]
+  ]
 
 module.exports = QualityCategoryView

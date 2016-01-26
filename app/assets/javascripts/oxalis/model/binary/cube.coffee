@@ -126,29 +126,6 @@ class Cube
     return @arbitraryCube
 
 
-  setArbitraryBucketByZoomedAddress : ([bucket_x, bucket_y, bucket_z, zoomStep], bucketData) ->
-
-    cube = @arbitraryCube
-
-    width = 1 << zoomStep
-
-    for dx in [0...width] by 1
-      for dy in [0...width] by 1
-        for dz in [0...width] by 1
-
-          subBucket = [
-            (bucket_x << zoomStep) + dx
-            (bucket_y << zoomStep) + dy
-            (bucket_z << zoomStep) + dz
-            0
-          ]
-
-          bucketIndex = @getBucketIndexByZoomedAddress(subBucket)
-          bucket = cube[bucketIndex]
-
-          cube[bucketIndex] = bucketData if not bucket? or bucket.zoomStep > zoomStep
-
-
   getVoxelIndexByVoxelOffset : ([x, y, z]) ->
 
     return x + y * (1 << @BUCKET_SIZE_P) + z * (1 << @BUCKET_SIZE_P * 2)

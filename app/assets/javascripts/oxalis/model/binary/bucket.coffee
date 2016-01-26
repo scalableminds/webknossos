@@ -10,7 +10,7 @@ class Bucket
   BUCKET_SIZE_P : 5
 
 
-  constructor : (@BIT_DEPTH) ->
+  constructor : (@BIT_DEPTH, @zoomedAddress) ->
 
     _.extend(this, Backbone.Events)
 
@@ -30,7 +30,7 @@ class Bucket
     @accessed = true
 
 
-  collect : ->
+  shouldCollect : ->
 
     collect = not @accessed and not @dirty
     @accessed = false

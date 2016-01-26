@@ -167,10 +167,10 @@ class Cube
 
   createBucket : (address) ->
 
-    bucket = new Bucket(@BIT_DEPTH)
+    bucket = new Bucket(@BIT_DEPTH, address)
     bucket.on
       bucketLoaded : => @trigger("bucketLoaded", address)
-    @addBucketToGarbageCollection(address)
+    @addBucketToGarbageCollection(bucket)
     return bucket
 
 
@@ -182,30 +182,27 @@ class Cube
       bucket.access()
 
 
-  addBucketToGarbageCollection : (address) ->
-
-    @bucketCount++
+  addBucketToGarbageCollection : (bucket) ->
 
     unless @bucketCount < @MAXIMUM_BUCKET_COUNT
 
-      while((bucket = @buckets[@bucketIterator]).accessed)
+      while(not @buckets[@bucketIterator].shouldCollect())
 
-        bucket.accessed = false
-        @bucketIterator = ++@bucketIterator % MAXIMUM_BUCKET_COUNT
+        @bucketIterator = ++@bucketIterator % @MAXIMUM_BUCKET_COUNT
 
-      @collectBucket(bucket)
+      @collectBucket(@buckets[@bucketIterator])
       @bucketCount--
 
-    @buckets[@bucketIterator] = address
+    @bucketCount++
+    @buckets[@bucketIterator] = bucket
     @bucketIterator = ++@bucketIterator % @MAXIMUM_BUCKET_COUNT
 
 
-  collectBucket : (address) ->
+  collectBucket : (bucket) ->
 
+    address = bucket.zoomedAddress
     cube = @cubes[address[3]].data
     bucketIndex = @getBucketIndexByZoomedAddress(address)
-    bucket = @getBucketByZoomedAddress(address).data
-
     cube[bucketIndex] = null
 
 

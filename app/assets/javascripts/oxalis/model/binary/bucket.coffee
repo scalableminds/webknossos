@@ -47,13 +47,16 @@ class Bucket
     return @state == @STATE_LOADED
 
 
-  label : (labelFunc, mergedCallback) ->
-
-    @dirty = true
-    if @state != @STATE_LOADED
-      @mergedCallback = mergedCallback
+  label : (labelFunc, pushCallback) ->
 
     labelFunc(@getOrCreateData())
+    @dirty = true
+
+    if @state == @STATE_LOADED
+      pushCallback()
+    else
+      @pushCallback = pushCallback
+
 
 
   getOrCreateData : ->
@@ -79,7 +82,7 @@ class Bucket
       when @STATE_REQUESTED
         if @dirty
           @merge(data)
-          @mergedCallback()
+          @pushCallback()
         else
           @data = data
         @trigger("bucketLoaded")

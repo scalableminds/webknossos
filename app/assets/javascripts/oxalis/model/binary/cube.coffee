@@ -1,4 +1,5 @@
 Backbone = require("backbone")
+_ = require("lodash")
 ErrorHandling = require("libs/error_handling")
 {Bucket, NullBucket} = require("./bucket")
 
@@ -302,15 +303,16 @@ class Cube
 
       { bucket, voxelIndex } = @getBucketAndVoxelIndex(voxel, 0, true)
 
-      mergedCallback = =>
+      mergedCallback = _.debounce((=>
         @pushQueue.insert(@positionToZoomedAddress(voxel))
-        @pushQueue.push()
+        @pushQueue.push()), 1000)
 
-      bucket.label (data, mergedCallback) ->
-
+      labelFunc = (data) =>
         # Write label in little endian order
         for i in [0...@BYTE_OFFSET]
           data[voxelIndex + i] = (label >> (i * 8) ) & 0xff
+
+      bucket.label(labelFunc, mergedCallback)
 
 
   getDataValue : ( voxel, mapping=@EMPTY_MAPPING ) ->

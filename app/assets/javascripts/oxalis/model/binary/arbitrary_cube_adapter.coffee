@@ -1,0 +1,50 @@
+class ArbitraryCubeAdapter
+
+  ARBITRARY_MAX_ZOOMSTEP : 2
+
+
+  constructor : (@cube, @boundary) ->
+
+    @sizeZYX = @boundary[0] * @boundary[1] * @boundary[2]
+    @sizeZY  = @boundary[1] * @boundary[2]
+    @sizeZ   = @boundary[2]
+
+
+  getBucket : _.memoize((bucketIndex) ->
+
+    return null unless @isValidBucket(bucketIndex)
+
+    bucketAddress = [
+      Math.floor(bucketIndex / @sizeZY),
+      Math.floor((bucketIndex % @sizeZY) / @sizeZ),
+      bucketIndex % @sizeZ,
+      0
+    ]
+
+    for zoomStep in [0..@ARBITRARY_MAX_ZOOMSTEP]
+      if ((bucket = @cube.getBucketDataByZoomedAddress(bucketAddress)) != null)
+        bucket.zoomStep = zoomStep
+        return bucket
+
+      bucketAddress = [
+        bucketAddress[0] >> 1
+        bucketAddress[1] >> 1
+        bucketAddress[2] >> 1
+        bucketAddress[3] + 1
+      ]
+
+    return null
+  )
+
+
+  isValidBucket : (bucketIndex) ->
+
+    return bucketIndex < @sizeZYX
+
+
+  reset : ->
+
+    @getBucket.cache.__data__ = {}
+
+
+module.exports = ArbitraryCubeAdapter

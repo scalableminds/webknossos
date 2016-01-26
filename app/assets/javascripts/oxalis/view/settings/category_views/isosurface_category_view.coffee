@@ -10,40 +10,47 @@ class IsosurfaceCategoryView extends CategoryView
   caption : "Isosurface View"
 
 
-  subviewCreators :
+  subviewCreatorsList : [
 
-    "displayIso" : ->
+    [
+      "displayIso", ->
 
-      return new CheckboxSettingView(
-        model : @model
-        options :
-          name : "isosurfaceDisplay"
-          displayName : "Turn On"
-      )
+        return new CheckboxSettingView(
+          model : @model
+          options :
+            name : "isosurfaceDisplay"
+            displayName : "Turn On"
+        )
+    ]
 
-    "boundingBox" : ->
+    [
+      "boundingBox", ->
 
-      return new SliderSettingView(
-        model : @model
-        options :
-          name : "isosurfaceBBsize"
-          displayName : "Bounding Box Size"
-          min : 1
-          max : 10
-          step : 0.1
-      )
+        return new SliderSettingView(
+          model : @model
+          options :
+            name : "isosurfaceBBsize"
+            displayName : "Bounding Box Size"
+            min : 1
+            max : 10
+            step : 0.1
+        )
+    ]
 
-    "resolution" : ->
+    [
+      "resolution", ->
 
-      return new SliderSettingView(
-        model : @model
-        options :
-          name : "isosurfaceResolution"
-          displayName : "Resolution"
-          min : 40
-          max : 400
-          step : 1
-      )
+        return new SliderSettingView(
+          model : @model
+          options :
+            name : "isosurfaceResolution"
+            displayName : "Resolution"
+            min : 40
+            max : 400
+            step : 1
+        )
+    ]
+  ]
 
 
   initialize : ->

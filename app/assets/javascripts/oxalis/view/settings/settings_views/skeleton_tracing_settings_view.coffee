@@ -13,20 +13,21 @@ class SkeletonTracingSettingsView extends SettingsView
 
   modelName : "skeletonTracingAdapter"
 
-  subviewCreators :
+  subviewCreatorsList : [
+    [
+      "tree-category", ->
+        return new TreeCategoryView({ @model })
+    ]
 
-    "tree-category" : ->
+    [
+      "node-category", ->
+        return new NodeCategoryView({ @model })
+    ]
 
-      return new TreeCategoryView({ @model })
-
-
-    "node-category" : ->
-
-      return new NodeCategoryView({ @model })
-
-
-    "boundingBox-category" : ->
-
-      return new BoundingBoxCategory({ @model })
+    [
+      "boundingBox-category", ->
+        return new BoundingBoxCategory({ @model })
+    ]
+  ]
 
 module.exports = SkeletonTracingSettingsView

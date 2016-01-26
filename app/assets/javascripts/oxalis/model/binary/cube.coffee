@@ -1,5 +1,6 @@
 Backbone = require("backbone")
 ErrorHandling = require("libs/error_handling")
+ArbitraryCubeAdapter = require("./arbitrary_cube_adapter")
 
 class Cube
 
@@ -63,8 +64,7 @@ class Cube
       Math.ceil(@upperBoundary[2] / (1 << @BUCKET_SIZE_P))
     ]
 
-    @arbitraryCube = new Array(cubeBoundary[0] * cubeBoundary[1] * cubeBoundary[2])
-    @arbitraryCube.boundary = cubeBoundary.slice()
+    @arbitraryCube = new ArbitraryCubeAdapter(@, cubeBoundary.slice())
 
     for i in [0...@ZOOM_STEP_COUNT]
 
@@ -122,7 +122,7 @@ class Cube
 
   getArbitraryCube : ->
 
-    @arbitraryCube
+    return @arbitraryCube
 
 
   getBucketIndexByZoomedAddress : ( address ) ->
@@ -228,7 +228,6 @@ class Cube
 
       @setBucketData(cube, bucketIndex, bucketData)
 
-      @setArbitraryBucketByZoomedAddress(address, bucketData) if address[3] <= @ARBITRARY_MAX_ZOOMSTEP
       @trigger("bucketLoaded", address)
 
 
@@ -257,29 +256,6 @@ class Cube
           oldBucketData[i * @BYTE_OFFSET + j] = newBucketData[i * @BYTE_OFFSET + j]
 
     return oldBucketData
-
-
-  setArbitraryBucketByZoomedAddress : ([bucket_x, bucket_y, bucket_z, zoomStep], bucketData) ->
-
-    cube = @arbitraryCube
-
-    width = 1 << zoomStep
-
-    for dx in [0...width] by 1
-      for dy in [0...width] by 1
-        for dz in [0...width] by 1
-
-          subBucket = [
-            (bucket_x << zoomStep) + dx
-            (bucket_y << zoomStep) + dy
-            (bucket_z << zoomStep) + dz
-            0
-          ]
-
-          bucketIndex = @getBucketIndexByZoomedAddress(subBucket)
-          bucket = cube[bucketIndex]
-
-          cube[bucketIndex] = bucketData if not bucket? or bucket.zoomStep > zoomStep
 
 
   accessBuckets : (addressList) ->
@@ -313,44 +289,7 @@ class Cube
     bucket = @getBucketDataByZoomedAddress(address)
 
     cube[bucketIndex] = null
-    @collectArbitraryBucket(address, bucket) if address[3] <= @ARBITRARY_MAX_ZOOMSTEP
 
-
-  collectArbitraryBucket : ([bucket_x, bucket_y, bucket_z, zoomStep], oldBucket) ->
-
-    cube = @arbitraryCube
-
-    substitute = null
-    substituteAddress = [
-      bucket_x >> 1
-      bucket_y >> 1
-      bucket_z >> 1
-      zoomStep + 1
-    ]
-
-    while substituteAddress[3] <= @ARBITRARY_MAX_ZOOMSTEP and not (substitute = @getBucketDataByZoomedAddress(substituteAddress))?
-
-          substituteAddress[0] >>= 1
-          substituteAddress[1] >>= 1
-          substituteAddress[2] >>= 1
-          substituteAddress[3]++
-
-    width = 1 << zoomStep
-
-    for dx in [0...width] by 1
-      for dy in [0...width] by 1
-        for dz in [0...width] by 1
-
-          subBucket = [
-            (bucket_x << zoomStep) + dx
-            (bucket_y << zoomStep) + dy
-            (bucket_z << zoomStep) + dz
-             0
-          ]
-
-          bucketIndex = @getBucketIndexByZoomedAddress(subBucket)
-
-          cube[bucketIndex] = substitute if cube[bucketIndex] == oldBucket
 
   labelTestShape : ->
     # draw a sqhere, centered at (100, 100, 100) with radius 50

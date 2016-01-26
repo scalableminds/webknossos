@@ -5,15 +5,18 @@ class AbstractTreeCategoryView extends CategoryView
 
   caption : "Abstract Tree"
 
-  subviewCreators :
+  subviewCreatorsList : [
 
-    "renderComments" : ->
+    [
+      "renderComments", ->
 
-      return new CheckboxSettingView(
-        model : @model
-        options :
-          name : "renderComments"
-          displayName : "Render Comments"
-      )
+        return new CheckboxSettingView(
+          model : @model
+          options :
+            name : "renderComments"
+            displayName : "Render Comments"
+        )
+    ]
+  ]
 
 module.exports = AbstractTreeCategoryView

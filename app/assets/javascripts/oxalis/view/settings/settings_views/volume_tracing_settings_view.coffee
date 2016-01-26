@@ -12,10 +12,11 @@ class VolumeTracingSettingsView extends SettingsView
   modelName : "volumeTracingAdapter"
 
 
-  subviewCreators :
-
-    "cell-category" : ->
-
-      return new CellCategoryView({ @model })
+  subviewCreatorsList : [
+    [
+      "cell-category", ->
+        return new CellCategoryView({ @model })
+    ]
+  ]
 
 module.exports = VolumeTracingSettingsView

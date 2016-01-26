@@ -1,4 +1,5 @@
 Backbone = require("backbone")
+_ = require("lodash")
 
 class Bucket
 
@@ -47,15 +48,15 @@ class Bucket
     return @state == @STATE_LOADED
 
 
-  label : (labelFunc, pushCallback) ->
+  label : (labelFunc, createdCallback=_.noop, loadedCallback=_.noop) ->
 
-    labelFunc(@getOrCreateData())
+    labelFunc(@getOrCreateData(createdCallback))
     @dirty = true
 
     if @state == @STATE_LOADED
-      pushCallback()
+      loadedCallback()
     else
-      @pushCallback = pushCallback
+      @loadedCallback = loadedCallback
 
 
   hasData : ->
@@ -72,10 +73,11 @@ class Bucket
     return @data
 
 
-  getOrCreateData : ->
+  getOrCreateData : (createdCallback=_.noop) ->
 
     unless @data?
       @data = new Uint8Array(@BUCKET_LENGTH)
+      createdCallback()
 
     return @getData()
 
@@ -93,7 +95,7 @@ class Bucket
       when @STATE_REQUESTED
         if @dirty
           @merge(data)
-          @pushCallback()
+          @loadedCallback()
         else
           @data = data
         @trigger("bucketLoaded")

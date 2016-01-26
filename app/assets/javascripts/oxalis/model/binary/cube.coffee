@@ -3,6 +3,7 @@ _ = require("lodash")
 ErrorHandling = require("libs/error_handling")
 {Bucket, NullBucket} = require("./bucket")
 ArbitraryCubeAdapter = require("./arbitrary_cube_adapter")
+PullQueue = require("./pullqueue")
 
 class Cube
 
@@ -85,6 +86,9 @@ class Cube
   setMapping : (@mapping) ->
 
     @trigger("mappingChanged")
+
+
+  setPullQueue : (@pullQueue) ->
 
 
   setPushQueue : (@pushQueue) ->
@@ -239,16 +243,30 @@ class Cube
 
       { bucket, voxelIndex } = @getBucketAndVoxelIndex(voxel, 0, true)
 
-      mergedCallback = _.debounce((=>
-        @pushQueue.insert(@positionToZoomedAddress(voxel))
-        @pushQueue.push()), 1000)
-
       labelFunc = (data) =>
         # Write label in little endian order
         for i in [0...@BYTE_OFFSET]
           data[voxelIndex + i] = (label >> (i * 8) ) & 0xff
 
-      bucket.label(labelFunc, mergedCallback)
+
+      if not bucket.hasData()
+        # Ensure that if a temporal bucket is created, the bucket will be
+        # requested.
+        createdCallback = _.debounce((=>
+          @pullQueue.add({
+            bucket: @positionToZoomedAddress(voxel),
+            priority: PullQueue::PRIORITY_HIGHEST})
+          @pullQueue.pull()))
+      else
+        createdCallback = _.noop
+
+      # Ensure that once the bucket is loaded (or immediately if it already is),
+      # it will be pushed to the server.
+      loadedCallback = _.debounce((=>
+        @pushQueue.insert(@positionToZoomedAddress(voxel))
+        @pushQueue.push()))
+
+      bucket.label(labelFunc, createdCallback, loadedCallback)
 
 
   getDataValue : ( voxel, mapping=@EMPTY_MAPPING ) ->

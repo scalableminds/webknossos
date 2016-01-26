@@ -28,6 +28,10 @@ case class DataRequestSettings(
   useHalfByte: Boolean /* = false*/,
   skipInterpolation: Boolean)
 
+object DataRequestSettings {
+  val default = DataRequestSettings(false, false)
+}
+
 case class DataWriteRequest(
   dataSource: DataSource,
   dataLayer: DataLayer,

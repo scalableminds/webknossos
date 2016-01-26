@@ -96,7 +96,7 @@ subPointMacro = _.template(
 
     <%= output %> = lastBucket[pointIndex];
 
-  } else if (bucketIndex < buckets.length && (bucket = buckets[bucketIndex]) != null) {
+  } else if ((bucket = buckets.getBucket(bucketIndex)) != null) {
 
     bucketZoomStep = bucket.zoomStep || 0;
 
@@ -116,7 +116,7 @@ subPointMacro = _.template(
     <%= output %> = bucket[pointIndex];
 
   } else {
-    if(bucketIndex < buckets.length && missingBuckets.length < 100) {
+    if(buckets.isValidBucket(bucketIndex) && missingBuckets.length < 100) {
 
       missingBuckets.push([
         Math.floor(bucketIndex / sizeZY),
@@ -231,6 +231,8 @@ InterpolationCollector =
       var bucketIndex, sub_x, sub_y, sub_Z;
       var min_x, min_y, min_z, max_x, max_y, max_z;
       var i, j;
+
+      buckets.reset();
 
       if (buckets) {
 

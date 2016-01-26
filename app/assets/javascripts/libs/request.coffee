@@ -121,8 +121,23 @@ Request =
       credentials : "same-origin"
       headers : {}
       doNotCatch : false
+      params : null
 
     options = _.defaultsDeep(options, defaultOptions)
+
+    # Append URL parameters to the URL
+    if options.params
+      params = options.params
+
+      if _.isString()
+        appendix = params
+      else if _.isObject(params)
+        appendix = _.map(params, (value, key) -> return "#{key}=#{value}").join("&")
+      else
+        throw new Error("options.params is expected to be a string or object for a request!")
+
+      url += "?#{appendix}"
+
 
     headers = new Headers()
     for name of options.headers

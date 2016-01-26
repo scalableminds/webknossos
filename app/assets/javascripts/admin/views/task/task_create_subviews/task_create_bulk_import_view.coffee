@@ -13,7 +13,7 @@ class TaskCreateBulkImportView extends Marionette.ItemView
     <div class="col-sm-12">
       <div class="well">
         One line for each task. The values are seperated by ','. Format: <br>
-        dataSet, taskTypeSummary, experienceDomain, minExperience, x, y, z, priority, instances, team, minX, minY, minZ, maxX, maxY, maxZ, (opt: project)<br><br>
+        dataSet, taskTypeId, experienceDomain, minExperience, x, y, z, priority, instances, team, minX, minY, minZ, maxX, maxY, maxZ, (opt: project)<br><br>
 
         <form action="" method="POST" class="form-horizontal" onSubmit="return false;">
           <div class="form-group">
@@ -35,7 +35,7 @@ class TaskCreateBulkImportView extends Marionette.ItemView
   events :
     "submit" : "submit"
 
-  ui:
+  ui :
     "bulkText" : "textarea[name=data]"
 
   ###*
@@ -49,63 +49,57 @@ class TaskCreateBulkImportView extends Marionette.ItemView
       @showInvalidData()
       return
 
-    requests = @parseText(bulkText).map((task) ->
-      return Request.sendJSONReceiveJSON(
-        "/api/tasks",
-        data : task
-      )
+    tasks = @parseText(bulkText)
+    Request.sendJSONReceiveJSON(
+      "/api/tasks"
+      params : {type : "bulk"},
+      data : tasks
+    ).then(
+      =>
+        @showSaveSuccess()
+      =>
+        @showSaveError()
     )
-
-    Promise.all(requests)
-      .then(
-        =>
-          if response.status == 200
-            @showSaveSuccess()
-          else
-            @showSaveError()
-        =>
-          @showSaveError()
-      )
 
     return
 
 
-  showSaveSuccess: ->
+  showSaveSuccess : ->
 
     Toast.success("The tasks were successfully created")
 
 
-  showSaveError: ->
+  showSaveError : ->
 
     Toast.error("The tasks could not be created due to server errors.")
 
 
-  showInvalidData: ->
+  showInvalidData : ->
 
     Toast.error("The form data is not correct.")
 
 
-  splitToLines: (string) ->
+  splitToLines : (string) ->
 
-    return string.split("\n")
+    return string.trim().split("\n")
 
 
-  splitToWords: (string) ->
+  splitToWords : (string) ->
 
     return string.split(",").map(_.trim)
 
 
-  isValidData: (bulkText) ->
+  isValidData : (bulkText) ->
 
     return _.every(@splitToLines(bulkText), @isValidLine, @)
 
 
-  isNull: (value) ->
+  isNull : (value) ->
 
     return value is null
 
 
-  isValidLine: (bulkLine) ->
+  isValidLine : (bulkLine) ->
 
     bulkData = @formatLine(bulkLine)
     if bulkData is null
@@ -125,19 +119,20 @@ class TaskCreateBulkImportView extends Marionette.ItemView
     return true
 
 
-  parseText: (bulkText) ->
+  parseText : (bulkText) ->
 
     return _.map(@splitToLines(bulkText), @formatLine, @)
 
 
-  formatLine: (bulkLine) ->
+  formatLine : (bulkLine) ->
 
     words = @splitToWords(bulkLine)
     if words.length < 16
       return null
+    debugger
 
     dataSet = words[0]
-    type = words[1]
+    taskTypeId = words[1]
     experienceDomain = words[2]
     minExperience = parseInt(words[3])
     x = parseInt(words[4])
@@ -160,21 +155,21 @@ class TaskCreateBulkImportView extends Marionette.ItemView
     return {
       dataSet,
       team,
-      type,
-      neededExperience:
-        value: minExperience
-        domain: experienceDomain
-      status:
-        open: instances
-        inProgress: 0
-        completed: 0
+      taskTypeId,
+      neededExperience :
+        value : minExperience
+        domain : experienceDomain
+      status :
+        open : instances
+        inProgress : 0
+        completed : 0
       priority,
-      editPosition: [x, y, z]
-      boundingBox:
-        topLeft: [minX, minY, minZ]
-        width: maxX
-        height: maxY
-        depth: maxZ
+      editPosition : [x, y, z]
+      boundingBox :
+        topLeft : [minX, minY, minZ]
+        width : maxX
+        height : maxY
+        depth : maxZ
       projectName
     }
 

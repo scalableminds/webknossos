@@ -1,7 +1,7 @@
 $     = require("jquery")
 _     = require("lodash")
 Toast = require("libs/toast")
-
+pako  = require("pako")
 
 Request =
 
@@ -103,6 +103,10 @@ Request =
       else
         options.data.buffer.slice(0, options.data.byteLength)
 
+    if options.compress
+      body = pako.gzip(body)
+      options.headers["Content-Encoding"] = "gzip"
+
     return @receiveArraybuffer(
       url,
       _.defaultsDeep(options,
@@ -143,12 +147,14 @@ Request =
 
 
   timeoutPromise : (timeout) ->
+
     return new Promise( (resolve, reject) ->
       setTimeout(
         -> reject("timeout")
         timeout
       )
     )
+
 
   handleStatus : (response) ->
 
@@ -213,5 +219,6 @@ Request =
     )
 
     return deferred.promise()
+
 
 module.exports = Request

@@ -13,7 +13,7 @@ class VolumeTabView extends AbstractTabView
         name : "Tracing"
         iconClass : "fa fa-cogs"
         viewClass : VolumeTracingSettingsView
-        options : { model: new BackboneToOxalisAdapterModel(@model)}
+        options : { model: @adapterModel}
       }
       {
         id : "dataset-settings-tab"

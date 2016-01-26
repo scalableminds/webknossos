@@ -31,9 +31,9 @@ class NodeCategoryView extends CategoryView
           options :
             name : "radius"
             displayName : "Radius"
-            min: 1
-            max: 5000
-            step: 10
+            min : 1
+            max : 5000
+            step : 1
         )
     ]
 
@@ -45,9 +45,9 @@ class NodeCategoryView extends CategoryView
           options :
             name : "particleSize"
             displayName : "Particle Size"
-            min: Constants.MIN_PARTICLE_SIZE
-            max: Constants.MAX_PARTICLE_SIZE
-            step: 0.1
+            min : Constants.MIN_PARTICLE_SIZE
+            max : Constants.MAX_PARTICLE_SIZE
+            step : 0.1
         )
     ]
 

@@ -58,15 +58,26 @@ class Bucket
       @pushCallback = pushCallback
 
 
+  hasData : ->
 
-  getOrCreateData : ->
+    return @data?
+
+
+  getData : ->
+
+    unless @data?
+      throw new Error("Bucket.getData() called, but data does not exist.")
 
     @accessed = true
+    return @data
+
+
+  getOrCreateData : ->
 
     unless @data?
       @data = new Uint8Array(@BUCKET_LENGTH)
 
-    return @data
+    return @getData()
 
 
   pull : ->
@@ -127,5 +138,6 @@ class NullBucket extends Bucket
     @data = new Uint8Array(@BUCKET_LENGTH)
 
   label : (_) ->  # Do nothing
+
 
 module.exports = {Bucket, NullBucket}

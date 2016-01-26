@@ -280,7 +280,7 @@ class Plane2D
 
       sourceOffset = (sourceOffsets[0] << @DELTA[@U]) + (sourceOffsets[1] << @DELTA[@V]) + (sourceOffsets[2] << @DELTA[@W])
 
-      bucketData = @cube.getBucketByZoomedAddress(bucket).data
+      bucketData = @cube.getBucketByZoomedAddress(bucket).getData()
       mapping    = @cube.currentMapping
       @cube.accessBuckets([bucket])
 

@@ -37,9 +37,18 @@ class PullQueue
     # Starting to download some buckets
     while @batchCount < @BATCH_LIMIT and @queue.length
 
-      items = @queue.splice(0, Math.min(@BATCH_SIZE, @queue.length))
-      batch = (item.bucket for item in items)
-      @pullBatch(batch)
+      batch = []
+      while batch.length < @BATCH_SIZE and @queue.length
+        address = @queue.shift().bucket
+        bucket = @cube.getBucketByZoomedAddress(address)
+
+        continue unless bucket.needsRequest()
+
+        batch.push(address)
+        bucket.pull()
+
+      if batch.length > 0
+        @pullBatch(batch)
 
 
   pullBatch : (batch) ->
@@ -49,10 +58,6 @@ class PullQueue
 
     transmitBuffer = []
     for bucket in batch
-      # TODO: Remove duplicates
-      unless @cube.getBucketByZoomedAddress(bucket).needsRequest()
-        continue
-      @cube.getBucketByZoomedAddress(bucket).pull()
       zoomStep = bucket[3]
       transmitBuffer.push(
         zoomStep
@@ -61,9 +66,6 @@ class PullQueue
         bucket[1] << (zoomStep + @cube.BUCKET_SIZE_P)
         bucket[2] << (zoomStep + @cube.BUCKET_SIZE_P)
       )
-
-    if transmitBuffer.length == 0
-      return
 
     # Measuring the time until response arrives to select appropriate preloading strategy
     roundTripBeginTime = new Date()

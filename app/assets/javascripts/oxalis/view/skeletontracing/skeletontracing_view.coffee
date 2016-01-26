@@ -31,7 +31,7 @@ class SkeletonTracingView extends View
             $(window).on(
               "beforeunload"
               => return null)
-            window.location.reload() )},
+            app.router.reload() )},
           {id : "cancel-button", label : "Cancel", callback : ( => @reloadDenied = true ) } ] )
     )
     @listenTo(@model.skeletonTracing.stateLogger, "pushDone", ->

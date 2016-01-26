@@ -12,14 +12,18 @@ class ArbitraryUserSettingsView extends SettingsView
   modelName : "user"
 
 
-  subviewCreators :
+  subviewCreatorsList : [
+    [
+      "controls-category", ->
 
-    "controls-category" : ->
+        return new ControlsCategoryView(model : @model)
+    ]
 
-      return new ControlsCategoryView(model : @model)
+    [
+      "flight-category", ->
 
-    "flight-category" : ->
-
-      return new FlightCategoryView(model : @model)
+        return new FlightCategoryView(model : @model)
+    ]
+  ]
 
 module.exports = ArbitraryUserSettingsView

@@ -40,6 +40,9 @@ class PaginationCollection
     @listenTo(@fullCollection, "remove", @_passthroughEvent("remove"))
     @listenTo(@fullCollection, "sync", @_passthroughEvent("sync"))
 
+    @_reset = _.debounce(@_reset, 50)
+    return
+
 
   add : ->
     @fullCollection.add.apply(@fullCollection, arguments)

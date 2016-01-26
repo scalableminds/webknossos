@@ -26,12 +26,12 @@ class ArbitraryCubeAdapter
         bucket.zoomStep = zoomStep
         return bucket
 
-        bucketAddress = [
-          bucketAddress[0] >> 1
-          bucketAddress[1] >> 1
-          bucketAddress[2] >> 1
-          bucketAddress[3] + 1
-        ]
+      bucketAddress = [
+        bucketAddress[0] >> 1
+        bucketAddress[1] >> 1
+        bucketAddress[2] >> 1
+        bucketAddress[3] + 1
+      ]
 
     return null
   )

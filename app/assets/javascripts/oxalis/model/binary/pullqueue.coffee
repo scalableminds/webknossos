@@ -101,6 +101,9 @@ class PullQueue
               @boundingBox.removeOutsideArea(bucket, bucketData)
               @cube.getBucketByZoomedAddress(bucket).receiveData(bucketData)
         )
+        =>
+          for bucket in batch
+            @add({bucket : bucket, priority : @PRIORITY_HIGHEST})
       )
       =>
         @batchCount--

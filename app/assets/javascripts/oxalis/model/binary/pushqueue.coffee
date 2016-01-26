@@ -88,7 +88,7 @@ class PushQueue
             cubeSize: 1 << @cube.BUCKET_SIZE_P),
           @cube.getBucketByZoomedAddress(bucket).getData())
 
-    @updatePipeline.executePassAlongAction =>
+    @updatePipeline.executePassAlongAction( =>
 
       transmitData.dataPromise().then((data) =>
         Request.sendArraybufferReceiveArraybuffer("#{@layer.url}/data/datasets/#{@dataSetName}/layers/#{@layer.name}/data?token=#{@layer.token}",
@@ -100,6 +100,7 @@ class PushQueue
           compress : true
         )
       )
+    ).fail(-> throw new Error("Uploading data failed."))
 
 
 module.exports = PushQueue

@@ -178,14 +178,6 @@ class Cube
     return bucket
 
 
-  accessBuckets : (addressList) ->
-
-    for address in addressList
-
-      bucket = @getBucketByZoomedAddress(address)
-      bucket.access()
-
-
   addBucketToGarbageCollection : (bucket) ->
 
     unless @bucketCount < @MAXIMUM_BUCKET_COUNT

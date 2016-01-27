@@ -26,11 +26,6 @@ class Bucket
     @mergedCallback = null
 
 
-  access : ->
-
-    @accessed = true
-
-
   shouldCollect : ->
 
     collect = not @accessed and not @dirty

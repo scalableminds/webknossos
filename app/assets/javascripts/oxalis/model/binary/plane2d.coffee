@@ -282,7 +282,6 @@ class Plane2D
 
       bucketData = @cube.getBucketByZoomedAddress(bucket).getData()
       mapping    = @cube.currentMapping
-      @cube.accessBuckets([bucket])
 
       @renderToBuffer(
         {

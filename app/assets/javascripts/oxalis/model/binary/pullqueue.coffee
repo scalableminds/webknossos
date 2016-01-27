@@ -103,7 +103,8 @@ class PullQueue
         )
         =>
           for bucket in batch
-            @add({bucket : bucket, priority : @PRIORITY_HIGHEST})
+            if @cube.getBucketByZoomedAddress(item.bucket).dirty
+              @add({bucket : bucket, priority : @PRIORITY_HIGHEST})
       )
       =>
         @batchCount--

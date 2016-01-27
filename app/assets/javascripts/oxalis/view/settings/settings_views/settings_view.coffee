@@ -19,7 +19,12 @@ class SettingsView extends Marionette.ItemView
 
   initialize : ->
 
-    @model = @model[@modelName]
+    if _.isArray(@modelName)
+      @model = _.transform(@modelName,
+                           (result, name) => result[name] = @model[name],
+                           {})
+    else
+      @model = @model[@modelName]
 
     unless @subviewCreatorsList?
       throw new Error(

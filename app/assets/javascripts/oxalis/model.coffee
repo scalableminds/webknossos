@@ -147,6 +147,7 @@ class Model extends Backbone.Model
     @set("mode", if isVolumeTracing then constants.MODE_VOLUME else constants.MODE_PLANE_TRACING)
 
     @initSettersGetter()
+    @initialized = true
     @trigger("sync")
 
     # no error

@@ -12,13 +12,13 @@ class PlaneUserSettingsView extends SettingsView
   id : "user-settings"
   className : "flex-column"
 
-  modelName : "user"
+  modelName : ["user", "flycam"]
 
 
   subviewCreatorsList : [
     [
       "controls-category", ->
-        return new ControlsCategoryView({ @model })
+        return new ControlsCategoryView({ model : @model.user })
     ]
 
     [
@@ -28,22 +28,22 @@ class PlaneUserSettingsView extends SettingsView
 
     [
       "tdview-category", ->
-        return new TDViewCategoryView({ @model })
+        return new TDViewCategoryView({ model : @model.user })
     ]
 
     [
       "isosurface-category", ->
-        return new IsosurfaceCategoryView({ @model })
+        return new IsosurfaceCategoryView({ model : @model.user })
     ]
 
     [
       "segmentation-category", ->
-        return new SegmentationCategoryView({ @model })
+        return new SegmentationCategoryView({ model : @model.user })
     ]
 
     [
       "abstracttree-category", ->
-        return new AbstractTreeCategoryView({ @model })
+        return new AbstractTreeCategoryView({ model : @model.user })
     ]
   ]
 

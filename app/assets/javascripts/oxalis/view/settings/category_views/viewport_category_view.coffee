@@ -16,7 +16,7 @@ class ViewportCategoryView extends CategoryView
       "moveValue", ->
 
         return new SliderSettingView(
-          model : @model
+          model : @model.user
           options :
             name : "moveValue"
             displayName : "Move Value (nm/s)"
@@ -30,14 +30,14 @@ class ViewportCategoryView extends CategoryView
       "zoom", ->
 
         return new SliderSettingView(
-          model : @model
+          model : @model.user
           options :
             name : "zoom"
             displayName : "Zoom"
             min : -100
             max : 100
             step : 1
-            logScaleBase : Math.pow(20, 0.01) # TODO: Math.pow(@model.flycam.getMaxZoomStep(), 0.01)
+            logScaleBase : Math.pow(@model.flycam.getMaxZoomStep(), 0.01)
         )
     ]
 
@@ -45,7 +45,7 @@ class ViewportCategoryView extends CategoryView
       "scale", ->
 
         return new SliderSettingView(
-          model : @model
+          model : @model.user
           options :
             name : "scale"
             displayName : "Viewport Scale"
@@ -59,7 +59,7 @@ class ViewportCategoryView extends CategoryView
       "clippingDistance", ->
 
         return new SliderSettingView(
-          model : @model
+          model : @model.user
           options :
             name : "clippingDistance"
             displayName : "Clipping Distance"
@@ -73,7 +73,7 @@ class ViewportCategoryView extends CategoryView
       "dynamicSpaceDirection", ->
 
         return new CheckboxSettingView(
-          model : @model
+          model : @model.user
           options :
             name : "dynamicSpaceDirection"
             displayName : "d/f-Switching"
@@ -84,7 +84,7 @@ class ViewportCategoryView extends CategoryView
       "displayCrosshair", ->
 
         return new CheckboxSettingView(
-          model : @model
+          model : @model.user
           options :
             name : "displayCrosshair"
             displayName : "Show Crosshairs"

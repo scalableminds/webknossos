@@ -136,6 +136,8 @@ class TracingLayoutView extends Marionette.LayoutView
 
   renderSettings : ->
 
+    return unless @model.initialized
+
     if @isSkeletonMode()
       settingsTabClass = if @isArbitraryMode() then SkeletonArbitraryTabView else SkeletonPlaneTabView
       settingsTabView = new settingsTabClass(@options)

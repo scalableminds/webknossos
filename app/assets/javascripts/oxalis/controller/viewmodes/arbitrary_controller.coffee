@@ -137,7 +137,7 @@ class ArbitraryController
       "space"         : (timeFactor) =>
         @cam.move [0, 0, getVoxelOffset(timeFactor)]
         @moved()
-      "alt + space"   : (timeFactor) => @cam.move [0, 0, -getVoxelOffset(timeFactor)]
+      "ctrl + space"   : (timeFactor) => @cam.move [0, 0, -getVoxelOffset(timeFactor)]
 
       #Rotate in distance
       "left"          : (timeFactor) => @cam.yaw @model.user.get("rotateValue") * timeFactor, @mode == constants.MODE_ARBITRARY

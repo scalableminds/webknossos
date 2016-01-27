@@ -32,16 +32,25 @@ class PullQueue
     # Filter and sort queue, using negative priorities for sorting so .pop() can be used to get next bucket
     @queue = _.filter(@queue, (item) =>
       @boundingBox.containsBucket(item.bucket) and
-        not @cube.isBucketRequestedByZoomedAddress(item.bucket)
+        @cube.getBucketByZoomedAddress(item.bucket).needsRequest()
     )
     @queue = _.sortBy(@queue, (item) -> item.priority)
 
     # Starting to download some buckets
     while @batchCount < @BATCH_LIMIT and @queue.length
 
-      items = @queue.splice(0, Math.min(@BATCH_SIZE, @queue.length))
-      batch = (item.bucket for item in items)
-      @pullBatch(batch)
+      batch = []
+      while batch.length < @BATCH_SIZE and @queue.length
+        address = @queue.shift().bucket
+        bucket = @cube.getBucketByZoomedAddress(address)
+
+        continue unless bucket.needsRequest()
+
+        batch.push(address)
+        bucket.pull()
+
+      if batch.length > 0
+        @pullBatch(batch)
 
 
   pullBatch : (batch) ->
@@ -52,7 +61,6 @@ class PullQueue
     requestData = new MultipartData()
 
     for bucket in batch
-      @cube.requestBucketByZoomedAddress(bucket)
       zoomStep = bucket[3]
 
       requestData.addPart(
@@ -91,12 +99,12 @@ class PullQueue
                 bucketData = responseBuffer.subarray(offset, offset += @cube.BUCKET_LENGTH)
 
               @boundingBox.removeOutsideArea(bucket, bucketData)
-              @cube.setBucketByZoomedAddress(bucket, bucketData)
-
-          =>
-            for bucket in batch
-              @cube.setBucketByZoomedAddress(bucket, null)
+              @cube.getBucketByZoomedAddress(bucket).receiveData(bucketData)
         )
+        =>
+          for bucket in batch
+            if @cube.getBucketByZoomedAddress(item.bucket).dirty
+              @add({bucket : bucket, priority : @PRIORITY_HIGHEST})
       )
       =>
         @batchCount--

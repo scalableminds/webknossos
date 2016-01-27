@@ -45,7 +45,8 @@ class Binary
     datasetName = @model.get("dataset").get("name")
     @pullQueue = new PullQueue(datasetName, @cube, @layer, @tracing.id, @boundingBox, @connectionInfo)
     @pushQueue = new PushQueue(datasetName, @cube, @layer, @tracing.id, updatePipeline)
-    @cube.setPushQueue( @pushQueue )
+    @cube.setPullQueue(@pullQueue)
+    @cube.setPushQueue(@pushQueue)
     @mappings = new Mappings(@model.dataSetName, @layer)
     @activeMapping = null
 
@@ -65,8 +66,6 @@ class Binary
     @listenTo(@model.get("datasetConfiguration"), "change:fourBit" , (model, fourBit) -> @pullQueue.setFourBit(fourBit) )
 
     @cube.on(
-      temporalBucketCreated : (address) =>
-        @pullQueue.add({bucket: address, priority: PullQueue::PRIORITY_HIGHEST})
       newMapping : =>
         @forcePlaneRedraw()
     )
@@ -159,7 +158,7 @@ class Binary
   getByVerticesSync : (vertices) ->
     # A synchronized implementation of `get`. Cuz its faster.
 
-    { buffer, accessedBuckets, missingBuckets } = InterpolationCollector.bulkCollect(
+    { buffer, missingBuckets } = InterpolationCollector.bulkCollect(
       vertices
       @cube.getArbitraryCube()
     )
@@ -170,8 +169,6 @@ class Binary
         priority: PullQueue::PRIORITY_HIGHEST
     ))
     @pullQueue.pull()
-
-    @cube.accessBuckets(accessedBuckets)
 
     buffer
 

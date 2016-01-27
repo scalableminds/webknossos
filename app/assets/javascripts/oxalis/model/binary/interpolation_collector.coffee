@@ -100,13 +100,6 @@ subPointMacro = _.template(
 
     bucketZoomStep = bucket.zoomStep || 0;
 
-    accessedBuckets.push([
-      sub_x >> (5 + bucketZoomStep),
-      sub_y >> (5 + bucketZoomStep),
-      sub_z >> (5 + bucketZoomStep),
-      bucketZoomStep
-    ]);
-
     <%= pointIndexMacro({ pointIndex : "pointIndex", x : "sub_x", y : "sub_y", z : "sub_z", zoomStep : "bucketZoomStep" }) %>
 
     lastBucket = bucket;
@@ -220,7 +213,6 @@ InterpolationCollector =
     _.template(
       """
       var buffer = new Uint8Array(vertices.length / 3);
-      var accessedBuckets = [];
       var missingBuckets = [];
       var x, y, z;
       var sub_x, sub_y, sub_z;
@@ -277,7 +269,6 @@ InterpolationCollector =
 
       return {
         buffer : buffer,
-        accessedBuckets : accessedBuckets,
         missingBuckets : missingBuckets
       };
 

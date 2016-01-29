@@ -55,18 +55,21 @@ class TaskCreateBulkImportView extends Marionette.ItemView
       params : {type : "bulk"},
       data : tasks
     ).then(
-      =>
-        @showSaveSuccess()
-      =>
-        @showSaveError()
+      @showSaveSuccess
+      @showSaveError
     )
 
     return
 
 
-  showSaveSuccess : ->
+  showSaveSuccess : (response) ->
 
-    Toast.success("The tasks were successfully created")
+    if response.errors
+      for item, i in response.items
+        Toast.error("Line #{i} : #{item.error}")
+
+    else
+      Toast.success("All tasks were successfully created")
 
 
   showSaveError : ->

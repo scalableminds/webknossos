@@ -1,6 +1,6 @@
 Backbone = require("backbone")
 _ = require("lodash")
-ErrorHandling = require("libs/error_handling")
+ErrorHandling = require("../../../libs/error_handling")
 {Bucket, NullBucket} = require("./bucket")
 ArbitraryCubeAdapter = require("./arbitrary_cube_adapter")
 PullQueue = require("./pullqueue")

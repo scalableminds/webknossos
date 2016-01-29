@@ -1,6 +1,6 @@
 Cube              = require("./cube")
-Request           = require("libs/request")
-MultipartData     = require("libs/multipart_data")
+Request           = require("../../../libs/request")
+MultipartData     = require("../../../libs/multipart_data")
 
 class PushQueue
 

@@ -87,7 +87,7 @@ with I18nSupport
       val successful = results.count(_.isDefined)
       val errors = results.exists(_.isEmpty)
       val items = results.map(singleResult2Status)
-      Json.obj("errors" -> errors, "successful" -> successful, "items" -> Json.arr(items))
+      Json.obj("errors" -> errors, "successful" -> successful, "items" -> items)
     }
   }
 

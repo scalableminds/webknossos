@@ -129,7 +129,7 @@ Request =
     if options.params
       params = options.params
 
-      if _.isString()
+      if _.isString(params)
         appendix = params
       else if _.isObject(params)
         appendix = _.map(params, (value, key) -> return "#{key}=#{value}").join("&")

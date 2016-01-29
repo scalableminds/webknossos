@@ -129,7 +129,6 @@ class TaskCreateBulkImportView extends Marionette.ItemView
     words = @splitToWords(bulkLine)
     if words.length < 16
       return null
-    debugger
 
     dataSet = words[0]
     taskTypeId = words[1]

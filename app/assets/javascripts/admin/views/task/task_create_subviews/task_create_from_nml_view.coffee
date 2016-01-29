@@ -35,7 +35,7 @@ class TaskCreateFromNMLView extends Marionette.LayoutView
 
   """)
 
-  initialize: (options) ->
+  initialize : (options) ->
 
     @parent = options.parent
 
@@ -44,7 +44,7 @@ class TaskCreateFromNMLView extends Marionette.LayoutView
    * Submit NML Form via AJAX to server.
    * @return {Boolean} false, prevent page reload
   ###
-  submit: ->
+  submit : ->
 
     form = @parent.ui.form[0]
 
@@ -55,10 +55,16 @@ class TaskCreateFromNMLView extends Marionette.LayoutView
 
       Request.sendMultipartFormReceiveJSON("/api/tasks",
         data : new FormData(form)
+        params : {type : "nml"}
       )
       .then(
-        => @fileuploadDone()
-        -> console.log(arguments)
+        =>
+          @parent.showSaveSuccess()
+
+          if @CLEAR_ON_SUCCESS
+            @parent.clearForm()
+
+        _.noop
       )
       .then(
         =>
@@ -70,23 +76,10 @@ class TaskCreateFromNMLView extends Marionette.LayoutView
 
 
   ###*
-   * Upload Success Hook.
-   * Show success message and clear form.
-  ###
-  fileuploadDone: ->
-
-    debugger
-    @parent.showSaveSuccess()
-
-    if @CLEAR_ON_SUCCESS
-      @parent.clearForm()
-
-
-  ###*
    * Upload Finish Hook.
    * Enable button and set button text.
   ###
-  fileuploadAlways: ->
+  fileuploadAlways : ->
 
     @parent.ui.submitButton.prop("disabled", false)
     @parent.ui.submitButton.removeClass("disabled")

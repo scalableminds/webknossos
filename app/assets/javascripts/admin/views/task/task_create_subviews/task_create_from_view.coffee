@@ -1,6 +1,7 @@
 _                       = require("lodash")
 Marionette              = require("backbone.marionette")
 routes                  = require("routes")
+FormSyphon              = require("form-syphon")
 TaskTypeCollection      = require("admin/models/tasktype/task_type_collection")
 TeamCollection          = require("admin/models/team/team_collection")
 ProjectCollection       = require("admin/models/project/project_collection")
@@ -8,6 +9,7 @@ SelectionView           = require("admin/views/selection_view")
 TaskCreateFromFormView  = require("./task_create_from_form_view")
 TaskCreateFromNMLView   = require("./task_create_from_nml_view")
 Toast                   = require("libs/toast")
+Utils                   = require("libs/utils")
 
 class TaskCreateFromView extends Marionette.LayoutView
 
@@ -46,7 +48,7 @@ class TaskCreateFromView extends Marionette.LayoutView
         <div class=" form-group">
           <label class="col-sm-2 control-label" for="experience_domain">Experience Domain</label>
           <div class="col-sm-9">
-            <input type="text" class="form-control" name="experience.domain" value="" id="experience_domain" data-source="[]" data-provide="typeahead" autocomplete="off" placeholder="Enter a domain">
+            <input type="text" class="form-control" name="experience[domain]" value="" data-source="[]" data-provide="typeahead" autocomplete="off" placeholder="Enter a domain">
             <span class="help-block errors"></span>
           </div>
         </div>
@@ -54,7 +56,7 @@ class TaskCreateFromView extends Marionette.LayoutView
         <div class=" form-group">
           <label class="col-sm-2 control-label" for="experience_value">Min Experience</label>
           <div class="col-sm-9">
-            <input type="number" id="experience_value" name="experience.value" value="0" class="form-control">
+            <input type="number" id="value" name="experience[value]" value="0" class="form-control">
             <span class="help-block errors"></span>
           </div>
         </div>
@@ -70,7 +72,7 @@ class TaskCreateFromView extends Marionette.LayoutView
         <div class=" form-group">
           <label class="col-sm-2 control-label" for="status_open">Task instances</label>
           <div class="col-sm-9">
-            <input type="number" id="status_open" name="status.open" value="10" min="1" class="form-control">
+            <input type="number" id="open" name="status[open]" value="10" min="1" class="form-control">
             <span class="help-block errors"></span>
           </div>
         </div>
@@ -124,7 +126,7 @@ class TaskCreateFromView extends Marionette.LayoutView
     type : @type
 
 
-  regions:
+  regions :
     "taskType" : ".taskType"
     "team"     : ".team"
     "project"  : ".project"
@@ -134,15 +136,13 @@ class TaskCreateFromView extends Marionette.LayoutView
     "submit" : "submit"
 
   ui :
-    form: "#createForm"
-    neededExperience_value : "#experience_value"
-    neededExperience_domain : "#experience_domain"
+    form : "#createForm"
     priority : "#priority"
     status_open : "#status_open"
     boundingBox : "#boundingBox"
     submitButton : "#submit"
 
-  initialize: (options) ->
+  initialize : (options) ->
 
     @type = options.type
 
@@ -156,9 +156,6 @@ class TaskCreateFromView extends Marionette.LayoutView
     @ui.submitButton.prop("disabled", true)
     @ui.submitButton.addClass("disabled")
 
-    # load form contents into model
-    @updateModel()
-
     # send form data to server
     return @createSubview.submit()
 
@@ -166,68 +163,46 @@ class TaskCreateFromView extends Marionette.LayoutView
   ###*
    * Update model with form values.
    ###
-  updateModel : ->
+  serializeForm : ->
 
-    # set and typecast form values into model
-    @model.set(
-      neededExperience :
-        # parse minimum experience to integer
-        value : parseInt( @ui.neededExperience_value.val() )
-        domain : @ui.neededExperience_domain.val()
-      status :
-        # parse number of instances to integer
-        open : parseInt( @ui.status_open.val() )
-        # cannot nest model attributes
-        # insert existign vars to maintain model defaults
-        inProgress : @model.get("status").inProgress
-        completed : @model.get("status").completed
-      # parse priority, range 0 to 100, to integer
-      priority : parseInt( @ui.priority.val() )
+    formValues = FormSyphon.serialize(@ui.form)
 
+    formValues.status.inProgress = @model.get("status").inProgress
+    formValues.status.completed = @model.get("status").completed
+    formValues.boundingBox = @parseBoundingBox(formValues.boundingBox)
+
+    return formValues
+
+  parseBoundingBox : (string) ->
       # split string by comma delimiter, trim whitespace and cast to integer
       # access from subview
-      boundingBox : do =>
-        intArray = _.map(@ui.boundingBox.val().split(","), (number) ->
-          parseInt( number.trim() )
-        )
+      intArray = Utils.stringToNumberArray(string)
 
-        # user input could be too short
-        # insert a 0 instead
-        return {
-          topLeft: [
-            intArray[0] || 0,
-            intArray[1] || 0,
-            intArray[2] || 0
-          ],
-          width: intArray[3] || 0,
-          height: intArray[4] || 0,
-          depth: intArray[5] || 0
-        }
-    )
-
-    # update models from subviews
-    @taskTypeSelectionView.updateModel()
-    @teamSelectionView.updateModel()
-    @projectSelectionView.updateModel()
-
-    # update model of create-subview
-    if @createSubview.updateModel?
-      @createSubview.updateModel()
-
-    return
+      # user input could be too short
+      # insert a 0 instead
+      return {
+        topLeft : [
+          intArray[0] || 0,
+          intArray[1] || 0,
+          intArray[2] || 0
+        ],
+        width : intArray[3] || 0,
+        height : intArray[4] || 0,
+        depth : intArray[5] || 0
+      }
 
 
   ###*
    * Toast a success message.
   ###
-  showSaveSuccess: ->
+  showSaveSuccess : ->
 
     Toast.success("The task was successfully created")
 
   ###*
    * Toast an error message.
   ###
-  showSaveError: ->
+  showSaveError : ->
 
     Toast.error("The task could not be created due to server errors.")
 
@@ -235,7 +210,7 @@ class TaskCreateFromView extends Marionette.LayoutView
   ###*
    * Toast an invalid data message.
   ###
-  showInvalidData: ->
+  showInvalidData : ->
 
     Toast.error("The form data is not correct.")
 
@@ -243,49 +218,43 @@ class TaskCreateFromView extends Marionette.LayoutView
   ###*
    * Clear all text inputs in the form.
   ###
-  clearForm: ->
+  clearForm : ->
 
-    debugger
     @ui.form[0].reset()
-    # @ui.neededExperience_domain.val("")
-    # @ui.neededExperience_value.val("0")
-    # @ui.priority.val("0")
-    # @ui.status_open.val("10")
-    # @ui.boundingBox.val("0, 0, 0, 0, 0, 0")
 
 
   ###*
   * Render the SelectionViews based on the stored options.
   * Create a subview based on the passed type: from_form/ from_nml
   ###
-  onRender: ->
+  onRender : ->
 
     # the value of the tasktype is the id and the displayed innerHTML is the summary
     @taskTypeSelectionView = new SelectionView(
-      collection: new TaskTypeCollection()
+      collection : new TaskTypeCollection()
       childViewOptions :
-        modelValue: -> return "#{@model.get("id")}"
-        modelName: -> return "#{@model.get("summary")}"
+        modelValue : -> return "#{@model.get("id")}"
+        modelName : -> return "#{@model.get("summary")}"
       data : "amIAnAdmin=true"
-      name: "taskTypeId"
+      name : "taskTypeId"
       parentModel : @model
     )
 
     @teamSelectionView = new SelectionView(
       collection : new TeamCollection()
       childViewOptions :
-        modelValue: -> return "#{@model.get("name")}"
+        modelValue : -> return "#{@model.get("name")}"
       data : "amIAnAdmin=true"
-      name: "team"
+      name : "team"
       parentModel : @model
     )
 
     @projectSelectionView = new SelectionView(
-      collection: new ProjectCollection()
+      collection : new ProjectCollection()
       childViewOptions :
-        modelValue: -> return "#{@model.get("name")}"
+        modelValue : -> return "#{@model.get("name")}"
       data : "amIAnAdmin=true"
-      name: "projectName"
+      name : "projectName"
       parentModel : @model
     )
 
@@ -296,11 +265,11 @@ class TaskCreateFromView extends Marionette.LayoutView
 
     # get create-subview type
     if @type == "from_form"
-      @createSubview = new TaskCreateFromFormView(model: @model, parent: @)
+      @createSubview = new TaskCreateFromFormView(model : @model, parent : @)
     else if @type == "from_nml"
-      @createSubview = new TaskCreateFromNMLView(model: @model, parent: @)
+      @createSubview = new TaskCreateFromNMLView(model : @model, parent : @)
     else
-      throw "Type #{@type} is not defined. Choose between \"from_form\" and \"from_nml\"."
+      throw Error("Type #{@type} is not defined. Choose between \"from_form\" and \"from_nml\".")
 
     # render the create-subview
     @subview.show(@createSubview)

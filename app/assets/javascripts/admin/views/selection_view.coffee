@@ -49,35 +49,4 @@ class SelectionView extends Marionette.CollectionView
     else
       @active = @$el.val()
 
-    console.log("active", @active)
-
-
-  ###*
-   * Return the active option.
-   *
-   * @method getActive
-   * @return {String} active option's value
-   ###
-  getActive : ->
-
-    return @active
-
-  updateActive : (evt) ->
-
-    @active = evt.target.value
-    return
-
-  ###*
-   * Update the parent views model with the selected option
-   *
-   * @method updateModel
-   ###
-  updateModel : ->
-
-    # TODO: remove
-    console.log('parentModel', @$el.attr("name"), @parentModel)
-
-    if @parentModel?
-      @parentModel.set(@$el.attr("name"), @getActive())
-
 module.exports = SelectionView

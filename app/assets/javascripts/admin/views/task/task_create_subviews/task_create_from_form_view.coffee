@@ -3,6 +3,7 @@ Marionette        = require("backbone.marionette")
 routes            = require("routes")
 DatasetCollection = require("admin/models/dataset/dataset_collection")
 SelectionView     = require("admin/views/selection_view")
+Utils             = require("libs/utils")
 
 
 class TaskCreateFromFormView extends Marionette.LayoutView
@@ -37,13 +38,13 @@ class TaskCreateFromFormView extends Marionette.LayoutView
     </div>
   """)
 
-  regions:
-    "dataSet": ".dataSet"
+  regions :
+    "dataSet" : ".dataSet"
 
-  ui:
-    "editPosition": "#editPosition"
+  ui :
+    "editPosition" : "#editPosition"
 
-  initialize: (options) ->
+  initialize : (options) ->
 
     @parent = options.parent
 
@@ -51,28 +52,25 @@ class TaskCreateFromFormView extends Marionette.LayoutView
   ###*
    * Update the model with form data.
    ###
-  updateModel : ->
+  serializeForm : ->
 
-    @model.set(
-      # split string by comma delimiter, trim whitespace and cast to integer
-      editPosition : _.map(@ui.editPosition.val().split(","), (number) ->
-          parseInt( number.trim() )
-        )
-    )
+    formValues = @parent.serializeForm()
+    formValues.editPosition = Utils.stringToNumberArray(@ui.editPosition.val())
 
-    # trigger selection view to update the model as well
-    @dataSetSelectionView.updateModel()
-
+    return formValues
 
   ###*
    * Submit Form via AJAX to server.
    * @return {Boolean} false, prevent page reload
   ###
-  submit: ->
+  submit : ->
+
+    serializedForm = @serializeForm()
 
     # unblock submit button after model synched
     # show a status flash message
-    @model.save({},
+    @model.save(serializedForm,
+      params : {type : "default"}
       error : =>
         @parent.ui.submitButton.prop("disabled", false)
         @parent.ui.submitButton.removeClass("disabled")
@@ -84,7 +82,6 @@ class TaskCreateFromFormView extends Marionette.LayoutView
         @parent.ui.submitButton.removeClass("disabled")
 
         if @CLEAR_ON_SUCCESS
-          @clearForm()
           @parent.clearForm()
 
         @parent.showSaveSuccess()
@@ -95,24 +92,16 @@ class TaskCreateFromFormView extends Marionette.LayoutView
 
 
   ###*
-   * Clear all text inputs in the form.
-  ###
-  clearForm: ->
-
-      @ui.editPosition.val("0, 0, 0")
-
-
-  ###*
   * Render a dataset SelectionView.
   ###
-  onRender: ->
+  onRender : ->
 
     @dataSetSelectionView = new SelectionView(
-      collection: new DatasetCollection()
+      collection : new DatasetCollection()
       childViewOptions :
-        modelValue: -> return "#{@model.get("name")}"
+        modelValue : -> return "#{@model.get("name")}"
       data : "amIAnAdmin=true&isActive=true"
-      name: "dataSet"
+      name : "dataSet"
       parentModel : @model
     )
 

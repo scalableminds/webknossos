@@ -288,7 +288,7 @@ class Router extends Backbone.Router
       return
 
     beforeunloadValue = @triggerBeforeunload()
-    if beforeunloadValue? and confirm(beforeunloadValue + "\nDo you wish to navigate away?")
+    if beforeunloadValue? and !confirm(beforeunloadValue + "\nDo you wish to navigate away?")
       @off("beforeunload")
       return
 

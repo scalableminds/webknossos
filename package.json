@@ -33,7 +33,11 @@
     "chokidar": "^1.4.1"
   },
   "scripts": {
-    "install": "napa georgwiese/three.js#scm_oxalis:three.js"
+    "install": "napa georgwiese/three.js#scm_oxalis:three.js",
+    "test": "./node_modules/.bin/protractor",
+    "prewebdriver": "npm run webdriver-update",
+    "webdriver": "./node_modules/.bin/webdriver-manager start",
+    "webdriver-update": "./node_modules/.bin/webdriver-manager update"
   },
   "peerDependencies": {
     "backbone": "^1.2.3"

@@ -8,7 +8,7 @@ import controllers.Controller
 import models.annotation.{AnnotationType, _}
 import models.task.{Task, _}
 import models.user._
-import oxalis.nml.NMLService.NMLParseSuccess
+import oxalis.nml.NMLService.{NMLParseSuccess, NMLParseFailure}
 import oxalis.nml._
 import oxalis.security.Secured
 import play.api.i18n.{Messages, MessagesApi}
@@ -37,7 +37,7 @@ class NMLIO @Inject()(val messagesApi: MessagesApi) extends Controller with Secu
     val (parseSuccess, parseFailed) = parsedFiles.partition { case x: NMLParseSuccess => true; case _ => false }
 
     if (parseFailed.nonEmpty) {
-      val errors = parseFailed.map(fileName => "error" -> Messages("nml.file.invalid", fileName))
+      val errors = parseFailed.map{ case result: NMLParseFailure => "error" -> Messages("nml.file.invalid", result.fileName, result.error)}
       Future.successful(JsonBadRequest(errors))
     } else if (parseSuccess.isEmpty) {
       Future.successful(JsonBadRequest(Messages("nml.file.noFile")))
@@ -53,7 +53,7 @@ class NMLIO @Inject()(val messagesApi: MessagesApi) extends Controller with Secu
           Messages("nml.file.uploadSuccess")
         )
       }
-      .getOrElse(JsonBadRequest(Messages("nml.file.invalid")))
+      .getOrElse(JsonBadRequest(Messages("nml.file.createFailed")))
     }
   }
 

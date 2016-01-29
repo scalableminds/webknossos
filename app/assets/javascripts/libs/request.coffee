@@ -47,13 +47,37 @@ Request =
   # OUT: json
   sendMultipartFormReceiveJSON : (url, options = {}) ->
 
+    toFormData = (input, form, namespace) ->
+      formData = form || new FormData()
+
+      for key, value of input
+
+        if namespace
+          formKey = "#{namespace}[#{key}]"
+        else
+          formKey = key
+
+        if _.isArray(value)
+          for val in value
+            formData.append("#{formKey}[]", val)
+
+        else if value instanceof File
+          formData.append("#{formKey}[]", value, value.name)
+
+        else if _.isObject(value)
+          toFormData(value, formData, key)
+
+        else # string
+          formData.append(formKey, value)
+
+      return formData
+
+
     body = if options.data instanceof FormData
         options.data
       else
-        formData = new FormData()
-        for key of options.data
-          formData.append(key, options.data[key])
-        formData
+        toFormData(options.data)
+
 
     return @receiveJSON(
       url,

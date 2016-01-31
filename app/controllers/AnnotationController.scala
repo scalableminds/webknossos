@@ -182,7 +182,6 @@ object AnnotationController extends Controller with Secured with TracingInformat
   def handleUpdates(annotation: Annotation, js: JsValue, version: Int)(implicit request: AuthenticatedRequest[_]): Fox[JsObject] = {
     js match {
       case JsArray(jsUpdates) =>
-        Logger.info("Tried: " + jsUpdates)
         for {
           updated <- annotation.muta.updateFromJson(jsUpdates) //?~> Messages("format.json.invalid")
         } yield {
@@ -190,7 +189,7 @@ object AnnotationController extends Controller with Secured with TracingInformat
           Json.obj("version" -> version)
         }
       case t =>
-        Logger.info("Tried: " + t)
+        Logger.warn("Client sent invalid json tracing update: " + t)
         Failure(Messages("format.json.invalid"))
     }
   }

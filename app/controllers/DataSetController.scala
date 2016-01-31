@@ -113,6 +113,7 @@ object DataSetController extends Controller with Secured {
 
   def importDataSet(dataSetName: String) = Authenticated.async{ implicit request =>
     for {
+      _ <- ensureProperDSName(dataSetName) ?~> Messages("dataSet.import.impossible.name")
       dataSet <- DataSetDAO.findOneBySourceName(dataSetName) ?~> Messages("dataSet.notFound")
       result <- DataSetService.importDataSet(dataSet)
     } yield {
@@ -148,10 +149,16 @@ object DataSetController extends Controller with Secured {
     }
   }
 
+  def ensureProperDSName(name: String) =
+    if(name.matches("[A-Za-z0-9_\\-]*"))
+      Full(name)
+    else
+      Empty
+
   def uploadForm = Form(
     tuple(
       "name" -> nonEmptyText.verifying("dataSet.name.invalid",
-        n => n.matches("[A-Za-z0-9_]*")),
+        n => ensureProperDSName(n).isDefined),
       "team" -> nonEmptyText,
       "scale" -> mapping(
         "scale" -> text.verifying("scale.invalid",

@@ -1,5 +1,6 @@
 mockRequire = require("mock-require")
 sinon = require("sinon")
+_ = require("lodash")
 
 mockRequire("../../../oxalis/model/binary/pullqueue", {
   prototype : {
@@ -38,7 +39,7 @@ describe "Cube", ->
 
       cube.labelVoxel([1, 1, 1], 42)
 
-      setTimeout((->
+      _.defer ->
         expect(pullQueue.add.calledWith({
             bucket: [0, 0, 0, 0],
             priority: 123})
@@ -47,4 +48,4 @@ describe "Cube", ->
         expect(pullQueue.add.called).toBe(true)
 
         done()
-      ), 50)
+

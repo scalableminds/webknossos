@@ -46,7 +46,7 @@ describe "Cube", ->
               priority: 123})
           ).toBe(true)
 
-          expect(pullQueue.add.called).toBe(true)
+          expect(pullQueue.pull.called).toBe(true)
 
           done()
       ])

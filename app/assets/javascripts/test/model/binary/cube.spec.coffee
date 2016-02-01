@@ -51,4 +51,34 @@ describe "Cube", ->
           done()
       ])
 
+    it "should push buckets after they were pulled", (done) ->
 
+      cube.labelVoxel([1, 1, 1], 42)
+
+      runAsync([
+        ->
+          expect(pushQueue.insert.called).toBe(false)
+          expect(pushQueue.push.called).toBe(false)
+        ->
+          bucket = cube.getBucketByZoomedAddress([0, 0, 0, 0])
+          bucket.pull()
+          bucket.receiveData(new Uint8Array(32 * 32 * 32 * 3))
+        ->
+          expect(pushQueue.insert.calledWith(
+            [0, 0, 0, 0]
+          )).toBe(true)
+          expect(pushQueue.push.called).toBe(true)
+          done()
+      ])
+
+    it "should only create one temporal bucket", ->
+
+      cube.labelVoxel([0, 0, 0], 42)
+      cube.labelVoxel([1, 0, 0], 43)
+
+      data = cube.getBucketByZoomedAddress([0, 0, 0, 0]).getData()
+
+      # Both values should be in the bucket, at positions 0 and 3 because of
+      # the bit depth of 24.
+      expect(data[0]).toBe(42)
+      expect(data[3]).toBe(43)

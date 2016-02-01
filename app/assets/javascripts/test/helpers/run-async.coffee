@@ -12,7 +12,8 @@ runAsync = (functions, waitTimeMs=100) ->
 
     setTimeout(( ->
       func = functions.shift()
-      promise = func() or Promise.resolve()
+      result = func()
+      promise = if result instanceof Promise then result else Promise.resolve()
       promise.then ->
         runAsync(functions, waitTimeMs).then(resolve)
     ), waitTimeMs)

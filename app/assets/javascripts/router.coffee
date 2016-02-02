@@ -276,11 +276,16 @@ class Router extends Backbone.Router
 
   triggerBeforeunload : =>
 
+    # Triggers the registered `beforeunload` handlers and returns the first return value
+    # Doesn't use Backbone's trigger because we need return values
     handlers = this._events?.beforeunload ? []
-    beforeunloadValue = _.find(handlers.map((handler) => handler.callback.call(handler.ctx)), (value) => value?)
+    beforeunloadValue = _.find(
+      handlers.map((handler) => handler.callback.call(handler.ctx)),
+      (value) => value?)
     return beforeunloadValue
 
 
+  # Override to handle view cleanup and custom beforeunload behavior
   navigate : (path, options) ->
 
     # Do nothing if we are already on that page
@@ -317,11 +322,13 @@ class Router extends Backbone.Router
   loadURL : (url) ->
 
     window.location.href = url
+    return
 
 
   reload : ->
 
     window.location.reload()
+    return
 
 
 module.exports = Router

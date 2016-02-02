@@ -35,94 +35,98 @@ describe "Cube", ->
 
   describe "Volume Annotation Handling", ->
 
-    it "should request buckets when temporal buckets are created", (done) ->
+    describe "Voxel Labeling", ->
 
-      cube.labelVoxel([1, 1, 1], 42)
+      it "should request buckets when temporal buckets are created", (done) ->
 
-      runAsync([
-        ->
-          expect(pullQueue.add.calledWith({
-              bucket: [0, 0, 0, 0],
-              priority: 123})
-          ).toBe(true)
+        cube.labelVoxel([1, 1, 1], 42)
 
-          expect(pullQueue.pull.called).toBe(true)
+        runAsync([
+          ->
+            expect(pullQueue.add.calledWith({
+                bucket: [0, 0, 0, 0],
+                priority: 123})
+            ).toBe(true)
 
-          done()
-      ])
+            expect(pullQueue.pull.called).toBe(true)
 
-    it "should push buckets after they were pulled", (done) ->
+            done()
+        ])
 
-      cube.labelVoxel([1, 1, 1], 42)
+      it "should push buckets after they were pulled", (done) ->
 
-      runAsync([
-        ->
-          expect(pushQueue.insert.called).toBe(false)
-          expect(pushQueue.push.called).toBe(false)
-        ->
-          bucket = cube.getBucketByZoomedAddress([0, 0, 0, 0])
-          bucket.pull()
-          bucket.receiveData(new Uint8Array(32 * 32 * 32 * 3))
-        ->
-          expect(pushQueue.insert.calledWith(
-            [0, 0, 0, 0]
-          )).toBe(true)
-          expect(pushQueue.push.called).toBe(true)
-          done()
-      ])
+        cube.labelVoxel([1, 1, 1], 42)
 
-    it "should push buckets immediately if they are pulled already", (done) ->
+        runAsync([
+          ->
+            expect(pushQueue.insert.called).toBe(false)
+            expect(pushQueue.push.called).toBe(false)
+          ->
+            bucket = cube.getBucketByZoomedAddress([0, 0, 0, 0])
+            bucket.pull()
+            bucket.receiveData(new Uint8Array(32 * 32 * 32 * 3))
+          ->
+            expect(pushQueue.insert.calledWith(
+              [0, 0, 0, 0]
+            )).toBe(true)
+            expect(pushQueue.push.called).toBe(true)
+            done()
+        ])
 
-      bucket = cube.getBucketByZoomedAddress([0, 0, 0, 0])
-      bucket.pull()
-      bucket.receiveData(new Uint8Array(32 * 32 * 32 * 3))
+      it "should push buckets immediately if they are pulled already", (done) ->
 
-      cube.labelVoxel([0, 0, 0], 42)
+        bucket = cube.getBucketByZoomedAddress([0, 0, 0, 0])
+        bucket.pull()
+        bucket.receiveData(new Uint8Array(32 * 32 * 32 * 3))
 
-      runAsync([
-        ->
-          expect(pushQueue.insert.calledWith(
-            [0, 0, 0, 0]
-          )).toBe(true)
-          expect(pushQueue.push.called).toBe(true)
-          done()
-      ])
+        cube.labelVoxel([0, 0, 0], 42)
 
-    it "should only create one temporal bucket", ->
+        runAsync([
+          ->
+            expect(pushQueue.insert.calledWith(
+              [0, 0, 0, 0]
+            )).toBe(true)
+            expect(pushQueue.push.called).toBe(true)
+            done()
+        ])
 
-      cube.labelVoxel([0, 0, 0], 42)
-      cube.labelVoxel([1, 0, 0], 43)
+      it "should only create one temporal bucket", ->
 
-      data = cube.getBucketByZoomedAddress([0, 0, 0, 0]).getData()
+        # Creates temporal bucket
+        cube.labelVoxel([0, 0, 0], 42)
+        # Uses existing temporal bucket
+        cube.labelVoxel([1, 0, 0], 43)
 
-      # Both values should be in the bucket, at positions 0 and 3 because of
-      # the bit depth of 24.
-      expect(data[0]).toBe(42)
-      expect(data[3]).toBe(43)
+        data = cube.getBucketByZoomedAddress([0, 0, 0, 0]).getData()
 
-    it "should merge incoming buckets", ->
+        # Both values should be in the bucket, at positions 0 and 3 because of
+        # the bit depth of 24.
+        expect(data[0]).toBe(42)
+        expect(data[3]).toBe(43)
 
-      bucket = cube.getBucketByZoomedAddress([0, 0, 0, 0])
+      it "should merge incoming buckets", ->
 
-      oldData = new Uint8Array(32 * 32 * 32 * 3)
-      # First voxel should be overwritten by new data
-      oldData[0] = 1
-      oldData[1] = 2
-      oldData[2] = 3
-      # Second voxel should be merged into new data
-      oldData[3] = 4
-      oldData[4] = 5
-      oldData[5] = 6
+        bucket = cube.getBucketByZoomedAddress([0, 0, 0, 0])
 
-      cube.labelVoxel([0, 0, 0], 42)
+        oldData = new Uint8Array(32 * 32 * 32 * 3)
+        # First voxel should be overwritten by new data
+        oldData[0] = 1
+        oldData[1] = 2
+        oldData[2] = 3
+        # Second voxel should be merged into new data
+        oldData[3] = 4
+        oldData[4] = 5
+        oldData[5] = 6
 
-      bucket.pull()
-      bucket.receiveData(oldData)
+        cube.labelVoxel([0, 0, 0], 42)
 
-      newData = bucket.getData()
-      expect(newData[0]).toBe(42)
-      expect(newData[1]).toBe(0)
-      expect(newData[2]).toBe(0)
-      expect(newData[3]).toBe(4)
-      expect(newData[4]).toBe(5)
-      expect(newData[5]).toBe(6)
+        bucket.pull()
+        bucket.receiveData(oldData)
+
+        newData = bucket.getData()
+        expect(newData[0]).toBe(42)
+        expect(newData[1]).toBe(0)
+        expect(newData[2]).toBe(0)
+        expect(newData[3]).toBe(4)
+        expect(newData[4]).toBe(5)
+        expect(newData[5]).toBe(6)

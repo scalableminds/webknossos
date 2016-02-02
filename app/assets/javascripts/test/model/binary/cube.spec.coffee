@@ -133,10 +133,20 @@ describe "Cube", ->
 
     describe "getDataValue()", ->
 
-      it "should return the correct value", ->
+      it "should return the raw value without a mapping", ->
 
         value = 1 * (1 << 16) + 2 * (1 << 8) + 3
         cube.labelVoxel([0, 0, 0], value)
 
         expect(cube.getDataValue([0, 0, 0])).toBe(value)
+
+      it "should return the mapping value if available", ->
+
+        cube.labelVoxel([0, 0, 0], 42)
+        cube.labelVoxel([1, 1, 1], 43)
+
+        mapping = {42 : 1}
+
+        expect(cube.getDataValue([0, 0, 0], mapping)).toBe(1)
+        expect(cube.getDataValue([1, 1, 1], mapping)).toBe(43)
 

@@ -130,3 +130,13 @@ describe "Cube", ->
         expect(newData[3]).toBe(4)
         expect(newData[4]).toBe(5)
         expect(newData[5]).toBe(6)
+
+    describe "getDataValue()", ->
+
+      it "should return the correct value", ->
+
+        value = 1 * (1 << 16) + 2 * (1 << 8) + 3
+        cube.labelVoxel([0, 0, 0], value)
+
+        expect(cube.getDataValue([0, 0, 0])).toBe(value)
+

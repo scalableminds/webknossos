@@ -265,12 +265,13 @@ class Cube
 
     { bucket, voxelIndex} = @getBucketAndVoxelIndex( voxel, 0 )
 
-    if bucket?
+    if bucket.hasData()
 
+      data = bucket.getData()
       result = 0
       # Assuming little endian byte order
       for i in [0...@BYTE_OFFSET]
-        result += (1 << (8 * i)) * bucket[ voxelIndex + i]
+        result += (1 << (8 * i)) * data[ voxelIndex + i]
 
       if mapping?[result]?
         return mapping[result]

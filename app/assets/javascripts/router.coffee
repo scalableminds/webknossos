@@ -49,7 +49,7 @@ class Router extends Backbone.Router
         evt.preventDefault()
         return
 
-      # disable links beginning with #
+      # disable for links beginning with #
       if url.indexOf("#") == 0
         return
 
@@ -73,6 +73,7 @@ class Router extends Backbone.Router
 
     @$loadingSpinner = $("#loader")
     @$mainContainer = $("#main-container")
+    window.addEventListener("beforeunload", @beforeunloadHandler, false)
 
 
   hideLoading : ->
@@ -267,8 +268,34 @@ class Router extends Backbone.Router
 
     return
 
+  beforeunloadHandler : (e) =>
+    beforeunloadValue = @triggerBeforeunload()
+    if beforeunloadValue?
+      e.returnValue = beforeunloadValue
+    return
 
-  execute : ->
+  triggerBeforeunload : =>
+
+    # Triggers the registered `beforeunload` handlers and returns the first return value
+    # Doesn't use Backbone's trigger because we need return values
+    handlers = this._events?.beforeunload ? []
+    beforeunloadValue = _.find(
+      handlers.map((handler) => handler.callback.call(handler.ctx)),
+      (value) => value?)
+    return beforeunloadValue
+
+
+  # Override to handle view cleanup and custom beforeunload behavior
+  navigate : (path, options) ->
+
+    # Do nothing if we are already on that page
+    if path == window.location.pathname
+      return
+
+    beforeunloadValue = @triggerBeforeunload()
+    if beforeunloadValue? and !confirm(beforeunloadValue + "\nDo you wish to navigate away?")
+      @off("beforeunload")
+      return
 
     # Remove current views
     if @activeViews
@@ -280,7 +307,8 @@ class Router extends Backbone.Router
           view.remove()
 
         if view.forcePageReload
-          @reload()
+          window.removeEventListener("beforeunload", @beforeunloadHandler)
+          @loadURL(path)
           return
       @activeViews = []
 
@@ -294,11 +322,13 @@ class Router extends Backbone.Router
   loadURL : (url) ->
 
     window.location.href = url
+    return
 
 
   reload : ->
 
     window.location.reload()
+    return
 
 
 module.exports = Router

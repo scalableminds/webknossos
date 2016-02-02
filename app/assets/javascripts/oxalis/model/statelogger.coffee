@@ -115,7 +115,7 @@ class StateLogger
 
     # HTTP Code 409 'conflict' for dirty state
     if response.status == 409
-      $(window).off("beforeunload")
+      app.router.off("beforeunload")
       alert("""
         It seems that you edited the tracing simultaneously in different windows.
         Editing should be done in a single window only.

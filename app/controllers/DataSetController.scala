@@ -173,7 +173,7 @@ class DataSetController @Inject() (val messagesApi: MessagesApi) extends Control
             upload = DataSourceUpload(name, team, zipFile.ref.file.getAbsolutePath(), Some(settings))
             _ <- DataStoreHandler.uploadDataSource(upload).toFox
           } yield {
-            Ok
+            Ok(Json.obj())
           }).futureBox.map {
             case Full(r) => r
             case Failure(error,_,_) =>

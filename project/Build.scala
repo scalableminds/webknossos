@@ -47,7 +47,7 @@ object ApplicationBuild extends Build with sbtassembly.AssemblyKeys {
       case PathList("javax", "mail", xs @ _*)                                  => MergeStrategy.first
       case PathList("javax", "activation", xs @ _*)                            => MergeStrategy.first
       case PathList(ps @ _*) if ps.last endsWith ".html"                       => MergeStrategy.first
-      case PathList("org", "apache", xs @ _*)                                  => MergeStrategy.first
+      case PathList("org", "apache", "commons", "logging", xs @ _*)            => MergeStrategy.first
       case PathList("play", "core", "server", xs @ _*)                         => MergeStrategy.first
       case "log4j.properties"                                                  => MergeStrategy.concat
       case "unwanted.txt"                                                      => MergeStrategy.discard

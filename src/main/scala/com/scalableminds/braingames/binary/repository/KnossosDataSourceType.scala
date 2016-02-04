@@ -12,18 +12,21 @@ import com.scalableminds.braingames.binary.models._
 import com.scalableminds.braingames.binary.repository.mapping.{MappingPrinter, MappingParser}
 import com.scalableminds.util.geometry.{Scale, BoundingBox}
 import com.scalableminds.util.tools.ProgressTracking.ProgressTracker
+import com.scalableminds.util.tools.{FoxImplicits, Fox}
 import com.scalableminds.util.tools.JsonHelper
 import com.scalableminds.util.io.PathUtils
 import net.liftweb.common.{Empty, Box, Full, Failure}
 import org.apache.commons.io.{FileUtils, FilenameUtils}
 import scala.collection.breakOut
+import scala.concurrent.ExecutionContext.Implicits._
 import play.api.libs.json._
+
 
 class KnossosDataSourceType(val messagesApi: MessagesApi) extends DataSourceType with KnossosDataSourceTypeHandler{
   val name = "knossos"
 }
 
-trait KnossosDataSourceTypeHandler extends DataSourceTypeHandler with I18nSupport{
+trait KnossosDataSourceTypeHandler extends DataSourceTypeHandler with I18nSupport with FoxImplicits{
   import com.scalableminds.braingames.binary.Logger._
 
   private val maxRecursiveLayerDepth = 2
@@ -34,7 +37,7 @@ trait KnossosDataSourceTypeHandler extends DataSourceTypeHandler with I18nSuppor
   
   def fileExtension = "raw"
 
-  def importDataSource(unusableDataSource: UnusableDataSource, progressTracker: ProgressTracker): Box[DataSource] = {
+  def importDataSource(unusableDataSource: UnusableDataSource, progressTracker: ProgressTracker): Fox[DataSource] = {
     dataSourceFromFile(unusableDataSource.sourceFolder)
   }
 

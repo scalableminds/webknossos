@@ -8,12 +8,13 @@ import javax.inject.Inject
 import com.scalableminds.braingames.binary.models.{UnusableDataSource, DataSource}
 import com.scalableminds.util.io.PathUtils
 import com.scalableminds.util.tools.ProgressTracking.ProgressTracker
+import com.scalableminds.util.tools.Fox
 import net.liftweb.common.Box
 import play.api.Logger
 import play.api.i18n.MessagesApi
 
 trait DataSourceTypeHandler {
-  def importDataSource(unusableDataSource: UnusableDataSource, progressTracker: ProgressTracker): Box[DataSource]
+  def importDataSource(unusableDataSource: UnusableDataSource, progressTracker: ProgressTracker): Fox[DataSource]
 }
 
 trait DataSourceTypeGuesser {

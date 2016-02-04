@@ -8,6 +8,7 @@ import java.nio.file.Path
 import com.scalableminds.util.geometry.{BoundingBox, Point3D}
 import com.scalableminds.braingames.binary.store.FileDataStore
 import scala.concurrent.Future
+import scala.math.pow
 import com.scalableminds.braingames.binary.Logger._
 import com.scalableminds.util.tools.BlockedArray3D
 import net.liftweb.common.Full
@@ -71,7 +72,7 @@ object KnossosMultiResCreator {
     }
   }
 
-  def createResolutions(source: Path, target: Path, dataSetId: String, bytesPerElement: Int, baseResolution: Int, resolutions: Int, boundingBox: BoundingBox): Future[_] = {
+  def createResolutions(source: Path, target: Path, dataSetId: String, bytesPerElement: Int, baseResolution: Int, resolutions: Int, boundingBox: BoundingBox, progressHook: Double => Unit): Future[_] = {
     def createNextResolution(resolution: Int) = {
       val targetResolution = resolution * 2
       logger.info(s"About to create resolution $targetResolution for $dataSetId")
@@ -103,9 +104,10 @@ object KnossosMultiResCreator {
     }
 
     val resolutionsToCreate = List.fill(resolutions - 2)(2).scanLeft(baseResolution)(_ * _)
-    resolutionsToCreate.foldLeft(Future.successful[Any](1)){
+    resolutionsToCreate.foldLeft(Future.successful[Any](1)){ 
       case (previous, resolution) =>
-        previous.flatMap(_ => createNextResolution(resolution))
+        val progress = 1.0 - 1.0 / pow(resolution + 1, 3)
+        previous.flatMap(_ => createNextResolution(resolution)).map(_ => progressHook(progress))
     }
   }
 }

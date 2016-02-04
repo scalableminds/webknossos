@@ -15,12 +15,14 @@ import com.scalableminds.braingames.binary.store.DataStore
 import com.scalableminds.util.geometry.{BoundingBox, Point3D, Scale}
 import com.scalableminds.util.io.PathUtils
 import com.scalableminds.util.tools.ProgressTracking.ProgressTracker
+import com.scalableminds.util.tools.{FoxImplicits, Fox}
 import com.twelvemonkeys.imageio.plugins.tiff.TIFFImageReaderSpi
 import org.apache.commons.io.FileUtils
 import net.liftweb.common.{Box, Full}
 import play.api.libs.concurrent.Execution.Implicits._
 
 import scala.collection.JavaConversions._
+import scala.concurrent.Future
 import scala.util.matching.Regex
 
 object TiffDataSourceType extends DataSourceType with ImageDataSourceTypeHandler {
@@ -62,7 +64,7 @@ case class RawImage(info: ImageInfo, data: Array[Byte])
 
 case class StackInfo(boundingBox: BoundingBox, bytesPerPixel: Int)
 
-trait ImageDataSourceTypeHandler extends DataSourceTypeHandler {
+trait ImageDataSourceTypeHandler extends DataSourceTypeHandler with FoxImplicits {
   val Target = "target"
 
   val LayerRxs = Seq(
@@ -96,27 +98,28 @@ trait ImageDataSourceTypeHandler extends DataSourceTypeHandler {
   protected def elementClass(bytesPerPixel: Int) =
     s"uint${bytesPerPixel * 8}"
 
-  def importDataSource(unusableDataSource: UnusableDataSource, progress: ProgressTracker): Box[DataSource] = {
+  def importDataSource(unusableDataSource: UnusableDataSource, progress: ProgressTracker): Fox[DataSource] = {
     val target = (unusableDataSource.sourceFolder.resolve(Target)).toAbsolutePath
 
     prepareTargetPath(target)
 
-    val layers = convertToKnossosStructure(unusableDataSource.id, unusableDataSource.sourceFolder, target, progress).toList
-
-    DataSourceSettings.fromSettingsFileIn(unusableDataSource.sourceFolder) match {
-      case Full(settings) =>
-        Full(DataSource(
-          unusableDataSource.id,
-          target.toString,
-          settings.scale,
-          settings.priority getOrElse 0,
-          dataLayers = layers))
-      case _ =>
-        Full(DataSource(
-          unusableDataSource.id,
-          target.toString,
-          DefaultScale,
-          dataLayers = layers))
+    convertToKnossosStructure(unusableDataSource.id, unusableDataSource.sourceFolder, target, progress).map{
+      layers =>
+        DataSourceSettings.fromSettingsFileIn(unusableDataSource.sourceFolder) match {
+          case Full(settings) =>
+            Full(DataSource(
+              unusableDataSource.id,
+              target.toString,
+              settings.scale,
+              settings.priority getOrElse 0,
+              dataLayers = layers))
+          case _ =>
+            Full(DataSource(
+              unusableDataSource.id,
+              target.toString,
+              DefaultScale,
+              dataLayers = layers))
+        }
     }
   }
 
@@ -172,34 +175,40 @@ trait ImageDataSourceTypeHandler extends DataSourceTypeHandler {
       s"color_$idx"
   }
 
-  def convertToKnossosStructure(id: String, source: Path, targetRoot: Path, progress: ProgressTracker): Iterable[DataLayer] = {
+  def convertToKnossosStructure(id: String, source: Path, targetRoot: Path, progress: ProgressTracker): Future[List[DataLayer]] = {
     val images = PathUtils.listFiles(source, true).filter(_.getFileName.toString.endsWith("." + fileExtension))
 
     val layers = extractLayers(images.toList)
     val namingSchema = namingSchemaFor(layers) _
 
-    val progressMax = images.size
-    val progressPerLayer = progressMax.toFloat / layers.size
+    val progressPerLayer = 1.0 / layers.size
 
-    layers.zipWithIndex.map {
+    Future.traverse(layers.zipWithIndex.toList){
       case (layer, idx) =>
-        def progressReporter(i: Int) =
+        def reportProgress(tileProgress: Double, resolutionProgress: Double) =
         // somewhat hacky way to meassure the progress
-          progress.track(math.min((idx * progressPerLayer + i) / progressMax, 1))
+          progress.track((idx + 0.5 * (tileProgress + resolutionProgress)) * progressPerLayer)
+
+        def reportTileProgress(p: Double) =
+          reportProgress(p, 0.0)
+
+        def reportResolutionProgress(p: Double) =
+          reportProgress(1.0, p)
 
         val layerName = namingSchema(layer.layer)
         val target = targetRoot.resolve(layerName)
-        TileToCubeWriter(id, 1, target, layer.depth, layer.bytesPerPixel, layer.images, progressReporter _).convertToCubes()
+        TileToCubeWriter(id, 1, target, layer.depth, layer.bytesPerPixel, layer.images, reportTileProgress _).convertToCubes()
         val boundingBox = BoundingBox(Point3D(0, 0, 0), layer.width, layer.height, layer.depth)
-        KnossosMultiResCreator.createResolutions(target, target, id, layer.bytesPerPixel, 1, Resolutions.size, boundingBox).onFailure {
+        val section = DataLayerSection(layerName, layerName, Resolutions, boundingBox, boundingBox)
+        val elements = elementClass(layer.bytesPerPixel)
+        
+        val layerFuture = KnossosMultiResCreator.createResolutions(target, target, id, layer.bytesPerPixel, 1, Resolutions.size, boundingBox, reportResolutionProgress _)
+        layerFuture.onFailure {
           case e: Exception =>
             logger.error(s"An error occurred while trying to down scale target of image stack $id. ${e.getMessage}", e)
         }
 
-        val section = DataLayerSection(layerName, layerName, Resolutions, boundingBox, boundingBox)
-        val elements = elementClass(layer.bytesPerPixel)
-
-        DataLayer(layerName, DefaultLayerType.category, targetRoot.toString, None, elements, false, None, List(section))
+        layerFuture.map(_ => DataLayer(layerName, DefaultLayerType.category, targetRoot.toString, None, elements, false, None, List(section)))
     }
   }
 
@@ -286,7 +295,7 @@ trait ImageDataSourceTypeHandler extends DataSourceTypeHandler {
     }
   }
 
-  case class TileToCubeWriter(id: String, resolutions: Int, target: Path, depth: Int, bytesPerPixel: Int, tiles: Iterator[RawImage], progressHook: Int => Unit) {
+  case class TileToCubeWriter(id: String, resolutions: Int, target: Path, depth: Int, bytesPerPixel: Int, tiles: Iterator[RawImage], progressHook: Double => Unit) {
     val CubeSize = 128
 
     def convertToCubes(cubeSize: Int = 128) = {
@@ -294,7 +303,7 @@ trait ImageDataSourceTypeHandler extends DataSourceTypeHandler {
       tiles.zipWithIndex.foreach {
         case (tile, idx) =>
           writeTile(tile, idx, fileCache)
-          progressHook(idx)
+          progressHook(idx.toFloat / depth)
       }
     }
 

@@ -35,7 +35,7 @@ trait ProgressTracking {
   protected class ProgressTrackerImpl(key: String) extends ProgressTracker {
     progress.send(_ + (key -> 0))
     def track(d: Double): Unit = {
-      progress.send(_ + (key -> d))
+      progress.send(_ + (key -> math.min(d, 1)))
     }
   }
 

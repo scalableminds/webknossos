@@ -62,13 +62,15 @@ class TaskCreateBulkImportView extends Marionette.ItemView
     return
 
 
-  showSaveSuccess : (response) ->
+  showSaveSuccess : (response) =>
 
+    # A succesful request indicates that the bulk syntax was correct. However,
+    # each task is processed individually and can fail or succeed.
     if response.errors
-      for item, i in response.items
-        Toast.error("Line #{i} : #{item.error}")
+      @handleSuccessfulRequest(response.items)
 
     else
+      @ui.bulkText.val("")
       Toast.success("All tasks were successfully created")
 
 
@@ -80,6 +82,27 @@ class TaskCreateBulkImportView extends Marionette.ItemView
   showInvalidData : ->
 
     Toast.error("The form data is not correct.")
+
+
+  handleSuccessfulRequest : (items) ->
+
+    # Remove all successful tasks from the text area and show an error toast for
+    # the failed tasks
+    bulkText = @ui.bulkText.val()
+    tasks = @splitToLines(bulkText)
+    failedTasks = []
+    errorMessages = []
+
+    for item, i in items
+      if item.status == 400
+        failedTasks.push(tasks[i])
+        errorMessages.push(item.error)
+
+    # prefix the error message with line numbers
+    errorMessages = errorMessages.map((text, i) -> "Line #{i} : #{text}")
+
+    @ui.bulkText.val(failedTasks.join("\n"))
+    Toast.error(errorMessages.join("\n"))
 
 
   splitToLines : (string) ->

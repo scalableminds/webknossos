@@ -67,8 +67,10 @@ class TaskCreateFromNMLView extends Marionette.LayoutView
         =>
           @parent.showSaveSuccess()
 
-          if @CLEAR_ON_SUCCESS
-            @parent.clearForm()
+          # Jasny Bootstrap's `reset` is broken (stack overflow)
+          # https://github.com/jasny/bootstrap/issues/179)
+          # if @CLEAR_ON_SUCCESS
+          #   @parent.clearForm()
 
         (obj) -> console.error(obj.errors)
       )

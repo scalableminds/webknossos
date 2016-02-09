@@ -154,7 +154,6 @@ class AnnotationController @Inject()(val messagesApi: MessagesApi) extends Contr
   def handleUpdates(annotation: Annotation, js: JsValue, version: Int)(implicit request: AuthenticatedRequest[_]): Fox[JsObject] = {
     js match {
       case JsArray(jsUpdates) =>
-        Logger.info("Tried: " + jsUpdates)
         for {
           updated <- annotation.muta.updateFromJson(jsUpdates) //?~> Messages("format.json.invalid")
         } yield {

@@ -23,7 +23,7 @@ class TaskCreateFromNMLView extends Marionette.LayoutView
           <span class="input-group-addon btn btn-default btn-file">
             <span class="fileinput-new">Browse...</span>
             <span class="fileinput-exists">Change</span>
-            <input type="file" multiple="" name="nmlFiles[]" title="Please select at least one .nml file" required=true>
+            <input type="file" accept=".nml" name="nmlFile" title="Please select at least one .nml file" required=true>
           </span>
           <a href="#" class="input-group-addon btn btn-default fileinput-exists" data-dismiss="fileinput">Remove</a>
         </div>
@@ -48,10 +48,9 @@ class TaskCreateFromNMLView extends Marionette.LayoutView
     serializedForm = @parent.serializeForm()
     @model.set(serializedForm)
 
-    payload = {
-      formJSON : JSON.stringify(serializedForm)
-      nmlFiles : @ui.fileUpload[0].files
-    }
+    payload = new FormData()
+    payload.append("formJSON", JSON.stringify(serializedForm))
+    payload.append("nmlFile", @ui.fileUpload[0].files[0])
 
     form = @parent.ui.form[0]
 

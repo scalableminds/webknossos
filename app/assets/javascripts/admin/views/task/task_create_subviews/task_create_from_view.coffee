@@ -48,7 +48,7 @@ class TaskCreateFromView extends Marionette.LayoutView
         <div class=" form-group">
           <label class="col-sm-2 control-label" for="experience_domain">Experience Domain</label>
           <div class="col-sm-9">
-            <input type="text" class="form-control" name="experience[domain]" value="" data-source="[]" data-provide="typeahead" autocomplete="off" placeholder="Enter a domain">
+            <input type="text" class="form-control" name="neededExperience[domain]" value="" data-source="[]" data-provide="typeahead" autocomplete="off" placeholder="Enter a domain">
             <span class="help-block errors"></span>
           </div>
         </div>
@@ -56,7 +56,7 @@ class TaskCreateFromView extends Marionette.LayoutView
         <div class=" form-group">
           <label class="col-sm-2 control-label" for="experience_value">Min Experience</label>
           <div class="col-sm-9">
-            <input type="number" id="value" name="experience[value]" value="0" class="form-control">
+            <input type="number" id="value" name="neededExperience[value]" value="0" class="form-control">
             <span class="help-block errors"></span>
           </div>
         </div>

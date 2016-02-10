@@ -107,13 +107,14 @@ class DatasetUploadView extends Marionette.LayoutView
         data : new FormData(form)
       )
       .then(
-        -> Toast.success()
+        ->
+          Toast.success()
+          app.router.navigate("/dashboard", { trigger: true })
         -> # NOOP
       )
       .then(
-        =>
+        => # always do
           @ui.spinner.addClass("hidden")
-          app.router.navigate("/dashboard", { trigger: true })
       )
 
 

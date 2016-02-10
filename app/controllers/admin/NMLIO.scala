@@ -53,7 +53,6 @@ class NMLIO @Inject()(val messagesApi: MessagesApi) extends Controller with Secu
           Messages("nml.file.uploadSuccess")
         )
       }
-      .getOrElse(JsonBadRequest(Messages("nml.file.invalid")))
     }
   }
 

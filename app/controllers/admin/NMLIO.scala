@@ -46,14 +46,16 @@ class NMLIO @Inject()(val messagesApi: MessagesApi) extends Controller with Secu
       val nmls = parseSuccess.flatMap(_.nml).toList
 
       AnnotationService
-      .createAnnotationFrom(request.user, nmls, AnnotationType.Explorational, nameForNMLs(fileNames))
-      .map { annotation =>
-        JsonOk(
-          Json.obj("annotation" -> Json.obj("typ" -> annotation.typ, "id" -> annotation.id)),
-          Messages("nml.file.uploadSuccess")
-        )
+      .createAnnotationFrom(request.user, nmls, AnnotationType.Explorational, nameForNMLs(fileNames)).futuerBox.map{
+        case Full(annotation) =>
+          JsonOk(
+            Json.obj("annotation" -> Json.obj("typ" -> annotation.typ, "id" -> annotation.id)),
+            Messages("nml.file.uploadSuccess")
+          )
+
+        case _ =>
+          JsonBadRequest(Messages("nml.file.invalid"))
       }
-      .getOrElse(JsonBadRequest(Messages("nml.file.invalid")))
     }
   }
 

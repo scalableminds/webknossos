@@ -15,6 +15,7 @@ import play.api.i18n.{Messages, MessagesApi}
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json._
 import views.html
+import net.liftweb.common.Full
 
 class NMLIO @Inject()(val messagesApi: MessagesApi) extends Controller with Secured {
 
@@ -46,7 +47,7 @@ class NMLIO @Inject()(val messagesApi: MessagesApi) extends Controller with Secu
       val nmls = parseSuccess.flatMap(_.nml).toList
 
       AnnotationService
-      .createAnnotationFrom(request.user, nmls, AnnotationType.Explorational, nameForNMLs(fileNames)).futuerBox.map{
+      .createAnnotationFrom(request.user, nmls, AnnotationType.Explorational, nameForNMLs(fileNames)).futureBox.map{
         case Full(annotation) =>
           JsonOk(
             Json.obj("annotation" -> Json.obj("typ" -> annotation.typ, "id" -> annotation.id)),

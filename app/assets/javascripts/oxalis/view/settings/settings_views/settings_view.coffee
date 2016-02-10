@@ -21,7 +21,7 @@ class SettingsView extends Marionette.ItemView
 
     if _.isArray(@modelName)
       @model = _.transform(@modelName,
-                           (result, name) => result[name] = @model[name],
+                           (result, name) => result[name] = @model.get(name),
                            {})
     else
       @model = @model[@modelName]

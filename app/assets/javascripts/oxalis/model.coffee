@@ -24,6 +24,13 @@ ErrorHandling        = require("libs/error_handling")
 
 class Model extends Backbone.Model
 
+
+  constructor : ->
+
+    @initialized = false
+    super(arguments...)
+
+
   fetch : (options) ->
 
     if @get("controlMode") == constants.CONTROL_MODE_TRACE
@@ -54,6 +61,8 @@ class Model extends Backbone.Model
       else
 
         @user = new User()
+        @set("user", @user)
+
         @user.fetch().then( =>
 
           @set("dataset", new Backbone.Model(tracing.content.dataSet))

@@ -23,17 +23,24 @@
     "gulp-util": "^3.0.7",
     "imports-loader": "^0.6.4",
     "isomorphic-fetch": "^2.2.0",
+    "jasmine-node": "^1.14.5",
+    "mock-require": "^1.2.1",
     "napa": "^2.2.0",
     "protractor": "^2.5.1",
     "require-sugar": "^0.1.2",
     "rimraf": "^2.4.3",
+    "sinon": "^1.17.3",
     "through2": "^2.0.0",
     "webpack": "^1.12.2",
     "worker-loader": "^0.6.0",
     "chokidar": "^1.4.1"
   },
   "scripts": {
-    "install": "napa georgwiese/three.js#scm_oxalis:three.js"
+    "install": "napa georgwiese/three.js#scm_oxalis:three.js",
+    "test": "node_modules/jasmine-node/bin/jasmine-node --coffee app/assets/javascripts/test && ./node_modules/.bin/protractor",
+    "prewebdriver": "npm run webdriver-update",
+    "webdriver": "./node_modules/.bin/webdriver-manager start",
+    "webdriver-update": "./node_modules/.bin/webdriver-manager update"
   },
   "peerDependencies": {
     "backbone": "^1.2.3"

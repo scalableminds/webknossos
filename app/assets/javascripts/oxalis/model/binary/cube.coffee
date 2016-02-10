@@ -1,6 +1,6 @@
 Backbone = require("backbone")
 _ = require("lodash")
-ErrorHandling = require("libs/error_handling")
+ErrorHandling = require("../../../libs/error_handling")
 {Bucket, NullBucket} = require("./bucket")
 ArbitraryCubeAdapter = require("./arbitrary_cube_adapter")
 PullQueue = require("./pullqueue")
@@ -265,12 +265,13 @@ class Cube
 
     { bucket, voxelIndex} = @getBucketAndVoxelIndex( voxel, 0 )
 
-    if bucket?
+    if bucket.hasData()
 
+      data = bucket.getData()
       result = 0
       # Assuming little endian byte order
       for i in [0...@BYTE_OFFSET]
-        result += (1 << (8 * i)) * bucket[ voxelIndex + i]
+        result += (1 << (8 * i)) * data[ voxelIndex + i]
 
       if mapping?[result]?
         return mapping[result]

@@ -1,3 +1,5 @@
+_ = require("lodash")
+
 class ArbitraryCubeAdapter
 
   ARBITRARY_MAX_ZOOMSTEP : 2

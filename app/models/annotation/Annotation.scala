@@ -23,6 +23,7 @@ import play.modules.reactivemongo.json.BSONFormats._
 import reactivemongo.api.indexes.{IndexType, Index}
 import oxalis.view.{ResourceAction, ResourceActionCollection}
 import models.team.Role
+import models.tracing.TracingStatistics
 
 case class Annotation(
                        _user: Option[BSONObjectID],
@@ -126,7 +127,7 @@ object Annotation {
         "name" -> annotation.name,
         "id" -> annotation.id,
         "formattedHash" -> Formatter.formatHash(annotation.id),
-        "stats" -> stats.toOption
+        "stats" -> stats.map(_.writeAsJson).toOption
 
       )
     }

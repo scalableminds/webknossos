@@ -54,7 +54,10 @@ case class CreateTree(value: JsObject) extends TracingUpdater {
     val timestamp = (value \ "timestamp").as[Long]
     val name = (value \ "name").asOpt[String] getOrElse (DBTree.nameFromId(id))
     TracingUpdate { t =>
-      DBTreeDAO.insert(DBTree(t._id, id, color, timestamp, name)).map(_ => t) ?~> "Failed to insert tree."
+      for {
+        t_ <- t.updateStatistics(_.createTree) ?~> "Failed to update tracing statistics."
+        _ <- DBTreeDAO.insert(DBTree(t._id, id, color, timestamp, name)) ?~> "Failed to insert tree."
+      } yield t_
     }
   }
 }
@@ -63,9 +66,11 @@ case class DeleteTree(value: JsObject) extends TracingUpdater {
   def createUpdate()(implicit ctx: DBAccessContext) = {
     val id = (value \ "id").as[Int]
     TracingUpdate { t =>
-      t.tree(id).toFox.flatMap { tree =>
-        DBTreeService.remove(tree._id).map(_ => t) ?~> "Failed to remove tree."
-      }
+      for {
+        tree <- t.tree(id).toFox ?~> "Failed to access tree."
+        t_ <- t.updateStatistics(_.deleteTree(tree)) ?~> "Failed to update tracing statistics."
+        _ <- DBTreeService.remove(tree._id) ?~> "Failed to remove tree."
+      } yield t_
     }
   }
 }
@@ -77,7 +82,7 @@ case class UpdateTree(value: JsObject) extends TracingUpdater {
     val color = (value \ "color").asOpt[Color]
     val name = (value \ "name").asOpt[String] getOrElse (DBTree.nameFromId(id))
     TracingUpdate { t =>
-      for{
+      for {
         tree <- t.tree(id).toFox ?~> "Failed to access tree."
         updated = tree.copy(color = color orElse tree.color, treeId = updatedId, name = name)
         _ <- DBTreeDAO.update(tree._id, updated) ?~> "Failed to update tree."
@@ -94,10 +99,11 @@ case class MergeTree(value: JsObject) extends TracingUpdater {
       for {
         source <- t.tree(sourceId).toFox ?~> "Failed to access source tree."
         target <- t.tree(targetId).toFox ?~> "Failed to access target tree."
+        t_ <- t.updateStatistics(_.mergeTree) ?~> "Failed to update tracing statistics."
         _ <- DBNodeDAO.moveAllNodes(source._id, target._id) ?~> "Failed to move all nodes."
         _ <- DBEdgeDAO.moveAllEdges(source._id, target._id) ?~> "Failed to move all edges."
         _ <- DBTreeService.remove(source._id) ?~> "Failed to remove source tree."
-      } yield t
+      } yield t_
     }
   }
 }
@@ -130,8 +136,9 @@ case class CreateNode(value: JsObject) extends TracingUpdater {
     TracingUpdate { t =>
       for {
         tree <- t.tree(treeId).toFox ?~> "Failed to access tree."
+        t_ <- t.updateStatistics(_.createNode) ?~> "Failed to update tracing statistics."
         _ <- DBNodeDAO.insert(DBNode(node, tree._id)) ?~> "Failed to insert node into tree."
-      } yield t
+      } yield t_
     }
   }
 }
@@ -146,9 +153,10 @@ case class DeleteNode(value: JsObject) extends TracingUpdater {
     TracingUpdate { t =>
       for {
         tree <- t.tree(treeId).toFox ?~> "Failed to access tree."
+        t_ <- t.updateStatistics(_.deleteNode(nodeId, tree)) ?~> "Failed to update tracing statistics."
         _ <- DBNodeDAO.remove(nodeId, tree._id) ?~> "Failed to remove node."
         _ <- DBEdgeDAO.deleteEdgesOfNode(nodeId, tree._id) ?~> "Failed to remove edges of node."
-      } yield t
+      } yield t_
     }
   }
 }
@@ -179,8 +187,9 @@ case class CreateEdge(value: JsObject) extends TracingUpdater {
     TracingUpdate { t =>
       for {
         tree <- t.tree(treeId).toFox ?~> "Failed to access tree."
+        t_ <- t.updateStatistics(_.createEdge) ?~> "Failed to update tracing statistics."
         _ <- DBEdgeDAO.insert(DBEdge(edge, tree._id)) ?~> "Failed to insert edge."
-      } yield t
+      } yield t_
     }
   }
 }
@@ -195,8 +204,9 @@ case class DeleteEdge(value: JsObject) extends TracingUpdater {
     TracingUpdate { t =>
       for {
         tree <- t.tree(treeId).toFox ?~> "Failed to access tree."
+        t_ <- t.updateStatistics(_.deleteEdge) ?~> "Failed to update tracing statistics."
         _ <- DBEdgeDAO.remove(edge, tree._id) ?~> "Failed to remove edge."
-      } yield t
+      } yield t_
     }
   }
 }

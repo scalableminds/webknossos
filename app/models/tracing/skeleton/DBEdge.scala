@@ -82,4 +82,11 @@ object DBEdgeDAO extends SecuredBaseDAO[DBEdge] {
         Json.obj("edge.source" -> nodeId),
         Json.obj("edge.target" -> nodeId))))
   }
+
+  def countEdgesOfNode(nodeId: Int, _tree: BSONObjectID)(implicit ctx: DBAccessContext) = {
+    count(
+      Json.obj("_treeId" -> _tree, "$or" -> Json.arr(
+        Json.obj("edge.source" -> nodeId),
+        Json.obj("edge.target" -> nodeId))))
+  }
 }

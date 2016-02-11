@@ -4,7 +4,7 @@ import com.scalableminds.util.geometry.{BoundingBox, Point3D}
 import com.scalableminds.util.reactivemongo.DBAccessContext
 import com.scalableminds.util.tools.Fox
 import models.annotation._
-import models.tracing.skeleton.{DBTreeService, SkeletonTracingService, SkeletonTracing, SkeletonTracingLike}
+import models.tracing.skeleton.{DBTreeService, SkeletonTracingService, SkeletonTracing, SkeletonTracingLike, SkeletonTracingStatistics}
 import oxalis.nml.utils._
 import oxalis.nml.{BranchPoint, Comment, NML, TreeLike}
 import play.api.libs.concurrent.Execution.Implicits._
@@ -76,6 +76,19 @@ case class TemporarySkeletonTracing(
       case s =>
         Fox.failure("Can't merge annotation content of a different type into TemporarySkeletonTracing. Tried to merge " + s.id)
     }
+  }
+
+  def stats = {
+    val numberOfTrees = _trees.size
+
+    val (numberOfNodes, numberOfEdges) = _trees.foldLeft((0l, 0l)) {
+      case ((numberOfNodes, numberOfEdges), tree) =>
+        val nNodes = tree.nodes.size
+        val nEdges = tree.edges.size
+        (numberOfNodes + nNodes, numberOfEdges + nEdges)
+    }
+
+    Some(SkeletonTracingStatistics(numberOfNodes, numberOfEdges, numberOfTrees))
   }
 }
 

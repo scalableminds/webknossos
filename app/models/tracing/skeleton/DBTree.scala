@@ -68,7 +68,7 @@ object DBTreeService {
 
   def remove(_tree: BSONObjectID)(implicit ctx: DBAccessContext) = {
     for {
-      _ <- DBNodeDAO.removeAllOf(_tree)
+      nNodes <- DBNodeDAO.removeAllOf(_tree)
       _ <- DBEdgeDAO.removeAllOf(_tree)
       _ <- DBTreeDAO.removeById(_tree)
     } yield {

@@ -54,6 +54,8 @@ class Model extends Backbone.Model
       else
 
         @user = new User()
+        @set("user", @user)
+
         @user.fetch().then( =>
 
           @set("dataset", new Backbone.Model(tracing.content.dataSet))
@@ -277,7 +279,7 @@ class Model extends Backbone.Model
 
     @get("flycam").setPosition( state.position || tracing.content.editPosition )
     if state.zoomStep?
-      @get("flycam").setZoomStep( state.zoomStep )
+      @get("user").set("zoom", Math.exp(Math.LN2 * state.zoomStep))
       @get("flycam3d").setZoomStep( state.zoomStep )
     if state.rotation?
       @get("flycam3d").setRotation( state.rotation )

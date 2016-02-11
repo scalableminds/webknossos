@@ -78,7 +78,7 @@ case class TemporarySkeletonTracing(
     }
   }
 
-  def stats = {
+  lazy val stats = {
     val numberOfTrees = _trees.size
 
     val (numberOfNodes, numberOfEdges) = _trees.foldLeft((0l, 0l)) {

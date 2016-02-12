@@ -17,9 +17,13 @@ class SettingsView extends Marionette.ItemView
   """)
 
 
+  modelName : null
+
+
   initialize : ->
 
-    @model = @model[@modelName]
+    if @modelName?
+      @model = @model[@modelName]
 
     unless @subviewCreatorsList?
       throw new Error(

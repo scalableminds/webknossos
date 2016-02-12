@@ -100,7 +100,8 @@ class Flycam2d
 
   getMaxZoomStep : ->
 
-    Math.pow(2, @zoomStepCount + @maxZoomStepDiff)
+    maxZoomStep = @zoomStepCount - 1
+    Math.pow(2, maxZoomStep + @maxZoomStepDiff)
 
 
   calculateBuffer : ->

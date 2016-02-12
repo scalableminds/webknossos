@@ -19,10 +19,6 @@ import net.liftweb.common.Full
 
 class NMLIO @Inject()(val messagesApi: MessagesApi) extends Controller with Secured {
 
-  def uploadForm = Authenticated { implicit request =>
-    Ok(html.admin.nml.nmlupload())
-  }
-
   private def nameForNMLs(fileNames: Seq[String]) =
     if (fileNames.size == 1)
       fileNames.headOption.map(_.replaceAll("\\.nml$", ""))

@@ -112,10 +112,6 @@ DELETE        /annotations/:typ/:id                                             
 GET           /annotations/:typ/:id/merge/:mergedTyp/:mergedId/:readOnly        controllers.AnnotationController.merge(typ: String, id: String, mergedTyp: String, mergedId: String, readOnly: Boolean)
 # GET           /annotations/:typ/:id/saveMerged                                  controllers.AnnotationController.saveMerged(typ: String, id: String)
 
-#Admin pages
-GET           /admin/nml/upload                                                 controllers.admin.NMLIO.uploadForm
-POST          /admin/nml/upload                                                 controllers.admin.NMLIO.upload
-
 # Admin datasets
 GET           /datasets/upload                                                  controllers.DataSetController.empty
 POST          /api/datasets/upload                                              controllers.DataSetController.upload

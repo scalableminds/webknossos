@@ -239,27 +239,28 @@ class TaskCreateFromView extends Marionette.LayoutView
       collection : new TaskTypeCollection()
       childViewOptions :
         modelValue : -> return "#{@model.get("id")}"
+        modelLabel : -> return "#{@model.get("summary")}"
+        defaultItem : {id : @model.get("type")}
       data : "amIAnAdmin=true"
       name : "taskTypeId"
-      active : @model.get("type")
     )
 
     @teamSelectionView = new SelectionView(
       collection : new TeamCollection()
       childViewOptions :
         modelValue : -> return "#{@model.get("name")}"
+        defaultItem : {name : @model.get("team")}
       data : "amIAnAdmin=true"
       name : "team"
-      active : @model.get("team")
     )
 
     @projectSelectionView = new SelectionView(
       collection : new ProjectCollection()
       childViewOptions :
         modelValue : -> return "#{@model.get("name")}"
+        defaultItem : {name : @model.get("projectName")}
       data : "amIAnAdmin=true"
       name : "projectName"
-      active : @model.get("projectName")
     )
 
     # render subviews in defined regions

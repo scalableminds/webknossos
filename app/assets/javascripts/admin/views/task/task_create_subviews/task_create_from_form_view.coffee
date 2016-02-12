@@ -72,7 +72,7 @@ class TaskCreateFromFormView extends Marionette.LayoutView
         @parent.showSaveError()
 
       success : (task) =>
-	@parent.showSaveSuccess(task)
+        @parent.showSaveSuccess(task)
     )
 
     # prevent page reload
@@ -88,6 +88,7 @@ class TaskCreateFromFormView extends Marionette.LayoutView
       collection : new DatasetCollection()
       childViewOptions :
         modelValue : -> return "#{@model.get("name")}"
+        defaultItem : {name : @model.get("dataSet")}
       data : "amIAnAdmin=true&isActive=true"
       name : "dataSet"
       parentModel : @model

@@ -13,25 +13,32 @@ class SelectionItemView extends Marionette.ItemView
     if @options.defaultItem
       [[key, value]] = _.pairs(@options.defaultItem)
       if @model.get(key) == value
-        return _.extend(defaults, selected : true)
-      else
-        return defaults
+        _.extend(defaults, selected : true)
+
+    return defaults
 
   template : _.template("""
-    <%- value %>
+    <%- label %>
   """)
 
   initialize : (options) ->
 
+    # a function to retrieve the option's value
     @modelValue = options.modelValue
+
+    # a function to retrieve the option's label (displayed text)
+    @modelLabel = options.modelLabel
 
     @listenTo(@, "render", @afterRender)
 
 
   serializeData : ->
 
+    label = if @modelLabel then @modelLabel() else @modelValue()
+
     return {
       value : @modelValue()
+      label : label
       id : @model.get("id")
     }
 

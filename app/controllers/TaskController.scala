@@ -180,6 +180,8 @@ class TaskController @Inject() (val messagesApi: MessagesApi) extends Controller
           AnnotationDAO.updateAllUsingNewTaskType(updatedTask, taskType.settings)
           JsonOk(json, Messages("task.editSuccess"))
         }
+      case errors: JsError =>
+        Fox.successful(JsonBadRequest(jsonErrorWrites(errors), Messages("task.create.failed")))
     }
   }
 

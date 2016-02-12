@@ -28,15 +28,16 @@ trait FoxImplicits {
 
 
 object Fox{
-  def apply[A](future: Future[Box[A]])(implicit ec: ExecutionContext)  =
+  def apply[A](future: Future[Box[A]])(implicit ec: ExecutionContext): Fox[A]  =
     new Fox(future)
 
-  def successful[A](e: A)(implicit ec: ExecutionContext)  =
+  def successful[A](e: A)(implicit ec: ExecutionContext): Fox[A]  =
     new Fox(Future.successful(Full(e)))
 
-  def empty(implicit ec: ExecutionContext) = new Fox(Future.successful(Empty))
+  def empty(implicit ec: ExecutionContext): Fox[Nothing] = new Fox(Future.successful(Empty))
 
-  def failure(message: String, ex: Box[Throwable] = Empty, chain: Box[Failure] = Empty)(implicit ec: ExecutionContext)  =
+  def failure(message: String, ex: Box[Throwable] = Empty, 
+              chain: Box[Failure] = Empty)(implicit ec: ExecutionContext): Fox[Nothing]  =
     new Fox(Future.successful(Failure(message, ex, chain)))
 
   def sequence[T](l: List[Fox[T]])(implicit ec: ExecutionContext): Future[List[Box[T]]] =
@@ -51,8 +52,8 @@ object Fox{
       }
     })
 
-  def sequenceOfFulls[T](l: List[Fox[T]])(implicit ec: ExecutionContext): Future[List[T]] =
-    Future.sequence(l.map(_.futureBox)).map{ results =>
+  def sequenceOfFulls[T](seq: List[Fox[T]])(implicit ec: ExecutionContext): Future[List[T]] =
+    Future.sequence(seq.map(_.futureBox)).map{ results =>
       results.foldRight(List.empty[T]){
         case (_ : Failure, l) => l
         case (Empty, l) => l
@@ -76,7 +77,7 @@ class Fox[+A](val futureBox: Future[Box[A]])(implicit ec: ExecutionContext) {
       case _ => fox.futureBox
     })
 
-  def getOrElse[B >: A](b: B): Future[B] =
+  def getOrElse[B >: A](b: => B): Future[B] =
     futureBox.map(_.getOrElse(b))
 
   def map[B](f: A => B): Fox[B] =

@@ -7,22 +7,26 @@ import scala.concurrent.{ExecutionContext, Future}
 import net.liftweb.common.{Failure, Empty, Full, Box}
 
 trait FoxImplicits {
-  implicit def futureBox2Fox[T](f: Future[Box[T]])(implicit ec: ExecutionContext) =
+  implicit def bool2Fox(b: Boolean)(implicit ec: ExecutionContext): Fox[Boolean] =
+    if(b) Fox.successful(b)
+    else  Fox.empty
+
+  implicit def futureBox2Fox[T](f: Future[Box[T]])(implicit ec: ExecutionContext): Fox[T] =
     new Fox(f)
 
-  implicit def futureFull2Fox[T](f: Future[Full[T]])(implicit ec: ExecutionContext) =
+  implicit def futureFull2Fox[T](f: Future[Full[T]])(implicit ec: ExecutionContext): Fox[T] =
     new Fox(f)
 
-  implicit def box2Fox[T](b: Box[T])(implicit ec: ExecutionContext) =
+  implicit def box2Fox[T](b: Box[T])(implicit ec: ExecutionContext): Fox[T] =
     new Fox(Future.successful(b))
 
-  implicit def future2Fox[T](f: Future[T])(implicit ec: ExecutionContext) =
+  implicit def future2Fox[T](f: Future[T])(implicit ec: ExecutionContext): Fox[T] =
     new Fox(f.map(Full(_)))
 
-  implicit def option2Fox[T](b: Option[T])(implicit ec: ExecutionContext) =
+  implicit def option2Fox[T](b: Option[T])(implicit ec: ExecutionContext): Fox[T] =
     new Fox(Future.successful(Box(b)))
 
-  implicit def futureOption2Fox[T](f: Future[Option[T]])(implicit ec: ExecutionContext) =
+  implicit def futureOption2Fox[T](f: Future[Option[T]])(implicit ec: ExecutionContext): Fox[T] =
     new Fox(f.map(Box(_)))
 }
 

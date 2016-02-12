@@ -11,9 +11,6 @@ class SelectionView extends Marionette.CollectionView
 
   childView : SelectionItemView
 
-  events :
-    "change" : "updateActive"
-
   initialize : (options) ->
 
     @collection.fetch(

@@ -106,6 +106,18 @@ class Fox[+A](val futureBox: Future[Box[A]])(implicit ec: ExecutionContext) {
   def toFox = this
 
   /**
+   * If the box is Empty this will create a Full. If The box is Full it will get emptied. Failures are passed through.
+   */
+  def reverse: Fox[Boolean] = {
+    new Fox(futureBox.map{
+      case Full(_) => Empty
+      case Empty => Full(true)
+      case f: Failure => f
+    })
+  } 
+  
+
+  /**
    * Makes Fox play better with Scala 2.8 for comprehensions
    */
   def withFilter(p: A => Boolean): WithFilter = new WithFilter(p)

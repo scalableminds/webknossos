@@ -9,6 +9,7 @@ class TaskCreateView extends AbstractTabView
   getTabs : ->
     [
       {
+        active : true
         id : "tab-createFromForm"
         name : "Create Task"
         iconClass : "fa fa-tasks"
@@ -21,7 +22,6 @@ class TaskCreateView extends AbstractTabView
         id : "tab-createFromNML"
         name : "Create Task from NML File"
         iconClass : "fa fa-file"
-        active : true
         viewClass : TaskCreateFromView
         options :
           type : "from_nml"

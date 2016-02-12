@@ -26,15 +26,6 @@ class TaskListView extends Marionette.CompositeView
          </tr>
       </thead>
     </table>
-    <div class="navbar navbar-default navbar-fixed-bottom">
-      <div class="navbar-form">
-        <div class="btn-group">
-          <a class="btn btn-primary" href="/tasks/create">
-            <i class="fa fa-plus"></i>Create New Task
-          </a>
-        </div>
-      </div>
-    </div>
   """)
   className : "task-administration container wide"
   childView : TaskListItemView
@@ -60,7 +51,7 @@ class TaskListView extends Marionette.CompositeView
 
   createNewTask : ->
 
-    app.router.loadURL("/tasks/create")
+    app.router.navigate("/tasks/create", {trigger : true})
 
 
   toggleAllDetails : ->

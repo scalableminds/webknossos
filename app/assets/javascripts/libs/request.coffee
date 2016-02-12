@@ -1,6 +1,7 @@
-$     = require("jquery")
-_     = require("lodash")
-Toast = require("libs/toast")
+$             = require("jquery")
+_             = require("lodash")
+Toast         = require("libs/toast")
+ErrorHandling = require("libs/error_handling")
 
 
 Request =
@@ -68,6 +69,7 @@ Request =
           toFormData(value, formData, key)
 
         else # string
+          ErrorHandling.assert(_.isString(value))
           formData.append(formKey, value)
 
       return formData

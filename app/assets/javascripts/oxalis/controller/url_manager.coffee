@@ -48,7 +48,6 @@ class UrlManager
           if stateArray[5]?
             state.activeNode = +stateArray[5]
 
-    debugger
     return state
 
 

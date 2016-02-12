@@ -60,7 +60,7 @@ class TaskCreateFromNMLView extends Marionette.LayoutView
         params : {type : "nml"}
       )
       .then(
-        => @parent.showSaveSuccess()
+	(task) => @parent.showSaveSuccess(task)
         => @parent.showSaveError()
       )
 

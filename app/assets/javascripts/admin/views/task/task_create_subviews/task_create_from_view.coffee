@@ -101,7 +101,6 @@ class TaskCreateFromView extends Marionette.LayoutView
               pattern="(\\s*\\d+\\s*,){5}(\\s*\\d+\\s*)"
               title="topLeft.x, topLeft.y, topLeft.z, width, height, depth"
               value="<%- boundingBoxString() %>"
-              required=true
               class="form-control">
             <span class="help-block errors"></span>
           </div>
@@ -125,8 +124,10 @@ class TaskCreateFromView extends Marionette.LayoutView
 
     type : @type
     boundingBoxString : ->
+      if not @boundingBox then return ""
       b = @boundingBox
       return "#{b.topLeft.join(', ')}, #{b.width}, #{b.height}, #{b.depth}"
+
 
     getActionName : =>
       return @getActionName()
@@ -151,15 +152,16 @@ class TaskCreateFromView extends Marionette.LayoutView
   initialize : (options) ->
 
     @type = options.type
+    @isEditingMode = _.isString(@model.id)
 
-    if @model.id
+    if @isEditingMode
       @listenTo(@model, "sync", @render)
       @model.fetch()
 
 
   getActionName : ->
 
-    if @model.id
+    if @isEditingMode
       return "Update"
     else
       return "Create"
@@ -192,6 +194,9 @@ class TaskCreateFromView extends Marionette.LayoutView
 
 
   parseBoundingBox : (string) ->
+
+      if _.isEmpty(string) then return
+
       # split string by comma delimiter, trim whitespace and cast to integer
       # access from subview
       intArray = Utils.stringToNumberArray(string)
@@ -208,16 +213,16 @@ class TaskCreateFromView extends Marionette.LayoutView
       }
 
 
-  showSaveSuccess : ->
+  showSaveSuccess : (task) ->
 
-    Toast.success("The task was successfully #{@getActionName().toLowerCase()}")
-    app.router.navigate("/tasks", {trigger : true})
+    Toast.success("The task was successfully #{@getActionName().toLowerCase()}d")
+    app.router.navigate("/tasks##{task.id}", {trigger : true})
 
 
   showSaveError : ->
 
     @toggleSubmitButton(false)
-    Toast.error("The task could not be #{@getActionName().toLowerCase()} due to server errors.")
+    Toast.error("The task could not be #{@getActionName().toLowerCase()}d due to server errors.")
 
 
   showInvalidData : ->

@@ -71,8 +71,8 @@ class TaskCreateFromFormView extends Marionette.LayoutView
       error : =>
         @parent.showSaveError()
 
-      success : =>
-        @parent.showSaveSuccess()
+      success : (task) =>
+	@parent.showSaveSuccess(task)
     )
 
     # prevent page reload

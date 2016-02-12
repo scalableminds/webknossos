@@ -16,11 +16,7 @@ class TaskModel extends Backbone.Model
     type : null
     dataSet : ""
     editPosition : [0, 0, 0]
-    boundingBox :
-      topLeft: [0,0,0]
-      width: 0
-      height: 0
-      depth: 0
+    boundingBox : null
     neededExperience :
       value : 0
       domain : ""

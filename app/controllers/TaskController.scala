@@ -110,7 +110,6 @@ class TaskController @Inject() (val messagesApi: MessagesApi) extends Controller
   def createSingleTask(input: (String, Experience, Int, CompletionStatus, String, String, Option[BoundingBox], String, Point3D))(implicit request: AuthenticatedRequest[_]) =
     input match {
       case (taskTypeId, experience, priority, status, team, projectName, boundingBox, dataSetName, start) =>
-        Logger.warn("BOUNDING BOX 2: " + boundingBox)
         for {
           dataSet <- DataSetDAO.findOneBySourceName(dataSetName) ?~> Messages("dataSet.notFound")
           taskType <- TaskTypeDAO.findOneById(taskTypeId) ?~> Messages("taskType.notFound")

@@ -1,88 +1,46 @@
-_                         = require("lodash")
-Marionette                = require("backbone.marionette")
-routes                    = require("routes")
 TaskCreateFromView        = require("./task_create_subviews/task_create_from_view")
 TaskCreateBulkImportView  = require("./task_create_subviews/task_create_bulk_import_view")
+AbstractTabView           = require("oxalis/view/abstract_tab_view")
 
-class TaskCreateView extends Marionette.LayoutView
-
-  # keep track of the active view
-  activeView : null
+class TaskCreateView extends AbstractTabView
 
   id : "task-create"
-  className : "container wide task-type-administration"
-  template : _.template("""
-  <div class="tabbable" id="tabbable-dashboard">
 
-    <ul class="nav nav-tabs">
-      <li class="active">
-        <a href="#" id="tab-createFromForm" data-toggle="tab">Create Task</a>
-      </li>
-      <li>
-        <a href="#" id="tab-createFromNML" data-toggle="tab">Create Task from NML File</a>
-      </li>
-      <li>
-        <a href="#" id="tab-createBulkImport" data-toggle="tab">Import Task in Bulk</a>
-      </li>
-    </ul>
+  getTabs : ->
+    [
+      {
+        id : "tab-createFromForm"
+        name : "Create Task"
+        iconClass : "fa fa-tasks"
+        viewClass : TaskCreateFromView
+        options :
+          type : "from_form"
+          model : @model
+      }
+      {
+        id : "tab-createFromNML"
+        name : "Create Task from NML File"
+        iconClass : "fa fa-file"
+        active : true
+        viewClass : TaskCreateFromView
+        options :
+          type : "from_nml"
+          model : @model
+      }
+      {
+        id : "tab-createBulkImport"
+        name : "Import Task in Bulk"
+        iconClass : "fa fa-list"
+        viewClass : TaskCreateBulkImportView
+        options :
+          model : @model
+      }
+    ]
 
-    <div class="tab-content">
-      <div class="tab-pane active"></div>
-    </div>
-
-  </div> <!-- END .tabbable -->
-  """)
-
-  # content region for tabs
-  regions:
-    tabPane : ".tab-pane"
-
-  # trigger tab changes
-  events :
-    "click #tab-createFromForm" : "showTabCreateFromForm"
-    "click #tab-createFromNML" : "showTabCreateFromNML"
-    "click #tab-createBulkImport" : "showTabCreateBulkImport"
-
-  # change to activated tabs
-
-  ###*
-  * Activate Default Form View
-  ###
-  showTabCreateFromForm : ->
-
-    @activeView = new TaskCreateFromView(
-      type : "from_form"
-      model : @model
-    )
-    @tabPane.show(@activeView)
-
-
-  ###*
-  * Activate NML Form View
-  ###
-  showTabCreateFromNML : ->
-
-    @activeView = new TaskCreateFromView(
-      type : "from_nml"
-      model : @model
-    )
-    @tabPane.show(@activeView)
-
-
-  ###*
-  * Activate Bulk Import View
-  ###
-  showTabCreateBulkImport : ->
-
-    @activeView = new TaskCreateBulkImportView()
-    @tabPane.show(@activeView)
-
-
-  ###*
-  * Show default on startup
-  ###
   onRender : ->
 
-    @showTabCreateFromForm()
+    @$el.addClass("container wide task-edit-administration")
+
+
 
 module.exports = TaskCreateView

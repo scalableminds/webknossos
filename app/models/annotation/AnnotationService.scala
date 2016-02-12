@@ -43,7 +43,7 @@ object AnnotationService extends AnnotationContentProviders with BoxImplicits wi
   def createExplorationalFor(user: User, dataSet: DataSet, contentType: String, id: String = "")(implicit ctx: DBAccessContext) =
     withProviderForContentType(contentType) { provider =>
       for {
-        content <- provider.createFrom(dataSet).toFox
+        content <- provider.createFrom(dataSet)
         contentReference = ContentReference.createFor(content)
         annotation = Annotation(
           Some(user._id),
@@ -132,7 +132,7 @@ object AnnotationService extends AnnotationContentProviders with BoxImplicits wi
   def createFrom(user: User, content: AnnotationContent, annotationType: AnnotationType, name: Option[String])(implicit messages: Messages, ctx: DBAccessContext) = {
     for {
       dataSet <- DataSetDAO.findOneBySourceName(content.dataSetName) ~> Messages("dataSet.notFound")
-      val annotation = Annotation(
+      annotation = Annotation(
         Some(user._id),
         ContentReference.createFor(content),
         team = selectSuitableTeam(user, dataSet),

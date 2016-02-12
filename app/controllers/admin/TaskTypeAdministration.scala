@@ -47,9 +47,9 @@ class TaskTypeAdministration @Inject() (val messagesApi: MessagesApi) extends Ad
 
       success = { t =>
         for{
-          _ <- ensureTeamAdministration(request.user, t.team).toFox
+          _ <- ensureTeamAdministration(request.user, t.team)
           _ <- TaskTypeDAO.insert(t)
-          ttJson <- TaskType.transformToJsonWithStatus(t).toFox
+          ttJson <- TaskType.transformToJsonWithStatus(t)
         } yield {
           JsonOk(
             Json.obj("newTaskType" -> ttJson),
@@ -61,9 +61,9 @@ class TaskTypeAdministration @Inject() (val messagesApi: MessagesApi) extends Ad
 
   def get(taskTypeId: String) = Authenticated.async{ implicit request =>
     for {
-      taskType <- TaskTypeDAO.findOneById(taskTypeId).toFox ?~> Messages("taskType.notFound")
-      _ <- ensureTeamAdministration(request.user, taskType.team).toFox
-      ttJson <- TaskType.transformToJsonWithStatus(taskType).toFox
+      taskType <- TaskTypeDAO.findOneById(taskTypeId) ?~> Messages("taskType.notFound")
+      _ <- ensureTeamAdministration(request.user, taskType.team)
+      ttJson <- TaskType.transformToJsonWithStatus(taskType)
     } yield {
       Ok(ttJson)
     }
@@ -92,9 +92,9 @@ class TaskTypeAdministration @Inject() (val messagesApi: MessagesApi) extends Ad
         success = { t =>
           val updatedTaskType = t.copy(_id = taskType._id)
           for {
-            _ <- TaskTypeDAO.update(taskType._id, updatedTaskType).toFox
-            tasks <- TaskDAO.findAllByTaskType(taskType._id).toFox
-            _ <- ensureTeamAdministration(request.user, updatedTaskType.team).toFox
+            _ <- TaskTypeDAO.update(taskType._id, updatedTaskType)
+            tasks <- TaskDAO.findAllByTaskType(taskType._id)
+            _ <- ensureTeamAdministration(request.user, updatedTaskType.team)
           } yield {
             tasks.map(task => AnnotationDAO.updateAllUsingNewTaskType(task, updatedTaskType.settings))
             JsonOk(Messages("taskType.editSuccess"))
@@ -105,7 +105,7 @@ class TaskTypeAdministration @Inject() (val messagesApi: MessagesApi) extends Ad
 
     for {
       taskType <- TaskTypeDAO.findOneById(taskTypeId) ?~> Messages("taskType.notFound")
-      _ <- ensureTeamAdministration(request.user, taskType.team).toFox
+      _ <- ensureTeamAdministration(request.user, taskType.team)
       result <- evaluateForm(taskType)
     } yield {
       result

@@ -22,7 +22,7 @@ import models.annotation.AnnotationService
 import play.api.Play.current
 import com.scalableminds.util.tools.{FoxImplicits, Fox}
 import com.scalableminds.util.reactivemongo.DBAccessContext
-import play.api.mvc.AnyContent
+import play.api.mvc.{Result, AnyContent}
 import play.twirl.api.Html
 import scala.concurrent.Future
 import play.api.libs.json._
@@ -79,7 +79,7 @@ class TaskController @Inject() (val messagesApi: MessagesApi) extends Controller
       (taskTypeId, experience, priority, status, team, projectName, boundingBox) <- parseJson(stringifiedJson).toFox
       taskType <- TaskTypeDAO.findOneById(taskTypeId) ?~> Messages("taskType.notFound")
       project <- ProjectService.findIfNotEmpty(projectName) ?~> Messages("project.notFound")
-      _ <- ensureTeamAdministration(request.user, team).toFox
+      _ <- ensureTeamAdministration(request.user, team)
       result <- {
         val nmls = NMLService.extractFromFile(nmlFile.ref.file, nmlFile.filename)
 
@@ -114,7 +114,7 @@ class TaskController @Inject() (val messagesApi: MessagesApi) extends Controller
           dataSet <- DataSetDAO.findOneBySourceName(dataSetName) ?~> Messages("dataSet.notFound")
           taskType <- TaskTypeDAO.findOneById(taskTypeId) ?~> Messages("taskType.notFound")
           project <- ProjectService.findIfNotEmpty(projectName) ?~> Messages("project.notFound")
-          _ <- ensureTeamAdministration(request.user, team).toFox
+          _ <- ensureTeamAdministration(request.user, team)
           task = Task(taskType._id, team, experience, priority, status.open, _project = project.map(_.name))
           _ <- TaskDAO.insert(task)
           _ <- AnnotationService.createAnnotationBase(task, request.user._id, boundingBox, taskType.settings, dataSetName, start)
@@ -123,47 +123,40 @@ class TaskController @Inject() (val messagesApi: MessagesApi) extends Controller
         }
     }
 
-  def bulkCreate(json: JsValue)(implicit request: AuthenticatedRequest[_]) = {
-    json.validate(Reads.list(taskCompleteReads)) match {
-      case JsSuccess(parsed, _) =>
-        val results = parsed.map(p => createSingleTask(p).map(_ => Messages("task.create.success")))
-        bulk2StatusJson(results).map(js => JsonOk(js, Messages("task.bulk.processed")))
-      case errors: JsError =>
-        Future.successful(JsonBadRequest(jsonErrorWrites(errors), Messages("format.json.invalid")))
+  def bulkCreate(json: JsValue)(implicit request: AuthenticatedRequest[_]): Fox[Result] = {
+    withJsonUsing(json, Reads.list(taskCompleteReads)){ parsed =>
+      val results = parsed.map(p => createSingleTask(p).map(_ => Messages("task.create.success")))
+      bulk2StatusJson(results).map(js => JsonOk(js, Messages("task.bulk.processed")))
     }
   }
 
   def create(`type`: String = "default") = Authenticated.async{ implicit request =>
     `type` match {
       case "default" =>
-        val r = request.body.asJson
-        .map{json => json.validate(taskCompleteReads) match {
-          case JsSuccess(parsed, _) =>
+        request.body.asJson.toFox.flatMap{json =>
+          withJsonUsing(json, taskCompleteReads){ parsed =>
             for{
               task <- createSingleTask(parsed)
               json <- Task.transformToJson(task)
             } yield JsonOk(json, Messages("task.create.success"))
-          case errors: JsError =>
-            Fox.successful(JsonBadRequest(jsonErrorWrites(errors), Messages("task.create.failed")))
-        }}
-        .getOrElse(Fox.successful(JsonBadRequest(Messages("format.json.invalid"))))
-        r
+          }
+        }.getOrElse(JsonBadRequest(Messages("format.json.invalid")))
       case "nml" =>
         createFromNML(request)
       case "bulk" =>
         request.body.asJson
-        .map(json => bulkCreate(json))
-        .getOrElse(Fox.successful(JsonBadRequest(Messages("format.json.invalid"))))
+        .toFox
+        .flatMap(json => bulkCreate(json))
+        .getOrElse(JsonBadRequest(Messages("format.json.invalid")))
     }
   }
 
   def update(taskId: String) = Authenticated.async(parse.json) { implicit request =>
-    request.body.validate(taskCompleteReads) match {
-      case JsSuccess((taskTypeId, experience, priority, status, team, projectName, boundingBox, dataSetName, start), _) =>
+    withJsonBodyUsing(taskCompleteReads){
+      case (taskTypeId, experience, priority, status, team, projectName, boundingBox, dataSetName, start) =>
         for {
           task <- TaskDAO.findOneById(taskId) ?~> Messages("task.notFound")
-          _ <- ensureTeamAdministration(request.user, task.team).toFox
-
+          _ <- ensureTeamAdministration(request.user, task.team)
           taskType <- TaskTypeDAO.findOneById(taskTypeId) ?~> Messages("taskType.notFound")
           project <- ProjectService.findIfNotEmpty(projectName) ?~> Messages("project.notFound")
 
@@ -180,8 +173,6 @@ class TaskController @Inject() (val messagesApi: MessagesApi) extends Controller
           AnnotationDAO.updateAllUsingNewTaskType(updatedTask, taskType.settings)
           JsonOk(json, Messages("task.editSuccess"))
         }
-      case errors: JsError =>
-        Fox.successful(JsonBadRequest(jsonErrorWrites(errors), Messages("task.create.failed")))
     }
   }
 
@@ -223,11 +214,11 @@ class TaskController @Inject() (val messagesApi: MessagesApi) extends Controller
 
   def createAvailableTasksJson(availableTasksMap: Map[User, (Int, List[Project])]) =
     Json.toJson(availableTasksMap.map { case (user, (taskCount, projects)) =>
-        Json.obj(
-          "name" -> user.name,
-          "availableTaskCount" -> taskCount,
-          "projects" -> projects.map(_.name)
-        )
+      Json.obj(
+        "name" -> user.name,
+        "availableTaskCount" -> taskCount,
+        "projects" -> projects.map(_.name)
+      )
     })
 
   def requestAvailableTasks = Authenticated.async { implicit request =>

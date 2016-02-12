@@ -1,6 +1,8 @@
 package controllers
 
-import play.api.mvc.{Controller => PlayController, Request}
+import scala.concurrent.Future
+
+import play.api.mvc.{Controller => PlayController, Result, Request}
 import oxalis.security.AuthenticatedRequest
 import oxalis.view.ProvidesSessionData
 import com.scalableminds.util.mvc.ExtendedController
@@ -23,25 +25,11 @@ with I18nSupport
   implicit def AuthenticatedRequest2Request[T](r: AuthenticatedRequest[T]): Request[T] =
     r.request
 
-  def ensureTeamAdministration(user: User, team: String) = {
-    user.adminTeams.exists(_.team == team) match {
-      case true => Full(true)
-      case false => Failure(Messages("team.admin.notAllowed", team))
-    }
-  }
-
-  def allowedToAdministrate(admin: User, user: User) =
-    user.isEditableBy(admin) match {
-      case true => Full(true)
-      case false => Failure(Messages("notAllowed"))
-    }
-
+  def ensureTeamAdministration(user: User, team: String) =
+    user.adminTeams.exists(_.team == team) ?~> Messages("team.admin.notAllowed", team)
 
   def allowedToAdministrate(admin: User, dataSet: DataSet) =
-    dataSet.isEditableBy(Some(admin)) match {
-      case true => Full(true)
-      case false => Failure(Messages("notAllowed"))
-    }
+    dataSet.isEditableBy(Some(admin)) ?~> Messages("notAllowed")
 
   case class Filter[A, T](name: String, predicate: (A, T) => Boolean)(implicit converter: Converter[String, A]) {
     def applyOn(list: List[T])(implicit request: Request[_]): List[T] = {
@@ -91,4 +79,24 @@ with I18nSupport
     }
   }
 
+  def withJsonBodyAs[A](f: A => Fox[Result])(implicit rds: Reads[A], request: Request[JsValue]): Fox[Result] = {
+    withJsonBodyUsing(rds)(f)
+  }
+
+  def withJsonBodyUsing[A](reads: Reads[A])(f: A => Fox[Result])(implicit request: Request[JsValue]): Fox[Result] = {
+    withJsonUsing(request.body, reads)(f)
+  }
+
+  def withJsonAs[A](json: JsReadable)(f: A => Fox[Result])(implicit rds: Reads[A]): Fox[Result] = {
+    withJsonUsing(json, rds)(f)
+  }
+
+  def withJsonUsing[A](json: JsReadable, reads: Reads[A])(f: A => Fox[Result]): Fox[Result] = {
+    json.validate(reads) match {
+      case JsSuccess(result, _) =>
+        f(result)
+      case e: JsError =>
+        Fox.successful(JsonBadRequest(jsonErrorWrites(e), Messages("format.json.invalid")))
+    }
+  }
 }

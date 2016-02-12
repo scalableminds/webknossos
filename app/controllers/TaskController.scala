@@ -8,6 +8,7 @@ import models.binary.DataSetDAO
 import javax.inject.Inject
 import net.liftweb.common.{Box, Failure, Full}
 import oxalis.nml.NMLService
+import play.api.Logger
 import play.api.data.Form
 import play.api.data.Forms._
 import play.api.libs.json.Json._
@@ -39,7 +40,7 @@ class TaskController @Inject() (val messagesApi: MessagesApi) extends Controller
       (__ \ 'status).read[CompletionStatus] and
       (__ \ 'team).read[String] and
       (__ \ 'projectName).read[String] and
-      (__ \ 'boundingBox).read[BoundingBox]
+      (__ \ 'boundingBox).readNullable[BoundingBox]
 
   val taskNMLJsonReads = baseJsonReads.tupled
 
@@ -92,9 +93,12 @@ class TaskController @Inject() (val messagesApi: MessagesApi) extends Controller
               status.open,
               _project = project.map(_.name),
               _id = BSONObjectID.generate)
-            TaskDAO.insert(task).flatMap { _ =>
-              AnnotationService.createAnnotationBase(task, request.user._id, boundingBox, taskType.settings, nml)
-            }.map(_ => Messages("task.create.success"))
+
+            for{
+              _ <- TaskDAO.insert(task)
+              _ <- AnnotationService.createAnnotationBase(task, request.user._id, boundingBox, taskType.settings, nml)
+            } yield Messages("task.create.success")
+
           case NMLService.NMLParseFailure(fileName, error) =>
             Fox.failure(Messages("nml.file.invalid", fileName, error))
         }
@@ -103,9 +107,10 @@ class TaskController @Inject() (val messagesApi: MessagesApi) extends Controller
     } yield result
   }
 
-  def createSingleTask(input: (String, Experience, Int, CompletionStatus, String, String, BoundingBox, String, Point3D))(implicit request: AuthenticatedRequest[_]) =
+  def createSingleTask(input: (String, Experience, Int, CompletionStatus, String, String, Option[BoundingBox], String, Point3D))(implicit request: AuthenticatedRequest[_]) =
     input match {
       case (taskTypeId, experience, priority, status, team, projectName, boundingBox, dataSetName, start) =>
+        Logger.warn("BOUNDING BOX 2: " + boundingBox)
         for {
           dataSet <- DataSetDAO.findOneBySourceName(dataSetName) ?~> Messages("dataSet.notFound")
           taskType <- TaskTypeDAO.findOneById(taskTypeId) ?~> Messages("taskType.notFound")
@@ -113,8 +118,8 @@ class TaskController @Inject() (val messagesApi: MessagesApi) extends Controller
           _ <- ensureTeamAdministration(request.user, team).toFox
           task = Task(taskType._id, team, experience, priority, status.open, _project = project.map(_.name))
           _ <- TaskDAO.insert(task)
+          _ <- AnnotationService.createAnnotationBase(task, request.user._id, boundingBox, taskType.settings, dataSetName, start)
         } yield {
-          AnnotationService.createAnnotationBase(task, request.user._id, boundingBox, taskType.settings, dataSetName, start)
           task
         }
     }
@@ -135,7 +140,10 @@ class TaskController @Inject() (val messagesApi: MessagesApi) extends Controller
         val r = request.body.asJson
         .map{json => json.validate(taskCompleteReads) match {
           case JsSuccess(parsed, _) =>
-            createSingleTask(parsed).map(_ => JsonOk(Messages("task.create.success")))
+            for{
+              task <- createSingleTask(parsed)
+              json <- Task.transformToJson(task)
+            } yield JsonOk(json, Messages("task.create.success"))
           case errors: JsError =>
             Fox.successful(JsonBadRequest(jsonErrorWrites(errors), Messages("task.create.failed")))
         }}
@@ -160,7 +168,7 @@ class TaskController @Inject() (val messagesApi: MessagesApi) extends Controller
           taskType <- TaskTypeDAO.findOneById(taskTypeId) ?~> Messages("taskType.notFound")
           project <- ProjectService.findIfNotEmpty(projectName) ?~> Messages("project.notFound")
 
-          _ <- TaskDAO.update(
+          updatedTask <- TaskDAO.update(
             _task = task._id,
             _taskType = taskType._id,
             neededExperience = experience,
@@ -168,10 +176,10 @@ class TaskController @Inject() (val messagesApi: MessagesApi) extends Controller
             instances = status.open,
             team = team,
             _project = project.map(_.name))
-          result <- TaskDAO.findOneById(taskId) ?~> Messages("task.notFound")
+          json <- Task.transformToJson(updatedTask)
         } yield {
-          AnnotationDAO.updateAllUsingNewTaskType(task, taskType.settings)
-          Ok(Json.toJson(result))
+          AnnotationDAO.updateAllUsingNewTaskType(updatedTask, taskType.settings)
+          JsonOk(json, Messages("task.editSuccess"))
         }
     }
   }

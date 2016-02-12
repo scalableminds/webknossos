@@ -205,8 +205,8 @@ object TaskDAO extends SecuredBaseDAO[Task] with FoxImplicits {
              instances: Int,
              team: String,
              _project: Option[String]
-            )(implicit ctx: DBAccessContext): Fox[WriteResult] =
-    update(
+            )(implicit ctx: DBAccessContext): Fox[Task] =
+    findAndModify(
       Json.obj("_id" -> _task),
       Json.obj("$set" ->
         Json.obj(

@@ -211,7 +211,7 @@ class TaskCreateFromView extends Marionette.LayoutView
   showSaveSuccess : ->
 
     Toast.success("The task was successfully #{@getActionName().toLowerCase()}")
-    app.navigate("/tasks", {trigger : true})
+    app.router.navigate("/tasks", {trigger : true})
 
 
   showSaveError : ->

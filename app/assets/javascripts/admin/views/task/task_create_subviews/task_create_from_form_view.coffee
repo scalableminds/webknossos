@@ -49,9 +49,6 @@ class TaskCreateFromFormView extends Marionette.LayoutView
     @parent = options.parent
 
 
-  ###*
-   * Update the model with form data.
-   ###
   serializeForm : ->
 
     formValues = @parent.serializeForm()
@@ -75,10 +72,6 @@ class TaskCreateFromFormView extends Marionette.LayoutView
         @parent.showSaveError()
 
       success : =>
-
-        if @CLEAR_ON_SUCCESS
-          @parent.clearForm()
-
         @parent.showSaveSuccess()
     )
 

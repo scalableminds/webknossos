@@ -128,11 +128,9 @@ class Bucket
 
 class NullBucket extends Bucket
 
-  constructor : (BIT_DEPTH) ->
-    super(BIT_DEPTH)
-
+  constructor : ->
+    super(0)
     @state = @STATE_LOADED
-    @data = new Uint8Array(@BUCKET_LENGTH)
 
   label : (_) ->  # Do nothing
 

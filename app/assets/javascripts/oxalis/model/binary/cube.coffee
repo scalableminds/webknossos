@@ -48,7 +48,7 @@ class Cube
 
     _.extend(this, Backbone.Events)
 
-    @NULL_BUCKET = new NullBucket(@BIT_DEPTH)
+    @NULL_BUCKET = new NullBucket()
 
     @LOOKUP_DEPTH_UP = @ZOOM_STEP_COUNT - 1
     @MAX_ZOOM_STEP   = @ZOOM_STEP_COUNT - 1
@@ -158,8 +158,11 @@ class Cube
 
   getBucketByZoomedAddress : (address) ->
 
-    cube = @cubes[address[3]].data
+    if address[3] >= @ZOOM_STEP_COUNT
+      return @NULL_BUCKET
+
     bucketIndex = @getBucketIndexByZoomedAddress(address)
+    cube = @cubes[address[3]].data
 
     if bucketIndex?
       unless cube[bucketIndex]?
@@ -197,8 +200,8 @@ class Cube
   collectBucket : (bucket) ->
 
     address = bucket.zoomedAddress
-    cube = @cubes[address[3]].data
     bucketIndex = @getBucketIndexByZoomedAddress(address)
+    cube = @cubes[address[3]].data
     cube[bucketIndex] = null
 
 

@@ -59,7 +59,8 @@ class TaskCreateBulkImportView extends Marionette.ItemView
       @showSaveError
     )
 
-    return
+    # prevent page reload
+    return false
 
 
   showSaveSuccess : (response) =>

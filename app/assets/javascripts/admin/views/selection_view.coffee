@@ -9,12 +9,6 @@ class SelectionView extends Marionette.CollectionView
 
   childView : SelectionItemView
 
-  # this view is often used as a subview
-  # but has his specific collection model
-  # parentModel allows to update the parent views model
-  # with the selected option
-  parentModel : null
-
   # keep track of the active option
   active : null
 

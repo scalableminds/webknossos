@@ -5,12 +5,17 @@ class SelectionItemView extends Marionette.ItemView
 
   tagName : "option"
   attributes : ->
+
+    defaults =
+      id : @model.get("id")
+      value : @options.modelValue()
+
     if @options.defaultItem
       [[key, value]] = _.pairs(@options.defaultItem)
       if @model.get(key) == value
-        return selected : true
+        return _.extend(defaults, selected : true)
       else
-        return {}
+        return defaults
 
   template : _.template("""
     <%- value %>
@@ -19,9 +24,6 @@ class SelectionItemView extends Marionette.ItemView
   initialize : (options) ->
 
     @modelValue = options.modelValue
-
-    # in the taskcreate form the tasktype select must distinguish between value and innerHTML
-    @modelName = options.modelName
 
     @listenTo(@, "render", @afterRender)
 
@@ -33,17 +35,5 @@ class SelectionItemView extends Marionette.ItemView
       id : @model.get("id")
     }
 
-
-  afterRender : ->
-
-    @$el.attr(
-      id : @model.get("id")
-      value : @modelValue()
-    ).html(
-      if @modelName?
-        @modelName()
-      else
-        @modelValue()
-    )
 
 module.exports = SelectionItemView

@@ -57,7 +57,6 @@ class TaskCreateFromNMLView extends Marionette.LayoutView
     if form.checkValidity()
 
       Toast.info("Uploading NML", false)
-      @parent.ui.submitButton.text("Uploading...")
 
       Request.sendMultipartFormReceiveJSON("/api/tasks",
         data : payload
@@ -72,26 +71,10 @@ class TaskCreateFromNMLView extends Marionette.LayoutView
           # if @CLEAR_ON_SUCCESS
           #   @parent.clearForm()
 
-        (obj) -> console.error(obj.errors)
-      )
-      .then(
-        =>
-          @fileuploadAlways()
+        => @parent.showSaveError()
       )
 
     # prevent page reload
     return false
-
-
-  ###*
-   * Upload Finish Hook.
-   * Enable button and set button text.
-  ###
-  fileuploadAlways : ->
-
-    @parent.ui.submitButton.prop("disabled", false)
-    @parent.ui.submitButton.removeClass("disabled")
-    @parent.ui.submitButton.text("Create")
-
 
 module.exports = TaskCreateFromNMLView

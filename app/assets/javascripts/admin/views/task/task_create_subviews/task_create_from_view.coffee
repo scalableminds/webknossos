@@ -152,13 +152,16 @@ class TaskCreateFromView extends Marionette.LayoutView
     ###
   submit : ->
 
-    # block submit button
-    @ui.submitButton.prop("disabled", true)
-    @ui.submitButton.addClass("disabled")
+    @toggleSubmitButton(true)
 
     # send form data to server
     return @createSubview.submit()
 
+
+  toggleSubmitButton : (state) ->
+
+    @ui.submitButton.prop("disabled", state)
+    @ui.submitButton.toggleClass("disabled", state)
 
   ###*
    * Update model with form values.
@@ -178,7 +181,6 @@ class TaskCreateFromView extends Marionette.LayoutView
       # access from subview
       intArray = Utils.stringToNumberArray(string)
 
-      # user input could be too short
       # insert a 0 instead
       return {
         topLeft : [
@@ -197,6 +199,7 @@ class TaskCreateFromView extends Marionette.LayoutView
   ###
   showSaveSuccess : ->
 
+    @toggleSubmitButton(false)
     Toast.success("The task was successfully created")
 
   ###*
@@ -204,6 +207,7 @@ class TaskCreateFromView extends Marionette.LayoutView
   ###
   showSaveError : ->
 
+    @toggleSubmitButton(false)
     Toast.error("The task could not be created due to server errors.")
 
 
@@ -237,7 +241,6 @@ class TaskCreateFromView extends Marionette.LayoutView
         modelName : -> return "#{@model.get("summary")}"
       data : "amIAnAdmin=true"
       name : "taskTypeId"
-      parentModel : @model
     )
 
     @teamSelectionView = new SelectionView(
@@ -246,7 +249,6 @@ class TaskCreateFromView extends Marionette.LayoutView
         modelValue : -> return "#{@model.get("name")}"
       data : "amIAnAdmin=true"
       name : "team"
-      parentModel : @model
     )
 
     @projectSelectionView = new SelectionView(
@@ -255,7 +257,6 @@ class TaskCreateFromView extends Marionette.LayoutView
         modelValue : -> return "#{@model.get("name")}"
       data : "amIAnAdmin=true"
       name : "projectName"
-      parentModel : @model
     )
 
     # render subviews in defined regions

@@ -72,14 +72,9 @@ class TaskCreateFromFormView extends Marionette.LayoutView
     @model.save(serializedForm,
       params : {type : "default"}
       error : =>
-        @parent.ui.submitButton.prop("disabled", false)
-        @parent.ui.submitButton.removeClass("disabled")
-
         @parent.showSaveError()
 
       success : =>
-        @parent.ui.submitButton.prop("disabled", false)
-        @parent.ui.submitButton.removeClass("disabled")
 
         if @CLEAR_ON_SUCCESS
           @parent.clearForm()

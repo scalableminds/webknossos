@@ -8,9 +8,6 @@ class TaskCreateFromNMLView extends Marionette.LayoutView
 
   id: "create-from-nml"
 
-  # clear all form inputs when task was successfully created
-  CLEAR_ON_SUCCESS : true
-
   template: _.template("""
     <div class="form-group">
       <label class="col-sm-2 control-label" for="nmlFile">Reference NML File</label>
@@ -63,14 +60,7 @@ class TaskCreateFromNMLView extends Marionette.LayoutView
         params : {type : "nml"}
       )
       .then(
-        =>
-          @parent.showSaveSuccess()
-
-          # Jasny Bootstrap's `reset` is broken (stack overflow)
-          # https://github.com/jasny/bootstrap/issues/179)
-          # if @CLEAR_ON_SUCCESS
-          #   @parent.clearForm()
-
+        => @parent.showSaveSuccess()
         => @parent.showSaveError()
       )
 

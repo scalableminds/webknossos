@@ -165,7 +165,7 @@ class TaskCreateFromView extends Marionette.LayoutView
       return "Create"
 
 
-  # Submit form data as json.
+  # Submit form data as json
   submit : ->
 
     @toggleSubmitButton(true)
@@ -210,8 +210,8 @@ class TaskCreateFromView extends Marionette.LayoutView
 
   showSaveSuccess : ->
 
-    @toggleSubmitButton(false)
     Toast.success("The task was successfully #{@getActionName().toLowerCase()}")
+    app.navigate("/tasks", {trigger : true})
 
 
   showSaveError : ->
@@ -223,12 +223,6 @@ class TaskCreateFromView extends Marionette.LayoutView
   showInvalidData : ->
 
     Toast.error("The form data is not correct.")
-
-
-  clearForm : ->
-
-    @ui.form[0].reset()
-
 
   ###
    Render the SelectionViews based on the stored options.

@@ -136,6 +136,10 @@ class TracingLayoutView extends Marionette.LayoutView
 
   renderSettings : ->
 
+    # This method will be invoked again once the model is initialized as part of
+    # the "sync" event callback.
+    return unless @model.initialized
+
     if @isSkeletonMode()
       settingsTabClass = if @isArbitraryMode() then SkeletonArbitraryTabView else SkeletonPlaneTabView
       settingsTabView = new settingsTabClass(@options)

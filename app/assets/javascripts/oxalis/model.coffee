@@ -24,6 +24,13 @@ ErrorHandling        = require("libs/error_handling")
 
 class Model extends Backbone.Model
 
+
+  constructor : ->
+
+    @initialized = false
+    super(arguments...)
+
+
   fetch : (options) ->
 
     if @get("controlMode") == constants.CONTROL_MODE_TRACE
@@ -149,6 +156,7 @@ class Model extends Backbone.Model
     @set("mode", if isVolumeTracing then constants.MODE_VOLUME else constants.MODE_PLANE_TRACING)
 
     @initSettersGetter()
+    @initialized = true
     @trigger("sync")
 
     # no error

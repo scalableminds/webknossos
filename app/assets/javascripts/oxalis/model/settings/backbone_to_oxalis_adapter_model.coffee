@@ -22,6 +22,11 @@ class BackboneToOxalisAdapterModel extends Backbone.Model
       activeCellId : 0
     )
 
+    @listenTo(@oxalisModel, "sync", @bind)
+
+
+  bind : ->
+
     if @oxalisModel.skeletonTracing
 
       # Update values after OxalisModel is done syncing
@@ -49,8 +54,11 @@ class BackboneToOxalisAdapterModel extends Backbone.Model
 
       # ######################################
       # Listen to changes in the BackboneModel
+
+      # some calls are deferred, so the backbone change is propagated first, as the property in question
+      # may be reset again if it is invalid
       @listenTo(@skeletonTracingAdapter, "change:activeTreeId", (model, id) ->
-        @skeletonTracingModel.setActiveTree(id)
+        _.defer( => @skeletonTracingModel.setActiveTree(id) )
       )
 
       @listenTo(@skeletonTracingAdapter, "change:somaClicking", (model, bool) ->
@@ -58,11 +66,11 @@ class BackboneToOxalisAdapterModel extends Backbone.Model
       )
 
       @listenTo(@skeletonTracingAdapter, "change:activeNodeId", (model, id) ->
-        @skeletonTracingModel.setActiveNode(id)
+        _.defer( => @skeletonTracingModel.setActiveNode(id) )
       )
 
       @listenTo(@skeletonTracingAdapter, "change:particleSize", (model, size) ->
-        @oxalisModel.user.set("particleSize", size)
+        _.defer( => @oxalisModel.user.set("particleSize", size) )
       )
 
       @listenTo(@skeletonTracingAdapter, "change:overrideNodeRadius", (model, bool) ->
@@ -70,7 +78,7 @@ class BackboneToOxalisAdapterModel extends Backbone.Model
       )
 
       @listenTo(@skeletonTracingAdapter, "change:radius", (model, radius) ->
-        @skeletonTracingModel.setActiveNodeRadius(radius)
+        _.defer( => @skeletonTracingModel.setActiveNodeRadius(radius) )
       )
 
       @listenTo(@skeletonTracingAdapter, "change:boundingBox", (model, string) ->

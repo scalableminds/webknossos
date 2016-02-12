@@ -12,38 +12,37 @@ class PlaneUserSettingsView extends SettingsView
   id : "user-settings"
   className : "flex-column"
 
-  modelName : "user"
 
+  subviewCreatorsList : [
+    [
+      "controls-category", ->
+        return new ControlsCategoryView({model : @model.get("user")})
+    ]
 
-  subviewCreators :
+    [
+      "viewport-category", ->
+        return new ViewportCategoryView({@model})
+    ]
 
-    "controls-category" : ->
+    [
+      "tdview-category", ->
+        return new TDViewCategoryView({model : @model.get("user")})
+    ]
 
-      return new ControlsCategoryView({ @model })
+    [
+      "isosurface-category", ->
+        return new IsosurfaceCategoryView({model : @model.get("user")})
+    ]
 
+    [
+      "segmentation-category", ->
+        return new SegmentationCategoryView({model : @model.get("user")})
+    ]
 
-    "viewport-category" : ->
-
-      return new ViewportCategoryView({ @model })
-
-
-    "tdview-category" : ->
-
-      return new TDViewCategoryView({ @model })
-
-
-    "isosurface-category" : ->
-
-      return new IsosurfaceCategoryView({ @model })
-
-
-    "segmentation-category" : ->
-
-      return new SegmentationCategoryView({ @model })
-
-
-    "abstracttree-category" : ->
-
-      return new AbstractTreeCategoryView({ @model })
+    [
+      "abstracttree-category", ->
+        return new AbstractTreeCategoryView({model : @model.get("user")})
+    ]
+  ]
 
 module.exports = PlaneUserSettingsView

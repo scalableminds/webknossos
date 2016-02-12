@@ -96,14 +96,12 @@ class SkeletonTracing
         @flycam3d.setDirection(@firstEdgeDirection)
 
 
-    $(window).on(
-      "beforeunload"
-      =>
-        if !@stateLogger.stateSaved() and @stateLogger.allowUpdate
-          @stateLogger.pushNow(false)
-          return "You haven't saved your progress, please give us 2 seconds to do so and and then leave this site."
-        else
-          return
+    app.router.on("beforeunload", =>
+      if !@stateLogger.stateSaved() and @stateLogger.allowUpdate
+        @stateLogger.pushNow(false)
+        return "You haven't saved your progress, please give us 2 seconds to do so and and then leave this site."
+      else
+        return
     )
 
 

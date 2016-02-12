@@ -20,10 +20,11 @@ import com.scalableminds.util.geometry.{Point3D, BoundingBox}
 import reactivemongo.bson.BSONObjectID
 import models.annotation.AnnotationType._
 import scala.Some
-import models.binary.DataSet
+import models.binary.{DataSet, DataSetDAO}
 import oxalis.nml.NML
 import com.scalableminds.util.mvc.BoxImplicits
 import play.modules.reactivemongo.json.BSONFormats._
+import play.api.i18n.{Messages, MessagesApi}
 
 /**
  * Company: scalableminds
@@ -34,6 +35,11 @@ import play.modules.reactivemongo.json.BSONFormats._
 
 object AnnotationService extends AnnotationContentProviders with BoxImplicits with FoxImplicits with TextUtils{
 
+  private def selectSuitableTeam(user: User, dataSet: DataSet): String = {
+    val dataSetTeams = dataSet.owningTeam +: dataSet.allowedTeams
+    dataSetTeams.intersect(user.teamNames).head
+  }
+
   def createExplorationalFor(user: User, dataSet: DataSet, contentType: String, id: String = "")(implicit ctx: DBAccessContext) =
     withProviderForContentType(contentType) { provider =>
       for {
@@ -42,7 +48,7 @@ object AnnotationService extends AnnotationContentProviders with BoxImplicits wi
         annotation = Annotation(
           Some(user._id),
           contentReference,
-          team = user.teams.head.team, // TODO: refactor
+          team = selectSuitableTeam(user, dataSet),
           typ = AnnotationType.Explorational,
           state = AnnotationState.InProgress,
           _id = BSONObjectID.parse(id).getOrElse(BSONObjectID.generate)
@@ -123,15 +129,17 @@ object AnnotationService extends AnnotationContentProviders with BoxImplicits wi
     }
   }
 
-  def createFrom(_user: BSONObjectID, team: String, content: AnnotationContent, annotationType: AnnotationType, name: Option[String])(implicit ctx: DBAccessContext) = {
-    val annotation = Annotation(
-      Some(_user),
-      ContentReference.createFor(content),
-      team = team,
-      _name = name,
-      typ = annotationType)
-
-    AnnotationDAO.insert(annotation).map { _ =>
+  def createFrom(user: User, content: AnnotationContent, annotationType: AnnotationType, name: Option[String])(implicit messages: Messages, ctx: DBAccessContext) = {
+    for {
+      dataSet <- DataSetDAO.findOneBySourceName(content.dataSetName) ~> Messages("dataSet.notFound")
+      val annotation = Annotation(
+        Some(user._id),
+        ContentReference.createFor(content),
+        team = selectSuitableTeam(user, dataSet),
+        _name = name,
+        typ = annotationType)
+      _ <- AnnotationDAO.insert(annotation)
+    } yield {
       annotation
     }
   }
@@ -174,12 +182,11 @@ object AnnotationService extends AnnotationContentProviders with BoxImplicits wi
     }
   }
 
-  def createAnnotationFrom(user: User, nmls: List[NML], typ: AnnotationType, name: Option[String])(implicit ctx: DBAccessContext): Fox[Annotation] = {
+  def createAnnotationFrom(user: User, nmls: List[NML], typ: AnnotationType, name: Option[String])(implicit messages: Messages, ctx: DBAccessContext): Fox[Annotation] = {
     SkeletonTracingService.createFrom(nmls, None, AnnotationSettings.skeletonDefault).toFox.flatMap {
       content =>
         AnnotationService.createFrom(
-          user._id,
-          user.teams.head.team, //TODO: refactor
+          user,
           content,
           typ,
           name)

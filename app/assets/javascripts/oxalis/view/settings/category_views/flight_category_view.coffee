@@ -9,87 +9,102 @@ class FlightCategoryView extends CategoryView
   caption : "Flightoptions"
 
 
-  subviewCreators :
+  subviewCreatorsList : [
 
-    "mouseRotateValue" : ->
+    [
+      "mouseRotateValue", ->
 
-      return new SliderSettingView(
-        model : @model
-        options :
-          name : "mouseRotateValue"
-          displayName : "Mouse Rotation"
-          min : 0.001
-          max : 0.02
-          step : 0.001
-      )
+        return new SliderSettingView(
+          model : @model
+          options :
+            name : "mouseRotateValue"
+            displayName : "Mouse Rotation"
+            min : 0.001
+            max : 0.02
+            step : 0.001
+        )
+    ]
 
-    "rotateValue" : ->
+    [
+      "rotateValue", ->
 
-      return new SliderSettingView(
-        model : @model
-        options :
-          name : "rotateValue"
-          displayName : "Keyboard Rotation Value"
-          min : 0.001
-          max : 0.08
-          step : 0.001
-      )
+        return new SliderSettingView(
+          model : @model
+          options :
+            name : "rotateValue"
+            displayName : "Keyboard Rotation Value"
+            min : 0.001
+            max : 0.08
+            step : 0.001
+        )
+    ]
 
-    "moveValue3d" : ->
+    [
+      "moveValue3d", ->
 
-      return new SliderSettingView(
-        model : @model
-        options :
-          name : "moveValue3d"
-          displayName : "Move Value (nm/s)"
-          min : constants.MIN_MOVE_VALUE
-          max : constants.MAX_MOVE_VALUE
-          step : 10
-      )
+        return new SliderSettingView(
+          model : @model
+          options :
+            name : "moveValue3d"
+            displayName : "Move Value (nm/s)"
+            min : constants.MIN_MOVE_VALUE
+            max : constants.MAX_MOVE_VALUE
+            step : 10
+        )
+    ]
 
-    "crosshairSize" : ->
+    [
+      "crosshairSize", ->
 
-      return new SliderSettingView(
-        model : @model
-        options :
-          name : "crosshairSize"
-          displayName : "Crosshair Size"
-          min : 0.05
-          max : 0.5
-          step : 0.01
-      )
+        return new SliderSettingView(
+          model : @model
+          options :
+            name : "crosshairSize"
+            displayName : "Crosshair Size"
+            min : 0.05
+            max : 0.5
+            step : 0.01
+        )
+    ]
 
-    "sphericalCapRadius" : ->
+    [
+      "sphericalCapRadius", ->
 
-      return new SliderSettingView(
-        model : @model
-        options :
-          name : "sphericalCapRadius"
-          displayName : "Sphere Radius"
-          min : 50
-          max : 500
-          step : 1
-      )
+        return new SliderSettingView(
+          model : @model
+          options :
+            name : "sphericalCapRadius"
+            displayName : "Sphere Radius"
+            min : 50
+            max : 500
+            step : 1
+        )
+    ]
 
-    "clippingDistanceArbitrary" : ->
+    [
+      "clippingDistanceArbitrary", ->
 
-      return new SliderSettingView(
-        model : @model
-        options :
-          name : "clippingDistanceArbitrary"
-          displayName : "Clipping Distance"
-          min : 1
-          max : 127
-          step : 1
-      )
+        return new SliderSettingView(
+          model : @model
+          options :
+            name : "clippingDistanceArbitrary"
+            displayName : "Clipping Distance"
+            min : 1
+            max : 127
+            step : 1
+        )
+    ]
 
-    "displayCrosshair" : ->
+    [
+      "displayCrosshair", ->
 
-      return new CheckboxSettingView(
-        model : @model
-        options :
-          name : "displayCrosshair"
-          displayName : "Show Crosshair"
-      )
+        return new CheckboxSettingView(
+          model : @model
+          options :
+            name : "displayCrosshair"
+            displayName : "Show Crosshair"
+        )
+    ]
+  ]
 
 module.exports = FlightCategoryView

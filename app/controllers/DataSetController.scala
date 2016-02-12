@@ -115,6 +115,7 @@ class DataSetController @Inject() (val messagesApi: MessagesApi) extends Control
 
   def importDataSet(dataSetName: String) = Authenticated.async{ implicit request =>
     for {
+      _ <- ensureProperDSName(dataSetName) ?~> Messages("dataSet.import.impossible.name")
       dataSet <- DataSetDAO.findOneBySourceName(dataSetName) ?~> Messages("dataSet.notFound")
       result <- DataSetService.importDataSet(dataSet)
     } yield {
@@ -150,10 +151,16 @@ class DataSetController @Inject() (val messagesApi: MessagesApi) extends Control
     }
   }
 
+  def ensureProperDSName(name: String) =
+    if(name.matches("[A-Za-z0-9_\\-]*"))
+      Full(name)
+    else
+      Empty
+
   def uploadForm = Form(
     tuple(
       "name" -> nonEmptyText.verifying("dataSet.name.invalid",
-        n => n.matches("[A-Za-z0-9_]*")),
+        n => ensureProperDSName(n).isDefined),
       "team" -> nonEmptyText,
       "scale" -> mapping(
         "scale" -> text.verifying("scale.invalid",
@@ -173,7 +180,7 @@ class DataSetController @Inject() (val messagesApi: MessagesApi) extends Control
             upload = DataSourceUpload(name, team, zipFile.ref.file.getAbsolutePath(), Some(settings))
             _ <- DataStoreHandler.uploadDataSource(upload).toFox
           } yield {
-            Ok
+            Ok(Json.obj())
           }).futureBox.map {
             case Full(r) => r
             case Failure(error,_,_) =>

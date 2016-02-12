@@ -76,6 +76,7 @@ dataSet.file=Dataset ZIP File
 dataSet.notFound=Selected data set doesn''t exist
 dataSet.notSupplied=No data set supplied
 dataSet.name.invalid=A dataset name can only contain letters, digits and underscores
+dataSet.import.impossible.name=Import impossible. Dataset name can only consist of a-Z, 0-9, "-" and "_".
 dataSet.name.alreadyTaken=This dataset name is already in use.
 dataSet.source.notFound=The data source for the data source couldn''t be found
 dataSet.import.success=The import of the dataset was successful

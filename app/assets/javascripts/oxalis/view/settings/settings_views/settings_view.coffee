@@ -9,17 +9,32 @@ class SettingsView extends Marionette.ItemView
   template : _.template("""
     <div class="panel-group flex-overflow">
 
-      <% _.forEach(subviewCreators, function (subview, key) { %>
-        <div data-subview="<%- key %>"></div>
+      <% _.forEach(subviewCreatorsList, function (key_value_pair) { %>
+        <div data-subview="<%- key_value_pair[0] %>"></div>
       <% }) %>
 
     </div>
   """)
 
 
+  modelName : null
+
+
   initialize : ->
 
-    @model = @model[@modelName]
+    if @modelName?
+      @model = @model[@modelName]
+
+    unless @subviewCreatorsList?
+      throw new Error(
+        "Subclasses of CategoryView must specify subviewCreatorsList")
+
+    # subviewCreators hash needed for Subviews extension
+    @subviewCreators = _.transform(
+      @subviewCreatorsList
+      (result, [key, value]) -> result[key] = value
+      {}
+    )
 
     Subviews.add(this)
 
@@ -34,6 +49,6 @@ class SettingsView extends Marionette.ItemView
 
   serializeData : ->
 
-    return { @subviewCreators }
+    return { @subviewCreatorsList }
 
 module.exports = SettingsView

@@ -24,7 +24,7 @@ class TaskCreateFromView extends Marionette.LayoutView
     <div class="well">
       <div class="col-sm-9 col-sm-offset-2">
         <% if (type == "from_form") { %>
-          <h3>Create Task</h3>
+          <h3><%- getActionName() %> Task</h3>
           <br/>
         </div>
         <% } else if (type == "from_nml") { %>
@@ -48,7 +48,7 @@ class TaskCreateFromView extends Marionette.LayoutView
         <div class=" form-group">
           <label class="col-sm-2 control-label" for="experience_domain">Experience Domain</label>
           <div class="col-sm-9">
-            <input type="text" class="form-control" name="neededExperience[domain]" value="" data-source="[]" data-provide="typeahead" autocomplete="off" placeholder="Enter a domain">
+            <input type="text" class="form-control" name="neededExperience[domain]" value="<%- neededExperience.domain %>" data-source="[]" data-provide="typeahead" autocomplete="off" placeholder="Enter a domain">
             <span class="help-block errors"></span>
           </div>
         </div>
@@ -56,7 +56,7 @@ class TaskCreateFromView extends Marionette.LayoutView
         <div class=" form-group">
           <label class="col-sm-2 control-label" for="experience_value">Min Experience</label>
           <div class="col-sm-9">
-            <input type="number" id="value" name="neededExperience[value]" value="0" class="form-control">
+            <input type="number" id="value" name="neededExperience[value]" value="<%- neededExperience.value %>" class="form-control">
             <span class="help-block errors"></span>
           </div>
         </div>
@@ -64,7 +64,7 @@ class TaskCreateFromView extends Marionette.LayoutView
         <div class=" form-group">
           <label class="col-sm-2 control-label" for="priority">Priority</label>
           <div class="col-sm-9">
-            <input type="number" id="priority" name="priority" value="100" class="form-control">
+            <input type="number" id="priority" name="priority" value="<%- priority %>" class="form-control">
             <span class="help-block errors"></span>
           </div>
         </div>
@@ -72,7 +72,7 @@ class TaskCreateFromView extends Marionette.LayoutView
         <div class=" form-group">
           <label class="col-sm-2 control-label" for="status_open">Task instances</label>
           <div class="col-sm-9">
-            <input type="number" id="open" name="status[open]" value="10" min="1" class="form-control">
+            <input type="number" id="open" name="status[open]" value="<%- status.open %>" min="1" class="form-control">
             <span class="help-block errors"></span>
           </div>
         </div>
@@ -100,7 +100,7 @@ class TaskCreateFromView extends Marionette.LayoutView
               placeholder="topLeft.x, topLeft.y, topLeft.z, width, height, depth"
               pattern="(\\s*\\d+\\s*,){5}(\\s*\\d+\\s*)"
               title="topLeft.x, topLeft.y, topLeft.z, width, height, depth"
-              value="0, 0, 0, 0, 0, 0"
+              value="<%- boundingBoxString() %>"
               required=true
               class="form-control">
             <span class="help-block errors"></span>
@@ -111,7 +111,7 @@ class TaskCreateFromView extends Marionette.LayoutView
 
         <div class="form-group">
           <div class="col-sm-2 col-sm-offset-9">
-            <button id="submit" type="submit" class="form-control btn btn-primary">Create</button>
+            <button id="submit" type="submit" class="form-control btn btn-primary"><%- getActionName() %></button>
           </div>
         </div>
 
@@ -124,6 +124,12 @@ class TaskCreateFromView extends Marionette.LayoutView
   templateHelpers: ->
 
     type : @type
+    boundingBoxString : ->
+      b = @boundingBox
+      return "#{b.topLeft.join(', ')}, #{b.width}, #{b.height}, #{b.depth}"
+
+    getActionName : =>
+      return @getActionName()
 
 
   regions :
@@ -146,10 +152,20 @@ class TaskCreateFromView extends Marionette.LayoutView
 
     @type = options.type
 
+    if @model.id
+      @listenTo(@model, "sync", @render)
+      @model.fetch()
 
-  ###*
-    * Submit form data as json.
-    ###
+
+  getActionName : ->
+
+    if @model.id
+      return "Update"
+    else
+      return "Create"
+
+
+  # Submit form data as json.
   submit : ->
 
     @toggleSubmitButton(true)
@@ -163,9 +179,7 @@ class TaskCreateFromView extends Marionette.LayoutView
     @ui.submitButton.prop("disabled", state)
     @ui.submitButton.toggleClass("disabled", state)
 
-  ###*
-   * Update model with form values.
-   ###
+
   serializeForm : ->
 
     formValues = FormSyphon.serialize(@ui.form)
@@ -176,12 +190,12 @@ class TaskCreateFromView extends Marionette.LayoutView
 
     return formValues
 
+
   parseBoundingBox : (string) ->
       # split string by comma delimiter, trim whitespace and cast to integer
       # access from subview
       intArray = Utils.stringToNumberArray(string)
 
-      # insert a 0 instead
       return {
         topLeft : [
           intArray[0] || 0,
@@ -194,53 +208,41 @@ class TaskCreateFromView extends Marionette.LayoutView
       }
 
 
-  ###*
-   * Toast a success message.
-  ###
   showSaveSuccess : ->
 
     @toggleSubmitButton(false)
-    Toast.success("The task was successfully created")
+    Toast.success("The task was successfully #{@getActionName().toLowerCase()}")
 
-  ###*
-   * Toast an error message.
-  ###
+
   showSaveError : ->
 
     @toggleSubmitButton(false)
-    Toast.error("The task could not be created due to server errors.")
+    Toast.error("The task could not be #{@getActionName().toLowerCase()} due to server errors.")
 
 
-  ###*
-   * Toast an invalid data message.
-  ###
   showInvalidData : ->
 
     Toast.error("The form data is not correct.")
 
 
-  ###*
-   * Clear all text inputs in the form.
-  ###
   clearForm : ->
 
     @ui.form[0].reset()
 
 
-  ###*
-  * Render the SelectionViews based on the stored options.
-  * Create a subview based on the passed type: from_form/ from_nml
+  ###
+   Render the SelectionViews based on the stored options.
+   Create a subview based on the passed type: from_form/ from_nml
   ###
   onRender : ->
 
-    # the value of the tasktype is the id and the displayed innerHTML is the summary
     @taskTypeSelectionView = new SelectionView(
       collection : new TaskTypeCollection()
       childViewOptions :
         modelValue : -> return "#{@model.get("id")}"
-        modelName : -> return "#{@model.get("summary")}"
       data : "amIAnAdmin=true"
       name : "taskTypeId"
+      active : @model.get("type")
     )
 
     @teamSelectionView = new SelectionView(
@@ -249,6 +251,7 @@ class TaskCreateFromView extends Marionette.LayoutView
         modelValue : -> return "#{@model.get("name")}"
       data : "amIAnAdmin=true"
       name : "team"
+      active : @model.get("team")
     )
 
     @projectSelectionView = new SelectionView(
@@ -257,6 +260,7 @@ class TaskCreateFromView extends Marionette.LayoutView
         modelValue : -> return "#{@model.get("name")}"
       data : "amIAnAdmin=true"
       name : "projectName"
+      active : @model.get("projectName")
     )
 
     # render subviews in defined regions

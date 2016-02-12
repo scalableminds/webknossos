@@ -168,9 +168,10 @@ class TaskController @Inject() (val messagesApi: MessagesApi) extends Controller
             instances = status.open,
             team = team,
             _project = project.map(_.name))
+          result <- TaskDAO.findOneById(taskId) ?~> Messages("task.notFound")
         } yield {
           AnnotationDAO.updateAllUsingNewTaskType(task, taskType.settings)
-          Ok(Json.toJson(Messages("task.editSuccess")))
+          Ok(Json.toJson(result))
         }
     }
   }

@@ -174,10 +174,10 @@ class Router extends Backbone.Router
   taskEdit : (taskID) ->
 
     self = this
-    require(["admin/views/task/task_edit_view", "admin/models/task/task_model"], (TaskEditView, TaskModel) ->
+    require(["admin/views/task/task_create_subviews/task_create_from_view", "admin/models/task/task_model"], (TaskCreateFromView, TaskModel) ->
 
       model = new TaskModel(id : taskID)
-      view = new TaskEditView(model : model)
+      view = new TaskCreateFromView(model : model, type : "from_form")
 
       self.changeView(view)
       self.hideLoadingSpinner()

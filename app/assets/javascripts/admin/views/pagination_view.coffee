@@ -34,7 +34,7 @@ class PaginationView extends Marionette.ItemView
         </ul>
 
         <% if (addButtonText) { %>
-          <a class="btn btn-success add-button" href="#">
+          <a class="btn btn-primary add-button" href="#">
             <i class="fa fa-plus"></i><%- addButtonText %>
           </a>
         <% } %>

@@ -1,4 +1,6 @@
 PullQueue = require("./pullqueue")
+_ = require("lodash")
+
 
 class TemporalBucketManager
   # Manages temporal buckets (i.e., buckets created for annotation where
@@ -8,10 +10,16 @@ class TemporalBucketManager
 
   constructor : (@pullQueue, @pushQueue) ->
 
-    @buckets = []
+    @loadedPromises = []
 
 
   addBucket : (bucket) ->
+
+    @pullBucket(bucket)
+    @loadedPromises.push(@makeLoadedPromise(bucket))
+
+
+  pullBucket : (bucket) ->
 
     @pullQueue.add(
         bucket: bucket.zoomedAddress
@@ -19,9 +27,25 @@ class TemporalBucketManager
     )
     @pullQueue.pull()
 
-    bucket.on "bucketLoaded", =>
-      if bucket.dirty
-        @pushQueue.insert(bucket.zoomedAddress)
+
+  makeLoadedPromise : (bucket) ->
+
+    loadedPromise = new Promise(
+      (resolve, reject) =>
+        bucket.on "bucketLoaded", =>
+
+          if bucket.dirty
+            @pushQueue.insert(bucket.zoomedAddress)
+
+          resolve()
+          @loadedPromises = @loadedPromises.filter((p) -> p != loadedPromise)
+    )
+    return loadedPromise
+
+
+  getAllLoadedPromise : ->
+
+    return Promise.all(@loadedPromises)
 
 
 module.exports = TemporalBucketManager

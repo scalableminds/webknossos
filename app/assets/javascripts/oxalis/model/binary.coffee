@@ -45,8 +45,7 @@ class Binary
     datasetName = @model.get("dataset").get("name")
     @pullQueue = new PullQueue(datasetName, @cube, @layer, @tracing.id, @boundingBox, @connectionInfo)
     @pushQueue = new PushQueue(datasetName, @cube, @layer, @tracing.id, updatePipeline)
-    @cube.setPullQueue(@pullQueue)
-    @cube.setPushQueue(@pushQueue)
+    @cube.initializeWithQueues(@pullQueue, @pushQueue)
     @mappings = new Mappings(@model.dataSetName, @layer)
     @activeMapping = null
 

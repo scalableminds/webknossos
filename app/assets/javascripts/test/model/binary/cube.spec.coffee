@@ -29,8 +29,7 @@ describe "Cube", ->
     }
 
     cube = new Cube([100, 100, 100], 3, 24)
-    cube.setPullQueue(pullQueue)
-    cube.setPushQueue(pushQueue)
+    cube.initializeWithQueues(pullQueue, pushQueue)
 
 
   describe "Volume Annotation Handling", ->
@@ -60,7 +59,6 @@ describe "Cube", ->
         runAsync([
           ->
             expect(pushQueue.insert.called).toBe(false)
-            expect(pushQueue.push.called).toBe(false)
           ->
             bucket = cube.getBucketByZoomedAddress([0, 0, 0, 0])
             bucket.pull()
@@ -69,7 +67,6 @@ describe "Cube", ->
             expect(pushQueue.insert.calledWith(
               [0, 0, 0, 0]
             )).toBe(true)
-            expect(pushQueue.push.called).toBe(true)
             done()
         ])
 
@@ -86,7 +83,6 @@ describe "Cube", ->
             expect(pushQueue.insert.calledWith(
               [0, 0, 0, 0]
             )).toBe(true)
-            expect(pushQueue.push.called).toBe(true)
             done()
         ])
 

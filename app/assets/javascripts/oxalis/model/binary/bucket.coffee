@@ -11,7 +11,7 @@ class Bucket
   BUCKET_SIZE_P : 5
 
 
-  constructor : (@BIT_DEPTH, @zoomedAddress) ->
+  constructor : (@BIT_DEPTH, @zoomedAddress, @temporalBucketManager) ->
 
     _.extend(this, Backbone.Events)
 
@@ -23,7 +23,6 @@ class Bucket
     @accessed = true
 
     @data = null
-    @mergedCallback = null
 
 
   shouldCollect : ->
@@ -43,15 +42,10 @@ class Bucket
     return @state == @STATE_LOADED
 
 
-  label : (labelFunc, createdCallback=_.noop, loadedCallback=_.noop) ->
+  label : (labelFunc) ->
 
-    labelFunc(@getOrCreateData(createdCallback))
+    labelFunc(@getOrCreateData())
     @dirty = true
-
-    if @state == @STATE_LOADED
-      loadedCallback()
-    else
-      @loadedCallback = loadedCallback
 
 
   hasData : ->
@@ -68,11 +62,11 @@ class Bucket
     return @data
 
 
-  getOrCreateData : (createdCallback=_.noop) ->
+  getOrCreateData : ->
 
     unless @data?
       @data = new Uint8Array(@BUCKET_LENGTH)
-      createdCallback()
+      @temporalBucketManager.addBucket(this)
 
     return @getData()
 
@@ -90,7 +84,6 @@ class Bucket
       when @STATE_REQUESTED
         if @dirty
           @merge(data)
-          @loadedCallback()
         else
           @data = data
         @trigger("bucketLoaded")
@@ -128,11 +121,9 @@ class Bucket
 
 class NullBucket extends Bucket
 
-  constructor : (BIT_DEPTH) ->
-    super(BIT_DEPTH)
-
+  constructor : ->
+    super(0)
     @state = @STATE_LOADED
-    @data = new Uint8Array(@BUCKET_LENGTH)
 
   label : (_) ->  # Do nothing
 

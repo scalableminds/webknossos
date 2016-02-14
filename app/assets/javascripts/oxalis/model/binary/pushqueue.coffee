@@ -6,7 +6,7 @@ class PushQueue
 
   BATCH_LIMIT : 1
   BATCH_SIZE : 32
-  THROTTLE_TIME : 10000
+  DEBOUNCE_TIME : 1000
   MESSAGE_TIMEOUT : 10000
 
 
@@ -15,19 +15,21 @@ class PushQueue
     @url = "#{@layer.url}/data/datasets/#{@dataSetName}/layers/#{@layer.name}/data?cubeSize=#{1 << @cube.BUCKET_SIZE_P}&annotationId=#{@tracingId}&token=#{@layer.token}"
     @queue = []
 
-    @push = _.throttle @pushImpl, @THROTTLE_TIME
+    @push = _.debounce @pushImpl, @DEBOUNCE_TIME
 
 
   insert : (bucket) ->
 
     @queue.push( bucket )
     @removeDuplicates()
+    @push()
 
 
   insertFront : (bucket) ->
 
     @queue.unshift( bucket )
     @removeDuplicates()
+    @push()
 
 
   clear : ->

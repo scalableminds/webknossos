@@ -13,6 +13,11 @@ class TemporalBucketManager
     @loadedPromises = []
 
 
+  getCount : ->
+
+    return @loadedPromises.length
+
+
   addBucket : (bucket) ->
 
     @pullBucket(bucket)
@@ -37,8 +42,8 @@ class TemporalBucketManager
           if bucket.dirty
             @pushQueue.insert(bucket.zoomedAddress)
 
-          resolve()
           @loadedPromises = @loadedPromises.filter((p) -> p != loadedPromise)
+          resolve()
     )
     return loadedPromise
 

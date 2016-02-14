@@ -8,12 +8,13 @@ import com.scalableminds.util.reactivemongo.DBAccessContext
 import com.scalableminds.util.tools.Fox
 import models.annotation.{AnnotationSettings, AnnotationContentService}
 import models.binary.{DataSet, DataSetDAO}
-import models.tracing.skeleton.{SkeletonTracingLike, SkeletonTracing}
+import models.tracing.skeleton.{SkeletonTracingLike, SkeletonTracing, SkeletonTracingStatistics}
 import net.liftweb.common.Full
 import oxalis.nml.NML
 import play.api.libs.concurrent.Execution.Implicits._
 
 object TemporarySkeletonTracingService extends AnnotationContentService {
+
   def createFrom(nml: NML, id: String, boundingBox: Option[BoundingBox], settings: AnnotationSettings = AnnotationSettings.default)(implicit ctx: DBAccessContext) = {
     val box = boundingBox.flatMap { box => if (box.isEmpty) None else Some(box) }
     val start = DataSetDAO.findOneBySourceName(nml.dataSetName).futureBox.map {

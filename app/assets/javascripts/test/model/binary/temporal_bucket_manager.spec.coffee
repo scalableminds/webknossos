@@ -3,6 +3,10 @@ mockRequire = require("mock-require")
 sinon = require("sinon")
 runAsync = require("../../helpers/run-async")
 
+mockRequire("jquery", {fn : {}})
+mockRequire("../../../libs/request", null)
+require("../../../libs/core_ext")
+
 mockRequire("../../../oxalis/model/binary/pullqueue", {
   prototype : {
     PRIORITY_HIGHEST: 123

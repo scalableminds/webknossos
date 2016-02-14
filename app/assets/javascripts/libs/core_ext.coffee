@@ -1,7 +1,7 @@
 $           = require("jquery")
 Backbone    = require("backbone")
 _           = require("lodash")
-Request     = require("libs/request")
+Request     = require("./request")
 
 
 $.bindDeferred = (target, source) ->

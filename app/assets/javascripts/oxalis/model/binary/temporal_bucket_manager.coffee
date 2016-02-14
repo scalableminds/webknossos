@@ -42,7 +42,7 @@ class TemporalBucketManager
           if bucket.dirty
             @pushQueue.insert(bucket.zoomedAddress)
 
-          @loadedPromises = @loadedPromises.filter((p) -> p != loadedPromise)
+          _.removeElement(@loadedPromises, loadedPromise)
           resolve()
     )
     return loadedPromise

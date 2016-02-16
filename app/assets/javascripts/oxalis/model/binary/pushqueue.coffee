@@ -63,13 +63,15 @@ class PushQueue
   pushImpl : =>
 
     unless @sendData
-      return
+      return (new $.Deferred()).resolve().promise()
 
     while @queue.length
 
       batchSize = Math.min(@BATCH_SIZE, @queue.length)
       batch = @queue.splice(0, batchSize)
       @pushBatch(batch)
+
+    return @updatePipeline.getLastActionPromise()
 
 
   pushBatch : (batch) ->
@@ -90,17 +92,19 @@ class PushQueue
             cubeSize: 1 << @cube.BUCKET_SIZE_P),
           @cube.getBucketByZoomedAddress(bucket).getData())
 
-    @updatePipeline.executePassAlongAction( =>
+    return @updatePipeline.executePassAlongAction( =>
 
-      transmitData.dataPromise().then((data) =>
-        Request.sendArraybufferReceiveArraybuffer("#{@layer.url}/data/datasets/#{@dataSetName}/layers/#{@layer.name}/data?token=#{@layer.token}",
-          method : "PUT"
-          data : data
-          headers :
-            "Content-Type" : "multipart/mixed; boundary=#{transmitData.boundary}"
-          timeout : @MESSAGE_TIMEOUT
-          compress : true
-        )
+      return transmitData.dataPromise().then((data) =>
+        return Request.$(Request.sendArraybufferReceiveArraybuffer(
+          "#{@layer.url}/data/datasets/#{@dataSetName}/layers/#{@layer.name}/data?token=#{@layer.token}", {
+            method : "PUT"
+            data : data
+            headers :
+              "Content-Type" : "multipart/mixed; boundary=#{transmitData.boundary}"
+            timeout : @MESSAGE_TIMEOUT
+            compress : true
+          }
+        ))
       )
     ).fail(-> throw new Error("Uploading data failed."))
 

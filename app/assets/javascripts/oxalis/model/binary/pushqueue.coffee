@@ -62,16 +62,18 @@ class PushQueue
 
   pushImpl : =>
 
-    unless @sendData
-      return (new $.Deferred()).resolve().promise()
+    return Request.$(@cube.temporalBucketManager.getAllLoadedPromise()).then =>
 
-    while @queue.length
+      unless @sendData
+        return (new $.Deferred()).resolve().promise()
 
-      batchSize = Math.min(@BATCH_SIZE, @queue.length)
-      batch = @queue.splice(0, batchSize)
-      @pushBatch(batch)
+      while @queue.length
 
-    return @updatePipeline.getLastActionPromise()
+        batchSize = Math.min(@BATCH_SIZE, @queue.length)
+        batch = @queue.splice(0, batchSize)
+        @pushBatch(batch)
+
+      return @updatePipeline.getLastActionPromise()
 
 
   pushBatch : (batch) ->

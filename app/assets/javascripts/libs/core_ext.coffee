@@ -2,13 +2,28 @@ $           = require("jquery")
 Backbone    = require("backbone")
 _           = require("lodash")
 Request     = require("./request")
+Marionette  = require("backbone.marionette")
 
+# Make sure `$.Deferred`s are never used in Oxalis code, except for whitelisted methods.
+do ->
+  isWithinWhitlistedMethod = false
 
-$_Deferred = $.Deferred
-$.Deferred = ->
+  whitelistMethod = (object, methodName) ->
+    oldMethod = object[methodName]
+    object[methodName] = ->
+      isWithinWhitlistedMethod = true
+      oldMethod.apply(this, arguments)
+      isWithinWhitlistedMethod = false
 
-  console.warn("$.Deferred is deprecated, use libs/deferred or Promise instead.")
-  return $_Deferred(arguments...)
+  # addInitializer() needs Promises internally, but doesn't expose it.
+  whitelistMethod(Marionette.Application.prototype, "addInitializer")
+
+  $_Deferred = $.Deferred
+  $.Deferred = ->
+
+    unless isWithinWhitlistedMethod
+      throw new Error("$.Deferred is deprecated, use libs/deferred or Promise instead.")
+    return $_Deferred(arguments...)
 
 
 # TODO: Remove or fix

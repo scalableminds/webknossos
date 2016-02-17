@@ -86,7 +86,7 @@ class TaskTypeItemView extends Marionette.CompositeView
     evt.preventDefault()
 
     if window.confirm("Do you really want to delete this task type?")
-      @model.destroy().done((response) =>
+      @model.destroy().then((response) =>
         Toast.message(response.messages)
       )
 
@@ -96,7 +96,7 @@ class TaskTypeItemView extends Marionette.CompositeView
 
       @collection
         .fetch(silent : true)
-        .done( =>
+        .then( =>
           @render()
           @ui.detailsRow.removeClass("hide")
           @ui.detailsToggle.addClass("open")

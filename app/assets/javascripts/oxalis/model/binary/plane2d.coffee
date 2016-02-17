@@ -94,17 +94,12 @@ class Plane2D
     @_forceRedraw = true
 
 
-  get : ({position, zoomStep, area}) ->
-
-    $.when(@getImpl(position, zoomStep, area))
-
-
   hasChanged : ->
 
     not @dataTexture.ready
 
 
-  getImpl : (position, zoomStep, area) ->
+  get : ({position, zoomStep, area}) ->
 
     @getTexture(@dataTexture, position, zoomStep, area)
 

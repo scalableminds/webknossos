@@ -324,7 +324,7 @@ class ArbitraryController
 
   popBranch : ->
 
-    _.defer => @model.skeletonTracing.popBranch().done((id) =>
+    _.defer => @model.skeletonTracing.popBranch().then((id) =>
       @setActiveNode(id, true)
     )
 

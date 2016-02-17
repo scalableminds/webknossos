@@ -69,7 +69,7 @@ class Skeleton
     @loadSkeletonFromModel()
 
 
-  loadSkeletonFromModel : (trees, finishedDeferred) ->
+  loadSkeletonFromModel : (trees) ->
 
     unless trees? then trees = @model.skeletonTracing.getTrees()
 
@@ -84,9 +84,6 @@ class Skeleton
       treeGeometry.updateNodeColor(branchpoint.id, null, true)
 
     @setActiveNode()
-
-    if finishedDeferred?
-      finishedDeferred.resolve()
 
     app.vent.trigger("rerender")
 

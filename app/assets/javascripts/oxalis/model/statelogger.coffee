@@ -14,7 +14,7 @@ class StateLogger
   constructor : (@flycam, @version, @tracingId, @tracingType, @allowUpdate) ->
 
     _.extend(this, Backbone.Events)
-    @mutexedPush = _.mutexDeferred(@pushImpl, -1)
+    @mutexedPush = _.mutexPromise(@pushImpl, -1)
 
     @newDiffs = []
 
@@ -78,7 +78,7 @@ class StateLogger
   pushImpl : (notifyOnFailure) ->
 
     if not @allowUpdate
-      return new $.Deferred().resolve().promise()
+      return Promise.resolve()
 
     # TODO: remove existing updateTracing
     @concatUpdateTracing()
@@ -89,9 +89,7 @@ class StateLogger
       @newDiffs
     })
 
-    deferred = $.Deferred()
-
-    Request.sendJSONReceiveJSON(
+    return Request.sendJSONReceiveJSON(
       "/annotations/#{@tracingType}/#{@tracingId}?version=#{(@version + 1)}"
       method : "PUT"
       data : @newDiffs
@@ -100,13 +98,9 @@ class StateLogger
         @newDiffs = @newDiffs.slice(diffsCurrentLength)
         @version = response.version
         @pushDoneCallback()
-        deferred.resolve()
       (responseObject) =>
         @pushFailCallback(responseObject, notifyOnFailure)
-        deferred.resolve()
     )
-
-    deferred.promise()
 
 
   pushFailCallback : (response, notifyOnFailure) ->

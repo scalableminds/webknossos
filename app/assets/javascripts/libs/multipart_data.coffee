@@ -1,4 +1,4 @@
-$ = require("jquery")
+Deferred = require("./deferred")
 
 class MultipartData
 
@@ -27,7 +27,7 @@ class MultipartData
 
   dataPromise : ->
 
-    deferred = new $.Deferred()
+    deferred = new Deferred()
 
     reader = new FileReader()
     reader.onload = (e) =>

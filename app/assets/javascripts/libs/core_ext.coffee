@@ -4,6 +4,14 @@ _           = require("lodash")
 Request     = require("./request")
 
 
+$_Deferred = $.Deferred
+$.Deferred = ->
+
+  console.warn("$.Deferred is deprecated, use libs/deferred or Promise instead.")
+  return $_Deferred(arguments...)
+
+
+# TODO: Remove or fix
 $.bindDeferred = (target, source) ->
 
   source
@@ -19,6 +27,7 @@ _.mixin(
     "#{string[0].toLowerCase}#{string.substring(1)}"
 
 
+  # TODO: Remove or fix
   debounceOrThrottleDeferred : (func, waitDebounce, waitThrottle) ->
 
     timeoutDebounce = null
@@ -60,6 +69,7 @@ _.mixin(
       deferred.promise()
 
 
+  # TODO: Remove or fix
   debounceDeferred : (func, wait) ->
 
     timeout = null
@@ -91,6 +101,7 @@ _.mixin(
   # any input parameters, because you cannot know which are used and
   # which are dropped. In contrast to `_.throttle`, the function
   # at the beginning of the time span.
+  # TODO: Remove or fix
   throttle2 : (func, wait, resume = true) ->
 
     timeout = more = false
@@ -113,28 +124,28 @@ _.mixin(
   # Returns a wrapper function that rejects all invocations while an
   # instance of the function is still running. The mutex can be
   # cleared with a predefined timeout. The wrapped function is
-  # required to return a `$.Deferred` at all times.
-  mutexDeferred : (func, timeout = 20000) ->
+  # required to return a `Promise` at all times.
+  mutexPromise : (func, timeout = 20000) ->
 
-    deferred = null
+    promise = null
 
     (args...) ->
 
-      unless deferred
+      unless promise
 
-        deferred = _deferred = func.apply(this, args)
+        promise = _promise = func.apply(this, args)
         unless timeout < 0
           setTimeout((->
-            deferred = null if deferred == _deferred
+            promise = null if promise == _promise
           ), timeout)
-        deferred.then(
-          -> deferred = null
-          -> deferred = null
+        promise.then(
+          -> promise = null
+          -> promise = null
         )
-        deferred
+        promise
 
       else
-        $.Deferred().reject("mutex").promise()
+        Promise.reject("mutex")
 
   # Removes the first occurrence of given element from an array.
   removeElement : (array, element) ->
@@ -148,6 +159,7 @@ _.mixin(
 # Works like `$.when`. However, there is a notification when one
 # of the deferreds completes.
 # http://api.jquery.com/jQuery.when/
+# TODO: Remove or fix
 $.whenWithProgress = (args...) ->
 
   sliceDeferred = [].slice
@@ -249,11 +261,15 @@ Backbone.ajax = (options) ->
     else
       throw new Error("options.data is expected to be a string or object for a GET request!")
 
-  return Request.$(Request.sendJSONReceiveJSON(
+  return Request.sendJSONReceiveJSON(
     options.url
     method : options.type
     data : options.data
-  ))
-    # Needs to be done/fail because we don't care about the return value of the callbacks
-    .done(options.success)
-    .fail(options.error)
+  ).then(
+    (res) ->
+      options.success(res)
+      return Promise.resolve(res)
+    (res) ->
+      options.error(res)
+      return Promise.reject(res)
+  )

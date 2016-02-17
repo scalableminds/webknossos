@@ -24,7 +24,7 @@ class WorkloadListView extends Marionette.CompositeView
 
   initialize : ->
 
-    @collection.fetch().done( =>
+    @collection.fetch().then( =>
       @collection.setSorting("availableTaskCount", 1)
     )
 

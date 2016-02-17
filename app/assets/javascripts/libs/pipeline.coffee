@@ -1,5 +1,5 @@
-$ = require("jquery")
 _ = require("lodash")
+Deferred = require("./deferred")
 
 
 class Pipeline
@@ -25,16 +25,15 @@ class Pipeline
 
 
   executeAction : (action) ->
-    # action : function that returns a
-    #          $.Deferred object
+    # action : function that returns a `Promise`
 
-    action._deferred = new $.Deferred()
+    action._deferred = new Deferred()
     @actions.push( action )
 
     if not @running
       @executeNext()
 
-    return action._deferred
+    return action._deferred.promise()
 
 
   executePassAlongAction : (action) ->
@@ -42,7 +41,7 @@ class Pipeline
 
     newAction = ->
       args = arguments
-      action(args...).pipe ->
+      action(args...).then ->
         # TODO: Figure out how to pass along all arguments
         return args[0]
 
@@ -52,13 +51,13 @@ class Pipeline
   executeActions : (actionList) ->
 
     for action in actionList
-      deferred = @executeAction(action)
-    return deferred
+      promise = @executeAction(action)
+    return promise
 
 
   restart : ->
     # To restart the pipeline after it failed.
-    # Returns a new Deferred for the first item.
+    # Returns a new Promise for the first item.
 
     if @failed and @actions.length > 0
       @failed = false
@@ -68,7 +67,7 @@ class Pipeline
       # Reinsert first action
       return @executeAction(@actions.shift())
 
-    return new $.Deferred().resolve()
+    return Promise.resolve()
 
 
   executeNext : =>
@@ -79,25 +78,26 @@ class Pipeline
 
       @running = true
 
-      currentAction(@nextArguments...)
-        .done (response) =>
+      currentAction(@nextArguments...).then(
+        (response) =>
 
-          currentAction._deferred.resolve(arguments...)
+          currentAction._deferred.resolve(response)
 
           @nextArguments = arguments
           @retryCount = 0
           @executeNext()
 
-        .fail (response) =>
+        (response) =>
 
           @retryCount++
           @actions.unshift(currentAction)
 
           if @retryCount >= @options.maxRetry
             @failed = true
-            currentAction._deferred.reject(arguments...)
+            currentAction._deferred.reject(response)
           else
             setTimeout(@executeNext, @options.retryTimeMs)
+      )
 
     else
 

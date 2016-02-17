@@ -102,7 +102,12 @@ class PushQueue
           compress : true
         )
       )
-    ).fail(-> throw new Error("Uploading data failed."))
+    ).then(
+      undefined
+      (err) ->
+        throw new Error("Uploading data failed.", err)
+        Promise.reject(err)
+    )
 
 
 module.exports = PushQueue

@@ -132,7 +132,7 @@ class TaskTypeFormView extends Marionette.LayoutView
   initialize : ->
 
     if @options.isEditForm
-      @model.fetch().done(=> @prefillForm())
+      @model.fetch().then(=> @prefillForm())
 
 
   prefillForm : ->

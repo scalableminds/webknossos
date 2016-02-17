@@ -245,7 +245,7 @@ class Model extends Backbone.Model
   save : ->
 
     submodels = []
-    deferreds = []
+    promises = []
 
     if @user?
       submodels.push[@user]
@@ -263,10 +263,10 @@ class Model extends Backbone.Model
       submodels.push(@get("skeletonTracing").stateLogger)
 
     _.each(submodels, (model) ->
-      deferreds.push( model.save() )
+      promises.push( model.save() )
     )
 
-    return $.when.apply($, deferreds)
+    return Promise.all(promises)
 
 
   # Make the Model compatible between legacy Oxalis style and Backbone.Modela/Views

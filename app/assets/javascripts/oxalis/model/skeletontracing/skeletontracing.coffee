@@ -1,6 +1,5 @@
 app                        = require("app")
 Backbone                   = require("backbone")
-$                          = require("jquery")
 _                          = require("lodash")
 backbone                   = require("backbone")
 Request                    = require("libs/request")
@@ -36,9 +35,6 @@ class SkeletonTracing
 
     @data = tracing.content.contentData
     @restrictionHandler = new RestrictionHandler(tracing.restrictions)
-
-    # initialize deferreds
-    @finishedDeferred = new $.Deferred().resolve()
 
 
     ############ Load Tree from @data ##############
@@ -152,35 +148,34 @@ class SkeletonTracing
 
     return if @restrictionHandler.handleUpdate()
 
-    deferred = new $.Deferred()
-    if @branchPointsAllowed
-      if @branchStack.length and @doubleBranchPop
-        @trigger("doubleBranch", =>
+    return new Promise (resolve, reject) =>
+      if @branchPointsAllowed
+        if @branchStack.length and @doubleBranchPop
+          @trigger("doubleBranch", =>
+            point = @branchStack.pop()
+            @stateLogger.push()
+            @setActiveNode(point.id)
+            @activeNode.type = @TYPE_USUAL
+
+            @trigger("setBranch", false, @activeNode)
+            @doubleBranchPop = true
+            resolve(@activeNode.id))
+        else
           point = @branchStack.pop()
           @stateLogger.push()
-          @setActiveNode(point.id)
-          @activeNode.type = @TYPE_USUAL
+          if point
+            @setActiveNode(point.id)
+            @activeNode.type = @TYPE_USUAL
 
-          @trigger("setBranch", false, @activeNode)
-          @doubleBranchPop = true
-          deferred.resolve(@activeNode.id))
+            @trigger("setBranch", false, @activeNode)
+            @doubleBranchPop = true
+            resolve(@activeNode.id)
+          else
+            @trigger("emptyBranchStack")
+            reject()
       else
-        point = @branchStack.pop()
-        @stateLogger.push()
-        if point
-          @setActiveNode(point.id)
-          @activeNode.type = @TYPE_USUAL
-
-          @trigger("setBranch", false, @activeNode)
-          @doubleBranchPop = true
-          deferred.resolve(@activeNode.id)
-        else
-          @trigger("emptyBranchStack")
-          deferred.reject()
-      deferred
-    else
-      @trigger("noBranchPoints")
-      deferred.reject()
+        @trigger("noBranchPoints")
+        reject()
 
 
   deleteBranch : (node) ->
@@ -498,9 +493,6 @@ class SkeletonTracing
 
     unless @activeNode
       return
-    # don't delete nodes when the previous tree split isn't finished
-    unless @finishedDeferred.state() == "resolved"
-      return
 
     @trigger("deleteComment", @activeNode.id)
     for neighbor in @activeNode.neighbors
@@ -537,9 +529,7 @@ class SkeletonTracing
             nodeIds.push(node.id)
           @stateLogger.moveTreeComponent(oldActiveTreeId, @activeTree.treeId, nodeIds)
 
-      # this deferred will be resolved once the skeleton has finished reloading the trees
-      @finishedDeferred = new $.Deferred()
-      @trigger("reloadTrees", newTrees, @finishedDeferred)
+      @trigger("reloadTrees", newTrees)
 
     else if @activeNode.neighbors.length == 1
       # no children, so just remove it.

@@ -1,4 +1,3 @@
-$     = require("jquery")
 _     = require("lodash")
 Toast = require("./toast")
 pako  = require("pako")
@@ -203,22 +202,6 @@ Request =
   always : (promise, func) ->
 
     promise.then(func, func)
-
-
-  # Wraps a native Promise as a jQuery deferred.
-  # http://api.jquery.com/category/deferred-object/
-  $ : (promise) ->
-
-    deferred = new $.Deferred()
-
-    promise.then(
-      (success) ->
-        deferred.resolve(success)
-      (error) ->
-        deferred.reject(error)
-    )
-
-    return deferred.promise()
 
 
 module.exports = Request

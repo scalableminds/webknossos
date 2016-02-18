@@ -218,4 +218,3 @@ object AnnotationService extends AnnotationContentProviders with BoxImplicits wi
     }
   }
 }
-

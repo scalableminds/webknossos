@@ -20,6 +20,7 @@ import com.twelvemonkeys.imageio.plugins.tiff.TIFFImageReaderSpi
 import org.apache.commons.io.FileUtils
 import net.liftweb.common.{Box, Full}
 import play.api.libs.concurrent.Execution.Implicits._
+import se.sawano.java.text.AlphanumericComparator
 
 import scala.collection.JavaConversions._
 import scala.concurrent.Future
@@ -73,8 +74,6 @@ trait ImageDataSourceTypeHandler extends DataSourceTypeHandler with FoxImplicits
   )
 
   def fileExtension: String
-
-  lazy val IndexRxs = s"""_([0-9]+)\\.${fileExtension}"""r
 
   val DefaultScale = Scale(200, 200, 200)
 
@@ -145,13 +144,10 @@ trait ImageDataSourceTypeHandler extends DataSourceTypeHandler with FoxImplicits
 
   def extractLayers(files: List[Path]): Iterable[ImageLayer] = {
 
-    def compareImageFiles(pathA: Path, pathB: Path) = {
-      (for {
-        indexA <- IndexRxs.findFirstMatchIn(pathA.toString).map(_.group(1).toInt)
-        indexB <- IndexRxs.findFirstMatchIn(pathB.toString).map(_.group(1).toInt)
-      } yield {
-          indexA < indexB
-        }) getOrElse (pathA.toString < pathB.toString)
+    class AlphanumericOrdering extends Ordering[Path] {
+      val comparator = new AlphanumericComparator()
+
+      def compare(x: Path, y: Path): Int = comparator.compare(x.toString, y.toString)
     }
 
     files.groupBy(path => layerFromFileName(path)).flatMap {
@@ -159,7 +155,7 @@ trait ImageDataSourceTypeHandler extends DataSourceTypeHandler with FoxImplicits
         val depth = layerImages.size
         extractImageInfo(layerImages.toList) match {
           case Some(imageInfo) =>
-            val rawImages = layerImages.toList.sortWith(compareImageFiles).toIterator.flatMap(t => toRawImage(t))
+            val rawImages = layerImages.toList.sorted(new AlphanumericOrdering()).toIterator.flatMap(t => toRawImage(t))
             Some(ImageLayer(layer, imageInfo.width, imageInfo.height, depth, imageInfo.bytesPerPixel, rawImages))
           case _ =>
             logger.warn("No image files found")

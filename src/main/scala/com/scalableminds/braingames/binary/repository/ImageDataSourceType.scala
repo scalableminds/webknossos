@@ -59,7 +59,27 @@ object JpegDataSourceType extends DataSourceType with ImageDataSourceTypeHandler
 
 case class ImageLayer(layer: Int, width: Int, height: Int, depth: Int, bytesPerPixel: Int, images: Iterator[RawImage])
 
-case class ImageInfo(width: Int, height: Int, bytesPerPixel: Int)
+case class ImageValueRange(minValue: Int = Int.MaxValue, maxValue: Int = Int.MinValue) {
+  def apply(value: Int) = ImageValueRange(math.min(minValue, value), math.max(maxValue, value))
+
+  def combine(other: ImageValueRange) = ImageValueRange(math.min(minValue, other.minValue), math.max(maxValue, other.maxValue))
+}
+
+case class ImageInfo(width: Int = 0, height: Int = 0, bytesPerPixel: Int = 0, valueRange: ImageValueRange = ImageValueRange()) {
+  def combine(other: ImageInfo): Option[ImageInfo] = {
+    if (bytesPerPixel == other.bytesPerPixel)
+      Some(ImageInfo(
+        math.max(width, other.width),
+        math.max(height, other.height),
+        bytesPerPixel,
+        valueRange.combine(other.valueRange)
+      ))
+    else
+      logger.error("Different image byte formats within the same layer.")
+      throw new Exception("Different image byte formats within the same layer.")
+      None
+  }
+}
 
 case class RawImage(info: ImageInfo, data: Array[Byte])
 
@@ -122,11 +142,13 @@ trait ImageDataSourceTypeHandler extends DataSourceTypeHandler with FoxImplicits
     }
   }
 
-  protected def extractImageInfo(images: List[Path]): Option[ImageInfo] = {
-    images.map(toImageInfo).flatten.reduceOption(
-      (a: ImageInfo, b: ImageInfo) =>
-        ImageInfo(math.max(a.width, b.width), math.max(a.height, b.height), math.max(a.bytesPerPixel, b.bytesPerPixel))
-    )
+  protected def extractImageInfo(images: Seq[Path]): Option[ImageInfo] = {
+    images.map(toImageInfo).reduce[Option[ImageInfo]]{
+      case (Some(imageInfoA), Some(imageInfoB)) =>
+        imageInfoA.combine(imageInfoB)
+      case _                                    =>
+        None
+    }
   }
 
   def layerFromFileName(file: Path) = {
@@ -153,9 +175,9 @@ trait ImageDataSourceTypeHandler extends DataSourceTypeHandler with FoxImplicits
     files.groupBy(path => layerFromFileName(path)).flatMap {
       case (layer, layerImages) =>
         val depth = layerImages.size
-        extractImageInfo(layerImages.toList) match {
+        extractImageInfo(layerImages) match {
           case Some(imageInfo) =>
-            val rawImages = layerImages.toList.sorted(new AlphanumericOrdering()).toIterator.flatMap(t => toRawImage(t))
+            val rawImages = layerImages.toList.sorted(new AlphanumericOrdering()).toIterator.flatMap(t => toRawImage(t, imageInfo))
             Some(ImageLayer(layer, imageInfo.width, imageInfo.height, depth, imageInfo.bytesPerPixel, rawImages))
           case _ =>
             logger.warn("No image files found")
@@ -208,7 +230,7 @@ trait ImageDataSourceTypeHandler extends DataSourceTypeHandler with FoxImplicits
     }
   }
 
-  private def convertIfNecessary(image: BufferedImage) = {
+  private def convertIfNecessary(image: BufferedImage, valueRange: ImageValueRange) = {
     def convertTo(targetType: Int) = {
       logger.debug(s"Converting image from type ${image.getType} to $targetType")
       val convertedImage = new BufferedImage(
@@ -219,9 +241,25 @@ trait ImageDataSourceTypeHandler extends DataSourceTypeHandler with FoxImplicits
       convertedImage
     }
 
+    def useFullColorRange = {
+      logger.debug(s"Converting image to to full range from dynamic range [${valueRange.minValue}, ${valueRange.maxValue}]")
+      val buffer = image.getRaster.getDataBuffer
+      val offset = valueRange.minValue
+      val scale = 255.0 / (valueRange.maxValue - valueRange.minValue)
+      (0 until buffer.getSize).foreach{
+          index =>
+            val value = buffer.getElem(index)
+            val scaledValue = (value - offset) * scale
+            buffer.setElem(index,  scaledValue.toInt)
+      }
+    }
+
     if (image != null) {
       image.getType match {
         case BufferedImage.TYPE_BYTE_INDEXED =>
+          convertTo(BufferedImage.TYPE_BYTE_GRAY)
+        case BufferedImage.TYPE_USHORT_GRAY =>
+          useFullColorRange
           convertTo(BufferedImage.TYPE_BYTE_GRAY)
         case _ =>
           image
@@ -229,10 +267,10 @@ trait ImageDataSourceTypeHandler extends DataSourceTypeHandler with FoxImplicits
     } else image
   }
 
-  def toRawImage(imageFile: Path): Option[RawImage] = {
+  def toRawImage(imageFile: Path, imageInfo: ImageInfo): Option[RawImage] = {
     PathUtils.fileOption(imageFile).flatMap {
       file =>
-        val image = convertIfNecessary(ImageIO.read(file))
+        val image = convertIfNecessary(ImageIO.read(file), imageInfo.valueRange)
         if (image == null) {
           logger.error("Couldn't load image file. " + ImageIO.getImageReaders(file).toList.map(_.getClass.toString))
           //throw new Exception("Couldn't load image file due to missing reader.")
@@ -256,7 +294,9 @@ trait ImageDataSourceTypeHandler extends DataSourceTypeHandler with FoxImplicits
           None
         } else {
           val bytesPerPixel = imageTypeToByteDepth(image.getType)
-          Some(ImageInfo(image.getWidth, image.getHeight, bytesPerPixel))
+          val buffer = image.getRaster.getDataBuffer
+          val valueRange = (0 until buffer.getSize).foldLeft(ImageValueRange())((valueRange, index) => valueRange(buffer.getElem(index)))
+          Some(ImageInfo(image.getWidth, image.getHeight, bytesPerPixel, valueRange))
         }
     }
   }
@@ -265,6 +305,8 @@ trait ImageDataSourceTypeHandler extends DataSourceTypeHandler with FoxImplicits
     typ match {
       case BufferedImage.TYPE_BYTE_GRAY =>
         1
+      case BufferedImage.TYPE_USHORT_GRAY =>
+        1 // since this will be converted to 8 bits later
       case BufferedImage.TYPE_3BYTE_BGR =>
         3
       case x =>

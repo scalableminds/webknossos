@@ -30,7 +30,7 @@ class TaskCreateFromFormView extends Marionette.LayoutView
           placeholder="x, y, z"
           title="x, y, z"
           pattern="(\\s*\\d+\\s*,){2}(\\s*\\d+\\s*)"
-          value="0, 0, 0"
+          value="<%- editPosition %>"
           required=true
           class="form-control">
         <span class="help-block errors"></span>

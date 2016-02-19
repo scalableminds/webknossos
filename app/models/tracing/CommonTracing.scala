@@ -3,7 +3,7 @@
  */
 package models.tracing
 
-import com.scalableminds.util.geometry.BoundingBox
+import com.scalableminds.util.geometry.{Point3D, BoundingBox}
 import models.annotation.AnnotationSettings
 
 trait CommonTracing {

@@ -52,6 +52,7 @@ class DatasetListView extends Marionette.CompositeView
   initialize : ->
 
     @collection.setSorting("created")
+    @collection.setCollectionFilter((child) -> return child.get("isEditable"))
     @collection.setPageSize(@DATASETS_PER_PAGE)
 
     @listenTo(app.vent, "paginationView:filter", @filterBySearch)
@@ -81,8 +82,6 @@ class DatasetListView extends Marionette.CompositeView
 
     @collection.setFilter(["name", "owningTeam"], searchQuery)
 
-  # Marionette's CollectionView filter
-  filter : (child, index, collection) -> return child.get("isEditable")
 
   onDestroy : ->
 

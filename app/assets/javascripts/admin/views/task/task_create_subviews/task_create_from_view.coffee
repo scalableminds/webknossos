@@ -261,6 +261,7 @@ class TaskCreateFromView extends Marionette.LayoutView
         defaultItem : {name : @model.get("projectName")}
       data : "amIAnAdmin=true"
       name : "projectName"
+      emptyOption : true
     )
 
     # render subviews in defined regions

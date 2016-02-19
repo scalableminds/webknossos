@@ -96,7 +96,7 @@ class TaskTypeAdministration @Inject() (val messagesApi: MessagesApi) extends Ad
             tasks <- TaskDAO.findAllByTaskType(taskType._id)
             _ <- ensureTeamAdministration(request.user, updatedTaskType.team)
           } yield {
-            tasks.map(task => AnnotationDAO.updateAllUsingNewTaskType(task, updatedTaskType.settings))
+            tasks.map(task => AnnotationDAO.updateAllOfTask(task, updatedTaskType.settings))
             JsonOk(Messages("taskType.editSuccess"))
           }
         }

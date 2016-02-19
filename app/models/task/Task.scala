@@ -199,7 +199,8 @@ object TaskDAO extends SecuredBaseDAO[Task] with FoxImplicits {
   def unassignOnce(_task: BSONObjectID)(implicit ctx: DBAccessContext) =
     changeAssignedInstances(_task, -1)
 
-  def update(_task: BSONObjectID, _taskType: BSONObjectID,
+  def update(_task: BSONObjectID,
+             _taskType: BSONObjectID,
              neededExperience: Experience,
              priority: Int,
              instances: Int,
@@ -210,6 +211,7 @@ object TaskDAO extends SecuredBaseDAO[Task] with FoxImplicits {
       Json.obj("_id" -> _task),
       Json.obj("$set" ->
         Json.obj(
+          "_taskType" -> _taskType,
           "neededExperience" -> neededExperience,
           "priority" -> priority,
           "instances" -> instances,

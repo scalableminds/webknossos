@@ -1,16 +1,11 @@
 package controllers
 
-import java.io.File
-
 import com.scalableminds.util.geometry.{BoundingBox, Point3D}
-import com.scalableminds.util.mvc.JsonResult
 import models.binary.DataSetDAO
 import javax.inject.Inject
 import net.liftweb.common.{Box, Failure, Full}
 import oxalis.nml.NMLService
 import play.api.Logger
-import play.api.data.Form
-import play.api.data.Forms._
 import play.api.libs.json.Json._
 import oxalis.security.{AuthenticatedRequest, Secured}
 import models.user._
@@ -39,7 +34,7 @@ class TaskController @Inject() (val messagesApi: MessagesApi) extends Controller
       (__ \ 'priority).read[Int] and
       (__ \ 'status).read[CompletionStatus] and
       (__ \ 'team).read[String] and
-      (__ \ 'projectName).read[String] and
+      (__ \ 'projectName).readNullable[String] and
       (__ \ 'boundingBox).readNullable[BoundingBox]
 
   val taskNMLJsonReads = baseJsonReads.tupled
@@ -107,7 +102,7 @@ class TaskController @Inject() (val messagesApi: MessagesApi) extends Controller
     } yield result
   }
 
-  def createSingleTask(input: (String, Experience, Int, CompletionStatus, String, String, Option[BoundingBox], String, Point3D))(implicit request: AuthenticatedRequest[_]) =
+  def createSingleTask(input: (String, Experience, Int, CompletionStatus, String, Option[String], Option[BoundingBox], String, Point3D))(implicit request: AuthenticatedRequest[_]) =
     input match {
       case (taskTypeId, experience, priority, status, team, projectName, boundingBox, dataSetName, start) =>
         for {
@@ -165,12 +160,13 @@ class TaskController @Inject() (val messagesApi: MessagesApi) extends Controller
             _taskType = taskType._id,
             neededExperience = experience,
             priority = priority,
-            instances = status.open,
+            instances = status.open + task.assignedInstances,
             team = team,
             _project = project.map(_.name))
+          _ <- AnnotationService.updateAllOfTask(updatedTask, team, dataSetName, boundingBox, taskType.settings)
+          _ <- AnnotationService.updateAnnotationBase(updatedTask, start)
           json <- Task.transformToJson(updatedTask)
         } yield {
-          AnnotationDAO.updateAllUsingNewTaskType(updatedTask, taskType.settings)
           JsonOk(json, Messages("task.editSuccess"))
         }
     }

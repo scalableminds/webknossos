@@ -57,6 +57,18 @@ object AnnotationService extends AnnotationContentProviders with BoxImplicits wi
       } yield annotation
     }
 
+  def updateAllOfTask(
+    task: Task,
+    team: String,
+    dataSetName: String,
+    boundingBox: Option[BoundingBox],
+    settings: AnnotationSettings)(implicit ctx: DBAccessContext) = {
+    for{
+      _ <- AnnotationDAO.updateTeamForAllOfTask(task, team)
+      _ <- AnnotationDAO.updateAllOfTask(task, dataSetName, boundingBox, settings)
+    } yield true
+  }
+
 
   def baseFor(task: Task)(implicit ctx: DBAccessContext) =
     AnnotationDAO.findByTaskIdAndType(task._id, AnnotationType.TracingBase).one[Annotation].toFox
@@ -119,6 +131,15 @@ object AnnotationService extends AnnotationContentProviders with BoxImplicits wi
       content = ContentReference.createFor(tracing)
       _ <- AnnotationDAO.insert(Annotation(Some(userId), content, team = task.team, typ = AnnotationType.TracingBase, _task = Some(task._id)))
     } yield tracing
+  }
+
+  def updateAnnotationBase(task: Task, start: Point3D)(implicit ctx: DBAccessContext) = {
+    for {
+      base <- task.annotationBase
+      content <- base.content
+    } yield {
+      content.service.updateEditPosition(start, content.id)
+    }
   }
 
   def createAnnotationBase(task: Task, userId: BSONObjectID, boundingBox: Option[BoundingBox], settings: AnnotationSettings, nml: NML)(implicit ctx: DBAccessContext) = {

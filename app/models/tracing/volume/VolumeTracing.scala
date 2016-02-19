@@ -5,6 +5,7 @@ import models.annotation.{AnnotationLike, AnnotationContentService, AnnotationCo
 import models.basics.SecuredBaseDAO
 import models.binary._
 import java.io.{PipedOutputStream, PipedInputStream, InputStream}
+import models.tracing.{CommonTracingService, CommonTracing}
 import net.liftweb.common.{Failure, Full}
 import play.api.Logger
 import play.api.libs.iteratee.{Enumerator, Iteratee}
@@ -34,7 +35,7 @@ case class VolumeTracing(
                           boundingBox: Option[BoundingBox] = None,
                           settings: AnnotationSettings = AnnotationSettings.volumeDefault,
                           _id: BSONObjectID = BSONObjectID.generate)
-  extends AnnotationContent with FoxImplicits{
+  extends AnnotationContent with CommonTracing with FoxImplicits{
 
   def id = _id.stringify
 
@@ -115,12 +116,10 @@ case class VolumeTracing(
   }
 }
 
-object VolumeTracingService extends AnnotationContentService with FoxImplicits {
+object VolumeTracingService extends AnnotationContentService with CommonTracingService with FoxImplicits {
   type AType = VolumeTracing
 
   def dao = VolumeTracingDAO
-
-  def updateSettings(settings: AnnotationSettings, tracingId: String)(implicit ctx: DBAccessContext): Fox[Boolean] = ???
 
   def findOneById(id: String)(implicit ctx: DBAccessContext) =
     VolumeTracingDAO.findOneById(id)

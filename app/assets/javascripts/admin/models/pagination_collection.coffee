@@ -120,7 +120,7 @@ class PaginationCollection
       @state.filter = (model) ->
         return _.any(fields, (fieldName) ->
           value = model.get(fieldName)
-          return if value? then regexp.test(value) else false
+          return if value? then !!value.match(regexp) else false
         )
 
     @_reset()

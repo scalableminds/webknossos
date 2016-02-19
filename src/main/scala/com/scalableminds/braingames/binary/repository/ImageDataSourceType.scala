@@ -241,7 +241,7 @@ trait ImageDataSourceTypeHandler extends DataSourceTypeHandler with FoxImplicits
       convertedImage
     }
 
-    def useFullColorRange = {
+    def useFullColorRange() = {
       logger.debug(s"Converting image to to full range from dynamic range [${valueRange.minValue}, ${valueRange.maxValue}]")
       val buffer = image.getRaster.getDataBuffer
       val offset = valueRange.minValue
@@ -259,7 +259,7 @@ trait ImageDataSourceTypeHandler extends DataSourceTypeHandler with FoxImplicits
         case BufferedImage.TYPE_BYTE_INDEXED =>
           convertTo(BufferedImage.TYPE_BYTE_GRAY)
         case BufferedImage.TYPE_USHORT_GRAY =>
-          useFullColorRange
+          useFullColorRange()
           convertTo(BufferedImage.TYPE_BYTE_GRAY)
         case _ =>
           image

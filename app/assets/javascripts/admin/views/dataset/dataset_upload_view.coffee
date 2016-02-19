@@ -79,7 +79,6 @@ class DatasetUploadView extends Marionette.LayoutView
   initialize : ->
 
     @teamSelectionView = new SelectionView(
-      viewComparator: "name"
       collection : new TeamCollection()
       name : "team"
       childViewOptions :

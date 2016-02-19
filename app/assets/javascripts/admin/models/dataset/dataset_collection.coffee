@@ -5,5 +5,6 @@ class DatasetCollection extends SortedCollection
 
   url : "/api/datasets"
   model : DatasetModel
+  sortBy : "name"
 
 module.exports = DatasetCollection

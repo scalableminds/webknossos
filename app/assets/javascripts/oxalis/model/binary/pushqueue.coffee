@@ -6,7 +6,7 @@ class PushQueue
 
   BATCH_LIMIT : 1
   BATCH_SIZE : 32
-  THROTTLE_TIME : 10000
+  DEBOUNCE_TIME : 1000
   MESSAGE_TIMEOUT : 10000
 
 
@@ -15,19 +15,21 @@ class PushQueue
     @url = "#{@layer.url}/data/datasets/#{@dataSetName}/layers/#{@layer.name}/data?cubeSize=#{1 << @cube.BUCKET_SIZE_P}&annotationId=#{@tracingId}&token=#{@layer.token}"
     @queue = []
 
-    @push = _.throttle @pushImpl, @THROTTLE_TIME
+    @push = _.debounce @pushImpl, @DEBOUNCE_TIME
 
 
   insert : (bucket) ->
 
     @queue.push( bucket )
     @removeDuplicates()
+    @push()
 
 
   insertFront : (bucket) ->
 
     @queue.unshift( bucket )
     @removeDuplicates()
+    @push()
 
 
   clear : ->
@@ -60,14 +62,18 @@ class PushQueue
 
   pushImpl : =>
 
-    unless @sendData
-      return
+    return Request.$(@cube.temporalBucketManager.getAllLoadedPromise()).then =>
 
-    while @queue.length
+      unless @sendData
+        return (new $.Deferred()).resolve().promise()
 
-      batchSize = Math.min(@BATCH_SIZE, @queue.length)
-      batch = @queue.splice(0, batchSize)
-      @pushBatch(batch)
+      while @queue.length
+
+        batchSize = Math.min(@BATCH_SIZE, @queue.length)
+        batch = @queue.splice(0, batchSize)
+        @pushBatch(batch)
+
+      return @updatePipeline.getLastActionPromise()
 
 
   pushBatch : (batch) ->
@@ -88,17 +94,19 @@ class PushQueue
             cubeSize: 1 << @cube.BUCKET_SIZE_P),
           @cube.getBucketByZoomedAddress(bucket).getData())
 
-    @updatePipeline.executePassAlongAction( =>
+    return @updatePipeline.executePassAlongAction( =>
 
-      transmitData.dataPromise().then((data) =>
-        Request.sendArraybufferReceiveArraybuffer("#{@layer.url}/data/datasets/#{@dataSetName}/layers/#{@layer.name}/data?token=#{@layer.token}",
-          method : "PUT"
-          data : data
-          headers :
-            "Content-Type" : "multipart/mixed; boundary=#{transmitData.boundary}"
-          timeout : @MESSAGE_TIMEOUT
-          compress : true
-        )
+      return transmitData.dataPromise().then((data) =>
+        return Request.$(Request.sendArraybufferReceiveArraybuffer(
+          "#{@layer.url}/data/datasets/#{@dataSetName}/layers/#{@layer.name}/data?token=#{@layer.token}", {
+            method : "PUT"
+            data : data
+            headers :
+              "Content-Type" : "multipart/mixed; boundary=#{transmitData.boundary}"
+            timeout : @MESSAGE_TIMEOUT
+            compress : true
+          }
+        ))
       )
     ).fail(-> throw new Error("Uploading data failed."))
 

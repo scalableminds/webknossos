@@ -29,6 +29,7 @@ class PaginationCollection
       currentPage : 0
       sorting : null
       filter : null
+      collectionFilter : null
       filterQuery : ""
     )
 
@@ -102,6 +103,12 @@ class PaginationCollection
     return
 
 
+  setCollectionFilter : (filter) ->
+
+    @state.collectionFilter = filter
+    return
+
+
   setFilter : (fields, query) ->
 
     if query == '' or not _.isString(query)
@@ -116,7 +123,7 @@ class PaginationCollection
       @state.filter = (model) ->
         return _.any(fields, (fieldName) ->
           value = model.get(fieldName)
-          return if value? then regexp.test(value) else false
+          return if value? then !!value.match(regexp) else false
         )
 
     @_reset()
@@ -148,6 +155,9 @@ class PaginationCollection
 
   _resetModels : ->
     models = @fullCollection.models.slice()
+
+    if @state.collectionFilter?
+      models = models.filter(@state.collectionFilter)
 
     if @state.filter?
       models = models.filter(@state.filter)

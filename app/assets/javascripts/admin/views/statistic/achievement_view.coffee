@@ -8,12 +8,20 @@ class AchievementView extends Marionette.ItemView
     <table class="table">
       <tbod>
         <tr>
+          <td>Number of Users</td>
+          <td><%- numberOfUsers %></td>
+        </tr>
+        <tr>
+          <td>Number of Datasets</td>
+          <td><%- numberOfDatasets %></td>
+        </tr>
+        <tr>
           <td>Number of Annotations</td>
           <td><%- numberOfAnnotations %></td>
         </tr>
         <tr>
-          <td>Number of Users</td>
-          <td><%- numberOfUsers %></td>
+          <td>Number of Trees</td>
+          <td><%- numberOfTrees %></td>
         </tr>
       </tbody>
     </table>

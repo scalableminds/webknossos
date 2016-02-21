@@ -168,14 +168,15 @@ class DatasetListItemView extends Marionette.CompositeView
 
   importFailed : (response) ->
 
-    @ui.importLink.show()
-    @ui.progressbarContainer.addClass("hide")
-    @ui.row.addClass('import-failed')
-    @ui.importError.removeClass("hide")
+    if @isRendered and not @isDestroyed
+      @ui.importLink.show()
+      @ui.progressbarContainer.addClass("hide")
+      @ui.row.addClass('import-failed')
+      @ui.importError.removeClass("hide")
 
-    # apply single error
-    if response.messages?[0]?.error
-      @ui.errorText.text(response.messages[0].error)
+      # apply single error
+      if response.messages?[0]?.error
+        @ui.errorText.text(response.messages[0].error)
 
 
   updateProgress : ->

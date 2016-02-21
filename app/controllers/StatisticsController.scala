@@ -16,6 +16,10 @@ import play.api.i18n.{Messages, MessagesApi}
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json.Json
 import play.twirl.api.Html
+import scala.concurrent.duration.Duration
+import models.annotation.AnnotationDAO
+import models.tracing.skeleton.DBTreeDAO
+import models.binary.DataSetDAO
 
 class StatisticsController @Inject()(val messagesApi: MessagesApi) extends Controller with Secured {
   val intervalHandler = Map(
@@ -40,14 +44,18 @@ class StatisticsController @Inject()(val messagesApi: MessagesApi) extends Contr
       case Some(handler) =>
         for {
           times <- TimeSpanService.loggedTimePerInterval(handler, start, end)
-          numberOfAnnotations <- AnnotationDAO.countAll
           numberOfUsers <- UserDAO.count(Json.obj())
+          numberOfDatasets <- DataSetDAO.count(Json.obj())
+          numberOfAnnotations <- AnnotationDAO.countAll
+          numberOfTrees <- DBTreeDAO.count(Json.obj())
         } yield {
           Ok(Json.obj(
             "name" -> "oxalis",
             "tracingTimes" -> intervalTracingTimeJson(times),
+            "numberOfUsers" -> numberOfUsers,
+            "numberOfDatasets" -> numberOfDatasets,
             "numberOfAnnotations" -> numberOfAnnotations,
-            "numberOfUsers" -> numberOfUsers
+            "numberOfTrees" -> numberOfTrees
           ))
         }
       case _             =>

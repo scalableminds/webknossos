@@ -3,7 +3,7 @@ _ = require("lodash")
 ErrorHandling = require("../../../libs/error_handling")
 {Bucket, NullBucket} = require("./bucket")
 ArbitraryCubeAdapter = require("./arbitrary_cube_adapter")
-PullQueue = require("./pullqueue")
+TemporalBucketManager = require("./temporal_bucket_manager")
 
 class Cube
 
@@ -48,7 +48,7 @@ class Cube
 
     _.extend(this, Backbone.Events)
 
-    @NULL_BUCKET = new NullBucket(@BIT_DEPTH)
+    @NULL_BUCKET = new NullBucket()
 
     @LOOKUP_DEPTH_UP = @ZOOM_STEP_COUNT - 1
     @MAX_ZOOM_STEP   = @ZOOM_STEP_COUNT - 1
@@ -83,15 +83,16 @@ class Cube
       ]
 
 
+  initializeWithQueues : (@pullQueue, @pushQueue) ->
+    # Due to cyclic references, this method has to be called before the cube is
+    # used with the instantiated queues
+
+    @temporalBucketManager = new TemporalBucketManager(@pullQueue, @pushQueue)
+
+
   setMapping : (@mapping) ->
 
     @trigger("mappingChanged")
-
-
-  setPullQueue : (@pullQueue) ->
-
-
-  setPushQueue : (@pushQueue) ->
 
 
   setMappingEnabled : (isEnabled) ->
@@ -158,8 +159,11 @@ class Cube
 
   getBucketByZoomedAddress : (address) ->
 
-    cube = @cubes[address[3]].data
+    if address[3] >= @ZOOM_STEP_COUNT
+      return @NULL_BUCKET
+
     bucketIndex = @getBucketIndexByZoomedAddress(address)
+    cube = @cubes[address[3]].data
 
     if bucketIndex?
       unless cube[bucketIndex]?
@@ -171,7 +175,7 @@ class Cube
 
   createBucket : (address) ->
 
-    bucket = new Bucket(@BIT_DEPTH, address)
+    bucket = new Bucket(@BIT_DEPTH, address, @temporalBucketManager)
     bucket.on
       bucketLoaded : => @trigger("bucketLoaded", address)
     @addBucketToGarbageCollection(bucket)
@@ -197,8 +201,8 @@ class Cube
   collectBucket : (bucket) ->
 
     address = bucket.zoomedAddress
-    cube = @cubes[address[3]].data
     bucketIndex = @getBucketIndexByZoomedAddress(address)
+    cube = @cubes[address[3]].data
     cube[bucketIndex] = null
 
 
@@ -240,25 +244,12 @@ class Cube
         for i in [0...@BYTE_OFFSET]
           data[voxelIndex + i] = (label >> (i * 8) ) & 0xff
 
+      bucket.label(labelFunc)
 
-      if not bucket.hasData()
-        # Ensure that if a temporal bucket is created, the bucket will be
-        # requested.
-        createdCallback = _.debounce((=>
-          @pullQueue.add({
-            bucket: @positionToZoomedAddress(voxel),
-            priority: PullQueue::PRIORITY_HIGHEST})
-          @pullQueue.pull()))
-      else
-        createdCallback = _.noop
-
-      # Ensure that once the bucket is loaded (or immediately if it already is),
-      # it will be pushed to the server.
-      loadedCallback = _.debounce((=>
+      # Push bucket if it's loaded, otherwise, TemporalBucketManager will push
+      # it once it is.
+      if bucket.isLoaded()
         @pushQueue.insert(@positionToZoomedAddress(voxel))
-        @pushQueue.push()))
-
-      bucket.label(labelFunc, createdCallback, loadedCallback)
 
 
   getDataValue : ( voxel, mapping=@EMPTY_MAPPING ) ->

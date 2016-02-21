@@ -4,33 +4,36 @@ Marionette = require("backbone.marionette")
 
 class PaginationView extends Marionette.ItemView
 
+  pagingatorTemplate : _.template("""
+    <li class="first <% if (Pagination.currentPage == 0) { %> disabled <% } %>">
+      <a><i class="fa fa-angle-double-left"></i></a>
+    </li>
+    <li class="prev <% if (Pagination.currentPage == 0) { %> disabled <% } %>"">
+      <a><i class="fa fa-angle-left"></i></a>
+    </li>
+    <% _.each(pageRange, function (pageIndex) { %>
+      <% if (Pagination.currentPage == pageIndex) { %>
+        <li class="active">
+          <span><%- pageIndex + 1 %></span>
+        </li>
+      <% } else { %>
+        <li>
+          <a class="page"><%- pageIndex + 1 %></a>
+        </li>
+      <% } %>
+    <% }); %>
+    <li class="next <% if (Pagination.currentPage >= Pagination.lastPage) { %> disabled <% } %>">
+      <a><i class="fa fa-angle-right"></i></a>
+    </li>
+    <li class="last <% if (Pagination.currentPage >= Pagination.lastPage) { %> disabled <% } %>">
+      <a><i class="fa fa-angle-double-right"></i></a>
+    </li>
+  """)
   template : _.template("""
     <div class="row">
       <div class="col-sm-9">
         <ul class="pagination">
-          <li class="first <% if (Pagination.currentPage == 0) { %> disabled <% } %>">
-            <a><i class="fa fa-angle-double-left"></i></a>
-          </li>
-          <li class="prev <% if (Pagination.currentPage == 0) { %> disabled <% } %>"">
-            <a><i class="fa fa-angle-left"></i></a>
-          </li>
-          <% _.each(pageRange, function (pageIndex) { %>
-            <% if (Pagination.currentPage == pageIndex) { %>
-              <li class="active">
-                <span><%- pageIndex + 1 %></span>
-              </li>
-            <% } else { %>
-              <li>
-                <a class="page"><%- pageIndex + 1 %></a>
-              </li>
-            <% } %>
-          <% }); %>
-          <li class="next <% if (Pagination.currentPage >= Pagination.lastPage) { %> disabled <% } %>">
-            <a><i class="fa fa-angle-right"></i></a>
-          </li>
-          <li class="last <% if (Pagination.currentPage >= Pagination.lastPage) { %> disabled <% } %>">
-            <a><i class="fa fa-angle-double-right"></i></a>
-          </li>
+
         </ul>
 
         <% if (addButtonText) { %>
@@ -70,11 +73,10 @@ class PaginationView extends Marionette.ItemView
     "input input" : "filterBySearch"
 
 
-  initialize : ->
-
+  initialize : (options) ->
+    @options = options
     @listenToOnce(@collection, "reset", @searchByHash)
     @listenTo(@collection, "reset", @render)
-    @listenTo(this, "render", @afterRender)
 
 
   goFirst : (evt) ->
@@ -114,13 +116,25 @@ class PaginationView extends Marionette.ItemView
     filterQuery = @ui.inputSearch.val()
     app.vent.trigger("paginationView:filter", filterQuery)
 
-    @ui.inputSearch.focus()
-    @ui.inputSearch.val(@collection.state.filterQuery)
+
+  render : ->
+    this._ensureViewIsIntact()
+    this.triggerMethod('before:render', this)
+
+    obj = @templateHelpers()
+    if not this.isRendered
+      @$el.html(@template(obj))
+      this.isRendered = true
+
+    @$el.find("ul.pagination").html(@pagingatorTemplate(obj))
+    this.bindUIElements()
+    this.triggerMethod('render', this)
+    return this
 
 
-  afterRender : ->
+  # afterRender : ->
 
-    @ui.inputSearch.val(@collection.state.filterQuery)
+  #   @ui.inputSearch.val(@collection.state.filterQuery)
 
 
   searchByHash : ->
@@ -128,6 +142,7 @@ class PaginationView extends Marionette.ItemView
     hash = location.hash.slice(1)
     if (hash)
       @ui.inputSearch.val(hash)
+      @ui.inputSearch.focus()
       @filterBySearch()
 
 

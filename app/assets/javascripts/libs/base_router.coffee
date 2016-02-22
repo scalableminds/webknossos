@@ -90,17 +90,17 @@ class BaseRouter
   shouldNavigate : (path) ->
     return @currentURL != path
 
-  navigate : (path, { trigger=true } = {}) ->
+  navigate : (path, { trigger = true } = {}) ->
     if not @shouldNavigate(path)
       # Do nothing
       return
 
-    @currentURL = path
     if trigger
       beforeunloadValue = @triggerBeforeunload()
       if beforeunloadValue? and not confirm(beforeunloadValue + "\nDo you wish to navigate away?")
         return
       window.history.pushState({}, document.title, path)
+    @currentURL = path
 
     if @cleanupViews()
       _.defer(@handleRoute)
@@ -126,11 +126,6 @@ class BaseRouter
 
 
   cleanupViews : ->
-
-    beforeunloadValue = @triggerBeforeunload()
-    if beforeunloadValue? and !confirm(beforeunloadValue + "\nDo you wish to navigate away?")
-      @off("beforeunload")
-      return
 
     # Remove current views
     if @activeViews

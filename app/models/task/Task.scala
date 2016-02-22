@@ -171,7 +171,7 @@ object TaskDAO extends SecuredBaseDAO[Task] with FoxImplicits {
   }
 
   def deleteAllWithTaskType(taskType: TaskType)(implicit ctx: DBAccessContext) =
-    update(Json.obj("_taskType" -> taskType._id), Json.obj("$set" -> Json.obj("isActive" -> false)))
+    update(Json.obj("_taskType" -> taskType._id), Json.obj("$set" -> Json.obj("isActive" -> false)), multi = true)
 
   def findAllByProject(project: String)(implicit ctx: DBAccessContext) = withExceptionCatcher{
     find("_project", project).collect[List]()

@@ -266,7 +266,10 @@ class Model extends Backbone.Model
       deferreds.push( model.save() )
     )
 
-    return $.when.apply($, deferreds)
+    return $.when.apply($, deferreds).then(
+      -> Toast.success("Saved!")
+      -> Toast.error("Couldn't save. Please try again.")
+    )
 
 
   # Make the Model compatible between legacy Oxalis style and Backbone.Modela/Views

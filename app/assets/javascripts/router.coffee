@@ -2,13 +2,14 @@ $         = require("jquery")
 _         = require("lodash")
 Backbone  = require("backbone")
 constants = require("oxalis/constants")
+NewRouter = require("./new_router")
 
 # #####
 # This Router contains all the routes for views that have been
 # refactored to Backbone.View yet. All other routes, that require HTML to be
 # delivered by the Server are handled by the NonBackboneRouter.
 # #####
-class Router extends Backbone.Router
+class Router extends NewRouter
 
   routes :
     "users"                             : "users"
@@ -29,51 +30,11 @@ class Router extends Backbone.Router
     "admin/taskTypes"                   : "hideLoading"
     "workload"                          : "workload"
 
-  whitelist : [
-    "help/keyboardshortcuts",
-    "help/faq",
-    "issues"
-  ]
 
-  initialize : ->
-
-    # handle all links and manage page changes (rather the reloading the whole site)
-    $(document).on "click", "a", (evt) =>
-
-      url = $(evt.currentTarget).attr("href") or ""
-      urlWithoutSlash = url.slice(1)
-
-      if newWindow = $(evt.target).data("newwindow")
-        [ width, height ] = newWindow.split("x")
-        window.open(url, "_blank", "width=#{width},height=#{height},location=no,menubar=no")
-        evt.preventDefault()
-        return
-
-      # disable for links beginning with #
-      if url.indexOf("#") == 0
-        return
-
-      # allow opening links in new tabs
-      if evt.metaKey or evt.ctrlKey
-        return
-
-      # allow target=_blank etc
-      if evt.currentTarget.target != ""
-        return
-
-      for route of @routes
-        regex = @_routeToRegExp(route)
-        if regex.test(urlWithoutSlash)
-          evt.preventDefault()
-          @navigate(url, trigger : true)
-
-          return
-
-      return
-
+  constructor : ->
+    super
     @$loadingSpinner = $("#loader")
     @$mainContainer = $("#main-container")
-    window.addEventListener("beforeunload", @beforeunloadHandler, false)
 
 
   hideLoading : ->
@@ -252,7 +213,7 @@ class Router extends Backbone.Router
 
   changeView : (views...) ->
 
-    if @activeViews == views
+    if _.isEqual(@activeViews, views)
       return
 
     @$loadingSpinner.removeClass("hidden")
@@ -266,68 +227,6 @@ class Router extends Backbone.Router
     if ga?
       ga("send", "pageview", location.pathname)
 
-    return
-
-  beforeunloadHandler : (e) =>
-    beforeunloadValue = @triggerBeforeunload()
-    if beforeunloadValue?
-      e.returnValue = beforeunloadValue
-    return
-
-  triggerBeforeunload : =>
-
-    # Triggers the registered `beforeunload` handlers and returns the first return value
-    # Doesn't use Backbone's trigger because we need return values
-    handlers = this._events?.beforeunload ? []
-    beforeunloadValue = _.find(
-      handlers.map((handler) => handler.callback.call(handler.ctx)),
-      (value) => value?)
-    return beforeunloadValue
-
-
-  # Override to handle view cleanup and custom beforeunload behavior
-  navigate : (path, options) ->
-
-    # Do nothing if we are already on that page
-    if path == window.location.pathname
-      return
-
-    beforeunloadValue = @triggerBeforeunload()
-    if beforeunloadValue? and !confirm(beforeunloadValue + "\nDo you wish to navigate away?")
-      @off("beforeunload")
-      return
-
-    # Remove current views
-    if @activeViews
-      for view in @activeViews
-        # prefer Marionette's.destroy() function to Backbone's remove()
-        if view.destroy
-          view.destroy()
-        else
-          view.remove()
-
-        if view.forcePageReload
-          window.removeEventListener("beforeunload", @beforeunloadHandler)
-          @loadURL(path)
-          return
-      @activeViews = []
-
-    else
-      # we are probably coming from a URL that isn't a Backbone.View yet (or page reload)
-      @$mainContainer.empty()
-
-    super
-
-
-  loadURL : (url) ->
-
-    window.location.href = url
-    return
-
-
-  reload : ->
-
-    window.location.reload()
     return
 
 

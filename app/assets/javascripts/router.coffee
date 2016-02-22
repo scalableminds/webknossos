@@ -257,8 +257,18 @@ class Router extends Backbone.Router
 
     @$loadingSpinner.removeClass("hidden")
 
+    if @activeViews
+      for view in @activeViews
+        # prefer Marionette's.destroy() function to Backbone's remove()
+        if view.destroy
+          view.destroy()
+        else
+          view.remove()
+
     # Add new views
     @activeViews = views
+    @$mainContainer.empty()
+
     for view in views
       @$mainContainer.append(view.render().el)
 

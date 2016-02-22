@@ -1,15 +1,15 @@
-$         = require("jquery")
-_         = require("lodash")
-Backbone  = require("backbone")
-constants = require("oxalis/constants")
-NewRouter = require("./new_router")
+$          = require("jquery")
+_          = require("lodash")
+Backbone   = require("backbone")
+constants  = require("oxalis/constants")
+BaseRouter = require("libs/base_router")
 
 # #####
 # This Router contains all the routes for views that have been
 # refactored to Backbone.View yet. All other routes, that require HTML to be
 # delivered by the Server are handled by the NonBackboneRouter.
 # #####
-class Router extends NewRouter
+class Router extends BaseRouter
 
   routes :
     "users"                             : "users"

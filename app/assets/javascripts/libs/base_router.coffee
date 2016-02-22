@@ -2,13 +2,14 @@ $ = require("jquery")
 _ = require("lodash")
 Backbone = require("backbone")
 
-class NewRouter
+class BaseRouter
 
   $mainContainer : null
   routes : {}
 
   constructor : ->
     _.extend(this, Backbone.Events)
+    @activeViews = []
     @routes = _.map(@routes, (handler, route) =>
       {
         route: Backbone.Router::_routeToRegExp(route),
@@ -101,8 +102,9 @@ class NewRouter
         return
       window.history.pushState({}, document.title, path)
 
-    @cleanupViews()
-    _.defer(@handleRoute)
+    if @cleanupViews()
+      _.defer(@handleRoute)
+    return
 
 
   handleBeforeunload : (e) =>
@@ -123,7 +125,7 @@ class NewRouter
     return beforeunloadValue
 
 
-  cleanupViews : (path) ->
+  cleanupViews : ->
 
     beforeunloadValue = @triggerBeforeunload()
     if beforeunloadValue? and !confirm(beforeunloadValue + "\nDo you wish to navigate away?")
@@ -141,13 +143,15 @@ class NewRouter
 
         if view.forcePageReload
           window.removeEventListener("beforeunload", @handleBeforeunload)
-          @loadURL(path)
-          return
+          @reload()
+          return false
       @activeViews = []
 
     else
       # we are probably coming from a URL that isn't a Backbone.View yet (or page reload)
       @$mainContainer.empty()
+
+    return true
 
 
   loadURL : (url) ->
@@ -161,4 +165,4 @@ class NewRouter
     window.location.reload()
     return
 
-module.exports = NewRouter
+module.exports = BaseRouter

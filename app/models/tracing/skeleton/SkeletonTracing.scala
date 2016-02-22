@@ -11,7 +11,7 @@ import models.user.{User, UsedAnnotationDAO, UsedAnnotation}
 import models.basics._
 import oxalis.nml._
 import models.annotation.{AnnotationState, AnnotationContentService, AnnotationSettings, AnnotationContent}
-import models.tracing.{CommonTracingService}
+import models.tracing.{CommonTracing, CommonTracingService}
 import models.binary.DataSet
 import oxalis.nml.NML
 import com.scalableminds.util.reactivemongo.DBAccessContext
@@ -34,7 +34,7 @@ case class SkeletonTracing(
                             settings: AnnotationSettings = AnnotationSettings.skeletonDefault,
                             _id: BSONObjectID = BSONObjectID.generate
                           )
-  extends SkeletonTracingLike with AnnotationContent with SkeletonManipulations {
+  extends SkeletonTracingLike with AnnotationContent with CommonTracing with SkeletonManipulations {
 
   def id = _id.stringify
 

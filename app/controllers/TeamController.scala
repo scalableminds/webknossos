@@ -2,33 +2,26 @@ package controllers
 
 import javax.inject.Inject
 
-import oxalis.security.Secured
-import models.team._
-import play.api.libs.json.{JsError, JsSuccess, Writes, Json}
-import play.api.libs.concurrent.Execution.Implicits._
-import models.user.User
-import models.user.UserService
 import scala.concurrent.Future
-import play.api.i18n.{MessagesApi, Messages}
-import net.liftweb.common.{Empty, Failure, Full}
-import play.twirl.api.Html
+
 import com.scalableminds.util.reactivemongo.GlobalAccessContext
 import com.scalableminds.util.tools.DefaultConverters._
+import models.team._
+import models.user.{User, UserService}
+import net.liftweb.common.{Empty, Failure, Full}
+import oxalis.security.Secured
+import play.api.i18n.{Messages, MessagesApi}
+import play.api.libs.concurrent.Execution.Implicits._
+import play.api.libs.json.Json
+import play.twirl.api.Html
 
 class TeamController @Inject()(val messagesApi: MessagesApi) extends Controller with Secured {
 
-  def empty = Authenticated{ implicit request =>
+  def empty = Authenticated { implicit request =>
     Ok(views.html.main()(Html("")))
   }
 
-  def isTeamOwner(team: Team, user: User) = {
-    if(team.owner.contains(user._id))
-      Full(true)
-    else
-      Failure(Messages("team.noOwner"))
-  }
-
-  def list = Authenticated.async{ implicit request =>
+  def list = Authenticated.async { implicit request =>
     UsingFilters(
       Filter("isEditable", (value: Boolean, el: Team) =>
         el.isEditableBy(request.user) == value),
@@ -36,8 +29,8 @@ class TeamController @Inject()(val messagesApi: MessagesApi) extends Controller 
         el.parent.isEmpty == value),
       Filter("amIAnAdmin", (value: Boolean, el: Team) =>
         request.user.adminTeamNames.contains(el.name) == value)
-    ){ filter =>
-      for{
+    ) { filter =>
+      for {
         allTeams <- TeamDAO.findAll
         filteredTeams = filter.applyOn(allTeams)
         js <- Future.traverse(filteredTeams)(Team.teamPublicWrites(_, request.user))
@@ -47,10 +40,10 @@ class TeamController @Inject()(val messagesApi: MessagesApi) extends Controller 
     }
   }
 
-  def delete(id: String) = Authenticated.async{ implicit request =>
-    for{
+  def delete(id: String) = Authenticated.async { implicit request =>
+    for {
       team <- TeamDAO.findOneById(id)
-      _ <- isTeamOwner(team, request.user).toFox
+      _ <- team.owner.contains(request.user._id) ?~> Messages("team.noOwner")
       _ <- TeamService.remove(team)
       _ <- UserService.removeTeamFromUsers(team)
     } yield {
@@ -61,28 +54,21 @@ class TeamController @Inject()(val messagesApi: MessagesApi) extends Controller 
   def ensureRootTeam(team: Team) = {
     team.parent.isEmpty match {
       case true => Full(true)
-      case _ => Empty
+      case _    => Empty
     }
   }
 
-  def create = Authenticated.async(parse.json){ implicit request =>
-    request.body.validate(Team.teamPublicReads(request.user)) match {
-      case JsSuccess(team, _) =>
-        TeamDAO.findOneByName(team.name)(GlobalAccessContext).futureBox.flatMap{
-          case Empty =>
-            for{
-              parent <- team.parent.toFox.flatMap(TeamDAO.findOneByName(_)(GlobalAccessContext)) ?~> Messages("team.parent.notFound")
-              _ <- ensureRootTeam(parent) ?~> Messages("team.parent.mustBeRoot") // current limitation
-              _ <- TeamService.create(team, request.user)
-              js <- Team.teamPublicWrites(team, request.user)
-            } yield {
-              Ok(js)
-            }
-          case _ =>
-            Future.successful(JsonBadRequest(Messages("team.name.alreadyTaken")))
-        }
-      case e: JsError =>
-        Future.successful(BadRequest(jsonErrorWrites(e)))
+  def create = Authenticated.async(parse.json) { implicit request =>
+    withJsonBodyUsing(Team.teamPublicReads(request.user)) { team =>
+      for {
+        _ <- TeamDAO.findOneByName(team.name)(GlobalAccessContext).reverse ?~> Messages("team.name.alreadyTaken")
+        parent <- team.parent.toFox.flatMap(TeamDAO.findOneByName(_)(GlobalAccessContext)) ?~> Messages("team.parent.notFound")
+        _ <- ensureRootTeam(parent) ?~> Messages("team.parent.mustBeRoot") // current limitation
+        _ <- TeamService.create(team, request.user)
+        js <- Team.teamPublicWrites(team, request.user)
+      } yield {
+        JsonOk(js, Messages("team.created"))
+      }
     }
   }
 }

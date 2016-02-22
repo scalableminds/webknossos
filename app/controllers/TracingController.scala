@@ -79,7 +79,7 @@ trait TracingInformationProvider extends play.api.http.Status with FoxImplicits 
     withAnnotation(annotationId) {
       annotation =>
         for {
-          _ <- annotation.restrictions.allowAccess(request.userOpt).failIfFalse(Messages("notAllowed")).toFox ~> 400
+          _ <- annotation.restrictions.allowAccess(request.userOpt) ?~> Messages("notAllowed") ~> 400
           json <- if(readOnly)
                     annotation.makeReadOnly.annotationInfo(request.userOpt)
                   else

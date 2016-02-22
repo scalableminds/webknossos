@@ -1,5 +1,5 @@
 _           = require("lodash")
-FormatUtils = require("format_utils")
+FormatUtils = require("libs/format_utils")
 
 class TaskTypeModel extends Backbone.Model
 

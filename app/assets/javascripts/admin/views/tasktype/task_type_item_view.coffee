@@ -12,7 +12,7 @@ class TaskTypeItemView extends Marionette.CompositeView
         <i class="caret-right"></i>
         <i class="caret-down"></i>
       </td>
-      <td><%- formattedHash %></td>
+      <td><%= linebreakID() %></td>
       <td><%- team %></td>
       <td><%- summary %></td>
       <td><%- formattedShortText %></td>
@@ -68,6 +68,11 @@ class TaskTypeItemView extends Marionette.CompositeView
   ui :
     "detailsRow" : ".details-row"
     "detailsToggle" : ".details-toggle"
+
+
+  templateHelpers :
+    linebreakID : ->
+      return "#{@id.substr(0, 18)}\n#{@id.substr(18, 6)}"
 
 
   initialize : ->

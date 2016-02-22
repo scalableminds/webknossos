@@ -15,6 +15,8 @@ class Router extends Backbone.Router
     "teams"                             : "teams"
     "statistics"                        : "statistics"
     "tasks"                             : "tasks"
+    "tasks/create"                      : "taskCreate"
+    "tasks/:id/edit"                    : "taskEdit"
     "projects"                          : "projects"
     "annotations/:type/:id(/readOnly)"  : "tracingView"
     "datasets/:id/view"                 : "tracingViewPublic"
@@ -26,7 +28,7 @@ class Router extends Backbone.Router
     "taskTypes"                         : "taskTypes"
     "spotlight"                         : "spotlight"
     "tasks/overview"                    : "taskOverview"
-    "admin/taskTypes"                   : "hideLoading"
+    "admin/taskTypes"                   : "hideLoadingSpinner"
     "workload"                          : "workload"
 
   whitelist : [
@@ -76,7 +78,7 @@ class Router extends Backbone.Router
     window.addEventListener("beforeunload", @beforeunloadHandler, false)
 
 
-  hideLoading : ->
+  hideLoadingSpinner : ->
 
     @$loadingSpinner.addClass("hidden")
 
@@ -151,6 +153,37 @@ class Router extends Backbone.Router
     @showWithPagination("WorkloadListView", "WorkloadCollection")
 
 
+
+  ###*
+   * Load layout view that shows task-creation subviews
+   ###
+  taskCreate : ->
+
+    self = this
+    require(["admin/views/task/task_create_view", "admin/models/task/task_model"], (TaskCreateView, TaskModel) ->
+
+      model = new TaskModel()
+      view = new TaskCreateView(model : model)
+
+      self.changeView(view)
+      self.hideLoadingSpinner()
+    )
+
+  ###*
+   * Load item view which displays an editable task.
+   ###
+  taskEdit : (taskID) ->
+
+    self = this
+    require(["admin/views/task/task_create_subviews/task_create_from_view", "admin/models/task/task_model"], (TaskCreateFromView, TaskModel) ->
+
+      model = new TaskModel(id : taskID)
+      view = new TaskCreateFromView(model : model, type : "from_form")
+
+      self.changeView(view)
+      self.hideLoadingSpinner()
+    )
+
   taskTypes : ->
 
     self = this
@@ -159,7 +192,7 @@ class Router extends Backbone.Router
       collection = new TaskTypeCollection()
       view = new TaskTypeView(collection: collection)
       self.changeView(view)
-      self.hideLoading()
+      self.hideLoadingSpinner()
     )
 
 
@@ -171,7 +204,7 @@ class Router extends Backbone.Router
       model = new TaskTypeModel({id : taskTypeID})
       view = new TaskTypeFormView(model : model, isEditForm : true)
       self.changeView(view)
-      self.hideLoading()
+      self.hideLoadingSpinner()
     )
 
 
@@ -187,7 +220,7 @@ class Router extends Backbone.Router
 
       self.listenTo(model, "sync", ->
         self.changeView(view)
-        self.hideLoading()
+        self.hideLoadingSpinner()
       )
 
       model.fetch()
@@ -203,7 +236,7 @@ class Router extends Backbone.Router
       view = new SpotlightView(collection: collection)
 
       self.changeView(view)
-      self.listenTo(collection, "sync", self.hideLoading)
+      self.listenTo(collection, "sync", self.hideLoadingSpinner)
     )
 
 
@@ -216,7 +249,7 @@ class Router extends Backbone.Router
       view = new TaskOverviewView({model})
 
       self.changeView(view)
-      self.listenTo(model, "sync", self.hideLoading)
+      self.listenTo(model, "sync", self.hideLoadingSpinner)
     )
 
 
@@ -230,7 +263,7 @@ class Router extends Backbone.Router
       paginationView = new admin.PaginationView({ collection, addButtonText })
 
       self.changeView(paginationView, view)
-      self.listenTo(collection, "sync", => self.hideLoading())
+      self.listenTo(collection, "sync", => self.hideLoadingSpinner())
     )
 
 
@@ -242,10 +275,10 @@ class Router extends Backbone.Router
       if collection
         collection = new admin[collection]()
         view = new admin[view](collection : collection)
-        self.listenTo(collection, "sync", => self.hideLoading())
+        self.listenTo(collection, "sync", => self.hideLoadingSpinner())
       else
         view = new admin[view]()
-        setTimeout((=> self.hideLoading()), 200)
+        setTimeout((=> self.hideLoadingSpinner()), 200)
 
       self.changeView(view)
     )

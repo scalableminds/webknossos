@@ -43,7 +43,7 @@ object AnnotationService extends AnnotationContentProviders with BoxImplicits wi
   def createExplorationalFor(user: User, dataSet: DataSet, contentType: String, id: String = "")(implicit ctx: DBAccessContext) =
     withProviderForContentType(contentType) { provider =>
       for {
-        content <- provider.createFrom(dataSet).toFox
+        content <- provider.createFrom(dataSet)
         contentReference = ContentReference.createFor(content)
         annotation = Annotation(
           Some(user._id),
@@ -56,6 +56,18 @@ object AnnotationService extends AnnotationContentProviders with BoxImplicits wi
         _ <- AnnotationDAO.insert(annotation)
       } yield annotation
     }
+
+  def updateAllOfTask(
+    task: Task,
+    team: String,
+    dataSetName: String,
+    boundingBox: Option[BoundingBox],
+    settings: AnnotationSettings)(implicit ctx: DBAccessContext) = {
+    for{
+      _ <- AnnotationDAO.updateTeamForAllOfTask(task, team)
+      _ <- AnnotationDAO.updateAllOfTask(task, dataSetName, boundingBox, settings)
+    } yield true
+  }
 
 
   def baseFor(task: Task)(implicit ctx: DBAccessContext) =
@@ -113,16 +125,25 @@ object AnnotationService extends AnnotationContentProviders with BoxImplicits wi
     }
   }
 
-  def createAnnotationBase(task: Task, userId: BSONObjectID, boundingBox: BoundingBox, settings: AnnotationSettings, dataSetName: String, start: Point3D)(implicit ctx: DBAccessContext) = {
+  def createAnnotationBase(task: Task, userId: BSONObjectID, boundingBox: Option[BoundingBox], settings: AnnotationSettings, dataSetName: String, start: Point3D)(implicit ctx: DBAccessContext) = {
     for {
-      tracing <- SkeletonTracingService.createFrom(dataSetName, start, Some(boundingBox), insertStartAsNode = true, settings)
+      tracing <- SkeletonTracingService.createFrom(dataSetName, start, boundingBox, insertStartAsNode = true, settings)
       content = ContentReference.createFor(tracing)
       _ <- AnnotationDAO.insert(Annotation(Some(userId), content, team = task.team, typ = AnnotationType.TracingBase, _task = Some(task._id)))
     } yield tracing
   }
 
-  def createAnnotationBase(task: Task, userId: BSONObjectID, boundingBox: BoundingBox, settings: AnnotationSettings, nml: NML)(implicit ctx: DBAccessContext) = {
-    SkeletonTracingService.createFrom(nml, Some(boundingBox), settings).toFox.flatMap {
+  def updateAnnotationBase(task: Task, start: Point3D)(implicit ctx: DBAccessContext) = {
+    for {
+      base <- task.annotationBase
+      content <- base.content
+    } yield {
+      content.service.updateEditPosition(start, content.id)
+    }
+  }
+
+  def createAnnotationBase(task: Task, userId: BSONObjectID, boundingBox: Option[BoundingBox], settings: AnnotationSettings, nml: NML)(implicit ctx: DBAccessContext) = {
+    SkeletonTracingService.createFrom(nml, boundingBox, settings).toFox.flatMap {
       tracing =>
         val content = ContentReference.createFor(tracing)
         AnnotationDAO.insert(Annotation(Some(userId), content, team = task.team, typ = AnnotationType.TracingBase, _task = Some(task._id)))
@@ -132,7 +153,7 @@ object AnnotationService extends AnnotationContentProviders with BoxImplicits wi
   def createFrom(user: User, content: AnnotationContent, annotationType: AnnotationType, name: Option[String])(implicit messages: Messages, ctx: DBAccessContext) = {
     for {
       dataSet <- DataSetDAO.findOneBySourceName(content.dataSetName) ~> Messages("dataSet.notFound")
-      val annotation = Annotation(
+      annotation = Annotation(
         Some(user._id),
         ContentReference.createFor(content),
         team = selectSuitableTeam(user, dataSet),

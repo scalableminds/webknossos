@@ -51,7 +51,7 @@ class TaskListView extends Marionette.CompositeView
 
   createNewTask : ->
 
-    app.router.loadURL("/admin/tasks/create")
+    app.router.navigate("/tasks/create", {trigger : true})
 
 
   toggleAllDetails : ->

@@ -1,6 +1,5 @@
 _                    = require("lodash")
 Marionette           = require("backbone.marionette")
-DatasetCollection    = require("admin/models/dataset/dataset_collection")
 SpotlightDatasetView = require("views/spotlight_dataset_view")
 
 class SpotlightDatasetListView extends Marionette.CollectionView

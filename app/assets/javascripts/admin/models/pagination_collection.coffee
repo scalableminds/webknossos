@@ -33,6 +33,9 @@ class PaginationCollection
       filterQuery : ""
     )
 
+    if @sortBy
+      @setSort(@sortBy, "asc")
+
     @length = Math.min(@state.pageSize, @fullCollection.length)
     @models = @currentModels.slice(0, @length)
 

@@ -166,12 +166,12 @@ object TaskDAO extends SecuredBaseDAO[Task] with FoxImplicits {
     }))
   }
 
-  def deleteAllWithTaskType(taskType: TaskType)(implicit ctx: DBAccessContext) =
-    update(Json.obj("_taskType" -> taskType._id), Json.obj("$set" -> Json.obj("isActive" -> false)))
-
-  def findAllByTaskType(taskType: TaskType)(implicit ctx: DBAccessContext) = withExceptionCatcher{
-    find("_taskType", taskType._id).collect[List]()
+  def findAllByTaskType(_taskType: BSONObjectID)(implicit ctx: DBAccessContext) = withExceptionCatcher{
+    find("_taskType", _taskType).collect[List]()
   }
+
+  def deleteAllWithTaskType(taskType: TaskType)(implicit ctx: DBAccessContext) =
+    update(Json.obj("_taskType" -> taskType._id), Json.obj("$set" -> Json.obj("isActive" -> false)), multi = true)
 
   def findAllByProject(project: String)(implicit ctx: DBAccessContext) = withExceptionCatcher{
     find("_project", project).collect[List]()
@@ -199,17 +199,19 @@ object TaskDAO extends SecuredBaseDAO[Task] with FoxImplicits {
   def unassignOnce(_task: BSONObjectID)(implicit ctx: DBAccessContext) =
     changeAssignedInstances(_task, -1)
 
-  def update(_task: BSONObjectID, _taskType: BSONObjectID,
+  def update(_task: BSONObjectID,
+             _taskType: BSONObjectID,
              neededExperience: Experience,
              priority: Int,
              instances: Int,
              team: String,
              _project: Option[String]
-            )(implicit ctx: DBAccessContext): Fox[WriteResult] =
-    update(
+            )(implicit ctx: DBAccessContext): Fox[Task] =
+    findAndModify(
       Json.obj("_id" -> _task),
       Json.obj("$set" ->
         Json.obj(
+          "_taskType" -> _taskType,
           "neededExperience" -> neededExperience,
           "priority" -> priority,
           "instances" -> instances,

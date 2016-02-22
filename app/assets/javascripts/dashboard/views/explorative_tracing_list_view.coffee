@@ -7,7 +7,6 @@ Request                        = require("libs/request")
 SortTableBehavior              = require("libs/behaviors/sort_table_behavior")
 ExplorativeTracingListItemView = require("./explorative_tracing_list_item_view")
 UserAnnotationsCollection      = require("../models/user_annotations_collection")
-DatasetCollection              = require("admin/models/dataset/dataset_collection")
 
 
 class ExplorativeTracingListView extends Marionette.CompositeView

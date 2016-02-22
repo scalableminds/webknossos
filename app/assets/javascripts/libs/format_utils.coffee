@@ -20,7 +20,7 @@ class FormatUtils
 
   @formatHash : (id) ->
 
-    return id.slice(0, 6)
+    return id.slice(-6)
 
 
   @formatShortText : (text, maxLength = 100) ->

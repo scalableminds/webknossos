@@ -6,13 +6,32 @@ package frontend
 import scala.concurrent.{Future, Await}
 import scala.sys.process.ProcessIO
 
+import play.api.{Configuration, Environment, Mode}
+import play.api.Logger
 import play.api.libs.ws.WS
 import play.api.test.{FakeApplication, WithServer, TestServer}
 import scala.concurrent.duration._
 import org.specs2.mutable._
+import org.specs2.specification._
 import scala.io.Source
+import reactivemongo.api._
+import scala.concurrent.ExecutionContext.Implicits.global
 
-class ProtractorSpec extends Specification {
+class ProtractorSpec extends Specification with BeforeAll {
+
+  def beforeAll = {
+    val driver = new MongoDriver
+    val connection = driver.connection(List("localhost"))
+    val config = Configuration.load(Environment.simple())
+    val db = config.getString("mongodb.db").getOrElse("play-oxalis")
+
+    connection.waitForPrimary(5 seconds).map { _ =>
+      println(s"About to drop database: $db")
+      connection(db).drop()
+      connection.close()
+      driver.close()
+    }
+  }
 
   "my application" should {
 

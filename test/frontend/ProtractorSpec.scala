@@ -6,7 +6,6 @@ package frontend
 import scala.concurrent.{Future, Await}
 import scala.sys.process.ProcessIO
 
-import play.api.{Configuration, Environment, Mode}
 import play.api.Logger
 import play.api.libs.ws.WS
 import play.api.test.{FakeApplication, WithServer, TestServer}

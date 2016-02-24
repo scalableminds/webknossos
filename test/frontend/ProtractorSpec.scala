@@ -19,23 +19,36 @@ import scala.concurrent.ExecutionContext.Implicits.global
 
 class ProtractorSpec extends Specification with BeforeAll {
 
+  val testDB = "oxalis-testing"
+
   def beforeAll = {
+    try {
+      println(s"About to drop database: $testDB")
+      dropDatabase()
+      println("Successfully dropped the database")
+    } catch {
+      case e: Exception =>
+        throw new Error(s"An exception occured while dropping the database: ${e.toString}")
+    }
+  }
+
+  private def dropDatabase() {
     val driver = new MongoDriver
     val connection = driver.connection(List("localhost"))
-    val config = Configuration.load(Environment.simple())
-    val db = config.getString("mongodb.db").getOrElse("play-oxalis")
+    implicit val timeout: FiniteDuration = 5 seconds
 
-    connection.waitForPrimary(5 seconds).map { _ =>
-      println(s"About to drop database: $db")
-      connection(db).drop()
-      connection.close()
+    Await.result(for {
+      _ <- connection.waitForPrimary
+      _ <- connection(testDB).drop()
+      _ <- connection.askClose
+    } yield {
       driver.close()
-    }
+    }, timeout)
   }
 
   "my application" should {
 
-    "pass the protractor tests" in new WithServer(app = FakeApplication(), port = 9000) {
+    "pass the protractor tests" in new WithServer(app = FakeApplication(additionalConfiguration = Map("mongodb.db" -> testDB)), port = 9000) {
       val resp = Await.result(WS.url("http://localhost:9000").get(), 2 seconds)
       resp.status === 200
 

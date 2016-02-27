@@ -43,7 +43,6 @@ class Controller
       view : null
       planeController : null
       arbitraryController : null
-      allowedModes : []
     )
 
     _.extend(@, Backbone.Events)
@@ -70,21 +69,6 @@ class Controller
       return
 
     @urlManager.startUrlUpdater()
-
-    for allowedMode in @model.settings.allowedModes
-
-      if @model.getColorBinaries()[0].cube.BIT_DEPTH == 8
-        switch allowedMode
-          when "flight" then @allowedModes.push(constants.MODE_ARBITRARY)
-          when "oblique" then @allowedModes.push(constants.MODE_ARBITRARY_PLANE)
-
-      switch allowedMode
-        when "volume" then @allowedModes.push(constants.MODE_VOLUME)
-
-    if not @model.volumeTracing?
-      # Plane tracing mode is always allowed (except in VOLUME mode)
-      @allowedModes.push(constants.MODE_PLANE_TRACING)
-
 
     # FPS stats
     stats = new Stats()
@@ -125,11 +109,10 @@ class Controller
 
     @listenTo(@model, "change:mode", @setMode)
 
-    @allowedModes.sort()
-    if @allowedModes.length == 0
+    if @model.allowedModes.length == 0
       Toast.error("There was no valid allowed tracing mode specified.")
     else
-      @model.setMode(@allowedModes[0])
+      @model.setMode(@model.allowedModes[0])
     if @urlManager.initialState.mode? and @urlManager.initialState.mode != @model.mode
       @model.setMode(@urlManager.initialState.mode)
 
@@ -172,8 +155,8 @@ class Controller
 
         "m" : => # rotate allowed modes
 
-          index = (@allowedModes.indexOf(@model.get("mode")) + 1) % @allowedModes.length
-          @model.setMode(@allowedModes[index])
+          index = (@model.allowedModes.indexOf(@model.get("mode")) + 1) % @model.allowedModes.length
+          @model.setMode(@model.allowedModes[index])
 
         "super + s" : (event) =>
           event.preventDefault()
@@ -192,11 +175,11 @@ class Controller
 
   setMode : (newMode, force = false) ->
 
-    if (newMode == constants.MODE_ARBITRARY or newMode == constants.MODE_ARBITRARY_PLANE) and (newMode in @allowedModes or force)
+    if (newMode == constants.MODE_ARBITRARY or newMode == constants.MODE_ARBITRARY_PLANE) and (newMode in @model.allowedModes or force)
       @planeController?.stop()
       @arbitraryController.start(newMode)
 
-    else if (newMode == constants.MODE_PLANE_TRACING or newMode == constants.MODE_VOLUME) and (newMode in @allowedModes or force)
+    else if (newMode == constants.MODE_PLANE_TRACING or newMode == constants.MODE_VOLUME) and (newMode in @model.allowedModes or force)
       @arbitraryController?.stop()
       @planeController.start(newMode)
 

@@ -64,7 +64,7 @@ class SliderSettingView extends AbstractSettingView
 
   getSliderValue : ->
 
-    value = @ui.slider.val()
+    value = parseFloat(@ui.slider.val())
     if @options.logScaleBase?
       value = Math.pow(@options.logScaleBase, value)
     return value

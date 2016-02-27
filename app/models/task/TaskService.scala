@@ -4,6 +4,7 @@ import scala.async.Async._
 
 import models.annotation.{AnnotationService, Annotation, AnnotationType, AnnotationDAO}
 import com.scalableminds.util.reactivemongo.DBAccessContext
+import models.task.TaskDAO._
 import reactivemongo.bson.BSONObjectID
 
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
@@ -38,6 +39,10 @@ object TaskService extends TaskAssignmentSimulation with TaskAssignment with Fox
         Logger.warn("Tried to remove task without permission.")
         Future.successful(LastError(false ,None, None, None, None, 0, false))
     }
+  }
+
+  def findAllByTaskType(_taskType: String)(implicit ctx: DBAccessContext) = withExceptionCatcher{
+    withValidId(_taskType)(TaskDAO.findAllByTaskType)
   }
 
   def deleteAllWithTaskType(taskType: TaskType)(implicit ctx: DBAccessContext) =

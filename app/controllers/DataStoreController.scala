@@ -121,7 +121,7 @@ object WebSocketRESTServer {
 
     val iteratee = Iteratee.foreach[Array[Byte]] {
       it =>
-        Logger.trace("Got WS message: " + it.size)
+        Logger.trace("Got WS message: " + it.length)
         ws.response(it)
     }.map{ _ =>
       Logger.debug("Websocket closed.")
@@ -153,7 +153,7 @@ case class WebSocketRESTServer(out: Channel[Array[Byte]]) extends FoxImplicits{
   }
 
   def cancelRESTCall(uuid: String) = {
-    openCalls().get(uuid).map {
+    openCalls().get(uuid).foreach {
       promise =>
         if(promise.trySuccess(Failure("REST call timed out.")))
           Logger.warn("REST request timed out. UUID: " + uuid)
@@ -168,7 +168,7 @@ case class WebSocketRESTServer(out: Channel[Array[Byte]]) extends FoxImplicits{
         case JsSuccess(response, _) =>
           if(response.status != Status.OK.toString)
             Logger.warn(s"Failed (Code: ${response.status})  REST call to '${response.path}'(${response.uuid}). Result: '${response.body.toString().take(500)}'")
-          openCalls().get(response.uuid).map {
+          openCalls().get(response.uuid).foreach {
             promise =>
               promise.trySuccess(Full(response)) match {
                 case true =>
@@ -202,7 +202,7 @@ class DataStoreController @Inject() (val messagesApi: MessagesApi) extends Contr
       Logger.info(s"Got a backchannel request for $name.")
       DataStoreDAO.findByKey(key)(GlobalAccessContext).futureBox.map {
         case Full(dataStore) =>
-          val (iterator, enumerator, restChannel) = WebSocketRESTServer.create
+          val (iterator, enumerator, restChannel) = WebSocketRESTServer.create()
           DataStoreHandler.register(dataStore.name, restChannel)
           Logger.info(s"Key $name connected.")
           Right(iterator, enumerator)
@@ -224,29 +224,21 @@ class DataStoreController @Inject() (val messagesApi: MessagesApi) extends Contr
       }
   }
 
-  def updateOne(name: String, dataSourceId: String) = DataStoreAction(parse.json) {
-    implicit request =>
-      request.body.validate[DataSourceLike] match {
-        case JsSuccess(dataSource, _) =>
-          DataSetService.updateDataSources(request.dataStore.name, List(dataSource))(GlobalAccessContext)
-          JsonOk
-        case e: JsError =>
-          Logger.warn("Datastore reported invalid json for datasource.")
-          JsonBadRequest(JsError.toFlatJson(e))
-      }
-  }
-
-  def ensureDataStoreHasAccess(dataStore: DataStore, dataSet: DataSet): Fox[Boolean] = {
-    if(dataSet.dataStoreInfo.name == dataStore.name)
-      Full(true)
-    else
-      Failure(Messages("dataStore.notAllowed"))
+  def updateOne(name: String, dataSourceId: String) = DataStoreAction(parse.json) { implicit request =>
+    request.body.validate[DataSourceLike] match {
+      case JsSuccess(dataSource, _) =>
+        DataSetService.updateDataSources(request.dataStore.name, List(dataSource))(GlobalAccessContext)
+        JsonOk
+      case e: JsError =>
+        Logger.warn("Datastore reported invalid json for datasource.")
+        JsonBadRequest(JsError.toFlatJson(e))
+    }
   }
 
   def layerRead(name: String, dataSetName: String, dataLayerName: String) = DataStoreAction.async{ implicit request =>
     for{
       dataSet <- DataSetDAO.findOneBySourceName(dataSetName)(GlobalAccessContext) ?~> Messages("dataSet.notFound")
-      _ <- ensureDataStoreHasAccess(request.dataStore, dataSet)
+      _ <- (dataSet.dataStoreInfo.name == request.dataStore.name) ?~> Messages("dataStore.notAllowed")
       layer <- DataSetService.getDataLayer(dataSet, dataLayerName)(GlobalAccessContext) ?~> Messages("dataLayer.notFound")
     } yield {
       Ok(Json.toJson(layer))

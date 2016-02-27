@@ -62,10 +62,7 @@ class StateLogger
 
   pushNow : ->   # Interface for view & controller
 
-    return @mutexedPush(false).then(
-      -> Toast.success("Saved!")
-      -> Toast.error("Couldn't save. Please try again.")
-    )
+    return @mutexedPush(false)
 
   # alias for `pushNow`
   # needed for save delegation by `Model`

@@ -1,10 +1,12 @@
-_             = require("lodash")
-TaskTypeModel = require("./task_type_model")
+_                = require("lodash")
+TaskTypeModel    = require("./task_type_model")
+SortedCollection = require("../sorted_collection")
 
-class TaskTypeCollection extends Backbone.Collection
+class TaskTypeCollection extends SortedCollection
 
   url : "/api/taskTypes"
   model : TaskTypeModel
+  sortBy : "summary"
 
   parse : (responses) ->
 

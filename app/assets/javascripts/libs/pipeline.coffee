@@ -24,6 +24,14 @@ class Pipeline
       retryTimeMs : 1000
 
 
+  getLastActionPromise : ->
+
+    if @actions.length == 0
+      return (new $.Deferred()).resolve().promise()
+
+    return @actions[@actions.length - 1]._deferred.promise()
+
+
   executeAction : (action) ->
     # action : function that returns a
     #          $.Deferred object

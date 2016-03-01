@@ -315,32 +315,36 @@ object TaskAdministration extends AdminController {
       data
       .split("\n")
       .map(_.split(",").map(_.trim))
-      .filter(_.length >= 9)
+      .filter(_.length >= 19)
 
     def parseParamLine(params: Array[String]) = {
-      val projectName = if (params.length >= 17) params(16) else ""
+      val projectName = if (params.length >= 20) params(19) else ""
       for {
         project <- ProjectService.findIfNotEmpty(projectName) ?~> Messages("project.notFound")
         experienceValue <- params(3).toIntOpt ?~> "Invalid experience value"
         x <- params(4).toIntOpt ?~> "Invalid x value"
         y <- params(5).toIntOpt ?~> "Invalid y value"
         z <- params(6).toIntOpt ?~> "Invalid z value"
-        priority <- params(7).toIntOpt ?~> "Invalid priority value"
-        instances <- params(8).toIntOpt ?~> "Invalid instances value"
+        rotX <- params(7).toFloatOpt ?~> "Invalid x value"
+        rotY <- params(8).toFloatOpt ?~> "Invalid y value"
+        rotZ <- params(9).toFloatOpt ?~> "Invalid z value"
+        priority <- params(10).toIntOpt ?~> "Invalid priority value"
+        instances <- params(11).toIntOpt ?~> "Invalid instances value"
         taskTypeSummary = params(1)
-        team = params(9)
-        minX <- params(10).toIntOpt ?~> "Invalid minX value"
-        minY <- params(11).toIntOpt ?~> "Invalid minY value"
-        minZ <- params(12).toIntOpt ?~> "Invalid minZ value"
-        maxX <- params(13).toIntOpt ?~> "Invalid maxX value"
-        maxY <- params(14).toIntOpt ?~> "Invalid maxY value"
-        maxZ <- params(15).toIntOpt ?~> "Invalid maxZ value"
+        team = params(12)
+        minX <- params(13).toIntOpt ?~> "Invalid minX value"
+        minY <- params(14).toIntOpt ?~> "Invalid minY value"
+        minZ <- params(15).toIntOpt ?~> "Invalid minZ value"
+        maxX <- params(16).toIntOpt ?~> "Invalid maxX value"
+        maxY <- params(17).toIntOpt ?~> "Invalid maxY value"
+        maxZ <- params(18).toIntOpt ?~> "Invalid maxZ value"
         _ <- ensureTeamAdministration(request.user, team).toFox
         taskType <- TaskTypeDAO.findOneBySumnary(taskTypeSummary) ?~> Messages("taskType.notFound")
       } yield {
         val dataSetName = params(0)
         val experience = Experience(params(2), experienceValue)
         val position = Point3D(x, y, z)
+        val rotation = Vector3D(rotX, rotY, rotZ)
         val boundingBox = BoundingBox.createFrom(Point3D(minX, minY, minZ), Point3D(maxX, maxY, maxZ))
         val task = Task(
           taskType._id,
@@ -349,16 +353,16 @@ object TaskAdministration extends AdminController {
           priority,
           instances,
           _project = project.map(_.name))
-        (dataSetName, position, boundingBox, taskType, task)
+        (dataSetName, position, rotation, boundingBox, taskType, task)
       }
     }
 
     def createTasksFromData(data: String) =
       Fox.sequence(extractParamLines(data).map(parseParamLine).toList).map { results =>
         results.flatMap{
-          case Full((dataSetName, position, boundingBox, taskType, task)) =>
+          case Full((dataSetName, position, rotation, boundingBox, taskType, task)) =>
             TaskDAO.insert(task)
-            AnnotationService.createAnnotationBase(task, request.user._id, boundingBox, taskType.settings, dataSetName, position, Vector3D(0,0,0))
+            AnnotationService.createAnnotationBase(task, request.user._id, boundingBox, taskType.settings, dataSetName, position, rotation)
             Full(task)
           case f: Failure =>
             Logger.warn("Failure while creating bulk tasks: " + f)

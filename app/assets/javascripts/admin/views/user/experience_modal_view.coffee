@@ -74,11 +74,11 @@ class ExperienceModal extends Backbone.Marionette.ItemView
       users = @findUsers()
 
       for user in users
-        experiences = user.get("experiences")
+        experiences = _.clone(user.get("experiences"))
         if _.isNumber(experiences[domain])
           delete experiences[domain]
 
-        user.save("experiences" : experiences)
+        user.save({ experiences : experiences }, { wait : true })
         user.trigger("change") #Backbone doesn't support nested models
 
         @hideModal()
@@ -95,12 +95,12 @@ class ExperienceModal extends Backbone.Marionette.ItemView
       users = @findUsers()
 
       for user in users
-        experiences = user.get("experiences")
+        experiences = _.clone(user.get("experiences"))
         if _.isNumber(experiences[domain]) and not setOnly
           experiences[domain] += value
         else
           experiences[domain] = value
-        user.save("experiences" : experiences)
+        user.save({ experiences : experiences }, { wait : true })
         user.trigger("change") #Backbone doesn't support nested models
 
         @hideModal()
@@ -127,6 +127,7 @@ class ExperienceModal extends Backbone.Marionette.ItemView
       @ui.experienceDomain.focus()
 
     return isValid
+
 
   hideModal : ->
 

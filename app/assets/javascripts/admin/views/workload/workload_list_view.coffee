@@ -1,5 +1,5 @@
 ### define
-  underscore : _
+underscore : _
 app : app
 backbone.marionette : marionette
 ./workload_list_item_view : WorkloadListItemView

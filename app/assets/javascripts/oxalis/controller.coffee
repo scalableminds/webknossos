@@ -62,12 +62,9 @@ class Controller
     @model = new Model()
     @urlManager = new UrlManager(this, @model)
 
-    @model.initialize( @controlMode, @urlManager.initialState ).done ({tracing, error}) =>
+    @model.initialize( @controlMode, @urlManager.initialState ).then ({tracing}) =>
 
-      # Do not continue, when there was an error and we got no settings from the server
-      if error
-        return
-
+      console.log(tracing)
       unless tracing.restrictions.allowAccess
         Toast.Error "You are not allowed to access this tracing"
         return

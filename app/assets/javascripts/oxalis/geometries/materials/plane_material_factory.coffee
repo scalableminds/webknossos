@@ -164,7 +164,7 @@ class PlaneMaterialFactory extends AbstractPlaneMaterialFactory
         }
       }
       """
-      {
+    )({
         layers : colorLayerNames
         hasSegmentation : segmentationBinary?
         segmentationName : @sanitizeName( segmentationBinary?.name )

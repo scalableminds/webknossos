@@ -1,5 +1,6 @@
 ### define
 dat.gui : DatGui
+clipboard : Clipboard
 libs/request : Request
 libs/event_mixin : EventMixin
 libs/toast : Toast
@@ -168,6 +169,15 @@ class Gui
 
     $("#dataset-name").text(@model.dataSetName)
 
+    $(".trace-position-copy-button").on "click", ->
+      event.preventDefault()
+      positionString = $("#trace-position-input").val()
+      Clipboard.copy(positionString).then(
+        ->
+          Toast.success("Position copied to clipboard")
+      )
+
+
     $("#trace-position-input").on "change", (event) =>
 
       @setPosFromString(event.target.value)
@@ -183,7 +193,7 @@ class Gui
       event.preventDefault()
       @saveNow().done =>
         if confirm("Are you sure you want to permanently finish this tracing?")
-          window.location.href = event.target.href
+          window.location.href = event.currentTarget.href
 
 
     $("#trace-download-button").click (event) =>
@@ -490,7 +500,7 @@ class Gui
     else
       widthStr = (nm / 1000000).toFixed(1) + " mm</p>"
 
-    $("#zoomFactor").html("<p>Viewport width: " + widthStr )
+    $("#zoomFactor").html("<div>Viewport width: #{widthStr} </div>")
 
 
   setFolderVisibility : (folder, visible) ->

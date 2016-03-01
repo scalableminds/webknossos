@@ -11,7 +11,7 @@ backbone : Backbone
 
 class SortedCollection extends Backbone.Collection
 
-  sortByAttribute : (args...) ->
+  setSorting : (args...) ->
 
     return @setSort(args...)
 

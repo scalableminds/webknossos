@@ -19,6 +19,7 @@ class Router extends Backbone.Router
     "projects"                      : "projects"
     "dashboard"                     : "dashboard"
     "datasets"                      : "dashboard"
+    "datasets/upload"               : "datasetUpload"
     "users/:id/details"             : "dashboard"
     "taskTypes/:id/edit"            : "editTaskType"
     "taskTypes"                     : "taskTypes"
@@ -87,6 +88,11 @@ class Router extends Backbone.Router
     @showAdminView("StatisticView")
 
 
+  datasetUpload : ->
+
+    @showAdminView("DatasetUploadView")
+
+
   users : ->
 
     @showWithPagination("UserListView", "UserCollection")
@@ -144,14 +150,14 @@ class Router extends Backbone.Router
 
   spotlight : ->
 
-    require(["views/spotlight_view", "admin/models/dataset/dataset_collection"], (SpotlightView, DatasetCollection) =>
+   require(["views/spotlight_view", "admin/models/dataset/paginated_dataset_collection"], (SpotlightView, PaginatedDatasetCollection) =>
 
-      collection = new DatasetCollection()
-      view = new SpotlightView(model: collection)
+     collection = new PaginatedDatasetCollection()
+     view = new SpotlightView(collection: collection)
 
-      @changeView(view)
-      @listenTo(collection, "sync", @hideLoading)
-    )
+     @changeView(view)
+     @listenTo(collection, "sync", @hideLoading)
+   )
 
 
   taskOverview : ->

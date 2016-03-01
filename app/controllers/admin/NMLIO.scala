@@ -75,8 +75,7 @@ object NMLIO extends Controller with Secured with TextUtils {
     SkeletonTracingService.createFrom(nmls, None, AnnotationSettings.skeletonDefault).toFox.flatMap {
       content =>
         AnnotationService.createFrom(
-          user._id,
-          user.teams.head.team, //TODO: refactor
+          user,
           content,
           typ,
           name)
@@ -98,14 +97,16 @@ object NMLIO extends Controller with Secured with TextUtils {
     } else {
       val (fileNames, nmls) = parseSuccess.unzip
 
-      createAnnotationFrom(request.user, nmls, AnnotationType.Explorational, nameForNMLs(fileNames))
-      .map { annotation =>
+      createAnnotationFrom(request.user, nmls, AnnotationType.Explorational, nameForNMLs(fileNames)).futureBox.map {
+        case Full(annotation) =>
           JsonOk(
             Json.obj("annotation" -> Json.obj("typ" -> annotation.typ, "id" -> annotation.id)),
             Messages("nml.file.uploadSuccess")
           )
+
+        case _ =>
+          JsonBadRequest(Messages("nml.file.invalid"))
       }
-      .getOrElse(JsonBadRequest(Messages("nml.file.invalid")))
     }
   }
 

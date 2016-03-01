@@ -24,13 +24,16 @@ class DashboardView extends Backbone.Marionette.LayoutView
         <% } %>
         <li <% if (isAdminView) { %> class="active" <% } %> >
           <a href="#" id="tab-tasks" data-toggle="tab">Tasks</a>
+        <li <% if (isAdminView) { %> class="active" <% } %> >
         </li>
         <li>
           <a href="#" id="tab-explorative" data-toggle="tab">Explorative Annotations</a>
         </li>
-        <li>
-          <a href="#" id="tab-tracked-time" data-toggle="tab">Tracked Time</a>
-        </li>
+        <% if (isAdminView) { %>
+          <li>
+            <a href="#" id="tab-tracked-time" data-toggle="tab">Tracked Time</a>
+          </li>
+        <% } %>
       </ul>
       <div class="tab-content">
         <div class="tab-pane active"></div>

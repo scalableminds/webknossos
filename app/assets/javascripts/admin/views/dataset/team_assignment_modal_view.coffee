@@ -2,6 +2,7 @@
 underscore : _
 app : app
 backbone.marionette : marionette
+libs/request : Request
 admin/models/team/team_collection : TeamCollection
 ./team_assignment_modal_item_view : TeamAssignmentModalItemView
 ###
@@ -40,7 +41,9 @@ class TeamAssignmentModalView extends Backbone.Marionette.CompositeView
   initialize : (args) ->
 
     @collection = new TeamCollection()
-    @collection.fetch()
+    @collection.fetch(
+      data : "isEditable=true"
+    )
 
     @dataset = args.dataset
 
@@ -60,11 +63,9 @@ class TeamAssignmentModalView extends Backbone.Marionette.CompositeView
 
     @dataset.set("allowedTeams", allowedTeams)
 
-    $.ajax(
-      url: """/api/datasets/#{@dataset.get("name")}/teams"""
-      type: "POST"
-      contentType: "application/json; charset=utf-8"
-      data: JSON.stringify(allowedTeams)
+    Request.sendJSONReceiveJSON(
+      """/api/datasets/#{@dataset.get("name")}/teams"""
+      data: allowedTeams
     )
 
     @destroyModal()

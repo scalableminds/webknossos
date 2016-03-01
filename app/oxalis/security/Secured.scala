@@ -1,7 +1,17 @@
 package oxalis.security
 
 import scala.concurrent.Future
-
+import com.scalableminds.util.mvc.JsonResult
+import models.user.{UserService, User}
+import play.api.mvc._
+import play.api.mvc.BodyParsers
+import play.api.mvc.Results._
+import play.api.i18n.Messages
+import play.api.mvc.Request
+import play.api.Play
+import play.api.Play.current
+import controllers.routes
+import play.api.libs.concurrent.Akka
 import akka.actor.Props
 import com.scalableminds.util.reactivemongo.GlobalAccessContext
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
@@ -17,6 +27,9 @@ import play.api.libs.concurrent.Akka
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.mvc.Results._
 import play.api.mvc.{Request, _}
+import com.scalableminds.util.reactivemongo.GlobalAccessContext
+import models.team.Role
+import play.api.http.Status._
 
 class AuthenticatedRequest[A](
   val user: User, override val request: Request[A]
@@ -132,5 +145,19 @@ trait Secured extends FoxImplicits {
    * Redirect to login if the user in not authorized.
    */
   private def onUnauthorized(request: RequestHeader) =
-    Results.Redirect(routes.Authentication.login)
+    if (request.path.startsWith("/api/"))
+      new JsonResult(FORBIDDEN)(Messages("notAllowed"))
+    else
+      Results.Redirect(routes.Authentication.login)
+  // --
+
+  /**
+   * Action for authenticated users.
+
+  def IsAuthenticated(f: => String => Request[AnyContent] => Result) =
+    Security.Authenticated(userId, onUnauthorized) {
+      user =>
+        Action(request => f(user)(request))
+    }
+   */
 }

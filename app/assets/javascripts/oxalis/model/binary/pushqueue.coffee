@@ -1,7 +1,7 @@
 ### define
 underscore : _
-libs/array_buffer_socket : ArrayBufferSocket
 libs/unit8array_builder : Uint8ArrayBuilder
+libs/request : Request
 gzip : gzip
 ###
 
@@ -14,11 +14,8 @@ class PushQueue
 
   constructor : (@dataSetName, @cube, @layer, @tracingId, @updatePipeline, @sendData = true) ->
 
+    @url = "#{@layer.url}/data/datasets/#{@dataSetName}/layers/#{@layer.name}/data?cubeSize=#{1 << @cube.BUCKET_SIZE_P}&annotationId=#{@tracingId}&token=#{@layer.token}"
     @queue = []
-
-    @getParams =
-      cubeSize : 1 << @cube.BUCKET_SIZE_P
-      annotationId : tracingId
 
     @push = _.throttle @pushImpl, @THROTTLE_TIME
 
@@ -98,25 +95,11 @@ class PushQueue
       console.log "Pushing batch", batch
       gzip = new Zlib.Gzip(transmitBuffer)
       transmitBuffer = gzip.compress()
-      @getSendSocket().send(transmitBuffer)
 
-
-  getSendSocket : ->
-
-    cubeSize = 1 << @cube.BUCKET_SIZE_P
-
-    params = @getParams
-
-    params.token = @layer.token
-
-    if @socket? then @socket else @socket = new ArrayBufferSocket(
-      senders : [
-        new ArrayBufferSocket.XmlHttpRequest(
-          "#{@layer.url}/data/datasets/#{@dataSetName}/layers/#{@layer.name}/data",
-          params,
-          "PUT", "gzip"
-        )
-      ]
-      requestBufferType : Uint8Array
-      responseBufferType : Uint8Array
-    )
+      Request.$(Request.sendArraybufferReceiveArraybuffer(
+        @url
+        data: transmitBuffer
+        method: "PUT"
+        headers:
+          "Content-Encoding": "gzip"
+      ))

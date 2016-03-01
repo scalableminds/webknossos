@@ -11,7 +11,7 @@ object Node {
 
   implicit object NodeXMLWrites extends SynchronousXMLWrites[Node] {
     def synchronousWrites(n: Node) =
-      <node id={ n.id.toString } radius={ n.radius.toString } x={ n.position.x.toString } y={ n.position.y.toString } z={ (n.position.z).toString } inVp={ n.viewport.toString } inMag={ n.resolution.toString } bitDepth={ n.bitDepth.toString } interpolation={ n.interpolation.toString } time={ n.timestamp.toString }/>
+      <node id={ n.id.toString } radius={ n.radius.toString } x={ n.position.x.toString } y={ n.position.y.toString } z={ n.position.z.toString } rotX={ n.rotation.x.toString } rotY={ n.rotation.y.toString } rotZ={ n.rotation.z.toString } inVp={ n.viewport.toString } inMag={ n.resolution.toString } bitDepth={ n.bitDepth.toString } interpolation={ n.interpolation.toString } time={ n.timestamp.toString }/>
   }
 
   implicit object NodeFormat extends Format[Node] {

@@ -35,7 +35,7 @@ object SkeletonTracingService extends AnnotationContentService with CommonTracin
 
     val trees =
       if (insertStartAsNode)
-        List(Tree.createFrom(start))
+        List(Tree.createFrom(start, rotation))
       else
         Nil
 

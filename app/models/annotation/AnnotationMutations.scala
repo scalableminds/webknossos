@@ -91,7 +91,7 @@ class AnnotationMutations(val annotation: Annotation)
   def cancelTask()(implicit ctx: DBAccessContext) = {
     for {
       task <- annotation.task
-      _ <- TaskService.unassignOnce(task).toFox
+      _ <- TaskService.unassignOnce(task)
       _ <- AnnotationDAO.updateState(annotation, AnnotationState.Unassigned)
     } yield annotation
   }
@@ -101,7 +101,7 @@ class AnnotationMutations(val annotation: Annotation)
 
   def resetToBase()(implicit ctx: DBAccessContext) = {
     for {
-      task <- annotation.task.toFox
+      task <- annotation.task
       annotationContent <- annotation.content
       tracingBase <- task.annotationBase.flatMap(_.content)
       reset <- tracingBase.temporaryDuplicate(id = BSONObjectID.generate.stringify).flatMap(_.saveToDB)

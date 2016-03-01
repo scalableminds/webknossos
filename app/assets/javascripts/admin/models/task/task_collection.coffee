@@ -1,6 +1,6 @@
 _                    = require("lodash")
 PaginationCollection = require("../pagination_collection")
-FormatUtils          = require("format_utils")
+FormatUtils          = require("libs/format_utils")
 
 class TaskCollection extends PaginationCollection
 

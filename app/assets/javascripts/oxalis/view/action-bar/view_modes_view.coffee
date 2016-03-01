@@ -30,6 +30,13 @@ class ViewModesView extends Marionette.ItemView
   initialize : (options) ->
 
     @listenTo(@model, "change:mode", @updateForMode)
+    @listenTo(this, "attach", @afterAttach)
+
+
+  afterAttach : ->
+    for mode, modeValue of @modeMapping
+      $("##{mode}").attr("disabled", modeValue not in @options.model.allowedModes)
+    return
 
 
   changeMode : (evt) ->

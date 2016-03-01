@@ -89,6 +89,27 @@ class Model extends Backbone.Model
       )
 
 
+  determineAllowedModes : ->
+
+    allowedModes = []
+    for allowedMode in @get("settings").allowedModes
+
+      if @getColorBinaries()[0].cube.BIT_DEPTH == 8
+        switch allowedMode
+          when "flight" then allowedModes.push(constants.MODE_ARBITRARY)
+          when "oblique" then allowedModes.push(constants.MODE_ARBITRARY_PLANE)
+
+      switch allowedMode
+        when "volume" then allowedModes.push(constants.MODE_VOLUME)
+
+    if not @get("volumeTracing")?
+      # Plane tracing mode is always allowed (except in VOLUME mode)
+      allowedModes.push(constants.MODE_PLANE_TRACING)
+
+    allowedModes.sort()
+    return allowedModes
+
+
   initializeWithData : (tracing, layers) ->
 
     dataset = @get("dataset")
@@ -154,6 +175,7 @@ class Model extends Backbone.Model
     @set("tracing", tracing)
     @set("settings", tracing.content.settings)
     @set("mode", if isVolumeTracing then constants.MODE_VOLUME else constants.MODE_PLANE_TRACING)
+    @set("allowedModes", @determineAllowedModes())
 
     @initSettersGetter()
     @initialized = true
@@ -266,7 +288,14 @@ class Model extends Backbone.Model
       promises.push( model.save() )
     )
 
-    return Promise.all(promises)
+    return Promise.all(promises).then(
+      ->
+        Toast.success("Saved!")
+        return Promise.resolve(arguments)
+      ->
+        Toast.error("Couldn't save. Please try again.")
+        return Promise.reject(arguments)
+    )
 
 
   # Make the Model compatible between legacy Oxalis style and Backbone.Modela/Views

@@ -90,7 +90,7 @@ object BrainTracing {
           .get()
           .map { response =>
             response.status match {
-              case 200 if(!isSilentFailure(response.body)) =>
+              case 200 if !isSilentFailure(response.body) =>
                 Logger.trace(s"Logged time! User: ${user.email} Time: $hours")
                 true
               case 200 =>

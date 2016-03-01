@@ -86,10 +86,12 @@ object ProjectService extends FoxImplicits {
   def insert(name: String, team: String, owner: User)(implicit ctx: DBAccessContext) =
     ProjectDAO.insert(Project(name, team, owner._id))
 
-  def findIfNotEmpty(name: String)(implicit ctx: DBAccessContext): Fox[Option[Project]] = {
+  def findIfNotEmpty(name: Option[String])(implicit ctx: DBAccessContext): Fox[Option[Project]] = {
     name match {
-      case "" => new Fox(Future.successful(Full(None)))
-      case x => ProjectDAO.findOneByName(x).toFox.map(p => Some(p))
+      case Some("") | None =>
+        new Fox(Future.successful(Full(None)))
+      case Some(x) =>
+        ProjectDAO.findOneByName(x).toFox.map(p => Some(p))
     }
   }
 }

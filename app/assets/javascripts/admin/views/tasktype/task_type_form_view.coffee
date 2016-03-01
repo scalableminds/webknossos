@@ -194,7 +194,7 @@ class TaskTypeFormView extends Marionette.LayoutView
       childViewOptions :
         modelValue: -> return "#{@model.get("name")}"
       data : "amIAnAdmin=true"
-      name: "team"
+      name : "team"
     )
     @team.show(teamSelectionView)
 

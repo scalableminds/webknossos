@@ -62,14 +62,18 @@ class PushQueue
 
   pushImpl : =>
 
-    unless @sendData
-      return
+    return @cube.temporalBucketManager.getAllLoadedPromise().then =>
 
-    while @queue.length
+      unless @sendData
+        return Promise.resolve()
 
-      batchSize = Math.min(@BATCH_SIZE, @queue.length)
-      batch = @queue.splice(0, batchSize)
-      @pushBatch(batch)
+      while @queue.length
+
+        batchSize = Math.min(@BATCH_SIZE, @queue.length)
+        batch = @queue.splice(0, batchSize)
+        @pushBatch(batch)
+
+      return @updatePipeline.getLastActionPromise()
 
 
   pushBatch : (batch) ->
@@ -90,16 +94,18 @@ class PushQueue
             cubeSize: 1 << @cube.BUCKET_SIZE_P),
           @cube.getBucketByZoomedAddress(bucket).getData())
 
-    @updatePipeline.executePassAlongAction( =>
+    return @updatePipeline.executePassAlongAction( =>
 
-      transmitData.dataPromise().then((data) =>
-        Request.sendArraybufferReceiveArraybuffer("#{@layer.url}/data/datasets/#{@dataSetName}/layers/#{@layer.name}/data?token=#{@layer.token}",
-          method : "PUT"
-          data : data
-          headers :
-            "Content-Type" : "multipart/mixed; boundary=#{transmitData.boundary}"
-          timeout : @MESSAGE_TIMEOUT
-          compress : true
+      return transmitData.dataPromise().then((data) =>
+        return Request.sendArraybufferReceiveArraybuffer(
+          "#{@layer.url}/data/datasets/#{@dataSetName}/layers/#{@layer.name}/data?token=#{@layer.token}", {
+            method : "PUT"
+            data : data
+            headers :
+              "Content-Type" : "multipart/mixed; boundary=#{transmitData.boundary}"
+            timeout : @MESSAGE_TIMEOUT
+            compress : true
+          }
         )
       )
     ).then(

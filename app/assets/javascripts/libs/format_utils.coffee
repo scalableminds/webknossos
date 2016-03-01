@@ -18,15 +18,24 @@ class FormatUtils
     )
 
 
-  @formatHash: (id) ->
-    return id.slice(0, 6)
+  @formatHash : (id) ->
+
+    return id.slice(-6)
 
 
-  @formatShortText: (text, maxLength = 100) ->
+  @formatShortText : (text, maxLength = 100) ->
 
     if text.length > maxLength and maxLength > 4
       text.slice(0, maxLength - 4) + " ..."
     else
       text
+
+
+  ###*
+   * Return current date and time
+   ###
+  @formatDate : ->
+
+    return moment().format("YYYY-MM-DD HH:mm")
 
 module.exports = FormatUtils

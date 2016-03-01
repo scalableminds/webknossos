@@ -7,7 +7,6 @@ Request                        = require("libs/request")
 SortTableBehavior              = require("libs/behaviors/sort_table_behavior")
 ExplorativeTracingListItemView = require("./explorative_tracing_list_item_view")
 UserAnnotationsCollection      = require("../models/user_annotations_collection")
-DatasetCollection              = require("admin/models/dataset/dataset_collection")
 
 
 class ExplorativeTracingListView extends Marionette.CompositeView
@@ -21,11 +20,11 @@ class ExplorativeTracingListView extends Marionette.CompositeView
           enctype="multipart/form-data"
           id="upload-and-explore-form"
           class="form-inline inline-block">
-          <div class="fileinput fileinput-new" data-provides="fileinput">
+          <div id="fileinput" class="fileinput fileinput-new" data-provides="fileinput">
             <span class="btn btn-default btn-file">
-              <span class="fileinput-new">
-                <i class="fa fa-upload" id="form-upload-icon"></i>
-                <i class="fa fa-spinner fa-spin hide" id="form-spinner-icon"></i>
+              <span>
+                <i class="fa fa-upload fileinput-new" id="form-upload-icon"></i>
+                <i class="fa fa-spinner fa-spin fileinput-exists" id="form-spinner-icon"></i>
                 Upload NML & explore
               </span>
               <input type="file" name="nmlFile" multiple accept=".nml">
@@ -74,15 +73,17 @@ class ExplorativeTracingListView extends Marionette.CompositeView
     parent : null
 
   events :
-    "change input[type=file]" : "selectFiles"
+    "change.bs.fileinput .fileinput" : "selectFiles"
     "submit @ui.uploadAndExploreForm" : "uploadFiles"
     "click @ui.toggleViewArchivedButton" : "fetchArchivedAnnotations"
     "click @ui.toggleViewOpenButton" : "fetchOpenAnnotations"
     "click @ui.archiveAllButton" : "archiveAll"
 
   ui :
+    fileinput : "#fileinput"
     tracingChooser : "#tracing-chooser"
     uploadAndExploreForm : "#upload-and-explore-form"
+    uploadFileInput : "#upload-and-explore-form input[type=file]"
     formSpinnerIcon : "#form-spinner-icon"
     formUploadIcon : "#form-upload-icon"
     toggleViewArchivedButton : "#toggle-view-archived"
@@ -110,7 +111,7 @@ class ExplorativeTracingListView extends Marionette.CompositeView
 
   selectFiles : (event) ->
 
-    if event.target.files.length
+    if @ui.uploadFileInput[0].files.length
       @ui.uploadAndExploreForm.submit()
 
 
@@ -118,26 +119,17 @@ class ExplorativeTracingListView extends Marionette.CompositeView
 
     event.preventDefault()
 
-    toggleIcon = (state) =>
-
-      @ui.formSpinnerIcon.toggleClass("hide", state)
-      @ui.formUploadIcon.toggleClass("hide", !state)
-
-
-    toggleIcon(false)
-
     form = @ui.uploadAndExploreForm
 
-    Request.always(
-      Request.sendMultipartFormReceiveJSON(
-        form.attr("action")
-        data : new FormData(form[0])
-      ).then((data) ->
+    Request.sendMultipartFormReceiveJSON(
+      form.attr("action")
+      data : new FormData(form[0])
+    ).then(
+      (data) ->
         url = "/annotations/" + data.annotation.typ + "/" + data.annotation.id
         app.router.loadURL(url)
         Toast.message(data.messages)
-      )
-      -> toggleIcon(true)
+      => @ui.fileinput.fileinput("clear")
     )
 
 

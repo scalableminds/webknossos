@@ -2,6 +2,7 @@ app                       = require("app")
 Backbone                  = require("backbone")
 $                         = require("jquery")
 _                         = require("lodash")
+utils                     = require("libs/utils")
 Input                     = require("libs/input")
 Trackball                 = require("three.trackball")
 CameraController          = require("../camera_controller")
@@ -401,7 +402,7 @@ class PlaneController
     switch type
       when null then @moveZ(delta, true)
       when "alt"
-        @zoomPlanes(delta, true)
+        @zoomPlanes(utils.clamp(-1, delta, 1), true)
 
 
   calculateGlobalPos : (clickPos) =>

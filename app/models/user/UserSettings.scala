@@ -70,6 +70,6 @@ object UserSettings extends BasicSettings{
       "sortTreesByName" -> JsBoolean(false),
       "sortCommentsAsc" -> JsBoolean(true),
       "segmentationOpacity" -> JsNumber(20),
-      "sphericalCapRadius" -> JsNumber(500)))
+      "sphericalCapRadius" -> JsNumber(140)))
 
 }

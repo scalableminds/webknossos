@@ -2,7 +2,7 @@
 
 class TracePoint
 
-  constructor : (@type, @id, @pos, @radius, @treeId, @metaInfo, @rotation ) ->
+  constructor : (@type, @id, @pos, @radius, @treeId, @metaInfo, @rotation) ->
 
     @neighbors = []
 

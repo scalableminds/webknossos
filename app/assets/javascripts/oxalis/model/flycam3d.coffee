@@ -26,7 +26,7 @@ class Flycam3d
   ZOOM_STEP_MIN : 0.5
   ZOOM_STEP_MAX : 5
 
-  zoomStep : 1
+  zoomStep : 1.3
   hasChanged : true
   scale : null
   currentMatrix : null

@@ -164,7 +164,7 @@ class PlaneView
     @resizeThrottled()
 
 
-  resize : ->
+  resize : =>
 
     # Call this after the canvas was resized to fix the viewport
     canvas = $("#render-canvas")
@@ -238,9 +238,6 @@ class PlaneView
 
   stop : ->
 
-    if @running
-      $(window).off "resize", => @.resize()
-
     $(".inputcatcher").hide()
 
     @running = false
@@ -252,8 +249,6 @@ class PlaneView
 
     @scaleTrianglesPlane(@model.user.get("scale"))
     $(".inputcatcher").show()
-
-    $(window).on "resize", => @.resize()
 
     @animate()
 

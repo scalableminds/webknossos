@@ -35,7 +35,7 @@ case class DataSet(
     dataSource.map(_.boundingBox.center).getOrElse(Point3D(0, 0, 0))
 
   def defaultRotation =
-    Vector3D(0, 0, 1)
+    Vector3D(0, 0, 0)
 }
 
 object DataSet {

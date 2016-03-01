@@ -2,6 +2,7 @@
 underscore : _
 backbone : Backbone
 nested_obj_model : NestedObjModel
+libs/request : Request
 ###
 
 class DashboardTaskModel extends NestedObjModel
@@ -32,16 +33,8 @@ class DashboardTaskModel extends NestedObjModel
     annotation = @get("annotation")
     url = "/annotations/#{annotation.typ}/#{annotation.id}/finish"
 
-    deferred = new $.Deferred()
-
-    $.get(url).success( (response) =>
-
-      @get("annotation").state.isFinished = true
-      @trigger("change")
-      deferred.resolve(response)
-
-    ).fail( (xhr) ->
-      deferred.reject(xhr.responseJSON)
+    Request.$(Request.receiveJSON(url)).then(
+      (response) =>
+        @get("annotation").state.isFinished = true
+        @trigger("change")
     )
-
-    return deferred.promise()

@@ -6,7 +6,7 @@ require.config(
 
   paths :
     "jquery"              : "../bower_components/jquery/jquery"
-    "underscore"          : "../bower_components/lodash/dist/lodash"
+    "underscore"          : "../bower_components/lodash/lodash"
     "bootstrap"           : "../bower_components/bootstrap/dist/js/bootstrap"
     "slider"              : "../bower_components/seiyria-bootstrap-slider/js/bootstrap-slider"
     "coffee-script"       : "../bower_components/coffee-script/extras/coffee-script"
@@ -32,9 +32,12 @@ require.config(
     "d3"                  : "../bower_components/d3/d3"
     "daterangepicker"     : "../bower_components/bootstrap-daterangepicker/daterangepicker"
     "rangeslider"         : "../bower_components/nouislider/distribute/nouislider.min"
-    "clipboard"           : "../bower_components/clipboard/dist/clipboard.min"
+    "clipboard"           : "../bower_components/clipboard.js/clipboard.min"
     "mjs"                 : "../bower_components/mjs/src/mjs"
     "cola"                : "../bower_components/webcola/WebCola/cola.min"
+    "fetch"               : "../bower_components/fetch/fetch"
+    "promise"             : "../bower_components/es6-promise/promise.min"
+    "fileinput"           : "../bower_components/jasny-bootstrap/js/fileinput"
     "worker"              : "libs/worker_plugin"
     "wrapped_worker"      : "libs/wrapped_worker_plugin"
     "nested_obj_model"    : "libs/nested_obj_model"
@@ -46,8 +49,6 @@ require.config(
     "slider" : [ "bootstrap" ]
     "ace" :
       exports : "ace"
-    "libs/viz" :
-      exports : "Viz"
     "routes" :
       exports : "jsRoutes"
     "three" :

@@ -78,7 +78,7 @@ class TaskTypeItemView extends Backbone.Marionette.CompositeView
   initialize : ->
 
     @listenTo(app.vent, "taskTypeListView:toggleDetails", @toggleDetails)
-    @collection = new TaskCollection(@model.get("id"))
+    @collection = new TaskCollection(null, taskTypeId : @model.get("id"))
 
     # minimize the toggle view on item deletion
     @listenTo(@collection, "remove", (item) =>
@@ -93,8 +93,6 @@ class TaskTypeItemView extends Backbone.Marionette.CompositeView
     if window.confirm("Do you really want to delete this task type?")
       @model.destroy().done((response) =>
         Toast.message(response.messages)
-      ).fail((xhr) ->
-        Toast.message(xhr.responseJSON.messages)
       )
 
   toggleDetails : ->

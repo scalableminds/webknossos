@@ -1,7 +1,9 @@
 package controllers
 
+import com.scalableminds.util.mvc.JsonResult
 import oxalis.security.{AuthenticatedRequest, Secured}
 import models.user.{UsedAnnotationDAO, User, UserDAO}
+import play.api.http.Status._
 import play.api.i18n.Messages
 import play.api.libs.json._
 import play.api.Logger
@@ -47,7 +49,7 @@ object AnnotationController extends Controller with Secured with TracingInformat
   def info(typ: String, id: String, readOnly: Boolean = false) = UserAwareAction.async { implicit request =>
       val annotationId = AnnotationIdentifier(typ, id)
       respondWithTracingInformation(annotationId, readOnly).map { js =>
-          request.userOpt.map { user =>
+          request.userOpt.foreach { user =>
               UsedAnnotationDAO.use(user, annotationId)
           }
           Ok(js)
@@ -87,7 +89,7 @@ object AnnotationController extends Controller with Secured with TracingInformat
       _ <- AnnotationUpdateService.removeAll(typ, id)
     } yield {
       AnnotationUpdateService.store(typ, id, updateableAnnotation.version + 1, combinedUpdate)
-      Logger.info(s"REVERTED using update [$typ - $id, $version]: ${combinedUpdate}")
+      Logger.info(s"REVERTED using update [$typ - $id, $version]: $combinedUpdate")
       JsonOk(result, "annotation.reverted")
     }
   }
@@ -97,7 +99,7 @@ object AnnotationController extends Controller with Secured with TracingInformat
         for {
           dataSetName <- annotation.dataSetName ?~> Messages("dataSet.notSupplied")
           dataSet <- DataSetDAO.findOneBySourceName(dataSetName) ?~> Messages("dataSet.notFound")
-          temporary <- annotation.temporaryDuplicate(true)
+          temporary <- annotation.temporaryDuplicate(keepId = true)
           explorational = temporary.copy(typ = AnnotationType.Explorational)
           savedAnnotation <- explorational.saveToDB
         } yield {
@@ -180,7 +182,6 @@ object AnnotationController extends Controller with Secured with TracingInformat
   def handleUpdates(annotation: Annotation, js: JsValue, version: Int)(implicit request: AuthenticatedRequest[_]): Fox[JsObject] = {
     js match {
       case JsArray(jsUpdates) =>
-        Logger.info("Tried: " + jsUpdates)
         for {
           updated <- annotation.muta.updateFromJson(jsUpdates) //?~> Messages("format.json.invalid")
         } yield {
@@ -188,7 +189,7 @@ object AnnotationController extends Controller with Secured with TracingInformat
           Json.obj("version" -> version)
         }
       case t =>
-        Logger.info("Tried: " + t)
+        Logger.warn("Client sent invalid json tracing update: " + t)
         Failure(Messages("format.json.invalid"))
     }
   }
@@ -216,7 +217,7 @@ object AnnotationController extends Controller with Secured with TracingInformat
             JsonOk(result, "annotation.saved")
           }
         else
-          new Fox(Future.successful(Full(JsonBadRequest(oldJs, "annotation.dirtyState"))))
+          new Fox(Future.successful(Full(new JsonResult(CONFLICT)(oldJs, Messages("annotation.dirtyState")))))
       }
 
       //Logger.info(s"Tracing update [$typ - $id, $version]: ${request.body}")

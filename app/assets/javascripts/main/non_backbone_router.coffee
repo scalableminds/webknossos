@@ -4,6 +4,7 @@ underscore : _
 backbone : Backbone
 app : app
 oxalis/constants : constants
+libs/request : Request
 ###
 
 class NonBackboneRouter extends Backbone.Router
@@ -37,23 +38,18 @@ class NonBackboneRouter extends Backbone.Router
         templateOutput = _.template(templateSource)(data)
         leftTabBar.html(templateOutput)
 
-      $.ajax(
-        url: dataUrl
-        type: 'GET'
-        success: (info) ->
-
+      Request.receiveJSON(
+        dataUrl
+      ).then(
+        (info) ->
           if info.task
             populateTemplate({task : null})
           else
             populateTemplate({task : info.task})
-
-        error: (xhr, status, error) ->
-
-          console.error("Something went wrong when receiving info data", xhr, status, error)
-
-        complete: (info) ->
-
           oxalis = window.oxalis = new Controller(constants.CONTROL_MODE_TRACE)
+
+        (error) ->
+          console.error("Something went wrong when receiving info data", error)
       )
 
       return

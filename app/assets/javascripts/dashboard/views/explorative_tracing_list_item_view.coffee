@@ -3,6 +3,7 @@ underscore : _
 backbone.marionette : marionette
 routes : routes
 libs/toast : Toast
+libs/request : Request
 libs/behaviors/hover_show_hide_behavior : HoverShowHide
 ###
 
@@ -83,29 +84,23 @@ class ExplorativeTracingListItemView extends Backbone.Marionette.ItemView
     target = $(event.target)
     url = target.attr("action")
 
-    $.ajax(
-      url : url
-      type: "post",
-      data: target.serialize(),
-    ).done((response) =>
+    Request.sendUrlEncodedFormReceiveJSON(
+      url
+      data: target
+    ).then( (response) =>
       Toast.message(response.messages)
       newName = @$("input[name='name']").val()
       @model.set("name", newName)
       @render()
-    ).fail((xhr) ->
-      Toast.message(xhr.responseJSON.messages)
     )
 
 
   finishTracing : (event) ->
 
     event.preventDefault()
-    url = $(event.target).attr("href")
+    url = $(event.target).attr("href") || $(event.target.parentElement).attr("href")
 
-    $.get(url).done((response) =>
+    Request.receiveJSON(url).then( (response) =>
       Toast.message(response.messages)
       @model.collection.remove(@model)
-    ).fail((xhr) ->
-      Toast.message(xhr.responseJSON.messages)
     )
-

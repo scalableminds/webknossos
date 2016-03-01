@@ -4,13 +4,25 @@ require [
   "backbone"
   "app"
   "main/errorHandling"
+  "libs/request"
   "bootstrap"
+  "fetch"
+  "promise"
   "libs/core_ext"
-], ($, _, Backbone, app, ErrorHandling) ->
+], ($, _, Backbone, app, ErrorHandling, Request) ->
 
   ErrorHandling.initialize( throwAssertions: false, sendLocalErrors: false )
 
   require ["main/router", "main/non_backbone_router"], (Router, NonBackboneRouter) ->
+
+    app.addInitializer( ->
+      Request.receiveJSON("/api/user", doNotCatch : true)
+        .then((user) ->
+          app.currentUser = user
+          ErrorHandling.setCurrentUser(user)
+          return
+        ).catch((error) -> return)
+    )
 
     app.addInitializer( ->
 
@@ -24,4 +36,3 @@ require [
       $("#flashModal").modal("show")
 
       app.start()
-

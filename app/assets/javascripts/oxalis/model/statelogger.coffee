@@ -81,41 +81,40 @@ class StateLogger
       @newDiffs
     })
 
-    Request.send(
-      url : "/annotations/#{@tracingType}/#{@tracingId}?version=#{(@version + 1)}"
+    deferred = $.Deferred()
+
+    Request.sendJSONReceiveJSON(
+      "/annotations/#{@tracingType}/#{@tracingId}?version=#{(@version + 1)}"
       method : "PUT"
       data : @newDiffs
-      contentType : "application/json"
-    ).then((response) =>
-      @newDiffs = @newDiffs.slice(diffsCurrentLength)
-      @version = response.version
-    ).fail((responseObject) => @pushFailCallback(responseObject, notifyOnFailure))
-    .done(=> @pushDoneCallback())
+    ).then(
+      (response) =>
+        @newDiffs = @newDiffs.slice(diffsCurrentLength)
+        @version = response.version
+        @pushDoneCallback()
+        deferred.resolve()
+      (responseObject) =>
+        @pushFailCallback(responseObject, notifyOnFailure)
+        deferred.resolve()
+    )
+
+    deferred.promise()
 
 
-  pushFailCallback : (responseObject, notifyOnFailure) ->
+  pushFailCallback : (response, notifyOnFailure) ->
 
     $('body').addClass('save-error')
 
-    if responseObject.responseText? && responseObject.responseText != ""
-      # restore whatever is send as the response
-      try
-        response = JSON.parse(responseObject.responseText)
-      catch error
-        console.error "parsing failed.", response
-      if response?.messages?[0]?.error?
-        if response.messages[0].error == "annotation.dirtyState"
-          $(window).off("beforeunload")
-          alert("""
-            It seems that you edited the tracing simultaneously in different windows.
-            Editing should be done in a single window only.
+    # HTTP Code 409 'conflict' for dirty state
+    if response.status == 409
+      $(window).off("beforeunload")
+      alert("""
+        It seems that you edited the tracing simultaneously in different windows.
+        Editing should be done in a single window only.
 
-            In order to restore the current window, a reload is necessary.
-          """)
-          window.location.reload()
-
-        else
-          Toast.message(response.messages)
+        In order to restore the current window, a reload is necessary.
+      """)
+      window.location.reload()
 
 
     setTimeout((=> @pushNow()), @SAVE_RETRY_WAITING_TIME)

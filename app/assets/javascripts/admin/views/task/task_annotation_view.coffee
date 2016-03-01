@@ -2,6 +2,7 @@
 underscore : _
 moment : moment
 libs/toast : Toast
+libs/request : Request
 backbone.marionette : marionette
 admin/models/task/annotation_model : AnnotationModel
 ###
@@ -51,17 +52,11 @@ class TaskAnnotationView extends Backbone.Marionette.ItemView
   callAjax : (evt) ->
 
     evt.preventDefault()
-    $.ajax(
-      url : $(evt.target).prop("href")
-    ).done(
-      (jsonData) =>
-        if(jsonData)
-          @model.set(jsonData)
-    ).always(
-      (response) ->
-        if(response)
-          message = response.messages
-          Toast.message(message)
+
+    Request.receiveJSON($(evt.target).prop("href")).then( (jsonData) =>
+      @model.set(jsonData)
+      message = jsonData.messages
+      Toast.message(message)
     )
 
 

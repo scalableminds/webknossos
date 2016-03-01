@@ -18,6 +18,7 @@ class ArbitraryView
   additionalInfo : ""
 
   isRunning : true
+  animationRequestId : undefined
 
   scene : null
   camera : null
@@ -74,21 +75,24 @@ class ArbitraryView
 
       @resize()
       # start the rendering loop
-      @animate()
+      @animationRequestId = window.requestAnimationFrame(@animate)
       # Dont forget to handle window resizing!
-      $(window).on "resize", @resize
+      $(window).on("resize", @resize)
 
 
   stop : ->
 
     if @isRunning
       @isRunning = false
+      if @animationRequestId?
+        window.cancelAnimationFrame(@animationRequestId)
+        @animationRequestId = undefined
 
       for element in @group.children
         element.setVisibility = element.setVisibility || (v) -> this.visible = v
-        element.setVisibility false
+        element.setVisibility(false)
 
-      $(window).off "resize", @resize
+      $(window).off("resize", @resize)
 
     $('.skeleton-arbitrary-controls').hide()
     $("#arbitrary-info-canvas").hide()
@@ -97,8 +101,9 @@ class ArbitraryView
     $('#add-node-button').show()
 
 
-  animate : ->
+  animate : =>
 
+    @animationRequestId = undefined
     return unless @isRunning
 
     TWEEN.update()
@@ -115,10 +120,10 @@ class ArbitraryView
 
       m = @dataCam.getZoomedMatrix()
 
-      camera.matrix.set m[0], m[4], m[8],  m[12],
+      camera.matrix.set(m[0], m[4], m[8],  m[12],
                         m[1], m[5], m[9],  m[13],
                         m[2], m[6], m[10], m[14],
-                        m[3], m[7], m[11], m[15]
+                        m[3], m[7], m[11], m[15])
 
       camera.matrix.multiply( new THREE.Matrix4().makeRotationY( Math.PI ))
       camera.matrix.multiply( new THREE.Matrix4().makeTranslation( @cameraPosition... ))
@@ -130,13 +135,13 @@ class ArbitraryView
       renderer.enableScissorTest(true)
       renderer.setClearColor(0xFFFFFF, 1);
 
-      renderer.render scene, camera
+      renderer.render(scene, camera)
 
       forceUpdate = false
 
       @trigger("finishedRender")
 
-    window.requestAnimationFrame => @animate()
+    @animationRequestId = window.requestAnimationFrame(@animate)
 
 
   draw : ->

@@ -5,6 +5,7 @@ backbone.marionette : marionette
 admin/models/team/team_collection : TeamCollection
 admin/views/selection_view : SelectionView
 libs/toast : Toast
+libs/request : Request
 ###
 
 class TaskTypeFormView extends Backbone.Marionette.LayoutView
@@ -193,11 +194,10 @@ class TaskTypeFormView extends Backbone.Marionette.LayoutView
       else
         "/api/taskTypes"
 
-    $.ajax(
-      url : url
-      type: "post",
-      data: target.serialize(),
-    ).done((response) =>
+    Request.sendUrlEncodedFormReceiveJSON(
+      url
+      data: target
+    ).then( (response) =>
       Toast.message(response.messages)
 
       if @options.isEditForm
@@ -205,11 +205,6 @@ class TaskTypeFormView extends Backbone.Marionette.LayoutView
       else
         @collection.addJSON(response.newTaskType)
         @render()
-    ).fail((xhr) ->
-      mainMessage = xhr.responseJSON.messages[0]
-      detailedErrors = _.values(xhr.responseJSON.errors)
-      mainMessage.error += detailedErrors
-      Toast.message([mainMessage])
     )
 
 

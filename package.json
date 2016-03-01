@@ -5,6 +5,7 @@
     "type": "git",
     "url": "git://github.com/scalableminds/oxalis.git"
   },
+  "license": "MIT",
   "dependencies": {
     "bower": "*",
     "requirejs": "~2.1.11",

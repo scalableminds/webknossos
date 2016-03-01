@@ -1,10 +1,10 @@
-### define
-underscore : _
-jquery : $
-libs/request : Request
-libs/event_mixin : EventMixin
-libs/toast : Toast
-###
+Backbone      = require("backbone")
+_             = require("lodash")
+$             = require("jquery")
+app           = require("app")
+Request       = require("libs/request")
+Toast         = require("libs/toast")
+ErrorHandling = require("libs/error_handling")
 
 class StateLogger
 
@@ -13,15 +13,13 @@ class StateLogger
 
   constructor : (@flycam, @version, @tracingId, @tracingType, @allowUpdate) ->
 
-    _.extend(this, new EventMixin())
+    _.extend(this, Backbone.Events)
     @mutexedPush = _.mutexDeferred(@pushImpl, -1)
 
     @newDiffs = []
 
     # Push state to server whenever a user moves
-    @flycam.on
-      positionChanged : =>
-        @push()
+    @listenTo(@flycam, "positionChanged", @push)
 
 
   pushDiff : (action, value, push = true) ->
@@ -66,6 +64,13 @@ class StateLogger
 
     return @mutexedPush(false)
 
+  # alias for `pushNow`
+  # needed for save delegation by `Model`
+  # see `model.coffee`
+  save : ->
+
+      return @pushNow()
+
 
   pushImpl : (notifyOnFailure) ->
 
@@ -77,7 +82,7 @@ class StateLogger
 
     diffsCurrentLength = @newDiffs.length
     console.log "Sending data: ", @newDiffs
-    $.assert(@newDiffs.length > 0, "Empty update sent to server!", {
+    ErrorHandling.assert(@newDiffs.length > 0, "Empty update sent to server!", {
       @newDiffs
     })
 
@@ -107,14 +112,14 @@ class StateLogger
 
     # HTTP Code 409 'conflict' for dirty state
     if response.status == 409
-      $(window).off("beforeunload")
+      app.router.off("beforeunload")
       alert("""
         It seems that you edited the tracing simultaneously in different windows.
         Editing should be done in a single window only.
 
         In order to restore the current window, a reload is necessary.
       """)
-      window.location.reload()
+      app.router.reload()
 
 
     setTimeout((=> @pushNow()), @SAVE_RETRY_WAITING_TIME)
@@ -126,3 +131,6 @@ class StateLogger
 
     @trigger("pushDone")
     $('body').removeClass('save-error')
+
+
+module.exports = StateLogger

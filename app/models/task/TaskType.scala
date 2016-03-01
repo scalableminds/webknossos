@@ -3,6 +3,7 @@ package models.task
 import play.api.libs.concurrent.Execution.Implicits._
 import models.basics.SecuredBaseDAO
 import play.api.libs.json._
+import play.api.libs.concurrent.Execution.Implicits._
 import com.scalableminds.util.tools._
 import play.api.libs.functional.syntax._
 import models.annotation.{AnnotationService, AnnotationSettings}
@@ -25,12 +26,21 @@ object TraceLimit {
   implicit val timeSpanFormat = Json.format[TraceLimit]
 }
 
-case class TaskType(summary: String, description: String, expectedTime: TraceLimit, team: String, settings: AnnotationSettings = AnnotationSettings.default, fileName: Option[String] = None, _id: BSONObjectID = BSONObjectID.generate) {
+case class TaskType(
+  summary: String,
+  description: String,
+  expectedTime: TraceLimit,
+  team: String,
+  settings: AnnotationSettings = AnnotationSettings.default,
+  fileName: Option[String] = None,
+  isActive: Boolean = true,
+  _id: BSONObjectID = BSONObjectID.generate) {
+
   val id = _id.stringify
 
   def status(implicit ctx: DBAccessContext) = {
     for {
-      tasks <- TaskDAO.findAllByTaskType(this) getOrElse(List.empty)
+      tasks <- TaskDAO.findAllByTaskType(_id).getOrElse(List.empty)
       taskStatus <- Future.sequence(tasks.map(_.status))
     } yield {
       taskStatus.fold(CompletionStatus(0, 0, 0))(CompletionStatus.combine)
@@ -109,6 +119,19 @@ object TaskTypeDAO extends SecuredBaseDAO[TaskType] {
           DenyEveryone()
       }
     }
+  }
+
+  override def find(query: JsObject = Json.obj())(implicit ctx: DBAccessContext) =
+    super.find(query ++ Json.obj("isActive" -> true))
+
+  override def findOne(query: JsObject = Json.obj())(implicit ctx: DBAccessContext) =
+    super.findOne(query ++ Json.obj("isActive" -> true))
+
+  def findOneById(id: BSONObjectID, includeDeleted: Boolean = false)(implicit ctx: DBAccessContext) = withExceptionCatcher{
+    if(includeDeleted)
+      super.find(Json.obj("_id" -> id)).one[TaskType]
+    else
+      super.find(Json.obj("_id" -> id, "isActive" -> true)).one[TaskType]
   }
 
   def findOneBySumnary(summary: String)(implicit ctx: DBAccessContext) = {

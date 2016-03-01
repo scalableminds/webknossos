@@ -1,16 +1,15 @@
-### define
-jquery : $
-underscore : _
-mjs : MJS
-libs/event_mixin : EventMixin
-libs/request : Request
-libs/input : Input
-../../geometries/arbitrary_plane : ArbitraryPlane
-../../geometries/crosshair : Crosshair
-../../view/arbitrary_view : ArbitraryView
-../../geometries/arbitrary_plane_info : ArbitraryPlaneInfo
-../../constants : constants
-###
+app                = require("app")
+Backbone           = require("backbone")
+$                  = require("jquery")
+_                  = require("lodash")
+Input              = require("libs/input")
+ArbitraryPlane     = require("../../geometries/arbitrary_plane")
+Crosshair          = require("../../geometries/crosshair")
+ArbitraryView      = require("../../view/arbitrary_view")
+ArbitraryPlaneInfo = require("../../geometries/arbitrary_plane_info")
+constants          = require("../../constants")
+{M4x4, V3}         = require("libs/mjs")
+
 
 class ArbitraryController
 
@@ -46,35 +45,41 @@ class ArbitraryController
       @keyboardOnce?.unbind()
 
 
-  constructor : (@model, stats, @gui, @view, @sceneController, @skeletonTracingController) ->
+  constructor : (@model, stats, @view, @sceneController, @skeletonTracingController) ->
 
-    _.extend(this, new EventMixin())
+    _.extend(this, Backbone.Events)
 
     @isStarted = false
 
     @canvas = canvas = $("#render-canvas")
 
     @cam = @model.flycam3d
-    @arbitraryView = new ArbitraryView(canvas, @cam, stats, @view, @model.scaleInfo, @WIDTH)
+    @arbitraryView = new ArbitraryView(canvas, @cam, stats, @view, @WIDTH)
 
     @plane = new ArbitraryPlane(@cam, @model, @WIDTH)
     @arbitraryView.addGeometry @plane
 
+    # render HTML element to indicate recording status
     @infoPlane = new ArbitraryPlaneInfo()
+    @infoPlane.render()
+    $("#render").append(@infoPlane.el)
+
 
     @input = _.extend({}, @input)
 
-    @crosshair = new Crosshair(@cam, model.user.get("crosshairSize"))
+    @crosshair = new Crosshair(@cam, @model.user.get("crosshairSize"))
     @arbitraryView.addGeometry(@crosshair)
 
-    @model.user.on
-      displayCrosshairChanged : (displayCrosshair) =>
-        @crosshair.setVisibility(displayCrosshair)
+    @listenTo(@model.user, "change:displayCrosshair", (model, value) ->
+      @crosshair.setVisibility(value)
+    )
 
-    @bind()
+    @bindToEvents()
     @arbitraryView.draw()
 
     @stop()
+
+    @crosshair.setVisibility(@model.user.get("displayCrosshair"))
 
     # Toggle record
     @setRecord(false)
@@ -120,10 +125,12 @@ class ArbitraryController
 
     getVoxelOffset  = (timeFactor) =>
 
-      return @model.user.get("moveValue3d") * timeFactor / @model.scaleInfo.baseVoxel / constants.FPS
+      return @model.user.get("moveValue3d") * timeFactor / app.scaleInfo.baseVoxel / constants.FPS
 
 
     @input.keyboard = new Input.Keyboard(
+
+      # KeyboardJS is sensitive to ordering (complex combos first)
 
       # Scale plane
       "l"             : (timeFactor) => @arbitraryView.applyScale -@model.user.get("scaleValue")
@@ -139,17 +146,17 @@ class ArbitraryController
         @moved()
       "ctrl + space"   : (timeFactor) => @cam.move [0, 0, -getVoxelOffset(timeFactor)]
 
-      #Rotate in distance
-      "left"          : (timeFactor) => @cam.yaw @model.user.get("rotateValue") * timeFactor, @mode == constants.MODE_ARBITRARY
-      "right"         : (timeFactor) => @cam.yaw -@model.user.get("rotateValue") * timeFactor, @mode == constants.MODE_ARBITRARY
-      "up"            : (timeFactor) => @cam.pitch -@model.user.get("rotateValue") * timeFactor, @mode == constants.MODE_ARBITRARY
-      "down"          : (timeFactor) => @cam.pitch @model.user.get("rotateValue") * timeFactor, @mode == constants.MODE_ARBITRARY
-
       #Rotate at centre
       "shift + left"  : (timeFactor) => @cam.yaw @model.user.get("rotateValue") * timeFactor
       "shift + right" : (timeFactor) => @cam.yaw -@model.user.get("rotateValue") * timeFactor
       "shift + up"    : (timeFactor) => @cam.pitch @model.user.get("rotateValue") * timeFactor
       "shift + down"  : (timeFactor) => @cam.pitch -@model.user.get("rotateValue") * timeFactor
+
+      #Rotate in distance
+      "left"          : (timeFactor) => @cam.yaw @model.user.get("rotateValue") * timeFactor, @mode == constants.MODE_ARBITRARY
+      "right"         : (timeFactor) => @cam.yaw -@model.user.get("rotateValue") * timeFactor, @mode == constants.MODE_ARBITRARY
+      "up"            : (timeFactor) => @cam.pitch -@model.user.get("rotateValue") * timeFactor, @mode == constants.MODE_ARBITRARY
+      "down"          : (timeFactor) => @cam.pitch @model.user.get("rotateValue") * timeFactor, @mode == constants.MODE_ARBITRARY
 
       #Zoom in/out
       "i"             : (timeFactor) => @cam.zoomIn()
@@ -214,29 +221,27 @@ class ArbitraryController
 
   init : ->
 
-    @setClippingDistance @model.user.get("clippingDistance")
+    @setClippingDistance(@model.user.get("clippingDistanceArbitrary"))
     @arbitraryView.applyScale(0)
 
 
-  bind : ->
+  bindToEvents : ->
 
-    @arbitraryView.on "render", (force, event) => @render(force, event)
-    @arbitraryView.on "finishedRender", => @model.skeletonTracing.rendered()
+    @listenTo(@arbitraryView, "render", @render)
 
     for name, binary of @model.binary
-      binary.cube.on "bucketLoaded", => @arbitraryView.draw()
+      @listenTo(binary.cube, "bucketLoaded", @arbitraryView.draw)
 
-    @model.user.on
-
-      crosshairSizeChanged : (value) =>
-        @crosshair.setScale(value)
-
-      sphericalCapRadiusChanged : (value) =>
-        @model.flycam3d.distance = value
-        @plane.setMode @mode
-
-      clippingDistanceArbitraryChanged : (value) =>
-        @setClippingDistance(value)
+    @listenTo(@model.user, "change:crosshairSize", (model, value) ->
+      @crosshair.setScale(value)
+    )
+    @listenTo(@model.user, "change:sphericalCapRadius" : (model, value) ->
+      @model.flycam3d.distance = value
+      @plane.setMode(@mode)
+    )
+    @listenTo(@model.user, "change:clippingDistanceArbitrary", (model, value) ->
+      @setClippingDistance(value)
+    )
 
 
   start : (@mode) ->
@@ -272,7 +277,11 @@ class ArbitraryController
 
   addNode : (position) =>
 
-    @model.skeletonTracing.addNode(position, constants.TYPE_USUAL, constants.ARBITRARY_VIEW, 0)
+    datasetConfig = @model.get("datasetConfiguration")
+    fourBit = if datasetConfig.get("fourBit") then 4 else 8
+    interpolation = datasetConfig.get("interpolation")
+
+    @model.skeletonTracing.addNode(position, constants.TYPE_USUAL, constants.ARBITRARY_VIEW, 0, fourBit, interpolation)
 
 
   setWaypoint : () =>
@@ -294,7 +303,7 @@ class ArbitraryController
     @model.user.set("moveValue3d", (Number) moveValue)
 
 
-  setParticleSize : (delta) =>
+  setParticleSize : (delta) ->
 
     particleSize = @model.user.get("particleSize") + delta
     particleSize = Math.min(constants.MAX_PARTICLE_SIZE, particleSize)
@@ -303,7 +312,7 @@ class ArbitraryController
     @model.user.set("particleSize", (Number) particleSize)
 
 
-  setClippingDistance : (value) =>
+  setClippingDistance : (value) ->
 
     @arbitraryView.setClippingDistance(value)
 
@@ -333,7 +342,7 @@ class ArbitraryController
           activeNode.pos[1] - parent.pos[1],
           activeNode.pos[2] - parent.pos[2]])
         if direction[0] or direction[1] or direction[2]
-          @cam.setDirection( @model.scaleInfo.voxelToNm( direction ))
+          @cam.setDirection(app.scaleInfo.voxelToNm(direction))
           break
         parent = parent.parent
 
@@ -358,8 +367,11 @@ class ArbitraryController
       lastNodeMatrix[13] - matrix[13]
       lastNodeMatrix[14] - matrix[14]
     ]
-    vectorLength = MJS.V3.length(vector)
+    vectorLength = V3.length(vector)
 
     if vectorLength > 10
       @setWaypoint()
       @lastNodeMatrix = matrix
+
+
+module.exports = ArbitraryController

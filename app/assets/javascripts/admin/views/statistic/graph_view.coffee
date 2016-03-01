@@ -1,12 +1,10 @@
-### define
-underscore : _
-app : app
-backbone.marionette : marionette
-c3: c3
-moment : moment
-###
+_          = require("lodash")
+app        = require("app")
+Marionette = require("backbone.marionette")
+c3         = require("c3")
+moment     = require("moment")
 
-class GraphView extends Backbone.Marionette.ItemView
+class GraphView extends Marionette.ItemView
 
   template : _.template("""
     <h3>Overall Weekly Tracing Time</h3>
@@ -21,8 +19,9 @@ class GraphView extends Backbone.Marionette.ItemView
 
   addGraph : ->
 
+
     dates = @model.get("tracingTimes").map((item) -> return moment(item.get("start")).format("YYYY-MM-DD"))
-    weeklyHours = @model.get("tracingTimes").map((item) -> return parseInt moment.duration(item.get("tracingTime")).asHours())
+    weeklyHours = @model.get("tracingTimes").map((item) -> return moment.duration(item.get("tracingTime")).asHours())
 
     graph = c3.generate(
       bindto : "#graph"
@@ -30,7 +29,7 @@ class GraphView extends Backbone.Marionette.ItemView
         x: "date"
         columns: [
           ["date"].concat(dates)
-          ["WeeklyHours"].concat(weeklyHours)
+          ["weeklyHours"].concat(weeklyHours)
         ]
         selection :
           enabled : true
@@ -50,3 +49,5 @@ class GraphView extends Backbone.Marionette.ItemView
   selectDataPoint : (data) ->
 
     app.vent.trigger("graphView:updatedSelection", data)
+
+module.exports = GraphView

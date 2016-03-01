@@ -1,10 +1,12 @@
-### define
-underscore : _
-backbone : Backbone
-./team_model : TeamModel
-###
+_                    = require("lodash")
+Backbone             = require("backbone")
+TeamModel            = require("./team_model")
+SortedCollection     = require("../sorted_collection")
 
-class TeamCollection extends Backbone.Collection
+class TeamCollection extends SortedCollection
 
   url : "/api/teams"
-  model: TeamModel
+  model : TeamModel
+  sortBy : "name"
+
+module.exports = TeamCollection

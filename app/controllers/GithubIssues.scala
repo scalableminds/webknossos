@@ -1,23 +1,29 @@
 package controllers
 
+import javax.inject.Inject
+
 import com.ning.http.client.Realm
 import com.scalableminds.util.mail.Send
 import models.user.User
 import oxalis.mail.DefaultMails
 import oxalis.security.Secured
 import play.api.Play.current
-import play.api.i18n.Messages
+import play.api.i18n.{MessagesApi, Messages}
+import play.api.libs.concurrent.Akka
+import play.api.libs.ws.{WSAuthScheme, WS}
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json.Json._
 import play.api.libs.json._
-import play.api.libs.ws.WS
 import play.api.{Logger, Play}
 import views.html
 import scala.concurrent.Future
 
 case class GithubAuth(user: String, key: String)
 
-object GithubIssues extends Controller with Secured {
+class GithubIssues @Inject() (val messagesApi: MessagesApi) extends Controller with Secured {
+
+  lazy val Mailer =
+    Akka.system(play.api.Play.current).actorSelection("/user/mailActor")
 
   val conf = Play.configuration
 
@@ -54,7 +60,7 @@ object GithubIssues extends Controller with Secured {
       case Some(GithubAuth(ghuser, key)) =>
         WS
           .url(githubUrl + "/repos/scalableminds/oxalis/issues")
-          .withAuth(ghuser, key, Realm.AuthScheme.BASIC)
+          .withAuth(ghuser, key, WSAuthScheme.BASIC)
           .post(issue).map { response =>
           response.status == CREATED
         }
@@ -65,7 +71,7 @@ object GithubIssues extends Controller with Secured {
 
   def mailIssue(user: User, summary: String, description: String) {
     val mail = DefaultMails.issueMail(user.name, user.email, summary, description)
-    Application.Mailer ! Send(mail)
+    Mailer ! Send(mail)
   }
 
   def handleSubmission(user: User, summary: String, description: String, issueType: String) = {

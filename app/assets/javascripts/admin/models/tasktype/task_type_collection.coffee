@@ -1,12 +1,12 @@
-### define
-underscore : _
-./task_type_model : TaskTypeModel
-###
+_                = require("lodash")
+TaskTypeModel    = require("./task_type_model")
+SortedCollection = require("../sorted_collection")
 
-class TaskTypeCollection extends Backbone.Collection
+class TaskTypeCollection extends SortedCollection
 
   url : "/api/taskTypes"
   model : TaskTypeModel
+  sortBy : "summary"
 
   parse : (responses) ->
 
@@ -17,3 +17,5 @@ class TaskTypeCollection extends Backbone.Collection
 
     [item] = @parse([item])
     @add(item)
+
+module.exports = TaskTypeCollection

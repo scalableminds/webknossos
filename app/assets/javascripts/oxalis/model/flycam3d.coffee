@@ -1,9 +1,6 @@
-### define
-libs/event_mixin : EventMixin
-mjs : MJS
-underscore : _
-three : THREE
-###
+_           = require("lodash")
+THREE       = require("three")
+{M4x4, V3}  = require("libs/mjs")
 
 updateMacro = (_this) ->
 
@@ -14,9 +11,9 @@ updateMacro = (_this) ->
 transformationWithDistanceMacro = (_this, transformationFn, transformationArg1, transformationArg2) ->
 
   { currentMatrix } = _this
-  MJS.M4x4.translate(_this.distanceVecNegative, currentMatrix, currentMatrix)
+  M4x4.translate(_this.distanceVecNegative, currentMatrix, currentMatrix)
   transformationFn.call(_this, transformationArg1, transformationArg2)
-  MJS.M4x4.translate(_this.distanceVecPositive, currentMatrix, currentMatrix)
+  M4x4.translate(_this.distanceVecPositive, currentMatrix, currentMatrix)
   updateMacro(_this)
 
 
@@ -33,13 +30,13 @@ class Flycam3d
 
   constructor : (@distance, scale) ->
 
-    _.extend(this, new EventMixin())
+    _.extend(this, Backbone.Events)
 
     @scale = @calculateScaleValues(scale)
 
     @reset()
-    @distanceVecNegative = [0, 0, -distance]
-    @distanceVecPositive = [0, 0, distance]
+    @distanceVecNegative = [0, 0, -@distance]
+    @distanceVecPositive = [0, 0, @distance]
 
 
   calculateScaleValues : (scale) ->
@@ -63,7 +60,7 @@ class Flycam3d
       0, 0, 1, 0,
       0, 0, 0, 1
     ]
-    MJS.M4x4.scale(scale, m, m)
+    M4x4.scale(scale, m, m)
     @currentMatrix = m
 
     if position? and not resetPosition
@@ -114,24 +111,24 @@ class Flycam3d
 
   getMatrix : ->
 
-    MJS.M4x4.clone @currentMatrix
+    M4x4.clone @currentMatrix
 
 
   getZoomedMatrix : ->
 
     matrix = @getMatrix()
-    MJS.M4x4.scale1(@zoomStep, matrix, matrix)
+    M4x4.scale1(@zoomStep, matrix, matrix)
 
 
   setMatrix : (matrix) ->
 
-    @currentMatrix = MJS.M4x4.clone(matrix)
+    @currentMatrix = M4x4.clone(matrix)
     updateMacro(@)
 
 
   move : (vector) ->
 
-    MJS.M4x4.translate(vector, @currentMatrix, @currentMatrix)
+    M4x4.translate(vector, @currentMatrix, @currentMatrix)
     updateMacro(@)
 
 
@@ -185,7 +182,7 @@ class Flycam3d
 
   rotateOnAxisSilent : (angle, axis) ->
 
-    MJS.M4x4.rotate(angle, axis, @currentMatrix, @currentMatrix)
+    M4x4.rotate(angle, axis, @currentMatrix, @currentMatrix)
 
 
   rotateOnAxisDistance : (angle, axis) ->
@@ -270,9 +267,9 @@ class Flycam3d
       pos[0], pos[1], pos[2], 1
     ]
 
-    MJS.M4x4.scale(@scale, matrix2, matrix2)
+    M4x4.scale(@scale, matrix2, matrix2)
 
-    @currentMatrix = @convertToJsArray(MJS.M4x4.mul(matrix2, m))
+    @currentMatrix = @convertToJsArray(M4x4.mul(matrix2, m))
     updateMacro(@)
 
 
@@ -301,3 +298,5 @@ class Flycam3d
 
     matrix = @currentMatrix
     [ matrix[0], matrix[1], matrix[2] ]
+
+module.exports = Flycam3d

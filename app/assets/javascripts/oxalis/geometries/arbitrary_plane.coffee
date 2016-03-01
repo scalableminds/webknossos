@@ -1,10 +1,9 @@
-### define
-three : THREE
-mjs : MJS
-underscore : _
-oxalis/constants : constants
-./materials/arbitrary_plane_material_factory : ArbitraryPlaneMaterialFactory
-###
+_                             = require("lodash")
+backbone                      = require("backbone")
+THREE                         = require("three")
+{M4x4, V3}                    = require("libs/mjs")
+constants                     = require("oxalis/constants")
+ArbitraryPlaneMaterialFactory = require("./materials/arbitrary_plane_material_factory")
 
 # Let's set up our trianglesplane.
 # It serves as a "canvas" where the brain images
@@ -41,18 +40,17 @@ class ArbitraryPlane
 
   constructor : (@cam, @model, @width = 128) ->
 
+    _.extend(@, Backbone.Events)
+
     @mesh = @createMesh()
 
-    @cam.on "changed", =>
-      @isDirty = true
-
-    @model.flycam.on "positionChanged", =>
-      @isDirty = true
+    @listenTo(@cam, "changed", -> @isDirty = true)
+    @listenTo(@model.flycam, "positionChanged", -> @isDirty = true)
 
     for name, binary of @model.binary
       binary.cube.on "bucketLoaded", => @isDirty = true
 
-    throw "width needs to be a power of 2" unless Math.log(width) / Math.LN2 % 1 != 1
+    throw "width needs to be a power of 2" unless Math.log(@width) / Math.LN2 % 1 != 1
 
 
   setMode : ( mode, radius ) ->
@@ -77,10 +75,10 @@ class ArbitraryPlane
 
       matrix = cam.getZoomedMatrix()
 
-      newVertices = MJS.M4x4.transformPointsAffine matrix, @queryVertices
+      newVertices = M4x4.transformPointsAffine matrix, @queryVertices
       newColors = @model.getColorBinaries()[0].getByVerticesSync(newVertices)
 
-      @textureMaterial.setData "color", newColors
+      @textureMaterial.setData("color", newColors)
 
       m = cam.getZoomedMatrix()
 
@@ -89,7 +87,7 @@ class ArbitraryPlane
                       m[2], m[6], m[10], m[14],
                       m[3], m[7], m[11], m[15]
 
-      mesh.matrix.multiply( new THREE.Matrix4().makeRotationY( Math.PI ))
+      mesh.matrix.multiply(new THREE.Matrix4().makeRotationY(Math.PI))
       mesh.matrixWorldNeedsUpdate = true
 
       @isDirty = false
@@ -116,9 +114,9 @@ class ArbitraryPlane
         vertex[1] = y - (Math.floor @width/2)
         vertex[2] = 0
 
-        vector = MJS.V3.sub(vertex, centerVertex, vector)
-        length = MJS.V3.length(vector)
-        vector = MJS.V3.scale(vector, sphericalCapRadius / length, vector)
+        vector = V3.sub(vertex, centerVertex, vector)
+        length = V3.length(vector)
+        vector = V3.scale(vector, sphericalCapRadius / length, vector)
 
         queryVertices[currentIndex++] = centerVertex[0] + vector[0]
         queryVertices[currentIndex++] = centerVertex[1] + vector[1]
@@ -170,3 +168,4 @@ class ArbitraryPlane
 
     plane
 
+module.exports = ArbitraryPlane

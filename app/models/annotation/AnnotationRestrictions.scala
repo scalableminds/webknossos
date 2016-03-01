@@ -63,13 +63,6 @@ object AnnotationRestrictions {
             (annotation._user == Some(user._id) || user.roleInTeam(annotation.team) == Some(Role.Admin)) && !annotation.state.isFinished
         } getOrElse false
       }
-
-      override def allowDownload(user: Option[User]) = {
-        user.map {
-          user =>
-            allowAccess(user)
-        } getOrElse false
-      }
     }
 
   def readonlyAnnotation() =

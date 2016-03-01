@@ -30,4 +30,3 @@ db.users.find().forEach(function(elem){
     db.users.save(elem);
 })
 
-

@@ -1,6 +1,4 @@
-### define
-underscore : _
-###
+_ = require("lodash")
 
 templateFill = (str, params) ->
 
@@ -98,16 +96,9 @@ subPointMacro = _.template(
 
     <%= output %> = lastBucket[pointIndex];
 
-  } else if (bucketIndex < buckets.length && (bucket = buckets[bucketIndex]) != null) {
+  } else if ((bucket = buckets.getBucket(bucketIndex)) != null) {
 
     bucketZoomStep = bucket.zoomStep || 0;
-
-    accessedBuckets.push([
-      sub_x >> (5 + bucketZoomStep),
-      sub_y >> (5 + bucketZoomStep),
-      sub_z >> (5 + bucketZoomStep),
-      bucketZoomStep
-    ]);
 
     <%= pointIndexMacro({ pointIndex : "pointIndex", x : "sub_x", y : "sub_y", z : "sub_z", zoomStep : "bucketZoomStep" }) %>
 
@@ -118,7 +109,7 @@ subPointMacro = _.template(
     <%= output %> = bucket[pointIndex];
 
   } else {
-    if(bucketIndex < buckets.length && missingBuckets.length < 100) {
+    if(buckets.isValidBucket(bucketIndex) && missingBuckets.length < 100) {
 
       missingBuckets.push([
         Math.floor(bucketIndex / sizeZY),
@@ -222,7 +213,6 @@ InterpolationCollector =
     _.template(
       """
       var buffer = new Uint8Array(vertices.length / 3);
-      var accessedBuckets = [];
       var missingBuckets = [];
       var x, y, z;
       var sub_x, sub_y, sub_z;
@@ -233,6 +223,8 @@ InterpolationCollector =
       var bucketIndex, sub_x, sub_y, sub_Z;
       var min_x, min_y, min_z, max_x, max_y, max_z;
       var i, j;
+
+      buckets.reset();
 
       if (buckets) {
 
@@ -277,7 +269,6 @@ InterpolationCollector =
 
       return {
         buffer : buffer,
-        accessedBuckets : accessedBuckets,
         missingBuckets : missingBuckets
       };
 
@@ -287,4 +278,4 @@ InterpolationCollector =
   )
 
 
-
+module.exports = InterpolationCollector

@@ -1,8 +1,9 @@
-![Oxalis logo](https://oxalis.at/assets/images/oxalis.svg)
 # webKnossos
-webKnossos is a web-based annotation tool for large 3d image datasets.
+Cellular-resolution connectomics is currently substantially limited by the throughput and efficiency of data analysis. Current solutions require an efficient integration of automated image analysis with massive manual data annotation. To scale such annotation efforts it is decisive to be able to crowd source data analysis online. Here we present **webKnossos** (former oxalis),
 
-# Dependencies
+![webKnossos logo](https://oxalis.at/assets/images/oxalis.svg)
+
+## Dependencies
 
 * [Java JDK 1.7 (Oracle version)](http://www.oracle.com/technetwork/java/javase/downloads/index.html)
 * [sbt](http://www.scala-sbt.org/)
@@ -10,8 +11,8 @@ webKnossos is a web-based annotation tool for large 3d image datasets.
 * [node.js 0.10.0+](http://nodejs.org/download/)
 * [git](http://git-scm.com/downloads)
 
-# Installation
-## OS X
+## Installation
+#### OS X
 If you are using OS X try using this awesome installer:
 https://gist.github.com/normanrz/9128496
 
@@ -27,21 +28,38 @@ brew install git node mongodb sbt
 # Start mongo
 launchctl load ~/Library/LaunchAgents/homebrew.mxcl.mongodb.plist
 
-# Checkout the Oxalis git repository
+# Checkout the webKnossos git repository
 git clone git@github.com:scalableminds/oxalis.git
 ```
 
+If you are installing *webKnossos* in a virtual machine, please make sure you allocated **enough memory**. A good value is 5gb, you might get away with less.
 
-## Manual Installation
 
-### Java
+#### Ubuntu 15.10
+
+```
+# Adding repository for Oracle java7
+sudo add-apt-repository ppa:webupd8team/java
+
+# Adding repository for sbt
+echo "deb https://dl.bintray.com/sbt/debian /" | sudo tee -a /etc/apt/sources.list.d/sbt.list
+sudo apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv 642AC823
+
+# Installing everything
+sudo apt-get update
+sudo apt-get install mongodb-server nodejs nodejs-legacy scala npm sbt oracle-java7-installer
+```
+
+#### Manual Installation
+
+##### Java
 - install Java JDK 1.7 (from Oracle, OpenJDK is currently not supported)
 - make sure `JAVA_HOME` and `JDK_HOME` are set and `PATH` contains path to JDK
 
-### sbt
+##### sbt
 See: http://www.scala-sbt.org/release/docs/Getting-Started/Setup.html
 
-### mongoDB
+##### mongoDB
 - install mongoDB from http://www.mongodb.org/downloads
 - mongoDB version **2.4.3+ is required**
 - your package managers' versions (e.g. `apt-get`) might be outdated
@@ -62,35 +80,42 @@ sudo vim /etc/environment
 - logout and login again to reload environment.
 - set up database dir (create (your path)/data/db where you want to save your database)
 
-```bash	
+```bash
 mongod --dbpath (your path)
 ```
 
-### node.js
+##### node.js
 * install node from http://nodejs.org/download/
 * node version **0.10.0+ is required**
 * your package managers' versions (e.g. `apt-get`) might be outdated
 * no node modules are required to be installed globally. but installing the following is handy for development
   * [coffee-script](https://github.com/jashkenas/coffeescript)
   * [less](http://lesscss.org/)
-  * [bower](http://bower.io/)
   * [gulp](http://gulpjs.com/)
-  
+
 ```bash
-npm install -g coffee-script less bower gulp
+npm install -g coffee-script less gulp
 ```
 
-# Run
+### Run
 ```bash
 sbt run
 ```
 
 Will fetch all Scala, Java and node dependencies and run the application on Port 9000.
 
-# Credits
+## Test
+```bash
+./start
+gulp webdriver
+gulp test
+```
+
+Will run acceptance-tests against the running server instance on Port 9000.
+
+## Credits
 scalable minds - http://scm.io
 
 # License
 MIT
 
-Includes GraphViz by John Ellson et al. (http://www.graphviz.org/) under EPL

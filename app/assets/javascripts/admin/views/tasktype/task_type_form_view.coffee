@@ -1,14 +1,12 @@
-### define
-underscore : _
-app : app
-backbone.marionette : marionette
-admin/models/team/team_collection : TeamCollection
-admin/views/selection_view : SelectionView
-libs/toast : Toast
-libs/request : Request
-###
+_              = require("lodash")
+app            = require("app")
+Marionette     = require("backbone.marionette")
+TeamCollection = require("admin/models/team/team_collection")
+SelectionView  = require("admin/views/selection_view")
+Toast          = require("libs/toast")
+Request        = require("libs/request")
 
-class TaskTypeFormView extends Backbone.Marionette.LayoutView
+class TaskTypeFormView extends Marionette.LayoutView
 
   template : _.template("""
     <div class="well clearfix">
@@ -196,7 +194,8 @@ class TaskTypeFormView extends Backbone.Marionette.LayoutView
       childViewOptions :
         modelValue: -> return "#{@model.get("name")}"
       data : "amIAnAdmin=true"
-      name: "team"
+      name : "team"
     )
     @team.show(teamSelectionView)
 
+module.exports = TaskTypeFormView

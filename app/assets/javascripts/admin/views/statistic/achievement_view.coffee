@@ -1,22 +1,30 @@
-### define
-underscore : _
-backbone.marionette : marionette
-###
+_          = require("lodash")
+Marionette = require("backbone.marionette")
 
-class AchievementView extends Backbone.Marionette.ItemView
+class AchievementView extends Marionette.ItemView
 
   template : _.template("""
     <h3>Achievements</h3>
     <table class="table">
       <tbod>
         <tr>
-          <td>Number of Annotations</td>
-          <td><%= numberOfAnnotations %></td>
+          <td>Number of Users</td>
+          <td><%- numberOfUsers %></td>
         </tr>
         <tr>
-          <td>Number of Users</td>
-          <td><%= numberOfUsers %></td>
+          <td>Number of Datasets</td>
+          <td><%- numberOfDatasets %></td>
+        </tr>
+        <tr>
+          <td>Number of Annotations</td>
+          <td><%- numberOfAnnotations %></td>
+        </tr>
+        <tr>
+          <td>Number of Trees</td>
+          <td><%- numberOfTrees %></td>
         </tr>
       </tbody>
     </table>
   """)
+
+module.exports = AchievementView

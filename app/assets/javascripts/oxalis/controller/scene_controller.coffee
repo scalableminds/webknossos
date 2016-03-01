@@ -1,26 +1,25 @@
-### define
-../geometries/plane : Plane
-../geometries/skeleton : Skeleton
-../geometries/cube : Cube
-../geometries/contourgeometry : ContourGeometry
-../geometries/volumegeometry : VolumeGeometry
-../model/dimensions : Dimensions
-../../libs/event_mixin : EventMixin
-../constants : constants
-../view/polygons/polygon_factory : PolygonFactory
-three : THREE
-###
+app             = require("app")
+Backbone        = require("backbone")
+Plane           = require("../geometries/plane")
+Skeleton        = require("../geometries/skeleton")
+Cube            = require("../geometries/cube")
+ContourGeometry = require("../geometries/contourgeometry")
+VolumeGeometry  = require("../geometries/volumegeometry")
+Dimensions      = require("../model/dimensions")
+constants       = require("../constants")
+PolygonFactory  = require("../view/polygons/polygon_factory")
+THREE           = require("three")
 
 class SceneController
 
-  # This class collects all the meshes displayed in the Sceleton View and updates position and scale of each
+  # This class collects all the meshes displayed in the Skeleton View and updates position and scale of each
   # element depending on the provided flycam.
 
   CUBE_COLOR : 0x999999
 
   constructor : (@upperBoundary, @flycam, @model) ->
 
-    _.extend(@, new EventMixin())
+    _.extend(this, Backbone.Events)
 
     @current          = 0
     @displayPlane     = [true, true, true]
@@ -31,7 +30,7 @@ class SceneController
     @volumeMeshes   = []
 
     @createMeshes()
-    @bind()
+    @bindToEvents()
 
 
   createMeshes : ->
@@ -58,7 +57,7 @@ class SceneController
       @contour = new ContourGeometry(@model.volumeTracing, @model.flycam)
 
     if @model.skeletonTracing?
-      @skeleton = new Skeleton(@flycam, @model)
+      @skeleton = new Skeleton(@model)
 
     # create Meshes
     @planes = new Array(3)
@@ -92,11 +91,12 @@ class SceneController
       @volumeMeshes = []
 
       for id of triangles
-        volume = new VolumeGeometry(triangles[id], parseInt(id))
+        mappedId = @model.getSegmentationBinary().cube.mapId(parseInt(id))
+        volume = new VolumeGeometry(triangles[id], mappedId)
         @volumeMeshes = @volumeMeshes.concat(volume.getMeshes())
 
       @trigger("newGeometries", @volumeMeshes)
-      @flycam.update()
+      app.vent.trigger("rerender")
       @cellsDeferred = null
 
 
@@ -152,37 +152,38 @@ class SceneController
       @planes[i].setScale(planeScale)
 
 
-  setTextRotation : (rotVec) =>
+  setTextRotation : (rotVec) ->
 
     # TODO: Implement
 
 
-  setDisplayCrosshair : (value) =>
+  setDisplayCrosshair : (value) ->
 
     for plane in @planes
       plane.setDisplayCrosshair value
-    @flycam.update()
+    app.vent.trigger("rerender")
 
 
-  setClippingDistance : (value) =>
+  setClippingDistance : (value) ->
 
     # convert nm to voxel
     for i in constants.ALL_PLANES
-      @planeShift[i] = value * @model.scaleInfo.voxelPerNM[i]
+      @planeShift[i] = value * app.scaleInfo.voxelPerNM[i]
+    app.vent.trigger("rerender")
 
 
-  setInterpolation : (value) =>
+  setInterpolation : (value) ->
 
     for plane in @planes
       plane.setLinearInterpolationEnabled(value)
-    @flycam.update()
+    app.vent.trigger("rerender")
 
 
   setDisplayPlanes : (value) =>
 
     for i in [0..2]
       @displayPlane[i] = value
-    @flycam.update()
+    app.vent.trigger("rerender")
 
 
   getMeshes : =>
@@ -242,16 +243,18 @@ class SceneController
     @skeleton?.setSizeAttenuation(false)
 
 
-  bind : ->
+  bindToEvents : ->
 
-    @model.user.on({
-      clippingDistanceChanged : (value) =>
-        @setClippingDistance(value)
-      displayCrosshairChanged : (value) =>
-        @setDisplayCrosshair(value)
-      interpolationChanged : (value) =>
-        @setInterpolation(value)
-      tdViewDisplayPlanesChanged : (value) =>
-        @setDisplayPlanes value
-      segmentationOpacityChanged : (value) =>
-        @setSegmentationAlpha value  })
+    user = @model.user
+    @listenTo(@model, "newBoundingBox", (bb) -> @setBoundingBox(bb))
+    @listenTo(user, "change:segmentationOpacity", (model, opacity) ->
+      @setSegmentationAlpha(opacity)
+    )
+    @listenTo(user, "change:clippingDistance", (model, value) -> @setClippingDistance(value))
+    @listenTo(user, "change:displayCrosshair", (model, value) -> @setDisplayCrosshair(value))
+    @listenTo(@model.datasetConfiguration, "change:interpolation", (model, value) ->
+      @setInterpolation(value)
+    )
+    @listenTo(user, "change:tdViewDisplayPlanes", (model, value) -> @setDisplayPlanes(value))
+
+module.exports = SceneController

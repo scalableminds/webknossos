@@ -3,11 +3,14 @@
  */
 package controllers
 
+import javax.inject.Inject
+
 import org.apache.commons.io.FilenameUtils
 import org.apache.commons.codec.binary.Base64
 import org.apache.commons.io.FileUtils
 import java.io.File
 import akka.agent.Agent
+import play.api.mvc.WebSocket.FrameFormatter
 import play.api.http.Status
 import play.api.mvc._
 import play.api.libs.json.{JsError, JsSuccess, Json, JsValue}
@@ -20,63 +23,52 @@ import play.api.libs.concurrent.Akka
 import scala.concurrent.duration._
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import models.binary._
-import play.api.i18n.Messages
+import play.api.i18n.{MessagesApi, I18nSupport, Messages}
 import com.scalableminds.braingames.binary.models._
 import play.api.libs.concurrent.Execution.Implicits._
 import com.scalableminds.util.reactivemongo.{GlobalAccessContext, DBAccessContext}
 import com.scalableminds.util.rest.{RESTResponse, RESTCall}
 import play.api.Play
 
-object DataStoreHandler extends DataStoreBackChannelHandler{
+object DataStoreHandler extends DataStoreBackChannelHandler {
 
   lazy val config = Play.current.configuration
 
   def createUserDataLayer(dataStoreInfo: DataStoreInfo, base: DataSource): Fox[UserDataLayer] = {
     Logger.debug("Called to create user data source. Base: " + base.id + " Datastore: " + dataStoreInfo)
-    findByServer(dataStoreInfo.name).toFox.flatMap {
-      dataStore =>
-        val call = RESTCall("POST", s"/data/datasets/${base.id}/layers", Map.empty, Map.empty, Json.obj())
-        dataStore.request(call).flatMap { response =>
-            response.body.validate(UserDataLayer.userDataLayerFormat) match {
-              case JsSuccess(userDataLayer, _) => Full(userDataLayer)
-              case e: JsError => Failure("REST user data layer create returned malformed json: " + e.toString)
-            }
-        }
+    val call = RESTCall("POST", s"/data/datasets/${base.id}/layers", Map.empty, Map.empty, Json.obj())
+    sendRequest(dataStoreInfo.name, call).flatMap { response =>
+      response.body.validate(UserDataLayer.userDataLayerFormat) match {
+        case JsSuccess(userDataLayer, _) => Full(userDataLayer)
+        case e: JsError => Failure("REST user data layer create returned malformed json: " + e.toString)
+      }
     }
   }
 
   def requestDataLayerThumbnail(dataSet: DataSet, dataLayerName: String, width: Int, height: Int): Fox[String] = {
     Logger.debug("Thumbnail called for: " + dataSet.name + " Layer: " + dataLayerName)
-    findByServer(dataSet.dataStoreInfo.name).toFox.flatMap {
-      dataStore =>
-        val call = RESTCall(
-          "GET",
-          s"/data/datasets/${dataSet.urlEncodedName}/layers/$dataLayerName/thumbnail.json",
-          Map.empty,
-          Map("token" -> DataTokenService.oxalisToken, "width" -> width.toString, "height" -> height.toString),
-          Json.obj())
-        dataStore.request(call).flatMap { response =>
-            (response.body \ "value").asOpt[String]
-        }
+    val call = RESTCall(
+      "GET",
+      s"/data/datasets/${dataSet.urlEncodedName}/layers/$dataLayerName/thumbnail.json",
+      Map.empty,
+      Map("token" -> DataTokenService.oxalisToken, "width" -> width.toString, "height" -> height.toString),
+      Json.obj())
+
+    sendRequest(dataSet.dataStoreInfo.name, call).flatMap { response =>
+      (response.body \ "value").asOpt[String]
     }
   }
 
   def progressForImport(dataSet: DataSet): Fox[RESTResponse] = {
     Logger.debug("Import rogress called for: " + dataSet.name)
-    findByServer(dataSet.dataStoreInfo.name).toFox.flatMap {
-      dataStore =>
-        val call = RESTCall("GET", s"/data/datasets/${dataSet.urlEncodedName}/import", Map.empty, Map.empty, Json.obj())
-        dataStore.request(call)
-    }
+    val call = RESTCall("GET", s"/data/datasets/${dataSet.urlEncodedName}/import", Map.empty, Map.empty, Json.obj())
+    sendRequest(dataSet.dataStoreInfo.name, call)
   }
 
   def importDataSource(dataSet: DataSet): Fox[RESTResponse] = {
     Logger.debug("Import called for: " + dataSet.name)
-    findByServer(dataSet.dataStoreInfo.name).toFox.flatMap {
-      dataStore =>
-        val call = RESTCall("POST", s"/data/datasets/${dataSet.urlEncodedName}/import", Map.empty, Map.empty, Json.obj())
-        dataStore.request(call)
-    }
+    val call = RESTCall("POST", s"/data/datasets/${dataSet.urlEncodedName}/import", Map.empty, Map.empty, Json.obj())
+    sendRequest(dataSet.dataStoreInfo.name, call)
   }
 
   def uploadDataSource(upload: DataSourceUpload) = {
@@ -93,7 +85,7 @@ object DataStoreHandler extends DataStoreBackChannelHandler{
       }
     }).futureBox.map {
       case Full(r) => r
-      case Empty => Failure(Messages("dataStore.notAvailable"))
+      case Empty => Failure("dataStore.notAvailable")
     }
   }
 }
@@ -129,7 +121,7 @@ object WebSocketRESTServer {
 
     val iteratee = Iteratee.foreach[Array[Byte]] {
       it =>
-        Logger.trace("Got WS message: " + it.size)
+        Logger.trace("Got WS message: " + it.length)
         ws.response(it)
     }.map{ _ =>
       Logger.debug("Websocket closed.")
@@ -161,7 +153,7 @@ case class WebSocketRESTServer(out: Channel[Array[Byte]]) extends FoxImplicits{
   }
 
   def cancelRESTCall(uuid: String) = {
-    openCalls().get(uuid).map {
+    openCalls().get(uuid).foreach {
       promise =>
         if(promise.trySuccess(Failure("REST call timed out.")))
           Logger.warn("REST request timed out. UUID: " + uuid)
@@ -175,8 +167,8 @@ case class WebSocketRESTServer(out: Channel[Array[Byte]]) extends FoxImplicits{
       json.validate[RESTResponse] match {
         case JsSuccess(response, _) =>
           if(response.status != Status.OK.toString)
-            Logger.warn("Failed (Code: "+response.status+") with REST result: " + response)
-          openCalls().get(response.uuid).map {
+            Logger.warn(s"Failed (Code: ${response.status})  REST call to '${response.path}'(${response.uuid}). Result: '${response.body.toString().take(500)}'")
+          openCalls().get(response.uuid).foreach {
             promise =>
               promise.trySuccess(Full(response)) match {
                 case true =>
@@ -199,26 +191,26 @@ case class WebSocketRESTServer(out: Channel[Array[Byte]]) extends FoxImplicits{
   }
 }
 
-object DataStoreController extends Controller with DataStoreActionHelper{
+class DataStoreController @Inject() (val messagesApi: MessagesApi) extends Controller with DataStoreActionHelper{
 
   def show = DataStoreAction{ implicit request =>
     Ok(DataStore.dataStoreFormat.writes(request.dataStore))
   }
 
-  def backChannel(name: String, key: String) = WebSocket.async[Array[Byte]] {
+  def backChannel(name: String, key: String) = WebSocket.tryAccept[Array[Byte]] {
     implicit request =>
       Logger.info(s"Got a backchannel request for $name.")
       DataStoreDAO.findByKey(key)(GlobalAccessContext).futureBox.map {
         case Full(dataStore) =>
-          val (iterator, enumerator, restChannel) = WebSocketRESTServer.create
+          val (iterator, enumerator, restChannel) = WebSocketRESTServer.create()
           DataStoreHandler.register(dataStore.name, restChannel)
           Logger.info(s"Key $name connected.")
-          (iterator, enumerator)
+          Right(iterator, enumerator)
         case _ =>
           Logger.warn(s"$name  tried to connect with invalid key '$key'.")
-          (Iteratee.ignore[Array[Byte]], Enumerator.empty[Array[Byte]])
+          Right(Iteratee.ignore[Array[Byte]], Enumerator.empty[Array[Byte]])
       }
-  }
+  }(FrameFormatter.byteArrayFrame)
 
   def updateAll(name: String) = DataStoreAction(parse.json) {
     implicit request =>
@@ -232,36 +224,22 @@ object DataStoreController extends Controller with DataStoreActionHelper{
       }
   }
 
-  def updateOne(name: String, dataSourceId: String) = DataStoreAction(parse.json) {
-    implicit request =>
-      request.body.validate[DataSourceLike] match {
-        case JsSuccess(dataSource, _) =>
-          DataSetService.updateDataSources(request.dataStore.name, List(dataSource))(GlobalAccessContext)
-          JsonOk
-        case e: JsError =>
-          Logger.warn("Datastore reported invalid json for datasource.")
-          JsonBadRequest(JsError.toFlatJson(e))
-      }
-  }
-
-  def ensureDataStoreHasAccess(dataStore: DataStore, dataSet: DataSet): Fox[Boolean] = {
-    if(dataSet.dataStoreInfo.name == dataStore.name)
-      Full(true)
-    else
-      Failure(Messages("dataStore.notAllowed"))
-  }
-
-  def getDataLayer(dataSet: DataSet, dataLayerName: String)(implicit ctx: DBAccessContext): Fox[DataLayer] = {
-    dataSet
-      .dataSource.flatMap(_.getDataLayer(dataLayerName)).toFox
-      .orElse(UserDataLayerDAO.findOneByName(dataLayerName).filter(_.dataSourceName == dataSet.name).map(_.dataLayer))
+  def updateOne(name: String, dataSourceId: String) = DataStoreAction(parse.json) { implicit request =>
+    request.body.validate[DataSourceLike] match {
+      case JsSuccess(dataSource, _) =>
+        DataSetService.updateDataSources(request.dataStore.name, List(dataSource))(GlobalAccessContext)
+        JsonOk
+      case e: JsError =>
+        Logger.warn("Datastore reported invalid json for datasource.")
+        JsonBadRequest(JsError.toFlatJson(e))
+    }
   }
 
   def layerRead(name: String, dataSetName: String, dataLayerName: String) = DataStoreAction.async{ implicit request =>
     for{
       dataSet <- DataSetDAO.findOneBySourceName(dataSetName)(GlobalAccessContext) ?~> Messages("dataSet.notFound")
-      _ <- ensureDataStoreHasAccess(request.dataStore, dataSet)
-      layer <- getDataLayer(dataSet, dataLayerName)(GlobalAccessContext) ?~> Messages("dataLayer.notFound")
+      _ <- (dataSet.dataStoreInfo.name == request.dataStore.name) ?~> Messages("dataStore.notAllowed")
+      layer <- DataSetService.getDataLayer(dataSet, dataLayerName)(GlobalAccessContext) ?~> Messages("dataLayer.notFound")
     } yield {
       Ok(Json.toJson(layer))
     }
@@ -269,13 +247,13 @@ object DataStoreController extends Controller with DataStoreActionHelper{
 
 }
 
-trait DataStoreActionHelper extends FoxImplicits with Results{
+trait DataStoreActionHelper extends FoxImplicits with Results with I18nSupport{
   import play.api.mvc._
 
   class RequestWithDataStore[A](val dataStore: DataStore, request: Request[A]) extends WrappedRequest[A](request)
 
   object DataStoreAction extends ActionBuilder[RequestWithDataStore] {
-    def invokeBlock[A](request: Request[A], block: (RequestWithDataStore[A]) => Future[SimpleResult]) = {
+    def invokeBlock[A](request: Request[A], block: (RequestWithDataStore[A]) => Future[Result]) = {
       request.getQueryString("key").toFox.flatMap(key => DataStoreDAO.findByKey(key)(GlobalAccessContext)).flatMap {
         dataStore =>
           block(new RequestWithDataStore(dataStore, request))

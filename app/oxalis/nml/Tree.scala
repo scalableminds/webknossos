@@ -3,7 +3,7 @@ package oxalis.nml
 import com.scalableminds.util.image.Color
 import com.scalableminds.util.geometry.Point3D
 
-case class Tree(treeId: Int, nodes: Set[Node], edges: Set[Edge], color: Color, name: String = "") extends TreeLike {
+case class Tree(treeId: Int, nodes: Set[Node], edges: Set[Edge], color: Option[Color], name: String = "") extends TreeLike {
 
   def addNodes(ns: Set[Node]) = this.copy(nodes = nodes ++ ns)
 
@@ -36,11 +36,15 @@ case class Tree(treeId: Int, nodes: Set[Node], edges: Set[Edge], color: Color, n
       nodes = nodes.map(node => node.copy(id = f(node.id))),
       edges = edges.map(edge => edge.copy(source = f(edge.source), target = f(edge.target))))
   }
+
+  def addNamePrefix(prefix: String) = {
+    this.copy(name = prefix + name)
+  }
 }
 
 object Tree {
-  def empty = Tree(1, Set.empty, Set.empty, Color(1, 0, 0, 0))
+  def empty = Tree(1, Set.empty, Set.empty, None)
 
   def createFrom(node: Point3D) =
-    Tree(1, Set(Node(1, node)), Set.empty, Color.RED)
+    Tree(1, Set(Node(1, node)), Set.empty, None)
 }

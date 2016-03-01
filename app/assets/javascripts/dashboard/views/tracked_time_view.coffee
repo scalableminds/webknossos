@@ -1,11 +1,9 @@
-### define
-underscore : _
-backbone.marionette : marionette
-dashboard/views/dashboard_task_list_item_view : DashboardTaskListItemView
-routes : routes
-###
+_                         = require("lodash")
+Marionette                = require("backbone.marionette")
+DashboardTaskListItemView = require("./dashboard_task_list_item_view")
+routes                    = require("routes")
 
-class TrackedTimeView extends Backbone.Marionette.CompositeView
+class TrackedTimeView extends Marionette.CompositeView
 
   template : _.template("""
     <h3>Tracked Time</h3>
@@ -19,8 +17,8 @@ class TrackedTimeView extends Backbone.Marionette.CompositeView
       <tbody>
       <% _.each(formattedLogs, function(entry) { %>
         <tr>
-          <td> <%= entry.interval %> </td>
-          <td> <%= entry.time %> </td>
+          <td> <%- entry.interval %> </td>
+          <td> <%- entry.time %> </td>
         </tr>
       <% }) %>
       </tbody>
@@ -33,3 +31,6 @@ class TrackedTimeView extends Backbone.Marionette.CompositeView
     @listenTo(@model, "sync", @render)
 
     @model.fetch()
+
+
+module.exports = TrackedTimeView

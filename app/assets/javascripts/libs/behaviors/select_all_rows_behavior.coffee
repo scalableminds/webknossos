@@ -1,8 +1,7 @@
-### define
-backbone.marionette : Marionette
-###
+Marionette = require("backbone.marionette")
 
-class SelectAllRowsBehavior extends Backbone.Marionette.Behavior
+class SelectAllRowsBehavior extends Marionette.Behavior
+
 
   events :
     "change input.select-all-rows" : "selectAllRows"
@@ -12,3 +11,5 @@ class SelectAllRowsBehavior extends Backbone.Marionette.Behavior
 
     @$el.find("tbody input.select-row").prop("checked", evt.target.checked)
     return
+
+module.exports = SelectAllRowsBehavior

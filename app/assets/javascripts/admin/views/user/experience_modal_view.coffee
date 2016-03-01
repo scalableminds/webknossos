@@ -1,9 +1,7 @@
-### define
-underscore : _
-backbone.marionette : marionette
-###
+_          = require("lodash")
+Marionette = require("backbone.marionette")
 
-class ExperienceModal extends Backbone.Marionette.ItemView
+class ExperienceModalView extends Marionette.ItemView
 
   tagName : "div"
   className : "modal fade"
@@ -79,7 +77,6 @@ class ExperienceModal extends Backbone.Marionette.ItemView
           delete experiences[domain]
 
         user.save({ experiences : experiences }, { wait : true })
-        user.trigger("change") #Backbone doesn't support nested models
 
         @hideModal()
 
@@ -101,7 +98,6 @@ class ExperienceModal extends Backbone.Marionette.ItemView
         else
           experiences[domain] = value
         user.save({ experiences : experiences }, { wait : true })
-        user.trigger("change") #Backbone doesn't support nested models
 
         @hideModal()
 
@@ -133,3 +129,4 @@ class ExperienceModal extends Backbone.Marionette.ItemView
 
     @$el.modal("hide")
 
+module.exports = ExperienceModalView

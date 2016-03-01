@@ -1,7 +1,6 @@
-import akka.actor.{PoisonPill, Props}
+import akka.actor.Props
 import com.scalableminds.util.reactivemongo.GlobalDBAccess
 import com.scalableminds.util.security.SCrypt
-import com.scalableminds.datastore.services.BinaryDataService
 import models.binary.{DataStore, DataStoreDAO}
 import models.team._
 import net.liftweb.common.Full
@@ -15,17 +14,13 @@ import com.scalableminds.util.mail.Mailer
 import play.api.libs.concurrent.Execution.Implicits._
 import com.typesafe.config.Config
 import play.airbrake.Airbrake
-import com.kenshoo.play.metrics._
-import com.codahale.metrics.JmxReporter
 import play.api.libs.json.Json
 import play.api.mvc._
 
-object Global extends WithFilters(MetricsFilter) with GlobalSettings {
+object Global extends GlobalSettings {
 
   override def onStart(app: Application) {
     val conf = app.configuration
-
-    startJMX()
 
     startActors(conf.underlying, app)
 
@@ -33,13 +28,6 @@ object Global extends WithFilters(MetricsFilter) with GlobalSettings {
       InitialData.insert()
     }
     super.onStart(app)
-  }
-
-  def startJMX() = {
-    JmxReporter
-      .forRegistry(MetricsRegistry.default)
-      .build
-      .start
   }
 
   def startActors(conf: Config, app: Application) {
@@ -92,8 +80,8 @@ object InitialData extends GlobalDBAccess {
           true,
           SCrypt.hashPassword("secret"),
           SCrypt.md5("secret"),
-          List(TeamMembership(mpi.name, Role.Admin)),
-          UserSettings.defaultSettings))
+          List(TeamMembership(mpi.name, Role.Admin)))
+        )
     }
   }
 
@@ -122,7 +110,7 @@ object InitialData extends GlobalDBAccess {
   def insertLocalDataStore() = {
     DataStoreDAO.findOne(Json.obj("name" -> "localhost")).futureBox.map { maybeStore =>
       if (maybeStore.isEmpty) {
-        DataStoreDAO.insert(DataStore("localhost", "", "something-secure"))
+        DataStoreDAO.insert(DataStore("localhost", "something-secure"))
       }
     }
   }

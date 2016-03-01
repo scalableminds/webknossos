@@ -1,8 +1,8 @@
-### define
-jquery : $
-underscore : _
-libs/toast : Toast
-###
+$             = require("jquery")
+_             = require("lodash")
+Toast         = require("./toast")
+ErrorHandling = require("./error_handling")
+pako          = require("pako")
 
 Request =
 
@@ -48,13 +48,38 @@ Request =
   # OUT: json
   sendMultipartFormReceiveJSON : (url, options = {}) ->
 
+    toFormData = (input, form, namespace) ->
+      formData = form || new FormData()
+
+      for key, value of input
+
+        if namespace
+          formKey = "#{namespace}[#{key}]"
+        else
+          formKey = key
+
+        if _.isArray(value)
+          for val in value
+            formData.append("#{formKey}[]", val)
+
+        else if value instanceof File
+          formData.append("#{formKey}[]", value, value.name)
+
+        else if _.isObject(value)
+          toFormData(value, formData, key)
+
+        else # string
+          ErrorHandling.assert(_.isString(value))
+          formData.append(formKey, value)
+
+      return formData
+
+
     body = if options.data instanceof FormData
         options.data
       else
-        formData = new FormData()
-        for key of options.data
-          formData.append(key, options.data[key])
-        formData
+        toFormData(options.data)
+
 
     return @receiveJSON(
       url,
@@ -104,6 +129,10 @@ Request =
       else
         options.data.buffer.slice(0, options.data.byteLength)
 
+    if options.compress
+      body = pako.gzip(body)
+      options.headers["Content-Encoding"] = "gzip"
+
     return @receiveArraybuffer(
       url,
       _.defaultsDeep(options,
@@ -122,8 +151,23 @@ Request =
       credentials : "same-origin"
       headers : {}
       doNotCatch : false
+      params : null
 
     options = _.defaultsDeep(options, defaultOptions)
+
+    # Append URL parameters to the URL
+    if options.params
+      params = options.params
+
+      if _.isString(params)
+        appendix = params
+      else if _.isObject(params)
+        appendix = _.map(params, (value, key) -> return "#{key}=#{value}").join("&")
+      else
+        throw new Error("options.params is expected to be a string or object for a request!")
+
+      url += "?#{appendix}"
+
 
     headers = new Headers()
     for name of options.headers
@@ -144,12 +188,14 @@ Request =
 
 
   timeoutPromise : (timeout) ->
+
     return new Promise( (resolve, reject) ->
       setTimeout(
         -> reject("timeout")
         timeout
       )
     )
+
 
   handleStatus : (response) ->
 
@@ -213,4 +259,7 @@ Request =
         deferred.reject(error)
     )
 
-    deferred.promise()
+    return deferred.promise()
+
+
+module.exports = Request

@@ -1,10 +1,9 @@
-### define
-jquery : $
-../libs/toast : Toast
-./constants : constants
-./view/modal : modal
-three : THREE
-###
+$         = require("jquery")
+app       = require("../app")
+Toast     = require("../libs/toast")
+THREE     = require("three")
+constants = require("./constants")
+modal     = require("./view/modal")
 
 class View
 
@@ -19,14 +18,13 @@ class View
 
     @setTheme(constants.THEME_BRIGHT)
 
-    # disable loader, show oxalis
-    $("#loader").hide()
-    $("#container").removeClass("hide")
+    # disable loader
+    $("#loader").addClass("hidden")
 
 
   toggleTheme : ->
 
-    if @currentTheme is constants.THEME_BRIGHT
+    if @theme is constants.THEME_BRIGHT
       @setTheme(constants.THEME_DARK)
     else
       @setTheme(constants.THEME_BRIGHT)
@@ -34,14 +32,18 @@ class View
 
   setTheme : (theme) ->
 
+    @theme = theme
+    app.vent.trigger("view:setTheme", theme)
+
     if theme is constants.THEME_BRIGHT
       $("body").attr('class', 'bright')
     else
       $("body").attr('class', 'dark')
 
-    @currentTheme = theme
 
 
   isWebGlSupported : ->
 
     return window.WebGLRenderingContext and document.createElement('canvas').getContext('experimental-webgl')
+
+module.exports = View

@@ -1,24 +1,20 @@
 package controllers.admin
 
-import play.mvc.Security.Authenticated
-import oxalis.security.{AuthenticatedRequest, Secured}
-import oxalis.annotation._
-import views._
+import javax.inject.Inject
+
 import models.task._
 import play.api.data.Forms._
 import play.api.data.Form
-import play.api.i18n.Messages
-import models.tracing._
-import play.api.templates.Html
-import controllers.{Controller, Application}
+import play.api.i18n.{MessagesApi, Messages}
+import play.twirl.api.Html
 import models.annotation.AnnotationDAO
 import play.api.libs.concurrent.Execution.Implicits._
 import com.scalableminds.util.tools.Fox
-import play.api.mvc.SimpleResult
+import play.api.mvc.Result
 import scala.concurrent.Future
 import play.api.libs.json._
 
-object TaskTypeAdministration extends AdminController {
+class TaskTypeAdministration @Inject() (val messagesApi: MessagesApi) extends AdminController {
 
   val taskTypeForm = Form(
     mapping(
@@ -35,7 +31,7 @@ object TaskTypeAdministration extends AdminController {
       TaskType.fromForm)(TaskType.toForm)).fill(TaskType.empty)
 
   def empty = Authenticated{ implicit request =>
-    Ok(views.html.main()(Html.empty))
+    Ok(views.html.main()(Html("")))
   }
 
   def create = Authenticated.async(parse.urlFormEncoded) { implicit request =>
@@ -51,9 +47,9 @@ object TaskTypeAdministration extends AdminController {
 
       success = { t =>
         for{
-          _ <- ensureTeamAdministration(request.user, t.team).toFox
+          _ <- ensureTeamAdministration(request.user, t.team)
           _ <- TaskTypeDAO.insert(t)
-          ttJson <- TaskType.transformToJsonWithStatus(t).toFox
+          ttJson <- TaskType.transformToJsonWithStatus(t)
         } yield {
           JsonOk(
             Json.obj("newTaskType" -> ttJson),
@@ -65,9 +61,9 @@ object TaskTypeAdministration extends AdminController {
 
   def get(taskTypeId: String) = Authenticated.async{ implicit request =>
     for {
-      taskType <- TaskTypeDAO.findOneById(taskTypeId).toFox ?~> Messages("taskType.notFound")
-      _ <- ensureTeamAdministration(request.user, taskType.team).toFox
-      ttJson <- TaskType.transformToJsonWithStatus(taskType).toFox
+      taskType <- TaskTypeDAO.findOneById(taskTypeId) ?~> Messages("taskType.notFound")
+      _ <- ensureTeamAdministration(request.user, taskType.team)
+      ttJson <- TaskType.transformToJsonWithStatus(taskType)
     } yield {
       Ok(ttJson)
     }
@@ -84,7 +80,7 @@ object TaskTypeAdministration extends AdminController {
   }
 
   def editTaskTypeForm(taskTypeId: String) = Authenticated.async(parse.urlFormEncoded) { implicit request =>
-    def evaluateForm(taskType: TaskType): Fox[SimpleResult] = {
+    def evaluateForm(taskType: TaskType): Fox[Result] = {
       val boundForm = taskTypeForm.bindFromRequest
       boundForm.fold(
         hasErrors = { formWithErrors =>
@@ -96,11 +92,11 @@ object TaskTypeAdministration extends AdminController {
         success = { t =>
           val updatedTaskType = t.copy(_id = taskType._id)
           for {
-            _ <- TaskTypeDAO.update(taskType._id, updatedTaskType).toFox
-            tasks <- TaskDAO.findAllByTaskType(taskType).toFox
-            _ <- ensureTeamAdministration(request.user, updatedTaskType.team).toFox
+            _ <- TaskTypeDAO.update(taskType._id, updatedTaskType)
+            tasks <- TaskDAO.findAllByTaskType(taskType._id)
+            _ <- ensureTeamAdministration(request.user, updatedTaskType.team)
           } yield {
-            tasks.map(task => AnnotationDAO.updateAllUsingNewTaskType(task, updatedTaskType.settings))
+            tasks.map(task => AnnotationDAO.updateAllOfTask(task, updatedTaskType.settings))
             JsonOk(Messages("taskType.editSuccess"))
           }
         }
@@ -109,7 +105,7 @@ object TaskTypeAdministration extends AdminController {
 
     for {
       taskType <- TaskTypeDAO.findOneById(taskTypeId) ?~> Messages("taskType.notFound")
-      _ <- ensureTeamAdministration(request.user, taskType.team).toFox
+      _ <- ensureTeamAdministration(request.user, taskType.team)
       result <- evaluateForm(taskType)
     } yield {
       result
@@ -121,7 +117,9 @@ object TaskTypeAdministration extends AdminController {
       taskType <- TaskTypeDAO.findOneById(taskTypeId) ?~> Messages("taskType.notFound")
       _ <- ensureTeamAdministration(request.user, taskType.team)
     } yield {
-      TaskTypeDAO.removeById(taskType._id)
+      val updatedTaskType = taskType.copy(isActive = false)
+      TaskTypeDAO.update(taskType._id, updatedTaskType)
+      TaskService.deleteAllWithTaskType(taskType)
       JsonOk(Messages("taskType.deleted", taskType.summary))
     }
   }

@@ -1,31 +1,28 @@
-### define
-../../libs/event_mixin : EventMixin
-../model/dimensions : Dimensions
-../../libs/resizable_buffer : ResizableBuffer
-../constants : constants
-three : THREE
-###
+app             = require("app")
+Backbone        = require("backbone")
+ResizableBuffer = require("libs/resizable_buffer")
+THREE           = require("three")
+Dimensions      = require("../model/dimensions")
+constants       = require("../constants")
 
-class CellLayer
+class ContourGeometry
 
   COLOR_NORMAL : new THREE.Color(0x000000)
   COLOR_DELETE : new THREE.Color(0xff0000)
 
   constructor : (@volumeTracing, @flycam) ->
 
-    _.extend(this, new EventMixin())
+    _.extend(this, Backbone.Events)
 
     @color = @COLOR_NORMAL
 
-    @volumeTracing.on({
-      updateLayer : (cellId, contourList) =>
-        @color = if cellId == 0 then @COLOR_DELETE else @COLOR_NORMAL
-        @reset()
-        for p in contourList
-          @addEdgePoint(p)
-      volumeAnnotated : =>
-        @reset()
-      })
+    @listenTo(@volumeTracing, "volumeAnnotated", @reset)
+    @listenTo(@volumeTracing, "updateLayer", (cellId, contourList) ->
+      @color = if cellId == 0 then @COLOR_DELETE else @COLOR_NORMAL
+      @reset()
+      for p in contourList
+        @addEdgePoint(p)
+    )
 
     @createMeshes()
 
@@ -64,7 +61,7 @@ class CellLayer
     @edge.vertexBuffer.push(edgePoint)
     @finalizeMesh(@edge)
 
-    @flycam.update()
+    app.vent.trigger("rerender")
 
 
   finalizeMesh : (mesh) ->
@@ -75,3 +72,4 @@ class CellLayer
     positionAttribute.numItems    = mesh.vertexBuffer.getLength() * 3
     positionAttribute.needsUpdate = true
 
+module.exports = ContourGeometry

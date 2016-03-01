@@ -1,39 +1,47 @@
-### define
-./model/binary : Binary
-./model/skeletontracing/skeletontracing : SkeletonTracing
-./model/user : User
-./model/volumetracing/volumetracing : VolumeTracing
-./model/binarydata_connection_info : ConnectionInfo
-./model/scaleinfo : ScaleInfo
-./model/flycam2d : Flycam2d
-./model/flycam3d : Flycam3d
-libs/request : Request
-libs/toast : Toast
-libs/pipeline : Pipeline
-./constants : constants
-###
+Backbone             = require("backbone")
+_                    = require("lodash")
+app                  = require("../app")
+Binary               = require("./model/binary")
+SkeletonTracing      = require("./model/skeletontracing/skeletontracing")
+User                 = require("./model/user")
+DatasetConfiguration = require("./model/dataset_configuration")
+VolumeTracing        = require("./model/volumetracing/volumetracing")
+ConnectionInfo       = require("./model/binarydata_connection_info")
+ScaleInfo            = require("./model/scaleinfo")
+Flycam2d             = require("./model/flycam2d")
+Flycam3d             = require("./model/flycam3d")
+constants            = require("./constants")
+Request              = require("libs/request")
+Toast                = require("libs/toast")
+ErrorHandling        = require("libs/error_handling")
 
-# This is the model. It takes care of the data including the
+# This is THE model. It takes care of the data including the
 # communication with the server.
 
 # All public operations are **asynchronous**. We return a promise
 # which you can react on.
 
 
-class Model
+class Model extends Backbone.Model
 
-  initialize : (controlMode, state) =>
 
-    @tracingId = $("#container").data("tracing-id")
-    @tracingType = $("#container").data("tracing-type")
+  constructor : ->
 
-    if controlMode == constants.CONTROL_MODE_TRACE
+    @initialized = false
+    super(arguments...)
+
+
+  fetch : (options) ->
+
+    if @get("controlMode") == constants.CONTROL_MODE_TRACE
       # Include /readOnly part whenever it is in the pathname
       infoUrl = location.pathname + "/info"
     else
-      infoUrl = "/annotations/#{@tracingType}/#{@tracingId}/info"
+      infoUrl = "/annotations/#{@get('tracingType')}/#{@get('tracingId')}/info"
 
     Request.receiveJSON(infoUrl).then( (tracing) =>
+
+      @datasetName = tracing.content.dataSet.name
 
       if tracing.error
         Toast.error(tracing.error)
@@ -44,41 +52,79 @@ class Model
         return {"error" : true}
 
       else unless tracing.content.dataSet.dataLayers
-        datasetName = tracing.content.dataSet.name
-        if datasetName
-          Toast.error("Please, double check if you have the dataset '#{datasetName}' imported.")
+        if @datasetName
+          Toast.error("Please, double check if you have the dataset '#{@datasetName}' imported.")
         else
           Toast.error("Please, make sure you have a dataset imported.")
         return {"error" : true}
 
       else
-        Request.receiveJSON("/user/configuration").then(
-          (user) =>
-            dataSet = tracing.content.dataSet
-            layers  = @getLayers(dataSet.dataLayers, tracing.content.contentData.customLayers)
-            Promise.all(
-              @getDataTokens(dataSet.dataStore.url, dataSet.name, layers)
-            ).then =>
-              @initializeWithData(controlMode, state, tracing, user, layers)
 
-          -> Toast.error("Ooops. We couldn't communicate with our mother ship. Please try to reload this page.")
-        ))
+        @user = new User()
+        @set("user", @user)
 
-  initializeWithData : (controlMode, state, tracing, user, layers) ->
+        @user.fetch().then( =>
 
-    $.assertExtendContext({
-      task: tracing.id
-      dataSet: tracing.content.dataSet.name
+          @set("dataset", new Backbone.Model(tracing.content.dataSet))
+          colorLayers = _.filter( @get("dataset").get("dataLayers"),
+                                  (layer) -> layer.category == "color")
+          @set("datasetConfiguration", new DatasetConfiguration({
+            @datasetName
+            dataLayerNames : _.pluck(colorLayers, "name")
+          }))
+          @get("datasetConfiguration").fetch().then(
+            =>
+              layers = @getLayers(tracing.content.contentData.customLayers)
+
+              Promise.all(
+                @getDataTokens(layers)
+              ).then( =>
+                error = @initializeWithData(tracing, layers)
+                return error if error
+              )
+
+            -> Toast.error("Ooops. We couldn't communicate with our mother ship. Please try to reload this page.")
+            )
+        )
+      )
+
+
+  determineAllowedModes : ->
+
+    allowedModes = []
+    for allowedMode in @get("settings").allowedModes
+
+      if @getColorBinaries()[0].cube.BIT_DEPTH == 8
+        switch allowedMode
+          when "flight" then allowedModes.push(constants.MODE_ARBITRARY)
+          when "oblique" then allowedModes.push(constants.MODE_ARBITRARY_PLANE)
+
+      switch allowedMode
+        when "volume" then allowedModes.push(constants.MODE_VOLUME)
+
+    if not @get("volumeTracing")?
+      # Plane tracing mode is always allowed (except in VOLUME mode)
+      allowedModes.push(constants.MODE_PLANE_TRACING)
+
+    allowedModes.sort()
+    return allowedModes
+
+
+  initializeWithData : (tracing, layers) ->
+
+    dataset = @get("dataset")
+
+    ErrorHandling.assertExtendContext({
+      task: @get("tracingId")
+      dataSet: dataset.get("name")
+
     })
 
     console.log "tracing", tracing
-    console.log "user", user
+    console.log "user", @user
 
-    dataSet = tracing.content.dataSet
     isVolumeTracing = "volume" in tracing.content.settings.allowedModes
-    @user = new User(user)
-    @scaleInfo = new ScaleInfo(dataSet.scale)
-    @updatePipeline = new Pipeline([tracing.version])
+    app.scaleInfo = new ScaleInfo(dataset.get("scale"))
 
     if (bb = tracing.content.boundingBox)?
         @boundingBox = {
@@ -91,8 +137,6 @@ class Model
         }
 
     @connectionInfo = new ConnectionInfo()
-    @dataSetName = dataSet.name
-    @datasetPostfix = _.last(@dataSetName.split("_"))
     @binary = {}
 
     maxZoomStep = -Infinity
@@ -100,38 +144,50 @@ class Model
     for layer in layers
       layer.bitDepth = parseInt(layer.elementClass.substring(4))
       maxLayerZoomStep = Math.log(Math.max(layer.resolutions...)) / Math.LN2
-      @binary[layer.name] = new Binary(this, tracing, layer, maxLayerZoomStep, @updatePipeline, @connectionInfo)
+      @binary[layer.name] = new Binary(this, tracing, layer, maxLayerZoomStep, @connectionInfo)
       maxZoomStep = Math.max(maxZoomStep, maxLayerZoomStep)
 
     @buildMappingsObject(layers)
 
     if @getColorBinaries().length == 0
       Toast.error("No data available! Something seems to be wrong with the dataset.")
+      return {"error" : true}
 
-    @setDefaultBinaryColors()
+    flycam = new Flycam2d(constants.PLANE_WIDTH, maxZoomStep + 1, @)
+    flycam3d = new Flycam3d(constants.DISTANCE_3D, dataset.get("scale"))
+    @set("flycam", flycam)
+    @set("flycam3d", flycam3d)
+    @listenTo(flycam3d, "changed", (matrix, zoomStep) => flycam.setPosition(matrix[12..14]))
+    @listenTo(flycam, "positionChanged" : (position) => flycam3d.setPositionSilent(position))
 
-    @flycam = new Flycam2d(constants.PLANE_WIDTH, @scaleInfo, maxZoomStep + 1, @user)
-    @flycam3d = new Flycam3d(constants.DISTANCE_3D, dataSet.scale)
-    @flycam3d.on
-      "changed" : (matrix, zoomStep) =>
-        @flycam.setPosition( matrix[12..14] )
-    @flycam.on
-      "positionChanged" : (position) =>
-        @flycam3d.setPositionSilent(position)
-
-    if controlMode == constants.CONTROL_MODE_TRACE
+    if @get("controlMode") == constants.CONTROL_MODE_TRACE
 
       if isVolumeTracing
-        $.assert( @getSegmentationBinary()?,
+        ErrorHandling.assert( @getSegmentationBinary()?,
           "Volume is allowed, but segmentation does not exist" )
-        @volumeTracing = new VolumeTracing(tracing, @flycam, @getSegmentationBinary(), @updatePipeline)
+        @set("volumeTracing", new VolumeTracing(tracing, flycam, @getSegmentationBinary()))
       else
-        @skeletonTracing = new SkeletonTracing(tracing, @scaleInfo, @flycam, @flycam3d, @user, @updatePipeline)
+        @set("skeletonTracing", new SkeletonTracing(tracing, flycam, flycam3d, @user))
 
-    @applyState(state, tracing)
+    @applyState(@get("state"), tracing)
     @computeBoundaries()
 
-    return {tracing}
+    @set("tracing", tracing)
+    @set("settings", tracing.content.settings)
+    @set("mode", if isVolumeTracing then constants.MODE_VOLUME else constants.MODE_PLANE_TRACING)
+    @set("allowedModes", @determineAllowedModes())
+
+    @initSettersGetter()
+    @initialized = true
+    @trigger("sync")
+
+    # no error
+    return
+
+
+  setMode : (@mode) ->
+
+    @trigger("change:mode", @mode)
 
 
   # For now, since we have no UI for this
@@ -147,11 +203,13 @@ class Model
       }
 
 
-  getDataTokens : (dataStoreUrl, dataSetName, layers) ->
+  getDataTokens : (layers) ->
+
+    dataStoreUrl = @get("dataset").get("dataStore").url
 
     for layer in layers
-      do (layer) ->
-        Request.receiveJSON("/dataToken/generate?dataSetName=#{dataSetName}&dataLayerName=#{layer.name}").then( (dataStore) ->
+      do (layer) =>
+        Request.receiveJSON("/dataToken/generate?dataSetName=#{@datasetName}&dataLayerName=#{layer.name}").then( (dataStore) ->
           layer.token = dataStore.token
           layer.url   = dataStoreUrl
         )
@@ -159,33 +217,22 @@ class Model
 
   getColorBinaries : ->
 
-    return _.filter @binary, (binary) ->
+    return _.filter(@binary, (binary) ->
       binary.category == "color"
+    )
 
 
   getSegmentationBinary : ->
 
-    return _.find @binary, (binary) ->
+    return _.find(@binary, (binary) ->
       binary.category == "segmentation"
+    )
 
 
-  setDefaultBinaryColors : ->
-
-    colorBinaries = @getColorBinaries()
-
-    if colorBinaries.length == 1
-      defaultColors = [[255, 255, 255]]
-    else
-      defaultColors = [[255, 0, 0], [0, 255, 0], [0, 0, 255],
-                        [255, 255, 0], [0, 255, 255], [255, 0, 255]]
-
-    for binary, i in colorBinaries
-      binary.setColor( defaultColors[i % defaultColors.length] )
-
-
-  getLayers : (layers, userLayers) ->
+  getLayers : (userLayers) ->
     # Overwrite or extend layers with userLayers
 
+    layers = @get("dataset").get("dataLayers")
     return layers unless userLayers?
 
     for userLayer in userLayers
@@ -201,6 +248,11 @@ class Model
     return layers
 
 
+  canDisplaySegmentationData : ->
+
+    return not @flycam.getIntegerZoomStep() > 0 or not @getSegmentationBinary()
+
+
   computeBoundaries : ->
 
     @lowerBoundary = [ Infinity,  Infinity,  Infinity]
@@ -211,14 +263,61 @@ class Model
         @lowerBoundary[i] = Math.min @lowerBoundary[i], binary.lowerBoundary[i]
         @upperBoundary[i] = Math.max @upperBoundary[i], binary.upperBoundary[i]
 
+  # delegate save request to all submodules
+  save : ->
+
+    submodels = []
+    deferreds = []
+
+    if @user?
+      submodels.push[@user]
+
+    if @get("dataset")?
+      submodels.push[@get("dataset")]
+
+    if @get("datasetConfiguration")?
+      submodels.push[@get("datasetConfiguration")]
+
+    if @get("volumeTracing")?
+      submodels.push(@get("volumeTracing").stateLogger)
+
+    if @get("skeletonTracing")?
+      submodels.push(@get("skeletonTracing").stateLogger)
+
+    _.each(submodels, (model) ->
+      deferreds.push( model.save() )
+    )
+
+    return $.when.apply($, deferreds).then(
+      -> Toast.success("Saved!")
+      -> Toast.error("Couldn't save. Please try again.")
+    )
+
+
+  # Make the Model compatible between legacy Oxalis style and Backbone.Modela/Views
+  initSettersGetter : ->
+
+    _.forEach(@attributes, (value, key, attribute) =>
+
+      Object.defineProperty(@, key,
+        set : (val) ->
+          this.set(key, val)
+        , get : ->
+          return @get(key)
+      )
+    )
+
 
   applyState : (state, tracing) ->
 
-    @flycam.setPosition( state.position || tracing.content.editPosition )
+    @get("flycam").setPosition( state.position || tracing.content.editPosition )
     if state.zoomStep?
-      @flycam.setZoomStep( state.zoomStep )
-      @flycam3d.setZoomStep( state.zoomStep )
+      @get("user").set("zoom", Math.exp(Math.LN2 * state.zoomStep))
+      @get("flycam3d").setZoomStep( state.zoomStep )
     if state.rotation?
-      @flycam3d.setRotation( state.rotation )
+      @get("flycam3d").setRotation( state.rotation )
     if state.activeNode?
-      @skeletonTracing?.setActiveNode(state.activeNode)
+      @get("skeletonTracing")?.setActiveNode(state.activeNode)
+
+
+module.exports = Model

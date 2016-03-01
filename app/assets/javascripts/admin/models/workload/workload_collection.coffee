@@ -1,12 +1,12 @@
-### define
-underscore : _
-backbone : Backbone
-../pagination_collection : PaginationCollection
-###
+_                    = require("lodash")
+Backbone             = require("backbone")
+PaginationCollection = require("../pagination_collection")
 
 class WorkloadCollection extends PaginationCollection
 
   url : "/api/tasks/workload"
 
-  paginator_ui :
-    perPage : 20
+  state :
+    pageSize : 20
+
+module.exports = WorkloadCollection

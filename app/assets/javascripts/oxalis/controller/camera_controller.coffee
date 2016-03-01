@@ -1,11 +1,11 @@
-### define
-../model : Model
-../view : View
-../model/dimensions : Dimensions
-../constants : constants
-libs/event_mixin : EventMixin
-three : THREE
-###
+app        = require("app")
+Backbone   = require("backbone")
+Model      = require("../model")
+View       = require("../view")
+Dimensions = require("../model/dimensions")
+constants  = require("../constants")
+THREE      = require("three")
+TWEEN      = require("tween.js")
 
 class CameraController
 
@@ -18,7 +18,11 @@ class CameraController
 
   constructor : (@cameras, @flycam, @model) ->
 
-    _.extend(@, new EventMixin())
+    _.extend(this, Backbone.Events)
+
+    app.vent.on(
+      centerTDView : => @centerTDView()
+    )
 
     @updateCamViewport()
     for cam in @cameras
@@ -27,33 +31,26 @@ class CameraController
 
     @changeTDViewDiagonal(false)
 
-    @bind()
+    @bindToEvents()
 
   update : =>
     gPos = @flycam.getPosition()
     # camera porition's unit is nm, so convert it.
-    cPos = @model.scaleInfo.voxelToNm(gPos)
+    cPos = app.scaleInfo.voxelToNm(gPos)
     @cameras[constants.PLANE_XY].position = new THREE.Vector3(cPos[0], cPos[1], cPos[2])
     @cameras[constants.PLANE_YZ].position = new THREE.Vector3(cPos[0], cPos[1], cPos[2])
     @cameras[constants.PLANE_XZ].position = new THREE.Vector3(cPos[0], cPos[1], cPos[2])
 
 
   changeTDView : (id, animate = true) ->
-    # In order for the rotation to be correct, it is not sufficient
-    # to just use THREEJS' lookAt() function, because it may still
-    # look at the plane in a wrong angle. Therefore, the rotation
-    # has to be hard coded.
-    #
-    # CORRECTION: You're telling lies, you need to use the up vector...
-
     camera = @cameras[constants.TDView]
-    b = @model.scaleInfo.voxelToNm(@model.upperBoundary)
+    b = app.scaleInfo.voxelToNm(@model.upperBoundary)
 
-    pos = @model.scaleInfo.voxelToNm(@model.flycam.getPosition())
+    pos = app.scaleInfo.voxelToNm(@model.flycam.getPosition())
     time = 800
     to = {}
     notify = => @trigger("cameraPositionChanged")
-    getConvertedPosition = => return @model.scaleInfo.voxelToNm(@model.flycam.getPosition())
+    getConvertedPosition = => return app.scaleInfo.voxelToNm(@model.flycam.getPosition())
     from = {
       notify: notify
       getConvertedPosition: getConvertedPosition
@@ -143,7 +140,7 @@ class CameraController
     @flycam.setRayThreshold(@camera.right, @camera.left)
     @camera.updateProjectionMatrix()
     @notify()
-    @flycam.update()
+    app.vent.trigger("rerender")
 
 
   TDViewportSize : ->
@@ -175,7 +172,7 @@ class CameraController
     camera.updateProjectionMatrix()
 
     @flycam.setRayThreshold(camera.right, camera.left)
-    @flycam.update()
+    app.vent.trigger("rerender")
 
 
   moveTDViewX : (x) =>
@@ -206,12 +203,23 @@ class CameraController
 
   moveTDViewRaw : (moveVector) ->
 
-    @cameras[constants.TDView].left   += moveVector.x
-    @cameras[constants.TDView].right  += moveVector.x
-    @cameras[constants.TDView].top    += moveVector.y
-    @cameras[constants.TDView].bottom += moveVector.y
-    @cameras[constants.TDView].updateProjectionMatrix()
-    @flycam.update()
+    camera = @cameras[constants.TDView]
+    camera.left   += moveVector.x
+    camera.right  += moveVector.x
+    camera.top    += moveVector.y
+    camera.bottom += moveVector.y
+    camera.updateProjectionMatrix()
+    app.vent.trigger("rerender")
+
+
+  centerTDView : ->
+
+    camera = @cameras[constants.TDView]
+    @moveTDViewRaw(
+      new THREE.Vector2(
+        -(camera.left + camera.right) / 2,
+        -(camera.top + camera.bottom) / 2)
+    )
 
 
   setClippingDistance : (value) ->
@@ -222,23 +230,25 @@ class CameraController
 
   getClippingDistance : (planeID) ->
 
-    @camDistance * @model.scaleInfo.voxelPerNM[planeID]
+    @camDistance * app.scaleInfo.voxelPerNM[planeID]
 
 
   updateCamViewport : ->
 
-    scaleFactor = @model.scaleInfo.baseVoxel
+    scaleFactor = app.scaleInfo.baseVoxel
     boundary    = constants.VIEWPORT_WIDTH / 2 * @model.user.get("zoom")
     for i in [constants.PLANE_XY, constants.PLANE_YZ, constants.PLANE_XZ]
       @cameras[i].near = -@camDistance
       @cameras[i].left  = @cameras[i].bottom = -boundary * scaleFactor
       @cameras[i].right = @cameras[i].top    =  boundary * scaleFactor
       @cameras[i].updateProjectionMatrix()
-    @flycam.update()
+    app.vent.trigger("rerender")
 
 
-  bind : ->
+  bindToEvents : ->
 
-    @model.user.on
-      clippingDistanceChanged : (value) => @setClippingDistance(value)
-      zoomChanged : (value) => @updateCamViewport()
+    @listenTo(@model.user, "change:clippingDistance", (model, value) -> @setClippingDistance(value))
+    @listenTo(@model.user, "change:zoom", (model, value) -> @updateCamViewport())
+
+
+module.exports = CameraController

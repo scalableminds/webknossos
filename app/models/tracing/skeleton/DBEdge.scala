@@ -1,6 +1,7 @@
 package models.tracing.skeleton
 
 import oxalis.nml.Edge
+import reactivemongo.api.commands.WriteResult
 import reactivemongo.bson.BSONObjectID
 import play.api.libs.json.Json
 import models.basics.SecuredBaseDAO
@@ -26,7 +27,7 @@ object DBEdgeDAO extends SecuredBaseDAO[DBEdge] {
 
   underlying.indexesManager.ensure(Index(Seq("_treeId" -> IndexType.Ascending)))
 
-  def remove(edge: Edge, _tree: BSONObjectID)(implicit ctx: DBAccessContext): Fox[LastError] =
+  def remove(edge: Edge, _tree: BSONObjectID)(implicit ctx: DBAccessContext): Fox[WriteResult] =
     remove(Json.obj("_treeId" -> _tree, "edge.source" -> edge.source, "edge.target" -> edge.target))
 
   def findByTree(_tree: BSONObjectID)(implicit ctx: DBAccessContext) = withExceptionCatcher{
@@ -77,6 +78,13 @@ object DBEdgeDAO extends SecuredBaseDAO[DBEdge] {
 
   def deleteEdgesOfNode(nodeId: Int, _tree: BSONObjectID)(implicit ctx: DBAccessContext) = {
     remove(
+      Json.obj("_treeId" -> _tree, "$or" -> Json.arr(
+        Json.obj("edge.source" -> nodeId),
+        Json.obj("edge.target" -> nodeId))))
+  }
+
+  def countEdgesOfNode(nodeId: Int, _tree: BSONObjectID)(implicit ctx: DBAccessContext) = {
+    count(
       Json.obj("_treeId" -> _tree, "$or" -> Json.arr(
         Json.obj("edge.source" -> nodeId),
         Json.obj("edge.target" -> nodeId))))

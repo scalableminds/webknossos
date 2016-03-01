@@ -1,8 +1,8 @@
-### define
-../constants : constants
-../model/dimensions : dimensions
-three : THREE
-###
+app        = require("app")
+backbone   = require("backbone")
+constants  = require("../constants")
+dimensions = require("../model/dimensions")
+THREE      = require("three")
 
 class Cube
 
@@ -14,11 +14,12 @@ class Cube
     color              = properties.color             || 0x000000
     @showCrossSections = properties.showCrossSections || false
 
+    _.extend(@, Backbone.Events)
+
     @initialized = false
     @visible     = true
 
-    @model.flycam.on({
-      positionChanged : (pos) => @updatePosition(pos) })
+    @listenTo(@model.flycam, "positionChanged", (pos) => @updatePosition(pos))
 
     lineProperties = {color: color, linewidth: lineWidth}
 
@@ -38,6 +39,8 @@ class Cube
       @setCorners(@min, @max)
 
   setCorners : (@min, @max) ->
+
+    { min, max } = this
 
     vec = (x, y, z) ->
       new THREE.Vector3(x, y, z)
@@ -72,7 +75,7 @@ class Cube
 
     @initialized = true
     @updatePosition(@model.flycam.getPosition())
-    @model.flycam.update()
+    app.vent.trigger("rerender")
 
   updatePosition : (position) ->
 
@@ -113,3 +116,6 @@ class Cube
   setVisibility : (visible) ->
 
     @visible = visible
+
+
+module.exports = Cube

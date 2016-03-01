@@ -1,14 +1,11 @@
-### define
-underscore : _
-backbone.marionette : Marionette
-fileinput : Fileinput
-libs/toast : Toast
-libs/request : Request
-admin/views/selection_view : SelectionView
-admin/models/team/team_collection : TeamCollection
-###
+_               = require("lodash")
+Marionette      = require("backbone.marionette")
+Toast           = require("libs/toast")
+Request         = require("libs/request")
+SelectionView   = require("admin/views/selection_view")
+TeamCollection  = require("admin/models/team/team_collection")
 
-class DatasetUploadView extends Backbone.Marionette.LayoutView
+class DatasetUploadView extends Marionette.LayoutView
 
   template : _.template("""
     <div class="row">
@@ -82,7 +79,6 @@ class DatasetUploadView extends Backbone.Marionette.LayoutView
   initialize : ->
 
     @teamSelectionView = new SelectionView(
-      viewComparator: "name"
       collection : new TeamCollection()
       name : "team"
       childViewOptions :
@@ -110,10 +106,15 @@ class DatasetUploadView extends Backbone.Marionette.LayoutView
         data : new FormData(form)
       )
       .then(
-        -> Toast.success()
+        ->
+          Toast.success()
+          app.router.navigate("/dashboard", { trigger: true })
         -> # NOOP
       )
       .then(
-        =>
+        => # always do
           @ui.spinner.addClass("hidden")
       )
+
+
+module.exports = DatasetUploadView

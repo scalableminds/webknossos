@@ -1,11 +1,10 @@
-### define
-libs/event_mixin : EventMixin
-three : THREE
-stats : Stats
-jquery : $
-underscore : _
-../constants : constants
-###
+app       = require("app")
+Backbone  = require("backbone")
+THREE     = require("three")
+Stats     = require("stats.js")
+$         = require("jquery")
+_         = require("lodash")
+constants = require("../constants")
 
 class ArbitraryView
 
@@ -24,9 +23,9 @@ class ArbitraryView
   camera : null
   cameraPosition : null
 
-  constructor : (canvas, @dataCam, @stats, @view, scaleInfo, width) ->
+  constructor : (canvas, @dataCam, @stats, @view, width) ->
 
-    _.extend(this, new EventMixin())
+    _.extend(this, Backbone.Events)
 
     # CAM_DISTANCE has to be calculates such that with cam
     # angle 45°, the plane of width 128 fits exactly in the
@@ -52,7 +51,7 @@ class ArbitraryView
 
     @group = new THREE.Object3D
     # The dimension(s) with the highest resolution will not be distorted
-    @group.scale = new THREE.Vector3(scaleInfo.nmPerVoxel...)
+    @group.scale = new THREE.Vector3(app.scaleInfo.nmPerVoxel...)
     # Add scene to the group, all Geometries are than added to group
     @scene.add(@group)
     @group.add(camera)
@@ -69,9 +68,6 @@ class ArbitraryView
 
       $('.skeleton-arbitrary-controls').show()
       $("#arbitrary-info-canvas").show()
-      $('#trace-rotation').show()
-      $('#trace-mode').show()
-      $('#add-node-button').hide()
 
       @resize()
       # start the rendering loop
@@ -94,11 +90,8 @@ class ArbitraryView
 
       $(window).off("resize", @resize)
 
-    $('.skeleton-arbitrary-controls').hide()
-    $("#arbitrary-info-canvas").hide()
-    $('#trace-rotation').hide()
-    $('#trace-mode').hide()
-    $('#add-node-button').show()
+      $('.skeleton-arbitrary-controls').hide()
+      $("#arbitrary-info-canvas").hide()
 
 
   animate : =>
@@ -123,13 +116,16 @@ class ArbitraryView
                         m[2], m[6], m[10], m[14],
                         m[3], m[7], m[11], m[15])
 
-      camera.matrix.multiply( new THREE.Matrix4().makeRotationY( Math.PI ))
-      camera.matrix.multiply( new THREE.Matrix4().makeTranslation( @cameraPosition... ))
+      camera.matrix.multiply(new THREE.Matrix4().makeRotationY(Math.PI))
+      camera.matrix.multiply(new THREE.Matrix4().makeTranslation(@cameraPosition...))
       camera.matrixWorldNeedsUpdate = true
 
-      f = @deviceScaleFactor
-      renderer.setViewport(0, 0, @width * f, @height * f)
-      renderer.setScissor(0, 0, @width * f, @height * f)
+      renderer.setViewport(0, 0,
+                           @width * @deviceScaleFactor,
+                           @height * @deviceScaleFactor)
+      renderer.setScissor(0, 0,
+                          @width * @deviceScaleFactor,
+                          @height * @deviceScaleFactor)
       renderer.enableScissorTest(true)
       renderer.setClearColor(0xFFFFFF, 1);
 
@@ -202,3 +198,4 @@ class ArbitraryView
 
     @additionalInfo = info
 
+module.exports = ArbitraryView

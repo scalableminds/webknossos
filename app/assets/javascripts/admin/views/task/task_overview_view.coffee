@@ -1,18 +1,16 @@
-### define
-underscore : _
-backbone.marionette : marionette
-moment : moment
-routes : routes
-daterangepicker : DateRangePicker
-rangeslider : RangeSlider
-libs/utils : Utils
-admin/models/team/team_collection : TeamCollection
-admin/views/selection_view : SelectionView
-d3 : d3
-cola : cola
-###
+_                = require("lodash")
+Marionette       = require("backbone.marionette")
+d3               = require("d3")
+cola             = require("webcola")
+moment           = require("moment")
+routes           = require("routes")
+RangeSlider      = require("nouislider")
+Utils            = require("libs/utils")
+TeamCollection   = require("admin/models/team/team_collection")
+SelectionView    = require("admin/views/selection_view")
+DateRangePicker  = require("bootstrap-daterangepicker")
 
-class TaskOverviewView extends Backbone.Marionette.LayoutView
+class TaskOverviewView extends Marionette.LayoutView
 
   id : "task-overview"
   className : "container wide"
@@ -149,16 +147,16 @@ class TaskOverviewView extends Backbone.Marionette.LayoutView
 
 
   initializeDateRangePicker : ->
-
-    @ui.dateRangeInput.daterangepicker(
-      locale:
-        format: "L"
-      startDate: moment().subtract(@DEFAULT_TIME_PERIOD_TIME, @DEFAULT_TIME_PERIOD_UNIT).format("L")
-      endDate: moment().format("L")
-      opens: "left"
-    (start, end, label) =>
-      @fetchData(start.valueOf(), end.valueOf())
-      @paintGraphDebounced()
+    new DateRangePicker.daterangepicker(@ui.dateRangeInput[0], {
+        locale:
+          format: "L"
+        startDate: moment().subtract(@DEFAULT_TIME_PERIOD_TIME, @DEFAULT_TIME_PERIOD_UNIT).format("L")
+        endDate: moment().format("L")
+        opens: "left"
+      },
+      (start, end, label) =>
+        @fetchData(start.valueOf(), end.valueOf())
+        @paintGraphDebounced()
     )
     return
 
@@ -337,7 +335,7 @@ class TaskOverviewView extends Backbone.Marionette.LayoutView
     svgNodesContainer.append("svg:text")
       .attr("class", "id")
       .text( (d) -> d.text )
-      .each( (d) -> 
+      .each( (d) ->
         d.width = @getBBox().width + TEXT_PADDING
         d.height = RECT_HEIGHT
       )
@@ -526,8 +524,9 @@ class TaskOverviewView extends Backbone.Marionette.LayoutView
     .domain([0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1])
     .range(["#a50026","#d73027","#f46d43","#fdae61","#fee08b","#ffffbf","#d9ef8b","#a6d96a","#66bd63","#1a9850","#006837"])
 
-
   edge : (idA, idB, nodes, color="black") ->
     source : _.find(nodes, "id" : idA)
     target : _.find(nodes, "id" : idB)
     color : color
+
+module.exports = TaskOverviewView

@@ -1,10 +1,11 @@
-### define
-../pagination_collection : PaginationCollection
-###
+PaginationCollection = require("../pagination_collection")
 
 class UserCollection extends PaginationCollection
 
   url : "/api/users"
+  sortBy : "firstName"
 
-  paginator_ui :
-    perPage : 50
+  state :
+    pageSize : 50
+
+module.exports = UserCollection

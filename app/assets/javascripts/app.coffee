@@ -1,6 +1,4 @@
-### define
-backbone.marionette : Marionette
-###
+Marionette = require("backbone.marionette")
 
-window.app = app = new Backbone.Marionette.Application()
-return app
+module.exports = window.app = app = new Marionette.Application()
+

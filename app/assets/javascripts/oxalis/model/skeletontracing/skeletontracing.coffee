@@ -1,17 +1,17 @@
-### define
-jquery : $
-underscore : _
-libs/request : Request
-libs/event_mixin : EventMixin
-libs/color_generator : ColorGenerator
-./tracepoint : TracePoint
-./tracetree : TraceTree
-./skeletontracing_statelogger : SkeletonTracingStateLogger
-../../constants : constants
-../helpers/restriction_handler : RestrictionHandler
-./tracingparser : TracingParser
-three : THREE
-###
+app                        = require("app")
+Backbone                   = require("backbone")
+$                          = require("jquery")
+_                          = require("lodash")
+backbone                   = require("backbone")
+Request                    = require("libs/request")
+ColorGenerator             = require("libs/color_generator")
+TracePoint                 = require("./tracepoint")
+TraceTree                  = require("./tracetree")
+SkeletonTracingStateLogger = require("./skeletontracing_statelogger")
+constants                  = require("../../constants")
+RestrictionHandler         = require("../helpers/restriction_handler")
+TracingParser              = require("./tracingparser")
+CommentsCollection         = require("oxalis/model/right-menu/comments_collection")
 
 class SkeletonTracing
 
@@ -23,14 +23,14 @@ class SkeletonTracing
 
   branchStack : []
   trees : []
-  comments : []
+  comments : new CommentsCollection()
   activeNode : null
   activeTree : null
   firstEdgeDirection : null
 
-  constructor : (tracing, @scaleInfo, @flycam, @flycam3d, @user) ->
+  constructor : (tracing, @flycam, @flycam3d, @user) ->
 
-    _.extend(this, new EventMixin())
+    _.extend(this, Backbone.Events)
 
     @doubleBranchPop = false
 
@@ -57,7 +57,12 @@ class SkeletonTracing
       @activeTree
     } = tracingParser.parse()
 
+    # Initialize tree colors
     @colorIdCounter = @treeIdCount
+
+    for tree in @trees
+      unless tree.color?
+        @shuffleTreeColor(tree)
 
     # ensure a tree is active
     unless @activeTree
@@ -68,7 +73,7 @@ class SkeletonTracing
 
     tracingType = tracing.typ
     if (tracingType == "Task") and @getNodeListOfAllTrees().length == 0
-      @addNode(tracing.content.editPosition, @TYPE_USUAL, 0, 0)
+      @addNode(tracing.content.editPosition, @TYPE_USUAL, 0, 0, 4, false)
 
     @branchPointsAllowed = tracing.content.settings.branchPointsAllowed
     if not @branchPointsAllowed
@@ -91,14 +96,12 @@ class SkeletonTracing
         @flycam3d.setDirection(@firstEdgeDirection)
 
 
-    $(window).on(
-      "beforeunload"
-      =>
-        if !@stateLogger.stateSaved() and @stateLogger.allowUpdate
-          @stateLogger.pushNow(false)
-          return "You haven't saved your progress, please give us 2 seconds to do so and and then leave this site."
-        else
-          return
+    app.router.on("beforeunload", =>
+      if !@stateLogger.stateSaved() and @stateLogger.allowUpdate
+        @stateLogger.pushNow(false)
+        return "You haven't saved your progress, please give us 2 seconds to do so and and then leave this site."
+      else
+        return
     )
 
 
@@ -126,7 +129,7 @@ class SkeletonTracing
             @pushBranch()
         @doubleBranchPop = false
       offset += size
-    @trigger "reloadTrees"
+    @trigger("reloadTrees")
     console.log "[benchmark] done. Took me #{((new Date()).getTime() - startTime) / 1000} seconds."
 
 
@@ -152,7 +155,7 @@ class SkeletonTracing
     deferred = new $.Deferred()
     if @branchPointsAllowed
       if @branchStack.length and @doubleBranchPop
-        @trigger( "doubleBranch", =>
+        @trigger("doubleBranch", =>
           point = @branchStack.pop()
           @stateLogger.push()
           @setActiveNode(point.id)
@@ -199,31 +202,21 @@ class SkeletonTracing
     return id in (node.id for node in @branchStack)
 
 
-  rejectBranchDeferred : ->
-
-    @branchDeferred.reject()
-
-
-  resolveBranchDeferred : ->
-
-    @branchDeferred.resolve()
-
-
-  addNode : (position, type, viewport, resolution, centered = true) ->
+  addNode : (position, type, viewport, resolution, bitDepth, interpolation) ->
 
     return if @restrictionHandler.handleUpdate()
 
     if @ensureDirection(position)
 
-      radius = 10 * @scaleInfo.baseVoxel
+      radius = 10 * app.scaleInfo.baseVoxel
       if @activeNode then radius = @activeNode.radius
 
       metaInfo =
         timestamp : (new Date()).getTime()
         viewport : viewport
         resolution : resolution
-        bitDepth : if @user.get("fourBit") then 4 else 8
-        interpolation : @user.get("interpolation")
+        bitDepth : bitDepth
+        interpolation : interpolation
 
       point = new TracePoint(type, @idCount++, position, radius, @activeTree.treeId, metaInfo)
       @activeTree.nodes.push(point)
@@ -239,15 +232,14 @@ class SkeletonTracing
         @activeNode = point
         point.type = @TYPE_BRANCH
         if @branchPointsAllowed
-          centered = true
           @pushBranch()
 
       @doubleBranchPop = false
 
       @stateLogger.createNode(point, @activeTree.treeId)
 
-      @trigger("newNode", centered)
-      @trigger("newActiveNode")
+      @trigger("newNode")
+      @trigger("newActiveNode", @activeNode.id)
     else
       @trigger("wrongDirection")
 
@@ -256,8 +248,8 @@ class SkeletonTracing
 
     if (!@branchPointsAllowed and @activeTree.nodes.length == 2 and
         @firstEdgeDirection and @activeTree.treeId == @trees[0].treeId)
-      sourceNodeNm = @scaleInfo.voxelToNm(@activeTree.nodes[1].pos)
-      targetNodeNm = @scaleInfo.voxelToNm(position)
+      sourceNodeNm = app.scaleInfo.voxelToNm(@activeTree.nodes[1].pos)
+      targetNodeNm = app.scaleInfo.voxelToNm(position)
       secondEdgeDirection = [targetNodeNm[0] - sourceNodeNm[0],
                              targetNodeNm[1] - sourceNodeNm[1],
                              targetNodeNm[2] - sourceNodeNm[2]]
@@ -289,7 +281,7 @@ class SkeletonTracing
 
   getActiveNodeRadius : ->
 
-    if @activeNode then @activeNode.radius else 10 * @scaleInfo.baseVoxel
+    if @activeNode then @activeNode.radius else 10 * app.scaleInfo.baseVoxel
 
 
   getActiveTreeId : ->
@@ -332,9 +324,9 @@ class SkeletonTracing
           @activeNode = node
           @activeTree = tree
           break
-    @stateLogger.push()
 
-    @trigger("newActiveNode")
+    @stateLogger.push()
+    @trigger("newActiveNode", @activeNode.id)
 
     if mergeTree
       @mergeTree(lastActiveNode, lastActiveTree)
@@ -348,7 +340,7 @@ class SkeletonTracing
       @activeNode.radius = Math.min( @MAX_RADIUS,
                             Math.max( @MIN_RADIUS, radius ) )
       @stateLogger.updateNode( @activeNode, @activeNode.treeId )
-      @trigger "newActiveNodeRadius", radius
+      @trigger("newActiveNodeRadius", radius)
 
 
   setComment : (commentText) ->
@@ -437,6 +429,13 @@ class SkeletonTracing
     @setActiveTree(trees[ (i + diff) % trees.length ].treeId)
 
 
+  centerActiveNode : ->
+
+    position = @getActiveNodePos()
+    if position
+      @flycam.setPosition(position)
+
+
   setActiveTree : (id) ->
 
     for tree in @trees
@@ -447,10 +446,10 @@ class SkeletonTracing
       @activeNode = null
     else
       @activeNode = @activeTree.nodes[0]
+      @trigger("newActiveNode", @activeNode.id)
     @stateLogger.push()
 
-    @trigger("newActiveNode")
-    @trigger("newActiveTree")
+    @trigger("newActiveTree", @activeTree.treeId)
 
 
   getNewTreeColor : ->
@@ -503,7 +502,7 @@ class SkeletonTracing
     unless @finishedDeferred.state() == "resolved"
       return
 
-    @deleteComment(@activeNode.id)
+    @trigger("deleteComment", @activeNode.id)
     for neighbor in @activeNode.neighbors
       neighbor.removeNeighbor(@activeNode.id)
     @activeTree.removeNode(@activeNode.id)
@@ -579,7 +578,7 @@ class SkeletonTracing
     # remove branchpoints and comments, NOT when merging trees
     for node in tree.nodes
       if deleteBranchesAndComments
-        @deleteComment(node.id)
+        @trigger("deleteComment", node.id)
         @deleteBranch(node)
 
     if notifyServer
@@ -673,9 +672,6 @@ class SkeletonTracing
     return result
 
 
-  rendered : -> @trigger("finishedRender")
-
-
   findNodeInList : (list, id) ->
     # Helper method used in initialization
 
@@ -710,3 +706,10 @@ class SkeletonTracing
     if a.node.treeId > b.node.treeId
       return 1
     return a.node.id - b.node.id
+
+  getPlainComments : =>
+
+    return @comments.toJSON()
+
+
+module.exports = SkeletonTracing

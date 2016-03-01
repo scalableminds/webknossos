@@ -65,7 +65,7 @@ object Project {
     }
 
   val projectPublicReads: Reads[Project] =
-    ((__ \ 'name).read[String](Reads.minLength[String](3) keepAnd Reads.pattern("^[a-zA-Z0-9_-]*$".r, Messages("project.name.invalidChars"))) and
+    ((__ \ 'name).read[String](Reads.minLength[String](3) keepAnd Reads.pattern("^[a-zA-Z0-9_-]*$".r, "project.name.invalidChars")) and
       (__ \ 'team).read[String] and
       (__ \ 'owner).read[String](StringObjectIdReads("owner")))((name, team, owner) => Project(name, team, BSONObjectID(owner)))
 }
@@ -86,10 +86,12 @@ object ProjectService extends FoxImplicits {
   def insert(name: String, team: String, owner: User)(implicit ctx: DBAccessContext) =
     ProjectDAO.insert(Project(name, team, owner._id))
 
-  def findIfNotEmpty(name: String)(implicit ctx: DBAccessContext): Fox[Option[Project]] = {
+  def findIfNotEmpty(name: Option[String])(implicit ctx: DBAccessContext): Fox[Option[Project]] = {
     name match {
-      case "" => new Fox(Future.successful(Full(None)))
-      case x => ProjectDAO.findOneByName(x).toFox.map(p => Some(p))
+      case Some("") | None =>
+        new Fox(Future.successful(Full(None)))
+      case Some(x) =>
+        ProjectDAO.findOneByName(x).toFox.map(p => Some(p))
     }
   }
 }

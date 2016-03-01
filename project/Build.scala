@@ -1,15 +1,21 @@
+import com.typesafe.sbt.web.Import._
 import sbt._
 import sbt.Keys._
-import play.Project._
+import play.Play.autoImport._
+import play.sbt.PlayImport
+import PlayKeys._
+import play.twirl.sbt.Import._
+import play.sbt.routes.RoutesKeys._
 import sbt.Task
 import scala.concurrent.Future
 import scala.concurrent.ExecutionContext.Implicits.global
 
 object Dependencies{
-  val akkaVersion = "2.2.0"
-  val reactiveVersion = "0.10.0"
-  val reactivePlayVersion = "0.10.2"
-  val braingamesVersion = "6.10.17-master-fix"
+  val akkaVersion = "2.4.1"
+  val reactiveVersion = "0.11.7"
+  val reactivePlayVersion = "0.11.7.play24"
+  val braingamesVersion = "8.3.0"
+  val twelvemonkeysVersion = "3.1.2"
 
   val restFb = "com.restfb" % "restfb" % "1.6.11"
   val commonsIo = "commons-io" % "commons-io" % "2.4"
@@ -18,25 +24,25 @@ object Dependencies{
   val akkaTest = "com.typesafe.akka" %% "akka-testkit" % akkaVersion
   val akkaAgent = "com.typesafe.akka" %% "akka-agent" % akkaVersion
   val akkaRemote = "com.typesafe.akka" %% "akka-remote" % akkaVersion
+  val akkaLogging = "com.typesafe.akka" %% "akka-slf4j" % akkaVersion
   val jerseyClient = "com.sun.jersey" % "jersey-client" % "1.8"
   val jerseyCore = "com.sun.jersey" % "jersey-core" % "1.8"
   val reactivePlay = "org.reactivemongo" %% "play2-reactivemongo" % reactivePlayVersion
   val reactiveBson = "org.reactivemongo" %% "reactivemongo-bson-macros" % reactiveVersion
-  val scalaReflect = "org.scala-lang" % "scala-reflect" % "2.10.0"
+  val scalaReflect = "org.scala-lang" % "scala-reflect" % "2.11.2"
   val braingamesBinary = "com.scalableminds" %% "braingames-binary" % braingamesVersion
   val braingamesDatastore = "com.scalableminds" %% "braingames-datastore" % braingamesVersion
-  val scalaAsync = "org.scala-lang.modules" %% "scala-async" % "0.9.0-M2"
-  val airbrake = "eu.teamon" %% "play-airbrake" % "0.3.5-SCM"
-  val mongev = "com.scalableminds" %% "play-mongev" % "0.2.8"
-  val playMetrics = "com.kenshoo" %% "metrics-play" % "0.1.3"
+  val scalaAsync = "org.scala-lang.modules" %% "scala-async" % "0.9.2"
+  val airbrake = "com.scalableminds" %% "play-airbrake" % "0.5.0"
+  val mongev = "com.scalableminds" %% "play-mongev" % "0.4.1"
   val tiff = Seq(
-      "com.twelvemonkeys.common" % "common-lang" % "3.0-rc5",
-      "com.twelvemonkeys.common" % "common-io" % "3.0-rc5",
-      "com.twelvemonkeys.common" % "common-image" % "3.0-rc5",
-      "com.twelvemonkeys.imageio" %  "imageio-core" % "3.0-rc5",
-      "com.twelvemonkeys.imageio" %  "imageio-metadata" % "3.0-rc5",
-      "com.twelvemonkeys.imageio" % "imageio-jpeg" % "3.0-rc5",
-      "com.twelvemonkeys.imageio" % "imageio-tiff" % "3.0-rc5"
+      "com.twelvemonkeys.common" % "common-lang" % twelvemonkeysVersion,
+      "com.twelvemonkeys.common" % "common-io" % twelvemonkeysVersion,
+      "com.twelvemonkeys.common" % "common-image" % twelvemonkeysVersion,
+      "com.twelvemonkeys.imageio" %  "imageio-core" % twelvemonkeysVersion,
+      "com.twelvemonkeys.imageio" %  "imageio-metadata" % twelvemonkeysVersion,
+      "com.twelvemonkeys.imageio" % "imageio-jpeg" % twelvemonkeysVersion,
+      "com.twelvemonkeys.imageio" % "imageio-tiff" % twelvemonkeysVersion
     )
 }
 
@@ -50,7 +56,7 @@ object Resolvers {
   val scmRel = Resolver.url("Scalableminds REL Repo", url("http://scalableminds.github.com/releases/"))(Resolver.ivyStylePatterns)
   val scmIntRel = "scm.io intern releases repo" at "http://maven.scm.io/releases/"
   val scmIntSnaps = "scm.io intern snapshots repo" at "http://maven.scm.io/snapshots/"
-  val teamon = "teamon.eu repo" at "http://repo.teamon.eu"
+  val bintray = "scalaz-bintray" at "http://dl.bintray.com/scalaz/releases"
 }
 
 object AssetCompilation {
@@ -60,7 +66,7 @@ object AssetCompilation {
   }
 
   import SettingsKeys._
-  import com.typesafe.sbt.packager.universal.Keys._
+  import com.typesafe.sbt.packager.Keys._
 
   def isWindowsSystem = System.getProperty("os.name").startsWith("Windows")
 
@@ -142,6 +148,7 @@ object ApplicationBuild extends Build {
     akkaTest,
     akkaAgent,
     akkaRemote,
+    akkaLogging,
     jerseyClient,
     jerseyCore,
     reactiveBson,
@@ -151,9 +158,10 @@ object ApplicationBuild extends Build {
     braingamesDatastore,
     scalaAsync,
     cache,
+    ws,
     airbrake,
-    playMetrics,
-    mongev)++tiff
+    mongev,
+    specs2 % Test)++tiff
 
   val dependencyResolvers = Seq(
     novusRel,
@@ -165,27 +173,30 @@ object ApplicationBuild extends Build {
     scmRel,
     scmIntRel,
     scmIntSnaps,
-    teamon
+    bintray
   )
 
   lazy val oxalisSettings = Seq(
-    templatesImport += "oxalis.view.helpers._",
-    templatesImport += "oxalis.view._",
-    scalaVersion := "2.10.3",
-    javacOptions ++= Seq("-source", "1.7", "-target", "1.7"),
-    scalacOptions += "-target:jvm-1.7",
+    TwirlKeys.templateImports += "oxalis.view.helpers._",
+    TwirlKeys.templateImports += "oxalis.view._",
+    scalaVersion := "2.11.7",
+    scalacOptions += "-target:jvm-1.8",
+    version := appVersion,
     gulpPath := (Path("node_modules") / ".bin" / "gulp").getPath,
     npmPath := "npm",
+    routesGenerator := InjectedRoutesGenerator,
+    libraryDependencies ++= oxalisDependencies,
     //requireJs := Seq("main"),
     //requireJsShim += "main.js",
     resolvers ++= dependencyResolvers,
-    lessEntryPoints <<= (sourceDirectory in Compile)(base => base / "none"),
-    coffeescriptEntryPoints <<= (sourceDirectory in Compile)(base => base / "none"),
-    javascriptEntryPoints <<= (sourceDirectory in Compile)(base => base / "none"),
-    unmanagedResourceDirectories in Compile += target.value / "assets"
+    //unmanagedResourceDirectories in Compile += target.value / "assets"
+    sourceDirectory in Assets := file("none")
+
     // playAssetsDirectories += baseDirectory.value / "target" / "assets"
   )
 
-  lazy val oxalis: Project = play.Project(appName, appVersion, oxalisDependencies, settings = oxalisSettings ++ AssetCompilation.settings)
+  lazy val oxalis: Project = Project(appName, file("."))
+    .enablePlugins(play.PlayScala)
+    .settings((oxalisSettings ++ AssetCompilation.settings):_*)
 }
 

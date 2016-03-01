@@ -1,14 +1,12 @@
-### define
-underscore : _
-backbone.marionette : marionette
-###
+_          = require("lodash")
+Marionette = require("backbone.marionette")
 
-class StatisticListView extends Backbone.Marionette.ItemView
+class StatisticListItemView extends Marionette.ItemView
 
   tagName : "tr"
   template : _.template("""
-    <td><%= user.firstName %> <%= user.lastName %></td>
-    <td><%= hours %>h <%= remainingMinutes %>m</td>
+    <td><%- user.firstName %> <%- user.lastName %></td>
+    <td><%- hours %>h <%- remainingMinutes %>m</td>
   """)
 
 
@@ -29,3 +27,5 @@ class StatisticListView extends Backbone.Marionette.ItemView
     while number.length < digits
       number = "0#{number}"
     number
+
+module.exports = StatisticListItemView

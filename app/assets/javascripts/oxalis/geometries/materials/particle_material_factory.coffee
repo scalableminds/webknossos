@@ -1,7 +1,6 @@
-### define
-three : THREE
-./abstract_material_factory : AbstractMaterialFactory
-###
+app                     = require("app")
+THREE                   = require("three")
+AbstractMaterialFactory = require("./abstract_material_factory")
 
 class ParticleMaterialFactory extends AbstractMaterialFactory
 
@@ -16,7 +15,7 @@ class ParticleMaterialFactory extends AbstractMaterialFactory
         value : @model.flycam.getPlaneScalingFactor()
       baseVoxel :
         type : "f"
-        value : @model.scaleInfo.baseVoxel
+        value : app.scaleInfo.baseVoxel
       particleSize :
         type : "f"
         value : @model.user.get("particleSize")
@@ -31,7 +30,9 @@ class ParticleMaterialFactory extends AbstractMaterialFactory
         value : window.devicePixelRatio || 1
 
     @attributes = _.extend @attributes,
-      size :
+      sizeNm :
+        type : "f"
+      nodeScaleFactor :
         type : "f"
 
 
@@ -47,17 +48,22 @@ class ParticleMaterialFactory extends AbstractMaterialFactory
 
     super()
 
-    @model.user.on
-      particleSizeChanged : (size) =>
-        @uniforms.particleSize.value = size
-      scaleChanged : (scale) =>
-        @uniforms.scale.value = scale
-      overrideNodeRadiusChanged : =>
-        @model.flycam.update()
+    @listenTo(@model.user, "change:particleSize", (model, size) ->
+      @uniforms.particleSize.value = size
+      app.vent.trigger("rerender")
+    )
+    @listenTo(@model.user, "change:scale", (model, scale) ->
+      @uniforms.scale.value = scale
+      app.vent.trigger("rerender")
+    )
+    @listenTo(@model.user, "change:overrideNodeRadius", ->
+      app.vent.trigger("rerender")
+    )
 
-    @model.flycam.on
-      zoomStepChanged : =>
-        @uniforms.zoomFactor.value = @model.flycam.getPlaneScalingFactor()
+    @listenTo(@model.flycam, "zoomStepChanged", ->
+      @uniforms.zoomFactor.value = @model.flycam.getPlaneScalingFactor()
+      app.vent.trigger("rerender")
+    )
 
 
   getVertexShader : ->
@@ -70,7 +76,8 @@ class ParticleMaterialFactory extends AbstractMaterialFactory
       uniform int   showRadius;
       uniform float devicePixelRatio;
       varying vec3 vColor;
-      attribute float size;
+      attribute float sizeNm;
+      attribute float nodeScaleFactor;
 
       void main()
       {
@@ -78,10 +85,11 @@ class ParticleMaterialFactory extends AbstractMaterialFactory
           vColor = color;
           if (showRadius == 1)
             gl_PointSize = max(
-              size / zoomFactor / baseVoxel,
-              particleSize ) * devicePixelRatio * scale;
+                sizeNm / zoomFactor / baseVoxel,
+                particleSize
+              ) * devicePixelRatio * scale * nodeScaleFactor;
           else
-            gl_PointSize = particleSize;
+            gl_PointSize = particleSize * nodeScaleFactor;
           gl_Position = projectionMatrix * mvPosition;
       }
     """
@@ -97,3 +105,5 @@ class ParticleMaterialFactory extends AbstractMaterialFactory
           gl_FragColor = vec4( vColor, 1.0 );
       }
     """
+
+module.exports = ParticleMaterialFactory

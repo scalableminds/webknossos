@@ -1,8 +1,8 @@
-### define
-../../model/dimensions : Dimensions
-../../constants : constants
-libs/input : Input
-###
+app        = require("app")
+Backbone   = require("backbone")
+Dimensions = require("oxalis/model/dimensions")
+Constants  = require("oxalis/constants")
+Input      = require("libs/input")
 
 class VolumeTracingController
 
@@ -18,22 +18,13 @@ class VolumeTracingController
   MERGE_MODE_CELL1  : 1
   MERGE_MODE_CELL2  : 2
 
-  CONTROL_MODE_MOVE : 0
-  CONTROL_MODE_TRACE : 1
-
-
-  constructor : ( @model, @sceneController, @gui, @volumeTracingView ) ->
+  constructor : ( @model, @sceneController, @volumeTracingView ) ->
 
     @inDeleteMode = false
+    @controlMode = Constants.VOLUME_MODE_MOVE
 
-    @gui.on
-      setActiveCell : (id) => @model.volumeTracing.setActiveCell(id)
-      createNewCell : => @model.volumeTracing.createCell()
-
-    @model.flycam.on
-      zoomStepChanged : =>
-        shouldWarn = @model.flycam.getIntegerZoomStep() > 0
-        $('body').toggleClass("zoomstep-warning", shouldWarn)
+    _.extend(@, Backbone.Events)
+    @listenTo(app.vent, "changeVolumeMode", @setControlMode)
 
     $('#create-cell-button').on("click", =>
       @model.volumeTracing.createCell()
@@ -41,25 +32,9 @@ class VolumeTracingController
 
     # Keyboard shortcuts
     new Input.KeyboardNoLoop(
-      "m" : => @toggleControlMode()
+      "w" : => @toggleControlMode()
+      "1" : => @toggleControlMode()
     )
-
-    $('#trace-download-button').hide()
-
-    # Control mode
-    @controlModeMapping =
-      "control-mode-move" : @CONTROL_MODE_MOVE
-      "control-mode-trace" : @CONTROL_MODE_TRACE
-
-    for control of @controlModeMapping
-
-      do (control) =>
-        $("#" + control).on "click", =>
-          @setControlMode(@controlModeMapping[control])
-
-    @setControlMode(@CONTROL_MODE_TRACE)
-
-    # Merging
 
     # no merging for now
     $("#btn-merge").hide()
@@ -89,22 +64,19 @@ class VolumeTracingController
             @merge()
 
 
-  setControlMode : (@controlMode) ->
+  setControlMode : (controlMode) ->
 
-    # Set button class
-    for button in $("#control-mode .btn-group").children()
-
-      $(button).removeClass("btn-primary")
-      if @controlMode == @controlModeMapping[$(button).attr("id")]
-        $(button).addClass("btn-primary")
+    @controlMode = controlMode
 
 
   toggleControlMode : ->
 
-    if @controlMode == @CONTROL_MODE_MOVE
-      @setControlMode(@CONTROL_MODE_TRACE)
+    mode = if @controlMode == Constants.VOLUME_MODE_MOVE
+      Constants.VOLUME_MODE_TRACE
     else
-      @setControlMode(@CONTROL_MODE_MOVE)
+      Constants.VOLUME_MODE_MOVE
+
+    app.vent.trigger("changeVolumeMode", mode)
 
 
   merge : ->
@@ -121,7 +93,7 @@ class VolumeTracingController
   handleCellSelection : (cellId) ->
 
     if cellId > 0
-      if      @mergeMode == @MERGE_MODE_NORMAL
+      if @mergeMode == @MERGE_MODE_NORMAL
         @model.volumeTracing.setActiveCell( cellId )
       else if @mergeMode == @MERGE_MODE_CELL1
         $("#merge-cell1").val(cellId)
@@ -152,3 +124,5 @@ class VolumeTracingController
   drawVolume : (pos) ->
 
     @model.volumeTracing.addToLayer(pos)
+
+module.exports = VolumeTracingController

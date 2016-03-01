@@ -32,7 +32,7 @@ object CompoundAnnotation extends Formatter with FoxImplicits {
           project.team,
           controllers.admin.routes.NMLIO.projectDownload(project.name).url,
           annotations,
-          AnnotationType.CompoundProject) ?~> Messages("project.noAnnotaton")
+          AnnotationType.CompoundProject) ?~> "project.noAnnotation"
       } yield merged
     }
   }
@@ -47,7 +47,7 @@ object CompoundAnnotation extends Formatter with FoxImplicits {
           task.team,
           controllers.admin.routes.NMLIO.taskDownload(task.id).url,
           annotations,
-          AnnotationType.CompoundTask) ?~> Messages("task.noAnnotaton")
+          AnnotationType.CompoundTask) ?~> "task.noAnnotation"
       } yield merged
     }
   }
@@ -55,7 +55,7 @@ object CompoundAnnotation extends Formatter with FoxImplicits {
   def createFromTaskType(taskType: TaskType, _user: Option[BSONObjectID])(implicit ctx: DBAccessContext) = {
     logTime("taskType composition", Logger.debug) {
       for {
-        tasks <- TaskDAO.findAllByTaskType(taskType)
+        tasks <- TaskDAO.findAllByTaskType(taskType._id)
         annotations <- Future.traverse(tasks)(_.annotations).map(_.flatten).toFox
         merged <- createFromFinishedAnnotations(
           taskType.id,
@@ -63,7 +63,7 @@ object CompoundAnnotation extends Formatter with FoxImplicits {
           taskType.team,
           controllers.admin.routes.NMLIO.taskTypeDownload(taskType.id).url,
           annotations,
-          AnnotationType.CompoundTaskType) ?~> Messages("taskType.noAnnotaton")
+          AnnotationType.CompoundTaskType) ?~> "taskType.noAnnotation"
       } yield merged
     }
   }

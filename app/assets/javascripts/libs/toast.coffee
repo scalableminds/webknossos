@@ -1,7 +1,5 @@
-### define
-jquery : $
-bootstrap : Bootstrap
-###
+$         = require("jquery")
+Bootstrap = require("bootstrap")
 
 $.fn.alertWithTimeout = (timeout = 3000) ->
 
@@ -42,17 +40,18 @@ Toast =
       messages = type
       for message in messages
         if message.success?
-          @success(message.success)
+          return @success(message.success)
         if message.error?
-          @error(message.error)
+          return @error(message.error)
 
     else if _.isArray(message)
-      messages = messages
-      @message(type, message, sticky) for message in messages
+      messages = message
+      return (@message(type, message, sticky) for message in messages)
 
     else if shouldDisplayToast(type, message, sticky)
       $messageElement = $("<div>", class : "alert alert-#{type} fade in", "data-id" : message).html(message)
-      $messageElement.prepend($("<button>", type : "button", class : "close", "data-dismiss" : "alert").html("&times;"))
+      $closeButton = $("<button>", type : "button", class : "close", "data-dismiss" : "alert").html("&times;")
+      $messageElement.prepend($closeButton)
       if sticky
         $messageElement.alert()
       else
@@ -63,28 +62,22 @@ Toast =
       if type == "danger"
         @highlight($messageElement)
 
-    return
+      return {remove : -> $closeButton.click()}
 
 
   info : (message, sticky) ->
 
-    @message("info", message, sticky)
+    return @message("info", message, sticky)
 
 
-  success : (message, sticky) ->
+  success : (message = "Success :-)", sticky) ->
 
-    if message?
-      @message("success", message, sticky)
-    else
-      @message("success", "Success :-)", sticky)
+    return @message("success", message, sticky)
 
 
-  error : (message, sticky) ->
+  error : (message = "Error :-/", sticky) ->
 
-    if message?
-      @message("danger", message, sticky)
-    else
-      @message("danger", "Error :-/", sticky)
+    return @message("danger", message, sticky)
 
 
   highlight : (target) ->
@@ -100,3 +93,6 @@ Toast =
   delete : (type, message) ->
 
     getToasts(type, message).alert("close")
+
+
+module.exports = Toast

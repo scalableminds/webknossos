@@ -1,16 +1,16 @@
-### define
-../dimensions : Dimensions
-libs/drawing : Drawing
-###
+Dimensions = require("../dimensions")
+Drawing    = require("libs/drawing")
 
 
 class VolumeLayer
+
 
   constructor : (@plane, @thirdDimensionValue) ->
 
     @contourList = []
     @maxCoord    = null
     @minCoord    = null
+
 
   addContour : (pos) ->
 
@@ -34,12 +34,21 @@ class VolumeLayer
     return Drawing.smoothLine(@contourList, ( (pos) => @updateArea(pos) ) )
 
 
+  finish : ->
+
+    unless @isEmpty()
+      @addContour(@contourList[0])
+
+
+  isEmpty : ->
+
+    return @contourList.length == 0
+
+
   getVoxelIterator : ->
 
-    unless @minCoord
+    if @isEmpty()
       return { hasNext : false }
-
-    @addContour( @contourList[0] )
 
     minCoord2d = @get2DCoordinate(@minCoord)
     maxCoord2d = @get2DCoordinate(@maxCoord)
@@ -194,3 +203,26 @@ class VolumeLayer
     sPos1 = [pos1[0] * (1 - f), pos1[1] * (1 - f), pos1[2] * (1 - f)]
     sPos2 = [pos2[0] * f, pos2[1] * f, pos2[2] * f]
     return [sPos1[0] + sPos2[0], sPos1[1] + sPos2[1], sPos1[2] + sPos2[2]]
+
+
+  getCentroid : ->
+    # Formula:
+    # https://en.wikipedia.org/wiki/Centroid#Centroid_of_polygon
+
+    sumArea = 0
+    sumCx = 0
+    sumCy = 0
+    for i in [0...(@contourList.length - 1)]
+      [x_i, y_i] = @get2DCoordinate(@contourList[i])
+      [x_i_1, y_i_1] = @get2DCoordinate(@contourList[i+1])
+      sumArea += x_i * y_i_1 - x_i_1 * y_i
+      sumCx += (x_i + x_i_1) * (x_i * y_i_1 - x_i_1 * y_i)
+      sumCy += (y_i + y_i_1) * (x_i * y_i_1 - x_i_1 * y_i)
+
+    area = sumArea / 2
+    cx = sumCx / 6 / area
+    cy = sumCy / 6 / area
+
+    return @get3DCoordinate([cx, cy])
+
+module.exports = VolumeLayer

@@ -1,7 +1,5 @@
-### define
-three : THREE
-./abstract_plane_material_factory : AbstractPlaneMaterialFactory
-###
+THREE                        = require("three")
+AbstractPlaneMaterialFactory = require("./abstract_plane_material_factory")
 
 class ArbitraryPlaneMaterialFactory extends AbstractPlaneMaterialFactory
 
@@ -50,3 +48,5 @@ class ArbitraryPlaneMaterialFactory extends AbstractPlaneMaterialFactory
       }
       """
     )(colorName : @colorName)
+
+module.exports = ArbitraryPlaneMaterialFactory

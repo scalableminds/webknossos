@@ -13,10 +13,10 @@ import com.scalableminds.util.reactivemongo.{GlobalAccessContext, DBAccessContex
 import com.scalableminds.util.tools.{FoxImplicits, Fox}
 import reactivemongo.bson.BSONObjectID
 import play.api.Logger
-import models.tracing.skeleton.AnnotationStatistics
+import models.tracing.AnnotationStatistics
 import oxalis.view.{ResourceActionCollection, ResourceAction}
 import play.api.libs.json.Json.JsValueWrapper
-import oxalis.mvc.FilterableJson
+import oxalis.mvc.{UrlHelper, FilterableJson}
 import com.scalableminds.util.mvc.Formatter
 import org.joda.time.format.DateTimeFormat
 
@@ -47,7 +47,7 @@ trait AnnotationLike extends AnnotationStatistics {
   def _task: Option[BSONObjectID]
 
   def task: Fox[Task] =
-    _task.toFox.flatMap(id => TaskDAO.findOneById(id)(GlobalAccessContext))
+    _task.toFox.flatMap(id => TaskDAO.findOneById(id, true)(GlobalAccessContext))
 
   def state: AnnotationState
 
@@ -75,7 +75,7 @@ trait AnnotationLike extends AnnotationStatistics {
   def saveToDB(implicit ctx: DBAccessContext): Fox[AnnotationLike]
 }
 
-object AnnotationLike extends FoxImplicits with FilterableJson{
+object AnnotationLike extends FoxImplicits with FilterableJson with UrlHelper{
 
   def stateLabel(annotation: AnnotationLike, user: Option[User]) = {
     annotation.state match {
@@ -89,7 +89,7 @@ object AnnotationLike extends FoxImplicits with FilterableJson{
   def annotationLikeInfoWrites(a: AnnotationLike, user: Option[User], exclude: List[String])(implicit ctx: DBAccessContext): Fox[JsObject] = {
     JsonObjectWithFilter(exclude)(
       "version" +> a.version,
-      "user" +> a.user.toFox.map(u => JsString(u.name)).getOrElse(JsNull),
+      "user" +> a.user.map(u => JsString(u.name)).getOrElse(JsNull),
       "created" +> DateTimeFormat.forPattern("yyyy-MM-dd HH:mm").print(a.created),
       "stateLabel" +> stateLabel(a, user),
       "state" +> a.state,
@@ -97,11 +97,11 @@ object AnnotationLike extends FoxImplicits with FilterableJson{
       "name" +> a._name.getOrElse(""),
       "typ" +> a.typ,
       "task" +> a.task.flatMap(t => Task.transformToJson(t)).getOrElse(JsNull),
-      "stats" +> a.statisticsForAnnotation().map(s => Json.toJson(s)).getOrElse(JsNull),
+      "stats" +> a.statisticsForAnnotation().map(_.writeAsJson).getOrElse(JsNull),
       "restrictions" +> AnnotationRestrictions.writeAsJson(a.restrictions, user),
       "actions" +> a.actions(user),
       "formattedHash" +> Formatter.formatHash(a.id),
-      "downloadUrl" +> a.relativeDownloadUrl.map(Application.toAbsoluteUrl),
+      "downloadUrl" +> a.relativeDownloadUrl.map(toAbsoluteUrl),
       "content" +> a.content.flatMap(AnnotationContent.writeAsJson(_)).getOrElse(JsNull),
       "contentType" +> a.content.map(_.contentType).getOrElse(""),
       "dataSetName" +> a.dataSetName

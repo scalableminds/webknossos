@@ -1,15 +1,13 @@
-### define
-jquery : $
-underscore : _
-backbone.marionette : Marionette
-libs/toast : Toast
-libs/request : Request
-app : app
-admin/views/selection_view : SelectionView
-admin/models/user/user_collection : UserCollection
-###
+$              = require("jquery")
+_              = require("lodash")
+Marionette     = require("backbone.marionette")
+Toast          = require("libs/toast")
+Request        = require("libs/request")
+app            = require("app")
+SelectionView  = require("admin/views/selection_view")
+UserCollection = require("admin/models/user/user_collection")
 
-class TaskTransferModalView extends Backbone.Marionette.LayoutView
+class TaskTransferModalView extends Marionette.LayoutView
 
   className : "modal fade"
   template : _.template("""
@@ -69,7 +67,7 @@ class TaskTransferModalView extends Backbone.Marionette.LayoutView
     evt.preventDefault()
 
     userID = @$("select :selected").attr("id")
-    Request.json(
+    Request.sendJSONReceiveJSON(
       @url,
       data:
         "userId" : userID
@@ -88,3 +86,4 @@ class TaskTransferModalView extends Backbone.Marionette.LayoutView
     @$el.modal("hide")
     return
 
+module.exports = TaskTransferModalView

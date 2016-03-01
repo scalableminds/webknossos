@@ -1,12 +1,13 @@
-### define
-three : THREE
-./abstract_material_factory : AbstractMaterialFactory
-###
+app                     = require("app")
+THREE                   = require("three")
+AbstractMaterialFactory = require("./abstract_material_factory")
 
 class AbstractPlaneMaterialFactory extends AbstractMaterialFactory
 
 
   constructor : (@model, @tWidth) ->
+
+    _.extend(this, Backbone.Events)
 
     @minFilter = THREE.NearestFilter
     @maxFilter = THREE.NearestFilter
@@ -17,18 +18,15 @@ class AbstractPlaneMaterialFactory extends AbstractMaterialFactory
 
     super()
 
-    settings = @model.user.getOrCreateBrightnessContrastColorSettings(
-      @model
-    )
-
     for binary in @model.getColorBinaries()
       name = @sanitizeName(binary.name)
       @uniforms[name + "_brightness"] =
         type : "f"
-        value : settings[binary.name].brightness / 255
+        value : @model.datasetConfiguration.get("layers.#{binary.name}.brightness") / 255
       @uniforms[name + "_contrast"] =
         type : "f"
-        value : settings[binary.name].contrast
+        value : @model.datasetConfiguration.get("layers.#{binary.name}.contrast")
+
 
     @createTextures()
 
@@ -45,13 +43,16 @@ class AbstractPlaneMaterialFactory extends AbstractMaterialFactory
 
   setupChangeListeners : ->
 
-    for binary in @model.getColorBinaries()
-      do (binary) =>
-        binary.on
-          newColorSettings : (brightness, contrast) =>
-            name = @sanitizeName(binary.name)
-            @uniforms[name + "_brightness"].value = brightness / 255
-            @uniforms[name + "_contrast"].value = contrast
+    @listenTo(@model.datasetConfiguration, "change", (model) ->
+
+      for binaryName, changes of model.changed.layers or {}
+        name = @sanitizeName(binaryName)
+        if changes.brightness?
+          @uniforms[name + "_brightness"].value = changes.brightness / 255
+        if changes.contrast?
+          @uniforms[name + "_contrast"].value = changes.contrast
+      app.vent.trigger("rerender")
+    )
 
 
   createTextures : ->
@@ -90,3 +91,5 @@ class AbstractPlaneMaterialFactory extends AbstractMaterialFactory
                         modelViewMatrix *
                         vec4(position,1.0); }
     """
+
+module.exports = AbstractPlaneMaterialFactory

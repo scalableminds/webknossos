@@ -2,11 +2,14 @@ package models.user
 
 import play.api.Play.current
 import com.scalableminds.util.security.SCrypt._
+import reactivemongo.api.commands.WriteResult
+
 //import scala.collection.mutable.Stack
 //import play.api.libs.json.{Json, JsValue}
 import play.api.libs.json.Json._
 import models.basics._
 import models.team._
+import models.configuration.{UserConfiguration, DataSetConfiguration}
 import com.scalableminds.util.reactivemongo._
 //import scala.concurrent.Future
 import play.api.libs.concurrent.Execution.Implicits._
@@ -29,7 +32,8 @@ case class User(
                  pwdHash: String = "",
                  md5hash: String = "",
                  teams: List[TeamMembership],
-                 configuration: UserSettings = UserSettings.defaultSettings,
+                 userConfiguration: UserConfiguration = UserConfiguration.default,
+                 dataSetConfigurations: Map[String, DataSetConfiguration] = Map.empty,
                  experiences: Map[String, Int] = Map.empty,
                  lastActivity: Long = System.currentTimeMillis,
                  _isSuperUser: Option[Boolean] = None,
@@ -180,7 +184,7 @@ object UserDAO extends SecuredBaseDAO[User] {
       insert(user).map(_ => user)
   }
 
-  def update(_user: BSONObjectID, firstName: String, lastName: String, verified: Boolean, teams: List[TeamMembership], experiences: Map[String, Int])(implicit ctx: DBAccessContext): Fox[LastError] =
+  def update(_user: BSONObjectID, firstName: String, lastName: String, verified: Boolean, teams: List[TeamMembership], experiences: Map[String, Int])(implicit ctx: DBAccessContext): Fox[WriteResult] =
     update(findByIdQ(_user), Json.obj("$set" -> Json.obj(
       "firstName" -> firstName,
       "lastName" -> lastName,
@@ -201,8 +205,12 @@ object UserDAO extends SecuredBaseDAO[User] {
     update(findByIdQ(_user), Json.obj("$inc" -> Json.obj(s"experiences.$domain" -> value)))
   }
 
-  def updateSettings(user: User, settings: UserSettings)(implicit ctx: DBAccessContext) = {
-    update(findByIdQ(user._id), Json.obj("$set" -> Json.obj("configuration.settings" -> settings.settings)))
+  def updateUserConfiguration(user: User, configuration: UserConfiguration)(implicit ctx: DBAccessContext) = {
+    update(findByIdQ(user._id), Json.obj("$set" -> Json.obj("userConfiguration.configuration" -> configuration.configurationOrDefaults)))
+  }
+
+  def updateDataSetConfiguration(user: User, dataSetName: String, configuration: DataSetConfiguration)(implicit ctx: DBAccessContext) = {
+    update(findByIdQ(user._id), Json.obj("$set" -> Json.obj(s"dataSetConfigurations.$dataSetName.configuration" -> configuration.configurationOrDefaults)))
   }
 
   def setExperience(_user: BSONObjectID, domain: String, value: Int)(implicit ctx: DBAccessContext) = {

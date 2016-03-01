@@ -1,38 +1,38 @@
-require [
-  "jquery"
-  "underscore"
-  "backbone"
-  "app"
-  "main/errorHandling"
-  "libs/request"
-  "bootstrap"
-  "fetch"
-  "promise"
-  "libs/core_ext"
-], ($, _, Backbone, app, ErrorHandling, Request) ->
+$             = require("jquery")
+_             = require("lodash")
+Backbone      = require("backbone")
+ErrorHandling = require("libs/error_handling")
+Request       = require("libs/request")
+app           = require("./app")
 
-  ErrorHandling.initialize( throwAssertions: false, sendLocalErrors: false )
+require("bootstrap")
+require("jasny-bootstrap")
+require("whatwg-fetch")
+require("es6-promise")
+require("libs/core_ext")
 
-  require ["main/router", "main/non_backbone_router"], (Router, NonBackboneRouter) ->
+ErrorHandling.initialize( throwAssertions: false, sendLocalErrors: false )
 
-    app.addInitializer( ->
-      Request.receiveJSON("/api/user", doNotCatch : true)
-        .then((user) ->
-          app.currentUser = user
-          ErrorHandling.setCurrentUser(user)
-          return
-        ).catch((error) -> return)
-    )
+Router = require("./router")
 
-    app.addInitializer( ->
+app.addInitializer( ->
+  app.router = new Router()
+  Backbone.history.start( pushState : true )
+)
 
-      new NonBackboneRouter() # handle all the routes that are not yet Backbone Views
-      app.router = new Router()
-      Backbone.history.start( pushState : true )
-    )
+app.addInitializer( ->
+  Request.receiveJSON("/api/user", doNotCatch : true)
+    .then((user) ->
+      app.currentUser = user
+      ErrorHandling.setCurrentUser(user)
+      return
+    ).catch((error) -> return)
+)
 
-    $ ->
-      # show the bootstrap flash modal on load
-      $("#flashModal").modal("show")
 
-      app.start()
+$ ->
+  # show the bootstrap flash modal on load
+  $("#flashModal").modal("show")
+
+  app.start()
+

@@ -1,9 +1,10 @@
-### define
-underscore : _
-../viewmodes/plane_controller : PlaneController
-../../constants : constants
-../../model/dimensions : dimensions
-###
+app             = require("app")
+THREE           = require("three")
+TWEEN           = require("tween.js")
+_               = require("lodash")
+PlaneController = require("../viewmodes/plane_controller")
+constants       = require("../../constants")
+dimensions      = require("../../model/dimensions")
 
 class SkeletonTracingPlaneController extends PlaneController
 
@@ -14,12 +15,9 @@ class SkeletonTracingPlaneController extends PlaneController
   # Tracing.
 
 
-  constructor : (@model, stats, @gui, @view, @sceneController, @skeletonTracingController) ->
+  constructor : (@model, stats, @view, @sceneController, @skeletonTracingController) ->
 
-    super(@model, stats, @gui, @view, @sceneController)
-
-    @planeView.on
-      finishedRender : => @model.skeletonTracing.rendered()
+    super(@model, stats, @view, @sceneController)
 
 
   start : ->
@@ -71,13 +69,9 @@ class SkeletonTracingPlaneController extends PlaneController
       "b" : => @model.skeletonTracing.pushBranch()
       "j" : => @popBranch()
 
-      "s" : @skeletonTracingController.centerActiveNode
-
-      #Comments
-      "n" : => @skeletonTracingController.setActiveNode(
-        @model.skeletonTracing.nextCommentNodeID(true), false, true)
-      "p" : => @skeletonTracingController.setActiveNode(
-        @model.skeletonTracing.nextCommentNodeID(false), false, true)
+      "s" : =>
+        @skeletonTracingController.centerActiveNode()
+        @cameraController.centerTDView()
 
 
   popBranch : =>
@@ -110,7 +104,7 @@ class SkeletonTracingPlaneController extends PlaneController
     raycaster = projector.pickingRay(vector, camera)
     raycaster.ray.threshold = @model.flycam.getRayThreshold(plane)
 
-    raycaster.ray.__scalingFactors = @model.scaleInfo.nmPerVoxel
+    raycaster.ray.__scalingFactors = app.scaleInfo.nmPerVoxel
 
     # identify clicked object
     intersects = raycaster.intersectObjects(@sceneController.skeleton.getAllNodes())
@@ -170,14 +164,50 @@ class SkeletonTracingPlaneController extends PlaneController
 
     if @model.user.get("newNodeNewTree") == true
       @model.skeletonTracing.createNewTree()
-      # make sure the tree was rendered two times before adding nodes,
-      # otherwise our buffer optimizations won't work
-      @model.skeletonTracing.one("finishedRender", =>
-        @model.skeletonTracing.one("finishedRender", =>
-          @model.skeletonTracing.addNode(position, constants.TYPE_USUAL,
-            @activeViewport, @model.flycam.getIntegerZoomStep()))
-        @planeView.draw())
-      @planeView.draw()
-    else
-      @model.skeletonTracing.addNode(position, constants.TYPE_USUAL,
-        @activeViewport, @model.flycam.getIntegerZoomStep(), centered)
+
+    if not @model.skeletonTracing.getActiveNode()?
+      centered = true
+
+    datasetConfig = @model.get("datasetConfiguration")
+
+    @model.skeletonTracing.addNode(
+      position,
+      constants.TYPE_USUAL,
+      @activeViewport,
+      @model.flycam.getIntegerZoomStep(),
+      if datasetConfig.get("fourBit") then 4 else 8,
+      datasetConfig.get("interpolation")
+    )
+
+    if centered
+      @centerPositionAnimated(@model.skeletonTracing.getActiveNodePos())
+
+
+  centerPositionAnimated : (position) ->
+
+    # Let the user still manipulate the "third dimension" during animation
+    dimensionToSkip = dimensions.thirdDimensionForPlane(@activeViewport)
+
+    curGlobalPos = @flycam.getPosition()
+
+    (new TWEEN.Tween({
+        globalPosX: curGlobalPos[0]
+        globalPosY: curGlobalPos[1]
+        globalPosZ: curGlobalPos[2]
+        flycam: @flycam
+        dimensionToSkip: dimensionToSkip
+    }))
+    .to({
+        globalPosX: position[0]
+        globalPosY: position[1]
+        globalPosZ: position[2]
+      }, 200)
+    .onUpdate( ->
+        position = [@globalPosX, @globalPosY, @globalPosZ]
+        position[@dimensionToSkip] = null
+        @flycam.setPosition(position)
+      )
+    .start()
+
+
+module.exports = SkeletonTracingPlaneController

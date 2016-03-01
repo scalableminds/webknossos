@@ -1,6 +1,4 @@
-### define
-three : THREE
-###
+THREE = require("three")
 # This class encapsulates any conversions between the nm and voxel
 # coordinate system.
 
@@ -47,4 +45,4 @@ class ScaleInfo
       res *= baseVoxel
     return res
 
-
+module.exports = ScaleInfo

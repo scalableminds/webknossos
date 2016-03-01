@@ -1,60 +1,27 @@
-### define
-libs/request : Request
-libs/event_mixin : EventMixin
-underscore : _
-###
+_        = require("lodash")
+Backbone = require("backbone")
+app      = require("app")
 
-class User
+class User extends Backbone.Model
 
+  url : "/api/user/userConfiguration"
   # To add any user setting, you must define default values in
   # UserSettings.scala
 
-  constructor : (user) ->
 
-    _.extend(this, new EventMixin())
-    @userSettings = {}
-    _.extend(@userSettings, user)
+  initialize : ->
 
-
-  setByName : (name, value) ->
-
-    @userSettings[name] = value
-    @trigger(name + "Changed", value)
-    @push()
-
-
-  setByObject : (object) ->
-
-    for name of object
-      @setByName(name, object[name])
-
-
-  set : (arg1, arg2) ->
-
-    if _.isObject(arg1)
-      @setByObject(arg1)
-    else
-      @setByName(arg1, arg2)
-
-
-  get : (name) ->
-
-    return @userSettings[name]
-
-
-  getSettings : ->
-
-    return @userSettings
+    @listenTo(@, "change", _.debounce((=> @save()), 500))
 
 
   getMouseInversionX : ->
 
-    return if @userSettings.inverseX then 1 else -1
+    return if @get("inverseX") then 1 else -1
 
 
   getMouseInversionY : ->
 
-    return if @userSettings.inverseY then 1 else -1
+    return if @get("inverseY") then 1 else -1
 
 
   getOrCreateBrightnessContrastColorSettings : (model) ->
@@ -78,30 +45,9 @@ class User
       @getOrCreateBrightnessContrastColorSettings(model)
     ))
 
-
   triggerAll : ->
 
-    for property of @userSettings
-      @trigger(property + "Changed", @get(property))
+    for property of @attributes
+      @trigger("change:#{property}", @, @get(property))
 
-
-  push : ->
-
-    $.when(@pushThrottled())
-
-
-  pushThrottled : ->
-
-    saveFkt = @pushImpl
-    @pushThrottled = _.throttle(_.mutexDeferred( saveFkt, -1), 10000)
-    @pushThrottled()
-
-
-  pushImpl : ->
-
-    console.log "Sending User Data:", @userSettings
-
-    return Request.sendJSONReceiveJSON(
-      "/user/configuration"
-      data : @userSettings
-    )
+module.exports = User

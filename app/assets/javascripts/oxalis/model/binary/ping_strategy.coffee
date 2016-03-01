@@ -1,6 +1,4 @@
-### define
-../dimensions : Dimensions
-###
+Dimensions = require("../dimensions")
 
 class PingStrategy
 
@@ -131,4 +129,4 @@ class PingStrategy.Volume extends PingStrategy.BaseStrategy
   preloadingPriorityOffset : 80
 
 
-PingStrategy
+module.exports = PingStrategy

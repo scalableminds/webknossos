@@ -1,16 +1,14 @@
-### define
-underscore : _
-backbone.marionette : marionette
-app : app
-moment : moment
-./statistic_list_item_view : StatisticListItemView
-admin/models/statistic/user_statistic_collection : UserStatisticCollection
-###
+_                       = require("lodash")
+Marionette              = require("backbone.marionette")
+app                     = require("app")
+moment                  = require("moment")
+StatisticListItemView   = require("./statistic_list_item_view")
+UserStatisticCollection = require("admin/models/statistic/user_statistic_collection")
 
-class StatisticListView extends Backbone.Marionette.CompositeView
+class StatisticListView extends Marionette.CompositeView
 
   template : _.template("""
-    <h3>Best Tracers for week <%= startDate.format("DD.MM") %> - <%= endDate.format("DD.MM.YYYY") %></h3>
+    <h3>Best Tracers for week <%- startDate.format("DD.MM") %> - <%- endDate.format("DD.MM.YYYY") %></h3>
     <table class="table-striped table">
       <thead>
         <tr>
@@ -28,7 +26,7 @@ class StatisticListView extends Backbone.Marionette.CompositeView
   initialize : ->
 
     #set first day of the week to monday globally
-    moment.lang("en", week : dow : 1)
+    moment.locale("en", week : dow : 1)
 
     @model = new Backbone.Model(
       startDate : moment().startOf("week")
@@ -66,3 +64,5 @@ class StatisticListView extends Backbone.Marionette.CompositeView
         limit : 5
       reset : true
     )
+
+module.exports = StatisticListView

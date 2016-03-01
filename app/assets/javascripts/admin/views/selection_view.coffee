@@ -1,30 +1,30 @@
-### define
-underscore : _
-backbone.marionette : Marionette
-./selection_item_view : SelectionItemView
-###
+_                 = require("lodash")
+Marionette        = require("backbone.marionette")
+SelectionItemView = require("./selection_item_view")
 
-class SelectionView extends Backbone.Marionette.CollectionView
+class SelectionView extends Marionette.CollectionView
 
   tagName : "select"
-  className: "form-control"
+  className : "form-control"
+  attributes : ->
+    return {name : @options.name}
 
   childView : SelectionItemView
 
   initialize : (options) ->
 
+    # append an empty option if the emptyOption option was supplied
+    if options.emptyOption
+      @listenTo(@, "show", @afterRender)
+
     @collection.fetch(
-      silent : true
       data : options.data
-    ).done(
-      => @render()
     )
 
-    if options.name
 
-      @$el.attr("name", options.name)
+  afterRender : ->
 
-
-
+    @$el.prepend("<option></option>")
 
 
+module.exports = SelectionView

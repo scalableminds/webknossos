@@ -1,8 +1,6 @@
-### define
-underscore : _
-backbone : backbone
-nested_obj_model : NestedObjModel
-###
+_              = require("lodash")
+backbone       = require("backbone")
+NestedObjModel = require("libs/nested_obj_model")
 
 class DatasetModel extends NestedObjModel
 
@@ -31,3 +29,5 @@ class DatasetModel extends NestedObjModel
 
     if colorLayer = _.findWhere(layers, category : "color")
       return "/api/datasets/#{datasetName}/layers/#{colorLayer.name}/thumbnail"
+
+module.exports = DatasetModel

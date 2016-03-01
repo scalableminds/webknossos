@@ -1,11 +1,12 @@
-### define
-three : THREE
-###
+Backbone = require("backbone")
+THREE    = require("three")
 
 class AbstractMaterialFactory
 
 
   constructor : (@model) ->
+
+    _.extend(this, Backbone.Events)
 
     @setupAttributesAndUniforms()
     @makeMaterial()
@@ -42,3 +43,6 @@ class AbstractMaterialFactory
 
 
   getFragmentShader : ->
+
+
+module.exports = AbstractMaterialFactory

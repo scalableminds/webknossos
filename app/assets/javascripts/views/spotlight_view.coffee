@@ -1,13 +1,10 @@
-### define
-underscore : _
-backbone.marionette : marionette
-admin/models/dataset/dataset_collection : DatasetCollection
-./credits_view : CreditsView
-./spotlight_dataset_list_view : SpotlightDatasetListView
-../admin/views/pagination_view : PaginationView
-###
+_                        = require("lodash")
+Marionette               = require("backbone.marionette")
+CreditsView              = require("./credits_view")
+SpotlightDatasetListView = require("./spotlight_dataset_list_view")
+PaginationView           = require("admin/views/pagination_view")
 
-class SpotlightView extends Backbone.Marionette.LayoutView
+class SpotlightView extends Marionette.LayoutView
 
   className : "spotlight-view"
   template : _.template("""
@@ -17,7 +14,7 @@ class SpotlightView extends Backbone.Marionette.LayoutView
         <div><p>webKnossos</p></div>
       </div>
       <div id="pagination"></div>
-      <div id="datasets"></div>
+      <div id="datasets" class="container wide"></div>
     </div>
     <div id="credits"></div>
   """)
@@ -27,17 +24,15 @@ class SpotlightView extends Backbone.Marionette.LayoutView
     credits : "#credits"
     datasets : "#datasets"
 
-  ui :
-    credits : "#credits"
-    datasets : "#datasets"
 
+  initialize : ->
 
-  initialize : (options) ->
+    @paginationView = new PaginationView(collection: @collection)
+    @spotlightDatasetListView = new SpotlightDatasetListView(collection : @collection)
 
-    @paginationView = new PaginationView(collection: options.collection)
-    @spotlightDatasetListView = new SpotlightDatasetListView(collection : options.collection)
     @creditsView = new CreditsView()
 
+    @collection.fetch({ data : "isActive=true" })
     @listenTo(@, "render", @show)
 
 
@@ -47,3 +42,5 @@ class SpotlightView extends Backbone.Marionette.LayoutView
     @datasets.show(@spotlightDatasetListView)
     @credits.show(@creditsView)
 
+
+module.exports = SpotlightView

@@ -1,13 +1,14 @@
-### define
-../constants : constants
-###
+app       = require("app")
+backbone  = require("backbone")
+constants = require("../constants")
+{V3}      = require("libs/mjs")
 
 class UrlManager
 
 
   MAX_UPDATE_INTERVAL : 1000
 
-  constructor : (@controller, @model) ->
+  constructor : (@model) ->
 
     @baseUrl      = document.location.pathname
     @initialState = @parseUrl()
@@ -17,57 +18,66 @@ class UrlManager
       @MAX_UPDATE_INTERVAL
     )
 
+    _.extend(@, Backbone.Events)
+
 
   parseUrl : ->
 
-    stateString = location.hash.slice(1)
-    state       = {}
+    # State string format:
+    # x,y,z,mode,zoomStep[,rotX,rotY,rotZ][,activeNode]
 
-    if stateString?
+    stateString = location.hash.slice(1)
+    state = {}
+
+    if stateString
 
       stateArray = stateString.split(",")
-      return state unless stateArray.length >= 5
+      if stateArray.length >= 5
 
-      state.position = _.map stateArray.slice(0, 3), (e) -> +e
-      state.mode     = +stateArray[3]
-      state.zoomStep = +stateArray[4]
+        state.position = _.map stateArray.slice(0, 3), (e) -> +e
+        state.mode     = +stateArray[3]
+        state.zoomStep = +stateArray[4]
 
-      if stateArray.length >= 8
-        state.rotation = _.map stateArray.slice(5, 8), (e) -> +e
-        if stateArray[8]?
-          state.activeNode = +stateArray[8]
-      else
-        if stateArray[5]?
-          state.activeNode = +stateArray[5]
+        if stateArray.length >= 8
+          state.rotation = _.map stateArray.slice(5, 8), (e) -> +e
+
+          if stateArray[8]?
+            state.activeNode = +stateArray[8]
+
+        else
+          if stateArray[5]?
+            state.activeNode = +stateArray[5]
 
     return state
 
 
   startUrlUpdater : ->
 
-    @model.flycam.on
-      changed : => @update()
-    @model.flycam3d.on
-      changed : => @update()
-    @model.skeletonTracing?.on
-      newActiveNode : => @update()
+    @listenTo(@model.flycam, "changed", @update)
+    @listenTo(@model.flycam3d, "changed", @update)
+    @listenTo(@model, "change:mode", @update)
+
+    if @model.skeletonTracing
+      @listenTo(@model.skeletonTracing, "newActiveNode", @update)
 
 
   buildUrl : ->
 
     { flycam, flycam3d } = @model
-    state = _.map flycam.getPosition(), (e) -> Math.floor(e)
-    state.push( @controller.mode )
+    state = V3.floor(flycam.getPosition())
+    state.push( @model.mode )
 
-    if @controller.mode in constants.MODES_ARBITRARY
-      state = state.concat( [flycam3d.getZoomStep().toFixed(2)] )
-                   .concat( _.map flycam3d.getRotation(), (e) -> e.toFixed(2) )
+    if @model.mode in constants.MODES_ARBITRARY
+      state = state
+        .concat( [flycam3d.getZoomStep().toFixed(2)] )
+        .concat( _.map flycam3d.getRotation(), (e) -> e.toFixed(2) )
 
     else
       state = state.concat( [flycam.getZoomStep().toFixed(2)] )
 
     if @model.skeletonTracing?.getActiveNodeId()?
-      activeNode = @model.skeletonTracing.getActiveNodeId()
-      state = state.concat([activeNode])
+      state.push(@model.skeletonTracing.getActiveNodeId())
 
     return @baseUrl + "#" + state.join(",")
+
+module.exports = UrlManager

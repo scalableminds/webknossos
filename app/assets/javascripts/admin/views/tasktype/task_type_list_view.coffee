@@ -1,11 +1,9 @@
-### define
-underscore : _
-app : app
-backbone.marionette : marionette
-./task_type_item_view : TaskTypeItemView
-###
+_                = require("lodash")
+app              = require("app")
+Marionette       = require("backbone.marionette")
+TaskTypeItemView = require("./task_type_item_view")
 
-class TaskTypeListView extends Backbone.Marionette.CompositeView
+class TaskTypeListView extends Marionette.CompositeView
 
   template : =>
     _.template("""
@@ -46,3 +44,5 @@ class TaskTypeListView extends Backbone.Marionette.CompositeView
 
     @ui.detailsToggle.toggleClass("open")
     app.vent.trigger("taskTypeListView:toggleDetails")
+
+module.exports = TaskTypeListView

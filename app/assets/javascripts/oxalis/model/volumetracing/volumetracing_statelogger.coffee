@@ -1,6 +1,5 @@
-### define
-../statelogger : StateLogger
-###
+StateLogger = require("../statelogger")
+$ = require("jquery")
 
 class VolumeTracingStateLogger extends StateLogger
 
@@ -19,6 +18,13 @@ class VolumeTracingStateLogger extends StateLogger
       @pushImpl()
 
 
+  pushNow : ->
+
+    pushQueuePromise = @pushQueue.pushImpl()
+    stateLoggerPromise = super(arguments...)
+    return $.when(pushQueuePromise, stateLoggerPromise)
+
+
   concatUpdateTracing : ->
 
     @pushDiff(
@@ -30,3 +36,5 @@ class VolumeTracingStateLogger extends StateLogger
       }
       false
     )
+
+module.exports = VolumeTracingStateLogger

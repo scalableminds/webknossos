@@ -1,6 +1,4 @@
-### define
-mjs : MJS
-###
+{M4x4, V3}  = require("libs/mjs")
 
 # Constants
 HEAP_SIZE = 1 << 25
@@ -78,7 +76,7 @@ class PolyhedronRasterizer
   constructor : (@vertices, @indices) ->
 
     @calcExtent()
-    { min_x, min_y, min_z, delta_z, delta_y, shift_z } = @
+    { min_x, min_y, min_z, delta_z, delta_y, shift_z, vertices } = @
 
     @bufferLength = bufferLength = delta_z << shift_z
     @buffer = buffer = new Int32Array(HEAP, 0, bufferLength)
@@ -152,7 +150,7 @@ class PolyhedronRasterizer
   #    vertices1[--i] = vertices[i] + min_x
   #
   #  new PolyhedronRasterizer(
-  #    MJS.M4x4.transformPointsAffine(matrix, vertices1, vertices1),
+  #    M4x4.transformPointsAffine(matrix, vertices1, vertices1),
   #    @indices
   #  )
 
@@ -460,11 +458,11 @@ class PolyhedronRasterizer.Master
     { vertices, indices } = @
 
     transformedPolyhdron = new PolyhedronRasterizer(
-      MJS.M4x4.transformPointsAffine(matrix, vertices, new Int32Array(vertices.length)),
+      M4x4.transformPointsAffine(matrix, vertices, new Int32Array(vertices.length)),
       indices
     )
 
-    orientationVector = MJS.M4x4.transformLineAffine(matrix, [0, 0, 1], [0, 0, 0])
+    orientationVector = M4x4.transformLineAffine(matrix, [0, 0, 1], [0, 0, 0])
 
     transformedPolyhdron.orientation = if orientationVector[2] < 0 then -1 else 1
 
@@ -511,4 +509,4 @@ class PolyhedronRasterizer.Master
 
 
 
-PolyhedronRasterizer
+module.exports = PolyhedronRasterizer

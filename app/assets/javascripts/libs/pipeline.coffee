@@ -1,7 +1,5 @@
-### define
-jquery : $
-underscore : _
-###
+$ = require("jquery")
+_ = require("lodash")
 
 
 class Pipeline
@@ -24,6 +22,14 @@ class Pipeline
     _.defaults @options,
       maxRetry : 3
       retryTimeMs : 1000
+
+
+  getLastActionPromise : ->
+
+    if @actions.length == 0
+      return (new $.Deferred()).resolve().promise()
+
+    return @actions[@actions.length - 1]._deferred.promise()
 
 
   executeAction : (action) ->
@@ -104,3 +110,5 @@ class Pipeline
     else
 
       @running = false
+
+module.exports = Pipeline

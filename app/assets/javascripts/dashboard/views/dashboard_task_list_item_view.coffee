@@ -1,22 +1,20 @@
-### define
-underscore : _
-backbone.marionette : marionette
-libs/toast : Toast
-###
+_          = require("lodash")
+Marionette = require("backbone.marionette")
+Toast      = require("libs/toast")
 
-class DashboardTaskListItemView extends Backbone.Marionette.ItemView
+class DashboardTaskListItemView extends Marionette.ItemView
 
   tagName : "tr"
 
   template : _.template("""
-    <td><%= formattedHash     %></td>
-    <td><%= type.summary      %></td>
-    <td><%= projectName       %></td>
-    <td><%= type.description  %></td>
+    <td><%- formattedHash     %></td>
+    <td><%- type.summary      %></td>
+    <td><%- projectName       %></td>
+    <td><%- type.description  %></td>
     <td>
       <% _.each(type.settings.allowedModes, function(mode) { %>
         <span class="label-default label">
-          <%= mode %>
+          <%- mode %>
         </span>
       <% }) %>
     </td>
@@ -24,13 +22,13 @@ class DashboardTaskListItemView extends Backbone.Marionette.ItemView
       <% if (annotation.state.isFinished) { %>
         <i class="fa fa-check"></i><span> Finished</span><br />
       <% } else { %>
-        <a href="/annotations/<%= annotation.typ %>/<%= annotation.id %>">
+        <a href="/annotations/<%- annotation.typ %>/<%- annotation.id %>">
           <i class="fa fa-random"></i>
           <strong>trace</strong>
         </a>
         <% if (isAdminView) { %>
           <br/>
-          <a href="/annotations/<%= annotation.typ %>/<%= annotation.id %>/transfer" id="transfer-task">
+          <a href="/annotations/<%- annotation.typ %>/<%- annotation.id %>/transfer" id="transfer-task">
             <i class="fa fa-share"></i>
             transfer
           </a>
@@ -59,13 +57,14 @@ class DashboardTaskListItemView extends Backbone.Marionette.ItemView
   initialize : (options) ->
 
     @model.set("isAdminView", options.isAdminView)
-    @model.on('change', @render)
+    @listenTo(@model, "change", @render)
 
 
   finish : ->
 
     if confirm("Are you sure you want to permanently finish this tracing?")
 
-      @model.finish().fail( (response) ->
-        Toast.message(response.messages)
-      )
+      @model.finish()
+
+
+module.exports = DashboardTaskListItemView

@@ -1,19 +1,18 @@
-### define
-jquery : $
-tween : TWEEN_LIB
-../model/dimensions : Dimensions
-../../libs/toast : Toast
-../../libs/event_mixin : EventMixin
-../constants : constants
-./modal : modal
-three : THREE
-###
+app        = require("app")
+Backbone   = require("backbone")
+$          = require("jquery")
+TWEEN      = require("tween.js")
+Dimensions = require("../model/dimensions")
+Toast      = require("../../libs/toast")
+constants  = require("../constants")
+modal      = require("./modal")
+THREE      = require("three")
 
 class PlaneView
 
-  constructor : (@model, @flycam, @view, @stats) ->
+  constructor : (@model, @view, @stats) ->
 
-    _.extend(@, new EventMixin())
+    _.extend(this, Backbone.Events)
 
     { @renderer, @scene } = @view
     @running = false
@@ -55,7 +54,7 @@ class PlaneView
     # scene.scale does not have an effect.
     @group = new THREE.Object3D
     # The dimension(s) with the highest resolution will not be distorted
-    @group.scale = @model.scaleInfo.getNmPerVoxelVector()
+    @group.scale = app.scaleInfo.getNmPerVoxelVector()
     # Add scene to the group, all Geometries are than added to group
     @scene.add(@group)
 
@@ -68,7 +67,7 @@ class PlaneView
     @scene.add( directionalLight )
 
     # Attach the canvas to the container
-    @renderer.setSize 2*WIDTH+20, 2*HEIGHT+20
+    @renderer.setSize 2 * WIDTH + 20, 2 * HEIGHT + 20
     $(@renderer.domElement).attr("id": "render-canvas")
     container.append @renderer.domElement
 
@@ -76,7 +75,9 @@ class PlaneView
 
     @first = true
     @newTextures = [true, true, true, true]
-    # start the rendering loop
+
+    @needsRerender = true
+    app.vent.on("rerender", => @needsRerender = true)
 
 
   animate : ->
@@ -103,16 +104,19 @@ class PlaneView
       for plane in binary.planes
         modelChanged |= plane.hasChanged()
 
-    if @flycam.hasChanged or @flycam.hasNewTextures() or modelChanged
+    if @needsRerender or modelChanged
 
-      @trigger "render"
+      @trigger("render")
 
       # update postion and FPS displays
       @stats.update()
 
-      # scale for retina displays
-      f = @deviceScaleFactor
-      viewport = [[0, @curWidth+20], [@curWidth+20, @curWidth+20], [0, 0], [@curWidth+20, 0]]
+      viewport = [
+        [0, @curWidth + 20],
+        [@curWidth + 20, @curWidth + 20],
+        [0, 0],
+        [@curWidth + 20, 0]
+      ]
       @renderer.autoClear = true
 
       setupRenderArea = (x, y, width, color) =>
@@ -125,17 +129,16 @@ class PlaneView
       @renderer.clear()
 
       for i in constants.ALL_VIEWPORTS
-        @trigger "renderCam", i
+        @trigger("renderCam", i)
         setupRenderArea(
-          viewport[i][0] * f, viewport[i][1] * f, @curWidth * f,
+          viewport[i][0] * @deviceScaleFactor,
+          viewport[i][1] * @deviceScaleFactor,
+          @curWidth * @deviceScaleFactor,
           constants.PLANE_COLORS[i]
         )
         @renderer.render @scene, @camera[i]
 
-      @flycam.hasChanged = false
-      @flycam.hasNewTexture = [false, false, false]
-
-      @trigger "finishedRender"
+      @needsRerender = false
 
   addGeometry : (geometry) ->
     # Adds a new Three.js geometry to the scene.
@@ -150,15 +153,16 @@ class PlaneView
 
 
   draw : ->
-    #Apply a single draw
-    @flycam.update()
+    app.vent.trigger("rerender")
 
 
   resizeThrottled : ->
 
     # throttle resize to avoid annoying flickering
     @resizeThrottled = _.throttle(
-      => @resize()
+      =>
+        @resize()
+        app.vent.trigger("planes:resize")
       constants.RESIZE_THROTTLE_TIME
     )
     @resizeThrottled()
@@ -168,10 +172,10 @@ class PlaneView
 
     # Call this after the canvas was resized to fix the viewport
     canvas = $("#render-canvas")
-    WIDTH = (canvas.width()-20)/2
-    HEIGHT = (canvas.height()-20)/2
+    WIDTH = (canvas.width() - 20 ) / 2
+    HEIGHT = (canvas.height() - 20 ) / 2
 
-    @renderer.setSize( 2*WIDTH+20, 2*HEIGHT+20)
+    @renderer.setSize(2 * WIDTH + 20, 2 * HEIGHT + 20)
     for i in constants.ALL_VIEWPORTS
       @camera[i].aspect = WIDTH / HEIGHT
       @camera[i].updateProjectionMatrix()
@@ -210,7 +214,7 @@ class PlaneView
       else
         $(".inputcatcher").eq(i).removeClass("active").addClass("inactive")
 
-    @flycam.update()
+    @draw()
 
 
   getCameras : =>
@@ -225,15 +229,17 @@ class PlaneView
        {id: "cancel-button", label: "Cancel"}])
 
 
-  bind : ->
+  bindToEvents : ->
 
-    @model.skeletonTracing?.on({
-      doubleBranch         : (callback) => @showBranchModal(callback)
-      mergeDifferentTrees  : ->
-        Toast.error("You can't merge nodes within the same tree", false) })
+    if @model.skeletonTracing
+      @listenTo(@model.skeletonTracing, "doubleBranch", @showBranchModal)
+      @listenTo(@model.skeletonTracing, "mergeDifferentTrees", ->
+        Toast.error("You can't merge nodes within the same tree", false)
+      )
 
-    @model.user.on
-      scaleChanged : (scale) => if @running then @scaleTrianglesPlane(scale)
+    @listenTo(@model.user, "change:scale", (model, scale) ->
+      if @running then @scaleTrianglesPlane(scale)
+    )
 
 
   stop : ->
@@ -256,3 +262,4 @@ class PlaneView
 
     @animate()
 
+module.exports = PlaneView

@@ -1,27 +1,24 @@
-### define
-jquery : $
-underscore : _
-stats : Stats
-./controller/viewmodes/plane_controller : PlaneController
-./controller/annotations/skeletontracing_controller : SkeletonTracingController
-./controller/annotations/volumetracing_controller : VolumeTracingController
-./controller/combinations/skeletontracing_arbitrary_controller : SkeletonTracingArbitraryController
-./controller/combinations/skeletontracing_plane_controller : SkeletonTracingPlaneController
-./controller/combinations/volumetracing_plane_controller : VolumeTracingPlaneController
-./controller/scene_controller : SceneController
-./controller/url_manager : UrlManager
-./model : Model
-./view : View
-./view/skeletontracing/skeletontracing_view : SkeletonTracingView
-./view/volumetracing/volumetracing_view : VolumeTracingView
-./view/gui : Gui
-./view/share_modal_view : ShareModalView
-./constants : constants
-../libs/event_mixin : EventMixin
-../libs/input : Input
-../libs/toast : Toast
+$                                  = require("jquery")
+_                                  = require("lodash")
+app                                = require("../app")
+Backbone                           = require("backbone")
+Stats                              = require("stats.js")
+PlaneController                    = require("./controller/viewmodes/plane_controller")
+SkeletonTracingController          = require("./controller/annotations/skeletontracing_controller")
+VolumeTracingController            = require("./controller/annotations/volumetracing_controller")
+SkeletonTracingArbitraryController = require("./controller/combinations/skeletontracing_arbitrary_controller")
+SkeletonTracingPlaneController     = require("./controller/combinations/skeletontracing_plane_controller")
+VolumeTracingPlaneController       = require("./controller/combinations/volumetracing_plane_controller")
+SceneController                    = require("./controller/scene_controller")
+UrlManager                         = require("./controller/url_manager")
+Model                              = require("./model")
+View                               = require("./view")
+SkeletonTracingView                = require("./view/skeletontracing/skeletontracing_view")
+VolumeTracingView                  = require("./view/volumetracing/volumetracing_view")
+constants                          = require("./constants")
+Input                              = require("../libs/input")
+Toast                              = require("../libs/toast")
 
-###
 
 class Controller
 
@@ -38,205 +35,103 @@ class Controller
   # controller - a controller for each row, each column and each
   # cross in this matrix.
 
-  constructor : (@controlMode) ->
+  constructor : (options) ->
+
+    { @model } = options
 
     _.extend(@,
       view : null
       planeController : null
       arbitraryController : null
-      allowedModes : []
     )
 
     _.extend(@, Backbone.Events)
 
-    unless @browserSupported()
-      unless window.confirm("You are using an unsupported browser, please use the newest version of Chrome, Opera or Safari.\n\nTry anyways?")
-        window.history.back()
-
-    _.extend(@, new EventMixin())
-
     @fullScreen = false
-    @mode = constants.MODE_PLANE_TRACING
 
-    @model = new Model()
-    @urlManager = new UrlManager(this, @model)
+    @urlManager = new UrlManager(@model)
+    @model.set("state", @urlManager.initialState)
 
-    @model.initialize( @controlMode, @urlManager.initialState ).then ({tracing}) =>
-
-      console.log(tracing)
-      unless tracing.restrictions.allowAccess
-        Toast.Error "You are not allowed to access this tracing"
-        return
-
-      if not tracing.restrictions.allowDownload or not tracing.downloadUrl?
-        $('#trace-download-button').attr("disabled", "disabled")
-      else
-        $('#trace-download-button').attr("href", tracing.downloadUrl)
-
-      @urlManager.startUrlUpdater()
-
-      # Warn if segmentation data is not available
-      if @model.getSegmentationBinary()?
-        hasWarned = false
-        @model.flycam.on
-          zoomStepChanged : =>
-            if @model.flycam.getIntegerZoomStep() > 1 and not hasWarned
-              hasWarned = true
-              Toast.info(
-                "Segmentation data is only available at lower zoom levels.")
-
-      for allowedMode in tracing.content.settings.allowedModes
-
-        if @model.getColorBinaries()[0].cube.BIT_DEPTH == 8
-          switch allowedMode
-            when "flight" then @allowedModes.push(constants.MODE_ARBITRARY)
-            when "oblique" then @allowedModes.push(constants.MODE_ARBITRARY_PLANE)
-
-        switch allowedMode
-          when "volume" then @allowedModes.push(constants.MODE_VOLUME)
-
-      if not @model.volumeTracing?
-        # Plane tracing mode is always allowed (except in VOLUME mode)
-        @allowedModes.push(constants.MODE_PLANE_TRACING)
-
-      # FPS stats
-      stats = new Stats()
-      $("body").append stats.domElement
-
-      @gui = @createGui(tracing.restrictions, tracing.content.settings)
-
-      #TODO trigger on resize
-      # set width / height for the right-side menu
-      _.defer =>
-        if $("#right-menu").length
-          menuPosition = $("#right-menu").position()
-          MARGIN = 40
-          width = Math.max(300, window.innerWidth - menuPosition.left - MARGIN)
-          height = Math.max(300, window.innerHeight - menuPosition.top - MARGIN)
-          tabHeight = height - $('#right-menu .nav').height() - 30
-
-          $("#right-menu").width(width).height(height)
-          @annotationController?.abstractTreeController?.setDimensions({
-            width : width
-            height : tabHeight
-          })
-
-      @sceneController = new SceneController(
-        @model.upperBoundary, @model.flycam, @model)
+    @model.fetch()
+      .then(
+        (error) => @modelFetchDone(error)
+      )
 
 
-      if @model.skeletonTracing?
+  modelFetchDone : (error) ->
 
-        @view = new SkeletonTracingView(@model)
-        @annotationController = new SkeletonTracingController(
-          @model, @sceneController, @gui, @view )
-        @planeController = new SkeletonTracingPlaneController(
-          @model, stats, @gui, @view, @sceneController, @annotationController)
-        @arbitraryController = new SkeletonTracingArbitraryController(
-          @model, stats, @gui, @view, @sceneController, @annotationController)
-
-      else if @model.volumeTracing?
-
-        @view = new VolumeTracingView(@model)
-        @annotationController = new VolumeTracingController(
-          @model, @sceneController, @gui, @view )
-        @planeController = new VolumeTracingPlaneController(
-          @model, stats, @gui, @view, @sceneController, @annotationController)
-
-      else # View mode
-
-        @view = new View(@model)
-        @planeController = new PlaneController(
-          @model, stats, @gui, @view, @sceneController)
-
-      @initMouse()
-      @initKeyboard()
-      @initUIElements()
-
-      for binaryName of @model.binary
-        @model.binary[binaryName].cube.on "bucketLoaded" : =>
-          @model.flycam.update()
-
-
-      if @controlMode == constants.CONTROL_MODE_VIEW
-
-        # Zoom Slider
-        logScaleBase = Math.pow(@model.flycam.getMaxZoomStep() * 0.99, 1 / 100)
-        slider = $('#zoom-slider').slider().on "slide", (event) =>
-          zoomValue = Math.pow(logScaleBase, event.value)
-          @model.user.set("zoom", zoomValue)
-
-        updateSlider = (zoom) =>
-          sliderValue = Math.log(zoom) / Math.log(logScaleBase)
-          slider.slider("setValue", sliderValue)
-
-        @model.user.on(
-          zoomChanged : updateSlider
-        )
-
-        # Segmentation slider
-        if @model.getSegmentationBinary()?
-          $('#alpha-slider').slider().on "slide", (event) =>
-
-            alpha = event.value
-            if (alpha == 0)
-              @model.getSegmentationBinary().pingStop()
-            @sceneController.setSegmentationAlpha( alpha )
-        else
-          $('#segmentation-slider').hide()
-
-      @modeMapping =
-        "view-mode-3planes"        : constants.MODE_PLANE_TRACING
-        "view-mode-sphere"         : constants.MODE_ARBITRARY
-        "view-mode-arbitraryplane" : constants.MODE_ARBITRARY_PLANE
-
-      _controller = this
-      for button in $("#view-mode .btn-group").children()
-
-        id = @modeMapping[ $(button).attr("id") ]
-        do (id) ->
-          $(button).on "click", ->
-            $(this).blur()
-            _controller.setMode( id )
-
-        if not (id in @allowedModes)
-          $(button).attr("disabled", "disabled")
-
-      if @allowedModes.length == 1
-        $("#view-mode").hide()
-
-      @allowedModes.sort()
-      if @allowedModes.length == 0
-        Toast.error("There was no valid allowed tracing mode specified.")
-      else
-        @setMode( @allowedModes[0] )
-      if @urlManager.initialState.mode?
-        @setMode( @urlManager.initialState.mode )
-
-      # initial trigger
-      @sceneController.setSegmentationAlpha($('#alpha-slider').data("slider-value") or @model.user.getSettings().segmentationOpacity)
-
-
-  initMouse : ->
-
-    # hide contextmenu, while rightclicking a canvas
-    $("#render").bind "contextmenu", (event) ->
-      event.preventDefault()
+    # Do not continue, when there was an error and we got no settings from the server
+    if error
       return
+
+    unless @model.tracing.restrictions.allowAccess
+      Toast.Error "You are not allowed to access this tracing"
+      return
+
+    @urlManager.startUrlUpdater()
+
+    # FPS stats
+    stats = new Stats()
+    $("body").append stats.domElement
+
+    @sceneController = new SceneController(
+      @model.upperBoundary, @model.flycam, @model)
+
+
+    if @model.skeletonTracing?
+
+      @view = new SkeletonTracingView(@model)
+      @annotationController = new SkeletonTracingController(
+        @model, @sceneController, @view )
+      @planeController = new SkeletonTracingPlaneController(
+        @model, stats, @view, @sceneController, @annotationController)
+      @arbitraryController = new SkeletonTracingArbitraryController(
+        @model, stats, @view, @sceneController, @annotationController)
+
+    else if @model.volumeTracing?
+
+      @view = new VolumeTracingView(@model)
+      @annotationController = new VolumeTracingController(
+        @model, @sceneController, @view )
+      @planeController = new VolumeTracingPlaneController(
+        @model, stats, @view, @sceneController, @annotationController)
+
+    else # View mode
+
+      @view = new View(@model)
+      @planeController = new PlaneController(
+        @model, stats, @view, @sceneController)
+
+    @initKeyboard()
+
+    for binaryName of @model.binary
+      @listenTo(@model.binary[binaryName].cube, "bucketLoaded", -> app.vent.trigger("rerender"))
+
+    @listenTo(@model, "change:mode", @setMode)
+
+    if @model.allowedModes.length == 0
+      Toast.error("There was no valid allowed tracing mode specified.")
+    else
+      @model.setMode(@model.allowedModes[0])
+    if @urlManager.initialState.mode? and @urlManager.initialState.mode != @model.mode
+      @model.setMode(@urlManager.initialState.mode)
+
+
+    # Zoom step warning
+    @zoomStepWarningToast = null
+    @model.flycam.on
+      zoomStepChanged : =>
+        shouldWarn = not @model.canDisplaySegmentationData()
+        if shouldWarn and not @zoomStepWarningToast?
+          toastType = if @model.volumeTracing? then "danger" else "info"
+          @zoomStepWarningToast = Toast.message(toastType,
+            "Segmentation data is only fully supported at a smaller zoom level.", true)
+        else if not shouldWarn and @zoomStepWarningToast?
+          @zoomStepWarningToast.remove()
+          @zoomStepWarningToast = null
 
 
   initKeyboard : ->
-
-    $(document).keypress (event) ->
-
-      if $(event.target).is("input")
-        # don't summon help modal when the user types into an input field
-        return
-
-      if event.shiftKey && event.which == 63
-        $("#help-modal").modal('toggle')
-
-
 
     # avoid scrolling while pressing space
     $(document).keydown (event) ->
@@ -245,122 +140,53 @@ class Controller
 
     keyboardControls = {}
 
-    if @controlMode == constants.CONTROL_MODE_TRACE
+    if @model.get("controlMode") == constants.CONTROL_MODE_TRACE
       _.extend( keyboardControls, {
         #Set Mode, outcomment for release
         "shift + 1" : =>
-          @setMode(constants.MODE_PLANE_TRACING)
+          @model.setMode(constants.MODE_PLANE_TRACING)
         "shift + 2" : =>
-          @setMode(constants.MODE_ARBITRARY)
+          @model.setMode(constants.MODE_ARBITRARY)
         "shift + 3" : =>
-          @setMode(constants.MODE_ARBITRARY_PLANE)
-        "shift + 4" : =>
-          @setMode(constants.MODE_VOLUME)
+          @model.setMode(constants.MODE_ARBITRARY_PLANE)
 
         "t" : =>
           @view.toggleTheme()
-          @annotationController?.abstractTreeController?.drawTree()
 
         "m" : => # rotate allowed modes
 
-          index = (@allowedModes.indexOf(@mode) + 1) % @allowedModes.length
-          @setMode( @allowedModes[index] )
+          index = (@model.allowedModes.indexOf(@model.get("mode")) + 1) % @model.allowedModes.length
+          @model.setMode(@model.allowedModes[index])
 
-        "super + s, ctrl + s" : (event) =>
-
+        "super + s" : (event) =>
           event.preventDefault()
           event.stopPropagation()
-          @gui.saveNow()
+          @model.save()
+
+        "ctrl + s" : (event) =>
+          event.preventDefault()
+          event.stopPropagation()
+          @model.save()
+
       } )
 
     new Input.KeyboardNoLoop( keyboardControls )
 
 
-  initUIElements : ->
-
-    @initAddScriptModal()
-
-    $("#share-button").on "click", (event) =>
-
-      # save the progress
-      model = @model.skeletonTracing || @model.volumeTracing
-      model.stateLogger.pushNow()
-
-      modalView = new ShareModalView(_model : @model)
-      el = modalView.render().el
-      $("#merge-modal").html(el)
-      modalView.show()
-
-
-
-  initAddScriptModal : ->
-
-    $("#add-script-link").removeClass("hide")
-    $("#add-script-button").click( (event) ->
-      try
-        eval($('#add-script-input').val())
-        # close modal if the script executed successfully
-        $('#script-modal').modal('hide')
-      catch error
-        alert(error)
-    )
-
-
   setMode : (newMode, force = false) ->
 
-    if (newMode == constants.MODE_ARBITRARY or newMode == constants.MODE_ARBITRARY_PLANE) and (newMode in @allowedModes or force)
+    if (newMode == constants.MODE_ARBITRARY or newMode == constants.MODE_ARBITRARY_PLANE) and (newMode in @model.allowedModes or force)
       @planeController?.stop()
       @arbitraryController.start(newMode)
 
-    else if (newMode == constants.MODE_PLANE_TRACING or newMode == constants.MODE_VOLUME) and (newMode in @allowedModes or force)
+    else if (newMode == constants.MODE_PLANE_TRACING or newMode == constants.MODE_VOLUME) and (newMode in @model.allowedModes or force)
       @arbitraryController?.stop()
       @planeController.start(newMode)
 
     else # newMode not allowed or invalid
       return
 
-
-    for button in $("#view-mode .btn-group").children()
-
-      $(button).removeClass("btn-primary")
-      if newMode == @modeMapping[$(button).attr("id")]
-        $(button).addClass("btn-primary")
-
-    @mode = newMode
-    @gui.setMode(newMode)
+    @model.mode = newMode
 
 
-  toggleFullScreen : ->
-
-    if @fullScreen
-      cancelFullscreen = document.webkitCancelFullScreen or document.mozCancelFullScreen or document.cancelFullScreen
-      @fullScreen = false
-      if cancelFullscreen
-        cancelFullscreen.call(document)
-    else
-      body = $("body")[0]
-      requestFullscreen = body.webkitRequestFullScreen or body.mozRequestFullScreen or body.requestFullScreen
-      @fullScreen = true
-      if requestFullscreen
-        requestFullscreen.call(body, body.ALLOW_KEYBOARD_INPUT)
-
-
-  createGui : (restrictions, settings)->
-
-    gui = new Gui($("#optionswindow"), @model, restrictions, settings)
-    gui.update()
-
-    for binary in @model.getColorBinaries()
-      binary.pullQueue.setFourBit(@model.user.get("fourBit"))
-
-    return gui
-
-
-  browserSupported : ->
-
-    userAgentContains = (substring) ->
-        navigator.userAgent.indexOf(substring) >= 0
-
-    # allow everything but IE
-    isIE = userAgentContains("MSIE") or userAgentContains("Trident")
-    return not isIE
+module.exports = Controller

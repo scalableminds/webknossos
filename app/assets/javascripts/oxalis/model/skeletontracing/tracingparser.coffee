@@ -1,14 +1,9 @@
-### define
-jquery : $
-underscore : _
-three.color : ColorConverter
-libs/request : Request
-libs/event_mixin : EventMixin
-libs/toast : Toast
-./tracepoint : TracePoint
-./tracetree : TraceTree
-../../constants : constants
-###
+_                  = require("lodash")
+THREE              = require("three")
+TracePoint         = require("./tracepoint")
+TraceTree          = require("./tracetree")
+Toast              = require("libs/toast")
+CommentsCollection = require("oxalis/model/right-menu/comments_collection")
 
 class TracingParser
 
@@ -18,7 +13,7 @@ class TracingParser
     @idCount = 1
     @treeIdCount = 1
     @trees = []
-    @comments = []
+    @comments = new CommentsCollection()
     @activeNode = null
     @activeTree = null
 
@@ -29,7 +24,7 @@ class TracingParser
       # Create new tree
       tree = new TraceTree(
         treeData.id,
-        new THREE.Color().setRGB(treeData.color...).getHex(),
+        @convertColor(treeData.color),
         if treeData.name then treeData.name else "Tree#{('00'+treeData.id).slice(-3)}",
         treeData.timestamp)
 
@@ -73,6 +68,14 @@ class TracingParser
       Toast.error("Node with id #{@data.activeNode} doesn't exist. Ignored active node.")
 
 
+  convertColor : (colorArray) ->
+
+    if colorArray?
+      return new THREE.Color().setRGB(colorArray...).getHex()
+
+    return null
+
+
   setBranchpoints : (nodeList) ->
 
     for branchpoint in @data.branchPoints
@@ -86,13 +89,10 @@ class TracingParser
 
   setComments : (nodeList) ->
 
-    for comment in @data.comments
-      node = @skeletonTracing.findNodeInList(nodeList, comment.node)
-      if node
-        comment.node = node
-        @comments.push(comment)
-      else
-        Toast.error("Node with id #{comment.node} doesn't exist. Ignored comment.")
+    filteredComments = _.filter(@data.comments, (comment) ->
+      _.some(nodeList, (node) -> node.id == comment.node)
+    )
+    @comments.add(filteredComments)
 
 
   parse : ->
@@ -102,7 +102,7 @@ class TracingParser
         idCount : 0
         treeIdCount : 0
         trees : []
-        comments : []
+        comments : new CommentsCollection()
         activeNode : null
         activeTree : null
       }
@@ -124,3 +124,5 @@ class TracingParser
       @activeNode
       @activeTree
     }
+
+module.exports = TracingParser

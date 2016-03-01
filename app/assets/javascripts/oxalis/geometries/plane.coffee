@@ -1,11 +1,10 @@
-### define
-../model : Model
-../view : View
-../model/dimensions : Dimensions
-../constants : constants
-three : THREE
-./materials/plane_material_factory : PlaneMaterialFactory
-###
+app                  = require("app")
+Model                = require("../model")
+View                 = require("../view")
+Dimensions           = require("../model/dimensions")
+constants            = require("../constants")
+THREE                = require("three")
+PlaneMaterialFactory = require("./materials/plane_material_factory")
 
 class Plane
 
@@ -28,8 +27,8 @@ class Plane
     # planeWidth means that the plane should be that many voxels wide in the
     # dimension with the highest resolution. In all other dimensions, the plane
     # is smaller in voxels, so that it is squared in nm.
-    # --> model.scaleInfo.baseVoxel
-    scaleArray = Dimensions.transDim(@model.scaleInfo.baseVoxelFactors, @planeID)
+    # --> app.scaleInfo.baseVoxel
+    scaleArray = Dimensions.transDim(app.scaleInfo.baseVoxelFactors, @planeID)
     @scaleVector = new THREE.Vector3(scaleArray...)
 
     @createMeshes(planeWidth, textureWidth)
@@ -96,7 +95,7 @@ class Plane
 
             if dataBuffer
               @plane.material.setData name, dataBuffer
-              @flycam.hasNewTexture[@planeID] = true
+              app.vent.trigger("rerender")
 
       @plane.material.setScaleParams(
         repeat :
@@ -139,7 +138,7 @@ class Plane
 
   setSegmentationAlpha : (alpha) ->
     @plane.material.setSegmentationAlpha alpha
-    @flycam.hasChanged = true
+    app.vent.trigger("rerender")
 
 
   getMeshes : =>
@@ -152,3 +151,5 @@ class Plane
     @plane.material.setColorInterpolation(
       if enabled then THREE.LinearFilter else THREE.NearestFilter
     )
+
+module.exports = Plane

@@ -1,6 +1,7 @@
 package models.tracing.skeleton
 
 import oxalis.nml.Node
+import reactivemongo.api.commands.WriteResult
 import reactivemongo.bson.BSONObjectID
 import models.basics.SecuredBaseDAO
 import play.api.libs.json.Json
@@ -26,7 +27,7 @@ object DBNodeDAO extends SecuredBaseDAO[DBNode] {
 
   underlying.indexesManager.ensure(Index(Seq("_treeId" -> IndexType.Ascending)))
 
-  def remove(nodeId: Int, _tree: BSONObjectID)(implicit ctx: DBAccessContext): Fox[LastError] =
+  def remove(nodeId: Int, _tree: BSONObjectID)(implicit ctx: DBAccessContext): Fox[WriteResult] =
     remove(Json.obj("_treeId" -> _tree, "node.id" -> nodeId))
 
   def findByTree(_tree: BSONObjectID)(implicit ctx: DBAccessContext) = withExceptionCatcher{

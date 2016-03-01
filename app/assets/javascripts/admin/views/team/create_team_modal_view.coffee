@@ -1,24 +1,23 @@
-### define
-underscore : _
-app : app
-libs/toast : Toast
-admin/models/team/team_model : TeamModel
-admin/models/team/team_collection : TeamCollection
-admin/views/selection_view : SelectionView
-###
+_              = require("lodash")
+app            = require("app")
+Marionette     = require("backbone.marionette")
+Toast          = require("libs/toast")
+TeamModel      = require("admin/models/team/team_model")
+TeamCollection = require("admin/models/team/team_collection")
+SelectionView  = require("admin/views/selection_view")
 
-class CreateTeamModalView extends Backbone.Marionette.LayoutView
+class CreateTeamModalView extends Marionette.LayoutView
 
   className : "modal fade"
   template : _.template("""
     <div class="modal-dialog">
       <div class="modal-content">
-        <div class="modal-header">
-          <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
-          <h3>Add a New Team</h3>
-        </div>
-        <div class="modal-body container-fluid">
-          <form class="form-horizontal">
+        <form class="form-horizontal">
+          <div class="modal-header">
+            <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+            <h3>Add a New Team</h3>
+          </div>
+          <div class="modal-body container-fluid">
             <div class="form-group">
               <label class="col-sm-2 control-label" for="inputName">Name</label>
               <div class="col-sm-10">
@@ -31,12 +30,12 @@ class CreateTeamModalView extends Backbone.Marionette.LayoutView
                 <input type="text" class="form-control" id="" placeholder="Name" required autofocus>
               </div>
             </div>
-          </form>
-        </div>
-        <div class="modal-footer">
-          <a href="#" class="btn btn-primary">Add</a>
-          <a href="#" class="btn btn-default" data-dismiss="modal">Close</a>
-        </div>
+          </div>
+          <div class="modal-footer">
+            <button type="submit" class="btn btn-primary">Add</button>
+            <a href="#" class="btn btn-default" data-dismiss="modal">Close</a>
+          </div>
+        </form>
       </div>
     </div>
   """)
@@ -45,7 +44,7 @@ class CreateTeamModalView extends Backbone.Marionette.LayoutView
     "inputName" : "#inputName"
 
   events :
-    "click .btn-primary" : "addNewTeam"
+    "submit form" : "addNewTeam"
 
   regions :
     "parentTeams" : ".parent-teams"
@@ -63,7 +62,9 @@ class CreateTeamModalView extends Backbone.Marionette.LayoutView
     )
 
 
-  addNewTeam : ->
+  addNewTeam : (evt) ->
+
+    evt.preventDefault()
 
     team = new TeamModel(
       name : @ui.inputName.val(),
@@ -90,3 +91,4 @@ class CreateTeamModalView extends Backbone.Marionette.LayoutView
     )
     @$el.modal("hide")
 
+module.exports = CreateTeamModalView

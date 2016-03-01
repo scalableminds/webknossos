@@ -1,8 +1,7 @@
-### define
-underscore : _
-backbone : backbone
-libs/utils: utils
-###
+_        = require("lodash")
+backbone = require("backbone")
+utils    = require("libs/utils")
+moment   = require("moment")
 
 class ProjectTaskCollection extends Backbone.Collection
 
@@ -23,3 +22,5 @@ class ProjectTaskCollection extends Backbone.Collection
 
         return response
     )
+
+module.exports = ProjectTaskCollection

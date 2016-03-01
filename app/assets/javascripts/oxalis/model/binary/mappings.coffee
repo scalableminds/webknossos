@@ -1,8 +1,7 @@
-### define
-underscore : _
-jquery : $
-libs/request : Request
-###
+_             = require("lodash")
+$             = require("jquery")
+Request       = require("libs/request")
+ErrorHandling = require("libs/error_handling")
 
 class Mappings
 
@@ -65,7 +64,7 @@ class Mappings
     for currentMappingName in @getMappingChain(mappingName)
 
       mappingObject = @mappings[currentMappingName].mappingObject
-      $.assert(mappingObject,
+      ErrorHandling.assert(mappingObject,
           "mappingObject must have been fetched at this point")
 
       for mappingClass in mappingObject.classes
@@ -98,3 +97,5 @@ class Mappings
     for entry in array
       min = Math.min(min, entry)
     return min
+
+module.exports = Mappings

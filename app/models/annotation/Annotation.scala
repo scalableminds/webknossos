@@ -10,7 +10,7 @@ import org.joda.time.format.DateTimeFormat
 import org.joda.time.DateTime
 import com.scalableminds.util.mvc.Formatter
 import oxalis.nml.NML
-import com.scalableminds.util.geometry.Point3D
+import com.scalableminds.util.geometry.{BoundingBox, Point3D}
 import java.util.Date
 import play.api.Logger
 import models.basics.Implicits._
@@ -23,6 +23,7 @@ import play.modules.reactivemongo.json.BSONFormats._
 import reactivemongo.api.indexes.{IndexType, Index}
 import oxalis.view.{ResourceAction, ResourceActionCollection}
 import models.team.Role
+import models.tracing.TracingStatistics
 
 case class Annotation(
                        _user: Option[BSONObjectID],
@@ -35,6 +36,7 @@ case class Annotation(
                        _name: Option[String] = None,
                        created : Long = System.currentTimeMillis,
                        _id: BSONObjectID = BSONObjectID.generate,
+                       isActive: Boolean = true,
                        readOnly: Option[Boolean] = None
                      )
 
@@ -61,17 +63,9 @@ case class Annotation(
 
   def relativeDownloadUrl = Some(Annotation.relativeDownloadUrlOf(typ, id))
 
-  def isReadyToBeFinished(implicit ctx: DBAccessContext) = {
-    // TODO: RF - rework
-    task
-    .flatMap(_.annotationBase.toFox.flatMap(_.statisticsForAnnotation()).map(_.numberOfNodes))
-    .getOrElse(1L)
-    .flatMap { nodesInBase =>
-      this.statisticsForAnnotation().map(_.numberOfNodes > nodesInBase) getOrElse true
-    }
-  }
+  def isReadyToBeFinished(implicit ctx: DBAccessContext) = Future.successful(true)
 
-  def removeTask = {
+  def removeTask() = {
     this.copy(_task = None, typ = AnnotationType.Orphan)
   }
 
@@ -95,7 +89,6 @@ case class Annotation(
   }
 
   def actions(userOpt: Option[User]) = {
-    import controllers.admin.routes._
     import controllers.routes._
     val traceOrView = if(restrictions.allowUpdate(userOpt)) "trace" else "view"
     val basicActions = List(
@@ -113,7 +106,7 @@ case class Annotation(
 object Annotation {
   implicit val annotationFormat = Json.format[Annotation]
 
-  def relativeDownloadUrlOf(typ: String, id: String) =
+  def relativeDownloadUrlOf(typ: String, id: String): String =
     controllers.routes.AnnotationController.download(typ, id).url
 
   def transformToJson(annotation: Annotation)(implicit ctx: DBAccessContext): Future[JsObject] = {
@@ -134,7 +127,7 @@ object Annotation {
         "name" -> annotation.name,
         "id" -> annotation.id,
         "formattedHash" -> Formatter.formatHash(annotation.id),
-        "stats" -> stats.toOption
+        "stats" -> stats.map(_.writeAsJson).toOption
 
       )
     }
@@ -144,7 +137,7 @@ object Annotation {
 
 object AnnotationDAO
   extends SecuredBaseDAO[Annotation]
-  with FoxImplicits with MongoHelpers{
+  with FoxImplicits with MongoHelpers {
 
   val collectionName = "annotations"
 
@@ -152,6 +145,14 @@ object AnnotationDAO
 
   underlying.indexesManager.ensure(Index(Seq("_task" -> IndexType.Ascending)))
   underlying.indexesManager.ensure(Index(Seq("_user" -> IndexType.Ascending)))
+
+  override def find(query: JsObject = Json.obj())(implicit ctx: DBAccessContext) = {
+    super.find(query ++ Json.obj("isActive" -> true))
+  }
+
+  override def findOne(query: JsObject = Json.obj())(implicit ctx: DBAccessContext) = {
+    super.findOne(query ++ Json.obj("isActive" -> true))
+  }
 
   override val AccessDefinitions = new DefaultAccessDefinitions{
 
@@ -194,30 +195,39 @@ object AnnotationDAO
   def findFor(_user: BSONObjectID)(implicit ctx: DBAccessContext) = withExceptionCatcher{
     find(Json.obj(
       "_user" -> _user,
-      "state.isAssigned" -> true)).cursor[Annotation].collect[List]()
+      "state.isAssigned" -> true)).cursor[Annotation]().collect[List]()
   }
 
   def findFor(_user: BSONObjectID, annotationType: AnnotationType)(implicit ctx: DBAccessContext) = withExceptionCatcher{
     find(Json.obj(
       "_user" -> _user,
       "state.isAssigned" -> true,
-      "typ" -> annotationType)).cursor[Annotation].collect[List]()
+      "typ" -> annotationType)).cursor[Annotation]().collect[List]()
   }
 
-
-  def findForWithTypeOtherThan(_user: BSONObjectID, annotationTypes: List[AnnotationType])(implicit ctx: DBAccessContext) = withExceptionCatcher{
-    find(Json.obj(
+  def findForWithTypeOtherThan(_user: BSONObjectID, isFinished: Option[Boolean], annotationTypes: List[AnnotationType])(implicit ctx: DBAccessContext) = withExceptionCatcher{
+    var q = Json.obj(
       "_user" -> _user,
-      "state.isFinished" -> false,
       "state.isAssigned" -> true,
-      "typ" -> Json.obj("$nin" -> annotationTypes))).cursor[Annotation].collect[List]()
+      "typ" -> Json.obj("$nin" -> annotationTypes))
+
+    isFinished.foreach{ f => q += "state.isFinished" -> JsBoolean(f)}
+
+    find(q).cursor[Annotation]().collect[List]()
+  }
+
+  def findFinishedFor(_user: BSONObjectID)(implicit ctx: DBAccessContext) = withExceptionCatcher {
+    find(Json.obj(
+    "_user" -> _user,
+    "state.isFinished" -> true
+    )).cursor[Annotation]().collect[List]()
   }
 
   def findOpenAnnotationFor(_user: BSONObjectID, annotationType: AnnotationType)(implicit ctx: DBAccessContext) =
     findOne(defaultFindForUserQ(_user, annotationType))
 
   def findOpenAnnotationsFor(_user: BSONObjectID, annotationType: AnnotationType)(implicit ctx: DBAccessContext) = withExceptionCatcher{
-    find(defaultFindForUserQ(_user, annotationType)).cursor[Annotation].collect[List]()
+    find(defaultFindForUserQ(_user, annotationType)).cursor[Annotation]().collect[List]()
   }
 
   def countOpenAnnotations(_user: BSONObjectID, annotationType: AnnotationType)(implicit ctx: DBAccessContext) =
@@ -227,17 +237,17 @@ object AnnotationDAO
     find(Json.obj(
       "state.isFinished" -> false,
       "state.isAssigned" -> true,
-      "typ" -> annotationType)).cursor[Annotation].collect[List]()
+      "typ" -> annotationType)).cursor[Annotation]().collect[List]()
   }
 
   def removeAllWithTaskId(_task: BSONObjectID)(implicit ctx: DBAccessContext) =
-    remove(Json.obj("_task" -> _task))
+    update(Json.obj("_task" -> _task), Json.obj("$set" -> Json.obj("isActive" -> false)), upsert = false, multi = true)
 
   def incrementVersion(_annotation: BSONObjectID)(implicit ctx: DBAccessContext) =
     findAndModify(
       Json.obj("_id" -> _annotation),
       Json.obj("$inc" -> Json.obj("version" -> 1)),
-      true)
+      returnNew = true)
 
   def findByTaskId(_task: BSONObjectID)(implicit ctx: DBAccessContext) = withExceptionCatcher{
     find("_task", _task).collect[List]()
@@ -272,30 +282,46 @@ object AnnotationDAO
       Json.obj("_id" -> annotation._id),
       Json.obj("$set" -> Json.obj("state" -> state)))
 
-  def updateAllUsingNewTaskType(task: Task, settings: AnnotationSettings)(implicit ctx: DBAccessContext) = {
+  def updateTeamForAllOfTask(task: Task, team: String)(implicit ctx: DBAccessContext) =
+    update(Json.obj("_id" -> task._id), Json.obj("$set" -> Json.obj("team" -> team)))
+
+  def updateAllOfTask(
+    task: Task,
+    settings: AnnotationSettings)(implicit ctx: DBAccessContext) = {
+
     find(
       Json.obj(
-        "_task" -> task._id)).one[Annotation].map {
-      case Some(annotation) =>
-        annotation._content.service.updateSettings(settings, annotation._content._id)
-      case _ =>
-    }
+        "_task" -> task._id)).cursor[Annotation]().collect[List]().map(_.map { annotation =>
+      annotation._content.service.updateSettings(settings, annotation._content._id)
+    })
+  }
+  def updateAllOfTask(
+    task: Task,
+    dataSetName: String,
+    boundingBox: Option[BoundingBox],
+    settings: AnnotationSettings)(implicit ctx: DBAccessContext) = {
+
+    find(
+      Json.obj(
+        "_task" -> task._id)).cursor[Annotation]().collect[List]().map(_.map{ annotation =>
+          annotation._content.service.updateSettings(dataSetName, boundingBox, settings, annotation._content._id)
+    })
   }
 
   def countAll(implicit ctx: DBAccessContext) =
-    count(Json.obj())
+    count(Json.obj("isActive" -> true))
 
   def finish(_annotation: BSONObjectID)(implicit ctx: DBAccessContext) =
     findAndModify(
       Json.obj("_id" -> _annotation),
       Json.obj("$set" -> Json.obj("state" -> AnnotationState.Finished)),
-      true)
+      returnNew = true)
 
   def rename(_annotation: BSONObjectID, name: String)(implicit ctx: DBAccessContext) =
     findAndModify(
       Json.obj("_id" -> _annotation),
       Json.obj("$set" -> Json.obj("_name" -> name)),
-      true)
+      returnNew = true)
 
   def reopen(_annotation: BSONObjectID)(implicit ctx: DBAccessContext) =
     updateState(_annotation, AnnotationState.InProgress)
@@ -307,7 +333,7 @@ object AnnotationDAO
     findAndModify(
       Json.obj("_id" -> _annotation),
       Json.obj("$set" -> Json.obj("state" -> state)),
-      true)
+      returnNew = true)
 
   def assignReviewer(_annotation: BSONObjectID, annotationReview: AnnotationReview)(implicit ctx: DBAccessContext) =
     findAndModify(
@@ -315,21 +341,21 @@ object AnnotationDAO
       Json.obj("$set" -> Json.obj(
         "state" -> AnnotationState.InReview,
         "review.-1" -> annotationReview)),
-      true)
+      returnNew = true)
 
   def addReviewComment(_annotation: BSONObjectID, comment: String)(implicit ctx: DBAccessContext) =
     findAndModify(
       Json.obj("_id" -> _annotation),
       Json.obj("$set" -> Json.obj(
         "review.0.comment" -> comment)),
-      true)
+      returnNew = true)
 
   def updateContent(_annotation: BSONObjectID, content: ContentReference)(implicit ctx: DBAccessContext) =
     findAndModify(
       Json.obj("_id" -> _annotation),
       Json.obj("$set" -> Json.obj(
         "_content" -> content)),
-      true)
+      returnNew = true)
 
   def unassignReviewer(_annotation: BSONObjectID)(implicit ctx: DBAccessContext) =
     findAndModify(
@@ -337,12 +363,12 @@ object AnnotationDAO
       Json.obj("$set" -> Json.obj(
         "state" -> AnnotationState.ReadyForReview),
         "$pop" -> Json.obj("review" -> -1)),
-      true)
+      returnNew = true)
 
   def transfer(_annotation: BSONObjectID, _user: BSONObjectID)(implicit ctx: DBAccessContext) =
     findAndModify(
       Json.obj("_id" -> _annotation),
       Json.obj("$set" -> Json.obj(
         "_user" -> _user)),
-      true)
+      returnNew = true)
 }

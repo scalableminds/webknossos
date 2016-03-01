@@ -1,19 +1,17 @@
-### define
-underscore : _
-backbone.marionette : marionette
-libs/template_helpers : TemplateHelpers
-###
+_               = require("lodash")
+Marionette      = require("backbone.marionette")
+TemplateHelpers = require("libs/template_helpers")
 
-class TeamListItemView extends Backbone.Marionette.ItemView
+class TeamListItemView extends Marionette.ItemView
 
   tagName : "tr"
   template : _.template("""
-    <td><%= name %></td>
-    <td><% if(parent){ %><%= parent %><% } %></td>
-    <td><% if(owner){ %> <%= owner.firstName %> <%= owner.lastName %> <% }else{ %> - <% } %></td>
+    <td><%- name %></td>
+    <td><% if(parent){ %><%- parent %><% } %></td>
+    <td><% if(owner){ %> <%- owner.firstName %> <%- owner.lastName %> <% }else{ %> - <% } %></td>
     <td>
       <% _.each(roles, function(role){ %>
-          <span class="label label-default" style="background-color: <%= TemplateHelpers.stringToColor(role.name) %>"><%= role.name %></span>
+          <span class="label label-default" style="background-color: <%- TemplateHelpers.stringToColor(role.name) %>"><%- role.name %></span>
       <% }) %>
     </td>
     </td>
@@ -41,3 +39,4 @@ class TeamListItemView extends Backbone.Marionette.ItemView
       @model.destroy()
 
 
+module.exports = TeamListItemView

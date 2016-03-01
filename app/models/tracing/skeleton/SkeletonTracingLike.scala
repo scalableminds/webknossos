@@ -5,6 +5,7 @@ import oxalis.nml._
 import oxalis.nml.utils._
 import com.scalableminds.util.geometry.Scale
 import com.scalableminds.util.geometry.{Point3D, BoundingBox}
+import play.api.libs.iteratee.Enumerator
 import play.api.libs.json._
 import play.api.libs.functional.syntax._
 import com.scalableminds.util.xml.XMLWrites
@@ -21,7 +22,7 @@ import models.annotation.AnnotationType._
 import scala.Some
 import oxalis.nml.NML
 import models.annotation.AnnotationType.AnnotationType
-import com.scalableminds.util.reactivemongo.GlobalDBAccess
+import com.scalableminds.util.reactivemongo.{DBAccessContext, GlobalDBAccess}
 import com.scalableminds.util.tools.{FoxImplicits, Fox}
 import net.liftweb.common.Full
 import java.io.InputStream
@@ -57,8 +58,10 @@ trait SkeletonTracingLike extends AnnotationContent {
 
   def downloadFileExtension = ".nml"
 
-  def toDownloadStream: Fox[InputStream] =
-    NMLService.toNML(this).map(IOUtils.toInputStream)
+  def stats: Option[SkeletonTracingStatistics]
+
+  def toDownloadStream(implicit ctx: DBAccessContext): Fox[Enumerator[Array[Byte]]] =
+    NMLService.toNML(this).map(data => Enumerator.fromStream(IOUtils.toInputStream(data)))
 
   override def contentData =
     SkeletonTracingLike.skeletonTracingLikeWrites(this)

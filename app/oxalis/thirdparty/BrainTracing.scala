@@ -1,7 +1,7 @@
 package oxalis.thirdparty
 
 import models.user.User
-import play.api.libs.ws.WS
+import play.api.libs.ws.{WSAuthScheme, WS}
 import com.ning.http.client.Realm.AuthScheme
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.Logger
@@ -30,7 +30,7 @@ object BrainTracing {
       val result = Promise[String]()
       WS
       .url(CREATE_URL)
-      .withAuth(USER, PW, AuthScheme.BASIC)
+      .withAuth(USER, PW, WSAuthScheme.BASIC)
       .withQueryString(
         "license" -> LICENSE,
         "firstname" -> user.firstName,
@@ -77,7 +77,7 @@ object BrainTracing {
           val taskType = await(taskTypeFox.futureBox)
           await(WS
           .url(LOGTIME_URL)
-          .withAuth(USER, PW, AuthScheme.BASIC)
+          .withAuth(USER, PW, WSAuthScheme.BASIC)
           .withQueryString(
             "license" -> LICENSE,
             "email" -> user.email,
@@ -90,7 +90,7 @@ object BrainTracing {
           .get()
           .map { response =>
             response.status match {
-              case 200 if(!isSilentFailure(response.body)) =>
+              case 200 if !isSilentFailure(response.body) =>
                 Logger.trace(s"Logged time! User: ${user.email} Time: $hours")
                 true
               case 200 =>

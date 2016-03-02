@@ -69,14 +69,7 @@ case class Task(
   }
 
   def hasEnoughExperience(user: User) = {
-    if (this.neededExperience.isEmpty) {
-      true
-    } else {
-      user.experiences
-      .get(this.neededExperience.domain)
-      .map(_ >= this.neededExperience.value)
-      .getOrElse(false)
-    }
+    neededExperience.isEmpty || user.experiences.get(neededExperience.domain).exists(_ >= neededExperience.value)
   }
 }
 
@@ -85,9 +78,10 @@ object Task extends FoxImplicits {
 
   def transformToJson(task: Task)(implicit ctx: DBAccessContext): Future[JsObject] = {
     for {
-      dataSetName <- task.annotationBase.flatMap(_.dataSetName) getOrElse ""
-      editPosition <- task.annotationBase.flatMap(_.content.map(_.editPosition)) getOrElse Point3D(1, 1, 1)
-      boundingBox <- task.annotationBase.flatMap(_.content.map(_.boundingBox)) getOrElse None
+      annotationContent <- task.annotationBase.flatMap(_.content).futureBox
+      dataSetName = annotationContent.map(_.dataSetName).openOr("")
+      editPosition = annotationContent.map(_.editPosition).openOr(Point3D(0, 0, 0))
+      boundingBox = annotationContent.flatMap(_.boundingBox).toOption
       status <- task.status
       tt <- task.taskType.map(TaskType.transformToJson) getOrElse JsNull
       projectName = task._project.getOrElse("")

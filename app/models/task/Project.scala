@@ -121,6 +121,7 @@ object ProjectDAO extends SecuredBaseDAO[Project] {
   val formatter = Project.projectFormat
 
   underlying.indexesManager.ensure(Index(Seq("name" -> IndexType.Ascending)))
+  underlying.indexesManager.ensure(Index(Seq("team" -> IndexType.Ascending)))
 
   def findOneByName(name: String)(implicit ctx: DBAccessContext) = {
     findOne("name", name)

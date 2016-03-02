@@ -97,7 +97,7 @@ object DataSetController extends Controller with Secured {
   def accessList(dataSetName: String) = Authenticated.async{ implicit request =>
     for{
       dataSet <- DataSetDAO.findOneBySourceName(dataSetName) ?~> Messages("dataSet.notFound")
-      users <- UserService.findByTeams(dataSet.allowedTeams)
+      users <- UserService.findByTeams(dataSet.allowedTeams, includeAnonymous = false)
     } yield {
       Ok(Writes.list(User.userCompactWrites(request.user)).writes(users))
     }

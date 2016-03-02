@@ -6,7 +6,7 @@ jquery : $
 class SkeletonTracingStateLogger extends StateLogger
 
 
-  constructor : (flycam, version, tracingId, tracingType, allowUpdate, @skeletonTracing) ->
+  constructor : (flycam, @flycam3d, version, tracingId, tracingType, allowUpdate, @skeletonTracing) ->
 
     super(flycam, version, tracingId, tracingType, allowUpdate)
 
@@ -77,7 +77,8 @@ class SkeletonTracingStateLogger extends StateLogger
       treeId : treeId,
       id: node.id,
       radius: node.radius,
-      position : node.pos
+      position : node.pos,
+      rotation : node.rotation
 
 
   edgeObject : (node, treeId) ->
@@ -152,6 +153,7 @@ class SkeletonTracingStateLogger extends StateLogger
         comments : @skeletonTracing.getPlainComments()
         activeNode : @skeletonTracing.getActiveNodeId()
         editPosition : @flycam.getPosition()
+        editRotation : @flycam3d.getRotation()
         zoomLevel : @flycam.getZoomStep()
       }
       false

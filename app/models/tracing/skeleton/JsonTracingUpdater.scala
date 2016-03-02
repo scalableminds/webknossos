@@ -1,5 +1,6 @@
 package models.tracing.skeleton
 
+import com.scalableminds.util.geometry.Vector3D
 import play.api.libs.json._
 import com.scalableminds.util.image.Color
 import play.api.Logger
@@ -212,6 +213,7 @@ case class UpdateTracing(value: JsObject) extends TracingUpdater {
     val comments = (value \ "comments").as[List[Comment]]
     val activeNodeId = (value \ "activeNode").asOpt[Int]
     val editPosition = (value \ "editPosition").as[Point3D]
+    val editRotation = (value \ "editRotation").as[Vector3D]
     val zoomLevel = (value \ "zoomLevel").as[Double]
     TracingUpdate { t =>
       val updated = t.copy(
@@ -219,6 +221,7 @@ case class UpdateTracing(value: JsObject) extends TracingUpdater {
         comments = comments,
         activeNodeId = activeNodeId,
         editPosition = editPosition,
+        editRotation = editRotation,
         zoomLevel = zoomLevel)
       SkeletonTracingDAO.update(t._id, updated).map(_ => updated) ?~> "Failed to update tracing."
     }

@@ -9,7 +9,7 @@ class UrlManager
 
   constructor : (@controller, @model) ->
 
-    @baseUrl      = document.location.pathname
+    @baseUrl      = document.location.pathname + document.location.search
     @initialState = @parseUrl()
 
     @update = _.throttle(

@@ -52,11 +52,21 @@ object Application extends Controller with Secured {
   def index() = UserAwareAction { implicit request =>
     UserAgentTrackingDAO.trackUserAgent(request.userOpt.map(_._id), request.headers.get("user-agent").getOrElse("<none>"))
     request.userOpt match {
+      case Some(user) if user.isAnonymous =>
+        Redirect("/info")
       case Some(user) =>
         Redirect("/dashboard")
       case _ =>
         Redirect("/spotlight")
     }
+  }
+
+  def info() = UserAwareAction { implicit request =>
+    Ok(views.html.info())
+  }
+
+  def thankyou() = UserAwareAction { implicit request =>
+    Ok(views.html.thankyou())
   }
 
   def emptyMain = Authenticated { implicit request =>

@@ -10,7 +10,7 @@ libs/drawing : Drawing
 
 class VolumeTracing
 
-  constructor : (tracing, @flycam, @binary) ->
+  constructor : (tracing, @flycam, @flycam3d, @binary) ->
 
     _.extend(@, new EventMixin())
 
@@ -23,7 +23,7 @@ class VolumeTracing
     @idCount      = @contentData.nextCell || 1
 
     @stateLogger  = new VolumeTracingStateLogger(
-      @flycam, tracing.version, tracing.id, tracing.typ,
+      @flycam, @flycam3d, tracing.version, tracing.id, tracing.typ,
       tracing.restrictions.allowUpdate,
       this, @binary.pushQueue
     )

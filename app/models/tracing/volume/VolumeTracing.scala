@@ -1,6 +1,6 @@
 package models.tracing.volume
 
-import com.scalableminds.util.geometry.{Point3D, BoundingBox}
+import com.scalableminds.util.geometry.{Vector3D, Point3D, BoundingBox}
 import models.annotation.{AnnotationLike, AnnotationContentService, AnnotationContent, AnnotationSettings}
 import models.basics.SecuredBaseDAO
 import models.binary.UserDataLayerDAO
@@ -27,6 +27,7 @@ case class VolumeTracing(
   activeCellId: Option[Int] = None,
   timestamp: Long = System.currentTimeMillis(),
   editPosition: Point3D = Point3D(0,0,0),
+  editRotation: Vector3D = Vector3D(0,0,0),
   zoomLevel: Double,
   boundingBox: Option[BoundingBox] = None,
   settings: AnnotationSettings = AnnotationSettings.volumeDefault,

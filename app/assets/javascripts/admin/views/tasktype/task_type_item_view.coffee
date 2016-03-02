@@ -30,6 +30,9 @@ class TaskTypeItemView extends Backbone.Marionette.CompositeView
         <% if(settings.somaClickingAllowed) { %>
           <span class="label label-default">Soma clicking</span>
         <% } %>
+        <% if(settings.advancedOptionsAllowed) { %>
+          <span class="label label-default">Advanced Options</span>
+        <% } %>
       </td>
       <td><%= expectedTime %></td>
       <td><%= fileName %></td>

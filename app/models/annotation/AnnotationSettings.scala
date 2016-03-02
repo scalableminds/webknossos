@@ -6,17 +6,20 @@ import models.basics.BasicSettings
 
 import AnnotationSettings._
 
-case class AnnotationSettings(allowedModes: List[String] = SKELETON_MODES,
-                              branchPointsAllowed: Boolean = true,
-                              somaClickingAllowed: Boolean = true
-                             )
+case class AnnotationSettings(
+  allowedModes: List[String] = SKELETON_MODES,
+  branchPointsAllowed: Boolean = true,
+  somaClickingAllowed: Boolean = true,
+  advancedOptionsAllowed: Boolean = true
+  )
 
 object AnnotationSettings {
+  val ORTHOGONAL = "orthogonal"
   val OBLIQUE = "oblique"
   val FLIGHT = "flight"
   val VOLUME = "volume"
 
-  val SKELETON_MODES = List(OBLIQUE, FLIGHT)
+  val SKELETON_MODES = List(ORTHOGONAL, OBLIQUE, FLIGHT)
   val VOLUME_MODES = List(VOLUME)
 
   val default = AnnotationSettings()

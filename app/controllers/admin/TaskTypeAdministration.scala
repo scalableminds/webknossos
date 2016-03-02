@@ -27,6 +27,7 @@ object TaskTypeAdministration extends AdminController {
       "team" -> nonEmptyText,
       "allowedModes" -> seq(text),
       "branchPointsAllowed" -> boolean,
+      "advancedOptionsAllowed" -> boolean,
       "somaClickingAllowed" -> boolean,
       "expectedTime" -> mapping(
         "minTime" -> number(min = 1),

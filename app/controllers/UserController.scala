@@ -20,6 +20,7 @@ import play.api.libs.functional.syntax._
 import play.api.templates.Html
 import com.scalableminds.util.tools.ExtendedTypes.ExtendedString
 import models.user.time._
+import com.scalableminds.util.tools.DefaultConverters._
 
 import scala.text
 
@@ -90,16 +91,16 @@ object UserController extends Controller with Secured with Dashboard with FoxImp
 
   // REST API
   def list = Authenticated.async{ implicit request =>
-    for {
-      users <- UserDAO.findAll
-    } yield {
-      val filtered = request.getQueryString("isEditable").flatMap(_.toBooleanOpt) match{
-        case Some(isEditable) =>
-          users.filter(_.isEditableBy(request.user) == isEditable)
-        case None =>
-          users
+    UsingFilters(
+      Filter("includeAnonymous", (value: Boolean, el: User) => value || !el.isAnonymous, default = Some("false")),
+      Filter("isEditable", (value: Boolean, el: User) => el.isEditableBy(request.user) == value)
+    ) { filter =>
+      for {
+        users <- UserDAO.findAll
+        filtered = filter.applyOn(users)
+      } yield {
+        Ok(Writes.list(User.userPublicWrites(request.user)).writes(filtered.sortBy(_.lastName.toLowerCase)))
       }
-      Ok(Writes.list(User.userPublicWrites(request.user)).writes(filtered.sortBy(_.lastName.toLowerCase)))
     }
   }
 

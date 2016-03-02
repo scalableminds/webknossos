@@ -43,7 +43,7 @@ class TracingParser
           new TracePoint(
             @skeletonTracing.TYPE_USUAL,
             node.id, node.position, node.radius, treeData.id,
-            metaInfo))
+            metaInfo, node.rotation))
 
         # idCount should be bigger than any other id
         @idCount = Math.max(node.id + 1, @idCount);

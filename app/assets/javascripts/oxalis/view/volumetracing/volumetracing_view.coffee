@@ -5,9 +5,9 @@ jquery : $
 
 class VolumeTracingView extends View
 
-  constructor : (@model) ->
+  constructor : (@model, advancedOptionsAllowed) ->
 
-    super(@model)
+    super(@model, advancedOptionsAllowed)
 
     $(".skeleton-controls").hide()
     $(".skeleton-plane-controls").hide()

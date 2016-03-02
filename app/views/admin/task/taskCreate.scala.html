@@ -1,4 +1,4 @@
-@(taskTypes: List[models.task.TaskType], dataSets: List[models.binary.DataSet], projects: List[models.task.Project], teams: List[String], nmlForm: Form[(String, models.user.Experience, Int, Int, String, String, com.scalableminds.util.geometry.BoundingBox)], taskForm: Form[(String, String, com.scalableminds.util.geometry.Point3D, models.user.Experience, Int, Int, String, String, com.scalableminds.util.geometry.BoundingBox)])(implicit session: oxalis.view.AuthedSessionData)
+@(taskTypes: List[models.task.TaskType], dataSets: List[models.binary.DataSet], projects: List[models.task.Project], teams: List[String], nmlForm: Form[_], taskForm: Form[_])(implicit session: oxalis.view.AuthedSessionData)
 
 @main(){
   <div class="container task-types-administration">
@@ -62,7 +62,11 @@
 
             @helper.inputText(taskForm("start.point"), 'type -> "text", 'class -> "form-control")
 
+            @helper.inputText(taskForm("rotation.vector"), 'type -> "text", 'class -> "form-control")
+
             @helper.inputText(taskForm("boundingBox.box"), 'type -> "text", 'class -> "form-control")
+
+            @helper.checkbox(taskForm("isForAnonymous"))
 
             <div class="form-group">
               <div class="col-sm-9 col-sm-offset-3">
@@ -80,7 +84,7 @@
         <div class="well">
           <h3>Import Tasks in Bulk</h3>
           One line for each task. The values are seperated by ','. Format: <br />
-          dataSet, taskTypeSummary, experienceDomain, minExperience, x, y, z, priority, instances, team, minX, minY, minZ, maxX, maxY, maxZ, (opt: project)<br /><br />
+          dataSet, taskTypeSummary, experienceDomain, minExperience, x, y, z, rotX, rotY, rotZ, priority, instances, team, minX, minY, minZ, maxX, maxY, maxZ, (opt: project)<br /><br />
           @helper.form(controllers.admin.routes.TaskAdministration.createBulk, 'class -> "form-horizontal"){
             <div class="form-group">
               <div class="col-sm-12">

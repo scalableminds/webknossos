@@ -2,7 +2,7 @@
 
 @import play.api.Play.current
 
-@if(showNavButtons) {
+@if(showNavButtons && session.userOpt.map(!_.isAnonymous).getOrElse(true)) {
   <header class="navbar navbar-fixed-top navbar-inverse">
     <div class="container-fluid">
       <div class="navbar-header">

@@ -3,8 +3,7 @@ package models.tracing.skeleton
 import models.tracing.skeleton.temporary.TemporarySkeletonTracing
 import oxalis.nml._
 import oxalis.nml.utils._
-import com.scalableminds.util.geometry.Scale
-import com.scalableminds.util.geometry.{Point3D, BoundingBox}
+import com.scalableminds.util.geometry.{Vector3D, Scale, Point3D, BoundingBox}
 import play.api.libs.json._
 import play.api.libs.functional.syntax._
 import com.scalableminds.util.xml.XMLWrites
@@ -46,6 +45,8 @@ trait SkeletonTracingLike extends AnnotationContent {
   def comments: List[Comment]
 
   def editPosition: Point3D
+
+  def editRotation: Vector3D
 
   def zoomLevel: Double
 

@@ -32,6 +32,7 @@ case class User(
                  configuration: UserSettings = UserSettings.defaultSettings,
                  experiences: Map[String, Int] = Map.empty,
                  lastActivity: Long = System.currentTimeMillis,
+                 _isAnonymous: Option[Boolean] = None,
                  _isSuperUser: Option[Boolean] = None,
                  _id: BSONObjectID = BSONObjectID.generate) extends DBAccessContextPayload {
 
@@ -44,6 +45,8 @@ case class User(
   def teamNames = teams.map(_.team)
 
   def isSuperUser = _isSuperUser getOrElse false
+
+  def isAnonymous = _isAnonymous getOrElse false
 
   val name = firstName + " " + lastName
 
@@ -108,8 +111,9 @@ object User {
       (__ \ "teams").write[List[TeamMembership]] and
       (__ \ "experiences").write[Map[String, Int]] and
       (__ \ "lastActivity").write[Long] and
+      (__ \ "isAnonymous").write[Boolean] and
       (__ \ "isEditable").write[Boolean])(u =>
-      (u.id, u.email, u.firstName, u.lastName, u.verified, u.teams, u.experiences, u.lastActivity, u.isEditableBy(requestingUser)))
+      (u.id, u.email, u.firstName, u.lastName, u.verified, u.teams, u.experiences, u.lastActivity, u.isAnonymous, u.isEditableBy(requestingUser)))
 
   def userCompactWrites(requestingUser: User): Writes[User] =
     ((__ \ "id").write[String] and
@@ -223,6 +227,14 @@ object UserDAO extends SecuredBaseDAO[User] {
 
   def changePassword(_user: BSONObjectID, pswd: String)(implicit ctx: DBAccessContext) = {
     update(findByIdQ(_user), Json.obj("$set" -> Json.obj("pwdHash" -> hashPassword(pswd))))
+  }
+
+  def findAllNonAnonymous(implicit ctx: DBAccessContext) = {
+    find(Json.obj("_isAnonymous" -> Json.obj("$ne" -> true))).cursor[User].collect[List]()
+  }
+
+  def countNonAnonymousUsers(implicit ctx: DBAccessContext) = {
+    count(Json.obj("_isAnonymous" -> Json.obj("$ne" -> true)))
   }
 
   def verify(user: User)(implicit ctx: DBAccessContext) = {

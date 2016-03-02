@@ -6,6 +6,7 @@ stats : Stats
 ./controller/annotations/skeletontracing_controller : SkeletonTracingController
 ./controller/annotations/volumetracing_controller : VolumeTracingController
 ./controller/combinations/skeletontracing_arbitrary_controller : SkeletonTracingArbitraryController
+./controller/combinations/minimal_skeletontracing_arbitrary_controller : MinimalArbitraryController
 ./controller/combinations/skeletontracing_plane_controller : SkeletonTracingPlaneController
 ./controller/combinations/volumetracing_plane_controller : VolumeTracingPlaneController
 ./controller/scene_controller : SceneController
@@ -91,13 +92,14 @@ class Controller
           switch allowedMode
             when "flight" then @allowedModes.push(constants.MODE_ARBITRARY)
             when "oblique" then @allowedModes.push(constants.MODE_ARBITRARY_PLANE)
+        else
+            # flight and oblique mode do not work with non-uint8 data
+            if allowedMode is "flight" or allowedMode is "oblique"
+              Toast.error("#{allowedMode} mode was allowed but does not work with more-than-8-bit data.")
 
         switch allowedMode
+          when "orthogonal" then @allowedModes.push(constants.MODE_PLANE_TRACING)
           when "volume" then @allowedModes.push(constants.MODE_VOLUME)
-
-      if not @model.volumeTracing?
-        # Plane tracing mode is always allowed (except in VOLUME mode)
-        @allowedModes.push(constants.MODE_PLANE_TRACING)
 
       # FPS stats
       stats = new Stats()
@@ -125,19 +127,22 @@ class Controller
         @model.upperBoundary, @model.flycam, @model)
 
 
+      advancedOptionsAllowed = tracing.content.settings.advancedOptionsAllowed
       if @model.skeletonTracing?
 
-        @view = new SkeletonTracingView(@model)
+        @view = new SkeletonTracingView(@model, advancedOptionsAllowed)
         @annotationController = new SkeletonTracingController(
           @model, @sceneController, @gui, @view )
         @planeController = new SkeletonTracingPlaneController(
           @model, stats, @gui, @view, @sceneController, @annotationController)
-        @arbitraryController = new SkeletonTracingArbitraryController(
+        ArbitraryController =
+          if advancedOptionsAllowed then SkeletonTracingArbitraryController else MinimalArbitraryController
+        @arbitraryController = new ArbitraryController(
           @model, stats, @gui, @view, @sceneController, @annotationController)
 
       else if @model.volumeTracing?
 
-        @view = new VolumeTracingView(@model)
+        @view = new VolumeTracingView(@model, advancedOptionsAllowed)
         @annotationController = new VolumeTracingController(
           @model, @sceneController, @gui, @view )
         @planeController = new VolumeTracingPlaneController(
@@ -145,12 +150,12 @@ class Controller
 
       else # View mode
 
-        @view = new View(@model)
+        @view = new View(@model, advancedOptionsAllowed)
         @planeController = new PlaneController(
           @model, stats, @gui, @view, @sceneController)
 
       @initMouse()
-      @initKeyboard()
+      @initKeyboard(advancedOptionsAllowed)
       @initUIElements()
 
       for binaryName of @model.binary
@@ -213,6 +218,10 @@ class Controller
       if @urlManager.initialState.mode?
         @setMode( @urlManager.initialState.mode )
 
+      # only enable hard time limit for anonymous users so far
+      if tracing.task and tracing.user is "Anonymous User"
+        @initTimeLimit(tracing.task.type.expectedTime)
+
       # initial trigger
       @sceneController.setSegmentationAlpha($('#alpha-slider').data("slider-value") or @model.user.getSettings().segmentationOpacity)
 
@@ -225,16 +234,18 @@ class Controller
       return
 
 
-  initKeyboard : ->
+  initKeyboard : (advancedOptionsAllowed) ->
 
-    $(document).keypress (event) ->
+    # no help menu for minimal mode
+    if advancedOptionsAllowed
+      $(document).keypress (event) ->
 
-      if $(event.target).is("input")
-        # don't summon help modal when the user types into an input field
-        return
+        if $(event.target).is("input")
+          # don't summon help modal when the user types into an input field
+          return
 
-      if event.shiftKey && event.which == 63
-        $("#help-modal").modal('toggle')
+        if event.shiftKey && event.which == 63
+          $("#help-modal").modal('toggle')
 
 
 
@@ -364,3 +375,29 @@ class Controller
     # allow everything but IE
     isIE = userAgentContains("MSIE") or userAgentContains("Trident")
     return not isIE
+
+
+  initTimeLimit : (timeString) ->
+
+    finishTracing = =>
+      # save the progress
+      model = @model.skeletonTracing || @model.volumeTracing
+      model.stateLogger.pushNow().done( ->
+        window.location.href = $("#trace-finish-button").attr("href")
+      )
+
+    # parse hard time limit and convert from min to ms
+    hardLimitRe = /Limit: ([0-9]+)/
+    timeLimit = parseInt(timeString.match(hardLimitRe)[1]) * 60 * 1000 or 0
+
+    # setTimeout uses signed 32-bit integers, an overflow would cause immediate timeout execution
+    if timeLimit >= Math.pow(2, 32) / 2
+      Toast.error("Time limit was reduced as it cannot be bigger than 35791 minutes.")
+      timeLimit = Math.pow(2, 32) / 2 - 1
+    console.log("TimeLimit is #{timeLimit/60/1000} min")
+
+    if timeLimit
+      setTimeout( ->
+        window.alert("Time limit is reached, thanks for tracing!")
+        finishTracing()
+      , timeLimit)

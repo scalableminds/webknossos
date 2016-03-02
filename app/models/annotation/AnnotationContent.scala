@@ -1,7 +1,7 @@
 package models.annotation
 
 import java.util.Date
-import com.scalableminds.util.geometry.{BoundingBox, Scale, Point3D}
+import com.scalableminds.util.geometry.{Vector3D, BoundingBox, Scale, Point3D}
 import java.io.InputStream
 import play.api.libs.json._
 import play.api.libs.functional.syntax._
@@ -23,6 +23,8 @@ trait AnnotationContent {
   def id: String
 
   def editPosition: Point3D
+
+  def editRotation: Vector3D
 
   def boundingBox: Option[BoundingBox]
 
@@ -84,6 +86,7 @@ object AnnotationContent {
         "dataSet" -> dataSet.toOption,
         "contentData" -> contentData,
         "editPosition" -> ac.editPosition,
+        "editRotation" -> ac.editRotation,
         "boundingBox" -> ac.boundingBox,
         "contentType" -> ac.contentType)
     }

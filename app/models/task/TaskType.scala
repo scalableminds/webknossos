@@ -25,7 +25,15 @@ object TraceLimit {
   implicit val timeSpanFormat = Json.format[TraceLimit]
 }
 
-case class TaskType(summary: String, description: String, expectedTime: TraceLimit, team: String, settings: AnnotationSettings = AnnotationSettings.default, fileName: Option[String] = None, _id: BSONObjectID = BSONObjectID.generate) {
+case class TaskType(
+  summary: String,
+  description: String,
+  expectedTime: TraceLimit,
+  team: String,
+  settings: AnnotationSettings = AnnotationSettings.default,
+  fileName: Option[String] = None,
+  _id: BSONObjectID = BSONObjectID.generate) {
+
   val id = _id.stringify
 
   def status(implicit ctx: DBAccessContext) = {
@@ -44,7 +52,16 @@ object TaskType {
 
   def empty = TaskType("", "", TraceLimit(5, 10, 15), "")
 
-  def fromForm(summary: String, description: String, team: String, allowedModes: Seq[String], branchPointsAllowed: Boolean, somaClickingAllowed: Boolean, expectedTime: TraceLimit) =
+  def fromForm(
+    summary: String,
+    description: String,
+    team: String,
+    allowedModes: Seq[String],
+    branchPointsAllowed: Boolean,
+    advancedOptionsAllowed: Boolean,
+    somaClickingAllowed: Boolean,
+    expectedTime: TraceLimit) = {
+
     TaskType(
       summary,
       description,
@@ -53,7 +70,9 @@ object TaskType {
       AnnotationSettings(
         allowedModes.toList,
         branchPointsAllowed,
-        somaClickingAllowed))
+        somaClickingAllowed,
+        advancedOptionsAllowed))
+  }
 
   def toForm(tt: TaskType) =
     Some((
@@ -62,6 +81,7 @@ object TaskType {
       tt.team,
       tt.settings.allowedModes,
       tt.settings.branchPointsAllowed,
+      tt.settings.advancedOptionsAllowed,
       tt.settings.somaClickingAllowed,
       tt.expectedTime))
 

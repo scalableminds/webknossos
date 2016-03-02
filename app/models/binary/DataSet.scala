@@ -9,6 +9,7 @@ import play.api.libs.concurrent.Execution.Implicits._
 import scala.Some
 import com.scalableminds.util.reactivemongo.AccessRestrictions.AllowIf
 import com.scalableminds.braingames.binary.models.DataSource
+import com.scalableminds.util.geometry.{Vector3D, Point3D}
 import com.scalableminds.util.geometry.Point3D
 import play.utils.UriEncoding
 
@@ -32,6 +33,9 @@ case class DataSet(
 
   def defaultStart =
     dataSource.map(_.boundingBox.center).getOrElse(Point3D(0, 0, 0))
+
+  def defaultRotation =
+    Vector3D(0, 0, 0)
 }
 
 object DataSet {

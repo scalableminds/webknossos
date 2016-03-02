@@ -8,7 +8,7 @@ three : THREE
 
 class View
 
-  constructor : (@model) ->
+  constructor : (@model, advancedOptionsAllowed) ->
 
     unless @isWebGlSupported()
       Toast.error("Couldn't initialise WebGL, please make sure you are using Google Chrome and WebGL is enabled.<br>"+
@@ -22,6 +22,10 @@ class View
     # disable loader, show oxalis
     $("#loader").hide()
     $("#container").removeClass("hide")
+
+    if not advancedOptionsAllowed
+      $("#left-menu").hide()
+      $("#right-menu").hide()
 
 
   toggleTheme : ->

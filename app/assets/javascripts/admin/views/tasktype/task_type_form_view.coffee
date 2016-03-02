@@ -38,27 +38,18 @@ class TaskTypeFormView extends Backbone.Marionette.LayoutView
 
           </div>
           <div class="col-sm-6">
-
-            <div class="col-sm-6 form-group pull-right">
-              <label class="col-sm-10 control-label" for="obliqueAllowed">Allow Oblique Mode</label>
-              <div class="col-sm-2">
-                <input type="checkbox" id="obliqueAllowed" name="allowedModes[]" value="oblique" checked>
-                <span></span>
-              </div>
-            </div>
-
-            <div class="col-sm-6 form-group pull-right">
-              <label class="col-sm-10 control-label" for="flightAllowed">Allow Flight Mode</label>
-              <div class="col-sm-2">
-                <input type="checkbox" id="flightAllowed" name="allowedModes[]" value="flight" checked>
-                <span></span>
-              </div>
-            </div>
-
             <div class="col-sm-6 form-group pull-right">
               <label class="col-sm-10 control-label" for="somaClickingAllowed">Allow Soma clicking</label>
               <div class="col-sm-2">
                 <input type="checkbox" id="somaClickingAllowed" name="somaClickingAllowed" value="true" checked>
+                <span></span>
+              </div>
+            </div>
+
+            <div class="col-sm-6 form-group pull-right">
+              <label class="col-sm-10 control-label" for="orthogonalAllowed">Allow Orthogonal Mode</label>
+              <div class="col-sm-2">
+                <input type="checkbox" id="orthogonalAllowed" name="allowedModes[]" value="orthogonal" checked>
                 <span></span>
               </div>
             </div>
@@ -71,13 +62,37 @@ class TaskTypeFormView extends Backbone.Marionette.LayoutView
               </div>
             </div>
 
+            <div class="col-sm-6 form-group pull-right">
+              <label class="col-sm-10 control-label" for="obliqueAllowed">Allow Oblique Mode</label>
+              <div class="col-sm-2">
+                <input type="checkbox" id="obliqueAllowed" name="allowedModes[]" value="oblique" checked>
+                <span></span>
+              </div>
+            </div>
+
+            <div class="col-sm-6 form-group pull-right">
+              <label class="col-sm-10 control-label" for="advancedOptionsAllowed">Advanced Tracing Options</label>
+              <div class="col-sm-2">
+                <input type="checkbox" id="advancedOptionsAllowed" name="advancedOptionsAllowed" value="true" checked>
+                <span></span>
+              </div>
+            </div>
+
+            <div class="col-sm-6 form-group pull-right">
+              <label class="col-sm-10 control-label" for="flightAllowed">Allow Flight Mode</label>
+              <div class="col-sm-2">
+                <input type="checkbox" id="flightAllowed" name="allowedModes[]" value="flight" checked>
+                <span></span>
+              </div>
+            </div>
+
             <div class="form-group">
               <label class="col-sm-8 control-label" for="expectedTime_minTime">Expected Time (min)</label>
               <div class="col-sm-4">
                 <div class="input-group">
                   <input type="number" id="expectedTime_minTime" name="expectedTime.minTime"
-                    value="5" min="1" input-append="hours" class="form-control" required>
-                  <span class="input-group-addon">hours</span>
+                    value="300" min="1" input-append="minutes" class="form-control" required>
+                  <span class="input-group-addon">minutes</span>
                 </div>
               </div>
             </div>
@@ -87,8 +102,8 @@ class TaskTypeFormView extends Backbone.Marionette.LayoutView
               <div class="col-sm-4">
                 <div class="input-group">
                   <input type="number" id="expectedTime_maxTime" name="expectedTime.maxTime"
-                    value="10" min="1" input-append="hours" class="form-control" required>
-                  <span class="input-group-addon">hours</span>
+                    value="600" min="1" input-append="minutes" class="form-control" required>
+                  <span class="input-group-addon">minutes</span>
                 </div>
               </div>
             </div>
@@ -98,8 +113,8 @@ class TaskTypeFormView extends Backbone.Marionette.LayoutView
               <div class="col-sm-4">
                 <div class="input-group">
                   <input type="number" id="expectedTime_maxHard" name="expectedTime.maxHard"
-                    value="15" min="1" input-append="hours" class="form-control" required>
-                  <span class="input-group-addon">hours</span>
+                    value="900" min="1" input-append="minutes" class="form-control" required>
+                  <span class="input-group-addon">minutes</span>
                 </div>
               </div>
             </div>
@@ -125,6 +140,8 @@ class TaskTypeFormView extends Backbone.Marionette.LayoutView
     "form" : "form"
     "branchPointsAllowed" : "#branchPointsAllowed"
     "somaClickingAllowed" : "#somaClickingAllowed"
+    "advancedOptionsAllowed" : "#advancedOptionsAllowed"
+    "orthogonalAllowed" : "#orthogonalAllowed"
     "obliqueAllowed" : "#obliqueAllowed"
     "flightAllowed" : "#flightAllowed"
     "summary" : "#summary"
@@ -143,9 +160,11 @@ class TaskTypeFormView extends Backbone.Marionette.LayoutView
     @ui.description.val(@model.get("description"))
 
     settings = @model.get("settings")
+    @ui.orthogonalAllowed.attr("checked", "orthogonal" in settings.allowedModes)
     @ui.obliqueAllowed.attr("checked", "oblique" in settings.allowedModes)
     @ui.flightAllowed.attr("checked", "flight" in settings.allowedModes)
     @ui.branchPointsAllowed.attr("checked", settings["branchPointsAllowed"])
+    @ui.advancedOptionsAllowed.attr("checked", settings["advancedOptionsAllowed"])
     @ui.somaClickingAllowed.attr("checked", settings["somaClickingAllowed"])
 
     # TODO Replace once time changes have been ported to master

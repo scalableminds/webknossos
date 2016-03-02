@@ -5,7 +5,7 @@
 class VolumeTracingStateLogger extends StateLogger
 
 
-  constructor : (flycam, version, tracingId, tracingType, allowUpdate, @volumeTracing, @pushQueue) ->
+  constructor : (flycam, @flycam3d, version, tracingId, tracingType, allowUpdate, @volumeTracing, @pushQueue) ->
 
     super(flycam, version, tracingId, tracingType, allowUpdate)
 
@@ -26,6 +26,7 @@ class VolumeTracingStateLogger extends StateLogger
       {
         activeCell : @volumeTracing.getActiveCellId()
         editPosition : @flycam.getPosition()
+        editRotation : @flycam3d.getRotation()
         nextCell : @volumeTracing.idCount
       }
       false

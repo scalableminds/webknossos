@@ -1,5 +1,9 @@
 package controllers.admin
 
+import java.util.Locale
+
+import scala.util.matching.Regex
+
 import reactivemongo.bson.BSONObjectID
 
 import scala.Array.canBuildFrom
@@ -7,7 +11,7 @@ import scala.Option.option2Iterable
 import oxalis.security.AuthenticatedRequest
 import oxalis.security.Secured
 import com.scalableminds.util.tools.ExtendedTypes.ExtendedString
-import com.scalableminds.util.geometry.{Point3D, BoundingBox}
+import com.scalableminds.util.geometry.{Vector3D, Point3D, BoundingBox}
 import models.binary.DataSet
 import models.tracing._
 import models.task._
@@ -43,6 +47,8 @@ import play.api.mvc.AnyContent
 import com.scalableminds.util.reactivemongo.DBAccessContext
 import models.team.Team
 import models.user.time.{TimeSpan, TimeSpanService}
+import scala.concurrent.duration._
+import scala.concurrent.duration
 
 object TaskAdministration extends AdminController {
 
@@ -52,6 +58,21 @@ object TaskAdministration extends AdminController {
 
   def empty = Authenticated{ implicit request =>
     Ok(views.html.main()(Html.empty))
+  }
+
+  // Vector helpers
+  val vectorForm = "\\s*([0-9]+(?:\\.[0-9]+)?),\\s*([0-9]+(?:\\.[0-9]+)?),\\s*([0-9]+(?:\\.[0-9]+)?)\\s*"
+  val vectorFormRx = vectorForm.r
+
+  def VectorToForm(p: Vector3D) = Some("%f, %f, %f".formatLocal(Locale.ENGLISH, p.x, p.y, p.z))
+
+  def VectorFromForm(s: String) = {
+    s match {
+      case vectorFormRx(x, y, z) =>
+        Vector3D(x.toFloat, y.toFloat, z.toFloat)
+      case _ =>
+        null
+    }
   }
 
   def basicTaskForm(minTaskInstances: Int) = Form(
@@ -89,6 +110,9 @@ object TaskAdministration extends AdminController {
     "start" -> mapping(
       "point" -> text.verifying("point.invalid",
         p => p.matches("([0-9]+),\\s*([0-9]+),\\s*([0-9]+)\\s*")))(Point3D.fromForm)(Point3D.toForm),
+    "rotation" -> mapping(
+      "vector" -> text.verifying("vector.invalid",
+        p => p.matches(vectorForm)))(VectorFromForm)(VectorToForm),
     "experience" -> mapping(
       "domain" -> text,
       "value" -> number)(Experience.fromForm)(Experience.unapply),
@@ -96,17 +120,18 @@ object TaskAdministration extends AdminController {
     "taskInstances" -> number,
     "team" -> nonEmptyText,
     "project" -> text,
+    "isForAnonymous" -> boolean,
     "boundingBox" -> mapping(
       "box" -> text.verifying("boundingBox.invalid",
         b => b.matches("([0-9]+),\\s*([0-9]+),\\s*([0-9]+)\\s*,\\s*([0-9]+),\\s*([0-9]+),\\s*([0-9]+)\\s*")))(BoundingBox.fromForm)(BoundingBox.toForm)
   )
 
   val taskForm = Form(
-    taskMapping).fill("", "", Point3D(0, 0, 0), Experience.empty, 100, 10, "", "", BoundingBox(Point3D(0, 0, 0), 0, 0, 0))
+    taskMapping).fill("", "", Point3D(0, 0, 0), Vector3D(0, 0, 1), Experience.empty, 100, 10, "", "", false, BoundingBox(Point3D(0, 0, 0), 0, 0, 0))
 
   def taskCreateHTML(
-                      taskFromNMLForm: Form[(String, Experience, Int, Int, String, String, BoundingBox)],
-                      taskForm: Form[(String, String, Point3D, Experience, Int, Int, String, String, BoundingBox)]
+                      taskFromNMLForm: Form[_],
+                      taskForm: Form[_]
                     )(implicit request: AuthenticatedRequest[_]) =
     for {
       dataSets <- DataSetDAO.findAll
@@ -122,7 +147,7 @@ object TaskAdministration extends AdminController {
         taskForm)
     }
 
-  def taskEditHtml(taskId: String, taskForm: Form[(String, Experience, Int, Int, String, String)])(implicit request: AuthenticatedRequest[_]) =
+  def taskEditHtml(taskId: String, taskForm: Form[_])(implicit request: AuthenticatedRequest[_]) =
     for {
       projects <- ProjectDAO.findAll
       taskTypes <- TaskTypeDAO.findAll
@@ -148,10 +173,36 @@ object TaskAdministration extends AdminController {
     }
   }
 
+  def createAnonymousUsersAndTasksInstances(task: Task)(implicit request: AuthenticatedRequest[_]) =
+    Fox.sequenceOfFulls((1 to task.instances).toList.map { i =>
+      for {
+        user <- UserService.insertAnonymousUser(task.team, task.neededExperience)
+        loginToken <- UserService.createLoginToken(user, validDuration = 30 days)
+        annotation <- AnnotationService.createAnnotationFor(user, task)
+      } yield {
+        val url = controllers.routes.AnnotationController.trace(annotation.typ, annotation.id).absoluteURL(secure = true)
+        url + "?loginToken=" + loginToken
+      }
+    })
+
   def createFromForm = Authenticated.async(parse.urlFormEncoded) { implicit request =>
+    def createResult(isForAnonymous: Boolean, task: Task): Fox[SimpleResult] = {
+      if(isForAnonymous){
+        createAnonymousUsersAndTasksInstances(task).map{ links =>
+          Ok(s"Created task with id: ${task.id}. Links:\n" + links.mkString("\n"))
+        }
+      } else {
+        Fox.successful(
+          Redirect(controllers.routes.TaskController.empty)
+            .flashing(
+              FlashSuccess(Messages("task.createSuccess")))
+            .highlighting(task.id))
+      }
+    }
+
     taskForm.bindFromRequest.fold(
     formWithErrors => taskCreateHTML(taskFromNMLForm, formWithErrors).map(html => BadRequest(html)), {
-      case (dataSetName, taskTypeId, start, experience, priority, instances, team, projectName, boundingBox) =>
+      case (dataSetName, taskTypeId, start, rotation, experience, priority, instances, team, projectName, isForAnonymous, boundingBox) =>
         for {
           dataSet <- DataSetDAO.findOneBySourceName(dataSetName) ?~> Messages("dataSet.notFound")
           taskType <- TaskTypeDAO.findOneById(taskTypeId) ?~> Messages("taskType.notFound")
@@ -159,12 +210,10 @@ object TaskAdministration extends AdminController {
           _ <- ensureTeamAdministration(request.user, team).toFox
           task = Task(taskType._id, team, experience, priority, instances, _project = project.map(_.name))
           _ <- TaskDAO.insert(task)
+          _ <- AnnotationService.createAnnotationBase(task, request.user._id, boundingBox, taskType.settings, dataSetName, start, rotation)
+          result <- createResult(isForAnonymous, task)
         } yield {
-          AnnotationService.createAnnotationBase(task, request.user._id, boundingBox, taskType.settings, dataSetName, start)
-          Redirect(controllers.routes.TaskController.empty)
-          .flashing(
-            FlashSuccess(Messages("task.createSuccess")))
-          .highlighting(task.id)
+          result
         }
     })
   }
@@ -266,32 +315,36 @@ object TaskAdministration extends AdminController {
       data
       .split("\n")
       .map(_.split(",").map(_.trim))
-      .filter(_.length >= 9)
+      .filter(_.length >= 19)
 
     def parseParamLine(params: Array[String]) = {
-      val projectName = if (params.length >= 17) params(16) else ""
+      val projectName = if (params.length >= 20) params(19) else ""
       for {
         project <- ProjectService.findIfNotEmpty(projectName) ?~> Messages("project.notFound")
         experienceValue <- params(3).toIntOpt ?~> "Invalid experience value"
         x <- params(4).toIntOpt ?~> "Invalid x value"
         y <- params(5).toIntOpt ?~> "Invalid y value"
         z <- params(6).toIntOpt ?~> "Invalid z value"
-        priority <- params(7).toIntOpt ?~> "Invalid priority value"
-        instances <- params(8).toIntOpt ?~> "Invalid instances value"
+        rotX <- params(7).toFloatOpt ?~> "Invalid x value"
+        rotY <- params(8).toFloatOpt ?~> "Invalid y value"
+        rotZ <- params(9).toFloatOpt ?~> "Invalid z value"
+        priority <- params(10).toIntOpt ?~> "Invalid priority value"
+        instances <- params(11).toIntOpt ?~> "Invalid instances value"
         taskTypeSummary = params(1)
-        team = params(9)
-        minX <- params(10).toIntOpt ?~> "Invalid minX value"
-        minY <- params(11).toIntOpt ?~> "Invalid minY value"
-        minZ <- params(12).toIntOpt ?~> "Invalid minZ value"
-        maxX <- params(13).toIntOpt ?~> "Invalid maxX value"
-        maxY <- params(14).toIntOpt ?~> "Invalid maxY value"
-        maxZ <- params(15).toIntOpt ?~> "Invalid maxZ value"
+        team = params(12)
+        minX <- params(13).toIntOpt ?~> "Invalid minX value"
+        minY <- params(14).toIntOpt ?~> "Invalid minY value"
+        minZ <- params(15).toIntOpt ?~> "Invalid minZ value"
+        maxX <- params(16).toIntOpt ?~> "Invalid maxX value"
+        maxY <- params(17).toIntOpt ?~> "Invalid maxY value"
+        maxZ <- params(18).toIntOpt ?~> "Invalid maxZ value"
         _ <- ensureTeamAdministration(request.user, team).toFox
         taskType <- TaskTypeDAO.findOneBySumnary(taskTypeSummary) ?~> Messages("taskType.notFound")
       } yield {
         val dataSetName = params(0)
         val experience = Experience(params(2), experienceValue)
         val position = Point3D(x, y, z)
+        val rotation = Vector3D(rotX, rotY, rotZ)
         val boundingBox = BoundingBox.createFrom(Point3D(minX, minY, minZ), Point3D(maxX, maxY, maxZ))
         val task = Task(
           taskType._id,
@@ -300,16 +353,16 @@ object TaskAdministration extends AdminController {
           priority,
           instances,
           _project = project.map(_.name))
-        (dataSetName, position, boundingBox, taskType, task)
+        (dataSetName, position, rotation, boundingBox, taskType, task)
       }
     }
 
     def createTasksFromData(data: String) =
       Fox.sequence(extractParamLines(data).map(parseParamLine).toList).map { results =>
         results.flatMap{
-          case Full((dataSetName, position, boundingBox, taskType, task)) =>
+          case Full((dataSetName, position, rotation, boundingBox, taskType, task)) =>
             TaskDAO.insert(task)
-            AnnotationService.createAnnotationBase(task, request.user._id, boundingBox, taskType.settings, dataSetName, position)
+            AnnotationService.createAnnotationBase(task, request.user._id, boundingBox, taskType.settings, dataSetName, position, rotation)
             Full(task)
           case f: Failure =>
             Logger.warn("Failure while creating bulk tasks: " + f)
@@ -391,7 +444,7 @@ object TaskAdministration extends AdminController {
     }
 
     for {
-      users <- UserService.findAll
+      users <- UserService.findAllNonAnonymous()
       userInfos <- getUserInfos(users)
       allTaskTypes <- TaskTypeDAO.findAll
       allProjects <- ProjectDAO.findAll

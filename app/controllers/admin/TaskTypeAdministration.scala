@@ -54,10 +54,9 @@ object TaskTypeAdministration extends AdminController {
         for{
           _ <- ensureTeamAdministration(request.user, t.team).toFox
           _ <- TaskTypeDAO.insert(t)
-          ttJson <- TaskType.transformToJsonWithStatus(t).toFox
         } yield {
           JsonOk(
-            Json.obj("newTaskType" -> ttJson),
+            Json.obj("newTaskType" -> TaskType.transformToJson(t)),
             Messages("taskType.createSuccess")
           )
         }
@@ -78,9 +77,8 @@ object TaskTypeAdministration extends AdminController {
   def list = Authenticated.async{ implicit request =>
     for {
       taskTypes <- TaskTypeDAO.findAll
-      ttJsons <- Future.traverse(taskTypes)(TaskType.transformToJsonWithStatus)
     } yield {
-      Ok(Json.toJson(ttJsons))
+      Ok(Json.toJson(taskTypes.map(TaskType.transformToJson)))
     }
   }
 

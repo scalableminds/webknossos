@@ -21,6 +21,7 @@ stats : Stats
 ../libs/event_mixin : EventMixin
 ../libs/input : Input
 ../libs/toast : Toast
+../libs/request : Request
 
 ###
 
@@ -302,6 +303,16 @@ class Controller
       $("#merge-modal").html(el)
       modalView.show()
 
+    $("#next-task-button").on "click", (event) =>
+
+
+      model = @model.skeletonTracing || @model.volumeTracing
+
+      model.stateLogger.pushNow()
+          .then(=> Request.$(Request.triggerRequest("/annotations/#{@model.tracingType}/#{@model.tracingId}/finish")))
+          .then(-> Request.$(Request.receiveJSON("/user/tasks/request")))
+          .then((task) -> window.location.href = "/annotations/#{task.typ}/#{task.id}")
+          .fail(-> window.location.href = "/dashboard")
 
 
   initAddScriptModal : ->

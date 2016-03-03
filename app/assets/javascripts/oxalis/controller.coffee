@@ -310,9 +310,12 @@ class Controller
 
       model.stateLogger.pushNow()
           .then(=> Request.$(Request.triggerRequest("/annotations/#{@model.tracingType}/#{@model.tracingId}/finish")))
-          .then(-> Request.$(Request.receiveJSON("/user/tasks/request")))
-          .then((task) -> window.location.href = "/annotations/#{task.typ}/#{task.id}")
-          .fail(-> window.location.href = "/dashboard")
+          .then(->
+            Request.$(Request.receiveJSON("/user/tasks/request")).then(
+              (annotation) -> window.location.href = "/annotations/#{annotation.typ}/#{annotation.id}"
+              -> window.location.href = "/dashboard"
+            )
+          )
 
 
   initAddScriptModal : ->

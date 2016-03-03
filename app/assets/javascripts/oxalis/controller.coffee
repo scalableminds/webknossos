@@ -17,6 +17,7 @@ stats : Stats
 ./view/volumetracing/volumetracing_view : VolumeTracingView
 ./view/gui : Gui
 ./view/share_modal_view : ShareModalView
+./view/modal : modal
 ./constants : constants
 ../libs/event_mixin : EventMixin
 ../libs/input : Input
@@ -291,6 +292,7 @@ class Controller
   initUIElements : ->
 
     @initAddScriptModal()
+    @maybeShowTaskTypeText()
 
     $("#share-button").on "click", (event) =>
 
@@ -305,17 +307,32 @@ class Controller
 
     $("#next-task-button").on "click", (event) =>
 
+      tracingModel = @model.skeletonTracing || @model.volumeTracing
 
-      model = @model.skeletonTracing || @model.volumeTracing
-
-      model.stateLogger.pushNow()
+      tracingModel.stateLogger.pushNow()
           .then(=> Request.$(Request.triggerRequest("/annotations/#{@model.tracingType}/#{@model.tracingId}/finish")))
-          .then(->
+          .then(=>
             Request.$(Request.receiveJSON("/user/tasks/request")).then(
-              (annotation) -> window.location.href = "/annotations/#{annotation.typ}/#{annotation.id}"
+              (annotation) =>
+                differentTaskType = annotation.task.type.id != @model.task?.type.id
+                differentTaskTypeParam = if differentTaskType then "?differentTaskType" else ""
+                window.location.href = "/annotations/#{annotation.typ}/#{annotation.id}#{differentTaskTypeParam}"
               -> window.location.href = "/dashboard"
             )
           )
+
+
+  maybeShowTaskTypeText : ->
+
+    return if window.location.search.indexOf("differentTaskType") < 0 or not @model.task?
+
+    taskType = @model.task.type
+    title = "Attention, new Task Type: #{taskType.summary}"
+    if taskType.description
+      text = "You are now tracing a new task with the following description:<br>#{taskType.description}"
+    else
+      text = "You are now tracing a new task with no description."
+    modal.show(text, title)
 
 
   initAddScriptModal : ->

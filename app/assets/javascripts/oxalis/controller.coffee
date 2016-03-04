@@ -323,7 +323,9 @@ class Controller
                 differentTaskType = annotation.task.type.id != @model.task?.type.id
                 differentTaskTypeParam = if differentTaskType then "?differentTaskType" else ""
                 window.location.href = "/annotations/#{annotation.typ}/#{annotation.id}#{differentTaskTypeParam}"
-              -> window.location.href = "/dashboard"
+              ->
+                # Wait a while so users have a chance to read the error message
+                setTimeout((-> window.location.href = "/dashboard"), 2000)
             )
           )
 

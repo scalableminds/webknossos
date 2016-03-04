@@ -161,7 +161,7 @@ class Controller
 
       @initMouse()
       @initKeyboard(advancedOptionsAllowed)
-      @initUIElements()
+      @initUIElements(tracing.restrictions.allowFinish)
 
       for binaryName of @model.binary
         @model.binary[binaryName].cube.on "bucketLoaded" : =>
@@ -295,7 +295,7 @@ class Controller
     new Input.KeyboardNoLoop( keyboardControls )
 
 
-  initUIElements : ->
+  initUIElements : (allowFinish) ->
 
     @initAddScriptModal()
     @maybeShowTaskTypeText()
@@ -328,6 +328,9 @@ class Controller
                 setTimeout((-> window.location.href = "/dashboard"), 2000)
             )
           )
+
+    if not allowFinish or not @model.task?
+      $("#next-task-button").hide()
 
 
   maybeShowTaskTypeText : ->

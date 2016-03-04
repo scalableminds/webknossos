@@ -47,11 +47,11 @@ object TaskController extends Controller with Secured with FoxImplicits {
     }
   }
 
-  def requestTaskFor(user: User)(implicit ctx: DBAccessContext) =
-    TaskService.nextTaskForUser(user)
+  def requestAssignmentFor(user: User)(implicit ctx: DBAccessContext) =
+    TaskService.findAssignableFor(user)
 
   def getAvailableTasksFor(user: User)(implicit ctx: DBAccessContext): Fox[List[Task]] =
-    TaskService.findAssignableFor(user)
+    TaskService.allNextTasksForUser(user)
 
   def getProjectsFor(tasks: List[Task])(implicit ctx: DBAccessContext): Future[List[Project]] =
     Fox.sequenceOfFulls(tasks.map(_.project)).map(_.distinct)
@@ -92,7 +92,9 @@ object TaskController extends Controller with Secured with FoxImplicits {
     val user = request.user
     for {
       _ <- ensureMaxNumberOfOpenTasks(user)
-      task <- requestTaskFor(user) ?~> Messages("task.unavailable")
+      assignment <- requestAssignmentFor(user) ?~> Messages("task.unavailable")
+      _ <- OpenAssignmentService.remove(assignment)
+      task <- assignment.task
       annotation <- AnnotationService.createAnnotationFor(user, task) ?~> Messages("annotation.creationFailed")
       annotationJSON <- AnnotationLike.annotationLikeInfoWrites(annotation, Some(user), exclude = List("content", "actions"))
     } yield {

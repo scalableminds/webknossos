@@ -243,6 +243,13 @@ object AnnotationDAO
     find("_task", _task).collect[List]()
   }
 
+  def findByTaskIdAndUser(_user: BSONObjectID, _task: BSONObjectID, annotationType: AnnotationType)(implicit ctx: DBAccessContext) = withExceptionCatcher{
+    find(Json.obj(
+      "_task" -> _task,
+      "typ" -> annotationType,
+      "_user" -> _user)).one[Annotation]
+  }
+
   def findByTaskIdAndType(_task: BSONObjectID, annotationType: AnnotationType)(implicit ctx: DBAccessContext) =
     find(Json.obj(
       "_task" -> _task,

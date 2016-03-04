@@ -10,7 +10,7 @@ import scala.concurrent.Future
 import net.liftweb.common.{Failure, Box}
 import scala.async.Async._
 import play.api.i18n.Messages
-import models.task.TaskService
+import models.task.{OpenAssignmentService, TaskService}
 import reactivemongo.bson.BSONObjectID
 import play.api.libs.concurrent.Execution.Implicits._
 
@@ -88,7 +88,7 @@ class AnnotationMutations(val annotation: Annotation) extends AnnotationMutation
   def cancelTask()(implicit ctx: DBAccessContext) = {
     for {
       task <- annotation.task
-      _ <- TaskService.unassignOnce(task).toFox
+      _ <- OpenAssignmentService.insertOneFor(task)
       _ <- AnnotationDAO.updateState(annotation, AnnotationState.Unassigned)
     } yield annotation
   }

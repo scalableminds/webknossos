@@ -57,6 +57,7 @@ object TaskType {
     description: String,
     team: String,
     allowedModes: Seq[String],
+    preferredMode: Option[String],
     branchPointsAllowed: Boolean,
     advancedOptionsAllowed: Boolean,
     somaClickingAllowed: Boolean,
@@ -69,6 +70,7 @@ object TaskType {
       team,
       AnnotationSettings(
         allowedModes.toList,
+        preferredMode,
         branchPointsAllowed,
         somaClickingAllowed,
         advancedOptionsAllowed))
@@ -80,6 +82,7 @@ object TaskType {
       tt.description,
       tt.team,
       tt.settings.allowedModes,
+      tt.settings.preferredMode,
       tt.settings.branchPointsAllowed,
       tt.settings.advancedOptionsAllowed,
       tt.settings.somaClickingAllowed,

@@ -46,6 +46,7 @@ class Controller
       planeController : null
       arbitraryController : null
       allowedModes : []
+      preferredMode : -1
     )
 
     _.extend(@, Backbone.Events)
@@ -88,18 +89,20 @@ class Controller
 
       for allowedMode in tracing.content.settings.allowedModes
 
-        if @model.getColorBinaries()[0].cube.BIT_DEPTH == 8
-          switch allowedMode
-            when "flight" then @allowedModes.push(constants.MODE_ARBITRARY)
-            when "oblique" then @allowedModes.push(constants.MODE_ARBITRARY_PLANE)
-        else
+        if allowedMode in ["flight", "oblique"]
+          if @model.getColorBinaries()[0].cube.BIT_DEPTH == 8
+            @allowedModes.push(constants.MODE_NAME_TO_ID[allowedMode])
+          else
             # flight and oblique mode do not work with non-uint8 data
-            if allowedMode is "flight" or allowedMode is "oblique"
-              Toast.error("#{allowedMode} mode was allowed but does not work with more-than-8-bit data.")
+            Toast.error("#{allowedMode} mode was allowed but does not work with more-than-8-bit data.")
 
-        switch allowedMode
-          when "orthogonal" then @allowedModes.push(constants.MODE_PLANE_TRACING)
-          when "volume" then @allowedModes.push(constants.MODE_VOLUME)
+        if allowedMode in ["orthogonal", "volume"]
+          @allowedModes.push(constants.MODE_NAME_TO_ID[allowedMode])
+
+      if tracing.content.settings.preferredMode
+        modeId = constants.MODE_NAME_TO_ID[tracing.content.settings.preferredMode]
+        if modeId in @allowedModes
+          @preferredMode = modeId
 
       # FPS stats
       stats = new Stats()
@@ -214,7 +217,10 @@ class Controller
       if @allowedModes.length == 0
         Toast.error("There was no valid allowed tracing mode specified.")
       else
-        @setMode( @allowedModes[0] )
+        if @preferredMode < 0
+          @setMode(@allowedModes[0])
+        else
+          @setMode(@preferredMode)
       if @urlManager.initialState.mode?
         @setMode( @urlManager.initialState.mode )
 

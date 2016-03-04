@@ -18,6 +18,12 @@ Constants =
   MODE_VOLUME          : 3
   MODES_PLANE          : [0, 3]
   MODES_ARBITRARY      : [1, 2]
+  MODE_NAME_TO_ID      : {
+    "orthogonal" : 0,
+    "flight" : 1,
+    "oblique" : 2,
+    "volume" : 3,
+  }
 
   CONTROL_MODE_TRACE   : 0
   CONTROL_MODE_VIEW    : 1

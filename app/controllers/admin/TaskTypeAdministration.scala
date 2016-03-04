@@ -26,6 +26,7 @@ object TaskTypeAdministration extends AdminController {
       "description" -> text,
       "team" -> nonEmptyText,
       "allowedModes" -> seq(text),
+      "preferredMode" -> optional(text),
       "branchPointsAllowed" -> boolean,
       "advancedOptionsAllowed" -> boolean,
       "somaClickingAllowed" -> boolean,
@@ -95,9 +96,9 @@ object TaskTypeAdministration extends AdminController {
         success = { t =>
           val updatedTaskType = t.copy(_id = taskType._id)
           for {
+            _ <- ensureTeamAdministration(request.user, updatedTaskType.team).toFox
             _ <- TaskTypeDAO.update(taskType._id, updatedTaskType).toFox
             tasks <- TaskDAO.findAllByTaskType(taskType).toFox
-            _ <- ensureTeamAdministration(request.user, updatedTaskType.team).toFox
           } yield {
             tasks.map(task => AnnotationDAO.updateAllUsingNewTaskType(task, updatedTaskType.settings))
             JsonOk(Messages("taskType.editSuccess"))

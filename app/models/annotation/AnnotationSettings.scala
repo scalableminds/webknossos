@@ -8,6 +8,7 @@ import AnnotationSettings._
 
 case class AnnotationSettings(
   allowedModes: List[String] = SKELETON_MODES,
+  preferredMode: Option[String] = None,
   branchPointsAllowed: Boolean = true,
   somaClickingAllowed: Boolean = true,
   advancedOptionsAllowed: Boolean = true

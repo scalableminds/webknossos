@@ -20,7 +20,10 @@ class TaskTypeItemView extends Backbone.Marionette.CompositeView
       <td><%= formattedShortText %></td>
       <td>
         <% _.each(settings.allowedModes, function (mode) { %>
-          <span class="label label-default"><%= mode[0].toUpperCase() + mode.slice(1) %></span>
+          <% var cssClass = mode == settings.preferredMode ? "label-primary" : "label-default"; %>
+          <span class="label <%= cssClass %>">
+            <%= mode[0].toUpperCase() + mode.slice(1) %>
+          </span>
         <% }) %>
       </td>
       <td>

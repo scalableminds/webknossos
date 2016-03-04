@@ -35,6 +35,8 @@ class Model
 
     Request.receiveJSON(infoUrl).then( (tracing) =>
 
+      @task = tracing.task
+
       if tracing.error
         Toast.error(tracing.error)
         return {"error" : true}

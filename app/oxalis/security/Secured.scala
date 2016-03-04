@@ -121,18 +121,8 @@ trait Secured extends FoxImplicits with I18nSupport{
   private def onUnauthorized(request: RequestHeader) =
     if (request.path.startsWith("/api/"))
       new JsonResult(FORBIDDEN)(Messages("notAllowed"))
-    else
-      Results.Redirect(routes.Authentication.login)
-  // --
-
-  /**
-   * Action for authenticated users.
-
-  def IsAuthenticated(f: => String => Request[AnyContent] => Result) =
-    Security.Authenticated(userId, onUnauthorized) {
-      user =>
-        Action(request => f(user)(request))
+    else {
+      val finalTarget = if (request.method == "GET") Some(request.uri) else None
+      Results.Redirect(routes.Authentication.login(finalTarget))
     }
-   */
-
 }

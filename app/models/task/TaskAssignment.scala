@@ -48,7 +48,7 @@ trait TaskAssignment extends FoxImplicits{
   }
 
   private def findAssignable(user: User)(implicit ctx: DBAccessContext) = {
-    val finishedFilter = Enumeratee.filter[OpenAssignment] { assignment =>
+    val experienceFilter = Enumeratee.filter[OpenAssignment] { assignment =>
       assignment.hasEnoughExperience(user)
     }
 
@@ -56,7 +56,7 @@ trait TaskAssignment extends FoxImplicits{
       AnnotationService.findTaskOf(user, assignment._task).futureBox.map(_.isEmpty)
     }
 
-    findNextAssignment(ctx) &> finishedFilter ><> alreadyDoneFilter
+    findNextAssignment(ctx) &> experienceFilter ><> alreadyDoneFilter
   }
 
   def findAllAssignableFor(user: User)(implicit ctx: DBAccessContext): Fox[List[OpenAssignment]] = {

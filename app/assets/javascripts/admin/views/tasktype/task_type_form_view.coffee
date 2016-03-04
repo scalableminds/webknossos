@@ -87,6 +87,18 @@ class TaskTypeFormView extends Backbone.Marionette.LayoutView
             </div>
 
             <div class="form-group">
+              <label class="col-sm-8 control-label" for="preferredMode">Preferred Mode</label>
+              <div class="col-sm-4">
+                <select id="preferredMode" name="preferredMode" class="form-control">
+                  <option value="">Any</option>
+                  <option value="orthogonal">Orthogonal</option>
+                  <option value="oblique">Oblique</option>
+                  <option value="flight">Flight</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="form-group">
               <label class="col-sm-8 control-label" for="expectedTime_minTime">Expected Time (min)</label>
               <div class="col-sm-4">
                 <div class="input-group">
@@ -144,6 +156,7 @@ class TaskTypeFormView extends Backbone.Marionette.LayoutView
     "orthogonalAllowed" : "#orthogonalAllowed"
     "obliqueAllowed" : "#obliqueAllowed"
     "flightAllowed" : "#flightAllowed"
+    "preferredMode" : "#preferredMode"
     "summary" : "#summary"
     "description" : "#description"
 
@@ -166,6 +179,9 @@ class TaskTypeFormView extends Backbone.Marionette.LayoutView
     @ui.branchPointsAllowed.attr("checked", settings["branchPointsAllowed"])
     @ui.advancedOptionsAllowed.attr("checked", settings["advancedOptionsAllowed"])
     @ui.somaClickingAllowed.attr("checked", settings["somaClickingAllowed"])
+
+    if settings.preferredMode
+      @ui.preferredMode.val(settings.preferredMode)
 
     # TODO Replace once time changes have been ported to master
     # inputStrings = ["expectedTime_maxHard"]

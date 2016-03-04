@@ -56,7 +56,7 @@ object OpenAssignment extends FoxImplicits {
 
 object OpenAssignmentDAO extends SecuredBaseDAO[OpenAssignment] with FoxImplicits {
 
-  val collectionName = "openAssignment"
+  val collectionName = "openAssignments"
 
   val formatter = OpenAssignment.openAssignmentFormat
 

@@ -74,7 +74,7 @@ object ProjectService extends FoxImplicits {
   def remove(project: Project)(implicit ctx: DBAccessContext): Fox[Boolean] = {
     ProjectDAO.remove("name", project.name).flatMap{
       case result if result.n > 0 =>
-        TaskDAO.removeAllWithProject(project).map{ _ =>
+        TaskService.removeAllWithProject(project).map{ _ =>
           true
         }
       case _ =>

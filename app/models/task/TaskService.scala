@@ -11,38 +11,48 @@ import scala.concurrent.Future
 import play.api.Logger
 import reactivemongo.core.commands.LastError
 
-/**
- * Company: scalableminds
- * User: tmbo
- * Date: 19.11.13
- * Time: 14:59
- */
 object TaskService extends TaskAssignmentSimulation with TaskAssignment with FoxImplicits {
 
-  def findAllAssignable(implicit ctx: DBAccessContext) = TaskDAO.findAllAssignable
+  def findOneById(id: String)(implicit ctx: DBAccessContext) =
+    TaskDAO.findOneById(id)
 
-  def findAll(implicit ctx: DBAccessContext) = TaskDAO.findAll
+  def findNextAssignment(implicit ctx: DBAccessContext) =
+    OpenAssignmentService.findNextOpenAssignments
+
+  def findAll(implicit ctx: DBAccessContext) =
+    TaskDAO.findAll
 
   def findAllAdministratable(user: User)(implicit ctx: DBAccessContext) =
     TaskDAO.findAllAdministratable(user)
 
   def remove(_task: BSONObjectID)(implicit ctx: DBAccessContext) = {
-    TaskDAO.removeById(_task).flatMap{
-      case result if result.n > 0 =>
-        AnnotationDAO.removeAllWithTaskId(_task)
-      case _ =>
-        Logger.warn("Tried to remove task without permission.")
-        Future.successful(LastError(false ,None, None, None, None, 0, false))
-    }
+    for{
+      _ <- TaskDAO.removeById(_task)
+      _ <- AnnotationDAO.removeAllWithTaskId(_task)
+      _ <- OpenAssignmentService.removeByTask(_task)
+    } yield true
   }
 
-  def assignOnce(t: Task)(implicit ctx: DBAccessContext) =
-    TaskDAO.assignOnce(t._id)
-
-  def unassignOnce(t: Task)(implicit ctx: DBAccessContext) =
-    TaskDAO.unassignOnce(t._id)
-
-  def logTime(time: Long, _task: BSONObjectID)(implicit ctx: DBAccessContext) = {
+  def logTime(time: Long, _task: BSONObjectID)(implicit ctx: DBAccessContext) =
     TaskDAO.logTime(time, _task)
+
+  def removeAllWithProject(project: Project)(implicit ctx: DBAccessContext) = {
+    for{
+      _ <- TaskDAO.removeAllWithProject(project)
+      _ <- OpenAssignmentService.removeByProject(project)
+    } yield true
+  }
+
+  def insert(task: Task, insertAssignments: Boolean)(implicit ctx: DBAccessContext) = {
+    def insertAssignmentsIfRequested() =
+      if(insertAssignments) {
+        OpenAssignmentService.insertInstancesFor(task, task.instances)
+      } else
+        Future.successful(true)
+
+    for {
+      _ <- TaskDAO.insert(task)
+      _ <- insertAssignmentsIfRequested()
+    } yield task
   }
 }

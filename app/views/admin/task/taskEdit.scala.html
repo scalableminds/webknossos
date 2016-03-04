@@ -8,7 +8,7 @@
       All tracings of this task are going to get adjusted to this settings. This is espacially true when changing the Task type.<br /> <br />
       @helper.form(controllers.admin.routes.TaskAdministration.editTaskForm(taskId), 'class -> "form-horizontal") {
 
-        @basicTaskForm(editForm, taskTypes, projects, teams)
+        @basicTaskForm(editForm, taskTypes, projects, teams, Some("Remaining instances"))
 
         <div class="form-group">
           <div class="col-sm-2 col-sm-offset-2">

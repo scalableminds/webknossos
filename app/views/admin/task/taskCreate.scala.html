@@ -9,7 +9,7 @@
           Every nml creates a new task. You can either upload a single NML file or a zipped collection of nml files (.zip).<br /><br />
           @helper.form(controllers.admin.routes.TaskAdministration.createFromNML, 'class -> "form-horizontal", 'enctype -> "multipart/form-data") {
 
-            @basicTaskForm(nmlForm, taskTypes, projects, teams)
+            @basicTaskForm(nmlForm, taskTypes, projects, teams, None)
 
             @helper.inputText(taskForm("boundingBox.box"), 'type -> "text", 'class -> "form-control")
 
@@ -54,7 +54,7 @@
           <h3>Create Task</h3>
           @helper.form(controllers.admin.routes.TaskAdministration.createFromForm, 'class -> "form-horizontal") {
 
-            @basicTaskForm(nmlForm, taskTypes, projects, teams)
+            @basicTaskForm(nmlForm, taskTypes, projects, teams, None)
 
             @helper.select(taskForm("dataSet"), dataSets.map { dataSet =>
               dataSet.name -> dataSet.name

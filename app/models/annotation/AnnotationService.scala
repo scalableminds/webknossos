@@ -84,6 +84,9 @@ object AnnotationService extends AnnotationContentProviders with BoxImplicits wi
   def findTasksOf(user: User)(implicit ctx: DBAccessContext) =
     AnnotationDAO.findFor(user._id, AnnotationType.Task)
 
+  def findTaskOf(user: User, _task: BSONObjectID)(implicit ctx: DBAccessContext) =
+    AnnotationDAO.findByTaskIdAndUser(user._id, _task, AnnotationType.Task)
+
   def findExploratoryOf(user: User)(implicit ctx: DBAccessContext) =
     AnnotationDAO.findForWithTypeOtherThan(user._id, AnnotationType.Task :: AnnotationType.SystemTracings)
 
@@ -97,7 +100,6 @@ object AnnotationService extends AnnotationContentProviders with BoxImplicits wi
 
     for {
       annotationBase <- task.annotationBase ?~> "Failed to retrieve annotation base."
-      _ <- TaskService.assignOnce(task).toFox ?~> "Failed to assign task once."
       result <- useAsTemplateAndInsert(annotationBase).toFox ?~> "Failed to use annotation base as template."
     } yield {
       result
@@ -131,7 +133,7 @@ object AnnotationService extends AnnotationContentProviders with BoxImplicits wi
   def createFrom(user: User, content: AnnotationContent, annotationType: AnnotationType, name: Option[String])(implicit ctx: DBAccessContext) = {
     for {
       dataSet <- DataSetDAO.findOneBySourceName(content.dataSetName) ~> Messages("dataSet.notFound")
-      val annotation = Annotation(
+      annotation = Annotation(
         Some(user._id),
         ContentReference.createFor(content),
         team = selectSuitableTeam(user, dataSet),

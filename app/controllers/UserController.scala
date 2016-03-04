@@ -20,7 +20,12 @@ import play.api.libs.json._
 import play.twirl.api.Html
 import views.html
 
-class UserController @Inject()(val messagesApi: MessagesApi) extends Controller with Secured with Dashboard with FoxImplicits {
+class UserController @Inject()(val messagesApi: MessagesApi)
+  extends Controller
+  with UserAuthentication
+  with Secured
+  with Dashboard
+  with FoxImplicits {
 
   def empty = Authenticated { implicit request =>
     Ok(views.html.main()(Html("")))
@@ -187,7 +192,9 @@ class UserController @Inject()(val messagesApi: MessagesApi) extends Controller 
         }
     }
   }
+}
 
+trait UserAuthentication extends Secured with Dashboard with FoxImplicits { this: Controller =>
   val resetForm: Form[(String, String)] = {
 
     def resetFormApply(oldPassword: String, password: (String, String)) =
@@ -232,4 +239,5 @@ class UserController @Inject()(val messagesApi: MessagesApi) extends Controller 
     }
     )
   }
+
 }

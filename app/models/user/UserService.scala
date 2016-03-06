@@ -44,7 +44,7 @@ object UserService extends FoxImplicits {
     UserDAO.findByTeams(teams, includeAnonymous)
   }
 
-  def countNonAnonymousUsers()(implicit ctx: DBAccessContext) = {
+  def countNonAnonymousUsers(implicit ctx: DBAccessContext) = {
     UserDAO.countNonAnonymousUsers
   }
 

@@ -17,6 +17,10 @@ class AchievementView extends Backbone.Marionette.ItemView
           <td>Number of Users</td>
           <td><%= numberOfUsers %></td>
         </tr>
+        <tr>
+          <td>Number of open Assignments</td>
+          <td><%= numberOfOpenAssignments %></td>
+        </tr>
       </tbody>
     </table>
   """)

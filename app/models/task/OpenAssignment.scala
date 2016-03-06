@@ -91,6 +91,10 @@ object OpenAssignmentDAO extends SecuredBaseDAO[OpenAssignment] with FoxImplicit
     remove(Json.obj("_project" -> _project))
   }
 
+  def countOpenAssignments(implicit ctx: DBAccessContext) = {
+    count(Json.obj())
+  }
+
   def updateAllOf(task: Task)(implicit ctx: DBAccessContext) = {
     update(Json.obj("_task" -> task._id), Json.obj("$set" -> Json.obj(
       "team" -> task.team,

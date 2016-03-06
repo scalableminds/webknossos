@@ -3,6 +3,7 @@
  */
 package controllers
 
+import models.task.OpenAssignmentService
 import oxalis.security.Secured
 import models.user.time.{TimeSpan, TimeSpanService}
 import play.api.i18n.Messages
@@ -38,13 +39,15 @@ object StatisticsController extends Controller with Secured{
         for{
           times <- TimeSpanService.loggedTimePerInterval(handler, start, end)
           numberOfAnnotations <- AnnotationDAO.countAll
-          numberOfUsers <- UserService.countNonAnonymousUsers()
+          numberOfUsers <- UserService.countNonAnonymousUsers
+          numberOfAssignments <- OpenAssignmentService.countOpenAssignments
         } yield {
           Ok(Json.obj(
             "name" -> "oxalis",
             "tracingTimes" -> intervalTracingTimeJson(times),
             "numberOfAnnotations" -> numberOfAnnotations,
-            "numberOfUsers" -> numberOfUsers
+            "numberOfUsers" -> numberOfUsers,
+            "numberOfOpenAssignments" -> numberOfAssignments
           ))
         }
       case _ =>

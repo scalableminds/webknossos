@@ -7,6 +7,7 @@ import play.api.Logger
 import models.user._
 import models.task._
 import models.annotation._
+import reactivemongo.core.commands.LastError
 import views._
 import play.api.libs.concurrent._
 import play.api.libs.concurrent.Execution.Implicits._
@@ -88,12 +89,24 @@ object TaskController extends Controller with Secured with FoxImplicits {
     }
   }
 
+  def tryToGetNextAssignmentFor(user: User, retryCount: Int = 5)(implicit ctx: DBAccessContext): Fox[OpenAssignment] = {
+    (requestAssignmentFor(user) ?~> Messages("task.unavailable")).flatMap { assignment =>
+      OpenAssignmentService.remove(assignment).flatMap { removeResult =>
+        if (removeResult.n >= 1)
+          Fox.successful(assignment)
+        else if (retryCount > 0)
+          tryToGetNextAssignmentFor(user, retryCount - 1)
+        else
+          Fox.failure(Messages("task.unavailable"))
+      }
+    }
+  }
+
   def request = Authenticated.async { implicit request =>
     val user = request.user
     for {
       _ <- ensureMaxNumberOfOpenTasks(user)
-      assignment <- requestAssignmentFor(user) ?~> Messages("task.unavailable")
-      _ <- OpenAssignmentService.remove(assignment)
+      assignment <- tryToGetNextAssignmentFor(user)
       task <- assignment.task
       annotation <- AnnotationService.createAnnotationFor(user, task) ?~> Messages("annotation.creationFailed")
       annotationJSON <- AnnotationLike.annotationLikeInfoWrites(annotation, Some(user), exclude = List("content", "actions"))

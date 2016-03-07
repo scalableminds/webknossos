@@ -14,6 +14,7 @@ class ProjectsListView extends Marionette.CompositeView
           <th>Name</th>
           <th>Team</th>
           <th>Owner</th>
+          <th>Open Assignments</th>
           <th>Actions</th>
         </tr>
       </thead>

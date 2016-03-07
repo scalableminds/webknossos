@@ -19,6 +19,7 @@ import play.api.i18n.{MessagesApi, Messages}
 import models.annotation.AnnotationService
 import play.api.Play.current
 import com.scalableminds.util.tools.{FoxImplicits, Fox}
+import net.liftweb.common.{Empty, Full, Failure, Box}
 import com.scalableminds.util.reactivemongo.DBAccessContext
 import play.api.mvc.{Result, AnyContent}
 import play.twirl.api.Html
@@ -27,6 +28,7 @@ import play.api.libs.json._
 import play.api.libs.functional.syntax._
 import reactivemongo.bson.BSONObjectID
 import scala.concurrent.duration._
+import scala.async.Async.{async, await}
 
 class TaskController @Inject() (val messagesApi: MessagesApi) extends Controller with Secured with FoxImplicits {
 
@@ -253,23 +255,41 @@ class TaskController @Inject() (val messagesApi: MessagesApi) extends Controller
     })
 
   def requestAvailableTasks = Authenticated.async { implicit request =>
-    for {
-      availableTasksMap <- TaskService.getAllAvailableTaskCountsAndProjects()
-    } yield {
-      Ok(createAvailableTasksJson(availableTasksMap))
-    }
+    // TODO: WORKLOAD CURRENTLY DISABLED DUE TO PERFORMANCE REASONS
+    Future.successful(Ok(Json.arr()))
+//    for {
+//      availableTasksMap <- getAllAvailableTaskCountsAndProjects()
+//    } yield {
+//      Ok(createAvailableTasksJson(availableTasksMap))
+//    }
   }
 
-  def tryToGetNextAssignmentFor(user: User, retryCount: Int = 5)(implicit ctx: DBAccessContext): Fox[OpenAssignment] = {
-    (requestAssignmentFor(user) ?~> Messages("task.unavailable")).flatMap { assignment =>
-      OpenAssignmentService.remove(assignment).flatMap { removeResult =>
-        if (removeResult.n >= 1)
-          Fox.successful(assignment)
-        else if (retryCount > 0)
-          tryToGetNextAssignmentFor(user, retryCount - 1)
-        else
-          Fox.failure(Messages("task.unavailable"))
-      }
+  def tryToGetNextAssignmentFor(user: User, retryCount: Int = 20)(implicit ctx: DBAccessContext): Fox[OpenAssignment] = {
+    val s = System.currentTimeMillis()
+    requestAssignmentFor(user).futureBox.flatMap {
+      case Full(assignment) =>
+        OpenAssignmentService.remove(assignment).flatMap { removeResult =>
+          if (removeResult.n >= 1)
+            Fox.successful(assignment)
+          else if (retryCount > 0)
+            tryToGetNextAssignmentFor(user, retryCount - 1)
+          else {
+            val e = System.currentTimeMillis()
+            Logger.warn(s"Failed to remove any assignment for user ${user.email}. Result: $removeResult n:${removeResult.n} ok:${removeResult.ok} code:${removeResult.code} TOOK: ${e-s}ms")
+            Fox.failure(Messages("task.unavailable"))
+          }
+        }.futureBox
+      case f: Failure =>
+        Logger.warn(s"Failure while trying to getNextTask (u: ${user.email} r: $retryCount): " + f)
+        if (retryCount > 0)
+          tryToGetNextAssignmentFor(user, retryCount - 1).futureBox
+        else {
+          Logger.warn(s"Failed to retrieve any assignment after all retries (u: ${user.email}) due to FAILURE")
+          Fox.failure(Messages("assignment.retrieval.failed")).futureBox
+        }
+      case Empty =>
+        Logger.warn(s"Failed to retrieve any assignment after all retries (u: ${user.email}) due to EMPTY")
+        Fox.failure(Messages("task.unavailable")).futureBox
     }
   }
 

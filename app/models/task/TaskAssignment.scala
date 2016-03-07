@@ -19,7 +19,9 @@ import play.api.libs.concurrent.Execution.Implicits.{ defaultContext => dec }
  */
 trait TaskAssignment extends FoxImplicits{
 
-  def findNextAssignment(implicit ctx: DBAccessContext): Enumerator[OpenAssignment]
+  def findNextAssignment(user: User)(implicit ctx: DBAccessContext): Enumerator[OpenAssignment]
+
+  def findAllAssignments(implicit ctx: DBAccessContext): Enumerator[OpenAssignment]
 
   val conf = current.configuration
 
@@ -48,15 +50,11 @@ trait TaskAssignment extends FoxImplicits{
   }
 
   private def findAssignable(user: User)(implicit ctx: DBAccessContext) = {
-    val experienceFilter = Enumeratee.filter[OpenAssignment] { assignment =>
-      assignment.hasEnoughExperience(user)
-    }
-
     val alreadyDoneFilter = filterM[OpenAssignment]{ assignment =>
       AnnotationService.findTaskOf(user, assignment._task).futureBox.map(_.isEmpty)
     }
 
-    findNextAssignment(ctx) &> experienceFilter ><> alreadyDoneFilter
+    findNextAssignment(user)(ctx) &> alreadyDoneFilter
   }
 
   def findAllAssignableFor(user: User)(implicit ctx: DBAccessContext): Fox[List[OpenAssignment]] = {

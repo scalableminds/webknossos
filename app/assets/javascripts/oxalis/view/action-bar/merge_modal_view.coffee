@@ -25,17 +25,6 @@ class MergeModalView extends Marionette.LayoutView
         </div>
         <div class="modal-body container-fluid">
           <div class="form-group">
-            <label for="task">Task</label>
-            <div class="row">
-              <div class="col-md-10 task">
-                <input type="text" class="form-control" placeholder="Task id"></input>
-              </div>
-              <div class="col-md-2">
-                <button class="btn btn-primary" id="task-merge">Merge</button>
-              </div>
-            </div>
-          </div>
-          <div class="form-group">
             <label for="task-type">Task type</label>
             <div class="row">
               <div class="col-md-10 task-type"></div>
@@ -117,7 +106,6 @@ class MergeModalView extends Marionette.LayoutView
     "project"     : ".project"
 
   events :
-    "click #task-merge"               : "mergeTask"
     "click #task-type-merge"          : "mergeTaskType"
     "click #project-merge"            : "mergeProject"
     "click #nml-merge"                : "mergeNml"
@@ -127,7 +115,6 @@ class MergeModalView extends Marionette.LayoutView
     "change.bs.fileinput"             : "selectFiles"
 
   ui :
-    "task"                 : ".task"
     "tasktype"             : ".task-type"
     "project"              : ".project"
     "explorative"          : ".explorative"
@@ -161,15 +148,6 @@ class MergeModalView extends Marionette.LayoutView
 
       @tasktype   .show(@taskTypeSelectionView)
       @project    .show(@projectSelectionView)
-    )
-
-
-  mergeTask : ->
-
-    taskId = @ui.task.find("input").val()
-    @validateId(taskId).then( =>
-      url = "/annotations/CompoundTask/#{taskId}/merge/#{@model.get("tracingType")}/#{@model.get("tracingId")}"
-      @merge(url)
     )
 
 

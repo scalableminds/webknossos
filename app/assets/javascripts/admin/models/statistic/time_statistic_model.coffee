@@ -18,16 +18,7 @@ class TimeStatisticModel extends Backbone.Model
 
   parse : (response) ->
 
-    # deliberately ignore the last aka current month, since the data is not
-    # yet complete
-    timings = response.tracingTimes
-    if timings.length > 1
-
-      timings = _.chain(response.tracingTimes)
-        .sortBy((timeEntry) -> return timeEntry.start)
-        .slice(0, -1)
-        .value()
-
+    timings = _.sortBy(response.tracingTimes, (timeEntry) -> return timeEntry.start)
     response.tracingTimes = new Backbone.Collection(timings)
 
     return response

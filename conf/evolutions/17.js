@@ -21,7 +21,7 @@ db.tasks.find().forEach(function(elem){
 })
 
 db.openAssignments.find().forEach(function(elem){
-  db.tasks.update({"_id" : elem._id}, {"$inc": {"assignedInstances" : -1} })
+  db.tasks.update({"_id" : elem._task}, {"$inc": {"assignedInstances" : -1} })
 })
 
 db.openAssignments.remove({})

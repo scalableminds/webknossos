@@ -53,6 +53,7 @@ class SkeletonTracingView extends View
 
     modal.show("You just toggled the skeleton visibility. To toggle back, just hit the 1-Key.",
       "Skeleton visibility",
-      [{id: "ok-button", label: "OK, Got it."}])
+      [{id: "ok-button", label: "OK, Got it."}]
+    )
 
 module.exports = SkeletonTracingView

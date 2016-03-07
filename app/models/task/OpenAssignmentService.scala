@@ -12,7 +12,11 @@ import reactivemongo.bson.BSONObjectID
 import play.api.libs.concurrent.Execution.Implicits._
 
 object OpenAssignmentService extends FoxImplicits{
-  def findNextOpenAssignments(implicit ctx: DBAccessContext): Enumerator[OpenAssignment] = {
+  def findNextOpenAssignments(user: User)(implicit ctx: DBAccessContext): Enumerator[OpenAssignment] = {
+    OpenAssignmentDAO.findOrderedByPriority(user)
+  }
+
+  def findAllOpenAssignments(implicit ctx: DBAccessContext): Enumerator[OpenAssignment] = {
     OpenAssignmentDAO.findOrderedByPriority
   }
 

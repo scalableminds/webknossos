@@ -23,7 +23,6 @@ dependencies:
 test:
   override:
     - docker-compose -f docker-compose-circleci.yml up -d
-        background: true
     - curl --retry 20 --retry-delay 5 -v http://localhost:9000
 
 deployment:

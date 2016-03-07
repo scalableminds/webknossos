@@ -50,8 +50,13 @@ class Skeleton
         @flycam.update()
       newTreeColor : (treeId) => @updateTreeColor(treeId)
 
-    @model.user.on "particleSizeChanged", (particleSize) =>
-      @setParticleSize(particleSize)
+    @model.user.on
+      particleSizeChanged : (particleSize) =>
+        @setParticleSize(particleSize)
+      overrideNodeRadiusChanged : (overrideNodeRadius) =>
+        for tree in @treeGeometries
+          tree.showRadius(not @model.user.get("overrideNodeRadius"))
+
 
 
   createNewTree : (treeId, treeColor) ->

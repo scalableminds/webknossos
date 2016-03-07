@@ -52,7 +52,7 @@ class ArbitraryView
     @group = new THREE.Object3D
     # The dimension(s) with the highest resolution will not be distorted
     @group.scale = new THREE.Vector3(app.scaleInfo.nmPerVoxel...)
-    # Add scene to the group, all Geometries are than added to group
+    # Add scene to the group, all Geometries are then added to group
     @scene.add(@group)
     @group.add(camera)
 

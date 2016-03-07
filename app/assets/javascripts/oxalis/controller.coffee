@@ -99,6 +99,7 @@ class Controller
         @model, stats, @view, @sceneController)
 
     @initKeyboard()
+    @initTimeLimit()
 
     for binaryName of @model.binary
       @listenTo(@model.binary[binaryName].cube, "bucketLoaded", -> app.vent.trigger("rerender"))
@@ -131,7 +132,7 @@ class Controller
           @zoomStepWarningToast = null
 
 
-  initKeyboard : (advancedOptionsAllowed) ->
+  initKeyboard : ->
 
     # avoid scrolling while pressing space
     $(document).keydown (event) ->
@@ -189,8 +190,6 @@ class Controller
     @model.mode = newMode
 
 
-module.exports = Controller
-
   initTimeLimit : (timeString) ->
 
     finishTracing = =>
@@ -215,3 +214,8 @@ module.exports = Controller
         window.alert("Time limit is reached, thanks for tracing!")
         finishTracing()
       , timeLimit)
+
+
+module.exports = Controller
+
+

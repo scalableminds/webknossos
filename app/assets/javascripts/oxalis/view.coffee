@@ -7,7 +7,7 @@ modal     = require("./view/modal")
 
 class View
 
-  constructor : (@model, advancedOptionsAllowed) ->
+  constructor : (@model) ->
 
     unless @isWebGlSupported()
       Toast.error("Couldn't initialise WebGL, please make sure you are using Google Chrome and WebGL is enabled.<br>"+
@@ -20,10 +20,6 @@ class View
 
     # disable loader
     $("#loader").addClass("hidden")
-
-    if not advancedOptionsAllowed
-      $("#left-menu").hide()
-      $("#right-menu").hide()
 
 
   toggleTheme : ->

@@ -3,9 +3,9 @@ View = require("../../view")
 
 class VolumeTracingView extends View
 
-  constructor : (@model, advancedOptionsAllowed) ->
+  constructor : (@model) ->
 
-    super(@model, advancedOptionsAllowed)
+    super(@model)
 
     $(".skeleton-controls").hide()
     $(".skeleton-plane-controls").hide()

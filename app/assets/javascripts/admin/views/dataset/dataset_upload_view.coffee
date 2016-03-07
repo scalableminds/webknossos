@@ -79,7 +79,6 @@ class DatasetUploadView extends Marionette.LayoutView
   initialize : ->
 
     @teamSelectionView = new SelectionView(
-      viewComparator: "name"
       collection : new TeamCollection()
       name : "team"
       childViewOptions :
@@ -107,13 +106,14 @@ class DatasetUploadView extends Marionette.LayoutView
         data : new FormData(form)
       )
       .then(
-        -> Toast.success()
+        ->
+          Toast.success()
+          app.router.navigate("/dashboard", { trigger: true })
         -> # NOOP
       )
       .then(
-        =>
+        => # always do
           @ui.spinner.addClass("hidden")
-          app.router.navigate("/dashboard", { trigger: true })
       )
 
 

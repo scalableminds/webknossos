@@ -8,7 +8,9 @@ import play.api.libs.json.Json
  * Date: 19.11.13
  * Time: 14:58
  */
-case class CompletionStatus(open: Int, inProgress: Int, completed: Int)
+case class CompletionStatus(open: Int, inProgress: Int, completed: Int){
+  def total = open + inProgress + completed
+}
 
 object CompletionStatus {
   implicit val completionStatusFormat = Json.format[CompletionStatus]

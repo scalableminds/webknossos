@@ -30,7 +30,7 @@ class VolumeActionsView extends Marionette.ItemView
 
   createCell : ->
 
-    throw new Error("TODO. Not implemented yet.")
+    @model.volumeTracing.createCell()
 
 
   changeMode : (evt) ->

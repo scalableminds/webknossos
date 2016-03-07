@@ -30,6 +30,7 @@ class AbstractTabView extends Marionette.LayoutView
 
     @listenTo(@, "render", @afterRender)
 
+    @adapterModel = options.adapterModel
     regions = {}
     @activeTabIndex = 0
     @tabs = @getTabs()

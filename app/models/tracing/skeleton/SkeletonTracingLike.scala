@@ -58,6 +58,8 @@ trait SkeletonTracingLike extends AnnotationContent {
 
   def downloadFileExtension = ".nml"
 
+  def stats: Option[SkeletonTracingStatistics]
+
   def toDownloadStream(implicit ctx: DBAccessContext): Fox[Enumerator[Array[Byte]]] =
     NMLService.toNML(this).map(data => Enumerator.fromStream(IOUtils.toInputStream(data)))
 

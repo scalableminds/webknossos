@@ -25,14 +25,24 @@ class SkeletonTracingView extends View
       if @reloadDenied
         Toast.error(autoSaveFailureMessage,  true)
       else
-        modal.show("Several attempts to reach our server have failed. You should reload the page
-          to make sure that your work won't be lost.",
-          [ { id : "reload-button", label : "OK, reload", callback : ( ->
-            $(window).on(
-              "beforeunload"
-              => return null)
-            app.router.reload() )},
-          {id : "cancel-button", label : "Cancel", callback : ( => @reloadDenied = true ) } ] )
+        modal.show(
+          "Several attempts to reach our server have failed. You should
+          reload the page to make sure that your work won't be lost.",
+          [
+            {
+              id : "reload-button",
+              label : "OK, reload",
+              callback : ->
+                app.router.off("beforeunload")
+                app.router.reload()
+            },
+            {
+              id : "cancel-button",
+              label : "Cancel",
+              callback : => @reloadDenied = true
+            }
+          ]
+        )
     )
     @listenTo(@model.skeletonTracing.stateLogger, "pushDone", ->
       Toast.delete("danger", autoSaveFailureMessage))

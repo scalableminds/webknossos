@@ -26,7 +26,7 @@ object UserService extends FoxImplicits {
 
   val defaultUserEmail = Play.configuration.getString("application.authentication.defaultUser").get
 
-  lazy val defaultUser = {
+  def defaultUser = {
     UserDAO.findOneByEmail(defaultUserEmail)(GlobalAccessContext)
   }
 

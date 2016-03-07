@@ -77,10 +77,7 @@ class DashboardTaskListView extends Marionette.CompositeView
 
     @listenTo(app.vent, "TaskTransferModal:refresh", @refresh)
 
-
-  # Marionette's CollectionView filter
-  filter : (child, index, collection) ->
-
+  filter : (child) ->
     if @showFinishedTasks
       return child.get("annotation").state.isFinished
     else

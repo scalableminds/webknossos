@@ -13,6 +13,7 @@ TracingView                  = require("./tracing_view")
 OxalisController             = require("oxalis/controller")
 OxalisModel                  = require("oxalis/model")
 Constants                    = require("oxalis/constants")
+BackboneToOxalisAdapterModel = require("oxalis/model/settings/backbone_to_oxalis_adapter_model")
 
 class TracingLayoutView extends Marionette.LayoutView
 
@@ -71,6 +72,7 @@ class TracingLayoutView extends Marionette.LayoutView
     )
 
     @model = @options.model
+    @options.adapterModel = new BackboneToOxalisAdapterModel(@model)
 
     @listenTo(@, "render", @afterRender)
     @listenTo(app.vent, "planes:resize", @resizeRightMenu)
@@ -134,6 +136,10 @@ class TracingLayoutView extends Marionette.LayoutView
 
   renderSettings : ->
 
+    # This method will be invoked again once the model is initialized as part of
+    # the "sync" event callback.
+    return unless @model.initialized
+
     if @isSkeletonMode()
       settingsTabClass = if @isArbitraryMode() then SkeletonArbitraryTabView else SkeletonPlaneTabView
       settingsTabView = new settingsTabClass(@options)
@@ -142,7 +148,7 @@ class TracingLayoutView extends Marionette.LayoutView
     else
       settingsTabView = new ViewmodeTabView(@options)
 
-    @settings.show(settingsTabView, preventDestroy : true)
+    @settings.show(settingsTabView)
 
 
   isTracingMode : ->

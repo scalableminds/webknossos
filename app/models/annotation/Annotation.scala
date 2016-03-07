@@ -10,7 +10,7 @@ import org.joda.time.format.DateTimeFormat
 import org.joda.time.DateTime
 import com.scalableminds.util.mvc.Formatter
 import oxalis.nml.NML
-import com.scalableminds.util.geometry.Point3D
+import com.scalableminds.util.geometry.{BoundingBox, Point3D}
 import java.util.Date
 import play.api.Logger
 import models.basics.Implicits._
@@ -23,6 +23,7 @@ import play.modules.reactivemongo.json.BSONFormats._
 import reactivemongo.api.indexes.{IndexType, Index}
 import oxalis.view.{ResourceAction, ResourceActionCollection}
 import models.team.Role
+import models.tracing.TracingStatistics
 
 case class Annotation(
                        _user: Option[BSONObjectID],
@@ -126,7 +127,7 @@ object Annotation {
         "name" -> annotation.name,
         "id" -> annotation.id,
         "formattedHash" -> Formatter.formatHash(annotation.id),
-        "stats" -> stats.toOption
+        "stats" -> stats.map(_.writeAsJson).toOption
 
       )
     }
@@ -281,14 +282,30 @@ object AnnotationDAO
       Json.obj("_id" -> annotation._id),
       Json.obj("$set" -> Json.obj("state" -> state)))
 
-  def updateAllUsingNewTaskType(task: Task, settings: AnnotationSettings)(implicit ctx: DBAccessContext) = {
+  def updateTeamForAllOfTask(task: Task, team: String)(implicit ctx: DBAccessContext) =
+    update(Json.obj("_id" -> task._id), Json.obj("$set" -> Json.obj("team" -> team)))
+
+  def updateAllOfTask(
+    task: Task,
+    settings: AnnotationSettings)(implicit ctx: DBAccessContext) = {
+
     find(
       Json.obj(
-        "_task" -> task._id)).one[Annotation].map {
-      case Some(annotation) =>
-        annotation._content.service.updateSettings(settings, annotation._content._id)
-      case _ =>
-    }
+        "_task" -> task._id)).cursor[Annotation]().collect[List]().map(_.map { annotation =>
+      annotation._content.service.updateSettings(settings, annotation._content._id)
+    })
+  }
+  def updateAllOfTask(
+    task: Task,
+    dataSetName: String,
+    boundingBox: Option[BoundingBox],
+    settings: AnnotationSettings)(implicit ctx: DBAccessContext) = {
+
+    find(
+      Json.obj(
+        "_task" -> task._id)).cursor[Annotation]().collect[List]().map(_.map{ annotation =>
+          annotation._content.service.updateSettings(dataSetName, boundingBox, settings, annotation._content._id)
+    })
   }
 
   def countAll(implicit ctx: DBAccessContext) =

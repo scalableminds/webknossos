@@ -1,4 +1,5 @@
 StateLogger = require("../statelogger")
+$ = require("jquery")
 
 class VolumeTracingStateLogger extends StateLogger
 
@@ -15,6 +16,13 @@ class VolumeTracingStateLogger extends StateLogger
 
     if push
       @pushImpl()
+
+
+  pushNow : ->
+
+    pushQueuePromise = @pushQueue.pushImpl()
+    stateLoggerPromise = super(arguments...)
+    return $.when(pushQueuePromise, stateLoggerPromise)
 
 
   concatUpdateTracing : ->

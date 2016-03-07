@@ -93,6 +93,7 @@ GET           /api/datasetToken/validate                                        
 
 # SkeletonTracing Stuff
 POST          /annotations/createExplorational                                  controllers.AnnotationController.createExplorational
+POST          /admin/nml/upload                                                 controllers.admin.NMLIO.upload
 PUT           /annotations/:typ/:id                                             controllers.AnnotationController.updateWithJson(typ: String, id: String, version: Int)
 POST          /annotations/:typ/:id/name                                        controllers.AnnotationController.nameExplorativeAnnotation(typ: String, id: String)
 GET           /annotations/:typ/:id/finishAndRedirect                           controllers.AnnotationController.finishWithRedirect(typ: String, id: String)
@@ -112,27 +113,36 @@ DELETE        /annotations/:typ/:id                                             
 GET           /annotations/:typ/:id/merge/:mergedTyp/:mergedId/:readOnly        controllers.AnnotationController.merge(typ: String, id: String, mergedTyp: String, mergedId: String, readOnly: Boolean)
 # GET           /annotations/:typ/:id/saveMerged                                  controllers.AnnotationController.saveMerged(typ: String, id: String)
 
-#Admin pages
-GET           /admin/nml/upload                                                 controllers.admin.NMLIO.uploadForm
-POST          /admin/nml/upload                                                 controllers.admin.NMLIO.upload
-
 # Admin datasets
 GET           /datasets/upload                                                  controllers.DataSetController.empty
 POST          /api/datasets/upload                                              controllers.DataSetController.upload
 
 # Admin Tasks
 GET           /api/tasks                                                        controllers.TaskController.list
-DELETE        /api/tasks/:id                                                    controllers.admin.TaskAdministration.delete(id: String)
+
+# DELETE        /api/tasks/:id                                                    controllers.admin.TaskAdministration.delete(id: String)
 
 GET           /tasks                                                            controllers.TaskController.empty
-GET           /tasks/overview                                                   controllers.admin.TaskAdministration.empty
-GET           /admin/tasks/create                                               controllers.admin.TaskAdministration.create
-POST          /admin/tasks/createBulk                                           controllers.admin.TaskAdministration.createBulk
-POST          /admin/tasks/createFromNML                                        controllers.admin.TaskAdministration.createFromNML
-POST          /admin/tasks/createFromForm                                       controllers.admin.TaskAdministration.createFromForm
-GET           /admin/tasks/:id/edit                                             controllers.admin.TaskAdministration.edit(id: String)
-POST          /admin/tasks/:id                                                  controllers.admin.TaskAdministration.editTaskForm(id: String)
-GET           /api/tasks/overview                                               controllers.admin.TaskAdministration.overviewData(start: Option[Long], end: Option[Long])
+GET           /tasks/overview                                                   controllers.TaskController.empty
+GET           /tasks/create                                                     controllers.TaskController.empty
+
+POST          /api/tasks                                                        controllers.TaskController.create(type: String)
+GET           /api/tasks/:id                                                    controllers.TaskController.read(id: String)
+DELETE        /api/tasks/:id                                                    controllers.TaskController.delete(id: String)
+PUT           /api/tasks/:id                                                    controllers.TaskController.update(id: String)
+
+GET           /tasks/:id/edit                                                   controllers.UserController.emptyWithWildcard(id: String)
+# show backbone views for task creation
+
+#POST          /admin/tasks/createBulk                                           controllers.admin.TaskAdministration.createBulk
+#POST          /admin/tasks/createFromNML                                        controllers.admin.TaskAdministration.createFromNML
+#POST          /admin/tasks/createFromForm                                       controllers.admin.TaskAdministration.createFromForm
+
+# TODO: remove
+#GET           /admin/tasks/:id/edit                                          controllers.admin.TaskAdministration.edit(id: String)
+#GET           /admin/tasks/:id/edit                                             controllers.UserController.emptyWithWildcard(id: String)
+#POST          /admin/tasks/:id                                                  controllers.admin.TaskAdministration.editTaskForm(id: String)
+#GET           /api/tasks/overview                                               controllers.admin.TaskAdministration.overviewData
 GET           /api/tasks/workload                                               controllers.TaskController.requestAvailableTasks
 GET           /workload                                                         controllers.TaskController.empty
 
@@ -144,7 +154,8 @@ GET           /taskTypes/:id/edit                                               
 GET           /api/taskTypes                                                    controllers.admin.TaskTypeAdministration.list
 POST          /api/taskTypes                                                    controllers.admin.TaskTypeAdministration.create
 DELETE        /api/taskTypes/:id/delete                                         controllers.admin.TaskTypeAdministration.delete(id: String)
-GET           /api/taskTypes/:id/tasks                                          controllers.admin.TaskAdministration.tasksForType(id: String)
+GET           /api/taskTypes/:id/tasks                                          controllers.TaskController.listTasksForType(id: String)
+
 GET           /api/taskTypes/:id/download                                       controllers.admin.NMLIO.taskTypeDownload(id: String)
 GET           /api/taskTypes/:id                                                controllers.admin.TaskTypeAdministration.get(id: String)
 POST          /api/taskTypes/:id                                                controllers.admin.TaskTypeAdministration.editTaskTypeForm(id: String)

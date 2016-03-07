@@ -62,10 +62,7 @@ class StateLogger
 
   pushNow : ->   # Interface for view & controller
 
-    return @mutexedPush(false).then(
-      -> Toast.success("Saved!")
-      -> Toast.error("Couldn't save. Please try again.")
-    )
+    return @mutexedPush(false)
 
   # alias for `pushNow`
   # needed for save delegation by `Model`
@@ -115,7 +112,7 @@ class StateLogger
 
     # HTTP Code 409 'conflict' for dirty state
     if response.status == 409
-      $(window).off("beforeunload")
+      app.router.off("beforeunload")
       alert("""
         It seems that you edited the tracing simultaneously in different windows.
         Editing should be done in a single window only.

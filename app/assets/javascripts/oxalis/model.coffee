@@ -24,6 +24,13 @@ ErrorHandling        = require("libs/error_handling")
 
 class Model extends Backbone.Model
 
+
+  constructor : ->
+
+    @initialized = false
+    super(arguments...)
+
+
   fetch : (options) ->
 
     if @get("controlMode") == constants.CONTROL_MODE_TRACE
@@ -54,6 +61,8 @@ class Model extends Backbone.Model
       else
 
         @user = new User()
+        @set("user", @user)
+
         @user.fetch().then( =>
 
           @set("dataset", new Backbone.Model(tracing.content.dataSet))
@@ -147,6 +156,7 @@ class Model extends Backbone.Model
     @set("mode", if isVolumeTracing then constants.MODE_VOLUME else constants.MODE_PLANE_TRACING)
 
     @initSettersGetter()
+    @initialized = true
     @trigger("sync")
 
     # no error
@@ -256,7 +266,10 @@ class Model extends Backbone.Model
       deferreds.push( model.save() )
     )
 
-    return $.when.apply($, deferreds)
+    return $.when.apply($, deferreds).then(
+      -> Toast.success("Saved!")
+      -> Toast.error("Couldn't save. Please try again.")
+    )
 
 
   # Make the Model compatible between legacy Oxalis style and Backbone.Modela/Views
@@ -277,7 +290,7 @@ class Model extends Backbone.Model
 
     @get("flycam").setPosition( state.position || tracing.content.editPosition )
     if state.zoomStep?
-      @get("flycam").setZoomStep( state.zoomStep )
+      @get("user").set("zoom", Math.exp(Math.LN2 * state.zoomStep))
       @get("flycam3d").setZoomStep( state.zoomStep )
     if state.rotation?
       @get("flycam3d").setRotation( state.rotation )

@@ -22,6 +22,11 @@ class BackboneToOxalisAdapterModel extends Backbone.Model
       activeCellId : 0
     )
 
+    @listenTo(@oxalisModel, "sync", @bind)
+
+
+  bind : ->
+
     if @oxalisModel.skeletonTracing
 
       # Update values after OxalisModel is done syncing
@@ -41,36 +46,45 @@ class BackboneToOxalisAdapterModel extends Backbone.Model
       # ####################################
       # Listen to changes in the OxalisModel
 
-      @listenTo(@skeletonTracingModel, "newTree", (id) -> @skeletonTracingAdapter.set("activeTreeId", id))
-      @listenTo(@skeletonTracingModel, "newActiveTree", (id) -> @skeletonTracingAdapter.set("activeTreeId", id))
-      @listenTo(@skeletonTracingModel, "newActiveNode", (id) -> @skeletonTracingAdapter.set("activeNodeId", id))
-      @listenTo(@skeletonTracingModel, "newActiveNodeRadius", (id) -> @skeletonTracingAdapter.set("radius", id))
+      @listenTo(@skeletonTracingModel, "newTree", (id) -> @skeletonTracingAdapter.set("activeTreeId", id, {triggeredByModel: true}))
+      @listenTo(@skeletonTracingModel, "newActiveTree", (id) -> @skeletonTracingAdapter.set("activeTreeId", id, {triggeredByModel: true}))
+      @listenTo(@skeletonTracingModel, "newActiveNode", (id) -> @skeletonTracingAdapter.set("activeNodeId", id, {triggeredByModel: true}))
+      @listenTo(@skeletonTracingModel, "newActiveNodeRadius", (id) -> @skeletonTracingAdapter.set("radius", id, {triggeredByModel: true}))
 
 
       # ######################################
       # Listen to changes in the BackboneModel
-      @listenTo(@skeletonTracingAdapter, "change:activeTreeId", (model, id) ->
-        @skeletonTracingModel.setActiveTree(id)
+
+      # Some calls are deferred, so the backbone change is propagated first, as the property in question
+      # may be reset again if it is invalid.
+      # If the original event was triggered by the oxalis model (options.triggeredByModel), the change in the backbone model
+      # doesn't need to be propagated again. This lead to race conditions, if the property was changed in the oxalis
+      # model in the mean time.
+      @listenTo(@skeletonTracingAdapter, "change:activeTreeId", (model, id, options) ->
+        if not options.triggeredByModel
+          _.defer( => @skeletonTracingModel.setActiveTree(id) )
       )
 
       @listenTo(@skeletonTracingAdapter, "change:somaClicking", (model, bool) ->
         @oxalisModel.user.set("newNodeNewTree", bool)
       )
 
-      @listenTo(@skeletonTracingAdapter, "change:activeNodeId", (model, id) ->
-        @skeletonTracingModel.setActiveNode(id)
+      @listenTo(@skeletonTracingAdapter, "change:activeNodeId", (model, id, options) ->
+        if not options.triggeredByModel
+          _.defer( => @skeletonTracingModel.setActiveNode(id) )
       )
 
       @listenTo(@skeletonTracingAdapter, "change:particleSize", (model, size) ->
-        @oxalisModel.user.set("particleSize", size)
+        _.defer( => @oxalisModel.user.set("particleSize", size) )
       )
 
       @listenTo(@skeletonTracingAdapter, "change:overrideNodeRadius", (model, bool) ->
         @oxalisModel.user.set("overrideNodeRadius", bool)
       )
 
-      @listenTo(@skeletonTracingAdapter, "change:radius", (model, radius) ->
-        @skeletonTracingModel.setActiveNodeRadius(radius)
+      @listenTo(@skeletonTracingAdapter, "change:radius", (model, radius, options) ->
+        if not options.triggeredByModel
+          _.defer( => @skeletonTracingModel.setActiveNodeRadius(radius) )
       )
 
       @listenTo(@skeletonTracingAdapter, "change:boundingBox", (model, string) ->

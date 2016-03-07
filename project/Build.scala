@@ -15,8 +15,8 @@ object Dependencies{
   val akkaVersion = "2.4.1"
   val reactiveVersion = "0.11.7"
   val reactivePlayVersion = "0.11.7.play24"
-  val braingamesVersion = "8.0.11"
-  val twelvemonkeys = "3.2"
+  val braingamesVersion = "8.3.0"
+  val twelvemonkeysVersion = "3.1.2"
 
   val restFb = "com.restfb" % "restfb" % "1.6.11"
   val commonsIo = "commons-io" % "commons-io" % "2.4"
@@ -37,13 +37,13 @@ object Dependencies{
   val airbrake = "com.scalableminds" %% "play-airbrake" % "0.5.0"
   val mongev = "com.scalableminds" %% "play-mongev" % "0.4.1"
   val tiff = Seq(
-      "com.twelvemonkeys.common" % "common-lang" % twelvemonkeys,
-      "com.twelvemonkeys.common" % "common-io" % twelvemonkeys,
-      "com.twelvemonkeys.common" % "common-image" % twelvemonkeys,
-      "com.twelvemonkeys.imageio" %  "imageio-core" % twelvemonkeys,
-      "com.twelvemonkeys.imageio" %  "imageio-metadata" % twelvemonkeys,
-      "com.twelvemonkeys.imageio" % "imageio-jpeg" % twelvemonkeys,
-      "com.twelvemonkeys.imageio" % "imageio-tiff" % twelvemonkeys
+      "com.twelvemonkeys.common" % "common-lang" % twelvemonkeysVersion,
+      "com.twelvemonkeys.common" % "common-io" % twelvemonkeysVersion,
+      "com.twelvemonkeys.common" % "common-image" % twelvemonkeysVersion,
+      "com.twelvemonkeys.imageio" %  "imageio-core" % twelvemonkeysVersion,
+      "com.twelvemonkeys.imageio" %  "imageio-metadata" % twelvemonkeysVersion,
+      "com.twelvemonkeys.imageio" % "imageio-jpeg" % twelvemonkeysVersion,
+      "com.twelvemonkeys.imageio" % "imageio-tiff" % twelvemonkeysVersion
     )
 }
 

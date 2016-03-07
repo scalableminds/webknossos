@@ -1,11 +1,12 @@
 _                    = require("lodash")
 Backbone             = require("backbone")
 TeamModel            = require("./team_model")
-PaginationCollection = require("../pagination_collection")
+SortedCollection     = require("../sorted_collection")
 
-class TeamCollection extends Backbone.Collection
+class TeamCollection extends SortedCollection
 
   url : "/api/teams"
-  model: TeamModel
+  model : TeamModel
+  sortBy : "name"
 
 module.exports = TeamCollection

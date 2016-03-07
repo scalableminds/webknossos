@@ -4,6 +4,7 @@ import javax.inject.Inject
 
 import scala.async.Async._
 import scala.concurrent._
+import scala.concurrent.duration._
 
 import akka.util.Timeout
 import com.scalableminds.util.mvc.JsonResult
@@ -24,7 +25,6 @@ import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.iteratee.Enumerator
 import play.api.libs.json.{JsArray, JsObject, _}
 import play.twirl.api.Html
-import scala.concurrent.duration._
 
 /**
  * Company: scalableminds
@@ -49,13 +49,13 @@ class AnnotationController @Inject()(val messagesApi: MessagesApi) extends Contr
     }
   }
 
-  def infoReadOnly(typ: String, id: String) = info(typ, id, true)
+  def infoReadOnly(typ: String, id: String) = info(typ, id, readOnly = true)
 
   def merge(typ: String, id: String, mergedTyp: String, mergedId: String, readOnly: Boolean) = Authenticated.async { implicit request =>
     withMergedAnnotation(typ, id, mergedId, mergedTyp, readOnly) { annotation =>
       for {
-        _ <- annotation.restrictions.allowAccess(request.user).failIfFalse(Messages("notAllowed")).toFox ~> 400
-        temporary <- annotation.temporaryDuplicate(true)
+        _ <- annotation.restrictions.allowAccess(request.user) ?~> Messages("notAllowed") ~> 400
+        temporary <- annotation.temporaryDuplicate(keepId = true)
         explorational = temporary.copy(typ = AnnotationType.Explorational)
         savedAnnotation <- explorational.saveToDB
         json <- annotationJson(request.user, savedAnnotation)
@@ -72,11 +72,11 @@ class AnnotationController @Inject()(val messagesApi: MessagesApi) extends Contr
 
   def revert(typ: String, id: String, version: Int) = Authenticated.async { implicit request =>
     def combineUpdates(updates: List[AnnotationUpdate]) = updates.foldLeft(Seq.empty[JsValue]) {
-      case (updates, AnnotationUpdate(_, _, _, JsArray(nextUpdates), _)) =>
-        updates ++ nextUpdates
-      case (updates, u)                                                  =>
+      case (acumulatedUpdates, AnnotationUpdate(_, _, _, JsArray(nextUpdates), _)) =>
+        acumulatedUpdates ++ nextUpdates
+      case (acumulatedUpdates, u)                                                  =>
         Logger.warn("dropping update during replay! Update: " + u)
-        updates
+        acumulatedUpdates
     }
 
     for {
@@ -98,7 +98,7 @@ class AnnotationController @Inject()(val messagesApi: MessagesApi) extends Contr
   def reset(typ: String, id: String) = Authenticated.async { implicit request =>
     withAnnotation(AnnotationIdentifier(typ, id)) { annotation =>
       for {
-        _ <- ensureTeamAdministration(request.user, annotation.team).toFox
+        _ <- ensureTeamAdministration(request.user, annotation.team)
         reset <- annotation.muta.resetToBase() ?~> Messages("annotation.reset.failed")
         json <- annotationJson(request.user, reset)
       } yield {
@@ -110,7 +110,7 @@ class AnnotationController @Inject()(val messagesApi: MessagesApi) extends Contr
   def reopen(typ: String, id: String) = Authenticated.async { implicit request =>
     withAnnotation(AnnotationIdentifier(typ, id)) { annotation =>
       for {
-        _ <- ensureTeamAdministration(request.user, annotation.team).toFox
+        _ <- ensureTeamAdministration(request.user, annotation.team)
         reopenedAnnotation <- annotation.muta.reopen() ?~> Messages("annotation.invalid")
         json <- annotationJson(request.user, reopenedAnnotation)
       } yield {
@@ -119,42 +119,39 @@ class AnnotationController @Inject()(val messagesApi: MessagesApi) extends Contr
     }
   }
 
-  def download(typ: String, id: String) = Authenticated.async {
-    implicit request =>
-      withAnnotation(AnnotationIdentifier(typ, id)) {
-        annotation =>
-          for {
-            name <- nameAnnotation(annotation) ?~> Messages("annotation.name.impossible")
-            _ <- annotation.restrictions.allowDownload(request.user).failIfFalse(Messages("annotation.download.notAllowed")).toFox
-            annotationDAO <- AnnotationDAO.findOneById(id) ?~> Messages("annotation.notFound")
-            content <- annotation.content ?~> Messages("annotation.content.empty")
-            stream <- content.toDownloadStream
-          } yield {
-            Ok.chunked(stream.andThen(Enumerator.eof[Array[Byte]])).withHeaders(
-              CONTENT_TYPE ->
-                "application/octet-stream",
-              CONTENT_DISPOSITION ->
-                s"filename=${name + content.downloadFileExtension}")
-          }
-      }
+  def download(typ: String, id: String) = Authenticated.async { implicit request =>
+    withAnnotation(AnnotationIdentifier(typ, id)) {
+      annotation =>
+        for {
+          name <- nameAnnotation(annotation) ?~> Messages("annotation.name.impossible")
+          _ <- annotation.restrictions.allowDownload(request.user) ?~> Messages("annotation.download.notAllowed")
+          annotationDAO <- AnnotationDAO.findOneById(id) ?~> Messages("annotation.notFound")
+          content <- annotation.content ?~> Messages("annotation.content.empty")
+          stream <- content.toDownloadStream
+        } yield {
+          Ok.chunked(stream.andThen(Enumerator.eof[Array[Byte]])).withHeaders(
+            CONTENT_TYPE ->
+              "application/octet-stream",
+            CONTENT_DISPOSITION ->
+              s"filename=${name + content.downloadFileExtension}")
+        }
+    }
   }
 
-  def createExplorational = Authenticated.async(parse.urlFormEncoded) {
-    implicit request =>
-      for {
-        dataSetName <- postParameter("dataSetName") ?~> Messages("dataSet.notSupplied")
-        dataSet <- DataSetDAO.findOneBySourceName(dataSetName) ?~> Messages("dataSet.notFound")
-        contentType <- postParameter("contentType") ?~> Messages("annotation.contentType.notSupplied")
-        annotation <- AnnotationService.createExplorationalFor(request.user, dataSet, contentType) ?~> Messages("annotation.create.failed")
-      } yield {
-        Redirect(routes.AnnotationController.trace(annotation.typ, annotation.id))
-      }
+  def createExplorational = Authenticated.async(parse.urlFormEncoded) { implicit request =>
+    for {
+      dataSetName <- postParameter("dataSetName") ?~> Messages("dataSet.notSupplied")
+      dataSet <- DataSetDAO.findOneBySourceName(dataSetName) ?~> Messages("dataSet.notFound")
+      contentType <- postParameter("contentType") ?~> Messages("annotation.contentType.notSupplied")
+      annotation <- AnnotationService.createExplorationalFor(request.user, dataSet, contentType) ?~> Messages("annotation.create.failed")
+    } yield {
+      Redirect(routes.AnnotationController.trace(annotation.typ, annotation.id))
+    }
   }
 
   def handleUpdates(annotation: Annotation, js: JsValue, version: Int)(implicit request: AuthenticatedRequest[_]): Fox[JsObject] = {
     js match {
       case JsArray(jsUpdates) =>
-        Logger.info("Tried: " + jsUpdates)
         for {
           updated <- annotation.muta.updateFromJson(jsUpdates) //?~> Messages("format.json.invalid")
         } yield {
@@ -223,52 +220,46 @@ class AnnotationController @Inject()(val messagesApi: MessagesApi) extends Contr
     }
   }
 
-  def finishAll(typ: String) = Authenticated.async(parse.json) {
-    implicit request =>
-      (request.body \ "annotations").validate[JsArray] match {
-        case JsSuccess(annotationIds, _) =>
-          val results: List[Fox[(JsObject, String)]] = (for {
-            jsValue <- annotationIds.value
-            id <- jsValue.asOpt[String]
-          } yield finishAnnotation(typ, id, request.user)(GlobalAccessContext)).toList
+  def finishAll(typ: String) = Authenticated.async(parse.json) { implicit request =>
+    withJsonAs[JsArray](request.body \ "annotations") { annotationIds =>
+      val results: List[Fox[(JsObject, String)]] = (for {
+        jsValue <- annotationIds.value
+        id <- jsValue.asOpt[String]
+      } yield finishAnnotation(typ, id, request.user)(GlobalAccessContext)).toList
 
-          Fox.sequence(results) map { results =>
-            JsonOk(Messages("annotation.allFinished"))
-          }
-        case e: JsError                  =>
-          Future.successful(JsonBadRequest(JsError.toFlatJson(e)))
+      Fox.sequence(results) map { results =>
+        JsonOk(Messages("annotation.allFinished"))
       }
+    }
   }
 
-  def finishWithRedirect(typ: String, id: String) = Authenticated.async {
-    implicit request =>
-      for {
-        annotation <- AnnotationDAO.findOneById(id) ?~> Messages("annotation.notFound")
-        finished <- annotation.muta.finishAnnotation(request.user).futureBox
-      } yield {
-        finished match {
-          case Full((_, message))     =>
-            Redirect("/dashboard").flashing("success" -> message)
-          case Failure(message, _, _) =>
-            Redirect("/dashboard").flashing("error" -> message)
-          case _                      =>
-            Redirect("/dashboard").flashing("error" -> Messages("error.unknown"))
-        }
+  def finishWithRedirect(typ: String, id: String) = Authenticated.async { implicit request =>
+    for {
+      annotation <- AnnotationDAO.findOneById(id) ?~> Messages("annotation.notFound")
+      finished <- annotation.muta.finishAnnotation(request.user).futureBox
+    } yield {
+      finished match {
+        case Full((_, message))     =>
+          Redirect("/dashboard").flashing("success" -> message)
+        case Failure(message, _, _) =>
+          Redirect("/dashboard").flashing("error" -> message)
+        case _                      =>
+          Redirect("/dashboard").flashing("error" -> Messages("error.unknown"))
       }
+    }
   }
 
-  def nameExplorativeAnnotation(typ: String, id: String) = Authenticated.async(parse.urlFormEncoded) {
-    implicit request =>
-      for {
-        annotation <- AnnotationDAO.findOneById(id) ?~> Messages("annotation.notFound")
-        name <- postParameter("name") ?~> Messages("annotation.invalidName")
-        updated <- annotation.muta.rename(name).toFox
-        renamedJSON <- Annotation.transformToJson(updated)
-      } yield {
-        JsonOk(
-          Json.obj("annotations" -> renamedJSON),
-          Messages("annotation.setName"))
-      }
+  def nameExplorativeAnnotation(typ: String, id: String) = Authenticated.async(parse.urlFormEncoded) { implicit request =>
+    for {
+      annotation <- AnnotationDAO.findOneById(id) ?~> Messages("annotation.notFound")
+      name <- postParameter("name") ?~> Messages("annotation.invalidName")
+      updated <- annotation.muta.rename(name)
+      renamedJSON <- Annotation.transformToJson(updated)
+    } yield {
+      JsonOk(
+        Json.obj("annotations" -> renamedJSON),
+        Messages("annotation.setName"))
+    }
   }
 
   def empty(implicit request: AuthenticatedRequest[_]) = {
@@ -278,7 +269,7 @@ class AnnotationController @Inject()(val messagesApi: MessagesApi) extends Contr
   def annotationsForTask(taskId: String) = Authenticated.async { implicit request =>
     for {
       task <- TaskDAO.findOneById(taskId) ?~> Messages("task.notFound")
-      _ <- ensureTeamAdministration(request.user, task.team).toFox
+      _ <- ensureTeamAdministration(request.user, task.team)
       annotations <- task.annotations
       jsons <- Fox.sequence(annotations.map(annotationJson(request.user, _, exclude = List("content"))))
     } yield {
@@ -299,7 +290,7 @@ class AnnotationController @Inject()(val messagesApi: MessagesApi) extends Contr
     }
     withAnnotation(AnnotationIdentifier(typ, id)) { annotation =>
       for {
-        _ <- ensureTeamAdministration(request.user, annotation.team).toFox
+        _ <- ensureTeamAdministration(request.user, annotation.team)
         result <- tryToCancel(annotation)
       } yield {
         UsedAnnotationDAO.removeAll(annotation.id)
@@ -308,15 +299,14 @@ class AnnotationController @Inject()(val messagesApi: MessagesApi) extends Contr
     }
   }
 
-  def transfer(typ: String, id: String) = Authenticated.async(parse.json) {
-    implicit request =>
-      for {
-        annotation <- AnnotationDAO.findOneById(id).toFox ?~> Messages("annotation.notFound")
-        userId <- (request.body \ "userId").asOpt[String].toFox
-        user <- UserDAO.findOneById(userId) ?~> Messages("user.notFound")
-        result <- annotation.muta.transferToUser(user)
-      } yield {
-        Ok
-      }
+  def transfer(typ: String, id: String) = Authenticated.async(parse.json) { implicit request =>
+    for {
+      annotation <- AnnotationDAO.findOneById(id) ?~> Messages("annotation.notFound")
+      userId <- (request.body \ "userId").asOpt[String].toFox
+      user <- UserDAO.findOneById(userId) ?~> Messages("user.notFound")
+      result <- annotation.muta.transferToUser(user)
+    } yield {
+      Ok
+    }
   }
 }

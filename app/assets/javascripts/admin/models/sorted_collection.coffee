@@ -2,6 +2,12 @@ Backbone = require("backbone")
 
 class SortedCollection extends Backbone.Collection
 
+  initialize : ->
+
+    if @sortBy
+      @setSort(@sortBy, "asc")
+
+
   setSort : (field, sortDirection) ->
 
     if sortDirection == "asc"

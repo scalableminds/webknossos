@@ -8,19 +8,16 @@ import controllers.Controller
 import models.annotation.{AnnotationType, _}
 import models.task.{Task, _}
 import models.user._
-import oxalis.nml.NMLService.NMLParseSuccess
+import oxalis.nml.NMLService.{NMLParseSuccess, NMLParseFailure}
 import oxalis.nml._
 import oxalis.security.Secured
 import play.api.i18n.{Messages, MessagesApi}
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json._
 import views.html
+import net.liftweb.common.Full
 
 class NMLIO @Inject()(val messagesApi: MessagesApi) extends Controller with Secured {
-
-  def uploadForm = Authenticated { implicit request =>
-    Ok(html.admin.nml.nmlupload())
-  }
 
   private def nameForNMLs(fileNames: Seq[String]) =
     if (fileNames.size == 1)
@@ -37,7 +34,7 @@ class NMLIO @Inject()(val messagesApi: MessagesApi) extends Controller with Secu
     val (parseSuccess, parseFailed) = parsedFiles.partition { case x: NMLParseSuccess => true; case _ => false }
 
     if (parseFailed.nonEmpty) {
-      val errors = parseFailed.map(fileName => "error" -> Messages("nml.file.invalid", fileName))
+      val errors = parseFailed.map{ case result: NMLParseFailure => "error" -> Messages("nml.file.invalid", result.fileName, result.error)}
       Future.successful(JsonBadRequest(errors))
     } else if (parseSuccess.isEmpty) {
       Future.successful(JsonBadRequest(Messages("nml.file.noFile")))
@@ -46,14 +43,17 @@ class NMLIO @Inject()(val messagesApi: MessagesApi) extends Controller with Secu
       val nmls = parseSuccess.flatMap(_.nml).toList
 
       AnnotationService
-      .createAnnotationFrom(request.user, nmls, AnnotationType.Explorational, nameForNMLs(fileNames))
-      .map { annotation =>
-        JsonOk(
-          Json.obj("annotation" -> Json.obj("typ" -> annotation.typ, "id" -> annotation.id)),
-          Messages("nml.file.uploadSuccess")
-        )
+      .createAnnotationFrom(request.user, nmls, AnnotationType.Explorational, nameForNMLs(fileNames)).futureBox.map{
+        case Full(annotation) =>
+          JsonOk(
+            Json.obj("annotation" -> Json.obj("typ" -> annotation.typ, "id" -> annotation.id)),
+            Messages("nml.file.uploadSuccess")
+          )
+
+        case _ =>
+          JsonBadRequest(Messages("nml.file.invalid"))
       }
-      .getOrElse(JsonBadRequest(Messages("nml.file.invalid")))
+      .getOrElse(JsonBadRequest(Messages("nml.file.createFailed")))
     }
   }
 
@@ -91,7 +91,7 @@ class NMLIO @Inject()(val messagesApi: MessagesApi) extends Controller with Secu
   def taskTypeDownload(taskTypeId: String) = Authenticated.async { implicit request =>
     def createTaskTypeZip(taskType: TaskType) =
       for {
-        tasks <- TaskDAO.findAllByTaskType(taskType)
+        tasks <- TaskDAO.findAllByTaskType(taskType._id)
         tracings <- Future.traverse(tasks)(_.annotations).map(_.flatten.filter(_.state.isFinished))
         zip <- AnnotationService.zipAnnotations(tracings, taskType.summary + "_nmls.zip")
       } yield zip

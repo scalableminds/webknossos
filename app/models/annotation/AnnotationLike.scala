@@ -13,7 +13,7 @@ import com.scalableminds.util.reactivemongo.{GlobalAccessContext, DBAccessContex
 import com.scalableminds.util.tools.{FoxImplicits, Fox}
 import reactivemongo.bson.BSONObjectID
 import play.api.Logger
-import models.tracing.skeleton.AnnotationStatistics
+import models.tracing.AnnotationStatistics
 import oxalis.view.{ResourceActionCollection, ResourceAction}
 import play.api.libs.json.Json.JsValueWrapper
 import oxalis.mvc.{UrlHelper, FilterableJson}
@@ -89,7 +89,7 @@ object AnnotationLike extends FoxImplicits with FilterableJson with UrlHelper{
   def annotationLikeInfoWrites(a: AnnotationLike, user: Option[User], exclude: List[String])(implicit ctx: DBAccessContext): Fox[JsObject] = {
     JsonObjectWithFilter(exclude)(
       "version" +> a.version,
-      "user" +> a.user.toFox.map(u => JsString(u.name)).getOrElse(JsNull),
+      "user" +> a.user.map(u => JsString(u.name)).getOrElse(JsNull),
       "created" +> DateTimeFormat.forPattern("yyyy-MM-dd HH:mm").print(a.created),
       "stateLabel" +> stateLabel(a, user),
       "state" +> a.state,
@@ -97,7 +97,7 @@ object AnnotationLike extends FoxImplicits with FilterableJson with UrlHelper{
       "name" +> a._name.getOrElse(""),
       "typ" +> a.typ,
       "task" +> a.task.flatMap(t => Task.transformToJson(t)).getOrElse(JsNull),
-      "stats" +> a.statisticsForAnnotation().map(s => Json.toJson(s)).getOrElse(JsNull),
+      "stats" +> a.statisticsForAnnotation().map(_.writeAsJson).getOrElse(JsNull),
       "restrictions" +> AnnotationRestrictions.writeAsJson(a.restrictions, user),
       "actions" +> a.actions(user),
       "formattedHash" +> Formatter.formatHash(a.id),

@@ -11,7 +11,7 @@ import models.user.{User, UsedAnnotationDAO, UsedAnnotation}
 import models.basics._
 import oxalis.nml._
 import models.annotation.{AnnotationState, AnnotationContentService, AnnotationSettings, AnnotationContent}
-import models.tracing.CommonTracingService
+import models.tracing.{CommonTracing, CommonTracingService}
 import models.binary.DataSet
 import oxalis.nml.NML
 import com.scalableminds.util.reactivemongo.DBAccessContext
@@ -30,10 +30,11 @@ case class SkeletonTracing(
                             zoomLevel: Double,
                             boundingBox: Option[BoundingBox],
                             comments: List[Comment] = Nil,
+                            stats: Option[SkeletonTracingStatistics],
                             settings: AnnotationSettings = AnnotationSettings.skeletonDefault,
                             _id: BSONObjectID = BSONObjectID.generate
                           )
-  extends SkeletonTracingLike with AnnotationContent with SkeletonManipulations {
+  extends SkeletonTracingLike with AnnotationContent with CommonTracing with SkeletonManipulations {
 
   def id = _id.stringify
 
@@ -53,6 +54,8 @@ case class SkeletonTracing(
   def tree(treeId: Int) = DBTreeDAO.findOneByTreeId(_id, treeId)(GlobalAccessContext)
 
   def maxNodeId = this.trees.map(oxalis.nml.utils.maxNodeId)
+
+  def getOrCollectStatistics: Fox[SkeletonTracingStatistics] = this.stats.toFox.orElse(collectStatistics)
 
   def toTemporary(implicit ctx: DBAccessContext) =
     temporaryDuplicate(id)
@@ -89,6 +92,29 @@ trait SkeletonManipulations extends FoxImplicits {
       Fox.empty
     }
   }
+
+  def collectStatistics: Fox[SkeletonTracingStatistics] = {
+    for {
+      trees <- this.DBTrees.toFox
+      numberOfTrees = trees.size
+      (numberOfNodes, numberOfEdges) <- trees.foldLeft(Fox.successful((0l, 0l))) {
+        case (f, tree) =>
+          for {
+            (numberOfNodes, numberOfEdges) <- f.toFox
+            nNodes <- tree.numberOfNodes
+            nEdges <- tree.numberOfEdges
+          } yield {
+            (numberOfNodes + nNodes, numberOfEdges + nEdges)
+          }
+      }
+    } yield {
+      this.copy(stats = Some(SkeletonTracingStatistics(numberOfNodes, numberOfEdges, numberOfTrees))).saveToDB(GlobalAccessContext)
+      SkeletonTracingStatistics(numberOfNodes, numberOfEdges, numberOfTrees)
+    }
+  }
+
+  def updateStatistics(update: SkeletonTracingStatistics => Fox[SkeletonTracingStatistics]) =
+    this.stats.toFox.flatMap(update).map(stats => this.copy(stats = Some(stats)))
 }
 
 object SkeletonTracing {
@@ -97,17 +123,6 @@ object SkeletonTracing {
   val contentType = "skeletonTracing"
 
   val defaultZoomLevel = 2.0
-
-  def from(dataSetName: String, start: Point3D, settings: AnnotationSettings): SkeletonTracing =
-    SkeletonTracing(
-      dataSetName,
-      Nil,
-      System.currentTimeMillis,
-      None,
-      start,
-      defaultZoomLevel,
-      None,
-      settings = settings)
 
   def from(t: SkeletonTracingLike) =
     SkeletonTracing(
@@ -119,6 +134,7 @@ object SkeletonTracing {
       t.zoomLevel,
       t.boundingBox,
       t.comments,
+      t.stats,
       t.settings
     )
 }

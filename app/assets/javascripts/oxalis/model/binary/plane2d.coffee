@@ -280,9 +280,8 @@ class Plane2D
 
       sourceOffset = (sourceOffsets[0] << @DELTA[@U]) + (sourceOffsets[1] << @DELTA[@V]) + (sourceOffsets[2] << @DELTA[@W])
 
-      bucketData = @cube.getBucketDataByZoomedAddress(bucket)
+      bucketData = @cube.getBucketByZoomedAddress(bucket).getData()
       mapping    = @cube.currentMapping
-      @cube.accessBuckets([bucket])
 
       @renderToBuffer(
         {
@@ -305,7 +304,7 @@ class Plane2D
 
   generateRenderMap : ([bucket_x, bucket_y, bucket_z, zoomStep]) ->
 
-    return [[bucket_x, bucket_y, bucket_z, zoomStep]] if @cube.isBucketLoadedByZoomedAddress([bucket_x, bucket_y, bucket_z, zoomStep])
+    return [[bucket_x, bucket_y, bucket_z, zoomStep]] if @cube.getBucketByZoomedAddress([bucket_x, bucket_y, bucket_z, zoomStep]).hasData()
 
     map = new Array(@MAP_SIZE)
     map[0] = undefined
@@ -324,9 +323,9 @@ class Plane2D
           zoomStep + i
         ]
 
-        map[0] = bucket if @cube.isBucketLoadedByZoomedAddress(bucket)
+        map[0] = bucket if @cube.getBucketByZoomedAddress(bucket).hasData()
 
-    if zoomStep and @enhanceRenderMap(map, 0, [bucket_x, bucket_y, bucket_z, zoomStep], map[0], @cube.LOOKUP_DEPTH_DOWN)
+    if zoomStep != 0 and @enhanceRenderMap(map, 0, [bucket_x, bucket_y, bucket_z, zoomStep], map[0], @cube.LOOKUP_DEPTH_DOWN)
 
       map[0] = @RECURSION_PLACEHOLDER
 
@@ -337,7 +336,7 @@ class Plane2D
 
     enhanced = false
 
-    if @cube.isBucketLoadedByZoomedAddress([bucket_x, bucket_y, bucket_z, zoomStep])
+    if @cube.getBucketByZoomedAddress([bucket_x, bucket_y, bucket_z, zoomStep]).hasData()
 
       map[mapIndex] = [bucket_x, bucket_y, bucket_z, zoomStep]
       enhanced = true

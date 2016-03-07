@@ -8,12 +8,13 @@ import com.scalableminds.util.reactivemongo.DBAccessContext
 import com.scalableminds.util.tools.Fox
 import models.annotation.{AnnotationSettings, AnnotationContentService}
 import models.binary.{DataSet, DataSetDAO}
-import models.tracing.skeleton.{SkeletonTracingLike, SkeletonTracing}
+import models.tracing.skeleton.{SkeletonTracingLike, SkeletonTracing, SkeletonTracingStatistics}
 import net.liftweb.common.Full
 import oxalis.nml.NML
 import play.api.libs.concurrent.Execution.Implicits._
 
 object TemporarySkeletonTracingService extends AnnotationContentService {
+
   def createFrom(nml: NML, id: String, boundingBox: Option[BoundingBox], settings: AnnotationSettings = AnnotationSettings.default)(implicit ctx: DBAccessContext) = {
     val box = boundingBox.flatMap { box => if (box.isEmpty) None else Some(box) }
     val start = DataSetDAO.findOneBySourceName(nml.dataSetName).futureBox.map {
@@ -87,4 +88,8 @@ object TemporarySkeletonTracingService extends AnnotationContentService {
   def createFrom(dataSet: DataSet)(implicit ctx: DBAccessContext) = ???
 
   def clearTracingData(id: String)(implicit ctx: DBAccessContext) = ???
+
+  def updateSettings(dataSetName: String, boundingBox: Option[BoundingBox], settings: AnnotationSettings, tracingId: String)(implicit ctx: DBAccessContext): Fox[Boolean] = ???
+
+  def updateEditPosition(editPosition: Point3D, tracingId: String)(implicit ctx: DBAccessContext): Fox[Boolean] = ???
 }

@@ -106,7 +106,7 @@ class TaskController @Inject() (val messagesApi: MessagesApi) extends Controller
     input match {
       case (taskTypeId, experience, priority, status, team, projectName, boundingBox, dataSetName, start) =>
         for {
-          dataSet <- DataSetDAO.findOneBySourceName(dataSetName) ?~> Messages("dataSet.notFound")
+          _ <- DataSetDAO.findOneBySourceName(dataSetName) ?~> Messages("dataSet.notFound")
           taskType <- TaskTypeDAO.findOneById(taskTypeId) ?~> Messages("taskType.notFound")
           project <- ProjectService.findIfNotEmpty(projectName) ?~> Messages("project.notFound")
           _ <- ensureTeamAdministration(request.user, team)

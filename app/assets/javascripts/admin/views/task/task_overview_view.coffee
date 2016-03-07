@@ -87,12 +87,12 @@ class TaskOverviewView extends Marionette.LayoutView
     defaultEndDate = moment().endOf("day").valueOf()
     @fetchData(defaultStartDate, defaultEndDate)
 
-    @listenTo(@model, "change", @renderRangeSlider)
+    @listenTo(@collection, "change", @renderRangeSlider)
 
 
   fetchData : (start, end) ->
 
-    @fetchPromise = @model.fetch(
+    @fetchPromise = @collection.fetch(
       data:
         start: start
         end: end
@@ -104,7 +104,7 @@ class TaskOverviewView extends Marionette.LayoutView
 
     # This function calculates the min/max working hours of the users of the selected team
     if _.isEmpty(@minMaxHours)
-      selectedUsers = _.filter(@model.get("userInfos"), (userInfo) => @team in _.pluck(userInfo.user.teams, "team"))
+      selectedUsers = _.filter(@collection.get("userInfos"), (userInfo) => @team in _.pluck(userInfo.user.teams, "team"))
       workingTimes = _.pluck(selectedUsers, "workingTime")
 
       if _.isEmpty(workingTimes) then workingTimes = [0]
@@ -263,15 +263,19 @@ class TaskOverviewView extends Marionette.LayoutView
 
     @fetchPromise.then( =>
 
-      { userInfos, taskTypes, projects } = @model.attributes
+      # { userInfos, taskTypes, projects } = @model.attributes
       # move workingTime to user object and convert to hours
-      userInfos.map( (userInfo) => userInfo.user.workingHours = Utils.roundTo(userInfo.workingTime / @MS_PER_HOUR, 2) )
+      @collection.forEach((userInfoModel) => userInfoModel.get("user").workingHours = Utils.roundTo(userInfoModel.get("workingTime") / @MS_PER_HOUR, 2) )
+
       # extract users and add full names
-      @users = _.pluck(userInfos, "user")
+      @users = @collection.pluck("user")
       @users.map( (user) -> user.name = user.firstName + " " + user.lastName )
 
+      taskTypes = _.flatten(@collection.pluck("taskTypes"))
+      projects = _.flatten(@collection.pluck("projects"))
+
       nodes = @buildNodes(taskTypes, projects)
-      edges = @buildEdges(userInfos, nodes)
+      edges = @buildEdges(nodes)
 
       @updateGraph(nodes, edges)
     )
@@ -430,12 +434,12 @@ class TaskOverviewView extends Marionette.LayoutView
     return nodes
 
 
-  buildEdges : (userInfos, nodes) ->
+  buildEdges : (nodes) ->
 
     edges = []
 
     # only draw edges for users that are displayed in the graph
-    selectedUserInfos = _.filter(userInfos, (userInfo) => @doDrawUser(userInfo.user))
+    selectedUserInfos = @collection.filter((userInfo) => @doDrawUser(userInfo.get("user")))
 
     if @doDrawTaskTypes()
 

@@ -48,7 +48,11 @@ class BackboneToOxalisAdapterModel extends Backbone.Model
 
       @listenTo(@skeletonTracingModel, "newTree", (id) -> @skeletonTracingAdapter.set("activeTreeId", id, {triggeredByModel: true}))
       @listenTo(@skeletonTracingModel, "newActiveTree", (id) -> @skeletonTracingAdapter.set("activeTreeId", id, {triggeredByModel: true}))
-      @listenTo(@skeletonTracingModel, "newActiveNode", (id) -> @skeletonTracingAdapter.set("activeNodeId", id, {triggeredByModel: true}))
+      @listenTo(@skeletonTracingModel, "newActiveNode", (id) ->
+        @skeletonTracingAdapter.set("activeNodeId", id, {triggeredByModel: true})
+        # update node radius display accordingly
+        @skeletonTracingAdapter.set("radius", @skeletonTracingModel.getActiveNodeRadius(), {triggeredByModel: true})
+      )
       @listenTo(@skeletonTracingModel, "newActiveNodeRadius", (id) -> @skeletonTracingAdapter.set("radius", id, {triggeredByModel: true}))
 
 

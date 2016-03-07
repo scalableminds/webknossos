@@ -1,6 +1,6 @@
 package models.tracing.skeleton
 
-import com.scalableminds.util.geometry.{Point3D, BoundingBox}
+import com.scalableminds.util.geometry.{Vector3D, Point3D, BoundingBox}
 import models.annotation._
 import models.task.Task
 import CompoundAnnotation._
@@ -27,6 +27,7 @@ case class SkeletonTracing(
                             timestamp: Long,
                             activeNodeId: Option[Int],
                             editPosition: Point3D,
+                            editRotation: Vector3D,
                             zoomLevel: Double,
                             boundingBox: Option[BoundingBox],
                             comments: List[Comment] = Nil,
@@ -124,6 +125,21 @@ object SkeletonTracing {
 
   val defaultZoomLevel = 2.0
 
+<<<<<<< HEAD
+=======
+  def from(dataSetName: String, start: Point3D, rotation: Vector3D, settings: AnnotationSettings): SkeletonTracing =
+    SkeletonTracing(
+      dataSetName,
+      Nil,
+      System.currentTimeMillis,
+      None,
+      start,
+      rotation,
+      defaultZoomLevel,
+      None,
+      settings = settings)
+
+>>>>>>> 777b966dea8460009c7c78dfd25fd855a0f7da08
   def from(t: SkeletonTracingLike) =
     SkeletonTracing(
       t.dataSetName,
@@ -131,6 +147,7 @@ object SkeletonTracing {
       t.timestamp,
       t.activeNodeId,
       t.editPosition,
+      t.editRotation,
       t.zoomLevel,
       t.boundingBox,
       t.comments,
@@ -161,12 +178,12 @@ object SkeletonTracingDAO extends SecuredBaseDAO[SkeletonTracing] with FoxImplic
       Json.obj("_id" -> _tracing),
       Json.obj("$set" -> Json.obj(
         "branchPoints.-1" -> bp)),
-      true)
+      returnNew = true)
 
   def addComment(_tracing: BSONObjectID, comment: Comment)(implicit ctx: DBAccessContext) =
     findAndModify(
       Json.obj("_id" -> _tracing),
       Json.obj("$set" -> Json.obj(
         "comments.-1" -> comment)),
-      true)
+      returnNew = true)
 }

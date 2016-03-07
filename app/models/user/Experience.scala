@@ -19,6 +19,12 @@ case class Experience(domain: String, value: Int) {
   override def toString = if (isEmpty) "" else s"$domain: $value"
 
   def isEmpty = domain == "" && value == 0
+
+  def toMap: Map[String, Int] =
+    if(isEmpty)
+      Map.empty
+    else
+      Map(domain -> value)
 }
 
 object Experience {

@@ -11,6 +11,12 @@ import oxalis.security.{AuthenticatedRequest, Secured}
 import models.user._
 import models.task._
 import models.annotation._
+<<<<<<< HEAD
+=======
+import reactivemongo.core.commands.LastError
+import views._
+import play.api.libs.concurrent._
+>>>>>>> 777b966dea8460009c7c78dfd25fd855a0f7da08
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.i18n.{MessagesApi, Messages}
 import models.annotation.AnnotationService
@@ -208,6 +214,33 @@ class TaskController @Inject() (val messagesApi: MessagesApi) extends Controller
     }
   }
 
+<<<<<<< HEAD
+=======
+  def requestAssignmentFor(user: User)(implicit ctx: DBAccessContext) =
+    TaskService.findAssignableFor(user)
+
+  def getAvailableTasksFor(user: User)(implicit ctx: DBAccessContext): Fox[List[Task]] =
+    TaskService.allNextTasksForUser(user)
+
+  def getProjectsFor(tasks: List[Task])(implicit ctx: DBAccessContext): Future[List[Project]] =
+    Fox.sequenceOfFulls(tasks.map(_.project)).map(_.distinct)
+
+  def getAllAvailableTaskCountsAndProjects()(implicit ctx: DBAccessContext): Fox[Map[User, (Int, List[Project])]] = {
+    UserDAO.findAllNonAnonymous
+      .flatMap { users =>
+        Future.sequence( users.map { user =>
+          async {
+            val tasks = await(getAvailableTasksFor(user).futureBox) openOr List()
+            val taskCount = tasks.size
+            val projects = await(getProjectsFor(tasks))
+            user -> (taskCount, projects)
+          }
+        })
+      }
+      .map(_.toMap[User, (Int, List[Project])])
+  }
+
+>>>>>>> 777b966dea8460009c7c78dfd25fd855a0f7da08
   def createAvailableTasksJson(availableTasksMap: Map[User, (Int, List[Project])]) =
     Json.toJson(availableTasksMap.map { case (user, (taskCount, projects)) =>
       Json.obj(
@@ -225,11 +258,29 @@ class TaskController @Inject() (val messagesApi: MessagesApi) extends Controller
     }
   }
 
+  def tryToGetNextAssignmentFor(user: User, retryCount: Int = 5)(implicit ctx: DBAccessContext): Fox[OpenAssignment] = {
+    (requestAssignmentFor(user) ?~> Messages("task.unavailable")).flatMap { assignment =>
+      OpenAssignmentService.remove(assignment).flatMap { removeResult =>
+        if (removeResult.n >= 1)
+          Fox.successful(assignment)
+        else if (retryCount > 0)
+          tryToGetNextAssignmentFor(user, retryCount - 1)
+        else
+          Fox.failure(Messages("task.unavailable"))
+      }
+    }
+  }
+
   def request = Authenticated.async { implicit request =>
     val user = request.user
     for {
       _ <- ensureMaxNumberOfOpenTasks(user)
+<<<<<<< HEAD
       task <- TaskService.nextTaskForUser(user) ?~> Messages("task.unavailable")
+=======
+      assignment <- tryToGetNextAssignmentFor(user)
+      task <- assignment.task
+>>>>>>> 777b966dea8460009c7c78dfd25fd855a0f7da08
       annotation <- AnnotationService.createAnnotationFor(user, task) ?~> Messages("annotation.creationFailed")
       annotationJSON <- AnnotationLike.annotationLikeInfoWrites(annotation, Some(user), exclude = List("content", "actions"))
     } yield {

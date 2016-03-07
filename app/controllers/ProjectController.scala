@@ -27,7 +27,7 @@ class ProjectController @Inject()(val messagesApi: MessagesApi) extends Controll
     implicit request =>
       for {
         projects <- ProjectDAO.findAll
-        js <- Future.traverse(projects)(Project.projectPublicWritesWithStatus(_, request.user))
+        js <- Future.traverse(projects)(Project.projectPublicWrites(_, request.user))
       } yield {
         Ok(Json.toJson(js))
       }
@@ -44,6 +44,7 @@ class ProjectController @Inject()(val messagesApi: MessagesApi) extends Controll
       }
   }
 
+<<<<<<< HEAD
   def create = Authenticated.async(parse.json) { implicit request =>
     withJsonBodyUsing(Project.projectPublicReads) { project =>
       ProjectDAO.findOneByName(project.name)(GlobalAccessContext).futureBox.flatMap {
@@ -56,6 +57,25 @@ class ProjectController @Inject()(val messagesApi: MessagesApi) extends Controll
           Future.successful(JsonBadRequest(Messages("team.notAllowed")))
         case _                                                           =>
           Future.successful(JsonBadRequest(Messages("project.name.alreadyTaken")))
+=======
+  def create = Authenticated.async(parse.json) {
+    implicit request =>
+      request.body.validate(Project.projectPublicReads) match {
+        case JsSuccess(project, _) =>
+          ProjectDAO.findOneByName(project.name)(GlobalAccessContext).futureBox.flatMap {
+            case Empty if request.user.adminTeamNames.contains(project.team) =>
+              ProjectDAO.insert(project).flatMap(_ => Project.projectPublicWrites(project, request.user)).map {
+                js =>
+                  Ok(js)
+              }
+            case Empty =>
+              Future.successful(JsonBadRequest(Messages("team.notAllowed")))
+            case _ =>
+              Future.successful(JsonBadRequest(Messages("project.name.alreadyTaken")))
+          }
+        case e: JsError =>
+          Future.successful(BadRequest(jsonErrorWrites(e)))
+>>>>>>> 777b966dea8460009c7c78dfd25fd855a0f7da08
       }
     }
   }

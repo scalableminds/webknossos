@@ -24,6 +24,10 @@ class DatasetActionsView extends Marionette.ItemView
       <button class="btn btn-default" id="trace-share-button"><i class="fa fa-share-alt"></i>Share</button>
     </div>
 
+    <% if(tracing.restrictions.allowFinish || tracing.task) { %>
+        <button class="btn btn-default" id="trace-next-task-button"><i class="fa fa-step-forward"></i>Finish and get next task</button>
+    <% } %>
+
     <% if (isSkeletonMode) { %>
       <div class="btn btn-default" id="trace-merge-button"><i class="fa fa-folder-open"></i>Merge Tracing</div>
       <div class="merge-modal-wrapper"></div>
@@ -40,6 +44,7 @@ class DatasetActionsView extends Marionette.ItemView
     "click #trace-save-button" : "saveTracing"
     "click #trace-merge-button" : "mergeTracing"
     "click #trace-share-button" : "shareTracing"
+    "click #trace-next-task-button" : "getNextTask"
 
   ui :
     "modalWrapper" : ".merge-modal-wrapper"
@@ -80,7 +85,7 @@ class DatasetActionsView extends Marionette.ItemView
 
       # save the progress
       model = @model.skeletonTracing || @model.volumeTracing
-      model.stateLogger.pushImpl()
+      model.stateLogger.save()
 
       modalView = new ShareModalView({@model})
       @ui.modalWrapper.html(modalView.render().el)
@@ -90,5 +95,23 @@ class DatasetActionsView extends Marionette.ItemView
   isSkeletonMode : ->
 
     return _.contains(Constants.MODES_SKELETON, @model.get("mode"))
+
+
+  getNextTask : ->
+
+    model = @model.skeletonTracing || @model.volumeTracing
+
+    model.stateLogger.save()
+        .then(=> Request.triggerRequest("/annotations/#{@model.tracingType}/#{@model.tracingId}/finish"))
+        .then(=>
+          Request.receiveJSON("/user/tasks/request")).then(
+            (annotation) =>
+              differentTaskType = annotation.task.type.id != @model.tracing.task?.type.id
+              differentTaskTypeParam = if differentTaskType then "?differentTaskType" else ""
+              app.router.loadURL("/annotations/#{annotation.typ}/#{annotation.id}#{differentTaskTypeParam}")
+            ->
+              # Wait a while so users have a chance to read the error message
+              setTimeout((-> app.router.loadURL("/dashboard")), 2000)
+          )
 
 module.exports = DatasetActionsView

@@ -16,7 +16,7 @@ import com.scalableminds.util.tools.{TextUtils, FoxImplicits, Fox}
 import models.tracing.skeleton.SkeletonTracingService
 import play.api.libs.concurrent.Execution.Implicits._
 import models.task.{Task, TaskService}
-import com.scalableminds.util.geometry.{Point3D, BoundingBox}
+import com.scalableminds.util.geometry.{Vector3D, Point3D, BoundingBox}
 import reactivemongo.bson.BSONObjectID
 import models.annotation.AnnotationType._
 import scala.Some
@@ -102,11 +102,19 @@ object AnnotationService extends AnnotationContentProviders with BoxImplicits wi
   def findTasksOf(user: User)(implicit ctx: DBAccessContext) =
     AnnotationDAO.findFor(user._id, AnnotationType.Task)
 
+<<<<<<< HEAD
   def findExploratoryOf(user: User, isFinished: Option[Boolean])(implicit ctx: DBAccessContext) =
     AnnotationDAO.findForWithTypeOtherThan(user._id, isFinished, AnnotationType.Task :: AnnotationType.SystemTracings)
 
   def findFinishedOf(user: User)(implicit ctx: DBAccessContext) =
     AnnotationDAO.findFinishedFor(user._id)
+=======
+  def findTaskOf(user: User, _task: BSONObjectID)(implicit ctx: DBAccessContext) =
+    AnnotationDAO.findByTaskIdAndUser(user._id, _task, AnnotationType.Task)
+
+  def findExploratoryOf(user: User)(implicit ctx: DBAccessContext) =
+    AnnotationDAO.findForWithTypeOtherThan(user._id, AnnotationType.Task :: AnnotationType.SystemTracings)
+>>>>>>> 777b966dea8460009c7c78dfd25fd855a0f7da08
 
 
   def createAnnotationFor(user: User, task: Task)(implicit ctx: DBAccessContext): Fox[Annotation] = {
@@ -117,19 +125,32 @@ object AnnotationService extends AnnotationContentProviders with BoxImplicits wi
         typ = AnnotationType.Task).temporaryDuplicate(keepId = false).flatMap(_.saveToDB)
 
     for {
-      annotationBase <- task.annotationBase
-      _ <- TaskService.assignOnce(task).toFox
-      result <- useAsTemplateAndInsert(annotationBase).toFox
+      annotationBase <- task.annotationBase ?~> "Failed to retrieve annotation base."
+      result <- useAsTemplateAndInsert(annotationBase).toFox ?~> "Failed to use annotation base as template."
     } yield {
       result
     }
   }
 
+<<<<<<< HEAD
   def createAnnotationBase(task: Task, userId: BSONObjectID, boundingBox: Option[BoundingBox], settings: AnnotationSettings, dataSetName: String, start: Point3D)(implicit ctx: DBAccessContext) = {
     for {
       tracing <- SkeletonTracingService.createFrom(dataSetName, start, boundingBox, insertStartAsNode = true, settings)
+=======
+  def createAnnotationBase(
+    task: Task,
+    userId: BSONObjectID,
+    boundingBox: BoundingBox,
+    settings: AnnotationSettings,
+    dataSetName: String,
+    start: Point3D,
+    rotation: Vector3D)(implicit ctx: DBAccessContext) = {
+
+    for {
+      tracing <- SkeletonTracingService.createFrom(dataSetName, start, rotation, Some(boundingBox), insertStartAsNode = true, settings) ?~> "Failed to create skeleton tracing."
+>>>>>>> 777b966dea8460009c7c78dfd25fd855a0f7da08
       content = ContentReference.createFor(tracing)
-      _ <- AnnotationDAO.insert(Annotation(Some(userId), content, team = task.team, typ = AnnotationType.TracingBase, _task = Some(task._id)))
+      _ <- AnnotationDAO.insert(Annotation(Some(userId), content, team = task.team, typ = AnnotationType.TracingBase, _task = Some(task._id))) ?~> "Failed to insert annotation."
     } yield tracing
   }
 

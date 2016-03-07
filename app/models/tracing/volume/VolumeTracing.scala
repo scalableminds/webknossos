@@ -1,6 +1,6 @@
 package models.tracing.volume
 
-import com.scalableminds.util.geometry.{Point3D, BoundingBox}
+import com.scalableminds.util.geometry.{Vector3D, Point3D, BoundingBox}
 import models.annotation.{AnnotationLike, AnnotationContentService, AnnotationContent, AnnotationSettings}
 import models.basics.SecuredBaseDAO
 import models.binary._
@@ -26,6 +26,7 @@ import com.scalableminds.braingames.binary.models.{DataLayer, UserDataLayer, Dat
  * Time: 11:23
  */
 case class VolumeTracing(
+<<<<<<< HEAD
                           dataSetName: String,
                           userDataLayerName: String,
                           activeCellId: Option[Int] = None,
@@ -36,6 +37,19 @@ case class VolumeTracing(
                           settings: AnnotationSettings = AnnotationSettings.volumeDefault,
                           _id: BSONObjectID = BSONObjectID.generate)
   extends AnnotationContent with CommonTracing with FoxImplicits{
+=======
+  dataSetName: String,
+  userDataLayerName: String,
+  activeCellId: Option[Int] = None,
+  timestamp: Long = System.currentTimeMillis(),
+  editPosition: Point3D = Point3D(0,0,0),
+  editRotation: Vector3D = Vector3D(0,0,0),
+  zoomLevel: Double,
+  boundingBox: Option[BoundingBox] = None,
+  settings: AnnotationSettings = AnnotationSettings.volumeDefault,
+  _id: BSONObjectID = BSONObjectID.generate)
+  extends AnnotationContent {
+>>>>>>> 777b966dea8460009c7c78dfd25fd855a0f7da08
 
   def id = _id.stringify
 

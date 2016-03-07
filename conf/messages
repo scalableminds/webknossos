@@ -109,6 +109,7 @@ dataToken.creationFailed=Creation of the data token failed.
 cellId=Cell Id
 
 start.point=Start
+rotation.vector=Start Rotation
 
 boundingBox.box=Bounding Box
 boundingBox.invalid=Invalid bounding box
@@ -127,7 +128,7 @@ nml.file.invalid=Couldn''t parse file: {0}. {1}
 nml.file.noFile=No file uploaded
 
 owner=Owner
-
+isForAnonymous=Create anonymous users
 priority=Priority
 
 project=Project (optional)

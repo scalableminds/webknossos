@@ -212,6 +212,7 @@ class AnnotationController @Inject()(val messagesApi: MessagesApi) extends Contr
     } yield (json, message)
   }
 
+<<<<<<< HEAD
   def finish(typ: String, id: String) = Authenticated.async { implicit request =>
     for {
       (json, message) <- finishAnnotation(typ, id, request.user)(GlobalAccessContext)
@@ -229,6 +230,24 @@ class AnnotationController @Inject()(val messagesApi: MessagesApi) extends Contr
 
       Fox.sequence(results) map { results =>
         JsonOk(Messages("annotation.allFinished"))
+=======
+  def finishWithRedirect(typ: String, id: String) = Authenticated.async {
+    implicit request =>
+      val redirectTarget = if(!request.user.isAnonymous) "/dashboard" else "/thankyou"
+
+      for {
+        annotation <- AnnotationDAO.findOneById(id) ?~> Messages("annotation.notFound")
+        finished <- annotation.muta.finishAnnotation(request.user).futureBox
+      } yield {
+        finished match {
+          case Full((_, message)) =>
+            Redirect(redirectTarget).flashing("success" -> message)
+          case Failure(message, _, _) =>
+            Redirect(redirectTarget).flashing("error" -> message)
+          case _ =>
+            Redirect(redirectTarget).flashing("error" -> Messages("error.unknown"))
+        }
+>>>>>>> 777b966dea8460009c7c78dfd25fd855a0f7da08
       }
     }
   }

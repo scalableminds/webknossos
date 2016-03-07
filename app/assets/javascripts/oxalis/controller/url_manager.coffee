@@ -10,7 +10,7 @@ class UrlManager
 
   constructor : (@model) ->
 
-    @baseUrl      = document.location.pathname
+    @baseUrl      = document.location.pathname + document.location.search
     @initialState = @parseUrl()
 
     @update = _.throttle(

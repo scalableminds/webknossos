@@ -23,7 +23,7 @@ class Flycam3d
   ZOOM_STEP_MIN : 0.5
   ZOOM_STEP_MAX : 5
 
-  zoomStep : 1
+  zoomStep : 1.3
   hasChanged : true
   scale : null
   currentMatrix : null
@@ -244,33 +244,6 @@ class Flycam3d
     @roll  -z * Math.PI / 180
     @yaw   -y * Math.PI / 180
     @pitch -x * Math.PI / 180
-
-
-  getDirection : ->
-
-    matrix = @currentMatrix
-    [ matrix[8], matrix[9], matrix[10] ]
-
-
-  setDirection : (d) ->
-
-    pos = @getPosition()
-
-    m = new THREE.Matrix4().lookAt(new THREE.Vector3(d...),
-      new THREE.Vector3(0, 0, 0),
-      @getCurrentUpVector()).elements
-
-    matrix2 = [
-      1, 0, 0, 0,
-      0, 1, 0, 0,
-      0, 0, 1, 0,
-      pos[0], pos[1], pos[2], 1
-    ]
-
-    M4x4.scale(@scale, matrix2, matrix2)
-
-    @currentMatrix = @convertToJsArray(M4x4.mul(matrix2, m))
-    updateMacro(@)
 
 
   getCurrentUpVector : ->

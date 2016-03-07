@@ -5,11 +5,21 @@ import scala.concurrent.Future
 
 import com.scalableminds.util.io.NamedFileStream
 import com.scalableminds.util.mvc.BoxImplicits
+<<<<<<< HEAD
 import com.scalableminds.util.reactivemongo.DBAccessContext
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import models.task.TaskService
 import models.user.{UsedAnnotationDAO, User}
 import net.liftweb.common.{Box, Failure}
+=======
+import models.user.{UsedAnnotationDAO, User}
+import scala.concurrent.Future
+import net.liftweb.common.{Failure, Box}
+import scala.async.Async._
+import play.api.i18n.Messages
+import models.task.{OpenAssignmentService, TaskService}
+import reactivemongo.bson.BSONObjectID
+>>>>>>> 777b966dea8460009c7c78dfd25fd855a0f7da08
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json.JsValue
 import reactivemongo.bson.BSONObjectID
@@ -91,7 +101,11 @@ class AnnotationMutations(val annotation: Annotation)
   def cancelTask()(implicit ctx: DBAccessContext) = {
     for {
       task <- annotation.task
+<<<<<<< HEAD
       _ <- TaskService.unassignOnce(task)
+=======
+      _ <- OpenAssignmentService.insertOneFor(task)
+>>>>>>> 777b966dea8460009c7c78dfd25fd855a0f7da08
       _ <- AnnotationDAO.updateState(annotation, AnnotationState.Unassigned)
     } yield annotation
   }

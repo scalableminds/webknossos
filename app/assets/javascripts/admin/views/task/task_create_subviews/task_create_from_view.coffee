@@ -70,7 +70,7 @@ class TaskCreateFromView extends Marionette.LayoutView
         </div>
 
         <div class=" form-group">
-          <label class="col-sm-2 control-label" for="status_open">Task instances</label>
+          <label class="col-sm-2 control-label" for="status_open"><%- getInstanceLabel() %></label>
           <div class="col-sm-9">
             <input type="number" id="open" name="status[open]" value="<%- status.open %>" min="1" class="form-control">
             <span class="help-block errors"></span>
@@ -123,6 +123,7 @@ class TaskCreateFromView extends Marionette.LayoutView
   templateHelpers: ->
 
     type : @type
+    getInstanceLabel : => if @isEditingMode() then "Remaining Instances" else "Task Instances"
     boundingBoxString : ->
       if not @boundingBox then return ""
       b = @boundingBox

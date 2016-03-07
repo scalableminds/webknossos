@@ -32,7 +32,6 @@ case class Task(
                  neededExperience: Experience = Experience.empty,
                  priority: Int = 100,
                  instances: Int = 1,
-                 assignedInstances: Int = 0,
                  tracingTime: Option[Long] = None,
                  created: DateTime = DateTime.now(),
                  isActive: Boolean = true,
@@ -47,9 +46,6 @@ case class Task(
   def project(implicit ctx: DBAccessContext) =
     _project.toFox.flatMap(name => ProjectDAO.findOneByName(name))
 
-  def isFullyAssigned =
-    instances <= assignedInstances
-
   def annotations(implicit ctx: DBAccessContext) =
     AnnotationService.annotationsFor(this)
 
@@ -59,25 +55,20 @@ case class Task(
   def annotationBase(implicit ctx: DBAccessContext) =
     AnnotationService.baseFor(this)
 
-  def unassigneOnce = this.copy(assignedInstances = assignedInstances - 1)
+  def remainingInstances(implicit ctx: DBAccessContext) =
+    OpenAssignmentDAO.countFor(_id)
 
   def status(implicit ctx: DBAccessContext) = async{
     val inProgress = await(AnnotationService.countUnfinishedAnnotationsFor(this) getOrElse 0)
+    val remaining = await(remainingInstances getOrElse 0)
     CompletionStatus(
-      open = instances - assignedInstances,
+      open = remaining,
       inProgress = inProgress,
-      completed = assignedInstances - inProgress)
+      completed = instances - (inProgress + remaining))
   }
 
   def hasEnoughExperience(user: User) = {
-    if (this.neededExperience.isEmpty) {
-      true
-    } else {
-      user.experiences
-      .get(this.neededExperience.domain)
-      .map(_ >= this.neededExperience.value)
-      .getOrElse(false)
-    }
+    neededExperience.isEmpty || user.experiences.get(neededExperience.domain).exists(_ >= neededExperience.value)
   }
 }
 
@@ -86,9 +77,10 @@ object Task extends FoxImplicits {
 
   def transformToJson(task: Task)(implicit ctx: DBAccessContext): Future[JsObject] = {
     for {
-      dataSetName <- task.annotationBase.flatMap(_.dataSetName) getOrElse ""
-      editPosition <- task.annotationBase.flatMap(_.content.map(_.editPosition)) getOrElse Point3D(1, 1, 1)
-      boundingBox <- task.annotationBase.flatMap(_.content.map(_.boundingBox)) getOrElse None
+      annotationContent <- task.annotationBase.flatMap(_.content).futureBox
+      dataSetName = annotationContent.map(_.dataSetName).openOr("")
+      editPosition = annotationContent.map(_.editPosition).openOr(Point3D(0, 0, 0))
+      boundingBox = annotationContent.flatMap(_.boundingBox).toOption
       status <- task.status
       tt <- task.taskType.map(TaskType.transformToJson) getOrElse JsNull
       projectName = task._project.getOrElse("")
@@ -119,6 +111,7 @@ object TaskDAO extends SecuredBaseDAO[Task] with FoxImplicits {
   val formatter = Task.taskFormat
 
   underlying.indexesManager.ensure(Index(Seq("_project" -> IndexType.Ascending)))
+  underlying.indexesManager.ensure(Index(Seq("team" -> IndexType.Ascending)))
   underlying.indexesManager.ensure(Index(Seq("_taskType" -> IndexType.Ascending)))
 
   override val AccessDefinitions = new DefaultAccessDefinitions{
@@ -142,6 +135,7 @@ object TaskDAO extends SecuredBaseDAO[Task] with FoxImplicits {
     }
   }
 
+<<<<<<< HEAD
   override def find(query: JsObject = Json.obj())(implicit ctx: DBAccessContext) = {
     super.find(query ++ Json.obj("isActive" -> true))
   }
@@ -155,6 +149,8 @@ object TaskDAO extends SecuredBaseDAO[Task] with FoxImplicits {
     super.removeById(bson)
   }
 
+=======
+>>>>>>> 777b966dea8460009c7c78dfd25fd855a0f7da08
   def findAllAdministratable(user: User)(implicit ctx: DBAccessContext) = withExceptionCatcher{
     find(Json.obj(
       "team" -> Json.obj("$in" -> user.adminTeamNames))).cursor[Task].collect[List]()
@@ -177,6 +173,7 @@ object TaskDAO extends SecuredBaseDAO[Task] with FoxImplicits {
     find("_project", project).collect[List]()
   }
 
+<<<<<<< HEAD
   def findAllAssignable(implicit ctx: DBAccessContext) =
     findAll.map(_.filter(!_.isFullyAssigned))
 
@@ -201,6 +198,12 @@ object TaskDAO extends SecuredBaseDAO[Task] with FoxImplicits {
 
   def update(_task: BSONObjectID,
              _taskType: BSONObjectID,
+=======
+  def logTime(time: Long, _task: BSONObjectID)(implicit ctx: DBAccessContext) =
+    update(Json.obj("_id" -> _task), Json.obj("$inc" -> Json.obj("tracingTime" -> time)))
+
+  def update(_task: BSONObjectID, _taskType: BSONObjectID,
+>>>>>>> 777b966dea8460009c7c78dfd25fd855a0f7da08
              neededExperience: Experience,
              priority: Int,
              instances: Int,
@@ -216,5 +219,6 @@ object TaskDAO extends SecuredBaseDAO[Task] with FoxImplicits {
           "priority" -> priority,
           "instances" -> instances,
           "team" -> team,
-          "_project" -> _project)))
+          "_project" -> _project)),
+    returnNew = true)
 }

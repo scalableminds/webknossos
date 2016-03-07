@@ -23,6 +23,10 @@ class AchievementView extends Marionette.ItemView
           <td>Number of Trees</td>
           <td><%- numberOfTrees %></td>
         </tr>
+        <tr>
+          <td>Number of open Assignments</td>
+          <td><%= numberOfOpenAssignments %></td>
+        </tr>
       </tbody>
     </table>
   """)

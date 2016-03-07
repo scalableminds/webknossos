@@ -22,7 +22,9 @@ class TaskTypeAdministration @Inject() (val messagesApi: MessagesApi) extends Ad
       "description" -> text,
       "team" -> nonEmptyText,
       "allowedModes" -> seq(text),
+      "preferredMode" -> optional(text),
       "branchPointsAllowed" -> boolean,
+      "advancedOptionsAllowed" -> boolean,
       "somaClickingAllowed" -> boolean,
       "expectedTime" -> mapping(
         "minTime" -> number(min = 1),
@@ -49,10 +51,13 @@ class TaskTypeAdministration @Inject() (val messagesApi: MessagesApi) extends Ad
         for{
           _ <- ensureTeamAdministration(request.user, t.team)
           _ <- TaskTypeDAO.insert(t)
+<<<<<<< HEAD
           ttJson <- TaskType.transformToJsonWithStatus(t)
+=======
+>>>>>>> 777b966dea8460009c7c78dfd25fd855a0f7da08
         } yield {
           JsonOk(
-            Json.obj("newTaskType" -> ttJson),
+            Json.obj("newTaskType" -> TaskType.transformToJson(t)),
             Messages("taskType.createSuccess")
           )
         }
@@ -73,9 +78,8 @@ class TaskTypeAdministration @Inject() (val messagesApi: MessagesApi) extends Ad
   def list = Authenticated.async{ implicit request =>
     for {
       taskTypes <- TaskTypeDAO.findAll
-      ttJsons <- Future.traverse(taskTypes)(TaskType.transformToJsonWithStatus)
     } yield {
-      Ok(Json.toJson(ttJsons))
+      Ok(Json.toJson(taskTypes.map(TaskType.transformToJson)))
     }
   }
 
@@ -92,9 +96,15 @@ class TaskTypeAdministration @Inject() (val messagesApi: MessagesApi) extends Ad
         success = { t =>
           val updatedTaskType = t.copy(_id = taskType._id)
           for {
+<<<<<<< HEAD
             _ <- TaskTypeDAO.update(taskType._id, updatedTaskType)
             tasks <- TaskDAO.findAllByTaskType(taskType._id)
             _ <- ensureTeamAdministration(request.user, updatedTaskType.team)
+=======
+            _ <- ensureTeamAdministration(request.user, updatedTaskType.team).toFox
+            _ <- TaskTypeDAO.update(taskType._id, updatedTaskType).toFox
+            tasks <- TaskDAO.findAllByTaskType(taskType).toFox
+>>>>>>> 777b966dea8460009c7c78dfd25fd855a0f7da08
           } yield {
             tasks.map(task => AnnotationDAO.updateAllOfTask(task, updatedTaskType.settings))
             JsonOk(Messages("taskType.editSuccess"))

@@ -16,22 +16,22 @@ import play.api.libs.json.Json
 import play.modules.reactivemongo.json.BSONFormats._
 import reactivemongo.core.commands.LastError
 
-/**
- * Company: scalableminds
- * User: tmbo
- * Date: 19.11.13
- * Time: 14:59
- */
 object TaskService extends TaskAssignmentSimulation with TaskAssignment with FoxImplicits {
 
-  def findAllAssignable(implicit ctx: DBAccessContext) = TaskDAO.findAllAssignable
+  def findOneById(id: String)(implicit ctx: DBAccessContext) =
+    TaskDAO.findOneById(id)
 
-  def findAll(implicit ctx: DBAccessContext) = TaskDAO.findAll
+  def findNextAssignment(implicit ctx: DBAccessContext) =
+    OpenAssignmentService.findNextOpenAssignments
+
+  def findAll(implicit ctx: DBAccessContext) =
+    TaskDAO.findAll
 
   def findAllAdministratable(user: User)(implicit ctx: DBAccessContext) =
     TaskDAO.findAllAdministratable(user)
 
   def remove(_task: BSONObjectID)(implicit ctx: DBAccessContext) = {
+<<<<<<< HEAD
     TaskDAO.update(Json.obj("_id" -> _task), Json.obj("$set" -> Json.obj("isActive" -> false))).flatMap{
       case result if result.n > 0 =>
         AnnotationDAO.removeAllWithTaskId(_task)
@@ -50,12 +50,36 @@ object TaskService extends TaskAssignmentSimulation with TaskAssignment with Fox
 
   def assignOnce(t: Task)(implicit ctx: DBAccessContext) =
     TaskDAO.assignOnce(t._id)
+=======
+    for{
+      _ <- TaskDAO.removeById(_task)
+      _ <- AnnotationDAO.removeAllWithTaskId(_task)
+      _ <- OpenAssignmentService.removeByTask(_task)
+    } yield true
+  }
 
-  def unassignOnce(t: Task)(implicit ctx: DBAccessContext) =
-    TaskDAO.unassignOnce(t._id)
-
-  def logTime(time: Long, _task: BSONObjectID)(implicit ctx: DBAccessContext) = {
+  def logTime(time: Long, _task: BSONObjectID)(implicit ctx: DBAccessContext) =
     TaskDAO.logTime(time, _task)
+>>>>>>> 777b966dea8460009c7c78dfd25fd855a0f7da08
+
+  def removeAllWithProject(project: Project)(implicit ctx: DBAccessContext) = {
+    for{
+      _ <- TaskDAO.removeAllWithProject(project)
+      _ <- OpenAssignmentService.removeByProject(project)
+    } yield true
+  }
+
+  def insert(task: Task, insertAssignments: Boolean)(implicit ctx: DBAccessContext) = {
+    def insertAssignmentsIfRequested() =
+      if(insertAssignments) {
+        OpenAssignmentService.insertInstancesFor(task, task.instances)
+      } else
+        Future.successful(true)
+
+    for {
+      _ <- TaskDAO.insert(task)
+      _ <- insertAssignmentsIfRequested()
+    } yield task
   }
 
   def getProjectsFor(tasks: List[Task])(implicit ctx: DBAccessContext): Future[List[Project]] =

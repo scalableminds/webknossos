@@ -5,6 +5,7 @@ import models.annotation.{Annotation, AnnotationType, AnnotationDAO, AnnotationS
 
 import scala.concurrent.Future
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import play.api.libs.iteratee.Iteratee
 import reactivemongo.bson.BSONObjectID
 import scala.async.Async._
 import play.api.libs.concurrent.Execution.Implicits._
@@ -19,56 +20,59 @@ import net.liftweb.common.{Failure, Full}
  */
 trait TaskAssignmentSimulation extends TaskAssignment with FoxImplicits {
 
-  case class AssignmentStatus(assignments: Map[User, Task], tasks: Map[BSONObjectID, Task]) {
+  case class AssignmentStatus(assignments: Map[User, Task], usersLeft: List[User]) {
     def addAssignment(user: User, task: Task) = {
       this.copy(
-        assignments = assignments + (user -> task),
-        tasks = tasks + (task._id -> task.copy(assignedInstances = task.assignedInstances + 1))
+        assignments = assignments + (user -> task)
       )
+    }
+
+    def removeUser(user: User) = {
+      this.copy(usersLeft = usersLeft.filter(_ != user))
     }
   }
 
   object AssignmentStatus {
-    def apply(availableTasks: List[Task]): AssignmentStatus = {
-      val tasks = availableTasks.map(t => t._id -> t).toMap
-      AssignmentStatus(Map.empty, tasks)
+    def empty(users: List[User]): AssignmentStatus = {
+      AssignmentStatus(Map.empty, users)
+    }
+  }
+
+  def firstUserThatCanTakeAssignment(users: List[User], assignment: OpenAssignment)(implicit ctx: DBAccessContext): Future[Option[User]] = {
+    users match {
+      case first :: tail =>
+        if(!assignment.hasEnoughExperience(first))
+          firstUserThatCanTakeAssignment(tail, assignment)
+        else
+          AnnotationService.findTaskOf(first, assignment._task).futureBox.map(_.isEmpty).flatMap{
+            case true  => Future.successful(Some(first))
+            case false => firstUserThatCanTakeAssignment(tail, assignment)
+          }
+      case Nil =>
+        Future.successful(None)
     }
   }
 
   def simulateTaskAssignment(users: List[User])(implicit ctx: DBAccessContext): Fox[Map[User, Task]] = {
-    def assignToEach(users: List[User], assignmentStatus: AssignmentStatus): Fox[AssignmentStatus] = {
-      users.foldLeft(Fox.successful(assignmentStatus)) {
-        case (status, user) => status.flatMap(simulateTaskAssignments(user, _))
-      }
-    }
-
-    for {
-      available <- findAllAssignable
-      result <- assignToEach(users, AssignmentStatus(available))
-    } yield {
-      result.assignments
-    }
-  }
-
-  def simulateTaskAssignments(user: User, assignmentStatus: AssignmentStatus)(implicit ctx: DBAccessContext): Fox[AssignmentStatus] = {
-    async {
-      await(AnnotationService.findTasksOf(user).map(_.flatMap(_._task)).futureBox) match {
-        case Full(doneTasks) =>
-
-          def canBeDoneByUser(t: Task) = t.hasEnoughExperience(user) && !doneTasks.contains(t._id) && !t.isFullyAssigned
-
-          val tasksAvailable = assignmentStatus.tasks.values.filter(canBeDoneByUser)
-          await(nextTaskForUser(user, Future.successful(tasksAvailable.toList)).futureBox) match {
-            case Full(task) =>
-              Full(assignmentStatus.addAssignment(user, task))
-            case _ =>
-              Full(assignmentStatus)
+    val assignmentSimulation = Iteratee.fold2[OpenAssignment, AssignmentStatus](AssignmentStatus.empty(users)){
+      case (assignmentStatus, nextOpenAssignment) =>
+        async{
+          await(firstUserThatCanTakeAssignment(assignmentStatus.usersLeft, nextOpenAssignment)) match {
+            case Some(user) =>
+              await(nextOpenAssignment.task.futureBox) match {
+                case Full(task) =>
+                  val updatedStatus = assignmentStatus.addAssignment(user, task).removeUser(user)
+                  (updatedStatus, updatedStatus.usersLeft.isEmpty)
+                case _ =>
+                  (assignmentStatus, false)
+              }
+            case None =>
+              (assignmentStatus, false)
           }
-
-        case f: Failure => f
-        case _ => Failure("Failed to simulate task assignemtns")
-      }
+        }
     }
+
+    (findNextAssignment |>>> assignmentSimulation).map(_.assignments)
   }
 }
 

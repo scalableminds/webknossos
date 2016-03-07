@@ -9,6 +9,7 @@ VolumeTracingController            = require("./controller/annotations/volumetra
 SkeletonTracingArbitraryController = require("./controller/combinations/skeletontracing_arbitrary_controller")
 SkeletonTracingPlaneController     = require("./controller/combinations/skeletontracing_plane_controller")
 VolumeTracingPlaneController       = require("./controller/combinations/volumetracing_plane_controller")
+MinimalArbitraryController         = require("./controller/combinations/minimal_skeletontracing_arbitrary_controller")
 SceneController                    = require("./controller/scene_controller")
 UrlManager                         = require("./controller/url_manager")
 Model                              = require("./model")
@@ -18,7 +19,6 @@ VolumeTracingView                  = require("./view/volumetracing/volumetracing
 constants                          = require("./constants")
 Input                              = require("../libs/input")
 Toast                              = require("../libs/toast")
-
 
 class Controller
 
@@ -68,12 +68,6 @@ class Controller
       Toast.Error "You are not allowed to access this tracing"
       return
 
-    @urlManager.startUrlUpdater()
-
-    # FPS stats
-    stats = new Stats()
-    $("body").append stats.domElement
-
     @sceneController = new SceneController(
       @model.upperBoundary, @model.flycam, @model)
 
@@ -85,7 +79,9 @@ class Controller
         @model, @sceneController, @view )
       @planeController = new SkeletonTracingPlaneController(
         @model, stats, @view, @sceneController, @annotationController)
-      @arbitraryController = new SkeletonTracingArbitraryController(
+
+      ArbitraryController = if tracing.content.settings.advancedOptionsAllowed then SkeletonTracingArbitraryController else MinimalArbitraryController
+      @arbitraryController = new ArbitraryController(
         @model, stats, @view, @sceneController, @annotationController)
 
     else if @model.volumeTracing?
@@ -112,7 +108,11 @@ class Controller
     if @model.allowedModes.length == 0
       Toast.error("There was no valid allowed tracing mode specified.")
     else
-      @model.setMode(@model.allowedModes[0])
+    if @model.settings.preferredMode < 0
+        @setMode(@allowedModes[0])
+      else
+        @setMode(@preferredMode)
+
     if @urlManager.initialState.mode? and @urlManager.initialState.mode != @model.mode
       @model.setMode(@urlManager.initialState.mode)
 
@@ -131,7 +131,7 @@ class Controller
           @zoomStepWarningToast = null
 
 
-  initKeyboard : ->
+  initKeyboard : (advancedOptionsAllowed) ->
 
     # avoid scrolling while pressing space
     $(document).keydown (event) ->
@@ -190,3 +190,28 @@ class Controller
 
 
 module.exports = Controller
+
+  initTimeLimit : (timeString) ->
+
+    finishTracing = =>
+      # save the progress
+      model = @model.skeletonTracing || @model.volumeTracing
+      model.stateLogger.pushNow().done( ->
+        window.location.href = $("#trace-finish-button").attr("href")
+      )
+
+    # parse hard time limit and convert from min to ms
+    hardLimitRe = /Limit: ([0-9]+)/
+    timeLimit = parseInt(timeString.match(hardLimitRe)[1]) * 60 * 1000 or 0
+
+    # setTimeout uses signed 32-bit integers, an overflow would cause immediate timeout execution
+    if timeLimit >= Math.pow(2, 32) / 2
+      Toast.error("Time limit was reduced as it cannot be bigger than 35791 minutes.")
+      timeLimit = Math.pow(2, 32) / 2 - 1
+    console.log("TimeLimit is #{timeLimit/60/1000} min")
+
+    if timeLimit
+      setTimeout( ->
+        window.alert("Time limit is reached, thanks for tracing!")
+        finishTracing()
+      , timeLimit)

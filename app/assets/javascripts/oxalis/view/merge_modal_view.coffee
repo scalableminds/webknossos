@@ -26,17 +26,6 @@ class MergeModalView extends Backbone.Marionette.LayoutView
         </div>
         <div class="modal-body container-fluid">
           <div class="form-group">
-            <label for="task">Task</label>
-            <div class="row">
-              <div class="col-md-10 task">
-                <input type="text" class="form-control" placeholder="Task id"></input>
-              </div>
-              <div class="col-md-2">
-                <button class="btn btn-primary" id="task-merge">Merge</button>
-              </div>
-            </div>
-          </div>
-          <div class="form-group">
             <label for="task-type">Task type</label>
             <div class="row">
               <div class="col-md-10 task-type"></div>
@@ -112,7 +101,6 @@ class MergeModalView extends Backbone.Marionette.LayoutView
     "explorative" : ".explorative"
 
   events :
-    "click #task-merge"               : "mergeTask"
     "click #task-type-merge"          : "mergeTaskType"
     "click #project-merge"            : "mergeProject"
     "click #nml-merge"                : "mergeNml"
@@ -121,7 +109,6 @@ class MergeModalView extends Backbone.Marionette.LayoutView
     "click #explorative-merge"        : "mergeExplorative"
 
   ui :
-    "task"                 : ".task"
     "tasktype"             : ".task-type"
     "project"              : ".project"
     "explorative"          : ".explorative"
@@ -163,16 +150,6 @@ class MergeModalView extends Backbone.Marionette.LayoutView
       @project    .show(@projectSelectionView)
       @explorative.show(@explorativSelectionView)
     )
-
-
-  mergeTask : ->
-
-    taskId = @ui.task.find("input").val()
-    if taskId
-      url = "/annotations/CompoundTask/#{taskId}/merge/#{@_model.tracingType}/#{@_model.tracingId}"
-      @merge(url)
-    else
-      Toast.error("Please input a valid task id")
 
 
   mergeTaskType : ->

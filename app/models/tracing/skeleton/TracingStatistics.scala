@@ -28,7 +28,7 @@ trait AnnotationStatistics extends FoxImplicits { this: AnnotationLike =>
           SkeletonTracingStatistic(numberOfNodes, numberOfEdges, numberOfTrees)
         }
       case _ =>
-        Logger.warn("No statistics available for content")
+        Logger.debug("No statistics available for content")
         Fox.successful(SkeletonTracingStatistic(0, 0, 0))
     }
   }

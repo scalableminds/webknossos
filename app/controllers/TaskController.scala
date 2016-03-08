@@ -15,12 +15,11 @@ import play.api.i18n.Messages
 import models.annotation.AnnotationService
 import play.api.Play.current
 import com.scalableminds.util.tools.{FoxImplicits, Fox}
-import net.liftweb.common.{Full, Failure}
+import net.liftweb.common.{Empty, Full, Failure, Box}
 import com.scalableminds.util.reactivemongo.DBAccessContext
 import scala.concurrent.Future
 import play.api.templates.Html
 import scala.async.Async.{async, await}
-import net.liftweb.common.Box
 
 object TaskController extends Controller with Secured with FoxImplicits {
 
@@ -89,16 +88,30 @@ object TaskController extends Controller with Secured with FoxImplicits {
     }
   }
 
-  def tryToGetNextAssignmentFor(user: User, retryCount: Int = 5)(implicit ctx: DBAccessContext): Fox[OpenAssignment] = {
-    (requestAssignmentFor(user) ?~> Messages("task.unavailable")).flatMap { assignment =>
-      OpenAssignmentService.remove(assignment).flatMap { removeResult =>
-        if (removeResult.n >= 1)
-          Fox.successful(assignment)
-        else if (retryCount > 0)
-          tryToGetNextAssignmentFor(user, retryCount - 1)
-        else
-          Fox.failure(Messages("task.unavailable"))
-      }
+  def tryToGetNextAssignmentFor(user: User, retryCount: Int = 20)(implicit ctx: DBAccessContext): Fox[OpenAssignment] = {
+    requestAssignmentFor(user).futureBox.flatMap {
+      case Full(assignment) =>
+        OpenAssignmentService.remove(assignment).flatMap { removeResult =>
+          if (removeResult.n >= 1)
+            Fox.successful(assignment)
+          else if (retryCount > 0)
+            tryToGetNextAssignmentFor(user, retryCount - 1)
+          else {
+            Logger.warn(s"Failed to remove any assignment for user ${user.email}. Result: $removeResult n:${removeResult.n} ok:${removeResult.ok} code:${removeResult.code} ")
+            Fox.failure(Messages("task.unavailable"))
+          }
+        }.futureBox
+      case f: Failure =>
+        Logger.warn(s"Failure while trying to getNextTask (u: ${user.email} r: $retryCount): " + f)
+        if (retryCount > 0)
+          tryToGetNextAssignmentFor(user, retryCount - 1).futureBox
+        else {
+          Logger.warn(s"Failed to retrieve any assignment after all retries (u: ${user.email}) due to FAILURE")
+          Fox.failure(Messages("assignment.retrieval.failed")).futureBox
+        }
+      case Empty =>
+        Logger.warn(s"Failed to retrieve any assignment after all retries (u: ${user.email}) due to EMPTY")
+        Fox.failure(Messages("assignment.retrieval.failed")).futureBox
     }
   }
 

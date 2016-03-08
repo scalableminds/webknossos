@@ -15,12 +15,11 @@ import play.api.i18n.Messages
 import models.annotation.AnnotationService
 import play.api.Play.current
 import com.scalableminds.util.tools.{FoxImplicits, Fox}
-import net.liftweb.common.{Full, Failure}
+import net.liftweb.common.{Empty, Full, Failure, Box}
 import com.scalableminds.util.reactivemongo.DBAccessContext
 import scala.concurrent.Future
 import play.api.templates.Html
 import scala.async.Async.{async, await}
-import net.liftweb.common.Box
 
 object TaskController extends Controller with Secured with FoxImplicits {
 
@@ -107,7 +106,15 @@ object TaskController extends Controller with Secured with FoxImplicits {
         if (retryCount > 0)
           tryToGetNextAssignmentFor(user, retryCount - 1).futureBox
         else {
-          Logger.warn(s"Failed to retrieve any assignment after all retries (u: ${user.email})")
+          Logger.warn(s"Failed to retrieve any assignment after all retries (u: ${user.email}) due to FAILURE")
+          Fox.failure(Messages("assignment.retrieval.failed")).futureBox
+        }
+      case Empty =>
+        Logger.warn(s"'Empty' while trying to getNextTask (u: ${user.email} r: $retryCount)")
+        if (retryCount > 0)
+          tryToGetNextAssignmentFor(user, retryCount - 1).futureBox
+        else {
+          Logger.warn(s"Failed to retrieve any assignment after all retries (u: ${user.email}) due to EMPTY")
           Fox.failure(Messages("assignment.retrieval.failed")).futureBox
         }
     }

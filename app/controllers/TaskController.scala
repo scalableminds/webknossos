@@ -98,7 +98,7 @@ object TaskController extends Controller with Secured with FoxImplicits {
           else if (retryCount > 0)
             tryToGetNextAssignmentFor(user, retryCount - 1)
           else {
-            Logger.warn(s"Failed to remove any assignment for user ${user.email}")
+            Logger.warn(s"Failed to remove any assignment for user ${user.email}. Result: $removeResult n:${removeResult.n} ok:${removeResult.ok} code:${removeResult.code} ")
             Fox.failure(Messages("task.unavailable"))
           }
         }.futureBox

@@ -28,7 +28,9 @@ class MergeModalView extends Backbone.Marionette.LayoutView
           <div class="form-group">
             <label for="task">Task</label>
             <div class="row">
-              <div class="col-md-10 task"></div>
+              <div class="col-md-10 task">
+                <input type="text" class="form-control" placeholder="Task id"></input>
+              </div>
               <div class="col-md-2">
                 <button class="btn btn-primary" id="task-merge">Merge</button>
               </div>
@@ -105,7 +107,6 @@ class MergeModalView extends Backbone.Marionette.LayoutView
   """)
 
   regions :
-    "task"        : ".task"
     "tasktype"    : ".task-type"
     "project"     : ".project"
     "explorative" : ".explorative"
@@ -141,11 +142,7 @@ class MergeModalView extends Backbone.Marionette.LayoutView
     @$el.modal("show")
 
     Request.receiveJSON("/api/user").then( (user) =>
-      @taskSelectionView = new SelectionView(
-        collection : new  TaskCollection()
-        childViewOptions :
-          modelValue: -> return "#{@model.get("id")}"
-      )
+
       @taskTypeSelectionView = new SelectionView(
         collection : new  TaskTypeCollection()
         childViewOptions :
@@ -162,7 +159,6 @@ class MergeModalView extends Backbone.Marionette.LayoutView
           modelValue: -> return "#{@model.get("id")}"
       )
 
-      @task       .show(@taskSelectionView)
       @tasktype   .show(@taskTypeSelectionView)
       @project    .show(@projectSelectionView)
       @explorative.show(@explorativSelectionView)
@@ -171,9 +167,12 @@ class MergeModalView extends Backbone.Marionette.LayoutView
 
   mergeTask : ->
 
-    taskId = @ui.task.find("select :selected").val()
-    url = "/annotations/CompoundTask/#{taskId}/merge/#{@_model.tracingType}/#{@_model.tracingId}"
-    @merge(url)
+    taskId = @ui.task.find("input").val()
+    if taskId
+      url = "/annotations/CompoundTask/#{taskId}/merge/#{@_model.tracingType}/#{@_model.tracingId}"
+      @merge(url)
+    else
+      Toast.error("Please input a valid task id")
 
 
   mergeTaskType : ->

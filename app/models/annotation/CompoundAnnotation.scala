@@ -32,7 +32,7 @@ object CompoundAnnotation extends Formatter with FoxImplicits {
           project.team,
           controllers.admin.routes.NMLIO.projectDownload(project.name).url,
           annotations,
-          AnnotationType.CompoundProject) ?~> Messages("project.noAnnotaton")
+          AnnotationType.CompoundProject) ?~> Messages("project.noAnnotations")
       } yield merged
     }
   }
@@ -47,7 +47,7 @@ object CompoundAnnotation extends Formatter with FoxImplicits {
           task.team,
           controllers.admin.routes.NMLIO.taskDownload(task.id).url,
           annotations,
-          AnnotationType.CompoundTask) ?~> Messages("task.noAnnotaton")
+          AnnotationType.CompoundTask) ?~> Messages("task.noAnnotations")
       } yield merged
     }
   }
@@ -63,7 +63,7 @@ object CompoundAnnotation extends Formatter with FoxImplicits {
           taskType.team,
           controllers.admin.routes.NMLIO.taskTypeDownload(taskType.id).url,
           annotations,
-          AnnotationType.CompoundTaskType) ?~> Messages("taskType.noAnnotaton")
+          AnnotationType.CompoundTaskType) ?~> Messages("taskType.noAnnotations")
       } yield merged
     }
   }

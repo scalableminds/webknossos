@@ -88,7 +88,7 @@ object TaskController extends Controller with Secured with FoxImplicits {
     }
   }
 
-  def tryToGetNextAssignmentFor(user: User, retryCount: Int = 5)(implicit ctx: DBAccessContext): Fox[OpenAssignment] = {
+  def tryToGetNextAssignmentFor(user: User, retryCount: Int = 20)(implicit ctx: DBAccessContext): Fox[OpenAssignment] = {
     requestAssignmentFor(user).futureBox.flatMap {
       case Full(assignment) =>
         OpenAssignmentService.remove(assignment).flatMap { removeResult =>

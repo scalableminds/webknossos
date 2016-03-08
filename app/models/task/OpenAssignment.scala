@@ -61,6 +61,7 @@ object OpenAssignmentDAO extends SecuredBaseDAO[OpenAssignment] with FoxImplicit
   val formatter = OpenAssignment.openAssignmentFormat
 
   underlying.indexesManager.ensure(Index(Seq("_task" -> IndexType.Ascending)))
+  underlying.indexesManager.ensure(Index(Seq("_project" -> IndexType.Ascending)))
   underlying.indexesManager.ensure(Index(Seq("team" -> IndexType.Ascending)))
 
   override val AccessDefinitions = new DefaultAccessDefinitions {
@@ -81,6 +82,10 @@ object OpenAssignmentDAO extends SecuredBaseDAO[OpenAssignment] with FoxImplicit
 
   def countFor(_task: BSONObjectID)(implicit ctx: DBAccessContext) = {
     count(Json.obj("_task" -> _task))
+  }
+
+  def countForProject(project: String)(implicit ctx: DBAccessContext) = {
+    count(Json.obj("_project" -> project))
   }
 
   def removeByTask(_task: BSONObjectID)(implicit ctx: DBAccessContext) = {

@@ -26,15 +26,6 @@ class MergeModalView extends Backbone.Marionette.LayoutView
         </div>
         <div class="modal-body container-fluid">
           <div class="form-group">
-            <label for="task">Task</label>
-            <div class="row">
-              <div class="col-md-10 task"></div>
-              <div class="col-md-2">
-                <button class="btn btn-primary" id="task-merge">Merge</button>
-              </div>
-            </div>
-          </div>
-          <div class="form-group">
             <label for="task-type">Task type</label>
             <div class="row">
               <div class="col-md-10 task-type"></div>
@@ -105,13 +96,11 @@ class MergeModalView extends Backbone.Marionette.LayoutView
   """)
 
   regions :
-    "task"        : ".task"
     "tasktype"    : ".task-type"
     "project"     : ".project"
     "explorative" : ".explorative"
 
   events :
-    "click #task-merge"               : "mergeTask"
     "click #task-type-merge"          : "mergeTaskType"
     "click #project-merge"            : "mergeProject"
     "click #nml-merge"                : "mergeNml"
@@ -120,7 +109,6 @@ class MergeModalView extends Backbone.Marionette.LayoutView
     "click #explorative-merge"        : "mergeExplorative"
 
   ui :
-    "task"                 : ".task"
     "tasktype"             : ".task-type"
     "project"              : ".project"
     "explorative"          : ".explorative"
@@ -141,11 +129,7 @@ class MergeModalView extends Backbone.Marionette.LayoutView
     @$el.modal("show")
 
     Request.receiveJSON("/api/user").then( (user) =>
-      @taskSelectionView = new SelectionView(
-        collection : new  TaskCollection()
-        childViewOptions :
-          modelValue: -> return "#{@model.get("id")}"
-      )
+
       @taskTypeSelectionView = new SelectionView(
         collection : new  TaskTypeCollection()
         childViewOptions :
@@ -162,18 +146,10 @@ class MergeModalView extends Backbone.Marionette.LayoutView
           modelValue: -> return "#{@model.get("id")}"
       )
 
-      @task       .show(@taskSelectionView)
       @tasktype   .show(@taskTypeSelectionView)
       @project    .show(@projectSelectionView)
       @explorative.show(@explorativSelectionView)
     )
-
-
-  mergeTask : ->
-
-    taskId = @ui.task.find("select :selected").val()
-    url = "/annotations/CompoundTask/#{taskId}/merge/#{@_model.tracingType}/#{@_model.tracingId}"
-    @merge(url)
 
 
   mergeTaskType : ->

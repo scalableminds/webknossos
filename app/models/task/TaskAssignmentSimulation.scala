@@ -72,7 +72,7 @@ trait TaskAssignmentSimulation extends TaskAssignment with FoxImplicits {
         }
     }
 
-    (findNextAssignment |>>> assignmentSimulation).map(_.assignments)
+    (findAllAssignments |>>> assignmentSimulation).map(_.assignments)
   }
 }
 

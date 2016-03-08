@@ -152,6 +152,7 @@ object AnnotationDAO
 
   underlying.indexesManager.ensure(Index(Seq("_task" -> IndexType.Ascending)))
   underlying.indexesManager.ensure(Index(Seq("_user" -> IndexType.Ascending)))
+  underlying.indexesManager.ensure(Index(Seq("_user" -> IndexType.Ascending, "_task" -> IndexType.Ascending)))
 
   override val AccessDefinitions = new DefaultAccessDefinitions{
 

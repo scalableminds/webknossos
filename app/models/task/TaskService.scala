@@ -16,8 +16,11 @@ object TaskService extends TaskAssignmentSimulation with TaskAssignment with Fox
   def findOneById(id: String)(implicit ctx: DBAccessContext) =
     TaskDAO.findOneById(id)
 
-  def findNextAssignment(implicit ctx: DBAccessContext) =
-    OpenAssignmentService.findNextOpenAssignments
+  def findNextAssignment(user: User)(implicit ctx: DBAccessContext) =
+    OpenAssignmentService.findNextOpenAssignments(user)
+
+  def findAllAssignments(implicit ctx: DBAccessContext) =
+    OpenAssignmentService.findAllOpenAssignments
 
   def findAll(implicit ctx: DBAccessContext) =
     TaskDAO.findAll

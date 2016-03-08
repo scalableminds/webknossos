@@ -10,7 +10,7 @@ import play.api.Logger
 import models.user.{User, Experience}
 import models.annotation._
 import play.api.libs.iteratee.Enumerator
-import play.api.libs.json.{JsNull, Json, JsObject}
+import play.api.libs.json.{JsArray, JsNull, Json, JsObject}
 import com.scalableminds.util.mvc.Formatter
 import scala.concurrent.duration._
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
@@ -63,6 +63,7 @@ object OpenAssignmentDAO extends SecuredBaseDAO[OpenAssignment] with FoxImplicit
   underlying.indexesManager.ensure(Index(Seq("_task" -> IndexType.Ascending)))
   underlying.indexesManager.ensure(Index(Seq("_project" -> IndexType.Ascending)))
   underlying.indexesManager.ensure(Index(Seq("team" -> IndexType.Ascending)))
+  underlying.indexesManager.ensure(Index(Seq("team" -> IndexType.Ascending, "neededExperience" -> IndexType.Ascending)))
 
   override val AccessDefinitions = new DefaultAccessDefinitions {
 
@@ -74,6 +75,16 @@ object OpenAssignmentDAO extends SecuredBaseDAO[OpenAssignment] with FoxImplicit
           DenyEveryone()
       }
     }
+  }
+
+  private def experiencesToQuery(user: User) =
+    JsArray(user.experiences.map{ case (domain, value) => Json.obj("neededExperience.domain" -> domain, "neededExperience.value" -> value)}.toSeq)
+
+  private def noRequiredExperience =
+    Json.obj("neededExperience.domain" -> "", "neededExperience.value" -> 0)
+
+  def findOrderedByPriority(user: User)(implicit ctx: DBAccessContext): Enumerator[OpenAssignment] = {
+    find(Json.obj("$or" -> (experiencesToQuery(user) :+ noRequiredExperience))).sort(Json.obj("priority" -> 1)).cursor[OpenAssignment].enumerate()
   }
 
   def findOrderedByPriority(implicit ctx: DBAccessContext): Enumerator[OpenAssignment] = {

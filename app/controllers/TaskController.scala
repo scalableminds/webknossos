@@ -89,6 +89,7 @@ object TaskController extends Controller with Secured with FoxImplicits {
   }
 
   def tryToGetNextAssignmentFor(user: User, retryCount: Int = 20)(implicit ctx: DBAccessContext): Fox[OpenAssignment] = {
+    val s = System.currentTimeMillis()
     requestAssignmentFor(user).futureBox.flatMap {
       case Full(assignment) =>
         OpenAssignmentService.remove(assignment).flatMap { removeResult =>
@@ -97,7 +98,8 @@ object TaskController extends Controller with Secured with FoxImplicits {
           else if (retryCount > 0)
             tryToGetNextAssignmentFor(user, retryCount - 1)
           else {
-            Logger.warn(s"Failed to remove any assignment for user ${user.email}. Result: $removeResult n:${removeResult.n} ok:${removeResult.ok} code:${removeResult.code} ")
+            val e = System.currentTimeMillis()
+            Logger.warn(s"Failed to remove any assignment for user ${user.email}. Result: $removeResult n:${removeResult.n} ok:${removeResult.ok} code:${removeResult.code} TOOK: ${e-s}ms")
             Fox.failure(Messages("task.unavailable"))
           }
         }.futureBox

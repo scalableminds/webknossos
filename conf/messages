@@ -200,6 +200,8 @@ task.edit.toFewInstances=There are already more finished / in progress tracings
 task.editSuccess=Task successfully edited
 task.noAnnotations=We couldn''t find finished annotations for this task
 
+assignment.retrieval.failed=Failed to retrieve any assignment
+
 taskInstances=Task instances
 
 taskType=Task type

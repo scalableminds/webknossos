@@ -90,15 +90,26 @@ object TaskController extends Controller with Secured with FoxImplicits {
   }
 
   def tryToGetNextAssignmentFor(user: User, retryCount: Int = 5)(implicit ctx: DBAccessContext): Fox[OpenAssignment] = {
-    (requestAssignmentFor(user) ?~> Messages("task.unavailable")).flatMap { assignment =>
-      OpenAssignmentService.remove(assignment).flatMap { removeResult =>
-        if (removeResult.n >= 1)
-          Fox.successful(assignment)
-        else if (retryCount > 0)
-          tryToGetNextAssignmentFor(user, retryCount - 1)
-        else
-          Fox.failure(Messages("task.unavailable"))
-      }
+    requestAssignmentFor(user).futureBox.flatMap {
+      case Full(assignment) =>
+        OpenAssignmentService.remove(assignment).flatMap { removeResult =>
+          if (removeResult.n >= 1)
+            Fox.successful(assignment)
+          else if (retryCount > 0)
+            tryToGetNextAssignmentFor(user, retryCount - 1)
+          else {
+            Logger.warn(s"Failed to remove any assignment for user ${user.email}")
+            Fox.failure(Messages("task.unavailable"))
+          }
+        }.futureBox
+      case f: Failure =>
+        Logger.warn(s"Failure while trying to getNextTask (u: ${user.email} r: $retryCount): " + f)
+        if (retryCount > 0)
+          tryToGetNextAssignmentFor(user, retryCount - 1).futureBox
+        else {
+          Logger.warn(s"Failed to retrieve any assignment after all retries (u: ${user.email})")
+          Fox.failure(Messages("assignment.retrieval.failed")).futureBox
+        }
     }
   }
 

@@ -69,7 +69,7 @@ class TaskTransferModalView extends Backbone.Marionette.LayoutView
     evt.preventDefault()
 
     userID = @$("select :selected").attr("id")
-    Request.json(
+    Request.sendJSONReceiveJSON(
       @url,
       data:
         "userId" : userID

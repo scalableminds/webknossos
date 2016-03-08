@@ -110,13 +110,8 @@ object TaskController extends Controller with Secured with FoxImplicits {
           Fox.failure(Messages("assignment.retrieval.failed")).futureBox
         }
       case Empty =>
-        Logger.warn(s"'Empty' while trying to getNextTask (u: ${user.email} r: $retryCount)")
-        if (retryCount > 0)
-          tryToGetNextAssignmentFor(user, retryCount - 1).futureBox
-        else {
-          Logger.warn(s"Failed to retrieve any assignment after all retries (u: ${user.email}) due to EMPTY")
-          Fox.failure(Messages("assignment.retrieval.failed")).futureBox
-        }
+        Logger.warn(s"Failed to retrieve any assignment after all retries (u: ${user.email}) due to EMPTY")
+        Fox.failure(Messages("assignment.retrieval.failed")).futureBox
     }
   }
 

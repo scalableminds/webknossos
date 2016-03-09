@@ -20,7 +20,7 @@ class TaskCreateFromNMLView extends Marionette.LayoutView
           <span class="input-group-addon btn btn-default btn-file">
             <span class="fileinput-new">Browse...</span>
             <span class="fileinput-exists">Change</span>
-            <input type="file" accept=".nml" name="nmlFile" title="Please select at least one .nml file" required=true>
+            <input type="file" accept=".nml" name="nmlFile" title="Please select at least one .nml file" required>
           </span>
           <a href="#" class="input-group-addon btn btn-default fileinput-exists" data-dismiss="fileinput">Remove</a>
         </div>

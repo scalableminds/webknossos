@@ -48,7 +48,7 @@ class TaskCreateFromView extends Marionette.LayoutView
         <div class=" form-group">
           <label class="col-sm-2 control-label" for="experience_domain">Experience Domain</label>
           <div class="col-sm-9">
-            <input type="text" class="form-control" name="neededExperience[domain]" value="<%- neededExperience.domain %>" data-source="[]" data-provide="typeahead" autocomplete="off" placeholder="Enter a domain">
+            <input type="text" class="form-control" name="neededExperience[domain]" value="<%- neededExperience.domain %>" placeholder="Enter a domain (min. 3 characters)" pattern=".{3,}" required>
             <span class="help-block errors"></span>
           </div>
         </div>
@@ -56,7 +56,7 @@ class TaskCreateFromView extends Marionette.LayoutView
         <div class=" form-group">
           <label class="col-sm-2 control-label" for="experience_value">Min Experience</label>
           <div class="col-sm-9">
-            <input type="number" id="value" name="neededExperience[value]" value="<%- neededExperience.value %>" class="form-control">
+            <input type="number" id="value" name="neededExperience[value]" value="<%- neededExperience.value %>" class="form-control" required>
             <span class="help-block errors"></span>
           </div>
         </div>
@@ -64,7 +64,7 @@ class TaskCreateFromView extends Marionette.LayoutView
         <div class=" form-group">
           <label class="col-sm-2 control-label" for="priority">Priority</label>
           <div class="col-sm-9">
-            <input type="number" id="priority" name="priority" value="<%- priority %>" class="form-control">
+            <input type="number" id="priority" name="priority" value="<%- priority %>" class="form-control" required>
             <span class="help-block errors"></span>
           </div>
         </div>
@@ -72,7 +72,7 @@ class TaskCreateFromView extends Marionette.LayoutView
         <div class=" form-group">
           <label class="col-sm-2 control-label" for="status_open">Task instances</label>
           <div class="col-sm-9">
-            <input type="number" id="open" name="status[open]" value="<%- status.open %>" min="1" class="form-control">
+            <input type="number" id="open" name="status[open]" value="<%- status.open %>" min="1" class="form-control" required>
             <span class="help-block errors"></span>
           </div>
         </div>
@@ -101,7 +101,8 @@ class TaskCreateFromView extends Marionette.LayoutView
               pattern="(\\s*\\d+\\s*,){5}(\\s*\\d+\\s*)"
               title="topLeft.x, topLeft.y, topLeft.z, width, height, depth"
               value="<%- boundingBoxString() %>"
-              class="form-control">
+              class="form-control"
+              required>
             <span class="help-block errors"></span>
           </div>
         </div>

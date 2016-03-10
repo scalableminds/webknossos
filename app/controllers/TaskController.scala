@@ -113,7 +113,7 @@ object TaskController extends Controller with Secured with FoxImplicits {
         }
       case Empty =>
         Logger.warn(s"Failed to retrieve any assignment after all retries (u: ${user.email}) due to EMPTY")
-        Fox.failure(Messages("assignment.retrieval.failed")).futureBox
+        Fox.failure(Messages("task.unavailable")).futureBox
     }
   }
 

@@ -1,18 +1,12 @@
 package models.user
 
-<<<<<<< HEAD
 import play.api.Play
 import play.api.Play.current
-import oxalis.thirdparty.BrainTracing
 import play.api.libs.concurrent.Akka
-=======
 import java.util.UUID
 
 import oxalis.thirdparty.BrainTracing
-import play.api.libs.json.Json
->>>>>>> 777b966dea8460009c7c78dfd25fd855a0f7da08
 import play.api.{Logger, Application}
-import scala.concurrent.{Future, Await}
 import scala.concurrent.duration._
 import oxalis.user.UserCache
 import models.configuration.{UserConfiguration, DataSetConfiguration}

@@ -125,21 +125,19 @@ object SkeletonTracing {
 
   val defaultZoomLevel = 2.0
 
-<<<<<<< HEAD
-=======
-  def from(dataSetName: String, start: Point3D, rotation: Vector3D, settings: AnnotationSettings): SkeletonTracing =
-    SkeletonTracing(
-      dataSetName,
-      Nil,
-      System.currentTimeMillis,
-      None,
-      start,
-      rotation,
-      defaultZoomLevel,
-      None,
-      settings = settings)
+//  def from(dataSetName: String, start: Point3D, rotation: Vector3D, settings: AnnotationSettings): SkeletonTracing =
+//    SkeletonTracing(
+//      dataSetName,
+//      Nil,
+//      System.currentTimeMillis,
+//      None,
+//      start,
+//      rotation,
+//      defaultZoomLevel,
+//      None,
+//      stats = None,
+//      settings = settings)
 
->>>>>>> 777b966dea8460009c7c78dfd25fd855a0f7da08
   def from(t: SkeletonTracingLike) =
     SkeletonTracing(
       t.dataSetName,

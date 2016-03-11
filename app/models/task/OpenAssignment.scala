@@ -22,7 +22,6 @@ import org.joda.time.format.DateTimeFormat
 import java.text.SimpleDateFormat
 import scala.async.Async._
 import akka.actor.Props
-import akka.routing.RoundRobinRouter
 import reactivemongo.api.indexes.{IndexType, Index}
 import reactivemongo.core.commands.LastError
 import com.scalableminds.util.reactivemongo.AccessRestrictions.{AllowIf, DenyEveryone}

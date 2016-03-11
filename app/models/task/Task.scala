@@ -14,14 +14,12 @@ import com.scalableminds.util.mvc.Formatter
 import scala.concurrent.duration._
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.util.reactivemongo.{DefaultAccessDefinitions, GlobalAccessContext, DBAccessContext}
-import reactivemongo.api.commands.WriteResult
 import reactivemongo.bson.BSONObjectID
 import play.modules.reactivemongo.json.BSONFormats._
 import org.joda.time.DateTime
 import org.joda.time.format.DateTimeFormat
 import java.text.SimpleDateFormat
 import scala.async.Async._
-import akka.actor.Props
 import reactivemongo.api.indexes.{IndexType, Index}
 import reactivemongo.core.commands.LastError
 import com.scalableminds.util.reactivemongo.AccessRestrictions.{AllowIf, DenyEveryone}
@@ -34,14 +32,14 @@ case class Task(
                  instances: Int = 1,
                  tracingTime: Option[Long] = None,
                  created: DateTime = DateTime.now(),
-                 isActive: Boolean = true,
+                 directLinks: List[String] = Nil,
                  _project: Option[String] = None,
                  _id: BSONObjectID = BSONObjectID.generate
                ) extends FoxImplicits {
 
   lazy val id = _id.stringify
 
-  def taskType(implicit ctx: DBAccessContext) = TaskTypeDAO.findOneById(_taskType, true)(GlobalAccessContext).toFox
+  def taskType(implicit ctx: DBAccessContext) = TaskTypeDAO.findOneById(_taskType)(GlobalAccessContext).toFox
 
   def project(implicit ctx: DBAccessContext) =
     _project.toFox.flatMap(name => ProjectDAO.findOneByName(name))
@@ -135,22 +133,6 @@ object TaskDAO extends SecuredBaseDAO[Task] with FoxImplicits {
     }
   }
 
-<<<<<<< HEAD
-  override def find(query: JsObject = Json.obj())(implicit ctx: DBAccessContext) = {
-    super.find(query ++ Json.obj("isActive" -> true))
-  }
-
-  override def findOne(query: JsObject = Json.obj())(implicit ctx: DBAccessContext) = {
-    super.findOne(query ++ Json.obj("isActive" -> true))
-  }
-
-  @deprecated(message = "This method shouldn't be used. Use TaskService.remove instead", "2.0")
-  override def removeById(bson: BSONObjectID)(implicit ctx: DBAccessContext) = {
-    super.removeById(bson)
-  }
-
-=======
->>>>>>> 777b966dea8460009c7c78dfd25fd855a0f7da08
   def findAllAdministratable(user: User)(implicit ctx: DBAccessContext) = withExceptionCatcher{
     find(Json.obj(
       "team" -> Json.obj("$in" -> user.adminTeamNames))).cursor[Task].collect[List]()
@@ -166,44 +148,14 @@ object TaskDAO extends SecuredBaseDAO[Task] with FoxImplicits {
     find("_taskType", _taskType).collect[List]()
   }
 
-  def deleteAllWithTaskType(taskType: TaskType)(implicit ctx: DBAccessContext) =
-    update(Json.obj("_taskType" -> taskType._id), Json.obj("$set" -> Json.obj("isActive" -> false)), multi = true)
-
   def findAllByProject(project: String)(implicit ctx: DBAccessContext) = withExceptionCatcher{
     find("_project", project).collect[List]()
   }
 
-<<<<<<< HEAD
-  def findAllAssignable(implicit ctx: DBAccessContext) =
-    findAll.map(_.filter(!_.isFullyAssigned))
-
-  def findOneById(id: BSONObjectID, includeDeleted: Boolean = false)(implicit ctx: DBAccessContext) = withExceptionCatcher{
-    if(includeDeleted)
-      super.find(Json.obj("_id" -> id)).one[Task]
-    else
-      super.find(Json.obj("_id" -> id, "isActive" -> true)).one[Task]
-  }
-
-  def logTime(time: Long, _task: BSONObjectID)(implicit ctx: DBAccessContext) =
-    update(Json.obj("_id" -> _task), Json.obj("$inc" -> Json.obj("tracingTime" -> time)))
-
-  def changeAssignedInstances(_task: BSONObjectID, by: Int)(implicit ctx: DBAccessContext) =
-    update(Json.obj("_id" -> _task), Json.obj("$inc" -> Json.obj("assignedInstances" -> by)))
-
-  def assignOnce(_task: BSONObjectID)(implicit ctx: DBAccessContext) =
-    changeAssignedInstances(_task, 1)
-
-  def unassignOnce(_task: BSONObjectID)(implicit ctx: DBAccessContext) =
-    changeAssignedInstances(_task, -1)
-
-  def update(_task: BSONObjectID,
-             _taskType: BSONObjectID,
-=======
   def logTime(time: Long, _task: BSONObjectID)(implicit ctx: DBAccessContext) =
     update(Json.obj("_id" -> _task), Json.obj("$inc" -> Json.obj("tracingTime" -> time)))
 
   def update(_task: BSONObjectID, _taskType: BSONObjectID,
->>>>>>> 777b966dea8460009c7c78dfd25fd855a0f7da08
              neededExperience: Experience,
              priority: Int,
              instances: Int,
@@ -214,7 +166,6 @@ object TaskDAO extends SecuredBaseDAO[Task] with FoxImplicits {
       Json.obj("_id" -> _task),
       Json.obj("$set" ->
         Json.obj(
-          "_taskType" -> _taskType,
           "neededExperience" -> neededExperience,
           "priority" -> priority,
           "instances" -> instances,

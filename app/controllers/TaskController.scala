@@ -1,6 +1,6 @@
 package controllers
 
-import com.scalableminds.util.geometry.{BoundingBox, Point3D}
+import com.scalableminds.util.geometry.{Vector3D, BoundingBox, Point3D}
 import models.binary.DataSetDAO
 import javax.inject.Inject
 import net.liftweb.common.{Box, Failure, Full}
@@ -11,12 +11,9 @@ import oxalis.security.{AuthenticatedRequest, Secured}
 import models.user._
 import models.task._
 import models.annotation._
-<<<<<<< HEAD
-=======
 import reactivemongo.core.commands.LastError
 import views._
 import play.api.libs.concurrent._
->>>>>>> 777b966dea8460009c7c78dfd25fd855a0f7da08
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.i18n.{MessagesApi, Messages}
 import models.annotation.AnnotationService
@@ -29,13 +26,14 @@ import scala.concurrent.Future
 import play.api.libs.json._
 import play.api.libs.functional.syntax._
 import reactivemongo.bson.BSONObjectID
+import scala.concurrent.duration._
 
 class TaskController @Inject() (val messagesApi: MessagesApi) extends Controller with Secured with FoxImplicits {
 
   val MAX_OPEN_TASKS = current.configuration.getInt("oxalis.tasks.maxOpenPerUser") getOrElse 2
 
   val baseJsonReads =
-      (__ \ 'taskTypeId).read[String] and
+    (__ \ 'taskTypeId).read[String] and
       (__ \ 'neededExperience).read[Experience] and
       (__ \ 'priority).read[Int] and
       (__ \ 'status).read[CompletionStatus] and
@@ -48,15 +46,17 @@ class TaskController @Inject() (val messagesApi: MessagesApi) extends Controller
   val taskCompleteReads =
     (baseJsonReads and
       (__ \ 'dataSet).read[String] and
-      (__ \ 'editPosition).read[Point3D]).tupled
+      (__ \ 'editPosition).read[Point3D] and
+      (__ \ 'editRotation).read[Vector3D] and
+      (__ \ 'isForAnonymous).read[Boolean]).tupled
 
-  def empty = Authenticated{ implicit request =>
+  def empty = Authenticated { implicit request =>
     Ok(views.html.main()(Html("")))
   }
 
-  def read(taskId: String) = Authenticated.async{ implicit request =>
-    for{
-      task <- TaskDAO.findOneById(taskId) ?~> Messages("task.notFound")
+  def read(taskId: String) = Authenticated.async { implicit request =>
+    for {
+      task <- TaskService.findOneById(taskId) ?~> Messages("task.notFound")
       js <- Task.transformToJson(task)
     } yield {
       Ok(js)
@@ -73,7 +73,7 @@ class TaskController @Inject() (val messagesApi: MessagesApi) extends Controller
       }
     }
 
-    for{
+    for {
       body <- request.body.asMultipartFormData ?~> Messages("invalid")
       nmlFile <- body.file("nmlFile") ?~> Messages("nml.file.notFound")
       stringifiedJson <- body.dataParts.get("formJSON").flatMap(_.headOption) ?~> Messages("format.json.missing")
@@ -85,7 +85,7 @@ class TaskController @Inject() (val messagesApi: MessagesApi) extends Controller
         val nmls = NMLService.extractFromFile(nmlFile.ref.file, nmlFile.filename)
 
         val results = nmls.map {
-          case NMLService.NMLParseSuccess(_, nml)          =>
+          case NMLService.NMLParseSuccess(_, nml) =>
             val task = Task(
               taskType._id,
               team,
@@ -95,8 +95,8 @@ class TaskController @Inject() (val messagesApi: MessagesApi) extends Controller
               _project = project.map(_.name),
               _id = BSONObjectID.generate)
 
-            for{
-              _ <- TaskDAO.insert(task)
+            for {
+              _ <- TaskService.insert(task, insertAssignments = true)
               _ <- AnnotationService.createAnnotationBase(task, request.user._id, boundingBox, taskType.settings, nml)
             } yield Messages("task.create.success")
 
@@ -108,43 +108,46 @@ class TaskController @Inject() (val messagesApi: MessagesApi) extends Controller
     } yield result
   }
 
-  def createSingleTask(input: (String, Experience, Int, CompletionStatus, String, Option[String], Option[BoundingBox], String, Point3D))(implicit request: AuthenticatedRequest[_]) =
+
+  def createSingleTask(input: (String, Experience, Int, CompletionStatus, String, Option[String], Option[BoundingBox], String, Point3D, Vector3D, Boolean))(implicit request: AuthenticatedRequest[_]) =
     input match {
-      case (taskTypeId, experience, priority, status, team, projectName, boundingBox, dataSetName, start) =>
+      case (taskTypeId, experience, priority, status, team, projectName, boundingBox, dataSetName, start, rotation, isForAnonymous) =>
         for {
           _ <- DataSetDAO.findOneBySourceName(dataSetName) ?~> Messages("dataSet.notFound")
           taskType <- TaskTypeDAO.findOneById(taskTypeId) ?~> Messages("taskType.notFound")
           project <- ProjectService.findIfNotEmpty(projectName) ?~> Messages("project.notFound")
           _ <- ensureTeamAdministration(request.user, team)
           task = Task(taskType._id, team, experience, priority, status.open, _project = project.map(_.name))
-          _ <- TaskDAO.insert(task)
-          _ <- AnnotationService.createAnnotationBase(task, request.user._id, boundingBox, taskType.settings, dataSetName, start)
+          _ <- AnnotationService.createAnnotationBase(task, request.user._id, boundingBox, taskType.settings, dataSetName, start, rotation)
+          directLinks <- createAnonymousUsersAndTasksInstancesIfNeeded(isForAnonymous, task).toFox
+          taskWithLinks = task.copy(directLinks = directLinks)
+          _ <- TaskService.insert(taskWithLinks, insertAssignments = ! isForAnonymous)
         } yield {
           task
         }
     }
 
   def bulkCreate(json: JsValue)(implicit request: AuthenticatedRequest[_]): Fox[Result] = {
-    withJsonUsing(json, Reads.list(taskCompleteReads)){ parsed =>
+    withJsonUsing(json, Reads.list(taskCompleteReads)) { parsed =>
       val results = parsed.map(p => createSingleTask(p).map(_ => Messages("task.create.success")))
       bulk2StatusJson(results).map(js => JsonOk(js, Messages("task.bulk.processed")))
     }
   }
 
-  def create(`type`: String = "default") = Authenticated.async{ implicit request =>
+  def create(`type`: String = "default") = Authenticated.async { implicit request =>
     `type` match {
       case "default" =>
-        request.body.asJson.toFox.flatMap{json =>
-          withJsonUsing(json, taskCompleteReads){ parsed =>
-            for{
+        request.body.asJson.toFox.flatMap { json =>
+          withJsonUsing(json, taskCompleteReads) { parsed =>
+            for {
               task <- createSingleTask(parsed)
               json <- Task.transformToJson(task)
             } yield JsonOk(json, Messages("task.create.success"))
           }
         }.getOrElse(JsonBadRequest(Messages("format.json.invalid")))
-      case "nml" =>
+      case "nml"     =>
         createFromNML(request)
-      case "bulk" =>
+      case "bulk"    =>
         request.body.asJson
         .toFox
         .flatMap(json => bulkCreate(json))
@@ -152,26 +155,43 @@ class TaskController @Inject() (val messagesApi: MessagesApi) extends Controller
     }
   }
 
+  def createAnonymousUsersAndTasksInstancesIfNeeded(isForAnonymous: Boolean, task: Task)(implicit request: AuthenticatedRequest[_]) = {
+    if (isForAnonymous)
+      Fox.sequenceOfFulls((1 to task.instances).toList.map { i =>
+        for {
+          user <- UserService.insertAnonymousUser(task.team, task.neededExperience)
+          loginToken <- UserService.createLoginToken(user, validDuration = 30 days)
+          annotation <- AnnotationService.createAnnotationFor(user, task)
+        } yield {
+          val url = controllers.routes.AnnotationController.trace(annotation.typ, annotation.id).absoluteURL(secure = true)
+          url + "?loginToken=" + loginToken
+        }
+      })
+    else
+      Future.successful(Nil)
+  }
+
   def update(taskId: String) = Authenticated.async(parse.json) { implicit request =>
     withJsonBodyUsing(taskCompleteReads){
-      case (taskTypeId, experience, priority, status, team, projectName, boundingBox, dataSetName, start) =>
+      case (taskTypeId, experience, priority, status, team, projectName, boundingBox, dataSetName, start, rotation, isAnonymous) =>
         for {
-          task <- TaskDAO.findOneById(taskId) ?~> Messages("task.notFound")
+          task <- TaskService.findOneById(taskId) ?~> Messages("task.notFound")
           _ <- ensureTeamAdministration(request.user, task.team)
           taskType <- TaskTypeDAO.findOneById(taskTypeId) ?~> Messages("taskType.notFound")
           project <- ProjectService.findIfNotEmpty(projectName) ?~> Messages("project.notFound")
-
+          openInstanceCount <- task.remainingInstances
           updatedTask <- TaskDAO.update(
             _task = task._id,
             _taskType = taskType._id,
             neededExperience = experience,
             priority = priority,
-            instances = status.open + task.assignedInstances,
+            instances = task.instances + status.open - openInstanceCount,
             team = team,
             _project = project.map(_.name))
           _ <- AnnotationService.updateAllOfTask(updatedTask, team, dataSetName, boundingBox, taskType.settings)
-          _ <- AnnotationService.updateAnnotationBase(updatedTask, start)
+          _ <- AnnotationService.updateAnnotationBase(updatedTask, start, rotation)
           json <- Task.transformToJson(updatedTask)
+          _ <- OpenAssignmentService.updateAllOf(updatedTask, status.open)
         } yield {
           JsonOk(json, Messages("task.editSuccess"))
         }
@@ -180,7 +200,7 @@ class TaskController @Inject() (val messagesApi: MessagesApi) extends Controller
 
   def delete(taskId: String) = Authenticated.async { implicit request =>
     for {
-      task <- TaskDAO.findOneById(taskId) ?~> Messages("task.notFound")
+      task <- TaskService.findOneById(taskId) ?~> Messages("task.notFound")
       _ <- TaskService.remove(task._id)
     } yield {
       JsonOk(Messages("task.removed"))
@@ -214,8 +234,6 @@ class TaskController @Inject() (val messagesApi: MessagesApi) extends Controller
     }
   }
 
-<<<<<<< HEAD
-=======
   def requestAssignmentFor(user: User)(implicit ctx: DBAccessContext) =
     TaskService.findAssignableFor(user)
 
@@ -225,22 +243,6 @@ class TaskController @Inject() (val messagesApi: MessagesApi) extends Controller
   def getProjectsFor(tasks: List[Task])(implicit ctx: DBAccessContext): Future[List[Project]] =
     Fox.sequenceOfFulls(tasks.map(_.project)).map(_.distinct)
 
-  def getAllAvailableTaskCountsAndProjects()(implicit ctx: DBAccessContext): Fox[Map[User, (Int, List[Project])]] = {
-    UserDAO.findAllNonAnonymous
-      .flatMap { users =>
-        Future.sequence( users.map { user =>
-          async {
-            val tasks = await(getAvailableTasksFor(user).futureBox) openOr List()
-            val taskCount = tasks.size
-            val projects = await(getProjectsFor(tasks))
-            user -> (taskCount, projects)
-          }
-        })
-      }
-      .map(_.toMap[User, (Int, List[Project])])
-  }
-
->>>>>>> 777b966dea8460009c7c78dfd25fd855a0f7da08
   def createAvailableTasksJson(availableTasksMap: Map[User, (Int, List[Project])]) =
     Json.toJson(availableTasksMap.map { case (user, (taskCount, projects)) =>
       Json.obj(
@@ -275,12 +277,8 @@ class TaskController @Inject() (val messagesApi: MessagesApi) extends Controller
     val user = request.user
     for {
       _ <- ensureMaxNumberOfOpenTasks(user)
-<<<<<<< HEAD
-      task <- TaskService.nextTaskForUser(user) ?~> Messages("task.unavailable")
-=======
       assignment <- tryToGetNextAssignmentFor(user)
       task <- assignment.task
->>>>>>> 777b966dea8460009c7c78dfd25fd855a0f7da08
       annotation <- AnnotationService.createAnnotationFor(user, task) ?~> Messages("annotation.creationFailed")
       annotationJSON <- AnnotationLike.annotationLikeInfoWrites(annotation, Some(user), exclude = List("content", "actions"))
     } yield {

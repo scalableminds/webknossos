@@ -3,13 +3,8 @@ package models.tracing.skeleton
 import models.tracing.skeleton.temporary.TemporarySkeletonTracing
 import oxalis.nml._
 import oxalis.nml.utils._
-<<<<<<< HEAD
-import com.scalableminds.util.geometry.Scale
-import com.scalableminds.util.geometry.{Point3D, BoundingBox}
 import play.api.libs.iteratee.Enumerator
-=======
 import com.scalableminds.util.geometry.{Vector3D, Scale, Point3D, BoundingBox}
->>>>>>> 777b966dea8460009c7c78dfd25fd855a0f7da08
 import play.api.libs.json._
 import play.api.libs.functional.syntax._
 import com.scalableminds.util.xml.XMLWrites

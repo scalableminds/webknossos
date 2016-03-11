@@ -102,20 +102,14 @@ object AnnotationService extends AnnotationContentProviders with BoxImplicits wi
   def findTasksOf(user: User)(implicit ctx: DBAccessContext) =
     AnnotationDAO.findFor(user._id, AnnotationType.Task)
 
-<<<<<<< HEAD
   def findExploratoryOf(user: User, isFinished: Option[Boolean])(implicit ctx: DBAccessContext) =
     AnnotationDAO.findForWithTypeOtherThan(user._id, isFinished, AnnotationType.Task :: AnnotationType.SystemTracings)
 
   def findFinishedOf(user: User)(implicit ctx: DBAccessContext) =
     AnnotationDAO.findFinishedFor(user._id)
-=======
+
   def findTaskOf(user: User, _task: BSONObjectID)(implicit ctx: DBAccessContext) =
     AnnotationDAO.findByTaskIdAndUser(user._id, _task, AnnotationType.Task)
-
-  def findExploratoryOf(user: User)(implicit ctx: DBAccessContext) =
-    AnnotationDAO.findForWithTypeOtherThan(user._id, AnnotationType.Task :: AnnotationType.SystemTracings)
->>>>>>> 777b966dea8460009c7c78dfd25fd855a0f7da08
-
 
   def createAnnotationFor(user: User, task: Task)(implicit ctx: DBAccessContext): Fox[Annotation] = {
     def useAsTemplateAndInsert(annotation: Annotation) =
@@ -132,34 +126,28 @@ object AnnotationService extends AnnotationContentProviders with BoxImplicits wi
     }
   }
 
-<<<<<<< HEAD
-  def createAnnotationBase(task: Task, userId: BSONObjectID, boundingBox: Option[BoundingBox], settings: AnnotationSettings, dataSetName: String, start: Point3D)(implicit ctx: DBAccessContext) = {
-    for {
-      tracing <- SkeletonTracingService.createFrom(dataSetName, start, boundingBox, insertStartAsNode = true, settings)
-=======
   def createAnnotationBase(
     task: Task,
     userId: BSONObjectID,
-    boundingBox: BoundingBox,
+    boundingBox: Option[BoundingBox],
     settings: AnnotationSettings,
     dataSetName: String,
     start: Point3D,
     rotation: Vector3D)(implicit ctx: DBAccessContext) = {
 
     for {
-      tracing <- SkeletonTracingService.createFrom(dataSetName, start, rotation, Some(boundingBox), insertStartAsNode = true, settings) ?~> "Failed to create skeleton tracing."
->>>>>>> 777b966dea8460009c7c78dfd25fd855a0f7da08
+      tracing <- SkeletonTracingService.createFrom(dataSetName, start, rotation, boundingBox, insertStartAsNode = true, settings) ?~> "Failed to create skeleton tracing."
       content = ContentReference.createFor(tracing)
       _ <- AnnotationDAO.insert(Annotation(Some(userId), content, team = task.team, typ = AnnotationType.TracingBase, _task = Some(task._id))) ?~> "Failed to insert annotation."
     } yield tracing
   }
 
-  def updateAnnotationBase(task: Task, start: Point3D)(implicit ctx: DBAccessContext) = {
+  def updateAnnotationBase(task: Task, start: Point3D, rotation: Vector3D)(implicit ctx: DBAccessContext) = {
     for {
       base <- task.annotationBase
       content <- base.content
     } yield {
-      content.service.updateEditPosition(start, content.id)
+      content.service.updateEditPosRot(start, rotation, content.id)
     }
   }
 

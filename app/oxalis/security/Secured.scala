@@ -108,8 +108,8 @@ trait Secured extends FoxImplicits with I18nSupport{
    *
    */
   trait AuthHelpers {
-    def executeAndEnsureSession[A](user: User, request: Request[A], block: (AuthenticatedRequest[A]) => Future[SimpleResult]): Future[SimpleResult] =
-      if (request.session.get(Secured.SessionInformationKey) == Some(user.id))
+    def executeAndEnsureSession[A](user: User, request: Request[A], block: (AuthenticatedRequest[A]) => Future[Result]): Future[Result] =
+      if (request.session.get(Secured.SessionInformationKey).contains(user.id))
         block(new AuthenticatedRequest(user, request))
       else
         block(new AuthenticatedRequest(user, request)).map { r =>
@@ -117,13 +117,8 @@ trait Secured extends FoxImplicits with I18nSupport{
         }
   }
 
-<<<<<<< HEAD
-  object Authenticated extends ActionBuilder[AuthenticatedRequest]{
-    def invokeBlock[A](request: Request[A], block: (AuthenticatedRequest[A]) => Future[Result]) = {
-=======
   object Authenticated extends ActionBuilder[AuthenticatedRequest] with AuthHelpers{
-    def invokeBlock[A](request: Request[A], block: (AuthenticatedRequest[A]) => Future[SimpleResult]) = {
->>>>>>> 777b966dea8460009c7c78dfd25fd855a0f7da08
+    def invokeBlock[A](request: Request[A], block: (AuthenticatedRequest[A]) => Future[Result]) = {
       maybeUser(request).flatMap { user =>
         Secured.ActivityMonitor ! UserActivity(user, System.currentTimeMillis)
         if (user.verified)
@@ -134,13 +129,8 @@ trait Secured extends FoxImplicits with I18nSupport{
     }
   }
 
-<<<<<<< HEAD
-  object UserAwareAction extends ActionBuilder[UserAwareRequest] {
-    def invokeBlock[A](request: Request[A], block: (UserAwareRequest[A]) => Future[Result]) = {
-=======
   object UserAwareAction extends ActionBuilder[UserAwareRequest] with AuthHelpers{
-    def invokeBlock[A](request: Request[A], block: (UserAwareRequest[A]) => Future[SimpleResult]) = {
->>>>>>> 777b966dea8460009c7c78dfd25fd855a0f7da08
+    def invokeBlock[A](request: Request[A], block: (UserAwareRequest[A]) => Future[Result]) = {
       maybeUser(request).filter(_.verified).futureBox.flatMap {
         case Full(user) =>
           Secured.ActivityMonitor ! UserActivity(user, System.currentTimeMillis)

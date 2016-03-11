@@ -3,7 +3,6 @@
  */
 package controllers
 
-<<<<<<< HEAD
 import javax.inject.Inject
 
 import scala.concurrent.Future
@@ -11,24 +10,18 @@ import scala.concurrent.Future
 import com.scalableminds.util.tools.{FoxImplicits, Fox}
 import models.annotation.{AnnotationService, AnnotationDAO}
 import models.task.{TaskService, Project, TaskType}
-=======
 import models.task.OpenAssignmentService
 import oxalis.security.Secured
->>>>>>> 777b966dea8460009c7c78dfd25fd855a0f7da08
 import models.user.time.{TimeSpan, TimeSpanService}
 import models.user.{UserService, User, UserDAO}
 import oxalis.security.Secured
 import play.api.i18n.{Messages, MessagesApi}
 import play.api.libs.concurrent.Execution.Implicits._
-<<<<<<< HEAD
 import play.api.libs.json._
 import play.api.libs.json.Json._
 import play.api.libs.functional.syntax._
 import play.twirl.api.Html
-=======
 import models.user.{UserService, User, UserDAO}
-import play.api.templates.Html
->>>>>>> 777b966dea8460009c7c78dfd25fd855a0f7da08
 import scala.concurrent.duration.Duration
 import models.tracing.skeleton.DBTreeDAO
 import models.binary.DataSetDAO
@@ -60,16 +53,11 @@ class StatisticsController @Inject()(val messagesApi: MessagesApi)
       case Some(handler) =>
         for {
           times <- TimeSpanService.loggedTimePerInterval(handler, start, end)
-<<<<<<< HEAD
-          numberOfUsers <- UserDAO.count(Json.obj())
+          numberOfUsers <- UserService.countNonAnonymousUsers
           numberOfDatasets <- DataSetDAO.count(Json.obj())
           numberOfAnnotations <- AnnotationDAO.countAll
           numberOfTrees <- DBTreeDAO.count(Json.obj())
-=======
-          numberOfAnnotations <- AnnotationDAO.countAll
-          numberOfUsers <- UserService.countNonAnonymousUsers
           numberOfAssignments <- OpenAssignmentService.countOpenAssignments
->>>>>>> 777b966dea8460009c7c78dfd25fd855a0f7da08
         } yield {
           Ok(Json.obj(
             "name" -> "oxalis",
@@ -77,12 +65,8 @@ class StatisticsController @Inject()(val messagesApi: MessagesApi)
             "numberOfUsers" -> numberOfUsers,
             "numberOfDatasets" -> numberOfDatasets,
             "numberOfAnnotations" -> numberOfAnnotations,
-<<<<<<< HEAD
-            "numberOfTrees" -> numberOfTrees
-=======
-            "numberOfUsers" -> numberOfUsers,
+            "numberOfTrees" -> numberOfTrees,
             "numberOfOpenAssignments" -> numberOfAssignments
->>>>>>> 777b966dea8460009c7c78dfd25fd855a0f7da08
           ))
         }
       case _             =>

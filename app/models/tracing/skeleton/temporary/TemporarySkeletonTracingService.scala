@@ -93,5 +93,5 @@ object TemporarySkeletonTracingService extends AnnotationContentService {
 
   def updateSettings(dataSetName: String, boundingBox: Option[BoundingBox], settings: AnnotationSettings, tracingId: String)(implicit ctx: DBAccessContext): Fox[Boolean] = ???
 
-  def updateEditPosition(editPosition: Point3D, tracingId: String)(implicit ctx: DBAccessContext): Fox[Boolean] = ???
+  def updateEditPosRot(editPosition: Point3D, rotation: Vector3D, tracingId: String)(implicit ctx: DBAccessContext): Fox[Boolean] = ???
 }

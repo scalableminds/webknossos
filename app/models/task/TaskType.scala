@@ -33,10 +33,7 @@ case class TaskType(
   team: String,
   settings: AnnotationSettings = AnnotationSettings.default,
   fileName: Option[String] = None,
-<<<<<<< HEAD
   isActive: Boolean = true,
-=======
->>>>>>> 777b966dea8460009c7c78dfd25fd855a0f7da08
   _id: BSONObjectID = BSONObjectID.generate) {
 
   val id = _id.stringify

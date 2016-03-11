@@ -10,7 +10,7 @@ class WorkloadListItemView extends Backbone.Marionette.CompositeView
   template : _.template("""
     <td><%- name %></td>
     <td>
-      <% _.each(teams, function(team){ %>
+      <% _.each(teams.sort(), function(team){ %>
           <span class="label label-default" style="background-color: <%- TemplateHelpers.stringToColor(team) %>"><%- team %></span>
       <% }) %>
     </td>

@@ -32,8 +32,7 @@ class DashboardTaskModel extends NestedObjModel
 
     return Request.$(Request.receiveJSON(url)).then(
       (response) =>
-        @get("annotation").state.isFinished = true
-        @trigger("change")
+        @set("annotation.state.isFinished", true)
     )
 
 

@@ -1,10 +1,10 @@
-Request   = require("libs/request")
-_         = require("lodash")
-Backbone  = require("backbone")
-DeepModel = require("backbone-deep-model")
+Request        = require("libs/request")
+_              = require("lodash")
+Backbone       = require("backbone")
+NestedObjModel = require("libs/nested_obj_model")
 
 
-class DatasetConfiguration extends Backbone.DeepModel
+class DatasetConfiguration extends NestedObjModel
 
   initialize : ({datasetName, @dataLayerNames}) ->
 

@@ -4,8 +4,8 @@ class SortedCollection extends Backbone.Collection
 
   initialize : ->
 
-    if @sortBy
-      @setSort(@sortBy, "asc")
+    if @sortAttribute
+      @setSort(@sortAttribute, "asc")
 
 
   setSort : (field, sortDirection) ->

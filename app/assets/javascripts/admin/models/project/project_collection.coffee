@@ -7,6 +7,6 @@ class ProjectCollection extends PaginationCollection
   model : ProjectModel
   url : "/api/projects"
   idAttribute : "name"
-  sortBy : "name"
+  sortAttribute : "name"
 
 module.exports = ProjectCollection

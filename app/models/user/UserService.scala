@@ -60,7 +60,14 @@ object UserService extends FoxImplicits {
       result <- UserDAO.insert(user, isVerified)(GlobalAccessContext).futureBox
     } yield result
 
-  def update(user: User, firstName: String, lastName: String, verified: Boolean, teams: List[TeamMembership], experiences: Map[String, Int])(implicit ctx: DBAccessContext) = {
+  def update(
+    user: User,
+    firstName: String,
+    lastName: String,
+    verified: Boolean,
+    teams: List[TeamMembership],
+    experiences: Map[String, Int])(implicit ctx: DBAccessContext): Fox[User] = {
+
     if (!user.verified && verified) {
       Mailer ! Send(DefaultMails.verifiedMail(user.name, user.email))
       if(user.teams.isEmpty){

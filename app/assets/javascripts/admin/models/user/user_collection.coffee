@@ -3,7 +3,7 @@ PaginationCollection = require("../pagination_collection")
 class UserCollection extends PaginationCollection
 
   url : "/api/users"
-  sortBy : "firstName"
+  sortAttribute : "firstName"
 
   state :
     pageSize : 50

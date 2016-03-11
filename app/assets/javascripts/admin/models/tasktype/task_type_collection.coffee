@@ -6,7 +6,7 @@ class TaskTypeCollection extends SortedCollection
 
   url : "/api/taskTypes"
   model : TaskTypeModel
-  sortBy : "summary"
+  sortAttribute : "summary"
 
   parse : (responses) ->
 

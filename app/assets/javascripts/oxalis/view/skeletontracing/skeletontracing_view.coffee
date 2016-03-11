@@ -6,7 +6,7 @@ View  = require("../../view")
 
 class SkeletonTracingView extends View
 
-  constructor : (@model, advancedOptionsAllowed) ->
+  constructor : (@model) ->
 
     super(@model)
     _.extend(@, Backbone.Events)

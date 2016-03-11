@@ -78,7 +78,8 @@ class BaseRouter
 
   handleRoute : =>
 
-    urlWithoutSlash = @currentURL.replace(/^\//, "")
+    urlWithoutSlash = @currentURL.replace(/^\//, "").replace(/#.*$/, "")
+
     for { route, handler } in @routes
       match = urlWithoutSlash.match(route)
       if match

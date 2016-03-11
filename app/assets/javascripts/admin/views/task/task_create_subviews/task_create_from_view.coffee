@@ -102,7 +102,7 @@ class TaskCreateFromView extends Marionette.LayoutView
               title="topLeft.x, topLeft.y, topLeft.z, width, height, depth"
               value="<%- boundingBoxString() %>"
               class="form-control"
-              required>
+              >
             <span class="help-block errors"></span>
           </div>
         </div>

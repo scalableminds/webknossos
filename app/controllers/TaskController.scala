@@ -144,14 +144,13 @@ class TaskController @Inject() (val messagesApi: MessagesApi) extends Controller
               json <- Task.transformToJson(task)
             } yield JsonOk(json, Messages("task.create.success"))
           }
-        }.getOrElse(JsonBadRequest(Messages("format.json.invalid")))
+        }
       case "nml"     =>
         createFromNML(request)
       case "bulk"    =>
         request.body.asJson
         .toFox
         .flatMap(json => bulkCreate(json))
-        .getOrElse(JsonBadRequest(Messages("format.json.invalid")))
     }
   }
 

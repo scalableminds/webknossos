@@ -54,7 +54,7 @@ with I18nSupport
 
   def jsonErrorWrites(errors: JsError): JsObject =
     Json.obj(
-      "messages" -> errors.errors.map(error =>
+      "errors" -> errors.errors.map(error =>
         error._2.foldLeft(Json.obj("field" -> error._1.toJsonString)) {
           case (js, e) => js ++ Json.obj("error" -> Messages(e.message))
         }

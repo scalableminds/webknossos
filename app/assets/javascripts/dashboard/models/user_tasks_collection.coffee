@@ -21,7 +21,7 @@ class UserTasksCollection extends SortedCollection
 
   unfinishedTasksFilter : (task) ->
 
-    return !task.get("state.isFinished")
+    return !task.get("annotation.state.isFinished")
 
 
   getNewTask : ->

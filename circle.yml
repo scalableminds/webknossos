@@ -31,5 +31,5 @@ deployment:
   hub:
     branch: /.*/
     commands:
-      - docker login -u $DOCKER_USER -p $DOCKER_PASS
+      - docker login -e $DOCKER_EMAIL -u $DOCKER_USER -p $DOCKER_PASS
       - docker push scalableminds/oxalis:$CIRCLE_BUILD_NUM

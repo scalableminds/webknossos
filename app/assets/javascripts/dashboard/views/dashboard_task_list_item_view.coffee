@@ -7,7 +7,11 @@ class DashboardTaskListItemView extends Marionette.ItemView
   tagName : "tr"
 
   template : _.template("""
-    <td><%- formattedHash     %></td>
+    <td>
+      <div class="monospace-id">
+        <%- id %>
+      </div>
+    </td>
     <td><%- type.summary      %></td>
     <td><%- projectName       %></td>
     <td><%- type.description  %></td>

@@ -31,11 +31,26 @@ class TaskCreateFromFormView extends Marionette.LayoutView
           title="x, y, z"
           pattern="(\\s*\\d+\\s*,){2}(\\s*\\d+\\s*)"
           value="<%- editPosition %>"
-          required=true
+          required
           class="form-control">
-        <span class="help-block errors"></span>
       </div>
     </div>
+
+      <div class=" form-group">
+        <label class="col-sm-2 control-label" for="editRotation">Start Rotation</label>
+        <div class="col-sm-9">
+          <input
+            type="text"
+            id="editRotation"
+            name="editRotation"
+            placeholder="Rotation x, Rotation y, Rotation z"
+            title="Rotation x, Rotation y, Rotation z"
+            pattern="(\\s*\\d+\\s*,){2}(\\s*\\d+\\s*)"
+            value="<%- editRotation %>"
+            required
+            class="form-control">
+        </div>
+      </div>
   """)
 
   regions :
@@ -43,6 +58,7 @@ class TaskCreateFromFormView extends Marionette.LayoutView
 
   ui :
     "editPosition" : "#editPosition"
+    "editRotation" : "#editRotation"
 
   initialize : (options) ->
 
@@ -53,6 +69,7 @@ class TaskCreateFromFormView extends Marionette.LayoutView
 
     formValues = @parent.serializeForm()
     formValues.editPosition = Utils.stringToNumberArray(@ui.editPosition.val())
+    formValues.editRotation = Utils.stringToNumberArray(@ui.editRotation.val())
 
     return formValues
 

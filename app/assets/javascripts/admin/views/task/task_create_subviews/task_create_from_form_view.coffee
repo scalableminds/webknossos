@@ -32,7 +32,8 @@ class TaskCreateFromFormView extends Marionette.LayoutView
           pattern="(\\s*\\d+\\s*,){2}(\\s*\\d+\\s*)"
           value="<%- editPosition %>"
           required=true
-          class="form-control">
+          class="form-control"
+          required>
         <span class="help-block errors"></span>
       </div>
     </div>

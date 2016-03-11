@@ -21,9 +21,9 @@ class SortTableBehavior extends Backbone.Marionette.Behavior
     this.view.sort = false
 
 
-  onDomRefresh : ->
+  onRender : ->
 
-    sortableTableHeads = $("[data-sort]").toArray()
+    sortableTableHeads = @$("[data-sort]").toArray()
     sortableTableHeads.forEach((tableHeader) =>
       $tableHeader = $(tableHeader)
 

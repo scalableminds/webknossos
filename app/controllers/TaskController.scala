@@ -75,6 +75,7 @@ object TaskController extends Controller with Secured with FoxImplicits {
     Json.toJson(availableTasksMap.map { case (user, (taskCount, projects)) =>
       Json.obj(
         "name" -> user.name,
+        "teams" -> user.teamNames,
         "availableTaskCount" -> taskCount,
         "projects" -> projects.map(_.name)
       )

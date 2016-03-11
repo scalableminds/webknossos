@@ -212,6 +212,7 @@ class TaskController @Inject() (val messagesApi: MessagesApi) extends Controller
     Json.toJson(availableTasksMap.map { case (user, (taskCount, projects)) =>
       Json.obj(
         "name" -> user.name,
+        "teams" -> user.teamNames,
         "availableTaskCount" -> taskCount,
         "projects" -> projects.map(_.name)
       )

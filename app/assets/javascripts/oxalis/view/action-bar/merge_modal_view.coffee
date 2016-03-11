@@ -166,7 +166,6 @@ class MergeModalView extends Marionette.LayoutView
           modelValue: -> return "#{@model.get("id")}"
       )
 
-      @task       .show(@taskSelectionView)
       @tasktype   .show(@taskTypeSelectionView)
       @project    .show(@projectSelectionView)
       @explorative.show(@explorativSelectionView)
@@ -176,11 +175,10 @@ class MergeModalView extends Marionette.LayoutView
   mergeTask : ->
 
     taskId = @ui.task.find("input").val()
-    if taskId
+    @validateTaskId(taskId).then( =>
       url = "/annotations/CompoundTask/#{taskId}/merge/#{@model.get("tracingType")}/#{@model.get("tracingId")}"
       @merge(url)
-    else
-      Toast.error("Please enter a valid task id")
+    )
 
 
   mergeTaskType : ->
@@ -257,5 +255,11 @@ class MergeModalView extends Marionette.LayoutView
       )
       => @toggleIcon(true)
     )
+
+
+  validateTaskId : (taskId) ->
+
+    Request.receiveJSON("/api/find?q=#{taskId}&type=id")
+
 
 module.exports = MergeModalView

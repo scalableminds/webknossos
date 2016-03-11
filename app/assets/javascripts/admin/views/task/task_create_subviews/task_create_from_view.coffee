@@ -123,7 +123,7 @@ class TaskCreateFromView extends Marionette.LayoutView
   templateHelpers: ->
 
     type : @type
-    getInstanceLabel : => if @isEditingMode() then "Remaining Instances" else "Task Instances"
+    getInstanceLabel : => if @isEditingMode then "Remaining Instances" else "Task Instances"
     boundingBoxString : ->
       if not @boundingBox then return ""
       b = @boundingBox

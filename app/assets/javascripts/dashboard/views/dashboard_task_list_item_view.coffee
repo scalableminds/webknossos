@@ -8,27 +8,27 @@ class DashboardTaskListItemView extends Marionette.ItemView
 
   template : _.template("""
     <td><%- formattedHash     %></td>
-    <td><%- type.summary      %></td>
+    <td><%- tasktype.summary      %></td>
     <td><%- projectName       %></td>
-    <td><%- type.description  %></td>
+    <td><%- tasktype.description  %></td>
     <td>
-      <% _.each(type.settings.allowedModes, function(mode) { %>
+      <% _.each(tasktype.settings.allowedModes, function(mode) { %>
         <span class="label-default label">
           <%- mode %>
         </span>
       <% }) %>
     </td>
     <td class="nowrap">
-      <% if (annotation.state.isFinished) { %>
+      <% if (state.isFinished) { %>
         <i class="fa fa-check"></i><span> Finished</span><br />
       <% } else { %>
-        <a href="/annotations/<%- annotation.typ %>/<%- annotation.id %>">
+        <a href="/annotations/<%- typ %>/<%- annotation.id %>">
           <i class="fa fa-random"></i>
           <strong>trace</strong>
         </a>
         <% if (isAdminView) { %>
           <br/>
-          <a href="/annotations/<%- annotation.typ %>/<%- annotation.id %>/transfer" id="transfer-task">
+          <a href="/annotations/<%- typ %>/<%- annotation.id %>/transfer" id="transfer-task">
             <i class="fa fa-share"></i>
             transfer
           </a>

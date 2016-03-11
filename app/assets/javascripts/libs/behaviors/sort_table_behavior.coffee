@@ -13,9 +13,9 @@ class SortTableBehavior extends Marionette.Behavior
     sortDirection : "asc"
 
 
-  onDomRefresh : ->
+  onRender : ->
 
-    sortableTableHeads = $("[data-sort]").toArray()
+    sortableTableHeads = @$("[data-sort]").toArray()
     sortableTableHeads.forEach((tableHeader) =>
       $tableHeader = $(tableHeader)
 

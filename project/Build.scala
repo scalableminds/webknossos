@@ -10,7 +10,6 @@ import sbt.Task
 import scala.concurrent.Future
 import scala.concurrent.ExecutionContext.Implicits.global
 
-
 object Dependencies{
   val akkaVersion = "2.4.1"
   val reactiveVersion = "0.11.7"
@@ -136,7 +135,6 @@ object ApplicationBuild extends Build {
   import Dependencies._
   import Resolvers._
   import AssetCompilation.SettingsKeys._
-  import com.typesafe.sbt.packager.Keys._
 
   val appName =  "oxalis"
 
@@ -197,10 +195,7 @@ object ApplicationBuild extends Build {
     // playAssetsDirectories += baseDirectory.value / "target" / "assets"
   )
 
-  lazy val dockerSettings = Seq()
-
   lazy val oxalis: Project = Project(appName, file("."))
     .enablePlugins(play.PlayScala)
-    .settings((oxalisSettings ++ AssetCompilation.settings ++ dockerSettings):_*)
+    .settings((oxalisSettings ++ AssetCompilation.settings):_*)
 }
-

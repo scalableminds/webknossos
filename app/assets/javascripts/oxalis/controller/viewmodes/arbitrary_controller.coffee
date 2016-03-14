@@ -45,7 +45,7 @@ class ArbitraryController
       @keyboardOnce?.unbind()
 
 
-  constructor : (@model, stats, @view, @sceneController, @skeletonTracingController) ->
+  constructor : (@model, @view, @sceneController, @skeletonTracingController) ->
 
     _.extend(this, Backbone.Events)
 
@@ -54,7 +54,7 @@ class ArbitraryController
     @canvas = canvas = $("#render-canvas")
 
     @cam = @model.flycam3d
-    @arbitraryView = new ArbitraryView(canvas, @cam, stats, @view, @WIDTH)
+    @arbitraryView = new ArbitraryView(canvas, @cam, @view, @WIDTH)
 
     @plane = new ArbitraryPlane(@cam, @model, @WIDTH)
     @arbitraryView.addGeometry @plane

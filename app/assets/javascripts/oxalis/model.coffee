@@ -101,7 +101,7 @@ class Model extends Backbone.Model
           when "oblique" then allowedModes.push(constants.MODE_ARBITRARY_PLANE)
 
       if allowedMode in ["orthogonal", "volume"]
-        @allowedModes.push(constants.MODE_NAME_TO_ID[allowedMode])
+        allowedModes.push(constants.MODE_NAME_TO_ID[allowedMode])
 
     if not @get("volumeTracing")?
       # Plane tracing mode is always allowed (except in VOLUME mode)
@@ -109,7 +109,7 @@ class Model extends Backbone.Model
 
     if settings.preferredMode
       modeId = constants.MODE_NAME_TO_ID[settings.preferredMode]
-      if modeId in @allowedModes
+      if modeId in allowedModes
         @preferredMode = modeId
 
     allowedModes.sort()

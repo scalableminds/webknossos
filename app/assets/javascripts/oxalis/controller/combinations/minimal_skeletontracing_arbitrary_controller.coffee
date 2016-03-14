@@ -1,8 +1,6 @@
-### define
-../viewmodes/arbitrary_controller : ArbitraryController
-libs/input : Input
-../../constants : constants
-###
+ArbitraryController = require("../viewmodes/arbitrary_controller")
+Input               = require("libs/input")
+Constants           = require("../../Constants")
 
 class MinimalSkeletonTracingArbitraryController extends ArbitraryController
 
@@ -22,7 +20,7 @@ class MinimalSkeletonTracingArbitraryController extends ArbitraryController
 
     getVoxelOffset  = (timeFactor) =>
 
-      return @model.user.get("moveValue3d") * timeFactor / @model.scaleInfo.baseVoxel / constants.FPS
+      return @model.user.get("moveValue3d") * timeFactor / @model.scaleInfo.baseVoxel / Constants.FPS
 
     @input.keyboard = new Input.Keyboard(
 
@@ -43,10 +41,10 @@ class MinimalSkeletonTracingArbitraryController extends ArbitraryController
       "g"             : (timeFactor) => @changeMoveValue(-25)
 
       #Rotate in distance
-      "left"          : (timeFactor) => @cam.yaw @model.user.get("rotateValue") * timeFactor, @mode == constants.MODE_ARBITRARY
-      "right"         : (timeFactor) => @cam.yaw -@model.user.get("rotateValue") * timeFactor, @mode == constants.MODE_ARBITRARY
-      "up"            : (timeFactor) => @cam.pitch -@model.user.get("rotateValue") * timeFactor, @mode == constants.MODE_ARBITRARY
-      "down"          : (timeFactor) => @cam.pitch @model.user.get("rotateValue") * timeFactor, @mode == constants.MODE_ARBITRARY
+      "left"          : (timeFactor) => @cam.yaw @model.user.get("rotateValue") * timeFactor, @mode == Constants.MODE_ARBITRARY
+      "right"         : (timeFactor) => @cam.yaw -@model.user.get("rotateValue") * timeFactor, @mode == Constants.MODE_ARBITRARY
+      "up"            : (timeFactor) => @cam.pitch -@model.user.get("rotateValue") * timeFactor, @mode == Constants.MODE_ARBITRARY
+      "down"          : (timeFactor) => @cam.pitch @model.user.get("rotateValue") * timeFactor, @mode == Constants.MODE_ARBITRARY
     )
 
     @input.keyboardOnce = new Input.Keyboard(
@@ -57,3 +55,6 @@ class MinimalSkeletonTracingArbitraryController extends ArbitraryController
         @centerActiveNode()
 
     , -1)
+
+
+module.exports = MinimalSkeletonTracingArbitraryController

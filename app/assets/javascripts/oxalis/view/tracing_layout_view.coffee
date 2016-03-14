@@ -115,7 +115,7 @@ class TracingLayoutView extends Marionette.LayoutView
 
     @tracingContainer.show(tracingView, preventDestroy : true)
 
-    if not @model.setting.advancedOptionsAllowed
+    if not @model.settings.advancedOptionsAllowed
       return
 
     @actionBar.show(actionBarView, preventDestroy : true)

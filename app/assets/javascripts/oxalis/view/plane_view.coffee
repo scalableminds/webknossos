@@ -10,7 +10,7 @@ THREE      = require("three")
 
 class PlaneView
 
-  constructor : (@model, @view, @stats) ->
+  constructor : (@model, @view) ->
 
     _.extend(this, Backbone.Events)
 
@@ -107,9 +107,6 @@ class PlaneView
     if @needsRerender or modelChanged
 
       @trigger("render")
-
-      # update postion and FPS displays
-      @stats.update()
 
       viewport = [
         [0, @curWidth + 20],

@@ -13,7 +13,7 @@ class SkeletonTracingController
   # functions that can be called by the specific view mode controller.
 
 
-  constructor : ( @model, @sceneController, @skeletonTracingView ) ->
+  constructor : (@model, @skeletonTracingView, @sceneController) ->
 
     _.extend(@, Backbone.Events)
 

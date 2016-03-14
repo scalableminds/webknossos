@@ -15,9 +15,9 @@ class SkeletonTracingPlaneController extends PlaneController
   # Tracing.
 
 
-  constructor : (@model, stats, @view, @sceneController, @skeletonTracingController) ->
+  constructor : (@model, @view, @sceneController, @skeletonTracingController) ->
 
-    super(@model, stats, @view, @sceneController)
+    super(@model, @view, @sceneController)
 
 
   start : ->

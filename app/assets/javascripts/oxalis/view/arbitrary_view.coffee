@@ -1,7 +1,6 @@
 app       = require("app")
 Backbone  = require("backbone")
 THREE     = require("three")
-Stats     = require("stats.js")
 $         = require("jquery")
 _         = require("lodash")
 constants = require("../constants")
@@ -23,7 +22,7 @@ class ArbitraryView
   camera : null
   cameraPosition : null
 
-  constructor : (canvas, @dataCam, @stats, @view, width) ->
+  constructor : (canvas, @dataCam, @view, width) ->
 
     _.extend(this, Backbone.Events)
 
@@ -103,10 +102,7 @@ class ArbitraryView
 
     if @trigger("render", @forceUpdate) or @forceUpdate
 
-      { camera, stats, geometries, renderer, scene } = @
-
-      # update postion and FPS displays
-      stats.update()
+      { camera, geometries, renderer, scene } = @
 
       for geometry in geometries when geometry.update?
         geometry.update()

@@ -40,7 +40,7 @@ class PlaneController
       @keyboardLoopDelayed?.unbind()
 
 
-  constructor : (@model, stats, @view, @sceneController) ->
+  constructor : (@model, @view, @sceneController) ->
 
     _.extend(this, Backbone.Events)
 
@@ -50,7 +50,7 @@ class PlaneController
 
     @oldNmPos = app.scaleInfo.voxelToNm( @flycam.getPosition() )
 
-    @planeView = new PlaneView(@model, @view, stats)
+    @planeView = new PlaneView(@model, @view)
 
     @activeViewport = constants.PLANE_XY
 

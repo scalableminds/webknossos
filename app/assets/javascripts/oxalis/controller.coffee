@@ -68,6 +68,8 @@ class Controller
       Toast.Error "You are not allowed to access this tracing"
       return
 
+    @urlManager.startUrlUpdater()
+
     @sceneController = new SceneController(
       @model.upperBoundary, @model.flycam, @model)
 
@@ -76,27 +78,32 @@ class Controller
 
       @view = new SkeletonTracingView(@model)
       @annotationController = new SkeletonTracingController(
-        @model, @sceneController, @view )
+        @model, @view, @sceneController)
       @planeController = new SkeletonTracingPlaneController(
-        @model, stats, @view, @sceneController, @annotationController)
+        @model, @view, @sceneController, @annotationController)
 
-      ArbitraryController = if tracing.content.settings.advancedOptionsAllowed then SkeletonTracingArbitraryController else MinimalArbitraryController
+      ArbitraryController = if @model.tracing.content.settings.advancedOptionsAllowed then SkeletonTracingArbitraryController else MinimalArbitraryController
       @arbitraryController = new ArbitraryController(
-        @model, stats, @view, @sceneController, @annotationController)
+        @model, @view, @sceneController, @annotationController)
 
     else if @model.volumeTracing?
 
       @view = new VolumeTracingView(@model)
       @annotationController = new VolumeTracingController(
-        @model, @sceneController, @view )
+        @model, @view, @sceneController)
       @planeController = new VolumeTracingPlaneController(
-        @model, stats, @view, @sceneController, @annotationController)
+        @model, @view, @sceneController, @annotationController)
 
     else # View mode
 
       @view = new View(@model)
       @planeController = new PlaneController(
-        @model, stats, @view, @sceneController)
+        @model, @view, @sceneController)
+
+    # FPS stats
+    stats = new Stats()
+    $("body").append stats.domElement
+    @listenTo(@arbitraryController.view, "render", -> stats.update())
 
     @initKeyboard()
     @initTimeLimit()
@@ -109,10 +116,10 @@ class Controller
     if @model.allowedModes.length == 0
       Toast.error("There was no valid allowed tracing mode specified.")
     else
-    if @model.settings.preferredMode < 0
-        @setMode(@allowedModes[0])
-      else
-        @setMode(@preferredMode)
+      if @model.settings.preferredMode
+          @setMode(@preferredMode)
+        else
+          @setMode(@model.allowedModes[0])
 
     if @urlManager.initialState.mode? and @urlManager.initialState.mode != @model.mode
       @model.setMode(@urlManager.initialState.mode)
@@ -190,8 +197,13 @@ class Controller
     @model.mode = newMode
 
 
-  initTimeLimit : (timeString) ->
+  initTimeLimit :  ->
 
+    # only enable hard time limit for anonymous users so far
+    unless @model.tracing.task and @model.tracing.user is "Anonymous User"
+      return
+
+    # TODO move that somehwere else
     finishTracing = =>
       # save the progress
       model = @model.skeletonTracing || @model.volumeTracing
@@ -201,7 +213,8 @@ class Controller
 
     # parse hard time limit and convert from min to ms
     hardLimitRe = /Limit: ([0-9]+)/
-    timeLimit = parseInt(timeString.match(hardLimitRe)[1]) * 60 * 1000 or 0
+    expectedTime = @modeltracing.task.type.expectedTime
+    timeLimit = parseInt(expectedTime.match(hardLimitRe)[1]) * 60 * 1000 or 0
 
     # setTimeout uses signed 32-bit integers, an overflow would cause immediate timeout execution
     if timeLimit >= Math.pow(2, 32) / 2

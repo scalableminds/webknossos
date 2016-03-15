@@ -2,6 +2,7 @@ app                = require("app")
 Backbone           = require("backbone")
 $                  = require("jquery")
 _                  = require("lodash")
+TWEEN              = require("tween.js")
 Input              = require("libs/input")
 ArbitraryPlane     = require("../../geometries/arbitrary_plane")
 Crosshair          = require("../../geometries/crosshair")
@@ -334,20 +335,7 @@ class ArbitraryController
 
     activeNode = @model.skeletonTracing.getActiveNode()
     if activeNode
-# <<<<<<< HEAD
-#       @cam.setPosition(activeNode.pos)
-#       parent = activeNode.parent
-#       while parent
-#         # set right direction
-#         direction = ([
-#           activeNode.pos[0] - parent.pos[0],
-#           activeNode.pos[1] - parent.pos[1],
-#           activeNode.pos[2] - parent.pos[2]])
-#         if direction[0] or direction[1] or direction[2]
-#           @cam.setDirection(app.scaleInfo.voxelToNm(direction))
-#           break
-#         parent = parent.parent
-# =======
+
       # animate the change to the new position and new rotation
       curPos = @cam.getPosition()
       newPos = @model.skeletonTracing.getActiveNodePos()
@@ -366,7 +354,6 @@ class ArbitraryController
       waypointAnimation.start()
 
       @cam.update()
-# >>>>>>> 777b966dea8460009c7c78dfd25fd855a0f7da08
 
 
   setActiveNode : (nodeId, centered, mergeTree) ->

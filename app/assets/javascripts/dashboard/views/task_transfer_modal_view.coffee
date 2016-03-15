@@ -33,7 +33,6 @@ class TaskTransferModalView extends Marionette.LayoutView
     </div>
   """)
 
-  #   <input type="text" class="form-control" name="userName" placeholder="Type a user's name" value="" list="user-datalist" required autofocus>
 
 
   regions :
@@ -52,7 +51,6 @@ class TaskTransferModalView extends Marionette.LayoutView
   onShow : ->
 
     selectionView = new SelectionView(
-      #el : $("""<datalist id="user-datalist">""")
       collection : @userCollection
       childViewOptions :
         modelValue: -> return "#{@model.get("firstName")} #{@model.get("lastName")}"

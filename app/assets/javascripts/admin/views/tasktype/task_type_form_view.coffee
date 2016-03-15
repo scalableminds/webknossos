@@ -184,9 +184,6 @@ class TaskTypeFormView extends Marionette.LayoutView
     if settings.preferredMode
       @ui.preferredMode.val(settings.preferredMode)
 
-    # TODO Replace once time changes have been ported to master
-    # inputStrings = ["expectedTime_maxHard"]
-    # numValues = @model.get("expectedTime").match(/Limit: ([0-9]+)/).slice(1).map(parseFloat)
     inputStrings = ["expectedTime_minTime", "expectedTime_maxTime", "expectedTime_maxHard"]
     numValues = @model.get("expectedTime").match(/([0-9]+) - ([0-9]+), Limit: ([0-9]+)/).slice(1).map(parseFloat)
 

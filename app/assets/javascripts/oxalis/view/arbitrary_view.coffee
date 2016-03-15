@@ -132,7 +132,7 @@ class ArbitraryView
 
       forceUpdate = false
 
-      @trigger("finishedRender")
+      @trigger("render")
 
     @animationRequestId = window.requestAnimationFrame(@animate)
 

@@ -103,8 +103,7 @@ class Controller
     # FPS stats
     stats = new Stats()
     $("body").append stats.domElement
-    # TODO figure out who updates FPS
-    @listenTo(@arbitraryController.arbitraryView, "finishRender", -> stats.update())
+    @listenTo(@arbitraryController.arbitraryView, "render", -> stats.update())
     @listenTo(@planeController.planeView, "render", -> stats.update())
 
     @initKeyboard()

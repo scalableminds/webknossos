@@ -82,7 +82,7 @@ class PlaneController
 
     @initTrackballControls()
     @bindToEvents()
-    # @stop() ???
+    @stop()
 
 
   initMouse : ->
@@ -250,8 +250,8 @@ class PlaneController
     if @isStarted
       @input.unbind()
 
-    @sceneController.stop()
-    @planeView.stop()
+      @sceneController.stop()
+      @planeView.stop()
 
     @isStarted = false
 

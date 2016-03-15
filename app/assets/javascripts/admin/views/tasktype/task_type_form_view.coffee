@@ -131,7 +131,7 @@ class TaskTypeFormView extends Marionette.LayoutView
 
             <div class="form-group">
               <div class="col-sm-9 col-sm-offset-3">
-                <button type="submit" class="form-control btn btn-primary">Create</button>
+                <button type="submit" class="form-control btn btn-primary"><%- getSubmitLabel() %></button>
               </div>
             </div>
         </div>
@@ -139,6 +139,8 @@ class TaskTypeFormView extends Marionette.LayoutView
     </div>
   """)
 
+  templateHelpers : ->
+    getSubmitLabel : => if @isEditMode then "Save" else "Create"
 
   regions :
     "team" : ".team"
@@ -161,7 +163,8 @@ class TaskTypeFormView extends Marionette.LayoutView
 
   initialize : ->
 
-    if @options.isEditForm
+    @isEditMode = @options.isEditMode
+    if @isEditMode
       @model.fetch().done(=> @prefillForm())
 
 
@@ -203,7 +206,7 @@ class TaskTypeFormView extends Marionette.LayoutView
       return
 
     url =
-      if @options.isEditForm
+      if @isEditMode
         "/api/taskTypes/#{@model.get("id")}"
       else
         "/api/taskTypes"
@@ -214,7 +217,7 @@ class TaskTypeFormView extends Marionette.LayoutView
     ).then( (response) =>
       Toast.message(response.messages)
 
-      if @options.isEditForm
+      if @isEditMode
         app.router.navigate("/taskTypes", { trigger: true })
       else
         @collection.addJSON(response.newTaskType)

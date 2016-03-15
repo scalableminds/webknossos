@@ -2,6 +2,7 @@ _              = require("lodash")
 Marionette     = require("backbone.marionette")
 app            = require("app")
 Toast          = require("libs/toast")
+Request        = require("libs/request")
 MergeModalView = require("./merge_modal_view")
 ShareModalView = require("./share_modal_view")
 Constants      = require("oxalis/constants")
@@ -24,8 +25,8 @@ class DatasetActionsView extends Marionette.ItemView
       <button class="btn btn-default" id="trace-share-button"><i class="fa fa-share-alt"></i>Share</button>
     </div>
 
-    <% if(tracing.restrictions.allowFinish || tracing.task) { %>
-        <button class="btn btn-default" id="trace-next-task-button"><i class="fa fa-step-forward"></i>Finish and get next task</button>
+    <% if(tracing.restrictions.allowFinish && tracing.task) { %>
+        <button class="btn btn-default" id="trace-next-task-button"><i class="fa fa-step-forward"></i>Finish and Get Next Task</button>
     <% } %>
 
     <% if (isSkeletonMode) { %>
@@ -99,9 +100,9 @@ class DatasetActionsView extends Marionette.ItemView
 
   getNextTask : ->
 
-    model = @model.skeletonTracing || @model.volumeTracing
+    tracingType = @model.skeletonTracing || @model.volumeTracing
 
-    model.stateLogger.save()
+    tracingType.stateLogger.save()
         .then(=> Request.triggerRequest("/annotations/#{@model.tracingType}/#{@model.tracingId}/finish"))
         .then(=>
           Request.receiveJSON("/user/tasks/request")).then(

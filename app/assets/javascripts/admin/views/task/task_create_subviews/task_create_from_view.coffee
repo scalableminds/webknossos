@@ -88,7 +88,12 @@ class TaskCreateFromView extends Marionette.LayoutView
         <div class="form-group">
             <label class="col-sm-2 control-label" for="isForAnonymous">Create anonymous users</label>
             <div class="col-sm-9">
-            <input type="checkbox" name="isForAnonymous" value="<%- isForAnonymous %>">
+            <input
+              type="checkbox"
+              name="isForAnonymous"
+              <% if (isForAnonymous) { %> checked <% }%>
+              <% if (isEditingMode) { %> disabled <% }%>
+            >
             </div>
         </div>
 
@@ -125,6 +130,7 @@ class TaskCreateFromView extends Marionette.LayoutView
   templateHelpers: ->
 
     type : @type
+    isEditingMode : @isEditingMode
     getInstanceLabel : => if @isEditingMode then "Remaining Instances" else "Task Instances"
     boundingBoxString : ->
       if not @boundingBox then return ""

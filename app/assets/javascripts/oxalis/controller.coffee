@@ -113,6 +113,8 @@ class Controller
     for binaryName of @model.binary
       @listenTo(@model.binary[binaryName].cube, "bucketLoaded", -> app.vent.trigger("rerender"))
 
+    # ###
+    # Initialize 'flight', 'oblique' or 'orthogonal'/'volume' mode
     @listenTo(@model, "change:mode", @setMode)
 
     if @urlManager.initialState.mode? and @urlManager.initialState.mode != @model.mode
@@ -121,13 +123,12 @@ class Controller
     if @model.allowedModes.length == 0
       Toast.error("There was no valid allowed tracing mode specified.")
     else
-      debugger
       if @model.get("preferredMode")
-          @setMode(@model.get("preferredMode"))
+          @model.setMode(@model.get("preferredMode"))
         else
-          @setMode(@model.allowedModes[0])
+          @model.setMode(@model.allowedModes[0])
 
-
+    # ###
 
     # Zoom step warning
     @zoomStepWarningToast = null
@@ -210,14 +211,17 @@ class Controller
     # TODO move that somehwere else
     finishTracing = =>
       # save the progress
-      model = @model.skeletonTracing || @model.volumeTracing
-      model.stateLogger.pushNow().done( ->
-        window.location.href = $("#trace-finish-button").attr("href")
+      model = @model
+
+      tracingType = model.skeletonTracing || model.volumeTracing
+      tracingType.stateLogger.pushNow().done( ->
+        url = "/annotations/#{model.tracingType}/#{model.tracingId}/finishAndRedirect"
+        app.router.loadURL(url)
       )
 
     # parse hard time limit and convert from min to ms
     hardLimitRe = /Limit: ([0-9]+)/
-    expectedTime = @modeltracing.task.type.expectedTime
+    expectedTime = @model.tracing.task.type.expectedTime
     timeLimit = parseInt(expectedTime.match(hardLimitRe)[1]) * 60 * 1000 or 0
 
     # setTimeout uses signed 32-bit integers, an overflow would cause immediate timeout execution
@@ -234,5 +238,3 @@ class Controller
 
 
 module.exports = Controller
-
-

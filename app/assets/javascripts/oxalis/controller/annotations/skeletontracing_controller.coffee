@@ -29,7 +29,6 @@ class SkeletonTracingController
 
   setRadius : (delta) ->
 
-    console.log delta
     @model.skeletonTracing.setActiveNodeRadius(
       @model.skeletonTracing.getActiveNodeRadius() * Math.pow(1.05 , delta)
     )

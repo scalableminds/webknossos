@@ -2,7 +2,7 @@ package models.task
 
 import models.basics._
 import java.util.Date
-import com.scalableminds.util.geometry.Point3D
+import com.scalableminds.util.geometry.{Point3D, Vector3D}
 
 import scala.concurrent.Future
 import play.api.libs.concurrent.Execution.Implicits._
@@ -78,6 +78,7 @@ object Task extends FoxImplicits {
       annotationContent <- task.annotationBase.flatMap(_.content).futureBox
       dataSetName = annotationContent.map(_.dataSetName).openOr("")
       editPosition = annotationContent.map(_.editPosition).openOr(Point3D(0, 0, 0))
+      editRotation = annotationContent.map(_.editRotation).openOr(Vector3D(0, 0, 0))
       boundingBox = annotationContent.flatMap(_.boundingBox).toOption
       status <- task.status
       tt <- task.taskType.map(TaskType.transformToJson) getOrElse JsNull
@@ -91,9 +92,12 @@ object Task extends FoxImplicits {
         "type" -> tt,
         "dataSet" -> dataSetName,
         "editPosition" -> editPosition,
+        "editRotation" -> editRotation,
+        "isForAnonymous" -> !task.directLinks.isEmpty,
         "boundingBox" -> boundingBox,
         "neededExperience" -> task.neededExperience,
         "priority" -> task.priority,
+        "directLinks" -> task.directLinks,
         "created" -> DateTimeFormat.forPattern("yyyy-MM-dd HH:mm").print(task.created),
         "status" -> status,
         "tracingTime" -> task.tracingTime

@@ -103,7 +103,7 @@ class StateLogger
         deferred.resolve()
     )
 
-    deferred.promise()
+    return deferred.promise()
 
 
   pushFailCallback : (response, notifyOnFailure) ->

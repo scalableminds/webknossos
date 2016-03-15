@@ -20,10 +20,11 @@ class AvailableTasksJob extends Actor {
 
   case object CheckAvailableTasks
 
-  val tick =
-    context.system.scheduler.schedule(0 millis, 1 day, self, CheckAvailableTasks)
-
-  override def postStop() = tick.cancel()
+// TODO: WORKLOAD CURRENTLY DISABLED DUE TO PERFORMANCE REASONS
+//  val tick =
+//    context.system.scheduler.schedule(0 millis, 1 day, self, CheckAvailableTasks)
+//
+//  override def postStop() = tick.cancel()
 
   override def receive: Receive = {
     case CheckAvailableTasks =>

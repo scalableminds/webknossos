@@ -82,11 +82,13 @@ object TaskController extends Controller with Secured with FoxImplicits {
     })
 
   def requestAvailableTasks = Authenticated.async { implicit request =>
-    for {
-      availableTasksMap <- getAllAvailableTaskCountsAndProjects()
-    } yield {
-      Ok(createAvailableTasksJson(availableTasksMap))
-    }
+    // TODO: WORKLOAD CURRENTLY DISABLED DUE TO PERFORMANCE REASONS
+    Future.successful(Ok(Json.arr()))
+//    for {
+//      availableTasksMap <- getAllAvailableTaskCountsAndProjects()
+//    } yield {
+//      Ok(createAvailableTasksJson(availableTasksMap))
+//    }
   }
 
   def tryToGetNextAssignmentFor(user: User, retryCount: Int = 20)(implicit ctx: DBAccessContext): Fox[OpenAssignment] = {

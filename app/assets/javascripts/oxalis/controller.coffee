@@ -113,22 +113,10 @@ class Controller
     for binaryName of @model.binary
       @listenTo(@model.binary[binaryName].cube, "bucketLoaded", -> app.vent.trigger("rerender"))
 
-    # ###
-    # Initialize 'flight', 'oblique' or 'orthogonal'/'volume' mode
-    @listenTo(@model, "change:mode", @setMode)
 
-    if @urlManager.initialState.mode? and @urlManager.initialState.mode != @model.mode
-      @model.setMode(@urlManager.initialState.mode)
+    @listenTo(@model, "change:mode", @loadMode)
+    @loadMode(@model.get("mode"))
 
-    if @model.allowedModes.length == 0
-      Toast.error("There was no valid allowed tracing mode specified.")
-    else
-      if @model.get("preferredMode")
-          @model.setMode(@model.get("preferredMode"))
-        else
-          @model.setMode(@model.allowedModes[0])
-
-    # ###
 
     # Zoom step warning
     @zoomStepWarningToast = null
@@ -186,7 +174,7 @@ class Controller
     new Input.KeyboardNoLoop( keyboardControls )
 
 
-  setMode : (newMode, force = false) ->
+  loadMode : (newMode, force = false) ->
 
     if (newMode == constants.MODE_ARBITRARY or newMode == constants.MODE_ARBITRARY_PLANE) and (newMode in @model.allowedModes or force)
       @planeController?.stop()
@@ -198,8 +186,6 @@ class Controller
 
     else # newMode not allowed or invalid
       return
-
-    @model.mode = newMode
 
 
   initTimeLimit :  ->

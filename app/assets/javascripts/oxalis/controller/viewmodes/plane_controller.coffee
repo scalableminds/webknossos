@@ -250,9 +250,8 @@ class PlaneController
     if @isStarted
       @input.unbind()
 
-    # TODO always stop?
-      @sceneController.stop()
-      @planeView.stop()
+    @sceneController.stop()
+    @planeView.stop()
 
     @isStarted = false
 

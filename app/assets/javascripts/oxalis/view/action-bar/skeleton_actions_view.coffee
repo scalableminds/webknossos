@@ -25,7 +25,7 @@ class SkeletonActionsView extends Marionette.ItemView
     # add node
     @model.skeletonTracing.addNode(
       position,
-      @model.flycam.getRotation(constants.PLANE_XY),
+      @model.flycam.getRotation(Constants.PLANE_XY),
       Constants.TYPE_USUAL,
       Constants.PLANE_XY, # xy viewport
       @model.flycam.getIntegerZoomStep(),

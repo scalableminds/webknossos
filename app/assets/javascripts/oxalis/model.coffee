@@ -180,8 +180,16 @@ class Model extends Backbone.Model
 
     @set("tracing", tracing)
     @set("settings", tracing.content.settings)
-    @set("mode", if isVolumeTracing then constants.MODE_VOLUME else constants.MODE_PLANE_TRACING)
     @set("allowedModes", @determineAllowedModes())
+
+
+    # Initialize 'flight', 'oblique' or 'orthogonal'/'volume' mode
+    if @get("allowedModes").length == 0
+      Toast.error("There was no valid allowed tracing mode specified.")
+    else
+      mode = @get("preferredMode") or @get("state").mode or @get("allowedModes")[0]
+      @setMode(mode)
+
 
     @initSettersGetter()
     @initialized = true
@@ -191,9 +199,10 @@ class Model extends Backbone.Model
     return
 
 
-  setMode : (@mode) ->
+  setMode : (mode) ->
 
-    @trigger("change:mode", @mode)
+    @set("mode", mode)
+    @trigger("change:mode", mode)
 
 
   # For now, since we have no UI for this

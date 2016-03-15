@@ -1,9 +1,10 @@
+$         = require("jquery")
+_         = require("lodash")
 app       = require("app")
 Backbone  = require("backbone")
 THREE     = require("three")
-$         = require("jquery")
-_         = require("lodash")
-constants = require("../constants")
+TWEEN     = require("tween.js")
+Constants = require("../constants")
 
 class ArbitraryView
 
@@ -155,7 +156,7 @@ class ArbitraryView
 
     @resizeThrottled = _.throttle(
       => @resize()
-      constants.RESIZE_THROTTLE_TIME
+      Constants.RESIZE_THROTTLE_TIME
     )
     @resizeThrottled()
 
@@ -180,7 +181,7 @@ class ArbitraryView
 
     if (@scaleFactor+delta > @MIN_SCALE) and (@scaleFactor+delta < @MAX_SCALE)
       @scaleFactor += Number(delta)
-      @width = @height = @scaleFactor * constants.VIEWPORT_WIDTH
+      @width = @height = @scaleFactor * Constants.VIEWPORT_WIDTH
       @container.width(@width)
       @container.height(@height)
 

@@ -103,7 +103,9 @@ class Controller
     # FPS stats
     stats = new Stats()
     $("body").append stats.domElement
-    @listenTo(@arbitraryController.view, "render", -> stats.update())
+    # TODO figure out who updates FPS
+    @listenTo(@arbitraryController.arbitraryView, "finishRender", -> stats.update())
+    @listenTo(@planeController.planeView, "render", -> stats.update())
 
     @initKeyboard()
     @initTimeLimit()
@@ -113,16 +115,18 @@ class Controller
 
     @listenTo(@model, "change:mode", @setMode)
 
+    if @urlManager.initialState.mode? and @urlManager.initialState.mode != @model.mode
+      @model.setMode(@urlManager.initialState.mode)
+
     if @model.allowedModes.length == 0
       Toast.error("There was no valid allowed tracing mode specified.")
     else
-      if @model.settings.preferredMode
-          @setMode(@preferredMode)
+      debugger
+      if @model.get("preferredMode")
+          @setMode(@model.get("preferredMode"))
         else
           @setMode(@model.allowedModes[0])
 
-    if @urlManager.initialState.mode? and @urlManager.initialState.mode != @model.mode
-      @model.setMode(@urlManager.initialState.mode)
 
 
     # Zoom step warning

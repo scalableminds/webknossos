@@ -133,7 +133,7 @@ class PlaneView
           @curWidth * @deviceScaleFactor,
           constants.PLANE_COLORS[i]
         )
-        @renderer.render @scene, @camera[i]
+        @renderer.render(@scene, @camera[i])
 
       @needsRerender = false
 

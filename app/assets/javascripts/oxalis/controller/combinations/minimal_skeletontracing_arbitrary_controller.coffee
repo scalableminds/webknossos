@@ -1,5 +1,6 @@
-ArbitraryController = require("../viewmodes/arbitrary_controller")
+app                 = require("app")
 Input               = require("libs/input")
+ArbitraryController = require("../viewmodes/arbitrary_controller")
 Constants           = require("../../Constants")
 
 class MinimalSkeletonTracingArbitraryController extends ArbitraryController
@@ -20,7 +21,7 @@ class MinimalSkeletonTracingArbitraryController extends ArbitraryController
 
     getVoxelOffset  = (timeFactor) =>
 
-      return @model.user.get("moveValue3d") * timeFactor / @model.scaleInfo.baseVoxel / Constants.FPS
+      return @model.user.get("moveValue3d") * timeFactor / app.scaleInfo.baseVoxel / Constants.FPS
 
     @input.keyboard = new Input.Keyboard(
 

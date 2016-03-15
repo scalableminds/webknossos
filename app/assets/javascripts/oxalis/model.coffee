@@ -110,7 +110,7 @@ class Model extends Backbone.Model
     if settings.preferredMode
       modeId = constants.MODE_NAME_TO_ID[settings.preferredMode]
       if modeId in allowedModes
-        @preferredMode = modeId
+        @set("preferredMode", modeId)
 
     allowedModes.sort()
     return allowedModes

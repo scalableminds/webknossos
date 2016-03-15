@@ -189,13 +189,13 @@ object UserDAO extends SecuredBaseDAO[User] {
       insert(user).map(_ => user)
   }
 
-  def update(_user: BSONObjectID, firstName: String, lastName: String, verified: Boolean, teams: List[TeamMembership], experiences: Map[String, Int])(implicit ctx: DBAccessContext): Fox[WriteResult] =
-    update(findByIdQ(_user), Json.obj("$set" -> Json.obj(
+  def update(_user: BSONObjectID, firstName: String, lastName: String, verified: Boolean, teams: List[TeamMembership], experiences: Map[String, Int])(implicit ctx: DBAccessContext): Fox[User] =
+    findAndModify(findByIdQ(_user), Json.obj("$set" -> Json.obj(
       "firstName" -> firstName,
       "lastName" -> lastName,
       "verified" -> verified,
       "teams" -> teams,
-      "experiences" -> experiences)))
+      "experiences" -> experiences)), returnNew = true)
 
   def addTeams(_user: BSONObjectID, teams: Seq[TeamMembership])(implicit ctx: DBAccessContext) =
     update(findByIdQ(_user), Json.obj("$pushAll" -> Json.obj("teams" -> teams)))

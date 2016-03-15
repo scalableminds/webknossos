@@ -79,6 +79,7 @@ class TaskOverviewView extends Marionette.LayoutView
   TEXT_PADDING : 10
   OPTIONS_MARGIN : 30
   FUTURE_TASK_EDGE_COLOR : "#3091E6"
+  MAX_SCALE : 3.0
 
 
   initialize : ->
@@ -445,13 +446,15 @@ class TaskOverviewView extends Marionette.LayoutView
 
       # task type edges
       edges = edges.concat(_.flatten(selectedUserInfos.map( (userInfo) =>
-        { user, taskTypes } = userInfo
+        user = userInfo.get("user")
+        taskTypes = userInfo.get("taskTypes")
         taskTypes.map( (taskType) => @edge(user.id, taskType._id.$oid, nodes)) if @doDrawUser(user)
       )))
 
       # future task type edges
       edges = edges.concat(_.flatten(selectedUserInfos.map( (userInfo) =>
-        { user, futureTaskType } = userInfo
+        user = userInfo.get("user")
+        futureTaskType = userInfo.get("futureTaskType")
         if(futureTaskType)
           @edge(user.id, futureTaskType._id.$oid, nodes, @FUTURE_TASK_EDGE_COLOR) if @doDrawUser(user)
       )))
@@ -459,7 +462,8 @@ class TaskOverviewView extends Marionette.LayoutView
     # project edges
     if @doDrawProjects()
       edges = edges.concat(_.flatten(selectedUserInfos.map( (userInfo) =>
-        { user, projects } = userInfo
+        user = userInfo.get("user")
+        projects = userInfo.get("projects")
         projects.map( (project) => @edge(user.id, project._id.$oid, nodes)) if @doDrawUser(user)
       )))
 
@@ -511,6 +515,8 @@ class TaskOverviewView extends Marionette.LayoutView
     midY = bounds.y + height / 2
     return if width == 0 || height == 0 # nothing to fit
     scale = 0.90 / Math.max(width / fullWidth, height / fullHeight)
+    # limit scale to a reasonable magnification
+    scale = Math.min(scale, @MAX_SCALE)
     translate = [fullWidth / 2 - scale * midX, fullHeight / 2 - scale * midY]
 
     @container

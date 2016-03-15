@@ -193,11 +193,11 @@ class UserController @Inject()(val messagesApi: MessagesApi)
           _ <- Fox.combined(teamsWithUpdate.map(t => ensureTeamAdministration(issuingUser, t.team)))
           _ <- ensureRoleExistence(assignedTeams.zip(teams))
           _ <- ensureProperTeamAdministration(user, assignedTeams.zip(teams))
+          trimmedExperiences = experiences.map { case (key, value) => key.trim -> value }.toMap
+          updatedTeams = assignedTeams.filter(t => teamsWithUpdate.exists(_.team == t.team)) ++ teamsWithoutUpdate
+          updatedUser <- UserService.update(user, firstName, lastName, verified, updatedTeams, trimmedExperiences)
         } yield {
-          val trimmedExperiences = experiences.map { case (key, value) => key.trim -> value }.toMap
-          val updatedTeams = assignedTeams.filter(t => teamsWithUpdate.exists(_.team == t.team)) ++ teamsWithoutUpdate
-          UserService.update(user, firstName, lastName, verified, updatedTeams, trimmedExperiences)
-          Ok
+          Ok(User.userPublicWrites(request.user).writes(updatedUser))
         }
     }
   }

@@ -36,21 +36,21 @@ class TaskCreateFromFormView extends Marionette.LayoutView
       </div>
     </div>
 
-      <div class=" form-group">
-        <label class="col-sm-2 control-label" for="editRotation">Start Rotation</label>
-        <div class="col-sm-9">
-          <input
-            type="text"
-            id="editRotation"
-            name="editRotation"
-            placeholder="Rotation x, Rotation y, Rotation z"
-            title="Rotation x, Rotation y, Rotation z"
-            pattern="(\\s*\\d+\\s*,){2}(\\s*\\d+\\s*)"
-            value="<%- editRotation %>"
-            required
-            class="form-control">
-        </div>
+    <div class=" form-group">
+      <label class="col-sm-2 control-label" for="editRotation">Start Rotation</label>
+      <div class="col-sm-9">
+        <input
+          type="text"
+          id="editRotation"
+          name="editRotation"
+          placeholder="Rotation x, Rotation y, Rotation z"
+          title="Rotation x, Rotation y, Rotation z"
+          pattern="(\\s*\\d+\\s*,){2}(\\s*\\d+\\s*)"
+          value="<%- editRotation %>"
+          required
+          class="form-control">
       </div>
+    </div>
   """)
 
   regions :

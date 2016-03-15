@@ -199,4 +199,3 @@ object ApplicationBuild extends Build {
     .enablePlugins(play.PlayScala)
     .settings((oxalisSettings ++ AssetCompilation.settings):_*)
 }
-

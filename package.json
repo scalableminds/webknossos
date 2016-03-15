@@ -42,12 +42,9 @@
     "webdriver": "./node_modules/.bin/webdriver-manager start",
     "webdriver-update": "./node_modules/.bin/webdriver-manager update"
   },
-  "peerDependencies": {
-    "backbone": "^1.2.3"
-  },
   "dependencies": {
     "airbrake-js": "^0.5.8",
-    "backbone": "^1.2.3",
+    "backbone": "1.2.3",
     "backbone-deep-model": "^0.10.4",
     "backbone-subviews": "^0.7.4",
     "backbone.marionette": "^2.4.4",

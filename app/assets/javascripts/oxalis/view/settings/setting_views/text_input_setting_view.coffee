@@ -37,7 +37,12 @@ class TextInputSettingView extends AbstractSettingView
 
   handleChange : (evt) ->
 
-    @model.set(@options.name, evt.target.value)
+    value = evt.target.value
+
+    if @options.validate
+      return if not @options.validate.call(@, value)
+
+    @model.set(@options.name, value)
 
 
   update : (model, value) ->

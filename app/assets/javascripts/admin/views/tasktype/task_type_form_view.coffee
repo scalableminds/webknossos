@@ -140,7 +140,7 @@ class TaskTypeFormView extends Marionette.LayoutView
   """)
 
   templateHelpers : ->
-    getSubmitLabel : => if @isEditMode then "Save" else "Create"
+    getSubmitLabel : => if @isEditMode then "Update" else "Create"
 
   regions :
     "team" : ".team"

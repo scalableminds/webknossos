@@ -103,9 +103,9 @@ class DatasetActionsView extends Marionette.ItemView
     tracingType = @model.skeletonTracing || @model.volumeTracing
 
     tracingType.stateLogger.save()
-        .then(=> Request.triggerRequest("/annotations/#{@model.tracingType}/#{@model.tracingId}/finish"))
+        .then(=> Request.$(Request.triggerRequest("/annotations/#{@model.tracingType}/#{@model.tracingId}/finish")))
         .then(=>
-          Request.receiveJSON("/user/tasks/request")).then(
+          Request.$(Request.receiveJSON("/user/tasks/request")).then(
             (annotation) =>
               differentTaskType = annotation.task.type.id != @model.tracing.task?.type.id
               differentTaskTypeParam = if differentTaskType then "?differentTaskType" else ""
@@ -114,5 +114,6 @@ class DatasetActionsView extends Marionette.ItemView
               # Wait a while so users have a chance to read the error message
               setTimeout((-> app.router.loadURL("/dashboard")), 2000)
           )
+        )
 
 module.exports = DatasetActionsView

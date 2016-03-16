@@ -2,6 +2,7 @@ $           = require("jquery")
 _           = require("lodash")
 Clipboard   = require("clipboard-js")
 Marionette  = require("backbone.marionette")
+Toast       = require("libs/toast")
 
 
 class AnonymousTaskListModal extends Marionette.LayoutView

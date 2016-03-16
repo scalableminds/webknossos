@@ -67,9 +67,10 @@ class TaskListView extends Marionette.CompositeView
 
   showAnonymousLinks : ->
 
-    anonymousTaskId = window.location.search.match(/\?showAnonymousLinks=(\S+)/)[1]
-    return unless anonymousTaskId
+    match = window.location.search.match(/\?showAnonymousLinks=(\S+)/)
+    return unless match
 
+    anonymousTaskId = match[1]
     task = @collection.findWhere(id : anonymousTaskId)
     if task and task.get("directLinks")
       @showModal(task)

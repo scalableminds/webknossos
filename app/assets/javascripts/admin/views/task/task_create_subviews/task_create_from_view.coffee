@@ -226,7 +226,12 @@ class TaskCreateFromView extends Marionette.LayoutView
   showSaveSuccess : (task) ->
 
     Toast.success("The task was successfully #{@getActionName().toLowerCase()}d")
-    app.router.navigate("/tasks##{task.id}", {trigger : true})
+
+    url = "/tasks"
+    if task.get("directLinks")
+      url += "?showAnonymousLinks=#{task.id}"
+
+    app.router.navigate("#{url}##{task.id}", {trigger : true})
 
 
   showSaveError : ->

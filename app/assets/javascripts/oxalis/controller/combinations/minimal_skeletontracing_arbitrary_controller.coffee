@@ -1,7 +1,7 @@
 app                 = require("app")
 Input               = require("libs/input")
 ArbitraryController = require("../viewmodes/arbitrary_controller")
-Constants           = require("../../Constants")
+Constants           = require("../../constants")
 
 class MinimalSkeletonTracingArbitraryController extends ArbitraryController
 

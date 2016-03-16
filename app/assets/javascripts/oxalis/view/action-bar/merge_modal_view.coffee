@@ -27,7 +27,9 @@ class MergeModalView extends Marionette.LayoutView
           <div class="form-group">
             <label for="task">Task</label>
             <div class="row">
-              <div class="col-md-10 task"></div>
+              <div class="col-md-10 task">
+                <input type="text" class="form-control" placeholder="Task id"></input>
+              </div>
               <div class="col-md-2">
                 <button class="btn btn-primary" id="task-merge">Merge</button>
               </div>
@@ -87,7 +89,9 @@ class MergeModalView extends Marionette.LayoutView
           <div class="form-group">
             <label for="explorative">Explorative annotations</label>
             <div class="row">
-              <div class="col-md-10 explorative"></div>
+              <div class="col-md-10 explorative">
+                <input type="text" class="form-control" placeholder="Explorative annotation id"></input>
+              </div>
               <div class="col-md-2">
                 <button class="btn btn-primary" id="explorative-merge">Merge</button>
               </div>
@@ -109,10 +113,8 @@ class MergeModalView extends Marionette.LayoutView
   """)
 
   regions :
-    "task"        : ".task"
     "tasktype"    : ".task-type"
     "project"     : ".project"
-    "explorative" : ".explorative"
 
   events :
     "click #task-merge"               : "mergeTask"
@@ -145,13 +147,7 @@ class MergeModalView extends Marionette.LayoutView
     @$el.modal("show")
 
     Request.receiveJSON("/api/user").then( (user) =>
-      @taskSelectionView = new SelectionView(
-        collection : new  TaskCollection(null, {
-          dataSetName : @model.get("tracing").dataSetName
-        })
-        childViewOptions :
-          modelValue: -> return "#{@model.get("id")}"
-      )
+
       @taskTypeSelectionView = new SelectionView(
         collection : new  TaskTypeCollection()
         childViewOptions :
@@ -162,27 +158,19 @@ class MergeModalView extends Marionette.LayoutView
         childViewOptions :
           modelValue: -> return "#{@model.get("name")}"
       )
-      @explorativSelectionView = new SelectionView(
-        collection : new UserAnnotationCollection(null, {
-          userId : user.id,
-          dataSetName : @model.get("tracing").dataSetName
-        })
-        childViewOptions :
-          modelValue: -> return "#{@model.get("id")}"
-      )
 
-      @task       .show(@taskSelectionView)
       @tasktype   .show(@taskTypeSelectionView)
       @project    .show(@projectSelectionView)
-      @explorative.show(@explorativSelectionView)
     )
 
 
   mergeTask : ->
 
-    taskId = @ui.task.find("select :selected").val()
-    url = "/annotations/CompoundTask/#{taskId}/merge/#{@model.get("tracingType")}/#{@model.get("tracingId")}"
-    @merge(url)
+    taskId = @ui.task.find("input").val()
+    @validateId(taskId).then( =>
+      url = "/annotations/CompoundTask/#{taskId}/merge/#{@model.get("tracingType")}/#{@model.get("tracingId")}"
+      @merge(url)
+    )
 
 
   mergeTaskType : ->
@@ -210,9 +198,11 @@ class MergeModalView extends Marionette.LayoutView
 
   mergeExplorative : ->
 
-    explorativId = @ui.explorative.find("select :selected").val()
-    url = "/annotations/Explorational/#{explorativId}/merge/#{@model.get("tracingType")}/#{@model.get("tracingId")}"
-    @merge(url)
+    explorativeId = @ui.explorative.find("input").val()
+    @validateId(explorativeId).then( =>
+      url = "/annotations/Explorational/#{explorativeId}/merge/#{@model.get("tracingType")}/#{@model.get("tracingId")}"
+      @merge(url)
+    )
 
 
   merge : (url) ->
@@ -259,5 +249,11 @@ class MergeModalView extends Marionette.LayoutView
       )
       => @toggleIcon(true)
     )
+
+
+  validateId : (id) ->
+
+    Request.receiveJSON("/api/find?q=#{id}&type=id")
+
 
 module.exports = MergeModalView

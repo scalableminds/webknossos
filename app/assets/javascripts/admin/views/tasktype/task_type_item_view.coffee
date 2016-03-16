@@ -12,7 +12,11 @@ class TaskTypeItemView extends Marionette.CompositeView
         <i class="caret-right"></i>
         <i class="caret-down"></i>
       </td>
-      <td><%- id %></td>
+      <td>
+        <div class="monospace-id">
+          <%- id %>
+        </div>
+      </td>
       <td><%- team %></td>
       <td><%- summary %></td>
       <td><%- formattedShortText %></td>

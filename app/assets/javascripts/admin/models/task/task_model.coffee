@@ -16,6 +16,7 @@ class TaskModel extends Backbone.Model
     type : null
     dataSet : ""
     editPosition : [0, 0, 0]
+    editRotation : [0, 0, 0]
     boundingBox : null
     neededExperience :
       value : 0
@@ -27,6 +28,7 @@ class TaskModel extends Backbone.Model
       inProgress : 0
       completed : 0
     tracingTime : null
+    isForAnonymous : false
 
   destroy : ->
 

@@ -1,6 +1,6 @@
 package models.annotation
 
-import com.scalableminds.util.geometry.{Point3D, BoundingBox}
+import com.scalableminds.util.geometry.{Vector3D, Point3D, BoundingBox}
 import play.api.Logger
 import models.tracing.skeleton.{SkeletonTracingService, SkeletonTracing}
 import models.tracing.volume.{VolumeTracingService, VolumeTracing}
@@ -23,7 +23,7 @@ trait AnnotationContentService {
 
   def updateSettings(settings: AnnotationSettings, tracingId: String)(implicit ctx: DBAccessContext): Fox[Boolean]
 
-  def updateEditPosition(editPosition: Point3D, tracingId: String)(implicit ctx: DBAccessContext): Fox[Boolean]
+  def updateEditPosRot(editPosition: Point3D, editRotation: Vector3D, tracingId: String)(implicit ctx: DBAccessContext): Fox[Boolean]
 
   def findOneById(id: String)(implicit ctx: DBAccessContext): Fox[AType]
 

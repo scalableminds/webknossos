@@ -44,7 +44,7 @@ class SkeletonTracing
     ############ Load Tree from @data ##############
 
     @stateLogger = new SkeletonTracingStateLogger(
-      @flycam, tracing.version, tracing.id, tracing.typ,
+      @flycam, @flycam3d, tracing.version, tracing.id, tracing.typ,
       tracing.restrictions.allowUpdate, this)
 
     tracingParser = new TracingParser(@, @data)
@@ -73,7 +73,7 @@ class SkeletonTracing
 
     tracingType = tracing.typ
     if (tracingType == "Task") and @getNodeListOfAllTrees().length == 0
-      @addNode(tracing.content.editPosition, @TYPE_USUAL, 0, 0, 4, false)
+      @addNode(tracing.content.editPosition, tracing.content.editRotation, @TYPE_USUAL, 0, 0, 4, false)
 
     @branchPointsAllowed = tracing.content.settings.branchPointsAllowed
     if not @branchPointsAllowed
@@ -93,7 +93,6 @@ class SkeletonTracing
 
       if @firstEdgeDirection
         @flycam.setSpaceDirection(@firstEdgeDirection)
-        @flycam3d.setDirection(@firstEdgeDirection)
 
 
     app.router.on("beforeunload", =>
@@ -115,7 +114,7 @@ class SkeletonTracing
       @createNewTree()
       for i in [0...numberOfNodesPerTree]
         pos = [Math.random() * size + offset, Math.random() * size + offset, Math.random() * size + offset]
-        point = new TracePoint(@TYPE_USUAL, @idCount++, pos, Math.random() * 200, @activeTree.treeId, null)
+        point = new TracePoint(@TYPE_USUAL, @idCount++, pos, Math.random() * 200, @activeTree.treeId, null, [0, 0, 0])
         @activeTree.nodes.push(point)
         if @activeNode
           @activeNode.appendNext(point)
@@ -202,7 +201,7 @@ class SkeletonTracing
     return id in (node.id for node in @branchStack)
 
 
-  addNode : (position, type, viewport, resolution, bitDepth, interpolation) ->
+  addNode : (position, rotation, type, viewport, resolution, bitDepth, interpolation) ->
 
     return if @restrictionHandler.handleUpdate()
 
@@ -218,7 +217,7 @@ class SkeletonTracing
         bitDepth : bitDepth
         interpolation : interpolation
 
-      point = new TracePoint(type, @idCount++, position, radius, @activeTree.treeId, metaInfo)
+      point = new TracePoint(type, @idCount++, position, radius, @activeTree.treeId, metaInfo, rotation)
       @activeTree.nodes.push(point)
 
       if @activeNode
@@ -282,6 +281,11 @@ class SkeletonTracing
   getActiveNodeRadius : ->
 
     if @activeNode then @activeNode.radius else 10 * app.scaleInfo.baseVoxel
+
+
+  getActiveNodeRotation : ->
+
+    if @activeNode then @activeNode.rotation else null
 
 
   getActiveTreeId : ->

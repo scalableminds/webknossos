@@ -163,7 +163,7 @@ class Router extends BaseRouter
     require(["admin/views/tasktype/task_type_form_view", "admin/models/tasktype/task_type_model"], (TaskTypeFormView, TaskTypeModel) =>
 
       model = new TaskTypeModel({id : taskTypeID})
-      view = new TaskTypeFormView(model : model, isEditForm : true)
+      view = new TaskTypeFormView(model : model, isEditMode : true)
       self.changeView(view)
       self.hideLoadingSpinner()
     )

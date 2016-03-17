@@ -35,7 +35,7 @@ class TaskCreateFromView extends Marionette.LayoutView
         <% } %>
         <form id="createForm" action="" method="POST" class="form-horizontal" onSubmit="return false;">
 
-        <div class=" form-group">
+        <div class="form-group">
           <label class="col-sm-2 control-label" for="taskType">Task type</label>
           <div class="col-sm-9">
             <div class="taskType"></div>
@@ -45,51 +45,59 @@ class TaskCreateFromView extends Marionette.LayoutView
           </div>
         </div>
 
-        <div class=" form-group">
+        <div class="form-group">
           <label class="col-sm-2 control-label" for="experience_domain">Experience Domain</label>
           <div class="col-sm-9">
             <input type="text" class="form-control" name="neededExperience[domain]" value="<%- neededExperience.domain %>" placeholder="Enter a domain (min. 3 characters)" pattern=".{3,}" required>
-            <span class="help-block errors"></span>
           </div>
         </div>
 
-        <div class=" form-group">
+        <div class="form-group">
           <label class="col-sm-2 control-label" for="experience_value">Min Experience</label>
           <div class="col-sm-9">
             <input type="number" id="value" name="neededExperience[value]" value="<%- neededExperience.value %>" class="form-control" required>
-            <span class="help-block errors"></span>
           </div>
         </div>
 
-        <div class=" form-group">
+        <div class="form-group">
           <label class="col-sm-2 control-label" for="priority">Priority</label>
           <div class="col-sm-9">
             <input type="number" id="priority" name="priority" value="<%- priority %>" class="form-control" required>
-            <span class="help-block errors"></span>
           </div>
         </div>
 
-        <div class=" form-group">
-          <label class="col-sm-2 control-label" for="status_open">Task instances</label>
+        <div class="form-group">
+          <label class="col-sm-2 control-label" for="status_open"><%- getInstanceLabel() %></label>
           <div class="col-sm-9">
             <input type="number" id="open" name="status[open]" value="<%- status.open %>" min="1" class="form-control" required>
-            <span class="help-block errors"></span>
           </div>
         </div>
 
-        <div class=" form-group">
+        <div class="form-group">
           <label class="col-sm-2 control-label" for="team">Team</label>
           <div class="col-sm-9 team">
           </div>
         </div>
 
-        <div class=" form-group">
+        <div class="form-group">
           <label class="col-sm-2 control-label" for="projectName">Project</label>
           <div class="col-sm-9 project">
           </div>
         </div>
 
-        <div class=" form-group">
+        <div class="form-group">
+            <label class="col-sm-2 control-label" for="isForAnonymous">Create anonymous users</label>
+            <div class="col-sm-9">
+            <input
+              type="checkbox"
+              name="isForAnonymous"
+              <% if (isForAnonymous) { %> checked <% }%>
+              <% if (isEditingMode) { %> disabled <% }%>
+            >
+            </div>
+        </div>
+
+        <div class="form-group">
           <label class="col-sm-2 control-label" for="boundingBox">Bounding Box</label>
           <div class="col-sm-9">
             <span class="help-block hints"></span>
@@ -102,8 +110,7 @@ class TaskCreateFromView extends Marionette.LayoutView
               title="topLeft.x, topLeft.y, topLeft.z, width, height, depth"
               value="<%- boundingBoxString() %>"
               class="form-control"
-              >
-            <span class="help-block errors"></span>
+            >
           </div>
         </div>
 
@@ -124,6 +131,8 @@ class TaskCreateFromView extends Marionette.LayoutView
   templateHelpers: ->
 
     type : @type
+    isEditingMode : @isEditingMode
+    getInstanceLabel : => if @isEditingMode then "Remaining Instances" else "Task Instances"
     boundingBoxString : ->
       if not @boundingBox then return ""
       b = @boundingBox
@@ -217,7 +226,12 @@ class TaskCreateFromView extends Marionette.LayoutView
   showSaveSuccess : (task) ->
 
     Toast.success("The task was successfully #{@getActionName().toLowerCase()}d")
-    app.router.navigate("/tasks##{task.id}", {trigger : true})
+
+    url = "/tasks"
+    if task.get("directLinks")
+      url += "?showAnonymousLinks=#{task.id}"
+
+    app.router.navigate("#{url}##{task.id}", {trigger : true})
 
 
   showSaveError : ->

@@ -35,7 +35,9 @@ class ViewModesView extends Marionette.ItemView
 
   afterAttach : ->
     for mode, modeValue of @modeMapping
-      $("##{mode}").attr("disabled", modeValue not in @options.model.allowedModes)
+      $("##{mode}").attr("disabled", modeValue not in @model.get("allowedModes"))
+
+    @updateForMode(@model.get("mode"))
     return
 
 

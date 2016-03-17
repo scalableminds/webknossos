@@ -1,4 +1,4 @@
-@(form: Form[(String, String, Option[String])])(implicit session: oxalis.view.SessionData, messages: Messages)
+@(form: Form[(String, String)])(implicit session: oxalis.view.SessionData, messages: Messages)
 
 @main(){
 
@@ -20,9 +20,6 @@
         @helper.inputText(form("email"), 'type -> "email", 'class -> "form-control")
         @helper.inputPassword(form("password"), 'class -> "form-control")
 
-        <div class="hidden">
-          @helper.inputText(form("redirectTo"), 'type -> "text")
-        </div>
         <div class="form-group">
           <div class="col-sm-offset-3 col-sm-5">
             <button type="submit" class="form-control btn btn-primary">Login</button>

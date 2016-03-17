@@ -7,7 +7,7 @@ class ProjectTaskView extends Marionette.ItemView
   template : _.template("""
     <td>
       <a href="/tasks#<%- id %>">
-        <%- id %>
+        <%- id.slice(-6) %>
       </a>
     </td>
     <td>

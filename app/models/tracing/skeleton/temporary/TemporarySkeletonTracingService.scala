@@ -3,7 +3,7 @@
  */
 package models.tracing.skeleton.temporary
 
-import com.scalableminds.util.geometry.{Point3D, BoundingBox}
+import com.scalableminds.util.geometry.{Vector3D, Point3D, BoundingBox}
 import com.scalableminds.util.reactivemongo.DBAccessContext
 import com.scalableminds.util.tools.Fox
 import models.annotation.{AnnotationSettings, AnnotationContentService}
@@ -33,6 +33,7 @@ object TemporarySkeletonTracingService extends AnnotationContentService {
         System.currentTimeMillis(),
         nml.activeNodeId,
         _,
+        Vector3D(0,0,0),
         SkeletonTracing.defaultZoomLevel,
         box,
         nml.comments,
@@ -52,6 +53,7 @@ object TemporarySkeletonTracingService extends AnnotationContentService {
         System.currentTimeMillis(),
         tracing.activeNodeId,
         tracing.editPosition,
+        tracing.editRotation,
         tracing.zoomLevel,
         tracing.boundingBox,
         tracing.comments,
@@ -91,5 +93,5 @@ object TemporarySkeletonTracingService extends AnnotationContentService {
 
   def updateSettings(dataSetName: String, boundingBox: Option[BoundingBox], settings: AnnotationSettings, tracingId: String)(implicit ctx: DBAccessContext): Fox[Boolean] = ???
 
-  def updateEditPosition(editPosition: Point3D, tracingId: String)(implicit ctx: DBAccessContext): Fox[Boolean] = ???
+  def updateEditPosRot(editPosition: Point3D, rotation: Vector3D, tracingId: String)(implicit ctx: DBAccessContext): Fox[Boolean] = ???
 }

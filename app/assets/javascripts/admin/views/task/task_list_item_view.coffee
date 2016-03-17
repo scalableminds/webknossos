@@ -16,11 +16,7 @@ class TaskListItemView extends Marionette.CompositeView
         <i class="caret-right"></i>
         <i class="caret-down"></i>
       </td>
-      <td>
-        <div class="monospace-id">
-          <%- id %>
-        </div>
-      </td>
+      <td><%- formattedHash %></td>
       <td><%- team %></td>
       <td>
         <a href="/projects#<%- projectName %>">

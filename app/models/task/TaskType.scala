@@ -54,7 +54,17 @@ object TaskType {
 
   def empty = TaskType("", "", TraceLimit(5, 10, 15), "")
 
-  def fromForm(summary: String, description: String, team: String, allowedModes: Seq[String], branchPointsAllowed: Boolean, somaClickingAllowed: Boolean, expectedTime: TraceLimit) =
+  def fromForm(
+    summary: String,
+    description: String,
+    team: String,
+    allowedModes: Seq[String],
+    preferredMode: Option[String],
+    branchPointsAllowed: Boolean,
+    advancedOptionsAllowed: Boolean,
+    somaClickingAllowed: Boolean,
+    expectedTime: TraceLimit) = {
+
     TaskType(
       summary,
       description,
@@ -62,8 +72,11 @@ object TaskType {
       team,
       AnnotationSettings(
         allowedModes.toList,
+        preferredMode,
         branchPointsAllowed,
-        somaClickingAllowed))
+        somaClickingAllowed,
+        advancedOptionsAllowed))
+  }
 
   def toForm(tt: TaskType) =
     Some((
@@ -71,7 +84,9 @@ object TaskType {
       tt.description,
       tt.team,
       tt.settings.allowedModes,
+      tt.settings.preferredMode,
       tt.settings.branchPointsAllowed,
+      tt.settings.advancedOptionsAllowed,
       tt.settings.somaClickingAllowed,
       tt.expectedTime))
 

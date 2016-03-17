@@ -2,8 +2,10 @@
 
 @import play.api.Play.current
 
-<header class="navbar navbar-static-top navbar-inverse">
-    <div class="container">
-        <span class="navbar-brand">@current.configuration.getString("application.name")</span>
+<header class="navbar navbar-fixed-top navbar-inverse">
+  <div class="container-fluid">
+    <div class="navbar-header">
+      <span class="navbar-brand">@current.configuration.getString("application.name")</span>
     </div>
+  </div>
 </header>

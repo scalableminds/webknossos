@@ -18,7 +18,7 @@ class VolumeTracingController
   MERGE_MODE_CELL1  : 1
   MERGE_MODE_CELL2  : 2
 
-  constructor : ( @model, @sceneController, @volumeTracingView ) ->
+  constructor : (@model, @volumeTracingView, @sceneController) ->
 
     @inDeleteMode = false
     @controlMode = Constants.VOLUME_MODE_MOVE

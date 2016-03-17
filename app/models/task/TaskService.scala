@@ -16,17 +16,16 @@ import play.api.libs.json.Json
 import play.modules.reactivemongo.json.BSONFormats._
 import reactivemongo.core.commands.LastError
 
-/**
- * Company: scalableminds
- * User: tmbo
- * Date: 19.11.13
- * Time: 14:59
- */
 object TaskService extends TaskAssignmentSimulation with TaskAssignment with FoxImplicits {
 
-  def findAllAssignable(implicit ctx: DBAccessContext) = TaskDAO.findAllAssignable
+  def findOneById(id: String)(implicit ctx: DBAccessContext) =
+    TaskDAO.findOneById(id)
 
-  def findAll(implicit ctx: DBAccessContext) = TaskDAO.findAll
+  def findNextAssignment(implicit ctx: DBAccessContext) =
+    OpenAssignmentService.findNextOpenAssignments
+
+  def findAll(implicit ctx: DBAccessContext) =
+    TaskDAO.findAll
 
   def findAllAdministratable(user: User)(implicit ctx: DBAccessContext) =
     TaskDAO.findAllAdministratable(user)
@@ -34,7 +33,10 @@ object TaskService extends TaskAssignmentSimulation with TaskAssignment with Fox
   def remove(_task: BSONObjectID)(implicit ctx: DBAccessContext) = {
     TaskDAO.update(Json.obj("_id" -> _task), Json.obj("$set" -> Json.obj("isActive" -> false))).flatMap{
       case result if result.n > 0 =>
-        AnnotationDAO.removeAllWithTaskId(_task)
+        for {
+          _ <- AnnotationDAO.removeAllWithTaskId(_task)
+          _ <- OpenAssignmentService.removeByTask(_task)
+        } yield true
       case _ =>
         Logger.warn("Tried to remove task without permission.")
         Future.successful(LastError(false ,None, None, None, None, 0, false))
@@ -46,27 +48,44 @@ object TaskService extends TaskAssignmentSimulation with TaskAssignment with Fox
   }
 
   def deleteAllWithTaskType(taskType: TaskType)(implicit ctx: DBAccessContext) =
-    TaskDAO.deleteAllWithTaskType(taskType)
+    TaskDAO.findAllByTaskType(taskType._id).map{ tasks =>
+      tasks.foreach{ t =>
+        remove(t._id)
+      }
+    }
 
-  def assignOnce(t: Task)(implicit ctx: DBAccessContext) =
-    TaskDAO.assignOnce(t._id)
-
-  def unassignOnce(t: Task)(implicit ctx: DBAccessContext) =
-    TaskDAO.unassignOnce(t._id)
-
-  def logTime(time: Long, _task: BSONObjectID)(implicit ctx: DBAccessContext) = {
+  def logTime(time: Long, _task: BSONObjectID)(implicit ctx: DBAccessContext) =
     TaskDAO.logTime(time, _task)
+
+  def removeAllWithProject(project: Project)(implicit ctx: DBAccessContext) = {
+    for{
+      _ <- TaskDAO.removeAllWithProject(project)
+      _ <- OpenAssignmentService.removeByProject(project)
+    } yield true
+  }
+
+  def insert(task: Task, insertAssignments: Boolean)(implicit ctx: DBAccessContext) = {
+    def insertAssignmentsIfRequested() =
+      if(insertAssignments) {
+        OpenAssignmentService.insertInstancesFor(task, task.instances)
+      } else
+        Future.successful(true)
+
+    for {
+      _ <- TaskDAO.insert(task)
+      _ <- insertAssignmentsIfRequested()
+    } yield task
   }
 
   def getProjectsFor(tasks: List[Task])(implicit ctx: DBAccessContext): Future[List[Project]] =
     Fox.sequenceOfFulls(tasks.map(_.project)).map(_.distinct)
 
   def getAllAvailableTaskCountsAndProjects()(implicit ctx: DBAccessContext): Fox[Map[User, (Int, List[Project])]] = {
-    UserDAO.findAll
+    UserDAO.findAllNonAnonymous
     .flatMap { users =>
       Future.sequence( users.map { user =>
         async {
-          val tasks = await(TaskService.findAssignableFor(user).futureBox) openOr List()
+          val tasks = await(TaskService.allNextTasksForUser(user).futureBox) openOr List()
           val taskCount = tasks.size
           val projects = await(TaskService.getProjectsFor(tasks))
           user -> (taskCount, projects)

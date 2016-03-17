@@ -31,9 +31,9 @@ with I18nSupport
   def allowedToAdministrate(admin: User, dataSet: DataSet) =
     dataSet.isEditableBy(Some(admin)) ?~> Messages("notAllowed")
 
-  case class Filter[A, T](name: String, predicate: (A, T) => Boolean)(implicit converter: Converter[String, A]) {
+  case class Filter[A, T](name: String, predicate: (A, T) => Boolean, default: Option[String] = None)(implicit converter: Converter[String, A]) {
     def applyOn(list: List[T])(implicit request: Request[_]): List[T] = {
-      request.getQueryString(name).flatMap(converter.convert) match {
+      request.getQueryString(name).orElse(default).flatMap(converter.convert) match {
         case Some(attr) => list.filter(predicate(attr, _))
         case _ => list
       }
@@ -54,7 +54,7 @@ with I18nSupport
 
   def jsonErrorWrites(errors: JsError): JsObject =
     Json.obj(
-      "messages" -> errors.errors.map(error =>
+      "errors" -> errors.errors.map(error =>
         error._2.foldLeft(Json.obj("field" -> error._1.toJsonString)) {
           case (js, e) => js ++ Json.obj("error" -> Messages(e.message))
         }

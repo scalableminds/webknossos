@@ -6,6 +6,8 @@
 GET           /                                                                 controllers.Application.index
 GET           /dashboard                                                        controllers.UserController.empty
 GET           /impressum                                                        controllers.Application.impressum
+GET           /info                                                             controllers.Application.info
+GET           /thankyou                                                         controllers.Application.thankyou
 
 # Github Issues integration
 GET           /issues                                                           controllers.GithubIssues.index
@@ -16,7 +18,7 @@ GET           /help/faq                                                         
 GET           /help/keyboardshortcuts                                           controllers.HelpController.keyboardShortcuts
 
 # Authentication
-GET           /login                                                            controllers.Authentication.login(redirectTo: Option[String])
+GET           /login                                                            controllers.Authentication.login
 POST          /login                                                            controllers.Authentication.authenticate
 GET           /switch                                                           controllers.Authentication.switchTo(to: String)
 GET           /logout                                                           controllers.Authentication.logout
@@ -159,8 +161,6 @@ GET           /api/taskTypes/:id/tasks                                          
 GET           /api/taskTypes/:id/download                                       controllers.admin.NMLIO.taskTypeDownload(id: String)
 GET           /api/taskTypes/:id                                                controllers.admin.TaskTypeAdministration.get(id: String)
 POST          /api/taskTypes/:id                                                controllers.admin.TaskTypeAdministration.editTaskTypeForm(id: String)
-
-GET           /api/find                                                         controllers.SearchController.find(q: String, type: String)
 
 # Projects
 GET           /projects                                                         controllers.ProjectController.empty

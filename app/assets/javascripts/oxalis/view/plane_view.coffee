@@ -10,7 +10,7 @@ THREE      = require("three")
 
 class PlaneView
 
-  constructor : (@model, @view, @stats) ->
+  constructor : (@model, @view) ->
 
     _.extend(this, Backbone.Events)
 
@@ -108,9 +108,6 @@ class PlaneView
 
       @trigger("render")
 
-      # update postion and FPS displays
-      @stats.update()
-
       viewport = [
         [0, @curWidth + 20],
         [@curWidth + 20, @curWidth + 20],
@@ -136,7 +133,7 @@ class PlaneView
           @curWidth * @deviceScaleFactor,
           constants.PLANE_COLORS[i]
         )
-        @renderer.render @scene, @camera[i]
+        @renderer.render(@scene, @camera[i])
 
       @needsRerender = false
 
@@ -168,7 +165,7 @@ class PlaneView
     @resizeThrottled()
 
 
-  resize : ->
+  resize : =>
 
     # Call this after the canvas was resized to fix the viewport
     canvas = $("#render-canvas")
@@ -246,8 +243,6 @@ class PlaneView
 
     $(".inputcatcher").hide()
 
-    $(window).off "resize", => @.resize()
-
     @running = false
 
 
@@ -257,8 +252,6 @@ class PlaneView
 
     @scaleTrianglesPlane(@model.user.get("scale"))
     $(".inputcatcher").show()
-
-    $(window).on "resize", => @.resize()
 
     @animate()
 

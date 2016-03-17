@@ -22,7 +22,9 @@ class TaskTypeAdministration @Inject() (val messagesApi: MessagesApi) extends Ad
       "description" -> text,
       "team" -> nonEmptyText,
       "allowedModes" -> seq(text),
+      "preferredMode" -> optional(text),
       "branchPointsAllowed" -> boolean,
+      "advancedOptionsAllowed" -> boolean,
       "somaClickingAllowed" -> boolean,
       "expectedTime" -> mapping(
         "minTime" -> number(min = 1),
@@ -49,10 +51,9 @@ class TaskTypeAdministration @Inject() (val messagesApi: MessagesApi) extends Ad
         for{
           _ <- ensureTeamAdministration(request.user, t.team)
           _ <- TaskTypeDAO.insert(t)
-          ttJson <- TaskType.transformToJsonWithStatus(t)
         } yield {
           JsonOk(
-            Json.obj("newTaskType" -> ttJson),
+            Json.obj("newTaskType" -> TaskType.transformToJson(t)),
             Messages("taskType.createSuccess")
           )
         }
@@ -73,9 +74,8 @@ class TaskTypeAdministration @Inject() (val messagesApi: MessagesApi) extends Ad
   def list = Authenticated.async{ implicit request =>
     for {
       taskTypes <- TaskTypeDAO.findAll
-      ttJsons <- Future.traverse(taskTypes)(TaskType.transformToJsonWithStatus)
     } yield {
-      Ok(Json.toJson(ttJsons))
+      Ok(Json.toJson(taskTypes.map(TaskType.transformToJson)))
     }
   }
 
@@ -92,9 +92,9 @@ class TaskTypeAdministration @Inject() (val messagesApi: MessagesApi) extends Ad
         success = { t =>
           val updatedTaskType = t.copy(_id = taskType._id)
           for {
+            _ <- ensureTeamAdministration(request.user, updatedTaskType.team).toFox
             _ <- TaskTypeDAO.update(taskType._id, updatedTaskType)
             tasks <- TaskDAO.findAllByTaskType(taskType._id)
-            _ <- ensureTeamAdministration(request.user, updatedTaskType.team)
           } yield {
             tasks.map(task => AnnotationDAO.updateAllOfTask(task, updatedTaskType.settings))
             JsonOk(Messages("taskType.editSuccess"))

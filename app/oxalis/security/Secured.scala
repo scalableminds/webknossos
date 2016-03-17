@@ -1,5 +1,6 @@
 package oxalis.security
 
+import scala.concurrent.Future
 import com.scalableminds.util.mvc.JsonResult
 import models.user.{UserService, User}
 import play.api.mvc._
@@ -12,23 +13,31 @@ import play.api.Play.current
 import controllers.routes
 import play.api.libs.concurrent.Akka
 import akka.actor.Props
+import com.scalableminds.util.reactivemongo.GlobalAccessContext
+import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import controllers.routes
+import models.user.{User, UserService}
+import net.liftweb.common.{Empty, Full}
 import oxalis.user.{ActivityMonitor, UserActivity}
 import oxalis.view.AuthedSessionData
-import scala.concurrent.Future
-import com.scalableminds.util.tools.{FoxImplicits, Fox}
-import net.liftweb.common.{Full, Empty}
+import play.api.Play
+import play.api.Play.current
+import play.api.i18n.Messages
+import play.api.libs.concurrent.Akka
 import play.api.libs.concurrent.Execution.Implicits._
+import play.api.mvc.Results._
+import play.api.mvc.{Request, _}
 import com.scalableminds.util.reactivemongo.GlobalAccessContext
 import models.team.Role
 import play.api.http.Status._
 
 class AuthenticatedRequest[A](
-                               val user: User, override val request: Request[A]
-                             ) extends UserAwareRequest(Some(user), request)
+  val user: User, override val request: Request[A]
+  ) extends UserAwareRequest(Some(user), request)
 
 class UserAwareRequest[A](
-                           val userOpt: Option[User], val request: Request[A]
-                         ) extends WrappedRequest(request)
+  val userOpt: Option[User], val request: Request[A]
+  ) extends WrappedRequest(request)
 
 
 object Secured {
@@ -60,7 +69,7 @@ trait Secured extends FoxImplicits with I18nSupport{
    * Tries to extract the user from a request
    */
   def maybeUser(implicit request: RequestHeader): Fox[User] =
-    userFromSession orElse autoLoginUser
+    userFromToken orElse userFromSession orElse autoLoginUser
 
   private def autoLoginUser: Fox[User] = {
     // development setting: if the key is set, one gets logged in automatically
@@ -69,6 +78,14 @@ trait Secured extends FoxImplicits with I18nSupport{
     else
       Fox.empty
   }
+
+  private def userFromToken(implicit request: RequestHeader): Fox[User] =
+    request.getQueryString("loginToken") match {
+      case Some(token) =>
+        userService.authByToken(token)(GlobalAccessContext)
+      case _ =>
+        Empty
+    }
 
   private def userFromSession(implicit request: RequestHeader): Fox[User] =
     request.session.get(Secured.SessionInformationKey) match {
@@ -90,25 +107,34 @@ trait Secured extends FoxImplicits with I18nSupport{
    * }
    *
    */
+  trait AuthHelpers {
+    def executeAndEnsureSession[A](user: User, request: Request[A], block: (AuthenticatedRequest[A]) => Future[Result]): Future[Result] =
+      if (request.session.get(Secured.SessionInformationKey).contains(user.id))
+        block(new AuthenticatedRequest(user, request))
+      else
+        block(new AuthenticatedRequest(user, request)).map { r =>
+          r.withSession(Secured.createSession(user))
+        }
+  }
 
-  object Authenticated extends ActionBuilder[AuthenticatedRequest]{
+  object Authenticated extends ActionBuilder[AuthenticatedRequest] with AuthHelpers{
     def invokeBlock[A](request: Request[A], block: (AuthenticatedRequest[A]) => Future[Result]) = {
       maybeUser(request).flatMap { user =>
         Secured.ActivityMonitor ! UserActivity(user, System.currentTimeMillis)
         if (user.verified)
-          block(new AuthenticatedRequest(user, request))
+          executeAndEnsureSession(user, request, block)
         else
           Future.successful(Forbidden(views.html.error.defaultError(Messages("user.notVerified"), false)(AuthedSessionData(user, request.flash))))
       }.getOrElse(onUnauthorized(request))
     }
   }
 
-  object UserAwareAction extends ActionBuilder[UserAwareRequest] {
+  object UserAwareAction extends ActionBuilder[UserAwareRequest] with AuthHelpers{
     def invokeBlock[A](request: Request[A], block: (UserAwareRequest[A]) => Future[Result]) = {
       maybeUser(request).filter(_.verified).futureBox.flatMap {
         case Full(user) =>
           Secured.ActivityMonitor ! UserActivity(user, System.currentTimeMillis)
-          block(new AuthenticatedRequest(user, request))
+          executeAndEnsureSession(user, request, block)
         case _ =>
           block(new UserAwareRequest(None, request))
       }
@@ -121,8 +147,17 @@ trait Secured extends FoxImplicits with I18nSupport{
   private def onUnauthorized(request: RequestHeader) =
     if (request.path.startsWith("/api/"))
       new JsonResult(FORBIDDEN)(Messages("notAllowed"))
-    else {
-      val finalTarget = if (request.method == "GET") Some(request.uri) else None
-      Results.Redirect(routes.Authentication.login(finalTarget))
+    else
+      Results.Redirect(routes.Authentication.login)
+  // --
+
+  /**
+   * Action for authenticated users.
+
+  def IsAuthenticated(f: => String => Request[AnyContent] => Result) =
+    Security.Authenticated(userId, onUnauthorized) {
+      user =>
+        Action(request => f(user)(request))
     }
+   */
 }

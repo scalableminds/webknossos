@@ -27,7 +27,7 @@ class ProjectController @Inject()(val messagesApi: MessagesApi) extends Controll
     implicit request =>
       for {
         projects <- ProjectDAO.findAll
-        js <- Future.traverse(projects)(Project.projectPublicWritesWithStatus(_, request.user))
+        js <- Future.traverse(projects)(Project.projectPublicWrites(_, request.user))
       } yield {
         Ok(Json.toJson(js))
       }
@@ -50,7 +50,7 @@ class ProjectController @Inject()(val messagesApi: MessagesApi) extends Controll
         case Empty if request.user.adminTeamNames.contains(project.team) =>
           for {
             _  <- ProjectDAO.insert(project)
-            js <- Project.projectPublicWritesWithStatus(project, request.user)
+            js <- Project.projectPublicWrites(project, request.user)
           } yield Ok(js)
         case Empty                                                       =>
           Future.successful(JsonBadRequest(Messages("team.notAllowed")))

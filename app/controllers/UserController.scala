@@ -19,6 +19,15 @@ import play.api.libs.json.Json._
 import play.api.libs.json._
 import play.twirl.api.Html
 import views.html
+import scala.concurrent.Future
+import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import models.team._
+import play.api.libs.functional.syntax._
+import com.scalableminds.util.tools.ExtendedTypes.ExtendedString
+import models.user.time._
+import com.scalableminds.util.tools.DefaultConverters._
+
+import scala.text
 
 class UserController @Inject()(val messagesApi: MessagesApi)
   extends Controller
@@ -108,17 +117,17 @@ class UserController @Inject()(val messagesApi: MessagesApi)
   }
 
   // REST API
-  def list = Authenticated.async { implicit request =>
-    for {
-      users <- UserDAO.findAll
-    } yield {
-      val filtered = request.getQueryString("isEditable").flatMap(_.toBooleanOpt) match {
-        case Some(isEditable) =>
-          users.filter(_.isEditableBy(request.user) == isEditable)
-        case None             =>
-          users
+  def list = Authenticated.async{ implicit request =>
+    UsingFilters(
+      Filter("includeAnonymous", (value: Boolean, el: User) => value || !el.isAnonymous, default = Some("false")),
+      Filter("isEditable", (value: Boolean, el: User) => el.isEditableBy(request.user) == value)
+    ) { filter =>
+      for {
+        users <- UserDAO.findAll
+        filtered = filter.applyOn(users)
+      } yield {
+        Ok(Writes.list(User.userPublicWrites(request.user)).writes(filtered.sortBy(_.lastName.toLowerCase)))
       }
-      Ok(Writes.list(User.userPublicWrites(request.user)).writes(filtered.sortBy(_.lastName.toLowerCase)))
     }
   }
 

@@ -79,9 +79,9 @@ class DashboardTaskListView extends Marionette.CompositeView
 
   filter : (child) ->
     if @showFinishedTasks
-      return child.get("annotation").state.isFinished
+      return child.get("annotation.state.isFinished")
     else
-      return !child.get("annotation").state.isFinished
+      return !child.get("annotation.state.isFinished")
 
   newTask : (event) ->
 

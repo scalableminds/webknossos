@@ -13,7 +13,7 @@ class SkeletonTracingController
   # functions that can be called by the specific view mode controller.
 
 
-  constructor : ( @model, @sceneController, @skeletonTracingView ) ->
+  constructor : (@model, @skeletonTracingView, @sceneController) ->
 
     _.extend(@, Backbone.Events)
 
@@ -29,7 +29,6 @@ class SkeletonTracingController
 
   setRadius : (delta) ->
 
-    console.log delta
     @model.skeletonTracing.setActiveNodeRadius(
       @model.skeletonTracing.getActiveNodeRadius() * Math.pow(1.05 , delta)
     )

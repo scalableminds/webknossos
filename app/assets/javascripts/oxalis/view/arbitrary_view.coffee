@@ -1,10 +1,10 @@
+$         = require("jquery")
+_         = require("lodash")
 app       = require("app")
 Backbone  = require("backbone")
 THREE     = require("three")
-Stats     = require("stats.js")
-$         = require("jquery")
-_         = require("lodash")
-constants = require("../constants")
+TWEEN     = require("tween.js")
+Constants = require("../constants")
 
 class ArbitraryView
 
@@ -23,7 +23,7 @@ class ArbitraryView
   camera : null
   cameraPosition : null
 
-  constructor : (canvas, @dataCam, @stats, @view, width) ->
+  constructor : (canvas, @dataCam, @view, width) ->
 
     _.extend(this, Backbone.Events)
 
@@ -99,12 +99,11 @@ class ArbitraryView
     @animationRequestId = undefined
     return unless @isRunning
 
+    TWEEN.update()
+
     if @trigger("render", @forceUpdate) or @forceUpdate
 
-      { camera, stats, geometries, renderer, scene } = @
-
-      # update postion and FPS displays
-      stats.update()
+      { camera, geometries, renderer, scene } = @
 
       for geometry in geometries when geometry.update?
         geometry.update()
@@ -133,7 +132,7 @@ class ArbitraryView
 
       forceUpdate = false
 
-      @trigger("finishedRender")
+      @trigger("render")
 
     @animationRequestId = window.requestAnimationFrame(@animate)
 
@@ -157,7 +156,7 @@ class ArbitraryView
 
     @resizeThrottled = _.throttle(
       => @resize()
-      constants.RESIZE_THROTTLE_TIME
+      Constants.RESIZE_THROTTLE_TIME
     )
     @resizeThrottled()
 
@@ -182,7 +181,7 @@ class ArbitraryView
 
     if (@scaleFactor+delta > @MIN_SCALE) and (@scaleFactor+delta < @MAX_SCALE)
       @scaleFactor += Number(delta)
-      @width = @height = @scaleFactor * constants.VIEWPORT_WIDTH
+      @width = @height = @scaleFactor * Constants.VIEWPORT_WIDTH
       @container.width(@width)
       @container.height(@height)
 

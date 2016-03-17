@@ -2,7 +2,7 @@ app                       = require("app")
 Backbone                  = require("backbone")
 $                         = require("jquery")
 _                         = require("lodash")
-utils                     = require("libs/utils")
+Utils                     = require("libs/utils")
 Input                     = require("libs/input")
 Trackball                 = require("three.trackball")
 CameraController          = require("../camera_controller")
@@ -40,7 +40,7 @@ class PlaneController
       @keyboardLoopDelayed?.unbind()
 
 
-  constructor : (@model, stats, @view, @sceneController) ->
+  constructor : (@model, @view, @sceneController) ->
 
     _.extend(this, Backbone.Events)
 
@@ -50,7 +50,7 @@ class PlaneController
 
     @oldNmPos = app.scaleInfo.voxelToNm( @flycam.getPosition() )
 
-    @planeView = new PlaneView(@model, @view, stats)
+    @planeView = new PlaneView(@model, @view)
 
     @activeViewport = constants.PLANE_XY
 
@@ -82,6 +82,7 @@ class PlaneController
 
     @initTrackballControls()
     @bindToEvents()
+    @stop()
 
 
   initMouse : ->
@@ -248,8 +249,9 @@ class PlaneController
 
     if @isStarted
       @input.unbind()
-      @planeView.stop()
+
       @sceneController.stop()
+      @planeView.stop()
 
     @isStarted = false
 
@@ -402,7 +404,7 @@ class PlaneController
     switch type
       when null then @moveZ(delta, true)
       when "alt"
-        @zoomPlanes(utils.clamp(-1, delta, 1), true)
+        @zoomPlanes(Utils.clamp(-1, delta, 1), true)
 
 
   calculateGlobalPos : (clickPos) =>

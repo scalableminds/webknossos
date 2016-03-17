@@ -1,8 +1,8 @@
 Description of changes:
 - abc
 
-Fixes Issues:
-- #123
+Issues:
+- fixes #123
 
 ------
 - [ ] Ready for review

@@ -234,17 +234,19 @@ class AnnotationController @Inject()(val messagesApi: MessagesApi) extends Contr
   }
 
   def finishWithRedirect(typ: String, id: String) = Authenticated.async { implicit request =>
+    val redirectTarget = if(!request.user.isAnonymous) "/dashboard" else "/thankyou"
+
     for {
       annotation <- AnnotationDAO.findOneById(id) ?~> Messages("annotation.notFound")
       finished <- annotation.muta.finishAnnotation(request.user).futureBox
     } yield {
       finished match {
-        case Full((_, message))     =>
-          Redirect("/dashboard").flashing("success" -> message)
+        case Full((_, message)) =>
+          Redirect(redirectTarget).flashing("success" -> message)
         case Failure(message, _, _) =>
-          Redirect("/dashboard").flashing("error" -> message)
-        case _                      =>
-          Redirect("/dashboard").flashing("error" -> Messages("error.unknown"))
+          Redirect(redirectTarget).flashing("error" -> message)
+        case _ =>
+          Redirect(redirectTarget).flashing("error" -> Messages("error.unknown"))
       }
     }
   }

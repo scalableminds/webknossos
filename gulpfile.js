@@ -26,7 +26,6 @@ paths = {
 
 var nodePath = __dirname + "/node_modules/";
 var scriptPaths = {
-  "backbone-deep-model" : nodePath + "backbone-deep-model/distribution/deep-model",
   "gzip"                : nodePath + "zlibjs/bin/gzip.min",
   "three"               : nodePath + "three.js/build/three",
   "three.color"         : nodePath + "three.js/examples/js/math/ColorConverter",
@@ -75,7 +74,6 @@ function makeScripts() {
         { test: scriptPaths["three.color"], loader: "imports?THREE=three!exports?THREE.ColorConverter" },
         { test: scriptPaths["three.trackball"], loader: "imports?THREE=three" },
         { test: scriptPaths["three"], loader: "exports?THREE" },
-        { test: scriptPaths["backbone-deep-model"], loader: "imports?_=underscore" },
         { test: scriptPaths["gzip"], loader: "exports?this.Zlib" },
         // {
         //   test: /\.jsx?$/,

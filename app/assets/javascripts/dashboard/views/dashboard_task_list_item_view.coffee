@@ -52,7 +52,7 @@ class DashboardTaskListItemView extends Marionette.ItemView
 
   className : ->
 
-    if @model.get("annotation").state.isFinished
+    if @model.get("annotation.state.isFinished")
       return "finished"
     else
       return "unfinished"

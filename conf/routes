@@ -119,7 +119,7 @@ GET           /api/tasks                                                      co
 DELETE        /api/tasks/:id                                                  controllers.admin.TaskAdministration.delete(id: String)
 
 GET           /tasks                                                          controllers.TaskController.empty
-GET           /tasks/overview                                                 controllers.admin.TaskAdministration.empty
+GET           /tasks/:name                                                    controllers.admin.TaskAdministration.empty(name: String)
 GET           /admin/tasks/create                                             controllers.admin.TaskAdministration.create
 POST          /admin/tasks/createBulk                                         controllers.admin.TaskAdministration.createBulk
 POST          /admin/tasks/createFromNML                                      controllers.admin.TaskAdministration.createFromNML

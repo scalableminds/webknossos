@@ -1,7 +1,7 @@
 ### define
 underscore : _
 ../pagination_collection : PaginationCollection
-format_utils : FormatUtils
+libs/format_utils : FormatUtils
 ###
 
 class TaskCollection extends PaginationCollection
@@ -20,9 +20,9 @@ class TaskCollection extends PaginationCollection
         "/api/tasks"
 
 
-  parse : (respones) ->
+  parse : (responses) ->
 
-    _.map(respones,
+    _.map(responses,
       (response) ->
 
         # apply some defaults

@@ -1,6 +1,6 @@
 ### define
 underscore : _
-format_utils : FormatUtils
+libs/format_utils : FormatUtils
 ###
 
 class TaskTypeModel extends Backbone.Model

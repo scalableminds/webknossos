@@ -1,25 +1,42 @@
 ### define
 underscore : _
-backbone : backbone
-libs/utils: utils
+libs/format_utils: FormatUtils
+../pagination_collection : PaginationCollection
 ###
 
-class ProjectTaskCollection extends Backbone.Collection
+class ProjectTaskCollection extends PaginationCollection
 
-  constructor : (projectName) ->
-    @url = "/api/projects/#{projectName}/tasks"
-    super()
 
+  initialize : (models, options) ->
+
+    @projectName = options.projectName
+
+    # TODO on dev merge:
+    # Use url() method directly. This Hack is due to weird lib Paginator behavior.
+    @url = "/api/projects/#{@projectName}/tasks"
 
   parse : (responses) ->
 
     return _.map(responses,
       (response) ->
-        if response.tracingTime
-          duration = moment.duration(response.tracingTime)
-          response.tracingTime = "#{utils.zeroPad(duration.hours(), 2)}h #{utils.zeroPad(duration.minutes(), 2)}m"
+
+        # apply some defaults
+        response.type =
+          summary : response.type?.summary || "<deleted>"
+        response.formattedTracingTime = FormatUtils.formatSeconds(response.tracingTime? or 0)
+
+        # convert bounding box
+        if response.boundingBox?
+
+          { topLeft, width, height, depth } = response.boundingBox
+          response.boundingBox = topLeft.concat [
+            topLeft[0] + width
+            topLeft[1] + height
+            topLeft[2] + depth
+          ]
+
         else
-          response.tracingTime = "00:00"
+          response.boundingBox = []
 
         return response
     )

@@ -13,6 +13,7 @@ admin/models/team/paginated_team_collection : PaginatedTeamCollection
 admin/models/user/user_collection : UserCollection
 admin/models/task/task_collection : TaskCollection
 admin/models/project/project_collection : ProjectCollection
+admin/models/project/project_task_collection : ProjectTaskCollection
 admin/models/workload/workload_collection : WorkloadCollection
 ###
 
@@ -33,6 +34,7 @@ return {
   TaskCollection
   ProjectListView
   ProjectCollection
+  ProjectTaskCollection
   StatisticView
   WorkloadListView
   WorkloadCollection

@@ -54,7 +54,7 @@ object TaskAdministration extends AdminController {
 
   type TaskForm = Form[(String, String, Point3D, Experience, Int, Int, String)]
 
-  def empty = Authenticated{ implicit request =>
+  def empty(name: String) = Authenticated{ implicit request =>
     Ok(views.html.main()(Html.empty))
   }
 

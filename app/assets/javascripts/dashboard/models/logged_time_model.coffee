@@ -1,7 +1,7 @@
 ### define
 underscore : _
 backbone : Backbone
-format_utils : FormatUtils
+libs/format_utils : FormatUtils
 ###
 
 class LoggedTimeModel extends Backbone.Model

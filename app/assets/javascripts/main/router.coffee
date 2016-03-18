@@ -15,7 +15,9 @@ class Router extends Backbone.Router
     "users"                         : "users"
     "teams"                         : "teams"
     "statistics"                    : "statistics"
-    "tasks"                         : "tasks"
+    #"tasks"                         : "tasks"
+    "tasks/overview"                : "taskOverview"
+    "tasks/:name"                     : "projectTasks"
     "projects"                      : "projects"
     "dashboard"                     : "dashboard"
     "datasets"                      : "dashboard"
@@ -24,7 +26,6 @@ class Router extends Backbone.Router
     "taskTypes/:id/edit"            : "editTaskType"
     "taskTypes"                     : "taskTypes"
     "spotlight"                     : "spotlight"
-    "tasks/overview"                : "taskOverview"
     "workload"                      : "workload"
 
   whitelist : [
@@ -103,9 +104,9 @@ class Router extends Backbone.Router
     @showWithPagination("TeamListView", "PaginatedTeamCollection", "Add New Team")
 
 
-  tasks : ->
+  projectTasks : (projectName) ->
 
-    @showWithPagination("TaskListView", "TaskCollection", "Create New Task")
+    @showWithPagination("TaskListView", "ProjectTaskCollection", {projectName, addButtonText : "Create New Task"})
 
 
   workload : ->
@@ -172,13 +173,15 @@ class Router extends Backbone.Router
     )
 
 
-  showWithPagination : (view, collection, addButtonText=null) ->
+  showWithPagination : (view, collection, options) ->
+
+    _.defaults(options, {addButtonText : null})
 
     require ["admin/admin"], (admin) =>
 
-      collection = new admin[collection]()
+      collection = new admin[collection](null, options)
       view = new admin[view](collection: collection)
-      paginationView = new admin.PaginationView({collection, addButtonText})
+      paginationView = new admin.PaginationView({collection, addButtonText : options.addButtonText})
 
       @changeView(paginationView, view)
       @listenTo(collection, "sync", => @hideLoading())

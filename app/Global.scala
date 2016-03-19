@@ -355,32 +355,32 @@ class InitialData(conf: Configuration, app: Application) extends GlobalDBAccess 
 
     val taskTypes = List(
       TaskType(
-        "unrestricted",
-        "Use any mode without time limit",
+        "synapseIdentification",
+        "Identify all synapses along the axon, mark them by comment 'syn'",
         TraceLimit(5, 10, 99),
         team.name,
         yesOtherModes),
       TaskType(
-        "orthogonalLong",
-        "Please use only orthogonal mode",
+        "fastDendriteTracing",
+        "Trace all dendrites from the soma excluding spines",
         TraceLimit(5, 10, 20),
         team.name,
         noOtherModes),
       TaskType(
-        "orthogonalShort",
-        "Please use only orthogonal mode and don't take too long",
+        "fluoAxonReconstruction",
+        "Follow the green axon through the dataset",
         TraceLimit(5, 10, 10),
         team.name,
         noOtherModes),
       TaskType(
-        "allModesLong",
-        "Use any mode",
+        "retinalReconstruction",
+        "Reconstruct the retinal cell to the soma",
         TraceLimit(5, 10, 20),
         team.name,
         yesOtherModes),
       TaskType(
-        "allModesShort",
-        "Use any mode and don't take too long",
+        "fullSpinyReconstruction",
+        "Reconstruct the cortical neurite, make sure to include all spines",
         TraceLimit(5, 10, 10),
         team.name,
         yesOtherModes))

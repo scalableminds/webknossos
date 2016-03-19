@@ -52,7 +52,7 @@ class NestedObjModel extends Backbone.Model
     if _.isPlainObject(newObj)
       # Recursively call triggerDeepChange for each key
       _.forOwn(newObj, (value, key) =>
-        @triggerDeepChange(oldObj[key], newObj[key], "#{deepKey}.#{key}")
+        @triggerDeepChange((if oldObj? then oldObj[key] else oldObj), newObj[key], "#{deepKey}.#{key}")
       )
     else if oldObj != newObj
       # Add the change to the changed object

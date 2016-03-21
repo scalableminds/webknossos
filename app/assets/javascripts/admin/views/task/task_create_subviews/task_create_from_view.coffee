@@ -228,7 +228,7 @@ class TaskCreateFromView extends Marionette.LayoutView
     Toast.success("The task was successfully #{@getActionName().toLowerCase()}d")
 
     url = "/tasks"
-    if task.get("directLinks")
+    if not _.isEmpty(task.get("directLinks"))
       url += "?showAnonymousLinks=#{task.id}"
 
     app.router.navigate("#{url}##{task.id}", {trigger : true})

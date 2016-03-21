@@ -6,6 +6,7 @@
 GET           /                                                               controllers.Application.index
 GET           /dashboard                                                      controllers.UserController.empty
 GET           /impressum                                                      controllers.Application.impressum
+GET           /videos                                                    controllers.Application.videos
 
 # Github Issues integration
 GET           /issues                                                         controllers.GithubIssues.index

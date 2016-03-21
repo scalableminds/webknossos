@@ -66,4 +66,7 @@ object Application extends Controller with Secured {
   def impressum = UserAwareAction { implicit request =>
     Ok(views.html.impressum())
   }
+  def videos = UserAwareAction { implicit request =>
+    Ok(views.html.videos())
+  }
 }

@@ -8,7 +8,7 @@ class NestedObjModel extends Backbone.Model
     _.reduce(
       attributes
       (value, attribute) ->
-        value[attribute]
+        return value?[attribute]
       valueObj)
 
 

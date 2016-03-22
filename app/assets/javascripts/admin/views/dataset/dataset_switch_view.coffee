@@ -46,7 +46,7 @@ class DatasetSwitchView extends Backbone.Marionette.LayoutView
 
   initialize : ->
 
-    @listenTo(@model, "sync", -> @render())
+    @listenTo(@model, "sync", @onShow)
 
 
   templateHelpers : ->

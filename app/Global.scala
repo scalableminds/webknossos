@@ -200,7 +200,7 @@ class InitialData(conf: Configuration, app: Application) extends GlobalDBAccess 
 
   def addE2006(users: List[User], admin: User, team: Team, taskTypes: List[TaskType], teamNumber: Int) {
     val project = insertProject(team, admin, s"e2006_project_$teamNumber")
-    val taskType = taskTypes.find(_.summary == "allModesLong").get
+    val taskType = taskTypes.find(_.summary == "retinalReconstruction").get
     for {
       (file, idx) <- fileFor("e2006_nml").toSeq.flatMap(_.listFiles).zipWithIndex
     } yield {
@@ -225,7 +225,7 @@ class InitialData(conf: Configuration, app: Application) extends GlobalDBAccess 
   }
   def addFluoro(users: List[User], admin: User, team: Team, taskTypes: List[TaskType], teamNumber: Int) {
     val project = insertProject(team, admin, s"fluoro_project_$teamNumber")
-    val taskType = taskTypes.find(_.summary == "orthogonalShort").get
+    val taskType = taskTypes.find(_.summary == "fluoAxonReconstruction").get
     val coordsAll=Array(Array(285, 1428, 67), Array(407, 1136, 67), Array(626, 1030, 67), Array(744, 874, 67), Array(949, 668, 67), Array(857, 450, 67), Array(674, 730, 67), Array(512, 522, 67), Array(378, 690, 67), Array(271, 872, 67), Array(87, 630, 67), Array(204, 356, 67), Array(360, 188, 67), Array(647, 284, 67), Array(887, 166, 67), Array(909, 534, 67), Array(802, 730, 67), Array(582, 812, 67), Array(517, 742, 67), Array(231, 954, 67))
     for (i <- 0 to 19) {
       val coords = coordsAll(i)
@@ -247,7 +247,7 @@ class InitialData(conf: Configuration, app: Application) extends GlobalDBAccess 
 
   def addCortex(users: List[User], admin: AdminUser, team: Team, taskTypes: List[TaskType], teamNumber: Int) {
     val project = insertProject(team, admin, s"cortex_project_$teamNumber")
-    val taskType = taskTypes.find(_.summary == "allModesShort").get
+    val taskType = taskTypes.find(_.summary == "fullSpinyReconstruction").get
     for {
       typ <- List("unfinished", "finished")
       (file, idx) <- fileFor(s"cortex/$typ").toSeq.flatMap(_.listFiles).zipWithIndex

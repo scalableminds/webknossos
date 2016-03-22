@@ -44,6 +44,11 @@ class DatasetSwitchView extends Backbone.Marionette.LayoutView
     "pagination" : ".pagination"
 
 
+  initialize : ->
+
+    @listenTo(@model, "sync", -> @render())
+
+
   templateHelpers : ->
 
     isAdmin : =>

@@ -31,7 +31,7 @@ class TracingView extends Marionette.LayoutView
     "contextmenu" : "disableContextMenu"
 
   ui :
-    "inputcatchers" : "#inputcatchers"
+    "inputcatchers" : ".inputcatcher"
 
   initialize : ->
 

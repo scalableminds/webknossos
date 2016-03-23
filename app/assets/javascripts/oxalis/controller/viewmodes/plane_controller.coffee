@@ -236,11 +236,12 @@ class PlaneController
 
     @stop()
 
+    @sceneController.start()
+    @planeView.start()
+
     @initKeyboard()
     @init()
     @initMouse()
-    @sceneController.start()
-    @planeView.start()
 
     @isStarted = true
 
@@ -250,8 +251,8 @@ class PlaneController
     if @isStarted
       @input.unbind()
 
-      @sceneController.stop()
-      @planeView.stop()
+    @sceneController.stop()
+    @planeView.stop()
 
     @isStarted = false
 

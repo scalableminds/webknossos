@@ -33,6 +33,7 @@ case class Task(
                  tracingTime: Option[Long] = None,
                  created: DateTime = DateTime.now(),
                  directLinks: List[String] = Nil,
+                 isActive: Boolean = true,
                  _project: Option[String] = None,
                  _id: BSONObjectID = BSONObjectID.generate
                ) extends FoxImplicits {
@@ -135,6 +136,14 @@ object TaskDAO extends SecuredBaseDAO[Task] with FoxImplicits {
           DenyEveryone()
       }
     }
+  }
+
+  override def find(query: JsObject = Json.obj())(implicit ctx: DBAccessContext) = {
+    super.find(query ++ Json.obj("isActive" -> true))
+  }
+
+  override def findOne(query: JsObject = Json.obj())(implicit ctx: DBAccessContext) = {
+    super.findOne(query ++ Json.obj("isActive" -> true))
   }
 
   def findAllAdministratable(user: User)(implicit ctx: DBAccessContext) = withExceptionCatcher{

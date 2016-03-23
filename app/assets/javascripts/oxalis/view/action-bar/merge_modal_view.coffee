@@ -166,9 +166,11 @@ class MergeModalView extends Marionette.LayoutView
 
   mergeTask : ->
 
-    taskId = @ui.task.find("select :selected").val()
-    url = "/annotations/CompoundTask/#{taskId}/merge/#{@model.get("tracingType")}/#{@model.get("tracingId")}"
-    @merge(url)
+    taskId = @ui.task.find("input").val()
+    @validateId(taskId).then( =>
+      url = "/annotations/CompoundTask/#{taskId}/merge/#{@model.get("tracingType")}/#{@model.get("tracingId")}"
+      @merge(url)
+    )
 
 
   mergeTaskType : ->
@@ -196,9 +198,11 @@ class MergeModalView extends Marionette.LayoutView
 
   mergeExplorative : ->
 
-    explorativId = @ui.explorative.find("select :selected").val()
-    url = "/annotations/Explorational/#{explorativId}/merge/#{@model.get("tracingType")}/#{@model.get("tracingId")}"
-    @merge(url)
+    explorativeId = @ui.explorative.find("input").val()
+    @validateId(explorativeId).then( =>
+      url = "/annotations/Explorational/#{explorativeId}/merge/#{@model.get("tracingType")}/#{@model.get("tracingId")}"
+      @merge(url)
+    )
 
 
   merge : (url) ->
@@ -245,5 +249,11 @@ class MergeModalView extends Marionette.LayoutView
       )
       => @toggleIcon(true)
     )
+
+
+  validateId : (id) ->
+
+    Request.receiveJSON("/api/find?q=#{id}&type=id")
+
 
 module.exports = MergeModalView

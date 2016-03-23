@@ -10,7 +10,11 @@ class ExplorativeTracingListItemView extends Marionette.ItemView
 
   tagName : "tr"
   template : _.template("""
-    <td><%- formattedHash %></td>
+    <td>
+      <div class="monospace-id">
+        <%- id %>
+      </div>
+    </td>
     <td class="explorative-name-column hover-dynamic">
       <span class="hover-hide" id="explorative-tracing-name"><%- name %></span>
       <form action="<%- jsRoutes.controllers.AnnotationController.nameExplorativeAnnotation(typ, id).url %>"

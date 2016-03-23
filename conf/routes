@@ -162,6 +162,9 @@ GET           /api/taskTypes/:id/download                                       
 GET           /api/taskTypes/:id                                                controllers.admin.TaskTypeAdministration.get(id: String)
 POST          /api/taskTypes/:id                                                controllers.admin.TaskTypeAdministration.editTaskTypeForm(id: String)
 
+# ID Validation
+GET           /api/find                                                         controllers.SearchController.find(q: String, type: String)
+
 # Projects
 GET           /projects                                                         controllers.ProjectController.empty
 GET           /api/projects                                                     controllers.ProjectController.list

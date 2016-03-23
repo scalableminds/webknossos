@@ -103,10 +103,6 @@ class Model extends Backbone.Model
       if allowedMode in ["orthogonal", "volume"]
         allowedModes.push(constants.MODE_NAME_TO_ID[allowedMode])
 
-    if not @get("volumeTracing")?
-      # Plane tracing mode is always allowed (except in VOLUME mode)
-      allowedModes.push(constants.MODE_PLANE_TRACING)
-
     if settings.preferredMode
       modeId = constants.MODE_NAME_TO_ID[settings.preferredMode]
       if modeId in allowedModes

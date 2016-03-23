@@ -133,7 +133,7 @@ class AnnotationController @Inject()(val messagesApi: MessagesApi) extends Contr
             CONTENT_TYPE ->
               "application/octet-stream",
             CONTENT_DISPOSITION ->
-              s"filename=${name + content.downloadFileExtension}")
+              s"filename=${'"'}${name + content.downloadFileExtension}${'"'}")
         }
     }
   }

@@ -22,7 +22,7 @@ class VolumeTracing
     @lastCentroid = null
 
     @stateLogger  = new VolumeTracingStateLogger(
-      @flycam, @flycam3d, tracing.version, tracing.id, tracing.typ,
+      @flycam, tracing.version, tracing.id, tracing.typ,
       tracing.restrictions.allowUpdate,
       this, @binary.pushQueue
     )

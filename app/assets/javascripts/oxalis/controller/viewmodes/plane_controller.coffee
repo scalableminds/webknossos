@@ -250,8 +250,8 @@ class PlaneController
     if @isStarted
       @input.unbind()
 
-      @sceneController.stop()
-      @planeView.stop()
+    @planeView.stop()
+    @sceneController.stop()
 
     @isStarted = false
 

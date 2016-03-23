@@ -222,6 +222,7 @@ class PlaneView
   showBranchModal : (callback) ->
 
     modal.show("You didn't add a node after jumping to this branchpoint, do you really want to jump again?",
+      "Jump again?",
       [{id: "jump-button", label: "Jump again", callback: callback},
        {id: "cancel-button", label: "Cancel"}])
 

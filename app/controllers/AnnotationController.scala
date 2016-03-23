@@ -162,7 +162,7 @@ object AnnotationController extends Controller with Secured with TracingInformat
               CONTENT_TYPE ->
                 "application/octet-stream",
               CONTENT_DISPOSITION ->
-                s"filename=${name + content.downloadFileExtension}")
+                s"filename=${'"'}${name + content.downloadFileExtension}${'"'}")
           }
       }
   }

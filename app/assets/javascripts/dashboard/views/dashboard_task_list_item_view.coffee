@@ -70,5 +70,4 @@ class DashboardTaskListItemView extends Marionette.ItemView
 
       @model.finish()
 
-
 module.exports = DashboardTaskListItemView

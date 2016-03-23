@@ -41,7 +41,7 @@ class Model extends Backbone.Model
 
     Request.receiveJSON(infoUrl).then( (tracing) =>
 
-      @datasetName = tracing.content.dataSet.name
+      @set("datasetName", tracing.content.dataSet.name)
 
       if tracing.error
         Toast.error(tracing.error)
@@ -52,8 +52,8 @@ class Model extends Backbone.Model
         return {"error" : true}
 
       else unless tracing.content.dataSet.dataLayers
-        if @datasetName
-          Toast.error("Please, double check if you have the dataset '#{@datasetName}' imported.")
+        if @get("datasetName")
+          Toast.error("Please, double check if you have the dataset '#{@get("datasetName")}' imported.")
         else
           Toast.error("Please, make sure you have a dataset imported.")
         return {"error" : true}
@@ -69,7 +69,7 @@ class Model extends Backbone.Model
           colorLayers = _.filter( @get("dataset").get("dataLayers"),
                                   (layer) -> layer.category == "color")
           @set("datasetConfiguration", new DatasetConfiguration({
-            @datasetName
+            datasetName : @get("datasetName")
             dataLayerNames : _.pluck(colorLayers, "name")
           }))
           @get("datasetConfiguration").fetch().then(
@@ -92,19 +92,21 @@ class Model extends Backbone.Model
   determineAllowedModes : ->
 
     allowedModes = []
-    for allowedMode in @get("settings").allowedModes
+    settings = @get("settings")
+    for allowedMode in settings.allowedModes
 
       if @getColorBinaries()[0].cube.BIT_DEPTH == 8
         switch allowedMode
           when "flight" then allowedModes.push(constants.MODE_ARBITRARY)
           when "oblique" then allowedModes.push(constants.MODE_ARBITRARY_PLANE)
 
-      switch allowedMode
-        when "volume" then allowedModes.push(constants.MODE_VOLUME)
+      if allowedMode in ["orthogonal", "volume"]
+        allowedModes.push(constants.MODE_NAME_TO_ID[allowedMode])
 
-    if not @get("volumeTracing")?
-      # Plane tracing mode is always allowed (except in VOLUME mode)
-      allowedModes.push(constants.MODE_PLANE_TRACING)
+    if settings.preferredMode
+      modeId = constants.MODE_NAME_TO_ID[settings.preferredMode]
+      if modeId in allowedModes
+        @set("preferredMode", modeId)
 
     allowedModes.sort()
     return allowedModes
@@ -165,7 +167,7 @@ class Model extends Backbone.Model
       if isVolumeTracing
         ErrorHandling.assert( @getSegmentationBinary()?,
           "Volume is allowed, but segmentation does not exist" )
-        @set("volumeTracing", new VolumeTracing(tracing, flycam, @getSegmentationBinary()))
+        @set("volumeTracing", new VolumeTracing(tracing, flycam, flycam3d, @getSegmentationBinary()))
       else
         @set("skeletonTracing", new SkeletonTracing(tracing, flycam, flycam3d, @user))
 
@@ -174,8 +176,16 @@ class Model extends Backbone.Model
 
     @set("tracing", tracing)
     @set("settings", tracing.content.settings)
-    @set("mode", if isVolumeTracing then constants.MODE_VOLUME else constants.MODE_PLANE_TRACING)
     @set("allowedModes", @determineAllowedModes())
+
+
+    # Initialize 'flight', 'oblique' or 'orthogonal'/'volume' mode
+    if @get("allowedModes").length == 0
+      Toast.error("There was no valid allowed tracing mode specified.")
+    else
+      mode = @get("preferredMode") or @get("state").mode or @get("allowedModes")[0]
+      @setMode(mode)
+
 
     @initSettersGetter()
     @initialized = true
@@ -185,9 +195,10 @@ class Model extends Backbone.Model
     return
 
 
-  setMode : (@mode) ->
+  setMode : (mode) ->
 
-    @trigger("change:mode", @mode)
+    @set("mode", mode)
+    @trigger("change:mode", mode)
 
 
   # For now, since we have no UI for this
@@ -209,7 +220,7 @@ class Model extends Backbone.Model
 
     for layer in layers
       do (layer) =>
-        Request.receiveJSON("/dataToken/generate?dataSetName=#{@datasetName}&dataLayerName=#{layer.name}").then( (dataStore) ->
+        Request.receiveJSON("/dataToken/generate?dataSetName=#{@get("datasetName")}&dataLayerName=#{layer.name}").then( (dataStore) ->
           layer.token = dataStore.token
           layer.url   = dataStoreUrl
         )
@@ -294,7 +305,7 @@ class Model extends Backbone.Model
     )
 
 
-  # Make the Model compatible between legacy Oxalis style and Backbone.Modela/Views
+  # Make the Model compatible between legacy Oxalis style and Backbone.Models/Views
   initSettersGetter : ->
 
     _.forEach(@attributes, (value, key, attribute) =>
@@ -310,12 +321,15 @@ class Model extends Backbone.Model
 
   applyState : (state, tracing) ->
 
-    @get("flycam").setPosition( state.position || tracing.content.editPosition )
+    @get("flycam").setPosition(state.position || tracing.content.editPosition)
     if state.zoomStep?
       @get("user").set("zoom", Math.exp(Math.LN2 * state.zoomStep))
       @get("flycam3d").setZoomStep( state.zoomStep )
-    if state.rotation?
-      @get("flycam3d").setRotation( state.rotation )
+
+    rotation = state.rotation || tracing.content.editRotation
+    if rotation?
+      @get("flycam3d").setRotation(rotation)
+
     if state.activeNode?
       @get("skeletonTracing")?.setActiveNode(state.activeNode)
 

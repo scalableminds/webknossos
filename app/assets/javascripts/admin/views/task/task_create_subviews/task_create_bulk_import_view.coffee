@@ -13,7 +13,7 @@ class TaskCreateBulkImportView extends Marionette.ItemView
     <div class="col-sm-12">
       <div class="well">
         One line for each task. The values are seperated by ','. Format: <br>
-	dataSet, <a href="/taskTypes">taskTypeId</a>, experienceDomain, minExperience, x, y, z, priority, instances, team, minX, minY, minZ, maxX, maxY, maxZ, (opt: project)<br><br>
+	dataSet, <a href="/taskTypes">taskTypeId</a>, experienceDomain, minExperience, x, y, z, rotX, rotY, rotZ, priority, instances, team, minX, minY, minZ, maxX, maxY, maxZ, (opt: project)<br><br>
 
         <form action="" method="POST" class="form-horizontal" onSubmit="return false;">
           <div class="form-group">
@@ -154,7 +154,7 @@ class TaskCreateBulkImportView extends Marionette.ItemView
   formatLine : (bulkLine) ->
 
     words = @splitToWords(bulkLine)
-    if words.length < 16
+    if words.length < 19
       return null
 
     dataSet = words[0]
@@ -164,19 +164,22 @@ class TaskCreateBulkImportView extends Marionette.ItemView
     x = parseInt(words[4])
     y = parseInt(words[5])
     z = parseInt(words[6])
-    priority = parseInt(words[7])
-    instances = parseInt(words[8])
-    team = words[9]
-    minX = parseInt(words[10])
-    minY = parseInt(words[11])
-    minZ = parseInt(words[12])
-    maxX = parseInt(words[13])
-    maxY = parseInt(words[14])
-    maxZ = parseInt(words[15])
+    rotX = parseInt(words[7])
+    rotY = parseInt(words[8])
+    rotZ = parseInt(words[9])
+    priority = parseInt(words[10])
+    instances = parseInt(words[11])
+    team = words[12]
+    minX = parseInt(words[13])
+    minY = parseInt(words[14])
+    minZ = parseInt(words[15])
+    maxX = parseInt(words[16])
+    maxY = parseInt(words[17])
+    maxZ = parseInt(words[18])
 
     projectName = ""
-    if words[16]
-      projectName = words[16]
+    if words[19]
+      projectName = words[19]
 
     return {
       dataSet,
@@ -191,6 +194,7 @@ class TaskCreateBulkImportView extends Marionette.ItemView
         completed : 0
       priority,
       editPosition : [x, y, z]
+      editRotation : [rotX, rotY, rotZ]
       boundingBox :
         topLeft : [minX, minY, minZ]
         width : maxX

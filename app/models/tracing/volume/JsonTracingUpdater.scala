@@ -1,5 +1,6 @@
 package models.tracing.volume
 
+import com.scalableminds.util.geometry.Vector3D
 import play.api.libs.json._
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import scala.concurrent.Future
@@ -45,11 +46,13 @@ case class UpdateTracing(value: JsObject) extends TracingUpdater {
     val activeCellId = (value \ "activeCell").asOpt[Int]
     val nextSegmentationId = (value \ "nextCell").asOpt[Int]
     val editPosition = (value \ "editPosition").asOpt[Point3D]
+    val editRotation = (value \ "editRotation").asOpt[Vector3D]
     val zoomLevel = (value \ "zoomLevel").asOpt[Double]
     TracingUpdate { t =>
       val updated = t.copy(
         activeCellId = activeCellId,
         editPosition = editPosition getOrElse t.editPosition,
+        editRotation = editRotation getOrElse t.editRotation,
         zoomLevel = zoomLevel getOrElse t.zoomLevel)
       UserDataLayerDAO.updateNextSegmentationId(t.userDataLayerName, nextSegmentationId)
       VolumeTracingDAO.update(t._id, updated).map(_ => updated)

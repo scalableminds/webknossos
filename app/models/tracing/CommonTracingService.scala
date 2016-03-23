@@ -1,6 +1,6 @@
 package models.tracing
 
-import com.scalableminds.util.geometry.{Point3D, BoundingBox}
+import com.scalableminds.util.geometry.{Vector3D, Point3D, BoundingBox}
 import models.annotation.AnnotationSettings
 import models.basics.SecuredBaseDAO
 import play.api.libs.json.Json
@@ -14,13 +14,14 @@ trait CommonTracingService extends FoxImplicits {
 
 
 
-  def updateEditPosition(editPosition: Point3D, tracingId: String)(implicit ctx: DBAccessContext): Fox[Boolean] = {
+  def updateEditPosRot(editPosition: Point3D, editRotation: Vector3D, tracingId: String)(implicit ctx: DBAccessContext): Fox[Boolean] = {
     dao.withValidId(tracingId) {
       id =>
         dao.update(
           Json.obj("_id" -> id),
           Json.obj("$set" -> Json.obj(
-            "editPosition" -> editPosition)),
+            "editPosition" -> editPosition,
+            "editRotation" -> editRotation)),
           multi = false,
           upsert = false
         ).map(_.ok)

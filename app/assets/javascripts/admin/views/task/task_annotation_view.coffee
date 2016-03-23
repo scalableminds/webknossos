@@ -1,6 +1,7 @@
 _               = require("lodash")
 moment          = require("moment")
 Toast           = require("libs/toast")
+Request         = require("libs/request")
 Marionette      = require("backbone.marionette")
 AnnotationModel = require("admin/models/task/annotation_model")
 

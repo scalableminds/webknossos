@@ -144,7 +144,7 @@ Request =
     )
 
 
-  triggerRequest : (url, options, responseDataHandler) ->
+  triggerRequest : (url, options={}, responseDataHandler) ->
 
     defaultOptions =
       method : "GET"

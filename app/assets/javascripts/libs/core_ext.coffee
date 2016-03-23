@@ -131,10 +131,10 @@ _.mixin(
           -> deferred = null
           -> deferred = null
         )
-        deferred
+        return deferred
 
       else
-        $.Deferred().reject("mutex").promise()
+        return $.Deferred().reject("mutex").promise()
 
   # Removes the first occurrence of given element from an array.
   removeElement : (array, element) ->

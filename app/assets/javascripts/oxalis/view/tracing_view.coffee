@@ -1,4 +1,5 @@
 Marionette = require("backbone.marionette")
+Constants  = require("../constants")
 
 class TracingView extends Marionette.LayoutView
 
@@ -27,8 +28,10 @@ class TracingView extends Marionette.LayoutView
   """)
 
   events :
-    "contextmenu #inputcatchers" : "disableContextMenu"
+    "contextmenu" : "disableContextMenu"
 
+  ui :
+    "inputcatchers" : ".inputcatcher"
 
   initialize : ->
 
@@ -43,5 +46,12 @@ class TracingView extends Marionette.LayoutView
     # hide contextmenu, while rightclicking a canvas
     event.preventDefault()
     return
+
+
+  onRender : ->
+
+    # Hide the input catchers arbitrary model
+    if @model.get("mode") in Constants.MODES_ARBITRARY
+      @ui.inputcatchers.hide()
 
 module.exports = TracingView

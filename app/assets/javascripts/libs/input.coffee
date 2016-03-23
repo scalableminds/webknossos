@@ -177,7 +177,7 @@ class Input.Mouse
       if event.which == @which
         $(":focus").blur() # see OX-159
 
-        @down  = true
+        @down = true
         @moveDelta = 0
         @mouse.trigger(@name + "MouseDown", @mouse.lastPosition, @id, event)
 
@@ -265,7 +265,7 @@ class Input.Mouse
     else
       @mouseEnter(which : 0) if @isHit(event)
 
-    @handle( "MouseUp", event )
+    @handle("MouseUp", event)
 
 
   mouseMove : (event) =>

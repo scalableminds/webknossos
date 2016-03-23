@@ -74,7 +74,7 @@ object ProjectService extends FoxImplicits {
   def remove(project: Project)(implicit ctx: DBAccessContext): Fox[Boolean] = {
     ProjectDAO.remove("name", project.name).flatMap{
       case result if result.n > 0 =>
-        TaskDAO.removeAllWithProject(project).map{ _ =>
+        TaskService.removeAllWithProject(project).map{ _ =>
           true
         }
       case _ =>
@@ -123,6 +123,7 @@ object ProjectDAO extends SecuredBaseDAO[Project] {
   val formatter = Project.projectFormat
 
   underlying.indexesManager.ensure(Index(Seq("name" -> IndexType.Ascending)))
+  underlying.indexesManager.ensure(Index(Seq("team" -> IndexType.Ascending)))
 
   def findOneByName(name: String)(implicit ctx: DBAccessContext) = {
     findOne("name", name)

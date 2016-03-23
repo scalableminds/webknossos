@@ -28,6 +28,7 @@ class SkeletonTracingView extends View
         modal.show(
           "Several attempts to reach our server have failed. You should
           reload the page to make sure that your work won't be lost.",
+          "Connection error",
           [
             {
               id : "reload-button",
@@ -51,6 +52,7 @@ class SkeletonTracingView extends View
   showFirstVisToggle : ->
 
     modal.show("You just toggled the skeleton visibility. To toggle back, just hit the 1-Key.",
+      "Skeleton visibility",
       [{id: "ok-button", label: "OK, Got it."}])
 
 module.exports = SkeletonTracingView

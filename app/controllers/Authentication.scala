@@ -87,7 +87,7 @@ class Authentication @Inject()(val messagesApi: MessagesApi) extends Controller 
                 Redirect(controllers.routes.Application.index)
                 .withSession(Secured.createSession(user))
               } else {
-                Redirect(controllers.routes.Authentication.login(None))
+                Redirect(controllers.routes.Authentication.login)
                 .flashing("modal" -> "Your account has been created. An administrator is going to unlock you soon.")
               }
             }
@@ -99,14 +99,13 @@ class Authentication @Inject()(val messagesApi: MessagesApi) extends Controller 
   val loginForm = Form(
     tuple(
       "email" -> text,
-      "password" -> text,
-      "redirectTo" -> optional(text)))
+      "password" -> text))
 
   /**
    * Login page.
    */
-  def login(redirectTo: Option[String]) = Action { implicit request =>
-    Ok(html.user.login(loginForm.fill(("", "", redirectTo))))
+  def login = Action { implicit request =>
+    Ok(html.user.login(loginForm))
   }
 
   /**
@@ -116,18 +115,13 @@ class Authentication @Inject()(val messagesApi: MessagesApi) extends Controller 
     loginForm.bindFromRequest.fold(
     formWithErrors =>
       Future.successful(BadRequest(html.user.login(formWithErrors))), {
-      case (email, password, redirectTo) =>
+      case (email, password) =>
         UserService.auth(email.toLowerCase, password).map {
           user =>
             val redirectLocation =
-              if (user.verified) {
-                redirectTo match {
-                  case Some(url) if url != "" =>
-                    Redirect(url)
-                  case _ =>
-                    Redirect(controllers.routes.Application.index)
-                }
-              } else
+              if (user.verified)
+                Redirect(controllers.routes.Application.index)
+              else
                 BadRequest(html.user.login(loginForm.bindFromRequest.withGlobalError("user.notVerified")))
             redirectLocation.withSession(Secured.createSession(user))
 
@@ -157,7 +151,7 @@ class Authentication @Inject()(val messagesApi: MessagesApi) extends Controller 
    * Logout and clean the session.
    */
   def logout = Action {
-    Redirect(controllers.routes.Authentication.login(None))
+    Redirect(controllers.routes.Authentication.login)
     .withNewSession
     .flashing("success" -> Messages("user.logout.success"))
   }

@@ -20,7 +20,7 @@ import play.api.libs.concurrent.Execution.Implicits._
 import oxalis.thirdparty.BrainTracing
 
 object TimeSpanService extends FoxImplicits{
-  val MaxTracingPause = (Play.current.configuration.getInt("oxalis.user.time.tracingPauseInSeconds") getOrElse (30) seconds).toMillis
+  val MaxTracingPause = (Play.current.configuration.getInt("oxalis.user.time.tracingPauseInSeconds") getOrElse (60) seconds).toMillis
 
   lazy val timeSpanTracker = Akka.system.actorOf(Props[TimeSpanTracker])
 

@@ -365,6 +365,11 @@ class ArbitraryController
 
   getShortestRotation : (curRotation, newRotation) ->
 
+    # TODO
+    # interpolating Euler angles does not lead to the shortest rotation
+    # interpolate the Quaternion representation instead
+    # https://theory.org/software/qfa/writeup/node12.html
+
     for i in [0..2]
       # a rotation about more than 180° is shorter when rotating the other direction
       if newRotation[i] - curRotation[i] > 180

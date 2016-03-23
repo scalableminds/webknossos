@@ -129,7 +129,7 @@ class TracingLayoutView extends Marionette.LayoutView
 
     @rightMenu.show(@rightMenuView)
     @renderSettings()
-    @showNewTaskTypeModal()
+    @maybeShowNewTaskTypeModal()
 
 
   showUserScriptsModal : (event) =>
@@ -140,7 +140,7 @@ class TracingLayoutView extends Marionette.LayoutView
     modalView.show()
 
 
-  showNewTaskTypeModal : ->
+  maybeShowNewTaskTypeModal : ->
 
     # Users can aquire new tasks directly in the tracing view. Occasionally,
     # the start working on a new TaskType and new to be instructed.

@@ -1,6 +1,6 @@
 package models.tracing.skeleton.temporary
 
-import com.scalableminds.util.geometry.{BoundingBox, Point3D}
+import com.scalableminds.util.geometry.{Vector3D, BoundingBox, Point3D}
 import com.scalableminds.util.reactivemongo.DBAccessContext
 import com.scalableminds.util.tools.Fox
 import models.annotation._
@@ -19,6 +19,7 @@ case class TemporarySkeletonTracing(
                                      timestamp: Long,
                                      activeNodeId: Option[Int],
                                      editPosition: Point3D,
+                                     editRotation: Vector3D,
                                      zoomLevel: Double,
                                      boundingBox: Option[BoundingBox],
                                      comments: List[Comment] = Nil,

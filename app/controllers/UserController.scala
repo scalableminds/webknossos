@@ -19,8 +19,22 @@ import play.api.libs.json.Json._
 import play.api.libs.json._
 import play.twirl.api.Html
 import views.html
+import scala.concurrent.Future
+import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import models.team._
+import play.api.libs.functional.syntax._
+import com.scalableminds.util.tools.ExtendedTypes.ExtendedString
+import models.user.time._
+import com.scalableminds.util.tools.DefaultConverters._
 
-class UserController @Inject()(val messagesApi: MessagesApi) extends Controller with Secured with Dashboard with FoxImplicits {
+import scala.text
+
+class UserController @Inject()(val messagesApi: MessagesApi)
+  extends Controller
+  with UserAuthentication
+  with Secured
+  with Dashboard
+  with FoxImplicits {
 
   def empty = Authenticated { implicit request =>
     Ok(views.html.main()(Html("")))
@@ -103,17 +117,17 @@ class UserController @Inject()(val messagesApi: MessagesApi) extends Controller 
   }
 
   // REST API
-  def list = Authenticated.async { implicit request =>
-    for {
-      users <- UserDAO.findAll
-    } yield {
-      val filtered = request.getQueryString("isEditable").flatMap(_.toBooleanOpt) match {
-        case Some(isEditable) =>
-          users.filter(_.isEditableBy(request.user) == isEditable)
-        case None             =>
-          users
+  def list = Authenticated.async{ implicit request =>
+    UsingFilters(
+      Filter("includeAnonymous", (value: Boolean, el: User) => value || !el.isAnonymous, default = Some("false")),
+      Filter("isEditable", (value: Boolean, el: User) => el.isEditableBy(request.user) == value)
+    ) { filter =>
+      for {
+        users <- UserDAO.findAll
+        filtered = filter.applyOn(users)
+      } yield {
+        Ok(Writes.list(User.userPublicWrites(request.user)).writes(filtered.sortBy(_.lastName.toLowerCase)))
       }
-      Ok(Writes.list(User.userPublicWrites(request.user)).writes(filtered.sortBy(_.lastName.toLowerCase)))
     }
   }
 
@@ -179,15 +193,17 @@ class UserController @Inject()(val messagesApi: MessagesApi) extends Controller 
           _ <- Fox.combined(teamsWithUpdate.map(t => ensureTeamAdministration(issuingUser, t.team)))
           _ <- ensureRoleExistence(assignedTeams.zip(teams))
           _ <- ensureProperTeamAdministration(user, assignedTeams.zip(teams))
+          trimmedExperiences = experiences.map { case (key, value) => key.trim -> value }.toMap
+          updatedTeams = assignedTeams.filter(t => teamsWithUpdate.exists(_.team == t.team)) ++ teamsWithoutUpdate
+          updatedUser <- UserService.update(user, firstName, lastName, verified, updatedTeams, trimmedExperiences)
         } yield {
-          val trimmedExperiences = experiences.map { case (key, value) => key.trim -> value }.toMap
-          val updatedTeams = assignedTeams.filter(t => teamsWithUpdate.exists(_.team == t.team)) ++ teamsWithoutUpdate
-          UserService.update(user, firstName, lastName, verified, updatedTeams, trimmedExperiences)
-          Ok
+          Ok(User.userPublicWrites(request.user).writes(updatedUser))
         }
     }
   }
+}
 
+trait UserAuthentication extends Secured with Dashboard with FoxImplicits { this: Controller =>
   val resetForm: Form[(String, String)] = {
 
     def resetFormApply(oldPassword: String, password: (String, String)) =
@@ -232,4 +248,5 @@ class UserController @Inject()(val messagesApi: MessagesApi) extends Controller 
     }
     )
   }
+
 }

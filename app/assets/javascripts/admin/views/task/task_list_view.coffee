@@ -1,7 +1,9 @@
-_                = require("lodash")
-app              = require("app")
-Marionette       = require("backbone.marionette")
-TaskListItemView = require("./task_list_item_view")
+_                       = require("lodash")
+app                     = require("app")
+Marionette              = require("backbone.marionette")
+Toast                   = require("libs/toast")
+TaskListItemView        = require("./task_list_item_view")
+AnonymousTaskLinkModal  = require("./anonymous_task_link_modal")
 
 class TaskListView extends Marionette.CompositeView
 
@@ -26,6 +28,7 @@ class TaskListView extends Marionette.CompositeView
          </tr>
       </thead>
     </table>
+    <div id="modal-wrapper"></div>
   """)
   className : "task-administration container wide"
   childView : TaskListItemView
@@ -35,6 +38,7 @@ class TaskListView extends Marionette.CompositeView
     "modal" : ".modal"
     "inputName" : "#inputName"
     "detailsToggle" : ".details-toggle-all"
+    "modalWrapper" : "#modal-wrapper"
 
   events :
     "click #new-team" : "showModal"
@@ -45,6 +49,7 @@ class TaskListView extends Marionette.CompositeView
 
     @listenTo(app.vent, "paginationView:filter", @filterBySearch)
     @listenTo(app.vent, "paginationView:addElement", @createNewTask)
+    @listenTo(@collection, "sync", @showAnonymousLinks)
 
     @collection.fetch()
 
@@ -58,6 +63,34 @@ class TaskListView extends Marionette.CompositeView
 
     @ui.detailsToggle.toggleClass("open")
     app.vent.trigger("taskListView:toggleDetails")
+
+
+  showAnonymousLinks : ->
+
+    match = window.location.search.match(/\?showAnonymousLinks=(\S+)/)
+    return unless match
+
+    anonymousTaskId = match[1]
+    task = @collection.findWhere(id : anonymousTaskId)
+    if task and task.get("directLinks")
+      @showModal(task)
+    else
+      Toast.error("Unable to find anonymous links for task #{anonymousTaskId}.")
+
+
+  showModal : (task) ->
+
+    modalView = new AnonymousTaskLinkModal({model : task})
+    modalView.render()
+    @ui.modalWrapper.html(modalView.el)
+
+    modalView.$el.modal("show")
+    @modalView = modalView
+
+
+  onDestroy : ->
+
+    @modalView?.destroy()
 
 
   filterBySearch : (searchQuery) ->

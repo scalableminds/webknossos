@@ -10,7 +10,7 @@ THREE      = require("three")
 
 class PlaneView
 
-  constructor : (@model, @view, @stats) ->
+  constructor : (@model, @view) ->
 
     _.extend(this, Backbone.Events)
 
@@ -40,9 +40,9 @@ class PlaneView
     @camera[constants.PLANE_YZ].position.x =  1
     @camera[constants.PLANE_XZ].position.y =  1
     @camera[constants.TDView].position    = new THREE.Vector3(10, 10, -10)
-    @camera[constants.PLANE_XY].up         = new THREE.Vector3( 0, -1,  0)
-    @camera[constants.PLANE_YZ].up         = new THREE.Vector3( 0, -1,  0)
-    @camera[constants.PLANE_XZ].up         = new THREE.Vector3( 0,  0, -1)
+    @camera[constants.PLANE_XY].up        = new THREE.Vector3( 0, -1,  0)
+    @camera[constants.PLANE_YZ].up        = new THREE.Vector3( 0, -1,  0)
+    @camera[constants.PLANE_XZ].up        = new THREE.Vector3( 0,  0, -1)
     @camera[constants.TDView].up          = new THREE.Vector3( 0,  0, -1)
     for cam in @camera
       cam.lookAt(new THREE.Vector3( 0, 0, 0))
@@ -108,9 +108,6 @@ class PlaneView
 
       @trigger("render")
 
-      # update postion and FPS displays
-      @stats.update()
-
       viewport = [
         [0, @curWidth + 20],
         [@curWidth + 20, @curWidth + 20],
@@ -136,7 +133,7 @@ class PlaneView
           @curWidth * @deviceScaleFactor,
           constants.PLANE_COLORS[i]
         )
-        @renderer.render @scene, @camera[i]
+        @renderer.render(@scene, @camera[i])
 
       @needsRerender = false
 
@@ -168,7 +165,7 @@ class PlaneView
     @resizeThrottled()
 
 
-  resize : ->
+  resize : =>
 
     # Call this after the canvas was resized to fix the viewport
     canvas = $("#render-canvas")
@@ -225,6 +222,7 @@ class PlaneView
   showBranchModal : (callback) ->
 
     modal.show("You didn't add a node after jumping to this branchpoint, do you really want to jump again?",
+      "Jump again?",
       [{id: "jump-button", label: "Jump again", callback: callback},
        {id: "cancel-button", label: "Cancel"}])
 
@@ -246,8 +244,6 @@ class PlaneView
 
     $(".inputcatcher").hide()
 
-    $(window).off "resize", => @.resize()
-
     @running = false
 
 
@@ -257,8 +253,6 @@ class PlaneView
 
     @scaleTrianglesPlane(@model.user.get("scale"))
     $(".inputcatcher").show()
-
-    $(window).on "resize", => @.resize()
 
     @animate()
 

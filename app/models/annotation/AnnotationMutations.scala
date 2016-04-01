@@ -7,7 +7,7 @@ import com.scalableminds.util.io.NamedFileStream
 import com.scalableminds.util.mvc.BoxImplicits
 import com.scalableminds.util.reactivemongo.DBAccessContext
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
-import models.task.TaskService
+import models.task.{OpenAssignmentService, TaskService}
 import models.user.{UsedAnnotationDAO, User}
 import net.liftweb.common.{Box, Failure}
 import play.api.libs.concurrent.Execution.Implicits._
@@ -91,7 +91,7 @@ class AnnotationMutations(val annotation: Annotation)
   def cancelTask()(implicit ctx: DBAccessContext) = {
     for {
       task <- annotation.task
-      _ <- TaskService.unassignOnce(task)
+      _ <- OpenAssignmentService.insertOneFor(task)
       _ <- AnnotationDAO.updateState(annotation, AnnotationState.Unassigned)
     } yield annotation
   }

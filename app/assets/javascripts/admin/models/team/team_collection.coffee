@@ -7,6 +7,6 @@ class TeamCollection extends SortedCollection
 
   url : "/api/teams"
   model : TeamModel
-  sortBy : "name"
+  sortAttribute : "name"
 
 module.exports = TeamCollection

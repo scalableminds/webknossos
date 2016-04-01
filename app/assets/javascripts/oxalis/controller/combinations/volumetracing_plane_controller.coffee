@@ -12,9 +12,9 @@ class VolumeTracingPlaneController extends PlaneController
   # Tracing.
 
 
-  constructor : (@model, stats, @view, @sceneController, @volumeTracingController) ->
+  constructor : (@model, @view, @sceneController, @volumeTracingController) ->
 
-    super(@model, stats, @view, @sceneController)
+    super(@model, @view, @sceneController)
 
     @listenTo(@model.flycam, "positionChanged", =>
       @render3dCell @model.volumeTracing.getActiveCellId()

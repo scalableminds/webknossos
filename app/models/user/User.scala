@@ -36,6 +36,7 @@ case class User(
                  dataSetConfigurations: Map[String, DataSetConfiguration] = Map.empty,
                  experiences: Map[String, Int] = Map.empty,
                  lastActivity: Long = System.currentTimeMillis,
+                 _isAnonymous: Option[Boolean] = None,
                  _isSuperUser: Option[Boolean] = None,
                  _id: BSONObjectID = BSONObjectID.generate) extends DBAccessContextPayload {
 
@@ -48,6 +49,8 @@ case class User(
   def teamNames = teams.map(_.team)
 
   def isSuperUser = _isSuperUser getOrElse false
+
+  def isAnonymous = _isAnonymous getOrElse false
 
   val name = firstName + " " + lastName
 
@@ -112,8 +115,9 @@ object User {
       (__ \ "teams").write[List[TeamMembership]] and
       (__ \ "experiences").write[Map[String, Int]] and
       (__ \ "lastActivity").write[Long] and
+      (__ \ "isAnonymous").write[Boolean] and
       (__ \ "isEditable").write[Boolean])(u =>
-      (u.id, u.email, u.firstName, u.lastName, u.verified, u.teams, u.experiences, u.lastActivity, u.isEditableBy(requestingUser)))
+      (u.id, u.email, u.firstName, u.lastName, u.verified, u.teams, u.experiences, u.lastActivity, u.isAnonymous, u.isEditableBy(requestingUser)))
 
   def userCompactWrites(requestingUser: User): Writes[User] =
     ((__ \ "id").write[String] and
@@ -162,8 +166,9 @@ object UserDAO extends SecuredBaseDAO[User] {
 
   def findOneByEmail(email: String)(implicit ctx: DBAccessContext) = findOne("email", email)
 
-  def findByTeams(teams: List[String])(implicit ctx: DBAccessContext) = withExceptionCatcher {
-    find(Json.obj("$or" -> teams.map(team => Json.obj("teams.team" -> team)))).cursor[User].collect[List]()
+  def findByTeams(teams: List[String], includeAnonymous: Boolean)(implicit ctx: DBAccessContext) = withExceptionCatcher {
+    val anonymousFilter = if(includeAnonymous) Json.obj() else Json.obj("_isAnonymous" -> Json.obj("$ne" -> true))
+    find(Json.obj("$or" -> teams.map(team => Json.obj("teams.team" -> team))) ++ anonymousFilter).cursor[User].collect[List]()
   }
 
   def findByIdQ(id: BSONObjectID) = Json.obj("_id" -> id)
@@ -184,13 +189,13 @@ object UserDAO extends SecuredBaseDAO[User] {
       insert(user).map(_ => user)
   }
 
-  def update(_user: BSONObjectID, firstName: String, lastName: String, verified: Boolean, teams: List[TeamMembership], experiences: Map[String, Int])(implicit ctx: DBAccessContext): Fox[WriteResult] =
-    update(findByIdQ(_user), Json.obj("$set" -> Json.obj(
+  def update(_user: BSONObjectID, firstName: String, lastName: String, verified: Boolean, teams: List[TeamMembership], experiences: Map[String, Int])(implicit ctx: DBAccessContext): Fox[User] =
+    findAndModify(findByIdQ(_user), Json.obj("$set" -> Json.obj(
       "firstName" -> firstName,
       "lastName" -> lastName,
       "verified" -> verified,
       "teams" -> teams,
-      "experiences" -> experiences)))
+      "experiences" -> experiences)), returnNew = true)
 
   def addTeams(_user: BSONObjectID, teams: Seq[TeamMembership])(implicit ctx: DBAccessContext) =
     update(findByIdQ(_user), Json.obj("$pushAll" -> Json.obj("teams" -> teams)))
@@ -231,6 +236,14 @@ object UserDAO extends SecuredBaseDAO[User] {
 
   def changePassword(_user: BSONObjectID, pswd: String)(implicit ctx: DBAccessContext) = {
     update(findByIdQ(_user), Json.obj("$set" -> Json.obj("pwdHash" -> hashPassword(pswd))))
+  }
+
+  def findAllNonAnonymous(implicit ctx: DBAccessContext) = {
+    find(Json.obj("_isAnonymous" -> Json.obj("$ne" -> true))).cursor[User].collect[List]()
+  }
+
+  def countNonAnonymousUsers(implicit ctx: DBAccessContext) = {
+    count(Json.obj("_isAnonymous" -> Json.obj("$ne" -> true)))
   }
 
   def verify(user: User)(implicit ctx: DBAccessContext) = {

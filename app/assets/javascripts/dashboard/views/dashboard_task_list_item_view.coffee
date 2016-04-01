@@ -7,7 +7,11 @@ class DashboardTaskListItemView extends Marionette.ItemView
   tagName : "tr"
 
   template : _.template("""
-    <td><%- formattedHash     %></td>
+    <td>
+      <div class="monospace-id">
+        <%- id %>
+      </div>
+    </td>
     <td><%- type.summary      %></td>
     <td><%- projectName       %></td>
     <td><%- type.description  %></td>
@@ -48,7 +52,7 @@ class DashboardTaskListItemView extends Marionette.ItemView
 
   className : ->
 
-    if @model.get("annotation").state.isFinished
+    if @model.get("annotation.state.isFinished")
       return "finished"
     else
       return "unfinished"
@@ -65,6 +69,5 @@ class DashboardTaskListItemView extends Marionette.ItemView
     if confirm("Are you sure you want to permanently finish this tracing?")
 
       @model.finish()
-
 
 module.exports = DashboardTaskListItemView

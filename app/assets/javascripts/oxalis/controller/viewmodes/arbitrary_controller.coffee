@@ -2,6 +2,7 @@ app                = require("app")
 Backbone           = require("backbone")
 $                  = require("jquery")
 _                  = require("lodash")
+TWEEN              = require("tween.js")
 Input              = require("libs/input")
 ArbitraryPlane     = require("../../geometries/arbitrary_plane")
 Crosshair          = require("../../geometries/crosshair")
@@ -45,7 +46,7 @@ class ArbitraryController
       @keyboardOnce?.unbind()
 
 
-  constructor : (@model, stats, @view, @sceneController, @skeletonTracingController) ->
+  constructor : (@model, @view, @sceneController, @skeletonTracingController) ->
 
     _.extend(this, Backbone.Events)
 
@@ -54,7 +55,7 @@ class ArbitraryController
     @canvas = canvas = $("#render-canvas")
 
     @cam = @model.flycam3d
-    @arbitraryView = new ArbitraryView(canvas, @cam, stats, @view, @WIDTH)
+    @arbitraryView = new ArbitraryView(canvas, @cam, @view, @WIDTH)
 
     @plane = new ArbitraryPlane(@cam, @model, @WIDTH)
     @arbitraryView.addGeometry @plane
@@ -275,24 +276,25 @@ class ArbitraryController
       when "shift" then @setParticleSize(delta)
 
 
-  addNode : (position) =>
+  addNode : (position, rotation) =>
 
     datasetConfig = @model.get("datasetConfiguration")
     fourBit = if datasetConfig.get("fourBit") then 4 else 8
     interpolation = datasetConfig.get("interpolation")
 
-    @model.skeletonTracing.addNode(position, constants.TYPE_USUAL, constants.ARBITRARY_VIEW, 0, fourBit, interpolation)
+    @model.skeletonTracing.addNode(position, rotation, constants.TYPE_USUAL, constants.ARBITRARY_VIEW, 0, fourBit, interpolation)
 
 
-  setWaypoint : () =>
+  setWaypoint : =>
 
     unless @record
       return
 
     position  = @cam.getPosition()
-    activeNodePos = @model.skeletonTracing.getActiveNodePos()
+    rotation = @cam.getRotation()
 
-    @addNode(position)
+    @addNode(position, rotation)
+
 
   changeMoveValue : (delta) ->
 
@@ -333,24 +335,48 @@ class ArbitraryController
 
     activeNode = @model.skeletonTracing.getActiveNode()
     if activeNode
-      @cam.setPosition(activeNode.pos)
-      parent = activeNode.parent
-      while parent
-        # set right direction
-        direction = ([
-          activeNode.pos[0] - parent.pos[0],
-          activeNode.pos[1] - parent.pos[1],
-          activeNode.pos[2] - parent.pos[2]])
-        if direction[0] or direction[1] or direction[2]
-          @cam.setDirection(app.scaleInfo.voxelToNm(direction))
-          break
-        parent = parent.parent
+
+      # animate the change to the new position and new rotation
+      curPos = @cam.getPosition()
+      newPos = @model.skeletonTracing.getActiveNodePos()
+      curRotation = @cam.getRotation()
+      newRotation = @model.skeletonTracing.getActiveNodeRotation()
+      newRotation = @getShortestRotation(curRotation, newRotation)
+
+      waypointAnimation = new TWEEN.Tween(
+        {x: curPos[0], y: curPos[1], z: curPos[2], rx: curRotation[0], ry: curRotation[1], rz: curRotation[2], cam: @cam})
+      waypointAnimation.to(
+        {x: newPos[0], y: newPos[1], z: newPos[2], rx: newRotation[0], ry: newRotation[1], rz: newRotation[2]}, 200)
+      waypointAnimation.onUpdate( ->
+        @cam.setPosition([@x, @y, @z])
+        @cam.setRotation([@rx, @ry, @rz])
+      )
+      waypointAnimation.start()
+
+      @cam.update()
 
 
   setActiveNode : (nodeId, centered, mergeTree) ->
 
     @model.skeletonTracing.setActiveNode(nodeId, mergeTree)
-    @cam.setPosition @model.skeletonTracing.getActiveNodePos()
+    @cam.setPosition(@model.skeletonTracing.getActiveNodePos())
+    @cam.setRotation(@model.skeletonTracing.getActiveNodeRotation())
+
+
+  getShortestRotation : (curRotation, newRotation) ->
+
+    # TODO
+    # interpolating Euler angles does not lead to the shortest rotation
+    # interpolate the Quaternion representation instead
+    # https://theory.org/software/qfa/writeup/node12.html
+
+    for i in [0..2]
+      # a rotation about more than 180° is shorter when rotating the other direction
+      if newRotation[i] - curRotation[i] > 180
+        newRotation[i] -= 360
+      else if newRotation[i] - curRotation[i] < -180
+        newRotation[i] += 360
+    return newRotation
 
 
   moved : ->

@@ -1,0 +1,35 @@
+machine:
+  node:
+    version: 4.2.2
+  java:
+    version: oraclejdk8
+  services:
+    - docker
+
+dependencies:
+  pre:
+    - wget -q https://dl.bintray.com/sbt/debian/sbt-0.13.9.deb
+    - sudo dpkg -i sbt-0.13.9.deb
+    - sudo service docker stop; sudo curl -L -o /usr/bin/docker 'https://s3-external-1.amazonaws.com/circle-downloads/docker-1.9.0-circleci'; sudo chmod 0755 /usr/bin/docker; sudo service docker start; true
+  cache_directories:
+    - "~/.m2"
+    - "~/.ivy2"
+    - "~/.sbt"
+    - "node_modules"
+  override:
+    - sbt clean compile stage
+    - docker build -t scalableminds/oxalis:$CIRCLE_BUILD_NUM .
+
+test:
+  override:
+    - docker-compose -f docker-compose-circleci.yml up -d:
+        background: true
+    - sleep 10
+    - ./test/infrastructure/deployment.bash
+
+deployment:
+  hub:
+    branch: /.*/
+    commands:
+      - docker login -e $DOCKER_EMAIL -u $DOCKER_USER -p $DOCKER_PASS
+      - docker push scalableminds/oxalis:$CIRCLE_BUILD_NUM

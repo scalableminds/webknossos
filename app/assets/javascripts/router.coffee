@@ -163,7 +163,7 @@ class Router extends BaseRouter
     require(["admin/views/tasktype/task_type_form_view", "admin/models/tasktype/task_type_model"], (TaskTypeFormView, TaskTypeModel) =>
 
       model = new TaskTypeModel({id : taskTypeID})
-      view = new TaskTypeFormView(model : model, isEditForm : true)
+      view = new TaskTypeFormView(model : model, isEditMode : true)
       self.changeView(view)
       self.hideLoadingSpinner()
     )
@@ -204,13 +204,13 @@ class Router extends BaseRouter
   taskOverview : ->
 
     self = this
-    require(["admin/views/task/task_overview_view", "admin/models/task/task_overview_model"], (TaskOverviewView, TaskOverviewModel) ->
+    require(["admin/views/task/task_overview_view", "admin/models/task/task_overview_collection"], (TaskOverviewView, TaskOverviewCollection) ->
 
-      model = new TaskOverviewModel()
-      view = new TaskOverviewView({model})
+      collection = new TaskOverviewCollection()
+      view = new TaskOverviewView({collection})
 
       self.changeView(view)
-      self.listenTo(model, "sync", self.hideLoadingSpinner)
+      self.listenTo(collection, "sync", self.hideLoadingSpinner)
     )
 
 

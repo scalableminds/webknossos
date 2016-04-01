@@ -85,26 +85,25 @@ class PullQueue
             "Content-Type" : "multipart/mixed; boundary=#{requestData.boundary}"
           timeout : @MESSAGE_TIMEOUT
           compress : true
-        ).then(
-          (responseBuffer) =>
-            responseBuffer = new Uint8Array(responseBuffer)
-            @connctionInfo.log(@layer.name, roundTripBeginTime, batch.length, responseBuffer.length)
-
-            offset = 0
-
-            for bucket, i in batch
-              if bucket.fourBit
-                bucketData = @decode4bit(responseBuffer.subarray(offset, offset += (@cube.BUCKET_LENGTH >> 1)))
-              else
-                bucketData = responseBuffer.subarray(offset, offset += @cube.BUCKET_LENGTH)
-
-              @boundingBox.removeOutsideArea(bucket, bucketData)
-              @cube.getBucketByZoomedAddress(bucket).receiveData(bucketData)
         )
-        =>
-          for bucket in batch
-            if @cube.getBucketByZoomedAddress(item.bucket).dirty
-              @add({bucket : bucket, priority : @PRIORITY_HIGHEST})
+      ).then((responseBuffer) =>
+        responseBuffer = new Uint8Array(responseBuffer)
+        @connctionInfo.log(@layer.name, roundTripBeginTime, batch.length, responseBuffer.length)
+
+        offset = 0
+
+        for bucket, i in batch
+          if bucket.fourBit
+            bucketData = @decode4bit(responseBuffer.subarray(offset, offset += (@cube.BUCKET_LENGTH >> 1)))
+          else
+            bucketData = responseBuffer.subarray(offset, offset += @cube.BUCKET_LENGTH)
+
+          @boundingBox.removeOutsideArea(bucket, bucketData)
+          @cube.getBucketByZoomedAddress(bucket).receiveData(bucketData)
+      ).catch(=>
+        for bucket in batch
+          if @cube.getBucketByZoomedAddress(item.bucket).dirty
+            @add({bucket : bucket, priority : @PRIORITY_HIGHEST})
       )
       =>
         @batchCount--

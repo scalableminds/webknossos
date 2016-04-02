@@ -1,6 +1,7 @@
-Cube              = require("./cube")
-Request           = require("../../../libs/request")
-MultipartData     = require("../../../libs/multipart_data")
+_             = require("lodash")
+Cube          = require("./cube")
+Request       = require("../../../libs/request")
+MultipartData = require("../../../libs/multipart_data")
 
 class PullQueue
 
@@ -22,7 +23,7 @@ class PullQueue
   roundTripTime : 0
 
 
-  constructor : (@dataSetName, @cube, @layer, @tracingId, @boundingBox, @connctionInfo) ->
+  constructor : (@dataSetName, @cube, @layer, @boundingBox, @connectionInfo) ->
 
     @queue = []
     @url = "#{@layer.url}/data/datasets/#{@dataSetName}/layers/#{@layer.name}/data?cubeSize=#{1 << @cube.BUCKET_SIZE_P}&token=#{@layer.token}"
@@ -55,7 +56,6 @@ class PullQueue
 
   pullBatch : (batch) ->
     # Loading a bunch of buckets
-
     @batchCount++
 
     requestData = new MultipartData()
@@ -88,7 +88,7 @@ class PullQueue
         )
       ).then((responseBuffer) =>
         responseBuffer = new Uint8Array(responseBuffer)
-        @connctionInfo.log(@layer.name, roundTripBeginTime, batch.length, responseBuffer.length)
+        @connectionInfo.log(@layer.name, roundTripBeginTime, batch.length, responseBuffer.length)
 
         offset = 0
 

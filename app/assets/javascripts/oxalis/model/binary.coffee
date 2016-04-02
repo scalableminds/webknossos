@@ -43,7 +43,7 @@ class Binary
     updatePipeline = new Pipeline([@tracing.version])
 
     datasetName = @model.get("dataset").get("name")
-    @pullQueue = new PullQueue(datasetName, @cube, @layer, @tracing.id, @boundingBox, @connectionInfo)
+    @pullQueue = new PullQueue(datasetName, @cube, @layer, @boundingBox, @connectionInfo)
     @pushQueue = new PushQueue(datasetName, @cube, @layer, @tracing.id, updatePipeline)
     @cube.initializeWithQueues(@pullQueue, @pushQueue)
     @mappings = new Mappings(@model.dataSetName, @layer)

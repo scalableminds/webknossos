@@ -182,6 +182,12 @@ Request =
 
     if options.timeout?
       return Promise.race([ fetchPromise, @timeoutPromise(options.timeout) ])
+        .then((result) ->
+          if result == "timeout"
+            throw new Error("Timeout")
+          else
+            return result
+        )
     else
       return fetchPromise
 
@@ -190,7 +196,7 @@ Request =
 
     return new Promise( (resolve, reject) ->
       setTimeout(
-        -> reject("timeout")
+        -> resolve("timeout")
         timeout
       )
     )

@@ -27,7 +27,7 @@ class Bucket
 
   shouldCollect : ->
 
-    collect = not @accessed and not @dirty
+    collect = not @accessed and not @dirty and @state != @STATE_REQUESTED
     @accessed = false
     return collect
 

@@ -43,6 +43,7 @@ describe "PullQueue", ->
 
     cube = {
       BUCKET_SIZE_P : 5
+      BUCKET_LENGTH : 32 * 32 * 32
       getBucketByZoomedAddress : sinon.stub()
     }
     boundingBox = {
@@ -57,19 +58,21 @@ describe "PullQueue", ->
     boundingBox.containsBucket.returns(true)
 
 
-  jasmine.DEFAULT_TIMEOUT_INTERVAL = 10000
-
   describe "Successful pulling", ->
 
     buckets = [new Bucket(8, [0, 0, 0, 0], null), new Bucket(8, [1, 1, 1, 1], null)]
+    bucketData1 = (i % 256 for i in [0...(32 * 32 * 32)])
+    bucketData2 = ((2 * i) % 256 for i in [0...(32 * 32 * 32)])
 
     beforeEach ->
 
-      pullQueue.add({bucket: buckets[0].zoomedAddress, priority : 0})
-      pullQueue.add({bucket: buckets[1].zoomedAddress, priority : 0})
-
       for bucket in buckets
+        pullQueue.add({bucket: bucket.zoomedAddress, priority : 0})
         cube.getBucketByZoomedAddress.withArgs(bucket.zoomedAddress).returns(bucket)
+
+      responseBuffer = bucketData1.concat(bucketData2)
+      RequestMock.sendArraybufferReceiveArraybuffer.returns(Promise.resolve(responseBuffer))
+
 
     it "should pass the correct request parameters", (done) ->
 
@@ -101,5 +104,16 @@ describe "PullQueue", ->
           expect(url).toBe(expectedUrl)
           expect(options).toEqual(expectedOptions)
 
+          done()
+      ])
+
+    it "should receive the correct data", (done) ->
+
+      pullQueue.pull()
+
+      runAsync([
+        ->
+          expect(buckets[0].getData()).toEqual(bucketData1)
+          expect(buckets[1].getData()).toEqual(bucketData2)
           done()
       ])

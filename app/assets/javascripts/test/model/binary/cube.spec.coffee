@@ -2,6 +2,8 @@ mockRequire = require("mock-require")
 sinon = require("sinon")
 runAsync = require("../../helpers/run-async")
 
+mockRequire.stopAll()
+
 mockRequire("../../../oxalis/model/binary/pullqueue", {
   prototype : {
     PRIORITY_HIGHEST: 123
@@ -13,20 +15,16 @@ Cube = require("../../../oxalis/model/binary/cube")
 describe "Cube", ->
 
   cube = null
-  pullQueue = null
-  pushQueue = null
+  pullQueue = {
+    add : sinon.stub()
+    pull : sinon.stub()
+  }
+  pushQueue = {
+    insert : sinon.stub()
+    push : sinon.stub()
+  }
 
   beforeEach ->
-
-    pullQueue = {
-      add : sinon.stub()
-      pull : sinon.stub()
-    }
-
-    pushQueue = {
-      insert : sinon.stub()
-      push : sinon.stub()
-    }
 
     cube = new Cube([100, 100, 100], 3, 24)
     cube.initializeWithQueues(pullQueue, pushQueue)
@@ -145,4 +143,40 @@ describe "Cube", ->
 
         expect(cube.getDataValue([0, 0, 0], mapping)).toBe(1)
         expect(cube.getDataValue([1, 1, 1], mapping)).toBe(43)
+
+    describe "Garbage Collection", ->
+
+      beforeEach ->
+
+        Cube::MAXIMUM_BUCKET_COUNT = 3
+
+      it "should only keep 3 buckets", ->
+
+        cube.getBucketByZoomedAddress([0, 0, 0, 0])
+        cube.getBucketByZoomedAddress([1, 1, 1, 0])
+        cube.getBucketByZoomedAddress([2, 2, 2, 0])
+        cube.getBucketByZoomedAddress([3, 3, 3, 0])
+
+        expect(cube.bucketCount).toBe(3)
+
+      it "should not collect buckets with shouldCollect() == false", ->
+
+        b1 = cube.getBucketByZoomedAddress([0, 0, 0, 0])
+        b1.pull()
+        b2 = cube.getBucketByZoomedAddress([1, 1, 1, 0])
+        b3 = cube.getBucketByZoomedAddress([2, 2, 2, 0])
+        b4 = cube.getBucketByZoomedAddress([3, 3, 3, 0])
+
+        expect(b1.shouldCollect()).toBe(false)
+
+        addresses = cube.buckets.map((b) -> b.zoomedAddress)
+        expect(addresses).toEqual([[0, 0, 0, 0], [3, 3, 3, 0], [2, 2, 2, 0]])
+
+      it "should throw an exception if no bucket is collectable", ->
+
+        cube.getBucketByZoomedAddress([0, 0, 0, 0]).pull()
+        cube.getBucketByZoomedAddress([1, 1, 1, 0]).pull()
+        cube.getBucketByZoomedAddress([2, 2, 2, 0]).pull()
+
+        expect(-> cube.getBucketByZoomedAddress([3, 3, 3, 0])).toThrow()
 

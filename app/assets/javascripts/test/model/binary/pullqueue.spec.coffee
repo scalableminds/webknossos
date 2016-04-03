@@ -121,15 +121,42 @@ describe "PullQueue", ->
           done()
       ])
 
-    it "should not request twice", (done) ->
+  describe "Request Failure", ->
+
+    buckets = null
+
+    beforeEach ->
+
+      buckets = [new Bucket(8, [0, 0, 0, 0], null), new Bucket(8, [1, 1, 1, 1], null)]
+
+      for bucket in buckets
+        pullQueue.add({bucket: bucket.zoomedAddress, priority : 0})
+        cube.getBucketByZoomedAddress.withArgs(bucket.zoomedAddress).returns(bucket)
+
+      RequestMock.sendArraybufferReceiveArraybuffer.reset()
+      RequestMock.sendArraybufferReceiveArraybuffer.onFirstCall().returns(Promise.reject())
+      RequestMock.sendArraybufferReceiveArraybuffer.onSecondCall().returns(
+          Promise.resolve(new Uint8Array(32 * 32 * 32)))
+
+
+    it "should not request twice if not bucket dirty", (done) ->
 
       pullQueue.pull()
 
       runAsync([
         ->
           expect(RequestMock.sendArraybufferReceiveArraybuffer.callCount).toBe(1)
-          pullQueue.pull()
+          done()
+      ])
+
+    it "should reinsert dirty buckets", (done) ->
+
+      buckets[0].dirty = true
+      buckets[0].data = new Uint8Array(32 * 32 * 32)
+      pullQueue.pull()
+
+      runAsync([
         ->
-          expect(RequestMock.sendArraybufferReceiveArraybuffer.callCount).toBe(1)
+          expect(RequestMock.sendArraybufferReceiveArraybuffer.callCount).toBe(2)
           done()
       ])

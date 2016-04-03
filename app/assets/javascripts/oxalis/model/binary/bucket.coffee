@@ -78,6 +78,13 @@ class Bucket
       else @unexpectedState()
 
 
+  pullFailed : ->
+
+    @state = switch @state
+      when @STATE_REQUESTED then @STATE_UNREQUESTED
+      else @unexpectedState()
+
+
   receiveData : (data) ->
 
     @state = switch @state

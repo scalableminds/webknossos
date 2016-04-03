@@ -97,13 +97,14 @@ class PullQueue
             bucketData = @decode4bit(responseBuffer.subarray(offset, offset += (@cube.BUCKET_LENGTH >> 1)))
           else
             bucketData = responseBuffer.subarray(offset, offset += @cube.BUCKET_LENGTH)
-
           @boundingBox.removeOutsideArea(bucket, bucketData)
           @cube.getBucketByZoomedAddress(bucket).receiveData(bucketData)
       ).catch(=>
-        for bucket in batch
-          if @cube.getBucketByZoomedAddress(item.bucket).dirty
-            @add({bucket : bucket, priority : @PRIORITY_HIGHEST})
+        for bucketAddress in batch
+          bucket = @cube.getBucketByZoomedAddress(bucketAddress)
+          bucket.pullFailed()
+          if bucket.dirty
+            @add({bucket : bucketAddress, priority : @PRIORITY_HIGHEST})
       )
       =>
         @batchCount--

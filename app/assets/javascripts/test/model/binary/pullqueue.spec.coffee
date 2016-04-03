@@ -8,17 +8,16 @@ mockRequire.stopAll()
 MultipartData = require("../../../libs/multipart_data")
 # FileReader is not available in node context
 # -> Mock MultipartData to just return the data string
-MultipartData.prototype.dataPromise = ->
+MultipartData::dataPromise = ->
   return Promise.resolve(this.data)
 # Mock random boundary
-MultipartData.prototype.randomBoundary = ->
+MultipartData::randomBoundary = ->
   return "--multipart-boundary--xxxxxxxxxxxxxxxxxxxxxxxx--"
 mockRequire("../../../libs/request", MultipartData)
 
 RequestMock = {
   always : (promise, func) -> promise.then(func, func)
   sendArraybufferReceiveArraybuffer : sinon.stub()
-  foo : 0
 }
 mockRequire("../../../libs/request", RequestMock)
 
@@ -33,44 +32,38 @@ describe "PullQueue", ->
     token : "token"
     category : "color"
   }
+  cube = {
+    BUCKET_SIZE_P : 5
+    BUCKET_LENGTH : 32 * 32 * 32
+    getBucketByZoomedAddress : sinon.stub()
+  }
+  boundingBox = {
+    containsBucket : sinon.stub().returns(true)
+    removeOutsideArea : sinon.stub()
+  }
+  connectionInfo = {
+    log : sinon.stub()
+  }
 
-  cube = null
-  boundingBox = null
   pullQueue = null
-  connectionInfo = null
+  buckets = null
 
   beforeEach ->
 
-    cube = {
-      BUCKET_SIZE_P : 5
-      BUCKET_LENGTH : 32 * 32 * 32
-      getBucketByZoomedAddress : sinon.stub()
-    }
-    boundingBox = {
-      containsBucket : sinon.stub()
-      removeOutsideArea : sinon.stub()
-    }
-    connectionInfo = {
-      log : sinon.stub()
-    }
     pullQueue = new PullQueue(dataSetName, cube, layer, boundingBox, connectionInfo)
 
-    boundingBox.containsBucket.returns(true)
+    buckets = [new Bucket(8, [0, 0, 0, 0], null), new Bucket(8, [1, 1, 1, 1], null)]
+    for bucket in buckets
+      pullQueue.add({bucket: bucket.zoomedAddress, priority : 0})
+      cube.getBucketByZoomedAddress.withArgs(bucket.zoomedAddress).returns(bucket)
 
 
   describe "Successful pulling", ->
 
-    buckets = null
     bucketData1 = (i % 256 for i in [0...(32 * 32 * 32)])
     bucketData2 = ((2 * i) % 256 for i in [0...(32 * 32 * 32)])
 
     beforeEach ->
-
-      buckets = [new Bucket(8, [0, 0, 0, 0], null), new Bucket(8, [1, 1, 1, 1], null)]
-
-      for bucket in buckets
-        pullQueue.add({bucket: bucket.zoomedAddress, priority : 0})
-        cube.getBucketByZoomedAddress.withArgs(bucket.zoomedAddress).returns(bucket)
 
       responseBuffer = bucketData1.concat(bucketData2)
       RequestMock.sendArraybufferReceiveArraybuffer.reset()
@@ -116,6 +109,8 @@ describe "PullQueue", ->
 
       runAsync([
         ->
+          expect(buckets[0].state).toBe(Bucket::STATE_LOADED)
+          expect(buckets[1].state).toBe(Bucket::STATE_LOADED)
           expect(buckets[0].getData()).toEqual(bucketData1)
           expect(buckets[1].getData()).toEqual(bucketData2)
           done()
@@ -123,15 +118,7 @@ describe "PullQueue", ->
 
   describe "Request Failure", ->
 
-    buckets = null
-
     beforeEach ->
-
-      buckets = [new Bucket(8, [0, 0, 0, 0], null), new Bucket(8, [1, 1, 1, 1], null)]
-
-      for bucket in buckets
-        pullQueue.add({bucket: bucket.zoomedAddress, priority : 0})
-        cube.getBucketByZoomedAddress.withArgs(bucket.zoomedAddress).returns(bucket)
 
       RequestMock.sendArraybufferReceiveArraybuffer.reset()
       RequestMock.sendArraybufferReceiveArraybuffer.onFirstCall().returns(Promise.reject())
@@ -146,6 +133,8 @@ describe "PullQueue", ->
       runAsync([
         ->
           expect(RequestMock.sendArraybufferReceiveArraybuffer.callCount).toBe(1)
+          expect(buckets[0].state).toBe(Bucket::STATE_UNREQUESTED)
+          expect(buckets[1].state).toBe(Bucket::STATE_UNREQUESTED)
           done()
       ])
 
@@ -158,5 +147,7 @@ describe "PullQueue", ->
       runAsync([
         ->
           expect(RequestMock.sendArraybufferReceiveArraybuffer.callCount).toBe(2)
+          expect(buckets[0].state).toBe(Bucket::STATE_LOADED)
+          expect(buckets[1].state).toBe(Bucket::STATE_UNREQUESTED)
           done()
       ])

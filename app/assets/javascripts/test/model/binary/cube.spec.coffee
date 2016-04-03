@@ -2,6 +2,8 @@ mockRequire = require("mock-require")
 sinon = require("sinon")
 runAsync = require("../../helpers/run-async")
 
+mockRequire.stopAll()
+
 mockRequire("../../../oxalis/model/binary/pullqueue", {
   prototype : {
     PRIORITY_HIGHEST: 123

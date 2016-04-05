@@ -112,7 +112,7 @@ class DashboardTaskListView extends Marionette.CompositeView
 
   refresh : ->
 
-    @collection.fetch().done( =>
+    @collection.fetch().then( =>
       @render()
     )
 

@@ -1,5 +1,5 @@
 THREE = require("three")
-$     = require("jquery")
+Deferred = require("../../libs/deferred")
 
 # This loads and caches meshes.
 
@@ -33,7 +33,7 @@ class Mesh
 
   @load : (filename) ->
 
-    deferred = new $.Deferred()
+    deferred = new Deferred()
 
     new THREE.JSONLoader().load(
       "/assets/mesh/" + filename

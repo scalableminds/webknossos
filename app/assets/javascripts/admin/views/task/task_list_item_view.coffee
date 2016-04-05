@@ -101,7 +101,7 @@ class TaskListItemView extends Marionette.CompositeView
 
       @collection
         .fetch()
-        .done( =>
+        .then( =>
           @render()
           @ui.detailsRow.removeClass("hide")
           @ui.detailsToggle.addClass("open")

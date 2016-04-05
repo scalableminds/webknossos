@@ -1,5 +1,4 @@
 _             = require("lodash")
-$             = require("jquery")
 Request       = require("libs/request")
 ErrorHandling = require("libs/error_handling")
 
@@ -29,17 +28,17 @@ class Mappings
 
     mappingChain = @getMappingChain(mappingName)
     promises = _.map(mappingChain, (mappingName) => @fetchMapping(mappingName))
-    return $.when(promises...)
+    return Promise.all(promises)
 
 
   fetchMapping : (mappingName) ->
 
     if @mappings[mappingName].mappingObject?
-      return $.Deferred().resolve().promise()
+      return Promise.resolve()
 
-    Request.$(Request.receiveJSON(
+    Request.receiveJSON(
       @baseUrl + mappingName + @getParams
-    )).then(
+    ).then(
       (mapping) =>
         @mappings[mappingName].mappingObject = mapping
         console.log("Done downloading:", mappingName)

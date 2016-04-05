@@ -1,5 +1,6 @@
 tlt = require("./tlt")
 _   = require("lodash")
+Deferred = require("../../../libs/deferred")
 
 # This class is capable of turning voxel data into triangles
 # Based on the marching cubes algorithm
@@ -21,17 +22,16 @@ class PolygonFactory
   getTriangles : () ->
 
     result    = {}
-    @deferred = new $.Deferred()
+    @deferred = new Deferred()
     @isCancelled = false
 
     _.defer(@calculateTrianglesAsync, result)
-    return @getCancelableDeferred()
+    return @deferred.promise()
 
-  getCancelableDeferred : () ->
-    restrictedDeferred = @deferred.promise()
-    restrictedDeferred.cancel = =>
-      @isCancelled = true
-    return restrictedDeferred
+
+  cancel : ->
+
+    @isCancelled = true
 
 
   calculateTrianglesAsync : (result, lastPosition) =>

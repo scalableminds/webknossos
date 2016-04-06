@@ -1,6 +1,7 @@
-Cube              = require("./cube")
-Request           = require("../../../libs/request")
-MultipartData     = require("../../../libs/multipart_data")
+_             = require("lodash")
+Cube          = require("./cube")
+Request       = require("../../../libs/request")
+MultipartData = require("../../../libs/multipart_data")
 
 class PullQueue
 
@@ -22,7 +23,7 @@ class PullQueue
   roundTripTime : 0
 
 
-  constructor : (@dataSetName, @cube, @layer, @tracingId, @boundingBox, @connctionInfo) ->
+  constructor : (@dataSetName, @cube, @layer, @boundingBox, @connectionInfo) ->
 
     @queue = []
     @url = "#{@layer.url}/data/datasets/#{@dataSetName}/layers/#{@layer.name}/data?cubeSize=#{1 << @cube.BUCKET_SIZE_P}&token=#{@layer.token}"
@@ -55,7 +56,6 @@ class PullQueue
 
   pullBatch : (batch) ->
     # Loading a bunch of buckets
-
     @batchCount++
 
     requestData = new MultipartData()
@@ -85,26 +85,26 @@ class PullQueue
             "Content-Type" : "multipart/mixed; boundary=#{requestData.boundary}"
           timeout : @MESSAGE_TIMEOUT
           compress : true
-        ).then(
-          (responseBuffer) =>
-            responseBuffer = new Uint8Array(responseBuffer)
-            @connctionInfo.log(@layer.name, roundTripBeginTime, batch.length, responseBuffer.length)
-
-            offset = 0
-
-            for bucket, i in batch
-              if bucket.fourBit
-                bucketData = @decode4bit(responseBuffer.subarray(offset, offset += (@cube.BUCKET_LENGTH >> 1)))
-              else
-                bucketData = responseBuffer.subarray(offset, offset += @cube.BUCKET_LENGTH)
-
-              @boundingBox.removeOutsideArea(bucket, bucketData)
-              @cube.getBucketByZoomedAddress(bucket).receiveData(bucketData)
         )
-        =>
-          for bucket in batch
-            if @cube.getBucketByZoomedAddress(item.bucket).dirty
-              @add({bucket : bucket, priority : @PRIORITY_HIGHEST})
+      ).then((responseBuffer) =>
+        responseBuffer = new Uint8Array(responseBuffer)
+        @connectionInfo.log(@layer.name, roundTripBeginTime, batch.length, responseBuffer.length)
+
+        offset = 0
+
+        for bucket, i in batch
+          if bucket.fourBit
+            bucketData = @decode4bit(responseBuffer.subarray(offset, offset += (@cube.BUCKET_LENGTH >> 1)))
+          else
+            bucketData = responseBuffer.subarray(offset, offset += @cube.BUCKET_LENGTH)
+          @boundingBox.removeOutsideArea(bucket, bucketData)
+          @cube.getBucketByZoomedAddress(bucket).receiveData(bucketData)
+      ).catch(=>
+        for bucketAddress in batch
+          bucket = @cube.getBucketByZoomedAddress(bucketAddress)
+          bucket.pullFailed()
+          if bucket.dirty
+            @add({bucket : bucketAddress, priority : @PRIORITY_HIGHEST})
       )
       =>
         @batchCount--

@@ -27,7 +27,7 @@ class Bucket
 
   shouldCollect : ->
 
-    collect = not @accessed and not @dirty
+    collect = not @accessed and not @dirty and @state != @STATE_REQUESTED
     @accessed = false
     return collect
 
@@ -75,6 +75,13 @@ class Bucket
 
     @state = switch @state
       when @STATE_UNREQUESTED then @STATE_REQUESTED
+      else @unexpectedState()
+
+
+  pullFailed : ->
+
+    @state = switch @state
+      when @STATE_REQUESTED then @STATE_UNREQUESTED
       else @unexpectedState()
 
 

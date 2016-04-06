@@ -41,11 +41,17 @@ class AnnotationController @Inject()(val messagesApi: MessagesApi) extends Contr
 
   def info(typ: String, id: String, readOnly: Boolean = false) = UserAwareAction.async { implicit request =>
     val annotationId = AnnotationIdentifier(typ, id)
-    respondWithTracingInformation(annotationId, readOnly).map { js =>
-      request.userOpt.foreach { user =>
-        UsedAnnotationDAO.use(user, annotationId)
-      }
-      Ok(js)
+
+    withAnnotation(annotationId) { annotation =>
+        for {
+          js <- tracingInformation(annotation, readOnly)
+        } yield {
+          request.userOpt.foreach { user =>
+            UsedAnnotationDAO.use(user, annotationId)
+            TimeSpanService.logUserInteraction(user, Some(annotation))            // log time when a user starts working
+          }
+          Ok(js)
+        }
     }
   }
 
@@ -209,7 +215,10 @@ class AnnotationController @Inject()(val messagesApi: MessagesApi) extends Contr
       annotation <- AnnotationDAO.findOneById(id) ?~> Messages("annotation.notFound")
       (updated, message) <- annotation.muta.finishAnnotation(user)
       json <- annotationJson(user, updated)
-    } yield (json, message)
+    } yield {
+      TimeSpanService.logUserInteraction(user, Some(annotation))         // log time on a tracings end
+      (json, message)
+    }
   }
 
   def finish(typ: String, id: String) = Authenticated.async { implicit request =>

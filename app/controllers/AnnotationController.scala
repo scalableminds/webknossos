@@ -47,12 +47,18 @@ object AnnotationController extends Controller with Secured with TracingInformat
     AnnotationLike.annotationLikeInfoWrites(annotation, Some(user), exclude)
 
   def info(typ: String, id: String, readOnly: Boolean = false) = UserAwareAction.async { implicit request =>
-      val annotationId = AnnotationIdentifier(typ, id)
-      respondWithTracingInformation(annotationId, readOnly).map { js =>
+    val annotationId = AnnotationIdentifier(typ, id)
+
+    withAnnotation(annotationId) { annotation =>
+        for {
+          js <- tracingInformation(annotation, readOnly)
+        } yield {
           request.userOpt.foreach { user =>
-              UsedAnnotationDAO.use(user, annotationId)
+            UsedAnnotationDAO.use(user, annotationId)
+            TimeSpanService.logUserInteraction(user, Some(annotation))            // log time when a user starts working
           }
           Ok(js)
+        }
       }
   }
 
@@ -234,11 +240,16 @@ object AnnotationController extends Controller with Secured with TracingInformat
       }
   }
 
+  private def executeFinishAnnotation(annotation: Annotation)(implicit request: AuthenticatedRequest[_]) = {
+    TimeSpanService.logUserInteraction(request.user, Some(annotation))         // log time on a tracings end
+    annotation.muta.finishAnnotation(request.user)
+  }
+
   def finish(typ: String, id: String) = Authenticated.async {
     implicit request =>
       for {
         annotation <- AnnotationDAO.findOneById(id) ?~> Messages("annotation.notFound")
-        (updated, message) <- annotation.muta.finishAnnotation(request.user)
+        (updated, message) <- executeFinishAnnotation(annotation)
         json <- annotationJson(request.user, updated)
       } yield {
         JsonOk(json, message)
@@ -251,7 +262,7 @@ object AnnotationController extends Controller with Secured with TracingInformat
 
       for {
         annotation <- AnnotationDAO.findOneById(id) ?~> Messages("annotation.notFound")
-        finished <- annotation.muta.finishAnnotation(request.user).futureBox
+        finished <- executeFinishAnnotation(annotation).futureBox
       } yield {
         finished match {
           case Full((_, message)) =>

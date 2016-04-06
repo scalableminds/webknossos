@@ -20,7 +20,7 @@ import play.api.libs.concurrent.Execution.Implicits._
 import oxalis.thirdparty.BrainTracing
 
 object TimeSpanService extends FoxImplicits{
-  val MaxTracingPause = (Play.current.configuration.getInt("oxalis.user.time.tracingPauseInSeconds") getOrElse (60) seconds).toMillis
+  val MaxTracingPause = (Play.current.configuration.getInt("oxalis.user.time.tracingPauseInSeconds").getOrElse(60) seconds).toMillis
 
   lazy val timeSpanTracker = Akka.system.actorOf(Props[TimeSpanTracker])
 
@@ -78,13 +78,22 @@ object TimeSpanService extends FoxImplicits{
   protected class TimeSpanTracker extends Actor{
     val lastUserActivity = Agent[Map[BSONObjectID, TimeSpan]](Map.empty)
 
-    private def isNotInterrupted(current: Long, annotation: Option[AnnotationLike], last: TimeSpan) =
-      current - last.lastUpdate < MaxTracingPause && last.annotationEquals(annotation.map(_.id))
+    private def isNotInterrupted(current: Long, last: TimeSpan) =
+      current - last.lastUpdate < MaxTracingPause
+
+    private def belongsToSameTracing( last: TimeSpan, annotation: Option[AnnotationLike]) =
+      last.annotationEquals(annotation.map(_.id))
+
+    private def createNewTimeSpan(timestamp: Long, _user: BSONObjectID, annotation: Option[AnnotationLike], ctx: DBAccessContext) = {
+      val timeSpan = TimeSpan.create(timestamp, _user, annotation)
+      TimeSpanDAO.insert(timeSpan)(ctx)
+      timeSpan
+    }
 
     def receive = {
       case TrackTime(timestamp, _user, annotation, ctx) =>
         val timeSpan = lastUserActivity().get(_user) match {
-          case Some(last) if isNotInterrupted(timestamp, annotation, last) =>
+          case Some(last) if isNotInterrupted(timestamp, last) =>
             val duration = timestamp - last.lastUpdate
             val updated = last.copy(lastUpdate = timestamp, time = last.time + duration)
             // Log time to task
@@ -96,11 +105,13 @@ object TimeSpanService extends FoxImplicits{
               BrainTracing.logTime(user, duration, annotation)(GlobalAccessContext)
             }
             TimeSpanDAO.update(updated._id, updated)(ctx)
-            updated
+
+            if(belongsToSameTracing(last, annotation))
+              updated
+            else
+              createNewTimeSpan(timestamp, _user, annotation, ctx)
           case _ =>
-            val timeSpan = TimeSpan.create(timestamp, _user, annotation)
-            TimeSpanDAO.insert(timeSpan)(ctx)
-            timeSpan
+            createNewTimeSpan(timestamp, _user, annotation, ctx)
         }
         lastUserActivity.send( _ + (_user -> timeSpan))
     }

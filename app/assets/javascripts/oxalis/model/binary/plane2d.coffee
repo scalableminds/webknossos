@@ -410,7 +410,7 @@ class Plane2D
       sourceValue = 0
       for b in [0...bytesSrc]
         sourceValue += (1 << (b * 8)) * source.buffer[ src + b ]
-      sourceValue = mapping? and mapping[ sourceValue ] or sourceValue
+      sourceValue = if mapping? and mapping[ sourceValue ]? then mapping[ sourceValue ] else sourceValue
 
       # If you have to shorten the data,
       # use the first none-zero byte unless all are zero

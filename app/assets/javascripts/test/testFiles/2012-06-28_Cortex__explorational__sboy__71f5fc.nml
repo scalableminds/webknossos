@@ -1,0 +1,29 @@
+<things>
+  <parameters>
+    <experiment name="2012-06-28_Cortex"/>
+    <scale x="12.0" y="12.0" z="24.0"/>
+    <offset x="0" y="0" z="0"/>
+    <time ms="1460282639420"/>
+    <activeNode id="2"/>
+    <editPosition x="1604" y="1104" z="512"/>
+    <zoomLevel zoom="1.0"/>
+  </parameters>
+  <thing 
+  id="1" color.r="0.0" color.g="0.29019609093666077" color.b="1.0" color.a="1.0" name="Tree001">
+    <nodes>
+      <node 
+      id="1" radius="120.0" x="1530" y="1026" z="512" rotX="0.0" rotY="0.0" rotZ="0.0" inVp="0" inMag="1" bitDepth="8" interpolation="false" time="1460282633935">
+</node>
+      <node 
+      id="2" radius="120.0" x="1604" y="1104" z="512" rotX="0.0" rotY="0.0" rotZ="0.0" inVp="0" inMag="1" bitDepth="8" interpolation="false" time="1460282635721">
+</node>
+    </nodes>
+    <edges>
+      <edge source="1" target="2"/>
+    </edges>
+</thing>
+  <branchpoints>
+    <branchpoint id="1"/>
+  </branchpoints>
+  <comments> </comments>
+</things>

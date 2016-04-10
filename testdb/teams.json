@@ -1,0 +1,1 @@
+{ "_id" : { "$oid" : "570a24e12a7c0e3a0071f5f7" }, "name" : "Connectomics department", "roles" : [ { "name" : "user" }, { "name" : "admin" } ] }

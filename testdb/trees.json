@@ -1,0 +1,2 @@
+{ "_id" : { "$oid" : "570a25042a7c0e370171f5fe" }, "_tracing" : { "$oid" : "570a25012a7c0e380171f5fb" }, "treeId" : 1, "color" : [ 0, 0.2901960909366608, 1, 1 ], "timestamp" : { "$numberLong" : "1460282628340" }, "name" : "Tree001" }
+{ "_id" : { "$oid" : "570a25352a7c0e680171f605" }, "_tracing" : { "$oid" : "570a25352a7c0e690171f604" }, "treeId" : 1, "color" : [ 1, 0, 0, 1 ], "timestamp" : { "$numberLong" : "1460282677234" }, "name" : "Tree001" }

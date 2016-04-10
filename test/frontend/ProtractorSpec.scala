@@ -57,9 +57,10 @@ class ProtractorSpec extends Specification with BeforeAll {
 
   private def runProtractorTests: Int = {
     import sys.process._
+    s"./tools/import_export/import.sh $testDB testdb".run(getProcessIO)
     val webdriver = "npm run webdriver".run(getProcessIO)
     Thread.sleep(5000)
-    val result = "npm test".run(getProcessIO).exitValue()
+    val result = "./node_modules/.bin/protractor".run(getProcessIO).exitValue()
     webdriver.destroy()
     result
   }

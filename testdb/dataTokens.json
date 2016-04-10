@@ -1,0 +1,1 @@
+{ "_id" : { "$oid" : "570a25046980ade253ff01e8" }, "_user" : { "$oid" : "570a24e32a7c0e4a0071f5fa" }, "dataSetName" : "2012-06-28_Cortex", "dataLayerName" : "color", "token" : "k5bgu55n1f4uqi9bv2vfafqdt2", "expiration" : { "$numberLong" : "1460369028166" } }

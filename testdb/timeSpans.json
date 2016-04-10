@@ -1,0 +1,1 @@
+{ "_id" : { "$oid" : "570a25042a7c0e4c0071f5ff" }, "time" : 10924, "timestamp" : { "$numberLong" : "1460282628503" }, "lastUpdate" : { "$numberLong" : "1460282639427" }, "_user" : { "$oid" : "570a24e32a7c0e4a0071f5fa" }, "annotation" : "570a25012a7c0e380171f5fc" }

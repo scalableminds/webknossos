@@ -1,0 +1,1 @@
+{ "_id" : { "$oid" : "570a25042a7c0e370171f5fd" }, "user" : { "$oid" : "570a24e32a7c0e4a0071f5fa" }, "annotationId" : { "annotationType" : "Explorational", "identifier" : "570a25012a7c0e380171f5fc" } }

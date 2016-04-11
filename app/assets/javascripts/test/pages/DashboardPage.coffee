@@ -8,13 +8,13 @@ explorativeTab = "#tab-explorative"
 tasksTab = "#tab-tasks"
 tasks = ".tab-content tbody"
 newTaskButton = "#new-task-button"
-downloadUrl = "/annotations/Explorational/570a25012a7c0e380171f5fc/download"
+downloadUrl = "/annotations/Explorational/570ba0092a7c0e980056fe9b/download"
 downloadButton = "#explorative-tasks a[href=\"#{downloadUrl}\"]"
 
 
 class DashboardPage extends Page
 
-  @SAMPLE_NML_PATH = "2012-06-28_Cortex__explorational__sboy__71f5fc.nml"
+  @SAMPLE_NML_PATH = "2012-06-28_Cortex__explorational__sboy__56fe9b.nml"
 
   get : ->
 

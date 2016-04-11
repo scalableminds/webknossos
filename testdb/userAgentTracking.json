@@ -1,2 +1,1 @@
-{ "_id" : { "$oid" : "570a24e36980ade253ff01de" }, "userAgent" : "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_11_3) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/49.0.2623.110 Safari/537.36", "timestamp" : { "$numberLong" : "1460282595383" } }
-{ "_id" : { "$oid" : "570a24e36980ade253ff01df" }, "user" : { "$oid" : "570a24e32a7c0e4a0071f5fa" }, "userAgent" : "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_11_3) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/49.0.2623.110 Safari/537.36", "timestamp" : { "$numberLong" : "1460282595609" } }
+{"_id":{"$oid":"570b9f4c4bb848d0885ee70f"},"userAgent":"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_11_3) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/49.0.2623.110 Safari/537.36","timestamp":{"$numberLong":"1460379468973"}}

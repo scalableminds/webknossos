@@ -31,6 +31,7 @@ POST          /user/configuration                                             co
 GET           /user/configuration                                             controllers.SettingsController.read
 GET           /user/configuration/default                                     controllers.SettingsController.default
 GET           /user/tasks/request                                             controllers.TaskController.request
+GET           /user/tasks/peek                                                controllers.TaskController.peekNext(limit: Int ?= 10)
 GET           /users/:id/details                                              controllers.UserController.emptyWithWildcard(id)
 GET           /user/password/reset                                            controllers.UserController.resetPassword
 POST          /user/password/reset                                            controllers.UserController.handleResetPassword

@@ -23,8 +23,8 @@ class ProtractorSpec extends Specification with BeforeAll {
   def beforeAll = {
     try {
       println(s"About to drop database: $testDB")
-      s"./tools/dropDB.sh $testDB".run(getProcessIO)
-      s"./tools/import_export/import.sh $testDB testdb".run(getProcessIO)
+      s"./tools/dropDB.sh $testDB".run(getProcessIO).exitValue()
+      s"./tools/import_export/import.sh $testDB testdb".run(getProcessIO).exitValue()
       println("Successfully dropped the database and imported testdb")
     } catch {
       case e: Exception =>

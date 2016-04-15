@@ -200,7 +200,8 @@ class TaskCreateBulkImportView extends Marionette.ItemView
         width : maxX
         height : maxY
         depth : maxZ
-      projectName
+      projectName,
+      isForAnonymous : false
     }
 
 module.exports = TaskCreateBulkImportView

@@ -184,11 +184,15 @@ class Cube
 
   addBucketToGarbageCollection : (bucket) ->
 
-    unless @bucketCount < @MAXIMUM_BUCKET_COUNT
+    if @bucketCount >= @MAXIMUM_BUCKET_COUNT
 
-      while(not @buckets[@bucketIterator].shouldCollect())
+      for i in [0...(2 * @bucketCount)]
 
         @bucketIterator = ++@bucketIterator % @MAXIMUM_BUCKET_COUNT
+        break if @buckets[@bucketIterator].shouldCollect()
+
+      if not @buckets[@bucketIterator].shouldCollect()
+        throw new Error("All buckets have shouldCollect == false permanently")
 
       @collectBucket(@buckets[@bucketIterator])
       @bucketCount--

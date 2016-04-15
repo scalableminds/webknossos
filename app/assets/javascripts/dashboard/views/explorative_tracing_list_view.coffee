@@ -143,15 +143,16 @@ class ExplorativeTracingListView extends Marionette.CompositeView
       data: JSON.stringify({
         annotations: unarchivedAnnoationIds
       })
-    ).done( (data) =>
-      Toast.message(data.messages)
-      @collection.reset()
-      @render()
-    ).fail( (xhr) ->
-      if xhr.responseJSON
-        Toast.message(xhr.responseJSON.messages)
-      else
-        Toast.message(xhr.statusText)
+    ).then(
+      (data) =>
+        Toast.message(data.messages)
+        @collection.reset()
+        @render()
+      (xhr) ->
+        if xhr.responseJSON
+          Toast.message(xhr.responseJSON.messages)
+        else
+          Toast.message(xhr.statusText)
     )
 
   fetchArchivedAnnotations : ->

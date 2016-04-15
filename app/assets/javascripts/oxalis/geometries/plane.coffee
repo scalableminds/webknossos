@@ -87,15 +87,15 @@ class Plane
       if @model?
         for name, binary of @model.binary
 
-          binary.planes[@planeID].get(
+          dataBuffer = binary.planes[@planeID].get(
             position : @flycam.getTexturePosition(@planeID)
             zoomStep : @flycam.getIntegerZoomStep()
             area : @flycam.getArea(@planeID)
-          ).done ( dataBuffer ) =>
+          )
 
-            if dataBuffer
-              @plane.material.setData name, dataBuffer
-              app.vent.trigger("rerender")
+          if dataBuffer
+            @plane.material.setData name, dataBuffer
+            app.vent.trigger("rerender")
 
       @plane.material.setScaleParams(
         repeat :

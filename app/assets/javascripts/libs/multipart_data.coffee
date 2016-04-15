@@ -1,4 +1,3 @@
-$ = require("jquery")
 
 class MultipartData
 
@@ -27,15 +26,12 @@ class MultipartData
 
   dataPromise : ->
 
-    deferred = new $.Deferred()
-
-    reader = new FileReader()
-    reader.onload = (e) =>
-      deferred.resolve(e.target.result)
-
-    reader.readAsArrayBuffer(new Blob(@data))
-
-    return deferred.promise()
+    return new Promise((resolve) =>
+      reader = new FileReader()
+      reader.onload = (e) =>
+        resolve(e.target.result)
+      reader.readAsArrayBuffer(new Blob(@data))
+    )
 
 
 module.exports = MultipartData

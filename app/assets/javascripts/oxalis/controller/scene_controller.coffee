@@ -78,14 +78,16 @@ class SceneController
 
     return unless @model.getSegmentationBinary()?
 
-    if @cellsDeferred?
-      @cellsDeferred.cancel()
+    if @polygonFactory?
+      @polygonFactory.cancel()
 
-    @cellsDeferred = (new PolygonFactory(
+    @polygonFactory = new PolygonFactory(
       @model.getSegmentationBinary().cube
       resolution
       bb.min, bb.max, id
-    )).getTriangles().done (triangles) =>
+    )
+
+    @polygonFactory.getTriangles().then (triangles) =>
 
       @removeShapes()
       @volumeMeshes = []
@@ -97,7 +99,7 @@ class SceneController
 
       @trigger("newGeometries", @volumeMeshes)
       app.vent.trigger("rerender")
-      @cellsDeferred = null
+      @polygonFactory = null
 
 
   updateSceneForCam : (id) =>

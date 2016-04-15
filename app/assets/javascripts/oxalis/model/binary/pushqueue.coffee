@@ -62,10 +62,10 @@ class PushQueue
 
   pushImpl : =>
 
-    return Request.$(@cube.temporalBucketManager.getAllLoadedPromise()).then =>
+    return @cube.temporalBucketManager.getAllLoadedPromise().then =>
 
       unless @sendData
-        return (new $.Deferred()).resolve().promise()
+        return Promise.resolve()
 
       while @queue.length
 
@@ -97,7 +97,7 @@ class PushQueue
     return @updatePipeline.executePassAlongAction( =>
 
       return transmitData.dataPromise().then((data) =>
-        return Request.$(Request.sendArraybufferReceiveArraybuffer(
+        return Request.sendArraybufferReceiveArraybuffer(
           "#{@layer.url}/data/datasets/#{@dataSetName}/layers/#{@layer.name}/data?token=#{@layer.token}", {
             method : "PUT"
             data : data
@@ -106,9 +106,14 @@ class PushQueue
             timeout : @MESSAGE_TIMEOUT
             compress : true
           }
-        ))
+        )
       )
-    ).fail(-> throw new Error("Uploading data failed."))
+    ).then(
+      undefined
+      (err) ->
+        throw new Error("Uploading data failed.", err)
+        Promise.reject(err)
+    )
 
 
 module.exports = PushQueue

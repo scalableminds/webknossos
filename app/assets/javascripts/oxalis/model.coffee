@@ -278,7 +278,7 @@ class Model extends Backbone.Model
   save : ->
 
     submodels = []
-    deferreds = []
+    promises = []
 
     if @user?
       submodels.push[@user]
@@ -296,12 +296,16 @@ class Model extends Backbone.Model
       submodels.push(@get("skeletonTracing").stateLogger)
 
     _.each(submodels, (model) ->
-      deferreds.push( model.save() )
+      promises.push( model.save() )
     )
 
-    return $.when.apply($, deferreds).then(
-      -> Toast.success("Saved!")
-      -> Toast.error("Couldn't save. Please try again.")
+    return Promise.all(promises).then(
+      ->
+        Toast.success("Saved!")
+        return Promise.resolve(arguments)
+      ->
+        Toast.error("Couldn't save. Please try again.")
+        return Promise.reject(arguments)
     )
 
 

@@ -38,12 +38,12 @@ class User extends Backbone.Model
 
   resetBrightnessContrastColorSettings : (model) ->
 
-    Request.$(Request.receiveJSON("/user/configuration/default").then( (defaultData) =>
+    Request.receiveJSON("/user/configuration/default").then( (defaultData) =>
       @get("brightnessContrastColorSettings")[model.datasetPostfix] =
         defaultData.brightnessContrastColorSettings[model.datasetPostfix]
 
       @getOrCreateBrightnessContrastColorSettings(model)
-    ))
+    )
 
   triggerAll : ->
 

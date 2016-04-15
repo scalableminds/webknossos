@@ -124,7 +124,7 @@ class TaskOverviewView extends Marionette.LayoutView
 
   updateMinMaxHours : ->
 
-    @fetchPromise.done( =>
+    @fetchPromise.then( =>
       @minMaxHours = {}
       @getMinMaxHours()
     )
@@ -196,7 +196,7 @@ class TaskOverviewView extends Marionette.LayoutView
 
     sliderEl = @ui.rangeSliderInput[0]
 
-    @fetchPromise.done( =>
+    @fetchPromise.then( =>
       minMaxHours = @getMinMaxHours()
 
       # Destroy existing instance to reconfigure

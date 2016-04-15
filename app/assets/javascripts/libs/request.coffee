@@ -1,4 +1,3 @@
-$             = require("jquery")
 _             = require("lodash")
 Toast         = require("./toast")
 ErrorHandling = require("./error_handling")
@@ -183,6 +182,12 @@ Request =
 
     if options.timeout?
       return Promise.race([ fetchPromise, @timeoutPromise(options.timeout) ])
+        .then((result) ->
+          if result == "timeout"
+            throw new Error("Timeout")
+          else
+            return result
+        )
     else
       return fetchPromise
 
@@ -191,7 +196,7 @@ Request =
 
     return new Promise( (resolve, reject) ->
       setTimeout(
-        -> reject("timeout")
+        -> resolve("timeout")
         timeout
       )
     )
@@ -244,22 +249,6 @@ Request =
   always : (promise, func) ->
 
     promise.then(func, func)
-
-
-  # Wraps a native Promise as a jQuery deferred.
-  # http://api.jquery.com/category/deferred-object/
-  $ : (promise) ->
-
-    deferred = new $.Deferred()
-
-    promise.then(
-      (success) ->
-        deferred.resolve(success)
-      (error) ->
-        deferred.reject(error)
-    )
-
-    return deferred.promise()
 
 
 module.exports = Request

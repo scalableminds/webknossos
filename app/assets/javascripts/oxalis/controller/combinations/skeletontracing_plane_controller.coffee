@@ -76,7 +76,7 @@ class SkeletonTracingPlaneController extends PlaneController
 
   popBranch : =>
 
-    _.defer => @model.skeletonTracing.popBranch().done((id) =>
+    _.defer => @model.skeletonTracing.popBranch().then((id) =>
       @skeletonTracingController.setActiveNode(id, false, true)
     )
 

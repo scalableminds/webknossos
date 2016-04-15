@@ -23,27 +23,13 @@ class ProtractorSpec extends Specification with BeforeAll {
   def beforeAll = {
     try {
       println(s"About to drop database: $testDB")
-      dropDatabase()
+      s"./tools/dropDB.sh $testDB".run(getProcessIO)
       s"./tools/import_export/import.sh $testDB testdb".run(getProcessIO)
       println("Successfully dropped the database and imported testdb")
     } catch {
       case e: Exception =>
         throw new Error(s"An exception occured while dropping the database: ${e.toString}")
     }
-  }
-
-  private def dropDatabase() {
-    val driver = new MongoDriver
-    val connection = driver.connection(List("localhost"))
-    implicit val timeout: FiniteDuration = 5 seconds
-
-    Await.result(for {
-      _ <- connection.waitForPrimary
-      _ <- connection(testDB).drop()
-      _ <- connection.askClose
-    } yield {
-      driver.close()
-    }, timeout)
   }
 
   "my application" should {

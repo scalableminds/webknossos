@@ -14,8 +14,7 @@ else
   mkdir -p $out_dir
 fi
 
-js="print('_ ' + db.getCollectionNames())"
-cols=`mongo $db --eval "$js" | grep '_' | awk '{print $2}' | tr ',' ' '`
+cols=`mongo $db --eval "print(db.getCollectionNames())" | tail -n1 | tr ',' ' '`
 
 for c in $cols
 do

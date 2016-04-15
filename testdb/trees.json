@@ -1,0 +1,2 @@
+{"_id":{"$oid":"570b9ff12a7c0e980056fe8d"},"_tracing":{"$oid":"570b9ff02a7c0e960056fe8c"},"treeId":1,"color":[1.0,0.0,0.0,1.0],"timestamp":{"$numberLong":"1460379632960"},"name":"Tree001"}
+{"_id":{"$oid":"570ba00b2a7c0e9f0056fe9d"},"_tracing":{"$oid":"570ba0092a7c0e980056fe9a"},"treeId":1,"color":[0.0,0.29019609093666077,1.0,1.0],"timestamp":{"$numberLong":"1460379659339"},"name":"Tree001"}

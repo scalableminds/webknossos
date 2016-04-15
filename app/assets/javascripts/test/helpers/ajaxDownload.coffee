@@ -12,22 +12,26 @@ Download =
   ###
   fetchFactory : (converter) ->
 
-    errorHandler = (response) ->
+    responseHandler = (response) ->
 
       if (response.status >= 200 && response.status < 300)
         return response
 
       error = new Error(response.statusText)
       error.response = response
-      return error
+      return Promise.reject(error)
 
 
     return {
       from: (url) ->
 
         fetch(url)
-          .then(errorHandler)
+          .then(responseHandler)
           .then(converter)
+          .catch((e) ->
+            console.error(e)
+            return Promise.reject(e)
+          )
     }
 
 

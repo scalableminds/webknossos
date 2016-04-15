@@ -1,0 +1,1 @@
+{"_id":{"$oid":"570b9ff02a7c0e960056fe8b"},"_taskType":{"$oid":"570b9f4c2a7c0e4c008da6ee"},"team":"Connectomics department","neededExperience":{"domain":"123","value":0},"priority":100,"instances":10,"created":{"$numberLong":"1460379632904"},"directLinks":[],"isActive":true}

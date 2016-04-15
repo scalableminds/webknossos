@@ -14,6 +14,7 @@ import org.specs2.specification._
 import scala.io.Source
 import reactivemongo.api._
 import scala.concurrent.ExecutionContext.Implicits.global
+import sys.process._
 
 class ProtractorSpec extends Specification with BeforeAll {
 
@@ -22,26 +23,13 @@ class ProtractorSpec extends Specification with BeforeAll {
   def beforeAll = {
     try {
       println(s"About to drop database: $testDB")
-      dropDatabase()
-      println("Successfully dropped the database")
+      s"./tools/dropDB.sh $testDB".run(getProcessIO).exitValue()
+      s"./tools/import_export/import.sh $testDB testdb".run(getProcessIO).exitValue()
+      println("Successfully dropped the database and imported testdb")
     } catch {
       case e: Exception =>
         throw new Error(s"An exception occured while dropping the database: ${e.toString}")
     }
-  }
-
-  private def dropDatabase() {
-    val driver = new MongoDriver
-    val connection = driver.connection(List("localhost"))
-    implicit val timeout: FiniteDuration = 5 seconds
-
-    Await.result(for {
-      _ <- connection.waitForPrimary
-      _ <- connection(testDB).drop()
-      _ <- connection.askClose
-    } yield {
-      driver.close()
-    }, timeout)
   }
 
   "my application" should {
@@ -56,10 +44,9 @@ class ProtractorSpec extends Specification with BeforeAll {
   }
 
   private def runProtractorTests: Int = {
-    import sys.process._
     val webdriver = "npm run webdriver".run(getProcessIO)
     Thread.sleep(5000)
-    val result = "npm test".run(getProcessIO).exitValue()
+    val result = "./node_modules/.bin/protractor".run(getProcessIO).exitValue()
     webdriver.destroy()
     result
   }

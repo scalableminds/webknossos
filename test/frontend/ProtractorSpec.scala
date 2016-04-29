@@ -28,7 +28,8 @@ class ProtractorSpec(arguments: Arguments) extends Specification with BeforeAll 
                  ("mongodb.db"   -> mongoDb,
                   "mongodb.url"  -> mongoHost,
                   "mongodb.port" -> mongoPort,
-                  "http.port"    -> testPort)
+                  "http.port"    -> testPort,
+                  "mongodb.evolution.mongoCmd" -> s"mongo $mongoHost:$mongoPort/$mongoDb")
 
   def beforeAll = {
     try {

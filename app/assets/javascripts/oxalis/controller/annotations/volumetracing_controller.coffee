@@ -1,7 +1,6 @@
 app        = require("app")
 Backbone   = require("backbone")
 Dimensions = require("oxalis/model/dimensions")
-Constants  = require("oxalis/constants")
 Input      = require("libs/input")
 
 class VolumeTracingController
@@ -21,10 +20,8 @@ class VolumeTracingController
   constructor : (@model, @volumeTracingView, @sceneController) ->
 
     @inDeleteMode = false
-    @controlMode = Constants.VOLUME_MODE_MOVE
 
     _.extend(@, Backbone.Events)
-    @listenTo(app.vent, "changeVolumeMode", @setControlMode)
 
     $('#create-cell-button').on("click", =>
       @model.volumeTracing.createCell()
@@ -32,8 +29,8 @@ class VolumeTracingController
 
     # Keyboard shortcuts
     new Input.KeyboardNoLoop(
-      "w" : => @toggleControlMode()
-      "1" : => @toggleControlMode()
+      "w" : => @model.volumeTracing.toggleMode()
+      "1" : => @model.volumeTracing.toggleMode()
     )
 
     # no merging for now
@@ -62,21 +59,6 @@ class VolumeTracingController
         $(input).keypress (event) =>
           if event.which == 13
             @merge()
-
-
-  setControlMode : (controlMode) ->
-
-    @controlMode = controlMode
-
-
-  toggleControlMode : ->
-
-    mode = if @controlMode == Constants.VOLUME_MODE_MOVE
-      Constants.VOLUME_MODE_TRACE
-    else
-      Constants.VOLUME_MODE_MOVE
-
-    app.vent.trigger("changeVolumeMode", mode)
 
 
   merge : ->

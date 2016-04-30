@@ -21,7 +21,9 @@ oxalis-test:
     service: oxalis-sbt
   entrypoint: bash -c 
   command: >
-    "sbt -v -d \"test-only * -- 
+    "service xvfb start && 
+     export DISPLAY=:99 && 
+     sbt -v -d \"test-only * -- 
     -Dconfig.file=./conf/application_$${MODE}.conf 
     -Djava.net.preferIPv4Stack=true 
     -Dhttp.address=0.0.0.0

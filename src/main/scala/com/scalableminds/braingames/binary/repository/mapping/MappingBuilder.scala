@@ -3,6 +3,8 @@
  */
 package com.scalableminds.braingames.binary.repository.mapping
 
+import com.scalableminds.braingames.binary.Logger
+
 import scala.collection.mutable.MutableList
 import org.scalastuff.json._
 import net.liftweb.common.{Empty, Full, Box}
@@ -88,6 +90,7 @@ class MappingBuilder extends JsonHandler {
     expectedToken = expectedToken match {
       case ClassStart => MemberName
       case ClassValue => ClassStart
+      case _ => throw new IllegalStateException
     }
 
   def number(n: String) =
@@ -95,6 +98,8 @@ class MappingBuilder extends JsonHandler {
       case ClassValue =>
         classes.map(_.last += n.toLong)
         ClassValue
+      case _ =>
+        throw new IllegalStateException(s"Expected current state: '$expectedToken' expected: 'ClassValue'. Found number: '$n'. Name: '$name")
     }
 
   def string(s: String) =

@@ -38,7 +38,7 @@ class VolumeTracingPlaneController extends PlaneController
 
       leftDownMove : (delta, pos, plane, event) =>
 
-        if @volumeTracingController.controlMode == Constants.VOLUME_MODE_MOVE
+        if @model.volumeTracing.mode == Constants.VOLUME_MODE_MOVE
           @move [
             delta.x * @model.user.getMouseInversionX() / @planeView.scaleFactor
             delta.y * @model.user.getMouseInversionY() / @planeView.scaleFactor

@@ -26,6 +26,8 @@ import scala.collection.JavaConversions._
 import scala.concurrent.Future
 import scala.util.matching.Regex
 
+class InvalidImageFormatException(msg: String) extends Exception(msg)
+
 object TiffDataSourceType extends DataSourceType with ImageDataSourceTypeHandler {
   val name = "tiff"
 
@@ -65,19 +67,21 @@ case class ImageValueRange(minValue: Int = Int.MaxValue, maxValue: Int = Int.Min
   def combine(other: ImageValueRange) = ImageValueRange(math.min(minValue, other.minValue), math.max(maxValue, other.maxValue))
 }
 
-case class ImageInfo(width: Int = 0, height: Int = 0, bytesPerPixel: Int = 0, valueRange: ImageValueRange = ImageValueRange()) {
+case class ImageInfo(width: Int = 0, height: Int = 0, bytesPerPixel: Int = 0, valueRange: ImageValueRange = ImageValueRange(), source: Option[String]) {
   def combine(other: ImageInfo): Option[ImageInfo] = {
     if (bytesPerPixel == other.bytesPerPixel)
       Some(ImageInfo(
         math.max(width, other.width),
         math.max(height, other.height),
         bytesPerPixel,
-        valueRange.combine(other.valueRange)
+        valueRange.combine(other.valueRange),
+        Some(s"Combined($source, ${other.source})")
       ))
-    else
-      logger.error("Different image byte formats within the same layer.")
-      throw new Exception("Different image byte formats within the same layer.")
-      None
+    else {
+      val msg = s"Different image byte formats within the same layer. '$source' ($bytesPerPixel bytes/pixel) vs '${other.source}' (${other.bytesPerPixel} bytes/pixel) "
+      logger.error(msg)
+      throw new InvalidImageFormatException(msg)
+    }
   }
 }
 
@@ -279,7 +283,7 @@ trait ImageDataSourceTypeHandler extends DataSourceTypeHandler with FoxImplicits
           val raster = image.getRaster
           val data = (raster.getDataBuffer().asInstanceOf[DataBufferByte]).getData()
           val bytesPerPixel = imageTypeToByteDepth(image.getType)
-          Some(RawImage(ImageInfo(image.getWidth, image.getHeight, bytesPerPixel), data))
+          Some(RawImage(ImageInfo(image.getWidth, image.getHeight, bytesPerPixel, source = Some(imageFile.toString)), data))
         }
     }
   }
@@ -296,7 +300,7 @@ trait ImageDataSourceTypeHandler extends DataSourceTypeHandler with FoxImplicits
           val bytesPerPixel = imageTypeToByteDepth(image.getType)
           val buffer = image.getRaster.getDataBuffer
           val valueRange = (0 until buffer.getSize).foldLeft(ImageValueRange())((valueRange, index) => valueRange(buffer.getElem(index)))
-          Some(ImageInfo(image.getWidth, image.getHeight, bytesPerPixel, valueRange))
+          Some(ImageInfo(image.getWidth, image.getHeight, bytesPerPixel, valueRange, Some(imageFile.toString)))
         }
     }
   }

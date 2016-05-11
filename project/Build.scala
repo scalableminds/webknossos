@@ -25,7 +25,7 @@ object ApplicationBuild extends Build with sbtassembly.AssemblyKeys {
 
 
   lazy val datastoreSettings = Seq(
-    scalaVersion := "2.10.3",
+    scalaVersion := "2.11.7",
       resolvers ++= Seq(
       scmRel,
       scmIntRel,

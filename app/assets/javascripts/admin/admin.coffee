@@ -15,6 +15,7 @@ ProjectCollection           = require("./models/project/project_collection")
 StatisticView               = require("./views/statistic/statistic_view")
 WorkloadListView            = require("./views/workload/workload_list_view")
 WorkloadCollection          = require("./models/workload/workload_collection")
+ProjectTaskCollection       = require("admin/models/project/project_task_collection")
 
 # ####
 # This exports all the modules listed above and mainly the serves the purpose of
@@ -34,6 +35,7 @@ module.exports = {
   TaskCollection
   ProjectListView
   ProjectCollection
+  ProjectTaskCollection
   StatisticView
   WorkloadListView
   WorkloadCollection

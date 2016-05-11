@@ -8,7 +8,7 @@ AnonymousTaskLinkModal  = require("./anonymous_task_link_modal")
 class TaskListView extends Marionette.CompositeView
 
   template : _.template("""
-    <h3>Tasks</h3>
+    <h3>Tasks for Project <%- getProjectName() %></h3>
     <table id="tasklist-table" class="table table-double-striped table-details">
       <thead>
         <tr>
@@ -30,6 +30,7 @@ class TaskListView extends Marionette.CompositeView
     </table>
     <div id="modal-wrapper"></div>
   """)
+
   className : "task-administration container wide"
   childView : TaskListItemView
   childViewContainer : "table"
@@ -44,6 +45,9 @@ class TaskListView extends Marionette.CompositeView
     "click #new-team" : "showModal"
     "click .modal .btn-primary" : "addNewTeam"
     "click @ui.detailsToggle" : "toggleAllDetails"
+
+  templateHelpers : ->
+    getProjectName : => @collection.projectName
 
   initialize : ->
 

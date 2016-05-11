@@ -10,7 +10,6 @@ class ProjectsListView extends Marionette.CompositeView
     <table class="table table-double-striped table-details" id="projectlist-table">
       <thead>
         <tr>
-          <th class="details-toggle-all"><i class="caret-right"></i><i class="caret-down"></i></th>
           <th>Name</th>
           <th>Team</th>
           <th>Owner</th>
@@ -26,12 +25,8 @@ class ProjectsListView extends Marionette.CompositeView
   childView : ProjectListItemView
   childViewContainer : "table"
 
-  events :
-    "click @ui.detailsToggle" : "toggleAllDetails"
-
   ui :
     "modalWrapper" : "#modal-wrapper"
-    "detailsToggle" : ".details-toggle-all"
 
 
   initialize : ->
@@ -46,12 +41,6 @@ class ProjectsListView extends Marionette.CompositeView
   filterBySearch : (searchQuery) ->
 
     @collection.setFilter(["name", "team"], searchQuery)
-
-
-  toggleAllDetails : ->
-
-    @ui.detailsToggle.toggleClass("open")
-    app.vent.trigger("projectListView:toggleDetails")
 
 
   showModal : ->

@@ -125,9 +125,7 @@ GET           /api/tasks                                                        
 
 # DELETE        /api/tasks/:id                                                    controllers.admin.TaskAdministration.delete(id: String)
 
-GET           /tasks                                                            controllers.TaskController.empty
-GET           /tasks/overview                                                   controllers.TaskController.empty
-GET           /tasks/create                                                     controllers.TaskController.empty
+GET           /tasks/:name                                                      controllers.TaskController.empty(name: String)
 
 POST          /api/tasks                                                        controllers.TaskController.create(type: String)
 GET           /api/tasks/workload                                               controllers.TaskController.requestAvailableTasks
@@ -147,7 +145,7 @@ GET           /tasks/:id/edit                                                   
 #GET           /admin/tasks/:id/edit                                             controllers.UserController.emptyWithWildcard(id: String)
 #POST          /admin/tasks/:id                                                  controllers.admin.TaskAdministration.editTaskForm(id: String)
 #GET           /api/tasks/overview                                               controllers.admin.TaskAdministration.overviewData
-GET           /workload                                                         controllers.TaskController.empty
+GET           /workload                                                         controllers.TaskController.empty(name: String = "")
 
 GET           /api/tasks/:id/download                                           controllers.admin.NMLIO.taskDownload(id: String)
 GET           /api/tasks/:id/annotations                                        controllers.AnnotationController.annotationsForTask(id: String)
@@ -165,6 +163,7 @@ POST          /api/taskTypes/:id                                                
 
 # ID Validation
 GET           /api/find                                                         controllers.SearchController.find(q: String, type: String)
+
 
 # Projects
 GET           /projects                                                         controllers.ProjectController.empty

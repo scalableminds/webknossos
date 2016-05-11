@@ -5,6 +5,7 @@ Dimensions               = require("../dimensions")
 RestrictionHandler       = require("../helpers/restriction_handler")
 Drawing                  = require("libs/drawing")
 VolumeTracingStateLogger = require("./volumetracing_statelogger")
+Constants                = require("../../constants")
 
 class VolumeTracing
 
@@ -14,6 +15,7 @@ class VolumeTracing
 
     @contentData  = tracing.content.contentData
     @restrictionHandler = new RestrictionHandler(tracing.restrictions)
+    @mode = Constants.VOLUME_MODE_MOVE
 
     @cells        = []
     @activeCell   = null
@@ -36,6 +38,21 @@ class VolumeTracing
     # For testing
     window.setAlpha = (v) -> Drawing.setAlpha(v)
     window.setSmoothLength = (v) -> Drawing.setSmoothLength(v)
+
+
+  setMode : (@mode) ->
+
+    @trigger("change:mode", @mode)
+
+
+  toggleMode : ->
+
+    @setMode(
+      if @mode == Constants.VOLUME_MODE_TRACE
+        Constants.VOLUME_MODE_MOVE
+      else
+        Constants.VOLUME_MODE_TRACE
+    )
 
 
   createCell : (id) ->

@@ -49,7 +49,7 @@ trait TaskAssignment extends FoxImplicits{
     def continue[A](k: K[U, A]) = Cont(step(k))
   }
 
-  private def findAssignable(user: User)(implicit ctx: DBAccessContext) = {
+  def findAssignable(user: User)(implicit ctx: DBAccessContext) = {
     val alreadyDoneFilter = filterM[OpenAssignment]{ assignment =>
       AnnotationService.findTaskOf(user, assignment._task).futureBox.map(_.isEmpty)
     }

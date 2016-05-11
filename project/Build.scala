@@ -14,7 +14,7 @@ object Dependencies{
   val akkaVersion = "2.4.1"
   val reactiveVersion = "0.11.7"
   val reactivePlayVersion = "0.11.7.play24"
-  val braingamesVersion = "8.3.0"
+  val braingamesVersion = "8.3.2"
   val twelvemonkeysVersion = "3.1.2"
 
   val restFb = "com.restfb" % "restfb" % "1.6.11"
@@ -53,9 +53,9 @@ object Resolvers {
   val sonaSnaps = "sonatype snaps" at "https://oss.sonatype.org/content/repositories/snapshots/"
   val sgSnaps = "sgodbillon" at "https://bitbucket.org/sgodbillon/repository/raw/master/snapshots/"
   val typesafeRel = "typesafe" at "http://repo.typesafe.com/typesafe/releases"
-  val scmRel = Resolver.url("Scalableminds REL Repo", url("http://scalableminds.github.com/releases/"))(Resolver.ivyStylePatterns)
-  val scmIntRel = "scm.io intern releases repo" at "http://maven.scm.io/releases/"
-  val scmIntSnaps = "scm.io intern snapshots repo" at "http://maven.scm.io/snapshots/"
+  val scmRel = "scm.io releases S3 bucket" at "https://s3-eu-central-1.amazonaws.com/maven.scm.io/releases/"
+  val scmSnaps = "scm.io snapshots S3 bucket" at "https://s3-eu-central-1.amazonaws.com/maven.scm.io/snapshots/"
+  val teamon = "teamon.eu repo" at "http://repo.teamon.eu"
   val bintray = "scalaz-bintray" at "http://dl.bintray.com/scalaz/releases"
 }
 
@@ -171,9 +171,9 @@ object ApplicationBuild extends Build {
     sgSnaps,
     typesafeRel,
     scmRel,
-    scmIntRel,
-    scmIntSnaps,
-    bintray
+    scmSnaps,
+    bintray,
+    teamon
   )
 
   lazy val oxalisSettings = Seq(

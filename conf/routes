@@ -35,6 +35,7 @@ POST          /api/dataSetConfigurations/:dataSetName                           
 
 # Users
 GET           /user/tasks/request                                               controllers.TaskController.request
+GET           /user/tasks/peek                                                  controllers.TaskController.peekNext(limit: Int ?= 10)
 GET           /users/:id/details                                                controllers.UserController.emptyWithWildcard(id)
 GET           /users                                                            controllers.UserController.empty
 GET           /user/password/reset                                              controllers.UserController.resetPassword

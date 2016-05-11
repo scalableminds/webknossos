@@ -5,6 +5,11 @@ import models.binary.DataSetDAO
 import javax.inject.Inject
 import net.liftweb.common.{Box, Failure, Full}
 import oxalis.nml.NMLService
+import play.api.libs.iteratee.Cont
+import play.api.libs.iteratee.{Done, Input, Iteratee}
+import play.api.libs.json.Json._
+import play.api.libs.json._
+import oxalis.security.Secured
 import play.api.Logger
 import play.api.libs.json.Json._
 import oxalis.security.{AuthenticatedRequest, Secured}
@@ -303,6 +308,39 @@ class TaskController @Inject() (val messagesApi: MessagesApi) extends Controller
       annotationJSON <- AnnotationLike.annotationLikeInfoWrites(annotation, Some(user), exclude = List("content", "actions"))
     } yield {
       JsonOk(annotationJSON, Messages("task.assigned"))
+    }
+  }
+
+  def peekNext(limit: Int) = Authenticated.async { implicit request =>
+    val user = request.user
+
+    def takeUpTo[E](n: Int, filter: (Seq[E], E) => Boolean): Iteratee[E, Seq[E]] = {
+      def stepWith(accum: Seq[E]): Iteratee[E, Seq[E]] = {
+        if (accum.length >= n) Done(accum) else Cont {
+          case Input.EOF =>
+            Done(accum, Input.EOF)
+          case Input.Empty =>
+            stepWith(accum)
+          case Input.El(el) =>
+            if(filter(accum, el))
+              stepWith(accum :+ el)
+            else
+              stepWith(accum)
+        }
+      }
+      stepWith(Seq.empty)
+    }
+
+    def uniqueIdFilter(l: Seq[OpenAssignment], next: OpenAssignment) =
+      !l.map(_._task).contains(next._task)
+
+    def findNextAssignments = {
+      TaskService.findAssignable(user) |>>> takeUpTo[OpenAssignment](limit, uniqueIdFilter)
+    }
+    for {
+      assignments <- findNextAssignments
+    } yield {
+      Ok(Json.toJson(assignments))
     }
   }
 }

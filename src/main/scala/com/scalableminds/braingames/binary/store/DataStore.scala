@@ -84,13 +84,11 @@ object DataStore {
   }
 
   def fuzzyKnossosFile(dataSetDir: Path, id: String, resolution: Int, block: Point3D): Option[File] = {
-    PathUtils.fileOption(knossosDir(dataSetDir, resolution, block)).flatMap {
-      dir =>
-        Option(dir.listFiles(new FilenameFilter() {
-          override def accept(dir: File, name: String): Boolean = {
-            name.endsWith(".raw")
-          }
-        }))
-    }.getOrElse(Array.empty).headOption
+    val dir = knossosDir(dataSetDir, resolution, block)
+    Option(dir.toFile.listFiles(new FilenameFilter() {
+      override def accept(dir: File, name: String): Boolean = {
+        name.endsWith(".raw")
+      }
+    })).getOrElse(Array.empty).headOption
   }
 }

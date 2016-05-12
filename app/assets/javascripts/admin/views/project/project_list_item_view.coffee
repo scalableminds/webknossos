@@ -19,7 +19,7 @@ class ProjectListItemView extends Marionette.CompositeView
       <a href="/annotations/CompoundProject/<%= name %>" title="View all finished tracings">
         <i class="fa fa-random"></i>view
       </a><br/>
-      <a href="/tasks/<%= id %>" title="View Tasks">
+      <a href="/projects/<%= name %>/tasks" title="View Tasks">
         <i class="fa fa-tasks"></i>tasks
       </a><br/>
       <a href="/api/projects/<%= name %>/download" title="Download all finished tracings">

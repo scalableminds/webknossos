@@ -10,7 +10,6 @@ class TaskTypeListView extends Marionette.CompositeView
       <table class="table table-double-striped table-details" id="tasktype-table">
         <thead>
           <tr>
-            <th class="details-toggle-all"> <i class="caret-right"></i><i class="caret-down"></i></th>
             <th> # </th>
             <th> Team </th>
             <th> Summary </th>
@@ -28,21 +27,10 @@ class TaskTypeListView extends Marionette.CompositeView
   childView : TaskTypeItemView
   childViewContainer: "table"
 
-  ui:
-    "detailsToggle" : ".details-toggle-all"
-
-  events:
-    "click @ui.detailsToggle" : "toggleAllDetails"
-
 
   initialize : ->
 
     @collection.fetch()
 
-
-  toggleAllDetails : ->
-
-    @ui.detailsToggle.toggleClass("open")
-    app.vent.trigger("taskTypeListView:toggleDetails")
 
 module.exports = TaskTypeListView

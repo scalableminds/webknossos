@@ -6,11 +6,9 @@ import play.api.libs.json._
 import models.user.User
 import com.scalableminds.util.reactivemongo.{DefaultAccessDefinitions, DBAccessContext}
 import play.api.libs.concurrent.Execution.Implicits._
-import scala.Some
 import com.scalableminds.util.reactivemongo.AccessRestrictions.AllowIf
-import com.scalableminds.braingames.binary.models.DataSource
-import com.scalableminds.util.geometry.{Vector3D, Point3D}
-import com.scalableminds.util.geometry.Point3D
+import com.scalableminds.braingames.binary.models.{DataLayer, DataSource}
+import com.scalableminds.util.geometry.{BoundingBox, Scale, Vector3D, Point3D}
 import play.utils.UriEncoding
 
 case class DataSet(

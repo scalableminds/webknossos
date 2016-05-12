@@ -12,7 +12,6 @@ import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.braingames.binary.models._
 import play.api.i18n.Messages
 import play.api.libs.concurrent.Execution.Implicits._
-import controllers.DataStoreHandler
 import reactivemongo.api.commands.WriteResult
 import reactivemongo.core.commands.LastError
 import com.scalableminds.util.rest.RESTResponse
@@ -26,14 +25,14 @@ object DataSetService extends FoxImplicits {
   def isProperDataSetName(name: String) = name.matches("[A-Za-z0-9_\\-]*")
 
   def createDataSet(
-                     id: String,
+                     name: String,
                      dataStore: DataStoreInfo,
                      sourceType: String,
                      owningTeam: String,
                      dataSource: Option[DataSource] = None,
                      isActive: Boolean = false)(implicit ctx: DBAccessContext) = {
     DataSetDAO.insert(DataSet(
-      id,
+      name,
       dataStore,
       dataSource,
       sourceType,
@@ -76,15 +75,15 @@ object DataSetService extends FoxImplicits {
   def findDataSource(name: String)(implicit ctx: DBAccessContext) =
     DataSetDAO.findOneBySourceName(name).flatMap(_.dataSource)
 
-  def updateDataSources(dataStoreName: String, dataSources: List[DataSourceLike])(implicit ctx: DBAccessContext) = {
-    Logger.info(s"[$dataStoreName] Available datasets: " + dataSources.map(_.id).mkString(", "))
+  def updateDataSources(dataStore: DataStore, dataSources: List[DataSourceLike])(implicit ctx: DBAccessContext) = {
+    Logger.info(s"[${dataStore.name}] Available datasets: " + dataSources.map(_.id).mkString(", "))
     dataSources.map {
       case d: UsableDataSource =>
-        DataSetService.updateDataSource(DataStoreInfo(dataStoreName, d.serverUrl), d)
+        DataSetService.updateDataSource(DataStoreInfo(dataStore.name, d.serverUrl, dataStore.typ, None), d)
       case d: UnusableDataSource =>
         for {
           _ <- DataSetDAO.removeByName(d.id)(GlobalAccessContext)
-          _ <- DataSetService.createDataSet(d.id, DataStoreInfo(dataStoreName, d.serverUrl), d.sourceType, d.owningTeam, isActive = false)
+          _ <- DataSetService.createDataSet(d.id, DataStoreInfo(dataStore.name, d.serverUrl, dataStore.typ, None), d.sourceType, d.owningTeam, isActive = false)
         } yield true
     }
   }

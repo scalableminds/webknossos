@@ -6,16 +6,23 @@ import scala.concurrent.Future
 import scala.concurrent.duration._
 
 import com.scalableminds.braingames.binary.models._
-import com.scalableminds.util.geometry.Scale
+import com.scalableminds.util.geometry.{BoundingBox, Vector3D, Point3D, Scale}
 import com.scalableminds.util.reactivemongo.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.tools.DefaultConverters._
 import com.scalableminds.util.tools.ExtendedTypes.ExtendedString
+import com.scalableminds.util.tools.Fox
 import models.binary._
 import models.team.TeamDAO
 import models.user.{User, UserService}
 import net.liftweb.common.{Failure, Full}
 import org.apache.commons.codec.binary.Base64
-import oxalis.security.Secured
+import org.apache.xalan.res.XSLTErrorResources_pt_BR
+import oxalis.security.{AuthenticatedRequest, Secured}
+import play.api.Logger
+import play.api.data.validation.ValidationError
+import play.api.libs.json._
+import play.api.libs.json.Json._
+import play.api.libs.functional.syntax._
 import play.api.Play.current
 import play.api.cache.Cache
 import play.api.data.Form
@@ -23,6 +30,8 @@ import play.api.data.Forms._
 import play.api.i18n.{Messages, MessagesApi}
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json._
+import play.api.libs.ws.WS
+import play.api.mvc.BodyParsers.parse
 import play.twirl.api.Html
 
 class DataSetController @Inject()(val messagesApi: MessagesApi) extends Controller with Secured {
@@ -43,9 +52,9 @@ class DataSetController @Inject()(val messagesApi: MessagesApi) extends Controll
   def thumbnail(dataSetName: String, dataLayerName: String) = UserAwareAction.async { implicit request =>
 
     def imageFromCacheIfPossible(dataSet: DataSet) =
-    // We don't want all images to expire at the same time. Therefore, we add a day of randomness, hence the 86400
+    // We don't want all images to expire at the same time. Therefore, we add a day of randomness, hence the 1 day
       Cache.getOrElse(s"thumbnail-$dataSetName*$dataLayerName",
-        ThumbnailCacheDuration.toSeconds.toInt + (math.random * 86400).toInt) {
+        (ThumbnailCacheDuration.toSeconds + math.random * 1.day.toSeconds).toInt) {
         DataStoreHandler.requestDataLayerThumbnail(dataSet, dataLayerName, ThumbnailWidth, ThumbnailHeight)
       }
 
@@ -54,9 +63,8 @@ class DataSetController @Inject()(val messagesApi: MessagesApi) extends Controll
       layer <- DataSetService.getDataLayer(dataSet, dataLayerName) ?~> Messages("dataLayer.notFound")
       image <- imageFromCacheIfPossible(dataSet) ?~> Messages("dataLayer.thumbnailFailed")
     } yield {
-      val data = Base64.decodeBase64(image)
-      Ok(data).withHeaders(
-        CONTENT_LENGTH -> data.length.toString,
+      Ok(image).withHeaders(
+        CONTENT_LENGTH -> image.length.toString,
         CONTENT_TYPE -> play.api.libs.MimeTypes.forExtension("jpeg").getOrElse(play.api.http.ContentTypes.BINARY)
       )
     }
@@ -164,12 +172,156 @@ class DataSetController @Inject()(val messagesApi: MessagesApi) extends Controll
             case Full(r)              => r
             case Failure(error, _, _) =>
               JsonBadRequest(error)
+            case _ =>
+              JsonBadRequest(Messages("dataset.upload.failed"))
           }
       })
   }
 
   private def checkIfNewDataSetName(name: String)(implicit ctx: DBAccessContext) = {
     DataSetService.findDataSource(name)(GlobalAccessContext).reverse
+  }
+
+
+  val externalDataSetFormReads =
+    ((__ \ 'server).read[String] and
+      (__ \ 'name).read[String] and
+      (__ \ 'token).read[String] and
+      (__ \ 'team).read[String]).tupled
+
+  val channelTypeMapping = Map(
+    "annotation" -> "segmentation",
+    "image" -> "color"
+  )
+
+  case class NDProject(server: String, name: String, token: String, dataset: NDDataSet, channels: List[NDChannel])
+
+  case class NDDataSet(
+    name: String,
+    imageSize: Map[String, Array[Int]],
+    resolutions: List[Int],
+    offset: Map[String, Array[Int]],
+    voxelRes: Map[String, Array[Float]]){
+  }
+
+  object NDDataSet{
+    implicit val nddatasetReads = ((__ \ 'name).read[String] and
+      (__ \ 'imagesize).read[Map[String, Array[Int]]] and
+      (__ \ 'resolutions).read(Reads.minLength[List[Int]](1)) and
+      (__ \ 'offset).read[Map[String, Array[Int]]] and
+      (__ \ 'voxelres).read[Map[String, Array[Float]]])(NDDataSet.apply _)
+  }
+
+  case class NDChannel(name: String, dataType: String, channelType: String)
+
+  object NDChannelsReads extends Reads[List[NDChannel]]{
+    val channelBodyReads =
+      ((__ \ 'datatype).read[String].filter(ValidationError("ndstore.invalid.data.type"))(DataLayer.isValidElementClass) and
+        (__ \ 'channel_type).read[String].filter(ValidationError("ndstore.invalid.channel.type"))(channelTypeMapping.contains)).tupled
+
+    override def reads(json: JsValue): JsResult[List[NDChannel]] = json.validate(Reads.mapReads(channelBodyReads)).map { jso =>
+      jso.map{
+        case (name, (dataType, channelType)) =>
+          NDChannel(name, dataType, channelType)
+      }.toList
+    }
+  }
+
+  val ndProjectReads =
+    ((__ \ 'dataset).read[NDDataSet] and
+      (__ \ 'channels).read(NDChannelsReads)).tupled
+
+  def NDDataSet2DataSource(name: String, nd: NDDataSet, dataLayers: List[DataLayer]) = {
+    for {
+      vr <- nd.voxelRes.get("0").filter(_.length >= 3) ?~> Messages("ndstore.invalid.voxelres.zero")
+      scale = Scale(vr(0), vr(1), vr(2))
+    } yield {
+      DataSource(name, baseDir = "", scale = scale, dataLayers = dataLayers)
+    }
+  }
+
+  def NDChannelSize2BoundingBox(nd: NDDataSet) = {
+    for{
+      imageSize <- nd.imageSize.get("0").filter(_.length >= 3) ?~> Messages("ndstore.invalid.imagesize.zero")
+      topLeft <- nd.offset.get("0").flatMap(offsets => Point3D.fromArray(offsets)) ?~> Messages("ndstore.invalid.offset.zero")
+    } yield {
+      BoundingBox.createFrom(width = imageSize(0), height = imageSize(1), deph = imageSize(2), topLeft)
+    }
+  }
+
+  def NDChannels2DataLayers(nd: NDDataSet, channels: List[NDChannel]) = {
+    val singleChannelResults: List[Fox[DataLayer]] = channels.map { channel =>
+      for {
+        bbox <- NDChannelSize2BoundingBox(nd)
+        _ <- nd.resolutions.nonEmpty ?~> Messages("ndstore.invalid.resolutions")
+        sections = List(DataLayerSection("", channel.name, resolutions = nd.resolutions, bboxBig = bbox, bboxSmall = bbox))
+      } yield {
+        DataLayer(
+          name = channel.name,
+          category = channelTypeMapping.get(channel.channelType).get,
+          baseDir = "",
+          flags = None,
+          elementClass = channel.dataType,
+          isWritable = false,
+          fallback = None,
+          sections = sections
+        )
+      }
+    }
+    Fox.combined(singleChannelResults)
+  }
+
+  def requestProjectInformationFromNDStore(server: String, name: String, token: String): Fox[NDProject] = {
+    WS.url(s"$server/nd/ca/$token/info/").get().map { response =>
+      if (response.status == OK) {
+        response.json.validate(ndProjectReads) match {
+          case JsSuccess((dataset, channels), _) =>
+            Full(NDProject(server, name, token, dataset, channels))
+          case e: JsError =>
+            Logger.error(e.toString)
+            Failure(Messages("ndstore.response.parseFailure"))
+        }
+      } else {
+        Failure(Messages("ndstore.invalid.response", response.statusText))
+      }
+    }
+
+  }
+
+  def createDataSetFromNDProject(ndp: NDProject, team: String)(implicit ctx: DBAccessContext) = {
+    val dataStoreInfo = DataStoreInfo(ndp.server, ndp.server, NDStore, Some(ndp.token))
+
+    for {
+      dataLayers <- NDChannels2DataLayers(ndp.dataset, ndp.channels)
+      dataSource <- NDDataSet2DataSource(ndp.name, ndp.dataset, dataLayers)
+      result <- DataSetService.createDataSet(
+        ndp.name,
+        dataStoreInfo,
+        sourceType = "external",
+        team,
+        Some(dataSource),
+        isActive = true)
+    } yield result
+  }
+
+  def createNDStoreDataSet(implicit request: AuthenticatedRequest[JsValue]) =
+    withJsonBodyUsing(externalDataSetFormReads){
+      case (server, name, token, team) =>
+        for {
+          _ <- checkIfNewDataSetName(name) ?~> Messages("dataSet.name.alreadyTaken")
+          _ <- ensureTeamAdministration(request.user, team)
+          ndProject <- requestProjectInformationFromNDStore(server, name, token)
+          _ <- createDataSetFromNDProject(ndProject, team)
+        } yield Ok
+    }
+
+  def create(typ: String) = Authenticated.async(parse.json) { implicit request =>
+    typ match {
+      case "ndstore" =>
+        createNDStoreDataSet(request)
+      case _ =>
+        Future.successful(JsonBadRequest(Messages("dataset.type.invalid")))
+    }
   }
 
 }

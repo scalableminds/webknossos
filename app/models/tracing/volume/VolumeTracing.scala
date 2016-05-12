@@ -16,7 +16,6 @@ import play.api.libs.ws.WS
 import reactivemongo.bson.BSONObjectID
 import play.modules.reactivemongo.json.BSONFormats._
 import play.api.libs.concurrent.Execution.Implicits._
-import controllers.DataStoreHandler
 import com.scalableminds.braingames.binary.models.{DataLayer, UserDataLayer, DataSource}
 
 /**

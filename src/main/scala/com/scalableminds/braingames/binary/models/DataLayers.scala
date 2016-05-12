@@ -6,25 +6,18 @@ package com.scalableminds.braingames.binary.models
 import play.api.libs.json._
 import com.scalableminds.util.geometry.BoundingBox
 
+import scala.util.Try
+
 trait DataLayerLike {
   val sections: List[DataLayerSectionLike]
   val elementClass: String
   val category: String
 
-  val elementSize = elementClassToSize(elementClass)
+  val elementSize = DataLayer.elementClassToSize(elementClass)
   val bytesPerElement = elementSize / 8
 
   def isCompatibleWith(other: DataLayerLike) =
     this.bytesPerElement == other.bytesPerElement
-
-  def elementClassToSize(elementClass: String): Int = elementClass match {
-    case "uint8" => 8
-    case "uint16" => 16
-    case "uint24" => 24
-    case "uint32" => 32
-    case "uint64" => 64
-    case _ => throw new IllegalArgumentException(s"illegal element class ($elementClass) for DataLayer")
-  }
 }
 
 case class FallbackLayer(dataSourceName: String, layerName: String)
@@ -92,10 +85,44 @@ object DataLayer{
       defaultInterpolation
     }
   }
+  
+  def isValidElementClass(elementClass: String): Boolean = {
+    Try(elementClass).isSuccess
+  }
+
+  def elementClassToSize(elementClass: String): Int = elementClass match {
+    case "uint8" => 8
+    case "uint16" => 16
+    case "uint24" => 24
+    case "uint32" => 32
+    case "uint64" => 64
+    case _ => throw new IllegalArgumentException(s"illegal element class ($elementClass) for DataLayer")
+  }
 }
 
 case class UserDataLayer(dataSourceName: String, dataLayer: DataLayer)
 
 object UserDataLayer {
   implicit val userDataLayerFormat = Json.format[UserDataLayer]
+}
+
+object DataLayerHelpers{
+  def bestResolution(dataLayer: DataLayer, width: Int, height: Int): Int = {
+    // We want to make sure that the thumbnail only contains data, as much as possible but no black border
+    // To make sure there is no black border we are going to go with the second best resolution (hence the `- 1`)
+    val wr = math.floor(math.log(dataLayer.boundingBox.width.toDouble / width) / math.log(2)).toInt - 1
+    val hr = math.floor(math.log(dataLayer.boundingBox.height.toDouble / height) / math.log(2)).toInt - 1
+
+    math.max(0, List(wr, hr, (dataLayer.resolutions.size - 1)).min)
+  }
+
+  def goodThumbnailParameters(dataLayer: DataLayer, width: Int, height: Int) = {
+    // Parameters that seem to be working good enough
+    val center = dataLayer.boundingBox.center
+    val resolution = bestResolution(dataLayer, width, height)
+    val x = center.x - width * math.pow(2, resolution) / 2
+    val y = center.y - height * math.pow(2, resolution) / 2
+    val z = center.z
+    (x.toInt, y.toInt, z.toInt, resolution)
+  }
 }

@@ -125,8 +125,6 @@ GET           /api/tasks                                                        
 
 # DELETE        /api/tasks/:id                                                    controllers.admin.TaskAdministration.delete(id: String)
 
-GET           /tasks/:name                                                      controllers.TaskController.empty(name: String)
-
 POST          /api/tasks                                                        controllers.TaskController.create(type: String)
 GET           /api/tasks/workload                                               controllers.TaskController.requestAvailableTasks
 GET           /api/tasks/:id                                                    controllers.TaskController.read(id: String)
@@ -145,12 +143,13 @@ GET           /tasks/:id/edit                                                   
 #GET           /admin/tasks/:id/edit                                             controllers.UserController.emptyWithWildcard(id: String)
 #POST          /admin/tasks/:id                                                  controllers.admin.TaskAdministration.editTaskForm(id: String)
 #GET           /api/tasks/overview                                               controllers.admin.TaskAdministration.overviewData
-GET           /workload                                                         controllers.TaskController.empty(name: String = "")
+GET           /workload                                                         controllers.TaskController.empty
 
 GET           /api/tasks/:id/download                                           controllers.admin.NMLIO.taskDownload(id: String)
 GET           /api/tasks/:id/annotations                                        controllers.AnnotationController.annotationsForTask(id: String)
 
-GET           /taskTypes                                                        controllers.admin.TaskTypeAdministration.empty
+GET           /taskTypes                                                        controllers.admin.TaskTypeAdministration.empty(id: String = "")
+GET           /taskTypes/:id/tasks                                              controllers.admin.TaskTypeAdministration.empty(id: String)
 GET           /taskTypes/:id/edit                                               controllers.UserController.emptyWithWildcard(id: String)
 GET           /api/taskTypes                                                    controllers.admin.TaskTypeAdministration.list
 POST          /api/taskTypes                                                    controllers.admin.TaskTypeAdministration.create
@@ -166,7 +165,8 @@ GET           /api/find                                                         
 
 
 # Projects
-GET           /projects                                                         controllers.ProjectController.empty
+GET           /projects                                                         controllers.ProjectController.empty(name: String = "")
+GET           /projects/:name/tasks                                             controllers.ProjectController.empty(name: String)
 GET           /api/projects                                                     controllers.ProjectController.list
 POST          /api/projects                                                     controllers.ProjectController.create
 DELETE        /api/projects/:name                                               controllers.ProjectController.delete(name: String)

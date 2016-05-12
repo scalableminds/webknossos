@@ -16,9 +16,9 @@ class Router extends BaseRouter
     "teams"                             : "teams"
     "statistics"                        : "statistics"
     "tasks/create"                      : "taskCreate"
-    "tasks/:name"                       : "projectTasks"
     "tasks/:id/edit"                    : "taskEdit"
     "projects"                          : "projects"
+    "projects/:name/tasks"              : "projectTasks"
     "annotations/:type/:id(/readOnly)"  : "tracingView"
     "datasets/:id/view"                 : "tracingViewPublic"
     "dashboard"                         : "dashboard"
@@ -27,6 +27,7 @@ class Router extends BaseRouter
     "users/:id/details"                 : "dashboard"
     "taskTypes/:id/edit"                : "editTaskType"
     "taskTypes"                         : "taskTypes"
+    "taskTypes/:id/tasks"               : "taskTypesTasks"
     "spotlight"                         : "spotlight"
     "tasks/overview"                    : "taskOverview"
     "admin/taskTypes"                   : "hideLoadingSpinner"
@@ -101,7 +102,12 @@ class Router extends BaseRouter
 
   projectTasks : (projectName) ->
 
-     @showWithPagination("TaskListView", "ProjectTaskCollection", {projectName, addButtonText : "Create New Task"})
+     @showWithPagination("TaskListView", "TaskCollection", {projectName, addButtonText : "Create New Task"})
+
+
+  taskTypesTasks : (taskTypeId) ->
+
+     @showWithPagination("TaskListView", "TaskCollection", {taskTypeId, addButtonText : "Create New Task"})
 
 
   workload : ->

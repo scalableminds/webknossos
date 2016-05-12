@@ -46,7 +46,7 @@ class VolumeActionsView extends Marionette.ItemView
   changeMode : (evt) ->
 
     mode = @modeMapping[evt.target.id]
-    app.vent.trigger("changeVolumeMode", mode)
+    @model.volumeTracing.setMode(mode)
 
 
   serializeData : ->

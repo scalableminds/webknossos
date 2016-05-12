@@ -57,7 +57,7 @@ class TaskController @Inject() (val messagesApi: MessagesApi) extends Controller
       (__ \ 'editRotation).read[Vector3D] and
       (__ \ 'isForAnonymous).read[Boolean]).tupled
 
-  def empty() = Authenticated { implicit request =>
+  def empty = Authenticated { implicit request =>
     Ok(views.html.main()(Html("")))
   }
 

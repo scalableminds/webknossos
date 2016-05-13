@@ -37,7 +37,7 @@ object Project {
 
   def projectPublicWrites(project: Project, requestingUser: User): Future[JsObject] =
     for{
-      owner <- project.owner.map(User.userCompactWrites(requestingUser).writes(_)).futureBox
+      owner <- project.owner.map(User.userCompactWrites(requestingUser).writes).futureBox
     } yield {
       Json.obj(
         "name" -> project.name,

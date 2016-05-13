@@ -46,17 +46,16 @@ class AnnotationMutations(val annotation: Annotation)
 
   def finishAnnotation(user: User)(implicit ctx: DBAccessContext): Fox[(Annotation, String)] = {
     def executeFinish(annotation: Annotation): Future[Box[(Annotation, String)]] = async {
-      annotation match {
-        case annotation if annotation._task.isEmpty =>
+      if(annotation._task.isEmpty) {
+        val updated = await(annotation.muta.finish().futureBox)
+        updated.map(_ -> "annotation.finished")
+      } else {
+        val isReadyToBeFinished = await(annotation.isReadyToBeFinished)
+        if (isReadyToBeFinished) {
           val updated = await(annotation.muta.finish().futureBox)
-          updated.map(_ -> "annotation.finished")
-        case annotation                             =>
-          val isReadyToBeFinished = await(annotation.isReadyToBeFinished)
-          if (isReadyToBeFinished) {
-            val updated = await(annotation.muta.finish().futureBox)
-            updated.map(_ -> "task.finished")
-          } else
-              Failure("annotation.notFinishable")
+          updated.map(_ -> "task.finished")
+        } else
+            Failure("annotation.notFinishable")
       }
     }
 

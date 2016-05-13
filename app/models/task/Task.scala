@@ -94,7 +94,7 @@ object Task extends FoxImplicits {
         "dataSet" -> dataSetName,
         "editPosition" -> editPosition,
         "editRotation" -> editRotation,
-        "isForAnonymous" -> !task.directLinks.isEmpty,
+        "isForAnonymous" -> task.directLinks.nonEmpty,
         "boundingBox" -> boundingBox,
         "neededExperience" -> task.neededExperience,
         "priority" -> task.priority,
@@ -148,7 +148,7 @@ object TaskDAO extends SecuredBaseDAO[Task] with FoxImplicits {
 
   def findAllAdministratable(user: User)(implicit ctx: DBAccessContext) = withExceptionCatcher{
     find(Json.obj(
-      "team" -> Json.obj("$in" -> user.adminTeamNames))).cursor[Task].collect[List]()
+      "team" -> Json.obj("$in" -> user.adminTeamNames))).cursor[Task]().collect[List]()
   }
 
   def removeAllWithProject(project: Project)(implicit ctx: DBAccessContext) = {

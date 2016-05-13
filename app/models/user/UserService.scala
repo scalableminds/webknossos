@@ -64,7 +64,7 @@ object UserService extends FoxImplicits {
     for {
       teamOpt <- TeamDAO.findOneByName(teamName)(GlobalAccessContext).futureBox
       teamMemberships = teamOpt.map(t => TeamMembership(t.name, Role.User)).toList
-      user = User(email, firstName, lastName, false, hashPassword(password), md5(password), teamMemberships)
+      user = User(email, firstName, lastName, verified = false, hashPassword(password), md5(password), teamMemberships)
       result <- UserDAO.insert(user, isVerified)(GlobalAccessContext).futureBox
     } yield result
 

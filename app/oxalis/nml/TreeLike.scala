@@ -1,10 +1,8 @@
 package oxalis.nml
 
 import com.scalableminds.util.image.Color
-import com.scalableminds.util.xml.{SynchronousXMLWrites, XMLWrites, Xml}
-import play.api.libs.json.Writes
-import play.api.libs.json.Json
-import play.api.libs.concurrent.Execution.Implicits._
+import com.scalableminds.util.xml.{XMLWrites, Xml}
+import play.api.libs.json.{Json, Writes}
 import com.scalableminds.util.xml.XMLUtils._
 
 trait TreeLike {
@@ -26,8 +24,8 @@ trait TreeLike {
 
 object TreeLike{
     implicit object TreeLikeXMLWrites extends XMLWrites[TreeLike] {
-    import Node.NodeXMLWrites
     import Edge.EdgeXMLWrites
+    import Node.NodeXMLWrites
 
     def writes(t: TreeLike) =
       for{
@@ -46,8 +44,8 @@ object TreeLike{
   }
 
   implicit object DBTreeFormat extends Writes[TreeLike] {
-    import Node.NodeFormat
     import Edge.EdgeFormat
+    import Node.NodeFormat
 
     val ID = "id"
     val NODES = "nodes"

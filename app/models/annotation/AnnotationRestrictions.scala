@@ -44,24 +44,24 @@ object AnnotationRestrictions {
   def defaultAnnotationRestrictions(annotation: AnnotationLike) =
     new AnnotationRestrictions {
       override def allowAccess(user: Option[User]) = {
-        user.map {
+        user.exists {
           user =>
-            annotation._user == Some(user._id) || user.roleInTeam(annotation.team) == Some(Role.Admin)
-        } getOrElse false
+            annotation._user.contains(user._id) || user.roleInTeam(annotation.team).contains(Role.Admin)
+        }
       }
 
       override def allowUpdate(user: Option[User]) = {
-        user.map {
+        user.exists {
           user =>
-            annotation._user == Some(user._id) && !annotation.state.isFinished
-        } getOrElse false
+            annotation._user.contains(user._id) && !annotation.state.isFinished
+        }
       }
 
       override def allowFinish(user: Option[User]) = {
-        user.map {
+        user.exists {
           user =>
-            (annotation._user == Some(user._id) || user.roleInTeam(annotation.team) == Some(Role.Admin)) && !annotation.state.isFinished
-        } getOrElse false
+            (annotation._user.contains(user._id) || user.roleInTeam(annotation.team).contains(Role.Admin)) && !annotation.state.isFinished
+        }
       }
     }
 

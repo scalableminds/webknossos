@@ -18,7 +18,7 @@ trait Interval {
 
 case class Month(month: Int, year: Int) extends Interval with Ordered[Month] {
 
-  def compare(p: Month): Int = (12 * (year - p.year) + (month - p.month))
+  def compare(p: Month): Int = 12 * (year - p.year) + (month - p.month)
 
   override def <(that: Month): Boolean = (this compare that) < 0
 
@@ -28,7 +28,7 @@ case class Month(month: Int, year: Int) extends Interval with Ordered[Month] {
 
   override def >=(that: Month): Boolean = (this compare that) >= 0
 
-  override def toString = "%d-%02d".format(year, month)
+  override def toString = f"$year%d-$month%02d"
 
   def start = {
     jodaMonth.dayOfMonth().withMinimumValue().millisOfDay().withMinimumValue()
@@ -57,7 +57,7 @@ case class Week(week: Int, year: Int) extends Interval with Ordered[Week] {
 
   override def >=(that: Week): Boolean = (this compare that) >= 0
 
-  override def toString = "%d-W%02d".format(year, week)
+  override def toString = f"$year%d-W$week%02d"
 
   def start = {
     jodaWeek.withDayOfWeek(DateTimeConstants.MONDAY).millisOfDay().withMinimumValue()

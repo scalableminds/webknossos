@@ -36,17 +36,17 @@ object DataToken {
   private val generator = new SecureRandom()
   implicit val dataTokenFormat = Json.format[DataToken]
 
-  val expirationTime = (24 hours) toMillis
+  val expirationTime = 24.hours.toMillis
 
   def generateRandomToken =
-    new BigInteger(130, generator).toString(32);
+    new BigInteger(130, generator).toString(32)
 }
 
 object DataTokenService {
 
   val oxalisToken = DataToken.generateRandomToken
 
-  CleanUpService.register("deletion of expired dataTokens", DataToken.expirationTime millis){
+  CleanUpService.register("deletion of expired dataTokens", DataToken.expirationTime.millis){
     DataTokenDAO.removeExpiredTokens()(GlobalAccessContext).map(r => s"deleted ${r.n}")
   }
 
@@ -68,7 +68,7 @@ object DataTokenService {
 
   def validateDataSetToken(token: String, dataSetName: String): Future[Boolean] = {
     DataSetDAO.findOneBySourceName(dataSetName)(GlobalAccessContext).map{ dataSource =>
-      dataSource.accessToken == Some(token)
+      dataSource.accessToken.contains(token)
     } getOrElse false
   }
 }

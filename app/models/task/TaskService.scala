@@ -2,6 +2,7 @@ package models.task
 
 import models.annotation.{AnnotationService, Annotation, AnnotationType, AnnotationDAO}
 import com.scalableminds.util.reactivemongo.DBAccessContext
+import models.task.TaskDAO._
 import reactivemongo.bson.BSONObjectID
 
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
@@ -30,9 +31,9 @@ object TaskService extends TaskAssignmentSimulation with TaskAssignment with Fox
 
   def remove(_task: BSONObjectID)(implicit ctx: DBAccessContext) = {
     for{
-      _ <- TaskDAO.removeById(_task)
       _ <- AnnotationDAO.removeAllWithTaskId(_task)
       _ <- OpenAssignmentService.removeByTask(_task)
+      _ <- TaskDAO.removeById(_task)
     } yield true
   }
 
@@ -41,9 +42,9 @@ object TaskService extends TaskAssignmentSimulation with TaskAssignment with Fox
 
   def removeAllWithProject(project: Project)(implicit ctx: DBAccessContext) = {
     for{
-      _ <- TaskDAO.removeAllWithProject(project)
-      _ <- OpenAssignmentService.removeByProject(project)
-    } yield true
+      tasks <- project.tasks
+      result <- Fox.combined(tasks.map(task => remove(task._id)))
+    } yield result.forall(identity)
   }
 
   def insert(task: Task, insertAssignments: Boolean)(implicit ctx: DBAccessContext) = {

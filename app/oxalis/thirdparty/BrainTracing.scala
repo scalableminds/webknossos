@@ -41,13 +41,13 @@ object BrainTracing {
       .map { response =>
         result complete (response.status match {
           case 200 if(isSilentFailure(response.body)) =>
-            Success("braintraceing.error")
+            Success("braintracing.error")
           case 200 =>
             Success("braintracing.new")
           case 304 =>
             Success("braintracing.exists")
           case _ =>
-            Success("braintraceing.error")
+            Success("braintracing.error")
         })
         Logger.trace(s"Creation of account ${user.email} returned Status: ${response.status} Body: ${response.body}")
       }

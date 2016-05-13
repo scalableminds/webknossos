@@ -5,16 +5,17 @@ package com.scalableminds.braingames.binary.repository
 
 import java.nio.file.Path
 import javax.inject.Inject
-import com.scalableminds.braingames.binary.models.{UnusableDataSource, DataSource}
+
+import com.scalableminds.braingames.binary.models.{DataSource, UnusableDataSource}
 import com.scalableminds.util.io.PathUtils
 import com.scalableminds.util.tools.ProgressTracking.ProgressTracker
-import com.scalableminds.util.tools.Fox
-import net.liftweb.common.Box
+import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import net.liftweb.common.{Box, Full}
 import play.api.Logger
-import play.api.i18n.MessagesApi
+import play.api.i18n.{Messages, MessagesApi}
 
 trait DataSourceTypeHandler {
-  def importDataSource(unusableDataSource: UnusableDataSource, progressTracker: ProgressTracker): Fox[DataSource]
+  def importDataSource(unusableDataSource: UnusableDataSource, progressTracker: ProgressTracker)(implicit messages: Messages): Fox[DataSource]
 }
 
 trait DataSourceTypeGuesser {
@@ -34,18 +35,32 @@ class DataSourceTypeGuessers(val messagesApi: MessagesApi) {
   val types = List(new KnossosDataSourceType(messagesApi), TiffDataSourceType, PngDataSourceType, JpegDataSourceType)
   
   def lazyFileFinder(source: Path, excludeDirs: Seq[String]): Stream[Path] = {
-    Logger.trace(s"accessing files of $source")
-    PathUtils.listFiles(source).toStream #::: {
-      if (source.toFile.isDirectory && !excludeDirs.contains(source.getFileName.toString) && !source.toFile.isHidden) {
-        Logger.trace(s"accessing direc of $source")
-        PathUtils.listDirectories(source).toStream.flatMap(d => lazyFileFinder(d, excludeDirs))
-      }
-      else
+    def isTraversableDirectory(source: Path) = {
+      source.toFile.isDirectory && !excludeDirs.contains(source.getFileName.toString) && !source.toFile.isHidden
+    }
+
+    PathUtils.listFiles(source) match {
+      case Full(files) =>
+        files.toStream #::: {
+          if (isTraversableDirectory(source)) {
+            PathUtils.listDirectories(source) match {
+              case Full(dirs) =>
+                dirs.toStream.flatMap(d => lazyFileFinder(d, excludeDirs))
+              case e =>
+                Logger.error(s"Failed to list directories for '$source': $e")
+                Stream.empty
+            }
+          }
+          else
+            Stream.empty
+        }
+      case e =>
+        Logger.error(s"Failed to list files for '$source': $e")
         Stream.empty
     }
   }
   
-  def guessRepositoryType(source: Path) = {
+  def guessRepositoryType(source: Path): DataSourceType = {
     val paths = lazyFileFinder(source, Seq("target"))
     types.maxBy(_.chanceOfInboxType(paths))
   }

@@ -5,30 +5,35 @@ package com.scalableminds.braingames.binary.models
 
 import java.nio.file.{Files, Path}
 
-import play.api.libs.json._
+import com.scalableminds.util.io.FileIO
+import com.scalableminds.util.json.JsonUtils
 import com.scalableminds.util.tools.JsonHelper._
 import net.liftweb.common._
-import net.liftweb.common.Box._
-import com.scalableminds.util.io.FileIO
+import play.api.i18n.Messages
+import play.api.libs.json._
 
 trait SettingsFile[A] {
   def settingsFileName: String
 
   def settingsFileReads: Reads[A]
 
-  def settingsFileInFolder(p: Path) = p.resolve(settingsFileName)
+  def settingsFileInFolder(p: Path): Path = p.resolve(settingsFileName)
 
-  def fromSettingsFileIn(p: Path): Box[A] =
+  def fromSettingsFileIn(p: Path, rootPath: Path)(implicit messages: Messages): Box[A] =
     extractSettingsFromFile(
-      settingsFileInFolder(p),
-      settingsFileReads)
+                             settingsFileInFolder(p),
+                             rootPath,
+                             settingsFileReads)
 
-  def extractSettingsFromFile[T](path: Path, settingsReads: Reads[T]): Box[T] = {
+  def extractSettingsFromFile[T](path: Path, rootPath: Path, settingsReads: Reads[T])
+                                (implicit messages: Messages): Box[T] = {
     if (Files.isRegularFile(path)) {
-      JsonFromFile(path).flatMap {
+      jsonFromFile(path, rootPath).flatMap {
         _.validate(settingsReads) match {
           case JsSuccess(e, _) => Full(e)
-          case e: JsError => Failure(e.toString)
+          case e: JsError =>
+            val relativePath = rootPath.relativize(path)
+            Failure(s"File '$relativePath' invalid. " + JsonUtils.jsError2HumanReadable(e))
         }
       }
     } else

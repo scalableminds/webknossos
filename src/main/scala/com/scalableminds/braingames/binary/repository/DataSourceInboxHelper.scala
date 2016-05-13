@@ -5,18 +5,17 @@ package com.scalableminds.braingames.binary.repository
 
 import java.nio.file.Path
 
-import com.scalableminds.util.io.PathUtils
-import com.scalableminds.util.tools.{Fox, InProgress, FoxImplicits, ProgressTracking}
-import play.api.i18n.{I18nSupport, Messages}
-import com.scalableminds.braingames.binary.models.{FiledDataSource, UnusableDataSource, UsableDataSource}
-import play.api.libs.json.Json
-import org.apache.commons.io.FileUtils
 import com.scalableminds.braingames.binary.Logger._
-import com.scalableminds.util.tools.InProgress
-import net.liftweb.common.{Empty, Full, Failure}
+import com.scalableminds.braingames.binary.models.{FiledDataSource, UnusableDataSource, UsableDataSource}
+import com.scalableminds.util.io.PathUtils
+import com.scalableminds.util.tools.{Fox, FoxImplicits, InProgress, ProgressTracking}
+import net.liftweb.common.{Empty, Failure, Full}
+import org.apache.commons.io.FileUtils
+import play.api.i18n.{I18nSupport, Messages}
 import play.api.libs.concurrent.Execution.Implicits._
+import play.api.libs.json.Json
 
-trait DataSourceInboxHelper extends ProgressTracking with FoxImplicits with LockKeeperHelper with I18nSupport{
+trait DataSourceInboxHelper extends ProgressTracking with FoxImplicits with LockKeeperHelper with I18nSupport {
 
   val DataSourceJson = "datasource.json"
 
@@ -46,30 +45,34 @@ trait DataSourceInboxHelper extends ProgressTracking with FoxImplicits with Lock
   }
 
   def transformToDataSource(unusableDataSource: UnusableDataSource): Fox[UsableDataSource] = {
-    withLock(unusableDataSource.sourceFolder){
+    withLock(unusableDataSource.sourceFolder) {
       clearAllTrackers(importTrackerId(unusableDataSource.id))
       cleanUp(unusableDataSource.sourceFolder)
       new DataSourceTypeGuessers(messagesApi).guessRepositoryType(unusableDataSource.sourceFolder)
         .importDataSource(unusableDataSource, progressTrackerFor(importTrackerId(unusableDataSource.id)))
         .toFox
         .flatMap {
-        dataSource =>
-          writeDataSourceToFile(
-            unusableDataSource.sourceFolder,
-            FiledDataSource(unusableDataSource.owningTeam, unusableDataSource.sourceType, dataSource))
-      }.futureBox.map{
+          dataSource =>
+            writeDataSourceToFile(
+                                   unusableDataSource.sourceFolder,
+                                   FiledDataSource(unusableDataSource.owningTeam,
+                                                   unusableDataSource.sourceType,
+                                                   dataSource))
+        }.futureBox.map {
         case Full(r) =>
           logger.info("Datasource import finished for " + unusableDataSource.id)
           Full(r.toUsable(serverUrl))
-        case _ =>
+        case Empty =>
           logger.warn("Datasource import failed for " + unusableDataSource.id)
           Failure(Messages("dataSet.import.failedWithoutError", unusableDataSource.id))
+        case f: Failure =>
+          f
       }.toFox
     }.flatMap(x => x).futureBox.recover {
       case e: Exception =>
         logger.error("Failed to import dataset: " + e.getMessage, e)
         Failure(Messages("dataSet.import.failedWithError", e.getMessage), Full(e), Empty)
-    }.map{ result =>
+    }.map { result =>
       finishTrackerFor(importTrackerId(unusableDataSource.id), result.map(_ => true))
       result
     }

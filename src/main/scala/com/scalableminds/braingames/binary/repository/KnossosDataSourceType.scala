@@ -3,74 +3,79 @@
  */
 package com.scalableminds.braingames.binary.repository
 
-import java.nio.file.{Files, Path}
-import javax.inject.Inject
-import play.api.i18n.{I18nSupport, MessagesApi, Messages}
 import java.io.FileWriter
+import java.nio.file.{Files, Path}
 
 import com.scalableminds.braingames.binary.models._
-import com.scalableminds.braingames.binary.repository.mapping.{MappingPrinter, MappingParser}
-import com.scalableminds.util.geometry.{Scale, BoundingBox}
-import com.scalableminds.util.tools.ProgressTracking.ProgressTracker
-import com.scalableminds.util.tools.{FoxImplicits, Fox}
-import com.scalableminds.util.tools.JsonHelper
+import com.scalableminds.braingames.binary.repository.mapping.{MappingParser, MappingPrinter}
+import com.scalableminds.util.geometry.{BoundingBox, Scale}
 import com.scalableminds.util.io.PathUtils
-import net.liftweb.common.{Empty, Box, Full, Failure}
-import org.apache.commons.io.{FileUtils, FilenameUtils}
-import scala.collection.breakOut
+import com.scalableminds.util.tools.ProgressTracking.ProgressTracker
+import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import net.liftweb.common.{Box, Empty, Failure, Full}
+import play.api.Logger
+import play.api.i18n.{I18nSupport, Messages, MessagesApi}
+
 import scala.concurrent.ExecutionContext.Implicits._
-import play.api.libs.json._
 
 
-class KnossosDataSourceType(val messagesApi: MessagesApi) extends DataSourceType with KnossosDataSourceTypeHandler{
+class KnossosDataSourceType(val messagesApi: MessagesApi) extends DataSourceType with KnossosDataSourceTypeHandler {
   val name = "knossos"
 }
 
-trait KnossosDataSourceTypeHandler extends DataSourceTypeHandler with I18nSupport with FoxImplicits{
+trait KnossosDataSourceTypeHandler extends DataSourceTypeHandler with I18nSupport with FoxImplicits {
+
   import com.scalableminds.braingames.binary.Logger._
 
   private val maxRecursiveLayerDepth = 2
-  
+
+  private val DEFAULT_PRIORITY = 0
+
   def mappingsDirectory = "mappings"
-  
+
   def mappingFileExtension = "json"
-  
+
   def fileExtension = "raw"
 
-  def importDataSource(unusableDataSource: UnusableDataSource, progressTracker: ProgressTracker): Fox[DataSource] = {
+  def importDataSource(unusableDataSource: UnusableDataSource, progressTracker: ProgressTracker)
+                      (implicit messages: Messages): Fox[DataSource] = {
     dataSourceFromFile(unusableDataSource.sourceFolder)
   }
 
   protected def createSection(path: Path, settings: DataLayerSectionSettings): Box[DataLayerSection] = {
-    for{
-      bboxSmall <- BoundingBox.createFrom(settings.bboxSmall)
-      bboxBig <- BoundingBox.createFrom(settings.bboxBig)
+    for {
+      bboxSmall <- BoundingBox.createFrom(settings.bboxSmall) ?~! Messages("dataset.section.bboxsmall.invalid")
+      bboxBig <- BoundingBox.createFrom(settings.bboxBig)  ?~! Messages("dataset.section.bboxbig.invalid")
     } yield {
       DataLayerSection(
-        path.toString,
-        settings.sectionId getOrElse path.getFileName.toString,
-        settings.resolutions,
-        bboxSmall,
-        bboxBig)
+                        path.toString,
+                        settings.sectionId getOrElse path.getFileName.toString,
+                        settings.resolutions,
+                        bboxSmall,
+                        bboxBig)
     }
   }
 
-  protected def extractSections(base: Path): Box[List[DataLayerSection]] = {
+  protected def extractSections(base: Path): Fox[List[DataLayerSection]] = {
     val sectionSettingsMap = extractSectionSettings(base)
-    Box.listToListOfBoxes(sectionSettingsMap.map{
-      case (path, settings) =>
-        createSection(base.relativize(path), settings)
-    }.toList).toSingleBox("Failed to create sections")
+    Fox.combined(sectionSettingsMap.map {
+      case (path, settings) => createSection(base.relativize(path), settings).toFox
+    }.toList)
   }
 
   protected def extractSectionSettings(base: Path): Map[Path, DataLayerSectionSettings] = {
 
-    def extract(path: Path, depth: Int = 0): List[Option[(Path, DataLayerSectionSettings)]] = {
+    def extract(path: Path, depth: Int = 0): List[Box[(Path, DataLayerSectionSettings)]] = {
       if (depth > maxRecursiveLayerDepth) {
-        List()
+        List.empty
       } else {
-        DataLayerSectionSettings.fromSettingsFileIn(path).map(path -> _) ::
-          PathUtils.listDirectories(path).toList.flatMap(d => extract(d, depth + 1))
+        val head = DataLayerSectionSettings.fromSettingsFileIn(path, base).map(path -> _)
+        val tail = PathUtils.listDirectories(path) match {
+          case Full(dirs) => dirs.flatMap(d => extract(d, depth + 1))
+          case f: Failure => List(f)
+          case Empty => List(Empty)
+        }
+        head :: tail
       }
     }
 
@@ -79,58 +84,59 @@ trait KnossosDataSourceTypeHandler extends DataSourceTypeHandler with I18nSuppor
 
   protected def normalizeClasses(classes: List[List[Long]], parentClasses: List[List[Long]]): Box[List[List[Long]]] = {
 
-/*    import scala.collection.mutable.{Map => MutableMap}
-    
-    def find(m: MutableMap[Long, Long])(key: Long): Long = {
-      val parent = m.getOrElse(key, key)
-      if(parent == key)
-        key
-      else
-        find(m)(parent)
-    }
+    /*    import scala.collection.mutable.{Map => MutableMap}
 
-    def union(m: MutableMap[Long, Long])(a: Long, b: Long): Long = {
-      val roots = List(find(m)(a), find(m)(b))
-      m.put(roots.max, roots.min)
-      m.put(roots.min, roots.min)
-      roots.min
-    }
+        def find(m: MutableMap[Long, Long])(key: Long): Long = {
+          val parent = m.getOrElse(key, key)
+          if(parent == key)
+            key
+          else
+            find(m)(parent)
+        }
 
-    if(classes.reduceLeft((a, b) => a.union(b)).size != classes.foldLeft(0)((a, b) => a + b.size)) {
-      Failure("Invalid mapping")
-    } else {
-      val parentClassesMap = parentClasses.map{
-        c =>
-          val minId = c.min
-          c.map(_ -> minId)
-      }.flatten.toMap
+        def union(m: MutableMap[Long, Long])(a: Long, b: Long): Long = {
+          val roots = List(find(m)(a), find(m)(b))
+          m.put(roots.max, roots.min)
+          m.put(roots.min, roots.min)
+          roots.min
+        }
 
-      val classesMap = MutableMap[Long, Long]()
+        if(classes.reduceLeft((a, b) => a.union(b)).size != classes.foldLeft(0)((a, b) => a + b.size)) {
+          Failure("Invalid mapping")
+        } else {
+          val parentClassesMap = parentClasses.map{
+            c =>
+              val minId = c.min
+              c.map(_ -> minId)
+          }.flatten.toMap
 
-      classes.foreach{
-        c =>
-          c.map(id => parentClassesMap.getOrElse(id, id)).reduceLeft(union(classesMap))
-      }
+          val classesMap = MutableMap[Long, Long]()
 
-      Full(classesMap.mapValues(find(classesMap)).groupBy(_._2).values.map(_.keys.toList.sorted).toList)
-    }*/
+          classes.foreach{
+            c =>
+              c.map(id => parentClassesMap.getOrElse(id, id)).reduceLeft(union(classesMap))
+          }
+
+          Full(classesMap.mapValues(find(classesMap)).groupBy(_._2).values.map(_.keys.toList.sorted).toList)
+        }*/
 
     Full(classes)
   }
 
-  protected def normalizeMappingsRec(mappings: List[DataLayerMapping], finished: Map[String, DataLayerMapping]): List[DataLayerMapping] = {
+  protected def normalizeMappingsRec(mappings: List[DataLayerMapping],
+                                     finished: Map[String, DataLayerMapping]): List[DataLayerMapping] = {
     mappings match {
       case Nil =>
         finished.values.toList
 
       case _ =>
         val keys = finished.keys.toList
-        val (now, later) = mappings.partition(_.parent.map(keys.contains(_)).getOrElse(true))
-        
-        if(now.isEmpty) {
+        val (now, later) = mappings.partition(_.parent.forall(keys.contains))
+
+        if (now.isEmpty) {
           finished.values.toList
         } else {
-          val normalized = now.map{
+          val normalized = now.map {
             m =>
               val parentClasses = m.parent.flatMap(p => finished(p).classes).getOrElse(List())
               val classes = m.classes.getOrElse(List())
@@ -142,10 +148,10 @@ trait KnossosDataSourceTypeHandler extends DataSourceTypeHandler with I18nSuppor
   }
 
   protected def normalizeMappings(base: Path, mappings: List[DataLayerMapping]): Box[List[DataLayerMapping]] = {
-    normalizeMappingsRec(mappings, Map.empty).map{
+    normalizeMappingsRec(mappings, Map.empty).map {
       mapping =>
         val filename = mapping.name.replaceAll("[^a-zA-Z0-9.-]", "_")
-        val path = base.resolve(s"$filename.${mappingFileExtension}")
+        val path = base.resolve(s"$filename.$mappingFileExtension")
         PathUtils.fileOption(path).foreach {
           file =>
             MappingPrinter.print(mapping, new FileWriter(file))
@@ -154,62 +160,77 @@ trait KnossosDataSourceTypeHandler extends DataSourceTypeHandler with I18nSuppor
     }.toSingleBox("Error normalizing mappings")
   }
 
-  protected def extractMappings(base: Path): Box[List[DataLayerMapping]] = {
+  protected def extractMappings(base: Path): Fox[List[DataLayerMapping]] = {
     val sourceDir = base.resolve(mappingsDirectory)
     val targetDir = sourceDir.resolve("target")
 
-    val mappings = PathUtils.listFiles(base.resolve(mappingsDirectory))
-      .filter(_.toString.toLowerCase.endsWith(s".${mappingFileExtension}"))
-      .map {
-        mappingFile =>
-          MappingParser.parse(mappingFile)
-      }.toSingleBox(Messages("dataSet.import.layerMappingFailed"))
-    
-    PathUtils.ensureDirectory(targetDir)
-    mappings.flatMap(normalizeMappings(targetDir, _))
+    for {
+      files <- PathUtils.listFiles(base.resolve(mappingsDirectory)).toFox
+      mappings <- Fox.combined(files
+        .filter(_.toString.toLowerCase.endsWith(s".$mappingFileExtension"))
+        .map(mappingFile => MappingParser.parse(mappingFile).toFox))
+      _ = PathUtils.ensureDirectory(targetDir)
+      normalizedMapping <- normalizeMappings(targetDir, mappings)
+    } yield normalizedMapping
   }
 
-  protected def extractLayer(layer: Path, dataSourcePath: String) = {
+  protected def extractLayer(layer: Path, dataSourcePath: Path): Fox[DataLayer] = {
     for {
-      settings <- DataLayerSettings.fromSettingsFileIn(layer)
+      settings <- DataLayerSettings.fromSettingsFileIn(layer, dataSourcePath).toFox
       sections <- extractSections(layer)
       mappings <- extractMappings(layer)
     } yield {
       logger.info("Found Layer: " + settings)
       val dataLayerPath = layer.toAbsolutePath.toString
-      DataLayer(layer.getFileName.toString, settings.typ, dataLayerPath, settings.flags, settings.`class`, isWritable=false, settings.fallback, sections, settings.largestValue.map(_ + 1), mappings)
+      DataLayer(layer.getFileName.toString,
+                settings.typ,
+                dataLayerPath,
+                settings.flags,
+                settings.`class`,
+                isWritable = false,
+                settings.fallback,
+                sections,
+                settings.largestValue.map(_ + 1),
+                mappings)
     }
   }
 
-  protected def extractLayers(path: Path, dataSourcePath: String) = {
-    val parsedLayerSettings = PathUtils.listDirectories(path).map(layerPath => extractLayer(layerPath, dataSourcePath))
-    parsedLayerSettings.toSingleBox(Messages("dataSet.import.layerSettingsFailed"))
+  protected def extractLayers(path: Path, dataSourcePath: Path): Fox[List[DataLayer]] = {
+    for {
+      dirs <- PathUtils.listDirectories(path).toFox
+      parsedLayerSettings = dirs.map(layerPath => extractLayer(layerPath, dataSourcePath))
+      layerSettings <- Fox.combined(parsedLayerSettings)
+    } yield layerSettings
   }
 
-  protected def dataSourceFromFile(path: Path): Box[DataSource] = {
+  protected def dataSourceFromFile(path: Path): Fox[DataSource] = {
+    def extractDSSettingsIfPossible: Box[DataSource] = {
+      DataSourceSettings.fromSettingsFileIn(path, path) match {
+        case Full(settings) =>
+          Full(DataSource(
+                           settings.id getOrElse path.getFileName.toString,
+                           path.toAbsolutePath.toString,
+                           settings.scale,
+                           settings.priority.getOrElse(DEFAULT_PRIORITY),
+                           Nil))
+        case Empty =>
+          // If there is no config file present, we are using some default settings
+          Full(DataSource(path.getFileName.toString,
+                          path.toAbsolutePath.toString,
+                          Scale.default,
+                          DEFAULT_PRIORITY,
+                          Nil))
+        case f: Failure =>
+          f
+      }
+    }
 
     if (Files.isDirectory(path)) {
-      val dataSource: DataSource = DataSourceSettings.fromSettingsFileIn(path) match {
-        case Full(settings) =>
-          DataSource(
-            settings.id getOrElse path.getFileName.toString,
-            path.toAbsolutePath.toString,
-            settings.scale,
-            settings.priority getOrElse 0,
-            Nil)
-        case _ =>
-          DataSource(
-            path.getFileName.toString,
-            path.toAbsolutePath.toString,
-            Scale.default,
-            0,
-            Nil)
-      }
-
-      extractLayers(path, path.toAbsolutePath.toString).map{ layers =>
-        dataSource.copy(dataLayers = layers)
-      }
+      for {
+        dataSource <- extractDSSettingsIfPossible.toFox
+        layers <- extractLayers(path, path.toAbsolutePath) ?~> Messages("dataSet.import.noLayers")
+      } yield dataSource.copy(dataLayers = layers)
     } else
-      Failure(Messages("dataSet.import.directoryEmpty"))
+      Fox.failure(Messages("dataSet.import.directoryEmpty"))
   }
 }

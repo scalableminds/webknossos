@@ -25,10 +25,14 @@ protected class DataSourceInboxChangeHandler(dataSourceRepository: DataSourceRep
   def onStart(path: Path, recursive: Boolean): Unit = {
     try{
       if (path != null && Files.isDirectory(path)) {
-        val foundInboxSources = PathUtils.listDirectories(path).flatMap(teamAwareInboxSourcesIn)
-        dataSourceRepository.updateDataSources(foundInboxSources)
-        dataSourceRepository.updateInboxSources(foundInboxSources)
-
+        PathUtils.listDirectories(path) match {
+          case Full(dirs) =>
+          val foundInboxSources = dirs.flatMap(teamAwareInboxSourcesIn)
+          dataSourceRepository.updateDataSources(foundInboxSources)
+          dataSourceRepository.updateInboxSources(foundInboxSources)
+          case e =>
+            logger.error(s"Failed to execute onStart. Error during list directories on '$path': $e")
+        }
       }
     } catch {
       case e: Exception =>
@@ -42,32 +46,34 @@ protected class DataSourceInboxChangeHandler(dataSourceRepository: DataSourceRep
   }
 
   def onCreate(path: Path): Unit = {
-    onStart(path.getParent, false)
+    onStart(path.getParent, recursive = false)
   }
 
   def onDelete(path: Path): Unit = {
-    onStart(path.getParent, false)
+    onStart(path.getParent, recursive = false)
   }
 
   def teamAwareInboxSourcesIn(path: Path): List[DataSourceLike] = {
     val team = path.getFileName.toString
-    val subdirs = PathUtils.listDirectories(path)
-    if(subdirs == Nil){
-      logger.error(s"Failed to read datasets for team $team. Empty path: $path")
-      Nil
-    } else {
-      val inbox = subdirs.map{ p =>
-        dataSourceFromFolder(p, team)
-      }
-      logger.info(s"Datasets for team $team: ${inbox.map(_.id).mkString(", ")}")
-      inbox  
+    PathUtils.listDirectories(path) match {
+      case Full(Nil) =>
+        logger.error(s"Failed to read datasets for team $team. Empty path: $path")
+        Nil
+      case Full(subdirs) =>
+        val inbox = subdirs.map{ p =>
+          dataSourceFromFolder(p, team)
+        }
+        logger.info(s"Datasets for team $team: ${inbox.map(_.id).mkString(", ")}")
+        inbox
+      case e =>
+        logger.error(s"Failed to list directories for team $team at path $path")
+        Nil
     }
-    
   }
 
   def dataSourceFromFolder(path: Path, team: String): DataSourceLike = {
     logger.info(s"Handling $team at $path")
-    JsonHelper.JsonFromFile(path.resolve("datasource.json")).flatMap( _.validate(FiledDataSource.filedDataSourceFormat).asOpt) match {
+    JsonHelper.jsonFromFile(path.resolve("datasource.json"), path).flatMap( _.validate(FiledDataSource.filedDataSourceFormat).asOpt) match {
       case Full(filedDataSource) =>
         filedDataSource.toUsable(serverUrl)
       case _ =>

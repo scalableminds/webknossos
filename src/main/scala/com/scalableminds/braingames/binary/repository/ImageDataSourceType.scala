@@ -15,10 +15,11 @@ import com.scalableminds.braingames.binary.store.DataStore
 import com.scalableminds.util.geometry.{BoundingBox, Point3D, Scale}
 import com.scalableminds.util.io.PathUtils
 import com.scalableminds.util.tools.ProgressTracking.ProgressTracker
-import com.scalableminds.util.tools.{FoxImplicits, Fox}
+import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.twelvemonkeys.imageio.plugins.tiff.TIFFImageReaderSpi
 import org.apache.commons.io.FileUtils
 import net.liftweb.common.{Box, Full}
+import play.api.i18n.{I18nSupport, Messages}
 import play.api.libs.concurrent.Execution.Implicits._
 import se.sawano.java.text.AlphanumericComparator
 
@@ -121,14 +122,14 @@ trait ImageDataSourceTypeHandler extends DataSourceTypeHandler with FoxImplicits
   protected def elementClass(bytesPerPixel: Int) =
     s"uint${bytesPerPixel * 8}"
 
-  def importDataSource(unusableDataSource: UnusableDataSource, progress: ProgressTracker): Fox[DataSource] = {
-    val target = (unusableDataSource.sourceFolder.resolve(Target)).toAbsolutePath
+  def importDataSource(unusableDataSource: UnusableDataSource, progress: ProgressTracker)(implicit messages: Messages): Fox[DataSource] = {
+    val target = unusableDataSource.sourceFolder.resolve(Target).toAbsolutePath
 
     prepareTargetPath(target)
 
     convertToKnossosStructure(unusableDataSource.id, unusableDataSource.sourceFolder, target, progress).map{
       layers =>
-        DataSourceSettings.fromSettingsFileIn(unusableDataSource.sourceFolder) match {
+        DataSourceSettings.fromSettingsFileIn(unusableDataSource.sourceFolder, unusableDataSource.sourceFolder) match {
           case Full(settings) =>
             Full(DataSource(
               unusableDataSource.id,
@@ -155,7 +156,7 @@ trait ImageDataSourceTypeHandler extends DataSourceTypeHandler with FoxImplicits
     }
   }
 
-  def layerFromFileName(file: Path) = {
+  def layerFromFileName(file: Path): Int = {
     def extractLayer(rs: Seq[Regex]): Int = {
       rs match {
         case r :: tail =>
@@ -190,7 +191,7 @@ trait ImageDataSourceTypeHandler extends DataSourceTypeHandler with FoxImplicits
     }
   }
 
-  def namingSchemaFor(layers: Iterable[ImageLayer])(idx: Int) = {
+  def namingSchemaFor(layers: Iterable[ImageLayer])(idx: Int): String = {
     if (layers.size == 1)
       "color"
     else
@@ -198,7 +199,10 @@ trait ImageDataSourceTypeHandler extends DataSourceTypeHandler with FoxImplicits
   }
 
   def convertToKnossosStructure(id: String, source: Path, targetRoot: Path, progress: ProgressTracker): Future[List[DataLayer]] = {
-    val images = PathUtils.listFiles(source, true).filter(_.getFileName.toString.endsWith("." + fileExtension))
+    val images = PathUtils
+      .listFiles(source, recursive = true)
+      .openOr(Nil)
+      .filter(_.getFileName.toString.endsWith("." + fileExtension))
 
     val layers = extractLayers(images.toList)
     val namingSchema = namingSchemaFor(layers) _

@@ -6,14 +6,14 @@ package com.scalableminds.braingames.binary.models
 import play.api.libs.json.Json
 
 case class DataLayerSettings(
-  typ: String,
-  `class`: String,
-  largestValue: Option[Long],
-  flags: Option[List[String]],
-  fallback: Option[FallbackLayer])
+                              typ: String,
+                              `class`: String,
+                              largestValue: Option[Long],
+                              flags: Option[List[String]],
+                              fallback: Option[FallbackLayer])
 
 object DataLayerSettings extends SettingsFile[DataLayerSettings] {
   val settingsFileReads = Json.reads[DataLayerSettings]
 
-  val settingsFileName =  "layer.json"
+  val settingsFileName = "layer.json"
 }

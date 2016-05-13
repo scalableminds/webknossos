@@ -7,7 +7,6 @@ class PullQueue
 
   # Constants
   BATCH_LIMIT : 6
-  BATCH_SIZE : 3
   MESSAGE_TIMEOUT : 10000
 
   # For buckets that should be loaded immediately and
@@ -23,11 +22,11 @@ class PullQueue
   roundTripTime : 0
 
 
-  constructor : (@dataSetName, @cube, @layer, @boundingBox, @connectionInfo) ->
+  constructor : (@dataSetName, @cube, @layer, @boundingBox, @connectionInfo, @datastoreInfo) ->
 
     @queue = []
     @url = "#{@layer.url}/data/datasets/#{@dataSetName}/layers/#{@layer.name}/data?cubeSize=#{1 << @cube.BUCKET_SIZE_P}&token=#{@layer.token}"
-
+    @BATCH_SIZE = if @isNDstore() then 1 else 3
 
   pull : ->
     # Filter and sort queue, using negative priorities for sorting so .pop() can be used to get next bucket
@@ -58,35 +57,13 @@ class PullQueue
     # Loading a bunch of buckets
     @batchCount++
 
-    requestData = new MultipartData()
-
-    for bucket in batch
-      zoomStep = bucket[3]
-
-      requestData.addPart(
-        "X-Bucket": JSON.stringify(
-          position: [
-            bucket[0] << (zoomStep + @cube.BUCKET_SIZE_P)
-            bucket[1] << (zoomStep + @cube.BUCKET_SIZE_P)
-            bucket[2] << (zoomStep + @cube.BUCKET_SIZE_P)
-          ]
-          zoomStep: zoomStep
-          cubeSize: 1 << @cube.BUCKET_SIZE_P
-          fourBit: @shouldRequestFourBit()))
-
     # Measuring the time until response arrives to select appropriate preloading strategy
     roundTripBeginTime = new Date()
 
+    requestData = if @isNDstore() then @requestFromNDstore else @requestFromWKstore
+
     Request.always(
-      requestData.dataPromise().then((data) =>
-        Request.sendArraybufferReceiveArraybuffer("#{@layer.url}/data/datasets/#{@dataSetName}/layers/#{@layer.name}/data?token=#{@layer.token}",
-          data : data
-          headers :
-            "Content-Type" : "multipart/mixed; boundary=#{requestData.boundary}"
-          timeout : @MESSAGE_TIMEOUT
-          compress : true
-        )
-      ).then((responseBuffer) =>
+      requestData(batch).then((responseBuffer) =>
         responseBuffer = new Uint8Array(responseBuffer)
         @connectionInfo.log(@layer.name, roundTripBeginTime, batch.length, responseBuffer.length)
 
@@ -110,6 +87,54 @@ class PullQueue
         @batchCount--
         @pull()
     )
+
+
+  requestFromWKstore : (batch) =>
+
+    requestData = new MultipartData()
+
+    for bucket in batch
+
+      requestData.addPart(
+        "X-Bucket": JSON.stringify(
+          @getBucketData(bucket)
+      ))
+
+    return requestData.dataPromise().then((data) =>
+      Request.sendArraybufferReceiveArraybuffer("#{@layer.url}/data/datasets/#{@dataSetName}/layers/#{@layer.name}/data?token=#{@layer.token}",
+        data : data
+        headers :
+          "Content-Type" : "multipart/mixed; boundary=#{requestData.boundary}"
+        timeout : @MESSAGE_TIMEOUT
+        compress : true
+      )
+    )
+
+
+  requestFromNDstore : (batch) =>
+
+    bucket = @getBucketData(batch[0])
+    url = """#{@datastoreInfo.url}/ca/#{@datastoreInfo.accessToken}/raw/raw/#{bucket.zoomStep}/
+      #{bucket.position[0]},#{bucket.position[0]+bucket.cubeSize}/
+      #{bucket.position[1]},#{bucket.position[1]+bucket.cubeSize}/
+      #{bucket.position[2]},#{bucket.position[2]+bucket.cubeSize}/"""
+
+    return Request.receiveArraybuffer(url)
+
+
+  getBucketData : (bucket) =>
+
+    zoomStep = bucket[3]
+    return {
+      position: [
+        bucket[0] << (zoomStep + @cube.BUCKET_SIZE_P)
+        bucket[1] << (zoomStep + @cube.BUCKET_SIZE_P)
+        bucket[2] << (zoomStep + @cube.BUCKET_SIZE_P)
+      ]
+      zoomStep: zoomStep
+      cubeSize: 1 << @cube.BUCKET_SIZE_P
+      fourBit: @shouldRequestFourBit()
+    }
 
 
   clearNormalPriorities : ->
@@ -149,6 +174,11 @@ class PullQueue
   shouldRequestFourBit : ->
 
     return @fourBit and @layer.category == "color"
+
+
+  isNDstore : ->
+
+    return @datastoreInfo.typ == "ndstore"
 
 
 module.exports = PullQueue

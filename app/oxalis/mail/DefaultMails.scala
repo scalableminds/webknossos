@@ -51,16 +51,6 @@ object DefaultMails {
       bodyText = html.mail.validated(name).body,
       recipients = List(receiver))
 
-  def issueMail(userName: String, email: String, summary: String, description: String) =
-    Mail(
-      from = email,
-      headers = Map("Sender" -> defaultFrom),
-      subject = "Non technical issue - " + summary,
-      bodyText = html.mail.nonTechnicalIssue(userName, email, description).body,
-      recipients = List(brainTracingMailingList),
-      replyTo = Some(email),
-      ccRecipients = List(supportMail, email))
-
   def changePasswordMail(name: String, receiver: String) = {
     Mail(
       from = defaultFrom,

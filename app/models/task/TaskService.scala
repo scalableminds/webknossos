@@ -31,7 +31,7 @@ object TaskService extends TaskAssignmentSimulation with TaskAssignment with Fox
 
   def remove(_task: BSONObjectID)(implicit ctx: DBAccessContext) = {
     for{
-      _ <- AnnotationDAO.removeAllWithTaskId(_task)
+      _ <- AnnotationDAO.finishAllWithTaskId(_task)
       _ <- OpenAssignmentService.removeByTask(_task)
       _ <- TaskDAO.removeById(_task)
     } yield true

@@ -47,7 +47,7 @@ class AnnotationMutations(val annotation: Annotation) extends AnnotationMutation
         case annotation =>
           val isReadyToBeFinished = await(annotation.isReadyToBeFinished)
           if (isReadyToBeFinished) {
-            val updated = await(AnnotationDAO.finish(annotation._id).futureBox)
+            val updated = await(annotation.muta.finish().futureBox)
             updated.map(_ -> Messages("task.finished"))
           } else
             Failure(Messages("annotation.notFinishable"))

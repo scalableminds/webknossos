@@ -231,8 +231,11 @@ object AnnotationDAO
       "typ" -> annotationType)).cursor[Annotation].collect[List]()
   }
 
-  def removeAllWithTaskId(_task: BSONObjectID)(implicit ctx: DBAccessContext) =
-    remove(Json.obj("_task" -> _task))
+  def finishAllWithTaskId(_task: BSONObjectID)(implicit ctx: DBAccessContext) =
+    update(
+      Json.obj("_task" -> _task),
+      Json.obj("$set" -> Json.obj("state" -> AnnotationState.Finished)),
+      multi = true)
 
   def incrementVersion(_annotation: BSONObjectID)(implicit ctx: DBAccessContext) =
     findAndModify(

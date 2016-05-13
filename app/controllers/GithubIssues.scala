@@ -74,7 +74,7 @@ class GithubIssues @Inject() (val messagesApi: MessagesApi) extends Controller w
       summary <- postParameter("summary") ?~> Messages("issue.summary.notSupplied")
       description <- postParameter("description") ?~> Messages("issue.description.notSupplied")
       issueType <- postParameter("type") ?~> Messages("issue.type.notSupplied")
-      success <- createGithubIssue(user, summary, description, issueType)
+      success <- createGithubIssue(request.user, summary, description, issueType)
     } yield {
       val message = Messages(if (success) "issue.submit.success" else "issue.submit.failure")
       Ok(html.issue.close(success, message))

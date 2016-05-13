@@ -216,7 +216,8 @@ taskType=Task type
 taskType.editSuccess=Task type successfully edited
 taskType.createSuccess=Task type successfully created
 taskType.notFound=Selected task type doesn''t exist
-taskType.deleted=Task type ''{0}'' successfully deleted
+taskType.deleteSuccess=Task type ''{0}'' successfully deleted
+taskType.deleteFailure=Task type ''{0}'' deletion failed
 taskType.noAnnotations=We couldn''t find finished annotations for this task type
 
 time.invalidFormat=Time couldn''t get parsed.

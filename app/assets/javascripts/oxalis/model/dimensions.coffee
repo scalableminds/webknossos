@@ -15,7 +15,7 @@ Dimensions =
 
     switch planeID
       when constants.PLANE_XY then [0, 1, 2]  # of each plane. For example, moving along the
-      when constants.PLANE_YZ then [2, 1, 0]  # X-Axis of the YZ-Plane is eqivalent to moving
+      when constants.PLANE_YZ then [2, 1, 0]  # X-Axis of the YZ-Plane is equivalent to moving
       when constants.PLANE_XZ then [0, 2, 1]  # along the Z axis in the cube -> ind[0]=2
 
 

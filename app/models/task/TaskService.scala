@@ -62,9 +62,9 @@ object TaskService extends TaskAssignmentSimulation with TaskAssignment with Fox
 
   def removeAllWithProject(project: Project)(implicit ctx: DBAccessContext) = {
     for{
-      _ <- TaskDAO.removeAllWithProject(project)
-      _ <- OpenAssignmentService.removeByProject(project)
-    } yield true
+      tasks <- project.tasks
+      result <- Fox.combined(tasks.map(task => remove(task._id)))
+    } yield result.forall(identity)
   }
 
   def insert(task: Task, insertAssignments: Boolean)(implicit ctx: DBAccessContext) = {

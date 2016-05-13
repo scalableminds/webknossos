@@ -65,9 +65,7 @@ object ProjectService extends FoxImplicits {
   def remove(project: Project)(implicit ctx: DBAccessContext): Fox[Boolean] = {
     ProjectDAO.remove("name", project.name).flatMap{
       case result if result.n > 0 =>
-        TaskService.removeAllWithProject(project).map{ _ =>
-          true
-        }
+        TaskService.removeAllWithProject(project)
       case _ =>
         Logger.warn("Tried to remove project without permission.")
         Fox.successful(false)

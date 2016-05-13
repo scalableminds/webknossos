@@ -3,11 +3,12 @@
  */
 package com.scalableminds.util.io
 
-import play.api.Logger
 import java.io.{File, FilenameFilter}
-import java.nio.file
 import java.nio.file._
-import scala.collection.breakOut
+
+import net.liftweb.common.{Box, Failure, Full}
+import play.api.Logger
+
 import scala.collection.JavaConverters._
 
 object PathUtils extends PathUtils
@@ -26,20 +27,20 @@ trait PathUtils {
       new File(f, name).isFile
   }
 
-  def createFile(p: Path, failIfExists: Boolean) = {
-    try{
+  def createFile(p: Path, failIfExists: Boolean): Boolean = {
+    try {
       Files.createFile(p)
       true
-    } catch{
+    } catch {
       case e: FileAlreadyExistsException => !failIfExists
     }
   }
 
-  def isTheSame(p1: Path, p2: Path) =
+  def isTheSame(p1: Path, p2: Path): Boolean =
     p1.toAbsolutePath.compareTo(p2.toAbsolutePath) == 0
 
   def fileOption(p: Path): Option[File] =
-    if(!Files.isDirectory(p))
+    if (!Files.isDirectory(p))
       Some(p.toFile)
     else
       None
@@ -47,23 +48,29 @@ trait PathUtils {
   def parent(p: Path): Option[Path] =
     Option(p.getParent)
 
-  def listDirectoryEntries(directory: Path, recursive: Boolean, filterPred: Path => Boolean): List[Path] =
+  def listDirectoryEntries(directory: Path, recursive: Boolean, filterPred: Path => Boolean): Box[List[Path]] = {
     try {
-      val maxDepth = if(recursive) Int.MaxValue else 1
+      val maxDepth = if (recursive) Int.MaxValue else 1
       val directoryStream = Files.walk(directory, maxDepth, FileVisitOption.FOLLOW_LINKS)
       val r = directoryStream.iterator().asScala.drop(1).filter(filterPred).toList
       directoryStream.close()
-      r
+      Full(r)
     } catch {
-      case ex =>
-        Logger.error("Failed to list directories for directory: " + directory.toAbsolutePath)
-        Nil
+      case ex: AccessDeniedException =>
+        val errorMsg = s"Error access denied. Directory: ${directory.toAbsolutePath }"
+        Logger.error(errorMsg)
+        Failure(errorMsg)
+      case ex: Exception =>
+        val errorMsg = s"Error: ${ex.getMessage }. Directory: ${directory.toAbsolutePath }"
+        Logger.error(errorMsg)
+        Failure(errorMsg)
     }
+  }
 
-  def listDirectories(directory: Path, recursive: Boolean = false): List[Path] =
+  def listDirectories(directory: Path, recursive: Boolean = false): Box[List[Path]] =
     listDirectoryEntries(directory, recursive, Files.isDirectory(_))
 
-  def listFiles(directory: Path, recursive: Boolean = false): List[Path] =
+  def listFiles(directory: Path, recursive: Boolean = false): Box[List[Path]] =
     listDirectoryEntries(directory, recursive, !Files.isDirectory(_))
 
   def ensureDirectory(path: Path): Path = {

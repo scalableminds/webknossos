@@ -3,32 +3,36 @@
  */
 package com.scalableminds.util.tools
 
-import java.io.File
+import java.io.FileNotFoundException
 import java.nio.file._
-import scala.io.Source
-import play.api.libs.json._
-import net.liftweb.common._
 
-object JsonHelper{
+import net.liftweb.common._
+import play.api.libs.json._
+
+import scala.io.Source
+
+object JsonHelper {
   lazy val logger = LazyLogger("braingames.json")
 
-  def JsonFromFile(path: Path): Box[JsValue] = {
-    val f = path.toFile
-    if(Files.exists(path) && !Files.isDirectory(path))
-      JsonFromFile(path.toFile)
+  def jsonFromFile(path: Path, rootPath: Path): Box[JsValue] = {
+    if (Files.exists(path) && !Files.isDirectory(path))
+      parseJsonFromFile(path, rootPath)
     else
       Failure("Invalid path for json parsing.")
-
   }
 
-  def JsonFromFile(file: File): Box[JsValue] =
-    try{
-      Full(Json.parse(Source.fromFile(file).getLines.mkString))
+  private def parseJsonFromFile(path: Path, rootPath: Path): Box[JsValue] =
+    try {
+      Full(Json.parse(Source.fromFile(path.toFile).getLines.mkString))
     } catch {
       case e: java.io.EOFException =>
         logger.error("EOFException in JsonHelper while trying to extract json from file.", e)
-        Failure("An EOF exception occured during json read.")
-      case e: Exception  =>
-        Failure("Failed to parse Json. Error: "+ e.getMessage)
+        Failure(s"An EOF exception occurred during json read. File: ${rootPath.relativize(path).toString }")
+      case _: AccessDeniedException | _: FileNotFoundException =>
+        logger.error("File access exception in JsonHelper while trying to extract json from file.")
+        Failure(s"Failed to parse Json in '${rootPath.relativize(path).toString }'. Access denied.")
+      case e: Exception =>
+        logger.error("Exception in JsonHelper while trying to extract json from file.", e)
+        Failure(s"Error: ${e.getMessage }")
     }
 }

@@ -3,25 +3,23 @@
  */
 package com.scalableminds.util.geometry
 
-import com.scalableminds.util.tools.Fox
 import net.liftweb.common.{Box, Empty, Full}
 
 case class BoundingBox(topLeft: Point3D, width: Int, height: Int, depth: Int) {
 
   val bottomRight = topLeft.move(width, height, depth)
 
-  def contains(p: Point3D) = {
+  def contains(p: Point3D): Boolean = {
     p.x >= topLeft.x && p.y >= topLeft.y && p.z >= topLeft.z &&
       p.x <= bottomRight.x && p.y <= bottomRight.y && p.z <= bottomRight.z
-
   }
 
-  def intersects(other: BoundingBox) =
+  def intersects(other: BoundingBox): Boolean =
     topLeft.x < other.bottomRight.x && other.topLeft.x < bottomRight.x &&
-    topLeft.y < other.bottomRight.y && other.topLeft.y < bottomRight.y &&
-    topLeft.z < other.bottomRight.z && other.topLeft.z < bottomRight.z
+      topLeft.y < other.bottomRight.y && other.topLeft.y < bottomRight.y &&
+      topLeft.z < other.bottomRight.z && other.topLeft.z < bottomRight.z
 
-  def combineWith(other: BoundingBox) = {
+  def combineWith(other: BoundingBox): BoundingBox = {
     val x = math.min(other.topLeft.x, topLeft.x)
     val y = math.min(other.topLeft.y, topLeft.y)
     val z = math.min(other.topLeft.z, topLeft.z)
@@ -30,60 +28,65 @@ case class BoundingBox(topLeft: Point3D, width: Int, height: Int, depth: Int) {
     val h = math.max(other.height, height)
     val d = math.max(other.depth, depth)
 
-    BoundingBox(Point3D(x,y,z), w, h, d)
+    BoundingBox(Point3D(x, y, z), w, h, d)
   }
 
-  def isEmpty =
+  def isEmpty: Boolean =
     width <= 0 || height <= 0 || depth <= 0
 
-  def center =
+  def center: Point3D =
     topLeft.move(bottomRight).scale(0.5f)
-
 }
 
-object BoundingBox{
+object BoundingBox {
+
   import play.api.libs.json._
 
   val formRx = "\\s*([0-9]+),\\s*([0-9]+),\\s*([0-9]+)\\s*,\\s*([0-9]+),\\s*([0-9]+),\\s*([0-9]+)\\s*".r
 
-  def toForm(b: BoundingBox) =
+  def toForm(b: BoundingBox): Some[String] =
     Some("%d, %d, %d, %d, %d, %d".format(
-      b.topLeft.x, b.topLeft.y, b.topLeft.z, b.topLeft.x + b.width, b.topLeft.y + b.height, b.topLeft.z + b.depth
-    ))
+                                          b.topLeft.x,
+                                          b.topLeft.y,
+                                          b.topLeft.z,
+                                          b.topLeft.x + b.width,
+                                          b.topLeft.y + b.height,
+                                          b.topLeft.z + b.depth
+                                        ))
 
-  def fromForm(s: String) = {
+  def fromForm(s: String): Box[BoundingBox] = {
     s match {
       case formRx(minX, minY, minZ, maxX, maxY, maxZ) =>
         createFrom(
-          Point3D(Integer.parseInt(minX), Integer.parseInt(minY), Integer.parseInt(minZ)),
-          Point3D(Integer.parseInt(maxX), Integer.parseInt(maxY), Integer.parseInt(maxZ))
-        )
+                    Point3D(Integer.parseInt(minX), Integer.parseInt(minY), Integer.parseInt(minZ)),
+                    Point3D(Integer.parseInt(maxX), Integer.parseInt(maxY), Integer.parseInt(maxZ))
+                  )
       case _ =>
         null
     }
   }
 
-  def hull(c: List[BoundingBox]) = {
+  def hull(c: List[BoundingBox]): BoundingBox = {
     if (c.isEmpty)
       BoundingBox(Point3D(0, 0, 0), 0, 0, 0)
     else {
-      val topLeft = c.map(_.topLeft).foldLeft(Point3D(0, 0, 0))((b, e) => (
-        Point3D(math.max(b.x, e.x), math.max(b.y, e.y), math.max(b.z, e.z))))
+      val topLeft = c.map(_.topLeft).foldLeft(Point3D(0, 0, 0))((b, e) =>
+        Point3D(math.max(b.x, e.x), math.max(b.y, e.y), math.max(b.z, e.z)))
 
       BoundingBox(
-        topLeft,
-        c.map(_.width).max,
-        c.map(_.height).max,
-        c.map(_.depth).max)
+                   topLeft,
+                   c.map(_.width).max,
+                   c.map(_.height).max,
+                   c.map(_.depth).max)
     }
   }
 
-  def combine(bbs: List[BoundingBox]) = {
-    bbs match{
+  def combine(bbs: List[BoundingBox]): BoundingBox = {
+    bbs match {
       case head :: tail =>
-        tail.foldLeft(head)( _ combineWith _)
+        tail.foldLeft(head)(_ combineWith _)
       case _ =>
-        BoundingBox(Point3D(0,0,0), 0, 0, 0)
+        BoundingBox(Point3D(0, 0, 0), 0, 0, 0)
     }
   }
 
@@ -92,14 +95,14 @@ object BoundingBox{
       Empty
     else
       Full(BoundingBox(
-        Point3D(bbox(0)(0), bbox(1)(0), bbox(2)(0)),
-        bbox(0)(1) - bbox(0)(0),
-        bbox(1)(1) - bbox(1)(0),
-        bbox(2)(1) - bbox(2)(0)))
+                        Point3D(bbox(0)(0), bbox(1)(0), bbox(2)(0)),
+                        bbox(0)(1) - bbox(0)(0),
+                        bbox(1)(1) - bbox(1)(0),
+                        bbox(2)(1) - bbox(2)(0)))
   }
 
   def createFrom(topLeft: Point3D, bottomRight: Point3D): Box[BoundingBox] =
-    if(topLeft <= bottomRight)
+    if (topLeft <= bottomRight)
       Full(BoundingBox(topLeft, bottomRight.x - topLeft.x, bottomRight.y - topLeft.y, bottomRight.z - topLeft.z))
     else
       Empty

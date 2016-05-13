@@ -69,26 +69,12 @@ class GithubIssues @Inject() (val messagesApi: MessagesApi) extends Controller w
     }
   }
 
-  def mailIssue(user: User, summary: String, description: String) {
-    val mail = DefaultMails.issueMail(user.name, user.email, summary, description)
-    Mailer ! Send(mail)
-  }
-
-  def handleSubmission(user: User, summary: String, description: String, issueType: String) = {
-    if (issueType != "unrelated")
-      createGithubIssue(user, summary, description, issueType)
-    else {
-      mailIssue(user, summary, description)
-      Future.successful(true)
-    }
-  }
-
   def submit = Authenticated.async(parse.urlFormEncoded) { implicit request =>
     for {
       summary <- postParameter("summary") ?~> Messages("issue.summary.notSupplied")
       description <- postParameter("description") ?~> Messages("issue.description.notSupplied")
       issueType <- postParameter("type") ?~> Messages("issue.type.notSupplied")
-      success <- handleSubmission(request.user, summary, description, issueType)
+      success <- createGithubIssue(user, summary, description, issueType)
     } yield {
       val message = Messages(if (success) "issue.submit.success" else "issue.submit.failure")
       Ok(html.issue.close(success, message))

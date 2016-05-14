@@ -12,7 +12,7 @@ class DatasetSwitchView extends Marionette.LayoutView
     <div class="pull-right">
       <% if(isAdmin) { %>
         <a href="/datasets/upload" class="btn btn-primary">
-          <i class="fa fa-plus"></i>Upload Dataset
+          <i class="fa fa-plus"></i>Add Dataset
         </a>
         <a href="#" id="showAdvancedView" class="btn btn-default">
           <i class="fa fa-th-list"></i>Show advanced view

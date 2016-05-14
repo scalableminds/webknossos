@@ -23,7 +23,7 @@ class Router extends BaseRouter
     "datasets/:id/view"                 : "tracingViewPublic"
     "dashboard"                         : "dashboard"
     "datasets"                          : "dashboard"
-    "datasets/upload"                   : "datasetUpload"
+    "datasets/upload"                   : "datasetAdd"
     "users/:id/details"                 : "dashboard"
     "taskTypes/:id/edit"                : "editTaskType"
     "taskTypes"                         : "taskTypes"
@@ -84,9 +84,9 @@ class Router extends BaseRouter
     @showAdminView("StatisticView")
 
 
-  datasetUpload : ->
+  datasetAdd : ->
 
-    @showAdminView("DatasetUploadView")
+    @showAdminView("DatasetAddView")
 
 
   users : ->

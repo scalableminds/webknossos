@@ -105,6 +105,7 @@ ndstore.invalid.offset.zero=Dataset on NDStore doesn''t have an associated offse
 ndstore.invalid.voxelres.zero=Dataset on NDStore doesn''t have an associated voxel resolution
 ndstore.invalid.channel.type=Dataset on NDStore has an invalid channel type (valid channel is e.g. ''image'')
 ndstore.invalid.data.type=Dataset on NDStore has an invalid data type (a valid type is e.g. ''uint8'')
+ndstore.invalid.token=Couldn''t find token on NDStore
 
 zip.file.notFound=No or invalid ZIP file specified
 zip.file.invalid=Uploaded ZIP file invalid or corrupted

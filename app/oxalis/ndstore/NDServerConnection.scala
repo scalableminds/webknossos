@@ -51,8 +51,7 @@ object NDServerConnection extends FoxImplicits {
 
   private def infoUrlFor(server: String, token: String) = {
     import com.netaporter.uri.dsl._
-    server / "nd" / "ca" / token / "info" / ""
-    server.toString
+    (server / "nd" / "ca" / token / "info" / "").toString
   }
 
   private def evaluateNDServerInfoResponse(
@@ -69,8 +68,21 @@ object NDServerConnection extends FoxImplicits {
           Logger.error(e.toString)
           Failure(Messages("ndstore.response.parseFailure"))
       }
+    } else if(response.status == Status.NOT_FOUND) {
+      fuzzyErrorParser(response.body)
     } else {
       Failure(Messages("ndstore.invalid.response", response.statusText))
     }
+  }
+
+  private def fuzzyErrorParser(response: String)(implicit messages: Messages) = {
+    def isTokenError(s: String) = {
+      s.startsWith("Token") && s.endsWith("does not exist")
+    }
+
+    if(isTokenError(response))
+      Failure(Messages("ndstore.invalid.token"))
+    else
+      Failure(Messages("ndstore.invalid.response", response))
   }
 }

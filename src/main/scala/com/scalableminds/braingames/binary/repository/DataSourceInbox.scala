@@ -28,6 +28,8 @@ object DataSourceInbox{
 
 trait DataSourceInbox extends FoxImplicits with I18nSupport{
 
+  import com.scalableminds.braingames.binary.Logger._
+
   def dataSourceInboxHelper: DataSourceInboxHelper
 
   def dataSourceRepository: DataSourceRepository
@@ -45,9 +47,9 @@ trait DataSourceInbox extends FoxImplicits with I18nSupport{
         Full(dataSourceInboxHelper.transformToDataSource(ibx))
       case _ : UnusableDataSource =>
         Failure(Messages("dataSource.import.alreadyInProgress"))
-      case d: DataSource =>
-        // TODO: think about what we should do if an already imported DS gets imported again
-        Failure(Messages("dataSource.import.alreadyFinished"))
+      case d: UsableDataSource =>
+        logger.info("Reimporting dataset: " + d.id)
+        Full(dataSourceInboxHelper.transformToDataSource(d.toUnusable))
     }
   }
 

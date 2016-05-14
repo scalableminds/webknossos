@@ -22,7 +22,6 @@ import com.scalableminds.braingames.binary.models._
 import akka.pattern.AskTimeoutException
 import com.typesafe.config.Config
 import net.liftweb.common.Box
-import com.scalableminds.braingames.binary.watcher.StartWatching
 import com.scalableminds.braingames.binary.repository.DataSourceInbox
 import com.scalableminds.util.io.PathUtils
 
@@ -65,12 +64,16 @@ trait BinaryDataService extends DataSourceService with BinaryDataHelpers with Da
     val repositoryWatcherConfig = config.getConfig("braingames.binary.changeHandler")
     val repositoryWatchActor =
       system.actorOf(
-        Props(classOf[DirectoryWatcherActor], repositoryWatcherConfig, dataSourceInbox.handler),
+        Props(classOf[DirectoryWatcherActor],
+              repositoryWatcherConfig,
+              dataSourceRepositoryDir,
+              true,
+              dataSourceInbox.handler),
         name = "directoryWatcher")
 
     repositoryWatcher = Some(repositoryWatchActor)
 
-    repositoryWatchActor ! StartWatching(dataSourceRepositoryDir, true)
+    repositoryWatchActor ! DirectoryWatcherActor.StartWatching
   }
 
   def handleDataRequest(request: AbstractDataRequest): Future[Option[Array[Byte]]] = {

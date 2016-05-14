@@ -39,6 +39,9 @@ case class UsableDataSource(serverUrl: String, owningTeam: String, sourceType: S
   val id = dataSource.id
 
   val isUsable = true
+
+  def toUnusable: UnusableDataSource =
+    UnusableDataSource(serverUrl, dataSource.id, dataSource.baseDir, owningTeam, sourceType)
 }
 
 object UsableDataSource{

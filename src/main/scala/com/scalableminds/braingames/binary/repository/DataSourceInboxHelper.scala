@@ -45,20 +45,19 @@ trait DataSourceInboxHelper extends ProgressTracking with FoxImplicits with Lock
   }
 
   def transformToDataSource(unusableDataSource: UnusableDataSource): Fox[UsableDataSource] = {
+    val dsTypeGuesser = new DataSourceTypeGuessers(messagesApi) 
+    
     withLock(unusableDataSource.sourceFolder) {
       clearAllTrackers(importTrackerId(unusableDataSource.id))
       cleanUp(unusableDataSource.sourceFolder)
-      new DataSourceTypeGuessers(messagesApi).guessRepositoryType(unusableDataSource.sourceFolder)
+      val importResult = dsTypeGuesser.guessRepositoryType(unusableDataSource.sourceFolder)
         .importDataSource(unusableDataSource, progressTrackerFor(importTrackerId(unusableDataSource.id)))
-        .toFox
-        .flatMap {
-          dataSource =>
-            writeDataSourceToFile(
-                                   unusableDataSource.sourceFolder,
-                                   FiledDataSource(unusableDataSource.owningTeam,
-                                                   unusableDataSource.sourceType,
-                                                   dataSource))
-        }.futureBox.map {
+        .flatMap { dataSource =>
+            val filedDS = FiledDataSource(unusableDataSource.owningTeam, unusableDataSource.sourceType, dataSource) 
+            writeDataSourceToFile(unusableDataSource.sourceFolder, filedDS)
+        }
+      
+      importResult.futureBox.map {
         case Full(r) =>
           logger.info("Datasource import finished for " + unusableDataSource.id)
           Full(r.toUsable(serverUrl))

@@ -10,25 +10,37 @@ import scala.concurrent.Future
 import com.typesafe.config.Config
 import akka.agent.Agent
 
-case class StartWatching(path: Path, recursive: Boolean)
+object DirectoryWatcherActor {
+  // Messages
 
-class DirectoryWatcherActor(config: Config, changeHandler: DirectoryChangeHandler) extends Actor {
+  case object StartWatching
+
+  private case object CheckDirectory
+
+  case object CheckDirectoryOnce
+}
+
+class DirectoryWatcherActor(config: Config,
+                            path: Path,
+                            recursive: Boolean,
+                            changeHandler: DirectoryChangeHandler) extends Actor {
 
   import com.scalableminds.braingames.binary.Logger._
+  import DirectoryWatcherActor._
 
-  val TICKER_INTERVAL = config.getInt("tickerInterval") minutes
+  val TICKER_INTERVAL = config.getInt("tickerInterval").minutes
 
   implicit val ec = context.dispatcher
 
   implicit val system = context.system
 
-  var updateTicker: Option[Cancellable] = None
+  var currentlyRunning = false
 
   def receive = {
-    case StartWatching(path, recursive) =>
+    case StartWatching =>
       if (Files.isDirectory(path)) {
         try {
-          start(path, recursive)
+          start()
           logger.info(s"Successfully watching ${path.toString}.")
         } catch {
           case e: Exception =>
@@ -38,22 +50,37 @@ class DirectoryWatcherActor(config: Config, changeHandler: DirectoryChangeHandle
         logger.error(s"Can't watch $path because it doesn't exist.")
         sender ! false
       }
+    case CheckDirectory =>
+      // Avoid closing over class attributes of the actor during future execution
+      val s = self
+      val scheduler = context.system.scheduler
+      Future {
+        changeHandler.onTick(path, recursive)
+      }.onComplete{ _ =>
+        scheduler.scheduleOnce(TICKER_INTERVAL, s, CheckDirectory)
+      }
+      sender ! true
+    case CheckDirectoryOnce =>
+      Future {
+        changeHandler.onTick(path, recursive)
+      }
   }
 
   /**
    * The main directory watching thread
    */
-  def start(watchedJavaPath: Path, recursive: Boolean): Unit = {
+  def start(): Unit = {
+    // Avoid closing over class attributes of the actor during future execution
+    val s = self
+    val scheduler = context.system.scheduler
     Future{
-      changeHandler.onStart(watchedJavaPath, recursive)
+      changeHandler.onStart(path, recursive)
+    }.onComplete{_ =>
+      scheduler.scheduleOnce(TICKER_INTERVAL, s, CheckDirectory)
     }
-    updateTicker = Some(context.system.scheduler.schedule(TICKER_INTERVAL, TICKER_INTERVAL) {
-      changeHandler.onTick(watchedJavaPath, recursive)
-    })
   }
 
   override def postStop() = {
-    updateTicker.map(_.cancel())
     super.postStop()
   }
 }

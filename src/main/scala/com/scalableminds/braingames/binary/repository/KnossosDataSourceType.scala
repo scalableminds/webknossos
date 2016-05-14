@@ -199,6 +199,7 @@ trait KnossosDataSourceTypeHandler extends DataSourceTypeHandler with I18nSuppor
     for {
       dirs <- PathUtils.listDirectories(path).toFox
       parsedLayerSettings = dirs.map(layerPath => extractLayer(layerPath, dataSourcePath))
+      _ = dirs.nonEmpty ?~> Messages("dataSet.import.noLayers")
       layerSettings <- Fox.combined(parsedLayerSettings)
     } yield layerSettings
   }

@@ -11,7 +11,7 @@ class DatasetRemoteView extends Marionette.LayoutView
   template : _.template("""
     <div class="row">
       <div class="col-md-6">
-        <h3>Add Remote Dataset</h3>
+        <h3>Add Remote NDStore Dataset</h3>
         <form action="/api/datasets?typ=ndstore" method="POST" class="form-horizontal">
           <div class=" form-group">
             <label class="col-sm-3 control-label" for="name">Name</label>
@@ -27,16 +27,16 @@ class DatasetRemoteView extends Marionette.LayoutView
             </div>
           </div>
           <div class=" form-group">
-            <label class="col-sm-3 control-label" for="token">Token</label>
+            <label class="col-sm-3 control-label" for="server">Server Url</label>
             <div class="col-sm-9">
-              <input type="text" required name="token" class="form-control" title="NDstore token">
+              <input type="url" required name="server" class="form-control" title="NDstore server location">
               <span class="help-block errors"></span>
             </div>
           </div>
           <div class=" form-group">
-            <label class="col-sm-3 control-label" for="server">Server</label>
+            <label class="col-sm-3 control-label" for="token">Token</label>
             <div class="col-sm-9">
-              <input type="text" required name="server" class="form-control" title="NDstore server location">
+              <input type="text" required name="token" class="form-control" title="NDstore token">
               <span class="help-block errors"></span>
             </div>
           </div>

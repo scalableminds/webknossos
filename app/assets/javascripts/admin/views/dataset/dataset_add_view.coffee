@@ -16,7 +16,7 @@ class DatasetAddView extends Marionette.LayoutView
             <a href="#" id="tab-upload-dataset" data-toggle="tab">Upload Dataset</a>
           </li>
           <li>
-            <a href="#" id="tab-remote-dataset" data-toggle="tab">Add Remote Dataset</a>
+            <a href="#" id="tab-remote-dataset" data-toggle="tab">Add NDStore Dataset</a>
           </li>
         </ul>
         <div class="tab-content">

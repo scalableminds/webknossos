@@ -3,18 +3,18 @@
  */
 package com.scalableminds.braingames.binary.repository
 
-import java.nio.file.{Paths, Files, PathMatcher, Path}
-import javax.inject.Inject
+import java.nio.file.{Files, Path}
 
 import com.scalableminds.braingames.binary.models._
 import com.scalableminds.braingames.binary.watcher.DirectoryChangeHandler
-import com.scalableminds.util.tools.JsonHelper
-import play.api.i18n.MessagesApi
-import play.api.libs.concurrent.Execution.Implicits._
-import net.liftweb.common.Full
 import com.scalableminds.util.io.PathUtils
+import com.scalableminds.util.tools.JsonHelper
+import net.liftweb.common.Full
+import play.api.i18n.MessagesApi
 
-protected class DataSourceInboxChangeHandler(dataSourceRepository: DataSourceRepository, serverUrl: String)(val messagesApi: MessagesApi) extends DirectoryChangeHandler with PathUtils{
+protected class DataSourceInboxChangeHandler(dataSourceRepository: DataSourceRepository, serverUrl: String)
+                                            (val messagesApi: MessagesApi)
+  extends DirectoryChangeHandler with PathUtils {
 
   import com.scalableminds.braingames.binary.Logger._
 
@@ -23,13 +23,13 @@ protected class DataSourceInboxChangeHandler(dataSourceRepository: DataSourceRep
   val maxRecursiveLayerDepth = 2
 
   def onStart(path: Path, recursive: Boolean): Unit = {
-    try{
+    try {
       if (path != null && Files.isDirectory(path)) {
         PathUtils.listDirectories(path) match {
           case Full(dirs) =>
-          val foundInboxSources = dirs.flatMap(teamAwareInboxSourcesIn)
-          dataSourceRepository.updateDataSources(foundInboxSources)
-          dataSourceRepository.updateInboxSources(foundInboxSources)
+            val foundInboxSources = dirs.flatMap(teamAwareInboxSourcesIn)
+            dataSourceRepository.updateDataSources(foundInboxSources)
+            dataSourceRepository.updateInboxSources(foundInboxSources)
           case e =>
             logger.error(s"Failed to execute onStart. Error during list directories on '$path': $e")
         }
@@ -60,10 +60,8 @@ protected class DataSourceInboxChangeHandler(dataSourceRepository: DataSourceRep
         logger.error(s"Failed to read datasets for team $team. Empty path: $path")
         Nil
       case Full(subdirs) =>
-        val inbox = subdirs.map{ p =>
-          dataSourceFromFolder(p, team)
-        }
-        logger.info(s"Datasets for team $team: ${inbox.map(_.id).mkString(", ")}")
+        val inbox = subdirs.map(p => dataSourceFromFolder(p, team))
+        logger.info(s"Datasets for team $team: ${inbox.map(_.id).mkString(", ") }")
         inbox
       case e =>
         logger.error(s"Failed to list directories for team $team at path $path")
@@ -73,12 +71,17 @@ protected class DataSourceInboxChangeHandler(dataSourceRepository: DataSourceRep
 
   def dataSourceFromFolder(path: Path, team: String): DataSourceLike = {
     logger.info(s"Handling $team at $path")
-    JsonHelper.jsonFromFile(path.resolve("datasource.json"), path).flatMap( _.validate(FiledDataSource.filedDataSourceFormat).asOpt) match {
+    JsonHelper
+      .jsonFromFile(path.resolve("datasource.json"), path)
+      .flatMap(json => json.validate(FiledDataSource.filedDataSourceFormat).asOpt) match {
       case Full(filedDataSource) =>
         filedDataSource.toUsable(serverUrl)
       case _ =>
-        UnusableDataSource(serverUrl, path.getFileName.toString, path.toAbsolutePath.toString, team, 
-          new DataSourceTypeGuessers(messagesApi).guessRepositoryType(path).name)
+        UnusableDataSource(serverUrl,
+                           path.getFileName.toString,
+                           path.toAbsolutePath.toString,
+                           team,
+                           new DataSourceTypeGuessers(messagesApi).guessRepositoryType(path).name)
     }
   }
 }

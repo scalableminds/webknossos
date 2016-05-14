@@ -71,22 +71,20 @@ object DataStoreHandler extends DataStoreBackChannelHandler {
     sendRequest(dataSet.dataStoreInfo.name, call)
   }
 
-  def uploadDataSource(upload: DataSourceUpload) = {
+  def uploadDataSource(upload: DataSourceUpload)(implicit messages: Messages): Fox[Boolean] = {
+    def parseResponse(response: RESTResponse) = (response.body \ "error").asOpt[String] match {
+      case Some(error) => Failure(error)
+      case _ => Full(true)
+    }
+
     Logger.debug("Upload called for: " + upload.name)
-    (for {
+    for {
       localDatastore <- config.getString("datastore.name").toFox
       dataStore <- findByServer(localDatastore).toFox
-      call = RESTCall("POST", s"/data/datasets/upload", Map.empty, Map.empty, Json.toJson(upload))
-      response <- dataStore.request(call)
-    } yield {
-      (response.body \ "error").asOpt[String] match {
-        case Some(error) => Failure(error)
-        case _ => Full(Unit)
-      }
-    }).futureBox.map {
-      case Full(r) => r
-      case Empty => Failure("dataStore.notAvailable")
-    }
+      call = RESTCall("POST", s"/data/datasets", Map.empty, Map.empty, Json.toJson(upload))
+      response <- dataStore.request(call) ?~> Messages("dataStore.notAvailable")
+      result <- parseResponse(response)
+    } yield result
   }
 }
 

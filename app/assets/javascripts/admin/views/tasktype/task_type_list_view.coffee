@@ -7,7 +7,7 @@ class TaskTypeListView extends Marionette.CompositeView
 
   template : =>
     _.template("""
-      <table class="table table-double-striped table-details" id="tasktype-table">
+      <table class="table table-striped table-details" id="tasktype-table">
         <thead>
           <tr>
             <th> # </th>

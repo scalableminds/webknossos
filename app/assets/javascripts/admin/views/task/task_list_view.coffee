@@ -9,7 +9,7 @@ class TaskListView extends Marionette.CompositeView
 
   template : _.template("""
     <h3><%- getTitle() %></h3>
-    <table id="tasklist-table" class="table table-double-striped table-details">
+    <table id="tasklist-table" class="table table-striped table-details">
       <thead>
         <tr>
           <th class="details-toggle-all"><i class="caret-right"></i><i class="caret-down"></i></th>

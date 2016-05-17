@@ -7,7 +7,7 @@ class ProjectsListView extends Marionette.CompositeView
 
   template : _.template("""
     <h3>Projects</h3>
-    <table class="table table-double-striped table-details" id="projectlist-table">
+    <table class="table table-striped table-details" id="projectlist-table">
       <thead>
         <tr>
           <th>Name</th>

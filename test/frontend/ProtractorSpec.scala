@@ -13,7 +13,7 @@ import org.specs2.mutable._
 import org.specs2.specification._
 import scala.io.Source
 import reactivemongo.api._
-import scala.concurrent.ExecutionContext.Implicits.global
+import play.api.libs.concurrent.Execution.Implicits._
 import sys.process._
 
 class ProtractorSpec extends Specification with BeforeAll {

@@ -83,10 +83,10 @@ case class TemporarySkeletonTracing(
     val numberOfTrees = _trees.size
 
     val (numberOfNodes, numberOfEdges) = _trees.foldLeft((0l, 0l)) {
-      case ((numberOfNodes, numberOfEdges), tree) =>
+      case ((nodeCount, edgeCount), tree) =>
         val nNodes = tree.nodes.size
         val nEdges = tree.edges.size
-        (numberOfNodes + nNodes, numberOfEdges + nEdges)
+        (nodeCount + nNodes, edgeCount + nEdges)
     }
 
     Some(SkeletonTracingStatistics(numberOfNodes, numberOfEdges, numberOfTrees))

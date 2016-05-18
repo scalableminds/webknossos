@@ -6,8 +6,18 @@ class VolumeActionsView extends Marionette.ItemView
 
   template : _.template("""
     <div class="btn-group">
-      <button type="button" class="btn btn-default btn-primary" id="mode-move">Move</button>
-      <button type="button" class="btn btn-default" id="mode-trace">Trace</button>
+      <button
+        type="button"
+        class="btn btn-default <% if (isMoveMode) { %> btn-primary <% } %>"
+        id="mode-move">
+          Move
+      </button>
+      <button
+        type="button"
+        class="btn btn-default <% if (!isMoveMode) { %> btn-primary <% } %>"
+        id="mode-trace">
+          Trace
+      </button>
     </div>
     <div class="btn-group">
       <button type="button" class="btn btn-default" id="create-cell">Create new cell (C)</button>
@@ -25,7 +35,7 @@ class VolumeActionsView extends Marionette.ItemView
 
   initialize : (options) ->
 
-    @listenTo(app.vent, "changeVolumeMode", @updateForMode)
+    @listenTo(@model.volumeTracing, "change:mode", @render)
 
 
   createCell : ->
@@ -36,14 +46,14 @@ class VolumeActionsView extends Marionette.ItemView
   changeMode : (evt) ->
 
     mode = @modeMapping[evt.target.id]
-    app.vent.trigger("changeVolumeMode", mode)
+    @model.volumeTracing.setMode(mode)
 
 
-  updateForMode : (mode) ->
+  serializeData : ->
 
-    @$("button").removeClass("btn-primary")
+    return {
+      isMoveMode : @model.volumeTracing.mode == Constants.VOLUME_MODE_MOVE
+    }
 
-    buttonId = _.invert(@modeMapping)[mode]
-    @$("##{buttonId}").addClass("btn-primary")
 
 module.exports = VolumeActionsView

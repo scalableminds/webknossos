@@ -30,7 +30,7 @@ case class DataSet(
     UriEncoding.encodePathSegment(name, "UTF-8")
 
   def isEditableBy(user: Option[User]) =
-    user.map(_.adminTeamNames.contains(owningTeam)) getOrElse false
+    user.exists(_.adminTeamNames.contains(owningTeam))
 
   def defaultStart =
     dataSource.map(_.boundingBox.center).getOrElse(Point3D(0, 0, 0))
@@ -97,10 +97,10 @@ object DataSetDAO extends SecuredBaseDAO[DataSet] {
     findOne(byNameQ(name))
 
   def findAllOwnedBy(teams: List[String])(implicit ctx: DBAccessContext) =
-    find(Json.obj("owningTeam" -> Json.obj("$in" -> teams))).cursor[DataSet].collect[List]()
+    find(Json.obj("owningTeam" -> Json.obj("$in" -> teams))).cursor[DataSet]().collect[List]()
 
   def findAllActive(implicit ctx: DBAccessContext) = withExceptionCatcher{
-    find(Json.obj("isActive" -> true)).cursor[DataSet].collect[List]()
+    find(Json.obj("isActive" -> true)).cursor[DataSet]().collect[List]()
   }
 
   def updateDataSource(name: String, dataStoreInfo: DataStoreInfo, dataSource: DataSource)(implicit ctx: DBAccessContext) =

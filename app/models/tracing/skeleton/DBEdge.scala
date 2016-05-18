@@ -31,7 +31,7 @@ object DBEdgeDAO extends SecuredBaseDAO[DBEdge] {
     remove(Json.obj("_treeId" -> _tree, "edge.source" -> edge.source, "edge.target" -> edge.target))
 
   def findByTree(_tree: BSONObjectID)(implicit ctx: DBAccessContext) = withExceptionCatcher{
-    find(Json.obj("_treeId" -> _tree)).cursor[DBEdge].collect[List]()
+    find(Json.obj("_treeId" -> _tree)).cursor[DBEdge]().collect[List]()
   }
 
   def findOneByTree(_tree: BSONObjectID)(implicit ctx: DBAccessContext) = withExceptionCatcher{

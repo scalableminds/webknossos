@@ -37,7 +37,7 @@ object Project {
 
   def projectPublicWrites(project: Project, requestingUser: User): Future[JsObject] =
     for{
-      owner <- project.owner.map(User.userCompactWrites(requestingUser).writes(_)).futureBox
+      owner <- project.owner.map(User.userCompactWrites(requestingUser).writes).futureBox
     } yield {
       Json.obj(
         "name" -> project.name,
@@ -65,9 +65,7 @@ object ProjectService extends FoxImplicits {
   def remove(project: Project)(implicit ctx: DBAccessContext): Fox[Boolean] = {
     ProjectDAO.remove("name", project.name).flatMap{
       case result if result.n > 0 =>
-        TaskService.removeAllWithProject(project).map{ _ =>
-          true
-        }
+        TaskService.removeAllWithProject(project)
       case _ =>
         Logger.warn("Tried to remove project without permission.")
         Fox.successful(false)

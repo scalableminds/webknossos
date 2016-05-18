@@ -1,20 +1,16 @@
 package models.annotation
 
 import java.util.Date
-import com.scalableminds.util.geometry.{Vector3D, BoundingBox, Scale, Point3D}
-import java.io.InputStream
-import play.api.libs.iteratee.Enumerator
-import play.api.libs.json._
-import play.api.libs.functional.syntax._
-import com.scalableminds.braingames.binary.models.{FallbackLayer, DataLayer}
-import models.binary.{DataStoreInfo, DataSet, DataSetDAO}
-import scala.concurrent.Future
-import play.api.libs.concurrent.Execution.Implicits._
+
+import com.scalableminds.braingames.binary.models.{DataLayer, DataLayerMapping, FallbackLayer}
+import com.scalableminds.util.geometry.{BoundingBox, Point3D, Scale, Vector3D}
 import com.scalableminds.util.reactivemongo.DBAccessContext
 import com.scalableminds.util.tools.Fox
-import com.scalableminds.braingames.binary.models.DataLayerMapping
-import play.api.Logger
-import net.liftweb.common.Box
+import models.binary.{DataSet, DataSetDAO, DataStoreInfo}
+import play.api.libs.concurrent.Execution.Implicits._
+import play.api.libs.functional.syntax._
+import play.api.libs.iteratee.Enumerator
+import play.api.libs.json._
 
 trait AnnotationContent {
   type Self <: AnnotationContent

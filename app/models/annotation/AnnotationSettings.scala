@@ -1,10 +1,7 @@
 package models.annotation
 
+import models.annotation.AnnotationSettings._
 import play.api.libs.json._
-import play.api.libs.json.Json._
-import models.basics.BasicSettings
-
-import AnnotationSettings._
 
 case class AnnotationSettings(
   allowedModes: List[String] = SKELETON_MODES,

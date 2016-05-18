@@ -41,10 +41,23 @@ object AnnotationUpdateDAO
   val formatter = AnnotationUpdate.annotationUpdateFormat
 
   def retrieveAll(typ: String, annotationId: String, maxVersion: Int = Int.MaxValue)(implicit ctx: DBAccessContext) = {
-    find(Json.obj("typ" -> typ, "annotationId" -> annotationId, "version" -> Json.obj("$lte" -> maxVersion), "deleted" -> Json.obj("$ne" -> true))).cursor[AnnotationUpdate].collect[List]()
+    find(Json.obj(
+      "typ" -> typ,
+      "annotationId" -> annotationId,
+      "version" -> Json.obj(
+        "$lte" -> maxVersion),
+      "deleted" -> Json.obj(
+        "$ne" -> true)
+    )).cursor[AnnotationUpdate]().collect[List]()
   }
 
   def removeAll(typ: String, annotationId: String)(implicit ctx: DBAccessContext) = {
-    update(Json.obj("typ" -> typ, "annotationId" -> annotationId), Json.obj("$set" -> Json.obj("deleted" -> true)), multi = true)
+    update(
+      Json.obj(
+        "typ" -> typ,
+        "annotationId" -> annotationId),
+      Json.obj(
+        "$set" -> Json.obj("deleted" -> true))
+      , multi = true)
   }
 }

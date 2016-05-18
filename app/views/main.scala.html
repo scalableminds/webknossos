@@ -4,12 +4,12 @@
 
 @callingTemplate = @{
   // TODO: REMOVE HOTFIX
-  var c = Reflect.getCallerClass.map( _(8).getName() )
+  var c = Reflect.getCallerClass.map( _(8).getName )
   var i = 8
   val max = 12
-  while(c == Some("views.html.main$") && i <= max){
+  while(c.contains("views.html.main$") && i <= max){
     i += 1
-    c = Reflect.getCallerClass.map( _(i).getName() )
+    c = Reflect.getCallerClass.map( _(i).getName )
   }
   c
 }

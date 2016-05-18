@@ -1,22 +1,16 @@
 package oxalis.nml
 
-import scala.xml.{Node => XMLNode, Elem, XML, NodeSeq}
-import models.binary.DataSet
+import java.io.{File, FileInputStream, InputStream}
+
+import scala.annotation.tailrec
+import scala.xml.{Node => XMLNode, NodeSeq, XML}
+
+import com.scalableminds.util.geometry.{Point3D, Scale}
 import com.scalableminds.util.image.Color
 import com.scalableminds.util.tools.ExtendedTypes.ExtendedString
-import com.scalableminds.util.geometry.Point3D
-import play.api.Logger
-import java.io.File
-import com.scalableminds.util.geometry.Scale
-import models.user.User
-import com.sun.org.apache.xerces.internal.impl.io.MalformedByteSequenceException
-import java.io.InputStream
-import java.io.FileInputStream
-import net.liftweb.common.{Full, Box, Failure}
 import net.liftweb.common.Box._
-import utils._
-import scala.annotation.tailrec
-import models.tracing.skeleton.SkeletonTracing
+import net.liftweb.common.{Box, Failure, Full}
+import play.api.Logger
 
 object NMLParser {
 

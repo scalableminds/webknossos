@@ -15,15 +15,15 @@ object DefaultMails {
   /**
    * Base url used in emails
    */
-  val uri = conf.getString("http.uri") getOrElse ("http://localhost")
+  val uri = conf.getString("http.uri").getOrElse("http://localhost")
 
   val defaultFrom = "no-reply@webknossos.org"
 
-  val brainTracingMailingList = conf.getString("braintracing.mailinglist") getOrElse ("")
-  val newUserMailingList = conf.getString("braintracing.newuserlist") getOrElse ("")
-  val supportMail = conf.getString("scm.support.mail") getOrElse ("support@scm.io")
+  val brainTracingMailingList = conf.getString("braintracing.mailinglist").getOrElse("")
+  val newUserMailingList = conf.getString("braintracing.newuserlist").getOrElse("")
+  val supportMail = conf.getString("scm.support.mail").getOrElse("support@scm.io")
 
-  val workloadMail = conf.getString("workload.mail") getOrElse ("")
+  val workloadMail = conf.getString("workload.mail").getOrElse("")
 
   /**
    * Creates a registration mail which should allow the user to verify his
@@ -50,16 +50,6 @@ object DefaultMails {
       subject = "Your account on " + uri + " got activated",
       bodyText = html.mail.validated(name).body,
       recipients = List(receiver))
-
-  def issueMail(userName: String, email: String, summary: String, description: String) =
-    Mail(
-      from = email,
-      headers = Map("Sender" -> defaultFrom),
-      subject = "Non technical issue - " + summary,
-      bodyText = html.mail.nonTechnicalIssue(userName, email, description).body,
-      recipients = List(brainTracingMailingList),
-      replyTo = Some(email),
-      ccRecipients = List(supportMail, email))
 
   def changePasswordMail(name: String, receiver: String) = {
     Mail(

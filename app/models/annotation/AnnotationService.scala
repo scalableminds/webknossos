@@ -74,7 +74,7 @@ object AnnotationService extends AnnotationContentProviders with BoxImplicits wi
     AnnotationDAO.findByTaskIdAndType(task._id, AnnotationType.TracingBase).one[Annotation].toFox
 
   def annotationsFor(task: Task)(implicit ctx: DBAccessContext) =
-    AnnotationDAO.findByTaskIdAndType(task._id, AnnotationType.Task).cursor[Annotation].collect[List]()
+    AnnotationDAO.findByTaskIdAndType(task._id, AnnotationType.Task).cursor[Annotation]().collect[List]()
 
   def countUnfinishedAnnotationsFor(task: Task)(implicit ctx: DBAccessContext) =
     AnnotationDAO.countUnfinishedByTaskIdAndType(task._id, AnnotationType.Task)

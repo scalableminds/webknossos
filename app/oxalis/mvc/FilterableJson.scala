@@ -5,10 +5,6 @@ import scala.concurrent.Future
 import play.api.libs.json.Json
 import play.api.libs.concurrent.Execution.Implicits._
 
-/**
- * Created by tombocklisch on 23.01.14.
- */
-
 object FilterableJson
 
 trait FilterableJson {

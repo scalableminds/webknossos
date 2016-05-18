@@ -20,11 +20,12 @@ import play.api.libs.concurrent.Execution.Implicits._
 import oxalis.thirdparty.BrainTracing
 
 object TimeSpanService extends FoxImplicits{
-  val MaxTracingPause = (Play.current.configuration.getInt("oxalis.user.time.tracingPauseInSeconds").getOrElse(60) seconds).toMillis
+  val MaxTracingPause =
+    Play.current.configuration.getInt("oxalis.user.time.tracingPauseInSeconds").getOrElse(60).seconds.toMillis
 
   lazy val timeSpanTracker = Akka.system.actorOf(Props[TimeSpanTracker])
 
-  def logUserInteraction(user: User, annotation: Option[AnnotationLike])(implicit ctx: DBAccessContext) = {
+  def logUserInteraction(user: User, annotation: Option[AnnotationLike])(implicit ctx: DBAccessContext): Unit = {
     val timestamp = System.currentTimeMillis
 
     timeSpanTracker ! TrackTime(timestamp, user._id, annotation, ctx)
@@ -36,7 +37,7 @@ object TimeSpanService extends FoxImplicits{
     } yield {
       timeTrackingOpt match {
         case Full(timeSpans) =>
-          timeSpans.groupBy(groupingF).mapValues(_.foldLeft(0L)(_ + _.time) millis)
+          timeSpans.groupBy(groupingF).mapValues(_.foldLeft(0L)(_ + _.time).millis)
         case _ =>
           Map.empty[T, Duration]
       }
@@ -48,9 +49,9 @@ object TimeSpanService extends FoxImplicits{
     } yield {
       timeTrackingOpt match {
         case Full(timeSpans) =>
-          timeSpans.foldLeft(0L)(_ + _.time) millis
+          timeSpans.foldLeft(0L)(_ + _.time).millis
         case _ =>
-          0 millis
+          0.millis
       }
     }
 
@@ -60,7 +61,7 @@ object TimeSpanService extends FoxImplicits{
     } yield {
       timeTrackingOpt match {
         case Full(timeSpans) =>
-          timeSpans.groupBy(groupingF).mapValues(_.foldLeft(0L)(_ + _.time) millis)
+          timeSpans.groupBy(groupingF).mapValues(_.foldLeft(0L)(_ + _.time).millis)
         case _ =>
           Map.empty[T, Duration]
       }

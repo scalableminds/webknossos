@@ -110,7 +110,7 @@ object SkeletonTracingService extends AnnotationContentService with CommonTracin
   def uniqueTreePrefix(tracing: SkeletonTracingLike, user: Option[User], task: Option[Task])(tree: TreeLike): String = {
     val userName = user.map(_.abreviatedName) getOrElse ""
     val taskName = task.map(_.id) getOrElse ""
-    formatHash(taskName) + "_" + userName + "_" + "tree%03d".format(tree.treeId)
+    formatHash(taskName) + "_" + userName + "_" + f"tree${tree.treeId}%03d"
   }
 
   def renameTreesOfTracing(tracing: SkeletonTracing, user: Fox[User], task: Fox[Task])(implicit ctx: DBAccessContext): Fox[TemporarySkeletonTracing] = {

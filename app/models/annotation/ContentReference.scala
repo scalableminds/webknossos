@@ -17,9 +17,9 @@ import net.liftweb.common.Full
 
 case class ContentReference(contentType: String, _id: String) {
   lazy val service: AnnotationContentService =
-    ContentReference.contentProviders.get(contentType) getOrElse {
+    ContentReference.contentProviders.getOrElse(contentType, {
       throw new Exception("No registered resolver for ContentType: " + contentType)
-    }
+    })
 
   def resolveAs[T](implicit ctx: DBAccessContext): Fox[T] = {
     service.findOneById(_id).flatMap {

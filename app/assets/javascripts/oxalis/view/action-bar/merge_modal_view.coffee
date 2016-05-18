@@ -150,7 +150,6 @@ class MergeModalView extends Marionette.LayoutView
       @project    .show(@projectSelectionView)
     )
 
-
   mergeTaskType : ->
 
     taskTypeId = @ui.tasktype.find("select :selected").prop("id")

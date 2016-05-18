@@ -1,5 +1,7 @@
 package models.basics
 
+import scala.language.implicitConversions
+
 import oxalis.security.UserAwareRequest
 import models.user.User
 import com.scalableminds.util.reactivemongo.{AuthorizedAccessContext, DBAccessContext}

@@ -46,7 +46,7 @@ object DataSetService extends FoxImplicits {
 
   def updateDataSource(dataStoreInfo: DataStoreInfo, usableDataSource: UsableDataSource)(implicit ctx: DBAccessContext): Fox[WriteResult] = {
     DataSetDAO.findOneBySourceName(usableDataSource.id)(GlobalAccessContext).futureBox.flatMap {
-      case Full(dataSet) if (dataSet.dataStoreInfo.name == dataStoreInfo.name) =>
+      case Full(dataSet) if dataSet.dataStoreInfo.name == dataStoreInfo.name =>
         DataSetDAO.updateDataSource(usableDataSource.id, dataStoreInfo, usableDataSource.dataSource)(GlobalAccessContext).futureBox
       case Full(_) =>
         // TODO: There is a problem here. The dataset name is already in use. We are not going to update that datasource.

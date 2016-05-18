@@ -1,6 +1,6 @@
 path = require 'path'
 rmdir = require './helpers/rimraf-promised'
-readFile = require './helpers/readFile-promised'
+readFile = require './helpers/readfile-promised'
 waitForSelector = require './helpers/waitForSelector'
 DashboardPage = require './pages/DashboardPage'
 

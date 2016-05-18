@@ -8,10 +8,6 @@ class TaskTypeItemView extends Marionette.CompositeView
 
   template : _.template("""
     <tr id="<%- id %>">
-      <td class="details-toggle" href="#">
-        <i class="caret-right"></i>
-        <i class="caret-down"></i>
-      </td>
       <td><%- id %></td>
       <td><%- team %></td>
       <td><%- summary %></td>
@@ -44,19 +40,15 @@ class TaskTypeItemView extends Marionette.CompositeView
         <a href="/annotations/CompoundTaskType/<%- id %>" title="view all finished tracings">
           <i class="fa fa-random"></i>view
         </a> <br />
+        <a href="/taskTypes/<%- id %>/tasks" title="View Tasks">
+          <i class="fa fa-tasks"></i>tasks
+        </a> <br />
         <a href="/api/taskTypes/<%- id %>/download" >
           <i class="fa fa-download"></i>download
         </a> <br />
         <a href="#" class="delete">
           <i class="fa fa-trash-o"></i>delete
         </a>
-      </td>
-    </tr>
-    <tr class="details-row hide">
-      <td colspan="12">
-        <table class="table table-condensed table-nohead">
-          <tbody></tbody>
-        </table>
       </td>
     </tr>
   """)
@@ -66,23 +58,11 @@ class TaskTypeItemView extends Marionette.CompositeView
   tagName : "tbody"
 
   events :
-    "click .details-toggle" : "toggleDetails"
     "click .delete" : "deleteTaskType"
-
-  ui :
-    "detailsRow" : ".details-row"
-    "detailsToggle" : ".details-toggle"
-
 
   initialize : ->
 
-    @listenTo(app.vent, "taskTypeListView:toggleDetails", @toggleDetails)
     @collection = new TaskCollection(null, taskTypeId : @model.get("id"))
-
-    # minimize the toggle view on item deletion
-    @listenTo(@collection, "remove", (item) =>
-      @toggleDetails()
-    )
 
 
   deleteTaskType : (evt) ->
@@ -93,21 +73,6 @@ class TaskTypeItemView extends Marionette.CompositeView
       @model.destroy().then((response) =>
         Toast.message(response.messages)
       )
-
-  toggleDetails : ->
-
-    if @ui.detailsRow.hasClass("hide")
-
-      @collection
-        .fetch(silent : true)
-        .then( =>
-          @render()
-          @ui.detailsRow.removeClass("hide")
-          @ui.detailsToggle.addClass("open")
-        )
-    else
-      @ui.detailsRow.addClass("hide")
-      @ui.detailsToggle.removeClass("open")
 
 
 module.exports = TaskTypeItemView

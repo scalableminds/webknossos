@@ -18,7 +18,7 @@ import play.api.libs.json.Json
 import play.twirl.api.Html
 
 class ProjectController @Inject()(val messagesApi: MessagesApi) extends Controller with Secured {
-  def empty = Authenticated {
+  def empty(name: String) = Authenticated {
     implicit request =>
       Ok(views.html.main()(Html("")))
   }

@@ -20,7 +20,7 @@ oxalis-test:
   extends:
     service: oxalis-sbt
   command: >
-    /bin/bash -c 
+    bash -c 
     "service xvfb start && 
      export DISPLAY=:99 && 
      sbt -v -d \"test-only * -- 

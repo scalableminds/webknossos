@@ -101,7 +101,7 @@ class PlaneController
 
     return {
       leftDownMove : (delta) => @moveTDView(delta)
-      scroll : (value) => @zoomTDView(value, true)
+      scroll : (value) => @zoomTDView(Utils.clamp(-1, value, 1), true)
       over : => @planeView.setActiveViewport( @activeViewport = constants.TDView )
     }
 

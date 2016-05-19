@@ -251,8 +251,8 @@ class PlaneView
 
     @running = true
 
-    @scaleTrianglesPlane(@model.user.get("scale"))
     $(".inputcatcher").show()
+    @scaleTrianglesPlane(@model.user.get("scale"))
 
     @animate()
 

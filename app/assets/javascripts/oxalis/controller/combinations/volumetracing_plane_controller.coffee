@@ -32,6 +32,31 @@ class VolumeTracingPlaneController extends PlaneController
         @render3dCell id)
 
 
+  simulateTracing : =>
+
+    @model.volumeTracing.setMode(Constants.VOLUME_MODE_TRACE)
+
+    controls = @getPlaneMouseControls()
+    pos = (x, y) -> {x, y}
+
+    controls.leftMouseDown(pos(100, 100), 0, {})
+
+    _.defer =>
+      controls.leftDownMove(null, pos(200, 100))
+      _.defer =>
+        controls.leftDownMove(null, pos(200, 200))
+        _.defer =>
+          controls.leftDownMove(null, pos(100, 200))
+          _.defer =>
+            controls.leftDownMove(null, pos(100, 100))
+            controls.leftMouseUp()
+            _.defer =>
+              pos = @model.flycam.getPosition()
+              pos[2]++
+              @model.flycam.setPosition(pos)
+              _.defer(@simulateTracing)
+
+
   getPlaneMouseControls : (planeId) ->
 
     return _.extend super(planeId),

@@ -1,6 +1,7 @@
 _              = require("lodash")
 backbone       = require("backbone")
 NestedObjModel = require("libs/nested_obj_model")
+moment         = require("moment")
 
 class DatasetModel extends NestedObjModel
 
@@ -21,6 +22,8 @@ class DatasetModel extends NestedObjModel
       (layer) -> layer.category == "segmentation")
 
     response.thumbnailURL = @createThumbnailURL(response.name, response.dataSource.dataLayers)
+
+    response.formattedCreated =moment(response.created).format("YYYY-MM-DD HH:mm")
 
     return response
 

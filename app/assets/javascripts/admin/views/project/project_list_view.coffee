@@ -17,13 +17,14 @@ class ProjectsListView extends Marionette.CompositeView
           <th>Actions</th>
         </tr>
       </thead>
+      <tbody></tbody>
     </table>
     <div id="modal-wrapper"></div>
   """)
 
   className : "container wide project-administration"
   childView : ProjectListItemView
-  childViewContainer : "table"
+  childViewContainer : "tbody"
 
   ui :
     "modalWrapper" : "#modal-wrapper"

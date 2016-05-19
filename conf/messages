@@ -82,6 +82,7 @@ dataSet.upload.success=Dataset successfully uploaded
 dataSet.import.failedWithoutError=Import of dataset {0} failed
 dataSet.import.failedWithError=Import of the dataset failed with error: {0}
 dataSet.import.directoryEmpty=Import failed because the dataset directory is empty
+dataSet.import.noLayers=Import failed because no data layers could be found
 
 dataSource.notFound=Datasource not found on datastore server
 dataSource.import.alreadyFinished=Import of the dataset already finished

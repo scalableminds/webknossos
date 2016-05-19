@@ -148,22 +148,19 @@ class DataSetController @Inject()(val messagesApi: MessagesApi) extends Controll
 
   def upload = Authenticated.async(parse.multipartFormData) { implicit request =>
     uploadForm.bindFromRequest(request.body.dataParts).fold(
-      hasErrors = (formWithErrors => Future.successful(JsonBadRequest(formWithErrors.errors.head.message))),
+      hasErrors = 
+        formWithErrors => Future.successful(JsonBadRequest(formWithErrors.errors.head.message)),
       success = {
         case (name, team, scale) =>
-          (for {
+          for {
             _ <- checkIfNewDataSetName(name) ?~> Messages("dataSet.name.alreadyTaken")
             _ <- ensureTeamAdministration(request.user, team)
-            zipFile <- request.body.file("zipFile").toFox ~> Messages("zip.file.notFound")
+            zipFile <- request.body.file("zipFile") ?~> Messages("zip.file.notFound")
             settings = DataSourceSettings(None, scale, None)
             upload = DataSourceUpload(name, team, zipFile.ref.file.getAbsolutePath, Some(settings))
             _ <- DataStoreHandler.uploadDataSource(upload)
           } yield {
-              Ok(Json.obj())
-            }).futureBox.map {
-            case Full(r)              => r
-            case Failure(error, _, _) =>
-              JsonBadRequest(error)
+            Ok(Json.obj())
           }
       })
   }

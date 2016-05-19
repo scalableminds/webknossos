@@ -17,11 +17,11 @@ class DatasetListView extends Marionette.CompositeView
           </th>
           <th data-sort="dataSource.baseDir">Name</th>
           <th data-sort="dataStore.name">Datastore</th>
-          <th>Scale</th>
+          <th class="medium-column">Scale</th>
           <th data-sort="owningTeam">Owning Team</th>
           <th>Allowed Teams</th>
-          <th data-sort="isActive">Active</th>
-          <th data-sort="isPublic">Public</th>
+          <th data-sort="isActive" class="small-column">Active</th>
+          <th data-sort="isPublic" class="small-column">Public</th>
           <th>Data Layers</th>
           <th>Actions</th>
         </tr>

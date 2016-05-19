@@ -23,7 +23,7 @@ class DatasetModel extends NestedObjModel
 
     response.thumbnailURL = @createThumbnailURL(response.name, response.dataSource.dataLayers)
 
-    response.formattedCreated =moment(response.created).format("YYYY-MM-DD HH:mm")
+    response.formattedCreated = moment(response.created).format("YYYY-MM-DD HH:mm")
 
     return response
 

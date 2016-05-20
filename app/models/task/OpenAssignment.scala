@@ -78,7 +78,7 @@ object OpenAssignmentDAO extends SecuredBaseDAO[OpenAssignment] with FoxImplicit
   }
 
   private def experiencesToQuery(user: User) =
-    JsArray(user.experiences.map{ case (domain, value) => Json.obj("neededExperience.domain" -> domain, "neededExperience.value" -> value)}.toSeq)
+    JsArray(user.experiences.map{ case (domain, value) => Json.obj("neededExperience.domain" -> domain, "neededExperience.value" -> Json.obj("$lte" -> value))}.toSeq)
 
   private def noRequiredExperience =
     Json.obj("neededExperience.domain" -> "", "neededExperience.value" -> 0)

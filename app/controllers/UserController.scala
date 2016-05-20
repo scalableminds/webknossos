@@ -120,7 +120,8 @@ class UserController @Inject()(val messagesApi: MessagesApi)
   def list = Authenticated.async{ implicit request =>
     UsingFilters(
       Filter("includeAnonymous", (value: Boolean, el: User) => value || !el.isAnonymous, default = Some("false")),
-      Filter("isEditable", (value: Boolean, el: User) => el.isEditableBy(request.user) == value)
+      Filter("isEditable", (value: Boolean, el: User) => el.isEditableBy(request.user) == value),
+      Filter("isAdmin", (value: Boolean, el: User) => el.hasAdminAccess == value)
     ) { filter =>
       for {
         users <- UserDAO.findAll

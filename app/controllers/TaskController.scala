@@ -99,7 +99,7 @@ class TaskController @Inject() (val messagesApi: MessagesApi) extends Controller
               experience,
               priority,
               status.open,
-              _project = Some(project.name),
+              _project = project.name,
               _id = BSONObjectID.generate)
 
             for {
@@ -124,7 +124,7 @@ class TaskController @Inject() (val messagesApi: MessagesApi) extends Controller
           taskType <- TaskTypeDAO.findOneById(taskTypeId) ?~> Messages("taskType.notFound")
           project <- ProjectDAO.findOneByName(projectName) ?~> Messages("project.notFound")
           _ <- ensureTeamAdministration(request.user, team)
-          task = Task(taskType._id, team, experience, priority, status.open, _project = Some(project.name))
+          task = Task(taskType._id, team, experience, priority, status.open, _project = project.name)
           _ <- AnnotationService.createAnnotationBase(task, request.user._id, boundingBox, taskType.settings, dataSetName, start, rotation)
           directLinks <- createAnonymousUsersAndTasksInstancesIfNeeded(isForAnonymous, task).toFox
           taskWithLinks = task.copy(directLinks = directLinks)

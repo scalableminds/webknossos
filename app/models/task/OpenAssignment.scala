@@ -29,7 +29,7 @@ import com.scalableminds.util.reactivemongo.AccessRestrictions.{AllowIf, DenyEve
 case class OpenAssignment(
   _task: BSONObjectID,
   team: String,
-  _project: Option[String],
+  _project: String,
   neededExperience: Experience = Experience.empty,
   priority: Int = 100,
   created: DateTime = DateTime.now(),

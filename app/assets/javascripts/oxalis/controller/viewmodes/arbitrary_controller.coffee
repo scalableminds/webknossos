@@ -10,6 +10,7 @@ ArbitraryView      = require("../../view/arbitrary_view")
 ArbitraryPlaneInfo = require("../../geometries/arbitrary_plane_info")
 constants          = require("../../constants")
 {M4x4, V3}         = require("libs/mjs")
+Utils              = require("libs/utils")
 
 
 class ArbitraryController
@@ -273,7 +274,7 @@ class ArbitraryController
   scroll : (delta, type) =>
 
     switch type
-      when "shift" then @setParticleSize(delta)
+      when "shift" then @setParticleSize(Utils.clamp(-1, delta, 1))
 
 
   addNode : (position, rotation) =>

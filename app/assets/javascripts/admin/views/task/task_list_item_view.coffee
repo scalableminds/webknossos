@@ -3,6 +3,8 @@ app                  = require("app")
 Marionette           = require("backbone.marionette")
 AnnotationCollection = require("admin/models/task/annotation_collection")
 TaskAnnotationView   = require("./task_annotation_view")
+TemplateHelpers      = require("libs/template_helpers")
+
 
 class TaskListItemView extends Marionette.CompositeView
 
@@ -33,8 +35,10 @@ class TaskListItemView extends Marionette.CompositeView
         </a>
       </td>
       <td><%- dataSet %></td>
-      <td>(<%- editPosition %>)</td>
-      <td>(<%- boundingBox.join(", ") %>)</td>
+      <td class="nowrap">
+        (<%- editPosition %>)<br>
+        <span><%- TemplateHelpers.formatScale(boundingBox) %></span>
+      </td>
       <td>
         <% if (neededExperience.domain != "" || neededExperience.value > 0) { %>
           <span class="label label-default"><%- neededExperience.domain %> : <%- neededExperience.value %></span>
@@ -42,10 +46,11 @@ class TaskListItemView extends Marionette.CompositeView
       </td>
       <td><%- priority %></td>
       <td><%- created %></td>
-      <td>
-        <i class="fa fa-play-circle"></i><%- status.open %><br>
-        <i class="fa fa-random"></i><%- status.inProgress %><br>
-        <i class="fa fa-check-circle-o"></i><%- status.completed %>
+      <td class="nowrap">
+        <span><i class="fa fa-play-circle"></i><%- status.open %></span><br>
+        <span><i class="fa fa-random"></i><%- status.inProgress %></span><br>
+        <span><i class="fa fa-check-circle-o"></i><%- status.completed %></span><br>
+        <span><i class="fa fa-clock-o"></i><%- formattedTracingTime %></span>
       </td>
       <td class="nowrap">
         <a href="/tasks/<%- id %>/edit"><i class="fa fa-pencil"></i>edit</a><br>
@@ -76,6 +81,9 @@ class TaskListItemView extends Marionette.CompositeView
   ui :
     "detailsRow" : ".details-row"
     "detailsToggle" : ".details-toggle"
+
+  templateHelpers :
+    TemplateHelpers : TemplateHelpers
 
 
   initialize :->

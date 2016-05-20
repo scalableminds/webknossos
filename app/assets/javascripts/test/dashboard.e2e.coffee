@@ -1,8 +1,6 @@
-path = require 'path'
-rmdir = require './helpers/rimraf-promised'
-readFile = require './helpers/readfile-promised'
 waitForSelector = require './helpers/waitForSelector'
 DashboardPage = require './pages/DashboardPage'
+Download = require("./helpers/ajaxDownload")
 
 
 describe 'Dashboard', ->
@@ -45,43 +43,16 @@ describe 'Dashboard', ->
 
   describe 'NML Download', ->
 
-    testFile = path.join(
-      __dirname,
-      'testFiles',
-      DashboardPage.SAMPLE_NML_PATH
-    )
-
     it 'should download an NML file', (done) ->
 
       # remove tmp dir
-      rmdir browser.params.DOWNLOAD_DIRECTORY
-
-        # download file
-        .then( -> return page.downloadSampleNML() )
-
-        # when we got here, waitForFile succeeded
-        # which means file was actually downloaded
-        .then( -> done() )
-
-
-    it 'should contain correct NML data', (done) ->
-
-      # download file via ajax request
-      page.downloadSampleNMLViaAjax()
-
-        # read check file
+      page.openExplorativeTab()
+        .then( -> page.getFirstDownloadLink())
+        .then( (url) -> Download.text().from(url))
         .then( (nmlContent) ->
-          return readFile(testFile, 'utf8')
-            .then( (fileContent) ->
-              return { fileContent, nmlContent }
-            )
+          expect(nmlContent.length).toBeGreaterThan(0)
+          expect(nmlContent.startsWith("<things>")).toBe(true)
+          expect(nmlContent.endsWith("</things>")).toBe(true)
         )
+        .then( -> done())
 
-        # compare download and test file
-        .then( ({ fileContent, nmlContent }) ->
-          expect(nmlContent).toEqual(fileContent)
-          done()
-        )
-
-        # error handling
-        .catch( (error) -> throw error )

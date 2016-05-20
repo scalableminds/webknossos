@@ -12,8 +12,9 @@ do ->
     oldMethod = object[methodName]
     object[methodName] = ->
       isWithinWhitlistedMethod = true
-      oldMethod.apply(this, arguments)
+      returnValue = oldMethod.apply(this, arguments)
       isWithinWhitlistedMethod = false
+      return returnValue
 
   # addInitializer() needs Promises internally, but doesn't expose it.
   whitelistMethod(Marionette.Application.prototype, "addInitializer")
@@ -22,7 +23,7 @@ do ->
   $.Deferred = ->
 
     unless isWithinWhitlistedMethod
-      throw new Error("$.Deferred is deprecated, use libs/deferred or Promise instead.")
+      console.warn("$.Deferred is deprecated, use libs/deferred or Promise instead.")
     return $_Deferred(arguments...)
 
 

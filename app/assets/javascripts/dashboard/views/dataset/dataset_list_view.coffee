@@ -16,12 +16,11 @@ class DatasetListView extends Marionette.CompositeView
             <i class="caret-down"></i>
           </th>
           <th data-sort="dataSource.baseDir">Name</th>
-          <th data-sort="dataStore.name">Datastore</th>
-          <th>Scale</th>
-          <th data-sort="owningTeam">Owning Team</th>
+          <th data-sort="created">Created</th>
+          <th class="medium-column">Scale</th>
           <th>Allowed Teams</th>
-          <th data-sort="isActive">Active</th>
-          <th data-sort="isPublic">Public</th>
+          <th data-sort="isActive" class="small-column">Active</th>
+          <th data-sort="isPublic" class="small-column">Public</th>
           <th>Data Layers</th>
           <th>Actions</th>
         </tr>
@@ -51,7 +50,7 @@ class DatasetListView extends Marionette.CompositeView
 
   initialize : ->
 
-    @collection.setSorting("created")
+    @collection.setSorting("created", "desc")
     @collection.setCollectionFilter((child) -> return child.get("isEditable"))
     @collection.setPageSize(@DATASETS_PER_PAGE)
 

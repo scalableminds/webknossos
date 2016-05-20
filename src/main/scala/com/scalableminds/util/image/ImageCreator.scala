@@ -19,6 +19,7 @@ case class CombinedPage(image: BufferedImage, info: List[ImagePartInfo], pageInf
 
 case class ImageCreatorParameters(
                                    bytesPerElement: Int,
+                                   useHalfBytes: Boolean,
                                    slideWidth: Int = 128,
                                    slideHeight: Int = 128,
                                    imagesPerRow: Int = 8,
@@ -39,8 +40,18 @@ object ImageCreator {
   }
 
   def calculateSprites(data: Array[Byte], params: ImageCreatorParameters, targetType: Int): List[BufferedImage] = {
+    val imageData =
+      if(params.useHalfBytes) {
+        val r = new Array[Byte](data.length * 2)
+        data.zipWithIndex.foreach{
+          case (b, idx) =>
+            r(2*idx) =(b & 0xF0).toByte
+            r(2*idx + 1)=(b & 0x0F << 4).toByte
+        }
+        r
+      } else data
     val slidingSize = params.slideHeight * params.slideWidth * params.bytesPerElement
-    data.sliding(slidingSize, slidingSize).toList.flatMap {
+    imageData.sliding(slidingSize, slidingSize).toList.flatMap {
       slice =>
         createBufferedImageFromBytes(slice, targetType, params)
     }

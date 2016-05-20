@@ -1,20 +1,15 @@
 path = require("path")
-waitForFile = require("../helpers/waitForFile")
 Page = require("./Page")
-Download = require("../helpers/ajaxDownload")
 
 
 explorativeTab = "#tab-explorative"
 tasksTab = "#tab-tasks"
 tasks = ".tab-content tbody"
 newTaskButton = "#new-task-button"
-downloadUrl = "/annotations/Explorational/570ba0092a7c0e980056fe9b/download"
-downloadButton = "#explorative-tasks a[href=\"#{downloadUrl}\"]"
+downloadButton = "[href$='download']"
 
 
 class DashboardPage extends Page
-
-  @SAMPLE_NML_PATH = "2012-06-28_Cortex__explorational__sboy__56fe9b.nml"
 
   get : ->
 
@@ -31,11 +26,6 @@ class DashboardPage extends Page
   openTasksTab : ->
 
     return @clickElement(tasksTab)
-
-
-  clickDownloadButton : ->
-
-    return @clickElement(downloadButton)
 
 
   clickGetTaskButton : ->
@@ -56,28 +46,10 @@ class DashboardPage extends Page
       .then( => @clickGetTaskButton())
 
 
-  downloadSampleNML : ->
+  getFirstDownloadLink : ->
 
-    return @openExplorativeTab()
-      .then( => @clickDownloadButton())
-      .then( => waitForFile(@getSampleNMLPath()))
-
-
-  downloadSampleNMLViaAjax : ->
-
-    return Download
-      .text()
-      .from("http://localhost:9000" + downloadUrl)
-
-
-  ### HELPERS ###
-
-  getSampleNMLPath : ->
-
-    return path.join(
-      browser.params.DOWNLOAD_DIRECTORY
-      DashboardPage.SAMPLE_NML_PATH
-    )
+    return @waitForSelector(downloadButton)
+    .then((btn) -> return btn.getAttribute("href"))
 
 
 module.exports = DashboardPage

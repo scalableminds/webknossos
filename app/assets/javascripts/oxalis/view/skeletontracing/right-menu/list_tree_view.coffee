@@ -1,5 +1,6 @@
 _                = require("lodash")
 app              = require("app")
+Utils            = require("libs/utils")
 Marionette       = require("backbone.marionette")
 Backbone         = require("backbone")
 ListTreeItemView = require("./list_tree_item_view")
@@ -74,18 +75,18 @@ class ListTreeView extends Marionette.CompositeView
     @collection = new Backbone.Collection()
 
     @listenTo(@, "render", @updateSortIndicator)
-    @refresh()
+    @listenTo(@, "render", @refresh)
 
     @listenTo(@model.skeletonTracing, "deleteTree", @refresh)
     @listenTo(@model.skeletonTracing, "mergeTree", @refresh)
     @listenTo(@model.skeletonTracing, "newTree", @refresh)
-    @listenTo(@model.skeletonTracing, "newTreeName", @refresh)
+    @listenTo(@model.skeletonTracing, "newTreeName", @updateTreeWithId)
     @listenTo(@model.skeletonTracing, "reloadTrees", @refresh)
-    @listenTo(@model.skeletonTracing, "deleteActiveNode", @updateTreesDebounced)
-    @listenTo(@model.skeletonTracing, "newNode", @updateTreesDebounced)
-    @listenTo(@model.skeletonTracing, "newTreeColor", @refresh)
-    @listenTo(@model.skeletonTracing, "newActiveTree", @updateTreesDebounced)
-    @listenTo(@model.skeletonTracing, "newActiveNode", @_renderChildren)
+    @listenTo(@model.skeletonTracing, "deleteActiveNode", (node) => @updateTreeWithId(node.treeId))
+    @listenTo(@model.skeletonTracing, "newNode", (id, treeId) => @updateTreeWithId(treeId))
+    @listenTo(@model.skeletonTracing, "newTreeColor", @updateTreeWithId)
+    @listenTo(@model.skeletonTracing, "newActiveTree", @refresh)
+    @listenTo(@model.skeletonTracing, "newActiveNode", @updateName)
 
 
   setTreeName : (evt) ->
@@ -124,6 +125,16 @@ class ListTreeView extends Marionette.CompositeView
     @updateSortIndicator()
 
 
+  updateTreeWithId : (treeId) ->
+    # This method is used instead of refresh to avoid performance issues
+    $childView = @$("a[data-treeid='#{treeId}']")
+    tree = @model.skeletonTracing.getTree(treeId)
+
+    $childView.children(".tree-node-count").text(tree.nodes.length)
+    $childView.children(".tree-icon").css("color", "##{Utils.intToHex(tree.color)}")
+    $childView.children(".tree-name").text(tree.name)
+
+
   updateSortIndicator : ->
 
     isSortedByName = @model.user.get("sortTreesByName")
@@ -148,13 +159,13 @@ class ListTreeView extends Marionette.CompositeView
     trees = @model.skeletonTracing.getTreesSorted()
     @collection.reset(trees)
 
-    #@updateTreesDebounced()
+    @updateName()
 
 
   updateName : ->
 
-      name = @getActiveTree().name
-      @ui.treeNameInput.val(name)
+    name = @getActiveTree().name
+    @ui.treeNameInput.val(name)
 
 
   setActiveTree : (treeId) ->

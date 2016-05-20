@@ -38,15 +38,14 @@ Utils =
     return Math.round(value * digitMultiplier) / digitMultiplier
 
 
-  intToHex : (int) ->
+  intToHex : (int, digits=6) ->
 
-    hex = int.toString(16)
-    return if hex.length == 1 then "0" + hex else hex
+    return (_.repeat("0", digits) + int.toString( 16 )).slice(-digits)
 
 
   rgbToHex : (color) ->
 
-    return "#" + color.map( (int) -> Utils.intToHex(int) ).join("")
+    return "#" + color.map( (int) -> Utils.intToHex(int, 2) ).join("")
 
 
   hexToRgb : (hex) ->

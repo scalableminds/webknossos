@@ -3,6 +3,8 @@ app                  = require("app")
 Marionette           = require("backbone.marionette")
 AnnotationCollection = require("admin/models/task/annotation_collection")
 TaskAnnotationView   = require("./task_annotation_view")
+TemplateHelpers      = require("libs/template_helpers")
+
 
 class TaskListItemView extends Marionette.CompositeView
 
@@ -33,9 +35,9 @@ class TaskListItemView extends Marionette.CompositeView
         </a>
       </td>
       <td><%- dataSet %></td>
-      <td>
+      <td class="nowrap">
         (<%- editPosition %>)<br>
-        (<%- boundingBox.join(", ") %>)
+        <span><%- TemplateHelpers.formatScale(boundingBox) %></span>
       </td>
       <td>
         <% if (neededExperience.domain != "" || neededExperience.value > 0) { %>
@@ -79,6 +81,9 @@ class TaskListItemView extends Marionette.CompositeView
   ui :
     "detailsRow" : ".details-row"
     "detailsToggle" : ".details-toggle"
+
+  templateHelpers :
+    TemplateHelpers : TemplateHelpers
 
 
   initialize :->

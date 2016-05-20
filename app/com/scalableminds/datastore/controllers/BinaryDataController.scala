@@ -98,11 +98,14 @@ trait BinaryDataReadController extends BinaryDataCommonController {
                            x: Int,
                            y: Int,
                            z: Int,
-                           resolution: Int) = TokenSecuredAction(dataSetName, dataLayerName).async {
+                           resolution: Int,
+                           halfByte: Boolean,
+                           interpolation: Boolean) = TokenSecuredAction(dataSetName, dataLayerName).async {
     implicit request =>
       AllowRemoteOrigin {
+        val settings = DataRequestSettings(useHalfByte = halfByte, skipInterpolation = !interpolation)
         for {
-          data <- requestData(dataSetName, dataLayerName, Point3D(x, y, z), cubeSize, cubeSize, cubeSize, resolution)
+          data <- requestData(dataSetName, dataLayerName, Point3D(x, y, z), cubeSize, cubeSize, cubeSize, resolution, settings)
         } yield {
           Ok(data)
         }
@@ -119,8 +122,8 @@ trait BinaryDataReadController extends BinaryDataCommonController {
     def validateRequests(requests: Seq[Box[DataProtocolReadRequest]]) = {
       requests.find(!_.isDefined) match {
         case Some(Failure(msg, _, _)) => Failure(msg)
-        case Some(Empty) => Empty
         case None => Full(requests.flatten.toList)
+        case _ => Empty
       }
     }
 
@@ -160,11 +163,14 @@ trait BinaryDataReadController extends BinaryDataCommonController {
                           x: Int,
                           y: Int,
                           z: Int,
-                          resolution: Int) = TokenSecuredAction(dataSetName, dataLayerName).async(parse.raw) {
+                          resolution: Int,
+                          halfByte: Boolean,
+                          interpolation: Boolean) = TokenSecuredAction(dataSetName, dataLayerName).async(parse.raw) {
     implicit request =>
       AllowRemoteOrigin {
+        val settings = DataRequestSettings(useHalfByte = halfByte, skipInterpolation = !interpolation)
         for {
-          image <- respondWithSpriteSheet(dataSetName, dataLayerName, cubeSize, cubeSize, cubeSize, imagesPerRow, x, y, z, resolution)
+          image <- respondWithSpriteSheet(dataSetName, dataLayerName, cubeSize, cubeSize, cubeSize, imagesPerRow, x, y, z, resolution, settings)
         } yield {
           Ok.sendFile(image, true, _ => "test.jpg").withHeaders(
             CONTENT_TYPE -> contentTypeJpeg)
@@ -180,11 +186,14 @@ trait BinaryDataReadController extends BinaryDataCommonController {
                     x: Int,
                     y: Int,
                     z: Int,
-                    resolution: Int) = TokenSecuredAction(dataSetName, dataLayerName).async(parse.raw) {
+                    resolution: Int,
+                    halfByte: Boolean,
+                    interpolation: Boolean) = TokenSecuredAction(dataSetName, dataLayerName).async(parse.raw) {
     implicit request =>
       AllowRemoteOrigin {
+        val settings = DataRequestSettings(useHalfByte = halfByte, skipInterpolation = !interpolation)
         for {
-          image <- respondWithImage(dataSetName, dataLayerName, width, height, x, y, z, resolution)
+          image <- respondWithImage(dataSetName, dataLayerName, width, height, x, y, z, resolution, settings)
         } yield {
           Ok.sendFile(image, true, _ => "test.jpg").withHeaders(
             CONTENT_TYPE -> contentTypeJpeg)
@@ -294,7 +303,7 @@ trait BinaryDataReadController extends BinaryDataCommonController {
     for {
       (dataSource, dataLayer) <- getDataSourceAndDataLayer(dataSetName, dataLayerName)
       (x, y, z, resolution) = DataLayerHelpers.goodThumbnailParameters(dataLayer, width, height)
-      image <- respondWithImage(dataSetName, dataLayerName, width, height, x, y, z, resolution)
+      image <- respondWithImage(dataSetName, dataLayerName, width, height, x, y, z, resolution, DataRequestSettings.default)
     } yield {
       image
     }
@@ -310,11 +319,12 @@ trait BinaryDataReadController extends BinaryDataCommonController {
                                         x: Int,
                                         y: Int,
                                         z: Int,
-                                        resolution: Int): Fox[File] = {
+                                        resolution: Int,
+                                        settings: DataRequestSettings): Fox[File] = {
     for {
       (dataSource, dataLayer) <- getDataSourceAndDataLayer(dataSetName, dataLayerName)
-      params = ImageCreatorParameters(dataLayer.bytesPerElement, width, height, imagesPerRow)
-      data <- requestData(dataSetName, dataLayerName, Point3D(x, y, z), width, height, depth, resolution) ?~> Messages("binary.data.notFound")
+      params = ImageCreatorParameters(dataLayer.bytesPerElement, settings.useHalfByte, width, height, imagesPerRow)
+      data <- requestData(dataSetName, dataLayerName, Point3D(x, y, z), width, height, depth, resolution, settings) ?~> Messages("binary.data.notFound")
       spriteSheet <- ImageCreator.spriteSheetFor(data, params) ?~> Messages("image.create.failed")
       firstSheet <- spriteSheet.pages.headOption ?~> "Couldn'T create spritesheet"
     } yield {
@@ -330,8 +340,9 @@ trait BinaryDataReadController extends BinaryDataCommonController {
                                   x: Int,
                                   y: Int,
                                   z: Int,
-                                  resolution: Int) = {
-    respondWithSpriteSheet(dataSetName, dataLayerName, width, height, 1, 1, x, y, z, resolution)
+                                  resolution: Int,
+                                  settings: DataRequestSettings) = {
+    respondWithSpriteSheet(dataSetName, dataLayerName, width, height, 1, 1, x, y, z, resolution, settings)
   }
 }
 

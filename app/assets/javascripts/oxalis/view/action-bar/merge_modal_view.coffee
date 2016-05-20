@@ -158,7 +158,7 @@ class MergeModalView extends Marionette.LayoutView
 
   mergeProject : ->
 
-    projectId = @ui.project.find("select :selected").prop("id")
+    projectId = @ui.project.find("select :selected").prop("value")
     url = "/annotations/CompoundProject/#{projectId}/merge/#{@model.get("tracingType")}/#{@model.get("tracingId")}"
     @merge(url)
 

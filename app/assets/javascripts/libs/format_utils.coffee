@@ -6,15 +6,17 @@ class FormatUtils
   @formatSeconds : (seconds) ->
 
     t = moment.duration(seconds: seconds)
-    [ days, hours, minutes ] = [ t.days(), t.hours(), t.minutes() ]
+    [ days, hours, minutes, seconds ] = [ t.days(), t.hours(), t.minutes(), t.seconds() ]
 
     return (
-      if days == 0 and hours == 0
-        "#{minutes}m"
+      if  days == 0 and hours == 0 and minutes == 0
+        "#{seconds}s"
+      else if days == 0 and hours == 0
+        "#{minutes}m #{seconds}s"
       else if days == 0
-        "#{hours}h #{minutes}m"
+        "#{hours}h #{minutes}m #{seconds}s"
       else
-        "#{days}d #{hours}h #{minutes}m"
+        "#{days}d #{hours}h #{minutes}m #{seconds}s"
     )
 
 

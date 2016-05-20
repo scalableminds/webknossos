@@ -1,7 +1,7 @@
 EC = protractor.ExpectedConditions
 
 
-waitForSelector = (selector, condition = "presenceOf", timeout = 10000) ->
+waitForSelector = (selector, condition = "presenceOf", timeout = 60000) ->
 
   if not EC[condition]
     throw new Error("'#{condition}' is not a valid condition")

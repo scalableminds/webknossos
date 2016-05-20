@@ -3,12 +3,12 @@ var DOWNLOAD_DIRECTORY = __dirname + '/tmp';
 exports.config = {
   baseUrl: 'http://localhost:9000',
 
-  allScriptsTimeout: 11000,
+  allScriptsTimeout: 60000,
 
   framework: 'jasmine2',
 
   jasmineNodeOpts: {
-    defaultTimeoutInterval: 10000,
+    defaultTimeoutInterval: 60000,
     showTiming: true
   },
 

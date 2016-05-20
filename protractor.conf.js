@@ -4,7 +4,6 @@ exports.config = {
   baseUrl: 'http://localhost:9000',
 
   allScriptsTimeout: 11000,
-  getPageTimeout: 10000,
 
   framework: 'jasmine2',
 

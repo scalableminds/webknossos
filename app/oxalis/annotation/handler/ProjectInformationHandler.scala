@@ -19,7 +19,7 @@ object ProjectInformationHandler extends AnnotationInformationHandler with FoxIm
   def projectAnnotationRestrictions(project: Project) =
     new AnnotationRestrictions {
       override def allowAccess(user: Option[User]) =
-        user.flatMap( _.roleInTeam(project.team)) == Some(Role.Admin)
+        user.flatMap( _.roleInTeam(project.team)).contains(Role.Admin)
     }
 
   def provideAnnotation(projectName: String, user: Option[User])(implicit ctx: DBAccessContext): Fox[TemporaryAnnotation] = {

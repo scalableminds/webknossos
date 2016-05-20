@@ -8,14 +8,14 @@ import controllers.Controller
 import models.annotation.{AnnotationType, _}
 import models.task.{Task, _}
 import models.user._
-import oxalis.nml.NMLService.{NMLParseSuccess, NMLParseFailure}
+import oxalis.nml.NMLService.{NMLParseFailure, NMLParseSuccess}
 import oxalis.nml._
 import oxalis.security.Secured
 import play.api.i18n.{Messages, MessagesApi}
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json._
 import views.html
-import net.liftweb.common.Full
+import net.liftweb.common.{Failure, Full}
 
 class NMLIO @Inject()(val messagesApi: MessagesApi) extends Controller with Secured {
 
@@ -42,18 +42,13 @@ class NMLIO @Inject()(val messagesApi: MessagesApi) extends Controller with Secu
       val fileNames = parseSuccess.map(_.fileName)
       val nmls = parseSuccess.flatMap(_.nml).toList
 
-      AnnotationService
-      .createAnnotationFrom(request.user, nmls, AnnotationType.Explorational, nameForNMLs(fileNames)).futureBox.map{
-        case Full(annotation) =>
-          JsonOk(
-            Json.obj("annotation" -> Json.obj("typ" -> annotation.typ, "id" -> annotation.id)),
-            Messages("nml.file.uploadSuccess")
-          )
-
-        case _ =>
-          JsonBadRequest(Messages("nml.file.invalid"))
-      }
-      .getOrElse(JsonBadRequest(Messages("nml.file.createFailed")))
+      for{
+        annotation <- AnnotationService.createAnnotationFrom(
+          request.user, nmls, AnnotationType.Explorational, nameForNMLs(fileNames)) ?~> "nml.file.createFailed"
+      } yield JsonOk(
+        Json.obj("annotation" -> Json.obj("typ" -> annotation.typ, "id" -> annotation.id)),
+        Messages("nml.file.uploadSuccess")
+      )
     }
   }
 
@@ -67,7 +62,7 @@ class NMLIO @Inject()(val messagesApi: MessagesApi) extends Controller with Secu
       } yield zip
 
     for {
-      project <- ProjectDAO.findOneByName(projectName) ?~> Messages("project.notFound")
+      project <- ProjectDAO.findOneByName(projectName) ?~> Messages("project.notFound", projectName)
       zip <- createProjectZip(project)
     } yield {
       Ok.sendFile(zip.file)

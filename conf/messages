@@ -68,8 +68,8 @@ braintracing.exists=Great, you already have an account on braintracing.org. Plea
 
 dataSet=Dataset
 dataSet.file=Dataset ZIP File
-dataSet.notFound=Selected data set doesn''t exist
-dataSet.notSupplied=No data set supplied
+dataSet.notFound=Dataset {0} doesn''t exist
+dataSet.notSupplied=No dataset supplied
 dataSet.name.invalid=A dataset name can only contain letters, digits and underscores
 dataSet.import.impossible.name=Import impossible. Dataset name can only consist of a-Z, 0-9, "-" and "_".
 dataSet.name.alreadyTaken=This dataset name is already in use.
@@ -94,7 +94,7 @@ zip.file.notFound=No or invalid ZIP file specified
 zip.file.invalid=Uploaded ZIP file invalid or corrupted
 zip.file.tooLarge=The ZIP file must not be larger than 1GB
 
-dataLayer.notFound=DataLayer not found
+dataLayer.notFound=DataLayer ''{0}'' not found
 dataLayer.forbidden=Access to this layer is not allowed.
 
 scale.scale=Scale
@@ -135,7 +135,7 @@ project.remove.confirm=Do you really want to delete this project? All annotation
 project.remove.notAllowed=You are not allowed to remove this project. Talk to the owner.
 project.remove.success=Project got removed
 project.remove.failure=Project couldn''t get removed
-project.notFound=Project couldn''t be found
+project.notFound=Project {0} couldn''t be found
 project.noAnnotations=We couldn''t find annotations for this project
 
 role.invalid=Invalid role

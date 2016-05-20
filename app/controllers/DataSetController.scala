@@ -34,7 +34,7 @@ class DataSetController @Inject()(val messagesApi: MessagesApi) extends Controll
 
   def view(dataSetName: String) = UserAwareAction.async { implicit request =>
     for {
-      dataSet <- DataSetDAO.findOneBySourceName(dataSetName) ?~> Messages("dataSet.notFound")
+      dataSet <- DataSetDAO.findOneBySourceName(dataSetName) ?~> Messages("dataSet.notFound", dataSetName)
     } yield {
       Ok(views.html.main()(Html("")))
     }
@@ -50,8 +50,8 @@ class DataSetController @Inject()(val messagesApi: MessagesApi) extends Controll
       }
 
     for {
-      dataSet <- DataSetDAO.findOneBySourceName(dataSetName) ?~> Messages("dataSet.notFound")
-      layer <- DataSetService.getDataLayer(dataSet, dataLayerName) ?~> Messages("dataLayer.notFound")
+      dataSet <- DataSetDAO.findOneBySourceName(dataSetName) ?~> Messages("dataSet.notFound", dataSetName)
+      layer <- DataSetService.getDataLayer(dataSet, dataLayerName) ?~> Messages("dataLayer.notFound", dataLayerName)
       image <- imageFromCacheIfPossible(dataSet) ?~> Messages("dataLayer.thumbnailFailed")
     } yield {
       val data = Base64.decodeBase64(image)
@@ -86,7 +86,7 @@ class DataSetController @Inject()(val messagesApi: MessagesApi) extends Controll
 
   def accessList(dataSetName: String) = Authenticated.async { implicit request =>
     for {
-      dataSet <- DataSetDAO.findOneBySourceName(dataSetName) ?~> Messages("dataSet.notFound")
+      dataSet <- DataSetDAO.findOneBySourceName(dataSetName) ?~> Messages("dataSet.notFound", dataSetName)
       users <- UserService.findByTeams(dataSet.allowedTeams, includeAnonymous = false)
     } yield {
       Ok(Writes.list(User.userCompactWrites(request.user)).writes(users))
@@ -95,7 +95,7 @@ class DataSetController @Inject()(val messagesApi: MessagesApi) extends Controll
 
   def read(dataSetName: String) = UserAwareAction.async { implicit request =>
     for {
-      dataSet <- DataSetDAO.findOneBySourceName(dataSetName) ?~> Messages("dataSet.notFound")
+      dataSet <- DataSetDAO.findOneBySourceName(dataSetName) ?~> Messages("dataSet.notFound", dataSetName)
     } yield {
       Ok(DataSet.dataSetPublicWrites(request.userOpt).writes(dataSet))
     }
@@ -104,7 +104,7 @@ class DataSetController @Inject()(val messagesApi: MessagesApi) extends Controll
   def importDataSet(dataSetName: String) = Authenticated.async { implicit request =>
     for {
       _ <- DataSetService.isProperDataSetName(dataSetName) ?~> Messages("dataSet.import.impossible.name")
-      dataSet <- DataSetDAO.findOneBySourceName(dataSetName) ?~> Messages("dataSet.notFound")
+      dataSet <- DataSetDAO.findOneBySourceName(dataSetName) ?~> Messages("dataSet.notFound", dataSetName)
       result <- DataSetService.importDataSet(dataSet)
     } yield {
       val status = result.status.toIntOpt.getOrElse(INTERNAL_SERVER_ERROR)
@@ -125,7 +125,7 @@ class DataSetController @Inject()(val messagesApi: MessagesApi) extends Controll
   def updateTeams(dataSetName: String) = Authenticated.async(parse.json) { implicit request =>
     withJsonBodyAs[List[String]] { teams =>
       for {
-        dataSet <- DataSetDAO.findOneBySourceName(dataSetName) ?~> Messages("dataSet.notFound")
+        dataSet <- DataSetDAO.findOneBySourceName(dataSetName) ?~> Messages("dataSet.notFound", dataSetName)
         _ <- allowedToAdministrate(request.user, dataSet)
         userTeams <- TeamDAO.findAll.map(_.filter(team => team.isEditableBy(request.user)))
         teamsWithoutUpdate = dataSet.allowedTeams.filterNot(t => userTeams.exists(_.name == t))
@@ -148,7 +148,7 @@ class DataSetController @Inject()(val messagesApi: MessagesApi) extends Controll
 
   def upload = Authenticated.async(parse.multipartFormData) { implicit request =>
     uploadForm.bindFromRequest(request.body.dataParts).fold(
-      hasErrors = 
+      hasErrors =
         formWithErrors => Future.successful(JsonBadRequest(formWithErrors.errors.head.message)),
       success = {
         case (name, team, scale) =>

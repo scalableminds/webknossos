@@ -46,11 +46,11 @@ class TaskListItemView extends Marionette.CompositeView
       </td>
       <td><%- priority %></td>
       <td><%- created %></td>
-      <td>
-        <i class="fa fa-play-circle"></i><%- status.open %><br>
-        <i class="fa fa-random"></i><%- status.inProgress %><br>
-        <i class="fa fa-check-circle-o"></i><%- status.completed %><br>
-        <i class="fa fa-clock-o"></i><%- formattedTracingTime %>
+      <td class="nowrap">
+        <span><i class="fa fa-play-circle"></i><%- status.open %></span><br>
+        <span><i class="fa fa-random"></i><%- status.inProgress %></span><br>
+        <span><i class="fa fa-check-circle-o"></i><%- status.completed %></span><br>
+        <span><i class="fa fa-clock-o"></i><%- formattedTracingTime %></span>
       </td>
       <td class="nowrap">
         <a href="/tasks/<%- id %>/edit"><i class="fa fa-pencil"></i>edit</a><br>

@@ -32,7 +32,7 @@ object NDServerConnection extends FoxImplicits {
     try {
       WS.url(infoUrl).get().map { response =>
         try {
-          evaluateNDServerInfoResponse(response, server, name, token)
+          evaluateNDServerInfoResponse(response, normalizedServer, name, token)
         } catch {
           case e: com.fasterxml.jackson.core.JsonParseException =>
             Failure(Messages("ndstore.response.parseFailure"))

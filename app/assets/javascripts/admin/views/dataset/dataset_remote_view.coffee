@@ -43,7 +43,6 @@ class DatasetRemoteView extends Marionette.LayoutView
           <div class="form-group">
             <div class="col-sm-9 col-sm-offset-3">
               <button type="submit" class="form-control btn btn-primary">
-                <i class="fa fa-spinner fa-spin hidden"/>
                 Import
               </button>
             </div>
@@ -63,7 +62,6 @@ class DatasetRemoteView extends Marionette.LayoutView
 
   ui :
     form : "form"
-    spinner : ".fa-spinner"
 
   initialize : ->
 
@@ -88,9 +86,6 @@ class DatasetRemoteView extends Marionette.LayoutView
 
     if form[0].checkValidity()
 
-      Toast.info("Adding datasets", false)
-      @ui.spinner.removeClass("hidden")
-
       Request.sendJSONReceiveJSON("/api/datasets?typ=ndstore",
         data : FormSyphon.serialize(form)
       )
@@ -99,10 +94,6 @@ class DatasetRemoteView extends Marionette.LayoutView
           Toast.success()
           app.router.navigate("/dashboard", { trigger: true })
         -> # NOOP
-      )
-      .then(
-        => # always do
-          @ui.spinner.addClass("hidden")
       )
 
 

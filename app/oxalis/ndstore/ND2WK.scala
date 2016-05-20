@@ -65,7 +65,7 @@ object ND2WK extends FoxImplicits {
       for {
         bbox <- boundingBoxFromNDChannelSize(nd)
         _ <- nd.resolutions.nonEmpty ?~> Messages("ndstore.invalid.resolutions")
-        sections = List(DataLayerSection("", channel.name, resolutions = nd.resolutions, bboxBig = bbox, bboxSmall = bbox))
+        sections = List(DataLayerSection("", channel.name, resolutions = nd.resolutions.map(r => math.pow(2, r).toInt), bboxBig = bbox, bboxSmall = bbox))
       } yield {
         DataLayer(
           name = channel.name,

@@ -21,8 +21,10 @@ TemplateHelpers =
 
 
   formatScale : (scaleArr) ->
-
-    scaleArrRounded = scaleArr.map((value) -> utils.roundTo(value, 2))
-    return "(" + scaleArrRounded.join(', ') + ")"
+    if scaleArr?.length > 0
+      scaleArrRounded = scaleArr.map((value) -> utils.roundTo(value, 2))
+      return "(" + scaleArrRounded.join(', ') + ")"
+    else
+      return ""
 
 module.exports = TemplateHelpers

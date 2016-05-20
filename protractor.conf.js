@@ -3,12 +3,12 @@ var DOWNLOAD_DIRECTORY = __dirname + '/tmp';
 exports.config = {
   baseUrl: 'http://localhost:9000',
 
-  allScriptsTimeout: 60000,
+  allScriptsTimeout: 10000,
 
   framework: 'jasmine2',
 
   jasmineNodeOpts: {
-    defaultTimeoutInterval: 60000,
+    defaultTimeoutInterval: 10000,
     showTiming: true
   },
 
@@ -30,8 +30,6 @@ exports.config = {
       }
     }
   },
-
-  directConnect: true,
 
   seleniumServerJar: './node_modules/protractor/selenium/selenium-server-standalone-2.47.1.jar',
 

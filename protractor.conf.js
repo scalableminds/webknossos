@@ -17,7 +17,7 @@ exports.config = {
   },
 
   capabilities: {
-    'browserName': 'firefox', //TODO: use chrome here
+    'browserName': 'chrome',
     'platform': 'ANY',
     'version': 'ANY',
     'chromeOptions': {

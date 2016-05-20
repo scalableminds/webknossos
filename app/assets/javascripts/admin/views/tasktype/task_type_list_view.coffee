@@ -21,11 +21,12 @@ class TaskTypeListView extends Marionette.CompositeView
             <th></th>
           </tr>
         </thead>
+        <tbody></tbody>
       </table>
     """)
 
   childView : TaskTypeItemView
-  childViewContainer: "table"
+  childViewContainer: "tbody"
 
 
   initialize : ->

@@ -17,7 +17,7 @@ class TaskListView extends Marionette.CompositeView
           <th>Team</th>
           <th>Project</th>
           <th>Type</th>
-          <th>DataSet </th>
+          <th>DataSet</th>
           <th>Edit position /<br> Bounding Box</th>
           <th>Experience</th>
           <th>Priority</th>

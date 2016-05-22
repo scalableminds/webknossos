@@ -31,7 +31,7 @@ case class Task(
   @info("Date of creation" )created: DateTime = DateTime.now(),
   @info("Links for annonymous users") directLinks: List[String] = Nil,
   @info("Flag indicating deletion") isActive: Boolean = true,
-  @info("Reference to project") _project: Option[String] = None,
+  @info("Reference to project") _project: String,
   @info("Unique ID") _id: BSONObjectID = BSONObjectID.generate
 ) extends FoxImplicits {
 
@@ -40,7 +40,7 @@ case class Task(
   def taskType(implicit ctx: DBAccessContext) = TaskTypeDAO.findOneById(_taskType)(GlobalAccessContext).toFox
 
   def project(implicit ctx: DBAccessContext) =
-    _project.toFox.flatMap(name => ProjectDAO.findOneByName(name))
+    ProjectDAO.findOneByName(_project)
 
   def annotations(implicit ctx: DBAccessContext) =
     AnnotationService.annotationsFor(this)
@@ -80,13 +80,12 @@ object Task extends FoxImplicits {
       boundingBox = annotationContent.flatMap(_.boundingBox).toOption
       status <- task.status
       tt <- task.taskType.map(TaskType.transformToJson) getOrElse JsNull
-      projectName = task._project.getOrElse("")
     } yield {
       Json.obj(
         "id" -> task.id,
         "team" -> task.team,
         "formattedHash" -> Formatter.formatHash(task.id),
-        "projectName" -> projectName,
+        "projectName" -> task._project,
         "type" -> tt,
         "dataSet" -> dataSetName,
         "editPosition" -> editPosition,

@@ -145,6 +145,10 @@ object AnnotationDAO
     super.find(query ++ Json.obj("isActive" -> true))
   }
 
+  override def count(query: JsObject = Json.obj())(implicit ctx: DBAccessContext) = {
+    super.count(query ++ Json.obj("isActive" -> true))
+  }
+
   override def findOne(query: JsObject = Json.obj())(implicit ctx: DBAccessContext) = {
     super.findOne(query ++ Json.obj("isActive" -> true))
   }

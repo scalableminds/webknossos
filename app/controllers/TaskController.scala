@@ -45,7 +45,7 @@ class TaskController @Inject() (val messagesApi: MessagesApi) extends Controller
       (__ \ 'priority).read[Int] and
       (__ \ 'status).read[CompletionStatus] and
       (__ \ 'team).read[String] and
-      (__ \ 'projectName).readNullable[String] and
+      (__ \ 'projectName).read[String] and
       (__ \ 'boundingBox).readNullable[BoundingBox]
 
   val taskNMLJsonReads = baseJsonReads.tupled
@@ -86,7 +86,7 @@ class TaskController @Inject() (val messagesApi: MessagesApi) extends Controller
       stringifiedJson <- body.dataParts.get("formJSON").flatMap(_.headOption) ?~> Messages("format.json.missing")
       (taskTypeId, experience, priority, status, team, projectName, boundingBox) <- parseJson(stringifiedJson).toFox
       taskType <- TaskTypeDAO.findOneById(taskTypeId) ?~> Messages("taskType.notFound")
-      project <- ProjectService.findIfNotEmpty(projectName) ?~> Messages("project.notFound")
+      project <- ProjectDAO.findOneByName(projectName) ?~> Messages("project.notFound", projectName)
       _ <- ensureTeamAdministration(request.user, team)
       result <- {
         val nmls = NMLService.extractFromFile(nmlFile.ref.file, nmlFile.filename)
@@ -99,7 +99,7 @@ class TaskController @Inject() (val messagesApi: MessagesApi) extends Controller
               experience,
               priority,
               status.open,
-              _project = project.map(_.name),
+              _project = project.name,
               _id = BSONObjectID.generate)
 
             for {
@@ -116,15 +116,15 @@ class TaskController @Inject() (val messagesApi: MessagesApi) extends Controller
   }
 
 
-  def createSingleTask(input: (String, Experience, Int, CompletionStatus, String, Option[String], Option[BoundingBox], String, Point3D, Vector3D, Boolean))(implicit request: AuthenticatedRequest[_]) =
+  def createSingleTask(input: (String, Experience, Int, CompletionStatus, String, String, Option[BoundingBox], String, Point3D, Vector3D, Boolean))(implicit request: AuthenticatedRequest[_]) =
     input match {
       case (taskTypeId, experience, priority, status, team, projectName, boundingBox, dataSetName, start, rotation, isForAnonymous) =>
         for {
-          _ <- DataSetDAO.findOneBySourceName(dataSetName) ?~> Messages("dataSet.notFound")
+          _ <- DataSetDAO.findOneBySourceName(dataSetName) ?~> Messages("dataSet.notFound", dataSetName)
           taskType <- TaskTypeDAO.findOneById(taskTypeId) ?~> Messages("taskType.notFound")
-          project <- ProjectService.findIfNotEmpty(projectName) ?~> Messages("project.notFound")
+          project <- ProjectDAO.findOneByName(projectName) ?~> Messages("project.notFound", projectName)
           _ <- ensureTeamAdministration(request.user, team)
-          task = Task(taskType._id, team, experience, priority, status.open, _project = project.map(_.name))
+          task = Task(taskType._id, team, experience, priority, status.open, _project = project.name)
           _ <- AnnotationService.createAnnotationBase(task, request.user._id, boundingBox, taskType.settings, dataSetName, start, rotation)
           directLinks <- createAnonymousUsersAndTasksInstancesIfNeeded(isForAnonymous, task).toFox
           taskWithLinks = task.copy(directLinks = directLinks)
@@ -184,7 +184,7 @@ class TaskController @Inject() (val messagesApi: MessagesApi) extends Controller
           task <- TaskService.findOneById(taskId) ?~> Messages("task.notFound")
           _ <- ensureTeamAdministration(request.user, task.team)
           taskType <- TaskTypeDAO.findOneById(taskTypeId) ?~> Messages("taskType.notFound")
-          project <- ProjectService.findIfNotEmpty(projectName) ?~> Messages("project.notFound")
+          project <- ProjectDAO.findOneByName(projectName) ?~> Messages("project.notFound", projectName)
           openInstanceCount <- task.remainingInstances
           updatedTask <- TaskDAO.update(
             _task = task._id,
@@ -193,7 +193,7 @@ class TaskController @Inject() (val messagesApi: MessagesApi) extends Controller
             priority = priority,
             instances = task.instances + status.open - openInstanceCount,
             team = team,
-            _project = project.map(_.name))
+            _project = Some(project.name))
           _ <- AnnotationService.updateAllOfTask(updatedTask, team, dataSetName, boundingBox, taskType.settings)
           _ <- AnnotationService.updateAnnotationBase(updatedTask, start, rotation)
           json <- Task.transformToJson(updatedTask)

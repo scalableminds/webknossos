@@ -232,7 +232,7 @@ class SkeletonTracing
 
       @stateLogger.createNode(point, @activeTree.treeId)
 
-      @trigger("newNode")
+      @trigger("newNode", @activeNode.id, @activeTree.treeId)
       @trigger("newActiveNode", @activeNode.id)
     else
       @trigger("wrongDirection")
@@ -302,7 +302,7 @@ class SkeletonTracing
         @activeTree.name = "Tree#{('00'+@activeTree.treeId).slice(-3)}"
       @stateLogger.updateTree(@activeTree)
 
-      @trigger("newTreeName")
+      @trigger("newTreeName", @activeTree.treeId)
 
 
   getNode : (id) ->

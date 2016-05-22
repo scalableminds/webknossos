@@ -161,7 +161,7 @@ object AnnotationService extends AnnotationContentProviders with BoxImplicits wi
 
   def createFrom(user: User, content: AnnotationContent, annotationType: AnnotationType, name: Option[String])(implicit messages: Messages, ctx: DBAccessContext) = {
     for {
-      dataSet <- DataSetDAO.findOneBySourceName(content.dataSetName) ~> Messages("dataSet.notFound")
+      dataSet <- DataSetDAO.findOneBySourceName(content.dataSetName) ?~> Messages("dataSet.notFound", content.dataSetName)
       annotation = Annotation(
         Some(user._id),
         ContentReference.createFor(content),

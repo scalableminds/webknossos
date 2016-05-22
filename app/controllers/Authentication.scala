@@ -82,7 +82,7 @@ class Authentication @Inject()(val messagesApi: MessagesApi) extends Controller 
               Mailer ! Send(
                 DefaultMails.registerMail(user.name, email, brainDBResult))
               Mailer ! Send(
-                DefaultMails.registerAdminNotifyerMail(user.name, email, brainDBResult))
+                DefaultMails.registerAdminNotifyerMail(user, email, brainDBResult))
               if (autoVerify) {
                 Redirect(controllers.routes.Application.index)
                 .withSession(Secured.createSession(user))

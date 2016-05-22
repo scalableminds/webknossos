@@ -32,7 +32,7 @@ class TaskTypeAdministration @Inject() (val messagesApi: MessagesApi) extends Ad
         "maxHard" -> number(min = 1))(TraceLimit.apply)(TraceLimit.unapply))(
       TaskType.fromForm)(TaskType.toForm)).fill(TaskType.empty)
 
-  def empty = Authenticated{ implicit request =>
+  def empty(id: String) = Authenticated{ implicit request =>
     Ok(views.html.main()(Html("")))
   }
 

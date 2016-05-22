@@ -7,10 +7,10 @@ class ListTreeItemView extends Marionette.ItemView
   tagName : "li"
   template : _.template("""
     <i class="fa <%- getIcon() %>"></i>
-    <a href="#" data-treeid="1">
-      <span title="Node count" class="inline-block" style="width: 50px;"><%- nodes.length %></span>
-      <i class="fa fa-circle" style="color: #<%- intToHex(color) %>"></i>
-      <span title="Tree Name"><%- name %></span>
+    <a href="#" data-treeid="<%- treeId %>">
+      <span title="Node count" class="inline-block tree-node-count" style="width: 50px;"><%- nodes.length %></span>
+      <i class="fa fa-circle tree-icon" style="color: #<%- intToHex(color) %>"></i>
+      <span title="Tree Name" class="tree-name"><%- name %></span>
     </a>
   """)
 
@@ -24,9 +24,7 @@ class ListTreeItemView extends Marionette.ItemView
       else
         return "fa-bull"
 
-    intToHex : (int) ->
-
-      return ('000000' + int.toString( 16 )).slice(-6) #see Three.Color.getHexString()
+    intToHex : Utils.intToHex
 
 
   initialize : (options) ->

@@ -77,7 +77,7 @@ trait TracingInformationProvider extends play.api.http.Status with FoxImplicits 
 
   def tracingInformation(annotation: AnnotationLike, readOnly: Boolean)(implicit request: UserAwareRequest[_]): Fox[JsValue] = {
     for {
-      _ <- annotation.restrictions.allowAccess(request.userOpt) ?~> Messages("notAllowed") ~> 400
+      _ <- annotation.restrictions.allowAccess(request.userOpt) ?~> Messages("notAllowed") ~> BAD_REQUEST
       json <- if(readOnly)
                 annotation.makeReadOnly.annotationInfo(request.userOpt)
               else

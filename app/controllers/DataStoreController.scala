@@ -71,22 +71,20 @@ object DataStoreHandler extends DataStoreBackChannelHandler {
     sendRequest(dataSet.dataStoreInfo.name, call)
   }
 
-  def uploadDataSource(upload: DataSourceUpload) = {
+  def uploadDataSource(upload: DataSourceUpload)(implicit messages: Messages): Fox[Boolean] = {
+    def parseResponse(response: RESTResponse) = (response.body \ "error").asOpt[String] match {
+      case Some(error) => Failure(error)
+      case _ => Full(true)
+    }
+
     Logger.debug("Upload called for: " + upload.name)
-    (for {
+    for {
       localDatastore <- config.getString("datastore.name").toFox
       dataStore <- findByServer(localDatastore).toFox
-      call = RESTCall("POST", s"/data/datasets/upload", Map.empty, Map.empty, Json.toJson(upload))
-      response <- dataStore.request(call)
-    } yield {
-      (response.body \ "error").asOpt[String] match {
-        case Some(error) => Failure(error)
-        case _ => Full(Unit)
-      }
-    }).futureBox.map {
-      case Full(r) => r
-      case Empty => Failure("dataStore.notAvailable")
-    }
+      call = RESTCall("POST", s"/data/datasets", Map.empty, Map.empty, Json.toJson(upload))
+      response <- dataStore.request(call) ?~> Messages("dataStore.notAvailable")
+      result <- parseResponse(response)
+    } yield result
   }
 }
 
@@ -237,9 +235,9 @@ class DataStoreController @Inject() (val messagesApi: MessagesApi) extends Contr
 
   def layerRead(name: String, dataSetName: String, dataLayerName: String) = DataStoreAction.async{ implicit request =>
     for{
-      dataSet <- DataSetDAO.findOneBySourceName(dataSetName)(GlobalAccessContext) ?~> Messages("dataSet.notFound")
+      dataSet <- DataSetDAO.findOneBySourceName(dataSetName)(GlobalAccessContext) ?~> Messages("dataSet.notFound", dataSetName)
       _ <- (dataSet.dataStoreInfo.name == request.dataStore.name) ?~> Messages("dataStore.notAllowed")
-      layer <- DataSetService.getDataLayer(dataSet, dataLayerName)(GlobalAccessContext) ?~> Messages("dataLayer.notFound")
+      layer <- DataSetService.getDataLayer(dataSet, dataLayerName)(GlobalAccessContext) ?~> Messages("dataLayer.notFound", dataLayerName)
     } yield {
       Ok(Json.toJson(layer))
     }

@@ -12,7 +12,8 @@ import play.api.i18n.{MessagesApi, I18nSupport, Messages}
 import models.binary.DataSet
 import com.scalableminds.util.tools.{Fox, Converter}
 import play.api.libs.json._
-import scala.concurrent.ExecutionContext.Implicits.global
+import play.api.libs.concurrent.Execution.Implicits._
+
 
 trait Controller extends PlayController
 with ExtendedController

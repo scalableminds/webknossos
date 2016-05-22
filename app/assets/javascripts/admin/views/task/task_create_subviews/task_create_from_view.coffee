@@ -227,7 +227,7 @@ class TaskCreateFromView extends Marionette.LayoutView
 
     Toast.success("The task was successfully #{@getActionName().toLowerCase()}d")
 
-    url = "/tasks"
+    url = "/projects/#{task.get("projectName")}/tasks"
     if not _.isEmpty(task.get("directLinks"))
       url += "?showAnonymousLinks=#{task.id}"
 
@@ -276,6 +276,7 @@ class TaskCreateFromView extends Marionette.LayoutView
         defaultItem : {name : @model.get("projectName")}
       data : "amIAnAdmin=true"
       name : "projectName"
+      required : true
       emptyOption : true
     )
 

@@ -9,7 +9,7 @@ class SpotlightDatasetListView extends Marionette.CollectionView
   initialize : (options) ->
 
     @listenTo(app.vent, "paginationView:filter", @filterBySearch)
-    @collection.setSorting("created")
+    @collection.setSorting("created", "desc")
     @collection.setCollectionFilter((child) -> return child.get("isActive"))
 
 

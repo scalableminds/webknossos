@@ -100,16 +100,19 @@ class DatasetActionsView extends Marionette.ItemView
 
   getNextTask : ->
 
-    tracingType = @model.skeletonTracing || @model.volumeTracing
+    model = @model.skeletonTracing || @model.volumeTracing
+    finishUrl = "/annotations/#{@model.tracingType}/#{@model.tracingId}/finish"
+    requestTaskUrl = "/user/tasks/request"
 
-    tracingType.stateLogger.save()
-        .then(=> Request.$(Request.triggerRequest("/annotations/#{@model.tracingType}/#{@model.tracingId}/finish")))
+    model.stateLogger.save()
+        .then(=> Request.triggerRequest(finishUrl))
         .then(=>
-          Request.$(Request.receiveJSON("/user/tasks/request")).then(
+          Request.receiveJSON(requestTaskUrl).then(
             (annotation) =>
               differentTaskType = annotation.task.type.id != @model.tracing.task?.type.id
               differentTaskTypeParam = if differentTaskType then "?differentTaskType" else ""
-              app.router.loadURL("/annotations/#{annotation.typ}/#{annotation.id}#{differentTaskTypeParam}")
+              newTaskUrl = "/annotations/#{annotation.typ}/#{annotation.id}#{differentTaskTypeParam}"
+              app.router.loadURL(newTaskUrl)
             ->
               # Wait a while so users have a chance to read the error message
               setTimeout((-> app.router.loadURL("/dashboard")), 2000)

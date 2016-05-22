@@ -9,6 +9,7 @@ class ProjectModel extends Backbone.Model
     owner :
       firstName : ""
       lastName : ""
+    priority: 100
 
   parse : (response)->
 

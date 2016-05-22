@@ -42,7 +42,6 @@ class TaskController @Inject() (val messagesApi: MessagesApi) extends Controller
   val baseJsonReads =
     (__ \ 'taskTypeId).read[String] and
       (__ \ 'neededExperience).read[Experience] and
-      (__ \ 'priority).read[Int] and
       (__ \ 'status).read[CompletionStatus] and
       (__ \ 'team).read[String] and
       (__ \ 'projectName).read[String] and
@@ -84,7 +83,7 @@ class TaskController @Inject() (val messagesApi: MessagesApi) extends Controller
       body <- request.body.asMultipartFormData ?~> Messages("invalid")
       nmlFile <- body.file("nmlFile") ?~> Messages("nml.file.notFound")
       stringifiedJson <- body.dataParts.get("formJSON").flatMap(_.headOption) ?~> Messages("format.json.missing")
-      (taskTypeId, experience, priority, status, team, projectName, boundingBox) <- parseJson(stringifiedJson).toFox
+      (taskTypeId, experience, status, team, projectName, boundingBox) <- parseJson(stringifiedJson).toFox
       taskType <- TaskTypeDAO.findOneById(taskTypeId) ?~> Messages("taskType.notFound")
       project <- ProjectDAO.findOneByName(projectName) ?~> Messages("project.notFound", projectName)
       _ <- ensureTeamAdministration(request.user, team)
@@ -97,13 +96,12 @@ class TaskController @Inject() (val messagesApi: MessagesApi) extends Controller
               taskType._id,
               team,
               experience,
-              priority,
               status.open,
               _project = project.name,
               _id = BSONObjectID.generate)
 
             for {
-              _ <- TaskService.insert(task, insertAssignments = true)
+              _ <- TaskService.insert(task, project, insertAssignments = true)
               _ <- AnnotationService.createAnnotationBase(task, request.user._id, boundingBox, taskType.settings, nml)
             } yield Messages("task.create.success")
 
@@ -116,19 +114,19 @@ class TaskController @Inject() (val messagesApi: MessagesApi) extends Controller
   }
 
 
-  def createSingleTask(input: (String, Experience, Int, CompletionStatus, String, String, Option[BoundingBox], String, Point3D, Vector3D, Boolean))(implicit request: AuthenticatedRequest[_]) =
+  def createSingleTask(input: (String, Experience, CompletionStatus, String, String, Option[BoundingBox], String, Point3D, Vector3D, Boolean))(implicit request: AuthenticatedRequest[_]) =
     input match {
-      case (taskTypeId, experience, priority, status, team, projectName, boundingBox, dataSetName, start, rotation, isForAnonymous) =>
+      case (taskTypeId, experience, status, team, projectName, boundingBox, dataSetName, start, rotation, isForAnonymous) =>
         for {
           _ <- DataSetDAO.findOneBySourceName(dataSetName) ?~> Messages("dataSet.notFound", dataSetName)
           taskType <- TaskTypeDAO.findOneById(taskTypeId) ?~> Messages("taskType.notFound")
           project <- ProjectDAO.findOneByName(projectName) ?~> Messages("project.notFound", projectName)
           _ <- ensureTeamAdministration(request.user, team)
-          task = Task(taskType._id, team, experience, priority, status.open, _project = project.name)
+          task = Task(taskType._id, team, experience, status.open, _project = project.name)
           _ <- AnnotationService.createAnnotationBase(task, request.user._id, boundingBox, taskType.settings, dataSetName, start, rotation)
           directLinks <- createAnonymousUsersAndTasksInstancesIfNeeded(isForAnonymous, task).toFox
           taskWithLinks = task.copy(directLinks = directLinks)
-          _ <- TaskService.insert(taskWithLinks, insertAssignments = ! isForAnonymous)
+          _ <- TaskService.insert(taskWithLinks, project, insertAssignments = ! isForAnonymous)
         } yield {
           task
         }
@@ -179,7 +177,7 @@ class TaskController @Inject() (val messagesApi: MessagesApi) extends Controller
 
   def update(taskId: String) = Authenticated.async(parse.json) { implicit request =>
     withJsonBodyUsing(taskCompleteReads){
-      case (taskTypeId, experience, priority, status, team, projectName, boundingBox, dataSetName, start, rotation, isAnonymous) =>
+      case (taskTypeId, experience, status, team, projectName, boundingBox, dataSetName, start, rotation, isAnonymous) =>
         for {
           task <- TaskService.findOneById(taskId) ?~> Messages("task.notFound")
           _ <- ensureTeamAdministration(request.user, task.team)
@@ -190,14 +188,13 @@ class TaskController @Inject() (val messagesApi: MessagesApi) extends Controller
             _task = task._id,
             _taskType = taskType._id,
             neededExperience = experience,
-            priority = priority,
             instances = task.instances + status.open - openInstanceCount,
             team = team,
             _project = Some(project.name))
           _ <- AnnotationService.updateAllOfTask(updatedTask, team, dataSetName, boundingBox, taskType.settings)
           _ <- AnnotationService.updateAnnotationBase(updatedTask, start, rotation)
           json <- Task.transformToJson(updatedTask)
-          _ <- OpenAssignmentService.updateAllOf(updatedTask, status.open)
+          _ <- OpenAssignmentService.updateAllOf(updatedTask, project, status.open)
         } yield {
           JsonOk(json, Messages("task.editSuccess"))
         }

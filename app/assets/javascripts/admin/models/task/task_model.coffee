@@ -21,7 +21,6 @@ class TaskModel extends Backbone.Model
     neededExperience :
       value : 0
       domain : ""
-    priority : 100
     created : FormatUtils.formatDate()
     status :
       open : 10

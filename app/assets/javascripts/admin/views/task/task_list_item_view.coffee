@@ -44,7 +44,6 @@ class TaskListItemView extends Marionette.CompositeView
           <span class="label label-default"><%- neededExperience.domain %> : <%- neededExperience.value %></span>
         <% } %>
       </td>
-      <td><%- priority %></td>
       <td><%- created %></td>
       <td class="nowrap">
         <span><i class="fa fa-play-circle"></i><%- status.open %></span><br>

@@ -173,6 +173,7 @@ GET           /projects/:name/tasks                                             
 GET           /api/projects                                                     controllers.ProjectController.list
 POST          /api/projects                                                     controllers.ProjectController.create
 DELETE        /api/projects/:name                                               controllers.ProjectController.delete(name: String)
+POST          /api/projects/:name                                               controllers.ProjectController.update(name: String)
 GET           /api/projects/:name/download                                      controllers.admin.NMLIO.projectDownload(name: String)
 GET           /api/projects/:name/tasks                                         controllers.ProjectController.tasksForProject(name: String)
 

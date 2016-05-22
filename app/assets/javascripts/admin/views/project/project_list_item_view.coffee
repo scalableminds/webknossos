@@ -9,6 +9,7 @@ class ProjectListItemView extends Marionette.CompositeView
   template : _.template("""
     <td><%= name %></td>
     <td><%= team %></td>
+    <td><%= priority %></td>
     <% if(owner.email) { %>
       <td><%= owner.firstName %> <%= owner.lastName %> (<%= owner.email %>)</td>
     <% } else { %>

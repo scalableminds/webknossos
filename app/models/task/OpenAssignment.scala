@@ -49,8 +49,8 @@ case class OpenAssignment(
 object OpenAssignment extends FoxImplicits {
   implicit val openAssignmentFormat = Json.format[OpenAssignment]
 
-  def from(task: Task): OpenAssignment =
-    OpenAssignment(task._id, task.team, task._project, task.neededExperience, task.priority)
+  def from(task: Task, priority: Int): OpenAssignment =
+    OpenAssignment(task._id, task.team, task._project, task.neededExperience, priority)
 }
 
 object OpenAssignmentDAO extends SecuredBaseDAO[OpenAssignment] with FoxImplicits {
@@ -112,12 +112,18 @@ object OpenAssignmentDAO extends SecuredBaseDAO[OpenAssignment] with FoxImplicit
     count(Json.obj())
   }
 
+  def updateAllOf(name: String, project: Project)(implicit ctx: DBAccessContext) = {
+    update(Json.obj("_project" -> name), Json.obj("$set" -> Json.obj(
+      "priority" -> project.priority,
+      "_project" -> name
+    )),multi = true)
+  }
+
   def updateAllOf(task: Task)(implicit ctx: DBAccessContext) = {
     update(Json.obj("_task" -> task._id), Json.obj("$set" -> Json.obj(
       "team" -> task.team,
       "project" -> task._project,
-      "neededExperience" -> task.neededExperience,
-      "priority" -> task.priority
+      "neededExperience" -> task.neededExperience
     )),multi = true)
   }
 }

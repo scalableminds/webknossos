@@ -60,6 +60,18 @@ class ProjectController @Inject()(val messagesApi: MessagesApi) extends Controll
     }
   }
 
+  def update(projectName: String) = Authenticated.async(parse.json) { implicit request =>
+    withJsonBodyUsing(Project.projectPublicReads) { updateRequest =>
+      for{
+        project <- ProjectDAO.findOneByName(projectName)(GlobalAccessContext)
+        _ <- request.user.adminTeamNames.contains(project.team) ?~> "team.notAllowed"
+        updatedProject <- ProjectService.update(project._id, project, updateRequest)
+        js <- Project.projectPublicWritesWithStatus(updatedProject, request.user)
+      } yield Ok(js)
+    }
+  }
+
+
   def tasksForProject(projectName: String) = Authenticated.async {
     implicit request =>
       for {

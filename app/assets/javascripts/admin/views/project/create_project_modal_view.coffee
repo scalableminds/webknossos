@@ -35,6 +35,12 @@ class CreateProjectModalView extends Marionette.LayoutView
               <div class="col-sm-10 owner">
               </div>
             </div>
+            <div class="form-group">
+              <label class="col-sm-2 for="priority">Priority</label>
+              <div class="col-sm-10">
+                <input type="number" class="form-control project-priority" name="priority" value="100" required>
+              </div>
+            </div>
           </div>
           <div class="modal-footer">
             <button type="submit" class="btn btn-primary">Create</button>
@@ -54,6 +60,7 @@ class CreateProjectModalView extends Marionette.LayoutView
 
   ui :
     "name" : ".project-name"
+    "priority" : ".project-priority"
     "team" : ".team"
     "owner" : ".owner"
     "form" : "form"
@@ -95,8 +102,8 @@ class CreateProjectModalView extends Marionette.LayoutView
         owner : @ui.owner.find("select :selected").attr("id")
         name : @ui.name.val()
         team : @ui.team.find("select :selected").val()
+        priority: parseInt(@ui.priority.val())
       )
-
       @projectCollection.create(project,
         wait : true
         success : _.bind(@destroyModal, @)

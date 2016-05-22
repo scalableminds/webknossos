@@ -7,7 +7,7 @@ if(scmboy.hasNext() && teamCursor.hasNext()) {
     "name": "orphaned-tasks",
     "team": teamCursor.next().name
   })
-  db.tasks.update({"_project": {$exists: false}}, {$set: {"_project": "orphaned-tasks"}}, {multi: true})
+  db.tasks.update({"$or" : [{"_project": {$exists: false}}, {"_project" : {"$not" : {"$type" : 2}}}]}, {$set: {"_project": "orphaned-tasks"}}, {multi: true})
 } else {
   throw new Error("Scmboy not found")
 }

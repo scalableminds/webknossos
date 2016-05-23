@@ -102,7 +102,8 @@ object TimeSpanService extends FoxImplicits{
             }
             // Log time to user
             UserDAO.findOneById(_user)(GlobalAccessContext).map{ user =>
-              BrainTracing.logTime(user, duration, annotation)(GlobalAccessContext)
+              val anno = if(belongsToSameTracing(last, annotation)) annotation else None
+              BrainTracing.logTime(user, duration, anno)(GlobalAccessContext)
             }
             TimeSpanDAO.update(updated._id, updated)(ctx)
 

@@ -17,7 +17,7 @@ class DatasetActionsView extends Marionette.ItemView
     <% } %>
     <div class="btn-group btn-group">
       <% if(tracing.restrictions.allowFinish) { %>
-        <a href="/annotations/<%- tracingType %>/<%- tracingId %>/finishAndRedirect" class="btn btn-default" id="trace-finish-button"><i class="fa fa-check-circle-o"></i>Archive</a>
+        <a href="/annotations/<%- tracingType %>/<%- tracingId %>/finishAndRedirect" class="btn btn-default" id="trace-finish-button"><i class="fa fa-check-circle-o"></i><%- getArchiveBtnText() %></a>
       <% } %>
       <% if(tracing.restrictions.allowDownload || ! tracing.downloadUrl) { %>
         <a class="btn btn-default" id="trace-download-button"><i class="fa fa-download"></i>Download</a>
@@ -38,6 +38,8 @@ class DatasetActionsView extends Marionette.ItemView
   templateHelpers : ->
 
     isSkeletonMode : @isSkeletonMode()
+    getArchiveBtnText : -> return if @isTask then "Finish" else "Archive"
+
 
   events :
     "click #trace-finish-button" : "finishTracing"
@@ -74,6 +76,7 @@ class DatasetActionsView extends Marionette.ItemView
       evt.preventDefault()
 
     return @model.save()
+
 
   mergeTracing : ->
 

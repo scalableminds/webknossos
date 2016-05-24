@@ -178,6 +178,7 @@ class Model extends Backbone.Model
     @set("flightmodeRecording", false)
     @set("settings", tracing.content.settings)
     @set("allowedModes", @determineAllowedModes())
+    @set("isTask", @get("tracingType") == "Task")
 
 
     # Initialize 'flight', 'oblique' or 'orthogonal'/'volume' mode

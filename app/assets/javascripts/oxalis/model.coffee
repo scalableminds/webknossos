@@ -175,6 +175,7 @@ class Model extends Backbone.Model
     @computeBoundaries()
 
     @set("tracing", tracing)
+    @set("flightmodeRecording", false)
     @set("settings", tracing.content.settings)
     @set("allowedModes", @determineAllowedModes())
 

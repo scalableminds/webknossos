@@ -42,6 +42,11 @@ class ArbitraryPlaneInfo extends Backbone.Marionette.ItemView
     value = evt.target.checked
     @model.set("flightmodeRecording", value)
 
+    # Set a inital waypoint when enabling flight mode
+    # TODO: use the offical wK API
+    if value = true
+      app.oxalis.arbitraryController.setWaypoint()
+
 
   updateCheckboxToggle : ->
     if @model.get("flightmodeRecording") == @ui.checkbox.prop("checked")

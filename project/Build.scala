@@ -1,21 +1,20 @@
 import sbt._
 import sbt.Keys._
-import play.Project._
 import sbt.Task
 import sbtassembly.PathList
 import scala.concurrent.Future
 import scala.concurrent.ExecutionContext.Implicits.global
+import play.sbt.routes.RoutesKeys._
 
 object Dependencies{
-  val braingamesVersion = "6.10.16-master-fix"
+  val braingamesVersion = "8.3.1"
 
   val braingamesDataStore = "com.scalableminds" %% "braingames-datastore" % braingamesVersion
 }
 
 object Resolvers {
-  val scmRel = Resolver.url("Scalableminds REL Repo", url("http://scalableminds.github.com/releases/"))(Resolver.ivyStylePatterns)
-  val scmIntRel = "scm.io intern releases repo" at "http://maven.scm.io/releases/"
-  val scmIntSnaps = "scm.io intern snapshots repo" at "http://maven.scm.io/snapshots/"
+  val scmRel = "scm.io releases S3 bucket" at "https://s3-eu-central-1.amazonaws.com/maven.scm.io/releases/"
+  val scmSnaps = "scm.io snapshots S3 bucket" at "https://s3-eu-central-1.amazonaws.com/maven.scm.io/snapshots/"
 }
 
 object ApplicationBuild extends Build with sbtassembly.AssemblyKeys {
@@ -25,12 +24,14 @@ object ApplicationBuild extends Build with sbtassembly.AssemblyKeys {
 
 
   lazy val datastoreSettings = Seq(
+    version := braingamesVersion,
+    libraryDependencies += braingamesDataStore,
     scalaVersion := "2.11.7",
       resolvers ++= Seq(
       scmRel,
-      scmIntRel,
-      scmIntSnaps
+      scmSnaps
     ),
+    routesGenerator := InjectedRoutesGenerator,
     assemblyMergeStrategy in assembly := {
       case "application.conf"                                                  => MergeStrategy.concat
       case "package-info.class"                                                => MergeStrategy.concat
@@ -57,10 +58,8 @@ object ApplicationBuild extends Build with sbtassembly.AssemblyKeys {
     }
   )
 
-  lazy val standaloneDatastore: Project = play.Project(
-    "standalone-datastore", 
-    braingamesVersion, 
-    dependencies = Seq(braingamesDataStore), 
-    settings = datastoreSettings)
+  lazy val standaloneDatastore: Project = Project("standalone-datastore", file("."))
+    .enablePlugins(play.PlayScala)
+    .settings(datastoreSettings:_*)
 }
 

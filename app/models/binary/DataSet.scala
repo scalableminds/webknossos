@@ -30,7 +30,7 @@ case class DataSet(
     UriEncoding.encodePathSegment(name, "UTF-8")
 
   def isEditableBy(user: Option[User]) =
-    user.exists(_.adminTeamNames.contains(owningTeam))
+    user.exists(_.isAdminOf(owningTeam))
 
   def defaultStart =
     dataSource.map(_.boundingBox.center).getOrElse(Point3D(0, 0, 0))

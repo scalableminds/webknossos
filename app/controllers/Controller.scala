@@ -27,7 +27,7 @@ with I18nSupport
     r.request
 
   def ensureTeamAdministration(user: User, team: String) =
-    user.adminTeams.exists(_.team == team) ?~> Messages("team.admin.notAllowed", team)
+    user.isAdminOf(team) ?~> Messages("team.admin.notAllowed", team)
 
   def allowedToAdministrate(admin: User, dataSet: DataSet) =
     dataSet.isEditableBy(Some(admin)) ?~> Messages("notAllowed")

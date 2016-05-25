@@ -66,6 +66,8 @@ case class User(
 
   def roleInTeam(team: String) = teams.find(_.team == team).map(_.role)
 
+  def isAdminOf(team: String) = adminTeamNames.contains(team)
+
   override def toString = email
 
   def setExperience(name: String, value: Int) = {
@@ -99,7 +101,7 @@ case class User(
     (System.currentTimeMillis - this.lastActivity) / (1000 * 60 * 60 * 24)
 
   def isEditableBy(other: User) =
-    other.hasAdminAccess && ( teams.isEmpty || other.adminTeamNames.exists(teamNames.contains))
+    other.hasAdminAccess && ( teams.isEmpty || teamNames.exists(other.isAdminOf))
 
 }
 

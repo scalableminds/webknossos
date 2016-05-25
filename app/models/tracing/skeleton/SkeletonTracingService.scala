@@ -63,17 +63,6 @@ object SkeletonTracingService extends AnnotationContentService with CommonTracin
         settings))
   }
 
-  def clearTracingData(tracingId: String)(implicit ctx: DBAccessContext) = {
-    SkeletonTracingDAO.withValidId(tracingId) { _tracing =>
-      for {
-        _ <- DBTreeService.removeByTracing(_tracing)
-        - <- SkeletonTracingDAO.resetBranchPoints(_tracing)
-        - <- SkeletonTracingDAO.resetComments(_tracing)
-        tracing <- SkeletonTracingDAO.findOneById(_tracing)
-      } yield tracing
-    }
-  }
-
   def createFrom(tracingLike: SkeletonTracingLike)(implicit ctx: DBAccessContext): Fox[SkeletonTracing] = {
     val tracing = SkeletonTracing.from(tracingLike)
     for {
@@ -96,13 +85,13 @@ object SkeletonTracingService extends AnnotationContentService with CommonTracin
   def createFrom(dataSet: DataSet)(implicit ctx: DBAccessContext): Fox[SkeletonTracing] =
     createFrom(dataSet.name, dataSet.defaultStart, dataSet.defaultRotation, None, insertStartAsNode = false)
 
-  def removeById(_skeleton: BSONObjectID)(implicit ctx: DBAccessContext) =
-    for {
-      _ <- UsedAnnotationDAO.removeAll(_skeleton.stringify)
-      _ <- DBTreeService.removeByTracing(_skeleton)
-      _ <- SkeletonTracingDAO.removeById(_skeleton)
-    } yield true
-
+  def clearAndRemove(skeletonId: String)(implicit ctx: DBAccessContext) =
+    SkeletonTracingDAO.withValidId(skeletonId) { _id =>
+      for {
+        _ <- DBTreeService.removeByTracing(_id)
+        _ <- SkeletonTracingDAO.removeById(_id)
+      } yield true
+    }
 
   def findOneById(tracingId: String)(implicit ctx: DBAccessContext) =
     SkeletonTracingDAO.findOneById(tracingId)

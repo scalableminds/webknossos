@@ -310,7 +310,7 @@ class AnnotationController @Inject()(val messagesApi: MessagesApi) extends Contr
         _ <- ensureTeamAdministration(request.user, annotation.team)
         result <- tryToCancel(annotation)
       } yield {
-        UsedAnnotationDAO.removeAll(annotation.id)
+        UsedAnnotationDAO.removeAll(AnnotationIdentifier(typ, id))
         result
       }
     }

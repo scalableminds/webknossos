@@ -29,7 +29,7 @@ trait AnnotationContentService {
 
   def createFrom(dataSet: DataSet)(implicit ctx: DBAccessContext): Fox[AType]
 
-  def clearTracingData(id: String)(implicit ctx: DBAccessContext): Fox[AType]
+  def clearAndRemove(id: String)(implicit ctx: DBAccessContext): Fox[Boolean]
 }
 
 trait AnnotationContentProviders {

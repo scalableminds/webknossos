@@ -89,7 +89,7 @@ object TemporarySkeletonTracingService extends AnnotationContentService {
 
   def createFrom(dataSet: DataSet)(implicit ctx: DBAccessContext) = ???
 
-  def clearTracingData(id: String)(implicit ctx: DBAccessContext) = ???
+  def clearAndRemove(id: String)(implicit ctx: DBAccessContext) = ???
 
   def updateSettings(dataSetName: String, boundingBox: Option[BoundingBox], settings: AnnotationSettings, tracingId: String)(implicit ctx: DBAccessContext): Fox[Boolean] = ???
 

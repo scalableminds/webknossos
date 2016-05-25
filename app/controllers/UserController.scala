@@ -1,5 +1,6 @@
 package controllers
 
+import com.scalableminds.util.reactivemongo.GlobalAccessContext
 import com.scalableminds.util.security.SCrypt._
 import oxalis.security.Secured
 import models.user._
@@ -149,26 +150,24 @@ object UserController extends Controller with Secured with Dashboard with FoxImp
         Fox.successful(team)
     })
   }
-
+  
   def update(userId: String) = Authenticated.async(parse.json) { implicit request =>
     val issuingUser = request.user
     request.body.validate(userUpdateReader) match{
-      case JsSuccess((firstName, lastName, verified, assignedTeams, experiences), _) =>
+      case JsSuccess((firstName, lastName, verified, assignedMemberships, experiences), _) =>
         for {
           user <- UserDAO.findOneById(userId) ?~> Messages("user.notFound")
           _ <- allowedToAdministrate(issuingUser, user).toFox
-          teams <- Fox.combined(assignedTeams.map(t => TeamDAO.findOneByName(t.team))) ?~> Messages("team.notFound")
-          allTeams <- Fox.sequenceOfFulls(user.teams.map(t => TeamDAO.findOneByName(t.team)))
-          (oldTeamsWithUpdate, teamsWithoutUpdate) = user.teams.partition{t =>
-            issuingUser.adminTeamNames.contains(t.team) && !assignedTeams.contains(t)
-          }
-          teamsWithUpdate = oldTeamsWithUpdate ++ assignedTeams.filterNot(t => user.teams.exists(_.team == t.team))
-          _ <- Fox.combined(teamsWithUpdate.map(t => ensureTeamAdministration(issuingUser, t.team).toFox))
-          _ <- ensureRoleExistence(assignedTeams.zip(teams))
-          _ <- ensureProperTeamAdministration(user, assignedTeams.zip(teams))
+          teams <- Fox.combined(assignedMemberships.map(t => TeamDAO.findOneByName(t.team)(GlobalAccessContext) ?~> Messages("team.notFound")))
+          allTeams <- Fox.sequenceOfFulls(user.teams.map(t => TeamDAO.findOneByName(t.team)(GlobalAccessContext)))
+          teamsWithoutUpdate = user.teams.filterNot(t => ensureTeamAdministration(issuingUser, t.team).isDefined)
+          assignedMembershipWTeams = assignedMemberships.zip(teams)
+          teamsWithUpdate = assignedMembershipWTeams.filter(t => ensureTeamAdministration(issuingUser, t._1.team).isDefined)
+          _ <- ensureRoleExistence(teamsWithUpdate)
+          _ <- ensureProperTeamAdministration(user, teamsWithUpdate)
         } yield {
-          val trimmedExperiences = experiences.map{ case (key, value) => key.trim -> value}.toMap
-          val updatedTeams = assignedTeams.filter(t => teamsWithUpdate.exists(_.team == t.team)) ++ teamsWithoutUpdate
+          val trimmedExperiences = experiences.map{ case (key, value) => key.trim -> value}
+          val updatedTeams = teamsWithUpdate.map(_._1) ++ teamsWithoutUpdate
           UserService.update(user, firstName, lastName, verified, updatedTeams, trimmedExperiences)
           Ok
         }

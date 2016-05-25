@@ -20,7 +20,7 @@ with models.basics.Implicits {
     r.request
 
   def ensureTeamAdministration(user: User, team: String) = {
-    user.adminTeams.exists(_.team == team) match {
+    user.adminTeamNames.contains(team) match {
       case true => Full(true)
       case false => Failure(Messages("team.admin.notAllowed", team))
     }

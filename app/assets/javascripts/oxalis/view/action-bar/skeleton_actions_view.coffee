@@ -17,8 +17,6 @@ class SkeletonActionsView extends Marionette.ItemView
 
     # create xy offset
     position = @model.flycam.getPosition()
-    position[0] = position[0] + Math.pow(2, @model.flycam.getIntegerZoomStep())
-    position[1] = position[1] + Math.pow(2, @model.flycam.getIntegerZoomStep())
 
     datasetConfig = @model.get("datasetConfiguration")
 
@@ -32,5 +30,9 @@ class SkeletonActionsView extends Marionette.ItemView
       if datasetConfig.get("fourBit") then 4 else 8,
       datasetConfig.get("interpolation")
     )
+    newPosition = position.slice()
+    newPosition[0] += Math.pow(2, @model.flycam.getIntegerZoomStep())
+    newPosition[1] += Math.pow(2, @model.flycam.getIntegerZoomStep())
+    @model.flycam.setPosition(newPosition)
 
 module.exports = SkeletonActionsView

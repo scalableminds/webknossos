@@ -28,7 +28,7 @@ object BrainTracing {
     // TODO: fix, make team dynamic
     if (isActive && user.teamNames.contains("Connectomics department")) {
       val result = Promise[String]()
-      WS
+      val brainTracingRequest = WS
       .url(CREATE_URL)
       .withAuth(USER, PW, AuthScheme.BASIC)
       .withQueryString(
@@ -40,7 +40,7 @@ object BrainTracing {
       .get()
       .map { response =>
         result complete (response.status match {
-          case 200 if(isSilentFailure(response.body)) =>
+          case 200 if isSilentFailure(response.body) =>
             Success("braintraceing.error")
           case 200 =>
             Success("braintracing.new")
@@ -50,6 +50,10 @@ object BrainTracing {
             Success("braintraceing.error")
         })
         Logger.trace(s"Creation of account ${user.email} returned Status: ${response.status} Body: ${response.body}")
+      }
+      brainTracingRequest.onFailure{
+        case e: Exception =>
+          Logger.error(s"Failed to register user '${user.email}' in brain tracing db. Exception: ${e.getMessage}")
       }
       result.future
     } else {
@@ -75,7 +79,7 @@ object BrainTracing {
           val hours = inHours(time)
           val projectName = await(project.map(_.name).getOrElse(""))
           val taskType = await(taskTypeFox.futureBox)
-          await(WS
+          val brainTracingRequest = WS
           .url(LOGTIME_URL)
           .withAuth(USER, PW, AuthScheme.BASIC)
           .withQueryString(
@@ -90,7 +94,7 @@ object BrainTracing {
           .get()
           .map { response =>
             response.status match {
-              case 200 if(!isSilentFailure(response.body)) =>
+              case 200 if !isSilentFailure(response.body) =>
                 Logger.trace(s"Logged time! User: ${user.email} Time: $hours")
                 true
               case 200 =>
@@ -100,7 +104,12 @@ object BrainTracing {
                 Logger.error(s"Time logging failed! Code $code User: ${user.email} Time: $hours")
                 false
             }
-          })
+          }
+          brainTracingRequest.onFailure{
+            case e: Exception =>
+              Logger.error(s"Time logging failed! Exception ${e.getMessage}. User: ${user.email} Time: $hours")
+          }
+          await(brainTracingRequest)
         } else {
           true
         }

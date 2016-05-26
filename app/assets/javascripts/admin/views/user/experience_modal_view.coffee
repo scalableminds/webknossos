@@ -16,7 +16,7 @@ class ExperienceModalView extends Marionette.ItemView
           <div class="form-group">
             <label class="col-sm-2 control-label" for="experience-domain">Domain</label>
             <div class="col-sm-10">
-              <input type="text" class="form-control" name="experience-domain" autocomplete="off" required>
+              <input type="text" class="form-control" name="experience-domain" autocomplete="off" required autofocus>
             </div>
           </div>
           <div class="form-group">
@@ -51,6 +51,10 @@ class ExperienceModalView extends Marionette.ItemView
   ui :
     "experienceValue" : "input[type=number]"
     "experienceDomain" : "input[type=text]"
+
+  attributes:
+    "tabindex" : "-1"
+    "role": "dialog"
 
   initialize : (options) ->
 

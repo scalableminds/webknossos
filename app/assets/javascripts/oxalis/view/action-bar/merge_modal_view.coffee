@@ -122,7 +122,11 @@ class MergeModalView extends Marionette.LayoutView
     "formUploadIcon"       : "#form-upload-icon"
     "fileInput"            : ":file"
 
+  attributes:
+    "tabindex" : "-1"
+    "role": "dialog"
 
+    
   initialize : ->
 
     @nml = undefined

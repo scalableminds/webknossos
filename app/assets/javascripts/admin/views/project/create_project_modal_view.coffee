@@ -20,14 +20,14 @@ class CreateProjectModalView extends Marionette.LayoutView
           </div>
           <div class="modal-body container-fluid">
             <div class="form-group">
-              <label class="col-sm-2" for="team">Team</label>
-              <div class="col-sm-10 team">
-              </div>
-            </div>
-            <div class="form-group">
               <label class="col-sm-2 for="projectName">Project Name</label>
               <div class="col-sm-10">
                 <input type="text" class="form-control project-name" name="projectName" value="" required autofocus>
+              </div>
+            </div>
+            <div class="form-group">
+              <label class="col-sm-2" for="team">Team</label>
+              <div class="col-sm-10 team">
               </div>
             </div>
             <div class="form-group">
@@ -57,6 +57,10 @@ class CreateProjectModalView extends Marionette.LayoutView
     "team" : ".team"
     "owner" : ".owner"
     "form" : "form"
+
+  attributes:
+    "tabindex" : "-1"
+    "role": "dialog"
 
 
   initialize : (options) ->

@@ -41,7 +41,11 @@ class TaskTransferModalView extends Marionette.LayoutView
   events :
     "click .transfer" : "transferTask"
 
+  attributes:
+    "tabindex" : "-1"
+    "role": "dialog"
 
+    
   initialize : (options) ->
 
     @url = options.url

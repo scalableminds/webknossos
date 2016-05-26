@@ -30,6 +30,10 @@ class AnonymousTaskListModal extends Marionette.LayoutView
   events :
     "click .btn-primary" : "copyToClipboard"
 
+  attributes:
+    "tabindex" : "-1"
+    "role": "dialog"
+
   copyToClipboard : (evt) ->
 
     evt.preventDefault()

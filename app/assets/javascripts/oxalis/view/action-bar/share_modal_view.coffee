@@ -43,6 +43,10 @@ class ShareModalView extends Marionette.ItemView
     "click input" : "copyToClipboard"
     "click .copy-btn" : "copyToClipboard"
 
+  attributes:
+    "tabindex" : "-1"
+    "role": "dialog"
+
 
   getUrl : ->
 

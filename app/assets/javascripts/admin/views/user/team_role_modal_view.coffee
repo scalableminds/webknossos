@@ -37,7 +37,11 @@ class TeamRoleModalView extends Marionette.CompositeView
   events :
     "click .btn-primary" : "changeExperience"
 
+  attributes:
+    "tabindex" : "-1"
+    "role": "dialog"
 
+    
   initialize : (args) ->
 
     @collection = new TeamCollection()

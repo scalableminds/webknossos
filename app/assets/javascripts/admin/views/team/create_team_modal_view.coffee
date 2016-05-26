@@ -27,7 +27,7 @@ class CreateTeamModalView extends Marionette.LayoutView
             <div class="form-group">
               <label class="col-sm-2 control-label" for="inputName">Parent Team</label>
               <div class="col-sm-10 parent-teams">
-                <input type="text" class="form-control" id="" placeholder="Name" required autofocus>
+                <input type="text" class="form-control" id="" placeholder="Name" required>
               </div>
             </div>
           </div>
@@ -49,6 +49,9 @@ class CreateTeamModalView extends Marionette.LayoutView
   regions :
     "parentTeams" : ".parent-teams"
 
+  attributes:
+    "tabindex" : "-1"
+    "role": "dialog"
 
   initialize : (options) ->
 

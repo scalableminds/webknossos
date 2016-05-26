@@ -36,6 +36,10 @@ class TeamAssignmentModalView extends Marionette.CompositeView
   events :
     "click .btn-primary" : "submitTeams"
 
+  attributes:
+    "tabindex" : "-1"
+    "role": "dialog"
+    
 
   initialize : (args) ->
 

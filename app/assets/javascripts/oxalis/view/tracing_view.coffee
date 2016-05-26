@@ -5,7 +5,7 @@ class TracingView extends Marionette.LayoutView
 
   id : "render"
   template : _.template("""
-    <div id="modal" class="modal fade"></div>
+    <div id="modal" class="modal fade" tabindex="-1" role="dialog"></div>
     <div id="inputcatchers">
       <div id="planexy" class="inputcatcher"></div>
       <div id="planeyz" class="inputcatcher"></div>

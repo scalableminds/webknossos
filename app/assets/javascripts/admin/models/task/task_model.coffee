@@ -1,7 +1,8 @@
 Backbone = require("backbone")
+NestedObjModel = require("libs/nested_obj_model")
 FormatUtils = require("libs/format_utils")
 
-class TaskModel extends Backbone.Model
+class TaskModel extends NestedObjModel
 
   url : ->
     id = ''

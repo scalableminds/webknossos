@@ -256,7 +256,7 @@ class TaskCreateFromView extends Marionette.LayoutView
       childViewOptions :
         modelValue : -> return "#{@model.get("id")}"
         modelLabel : -> return "#{@model.get("summary")}"
-        defaultItem : {id : @model.get("type") or Utils.getUrlParams("taskType")}
+        defaultItem : {id : @model.get("type.id") or Utils.getUrlParams("taskType")}
       data : "amIAnAdmin=true"
       name : "taskTypeId"
     )

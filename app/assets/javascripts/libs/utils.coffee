@@ -109,4 +109,16 @@ Utils =
         team.role.name == "admin"
       ) >= 0
 
+
+  getUrlParams : (paramName) ->
+    # Parse the URL parameters as objects and return it or just a single param
+    params = window.location.search.substring(1).split("&").reduce((result, value) ->
+      parts = value.split('=')
+      if parts[0]
+        result[decodeURIComponent(parts[0])] = decodeURIComponent(parts[1])
+      return result
+    , {})
+
+    if paramName then return params[paramName] else return params
+
 module.exports = Utils

@@ -64,7 +64,12 @@ class TaskListView extends Marionette.CompositeView
 
   createNewTask : ->
 
-    app.router.navigate("/tasks/create", {trigger : true})
+    if name = @collection.fullCollection.projectName
+      urlParam = "projectName=#{name}"
+    else if id = @collection.fullCollection.taskTypeId
+      urlParam = "taskType=#{id}"
+
+    app.router.navigate("/tasks/create?#{urlParam}", {trigger : true})
 
 
   toggleAllDetails : ->

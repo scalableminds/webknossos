@@ -152,8 +152,6 @@ class ExplorativeTracingListView extends Marionette.CompositeView
         Toast.message(data.messages)
         @collection.reset()
         @render()
-      (error) ->
-        error.json().then((json) -> Toast.message(json.messages))
     )
 
   fetchArchivedAnnotations : ->

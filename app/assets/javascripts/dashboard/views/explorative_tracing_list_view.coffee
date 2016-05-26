@@ -135,24 +135,23 @@ class ExplorativeTracingListView extends Marionette.CompositeView
 
   archiveAll : () ->
 
+    unless confirm("Are you sure you want to archive all explorative annotations?")
+      return
+
     unarchivedAnnoationIds = @collection.pluck("id")
-    $.ajax(
-      url: jsRoutes.controllers.AnnotationController.finishAll("Explorational").url
-      type: "POST",
-      contentType: "application/json"
-      data: JSON.stringify({
-        annotations: unarchivedAnnoationIds
-      })
+    Request.sendJSONReceiveJSON(
+      jsRoutes.controllers.AnnotationController.finishAll("Explorational").url
+      {
+        method: "POST",
+        data: {
+          annotations: unarchivedAnnoationIds
+        }
+      }
     ).then(
       (data) =>
         Toast.message(data.messages)
         @collection.reset()
         @render()
-      (xhr) ->
-        if xhr.responseJSON
-          Toast.message(xhr.responseJSON.messages)
-        else
-          Toast.message(xhr.statusText)
     )
 
   fetchArchivedAnnotations : ->

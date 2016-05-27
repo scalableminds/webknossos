@@ -15,6 +15,7 @@ OxalisModel                  = require("oxalis/model")
 Constants                    = require("oxalis/constants")
 BackboneToOxalisAdapterModel = require("oxalis/model/settings/backbone_to_oxalis_adapter_model")
 Modal                        = require("oxalis/view/modal")
+Utils                        = require("libs/utils")
 
 class TracingLayoutView extends Marionette.LayoutView
 
@@ -143,8 +144,8 @@ class TracingLayoutView extends Marionette.LayoutView
   maybeShowNewTaskTypeModal : ->
 
     # Users can aquire new tasks directly in the tracing view. Occasionally,
-    # the start working on a new TaskType and new to be instructed.
-    return if window.location.search.indexOf("differentTaskType") < 0 or not @model.tracing.task?
+    # they start working on a new TaskType and need to be instructed.
+    return if Utils.getUrlParams("differentTaskType") or not @model.tracing.task?
 
     taskType = @model.tracing.task.type
     title = "Attention, new Task Type: #{taskType.summary}"

@@ -115,7 +115,9 @@ Utils =
     params = window.location.search.substring(1).split("&").reduce((result, value) ->
       parts = value.split('=')
       if parts[0]
-        result[decodeURIComponent(parts[0])] = decodeURIComponent(parts[1])
+        key = decodeURIComponent(parts[0])
+        value = if parts[1] then decodeURIComponent(parts[1]) else null
+        result[key] = value
       return result
     , {})
 

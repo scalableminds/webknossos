@@ -1,14 +1,11 @@
-PaginationView              = require("./views/pagination_view")
 DatasetListView             = require("../dashboard/views/dataset/dataset_list_view")
+PaginationView              = require("./views/pagination_view")
 DatasetCollection           = require("./models/dataset/dataset_collection")
-PaginatedDatasetCollection  = require("./models/dataset/paginated_dataset_collection")
 DatasetUploadView           = require("./views/dataset/dataset_upload_view")
 UserListView                = require("./views/user/user_list_view")
 UserCollection              = require("./models/user/user_collection")
-PaginatedUserCollection     = require("./models/user/paginated_user_collection")
 TeamListView                = require("./views/team/team_list_view")
 TeamCollection              = require("./models/team/team_collection")
-PaginatedTeamCollection     = require("./models/team/paginated_team_collection")
 TaskListView                = require("./views/task/task_list_view")
 TaskCollection              = require("./models/task/task_collection")
 TaskTypeListView            = require("./views/tasktype/task_type_list_view")
@@ -27,11 +24,8 @@ WorkloadCollection          = require("./models/workload/workload_collection")
 module.exports = {
   PaginationView
   DatasetCollection
-  PaginatedDatasetCollection
-  PaginatedTeamCollection
   UserListView
   UserCollection
-  PaginatedUserCollection
   TeamListView
   TeamCollection
   TaskListView

@@ -94,12 +94,12 @@ class Router extends BaseRouter
 
   users : ->
 
-    @showWithPagination("UserListView", "PaginatedUserCollection")
+    @showWithPagination("UserListView", "UserCollection", {})
 
 
   teams : ->
 
-    @showWithPagination("TeamListView", "PaginatedTeamCollection", {addButtonText : "Add New Team"})
+    @showWithPagination("TeamListView", "TeamCollection", {addButtonText : "Add New Team"})
 
 
   projectTasks : (projectName) ->
@@ -187,10 +187,11 @@ class Router extends BaseRouter
   spotlight : ->
 
     self = this
-    require(["views/spotlight_view", "admin/models/dataset/paginated_dataset_collection"], (SpotlightView, PaginatedDatasetCollection) ->
+    require(["dashboard/views/spotlight/spotlight_view", "admin/models/dataset/dataset_collection"], (SpotlightView, DatasetCollection) ->
 
-      collection = new PaginatedDatasetCollection()
-      view = new SpotlightView(collection: collection)
+      collection = new DatasetCollection()
+      paginatedCollection = new PaginationCollection([], fullCollection : collection)
+      view = new SpotlightView(collection: paginatedCollection)
 
       self.changeView(view)
       self.listenTo(collection, "sync", self.hideLoadingSpinner)

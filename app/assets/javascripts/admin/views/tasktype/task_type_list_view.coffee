@@ -7,6 +7,7 @@ class TaskTypeListView extends Marionette.CompositeView
 
   template : =>
     _.template("""
+      <h3>Task Types</h3>
       <table class="table table-striped table-details" id="tasktype-table">
         <thead>
           <tr>
@@ -25,6 +26,7 @@ class TaskTypeListView extends Marionette.CompositeView
       </table>
     """)
 
+  className : "container wide task-types-administration"
   childView : TaskTypeItemView
   childViewContainer: "tbody"
 
@@ -32,6 +34,13 @@ class TaskTypeListView extends Marionette.CompositeView
   initialize : ->
 
     @collection.fetch()
+
+    @listenTo(app.vent, "paginationView:filter", @filterBySearch)
+
+
+  filterBySearch : (searchQuery) ->
+
+    @collection.setFilter(["summary", "team", "expectedTime", "description", "id"], searchQuery)
 
 
 module.exports = TaskTypeListView

@@ -6,11 +6,10 @@ SelectionView  = require("admin/views/selection_view")
 Toast          = require("libs/toast")
 Request        = require("libs/request")
 
-class TaskTypeFormView extends Marionette.LayoutView
+class TaskTypeCreateView extends Marionette.LayoutView
 
   template : _.template("""
     <div class="well clearfix">
-      <h3>Task types</h3>
         <form method="POST" class="form-horizontal">
           <div class="col-sm-6">
             <div class="form-group">
@@ -233,4 +232,4 @@ class TaskTypeFormView extends Marionette.LayoutView
     )
     @team.show(teamSelectionView)
 
-module.exports = TaskTypeFormView
+module.exports = TaskTypeCreateView

@@ -11,6 +11,8 @@ TeamCollection              = require("./models/team/team_collection")
 PaginatedTeamCollection     = require("./models/team/paginated_team_collection")
 TaskListView                = require("./views/task/task_list_view")
 TaskCollection              = require("./models/task/task_collection")
+TaskTypeListView            = require("./views/tasktype/task_type_list_view")
+TaskTypeCollection          = require("./models/tasktype/task_type_collection")
 ProjectListView             = require("./views/project/project_list_view")
 ProjectCollection           = require("./models/project/project_collection")
 StatisticView               = require("./views/statistic/statistic_view")
@@ -40,4 +42,6 @@ module.exports = {
   WorkloadListView
   WorkloadCollection
   DatasetUploadView
+  TaskTypeListView
+  TaskTypeCollection
 }

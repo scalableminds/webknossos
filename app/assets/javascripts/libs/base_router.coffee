@@ -83,7 +83,7 @@ class BaseRouter
     for { route, handler } in @routes
       match = baseUrl.match(route)
       if match
-        args = Backbone.Router::_extractParameters(route, @currentURL)
+        args = Backbone.Router::_extractParameters(route, baseUrl)
         handler.apply(null, args)
         return
     return

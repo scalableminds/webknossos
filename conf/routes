@@ -152,8 +152,10 @@ GET           /api/tasks/:id/download                                           
 GET           /api/tasks/:id/annotations                                        controllers.AnnotationController.annotationsForTask(id: String)
 
 GET           /taskTypes                                                        controllers.TaskTypeController.empty(id: String = "")
+GET           /taskTypes/create                                                 controllers.TaskTypeController.empty(id: String = "")
 GET           /taskTypes/:id/tasks                                              controllers.TaskTypeController.empty(id: String)
 GET           /taskTypes/:id/edit                                               controllers.UserController.emptyWithWildcard(id: String)
+
 GET           /api/taskTypes                                                    controllers.TaskTypeController.list
 POST          /api/taskTypes                                                    controllers.TaskTypeController.create
 DELETE        /api/taskTypes/:id/delete                                         controllers.TaskTypeController.delete(id: String)

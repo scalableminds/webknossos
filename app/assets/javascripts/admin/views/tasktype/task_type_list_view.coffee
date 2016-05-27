@@ -36,6 +36,12 @@ class TaskTypeListView extends Marionette.CompositeView
     @collection.fetch()
 
     @listenTo(app.vent, "paginationView:filter", @filterBySearch)
+    @listenTo(app.vent, "paginationView:addElement", @createNewTaskType)
+
+
+  createNewTaskType : ->
+
+    app.router.navigate("/taskTypes/create", {trigger : true})
 
 
   filterBySearch : (searchQuery) ->

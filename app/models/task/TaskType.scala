@@ -87,7 +87,7 @@ object TaskType {
       "team" -> tt.team,
       "settings" -> Json.toJson(tt.settings),
       "fileName" -> tt.fileName,
-      "expectedTime" -> tt.expectedTime.toString
+      "expectedTime" -> tt.expectedTime
     )
   }
 

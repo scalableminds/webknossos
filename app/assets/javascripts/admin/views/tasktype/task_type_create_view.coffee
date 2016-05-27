@@ -137,6 +137,7 @@ class TaskTypeCreateView extends Marionette.LayoutView
       </form>
     </div>
   """)
+  className : "container wide task-types-administration"
 
   templateHelpers : ->
     getSubmitLabel : => if @isEditMode then "Update" else "Create"
@@ -162,9 +163,15 @@ class TaskTypeCreateView extends Marionette.LayoutView
 
   initialize : ->
 
-    @isEditMode = @options.isEditMode
+    @isEditingMode = _.isString(@model.id)
+
     if @isEditMode
       @model.fetch().then(=> @prefillForm())
+
+
+    if @isEditingMode
+      @listenTo(@model, "sync", @render)
+      @model.fetch()
 
 
   prefillForm : ->
@@ -216,7 +223,6 @@ class TaskTypeCreateView extends Marionette.LayoutView
       if @isEditMode
         app.router.navigate("/taskTypes", { trigger: true })
       else
-        @collection.addJSON(response.newTaskType)
         @render()
     )
 

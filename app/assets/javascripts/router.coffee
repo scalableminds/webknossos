@@ -119,7 +119,7 @@ class Router extends BaseRouter
 
   taskTypes : ->
 
-    @showWithPagination("TaskTypeListView", "TaskTypeCollection")
+    @showWithPagination("TaskTypeListView", "TaskTypeCollection", {addButtonText : "Create New TaskType"})
 
 
   ###*

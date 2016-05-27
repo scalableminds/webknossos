@@ -1,10 +1,9 @@
-package controllers.admin
+package controllers
 
 import javax.inject.Inject
 
 import scala.concurrent.Future
 
-import controllers.Controller
 import models.annotation.{AnnotationType, _}
 import models.task.{Task, _}
 import models.user._
@@ -14,10 +13,8 @@ import oxalis.security.Secured
 import play.api.i18n.{Messages, MessagesApi}
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json._
-import views.html
-import net.liftweb.common.{Failure, Full}
 
-class NMLIO @Inject()(val messagesApi: MessagesApi) extends Controller with Secured {
+class NMLIOController @Inject()(val messagesApi: MessagesApi) extends Controller with Secured {
 
   private def nameForNMLs(fileNames: Seq[String]) =
     if (fileNames.size == 1)

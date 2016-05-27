@@ -145,7 +145,7 @@ class TracingLayoutView extends Marionette.LayoutView
 
     # Users can aquire new tasks directly in the tracing view. Occasionally,
     # they start working on a new TaskType and need to be instructed.
-    return if Utils.getUrlParams("differentTaskType") or not @model.tracing.task?
+    return unless Utils.getUrlParams("differentTaskType") and @model.tracing.task?
 
     taskType = @model.tracing.task.type
     title = "Attention, new Task Type: #{taskType.summary}"

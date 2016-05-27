@@ -116,7 +116,7 @@ Utils =
       parts = value.split('=')
       if parts[0]
         key = decodeURIComponent(parts[0])
-        value = if parts[1] then decodeURIComponent(parts[1]) else null
+        value = if parts[1] then decodeURIComponent(parts[1]) else true
         result[key] = value
       return result
     , {})

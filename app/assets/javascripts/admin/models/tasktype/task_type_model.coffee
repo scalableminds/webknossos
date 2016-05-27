@@ -3,7 +3,7 @@ FormatUtils = require("libs/format_utils")
 
 class TaskTypeModel extends Backbone.Model
 
-  url : -> "/api/taskTypes/#{@id}"
+  urlRoot : "/api/taskTypes"
 
   defaults :
     summary : ""

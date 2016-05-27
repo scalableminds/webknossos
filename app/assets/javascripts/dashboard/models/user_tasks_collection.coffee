@@ -1,7 +1,7 @@
-_                = require("lodash")
-Backbone         = require("backbone")
-DashboardTaskModel        = require("./task_model")
-SortedCollection = require("admin/models/sorted_collection")
+_                   = require("lodash")
+Backbone            = require("backbone")
+DashboardTaskModel  = require("./dashboard_task_model")
+SortedCollection    = require("admin/models/sorted_collection")
 
 class UserTasksCollection extends SortedCollection
 

@@ -130,7 +130,7 @@ class TaskController @Inject() (val messagesApi: MessagesApi) extends Controller
           taskWithLinks = task.copy(directLinks = directLinks)
           _ <- TaskService.insert(taskWithLinks, insertAssignments = ! isForAnonymous)
         } yield {
-          task
+          taskWithLinks
         }
     }
 

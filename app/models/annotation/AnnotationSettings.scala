@@ -31,6 +31,8 @@ object AnnotationSettings {
   implicit val annotationSettingsReads =
     Json
     .reads[AnnotationSettings]
-    .filter(ValidationError("annotation.prefferedMode.invalid")) { a => a.preferredMode.forall(ALL_MODES.contains) }
-    .filter(ValidationError("annotation.mode.invalid")) { a => a.allowedModes.forall(ALL_MODES.contains) }
+    .filter(ValidationError("annotation.preferedMode.invalid")) { a =>
+      a.preferredMode.forall(ALL_MODES.contains) }
+    .filter(ValidationError("annotation.mode.invalid")) { a =>
+      a.allowedModes.forall(ALL_MODES.contains) }
 }

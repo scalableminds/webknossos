@@ -11,6 +11,7 @@ class TaskTypeCreateView extends Marionette.LayoutView
 
   template : _.template("""
     <div class="well clearfix">
+	<h3><%- getTitle() %> TaskTypes</h3>
         <form method="POST" class="form-horizontal">
           <div class="col-sm-6">
             <div class="form-group">
@@ -71,7 +72,7 @@ class TaskTypeCreateView extends Marionette.LayoutView
             <div class="col-sm-6 form-group pull-right">
 	      <label class="col-sm-10 control-label" for="settings[advancedOptionsAllowed">Advanced Tracing Options</label>
               <div class="col-sm-2">
-		<input type="checkbox" id="advancedOptionsAllowed" name="advancedOptionsAllowed" <%- isChecked(settings.advancedOptionsAllowed) %>>
+		<input type="checkbox" id="advancedOptionsAllowed" name="settings[advancedOptionsAllowed]" <%- isChecked(settings.advancedOptionsAllowed) %>>
                 <span></span>
               </div>
             </div>
@@ -88,7 +89,7 @@ class TaskTypeCreateView extends Marionette.LayoutView
               <label class="col-sm-8 control-label" for="preferredMode">Preferred Mode</label>
               <div class="col-sm-4">
                 <select id="preferredMode" name="preferredMode" class="form-control">
-                  <option value="">Any</option>
+		  <option>Any</option>
                   <option value="orthogonal">Orthogonal</option>
                   <option value="oblique">Oblique</option>
                   <option value="flight">Flight</option>
@@ -100,7 +101,7 @@ class TaskTypeCreateView extends Marionette.LayoutView
               <label class="col-sm-8 control-label" for="expectedTime_minTime">Expected Time (min)</label>
               <div class="col-sm-4">
                 <div class="input-group">
-		  <input type="number" id="expectedTime_minTime" name="expectedTime[minTime]"
+		  <input type="number" id="expectedTime_minTime" name="expectedTime[min]"
 		    value="<%- expectedTime.min %>" min="1" input-append="minutes" class="form-control" required>
                   <span class="input-group-addon">minutes</span>
                 </div>
@@ -111,7 +112,7 @@ class TaskTypeCreateView extends Marionette.LayoutView
               <label class="col-sm-8 control-label" for="expectedTime_maxTime">Expected Time (max)</label>
               <div class="col-sm-4">
                 <div class="input-group">
-		  <input type="number" id="expectedTime_maxTime" name="expectedTime[maxTime]"
+		  <input type="number" id="expectedTime_maxTime" name="expectedTime[max]"
 		    value="<%- expectedTime.max %>" min="1" input-append="minutes" class="form-control" required>
                   <span class="input-group-addon">minutes</span>
                 </div>
@@ -122,7 +123,7 @@ class TaskTypeCreateView extends Marionette.LayoutView
               <label class="col-sm-8 control-label" for="expectedTime_maxHard">Time limit</label>
               <div class="col-sm-4">
                 <div class="input-group">
-                  <input type="number" id="expectedTime_maxHard" name="expectedTime.maxHard"
+		  <input type="number" id="expectedTime_maxHard" name="expectedTime[maxHard]"
 		    value="<%- expectedTime.hardMax %>" min="1" input-append="minutes" class="form-control" required>
                   <span class="input-group-addon">minutes</span>
                 </div>
@@ -131,7 +132,7 @@ class TaskTypeCreateView extends Marionette.LayoutView
 
             <div class="form-group">
               <div class="col-sm-9 col-sm-offset-3">
-                <button type="submit" class="form-control btn btn-primary"><%- getSubmitLabel() %></button>
+		<button type="submit" class="form-control btn btn-primary"><%- getTitle() %></button>
               </div>
             </div>
         </div>
@@ -141,7 +142,7 @@ class TaskTypeCreateView extends Marionette.LayoutView
   className : "container wide task-types-administration"
 
   templateHelpers : ->
-    getSubmitLabel : => if @isEditMode then "Update" else "Create"
+    getTitle : => if @isEditMode then "Update" else "Create"
     isChecked : (bool) -> return "checked" if bool
 
   regions :
@@ -152,7 +153,6 @@ class TaskTypeCreateView extends Marionette.LayoutView
 
   ui :
     "form" : "form"
-
 
 
   initialize : ->
@@ -168,29 +168,17 @@ class TaskTypeCreateView extends Marionette.LayoutView
 
     event.preventDefault()
 
-
-    target = $(event.target)
-
     if not @ui.form[0].checkValidity()
       Toast.error("Please supply all needed values.")
       return
 
     formValues = FormSyphon.serialize(@ui.form)
-    debugger
+    formValues.preferredMode = null if formValues.preferredMode == "Any"
+    formValues.settings.allowedModes = []
 
-    url =
-      if @isEditMode
-        "/api/taskTypes/#{@model.get("id")}"
-      else
-        "/api/taskTypes"
-
-    Request.sendJSONReceiveJSON(
-      url
-      data : formValues
-    ).then(
+    @model.save(formValues).then(
       -> app.router.navigate("/taskTypes", { trigger: true })
     )
-
 
 
   onRender : ->
@@ -199,6 +187,7 @@ class TaskTypeCreateView extends Marionette.LayoutView
       collection : new TeamCollection()
       childViewOptions :
         modelValue: -> return "#{@model.get("name")}"
+	defaultItem : {name : @model.get("team")}
       data : "amIAnAdmin=true"
       name : "team"
       required : true

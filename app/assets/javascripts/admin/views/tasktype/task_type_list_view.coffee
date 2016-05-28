@@ -46,7 +46,7 @@ class TaskTypeListView extends Marionette.CompositeView
 
   filterBySearch : (searchQuery) ->
 
-    @collection.setFilter(["summary", "team", "expectedTime", "description", "id"], searchQuery)
+    @collection.setFilter(["summary", "team", "description", "id"], searchQuery)
 
 
 module.exports = TaskTypeListView

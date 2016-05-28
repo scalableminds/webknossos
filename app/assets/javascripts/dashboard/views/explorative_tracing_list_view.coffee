@@ -27,7 +27,7 @@ class ExplorativeTracingListView extends Marionette.CompositeView
                 <i class="fa fa-spinner fa-spin fileinput-exists" id="form-spinner-icon"></i>
                 Upload NML & explore
               </span>
-              <input type="file" name="nmlFile" multiple accept=".nml">
+              <input type="file" name="nmlFile" multiple accept=".nml, .zip">
             </span>
           </div>
         </form>

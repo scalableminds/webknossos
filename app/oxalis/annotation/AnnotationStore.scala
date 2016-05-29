@@ -6,17 +6,24 @@ import akka.util.Timeout
 import reactivemongo.bson.BSONObjectID
 import scala.concurrent.{Await, Future}
 import scala.concurrent.duration._
+
 import net.liftweb.common.Box
 import play.api.Logger
-import models.annotation.{Annotation, AnnotationService, AnnotationType, AnnotationLike}
+import models.annotation.{Annotation, AnnotationLike, AnnotationService, AnnotationType}
 import oxalis.annotation.handler.AnnotationInformationHandler
 import com.scalableminds.util.reactivemongo.DBAccessContext
 import com.scalableminds.util.tools.Fox
 import play.api.libs.json.Json
 import models.user.User
 import net.liftweb.common.Failure
+import play.api.cache.Cache
+import play.api.Play.current
 
-case class AnnotationIdentifier(annotationType: String, identifier: String)
+case class AnnotationIdentifier(annotationType: String, identifier: String){
+
+  def toUniqueString =
+    annotationType + "__" + identifier
+}
 
 object AnnotationIdentifier{
   implicit val annotationIdentifierFormat = Json.format[AnnotationIdentifier]
@@ -35,26 +42,15 @@ class AnnotationStore extends Actor {
 
   val maxCacheTime = 5 minutes
 
-  val cachedAnnotations = Agent[Map[AnnotationIdentifier, StoredResult]](Map())
-
-  def removeExpired() {
-    cachedAnnotations.send {
-      cached =>
-        cached.filterNot(e => isExpired(maxCacheTime)(e._2))
-    }
-  }
-
-  override def preStart() = {
-    system.scheduler.schedule(maxCacheTime, maxCacheTime)(removeExpired)
+  def cachedAnnotation(annotationId: AnnotationIdentifier): Option[StoredResult] = {
+    Cache.getAs[StoredResult](annotationId.toUniqueString)
   }
 
   def receive = {
     case RequestAnnotation(id, user, ctx) =>
       val s = sender
 
-      cachedAnnotations()
-        .get(id)
-        .filterNot(isExpired(maxCacheTime))
+      cachedAnnotation(id)
         .map(_.result)
         .getOrElse(requestAnnotation(id, user)(ctx))
         .futureBox
@@ -84,9 +80,6 @@ class AnnotationStore extends Actor {
       }
   }
 
-  def isExpired(maxAge: Duration)(result: StoredResult) =
-    System.currentTimeMillis - result.timestamp > maxAge.toMillis
-
   def requestAnnotation(id: AnnotationIdentifier, user: Option[User])(implicit ctx: DBAccessContext) = {
     try {
       val handler = AnnotationInformationHandler.informationHandlers(id.annotationType)
@@ -94,7 +87,7 @@ class AnnotationStore extends Actor {
         handler.provideAnnotation(id.identifier, user)
       if (handler.cache) {
         val stored = StoredResult(f)
-        cachedAnnotations.send(_ + (id -> stored))
+        Cache.set(id.toUniqueString, stored, maxCacheTime)
       }
       f
     } catch {
@@ -104,25 +97,25 @@ class AnnotationStore extends Actor {
     }
   }
 
-    def mergeAnnotation(annotation: Fox[AnnotationLike], annotationSec: Fox[AnnotationLike], readOnly: Boolean, user: User)(implicit ctx: DBAccessContext) = {
-      try {
-        for {
-          ann <- annotation
-          annSec <- annotationSec
-          mergedAnnotation <- AnnotationService.merge(readOnly, user._id, annSec.team, annSec.typ, ann, annSec)
-        } yield {
+  def mergeAnnotation(annotation: Fox[AnnotationLike], annotationSec: Fox[AnnotationLike], readOnly: Boolean, user: User)(implicit ctx: DBAccessContext) = {
+    try {
+      for {
+        ann <- annotation
+        annSec <- annotationSec
+        mergedAnnotation <- AnnotationService.merge(readOnly, user._id, annSec.team, annSec.typ, ann, annSec)
+      } yield {
 
-          // Caching of merged annotation
-          val storedMerge = StoredResult(Some(mergedAnnotation))
-          val mID = AnnotationIdentifier(mergedAnnotation.typ, mergedAnnotation.id)
-          cachedAnnotations.send(_ + (mID -> storedMerge))
+        // Caching of merged annotation
+        val storedMerge = StoredResult(Some(mergedAnnotation))
+        val mID = AnnotationIdentifier(mergedAnnotation.typ, mergedAnnotation.id)
+        Cache.set(mID.toUniqueString, storedMerge, maxCacheTime)
 
-          mergedAnnotation
-        }
-      } catch {
-        case e: Exception =>
-          Logger.error("Request Annotaton in AnnotationStore failed: " + e)
-          throw e
+        mergedAnnotation
       }
+    } catch {
+      case e: Exception =>
+        Logger.error("Request Annotation in AnnotationStore failed: " + e)
+        throw e
+    }
   }
 }

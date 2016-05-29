@@ -1,4 +1,5 @@
 import akka.actor.{PoisonPill, Props}
+import akka.routing.RoundRobinRouter
 import com.scalableminds.util.reactivemongo.GlobalDBAccess
 import com.scalableminds.util.security.SCrypt
 import com.scalableminds.datastore.services.BinaryDataService
@@ -10,7 +11,7 @@ import play.api._
 import play.api.libs.concurrent._
 import models.user._
 import models.task._
-import oxalis.annotation.{AnnotationStore}
+import oxalis.annotation.AnnotationStore
 import com.scalableminds.util.mail.Mailer
 import play.api.libs.concurrent.Execution.Implicits._
 import com.typesafe.config.Config
@@ -44,7 +45,8 @@ object Global extends WithFilters(MetricsFilter) with GlobalSettings {
 
   def startActors(conf: Config, app: Application) {
     Akka.system(app).actorOf(
-      Props(new AnnotationStore()),
+      Props[AnnotationStore].withRouter(
+        RoundRobinRouter(nrOfInstances = 10)),
       name = "annotationStore")
 
     Akka.system(app).actorOf(

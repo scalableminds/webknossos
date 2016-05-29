@@ -1,7 +1,7 @@
-_                = require("lodash")
-app              = require("app")
-Marionette       = require("backbone.marionette")
-TaskTypeItemView = require("./task_type_item_view")
+_                     = require("lodash")
+app                   = require("app")
+Marionette            = require("backbone.marionette")
+TaskTypeListItemView  = require("./task_type_list_item_view")
 
 class TaskTypeListView extends Marionette.CompositeView
 
@@ -27,7 +27,7 @@ class TaskTypeListView extends Marionette.CompositeView
     """)
 
   className : "container wide task-types-administration"
-  childView : TaskTypeItemView
+  childView : TaskTypeListItemView
   childViewContainer: "tbody"
 
 

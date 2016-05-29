@@ -17,7 +17,7 @@ class TaskTypeModel extends Backbone.Model
     expectedTime :
       min : 300
       max : 600
-      hardMax : 900
+      maxHard : 900
 
 
   parse : (response) ->

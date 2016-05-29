@@ -215,15 +215,20 @@ object AnnotationController extends Controller with Secured with TracingInformat
   }
 
   def updateWithJson(typ: String, id: String, version: Int) = Authenticated.async(parse.json(maxLength = 2097152)) { implicit request =>
-      def executeIfAllowed(oldAnnotation: Annotation, isAllowed: Boolean, oldJs: JsObject) = {
+      def executeIfAllowed(oldAnnotation: Annotation, isAllowed: Boolean) = {
         if (isAllowed)
           for {
             result <- handleUpdates(oldAnnotation, request.body, version)
           } yield {
             JsonOk(result, "annotation.saved")
           }
-        else
-          new Fox(Future.successful(Full(new JsonResult(CONFLICT)(oldJs, Messages("annotation.dirtyState")))))
+        else {
+          for {
+            oldJs <- oldAnnotation.annotationInfo(Some(request.user))
+          } yield {
+            new JsonResult(CONFLICT)(oldJs, Messages("annotation.dirtyState"))
+          }
+        }
       }
 
       //Logger.info(s"Tracing update [$typ - $id, $version]: ${request.body}")
@@ -233,8 +238,7 @@ object AnnotationController extends Controller with Secured with TracingInformat
         oldAnnotation <- findAnnotation(typ, id)
         updateableAnnotation <- isUpdateable(oldAnnotation) ?~> Messages("annotation.update.impossible")
         isAllowed <- isUpdateAllowed(oldAnnotation, version).toFox
-        oldJs <- oldAnnotation.annotationInfo(Some(request.user))
-        result <- executeIfAllowed(updateableAnnotation, isAllowed, oldJs)
+        result <- executeIfAllowed(updateableAnnotation, isAllowed)
       } yield {
         result
       }

@@ -47,7 +47,7 @@ trait TracingInformationProvider extends play.api.http.Status with FoxImplicits 
   }
 
   def findAnnotation(annotationId: AnnotationIdentifier)(implicit request: UserAwareRequest[_]): Fox[AnnotationLike] = {
-    implicit val timeout = Timeout(5 seconds)
+    implicit val timeout = Timeout(10 seconds)
     val f = annotationStore ? RequestAnnotation(annotationId, request.userOpt, authedRequestToDBAccess)
 
     f.mapTo[Box[AnnotationLike]]
@@ -58,7 +58,7 @@ trait TracingInformationProvider extends play.api.http.Status with FoxImplicits 
   }
 
   def mergeAnnotation(annotationId: AnnotationIdentifier, mergedAnnotationId: AnnotationIdentifier, readOnly: Boolean)(implicit request: AuthenticatedRequest[_]): Fox[AnnotationLike] = {
-    implicit val timeout = Timeout(5 seconds)
+    implicit val timeout = Timeout(10.seconds)
 
     val annotation = annotationStore ? RequestAnnotation(annotationId, request.userOpt, authedRequestToDBAccess)
     val annotationSec = annotationStore ? RequestAnnotation(mergedAnnotationId, request.userOpt, authedRequestToDBAccess)

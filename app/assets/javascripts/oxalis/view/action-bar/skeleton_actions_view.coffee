@@ -15,14 +15,11 @@ class SkeletonActionsView extends Marionette.ItemView
 
   addNode : ->
 
-    # create xy offset
-    position = @model.flycam.getPosition()
-
     datasetConfig = @model.get("datasetConfiguration")
 
     # add node
     @model.skeletonTracing.addNode(
-      position,
+      @model.flycam.getPosition(),
       @model.flycam.getRotation(Constants.PLANE_XY),
       Constants.TYPE_USUAL,
       Constants.PLANE_XY, # xy viewport
@@ -30,9 +27,5 @@ class SkeletonActionsView extends Marionette.ItemView
       if datasetConfig.get("fourBit") then 4 else 8,
       datasetConfig.get("interpolation")
     )
-    newPosition = position.slice()
-    newPosition[0] += Math.pow(2, @model.flycam.getIntegerZoomStep())
-    newPosition[1] += Math.pow(2, @model.flycam.getIntegerZoomStep())
-    @model.flycam.setPosition(newPosition)
 
 module.exports = SkeletonActionsView

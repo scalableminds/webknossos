@@ -92,7 +92,7 @@ class Router extends BaseRouter
 
   users : ->
 
-    @showWithPagination("UserListView", "UserCollection")
+    @showWithPagination("UserListView", "PaginatedUserCollection")
 
 
   teams : ->

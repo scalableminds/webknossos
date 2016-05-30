@@ -32,7 +32,7 @@ class ExplorativeTracingListItemView extends Marionette.ItemView
     </td>
     <td><%- dataSetName %></td>
 
-    <td>
+    <td class="nowrap">
       <% if (stats && (contentType == "skeletonTracing")) { %>
         <span title="Trees"><i class="fa fa-sitemap"></i><%- stats.numberOfTrees %>&nbsp;</span><br />
         <span title="Nodes"><i class="fa fa-bull"></i><%- stats.numberOfNodes %>&nbsp;</span><br />

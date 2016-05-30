@@ -3,17 +3,17 @@
  */
 package models.tracing.skeleton
 
-import com.scalableminds.util.geometry.{Vector3D, BoundingBox, Point3D}
+import com.scalableminds.util.geometry.{BoundingBox, Point3D, Vector3D}
 import com.scalableminds.util.reactivemongo.DBAccessContext
 import com.scalableminds.util.tools.Fox
 import models.annotation.CompoundAnnotation._
-import models.annotation.{AnnotationSettings, AnnotationContentService}
+import models.annotation.{AnnotationContentService, AnnotationSettings}
 import models.binary.DataSet
 import models.task.Task
 import models.tracing.CommonTracingService
-import models.tracing.skeleton.temporary.{TemporarySkeletonTracingService, TemporarySkeletonTracing}
-import models.user.{User, UsedAnnotationDAO}
-import oxalis.nml.{TreeLike, NML, Tree}
+import models.tracing.skeleton.temporary.{TemporarySkeletonTracing, TemporarySkeletonTracingService}
+import models.user.{UsedAnnotationDAO, User}
+import oxalis.nml.{BranchPoint, NML, Tree, TreeLike}
 import play.api.libs.json.Json
 import reactivemongo.bson.BSONObjectID
 import play.api.libs.concurrent.Execution.Implicits._
@@ -30,12 +30,22 @@ object SkeletonTracingService extends AnnotationContentService with CommonTracin
     rotation: Vector3D,
     boundingBox: Option[BoundingBox],
     insertStartAsNode: Boolean,
+    isFirstBranchPoint: Boolean,
     settings: AnnotationSettings = AnnotationSettings.skeletonDefault)
     (implicit ctx: DBAccessContext): Fox[SkeletonTracing] = {
 
     val trees =
       if (insertStartAsNode)
         List(Tree.createFrom(start, rotation))
+      else
+        Nil
+
+    val branchPoints =
+      if(isFirstBranchPoint)
+        // Find the first node and create a branchpoint at its id
+        trees.headOption.flatMap(_.nodes.headOption).map { node =>
+          BranchPoint(node.id)
+        }.toList
       else
         Nil
 
@@ -52,7 +62,7 @@ object SkeletonTracingService extends AnnotationContentService with CommonTracin
         "",
         dataSetName,
         trees,
-        Nil,
+        branchPoints,
         System.currentTimeMillis(),
         if(insertStartAsNode) Some(1) else None,
         start,
@@ -83,7 +93,13 @@ object SkeletonTracingService extends AnnotationContentService with CommonTracin
   }
 
   def createFrom(dataSet: DataSet)(implicit ctx: DBAccessContext): Fox[SkeletonTracing] =
-    createFrom(dataSet.name, dataSet.defaultStart, dataSet.defaultRotation, None, insertStartAsNode = false)
+    createFrom(
+      dataSet.name, 
+      dataSet.defaultStart, 
+      dataSet.defaultRotation, 
+      None, 
+      insertStartAsNode = false, 
+      isFirstBranchPoint = false)
 
   def clearAndRemove(skeletonId: String)(implicit ctx: DBAccessContext) =
     SkeletonTracingDAO.withValidId(skeletonId) { _id =>

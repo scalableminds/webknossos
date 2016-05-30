@@ -41,7 +41,6 @@ class Model extends Backbone.Model
 
     Request.receiveJSON(infoUrl).then( (tracing) =>
 
-      @set("datasetName", tracing.content.dataSet.name)
 
       if tracing.error
         Toast.error(tracing.error)
@@ -52,8 +51,8 @@ class Model extends Backbone.Model
         return {"error" : true}
 
       else unless tracing.content.dataSet.dataLayers
-        if @get("datasetName")
-          Toast.error("Please, double check if you have the dataset '#{@get("datasetName")}' imported.")
+        if datasetName = tracing.content.dataSet.name
+          Toast.error("Please, double check if you have the dataset '#{datasetName}' imported.")
         else
           Toast.error("Please, make sure you have a dataset imported.")
         return {"error" : true}
@@ -62,6 +61,7 @@ class Model extends Backbone.Model
 
         @user = new User()
         @set("user", @user)
+        @set("datasetName", tracing.content.dataSet.name)
 
         @user.fetch().then( =>
 

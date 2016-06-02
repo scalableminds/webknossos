@@ -50,7 +50,8 @@ case class User(
 
   val name = firstName + " " + lastName
 
-  val abreviatedName = (firstName.take(1) + lastName) toLowerCase
+  val abreviatedName =
+    (firstName.take(1) + lastName).toLowerCase.replace(" ", "_")
 
   lazy val id = _id.stringify
 

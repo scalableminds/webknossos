@@ -191,7 +191,7 @@ class UserController @Inject()(val messagesApi: MessagesApi)
           _ <- ensureProperTeamAdministration(user, teamsWithUpdate)
           trimmedExperiences = experiences.map { case (key, value) => key.trim -> value }
           updatedTeams = teamsWithUpdate.map(_._1) ++ teamsWithoutUpdate
-          updatedUser <- UserService.update(user, firstName, lastName, verified, updatedTeams, trimmedExperiences)
+          updatedUser <- UserService.update(user, firstName.trim, lastName.trim, verified, updatedTeams, trimmedExperiences)
         } yield {
           Ok(User.userPublicWrites(request.user).writes(updatedUser))
         }

@@ -150,7 +150,7 @@ object UserController extends Controller with Secured with Dashboard with FoxImp
         Fox.successful(team)
     })
   }
-  
+
   def update(userId: String) = Authenticated.async(parse.json) { implicit request =>
     val issuingUser = request.user
     request.body.validate(userUpdateReader) match{
@@ -168,7 +168,7 @@ object UserController extends Controller with Secured with Dashboard with FoxImp
         } yield {
           val trimmedExperiences = experiences.map{ case (key, value) => key.trim -> value}
           val updatedTeams = teamsWithUpdate.map(_._1) ++ teamsWithoutUpdate
-          UserService.update(user, firstName, lastName, verified, updatedTeams, trimmedExperiences)
+          UserService.update(user, firstName.trim, lastName.trim, verified, updatedTeams, trimmedExperiences)
           Ok
         }
       case e: JsError =>

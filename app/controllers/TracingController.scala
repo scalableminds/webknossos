@@ -39,10 +39,16 @@ trait TracingInformationProvider extends play.api.http.Status with FoxImplicits 
   }
 
   def findAnnotation(annotationId: AnnotationIdentifier)(implicit request: UserAwareRequest[_]): Fox[AnnotationLike] = {
-    implicit val timeout = Timeout(10.seconds)
-    val f = Application.annotationStore ? RequestAnnotation(annotationId, request.userOpt, authedRequestToDBAccess)
+    try {
+      implicit val timeout = Timeout(10.seconds)
+      val f = Application.annotationStore ? RequestAnnotation(annotationId, request.userOpt, authedRequestToDBAccess)
 
-    f.mapTo[Box[AnnotationLike]]
+      f.mapTo[Box[AnnotationLike]]
+    } catch {
+      case e: Exception =>
+        Logger.error(s"Failed to retrieve annotation $annotationId in time!")
+        Fox.failure("Failed to retrieve annotation in time.", Full(e))
+    }
   }
 
   def withMergedAnnotation[T](typ: AnnotationType, id: String, mergedId: String, mergedTyp: String, readOnly: Boolean)(f: AnnotationLike => Fox[T])(implicit request: AuthenticatedRequest[_]): Fox[T] = {

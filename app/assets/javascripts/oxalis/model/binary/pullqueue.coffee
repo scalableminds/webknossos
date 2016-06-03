@@ -64,11 +64,9 @@ class PullQueue
 
     Request.always(
       requestData(batch).then((responseBuffer) =>
-        responseBuffer = new Uint8Array(responseBuffer)
         @connectionInfo.log(@layer.name, roundTripBeginTime, batch.length, responseBuffer.length)
 
         offset = 0
-
         for bucket, i in batch
           if bucket.fourBit
             bucketData = @decode4bit(responseBuffer.subarray(offset, offset += (@cube.BUCKET_LENGTH >> 1)))
@@ -108,18 +106,49 @@ class PullQueue
         timeout : @MESSAGE_TIMEOUT
         compress : true
       )
+    ).then( (responseBuffer) =>
+      responseBuffer = new Uint8Array(responseBuffer)
     )
 
 
   requestFromNDstore : (batch) =>
 
-    bucket = @getBucketData(batch[0])
-    url = """#{@datastoreInfo.url}/ca/#{@datastoreInfo.accessToken}/raw/raw/#{bucket.zoomStep}/
-      #{bucket.position[0]},#{bucket.position[0]+bucket.cubeSize}/
-      #{bucket.position[1]},#{bucket.position[1]+bucket.cubeSize}/
-      #{bucket.position[2]},#{bucket.position[2]+bucket.cubeSize}/"""
+    return new Promise( (resolve, reject) =>
+      bucket = @getBucketData(batch[0])
+      bucketSize = bucket.cubeSize
 
-    return Request.receiveArraybuffer(url)
+      # ndstore cannot deliver data for coordinates that are out of bounds
+      bounds = @clampBucketToMaxCoordinates(bucket)
+      url = """#{@datastoreInfo.url}/ca/#{@datastoreInfo.accessToken}/raw/raw/#{bucket.zoomStep}/
+        #{bounds[0]},#{bounds[3]}/
+        #{bounds[1]},#{bounds[4]}/
+        #{bounds[2]},#{bounds[5]}/"""
+
+      # if at least one dimension is out of bounds, return an empty array
+      if bounds[0] >= bounds[3] or bounds[1] >= bounds[4] or bounds[2] >= bounds[5]
+        resolve(new Uint8Array(bucketSize * bucketSize * bucketSize))
+        return
+
+      Request.receiveArraybuffer(url).then(
+        (responseBuffer) =>
+          # the untyped array cannot be accessed by index, use a dataView for that
+          dataView = new DataView(responseBuffer)
+
+          # create a typed uint8 array that is initialized with zeros
+          buffer = new Uint8Array(bucketSize * bucketSize * bucketSize)
+          bucketBounds = @getMaxCoordinatesAsBucket(bounds, bucket)
+
+          # copy the ndstore response into the new array, respecting the bounds of the dataset
+          index = 0
+          for z in [bucketBounds[2]...bucketBounds[5] or bucket.cubeSize]
+            for y in [bucketBounds[1]...bucketBounds[4] or bucket.cubeSize]
+              for x in [bucketBounds[0]...bucketBounds[3] or bucket.cubeSize]
+                buffer[z * bucketSize * bucketSize + y * bucketSize + x] = dataView.getUint8(index++)
+          resolve(buffer)
+        (error) =>
+          reject(error)
+      )
+    )
 
 
   getBucketData : (bucket) =>
@@ -168,12 +197,34 @@ class PullQueue
     newColors
 
 
+  clampBucketToMaxCoordinates : ( {position, cubeSize, zoomStep} ) ->
+
+    min = @layer.lowerBoundary
+    max = @layer.upperBoundary
+
+    [ x, y, z ] = position
+    return [
+      Math.max(min[0], x)
+      Math.max(min[1], y)
+      Math.max(min[2], z)
+      # maxCoordinates are exclusive
+      Math.min(max[0], x + cubeSize)
+      Math.min(max[1], y + cubeSize)
+      Math.min(max[2], z + cubeSize)
+    ]
+
+
+  getMaxCoordinatesAsBucket : (bounds, bucket) ->
+
+    return _.map(bounds, (e) => e % (1 << ( @cube.BUCKET_SIZE_P + bucket.zoomStep )))
+
+
   setFourBit : (@fourBit) ->
 
 
   shouldRequestFourBit : ->
 
-    return @fourBit and @layer.category == "color"
+    return @fourBit and @layer.category == "color" and not @isNDstore()
 
 
   isNDstore : ->

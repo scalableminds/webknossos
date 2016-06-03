@@ -53,7 +53,7 @@ trait NMLParsingService {
     ZipIO.unzipWithFilenames(file).map{
       case (filename, nmlFile) =>
         val prefix = filename.replaceAll("\\.[^.]*$", "") + "_"
-        NMLParser.parse(nmlFile) match {
+        NMLParser.parse(nmlFile, filename) match {
           case Full(nml) =>
             NMLParseSuccess(name, nml.copy(trees = nml.trees.map(_.addNamePrefix(prefix))))
           case Failure(msg, _, _) =>

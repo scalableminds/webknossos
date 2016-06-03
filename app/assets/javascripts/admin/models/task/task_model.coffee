@@ -30,9 +30,10 @@ class TaskModel extends Backbone.Model
     tracingTime : null
     isForAnonymous : false
 
+
   destroy : ->
 
-    options = url : "/api/tasks/#{@get('id')}/delete"
+    options = url : "/api/tasks/#{@get('id')}"
     super(options)
 
 

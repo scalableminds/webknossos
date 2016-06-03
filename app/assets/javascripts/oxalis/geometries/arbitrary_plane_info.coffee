@@ -1,53 +1,62 @@
-marionette = require("backbone.marionette")
+marionette    = require("backbone.marionette")
+ToggleButton  = require("bootstrap-toggle")
 
 class ArbitraryPlaneInfo extends Backbone.Marionette.ItemView
 
-  NOT_RECORDING_CLASS : "not-recording"
-  NOT_RECORDING : "Watching"
-  RECORDING_CLASS : "recording"
-  RECORDING : "RECORDING"
-
-  tagName : "div"
   id : "arbitrary-info-canvas"
-  className : ->
-    if @model.get("isRecording")
-      return @RECORDING_CLASS
-    else
-      return @NOT_RECORDING_CLASS
 
   template : _.template("""
-    <span class="recording-text">
-      <%= recordingText %>
-    </span>
+    <input type="checkbox" <%= getCheckedStatus() %> >
   """)
 
-  constructor : ->
+  templateHelpers :
+    getCheckedStatus : ->
+      return "checked" if @flightmodeRecording
 
-    # Initialize Model in constructor so it is already available for className()
-    @model = new Backbone.Model({
-      isRecording : false,
-      recordingText : @NOT_RECORDING
-    })
+  events :
+    "change input" : "handleCheckboxChange"
 
-    super()
+  ui :
+    "checkbox" : "input"
 
 
   initialize : ->
 
-    @listenTo(@model, "change", @render)
+    @listenTo(@model, "change:flightmodeRecording", @updateCheckboxToggle)
 
 
-  updateInfo : (isRecording) ->
+  onRender : ->
 
-    @model.set({
-      isRecording : isRecording,
-      recordingText : if isRecording then @RECORDING else @NOT_RECORDING
+    @ui.checkbox.bootstrapToggle({
+      off : "Watching",
+      offstyle : "success",
+      on : "RECORDING",
+      onstyle : "danger",
+      width : 140,
     })
+    @updateCheckboxToggle()
 
-    @$el
-      .removeClass(@NOT_RECORDING_CLASS)
-      .removeClass(@RECORDING_CLASS)
-      .addClass(@className())
+
+  handleCheckboxChange : (evt) ->
+
+    value = evt.target.checked
+    @model.set("flightmodeRecording", value)
+
+    # Set a inital waypoint when enabling flight mode
+    # TODO: use the offical wK API
+    if value = true
+      app.oxalis.arbitraryController.setWaypoint()
+
+
+  updateCheckboxToggle : ->
+    if @model.get("flightmodeRecording") == @ui.checkbox.prop("checked")
+      return
+    @ui.checkbox.prop({ checked:  @model.get("flightmodeRecording") }).change()
+
+
+  onDestroy : ->
+
+    @ui.checkbox.bootstrapToggle("destroy")
 
 
 module.exports = ArbitraryPlaneInfo

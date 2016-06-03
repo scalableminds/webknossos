@@ -102,7 +102,7 @@ trait SkeletonManipulations extends FoxImplicits {
           }
       }
     } yield {
-      this.copy(stats = Some(SkeletonTracingStatistics(numberOfNodes, numberOfEdges, numberOfTrees))).saveToDB(GlobalAccessContext)
+      SkeletonTracingDAO.updateStats(this._id, SkeletonTracingStatistics(numberOfNodes, numberOfEdges, numberOfTrees))(GlobalAccessContext)
       SkeletonTracingStatistics(numberOfNodes, numberOfEdges, numberOfTrees)
     }
   }
@@ -159,6 +159,9 @@ object SkeletonTracingDAO extends SecuredBaseDAO[SkeletonTracing] with FoxImplic
   def resetBranchPoints(_tracing: BSONObjectID)(implicit ctx: DBAccessContext) =
     update(Json.obj("_id" -> _tracing), Json.obj("$set" -> Json.obj("branchPoints" -> Json.arr())))
 
+  def resetStats(_tracing: BSONObjectID)(implicit ctx: DBAccessContext) =
+    update(Json.obj("_id" -> _tracing), Json.obj("$unset" -> Json.obj("stats" -> true)))
+
   def addBranchPoint(_tracing: BSONObjectID, bp: BranchPoint)(implicit ctx: DBAccessContext) =
     findAndModify(
       Json.obj("_id" -> _tracing),
@@ -172,4 +175,7 @@ object SkeletonTracingDAO extends SecuredBaseDAO[SkeletonTracing] with FoxImplic
       Json.obj("$set" -> Json.obj(
         "comments.-1" -> comment)),
       returnNew = true)
+
+  def updateStats(_tracing: BSONObjectID, stats: SkeletonTracingStatistics)(implicit ctx: DBAccessContext) =
+    update(Json.obj("_id" -> _tracing), Json.obj("$set" -> Json.obj("stats" -> stats)))
 }

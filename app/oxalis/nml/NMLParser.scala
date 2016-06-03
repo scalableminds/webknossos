@@ -3,7 +3,7 @@ package oxalis.nml
 import java.io.{File, FileInputStream, InputStream}
 
 import scala.annotation.tailrec
-import scala.xml.{Node => XMLNode, NodeSeq, XML}
+import scala.xml.{NodeSeq, XML, Node => XMLNode}
 
 import com.scalableminds.util.geometry.{Point3D, Scale}
 import com.scalableminds.util.image.Color
@@ -16,24 +16,24 @@ object NMLParser {
 
   def createUniqueIds(trees: Seq[Tree]) = {
     trees.foldLeft(List[Tree]()) {
-      (l, t) =>
-        if (l.isEmpty || l.find(_.treeId == t.treeId).isEmpty)
+      case (l, t) =>
+        if (!l.exists(_.treeId == t.treeId))
           t :: l
         else {
-          val alteredId = (l.maxBy(_.treeId).treeId + 1)
+          val alteredId = l.maxBy(_.treeId).treeId + 1
           t.copy(treeId = alteredId) :: l
         }
     }
   }
 
-  def parse(input: InputStream) = {
-    val result = NMLParserImpl.parse(input)
+  def parse(input: InputStream, name: String) = {
+    val result = NMLParserImpl.parse(input, name)
     input.close()
     result
   }
 
   def parse(file: File): Box[NML] = {
-    parse(new FileInputStream(file))
+    parse(new FileInputStream(file), file.getName)
   }
 
   private object NMLParserImpl {
@@ -46,7 +46,7 @@ object NMLParser {
     val DEFAULT_INTERPOLATION = false
     val DEFAULT_TIMESTAMP = 0L
 
-    def parse(in: InputStream): Box[NML] = {
+    def parse(in: InputStream, name: String): Box[NML] = {
       try {
         val data = XML.load(in)
         for {
@@ -65,8 +65,8 @@ object NMLParser {
         }
       } catch {
         case e: Exception =>
-          Logger.error("Failed to parse NML due to " + e)
-          Failure("Couldn't parse nml: " + e.toString)
+          Logger.error(s"Failed to parse NML $name due to " + e)
+          Failure(s"Couldn't parse nml '$name': " + e.toString)
       }
     }
 
@@ -77,7 +77,7 @@ object NMLParser {
     def validateTrees(trees: Seq[Tree]): Box[Seq[Tree]] = {
       val nodeIds = trees.flatMap(_.nodes).map(_.id)
       nodeIds.size == nodeIds.distinct.size match {
-        case true => Full(trees)
+        case true  => Full(trees)
         case false => Failure("NML contains nodes with duplicate ids.")
       }
     }
@@ -109,7 +109,7 @@ object NMLParser {
           val r = (component ++ currentComponent)
           buildTreeFromNode(tail ::: connectedNodes.toList, treeReminder -- currentComponent, r)
         } else
-          (treeReminder -> component)
+            (treeReminder -> component)
       }
 
       var treeToProcess = tree
@@ -203,7 +203,7 @@ object NMLParser {
             case nodes if nodes.size > 0 =>
               val edges = (tree \ "edges" \ "edge").flatMap(parseEdge).toSet
               Some(Tree(id, nodes.toSet, edges, color, name))
-            case _ =>
+            case _                       =>
               None
           }
       }

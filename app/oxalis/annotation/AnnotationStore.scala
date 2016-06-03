@@ -6,17 +6,24 @@ import akka.util.Timeout
 import reactivemongo.bson.BSONObjectID
 import scala.concurrent.{Await, Future}
 import scala.concurrent.duration._
+
 import net.liftweb.common.Box
 import play.api.Logger
-import models.annotation.{Annotation, AnnotationService, AnnotationType, AnnotationLike}
+import models.annotation.{Annotation, AnnotationLike, AnnotationService, AnnotationType}
 import oxalis.annotation.handler.AnnotationInformationHandler
 import com.scalableminds.util.reactivemongo.DBAccessContext
 import com.scalableminds.util.tools.Fox
 import play.api.libs.json.Json
 import models.user.User
 import net.liftweb.common.Failure
+import play.api.cache.Cache
+import play.api.Play.current
 
-case class AnnotationIdentifier(annotationType: String, identifier: String)
+case class AnnotationIdentifier(annotationType: String, identifier: String){
+
+  def toUniqueString =
+    annotationType + "__" + identifier
+}
 
 object AnnotationIdentifier {
   implicit val annotationIdentifierFormat = Json.format[AnnotationIdentifier]
@@ -37,17 +44,8 @@ class AnnotationStore extends Actor {
 
   val maxCacheTime = 5 minutes
 
-  val cachedAnnotations = Agent[Map[AnnotationIdentifier, StoredResult]](Map())
-
-  def removeExpired() {
-    cachedAnnotations.send {
-      cached =>
-        cached.filterNot(e => isExpired(maxCacheTime)(e._2))
-    }
-  }
-
-  override def preStart() = {
-    system.scheduler.schedule(maxCacheTime, maxCacheTime)(removeExpired)
+  def cachedAnnotation(annotationId: AnnotationIdentifier): Option[StoredResult] = {
+    Cache.getAs[StoredResult](annotationId.toUniqueString)
   }
 
   def receive = {
@@ -89,10 +87,7 @@ class AnnotationStore extends Actor {
   def requestFromCache(id: AnnotationIdentifier): Option[Fox[AnnotationLike]] = {
     val handler = AnnotationInformationHandler.informationHandlers(id.annotationType)
     if (handler.cache) {
-      cachedAnnotations()
-        .get(id)
-        .filterNot(isExpired(maxCacheTime))
-        .map(_.result)
+      cachedAnnotation(id).map(_.result)
     } else
       None
   }
@@ -104,7 +99,7 @@ class AnnotationStore extends Actor {
         handler.provideAnnotation(id.identifier, user)
       if (handler.cache) {
         val stored = StoredResult(f)
-        cachedAnnotations.send(_ + (id -> stored))
+        Cache.set(id.toUniqueString, stored, maxCacheTime)
       }
       f
     } catch {
@@ -124,7 +119,7 @@ class AnnotationStore extends Actor {
         // Caching of merged annotation
         val storedMerge = StoredResult(Some(mergedAnnotation))
         val mID = AnnotationIdentifier(mergedAnnotation.typ, mergedAnnotation.id)
-        cachedAnnotations.send(_ + (mID -> storedMerge))
+        Cache.set(mID.toUniqueString, storedMerge, maxCacheTime)
         mergedAnnotation
       }
     } catch {

@@ -68,6 +68,7 @@ class CreateProjectModalView extends Marionette.LayoutView
       childViewOptions :
         defaultItem : {email : app.currentUser.email}
         modelValue : -> return "#{@model.get("firstName")} #{@model.get("lastName")} (#{@model.get("email")})"
+      data : "isAdmin=true"
     )
     @teamSelectionView = new SelectionView(
       collection : new TeamCollection()

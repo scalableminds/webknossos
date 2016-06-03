@@ -146,7 +146,8 @@ object VolumeTracingService extends AnnotationContentService with CommonTracingS
     }
   }
 
-  def clearTracingData(id: String)(implicit ctx: DBAccessContext): Fox[VolumeTracingService.AType] = ???
+  def clearAndRemove(id: String)(implicit ctx: DBAccessContext): Fox[Boolean] = 
+    ???
 }
 
 object VolumeTracing {

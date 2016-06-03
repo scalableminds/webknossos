@@ -19,7 +19,7 @@ import sys.process._
 
 class ProtractorSpec(arguments: Arguments) extends Specification with BeforeAll {
 
-  val argumentMapRead = arguments.commandLine.arguments.filter(_.startsWith("-D")).map(_.split("=")).groupBy(_(0).substring(2)).mapValues(_(0).last)
+  val argumentMapRead = parseCustomJavaArgs(arguments)
   val mongoDb   = argumentMapRead.getOrElse("mongodb.db", "oxalis-testing")
   val mongoHost = argumentMapRead.getOrElse("mongodb.url", "localhost")
   val mongoPort = argumentMapRead.getOrElse("mongodb.port", "27017")
@@ -66,6 +66,12 @@ class ProtractorSpec(arguments: Arguments) extends Specification with BeforeAll 
     new ProcessIO(_ => (),
       stdout => Source.fromInputStream(stdout).getLines().foreach(println),
       stderr => Source.fromInputStream(stderr).getLines().foreach(System.err.println))
+  }
+
+  private def parseCustomJavaArgs(arguments: Arguments) = {
+    val argumentsString = arguments.commandLine.arguments
+    val customArgumentsMap = argumentsString.filter(_.startsWith("-D")).map(_.split("="))
+    customArgumentsMap.groupBy(_(0).substring(2)).mapValues(_(0).last)
   }
 
 }

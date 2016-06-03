@@ -2,6 +2,7 @@ _                       = require("lodash")
 app                     = require("app")
 Marionette              = require("backbone.marionette")
 Toast                   = require("libs/toast")
+Utils                   = require("libs/utils")
 TaskListItemView        = require("./task_list_item_view")
 AnonymousTaskLinkModal  = require("./anonymous_task_link_modal")
 
@@ -64,7 +65,13 @@ class TaskListView extends Marionette.CompositeView
 
   createNewTask : ->
 
-    app.router.navigate("/tasks/create", {trigger : true})
+    if name = @collection.fullCollection.projectName
+      urlParam = "projectName=#{name}"
+    else if id = @collection.fullCollection.taskTypeId
+      urlParam = "taskType=#{id}"
+
+    # The trailing '#' is important for routing
+    app.router.navigate("/tasks/create?#{urlParam}#", {trigger : true})
 
 
   toggleAllDetails : ->
@@ -75,10 +82,9 @@ class TaskListView extends Marionette.CompositeView
 
   showAnonymousLinks : ->
 
-    match = window.location.search.match(/\?showAnonymousLinks=(\S+)/)
-    return unless match
+    anonymousTaskId = Utils.getUrlParams("showAnonymousLinks")
+    return unless anonymousTaskId
 
-    anonymousTaskId = match[1]
     task = @collection.findWhere(id : anonymousTaskId)
     if task and task.get("directLinks")
       @showModal(task)

@@ -1,11 +1,11 @@
 _              = require("lodash")
 app            = require("app")
-FormSyphon              = require("form-syphon")
+FormSyphon     = require("form-syphon")
 Marionette     = require("backbone.marionette")
+Multiselect    = require("bootstrap-multiselect")
 TeamCollection = require("admin/models/team/team_collection")
 SelectionView  = require("admin/views/selection_view")
 Toast          = require("libs/toast")
-Request        = require("libs/request")
 
 class TaskTypeCreateView extends Marionette.LayoutView
 
@@ -141,6 +141,7 @@ class TaskTypeCreateView extends Marionette.LayoutView
 
   ui :
     "form" : "form"
+    "multiselect" : "select[multiple='multiple']"
 
 
   initialize : ->
@@ -180,5 +181,13 @@ class TaskTypeCreateView extends Marionette.LayoutView
       required : true
     )
     @team.show(teamSelectionView)
+
+    @ui.multiselect.multiselect()
+
+
+  onDestroy : ->
+
+    @ui.multiselect.multiselect("destroy")
+
 
 module.exports = TaskTypeCreateView

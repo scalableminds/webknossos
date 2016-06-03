@@ -57,6 +57,27 @@ class PullQueue
     # Loading a bunch of buckets
     @batchCount++
 
+<<<<<<< HEAD
+=======
+    requestData = new MultipartData()
+    fourBit = @shouldRequestFourBit()
+
+    for bucket in batch
+      zoomStep = bucket[3]
+
+      requestData.addPart(
+        "X-Bucket": JSON.stringify(
+          position: [
+            bucket[0] << (zoomStep + @cube.BUCKET_SIZE_P)
+            bucket[1] << (zoomStep + @cube.BUCKET_SIZE_P)
+            bucket[2] << (zoomStep + @cube.BUCKET_SIZE_P)
+          ]
+          zoomStep: zoomStep
+          cubeSize: 1 << @cube.BUCKET_SIZE_P
+          fourBit: fourBit
+      ))
+
+>>>>>>> dev
     # Measuring the time until response arrives to select appropriate preloading strategy
     roundTripBeginTime = new Date()
 
@@ -68,8 +89,8 @@ class PullQueue
 
         offset = 0
         for bucket, i in batch
-          if bucket.fourBit
-            bucketData = @decode4bit(responseBuffer.subarray(offset, offset += (@cube.BUCKET_LENGTH >> 1)))
+          if fourBit
+            bucketData = @decodeFourBit(responseBuffer.subarray(offset, offset += (@cube.BUCKET_LENGTH >> 1)))
           else
             bucketData = responseBuffer.subarray(offset, offset += @cube.BUCKET_LENGTH)
           @boundingBox.removeOutsideArea(bucket, bucketData)
@@ -181,7 +202,7 @@ class PullQueue
     @queue = @queue.concat(items)
 
 
-  decode4Bit : (colors) ->
+  decodeFourBit : (colors) ->
 
     # Expand 4-bit data
     newColors = new Uint8Array(colors.length << 1)

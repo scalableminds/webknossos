@@ -37,7 +37,9 @@ object UsedAnnotationDAO extends SecuredBaseDAO[UsedAnnotation] {
     remove("user", user._id)
   }
 
-  def removeAll(tracing: String)(implicit ctx: DBAccessContext) = {
-    remove("tracing", tracing)
+  def removeAll(annotationId: AnnotationIdentifier)(implicit ctx: DBAccessContext) = {
+    remove(Json.obj(
+      "annotationId.annotationType" -> annotationId.annotationType,
+      "annotationId.identifier" -> annotationId.identifier))
   }
 }

@@ -53,7 +53,7 @@ case class CreateTree(value: JsObject) extends TracingUpdater {
     val id = (value \ "id").as[Int]
     val color = (value \ "color").asOpt[Color]
     val timestamp = (value \ "timestamp").as[Long]
-    val name = (value \ "name").asOpt[String] getOrElse (DBTree.nameFromId(id))
+    val name = (value \ "name").asOpt[String].getOrElse(DBTree.nameFromId(id))
     TracingUpdate { t =>
       for {
         updatedTracing <- t.updateStatistics(_.createTree) ?~> "Failed to update tracing statistics."
@@ -79,9 +79,9 @@ case class DeleteTree(value: JsObject) extends TracingUpdater {
 case class UpdateTree(value: JsObject) extends TracingUpdater {
   def createUpdate()(implicit ctx: DBAccessContext) = {
     val id = (value \ "id").as[Int]
-    val updatedId = (value \ "updatedId").asOpt[Int] getOrElse id
+    val updatedId = (value \ "updatedId").asOpt[Int].getOrElse(id)
     val color = (value \ "color").asOpt[Color]
-    val name = (value \ "name").asOpt[String] getOrElse (DBTree.nameFromId(id))
+    val name = (value \ "name").asOpt[String].getOrElse(DBTree.nameFromId(id))
     TracingUpdate { t =>
       for {
         tree <- t.tree(id).toFox ?~> "Failed to access tree."

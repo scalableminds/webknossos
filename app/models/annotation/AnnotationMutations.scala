@@ -10,6 +10,7 @@ import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import models.task.{OpenAssignmentService, TaskService}
 import models.user.{UsedAnnotationDAO, User}
 import net.liftweb.common.{Box, Failure}
+import oxalis.annotation.AnnotationIdentifier
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json.JsValue
 import reactivemongo.bson.BSONObjectID
@@ -46,17 +47,16 @@ class AnnotationMutations(val annotation: Annotation)
 
   def finishAnnotation(user: User)(implicit ctx: DBAccessContext): Fox[(Annotation, String)] = {
     def executeFinish(annotation: Annotation): Future[Box[(Annotation, String)]] = async {
-      annotation match {
-        case annotation if annotation._task.isEmpty =>
+      if(annotation._task.isEmpty) {
+        val updated = await(annotation.muta.finish().futureBox)
+        updated.map(_ -> "annotation.finished")
+      } else {
+        val isReadyToBeFinished = await(annotation.isReadyToBeFinished)
+        if (isReadyToBeFinished) {
           val updated = await(annotation.muta.finish().futureBox)
-          updated.map(_ -> "annotation.finished")
-        case annotation                             =>
-          val isReadyToBeFinished = await(annotation.isReadyToBeFinished)
-          if (isReadyToBeFinished) {
-            val updated = await(AnnotationDAO.finish(annotation._id).futureBox)
-            updated.map(_ -> "task.finished")
-          } else
-              Failure("annotation.notFinishable")
+          updated.map(_ -> "task.finished")
+        } else
+            Failure("annotation.notFinishable")
       }
     }
 
@@ -73,7 +73,7 @@ class AnnotationMutations(val annotation: Annotation)
     tryToFinish().map {
       result =>
         annotation.muta.writeAnnotationToFile()
-        UsedAnnotationDAO.removeAll(annotation.id)
+        UsedAnnotationDAO.removeAll(AnnotationIdentifier(annotation.typ, annotation.id))
         result
     }
   }
@@ -105,7 +105,7 @@ class AnnotationMutations(val annotation: Annotation)
       annotationContent <- annotation.content
       tracingBase <- task.annotationBase.flatMap(_.content)
       reset <- tracingBase.temporaryDuplicate(id = BSONObjectID.generate.stringify).flatMap(_.saveToDB)
-      _ <- annotationContent.service.clearTracingData(annotationContent.id)
+      _ <- annotationContent.service.clearAndRemove(annotationContent.id)
       updatedAnnotation <- AnnotationDAO.updateContent(annotation._id, ContentReference.createFor(reset))
     } yield updatedAnnotation
   }

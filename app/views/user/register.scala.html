@@ -1,39 +1,38 @@
 @(form: Form[(String, String, String, String, String)], teams: List[models.team.Team])(implicit session: oxalis.view.SessionData, messages: Messages)
 
-@main( ){
+@main() {
 
   <div class="container">
     <div class="well space-top col-center col-sm-6">
 
-        @helper.form(routes.Authentication.handleRegistration, 'class -> "form-horizontal") {
+    @helper.form(routes.Authentication.handleRegistration, 'class -> "form-horizontal") {
 
-          <legend>Sign up</legend>
+      <legend>Sign up</legend>
 
-          <div class="alert alert-info">
-            Not a member of the listed teams? Contact webknossos@@scalableminds.com to get more information about how to get to use webKnossos.
-          </div>
-
-          @form.errors.map { error =>
-            <div class="alert alert-danger">
-              @Messages(error.message)
-            </div>
-          }
-          @helper.select(form("team"), ("" -> "<None>") +: teams.map { t =>
-            t.name -> t.name
-          }, 'class -> "form-control")
-          @helper.inputText(form("email"), 'type -> "email", 'class -> "form-control")
-          @helper.inputText(form("firstName"), 'class -> "form-control")
-          @helper.inputText(form("lastName"), 'class -> "form-control")
-          @helper.inputPassword(form("password.main"), 'class -> "form-control")
-          @helper.inputPassword(form("password.validation"), 'class -> "form-control")
-
-          <div class="form-group">
-            <div class="col-sm-9 col-sm-offset-3">
-              <button type="submit" class="form-control btn btn-primary">Sign up</button>
-            </div>
-          </div>
-        }
+      <div class="alert alert-info">
+        Not a member of the listed teams? Contact webknossos@@scalableminds.com to get more information about how to get to use webKnossos.
       </div>
+
+      @form.errors.map { error =>
+        <div class="alert alert-danger">
+          @Messages(error.message)
+        </div>
+      }
+      @helper.select(form("team"), ("" -> "<None>") +: teams.map { t =>
+        t.name -> t.name
+      }, 'class -> "form-control")
+      @helper.inputText(form("email"), 'type -> "email", 'class -> "form-control")
+      @helper.inputText(form("firstName"), 'class -> "form-control")
+      @helper.inputText(form("lastName"), 'class -> "form-control")
+      @helper.inputPassword(form("password.main"), 'class -> "form-control")
+      @helper.inputPassword(form("password.validation"), 'class -> "form-control")
+
+      <div class="form-group">
+        <div class="col-sm-9 col-sm-offset-3">
+          <button type="submit" class="form-control btn btn-primary">Sign up</button>
+        </div>
+      </div>
+    }
     </div>
   </div>
 }

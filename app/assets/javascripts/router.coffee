@@ -12,6 +12,7 @@ BaseRouter = require("libs/base_router")
 class Router extends BaseRouter
 
   routes :
+<<<<<<< HEAD
     "users"                             : "users"
     "teams"                             : "teams"
     "statistics"                        : "statistics"
@@ -31,6 +32,28 @@ class Router extends BaseRouter
     "tasks/overview"                    : "taskOverview"
     "admin/taskTypes"                   : "hideLoadingSpinner"
     "workload"                          : "workload"
+=======
+    "/users"                             : "users"
+    "/teams"                             : "teams"
+    "/statistics"                        : "statistics"
+    "/tasks/create"                      : "taskCreate"
+    "/tasks/:id/edit"                    : "taskEdit"
+    "/projects"                          : "projects"
+    "/projects/:name/tasks"              : "projectTasks"
+    "/annotations/:type/:id(/readOnly)"  : "tracingView"
+    "/datasets/:id/view"                 : "tracingViewPublic"
+    "/dashboard"                         : "dashboard"
+    "/datasets"                          : "dashboard"
+    "/datasets/upload"                   : "datasetUpload"
+    "/users/:id/details"                 : "dashboard"
+    "/taskTypes/:id/edit"                : "editTaskType"
+    "/taskTypes"                         : "taskTypes"
+    "/taskTypes/:id/tasks"               : "taskTypesTasks"
+    "/spotlight"                         : "spotlight"
+    "/tasks/overview"                    : "taskOverview"
+    "/admin/taskTypes"                   : "hideLoadingSpinner"
+    "/workload"                          : "workload"
+>>>>>>> dev
 
 
   constructor : ->
@@ -76,7 +99,7 @@ class Router extends BaseRouter
 
   projects : ->
 
-    @showWithPagination("ProjectListView", "ProjectCollection", "Create New Project")
+    @showWithPagination("ProjectListView", "ProjectCollection", {addButtonText : "Create New Project"})
 
 
   statistics : ->
@@ -91,17 +114,22 @@ class Router extends BaseRouter
 
   users : ->
 
-    @showWithPagination("UserListView", "UserCollection")
+    @showWithPagination("UserListView", "PaginatedUserCollection")
 
 
   teams : ->
 
-    @showWithPagination("TeamListView", "PaginatedTeamCollection", "Add New Team")
+    @showWithPagination("TeamListView", "PaginatedTeamCollection", {addButtonText : "Add New Team"})
 
 
-  tasks : ->
+  projectTasks : (projectName) ->
 
-    @showWithPagination("TaskListView", "TaskCollection", "Create New Task")
+     @showWithPagination("TaskListView", "TaskCollection", {projectName, addButtonText : "Create New Task"})
+
+
+  taskTypesTasks : (taskTypeId) ->
+
+     @showWithPagination("TaskListView", "TaskCollection", {taskTypeId, addButtonText : "Create New Task"})
 
 
   workload : ->
@@ -214,14 +242,16 @@ class Router extends BaseRouter
     )
 
 
-  showWithPagination : (view, collection, addButtonText = null) ->
+  showWithPagination : (view, collection, options = {}) ->
+
+    _.defaults(options, {addButtonText : null})
 
     self = this
-    require(["admin/admin"], (admin) ->
+    require(["admin/admin"], (admin) =>
 
-      collection = new admin[collection]()
+      collection = new admin[collection](null, options)
       view = new admin[view](collection: collection)
-      paginationView = new admin.PaginationView({ collection, addButtonText })
+      paginationView = new admin.PaginationView({collection, addButtonText : options.addButtonText})
 
       self.changeView(paginationView, view)
       self.listenTo(collection, "sync", => self.hideLoadingSpinner())

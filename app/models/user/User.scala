@@ -54,7 +54,8 @@ case class User(
 
   val name = firstName + " " + lastName
 
-  val abreviatedName = (firstName.take(1) + lastName) toLowerCase
+  val abreviatedName =
+    (firstName.take(1) + lastName).toLowerCase.replace(" ", "_")
 
   lazy val id = _id.stringify
 
@@ -62,9 +63,11 @@ case class User(
 
   lazy val adminTeamNames = adminTeams.map(_.team)
 
-  lazy val hasAdminAccess = !adminTeams.isEmpty
+  lazy val hasAdminAccess = adminTeams.nonEmpty
 
   def roleInTeam(team: String) = teams.find(_.team == team).map(_.role)
+
+  def isAdminOf(team: String) = adminTeamNames.contains(team)
 
   override def toString = email
 
@@ -75,7 +78,7 @@ case class User(
 
   def increaseExperience(name: String, value: Int) = {
     val n = name.trim
-    this.copy(experiences = this.experiences + (n -> (this.experiences.get(n).getOrElse(0) + value)))
+    this.copy(experiences = this.experiences + (n -> (this.experiences.getOrElse(n, default = 0) + value)))
   }
 
   def deleteExperience(name: String) = {
@@ -99,7 +102,7 @@ case class User(
     (System.currentTimeMillis - this.lastActivity) / (1000 * 60 * 60 * 24)
 
   def isEditableBy(other: User) =
-    other.hasAdminAccess && ( teams.isEmpty || other.adminTeamNames.exists(teamNames.contains))
+    other.hasAdminAccess && ( teams.isEmpty || teamNames.exists(other.isAdminOf))
 
 }
 
@@ -168,7 +171,7 @@ object UserDAO extends SecuredBaseDAO[User] {
 
   def findByTeams(teams: List[String], includeAnonymous: Boolean)(implicit ctx: DBAccessContext) = withExceptionCatcher {
     val anonymousFilter = if(includeAnonymous) Json.obj() else Json.obj("_isAnonymous" -> Json.obj("$ne" -> true))
-    find(Json.obj("$or" -> teams.map(team => Json.obj("teams.team" -> team))) ++ anonymousFilter).cursor[User].collect[List]()
+    find(Json.obj("$or" -> teams.map(team => Json.obj("teams.team" -> team))) ++ anonymousFilter).cursor[User]().collect[List]()
   }
 
   def findByIdQ(id: BSONObjectID) = Json.obj("_id" -> id)
@@ -239,7 +242,7 @@ object UserDAO extends SecuredBaseDAO[User] {
   }
 
   def findAllNonAnonymous(implicit ctx: DBAccessContext) = {
-    find(Json.obj("_isAnonymous" -> Json.obj("$ne" -> true))).cursor[User].collect[List]()
+    find(Json.obj("_isAnonymous" -> Json.obj("$ne" -> true))).cursor[User]().collect[List]()
   }
 
   def countNonAnonymousUsers(implicit ctx: DBAccessContext) = {

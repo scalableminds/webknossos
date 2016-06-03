@@ -67,9 +67,9 @@ class WKDataStoreController @Inject()(val messagesApi: MessagesApi) extends Cont
 
   def layerRead(name: String, dataSetName: String, dataLayerName: String) = DataStoreAction.async { implicit request =>
     for {
-      dataSet <- DataSetDAO.findOneBySourceName(dataSetName)(GlobalAccessContext) ?~> Messages("dataSet.notFound")
+      dataSet <- DataSetDAO.findOneBySourceName(dataSetName)(GlobalAccessContext) ?~> Messages("dataSet.notFound", dataSetName)
       _ <- (dataSet.dataStoreInfo.name == request.dataStore.name) ?~> Messages("dataStore.notAllowed")
-      layer <- DataSetService.getDataLayer(dataSet, dataLayerName)(GlobalAccessContext) ?~> Messages("dataLayer.notFound")
+      layer <- DataSetService.getDataLayer(dataSet, dataLayerName)(GlobalAccessContext) ?~> Messages("dataLayer.notFound", dataLayerName)
     } yield {
       Ok(Json.toJson(layer))
     }

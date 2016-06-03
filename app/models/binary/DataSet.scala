@@ -1,34 +1,37 @@
 package models.binary
 
-import play.api.libs.functional.syntax._
+import com.scalableminds.braingames.binary.models.DataSource
+import com.scalableminds.util.geometry.{Point3D, Vector3D}
+import com.scalableminds.util.reactivemongo.AccessRestrictions.AllowIf
+import com.scalableminds.util.reactivemongo.{DBAccessContext, DefaultAccessDefinitions}
 import models.basics._
-import play.api.libs.json._
 import models.user.User
-import com.scalableminds.util.reactivemongo.{DefaultAccessDefinitions, DBAccessContext}
 import play.api.libs.concurrent.Execution.Implicits._
 import com.scalableminds.util.reactivemongo.AccessRestrictions.AllowIf
 import com.scalableminds.braingames.binary.models.{DataLayer, DataSource}
 import com.scalableminds.util.geometry.{BoundingBox, Scale, Vector3D, Point3D}
+import play.api.libs.functional.syntax._
+import play.api.libs.json._
 import play.utils.UriEncoding
 
 case class DataSet(
-                    name: String,
-                    dataStoreInfo: DataStoreInfo,
-                    dataSource: Option[DataSource],
-                    sourceType: String,
-                    owningTeam: String,
-                    allowedTeams: List[String],
-                    isActive: Boolean = false,
-                    isPublic: Boolean = false,
-                    accessToken: Option[String],
-                    description: Option[String] = None,
-                    created: Long = System.currentTimeMillis()) {
+  name: String,
+  dataStoreInfo: DataStoreInfo,
+  dataSource: Option[DataSource],
+  sourceType: String,
+  owningTeam: String,
+  allowedTeams: List[String],
+  isActive: Boolean = false,
+  isPublic: Boolean = false,
+  accessToken: Option[String],
+  description: Option[String] = None,
+  created: Long = System.currentTimeMillis()) {
 
   def urlEncodedName: String =
     UriEncoding.encodePathSegment(name, "UTF-8")
 
   def isEditableBy(user: Option[User]) =
-    user.map(_.adminTeamNames.contains(owningTeam)) getOrElse false
+    user.exists(_.isAdminOf(owningTeam))
 
   def defaultStart =
     dataSource.map(_.boundingBox.center).getOrElse(Point3D(0, 0, 0))
@@ -52,8 +55,8 @@ object DataSet {
       (__ \ 'isPublic).write[Boolean] and
       (__ \ 'description).write[Option[String]] and
       (__ \ 'created).write[Long] and
-      (__ \ "isEditable").write[Boolean])(d =>
-    (d.name, d.dataSource, d.dataStoreInfo, d.sourceType, d.owningTeam, d.allowedTeams, d.isActive, d.accessToken, d.isPublic, d.description, d.created, d.isEditableBy(user)))
+      (__ \ "isEditable").write[Boolean]) (d =>
+      (d.name, d.dataSource, d.dataStoreInfo, d.sourceType, d.owningTeam, d.allowedTeams, d.isActive, d.accessToken, d.isPublic, d.description, d.created, d.isEditableBy(user)))
 }
 
 object DataSetDAO extends SecuredBaseDAO[DataSet] {
@@ -70,15 +73,13 @@ object DataSetDAO extends SecuredBaseDAO[DataSet] {
               Json.obj("allowedTeams" -> Json.obj("$in" -> user.teamNames)),
               Json.obj("owningTeam" -> Json.obj("$in" -> user.adminTeamNames))
             )))
-        case _ =>
+        case _                =>
           AllowIf(
             Json.obj("isPublic" -> true)
           )
       }
     }
   }
-
-  import com.scalableminds.braingames.binary.models.DataLayer.dataLayerFormat
 
   val formatter = DataSet.dataSetFormat
 
@@ -95,21 +96,26 @@ object DataSetDAO extends SecuredBaseDAO[DataSet] {
     findOne(byNameQ(name))
 
   def findAllOwnedBy(teams: List[String])(implicit ctx: DBAccessContext) =
-    find(Json.obj("owningTeam" -> Json.obj("$in" -> teams))).cursor[DataSet].collect[List]()
+    find(Json.obj("owningTeam" -> Json.obj("$in" -> teams))).cursor[DataSet]().collect[List]()
 
-  def findAllActive(implicit ctx: DBAccessContext) = withExceptionCatcher{
-    find(Json.obj("isActive" -> true)).cursor[DataSet].collect[List]()
+  def findAllActive(implicit ctx: DBAccessContext) = withExceptionCatcher {
+    find(Json.obj("isActive" -> true)).cursor[DataSet]().collect[List]()
   }
 
-  def updateDataSource(name: String, dataStoreInfo: DataStoreInfo, dataSource: DataSource)(implicit ctx: DBAccessContext) =
+  def updateDataSource(
+    name: String,
+    dataStoreInfo: DataStoreInfo,
+    source: Option[DataSource],
+    isActive: Boolean)(implicit ctx: DBAccessContext) = {
     update(
       Json.obj("name" -> name),
       Json.obj("$set" -> Json.obj(
         "dataStoreInfo" -> dataStoreInfo,
-        "isActive" -> true,
-        "dataSource" -> dataSource
+        "isActive" -> isActive,
+        "dataSource" -> source
       ))
     )
+  }
 
   def updateActiveState(name: String, isActive: Boolean)(implicit ctx: DBAccessContext) =
     update(

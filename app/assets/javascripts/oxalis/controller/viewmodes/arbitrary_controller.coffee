@@ -10,6 +10,7 @@ ArbitraryView      = require("../../view/arbitrary_view")
 ArbitraryPlaneInfo = require("../../geometries/arbitrary_plane_info")
 constants          = require("../../constants")
 {M4x4, V3}         = require("libs/mjs")
+Utils              = require("libs/utils")
 
 
 class ArbitraryController
@@ -29,8 +30,6 @@ class ArbitraryController
 
   model : null
   view : null
-
-  record : false
 
   input :
     mouse : null
@@ -61,7 +60,7 @@ class ArbitraryController
     @arbitraryView.addGeometry @plane
 
     # render HTML element to indicate recording status
-    @infoPlane = new ArbitraryPlaneInfo()
+    @infoPlane = new ArbitraryPlaneInfo(model: @model)
     @infoPlane.render()
     $("#render").append(@infoPlane.el)
 
@@ -81,17 +80,6 @@ class ArbitraryController
     @stop()
 
     @crosshair.setVisibility(@model.user.get("displayCrosshair"))
-
-    # Toggle record
-    @setRecord(true)
-    $('#trace-mode-trace').on("click", =>
-      @setRecord(true)
-      $(":focus").blur()
-    )
-    $('#trace-mode-watch').on("click", =>
-      @setRecord(false)
-      $(":focus").blur()
-    )
 
 
   render : (forceUpdate, event) ->
@@ -207,16 +195,10 @@ class ArbitraryController
     , -1)
 
 
-  setRecord : (@record) ->
+  setRecord : (record) ->
 
-    $('#trace-mode button').removeClass("btn-primary")
-    if @record
-      $('#trace-mode-trace').addClass("btn-primary")
-    else
-      $('#trace-mode-watch').addClass("btn-primary")
-
-    @infoPlane.updateInfo(@record)
-    if @record
+    @model.set("flightmodeRecording", record)
+    if record
       @setWaypoint()
 
 
@@ -273,7 +255,7 @@ class ArbitraryController
   scroll : (delta, type) =>
 
     switch type
-      when "shift" then @setParticleSize(delta)
+      when "shift" then @setParticleSize(Utils.clamp(-1, delta, 1))
 
 
   addNode : (position, rotation) =>
@@ -287,7 +269,7 @@ class ArbitraryController
 
   setWaypoint : =>
 
-    unless @record
+    unless @model.get("flightmodeRecording")
       return
 
     position  = @cam.getPosition()

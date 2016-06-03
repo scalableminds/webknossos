@@ -34,7 +34,7 @@ object TaskService extends TaskAssignmentSimulation with TaskAssignment with Fox
     TaskDAO.findAllAdministratable(user)
 
   def remove(_task: BSONObjectID)(implicit ctx: DBAccessContext) = {
-    TaskDAO.update(Json.obj("_id" -> _task), Json.obj("$set" -> Json.obj("isActive" -> false))).flatMap{
+    TaskDAO.update(Json.obj("_id" -> _task), Json.obj("$set" -> Json.obj("isActive" -> false))).flatMap {
       case result if result.n > 0 =>
         for {
           _ <- AnnotationDAO.removeAllWithTaskId(_task)
@@ -42,29 +42,29 @@ object TaskService extends TaskAssignmentSimulation with TaskAssignment with Fox
         } yield true
       case _ =>
         Logger.warn("Tried to remove task without permission.")
-        Future.successful(LastError(false ,None, None, None, None, 0, false))
+        Fox.successful(false)
     }
   }
 
-  def findAllByTaskType(_taskType: String)(implicit ctx: DBAccessContext) = withExceptionCatcher{
+  def findAllByTaskType(_taskType: String)(implicit ctx: DBAccessContext) = withExceptionCatcher {
     withValidId(_taskType)(TaskDAO.findAllByTaskType)
   }
-
-  def deleteAllWithTaskType(taskType: TaskType)(implicit ctx: DBAccessContext) =
-    TaskDAO.findAllByTaskType(taskType._id).map{ tasks =>
-      tasks.foreach{ t =>
-        remove(t._id)
-      }
-    }
 
   def logTime(time: Long, _task: BSONObjectID)(implicit ctx: DBAccessContext) =
     TaskDAO.logTime(time, _task)
 
+  def removeAllWithTaskType(taskType: TaskType)(implicit ctx: DBAccessContext) = {
+    for {
+      tasks <- TaskDAO.findAllByTaskType(taskType._id)
+      result <- Fox.combined(tasks.map(task => remove(task._id)))
+    } yield result.forall(identity)
+  }
+
   def removeAllWithProject(project: Project)(implicit ctx: DBAccessContext) = {
     for{
-      _ <- TaskDAO.removeAllWithProject(project)
-      _ <- OpenAssignmentService.removeByProject(project)
-    } yield true
+      tasks <- project.tasks
+      result <- Fox.combined(tasks.map(task => remove(task._id)))
+    } yield result.forall(identity)
   }
 
   def insert(task: Task, insertAssignments: Boolean)(implicit ctx: DBAccessContext) = {

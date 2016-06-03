@@ -7,7 +7,10 @@ class SelectionView extends Marionette.CollectionView
   tagName : "select"
   className : "form-control"
   attributes : ->
-    return {name : @options.name}
+    return {
+      name : @options.name
+      required : @options.required
+    }
 
   childView : SelectionItemView
 

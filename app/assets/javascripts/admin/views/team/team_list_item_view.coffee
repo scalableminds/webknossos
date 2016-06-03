@@ -8,7 +8,7 @@ class TeamListItemView extends Marionette.ItemView
   template : _.template("""
     <td><%- name %></td>
     <td><% if(parent){ %><%- parent %><% } %></td>
-    <td><% if(owner){ %> <%- owner.firstName %> <%- owner.lastName %> <% }else{ %> - <% } %></td>
+    <td><% if(owner){ %> <%- owner.firstName %> <%- owner.lastName %> (<%- owner.email %>)<% }else{ %> - <% } %></td>
     <td>
       <% _.each(roles, function(role){ %>
           <span class="label label-default" style="background-color: <%- TemplateHelpers.stringToColor(role.name) %>"><%- role.name %></span>

@@ -179,11 +179,6 @@ class PlaneView
     @draw()
 
 
-    # notify THREE.TrackballControls
-    TDView = $("#TDView")
-    TDView.trigger($.Event('resizeCanvas'));
-
-
   scaleTrianglesPlane : (scale) =>
 
     @scaleFactor = scale
@@ -251,8 +246,8 @@ class PlaneView
 
     @running = true
 
-    @scaleTrianglesPlane(@model.user.get("scale"))
     $(".inputcatcher").show()
+    @scaleTrianglesPlane(@model.user.get("scale"))
 
     @animate()
 

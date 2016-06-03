@@ -30,10 +30,10 @@ object TimeSpanDAO extends SecuredBaseDAO[TimeSpan]{
   }
 
   def findByUser(user: User, start: Option[Long], end: Option[Long])(implicit ctx: DBAccessContext) = withExceptionCatcher{
-    find(Json.obj("_user" -> user._id) ++ intervalFilter(start, end)).cursor[TimeSpan].collect[List]()
+    find(Json.obj("_user" -> user._id) ++ intervalFilter(start, end)).cursor[TimeSpan]().collect[List]()
   }
 
   def findAllBetween(start: Option[Long], end: Option[Long])(implicit ctx: DBAccessContext) = withExceptionCatcher{
-    find(intervalFilter(start, end)).cursor[TimeSpan].collect[List]()
+    find(intervalFilter(start, end)).cursor[TimeSpan]().collect[List]()
   }
 }

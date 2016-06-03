@@ -95,7 +95,7 @@ case class VolumeTracing(
 
     for{
       dataSource <- DataSetDAO.findOneBySourceName(dataSetName) ?~> "dataSet.notFound"
-      urlToVolumeData = s"${dataSource.dataStoreInfo.url}/data/datasets/${dataSetName}/layers/${userDataLayerName}/download"
+      urlToVolumeData = s"${dataSource.dataStoreInfo.url}/data/datasets/$dataSetName/layers/$userDataLayerName/download"
       inputStream <- createStream(urlToVolumeData)
     } yield {
       inputStream
@@ -145,7 +145,8 @@ object VolumeTracingService extends AnnotationContentService with CommonTracingS
     }
   }
 
-  def clearTracingData(id: String)(implicit ctx: DBAccessContext): Fox[VolumeTracingService.AType] = ???
+  def clearAndRemove(id: String)(implicit ctx: DBAccessContext): Fox[Boolean] = 
+    ???
 }
 
 object VolumeTracing {

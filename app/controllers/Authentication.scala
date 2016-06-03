@@ -46,9 +46,9 @@ class Authentication @Inject()(val messagesApi: MessagesApi) extends Controller 
     Form(
       mapping(
         "team" -> text,
-        "email" -> email,
-        "firstName" -> nonEmptyText(1, 30),
-        "lastName" -> nonEmptyText(1, 30),
+        "email" -> email.verifying("user.email.trailingSpace", s => s.trim == s),
+        "firstName" -> nonEmptyText(1, 30).verifying("user.firstName.trailingSpace", s => s.trim == s),
+        "lastName" -> nonEmptyText(1, 30).verifying("user.lastName.trailingSpace", s => s.trim == s),
         "password" -> passwordField)(registerFormApply)(registerFormUnapply))
   }
 
@@ -82,7 +82,7 @@ class Authentication @Inject()(val messagesApi: MessagesApi) extends Controller 
               Mailer ! Send(
                 DefaultMails.registerMail(user.name, email, brainDBResult))
               Mailer ! Send(
-                DefaultMails.registerAdminNotifyerMail(user.name, email, brainDBResult))
+                DefaultMails.registerAdminNotifyerMail(user, email, brainDBResult))
               if (autoVerify) {
                 Redirect(controllers.routes.Application.index)
                 .withSession(Secured.createSession(user))

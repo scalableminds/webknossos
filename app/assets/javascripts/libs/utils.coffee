@@ -38,15 +38,14 @@ Utils =
     return Math.round(value * digitMultiplier) / digitMultiplier
 
 
-  intToHex : (int) ->
+  intToHex : (int, digits=6) ->
 
-    hex = int.toString(16)
-    return if hex.length == 1 then "0" + hex else hex
+    return (_.repeat("0", digits) + int.toString( 16 )).slice(-digits)
 
 
   rgbToHex : (color) ->
 
-    return "#" + color.map( (int) -> Utils.intToHex(int) ).join("")
+    return "#" + color.map( (int) -> Utils.intToHex(int, 2) ).join("")
 
 
   hexToRgb : (hex) ->
@@ -109,5 +108,19 @@ Utils =
       return _.findIndex(user.get("teams"), (team) ->
         team.role.name == "admin"
       ) >= 0
+
+
+  getUrlParams : (paramName) ->
+    # Parse the URL parameters as objects and return it or just a single param
+    params = window.location.search.substring(1).split("&").reduce((result, value) ->
+      parts = value.split('=')
+      if parts[0]
+        key = decodeURIComponent(parts[0])
+        value = if parts[1] then decodeURIComponent(parts[1]) else true
+        result[key] = value
+      return result
+    , {})
+
+    if paramName then return params[paramName] else return params
 
 module.exports = Utils

@@ -21,13 +21,13 @@ class DatasetListItemView extends Marionette.CompositeView
         <i class="caret-right"></i>
         <i class="caret-down"></i>
       </td>
-      <td title="<%- dataSource.baseDir %>"><%- name %></td>
-      <td><%- dataStore.name %></td>
+      <td title="<%- dataSource.baseDir %>"><%- name %><br /><span class="label label-default" style="background-color: <%- TemplateHelpers.stringToColor(dataStore.name) %>"><%- dataStore.name %></span></td>
+      <td><%- formattedCreated %></td>
       <td><%- TemplateHelpers.formatScale(dataSource.scale) %></td>
-      <td><%- owningTeam %></td>
       <td class="team-label">
         <% _.map(allowedTeams, function(team){ %>
-          <span class="label label-default" style="background-color: <%- TemplateHelpers.stringToColor(team) %>"><%- team %></span>
+          <span class="label label-default" style="background-color: <%- TemplateHelpers.stringToColor(team) %>">
+            <% if(team == owningTeam){%> <i class="fa fa-lock"></i><% }%><%- team %></span>
         <% }) %>
       </td>
       <td>

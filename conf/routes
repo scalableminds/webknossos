@@ -126,7 +126,6 @@ GET           /api/tasks                                                        
 
 # DELETE        /api/tasks/:id                                                    controllers.admin.TaskAdministration.delete(id: String)
 
-GET           /tasks                                                            controllers.TaskController.empty
 GET           /tasks/overview                                                   controllers.TaskController.empty
 GET           /tasks/create                                                     controllers.TaskController.empty
 
@@ -153,7 +152,8 @@ GET           /workload                                                         
 GET           /api/tasks/:id/download                                           controllers.admin.NMLIO.taskDownload(id: String)
 GET           /api/tasks/:id/annotations                                        controllers.AnnotationController.annotationsForTask(id: String)
 
-GET           /taskTypes                                                        controllers.admin.TaskTypeAdministration.empty
+GET           /taskTypes                                                        controllers.admin.TaskTypeAdministration.empty(id: String = "")
+GET           /taskTypes/:id/tasks                                              controllers.admin.TaskTypeAdministration.empty(id: String)
 GET           /taskTypes/:id/edit                                               controllers.UserController.emptyWithWildcard(id: String)
 GET           /api/taskTypes                                                    controllers.admin.TaskTypeAdministration.list
 POST          /api/taskTypes                                                    controllers.admin.TaskTypeAdministration.create
@@ -167,8 +167,10 @@ POST          /api/taskTypes/:id                                                
 # ID Validation
 GET           /api/find                                                         controllers.SearchController.find(q: String, type: String)
 
+
 # Projects
-GET           /projects                                                         controllers.ProjectController.empty
+GET           /projects                                                         controllers.ProjectController.empty(name: String = "")
+GET           /projects/:name/tasks                                             controllers.ProjectController.empty(name: String)
 GET           /api/projects                                                     controllers.ProjectController.list
 POST          /api/projects                                                     controllers.ProjectController.create
 DELETE        /api/projects/:name                                               controllers.ProjectController.delete(name: String)

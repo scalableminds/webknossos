@@ -5,10 +5,7 @@ error.unknown=Unknown error
 
 notAllowed=You are not allowed to view this resource
 
-binary.payload.notSupplied=No valid payload supplied
 binary.payload.invalid=Couldn''t parse payload
-binary.data.notFound=Couldn''t find the requested data
-binary.data.notSaved=Couldn''t save the data
 
 email=Email
 team=Team
@@ -45,18 +42,18 @@ team.admin.notAllowed=You are not allowed to administrate team {0}.
 team.notFound=Team could not be found.
 
 user.verified={0} has been verified
-user.verifyFailed=Couldn''t verify user
 user.notFound=User not found
 user.notVerified=Your account hasn''t been activated yet
-user.noPermission=You don''t have enough permissions to access this site. Sorry :(
 user.deleted={0} has been deleted
 user.bulk.empty=No user has been chosen
-user.bulk.failedFor=Operation failed for {0}
 user.password.nomatch=Passwords don''t match
 user.password.tooshort=Password too short
 user.resetPassword.failed=Invalid old password
 user.resetPassword.success=Your password was successfully changed
 user.email.alreadyInUse=This email address is already in use
+user.firstName.trailingSpace=Invalid first name due to trailing / leading spaces
+user.lastName.trailingSpace=Invalid first name due to trailing / leading spaces
+user.email.trailingSpace=Invalid first name due to trailing / leading spaces
 user.login.failed=Invalid email or password
 user.login.success=You are now logged in
 user.logout.success=You have successfully logged out
@@ -64,18 +61,18 @@ user.configuration.invalid=Couldn''t parse configuration
 user.configuration.updated=Your configuration got updated
 user.configuration.dataset.invalid=Dataset configuration is invalid
 user.configuration.dataset.updated=Dataset configuration updated
-user.experience.increased=Increased experience of {0}
 user.experience.set=Set experience of {0}
 user.experience.removed=Removed experience from {0}
 
 braintracing.new=An account on braintracing.org was created for you. You can use the same credentials as on webKnossos to login.
 braintracing.error=We couldn''t atomatically create an account for you on braintracing.org. Please do it on your own.
+braintracing.none=:)
 braintracing.exists=Great, you already have an account on braintracing.org. Please double check that you have uploaded all requested information.
 
 dataSet=Dataset
 dataSet.file=Dataset ZIP File
-dataSet.notFound=Selected data set doesn''t exist
-dataSet.notSupplied=No data set supplied
+dataSet.notFound=Dataset {0} doesn''t exist
+dataSet.notSupplied=No dataset supplied
 dataSet.name.invalid=A dataset name can only contain letters, digits and underscores
 dataSet.import.impossible.name=Import impossible. Dataset name can only consist of a-Z, 0-9, "-" and "_".
 dataSet.name.alreadyTaken=This dataset name is already in use.
@@ -89,6 +86,7 @@ dataSet.upload.success=Dataset successfully uploaded
 dataSet.import.failedWithoutError=Import of dataset {0} failed
 dataSet.import.failedWithError=Import of the dataset failed with error: {0}
 dataSet.import.directoryEmpty=Import failed because the dataset directory is empty
+dataSet.import.noLayers=Import failed because no data layers could be found
 
 dataSource.notFound=Datasource not found on datastore server
 dataSource.import.alreadyFinished=Import of the dataset already finished
@@ -111,7 +109,7 @@ zip.file.notFound=No or invalid ZIP file specified
 zip.file.invalid=Uploaded ZIP file invalid or corrupted
 zip.file.tooLarge=The ZIP file must not be larger than 1GB
 
-dataLayer.notFound=DataLayer not found
+dataLayer.notFound=DataLayer ''{0}'' not found
 dataLayer.forbidden=Access to this layer is not allowed.
 
 scale.scale=Scale
@@ -152,9 +150,7 @@ project.remove.confirm=Do you really want to delete this project? All annotation
 project.remove.notAllowed=You are not allowed to remove this project. Talk to the owner.
 project.remove.success=Project got removed
 project.remove.failure=Project couldn''t get removed
-project.notFound=Project couldn''t be found
-project.nameInvalid=Project names can only contain alphanumeric characters, _ and -
-project.createSuccess=Project successfully created
+project.notFound=Project {0} couldn''t be found
 project.noAnnotations=We couldn''t find annotations for this project
 
 role.invalid=Invalid role
@@ -163,6 +159,7 @@ role.added=Added role to {0}
 
 tracing=Annotation
 tracing.notFound=Tracing couldn''t be found
+
 annotation.creationFailed=Failed to create annotation
 annotation.notFound=Annotation couldn''t be found
 annotation.invalid=Invalid annotation
@@ -174,13 +171,6 @@ annotation.setName=Successfully named annotation
 annotation.invalidName=Annotation name is invalid
 annotation.finish.confirm=Are you sure you want to permanently finish this tracing?
 annotation.reset.success=Annotation was successfully reset
-annotation.review.assignFailed=Couldn''t assign reviewee
-annotation.review.notFound=There is no review for this tracing
-annotation.review.assigned=You got assigned as reviewee
-annotation.review.unassigned=You got unassigned from this training
-annotation.review.notReady=Tracing is not ready for review
-annotation.review.finishFailed=You can''t review this tracing
-annotation.review.finished=Review finished
 annotation.download.notAllowed=You can''t download this tracing
 annotation.notPossible=Couldn''t access annotation
 annotation.notFinishable=Before you can finish the annotation, you need to annotate something
@@ -198,25 +188,15 @@ issue.submit.success=Successfully submitted issue.
 issue.submit.failure=Failed to submit issue
 
 task.create.success=Task successfully created
-task.create.faliled=Failed to create Task
-task.create.invalidContent=Invalid request content
+task.create.failed=Failed to create Task
 task.bulk.processed=Tasks successfully processed
 task.finished=Task is finished
-task.cancelled=Task got cancelled
-task.passedToReview=Task is now getting reviewed. This may take some time.
 task.assigned=You got a new task
 task.tooManyOpenOnes=You already have too many open tasks
 task.requestAnother=Do you really want another task?
 task.unavailable=There is currently no task available
 task.notFound=Task couldn''t be found
 task.removed=Task got removed
-task.training.notFound=Couldn''t find training for this task
-task.training.deleted=Removed training from task
-task.training.sample.notFound= Couldn''t find sample for training
-task.training.assigned=You got a new Trainings-Task
-task.bulk.notSupplied=No data supplied
-task.bulk.createSuccess=Successfully created {0} Tasks
-task.edit.toFewInstances=There are already more finished / in progress tracings
 task.editSuccess=Task successfully edited
 task.noAnnotation=We couldn''t find finished annotations for this task
 
@@ -228,7 +208,8 @@ taskType=Task type
 taskType.editSuccess=Task type successfully edited
 taskType.createSuccess=Task type successfully created
 taskType.notFound=Selected task type doesn''t exist
-taskType.deleted=Task type ''{0}'' successfully deleted
+taskType.deleteSuccess=Task type ''{0}'' successfully deleted
+taskType.deleteFailure=Task type ''{0}'' deletion failed
 taskType.noAnnotations=We couldn''t find finished annotations for this task type
 
 time.invalidFormat=Time couldn''t get parsed.

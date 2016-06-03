@@ -1,5 +1,7 @@
 package models.basics
-import play.api.Logger
+
+import scala.language.reflectiveCalls
+
 import play.api.libs.json._
 
 trait BasicSettings{
@@ -7,7 +9,7 @@ trait BasicSettings{
 
   def MaxSettings = default.configuration.size
 
-  def isValidSetting(field: Tuple2[String, JsValue]) = {
+  def isValidSetting(field: (String, JsValue)) = {
     val (key, _) = field
     default.configuration.get(key)
   }

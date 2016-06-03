@@ -3,17 +3,17 @@
  */
 package models.tracing.skeleton
 
-import com.scalableminds.util.geometry.{Vector3D, BoundingBox, Point3D}
+import com.scalableminds.util.geometry.{BoundingBox, Point3D, Vector3D}
 import com.scalableminds.util.reactivemongo.DBAccessContext
 import com.scalableminds.util.tools.Fox
 import models.annotation.CompoundAnnotation._
-import models.annotation.{AnnotationSettings, AnnotationContentService}
+import models.annotation.{AnnotationContentService, AnnotationSettings}
 import models.binary.DataSet
 import models.task.Task
 import models.tracing.CommonTracingService
-import models.tracing.skeleton.temporary.{TemporarySkeletonTracingService, TemporarySkeletonTracing}
-import models.user.{User, UsedAnnotationDAO}
-import oxalis.nml.{TreeLike, NML, Tree}
+import models.tracing.skeleton.temporary.{TemporarySkeletonTracing, TemporarySkeletonTracingService}
+import models.user.{UsedAnnotationDAO, User}
+import oxalis.nml.{BranchPoint, NML, Tree, TreeLike}
 import play.api.libs.json.Json
 import reactivemongo.bson.BSONObjectID
 import play.api.libs.concurrent.Execution.Implicits._
@@ -30,12 +30,22 @@ object SkeletonTracingService extends AnnotationContentService with CommonTracin
     rotation: Vector3D,
     boundingBox: Option[BoundingBox],
     insertStartAsNode: Boolean,
+    isFirstBranchPoint: Boolean,
     settings: AnnotationSettings = AnnotationSettings.skeletonDefault)
     (implicit ctx: DBAccessContext): Fox[SkeletonTracing] = {
 
     val trees =
       if (insertStartAsNode)
         List(Tree.createFrom(start, rotation))
+      else
+        Nil
+
+    val branchPoints =
+      if(isFirstBranchPoint)
+        // Find the first node and create a branchpoint at its id
+        trees.headOption.flatMap(_.nodes.headOption).map { node =>
+          BranchPoint(node.id)
+        }.toList
       else
         Nil
 
@@ -52,7 +62,7 @@ object SkeletonTracingService extends AnnotationContentService with CommonTracin
         "",
         dataSetName,
         trees,
-        Nil,
+        branchPoints,
         System.currentTimeMillis(),
         if(insertStartAsNode) Some(1) else None,
         start,
@@ -61,17 +71,6 @@ object SkeletonTracingService extends AnnotationContentService with CommonTracin
         box,
         Nil,
         settings))
-  }
-
-  def clearTracingData(tracingId: String)(implicit ctx: DBAccessContext) = {
-    SkeletonTracingDAO.withValidId(tracingId) { _tracing =>
-      for {
-        _ <- DBTreeService.removeByTracing(_tracing)
-        - <- SkeletonTracingDAO.resetBranchPoints(_tracing)
-        - <- SkeletonTracingDAO.resetComments(_tracing)
-        tracing <- SkeletonTracingDAO.findOneById(_tracing)
-      } yield tracing
-    }
   }
 
   def createFrom(tracingLike: SkeletonTracingLike)(implicit ctx: DBAccessContext): Fox[SkeletonTracing] = {
@@ -94,15 +93,21 @@ object SkeletonTracingService extends AnnotationContentService with CommonTracin
   }
 
   def createFrom(dataSet: DataSet)(implicit ctx: DBAccessContext): Fox[SkeletonTracing] =
-    createFrom(dataSet.name, dataSet.defaultStart, dataSet.defaultRotation, None, insertStartAsNode = false)
+    createFrom(
+      dataSet.name, 
+      dataSet.defaultStart, 
+      dataSet.defaultRotation, 
+      None, 
+      insertStartAsNode = false, 
+      isFirstBranchPoint = false)
 
-  def removeById(_skeleton: BSONObjectID)(implicit ctx: DBAccessContext) =
-    for {
-      _ <- UsedAnnotationDAO.removeAll(_skeleton.stringify)
-      _ <- DBTreeService.removeByTracing(_skeleton)
-      _ <- SkeletonTracingDAO.removeById(_skeleton)
-    } yield true
-
+  def clearAndRemove(skeletonId: String)(implicit ctx: DBAccessContext) =
+    SkeletonTracingDAO.withValidId(skeletonId) { _id =>
+      for {
+        _ <- DBTreeService.removeByTracing(_id)
+        _ <- SkeletonTracingDAO.removeById(_id)
+      } yield true
+    }
 
   def findOneById(tracingId: String)(implicit ctx: DBAccessContext) =
     SkeletonTracingDAO.findOneById(tracingId)
@@ -110,7 +115,7 @@ object SkeletonTracingService extends AnnotationContentService with CommonTracin
   def uniqueTreePrefix(tracing: SkeletonTracingLike, user: Option[User], task: Option[Task])(tree: TreeLike): String = {
     val userName = user.map(_.abreviatedName) getOrElse ""
     val taskName = task.map(_.id) getOrElse ""
-    formatHash(taskName) + "_" + userName + "_" + "tree%03d".format(tree.treeId)
+    formatHash(taskName) + "_" + userName + "_" + f"tree${tree.treeId}%03d"
   }
 
   def renameTreesOfTracing(tracing: SkeletonTracing, user: Fox[User], task: Fox[Task])(implicit ctx: DBAccessContext): Fox[TemporarySkeletonTracing] = {

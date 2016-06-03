@@ -1,25 +1,18 @@
 package models.tracing.skeleton
 
-import com.scalableminds.util.geometry.{Vector3D, Point3D, BoundingBox}
-import models.annotation._
-import models.task.Task
-import CompoundAnnotation._
-import models.tracing.skeleton.temporary.{TemporarySkeletonTracingService, TemporarySkeletonTracing}
-import play.api.Logger
-import play.api.libs.json._
-import models.user.{User, UsedAnnotationDAO, UsedAnnotation}
+import com.scalableminds.util.geometry.{BoundingBox, Point3D, Vector3D}
+import com.scalableminds.util.reactivemongo.{DBAccessContext, GlobalAccessContext}
+import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import models.annotation.{AnnotationContent, AnnotationSettings}
 import models.basics._
+import models.tracing.CommonTracing
+import models.tracing.skeleton.temporary.TemporarySkeletonTracingService
 import oxalis.nml._
-import models.annotation.{AnnotationState, AnnotationContentService, AnnotationSettings, AnnotationContent}
-import models.tracing.{CommonTracing, CommonTracingService}
-import models.binary.DataSet
-import oxalis.nml.NML
-import com.scalableminds.util.reactivemongo.DBAccessContext
-import com.scalableminds.util.reactivemongo.GlobalAccessContext
-import reactivemongo.bson.BSONObjectID
+import play.api.Logger
 import play.api.libs.concurrent.Execution.Implicits._
+import play.api.libs.json._
 import play.modules.reactivemongo.json.BSONFormats._
-import com.scalableminds.util.tools.{FoxImplicits, Fox}
+import reactivemongo.bson.BSONObjectID
 
 case class SkeletonTracing(
                             dataSetName: String,
@@ -109,7 +102,7 @@ trait SkeletonManipulations extends FoxImplicits {
           }
       }
     } yield {
-      this.copy(stats = Some(SkeletonTracingStatistics(numberOfNodes, numberOfEdges, numberOfTrees))).saveToDB(GlobalAccessContext)
+      SkeletonTracingDAO.updateStats(this._id, SkeletonTracingStatistics(numberOfNodes, numberOfEdges, numberOfTrees))(GlobalAccessContext)
       SkeletonTracingStatistics(numberOfNodes, numberOfEdges, numberOfTrees)
     }
   }
@@ -160,16 +153,14 @@ object SkeletonTracingDAO extends SecuredBaseDAO[SkeletonTracing] with FoxImplic
 
   val formatter = SkeletonTracing.skeletonTracingFormat
 
-  @deprecated(":D", "2.2")
-  override def removeById(tracing: BSONObjectID)(implicit ctx: DBAccessContext) = {
-    super.removeById(tracing)
-  }
-
   def resetComments(_tracing: BSONObjectID)(implicit ctx: DBAccessContext) =
     update(Json.obj("_id" -> _tracing), Json.obj("$set" -> Json.obj("comments" -> Json.arr())))
 
   def resetBranchPoints(_tracing: BSONObjectID)(implicit ctx: DBAccessContext) =
     update(Json.obj("_id" -> _tracing), Json.obj("$set" -> Json.obj("branchPoints" -> Json.arr())))
+
+  def resetStats(_tracing: BSONObjectID)(implicit ctx: DBAccessContext) =
+    update(Json.obj("_id" -> _tracing), Json.obj("$unset" -> Json.obj("stats" -> true)))
 
   def addBranchPoint(_tracing: BSONObjectID, bp: BranchPoint)(implicit ctx: DBAccessContext) =
     findAndModify(
@@ -184,4 +175,7 @@ object SkeletonTracingDAO extends SecuredBaseDAO[SkeletonTracing] with FoxImplic
       Json.obj("$set" -> Json.obj(
         "comments.-1" -> comment)),
       returnNew = true)
+
+  def updateStats(_tracing: BSONObjectID, stats: SkeletonTracingStatistics)(implicit ctx: DBAccessContext) =
+    update(Json.obj("_id" -> _tracing), Json.obj("$set" -> Json.obj("stats" -> stats)))
 }

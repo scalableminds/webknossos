@@ -1,4 +1,5 @@
-import akka.actor.Props
+import akka.actor.{PoisonPill, Props}
+import akka.routing.RoundRobinPool
 import com.scalableminds.util.reactivemongo.GlobalDBAccess
 import com.scalableminds.util.security.SCrypt
 import models.binary.{WebKnossosStore, DataStore, DataStoreDAO}
@@ -9,7 +10,7 @@ import play.api._
 import play.api.libs.concurrent._
 import models.user._
 import models.task._
-import oxalis.annotation.{AnnotationStore}
+import oxalis.annotation.AnnotationStore
 import com.scalableminds.util.mail.Mailer
 import play.api.libs.concurrent.Execution.Implicits._
 import com.typesafe.config.Config
@@ -32,7 +33,7 @@ object Global extends GlobalSettings {
 
   def startActors(conf: Config, app: Application) {
     Akka.system(app).actorOf(
-      Props(new AnnotationStore()),
+      RoundRobinPool(10).props(Props[AnnotationStore]),
       name = "annotationStore")
 
     Akka.system(app).actorOf(

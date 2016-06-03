@@ -1,29 +1,23 @@
 package models.annotation
 
-import com.scalableminds.util.reactivemongo.AccessRestrictions.{DenyEveryone, AllowIf}
-import models.basics._
-import models.task.{TaskService, TaskDAO, TaskType, Task}
-import play.api.libs.json._
-import models.user.{UserService, UserDAO, User}
-import AnnotationType._
-import org.joda.time.format.DateTimeFormat
-import org.joda.time.DateTime
-import com.scalableminds.util.mvc.Formatter
-import oxalis.nml.NML
-import com.scalableminds.util.geometry.{BoundingBox, Point3D}
-import java.util.Date
-import play.api.Logger
-import models.basics.Implicits._
-import com.scalableminds.util.tools.{Fox, FoxImplicits}
-import play.api.libs.concurrent.Execution.Implicits._
 import scala.concurrent.Future
-import reactivemongo.bson.BSONObjectID
-import com.scalableminds.util.reactivemongo.{DefaultAccessDefinitions, MongoHelpers, DBAccessContext, GlobalAccessContext}
-import play.modules.reactivemongo.json.BSONFormats._
-import reactivemongo.api.indexes.{IndexType, Index}
+
+import com.scalableminds.util.geometry.BoundingBox
+import com.scalableminds.util.mvc.Formatter
+import com.scalableminds.util.reactivemongo.AccessRestrictions.{AllowIf, DenyEveryone}
+import com.scalableminds.util.reactivemongo.{DBAccessContext, DefaultAccessDefinitions, GlobalAccessContext, MongoHelpers}
+import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import models.annotation.AnnotationType._
+import models.basics._
+import models.task.Task
+import models.user.User
+import org.joda.time.format.DateTimeFormat
 import oxalis.view.{ResourceAction, ResourceActionCollection}
-import models.team.Role
-import models.tracing.TracingStatistics
+import play.api.libs.concurrent.Execution.Implicits._
+import play.api.libs.json._
+import play.modules.reactivemongo.json.BSONFormats._
+import reactivemongo.api.indexes.{Index, IndexType}
+import reactivemongo.bson.BSONObjectID
 
 case class Annotation(
                        _user: Option[BSONObjectID],
@@ -149,6 +143,10 @@ object AnnotationDAO
 
   override def find(query: JsObject = Json.obj())(implicit ctx: DBAccessContext) = {
     super.find(query ++ Json.obj("isActive" -> true))
+  }
+
+  override def count(query: JsObject = Json.obj())(implicit ctx: DBAccessContext) = {
+    super.count(query ++ Json.obj("isActive" -> true))
   }
 
   override def findOne(query: JsObject = Json.obj())(implicit ctx: DBAccessContext) = {

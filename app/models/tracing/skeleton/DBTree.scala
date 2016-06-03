@@ -95,7 +95,7 @@ object DBTree {
 
   def empty(_tracing: BSONObjectID) = DBTree(_tracing, 1, None, System.currentTimeMillis(), nameFromId(1))
 
-  def nameFromId(treeId: Int) = "Tree%03d".format(treeId)
+  def nameFromId(treeId: Int) = f"Tree$treeId%03d"
 
   def createFrom(tracingId: BSONObjectID, t: TreeLike) = {
     val name =

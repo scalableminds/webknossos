@@ -32,7 +32,7 @@ class TaskTypeAdministration @Inject() (val messagesApi: MessagesApi) extends Ad
         "maxHard" -> number(min = 1))(TraceLimit.apply)(TraceLimit.unapply))(
       TaskType.fromForm)(TaskType.toForm)).fill(TaskType.empty)
 
-  def empty = Authenticated{ implicit request =>
+  def empty(id: String) = Authenticated{ implicit request =>
     Ok(views.html.main()(Html("")))
   }
 
@@ -116,11 +116,11 @@ class TaskTypeAdministration @Inject() (val messagesApi: MessagesApi) extends Ad
     for {
       taskType <- TaskTypeDAO.findOneById(taskTypeId) ?~> Messages("taskType.notFound")
       _ <- ensureTeamAdministration(request.user, taskType.team)
+      updatedTaskType = taskType.copy(isActive = false)
+      _ <- TaskTypeDAO.update(taskType._id, updatedTaskType) ?~> Messages("taskType.deleteFailure")
     } yield {
-      val updatedTaskType = taskType.copy(isActive = false)
-      TaskTypeDAO.update(taskType._id, updatedTaskType)
-      TaskService.deleteAllWithTaskType(taskType)
-      JsonOk(Messages("taskType.deleted", taskType.summary))
+      TaskService.removeAllWithTaskType(taskType)
+      JsonOk(Messages("taskType.deleteSuccess", taskType.summary))
     }
   }
 }

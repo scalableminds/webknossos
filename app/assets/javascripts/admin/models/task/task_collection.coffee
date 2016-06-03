@@ -1,25 +1,35 @@
-_                    = require("lodash")
-PaginationCollection = require("../pagination_collection")
-FormatUtils          = require("libs/format_utils")
+FormatUtils           = require("libs/format_utils")
+PaginationCollection  = require("../pagination_collection")
+TaskModel             = require("./task_model")
 
 class TaskCollection extends PaginationCollection
 
-  initialize : (models, options = {}) ->
+  model: TaskModel
+  initialize : (models, options) ->
 
+    @projectName = options.projectName
     @taskTypeId = options.taskTypeId
-    @dataSetName = options.dataSetName
+
+    unless @projectName or @taskTypeId
+      throw new Error("TaskCollection initialized without 'project name' or 'task type id'")
+
+    # Since the TaskCollection is shared between projects and taskTypes it is
+    # handy to have a quick check available.
+    @isForProject = @projectName?
 
 
   url : ->
-    if @taskTypeId
-      "/api/taskTypes/#{@taskTypeId}/tasks"
+
+    if @isForProject
+      return "/api/projects/#{@projectName}/tasks"
     else
-      "/api/tasks"
+      return "/api/taskTypes/#{@taskTypeId}/tasks"
 
 
   parse : (responses) ->
 
-    responses = responses.map((response) ->
+    return responses.map((response) ->
+
       # apply some defaults
       response.type =
         summary : response.type?.summary || "<deleted>"
@@ -40,11 +50,5 @@ class TaskCollection extends PaginationCollection
 
       return response
     )
-
-    if @dataSetName
-      return _.filter(responses, dataSet : @dataSetName)
-    else
-      return responses
-
 
 module.exports = TaskCollection

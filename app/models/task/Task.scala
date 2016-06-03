@@ -34,7 +34,7 @@ case class Task(
                  created: DateTime = DateTime.now(),
                  directLinks: List[String] = Nil,
                  isActive: Boolean = true,
-                 _project: Option[String] = None,
+                 _project: String,
                  _id: BSONObjectID = BSONObjectID.generate
                ) extends FoxImplicits {
 
@@ -43,7 +43,7 @@ case class Task(
   def taskType(implicit ctx: DBAccessContext) = TaskTypeDAO.findOneById(_taskType)(GlobalAccessContext).toFox
 
   def project(implicit ctx: DBAccessContext) =
-    _project.toFox.flatMap(name => ProjectDAO.findOneByName(name))
+    ProjectDAO.findOneByName(_project)
 
   def annotations(implicit ctx: DBAccessContext) =
     AnnotationService.annotationsFor(this)
@@ -83,18 +83,17 @@ object Task extends FoxImplicits {
       boundingBox = annotationContent.flatMap(_.boundingBox).toOption
       status <- task.status
       tt <- task.taskType.map(TaskType.transformToJson) getOrElse JsNull
-      projectName = task._project.getOrElse("")
     } yield {
       Json.obj(
         "id" -> task.id,
         "team" -> task.team,
         "formattedHash" -> Formatter.formatHash(task.id),
-        "projectName" -> projectName,
+        "projectName" -> task._project,
         "type" -> tt,
         "dataSet" -> dataSetName,
         "editPosition" -> editPosition,
         "editRotation" -> editRotation,
-        "isForAnonymous" -> !task.directLinks.isEmpty,
+        "isForAnonymous" -> task.directLinks.nonEmpty,
         "boundingBox" -> boundingBox,
         "neededExperience" -> task.neededExperience,
         "priority" -> task.priority,
@@ -148,7 +147,7 @@ object TaskDAO extends SecuredBaseDAO[Task] with FoxImplicits {
 
   def findAllAdministratable(user: User)(implicit ctx: DBAccessContext) = withExceptionCatcher{
     find(Json.obj(
-      "team" -> Json.obj("$in" -> user.adminTeamNames))).cursor[Task].collect[List]()
+      "team" -> Json.obj("$in" -> user.adminTeamNames))).cursor[Task]().collect[List]()
   }
 
   def removeAllWithProject(project: Project)(implicit ctx: DBAccessContext) = {

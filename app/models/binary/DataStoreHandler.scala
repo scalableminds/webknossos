@@ -30,7 +30,7 @@ trait DataStoreHandlingStrategy {
 
   def importDataSource(dataSet: DataSet): Fox[RESTResponse]
 
-  def uploadDataSource(upload: DataSourceUpload): Fox[Boolean]
+  def uploadDataSource(upload: DataSourceUpload)(implicit messages: Messages): Fox[Boolean]
 }
 
 object DataStoreHandler extends DataStoreHandlingStrategy{
@@ -51,7 +51,7 @@ object DataStoreHandler extends DataStoreHandlingStrategy{
   override def requestDataLayerThumbnail(dataSet: DataSet, dataLayerName: String, width: Int, height: Int): Fox[Array[Byte]] =
     strategyForType(dataSet.dataStoreInfo.typ).requestDataLayerThumbnail(dataSet, dataLayerName, width, height)
 
-  override def uploadDataSource(upload: DataSourceUpload): Fox[Boolean] =
+  override def uploadDataSource(upload: DataSourceUpload)(implicit messages: Messages): Fox[Boolean] =
     WKStoreHandlingStrategy.uploadDataSource(upload)
 }
 
@@ -65,7 +65,7 @@ object NDStoreHandlingStrategy extends DataStoreHandlingStrategy with FoxImplici
   override def progressForImport(dataSet: DataSet): Fox[RESTResponse] =
     Fox.failure("NDStore doesn't support import progress yet.")
 
-  override def uploadDataSource(upload: DataSourceUpload): Fox[Boolean] =
+  override def uploadDataSource(upload: DataSourceUpload)(implicit messages: Messages): Fox[Boolean] =
     Fox.failure("NDStore doesn't support datasource uploads yet.")
 
   override def requestDataLayerThumbnail(dataSet: DataSet, dataLayerName: String, width: Int, height: Int): Fox[Array[Byte]] = {
@@ -134,18 +134,20 @@ object WKStoreHandlingStrategy extends DataStoreHandlingStrategy with DataStoreB
     sendRequest(dataSet.dataStoreInfo.name, call)
   }
 
-  def uploadDataSource(upload: DataSourceUpload): Fox[Boolean] = {
+  def uploadDataSource(upload: DataSourceUpload)(implicit messages: Messages): Fox[Boolean] = {
+    def parseResponse(response: RESTResponse) = (response.body \ "error").asOpt[String] match {
+      case Some(error) => Failure(error)
+      case _ => Full(true)
+    }
+
     Logger.debug("Upload called for: " + upload.name)
     for {
       localDatastore <- config.getString("datastore.name").toFox
       dataStore <- findByServer(localDatastore).toFox
-      call = RESTCall("POST", s"/data/datasets/upload", Map.empty, Map.empty, Json.toJson(upload))
-      response <- dataStore.request(call)
-      _ <- ((response.body \ "error").asOpt[String] match {
-        case Some(error) => Failure(error)
-        case _           => Full(Unit)
-      }) ?~> "dataStore.notAvailable"
-    } yield true
+      call = RESTCall("POST", s"/data/datasets", Map.empty, Map.empty, Json.toJson(upload))
+      response <- dataStore.request(call) ?~> Messages("dataStore.notAvailable")
+      result <- parseResponse(response)
+    } yield result
   }
 }
 

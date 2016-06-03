@@ -29,7 +29,7 @@ import com.scalableminds.util.reactivemongo.AccessRestrictions.{AllowIf, DenyEve
 case class OpenAssignment(
   _task: BSONObjectID,
   team: String,
-  _project: Option[String],
+  _project: String,
   neededExperience: Experience = Experience.empty,
   priority: Int = 100,
   created: DateTime = DateTime.now(),
@@ -77,17 +77,19 @@ object OpenAssignmentDAO extends SecuredBaseDAO[OpenAssignment] with FoxImplicit
   }
 
   private def experiencesToQuery(user: User) =
-    JsArray(user.experiences.map{ case (domain, value) => Json.obj("neededExperience.domain" -> domain, "neededExperience.value" -> value)}.toSeq)
+    JsArray(user.experiences.map{ case (domain, value) => Json.obj("neededExperience.domain" -> domain, "neededExperience.value" -> Json.obj("$lte" -> value))}.toSeq)
 
   private def noRequiredExperience =
     Json.obj("neededExperience.domain" -> "", "neededExperience.value" -> 0)
 
   def findOrderedByPriority(user: User)(implicit ctx: DBAccessContext): Enumerator[OpenAssignment] = {
-    find(Json.obj("$or" -> (experiencesToQuery(user) :+ noRequiredExperience))).sort(Json.obj("priority" -> -1)).cursor[OpenAssignment].enumerate()
+    find(Json.obj(
+      "$or" -> (experiencesToQuery(user) :+ noRequiredExperience)))
+    .sort(Json.obj("priority" -> -1)).cursor[OpenAssignment]().enumerate()
   }
 
   def findOrderedByPriority(implicit ctx: DBAccessContext): Enumerator[OpenAssignment] = {
-    find().sort(Json.obj("priority" -> 1)).cursor[OpenAssignment].enumerate()
+    find().sort(Json.obj("priority" -> 1)).cursor[OpenAssignment]().enumerate()
   }
 
   def countFor(_task: BSONObjectID)(implicit ctx: DBAccessContext) = {

@@ -21,7 +21,8 @@ class BaseRouter
 
     @setupClickHandler()
 
-    _.defer( => @navigate(window.location.pathname, { trigger: false }))
+    @currentURL = window.location.pathname + window.location.search + window.location.hash
+    _.defer( => @handleRoute())
 
 
   setupClickHandler : ->
@@ -29,7 +30,6 @@ class BaseRouter
     $(document).on "click", "a", (evt) =>
 
       url = $(evt.currentTarget).attr("href") or ""
-      urlWithoutSlash = url.replace(/^\//, "")
 
       if newWindow = $(evt.target).data("newwindow")
         [ width, height ] = newWindow.split("x")
@@ -50,7 +50,7 @@ class BaseRouter
         return
 
       for { route } in @routes
-        if urlWithoutSlash.match(route)
+        if url.match(route)
           evt.preventDefault()
           @navigate(url)
 
@@ -78,18 +78,27 @@ class BaseRouter
 
   handleRoute : =>
 
-    urlWithoutSlash = @currentURL.replace(/^\//, "").replace(/#.*$/, "")
+    baseUrl = @getBaseUrl()
 
     for { route, handler } in @routes
-      match = urlWithoutSlash.match(route)
+      match = baseUrl.match(route)
       if match
-        args = Backbone.Router::_extractParameters(route, urlWithoutSlash)
+        args = Backbone.Router::_extractParameters(route, baseUrl)
         handler.apply(null, args)
         return
     return
 
+
+  getBaseUrl : ->
+
+    # Return the baseUrl without urlParams or anchors/hashes
+    baseUrl = @currentURL.replace(/\?.*$/, "").replace(/#.*$/, "")
+    return baseUrl
+
+
   shouldNavigate : (path) ->
-    return @currentURL != path
+    return @getBaseUrl() != path
+
 
   navigate : (path, { trigger = true } = {}) ->
     if not @shouldNavigate(path)
@@ -129,7 +138,7 @@ class BaseRouter
   cleanupViews : ->
 
     # Remove current views
-    if @activeViews
+    if @activeViews.length > 0
       for view in @activeViews
         # prefer Marionette's.destroy() function to Backbone's remove()
         if view.destroy

@@ -5,6 +5,7 @@ PaginatedDatasetCollection  = require("./models/dataset/paginated_dataset_collec
 DatasetAddView              = require("./views/dataset/dataset_add_view")
 UserListView                = require("./views/user/user_list_view")
 UserCollection              = require("./models/user/user_collection")
+PaginatedUserCollection     = require("./models/user/paginated_user_collection")
 TeamListView                = require("./views/team/team_list_view")
 TeamCollection              = require("./models/team/team_collection")
 PaginatedTeamCollection     = require("./models/team/paginated_team_collection")
@@ -28,6 +29,7 @@ module.exports = {
   PaginatedTeamCollection
   UserListView
   UserCollection
+  PaginatedUserCollection
   TeamListView
   TeamCollection
   TaskListView

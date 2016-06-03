@@ -7,7 +7,6 @@ UserAnnotationCollection = require("oxalis/model/skeletontracing/user_annotation
 SelectionView            = require("admin/views/selection_view")
 UserCollection           = require("admin/models/user/user_collection")
 TeamCollection           = require("admin/models/team/team_collection")
-TaskCollection           = require("admin/models/task/task_collection")
 TaskTypeCollection       = require("admin/models/tasktype/task_type_collection")
 ProjectCollection        = require("admin/models/project/project_collection")
 ProjectModel             = require("admin/models/project/project_model")
@@ -150,7 +149,6 @@ class MergeModalView extends Marionette.LayoutView
       @project    .show(@projectSelectionView)
     )
 
-
   mergeTaskType : ->
 
     taskTypeId = @ui.tasktype.find("select :selected").prop("id")
@@ -160,7 +158,7 @@ class MergeModalView extends Marionette.LayoutView
 
   mergeProject : ->
 
-    projectId = @ui.project.find("select :selected").prop("id")
+    projectId = @ui.project.find("select :selected").prop("value")
     url = "/annotations/CompoundProject/#{projectId}/merge/#{@model.get("tracingType")}/#{@model.get("tracingId")}"
     @merge(url)
 

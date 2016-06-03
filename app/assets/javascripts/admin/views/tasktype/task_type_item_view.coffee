@@ -1,88 +1,62 @@
 _                  = require("lodash")
 Marionette         = require("backbone.marionette")
 Toast              = require("libs/toast")
-SimpleTaskItemView = require("./simple_task_item_view")
-TaskCollection     = require("admin/models/task/task_collection")
 
 class TaskTypeItemView extends Marionette.CompositeView
 
   template : _.template("""
-    <tr id="<%- id %>">
-      <td class="details-toggle" href="#">
-        <i class="caret-right"></i>
-        <i class="caret-down"></i>
-      </td>
-      <td><%- id %></td>
-      <td><%- team %></td>
-      <td><%- summary %></td>
-      <td><%- formattedShortText %></td>
-      <td>
-        <% _.each(settings.allowedModes, function (mode) { %>
-          <% var cssClass = mode == settings.preferredMode ? "label-primary" : "label-default"; %>
-          <span class="label <%= cssClass %>">
-            <%= mode[0].toUpperCase() + mode.slice(1) %>
-          </span>
-        <% }) %>
-      </td>
-      <td>
-        <% if(settings.branchPointsAllowed) { %>
-          <span class="label label-default">Branchpoints</span>
+    <td class="monospace-id"><%- id %></td>
+    <td><%- team %></td>
+    <td><%- summary %></td>
+    <td><%- formattedShortText %></td>
+    <td>
+      <% _.each(settings.allowedModes, function (mode) { %>
+        <% var modename = mode[0].toUpperCase() + mode.slice(1); %>
+        <% if(mode == settings.preferredMode) { %>
+          <span class="label label-primary" title="default mode"><%= modename %></span><br />
+        <% } else { %>
+          <span class="label label-default" ><%= modename %></span><br />
         <% } %>
-        <% if(settings.somaClickingAllowed) { %>
-          <span class="label label-default">Soma clicking</span>
-        <% } %>
-        <% if(settings.advancedOptionsAllowed) { %>
-          <span class="label label-default">Advanced Options</span>
-        <% } %>
-      </td>
-      <td><%- expectedTime %></td>
-      <td><%- fileName %></td>
-      <td class="nowrap">
-        <a href="/taskTypes/<%- id %>/edit" >
-          <i class="fa fa-pencil"></i>edit
-        </a> <br />
-        <a href="/annotations/CompoundTaskType/<%- id %>" title="view all finished tracings">
-          <i class="fa fa-random"></i>view
-        </a> <br />
-        <a href="/api/taskTypes/<%- id %>/download" >
-          <i class="fa fa-download"></i>download
-        </a> <br />
-        <a href="#" class="delete">
-          <i class="fa fa-trash-o"></i>delete
-        </a>
-      </td>
-    </tr>
-    <tr class="details-row hide">
-      <td colspan="12">
-        <table class="table table-condensed table-nohead">
-          <tbody></tbody>
-        </table>
-      </td>
-    </tr>
+      <% }) %>
+    </td>
+    <td>
+      <% if(settings.branchPointsAllowed) { %>
+        <span class="label label-default">Branchpoints</span>
+      <% } %>
+      <% if(settings.somaClickingAllowed) { %>
+        <span class="label label-default">Soma clicking</span>
+      <% } %>
+      <% if(settings.advancedOptionsAllowed) { %>
+        <span class="label label-default">Advanced Options</span>
+      <% } %>
+    </td>
+    <td><%- expectedTime %></td>
+    <td><%- fileName %></td>
+    <td class="nowrap">
+      <a href="/taskTypes/<%- id %>/edit" >
+        <i class="fa fa-pencil"></i>edit
+      </a> <br />
+      <a href="/annotations/CompoundTaskType/<%- id %>" title="view all finished tracings">
+        <i class="fa fa-random"></i>view
+      </a> <br />
+      <a href="/taskTypes/<%- id %>/tasks" title="View Tasks">
+        <i class="fa fa-tasks"></i>tasks
+      </a> <br />
+      <a href="/api/taskTypes/<%- id %>/download" >
+        <i class="fa fa-download"></i>download
+      </a> <br />
+      <a href="#" class="delete">
+        <i class="fa fa-trash-o"></i>delete
+      </a>
+    </td>
   """)
 
-  childView : SimpleTaskItemView
-  childViewContainer : "tbody"
-  tagName : "tbody"
+  tagName : "tr"
 
   events :
-    "click .details-toggle" : "toggleDetails"
     "click .delete" : "deleteTaskType"
 
-  ui :
-    "detailsRow" : ".details-row"
-    "detailsToggle" : ".details-toggle"
-
-
   initialize : ->
-
-    @listenTo(app.vent, "taskTypeListView:toggleDetails", @toggleDetails)
-    @collection = new TaskCollection(null, taskTypeId : @model.get("id"))
-
-    # minimize the toggle view on item deletion
-    @listenTo(@collection, "remove", (item) =>
-      @toggleDetails()
-    )
 
 
   deleteTaskType : (evt) ->
@@ -93,21 +67,6 @@ class TaskTypeItemView extends Marionette.CompositeView
       @model.destroy().then((response) =>
         Toast.message(response.messages)
       )
-
-  toggleDetails : ->
-
-    if @ui.detailsRow.hasClass("hide")
-
-      @collection
-        .fetch(silent : true)
-        .then( =>
-          @render()
-          @ui.detailsRow.removeClass("hide")
-          @ui.detailsToggle.addClass("open")
-        )
-    else
-      @ui.detailsRow.addClass("hide")
-      @ui.detailsToggle.removeClass("open")
 
 
 module.exports = TaskTypeItemView

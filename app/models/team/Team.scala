@@ -19,13 +19,13 @@ case class Team(name: String, parent: Option[String], roles: List[Role], owner: 
   lazy val id = _id.stringify
 
   def isEditableBy(user: User) =
-    user.adminTeamNames.contains(name) || parent.exists(user.adminTeamNames.contains)
+    user.isAdminOf(name) || parent.exists(user.isAdminOf)
 
   def isOwner(user: User) =
     owner.contains(user._id)
 
   def couldBeAdministratedBy(user: User) =
-    parent.map(user.teamNames.contains) getOrElse true
+    parent.forall(user.teamNames.contains)
 
   def isRootTeam =
     behavesLikeRootTeam.getOrElse(parent.isEmpty)
@@ -45,7 +45,7 @@ object Team extends FoxImplicits {
         "parent" -> team.parent,
         "roles" -> team.roles,
         "owner" -> owner.toOption,
-        "amIAnAdmin" -> requestingUser.adminTeamNames.contains(team.name),
+        "amIAnAdmin" -> requestingUser.isAdminOf(team.name),
         "isEditable" -> team.isEditableBy(requestingUser),
         "amIOwner" -> team.isOwner(requestingUser)
       )

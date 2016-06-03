@@ -2,11 +2,8 @@ package controllers
 
 import javax.inject.Inject
 
-import scala.concurrent.Future
-
-import com.scalableminds.util.tools.ExtendedTypes.ExtendedString
-import com.scalableminds.util.tools.{Fox, FoxImplicits}
-import models.team._
+import com.scalableminds.util.reactivemongo.GlobalAccessContext
+import com.scalableminds.util.security.SCrypt._
 import models.user._
 import models.user.time._
 import oxalis.security.Secured
@@ -120,7 +117,8 @@ class UserController @Inject()(val messagesApi: MessagesApi)
   def list = Authenticated.async{ implicit request =>
     UsingFilters(
       Filter("includeAnonymous", (value: Boolean, el: User) => value || !el.isAnonymous, default = Some("false")),
-      Filter("isEditable", (value: Boolean, el: User) => el.isEditableBy(request.user) == value)
+      Filter("isEditable", (value: Boolean, el: User) => el.isEditableBy(request.user) == value),
+      Filter("isAdmin", (value: Boolean, el: User) => el.hasAdminAccess == value)
     ) { filter =>
       for {
         users <- UserDAO.findAll
@@ -180,22 +178,20 @@ class UserController @Inject()(val messagesApi: MessagesApi)
   def update(userId: String) = Authenticated.async(parse.json) { implicit request =>
     val issuingUser = request.user
     withJsonBodyUsing(userUpdateReader) {
-      case (firstName, lastName, verified, assignedTeams, experiences) =>
+      case (firstName, lastName, verified, assignedMemberships, experiences) =>
         for {
           user <- UserDAO.findOneById(userId) ?~> Messages("user.notFound")
           _ <- user.isEditableBy(request.user) ?~> Messages("notAllowed")
-          teams <- Fox.combined(assignedTeams.map(t => TeamDAO.findOneByName(t.team))) ?~> Messages("team.notFound")
-          allTeams <- Fox.sequenceOfFulls(user.teams.map(t => TeamDAO.findOneByName(t.team)))
-          (oldTeamsWithUpdate, teamsWithoutUpdate) = user.teams.partition { t =>
-            issuingUser.adminTeamNames.contains(t.team) && !assignedTeams.contains(t)
-          }
-          teamsWithUpdate = oldTeamsWithUpdate ++ assignedTeams.filterNot(t => user.teams.exists(_.team == t.team))
-          _ <- Fox.combined(teamsWithUpdate.map(t => ensureTeamAdministration(issuingUser, t.team)))
-          _ <- ensureRoleExistence(assignedTeams.zip(teams))
-          _ <- ensureProperTeamAdministration(user, assignedTeams.zip(teams))
-          trimmedExperiences = experiences.map { case (key, value) => key.trim -> value }.toMap
-          updatedTeams = assignedTeams.filter(t => teamsWithUpdate.exists(_.team == t.team)) ++ teamsWithoutUpdate
-          updatedUser <- UserService.update(user, firstName, lastName, verified, updatedTeams, trimmedExperiences)
+          teams <- Fox.combined(assignedMemberships.map(t => TeamDAO.findOneByName(t.team)(GlobalAccessContext) ?~> Messages("team.notFound")))
+          allTeams <- Fox.sequenceOfFulls(user.teams.map(t => TeamDAO.findOneByName(t.team)(GlobalAccessContext)))
+          teamsWithoutUpdate = user.teams.filterNot(t => issuingUser.isAdminOf(t.team))
+          assignedMembershipWTeams = assignedMemberships.zip(teams)
+          teamsWithUpdate = assignedMembershipWTeams.filter(t => issuingUser.isAdminOf(t._1.team))
+          _ <- ensureRoleExistence(teamsWithUpdate)
+          _ <- ensureProperTeamAdministration(user, teamsWithUpdate)
+          trimmedExperiences = experiences.map { case (key, value) => key.trim -> value }
+          updatedTeams = teamsWithUpdate.map(_._1) ++ teamsWithoutUpdate
+          updatedUser <- UserService.update(user, firstName.trim, lastName.trim, verified, updatedTeams, trimmedExperiences)
         } yield {
           Ok(User.userPublicWrites(request.user).writes(updatedUser))
         }

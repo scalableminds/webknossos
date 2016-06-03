@@ -28,7 +28,7 @@ class TeamController @Inject()(val messagesApi: MessagesApi) extends Controller 
       Filter("isRoot", (value: Boolean, el: Team) =>
         el.parent.isEmpty == value),
       Filter("amIAnAdmin", (value: Boolean, el: Team) =>
-        request.user.adminTeamNames.contains(el.name) == value)
+        request.user.isAdminOf(el.name) == value)
     ) { filter =>
       for {
         allTeams <- TeamDAO.findAll

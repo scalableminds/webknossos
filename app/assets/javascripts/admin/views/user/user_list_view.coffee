@@ -69,7 +69,7 @@ class UserListView extends Marionette.CompositeView
 
   filterBySearch : (filterQuery) ->
 
-    @collection.setFilter(["email", "firstName", "lastName"], filterQuery)
+    @collection.setFilter(["email", "firstName",  "id", "lastName"], filterQuery)
 
 
   showTeamRoleModal : ->

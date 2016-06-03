@@ -60,7 +60,7 @@ class AnnotationController @Inject()(val messagesApi: MessagesApi) extends Contr
   def merge(typ: String, id: String, mergedTyp: String, mergedId: String, readOnly: Boolean) = Authenticated.async { implicit request =>
     withMergedAnnotation(typ, id, mergedId, mergedTyp, readOnly) { annotation =>
       for {
-        _ <- annotation.restrictions.allowAccess(request.user) ?~> Messages("notAllowed") ~> 400
+        _ <- annotation.restrictions.allowAccess(request.user) ?~> Messages("notAllowed") ~> BAD_REQUEST
         temporary <- annotation.temporaryDuplicate(keepId = true)
         explorational = temporary.copy(typ = AnnotationType.Explorational)
         savedAnnotation <- explorational.saveToDB
@@ -153,7 +153,7 @@ class AnnotationController @Inject()(val messagesApi: MessagesApi) extends Contr
   def createExplorational = Authenticated.async(parse.urlFormEncoded) { implicit request =>
     for {
       dataSetName <- postParameter("dataSetName") ?~> Messages("dataSet.notSupplied")
-      dataSet <- DataSetDAO.findOneBySourceName(dataSetName) ?~> Messages("dataSet.notFound")
+      dataSet <- DataSetDAO.findOneBySourceName(dataSetName) ?~> Messages("dataSet.notFound", dataSetName)
       contentType <- postParameter("contentType") ?~> Messages("annotation.contentType.notSupplied")
       annotation <- AnnotationService.createExplorationalFor(request.user, dataSet, contentType) ?~> Messages("annotation.create.failed")
     } yield {
@@ -187,19 +187,24 @@ class AnnotationController @Inject()(val messagesApi: MessagesApi) extends Contr
     if (annotation.restrictions.allowUpdate(request.user))
       Full(version == annotation.version + 1)
     else
-      Failure(Messages("notAllowed")) ~> 403
+      Failure(Messages("notAllowed")) ~> FORBIDDEN
   }
 
   def updateWithJson(typ: String, id: String, version: Int) = Authenticated.async(parse.json(maxLength = 2097152)) { implicit request =>
-    def executeIfAllowed(oldAnnotation: Annotation, isAllowed: Boolean, oldJs: JsObject) = {
+    def executeIfAllowed(oldAnnotation: Annotation, isAllowed: Boolean) = {
       if (isAllowed)
         for {
           result <- handleUpdates(oldAnnotation, request.body, version)
         } yield {
           JsonOk(result, Messages("annotation.saved"))
         }
-      else
-        new Fox(Future.successful(Full(new JsonResult(CONFLICT)(oldJs, Messages("annotation.dirtyState")))))
+      else {
+        for {
+          oldJs <- oldAnnotation.annotationInfo(Some(request.user))
+        } yield {
+          new JsonResult(CONFLICT)(oldJs, Messages("annotation.dirtyState"))
+        }
+      }
     }
 
     // Logger.info(s"Tracing update [$typ - $id, $version]: ${request.body}")
@@ -209,8 +214,7 @@ class AnnotationController @Inject()(val messagesApi: MessagesApi) extends Contr
       oldAnnotation <- findAnnotation(typ, id)
       updateableAnnotation <- isUpdateable(oldAnnotation) ?~> Messages("annotation.update.impossible")
       isAllowed <- isUpdateAllowed(oldAnnotation, version).toFox
-      oldJs <- oldAnnotation.annotationInfo(Some(request.user))
-      result <- executeIfAllowed(updateableAnnotation, isAllowed, oldJs)
+      result <- executeIfAllowed(updateableAnnotation, isAllowed)
     } yield {
       result
     }
@@ -310,7 +314,7 @@ class AnnotationController @Inject()(val messagesApi: MessagesApi) extends Contr
         _ <- ensureTeamAdministration(request.user, annotation.team)
         result <- tryToCancel(annotation)
       } yield {
-        UsedAnnotationDAO.removeAll(annotation.id)
+        UsedAnnotationDAO.removeAll(AnnotationIdentifier(typ, id))
         result
       }
     }

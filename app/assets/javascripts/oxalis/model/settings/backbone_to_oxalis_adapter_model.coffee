@@ -116,7 +116,7 @@ class BackboneToOxalisAdapterModel extends Backbone.Model
 
       # ######################################
       # Listen to changes in the BackboneModel
-      @listenTo(@volumeTracingAdapter, "change:activeCellId", (model, id) ->
+      @listenTo(@volumeTracingAdapter, "change:mappedActiveCellId", (model, id) ->
         @volumeTracingModel.setActiveCell(id)
       )
 

@@ -36,7 +36,7 @@ class ProjectController @Inject()(val messagesApi: MessagesApi) extends Controll
   def delete(projectName: String) = Authenticated.async {
     implicit request =>
       for {
-        project <- ProjectDAO.findOneByName(projectName) ?~> Messages("project.notFound")
+        project <- ProjectDAO.findOneByName(projectName) ?~> Messages("project.notFound", projectName)
         _ <- project.isOwnedBy(request.user) ?~> Messages("project.remove.notAllowed")
         _ <- ProjectService.remove(project) ?~> Messages("project.remove.failure")
       } yield {
@@ -47,7 +47,7 @@ class ProjectController @Inject()(val messagesApi: MessagesApi) extends Controll
   def create = Authenticated.async(parse.json) { implicit request =>
     withJsonBodyUsing(Project.projectPublicReads) { project =>
       ProjectDAO.findOneByName(project.name)(GlobalAccessContext).futureBox.flatMap {
-        case Empty if request.user.adminTeamNames.contains(project.team) =>
+        case Empty if request.user.isAdminOf(project.team) =>
           for {
             _  <- ProjectDAO.insert(project)
             js <- Project.projectPublicWritesWithStatus(project, request.user)
@@ -63,7 +63,7 @@ class ProjectController @Inject()(val messagesApi: MessagesApi) extends Controll
   def tasksForProject(projectName: String) = Authenticated.async {
     implicit request =>
       for {
-        project <- ProjectDAO.findOneByName(projectName) ?~> Messages("project.notFound")
+        project <- ProjectDAO.findOneByName(projectName) ?~> Messages("project.notFound", projectName)
         tasks <- project.tasks
         js <- Future.traverse(tasks)(Task.transformToJson)
       } yield {

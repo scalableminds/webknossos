@@ -86,7 +86,7 @@ class TaskController @Inject() (val messagesApi: MessagesApi) extends Controller
       stringifiedJson <- body.dataParts.get("formJSON").flatMap(_.headOption) ?~> Messages("format.json.missing")
       (taskTypeId, experience, priority, status, team, projectName, boundingBox) <- parseJson(stringifiedJson).toFox
       taskType <- TaskTypeDAO.findOneById(taskTypeId) ?~> Messages("taskType.notFound")
-      project <- ProjectDAO.findOneByName(projectName) ?~> Messages("project.notFound")
+      project <- ProjectDAO.findOneByName(projectName) ?~> Messages("project.notFound", projectName)
       _ <- ensureTeamAdministration(request.user, team)
       result <- {
         val nmls = NMLService.extractFromFile(nmlFile.ref.file, nmlFile.filename)
@@ -99,7 +99,7 @@ class TaskController @Inject() (val messagesApi: MessagesApi) extends Controller
               experience,
               priority,
               status.open,
-              _project = Some(project.name),
+              _project = project.name,
               _id = BSONObjectID.generate)
 
             for {
@@ -120,24 +120,25 @@ class TaskController @Inject() (val messagesApi: MessagesApi) extends Controller
     input match {
       case (taskTypeId, experience, priority, status, team, projectName, boundingBox, dataSetName, start, rotation, isForAnonymous) =>
         for {
-          _ <- DataSetDAO.findOneBySourceName(dataSetName) ?~> Messages("dataSet.notFound")
+          _ <- DataSetDAO.findOneBySourceName(dataSetName) ?~> Messages("dataSet.notFound", dataSetName)
           taskType <- TaskTypeDAO.findOneById(taskTypeId) ?~> Messages("taskType.notFound")
-          project <- ProjectDAO.findOneByName(projectName) ?~> Messages("project.notFound")
+          project <- ProjectDAO.findOneByName(projectName) ?~> Messages("project.notFound", projectName)
           _ <- ensureTeamAdministration(request.user, team)
-          task = Task(taskType._id, team, experience, priority, status.open, _project = Some(project.name))
+          task = Task(taskType._id, team, experience, priority, status.open, _project = project.name)
           _ <- AnnotationService.createAnnotationBase(task, request.user._id, boundingBox, taskType.settings, dataSetName, start, rotation)
           directLinks <- createAnonymousUsersAndTasksInstancesIfNeeded(isForAnonymous, task).toFox
           taskWithLinks = task.copy(directLinks = directLinks)
           _ <- TaskService.insert(taskWithLinks, insertAssignments = ! isForAnonymous)
         } yield {
-          task
+          taskWithLinks
         }
     }
 
   def bulkCreate(json: JsValue)(implicit request: AuthenticatedRequest[_]): Fox[Result] = {
     withJsonUsing(json, Reads.list(taskCompleteReads)) { parsed =>
-      val results = parsed.map(p => createSingleTask(p).map(_ => Messages("task.create.success")))
-      bulk2StatusJson(results).map(js => JsonOk(js, Messages("task.bulk.processed")))
+      Fox.serialSequence(parsed){p => createSingleTask(p).map(_ => Messages("task.create.success"))}.flatMap { results =>
+        bulk2StatusJson(results).map(js => JsonOk(js, Messages("task.bulk.processed")))
+      }
     }
   }
 
@@ -184,7 +185,7 @@ class TaskController @Inject() (val messagesApi: MessagesApi) extends Controller
           task <- TaskService.findOneById(taskId) ?~> Messages("task.notFound")
           _ <- ensureTeamAdministration(request.user, task.team)
           taskType <- TaskTypeDAO.findOneById(taskTypeId) ?~> Messages("taskType.notFound")
-          project <- ProjectDAO.findOneByName(projectName) ?~> Messages("project.notFound")
+          project <- ProjectDAO.findOneByName(projectName) ?~> Messages("project.notFound", projectName)
           openInstanceCount <- task.remainingInstances
           updatedTask <- TaskDAO.update(
             _task = task._id,

@@ -31,8 +31,6 @@ class ArbitraryController
   model : null
   view : null
 
-  record : false
-
   input :
     mouse : null
     keyboard : null
@@ -62,7 +60,7 @@ class ArbitraryController
     @arbitraryView.addGeometry @plane
 
     # render HTML element to indicate recording status
-    @infoPlane = new ArbitraryPlaneInfo()
+    @infoPlane = new ArbitraryPlaneInfo(model: @model)
     @infoPlane.render()
     $("#render").append(@infoPlane.el)
 
@@ -82,17 +80,6 @@ class ArbitraryController
     @stop()
 
     @crosshair.setVisibility(@model.user.get("displayCrosshair"))
-
-    # Toggle record
-    @setRecord(true)
-    $('#trace-mode-trace').on("click", =>
-      @setRecord(true)
-      $(":focus").blur()
-    )
-    $('#trace-mode-watch').on("click", =>
-      @setRecord(false)
-      $(":focus").blur()
-    )
 
 
   render : (forceUpdate, event) ->
@@ -208,16 +195,10 @@ class ArbitraryController
     , -1)
 
 
-  setRecord : (@record) ->
+  setRecord : (record) ->
 
-    $('#trace-mode button').removeClass("btn-primary")
-    if @record
-      $('#trace-mode-trace').addClass("btn-primary")
-    else
-      $('#trace-mode-watch').addClass("btn-primary")
-
-    @infoPlane.updateInfo(@record)
-    if @record
+    @model.set("flightmodeRecording", record)
+    if record
       @setWaypoint()
 
 
@@ -288,7 +269,7 @@ class ArbitraryController
 
   setWaypoint : =>
 
-    unless @record
+    unless @model.get("flightmodeRecording")
       return
 
     position  = @cam.getPosition()

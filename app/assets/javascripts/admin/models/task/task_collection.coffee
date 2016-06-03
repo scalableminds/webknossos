@@ -1,8 +1,10 @@
 FormatUtils           = require("libs/format_utils")
 PaginationCollection  = require("../pagination_collection")
+TaskModel             = require("./task_model")
 
 class TaskCollection extends PaginationCollection
 
+  model: TaskModel
   initialize : (models, options) ->
 
     @projectName = options.projectName
@@ -17,6 +19,7 @@ class TaskCollection extends PaginationCollection
 
 
   url : ->
+
     if @isForProject
       return "/api/projects/#{@projectName}/tasks"
     else

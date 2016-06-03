@@ -1,11 +1,8 @@
-PaginationCollection = require("../pagination_collection")
+Backbone = require("backbone")
 
-class UserCollection extends PaginationCollection
+class UserCollection extends Backbone.Collection
 
   url : "/api/users"
   sortAttribute : "firstName"
-
-  state :
-    pageSize : 50
 
 module.exports = UserCollection

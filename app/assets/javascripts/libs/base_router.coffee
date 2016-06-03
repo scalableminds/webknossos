@@ -21,7 +21,8 @@ class BaseRouter
 
     @setupClickHandler()
 
-    _.defer( => @navigate(window.location.pathname, { trigger: false }))
+    @currentURL = window.location.pathname
+    _.defer( => @handleRoute())
 
 
   setupClickHandler : ->
@@ -129,7 +130,7 @@ class BaseRouter
   cleanupViews : ->
 
     # Remove current views
-    if @activeViews
+    if @activeViews.length > 0
       for view in @activeViews
         # prefer Marionette's.destroy() function to Backbone's remove()
         if view.destroy

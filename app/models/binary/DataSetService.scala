@@ -44,22 +44,26 @@ object DataSetService extends FoxImplicits {
       accessToken = None))(GlobalAccessContext)
   }
 
-  def updateDataSource(dataStoreInfo: DataStoreInfo, usableDataSource: UsableDataSource)(implicit ctx: DBAccessContext): Fox[WriteResult] = {
-    DataSetDAO.findOneBySourceName(usableDataSource.id)(GlobalAccessContext).futureBox.flatMap {
+  def updateDataSource(dataStoreInfo: DataStoreInfo, dataSource: DataSourceLike)(implicit ctx: DBAccessContext): Fox[WriteResult] = {
+    DataSetDAO.findOneBySourceName(dataSource.id)(GlobalAccessContext).futureBox.flatMap {
       case Full(dataSet) if dataSet.dataStoreInfo.name == dataStoreInfo.name =>
-        DataSetDAO.updateDataSource(usableDataSource.id, dataStoreInfo, usableDataSource.dataSource)(GlobalAccessContext).futureBox
+        DataSetDAO.updateDataSource(
+          dataSource.id, 
+          dataStoreInfo, 
+          dataSource.source, 
+          isActive = dataSource.isUsable)(GlobalAccessContext).futureBox
       case Full(_) =>
         // TODO: There is a problem here. The dataset name is already in use. We are not going to update that datasource.
         // this should be somehow populated to the user to inform him that he needs to rename the datasource
         Fox.failure("dataset.name.alreadyInUse").futureBox
       case _ =>
         createDataSet(
-          usableDataSource.id,
+          dataSource.id,
           dataStoreInfo,
-          usableDataSource.sourceType,
-          usableDataSource.owningTeam,
-          Some(usableDataSource.dataSource),
-          isActive = true).futureBox
+          dataSource.sourceType,
+          dataSource.owningTeam,
+          dataSource.source,
+          isActive = dataSource.isUsable).futureBox
     }
   }
 
@@ -78,14 +82,8 @@ object DataSetService extends FoxImplicits {
 
   def updateDataSources(dataStoreName: String, dataSources: List[DataSourceLike])(implicit ctx: DBAccessContext) = {
     Logger.info(s"[$dataStoreName] Available datasets: " + dataSources.map(_.id).mkString(", "))
-    dataSources.map {
-      case d: UsableDataSource =>
-        DataSetService.updateDataSource(DataStoreInfo(dataStoreName, d.serverUrl), d)
-      case d: UnusableDataSource =>
-        for {
-          _ <- DataSetDAO.removeByName(d.id)(GlobalAccessContext)
-          _ <- DataSetService.createDataSet(d.id, DataStoreInfo(dataStoreName, d.serverUrl), d.sourceType, d.owningTeam, isActive = false)
-        } yield true
+    dataSources.map { dataSource =>
+      DataSetService.updateDataSource(DataStoreInfo(dataStoreName, dataSource.serverUrl), dataSource)
     }
   }
 }

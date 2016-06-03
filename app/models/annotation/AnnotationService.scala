@@ -136,7 +136,7 @@ object AnnotationService extends AnnotationContentProviders with BoxImplicits wi
     rotation: Vector3D)(implicit ctx: DBAccessContext) = {
 
     for {
-      tracing <- SkeletonTracingService.createFrom(dataSetName, start, rotation, boundingBox, insertStartAsNode = true, settings) ?~> "Failed to create skeleton tracing."
+      tracing <- SkeletonTracingService.createFrom(dataSetName, start, rotation, boundingBox, insertStartAsNode = true, isFirstBranchPoint = true, settings) ?~> "Failed to create skeleton tracing."
       content = ContentReference.createFor(tracing)
       _ <- AnnotationDAO.insert(Annotation(Some(userId), content, team = task.team, typ = AnnotationType.TracingBase, _task = Some(task._id))) ?~> "Failed to insert annotation."
     } yield tracing
@@ -161,7 +161,7 @@ object AnnotationService extends AnnotationContentProviders with BoxImplicits wi
 
   def createFrom(user: User, content: AnnotationContent, annotationType: AnnotationType, name: Option[String])(implicit messages: Messages, ctx: DBAccessContext) = {
     for {
-      dataSet <- DataSetDAO.findOneBySourceName(content.dataSetName) ~> Messages("dataSet.notFound")
+      dataSet <- DataSetDAO.findOneBySourceName(content.dataSetName) ?~> Messages("dataSet.notFound", content.dataSetName)
       annotation = Annotation(
         Some(user._id),
         ContentReference.createFor(content),

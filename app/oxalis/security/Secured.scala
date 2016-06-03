@@ -1,18 +1,18 @@
 package oxalis.security
 
-import scala.concurrent.Future
+import scala.concurrent.{Future, Promise}
+
 import com.scalableminds.util.mvc.JsonResult
-import models.user.{UserService, User}
+import models.user.{User, UserService}
 import play.api.mvc._
 import play.api.mvc.BodyParsers
 import play.api.mvc.Results._
 import play.api.i18n.{I18nSupport, Messages}
 import play.api.mvc.Request
-import play.api.Play
+import play.api.{Logger, Play}
 import play.api.Play.current
 import controllers.routes
 import play.api.libs.concurrent.Akka
-import akka.actor.Props
 import com.scalableminds.util.reactivemongo.GlobalAccessContext
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import controllers.routes
@@ -30,6 +30,12 @@ import play.api.mvc.{Request, _}
 import com.scalableminds.util.reactivemongo.GlobalAccessContext
 import models.team.Role
 import play.api.http.Status._
+import scala.concurrent.duration._
+import scala.util.Success
+
+import akka.actor.Props
+import akka.pattern.after
+import play.airbrake.Airbrake
 
 class AuthenticatedRequest[A](
   val user: User, override val request: Request[A]
@@ -65,6 +71,8 @@ trait Secured extends FoxImplicits with I18nSupport{
    */
   val userService = models.user.UserService
 
+  val longRequestWarningTime = 10.seconds
+
   /**
    * Tries to extract the user from a request
    */
@@ -95,6 +103,33 @@ trait Secured extends FoxImplicits with I18nSupport{
         Empty
     }
 
+  private def withLongRunningOpTracking[A](f: => Future[A])(implicit request: Request[_]): Future[A] = {
+    val start = System.currentTimeMillis
+    val longRunningAlert = Promise[Boolean]()
+
+    // Schedule a warning if the processing continues longer than the warn limit
+    after(longRequestWarningTime, Akka.system.scheduler)(Future.successful{
+      if(!longRunningAlert.isCompleted)
+        Logger.warn(
+          s"Running long running request (ID:${request.id}):" +
+          s" ${request.method.toUpperCase} ${request.uri}")
+    })
+
+    val result = f
+
+    // Schedule another warning if the processing of a long request is completed
+    result.onComplete{ r =>
+      longRunningAlert.complete(Success(true))
+      val end = System.currentTimeMillis
+      if((end - start).millis > longRequestWarningTime){
+        Logger.warn(
+          f"Completed long running Request (ID: ${request.id}%s, T: ${(end-start).toDouble / 1000}%.2fs): " +
+          s"${request.method.toUpperCase} ${request.uri}")
+      }
+    }
+    result
+  }
+
   /**
    * Awesome construct to create an authenticated action. It uses the helper
    * function defined below this one to ensure that a user is logged in. If
@@ -119,25 +154,29 @@ trait Secured extends FoxImplicits with I18nSupport{
 
   object Authenticated extends ActionBuilder[AuthenticatedRequest] with AuthHelpers{
     def invokeBlock[A](request: Request[A], block: (AuthenticatedRequest[A]) => Future[Result]) = {
-      maybeUser(request).flatMap { user =>
-        Secured.ActivityMonitor ! UserActivity(user, System.currentTimeMillis)
-        if (user.verified)
-          executeAndEnsureSession(user, request, block)
-        else
-          Future.successful(Forbidden(views.html.error.defaultError(Messages("user.notVerified"), false)(AuthedSessionData(user, request.flash))))
-      }.getOrElse(onUnauthorized(request))
+      withLongRunningOpTracking {
+        maybeUser(request).flatMap { user =>
+          Secured.ActivityMonitor ! UserActivity(user, System.currentTimeMillis)
+          if (user.verified)
+            executeAndEnsureSession(user, request, block)
+          else
+            Future.successful(Forbidden(views.html.error.defaultError(Messages("user.notVerified"), false)(AuthedSessionData(user, request.flash))))
+        }.getOrElse(onUnauthorized(request))
+      }(request)
     }
   }
 
   object UserAwareAction extends ActionBuilder[UserAwareRequest] with AuthHelpers{
     def invokeBlock[A](request: Request[A], block: (UserAwareRequest[A]) => Future[Result]) = {
-      maybeUser(request).filter(_.verified).futureBox.flatMap {
-        case Full(user) =>
-          Secured.ActivityMonitor ! UserActivity(user, System.currentTimeMillis)
-          executeAndEnsureSession(user, request, block)
-        case _ =>
-          block(new UserAwareRequest(None, request))
-      }
+      withLongRunningOpTracking{
+        maybeUser(request).filter(_.verified).futureBox.flatMap {
+          case Full(user) =>
+            Secured.ActivityMonitor ! UserActivity(user, System.currentTimeMillis)
+            executeAndEnsureSession(user, request, block)
+          case _ =>
+            block(new UserAwareRequest(None, request))
+        }
+      }(request)
     }
   }
 
@@ -153,11 +192,11 @@ trait Secured extends FoxImplicits with I18nSupport{
 
   /**
    * Action for authenticated users.
-
-  def IsAuthenticated(f: => String => Request[AnyContent] => Result) =
-    Security.Authenticated(userId, onUnauthorized) {
-      user =>
-        Action(request => f(user)(request))
-    }
+    **
+    *def IsAuthenticated(f: => String => Request[AnyContent] => Result) =
+    *Security.Authenticated(userId, onUnauthorized) {
+    *user =>
+    *Action(request => f(user)(request))
+    *}
    */
 }

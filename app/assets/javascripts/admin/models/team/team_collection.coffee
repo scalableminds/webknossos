@@ -1,5 +1,4 @@
 _                    = require("lodash")
-Backbone             = require("backbone")
 TeamModel            = require("./team_model")
 SortedCollection     = require("../sorted_collection")
 

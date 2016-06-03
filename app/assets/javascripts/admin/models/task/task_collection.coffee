@@ -33,6 +33,8 @@ class TaskCollection extends PaginationCollection
       # apply some defaults
       response.type =
         summary : response.type?.summary || "<deleted>"
+        id: response.type?.id || ""
+
       response.formattedTracingTime = FormatUtils.formatSeconds(response.tracingTime? or 0)
 
       # convert bounding box

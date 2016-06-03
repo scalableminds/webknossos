@@ -15,7 +15,6 @@ class Application @Inject()(val messagesApi: MessagesApi) extends Controller wit
   def javascriptRoutes = Action { implicit request =>
     Ok(
       JavaScriptReverseRouter("jsRoutes")(//fill in stuff which should be able to be called from js
-        controllers.admin.routes.javascript.NMLIO.upload,
         controllers.routes.javascript.TaskController.request,
         controllers.routes.javascript.AnnotationController.annotationsForTask,
         controllers.routes.javascript.AnnotationController.trace,
@@ -25,9 +24,10 @@ class Application @Inject()(val messagesApi: MessagesApi) extends Controller wit
         controllers.routes.javascript.AnnotationController.nameExplorativeAnnotation,
         controllers.routes.javascript.AnnotationController.createExplorational,
         controllers.routes.javascript.AnnotationController.download,
-        controllers.admin.routes.javascript.NMLIO.taskDownload,
-        controllers.admin.routes.javascript.NMLIO.projectDownload,
-        controllers.admin.routes.javascript.NMLIO.userDownload
+        controllers.routes.javascript.NMLIOController.taskDownload,
+        controllers.routes.javascript.NMLIOController.projectDownload,
+        controllers.routes.javascript.NMLIOController.userDownload,
+        controllers.routes.javascript.NMLIOController.upload
       )).as("text/javascript")
   }
 

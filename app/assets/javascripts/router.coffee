@@ -12,27 +12,6 @@ BaseRouter = require("libs/base_router")
 class Router extends BaseRouter
 
   routes :
-<<<<<<< HEAD
-    "users"                             : "users"
-    "teams"                             : "teams"
-    "statistics"                        : "statistics"
-    "tasks"                             : "tasks"
-    "tasks/create"                      : "taskCreate"
-    "tasks/:id/edit"                    : "taskEdit"
-    "projects"                          : "projects"
-    "annotations/:type/:id(/readOnly)"  : "tracingView"
-    "datasets/:id/view"                 : "tracingViewPublic"
-    "dashboard"                         : "dashboard"
-    "datasets"                          : "dashboard"
-    "datasets/upload"                   : "datasetAdd"
-    "users/:id/details"                 : "dashboard"
-    "taskTypes/:id/edit"                : "editTaskType"
-    "taskTypes"                         : "taskTypes"
-    "spotlight"                         : "spotlight"
-    "tasks/overview"                    : "taskOverview"
-    "admin/taskTypes"                   : "hideLoadingSpinner"
-    "workload"                          : "workload"
-=======
     "/users"                             : "users"
     "/teams"                             : "teams"
     "/statistics"                        : "statistics"
@@ -44,7 +23,7 @@ class Router extends BaseRouter
     "/datasets/:id/view"                 : "tracingViewPublic"
     "/dashboard"                         : "dashboard"
     "/datasets"                          : "dashboard"
-    "/datasets/upload"                   : "datasetUpload"
+    "/datasets/upload"                   : "datasetAdd"
     "/users/:id/details"                 : "dashboard"
     "/taskTypes/:id/edit"                : "editTaskType"
     "/taskTypes"                         : "taskTypes"
@@ -53,7 +32,6 @@ class Router extends BaseRouter
     "/tasks/overview"                    : "taskOverview"
     "/admin/taskTypes"                   : "hideLoadingSpinner"
     "/workload"                          : "workload"
->>>>>>> dev
 
 
   constructor : ->

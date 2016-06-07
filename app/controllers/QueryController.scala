@@ -56,7 +56,12 @@ class QueryController  @Inject() (val messagesApi: MessagesApi) extends Controll
 
   def infoAnnotationsOf[T: WeakTypeTag]: List[ParamDescription] = {
     symbolOf[T].asClass.primaryConstructor.typeSignature.paramLists.head.map(e =>
-      ParamDescription(e.name.toString, e.typeSignature.toString, e.annotations.find(_.tpe == typeOf[info]).map(_.tree.children.tail.head.toString())))
+      ParamDescription(
+        e.name.toString,
+        e.typeSignature.toString,
+        e.annotations
+          .find(_.tree.tpe == typeOf[info])
+          .map( ann => ann.tree.children.last.productElement(0).asInstanceOf[Constant].value.toString)))
   }
 
   def descriptions(element: String) = Authenticated{ implicit request =>

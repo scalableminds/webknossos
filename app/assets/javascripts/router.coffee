@@ -13,27 +13,28 @@ PaginationCollection  = require("admin/models/pagination_collection")
 class Router extends BaseRouter
 
   routes :
-    "/users"                             : "users"
-    "/teams"                             : "teams"
-    "/statistics"                        : "statistics"
-    "/tasks/create"                      : "taskCreate"
-    "/tasks/:id/edit"                    : "taskEdit"
-    "/projects"                          : "projects"
-    "/projects/:name/tasks"              : "projectTasks"
-    "/annotations/:type/:id(/readOnly)"  : "tracingView"
-    "/datasets/:id/view"                 : "tracingViewPublic"
-    "/dashboard"                         : "dashboard"
-    "/datasets"                          : "dashboard"
-    "/datasets/upload"                   : "datasetUpload"
-    "/users/:id/details"                 : "dashboard"
-    "/taskTypes"                         : "taskTypes"
-    "/taskTypes/create"                  : "taskTypesCreate"
-    "/taskTypes/:id/edit"                : "taskTypesCreate"
-    "/taskTypes/:id/tasks"               : "taskTypesTasks"
-    "/spotlight"                         : "spotlight"
-    "/tasks/overview"                    : "taskOverview"
-    "/admin/taskTypes"                   : "hideLoadingSpinner"
-    "/workload"                          : "workload"
+    "/users"                               : "users"
+    "/teams"                               : "teams"
+    "/statistics"                          : "statistics"
+    "/tasks/create"                        : "taskCreate"
+    "/tasks/:id/edit"                      : "taskEdit"
+    "/projects"                            : "projects"
+    "/projects/:name/tasks"                : "projectTasks"
+    "/annotations/:type/:id(/readOnly)"    : "tracingView"
+    "/datasets/:id/view"                   : "tracingViewPublic"
+    "/dashboard"                           : "dashboard"
+    "/datasets"                            : "dashboard"
+    "/datasets/upload"                     : "datasetUpload"
+    "/users/:id/details"                   : "dashboard"
+    "/taskTypes"                           : "taskTypes"
+    "/taskTypes/create"                    : "taskTypesCreate"
+    "/taskTypes/:id/edit"                  : "taskTypesCreate"
+    "/taskTypes/:id/tasks"                 : "taskTypesTasks"
+    "/spotlight"                           : "spotlight"
+    "/tasks/overview"                      : "taskOverview"
+    "/tasks/query"                         : "taskQuery"
+    "/admin/taskTypes"                     : "hideLoadingSpinner"
+    "/workload"                            : "workload"
 
 
   constructor : ->
@@ -100,6 +101,14 @@ class Router extends BaseRouter
   teams : ->
 
     @showWithPagination("TeamListView", "TeamCollection", {addButtonText : "Add New Team"})
+
+
+  taskQuery : ->
+
+    require(["admin/views/task/task_query_view"], (TaskQueryView, TaskCollection) =>
+      view = new TaskQueryView()
+      this.changeView(view)
+    )
 
 
   projectTasks : (projectName) ->

@@ -31,6 +31,10 @@ class QueryController  @Inject() (val messagesApi: MessagesApi) extends Controll
       Fox.failure("Invalid query type")
   }
 
+  def empty = Authenticated { implicit request =>
+    Ok(JsArray())
+  }
+
   def query(`type`: String) = Authenticated.async(parse.json) { implicit request =>
     for{
       _ <- request.user.hasAdminAccess ?~> "query.notAllowed"

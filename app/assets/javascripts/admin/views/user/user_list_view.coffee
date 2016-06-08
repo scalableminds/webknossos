@@ -60,6 +60,7 @@ class UserListView extends Marionette.CompositeView
 
   initialize : ->
 
+    @collection.setPageSize(50)
     @collection.fetch(
       data : "isEditable=true"
     )

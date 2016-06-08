@@ -52,7 +52,7 @@ PUT           /api/users/:id                                                    
 GET           /api/users/:id/tasks                                              controllers.UserController.userTasks(id: String)
 GET           /api/users/:id/loggedTime                                         controllers.UserController.userLoggedTime(id: String)
 GET           /api/users/:id/annotations                                        controllers.UserController.userAnnotations(id: String, isFinished: Option[Boolean])
-GET           /api/users/:id/annotations/download                               controllers.admin.NMLIO.userDownload(id: String)
+GET           /api/users/:id/annotations/download                               controllers.NMLIOController.userDownload(id: String)
 
 # Team
 GET           /teams                                                            controllers.TeamController.empty
@@ -96,7 +96,7 @@ GET           /api/datasetToken/validate                                        
 
 # SkeletonTracing Stuff
 POST          /annotations/createExplorational                                  controllers.AnnotationController.createExplorational
-POST          /admin/nml/upload                                                 controllers.admin.NMLIO.upload
+POST          /admin/nml/upload                                                 controllers.NMLIOController.upload
 PUT           /annotations/:typ/:id                                             controllers.AnnotationController.updateWithJson(typ: String, id: String, version: Int)
 POST          /annotations/:typ/:id/name                                        controllers.AnnotationController.nameExplorativeAnnotation(typ: String, id: String)
 GET           /annotations/:typ/:id/finishAndRedirect                           controllers.AnnotationController.finishWithRedirect(typ: String, id: String)
@@ -148,20 +148,22 @@ GET           /tasks/:id/edit                                                   
 #GET           /api/tasks/overview                                               controllers.admin.TaskAdministration.overviewData
 GET           /workload                                                         controllers.TaskController.empty
 
-GET           /api/tasks/:id/download                                           controllers.admin.NMLIO.taskDownload(id: String)
+GET           /api/tasks/:id/download                                           controllers.NMLIOController.taskDownload(id: String)
 GET           /api/tasks/:id/annotations                                        controllers.AnnotationController.annotationsForTask(id: String)
 
-GET           /taskTypes                                                        controllers.admin.TaskTypeAdministration.empty(id: String = "")
-GET           /taskTypes/:id/tasks                                              controllers.admin.TaskTypeAdministration.empty(id: String)
+GET           /taskTypes                                                        controllers.TaskTypeController.empty(id: String = "")
+GET           /taskTypes/create                                                 controllers.TaskTypeController.empty(id: String = "")
+GET           /taskTypes/:id/tasks                                              controllers.TaskTypeController.empty(id: String)
 GET           /taskTypes/:id/edit                                               controllers.UserController.emptyWithWildcard(id: String)
-GET           /api/taskTypes                                                    controllers.admin.TaskTypeAdministration.list
-POST          /api/taskTypes                                                    controllers.admin.TaskTypeAdministration.create
-DELETE        /api/taskTypes/:id/delete                                         controllers.admin.TaskTypeAdministration.delete(id: String)
+
+GET           /api/taskTypes                                                    controllers.TaskTypeController.list
+POST          /api/taskTypes                                                    controllers.TaskTypeController.create
+DELETE        /api/taskTypes/:id/delete                                         controllers.TaskTypeController.delete(id: String)
 GET           /api/taskTypes/:id/tasks                                          controllers.TaskController.listTasksForType(id: String)
 
-GET           /api/taskTypes/:id/download                                       controllers.admin.NMLIO.taskTypeDownload(id: String)
-GET           /api/taskTypes/:id                                                controllers.admin.TaskTypeAdministration.get(id: String)
-POST          /api/taskTypes/:id                                                controllers.admin.TaskTypeAdministration.editTaskTypeForm(id: String)
+GET           /api/taskTypes/:id/download                                       controllers.NMLIOController.taskTypeDownload(id: String)
+GET           /api/taskTypes/:id                                                controllers.TaskTypeController.get(id: String)
+PUT           /api/taskTypes/:id                                                controllers.TaskTypeController.update(id: String)
 
 # ID Validation
 GET           /api/find                                                         controllers.SearchController.find(q: String, type: String)
@@ -173,7 +175,7 @@ GET           /projects/:name/tasks                                             
 GET           /api/projects                                                     controllers.ProjectController.list
 POST          /api/projects                                                     controllers.ProjectController.create
 DELETE        /api/projects/:name                                               controllers.ProjectController.delete(name: String)
-GET           /api/projects/:name/download                                      controllers.admin.NMLIO.projectDownload(name: String)
+GET           /api/projects/:name/download                                      controllers.NMLIOController.projectDownload(name: String)
 GET           /api/projects/:name/tasks                                         controllers.ProjectController.tasksForProject(name: String)
 
 GET           /statistics                                                       controllers.StatisticsController.empty

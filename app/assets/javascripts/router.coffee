@@ -1,8 +1,9 @@
-$          = require("jquery")
-_          = require("lodash")
-Backbone   = require("backbone")
-constants  = require("oxalis/constants")
-BaseRouter = require("libs/base_router")
+$                     = require("jquery")
+_                     = require("lodash")
+Backbone              = require("backbone")
+constants             = require("oxalis/constants")
+BaseRouter            = require("libs/base_router")
+PaginationCollection  = require("admin/models/pagination_collection")
 
 # #####
 # This Router contains all the routes for views that have been
@@ -25,9 +26,10 @@ class Router extends BaseRouter
     "/datasets"                          : "dashboard"
     "/datasets/upload"                   : "datasetUpload"
     "/users/:id/details"                 : "dashboard"
-    "/taskTypes/:id/edit"                : "editTaskType"
-    "/taskTypes"                         : "taskTypes"
-    "/taskTypes/:id/tasks"               : "taskTypesTasks"
+    "/taskTypes"                          : "taskTypes"
+    "/taskTypes/create"                   : "taskTypesCreate"
+    "/taskTypes/:id/edit"                 : "taskTypesCreate"
+    "/taskTypes/:id/tasks"                : "taskTypesTasks"
     "/spotlight"                         : "spotlight"
     "/tasks/overview"                    : "taskOverview"
     "/admin/taskTypes"                   : "hideLoadingSpinner"
@@ -92,12 +94,12 @@ class Router extends BaseRouter
 
   users : ->
 
-    @showWithPagination("UserListView", "PaginatedUserCollection")
+    @showWithPagination("UserListView", "UserCollection", {})
 
 
   teams : ->
 
-    @showWithPagination("TeamListView", "PaginatedTeamCollection", {addButtonText : "Add New Team"})
+    @showWithPagination("TeamListView", "TeamCollection", {addButtonText : "Add New Team"})
 
 
   projectTasks : (projectName) ->
@@ -115,10 +117,9 @@ class Router extends BaseRouter
     @showWithPagination("WorkloadListView", "WorkloadCollection")
 
 
-  workload : ->
+  taskTypes : ->
 
-    @showWithPagination("WorkloadListView", "WorkloadCollection")
-
+    @showWithPagination("TaskTypeListView", "TaskTypeCollection", {addButtonText : "Create New TaskType"})
 
 
   ###*
@@ -151,25 +152,14 @@ class Router extends BaseRouter
       self.hideLoadingSpinner()
     )
 
-  taskTypes : ->
+
+  taskTypesCreate : (taskTypeId) ->
 
     self = this
-    require(["admin/views/tasktype/task_type_view", "admin/models/tasktype/task_type_collection"], (TaskTypeView, TaskTypeCollection) ->
+    require(["admin/views/tasktype/task_type_create_view", "admin/models/tasktype/task_type_model"], (TaskTypeCreateView, TaskTypeModel) ->
 
-      collection = new TaskTypeCollection()
-      view = new TaskTypeView(collection: collection)
-      self.changeView(view)
-      self.hideLoadingSpinner()
-    )
-
-
-  editTaskType : (taskTypeID) ->
-
-    self = this
-    require(["admin/views/tasktype/task_type_form_view", "admin/models/tasktype/task_type_model"], (TaskTypeFormView, TaskTypeModel) =>
-
-      model = new TaskTypeModel({id : taskTypeID})
-      view = new TaskTypeFormView(model : model, isEditMode : true)
+      model = new TaskTypeModel(id : taskTypeId)
+      view = new TaskTypeCreateView(model: model)
       self.changeView(view)
       self.hideLoadingSpinner()
     )
@@ -197,10 +187,11 @@ class Router extends BaseRouter
   spotlight : ->
 
     self = this
-    require(["views/spotlight_view", "admin/models/dataset/paginated_dataset_collection"], (SpotlightView, PaginatedDatasetCollection) ->
+    require(["dashboard/views/spotlight/spotlight_view", "admin/models/dataset/dataset_collection"], (SpotlightView, DatasetCollection) ->
 
-      collection = new PaginatedDatasetCollection()
-      view = new SpotlightView(collection: collection)
+      collection = new DatasetCollection()
+      paginatedCollection = new PaginationCollection([], fullCollection : collection)
+      view = new SpotlightView(collection: paginatedCollection)
 
       self.changeView(view)
       self.listenTo(collection, "sync", self.hideLoadingSpinner)
@@ -228,8 +219,9 @@ class Router extends BaseRouter
     require(["admin/admin"], (admin) =>
 
       collection = new admin[collection](null, options)
-      view = new admin[view](collection: collection)
-      paginationView = new admin.PaginationView({collection, addButtonText : options.addButtonText})
+      paginatedCollection = new PaginationCollection([], fullCollection : collection)
+      view = new admin[view](collection : paginatedCollection)
+      paginationView = new admin.PaginationView({collection : paginatedCollection, addButtonText : options.addButtonText})
 
       self.changeView(paginationView, view)
       self.listenTo(collection, "sync", => self.hideLoadingSpinner())

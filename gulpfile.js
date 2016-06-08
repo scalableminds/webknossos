@@ -26,11 +26,12 @@ paths = {
 
 var nodePath = __dirname + "/node_modules/";
 var scriptPaths = {
-  "gzip"                : nodePath + "zlibjs/bin/gzip.min",
-  "three"               : nodePath + "three.js/build/three",
-  "three.color"         : nodePath + "three.js/examples/js/math/ColorConverter",
-  "three.trackball"     : nodePath + "three.js/examples/js/controls/TrackballControls",
-  "jasny-bootstrap"     : nodePath + "jasny-bootstrap/dist/js/jasny-bootstrap",
+  "gzip"                  : nodePath + "zlibjs/bin/gzip.min",
+  "three"                 : nodePath + "three.js/build/three",
+  "three.color"           : nodePath + "three.js/examples/js/math/ColorConverter",
+  "three.trackball"       : nodePath + "three.js/examples/js/controls/TrackballControls",
+  "jasny-bootstrap"       : nodePath + "jasny-bootstrap/dist/js/jasny-bootstrap",
+  "bootstrap-multiselect" : nodePath + "bootstrap-multiselect/dist/js/bootstrap-multiselect",
 };
 
 

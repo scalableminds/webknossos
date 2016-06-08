@@ -142,7 +142,7 @@ trait UserAssignments extends Secured with Dashboard with FoxImplicits { this: C
     }
 
     for {
-      users <- UserService.findAll()    // TODO: AFTER MASTER MERGE NEEDS TO IGNORE ANONYMOUS USERS!
+      users <- UserService.findAllNonAnonymous()
       userInfos <- getUserInfos(users)
     } yield {
       Ok(Writes.list(UserWithTaskInfos.userInfosPublicWrites(request.user)).writes(userInfos))

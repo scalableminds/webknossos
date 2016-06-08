@@ -8,7 +8,8 @@ class UserModel extends Backbone.Model
     lastName : ""
 
   url : ->
-    if userID = @get("userID")
+
+    if userID = @get("id")
       return "/api/users/#{userID}"
     else
       return "/api/user"

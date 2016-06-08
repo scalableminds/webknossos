@@ -3,29 +3,18 @@ app                         = require("app")
 Request                     = require("libs/request")
 Marionette                  = require("backbone.marionette")
 TeamCollection              = require("admin/models/team/team_collection")
+ModalView                   = require("admin/views/modal_view")
 TeamAssignmentModalItemView = require("./team_assignment_modal_item_view")
 
 
-class TeamAssignmentModalView extends Marionette.CompositeView
+class TeamAssignmentModalView extends ModalView
 
-  className : "modal fade"
-  template : _.template("""
-    <div class="modal-dialog">
-      <div class="modal-content">
-        <div class="modal-header">
-            <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
-            <h3>Assign teams for this dataset</h3>
-        </div>
-        <div class="modal-body">
-          <ul name="teams" class="team-list"></ul>
-        </div>
-        <div class="modal-footer">
-          <a class="btn btn-primary">Save</a>
-          <a href="#" class="btn btn-default" data-dismiss="modal">Cancel</a>
-        </div>
-      </div>
-    </div>
-  """)
+  headerTemplate : "<h3>Assign teams for this dataset</h3>"
+  bodyTemplate : """<ul name="teams" class="team-list"></ul>"""
+  footerTemplate : """
+    <a class="btn btn-primary">Save</a>
+    <a href="#" class="btn btn-default" data-dismiss="modal">Cancel</a>
+  """
 
   childView : TeamAssignmentModalItemView
   childViewContainer : "ul"
@@ -36,10 +25,6 @@ class TeamAssignmentModalView extends Marionette.CompositeView
   events :
     "click .btn-primary" : "submitTeams"
 
-  attributes:
-    "tabindex" : "-1"
-    "role": "dialog"
-    
 
   initialize : (args) ->
 
@@ -71,17 +56,7 @@ class TeamAssignmentModalView extends Marionette.CompositeView
       data: allowedTeams
     )
 
-    @destroyModal()
-
-
-  destroyModal : ->
-
-    # The event is neccesarry due to the 300ms CSS transition
-    @$el.on("hide.bs.modal", =>
-      @$el.off("hide.bs.modal")
-      app.vent.trigger("TeamAssignmentModalView:refresh")
-    )
-    @$el.modal("hide")
+    @destroy()
 
 
 module.exports = TeamAssignmentModalView

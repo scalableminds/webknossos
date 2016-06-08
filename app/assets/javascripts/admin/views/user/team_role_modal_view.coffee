@@ -3,32 +3,17 @@ Marionette        = require("backbone.marionette")
 Toast             = require("libs/toast")
 TeamCollection    = require("admin/models/team/team_collection")
 TeamRoleModalItem = require("admin/views/user/team_role_modal_item_view")
+ModalView         = require("admin/views/modal_view")
 
-class TeamRoleModalView extends Marionette.CompositeView
+class TeamRoleModalView extends ModalView
 
-  tagName : "div"
-  className : "modal fade"
-  template : _.template("""
-    <div class="modal-dialog">
-      <div class="modal-content">
-        <div class="modal-header">
-          <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
-          <h3>Assign teams</h3>
-        </div>
-        <div class="modal-body container-fluid">
-          <header>
-            <h4 class="col-sm-8" for="teams">Teams</h4>
-            <h4 class="col-sm-4" for="role">Role</h4>
-          </header>
-          <div id="team-list">
-          </div>
-        </div>
-        <div class="modal-footer">
-          <a class="btn btn-primary">Save</a>
-          <a href="#" class="btn btn-default" data-dismiss="modal">Cancel</a>
-        </div>
-      </div>
-    </div>
+  headerTemplate : "<h3>Assign teams</h3>"
+  bodyTemplate : _.template("""
+    <header>
+      <h4 class="col-sm-8" for="teams">Teams</h4>
+      <h4 class="col-sm-4" for="role">Role</h4>
+    </header>
+    <div id="team-list"></div>
   """)
 
   childView : TeamRoleModalItem
@@ -37,18 +22,17 @@ class TeamRoleModalView extends Marionette.CompositeView
   events :
     "click .btn-primary" : "changeExperience"
 
-  attributes:
-    "tabindex" : "-1"
-    "role": "dialog"
+  _renderChildren : ->
+    debugger
+    super()
 
-    
-  initialize : (args) ->
+  initialize : (options) ->
 
     @collection = new TeamCollection()
     @collection.fetch(
       data: "amIAnAdmin=true"
     )
-    @userCollection = args.userCollection
+    @userCollection = options.userCollection
 
     @listenTo(@, "add:child", @prefillModal)
 

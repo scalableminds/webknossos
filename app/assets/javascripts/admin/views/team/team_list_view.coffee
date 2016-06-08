@@ -39,7 +39,7 @@ class TeamListView extends Marionette.CompositeView
   initialize : ->
 
     @listenTo(app.vent, "paginationView:filter", @filterBySearch)
-    @listenTo(app.vent, "CreateTeamModal:refresh", @render)
+    @listenTo(app.vent, "modal:destroy", @render)
     @listenTo(app.vent, "paginationView:addElement", @showModal)
 
     @collection.fetch(

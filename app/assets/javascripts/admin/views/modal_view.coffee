@@ -14,7 +14,10 @@ class ModalView extends Marionette.LayoutView
     bodyTemplate = @bodyTemplate || @genericHeaderTemplate
     footerTemplate = @footerTemplate || @genericFooterTemplate
 
-    executeIfFunction = (template) -> return if _.isFunction(template) then template() else template
+    data = @serializeData()
+    data = @mixinTemplateHelpers(data)
+
+    executeIfFunction = (template) -> return if _.isFunction(template) then template(data) else template
 
     return @modalTemplate(
       headerTemplate : executeIfFunction(headerTemplate)
@@ -30,7 +33,7 @@ class ModalView extends Marionette.LayoutView
           <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
           <%= headerTemplate %>
         </div>
-        <div class="modal-body form-horizontal">
+        <div class="modal-body container-fluid">
           <%= bodyTemplate %>
         </div>
         <div class="modal-footer">
@@ -45,7 +48,6 @@ class ModalView extends Marionette.LayoutView
   genericFooterTemplate : _.template("""
     <a href="#" class="btn btn-default" data-dismiss="modal">Cancel</a>
   """)
-
 
 
   show : ->
@@ -65,8 +67,18 @@ class ModalView extends Marionette.LayoutView
       @$el.find(".modal-body :input").first().focus()
     )
 
+
   destroy : ->
 
     @$el.off()
+
+    # The event is neccesarry due to the 300ms CSS transition
+    @$el.on("hidden.bs.modal", =>
+      @$el.off("hidden.bs.modal")
+      app.vent.trigger("modal:destroyed") #update pagination
+    )
+    @$el.modal("hide")
+
+    #@super()
 
 module.exports = ModalView

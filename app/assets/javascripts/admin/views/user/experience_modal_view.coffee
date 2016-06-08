@@ -5,18 +5,20 @@ class ExperienceModalView extends ModalView
 
   headerTemplate : "<h3>Change Experience</h3>"
   bodyTemplate : _.template("""
-    <div class="form-group">
-      <label class="col-sm-2 control-label" for="experience-domain">Domain</label>
-      <div class="col-sm-10">
-        <input type="text" class="form-control" name="experience-domain" autocomplete="off" required autofocus>
+    <form class="form-horizontal">
+      <div class="form-group">
+        <label class="col-sm-2 control-label" for="experience-domain">Domain</label>
+        <div class="col-sm-10">
+          <input type="text" class="form-control" name="experience-domain" autocomplete="off" required autofocus>
+        </div>
       </div>
-    </div>
-    <div class="form-group">
-      <label class="col-sm-2 control-label" for="experience-value">Level</label>
-      <div class="col-sm-10">
-        <input type="number" class="form-control" name="experience-value" value="0">
+      <div class="form-group">
+        <label class="col-sm-2 control-label" for="experience-value">Level</label>
+        <div class="col-sm-10">
+          <input type="number" class="form-control" name="experience-value" value="0">
+        </div>
       </div>
-    </div>
+    </form>
   """)
   footerTemplate : _.template("""
     <a href="#" class="increase-experience btn btn-primary">Increase Experience</a>

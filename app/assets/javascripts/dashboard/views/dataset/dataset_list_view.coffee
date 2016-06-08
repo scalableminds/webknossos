@@ -55,7 +55,7 @@ class DatasetListView extends Marionette.CompositeView
     @collection.setPageSize(@DATASETS_PER_PAGE)
 
     @listenTo(app.vent, "paginationView:filter", @filterBySearch)
-    @listenTo(app.vent, "TeamAssignmentModalView:refresh", @render)
+    @listenTo(app.vent, "modal:destroy", @render)
 
 
   toggleAllDetails : ->

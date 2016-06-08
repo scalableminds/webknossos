@@ -5,34 +5,24 @@ Toast          = require("libs/toast")
 Request        = require("libs/request")
 app            = require("app")
 SelectionView  = require("admin/views/selection_view")
+ModalView      = require("admin/views/modal_view")
 UserCollection = require("admin/models/user/user_collection")
 
-class TaskTransferModalView extends Marionette.LayoutView
+class TaskTransferModalView extends ModalView
 
-  className : "modal fade"
-  template : _.template("""
-    <div class="modal-dialog">
-      <div class="modal-content">
-        <div class="modal-header">
-          <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
-          <h3>Transfer a Task</h3>
-        </div>
-        <div class="modal-body container-fluid">
-          <div class="control-group">
-            <div class="form-group">
-              <label>New User's Name</label>
-              <div class="datalist"></div>
-            </div>
-          </div>
-        </div>
-        <div class="modal-footer">
-          <a href="#" class="btn btn-primary transfer">Transfer</a>
-          <a href="#" class="btn btn-default" data-dismiss="modal">Close</a>
-        </div>
+  headerTemplate : "<h3>Transfer a Task</h3>"
+  bodyTemplate : _.template("""
+    <div class="control-group">
+      <div class="form-group">
+        <label>New User's Name</label>
+        <div class="datalist"></div>
       </div>
     </div>
   """)
-
+  footerTemplate : """
+    <a href="#" class="btn btn-primary transfer">Transfer</a>
+    <a href="#" class="btn btn-default" data-dismiss="modal">Close</a>
+  """
 
 
   regions :
@@ -41,11 +31,7 @@ class TaskTransferModalView extends Marionette.LayoutView
   events :
     "click .transfer" : "transferTask"
 
-  attributes:
-    "tabindex" : "-1"
-    "role": "dialog"
 
-    
   initialize : (options) ->
 
     @url = options.url
@@ -74,18 +60,8 @@ class TaskTransferModalView extends Marionette.LayoutView
       data:
         "userId" : userID
     ).then( =>
-      @destroyModal()
+      @destroy()
     )
 
-
-  destroyModal : ->
-
-    # The event is neccesarry due to the 300ms CSS transition
-    @$el.on("hidden.bs.modal", =>
-      @$el.off("hidden.bs.modal")
-      app.vent.trigger("TaskTransferModal:refresh") #update pagination
-    )
-    @$el.modal("hide")
-    return
 
 module.exports = TaskTransferModalView

@@ -7,11 +7,21 @@ if [ ! $2 ]; then
   exit 1
 fi
 
+host="$3"
+if [ ! $3 ]; then
+  host="localhost"
+fi
+
+port="$4"
+if [ ! $4 ]; then
+  port="27017"
+fi
+
 db=$1
 dump_dir=$2
 
 for dump_file in `ls $dump_dir`
 do
   collection=${dump_file%.json}
-  mongoimport --db $db --collection $collection --file "$dump_dir/$dump_file"
+  mongoimport --db "$db" --host "$host" --port "$port" --collection "$collection" --file "$dump_dir/$dump_file"
 done

@@ -53,7 +53,7 @@ sudo apt-get install mongodb-server nodejs nodejs-legacy scala npm sbt oracle-ja
 #### Manual Installation
 
 ##### Java
-- install Java JDK 1.7 (from Oracle, OpenJDK is currently not supported)
+- install Java JDK 1.8 (from Oracle, OpenJDK is currently not supported)
 - make sure `JAVA_HOME` and `JDK_HOME` are set and `PATH` contains path to JDK
 
 ##### sbt

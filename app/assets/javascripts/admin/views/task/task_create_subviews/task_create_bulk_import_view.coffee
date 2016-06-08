@@ -13,7 +13,7 @@ class TaskCreateBulkImportView extends Marionette.ItemView
     <div class="col-sm-12">
       <div class="well">
         One line for each task. The values are seperated by ','. Format: <br>
-	dataSet, <a href="/taskTypes">taskTypeId</a>, experienceDomain, minExperience, x, y, z, rotX, rotY, rotZ, priority, instances, team, minX, minY, minZ, maxX, maxY, maxZ, (opt: project)<br><br>
+	dataSet, <a href="/taskTypes">taskTypeId</a>, experienceDomain, minExperience, x, y, z, rotX, rotY, rotZ, priority, instances, team, minX, minY, minZ, maxX, maxY, maxZ, project<br><br>
 
         <form action="" method="POST" class="form-horizontal" onSubmit="return false;">
           <div class="form-group">

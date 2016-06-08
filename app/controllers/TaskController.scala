@@ -136,8 +136,9 @@ class TaskController @Inject() (val messagesApi: MessagesApi) extends Controller
 
   def bulkCreate(json: JsValue)(implicit request: AuthenticatedRequest[_]): Fox[Result] = {
     withJsonUsing(json, Reads.list(taskCompleteReads)) { parsed =>
-      val results = parsed.map(p => createSingleTask(p).map(_ => Messages("task.create.success")))
-      bulk2StatusJson(results).map(js => JsonOk(js, Messages("task.bulk.processed")))
+      Fox.serialSequence(parsed){p => createSingleTask(p).map(_ => Messages("task.create.success"))}.flatMap { results =>
+        bulk2StatusJson(results).map(js => JsonOk(js, Messages("task.bulk.processed")))
+      }
     }
   }
 

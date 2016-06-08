@@ -65,7 +65,7 @@ class AbstractTreeView extends Marionette.ItemView
 
     id = @abstractTreeRenderer.getIdFromPos(event.offsetX, event.offsetY)
     if id
-      @model.skeletonTracing.trigger("newActiveNode", id)
+      @model.skeletonTracing.setActiveNode(id)
       @model.skeletonTracing.centerActiveNode()
 
 

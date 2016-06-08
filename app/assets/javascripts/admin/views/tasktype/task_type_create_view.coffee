@@ -157,7 +157,6 @@ class TaskTypeCreateView extends Marionette.LayoutView
 
     event.preventDefault()
 
-    debugger
     if not @ui.form[0].checkValidity()
       Toast.error("Please supply all needed values.")
       return
@@ -168,7 +167,7 @@ class TaskTypeCreateView extends Marionette.LayoutView
 
     # Add 'required' attribute to select once it's supported
     # https://github.com/davidstutz/bootstrap-multiselect/issues/620
-    if _.isEmpty(formValues.allowedModes)
+    if _.isEmpty(formValues.settings.allowedModes)
       Toast.error("Please provide at least one allowed mode.")
       return
 

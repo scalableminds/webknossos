@@ -74,11 +74,11 @@ class TaskTypeCreateView extends Marionette.LayoutView
             <div class="form-group">
               <label class="col-sm-2 control-label" for="preferredMode">Preferred Mode</label>
               <div class="col-sm-9">
-                <select id="preferredMode" name="preferredMode" class="form-control">
-                <option>Any</option>
-                  <option value="orthogonal">Orthogonal</option>
-                  <option value="oblique">Oblique</option>
-                  <option value="flight">Flight</option>
+                <select id="preferredMode" name="settings[preferredMode]" class="form-control">
+                  <option>Any</option>
+                  <option value="orthogonal" <%- isSelected(settings.preferredMode == "orthogonal") %>>Orthogonal</option>
+                  <option value="oblique" <%- isSelected(settings.preferredMode == "oblique") %>>Oblique</option>
+                  <option value="flight" <%- isSelected(settings.preferredMode == "flight") %>>Flight</option>
                 </select>
               </div>
             </div>
@@ -163,7 +163,7 @@ class TaskTypeCreateView extends Marionette.LayoutView
 
 
     formValues = FormSyphon.serialize(@ui.form)
-    formValues.preferredMode = null if formValues.preferredMode == "Any"
+    formValues.settings.preferredMode = null if formValues.settings.preferredMode == "Any"
 
     # Add 'required' attribute to select once it's supported
     # https://github.com/davidstutz/bootstrap-multiselect/issues/620

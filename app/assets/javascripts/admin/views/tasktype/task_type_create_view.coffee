@@ -64,7 +64,7 @@ class TaskTypeCreateView extends Marionette.LayoutView
                   Allow Branchpoints
                 </label>
 
-                <label class="col-sm-3" for="settings[advancedOptionsAllowed">
+                <label class="col-sm-3" for="advancedOptionsAllowed">
                   <input type="checkbox" id="advancedOptionsAllowed" name="settings[advancedOptionsAllowed]" <%- isChecked(settings.advancedOptionsAllowed) %>>
                   Advanced Tracing Options
                 </label>

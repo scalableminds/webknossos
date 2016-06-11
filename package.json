@@ -11,7 +11,9 @@
   },
   "devDependencies": {
     "chalk": "^1.1.1",
+    "cjsx-loader": "^3.0.0",
     "coffee-loader": "^0.7.2",
+    "coffee-react-transform": "^4.0.0",
     "coffee-script": "^1.8.0",
     "event-stream": "~3.1.0",
     "exports-loader": "^0.6.2",
@@ -66,6 +68,8 @@
     "moment": "^2.10.6",
     "nouislider": "^8.2.1",
     "pako": "^0.2.8",
+    "react": "^15.1.0",
+    "react-dom": "^15.1.0",
     "stats.js": "^1.0.0",
     "tween.js": "^16.3.1",
     "underscore": "^1.8.3",

@@ -2,8 +2,11 @@ app                = require("app")
 Marionette         = require("backbone.marionette")
 Input              = require("libs/input")
 CommentTabItemView = require("./comment_tab_item_view")
+CommentList        = require("./comment_tab_list_view")
+React              = require("react")
+ReactDOM           = require("react-dom")
 
-class CommentTabView extends Marionette.CompositeView
+class CommentTabView extends Marionette.ItemView
 
   className : "flex-column"
   template : _.template("""
@@ -26,13 +29,6 @@ class CommentTabView extends Marionette.CompositeView
     <ul id="comment-list" class="flex-overflow"></ul>
   """)
 
-  childView : CommentTabItemView
-  childViewContainer : "#comment-list"
-
-  childViewOptions : ->
-    parent : @
-    activeComment : @activeComment
-
   templateHelpers : ->
     activeComment : @activeComment
     isSortedAscending : @isSortedAscending
@@ -40,6 +36,7 @@ class CommentTabView extends Marionette.CompositeView
 
   ui :
     "commentInput" : "input"
+    "commentList" : "#comment-list"
 
   events :
     "click #comment-sort" : "sortComments"
@@ -56,9 +53,6 @@ class CommentTabView extends Marionette.CompositeView
 
     @collection = @model.skeletonTracing.comments
 
-    # Marionette internal function
-    this._initialEvents()
-
     # select the activeNode if there is a comment...
     if comment = @collection.findWhere("node" : @getActiveNodeId())
       @activeComment = comment
@@ -69,7 +63,7 @@ class CommentTabView extends Marionette.CompositeView
     # events
     @listenTo(@model.skeletonTracing, "newActiveNode", @updateInputElement)
     @listenTo(@model.skeletonTracing, "deleteComment", @deleteComment)
-    @listenTo(@collection, "sort", @render)
+    @listenTo(@collection, "change add remove reset sort", @updateState)
 
     # keyboard shortcuts
     new Input.KeyboardNoLoop(
@@ -78,12 +72,32 @@ class CommentTabView extends Marionette.CompositeView
     )
 
 
+  render : ->
+
+    super()
+    @commentList = ReactDOM.render(
+      <CommentList onNewActiveNode={@setActiveNode}/>,
+      @ui.commentList[0]
+    )
+    @updateState()
+
+
+  updateState : ->
+
+    return unless @commentList
+
+    @commentList.setState(
+      data : @collection
+      activeNodeId : @getActiveNodeId()
+    )
+
+
   getActiveNodeId : ->
 
     return @model.skeletonTracing.getActiveNodeId()
 
 
-  setActiveNode : (activeComment) ->
+  setActiveNode : (activeComment) =>
 
     @activeComment = activeComment
     nodeId = activeComment.get("node")
@@ -100,6 +114,7 @@ class CommentTabView extends Marionette.CompositeView
 
     # populate the input element
     @ui.commentInput.val(content)
+    @updateState()
 
 
   handleInput : (evt) ->
@@ -117,7 +132,7 @@ class CommentTabView extends Marionette.CompositeView
       if commentText != ""
         newComment = @collection.add(
           node : nodeId
-          content: commentText
+          content : commentText
         )
 
         @setActiveNode(newComment)

@@ -72,6 +72,7 @@ function makeScripts() {
       ],
       loaders: [
         { test: /\.coffee$/, loader: "coffee-loader" },
+        { test: /\.cjsx$/, loaders: ["coffee", "cjsx"] },
         { test: scriptPaths["three.color"], loader: "imports?THREE=three!exports?THREE.ColorConverter" },
         { test: scriptPaths["three.trackball"], loader: "imports?THREE=three" },
         { test: scriptPaths["three"], loader: "exports?THREE" },
@@ -86,7 +87,7 @@ function makeScripts() {
     resolve: {
       root: paths.src.js,
       alias: scriptPaths,
-      extensions: ['', '.js', '.json', '.coffee']
+      extensions: ['', '.js', '.json', '.coffee', '.cjsx']
     },
     externals: [
       { "routes": "var jsRoutes" }

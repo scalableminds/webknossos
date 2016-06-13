@@ -1,8 +1,8 @@
 FormatUtils           = require("libs/format_utils")
-PaginationCollection  = require("../pagination_collection")
+Backbone              = require("backbone")
 TaskModel             = require("./task_model")
 
-class TaskCollection extends PaginationCollection
+class TaskCollection extends Backbone.Collection
 
   model: TaskModel
   initialize : (models, options) ->

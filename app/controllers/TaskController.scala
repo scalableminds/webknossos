@@ -32,12 +32,13 @@ object TaskController extends Controller with Secured with FoxImplicits {
   }
 
   def list = Authenticated.async{ implicit request =>
-    for {
-      tasks <- TaskService.findAllAdministratable(request.user)
-      js <- Future.traverse(tasks)(Task.transformToJson)
-    } yield {
-      Ok(Json.toJson(js))
-    }
+//    for {
+//      tasks <- TaskService.findAllAdministratable(request.user)
+//      js <- Future.traverse(tasks)(Task.transformToJson)
+//    } yield {
+//      Ok(Json.toJson(js))
+//    }
+    Future.successful(Ok(Json.arr()))
   }
 
   def ensureMaxNumberOfOpenTasks(user: User)(implicit ctx: DBAccessContext): Fox[Int] = {

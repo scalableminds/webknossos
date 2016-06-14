@@ -56,7 +56,7 @@ class TaskTypeController @Inject()(val messagesApi: MessagesApi) extends Control
     }
   }
 
-  def editTaskTypeForm(taskTypeId: String) = Authenticated.async(parse.json) { implicit request =>
+  def update(taskTypeId: String) = Authenticated.async(parse.json) { implicit request =>
     withJsonBodyUsing(taskTypePublicReads) { tt =>
       for {
         taskType <- TaskTypeDAO.findOneById(taskTypeId) ?~> Messages("taskType.notFound")

@@ -13,7 +13,7 @@ class TaskTypeModel extends Backbone.Model
       branchPointsAllowed : true
       advancedOptionsAllowed : true
       somaClickingAllowed : true
-    preferredMode : ""
+      preferredMode : ""
     expectedTime :
       min : 300
       max : 600

@@ -54,31 +54,31 @@ class TaskTypeCreateView extends Marionette.LayoutView
               <label class="col-sm-2 control-label">Settings</label>
               <div class="col-sm-9">
 
-                <div class="col-sm-1">
+                <label class="col-sm-3" for="somaClickingAllowed">
                   <input type="checkbox" id="somaClickingAllowed" name="settings[somaClickingAllowed"] <%- isChecked(settings.somaClickingAllowed) %>>
-                </div>
-                <label class="col-sm-3" for="somaClickingAllowed">Allow Soma clicking</label>
+                  Allow Soma clicking
+                </label>
 
-                <div class="col-sm-1">
+                <label class="col-sm-3" for="branchPointsAllowed">
                   <input type="checkbox" id="branchPointsAllowed" name="settings[branchPointsAllowed"] <%- isChecked(settings.branchPointsAllowed) %>>
-                </div>
-                <label class="col-sm-3" for="branchPointsAllowed">Allow Branchpoints</label>
+                  Allow Branchpoints
+                </label>
 
-                <div class="col-sm-1">
+                <label class="col-sm-3" for="advancedOptionsAllowed">
                   <input type="checkbox" id="advancedOptionsAllowed" name="settings[advancedOptionsAllowed]" <%- isChecked(settings.advancedOptionsAllowed) %>>
-                </div>
-                <label class="col-sm-3" for="settings[advancedOptionsAllowed">Advanced Tracing Options</label>
+                  Advanced Tracing Options
+                </label>
               </div>
             </div>
 
             <div class="form-group">
               <label class="col-sm-2 control-label" for="preferredMode">Preferred Mode</label>
               <div class="col-sm-9">
-                <select id="preferredMode" name="preferredMode" class="form-control">
-                <option>Any</option>
-                  <option value="orthogonal">Orthogonal</option>
-                  <option value="oblique">Oblique</option>
-                  <option value="flight">Flight</option>
+                <select id="preferredMode" name="settings[preferredMode]" class="form-control">
+                  <option>Any</option>
+                  <option value="orthogonal" <%- isSelected(settings.preferredMode == "orthogonal") %>>Orthogonal</option>
+                  <option value="oblique" <%- isSelected(settings.preferredMode == "oblique") %>>Oblique</option>
+                  <option value="flight" <%- isSelected(settings.preferredMode == "flight") %>>Flight</option>
                 </select>
               </div>
             </div>
@@ -161,8 +161,16 @@ class TaskTypeCreateView extends Marionette.LayoutView
       Toast.error("Please supply all needed values.")
       return
 
+
     formValues = FormSyphon.serialize(@ui.form)
-    formValues.preferredMode = null if formValues.preferredMode == "Any"
+    formValues.settings.preferredMode = null if formValues.settings.preferredMode == "Any"
+
+    # Add 'required' attribute to select once it's supported
+    # https://github.com/davidstutz/bootstrap-multiselect/issues/620
+    if _.isEmpty(formValues.settings.allowedModes)
+      Toast.error("Please provide at least one allowed mode.")
+      return
+
 
     @model.save(formValues).then(
       -> app.router.navigate("/taskTypes", { trigger: true })

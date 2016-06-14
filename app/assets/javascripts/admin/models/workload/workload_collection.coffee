@@ -1,8 +1,7 @@
 _                    = require("lodash")
 Backbone             = require("backbone")
-PaginationCollection = require("../pagination_collection")
 
-class WorkloadCollection extends PaginationCollection
+class WorkloadCollection extends Backbone.Collection
 
   url : "/api/tasks/workload"
 

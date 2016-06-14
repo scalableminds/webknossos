@@ -32,7 +32,6 @@ var scriptPaths = {
   "three.trackball"       : nodePath + "three.js/examples/js/controls/TrackballControls",
   "jasny-bootstrap"       : nodePath + "jasny-bootstrap/dist/js/jasny-bootstrap",
   "bootstrap-multiselect" : nodePath + "bootstrap-multiselect/dist/js/bootstrap-multiselect",
-  "jasny-bootstrap"       : nodePath + "jasny-bootstrap/dist/js/jasny-bootstrap",
 };
 
 

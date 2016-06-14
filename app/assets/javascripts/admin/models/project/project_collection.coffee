@@ -1,8 +1,8 @@
 _                    = require("lodash")
-PaginationCollection = require("../pagination_collection")
+Backbone             = require("backbone")
 ProjectModel         = require("./project_model")
 
-class ProjectCollection extends PaginationCollection
+class ProjectCollection extends Backbone.Collection
 
   model : ProjectModel
   url : "/api/projects"

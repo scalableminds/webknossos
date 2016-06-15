@@ -14,7 +14,7 @@ class TaskQueryView extends Marionette.LayoutView
 
       <div class="row">
         <div class="col-sm-9">
-          <input type="text" class="form-control" id="query"/>
+          <textarea cols="40" rows="5" class="form-control" id="query"></textarea>
         </div>
         <div class="col-sm-3">
           <a class="btn btn-primary search-button" href="#">
@@ -22,6 +22,7 @@ class TaskQueryView extends Marionette.LayoutView
           </a>
         </div>
       </div>
+      <hr>
     </div>
     <div class="paginator"></div>
     <div class="taskList"></div>

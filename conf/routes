@@ -125,8 +125,8 @@ GET           /api/tasks                                                        
 
 # DELETE        /api/tasks/:id                                                    controllers.admin.TaskAdministration.delete(id: String)
 
+GET           /tasks                                                            controllers.TaskController.empty
 GET           /tasks/overview                                                   controllers.TaskController.empty
-GET           /tasks/query                                                      controllers.TaskController.empty
 GET           /tasks/create                                                     controllers.TaskController.empty
 
 GET           /api/queries                                                      controllers.QueryController.empty

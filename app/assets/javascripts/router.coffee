@@ -34,7 +34,7 @@ class Router extends BaseRouter
     "/tasks/overview"                    : "taskOverview"
     "/admin/taskTypes"                   : "hideLoadingSpinner"
     "/workload"                          : "workload"
-    "/tasks/query"                       : "taskQuery"
+    "/tasks"                             : "taskQuery"
 
   constructor : ->
     super

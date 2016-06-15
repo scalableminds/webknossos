@@ -13,17 +13,19 @@ import models.task.{Task, TaskDAO, info}
 import models.user.UserDAO
 import net.liftweb.common.Failure
 import oxalis.security.Secured
-import play.api.Logger
+import play.api.{Configuration, Logger}
 import play.api.i18n.{Messages, MessagesApi}
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json.{JsArray, JsObject, JsValue, Json}
 
-class QueryController  @Inject() (val messagesApi: MessagesApi) extends Controller with Secured with FoxImplicits{
+class QueryController  @Inject() (val messagesApi: MessagesApi,  val configuration: Configuration) extends Controller with Secured with FoxImplicits{
 
-  def handleQuery(`type`: String, query: JsObject)(implicit ctx: DBAccessContext): Fox[JsValue] = `type` match {
+  lazy val systemLimit = configuration.getInt("oxalis.query.maxResults").getOrElse(100)
+
+  def handleQuery(`type`: String, query: JsObject, limit: Int)(implicit ctx: DBAccessContext): Fox[JsValue] = `type` match {
     case "task" =>
       for{
-        resultObjects <- TaskDAO.executeUserQuery(query, limit = 1000)
+        resultObjects <- TaskDAO.executeUserQuery(query, limit = limit)
         jsResult <- Fox.combined(resultObjects.map(r => Task.transformToJson(r).toFox))
       } yield JsArray(jsResult)
     case _ =>
@@ -35,11 +37,12 @@ class QueryController  @Inject() (val messagesApi: MessagesApi) extends Controll
     Ok(JsArray())
   }
 
-  def query(`type`: String) = Authenticated.async(parse.json) { implicit request =>
+  def query(`type`: String, userDefinedLimit: Int) = Authenticated.async(parse.json) { implicit request =>
     for{
       _ <- request.user.hasAdminAccess ?~> "query.notAllowed"
       query <- request.body.asOpt[JsObject] ?~> "query.invalid.object"
-      result <- handleQuery(`type`, query)
+      limit = math.min(userDefinedLimit, systemLimit)
+      result <- handleQuery(`type`, query, limit)
     } yield {
       Ok(result)
     }

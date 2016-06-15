@@ -130,7 +130,7 @@ GET           /tasks/overview                                                   
 GET           /tasks/create                                                     controllers.TaskController.empty
 
 GET           /api/queries                                                      controllers.QueryController.empty
-POST          /api/queries                                                      controllers.QueryController.query(type: String)
+POST          /api/queries                                                      controllers.QueryController.query(type: String, limit: Int ?= 1000)
 GET           /api/descriptions/:element                                        controllers.QueryController.descriptions(element)
 
 POST          /api/tasks                                                        controllers.TaskController.create(type: String)

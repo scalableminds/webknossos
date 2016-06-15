@@ -54,7 +54,7 @@ class TaskQueryView extends Marionette.LayoutView
     @taskListView = new TaskListView({collection: paginatedCollection})
 
     app.router.hideLoadingSpinner()
-    @ui.query.val("{isActive: true}")
+    @ui.query.val("{\n\tisActive: true\n}")
 
     paginationView = new admin.PaginationView({collection : paginatedCollection, addButtonText : "Create New Task"})
 

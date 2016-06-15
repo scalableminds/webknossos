@@ -3,6 +3,8 @@ Marionette       = require("backbone.marionette")
 TaskListView     = require("./task_list_view.coffee")
 TaskCollection   = require("admin/models/task/task_collection")
 Request          = require("libs/request")
+admin            = require("admin/admin")
+PaginationCollection  = require("admin/models/pagination_collection")
 
 class TaskQueryView extends Marionette.LayoutView
 
@@ -21,10 +23,12 @@ class TaskQueryView extends Marionette.LayoutView
         </div>
       </div>
     </div>
+    <div class="paginator"></div>
     <div class="taskList"></div>
   """)
 
   regions :
+    "paginatorRegion" : ".paginator"
     "taskListRegion" : ".taskList"
 
   ui :
@@ -37,11 +41,16 @@ class TaskQueryView extends Marionette.LayoutView
   onRender : ->
 
     @collection = new TaskCollection(null, {addButtonText : "Create New Task"})
-    @taskListView = new TaskListView({collection: @collection})
+    paginatedCollection = new PaginationCollection([], fullCollection : @collection)
+    @taskListView = new TaskListView({collection: paginatedCollection})
 
-    @taskListRegion.show(@taskListView)
     app.router.hideLoadingSpinner()
     @ui.query.val("{isActive: true}")
+
+    paginationView = new admin.PaginationView({collection : paginatedCollection, addButtonText : "Create New Task"})
+
+    @taskListRegion.show(@taskListView)
+    @paginatorRegion.show(paginationView)
 
   search : ->
 

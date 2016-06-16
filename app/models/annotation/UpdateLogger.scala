@@ -42,6 +42,8 @@ object AnnotationUpdateDAO
 
   underlying.indexesManager.ensure(Index(Seq("annotationId" -> IndexType.Ascending)))
 
+  underlying.indexesManager.ensure(Index(Seq("version" -> IndexType.Ascending)))
+
   def retrieveAll(typ: String, annotationId: String, maxVersion: Int = Int.MaxValue, limit: Option[Int])(implicit ctx: DBAccessContext) = {
     find(Json.obj(
       "typ" -> typ,

@@ -284,12 +284,8 @@ object AnnotationDAO
       Json.obj("$set" -> Json.obj("state" -> state)))
 
   def updateAllUsingNewTaskType(task: Task, settings: AnnotationSettings)(implicit ctx: DBAccessContext) = {
-    find(
-      Json.obj(
-        "_task" -> task._id)).one[Annotation].map {
-      case Some(annotation) =>
-        annotation._content.service.updateSettings(settings, annotation._content._id)
-      case _ =>
+    findOne(Json.obj("_task" -> task._id)).map { annotation =>
+      annotation._content.service.updateSettings(settings, annotation._content._id)
     }
   }
 

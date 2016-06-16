@@ -99,8 +99,9 @@ object TaskTypeAdministration extends AdminController {
             _ <- ensureTeamAdministration(request.user, updatedTaskType.team).toFox
             _ <- TaskTypeDAO.update(taskType._id, updatedTaskType).toFox
             tasks <- TaskDAO.findAllByTaskType(taskType).toFox
+            // TODO: convert to serial sequence!
+            _ <- Fox.sequence(tasks.map(task => AnnotationDAO.updateAllUsingNewTaskType(task, updatedTaskType.settings)))
           } yield {
-            tasks.map(task => AnnotationDAO.updateAllUsingNewTaskType(task, updatedTaskType.settings))
             JsonOk(Messages("taskType.editSuccess"))
           }
         }

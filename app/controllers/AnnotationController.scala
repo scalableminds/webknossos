@@ -75,26 +75,34 @@ object AnnotationController extends Controller with Secured with TracingInformat
     }
   }
 
-  def revert(typ: String, id: String, version: Int) = Authenticated.async { implicit request =>
-    def combineUpdates(updates: List[AnnotationUpdate]) = updates.foldLeft(Seq.empty[JsValue]){
-      case (updates, AnnotationUpdate(_, _, _, JsArray(nextUpdates), _)) =>
-        updates ++ nextUpdates
-      case (updates, u) =>
-        Logger.warn("dropping update during replay! Update: " + u)
-        updates
-    }
+  def combineUpdates(updates: List[AnnotationUpdate]) = updates.foldLeft(Seq.empty[JsValue]){
+    case (updates, AnnotationUpdate(_, _, _, JsArray(nextUpdates), _)) =>
+      updates ++ nextUpdates
+    case (updates, u) =>
+      Logger.warn("dropping update during replay! Update: " + u)
+      updates
+  }
 
+  def listUpdates(typ: String, id: String)= Authenticated.async { implicit request =>
+    withAnnotation(AnnotationIdentifier(typ, id)) { annotation =>
+      for {
+        updates <- AnnotationUpdateService.retrieveAll(typ, id, maxVersion = annotation.version)
+        combinedUpdate = JsArray(combineUpdates(updates))
+      } yield Ok(combinedUpdate)
+    }
+  }
+
+  def revert(typ: String, id: String, version: Int) = Authenticated.async { implicit request =>
     for {
       oldAnnotation <- findAnnotation(typ, id)
       _ <- isUpdateAllowed(oldAnnotation, version).toFox
       updates <- AnnotationUpdateService.retrieveAll(typ, id, maxVersion=version)
-      updatedAnnotation <- oldAnnotation.muta.resetToBase()
       combinedUpdate = JsArray(combineUpdates(updates))
-      updateableAnnotation <- isUpdateable(updatedAnnotation) ?~> Messages("annotation.update.impossible")
+      updateableAnnotation <- isUpdateable(oldAnnotation) ?~> Messages("annotation.update.impossible")
+      updatedAnnotation <- oldAnnotation.muta.resetToBase()
       result <- handleUpdates(updateableAnnotation, combinedUpdate, version)
-      _ <- AnnotationUpdateService.removeAll(typ, id)
+      _ <- AnnotationUpdateService.removeAll(typ, id, aboveVersion = version)
     } yield {
-      AnnotationUpdateService.store(typ, id, updateableAnnotation.version + 1, combinedUpdate)
       Logger.info(s"REVERTED using update [$typ - $id, $version]: $combinedUpdate")
       JsonOk(result, "annotation.reverted")
     }

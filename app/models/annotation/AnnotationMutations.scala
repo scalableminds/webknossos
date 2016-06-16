@@ -7,10 +7,14 @@ import play.api.libs.json.JsValue
 import com.scalableminds.util.mvc.BoxImplicits
 import models.user.{UsedAnnotationDAO, User}
 import scala.concurrent.Future
-import net.liftweb.common.{Failure, Box}
+
+import net.liftweb.common.{Box, Failure}
 import scala.async.Async._
+
+import models.binary.DataSetDAO
 import play.api.i18n.Messages
 import models.task.{OpenAssignmentService, TaskService}
+import models.tracing.skeleton.SkeletonTracing
 import reactivemongo.bson.BSONObjectID
 import play.api.libs.concurrent.Execution.Implicits._
 
@@ -97,12 +101,25 @@ class AnnotationMutations(val annotation: Annotation) extends AnnotationMutation
     AnnotationDAO.incrementVersion(annotation._id)
 
   def resetToBase()(implicit ctx: DBAccessContext) = {
+    def resetContent(): Fox[AnnotationContent] ={
+      annotation.typ match {
+        case AnnotationType.Explorational =>
+          Fox.failure(Messages("annotation.revert.skeletonOnly"))
+        case AnnotationType.Task if annotation.contentType == SkeletonTracing.contentType =>
+          for {
+            task <- annotation.task.toFox
+            tracingBase <- task.annotationBase.flatMap(_.content)
+            reset <- tracingBase.temporaryDuplicate(id = BSONObjectID.generate.stringify).flatMap(_.saveToDB)
+          } yield reset
+        case _ if annotation.contentType != SkeletonTracing.contentType =>
+          Fox.failure(Messages("annotation.revert.skeletonOnly"))
+      }
+    }
+
     for {
-      task <- annotation.task.toFox
-      annotationContent <- annotation.content
-      tracingBase <- task.annotationBase.flatMap(_.content)
-      reset <- tracingBase.temporaryDuplicate(id = BSONObjectID.generate.stringify).flatMap(_.saveToDB)
-      _ <- annotationContent.service.clearTracingData(annotationContent.id)
+      oldAnnotationContent <- annotation.content
+      reset <- resetContent()
+      _ <- oldAnnotationContent.service.clearTracingData(oldAnnotationContent.id)
       updatedAnnotation <- AnnotationDAO.updateContent(annotation._id, ContentReference.createFor(reset))
     } yield updatedAnnotation
   }

@@ -27,8 +27,8 @@ object AnnotationUpdateService{
       updates.sortBy(_.version)
     }
   }
-  def removeAll(typ: String, id: String)(implicit ctx: DBAccessContext) = {
-    AnnotationUpdateDAO.removeAll(typ, id)
+  def removeAll(typ: String, id: String, aboveVersion: Int)(implicit ctx: DBAccessContext) = {
+    AnnotationUpdateDAO.removeAll(typ, id, aboveVersion)
   }
 }
 
@@ -44,7 +44,7 @@ object AnnotationUpdateDAO
     find(Json.obj("typ" -> typ, "annotationId" -> annotationId, "version" -> Json.obj("$lte" -> maxVersion), "deleted" -> Json.obj("$ne" -> true))).cursor[AnnotationUpdate].collect[List]()
   }
 
-  def removeAll(typ: String, annotationId: String)(implicit ctx: DBAccessContext) = {
-    update(Json.obj("typ" -> typ, "annotationId" -> annotationId), Json.obj("$set" -> Json.obj("deleted" -> true)), multi = true)
+  def removeAll(typ: String, annotationId: String, aboveVersion: Int)(implicit ctx: DBAccessContext) = {
+    update(Json.obj("typ" -> typ, "annotationId" -> annotationId, "version" -> Json.obj("$gt" -> aboveVersion)), Json.obj("$set" -> Json.obj("deleted" -> true)), multi = true)
   }
 }

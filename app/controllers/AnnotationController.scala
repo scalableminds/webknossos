@@ -86,10 +86,32 @@ object AnnotationController extends Controller with Secured with TracingInformat
   def listUpdates(typ: String, id: String)= Authenticated.async { implicit request =>
     withAnnotation(AnnotationIdentifier(typ, id)) { annotation =>
       for {
-        updates <- AnnotationUpdateService.retrieveAll(typ, id, maxVersion = annotation.version)
+        updates <- AnnotationUpdateService.retrieveAll(typ, id, limit = Some(100))
         combinedUpdate = JsArray(combineUpdates(updates))
       } yield Ok(combinedUpdate)
     }
+  }
+
+  def transferUpdates(typ: String, id: String, fromId: String, fromTyp: String, maxVersion: Int) = Authenticated.async { implicit request =>
+    def applyUpdates(updates: List[AnnotationUpdate], targetAnnotation: AnnotationLike): Fox[AnnotationLike] = {
+      updates.splitAt(100) match {
+        case (Nil, _) =>
+          Fox.successful(targetAnnotation)
+        case (first, last) =>
+          val combinedUpdate = combineUpdates(first)
+          targetAnnotation.muta.updateFromJson(combinedUpdate).flatMap{ updated =>
+            applyUpdates(last, updated)
+          }
+      }
+    }
+
+    for {
+      targetAnnotation <- findAnnotation(typ, id)
+      _ <- isUpdateAllowed(targetAnnotation, targetAnnotation.version + 1).toFox
+      _ <- findAnnotation(fromTyp, fromId)
+      updates <- AnnotationUpdateService.retrieveAll(fromTyp, fromId, maxVersion).toFox
+      result <- applyUpdates(updates, targetAnnotation)
+    } yield JsonOk(Messages("annotation.updates.transfered"))
   }
 
   def revert(typ: String, id: String, version: Int) = Authenticated.async { implicit request =>
@@ -222,23 +244,23 @@ object AnnotationController extends Controller with Secured with TracingInformat
       Failure(Messages("notAllowed")) ~> 403
   }
 
-  def updateWithJson(typ: String, id: String, version: Int) = Authenticated.async(parse.json(maxLength = 2097152)) { implicit request =>
-      def executeIfAllowed(oldAnnotation: Annotation, isAllowed: Boolean) = {
-        if (isAllowed)
-          for {
-            result <- handleUpdates(oldAnnotation, request.body, version)
-          } yield {
-            JsonOk(result, "annotation.saved")
-          }
-        else {
-          for {
-            oldJs <- oldAnnotation.annotationInfo(Some(request.user))
-          } yield {
-            new JsonResult(CONFLICT)(oldJs, Messages("annotation.dirtyState"))
-          }
-        }
+  def executeUpdateIfAllowed(oldAnnotation: Annotation, isAllowed: Boolean, updates: JsValue, version: Int, user: User)(implicit request: AuthenticatedRequest[_]) = {
+    if (isAllowed)
+      for {
+        result <- handleUpdates(oldAnnotation, updates, version)
+      } yield {
+        JsonOk(result, "annotation.saved")
       }
+    else {
+      for {
+        oldJs <- oldAnnotation.annotationInfo(Some(user))
+      } yield {
+        new JsonResult(CONFLICT)(oldJs, Messages("annotation.dirtyState"))
+      }
+    }
+  }
 
+  def updateWithJson(typ: String, id: String, version: Int) = Authenticated.async(parse.json(maxLength = 2097152)) { implicit request =>
       //Logger.info(s"Tracing update [$typ - $id, $version]: ${request.body}")
       AnnotationUpdateService.store(typ, id, version, request.body)
 
@@ -246,7 +268,7 @@ object AnnotationController extends Controller with Secured with TracingInformat
         oldAnnotation <- findAnnotation(typ, id)
         updateableAnnotation <- isUpdateable(oldAnnotation) ?~> Messages("annotation.update.impossible")
         isAllowed <- isUpdateAllowed(oldAnnotation, version).toFox
-        result <- executeIfAllowed(updateableAnnotation, isAllowed)
+        result <- executeUpdateIfAllowed(updateableAnnotation, isAllowed, request.body, version, request.user)
       } yield {
         result
       }

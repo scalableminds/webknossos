@@ -22,7 +22,8 @@ dependencies:
 
 test:
   override:
-    - docker-compose -f docker-compose-circleci.yml run oxalis-test
+    - docker-compose -f docker-compose-circleci.yml run oxalis-frontend-tests
+    - docker-compose -f docker-compose-circleci.yml run oxalis-e2e-tests
     - docker-compose -f docker-compose-circleci.yml up -d oxalis:
         background: true
     - sleep 10

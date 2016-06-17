@@ -41,7 +41,7 @@ class TracingParser
             metaInfo, node.rotation))
 
         # idCount should be bigger than any other id
-        @idCount = Math.max(node.id + 1, @idCount);
+        @idCount = Math.max(node.id + 1, @idCount)
 
       # Initialize edges
       for edge in treeData.edges
@@ -90,6 +90,7 @@ class TracingParser
   setComments : (nodeList) ->
 
     filteredComments = _.filter(@data.comments, (comment) ->
+      comment.treeId = Math.floor((Math.random() * 5))
       _.some(nodeList, (node) -> node.id == comment.node)
     )
     @comments.add(filteredComments)

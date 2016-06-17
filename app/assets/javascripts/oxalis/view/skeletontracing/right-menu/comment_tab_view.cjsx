@@ -1,7 +1,6 @@
 app                = require("app")
 Marionette         = require("backbone.marionette")
 Input              = require("libs/input")
-CommentTabItemView = require("./comment_tab_item_view")
 CommentList        = require("./comment_tab_list_view")
 React              = require("react")
 ReactDOM           = require("react-dom")

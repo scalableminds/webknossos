@@ -39,24 +39,40 @@ CommentList = React.createClass(
 
   render : ->
 
+    return null unless @state.data.length
+
     activeNodeId = @state.activeNodeId
 
-    commentNodes = @state.data.map( (comment) =>
+    groupedComments = @state.data.groupBy( (comment) -> comment.get("treeId") )
+    commentAndTreeNodes = _.map(groupedComments, (comments, treeId) =>
 
-      nodeId = comment.get("node")
+      commentNodes = comments.map( (comment) =>
+
+        nodeId = comment.get("node")
+        return (
+          <Comment
+            key={nodeId}
+            model={comment}
+            isActive={nodeId == activeNodeId}
+            onNewActiveNode={@props.onNewActiveNode}
+          />
+        )
+      )
+
       return (
-        <Comment
-          key={nodeId}
-          model={comment}
-          isActive={nodeId == activeNodeId}
-          onNewActiveNode={@props.onNewActiveNode}
-        />
+        <div key={treeId}>
+          <li>
+            <i className="fa fa-tree"></i>
+            {treeId}
+          </li>
+          {commentNodes}
+        </div>
       )
     )
 
     return (
       <div className="commentList">
-        {commentNodes}
+        {commentAndTreeNodes}
       </div>
     )
 

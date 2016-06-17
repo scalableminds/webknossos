@@ -14,11 +14,11 @@ CommentsCollection         = require("oxalis/model/right-menu/comments_collectio
 
 class SkeletonTracing
 
-  TYPE_USUAL   : constants.TYPE_USUAL
-  TYPE_BRANCH  : constants.TYPE_BRANCH
+  TYPE_USUAL : constants.TYPE_USUAL
+  TYPE_BRANCH : constants.TYPE_BRANCH
   # Max and min radius in base voxels (see scaleInfo.baseVoxel)
-  MIN_RADIUS        : 1
-  MAX_RADIUS        : 5000
+  MIN_RADIUS : 1
+  MAX_RADIUS : 5000
 
   branchStack : []
   trees : []
@@ -354,7 +354,7 @@ class SkeletonTracing
           @deletedCommentIndex = i
           break
       if commentText != ""
-        @comments.push({node: @activeNode, content: commentText})
+        @comments.push({node : @activeNode, content : commentText})
       @stateLogger.push()
       @trigger("updateComments")
 
@@ -407,14 +407,6 @@ class SkeletonTracing
     if not ascendingOrder
       return @comments.reverse()
     return @comments
-
-
-  getPlainComments : =>
-
-    plainComments = []
-    for comment in @comments
-      plainComments.push({node: comment.node.id, content: comment.content})
-    plainComments
 
 
   selectNextTree : (forward) ->
@@ -700,6 +692,7 @@ class SkeletonTracing
     if a.node.treeId > b.node.treeId
       return 1
     return a.node.id - b.node.id
+
 
   getPlainComments : =>
 

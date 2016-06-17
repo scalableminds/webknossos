@@ -5,6 +5,9 @@ machine:
 dependencies:
   pre:
     - curl -sSL https://s3.amazonaws.com/circle-downloads/install-circleci-docker.sh | bash -s -- 1.10.0
+    - curl -L https://github.com/docker/compose/releases/download/1.7.1/docker-compose-`uname -s`-`uname -m` > docker-compose
+    - sudo mv docker-compose /usr/local/bin/docker-compose
+    - sudo chmod +x /usr/local/bin/docker-compose
     - sudo service docker start
     - docker login -e $DOCKER_EMAIL -u $DOCKER_USER -p $DOCKER_PASS
   cache_directories:

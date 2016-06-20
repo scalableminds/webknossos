@@ -11,7 +11,6 @@ class TeamAssignmentModalView extends ModalView
   headerTemplate : "<h3>Assign teams for this dataset</h3>"
   bodyTemplate : _.template("""
     <ul name="teams" class="team-list">
-      <% debug() %>
       <% items.forEach(function(team) { %>
         <li>
           <div class="checkbox">

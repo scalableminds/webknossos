@@ -79,6 +79,4 @@ class ModalView extends Marionette.LayoutView
     )
     @$el.modal("hide")
 
-    #@super()
-
 module.exports = ModalView

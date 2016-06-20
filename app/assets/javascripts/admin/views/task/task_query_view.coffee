@@ -7,6 +7,10 @@ admin            = require("admin/admin")
 Toast            = require("libs/toast")
 PaginationCollection  = require("admin/models/pagination_collection")
 TaskQueryDocumentationModal = require("./task_query_documentation_modal")
+ace              = require("brace")
+require('brace/mode/javascript');
+require('brace/mode/json');
+require('brace/theme/clouds');
 
 class TaskQueryView extends Marionette.LayoutView
 
@@ -15,17 +19,15 @@ class TaskQueryView extends Marionette.LayoutView
       <h3>Tasks</h3>
 
       <div class="row">
-        <div class="col-sm-9">
-          <textarea cols="40" rows="5" class="form-control" id="query"></textarea>
-        </div>
-        <div class="col-sm-3">
+          <div id="query" style="width: 500px; height: 100px; display: inline-block"></div>
+          <div style="vertical-align: top; display: inline-block">
             <a class="btn btn-primary search-button" href="#">
               <i class="fa fa-search"></i>Search
             </a>
             <a class="btn btn-default documentation-button" href="#">
               <i class="fa fa-question-circle"></i>Documentation
             </a>
-        </div>
+          </div>
       </div>
       <hr>
     </div>
@@ -54,7 +56,6 @@ class TaskQueryView extends Marionette.LayoutView
     @taskListView = new TaskListView({collection: paginatedCollection})
 
     app.router.hideLoadingSpinner()
-    @ui.query.val("{\n\tisActive: true\n}")
 
     paginationView = new admin.PaginationView({collection : paginatedCollection, addButtonText : "Create New Task"})
 
@@ -65,9 +66,17 @@ class TaskQueryView extends Marionette.LayoutView
     @documentationModal.render()
     @ui.modalWrapper.html(@documentationModal.el)
 
+    @editor = ace.edit(@ui.query[0])
+    @editor.getSession().setMode('ace/mode/javascript')
+    @editor.setTheme('ace/theme/clouds')
+
+    @editor.setValue("{\n\tisActive: true\n}")
+    @editor.clearSelection()
+
+
   search : ->
 
-    queryString = @ui.query.val()
+    queryString = @editor.getValue()
     try
       queryObject = JSON.parse(queryString)
     catch e

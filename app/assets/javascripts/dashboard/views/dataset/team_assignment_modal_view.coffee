@@ -4,20 +4,35 @@ Request                     = require("libs/request")
 Marionette                  = require("backbone.marionette")
 TeamCollection              = require("admin/models/team/team_collection")
 ModalView                   = require("admin/views/modal_view")
-TeamAssignmentModalItemView = require("./team_assignment_modal_item_view")
 
 
 class TeamAssignmentModalView extends ModalView
 
   headerTemplate : "<h3>Assign teams for this dataset</h3>"
-  bodyTemplate : """<ul name="teams" class="team-list"></ul>"""
+  bodyTemplate : _.template("""
+    <ul name="teams" class="team-list">
+      <% debug() %>
+      <% items.forEach(function(team) { %>
+        <li>
+          <div class="checkbox">
+            <label>
+              <input type="checkbox" value="<%- team.name %>" <%- isChecked(team.name) %>>
+              <%- team.name %>
+            </label>
+          </div>
+        </li>
+      <% }) %>
+    </ul>
+  """)
   footerTemplate : """
     <a class="btn btn-primary">Save</a>
     <a href="#" class="btn btn-default" data-dismiss="modal">Cancel</a>
   """
 
-  childView : TeamAssignmentModalItemView
-  childViewContainer : "ul"
+  templateHelpers : ->
+    isChecked : (teamName) =>
+      if _.contains(@dataset.get("allowedTeams"), teamName)
+        return "checked"
 
   ui:
     "teamList" : ".team-list"
@@ -29,19 +44,12 @@ class TeamAssignmentModalView extends ModalView
   initialize : (args) ->
 
     @collection = new TeamCollection()
+    @listenTo(@collection, "sync", @render)
     @collection.fetch(
       data : "isEditable=true"
     )
 
     @dataset = args.dataset
-
-    @listenTo(@, "add:child", @prefillModal)
-
-
-  prefillModal : (childView) ->
-
-    if _.contains(@dataset.get("allowedTeams"), childView.model.get("name"))
-      $(childView.el).find("input").prop("checked", true)
 
 
   submitTeams : ->
@@ -52,7 +60,7 @@ class TeamAssignmentModalView extends ModalView
     @dataset.set("allowedTeams", allowedTeams)
 
     Request.sendJSONReceiveJSON(
-      """/api/datasets/#{@dataset.get("name")}/teams"""
+      "/api/datasets/#{@dataset.get("name")}/teams"
       data: allowedTeams
     )
 

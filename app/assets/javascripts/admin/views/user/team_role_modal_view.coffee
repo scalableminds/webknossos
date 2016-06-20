@@ -2,7 +2,6 @@ _                 = require("lodash")
 Marionette        = require("backbone.marionette")
 Toast             = require("libs/toast")
 TeamCollection    = require("admin/models/team/team_collection")
-TeamRoleModalItem = require("admin/views/user/team_role_modal_item_view")
 ModalView         = require("admin/views/modal_view")
 
 class TeamRoleModalView extends ModalView

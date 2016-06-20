@@ -49,7 +49,7 @@ class TaskQueryView extends Marionette.LayoutView
 
   onRender : ->
 
-    @collection = new TaskCollection(null, {addButtonText : "Create New Task"})
+    @collection = new TaskCollection(null)
     paginatedCollection = new PaginationCollection([], fullCollection : @collection)
     @taskListView = new TaskListView({collection: paginatedCollection})
 
@@ -90,7 +90,7 @@ class TaskQueryView extends Marionette.LayoutView
       @collection.reset()
       defaultQueryLimit = 100
       if result.length == defaultQueryLimit
-        Toast.warning("Not all results are shown because there are too many. Results are limited #{defaultQueryLimit} entries.")
+        Toast.warning("Not all results are shown because there are too many. Results are limited to #{defaultQueryLimit} entries.")
       @collection.addObjects(result)
     )
 

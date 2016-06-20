@@ -40,7 +40,6 @@ class TaskQueryDocumentationModal extends Marionette.ItemView
 
   onRender : ->
     Request.receiveJSON("api/descriptions/task").then((descriptions) =>
-      console.log(descriptions)
 
       tableHtml = _.template(
         """

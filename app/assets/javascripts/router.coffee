@@ -106,7 +106,7 @@ class Router extends BaseRouter
 
     require(["admin/views/task/task_query_view"], (TaskQueryView, TaskCollection) =>
       view = new TaskQueryView()
-      this.changeView(view)
+      @changeView(view)
     )
 
 

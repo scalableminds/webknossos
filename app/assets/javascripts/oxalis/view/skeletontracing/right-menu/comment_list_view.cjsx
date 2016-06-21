@@ -1,38 +1,6 @@
 React      = require("react")
 ReactDOM   = require("react-dom")
-Utils      = require("libs/utils")
-
-
-Comment = React.createClass(
-
-  render : ->
-
-    data = @props.model.attributes
-    return (
-      <li>
-        <i className={"fa " + "fa-angle-right" if @props.isActive}></i>
-        <a href="#" onClick={@handleClick} >{data.node + " - " + data.content}</a>
-      </li>
-    )
-
-
-  handleClick : ->
-
-    @props.onNewActiveNode(@props.model)
-
-
-  componentDidUpdate : ->
-
-    @ensureVisible()
-
-
-  ensureVisible : ->
-
-    el = ReactDOM.findDOMNode(@)
-    if @props.isActive
-      el.scrollIntoViewIfNeeded()
-
-)
+Comment    = require("./comment_list_item_view")
 
 
 CommentList = React.createClass(
@@ -43,11 +11,15 @@ CommentList = React.createClass(
 
     activeNodeId = @state.activeNodeId
 
+    # group comments by treeId
     groupedComments = @state.data.groupBy( (comment) -> comment.get("treeId") )
+
+    # create comment list grouped by trees
     commentAndTreeNodes = _.map(groupedComments, (comments, treeId) =>
 
       commentNodes = comments.map( (comment) =>
 
+        # one comment
         nodeId = comment.get("node")
         return (
           <Comment
@@ -59,6 +31,7 @@ CommentList = React.createClass(
         )
       )
 
+      # one tree and its comments
       return (
         <div key={treeId}>
           <li>
@@ -70,6 +43,7 @@ CommentList = React.createClass(
       )
     )
 
+    # the whole comment list
     return (
       <div className="commentList">
         {commentAndTreeNodes}
@@ -82,6 +56,7 @@ CommentList = React.createClass(
     return {
       data : []
       activeNodeId : 0
+      isSortedAscending : true
     }
 )
 

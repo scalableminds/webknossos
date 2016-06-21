@@ -1,7 +1,7 @@
 app                = require("app")
 Marionette         = require("backbone.marionette")
 Input              = require("libs/input")
-CommentList        = require("./comment_tab_list_view")
+CommentList        = require("./comment_list_view")
 React              = require("react")
 ReactDOM           = require("react-dom")
 
@@ -88,6 +88,7 @@ class CommentTabView extends Marionette.ItemView
     @commentList.setState(
       data : @collection
       activeNodeId : @getActiveNodeId()
+      isSortedAscending : @isSortedAscending
     )
 
 

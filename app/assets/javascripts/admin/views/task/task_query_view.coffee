@@ -19,7 +19,10 @@ class TaskQueryView extends Marionette.LayoutView
       <h3>Tasks</h3>
 
       <div class="row">
-          <div id="query" style="width: 500px; height: 100px; display: inline-block"></div>
+        <div class="col-sm-9">
+          <div id="query" style="width: 100%; height: 100px; display: inline-block; border: 1px solid #ddd"></div>
+        </div>
+        <div class="col-sm-3">
           <div style="vertical-align: top; display: inline-block">
             <a class="btn btn-primary search-button" href="#">
               <i class="fa fa-search"></i>Search
@@ -28,6 +31,7 @@ class TaskQueryView extends Marionette.LayoutView
               <i class="fa fa-question-circle"></i>Documentation
             </a>
           </div>
+        </div>
       </div>
       <hr>
     </div>
@@ -70,8 +74,10 @@ class TaskQueryView extends Marionette.LayoutView
     @editor.getSession().setMode('ace/mode/javascript')
     @editor.setTheme('ace/theme/clouds')
 
-    @editor.setValue("{\n\tisActive: true\n}")
+    defaultQuery = "{\n\t\"isActive\": true\n}"
+    @editor.setValue(defaultQuery)
     @editor.clearSelection()
+    @editor.resize()
 
 
   search : ->

@@ -5,7 +5,7 @@ TaskModel             = require("./task_model")
 class TaskCollection extends Backbone.Collection
 
   model: TaskModel
-  initialize : (models, options) ->
+  initialize : (models, options={}) ->
 
     @projectName = options.projectName
     @taskTypeId = options.taskTypeId

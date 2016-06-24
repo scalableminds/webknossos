@@ -34,8 +34,8 @@ class Binary
     @targetBitDepth = if @category == "color" then @layer.bitDepth else 8
 
     {topLeft, width, height, depth} = @layer.maxCoordinates
-    @lowerBoundary  = topLeft
-    @upperBoundary  = [ topLeft[0] + width, topLeft[1] + height, topLeft[2] + depth ]
+    @lowerBoundary = @layer.lowerBoundary = topLeft
+    @upperBoundary = @layer.upperBoundary = [ topLeft[0] + width, topLeft[1] + height, topLeft[2] + depth ]
 
     @cube = new Cube(@upperBoundary, maxZoomStep + 1, @layer.bitDepth)
     @boundingBox = new BoundingBox(@model.boundingBox, @cube)
@@ -43,7 +43,8 @@ class Binary
     updatePipeline = new Pipeline([@tracing.version])
 
     datasetName = @model.get("dataset").get("name")
-    @pullQueue = new PullQueue(datasetName, @cube, @layer, @boundingBox, @connectionInfo)
+    datastoreInfo = @model.get("dataset").get("dataStore")
+    @pullQueue = new PullQueue(datasetName, @cube, @layer, @boundingBox, @connectionInfo, datastoreInfo)
     @pushQueue = new PushQueue(datasetName, @cube, @layer, @tracing.id, updatePipeline)
     @cube.initializeWithQueues(@pullQueue, @pushQueue)
     @mappings = new Mappings(@model.dataSetName, @layer)

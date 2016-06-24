@@ -7,6 +7,9 @@ import com.scalableminds.util.reactivemongo.{DBAccessContext, DefaultAccessDefin
 import models.basics._
 import models.user.User
 import play.api.libs.concurrent.Execution.Implicits._
+import com.scalableminds.util.reactivemongo.AccessRestrictions.AllowIf
+import com.scalableminds.braingames.binary.models.{DataLayer, DataSource}
+import com.scalableminds.util.geometry.{BoundingBox, Scale, Vector3D, Point3D}
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
 import play.utils.UriEncoding

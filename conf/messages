@@ -79,6 +79,7 @@ dataSet.name.alreadyTaken=This dataset name is already in use.
 dataSet.source.notFound=The data source for the data source couldn''t be found
 dataSet.import.success=The import of the dataset was successful
 dataSet.import.failed=Failed to import the dataset
+dataSet.type.invalid=External data set of type ''{0}'' is not supported
 dataSet.import.inProgress=Dataset import is in progress
 dataSet.import.notStarted=Dataset import couldn''t be started
 dataSet.upload.success=Dataset successfully uploaded
@@ -92,6 +93,17 @@ dataSource.import.alreadyFinished=Import of the dataset already finished
 dataSource.import.alreadyInProgress=Import of the dataset already in progress
 
 dataStore.notAvailable=Datastore not available. Please try again in a few minutes.
+
+ndstore.invalid.response=Received invalid response from NDStore: ''{0}''
+ndstore.response.parseFailure=Received invalid json from NDStore
+ndstore.unreachable=Can''t reach the NDStore
+ndstore.invalid.resolutions=Dataset on NDStore doesn''t have any attached resolutions
+ndstore.invalid.imagesize.zero=Dataset on NDStore doesn''t have an associated bounding box / image size
+ndstore.invalid.offset.zero=Dataset on NDStore doesn''t have an associated offset
+ndstore.invalid.voxelres.zero=Dataset on NDStore doesn''t have an associated voxel resolution
+ndstore.invalid.channel.type=Dataset on NDStore has an invalid channel type (valid channel is e.g. ''image'')
+ndstore.invalid.data.type=Dataset on NDStore has an invalid data type (a valid type is e.g. ''uint8'')
+ndstore.invalid.token=Couldn''t find token on NDStore
 
 zip.file.notFound=No or invalid ZIP file specified
 zip.file.invalid=Uploaded ZIP file invalid or corrupted

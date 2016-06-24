@@ -45,7 +45,7 @@ class ProtractorSpec(arguments: Arguments) extends Specification with BeforeAll 
 
   "my application" should {
 
-    "pass the protractor tests" in new WithServer(app = FakeApplication(additionalConfiguration = argumentMap), port = testPort) {
+    "pass the protractor e2e tests" in new WithServer(app = FakeApplication(additionalConfiguration = argumentMap), port = testPort) {
       val resp = Await.result(WS.url(s"http://localhost:$testPort").get(), 2 seconds)
       resp.status === 200
 

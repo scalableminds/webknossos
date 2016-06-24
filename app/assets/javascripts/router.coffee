@@ -1,8 +1,9 @@
-$          = require("jquery")
-_          = require("lodash")
-Backbone   = require("backbone")
-constants  = require("oxalis/constants")
-BaseRouter = require("libs/base_router")
+$                     = require("jquery")
+_                     = require("lodash")
+Backbone              = require("backbone")
+constants             = require("oxalis/constants")
+BaseRouter            = require("libs/base_router")
+PaginationCollection  = require("admin/models/pagination_collection")
 
 # #####
 # This Router contains all the routes for views that have been
@@ -25,14 +26,15 @@ class Router extends BaseRouter
     "/datasets"                          : "dashboard"
     "/datasets/upload"                   : "datasetAdd"
     "/users/:id/details"                 : "dashboard"
-    "/taskTypes/:id/edit"                : "editTaskType"
     "/taskTypes"                         : "taskTypes"
+    "/taskTypes/create"                  : "taskTypesCreate"
+    "/taskTypes/:id/edit"                : "taskTypesCreate"
     "/taskTypes/:id/tasks"               : "taskTypesTasks"
     "/spotlight"                         : "spotlight"
     "/tasks/overview"                    : "taskOverview"
     "/admin/taskTypes"                   : "hideLoadingSpinner"
     "/workload"                          : "workload"
-
+    "/tasks"                             : "taskQuery"
 
   constructor : ->
     super
@@ -47,9 +49,7 @@ class Router extends BaseRouter
 
   tracingView : (type, id) ->
 
-    # Webpack messes up `this` binding, so we'll do it explicitly
-    self = this
-    require(["oxalis/view/tracing_layout_view"], (TracingLayoutView) ->
+    require(["oxalis/view/tracing_layout_view"], (TracingLayoutView) =>
 
       view = new TracingLayoutView(
         tracingType: type
@@ -57,21 +57,20 @@ class Router extends BaseRouter
         controlMode : constants.CONTROL_MODE_TRACE
       )
       view.forcePageReload = true
-      self.changeView(view)
+      @changeView(view)
     )
 
 
   tracingViewPublic : (id) ->
 
-    self = this
-    require(["oxalis/view/tracing_layout_view"], (TracingLayoutView) ->
+    require(["oxalis/view/tracing_layout_view"], (TracingLayoutView) =>
       view = new TracingLayoutView(
         tracingType: "View"
         tracingId : id
         controlMode : constants.CONTROL_MODE_VIEW
       )
       view.forcePageReload = true
-      self.changeView(view)
+      @changeView(view)
     )
 
 
@@ -92,12 +91,20 @@ class Router extends BaseRouter
 
   users : ->
 
-    @showWithPagination("UserListView", "PaginatedUserCollection")
+    @showWithPagination("UserListView", "UserCollection", {})
 
 
   teams : ->
 
-    @showWithPagination("TeamListView", "PaginatedTeamCollection", {addButtonText : "Add New Team"})
+    @showWithPagination("TeamListView", "TeamCollection", {addButtonText : "Add New Team"})
+
+
+  taskQuery : ->
+
+    require(["admin/views/task/task_query_view"], (TaskQueryView, TaskCollection) =>
+      view = new TaskQueryView()
+      @changeView(view)
+    )
 
 
   projectTasks : (projectName) ->
@@ -115,10 +122,9 @@ class Router extends BaseRouter
     @showWithPagination("WorkloadListView", "WorkloadCollection")
 
 
-  workload : ->
+  taskTypes : ->
 
-    @showWithPagination("WorkloadListView", "WorkloadCollection")
-
+    @showWithPagination("TaskTypeListView", "TaskTypeCollection", {addButtonText : "Create New TaskType"})
 
 
   ###*
@@ -126,14 +132,13 @@ class Router extends BaseRouter
    ###
   taskCreate : ->
 
-    self = this
-    require(["admin/views/task/task_create_view", "admin/models/task/task_model"], (TaskCreateView, TaskModel) ->
+    require(["admin/views/task/task_create_view", "admin/models/task/task_model"], (TaskCreateView, TaskModel) =>
 
       model = new TaskModel()
       view = new TaskCreateView(model : model)
 
-      self.changeView(view)
-      self.hideLoadingSpinner()
+      @changeView(view)
+      @hideLoadingSpinner()
     )
 
   ###*
@@ -141,53 +146,39 @@ class Router extends BaseRouter
    ###
   taskEdit : (taskID) ->
 
-    self = this
-    require(["admin/views/task/task_create_subviews/task_create_from_view", "admin/models/task/task_model"], (TaskCreateFromView, TaskModel) ->
+    require(["admin/views/task/task_create_subviews/task_create_from_view", "admin/models/task/task_model"], (TaskCreateFromView, TaskModel) =>
 
       model = new TaskModel(id : taskID)
       view = new TaskCreateFromView(model : model, type : "from_form")
 
-      self.changeView(view)
-      self.hideLoadingSpinner()
-    )
-
-  taskTypes : ->
-
-    self = this
-    require(["admin/views/tasktype/task_type_view", "admin/models/tasktype/task_type_collection"], (TaskTypeView, TaskTypeCollection) ->
-
-      collection = new TaskTypeCollection()
-      view = new TaskTypeView(collection: collection)
-      self.changeView(view)
-      self.hideLoadingSpinner()
+      @changeView(view)
+      @hideLoadingSpinner()
     )
 
 
-  editTaskType : (taskTypeID) ->
+  taskTypesCreate : (taskTypeId) ->
 
-    self = this
-    require(["admin/views/tasktype/task_type_form_view", "admin/models/tasktype/task_type_model"], (TaskTypeFormView, TaskTypeModel) =>
+    require(["admin/views/tasktype/task_type_create_view", "admin/models/tasktype/task_type_model"], (TaskTypeCreateView, TaskTypeModel) =>
 
-      model = new TaskTypeModel({id : taskTypeID})
-      view = new TaskTypeFormView(model : model, isEditMode : true)
-      self.changeView(view)
-      self.hideLoadingSpinner()
+      model = new TaskTypeModel(id : taskTypeId)
+      view = new TaskTypeCreateView(model: model)
+      @changeView(view)
+      @hideLoadingSpinner()
     )
 
 
   dashboard : (userID) =>
 
-    self = this
-    require(["dashboard/views/dashboard_view", "dashboard/models/user_model"], (DashboardView, UserModel) ->
+    require(["dashboard/views/dashboard_view", "dashboard/models/user_model"], (DashboardView, UserModel) =>
 
       isAdminView = userID != null
 
       model = new UserModel(id : userID)
       view = new DashboardView({ model, isAdminView, userID})
 
-      self.listenTo(model, "sync", ->
-        self.changeView(view)
-        self.hideLoadingSpinner()
+      @listenTo(model, "sync", ->
+        @changeView(view)
+        @hideLoadingSpinner()
       )
 
       model.fetch()
@@ -196,27 +187,26 @@ class Router extends BaseRouter
 
   spotlight : ->
 
-    self = this
-    require(["views/spotlight_view", "admin/models/dataset/paginated_dataset_collection"], (SpotlightView, PaginatedDatasetCollection) ->
+    require(["dashboard/views/spotlight/spotlight_view", "admin/models/dataset/dataset_collection"], (SpotlightView, DatasetCollection) =>
 
-      collection = new PaginatedDatasetCollection()
-      view = new SpotlightView(collection: collection)
+      collection = new DatasetCollection()
+      paginatedCollection = new PaginationCollection([], fullCollection : collection)
+      view = new SpotlightView(collection: paginatedCollection)
 
-      self.changeView(view)
-      self.listenTo(collection, "sync", self.hideLoadingSpinner)
+      @changeView(view)
+      @listenTo(collection, "sync", @hideLoadingSpinner)
     )
 
 
   taskOverview : ->
 
-    self = this
-    require(["admin/views/task/task_overview_view", "admin/models/task/task_overview_collection"], (TaskOverviewView, TaskOverviewCollection) ->
+    require(["admin/views/task/task_overview_view", "admin/models/task/task_overview_collection"], (TaskOverviewView, TaskOverviewCollection) =>
 
       collection = new TaskOverviewCollection()
       view = new TaskOverviewView({collection})
 
-      self.changeView(view)
-      self.listenTo(collection, "sync", self.hideLoadingSpinner)
+      @changeView(view)
+      @listenTo(collection, "sync", @hideLoadingSpinner)
     )
 
 
@@ -224,32 +214,31 @@ class Router extends BaseRouter
 
     _.defaults(options, {addButtonText : null})
 
-    self = this
     require(["admin/admin"], (admin) =>
 
       collection = new admin[collection](null, options)
-      view = new admin[view](collection: collection)
-      paginationView = new admin.PaginationView({collection, addButtonText : options.addButtonText})
+      paginatedCollection = new PaginationCollection([], fullCollection : collection)
+      view = new admin[view](collection : paginatedCollection)
+      paginationView = new admin.PaginationView({collection : paginatedCollection, addButtonText : options.addButtonText})
 
-      self.changeView(paginationView, view)
-      self.listenTo(collection, "sync", => self.hideLoadingSpinner())
+      @changeView(paginationView, view)
+      @listenTo(collection, "sync", => @hideLoadingSpinner())
     )
 
 
   showAdminView : (view, collection) ->
 
-    self = this
-    require(["admin/admin"], (admin) ->
+    require(["admin/admin"], (admin) =>
 
       if collection
         collection = new admin[collection]()
         view = new admin[view](collection : collection)
-        self.listenTo(collection, "sync", => self.hideLoadingSpinner())
+        @listenTo(collection, "sync", => @hideLoadingSpinner())
       else
         view = new admin[view]()
-        setTimeout((=> self.hideLoadingSpinner()), 200)
+        setTimeout((=> @hideLoadingSpinner()), 200)
 
-      self.changeView(view)
+      @changeView(view)
     )
 
   changeView : (views...) ->

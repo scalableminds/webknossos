@@ -1,30 +1,22 @@
 FormatUtils           = require("libs/format_utils")
-PaginationCollection  = require("../pagination_collection")
+Backbone              = require("backbone")
 TaskModel             = require("./task_model")
 
-class TaskCollection extends PaginationCollection
+class TaskCollection extends Backbone.Collection
 
   model: TaskModel
-  initialize : (models, options) ->
+  initialize : (models, options={}) ->
 
     @projectName = options.projectName
     @taskTypeId = options.taskTypeId
 
-    unless @projectName or @taskTypeId
-      throw new Error("TaskCollection initialized without 'project name' or 'task type id'")
-
-    # Since the TaskCollection is shared between projects and taskTypes it is
-    # handy to have a quick check available.
-    @isForProject = @projectName?
-
-
   url : ->
-
-    if @isForProject
+    if @projectName?
       return "/api/projects/#{@projectName}/tasks"
-    else
+    else if @taskTypeId?
       return "/api/taskTypes/#{@taskTypeId}/tasks"
-
+    else
+      return "/api/queries"
 
   parse : (responses) ->
 
@@ -33,6 +25,8 @@ class TaskCollection extends PaginationCollection
       # apply some defaults
       response.type =
         summary : response.type?.summary || "<deleted>"
+        id: response.type?.id || ""
+
       response.formattedTracingTime = FormatUtils.formatSeconds(response.tracingTime? or 0)
 
       # convert bounding box
@@ -50,5 +44,9 @@ class TaskCollection extends PaginationCollection
 
       return response
     )
+
+  addObjects : (objects) ->
+
+    @add(@parse(objects))
 
 module.exports = TaskCollection

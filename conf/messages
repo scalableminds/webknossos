@@ -179,6 +179,8 @@ annotation.reset.failed=Couldn''t reset tracing to base
 annotation.merge.success=Merging successfully done
 annotation.dirtyState=Annotation is not up to date. You can''t make any changes
 annotation.update.impossible=This annotation can''t be updated (read only)
+annotation.preferedMode.invalid=Prefered mode is invalid
+annotation.mode.invalid=Invalid annotation mode
 
 issue.summary.notSupplied=No summary supplied
 issue.description.notSupplied=No description supplied

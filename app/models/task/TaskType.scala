@@ -52,17 +52,11 @@ object TaskType {
 
   implicit val taskTypeFormat = Json.format[TaskType]
 
-  def empty = TaskType("", "", TraceLimit(5, 10, 15), "")
-
   def fromForm(
     summary: String,
     description: String,
     team: String,
-    allowedModes: Seq[String],
-    preferredMode: Option[String],
-    branchPointsAllowed: Boolean,
-    advancedOptionsAllowed: Boolean,
-    somaClickingAllowed: Boolean,
+    settings: AnnotationSettings,
     expectedTime: TraceLimit) = {
 
     TaskType(
@@ -70,12 +64,7 @@ object TaskType {
       description,
       expectedTime,
       team,
-      AnnotationSettings(
-        allowedModes.toList,
-        preferredMode,
-        branchPointsAllowed,
-        somaClickingAllowed,
-        advancedOptionsAllowed))
+      settings)
   }
 
   def toForm(tt: TaskType) =
@@ -98,7 +87,7 @@ object TaskType {
       "team" -> tt.team,
       "settings" -> Json.toJson(tt.settings),
       "fileName" -> tt.fileName,
-      "expectedTime" -> tt.expectedTime.toString
+      "expectedTime" -> tt.expectedTime
     )
   }
 

@@ -11,7 +11,7 @@ class ModalView extends Marionette.LayoutView
   getTemplate : ->
     # Header, Body and Footer should be overwritten by parent class
     headerTemplate = @headerTemplate || @genericHeaderTemplate
-    bodyTemplate = @bodyTemplate || @genericHeaderTemplate
+    bodyTemplate = @bodyTemplate || @genericBodyTemplate
     footerTemplate = @footerTemplate || @genericFooterTemplate
 
     data = @serializeData()
@@ -26,7 +26,8 @@ class ModalView extends Marionette.LayoutView
     )
 
   modalTemplate : _.template("""
-    <div <!-- Root Element is required>
+    <div>
+      <!-- Root 'div' is required>
       <div class="modal-dialog">
         <div class="modal-content">
         <div class="modal-header">

@@ -27,7 +27,7 @@ class CreateTeamModalView extends ModalView
       </div>
     </form>
   """)
-  footTemplate : """
+  footerTemplate : """
     <button type="submit" class="btn btn-primary">Add</button>
     <a href="#" class="btn btn-default" data-dismiss="modal">Close</a>
   """

@@ -31,7 +31,7 @@ exports.config = {
     }
   },
 
-  seleniumServerJar: './node_modules/protractor/selenium/selenium-server-standalone-2.47.1.jar',
+  seleniumServerJar: './node_modules/protractor/selenium/selenium-server-standalone-2.52.0.jar',
 
   specs: [
     'app/assets/javascripts/test/**/*.e2e.coffee'

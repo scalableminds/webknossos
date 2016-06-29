@@ -27,7 +27,7 @@
     "jasmine-node": "^1.14.5",
     "mock-require": "^1.2.1",
     "napa": "^2.2.0",
-    "protractor": "^2.5.1",
+    "protractor": "^3.3.0",
     "require-sugar": "^0.1.2",
     "rimraf": "^2.4.3",
     "sinon": "^1.17.3",
@@ -40,7 +40,7 @@
     "test": "node_modules/jasmine-node/bin/jasmine-node --coffee app/assets/javascripts/test",
     "prewebdriver": "npm run webdriver-update",
     "webdriver": "./node_modules/.bin/webdriver-manager start",
-    "webdriver-update": "./node_modules/.bin/webdriver-manager update"
+    "webdriver-update": "./node_modules/protractor/bin/webdriver-manager update"
   },
   "dependencies": {
     "airbrake-js": "^0.5.8",

@@ -118,9 +118,7 @@ class MergeModalView extends ModalView
     @nml = undefined
 
 
-  show : ->
-
-    @$el.modal("show")
+  onRender : ->
 
     Request.receiveJSON("/api/user").then( (user) =>
 
@@ -135,8 +133,8 @@ class MergeModalView extends ModalView
           modelValue: -> return "#{@model.get("name")}"
       )
 
-      @tasktype   .show(@taskTypeSelectionView)
-      @project    .show(@projectSelectionView)
+      @tasktype.show(@taskTypeSelectionView)
+      @project.show(@projectSelectionView)
     )
 
   mergeTaskType : ->

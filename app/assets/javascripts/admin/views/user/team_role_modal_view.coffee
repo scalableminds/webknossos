@@ -53,7 +53,7 @@ class TeamRoleModalView extends ModalView
       users = @getSelectedUsers()
       if users.length == 1
         team = _.find(users[0].get("teams"), team: teamName)
-        if team and team.role.name = roleName
+        if team and team.role.name == roleName
           return "selected"
 
   events :

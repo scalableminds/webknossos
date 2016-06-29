@@ -3,7 +3,7 @@
 // --- !Ups
 db.trees.remove({"_tracing" : { $exists: false }});
 
-var treeCursor = db.trees.find().noCursorTimeout();
+var treeCursor = db.trees.find();
 
 treeCursor.forEach(function(tree){
   var skeletons = db.skeletons.find({"_id" : tree._tracing});
@@ -32,8 +32,6 @@ treeCursor.forEach(function(tree){
     db.trees.update({"_id" : tree._id}, {"$set": {"branchPoints" : branchPoints, "comments" : comments}})
   }
 });
-
-treeCursor.close();
 
 // --- !Downs
 

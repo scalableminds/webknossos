@@ -35,7 +35,7 @@ class ProjectsListView extends Marionette.CompositeView
     @collection.fetch()
 
     @listenTo(app.vent, "paginationView:filter", @filterBySearch)
-    @listenTo(app.vent, "CreateProjectModal:refresh", @render)
+    @listenTo(app.vent, "modal:destroy", @render)
     @listenTo(app.vent, "paginationView:addElement", @showModal)
 
 

@@ -100,7 +100,7 @@ class TaskListView extends Marionette.CompositeView
     modalView.render()
     @ui.modalWrapper.html(modalView.el)
 
-    modalView.$el.modal("show")
+    modalView.show()
     @modalView = modalView
 
 

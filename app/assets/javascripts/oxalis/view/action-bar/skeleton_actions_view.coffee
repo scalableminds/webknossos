@@ -5,13 +5,24 @@ Constants  = require("oxalis/constants")
 class SkeletonActionsView extends Marionette.ItemView
 
   template : _.template("""
-    <div class="btn-group">
-      <button type="button" class="btn btn-default" id="add-node">Add Node (Right-Click) </button>
-    </div>
+    <% if(isTracingMode()) { %>
+      <div class="btn-group">
+	<button type="button" class="btn btn-default" id="add-node">Add Node (Right-Click) </button>
+      </div>
+    <% } %>
   """)
+
+  templateHelpers :
+    isTracingMode : ->
+      return @mode == Constants.MODE_PLANE_TRACING
 
   events :
     "click #add-node" : "addNode"
+
+  initialize : ->
+
+    @listenTo(@model, "change:mode", @render)
+
 
   addNode : ->
 

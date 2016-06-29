@@ -30,6 +30,8 @@ module.exports = {
   TeamCollection
   TaskListView
   TaskCollection
+  TaskTypeCollection
+  TaskTypeListView
   ProjectListView
   ProjectCollection
   StatisticView

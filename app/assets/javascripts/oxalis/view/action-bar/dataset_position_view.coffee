@@ -20,7 +20,7 @@ class DatasetPositionView extends Marionette.ItemView
       </div>
     </div>
     <div class="form-group">
-      <% if(isArbitrayMode) { %>
+      <% if(isArbitrayMode()) { %>
         <div class="input-group">
           <span class="input-group-addon">Rotation</span>
           <input id="trace-rotation-input" class="form-control" type="text" value="<%- rotation() %>">
@@ -36,6 +36,9 @@ class DatasetPositionView extends Marionette.ItemView
     rotation : ->
       V3.round(@flycam3d.getRotation()).join(", ")
 
+    isArbitrayMode : ->
+      return @mode in constants.MODES_ARBITRARY
+
 
   events :
     "change #trace-position-input" : "changePosition"
@@ -49,24 +52,11 @@ class DatasetPositionView extends Marionette.ItemView
 
   initialize : (options) ->
 
-    @viewMode = constants.MODE_PLANE_TRACING
-    @listenTo(@model, "change:mode", @updateViewMode)
+    @listenTo(@model, "change:mode", @render)
 
     # TODO MEASURE PERFORMANCE HIT BECAUSE OF CONSTANT RE-RENDER
     @listenTo(@model.get("flycam3d"), "changed", @render)
     @listenTo(@model.get("flycam"), "positionChanged", @render)
-
-
-  serializeData : ->
-
-    return _.extend(@model, {
-      isArbitrayMode : @viewMode in constants.MODES_ARBITRARY
-    })
-
-
-  updateViewMode : (@viewMode) ->
-
-    @render()
 
 
   changePosition : (event) ->

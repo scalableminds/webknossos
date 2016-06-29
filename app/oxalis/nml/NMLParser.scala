@@ -57,6 +57,7 @@ object NMLParser {
           branchPoints = parseBranchPoints(data \ "branchpoints", time)
           trees <- extractTrees(data \ "thing", branchPoints, comments)
         } yield {
+          Logger.debug(s"Parsed Branchpoints: ${branchPoints}")
           val dataSetName = parseDataSetName(parameters \ "experiment")
           val activeNodeId = parseActiveNode(parameters \ "activeNode")
           val editPosition = parseEditPosition(parameters \ "editPosition") // STARTPOS

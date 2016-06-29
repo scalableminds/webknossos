@@ -101,7 +101,9 @@ object DBTree {
   val dbTreeUpdateWrites: Writes[DBTree] =
     ((__ \ "color").writeNullable[Color] and
       (__ \ "timestamp").write[Long] and
-      (__ \ "name").write[String])(tree => (tree.color, tree.timestamp, tree.name))
+      (__ \ "comments").write[List[Comment]] and
+      (__ \ "branchPoints").write[List[BranchPoint]] and
+      (__ \ "name").write[String])(tree => (tree.color, tree.timestamp, tree.comments, tree.branchPoints, tree.name))
 
   def empty(_tracing: BSONObjectID) = DBTree(
     _tracing,

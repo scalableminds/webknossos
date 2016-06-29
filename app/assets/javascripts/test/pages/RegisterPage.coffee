@@ -9,44 +9,34 @@ class RegisterPage extends Page
 
   get : ->
 
-    browser.get("/register")
+    browser.url("/register")
 
 
   ### ACTIONS ###
-
   signUpWithCompleteForm : ->
 
-    @waitForSelector("input#email")
-      .then((email) -> email.sendKeys('myemail@mail.com'))
-      .then( => @waitForSelector("input#firstName"))
-      .then((firstName) -> firstName.sendKeys('FirstName'))
-      .then( => @waitForSelector("input#firstName"))
-      .then((firstName) -> firstName.sendKeys('FirstName'))
-      .then( => @waitForSelector("input#lastName"))
-      .then((firstName) -> firstName.sendKeys('LastName'))
-      .then( => @waitForSelector("input#password_main"))
-      .then((firstName) -> firstName.sendKeys('password'))
-      .then( => @waitForSelector("input#password_validation"))
-      .then((firstName) -> firstName.sendKeys('password'))
-      .then( => @clickElement(signupButton))
+    @waitForElement("input#email").setValue('myemail@mail.com')
+    @waitForElement("input#firstName").setValue('FirstName')
+    @waitForElement("input#firstName").setValue('FirstName')
+    @waitForElement("input#lastName").setValue('LastName')
+    @waitForElement("input#password_main").setValue('password')
+    @waitForElement("input#password_validation").setValue('password')
+    @waitForElement(signupButton).click()
 
 
   signUpWithInclompleteForm : ->
 
-    @clickElement(signupButton)
+    @waitForElement(signupButton).click()
 
 
   getAlerts : ->
 
-    return $$(alertDanger)
-      .then((alerts) -> return alerts)
+    return browser.elements(alertDanger).value
 
 
   getModalText : ->
 
-    return @waitForSelector("#modalDescription > p")
-      .then((body) -> return body.getInnerHtml())
-
+    return @waitForElement("#modalDescription > p").getAttribute('innerHTML')
 
 
 module.exports = RegisterPage

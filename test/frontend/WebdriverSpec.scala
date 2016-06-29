@@ -17,14 +17,14 @@ import reactivemongo.api._
 import play.api.libs.concurrent.Execution.Implicits._
 import sys.process._
 
-class ProtractorSpec(arguments: Arguments) extends Specification with BeforeAll {
+class WebdriverIOSpec(arguments: Arguments) extends Specification with BeforeAll {
 
   val argumentMapRead = parseCustomJavaArgs(arguments)
   val mongoDb   = argumentMapRead.getOrElse("mongodb.db", "oxalis-testing")
   val mongoHost = argumentMapRead.getOrElse("mongodb.url", "localhost")
   val mongoPort = argumentMapRead.getOrElse("mongodb.port", "27017")
   val testPort = 9000
-  val argumentMap = argumentMapRead + 
+  val argumentMap = argumentMapRead +
                  ("mongodb.db"   -> mongoDb,
                   "mongodb.url"  -> mongoHost,
                   "mongodb.port" -> mongoPort,
@@ -45,20 +45,17 @@ class ProtractorSpec(arguments: Arguments) extends Specification with BeforeAll 
 
   "my application" should {
 
-    "pass the protractor e2e tests" in new WithServer(app = FakeApplication(additionalConfiguration = argumentMap), port = testPort) {
+    "pass the webdriverio e2e tests" in new WithServer(app = FakeApplication(additionalConfiguration = argumentMap), port = testPort) {
       val resp = Await.result(WS.url(s"http://localhost:$testPort").get(), 2 seconds)
       resp.status === 200
 
-      runProtractorTests === 0
+      runWebdriverTests === 0
     }
 
   }
 
-  private def runProtractorTests: Int = {
-    val webdriver = "npm run webdriver".run(getProcessIO)
-    Thread.sleep(5000)
-    val result = "./node_modules/.bin/protractor".run(getProcessIO).exitValue()
-    webdriver.destroy()
+  private def runWebdriverTests: Int = {
+    val result = "npm run test-e2e".run(getProcessIO).exitValue()
     result
   }
 

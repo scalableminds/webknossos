@@ -1,7 +1,7 @@
-RegisterPage = require './pages/RegisterPage'
+RegisterPage = require "./pages/RegisterPage"
 
 
-describe 'Register', ->
+describe "Register", ->
 
   page = null
   beforeEach ->
@@ -9,22 +9,17 @@ describe 'Register', ->
     page.get()
 
 
-  describe 'SignUp', ->
+  describe "SignUp", ->
 
-    it 'should send empty form', (done) ->
+    it "should send empty form", ->
 
       page.signUpWithInclompleteForm()
-        .then( -> return page.getAlerts() )
-        .then((alerts) ->
-          expect(alerts.length).toBe(6)
-          done()
-        )
+      alerts = page.getAlerts()
+      expect(alerts.length).toBe(6)
 
-    it 'should send complete form', (done) ->
+
+    it "should send complete form", ->
 
       page.signUpWithCompleteForm()
-        .then( -> page.getModalText())
-        .then((text) ->
-          expect(text).toEqual(RegisterPage.signUpSuccessText)
-          done()
-        )
+      modalText = page.getModalText()
+      expect(modalText).toEqual(RegisterPage.signUpSuccessText)

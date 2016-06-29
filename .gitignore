@@ -44,3 +44,4 @@ aws.conf.disabled
 /knowledge
 conf/github.conf
 tmp/
+errorShots/

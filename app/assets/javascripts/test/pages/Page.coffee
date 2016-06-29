@@ -1,6 +1,3 @@
-waitForSelector = require "../helpers/waitForSelector"
-
-
 class Page
 
   get : ->
@@ -10,13 +7,12 @@ class Page
 
   ### HELPERS ###
 
-  waitForSelector : waitForSelector
+  waitForElement : (selector, timeout = 20000) ->
 
+    element = browser.element(selector)
+    element.waitForExist(timeout)
+    return element
 
-  clickElement : (selector) ->
-
-    return @waitForSelector(selector)
-      .then( (el) -> el.click() )
 
 
 module.exports = Page

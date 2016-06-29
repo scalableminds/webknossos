@@ -70,6 +70,7 @@
     "pako": "^0.2.8",
     "react": "^15.1.0",
     "react-dom": "^15.1.0",
+    "scroll-into-view-if-needed": "^1.0.2",
     "stats.js": "^1.0.0",
     "tween.js": "^16.3.1",
     "underscore": "^1.8.3",

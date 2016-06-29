@@ -1,7 +1,7 @@
 app                = require("app")
 Marionette         = require("backbone.marionette")
 Input              = require("libs/input")
-CommentList        = require("./comment_list_view")
+CommentList        = require("./comment_list")
 React              = require("react")
 ReactDOM           = require("react-dom")
 
@@ -73,12 +73,14 @@ class CommentTabView extends Marionette.ItemView
 
   render : ->
 
-    super()
-    @commentList = ReactDOM.render(
-      <CommentList onNewActiveNode={@setActiveNode}/>,
-      @ui.commentList[0]
-    )
-    @updateState()
+    # tabs are not destroyed and a rerender would cause the react components to lose their state
+    if not @commentList
+      super()
+      @commentList = ReactDOM.render(
+        <CommentList onNewActiveNode={@setActiveNode}/>,
+        @ui.commentList[0]
+      )
+      @updateState()
 
 
   updateState : ->

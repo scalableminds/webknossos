@@ -15,12 +15,12 @@ class RegisterPage extends Page
   ### ACTIONS ###
   signUpWithCompleteForm : ->
 
-    @waitForElement("input#email").setValue('myemail@mail.com')
-    @waitForElement("input#firstName").setValue('FirstName')
-    @waitForElement("input#firstName").setValue('FirstName')
-    @waitForElement("input#lastName").setValue('LastName')
-    @waitForElement("input#password_main").setValue('password')
-    @waitForElement("input#password_validation").setValue('password')
+    @waitForElement("input#email").setValue("myemail@mail.com")
+    @waitForElement("input#firstName").setValue("FirstName")
+    @waitForElement("input#firstName").setValue("FirstName")
+    @waitForElement("input#lastName").setValue("LastName")
+    @waitForElement("input#password_main").setValue("password")
+    @waitForElement("input#password_validation").setValue("password")
     @waitForElement(signupButton).click()
 
 
@@ -36,7 +36,7 @@ class RegisterPage extends Page
 
   getModalText : ->
 
-    return @waitForElement("#modalDescription > p").getAttribute('innerHTML')
+    return @waitForElement("#modalDescription > p").getAttribute("innerHTML")
 
 
 module.exports = RegisterPage

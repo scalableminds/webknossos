@@ -3,6 +3,7 @@ Page = require("./Page")
 
 
 explorativeTab = "#tab-explorative"
+explorativeTaskList = "#explorative-tasks"
 tasksTab = "#tab-tasks"
 tasks = ".tab-content tbody"
 newTaskButton = "#new-task-button"
@@ -13,43 +14,43 @@ class DashboardPage extends Page
 
   get : ->
 
-    browser.get("/dashboard")
+    browser.url("/dashboard")
 
 
   ### ACTIONS ###
-
   openExplorativeTab : ->
 
-    return @clickElement(explorativeTab)
+    @waitForElement(explorativeTab).click()
+    browser.waitForVisible(explorativeTaskList)
 
 
   openTasksTab : ->
 
-    return @clickElement(tasksTab)
+    @waitForElement(tasksTab).click()
+    browser.waitForVisible(newTaskButton)
 
 
   clickGetTaskButton : ->
 
-    return @clickElement(newTaskButton)
+    @waitForElement(newTaskButton).click()
 
 
   getTasks : ->
 
-    return @openTasksTab()
-      .then => @waitForSelector(tasks)
-      .then((tasks) -> tasks.$$("tr"))
+    @openTasksTab()
+    taskList = @waitForElement(tasks)
+    return taskList.elements("tr").value
 
 
   getNewTask : ->
 
-    return @openTasksTab()
-      .then( => @clickGetTaskButton())
+    @openTasksTab()
+    @clickGetTaskButton()
 
 
   getFirstDownloadLink : ->
 
-    return @waitForSelector(downloadButton)
-    .then((btn) -> return btn.getAttribute("href"))
+    return @waitForElement(downloadButton).getAttribute("href")
 
 
 module.exports = DashboardPage

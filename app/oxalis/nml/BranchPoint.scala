@@ -1,12 +1,9 @@
 package oxalis.nml
-import play.api.libs.json.Json
-import play.api.libs.json.JsValue
-import play.api.libs.json.Format
-import play.api.libs.json._
-import play.api.data.validation.ValidationError
-import com.scalableminds.util.xml.{SynchronousXMLWrites, XMLWrites}
 
-case class BranchPoint(id: Int)
+import com.scalableminds.util.xml.SynchronousXMLWrites
+import play.api.libs.json.Json
+
+case class BranchPoint(id: Int, timestamp: Long)
 
 object BranchPoint {
   val ID = "id"
@@ -16,6 +13,7 @@ object BranchPoint {
 
   implicit object BranchPointXMLWrites extends SynchronousXMLWrites[BranchPoint] {
     def synchronousWrites(b: BranchPoint) =
-      <branchpoint id={ b.id.toString }/>
+        <branchpoint id={b.id.toString} time={b.timestamp.toString}/>
   }
+
 }

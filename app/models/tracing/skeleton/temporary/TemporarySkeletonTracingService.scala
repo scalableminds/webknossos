@@ -33,14 +33,12 @@ object TemporarySkeletonTracingService extends AnnotationContentService with Fox
         id,
         nml.dataSetName,
         nml.trees,
-        nml.branchPoints,
         System.currentTimeMillis(),
         nml.activeNodeId,
         _,
         Vector3D(0,0,0),
         SkeletonTracing.defaultZoomLevel,
         box,
-        nml.comments,
         settings)
     }
   }
@@ -53,14 +51,12 @@ object TemporarySkeletonTracingService extends AnnotationContentService with Fox
         id,
         tracing.dataSetName,
         trees,
-        tracing.branchPoints,
         System.currentTimeMillis(),
         tracing.activeNodeId,
         tracing.editPosition,
         tracing.editRotation,
         tracing.zoomLevel,
         tracing.boundingBox,
-        tracing.comments,
         tracing.settings)
     }
   }

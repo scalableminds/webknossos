@@ -3,7 +3,14 @@ package oxalis.nml
 import com.scalableminds.util.image.Color
 import com.scalableminds.util.geometry.{Vector3D, Point3D}
 
-case class Tree(treeId: Int, nodes: Set[Node], edges: Set[Edge], color: Option[Color], name: String = "") extends TreeLike {
+case class Tree(
+  treeId: Int,
+  nodes: Set[Node],
+  edges: Set[Edge],
+  color: Option[Color],
+  branchPoints: List[BranchPoint],
+  comments: List[Comment],
+  name: String = "") extends TreeLike {
 
   def addNodes(ns: Set[Node]) = this.copy(nodes = nodes ++ ns)
 
@@ -34,7 +41,10 @@ case class Tree(treeId: Int, nodes: Set[Node], edges: Set[Edge], color: Option[C
   def applyNodeMapping(f: Int => Int) = {
     this.copy(
       nodes = nodes.map(node => node.copy(id = f(node.id))),
-      edges = edges.map(edge => edge.copy(source = f(edge.source), target = f(edge.target))))
+      edges = edges.map(edge => edge.copy(source = f(edge.source), target = f(edge.target))),
+      comments = comments.map(comment => comment.copy(node = f(comment.node))),
+      branchPoints = branchPoints.map(bp => bp.copy(id = f(bp.id)))
+    )
   }
 
   def addNamePrefix(prefix: String) = {
@@ -43,8 +53,8 @@ case class Tree(treeId: Int, nodes: Set[Node], edges: Set[Edge], color: Option[C
 }
 
 object Tree {
-  def empty = Tree(1, Set.empty, Set.empty, None)
+  def empty = Tree(1, Set.empty, Set.empty, None, Nil, Nil)
 
-  def createFrom(node: Point3D, rotation: Vector3D) =
-    Tree(1, Set(Node(1, node, rotation)), Set.empty, Some(Color.RED))
+  def createFrom(node: Node) =
+    Tree(1, Set(node), Set.empty, Some(Color.RED), Nil, Nil)
 }

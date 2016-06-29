@@ -37,7 +37,6 @@ object DataSetInformationHandler extends AnnotationInformationHandler with FoxIm
         dataSetName,
         dataSetName,
         Nil,
-        Nil,
         System.currentTimeMillis(),
         Some(0),
         dataSet.defaultStart,

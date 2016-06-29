@@ -16,14 +16,12 @@ import reactivemongo.bson.BSONObjectID
 
 case class SkeletonTracing(
                             dataSetName: String,
-                            branchPoints: List[BranchPoint],
                             timestamp: Long,
                             activeNodeId: Option[Int],
                             editPosition: Point3D,
                             editRotation: Vector3D,
                             zoomLevel: Double,
                             boundingBox: Option[BoundingBox],
-                            comments: List[Comment] = Nil,
                             stats: Option[SkeletonTracingStatistics],
                             settings: AnnotationSettings = AnnotationSettings.skeletonDefault,
                             _id: BSONObjectID = BSONObjectID.generate
@@ -134,14 +132,12 @@ object SkeletonTracing {
   def from(t: SkeletonTracingLike) =
     SkeletonTracing(
       t.dataSetName,
-      t.branchPoints,
       t.timestamp,
       t.activeNodeId,
       t.editPosition,
       t.editRotation,
       t.zoomLevel,
       t.boundingBox,
-      t.comments,
       t.stats,
       t.settings
     )

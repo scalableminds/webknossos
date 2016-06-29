@@ -43,10 +43,6 @@ trait SkeletonTracingLike extends AnnotationContent {
 
   def timestamp: Long
 
-  def branchPoints: List[BranchPoint]
-
-  def comments: List[Comment]
-
   def editPosition: Point3D
 
   def editRotation: Vector3D
@@ -79,8 +75,8 @@ object SkeletonTracingLike extends FoxImplicits {
         dataSource <- dataSet.dataSource.toFox
         trees <- e.trees
         treesXml <- Xml.toXML(trees.filterNot(_.nodes.isEmpty))
-        branchpoints <- Xml.toXML(e.branchPoints)
-        comments <- Xml.toXML(e.comments)
+        branchpoints <- Xml.toXML(trees.flatMap(_.branchPoints).sortBy(-_.timestamp))
+        comments <- Xml.toXML(trees.flatMap(_.comments))
       } yield {
         <things>
           <parameters>
@@ -108,8 +104,6 @@ object SkeletonTracingLike extends FoxImplicits {
     } yield {
       Json.obj(
         "activeNode" -> t.activeNodeId,
-        "branchPoints" -> t.branchPoints,
-        "comments" -> t.comments,
         "trees" -> trees,
         "zoomLevel" -> t.zoomLevel
       )

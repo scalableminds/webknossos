@@ -12,6 +12,10 @@ trait TreeLike {
   def edges: Set[Edge]
   def timestamp: Long
 
+  def branchPoints: List[BranchPoint]
+
+  def comments: List[Comment]
+
   def name: String
   def changeTreeId(id: Int): TreeLike
   def changeName(name: String): TreeLike

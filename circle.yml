@@ -34,4 +34,6 @@ deployment:
     branch: /.*/
     commands:
       - docker push scalableminds/oxalis:$CIRCLE_BUILD_NUM
+      - docker tag scalableminds/oxalis:$CIRCLE_BUILD_NUM scalableminds/oxalis:branch-$CIRCLE_BRANCH
+      - docker push scalableminds/oxalis:branch-$CIRCLE_BRANCH
       - docker logout

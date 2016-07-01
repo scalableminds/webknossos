@@ -21,13 +21,13 @@ class DashboardPage extends Page
   openExplorativeTab : ->
 
     @waitForElement(explorativeTab).click()
-    browser.waitForVisible(explorativeTaskList)
+    browser.waitForVisible(explorativeTaskList, 1000)
 
 
   openTasksTab : ->
 
     @waitForElement(tasksTab).click()
-    browser.waitForVisible(newTaskButton)
+    browser.waitForVisible(newTaskButton, 1000)
 
 
   clickGetTaskButton : ->

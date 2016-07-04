@@ -11,6 +11,19 @@ describe "Dashboard", ->
   getTabTitle = ->
     return browser.element(".tab-content h3").getText()
 
+  describe "NML Download", ->
+
+    it "should download an NML file", (done) ->
+
+      page.openExplorativeTab()
+      url = page.getFirstDownloadLink()
+      Download.text().from(url).then((nmlContent) ->
+        expect(nmlContent.length).toBeGreaterThan(0)
+        expect(nmlContent.startsWith("<things>")).toBe(true)
+        expect(nmlContent.endsWith("</things>")).toBe(true)
+        done()
+      )
+
   describe "Tasks", ->
 
     it "should open tasks", ->
@@ -41,37 +54,31 @@ describe "Dashboard", ->
 
     it "should display user's tasks", ->
 
-      page.openTasksTab()
       expect(getTabTitle()).toBe("Tasks")
       expect(browser.isExisting(page.newTaskButton)).toEqual(false)
       expect(browser.isExisting(page.downloadButton)).toEqual(true)
+
+    it "should display user's tracked time", (done) ->
+
+      page.openTrackedTimeTab()
+      expect(getTabTitle()).toBe("Tracked Time")
+
+      timeTableEntries = page.getTimeTableEntries()
+      timeGraphEntries = page.getTimeGraphEntries()
+
+      url = "http://localhost:9000/api/users/570b9f4d2a7c0e4d008da6ef/loggedTime"
+      Download.json().from(url).then((response) ->
+
+        numTimeEntries = response.loggedTime.length
+
+        expect(timeTableEntries.length).toEqual(numTimeEntries)
+        expect(timeGraphEntries.length).toEqual(numTimeEntries)
+        done()
+      )
 
     it "should display user's explorative annotations", ->
 
       page.openExplorativeTab()
       expect(getTabTitle()).toBe("Explorative Annotations")
 
-    it "should display user's tracked time", ->
-
-      page.openTrackedTimeTab()
-      expect(getTabTitle()).toBe("Tracked Time")
-
-
-
-
-  describe "NML Download", ->
-
-    it "should download an NML file", (done) ->
-
-      page.openExplorativeTab()
-      url = page.getFirstDownloadLink()
-      console.log("i did it")
-      Download.text().from(url).then((nmlContent) ->
-        console.log("i did it 2")
-        console.log(nmlContent)
-        expect(nmlContent.length).toBeGreaterThan(0)
-        expect(nmlContent.startsWith("<things>")).toBe(true)
-        expect(nmlContent.endsWith("</things>")).toBe(true)
-        done()
-      )
 

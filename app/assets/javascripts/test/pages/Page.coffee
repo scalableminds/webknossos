@@ -13,5 +13,4 @@ class Page
     return browser.element(selector)
 
 
-
 module.exports = Page

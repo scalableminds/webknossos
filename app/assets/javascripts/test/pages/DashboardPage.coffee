@@ -9,11 +9,15 @@ class DashboardPage extends Page
   tasksTab : "#tab-tasks"
 
   explorativeTaskList : "#explorative-tasks"
+  archivedTasksButton : "#toggle-view-archived"
   downloadButton : "[href$='download']"
 
   taskList : ".tab-content tbody"
   newTaskButton : "#new-task-button"
-  archivedTasksButton : "#toggle-view-archived"
+  finishedTasksButton : "#toggle-finished"
+
+  timeTableEntries : ".time-table tbody tr"
+  timeGraphEntries : "circle"
 
   get : ->
 
@@ -30,6 +34,7 @@ class DashboardPage extends Page
   openTasksTab : ->
 
     @waitForElement(@tasksTab).click()
+    @waitForElement(@finishedTasksButton)
 
 
   clickGetTaskButton : ->
@@ -57,7 +62,7 @@ class DashboardPage extends Page
 
   openDashboardAsUser : ->
 
-    # Open as 'SCM Boy'
+    # Open as user 'SCM Boy'
     browser.url("/users/570b9f4d2a7c0e4d008da6ef/details")
 
 
@@ -65,6 +70,16 @@ class DashboardPage extends Page
 
     @waitForElement(@trackedTimeTab).click()
     browser.waitForVisible("svg", 1000)
+
+
+  getTimeTableEntries : ->
+
+    return browser.elements(@timeTableEntries).value
+
+
+  getTimeGraphEntries : ->
+
+    return browser.elements(@timeGraphEntries).value
 
 
 module.exports = DashboardPage

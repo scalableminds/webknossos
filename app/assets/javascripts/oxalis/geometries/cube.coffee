@@ -89,9 +89,11 @@ class Cube
       for j in [0...geo.vertices.length]
         array = geo.vertices[j].toArray()
         array[thirdDim] = position[thirdDim]
-        geo.vertices[j] = new THREE.Vector3(array...)
+        geo.vertices[j] = new THREE.Vector3(array[0], array[1], array[2])
 
       geo.verticesNeedUpdate = true
+
+    return
 
   getMeshes : ->
 

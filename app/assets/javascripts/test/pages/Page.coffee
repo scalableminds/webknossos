@@ -9,9 +9,8 @@ class Page
 
   waitForElement : (selector, timeout = 20000) ->
 
-    element = browser.element(selector)
-    element.waitForExist(timeout)
-    return element
+    browser.waitForExist(selector, timeout)
+    return browser.element(selector)
 
 
 

@@ -2,15 +2,18 @@ path = require("path")
 Page = require("./Page")
 
 
-explorativeTab = "#tab-explorative"
-explorativeTaskList = "#explorative-tasks"
-tasksTab = "#tab-tasks"
-tasks = ".tab-content tbody"
-newTaskButton = "#new-task-button"
-downloadButton = "[href$='download']"
-
-
 class DashboardPage extends Page
+
+  explorativeTab : "#tab-explorative"
+  trackedTimeTab : "#tab-logged-time"
+  tasksTab : "#tab-tasks"
+
+  explorativeTaskList : "#explorative-tasks"
+  downloadButton : "[href$='download']"
+
+  taskList : ".tab-content tbody"
+  newTaskButton : "#new-task-button"
+  archivedTasksButton : "#toggle-view-archived"
 
   get : ->
 
@@ -20,25 +23,24 @@ class DashboardPage extends Page
   ### ACTIONS ###
   openExplorativeTab : ->
 
-    @waitForElement(explorativeTab).click()
-    browser.waitForVisible(explorativeTaskList, 1000)
+    @waitForElement(@explorativeTab).click()
+    @waitForElement(@explorativeTaskList)
 
 
   openTasksTab : ->
 
-    @waitForElement(tasksTab).click()
-    browser.waitForVisible(newTaskButton, 1000)
+    @waitForElement(@tasksTab).click()
 
 
   clickGetTaskButton : ->
 
-    @waitForElement(newTaskButton).click()
+    @waitForElement(@newTaskButton).click()
 
 
   getTasks : ->
 
     @openTasksTab()
-    taskList = @waitForElement(tasks)
+    taskList = @waitForElement(@taskList)
     return taskList.elements("tr").value
 
 
@@ -50,7 +52,19 @@ class DashboardPage extends Page
 
   getFirstDownloadLink : ->
 
-    return @waitForElement(downloadButton).getAttribute("href")
+    return @waitForElement(@downloadButton).getAttribute("href")
+
+
+  openDashboardAsUser : ->
+
+    # Open as 'SCM Boy'
+    browser.url("/users/570b9f4d2a7c0e4d008da6ef/details")
+
+
+  openTrackedTimeTab : ->
+
+    @waitForElement(@trackedTimeTab).click()
+    browser.waitForVisible("svg", 1000)
 
 
 module.exports = DashboardPage

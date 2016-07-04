@@ -1,5 +1,5 @@
 path = require("path")
-Page = require("./Page")
+Page = require("./page")
 
 
 class DashboardPage extends Page

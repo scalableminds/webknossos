@@ -1,4 +1,4 @@
-Page = require("./Page")
+Page = require("./page")
 
 signupButton = "button[type=submit]"
 alertDanger =  "div.alert-danger"

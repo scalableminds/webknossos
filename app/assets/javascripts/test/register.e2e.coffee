@@ -1,4 +1,4 @@
-RegisterPage = require "./pages/RegisterPage"
+RegisterPage = require "./pages/register_page"
 
 
 describe "Register", ->

@@ -1,4 +1,4 @@
-DashboardPage = require "./pages/DashboardPage"
+DashboardPage = require "./pages/dashboard_page"
 Download = require("./helpers/ajaxDownload")
 
 describe "Dashboard", ->

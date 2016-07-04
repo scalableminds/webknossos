@@ -3,21 +3,22 @@
  */
 package models.tracing.skeleton
 
-import com.scalableminds.util.geometry.{Vector3D, BoundingBox, Point3D}
+import com.scalableminds.util.geometry.{BoundingBox, Point3D, Vector3D}
 import com.scalableminds.util.reactivemongo.DBAccessContext
 import com.scalableminds.util.tools.Fox
 import models.annotation.CompoundAnnotation._
-import models.annotation.{AnnotationSettings, AnnotationContentService}
+import models.annotation.{AnnotationContentService, AnnotationSettings}
 import models.binary.DataSet
 import models.task.Task
 import models.tracing.CommonTracingService
-import models.tracing.skeleton.temporary.{TemporarySkeletonTracingService, TemporarySkeletonTracing}
-import models.user.{User, UsedAnnotationDAO}
-import oxalis.nml.{TreeLike, NML, Tree}
+import models.tracing.skeleton.temporary.{TemporarySkeletonTracing, TemporarySkeletonTracingService}
+import models.user.{UsedAnnotationDAO, User}
+import oxalis.nml.{NML, Tree, TreeLike}
 import play.api.libs.json.Json
 import reactivemongo.bson.BSONObjectID
 import play.api.libs.concurrent.Execution.Implicits._
 import play.modules.reactivemongo.json.BSONFormats._
+import reactivemongo.core.commands.LastError
 
 object SkeletonTracingService extends AnnotationContentService with CommonTracingService {
   val dao = SkeletonTracingDAO
@@ -127,10 +128,18 @@ object SkeletonTracingService extends AnnotationContentService with CommonTracin
       Json.obj("_id" -> skeleton._id),
       Json.obj(
         "$set" -> SkeletonTracingDAO.formatWithoutId(skeleton),
+        "$unset" -> Json.obj("notUpdated" -> true),
         "$setOnInsert" -> Json.obj("_id" -> skeleton._id)
       ),
       upsert = true).map { _ =>
       skeleton
+    }
+  }
+
+  def update(id: BSONObjectID, skeleton: SkeletonTracing)(implicit ctx: DBAccessContext): Fox[LastError] = {
+    SkeletonTracingDAO.update(id, skeleton).map { r =>
+      SkeletonTracingDAO.update(Json.obj("_id" -> id), Json.obj("$unset" -> Json.obj("notUpdated" -> true)))
+      r
     }
   }
 }

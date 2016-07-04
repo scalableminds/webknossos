@@ -7,18 +7,15 @@ import com.scalableminds.util.reactivemongo.AccessRestrictions.{AllowIf, DenyEve
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import net.liftweb.common.Failure
 import play.api.libs.json.{JsObject, JsValue, Json}
-import play.modules.reactivemongo.json.BSONFormats.BSONDocumentFormat
-import play.modules.reactivemongo.json.JSONSerializationPack
+import reactivemongo.play.json._
 import reactivemongo.api.commands.{GetLastError, LastError, WriteResult}
 import reactivemongo.bson.BSONDocument
-import play.modules.reactivemongo.json._
-
 import scala.concurrent.ExecutionContext.Implicits._
 import scala.concurrent.Future
 
 trait SecuredCollection[T] extends AbstractCollection[T] with DBInteractionLogger with MongoHelpers with DBAccess with WithJsonFormatter[T] with ExceptionCatchers with FoxImplicits {
 
-  val pack = JSONSerializationPack
+  val pack = reactivemongo.play.json.JSONSerializationPack
 
   def AccessDefinitions: DBAccessDefinition
 

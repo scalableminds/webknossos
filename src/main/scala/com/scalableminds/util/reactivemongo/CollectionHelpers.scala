@@ -5,10 +5,10 @@ package com.scalableminds.util.reactivemongo
 
 import net.liftweb.common.{Failure, Full}
 import play.api.libs.json._
-import play.modules.reactivemongo.json.JSONSerializationPack
+import reactivemongo.play.json.JSONSerializationPack
 import reactivemongo.api.commands.{WriteResult, LastError}
 import reactivemongo.bson.BSONObjectID
-import play.modules.reactivemongo.json.BSONFormats._
+import reactivemongo.play.json.BSONFormats._
 import play.api.libs.json.Writes
 import scala.concurrent.ExecutionContext.Implicits._
 import reactivemongo.api.collections.GenericQueryBuilder

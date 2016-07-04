@@ -4,7 +4,7 @@
 package com.scalableminds.util.reactivemongo
 
 import reactivemongo.api.DefaultDB
-import play.modules.reactivemongo.json.collection.JSONCollection
+import reactivemongo.play.json.collection.JSONCollection
 
 trait UnAuthorizedDBAccess {
   implicit val ctx: DBAccessContext = UnAuthorizedAccessContext

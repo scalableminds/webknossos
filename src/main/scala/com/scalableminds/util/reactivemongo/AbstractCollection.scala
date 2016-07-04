@@ -9,7 +9,7 @@ import reactivemongo.api.collections.GenericQueryBuilder
 import reactivemongo.api.commands.{WriteResult, LastError}
 import reactivemongo.bson.BSONDocument
 import com.scalableminds.util.tools.Fox
-import play.modules.reactivemongo.json.JSONSerializationPack
+import reactivemongo.play.json.JSONSerializationPack
 
 trait AbstractCollection[T]{
   def insert(t: JsObject)(implicit ctx: DBAccessContext): Fox[WriteResult]

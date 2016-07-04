@@ -21,8 +21,8 @@ trait ExceptionCatchers extends DBInteractionLogger with FoxImplicits {
 
   def withFailureHandler(e: => Future[WriteResult]): Fox[WriteResult] =
     e.map {
-      case LastError(false, errMsg, code, _, _, err, _, _, _, _, _, _) =>
-        Failure(s"Error in '$collectionName': $errMsg ($err)", Full(GenericDatabaseException(errMsg orElse err getOrElse "", code)), Empty)
+      case e: LastError if e.inError =>
+        Failure(s"Error in '$collectionName': ${e.errmsg} ", Full(GenericDatabaseException(e.errmsg orElse e.writeErrors.headOption.map(_.errmsg) getOrElse "", e.code)), Empty)
       case lastError =>
         Full(lastError)
     }.recover(dbExceptionHandler)

@@ -3,20 +3,7 @@ var webpack = require('webpack');
 var ExtractTextPlugin = require('extract-text-webpack-plugin');
 var fs = require("fs");
 
-var paths = {
-  src : {
-    css : __dirname + "/app/assets/stylesheets/main.less",
-    dir : __dirname + "/app/assets",
-    js : __dirname + "/app/assets/javascripts",
-    fontawesome : __dirname + "/node_modules/font-awesome/fonts/**",
-  },
-  dest : {
-    js : __dirname + "/public/javascripts",
-    css : __dirname + "/public/stylesheets",
-    fontawesome : __dirname + "/public/fonts/fontawesome",
-  },
-};
-
+var srcPath = __dirname + "/app/assets/javascripts/";
 var nodePath = __dirname + "/node_modules/";
 var scriptPaths = {
   "gzip"                  : nodePath + "zlibjs/bin/gzip.min",
@@ -30,13 +17,13 @@ var scriptPaths = {
 
 module.exports = {
   entry: {
-    main: paths.src.js + "/main.coffee"
+    main: srcPath + "main.coffee",
   },
   output: {
-    path:              paths.dest.js,
+    path:              __dirname + "/public/bundle",
     filename:          "[name].js",
     sourceMapFilename: "[file].map",
-    publicPath:        "/assets/javascripts/"
+    publicPath:        "/assets/bundle/"
   },
   module: {
     // Reduce compilation time by telling webpack to not parse these libraries.
@@ -73,7 +60,7 @@ module.exports = {
     ]
   },
   resolve: {
-    root: paths.src.js,
+    root: srcPath,
     alias: scriptPaths,
     extensions: ['', '.js', '.json', '.coffee']
   },
@@ -95,9 +82,6 @@ module.exports = {
       "window.jQuery" : "jquery",
       _ : "lodash"
     }),
-
-    // // Use lodash in place of underscore
-    // new webpack.NormalModuleReplacementPlugin(/underscore/, 'lodash'),
   ]
 };
 

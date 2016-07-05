@@ -230,11 +230,12 @@ class Tree
 
   getColor : (id, isActiveNode, isBranchPoint) ->
 
-    color = @model.skeletonTracing.getTree(@id).color
+    tree = @model.skeletonTracing.getTree(@id)
+    color = tree.color
     if id?
 
       isActiveNode  = isActiveNode  || @model.skeletonTracing.getActiveNodeId() == id
-      isBranchPoint = isBranchPoint || @model.skeletonTracing.isBranchPoint(id)
+      isBranchPoint = isBranchPoint || tree.isBranchPoint(id)
 
       if isActiveNode
         color = @shiftHex(color, 1/4)

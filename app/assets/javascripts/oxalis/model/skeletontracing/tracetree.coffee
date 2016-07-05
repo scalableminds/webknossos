@@ -8,6 +8,7 @@ class TraceTree
   removeNode : (id) ->
 
     @removeCommentWithNodeId(id)
+    @removeBranchWithNodeId(id)
 
     for i in [0...@nodes.length]
       if @nodes[i].id == id
@@ -21,6 +22,19 @@ class TraceTree
       if @comments[i].node == id
         @comments.splice(i, 1)
         return
+
+
+  removeBranchWithNodeId : (id) ->
+
+    for i in [0...@branchpoints.length]
+      if @branchpoints[i].id == id
+        @branchpoints.splice(i, 1)
+        return
+
+
+  isBranchPoint : (id) ->
+
+    return id in (node.id for node in @branchpoints)
 
 
   buildTree : ->

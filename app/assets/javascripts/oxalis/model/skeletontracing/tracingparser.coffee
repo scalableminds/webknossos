@@ -36,7 +36,6 @@ class TracingParser
 
         tree.nodes.push(
           new TracePoint(
-            @skeletonTracing.TYPE_USUAL,
             node.id, node.position, node.radius, treeData.id,
             metaInfo, node.rotation))
 
@@ -76,17 +75,6 @@ class TracingParser
     return null
 
 
-  setBranchpoints : (nodeList) ->
-
-    for branchpoint in @data.branchPoints
-      node = @skeletonTracing.findNodeInList(nodeList, branchpoint.id)
-      if node
-        node.type = @skeletonTracing.TYPE_BRANCH
-        @skeletonTracing.branchStack.push(node)
-      else
-        Toast.error("Node with id #{branchpoint.id} doesn't exist. Ignored branchpoint.")
-
-
   parse : ->
 
     unless @data?
@@ -103,8 +91,6 @@ class TracingParser
     nodeList = []
     for tree in @trees
       nodeList = nodeList.concat(tree.nodes)
-
-    # @setBranchpoints(nodeList)
 
     return {
       @idCount

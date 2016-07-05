@@ -51,7 +51,7 @@ class TeamAssignmentModalView extends Marionette.CompositeView
 
   prefillModal : (childView) ->
 
-    if _.contains(@dataset.get("allowedTeams"), childView.model.get("name"))
+    if _.includes(@dataset.get("allowedTeams"), childView.model.get("name"))
       $(childView.el).find("input").prop("checked", true)
 
 

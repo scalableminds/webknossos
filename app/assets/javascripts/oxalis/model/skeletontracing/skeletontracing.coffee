@@ -1,6 +1,7 @@
 app                        = require("app")
 Backbone                   = require("backbone")
 _                          = require("lodash")
+Utils                      = require("libs/utils")
 backbone                   = require("backbone")
 Request                    = require("libs/request")
 ColorGenerator             = require("libs/color_generator")
@@ -10,7 +11,6 @@ SkeletonTracingStateLogger = require("./skeletontracing_statelogger")
 constants                  = require("../../constants")
 RestrictionHandler         = require("../helpers/restriction_handler")
 TracingParser              = require("./tracingparser")
-CommentsCollection         = require("oxalis/model/right-menu/comments_collection")
 
 class SkeletonTracing
 
@@ -22,7 +22,6 @@ class SkeletonTracing
 
   branchStack : []
   trees : []
-  comments : new CommentsCollection()
   activeNode : null
   activeTree : null
   firstEdgeDirection : null
@@ -48,7 +47,6 @@ class SkeletonTracing
       @idCount
       @treeIdCount
       @trees
-      @comments
       @activeNode
       @activeTree
     } = tracingParser.parse()
@@ -283,6 +281,11 @@ class SkeletonTracing
     if @activeNode then @activeNode.rotation else null
 
 
+  getActiveTree : ->
+
+    if @activeTree then @activeTree else null
+
+
   getActiveTreeId : ->
 
     if @activeTree then @activeTree.treeId else null
@@ -342,73 +345,6 @@ class SkeletonTracing
       @trigger("newActiveNodeRadius", radius)
 
 
-  setComment : (commentText) ->
-
-    return if @restrictionHandler.handleUpdate()
-
-    if @activeNode
-      # remove any existing comments for that node
-      for i in [0...@comments.length]
-        if(@comments[i].node.id == @activeNode.id)
-          @comments.splice(i, 1)
-          @deletedCommentIndex = i
-          break
-      if commentText != ""
-        @comments.push({node : @activeNode, content : commentText})
-      @stateLogger.push()
-      @trigger("updateComments")
-
-
-  getComment : (nodeID) ->
-
-    unless nodeID? then nodeID = @activeNode.id if @activeNode
-    for comment in @comments
-      if comment.node.id == nodeID then return comment.content
-    return ""
-
-
-  deleteComment : (nodeID) ->
-
-    return if @restrictionHandler.handleUpdate()
-
-    for i in [0...@comments.length]
-      if(@comments[i].node.id == nodeID)
-        @comments.splice(i, 1)
-        @stateLogger.push()
-        @trigger("updateComments")
-        break
-
-
-  nextCommentNodeID : (forward) ->
-
-    length = @comments.length
-    offset = if forward then 1 else -1
-
-    unless @activeNode
-      if length > 0 then return @comments[0].node.id
-
-    if length == 0
-      return null
-
-    for i in [0...@comments.length]
-      if @comments[i].node.id == @activeNode.id
-        return @comments[(length + i + offset) % length].node.id
-
-    if @deletedCommentIndex?
-      offset = if forward then 0 else -1
-      return @comments[(length + @deletedCommentIndex + offset) % length].node.id
-
-    return @comments[0].node.id
-
-
-  getComments : (ascendingOrder = true) =>
-
-    @comments.sort(@compareNodes)
-    if not ascendingOrder
-      return @comments.reverse()
-    return @comments
-
-
   selectNextTree : (forward) ->
 
     trees = @getTreesSorted(@user.get("sortTreesByName"))
@@ -450,12 +386,12 @@ class SkeletonTracing
 
   shuffleTreeColor : (tree) ->
 
+    return if @restrictionHandler.handleUpdate()
+
     tree = @activeTree unless tree
     tree.color = @getNewTreeColor()
 
-    if @restrictionHandler.handleUpdate()
-      @stateLogger.updateTree(tree)
-
+    @stateLogger.updateTree(tree)
     @trigger("newTreeColor", tree.treeId)
 
 
@@ -490,7 +426,6 @@ class SkeletonTracing
     unless @activeNode
       return
 
-    @trigger("deleteComment", @activeNode.id)
     for neighbor in @activeNode.neighbors
       neighbor.removeNeighbor(@activeNode.id)
     @activeTree.removeNode(@activeNode.id)
@@ -564,7 +499,6 @@ class SkeletonTracing
     # remove branchpoints and comments, NOT when merging trees
     for node in tree.nodes
       if deleteBranchesAndComments
-        @trigger("deleteComment", node.id)
         @deleteBranch(node)
 
     if notifyServer
@@ -591,6 +525,8 @@ class SkeletonTracing
     if lastNode.id != activeNodeID
       if lastTree.treeId != @activeTree.treeId
         @activeTree.nodes = @activeTree.nodes.concat(lastTree.nodes)
+        @activeTree.comments = @activeTree.comments.concat(lastTree.comments)
+        @activeTree.branchpoints = @activeTree.branchpoints.concat(lastTree.branchpoints)
         @activeNode.appendNext(lastNode)
         lastNode.appendNext(@activeNode)
 
@@ -609,6 +545,11 @@ class SkeletonTracing
         @trigger("mergeDifferentTrees")
 
 
+  updateTree : (tree) ->
+
+    @stateLogger.updateTree(tree)
+
+
   getTree : (id) ->
 
     unless id
@@ -625,9 +566,14 @@ class SkeletonTracing
   getTreesSorted : ->
 
     if @user.get("sortTreesByName")
-      return (@trees.slice(0)).sort(@compareNames)
+      return @getTreesSortedBy("name")
     else
-      return (@trees.slice(0)).sort(@compareTimestamps)
+      return @getTreesSortedBy("timestamp")
+
+
+  getTreesSortedBy : (key, isSortedAscending) ->
+
+    return (@trees.slice(0)).sort(Utils.compareBy(key, isSortedAscending))
 
 
   getNodeListForRoot : (result, root, previous) ->
@@ -667,24 +613,6 @@ class SkeletonTracing
     return null
 
 
-  compareNames : (a, b) ->
-
-    if a.name < b.name
-      return -1
-    if a.name > b.name
-      return 1
-    return 0
-
-
-  compareTimestamps : (a,b) ->
-
-    if a.timestamp < b.timestamp
-      return -1
-    if a.timestamp > b.timestamp
-      return 1
-    return 0
-
-
   compareNodes : (a, b) ->
 
     if a.node.treeId < b.node.treeId
@@ -692,11 +620,6 @@ class SkeletonTracing
     if a.node.treeId > b.node.treeId
       return 1
     return a.node.id - b.node.id
-
-
-  getPlainComments : =>
-
-    return @comments.toJSON()
 
 
 module.exports = SkeletonTracing

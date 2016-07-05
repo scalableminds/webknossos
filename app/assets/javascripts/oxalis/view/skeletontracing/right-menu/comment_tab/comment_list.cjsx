@@ -1,3 +1,5 @@
+_               = require("lodash")
+Utils           = require("libs/utils")
 React           = require("react")
 ReactDOM        = require("react-dom")
 TreeCommentList = require("./tree_comment_list")
@@ -9,19 +11,21 @@ CommentList = React.createClass(
 
     return null unless @state.data.length
 
-    # group comments by treeId
-    groupedComments = @state.data.groupBy( (comment) -> comment.get("treeId") )
-
     # create comment lists grouped by trees
-    commentAndTreeNodes = _.map(groupedComments, (comments, treeId) =>
+    commentAndTreeNodes = _.map(@state.data, (tree) =>
+
+      # sort comments in place
+      tree.comments.sort(Utils.compareBy("node", @state.isSortedAscending))
 
       # one tree and its comments
       return (
         <TreeCommentList
-          key={treeId}
-          treeId={treeId}
-          comments={comments}
+          key={tree.treeId}
+          treeId={tree.treeId}
+          treeName={tree.name}
+          comments={tree.comments}
           activeNodeId={@state.activeNodeId}
+          activeTreeId={@state.activeTreeId}
           onNewActiveNode={@props.onNewActiveNode}
         />
       )
@@ -42,6 +46,7 @@ CommentList = React.createClass(
       activeNodeId : 0
       isSortedAscending : true
     }
+
 )
 
 module.exports = CommentList

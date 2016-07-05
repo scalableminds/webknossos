@@ -180,9 +180,6 @@ class ArbitraryController
         @setRecord(true)
       "u" : =>
         @setRecord(false)
-      #Comments
-      "n" : => @setActiveNode(@model.skeletonTracing.nextCommentNodeID(false), true)
-      "p" : => @setActiveNode(@model.skeletonTracing.nextCommentNodeID(true), true)
     )
 
     @input.keyboardOnce = new Input.Keyboard(

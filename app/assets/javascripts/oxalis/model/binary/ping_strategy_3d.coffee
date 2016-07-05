@@ -16,7 +16,7 @@ class PingStrategy3d
 
   forContentType : (contentType) ->
 
-    _.isEmpty(@contentTypes) or _.contains(@contentTypes, contentType)
+    _.isEmpty(@contentTypes) or _.includes(@contentTypes, contentType)
 
 
   inVelocityRange : (value) ->

@@ -7,7 +7,7 @@ Comment = React.createClass(
 
   render : ->
 
-    data = @props.model.attributes
+    data = @props.data
     return (
       <li className={if @props.isActive then "bold" else ""}>
         <i className={"fa fa-fw " + "fa-angle-right" if @props.isActive}></i>
@@ -18,7 +18,7 @@ Comment = React.createClass(
 
   handleClick : ->
 
-    @props.onNewActiveNode(@props.model)
+    @props.onNewActiveNode(@props.data, @props.treeId)
 
 
   componentDidUpdate : ->

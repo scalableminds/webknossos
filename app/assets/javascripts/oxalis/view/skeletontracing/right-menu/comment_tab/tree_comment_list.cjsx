@@ -7,20 +7,16 @@ TreeCommentList = React.createClass(
 
   render : ->
 
-    # find out whether the tree contains the activeNode regardless of whether
-    # it is collapsed or not
-    containsActiveNode = _.findIndex(@props.comments, (comment) =>
-      return comment.get("node") == @props.activeNodeId
-    ) > -1
+    containsActiveNode = @props.treeId == @props.activeTreeId
 
     # don't render the comment nodes if the tree is collapsed
     commentNodes = if not @state.collapsed then @props.comments.map( (comment) =>
-      nodeId = comment.get("node")
       return (
         <Comment
-          key={nodeId}
-          model={comment}
-          isActive={nodeId == @props.activeNodeId}
+          key={comment.node}
+          data={comment}
+          treeId={@props.treeId}
+          isActive={comment.node == @props.activeNodeId}
           onNewActiveNode={@props.onNewActiveNode}
         />
       )
@@ -33,7 +29,7 @@ TreeCommentList = React.createClass(
       <div>
         <li className={if containsActiveNode then "bold" else ""}>
           <i className={"fa fa-fw " + icon} onClick={@handleClick}></i>
-          {@props.treeId}
+          {@props.treeId} - {@props.treeName}
         </li>
         {commentNodes}
       </div>

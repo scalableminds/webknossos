@@ -53,7 +53,7 @@ class SortTableBehavior extends Marionette.Behavior
 
   onClick : (evt) ->
 
-    $elem = if _.contains(evt.target.className, "sort-icon") then $(evt.target).closest("th") else $(evt.target)
+    $elem = if _.includes(evt.target.className, "sort-icon") then $(evt.target).closest("th") else $(evt.target)
     elemData = $elem.data()
     if "sort" not of elemData
       return

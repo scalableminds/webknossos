@@ -70,7 +70,7 @@ class Model extends Backbone.Model
                                   (layer) -> layer.category == "color")
           @set("datasetConfiguration", new DatasetConfiguration({
             datasetName : @get("datasetName")
-            dataLayerNames : _.pluck(colorLayers, "name")
+            dataLayerNames : _.map(colorLayers, "name")
           }))
           @get("datasetConfiguration").fetch().then(
             =>

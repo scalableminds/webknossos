@@ -49,6 +49,10 @@ class MinimalSkeletonTracingArbitraryController extends ArbitraryController
     @input.keyboardNoLoop = new Input.KeyboardNoLoop(
       #Recenter active node
       "y" : => @centerActiveNode()
+
+      #Branches
+      "b" : => @pushBranch()
+      "j" : => @popBranch()
     )
 
     @input.keyboardOnce = new Input.Keyboard(

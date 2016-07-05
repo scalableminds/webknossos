@@ -1,3 +1,4 @@
+_                   = require("lodash")
 app                 = require("app")
 Input               = require("libs/input")
 ArbitraryController = require("../viewmodes/arbitrary_controller")
@@ -14,7 +15,7 @@ class MinimalSkeletonTracingArbitraryController extends ArbitraryController
 
     super args...
 
-    @setRecord(true)
+    _.defer => @setRecord(true)
 
 
   initKeyboard : ->

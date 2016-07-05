@@ -10,7 +10,7 @@ import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import models.annotation.{Annotation, AnnotationDAO}
 import models.basics.{QuerySupportedDAO, SecuredBaseDAO}
 import models.task.{Task, TaskDAO, info}
-import models.user.UserDAO
+import models.user.{User, UserDAO}
 import net.liftweb.common.Failure
 import oxalis.security.Secured
 import play.api.{Configuration, Logger}
@@ -22,11 +22,11 @@ class QueryController  @Inject() (val messagesApi: MessagesApi,  val configurati
 
   lazy val systemLimit = configuration.getInt("oxalis.query.maxResults").getOrElse(100)
 
-  def handleQuery(`type`: String, query: JsObject, limit: Int)(implicit ctx: DBAccessContext): Fox[JsValue] = `type` match {
+  def handleQuery(`type`: String, query: JsObject, limit: Int, user: Option[User])(implicit ctx: DBAccessContext): Fox[JsValue] = `type` match {
     case "task" =>
       for{
         resultObjects <- TaskDAO.executeUserQuery(query, limit = limit)
-        jsResult <- Fox.combined(resultObjects.map(r => Task.transformToJson(r).toFox))
+        jsResult <- Fox.combined(resultObjects.map(t => Task.transformToJson(t, user).toFox))
       } yield JsArray(jsResult)
     case _ =>
       Logger.error("Invalid query type")
@@ -42,7 +42,7 @@ class QueryController  @Inject() (val messagesApi: MessagesApi,  val configurati
       _ <- request.user.hasAdminAccess ?~> "query.notAllowed"
       query <- request.body.asOpt[JsObject] ?~> "query.invalid.object"
       limit = math.min(userDefinedLimit, systemLimit)
-      result <- handleQuery(`type`, query, limit)
+      result <- handleQuery(`type`, query, limit, request.userOpt)
     } yield {
       Ok(result)
     }

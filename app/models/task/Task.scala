@@ -71,7 +71,7 @@ case class Task(
 object Task extends FoxImplicits {
   implicit val taskFormat = Json.format[Task]
 
-  def transformToJson(task: Task)(implicit ctx: DBAccessContext): Future[JsObject] = {
+  def transformToJson(task: Task, forUser: Option[User])(implicit ctx: DBAccessContext): Future[JsObject] = {
     for {
       annotationContent <- task.annotationBase.flatMap(_.content).futureBox
       dataSetName = annotationContent.map(_.dataSetName).openOr("")
@@ -80,6 +80,7 @@ object Task extends FoxImplicits {
       boundingBox = annotationContent.flatMap(_.boundingBox).toOption
       status <- task.status
       tt <- task.taskType.map(TaskType.transformToJson) getOrElse JsNull
+      directLinks = if(forUser.exists(_.isAdminOf(task.team))) Json.toJson(task.directLinks) else JsNull
     } yield {
       Json.obj(
         "id" -> task.id,
@@ -94,7 +95,7 @@ object Task extends FoxImplicits {
         "boundingBox" -> boundingBox,
         "neededExperience" -> task.neededExperience,
         "priority" -> task.priority,
-        "directLinks" -> task.directLinks,
+        "directLinks" -> directLinks,
         "created" -> DateTimeFormat.forPattern("yyyy-MM-dd HH:mm").print(task.created),
         "status" -> status,
         "tracingTime" -> task.tracingTime

@@ -65,7 +65,7 @@ class ProjectController @Inject()(val messagesApi: MessagesApi) extends Controll
       for {
         project <- ProjectDAO.findOneByName(projectName) ?~> Messages("project.notFound", projectName)
         tasks <- project.tasks
-        js <- Future.traverse(tasks)(Task.transformToJson)
+        js <- Future.traverse(tasks)(t => Task.transformToJson(t, request.userOpt))
       } yield {
         Ok(Json.toJson(js))
       }

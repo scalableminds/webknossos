@@ -47,7 +47,7 @@ class ArbitraryCubeAdapter
 
   reset : ->
 
-    @getBucket.cache.__data__ = {}
+    @getBucket.cache.clear()
 
 
 module.exports = ArbitraryCubeAdapter

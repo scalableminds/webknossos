@@ -35,6 +35,7 @@ class AbstractTreeRenderer
   ###
   drawTree : (@tree, @activeNodeId) ->
 
+    tree = @tree
     unless tree?
       return
 

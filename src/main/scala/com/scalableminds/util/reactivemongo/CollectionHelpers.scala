@@ -6,19 +6,27 @@ package com.scalableminds.util.reactivemongo
 import net.liftweb.common.{Failure, Full}
 import play.api.libs.json._
 import reactivemongo.play.json.JSONSerializationPack
-import reactivemongo.api.commands.{WriteResult, LastError}
+import reactivemongo.api.commands.{LastError, WriteResult}
 import reactivemongo.bson.BSONObjectID
 import reactivemongo.play.json.BSONFormats._
 import play.api.libs.json.Writes
+
 import scala.concurrent.ExecutionContext.Implicits._
 import reactivemongo.api.collections.GenericQueryBuilder
+
 import scala.Some
 import reactivemongo.api.{Cursor, QueryOpts}
 import play.api.libs.json.JsObject
 import com.scalableminds.util.tools.Fox
+import com.typesafe.scalalogging.LazyLogging
 import play.api.libs.iteratee.Enumerator
 
-trait CollectionHelpers[T] extends DAO[T] with MongoHelpers with DBInteractionLogger with WithJsonFormatter[T] with ExceptionCatchers {
+trait CollectionHelpers[T]
+  extends DAO[T]
+          with MongoHelpers
+          with WithJsonFormatter[T]
+          with ExceptionCatchers
+          with LazyLogging {
   this: AbstractCollection[T] =>
 
   def formatWithoutId(t: T) = {

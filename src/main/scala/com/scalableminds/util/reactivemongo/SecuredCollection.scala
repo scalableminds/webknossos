@@ -13,7 +13,13 @@ import reactivemongo.bson.BSONDocument
 import scala.concurrent.ExecutionContext.Implicits._
 import scala.concurrent.Future
 
-trait SecuredCollection[T] extends AbstractCollection[T] with DBInteractionLogger with MongoHelpers with DBAccess with WithJsonFormatter[T] with ExceptionCatchers with FoxImplicits {
+trait SecuredCollection[T] 
+  extends AbstractCollection[T] 
+          with MongoHelpers 
+          with DBAccess 
+          with WithJsonFormatter[T] 
+          with ExceptionCatchers 
+          with FoxImplicits {
 
   val pack = reactivemongo.play.json.JSONSerializationPack
 

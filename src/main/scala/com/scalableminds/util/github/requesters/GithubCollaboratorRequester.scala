@@ -4,12 +4,12 @@
 package com.scalableminds.util.github.requesters
 
 import play.api.libs.json._
-import play.api.Logger
 import play.api.libs.json.Reads._
 import com.scalableminds.util.github.models.GithubCollaborator
+import com.typesafe.scalalogging.LazyLogging
 import play.api.libs.concurrent.Execution.Implicits._
 
-trait GithubCollaboratorRequester extends GithubRequester {
+trait GithubCollaboratorRequester extends GithubRequester with LazyLogging {
 
   def repoCollaboratorsUrl(repo: String): String
 
@@ -21,7 +21,7 @@ trait GithubCollaboratorRequester extends GithubRequester {
       response =>
         response.json.validate(extractCollaborators).fold(
           invalid => {
-            Logger.warn("An error occurred while trying to decode orgs: " + invalid)
+            logger.warn("An error occurred while trying to decode orgs: " + invalid)
             Nil
           },
           valid => valid.map(_.id)

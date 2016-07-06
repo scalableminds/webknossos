@@ -5,13 +5,13 @@ package com.scalableminds.util.github.requesters
 
 import play.api.libs.json._
 import scala.concurrent.Future
-import play.api.Logger
+import com.typesafe.scalalogging.LazyLogging
 import play.api.libs.json.Reads._
 import com.scalableminds.util.github.ResultSet
 import com.scalableminds.util.github.models.GithubIssue
 import play.api.libs.concurrent.Execution.Implicits._
 
-trait GithuIssueRequester extends GithubRequester {
+trait GithuIssueRequester extends GithubRequester with LazyLogging {
 
   def issuesUrl(repo: String): String
 
@@ -27,9 +27,9 @@ trait GithuIssueRequester extends GithubRequester {
   def updateIssueBody(token: String, issue: GithubIssue, body: String): Future[Boolean] = {
     githubRequest(issue.url, prependHost = false)(token).post(issueBodyUpdate(body)).map {
       response =>
-        Logger.info("Update returned: " + response.status)
+        logger.info("Update returned: " + response.status)
         if (response.status != 200)
-          Logger.warn(response.body)
+          logger.warn(response.body)
         response.status == 200
     }
   }

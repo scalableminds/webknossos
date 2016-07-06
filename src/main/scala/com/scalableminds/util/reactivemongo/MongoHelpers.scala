@@ -8,12 +8,14 @@ import play.api.libs.json.Json._
 import reactivemongo.bson.BSONObjectID
 import play.api.libs.functional.syntax._
 import play.api.libs.json.Reads._
+
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.Success
 import net.liftweb.common.Failure
 import com.scalableminds.util.tools.Fox
+import com.typesafe.scalalogging.LazyLogging
 
-trait MongoHelpers extends DBInteractionLogger{
+trait MongoHelpers extends LazyLogging {
   /** Writes an ID in Json Extended Notation */
   val toObjectId =
     OWrites[String] {

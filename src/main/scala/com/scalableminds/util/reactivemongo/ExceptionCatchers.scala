@@ -3,14 +3,16 @@
  */
 package com.scalableminds.util.reactivemongo
 
-import net.liftweb.common.{Full, Empty, Failure}
+import net.liftweb.common.{Empty, Failure, Full}
+
 import scala.concurrent.Future
-import reactivemongo.api.commands.{WriteResult, LastError}
+import reactivemongo.api.commands.{LastError, WriteResult}
 import reactivemongo.core.errors.GenericDatabaseException
 import play.api.libs.concurrent.Execution.Implicits._
-import com.scalableminds.util.tools.{FoxImplicits, Fox}
+import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.typesafe.scalalogging.LazyLogging
 
-trait ExceptionCatchers extends DBInteractionLogger with FoxImplicits {
+trait ExceptionCatchers extends FoxImplicits with LazyLogging {
   def collectionName: String
 
   def dbExceptionHandler: PartialFunction[Throwable, Failure] = {

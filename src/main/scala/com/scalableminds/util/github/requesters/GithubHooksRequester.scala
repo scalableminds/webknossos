@@ -4,10 +4,10 @@
 package com.scalableminds.util.github.requesters
 
 import play.api.libs.json.Json
-import play.api.Logger
+import com.typesafe.scalalogging.LazyLogging
 import play.api.libs.concurrent.Execution.Implicits._
 
-trait GithubHooksRequester extends GithubRequester {
+trait GithubHooksRequester extends GithubRequester with LazyLogging {
 
   def hooksUrl(repo: String): String
 
@@ -25,9 +25,9 @@ trait GithubHooksRequester extends GithubRequester {
   def createWebHook(token: String, repo: String, url: String) =
     githubRequest(hooksUrl(repo))(token).post(hook(url)).map {
       response =>
-        Logger.debug("Creating hook. Response status: " + response.status)
+        logger.debug("Creating hook. Response status: " + response.status)
         if(response.status != 201)
-          Logger.warn("Creating hook resulted in response: " + response.json)
+          logger.warn("Creating hook resulted in response: " + response.json)
         response.status
     }
 }

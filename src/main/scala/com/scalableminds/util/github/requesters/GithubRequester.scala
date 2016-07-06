@@ -3,16 +3,16 @@
  */
 package com.scalableminds.util.github.requesters
 
-import play.api.Logger
+import com.typesafe.scalalogging.LazyLogging
 import play.api.libs.ws.WS
 import play.api.libs.concurrent.Execution.Implicits._
 
-trait GithubRequester {
+trait GithubRequester extends LazyLogging{
   val GH = "https://api.github.com"
 
   def githubRequest(sub: String, prependHost: Boolean = true)(implicit token: String) = {
     import play.api.Play.current
-    Logger.trace(s"Using Github Token: $token to query $sub")
+    logger.trace(s"Using Github Token: $token to query $sub")
     val url =
       if (prependHost)
         GH + sub

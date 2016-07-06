@@ -4,7 +4,7 @@
 package com.scalableminds.util.auth
 
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
-import play.api.{Logger}
+import com.typesafe.scalalogging.LazyLogging
 import play.api.libs.ws.WS
 import play.api.libs.json._
 import net.liftweb.common.{Failure, Full}
@@ -16,7 +16,7 @@ import play.api.libs.json.JsSuccess
 import net.liftweb.common.Full
 import play.api.libs.functional.syntax._
 
-trait GithubOauth extends FoxImplicits {
+trait GithubOauth extends FoxImplicits with LazyLogging {
 
   def secret: String
 
@@ -43,14 +43,14 @@ trait GithubOauth extends FoxImplicits {
       )
       .post("")
       .map { response =>
-      Logger.info("Response code from access token request: " + response.status + " Body: " + response.body)
+      logger.info("Response code from access token request: " + response.status + " Body: " + response.body)
       if (response.status == OK) {
         response.json.validate(accessTokenGithubReads) match {
           case JsSuccess(token, _) =>
-            Logger.info("Got a response token.")
+            logger.info("Got a response token.")
             Full(token)
           case f: JsError =>
-            Logger.warn("Failed to parse response token. " + f)
+            logger.warn("Failed to parse response token. " + f)
             Failure("Requesting access token resulted in invalid json returned. " + f)
         }
       } else

@@ -5,7 +5,7 @@ package com.scalableminds.util.image
 
 import java.awt.image.BufferedImage
 import java.io.IOException
-import com.scalableminds.util.tools.LazyLogger
+import com.typesafe.scalalogging.LazyLogging
 
 case class ImagePartInfo(page: Int, x: Int, y: Int, height: Int, width: Int)
 
@@ -27,9 +27,7 @@ case class ImageCreatorParameters(
                                    imageWidth: Option[Int] = None,
                                    imageHeight: Option[Int] = None)
 
-object ImageCreator {
-
-  lazy val logger = LazyLogger("braingames.image")
+object ImageCreator extends LazyLogging {
 
   val defaultTargetType = BufferedImage.TYPE_3BYTE_BGR
 

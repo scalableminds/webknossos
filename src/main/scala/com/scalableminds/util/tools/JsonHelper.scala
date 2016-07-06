@@ -6,13 +6,13 @@ package com.scalableminds.util.tools
 import java.io.FileNotFoundException
 import java.nio.file._
 
+import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common._
 import play.api.libs.json._
 
 import scala.io.Source
 
-object JsonHelper {
-  lazy val logger = LazyLogger("braingames.json")
+object JsonHelper extends LazyLogging {
 
   def jsonFromFile(path: Path, rootPath: Path): Box[JsValue] = {
     if (Files.exists(path) && !Files.isDirectory(path))

@@ -3,7 +3,7 @@
  */
 package com.scalableminds.util.reactivemongo
 
-import reactivemongo.api.DefaultDB
+import reactivemongo.api.DB
 import reactivemongo.play.json.collection.JSONCollection
 
 trait UnAuthorizedDBAccess {
@@ -14,7 +14,8 @@ trait GlobalDBAccess {
   implicit val ctx: DBAccessContext = GlobalAccessContext
 }
 
-trait DefaultAccessDefinitions extends DBAccessDefinition with AllowEverythingDBAccessFactory with AllowEverythingDBAccessValidator
+trait DefaultAccessDefinitions
+  extends DBAccessDefinition with AllowEverythingDBAccessFactory with AllowEverythingDBAccessValidator
 
 trait DBAccessDefinition extends DBAccessFactory with DBAccessValidator
 
@@ -23,5 +24,5 @@ trait DBAccess {
 
   lazy val underlying: JSONCollection = db.collection(collectionName)
 
-  def db: DefaultDB
+  def db: DB
 }

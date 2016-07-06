@@ -7,13 +7,13 @@ import java.io.{File, FilenameFilter}
 import java.nio.file._
 
 import net.liftweb.common.{Box, Failure, Full}
-import play.api.Logger
+import com.typesafe.scalalogging.LazyLogging
 
 import scala.collection.JavaConverters._
 
 object PathUtils extends PathUtils
 
-trait PathUtils {
+trait PathUtils extends LazyLogging {
 
   val directoryFilter = new FilenameFilter {
     override def accept(dir: File, name: String): Boolean = {
@@ -58,11 +58,11 @@ trait PathUtils {
     } catch {
       case ex: AccessDeniedException =>
         val errorMsg = s"Error access denied. Directory: ${directory.toAbsolutePath }"
-        Logger.error(errorMsg)
+        logger.error(errorMsg)
         Failure(errorMsg)
       case ex: Exception =>
         val errorMsg = s"Error: ${ex.getMessage }. Directory: ${directory.toAbsolutePath }"
-        Logger.error(errorMsg)
+        logger.error(errorMsg)
         Failure(errorMsg)
     }
   }

@@ -4,24 +4,25 @@
 package com.scalableminds.util.github
 
 import play.api.libs.json.Reads
-import play.api.libs.ws.WSRequestHolder
+import play.api.libs.ws.WSRequest
+
 import scala.concurrent.Future
 import play.api.http.Status
-import play.api.Logger
 import com.scalableminds.util.github.requesters.GithubRequester
 import com.scalableminds.util.github.models.LinkHeader
+import com.typesafe.scalalogging.LazyLogging
 import play.api.libs.concurrent.Execution.Implicits._
 
-class ResultSet[T](requestUrl: String, deserializer: Reads[T], token: String) extends GithubRequester {
+class ResultSet[T](requestUrl: String, deserializer: Reads[T], token: String) extends GithubRequester with LazyLogging {
 
   def parseParams(rawParams: List[String]): Map[String, String] = {
     val ParamRx = """^\s*([^=]*)\s*=\s*"(.*?)"\s*$""".r
-    rawParams.map {
+    rawParams.flatMap {
       case ParamRx(typ, value) =>
         Some(typ -> value)
       case _ =>
         None
-    }.flatten.toMap
+    }.toMap
   }
 
   def parseLinkHeader(linkHeader: String): Array[LinkHeader] = {
@@ -37,18 +38,18 @@ class ResultSet[T](requestUrl: String, deserializer: Reads[T], token: String) ex
     }
   }
 
-  def isNextHeader(header: LinkHeader) = {
-    header.params.get("rel").map(_ == "next").getOrElse(false)
+  def isNextHeader(header: LinkHeader): Boolean = {
+    header.params.get("rel").contains("next")
   }
 
   def results: Future[List[T]] = {
-    def requestNext(nextRequest: WSRequestHolder): Future[List[T]] = {
+    def requestNext(nextRequest: WSRequest): Future[List[T]] = {
       nextRequest.get().flatMap {
         response =>
           val result = response.json.validate(deserializer).asOpt.toList
 
           if (response.status != Status.OK) {
-            Logger.warn("Result in result set failed: " + response.json)
+            logger.warn("Result in result set failed: " + response.json)
           }
           response.header("Link").flatMap(h => parseLinkHeader(h).find(isNextHeader)) match {
             case Some(link) =>

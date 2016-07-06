@@ -3,19 +3,23 @@
  */
 package frontend
 
-import scala.concurrent.{Future, Await}
+import scala.concurrent.{Await, Future}
 import scala.sys.process.ProcessIO
 
 import play.api.libs.ws.WS
-import play.api.test.{FakeApplication, WithServer, TestServer}
+import play.api.test.{FakeApplication, TestServer, WithServer}
 import scala.concurrent.duration._
+
 import org.specs2.main.Arguments
 import org.specs2.mutable._
 import org.specs2.specification._
 import scala.io.Source
+
 import reactivemongo.api._
 import play.api.libs.concurrent.Execution.Implicits._
 import sys.process._
+
+import com.typesafe.scalalogging.LazyLogging
 
 class ProtractorSpec(arguments: Arguments) extends Specification with BeforeAll with LazyLogging {
 
@@ -45,7 +49,10 @@ class ProtractorSpec(arguments: Arguments) extends Specification with BeforeAll 
 
   "my application" should {
 
-    "pass the protractor e2e tests" in new WithServer(app = FakeApplication(additionalConfiguration = argumentMap), port = testPort) {
+    "pass the protractor e2e tests" in new WithServer(
+      app = FakeApplication(additionalConfiguration = argumentMap), 
+      port = testPort) {
+      
       val resp = Await.result(WS.url(s"http://localhost:$testPort").get(), 2 seconds)
       resp.status === 200
 

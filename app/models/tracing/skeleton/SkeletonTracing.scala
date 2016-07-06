@@ -79,7 +79,7 @@ trait SkeletonManipulations extends FoxImplicits {
         updatedTracing <- updates.foldLeft(Fox.successful(this)) {
           case (f, updater) => f.flatMap(tracing => updater.update(tracing))
         }
-        _ <- SkeletonTracingDAO.update(updatedTracing._id, updatedTracing.copy(timestamp = System.currentTimeMillis))(GlobalAccessContext)
+        _ <- SkeletonTracingService.update(updatedTracing._id, updatedTracing.copy(timestamp = System.currentTimeMillis))(GlobalAccessContext)
       } yield updatedTracing
     } else {
       Logger.warn("Failed to parse all update commands from json.")
@@ -154,10 +154,10 @@ object SkeletonTracingDAO extends SecuredBaseDAO[SkeletonTracing] with FoxImplic
   val formatter = SkeletonTracing.skeletonTracingFormat
 
   def resetComments(_tracing: BSONObjectID)(implicit ctx: DBAccessContext) =
-    update(Json.obj("_id" -> _tracing), Json.obj("$set" -> Json.obj("comments" -> Json.arr())))
+    update(Json.obj("_id" -> _tracing), Json.obj("$set" -> Json.obj("comments" -> Json.arr()), "$unset" -> Json.obj("notUpdated" -> true)))
 
   def resetBranchPoints(_tracing: BSONObjectID)(implicit ctx: DBAccessContext) =
-    update(Json.obj("_id" -> _tracing), Json.obj("$set" -> Json.obj("branchPoints" -> Json.arr())))
+    update(Json.obj("_id" -> _tracing), Json.obj("$set" -> Json.obj("branchPoints" -> Json.arr()), "$unset" -> Json.obj("notUpdated" -> true)))
 
   def resetStats(_tracing: BSONObjectID)(implicit ctx: DBAccessContext) =
     update(Json.obj("_id" -> _tracing), Json.obj("$unset" -> Json.obj("stats" -> true)))
@@ -166,14 +166,14 @@ object SkeletonTracingDAO extends SecuredBaseDAO[SkeletonTracing] with FoxImplic
     findAndModify(
       Json.obj("_id" -> _tracing),
       Json.obj("$set" -> Json.obj(
-        "branchPoints.-1" -> bp)),
+        "branchPoints.-1" -> bp), "$unset" -> Json.obj("notUpdated" -> true)),
       returnNew = true)
 
   def addComment(_tracing: BSONObjectID, comment: Comment)(implicit ctx: DBAccessContext) =
     findAndModify(
       Json.obj("_id" -> _tracing),
       Json.obj("$set" -> Json.obj(
-        "comments.-1" -> comment)),
+        "comments.-1" -> comment), "$unset" -> Json.obj("notUpdated" -> true)),
       returnNew = true)
 
   def updateStats(_tracing: BSONObjectID, stats: SkeletonTracingStatistics)(implicit ctx: DBAccessContext) =

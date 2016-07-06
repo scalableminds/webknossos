@@ -233,7 +233,7 @@ case class UpdateTracing(value: JsObject) extends TracingUpdater {
         editPosition = editPosition,
         editRotation = editRotation,
         zoomLevel = zoomLevel)
-      SkeletonTracingDAO.update(t._id, updated).map(_ => updated) ?~> "Failed to update tracing."
+      SkeletonTracingService.update(t._id, updated).map(_ => updated) ?~> "Failed to update tracing."
     }
   }
 }

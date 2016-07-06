@@ -216,7 +216,7 @@ class TaskController @Inject() (val messagesApi: MessagesApi) extends Controller
 
   def list = Authenticated.async{ implicit request =>
     for {
-      tasks <- TaskService.findAllAdministratable(request.user)
+      tasks <- TaskService.findAllAdministratable(request.user, limit = 10000)
       js <- Future.traverse(tasks)(Task.transformToJson)
     } yield {
       Ok(Json.toJson(js))

@@ -11,7 +11,7 @@ import oxalis.nml._
 import play.api.Logger
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json._
-import play.modules.reactivemongo.json.BSONFormats._
+import reactivemongo.play.json.BSONFormats._
 import reactivemongo.bson.BSONObjectID
 
 case class SkeletonTracing(

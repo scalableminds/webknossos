@@ -13,7 +13,7 @@ import models.user.{UserDAO, User, Experience}
 import scala.concurrent.Future
 import play.api.Logger
 import play.api.libs.json.Json
-import play.modules.reactivemongo.json.BSONFormats._
+import reactivemongo.play.json.BSONFormats._
 import reactivemongo.core.commands.LastError
 
 object TaskService extends TaskAssignmentSimulation with TaskAssignment with FoxImplicits {

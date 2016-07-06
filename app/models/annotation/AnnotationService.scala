@@ -23,7 +23,7 @@ import scala.Some
 import models.binary.{DataSet, DataSetDAO}
 import oxalis.nml.NML
 import com.scalableminds.util.mvc.BoxImplicits
-import play.modules.reactivemongo.json.BSONFormats._
+import reactivemongo.play.json.BSONFormats._
 import play.api.i18n.{Messages, MessagesApi}
 
 /**

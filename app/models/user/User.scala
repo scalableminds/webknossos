@@ -14,7 +14,7 @@ import com.scalableminds.util.reactivemongo._
 //import scala.concurrent.Future
 import play.api.libs.concurrent.Execution.Implicits._
 import reactivemongo.bson.BSONObjectID
-import play.modules.reactivemongo.json.BSONFormats._
+import reactivemongo.play.json.BSONFormats._
 import reactivemongo.api.indexes.{IndexType, Index}
 import reactivemongo.api.indexes.Index
 import play.api.libs.json._

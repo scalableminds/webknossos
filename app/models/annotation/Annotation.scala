@@ -15,7 +15,7 @@ import org.joda.time.format.DateTimeFormat
 import oxalis.view.{ResourceAction, ResourceActionCollection}
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json._
-import play.modules.reactivemongo.json.BSONFormats._
+import reactivemongo.play.json.BSONFormats._
 import reactivemongo.api.indexes.{Index, IndexType}
 import reactivemongo.bson.BSONObjectID
 
@@ -379,6 +379,6 @@ object AnnotationDAO
       returnNew = true)
 
   override def executeUserQuery(q: JsObject, limit: Int)(implicit ctx: DBAccessContext): Fox[List[Annotation]] = withExceptionCatcher{
-    find(q).cursor[Annotation]().collect[List](upTo = limit)
+    find(q).cursor[Annotation]().collect[List](maxDocs = limit)
   }
 }

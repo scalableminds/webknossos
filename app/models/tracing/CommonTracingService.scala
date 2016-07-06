@@ -5,7 +5,7 @@ import models.annotation.AnnotationSettings
 import models.basics.SecuredBaseDAO
 import play.api.libs.json.Json
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
-import play.modules.reactivemongo.json.BSONFormats._
+import reactivemongo.play.json.BSONFormats._
 import com.scalableminds.util.reactivemongo.DBAccessContext
 
 

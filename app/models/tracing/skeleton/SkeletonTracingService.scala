@@ -17,7 +17,7 @@ import oxalis.nml.{BranchPoint, NML, Tree, TreeLike}
 import play.api.libs.json.Json
 import reactivemongo.bson.BSONObjectID
 import play.api.libs.concurrent.Execution.Implicits._
-import play.modules.reactivemongo.json.BSONFormats._
+import reactivemongo.play.json.BSONFormats._
 
 object SkeletonTracingService extends AnnotationContentService with CommonTracingService {
   val dao = SkeletonTracingDAO
@@ -94,11 +94,11 @@ object SkeletonTracingService extends AnnotationContentService with CommonTracin
 
   def createFrom(dataSet: DataSet)(implicit ctx: DBAccessContext): Fox[SkeletonTracing] =
     createFrom(
-      dataSet.name, 
-      dataSet.defaultStart, 
-      dataSet.defaultRotation, 
-      None, 
-      insertStartAsNode = false, 
+      dataSet.name,
+      dataSet.defaultStart,
+      dataSet.defaultRotation,
+      None,
+      insertStartAsNode = false,
       isFirstBranchPoint = false)
 
   def clearAndRemove(skeletonId: String)(implicit ctx: DBAccessContext) =

@@ -3,24 +3,25 @@
  */
 package com.scalableminds.braingames.binary.store
 
-import java.io.{FileNotFoundException, InputStream, OutputStream, FileInputStream, FileOutputStream, File}
+import java.io.{File, FileInputStream, FileNotFoundException, FileOutputStream, InputStream, OutputStream}
 import java.nio.file.{Files, Path, Paths}
+
 import com.scalableminds.util.io.PathUtils
 
 import scala.concurrent.Future
 import scala.concurrent.ExecutionContext.Implicits._
-import com.scalableminds.braingames.binary.{LoadBlock, SaveBlock, MappingRequest}
+import com.scalableminds.braingames.binary.{LoadBlock, MappingRequest, SaveBlock}
 import net.liftweb.common.Box
 import net.liftweb.common.Failure
-import com.scalableminds.braingames.binary.Logger._
 import com.scalableminds.util.geometry.Point3D
+import com.typesafe.scalalogging.LazyLogging
 
 class FileDataStoreActor extends DataStoreActor(new FileDataStore)
 
 /**
  * A data store implementation which uses the hdd as data storage
  */
-class FileDataStore extends DataStore {
+class FileDataStore extends DataStore with LazyLogging {
 
   import FileDataStore._
   import DataStore._

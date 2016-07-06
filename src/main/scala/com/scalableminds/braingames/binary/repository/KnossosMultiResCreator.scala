@@ -7,14 +7,15 @@ import java.nio.file.Path
 
 import com.scalableminds.util.geometry.{BoundingBox, Point3D}
 import com.scalableminds.braingames.binary.store.FileDataStore
+
 import scala.concurrent.Future
 import scala.math.pow
-import com.scalableminds.braingames.binary.Logger._
 import com.scalableminds.util.tools.BlockedArray3D
+import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common.Full
 import play.api.libs.concurrent.Execution.Implicits._
 
-object KnossosMultiResCreator {
+object KnossosMultiResCreator extends LazyLogging{
   val CubeSize = 128
 
   def fileSize(bytesPerElement: Int) = CubeSize * CubeSize * CubeSize * bytesPerElement

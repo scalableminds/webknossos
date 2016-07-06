@@ -13,36 +13,40 @@ import com.scalableminds.util.tools.Math._
 import akka.pattern.ask
 import akka.pattern.AskTimeoutException
 import akka.util.Timeout
+
 import scala.util._
 import scala.concurrent.duration._
 import scala.concurrent.Future
 import java.util.UUID
+
 import com.typesafe.config.Config
 import com.scalableminds.braingames.binary.models.DataLayer
 import com.scalableminds.braingames.binary.models.DataSource
 import store._
 import com.scalableminds.braingames.binary.models.DataSourceRepository
+
 import scala.concurrent.Await
 import com.scalableminds.braingames.binary.models.DataLayerSection
 import net.liftweb.common.Box
 import net.liftweb.common.{Failure => BoxFailure}
 import net.liftweb.common.Full
 import java.util.NoSuchElementException
+
 import scala.concurrent.Lock
-import com.scalableminds.util.tools.{FoxImplicits, Fox, BlockedArray3D}
+import com.scalableminds.util.tools.{BlockedArray3D, Fox, FoxImplicits}
 import com.scalableminds.util.tools.ExtendedTypes.ExtendedArraySeq
 import com.scalableminds.util.tools.ExtendedTypes.ExtendedDouble
+import com.typesafe.scalalogging.LazyLogging
 
 class DataRequestActor(
   val conf: Config,
   val cache: Agent[Map[CachedBlock, Future[Box[Array[Byte]]]]],
   dataSourceRepository: DataSourceRepository)
   extends Actor
-  with DataCache
-  with FoxImplicits
-  with EmptyDataProvider {
-
-  import Logger._
+          with DataCache
+          with FoxImplicits
+          with EmptyDataProvider
+          with LazyLogging {
 
   import store.DataStore._
 
@@ -296,13 +300,13 @@ class DataRequestActor(
         Future.successful(Unit)
 
       case _ =>
-        System.err.println("Could not save userData to any section.")
+        logger.error("Could not save userData to any section.")
         Future.successful(Unit)
     }
 
     val sections = Stream(layer.sections.filter {
       section =>
-        requestedSection.map(_ == section.sectionId) getOrElse true
+        requestedSection.forall(_ == section.sectionId)
     }: _*)
 
     saveToSections(sections)
@@ -340,13 +344,13 @@ class DataRequestActor(
         }
 
       case _ =>
-        System.err.println("Could not ensure userData to be in cache.")
+        logger.error("Could not ensure userData to be in cache.")
         Future.successful(Array[Byte]())
     }
 
     val sections = Stream(layer.sections.filter {
       section =>
-        requestedSection.map(_ == section.sectionId) getOrElse true
+        requestedSection.forall(_ == section.sectionId)
     }: _*)
 
     ensureCopyInSections(sections)

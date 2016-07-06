@@ -5,17 +5,22 @@ package com.scalableminds.braingames.binary.repository
 
 import java.nio.file.Path
 
-import com.scalableminds.braingames.binary.Logger._
 import com.scalableminds.braingames.binary.models.{FiledDataSource, UnusableDataSource, UsableDataSource}
 import com.scalableminds.util.io.PathUtils
 import com.scalableminds.util.tools.{Fox, FoxImplicits, InProgress, ProgressTracking}
+import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common.{Empty, Failure, Full}
 import org.apache.commons.io.FileUtils
 import play.api.i18n.{I18nSupport, Messages}
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json.Json
 
-trait DataSourceInboxHelper extends ProgressTracking with FoxImplicits with LockKeeperHelper with I18nSupport {
+trait DataSourceInboxHelper
+  extends ProgressTracking
+          with FoxImplicits
+          with LockKeeperHelper
+          with I18nSupport
+          with LazyLogging{
 
   val DataSourceJson = "datasource.json"
 

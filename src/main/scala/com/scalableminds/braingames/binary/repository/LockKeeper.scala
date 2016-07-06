@@ -9,11 +9,11 @@ import java.util.UUID
 import akka.actor.{Actor, ActorSystem, Props}
 import akka.pattern.ask
 import akka.util.Timeout
-import com.scalableminds.braingames.binary.Logger._
 import com.scalableminds.util.io.{FileIO, PathUtils}
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common.{Box, Failure, Full}
-import play.api.Logger
+import com.typesafe.scalalogging.LazyLogging
 import play.api.libs.concurrent.Execution.Implicits._
 
 import scala.concurrent.duration._
@@ -74,7 +74,7 @@ object LockFileContent {
   }
 }
 
-class LockKeeperActor extends Actor {
+class LockKeeperActor extends Actor with LazyLogging {
 
   case class LockOperationResult(result: Box[Boolean], retry: Boolean)
 
@@ -123,7 +123,7 @@ class LockKeeperActor extends Actor {
       LockOperationResult(result, retry = true)
     } catch {
       case e: Exception =>
-        Logger.error(s"Tried to release lock. Error: ${e.getMessage }")
+        logger.error(s"Tried to release lock. Error: ${e.getMessage }")
         val result = Failure(s"Failed to release lock. Error: ${e.getMessage }")
         LockOperationResult(result, retry = false)
     }
@@ -144,7 +144,7 @@ class LockKeeperActor extends Actor {
       LockOperationResult(result, retry = true)
     } catch {
       case e: Exception =>
-        Logger.error(s"Tried to acquire lock but got: ${e.getMessage }")
+        logger.error(s"Tried to acquire lock but got: ${e.getMessage }")
         val result = Failure(s"Failed to acquire lock. Error: ${e.getMessage }")
         LockOperationResult(result, retry = false)
     }

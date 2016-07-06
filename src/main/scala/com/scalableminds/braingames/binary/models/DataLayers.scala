@@ -5,6 +5,7 @@ package com.scalableminds.braingames.binary.models
 
 import play.api.libs.json._
 import com.scalableminds.util.geometry.BoundingBox
+import com.typesafe.scalalogging.LazyLogging
 
 import scala.util.Try
 
@@ -57,9 +58,7 @@ case class DataLayer(
   lazy val boundingBox = BoundingBox.combine(sections.map(_.bboxBig))
 }
 
-object DataLayer{
-
-  import com.scalableminds.braingames.binary.Logger._
+object DataLayer extends LazyLogging{
 
   val COLOR =
     DataLayerType("color", TrilerpInterpolation)

@@ -9,14 +9,13 @@ import com.scalableminds.braingames.binary.models._
 import com.scalableminds.braingames.binary.watcher.DirectoryChangeHandler
 import com.scalableminds.util.io.PathUtils
 import com.scalableminds.util.tools.JsonHelper
+import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common.Full
 import play.api.i18n.MessagesApi
 
 protected class DataSourceInboxChangeHandler(dataSourceRepository: DataSourceRepository, serverUrl: String)
                                             (val messagesApi: MessagesApi)
-  extends DirectoryChangeHandler with PathUtils {
-
-  import com.scalableminds.braingames.binary.Logger._
+  extends DirectoryChangeHandler with PathUtils with LazyLogging {
 
   val defaultTeam = "Structure of Neocortical Circuits Group"
 

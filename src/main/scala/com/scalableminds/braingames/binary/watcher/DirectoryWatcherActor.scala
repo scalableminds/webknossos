@@ -3,12 +3,15 @@
  */
 package com.scalableminds.braingames.binary.watcher
 
-import java.nio.file.{Files, Paths, Path}
-import akka.actor.{Cancellable, Actor}
+import java.nio.file.{Files, Path, Paths}
+
+import akka.actor.{Actor, Cancellable}
+
 import scala.concurrent.duration._
 import scala.concurrent.Future
 import com.typesafe.config.Config
 import akka.agent.Agent
+import com.typesafe.scalalogging.LazyLogging
 
 object DirectoryWatcherActor {
   // Messages
@@ -23,9 +26,8 @@ object DirectoryWatcherActor {
 class DirectoryWatcherActor(config: Config,
                             path: Path,
                             recursive: Boolean,
-                            changeHandler: DirectoryChangeHandler) extends Actor {
+                            changeHandler: DirectoryChangeHandler) extends Actor with LazyLogging {
 
-  import com.scalableminds.braingames.binary.Logger._
   import DirectoryWatcherActor._
 
   val TICKER_INTERVAL = config.getInt("tickerInterval").minutes

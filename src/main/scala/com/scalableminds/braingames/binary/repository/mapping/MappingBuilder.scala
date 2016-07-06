@@ -3,8 +3,6 @@
  */
 package com.scalableminds.braingames.binary.repository.mapping
 
-import com.scalableminds.braingames.binary.Logger
-
 import scala.collection.mutable.MutableList
 import org.scalastuff.json._
 import net.liftweb.common.{Empty, Full, Box}

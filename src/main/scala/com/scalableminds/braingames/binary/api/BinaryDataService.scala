@@ -4,7 +4,7 @@
 package com.scalableminds.braingames.binary.api
 
 import java.io.OutputStream
-import java.nio.file.{Paths, Path}
+import java.nio.file.{Path, Paths}
 
 import akka.actor.ActorSystem
 import akka.agent.Agent
@@ -12,11 +12,13 @@ import akka.actor.ActorRef
 import akka.routing.RoundRobinPool
 import com.scalableminds.braingames.binary._
 import play.api.i18n.I18nSupport
+
 import scala.concurrent.Future
 import akka.actor.Props
 import akka.pattern.ask
 import com.scalableminds.braingames.binary.watcher._
 import akka.util.Timeout
+
 import scala.concurrent.duration._
 import com.scalableminds.braingames.binary.models._
 import akka.pattern.AskTimeoutException
@@ -24,10 +26,15 @@ import com.typesafe.config.Config
 import net.liftweb.common.Box
 import com.scalableminds.braingames.binary.repository.DataSourceInbox
 import com.scalableminds.util.io.PathUtils
+import com.typesafe.scalalogging.LazyLogging
 
-trait BinaryDataService extends DataSourceService with BinaryDataHelpers with DataLayerMappingHelpers with DataDownloadHelper with I18nSupport{
-
-  import Logger._
+trait BinaryDataService 
+  extends DataSourceService 
+          with BinaryDataHelpers 
+          with DataLayerMappingHelpers 
+          with DataDownloadHelper 
+          with I18nSupport 
+          with LazyLogging {
 
   implicit def system: ActorSystem
 

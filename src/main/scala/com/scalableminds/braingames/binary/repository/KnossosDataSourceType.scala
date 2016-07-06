@@ -12,8 +12,8 @@ import com.scalableminds.util.geometry.{BoundingBox, Scale}
 import com.scalableminds.util.io.PathUtils
 import com.scalableminds.util.tools.ProgressTracking.ProgressTracker
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common.{Box, Empty, Failure, Full}
-import play.api.Logger
 import play.api.i18n.{I18nSupport, Messages, MessagesApi}
 
 import scala.concurrent.ExecutionContext.Implicits._
@@ -23,9 +23,7 @@ class KnossosDataSourceType(val messagesApi: MessagesApi) extends DataSourceType
   val name = "knossos"
 }
 
-trait KnossosDataSourceTypeHandler extends DataSourceTypeHandler with I18nSupport with FoxImplicits {
-
-  import com.scalableminds.braingames.binary.Logger._
+trait KnossosDataSourceTypeHandler extends DataSourceTypeHandler with I18nSupport with FoxImplicits with LazyLogging {
 
   private val maxRecursiveLayerDepth = 2
 

@@ -3,15 +3,15 @@
  */
 package com.scalableminds.braingames.binary.repository.mapping
 
-import java.io.{File, Reader, FileReader, IOException}
+import java.io.{File, FileReader, IOException, Reader}
 import java.nio.file.Path
-import com.scalableminds.braingames.binary.Logger._
+
 import org.scalastuff.json._
-import net.liftweb.common.{Failure, Empty, Full, Box}
-
+import net.liftweb.common.{Box, Empty, Failure, Full}
 import com.scalableminds.braingames.binary.models.DataLayerMapping
+import com.typesafe.scalalogging.LazyLogging
 
-class MappingParser {
+class MappingParser extends LazyLogging {
 
   private val parser = new JsonParser(new MappingBuilder)
 

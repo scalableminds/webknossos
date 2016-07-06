@@ -9,7 +9,6 @@ import java.nio.file.{Files, Path}
 import javax.imageio.ImageIO
 import javax.imageio.spi.IIORegistry
 
-import com.scalableminds.braingames.binary.Logger._
 import com.scalableminds.braingames.binary.models.{UnusableDataSource, _}
 import com.scalableminds.braingames.binary.store.DataStore
 import com.scalableminds.util.geometry.{BoundingBox, Point3D, Scale}
@@ -17,6 +16,7 @@ import com.scalableminds.util.io.PathUtils
 import com.scalableminds.util.tools.ProgressTracking.ProgressTracker
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.twelvemonkeys.imageio.plugins.tiff.TIFFImageReaderSpi
+import com.typesafe.scalalogging.LazyLogging
 import org.apache.commons.io.FileUtils
 import net.liftweb.common.{Box, Full}
 import play.api.i18n.{I18nSupport, Messages}
@@ -29,7 +29,7 @@ import scala.util.matching.Regex
 
 class InvalidImageFormatException(msg: String) extends Exception(msg)
 
-object TiffDataSourceType extends DataSourceType with ImageDataSourceTypeHandler {
+object TiffDataSourceType extends DataSourceType with ImageDataSourceTypeHandler with LazyLogging{
   val name = "tiff"
 
   val fileExtension = "tif"
@@ -68,7 +68,12 @@ case class ImageValueRange(minValue: Int = Int.MaxValue, maxValue: Int = Int.Min
   def combine(other: ImageValueRange) = ImageValueRange(math.min(minValue, other.minValue), math.max(maxValue, other.maxValue))
 }
 
-case class ImageInfo(width: Int = 0, height: Int = 0, bytesPerPixel: Int = 0, valueRange: ImageValueRange = ImageValueRange(), source: Option[String]) {
+case class ImageInfo(
+                      width: Int = 0,
+                      height: Int = 0,
+                      bytesPerPixel: Int = 0,
+                      valueRange: ImageValueRange = ImageValueRange(),
+                      source: Option[String]) extends LazyLogging {
   def combine(other: ImageInfo): Option[ImageInfo] = {
     if (bytesPerPixel == other.bytesPerPixel)
       Some(ImageInfo(
@@ -90,7 +95,7 @@ case class RawImage(info: ImageInfo, data: Array[Byte])
 
 case class StackInfo(boundingBox: BoundingBox, bytesPerPixel: Int)
 
-trait ImageDataSourceTypeHandler extends DataSourceTypeHandler with FoxImplicits {
+trait ImageDataSourceTypeHandler extends DataSourceTypeHandler with FoxImplicits with LazyLogging {
   val Target = "target"
 
   val LayerRxs = Seq(

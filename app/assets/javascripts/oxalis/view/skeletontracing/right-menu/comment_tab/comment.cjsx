@@ -1,17 +1,25 @@
 React                  = require("react")
 ReactDOM               = require("react-dom")
 scrollIntoViewIfNeeded = require("scroll-into-view-if-needed")
+classNames             = require("classnames")
 
 
 Comment = React.createClass(
 
   render : ->
 
+    liClassName = classNames({ "bold" : @props.isActive })
+    iClassName = classNames("fa", "fa-fw",
+      "fa-angle-right" : @props.isActive
+    )
+
     data = @props.data
     return (
-      <li className={if @props.isActive then "bold" else ""}>
-        <i className={"fa fa-fw " + "fa-angle-right" if @props.isActive}></i>
-        <a href="#" onClick={@handleClick} >{data.node + " - " + data.content}</a>
+      <li className={liClassName} ref={ (ref) => @comment = ref }>
+        <i className={iClassName}></i>
+        <a href="#" onClick={@handleClick}>
+          {data.node + " - " + data.content}
+        </a>
       </li>
     )
 
@@ -28,10 +36,9 @@ Comment = React.createClass(
 
   ensureVisible : ->
 
-    el = ReactDOM.findDOMNode(@)
     if @props.isActive
       # use ponyfill as so far only chrome supports this functionality
-      scrollIntoViewIfNeeded(el)
+      scrollIntoViewIfNeeded(@comment)
 
 )
 

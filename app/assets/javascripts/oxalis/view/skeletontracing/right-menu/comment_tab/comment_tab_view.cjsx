@@ -153,28 +153,32 @@ class CommentTabView extends Marionette.ItemView
     @model.skeletonTracing.updateTree(tree)
 
 
-  nextComment : ->
+  nextComment : (forward=true) ->
+
+    sortAscending = if forward then @isSortedAscending else not @isSortedAscending
 
     activeComment = @activeComment
 
     # get tree of active comment or activeTree if there is no active comment
     nextTree = @model.skeletonTracing.getTree(activeComment.treeId)
-    nextTree.comments.sort(Utils.compareBy("node", @isSortedAscending))
+    nextTree.comments.sort(Utils.compareBy("node", sortAscending))
 
     # try to find next comment for this tree
-    nextComment = _.find(nextTree.comments, (comment) => @commentComparator(comment) > @commentComparator(activeComment.comment))
+    nextComment = _.find(nextTree.comments,
+      (comment) => @commentComparator(comment, sortAscending) > @commentComparator(activeComment.comment, sortAscending))
 
     # try to find next tree with at least one comment
     if not nextComment
-      trees = @model.skeletonTracing.getTreesSortedBy("treeId", @isSortedAscending)
-      nextTree = _.find(trees, (tree) => @treeComparator(tree.treeId) > @treeComparator(activeComment.treeId) and tree.comments.length)
+      trees = @model.skeletonTracing.getTreesSortedBy("treeId", sortAscending)
+      nextTree = _.find(trees,
+        (tree) => @treeComparator(tree.treeId, sortAscending) > @treeComparator(activeComment.treeId, sortAscending) and tree.comments.length)
 
     # try to find any tree with at least one comment, starting from the beginning
     if not nextTree
       nextTree = _.find(trees, (tree) -> tree.comments.length)
 
     if not nextComment and nextTree
-      nextTree.comments.sort(Utils.compareBy("node", @isSortedAscending))
+      nextTree.comments.sort(Utils.compareBy("node", sortAscending))
       nextComment = nextTree.comments[0]
 
     # if a comment was found, make it active
@@ -184,31 +188,7 @@ class CommentTabView extends Marionette.ItemView
 
   previousComment : ->
 
-    activeComment = @activeComment
-
-    # get tree of active comment or activeTree if there is no active comment
-    previousTree = @model.skeletonTracing.getTree(activeComment.treeId)
-    previousTree.comments.sort(Utils.compareBy("node", @isSortedAscending))
-
-    # try to find previous comment for this tree
-    previousComment = _.findLast(previousTree.comments, (comment) => @commentComparator(comment) < @commentComparator(activeComment.comment))
-
-    # try to find previous tree with at least one comment
-    if not previousComment
-      trees = @model.skeletonTracing.getTreesSortedBy("treeId", @isSortedAscending)
-      previousTree = _.findLast(trees, (tree) => @treeComparator(tree.treeId) < @treeComparator(activeComment.treeId) and tree.comments.length)
-
-    # try to find any tree with at least one comment, starting from the end
-    if not previousTree
-      previousTree = _.findLast(trees, (tree) -> tree.comments.length)
-
-    if not previousComment and previousTree
-      previousTree.comments.sort(Utils.compareBy("node", @isSortedAscending))
-      previousComment = _.last(previousTree.comments)
-
-    # if a comment was found, make it active
-    if previousComment
-      @setActiveNode(previousComment, previousTree.treeId)
+    @nextComment(false)
 
 
   sortComments : (evt) ->
@@ -230,15 +210,15 @@ class CommentTabView extends Marionette.ItemView
     return { comment : comment, treeId : treeId }
 
 
-  commentComparator : (comment) =>
+  commentComparator : (comment, sortAscending) ->
 
-    coefficient = if @isSortedAscending then 1 else -1
+    coefficient = if sortAscending then 1 else -1
     return comment.node * coefficient
 
 
-  treeComparator : (treeId) =>
+  treeComparator : (treeId, sortAscending) ->
 
-    coefficient = if @isSortedAscending then 1 else -1
+    coefficient = if sortAscending then 1 else -1
     return treeId * coefficient
 
 

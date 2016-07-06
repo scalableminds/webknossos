@@ -407,7 +407,9 @@ class SkeletonTracing
 
     for neighbor in @activeNode.neighbors
       neighbor.removeNeighbor(@activeNode.id)
-    @activeTree.removeNode(@activeNode.id)
+    updateTree = @activeTree.removeNode(@activeNode.id)
+
+    @stateLogger.updateTree(@activeTree) if updateTree
 
     deletedNode = @activeNode
     @stateLogger.deleteNode(deletedNode, @activeTree.treeId)

@@ -1,6 +1,7 @@
 React      = require("react")
 ReactDOM   = require("react-dom")
 Comment    = require("./comment")
+classNames = require("classnames")
 
 
 TreeCommentList = React.createClass(
@@ -22,13 +23,17 @@ TreeCommentList = React.createClass(
       )
     ) else null
 
-    icon = if @state.collapsed then "fa-chevron-right" else "fa-chevron-down"
+    liClassName = classNames({ "bold" : containsActiveNode })
+    iClassName = classNames("fa", "fa-fw",
+      "fa-chevron-right" : @state.collapsed
+      "fa-chevron-down" : !@state.collapsed
+    )
 
     # one tree and its comments
     return (
       <div>
-        <li className={if containsActiveNode then "bold" else ""}>
-          <i className={"fa fa-fw " + icon} onClick={@handleClick}></i>
+        <li className={liClassName}>
+          <i className={iClassName} onClick={@handleClick}></i>
           {@props.treeId} - {@props.treeName}
         </li>
         {commentNodes}

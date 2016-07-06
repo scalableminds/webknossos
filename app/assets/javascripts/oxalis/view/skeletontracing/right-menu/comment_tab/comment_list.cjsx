@@ -14,6 +14,9 @@ CommentList = React.createClass(
     # create comment lists grouped by trees
     commentAndTreeNodes = _.map(@state.data, (tree) =>
 
+      # do not render tree if it has no comments
+      return null if not tree.comments.length
+
       # sort comments in place
       tree.comments.sort(Utils.compareBy("node", @state.isSortedAscending))
 

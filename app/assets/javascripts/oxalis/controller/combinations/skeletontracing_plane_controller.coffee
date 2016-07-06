@@ -153,7 +153,7 @@ class SkeletonTracingPlaneController extends PlaneController
     @addNode(position, rotation, not ctrlPressed)
 
     # Strg + Rightclick to set new not active branchpoint
-    if ctrlPressed and @model.user.get("newNodeNewTree") == false
+    if ctrlPressed and not @model.user.get("newNodeNewTree")
 
       @model.skeletonTracing.pushBranch()
       @skeletonTracingController.setActiveNode(activeNode.id)

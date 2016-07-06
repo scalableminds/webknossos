@@ -15,7 +15,7 @@ import org.joda.time.DateTime
 import org.joda.time.format.DateTimeFormat
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json.{JsNull, JsObject, Json}
-import play.modules.reactivemongo.json.BSONFormats._
+import reactivemongo.play.json.BSONFormats._
 import reactivemongo.api.indexes.{Index, IndexType}
 import reactivemongo.bson.BSONObjectID
 
@@ -143,9 +143,9 @@ object TaskDAO extends SecuredBaseDAO[Task] with FoxImplicits with QuerySupporte
     super.findOne(query ++ Json.obj("isActive" -> true))
   }
 
-  def findAllAdministratable(user: User)(implicit ctx: DBAccessContext) = withExceptionCatcher {
+  def findAllAdministratable(user: User, limit: Int)(implicit ctx: DBAccessContext) = withExceptionCatcher {
     find(Json.obj(
-      "team" -> Json.obj("$in" -> user.adminTeamNames))).cursor[Task]().collect[List]()
+      "team" -> Json.obj("$in" -> user.adminTeamNames))).cursor[Task]().collect[List](maxDocs = limit)
   }
 
   def removeAllWithProject(project: Project)(implicit ctx: DBAccessContext) = {
@@ -184,7 +184,7 @@ object TaskDAO extends SecuredBaseDAO[Task] with FoxImplicits with QuerySupporte
       returnNew = true)
 
   def executeUserQuery(q: JsObject, limit: Int)(implicit ctx: DBAccessContext): Fox[List[Task]] = withExceptionCatcher {
-    find(q).cursor[Task]().collect[List](upTo = limit)
+    find(q).cursor[Task]().collect[List](maxDocs = limit)
   }
 }
 

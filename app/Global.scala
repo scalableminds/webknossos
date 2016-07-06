@@ -2,7 +2,7 @@ import akka.actor.{PoisonPill, Props}
 import akka.routing.RoundRobinPool
 import com.scalableminds.util.reactivemongo.GlobalDBAccess
 import com.scalableminds.util.security.SCrypt
-import models.binary.{WebKnossosStore, DataStore, DataStoreDAO}
+import models.binary.{DataStore, DataStoreDAO, WebKnossosStore}
 import models.team._
 import net.liftweb.common.Full
 import oxalis.jobs.AvailableTasksJob
@@ -23,6 +23,7 @@ object Global extends GlobalSettings {
   override def onStart(app: Application) {
     val conf = app.configuration
 
+    Logger.info("Executing Global START")
     startActors(conf.underlying, app)
 
     if (conf.getBoolean("application.insertInitialData") getOrElse false) {

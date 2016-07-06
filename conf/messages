@@ -171,6 +171,7 @@ annotation.setName=Successfully named annotation
 annotation.invalidName=Annotation name is invalid
 annotation.finish.confirm=Are you sure you want to permanently finish this tracing?
 annotation.reset.success=Annotation was successfully reset
+annotation.revert.skeletonOnly=Reverting an annotation is only implemented for skeleton tracings of tasks
 annotation.download.notAllowed=You can''t download this tracing
 annotation.notPossible=Couldn''t access annotation
 annotation.notFinishable=Before you can finish the annotation, you need to annotate something

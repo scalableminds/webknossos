@@ -3,7 +3,7 @@ package models.annotation
 import models.user.{UserService, User}
 import java.util.Date
 import play.api.libs.json.Json
-import play.modules.reactivemongo.json.BSONFormats._
+import reactivemongo.play.json.BSONFormats._
 import reactivemongo.bson.BSONObjectID
 import com.scalableminds.util.reactivemongo.GlobalAccessContext
 
@@ -15,7 +15,7 @@ case class AnnotationReview(
     _id: BSONObjectID = BSONObjectID.generate) {
 
   def reviewer = UserService.findOneById(_reviewer.stringify, useCache = true)(GlobalAccessContext)
- 
+
   val date = new Date(timestamp)
 }
 

@@ -1,16 +1,19 @@
 package models.annotation
 
-import scala.async.Async._
-import scala.concurrent.Future
-
 import com.scalableminds.util.io.NamedFileStream
 import com.scalableminds.util.mvc.BoxImplicits
 import com.scalableminds.util.reactivemongo.DBAccessContext
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
-import models.task.{OpenAssignmentService, TaskService}
-import models.user.{UsedAnnotationDAO, User}
-import net.liftweb.common.{Box, Failure}
 import oxalis.annotation.AnnotationIdentifier
+import models.user.{UsedAnnotationDAO, User}
+import scala.concurrent.Future
+
+import net.liftweb.common.{Box, Failure}
+import scala.async.Async._
+
+import play.api.i18n.Messages
+import models.task.OpenAssignmentService
+import models.tracing.skeleton.SkeletonTracing
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json.JsValue
 import reactivemongo.bson.BSONObjectID
@@ -100,12 +103,25 @@ class AnnotationMutations(val annotation: Annotation)
     AnnotationDAO.incrementVersion(annotation._id)
 
   def resetToBase()(implicit ctx: DBAccessContext) = {
+    def resetContent(): Fox[AnnotationContent] ={
+      annotation.typ match {
+        case AnnotationType.Explorational =>
+          Fox.failure("annotation.revert.skeletonOnly")
+        case AnnotationType.Task if annotation.contentType == SkeletonTracing.contentType =>
+          for {
+            task <- annotation.task.toFox
+            tracingBase <- task.annotationBase.flatMap(_.content)
+            reset <- tracingBase.temporaryDuplicate(id = BSONObjectID.generate.stringify).flatMap(_.saveToDB)
+          } yield reset
+        case _ if annotation.contentType != SkeletonTracing.contentType =>
+          Fox.failure("annotation.revert.skeletonOnly")
+      }
+    }
+
     for {
-      task <- annotation.task
-      annotationContent <- annotation.content
-      tracingBase <- task.annotationBase.flatMap(_.content)
-      reset <- tracingBase.temporaryDuplicate(id = BSONObjectID.generate.stringify).flatMap(_.saveToDB)
-      _ <- annotationContent.service.clearAndRemove(annotationContent.id)
+      oldAnnotationContent <- annotation.content
+      reset <- resetContent()
+      _ <- oldAnnotationContent.service.clearAndRemove(oldAnnotationContent.id)
       updatedAnnotation <- AnnotationDAO.updateContent(annotation._id, ContentReference.createFor(reset))
     } yield updatedAnnotation
   }

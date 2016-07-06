@@ -9,7 +9,7 @@ import play.api.libs.functional.syntax._
 import models.annotation.{AnnotationService, AnnotationSettings}
 import reactivemongo.bson.BSONObjectID
 import com.scalableminds.util.reactivemongo._
-import play.modules.reactivemongo.json.BSONFormats._
+import reactivemongo.play.json.BSONFormats._
 import models.user.User
 import com.scalableminds.util.reactivemongo.AccessRestrictions.{DenyEveryone, AllowIf}
 import com.scalableminds.util.mvc.Formatter

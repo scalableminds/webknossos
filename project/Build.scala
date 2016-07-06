@@ -35,6 +35,7 @@ object Dependencies{
   val scalaAsync = "org.scala-lang.modules" %% "scala-async" % "0.9.2"
   val airbrake = "com.scalableminds" %% "play-airbrake" % "0.5.0"
   val mongev = "com.scalableminds" %% "play-mongev" % "0.4.1"
+  val urlHelper = "com.netaporter" %% "scala-uri" % "0.4.14"
   val tiff = Seq(
       "com.twelvemonkeys.common" % "common-lang" % twelvemonkeysVersion,
       "com.twelvemonkeys.common" % "common-io" % twelvemonkeysVersion,
@@ -161,7 +162,8 @@ object ApplicationBuild extends Build {
     ws,
     airbrake,
     mongev,
-    specs2 % Test)++tiff
+    urlHelper,
+    specs2 % Test) ++ tiff
 
   val dependencyResolvers = Seq(
     novusRel,

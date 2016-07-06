@@ -70,6 +70,11 @@ Toast =
     return @message("info", message, sticky)
 
 
+  warning : (message, sticky) ->
+
+    return @message("warning", message, sticky)
+
+
   success : (message = "Success :-)", sticky) ->
 
     return @message("success", message, sticky)

@@ -12,12 +12,13 @@
   "devDependencies": {
     "chalk": "^1.1.1",
     "cjsx-loader": "^3.0.0",
+    "chokidar": "^1.4.1",
     "coffee-loader": "^0.7.2",
     "coffee-react-transform": "^4.0.0",
     "coffee-script": "^1.8.0",
     "event-stream": "~3.1.0",
     "exports-loader": "^0.6.2",
-    "gulp": "~3.5.2",
+    "gulp": "~3.9.1",
     "gulp-bump": "~0.1.5",
     "gulp-exec": "~1.0.4",
     "gulp-less": "~1.2.1",
@@ -28,21 +29,20 @@
     "jasmine-node": "^1.14.5",
     "mock-require": "^1.2.1",
     "napa": "^2.2.0",
-    "protractor": "^2.5.1",
+    "protractor": "^3.3.0",
     "require-sugar": "^0.1.2",
     "rimraf": "^2.4.3",
     "sinon": "^1.17.3",
     "through2": "^2.0.0",
-    "webpack": "^1.12.2",
-    "worker-loader": "^0.6.0",
-    "chokidar": "^1.4.1"
+    "webpack": "^1.13.1",
+    "worker-loader": "^0.6.0"
   },
   "scripts": {
     "install": "napa georgwiese/three.js#scm_oxalis:three.js",
-    "test": "node_modules/jasmine-node/bin/jasmine-node --coffee app/assets/javascripts/test && sbt test",
+    "test": "node_modules/jasmine-node/bin/jasmine-node --coffee app/assets/javascripts/test",
     "prewebdriver": "npm run webdriver-update",
     "webdriver": "./node_modules/.bin/webdriver-manager start",
-    "webdriver-update": "./node_modules/.bin/webdriver-manager update"
+    "webdriver-update": "./node_modules/protractor/bin/webdriver-manager update"
   },
   "dependencies": {
     "airbrake-js": "^0.5.8",
@@ -54,6 +54,7 @@
     "bootstrap-daterangepicker": "^2.1.17",
     "bootstrap-multiselect": "^0.9.13",
     "bootstrap-toggle": "^2.2.2",
+    "brace": "^0.8.0",
     "c3": "^0.4.10",
     "clipboard-js": "^0.2.0",
     "d3": "^3.5.12",

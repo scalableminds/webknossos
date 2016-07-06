@@ -131,7 +131,7 @@ object Annotation {
 
 object AnnotationDAO
   extends SecuredBaseDAO[Annotation]
-  with FoxImplicits with MongoHelpers {
+  with FoxImplicits with MongoHelpers with QuerySupportedDAO[Annotation]{
 
   val collectionName = "annotations"
 
@@ -377,4 +377,8 @@ object AnnotationDAO
       Json.obj("$set" -> Json.obj(
         "_user" -> _user)),
       returnNew = true)
+
+  override def executeUserQuery(q: JsObject, limit: Int)(implicit ctx: DBAccessContext): Fox[List[Annotation]] = withExceptionCatcher{
+    find(q).cursor[Annotation]().collect[List](upTo = limit)
+  }
 }

@@ -2,7 +2,7 @@ import akka.actor.{PoisonPill, Props}
 import akka.routing.RoundRobinPool
 import com.scalableminds.util.reactivemongo.GlobalDBAccess
 import com.scalableminds.util.security.SCrypt
-import models.binary.{DataStore, DataStoreDAO}
+import models.binary.{WebKnossosStore, DataStore, DataStoreDAO}
 import models.team._
 import net.liftweb.common.Full
 import oxalis.jobs.AvailableTasksJob
@@ -111,7 +111,7 @@ object InitialData extends GlobalDBAccess {
   def insertLocalDataStore() = {
     DataStoreDAO.findOne(Json.obj("name" -> "localhost")).futureBox.map { maybeStore =>
       if (maybeStore.isEmpty) {
-        DataStoreDAO.insert(DataStore("localhost", "something-secure"))
+        DataStoreDAO.insert(DataStore("localhost", "something-secure", WebKnossosStore))
       }
     }
   }

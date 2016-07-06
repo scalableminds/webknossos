@@ -12,7 +12,6 @@ import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.braingames.binary.models._
 import play.api.i18n.Messages
 import play.api.libs.concurrent.Execution.Implicits._
-import controllers.DataStoreHandler
 import reactivemongo.api.commands.WriteResult
 import reactivemongo.core.commands.LastError
 import com.scalableminds.util.rest.RESTResponse
@@ -26,14 +25,14 @@ object DataSetService extends FoxImplicits {
   def isProperDataSetName(name: String) = name.matches("[A-Za-z0-9_\\-]*")
 
   def createDataSet(
-                     id: String,
+                     name: String,
                      dataStore: DataStoreInfo,
                      sourceType: String,
                      owningTeam: String,
                      dataSource: Option[DataSource] = None,
                      isActive: Boolean = false)(implicit ctx: DBAccessContext) = {
     DataSetDAO.insert(DataSet(
-      id,
+      name,
       dataStore,
       dataSource,
       sourceType,
@@ -48,9 +47,9 @@ object DataSetService extends FoxImplicits {
     DataSetDAO.findOneBySourceName(dataSource.id)(GlobalAccessContext).futureBox.flatMap {
       case Full(dataSet) if dataSet.dataStoreInfo.name == dataStoreInfo.name =>
         DataSetDAO.updateDataSource(
-          dataSource.id, 
-          dataStoreInfo, 
-          dataSource.source, 
+          dataSource.id,
+          dataStoreInfo,
+          dataSource.source,
           isActive = dataSource.isUsable)(GlobalAccessContext).futureBox
       case Full(_) =>
         // TODO: There is a problem here. The dataset name is already in use. We are not going to update that datasource.
@@ -80,10 +79,10 @@ object DataSetService extends FoxImplicits {
   def findDataSource(name: String)(implicit ctx: DBAccessContext) =
     DataSetDAO.findOneBySourceName(name).flatMap(_.dataSource)
 
-  def updateDataSources(dataStoreName: String, dataSources: List[DataSourceLike])(implicit ctx: DBAccessContext) = {
-    Logger.info(s"[$dataStoreName] Available datasets: " + dataSources.map(_.id).mkString(", "))
+  def updateDataSources(dataStore: DataStore, dataSources: List[DataSourceLike])(implicit ctx: DBAccessContext) = {
+    Logger.info(s"[${dataStore.name}] Available datasets: " + dataSources.map(_.id).mkString(", "))
     dataSources.map { dataSource =>
-      DataSetService.updateDataSource(DataStoreInfo(dataStoreName, dataSource.serverUrl), dataSource)
+      DataSetService.updateDataSource(DataStoreInfo(dataStore.name, dataSource.serverUrl, dataStore.typ, None), dataSource)
     }
   }
 }

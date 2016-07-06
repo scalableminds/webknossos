@@ -8,9 +8,9 @@ import play.api.libs.json.Json
 import java.util.UUID
 import com.scalableminds.util.reactivemongo.DBAccessContext
 
-case class DataStore(name: String, key: String = UUID.randomUUID().toString)
+case class DataStore(name: String, key: String = UUID.randomUUID().toString, typ: DataStoreType)
 
-case class DataStoreInfo(name: String, url: String)
+case class DataStoreInfo(name: String, url: String, typ: DataStoreType, accessToken: Option[String])
 
 object DataStoreInfo{
   implicit val dataStoreInfoFormat = Json.format[DataStoreInfo]

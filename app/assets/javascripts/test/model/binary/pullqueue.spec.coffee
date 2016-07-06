@@ -44,13 +44,16 @@ describe "PullQueue", ->
   connectionInfo = {
     log : sinon.stub()
   }
+  datastoreInfo = {
+    typ : "webknossos-store"
+  }
 
   pullQueue = null
   buckets = null
 
   beforeEach ->
 
-    pullQueue = new PullQueue(dataSetName, cube, layer, boundingBox, connectionInfo)
+    pullQueue = new PullQueue(dataSetName, cube, layer, boundingBox, connectionInfo, datastoreInfo)
 
     buckets = [new Bucket(8, [0, 0, 0, 0], null), new Bucket(8, [1, 1, 1, 1], null)]
     for bucket in buckets

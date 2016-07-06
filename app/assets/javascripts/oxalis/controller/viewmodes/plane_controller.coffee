@@ -428,5 +428,4 @@ class PlaneController
           curGlobalPos[1],
           curGlobalPos[2] - (constants.VIEWPORT_WIDTH * scaleFactor / 2 - clickPos.y) / scaleFactor * planeRatio[2] * zoomFactor ]
 
-
 module.exports = PlaneController

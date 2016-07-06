@@ -15,7 +15,7 @@ import com.scalableminds.util.io.{PathUtils, ZipIO}
 import com.scalableminds.util.tools.{Finished, InProgress, NotStarted, ProgressState}
 import net.liftweb.common.{Box, Empty, Failure, Full}
 import org.apache.commons.io.IOUtils
-import play.api.{Logger, Play}
+import play.api.Play
 import play.api.i18n.{Messages, MessagesApi}
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json.{JsError, JsString, JsSuccess, Json}
@@ -80,9 +80,9 @@ class DataSourceController @Inject()(val messagesApi: MessagesApi) extends Contr
           DataStorePlugin.binaryDataService.oxalisServer.reportDataSouce(usableDataSource)
         }.futureBox.foreach {
           case f: Failure =>
-            Logger.error("An error occoured: " + f)
+            logger.error("An error occoured: " + f)
           case _ =>
-            Logger.info(s"Start import completed for $dataSourceName")
+            logger.info(s"Start import completed for $dataSourceName")
         }
         progressToResult(InProgress(0))
       }
@@ -90,7 +90,7 @@ class DataSourceController @Inject()(val messagesApi: MessagesApi) extends Contr
 
   private def unzipDataSource(baseDir: Path, filePath: String): Box[Boolean] = {
     try {
-      Logger.warn(s"Unzipping uploaded dataset: $filePath")
+      logger.warn(s"Unzipping uploaded dataset: $filePath")
       ZipIO.unzipWithFilenames(new File(filePath)).foreach {
         case (name, in) =>
           val path = baseDir.resolve(Paths.get(name))
@@ -104,19 +104,19 @@ class DataSourceController @Inject()(val messagesApi: MessagesApi) extends Contr
       Full(true)
     } catch {
       case e: Exception =>
-        Logger.warn(s"Error unzipping uploaded dataset at $filePath: ${e.toString }")
+        logger.warn(s"Error unzipping uploaded dataset at $filePath: ${e.toString }")
         Failure(Messages("zip.file.invalid"))
     }
   }
 
   def upload() = Action.async(parse.json) {
     implicit request =>
-      Logger.warn("Dataset upload to store called.")
+      logger.warn("Dataset upload to store called.")
       request.body.validate[DataSourceUpload] match {
         case JsSuccess(upload, _) =>
           val baseDir = Paths.get(config.getString("braingames.binary.baseFolder")).resolve(upload.team).resolve(upload
                                                                                                                    .name)
-          Logger.warn(s"Uploading dataset into '$baseDir'")
+          logger.warn(s"Uploading dataset into '$baseDir'")
           PathUtils.ensureDirectory(baseDir)
           upload.settings.foreach(DataSourceSettings.writeSettingsToFile(_,
                                                                          DataSourceSettings

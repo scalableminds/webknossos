@@ -3,15 +3,16 @@
  */
 package com.scalableminds.datastore.models
 
-import java.nio.file.{Files, Paths, Path}
+import java.nio.file.{Files, Path, Paths}
 
 import com.scalableminds.braingames.binary._
 import com.scalableminds.util.io.PathUtils
 import java.io._
 import java.util.UUID
-import play.api.Logger
+
 import com.scalableminds.braingames.binary.models.DataLayer
 import com.scalableminds.braingames.binary.models.DataSource
+import com.typesafe.scalalogging.LazyLogging
 
 case class VolumeUpdate(
   dataSource: DataSource,
@@ -22,7 +23,7 @@ case class VolumeUpdate(
   dataFile: String) {
 }
 
-object VolumeUpdateService{
+object VolumeUpdateService extends LazyLogging {
   private def writeDataToFile(data: Array[Byte]) = {
   	val userBackupFolder = PathUtils.ensureDirectory(Paths.get("userBinaryData").resolve("logging"))
   	val backupFile = userBackupFolder.resolve(UUID.randomUUID().toString + ".raw")
@@ -36,7 +37,7 @@ object VolumeUpdateService{
   	request match {
 	  	case writeRequest: DataWriteRequest =>
 	  		val update = VolumeUpdate(writeRequest.dataSource, writeRequest.dataLayer, writeRequest.dataSection, writeRequest.resolution, writeRequest.cuboid, writeDataToFile(writeRequest.data))
-	  		Logger.info(s"Volume update: $update")
+	  		logger.info(s"Volume update: $update")
  		case _ =>
   	}
   }

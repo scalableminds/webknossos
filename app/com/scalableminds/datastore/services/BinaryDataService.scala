@@ -6,7 +6,6 @@ package com.scalableminds.datastore.services
 import com.scalableminds.braingames.binary.api.{ BinaryDataService => AbstractBinaryDataService }
 import play.api.Play
 import akka.actor.ActorSystem
-import com.scalableminds.braingames.binary.Logger._
 import java.io.File
 
 import play.api.i18n.MessagesApi

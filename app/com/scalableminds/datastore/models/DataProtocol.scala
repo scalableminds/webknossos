@@ -103,7 +103,7 @@ object DataProtocol {
     def apply(headers: Map[String, String]) = {
       parseReadHeader(headers.get("x-bucket")) match {
         case Full(r) => readRequestIteratee(r)
-        case f: Failure => Done[Array[Byte], FilePart[Box[DataProtocolReadRequest]]](filePart(f), Input.Empty)
+        case x => Done[Array[Byte], FilePart[Box[DataProtocolReadRequest]]](filePart(x), Input.Empty)
       }
     }
 
@@ -159,6 +159,7 @@ object DataProtocol {
       parseWriteHeader(headers.get("x-bucket")) match {
         case Full(r) => writeRequestIteratee(r)
         case f: Failure => Done[Array[Byte], FilePart[Box[DataProtocolWriteRequest]]](filePart(f), Input.Empty)
+        case Empty => Done[Array[Byte], FilePart[Box[DataProtocolWriteRequest]]](filePart(Empty), Input.Empty)
       }
     }
 

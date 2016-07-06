@@ -3,27 +3,28 @@
  */
 package com.scalableminds.datastore.services
 
-import play.api.libs.json.{JsError, Json, JsValue}
+import play.api.libs.json.{JsError, JsValue, Json}
 import com.scalableminds.braingames.binary.models.{DataLayer, DataSourceLike}
-import com.scalableminds.braingames.binary.Logger._
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.http.HeaderNames
-import akka.actor.{ ActorSystem, Props }
+import akka.actor.{ActorSystem, Props}
 import com.scalableminds.util.rest.RESTCall
+import com.typesafe.scalalogging.LazyLogging
 import play.api.libs.ws.WS
 import play.api.mvc._
 import play.api.test.Helpers._
-import play.api.test.{ FakeRequest, FakeHeaders }
+import play.api.test.{FakeHeaders, FakeRequest}
 import play.api.mvc.AnyContentAsJson
 import play.api.libs.json.JsSuccess
 import play.api.libs.iteratee.Iteratee
 import play.api.Play.current
 import play.utils.UriEncoding
+
 import scala.concurrent.Future
 import net.liftweb.common.{Failure, Full}
 
-class OxalisMessageHandler extends JsonMessageHandler {
+class OxalisMessageHandler extends JsonMessageHandler with LazyLogging {
 
   def queryStringToString(queryStrings: Map[String, String]) =
     queryStrings.map( t => t._1 + "=" + t._2).mkString("?", "&", "")
@@ -84,7 +85,7 @@ class OxalisServer(
   url: String,
   key: String,
   name: String,
-  webSocketSecurityInfo: WSSecurityInfo)(implicit system: ActorSystem) extends FoxImplicits {
+  webSocketSecurityInfo: WSSecurityInfo)(implicit system: ActorSystem) extends FoxImplicits with LazyLogging {
 
   val webSocketPath = s"/api/datastores/$name/backchannel?key=$key"
 

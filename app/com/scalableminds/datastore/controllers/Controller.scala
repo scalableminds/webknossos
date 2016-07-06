@@ -6,10 +6,17 @@ package com.scalableminds.datastore.controllers
 import play.api.i18n.I18nSupport
 import play.api.mvc.{Controller => PlayController, _}
 import com.scalableminds.util.mvc.ExtendedController
+import com.typesafe.scalalogging.LazyLogging
+
 import scala.concurrent.Future
 import play.api.libs.concurrent.Execution.Implicits._
 
-trait Controller extends PlayController with RemoteOriginHelpers with ExtendedController with I18nSupport
+trait Controller 
+  extends PlayController 
+          with RemoteOriginHelpers 
+          with ExtendedController 
+          with I18nSupport 
+          with LazyLogging
 
 trait RemoteOriginHelpers {
 

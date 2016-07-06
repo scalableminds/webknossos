@@ -6,12 +6,14 @@ package com.scalableminds.datastore
 import javax.inject.Inject
 
 import akka.actor.ActorSystem
-import com.scalableminds.braingames.binary.Logger
 import com.scalableminds.datastore.services.{BinaryDataService, DataSourceRepository}
+import com.typesafe.scalalogging.LazyLogging
 import play.api.i18n.MessagesApi
 import play.api.{Play, Plugin}
 
-class DataStorePlugin @Inject()(implicit app: play.api.Application, messagesApi: MessagesApi) extends Plugin {
+class DataStorePlugin @Inject()(implicit app: play.api.Application, messagesApi: MessagesApi)
+  extends Plugin
+          with LazyLogging{
 
   implicit val system = ActorSystem("datastore")
 
@@ -24,8 +26,7 @@ class DataStorePlugin @Inject()(implicit app: play.api.Application, messagesApi:
       binaryDataService.start()
     } catch {
       case e: Exception =>
-        Logger.logger.error("EXCEPTION ON DataStorePlugin START: " + e.getMessage)
-      
+        logger.error("EXCEPTION ON DataStorePlugin START: " + e.getMessage)
     }
   }
 

@@ -3,9 +3,10 @@
  */
 package com.scalableminds.datastore.models
 
-import com.scalableminds.braingames.binary.models.{UsableDataSource, DataSourceLike, DataSource}
-import play.api.{Logger, Play}
+import com.scalableminds.braingames.binary.models.{DataSource, DataSourceLike, UsableDataSource}
+import play.api.Play
 import com.scalableminds.datastore.DataStorePlugin
+import com.typesafe.scalalogging.LazyLogging
 
 case class DataSourceServer(serverAddress: String, serverId: String)
 
@@ -44,7 +45,7 @@ object NetworkInformation {
 }
 
 
-object DataSourceDAO extends TemporaryStore[DataSourceLike] {
+object DataSourceDAO extends TemporaryStore[DataSourceLike] with LazyLogging{
   // TODO: rethink that! maybe this should be a class instead of an object
   lazy val system = DataStorePlugin.current.get.system
 
@@ -52,7 +53,7 @@ object DataSourceDAO extends TemporaryStore[DataSourceLike] {
     find(name).flatMap {
       case ds: UsableDataSource => Some(ds)
       case r =>
-        Logger.warn(s"Couldn't find DS. Searched for: '$name'. Got: $r" )
+        logger.warn(s"Couldn't find DS. Searched for: '$name'. Got: $r" )
         None
     }
 

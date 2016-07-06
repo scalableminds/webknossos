@@ -3,25 +3,30 @@
  */
 package com.scalableminds.datastore.services
 
-import akka.actor.{ ActorRef, Actor }
+import akka.actor.{Actor, ActorRef}
 import play.api.libs.ws.WS
 import org.java_websocket.client._
 import org.java_websocket.handshake.ServerHandshake
-import com.scalableminds.braingames.binary.Logger._
 import java.net.URI
-import play.api.libs.json.{ Json, JsValue }
+
+import play.api.libs.json.{JsValue, Json}
 import com.fasterxml.jackson.core.JsonParseException
-import scala.concurrent.{ Await, Future }
+
+import scala.concurrent.{Await, Future}
 import scala.concurrent.duration._
 import java.nio.ByteBuffer
+
 import play.api.mvc.Codec
 import net.liftweb.common.Failure
-import java.io.{ File, FileInputStream }
+import java.io.{File, FileInputStream}
 import java.security.KeyStore
 import javax.net.ssl.SSLContext
 import javax.net.ssl.TrustManagerFactory
 import java.util.concurrent.TimeoutException
+
 import akka.agent.Agent
+import com.typesafe.scalalogging.LazyLogging
+
 import scala.collection.immutable.Queue
 
 case class SendJson(js: JsValue, retryOnFailure: Boolean = true)(implicit codec: Codec) extends WSMessage[Array[Byte]] {
@@ -56,7 +61,7 @@ trait JsonMessageHandler {
 class JsonWSTunnel(
   serverUrl: String,
   incomingMessageHandler: JsonMessageHandler,
-  webSocketSecurityInfo: WSSecurityInfo)(implicit codec: Codec) extends Actor {
+  webSocketSecurityInfo: WSSecurityInfo)(implicit codec: Codec) extends Actor with LazyLogging{
 
   implicit val exco = context.system.dispatcher
 

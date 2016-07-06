@@ -50,9 +50,9 @@ class ProtractorSpec(arguments: Arguments) extends Specification with BeforeAll 
   "my application" should {
 
     "pass the protractor e2e tests" in new WithServer(
-      app = FakeApplication(additionalConfiguration = argumentMap), 
+      app = FakeApplication(additionalConfiguration = argumentMap),
       port = testPort) {
-      
+
       val resp = Await.result(WS.url(s"http://localhost:$testPort").get(), 2 seconds)
       resp.status === 200
 
@@ -71,8 +71,8 @@ class ProtractorSpec(arguments: Arguments) extends Specification with BeforeAll 
 
   private def getProcessIO: ProcessIO = {
     new ProcessIO(_ => (),
-      stdout => Source.fromInputStream(stdout).getLines().foreach(logger.info),
-      stderr => Source.fromInputStream(stderr).getLines().foreach(logger.error))
+      stdout => Source.fromInputStream(stdout).getLines().foreach(l => logger.info(l)),
+      stderr => Source.fromInputStream(stderr).getLines().foreach(l => logger.error(l)))
   }
 
   private def parseCustomJavaArgs(arguments: Arguments) = {

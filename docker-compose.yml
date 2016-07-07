@@ -3,7 +3,7 @@ version: '2'
 services:
 
   oxalis:
-    image: scalableminds/oxalis:latest
+    image: scalableminds/oxalis:$DOCKER_TAG
     ports:
       - "9000:9000"
     links:
@@ -13,7 +13,7 @@ services:
       - MODE=dev
 
   oxalis-sbt:
-    image: scalableminds/sbt:sbt-0.13.9_mongo-3.2.1_node-4.x_jdk-8
+    image: scalableminds/sbt:$SBT_VERSION_TAG
     volumes:
       - ".:/project"
       - "~/.m2:/root/.m2"

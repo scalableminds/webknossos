@@ -52,11 +52,18 @@ class DatasetPositionView extends Marionette.ItemView
 
   initialize : (options) ->
 
+    @render = _.throttle(@render, 100)
     @listenTo(@model, "change:mode", @render)
 
     # TODO MEASURE PERFORMANCE HIT BECAUSE OF CONSTANT RE-RENDER
     @listenTo(@model.get("flycam3d"), "changed", @render)
     @listenTo(@model.get("flycam"), "positionChanged", @render)
+
+
+  # Rendering performance optimization
+  attachElContent : (html) ->
+    this.el.innerHTML = html
+    return html
 
 
   changePosition : (event) ->

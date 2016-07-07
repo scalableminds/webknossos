@@ -5,13 +5,15 @@ Cellular-resolution connectomics is currently substantially limited by the throu
 
 ## Dependencies
 
-* [Java JDK 1.8 (Oracle version)](http://www.oracle.com/technetwork/java/javase/downloads/index.html)
+* [Oracle JDK 8+)](http://www.oracle.com/technetwork/java/javase/downloads/index.html) or [Open JDK 8+](http://openjdk.java.net/)
 * [sbt](http://www.scala-sbt.org/)
-* [mongoDB 2.4.3+](http://www.mongodb.org/downloads)
-* [node.js 0.10.0+](http://nodejs.org/download/)
+* [mongoDB 3+](http://www.mongodb.org/downloads)
+* [node.js 4+](http://nodejs.org/download/)
 * [git](http://git-scm.com/downloads)
 
 ## Installation
+If you are installing *webKnossos* in a virtual machine, please make sure you allocated **enough memory**. A good value is 5 GB.
+
 #### OS X
 If you are using OS X try using this awesome installer:
 https://gist.github.com/normanrz/9128496
@@ -20,82 +22,57 @@ Or install Java manually and run:
 
 ```bash
 # Install Homebrew package manager
-ruby -e "$(curl -fsSL https://raw.github.com/Homebrew/homebrew/go/install)"
+/usr/bin/ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)"
 
 # Install git, node.js, mongoDB, sbt
 brew install git node mongodb sbt
 
 # Start mongo
-launchctl load ~/Library/LaunchAgents/homebrew.mxcl.mongodb.plist
+brew services start mongodb
 
 # Checkout the webKnossos git repository
 git clone git@github.com:scalableminds/oxalis.git
 ```
 
-If you are installing *webKnossos* in a virtual machine, please make sure you allocated **enough memory**. A good value is 5gb, you might get away with less.
 
-
-#### Ubuntu 15.10
+#### Ubuntu 16.04 LTS
 
 ```
-# Adding repository for Oracle java7
-sudo add-apt-repository ppa:webupd8team/java
-
 # Adding repository for sbt
 echo "deb https://dl.bintray.com/sbt/debian /" | sudo tee -a /etc/apt/sources.list.d/sbt.list
 sudo apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv 642AC823
 
 # Installing everything
 sudo apt-get update
-sudo apt-get install mongodb-server nodejs nodejs-legacy scala npm sbt oracle-java7-installer
+sudo apt-get install -y git mongodb-server nodejs nodejs-legacy scala npm sbt openjdk-8-jdk
 ```
+
+On older Ubuntu distributions: Please make sure to have the correct versions of node, mongoDB and java installed.
+
+#### Docker
+This is the fastest way to try webKnossos. Docker 1.12+ and Docker Compose 2 is required. This is only recommended for testing. For production a more elaborate setup with persistent file mounts is recommended.
+
+```
+DOCKER_TAG=branch-master docker-compose up oxalis
+```
+
 
 #### Manual Installation
 
 ##### Java
-- install Java JDK 1.8 (from Oracle, OpenJDK is currently not supported)
-- make sure `JAVA_HOME` and `JDK_HOME` are set and `PATH` contains path to JDK
+* Install Java JDK 8 (from Oracle or OpenJDK)
+* make sure `JAVA_HOME` and `JDK_HOME` are set and `PATH` contains path to JDK
 
 ##### sbt
 See: http://www.scala-sbt.org/release/docs/Getting-Started/Setup.html
 
 ##### mongoDB
-- install mongoDB from http://www.mongodb.org/downloads
-- mongoDB version **2.4.3+ is required**
-- your package managers' versions (e.g. `apt-get`) might be outdated
-
-- unpack
-
-```bash
-tar -xvf mongo(...).tgz
-sudo mv mongo(...) /usr/local/mongodb
-```
-
-- set environment, append /usr/local/mongodb/bin to path
-
-```bash
-sudo vim /etc/environment
-```
-
-- logout and login again to reload environment.
-- set up database dir (create (your path)/data/db where you want to save your database)
-
-```bash
-mongod --dbpath (your path)
-```
+* Install mongoDB from http://www.mongodb.org/downloads
+* mongoDB version **3+ is required**
 
 ##### node.js
-* install node from http://nodejs.org/download/
-* node version **0.10.0+ is required**
-* your package managers' versions (e.g. `apt-get`) might be outdated
-* no node modules are required to be installed globally. but installing the following is handy for development
-  * [coffee-script](https://github.com/jashkenas/coffeescript)
-  * [less](http://lesscss.org/)
-  * [gulp](http://gulpjs.com/)
-
-```bash
-npm install -g coffee-script less gulp
-```
+* Install node from http://nodejs.org/download/
+* node version **4+ is required**
 
 ### Run
 ```bash

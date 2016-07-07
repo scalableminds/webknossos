@@ -6,7 +6,7 @@ import play.api.libs.json.Json
 import reactivemongo.bson.BSONObjectID
 import scala.concurrent.duration.Duration
 import scala.concurrent.duration._
-import play.modules.reactivemongo.json.BSONFormats._
+import reactivemongo.play.json.BSONFormats._
 import org.joda.time.DateTime
 
 /**

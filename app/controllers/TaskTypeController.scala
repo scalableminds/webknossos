@@ -2,7 +2,7 @@ package controllers
 
 import javax.inject.Inject
 
-import com.scalableminds.util.tools.FoxImplicits
+import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import models.annotation.{AnnotationDAO, AnnotationSettings}
 import models.task._
 import oxalis.security.Secured
@@ -65,8 +65,8 @@ class TaskTypeController @Inject()(val messagesApi: MessagesApi) extends Control
         _ <- ensureTeamAdministration(request.user, updatedTaskType.team)
         _ <- TaskTypeDAO.update(taskType._id, updatedTaskType)
         tasks <- TaskDAO.findAllByTaskType(taskType._id)
+        _ <- Fox.serialSequence(tasks)(task => AnnotationDAO.updateAllOfTask(task, updatedTaskType.settings))
       } yield {
-        tasks.map(task => AnnotationDAO.updateAllOfTask(task, updatedTaskType.settings))
         JsonOk(TaskType.transformToJson(updatedTaskType), Messages("taskType.editSuccess"))
       }
     }

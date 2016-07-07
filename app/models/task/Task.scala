@@ -15,7 +15,7 @@ import org.joda.time.DateTime
 import org.joda.time.format.DateTimeFormat
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json.{JsNull, JsObject, Json}
-import play.modules.reactivemongo.json.BSONFormats._
+import reactivemongo.play.json.BSONFormats._
 import reactivemongo.api.indexes.{Index, IndexType}
 import reactivemongo.bson.BSONObjectID
 
@@ -71,7 +71,7 @@ case class Task(
 object Task extends FoxImplicits {
   implicit val taskFormat = Json.format[Task]
 
-  def transformToJson(task: Task)(implicit ctx: DBAccessContext): Future[JsObject] = {
+  def transformToJson(task: Task, forUser: Option[User])(implicit ctx: DBAccessContext): Future[JsObject] = {
     for {
       annotationContent <- task.annotationBase.flatMap(_.content).futureBox
       dataSetName = annotationContent.map(_.dataSetName).openOr("")
@@ -80,6 +80,7 @@ object Task extends FoxImplicits {
       boundingBox = annotationContent.flatMap(_.boundingBox).toOption
       status <- task.status
       tt <- task.taskType.map(TaskType.transformToJson) getOrElse JsNull
+      directLinks = if(forUser.exists(_.isAdminOf(task.team))) Json.toJson(task.directLinks) else JsNull
     } yield {
       Json.obj(
         "id" -> task.id,
@@ -94,7 +95,7 @@ object Task extends FoxImplicits {
         "boundingBox" -> boundingBox,
         "neededExperience" -> task.neededExperience,
         "priority" -> task.priority,
-        "directLinks" -> task.directLinks,
+        "directLinks" -> directLinks,
         "created" -> DateTimeFormat.forPattern("yyyy-MM-dd HH:mm").print(task.created),
         "status" -> status,
         "tracingTime" -> task.tracingTime
@@ -142,9 +143,9 @@ object TaskDAO extends SecuredBaseDAO[Task] with FoxImplicits with QuerySupporte
     super.findOne(query ++ Json.obj("isActive" -> true))
   }
 
-  def findAllAdministratable(user: User)(implicit ctx: DBAccessContext) = withExceptionCatcher {
+  def findAllAdministratable(user: User, limit: Int)(implicit ctx: DBAccessContext) = withExceptionCatcher {
     find(Json.obj(
-      "team" -> Json.obj("$in" -> user.adminTeamNames))).cursor[Task]().collect[List]()
+      "team" -> Json.obj("$in" -> user.adminTeamNames))).cursor[Task]().collect[List](maxDocs = limit)
   }
 
   def removeAllWithProject(project: Project)(implicit ctx: DBAccessContext) = {
@@ -183,7 +184,7 @@ object TaskDAO extends SecuredBaseDAO[Task] with FoxImplicits with QuerySupporte
       returnNew = true)
 
   def executeUserQuery(q: JsObject, limit: Int)(implicit ctx: DBAccessContext): Fox[List[Task]] = withExceptionCatcher {
-    find(q).cursor[Task]().collect[List](upTo = limit)
+    find(q).cursor[Task]().collect[List](maxDocs = limit)
   }
 }
 

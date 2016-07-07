@@ -14,8 +14,7 @@ transformationWithDistanceMacro = (_this, transformationFn, transformationArg1, 
   M4x4.translate(_this.distanceVecNegative, currentMatrix, currentMatrix)
   transformationFn.call(_this, transformationArg1, transformationArg2)
   M4x4.translate(_this.distanceVecPositive, currentMatrix, currentMatrix)
-  updateMacro(_this)
-
+  return
 
 class Flycam3d
 
@@ -69,12 +68,12 @@ class Flycam3d
     # Apply 180° Rotation to keep it consistent with plane view
     @roll Math.PI
 
-    updateMacro(@)
+    updateMacro(this)
 
 
   update : ->
 
-    updateMacro(@)
+    updateMacro(this)
 
 
   flush : ->
@@ -89,13 +88,13 @@ class Flycam3d
   zoomIn : ->
 
     @zoomStep = Math.max(@zoomStep / @ZOOM_STEP_INTERVAL, @ZOOM_STEP_MIN)
-    updateMacro(@)
+    updateMacro(this)
 
 
   zoomOut : ->
 
     @zoomStep = Math.min(@zoomStep * @ZOOM_STEP_INTERVAL, @ZOOM_STEP_MAX)
-    updateMacro(@)
+    updateMacro(this)
 
 
   getZoomStep : ->
@@ -123,22 +122,22 @@ class Flycam3d
   setMatrix : (matrix) ->
 
     @currentMatrix = M4x4.clone(matrix)
-    updateMacro(@)
+    updateMacro(this)
 
 
   move : (vector) ->
 
     M4x4.translate(vector, @currentMatrix, @currentMatrix)
-    updateMacro(@)
+    updateMacro(this)
 
 
   yaw : (angle, regardDistance = false) ->
 
     if regardDistance
-      transformationWithDistanceMacro(@, @yawSilent, angle)
+      transformationWithDistanceMacro(this, @yawSilent, angle)
     else
       @yawSilent(angle)
-    updateMacro(@)
+    updateMacro(this)
 
 
   yawSilent : (angle) ->
@@ -149,10 +148,10 @@ class Flycam3d
   roll : (angle, regardDistance = false) ->
 
     if regardDistance
-      transformationWithDistanceMacro(@, @rollSilent, angle)
+      transformationWithDistanceMacro(this, @rollSilent, angle)
     else
       @rollSilent(angle)
-    updateMacro(@)
+    updateMacro(this)
 
 
   rollSilent : (angle) ->
@@ -163,10 +162,10 @@ class Flycam3d
   pitch : (angle, regardDistance = false) ->
 
     if regardDistance
-      transformationWithDistanceMacro(@, @pitchSilent, angle)
+      transformationWithDistanceMacro(this, @pitchSilent, angle)
     else
       @pitchSilent(angle)
-    updateMacro(@)
+    updateMacro(this)
 
 
   pitchSilent : (angle) ->
@@ -177,7 +176,7 @@ class Flycam3d
   rotateOnAxis : (angle, axis) ->
 
     @rotateOnAxisSilent(angle, axis)
-    updateMacro(@)
+    updateMacro(this)
 
 
   rotateOnAxisSilent : (angle, axis) ->
@@ -187,7 +186,8 @@ class Flycam3d
 
   rotateOnAxisDistance : (angle, axis) ->
 
-    transformationWithDistanceMacro(@, @rotateOnAxisSilent, angle, axis)
+    transformationWithDistanceMacro(this, @rotateOnAxisSilent, angle, axis)
+    updateMacro(this)
 
 
   toString : ->
@@ -235,7 +235,7 @@ class Flycam3d
   setPosition : (p) ->
 
     @setPositionSilent(p)
-    updateMacro(@)
+    updateMacro(this)
 
 
   setRotation : ([x, y, z]) ->

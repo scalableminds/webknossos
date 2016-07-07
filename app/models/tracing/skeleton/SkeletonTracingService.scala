@@ -12,12 +12,15 @@ import models.binary.DataSet
 import models.task.Task
 import models.tracing.CommonTracingService
 import models.tracing.skeleton.temporary.{TemporarySkeletonTracing, TemporarySkeletonTracingService}
-import models.user.{UsedAnnotationDAO, User}
-import oxalis.nml.{BranchPoint, NML, Tree, TreeLike}
+import models.user.User
+import oxalis.nml.BranchPoint
+import oxalis.nml.{NML, Tree, TreeLike}
 import play.api.libs.json.Json
 import reactivemongo.bson.BSONObjectID
+import reactivemongo.play.json._
 import play.api.libs.concurrent.Execution.Implicits._
-import play.modules.reactivemongo.json.BSONFormats._
+import reactivemongo.api.commands.WriteResult
+import reactivemongo.core.commands.LastError
 
 object SkeletonTracingService extends AnnotationContentService with CommonTracingService {
   val dao = SkeletonTracingDAO
@@ -94,11 +97,11 @@ object SkeletonTracingService extends AnnotationContentService with CommonTracin
 
   def createFrom(dataSet: DataSet)(implicit ctx: DBAccessContext): Fox[SkeletonTracing] =
     createFrom(
-      dataSet.name, 
-      dataSet.defaultStart, 
-      dataSet.defaultRotation, 
-      None, 
-      insertStartAsNode = false, 
+      dataSet.name,
+      dataSet.defaultStart,
+      dataSet.defaultRotation,
+      None,
+      insertStartAsNode = false,
       isFirstBranchPoint = false)
 
   def clearAndRemove(skeletonId: String)(implicit ctx: DBAccessContext) =
@@ -132,10 +135,18 @@ object SkeletonTracingService extends AnnotationContentService with CommonTracin
       Json.obj("_id" -> skeleton._id),
       Json.obj(
         "$set" -> SkeletonTracingDAO.formatWithoutId(skeleton),
+        "$unset" -> Json.obj("notUpdated" -> true),
         "$setOnInsert" -> Json.obj("_id" -> skeleton._id)
       ),
       upsert = true).map { _ =>
       skeleton
+    }
+  }
+
+  def update(id: BSONObjectID, skeleton: SkeletonTracing)(implicit ctx: DBAccessContext): Fox[WriteResult] = {
+    SkeletonTracingDAO.update(id, skeleton).map { r =>
+      SkeletonTracingDAO.update(Json.obj("_id" -> id), Json.obj("$unset" -> Json.obj("notUpdated" -> true)))
+      r
     }
   }
 }

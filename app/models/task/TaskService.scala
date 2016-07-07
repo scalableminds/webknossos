@@ -13,7 +13,7 @@ import models.user.{UserDAO, User, Experience}
 import scala.concurrent.Future
 import play.api.Logger
 import play.api.libs.json.Json
-import play.modules.reactivemongo.json.BSONFormats._
+import reactivemongo.play.json.BSONFormats._
 import reactivemongo.core.commands.LastError
 
 object TaskService extends TaskAssignmentSimulation with TaskAssignment with FoxImplicits {
@@ -30,8 +30,8 @@ object TaskService extends TaskAssignmentSimulation with TaskAssignment with Fox
   def findAll(implicit ctx: DBAccessContext) =
     TaskDAO.findAll
 
-  def findAllAdministratable(user: User)(implicit ctx: DBAccessContext) =
-    TaskDAO.findAllAdministratable(user)
+  def findAllAdministratable(user: User, limit: Int)(implicit ctx: DBAccessContext) =
+    TaskDAO.findAllAdministratable(user, limit)
 
   def remove(_task: BSONObjectID)(implicit ctx: DBAccessContext) = {
     TaskDAO.update(Json.obj("_id" -> _task), Json.obj("$set" -> Json.obj("isActive" -> false))).flatMap {

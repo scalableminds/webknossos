@@ -33,11 +33,17 @@ trait NMLParsingService {
     def fileName: String
 
     def nml: Option[NML] = None
+
+    def succeeded: Boolean
   }
   case class NMLParseSuccess(fileName: String, _nml: NML) extends NMLParseResult{
+    def succeeded = true
+
     override def nml = Some(_nml)
   }
-  case class NMLParseFailure(fileName: String, error: String) extends NMLParseResult
+  case class NMLParseFailure(fileName: String, error: String) extends NMLParseResult{
+    def succeeded = false
+  }
 
   def extractFromNML(file: File, fileName: Option[String] = None): NMLParseResult = {
     val name = fileName getOrElse file.getName

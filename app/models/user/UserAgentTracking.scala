@@ -3,7 +3,7 @@ package models.user
 import models.basics._
 import reactivemongo.bson.BSONObjectID
 import play.api.libs.json.Json
-import play.modules.reactivemongo.json.BSONFormats._
+import reactivemongo.play.json.BSONFormats._
 import com.scalableminds.util.reactivemongo._
 
 case class UserAgentTracking(user: Option[BSONObjectID], userAgent: String, timestamp: Long)

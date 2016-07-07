@@ -13,6 +13,8 @@ import oxalis.security.Secured
 import play.api.i18n.{Messages, MessagesApi}
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json._
+import scala.collection.JavaConversions._
+import scala.collection.JavaConverters._
 
 class NMLIOController @Inject()(val messagesApi: MessagesApi) extends Controller with Secured {
 
@@ -28,14 +30,17 @@ class NMLIOController @Inject()(val messagesApi: MessagesApi) extends Controller
       case _                       => List(NMLService.extractFromNML(f.ref.file, Some(f.filename)))
     })
 
-    val (parseSuccess, parseFailed) = parsedFiles.partition { case x: NMLParseSuccess => true; case _ => false }
-
-    if (parseFailed.nonEmpty) {
-      val errors = parseFailed.map{ case result: NMLParseFailure => "error" -> Messages("nml.file.invalid", result.fileName, result.error)}
-      Future.successful(JsonBadRequest(errors))
-    } else if (parseSuccess.isEmpty) {
+    if (parsedFiles.isEmpty) {
       Future.successful(JsonBadRequest(Messages("nml.file.noFile")))
+    } else if (parsedFiles.exists(!_.succeeded)) {
+      val errors = parsedFiles.flatMap{
+        case result: NMLParseFailure =>
+          Some("error" -> Messages("nml.file.invalid", result.fileName, result.error))
+        case _ => None
+      }
+      Future.successful(JsonBadRequest(errors))
     } else {
+      val parseSuccess = parsedFiles.filter(_.succeeded)
       val fileNames = parseSuccess.map(_.fileName)
       val nmls = parseSuccess.flatMap(_.nml).toList
 

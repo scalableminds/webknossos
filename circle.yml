@@ -17,14 +17,14 @@ dependencies:
     - "node_modules"
   override:
     - docker pull scalableminds/sbt:$SBT_VERSION_TAG
-    - docker-compose -f docker-compose-circleci.yml run oxalis-sbt clean compile stage
+    - docker-compose run oxalis-sbt clean compile stage
     - docker build -t scalableminds/oxalis:$CIRCLE_BUILD_NUM .
 
 test:
   override:
-    - docker-compose -f docker-compose-circleci.yml run oxalis-frontend-tests
-    - docker-compose -f docker-compose-circleci.yml run oxalis-e2e-tests
-    - docker-compose -f docker-compose-circleci.yml up -d oxalis:
+    - docker-compose run oxalis-frontend-tests
+    - docker-compose run oxalis-e2e-tests
+    - DOCKER_TAG=$CIRCLE_BUILD_NUM docker-compose up -d oxalis:
         background: true
     - sleep 10
     - ./test/infrastructure/deployment.bash

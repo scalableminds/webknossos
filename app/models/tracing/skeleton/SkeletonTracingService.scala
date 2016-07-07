@@ -16,8 +16,10 @@ import models.user.{UsedAnnotationDAO, User}
 import oxalis.nml._
 import play.api.libs.json.Json
 import reactivemongo.bson.BSONObjectID
+import reactivemongo.play.json._
 import play.api.libs.concurrent.Execution.Implicits._
-import play.modules.reactivemongo.json.BSONFormats._
+import reactivemongo.api.commands.WriteResult
+import reactivemongo.core.commands.LastError
 
 object SkeletonTracingService extends AnnotationContentService with CommonTracingService {
   val dao = SkeletonTracingDAO
@@ -123,10 +125,18 @@ object SkeletonTracingService extends AnnotationContentService with CommonTracin
       Json.obj("_id" -> skeleton._id),
       Json.obj(
         "$set" -> SkeletonTracingDAO.formatWithoutId(skeleton),
+        "$unset" -> Json.obj("notUpdated" -> true),
         "$setOnInsert" -> Json.obj("_id" -> skeleton._id)
       ),
       upsert = true).map { _ =>
       skeleton
+    }
+  }
+
+  def update(id: BSONObjectID, skeleton: SkeletonTracing)(implicit ctx: DBAccessContext): Fox[WriteResult] = {
+    SkeletonTracingDAO.update(id, skeleton).map { r =>
+      SkeletonTracingDAO.update(Json.obj("_id" -> id), Json.obj("$unset" -> Json.obj("notUpdated" -> true)))
+      r
     }
   }
 }

@@ -12,9 +12,9 @@ import scala.concurrent.ExecutionContext.Implicits.global
 
 object Dependencies{
   val akkaVersion = "2.4.1"
-  val reactiveVersion = "0.11.7"
-  val reactivePlayVersion = "0.11.7.play24"
-  val braingamesVersion = "8.8.0"
+  val reactiveVersion = "0.11.13"
+  val reactivePlayVersion = "0.11.13-play24"
+  val braingamesVersion = "8.9.1"
   val twelvemonkeysVersion = "3.1.2"
 
   val restFb = "com.restfb" % "restfb" % "1.6.11"
@@ -25,6 +25,7 @@ object Dependencies{
   val akkaAgent = "com.typesafe.akka" %% "akka-agent" % akkaVersion
   val akkaRemote = "com.typesafe.akka" %% "akka-remote" % akkaVersion
   val akkaLogging = "com.typesafe.akka" %% "akka-slf4j" % akkaVersion
+  val scalaLogging = "com.typesafe.scala-logging" %% "scala-logging" % "3.4.0"
   val jerseyClient = "com.sun.jersey" % "jersey-client" % "1.8"
   val jerseyCore = "com.sun.jersey" % "jersey-core" % "1.8"
   val reactivePlay = "org.reactivemongo" %% "play2-reactivemongo" % reactivePlayVersion
@@ -160,6 +161,7 @@ object ApplicationBuild extends Build {
     scalaAsync,
     cache,
     ws,
+    scalaLogging,
     airbrake,
     mongev,
     urlHelper,

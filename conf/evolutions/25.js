@@ -3,38 +3,37 @@
 // --- !Ups
 db.trees.remove({"_tracing" : { $exists: false }});
 
-db.trees.find().forEach(function(tree){
-  var skeletons = db.skeletons.find({"_id" : tree._tracing, "notUpdated": {"$exists" : false}});
-  if(skeletons.hasNext()){
-    var skeleton = skeletons[0];
+db.skeletons.find({"notUpdated": {"$exists" : false}, "$or" : [{"branchPoints" : {"$gt" : []}}, {"comments" : {"$gt" : []}}]}).forEach(function(skeleton){
+  db.trees.find({"_tracing" : skeleton._id}).forEach(function(tree){
     var branchPoints = [];
 
-    skeleton.branchPoints.forEach(function(bp){
-      if(bp) {
-        var node = db.nodes.find({"_treeId": tree._id, "node.id": bp.id});
-        if (node.hasNext()) {
-          bp.timestamp = node.next().node.timestamp;
-          branchPoints.push(bp)
+    var nodes = db.nodes.find({"_treeId" : tree._id}).toArray();
+    for(var i = 0; i<skeleton.branchPoints.length; i++){
+      for(var j = 0; j<nodes.length; j++) {
+        if(nodes[j].node.id == skeleton.branchPoints[i].id){
+          branchPoints.push({"id" : nodes[j].node.id, "timestamp" : nodes[j].node.timestamp});
+          break;
         }
       }
-    });
+    }
 
     var comments = [];
 
-    skeleton.comments.forEach(function(comment){
-      if(comment) {
-        var node = db.nodes.find({"_treeId": tree._id, "node.id": comment.node});
-        if (node.hasNext()) {
-          comment.timestamp = node.next().node.timestamp;
-          comments.push(comment)
+    for(var i = 0; i<skeleton.comments.length; i++){
+      for(var j = 0; j<nodes.length; j++) {
+        if(nodes[j].node.id == skeleton.comments[i].node){
+          comments.push({"node" : nodes[j].node.id, "timestamp" : nodes[j].node.timestamp});
+          break;
         }
       }
-    });
+    }
 
     db.trees.update({"_id" : tree._id}, {"$set": {"branchPoints" : branchPoints, "comments" : comments}});
-    db.skeletons.update({"_id" : skeleton._id}, {"$set" : {"notUpdated" : true}})
-  }
+  });
+
+  db.skeletons.update({"_id" : skeleton._id}, {"$set" : {"notUpdated" : true}});
 });
+
 
 // --- !Downs
 

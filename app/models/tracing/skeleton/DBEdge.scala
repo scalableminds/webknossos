@@ -7,7 +7,7 @@ import play.api.libs.json.Json
 import models.basics.SecuredBaseDAO
 import com.scalableminds.util.reactivemongo.DBAccessContext
 import scala.concurrent.Future
-import play.modules.reactivemongo.json.BSONFormats._
+import reactivemongo.play.json.BSONFormats._
 import play.api.libs.concurrent.Execution.Implicits._
 import reactivemongo.api.indexes.{IndexType, Index}
 import reactivemongo.core.commands.LastError

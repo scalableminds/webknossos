@@ -4,7 +4,7 @@ import com.scalableminds.util.image.Color
 import models.basics._
 import oxalis.nml.{BranchPoint, Comment, Tree, TreeLike}
 import reactivemongo.bson.BSONObjectID
-import play.modules.reactivemongo.json.BSONFormats._
+import reactivemongo.play.json.BSONFormats._
 import play.api.libs.json.Json
 import scala.concurrent.Future
 

@@ -9,7 +9,8 @@ import models.user.User
 import play.api.libs.concurrent.Execution.Implicits._
 import com.scalableminds.util.reactivemongo.AccessRestrictions.AllowIf
 import com.scalableminds.braingames.binary.models.{DataLayer, DataSource}
-import com.scalableminds.util.geometry.{BoundingBox, Scale, Vector3D, Point3D}
+import com.scalableminds.util.geometry.{BoundingBox, Point3D, Scale, Vector3D}
+import models.configuration.DataSetConfiguration
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
 import play.utils.UriEncoding
@@ -25,6 +26,7 @@ case class DataSet(
   isPublic: Boolean = false,
   accessToken: Option[String],
   description: Option[String] = None,
+  defaultConfiguration: Option[DataSetConfiguration] = None,
   created: Long = System.currentTimeMillis()) {
 
   def urlEncodedName: String =

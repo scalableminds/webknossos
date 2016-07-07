@@ -57,8 +57,6 @@ case class Annotation(
 
   def relativeDownloadUrl = Some(Annotation.relativeDownloadUrlOf(typ, id))
 
-  def isReadyToBeFinished(implicit ctx: DBAccessContext) = Future.successful(true)
-
   def removeTask() = {
     this.copy(_task = None, typ = AnnotationType.Orphan)
   }

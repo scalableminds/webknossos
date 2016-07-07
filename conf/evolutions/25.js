@@ -3,6 +3,8 @@
 // --- !Ups
 db.trees.remove({"_tracing" : { $exists: false }});
 
+db.trees.update({"branchPoints" : {"$exists" : false}}, {"$set": {"branchPoints" : [], "comments" : []}}, {"multi": true});
+
 db.skeletons.find({"notUpdated": {"$exists" : false}, "$or" : [{"branchPoints" : {"$gt" : []}}, {"comments" : {"$gt" : []}}]}).forEach(function(skeleton){
   db.trees.find({"_tracing" : skeleton._id}).forEach(function(tree){
     var branchPoints = [];

@@ -22,7 +22,7 @@ db.skeletons.find({"notUpdated": {"$exists" : false}, "$or" : [{"branchPoints" :
     for(var i = 0; i<skeleton.comments.length; i++){
       for(var j = 0; j<nodes.length; j++) {
         if(nodes[j].node.id == skeleton.comments[i].node){
-          comments.push({"node" : nodes[j].node.id, "timestamp" : nodes[j].node.timestamp});
+          comments.push({"node" : nodes[j].node.id, "content": skeleton.comments[i].content, "timestamp" : nodes[j].node.timestamp});
           break;
         }
       }
@@ -48,5 +48,7 @@ db.skeletons.find().forEach(function(skeleton){
       comments = comments.concat(tree.comments);
   });
 
-  db.skeletons.update({"_id" : skeleton._id}, {"$set": {"branchPoints" : branchPoints.sort(function(a, b){return b.timestamp-a.timestamp}), "comments" : comments}})
+  db.skeletons.update({"_id" : skeleton._id},
+    {"$set": {"branchPoints" : branchPoints.sort(function(a, b){return b.timestamp-a.timestamp}), "comments" : comments},
+      "$unset" : {"notUpdated" : true}})
 });

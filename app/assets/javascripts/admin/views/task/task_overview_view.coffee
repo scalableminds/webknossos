@@ -105,8 +105,8 @@ class TaskOverviewView extends Marionette.LayoutView
 
     # This function calculates the min/max working hours of the users of the selected team
     if _.isEmpty(@minMaxHours)
-      selectedUsers = _.filter(@collection.get("userInfos"), (userInfo) => @team in _.pluck(userInfo.user.teams, "team"))
-      workingTimes = _.pluck(selectedUsers, "workingTime")
+      selectedUsers = _.filter(@collection.get("userInfos"), (userInfo) => @team in _.map(userInfo.user.teams, "team"))
+      workingTimes = _.map(selectedUsers, "workingTime")
 
       if _.isEmpty(workingTimes) then workingTimes = [0]
       minTime = Math.min(workingTimes...)
@@ -255,7 +255,7 @@ class TaskOverviewView extends Marionette.LayoutView
   doDrawUser : (user) ->
 
     isWithinWorkingHours = @chosenMinHours <= user.workingHours <= @chosenMaxHours
-    isInTeam = @team in _.pluck(user.teams, "team")
+    isInTeam = @team in _.map(user.teams, "team")
 
     return isWithinWorkingHours and isInTeam
 

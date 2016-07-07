@@ -52,16 +52,17 @@ object NMLParser {
         for {
           parameters <- (data \ "parameters").headOption ?~ "No parameters section found"
           scale <- parseScale(parameters \ "scale") ?~ "Couldn't parse scale"
-          trees <- extractTrees(data \ "thing")
+          time = parseTime(parameters \ "time")
+          comments = parseComments(data \ "comments")
+          branchPoints = parseBranchPoints(data \ "branchpoints", time)
+          trees <- extractTrees(data \ "thing", branchPoints, comments)
         } yield {
           val dataSetName = parseDataSetName(parameters \ "experiment")
           val activeNodeId = parseActiveNode(parameters \ "activeNode")
           val editPosition = parseEditPosition(parameters \ "editPosition") // STARTPOS
-          val time = parseTime(parameters \ "time")
-          val comments = parseComments(data \ "comments")
-          val branchPoints = parseBranchPoints(data \ "branchpoints")
+
           Logger.debug(s"Parsed NML file. Trees: ${trees.size}")
-          NML(dataSetName, trees.toList, branchPoints.toList, time, activeNodeId, scale, editPosition, comments.toList)
+          NML(dataSetName, trees.toList, time, activeNodeId, scale, editPosition)
         }
       } catch {
         case e: Exception =>
@@ -70,8 +71,8 @@ object NMLParser {
       }
     }
 
-    def extractTrees(treeNodes: NodeSeq) = {
-      validateTrees(parseTrees(treeNodes)).map(transformTrees)
+    def extractTrees(treeNodes: NodeSeq, branchPoints: Seq[BranchPoint], comments: Seq[Comment]) = {
+      validateTrees(parseTrees(treeNodes, branchPoints, comments)).map(transformTrees)
     }
 
     def validateTrees(trees: Seq[Tree]): Box[Seq[Tree]] = {
@@ -89,13 +90,13 @@ object NMLParser {
     private def splitIntoComponents(tree: Tree): List[Tree] = {
       def emptyTree = tree.copy(nodes = Set.empty, edges = Set.empty)
 
-      val t = System.currentTimeMillis()
+      val start = System.currentTimeMillis()
 
       val nodeMap = tree.nodes.map(n => n.id -> n).toMap
 
       @tailrec
       def buildTreeFromNode(nodesToProcess: List[Node], treeReminder: Tree, component: Tree = emptyTree): (Tree, Tree) = {
-        if (!nodesToProcess.isEmpty) {
+        if (nodesToProcess.nonEmpty) {
           val node = nodesToProcess.head
           val tail = nodesToProcess.tail
           val connectedEdges = treeReminder.edges.filter(e => e.source == node.id || e.target == node.id)
@@ -106,30 +107,30 @@ object NMLParser {
           }
 
           val currentComponent = tree.copy(nodes = connectedNodes + node, edges = connectedEdges)
-          val r = (component ++ currentComponent)
+          val r = component ++ currentComponent
           buildTreeFromNode(tail ::: connectedNodes.toList, treeReminder -- currentComponent, r)
         } else
-            (treeReminder -> component)
+            treeReminder -> component
       }
 
       var treeToProcess = tree
 
       var components = List[Tree]()
 
-      while (!treeToProcess.nodes.isEmpty) {
+      while (treeToProcess.nodes.nonEmpty) {
         val (treeReminder, component) = buildTreeFromNode(treeToProcess.nodes.head :: Nil, treeToProcess)
         treeToProcess = treeReminder
         components ::= component
       }
-      Logger.trace("Connected components calculation: " + (System.currentTimeMillis() - t))
+      Logger.trace("Connected components calculation: " + (System.currentTimeMillis() - start))
       components.map(
         _.copy(
           color = tree.color,
           treeId = tree.treeId))
     }
 
-    private def parseTrees(treeNodes: NodeSeq) = {
-      treeNodes.flatMap(parseTree)
+    private def parseTrees(treeNodes: NodeSeq, branchPoints: Seq[BranchPoint], comments: Seq[Comment]) = {
+      treeNodes.flatMap(treeNode => parseTree(treeNode, branchPoints, comments))
     }
 
     private def parseDataSetName(node: NodeSeq) = {
@@ -150,36 +151,40 @@ object NMLParser {
       node.headOption.flatMap(parsePoint3D)
     }
 
-    private def parseBranchPoints(branchPoints: NodeSeq) = {
-      for {
-        branchPoint <- branchPoints \ "branchpoint"
-        nodeId <- ((branchPoint \ "@id").text).toIntOpt
-      } yield BranchPoint(nodeId)
+    private def parseBranchPoints(branchPoints: NodeSeq, defaultTimestamp: Long) = {
+      (branchPoints \ "branchpoint").zipWithIndex.flatMap{
+        case (branchPoint, index) =>
+          (branchPoint \ "@id").text.toIntOpt.map{ nodeId =>
+            val parsedTimestamp = (branchPoint \ "@time").text.toLongOpt
+            val timestamp = parsedTimestamp.getOrElse(defaultTimestamp - index)
+            BranchPoint(nodeId, timestamp)
+          }
+      }
     }
 
     private def parsePoint3D(node: XMLNode) = {
       for {
-        x <- ((node \ "@x").text).toIntOpt
-        y <- ((node \ "@y").text).toIntOpt
-        z <- ((node \ "@z").text).toIntOpt
+        x <- (node \ "@x").text.toIntOpt
+        y <- (node \ "@y").text.toIntOpt
+        z <- (node \ "@z").text.toIntOpt
       } yield Point3D(x, y, z)
     }
 
     private def parseScale(nodes: NodeSeq) = {
       nodes.headOption.flatMap(node =>
         for {
-          x <- ((node \ "@x").text).toFloatOpt
-          y <- ((node \ "@y").text).toFloatOpt
-          z <- ((node \ "@z").text).toFloatOpt
+          x <- (node \ "@x").text.toFloatOpt
+          y <- (node \ "@y").text.toFloatOpt
+          z <- (node \ "@z").text.toFloatOpt
         } yield Scale(x, y, z))
     }
 
     private def parseColorOpt(node: XMLNode) = {
       for {
-        colorRed <- ((node \ "@color.r").text).toFloatOpt
-        colorBlue <- ((node \ "@color.g").text).toFloatOpt
-        colorGreen <- ((node \ "@color.b").text).toFloatOpt
-        colorAlpha <- ((node \ "@color.a").text).toFloatOpt
+        colorRed <- (node \ "@color.r").text.toFloatOpt
+        colorBlue <- (node \ "@color.g").text.toFloatOpt
+        colorGreen <- (node \ "@color.b").text.toFloatOpt
+        colorAlpha <- (node \ "@color.a").text.toFloatOpt
       } yield {
         Color(colorRed, colorBlue, colorGreen, colorAlpha)
       }
@@ -193,16 +198,20 @@ object NMLParser {
       (node \ "@name").text
     }
 
-    private def parseTree(tree: XMLNode): Option[Tree] = {
-      ((tree \ "@id").text).toIntOpt.flatMap {
+    private def parseTree(tree: XMLNode, branchPoints: Seq[BranchPoint], comments: Seq[Comment]): Option[Tree] = {
+      (tree \ "@id").text.toIntOpt.flatMap {
         id =>
           val color = parseColor(tree)
           val name = parseName(tree)
           Logger.trace("Parsing tree Id: %d".format(id))
           (tree \ "nodes" \ "node").flatMap(parseNode) match {
-            case nodes if nodes.size > 0 =>
+            case parsedNodes if parsedNodes.nonEmpty =>
               val edges = (tree \ "edges" \ "edge").flatMap(parseEdge).toSet
-              Some(Tree(id, nodes.toSet, edges, color, name))
+              val nodes = parsedNodes.toSet
+              val nodeIds = nodes.map(_.id)
+              val treeBP = branchPoints.filter(bp => nodeIds.contains(bp.id)).toList
+              val treeComments =  comments.filter(bp => nodeIds.contains(bp.node)).toList
+              Some(Tree(id, nodes, edges, color, treeBP, treeComments, name))
             case _                       =>
               None
           }
@@ -212,54 +221,46 @@ object NMLParser {
     private def parseComments(comments: NodeSeq) = {
       for {
         comment <- comments \ "comment"
-        nodeId <- ((comment \ "@node").text).toIntOpt
+        nodeId <- (comment \ "@node").text.toIntOpt
       } yield {
         val content = (comment \ "@content").text
         Comment(nodeId, content)
       }
     }
 
-    private def findRootNode(treeNodes: Map[Int, XMLNode], edges: List[Edge]) = {
-      val childNodes = edges.map(_.target)
-      treeNodes.filter {
-        case (id, node) => !childNodes.contains(node)
-      }.foreach(println)
-      treeNodes.find(node => !childNodes.contains(node)).map(_._2)
-    }
-
     private def parseEdge(edge: XMLNode) = {
       for {
-        source <- ((edge \ "@source").text).toIntOpt
-        target <- ((edge \ "@target").text).toIntOpt
+        source <- (edge \ "@source").text.toIntOpt
+        target <- (edge \ "@target").text.toIntOpt
       } yield {
         Edge(source, target)
       }
     }
 
     private def parseViewport(node: NodeSeq) = {
-      ((node \ "@inVp").text).toIntOpt.getOrElse(DEFAULT_VIEWPORT)
+      (node \ "@inVp").text.toIntOpt.getOrElse(DEFAULT_VIEWPORT)
     }
 
     private def parseResolution(node: NodeSeq) = {
-      ((node \ "@inMag").text).toIntOpt.getOrElse(DEFAULT_RESOLUTION)
+      (node \ "@inMag").text.toIntOpt.getOrElse(DEFAULT_RESOLUTION)
     }
 
     private def parseBitDepth(node: NodeSeq) = {
-      ((node \ "@bitDepth").text).toIntOpt.getOrElse(DEFAULT_BITDEPTH)
+      (node \ "@bitDepth").text.toIntOpt.getOrElse(DEFAULT_BITDEPTH)
     }
 
     private def parseInterpolation(node: NodeSeq) = {
-      ((node \ "@interpolation").text).toBooleanOpt.getOrElse(DEFAULT_INTERPOLATION)
+      (node \ "@interpolation").text.toBooleanOpt.getOrElse(DEFAULT_INTERPOLATION)
     }
 
     private def parseTimestamp(node: NodeSeq) = {
-      ((node \ "@time").text).toLongOpt.getOrElse(DEFAULT_TIMESTAMP)
+      (node \ "@time").text.toLongOpt.getOrElse(DEFAULT_TIMESTAMP)
     }
 
     private def parseNode(node: XMLNode) = {
       for {
-        id <- ((node \ "@id").text).toIntOpt
-        radius <- ((node \ "@radius").text).toFloatOpt
+        id <- (node \ "@id").text.toIntOpt
+        radius <- (node \ "@radius").text.toFloatOpt
         position <- parsePoint3D(node)
       } yield {
         val viewport = parseViewport(node)

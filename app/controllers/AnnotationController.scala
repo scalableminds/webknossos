@@ -76,60 +76,64 @@ class AnnotationController @Inject()(val messagesApi: MessagesApi) extends Contr
     Ok(empty)
   }
 
-  def combineUpdates(updates: List[AnnotationUpdate]) = updates.foldLeft(Seq.empty[JsValue]){
-    case (updates, AnnotationUpdate(_, _, _, JsArray(nextUpdates), _)) =>
-      updates ++ nextUpdates
-    case (updates, u) =>
-      Logger.warn("dropping update during replay! Update: " + u)
-      updates
-  }
+  // DISABLED: Due to changes in the json update protocol we are currently unable to parse all previous
+  // json updates and hence we can not use them to replay previous updates. It is also infeasible to write
+  // an evolution for this since it is to expensive to calculate the missing information to create the proper updates
 
-  def listUpdates(typ: String, id: String)= Authenticated.async { implicit request =>
-    withAnnotation(AnnotationIdentifier(typ, id)) { annotation =>
-      for {
-        updates <- AnnotationUpdateService.retrieveAll(typ, id, limit = Some(100))
-        combinedUpdate = JsArray(combineUpdates(updates))
-      } yield Ok(combinedUpdate)
-    }
-  }
+  // def combineUpdates(updates: List[AnnotationUpdate]) = updates.foldLeft(Seq.empty[JsValue]){
+  //   case (updates, AnnotationUpdate(_, _, _, JsArray(nextUpdates), _)) =>
+  //     updates ++ nextUpdates
+  //   case (updates, u) =>
+  //     Logger.warn("dropping update during replay! Update: " + u)
+  //     updates
+  // }
 
-  def transferUpdates(typ: String, id: String, fromId: String, fromTyp: String, maxVersion: Int) = Authenticated.async { implicit request =>
-    def applyUpdates(updates: List[AnnotationUpdate], targetAnnotation: AnnotationLike): Fox[AnnotationLike] = {
-      updates.splitAt(100) match {
-        case (Nil, _) =>
-          Fox.successful(targetAnnotation)
-        case (first, last) =>
-          val combinedUpdate = combineUpdates(first)
-          targetAnnotation.muta.updateFromJson(combinedUpdate).flatMap{ updated =>
-            applyUpdates(last, updated)
-          }
-      }
-    }
+  // def listUpdates(typ: String, id: String)= Authenticated.async { implicit request =>
+  //   withAnnotation(AnnotationIdentifier(typ, id)) { annotation =>
+  //     for {
+  //       updates <- AnnotationUpdateService.retrieveAll(typ, id, limit = Some(100))
+  //       combinedUpdate = JsArray(combineUpdates(updates))
+  //     } yield Ok(combinedUpdate)
+  //   }
+  // }
 
-    for {
-      targetAnnotation <- findAnnotation(typ, id)
-      _ <- isUpdateAllowed(targetAnnotation, targetAnnotation.version + 1).toFox
-      _ <- findAnnotation(fromTyp, fromId)
-      updates <- AnnotationUpdateService.retrieveAll(fromTyp, fromId, maxVersion).toFox
-      result <- applyUpdates(updates, targetAnnotation)
-    } yield JsonOk(Messages("annotation.updates.transfered"))
-  }
+  // def transferUpdates(typ: String, id: String, fromId: String, fromTyp: String, maxVersion: Int) = Authenticated.async { implicit request =>
+  //   def applyUpdates(updates: List[AnnotationUpdate], targetAnnotation: AnnotationLike): Fox[AnnotationLike] = {
+  //     updates.splitAt(100) match {
+  //       case (Nil, _) =>
+  //         Fox.successful(targetAnnotation)
+  //       case (first, last) =>
+  //         val combinedUpdate = combineUpdates(first)
+  //         targetAnnotation.muta.updateFromJson(combinedUpdate).flatMap{ updated =>
+  //           applyUpdates(last, updated)
+  //         }
+  //     }
+  //   }
 
-  def revert(typ: String, id: String, version: Int) = Authenticated.async { implicit request =>
-    for {
-      oldAnnotation <- findAnnotation(typ, id)
-      _ <- isUpdateAllowed(oldAnnotation, version).toFox
-      updates <- AnnotationUpdateService.retrieveAll(typ, id, maxVersion=version)
-      combinedUpdate = JsArray(combineUpdates(updates))
-      updateableAnnotation <- isUpdateable(oldAnnotation) ?~> Messages("annotation.update.impossible")
-      updatedAnnotation <- oldAnnotation.muta.resetToBase()
-      result <- handleUpdates(updateableAnnotation, combinedUpdate, version)
-      _ <- AnnotationUpdateService.removeAll(typ, id, aboveVersion = version)
-    } yield {
-      Logger.info(s"REVERTED using update [$typ - $id, $version]: $combinedUpdate")
-      JsonOk(result, "annotation.reverted")
-    }
-  }
+  //   for {
+  //     targetAnnotation <- findAnnotation(typ, id)
+  //     _ <- isUpdateAllowed(targetAnnotation, targetAnnotation.version + 1).toFox
+  //     _ <- findAnnotation(fromTyp, fromId)
+  //     updates <- AnnotationUpdateService.retrieveAll(fromTyp, fromId, maxVersion).toFox
+  //     result <- applyUpdates(updates, targetAnnotation)
+  //   } yield JsonOk(Messages("annotation.updates.transfered"))
+  // }
+
+  // def revert(typ: String, id: String, version: Int) = Authenticated.async { implicit request =>
+  //   for {
+  //     oldAnnotation <- findAnnotation(typ, id)
+  //     _ <- isUpdateAllowed(oldAnnotation, version).toFox
+  //     updates <- AnnotationUpdateService.retrieveAll(typ, id, maxVersion=version)
+  //     combinedUpdate = JsArray(combineUpdates(updates))
+  //     updateableAnnotation <- isUpdateable(oldAnnotation) ?~> Messages("annotation.update.impossible")
+  //     updatedAnnotation <- oldAnnotation.muta.resetToBase()
+  //     result <- handleUpdates(updateableAnnotation, combinedUpdate, version)
+  //     _ <- AnnotationUpdateService.removeAll(typ, id, aboveVersion = version)
+  //   } yield {
+  //     Logger.info(s"REVERTED using update [$typ - $id, $version]: $combinedUpdate")
+  //     JsonOk(result, "annotation.reverted")
+  //   }
+  // }
 
   def reset(typ: String, id: String) = Authenticated.async { implicit request =>
     withAnnotation(AnnotationIdentifier(typ, id)) { annotation =>

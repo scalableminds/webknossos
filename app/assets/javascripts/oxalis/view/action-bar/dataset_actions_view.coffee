@@ -98,7 +98,7 @@ class DatasetActionsView extends Marionette.ItemView
 
   isSkeletonMode : ->
 
-    return _.contains(Constants.MODES_SKELETON, @model.get("mode"))
+    return _.includes(Constants.MODES_SKELETON, @model.get("mode"))
 
 
   getNextTask : ->

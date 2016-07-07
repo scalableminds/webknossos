@@ -172,8 +172,4 @@ object UserService extends FoxImplicits {
     val expirationTime = System.currentTimeMillis + validDuration.toMillis
     LoginTokenDAO.insert(LoginToken(user._id, token, expirationTime)).map( _ => token)
   }
-
-  def increaseExperience(_user: BSONObjectID, domain: String, value: Int)(implicit ctx: DBAccessContext) = {
-    UserDAO.increaseExperience(_user, domain.trim, value)
-  }
 }

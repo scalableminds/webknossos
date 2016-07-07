@@ -200,18 +200,8 @@ object UserDAO extends SecuredBaseDAO[User] {
       "teams" -> teams,
       "experiences" -> experiences)), returnNew = true)
 
-  def addTeams(_user: BSONObjectID, teams: Seq[TeamMembership])(implicit ctx: DBAccessContext) =
-    update(findByIdQ(_user), Json.obj("$pushAll" -> Json.obj("teams" -> teams)))
-
-  def addRole(_user: BSONObjectID, role: String)(implicit ctx: DBAccessContext) =
-    update(findByIdQ(_user), Json.obj("$push" -> Json.obj("roles" -> role)))
-
-  def deleteRole(_user: BSONObjectID, role: String)(implicit ctx: DBAccessContext) =
-    update(findByIdQ(_user), Json.obj("$pull" -> Json.obj("roles" -> role)))
-
-  def increaseExperience(_user: BSONObjectID, domain: String, value: Int)(implicit ctx: DBAccessContext) = {
-    update(findByIdQ(_user), Json.obj("$inc" -> Json.obj(s"experiences.$domain" -> value)))
-  }
+  def addTeam(_user: BSONObjectID, team: TeamMembership)(implicit ctx: DBAccessContext) =
+    update(findByIdQ(_user), Json.obj("$push" -> Json.obj("teams" -> team)))
 
   def updateUserConfiguration(user: User, configuration: UserConfiguration)(implicit ctx: DBAccessContext) = {
     update(findByIdQ(user._id), Json.obj("$set" -> Json.obj("userConfiguration.configuration" -> configuration.configurationOrDefaults)))
@@ -219,14 +209,6 @@ object UserDAO extends SecuredBaseDAO[User] {
 
   def updateDataSetConfiguration(user: User, dataSetName: String, configuration: DataSetConfiguration)(implicit ctx: DBAccessContext) = {
     update(findByIdQ(user._id), Json.obj("$set" -> Json.obj(s"dataSetConfigurations.$dataSetName.configuration" -> configuration.configurationOrDefaults)))
-  }
-
-  def setExperience(_user: BSONObjectID, domain: String, value: Int)(implicit ctx: DBAccessContext) = {
-    update(findByIdQ(_user), Json.obj("$set" -> Json.obj(s"experiences.$domain" -> value)))
-  }
-
-  def deleteExperience(_user: BSONObjectID, domain: String)(implicit ctx: DBAccessContext) = {
-    update(findByIdQ(_user), Json.obj("$unset" -> Json.obj(s"experiences.$domain" -> 1)))
   }
 
   def logActivity(_user: BSONObjectID, lastActivity: Long)(implicit c: DBAccessContext) = {
@@ -247,12 +229,6 @@ object UserDAO extends SecuredBaseDAO[User] {
 
   def countNonAnonymousUsers(implicit ctx: DBAccessContext) = {
     count(Json.obj("_isAnonymous" -> Json.obj("$ne" -> true)))
-  }
-
-  def verify(user: User)(implicit ctx: DBAccessContext) = {
-    update(
-      Json.obj("email" -> user.email),
-      Json.obj("$set" -> Json.obj("verified" -> true)))
   }
 
   def removeTeamFromUsers(team: String)(implicit ctx: DBAccessContext) = {

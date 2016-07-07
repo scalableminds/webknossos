@@ -61,8 +61,8 @@ object OpenAssignmentDAO extends SecuredBaseDAO[OpenAssignment] with FoxImplicit
 
   underlying.indexesManager.ensure(Index(Seq("_task" -> IndexType.Ascending)))
   underlying.indexesManager.ensure(Index(Seq("_project" -> IndexType.Ascending)))
-  underlying.indexesManager.ensure(Index(Seq("team" -> IndexType.Ascending)))
-  underlying.indexesManager.ensure(Index(Seq("team" -> IndexType.Ascending, "neededExperience" -> IndexType.Ascending)))
+  underlying.indexesManager.ensure(Index(Seq("priority" -> IndexType.Descending)))
+  underlying.indexesManager.ensure(Index(Seq("team" -> IndexType.Ascending, "neededExperience" -> IndexType.Ascending, "priority" -> IndexType.Descending)))
 
   override val AccessDefinitions = new DefaultAccessDefinitions {
 
@@ -76,6 +76,9 @@ object OpenAssignmentDAO extends SecuredBaseDAO[OpenAssignment] with FoxImplicit
     }
   }
 
+  def byPriority =
+    Json.obj("priority" -> -1)
+
   private def experiencesToQuery(user: User) =
     JsArray(user.experiences.map{ case (domain, value) => Json.obj("neededExperience.domain" -> domain, "neededExperience.value" -> Json.obj("$lte" -> value))}.toSeq)
 
@@ -85,11 +88,11 @@ object OpenAssignmentDAO extends SecuredBaseDAO[OpenAssignment] with FoxImplicit
   def findOrderedByPriority(user: User)(implicit ctx: DBAccessContext): Enumerator[OpenAssignment] = {
     find(Json.obj(
       "$or" -> (experiencesToQuery(user) :+ noRequiredExperience)))
-    .sort(Json.obj("priority" -> -1)).cursor[OpenAssignment]().enumerate()
+    .sort(byPriority).cursor[OpenAssignment]().enumerate()
   }
 
   def findOrderedByPriority(implicit ctx: DBAccessContext): Enumerator[OpenAssignment] = {
-    find().sort(Json.obj("priority" -> 1)).cursor[OpenAssignment]().enumerate()
+    find().sort(byPriority).cursor[OpenAssignment]().enumerate()
   }
 
   def countFor(_task: BSONObjectID)(implicit ctx: DBAccessContext) = {

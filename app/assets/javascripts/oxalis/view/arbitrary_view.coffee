@@ -101,38 +101,36 @@ class ArbitraryView
 
     TWEEN.update()
 
-    if @trigger("render", @forceUpdate) or @forceUpdate
+    @trigger("render", @forceUpdate)
 
-      { camera, geometries, renderer, scene } = @
+    { camera, geometries, renderer, scene } = this
 
-      for geometry in geometries when geometry.update?
-        geometry.update()
+    for geometry in geometries when geometry.update?
+      geometry.update()
 
-      m = @dataCam.getZoomedMatrix()
+    m = @dataCam.getZoomedMatrix()
 
-      camera.matrix.set(m[0], m[4], m[8],  m[12],
-                        m[1], m[5], m[9],  m[13],
-                        m[2], m[6], m[10], m[14],
-                        m[3], m[7], m[11], m[15])
+    camera.matrix.set(m[0], m[4], m[8],  m[12],
+                      m[1], m[5], m[9],  m[13],
+                      m[2], m[6], m[10], m[14],
+                      m[3], m[7], m[11], m[15])
 
-      camera.matrix.multiply(new THREE.Matrix4().makeRotationY(Math.PI))
-      camera.matrix.multiply(new THREE.Matrix4().makeTranslation(@cameraPosition...))
-      camera.matrixWorldNeedsUpdate = true
+    camera.matrix.multiply(new THREE.Matrix4().makeRotationY(Math.PI))
+    camera.matrix.multiply(new THREE.Matrix4().makeTranslation(@cameraPosition...))
+    camera.matrixWorldNeedsUpdate = true
 
-      renderer.setViewport(0, 0,
-                           @width * @deviceScaleFactor,
-                           @height * @deviceScaleFactor)
-      renderer.setScissor(0, 0,
-                          @width * @deviceScaleFactor,
-                          @height * @deviceScaleFactor)
-      renderer.enableScissorTest(true)
-      renderer.setClearColor(0xFFFFFF, 1);
+    renderer.setViewport(0, 0,
+                         @width * @deviceScaleFactor,
+                         @height * @deviceScaleFactor)
+    renderer.setScissor(0, 0,
+                        @width * @deviceScaleFactor,
+                        @height * @deviceScaleFactor)
+    renderer.enableScissorTest(true)
+    renderer.setClearColor(0xFFFFFF, 1);
 
-      renderer.render(scene, camera)
+    renderer.render(scene, camera)
 
-      forceUpdate = false
-
-      @trigger("render")
+    @forceUpdate = false
 
     @animationRequestId = window.requestAnimationFrame(@animate)
 

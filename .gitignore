@@ -16,3 +16,4 @@ project/plugins/project/
 .settings/
 .cache
 .project
+.idea/

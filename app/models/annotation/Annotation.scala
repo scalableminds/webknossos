@@ -135,8 +135,8 @@ object AnnotationDAO
 
   val formatter = Annotation.annotationFormat
 
-  underlying.indexesManager.ensure(Index(Seq("_task" -> IndexType.Ascending)))
-  underlying.indexesManager.ensure(Index(Seq("_user" -> IndexType.Ascending, "_task" -> IndexType.Ascending)))
+  underlying.indexesManager.ensure(Index(Seq("isActive" -> IndexType.Ascending, "_task" -> IndexType.Ascending)))
+  underlying.indexesManager.ensure(Index(Seq("isActive" -> IndexType.Ascending, "_user" -> IndexType.Ascending, "_task" -> IndexType.Ascending)))
 
   override def find(query: JsObject = Json.obj())(implicit ctx: DBAccessContext) = {
     super.find(query ++ Json.obj("isActive" -> true))
@@ -188,20 +188,18 @@ object AnnotationDAO
   def hasAnOpenAnnotation(_user: BSONObjectID, annotationType: AnnotationType)(implicit ctx: DBAccessContext) =
     countOpenAnnotations(_user, annotationType).map(_ > 0)
 
-  def findFor(_user: BSONObjectID)(implicit ctx: DBAccessContext) = withExceptionCatcher{
-    find(Json.obj(
-      "_user" -> _user,
-      "state.isAssigned" -> true)).cursor[Annotation]().collect[List]()
-  }
-
-  def findFor(_user: BSONObjectID, annotationType: AnnotationType)(implicit ctx: DBAccessContext) = withExceptionCatcher{
-    find(Json.obj(
+  def findFor(_user: BSONObjectID, isFinished: Option[Boolean], annotationType: AnnotationType, limit: Int)(implicit ctx: DBAccessContext) = withExceptionCatcher{
+    var q = Json.obj(
       "_user" -> _user,
       "state.isAssigned" -> true,
-      "typ" -> annotationType)).cursor[Annotation]().collect[List]()
+      "typ" -> annotationType)
+
+    isFinished.foreach{ f => q += "state.isFinished" -> JsBoolean(f)}
+
+    find(q).sort(Json.obj("_id" -> -1)).cursor[Annotation]().collect[List](maxDocs = limit)
   }
 
-  def findForWithTypeOtherThan(_user: BSONObjectID, isFinished: Option[Boolean], annotationTypes: List[AnnotationType])(implicit ctx: DBAccessContext) = withExceptionCatcher{
+  def findForWithTypeOtherThan(_user: BSONObjectID, isFinished: Option[Boolean], annotationTypes: List[AnnotationType], limit: Int)(implicit ctx: DBAccessContext) = withExceptionCatcher{
     var q = Json.obj(
       "_user" -> _user,
       "state.isAssigned" -> true,
@@ -209,14 +207,7 @@ object AnnotationDAO
 
     isFinished.foreach{ f => q += "state.isFinished" -> JsBoolean(f)}
 
-    find(q).cursor[Annotation]().collect[List]()
-  }
-
-  def findFinishedFor(_user: BSONObjectID)(implicit ctx: DBAccessContext) = withExceptionCatcher {
-    find(Json.obj(
-    "_user" -> _user,
-    "state.isFinished" -> true
-    )).cursor[Annotation]().collect[List]()
+    find(q).sort(Json.obj("_id" -> -1)).cursor[Annotation]().collect[List](maxDocs = limit)
   }
 
   def findOpenAnnotationsFor(_user: BSONObjectID, annotationType: AnnotationType)(implicit ctx: DBAccessContext) = withExceptionCatcher{

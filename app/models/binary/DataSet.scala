@@ -64,7 +64,7 @@ object DataSet {
 }
 
 object DataSetDAO extends SecuredBaseDAO[DataSet] {
-  
+
   val collectionName = "dataSets"
 
   val formatter = DataSet.dataSetFormat
@@ -89,7 +89,7 @@ object DataSetDAO extends SecuredBaseDAO[DataSet] {
       }
     }
   }
-  
+
   def byNameQ(name: String) =
     Json.obj("name" -> name)
 

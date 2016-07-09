@@ -95,7 +95,8 @@ class DashboardTaskListView extends Marionette.CompositeView
   toggleFinished : ->
 
     @showFinishedTasks = not @showFinishedTasks
-    @render()
+    @collection.isFinished = @showFinishedTasks
+    @refresh()
 
 
   transferTask : (evt) ->

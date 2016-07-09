@@ -43,6 +43,7 @@ class ViewModesView extends Marionette.ItemView
 
   changeMode : (evt) ->
 
+    evt.target.blur()
     mode = @modeMapping[evt.target.id]
     @model.setMode(mode)
 

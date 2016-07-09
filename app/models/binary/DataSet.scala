@@ -105,7 +105,7 @@ object DataSetDAO extends SecuredBaseDAO[DataSet] {
     dataStoreInfo: DataStoreInfo,
     source: Option[DataSource],
     isActive: Boolean)(implicit ctx: DBAccessContext) = {
-    Logger.warn(s"$name Updating with datastoreinfo: " + Json.toJson(dataStoreInfo))
+    Logger.warn("Updating with datastoreinfo: " + Json.toJson(dataStoreInfo))
     update(
       byNameQ(name),
       Json.obj("$set" -> Json.obj(

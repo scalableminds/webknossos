@@ -162,14 +162,18 @@ trait KnossosDataSourceTypeHandler extends DataSourceTypeHandler with I18nSuppor
     val sourceDir = base.resolve(mappingsDirectory)
     val targetDir = sourceDir.resolve("target")
 
-    for {
-      files <- PathUtils.listFiles(base.resolve(mappingsDirectory)).toFox
-      mappings <- Fox.combined(files
-        .filter(_.toString.toLowerCase.endsWith(s".$mappingFileExtension"))
-        .map(mappingFile => MappingParser.parse(mappingFile).toFox))
-      _ = PathUtils.ensureDirectory(targetDir)
-      normalizedMapping <- normalizeMappings(targetDir, mappings)
-    } yield normalizedMapping
+    if(base.resolve(mappingsDirectory).toFile.exists()) {
+      for {
+        files <- PathUtils.listFiles(base.resolve(mappingsDirectory)).toFox
+        mappings <- Fox.combined(files
+                                   .filter(_.toString.toLowerCase.endsWith(s".$mappingFileExtension"))
+                                   .map(mappingFile => MappingParser.parse(mappingFile).toFox))
+        _ = PathUtils.ensureDirectory(targetDir)
+        normalizedMapping <- normalizeMappings(targetDir, mappings)
+      } yield normalizedMapping
+    } else {
+      Fox.successful(Nil)
+    }
   }
 
   protected def extractLayer(layer: Path, dataSourcePath: Path): Fox[DataLayer] = {

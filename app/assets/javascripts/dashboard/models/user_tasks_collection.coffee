@@ -8,8 +8,8 @@ class UserTasksCollection extends SortedCollection
   model : DashboardTaskModel
   url : ->
 
-    if userID = @get("userID")
-      return "/api/users/#{userID}/tasks"
+    if @userID
+      return "/api/users/#{@userID}/tasks"
     else
       return "/api/user/tasks"
 
@@ -34,5 +34,8 @@ class UserTasksCollection extends SortedCollection
         @add(newTask)
     )
 
+  initialize : (models, options) ->
+
+    @userID = options.userID
 
 module.exports = UserTasksCollection

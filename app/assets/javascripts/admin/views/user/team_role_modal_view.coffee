@@ -92,14 +92,14 @@ class TeamRoleModalView extends ModalView
           )
 
           # Find all selected teams
-          teams = _.map(@$("input[type=checkbox]:checked"), (element) ->
+          teams = _.map(@$("input[type=checkbox]:checked"), (element) =>
             teamName = $(element).data("teamname")
             return {
               team : $(element).val()
               role :
                 name: @$("select[data-teamname=\"#{teamName}\"] :selected").val()
             }
-          , @) || []
+          ) || []
 
           # Find unselected teams
           removedTeamsNames = _.map(@$("input[type=checkbox]:not(:checked)"), (element) ->

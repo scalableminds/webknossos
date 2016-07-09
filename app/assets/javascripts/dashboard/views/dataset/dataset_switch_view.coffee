@@ -51,9 +51,11 @@ class DatasetSwitchView extends Marionette.LayoutView
     datasetCollection = new DatasetCollection()
     @collection = new PaginationCollection([], fullCollection : datasetCollection)
 
-    @listenTo(@, "render", @showGalleryView)
     @listenToOnce(@, "render", => @toggleSwitchButtons(true))
-    @listenToOnce(@collection, "sync", @showGalleryView)
+    @listenToOnce(@collection, "sync", ->
+      @listenTo(@, "render", @showGalleryView)
+      @showGalleryView()
+    )
 
     @collection.fetch()
 

@@ -18,7 +18,7 @@ object ND2WK extends FoxImplicits {
   )
 
   def dataSetFromNDProject(ndp: NDProject, team: String)(implicit messages: Messages) = {
-    val dataStoreInfo = DataStoreInfo(ndp.server, ndp.server, NDStore.name, Some(ndp.token))
+    val dataStoreInfo = DataStoreInfo(ndp.server, ndp.server, NDStore, Some(ndp.token))
 
     for {
       dataLayers <- dataLayersFromNDChannels(ndp.dataset, ndp.channels)

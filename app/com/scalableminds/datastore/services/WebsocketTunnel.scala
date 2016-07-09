@@ -69,7 +69,7 @@ class JsonWSTunnel(
 
   private var isReconnectPaused = true
 
-  private val reconnectThrottle = 1 second
+  private val reconnectThrottle = 10 second
 
   private val websocket = Agent[Option[WebSock]](None)
 

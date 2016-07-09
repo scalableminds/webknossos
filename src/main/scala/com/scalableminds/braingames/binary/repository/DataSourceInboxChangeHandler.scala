@@ -69,7 +69,7 @@ protected class DataSourceInboxChangeHandler(dataSourceRepository: DataSourceRep
   }
 
   def dataSourceFromFolder(path: Path, team: String): DataSourceLike = {
-    logger.info(s"Handling $team at $path")
+    logger.debug(s"Handling $team at $path")
     JsonHelper
       .jsonFromFile(path.resolve("datasource.json"), path)
       .flatMap(json => json.validate(FiledDataSource.filedDataSourceFormat).asOpt) match {

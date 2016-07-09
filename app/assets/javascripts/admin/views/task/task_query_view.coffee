@@ -105,7 +105,7 @@ class TaskQueryView extends Marionette.LayoutView
       @collection.reset()
       defaultQueryLimit = 100
       if result.length == defaultQueryLimit
-        Toast.warning("Not all results are shown because there are too many. Results are limited to #{defaultQueryLimit} entries.")
+        Toast.warning("Not all results are shown because there are more than #{defaultQueryLimit}. Try to narrow your query.")
       @collection.addObjects(result)
     )
 

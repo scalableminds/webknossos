@@ -12,6 +12,7 @@ import com.scalableminds.braingames.binary.models.{DataLayer, DataSource}
 import com.scalableminds.util.geometry.{BoundingBox, Point3D, Scale, Vector3D}
 import models.annotation.AnnotationDAO._
 import models.configuration.DataSetConfiguration
+import play.api.Logger
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
 import play.utils.UriEncoding
@@ -104,6 +105,7 @@ object DataSetDAO extends SecuredBaseDAO[DataSet] {
     dataStoreInfo: DataStoreInfo,
     source: Option[DataSource],
     isActive: Boolean)(implicit ctx: DBAccessContext) = {
+    Logger.warn("Updating with datastoreinfo: " + Json.toJson(dataStoreInfo))
     update(
       byNameQ(name),
       Json.obj("$set" -> Json.obj(

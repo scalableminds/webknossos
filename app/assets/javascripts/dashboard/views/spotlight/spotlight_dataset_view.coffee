@@ -37,7 +37,7 @@ class SpotlightDatasetView extends Marionette.ItemView
         <p><h4><%- owningTeam %></h4></p>
         <p>Scale: <%- TemplateHelpers.formatScale(dataSource.scale) %></p>
         <% if(description) { %>
-          <p><%- description %></p>
+          <p><%= description %></p>
         <% } else { %>
           <% if(hasSegmentation) { %>
             <p>Original data and segmentation</p>

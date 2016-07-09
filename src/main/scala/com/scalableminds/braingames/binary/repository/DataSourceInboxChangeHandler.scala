@@ -29,6 +29,7 @@ protected class DataSourceInboxChangeHandler(dataSourceRepository: DataSourceRep
             val foundInboxSources = dirs.flatMap(teamAwareInboxSourcesIn)
             dataSourceRepository.updateDataSources(foundInboxSources)
             dataSourceRepository.updateInboxSources(foundInboxSources)
+            logger.info(s"Finished scanning inbox.")
           case e =>
             logger.error(s"Failed to execute onStart. Error during list directories on '$path': $e")
         }
@@ -60,7 +61,7 @@ protected class DataSourceInboxChangeHandler(dataSourceRepository: DataSourceRep
         Nil
       case Full(subdirs) =>
         val inbox = subdirs.map(p => dataSourceFromFolder(p, team))
-        logger.info(s"Datasets for team $team: ${inbox.map(_.id).mkString(", ") }")
+        logger.debug(s"Datasets for team $team: ${inbox.map(_.id).mkString(", ") }")
         inbox
       case e =>
         logger.error(s"Failed to list directories for team $team at path $path")

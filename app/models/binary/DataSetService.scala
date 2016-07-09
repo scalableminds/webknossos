@@ -80,7 +80,8 @@ object DataSetService extends FoxImplicits {
     DataSetDAO.findOneBySourceName(name).flatMap(_.dataSource)
 
   def updateDataSources(dataStore: DataStore, dataSources: List[DataSourceLike])(implicit ctx: DBAccessContext) = {
-    Logger.info(s"[${dataStore.name}] Available datasets: " + dataSources.map(_.id).mkString(", "))
+    Logger.info(s"[${dataStore.name}] Available datasets: ${dataSources.count(_.isUsable)} (usable), ${dataSources.count(!_.isUsable)} (unusable)")
+    Logger.debug(s"Found datasets: "+ dataSources.map(_.id).mkString(", "))
     dataSources.map { dataSource =>
       DataSetService.updateDataSource(DataStoreInfo(dataStore.name, dataSource.serverUrl, dataStore.typ, None), dataSource)
     }

@@ -112,7 +112,7 @@ object InitialData extends GlobalDBAccess {
   def insertLocalDataStore() = {
     DataStoreDAO.findOne(Json.obj("name" -> "localhost")).futureBox.map { maybeStore =>
       if (maybeStore.isEmpty) {
-        DataStoreDAO.insert(DataStore("localhost", "something-secure", WebKnossosStore))
+        DataStoreDAO.insert(DataStore("localhost", "something-secure", WebKnossosStore.name))
       }
     }
   }

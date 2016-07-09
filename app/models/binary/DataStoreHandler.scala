@@ -34,9 +34,9 @@ trait DataStoreHandlingStrategy {
 }
 
 object DataStoreHandler extends DataStoreHandlingStrategy{
-  def strategyForType(typ: DataStoreType) = typ match {
-    case NDStore => NDStoreHandlingStrategy
-    case WebKnossosStore => WKStoreHandlingStrategy
+  def strategyForType(typ: String) = typ match {
+    case NDStore.name => NDStoreHandlingStrategy
+    case WebKnossosStore.name => WKStoreHandlingStrategy
   }
 
   override def createUserDataLayer(dataStoreInfo: DataStoreInfo, base: DataSource): Fox[UserDataLayer] =

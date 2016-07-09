@@ -30,10 +30,10 @@ class TeamAssignmentModalView extends ModalView
 
   templateHelpers : ->
     isChecked : (teamName) =>
-      if _.contains(@dataset.get("allowedTeams"), teamName)
+      if _.includes(@dataset.get("allowedTeams"), teamName)
         return "checked"
 
-  ui:
+  ui :
     "teamList" : ".team-list"
 
   events :

@@ -6,8 +6,10 @@ import com.scalableminds.util.image.Color
 import play.api.Logger
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import scala.concurrent.Future
+
 import play.api.libs.concurrent.Execution.Implicits._
 import com.scalableminds.util.reactivemongo.DBAccessContext
+import oxalis.nml.{BranchPoint, Comment}
 
 object TracingUpdater {
 
@@ -54,10 +56,12 @@ case class CreateTree(value: JsObject) extends TracingUpdater {
     val color = (value \ "color").asOpt[Color]
     val timestamp = (value \ "timestamp").as[Long]
     val name = (value \ "name").asOpt[String].getOrElse(DBTree.nameFromId(id))
+    val branchPoints = (value \ "branchPoints").as[List[BranchPoint]]
+    val comments = (value \ "comments").as[List[Comment]]
     TracingUpdate { t =>
       for {
         updatedTracing <- t.updateStatistics(_.createTree) ?~> "Failed to update tracing statistics."
-        _ <- DBTreeDAO.insert(DBTree(t._id, id, color, timestamp, name)) ?~> "Failed to insert tree."
+        _ <- DBTreeDAO.insert(DBTree(t._id, id, color, branchPoints, comments, timestamp, name)) ?~> "Failed to insert tree."
       } yield updatedTracing
     }
   }
@@ -82,10 +86,17 @@ case class UpdateTree(value: JsObject) extends TracingUpdater {
     val updatedId = (value \ "updatedId").asOpt[Int].getOrElse(id)
     val color = (value \ "color").asOpt[Color]
     val name = (value \ "name").asOpt[String].getOrElse(DBTree.nameFromId(id))
+    val branchPoints = (value \ "branchPoints").as[List[BranchPoint]]
+    val comments = (value \ "comments").as[List[Comment]]
     TracingUpdate { t =>
       for {
         tree <- t.tree(id).toFox ?~> "Failed to access tree."
-        updated = tree.copy(color = color orElse tree.color, treeId = updatedId, name = name)
+        updated = tree.copy(
+          color = color orElse tree.color, 
+          treeId = updatedId, 
+          branchPoints = branchPoints, 
+          comments = comments, 
+          name = name)
         _ <- DBTreeDAO.update(tree._id, updated) ?~> "Failed to update tree."
       } yield t
     }
@@ -219,16 +230,12 @@ case class UpdateTracing(value: JsObject) extends TracingUpdater {
   import com.scalableminds.util.geometry.Point3D
 
   def createUpdate()(implicit ctx: DBAccessContext) = {
-    val branchPoints = (value \ "branchPoints").as[List[BranchPoint]]
-    val comments = (value \ "comments").as[List[Comment]]
     val activeNodeId = (value \ "activeNode").asOpt[Int]
     val editPosition = (value \ "editPosition").as[Point3D]
     val editRotation = (value \ "editRotation").as[Vector3D]
     val zoomLevel = (value \ "zoomLevel").as[Double]
     TracingUpdate { t =>
       val updated = t.copy(
-        branchPoints = branchPoints,
-        comments = comments,
         activeNodeId = activeNodeId,
         editPosition = editPosition,
         editRotation = editRotation,

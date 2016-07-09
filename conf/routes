@@ -104,9 +104,12 @@ GET           /annotations/:typ/:id/finish                                      
 POST          /annotations/:typ/finish                                          controllers.AnnotationController.finishAll(typ: String)
 GET           /annotations/:typ/:id/reopen                                      controllers.AnnotationController.reopen(typ: String, id: String)
 GET           /annotations/:typ/:id/reset                                       controllers.AnnotationController.reset(typ: String, id: String)
-GET           /annotations/:typ/:id/revert                                      controllers.AnnotationController.revert(typ: String, id: String, version: Int)
-GET           /annotations/:typ/:id/updates                                     controllers.AnnotationController.listUpdates(typ: String, id: String)
-POST          /annotations/:typ/:id/updates/transfer                            controllers.AnnotationController.transferUpdates(typ: String, id: String, fromId: String, fromTyp: String, maxVersion: Int)
+
+# Deaktivated due to changes in the format of updates in the saved annotation updates
+# GET           /annotations/:typ/:id/revert                                      controllers.AnnotationController.revert(typ: String, id: String, version: Int)
+# GET           /annotations/:typ/:id/updates                                     controllers.AnnotationController.listUpdates(typ: String, id: String)
+# POST          /annotations/:typ/:id/updates/transfer                            controllers.AnnotationController.transferUpdates(typ: String, id: String, fromId: String, fromTyp: String, maxVersion: Int)
+
 POST          /annotations/:typ/:id/transfer                                    controllers.AnnotationController.transfer(typ: String, id: String)
 
 GET           /annotations/:typ/:id                                             controllers.AnnotationController.trace(typ: String, id: String)

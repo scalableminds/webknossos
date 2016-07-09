@@ -153,9 +153,7 @@ class SkeletonTracingPlaneController extends PlaneController
     @addNode(position, rotation, not ctrlPressed)
 
     # Strg + Rightclick to set new not active branchpoint
-    if ctrlPressed and
-      @model.user.get("newNodeNewTree") == false and
-        @model.skeletonTracing.getActiveNodeType() == constants.TYPE_USUAL
+    if ctrlPressed and not @model.user.get("newNodeNewTree")
 
       @model.skeletonTracing.pushBranch()
       @skeletonTracingController.setActiveNode(activeNode.id)
@@ -174,7 +172,6 @@ class SkeletonTracingPlaneController extends PlaneController
     @model.skeletonTracing.addNode(
       position,
       rotation,
-      constants.TYPE_USUAL,
       @activeViewport,
       @model.flycam.getIntegerZoomStep(),
       if datasetConfig.get("fourBit") then 4 else 8,

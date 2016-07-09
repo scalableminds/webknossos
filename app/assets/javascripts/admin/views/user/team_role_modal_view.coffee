@@ -107,12 +107,12 @@ class TeamRoleModalView extends ModalView
           ) || []
 
           # Add / remove teams
-          teamNames = _.pluck(teams, "team")
+          teamNames = _.map(teams, "team")
           for oldTeam in user.get("teams")
             if not (oldTeam.team in teamNames)
               teams.push(oldTeam)
           teams = _.filter(teams,
-            (team) -> not _.contains(removedTeamsNames, team.team))
+            (team) -> not _.includes(removedTeamsNames, team.team))
 
           # Verify user and update his teams
           user.save(

@@ -57,8 +57,6 @@ case class Annotation(
 
   def relativeDownloadUrl = Some(Annotation.relativeDownloadUrlOf(typ, id))
 
-  def isReadyToBeFinished(implicit ctx: DBAccessContext) = Future.successful(true)
-
   def removeTask() = {
     this.copy(_task = None, typ = AnnotationType.Orphan)
   }
@@ -138,7 +136,6 @@ object AnnotationDAO
   val formatter = Annotation.annotationFormat
 
   underlying.indexesManager.ensure(Index(Seq("_task" -> IndexType.Ascending)))
-  underlying.indexesManager.ensure(Index(Seq("_user" -> IndexType.Ascending)))
   underlying.indexesManager.ensure(Index(Seq("_user" -> IndexType.Ascending, "_task" -> IndexType.Ascending)))
 
   override def find(query: JsObject = Json.obj())(implicit ctx: DBAccessContext) = {
@@ -222,22 +219,12 @@ object AnnotationDAO
     )).cursor[Annotation]().collect[List]()
   }
 
-  def findOpenAnnotationFor(_user: BSONObjectID, annotationType: AnnotationType)(implicit ctx: DBAccessContext) =
-    findOne(defaultFindForUserQ(_user, annotationType))
-
   def findOpenAnnotationsFor(_user: BSONObjectID, annotationType: AnnotationType)(implicit ctx: DBAccessContext) = withExceptionCatcher{
     find(defaultFindForUserQ(_user, annotationType)).cursor[Annotation]().collect[List]()
   }
 
   def countOpenAnnotations(_user: BSONObjectID, annotationType: AnnotationType)(implicit ctx: DBAccessContext) =
     count(defaultFindForUserQ(_user, annotationType))
-
-  def findOpen(annotationType: AnnotationType)(implicit ctx: DBAccessContext) = withExceptionCatcher{
-    find(Json.obj(
-      "state.isFinished" -> false,
-      "state.isAssigned" -> true,
-      "typ" -> annotationType)).cursor[Annotation]().collect[List]()
-  }
 
   def removeAllWithTaskId(_task: BSONObjectID)(implicit ctx: DBAccessContext) =
     update(Json.obj("_task" -> _task), Json.obj("$set" -> Json.obj("isActive" -> false)), upsert = false, multi = true)
@@ -247,10 +234,6 @@ object AnnotationDAO
       Json.obj("_id" -> _annotation),
       Json.obj("$inc" -> Json.obj("version" -> 1)),
       returnNew = true)
-
-  def findByTaskId(_task: BSONObjectID)(implicit ctx: DBAccessContext) = withExceptionCatcher{
-    find("_task", _task).collect[List]()
-  }
 
   def findByTaskIdAndUser(_user: BSONObjectID, _task: BSONObjectID, annotationType: AnnotationType)(implicit ctx: DBAccessContext) = withExceptionCatcher{
     find(Json.obj(
@@ -332,28 +315,10 @@ object AnnotationDAO
   def reopen(_annotation: BSONObjectID)(implicit ctx: DBAccessContext) =
     updateState(_annotation, AnnotationState.InProgress)
 
-  def passToReview(_annotation: BSONObjectID)(implicit ctx: DBAccessContext) =
-    updateState(_annotation, AnnotationState.InReview)
-
   def updateState(_annotation: BSONObjectID, state: AnnotationState)(implicit ctx: DBAccessContext) =
     findAndModify(
       Json.obj("_id" -> _annotation),
       Json.obj("$set" -> Json.obj("state" -> state)),
-      returnNew = true)
-
-  def assignReviewer(_annotation: BSONObjectID, annotationReview: AnnotationReview)(implicit ctx: DBAccessContext) =
-    findAndModify(
-      Json.obj("_id" -> _annotation),
-      Json.obj("$set" -> Json.obj(
-        "state" -> AnnotationState.InReview,
-        "review.-1" -> annotationReview)),
-      returnNew = true)
-
-  def addReviewComment(_annotation: BSONObjectID, comment: String)(implicit ctx: DBAccessContext) =
-    findAndModify(
-      Json.obj("_id" -> _annotation),
-      Json.obj("$set" -> Json.obj(
-        "review.0.comment" -> comment)),
       returnNew = true)
 
   def updateContent(_annotation: BSONObjectID, content: ContentReference)(implicit ctx: DBAccessContext) =
@@ -361,14 +326,6 @@ object AnnotationDAO
       Json.obj("_id" -> _annotation),
       Json.obj("$set" -> Json.obj(
         "_content" -> content)),
-      returnNew = true)
-
-  def unassignReviewer(_annotation: BSONObjectID)(implicit ctx: DBAccessContext) =
-    findAndModify(
-      Json.obj("_id" -> _annotation),
-      Json.obj("$set" -> Json.obj(
-        "state" -> AnnotationState.ReadyForReview),
-        "$pop" -> Json.obj("review" -> -1)),
       returnNew = true)
 
   def transfer(_annotation: BSONObjectID, _user: BSONObjectID)(implicit ctx: DBAccessContext) =

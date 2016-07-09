@@ -2,22 +2,32 @@ package models.tracing.skeleton
 
 import com.scalableminds.util.image.Color
 import models.basics._
-import oxalis.nml.Tree
-import oxalis.nml.TreeLike
+import oxalis.nml.{BranchPoint, Comment, Tree, TreeLike}
 import reactivemongo.bson.BSONObjectID
 import reactivemongo.play.json.BSONFormats._
 import play.api.libs.json.Json
 import scala.concurrent.Future
-import com.scalableminds.util.reactivemongo.{GlobalAccessContext, DBAccessContext}
+
+import com.scalableminds.util.reactivemongo.{DBAccessContext, GlobalAccessContext}
 import scala.async.Async._
+
 import play.api.libs.concurrent.Execution.Implicits._
-import reactivemongo.api.indexes.{IndexType, Index}
+import reactivemongo.api.indexes.{Index, IndexType}
 import com.scalableminds.util.tools.Fox
 import play.api.libs.functional.syntax._
 import play.api.libs.json.Json._
 import play.api.libs.json._
 
-case class DBTree(_tracing: BSONObjectID, treeId: Int, color: Option[Color], timestamp: Long = System.currentTimeMillis, name: String = "", _id: BSONObjectID = BSONObjectID.generate) {
+case class DBTree(
+  _tracing: BSONObjectID,
+  treeId: Int,
+  color: Option[Color],
+  branchPoints: List[BranchPoint] = Nil,
+  comments: List[Comment] = Nil,
+  timestamp: Long = System.currentTimeMillis,
+  name: String = "",
+  _id: BSONObjectID = BSONObjectID.generate) {
+
   val dao = DBTree
 
   def id = _id.stringify
@@ -42,7 +52,7 @@ case class DBTree(_tracing: BSONObjectID, treeId: Int, color: Option[Color], tim
   def toTree = for{
     ns <- nodes
     es <- edges
-  } yield Tree(treeId, ns, es, color, name)
+  } yield Tree(treeId, ns, es, color, branchPoints, comments, name)
 }
 
 object DBTreeService {
@@ -91,9 +101,18 @@ object DBTree {
   val dbTreeUpdateWrites: Writes[DBTree] =
     ((__ \ "color").writeNullable[Color] and
       (__ \ "timestamp").write[Long] and
-      (__ \ "name").write[String])(tree => (tree.color, tree.timestamp, tree.name))
+      (__ \ "comments").write[List[Comment]] and
+      (__ \ "branchPoints").write[List[BranchPoint]] and
+      (__ \ "name").write[String])(tree => (tree.color, tree.timestamp, tree.comments, tree.branchPoints, tree.name))
 
-  def empty(_tracing: BSONObjectID) = DBTree(_tracing, 1, None, System.currentTimeMillis(), nameFromId(1))
+  def empty(_tracing: BSONObjectID) = DBTree(
+    _tracing,
+    1,
+    None,
+    List.empty,
+    List.empty,
+    System.currentTimeMillis(),
+    nameFromId(1))
 
   def nameFromId(treeId: Int) = f"Tree$treeId%03d"
 
@@ -103,7 +122,7 @@ object DBTree {
         t.name
       else
         DBTree.nameFromId(t.treeId)
-    DBTree(tracingId, t.treeId, t.color, t.timestamp, name)
+    DBTree(tracingId, t.treeId, t.color, t.branchPoints, t.comments, t.timestamp, name)
   }
 
   def createCopy(t: DBTree, tid: BSONObjectID) =

@@ -82,9 +82,8 @@ class Skeleton
       treeGeometry.clear()
       treeGeometry.addNodes( tree.nodes )
 
-    for branchpoint in @skeletonTracing.branchStack
-      treeGeometry = @getTreeGeometry(branchpoint.treeId)
-      treeGeometry.updateNodeColor(branchpoint.id, null, true)
+      for branchpoint in tree.branchpoints
+        treeGeometry.updateNodeColor(branchpoint.id, null, true)
 
     @setActiveNode()
 

@@ -11,8 +11,6 @@ object Role {
 
   val Admin = Role("admin")
 
-  val Reviewer = Role("reviewer")
-
   val EmptyRole = Role("EMPTY")
 }
 

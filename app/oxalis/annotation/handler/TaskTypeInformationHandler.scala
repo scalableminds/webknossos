@@ -19,7 +19,7 @@ object TaskTypeInformationHandler extends AnnotationInformationHandler with FoxI
   def taskTypeAnnotationRestrictions(taskType: TaskType) =
     new AnnotationRestrictions {
       override def allowAccess(user: Option[User]) =
-        user.flatMap(_.roleInTeam(taskType.team)) == Some(Role.Admin)
+        user.flatMap(_.roleInTeam(taskType.team)).contains(Role.Admin)
     }
 
   def provideAnnotation(taskTypeId: String, user: Option[User])(implicit ctx: DBAccessContext): Fox[TemporaryAnnotation] = {

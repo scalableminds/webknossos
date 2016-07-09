@@ -12,9 +12,8 @@ import models.binary.DataSet
 import models.task.Task
 import models.tracing.CommonTracingService
 import models.tracing.skeleton.temporary.{TemporarySkeletonTracing, TemporarySkeletonTracingService}
-import models.user.User
-import oxalis.nml.BranchPoint
-import oxalis.nml.{NML, Tree, TreeLike}
+import models.user.{UsedAnnotationDAO, User}
+import oxalis.nml._
 import play.api.libs.json.Json
 import reactivemongo.bson.BSONObjectID
 import reactivemongo.play.json._
@@ -38,18 +37,11 @@ object SkeletonTracingService extends AnnotationContentService with CommonTracin
     (implicit ctx: DBAccessContext): Fox[SkeletonTracing] = {
 
     val trees =
-      if (insertStartAsNode)
-        List(Tree.createFrom(start, rotation))
-      else
-        Nil
-
-    val branchPoints =
-      if(isFirstBranchPoint)
-        // Find the first node and create a branchpoint at its id
-        trees.headOption.flatMap(_.nodes.headOption).map { node =>
-          BranchPoint(node.id)
-        }.toList
-      else
+      if (insertStartAsNode) {
+        val node = Node(1, start, rotation)
+        val branchPoints = if (isFirstBranchPoint) List(BranchPoint(node.id, System.currentTimeMillis)) else Nil
+        List(Tree.createFrom(node).copy(branchPoints = branchPoints))
+      } else
         Nil
 
     val box: Option[BoundingBox] = boundingBox.flatMap {
@@ -65,14 +57,12 @@ object SkeletonTracingService extends AnnotationContentService with CommonTracin
         "",
         dataSetName,
         trees,
-        branchPoints,
         System.currentTimeMillis(),
         if(insertStartAsNode) Some(1) else None,
         start,
         rotation,
         SkeletonTracing.defaultZoomLevel,
         box,
-        Nil,
         settings))
   }
 

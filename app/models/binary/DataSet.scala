@@ -9,10 +9,13 @@ import models.user.User
 import play.api.libs.concurrent.Execution.Implicits._
 import com.scalableminds.util.reactivemongo.AccessRestrictions.AllowIf
 import com.scalableminds.braingames.binary.models.{DataLayer, DataSource}
-import com.scalableminds.util.geometry.{BoundingBox, Scale, Vector3D, Point3D}
+import com.scalableminds.util.geometry.{BoundingBox, Point3D, Scale, Vector3D}
+import models.annotation.AnnotationDAO._
+import models.configuration.DataSetConfiguration
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
 import play.utils.UriEncoding
+import reactivemongo.api.indexes.{Index, IndexType}
 
 case class DataSet(
   name: String,
@@ -25,6 +28,7 @@ case class DataSet(
   isPublic: Boolean = false,
   accessToken: Option[String],
   description: Option[String] = None,
+  defaultConfiguration: Option[DataSetConfiguration] = None,
   created: Long = System.currentTimeMillis()) {
 
   def urlEncodedName: String =
@@ -60,7 +64,12 @@ object DataSet {
 }
 
 object DataSetDAO extends SecuredBaseDAO[DataSet] {
+  
   val collectionName = "dataSets"
+
+  val formatter = DataSet.dataSetFormat
+
+  underlying.indexesManager.ensure(Index(Seq("name" -> IndexType.Ascending)))
 
   // Security
   override val AccessDefinitions = new DefaultAccessDefinitions {
@@ -80,27 +89,15 @@ object DataSetDAO extends SecuredBaseDAO[DataSet] {
       }
     }
   }
-
-  val formatter = DataSet.dataSetFormat
-
+  
   def byNameQ(name: String) =
     Json.obj("name" -> name)
 
   def default()(implicit ctx: DBAccessContext) =
     findMaxBy("priority")
 
-  def deleteAllSourcesExcept(names: Array[String])(implicit ctx: DBAccessContext) =
-    remove(Json.obj("name" -> Json.obj("$nin" -> names)))
-
   def findOneBySourceName(name: String)(implicit ctx: DBAccessContext) =
     findOne(byNameQ(name))
-
-  def findAllOwnedBy(teams: List[String])(implicit ctx: DBAccessContext) =
-    find(Json.obj("owningTeam" -> Json.obj("$in" -> teams))).cursor[DataSet]().collect[List]()
-
-  def findAllActive(implicit ctx: DBAccessContext) = withExceptionCatcher {
-    find(Json.obj("isActive" -> true)).cursor[DataSet]().collect[List]()
-  }
 
   def updateDataSource(
     name: String,
@@ -108,34 +105,13 @@ object DataSetDAO extends SecuredBaseDAO[DataSet] {
     source: Option[DataSource],
     isActive: Boolean)(implicit ctx: DBAccessContext) = {
     update(
-      Json.obj("name" -> name),
+      byNameQ(name),
       Json.obj("$set" -> Json.obj(
         "dataStoreInfo" -> dataStoreInfo,
         "isActive" -> isActive,
         "dataSource" -> source
       ))
     )
-  }
-
-  def updateActiveState(name: String, isActive: Boolean)(implicit ctx: DBAccessContext) =
-    update(
-      Json.obj("name" -> name),
-      Json.obj("$set" -> Json.obj(
-        "isActive" -> isActive
-      )))
-
-  def removeByName(name: String)(implicit ctx: DBAccessContext) =
-    remove(Json.obj("name" -> name))
-
-  def removeBySourceId(names: List[String])(implicit ctx: DBAccessContext) =
-    remove(Json.obj("dataSource.id" -> Json.obj("$in" -> names)))
-
-  def formatWithoutId(ds: DataSource) = {
-    val js = Json.toJson(ds)
-    js.transform(removeId).getOrElse {
-      System.err.println("Couldn't remove ID from: " + js)
-      js
-    }
   }
 
   def updateTeams(name: String, teams: List[String])(implicit ctx: DBAccessContext) =

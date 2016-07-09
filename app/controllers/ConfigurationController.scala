@@ -2,6 +2,7 @@ package controllers
 
 import javax.inject.Inject
 
+import models.binary.{DataSetDAO, DataSetService}
 import models.configuration.{DataSetConfiguration, UserConfiguration}
 import models.user.UserService
 import oxalis.security.Secured
@@ -48,6 +49,7 @@ class ConfigurationController @Inject()(val messagesApi: MessagesApi) extends Co
       UserService.findOneById(user.id, useCache = false)
       .flatMap(_.dataSetConfigurations.get(dataSetName))
     }
+    .orElse(DataSetDAO.findOneBySourceName(dataSetName).flatMap(_.defaultConfiguration))
     .getOrElse(DataSetConfiguration.default)
     .map(configuration => Ok(toJson(configuration.configurationOrDefaults)))
   }

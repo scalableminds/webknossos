@@ -1,3 +1,4 @@
+_         = require("lodash")
 Backbone  = require("backbone")
 app       = require("app")
 Constants = require("oxalis/constants")
@@ -29,12 +30,12 @@ class AbstractTreeRenderer
    * Render function called by events and GUI.
    * Draws the abstract tree, emphasizes the active node
    * and highlights comments, if enabled.
-   * @param  {TracePoint} tree
+   * @param  {TraceTree} tree
    * @param  {Number} @activeNodeId TracePoint id
-   * @param  {BackboneCollection} @comments
   ###
-  drawTree : (tree, @activeNodeId, @comments) ->
+  drawTree : (@tree, @activeNodeId) ->
 
+    tree = @tree
     unless tree?
       return
 
@@ -366,7 +367,7 @@ class AbstractTreeRenderer
   ###
   nodeIdHasComment : (id) ->
 
-    return @RENDER_COMMENTS and @comments.hasCommentWithNodeId(id)
+    return @RENDER_COMMENTS and _.find(@tree.comments, { node : id })
 
 
   ###*

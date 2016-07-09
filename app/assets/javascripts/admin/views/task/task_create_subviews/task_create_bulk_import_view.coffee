@@ -132,15 +132,15 @@ class TaskCreateBulkImportView extends Marionette.ItemView
     if bulkData is null
       return false
 
-    if _.any(bulkData, @isNull, @)
+    if _.some(bulkData, @isNull, @)
       return false
 
-    if _.any(bulkData.experienceDomain, isNaN) or
-      _.any(bulkData.editPosition, isNaN) or
+    if _.some(bulkData.experienceDomain, isNaN) or
+      _.some(bulkData.editPosition, isNaN) or
       isNaN(bulkData.boundingBox.width) or
       isNaN(bulkData.boundingBox.height) or
       isNaN(bulkData.boundingBox.depth) or
-      _.any(bulkData.boundingBox.topLeft, isNaN)
+      _.some(bulkData.boundingBox.topLeft, isNaN)
         return false
 
     return true

@@ -10,6 +10,10 @@ object Dependencies{
   val braingamesVersion = "8.9.1"
 
   val braingamesDataStore = "com.scalableminds" %% "braingames-datastore" % braingamesVersion
+
+  val dependencies = Seq(
+    braingamesDataStore,
+    "com.typesafe.akka" %% "akka-slf4j" % "2.4.1")
 }
 
 object Resolvers {
@@ -25,7 +29,7 @@ object ApplicationBuild extends Build with sbtassembly.AssemblyKeys {
 
   lazy val datastoreSettings = Seq(
     version := braingamesVersion,
-    libraryDependencies += braingamesDataStore,
+    libraryDependencies ++= dependencies,
     scalaVersion := "2.11.7",
       resolvers ++= Seq(
       scmRel,

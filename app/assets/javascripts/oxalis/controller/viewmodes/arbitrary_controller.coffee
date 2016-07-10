@@ -180,9 +180,6 @@ class ArbitraryController
         @setRecord(true)
       "u" : =>
         @setRecord(false)
-      #Comments
-      "n" : => @setActiveNode(@model.skeletonTracing.nextCommentNodeID(false), true)
-      "p" : => @setActiveNode(@model.skeletonTracing.nextCommentNodeID(true), true)
     )
 
     @input.keyboardOnce = new Input.Keyboard(
@@ -264,7 +261,7 @@ class ArbitraryController
     fourBit = if datasetConfig.get("fourBit") then 4 else 8
     interpolation = datasetConfig.get("interpolation")
 
-    @model.skeletonTracing.addNode(position, rotation, constants.TYPE_USUAL, constants.ARBITRARY_VIEW, 0, fourBit, interpolation)
+    @model.skeletonTracing.addNode(position, rotation, constants.ARBITRARY_VIEW, 0, fourBit, interpolation)
 
 
   setWaypoint : =>

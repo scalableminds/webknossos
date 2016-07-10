@@ -7,7 +7,7 @@ class Mappings
 
   constructor : (datasetName, layer) ->
 
-    @mappings = _.indexBy(layer.mappings, "name")
+    @mappings = _.keyBy(layer.mappings, "name")
     @baseUrl = "/data/datasets/#{datasetName}/layers/#{layer.name}/mappings/"
     @getParams = "?token=#{layer.token}"
 

@@ -69,7 +69,7 @@ class StateLogger
   # see `model.coffee`
   save : ->
 
-      return @pushNow()
+    return @pushNow()
 
 
   pushImpl : (notifyOnFailure) ->

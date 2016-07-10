@@ -121,7 +121,7 @@ class PaginationCollection
 
       @state.filterQuery = query
       @state.filter = (model) ->
-        return _.any(fields, (fieldName) ->
+        return _.some(fields, (fieldName) ->
           value = model.get(fieldName)
           if value?
             return !!value.toString().match(regexp)

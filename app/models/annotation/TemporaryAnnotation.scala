@@ -83,6 +83,4 @@ class TemporaryAnnotationMutations(annotation: TemporaryAnnotation) extends Anno
   def cancelTask()(implicit ctx: DBAccessContext): Fox[TemporaryAnnotationMutations#AType] = ???
 
   def loadAnnotationContent()(implicit ctx: DBAccessContext): Fox[NamedFileStream] = ???
-
-  def unassignReviewer()(implicit ctx: DBAccessContext): Fox[TemporaryAnnotationMutations#AType] = ???
 }

@@ -58,6 +58,19 @@ Utils =
     return [r, g, b]
 
 
+  compareBy : (key, isSortedAscending=true) ->
+    # generic key comparator for array.prototype.sort
+
+    return (a, b) ->
+      if not isSortedAscending
+        [a,b] = [b,a]
+      if a[key] < b[key]
+        return -1
+      if a[key] > b[key]
+        return 1
+      return 0
+
+
   stringToNumberArray : (s) ->
 
     # remove leading/trailing whitespaces

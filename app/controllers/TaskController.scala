@@ -64,7 +64,7 @@ class TaskController @Inject() (val messagesApi: MessagesApi) extends Controller
   def read(taskId: String) = Authenticated.async { implicit request =>
     for {
       task <- TaskService.findOneById(taskId) ?~> Messages("task.notFound")
-      js <- Task.transformToJson(task)
+      js <- Task.transformToJson(task, request.userOpt)
     } yield {
       Ok(js)
     }
@@ -149,7 +149,7 @@ class TaskController @Inject() (val messagesApi: MessagesApi) extends Controller
           withJsonUsing(json, taskCompleteReads) { parsed =>
             for {
               task <- createSingleTask(parsed)
-              json <- Task.transformToJson(task)
+              json <- Task.transformToJson(task, request.userOpt)
             } yield JsonOk(json, Messages("task.create.success"))
           }
         }
@@ -197,7 +197,7 @@ class TaskController @Inject() (val messagesApi: MessagesApi) extends Controller
             _project = Some(project.name))
           _ <- AnnotationService.updateAllOfTask(updatedTask, team, dataSetName, boundingBox, taskType.settings)
           _ <- AnnotationService.updateAnnotationBase(updatedTask, start, rotation)
-          json <- Task.transformToJson(updatedTask)
+          json <- Task.transformToJson(updatedTask, request.userOpt)
           _ <- OpenAssignmentService.updateAllOf(updatedTask, status.open)
         } yield {
           JsonOk(json, Messages("task.editSuccess"))
@@ -216,8 +216,8 @@ class TaskController @Inject() (val messagesApi: MessagesApi) extends Controller
 
   def list = Authenticated.async{ implicit request =>
     for {
-      tasks <- TaskService.findAllAdministratable(request.user)
-      js <- Future.traverse(tasks)(Task.transformToJson)
+      tasks <- TaskService.findAllAdministratable(request.user, limit = 10000)
+      js <- Future.traverse(tasks)(t => Task.transformToJson(t, request.userOpt))
     } yield {
       Ok(Json.toJson(js))
     }
@@ -226,7 +226,7 @@ class TaskController @Inject() (val messagesApi: MessagesApi) extends Controller
   def listTasksForType(taskTypeId: String) = Authenticated.async { implicit request =>
     for {
       tasks <- TaskService.findAllByTaskType(taskTypeId)
-      js <- Future.traverse(tasks)(Task.transformToJson)
+      js <- Future.traverse(tasks)(t => Task.transformToJson(t, request.userOpt))
     } yield {
       Ok(Json.toJson(js))
     }

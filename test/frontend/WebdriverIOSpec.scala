@@ -3,21 +3,25 @@
  */
 package frontend
 
-import scala.concurrent.{Future, Await}
+import scala.concurrent.{Await, Future}
 import scala.sys.process.ProcessIO
 
 import play.api.libs.ws.WS
-import play.api.test.{FakeApplication, WithServer, TestServer}
+import play.api.test.{FakeApplication, TestServer, WithServer}
 import scala.concurrent.duration._
+
 import org.specs2.main.Arguments
 import org.specs2.mutable._
 import org.specs2.specification._
 import scala.io.Source
+
 import reactivemongo.api._
 import play.api.libs.concurrent.Execution.Implicits._
 import sys.process._
 
-class WebdriverIOSpec(arguments: Arguments) extends Specification with BeforeAll {
+import com.typesafe.scalalogging.LazyLogging
+
+class WebdriverIOSpec(arguments: Arguments) extends Specification with BeforeAll with LazyLogging {
 
   val argumentMapRead = parseCustomJavaArgs(arguments)
   val mongoDb   = argumentMapRead.getOrElse("mongodb.db", "oxalis-testing")
@@ -33,10 +37,10 @@ class WebdriverIOSpec(arguments: Arguments) extends Specification with BeforeAll
 
   def beforeAll = {
     try {
-      println(s"About to drop database: $mongoDb")
+      logger.warn(s"About to drop database: $mongoDb")
       s"./tools/dropDB.sh $mongoDb $mongoHost $mongoPort".run(getProcessIO).exitValue()
       s"./tools/import_export/import.sh $mongoDb testdb $mongoHost $mongoPort".run(getProcessIO).exitValue()
-      println("Successfully dropped the database and imported testdb")
+      logger.info("Successfully dropped the database and imported testdb")
     } catch {
       case e: Exception =>
         throw new Error(s"An exception occured while dropping the database: ${e.toString}")
@@ -45,7 +49,10 @@ class WebdriverIOSpec(arguments: Arguments) extends Specification with BeforeAll
 
   "my application" should {
 
-    "pass the webdriverio e2e tests" in new WithServer(app = FakeApplication(additionalConfiguration = argumentMap), port = testPort) {
+    "pass the webdriverio e2e tests" in new WithServer(
+      app = FakeApplication(additionalConfiguration = argumentMap),
+      port = testPort) {
+
       val resp = Await.result(WS.url(s"http://localhost:$testPort").get(), 2 seconds)
       resp.status === 200
 
@@ -61,8 +68,8 @@ class WebdriverIOSpec(arguments: Arguments) extends Specification with BeforeAll
 
   private def getProcessIO: ProcessIO = {
     new ProcessIO(_ => (),
-      stdout => Source.fromInputStream(stdout).getLines().foreach(println),
-      stderr => Source.fromInputStream(stderr).getLines().foreach(System.err.println))
+      stdout => Source.fromInputStream(stdout).getLines().foreach(l => logger.info(l)),
+      stderr => Source.fromInputStream(stderr).getLines().foreach(l => logger.error(l)))
   }
 
   private def parseCustomJavaArgs(arguments: Arguments) = {

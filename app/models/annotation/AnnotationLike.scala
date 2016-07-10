@@ -96,7 +96,7 @@ object AnnotationLike extends FoxImplicits with FilterableJson with UrlHelper{
       "id" +> a.id,
       "name" +> a._name.getOrElse(""),
       "typ" +> a.typ,
-      "task" +> a.task.flatMap(t => Task.transformToJson(t)).getOrElse(JsNull),
+      "task" +> a.task.flatMap(t => Task.transformToJson(t, user)).getOrElse(JsNull),
       "stats" +> a.statisticsForAnnotation().map(_.writeAsJson).getOrElse(JsNull),
       "restrictions" +> AnnotationRestrictions.writeAsJson(a.restrictions, user),
       "actions" +> a.actions(user),

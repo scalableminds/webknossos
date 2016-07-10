@@ -30,7 +30,7 @@ class DatasetModel extends NestedObjModel
 
   createThumbnailURL : (datasetName, layers) ->
 
-    if colorLayer = _.findWhere(layers, category : "color")
+    if colorLayer = _.find(layers, category : "color")
       return "/api/datasets/#{datasetName}/layers/#{colorLayer.name}/thumbnail"
 
 module.exports = DatasetModel

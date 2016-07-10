@@ -27,7 +27,6 @@ object AnnotationType {
     TracingBase,
     Orphan)
 
-
   def isExploratory(t: Annotation): Boolean = t.typ == Explorational
 
   def isSystemTracing(t: Annotation) =

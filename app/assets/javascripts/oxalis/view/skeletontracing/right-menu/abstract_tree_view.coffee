@@ -57,8 +57,7 @@ class AbstractTreeView extends Marionette.ItemView
       @abstractTreeRenderer.renderComments(@model.user.get("renderComments"))
       @abstractTreeRenderer.drawTree(
         @model.skeletonTracing.getTree(),
-        @model.skeletonTracing.getActiveNodeId(),
-        @model.skeletonTracing.comments)
+        @model.skeletonTracing.getActiveNodeId())
 
 
   handleClick : (event) ->

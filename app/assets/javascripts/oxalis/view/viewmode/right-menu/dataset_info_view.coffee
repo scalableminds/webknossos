@@ -30,6 +30,7 @@ class DatasetInfoView extends Marionette.ItemView
 
   initialize : (options) ->
 
+    @render = _.throttle(@render, 100)
     @listenTo(@model.flycam3d, "changed", @render)
     @listenTo(@model.flycam, "zoomStepChanged", @render)
 
@@ -37,6 +38,12 @@ class DatasetInfoView extends Marionette.ItemView
       @listenTo(@model.skeletonTracing, "deleteTree", @render)
       @listenTo(@model.skeletonTracing, "mergeTree", @render)
       @listenTo(@model.skeletonTracing, "newTree", @render)
+
+
+  # Rendering performance optimization
+  attachElContent : (html) ->
+    this.el.innerHTML = html
+    return html
 
 
   serializeData : ->

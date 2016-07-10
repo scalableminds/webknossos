@@ -205,9 +205,8 @@ class Controller
       )
 
     # parse hard time limit and convert from min to ms
-    hardLimitRe = /Limit: ([0-9]+)/
     expectedTime = @model.tracing.task.type.expectedTime
-    timeLimit = parseInt(expectedTime.match(hardLimitRe)[1]) * 60 * 1000 or 0
+    timeLimit = expectedTime.maxHard * 60 * 1000 or 0
 
     # setTimeout uses signed 32-bit integers, an overflow would cause immediate timeout execution
     if timeLimit >= Math.pow(2, 32) / 2

@@ -3,7 +3,7 @@ package models.team
 import com.scalableminds.util.reactivemongo.AccessRestrictions.{DenyEveryone, AllowIf}
 import play.api.libs.json._
 import reactivemongo.bson.BSONObjectID
-import play.modules.reactivemongo.json.BSONFormats._
+import reactivemongo.play.json.BSONFormats._
 import com.scalableminds.util.reactivemongo.{GlobalAccessContext, DefaultAccessDefinitions, DBAccessContext}
 import models.basics.SecuredBaseDAO
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
@@ -60,7 +60,7 @@ object Team extends FoxImplicits {
 
 object TeamService {
   def create(team: Team, user: User)(implicit ctx: DBAccessContext) = {
-    UserDAO.addTeams(user._id, Seq(TeamMembership(team.name, Role.Admin)))
+    UserDAO.addTeam(user._id, TeamMembership(team.name, Role.Admin))
     TeamDAO.insert(team)
   }
 

@@ -13,11 +13,13 @@ import models.task.Task
 import models.tracing.CommonTracingService
 import models.tracing.skeleton.temporary.{TemporarySkeletonTracing, TemporarySkeletonTracingService}
 import models.user.{UsedAnnotationDAO, User}
-import oxalis.nml.{BranchPoint, NML, Tree, TreeLike}
+import oxalis.nml._
 import play.api.libs.json.Json
 import reactivemongo.bson.BSONObjectID
+import reactivemongo.play.json._
 import play.api.libs.concurrent.Execution.Implicits._
-import play.modules.reactivemongo.json.BSONFormats._
+import reactivemongo.api.commands.WriteResult
+import reactivemongo.core.commands.LastError
 
 object SkeletonTracingService extends AnnotationContentService with CommonTracingService {
   val dao = SkeletonTracingDAO
@@ -35,18 +37,11 @@ object SkeletonTracingService extends AnnotationContentService with CommonTracin
     (implicit ctx: DBAccessContext): Fox[SkeletonTracing] = {
 
     val trees =
-      if (insertStartAsNode)
-        List(Tree.createFrom(start, rotation))
-      else
-        Nil
-
-    val branchPoints =
-      if(isFirstBranchPoint)
-        // Find the first node and create a branchpoint at its id
-        trees.headOption.flatMap(_.nodes.headOption).map { node =>
-          BranchPoint(node.id)
-        }.toList
-      else
+      if (insertStartAsNode) {
+        val node = Node(1, start, rotation)
+        val branchPoints = if (isFirstBranchPoint) List(BranchPoint(node.id, System.currentTimeMillis)) else Nil
+        List(Tree.createFrom(node).copy(branchPoints = branchPoints))
+      } else
         Nil
 
     val box: Option[BoundingBox] = boundingBox.flatMap {
@@ -62,14 +57,12 @@ object SkeletonTracingService extends AnnotationContentService with CommonTracin
         "",
         dataSetName,
         trees,
-        branchPoints,
         System.currentTimeMillis(),
         if(insertStartAsNode) Some(1) else None,
         start,
         rotation,
         SkeletonTracing.defaultZoomLevel,
         box,
-        Nil,
         settings))
   }
 
@@ -94,11 +87,11 @@ object SkeletonTracingService extends AnnotationContentService with CommonTracin
 
   def createFrom(dataSet: DataSet)(implicit ctx: DBAccessContext): Fox[SkeletonTracing] =
     createFrom(
-      dataSet.name, 
-      dataSet.defaultStart, 
-      dataSet.defaultRotation, 
-      None, 
-      insertStartAsNode = false, 
+      dataSet.name,
+      dataSet.defaultStart,
+      dataSet.defaultRotation,
+      None,
+      insertStartAsNode = false,
       isFirstBranchPoint = false)
 
   def clearAndRemove(skeletonId: String)(implicit ctx: DBAccessContext) =
@@ -132,10 +125,18 @@ object SkeletonTracingService extends AnnotationContentService with CommonTracin
       Json.obj("_id" -> skeleton._id),
       Json.obj(
         "$set" -> SkeletonTracingDAO.formatWithoutId(skeleton),
+        "$unset" -> Json.obj("notUpdated" -> true),
         "$setOnInsert" -> Json.obj("_id" -> skeleton._id)
       ),
       upsert = true).map { _ =>
       skeleton
+    }
+  }
+
+  def update(id: BSONObjectID, skeleton: SkeletonTracing)(implicit ctx: DBAccessContext): Fox[WriteResult] = {
+    SkeletonTracingDAO.update(id, skeleton).map { r =>
+      SkeletonTracingDAO.update(Json.obj("_id" -> id), Json.obj("$unset" -> Json.obj("notUpdated" -> true)))
+      r
     }
   }
 }

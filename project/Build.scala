@@ -12,9 +12,9 @@ import scala.concurrent.ExecutionContext.Implicits.global
 
 object Dependencies{
   val akkaVersion = "2.4.1"
-  val reactiveVersion = "0.11.7"
-  val reactivePlayVersion = "0.11.7.play24"
-  val braingamesVersion = "8.8.0"
+  val reactiveVersion = "0.11.13"
+  val reactivePlayVersion = "0.11.13-play24"
+  val braingamesVersion = "8.9.1"
   val twelvemonkeysVersion = "3.1.2"
 
   val restFb = "com.restfb" % "restfb" % "1.6.11"
@@ -25,6 +25,7 @@ object Dependencies{
   val akkaAgent = "com.typesafe.akka" %% "akka-agent" % akkaVersion
   val akkaRemote = "com.typesafe.akka" %% "akka-remote" % akkaVersion
   val akkaLogging = "com.typesafe.akka" %% "akka-slf4j" % akkaVersion
+  val scalaLogging = "com.typesafe.scala-logging" %% "scala-logging" % "3.4.0"
   val jerseyClient = "com.sun.jersey" % "jersey-client" % "1.8"
   val jerseyCore = "com.sun.jersey" % "jersey-core" % "1.8"
   val reactivePlay = "org.reactivemongo" %% "play2-reactivemongo" % reactivePlayVersion
@@ -62,7 +63,7 @@ object Resolvers {
 
 object AssetCompilation {
   object SettingsKeys{
-    val gulpPath = SettingKey[String]("gulp-path","where gulp is installed")
+    val webpackPath = SettingKey[String]("webpack-path","where webpack is installed")
     val npmPath = SettingKey[String]("npm-path","where npm is installed")
   }
 
@@ -95,38 +96,38 @@ object AssetCompilation {
     Seq()
   }
 
-  private def gulpGenerateTask: Def.Initialize[Task[Any]] = (gulpPath, baseDirectory, streams, target) map { (gulp, base, s, t) =>
+  private def webpackGenerateTask: Def.Initialize[Task[Any]] = (webpackPath, baseDirectory, streams, target) map { (webpack, base, s, t) =>
     try{
       Future{
-        startProcess(gulp, "debug", base) ! s.log
+        startProcess(webpack, "-w", base) ! s.log
       }
     } catch {
       case e: java.io.IOException =>
-        s.log.error("Gulp couldn't be found. Please set the configuration key 'AssetCompilation.gulpPath' properly. " + e.getMessage)
+        s.log.error("Webpack couldn't be found. Please set the configuration key 'AssetCompilation.webpackPath' properly. " + e.getMessage)
     }
   } dependsOn npmInstall
 
-  private def killGulp(x: Unit) = {
-    val pidFile = Path("target") / "gulp.pid"
+  private def killWebpack(x: Unit) = {
+    val pidFile = Path("target") / "webpack.pid"
     if(pidFile.exists){
       val pid = scala.io.Source.fromFile(pidFile).mkString.trim
       killProcess(pid)
       pidFile.delete()
-      println("Pow, Pow. Blood is everywhere, gulp is gone!")
+      println("Pow, Pow. Blood is everywhere, webpack is gone!")
     }
   }
 
-  private def assetsGenerationTask: Def.Initialize[Task[AnyVal]] = (gulpPath, baseDirectory, streams, target) map { (gulp, base, s, t) =>
+  private def assetsGenerationTask: Def.Initialize[Task[AnyVal]] = (webpackPath, baseDirectory, streams, target) map { (webpack, base, s, t) =>
     try{
-      startProcess(gulp, "build", base) ! s.log
+      startProcess(webpack, "", base) ! s.log
     } catch {
       case e: java.io.IOException =>
-        s.log.error("Gulp couldn't be found. Please set the configuration key 'AssetCompilation.gulpPath' properly. " + e.getMessage)
+        s.log.error("Webpack couldn't be found. Please set the configuration key 'AssetCompilation.webpackPath' properly. " + e.getMessage)
     }
   } dependsOn npmInstall
 
   val settings = Seq(
-    run in Compile <<= (run in Compile) map(killGulp) dependsOn gulpGenerateTask,
+    run in Compile <<= (run in Compile) map(killWebpack) dependsOn webpackGenerateTask,
     stage <<= stage dependsOn assetsGenerationTask,
     dist <<= dist dependsOn assetsGenerationTask
   )
@@ -160,6 +161,7 @@ object ApplicationBuild extends Build {
     scalaAsync,
     cache,
     ws,
+    scalaLogging,
     airbrake,
     mongev,
     urlHelper,
@@ -184,7 +186,7 @@ object ApplicationBuild extends Build {
     scalaVersion := "2.11.7",
     scalacOptions += "-target:jvm-1.8",
     version := appVersion,
-    gulpPath := (Path("node_modules") / ".bin" / "gulp").getPath,
+    webpackPath := (Path("node_modules") / ".bin" / "webpack").getPath,
     npmPath := "npm",
     routesGenerator := InjectedRoutesGenerator,
     libraryDependencies ++= oxalisDependencies,

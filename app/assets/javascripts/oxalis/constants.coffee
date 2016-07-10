@@ -41,9 +41,6 @@ Constants =
   TEXTURE_SIZE_P       : 9
   DISTANCE_3D          : 140
 
-  TYPE_USUAL           : 0
-  TYPE_BRANCH          : 1
-
   TDView_MOVE_SPEED    : 150
   MIN_MOVE_VALUE       : 30
   MAX_MOVE_VALUE       : 14000

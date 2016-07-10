@@ -44,7 +44,7 @@ class TaskTypeCreateView extends Marionette.LayoutView
               <div class="col-sm-9">
                 <select multiple="multiple" name="settings[allowedModes[]]" class="form-control">
                 <% ["flight", "orthogonal", "oblique"].forEach(function(mode) { %>
-                  <option value="<%-mode %>" <%- isSelected(_.contains(settings.allowedModes, mode)) %>> <%- mode %> </option>
+                  <option value="<%-mode %>" <%- isSelected(_.includes(settings.allowedModes, mode)) %>> <%- mode %> </option>
                 <% }) %>
                 </select>
               </div>

@@ -1,6 +1,7 @@
 app                        = require("app")
 Backbone                   = require("backbone")
 _                          = require("lodash")
+Utils                      = require("libs/utils")
 backbone                   = require("backbone")
 Request                    = require("libs/request")
 ColorGenerator             = require("libs/color_generator")
@@ -10,19 +11,14 @@ SkeletonTracingStateLogger = require("./skeletontracing_statelogger")
 constants                  = require("../../constants")
 RestrictionHandler         = require("../helpers/restriction_handler")
 TracingParser              = require("./tracingparser")
-CommentsCollection         = require("oxalis/model/right-menu/comments_collection")
 
 class SkeletonTracing
 
-  TYPE_USUAL   : constants.TYPE_USUAL
-  TYPE_BRANCH  : constants.TYPE_BRANCH
   # Max and min radius in base voxels (see scaleInfo.baseVoxel)
-  MIN_RADIUS        : 1
-  MAX_RADIUS        : 5000
+  MIN_RADIUS : 1
+  MAX_RADIUS : 5000
 
-  branchStack : []
   trees : []
-  comments : new CommentsCollection()
   activeNode : null
   activeTree : null
   firstEdgeDirection : null
@@ -48,7 +44,6 @@ class SkeletonTracing
       @idCount
       @treeIdCount
       @trees
-      @comments
       @activeNode
       @activeTree
     } = tracingParser.parse()
@@ -69,13 +64,10 @@ class SkeletonTracing
 
     tracingType = tracing.typ
     if (tracingType == "Task") and @getNodeListOfAllTrees().length == 0
-      @addNode(tracing.content.editPosition, tracing.content.editRotation, @TYPE_USUAL, 0, 0, 4, false)
+      @addNode(tracing.content.editPosition, tracing.content.editRotation, 0, 0, 4, false)
 
     @branchPointsAllowed = tracing.content.settings.branchPointsAllowed
     if not @branchPointsAllowed
-      # dirty but this actually is what needs to be done
-      @TYPE_BRANCH = @TYPE_USUAL
-
       #calculate direction of first edge in nm
       if @data.trees[0]?.edges?
         for edge in @data.trees[0].edges
@@ -110,7 +102,7 @@ class SkeletonTracing
       @createNewTree()
       for i in [0...numberOfNodesPerTree]
         pos = [Math.random() * size + offset, Math.random() * size + offset, Math.random() * size + offset]
-        point = new TracePoint(@TYPE_USUAL, @idCount++, pos, Math.random() * 200, @activeTree.treeId, null, [0, 0, 0])
+        point = new TracePoint(@idCount++, pos, Math.random() * 200, @activeTree.treeId, null, [0, 0, 0])
         @activeTree.nodes.push(point)
         if @activeNode
           @activeNode.appendNext(point)
@@ -118,7 +110,6 @@ class SkeletonTracing
           @activeNode = point
         else
           @activeNode = point
-          point.type = @TYPE_BRANCH
           if @branchPointsAllowed
             centered = true
             @pushBranch()
@@ -134,9 +125,8 @@ class SkeletonTracing
 
     if @branchPointsAllowed
       if @activeNode
-        @branchStack.push(@activeNode)
-        @activeNode.type = @TYPE_BRANCH
-        @stateLogger.push()
+        @activeTree.branchpoints.push( { id : @activeNode.id, timestamp : Date.now() } )
+        @stateLogger.updateTree(@activeTree)
 
         @trigger("setBranch", true, @activeNode)
     else
@@ -147,56 +137,48 @@ class SkeletonTracing
 
     return if @restrictionHandler.handleUpdate()
 
+    reallyPopBranch = (point, tree, resolve) =>
+      tree.removeBranchWithNodeId(point.id)
+      @stateLogger.updateTree(tree)
+      @setActiveNode(point.id)
+
+      @trigger("setBranch", false, @activeNode)
+      @doubleBranchPop = true
+      resolve(@activeNode.id)
+
     return new Promise (resolve, reject) =>
       if @branchPointsAllowed
-        if @branchStack.length and @doubleBranchPop
-          @trigger("doubleBranch", =>
-            point = @branchStack.pop()
-            @stateLogger.push()
-            @setActiveNode(point.id)
-            @activeNode.type = @TYPE_USUAL
-
-            @trigger("setBranch", false, @activeNode)
-            @doubleBranchPop = true
-            resolve(@activeNode.id))
-        else
-          point = @branchStack.pop()
-          @stateLogger.push()
-          if point
-            @setActiveNode(point.id)
-            @activeNode.type = @TYPE_USUAL
-
-            @trigger("setBranch", false, @activeNode)
-            @doubleBranchPop = true
-            resolve(@activeNode.id)
+        [point, tree] = @getNextBranch()
+        if point
+          if @doubleBranchPop
+            @trigger("doubleBranch", => reallyPopBranch(point, tree, resolve) )
           else
-            @trigger("emptyBranchStack")
-            reject()
+            reallyPopBranch(point, tree, resolve)
+        else
+          @trigger("emptyBranchStack")
+          reject()
       else
         @trigger("noBranchPoints")
         reject()
 
 
-  deleteBranch : (node) ->
+  getNextBranch : ->
 
-    return if @restrictionHandler.handleUpdate()
+    curTime = 0
+    curPoint = null
+    curTree = null
 
-    if node.type != @TYPE_BRANCH then return
+    for tree in @trees
+      for branch in tree.branchpoints
+        if branch.timestamp > curTime
+          curTime = branch.timestamp
+          curPoint = branch
+          curTree = tree
 
-    i = 0
-    while i < @branchStack.length
-      if @branchStack[i].id == node.id
-        @branchStack.splice(i, 1)
-      else
-        i++
-
-
-  isBranchPoint : (id) ->
-
-    return id in (node.id for node in @branchStack)
+    return [curPoint, curTree]
 
 
-  addNode : (position, rotation, type, viewport, resolution, bitDepth, interpolation) ->
+  addNode : (position, rotation, viewport, resolution, bitDepth, interpolation) ->
 
     return if @restrictionHandler.handleUpdate()
 
@@ -212,7 +194,7 @@ class SkeletonTracing
         bitDepth : bitDepth
         interpolation : interpolation
 
-      point = new TracePoint(type, @idCount++, position, radius, @activeTree.treeId, metaInfo, rotation)
+      point = new TracePoint(@idCount++, position, radius, @activeTree.treeId, metaInfo, rotation)
       @activeTree.nodes.push(point)
 
       if @activeNode
@@ -224,7 +206,7 @@ class SkeletonTracing
       else
 
         @activeNode = point
-        point.type = @TYPE_BRANCH
+        # first node should be a branchpoint
         if @branchPointsAllowed
           @pushBranch()
 
@@ -268,11 +250,6 @@ class SkeletonTracing
     if @activeNode then @activeNode.pos else null
 
 
-  getActiveNodeType : ->
-
-    if @activeNode then @activeNode.type else null
-
-
   getActiveNodeRadius : ->
 
     if @activeNode then @activeNode.radius else 10 * app.scaleInfo.baseVoxel
@@ -281,6 +258,11 @@ class SkeletonTracing
   getActiveNodeRotation : ->
 
     if @activeNode then @activeNode.rotation else null
+
+
+  getActiveTree : ->
+
+    if @activeTree then @activeTree else null
 
 
   getActiveTreeId : ->
@@ -342,81 +324,6 @@ class SkeletonTracing
       @trigger("newActiveNodeRadius", radius)
 
 
-  setComment : (commentText) ->
-
-    return if @restrictionHandler.handleUpdate()
-
-    if @activeNode
-      # remove any existing comments for that node
-      for i in [0...@comments.length]
-        if(@comments[i].node.id == @activeNode.id)
-          @comments.splice(i, 1)
-          @deletedCommentIndex = i
-          break
-      if commentText != ""
-        @comments.push({node: @activeNode, content: commentText})
-      @stateLogger.push()
-      @trigger("updateComments")
-
-
-  getComment : (nodeID) ->
-
-    unless nodeID? then nodeID = @activeNode.id if @activeNode
-    for comment in @comments
-      if comment.node.id == nodeID then return comment.content
-    return ""
-
-
-  deleteComment : (nodeID) ->
-
-    return if @restrictionHandler.handleUpdate()
-
-    for i in [0...@comments.length]
-      if(@comments[i].node.id == nodeID)
-        @comments.splice(i, 1)
-        @stateLogger.push()
-        @trigger("updateComments")
-        break
-
-
-  nextCommentNodeID : (forward) ->
-
-    length = @comments.length
-    offset = if forward then 1 else -1
-
-    unless @activeNode
-      if length > 0 then return @comments[0].node.id
-
-    if length == 0
-      return null
-
-    for i in [0...@comments.length]
-      if @comments[i].node.id == @activeNode.id
-        return @comments[(length + i + offset) % length].node.id
-
-    if @deletedCommentIndex?
-      offset = if forward then 0 else -1
-      return @comments[(length + @deletedCommentIndex + offset) % length].node.id
-
-    return @comments[0].node.id
-
-
-  getComments : (ascendingOrder = true) =>
-
-    @comments.sort(@compareNodes)
-    if not ascendingOrder
-      return @comments.reverse()
-    return @comments
-
-
-  getPlainComments : =>
-
-    plainComments = []
-    for comment in @comments
-      plainComments.push({node: comment.node.id, content: comment.content})
-    plainComments
-
-
   selectNextTree : (forward) ->
 
     trees = @getTreesSorted(@user.get("sortTreesByName"))
@@ -458,12 +365,12 @@ class SkeletonTracing
 
   shuffleTreeColor : (tree) ->
 
+    return if @restrictionHandler.handleUpdate()
+
     tree = @activeTree unless tree
     tree.color = @getNewTreeColor()
 
-    if @restrictionHandler.handleUpdate()
-      @stateLogger.updateTree(tree)
-
+    @stateLogger.updateTree(tree)
     @trigger("newTreeColor", tree.treeId)
 
 
@@ -498,15 +405,14 @@ class SkeletonTracing
     unless @activeNode
       return
 
-    @trigger("deleteComment", @activeNode.id)
     for neighbor in @activeNode.neighbors
       neighbor.removeNeighbor(@activeNode.id)
-    @activeTree.removeNode(@activeNode.id)
+    updateTree = @activeTree.removeNode(@activeNode.id)
+
+    @stateLogger.updateTree(@activeTree) if updateTree
 
     deletedNode = @activeNode
     @stateLogger.deleteNode(deletedNode, @activeTree.treeId)
-
-    @deleteBranch(deletedNode)
 
     if deletedNode.neighbors.length > 1
       # Need to split tree
@@ -543,20 +449,20 @@ class SkeletonTracing
       @deleteTree(false)
 
 
-  deleteTree : (notify, id, deleteBranchesAndComments, notifyServer) ->
+  deleteTree : (notify, id, notifyServer) ->
 
     return if @restrictionHandler.handleUpdate()
 
     if notify
       if confirm("Do you really want to delete the whole tree?")
-        @reallyDeleteTree(id, deleteBranchesAndComments, notifyServer)
+        @reallyDeleteTree(id, notifyServer)
       else
         return
     else
-      @reallyDeleteTree(id, deleteBranchesAndComments, notifyServer)
+      @reallyDeleteTree(id, notifyServer)
 
 
-  reallyDeleteTree : (id, deleteBranchesAndComments = true, notifyServer = true) ->
+  reallyDeleteTree : (id, notifyServer = true) ->
 
     return if @restrictionHandler.handleUpdate()
 
@@ -569,11 +475,6 @@ class SkeletonTracing
         index = i
         break
     @trees.splice(index, 1)
-    # remove branchpoints and comments, NOT when merging trees
-    for node in tree.nodes
-      if deleteBranchesAndComments
-        @trigger("deleteComment", node.id)
-        @deleteBranch(node)
 
     if notifyServer
       @stateLogger.deleteTree(tree)
@@ -599,6 +500,8 @@ class SkeletonTracing
     if lastNode.id != activeNodeID
       if lastTree.treeId != @activeTree.treeId
         @activeTree.nodes = @activeTree.nodes.concat(lastTree.nodes)
+        @activeTree.comments = @activeTree.comments.concat(lastTree.comments)
+        @activeTree.branchpoints = @activeTree.branchpoints.concat(lastTree.branchpoints)
         @activeNode.appendNext(lastNode)
         lastNode.appendNext(@activeNode)
 
@@ -610,11 +513,16 @@ class SkeletonTracing
 
         @trigger("mergeTree", lastTree.treeId, lastNode, @activeNode)
 
-        @deleteTree(false, lastTree.treeId, false, false)
+        @deleteTree(false, lastTree.treeId, false)
 
         @setActiveNode(activeNodeID)
       else
         @trigger("mergeDifferentTrees")
+
+
+  updateTree : (tree) ->
+
+    @stateLogger.updateTree(tree)
 
 
   getTree : (id) ->
@@ -633,9 +541,14 @@ class SkeletonTracing
   getTreesSorted : ->
 
     if @user.get("sortTreesByName")
-      return (@trees.slice(0)).sort(@compareNames)
+      return @getTreesSortedBy("name")
     else
-      return (@trees.slice(0)).sort(@compareTimestamps)
+      return @getTreesSortedBy("timestamp")
+
+
+  getTreesSortedBy : (key, isSortedAscending) ->
+
+    return (@trees.slice(0)).sort(Utils.compareBy(key, isSortedAscending))
 
 
   getNodeListForRoot : (result, root, previous) ->
@@ -675,24 +588,6 @@ class SkeletonTracing
     return null
 
 
-  compareNames : (a, b) ->
-
-    if a.name < b.name
-      return -1
-    if a.name > b.name
-      return 1
-    return 0
-
-
-  compareTimestamps : (a,b) ->
-
-    if a.timestamp < b.timestamp
-      return -1
-    if a.timestamp > b.timestamp
-      return 1
-    return 0
-
-
   compareNodes : (a, b) ->
 
     if a.node.treeId < b.node.treeId
@@ -700,10 +595,6 @@ class SkeletonTracing
     if a.node.treeId > b.node.treeId
       return 1
     return a.node.id - b.node.id
-
-  getPlainComments : =>
-
-    return @comments.toJSON()
 
 
 module.exports = SkeletonTracing

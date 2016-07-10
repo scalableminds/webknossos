@@ -24,16 +24,15 @@
     "less": "^2.7.1",
     "less-loader": "^2.2.3",
     "mock-require": "^1.2.1",
-    "napa": "^2.2.0",
     "protractor": "^3.3.0",
     "sinon": "^1.17.3",
     "style-loader": "^0.13.1",
+    "three.js": "georgwiese/three.js.git#scm_oxalis",
     "url-loader": "^0.5.7",
     "webpack": "^1.13.1",
     "worker-loader": "^0.6.0"
   },
   "scripts": {
-    "install": "napa georgwiese/three.js#scm_oxalis:three.js",
     "test": "node_modules/jasmine-node/bin/jasmine-node --coffee app/assets/javascripts/test",
     "prewebdriver": "npm run webdriver-update",
     "webdriver": "./node_modules/.bin/webdriver-manager start",

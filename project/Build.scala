@@ -76,7 +76,10 @@ object AssetCompilation {
     if(isWindowsSystem)
       Process( "cmd" :: "/c" :: app :: param :: Nil, base )
     else
-      Process( app :: param :: Nil, base )
+      if(param != "")
+        Process( app :: param :: Nil, base )
+      else
+        Process( app, base )
   }
 
   private def killProcess(pid: String) = {

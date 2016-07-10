@@ -37,6 +37,7 @@ class CreateTeamModalView extends ModalView
 
   events :
     "submit form" : "addNewTeam"
+    "click .btn-primary" : "addNewTeam"
 
   regions :
     "parentTeams" : ".parent-teams"

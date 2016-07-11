@@ -14,7 +14,7 @@ object Dependencies{
   val akkaVersion = "2.4.1"
   val reactiveVersion = "0.11.13"
   val reactivePlayVersion = "0.11.13-play24"
-  val braingamesVersion = "8.9.1"
+  val braingamesVersion = "8.9.4"
   val twelvemonkeysVersion = "3.1.2"
 
   val restFb = "com.restfb" % "restfb" % "1.6.11"
@@ -76,7 +76,10 @@ object AssetCompilation {
     if(isWindowsSystem)
       Process( "cmd" :: "/c" :: app :: param :: Nil, base )
     else
-      Process( app :: param :: Nil, base )
+      if(param != "")
+        Process( app :: param :: Nil, base )
+      else
+        Process( app, base )
   }
 
   private def killProcess(pid: String) = {

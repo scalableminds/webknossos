@@ -72,7 +72,7 @@ class DashboardTaskListView extends Marionette.CompositeView
   initialize : (@options) ->
 
     @showFinishedTasks = false
-    @collection = new UserTasksCollection()
+    @collection = new UserTasksCollection([], userID : @options.userID)
     @collection.fetch()
 
     @listenTo(app.vent, "modal:destroy", @refresh)
@@ -95,7 +95,8 @@ class DashboardTaskListView extends Marionette.CompositeView
   toggleFinished : ->
 
     @showFinishedTasks = not @showFinishedTasks
-    @render()
+    @collection.isFinished = @showFinishedTasks
+    @refresh()
 
 
   transferTask : (evt) ->

@@ -20,7 +20,7 @@ import play.api.mvc.Codec
 import play.api.libs.concurrent.Execution.Implicits._
 
 object WebSocketRESTServer {
-  def create() = {
+  def create(name: String) = {
     val (enumerator, channel) = Concurrent.broadcast[Array[Byte]]
 
     val ws = WebSocketRESTServer(channel)
@@ -30,8 +30,8 @@ object WebSocketRESTServer {
         Logger.trace("Got WS message: " + it.length)
         ws.response(it)
     }.map{ _ =>
-      Logger.debug("Websocket closed.")
-                   }
+      Logger.info(s"Websocket to '$name' closed. ")
+    }
     (iteratee, enumerator, ws)
   }
 }

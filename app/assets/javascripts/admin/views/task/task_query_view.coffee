@@ -27,9 +27,14 @@ class TaskQueryView extends Marionette.LayoutView
             <a class="btn btn-primary search-button" href="#">
               <i class="fa fa-search"></i>Search
             </a>
-            <a class="btn btn-default documentation-button" href="#">
-              <i class="fa fa-question-circle"></i>Documentation
-            </a>
+            <div class="btn-group btn-group.btn-group-justified" role="group">
+              <a class="btn btn-default documentation-button" role="button" href="#">
+                <i class="fa fa-question-circle"></i>Documentation
+              </a>
+              <a class="btn btn-default" role="button" href="/help/faq#taskqueries">
+                 <i class="fa fa-info"></i>Examples
+              </a>
+            </div>
           </div>
         </div>
       </div>
@@ -105,7 +110,7 @@ class TaskQueryView extends Marionette.LayoutView
       @collection.reset()
       defaultQueryLimit = 100
       if result.length == defaultQueryLimit
-        Toast.warning("Not all results are shown because there are too many. Results are limited to #{defaultQueryLimit} entries.")
+        Toast.warning("Not all results are shown because there are more than #{defaultQueryLimit}. Try to narrow your query.")
       @collection.addObjects(result)
     )
 

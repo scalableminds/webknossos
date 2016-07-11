@@ -87,9 +87,6 @@ object AnnotationService extends AnnotationContentProviders with BoxImplicits wi
     } yield result
   }
 
-  def openExplorationalFor(user: User)(implicit ctx: DBAccessContext) =
-    AnnotationDAO.findOpenAnnotationsFor(user._id, AnnotationType.Explorational)
-
   def openTasksFor(user: User)(implicit ctx: DBAccessContext) =
     AnnotationDAO.findOpenAnnotationsFor(user._id, AnnotationType.Task)
 
@@ -99,14 +96,11 @@ object AnnotationService extends AnnotationContentProviders with BoxImplicits wi
   def hasAnOpenTask(user: User)(implicit ctx: DBAccessContext) =
     AnnotationDAO.hasAnOpenAnnotation(user._id, AnnotationType.Task)
 
-  def findTasksOf(user: User)(implicit ctx: DBAccessContext) =
-    AnnotationDAO.findFor(user._id, AnnotationType.Task)
+  def findTasksOf(user: User, isFinished: Option[Boolean], limit: Int)(implicit ctx: DBAccessContext) =
+    AnnotationDAO.findFor(user._id, isFinished, AnnotationType.Task, limit)
 
-  def findExploratoryOf(user: User, isFinished: Option[Boolean])(implicit ctx: DBAccessContext) =
-    AnnotationDAO.findForWithTypeOtherThan(user._id, isFinished, AnnotationType.Task :: AnnotationType.SystemTracings)
-
-  def findFinishedOf(user: User)(implicit ctx: DBAccessContext) =
-    AnnotationDAO.findFinishedFor(user._id)
+  def findExploratoryOf(user: User, isFinished: Option[Boolean], limit: Int)(implicit ctx: DBAccessContext) =
+    AnnotationDAO.findForWithTypeOtherThan(user._id, isFinished, AnnotationType.Task :: AnnotationType.SystemTracings, limit)
 
   def findTaskOf(user: User, _task: BSONObjectID)(implicit ctx: DBAccessContext) =
     AnnotationDAO.findByTaskIdAndUser(user._id, _task, AnnotationType.Task)

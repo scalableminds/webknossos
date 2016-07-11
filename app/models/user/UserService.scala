@@ -145,10 +145,7 @@ object UserService extends FoxImplicits {
         result
     }
   }
-
-  def findFinishedTasksOf(user: User)(implicit ctx: DBAccessContext) =
-    AnnotationService.findTasksOf(user).map(_.flatMap(_._task))
-
+  
   def updateDataSetConfiguration(user: User, dataSetName: String, configuration: DataSetConfiguration)(implicit ctx: DBAccessContext) = {
     UserDAO.updateDataSetConfiguration(user, dataSetName, configuration).map {
       result =>

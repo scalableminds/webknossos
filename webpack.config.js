@@ -70,6 +70,7 @@ module.exports = {
   ],
   // devtool: "source-map",
   // debug: true,
+  bail: true,
   plugins: [
     new webpack.DefinePlugin({
       'process.env': {

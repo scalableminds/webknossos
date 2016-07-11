@@ -103,7 +103,7 @@ class NMLIOController @Inject()(val messagesApi: MessagesApi) extends Controller
   def userDownload(userId: String) = Authenticated.async { implicit request =>
     for {
       user <- UserService.findOneById(userId, useCache = true) ?~> Messages("user.notFound")
-      annotations <- AnnotationService.findTasksOf(user).map(_.filter(_.state.isFinished))
+      annotations <- AnnotationService.findTasksOf(user, isFinished = Some(true), limit = Int.MaxValue)
       zipped <- AnnotationService.zipAnnotations(annotations, user.abreviatedName + "_nmls.zip")
     } yield {
       Ok.sendFile(zipped.file)

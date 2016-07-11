@@ -32,7 +32,7 @@ class WKDataStoreController @Inject()(val messagesApi: MessagesApi) extends Cont
       Logger.info(s"Got a backchannel request for $name.")
       DataStoreDAO.findByKey(key)(GlobalAccessContext).futureBox.map {
         case Full(dataStore) =>
-          val (iterator, enumerator, restChannel) = WebSocketRESTServer.create()
+          val (iterator, enumerator, restChannel) = WebSocketRESTServer.create(name)
           WKStoreHandlingStrategy.register(dataStore.name, restChannel)
           Logger.info(s"Key $name connected.")
           Right(iterator, enumerator)

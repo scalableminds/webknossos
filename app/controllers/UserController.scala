@@ -33,6 +33,8 @@ class UserController @Inject()(val messagesApi: MessagesApi)
   with Dashboard
   with FoxImplicits {
 
+  val defaultAnnotationLimit = 1000
+
   def empty = Authenticated { implicit request =>
     Ok(views.html.main()(Html("")))
   }
@@ -54,17 +56,17 @@ class UserController @Inject()(val messagesApi: MessagesApi)
     }
   }
 
-  def annotations(isFinished: Option[Boolean]) = Authenticated.async { implicit request =>
+  def annotations(isFinished: Option[Boolean], limit: Option[Int]) = Authenticated.async { implicit request =>
     for {
-      content <- dashboardExploratoryAnnotations(request.user, request.user, isFinished)
+      content <- dashboardExploratoryAnnotations(request.user, request.user, isFinished, limit getOrElse defaultAnnotationLimit)
     } yield {
       Ok(content)
     }
   }
 
-  def tasks = Authenticated.async { implicit request =>
+  def tasks(isFinished: Option[Boolean], limit: Option[Int]) = Authenticated.async { implicit request =>
     for {
-      content <- dashboardTaskAnnotations(request.user, request.user)
+      content <- dashboardTaskAnnotations(request.user, request.user, isFinished, limit getOrElse defaultAnnotationLimit)
     } yield {
       Ok(content)
     }
@@ -83,19 +85,19 @@ class UserController @Inject()(val messagesApi: MessagesApi)
     }
   }
 
-  def userAnnotations(userId: String, isFinished: Option[Boolean]) = Authenticated.async { implicit request =>
+  def userAnnotations(userId: String, isFinished: Option[Boolean], limit: Option[Int]) = Authenticated.async { implicit request =>
     for {
       user <- UserDAO.findOneById(userId) ?~> Messages("user.notFound")
-      content <- dashboardExploratoryAnnotations(user, request.user, isFinished)
+      content <- dashboardExploratoryAnnotations(user, request.user, isFinished, limit getOrElse defaultAnnotationLimit)
     } yield {
       Ok(content)
     }
   }
 
-  def userTasks(userId: String) = Authenticated.async { implicit request =>
+  def userTasks(userId: String, isFinished: Option[Boolean], limit: Option[Int]) = Authenticated.async { implicit request =>
     for {
       user <- UserDAO.findOneById(userId) ?~> Messages("user.notFound")
-      content <- dashboardTaskAnnotations(user, request.user)
+      content <- dashboardTaskAnnotations(user, request.user, isFinished, limit getOrElse defaultAnnotationLimit)
     } yield {
       Ok(content)
     }

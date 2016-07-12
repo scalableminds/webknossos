@@ -11,6 +11,8 @@ require("whatwg-fetch")
 require("es6-promise")
 require("libs/core_ext")
 
+require("../stylesheets/main.less")
+
 ErrorHandling.initialize( throwAssertions: false, sendLocalErrors: false )
 
 Router = require("./router")

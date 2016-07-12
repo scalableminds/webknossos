@@ -63,7 +63,7 @@ object Resolvers {
 
 object AssetCompilation {
   object SettingsKeys{
-    val gulpPath = SettingKey[String]("gulp-path","where gulp is installed")
+    val webpackPath = SettingKey[String]("webpack-path","where webpack is installed")
     val npmPath = SettingKey[String]("npm-path","where npm is installed")
   }
 
@@ -76,7 +76,10 @@ object AssetCompilation {
     if(isWindowsSystem)
       Process( "cmd" :: "/c" :: app :: param :: Nil, base )
     else
-      Process( app :: param :: Nil, base )
+      if(param != "")
+        Process( app :: param :: Nil, base )
+      else
+        Process( app, base )
   }
 
   private def killProcess(pid: String) = {
@@ -96,38 +99,38 @@ object AssetCompilation {
     Seq()
   }
 
-  private def gulpGenerateTask: Def.Initialize[Task[Any]] = (gulpPath, baseDirectory, streams, target) map { (gulp, base, s, t) =>
+  private def webpackGenerateTask: Def.Initialize[Task[Any]] = (webpackPath, baseDirectory, streams, target) map { (webpack, base, s, t) =>
     try{
       Future{
-        startProcess(gulp, "debug", base) ! s.log
+        startProcess(webpack, "-w", base) ! s.log
       }
     } catch {
       case e: java.io.IOException =>
-        s.log.error("Gulp couldn't be found. Please set the configuration key 'AssetCompilation.gulpPath' properly. " + e.getMessage)
+        s.log.error("Webpack couldn't be found. Please set the configuration key 'AssetCompilation.webpackPath' properly. " + e.getMessage)
     }
   } dependsOn npmInstall
 
-  private def killGulp(x: Unit) = {
-    val pidFile = Path("target") / "gulp.pid"
+  private def killWebpack(x: Unit) = {
+    val pidFile = Path("target") / "webpack.pid"
     if(pidFile.exists){
       val pid = scala.io.Source.fromFile(pidFile).mkString.trim
       killProcess(pid)
       pidFile.delete()
-      println("Pow, Pow. Blood is everywhere, gulp is gone!")
+      println("Pow, Pow. Blood is everywhere, webpack is gone!")
     }
   }
 
-  private def assetsGenerationTask: Def.Initialize[Task[AnyVal]] = (gulpPath, baseDirectory, streams, target) map { (gulp, base, s, t) =>
+  private def assetsGenerationTask: Def.Initialize[Task[AnyVal]] = (webpackPath, baseDirectory, streams, target) map { (webpack, base, s, t) =>
     try{
-      startProcess(gulp, "build", base) ! s.log
+      startProcess(webpack, "", base) ! s.log
     } catch {
       case e: java.io.IOException =>
-        s.log.error("Gulp couldn't be found. Please set the configuration key 'AssetCompilation.gulpPath' properly. " + e.getMessage)
+        s.log.error("Webpack couldn't be found. Please set the configuration key 'AssetCompilation.webpackPath' properly. " + e.getMessage)
     }
   } dependsOn npmInstall
 
   val settings = Seq(
-    run in Compile <<= (run in Compile) map(killGulp) dependsOn gulpGenerateTask,
+    run in Compile <<= (run in Compile) map(killWebpack) dependsOn webpackGenerateTask,
     stage <<= stage dependsOn assetsGenerationTask,
     dist <<= dist dependsOn assetsGenerationTask
   )
@@ -186,7 +189,7 @@ object ApplicationBuild extends Build {
     scalaVersion := "2.11.7",
     scalacOptions += "-target:jvm-1.8",
     version := appVersion,
-    gulpPath := (Path("node_modules") / ".bin" / "gulp").getPath,
+    webpackPath := (Path("node_modules") / ".bin" / "webpack").getPath,
     npmPath := "npm",
     routesGenerator := InjectedRoutesGenerator,
     libraryDependencies ++= oxalisDependencies,

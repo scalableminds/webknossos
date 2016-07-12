@@ -42,10 +42,10 @@ class CreditsView extends Marionette.ItemView
         </div>
         <div class="col-sm-3">
           <a href="http://www.brain.mpg.de/connectomics">
-            <img class="img-responsive" src="assets/images/Max-Planck-Gesellschaft.svg">
+            <img class="img-50" src="assets/images/Max-Planck-Gesellschaft.svg">
           </a>
           <a href="http://www.brain.mpg.de/connectomics">
-            <img class="img-responsive" src="assets/images/MPI-brain-research.png">
+            <img class="img-50" src="assets/images/MPI-brain-research.svg">
           </a>
           <a href="http://www.scm.io">
             <img class="img-responsive" src="assets/images/scalableminds_logo.svg">

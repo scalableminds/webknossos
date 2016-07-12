@@ -16,11 +16,9 @@ class HelpLogoView extends Marionette.ItemView
           <tr><td>K,L</td><td>Scale up/down viewports</td></tr>
         </tbody>
       </table>
-      <div>
-        <img class="img-responsive" src="/assets/images/Max-Planck-Gesellschaft.svg")">
-      </div>
-      <div>
-        <img class="img-responsive" src="/assets/images/Logo_MPI_cut.svg")">
+      <div class="logos">
+        <img src="/assets/images/Max-Planck-Gesellschaft.svg" />
+        <img src="/assets/images/MPI-brain-research.png" />
       </div>
     </div>
   """)

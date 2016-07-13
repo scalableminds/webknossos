@@ -120,9 +120,11 @@ object AssetCompilation {
     }
   }
 
-  private def assetsGenerationTask: Def.Initialize[Task[AnyVal]] = (webpackPath, baseDirectory, streams, target) map { (webpack, base, s, t) =>
+  private def assetsGenerationTask: Def.Initialize[Task[Unit]] = (webpackPath, baseDirectory, streams, target) map { (webpack, base, s, t) =>
     try{
-      startProcess(webpack, "", base) ! s.log
+      val exitValue = startProcess(webpack, "", base) ! s.log
+      if(exitValue != 0)
+        throw new Error(s"Running webpack failed with exit code: $exitValue")
     } catch {
       case e: java.io.IOException =>
         s.log.error("Webpack couldn't be found. Please set the configuration key 'AssetCompilation.webpackPath' properly. " + e.getMessage)

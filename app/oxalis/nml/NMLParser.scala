@@ -14,18 +14,6 @@ import play.api.Logger
 
 object NMLParser {
 
-  def createUniqueIds(trees: Seq[Tree]) = {
-    trees.foldLeft(List[Tree]()) {
-      case (l, t) =>
-        if (!l.exists(_.treeId == t.treeId))
-          t :: l
-        else {
-          val alteredId = l.maxBy(_.treeId).treeId + 1
-          t.copy(treeId = alteredId) :: l
-        }
-    }
-  }
-
   def parse(input: InputStream, name: String) = {
     val result = NMLParserImpl.parse(input, name)
     input.close()
@@ -37,13 +25,21 @@ object NMLParser {
   }
 
   private object NMLParserImpl {
+
     val DEFAULT_TIME = 0L
+
     val DEFAULT_ACTIVE_NODE_ID = 1
+
     val DEFAULT_COLOR = Color(1, 0, 0, 0)
+
     val DEFAULT_VIEWPORT = 0
+
     val DEFAULT_RESOLUTION = 0
+
     val DEFAULT_BITDEPTH = 0
+
     val DEFAULT_INTERPOLATION = false
+
     val DEFAULT_TIMESTAMP = 0L
 
     def parse(in: InputStream, name: String): Box[NML] = {
@@ -84,7 +80,19 @@ object NMLParser {
     }
 
     private def transformTrees(trees: Seq[Tree]): Seq[Tree] = {
-      NMLParser.createUniqueIds(trees.flatMap(splitIntoComponents))
+      createUniqueIds(trees.flatMap(splitIntoComponents))
+    }
+
+    private def createUniqueIds(trees: Seq[Tree]) = {
+      trees.foldLeft(List[Tree]()) {
+        case (l, t) =>
+          if (!l.exists(_.treeId == t.treeId))
+            t :: l
+          else {
+            val alteredId = l.maxBy(_.treeId).treeId + 1
+            t.copy(treeId = alteredId) :: l
+          }
+      }
     }
 
     private def splitIntoComponents(tree: Tree): List[Tree] = {
@@ -168,6 +176,14 @@ object NMLParser {
         y <- (node \ "@y").text.toIntOpt
         z <- (node \ "@z").text.toIntOpt
       } yield Point3D(x, y, z)
+    }
+
+    private def parseRotation(node: NodeSeq) = {
+      for {
+        rotX <- (node \ "@rotX").text.toDoubleOpt
+        rotY <- (node \ "@rotY").text.toDoubleOpt
+        rotZ <- (node \ "@rotZ").text.toDoubleOpt
+      } yield Vector3D(rotX, rotY, rotZ)
     }
 
     private def parseScale(nodes: NodeSeq) = {
@@ -257,13 +273,6 @@ object NMLParser {
       (node \ "@time").text.toLongOpt.getOrElse(DEFAULT_TIMESTAMP)
     }
 
-    private def parseRotation(node: NodeSeq) = {
-      val rotX = (node \ "@rotX").text.toFloatOpt.getOrElse(Node.defaultRotation.x.toFloat)
-      val rotY = (node \ "@rotY").text.toFloatOpt.getOrElse(Node.defaultRotation.y.toFloat)
-      val rotZ = (node \ "@rotZ").text.toFloatOpt.getOrElse(Node.defaultRotation.z.toFloat)
-      Vector3D(rotX, rotY, rotZ)
-    }
-
     private def parseNode(node: XMLNode) = {
       for {
         id <- (node \ "@id").text.toIntOpt
@@ -275,10 +284,9 @@ object NMLParser {
         val timestamp = parseTimestamp(node)
         val bitDepth = parseBitDepth(node)
         val interpolation = parseInterpolation(node)
-        val rotation = parseRotation(node)
+        val rotation = parseRotation(node).getOrElse(Node.defaultRotation)
         Node(id, position, rotation, radius, viewport, resolution, bitDepth, interpolation, timestamp)
       }
     }
   }
-
 }

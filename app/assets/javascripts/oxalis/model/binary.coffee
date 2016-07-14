@@ -47,7 +47,7 @@ class Binary
     @pullQueue = new PullQueue(datasetName, @cube, @layer, @boundingBox, @connectionInfo, datastoreInfo)
     @pushQueue = new PushQueue(datasetName, @cube, @layer, @tracing.id, updatePipeline)
     @cube.initializeWithQueues(@pullQueue, @pushQueue)
-    @mappings = new Mappings(@model.dataSetName, @layer)
+    @mappings = new Mappings(datasetName, @layer)
     @activeMapping = null
 
     @pingStrategies = [

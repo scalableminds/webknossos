@@ -37,7 +37,7 @@ class Input.KeyboardNoLoop
     shouldIgnore = (event) ->
       bindingHasCtrl  = key.toLowerCase().indexOf("ctrl") != -1
       bindingHasShift = key.toLowerCase().indexOf("shift") != -1
-      eventHasCtrl  = event.ctrl or event.metaKey
+      eventHasCtrl  = event.ctrlKey or event.metaKey
       eventHasShift = event.shiftKey
       return (eventHasCtrl and not bindingHasCtrl) or
         (eventHasShift and not bindingHasShift)

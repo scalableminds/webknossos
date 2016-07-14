@@ -35,7 +35,7 @@ class TaskTypeCreateView extends Marionette.LayoutView
             <div class="form-group">
               <label class="col-sm-2 control-label" for="description">Description</label>
               <div class="col-sm-9">
-              <textarea id="description" name="description" class="form-control" value="<%- description %>"></textarea>
+              <textarea id="description" name="description" class="form-control"><%- description %></textarea>
               </div>
             </div>
 

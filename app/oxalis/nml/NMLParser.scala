@@ -275,7 +275,7 @@ object NMLParser {
         val timestamp = parseTimestamp(node)
         val bitDepth = parseBitDepth(node)
         val interpolation = parseInterpolation(node)
-	val rotation = parseRotation(node)
+        val rotation = parseRotation(node)
         Node(id, position, rotation, radius, viewport, resolution, bitDepth, interpolation, timestamp)
       }
     }

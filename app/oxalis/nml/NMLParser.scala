@@ -5,7 +5,7 @@ import java.io.{File, FileInputStream, InputStream}
 import scala.annotation.tailrec
 import scala.xml.{NodeSeq, XML, Node => XMLNode}
 
-import com.scalableminds.util.geometry.{Point3D, Scale}
+import com.scalableminds.util.geometry.{Point3D, Scale, Vector3D}
 import com.scalableminds.util.image.Color
 import com.scalableminds.util.tools.ExtendedTypes.ExtendedString
 import net.liftweb.common.Box._
@@ -257,6 +257,13 @@ object NMLParser {
       (node \ "@time").text.toLongOpt.getOrElse(DEFAULT_TIMESTAMP)
     }
 
+    private def parseRotation(node: NodeSeq) = {
+      val rotX = (node \ "@rotX").text.toFloatOpt.getOrElse(Node.defaultRotation.x.toFloat)
+      val rotY = (node \ "@rotY").text.toFloatOpt.getOrElse(Node.defaultRotation.y.toFloat)
+      val rotZ = (node \ "@rotZ").text.toFloatOpt.getOrElse(Node.defaultRotation.z.toFloat)
+      Vector3D(rotX, rotY, rotZ)
+    }
+
     private def parseNode(node: XMLNode) = {
       for {
         id <- (node \ "@id").text.toIntOpt
@@ -268,7 +275,8 @@ object NMLParser {
         val timestamp = parseTimestamp(node)
         val bitDepth = parseBitDepth(node)
         val interpolation = parseInterpolation(node)
-        Node(id, position, Node.defaultRotation, radius, viewport, resolution, bitDepth, interpolation, timestamp)
+	val rotation = parseRotation(node)
+        Node(id, position, rotation, radius, viewport, resolution, bitDepth, interpolation, timestamp)
       }
     }
   }

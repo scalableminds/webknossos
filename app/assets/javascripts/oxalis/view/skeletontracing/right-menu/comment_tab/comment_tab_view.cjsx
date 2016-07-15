@@ -60,6 +60,7 @@ class CommentTabView extends Marionette.ItemView
 
     # events
     @listenTo(@model.skeletonTracing, "newActiveNode", @updateInputElement)
+    @listenTo(@model.skeletonTracing, "reloadTrees" , @updateState)
 
     # keyboard shortcuts
     new Input.KeyboardNoLoop(

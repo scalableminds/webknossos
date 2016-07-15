@@ -152,7 +152,6 @@ class Model extends Backbone.Model
     @buildMappingsObject(layers)
 
     if @getColorBinaries().length == 0
-      console.log "No color binaries!"
       Toast.error("No data available! Something seems to be wrong with the dataset.")
       throw @HANDLED_ERROR
 

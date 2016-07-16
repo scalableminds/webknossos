@@ -119,4 +119,11 @@ object DataSetDAO extends SecuredBaseDAO[DataSet] {
       byNameQ(name),
       Json.obj("$set" -> Json.obj(
         "allowedTeams" -> teams)))
+
+  def updateDescription(name: String, description: Option[String])(implicit ctx: DBAccessContext) =
+    findAndModify(
+      byNameQ(name),
+      Json.obj("$set" -> Json.obj(
+        "description" -> description)),
+      returnNew = true)
 }

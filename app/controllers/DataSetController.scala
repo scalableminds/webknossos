@@ -44,6 +44,10 @@ class DataSetController @Inject()(val messagesApi: MessagesApi) extends Controll
 
   val ThumbnailCacheDuration = 1 day
 
+  val dataSetPublicReads =
+    ((__ \ 'description).readNullable[String])
+
+
   def view(dataSetName: String) = UserAwareAction.async { implicit request =>
     for {
       dataSet <- DataSetDAO.findOneBySourceName(dataSetName) ?~> Messages("dataSet.notFound", dataSetName)
@@ -111,6 +115,20 @@ class DataSetController @Inject()(val messagesApi: MessagesApi) extends Controll
       Ok(DataSet.dataSetPublicWrites(request.userOpt).writes(dataSet))
     }
   }
+
+  def update(dataSetName: String) = Authenticated.async(parse.json) { implicit request =>
+    withJsonBodyUsing(dataSetPublicReads) {
+      case (description) =>
+      for {
+        dataSet <- DataSetDAO.findOneBySourceName(dataSetName) ?~> Messages("dataSet.notFound", dataSetName)
+        _ <- allowedToAdministrate(request.user, dataSet)
+        updatedDataSet <- DataSetService.updateDescription(dataSet, description)
+      } yield {
+        Ok(DataSet.dataSetPublicWrites(request.userOpt).writes(updatedDataSet))
+      }
+    }
+  }
+
 
   def importDataSet(dataSetName: String) = Authenticated.async { implicit request =>
     for {

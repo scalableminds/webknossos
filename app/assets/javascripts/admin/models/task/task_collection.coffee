@@ -27,7 +27,7 @@ class TaskCollection extends Backbone.Collection
         summary : response.type?.summary || "<deleted>"
         id: response.type?.id || ""
 
-      response.formattedTracingTime = FormatUtils.formatSeconds(response.tracingTime? or 0)
+      response.formattedTracingTime = FormatUtils.formatSeconds(response.tracingTime? || 0)
 
       # convert bounding box
       if response.boundingBox?

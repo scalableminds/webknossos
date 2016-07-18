@@ -30,7 +30,7 @@ class DatasetEditView extends Marionette.LayoutView
             <div class="form-group">
               <label class="col-sm-3 col-sm-offset-2" for="isPublic">
                 <input type="checkbox" id="isPublic" name="isPublic" <%- isChecked(isPublic) %>>
-                isPublic
+                  publicly accessible
               </label>
             </div>
             <div class="form-group">

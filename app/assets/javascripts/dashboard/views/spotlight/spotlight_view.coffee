@@ -33,7 +33,10 @@ class SpotlightView extends Marionette.LayoutView
     @creditsView = new CreditsView()
 
     @collection.fetch({ data : "isActive=true" })
-    @listenTo(@, "render", @show)
+    @listenTo(@collection, "sync", ->
+      @listenTo(@, "render", @show)
+      @show()
+    )
 
 
   show : ->

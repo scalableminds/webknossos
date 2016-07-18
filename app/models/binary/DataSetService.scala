@@ -22,8 +22,8 @@ object DataSetService extends FoxImplicits {
   def updateTeams(dataSet: DataSet, teams: List[String])(implicit ctx: DBAccessContext) =
     DataSetDAO.updateTeams(dataSet.name, teams)
 
-  def updateDescription(dataSet: DataSet, description: Option[String])(implicit ctx: DBAccessContext) =
-    DataSetDAO.updateDescription(dataSet.name, description)
+  def update(dataSet: DataSet, description: Option[String], isPublic: Boolean)(implicit ctx: DBAccessContext) =
+    DataSetDAO.update(dataSet.name, description, isPublic)
 
   def isProperDataSetName(name: String) = name.matches("[A-Za-z0-9_\\-]*")
 

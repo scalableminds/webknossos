@@ -55,12 +55,12 @@ class TaskTypeCreateView extends Marionette.LayoutView
               <div class="col-sm-9">
 
                 <label class="col-sm-3" for="somaClickingAllowed">
-                  <input type="checkbox" id="somaClickingAllowed" name="settings[somaClickingAllowed"] <%- isChecked(settings.somaClickingAllowed) %>>
+                  <input type="checkbox" id="somaClickingAllowed" name="settings[somaClickingAllowed]" <%- isChecked(settings.somaClickingAllowed) %>>
                   Allow Soma clicking
                 </label>
 
                 <label class="col-sm-3" for="branchPointsAllowed">
-                  <input type="checkbox" id="branchPointsAllowed" name="settings[branchPointsAllowed"] <%- isChecked(settings.branchPointsAllowed) %>>
+                  <input type="checkbox" id="branchPointsAllowed" name="settings[branchPointsAllowed]" <%- isChecked(settings.branchPointsAllowed) %>>
                   Allow Branchpoints
                 </label>
 

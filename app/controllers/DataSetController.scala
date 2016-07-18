@@ -81,6 +81,11 @@ class DataSetController @Inject()(val messagesApi: MessagesApi) extends Controll
     Ok(views.html.main()(Html("")))
   }
 
+  // TODO: find a better way to ignore parameters
+  def emptyWithWildcard(param: String) = Authenticated { implicit request =>
+    Ok(views.html.main()(Html("")))
+  }
+
   def userAwareEmpty = UserAwareAction { implicit request =>
     Ok(views.html.main()(Html("")))
   }

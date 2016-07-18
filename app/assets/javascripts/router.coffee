@@ -25,6 +25,7 @@ class Router extends BaseRouter
     "/dashboard"                         : "dashboard"
     "/datasets"                          : "dashboard"
     "/datasets/upload"                   : "datasetAdd"
+    "/datasets/:id/edit"                 : "datasetEdit"
     "/users/:id/details"                 : "dashboard"
     "/taskTypes"                         : "taskTypes"
     "/taskTypes/create"                  : "taskTypesCreate"
@@ -87,6 +88,20 @@ class Router extends BaseRouter
   datasetAdd : ->
 
     @showAdminView("DatasetAddView")
+
+
+  datasetEdit : (datasetID) ->
+
+    require(["admin/views/dataset/dataset_edit_view", "admin/models/dataset/dataset_model"], (DatasetEditView, DatasetModel) =>
+
+      model = new DatasetModel(name : datasetID)
+      view = new DatasetEditView(model : model)
+
+      @listenTo(model, "sync", ->
+        @changeView(view)
+        @hideLoadingSpinner()
+      )
+    )
 
 
   users : ->

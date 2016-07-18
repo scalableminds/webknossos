@@ -68,6 +68,11 @@ class DatasetListItemView extends Marionette.CompositeView
         <% } %>
         <% if(isActive){ %>
           <div class="dataset-actions">
+            <% if(isEditable) { %>
+              <a href="/datasets/<%- name %>/edit" title="Edit dataset">
+                <i class="fa fa-pencil"></i> edit
+              </a>
+            <% } %>
             <a href="/datasets/<%- name %>/view" title="View dataset">
               <img src="/assets/images/eye.svg"> view
             </a>

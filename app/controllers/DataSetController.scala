@@ -44,6 +44,11 @@ class DataSetController @Inject()(val messagesApi: MessagesApi) extends Controll
 
   val ThumbnailCacheDuration = 1 day
 
+  val dataSetPublicReads =
+    ((__ \ 'description).readNullable[String] and
+      (__ \ 'isPublic).read[Boolean]).tupled
+
+
   def view(dataSetName: String) = UserAwareAction.async { implicit request =>
     for {
       dataSet <- DataSetDAO.findOneBySourceName(dataSetName) ?~> Messages("dataSet.notFound", dataSetName)
@@ -74,6 +79,11 @@ class DataSetController @Inject()(val messagesApi: MessagesApi) extends Controll
   }
 
   def empty = Authenticated { implicit request =>
+    Ok(views.html.main()(Html("")))
+  }
+
+  // TODO: find a better way to ignore parameters
+  def emptyWithWildcard(param: String) = Authenticated { implicit request =>
     Ok(views.html.main()(Html("")))
   }
 
@@ -111,6 +121,20 @@ class DataSetController @Inject()(val messagesApi: MessagesApi) extends Controll
       Ok(DataSet.dataSetPublicWrites(request.userOpt).writes(dataSet))
     }
   }
+
+  def update(dataSetName: String) = Authenticated.async(parse.json) { implicit request =>
+    withJsonBodyUsing(dataSetPublicReads) {
+      case (description, isPublic) =>
+      for {
+        dataSet <- DataSetDAO.findOneBySourceName(dataSetName) ?~> Messages("dataSet.notFound", dataSetName)
+        _ <- allowedToAdministrate(request.user, dataSet)
+        updatedDataSet <- DataSetService.update(dataSet, description, isPublic)
+      } yield {
+        Ok(DataSet.dataSetPublicWrites(request.userOpt).writes(updatedDataSet))
+      }
+    }
+  }
+
 
   def importDataSet(dataSetName: String) = Authenticated.async { implicit request =>
     for {

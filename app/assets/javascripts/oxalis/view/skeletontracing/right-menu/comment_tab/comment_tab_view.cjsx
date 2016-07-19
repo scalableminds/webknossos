@@ -100,7 +100,7 @@ class CommentTabView extends Marionette.ItemView
   ensureActiveCommentVisible : ->
 
     activeNodeId = @getActiveNodeId()
-    comment = $("#node-#{activeNodeId}")[0]
+    comment = $("#comment-tab-node-#{activeNodeId}")[0]
     scrollIntoViewIfNeeded(comment) if comment
 
 

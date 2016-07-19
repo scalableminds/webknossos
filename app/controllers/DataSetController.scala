@@ -62,7 +62,7 @@ class DataSetController @Inject()(val messagesApi: MessagesApi) extends Controll
     def imageFromCacheIfPossible(dataSet: DataSet) =
     // We don't want all images to expire at the same time. Therefore, we add a day of randomness, hence the 1 day
       Cache.getOrElse(s"thumbnail-$dataSetName*$dataLayerName",
-        (ThumbnailCacheDuration.toSeconds + math.random * 1.day.toSeconds).toInt) {
+        (ThumbnailCacheDuration.toSeconds + math.random * 2.hours.toSeconds).toInt) {
         DataStoreHandler.requestDataLayerThumbnail(dataSet, dataLayerName, ThumbnailWidth, ThumbnailHeight)
       }
 

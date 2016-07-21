@@ -31,8 +31,11 @@ object JsonHelper extends LazyLogging {
       case _: AccessDeniedException | _: FileNotFoundException =>
         logger.error("File access exception in JsonHelper while trying to extract json from file.")
         Failure(s"Failed to parse Json in '${rootPath.relativize(path).toString }'. Access denied.")
+      case e: com.fasterxml.jackson.databind.JsonMappingException =>
+        logger.warn(s"Exception in JsonHelper while trying to extract json from file. Path: $path. Json Mapping issue.")
+        Failure(s"Cause: ${e.getCause }")
       case e: Exception =>
-        logger.error("Exception in JsonHelper while trying to extract json from file.", e)
-        Failure(s"Error: ${e.getMessage }")
+        logger.error(s"Exception in JsonHelper while trying to extract json from file. Path: $path. Cause: ${e.getCause}")
+        Failure(s"Cause: ${e.getCause }")
     }
 }

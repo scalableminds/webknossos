@@ -118,7 +118,7 @@ class TaskCreateBulkImportView extends Marionette.ItemView
 
   isValidData : (bulkText) ->
 
-    return _.every(@splitToLines(bulkText), @isValidLine, @)
+    return _.every(@splitToLines(bulkText), @isValidLine.bind(@))
 
 
   isNull : (value) ->
@@ -132,7 +132,7 @@ class TaskCreateBulkImportView extends Marionette.ItemView
     if bulkData is null
       return false
 
-    if _.some(bulkData, @isNull, @)
+    if _.some(bulkData, @isNull.bind(@))
       return false
 
     if _.some(bulkData.experienceDomain, isNaN) or
@@ -148,7 +148,7 @@ class TaskCreateBulkImportView extends Marionette.ItemView
 
   parseText : (bulkText) ->
 
-    return _.map(@splitToLines(bulkText), @formatLine, @)
+    return _.map(@splitToLines(bulkText), @formatLine.bind(@))
 
 
   formatLine : (bulkLine) ->

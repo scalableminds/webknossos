@@ -389,6 +389,7 @@ trait BinaryDataWriteController extends BinaryDataCommonController {
           // unpack parsed requests from their FileParts
           requests <- validateRequests(request.body.files.map(_.ref), dataLayer).toFox
           dataRequestCollection = createRequestCollection(dataSource, dataLayer, requests)
+          _ = dataRequestCollection.requests.map(VolumeUpdateService.store _)
           _ <- DataStorePlugin.binaryDataService.handleDataRequest(dataRequestCollection) ?~> "Data request couldn't get handled"
         } yield Ok
       }

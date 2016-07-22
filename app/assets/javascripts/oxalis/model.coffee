@@ -218,14 +218,33 @@ class Model extends Backbone.Model
 
   getDataTokens : (layers) ->
 
+    for layer in layers
+      # scope layer as otherwise layer would always end up to be the last layer
+      do (layer) =>
+        layer.renewToken = (oldToken) =>
+          @getDataToken(layer, oldToken)
+
+        layer.renewToken()
+
+
+  getDataToken : (layer, oldToken) ->
+
+    # do not request new token if token is already requested
+    return if layer.tokenPromisePending
+
+    # do not request new token if token was already renewed
+    # this can happen if the data request was sent before the token renewal
+    # and ended after the token renewal
+    return if oldToken and oldToken is not layer.token
+
     dataStoreUrl = @get("dataset").get("dataStore").url
 
-    for layer in layers
-      do (layer) =>
-        Request.receiveJSON("/dataToken/generate?dataSetName=#{@get("datasetName")}&dataLayerName=#{layer.name}").then( (dataStore) ->
-          layer.token = dataStore.token
-          layer.url   = dataStoreUrl
-        )
+    layer.tokenPromisePending = true
+    layer.tokenPromise = Request.receiveJSON("/dataToken/generate?dataSetName=#{@get("datasetName")}&dataLayerName=#{layer.name}").then( (dataStore) ->
+      layer.token = dataStore.token
+      layer.url = dataStoreUrl
+      layer.tokenPromisePending = false
+    )
 
 
   getColorBinaries : ->

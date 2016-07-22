@@ -35,7 +35,7 @@ class TaskTypeCreateView extends Marionette.LayoutView
             <div class="form-group">
               <label class="col-sm-2 control-label" for="description">Description</label>
               <div class="col-sm-9">
-              <textarea id="description" name="description" class="form-control" value="<%- description %>"></textarea>
+              <textarea id="description" name="description" class="form-control"><%- description %></textarea>
               </div>
             </div>
 
@@ -55,12 +55,12 @@ class TaskTypeCreateView extends Marionette.LayoutView
               <div class="col-sm-9">
 
                 <label class="col-sm-3" for="somaClickingAllowed">
-                  <input type="checkbox" id="somaClickingAllowed" name="settings[somaClickingAllowed"] <%- isChecked(settings.somaClickingAllowed) %>>
+                  <input type="checkbox" id="somaClickingAllowed" name="settings[somaClickingAllowed]" <%- isChecked(settings.somaClickingAllowed) %>>
                   Allow Soma clicking
                 </label>
 
                 <label class="col-sm-3" for="branchPointsAllowed">
-                  <input type="checkbox" id="branchPointsAllowed" name="settings[branchPointsAllowed"] <%- isChecked(settings.branchPointsAllowed) %>>
+                  <input type="checkbox" id="branchPointsAllowed" name="settings[branchPointsAllowed]" <%- isChecked(settings.branchPointsAllowed) %>>
                   Allow Branchpoints
                 </label>
 

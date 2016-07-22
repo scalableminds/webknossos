@@ -34,11 +34,18 @@ class UserScriptsModalView extends Marionette.ItemView
 
 
   show : ->
+
     @$el.modal("show")
 
 
   handleAddClick : ->
-    eval(@ui.inputBox.val())
+
+    try
+      eval(@ui.inputBox.val())
+      # close modal if the script executed successfully
+      @$el.modal("hide")
+    catch error
+      alert(error)
 
 
 module.exports = UserScriptsModalView

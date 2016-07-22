@@ -414,6 +414,9 @@ class SkeletonTracing
     deletedNode = @activeNode
     @stateLogger.deleteNode(deletedNode, @activeTree.treeId)
 
+    comments = @activeTree.comments
+    branchpoints = @activeTree.branchpoints
+
     if deletedNode.neighbors.length > 1
       # Need to split tree
       newTrees = []
@@ -432,6 +435,10 @@ class SkeletonTracing
             node.treeId = @activeTree.treeId
         @setActiveNode(deletedNode.neighbors[i].id)
         newTrees.push(@activeTree)
+
+        # update comments and branchpoints
+        @activeTree.comments = @getCommentsForNodes(comments, @activeTree.nodes)
+        @activeTree.branchpoints = @getBranchpointsForNodes(branchpoints, @activeTree.nodes)
 
         if @activeTree.treeId != oldActiveTreeId
           nodeIds = []
@@ -586,6 +593,20 @@ class SkeletonTracing
       if node.id == id
         return node
     return null
+
+
+  getCommentsForNodes : (comments, nodes) ->
+
+    return _.filter(comments, (comment) ->
+      _.find(nodes, { id : comment.node })
+    )
+
+
+  getBranchpointsForNodes : (branchpoints, nodes) ->
+
+    return _.filter(branchpoints, (branch) ->
+      _.find(nodes, { id : branch.id })
+    )
 
 
   compareNodes : (a, b) ->

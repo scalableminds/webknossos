@@ -31,7 +31,7 @@ object DataSetInformationHandler extends AnnotationInformationHandler with FoxIm
   def provideAnnotation(dataSetName: String, user: Option[User])(implicit ctx: DBAccessContext): Fox[TemporaryAnnotation] = {
     for {
       dataSet <- DataSetDAO.findOneBySourceName(dataSetName) ?~> "dataSet.notFound"
-      team <- user.flatMap(_.teamNames.intersect(dataSet.allowedTeams).headOption) ?~> "notAllowed"
+      team = user.flatMap(_.teamNames.intersect(dataSet.allowedTeams).headOption).getOrElse("")
     } yield {
       val content = TemporarySkeletonTracing(
         dataSetName,

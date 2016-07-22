@@ -15,7 +15,7 @@ Comment = React.createClass(
 
     data = @props.data
     return (
-      <li className={liClassName} ref={ (ref) => @comment = ref }>
+      <li className={liClassName} id={"comment-tab-node-#{data.node}"} ref={ (ref) => @comment = ref }>
         <i className={iClassName}></i>
         <a href="#" onClick={@handleClick}>
           {data.node + " - " + data.content}

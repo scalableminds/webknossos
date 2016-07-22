@@ -84,3 +84,14 @@ div[data-toggle='collapse'] {
 .table .table {
   background-color: inherit;
 }
+
+// fix jasny-bootstrap fileinput
+// https://github.com/jasny/bootstrap/issues/263
+.fileinput-filename {
+  width: 100%;
+  position: absolute;
+  left: 0;
+  padding-left: 15px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}

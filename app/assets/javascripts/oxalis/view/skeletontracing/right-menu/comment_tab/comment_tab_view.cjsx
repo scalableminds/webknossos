@@ -1,10 +1,11 @@
-app                = require("app")
-Marionette         = require("backbone.marionette")
-Input              = require("libs/input")
-CommentList        = require("./comment_list")
-React              = require("react")
-ReactDOM           = require("react-dom")
-Utils              = require("libs/utils")
+app                    = require("app")
+Marionette             = require("backbone.marionette")
+Input                  = require("libs/input")
+CommentList            = require("./comment_list")
+React                  = require("react")
+ReactDOM               = require("react-dom")
+Utils                  = require("libs/utils")
+scrollIntoViewIfNeeded = require("scroll-into-view-if-needed")
 
 class CommentTabView extends Marionette.ItemView
 
@@ -60,6 +61,7 @@ class CommentTabView extends Marionette.ItemView
 
     # events
     @listenTo(@model.skeletonTracing, "newActiveNode", @updateInputElement)
+    @listenTo(@model.skeletonTracing, "reloadTrees" , @updateState)
 
     # keyboard shortcuts
     new Input.KeyboardNoLoop(
@@ -79,6 +81,9 @@ class CommentTabView extends Marionette.ItemView
       )
       @updateState()
 
+    # scroll active comment into view
+    @ensureActiveCommentVisible()
+
 
   updateState : ->
 
@@ -90,6 +95,13 @@ class CommentTabView extends Marionette.ItemView
       activeTreeId : @model.skeletonTracing.getActiveTreeId()
       isSortedAscending : @isSortedAscending
     )
+
+
+  ensureActiveCommentVisible : ->
+
+    activeNodeId = @getActiveNodeId()
+    comment = $("#comment-tab-node-#{activeNodeId}")[0]
+    scrollIntoViewIfNeeded(comment) if comment
 
 
   getActiveNodeId : ->

@@ -21,6 +21,7 @@
   <logger name="play" level="WARN" />
   <logger name="application" level="TRACE" />
   <logger name="braingames.binary" level="TRACE" />
+  <logger name="frontend" level="INFO" />
 
   <root level="WARN">
     <appender-ref ref="STDOUT" />

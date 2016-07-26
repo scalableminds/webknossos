@@ -61,15 +61,25 @@ class DataSetController @Inject()(val messagesApi: MessagesApi) extends Controll
 
     def imageFromCacheIfPossible(dataSet: DataSet) =
     // We don't want all images to expire at the same time. Therefore, we add a day of randomness, hence the 1 day
-      Cache.getOrElse(s"thumbnail-$dataSetName*$dataLayerName",
-        (ThumbnailCacheDuration.toSeconds + math.random * 2.hours.toSeconds).toInt) {
-        DataStoreHandler.requestDataLayerThumbnail(dataSet, dataLayerName, ThumbnailWidth, ThumbnailHeight)
+      Cache.get(s"thumbnail-$dataSetName*$dataLayerName") match {
+        case Some(a: Array[Byte]) =>
+          Fox.successful(a)
+        case _ =>
+          DataStoreHandler.requestDataLayerThumbnail(dataSet, dataLayerName, ThumbnailWidth, ThumbnailHeight).map{
+            result =>
+              Cache.set(s"thumbnail-$dataSetName*$dataLayerName",
+                result,
+                (ThumbnailCacheDuration.toSeconds + math.random * 2.hours.toSeconds).toInt)
+              result
+          }
       }
+
+
 
     for {
       dataSet <- DataSetDAO.findOneBySourceName(dataSetName) ?~> Messages("dataSet.notFound", dataSetName)
       layer <- DataSetService.getDataLayer(dataSet, dataLayerName) ?~> Messages("dataLayer.notFound", dataLayerName)
-      image <- imageFromCacheIfPossible(dataSet) ?~> Messages("dataLayer.thumbnailFailed")
+      image <- imageFromCacheIfPossible(dataSet)
     } yield {
       Ok(image).withHeaders(
         CONTENT_LENGTH -> image.length.toString,

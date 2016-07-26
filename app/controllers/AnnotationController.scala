@@ -254,20 +254,20 @@ class AnnotationController @Inject()(val messagesApi: MessagesApi) extends Contr
     }
   }
 
-  def finishAnnotation(typ: String, id: String, user: User)(implicit ctx: DBAccessContext): Fox[(JsObject, String)] = {
+  def finishAnnotation(typ: String, id: String, user: User)(implicit ctx: DBAccessContext): Fox[(Annotation, String)] = {
     for {
       annotation <- AnnotationDAO.findOneById(id) ?~> Messages("annotation.notFound")
       (updated, message) <- annotation.muta.finishAnnotation(user)
-      json <- annotationJson(user, updated,  List("content"))
     } yield {
       TimeSpanService.logUserInteraction(user, Some(annotation))         // log time on a tracings end
-      (json, message)
+      (updated, message)
     }
   }
 
   def finish(typ: String, id: String) = Authenticated.async { implicit request =>
     for {
-      (json, message) <- finishAnnotation(typ, id, request.user)(GlobalAccessContext)
+      (updated, message) <- finishAnnotation(typ, id, request.user)(GlobalAccessContext)
+      json <- annotationJson(request.user, updated,  List("content"))
     } yield {
       JsonOk(json, Messages(message))
     }
@@ -275,7 +275,7 @@ class AnnotationController @Inject()(val messagesApi: MessagesApi) extends Contr
 
   def finishAll(typ: String) = Authenticated.async(parse.json) { implicit request =>
     withJsonAs[JsArray](request.body \ "annotations") { annotationIds =>
-      val results: List[Fox[(JsObject, String)]] = (for {
+      val results: List[Fox[(Annotation, String)]] = (for {
         jsValue <- annotationIds.value
         id <- jsValue.asOpt[String]
       } yield finishAnnotation(typ, id, request.user)(GlobalAccessContext)).toList

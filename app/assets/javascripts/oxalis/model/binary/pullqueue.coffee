@@ -27,6 +27,10 @@ class PullQueue
     @queue = []
     @BATCH_SIZE = if @isNDstore() then 1 else 3
 
+    # Debug option.
+    # If true, buckets of all 0 will be transformed to have 255 bytes everywhere.
+    @whitenEmptyBuckets = false
+
 
   pull : ->
 
@@ -76,6 +80,7 @@ class PullQueue
           else
             bucketData = responseBuffer.subarray(offset, offset += @cube.BUCKET_LENGTH)
           @boundingBox.removeOutsideArea(bucket, bucketData)
+          @maybeWhitenEmptyBucket(bucketData)
           @cube.getBucketByZoomedAddress(bucket).receiveData(bucketData)
       ).catch(=>
         for bucketAddress in batch
@@ -245,6 +250,17 @@ class PullQueue
   isNDstore : ->
 
     return @datastoreInfo.typ == "ndstore"
+
+
+  maybeWhitenEmptyBucket : (bucketData) ->
+
+    return unless @whitenEmptyBuckets
+
+    allZero = _.reduce(bucketData, ((res, e) -> res and e == 0), true)
+
+    if allZero
+      for i in [0...bucketData.length]
+        bucketData[i] = 255
 
 
 module.exports = PullQueue

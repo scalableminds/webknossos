@@ -55,10 +55,6 @@ TRACING_OBJECT = {
       customLayers : []
 }
 
-fail = (message) ->
-  console.error("Fail: ", message)
-  expect("the test").toBe("not failing.")
-
 Model = require("../../oxalis/model")
 
 describe "Model", ->
@@ -85,8 +81,8 @@ describe "Model", ->
 
         model.fetch()
           .then(done)
-          .catch((error) ->
-            fail(error.message)
+          .catch((error) =>
+            @fail(error.message)
             done()
           )
 
@@ -99,8 +95,8 @@ describe "Model", ->
         Request.receiveJSON.returns(Promise.resolve(tracingObject))
 
         model.fetch()
-          .then(->
-            fail("Promise should not have been resolved.")
+          .then(=>
+            @fail("Promise should not have been resolved.")
             done()
           ).catch( (error) ->
             expect(error).toBe(Model::HANDLED_ERROR)
@@ -112,8 +108,8 @@ describe "Model", ->
         Request.receiveJSON.returns(Promise.reject(new Error("errorMessage")))
 
         model.fetch()
-          .then(->
-            fail("Promise should not have been resolved.")
+          .then(=>
+            @fail("Promise should not have been resolved.")
             done()
           ).catch( (error) ->
             expect(error.message).toBe("errorMessage")

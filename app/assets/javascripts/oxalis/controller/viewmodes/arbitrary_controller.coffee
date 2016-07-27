@@ -20,6 +20,7 @@ class ArbitraryController
   # Arbitrary Controller: Responsible for Arbitrary Modes
 
   WIDTH : 128
+  TIMETOCENTER : 200
 
   plane : null
   crosshair : null
@@ -325,7 +326,7 @@ class ArbitraryController
       waypointAnimation = new TWEEN.Tween(
         {x: curPos[0], y: curPos[1], z: curPos[2], rx: curRotation[0], ry: curRotation[1], rz: curRotation[2], cam: @cam})
       waypointAnimation.to(
-        {x: newPos[0], y: newPos[1], z: newPos[2], rx: newRotation[0], ry: newRotation[1], rz: newRotation[2]}, 200)
+        {x: newPos[0], y: newPos[1], z: newPos[2], rx: newRotation[0], ry: newRotation[1], rz: newRotation[2]}, @TIMETOCENTER)
       waypointAnimation.onUpdate( ->
         @cam.setPosition([@x, @y, @z])
         @cam.setRotation([@rx, @ry, @rz])

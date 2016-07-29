@@ -26,10 +26,10 @@ object JsonHelper extends LazyLogging {
       Full(Json.parse(Source.fromFile(path.toFile).getLines.mkString))
     } catch {
       case e: java.io.EOFException =>
-        logger.error("EOFException in JsonHelper while trying to extract json from file.", e)
+        logger.error(s"EOFException in JsonHelper while trying to extract json from file. File: ${rootPath.relativize(path).toString}")
         Failure(s"An EOF exception occurred during json read. File: ${rootPath.relativize(path).toString }")
-      case _: AccessDeniedException | _: FileNotFoundException =>
-        logger.error("File access exception in JsonHelper while trying to extract json from file.")
+      case _ : AccessDeniedException | _: FileNotFoundException =>
+        logger.error(s"File access exception in JsonHelper while trying to extract json from file. File: ${rootPath.relativize(path).toString}")
         Failure(s"Failed to parse Json in '${rootPath.relativize(path).toString }'. Access denied.")
       case e: com.fasterxml.jackson.databind.JsonMappingException =>
         logger.warn(s"Exception in JsonHelper while trying to extract json from file. Path: $path. Json Mapping issue.")

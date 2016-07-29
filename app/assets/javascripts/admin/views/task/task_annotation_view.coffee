@@ -28,7 +28,7 @@ class TaskAnnotationView extends Marionette.ItemView
         </li>
         <% }) %>
         <li>
-          <a href="#" class="delete-annotation"><i class="fa fa-trash-o"></i>delete</a>
+          <a href="#" class="cancel-annotation"><i class="fa fa-trash-o"></i>cancel</a>
         </li>
         </ul>
       </div>
@@ -40,7 +40,7 @@ class TaskAnnotationView extends Marionette.ItemView
 
   events :
     "click .isAjax" : "callAjax"
-    "click .delete-annotation" : "deleteAnnotation"
+    "click .cancel-annotation" : "cancelAnnotation"
 
   modelEvents :
     "change" : "render"
@@ -58,9 +58,9 @@ class TaskAnnotationView extends Marionette.ItemView
     )
 
 
-  deleteAnnotation : ->
+  cancelAnnotation : ->
 
-    if window.confirm("Do you really want to delete this annotation?")
+    if window.confirm("Do you really want to cancel this annotation?")
       @model.destroy()
 
 module.exports = TaskAnnotationView

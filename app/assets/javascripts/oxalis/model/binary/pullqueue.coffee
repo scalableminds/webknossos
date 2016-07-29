@@ -107,12 +107,22 @@ class PullQueue
       ))
 
     return requestData.dataPromise().then((data) =>
-      Request.sendArraybufferReceiveArraybuffer("#{@layer.url}/data/datasets/#{@dataSetName}/layers/#{@layer.name}/data?token=#{@layer.token}",
-        data : data
-        headers :
-          "Content-Type" : "multipart/mixed; boundary=#{requestData.boundary}"
-        timeout : @MESSAGE_TIMEOUT
-        compress : true
+      @layer.tokenPromise.then( =>
+        token = @layer.token
+        Request.sendArraybufferReceiveArraybuffer("#{@layer.url}/data/datasets/#{@dataSetName}/layers/#{@layer.name}/data?token=#{token}",
+          data : data
+          headers :
+            "Content-Type" : "multipart/mixed; boundary=#{requestData.boundary}"
+          timeout : @MESSAGE_TIMEOUT
+          compress : true
+          doNotCatch : true
+        ).catch((err) =>
+          # renew token if it is invalid
+          if err.status == 403
+            @layer.renewToken(token)
+
+          throw err
+        )
       )
     ).then( (responseBuffer) ->
       responseBuffer = new Uint8Array(responseBuffer)

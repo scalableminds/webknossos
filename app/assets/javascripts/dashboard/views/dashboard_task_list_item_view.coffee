@@ -1,6 +1,7 @@
 _          = require("lodash")
 Marionette = require("backbone.marionette")
 Toast      = require("libs/toast")
+Request    = require("libs/request")
 
 class DashboardTaskListItemView extends Marionette.ItemView
 
@@ -36,6 +37,11 @@ class DashboardTaskListItemView extends Marionette.ItemView
             <i class="fa fa-share"></i>
             transfer
           </a>
+          </br>
+          <a href="#" id="cancel-task">
+            <i class="fa fa-trash-o"></i>
+            cancel
+          </a>
         <% } %>
         <br/>
         <a href="#" id="finish-task" class="trace-finish">
@@ -48,6 +54,7 @@ class DashboardTaskListItemView extends Marionette.ItemView
 
   events :
     "click #finish-task" : "finish"
+    "click #cancel-task" : "cancelAnnotation"
 
 
   className : ->
@@ -67,7 +74,16 @@ class DashboardTaskListItemView extends Marionette.ItemView
   finish : ->
 
     if confirm("Are you sure you want to permanently finish this tracing?")
-
       @model.finish()
+
+
+  cancelAnnotation : ->
+
+    if confirm("Do you really want to cancel this annotation?")
+      annotation = @model.get("annotation")
+      Request.triggerRequest("/annotations/#{annotation.typ}/#{annotation.id}", method : "DELETE").then( =>
+        @model.collection.fetch()
+      )
+
 
 module.exports = DashboardTaskListItemView

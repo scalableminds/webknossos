@@ -78,8 +78,7 @@ class TaskQueryView extends Marionette.LayoutView
     @editor = ace.edit(@ui.query[0])
     @editor.getSession().setMode('ace/mode/javascript')
     @editor.setTheme('ace/theme/clouds')
-
-    defaultQuery = "{\n\t\"isActive\": true\n}"
+    defaultQuery = "{\n\t\"_id\": {\"$oid\": \"56cb594a16000045b4d0f273\"}\n}"
     @editor.setValue(defaultQuery)
     @editor.clearSelection()
     @editor.resize()

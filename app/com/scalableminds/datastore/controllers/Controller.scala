@@ -20,19 +20,19 @@ trait Controller
 
 trait RemoteOriginHelpers {
 
-  def AllowRemoteOrigin(f: => Future[Result]) =
+  def AllowRemoteOrigin(f: => Future[Result]): Future[Result] =
     f.map(addHeadersToResult)
 
-  def AllowRemoteOrigin(f: => Result) =
+  def AllowRemoteOrigin(f: => Result): Result =
     addHeadersToResult(f)
 
-  def addHeadersToResult(result: Result) =
-    result.withHeaders("Access-Control-Allow-Origin" -> "*")
+  def addHeadersToResult(result: Result): Result =
+    result.withHeaders("Access-Control-Allow-Origin" -> "*", "Access-Control-Max-Age" -> "600")
 
   case class AllowRemoteOrigin[A](action: Action[A]) extends Action[A] {
 
     def apply(request: Request[A]): Future[Result] =
-      action(request).map(_.withHeaders("Access-Control-Allow-Origin" -> "*"))
+      AllowRemoteOrigin(action(request))
 
     lazy val parser = action.parser
   }

@@ -90,7 +90,7 @@ object OpenAssignmentDAO extends SecuredBaseDAO[OpenAssignment] with FoxImplicit
         "$or" -> (experiencesToQuery(user) :+ noRequiredExperience)))
       .sort(byPriority)
       .cursor[OpenAssignment]()
-      .enumerate()
+      .enumerate(stopOnError = true)
   }
 
   def findOrderedByPriority(implicit ctx: DBAccessContext): Enumerator[OpenAssignment] = {

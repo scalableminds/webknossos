@@ -27,35 +27,27 @@ trait TaskAssignment extends FoxImplicits with LazyLogging{
 
   val conf = current.configuration
 
-  def logIfDeryaku(user: User)(s: String) = {
-    if(user.email == "deryaku@hotmail.de")
-      logger.error(s)
-  }
-
   /**
     * Create an Enumeratee that filters the inputs using the given predicate
     *
     * @param predicate A function to filter the input elements.
     * $paramEcSingle
     */
-  def filterM[E](user: User)(predicate: E => Future[Boolean])(implicit ec: ExecutionContext): Enumeratee[E, E] = new CheckDone[E, E] {
+  def filterM[E](predicate: E => Future[Boolean])(implicit ec: ExecutionContext): Enumeratee[E, E] = new CheckDone[E, E] {
     val pec = ec.prepare()
 
     def step[A](k: K[E, A]): K[E, Iteratee[E, A]] = {
 
       case in @ Input.El(e) =>
-        logIfDeryaku(user)("INPUT: " + in)
         Iteratee.flatten(predicate(e).map { b =>
           if (b) new CheckDone[E, E] { def continue[A](k: K[E, A]) = Cont(step(k)) } &> k(in)
           else Cont(step(k))
         }(pec))
 
       case Input.Empty =>
-        logIfDeryaku(user)("EMPTY!!!!!!")
         new CheckDone[E, E] { def continue[A](k: K[E, A]) = Cont(step(k)) } &> k(Input.Empty)
 
       case Input.EOF =>
-        logIfDeryaku(user)("INPUT EOF!!!!!!")
         Done(Cont(k), Input.EOF)
     }
 
@@ -64,10 +56,7 @@ trait TaskAssignment extends FoxImplicits with LazyLogging{
   }
 
   def findAssignable(user: User)(implicit ctx: DBAccessContext) = {
-    val alreadyDoneFilter = filterM[OpenAssignment](user){ assignment =>
-      // TODO: remove
-      logger.error(s"${user.email}: About to check for existance of tracing for ${assignment.id}")
-      logIfDeryaku(user)(s"Checking for existance of tracing for ${assignment.id}")
+    val alreadyDoneFilter = filterM[OpenAssignment]{ assignment =>
       AnnotationService.findTaskOf(user, assignment._task).futureBox.map(_.isEmpty)
     }
 

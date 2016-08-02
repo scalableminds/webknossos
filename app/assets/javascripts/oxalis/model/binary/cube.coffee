@@ -177,8 +177,9 @@ class Cube
 
     bucket = new Bucket(@BIT_DEPTH, address, @temporalBucketManager)
     bucket.on
-      bucketLoaded : => @trigger("bucketLoaded", address)
-    @addBucketToGarbageCollection(bucket)
+      bucketLoaded : =>
+        @trigger("bucketLoaded", address)
+        @addBucketToGarbageCollection(bucket)
     return bucket
 
 

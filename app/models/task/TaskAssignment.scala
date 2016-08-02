@@ -11,6 +11,7 @@ import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.typesafe.scalalogging.LazyLogging
 import play.api.libs.iteratee._
 import play.api.libs.concurrent.Execution.Implicits.{defaultContext => dec}
+import play.api.libs.iteratee.Enumeratee.CheckDone
 
 /**
  * Company: scalableminds
@@ -32,31 +33,34 @@ trait TaskAssignment extends FoxImplicits with LazyLogging{
   }
 
   /**
-   * Create an Enumeratee that filters the inputs using the given predicate
-   *
-   * @param predicate A function to filter the input elements.
-   * $paramEcSingle
-   */
-  def filterM[U](user: User)(predicate: U => Future[Boolean])(implicit ec: ExecutionContext): Enumeratee[U, U] = new Enumeratee.CheckDone[U, U] {
-    def step[A](k: K[U, A]): K[U, Iteratee[U, A]] = {
+    * Create an Enumeratee that filters the inputs using the given predicate
+    *
+    * @param predicate A function to filter the input elements.
+    * $paramEcSingle
+    */
+  def filterM[E](user: User)(predicate: E => Future[Boolean])(implicit ec: ExecutionContext): Enumeratee[E, E] = new CheckDone[E, E] {
+    val pec = ec.prepare()
+
+    def step[A](k: K[E, A]): K[E, Iteratee[E, A]] = {
 
       case in @ Input.El(e) =>
         logIfDeryaku(user)("INPUT: " + in)
         Iteratee.flatten(predicate(e).map { b =>
-          if (b) new Enumeratee.CheckDone[U, U] {def continue[A](k: K[U, A]) = Cont(step(k))} &> k(in)
+          if (b) new CheckDone[E, E] { def continue[A](k: K[E, A]) = Cont(step(k)) } &> k(in)
           else Cont(step(k))
-        }(dec))
+        }(pec))
 
-      case in @ Input.Empty =>
+      case Input.Empty =>
         logIfDeryaku(user)("EMPTY!!!!!!")
-        Cont(step(k))
+        new CheckDone[E, E] { def continue[A](k: K[E, A]) = Cont(step(k)) } &> k(Input.Empty)
 
       case Input.EOF =>
         logIfDeryaku(user)("INPUT EOF!!!!!!")
         Done(Cont(k), Input.EOF)
     }
 
-    def continue[A](k: K[U, A]) = Cont(step(k))
+    def continue[A](k: K[E, A]) = Cont(step(k))
+
   }
 
   def findAssignable(user: User)(implicit ctx: DBAccessContext) = {

@@ -26,35 +26,44 @@ trait TaskAssignment extends FoxImplicits with LazyLogging{
 
   val conf = current.configuration
 
+  def logIfDeryaku(user: User)(s: String) = {
+    if(user.email == "deryaku@hotmail.de")
+      logger.error(s)
+  }
+
   /**
    * Create an Enumeratee that filters the inputs using the given predicate
    *
    * @param predicate A function to filter the input elements.
    * $paramEcSingle
    */
-  def filterM[U](predicate: U => Future[Boolean])(implicit ec: ExecutionContext): Enumeratee[U, U] = new Enumeratee.CheckDone[U, U] {
+  def filterM[U](user: User)(predicate: U => Future[Boolean])(implicit ec: ExecutionContext): Enumeratee[U, U] = new Enumeratee.CheckDone[U, U] {
     def step[A](k: K[U, A]): K[U, Iteratee[U, A]] = {
 
-      case in @ Input.El(e) => Iteratee.flatten(predicate(e).map { b =>
-        if (b) new Enumeratee.CheckDone[U, U] {def continue[A](k: K[U, A]) = Cont(step(k))} &> k(in)
-        else Cont(step(k))
-      }(dec))
+      case in @ Input.El(e) =>
+        logIfDeryaku(user)("INPUT: " + in)
+        Iteratee.flatten(predicate(e).map { b =>
+          if (b) new Enumeratee.CheckDone[U, U] {def continue[A](k: K[U, A]) = Cont(step(k))} &> k(in)
+          else Cont(step(k))
+        }(dec))
 
       case in @ Input.Empty =>
-        new Enumeratee.CheckDone[U, U] {def continue[A](k: K[U, A]) = Cont(step(k))} &> k(in)
+        logIfDeryaku(user)("EMPTY!!!!!!")
+        Cont(step(k))
 
-      case Input.EOF => Done(Cont(k), Input.EOF)
-
+      case Input.EOF =>
+        logIfDeryaku(user)("INPUT EOF!!!!!!")
+        Done(Cont(k), Input.EOF)
     }
 
     def continue[A](k: K[U, A]) = Cont(step(k))
   }
 
   def findAssignable(user: User)(implicit ctx: DBAccessContext) = {
-    val alreadyDoneFilter = filterM[OpenAssignment]{ assignment =>
+    val alreadyDoneFilter = filterM[OpenAssignment](user){ assignment =>
       // TODO: remove
-      if(user.email == "deryaku@hotmail.de")
-        logger.error(s"Checking for existance of tracing for ${assignment.id}")
+      logger.error(s"${user.email}: About to check for existance of tracing for ${assignment.id}")
+      logIfDeryaku(user)(s"Checking for existance of tracing for ${assignment.id}")
       AnnotationService.findTaskOf(user, assignment._task).futureBox.map(_.isEmpty)
     }
 

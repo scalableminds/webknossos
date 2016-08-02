@@ -5,11 +5,12 @@ import scala.concurrent.{ExecutionContext, Future}
 
 import models.annotation.AnnotationService
 import play.api.Play._
-import models.user.{UserService, User}
+import models.user.{User, UserService}
 import com.scalableminds.util.reactivemongo.DBAccessContext
-import com.scalableminds.util.tools.{FoxImplicits, Fox}
+import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.typesafe.scalalogging.LazyLogging
 import play.api.libs.iteratee._
-import play.api.libs.concurrent.Execution.Implicits.{ defaultContext => dec }
+import play.api.libs.concurrent.Execution.Implicits.{defaultContext => dec}
 
 /**
  * Company: scalableminds
@@ -17,7 +18,7 @@ import play.api.libs.concurrent.Execution.Implicits.{ defaultContext => dec }
  * Date: 19.11.13
  * Time: 14:57
  */
-trait TaskAssignment extends FoxImplicits{
+trait TaskAssignment extends FoxImplicits with LazyLogging{
 
   def findNextAssignment(user: User)(implicit ctx: DBAccessContext): Enumerator[OpenAssignment]
 
@@ -51,6 +52,9 @@ trait TaskAssignment extends FoxImplicits{
 
   def findAssignable(user: User)(implicit ctx: DBAccessContext) = {
     val alreadyDoneFilter = filterM[OpenAssignment]{ assignment =>
+      // TODO: remove
+      if(user.email == "deryaku@hotmail.de")
+        logger.error(s"Checking for existance of tracing for ${assignment.id}")
       AnnotationService.findTaskOf(user, assignment._task).futureBox.map(_.isEmpty)
     }
 

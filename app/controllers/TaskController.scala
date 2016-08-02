@@ -272,6 +272,7 @@ class TaskController @Inject() (val messagesApi: MessagesApi) extends Controller
 
   def tryToGetNextAssignmentFor(user: User, retryCount: Int = 20)(implicit ctx: DBAccessContext): Fox[OpenAssignment] = {
     val s = System.currentTimeMillis()
+    Logger.info(s"Requested assignment for ${user.email}, retries: $retryCount")
     requestAssignmentFor(user).futureBox.flatMap {
       case Full(assignment) =>
         OpenAssignmentService.remove(assignment).flatMap { removeResult =>

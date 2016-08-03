@@ -124,8 +124,17 @@ class ArbitraryController
 
       #Move
       "space"         : (timeFactor) =>
+        @setRecord(true)
         @move(timeFactor)
       "ctrl + space"   : (timeFactor) => 
+        @setRecord(true)
+        @move(-timeFactor)
+
+      "f"         : (timeFactor) =>
+        @setRecord(false)
+        @move(timeFactor)
+      "d"   : (timeFactor) => 
+        @setRecord(false)
         @move(-timeFactor)
 
       #Rotate at centre

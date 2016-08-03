@@ -114,11 +114,6 @@ class ArbitraryController
 
   initKeyboard : ->
 
-    getVoxelOffset  = (timeFactor) =>
-
-      return @model.user.get("moveValue3d") * timeFactor / app.scaleInfo.baseVoxel / constants.FPS
-
-
     @input.keyboard = new Input.Keyboard(
 
       # KeyboardJS is sensitive to ordering (complex combos first)
@@ -129,9 +124,9 @@ class ArbitraryController
 
       #Move
       "space"         : (timeFactor) =>
-        @cam.move [0, 0, getVoxelOffset(timeFactor)]
-        @moved()
-      "ctrl + space"   : (timeFactor) => @cam.move [0, 0, -getVoxelOffset(timeFactor)]
+        @move(timeFactor)
+      "ctrl + space"   : (timeFactor) => 
+        @move(-timeFactor)
 
       #Rotate at centre
       "shift + left"  : (timeFactor) => @cam.yaw @model.user.get("rotateValue") * timeFactor
@@ -202,6 +197,17 @@ class ArbitraryController
     if record != @model.get("flightmodeRecording")
       @model.set("flightmodeRecording", record)
       @setWaypoint() 
+
+
+  getVoxelOffset : (timeFactor) ->
+
+    return @model.user.get("moveValue3d") * timeFactor / app.scaleInfo.baseVoxel / constants.FPS
+
+
+  move : (timeFactor) ->
+
+    @cam.move [0, 0, @getVoxelOffset(timeFactor)]
+    @moved()
 
 
   init : ->

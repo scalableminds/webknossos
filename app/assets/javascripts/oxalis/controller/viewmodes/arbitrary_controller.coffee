@@ -128,10 +128,6 @@ class ArbitraryController
       "k"             : (timeFactor) => @arbitraryView.applyScale  @model.user.get("scaleValue")
 
       #Move
-      "w"             : (timeFactor) => @cam.move [0, getVoxelOffset(timeFactor), 0]
-      "s"             : (timeFactor) => @cam.move [0, -getVoxelOffset(timeFactor), 0]
-      "a"             : (timeFactor) => @cam.move [getVoxelOffset(timeFactor), 0, 0]
-      "d"             : (timeFactor) => @cam.move [-getVoxelOffset(timeFactor), 0, 0]
       "space"         : (timeFactor) =>
         @cam.move [0, 0, getVoxelOffset(timeFactor)]
         @moved()
@@ -175,7 +171,7 @@ class ArbitraryController
       "r" : => @cam.setRotation([0, 0, 0])
 
       #Recenter active node
-      "y" : => @centerActiveNode()
+      "s" : => @centerActiveNode()
 
       #Recording of Waypoints
       "z" : =>

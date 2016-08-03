@@ -188,8 +188,13 @@ class ArbitraryController
 
       #Delete active node and recenter last node
       "shift + space" : =>
-        @model.skeletonTracing.deleteActiveNode()
-        @centerActiveNode()
+        skeletonTracing = @model.skeletonTracing
+        activeNode = skeletonTracing.getActiveNode()
+        if activeNode.neighbors.length > 1
+          Toast.error("Unable: Attempting to cut skeleton")
+        else
+          skeletonTracing.deleteActiveNode()
+          @centerActiveNode()
 
     , -1)
 

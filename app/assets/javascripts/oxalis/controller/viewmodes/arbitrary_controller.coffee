@@ -11,6 +11,7 @@ ArbitraryPlaneInfo = require("../../geometries/arbitrary_plane_info")
 constants          = require("../../constants")
 {M4x4, V3}         = require("libs/mjs")
 Utils              = require("libs/utils")
+Toast              = require("libs/toast")
 
 
 class ArbitraryController
@@ -302,6 +303,7 @@ class ArbitraryController
   pushBranch : ->
 
     @model.skeletonTracing.pushBranch()
+    Toast.success("Branchpoint set")
 
 
   popBranch : ->

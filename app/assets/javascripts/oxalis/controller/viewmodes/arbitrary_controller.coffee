@@ -199,9 +199,9 @@ class ArbitraryController
 
   setRecord : (record) ->
 
-    @model.set("flightmodeRecording", record)
-    if record
-      @setWaypoint()
+    if record != @model.get("flightmodeRecording")
+      @model.set("flightmodeRecording", record)
+      @setWaypoint() 
 
 
   init : ->

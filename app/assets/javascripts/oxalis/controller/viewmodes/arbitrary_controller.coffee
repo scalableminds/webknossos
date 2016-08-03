@@ -192,6 +192,8 @@ class ArbitraryController
         activeNode = skeletonTracing.getActiveNode()
         if activeNode.neighbors.length > 1
           Toast.error("Unable: Attempting to cut skeleton")
+        else if skeletonTracing.getBranchpointsForNodes(skeletonTracing.activeTree.branchpoints, activeNode).length
+          Toast.error("Unable: Attempting to delete branchpoint")
         else
           skeletonTracing.deleteActiveNode()
           @centerActiveNode()

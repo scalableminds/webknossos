@@ -58,7 +58,7 @@ describe "Cube", ->
           ->
             expect(pushQueue.insert.called).toBe(false)
           ->
-            bucket = cube.getBucketByZoomedAddress([0, 0, 0, 0])
+            bucket = cube.getBucket([0, 0, 0, 0])
             bucket.pull()
             bucket.receiveData(new Uint8Array(32 * 32 * 32 * 3))
           ->
@@ -70,7 +70,7 @@ describe "Cube", ->
 
       it "should push buckets immediately if they are pulled already", (done) ->
 
-        bucket = cube.getBucketByZoomedAddress([0, 0, 0, 0])
+        bucket = cube.getBucket([0, 0, 0, 0])
         bucket.pull()
         bucket.receiveData(new Uint8Array(32 * 32 * 32 * 3))
 
@@ -91,7 +91,7 @@ describe "Cube", ->
         # Uses existing temporal bucket
         cube.labelVoxel([1, 0, 0], 43)
 
-        data = cube.getBucketByZoomedAddress([0, 0, 0, 0]).getData()
+        data = cube.getBucket([0, 0, 0, 0]).getData()
 
         # Both values should be in the bucket, at positions 0 and 3 because of
         # the bit depth of 24.
@@ -100,7 +100,7 @@ describe "Cube", ->
 
       it "should merge incoming buckets", ->
 
-        bucket = cube.getBucketByZoomedAddress([0, 0, 0, 0])
+        bucket = cube.getBucket([0, 0, 0, 0])
 
         oldData = new Uint8Array(32 * 32 * 32 * 3)
         # First voxel should be overwritten by new data
@@ -152,20 +152,20 @@ describe "Cube", ->
 
       it "should only keep 3 buckets", ->
 
-        cube.getBucketByZoomedAddress([0, 0, 0, 0])
-        cube.getBucketByZoomedAddress([1, 1, 1, 0])
-        cube.getBucketByZoomedAddress([2, 2, 2, 0])
-        cube.getBucketByZoomedAddress([3, 3, 3, 0])
+        cube.getBucket([0, 0, 0, 0])
+        cube.getBucket([1, 1, 1, 0])
+        cube.getBucket([2, 2, 2, 0])
+        cube.getBucket([3, 3, 3, 0])
 
         expect(cube.bucketCount).toBe(3)
 
       it "should not collect buckets with shouldCollect() == false", ->
 
-        b1 = cube.getBucketByZoomedAddress([0, 0, 0, 0])
+        b1 = cube.getBucket([0, 0, 0, 0])
         b1.pull()
-        b2 = cube.getBucketByZoomedAddress([1, 1, 1, 0])
-        b3 = cube.getBucketByZoomedAddress([2, 2, 2, 0])
-        b4 = cube.getBucketByZoomedAddress([3, 3, 3, 0])
+        b2 = cube.getBucket([1, 1, 1, 0])
+        b3 = cube.getBucket([2, 2, 2, 0])
+        b4 = cube.getBucket([3, 3, 3, 0])
 
         expect(b1.shouldCollect()).toBe(false)
 
@@ -174,9 +174,9 @@ describe "Cube", ->
 
       it "should throw an exception if no bucket is collectable", ->
 
-        cube.getBucketByZoomedAddress([0, 0, 0, 0]).pull()
-        cube.getBucketByZoomedAddress([1, 1, 1, 0]).pull()
-        cube.getBucketByZoomedAddress([2, 2, 2, 0]).pull()
+        cube.getBucket([0, 0, 0, 0]).pull()
+        cube.getBucket([1, 1, 1, 0]).pull()
+        cube.getBucket([2, 2, 2, 0]).pull()
 
-        expect(-> cube.getBucketByZoomedAddress([3, 3, 3, 0])).toThrow()
+        expect(-> cube.getBucket([3, 3, 3, 0])).toThrow()
 

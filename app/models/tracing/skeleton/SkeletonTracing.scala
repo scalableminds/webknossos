@@ -23,6 +23,7 @@ case class SkeletonTracing(
                             zoomLevel: Double,
                             roundTripTime: Double,
                             bandwidth: Double,
+                            totalBuckets: Long,
                             boundingBox: Option[BoundingBox],
                             stats: Option[SkeletonTracingStatistics],
                             settings: AnnotationSettings = AnnotationSettings.skeletonDefault,
@@ -143,6 +144,7 @@ object SkeletonTracing {
       t.zoomLevel,
       t.roundTripTime,
       t.bandwidth,
+      t.totalBuckets,
       t.boundingBox,
       t.stats,
       t.settings

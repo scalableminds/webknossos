@@ -22,6 +22,7 @@ case class TemporarySkeletonTracing(
                                      zoomLevel: Double,
                                      roundTripTime: Double,
                                      bandwidth: Double,
+                                     totalBuckets: Long,
                                      boundingBox: Option[BoundingBox],
                                      settings: AnnotationSettings = AnnotationSettings.skeletonDefault
                                    ) extends SkeletonTracingLike with AnnotationContent with TreeMergeHelpers{

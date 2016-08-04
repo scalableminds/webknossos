@@ -92,10 +92,10 @@ case class UpdateTree(value: JsObject) extends TracingUpdater {
       for {
         tree <- t.tree(id).toFox ?~> "Failed to access tree."
         updated = tree.copy(
-          color = color orElse tree.color, 
-          treeId = updatedId, 
-          branchPoints = branchPoints, 
-          comments = comments, 
+          color = color orElse tree.color,
+          treeId = updatedId,
+          branchPoints = branchPoints,
+          comments = comments,
           name = name)
         _ <- DBTreeDAO.update(tree._id, updated) ?~> "Failed to update tree."
       } yield t
@@ -236,6 +236,8 @@ case class UpdateTracing(value: JsObject) extends TracingUpdater {
     val zoomLevel = (value \ "zoomLevel").as[Double]
     val roundTripTime = (value \ "roundTripTime").as[Double]
     val bandwidth = (value \ "bandwidth").as[Double]
+    val totalBuckets = (value \ "totalBuckets").as[Long]
+
     TracingUpdate { t =>
       val updated = t.copy(
         activeNodeId = activeNodeId,
@@ -243,7 +245,8 @@ case class UpdateTracing(value: JsObject) extends TracingUpdater {
         editRotation = editRotation,
         zoomLevel = zoomLevel,
         roundTripTime = roundTripTime,
-        bandwidth = bandwidth)
+        bandwidth = bandwidth,
+        totalBuckets = totalBuckets)
       SkeletonTracingService.update(t._id, updated).map(_ => updated) ?~> "Failed to update tracing."
     }
   }

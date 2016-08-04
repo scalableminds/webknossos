@@ -154,8 +154,9 @@ class SkeletonTracingStateLogger extends StateLogger
         editPosition : V3.floor(@flycam.getPosition())
         editRotation : @flycam3d.getRotation()
         zoomLevel : @flycam.getZoomStep()
-        roundTripTime : connectionInfo.roundTripTime
-        bandwidth : connectionInfo.bandwidth
+        roundTripTime : connectionInfo.roundTripTimePersist
+        bandwidth : connectionInfo.bandwidthPersist
+        totalBuckets : connectionInfo.totalBucketsPersist
       }
       false
     )

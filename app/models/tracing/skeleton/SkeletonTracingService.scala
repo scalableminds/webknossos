@@ -64,6 +64,7 @@ object SkeletonTracingService extends AnnotationContentService with CommonTracin
         SkeletonTracing.defaultZoomLevel,
         SkeletonTracing.defaultRoundTripTime,
         SkeletonTracing.defaultBandwidth,
+        0,
         box,
         settings))
   }

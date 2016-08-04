@@ -6,6 +6,7 @@ import models.basics.SecuredBaseDAO
 import models.binary._
 import java.io.{PipedOutputStream, PipedInputStream, InputStream}
 import models.tracing.{CommonTracingService, CommonTracing}
+import models.tracing.skeleton.SkeletonTracing
 import net.liftweb.common.{Failure, Full}
 import play.api.Logger
 import play.api.libs.iteratee.{Enumerator, Iteratee}
@@ -32,6 +33,9 @@ case class VolumeTracing(
                           editPosition: Point3D = Point3D(0, 0, 0),
                           editRotation: Vector3D = Vector3D(0,0,0),
                           zoomLevel: Double,
+                          roundTripTime: Double = SkeletonTracing.defaultRoundTripTime,
+                          bandwidth: Double = SkeletonTracing.defaultBandwidth,
+                          totalBuckets: Long =  0,
                           boundingBox: Option[BoundingBox] = None,
                           settings: AnnotationSettings = AnnotationSettings.volumeDefault,
                           _id: BSONObjectID = BSONObjectID.generate)

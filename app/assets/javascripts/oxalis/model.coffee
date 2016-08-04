@@ -358,5 +358,12 @@ class Model extends Backbone.Model
     if state.activeNode?
       @get("skeletonTracing")?.setActiveNode(state.activeNode)
 
+    connectionInfo = @getColorBinaries()[0].pullQueue.connectionInfo
+    if tracing.content.roundTripTime?
+      connectionInfo.roundTripTimePersist = tracing.content.roundTripTime
+    if tracing.content.bandwidth?
+      connectionInfo.bandwidthPersist = tracing.content.bandwidth
+    if tracing.content.totalBuckets?
+      connectionInfo.totalBucketsPersist = tracing.content.totalBuckets
 
 module.exports = Model

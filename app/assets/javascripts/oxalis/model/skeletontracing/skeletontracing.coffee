@@ -308,6 +308,8 @@ class SkeletonTracing
 
     @stateLogger.push()
     @trigger("newActiveNode", @activeNode.id)
+    if lastActiveTree.treeId != @activeTree.treeId
+      @trigger("newActiveTree", @activeTree.treeId)
 
     if mergeTree
       @mergeTree(lastActiveNode, lastActiveTree)

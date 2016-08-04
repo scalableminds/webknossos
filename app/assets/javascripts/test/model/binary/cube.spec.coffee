@@ -70,7 +70,7 @@ describe "Cube", ->
 
       it "should push buckets immediately if they are pulled already", (done) ->
 
-        bucket = cube.getBucket([0, 0, 0, 0])
+        bucket = cube.getOrCreateBucket([0, 0, 0, 0])
         bucket.pull()
         bucket.receiveData(new Uint8Array(32 * 32 * 32 * 3))
 
@@ -100,7 +100,7 @@ describe "Cube", ->
 
       it "should merge incoming buckets", ->
 
-        bucket = cube.getBucket([0, 0, 0, 0])
+        bucket = cube.getOrCreateBucket([0, 0, 0, 0])
 
         oldData = new Uint8Array(32 * 32 * 32 * 3)
         # First voxel should be overwritten by new data

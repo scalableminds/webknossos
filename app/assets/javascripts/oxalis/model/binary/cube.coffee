@@ -136,38 +136,60 @@ class Cube
     return x + y * (1 << @BUCKET_SIZE_P) + z * (1 << @BUCKET_SIZE_P * 2)
 
 
-  getBucketIndex : ([x, y, z, zoomStep]) ->
+  isWithinBounds : ([x, y, z, zoomStep]) ->
 
-    ErrorHandling.assertExists(@cubes[zoomStep], "Cube for given zoomStep does not exist"
-      cubeCount: @cubes.length
-      zoomStep: zoomStep
-      zoomStepCount: @ZOOM_STEP_COUNT
+    if zoomStep >= @ZOOM_STEP_COUNT
+      return false
+
+    ErrorHandling.assertExists(
+      @cubes[zoomStep],
+      "Cube for given zoomStep does not exist", {
+        cubeCount: @cubes.length
+        zoomStep: zoomStep
+        zoomStepCount: @ZOOM_STEP_COUNT
+      }
     )
 
     boundary = @cubes[zoomStep].boundary
 
-    if  x >= 0 and x < boundary[0] and
-        y >= 0 and y < boundary[1] and
-        z >= 0 and z < boundary[2]
-
-      return x * boundary[2] * boundary[1] + y * boundary[2] + z
-
-    else
-
-      return undefined
+    return x >= 0 and x < boundary[0] and
+           y >= 0 and y < boundary[1] and
+           z >= 0 and z < boundary[2]
 
 
+  getBucketIndex : ([x, y, z, zoomStep]) ->
+
+    ErrorHandling.assert(@isWithinBounds([x, y, z, zoomStep]))
+
+    boundary = @cubes[zoomStep].boundary
+    return x * boundary[2] * boundary[1] + y * boundary[2] + z
+
+
+  # Either returns the existing bucket or creates a new one. Only returns
+  # NULL_BUCKET if the bucket cannot possibly exist, e.g. because it is
+  # outside the dataset's bounding box.
+  getOrCreateBucket : (address) ->
+
+    unless @isWithinBounds(address)
+      return @NULL_BUCKET
+
+    bucket = @getBucket(address)
+    if bucket.isNullBucket
+      bucket = @createBucket(address)
+
+    return bucket
+
+
+  # Returns the Bucket object if it exists, or NULL_BUCKET otherwise.
   getBucket : (address) ->
 
-    if address[3] >= @ZOOM_STEP_COUNT
+    unless @isWithinBounds(address)
       return @NULL_BUCKET
 
     bucketIndex = @getBucketIndex(address)
     cube = @cubes[address[3]].data
 
-    if bucketIndex?
-      unless cube[bucketIndex]?
-        cube[bucketIndex] = @createBucket(address)
+    if cube[bucketIndex]?
       return cube[bucketIndex]
 
     return @NULL_BUCKET
@@ -180,6 +202,9 @@ class Cube
       bucketLoaded : =>
         @trigger("bucketLoaded", address)
         @addBucketToGarbageCollection(bucket)
+
+    bucketIndex = @getBucketIndex(address)
+    @cubes[address[3]].data[bucketIndex] = bucket
     return bucket
 
 
@@ -242,7 +267,9 @@ class Cube
 
     if voxelInCube
 
-      { bucket, voxelIndex } = @getBucketAndVoxelIndex(voxel, 0, true)
+      address = @positionToZoomedAddress(voxel)
+      bucket = @getOrCreateBucket(address)
+      voxelIndex = @getVoxelIndex(voxel)
 
       labelFunc = (data) =>
         # Write label in little endian order
@@ -254,12 +281,13 @@ class Cube
       # Push bucket if it's loaded, otherwise, TemporalBucketManager will push
       # it once it is.
       if bucket.isLoaded()
-        @pushQueue.insert(@positionToZoomedAddress(voxel))
+        @pushQueue.insert(address)
 
 
   getDataValue : ( voxel, mapping=@EMPTY_MAPPING ) ->
 
-    { bucket, voxelIndex} = @getBucketAndVoxelIndex( voxel, 0 )
+    bucket = @getBucket(@positionToZoomedAddress(voxel))
+    voxelIndex = @getVoxelIndex(voxel)
 
     if bucket.hasData()
 
@@ -282,16 +310,11 @@ class Cube
     return @getDataValue(voxel, @currentMapping)
 
 
-  getBucketAndVoxelIndex : (voxel, zoomStep, createBucketIfUndefined = false ) ->
-
-    address = @positionToZoomedAddress( voxel, zoomStep )
+  getVoxelIndex : (voxel) ->
 
     [x, y, z] = voxel.map((v) -> v & 0b11111)
-    voxelIndex = x + y * (1 << @BUCKET_SIZE_P) + z * (1 << @BUCKET_SIZE_P * 2)
-
-    return {
-      bucket : @getBucket(address, createBucketIfUndefined)
-      voxelIndex : @BYTE_OFFSET * voxelIndex }
+    return @BYTE_OFFSET *
+            (x + y * (1 << @BUCKET_SIZE_P) + z * (1 << @BUCKET_SIZE_P * 2))
 
 
   positionToZoomedAddress : ([x, y, z], zoomStep = 0) ->

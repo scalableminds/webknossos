@@ -201,7 +201,7 @@ class Cube
     bucket.on
       bucketLoaded : =>
         @trigger("bucketLoaded", address)
-        @addBucketToGarbageCollection(bucket)
+    @addBucketToGarbageCollection(bucket)
 
     bucketIndex = @getBucketIndex(address)
     @cubes[address[3]].data[bucketIndex] = bucket

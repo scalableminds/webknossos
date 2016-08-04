@@ -150,35 +150,33 @@ describe "Cube", ->
 
         Cube::MAXIMUM_BUCKET_COUNT = 3
 
-      # TODO: Undo outcommenting these test once GC is fixed
+      it "should only keep 3 buckets", ->
 
-      # it "should only keep 3 buckets", ->
+        cube.getOrCreateBucket([0, 0, 0, 0])
+        cube.getOrCreateBucket([1, 1, 1, 0])
+        cube.getOrCreateBucket([2, 2, 2, 0])
+        cube.getOrCreateBucket([3, 3, 3, 0])
 
-      #   cube.getBucket([0, 0, 0, 0])
-      #   cube.getBucket([1, 1, 1, 0])
-      #   cube.getBucket([2, 2, 2, 0])
-      #   cube.getBucket([3, 3, 3, 0])
+        expect(cube.bucketCount).toBe(3)
 
-      #   expect(cube.bucketCount).toBe(3)
+      it "should not collect buckets with shouldCollect() == false", ->
 
-      # it "should not collect buckets with shouldCollect() == false", ->
+        b1 = cube.getOrCreateBucket([0, 0, 0, 0])
+        b1.pull()
+        b2 = cube.getOrCreateBucket([1, 1, 1, 0])
+        b3 = cube.getOrCreateBucket([2, 2, 2, 0])
+        b4 = cube.getOrCreateBucket([3, 3, 3, 0])
 
-      #   b1 = cube.getBucket([0, 0, 0, 0])
-      #   b1.pull()
-      #   b2 = cube.getBucket([1, 1, 1, 0])
-      #   b3 = cube.getBucket([2, 2, 2, 0])
-      #   b4 = cube.getBucket([3, 3, 3, 0])
+        expect(b1.shouldCollect()).toBe(false)
 
-      #   expect(b1.shouldCollect()).toBe(false)
+        addresses = cube.buckets.map((b) -> b.zoomedAddress)
+        expect(addresses).toEqual([[0, 0, 0, 0], [3, 3, 3, 0], [2, 2, 2, 0]])
 
-      #   addresses = cube.buckets.map((b) -> b.zoomedAddress)
-      #   expect(addresses).toEqual([[0, 0, 0, 0], [3, 3, 3, 0], [2, 2, 2, 0]])
+      it "should throw an exception if no bucket is collectable", ->
 
-      # it "should throw an exception if no bucket is collectable", ->
+        cube.getOrCreateBucket([0, 0, 0, 0]).pull()
+        cube.getOrCreateBucket([1, 1, 1, 0]).pull()
+        cube.getOrCreateBucket([2, 2, 2, 0]).pull()
 
-      #   cube.getBucket([0, 0, 0, 0]).pull()
-      #   cube.getBucket([1, 1, 1, 0]).pull()
-      #   cube.getBucket([2, 2, 2, 0]).pull()
-
-      #   expect(-> cube.getBucket([3, 3, 3, 0])).toThrow()
+        expect(-> cube.getOrCreateBucket([3, 3, 3, 0])).toThrow()
 

@@ -363,38 +363,6 @@ class Plane2D
     return enhanced
 
 
-  renderVolumeTile : (tile) ->
-
-    bucket = @volumeTexture.topLeftBucket.slice(0)
-    bucket[@U] += tile[0]
-    bucket[@V] += tile[1]
-
-    destOffset = bufferOffsetByTileMacro(@, tile, @cube.BUCKET_SIZE_P)
-    sourceOffset = ((@volumeTexture.layer >> @volumeTexture.zoomStep) & (1 << @cube.BUCKET_SIZE_P) - 1)  << @DELTA[@W]
-
-    bucketData = @cube.getVolumeBucket(bucket)
-
-    return unless bucketData?
-
-    @renderToBuffer(
-      {
-        buffer: @volumeTexture.buffer
-        offset: destOffset
-        widthP: @cube.BUCKET_SIZE_P
-        rowDelta: 1 << @TEXTURE_SIZE_P
-      }
-      {
-        buffer: bucketData
-        offset: sourceOffset
-        pixelDelta: 1 << @DELTA[@U]
-        rowDelta: 1 << @DELTA[@V]
-        pixelRepeatP: 0
-        rowRepeatP: 0
-      }
-      null
-    )
-
-
   renderToBuffer : (destination, source) ->
 
     i = 1 << (destination.widthP << 1)

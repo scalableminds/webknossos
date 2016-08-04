@@ -37,7 +37,7 @@ class PullQueue
     # Filter and sort queue, using negative priorities for sorting so .pop() can be used to get next bucket
     @queue = _.filter(@queue, (item) =>
       @boundingBox.containsBucket(item.bucket) and
-        @cube.getBucket(item.bucket).needsRequest()
+        @cube.getOrCreateBucket(item.bucket).needsRequest()
     )
     @queue = _.sortBy(@queue, (item) -> item.priority)
 
@@ -47,8 +47,9 @@ class PullQueue
       batch = []
       while batch.length < @BATCH_SIZE and @queue.length
         address = @queue.shift().bucket
-        bucket = @cube.getBucket(address)
+        bucket = @cube.getOrCreateBucket(address)
 
+        # Buckets might be in the Queue multiple times
         continue unless bucket.needsRequest()
 
         batch.push(address)

@@ -8,6 +8,8 @@ class Bucket
   STATE_REQUESTED : 1
   STATE_LOADED : 2
 
+  STATE_NAMES = ["unrequested", "requested", "loaded"]
+
   BUCKET_SIZE_P : 5
 
 
@@ -110,7 +112,7 @@ class Bucket
 
   unexpectedState : ->
 
-    throw new Error("Unexpected state: " + @state)
+    throw new Error("Unexpected state: " + @STATE_NAMES[@state])
 
 
   merge : (newData) ->

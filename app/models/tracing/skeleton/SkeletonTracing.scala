@@ -21,6 +21,8 @@ case class SkeletonTracing(
                             editPosition: Point3D,
                             editRotation: Vector3D,
                             zoomLevel: Double,
+                            roundTripTime: Double,
+                            bandwidth: Double,
                             boundingBox: Option[BoundingBox],
                             stats: Option[SkeletonTracingStatistics],
                             settings: AnnotationSettings = AnnotationSettings.skeletonDefault,
@@ -115,6 +117,8 @@ object SkeletonTracing {
   val contentType = "skeletonTracing"
 
   val defaultZoomLevel = 2.0
+  val defaultRoundTripTime = 200.0
+  val defaultBandwidth = 100000.0
 
 //  def from(dataSetName: String, start: Point3D, rotation: Vector3D, settings: AnnotationSettings): SkeletonTracing =
 //    SkeletonTracing(
@@ -137,6 +141,8 @@ object SkeletonTracing {
       t.editPosition,
       t.editRotation,
       t.zoomLevel,
+      t.roundTripTime,
+      t.bandwidth,
       t.boundingBox,
       t.stats,
       t.settings

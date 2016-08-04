@@ -20,6 +20,8 @@ case class TemporarySkeletonTracing(
                                      editPosition: Point3D,
                                      editRotation: Vector3D,
                                      zoomLevel: Double,
+                                     roundTripTime: Double,
+                                     bandwidth: Double,
                                      boundingBox: Option[BoundingBox],
                                      settings: AnnotationSettings = AnnotationSettings.skeletonDefault
                                    ) extends SkeletonTracingLike with AnnotationContent with TreeMergeHelpers{

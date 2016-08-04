@@ -146,6 +146,7 @@ class SkeletonTracingStateLogger extends StateLogger
 
   concatUpdateTracing : ->
 
+    connectionInfo = @flycam.model.getColorBinaries()[0].pullQueue.connectionInfo
     @pushDiff(
       "updateTracing"
       {
@@ -153,6 +154,8 @@ class SkeletonTracingStateLogger extends StateLogger
         editPosition : V3.floor(@flycam.getPosition())
         editRotation : @flycam3d.getRotation()
         zoomLevel : @flycam.getZoomStep()
+        roundTripTime : connectionInfo.roundTripTime
+        bandwidth : connectionInfo.bandwidth
       }
       false
     )

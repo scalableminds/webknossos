@@ -42,6 +42,8 @@ object DataSetInformationHandler extends AnnotationInformationHandler with FoxIm
         dataSet.defaultStart,
         dataSet.defaultRotation,
         SkeletonTracing.defaultZoomLevel,
+        SkeletonTracing.defaultRoundTripTime,
+        SkeletonTracing.defaultBandwidth,
         None
       )
 

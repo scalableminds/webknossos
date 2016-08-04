@@ -38,6 +38,8 @@ object TemporarySkeletonTracingService extends AnnotationContentService with Fox
         _,
         Vector3D(0,0,0),
         SkeletonTracing.defaultZoomLevel,
+        SkeletonTracing.defaultRoundTripTime,
+        SkeletonTracing.defaultBandwidth,
         box,
         settings)
     }
@@ -56,6 +58,8 @@ object TemporarySkeletonTracingService extends AnnotationContentService with Fox
         tracing.editPosition,
         tracing.editRotation,
         tracing.zoomLevel,
+        tracing.roundTripTime,
+        tracing.bandwidth,
         tracing.boundingBox,
         tracing.settings)
     }

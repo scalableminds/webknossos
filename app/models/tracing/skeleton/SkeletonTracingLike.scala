@@ -49,6 +49,10 @@ trait SkeletonTracingLike extends AnnotationContent {
 
   def zoomLevel: Double
 
+  def roundTripTime: Double
+
+  def bandwidth: Double
+
   def boundingBox: Option[BoundingBox]
 
   def allowAllModes: Self
@@ -86,6 +90,7 @@ object SkeletonTracingLike extends FoxImplicits {
             <time ms={e.timestamp.toString}/>
             {e.activeNodeId.map(id => scala.xml.XML.loadString(s"""<activeNode id="$id"/>""")).getOrElse(scala.xml.Null)}
             <editPosition x={e.editPosition.x.toString} y={e.editPosition.y.toString} z={e.editPosition.z.toString}/>
+            <connection roundTripTime={e.roundTripTime.toString} bandwidth={e.bandwidth.toString}/>
             <zoomLevel zoom={e.zoomLevel.toString}/>
           </parameters>{treesXml}<branchpoints>
           {branchpoints}

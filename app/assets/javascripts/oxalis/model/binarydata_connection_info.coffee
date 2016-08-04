@@ -32,7 +32,7 @@ class BinaryDataConnectionInfo
 
     @totalBytes += loadedBytes
     
-    persistentSmoother = loadedBuckets / totalBucketsPersist
+    persistentSmoother = loadedBuckets / @totalBucketsPersist
     
     @roundTripTime = (1 - @ROUND_TRIP_TIME_SMOOTHER) * @roundTripTime + @ROUND_TRIP_TIME_SMOOTHER * roundTripTime
     @roundTripTimePersist = (1 - persistentSmoother) * @roundTripTime + persistentSmoother * roundTripTime

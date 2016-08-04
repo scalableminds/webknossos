@@ -53,16 +53,15 @@ class Controller
     @model.set("state", @urlManager.initialState)
 
     @model.fetch()
-      .then(
-        (error) => @modelFetchDone(error)
-      )
+        .then( => @modelFetchDone())
+        .catch( (error) =>
+          # Don't throw errors for errors already handled by the model.
+          unless error == @model.HANDLED_ERROR
+            throw error
+        )
 
 
-  modelFetchDone : (error) ->
-
-    # Do not continue, when there was an error and we got no settings from the server
-    if error
-      return
+  modelFetchDone : ->
 
     unless @model.tracing.restrictions.allowAccess
       Toast.Error "You are not allowed to access this tracing"

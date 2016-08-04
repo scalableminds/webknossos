@@ -234,12 +234,16 @@ case class UpdateTracing(value: JsObject) extends TracingUpdater {
     val editPosition = (value \ "editPosition").as[Point3D]
     val editRotation = (value \ "editRotation").as[Vector3D]
     val zoomLevel = (value \ "zoomLevel").as[Double]
+    val roundTripTime = (value \ "roundTripTime").as[Double]
+    val bandwidth = (value \ "bandwidth").as[Double]
     TracingUpdate { t =>
       val updated = t.copy(
         activeNodeId = activeNodeId,
         editPosition = editPosition,
         editRotation = editRotation,
-        zoomLevel = zoomLevel)
+        zoomLevel = zoomLevel,
+        roundTripTime = roundTripTime,
+        bandwidth = bandwidth)
       SkeletonTracingService.update(t._id, updated).map(_ => updated) ?~> "Failed to update tracing."
     }
   }

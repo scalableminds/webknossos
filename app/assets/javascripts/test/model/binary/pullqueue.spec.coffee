@@ -30,6 +30,7 @@ describe "PullQueue", ->
     url : "url"
     name : "layername"
     token : "token"
+    tokenPromise : Promise.resolve()
     category : "color"
   }
   cube = {
@@ -91,6 +92,7 @@ describe "PullQueue", ->
         }
         timeout: 10000
         compress: true
+        doNotCatch: true
       }
 
       pullQueue.pull()

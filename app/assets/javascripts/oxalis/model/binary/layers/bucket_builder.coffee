@@ -21,6 +21,18 @@ BucketBuilder = {
 
     return bucket
 
+
+  bucketToZoomedAddress : (bucket) ->
+
+    [x, y, z] = bucket.position
+    zoomStep = bucket.zoomStep
+    return [
+      x >> (zoomStep + Cube::BUCKET_SIZE_P)
+      y >> (zoomStep + Cube::BUCKET_SIZE_P)
+      z >> (zoomStep + Cube::BUCKET_SIZE_P)
+      zoomStep
+    ]
+
 }
 
 

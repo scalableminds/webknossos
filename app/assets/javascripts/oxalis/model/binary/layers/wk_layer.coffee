@@ -1,4 +1,5 @@
 Layer         = require("./layer")
+BucketBuilder = require("./bucket_builder")
 Request       = require("../../../../libs/request")
 MultipartData = require("../../../../libs/multipart_data")
 
@@ -49,7 +50,7 @@ class WkLayer extends Layer
 
       transmitData.addPart(
           {"X-Bucket": JSON.stringify(bucket)},
-          getBucketData(bucket))
+          getBucketData(BucketBuilder.bucketToZoomedAddress(bucket)))
 
     return transmitData.dataPromise().then((data) =>
       return Request.sendArraybufferReceiveArraybuffer(

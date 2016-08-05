@@ -186,14 +186,17 @@ describe "WkLayer", ->
         }
 
         layer.sendToStore(batch, getBucketData).then((result) ->
-          done()
           expect(RequestMock.sendArraybufferReceiveArraybuffer.callCount).toBe(1)
 
           [url, options] = RequestMock.sendArraybufferReceiveArraybuffer.getCall(0).args
           expect(url).toBe(expectedUrl)
           expect(options).toEqual(expectedOptions)
 
+          expect(getBucketData.callCount).toBe(2)
+          expect(getBucketData.getCall(0).args[0]).toEqual([0, 0, 0, 0])
+          expect(getBucketData.getCall(1).args[0]).toEqual([1, 1, 1, 1])
+
           done()
-        ).catch((e) -> console.error(e))
+        )
 
 

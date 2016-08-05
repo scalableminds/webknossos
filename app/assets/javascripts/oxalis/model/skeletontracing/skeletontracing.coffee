@@ -400,8 +400,6 @@ class SkeletonTracing
     @trigger("newTree", tree.treeId, tree.color)
 
 
-
-
   deleteActiveNode : ->
 
     return if @restrictionHandler.handleUpdate()
@@ -461,7 +459,10 @@ class SkeletonTracing
 
     return new Promise (resolve, reject) =>
       if @activeNode
-        reallyDeleteActiveNode(resolve)
+        if @getBranchpointsForNodes(@activeTree.branchpoints, @activeNode).length
+          @trigger("deleteBranch", => reallyDeleteActiveNode(resolve) )
+        else
+          reallyDeleteActiveNode(resolve)
       else
         reject()
 

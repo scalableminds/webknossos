@@ -306,6 +306,7 @@ class ArbitraryController
 
   pushBranch : ->
 
+    @setWaypoint() 
     @model.skeletonTracing.pushBranch()
     Toast.success("Branchpoint set")
 

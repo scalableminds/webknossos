@@ -14,7 +14,12 @@ class NdStoreLayer extends Layer
       throw new Error("NdStoreLayer should only be instantiated with ndstore")
 
 
-  requestImpl : (batch, token) ->
+  sendToStoreImpl : (batch, getBucketData, token) ->
+
+    throw new Error("ND-Store does not currently support sendToStore")
+
+
+  requestFromStoreImpl : (batch, token) ->
 
     ErrorHandling.assert(batch.length == 1, "Batch length should be 1 for NdStore Layers")
 

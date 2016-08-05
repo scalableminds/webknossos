@@ -145,3 +145,55 @@ describe "WkLayer", ->
 
           done()
         )
+
+  describe "sendToStore", ->
+
+    batch = [[0, 0, 0, 0], [1, 1, 1, 1]]
+
+    beforeEach ->
+
+      RequestMock.sendArraybufferReceiveArraybuffer = sinon.stub()
+      RequestMock.sendArraybufferReceiveArraybuffer.returns(Promise.resolve())
+
+    describe "Request Handling", ->
+
+      it "should send the correct request parameters", (done) ->
+
+        data = new Uint8Array(2)
+        getBucketData = sinon.stub()
+        getBucketData.returns(data)
+
+        expectedUrl = "url/data/datasets/dataSet/layers/layername/data?token=token"
+        expectedOptions = {
+          method: "PUT"
+          data: [
+            '----multipart-boundary--xxxxxxxxxxxxxxxxxxxxxxxx--\r\n',
+            'X-Bucket: {"position":[0,0,0],"zoomStep":0,"cubeSize":32}\r\n',
+            '\r\n',
+            data,
+            '\r\n----multipart-boundary--xxxxxxxxxxxxxxxxxxxxxxxx--\r\n',
+            'X-Bucket: {"position":[64,64,64],"zoomStep":1,"cubeSize":32}\r\n',
+            '\r\n',
+            data,
+            '\r\n----multipart-boundary--xxxxxxxxxxxxxxxxxxxxxxxx--\r\n'
+          ]
+          headers: {
+            'Content-Type': 'multipart/mixed; boundary=--multipart-boundary--xxxxxxxxxxxxxxxxxxxxxxxx--'
+          }
+          timeout: 10000
+          compress: true
+          doNotCatch: true
+        }
+
+        layer.sendToStore(batch, getBucketData).then((result) ->
+          done()
+          expect(RequestMock.sendArraybufferReceiveArraybuffer.callCount).toBe(1)
+
+          [url, options] = RequestMock.sendArraybufferReceiveArraybuffer.getCall(0).args
+          expect(url).toBe(expectedUrl)
+          expect(options).toEqual(expectedOptions)
+
+          done()
+        ).catch((e) -> console.error(e))
+
+

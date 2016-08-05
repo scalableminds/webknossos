@@ -14,7 +14,7 @@ class WkLayer extends Layer
       throw new Error("WkLayer should only be instantiated with webknossos-store")
 
 
-  requestImpl : (batch, token) ->
+  requestFromStoreImpl : (batch, token) ->
 
     requestData = new MultipartData()
 
@@ -38,6 +38,31 @@ class WkLayer extends Layer
       )
     ).then( (responseBuffer) ->
       return new Uint8Array(responseBuffer)
+    )
+
+
+  sendToStoreImpl : (batch, getBucketData, token) ->
+
+    transmitData = new MultipartData()
+
+    for bucket in batch
+
+      transmitData.addPart(
+          {"X-Bucket": JSON.stringify(bucket)},
+          getBucketData(bucket))
+
+    return transmitData.dataPromise().then((data) =>
+      return Request.sendArraybufferReceiveArraybuffer(
+        "#{@dataStoreInfo.url}/data/datasets/#{@dataSetName}/layers/#{@name}/data?token=#{token}", {
+          method : "PUT"
+          data : data
+          headers :
+            "Content-Type" : "multipart/mixed; boundary=#{transmitData.boundary}"
+          timeout : @REQUEST_TIMEOUT
+          compress : true
+          doNotCatch : true
+        }
+      )
     )
 
 

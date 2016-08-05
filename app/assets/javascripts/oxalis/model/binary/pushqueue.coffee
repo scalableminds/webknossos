@@ -78,42 +78,8 @@ class PushQueue
 
   pushBatch : (batch) ->
 
-    transmitData = new MultipartData()
-
-    for bucket in batch
-      zoomStep = bucket[3]
-
-      transmitData.addPart(
-          "X-Bucket": JSON.stringify(
-            position: [
-              bucket[0] << (zoomStep + @cube.BUCKET_SIZE_P)
-              bucket[1] << (zoomStep + @cube.BUCKET_SIZE_P)
-              bucket[2] << (zoomStep + @cube.BUCKET_SIZE_P)
-            ]
-            zoomStep: zoomStep
-            cubeSize: 1 << @cube.BUCKET_SIZE_P),
-          @cube.getBucketByZoomedAddress(bucket).getData())
-
-    return @updatePipeline.executePassAlongAction( =>
-
-      return transmitData.dataPromise().then((data) =>
-        return Request.sendArraybufferReceiveArraybuffer(
-          "#{@layer.url}/data/datasets/#{@dataSetName}/layers/#{@layer.name}/data?token=#{@layer.token}", {
-            method : "PUT"
-            data : data
-            headers :
-              "Content-Type" : "multipart/mixed; boundary=#{transmitData.boundary}"
-            timeout : @MESSAGE_TIMEOUT
-            compress : true
-          }
-        )
-      )
-    ).then(
-      undefined
-      (err) ->
-        throw new Error("Uploading data failed.", err)
-        Promise.reject(err)
-    )
+    getBucketData = (bucket) => @cube.getBucketByZoomedAddress(bucket).getData()
+    return @layer.sendToStore(batch, getBucketData)
 
 
 module.exports = PushQueue

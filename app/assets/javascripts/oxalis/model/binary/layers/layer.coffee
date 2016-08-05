@@ -32,29 +32,51 @@ class Layer
     return @tokenRequestPromise
 
 
+  doWithToken : (fn) ->
+
+    return @tokenPromise
+        .then(fn)
+        .catch((error) =>
+
+          if error.status == 403
+            console.warn("Token expired. Requesting new token...")
+            @tokenPromise = @requestDataToken()
+            return @doWithToken(fn)
+
+          throw error
+        )
+
+
+  buildBuckets : (batch, options) ->
+
+    return batch.map((bucketAddress) ->
+      BucketBuilder.fromZoomedAddress(bucketAddress, options))
+
+
   # Requests the data, ensures it has the right tokens and resolves with
   # an UInt8Array.
   requestFromStore : (batch, options) ->
 
-    batch = batch.map((bucketAddress) ->
-      BucketBuilder.fromZoomedAddress(bucketAddress, options))
-
-    return @tokenPromise.then((token) =>
-
-      @requestImpl(batch, token)
-
-    ).catch((error) =>
-
-        if error.status == 403
-          console.warn("Token expired. Requesting new token...")
-          @tokenPromise = @requestDataToken()
-          return @requestFromStore(batch)
-
-        throw error
-
+    @doWithToken((token) =>
+      @requestFromStoreImpl(@buildBuckets(batch), token)
     )
 
-  requestImpl : (batch, token) ->
+
+  # Sends the batch to the store. `getBucketData(zoomedAddress) -> Uint8Array`
+  # converts bucket addresses to the data to send to the server.
+  sendToStore : (batch, getBucketData) ->
+
+    @doWithToken((token) =>
+      @sendToStoreImpl(@buildBuckets(batch), getBucketData, token)
+    )
+
+
+  requestFromStoreImpl : (batch, token) ->
+
+    throw new Error("Subclass responsibility")
+
+
+  sendToStoreImpl : (batch, getBucketData, token) ->
 
     throw new Error("Subclass responsibility")
 

@@ -57,8 +57,7 @@ describe "WkLayer", ->
 
   describe "requestFromStore", ->
 
-    batch = [{"position": [0, 0, 0], "zoomStep": 0, "cubeSize": 32},
-             {"position": [64, 64, 64], "zoomStep": 1, "cubeSize": 32},]
+    batch = [[0, 0, 0, 0], [1, 1, 1, 1]]
     bucketData1 = (i % 256 for i in [0...(32 * 32 * 32)])
     bucketData2 = ((2 * i) % 256 for i in [0...(32 * 32 * 32)])
     responseBuffer = bucketData1.concat(bucketData2)

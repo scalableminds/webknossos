@@ -63,14 +63,13 @@ describe "PullQueue", ->
 
     it "should pass the correct parameters to requestFromStore()", ->
 
+      pullQueue.setFourBit(true)
       pullQueue.pull()
 
       expect(layer.requestFromStore.callCount).toBe(1)
-      [batch] = layer.requestFromStore.getCall(0).args
-      expect(batch).toEqual([
-        {position: [0, 0, 0], zoomStep: 0, cubeSize: 32, fourBit: false}
-        {position: [64, 64, 64], zoomStep: 1, cubeSize: 32, fourBit: false}
-      ])
+      [batch, options] = layer.requestFromStore.getCall(0).args
+      expect(batch).toEqual([[0, 0, 0, 0], [1, 1, 1, 1]])
+      expect(options).toEqual({fourBit : true})
 
     it "should receive the correct data", (done) ->
 

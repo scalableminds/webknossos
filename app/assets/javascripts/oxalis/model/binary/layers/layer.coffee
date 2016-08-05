@@ -1,4 +1,5 @@
 _             = require("lodash")
+BucketBuilder = require("./bucket_builder")
 Request       = require("../../../../libs/request")
 
 # Abstract class that defines the Layer interface and implements common
@@ -33,7 +34,10 @@ class Layer
 
   # Requests the data, ensures it has the right tokens and resolves with
   # an UInt8Array.
-  requestFromStore : (batch) ->
+  requestFromStore : (batch, options) ->
+
+    batch = batch.map((bucketAddress) ->
+      BucketBuilder.fromZoomedAddress(bucketAddress, options))
 
     return @tokenPromise.then((token) =>
 

@@ -63,9 +63,10 @@ class PullQueue
 
     # Measuring the time until response arrives to select appropriate preloading strategy
     roundTripBeginTime = new Date()
+    options = {fourBit : @shouldRequestFourBit()}
 
     Request.always(
-      @layer.requestFromStore(batch.map((b) => @getBucketData(b))).then((responseBuffer) =>
+      @layer.requestFromStore(batch, options).then((responseBuffer) =>
         @connectionInfo.log(@layer.name, roundTripBeginTime, batch.length, responseBuffer.length)
 
         offset = 0
@@ -88,21 +89,6 @@ class PullQueue
         @batchCount--
         @pull()
     )
-
-
-  getBucketData : (bucket) =>
-
-    zoomStep = bucket[3]
-    return {
-      position : [
-        bucket[0] << (zoomStep + @cube.BUCKET_SIZE_P)
-        bucket[1] << (zoomStep + @cube.BUCKET_SIZE_P)
-        bucket[2] << (zoomStep + @cube.BUCKET_SIZE_P)
-      ]
-      zoomStep : zoomStep
-      cubeSize : 1 << @cube.BUCKET_SIZE_P
-      fourBit : @shouldRequestFourBit()
-    }
 
 
   clearNormalPriorities : ->

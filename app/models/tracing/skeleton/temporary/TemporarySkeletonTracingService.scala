@@ -38,9 +38,9 @@ object TemporarySkeletonTracingService extends AnnotationContentService with Fox
         _,
         Vector3D(0,0,0),
         SkeletonTracing.defaultZoomLevel,
-        SkeletonTracing.defaultRoundTripTime,
-        SkeletonTracing.defaultBandwidth,
-        0,
+        None,
+        None,
+        None,
         box,
         settings)
     }

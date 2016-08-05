@@ -244,9 +244,9 @@ case class UpdateTracing(value: JsObject) extends TracingUpdater {
         editPosition = editPosition,
         editRotation = editRotation,
         zoomLevel = zoomLevel,
-        roundTripTime = roundTripTime,
-        bandwidth = bandwidth,
-        totalBuckets = totalBuckets)
+        roundTripTime = Some(roundTripTime),
+        bandwidth = Some(bandwidth),
+        totalBuckets = Some(totalBuckets))
       SkeletonTracingService.update(t._id, updated).map(_ => updated) ?~> "Failed to update tracing."
     }
   }

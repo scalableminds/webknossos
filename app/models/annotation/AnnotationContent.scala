@@ -23,11 +23,11 @@ trait AnnotationContent {
 
   def editRotation: Vector3D
 
-  def roundTripTime: Double
+  def roundTripTime: Option[Double]
 
-  def bandwidth: Double
+  def bandwidth: Option[Double]
 
-  def totalBuckets: Long
+  def totalBuckets: Option[Long]
 
   def boundingBox: Option[BoundingBox]
 

@@ -49,11 +49,11 @@ trait SkeletonTracingLike extends AnnotationContent {
 
   def zoomLevel: Double
 
-  def roundTripTime: Double
+  def roundTripTime: Option[Double]
 
-  def bandwidth: Double
+  def bandwidth: Option[Double]
 
-  def totalBuckets: Long
+  def totalBuckets: Option[Long]
 
   def boundingBox: Option[BoundingBox]
 
@@ -92,7 +92,7 @@ object SkeletonTracingLike extends FoxImplicits {
             <time ms={e.timestamp.toString}/>
             {e.activeNodeId.map(id => scala.xml.XML.loadString(s"""<activeNode id="$id"/>""")).getOrElse(scala.xml.Null)}
             <editPosition x={e.editPosition.x.toString} y={e.editPosition.y.toString} z={e.editPosition.z.toString}/>
-            <connection roundTripTime={e.roundTripTime.toString} bandwidth={e.bandwidth.toString} totalBuckets={e.totalBuckets.toString}/>
+            <connection roundTripTime={e.roundTripTime.getOrElse(0).toString} bandwidth={e.bandwidth.getOrElse(0).toString} totalBuckets={e.totalBuckets.getOrElse(0).toString}/>
             <zoomLevel zoom={e.zoomLevel.toString}/>
           </parameters>{treesXml}<branchpoints>
           {branchpoints}

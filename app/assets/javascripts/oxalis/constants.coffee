@@ -44,6 +44,7 @@ Constants =
   TDView_MOVE_SPEED    : 150
   MIN_MOVE_VALUE       : 30
   MAX_MOVE_VALUE       : 14000
+  MAX_MOVE_V_SLIDER    : 1500
 
   FPS                  : 50
 

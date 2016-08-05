@@ -5,7 +5,7 @@ Cellular-resolution connectomics is currently substantially limited by the throu
 
 ## Dependencies
 
-* [Oracle JDK 8+)](http://www.oracle.com/technetwork/java/javase/downloads/index.html) or [Open JDK 8+](http://openjdk.java.net/)
+* [Oracle JDK 8+](http://www.oracle.com/technetwork/java/javase/downloads/index.html) or [Open JDK 8+](http://openjdk.java.net/) (full JDK, JRE is not enough)
 * [sbt](http://www.scala-sbt.org/)
 * [mongoDB 3+](http://www.mongodb.org/downloads)
 * [node.js 4+](http://nodejs.org/download/)
@@ -79,16 +79,15 @@ See: http://www.scala-sbt.org/release/docs/Getting-Started/Setup.html
 sbt run
 ```
 
-Will fetch all Scala, Java and node dependencies and run the application on Port 9000.
+Will fetch all Scala, Java and node dependencies and run the application on Port 9000. Make sure that the mongoDB service is running before you start sbt.
 
 ## Test
 ```bash
-./start
-gulp webdriver
-gulp test
+sbt test
+npm test
 ```
 
-Will run acceptance-tests against the running server instance on Port 9000.
+These tests are run on our CI server. Running the tests manually in not encouraged at this point.
 
 ## Credits
 scalable minds - http://scm.io

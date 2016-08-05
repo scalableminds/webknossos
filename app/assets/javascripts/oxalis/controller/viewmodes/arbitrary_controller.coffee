@@ -173,17 +173,7 @@ class ArbitraryController
     @input.keyboardOnce = new Input.Keyboard(
 
       #Delete active node and recenter last node
-      "shift + space" : =>
-        skeletonTracing = @model.skeletonTracing
-        activeNode = skeletonTracing.getActiveNode()
-        if activeNode.neighbors.length > 1
-          Toast.error("Unable: Attempting to cut skeleton")
-        else if skeletonTracing.getBranchpointsForNodes(skeletonTracing.activeTree.branchpoints, activeNode).length
-          Toast.error("Unable: Attempting to delete branchpoint")
-        else
-          skeletonTracing.deleteActiveNode()
-          @centerActiveNode()
-
+      "shift + space" : => @deleteActiveNode()
     , -1)
 
 
@@ -348,6 +338,19 @@ class ArbitraryController
     @model.skeletonTracing.setActiveNode(nodeId, mergeTree)
     @cam.setPosition(@model.skeletonTracing.getActiveNodePos())
     @cam.setRotation(@model.skeletonTracing.getActiveNodeRotation())
+
+
+  deleteActiveNode : ->
+
+    skeletonTracing = @model.skeletonTracing
+    activeNode = skeletonTracing.getActiveNode()
+    if activeNode.neighbors.length > 1
+      Toast.error("Unable: Attempting to cut skeleton")
+    else if skeletonTracing.getBranchpointsForNodes(skeletonTracing.activeTree.branchpoints, activeNode).length
+      Toast.error("Unable: Attempting to delete branchpoint")
+    else
+      skeletonTracing.deleteActiveNode()
+      @centerActiveNode()
 
 
   getShortestRotation : (curRotation, newRotation) ->

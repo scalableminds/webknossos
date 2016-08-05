@@ -78,7 +78,7 @@ class PushQueue
 
   pushBatch : (batch) ->
 
-    getBucketData = (bucket) => @cube.getBucketByZoomedAddress(bucket).getData()
+    getBucketData = (bucket) => @cube.getBucket(bucket).getData()
     return @layer.sendToStore(batch, getBucketData)
 
 

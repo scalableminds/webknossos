@@ -23,6 +23,8 @@ class Binary
   upperBoundary : [4, 5, 6]
 class Flycam2d
   setPosition : ->
+class Layer
+  constructor : ->
 
 mockRequire("../../libs/toast", { error : _.noop })
 mockRequire("../../libs/request", Request)
@@ -36,6 +38,8 @@ mockRequire("../../oxalis/model/skeletontracing/skeletontracing", _.noop)
 mockRequire("../../oxalis/model/volumetracing/volumetracing", _.noop)
 mockRequire("../../oxalis/model/user", User)
 mockRequire("../../oxalis/model/dataset_configuration", DatasetConfiguration)
+mockRequire("../../oxalis/model/binary/layers/wk_layer", Layer)
+mockRequire("../../oxalis/model/binary/layers/nd_store_layer", Layer)
 
 TRACING_OBJECT = {
   content :

@@ -22,6 +22,7 @@ class PullQueue
 
     @queue = []
     @BATCH_SIZE = if @isNDstore() then 1 else 3
+    @fourBit = false
 
     # Debug option.
     # If true, buckets of all 0 will be transformed to have 255 bytes everywhere.
@@ -64,11 +65,11 @@ class PullQueue
     roundTripBeginTime = new Date()
 
     Request.always(
-      @layer.requestFromStore(batch).then((responseBuffer) =>
+      @layer.requestFromStore(batch.map((b) => @getBucketData(b))).then((responseBuffer) =>
         @connectionInfo.log(@layer.name, roundTripBeginTime, batch.length, responseBuffer.length)
 
         offset = 0
-        for bucket, i in batch
+        for bucket in batch
           if fourBit
             bucketData = @decodeFourBit(responseBuffer.subarray(offset, offset += (@cube.BUCKET_LENGTH >> 1)))
           else

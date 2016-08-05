@@ -35,7 +35,7 @@ class Layer
   # an UInt8Array.
   requestFromStore : (batch) ->
 
-    @tokenPromise.then((token) =>
+    return @tokenPromise.then((token) =>
 
       @requestImpl(batch, token)
 

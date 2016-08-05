@@ -161,27 +161,13 @@ class ArbitraryController
     @input.keyboardNoLoop = new Input.KeyboardNoLoop(
 
       "1" : => @skeletonTracingController.toggleSkeletonVisibility()
-      "2" : => @sceneController.skeleton.toggleInactiveTreeVisibility()
-
-      #Delete active node
-      "delete" : => @model.skeletonTracing.deleteActiveNode()
-      "c" : => @model.skeletonTracing.createNewTree()
 
       #Branches
       "b" : => @pushBranch()
       "j" : => @popBranch()
 
-      #Reset Matrix
-      "r" : => @cam.setRotation([0, 0, 0])
-
       #Recenter active node
       "s" : => @centerActiveNode()
-
-      #Recording of Waypoints
-      "z" : =>
-        @setRecord(true)
-      "u" : =>
-        @setRecord(false)
     )
 
     @input.keyboardOnce = new Input.Keyboard(

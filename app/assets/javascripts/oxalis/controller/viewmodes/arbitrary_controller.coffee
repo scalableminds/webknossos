@@ -305,6 +305,9 @@ class ArbitraryController
 
     _.defer => @model.skeletonTracing.popBranch().then((id) =>
       @setActiveNode(id, true)
+      if id == 1
+        @cam.yaw(Math.PI)
+        Toast.warning("Reached initial node, view reversed")
     )
 
 

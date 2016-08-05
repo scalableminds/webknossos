@@ -126,14 +126,14 @@ class ArbitraryController
       "space"         : (timeFactor) =>
         @setRecord(true)
         @move(timeFactor)
-      "ctrl + space"   : (timeFactor) => 
+      "ctrl + space"   : (timeFactor) =>
         @setRecord(true)
         @move(-timeFactor)
 
       "f"         : (timeFactor) =>
         @setRecord(false)
         @move(timeFactor)
-      "d"   : (timeFactor) => 
+      "d"   : (timeFactor) =>
         @setRecord(false)
         @move(-timeFactor)
 
@@ -181,7 +181,7 @@ class ArbitraryController
 
     if record != @model.get("flightmodeRecording")
       @model.set("flightmodeRecording", record)
-      @setWaypoint() 
+      @setWaypoint()
 
 
   getVoxelOffset : (timeFactor) ->
@@ -296,7 +296,7 @@ class ArbitraryController
 
   pushBranch : ->
 
-    @setWaypoint() 
+    @setWaypoint()
     @model.skeletonTracing.pushBranch()
     Toast.success("Branchpoint set")
 
@@ -349,8 +349,11 @@ class ArbitraryController
     else if skeletonTracing.getBranchpointsForNodes(skeletonTracing.activeTree.branchpoints, activeNode).length
       Toast.error("Unable: Attempting to delete branchpoint")
     else
-      skeletonTracing.deleteActiveNode()
-      @centerActiveNode()
+      _.defer => @model.skeletonTracing.deleteActiveNode().then(
+        =>
+          @centerActiveNode()
+        -> #NOOP
+      )
 
 
   getShortestRotation : (curRotation, newRotation) ->

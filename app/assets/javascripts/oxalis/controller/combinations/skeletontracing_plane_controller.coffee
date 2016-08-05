@@ -62,7 +62,11 @@ class SkeletonTracingPlaneController extends PlaneController
       "2" : => @sceneController.skeleton.toggleInactiveTreeVisibility()
 
       #Delete active node
-      "delete" : => @model.skeletonTracing.deleteActiveNode()
+      "delete" : =>
+        _.defer => @model.skeletonTracing.deleteActiveNode().then(
+          -> #NOOP
+          -> #NOOP
+        )
       "c" : => @model.skeletonTracing.createNewTree()
 
       #Branches

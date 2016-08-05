@@ -59,8 +59,11 @@ class MinimalSkeletonTracingArbitraryController extends ArbitraryController
 
       #Delete active node and recenter last node
       "shift + space" : =>
-        @model.skeletonTracing.deleteActiveNode()
-        @centerActiveNode()
+        _.defer => @model.skeletonTracing.deleteActiveNode().then(
+          =>
+            @centerActiveNode()
+          -> #NOOP
+        )
 
     , -1)
 

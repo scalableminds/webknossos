@@ -24,8 +24,8 @@ class ArbitraryCubeAdapter
     ]
 
     for zoomStep in [0..@ARBITRARY_MAX_ZOOMSTEP]
-      if @cube.getBucketByZoomedAddress(bucketAddress).hasData()
-        bucketData = @cube.getBucketByZoomedAddress(bucketAddress).getData()
+      if @cube.getBucket(bucketAddress).hasData()
+        bucketData = @cube.getBucket(bucketAddress).getData()
         bucketData.zoomStep = zoomStep
         return bucketData
 

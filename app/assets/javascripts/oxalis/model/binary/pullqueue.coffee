@@ -1,13 +1,11 @@
 _             = require("lodash")
 Cube          = require("./cube")
 Request       = require("../../../libs/request")
-MultipartData = require("../../../libs/multipart_data")
 
 class PullQueue
 
   # Constants
   BATCH_LIMIT : 6
-  MESSAGE_TIMEOUT : 10000
 
   # For buckets that should be loaded immediately and
   # should never be removed from the queue
@@ -16,13 +14,11 @@ class PullQueue
   cube : null
   queue : null
 
-  dataSetName : ""
-
   batchCount : 0
   roundTripTime : 0
 
 
-  constructor : (@dataSetName, @cube, @layer, @boundingBox, @connectionInfo, @datastoreInfo) ->
+  constructor : (@cube, @layer, @boundingBox, @connectionInfo, @datastoreInfo) ->
 
     @queue = []
     @BATCH_SIZE = if @isNDstore() then 1 else 3
@@ -67,10 +63,8 @@ class PullQueue
     # Measuring the time until response arrives to select appropriate preloading strategy
     roundTripBeginTime = new Date()
 
-    requestData = if @isNDstore() then @requestFromNDstore else @requestFromWKstore
-
     Request.always(
-      requestData(batch).then((responseBuffer) =>
+      @layer.requestFromStore(batch).then((responseBuffer) =>
         @connectionInfo.log(@layer.name, roundTripBeginTime, batch.length, responseBuffer.length)
 
         offset = 0
@@ -92,40 +86,6 @@ class PullQueue
       =>
         @batchCount--
         @pull()
-    )
-
-
-  requestFromWKstore : (batch) =>
-
-    requestData = new MultipartData()
-
-    for bucket in batch
-
-      requestData.addPart(
-        "X-Bucket" : JSON.stringify(
-          @getBucketData(bucket)
-      ))
-
-    return requestData.dataPromise().then((data) =>
-      @layer.tokenPromise.then( =>
-        token = @layer.token
-        Request.sendArraybufferReceiveArraybuffer("#{@layer.url}/data/datasets/#{@dataSetName}/layers/#{@layer.name}/data?token=#{token}",
-          data : data
-          headers :
-            "Content-Type" : "multipart/mixed; boundary=#{requestData.boundary}"
-          timeout : @MESSAGE_TIMEOUT
-          compress : true
-          doNotCatch : true
-        ).catch((err) =>
-          # renew token if it is invalid
-          if err.status == 403
-            @layer.renewToken(token)
-
-          throw err
-        )
-      )
-    ).then( (responseBuffer) ->
-      responseBuffer = new Uint8Array(responseBuffer)
     )
 
 

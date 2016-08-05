@@ -25,7 +25,6 @@ PullQueue = require("../../../oxalis/model/binary/pullqueue")
 
 describe "PullQueue", ->
 
-  dataSetName = "dataset"
   layer = {
     url : "url"
     name : "layername"
@@ -54,7 +53,7 @@ describe "PullQueue", ->
 
   beforeEach ->
 
-    pullQueue = new PullQueue(dataSetName, cube, layer, boundingBox, connectionInfo, datastoreInfo)
+    pullQueue = new PullQueue(cube, layer, boundingBox, connectionInfo, datastoreInfo)
 
     buckets = [new Bucket(8, [0, 0, 0, 0], null), new Bucket(8, [1, 1, 1, 1], null)]
     for bucket in buckets

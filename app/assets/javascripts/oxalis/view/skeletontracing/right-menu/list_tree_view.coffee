@@ -97,8 +97,11 @@ class ListTreeView extends Marionette.CompositeView
     @selectNextTree(false)
 
 
-  selectNextTree : ->
-    @selectNextTree(true)
+  selectNextTree : (next=true) ->
+
+    @model.skeletonTracing.selectNextTree(next)
+    @model.skeletonTracing.centerActiveNode()
+    @updateName()
 
 
   createNewTree : ->
@@ -140,13 +143,6 @@ class ListTreeView extends Marionette.CompositeView
     isSortedByName = @model.user.get("sortTreesByName")
     @ui.sortNameIcon.toggle(isSortedByName)
     @ui.sortTimeIcon.toggle(!isSortedByName)
-
-
-  selectNextTree : (next) ->
-
-    @model.skeletonTracing.selectNextTree(next)
-    @model.skeletonTracing.centerActiveNode()
-    @updateName()
 
 
   getActiveTree : ->

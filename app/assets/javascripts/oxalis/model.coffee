@@ -11,9 +11,9 @@ ScaleInfo            = require("./model/scaleinfo")
 Flycam2d             = require("./model/flycam2d")
 Flycam3d             = require("./model/flycam3d")
 constants            = require("./constants")
-Request              = require("libs/request")
-Toast                = require("libs/toast")
-ErrorHandling        = require("libs/error_handling")
+Request              = require("../libs/request")
+Toast                = require("../libs/toast")
+ErrorHandling        = require("../libs/error_handling")
 
 # This is THE model. It takes care of the data including the
 # communication with the server.
@@ -23,6 +23,9 @@ ErrorHandling        = require("libs/error_handling")
 
 
 class Model extends Backbone.Model
+
+
+  HANDLED_ERROR : {}
 
 
   constructor : ->
@@ -41,52 +44,49 @@ class Model extends Backbone.Model
 
     Request.receiveJSON(infoUrl).then( (tracing) =>
 
-
       if tracing.error
-        Toast.error(tracing.error)
-        return {"error" : true}
+        error = tracing.error
 
       else unless tracing.content.dataSet
-        Toast.error("Selected dataset doesn't exist")
-        return {"error" : true}
+        error = "Selected dataset doesn't exist"
 
       else unless tracing.content.dataSet.dataLayers
         if datasetName = tracing.content.dataSet.name
-          Toast.error("Please, double check if you have the dataset '#{datasetName}' imported.")
+          error = "Please, double check if you have the dataset '#{datasetName}' imported."
         else
-          Toast.error("Please, make sure you have a dataset imported.")
-        return {"error" : true}
+          error = "Please, make sure you have a dataset imported."
 
-      else
+      if error
+        Toast.error(error)
+        throw @HANDLED_ERROR
 
-        @user = new User()
-        @set("user", @user)
-        @set("datasetName", tracing.content.dataSet.name)
+      @user = new User()
+      @set("user", @user)
+      @set("datasetName", tracing.content.dataSet.name)
 
-        @user.fetch().then( =>
+      return @user.fetch().then(-> Promise.resolve(tracing))
 
-          @set("dataset", new Backbone.Model(tracing.content.dataSet))
-          colorLayers = _.filter( @get("dataset").get("dataLayers"),
-                                  (layer) -> layer.category == "color")
-          @set("datasetConfiguration", new DatasetConfiguration({
-            datasetName : @get("datasetName")
-            dataLayerNames : _.map(colorLayers, "name")
-          }))
-          @get("datasetConfiguration").fetch().then(
-            =>
-              layers = @getLayers(tracing.content.contentData.customLayers)
+    ).then( (tracing) =>
 
-              Promise.all(
-                @getDataTokens(layers)
-              ).then( =>
-                error = @initializeWithData(tracing, layers)
-                return error if error
-              )
+      @set("dataset", new Backbone.Model(tracing.content.dataSet))
+      colorLayers = _.filter( @get("dataset").get("dataLayers"),
+                              (layer) -> layer.category == "color")
+      @set("datasetConfiguration", new DatasetConfiguration({
+        datasetName : @get("datasetName")
+        dataLayerNames : _.map(colorLayers, "name")
+      }))
+      return @get("datasetConfiguration").fetch().then(-> Promise.resolve(tracing))
 
-            -> Toast.error("Ooops. We couldn't communicate with our mother ship. Please try to reload this page.")
-            )
-        )
-      )
+    ).then( (tracing) =>
+
+      layers = @getLayers(tracing.content.contentData.customLayers)
+      return Promise.all(@getDataTokens(layers)).then(-> Promise.resolve([tracing, layers]))
+
+    ).then( ([tracing, layers]) =>
+
+      @initializeWithData(tracing, layers)
+
+    )
 
 
   determineAllowedModes : ->
@@ -129,14 +129,14 @@ class Model extends Backbone.Model
     app.scaleInfo = new ScaleInfo(dataset.get("scale"))
 
     if (bb = tracing.content.boundingBox)?
-        @boundingBox = {
-          min : bb.topLeft
-          max : [
-            bb.topLeft[0] + bb.width
-            bb.topLeft[1] + bb.height
-            bb.topLeft[2] + bb.depth
-          ]
-        }
+      @boundingBox = {
+        min : bb.topLeft
+        max : [
+          bb.topLeft[0] + bb.width
+          bb.topLeft[1] + bb.height
+          bb.topLeft[2] + bb.depth
+        ]
+      }
 
     @connectionInfo = new ConnectionInfo()
     @binary = {}
@@ -153,7 +153,7 @@ class Model extends Backbone.Model
 
     if @getColorBinaries().length == 0
       Toast.error("No data available! Something seems to be wrong with the dataset.")
-      return {"error" : true}
+      throw @HANDLED_ERROR
 
     flycam = new Flycam2d(constants.PLANE_WIDTH, maxZoomStep + 1, @)
     flycam3d = new Flycam3d(constants.DISTANCE_3D, dataset.get("scale"))
@@ -358,5 +358,12 @@ class Model extends Backbone.Model
     if state.activeNode?
       @get("skeletonTracing")?.setActiveNode(state.activeNode)
 
+    connectionInfo = @getColorBinaries()[0].pullQueue.connectionInfo
+    if tracing.content.roundTripTime?
+      connectionInfo.roundTripTimePersist = tracing.content.roundTripTime
+    if tracing.content.bandwidth?
+      connectionInfo.bandwidthPersist = tracing.content.bandwidth
+    if tracing.content.totalBuckets?
+      connectionInfo.totalBucketsPersist = tracing.content.totalBuckets
 
 module.exports = Model

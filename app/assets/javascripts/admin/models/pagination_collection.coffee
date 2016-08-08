@@ -115,7 +115,8 @@ class PaginationCollection
       @state.filterQuery = ""
       @state.filter = null
     else
-      words = _.map(query.split(" "), (element) -> element.toLowerCase().replace(/[-[\]{}()*+?.,\\^$|#\s]/g, "\\$&"))
+      words = _.map(query.split(" "),
+        (element) -> element.toLowerCase().replace(/[\-\[\]{}()\*\+\?\.,\\\^\$\|\#\s]/g, "\\$&"))
       uniques = _.filter(_.uniq(words), (element) -> element != '')
       pattern = "(" + uniques.join("|") + ")"
       regexp = new RegExp(pattern, "igm")

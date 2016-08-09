@@ -56,14 +56,16 @@ object TaskService extends TaskAssignmentSimulation with TaskAssignment with Fox
   def removeAllWithTaskType(taskType: TaskType)(implicit ctx: DBAccessContext) = {
     for {
       tasks <- TaskDAO.findAllByTaskType(taskType._id)
-      result <- Fox.combined(tasks.map(task => remove(task._id)))
+      resultFuture <- Fox.serialSequence(tasks)(task => remove(task._id)).toFox
+      result <- Fox.combined(resultFuture)
     } yield result.forall(identity)
   }
 
   def removeAllWithProject(project: Project)(implicit ctx: DBAccessContext) = {
     for{
       tasks <- project.tasks
-      result <- Fox.combined(tasks.map(task => remove(task._id)))
+      resultFuture <- Fox.serialSequence(tasks)(task => remove(task._id)).toFox
+      result <- Fox.combined(resultFuture)
     } yield result.forall(identity)
   }
 

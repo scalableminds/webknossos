@@ -91,7 +91,7 @@ class TaskController @Inject() (val messagesApi: MessagesApi) extends Controller
       result <- {
         val nmls = NMLService.extractFromFile(nmlFile.ref.file, nmlFile.filename)
 
-        val results = nmls.map {
+        val futureResults = nmls.map {
           case NMLService.NMLParseSuccess(_, nml) =>
             val task = Task(
               taskType._id,
@@ -110,7 +110,10 @@ class TaskController @Inject() (val messagesApi: MessagesApi) extends Controller
           case NMLService.NMLParseFailure(fileName, error) =>
             Fox.failure(Messages("nml.file.invalid", fileName, error))
         }
-        bulk2StatusJson(results).map(js => JsonOk(js, Messages("task.bulk.processed")))
+        Fox.sequence(futureResults).map { results =>
+          val js = bulk2StatusJson(results)
+          JsonOk(js, Messages("task.bulk.processed"))
+        }
       }
     } yield result
   }
@@ -136,8 +139,9 @@ class TaskController @Inject() (val messagesApi: MessagesApi) extends Controller
 
   def bulkCreate(json: JsValue)(implicit request: AuthenticatedRequest[_]): Fox[Result] = {
     withJsonUsing(json, Reads.list(taskCompleteReads)) { parsed =>
-      Fox.serialSequence(parsed){p => createSingleTask(p).map(_ => Messages("task.create.success"))}.flatMap { results =>
-        bulk2StatusJson(results).map(js => JsonOk(js, Messages("task.bulk.processed")))
+      Fox.serialSequence(parsed){p => createSingleTask(p).map(_ => Messages("task.create.success"))}.map { results =>
+        val js = bulk2StatusJson(results)
+        JsonOk(js, Messages("task.bulk.processed"))
       }
     }
   }

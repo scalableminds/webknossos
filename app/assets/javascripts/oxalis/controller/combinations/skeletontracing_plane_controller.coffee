@@ -91,8 +91,9 @@ class SkeletonTracingPlaneController extends PlaneController
 
   onClick : (position, shiftPressed, altPressed, plane) =>
 
-    unless shiftPressed # do nothing
-      return
+    unless shiftPressed
+      return unless @model.getSegmentationBinary()?
+      @render3dCell(@model.getSegmentationBinary().cube.getDataValue(position))
 
     scaleFactor = @planeView.scaleFactor
     camera      = @planeView.getCameras()[plane]

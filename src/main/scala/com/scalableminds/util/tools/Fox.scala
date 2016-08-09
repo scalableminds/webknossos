@@ -44,14 +44,19 @@ object Fox{
               chain: Box[Failure] = Empty)(implicit ec: ExecutionContext): Fox[Nothing]  =
     new Fox(Future.successful(Failure(message, ex, chain)))
 
-  def serialSequence[A, B](l: List[A])(f: A => Fox[B])(implicit ec: ExecutionContext): Future[List[Fox[B]]] = {
-    l.foldLeft(Future(List.empty[Fox[B]])){
-      case (prevFuture, currentValue) =>
-        for {
-          list <- prevFuture
-          prev <- list.headOption.getOrElse(Fox.successful(true)).futureBox
-        } yield list :+ f(currentValue)
+  def serialSequence[A, B](l: List[A])(f: A => Fox[B])(implicit ec: ExecutionContext): Future[List[Box[B]]] = {
+    def runNext(remaining: List[A], results: List[Box[B]]): Future[List[Box[B]]] = {
+      remaining match {
+        case head :: tail =>
+          for{
+            currentResult <- f(head).futureBox
+            tailResults <- runNext(tail, currentResult :: results)
+          } yield tailResults
+        case Nil =>
+          Future.successful(results.reverse)
+      }
     }
+    runNext(l, Nil)
   }
 
   def sequence[T](l: List[Fox[T]])(implicit ec: ExecutionContext): Future[List[Box[T]]] =

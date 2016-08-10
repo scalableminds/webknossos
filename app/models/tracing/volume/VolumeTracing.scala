@@ -32,6 +32,9 @@ case class VolumeTracing(
                           editPosition: Point3D = Point3D(0, 0, 0),
                           editRotation: Vector3D = Vector3D(0,0,0),
                           zoomLevel: Double,
+                          roundTripTime: Option[Double] = None,
+                          bandwidth: Option[Double] = None,
+                          totalBuckets: Option[Long] =  None,
                           boundingBox: Option[BoundingBox] = None,
                           settings: AnnotationSettings = AnnotationSettings.volumeDefault,
                           _id: BSONObjectID = BSONObjectID.generate)

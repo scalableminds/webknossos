@@ -23,6 +23,12 @@ trait AnnotationContent {
 
   def editRotation: Vector3D
 
+  def roundTripTime: Option[Double]
+
+  def bandwidth: Option[Double]
+
+  def totalBuckets: Option[Long]
+
   def boundingBox: Option[BoundingBox]
 
   def timestamp: Long
@@ -84,6 +90,9 @@ object AnnotationContent {
         "contentData" -> contentData,
         "editPosition" -> ac.editPosition,
         "editRotation" -> ac.editRotation,
+        "roundTripTime" -> ac.roundTripTime,
+        "bandwidth" -> ac.bandwidth,
+        "totalBuckets" -> ac.totalBuckets,
         "boundingBox" -> ac.boundingBox,
         "contentType" -> ac.contentType)
     }

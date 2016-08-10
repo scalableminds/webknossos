@@ -62,6 +62,9 @@ object SkeletonTracingService extends AnnotationContentService with CommonTracin
         start,
         rotation,
         SkeletonTracing.defaultZoomLevel,
+        None,
+        None,
+        None,
         box,
         settings))
   }

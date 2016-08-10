@@ -33,6 +33,14 @@ object DefaultMails {
       bodyText = html.mail.registerAdminNotify(user, brainDBResult, uri).body,
       recipients = List(newUserMailingList))
 
+  def slowUserAdminNotifyerMail(user: User, roundTripTime: Double, bandwidth: Double, avgBitDepth: Double, avgMoveValue: Double, tracingSpeed: Double) =
+    Mail(
+      from = defaultFrom,
+      headers = Map("Sender" -> defaultFrom),
+      subject = s"Slow user detected: (${user.name}) on $uri",
+      bodyText = s"Dear admin,\n a slow user has been detected: (${user.name}) on $uri\nroundTripTime: ${roundTripTime}\nbandwidth: ${bandwidth}\naverage BitDepth: ${avgBitDepth}\navg move value: ${avgMoveValue}\ntracingSpeed: ${tracingSpeed}\n",
+      recipients = List(newUserMailingList))
+
   /**
     * Creates a registration mail which should allow the user to verify his
     * account

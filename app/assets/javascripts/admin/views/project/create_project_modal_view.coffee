@@ -2,6 +2,7 @@ _              = require("lodash")
 Marionette     = require("backbone.marionette")
 Toast          = require("libs/toast")
 app            = require("app")
+FormSyphon     = require("form-syphon")
 SelectionView  = require("admin/views/selection_view")
 UserCollection = require("admin/models/user/user_collection")
 TeamCollection = require("admin/models/team/team_collection")
@@ -25,9 +26,9 @@ class CreateProjectModalView extends Marionette.LayoutView
               </div>
             </div>
             <div class="form-group">
-              <label class="col-sm-2 for="projectName">Project Name</label>
+              <label class="col-sm-2 for="name">Project Name</label>
               <div class="col-sm-10">
-                <input type="text" class="form-control project-name" name="projectName" value="" required autofocus>
+                <input type="text" class="form-control project-name" name="name" value="" required autofocus>
               </div>
             </div>
             <div class="form-group">
@@ -60,9 +61,6 @@ class CreateProjectModalView extends Marionette.LayoutView
 
   ui :
     "name" : ".project-name"
-    "priority" : ".project-priority"
-    "team" : ".team"
-    "owner" : ".owner"
     "form" : "form"
 
 
@@ -74,13 +72,16 @@ class CreateProjectModalView extends Marionette.LayoutView
       collection : new UserCollection()
       childViewOptions :
         defaultItem : {email : app.currentUser.email}
-        modelValue : -> return "#{@model.get("firstName")} #{@model.get("lastName")} (#{@model.get("email")})"
+        modelValue : -> return @model.id
+        modelLabel : -> return "#{@model.get("firstName")} #{@model.get("lastName")} (#{@model.get("email")})"
+      name : "owner"
     )
     @teamSelectionView = new SelectionView(
       collection : new TeamCollection()
       childViewOptions :
         modelValue: -> return "#{@model.get("name")}"
       data : "amIAnAdmin=true"
+      name : "team"
     )
 
 
@@ -98,12 +99,9 @@ class CreateProjectModalView extends Marionette.LayoutView
 
     if @ui.form[0].checkValidity()
 
-      project = new ProjectModel(
-        owner : @ui.owner.find("select :selected").attr("id")
-        name : @ui.name.val()
-        team : @ui.team.find("select :selected").val()
-        priority: parseInt(@ui.priority.val())
-      )
+      formValues = FormSyphon.serialize(@ui.form)
+      project = new ProjectModel(formValues)
+
       @projectCollection.create(project,
         wait : true
         success : _.bind(@destroyModal, @)

@@ -94,6 +94,7 @@ class CreateProjectModalView extends ModalView
 
       formValues = FormSyphon.serialize(@ui.form)
       project = new ProjectModel(formValues)
+      project._isNew = true
 
       @projectCollection.create(project,
         wait : true

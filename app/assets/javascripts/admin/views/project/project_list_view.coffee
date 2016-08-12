@@ -52,7 +52,7 @@ class ProjectsListView extends Marionette.CompositeView
 
   filterBySearch : (searchQuery) ->
 
-    @collection.setFilter(["name", "team"], searchQuery)
+    @collection.setFilter(["name", "team", "priority"], searchQuery)
 
 
   showModal : ->

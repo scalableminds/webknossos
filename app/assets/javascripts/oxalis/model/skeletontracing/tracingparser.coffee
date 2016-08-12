@@ -3,7 +3,6 @@ THREE              = require("three")
 TracePoint         = require("./tracepoint")
 TraceTree          = require("./tracetree")
 Toast              = require("libs/toast")
-CommentsCollection = require("oxalis/model/right-menu/comments_collection")
 
 class TracingParser
 
@@ -13,7 +12,6 @@ class TracingParser
     @idCount = 1
     @treeIdCount = 1
     @trees = []
-    @comments = new CommentsCollection()
     @activeNode = null
     @activeTree = null
 
@@ -26,7 +24,9 @@ class TracingParser
         treeData.id,
         @convertColor(treeData.color),
         if treeData.name then treeData.name else "Tree#{('00'+treeData.id).slice(-3)}",
-        treeData.timestamp)
+        treeData.timestamp,
+        treeData.comments
+        treeData.branchPoints)
 
       # Initialize nodes
       for node in treeData.nodes
@@ -36,12 +36,11 @@ class TracingParser
 
         tree.nodes.push(
           new TracePoint(
-            @skeletonTracing.TYPE_USUAL,
             node.id, node.position, node.radius, treeData.id,
             metaInfo, node.rotation))
 
         # idCount should be bigger than any other id
-        @idCount = Math.max(node.id + 1, @idCount);
+        @idCount = Math.max(node.id + 1, @idCount)
 
       # Initialize edges
       for edge in treeData.edges
@@ -76,25 +75,6 @@ class TracingParser
     return null
 
 
-  setBranchpoints : (nodeList) ->
-
-    for branchpoint in @data.branchPoints
-      node = @skeletonTracing.findNodeInList(nodeList, branchpoint.id)
-      if node
-        node.type = @skeletonTracing.TYPE_BRANCH
-        @skeletonTracing.branchStack.push(node)
-      else
-        Toast.error("Node with id #{branchpoint.id} doesn't exist. Ignored branchpoint.")
-
-
-  setComments : (nodeList) ->
-
-    filteredComments = _.filter(@data.comments, (comment) ->
-      _.some(nodeList, (node) -> node.id == comment.node)
-    )
-    @comments.add(filteredComments)
-
-
   parse : ->
 
     unless @data?
@@ -102,7 +82,6 @@ class TracingParser
         idCount : 0
         treeIdCount : 0
         trees : []
-        comments : new CommentsCollection()
         activeNode : null
         activeTree : null
       }
@@ -113,14 +92,10 @@ class TracingParser
     for tree in @trees
       nodeList = nodeList.concat(tree.nodes)
 
-    @setBranchpoints(nodeList)
-    @setComments(nodeList)
-
     return {
       @idCount
       @treeIdCount
       @trees
-      @comments
       @activeNode
       @activeTree
     }

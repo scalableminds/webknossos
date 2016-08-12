@@ -1,7 +1,8 @@
-import akka.actor.Props
+import akka.actor.{PoisonPill, Props}
+import akka.routing.RoundRobinPool
 import com.scalableminds.util.reactivemongo.GlobalDBAccess
 import com.scalableminds.util.security.SCrypt
-import models.binary.{DataStore, DataStoreDAO}
+import models.binary.{DataStore, DataStoreDAO, WebKnossosStore}
 import models.team._
 import net.liftweb.common.Full
 import oxalis.jobs.AvailableTasksJob
@@ -9,7 +10,7 @@ import play.api._
 import play.api.libs.concurrent._
 import models.user._
 import models.task._
-import oxalis.annotation.{AnnotationStore}
+import oxalis.annotation.AnnotationStore
 import com.scalableminds.util.mail.Mailer
 import play.api.libs.concurrent.Execution.Implicits._
 import com.typesafe.config.Config
@@ -22,6 +23,7 @@ object Global extends GlobalSettings {
   override def onStart(app: Application) {
     val conf = app.configuration
 
+    Logger.info("Executing Global START")
     startActors(conf.underlying, app)
 
     if (conf.getBoolean("application.insertInitialData") getOrElse false) {
@@ -32,7 +34,7 @@ object Global extends GlobalSettings {
 
   def startActors(conf: Config, app: Application) {
     Akka.system(app).actorOf(
-      Props(new AnnotationStore()),
+      RoundRobinPool(10).props(Props[AnnotationStore]),
       name = "annotationStore")
 
     Akka.system(app).actorOf(
@@ -110,7 +112,7 @@ object InitialData extends GlobalDBAccess {
   def insertLocalDataStore() = {
     DataStoreDAO.findOne(Json.obj("name" -> "localhost")).futureBox.map { maybeStore =>
       if (maybeStore.isEmpty) {
-        DataStoreDAO.insert(DataStore("localhost", "something-secure"))
+        DataStoreDAO.insert(DataStore("localhost", "something-secure", WebKnossosStore))
       }
     }
   }

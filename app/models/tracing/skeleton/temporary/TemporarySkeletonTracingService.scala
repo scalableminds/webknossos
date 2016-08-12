@@ -3,42 +3,44 @@
  */
 package models.tracing.skeleton.temporary
 
-import com.scalableminds.util.geometry.{Vector3D, Point3D, BoundingBox}
+import com.scalableminds.util.geometry.{BoundingBox, Point3D, Vector3D}
 import com.scalableminds.util.reactivemongo.DBAccessContext
-import com.scalableminds.util.tools.Fox
-import models.annotation.{AnnotationSettings, AnnotationContentService}
+import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import models.annotation.{AnnotationContentService, AnnotationSettings}
 import models.binary.{DataSet, DataSetDAO}
 import models.tracing.skeleton.{SkeletonTracingLike, SkeletonTracing, SkeletonTracingStatistics}
 import net.liftweb.common.Full
 import oxalis.nml.NML
 import play.api.libs.concurrent.Execution.Implicits._
 
-object TemporarySkeletonTracingService extends AnnotationContentService {
+object TemporarySkeletonTracingService extends AnnotationContentService with FoxImplicits{
 
-  def createFrom(nml: NML, id: String, boundingBox: Option[BoundingBox], settings: AnnotationSettings = AnnotationSettings.default)(implicit ctx: DBAccessContext) = {
-    val box = boundingBox.flatMap { box => if (box.isEmpty) None else Some(box) }
-    val start = DataSetDAO.findOneBySourceName(nml.dataSetName).futureBox.map {
+  private def defaultDataSetPosition(dataSetName: String)(implicit ctx: DBAccessContext) = {
+    DataSetDAO.findOneBySourceName(dataSetName).futureBox.map {
       case Full(dataSet) =>
         dataSet.defaultStart
       case _ =>
         Point3D(0, 0, 0)
     }
+  }
+
+  def createFrom(nml: NML, id: String, boundingBox: Option[BoundingBox], settings: AnnotationSettings = AnnotationSettings.default)(implicit ctx: DBAccessContext) = {
+    val box = boundingBox.flatMap { box => if (box.isEmpty) None else Some(box) }
+    val start = nml.editPosition.toFox.orElse(defaultDataSetPosition(nml.dataSetName))
 
     start.map {
       TemporarySkeletonTracing(
         id,
         nml.dataSetName,
         nml.trees,
-        nml.branchPoints,
         System.currentTimeMillis(),
         nml.activeNodeId,
         _,
         Vector3D(0,0,0),
         SkeletonTracing.defaultZoomLevel,
         box,
-        nml.comments,
         settings)
-    }.toFox
+    }
   }
 
   def createFrom(tracing: SkeletonTracingLike, id: String)(implicit ctx: DBAccessContext) = {
@@ -49,14 +51,12 @@ object TemporarySkeletonTracingService extends AnnotationContentService {
         id,
         tracing.dataSetName,
         trees,
-        tracing.branchPoints,
         System.currentTimeMillis(),
         tracing.activeNodeId,
         tracing.editPosition,
         tracing.editRotation,
         tracing.zoomLevel,
         tracing.boundingBox,
-        tracing.comments,
         tracing.settings)
     }
   }
@@ -89,7 +89,7 @@ object TemporarySkeletonTracingService extends AnnotationContentService {
 
   def createFrom(dataSet: DataSet)(implicit ctx: DBAccessContext) = ???
 
-  def clearTracingData(id: String)(implicit ctx: DBAccessContext) = ???
+  def clearAndRemove(id: String)(implicit ctx: DBAccessContext) = ???
 
   def updateSettings(dataSetName: String, boundingBox: Option[BoundingBox], settings: AnnotationSettings, tracingId: String)(implicit ctx: DBAccessContext): Fox[Boolean] = ???
 

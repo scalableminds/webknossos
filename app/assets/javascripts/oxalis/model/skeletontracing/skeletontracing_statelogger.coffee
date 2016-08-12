@@ -17,12 +17,14 @@ class SkeletonTracingStateLogger extends StateLogger
 
     treeColor = new THREE.Color(tree.color)
     return {
-      id: if oldId then oldId else tree.treeId
-      updatedId: if oldId then tree.treeId
-      color: [treeColor.r, treeColor.g, treeColor.b, 1]
-      name: tree.name
-      timestamp: tree.timestamp
-      }
+      id : if oldId then oldId else tree.treeId
+      updatedId : if oldId then tree.treeId
+      color : [treeColor.r, treeColor.g, treeColor.b, 1]
+      name : tree.name
+      timestamp : tree.timestamp
+      comments : tree.comments
+      branchPoints : tree.branchpoints
+    }
 
 
   createTree : (tree) ->
@@ -38,8 +40,8 @@ class SkeletonTracingStateLogger extends StateLogger
   deleteTree : (tree) ->
 
     @pushDiff("deleteTree", {
-      id: tree.treeId
-      })
+      id : tree.treeId
+    })
 
 
   mergeTree : (sourceTree, targetTree, lastNodeId, activeNodeId) ->
@@ -63,9 +65,9 @@ class SkeletonTracingStateLogger extends StateLogger
     # targetTree, while leaving targetTree's properties
     # unchanged. Then, delete sourceTree.
     @pushDiff("mergeTree", {
-        sourceId : sourceTree.treeId
-        targetId : targetTree.treeId
-      }, false)
+      sourceId : sourceTree.treeId
+      targetId : targetTree.treeId
+    }, false)
     @createEdge(lastNodeId, activeNodeId, targetTree.treeId)
 
 
@@ -73,12 +75,13 @@ class SkeletonTracingStateLogger extends StateLogger
 
   nodeObject : (node, treeId) ->
 
-    return _.extend node.metaInfo,
+    return _.extend(node.metaInfo,
       treeId : treeId,
-      id: node.id,
-      radius: node.radius,
+      id : node.id,
+      radius : node.radius,
       position : V3.floor(node.pos),
       rotation : node.rotation
+    )
 
 
   edgeObject : (node, treeId) ->
@@ -118,8 +121,8 @@ class SkeletonTracingStateLogger extends StateLogger
     # Edges will be deleted implicitly
     @pushDiff("deleteNode", {
       treeId : treeId
-      id: node.id
-      })
+      id : node.id
+    })
 
 
   moveTreeComponent : (sourceId, targetId, nodeIds) ->
@@ -128,7 +131,7 @@ class SkeletonTracingStateLogger extends StateLogger
       sourceId : sourceId
       targetId : targetId
       nodeIds : nodeIds
-      })
+    })
 
 
   createEdge : (source, target, treeId) ->
@@ -138,19 +141,14 @@ class SkeletonTracingStateLogger extends StateLogger
       treeId : treeId
       source : source
       target : target
-      })
+    })
 
 
   concatUpdateTracing : ->
 
-    branchPoints = []
-    for branchPoint in @skeletonTracing.branchStack
-      branchPoints.push({id : branchPoint.id})
     @pushDiff(
       "updateTracing"
       {
-        branchPoints : branchPoints
-        comments : @skeletonTracing.getPlainComments()
         activeNode : @skeletonTracing.getActiveNodeId()
         editPosition : V3.floor(@flycam.getPosition())
         editRotation : @flycam3d.getRotation()

@@ -28,6 +28,10 @@ class ProjectsListView extends Marionette.CompositeView
   childView : ProjectListItemView
   childViewContainer : "tbody"
 
+  behaviors :
+    SortTableBehavior:
+      behaviorClass: SortTableBehavior
+
   ui :
     "modalWrapper" : "#modal-wrapper"
 
@@ -42,7 +46,7 @@ class ProjectsListView extends Marionette.CompositeView
     @collection.setSorting("priority", "desc")
 
     @listenTo(app.vent, "paginationView:filter", @filterBySearch)
-    @listenTo(app.vent, "CreateProjectModal:refresh", @render)
+    @listenTo(app.vent, "modal:destroy", @render)
     @listenTo(app.vent, "paginationView:addElement", @showModal)
 
 

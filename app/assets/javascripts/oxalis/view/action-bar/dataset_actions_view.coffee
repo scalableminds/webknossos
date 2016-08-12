@@ -17,7 +17,7 @@ class DatasetActionsView extends Marionette.ItemView
     <% } %>
     <div class="btn-group btn-group">
       <% if(tracing.restrictions.allowFinish) { %>
-        <a href="/annotations/<%- tracingType %>/<%- tracingId %>/finishAndRedirect" class="btn btn-default" id="trace-finish-button"><i class="fa fa-check-circle-o"></i>Archive</a>
+        <a href="/annotations/<%- tracingType %>/<%- tracingId %>/finishAndRedirect" class="btn btn-default" id="trace-finish-button"><i class="fa fa-check-circle-o"></i><%- getArchiveBtnText() %></a>
       <% } %>
       <% if(tracing.restrictions.allowDownload || ! tracing.downloadUrl) { %>
         <a class="btn btn-default" id="trace-download-button"><i class="fa fa-download"></i>Download</a>
@@ -38,6 +38,8 @@ class DatasetActionsView extends Marionette.ItemView
   templateHelpers : ->
 
     isSkeletonMode : @isSkeletonMode()
+    getArchiveBtnText : -> return if @isTask then "Finish" else "Archive"
+
 
   events :
     "click #trace-finish-button" : "finishTracing"
@@ -63,8 +65,15 @@ class DatasetActionsView extends Marionette.ItemView
   downloadTracing : (evt) ->
 
     evt.preventDefault()
+    win = window.open("about:blank", "_blank")
+    win.document.body.innerHTML="Please wait..."
     @saveTracing().then( =>
-      window.open(@model.tracing.downloadUrl, "_blank")
+      win.location.href = @model.tracing.downloadUrl
+      win.document.body.innerHTML="You may close this window now. (Auto-close in 2 seconds)."
+      setTimeout(
+        -> win.close()
+        2000
+      )
     )
 
 
@@ -74,6 +83,7 @@ class DatasetActionsView extends Marionette.ItemView
       evt.preventDefault()
 
     return @model.save()
+
 
   mergeTracing : ->
 
@@ -95,21 +105,24 @@ class DatasetActionsView extends Marionette.ItemView
 
   isSkeletonMode : ->
 
-    return _.contains(Constants.MODES_SKELETON, @model.get("mode"))
+    return _.includes(Constants.MODES_SKELETON, @model.get("mode"))
 
 
   getNextTask : ->
 
-    tracingType = @model.skeletonTracing || @model.volumeTracing
+    model = @model.skeletonTracing || @model.volumeTracing
+    finishUrl = "/annotations/#{@model.tracingType}/#{@model.tracingId}/finish"
+    requestTaskUrl = "/user/tasks/request"
 
-    tracingType.stateLogger.save()
-        .then(=> Request.$(Request.triggerRequest("/annotations/#{@model.tracingType}/#{@model.tracingId}/finish")))
+    model.stateLogger.save()
+        .then(=> Request.triggerRequest(finishUrl))
         .then(=>
-          Request.$(Request.receiveJSON("/user/tasks/request")).then(
+          Request.receiveJSON(requestTaskUrl).then(
             (annotation) =>
               differentTaskType = annotation.task.type.id != @model.tracing.task?.type.id
               differentTaskTypeParam = if differentTaskType then "?differentTaskType" else ""
-              app.router.loadURL("/annotations/#{annotation.typ}/#{annotation.id}#{differentTaskTypeParam}")
+              newTaskUrl = "/annotations/#{annotation.typ}/#{annotation.id}#{differentTaskTypeParam}"
+              app.router.loadURL(newTaskUrl)
             ->
               # Wait a while so users have a chance to read the error message
               setTimeout((-> app.router.loadURL("/dashboard")), 2000)

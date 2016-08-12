@@ -12,7 +12,7 @@ class DashboardTaskListView extends Marionette.CompositeView
   template : _.template("""
     <h3>Tasks</h3>
     <% if (isAdminView) { %>
-      <a href="<%- jsRoutes.controllers.admin.NMLIO.userDownload(id).url %>"
+      <a href="<%- jsRoutes.controllers.NMLIOController.userDownload(id).url %>"
          class="btn btn-primary"
          title="download all finished tracings">
           <i class="fa fa-download"></i>download
@@ -72,10 +72,10 @@ class DashboardTaskListView extends Marionette.CompositeView
   initialize : (@options) ->
 
     @showFinishedTasks = false
-    @collection = new UserTasksCollection()
+    @collection = new UserTasksCollection([], userID : @options.userID)
     @collection.fetch()
 
-    @listenTo(app.vent, "TaskTransferModal:refresh", @refresh)
+    @listenTo(app.vent, "modal:destroy", @refresh)
 
   filter : (child) ->
     if @showFinishedTasks
@@ -95,7 +95,8 @@ class DashboardTaskListView extends Marionette.CompositeView
   toggleFinished : ->
 
     @showFinishedTasks = not @showFinishedTasks
-    @render()
+    @collection.isFinished = @showFinishedTasks
+    @refresh()
 
 
   transferTask : (evt) ->

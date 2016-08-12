@@ -35,10 +35,7 @@ src/main/scala/rebel.xml
 *.skp
 *.mtl
 public/bower_components
-public/javascripts
-public/javascripts_tmp
-public/stylesheets
-public/fonts
+public/bundle
 aws.conf
 aws.conf.disabled
 /knowledge

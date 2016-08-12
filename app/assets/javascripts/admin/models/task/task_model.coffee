@@ -1,7 +1,8 @@
 Backbone = require("backbone")
+NestedObjModel = require("libs/nested_obj_model")
 FormatUtils = require("libs/format_utils")
 
-class TaskModel extends Backbone.Model
+class TaskModel extends NestedObjModel
 
   url : ->
     id = ''
@@ -29,9 +30,10 @@ class TaskModel extends Backbone.Model
     tracingTime : null
     isForAnonymous : false
 
+
   destroy : ->
 
-    options = url : "/api/tasks/#{@get('id')}/delete"
+    options = url : "/api/tasks/#{@get('id')}"
     super(options)
 
 

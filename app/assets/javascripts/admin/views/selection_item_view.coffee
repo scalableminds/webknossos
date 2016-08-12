@@ -11,7 +11,7 @@ class SelectionItemView extends Marionette.ItemView
       value : @options.modelValue()
 
     if @options.defaultItem
-      [[key, value]] = _.pairs(@options.defaultItem)
+      [[key, value]] = _.toPairs(@options.defaultItem)
       if @model.get(key) == value
         _.extend(defaults, selected : true)
 

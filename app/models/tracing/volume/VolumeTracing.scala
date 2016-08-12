@@ -14,9 +14,8 @@ import com.scalableminds.util.reactivemongo.{DBAccessContext, GlobalAccessContex
 import com.scalableminds.util.tools.{FoxImplicits, Fox}
 import play.api.libs.ws.WS
 import reactivemongo.bson.BSONObjectID
-import play.modules.reactivemongo.json.BSONFormats._
+import reactivemongo.play.json.BSONFormats._
 import play.api.libs.concurrent.Execution.Implicits._
-import controllers.DataStoreHandler
 import com.scalableminds.braingames.binary.models.{DataLayer, UserDataLayer, DataSource}
 
 /**
@@ -146,7 +145,8 @@ object VolumeTracingService extends AnnotationContentService with CommonTracingS
     }
   }
 
-  def clearTracingData(id: String)(implicit ctx: DBAccessContext): Fox[VolumeTracingService.AType] = ???
+  def clearAndRemove(id: String)(implicit ctx: DBAccessContext): Fox[Boolean] =
+    ???
 }
 
 object VolumeTracing {

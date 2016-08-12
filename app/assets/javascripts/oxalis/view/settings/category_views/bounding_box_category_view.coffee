@@ -30,7 +30,7 @@ class BoundingBoxCategory extends CategoryView
 
     [minX, minY, minZ, maxX, maxY, maxZ] = Utils.stringToNumberArray(value)
 
-    if isValid = minX > maxX or minY > maxY or minZ > maxZ
+    if isInvalid = minX > maxX or minY > maxY or minZ > maxZ
 
       # Unfortunately we cannot use HTML5 form validation here since the text box
       # is not part of a form and a submit event is missing :-(
@@ -42,6 +42,6 @@ class BoundingBoxCategory extends CategoryView
       # reset error state
       @ui.text[0].setCustomValidity("")
 
-    return isValid
+    return not isInvalid
 
 module.exports = BoundingBoxCategory

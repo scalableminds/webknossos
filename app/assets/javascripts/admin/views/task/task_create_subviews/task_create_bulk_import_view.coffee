@@ -13,8 +13,7 @@ class TaskCreateBulkImportView extends Marionette.ItemView
     <div class="col-sm-12">
       <div class="well">
         One line for each task. The values are seperated by ','. Format: <br>
-	dataSet, <a href="/taskTypes">taskTypeId</a>, experienceDomain, minExperience, x, y, z, rotX, rotY, rotZ, instances, team, minX, minY, minZ, maxX, maxY, maxZ, (opt: project)<br><br>
-
+        dataSet, <a href="/taskTypes">taskTypeId</a>, experienceDomain, minExperience, x, y, z, rotX, rotY, rotZ, instances, team, minX, minY, minZ, width, height, depth, project<br><br>
         <form action="" method="POST" class="form-horizontal" onSubmit="return false;">
           <div class="form-group">
             <div class="col-sm-12">
@@ -118,7 +117,7 @@ class TaskCreateBulkImportView extends Marionette.ItemView
 
   isValidData : (bulkText) ->
 
-    return _.every(@splitToLines(bulkText), @isValidLine, @)
+    return _.every(@splitToLines(bulkText), @isValidLine.bind(@))
 
 
   isNull : (value) ->
@@ -132,15 +131,15 @@ class TaskCreateBulkImportView extends Marionette.ItemView
     if bulkData is null
       return false
 
-    if _.any(bulkData, @isNull, @)
+    if _.some(bulkData, @isNull.bind(@))
       return false
 
-    if _.any(bulkData.experienceDomain, isNaN) or
-      _.any(bulkData.editPosition, isNaN) or
+    if _.some(bulkData.experienceDomain, isNaN) or
+      _.some(bulkData.editPosition, isNaN) or
       isNaN(bulkData.boundingBox.width) or
       isNaN(bulkData.boundingBox.height) or
       isNaN(bulkData.boundingBox.depth) or
-      _.any(bulkData.boundingBox.topLeft, isNaN)
+      _.some(bulkData.boundingBox.topLeft, isNaN)
         return false
 
     return true
@@ -148,7 +147,7 @@ class TaskCreateBulkImportView extends Marionette.ItemView
 
   parseText : (bulkText) ->
 
-    return _.map(@splitToLines(bulkText), @formatLine, @)
+    return _.map(@splitToLines(bulkText), @formatLine.bind(@))
 
 
   formatLine : (bulkLine) ->
@@ -172,9 +171,9 @@ class TaskCreateBulkImportView extends Marionette.ItemView
     minX = parseInt(words[12])
     minY = parseInt(words[13])
     minZ = parseInt(words[14])
-    maxX = parseInt(words[15])
-    maxY = parseInt(words[16])
-    maxZ = parseInt(words[17])
+    width = parseInt(words[15])
+    height = parseInt(words[16])
+    depth = parseInt(words[17])
 
     projectName = ""
     if words[18]
@@ -195,9 +194,9 @@ class TaskCreateBulkImportView extends Marionette.ItemView
       editRotation : [rotX, rotY, rotZ]
       boundingBox :
         topLeft : [minX, minY, minZ]
-        width : maxX
-        height : maxY
-        depth : maxZ
+        width : width
+        height : height
+        depth : depth
       projectName,
       isForAnonymous : false
     }

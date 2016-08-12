@@ -1,8 +1,10 @@
-@import (inline) "../../../node_modules/bootstrap/dist/css/bootstrap.css";
+@import "../../../node_modules/bootstrap/less/bootstrap.less";
 @import (inline) "../../../node_modules/c3/c3.css";
 @import (inline) "../../../node_modules/bootstrap-daterangepicker/daterangepicker.css";
 @import (inline) "../../../node_modules/nouislider/distribute/nouislider.min.css";
+@import (inline) "../../../node_modules/bootstrap-toggle/css/bootstrap-toggle.css";
 @import "../../../node_modules/font-awesome/less/font-awesome.less";
+@import "../../../node_modules/bootstrap-multiselect/dist/less/bootstrap-multiselect.less";
 @import "../../../node_modules/jasny-bootstrap/less/build/jasny-bootstrap.less";
 
 @import "_variables.less";
@@ -76,6 +78,10 @@ body:-webkit-full-screen {
   margin-left: 20px;
   margin-right: 20px;
   width: auto;
+}
+
+.bold {
+  font-weight: bold;
 }
 
 // Only affect child items in tables
@@ -159,7 +165,7 @@ td.nowrap * {
   position: fixed;
   right: 20px;
   top: 60px;
-  z-index: 1050; //above modal backdrop
+  z-index: @zindex-modal + 1;
 
   .alert {
     cursor: default;
@@ -352,4 +358,9 @@ i {
   max-width: 154px;
   font-family: monospace;
   font-size: 14px;
+}
+
+
+img.img-50 {
+  width: 47%;
 }

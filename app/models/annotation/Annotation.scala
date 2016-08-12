@@ -15,7 +15,7 @@ import org.joda.time.format.DateTimeFormat
 import oxalis.view.{ResourceAction, ResourceActionCollection}
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json._
-import play.modules.reactivemongo.json.BSONFormats._
+import reactivemongo.play.json.BSONFormats._
 import reactivemongo.api.indexes.{Index, IndexType}
 import reactivemongo.bson.BSONObjectID
 
@@ -56,8 +56,6 @@ case class Annotation(
       AnnotationRestrictions.defaultAnnotationRestrictions(this)
 
   def relativeDownloadUrl = Some(Annotation.relativeDownloadUrlOf(typ, id))
-
-  def isReadyToBeFinished(implicit ctx: DBAccessContext) = Future.successful(true)
 
   def removeTask() = {
     this.copy(_task = None, typ = AnnotationType.Orphan)
@@ -131,18 +129,21 @@ object Annotation {
 
 object AnnotationDAO
   extends SecuredBaseDAO[Annotation]
-  with FoxImplicits with MongoHelpers {
+  with FoxImplicits with MongoHelpers with QuerySupportedDAO[Annotation]{
 
   val collectionName = "annotations"
 
   val formatter = Annotation.annotationFormat
 
-  underlying.indexesManager.ensure(Index(Seq("_task" -> IndexType.Ascending)))
-  underlying.indexesManager.ensure(Index(Seq("_user" -> IndexType.Ascending)))
-  underlying.indexesManager.ensure(Index(Seq("_user" -> IndexType.Ascending, "_task" -> IndexType.Ascending)))
+  underlying.indexesManager.ensure(Index(Seq("isActive" -> IndexType.Ascending, "_task" -> IndexType.Ascending)))
+  underlying.indexesManager.ensure(Index(Seq("isActive" -> IndexType.Ascending, "_user" -> IndexType.Ascending, "_task" -> IndexType.Ascending)))
 
   override def find(query: JsObject = Json.obj())(implicit ctx: DBAccessContext) = {
     super.find(query ++ Json.obj("isActive" -> true))
+  }
+
+  override def count(query: JsObject = Json.obj())(implicit ctx: DBAccessContext) = {
+    super.count(query ++ Json.obj("isActive" -> true))
   }
 
   override def findOne(query: JsObject = Json.obj())(implicit ctx: DBAccessContext) = {
@@ -187,20 +188,18 @@ object AnnotationDAO
   def hasAnOpenAnnotation(_user: BSONObjectID, annotationType: AnnotationType)(implicit ctx: DBAccessContext) =
     countOpenAnnotations(_user, annotationType).map(_ > 0)
 
-  def findFor(_user: BSONObjectID)(implicit ctx: DBAccessContext) = withExceptionCatcher{
-    find(Json.obj(
-      "_user" -> _user,
-      "state.isAssigned" -> true)).cursor[Annotation]().collect[List]()
-  }
-
-  def findFor(_user: BSONObjectID, annotationType: AnnotationType)(implicit ctx: DBAccessContext) = withExceptionCatcher{
-    find(Json.obj(
+  def findFor(_user: BSONObjectID, isFinished: Option[Boolean], annotationType: AnnotationType, limit: Int)(implicit ctx: DBAccessContext) = withExceptionCatcher{
+    var q = Json.obj(
       "_user" -> _user,
       "state.isAssigned" -> true,
-      "typ" -> annotationType)).cursor[Annotation]().collect[List]()
+      "typ" -> annotationType)
+
+    isFinished.foreach{ f => q += "state.isFinished" -> JsBoolean(f)}
+
+    find(q).sort(Json.obj("_id" -> -1)).cursor[Annotation]().collect[List](maxDocs = limit)
   }
 
-  def findForWithTypeOtherThan(_user: BSONObjectID, isFinished: Option[Boolean], annotationTypes: List[AnnotationType])(implicit ctx: DBAccessContext) = withExceptionCatcher{
+  def findForWithTypeOtherThan(_user: BSONObjectID, isFinished: Option[Boolean], annotationTypes: List[AnnotationType], limit: Int)(implicit ctx: DBAccessContext) = withExceptionCatcher{
     var q = Json.obj(
       "_user" -> _user,
       "state.isAssigned" -> true,
@@ -208,18 +207,8 @@ object AnnotationDAO
 
     isFinished.foreach{ f => q += "state.isFinished" -> JsBoolean(f)}
 
-    find(q).cursor[Annotation]().collect[List]()
+    find(q).sort(Json.obj("_id" -> -1)).cursor[Annotation]().collect[List](maxDocs = limit)
   }
-
-  def findFinishedFor(_user: BSONObjectID)(implicit ctx: DBAccessContext) = withExceptionCatcher {
-    find(Json.obj(
-    "_user" -> _user,
-    "state.isFinished" -> true
-    )).cursor[Annotation]().collect[List]()
-  }
-
-  def findOpenAnnotationFor(_user: BSONObjectID, annotationType: AnnotationType)(implicit ctx: DBAccessContext) =
-    findOne(defaultFindForUserQ(_user, annotationType))
 
   def findOpenAnnotationsFor(_user: BSONObjectID, annotationType: AnnotationType)(implicit ctx: DBAccessContext) = withExceptionCatcher{
     find(defaultFindForUserQ(_user, annotationType)).cursor[Annotation]().collect[List]()
@@ -227,13 +216,6 @@ object AnnotationDAO
 
   def countOpenAnnotations(_user: BSONObjectID, annotationType: AnnotationType)(implicit ctx: DBAccessContext) =
     count(defaultFindForUserQ(_user, annotationType))
-
-  def findOpen(annotationType: AnnotationType)(implicit ctx: DBAccessContext) = withExceptionCatcher{
-    find(Json.obj(
-      "state.isFinished" -> false,
-      "state.isAssigned" -> true,
-      "typ" -> annotationType)).cursor[Annotation]().collect[List]()
-  }
 
   def removeAllWithTaskId(_task: BSONObjectID)(implicit ctx: DBAccessContext) =
     update(Json.obj("_task" -> _task), Json.obj("$set" -> Json.obj("isActive" -> false)), upsert = false, multi = true)
@@ -243,10 +225,6 @@ object AnnotationDAO
       Json.obj("_id" -> _annotation),
       Json.obj("$inc" -> Json.obj("version" -> 1)),
       returnNew = true)
-
-  def findByTaskId(_task: BSONObjectID)(implicit ctx: DBAccessContext) = withExceptionCatcher{
-    find("_task", _task).collect[List]()
-  }
 
   def findByTaskIdAndUser(_user: BSONObjectID, _task: BSONObjectID, annotationType: AnnotationType)(implicit ctx: DBAccessContext) = withExceptionCatcher{
     find(Json.obj(
@@ -328,28 +306,10 @@ object AnnotationDAO
   def reopen(_annotation: BSONObjectID)(implicit ctx: DBAccessContext) =
     updateState(_annotation, AnnotationState.InProgress)
 
-  def passToReview(_annotation: BSONObjectID)(implicit ctx: DBAccessContext) =
-    updateState(_annotation, AnnotationState.InReview)
-
   def updateState(_annotation: BSONObjectID, state: AnnotationState)(implicit ctx: DBAccessContext) =
     findAndModify(
       Json.obj("_id" -> _annotation),
       Json.obj("$set" -> Json.obj("state" -> state)),
-      returnNew = true)
-
-  def assignReviewer(_annotation: BSONObjectID, annotationReview: AnnotationReview)(implicit ctx: DBAccessContext) =
-    findAndModify(
-      Json.obj("_id" -> _annotation),
-      Json.obj("$set" -> Json.obj(
-        "state" -> AnnotationState.InReview,
-        "review.-1" -> annotationReview)),
-      returnNew = true)
-
-  def addReviewComment(_annotation: BSONObjectID, comment: String)(implicit ctx: DBAccessContext) =
-    findAndModify(
-      Json.obj("_id" -> _annotation),
-      Json.obj("$set" -> Json.obj(
-        "review.0.comment" -> comment)),
       returnNew = true)
 
   def updateContent(_annotation: BSONObjectID, content: ContentReference)(implicit ctx: DBAccessContext) =
@@ -359,18 +319,14 @@ object AnnotationDAO
         "_content" -> content)),
       returnNew = true)
 
-  def unassignReviewer(_annotation: BSONObjectID)(implicit ctx: DBAccessContext) =
-    findAndModify(
-      Json.obj("_id" -> _annotation),
-      Json.obj("$set" -> Json.obj(
-        "state" -> AnnotationState.ReadyForReview),
-        "$pop" -> Json.obj("review" -> -1)),
-      returnNew = true)
-
   def transfer(_annotation: BSONObjectID, _user: BSONObjectID)(implicit ctx: DBAccessContext) =
     findAndModify(
       Json.obj("_id" -> _annotation),
       Json.obj("$set" -> Json.obj(
         "_user" -> _user)),
       returnNew = true)
+
+  override def executeUserQuery(q: JsObject, limit: Int)(implicit ctx: DBAccessContext): Fox[List[Annotation]] = withExceptionCatcher{
+    find(q).cursor[Annotation]().collect[List](maxDocs = limit)
+  }
 }

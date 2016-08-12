@@ -23,7 +23,7 @@ import scala.Some
 import models.binary.{DataSet, DataSetDAO}
 import oxalis.nml.NML
 import com.scalableminds.util.mvc.BoxImplicits
-import play.modules.reactivemongo.json.BSONFormats._
+import reactivemongo.play.json.BSONFormats._
 import play.api.i18n.{Messages, MessagesApi}
 
 /**
@@ -87,9 +87,6 @@ object AnnotationService extends AnnotationContentProviders with BoxImplicits wi
     } yield result
   }
 
-  def openExplorationalFor(user: User)(implicit ctx: DBAccessContext) =
-    AnnotationDAO.findOpenAnnotationsFor(user._id, AnnotationType.Explorational)
-
   def openTasksFor(user: User)(implicit ctx: DBAccessContext) =
     AnnotationDAO.findOpenAnnotationsFor(user._id, AnnotationType.Task)
 
@@ -99,14 +96,11 @@ object AnnotationService extends AnnotationContentProviders with BoxImplicits wi
   def hasAnOpenTask(user: User)(implicit ctx: DBAccessContext) =
     AnnotationDAO.hasAnOpenAnnotation(user._id, AnnotationType.Task)
 
-  def findTasksOf(user: User)(implicit ctx: DBAccessContext) =
-    AnnotationDAO.findFor(user._id, AnnotationType.Task)
+  def findTasksOf(user: User, isFinished: Option[Boolean], limit: Int)(implicit ctx: DBAccessContext) =
+    AnnotationDAO.findFor(user._id, isFinished, AnnotationType.Task, limit)
 
-  def findExploratoryOf(user: User, isFinished: Option[Boolean])(implicit ctx: DBAccessContext) =
-    AnnotationDAO.findForWithTypeOtherThan(user._id, isFinished, AnnotationType.Task :: AnnotationType.SystemTracings)
-
-  def findFinishedOf(user: User)(implicit ctx: DBAccessContext) =
-    AnnotationDAO.findFinishedFor(user._id)
+  def findExploratoryOf(user: User, isFinished: Option[Boolean], limit: Int)(implicit ctx: DBAccessContext) =
+    AnnotationDAO.findForWithTypeOtherThan(user._id, isFinished, AnnotationType.Task :: AnnotationType.SystemTracings, limit)
 
   def findTaskOf(user: User, _task: BSONObjectID)(implicit ctx: DBAccessContext) =
     AnnotationDAO.findByTaskIdAndUser(user._id, _task, AnnotationType.Task)
@@ -136,7 +130,7 @@ object AnnotationService extends AnnotationContentProviders with BoxImplicits wi
     rotation: Vector3D)(implicit ctx: DBAccessContext) = {
 
     for {
-      tracing <- SkeletonTracingService.createFrom(dataSetName, start, rotation, boundingBox, insertStartAsNode = true, settings) ?~> "Failed to create skeleton tracing."
+      tracing <- SkeletonTracingService.createFrom(dataSetName, start, rotation, boundingBox, insertStartAsNode = true, isFirstBranchPoint = true, settings) ?~> "Failed to create skeleton tracing."
       content = ContentReference.createFor(tracing)
       _ <- AnnotationDAO.insert(Annotation(Some(userId), content, team = task.team, typ = AnnotationType.TracingBase, _task = Some(task._id))) ?~> "Failed to insert annotation."
     } yield tracing

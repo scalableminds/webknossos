@@ -30,6 +30,7 @@ class DatasetInfoView extends Marionette.ItemView
 
   initialize : (options) ->
 
+    @render = _.throttle(@render, 100)
     @listenTo(@model.flycam3d, "changed", @render)
     @listenTo(@model.flycam, "zoomStepChanged", @render)
 
@@ -39,13 +40,23 @@ class DatasetInfoView extends Marionette.ItemView
       @listenTo(@model.skeletonTracing, "newTree", @render)
 
 
+  # Rendering performance optimization
+  attachElContent : (html) ->
+    this.el.innerHTML = html
+    return html
+
+
   serializeData : ->
 
     annotationType = @model.get("tracingType")
-    task = @model.get("tracing").task
+    tracing = @model.get("tracing")
+    task = tracing.task
+    name = tracing.name
 
     # In case we have a task display its id as well
-    if task then annotationType += " #{task.formattedHash}"
+    if task then annotationType += " - #{task.formattedHash}"
+    # Or display an explorative tracings name if there is one
+    if name then annotationType += " - #{name}"
 
     return {
       annotationType : annotationType

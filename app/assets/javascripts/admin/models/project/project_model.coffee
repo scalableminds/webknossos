@@ -4,13 +4,14 @@ backbone = require("backbone")
 class ProjectModel extends Backbone.Model
 
   urlRoot : "/api/projects"
-  idAttribute: "name"
+  #idAttribute: "name"
 
   default :
     owner :
       firstName : ""
       lastName : ""
     priority: 100
+
 
   parse : (response)->
 

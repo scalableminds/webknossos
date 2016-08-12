@@ -1,22 +1,27 @@
-_                = require("lodash")
-Backbone         = require("backbone")
-TaskModel        = require("./task_model")
-SortedCollection = require("admin/models/sorted_collection")
+_                   = require("lodash")
+Backbone            = require("backbone")
+DashboardTaskModel  = require("./dashboard_task_model")
+SortedCollection    = require("admin/models/sorted_collection")
 
 class UserTasksCollection extends SortedCollection
 
-  model : TaskModel
-  url : ->
-
-    if userID = @get("userID")
-      return "/api/users/#{userID}/tasks"
-    else
-      return "/api/user/tasks"
-
-
+  model : DashboardTaskModel
   newTaskUrl : "/user/tasks/request"
   defaults :
       showFinishedTasks : false
+
+  url : ->
+
+    if @userID
+      return "/api/users/#{@userID}/tasks?isFinished=#{@isFinished}"
+    else
+      return "/api/user/tasks?isFinished=#{@isFinished}"
+
+
+  initialize : (models, options) ->
+
+    @userID = options.userID
+    @isFinished = options.isFinished || false
 
 
   unfinishedTasksFilter : (task) ->
@@ -26,13 +31,14 @@ class UserTasksCollection extends SortedCollection
 
   getNewTask : ->
 
-    newTask = new TaskModel()
+    newTask = new DashboardTaskModel()
 
     return newTask.fetch(
       url : @newTaskUrl
       success :  =>
         @add(newTask)
     )
+
 
 
 module.exports = UserTasksCollection

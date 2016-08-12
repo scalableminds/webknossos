@@ -12,7 +12,7 @@ class UserScriptsModalView extends Marionette.ItemView
           <h3>Add user script</h3>
         </div>
         <div class="modal-body">
-          <textarea id="add-script-input" rows="10"></textarea>
+          <textarea id="add-script-input" rows="10" autofocus></textarea>
         </div>
         <div class="modal-footer">
           <a href="#" id="add-script-button" class="btn btn-default">Add</a>
@@ -28,13 +28,24 @@ class UserScriptsModalView extends Marionette.ItemView
   events :
     "click #add-script-button" : "handleAddClick"
 
+  attributes:
+    "tabindex" : "-1"
+    "role": "dialog"
+
 
   show : ->
+
     @$el.modal("show")
 
 
   handleAddClick : ->
-    eval(@ui.inputBox.val())
+
+    try
+      eval(@ui.inputBox.val())
+      # close modal if the script executed successfully
+      @$el.modal("hide")
+    catch error
+      alert(error)
 
 
 module.exports = UserScriptsModalView

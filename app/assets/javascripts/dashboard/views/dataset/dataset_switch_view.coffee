@@ -1,10 +1,11 @@
 _                           = require("lodash")
 Marionette                  = require("backbone.marionette")
 DatasetListView             = require("./dataset_list_view")
-PaginatedDatasetCollection  = require("admin/models/dataset/paginated_dataset_collection")
-SpotlightDatasetListView    = require("views/spotlight_dataset_list_view")
+SpotlightDatasetListView    = require("../spotlight/spotlight_dataset_list_view")
+DatasetCollection           = require("admin/models/dataset/dataset_collection")
+PaginationCollection        = require("admin/models/pagination_collection")
 PaginationView              = require("admin/views/pagination_view")
-utils                       = require("libs/utils")
+Utils                       = require("libs/utils")
 
 class DatasetSwitchView extends Marionette.LayoutView
 
@@ -12,7 +13,7 @@ class DatasetSwitchView extends Marionette.LayoutView
     <div class="pull-right">
       <% if(isAdmin) { %>
         <a href="/datasets/upload" class="btn btn-primary">
-          <i class="fa fa-plus"></i>Upload Dataset
+          <i class="fa fa-plus"></i>Add Dataset
         </a>
         <a href="#" id="showAdvancedView" class="btn btn-default">
           <i class="fa fa-th-list"></i>Show advanced view
@@ -42,16 +43,19 @@ class DatasetSwitchView extends Marionette.LayoutView
 
 
   templateHelpers : ->
-    isAdmin : utils.isUserAdmin(@model)
+    isAdmin : Utils.isUserAdmin(@model)
 
 
   initialize : ->
 
-    @collection = new PaginatedDatasetCollection()
+    datasetCollection = new DatasetCollection()
+    @collection = new PaginationCollection([], fullCollection : datasetCollection)
 
-    @listenTo(@, "render", @showGalleryView)
     @listenToOnce(@, "render", => @toggleSwitchButtons(true))
-    @listenToOnce(@collection, "sync", @showGalleryView)
+    @listenToOnce(@collection, "sync", ->
+      @listenTo(@, "render", @showGalleryView)
+      @showGalleryView()
+    )
 
     @collection.fetch()
 

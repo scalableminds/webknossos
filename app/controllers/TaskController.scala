@@ -63,7 +63,7 @@ class TaskController @Inject() (val messagesApi: MessagesApi) extends Controller
   def read(taskId: String) = Authenticated.async { implicit request =>
     for {
       task <- TaskService.findOneById(taskId) ?~> Messages("task.notFound")
-      js <- Task.transformToJson(task)
+      js <- Task.transformToJson(task, request.userOpt)
     } yield {
       Ok(js)
     }
@@ -90,7 +90,7 @@ class TaskController @Inject() (val messagesApi: MessagesApi) extends Controller
       result <- {
         val nmls = NMLService.extractFromFile(nmlFile.ref.file, nmlFile.filename)
 
-        val results = nmls.map {
+        val futureResults = nmls.map {
           case NMLService.NMLParseSuccess(_, nml) =>
             val task = Task(
               taskType._id,
@@ -108,7 +108,10 @@ class TaskController @Inject() (val messagesApi: MessagesApi) extends Controller
           case NMLService.NMLParseFailure(fileName, error) =>
             Fox.failure(Messages("nml.file.invalid", fileName, error))
         }
-        bulk2StatusJson(results).map(js => JsonOk(js, Messages("task.bulk.processed")))
+        Fox.sequence(futureResults).map { results =>
+          val js = bulk2StatusJson(results)
+          JsonOk(js, Messages("task.bulk.processed"))
+        }
       }
     } yield result
   }
@@ -128,14 +131,16 @@ class TaskController @Inject() (val messagesApi: MessagesApi) extends Controller
           taskWithLinks = task.copy(directLinks = directLinks)
           _ <- TaskService.insert(taskWithLinks, project, insertAssignments = ! isForAnonymous)
         } yield {
-          task
+          taskWithLinks
         }
     }
 
   def bulkCreate(json: JsValue)(implicit request: AuthenticatedRequest[_]): Fox[Result] = {
     withJsonUsing(json, Reads.list(taskCompleteReads)) { parsed =>
-      val results = parsed.map(p => createSingleTask(p).map(_ => Messages("task.create.success")))
-      bulk2StatusJson(results).map(js => JsonOk(js, Messages("task.bulk.processed")))
+      Fox.serialSequence(parsed){p => createSingleTask(p).map(_ => Messages("task.create.success"))}.map { results =>
+        val js = bulk2StatusJson(results)
+        JsonOk(js, Messages("task.bulk.processed"))
+      }
     }
   }
 
@@ -146,7 +151,7 @@ class TaskController @Inject() (val messagesApi: MessagesApi) extends Controller
           withJsonUsing(json, taskCompleteReads) { parsed =>
             for {
               task <- createSingleTask(parsed)
-              json <- Task.transformToJson(task)
+              json <- Task.transformToJson(task, request.userOpt)
             } yield JsonOk(json, Messages("task.create.success"))
           }
         }
@@ -193,7 +198,7 @@ class TaskController @Inject() (val messagesApi: MessagesApi) extends Controller
             _project = Some(project.name))
           _ <- AnnotationService.updateAllOfTask(updatedTask, team, dataSetName, boundingBox, taskType.settings)
           _ <- AnnotationService.updateAnnotationBase(updatedTask, start, rotation)
-          json <- Task.transformToJson(updatedTask)
+          json <- Task.transformToJson(updatedTask, request.userOpt)
           _ <- OpenAssignmentService.updateAllOf(updatedTask, project, status.open)
         } yield {
           JsonOk(json, Messages("task.editSuccess"))
@@ -212,8 +217,8 @@ class TaskController @Inject() (val messagesApi: MessagesApi) extends Controller
 
   def list = Authenticated.async{ implicit request =>
     for {
-      tasks <- TaskService.findAllAdministratable(request.user)
-      js <- Future.traverse(tasks)(Task.transformToJson)
+      tasks <- TaskService.findAllAdministratable(request.user, limit = 10000)
+      js <- Future.traverse(tasks)(t => Task.transformToJson(t, request.userOpt))
     } yield {
       Ok(Json.toJson(js))
     }
@@ -222,7 +227,7 @@ class TaskController @Inject() (val messagesApi: MessagesApi) extends Controller
   def listTasksForType(taskTypeId: String) = Authenticated.async { implicit request =>
     for {
       tasks <- TaskService.findAllByTaskType(taskTypeId)
-      js <- Future.traverse(tasks)(Task.transformToJson)
+      js <- Future.traverse(tasks)(t => Task.transformToJson(t, request.userOpt))
     } yield {
       Ok(Json.toJson(js))
     }

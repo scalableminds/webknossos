@@ -15,7 +15,7 @@ class ExplorativeTracingListView extends Marionette.CompositeView
     <h3>Explorative Annotations</h3>
     <% if (!isAdminView) {%>
       <div>
-        <form action="<%- jsRoutes.controllers.admin.NMLIO.upload().url %>"
+        <form action="<%- jsRoutes.controllers.NMLIOController.upload().url %>"
           method="POST"
           enctype="multipart/form-data"
           id="upload-and-explore-form"
@@ -27,7 +27,7 @@ class ExplorativeTracingListView extends Marionette.CompositeView
                 <i class="fa fa-spinner fa-spin fileinput-exists" id="form-spinner-icon"></i>
                 Upload NML & explore
               </span>
-              <input type="file" name="nmlFile" multiple accept=".nml">
+              <input type="file" name="nmlFile" multiple accept=".nml, .zip">
             </span>
           </div>
         </form>
@@ -135,24 +135,23 @@ class ExplorativeTracingListView extends Marionette.CompositeView
 
   archiveAll : () ->
 
+    unless confirm("Are you sure you want to archive all explorative annotations?")
+      return
+
     unarchivedAnnoationIds = @collection.pluck("id")
-    $.ajax(
-      url: jsRoutes.controllers.AnnotationController.finishAll("Explorational").url
-      type: "POST",
-      contentType: "application/json"
-      data: JSON.stringify({
-        annotations: unarchivedAnnoationIds
-      })
+    Request.sendJSONReceiveJSON(
+      jsRoutes.controllers.AnnotationController.finishAll("Explorational").url
+      {
+        method: "POST",
+        data: {
+          annotations: unarchivedAnnoationIds
+        }
+      }
     ).then(
       (data) =>
         Toast.message(data.messages)
         @collection.reset()
         @render()
-      (xhr) ->
-        if xhr.responseJSON
-          Toast.message(xhr.responseJSON.messages)
-        else
-          Toast.message(xhr.statusText)
     )
 
   fetchArchivedAnnotations : ->

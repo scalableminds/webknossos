@@ -1,4 +1,7 @@
 {
+    "coffeelint": {
+        "transforms": [ "coffee-react-transform" ]
+    },
     "coffeescript_error": {
         "level": "error"
     },

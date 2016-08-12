@@ -78,7 +78,7 @@ class ProjectEditView extends Marionette.LayoutView
     @model.save(formValues).then(
       ->
       Toast.success("Saved!")
-      app.router.loadURL("/projects##{@model.get("name")}")
+      #app.router.loadURL("/projects##{@model.get("name")}")
     )
 
 

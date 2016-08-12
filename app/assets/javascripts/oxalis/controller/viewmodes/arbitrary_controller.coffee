@@ -20,6 +20,7 @@ class ArbitraryController
   # Arbitrary Controller: Responsible for Arbitrary Modes
 
   WIDTH : 128
+  TIMETOCENTER : 200
 
   plane : null
   crosshair : null
@@ -30,8 +31,6 @@ class ArbitraryController
 
   model : null
   view : null
-
-  record : false
 
   input :
     mouse : null
@@ -62,7 +61,7 @@ class ArbitraryController
     @arbitraryView.addGeometry @plane
 
     # render HTML element to indicate recording status
-    @infoPlane = new ArbitraryPlaneInfo()
+    @infoPlane = new ArbitraryPlaneInfo(model: @model)
     @infoPlane.render()
     $("#render").append(@infoPlane.el)
 
@@ -82,17 +81,6 @@ class ArbitraryController
     @stop()
 
     @crosshair.setVisibility(@model.user.get("displayCrosshair"))
-
-    # Toggle record
-    @setRecord(true)
-    $('#trace-mode-trace').on("click", =>
-      @setRecord(true)
-      $(":focus").blur()
-    )
-    $('#trace-mode-watch').on("click", =>
-      @setRecord(false)
-      $(":focus").blur()
-    )
 
 
   render : (forceUpdate, event) ->
@@ -193,9 +181,6 @@ class ArbitraryController
         @setRecord(true)
       "u" : =>
         @setRecord(false)
-      #Comments
-      "n" : => @setActiveNode(@model.skeletonTracing.nextCommentNodeID(false), true)
-      "p" : => @setActiveNode(@model.skeletonTracing.nextCommentNodeID(true), true)
     )
 
     @input.keyboardOnce = new Input.Keyboard(
@@ -208,16 +193,10 @@ class ArbitraryController
     , -1)
 
 
-  setRecord : (@record) ->
+  setRecord : (record) ->
 
-    $('#trace-mode button').removeClass("btn-primary")
-    if @record
-      $('#trace-mode-trace').addClass("btn-primary")
-    else
-      $('#trace-mode-watch').addClass("btn-primary")
-
-    @infoPlane.updateInfo(@record)
-    if @record
+    @model.set("flightmodeRecording", record)
+    if record
       @setWaypoint()
 
 
@@ -283,12 +262,12 @@ class ArbitraryController
     fourBit = if datasetConfig.get("fourBit") then 4 else 8
     interpolation = datasetConfig.get("interpolation")
 
-    @model.skeletonTracing.addNode(position, rotation, constants.TYPE_USUAL, constants.ARBITRARY_VIEW, 0, fourBit, interpolation)
+    @model.skeletonTracing.addNode(position, rotation, constants.ARBITRARY_VIEW, 0, fourBit, interpolation)
 
 
   setWaypoint : =>
 
-    unless @record
+    unless @model.get("flightmodeRecording")
       return
 
     position  = @cam.getPosition()
@@ -347,7 +326,7 @@ class ArbitraryController
       waypointAnimation = new TWEEN.Tween(
         {x: curPos[0], y: curPos[1], z: curPos[2], rx: curRotation[0], ry: curRotation[1], rz: curRotation[2], cam: @cam})
       waypointAnimation.to(
-        {x: newPos[0], y: newPos[1], z: newPos[2], rx: newRotation[0], ry: newRotation[1], rz: newRotation[2]}, 200)
+        {x: newPos[0], y: newPos[1], z: newPos[2], rx: newRotation[0], ry: newRotation[1], rz: newRotation[2]}, @TIMETOCENTER)
       waypointAnimation.onUpdate( ->
         @cam.setPosition([@x, @y, @z])
         @cam.setRotation([@rx, @ry, @rz])

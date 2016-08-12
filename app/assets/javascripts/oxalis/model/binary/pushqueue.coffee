@@ -92,7 +92,7 @@ class PushQueue
             ]
             zoomStep: zoomStep
             cubeSize: 1 << @cube.BUCKET_SIZE_P),
-          @cube.getBucketByZoomedAddress(bucket).getData())
+          @cube.getBucket(bucket).getData())
 
     return @updatePipeline.executePassAlongAction( =>
 

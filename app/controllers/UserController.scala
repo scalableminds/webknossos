@@ -2,11 +2,8 @@ package controllers
 
 import javax.inject.Inject
 
-import scala.concurrent.Future
-
-import com.scalableminds.util.tools.ExtendedTypes.ExtendedString
-import com.scalableminds.util.tools.{Fox, FoxImplicits}
-import models.team._
+import com.scalableminds.util.reactivemongo.GlobalAccessContext
+import com.scalableminds.util.security.SCrypt._
 import models.user._
 import models.user.time._
 import oxalis.security.Secured
@@ -36,6 +33,8 @@ class UserController @Inject()(val messagesApi: MessagesApi)
   with Dashboard
   with FoxImplicits {
 
+  val defaultAnnotationLimit = 1000
+
   def empty = Authenticated { implicit request =>
     Ok(views.html.main()(Html("")))
   }
@@ -57,17 +56,17 @@ class UserController @Inject()(val messagesApi: MessagesApi)
     }
   }
 
-  def annotations(isFinished: Option[Boolean]) = Authenticated.async { implicit request =>
+  def annotations(isFinished: Option[Boolean], limit: Option[Int]) = Authenticated.async { implicit request =>
     for {
-      content <- dashboardExploratoryAnnotations(request.user, request.user, isFinished)
+      content <- dashboardExploratoryAnnotations(request.user, request.user, isFinished, limit getOrElse defaultAnnotationLimit)
     } yield {
       Ok(content)
     }
   }
 
-  def tasks = Authenticated.async { implicit request =>
+  def tasks(isFinished: Option[Boolean], limit: Option[Int]) = Authenticated.async { implicit request =>
     for {
-      content <- dashboardTaskAnnotations(request.user, request.user)
+      content <- dashboardTaskAnnotations(request.user, request.user, isFinished, limit getOrElse defaultAnnotationLimit)
     } yield {
       Ok(content)
     }
@@ -86,19 +85,19 @@ class UserController @Inject()(val messagesApi: MessagesApi)
     }
   }
 
-  def userAnnotations(userId: String, isFinished: Option[Boolean]) = Authenticated.async { implicit request =>
+  def userAnnotations(userId: String, isFinished: Option[Boolean], limit: Option[Int]) = Authenticated.async { implicit request =>
     for {
       user <- UserDAO.findOneById(userId) ?~> Messages("user.notFound")
-      content <- dashboardExploratoryAnnotations(user, request.user, isFinished)
+      content <- dashboardExploratoryAnnotations(user, request.user, isFinished, limit getOrElse defaultAnnotationLimit)
     } yield {
       Ok(content)
     }
   }
 
-  def userTasks(userId: String) = Authenticated.async { implicit request =>
+  def userTasks(userId: String, isFinished: Option[Boolean], limit: Option[Int]) = Authenticated.async { implicit request =>
     for {
       user <- UserDAO.findOneById(userId) ?~> Messages("user.notFound")
-      content <- dashboardTaskAnnotations(user, request.user)
+      content <- dashboardTaskAnnotations(user, request.user, isFinished, limit getOrElse defaultAnnotationLimit)
     } yield {
       Ok(content)
     }
@@ -162,7 +161,7 @@ class UserController @Inject()(val messagesApi: MessagesApi)
 
   def ensureProperTeamAdministration(user: User, teams: List[(TeamMembership, Team)]) = {
     Fox.combined(teams.map {
-      case (TeamMembership(_, Role.Admin), team) if !team.couldBeAdministratedBy(user) =>
+      case (TeamMembership(_, Role.Admin), team) if(!team.couldBeAdministratedBy(user) && !team.parent.exists(p => teams.exists(_._1.team == p))) =>
         Fox.failure(Messages("team.admin.notPossibleBy", team.name, user.name))
       case (_, team)                                                                   =>
         Fox.successful(team)
@@ -181,22 +180,20 @@ class UserController @Inject()(val messagesApi: MessagesApi)
   def update(userId: String) = Authenticated.async(parse.json) { implicit request =>
     val issuingUser = request.user
     withJsonBodyUsing(userUpdateReader) {
-      case (firstName, lastName, verified, assignedTeams, experiences) =>
+      case (firstName, lastName, verified, assignedMemberships, experiences) =>
         for {
           user <- UserDAO.findOneById(userId) ?~> Messages("user.notFound")
           _ <- user.isEditableBy(request.user) ?~> Messages("notAllowed")
-          teams <- Fox.combined(assignedTeams.map(t => TeamDAO.findOneByName(t.team))) ?~> Messages("team.notFound")
-          allTeams <- Fox.sequenceOfFulls(user.teams.map(t => TeamDAO.findOneByName(t.team)))
-          (oldTeamsWithUpdate, teamsWithoutUpdate) = user.teams.partition { t =>
-            issuingUser.adminTeamNames.contains(t.team) && !assignedTeams.contains(t)
-          }
-          teamsWithUpdate = oldTeamsWithUpdate ++ assignedTeams.filterNot(t => user.teams.exists(_.team == t.team))
-          _ <- Fox.combined(teamsWithUpdate.map(t => ensureTeamAdministration(issuingUser, t.team)))
-          _ <- ensureRoleExistence(assignedTeams.zip(teams))
-          _ <- ensureProperTeamAdministration(user, assignedTeams.zip(teams))
-          trimmedExperiences = experiences.map { case (key, value) => key.trim -> value }.toMap
-          updatedTeams = assignedTeams.filter(t => teamsWithUpdate.exists(_.team == t.team)) ++ teamsWithoutUpdate
-          updatedUser <- UserService.update(user, firstName, lastName, verified, updatedTeams, trimmedExperiences)
+          teams <- Fox.combined(assignedMemberships.map(t => TeamDAO.findOneByName(t.team)(GlobalAccessContext) ?~> Messages("team.notFound")))
+          allTeams <- Fox.sequenceOfFulls(user.teams.map(t => TeamDAO.findOneByName(t.team)(GlobalAccessContext)))
+          teamsWithoutUpdate = user.teams.filterNot(t => issuingUser.isAdminOf(t.team))
+          assignedMembershipWTeams = assignedMemberships.zip(teams)
+          teamsWithUpdate = assignedMembershipWTeams.filter(t => issuingUser.isAdminOf(t._1.team))
+          _ <- ensureRoleExistence(teamsWithUpdate)
+          _ <- ensureProperTeamAdministration(user, teamsWithUpdate)
+          trimmedExperiences = experiences.map { case (key, value) => key.trim -> value }
+          updatedTeams = teamsWithUpdate.map(_._1) ++ teamsWithoutUpdate
+          updatedUser <- UserService.update(user, firstName.trim, lastName.trim, verified, updatedTeams, trimmedExperiences)
         } yield {
           Ok(User.userPublicWrites(request.user).writes(updatedUser))
         }

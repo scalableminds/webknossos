@@ -30,7 +30,7 @@ class TaskListItemView extends Marionette.CompositeView
         </a>
       </td>
       <td>
-        <a href="/taskTypes#<%- type.summary %>">
+        <a href="/taskTypes#<%- type.id %>">
           <%- type.summary %>
         </a>
       </td>

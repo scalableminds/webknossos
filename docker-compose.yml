@@ -1,11 +1,54 @@
-oxalis-main:
-  image: scalableminds/oxalis:latest
-  ports:
-    - "9000:9000"
-  links:
-    - mongo
-  environment:
-    - PORT=9000
-    - MODE=dev
-mongo:
-  image: mongo
+version: '2'
+
+services:
+
+  oxalis:
+    image: scalableminds/oxalis:$DOCKER_TAG
+    ports:
+      - "9000:9000"
+    links:
+      - mongo
+    environment:
+      - PORT=9000
+      - MODE=dev
+
+  oxalis-sbt:
+    image: scalableminds/sbt:$SBT_VERSION_TAG
+    volumes:
+      - ".:/project"
+      - "~/.m2:/root/.m2"
+      - "~/.ivy2:/root/.ivy2"
+      - "~/.sbt:/root/.sbt"
+
+  oxalis-frontend-tests:
+    extends:
+      service: oxalis-sbt
+    command: bash -c "npm test"
+
+  oxalis-e2e-tests:
+    extends:
+      service: oxalis-sbt
+    command: >
+      bash -c
+      "service xvfb start &&
+       export DISPLAY=:99 &&
+       sbt -v -d \"test-only * --
+      -Dconfig.file=./conf/application_$${MODE}.conf
+      -Djava.net.preferIPv4Stack=true
+      -Dhttp.address=0.0.0.0
+      -Dhttp.port=$${PORT}
+      -Dmongodb.db=oxalis-testing
+      -Dmongodb.url=mongo
+      -Dmongodb.port=27017
+      -Dmongodb.uri=mongodb://mongo:27017/oxalis-testing
+      \""
+    ports:
+      - "9000:9000"
+    links:
+      - mongo
+    environment:
+      - PORT=9000
+      - MODE=dev
+
+  mongo:
+    image: mongo

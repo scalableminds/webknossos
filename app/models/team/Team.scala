@@ -3,7 +3,7 @@ package models.team
 import com.scalableminds.util.reactivemongo.AccessRestrictions.{DenyEveryone, AllowIf}
 import play.api.libs.json._
 import reactivemongo.bson.BSONObjectID
-import play.modules.reactivemongo.json.BSONFormats._
+import reactivemongo.play.json.BSONFormats._
 import com.scalableminds.util.reactivemongo.{GlobalAccessContext, DefaultAccessDefinitions, DBAccessContext}
 import models.basics.SecuredBaseDAO
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
@@ -19,13 +19,13 @@ case class Team(name: String, parent: Option[String], roles: List[Role], owner: 
   lazy val id = _id.stringify
 
   def isEditableBy(user: User) =
-    user.adminTeamNames.contains(name) || parent.exists(user.adminTeamNames.contains)
+    user.isAdminOf(name) || parent.exists(user.isAdminOf)
 
   def isOwner(user: User) =
     owner.contains(user._id)
 
   def couldBeAdministratedBy(user: User) =
-    parent.map(user.teamNames.contains) getOrElse true
+    parent.forall(user.teamNames.contains)
 
   def isRootTeam =
     behavesLikeRootTeam.getOrElse(parent.isEmpty)
@@ -45,7 +45,7 @@ object Team extends FoxImplicits {
         "parent" -> team.parent,
         "roles" -> team.roles,
         "owner" -> owner.toOption,
-        "amIAnAdmin" -> requestingUser.adminTeamNames.contains(team.name),
+        "amIAnAdmin" -> requestingUser.isAdminOf(team.name),
         "isEditable" -> team.isEditableBy(requestingUser),
         "amIOwner" -> team.isOwner(requestingUser)
       )
@@ -60,7 +60,7 @@ object Team extends FoxImplicits {
 
 object TeamService {
   def create(team: Team, user: User)(implicit ctx: DBAccessContext) = {
-    UserDAO.addTeams(user._id, Seq(TeamMembership(team.name, Role.Admin)))
+    UserDAO.addTeam(user._id, TeamMembership(team.name, Role.Admin))
     TeamDAO.insert(team)
   }
 

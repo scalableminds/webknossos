@@ -6,24 +6,36 @@ import scala.concurrent.Future
 import scala.concurrent.duration._
 
 import com.scalableminds.braingames.binary.models._
-import com.scalableminds.util.geometry.Scale
+import com.scalableminds.util.geometry.{BoundingBox, Point3D, Scale, Vector3D}
 import com.scalableminds.util.reactivemongo.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.tools.DefaultConverters._
 import com.scalableminds.util.tools.ExtendedTypes.ExtendedString
+import com.scalableminds.util.tools.Fox
 import models.binary._
 import models.team.TeamDAO
 import models.user.{User, UserService}
 import net.liftweb.common.{Failure, Full}
 import org.apache.commons.codec.binary.Base64
-import oxalis.security.Secured
+import org.apache.xalan.res.XSLTErrorResources_pt_BR
+import oxalis.ndstore.{ND2WK, NDServerConnection}
+import oxalis.security.{AuthenticatedRequest, Secured}
+import play.api.Logger
+import play.api.data.validation.ValidationError
+import play.api.libs.json._
+import play.api.libs.json.Json._
+import play.api.libs.functional.syntax._
 import play.api.Play.current
 import play.api.cache.Cache
 import play.api.data.Form
 import play.api.data.Forms._
+import play.api.i18n.Messages.Message
 import play.api.i18n.{Messages, MessagesApi}
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json._
+import play.api.libs.ws.{WS, WSResponse}
+import play.api.mvc.BodyParsers.parse
 import play.twirl.api.Html
+import reactivemongo.api.commands.WriteResult
 
 class DataSetController @Inject()(val messagesApi: MessagesApi) extends Controller with Secured {
 
@@ -31,6 +43,11 @@ class DataSetController @Inject()(val messagesApi: MessagesApi) extends Controll
   val ThumbnailHeight = 200
 
   val ThumbnailCacheDuration = 1 day
+
+  val dataSetPublicReads =
+    ((__ \ 'description).readNullable[String] and
+      (__ \ 'isPublic).read[Boolean]).tupled
+
 
   def view(dataSetName: String) = UserAwareAction.async { implicit request =>
     for {
@@ -43,26 +60,40 @@ class DataSetController @Inject()(val messagesApi: MessagesApi) extends Controll
   def thumbnail(dataSetName: String, dataLayerName: String) = UserAwareAction.async { implicit request =>
 
     def imageFromCacheIfPossible(dataSet: DataSet) =
-    // We don't want all images to expire at the same time. Therefore, we add a day of randomness, hence the 86400
-      Cache.getOrElse(s"thumbnail-$dataSetName*$dataLayerName",
-        ThumbnailCacheDuration.toSeconds.toInt + (math.random * 86400).toInt) {
-        DataStoreHandler.requestDataLayerThumbnail(dataSet, dataLayerName, ThumbnailWidth, ThumbnailHeight)
+    // We don't want all images to expire at the same time. Therefore, we add a day of randomness, hence the 1 day
+      Cache.get(s"thumbnail-$dataSetName*$dataLayerName") match {
+        case Some(a: Array[Byte]) =>
+          Fox.successful(a)
+        case _ =>
+          DataStoreHandler.requestDataLayerThumbnail(dataSet, dataLayerName, ThumbnailWidth, ThumbnailHeight).map{
+            result =>
+              Cache.set(s"thumbnail-$dataSetName*$dataLayerName",
+                result,
+                (ThumbnailCacheDuration.toSeconds + math.random * 2.hours.toSeconds).toInt)
+              result
+          }
       }
+
+
 
     for {
       dataSet <- DataSetDAO.findOneBySourceName(dataSetName) ?~> Messages("dataSet.notFound", dataSetName)
       layer <- DataSetService.getDataLayer(dataSet, dataLayerName) ?~> Messages("dataLayer.notFound", dataLayerName)
-      image <- imageFromCacheIfPossible(dataSet) ?~> Messages("dataLayer.thumbnailFailed")
+      image <- imageFromCacheIfPossible(dataSet)
     } yield {
-      val data = Base64.decodeBase64(image)
-      Ok(data).withHeaders(
-        CONTENT_LENGTH -> data.length.toString,
+      Ok(image).withHeaders(
+        CONTENT_LENGTH -> image.length.toString,
         CONTENT_TYPE -> play.api.libs.MimeTypes.forExtension("jpeg").getOrElse(play.api.http.ContentTypes.BINARY)
       )
     }
   }
 
   def empty = Authenticated { implicit request =>
+    Ok(views.html.main()(Html("")))
+  }
+
+  // TODO: find a better way to ignore parameters
+  def emptyWithWildcard(param: String) = Authenticated { implicit request =>
     Ok(views.html.main()(Html("")))
   }
 
@@ -100,6 +131,20 @@ class DataSetController @Inject()(val messagesApi: MessagesApi) extends Controll
       Ok(DataSet.dataSetPublicWrites(request.userOpt).writes(dataSet))
     }
   }
+
+  def update(dataSetName: String) = Authenticated.async(parse.json) { implicit request =>
+    withJsonBodyUsing(dataSetPublicReads) {
+      case (description, isPublic) =>
+      for {
+        dataSet <- DataSetDAO.findOneBySourceName(dataSetName) ?~> Messages("dataSet.notFound", dataSetName)
+        _ <- allowedToAdministrate(request.user, dataSet)
+        updatedDataSet <- DataSetService.update(dataSet, description, isPublic)
+      } yield {
+        Ok(DataSet.dataSetPublicWrites(request.userOpt).writes(updatedDataSet))
+      }
+    }
+  }
+
 
   def importDataSet(dataSetName: String) = Authenticated.async { implicit request =>
     for {
@@ -167,6 +212,33 @@ class DataSetController @Inject()(val messagesApi: MessagesApi) extends Controll
 
   private def checkIfNewDataSetName(name: String)(implicit ctx: DBAccessContext) = {
     DataSetService.findDataSource(name)(GlobalAccessContext).reverse
+  }
+
+  val externalDataSetFormReads =
+    ((__ \ 'server).read[String] and
+      (__ \ 'name).read[String] and
+      (__ \ 'token).read[String] and
+      (__ \ 'team).read[String]).tupled
+
+  private def createNDStoreDataSet(implicit request: AuthenticatedRequest[JsValue]) =
+    withJsonBodyUsing(externalDataSetFormReads){
+      case (server, name, token, team) =>
+        for {
+          _ <- checkIfNewDataSetName(name) ?~> Messages("dataSet.name.alreadyTaken")
+          _ <- ensureTeamAdministration(request.user, team)
+          ndProject <- NDServerConnection.requestProjectInformationFromNDStore(server, name, token)
+          dataSet <- ND2WK.dataSetFromNDProject(ndProject, team)
+          _ <-  DataSetDAO.insert(dataSet)(GlobalAccessContext)
+        } yield Ok
+    }
+
+  def create(typ: String) = Authenticated.async(parse.json) { implicit request =>
+    typ match {
+      case "ndstore" =>
+        createNDStoreDataSet(request)
+      case _ =>
+        Future.successful(JsonBadRequest(Messages("dataSet.type.invalid", typ)))
+    }
   }
 
 }

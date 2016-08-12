@@ -3,21 +3,23 @@
  */
 package models.tracing.skeleton
 
-import com.scalableminds.util.geometry.{Vector3D, BoundingBox, Point3D}
+import com.scalableminds.util.geometry.{BoundingBox, Point3D, Vector3D}
 import com.scalableminds.util.reactivemongo.DBAccessContext
 import com.scalableminds.util.tools.Fox
 import models.annotation.CompoundAnnotation._
-import models.annotation.{AnnotationSettings, AnnotationContentService}
+import models.annotation.{AnnotationContentService, AnnotationSettings}
 import models.binary.DataSet
 import models.task.Task
 import models.tracing.CommonTracingService
-import models.tracing.skeleton.temporary.{TemporarySkeletonTracingService, TemporarySkeletonTracing}
-import models.user.{User, UsedAnnotationDAO}
-import oxalis.nml.{TreeLike, NML, Tree}
+import models.tracing.skeleton.temporary.{TemporarySkeletonTracing, TemporarySkeletonTracingService}
+import models.user.{UsedAnnotationDAO, User}
+import oxalis.nml._
 import play.api.libs.json.Json
 import reactivemongo.bson.BSONObjectID
+import reactivemongo.play.json._
 import play.api.libs.concurrent.Execution.Implicits._
-import play.modules.reactivemongo.json.BSONFormats._
+import reactivemongo.api.commands.WriteResult
+import reactivemongo.core.commands.LastError
 
 object SkeletonTracingService extends AnnotationContentService with CommonTracingService {
   val dao = SkeletonTracingDAO
@@ -30,13 +32,16 @@ object SkeletonTracingService extends AnnotationContentService with CommonTracin
     rotation: Vector3D,
     boundingBox: Option[BoundingBox],
     insertStartAsNode: Boolean,
+    isFirstBranchPoint: Boolean,
     settings: AnnotationSettings = AnnotationSettings.skeletonDefault)
     (implicit ctx: DBAccessContext): Fox[SkeletonTracing] = {
 
     val trees =
-      if (insertStartAsNode)
-        List(Tree.createFrom(start, rotation))
-      else
+      if (insertStartAsNode) {
+        val node = Node(1, start, rotation)
+        val branchPoints = if (isFirstBranchPoint) List(BranchPoint(node.id, System.currentTimeMillis)) else Nil
+        List(Tree.createFrom(node).copy(branchPoints = branchPoints))
+      } else
         Nil
 
     val box: Option[BoundingBox] = boundingBox.flatMap {
@@ -52,26 +57,13 @@ object SkeletonTracingService extends AnnotationContentService with CommonTracin
         "",
         dataSetName,
         trees,
-        Nil,
         System.currentTimeMillis(),
         if(insertStartAsNode) Some(1) else None,
         start,
         rotation,
         SkeletonTracing.defaultZoomLevel,
         box,
-        Nil,
         settings))
-  }
-
-  def clearTracingData(tracingId: String)(implicit ctx: DBAccessContext) = {
-    SkeletonTracingDAO.withValidId(tracingId) { _tracing =>
-      for {
-        _ <- DBTreeService.removeByTracing(_tracing)
-        - <- SkeletonTracingDAO.resetBranchPoints(_tracing)
-        - <- SkeletonTracingDAO.resetComments(_tracing)
-        tracing <- SkeletonTracingDAO.findOneById(_tracing)
-      } yield tracing
-    }
   }
 
   def createFrom(tracingLike: SkeletonTracingLike)(implicit ctx: DBAccessContext): Fox[SkeletonTracing] = {
@@ -94,15 +86,21 @@ object SkeletonTracingService extends AnnotationContentService with CommonTracin
   }
 
   def createFrom(dataSet: DataSet)(implicit ctx: DBAccessContext): Fox[SkeletonTracing] =
-    createFrom(dataSet.name, dataSet.defaultStart, dataSet.defaultRotation, None, insertStartAsNode = false)
+    createFrom(
+      dataSet.name,
+      dataSet.defaultStart,
+      dataSet.defaultRotation,
+      None,
+      insertStartAsNode = false,
+      isFirstBranchPoint = false)
 
-  def removeById(_skeleton: BSONObjectID)(implicit ctx: DBAccessContext) =
-    for {
-      _ <- UsedAnnotationDAO.removeAll(_skeleton.stringify)
-      _ <- DBTreeService.removeByTracing(_skeleton)
-      _ <- SkeletonTracingDAO.removeById(_skeleton)
-    } yield true
-
+  def clearAndRemove(skeletonId: String)(implicit ctx: DBAccessContext) =
+    SkeletonTracingDAO.withValidId(skeletonId) { _id =>
+      for {
+        _ <- DBTreeService.removeByTracing(_id)
+        _ <- SkeletonTracingDAO.removeById(_id)
+      } yield true
+    }
 
   def findOneById(tracingId: String)(implicit ctx: DBAccessContext) =
     SkeletonTracingDAO.findOneById(tracingId)
@@ -127,10 +125,18 @@ object SkeletonTracingService extends AnnotationContentService with CommonTracin
       Json.obj("_id" -> skeleton._id),
       Json.obj(
         "$set" -> SkeletonTracingDAO.formatWithoutId(skeleton),
+        "$unset" -> Json.obj("notUpdated" -> true),
         "$setOnInsert" -> Json.obj("_id" -> skeleton._id)
       ),
       upsert = true).map { _ =>
       skeleton
+    }
+  }
+
+  def update(id: BSONObjectID, skeleton: SkeletonTracing)(implicit ctx: DBAccessContext): Fox[WriteResult] = {
+    SkeletonTracingDAO.update(id, skeleton).map { r =>
+      SkeletonTracingDAO.update(Json.obj("_id" -> id), Json.obj("$unset" -> Json.obj("notUpdated" -> true)))
+      r
     }
   }
 }

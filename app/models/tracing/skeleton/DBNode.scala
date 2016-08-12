@@ -5,7 +5,7 @@ import reactivemongo.api.commands.WriteResult
 import reactivemongo.bson.BSONObjectID
 import models.basics.SecuredBaseDAO
 import play.api.libs.json.Json
-import play.modules.reactivemongo.json.BSONFormats._
+import reactivemongo.play.json.BSONFormats._
 import com.scalableminds.util.reactivemongo.DBAccessContext
 import play.api.libs.concurrent.Execution.Implicits._
 import reactivemongo.api.indexes.{IndexType, Index}

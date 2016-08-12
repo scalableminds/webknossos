@@ -37,7 +37,7 @@ class Input.KeyboardNoLoop
     shouldIgnore = (event) ->
       bindingHasCtrl  = key.toLowerCase().indexOf("ctrl") != -1
       bindingHasShift = key.toLowerCase().indexOf("shift") != -1
-      eventHasCtrl  = event.ctrl or event.metaKey
+      eventHasCtrl  = event.ctrlKey or event.metaKey
       eventHasShift = event.shiftKey
       return (eventHasCtrl and not bindingHasCtrl) or
         (eventHasShift and not bindingHasShift)
@@ -317,7 +317,7 @@ class Input.Mouse
   mouseWheel : (event) =>
 
     event.preventDefault()
-    delta = event.originalEvent.wheelDeltaY
+    delta = -event.originalEvent.deltaY
     if event.shiftKey
       @trigger("scroll", delta, "shift")
     else if event.altKey

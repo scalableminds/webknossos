@@ -44,7 +44,7 @@ class PaginationCollection
     @listenTo(@fullCollection, "remove", @_passthroughEvent("remove"))
     @listenTo(@fullCollection, "sync", @_passthroughEvent("sync"))
 
-    @_reset = _.debounce(@_reset, 50)
+    @_reset = _.debounce(@_resetNow, 50)
     return
 
 
@@ -69,7 +69,7 @@ class PaginationCollection
 
   setPageSize : (pageSize) ->
     @state.pageSize = pageSize
-    @_reset()
+    @_resetNow()
     return
 
 
@@ -121,7 +121,7 @@ class PaginationCollection
 
       @state.filterQuery = query
       @state.filter = (model) ->
-        return _.any(fields, (fieldName) ->
+        return _.some(fields, (fieldName) ->
           value = model.get(fieldName)
           if value?
             return !!value.toString().match(regexp)
@@ -152,7 +152,10 @@ class PaginationCollection
 
   _passthroughEvent : (eventType) ->
     return (args...) ->
-      @_reset()
+      if eventType == "sync"
+        @_resetNow()
+      else
+        @_reset()
       @trigger(eventType, args...)
       return
 
@@ -176,7 +179,7 @@ class PaginationCollection
     return
 
 
-  _reset : ->
+  _resetNow : ->
     @_resetModels()
     @models = @currentModels.slice(
       @state.currentPage * @state.pageSize,

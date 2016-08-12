@@ -9,7 +9,9 @@ class DatasetConfiguration extends NestedObjModel
   initialize : ({datasetName, @dataLayerNames}) ->
 
     @url = "/api/dataSetConfigurations/#{datasetName}"
-    @listenTo(@, "change", _.debounce((=> @save()), 500))
+    @listenTo(@, "change", _.debounce(
+      => if app.currentUser? then @save()
+      500))
     @listenTo(@, "sync", => @setDefaultBinaryColors())
 
 

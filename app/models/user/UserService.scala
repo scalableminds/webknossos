@@ -145,10 +145,7 @@ object UserService extends FoxImplicits {
         result
     }
   }
-
-  def findFinishedTasksOf(user: User)(implicit ctx: DBAccessContext) =
-    AnnotationService.findTasksOf(user).map(_.flatMap(_._task))
-
+  
   def updateDataSetConfiguration(user: User, dataSetName: String, configuration: DataSetConfiguration)(implicit ctx: DBAccessContext) = {
     UserDAO.updateDataSetConfiguration(user, dataSetName, configuration).map {
       result =>
@@ -171,9 +168,5 @@ object UserService extends FoxImplicits {
     val token = UUID.randomUUID().toString
     val expirationTime = System.currentTimeMillis + validDuration.toMillis
     LoginTokenDAO.insert(LoginToken(user._id, token, expirationTime)).map( _ => token)
-  }
-
-  def increaseExperience(_user: BSONObjectID, domain: String, value: Int)(implicit ctx: DBAccessContext) = {
-    UserDAO.increaseExperience(_user, domain.trim, value)
   }
 }

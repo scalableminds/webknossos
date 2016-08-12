@@ -53,16 +53,15 @@ class Controller
     @model.set("state", @urlManager.initialState)
 
     @model.fetch()
-      .then(
-        (error) => @modelFetchDone(error)
-      )
+        .then( => @modelFetchDone())
+        .catch( (error) =>
+          # Don't throw errors for errors already handled by the model.
+          unless error == @model.HANDLED_ERROR
+            throw error
+        )
 
 
-  modelFetchDone : (error) ->
-
-    # Do not continue, when there was an error and we got no settings from the server
-    if error
-      return
+  modelFetchDone : ->
 
     unless @model.tracing.restrictions.allowAccess
       Toast.Error "You are not allowed to access this tracing"
@@ -205,9 +204,8 @@ class Controller
       )
 
     # parse hard time limit and convert from min to ms
-    hardLimitRe = /Limit: ([0-9]+)/
     expectedTime = @model.tracing.task.type.expectedTime
-    timeLimit = parseInt(expectedTime.match(hardLimitRe)[1]) * 60 * 1000 or 0
+    timeLimit = expectedTime.maxHard * 60 * 1000 or 0
 
     # setTimeout uses signed 32-bit integers, an overflow would cause immediate timeout execution
     if timeLimit >= Math.pow(2, 32) / 2

@@ -12,7 +12,7 @@ import scala.concurrent.Future
 import scala.concurrent.duration._
 import com.scalableminds.util.reactivemongo.{GlobalAccessContext, DBAccessContext}
 import models.user.User
-import play.modules.reactivemongo.json.BSONFormats._
+import reactivemongo.play.json.BSONFormats._
 import reactivemongo.api.indexes.{IndexType, Index}
 import play.api.libs.concurrent.Execution.Implicits._
 import oxalis.cleanup.CleanUpService

@@ -31,7 +31,7 @@ class SearchController @Inject()(val messagesApi: MessagesApi) extends Controlle
     BSONObjectID.parse(id) match {
       case Success(oid) =>
 
-        val task = TaskDAO.findOneById(oid).flatMap(t => future2Fox(Task.transformToJson(t)))
+        val task = TaskDAO.findOneById(oid).flatMap(t => future2Fox(Task.transformToJson(t, request.userOpt)))
 
         val foundAnnotation = () => AnnotationDAO.findOneById(oid).flatMap(a => future2Fox(Annotation.transformToJson(a)))
 

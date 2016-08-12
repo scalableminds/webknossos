@@ -2,18 +2,6 @@
 
 @import com.scalableminds.util.tools.Reflect
 
-@callingTemplate = @{
-  // TODO: REMOVE HOTFIX
-  var c = Reflect.getCallerClass.map( _(8).getName )
-  var i = 8
-  val max = 12
-  while(c.contains("views.html.main$") && i <= max){
-    i += 1
-    c = Reflect.getCallerClass.map( _(i).getName )
-  }
-  c
-}
-
 @pageSkeleton{
     @mainHeader(showNavButtons)
     <div id="alert-container">
@@ -43,7 +31,7 @@
       <div id="loader-background"></div>
       <div id="loader-icon"><i class="fa fa-spinner fa-spin fa-4x"></i><br>Loading</div>
     </div>
-    <div id="main-container" data-template="@callingTemplate">
+    <div id="main-container">
       @body
     </div>
 }

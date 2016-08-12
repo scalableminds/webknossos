@@ -9,7 +9,7 @@ import play.api.libs.functional.syntax._
 import models.annotation.{AnnotationService, AnnotationSettings}
 import reactivemongo.bson.BSONObjectID
 import com.scalableminds.util.reactivemongo._
-import play.modules.reactivemongo.json.BSONFormats._
+import reactivemongo.play.json.BSONFormats._
 import models.user.User
 import com.scalableminds.util.reactivemongo.AccessRestrictions.{DenyEveryone, AllowIf}
 import com.scalableminds.util.mvc.Formatter
@@ -52,17 +52,11 @@ object TaskType {
 
   implicit val taskTypeFormat = Json.format[TaskType]
 
-  def empty = TaskType("", "", TraceLimit(5, 10, 15), "")
-
   def fromForm(
     summary: String,
     description: String,
     team: String,
-    allowedModes: Seq[String],
-    preferredMode: Option[String],
-    branchPointsAllowed: Boolean,
-    advancedOptionsAllowed: Boolean,
-    somaClickingAllowed: Boolean,
+    settings: AnnotationSettings,
     expectedTime: TraceLimit) = {
 
     TaskType(
@@ -70,12 +64,7 @@ object TaskType {
       description,
       expectedTime,
       team,
-      AnnotationSettings(
-        allowedModes.toList,
-        preferredMode,
-        branchPointsAllowed,
-        somaClickingAllowed,
-        advancedOptionsAllowed))
+      settings)
   }
 
   def toForm(tt: TaskType) =
@@ -98,7 +87,7 @@ object TaskType {
       "team" -> tt.team,
       "settings" -> Json.toJson(tt.settings),
       "fileName" -> tt.fileName,
-      "expectedTime" -> tt.expectedTime.toString
+      "expectedTime" -> tt.expectedTime
     )
   }
 

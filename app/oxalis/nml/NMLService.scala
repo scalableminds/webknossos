@@ -33,11 +33,17 @@ trait NMLParsingService {
     def fileName: String
 
     def nml: Option[NML] = None
+
+    def succeeded: Boolean
   }
   case class NMLParseSuccess(fileName: String, _nml: NML) extends NMLParseResult{
+    def succeeded = true
+
     override def nml = Some(_nml)
   }
-  case class NMLParseFailure(fileName: String, error: String) extends NMLParseResult
+  case class NMLParseFailure(fileName: String, error: String) extends NMLParseResult{
+    def succeeded = false
+  }
 
   def extractFromNML(file: File, fileName: Option[String] = None): NMLParseResult = {
     val name = fileName getOrElse file.getName
@@ -53,7 +59,7 @@ trait NMLParsingService {
     ZipIO.unzipWithFilenames(file).map{
       case (filename, nmlFile) =>
         val prefix = filename.replaceAll("\\.[^.]*$", "") + "_"
-        NMLParser.parse(nmlFile) match {
+        NMLParser.parse(nmlFile, filename) match {
           case Full(nml) =>
             NMLParseSuccess(name, nml.copy(trees = nml.trees.map(_.addNamePrefix(prefix))))
           case Failure(msg, _, _) =>

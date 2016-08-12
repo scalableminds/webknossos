@@ -5,7 +5,7 @@ import oxalis.annotation.AnnotationIdentifier
 import reactivemongo.bson.BSONObjectID
 import play.api.libs.json.Json
 import com.scalableminds.util.reactivemongo.DBAccessContext
-import play.modules.reactivemongo.json.BSONFormats._
+import reactivemongo.play.json.BSONFormats._
 import play.api.libs.concurrent.Execution.Implicits._
 
 case class UsedAnnotation(user: BSONObjectID, annotationId: AnnotationIdentifier, _id: BSONObjectID = BSONObjectID.generate)
@@ -37,7 +37,9 @@ object UsedAnnotationDAO extends SecuredBaseDAO[UsedAnnotation] {
     remove("user", user._id)
   }
 
-  def removeAll(tracing: String)(implicit ctx: DBAccessContext) = {
-    remove("tracing", tracing)
+  def removeAll(annotationId: AnnotationIdentifier)(implicit ctx: DBAccessContext) = {
+    remove(Json.obj(
+      "annotationId.annotationType" -> annotationId.annotationType,
+      "annotationId.identifier" -> annotationId.identifier))
   }
 }

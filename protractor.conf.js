@@ -3,12 +3,12 @@ var DOWNLOAD_DIRECTORY = __dirname + '/tmp';
 exports.config = {
   baseUrl: 'http://localhost:9000',
 
-  allScriptsTimeout: 11000,
+  allScriptsTimeout: 20000,
 
   framework: 'jasmine2',
 
   jasmineNodeOpts: {
-    defaultTimeoutInterval: 10000,
+    defaultTimeoutInterval: 20000,
     showTiming: true
   },
 
@@ -31,7 +31,7 @@ exports.config = {
     }
   },
 
-  seleniumServerJar: './node_modules/protractor/selenium/selenium-server-standalone-2.47.1.jar',
+  seleniumServerJar: './node_modules/protractor/selenium/selenium-server-standalone-2.52.0.jar',
 
   specs: [
     'app/assets/javascripts/test/**/*.e2e.coffee'

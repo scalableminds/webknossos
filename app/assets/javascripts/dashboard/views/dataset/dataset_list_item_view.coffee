@@ -68,15 +68,22 @@ class DatasetListItemView extends Marionette.CompositeView
         <% } %>
         <% if(isActive){ %>
           <div class="dataset-actions">
+            <% if(isEditable) { %>
+              <a href="/datasets/<%- name %>/edit" title="Edit dataset">
+                <i class="fa fa-pencil"></i> edit
+              </a>
+            <% } %>
             <a href="/datasets/<%- name %>/view" title="View dataset">
               <img src="/assets/images/eye.svg"> view
             </a>
             <a href="#" title="Create skeleton tracing" id="skeletonTraceLink">
               <img src="/assets/images/skeleton.svg"> start Skeleton Tracing
             </a>
-            <a href="#" title="Create volume tracing" id="volumeTraceLink">
-              <img src="/assets/images/volume.svg"> start Volume Tracing
-            </a>
+            <% if(dataStore.typ != "ndstore"){ %>
+              <a href="#" title="Create volume tracing" id="volumeTraceLink">
+                <img src="/assets/images/volume.svg"> start Volume Tracing
+              </a>
+            <% } %>
           </div>
         <% } %>
       </td>

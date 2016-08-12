@@ -236,6 +236,7 @@ class TaskCreateFromView extends Marionette.LayoutView
 
     Toast.error("The form data is not correct.")
 
+
   ###
    Render the SelectionViews based on the stored options.
    Create a subview based on the passed type: from_form/ from_nml
@@ -247,7 +248,7 @@ class TaskCreateFromView extends Marionette.LayoutView
       childViewOptions :
         modelValue : -> return "#{@model.get("id")}"
         modelLabel : -> return "#{@model.get("summary")}"
-        defaultItem : {id : @model.get("type")}
+        defaultItem : {id : @model.get("type.id") or Utils.getUrlParams("taskType")}
       data : "amIAnAdmin=true"
       name : "taskTypeId"
     )
@@ -265,7 +266,7 @@ class TaskCreateFromView extends Marionette.LayoutView
       collection : new ProjectCollection()
       childViewOptions :
         modelValue : -> return "#{@model.get("name")}"
-        defaultItem : {name : @model.get("projectName")}
+        defaultItem : {name : @model.get("projectName") or Utils.getUrlParams("projectName")}
       data : "amIAnAdmin=true"
       name : "projectName"
       required : true

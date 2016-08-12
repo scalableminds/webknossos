@@ -6,9 +6,7 @@ import com.scalableminds.util.geometry.Scale
 case class NML(
   dataSetName: String,
   trees: List[Tree],
-  branchPoints: List[BranchPoint],
   timestamp: Long,
   activeNodeId: Option[Int],
   scale: Scale,
-  editPosition: Option[Point3D],
-  comments: List[Comment])
+  editPosition: Option[Point3D])

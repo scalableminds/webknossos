@@ -34,17 +34,17 @@ trait Dashboard extends FoxImplicits {
   }
 
 
-  def dashboardExploratoryAnnotations(user: User, requestingUser: User, isFinished: Option[Boolean])(implicit ctx: DBAccessContext) = {
+  def dashboardExploratoryAnnotations(user: User, requestingUser: User, isFinished: Option[Boolean], limit: Int)(implicit ctx: DBAccessContext) = {
     for {
-      exploratoryAnnotations <- annotationsAsJson(AnnotationService.findExploratoryOf(user, isFinished), user)
+      exploratoryAnnotations <- annotationsAsJson(AnnotationService.findExploratoryOf(user, isFinished, limit), user)
     } yield {
       JsArray(exploratoryAnnotations.flatten)
     }
   }
 
-  def dashboardTaskAnnotations(user: User, requestingUser: User)(implicit ctx: DBAccessContext) = {
+  def dashboardTaskAnnotations(user: User, requestingUser: User, isFinished: Option[Boolean], limit: Int)(implicit ctx: DBAccessContext) = {
     for {
-      tasksAnnotations <- annotationsAsJson(AnnotationService.findTasksOf(user), user)
+      tasksAnnotations <- annotationsAsJson(AnnotationService.findTasksOf(user, isFinished, limit), user)
     } yield {
       JsArray(tasksAnnotations.flatten)
     }

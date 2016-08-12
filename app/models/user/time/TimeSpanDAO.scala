@@ -3,7 +3,7 @@ package models.user.time
 import models.user.User
 import com.scalableminds.util.reactivemongo.DBAccessContext
 import play.api.libs.json.Json
-import play.modules.reactivemongo.json.BSONFormats._
+import reactivemongo.play.json.BSONFormats._
 import play.api.libs.concurrent.Execution.Implicits._
 import models.basics.SecuredBaseDAO
 import reactivemongo.api.indexes.{IndexType, Index}

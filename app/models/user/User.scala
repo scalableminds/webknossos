@@ -14,7 +14,7 @@ import com.scalableminds.util.reactivemongo._
 //import scala.concurrent.Future
 import play.api.libs.concurrent.Execution.Implicits._
 import reactivemongo.bson.BSONObjectID
-import play.modules.reactivemongo.json.BSONFormats._
+import reactivemongo.play.json.BSONFormats._
 import reactivemongo.api.indexes.{IndexType, Index}
 import reactivemongo.api.indexes.Index
 import play.api.libs.json._
@@ -54,7 +54,8 @@ case class User(
 
   val name = firstName + " " + lastName
 
-  val abreviatedName = (firstName.take(1) + lastName).toLowerCase
+  val abreviatedName =
+    (firstName.take(1) + lastName).toLowerCase.replace(" ", "_")
 
   lazy val id = _id.stringify
 
@@ -65,6 +66,8 @@ case class User(
   lazy val hasAdminAccess = adminTeams.nonEmpty
 
   def roleInTeam(team: String) = teams.find(_.team == team).map(_.role)
+
+  def isAdminOf(team: String) = adminTeamNames.contains(team)
 
   override def toString = email
 
@@ -99,7 +102,7 @@ case class User(
     (System.currentTimeMillis - this.lastActivity) / (1000 * 60 * 60 * 24)
 
   def isEditableBy(other: User) =
-    other.hasAdminAccess && ( teams.isEmpty || other.adminTeamNames.exists(teamNames.contains))
+    other.hasAdminAccess && ( teams.isEmpty || teamNames.exists(other.isAdminOf))
 
 }
 
@@ -197,18 +200,8 @@ object UserDAO extends SecuredBaseDAO[User] {
       "teams" -> teams,
       "experiences" -> experiences)), returnNew = true)
 
-  def addTeams(_user: BSONObjectID, teams: Seq[TeamMembership])(implicit ctx: DBAccessContext) =
-    update(findByIdQ(_user), Json.obj("$pushAll" -> Json.obj("teams" -> teams)))
-
-  def addRole(_user: BSONObjectID, role: String)(implicit ctx: DBAccessContext) =
-    update(findByIdQ(_user), Json.obj("$push" -> Json.obj("roles" -> role)))
-
-  def deleteRole(_user: BSONObjectID, role: String)(implicit ctx: DBAccessContext) =
-    update(findByIdQ(_user), Json.obj("$pull" -> Json.obj("roles" -> role)))
-
-  def increaseExperience(_user: BSONObjectID, domain: String, value: Int)(implicit ctx: DBAccessContext) = {
-    update(findByIdQ(_user), Json.obj("$inc" -> Json.obj(s"experiences.$domain" -> value)))
-  }
+  def addTeam(_user: BSONObjectID, team: TeamMembership)(implicit ctx: DBAccessContext) =
+    update(findByIdQ(_user), Json.obj("$push" -> Json.obj("teams" -> team)))
 
   def updateUserConfiguration(user: User, configuration: UserConfiguration)(implicit ctx: DBAccessContext) = {
     update(findByIdQ(user._id), Json.obj("$set" -> Json.obj("userConfiguration.configuration" -> configuration.configurationOrDefaults)))
@@ -216,14 +209,6 @@ object UserDAO extends SecuredBaseDAO[User] {
 
   def updateDataSetConfiguration(user: User, dataSetName: String, configuration: DataSetConfiguration)(implicit ctx: DBAccessContext) = {
     update(findByIdQ(user._id), Json.obj("$set" -> Json.obj(s"dataSetConfigurations.$dataSetName.configuration" -> configuration.configurationOrDefaults)))
-  }
-
-  def setExperience(_user: BSONObjectID, domain: String, value: Int)(implicit ctx: DBAccessContext) = {
-    update(findByIdQ(_user), Json.obj("$set" -> Json.obj(s"experiences.$domain" -> value)))
-  }
-
-  def deleteExperience(_user: BSONObjectID, domain: String)(implicit ctx: DBAccessContext) = {
-    update(findByIdQ(_user), Json.obj("$unset" -> Json.obj(s"experiences.$domain" -> 1)))
   }
 
   def logActivity(_user: BSONObjectID, lastActivity: Long)(implicit c: DBAccessContext) = {
@@ -244,12 +229,6 @@ object UserDAO extends SecuredBaseDAO[User] {
 
   def countNonAnonymousUsers(implicit ctx: DBAccessContext) = {
     count(Json.obj("_isAnonymous" -> Json.obj("$ne" -> true)))
-  }
-
-  def verify(user: User)(implicit ctx: DBAccessContext) = {
-    update(
-      Json.obj("email" -> user.email),
-      Json.obj("$set" -> Json.obj("verified" -> true)))
   }
 
   def removeTeamFromUsers(team: String)(implicit ctx: DBAccessContext) = {

@@ -18,6 +18,7 @@ class Router extends BaseRouter
     "tasks/create"                      : "taskCreate"
     "tasks/:id/edit"                    : "taskEdit"
     "projects"                          : "projects"
+    "projects/:id/edit"                 : "projectEdit"
     "projects/:name/tasks"              : "projectTasks"
     "annotations/:type/:id(/readOnly)"  : "tracingView"
     "datasets/:id/view"                 : "tracingViewPublic"
@@ -78,6 +79,20 @@ class Router extends BaseRouter
   projects : ->
 
     @showWithPagination("ProjectListView", "ProjectCollection", {addButtonText : "Create New Project"})
+
+
+  projectEdit : (projectName) ->
+
+    require(["admin/views/project/project_edit_view", "admin/models/project/project_model"], (ProjectEditView, ProjectModel) =>
+
+      model = new ProjectModel(name : projectName)
+      view = new ProjectEditView(model : model)
+
+      @listenTo(model, "sync", ->
+        @changeView(view)
+        @hideLoadingSpinner()
+      )
+    )
 
 
   statistics : ->

@@ -33,6 +33,17 @@ class ProjectController @Inject()(val messagesApi: MessagesApi) extends Controll
       }
   }
 
+  def read(projectName: String) = Authenticated.async {
+    implicit request =>
+      for {
+        project <- ProjectDAO.findOneByName(projectName) ?~> Messages("project.notFound", projectName)
+        _ <- project.isOwnedBy(request.user) ?~> Messages("project.remove.notAllowed")
+        js <- Project.projectPublicWrites(project, request.user)
+      } yield {
+        Ok(Json.toJson(js))
+      }
+  }
+
   def delete(projectName: String) = Authenticated.async {
     implicit request =>
       for {

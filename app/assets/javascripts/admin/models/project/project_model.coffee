@@ -4,6 +4,7 @@ backbone = require("backbone")
 class ProjectModel extends Backbone.Model
 
   urlRoot : "/api/projects"
+  idAttribute: "name"
 
   default :
     owner :
@@ -16,11 +17,5 @@ class ProjectModel extends Backbone.Model
     # set some sensible defaults
     response.owner ||= @default.owner
     return response
-
-
-  destroy : (options) ->
-
-    _.extend(options, {url : "/api/projects/#{@get("name")}"})
-    super(options)
 
 module.exports = ProjectModel

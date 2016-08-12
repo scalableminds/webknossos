@@ -39,7 +39,7 @@ class CreateProjectModalView extends Marionette.LayoutView
             <div class="form-group">
               <label class="col-sm-2 for="priority">Priority</label>
               <div class="col-sm-10">
-                <input type="number" class="form-control project-priority" name="priority" value="100" required>
+                <input type="number" class="form-control" name="priority" value="100" required>
               </div>
             </div>
           </div>

@@ -31,9 +31,9 @@ class CreateProjectModalView extends ModalView
         </div>
       </div>
       <div class="form-group">
-        <label class="col-sm-2 for="priority">Priority</label>
+        <label class="col-sm-2" for="priority">Priority</label>
         <div class="col-sm-10">
-          <input type="number" class="form-control" name="priority" value="100" required>
+          <input type="number" class="form-control" name="priority" value="100" required autofocus>
         </div>
       </div>
     </form>

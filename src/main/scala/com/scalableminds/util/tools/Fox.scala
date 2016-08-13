@@ -53,8 +53,8 @@ object Fox{
         case head :: tail =>
           for{
             currentResult <- f(head)
-            tailResults <- runNext(tail, currentResult :: results)
-          } yield tailResults
+            results <- runNext(tail, currentResult :: results)
+          } yield results
         case Nil =>
           Future.successful(results.reverse)
       }
@@ -73,6 +73,21 @@ object Fox{
         case _ => Full(results.map(_.openOrThrowException("An exception should never be thrown, all boxes must be full")))
       }
     })
+
+  def serialCombined[A, B](l: List[A])(f: A => Fox[B])(implicit ec: ExecutionContext): Fox[List[B]] = {
+    def runNext(remaining: List[A], results: List[B]): Fox[List[B]] = {
+      remaining match {
+        case head :: tail =>
+          for{
+            currentResult <- f(head)
+            results <- runNext(tail, currentResult :: results)
+          } yield results
+        case Nil =>
+          Fox.successful(results.reverse)
+      }
+    }
+    runNext(l, Nil)
+  }
 
   def sequenceOfFulls[T](seq: List[Fox[T]])(implicit ec: ExecutionContext): Future[List[T]] =
     Future.sequence(seq.map(_.futureBox)).map{ results =>

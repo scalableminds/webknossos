@@ -3,30 +3,40 @@
 */
 package com.scalableminds.util.io
 
-import java.io.{InputStream, File, PrintWriter}
+import java.io.{File, InputStream, PrintWriter}
 
-case class NamedFileStream(stream: InputStream, name: String){
-  def normalizedName = {
+case class NamedFileStream(stream: InputStream, name: String) {
+  def normalizedName: String = {
     val sep = File.separatorChar
-    if (sep == '/') name else name.replace(sep, '/')
+    if (sep == '/')
+      name
+    else
+      name.replace(sep, '/')
   }
 }
 
 object FileIO {
-  def printToFile(s: String)(op: java.io.PrintWriter => Unit) {
+  def printToFile(s: String)(op: java.io.PrintWriter => Unit): Unit = {
     printToFile(new File(s))(op)
   }
 
-  def printToFile(f: java.io.File)(op: java.io.PrintWriter => Unit) {
+  def printToFile(f: java.io.File)(op: java.io.PrintWriter => Unit): Unit = {
     val p = new java.io.PrintWriter(f)
-    try { op(p) } finally { p.close() }
+    try {
+      op(p)
+    } finally {
+      p.close()
+    }
   }
 
-  def createTempFile(data: String, fileType: String = ".tmp") = {
+  def createTempFile(data: String, fileType: String = ".tmp"): File = {
     val temp = File.createTempFile("temp", System.nanoTime().toString + fileType)
     val out = new PrintWriter(temp)
-    try { out.print(data) }
-    finally { out.close }
+    try {
+      out.print(data)
+    } finally {
+      out.close()
+    }
     temp
   }
 }

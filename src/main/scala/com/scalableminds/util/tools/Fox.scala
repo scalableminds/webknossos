@@ -99,6 +99,16 @@ class Fox[+A](val futureBox: Future[Box[A]])(implicit ec: ExecutionContext) {
   def getOrElse[B >: A](b: => B): Future[B] =
     futureBox.map(_.getOrElse(b))
 
+  def flatten[B](implicit ev: A <:< Fox[B]): Fox[B] =
+    new Fox(futureBox.flatMap {
+      case Full(t) =>
+        t.futureBox
+      case Empty =>
+        Future.successful(Empty)
+      case fail: Failure =>
+        Future.successful(fail)
+    })
+
   def map[B](f: A => B): Fox[B] =
     new Fox(futureBox.map(_.map(f)))
 

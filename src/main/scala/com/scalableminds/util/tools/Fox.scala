@@ -28,6 +28,9 @@ trait FoxImplicits {
 
   implicit def futureOption2Fox[T](f: Future[Option[T]])(implicit ec: ExecutionContext): Fox[T] =
     new Fox(f.map(Box(_)))
+
+  implicit def fox2FutureBox[T](f: Fox[T])(implicit ec: ExecutionContext): Future[Box[T]] =
+    f.futureBox
 }
 
 
@@ -44,12 +47,12 @@ object Fox{
               chain: Box[Failure] = Empty)(implicit ec: ExecutionContext): Fox[Nothing]  =
     new Fox(Future.successful(Failure(message, ex, chain)))
 
-  def serialSequence[A, B](l: List[A])(f: A => Fox[B])(implicit ec: ExecutionContext): Future[List[Box[B]]] = {
-    def runNext(remaining: List[A], results: List[Box[B]]): Future[List[Box[B]]] = {
+  def serialSequence[A, B](l: List[A])(f: A => Future[B])(implicit ec: ExecutionContext): Future[List[B]] = {
+    def runNext(remaining: List[A], results: List[B]): Future[List[B]] = {
       remaining match {
         case head :: tail =>
           for{
-            currentResult <- f(head).futureBox
+            currentResult <- f(head)
             tailResults <- runNext(tail, currentResult :: results)
           } yield tailResults
         case Nil =>
@@ -84,10 +87,10 @@ object Fox{
 class Fox[+A](val futureBox: Future[Box[A]])(implicit ec: ExecutionContext) {
   val self = this
 
-  def ?~>(s: String) =
+  def ?~>(s: String): Fox[A] =
     new Fox(futureBox.map(_ ?~ s))
 
-  def ~>[T](errorCode: => T) =
+  def ~>[T](errorCode: => T): Fox[A] =
     new Fox(futureBox.map(_ ~> errorCode))
 
   def orElse[B >: A](fox: => Fox[B]): Fox[B] =
@@ -133,7 +136,7 @@ class Fox[+A](val futureBox: Future[Box[A]])(implicit ec: ExecutionContext) {
   /**
    * Helper to force an implicit conversation
    */
-  def toFox = this
+  def toFox: Fox[A] = this
 
   /**
    * If the box is Empty this will create a Full. If The box is Full it will get emptied. Failures are passed through.

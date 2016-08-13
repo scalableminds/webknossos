@@ -174,10 +174,7 @@ class TaskCreateBulkImportView extends Marionette.ItemView
     width = parseInt(words[15])
     height = parseInt(words[16])
     depth = parseInt(words[17])
-
-    projectName = ""
-    if words[18]
-      projectName = words[18]
+    projectName = words[18]
 
     return {
       dataSet,

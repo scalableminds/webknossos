@@ -11,7 +11,7 @@ import com.scalableminds.util.reactivemongo.DBAccessContext
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import models.tracing.skeleton.SkeletonTracingLike
 import org.apache.commons.io.IOUtils
-import oxalis.annotation.handler.SavedTracingInformationHandler
+import models.annotation.handler.SavedTracingInformationHandler
 import oxalis.nml.NMLService
 import play.api.Play
 import play.api.libs.concurrent.Execution.Implicits._

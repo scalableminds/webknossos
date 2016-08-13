@@ -17,7 +17,6 @@ import models.task.TaskDAO
 import models.user.time._
 import models.user.{UsedAnnotationDAO, User, UserDAO}
 import net.liftweb.common.{Full, _}
-import oxalis.annotation.AnnotationIdentifier
 import oxalis.security.{AuthenticatedRequest, Secured}
 import play.api.Logger
 import play.api.i18n.{Messages, MessagesApi}

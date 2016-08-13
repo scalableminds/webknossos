@@ -1,4 +1,4 @@
-package oxalis.annotation.handler
+package models.annotation.handler
 
 import net.liftweb.common.Box
 import com.scalableminds.util.tools.TextUtils._

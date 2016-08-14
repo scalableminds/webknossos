@@ -432,9 +432,8 @@ class DataBlockWriter(block: BlockedArray3D[Byte], dataRequest: DataWriteRequest
 
   @inline
   private def writeData(px: Double, py: Double, pz: Double, idx: Int): Array[Byte] = {
-    val dataSlice = dataRequest.data.slice(idx, idx + layer.bytesPerElement)
-    byteWriter(Point3D(px.castToInt, py.castToInt, pz.castToInt), dataSlice)
-    Array[Byte]()
+    byteWriter(Point3D(px.castToInt, py.castToInt, pz.castToInt), dataRequest.data, idx)
+    Array.empty[Byte]
   }
 
   private def calculatePositionInLoadedBlock(globalPoint: Point3D): Point3D = {
@@ -443,7 +442,7 @@ class DataBlockWriter(block: BlockedArray3D[Byte], dataRequest: DataWriteRequest
       .move(offset.negate)
   }
 
-  private def byteWriter(globalPoint: Point3D, data: Array[Byte]): Unit = {
-    block(calculatePositionInLoadedBlock(globalPoint), data)
+  private def byteWriter(globalPoint: Point3D, data: Array[Byte], offset: Int): Unit = {
+    block.setBytes(calculatePositionInLoadedBlock(globalPoint), data, offset)
   }
 }

@@ -3,8 +3,6 @@
  */
 package com.scalableminds.braingames.binary
 
-import scala.math._
-import com.scalableminds.util.tools.Math._
 import com.scalableminds.util.geometry._
 import scala.reflect.ClassTag
 
@@ -17,55 +15,23 @@ abstract class DataModel {
 
   protected def rotateAndMove(
     moveVector: (Double, Double, Double),
-    rotationBase: Option[MatrixBase3D],
     coordinates: Array[Vector3D]): Array[Vector3D] = {
     def ff(f: (Double, Double, Double, Int) => Array[Vector3D]): Array[Vector3D] = {
       coordinates.map(c => f(c.x, c.y, c.z, 0)(0))
     }
 
-    rotateAndMove(moveVector, rotationBase)(ff)((x, y, z, idx) => Array(Vector3D(x, y, z)))
+    simpleMove(moveVector, ff)((x, y, z, idx) => Array(Vector3D(x, y, z)))
   }
 
   @inline
-  protected def rotateAndMove[T](
-    moveVector: (Double, Double, Double),
-    rotationBase: Option[MatrixBase3D])(coordinates: ((Double, Double, Double, Int) => Array[T]) => Array[T])(f: (Double, Double, Double, Int) => Array[T]): Array[T] = {
-
-    rotationBase match{
-      case Some(rotation) =>
-        // orthogonal vector to (0,1,0) and rotation vector
-        val matrix = TransformationMatrix(Vector3D(moveVector), rotation).value
-
-        @inline
-        def coordinateTransformer(px: Double, py: Double, pz: Double, idx: Int) = {
-          f(matrix(0) * px + matrix(1) * py + matrix(2) * pz + matrix(3),
-            matrix(4) * px + matrix(5) * py + matrix(6) * pz + matrix(7),
-            matrix(8) * px + matrix(9) * py + matrix(10) * pz + matrix(11),
-            idx)
-        }
-
-        coordinates(coordinateTransformer)
-      case None =>
-        simpleMove(moveVector, coordinates)(f)
-
-    }
-  }
-
-  @inline
-  protected def simpleMove[T](
-    moveVector: (Double, Double, Double),
-    coordinates: ((Double, Double, Double, Int) => Array[T]) => Array[T])(f: (Double, Double, Double, Int) => Array[T]): Array[T] = {
+  protected def simpleMove[T](moveVector: (Double, Double, Double), coordinates: ((Double, Double, Double, Int) => Array[T]) => Array[T])
+                             (f: (Double, Double, Double, Int) => Array[T]): Array[T] = {
     coordinates { (px, py, pz, idx) =>
       val x = moveVector._1 + px
       val y = moveVector._2 + py
       val z = moveVector._3 + pz
       f(x, y, z, idx)
     }
-  }
-
-  def normalizeVector(v: Tuple3[Double, Double, Double]): Tuple3[Double, Double, Double] = {
-    var l = sqrt(square(v._1) + square(v._2) + square(v._3))
-    if (l > 0) (v._1 / l, v._2 / l, v._3 / l) else v
   }
 
   // calculate all coordinates which are in the model boundary
@@ -78,8 +44,7 @@ case class Cuboid(
     _depth: Int,
     resolution: Int = 1,
     topLeftOpt: Option[Vector3D] = None,
-    moveVector: (Double, Double, Double) = (0, 0, 0),
-    rotationBase: Option[MatrixBase3D] = None) extends DataModel {
+    moveVector: (Double, Double, Double) = (0, 0, 0)) extends DataModel {
 
   val width = resolution * _width
   val height = resolution * _height
@@ -92,7 +57,7 @@ case class Cuboid(
     Vector3D(-xh, -yh, -zh)
   }
 
-  val corners = rotateAndMove(moveVector, rotationBase, Array(
+  val corners = rotateAndMove(moveVector, Array(
     topLeft,
     topLeft.dx(width - 1),
     topLeft.dy(height - 1),
@@ -107,9 +72,6 @@ case class Cuboid(
 
   val minCorner = corners.foldLeft(maxCorner)((b, e) => (
     math.min(b._1, e.x), math.min(b._2, e.y), math.min(b._3, e.z)))
-
-  def isUnrotated =
-    rotationBase.isEmpty
 
   @inline
   private def looper[T](extendArrayBy: Int, c: ClassTag[T])(f: (Double, Double, Double, Int) => Array[T]) = {
@@ -128,7 +90,9 @@ case class Cuboid(
       while (y < yhMax) {
         x = topLeft.x
         while (x < xhMax) {
-          f(x, y, z, idx).copyToArray(array, idx, extendArrayBy)
+          val r = f(x, y, z, idx)
+          if(r.length > 0)
+            r.copyToArray(array, idx, extendArrayBy)
           x += resolution
           idx += extendArrayBy
         }
@@ -140,6 +104,6 @@ case class Cuboid(
   }
 
   override def withContainingCoordinates[T](extendArrayBy: Int = 1)(f: (Double, Double, Double, Int) => Array[T])(implicit c: ClassTag[T]): Array[T] = {
-    rotateAndMove(moveVector, rotationBase)(looper[T](extendArrayBy, c))(f)
+    simpleMove(moveVector, looper[T](extendArrayBy, c))(f)
   }
 }

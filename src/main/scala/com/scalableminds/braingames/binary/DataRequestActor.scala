@@ -99,7 +99,7 @@ class DataRequestActor(
   }
 
   def loadFromLayer(loadBlock: LoadBlock, useCache: Boolean): Future[Box[Array[Byte]]] = {
-    if (loadBlock.dataLayerSection.doesContainBlock(loadBlock.block, loadBlock.dataSource.blockLength)) {
+    if (loadBlock.dataLayerSection.doesContainBlock(loadBlock.block, loadBlock.dataSource.blockLength, loadBlock.resolution)) {
       def loadFromStore(dataStores: List[ActorRef]): Future[Box[Array[Byte]]] = dataStores match {
         case a :: tail =>
           (a ? loadBlock)
@@ -281,7 +281,7 @@ class DataRequestActor(
         Future.successful(Unit)
     }
 
-    if (saveBlock.dataLayerSection.doesContainBlock(saveBlock.block, saveBlock.dataSource.blockLength)) {
+    if (saveBlock.dataLayerSection.doesContainBlock(saveBlock.block, saveBlock.dataSource.blockLength, saveBlock.resolution)) {
       saveToStore(dataStores)
     } else {
       Future.successful(Unit)

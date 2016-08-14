@@ -19,35 +19,29 @@ case class BlockedArray3D[T](
 
   lazy val nullArray = Array.fill[T](elementSize)(nullElement)
 
-  def getBytes(p: Point3D, block: Array[T]) = {
+  @inline
+  private def getBytes(p: Point3D, block: Array[T]) = {
     val address =
       (p.x % blockWidth +
         p.y % blockHeight * blockWidth +
         p.z % blockDepth * blockHeight * blockWidth) * elementSize
 
     val bytes = new Array[T](elementSize)
-    var i = 0
-    while (i < elementSize) {
-      bytes.update(i, block(address + i))
-      i += 1
-    }
+    Array.copy(block, address, bytes, 0, elementSize)
     bytes
   }
 
-  def setBytes(p: Point3D, block: Array[T], d: Array[T]) = {
+  @inline
+  private def setBytes(p: Point3D, block: Array[T], d: Array[T], offset: Int): Unit = {
     val address =
       (p.x % blockWidth +
         p.y % blockHeight * blockWidth +
         p.z % blockDepth * blockHeight * blockWidth) * elementSize
 
-    var i = 0
-    while (i < elementSize) {
-      block.update(address + i, d(i))
-      i += 1
-    }
+    Array.copy(d, offset, block, address, elementSize)
   }
 
-  def calculateBlockIdx(p: Point3D) =
+  private def calculateBlockIdx(p: Point3D) =
     p.z / blockDepth +
       p.y / blockHeight * zBlocks +
       p.x / blockWidth * zBlocks * yBlocks
@@ -61,8 +55,8 @@ case class BlockedArray3D[T](
     }
   }
 
-  def apply(p: Point3D, d: Array[T]) = {
+  def setBytes(p: Point3D, d: Array[T], offset: Int): Unit = {
     val blockIdx = calculateBlockIdx(p)
-    setBytes(p, underlying(blockIdx), d)
+    setBytes(p, underlying(blockIdx), d, offset)
   }
 }

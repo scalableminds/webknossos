@@ -25,7 +25,9 @@ import akka.pattern.AskTimeoutException
 import com.typesafe.config.Config
 import net.liftweb.common.Box
 import com.scalableminds.braingames.binary.repository.DataSourceInbox
+import com.scalableminds.util.cache.LRUConcurrentCache
 import com.scalableminds.util.io.PathUtils
+import com.scalableminds.util.tools.Fox
 import com.typesafe.scalalogging.LazyLogging
 
 trait BinaryDataService 
@@ -52,18 +54,12 @@ trait BinaryDataService
 
   lazy val dataSourceRepositoryDir = PathUtils.ensureDirectory(Paths.get(config.getString("braingames.binary.baseFolder")))
 
-  val binDataCache = Agent[Map[CachedBlock, Future[Box[Array[Byte]]]]](Map.empty)
+  val binDataCache = new LRUConcurrentCache[CachedBlock, Array[Byte]](config.getInt("braingames.binary.cacheMaxSize"))
 
-  lazy val dataRequestActor = {
-    val nrOfBinRequestActors = config.getInt("braingames.binary.nrOfBinRequestActors")
-    val props = Props(classOf[DataRequestActor],
+  lazy val dataRequester = new DataRequester(
       config.getConfig("braingames.binary"),
       binDataCache,
       dataSourceRepository)
-
-    system.actorOf(props
-      .withRouter(new RoundRobinPool(nrOfBinRequestActors)), "dataRequestActor")
-  }
 
   var repositoryWatcher: Option[ActorRef] = None
 
@@ -83,18 +79,11 @@ trait BinaryDataService
     repositoryWatchActor ! DirectoryWatcherActor.StartWatching
   }
 
-  def handleDataRequest(request: AbstractDataRequest): Future[Option[Array[Byte]]] = {
-    askDataRequestActor(request)
+  def handleDataRequest(coll: DataRequestCollection): Fox[Array[Byte]] = {
+    dataRequester.requestCollection(coll)
   }
 
-  def askDataRequestActor[T](request: T) = {
-    val future = (dataRequestActor ? request) recover {
-      case e: AskTimeoutException =>
-        logger.warn("Data request to DataRequestActor timed out!")
-        None
-    }
-
-    future.mapTo[Option[Array[Byte]]]
+  def handleDataRequest(readRequest: DataReadRequest): Fox[Array[Byte]] = {
+    dataRequester.load(readRequest)
   }
-
 }

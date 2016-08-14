@@ -10,12 +10,12 @@ import com.scalableminds.braingames.binary.store.FileDataStore
 
 import scala.concurrent.Future
 import scala.math.pow
-import com.scalableminds.util.tools.BlockedArray3D
+import com.scalableminds.util.tools.{BlockedArray3D, Fox, FoxImplicits}
 import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common.Full
 import play.api.libs.concurrent.Execution.Implicits._
 
-object KnossosMultiResCreator extends LazyLogging{
+object KnossosMultiResCreator extends LazyLogging with FoxImplicits{
   val CubeSize = 128
 
   def fileSize(bytesPerElement: Int) = CubeSize * CubeSize * CubeSize * bytesPerElement
@@ -64,7 +64,7 @@ object KnossosMultiResCreator extends LazyLogging{
   private def loadCubes(dataStore: FileDataStore, target: Path, dataSetId: String, start: Point3D, resolution: Int, fileSize: Int, neighbours: Array[Point3D]): Future[List[Array[Byte]]] = {
     Future.traverse(neighbours.toList){ movement =>
       val cubePosition = start.move(movement)
-      dataStore.load(target, dataSetId, resolution, cubePosition, fileSize).map{
+      dataStore.load(target, dataSetId, resolution, cubePosition, fileSize).futureBox.map{
         case Full(data) =>
           data.padTo(fileSize, 0.toByte)
         case _ =>
@@ -89,8 +89,7 @@ object KnossosMultiResCreator extends LazyLogging{
 
       val numberPerGroup = (points.size.toFloat / Parallelism).ceil.toInt
 
-      Future.traverse(points.grouped(numberPerGroup)){ ps => ps.foldLeft(
-        Future.successful[Any](0)){
+      Future.traverse(points.grouped(numberPerGroup)){ ps => ps.foldLeft(Fox.successful(true)){
         case (f, p) => f.flatMap{ _ =>
           val base = p.scale(baseScale)
           val goal = p.scale(targetScale)
@@ -99,8 +98,7 @@ object KnossosMultiResCreator extends LazyLogging{
             val data = downScale(block, CubeSize, CubeSize, CubeSize, bytesPerElement)
             dataStore.save(target, dataSetId, targetResolution, goal, data)
           }
-        }
-      }
+        }}
       }
     }
 

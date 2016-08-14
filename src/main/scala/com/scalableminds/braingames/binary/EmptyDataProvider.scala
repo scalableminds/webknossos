@@ -3,16 +3,11 @@
  */
 package com.scalableminds.braingames.binary
 
-import akka.agent.Agent
-import akka.actor.ActorSystem
-import com.scalableminds.braingames.binary.models.DataLayer
-import com.scalableminds.braingames.binary.models.DataSource
-import scala.concurrent.ExecutionContext.Implicits._
+import com.scalableminds.braingames.binary.models.{DataLayer, DataSource}
 
 trait EmptyDataProvider {
-  implicit val sys: ActorSystem
 
-  lazy val nullFiles = Agent[Map[Int, Array[Byte]]](Map.empty)
+  lazy val nullFiles = scala.collection.concurrent.TrieMap.empty[Int, Array[Byte]]
 
   def loadNullBlock(dataSource: DataSource, dataLayer: DataLayer, useCache: Boolean): Array[Byte] = {
     val size = dataSource.blockSize * dataLayer.bytesPerElement
@@ -23,9 +18,5 @@ trait EmptyDataProvider {
   }
 
   def nullFile(size: Int) =
-    nullFiles().get(size).getOrElse{
-      val nullFile = new Array[Byte](size)
-      nullFiles send (_ + (size -> nullFile))
-      nullFile
-    }
+    nullFiles.getOrElseUpdate(size, new Array[Byte](size))
 }

@@ -91,7 +91,7 @@ class TaskController @Inject() (val messagesApi: MessagesApi) extends Controller
       result <- {
         val nmls = NMLService.extractFromFile(nmlFile.ref.file, nmlFile.filename)
 
-        val futureResults = nmls.map {
+        val futureResult: Future[List[Box[String]]] = Fox.serialSequence(nmls){
           case NMLService.NMLParseSuccess(_, nml) =>
             val task = Task(
               taskType._id,
@@ -110,7 +110,7 @@ class TaskController @Inject() (val messagesApi: MessagesApi) extends Controller
           case NMLService.NMLParseFailure(fileName, error) =>
             Fox.failure(Messages("nml.file.invalid", fileName, error))
         }
-        Fox.sequence(futureResults).map { results =>
+        futureResult.map { results =>
           val js = bulk2StatusJson(results)
           JsonOk(js, Messages("task.bulk.processed"))
         }
@@ -168,7 +168,7 @@ class TaskController @Inject() (val messagesApi: MessagesApi) extends Controller
 
   def createAnonymousUsersAndTasksInstancesIfNeeded(isForAnonymous: Boolean, task: Task)(implicit request: AuthenticatedRequest[_]) = {
     if (isForAnonymous)
-      Fox.sequenceOfFulls((1 to task.instances).toList.map { i =>
+      Fox.serialSequence((1 to task.instances).toList){ i =>
         for {
           user <- UserService.insertAnonymousUser(task.team, task.neededExperience)
           loginToken <- UserService.createLoginToken(user, validDuration = 30 days)
@@ -177,7 +177,7 @@ class TaskController @Inject() (val messagesApi: MessagesApi) extends Controller
           val url = controllers.routes.AnnotationController.trace(annotation.typ, annotation.id).absoluteURL(secure = true)
           url + "?loginToken=" + loginToken
         }
-      })
+      }.map(_.flatten)
     else
       Future.successful(Nil)
   }
@@ -252,7 +252,7 @@ class TaskController @Inject() (val messagesApi: MessagesApi) extends Controller
     TaskService.allNextTasksForUser(user)
 
   def getProjectsFor(tasks: List[Task])(implicit ctx: DBAccessContext): Future[List[Project]] =
-    Fox.sequenceOfFulls(tasks.map(_.project)).map(_.distinct)
+    Fox.serialSequence(tasks)(_.project).map(_.flatten).map(_.distinct)
 
   def createAvailableTasksJson(availableTasksMap: Map[User, (Int, List[Project])]) =
     Json.toJson(availableTasksMap.map { case (user, (taskCount, projects)) =>

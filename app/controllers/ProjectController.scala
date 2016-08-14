@@ -8,6 +8,7 @@ import javax.inject.Inject
 import scala.concurrent.Future
 
 import com.scalableminds.util.reactivemongo.GlobalAccessContext
+import com.scalableminds.util.tools.Fox
 import models.task.{Project, ProjectDAO, ProjectService, Task}
 import models.user.User
 import net.liftweb.common.{Empty, Full}
@@ -27,7 +28,7 @@ class ProjectController @Inject()(val messagesApi: MessagesApi) extends Controll
     implicit request =>
       for {
         projects <- ProjectDAO.findAll
-        js <- Future.traverse(projects)(Project.projectPublicWritesWithStatus(_, request.user))
+        js <- Fox.serialSequence(projects)(Project.projectPublicWritesWithStatus(_, request.user))
       } yield {
         Ok(Json.toJson(js))
       }
@@ -65,7 +66,7 @@ class ProjectController @Inject()(val messagesApi: MessagesApi) extends Controll
       for {
         project <- ProjectDAO.findOneByName(projectName) ?~> Messages("project.notFound", projectName)
         tasks <- project.tasks
-        js <- Future.traverse(tasks)(t => Task.transformToJson(t, request.userOpt))
+        js <- Fox.serialSequence(tasks)(t => Task.transformToJson(t, request.userOpt))
       } yield {
         Ok(Json.toJson(js))
       }

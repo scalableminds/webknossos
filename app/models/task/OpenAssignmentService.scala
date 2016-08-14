@@ -39,8 +39,8 @@ object OpenAssignmentService extends FoxImplicits{
   }
 
   def insertInstancesFor(task: Task, remainingInstances: Int)(implicit ctx: DBAccessContext) = {
-    val assignments = Array.fill(remainingInstances)(OpenAssignment.from(task))
-    Fox.sequenceOfFulls(assignments.map(a => OpenAssignmentDAO.insert(a)).toList)
+    val assignments = List.fill(remainingInstances)(OpenAssignment.from(task))
+    Fox.serialSequence(assignments)(a => OpenAssignmentDAO.insert(a))
   }
 
   def updateAllOf(task: Task, remainingInstances: Int)(implicit ctx: DBAccessContext) = {

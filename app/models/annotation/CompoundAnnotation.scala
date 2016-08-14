@@ -25,7 +25,7 @@ object CompoundAnnotation extends Formatter with FoxImplicits {
     logTime("project composition", Logger.debug) {
       for {
         tasks <- TaskDAO.findAllByProject(project.name)
-        annotations <- Fox.serialSequence(tasks)(_.annotations).map(_.flatten.flatten).toFox
+        annotations <- Fox.serialSequence(tasks)(_.annotations).map(_.flatten).toFox
         merged <- createFromFinishedAnnotations(
           project.name,
           _user,

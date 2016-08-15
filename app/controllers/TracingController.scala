@@ -5,20 +5,20 @@ import javax.inject.Inject
 import models.user.User
 import play.api.libs.concurrent.Akka
 import play.api.libs.json._
-import oxalis.security.{UserAwareRequest, Secured, AuthenticatedRequest}
+import oxalis.security.{AuthenticatedRequest, Secured, UserAwareRequest}
 import net.liftweb.common._
 import scala.concurrent.Future
 import scala.concurrent.duration._
-import oxalis.annotation.{MergeAnnotation, RequestAnnotation, AnnotationIdentifier}
+
 import akka.pattern.ask
 import play.api.libs.concurrent.Execution.Implicits._
 import akka.util.Timeout
 import com.scalableminds.util.tools.ExtendedTypes.ExtendedBoolean
-import play.api.i18n.{I18nSupport, MessagesApi, Messages}
-import models.annotation.{Annotation, AnnotationLike}
+import play.api.i18n.{I18nSupport, Messages, MessagesApi}
+import models.annotation.{Annotation, AnnotationIdentifier, AnnotationLike, AnnotationStore}
 import models.annotation.AnnotationType._
-import oxalis.annotation.handler.AnnotationInformationHandler
-import com.scalableminds.util.tools.{FoxImplicits, Fox}
+import models.annotation.handler.AnnotationInformationHandler
+import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import play.api.Logger
 
 class TracingController @Inject() (val messagesApi: MessagesApi) extends Controller with Secured with TracingInformationProvider
@@ -26,9 +26,6 @@ class TracingController @Inject() (val messagesApi: MessagesApi) extends Control
 trait TracingInformationProvider extends play.api.http.Status with FoxImplicits with models.basics.Implicits with I18nSupport{
 
   import AnnotationInformationHandler._
-
-  lazy val annotationStore =
-    Akka.system(play.api.Play.current).actorSelection("/user/annotationStore")
 
   def withInformationHandler[A, T](tracingType: String)(f: AnnotationInformationHandler => T)(implicit request: UserAwareRequest[_]): T = {
     f(informationHandlers(tracingType))
@@ -47,16 +44,7 @@ trait TracingInformationProvider extends play.api.http.Status with FoxImplicits 
   }
 
   def findAnnotation(annotationId: AnnotationIdentifier)(implicit request: UserAwareRequest[_]): Fox[AnnotationLike] = {
-    try {
-      implicit val timeout = Timeout(10.seconds)
-      val f = annotationStore ? RequestAnnotation(annotationId, request.userOpt, authedRequestToDBAccess)
-
-      f.mapTo[Box[AnnotationLike]]
-    } catch {
-      case e: Exception =>
-        Logger.error(s"Failed to retrieve annotation $annotationId in time!")
-        Fox.failure("Failed to retrieve annotation in time.", Full(e))
-    }
+    AnnotationStore.requestAnnotation(annotationId, request.userOpt)
   }
 
   def withMergedAnnotation[T](typ: AnnotationType, id: String, mergedId: String, mergedTyp: String, readOnly: Boolean)(f: AnnotationLike => Fox[T])(implicit request: AuthenticatedRequest[_]): Fox[T] = {
@@ -64,14 +52,10 @@ trait TracingInformationProvider extends play.api.http.Status with FoxImplicits 
   }
 
   def mergeAnnotation(annotationId: AnnotationIdentifier, mergedAnnotationId: AnnotationIdentifier, readOnly: Boolean)(implicit request: AuthenticatedRequest[_]): Fox[AnnotationLike] = {
-    implicit val timeout = Timeout(10.seconds)
+    val annotation = AnnotationStore.requestAnnotation(annotationId, request.userOpt)
+    val annotationSec = AnnotationStore.requestAnnotation(mergedAnnotationId, request.userOpt)
 
-    val annotation = annotationStore ? RequestAnnotation(annotationId, request.userOpt, authedRequestToDBAccess)
-    val annotationSec = annotationStore ? RequestAnnotation(mergedAnnotationId, request.userOpt, authedRequestToDBAccess)
-
-    val f = annotationStore ? MergeAnnotation(annotation.mapTo[Box[AnnotationLike]], annotationSec.mapTo[Box[AnnotationLike]], readOnly, request.user, authedRequestToDBAccess)
-
-    f.mapTo[Box[AnnotationLike]]
+    AnnotationStore.mergeAnnotation(annotation, annotationSec, readOnly, request.user)
   }
 
   def nameAnnotation(annotation: AnnotationLike)(implicit request: AuthenticatedRequest[_]): Fox[String] = {

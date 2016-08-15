@@ -36,7 +36,8 @@ describe "PullQueue", ->
   cube = {
     BUCKET_SIZE_P : 5
     BUCKET_LENGTH : 32 * 32 * 32
-    getBucketByZoomedAddress : sinon.stub()
+    getBucket : sinon.stub()
+    getOrCreateBucket : sinon.stub()
   }
   boundingBox = {
     containsBucket : sinon.stub().returns(true)
@@ -59,7 +60,8 @@ describe "PullQueue", ->
     buckets = [new Bucket(8, [0, 0, 0, 0], null), new Bucket(8, [1, 1, 1, 1], null)]
     for bucket in buckets
       pullQueue.add({bucket: bucket.zoomedAddress, priority : 0})
-      cube.getBucketByZoomedAddress.withArgs(bucket.zoomedAddress).returns(bucket)
+      cube.getBucket.withArgs(bucket.zoomedAddress).returns(bucket)
+      cube.getOrCreateBucket.withArgs(bucket.zoomedAddress).returns(bucket)
 
 
   describe "Successful pulling", ->

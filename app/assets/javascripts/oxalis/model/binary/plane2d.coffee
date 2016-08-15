@@ -275,7 +275,7 @@ class Plane2D
 
       sourceOffset = (sourceOffsets[0] << @DELTA[@U]) + (sourceOffsets[1] << @DELTA[@V]) + (sourceOffsets[2] << @DELTA[@W])
 
-      bucketData = @cube.getBucketByZoomedAddress(bucket).getData()
+      bucketData = @cube.getBucket(bucket).getData()
       mapping    = @cube.currentMapping
 
       @renderToBuffer(
@@ -299,7 +299,7 @@ class Plane2D
 
   generateRenderMap : ([bucket_x, bucket_y, bucket_z, zoomStep]) ->
 
-    return [[bucket_x, bucket_y, bucket_z, zoomStep]] if @cube.getBucketByZoomedAddress([bucket_x, bucket_y, bucket_z, zoomStep]).hasData()
+    return [[bucket_x, bucket_y, bucket_z, zoomStep]] if @cube.getBucket([bucket_x, bucket_y, bucket_z, zoomStep]).hasData()
 
     map = new Array(@MAP_SIZE)
     map[0] = undefined
@@ -318,7 +318,7 @@ class Plane2D
           zoomStep + i
         ]
 
-        map[0] = bucket if @cube.getBucketByZoomedAddress(bucket).hasData()
+        map[0] = bucket if @cube.getBucket(bucket).hasData()
 
     if zoomStep != 0 and @enhanceRenderMap(map, 0, [bucket_x, bucket_y, bucket_z, zoomStep], map[0], @cube.LOOKUP_DEPTH_DOWN)
 
@@ -331,7 +331,7 @@ class Plane2D
 
     enhanced = false
 
-    if @cube.getBucketByZoomedAddress([bucket_x, bucket_y, bucket_z, zoomStep]).hasData()
+    if @cube.getBucket([bucket_x, bucket_y, bucket_z, zoomStep]).hasData()
 
       map[mapIndex] = [bucket_x, bucket_y, bucket_z, zoomStep]
       enhanced = true
@@ -361,38 +361,6 @@ class Plane2D
       enhanced = true
 
     return enhanced
-
-
-  renderVolumeTile : (tile) ->
-
-    bucket = @volumeTexture.topLeftBucket.slice(0)
-    bucket[@U] += tile[0]
-    bucket[@V] += tile[1]
-
-    destOffset = bufferOffsetByTileMacro(@, tile, @cube.BUCKET_SIZE_P)
-    sourceOffset = ((@volumeTexture.layer >> @volumeTexture.zoomStep) & (1 << @cube.BUCKET_SIZE_P) - 1)  << @DELTA[@W]
-
-    bucketData = @cube.getVolumeBucketByZoomedAddress(bucket)
-
-    return unless bucketData?
-
-    @renderToBuffer(
-      {
-        buffer: @volumeTexture.buffer
-        offset: destOffset
-        widthP: @cube.BUCKET_SIZE_P
-        rowDelta: 1 << @TEXTURE_SIZE_P
-      }
-      {
-        buffer: bucketData
-        offset: sourceOffset
-        pixelDelta: 1 << @DELTA[@U]
-        rowDelta: 1 << @DELTA[@V]
-        pixelRepeatP: 0
-        rowRepeatP: 0
-      }
-      null
-    )
 
 
   renderToBuffer : (destination, source) ->

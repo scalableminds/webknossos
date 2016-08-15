@@ -317,7 +317,7 @@ class Input.Mouse
   mouseWheel : (event) =>
 
     event.preventDefault()
-    delta = event.originalEvent.wheelDeltaY
+    delta = -event.originalEvent.deltaY
     if event.shiftKey
       @trigger("scroll", delta, "shift")
     else if event.altKey

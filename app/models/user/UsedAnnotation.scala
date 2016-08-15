@@ -1,10 +1,10 @@
 package models.user
 
 import models.basics.SecuredBaseDAO
-import oxalis.annotation.AnnotationIdentifier
 import reactivemongo.bson.BSONObjectID
 import play.api.libs.json.Json
 import com.scalableminds.util.reactivemongo.DBAccessContext
+import models.annotation.AnnotationIdentifier
 import reactivemongo.play.json.BSONFormats._
 import play.api.libs.concurrent.Execution.Implicits._
 

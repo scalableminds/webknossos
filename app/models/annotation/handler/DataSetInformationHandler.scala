@@ -1,4 +1,4 @@
-package oxalis.annotation.handler
+package models.annotation.handler
 
 import scala.concurrent.Future
 

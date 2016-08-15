@@ -184,14 +184,14 @@ object AnnotationService extends AnnotationContentProviders with BoxImplicits wi
     saveToDB(annotation)
   }
 
-  def merge(readOnly: Boolean, _user: BSONObjectID, team: String, typ: AnnotationType, annotationsLike: AnnotationLike*)(implicit ctx: DBAccessContext): Fox[TemporaryAnnotation] = {
+  def merge(newId: BSONObjectID, readOnly: Boolean, _user: BSONObjectID, team: String, typ: AnnotationType, annotationsLike: AnnotationLike*)(implicit ctx: DBAccessContext): Fox[TemporaryAnnotation] = {
     val restrictions =
       if (readOnly)
         AnnotationRestrictions.readonlyAnnotation()
       else
         AnnotationRestrictions.updateableAnnotation()
 
-    CompoundAnnotation.createFromAnnotations(BSONObjectID.generate.stringify, Some(_user), team, None, annotationsLike.toList, typ, AnnotationState.InProgress, restrictions)
+    CompoundAnnotation.createFromAnnotations(newId.stringify, Some(_user), team, None, annotationsLike.toList, typ, AnnotationState.InProgress, restrictions)
   }
 
   def saveToDB(annotation: Annotation)(implicit ctx: DBAccessContext): Fox[Annotation] = {

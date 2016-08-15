@@ -389,7 +389,7 @@ class ArbitraryController
     ]
     vectorLength = V3.length(vector)
 
-    if Math.abs(vectorLength > 10)
+    if vectorLength > 10
       @setWaypoint()
       @lastNodeMatrix = matrix
 

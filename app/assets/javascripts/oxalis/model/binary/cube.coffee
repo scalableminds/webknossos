@@ -311,8 +311,8 @@ class Cube
 
 
   getVoxelIndex : (voxel, zoomStep = 0) ->
-    voxel /= 1 << zoomStep
-    [x, y, z] = voxel.map((v) -> v & 0b11111)
+
+    [x, y, z] = voxel.map((v) -> (v / 1 << zoomStep) & 0b11111)
     return @BYTE_OFFSET *
             (x + y * (1 << @BUCKET_SIZE_P) + z * (1 << @BUCKET_SIZE_P * 2))
 

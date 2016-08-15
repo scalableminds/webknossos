@@ -10,10 +10,10 @@ import play.api._
 import play.api.libs.concurrent._
 import models.user._
 import models.task._
-import oxalis.annotation.AnnotationStore
 import com.scalableminds.util.mail.Mailer
 import play.api.libs.concurrent.Execution.Implicits._
 import com.typesafe.config.Config
+import models.annotation.AnnotationStore
 import play.airbrake.Airbrake
 import play.api.libs.json.Json
 import play.api.mvc._
@@ -33,9 +33,6 @@ object Global extends GlobalSettings {
   }
 
   def startActors(conf: Config, app: Application) {
-    Akka.system(app).actorOf(
-      RoundRobinPool(10).props(Props[AnnotationStore]),
-      name = "annotationStore")
 
     Akka.system(app).actorOf(
       Props(new Mailer(conf)),

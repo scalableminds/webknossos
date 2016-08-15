@@ -2,15 +2,16 @@ package models.task
 
 import scala.async.Async._
 
-import models.annotation.{AnnotationService, Annotation, AnnotationType, AnnotationDAO}
+import models.annotation.{Annotation, AnnotationDAO, AnnotationService, AnnotationType}
 import com.scalableminds.util.reactivemongo.DBAccessContext
 import models.task.TaskDAO._
 import reactivemongo.bson.BSONObjectID
-
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import play.api.libs.concurrent.Execution.Implicits._
-import models.user.{UserDAO, User, Experience}
+import models.user.{Experience, User, UserDAO}
 import scala.concurrent.Future
+
+import net.liftweb.common.Box
 import play.api.Logger
 import play.api.libs.json.Json
 import reactivemongo.play.json.BSONFormats._
@@ -56,15 +57,17 @@ object TaskService extends TaskAssignmentSimulation with TaskAssignment with Fox
   def removeAllWithTaskType(taskType: TaskType)(implicit ctx: DBAccessContext) = {
     for {
       tasks <- TaskDAO.findAllByTaskType(taskType._id)
-      result <- Fox.combined(tasks.map(task => remove(task._id)))
-    } yield result.forall(identity)
+      resultBox <- Fox.serialSequence(tasks)(task => remove(task._id)).toFox
+      results <- resultBox.toSingleBox("task.single.delete.failed").toFox
+    } yield results.forall(identity)
   }
 
   def removeAllWithProject(project: Project)(implicit ctx: DBAccessContext) = {
     for{
       tasks <- project.tasks
-      result <- Fox.combined(tasks.map(task => remove(task._id)))
-    } yield result.forall(identity)
+      resultBox <- Fox.serialSequence(tasks)(task => remove(task._id)).toFox
+      results <- resultBox.toSingleBox("task.single.delete.failed").toFox
+    } yield results.forall(identity)
   }
 
   def insert(task: Task, insertAssignments: Boolean)(implicit ctx: DBAccessContext) = {

@@ -62,7 +62,7 @@ with I18nSupport
       )
     )
 
-  def bulk2StatusJson(futureResults: List[Fox[String]]) = {
+  def bulk2StatusJson(results: List[Box[String]]) = {
     def singleResult2Status(e: Box[String]) =
       e match {
         case Full(s)                                 =>
@@ -72,12 +72,10 @@ with I18nSupport
         case Failure(msg, _, _)                      =>
           Json.obj("status" -> BAD_REQUEST, jsonError -> msg)
       }
-    Fox.sequence(futureResults).map { results =>
-      val successful = results.count(_.isDefined)
-      val errors = results.exists(_.isEmpty)
-      val items = results.map(singleResult2Status)
-      Json.obj("errors" -> errors, "successful" -> successful, "items" -> items)
-    }
+    val successful = results.count(_.isDefined)
+    val errors = results.exists(_.isEmpty)
+    val items = results.map(singleResult2Status)
+    Json.obj("errors" -> errors, "successful" -> successful, "items" -> items)
   }
 
   def withJsonBodyAs[A](f: A => Fox[Result])(implicit rds: Reads[A], request: Request[JsValue]): Fox[Result] = {

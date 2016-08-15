@@ -16,7 +16,6 @@ import models.task.TaskDAO
 import models.user.time._
 import models.user.{SpeedMeasurementService, UsedAnnotationDAO, User, UserDAO}
 import net.liftweb.common.{Full, _}
-import oxalis.annotation.AnnotationIdentifier
 import oxalis.security.{AuthenticatedRequest, Secured}
 import play.api.Logger
 import play.api.i18n.{Messages, MessagesApi}
@@ -338,7 +337,7 @@ class AnnotationController @Inject()(val messagesApi: MessagesApi) extends Contr
       annotation match {
         case t if t.typ == AnnotationType.Task =>
           await(annotation.muta.cancelTask().futureBox).map { _ =>
-            Ok
+            JsonOk(Messages("task.finished"))
           }
         case _                                 =>
           Full(JsonOk(Messages("annotation.finished")))
@@ -362,7 +361,7 @@ class AnnotationController @Inject()(val messagesApi: MessagesApi) extends Contr
       user <- UserDAO.findOneById(userId) ?~> Messages("user.notFound")
       result <- annotation.muta.transferToUser(user)
     } yield {
-      Ok
+      JsonOk(Messages("annotation.transfered"))
     }
   }
 }

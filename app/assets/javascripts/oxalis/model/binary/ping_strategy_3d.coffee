@@ -69,30 +69,9 @@ class PingStrategy3d.DslSlow extends PingStrategy3d
     4, 4, 2
   )
 
-  pingPolyhedron1 : PolyhedronRasterizer.Master.squareFrustum(
-    3,  3, -0.0
-    3, 3, -3
-  )
-
   ping : (matrix) ->
 
     pullQueue = []
-
-    #-----------
-    matrix1 = M4x4.clone(matrix)
-    @modifyMatrixForPoly matrix1, 1
-
-    polyhedron1 = @pingPolyhedron1.transformAffine(matrix1)
-
-    testAddresses = polyhedron1.collectPointsOnion(matrix1[12], matrix1[13], matrix1[14])
-
-    i = 0
-    while i < testAddresses.length
-      bucket_x = testAddresses[i++]
-      bucket_y = testAddresses[i++]
-      bucket_z = testAddresses[i++]
-
-      pullQueue.push(bucket: [bucket_x, bucket_y, bucket_z, 1], priority: 0)
 
     #-----------
     matrix0 = M4x4.clone(matrix)

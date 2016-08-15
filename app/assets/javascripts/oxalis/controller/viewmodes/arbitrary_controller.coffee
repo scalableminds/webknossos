@@ -11,6 +11,7 @@ ArbitraryPlaneInfo = require("../../geometries/arbitrary_plane_info")
 constants          = require("../../constants")
 {M4x4, V3}         = require("libs/mjs")
 Utils              = require("libs/utils")
+Toast              = require("libs/toast")
 
 
 class ArbitraryController
@@ -113,11 +114,6 @@ class ArbitraryController
 
   initKeyboard : ->
 
-    getVoxelOffset  = (timeFactor) =>
-
-      return @model.user.get("moveValue3d") * timeFactor / app.scaleInfo.baseVoxel / constants.FPS
-
-
     @input.keyboard = new Input.Keyboard(
 
       # KeyboardJS is sensitive to ordering (complex combos first)
@@ -127,14 +123,19 @@ class ArbitraryController
       "k"             : (timeFactor) => @arbitraryView.applyScale  @model.user.get("scaleValue")
 
       #Move
-      "w"             : (timeFactor) => @cam.move [0, getVoxelOffset(timeFactor), 0]
-      "s"             : (timeFactor) => @cam.move [0, -getVoxelOffset(timeFactor), 0]
-      "a"             : (timeFactor) => @cam.move [getVoxelOffset(timeFactor), 0, 0]
-      "d"             : (timeFactor) => @cam.move [-getVoxelOffset(timeFactor), 0, 0]
       "space"         : (timeFactor) =>
-        @cam.move [0, 0, getVoxelOffset(timeFactor)]
-        @moved()
-      "ctrl + space"   : (timeFactor) => @cam.move [0, 0, -getVoxelOffset(timeFactor)]
+        @setRecord(true)
+        @move(timeFactor)
+      "ctrl + space"   : (timeFactor) =>
+        @setRecord(true)
+        @move(-timeFactor)
+
+      "f"         : (timeFactor) =>
+        @setRecord(false)
+        @move(timeFactor)
+      "d"   : (timeFactor) =>
+        @setRecord(false)
+        @move(-timeFactor)
 
       #Rotate at centre
       "shift + left"  : (timeFactor) => @cam.yaw @model.user.get("rotateValue") * timeFactor
@@ -160,44 +161,38 @@ class ArbitraryController
     @input.keyboardNoLoop = new Input.KeyboardNoLoop(
 
       "1" : => @skeletonTracingController.toggleSkeletonVisibility()
-      "2" : => @sceneController.skeleton.toggleInactiveTreeVisibility()
-
-      #Delete active node
-      "delete" : => @model.skeletonTracing.deleteActiveNode()
-      "c" : => @model.skeletonTracing.createNewTree()
 
       #Branches
       "b" : => @pushBranch()
       "j" : => @popBranch()
 
-      #Reset Matrix
-      "r" : => @cam.setRotation([0, 0, 0])
-
       #Recenter active node
-      "y" : => @centerActiveNode()
-
-      #Recording of Waypoints
-      "z" : =>
-        @setRecord(true)
-      "u" : =>
-        @setRecord(false)
+      "s" : => @centerActiveNode()
     )
 
     @input.keyboardOnce = new Input.Keyboard(
 
       #Delete active node and recenter last node
-      "shift + space" : =>
-        @model.skeletonTracing.deleteActiveNode()
-        @centerActiveNode()
-
+      "shift + space" : => @deleteActiveNode()
     , -1)
 
 
   setRecord : (record) ->
 
-    @model.set("flightmodeRecording", record)
-    if record
+    if record != @model.get("flightmodeRecording")
+      @model.set("flightmodeRecording", record)
       @setWaypoint()
+
+
+  getVoxelOffset : (timeFactor) ->
+
+    return @model.user.get("moveValue3d") * timeFactor / app.scaleInfo.baseVoxel / constants.FPS
+
+
+  move : (timeFactor) ->
+
+    @cam.move [0, 0, @getVoxelOffset(timeFactor)]
+    @moved()
 
 
   init : ->
@@ -301,13 +296,18 @@ class ArbitraryController
 
   pushBranch : ->
 
+    @setWaypoint()
     @model.skeletonTracing.pushBranch()
+    Toast.success("Branchpoint set")
 
 
   popBranch : ->
 
     _.defer => @model.skeletonTracing.popBranch().then((id) =>
       @setActiveNode(id, true)
+      if id == 1
+        @cam.yaw(Math.PI)
+        Toast.warning("Reached initial node, view reversed")
     )
 
 
@@ -341,6 +341,19 @@ class ArbitraryController
     @model.skeletonTracing.setActiveNode(nodeId, mergeTree)
     @cam.setPosition(@model.skeletonTracing.getActiveNodePos())
     @cam.setRotation(@model.skeletonTracing.getActiveNodeRotation())
+
+
+  deleteActiveNode : ->
+
+    skeletonTracing = @model.skeletonTracing
+    activeNode = skeletonTracing.getActiveNode()
+    if activeNode.neighbors.length > 1
+      Toast.error("Unable: Attempting to cut skeleton")
+    else
+      _.defer => @model.skeletonTracing.deleteActiveNode().then(
+        =>
+          @centerActiveNode()
+      )
 
 
   getShortestRotation : (curRotation, newRotation) ->

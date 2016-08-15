@@ -13,7 +13,7 @@ class TaskCreateBulkImportView extends Marionette.ItemView
     <div class="col-sm-12">
       <div class="well">
         One line for each task. The values are seperated by ','. Format: <br>
-	dataSet, <a href="/taskTypes">taskTypeId</a>, experienceDomain, minExperience, x, y, z, rotX, rotY, rotZ, priority, instances, team, minX, minY, minZ, maxX, maxY, maxZ, project<br><br>
+	dataSet, <a href="/taskTypes">taskTypeId</a>, experienceDomain, minExperience, x, y, z, rotX, rotY, rotZ, priority, instances, team, minX, minY, minZ, width, height, depth, project<br><br>
 
         <form action="" method="POST" class="form-horizontal" onSubmit="return false;">
           <div class="form-group">
@@ -173,9 +173,9 @@ class TaskCreateBulkImportView extends Marionette.ItemView
     minX = parseInt(words[13])
     minY = parseInt(words[14])
     minZ = parseInt(words[15])
-    maxX = parseInt(words[16])
-    maxY = parseInt(words[17])
-    maxZ = parseInt(words[18])
+    width = parseInt(words[16])
+    height = parseInt(words[17])
+    depth = parseInt(words[18])
 
     projectName = ""
     if words[19]
@@ -197,9 +197,9 @@ class TaskCreateBulkImportView extends Marionette.ItemView
       editRotation : [rotX, rotY, rotZ]
       boundingBox :
         topLeft : [minX, minY, minZ]
-        width : maxX
-        height : maxY
-        depth : maxZ
+        width : width
+        height : height
+        depth : depth
       projectName,
       isForAnonymous : false
     }

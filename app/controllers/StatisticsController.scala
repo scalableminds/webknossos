@@ -78,7 +78,7 @@ class StatisticsController @Inject()(val messagesApi: MessagesApi)
     for {
       handler <- intervalHandler.get(interval) ?~> Messages("statistics.interval.invalid")
       users <- UserDAO.findAll
-      usersWithTimes <- Fox.combined(users.map(user => TimeSpanService.loggedTimeOfUser(user, handler, start, end).map(user -> _)))
+      usersWithTimes <- Fox.serialCombined(users)(user => TimeSpanService.loggedTimeOfUser(user, handler, start, end).map(user -> _))
     } yield {
       val data = usersWithTimes.sortBy(-_._2.map(_._2.toMillis).sum).take(limit)
       val json = data.map {
@@ -116,17 +116,17 @@ trait UserAssignments extends Secured with Dashboard with FoxImplicits { this: C
 
       val futureTaskTypeMap = for {
         futureTasks <- TaskService.simulateTaskAssignment(users)
-        futureTaskTypes <- Fox.sequenceOfFulls(futureTasks.map{
+        futureTaskTypes <- Fox.serialSequence(futureTasks.toList){
           case (user, task) => task.taskType.map(user -> _)
-        }.toList)
+        }.map(_.flatten)
       } yield futureTaskTypes.toMap
 
       Future.traverse(users){user =>
         for {
           annotations <- AnnotationService.openTasksFor(user).getOrElse(Nil)
-          tasks <- Fox.sequenceOfFulls(annotations.map(_.task))
-          projects <- Fox.sequenceOfFulls(tasks.map(_.project))
-          taskTypes <- Fox.sequenceOfFulls(tasks.map(_.taskType))
+          tasks <- Fox.serialSequence(annotations)(_.task).map(_.flatten)
+          projects <- Fox.serialSequence(tasks)(_.project).map(_.flatten)
+          taskTypes <- Fox.serialSequence(tasks)(_.taskType).map(_.flatten)
           taskTypeMap <- futureTaskTypeMap.getOrElse(Map.empty)
           workingTime <- TimeSpanService.totalTimeOfUser(user, start, end).futureBox
         } yield {

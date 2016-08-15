@@ -71,7 +71,7 @@ object SkeletonTracingService extends AnnotationContentService with CommonTracin
     for {
       _ <- SkeletonTracingDAO.insert(tracing)
       trees <- tracingLike.trees
-      - <- Fox.sequence(trees.map(tree => DBTreeService.insert(tracing._id, tree)))
+      - <- Fox.serialSequence(trees)(tree => DBTreeService.insert(tracing._id, tree))
     } yield tracing
   }
 

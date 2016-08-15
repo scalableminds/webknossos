@@ -4,14 +4,7 @@ import com.scalableminds.util.io.NamedFileStream
 import com.scalableminds.util.mvc.BoxImplicits
 import com.scalableminds.util.reactivemongo.DBAccessContext
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
-import oxalis.annotation.AnnotationIdentifier
 import models.user.{UsedAnnotationDAO, User}
-import scala.concurrent.Future
-
-import net.liftweb.common.{Box, Failure}
-import scala.async.Async._
-
-import play.api.i18n.Messages
 import models.task.OpenAssignmentService
 import models.tracing.skeleton.SkeletonTracing
 import play.api.libs.concurrent.Execution.Implicits._

@@ -1,4 +1,4 @@
-package oxalis.annotation.handler
+package models.annotation.handler
 
 import net.liftweb.common.Box
 import oxalis.security.AuthenticatedRequest

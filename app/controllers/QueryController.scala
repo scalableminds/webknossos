@@ -26,7 +26,7 @@ class QueryController  @Inject() (val messagesApi: MessagesApi,  val configurati
     case "task" =>
       for{
         resultObjects <- TaskDAO.executeUserQuery(query, limit = limit)
-        jsResult <- Fox.combined(resultObjects.map(t => Task.transformToJson(t, user).toFox))
+        jsResult <- Fox.serialSequence(resultObjects)(t => Task.transformToJson(t, user))
       } yield JsArray(jsResult)
     case _ =>
       Logger.error("Invalid query type")

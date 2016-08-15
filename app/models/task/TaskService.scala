@@ -88,19 +88,19 @@ object TaskService extends TaskAssignmentSimulation with TaskAssignment with Fox
   }
 
   def getProjectsFor(tasks: List[Task])(implicit ctx: DBAccessContext): Future[List[Project]] =
-    Fox.sequenceOfFulls(tasks.map(_.project)).map(_.distinct)
+    Fox.serialSequence(tasks)(_.project).map(_.flatten).map(_.distinct)
 
   def getAllAvailableTaskCountsAndProjects()(implicit ctx: DBAccessContext): Fox[Map[User, (Int, List[Project])]] = {
     UserDAO.findAllNonAnonymous
     .flatMap { users =>
-      Future.sequence( users.map { user =>
+      Fox.serialSequence(users){ user =>
         async {
           val tasks = await(TaskService.allNextTasksForUser(user).futureBox) openOr List()
           val taskCount = tasks.size
           val projects = await(TaskService.getProjectsFor(tasks))
           user -> (taskCount, projects)
         }
-      })
+      }
     }
     .map(_.toMap[User, (Int, List[Project])])
   }

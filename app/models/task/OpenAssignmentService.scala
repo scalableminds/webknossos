@@ -30,23 +30,27 @@ object OpenAssignmentService extends FoxImplicits{
   def remove(assignment: OpenAssignment)(implicit ctx: DBAccessContext) =
     OpenAssignmentDAO.removeById(assignment._id)
 
-  def insertOneFor(task: Task)(implicit ctx: DBAccessContext) = {
-    OpenAssignmentDAO.insert(OpenAssignment.from(task))
+  def insertOneFor(task: Task, project: Project)(implicit ctx: DBAccessContext) = {
+    OpenAssignmentDAO.insert(OpenAssignment.from(task, project.priority))
   }
 
   def countOpenAssignments(implicit ctx: DBAccessContext) = {
     OpenAssignmentDAO.countOpenAssignments
   }
 
-  def insertInstancesFor(task: Task, remainingInstances: Int)(implicit ctx: DBAccessContext) = {
-    val assignments = List.fill(remainingInstances)(OpenAssignment.from(task))
+  def insertInstancesFor(task: Task, project: Project, remainingInstances: Int)(implicit ctx: DBAccessContext) = {
+    val assignments = List.fill(remainingInstances)(OpenAssignment.from(task, project.priority))
     Fox.serialSequence(assignments)(a => OpenAssignmentDAO.insert(a))
   }
 
-  def updateAllOf(task: Task, remainingInstances: Int)(implicit ctx: DBAccessContext) = {
+  def updateAllOf(task: Task, project: Project, remainingInstances: Int)(implicit ctx: DBAccessContext) = {
     for{
       _ <- removeByTask(task._id)
-      _ <- insertInstancesFor(task, remainingInstances).toFox
+      _ <- insertInstancesFor(task, project, remainingInstances).toFox
     } yield true
+  }
+
+  def updateAllOfProject(name: String, project: Project)(implicit ctx: DBAccessContext) = {
+    OpenAssignmentDAO.updateAllOf(name, project).toFox
   }
 }

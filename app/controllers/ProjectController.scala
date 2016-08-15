@@ -34,6 +34,17 @@ class ProjectController @Inject()(val messagesApi: MessagesApi) extends Controll
       }
   }
 
+  def read(projectName: String) = Authenticated.async {
+    implicit request =>
+      for {
+        project <- ProjectDAO.findOneByName(projectName) ?~> Messages("project.notFound", projectName)
+        _ <- project.isOwnedBy(request.user) ?~> Messages("project.remove.notAllowed")
+        js <- Project.projectPublicWrites(project, request.user)
+      } yield {
+        Ok(Json.toJson(js))
+      }
+  }
+
   def delete(projectName: String) = Authenticated.async {
     implicit request =>
       for {
@@ -60,6 +71,18 @@ class ProjectController @Inject()(val messagesApi: MessagesApi) extends Controll
       }
     }
   }
+
+  def update(projectName: String) = Authenticated.async(parse.json) { implicit request =>
+    withJsonBodyUsing(Project.projectPublicReads) { updateRequest =>
+      for{
+        project <- ProjectDAO.findOneByName(projectName)(GlobalAccessContext)
+        _ <- request.user.adminTeamNames.contains(project.team) ?~> "team.notAllowed"
+        updatedProject <- ProjectService.update(project._id, project, updateRequest)
+        js <- Project.projectPublicWritesWithStatus(updatedProject, request.user)
+      } yield Ok(js)
+    }
+  }
+
 
   def tasksForProject(projectName: String) = Authenticated.async {
     implicit request =>

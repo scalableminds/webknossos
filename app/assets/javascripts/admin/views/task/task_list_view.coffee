@@ -21,7 +21,6 @@ class TaskListView extends Marionette.CompositeView
           <th>DataSet</th>
           <th>Edit position /<br> Bounding Box</th>
           <th>Experience</th>
-          <th>Priority</th>
           <th>Created</th>
           <th>Stats</th>
           <th>Actions</th>
@@ -111,6 +110,6 @@ class TaskListView extends Marionette.CompositeView
 
   filterBySearch : (searchQuery) ->
 
-    @collection.setFilter(["team", "projectName", "id", "dataSet", "priority", "created"], searchQuery)
+    @collection.setFilter(["team", "projectName", "id", "dataSet", "created"], searchQuery)
 
 module.exports = TaskListView

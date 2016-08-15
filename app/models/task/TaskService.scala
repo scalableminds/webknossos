@@ -47,6 +47,10 @@ object TaskService extends TaskAssignmentSimulation with TaskAssignment with Fox
     }
   }
 
+  def handleProjectUpdate(name: String, updated: Project)(implicit ctx: DBAccessContext) = {
+    OpenAssignmentService.updateAllOfProject(name, updated)
+  }
+
   def findAllByTaskType(_taskType: String)(implicit ctx: DBAccessContext) = withExceptionCatcher {
     withValidId(_taskType)(TaskDAO.findAllByTaskType)
   }
@@ -70,10 +74,10 @@ object TaskService extends TaskAssignmentSimulation with TaskAssignment with Fox
     } yield results.forall(identity)
   }
 
-  def insert(task: Task, insertAssignments: Boolean)(implicit ctx: DBAccessContext) = {
+  def insert(task: Task,project: Project, insertAssignments: Boolean)(implicit ctx: DBAccessContext) = {
     def insertAssignmentsIfRequested() =
       if(insertAssignments) {
-        OpenAssignmentService.insertInstancesFor(task, task.instances)
+        OpenAssignmentService.insertInstancesFor(task, project, task.instances)
       } else
         Future.successful(true)
 

@@ -91,8 +91,9 @@ class SkeletonTracingPlaneController extends PlaneController
 
   onClick : (position, shiftPressed, altPressed, plane) =>
 
-    unless shiftPressed
+    unless shiftPressed # do nothing
       return
+
     scaleFactor = @planeView.scaleFactor
     camera      = @planeView.getCameras()[plane]
     # vector with direction from camera position to click position

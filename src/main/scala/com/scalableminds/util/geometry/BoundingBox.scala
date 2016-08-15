@@ -36,6 +36,9 @@ case class BoundingBox(topLeft: Point3D, width: Int, height: Int, depth: Int) {
 
   def center: Point3D =
     topLeft.move(bottomRight).scale(0.5f)
+
+  def scale(s: Float) =
+    BoundingBox(topLeft.scale(s), (width * s).toInt, (height * s).toInt, (depth * s).toInt)
 }
 
 object BoundingBox {

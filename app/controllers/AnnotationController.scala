@@ -5,7 +5,6 @@ import javax.inject.Inject
 import scala.async.Async._
 import scala.concurrent._
 import scala.concurrent.duration._
-
 import akka.util.Timeout
 import com.scalableminds.util.mvc.JsonResult
 import com.scalableminds.util.reactivemongo.{DBAccessContext, GlobalAccessContext}
@@ -15,7 +14,7 @@ import models.annotation.{Annotation, _}
 import models.binary.DataSetDAO
 import models.task.TaskDAO
 import models.user.time._
-import models.user.{UsedAnnotationDAO, User, UserDAO}
+import models.user.{SpeedMeasurementService, UsedAnnotationDAO, User, UserDAO}
 import net.liftweb.common.{Full, _}
 import oxalis.security.{AuthenticatedRequest, Secured}
 import play.api.Logger
@@ -258,7 +257,8 @@ class AnnotationController @Inject()(val messagesApi: MessagesApi) extends Contr
       annotation <- AnnotationDAO.findOneById(id) ?~> Messages("annotation.notFound")
       (updated, message) <- annotation.muta.finishAnnotation(user)
     } yield {
-      TimeSpanService.logUserInteraction(user, Some(annotation))         // log time on a tracings end
+      TimeSpanService.logUserInteraction(user, Some(annotation))// log time on a tracings end
+      SpeedMeasurementService.startSpeedMeasurement(annotation)
       (updated, message)
     }
   }
@@ -294,6 +294,7 @@ class AnnotationController @Inject()(val messagesApi: MessagesApi) extends Contr
     } yield {
       finished match {
         case Full((_, message)) =>
+          SpeedMeasurementService.startSpeedMeasurement(annotation)
           Redirect(redirectTarget).flashing("success" -> message)
         case Failure(message, _, _) =>
           Redirect(redirectTarget).flashing("error" -> message)

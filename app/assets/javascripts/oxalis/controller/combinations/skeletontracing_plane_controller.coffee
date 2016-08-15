@@ -176,7 +176,8 @@ class SkeletonTracingPlaneController extends PlaneController
       @activeViewport,
       @model.flycam.getIntegerZoomStep(),
       if datasetConfig.get("fourBit") then 4 else 8,
-      datasetConfig.get("interpolation")
+      datasetConfig.get("interpolation"),
+      @model.user.get("moveValue")
     )
 
     if centered

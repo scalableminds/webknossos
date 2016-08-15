@@ -353,7 +353,6 @@ class ArbitraryController
       _.defer => @model.skeletonTracing.deleteActiveNode().then(
         =>
           @centerActiveNode()
-        -> #NOOP
       )
 
 

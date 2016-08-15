@@ -62,7 +62,6 @@ class MinimalSkeletonTracingArbitraryController extends ArbitraryController
         _.defer => @model.skeletonTracing.deleteActiveNode().then(
           =>
             @centerActiveNode()
-          -> #NOOP
         )
 
     , -1)

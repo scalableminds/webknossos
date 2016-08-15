@@ -63,10 +63,7 @@ class SkeletonTracingPlaneController extends PlaneController
 
       #Delete active node
       "delete" : =>
-        _.defer => @model.skeletonTracing.deleteActiveNode().then(
-          -> #NOOP
-          -> #NOOP
-        )
+        _.defer => @model.skeletonTracing.deleteActiveNode()
       "c" : => @model.skeletonTracing.createNewTree()
 
       #Branches

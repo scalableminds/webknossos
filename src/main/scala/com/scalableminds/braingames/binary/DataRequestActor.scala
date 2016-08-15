@@ -69,7 +69,7 @@ class DataRequester(
   }
 
   def loadFromLayer(loadBlock: LoadBlock, useCache: Boolean): Fox[Array[Byte]] = {
-    if (loadBlock.dataLayerSection.doesContainBlock(loadBlock.block, loadBlock.dataSource.blockLength)) {
+    if (loadBlock.dataLayerSection.doesContainBlock(loadBlock.block, loadBlock.dataSource.blockLength, loadBlock.resolution)) {
       def loadFromStore: Fox[Array[Byte]] = Future {
         blocking {
           val bucket = dataStore.load(loadBlock)
@@ -264,7 +264,7 @@ class DataRequester(
       }
     }
 
-    if (saveBlock.dataLayerSection.doesContainBlock(saveBlock.block, saveBlock.dataSource.blockLength)) {
+    if (saveBlock.dataLayerSection.doesContainBlock(saveBlock.block, saveBlock.dataSource.blockLength, saveBlock.resolution)) {
       saveToStore
     } else {
       Fox.empty

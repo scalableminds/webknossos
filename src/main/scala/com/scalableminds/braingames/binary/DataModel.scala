@@ -13,14 +13,15 @@ import scala.reflect.ClassTag
 
 abstract class DataModel {
 
-  protected def rotateAndMove(
+  protected def simpleMove(
     moveVector: (Double, Double, Double),
     coordinates: Array[Vector3D]): Array[Vector3D] = {
+
     def ff(f: (Double, Double, Double, Int) => Array[Vector3D]): Array[Vector3D] = {
       coordinates.map(c => f(c.x, c.y, c.z, 0)(0))
     }
 
-    simpleMove(moveVector, ff)((x, y, z, idx) => Array(Vector3D(x, y, z)))
+    simpleMove[Vector3D](moveVector, ff)((x, y, z, idx) => Array(Vector3D(x, y, z)))
   }
 
   @inline
@@ -57,7 +58,7 @@ case class Cuboid(
     Vector3D(-xh, -yh, -zh)
   }
 
-  val corners = rotateAndMove(moveVector, Array(
+  val corners = simpleMove(moveVector, Array(
     topLeft,
     topLeft.dx(width - 1),
     topLeft.dy(height - 1),

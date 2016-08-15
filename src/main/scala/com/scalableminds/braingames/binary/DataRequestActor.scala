@@ -40,9 +40,9 @@ class LayerLocker extends FoxImplicits {
     }
   }
 
-  def withLockFor[A](dataSource: DataSource, layer: DataLayer)(f: => A): A = {
+  def withLockFor[A](dataSource: DataSource, layer: DataLayer)(f: () => A): A = {
     val lockObject = getLockObject(dataSource, layer)
-    lockObject.synchronized(f)
+    lockObject.synchronized(f())
   }
 }
 
@@ -59,7 +59,7 @@ class DataRequester(
 
   implicit val dataBlockLoadTimeout = conf.getInt("loadTimeout").seconds
 
-  implicit val dataBlockSaveTimeout = conf.getInt("loadTimeout").seconds
+  implicit val dataBlockSaveTimeout = conf.getInt("saveTimeout").seconds
 
   lazy val dataStore: DataStore = new FileDataStore
 
@@ -210,7 +210,7 @@ class DataRequester(
             new DataBlockCutter(block, request, layer, pointOffset).cutOutRequestedData
         }
       case request: DataWriteRequest =>
-        Future(blocking(layerLocker.withLockFor(dataSource, layer)(synchronousSave(request,
+        Future(blocking(layerLocker.withLockFor(dataSource, layer)(() => synchronousSave(request,
                                                                                    layer,
                                                                                    minBlock,
                                                                                    maxBlock,
@@ -240,7 +240,8 @@ class DataRequester(
           saveBlocks(minBlock, maxBlock, request, layer, blocks).map(_ => Array.empty[Byte])
       }.futureBox
 
-      Await.result(f, dataBlockSaveTimeout * 3)
+      // We will never wait here for ever, since all parts of the feature are upper bounded by Await.result on their own
+      Await.result(f, Duration.Inf)
     } catch {
       case e: Exception =>
         logger.error(s"Saving block failed for. Error: $e")

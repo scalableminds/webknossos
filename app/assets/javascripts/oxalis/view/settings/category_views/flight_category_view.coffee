@@ -48,7 +48,7 @@ class FlightCategoryView extends CategoryView
             name : "moveValue3d"
             displayName : "Move Value (nm/s)"
             min : constants.MIN_MOVE_VALUE
-            max : constants.MAX_MOVE_V_SLIDER
+            max : constants.MAX_MOVE_VALUE_SLIDER
             step : 10
         )
     ]

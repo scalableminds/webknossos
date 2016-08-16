@@ -400,7 +400,7 @@ class PlaneController
     @model.user.set("scale", scale)
 
 
-  render3dCell : (id) ->
+  render3dCell : (id, zoomStep = 0, removeShapes = true) ->
     unless id > 0
         return
     unless @model.user.get("isosurfaceDisplay")
@@ -408,7 +408,7 @@ class PlaneController
     else
       bb = @model.flycam.getViewportBoundingBox()
       res = @model.user.get("isosurfaceResolution")
-      @sceneController.showShapes(@scaleIsosurfaceBB(bb), res, id)
+      @sceneController.showShapes(@scaleIsosurfaceBB(bb), res, id, zoomStep, removeShapes)
 
 
   scaleIsosurfaceBB : (bb) ->

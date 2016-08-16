@@ -105,6 +105,6 @@ case class Cuboid(
   }
 
   override def withContainingCoordinates[T](extendArrayBy: Int = 1)(f: (Double, Double, Double, Int) => Array[T])(implicit c: ClassTag[T]): Array[T] = {
-    simpleMove(moveVector, looper[T](extendArrayBy, c))(f)
+    simpleMove[T](moveVector, looper[T](extendArrayBy, c))(f)
   }
 }

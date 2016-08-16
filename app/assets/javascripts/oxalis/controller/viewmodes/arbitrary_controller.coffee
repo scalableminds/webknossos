@@ -191,6 +191,7 @@ class ArbitraryController
 
 
   createBranchMarker : (pos) ->
+    activeNode = @model.skeletonTracing.getActiveNode()
     f = @cam.getZoomStep() / (@arbitraryView.width / @WIDTH)
     @cam.move [-(pos.x - @arbitraryView.width / 2) * f, -(pos.y - @arbitraryView.width / 2) * f, 0]
     position  = @cam.getPosition()
@@ -199,13 +200,12 @@ class ArbitraryController
     @addNode(position, rotation)
     @model.skeletonTracing.setActiveTree(1)
     @cam.move [(pos.x - @arbitraryView.width / 2) * f, (pos.y - @arbitraryView.width / 2) * f, 0]
-
+    @setActiveNode(activeNode.id, true)
 
   nextNode : (nextOne) ->
 
     activeNode = @model.skeletonTracing.getActiveNode()
-    if false #(nextOne && activeNode == @model.skeletonTracing.nodes.length) ||
-      #(!nextOne && activeNode == 1)
+    if (nextOne && activeNode.id == @model.skeletonTracing.getActiveTree().nodes.length) || (!nextOne && activeNode.id == 1)
       return
     @setActiveNode((activeNode.id + 2 * nextOne - 1), true) #implicit cast from boolean to int
 

@@ -2,6 +2,7 @@ _              = require("lodash")
 Marionette     = require("backbone.marionette")
 Toast          = require("libs/toast")
 app            = require("app")
+FormSyphon     = require("form-syphon")
 SelectionView  = require("admin/views/selection_view")
 UserCollection = require("admin/models/user/user_collection")
 TeamCollection = require("admin/models/team/team_collection")
@@ -14,19 +15,25 @@ class CreateProjectModalView extends ModalView
   bodyTemplate : _.template("""
     <form class="form-horizontal">
       <div class="form-group">
-        <label class="col-sm-2 for="projectName">Project Name</label>
-        <div class="col-sm-10">
-          <input type="text" class="form-control project-name" name="projectName" value="" required autofocus>
-        </div>
-      </div>
-      <div class="form-group">
         <label class="col-sm-2" for="team">Team</label>
         <div class="col-sm-10 team">
         </div>
       </div>
       <div class="form-group">
+        <label class="col-sm-2 for="name">Project Name</label>
+        <div class="col-sm-10">
+          <input type="text" class="form-control project-name" name="name" value="" required autofocus>
+        </div>
+      </div>
+      <div class="form-group">
         <label class="col-sm-2 for="owner">Owner</label>
         <div class="col-sm-10 owner">
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="col-sm-2" for="priority">Priority</label>
+        <div class="col-sm-10">
+          <input type="number" class="form-control" name="priority" value="100" required autofocus>
         </div>
       </div>
     </form>
@@ -48,8 +55,6 @@ class CreateProjectModalView extends ModalView
 
   ui :
     "name" : ".project-name"
-    "team" : ".team"
-    "owner" : ".owner"
     "form" : "form"
 
 
@@ -61,7 +66,9 @@ class CreateProjectModalView extends ModalView
       collection : new UserCollection()
       childViewOptions :
         defaultItem : {email : app.currentUser.email}
-        modelValue : -> return "#{@model.get("firstName")} #{@model.get("lastName")} (#{@model.get("email")})"
+        modelValue : -> return @model.id
+        modelLabel : -> return "#{@model.get("firstName")} #{@model.get("lastName")} (#{@model.get("email")})"
+      name : "owner"
       data : "isAdmin=true"
     )
     @teamSelectionView = new SelectionView(
@@ -69,6 +76,7 @@ class CreateProjectModalView extends ModalView
       childViewOptions :
         modelValue: -> return "#{@model.get("name")}"
       data : "amIAnAdmin=true"
+      name : "team"
     )
 
 
@@ -84,11 +92,9 @@ class CreateProjectModalView extends ModalView
 
     if @ui.form[0].checkValidity()
 
-      project = new ProjectModel(
-        owner : @ui.owner.find("select :selected").attr("id")
-        name : @ui.name.val()
-        team : @ui.team.find("select :selected").val()
-      )
+      formValues = FormSyphon.serialize(@ui.form)
+      project = new ProjectModel(formValues)
+      project._isNew = true
 
       @projectCollection.create(project,
         wait : true

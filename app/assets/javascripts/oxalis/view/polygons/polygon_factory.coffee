@@ -96,14 +96,14 @@ class PolygonFactory
   getCubeIndices : ([x, y, z]) ->
 
     labels = [
-      @modelCube.getDataValue([x, y, z]                                                ,zoomStep),
-      @modelCube.getDataValue([x + @voxelsToSkip, y, z]                                ,zoomStep),
-      @modelCube.getDataValue([x + @voxelsToSkip, y, z + @voxelsToSkip]                ,zoomStep),
-      @modelCube.getDataValue([x, y, z + @voxelsToSkip]                                ,zoomStep),
-      @modelCube.getDataValue([x, y + @voxelsToSkip, z]                                ,zoomStep),
-      @modelCube.getDataValue([x + @voxelsToSkip, y + @voxelsToSkip, z]                ,zoomStep),
-      @modelCube.getDataValue([x + @voxelsToSkip, y + @voxelsToSkip, z + @voxelsToSkip],zoomStep),
-      @modelCube.getDataValue([x, y + @voxelsToSkip, z + @voxelsToSkip]                ,zoomStep) ]
+      @modelCube.getDataValue([x, y, z]                                                ,@zoomStep),
+      @modelCube.getDataValue([x + @voxelsToSkip, y, z]                                ,@zoomStep),
+      @modelCube.getDataValue([x + @voxelsToSkip, y, z + @voxelsToSkip]                ,@zoomStep),
+      @modelCube.getDataValue([x, y, z + @voxelsToSkip]                                ,@zoomStep),
+      @modelCube.getDataValue([x, y + @voxelsToSkip, z]                                ,@zoomStep),
+      @modelCube.getDataValue([x + @voxelsToSkip, y + @voxelsToSkip, z]                ,@zoomStep),
+      @modelCube.getDataValue([x + @voxelsToSkip, y + @voxelsToSkip, z + @voxelsToSkip],@zoomStep),
+      @modelCube.getDataValue([x, y + @voxelsToSkip, z + @voxelsToSkip]                ,@zoomStep) ]
 
     cellIds = []
     for label in labels

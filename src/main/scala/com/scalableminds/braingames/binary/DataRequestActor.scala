@@ -314,59 +314,6 @@ class DataRequester(
                        block)
     }
   }
-
-  private def ensureCopyInLayer(loadBlock: LoadBlock, data: Array[Byte]) = {
-    withCache(loadBlock) {
-      Future.successful(Full(data.clone))
-    }
-  }
-
-  private def ensureCopy(dataSource: DataSource,
-                 layer: DataLayer,
-                 requestedSection: Option[String],
-                 resolution: Int,
-                 block: Point3D,
-                 data: Array[Byte]) = {
-
-    def ensureCopyInSections(sections: Stream[DataLayerSection]): Future[Array[Byte]] = sections match {
-      case section #:: tail =>
-        val loadBlock = LoadBlock(dataSource, layer, section, resolution, block)
-        ensureCopyInLayer(loadBlock, data).futureBox.flatMap {
-          case Full(byteArray) =>
-            Future.successful(byteArray)
-          case _ =>
-            ensureCopyInSections(tail)
-        }
-
-      case _ =>
-        logger.error("Could not ensure userData to be in cache.")
-        Future.successful(Array[Byte]())
-    }
-
-    val sections = Stream(layer.sections.filter {
-      section =>
-        requestedSection.forall(_ == section.sectionId)
-    }: _*)
-
-    ensureCopyInSections(sections)
-  }
-
-  private def ensureCopyInCache(minBlock: Point3D,
-                        maxBlock: Point3D,
-                        dataRequest: DataRequest,
-                        layer: DataLayer,
-                        blocks: Vector[Array[Byte]]): Future[Vector[Array[Byte]]] = {
-    Fox.serialSequence((minBlock to maxBlock, blocks).zipped.toList) {
-      case (p, block) =>
-        ensureCopy(
-                    dataRequest.dataSource,
-                    layer,
-                    dataRequest.dataSection,
-                    dataRequest.resolution,
-                    p,
-                    block)
-    }.map(_.toVector)
-  }
 }
 
 class DataBlockCutter(block: BlockedArray3D[Byte], dataRequest: DataReadRequest, layer: DataLayer, offset: Point3D) {

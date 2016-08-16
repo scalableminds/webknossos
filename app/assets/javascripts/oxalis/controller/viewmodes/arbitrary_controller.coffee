@@ -108,6 +108,9 @@ class ArbitraryController
         else if @mode == constants.MODE_ARBITRARY_PLANE
           f = @cam.getZoomStep() / (@arbitraryView.width / @WIDTH)
           @cam.move [delta.x * f, delta.y * f, 0]
+      rightClick : (pos, plane, event) =>
+        @createBranchMarker(pos)
+
       scroll : @scroll
     )
 
@@ -168,6 +171,9 @@ class ArbitraryController
 
       #Recenter active node
       "s" : => @centerActiveNode()
+
+      "]" : => @nextNode(true)
+      "[" : => @nextNode(false)
     )
 
     @input.keyboardOnce = new Input.Keyboard(
@@ -182,6 +188,26 @@ class ArbitraryController
     if record != @model.get("flightmodeRecording")
       @model.set("flightmodeRecording", record)
       @setWaypoint()
+
+
+  createBranchMarker : (pos) ->
+    f = @cam.getZoomStep() / (@arbitraryView.width / @WIDTH)
+    @cam.move [-(pos.x - @arbitraryView.width / 2) * f, -(pos.y - @arbitraryView.width / 2) * f, 0]
+    position  = @cam.getPosition()
+    rotation = @cam.getRotation()
+    @model.skeletonTracing.createNewTree()
+    @addNode(position, rotation)
+    @model.skeletonTracing.setActiveTree(1)
+    @cam.move [(pos.x - @arbitraryView.width / 2) * f, (pos.y - @arbitraryView.width / 2) * f, 0]
+
+
+  nextNode : (nextOne) ->
+
+    activeNode = @model.skeletonTracing.getActiveNode()
+    if false #(nextOne && activeNode == @model.skeletonTracing.nodes.length) ||
+      #(!nextOne && activeNode == 1)
+      return
+    @setActiveNode((activeNode.id + 2 * nextOne - 1), true) #implicit cast from boolean to int
 
 
   getVoxelOffset : (timeFactor) ->

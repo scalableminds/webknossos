@@ -39,6 +39,7 @@ class Binary
 
     @cube = new Cube(@upperBoundary, maxZoomStep + 1, @layer.bitDepth)
     @boundingBox = new BoundingBox(@model.boundingBox, @cube)
+    @cube.setBoundingBox(@boundingBox)
 
     updatePipeline = new Pipeline([@tracing.version])
 

@@ -84,6 +84,9 @@ class Cube
       ]
 
 
+  setBoundingBox : (@boundingBox) ->
+
+
   initializeWithQueues : (@pullQueue, @pushQueue) ->
     # Due to cyclic references, this method has to be called before the cube is
     # used with the instantiated queues
@@ -155,7 +158,8 @@ class Cube
 
     return x >= 0 and x < boundary[0] and
            y >= 0 and y < boundary[1] and
-           z >= 0 and z < boundary[2]
+           z >= 0 and z < boundary[2] and
+           @boundingBox.containsBucket([x, y, z, zoomStep])
 
 
   getBucketIndex : ([x, y, z, zoomStep]) ->

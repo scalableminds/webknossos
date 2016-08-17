@@ -26,14 +26,14 @@ class Plane2D
   TEXTURE_SIZE_P : 0
   BUCKETS_PER_ROW : 0
   MAP_SIZE : 0
-  RECURSION_PLACEHOLDER : {}
+  RECURSION_PLACEHOLDER : {recursionPlaceholder: true}
   DELTA : [0, 5, 10]
   U : 0
   V : 0
   W : 0
 
   NOT_LOADED_BUCKET_INTENSITY : 100
-  NOT_LOADED_BUCKET_PLACEHOLDER : {}
+  NOT_LOADED_BUCKET_PLACEHOLDER : {notLoadedBucketPlaceholder: true}
 
   cube : null
   queue : null
@@ -41,7 +41,7 @@ class Plane2D
   dataTexture : null
 
 
-  constructor : (index, @cube, @queue, @TEXTURE_SIZE_P, @DATA_BIT_DEPTH,
+  constructor : (@index, @cube, @queue, @TEXTURE_SIZE_P, @DATA_BIT_DEPTH,
                  @TEXTURE_BIT_DEPTH, @MAPPED_DATA_BIT_DEPTH, isSegmentation) ->
 
     _.extend(this, Backbone.Events)
@@ -60,7 +60,7 @@ class Plane2D
     for i in [0..@cube.LOOKUP_DEPTH_DOWN]
       @MAP_SIZE += 1 << (i << 1)
 
-    [@U, @V, @W] = Dimensions.getIndices(index)
+    [@U, @V, @W] = Dimensions.getIndices(@index)
 
     @dataTexture = { renderTile: @renderDataTile }
 
@@ -252,6 +252,7 @@ class Plane2D
     bucket[@V] += tile[1]
 
     map = @generateRenderMap(bucket)
+
     @renderSubTile(map, 0, tile, @dataTexture.zoomStep)
 
 
@@ -267,10 +268,11 @@ class Plane2D
 
     else if map[mapIndex] == @NOT_LOADED_BUCKET_PLACEHOLDER
 
+      tileSizeP = @cube.BUCKET_SIZE_P - (@dataTexture.zoomStep - tileZoomStep)
       @renderToBuffer(
         {
           buffer: @dataTexture.buffer
-          offset: bufferOffsetByTileMacro(@, tile, @cube.BUCKET_SIZE_P)
+          offset: bufferOffsetByTileMacro(@, tile, tileSizeP)
           widthP: @cube.BUCKET_SIZE_P
           rowDelta: 1 << @TEXTURE_SIZE_P
         }

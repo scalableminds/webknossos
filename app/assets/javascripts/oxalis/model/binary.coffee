@@ -60,7 +60,8 @@ class Binary
 
     @planes = []
     for planeId in constants.ALL_PLANES
-      @planes.push( new Plane2D(planeId, @cube, @pullQueue, @TEXTURE_SIZE_P, @layer.bitDepth, @targetBitDepth, 32) )
+      @planes.push( new Plane2D(planeId, @cube, @pullQueue, @TEXTURE_SIZE_P, @layer.bitDepth, @targetBitDepth,
+                                32, @category == "segmentation") )
 
     @pullQueue.setFourBit(@model.get("datasetConfiguration").get("fourBit"))
     @listenTo(@model.get("datasetConfiguration"), "change:fourBit" , (model, fourBit) -> @pullQueue.setFourBit(fourBit) )

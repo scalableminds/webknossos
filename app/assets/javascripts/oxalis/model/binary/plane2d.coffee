@@ -41,13 +41,16 @@ class Plane2D
   dataTexture : null
 
 
-  constructor : (index, @cube, @queue, @TEXTURE_SIZE_P, @DATA_BIT_DEPTH, @TEXTURE_BIT_DEPTH, @MAPPED_DATA_BIT_DEPTH) ->
+  constructor : (index, @cube, @queue, @TEXTURE_SIZE_P, @DATA_BIT_DEPTH,
+                 @TEXTURE_BIT_DEPTH, @MAPPED_DATA_BIT_DEPTH, isSegmentation) ->
 
     _.extend(this, Backbone.Events)
 
     @BUCKETS_PER_ROW = 1 << (@TEXTURE_SIZE_P - @cube.BUCKET_SIZE_P)
     @TEXTURE_SIZE = (1 << (@TEXTURE_SIZE_P << 1)) * (@TEXTURE_BIT_DEPTH >> 3)
 
+    if isSegmentation
+      @NOT_LOADED_BUCKET_INTENSITY = 0
     @NOT_LOADED_BUCKET_DATA = new Uint8Array(@cube.BUCKET_LENGTH)
     for i in [0...@NOT_LOADED_BUCKET_DATA.length]
       @NOT_LOADED_BUCKET_DATA[i] = @NOT_LOADED_BUCKET_INTENSITY

@@ -7,9 +7,13 @@ class BoundingBox
 
     @BUCKET_SIZE_P = @cube.BUCKET_SIZE_P
     @BYTE_OFFSET   = @cube.BYTE_OFFSET
+    @min           = [0, 0, 0]
+    @max           = @cube.upperBoundary.slice()
 
     if @boundingBox?
-      { @min, @max } = @boundingBox
+      for i in [0..2]
+        @min[i] = Math.max(@min[i], @boundingBox.min[i])
+        @max[i] = Math.min(@max[i], @boundingBox.max[i])
 
 
   getBoxForZoomStep : ( zoomStep ) ->
@@ -22,8 +26,6 @@ class BoundingBox
 
   containsBucket : ( [x, y, z, zoomStep] ) ->
 
-    return true unless @boundingBox?
-
     { min, max } = @getBoxForZoomStep zoomStep
 
     return (
@@ -34,8 +36,6 @@ class BoundingBox
 
 
   containsFullBucket : ( [x, y, z, zoomStep] ) ->
-
-    return true unless @boundingBox?
 
     { min, max } = @getBoxForZoomStep zoomStep
 

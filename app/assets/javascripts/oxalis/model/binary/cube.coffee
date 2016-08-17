@@ -4,6 +4,7 @@ ErrorHandling = require("../../../libs/error_handling")
 {Bucket, NullBucket} = require("./bucket")
 ArbitraryCubeAdapter = require("./arbitrary_cube_adapter")
 TemporalBucketManager = require("./temporal_bucket_manager")
+BoundingBox = require("./bounding_box")
 
 class Cube
 
@@ -44,7 +45,7 @@ class Cube
   # It is then removed from the cube.
 
 
-  constructor : (@upperBoundary, @ZOOM_STEP_COUNT, @BIT_DEPTH) ->
+  constructor : (globalBoundingBox, @upperBoundary, @ZOOM_STEP_COUNT, @BIT_DEPTH) ->
 
     _.extend(this, Backbone.Events)
 
@@ -83,8 +84,7 @@ class Cube
         (cubeBoundary[2] + 1) >> 1
       ]
 
-
-  setBoundingBox : (@boundingBox) ->
+    @boundingBox = new BoundingBox(globalBoundingBox, this)
 
 
   initializeWithQueues : (@pullQueue, @pushQueue) ->
@@ -92,6 +92,14 @@ class Cube
     # used with the instantiated queues
 
     @temporalBucketManager = new TemporalBucketManager(@pullQueue, @pushQueue)
+
+
+  getNullBucket : (bucket) ->
+
+    if @boundingBox.containsBucket(bucket)
+      return @NULL_BUCKET
+    else
+      return @NULL_BUCKET_OUT_OF_BB
 
 
   setMapping : (@mapping) ->
@@ -154,13 +162,7 @@ class Cube
       }
     )
 
-    boundary = @cubes[zoomStep].boundary
-
-    bbContainsBucket = if @boundingBox? then @boundingBox.containsBucket([x, y, z, zoomStep]) else true
-    return x >= 0 and x < boundary[0] and
-           y >= 0 and y < boundary[1] and
-           z >= 0 and z < boundary[2] and
-           bbContainsBucket
+    return @boundingBox.containsBucket([x, y, z, zoomStep])
 
 
   getBucketIndex : ([x, y, z, zoomStep]) ->
@@ -177,7 +179,7 @@ class Cube
   getOrCreateBucket : (address) ->
 
     unless @isWithinBounds(address)
-      return @NULL_BUCKET_OUT_OF_BB
+      return @getNullBucket(address)
 
     bucket = @getBucket(address)
     if bucket.isNullBucket
@@ -190,7 +192,7 @@ class Cube
   getBucket : (address) ->
 
     unless @isWithinBounds(address)
-      return @NULL_BUCKET_OUT_OF_BB
+      return @getNullBucket(address)
 
     bucketIndex = @getBucketIndex(address)
     cube = @cubes[address[3]].data
@@ -198,7 +200,7 @@ class Cube
     if cube[bucketIndex]?
       return cube[bucketIndex]
 
-    return @NULL_BUCKET
+    return @getNullBucket(address)
 
 
   createBucket : (address) ->

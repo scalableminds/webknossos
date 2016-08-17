@@ -37,15 +37,13 @@ class Binary
     @lowerBoundary = @layer.lowerBoundary = topLeft
     @upperBoundary = @layer.upperBoundary = [ topLeft[0] + width, topLeft[1] + height, topLeft[2] + depth ]
 
-    @cube = new Cube(@upperBoundary, maxZoomStep + 1, @layer.bitDepth)
-    @boundingBox = new BoundingBox(@model.boundingBox, @cube)
-    @cube.setBoundingBox(@boundingBox)
+    @cube = new Cube(@model.boundingBox, @upperBoundary, maxZoomStep + 1, @layer.bitDepth)
 
     updatePipeline = new Pipeline([@tracing.version])
 
     datasetName = @model.get("dataset").get("name")
     datastoreInfo = @model.get("dataset").get("dataStore")
-    @pullQueue = new PullQueue(datasetName, @cube, @layer, @boundingBox, @connectionInfo, datastoreInfo)
+    @pullQueue = new PullQueue(datasetName, @cube, @layer, @connectionInfo, datastoreInfo)
     @pushQueue = new PushQueue(datasetName, @cube, @layer, @tracing.id, updatePipeline)
     @cube.initializeWithQueues(@pullQueue, @pushQueue)
     @mappings = new Mappings(datasetName, @layer)

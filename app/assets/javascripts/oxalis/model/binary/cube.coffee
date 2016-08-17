@@ -156,10 +156,11 @@ class Cube
 
     boundary = @cubes[zoomStep].boundary
 
+    bbContainsBucket = if @boundingBox? then @boundingBox.containsBucket([x, y, z, zoomStep]) else true
     return x >= 0 and x < boundary[0] and
            y >= 0 and y < boundary[1] and
            z >= 0 and z < boundary[2] and
-           @boundingBox.containsBucket([x, y, z, zoomStep])
+           bbContainsBucket
 
 
   getBucketIndex : ([x, y, z, zoomStep]) ->

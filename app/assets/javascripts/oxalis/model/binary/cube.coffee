@@ -48,7 +48,8 @@ class Cube
 
     _.extend(this, Backbone.Events)
 
-    @NULL_BUCKET = new NullBucket()
+    @NULL_BUCKET_OUT_OF_BB = new NullBucket(NullBucket::TYPE_OUT_OF_BB)
+    @NULL_BUCKET = new NullBucket(NullBucket::TYPE_OTHER)
 
     @LOOKUP_DEPTH_UP = @ZOOM_STEP_COUNT - 1
     @MAX_ZOOM_STEP   = @ZOOM_STEP_COUNT - 1
@@ -171,7 +172,7 @@ class Cube
   getOrCreateBucket : (address) ->
 
     unless @isWithinBounds(address)
-      return @NULL_BUCKET
+      return @NULL_BUCKET_OUT_OF_BB
 
     bucket = @getBucket(address)
     if bucket.isNullBucket
@@ -184,7 +185,7 @@ class Cube
   getBucket : (address) ->
 
     unless @isWithinBounds(address)
-      return @NULL_BUCKET
+      return @NULL_BUCKET_OUT_OF_BB
 
     bucketIndex = @getBucketIndex(address)
     cube = @cubes[address[3]].data

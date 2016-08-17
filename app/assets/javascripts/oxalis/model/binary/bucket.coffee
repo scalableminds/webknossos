@@ -135,9 +135,14 @@ class NullBucket
   # Bucket's methods.
 
 
-  constructor : ->
+  TYPE_OUT_OF_BB : 1
+  TYPE_OTHER : 2
+
+
+  constructor : (type) ->
 
     @isNullBucket = true
+    @isOutOfBoundingBox = type == @TYPE_OUT_OF_BB
 
 
   hasData : -> return false

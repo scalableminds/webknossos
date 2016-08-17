@@ -32,6 +32,9 @@ class Plane2D
   V : 0
   W : 0
 
+  NOT_LOADED_BUCKET_INTENSITY : 100
+  NOT_LOADED_BUCKET_PLACEHOLDER : [-1, -1, -1, 0]
+
   cube : null
   queue : null
 
@@ -44,6 +47,10 @@ class Plane2D
 
     @BUCKETS_PER_ROW = 1 << (@TEXTURE_SIZE_P - @cube.BUCKET_SIZE_P)
     @TEXTURE_SIZE = (1 << (@TEXTURE_SIZE_P << 1)) * (@TEXTURE_BIT_DEPTH >> 3)
+
+    @NOT_LOADED_BUCKET_DATA = new Uint8Array(@cube.BUCKET_LENGTH)
+    for i in [0...@NOT_LOADED_BUCKET_DATA.length]
+      @NOT_LOADED_BUCKET_DATA[i] = @NOT_LOADED_BUCKET_INTENSITY
 
     @_forceRedraw = false
 
@@ -255,6 +262,26 @@ class Plane2D
         subTile = subTileMacro(tile, i)
         @renderSubTile(map, (mapIndex << 2) + 1 + i, subTile, tileZoomStep - 1)
 
+    else if map[mapIndex] == @NOT_LOADED_BUCKET_PLACEHOLDER
+
+      @renderToBuffer(
+        {
+          buffer: @dataTexture.buffer
+          offset: bufferOffsetByTileMacro(@, tile, @cube.BUCKET_SIZE_P)
+          widthP: @cube.BUCKET_SIZE_P
+          rowDelta: 1 << @TEXTURE_SIZE_P
+        }
+        {
+          buffer: @NOT_LOADED_BUCKET_DATA
+          mapping: null
+          offset: 0
+          pixelDelta: 1
+          rowDelta: 1
+          pixelRepeatP: 0
+          rowRepeatP: 0
+        }
+      )
+
     else
 
       bucket = map[mapIndex]
@@ -299,10 +326,12 @@ class Plane2D
 
   generateRenderMap : ([bucket_x, bucket_y, bucket_z, zoomStep]) ->
 
-    return [[bucket_x, bucket_y, bucket_z, zoomStep]] if @cube.getBucket([bucket_x, bucket_y, bucket_z, zoomStep]).hasData()
+    bucket = @cube.getBucket([bucket_x, bucket_y, bucket_z, zoomStep])
+    return [[bucket_x, bucket_y, bucket_z, zoomStep]] if bucket.hasData()
+    return [undefined] if bucket.isOutOfBoundingBox
 
     map = new Array(@MAP_SIZE)
-    map[0] = undefined
+    map[0] = @NOT_LOADED_BUCKET_PLACEHOLDER
 
     maxZoomStepOffset = Math.max(0, Math.min(@cube.LOOKUP_DEPTH_UP,
       @cube.ZOOM_STEP_COUNT - zoomStep - 1

@@ -33,7 +33,7 @@ class Plane2D
   W : 0
 
   NOT_LOADED_BUCKET_INTENSITY : 100
-  NOT_LOADED_BUCKET_PLACEHOLDER : [-1, -1, -1, 0]
+  NOT_LOADED_BUCKET_PLACEHOLDER : {}
 
   cube : null
   queue : null

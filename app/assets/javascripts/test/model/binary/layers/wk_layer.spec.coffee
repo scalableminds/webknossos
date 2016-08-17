@@ -19,6 +19,8 @@ RequestMock = {
   receiveJSON : sinon.stub()
 }
 mockRequire("../../../../libs/request", RequestMock)
+mockRequire.reRequire("../../../../libs/request")
+mockRequire.reRequire("../../../../oxalis/model/binary/layers/layer")
 
 WkLayer = require("../../../../oxalis/model/binary/layers/wk_layer")
 

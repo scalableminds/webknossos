@@ -7,7 +7,9 @@ class BoundingBox
 
     @BUCKET_SIZE_P = @cube.BUCKET_SIZE_P
     @BYTE_OFFSET   = @cube.BYTE_OFFSET
+    # Min is including
     @min           = [0, 0, 0]
+    # Max is excluding
     @max           = @cube.upperBoundary.slice()
 
     if @boundingBox?
@@ -20,7 +22,17 @@ class BoundingBox
 
     return {
       min : _.map @min, (e) => e >> ( @BUCKET_SIZE_P + zoomStep )
-      max : _.map @max, (e) => e >> ( @BUCKET_SIZE_P + zoomStep )
+      max : _.map @max, (e) =>
+
+        shift = @BUCKET_SIZE_P + zoomStep
+        res = e >> shift
+
+        # Computing ceil(e / 2^shift)
+        remainder = e & ((1 << shift) - 1)
+        if remainder != 0
+          res += 1
+
+        return res
     }
 
 
@@ -29,9 +41,9 @@ class BoundingBox
     { min, max } = @getBoxForZoomStep zoomStep
 
     return (
-      min[0] <= x <= max[0] and
-      min[1] <= y <= max[1] and
-      min[2] <= z <= max[2]
+      min[0] <= x < max[0] and
+      min[1] <= y < max[1] and
+      min[2] <= z < max[2]
     )
 
 
@@ -40,9 +52,9 @@ class BoundingBox
     { min, max } = @getBoxForZoomStep zoomStep
 
     return (
-      min[0] < x < max[0] and
-      min[1] < y < max[1] and
-      min[2] < z < max[2]
+      min[0] < x < max[0] - 1 and
+      min[1] < y < max[1] - 1 and
+      min[2] < z < max[2] - 1
     )
 
 

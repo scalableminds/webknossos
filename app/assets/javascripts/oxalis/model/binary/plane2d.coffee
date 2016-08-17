@@ -364,10 +364,16 @@ class Plane2D
   enhanceRenderMap : (map, mapIndex, [bucket_x, bucket_y, bucket_z, zoomStep], fallback, level) ->
 
     enhanced = false
+    bucket = @cube.getBucket([bucket_x, bucket_y, bucket_z, zoomStep])
 
-    if @cube.getBucket([bucket_x, bucket_y, bucket_z, zoomStep]).hasData()
+    if bucket.hasData()
 
       map[mapIndex] = [bucket_x, bucket_y, bucket_z, zoomStep]
+      enhanced = true
+
+    else if bucket.isOutOfBoundingBox and fallback == @NOT_LOADED_BUCKET_PLACEHOLDER
+
+      map[mapIndex] = undefined
       enhanced = true
 
     else

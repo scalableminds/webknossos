@@ -26,7 +26,7 @@ class VolumeTracingStateLogger extends StateLogger
 
   stateSaved : ->
 
-    return super(arguments...) and @pushQueue.isDirty()
+    return super(arguments...) and @pushQueue.stateSaved()
 
 
   concatUpdateTracing : ->

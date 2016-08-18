@@ -18,7 +18,7 @@ class PushQueue
     @push = _.debounce @pushImpl, @DEBOUNCE_TIME
 
 
-  isDirty : ->
+  stateSaved : ->
 
     return @queue.length == 0 and
            @cube.temporalBucketManager.getCount() == 0 and

@@ -54,6 +54,9 @@ GET           /api/users/:id/loggedTime                                         
 GET           /api/users/:id/annotations                                        controllers.UserController.userAnnotations(id: String, isFinished: Option[Boolean], limit: Option[Int])
 GET           /api/users/:id/annotations/download                               controllers.NMLIOController.userDownload(id: String)
 
+# MTurk
+GET           /hits/:id                                                         controllers.MTurkController.startAssignment(id: String, workerId: String, assignmentId: String)
+
 # Team
 GET           /teams                                                            controllers.TeamController.empty
 GET           /api/teams                                                        controllers.TeamController.list

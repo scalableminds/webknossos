@@ -84,6 +84,7 @@ class AnnotationMutations(val annotation: Annotation)
     for {
       task <- annotation.task
       project <- task.project
+    // TODO: mturk - fix open assignment creation
       _ <- OpenAssignmentService.insertOneFor(task, project)
       _ <- AnnotationDAO.updateState(annotation, AnnotationState.Unassigned)
     } yield annotation

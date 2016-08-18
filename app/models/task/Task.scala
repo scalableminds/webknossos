@@ -28,7 +28,6 @@ case class Task(
   @info("Number of required instances") instances: Int = 1,
   @info("Current tracing time") tracingTime: Option[Long] = None,
   @info("Date of creation" )created: DateTime = DateTime.now(),
-  @info("Links for annonymous users") directLinks: List[String] = Nil,
   @info("Flag indicating deletion") isActive: Boolean = true,
   @info("Reference to project") _project: String,
   @info("Unique ID") _id: BSONObjectID = BSONObjectID.generate
@@ -79,7 +78,6 @@ object Task extends FoxImplicits {
       boundingBox = annotationContent.flatMap(_.boundingBox).toOption
       status <- task.status
       tt <- task.taskType.map(TaskType.transformToJson) getOrElse JsNull
-      directLinks = if(forUser.exists(_.isAdminOf(task.team))) Json.toJson(task.directLinks) else JsNull
     } yield {
       Json.obj(
         "id" -> task.id,
@@ -90,10 +88,8 @@ object Task extends FoxImplicits {
         "dataSet" -> dataSetName,
         "editPosition" -> editPosition,
         "editRotation" -> editRotation,
-        "isForAnonymous" -> task.directLinks.nonEmpty,
         "boundingBox" -> boundingBox,
         "neededExperience" -> task.neededExperience,
-        "directLinks" -> task.directLinks,
         "created" -> DateTimeFormat.forPattern("yyyy-MM-dd HH:mm").print(task.created),
         "status" -> status,
         "tracingTime" -> task.tracingTime

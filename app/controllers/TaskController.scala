@@ -53,8 +53,7 @@ class TaskController @Inject() (val messagesApi: MessagesApi) extends Controller
     (baseJsonReads and
       (__ \ 'dataSet).read[String] and
       (__ \ 'editPosition).read[Point3D] and
-      (__ \ 'editRotation).read[Vector3D] and
-      (__ \ 'isForAnonymous).read[Boolean]).tupled
+      (__ \ 'editRotation).read[Vector3D]).tupled
 
   def empty = Authenticated { implicit request =>
     Ok(views.html.main()(Html("")))
@@ -101,7 +100,7 @@ class TaskController @Inject() (val messagesApi: MessagesApi) extends Controller
               _id = BSONObjectID.generate)
 
             for {
-              _ <- TaskService.insert(task, project, insertAssignments = true)
+              _ <- TaskService.insert(task, project)
               _ <- AnnotationService.createAnnotationBase(task, request.user._id, boundingBox, taskType.settings, nml)
             } yield Messages("task.create.success")
 
@@ -117,9 +116,9 @@ class TaskController @Inject() (val messagesApi: MessagesApi) extends Controller
   }
 
 
-  def createSingleTask(input: (String, Experience, CompletionStatus, String, String, Option[BoundingBox], String, Point3D, Vector3D, Boolean))(implicit request: AuthenticatedRequest[_]) =
+  def createSingleTask(input: (String, Experience, CompletionStatus, String, String, Option[BoundingBox], String, Point3D, Vector3D))(implicit request: AuthenticatedRequest[_]) =
     input match {
-      case (taskTypeId, experience, status, team, projectName, boundingBox, dataSetName, start, rotation, isForAnonymous) =>
+      case (taskTypeId, experience, status, team, projectName, boundingBox, dataSetName, start, rotation) =>
         for {
           _ <- DataSetDAO.findOneBySourceName(dataSetName) ?~> Messages("dataSet.notFound", dataSetName)
           taskType <- TaskTypeDAO.findOneById(taskTypeId) ?~> Messages("taskType.notFound")
@@ -127,11 +126,9 @@ class TaskController @Inject() (val messagesApi: MessagesApi) extends Controller
           _ <- ensureTeamAdministration(request.user, team)
           task = Task(taskType._id, team, experience, status.open, _project = project.name)
           _ <- AnnotationService.createAnnotationBase(task, request.user._id, boundingBox, taskType.settings, dataSetName, start, rotation)
-          directLinks <- createAnonymousUsersAndTasksInstancesIfNeeded(isForAnonymous, task).toFox
-          taskWithLinks = task.copy(directLinks = directLinks)
-          _ <- TaskService.insert(taskWithLinks, project, insertAssignments = ! isForAnonymous)
+          _ <- TaskService.insert(task, project)
         } yield {
-          taskWithLinks
+          task
         }
     }
 
@@ -164,25 +161,26 @@ class TaskController @Inject() (val messagesApi: MessagesApi) extends Controller
     }
   }
 
-  def createAnonymousUsersAndTasksInstancesIfNeeded(isForAnonymous: Boolean, task: Task)(implicit request: AuthenticatedRequest[_]) = {
-    if (isForAnonymous)
-      Fox.serialSequence((1 to task.instances).toList){ i =>
-        for {
-          user <- UserService.insertAnonymousUser(task.team, task.neededExperience)
-          loginToken <- UserService.createLoginToken(user, validDuration = 30 days)
-          annotation <- AnnotationService.createAnnotationFor(user, task)
-        } yield {
-          val url = controllers.routes.AnnotationController.trace(annotation.typ, annotation.id).absoluteURL(secure = true)
-          url + "?loginToken=" + loginToken
-        }
-      }.map(_.flatten)
-    else
-      Future.successful(Nil)
-  }
+//  def createAnonymousUsersAndTasksInstancesIfNeeded(isForAnonymous: Boolean, task: Task)(implicit request: AuthenticatedRequest[_]) = {
+//    if (isForAnonymous)
+//      Fox.serialSequence((1 to task.instances).toList){ i =>
+//        for {
+//          user <- UserService.insertAnonymousUser(task.team, task.neededExperience)
+//          loginToken <- UserService.createLoginToken(user, validDuration = 30 days)
+//          annotation <- AnnotationService.createAnnotationFor(user, task)
+//        } yield {
+//          val url = controllers.routes.AnnotationController.trace(annotation.typ, annotation.id).absoluteURL(secure = true)
+//          url + "?loginToken=" + loginToken
+//        }
+//      }.map(_.flatten)
+//    else
+//      Future.successful(Nil)
+//  }
 
+  // TODO: properly handle task update with amazon turk
   def update(taskId: String) = Authenticated.async(parse.json) { implicit request =>
     withJsonBodyUsing(taskCompleteReads){
-      case (taskTypeId, experience, status, team, projectName, boundingBox, dataSetName, start, rotation, isAnonymous) =>
+      case (taskTypeId, experience, status, team, projectName, boundingBox, dataSetName, start, rotation) =>
         for {
           task <- TaskService.findOneById(taskId) ?~> Messages("task.notFound")
           _ <- ensureTeamAdministration(request.user, task.team)

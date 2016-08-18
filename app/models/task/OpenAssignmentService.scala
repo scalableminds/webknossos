@@ -26,7 +26,6 @@ object OpenAssignmentService extends FoxImplicits{
   def removeByProject(project: Project)(implicit ctx: DBAccessContext) =
     OpenAssignmentDAO.removeByProject(project.name)
 
-
   def remove(assignment: OpenAssignment)(implicit ctx: DBAccessContext) =
     OpenAssignmentDAO.removeById(assignment._id)
 

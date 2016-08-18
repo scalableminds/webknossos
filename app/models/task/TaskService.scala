@@ -11,7 +11,9 @@ import play.api.libs.concurrent.Execution.Implicits._
 import models.user.{Experience, User, UserDAO}
 import scala.concurrent.Future
 
+import models.mturk.MTurkAssignmentConfig
 import net.liftweb.common.Box
+import oxalis.mturk.MTurkService
 import play.api.Logger
 import play.api.libs.json.Json
 import reactivemongo.play.json.BSONFormats._
@@ -74,16 +76,20 @@ object TaskService extends TaskAssignmentSimulation with TaskAssignment with Fox
     } yield results.forall(identity)
   }
 
-  def insert(task: Task,project: Project, insertAssignments: Boolean)(implicit ctx: DBAccessContext) = {
-    def insertAssignmentsIfRequested() =
-      if(insertAssignments) {
-        OpenAssignmentService.insertInstancesFor(task, project, task.instances)
-      } else
-        Future.successful(true)
+  def insert(task: Task, project: Project)(implicit ctx: DBAccessContext) = {
+    def insertAssignmentsIfNeeded() =
+      project.assignmentConfig.id match {
+        case WebknossosAssignmentConfig.id =>
+          OpenAssignmentService.insertInstancesFor(task, project, task.instances).toFox
+        case MTurkAssignmentConfig.id =>
+          MTurkService.createHITs(project, task)
+        case _ =>
+          Fox.successful(true)
+      }
 
     for {
       _ <- TaskDAO.insert(task)
-      _ <- insertAssignmentsIfRequested()
+      _ <- insertAssignmentsIfNeeded()
     } yield task
   }
 

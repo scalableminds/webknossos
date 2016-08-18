@@ -72,7 +72,7 @@ trait TaskAssignment extends FoxImplicits with LazyLogging{
   }
 
   def allNextTasksForUser(user: User)(implicit ctx: DBAccessContext): Fox[List[Task]] =
-    findAllAssignableFor(user).flatMap(assignments => Fox.serialSequence(assignments)(_.task).map(_.flatten))
+    findAllAssignableFor(user).flatMap(assignments => Fox.sequenceOfFulls(assignments.map(_.task)))
 
   def nextTaskForUser(user: User)(implicit ctx: DBAccessContext): Fox[Task] =
     findAssignableFor(user).flatMap(_.task)

@@ -8,7 +8,6 @@ import javax.inject.Inject
 import scala.concurrent.Future
 
 import com.scalableminds.util.reactivemongo.GlobalAccessContext
-import com.scalableminds.util.tools.Fox
 import models.task.{Project, ProjectDAO, ProjectService, Task}
 import models.user.User
 import net.liftweb.common.{Empty, Full}
@@ -28,17 +27,7 @@ class ProjectController @Inject()(val messagesApi: MessagesApi) extends Controll
     implicit request =>
       for {
         projects <- ProjectDAO.findAll
-        js <- Fox.serialSequence(projects)(Project.projectPublicWritesWithStatus(_, request.user))
-      } yield {
-        Ok(Json.toJson(js))
-      }
-  }
-
-  def read(projectName: String) = Authenticated.async {
-    implicit request =>
-      for {
-        project <- ProjectDAO.findOneByName(projectName) ?~> Messages("project.notFound", projectName)
-        js <- Project.projectPublicWrites(project, request.user)
+        js <- Future.traverse(projects)(Project.projectPublicWritesWithStatus(_, request.user))
       } yield {
         Ok(Json.toJson(js))
       }
@@ -71,24 +60,12 @@ class ProjectController @Inject()(val messagesApi: MessagesApi) extends Controll
     }
   }
 
-  def update(projectName: String) = Authenticated.async(parse.json) { implicit request =>
-    withJsonBodyUsing(Project.projectPublicReads) { updateRequest =>
-      for{
-        project <- ProjectDAO.findOneByName(projectName)(GlobalAccessContext)
-        _ <- request.user.adminTeamNames.contains(project.team) ?~> "team.notAllowed"
-        updatedProject <- ProjectService.update(project._id, project, updateRequest)
-        js <- Project.projectPublicWritesWithStatus(updatedProject, request.user)
-      } yield Ok(js)
-    }
-  }
-
-
   def tasksForProject(projectName: String) = Authenticated.async {
     implicit request =>
       for {
         project <- ProjectDAO.findOneByName(projectName) ?~> Messages("project.notFound", projectName)
         tasks <- project.tasks
-        js <- Fox.serialSequence(tasks)(t => Task.transformToJson(t, request.userOpt))
+        js <- Future.traverse(tasks)(t => Task.transformToJson(t, request.userOpt))
       } yield {
         Ok(Json.toJson(js))
       }

@@ -9,7 +9,6 @@ class ProjectListItemView extends Marionette.CompositeView
   template : _.template("""
     <td><%= name %></td>
     <td><%= team %></td>
-    <td><%= priority %></td>
     <% if(owner.email) { %>
       <td><%= owner.firstName %> <%= owner.lastName %> (<%= owner.email %>)</td>
     <% } else { %>
@@ -19,9 +18,6 @@ class ProjectListItemView extends Marionette.CompositeView
     <td class="nowrap">
       <a href="/annotations/CompoundProject/<%= name %>" title="View all finished tracings">
         <i class="fa fa-random"></i>view
-      </a><br/>
-      <a href="/projects/<%= name %>/edit" title="Edit Tasks">
-        <i class="fa fa-pencil"></i>edit
       </a><br/>
       <a href="/projects/<%= name %>/tasks" title="View Tasks">
         <i class="fa fa-tasks"></i>tasks

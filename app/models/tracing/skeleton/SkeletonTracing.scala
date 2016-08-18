@@ -41,7 +41,7 @@ case class SkeletonTracing(
     this.copy(settings = settings.copy(allowedModes = AnnotationSettings.SKELETON_MODES))
 
   def trees: Fox[List[TreeLike]] = DBTrees.flatMap{ ts =>
-    Fox.serialCombined(ts)(t => t.toTree)
+    Fox.combined(ts.map(t => t.toTree))
   }
 
   def DBTrees = DBTreeDAO.findByTracing(_id)(GlobalAccessContext)

@@ -20,7 +20,7 @@ import com.scalableminds.util.reactivemongo.AccessRestrictions.{DenyEveryone, Al
 import play.api.i18n.Messages
 import play.api.data.validation.ValidationError
 
-case class Project(name: String, team: String, _owner: BSONObjectID, priority: Int, _id: BSONObjectID = BSONObjectID.generate) {
+case class Project(name: String, team: String, _owner: BSONObjectID, _id: BSONObjectID = BSONObjectID.generate) {
   def owner = UserService.findOneById(_owner.stringify, useCache = true)(GlobalAccessContext)
 
   def isOwnedBy(user: User) = user._id == _owner
@@ -43,7 +43,6 @@ object Project {
         "name" -> project.name,
         "team" -> project.team,
         "owner" -> owner.toOption,
-        "priority" -> project.priority,
         "id" -> project.id
       )
     }
@@ -59,8 +58,7 @@ object Project {
   val projectPublicReads: Reads[Project] =
     ((__ \ 'name).read[String](Reads.minLength[String](3) keepAnd Reads.pattern("^[a-zA-Z0-9_-]*$".r, "project.name.invalidChars")) and
       (__ \ 'team).read[String] and
-      (__ \ 'priority).read[Int] and
-      (__ \ 'owner).read[String](StringObjectIdReads("owner")))((name, team, priority, owner) => Project(name, team, BSONObjectID(owner), priority))
+      (__ \ 'owner).read[String](StringObjectIdReads("owner")))((name, team, owner) => Project(name, team, BSONObjectID(owner)))
 }
 
 object ProjectService extends FoxImplicits {
@@ -74,8 +72,8 @@ object ProjectService extends FoxImplicits {
     }
   }
 
-  def insert(name: String, team: String, owner: User, priority: Int)(implicit ctx: DBAccessContext) =
-    ProjectDAO.insert(Project(name, team, owner._id, priority))
+  def insert(name: String, team: String, owner: User)(implicit ctx: DBAccessContext) =
+    ProjectDAO.insert(Project(name, team, owner._id))
 
   def findIfNotEmpty(name: Option[String])(implicit ctx: DBAccessContext): Fox[Option[Project]] = {
     name match {
@@ -84,21 +82,6 @@ object ProjectService extends FoxImplicits {
       case Some(x) =>
         ProjectDAO.findOneByName(x).toFox.map(p => Some(p))
     }
-  }
-
-  def update(_id: BSONObjectID, oldProject: Project, updateRequest: Project)(implicit ctx: DBAccessContext) = {
-    def updateTasksIfNecessary(updated: Project) = {
-      if(oldProject.priority == updated.priority)
-        Fox.successful(true)
-      else
-        TaskService.handleProjectUpdate(oldProject.name, updated)
-    }
-
-    for{
-      updatedProject <- ProjectDAO.updateProject(_id, updateRequest)
-      _ <- updateTasksIfNecessary(updatedProject)
-    } yield updatedProject
-
   }
 }
 
@@ -133,15 +116,5 @@ object ProjectDAO extends SecuredBaseDAO[Project] {
 
   def findOneByName(name: String)(implicit ctx: DBAccessContext) = {
     findOne("name", name)
-  }
-
-  def updateProject(_id: BSONObjectID, project: Project)(implicit ctx: DBAccessContext) = {
-    findAndModify(Json.obj("_id" -> _id), Json.obj("$set" ->
-      Json.obj(
-        "name" -> project.name,
-        "team" -> project.team,
-        "_owner" -> project._owner,
-        "priority" -> project.priority)), returnNew = true)
-
   }
 }

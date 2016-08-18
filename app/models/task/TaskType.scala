@@ -41,7 +41,7 @@ case class TaskType(
   def status(implicit ctx: DBAccessContext) = {
     for {
       tasks <- TaskDAO.findAllByTaskType(_id).getOrElse(List.empty)
-      taskStatus <- Fox.serialSequence(tasks)(_.status)
+      taskStatus <- Future.sequence(tasks.map(_.status))
     } yield {
       taskStatus.fold(CompletionStatus(0, 0, 0))(CompletionStatus.combine)
     }

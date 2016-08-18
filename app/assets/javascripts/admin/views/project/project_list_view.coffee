@@ -2,7 +2,7 @@ _                      = require("lodash")
 Marionette             = require("backbone.marionette")
 ProjectListItemView    = require("./project_list_item_view")
 CreateProjectModalView = require("./create_project_modal_view")
-SortTableBehavior      = require("libs/behaviors/sort_table_behavior")
+SortTableBehavior       = require("libs/behaviors/sort_table_behavior")
 
 class ProjectsListView extends Marionette.CompositeView
 
@@ -13,8 +13,7 @@ class ProjectsListView extends Marionette.CompositeView
         <tr>
           <th data-sort="name">Name</th>
           <th data-sort="team">Team</th>
-          <th data-sort="priority">Priority</th>
-          <th data-sort="owner.lastName">Owner</th>
+          <th data-sort="owner">Owner</th>
           <th data-sort="numberOfOpenAssignments">Open Assignments</th>
           <th>Actions</th>
         </tr>
@@ -35,15 +34,11 @@ class ProjectsListView extends Marionette.CompositeView
   ui :
     "modalWrapper" : "#modal-wrapper"
 
-  behaviors :
-    SortTableBehavior:
-      behaviorClass: SortTableBehavior
-
 
   initialize : ->
 
     @collection.fetch()
-    @collection.setSorting("priority", "desc")
+    @collection.setSorting("numberOfOpenAssignments", "desc")
 
     @listenTo(app.vent, "paginationView:filter", @filterBySearch)
     @listenTo(app.vent, "modal:destroy", @render)
@@ -52,7 +47,7 @@ class ProjectsListView extends Marionette.CompositeView
 
   filterBySearch : (searchQuery) ->
 
-    @collection.setFilter(["name", "team", "priority"], searchQuery)
+    @collection.setFilter(["name", "team"], searchQuery)
 
 
   showModal : ->

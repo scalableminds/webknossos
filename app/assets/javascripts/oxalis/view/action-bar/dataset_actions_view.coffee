@@ -69,11 +69,11 @@ class DatasetActionsView extends Marionette.ItemView
     win.document.body.innerHTML="Please wait..."
     @saveTracing().then( =>
       win.location.href = @model.tracing.downloadUrl
-      win.document.body.innerHTML="You may close this window after the download has started."
-      # setTimeout(
-      #   -> win.close()
-      #   2000
-      # )
+      win.document.body.innerHTML="You may close this window now. (Auto-close in 2 seconds)."
+      setTimeout(
+        -> win.close()
+        2000
+      )
     )
 
 

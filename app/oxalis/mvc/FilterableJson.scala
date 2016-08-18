@@ -1,11 +1,9 @@
 package oxalis.mvc
 
-import scala.concurrent.Future
-
-import com.scalableminds.util.tools.Fox
-import play.api.libs.concurrent.Execution.Implicits._
-import play.api.libs.json.Json
 import play.api.libs.json.Json.JsValueWrapper
+import scala.concurrent.Future
+import play.api.libs.json.Json
+import play.api.libs.concurrent.Execution.Implicits._
 
 object FilterableJson
 
@@ -23,11 +21,11 @@ trait FilterableJson {
   }
 
   def JsonObjectWithFilter(exclude: List[String])(attributes: JsonAttribute*) = {
-    val attrs = attributes.filter(attr => !exclude.contains(attr.key)).toList
+    val attrs = attributes.filter(attr => !exclude.contains(attr.key))
 
-    Fox.serialSequence(attrs)(_.value()).map {
+    Future.sequence(attrs.map(_.value())).map {
       values =>
-        Json.obj(attrs.map(_.key).zip(values): _*)
+	Json.obj(attrs.map(_.key).zip(values): _*)
     }
   }
 }

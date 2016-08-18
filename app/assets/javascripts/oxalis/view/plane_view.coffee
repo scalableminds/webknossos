@@ -214,7 +214,7 @@ class PlaneView
     @camera
 
 
-  showBranchModal : (callback) ->
+  showBranchModalDouble : (callback) ->
 
     modal.show("You didn't add a node after jumping to this branchpoint, do you really want to jump again?",
       "Jump again?",
@@ -222,10 +222,19 @@ class PlaneView
        {id: "cancel-button", label: "Cancel"}])
 
 
+  showBranchModalDelete : (callback) ->
+
+    modal.show("You are about to delete an unused branchpoint, are you sure?",
+      "Delete branchpoint?",
+      [{id: "delete-button", label: "Delete branchpoint", callback: callback},
+       {id: "cancel-button", label: "Cancel"}])
+
+
   bindToEvents : ->
 
     if @model.skeletonTracing
-      @listenTo(@model.skeletonTracing, "doubleBranch", @showBranchModal)
+      @listenTo(@model.skeletonTracing, "doubleBranch", @showBranchModalDouble)
+      @listenTo(@model.skeletonTracing, "deleteBranch", @showBranchModalDelete)
       @listenTo(@model.skeletonTracing, "mergeDifferentTrees", ->
         Toast.error("You can't merge nodes within the same tree", false)
       )

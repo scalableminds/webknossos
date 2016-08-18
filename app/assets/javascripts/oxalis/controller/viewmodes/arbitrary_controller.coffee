@@ -168,6 +168,9 @@ class ArbitraryController
 
       #Recenter active node
       "s" : => @centerActiveNode()
+      
+      #Rotate view by 180 deg
+      "r" : => @cam.yaw(Math.PI)
     )
 
     @input.keyboardOnce = new Input.Keyboard(

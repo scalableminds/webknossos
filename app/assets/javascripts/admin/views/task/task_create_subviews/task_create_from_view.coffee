@@ -79,18 +79,6 @@ class TaskCreateFromView extends Marionette.LayoutView
         </div>
 
         <div class="form-group">
-            <label class="col-sm-2 control-label" for="isForAnonymous">Create anonymous users</label>
-            <div class="col-sm-9">
-            <input
-              type="checkbox"
-              name="isForAnonymous"
-              <% if (isForAnonymous) { %> checked <% }%>
-              <% if (isEditingMode) { %> disabled <% }%>
-            >
-            </div>
-        </div>
-
-        <div class="form-group">
           <label class="col-sm-2 control-label" for="boundingBox">Bounding Box</label>
           <div class="col-sm-9">
             <span class="help-block hints"></span>
@@ -220,8 +208,6 @@ class TaskCreateFromView extends Marionette.LayoutView
     Toast.success("The task was successfully #{@getActionName().toLowerCase()}d")
 
     url = "/projects/#{task.get("projectName")}/tasks"
-    if not _.isEmpty(task.get("directLinks"))
-      url += "?showAnonymousLinks=#{task.id}"
 
     app.router.navigate("#{url}##{task.id}", {trigger : true})
 

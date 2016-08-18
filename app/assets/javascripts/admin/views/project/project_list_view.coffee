@@ -1,7 +1,6 @@
 _                      = require("lodash")
 Marionette             = require("backbone.marionette")
 ProjectListItemView    = require("./project_list_item_view")
-CreateProjectModalView = require("./create_project_modal_view")
 SortTableBehavior      = require("libs/behaviors/sort_table_behavior")
 
 class ProjectsListView extends Marionette.CompositeView
@@ -47,7 +46,7 @@ class ProjectsListView extends Marionette.CompositeView
 
     @listenTo(app.vent, "paginationView:filter", @filterBySearch)
     @listenTo(app.vent, "modal:destroy", @render)
-    @listenTo(app.vent, "paginationView:addElement", @showModal)
+    @listenTo(app.vent, "paginationView:addElement", @createProject)
 
 
   filterBySearch : (searchQuery) ->
@@ -55,11 +54,8 @@ class ProjectsListView extends Marionette.CompositeView
     @collection.setFilter(["name", "team", "priority"], searchQuery)
 
 
-  showModal : ->
+  createProject : ->
 
-    modalView = new CreateProjectModalView(projectCollection : @collection)
-    @ui.modalWrapper.html(modalView.render().el)
-
-    modalView.show()
+    app.router.navigate("/projects/create", {trigger : true})
 
 module.exports = ProjectsListView

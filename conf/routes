@@ -187,6 +187,7 @@ GET           /api/find                                                         
 
 # Projects
 GET           /projects                                                         controllers.ProjectController.empty(name: String = "")
+GET           /projects/create                                                  controllers.ProjectController.empty(name: String = "")
 GET           /projects/:name/tasks                                             controllers.ProjectController.empty(name: String)
 GET           /projects/:name/edit                                              controllers.ProjectController.empty(name: String)
 GET           /api/projects                                                     controllers.ProjectController.list

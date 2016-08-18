@@ -89,7 +89,6 @@ class PingStrategy3d.DslSlow extends PingStrategy3d
 
       pullQueue.push(bucket: [bucket_x, bucket_y, bucket_z, zoomStep], priority: 0)
 
-    console.log(pullQueue.slice(0, 3).map((a) -> a.bucket.toString()).join("   "))
     return pullQueue
     # priority 0 is highest
 

@@ -22,7 +22,7 @@
   <logger name="application" level="TRACE" />
   <logger name="braingames.binary" level="TRACE" />
 
-  <root level="WARN">
+  <root level="INFO">
     <appender-ref ref="STDOUT" />
     <appender-ref ref="FILE" />
   </root>

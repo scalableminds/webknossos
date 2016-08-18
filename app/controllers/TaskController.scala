@@ -302,6 +302,7 @@ class TaskController @Inject() (val messagesApi: MessagesApi) extends Controller
     val user = request.user
     for {
       _ <- ensureMaxNumberOfOpenTasks(user)
+      _ <- user.isAnonymous ?~> Messages("user.anonymous.notAllowed")
       assignment <- tryToGetNextAssignmentFor(user)
       task <- assignment.task
       annotation <- AnnotationService.createAnnotationFor(user, task) ?~> Messages("annotation.creationFailed")

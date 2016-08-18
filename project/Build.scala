@@ -58,7 +58,8 @@ object Dependencies{
     "org.apache.httpcomponents" % "httpcore" % "4.1.2",
     "org.apache.httpcomponents" % "httpmime" % "4.1.2",
     "org.apache.httpcomponents" % "httpclient-cache" % "4.1.2",
-    "xalan" % "xalan" % "2.7.1"
+    "xalan" % "xalan" % "2.7.1",
+    "com.amazonaws" % "aws-java-sdk" % "1.11.26"
   )
 
   val tiff = Seq(

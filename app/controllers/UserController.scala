@@ -119,7 +119,6 @@ class UserController @Inject()(val messagesApi: MessagesApi)
 
   // REST API
   def list = Authenticated.async{ implicit request =>
-    Logger.warn("Authentication context: " + request.user)
     UsingFilters(
       Filter("includeAnonymous", (value: Boolean, el: User) => value || !el.isAnonymous, default = Some("false")),
       Filter("isEditable", (value: Boolean, el: User) => el.isEditableBy(request.user) == value),

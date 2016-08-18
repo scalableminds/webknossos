@@ -5,36 +5,50 @@ package oxalis.mturk
 
 import java.util.UUID
 
+import scala.collection.JavaConversions._
+import scala.collection.JavaConverters._
+import scala.concurrent._
+import scala.concurrent.duration._
+
 import com.amazonaws.mturk.addon.HITQuestion
 import com.amazonaws.mturk.requester._
 import com.amazonaws.mturk.service.axis.RequesterService
-import com.amazonaws.mturk.util.PropertiesClientConfig
-import com.typesafe.scalalogging.LazyLogging
-import scala.concurrent.duration._
-import scala.collection.JavaConversions._
-import scala.concurrent._
-
+import com.amazonaws.mturk.util.ClientConfig
 import com.scalableminds.util.reactivemongo.GlobalAccessContext
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.typesafe.scalalogging.LazyLogging
+import models.annotation.AnnotationDAO
 import models.mturk._
 import models.task._
+import models.user.UserService
 import play.api.Play._
 import play.api.libs.concurrent.Execution.Implicits._
 
-object MTurkService extends LazyLogging with FoxImplicits{
+object MTurkService extends LazyLogging with FoxImplicits {
   type HITTypeId = String
 
   val conf = current.configuration
 
-  lazy val service =  new RequesterService(new PropertiesClientConfig("conf/mturk/mturk.properties"))
+  lazy val service = new RequesterService(loadConfig)
 
   val questionFile: String = "conf/mturk/project_hit_template.question"
 
-  val notificationsUrl = "https://sqs.eu-west-1.amazonaws.com/404539411561/mturk"
+  val notificationsUrl = conf.getString("amazon.sqs.endpoint").get + conf.getString("amazon.sqs.queueName").get
 
   val serverBaseUrl = conf.getString("http.uri").get
 
-  def ensureEnoughFunds(neededFunds: Int): Future[Boolean] = Future{
+  def loadConfig = {
+    val cfg = new ClientConfig()
+    cfg.setAccessKeyId(conf.getString("amazon.mturk.accessKey").get)
+    cfg.setSecretAccessKey(conf.getString("amazon.mturk.secretKey").get)
+    cfg.setRetriableErrors(conf.getStringList("amazon.mturk.retriableErrors").get.toSet.asJava)
+    cfg.setRetryAttempts(conf.getInt("amazon.mturk.retryAttempts").get)
+    cfg.setRetryDelayMillis(conf.getInt("amazon.mturk.retryDelayMillis").get)
+    cfg.setServiceURL(conf.getString("amazon.mturk.serviceUrl").get)
+    cfg
+  }
+
+  def ensureEnoughFunds(neededFunds: Int): Future[Boolean] = Future {
     blocking {
       val balance = service.getAccountBalance
       logger.info("Got account balance: " + RequesterService.formatCurrency(balance))
@@ -42,8 +56,47 @@ object MTurkService extends LazyLogging with FoxImplicits{
     }
   }
 
+  def handleSubmittedAssignment(assignmentId: String, hitId: String) = {
+    def finishIfAnnotationExists(assignment: MTurkAssignment) = {
+      assignment.annotations.find(_.assignmentId == assignmentId) match {
+        case Some(reference) =>
+          for {
+            annotation <- AnnotationDAO.findOneById(reference._annotation)(GlobalAccessContext)
+            user <- UserService.findOneById(reference._user.stringify, useCache = true)(GlobalAccessContext)
+            _ <- annotation.muta.finishAnnotation(user)(GlobalAccessContext)
+          } yield true
+        case None            =>
+          Fox.successful(true)
+      }
+    }
+
+    for {
+      assignment <- MTurkAssignmentDAO.findByHITId(hitId)(GlobalAccessContext)
+      result <- finishIfAnnotationExists(assignment)
+    } yield result
+  }
+
+  def handleAbandonedAssignment(assignmentId: String, hitId: String) = {
+    def cancelIfAnnotationExists(assignment: MTurkAssignment) = {
+      assignment.annotations.find(_.assignmentId == assignmentId) match {
+        case Some(reference) =>
+          for {
+            annotation <- AnnotationDAO.findOneById(reference._annotation)(GlobalAccessContext)
+            _ <- annotation.muta.cancelTask()(GlobalAccessContext)
+          } yield true
+        case None            =>
+          Fox.successful(true)
+      }
+    }
+
+    for {
+      assignment <- MTurkAssignmentDAO.findByHITId(hitId)(GlobalAccessContext)
+      result <- cancelIfAnnotationExists(assignment)
+    } yield result
+  }
+
   def handleProjectCreation(project: Project, config: MTurkAssignmentConfig): Fox[Boolean] = {
-    for{
+    for {
       hitTypeId <- createHITType(config).toFox
       _ <- setupNotifications(hitTypeId)
       _ <- MTurkProjectDAO.insert(MTurkProject(project.name, hitTypeId, project.team))(GlobalAccessContext)
@@ -53,11 +106,11 @@ object MTurkService extends LazyLogging with FoxImplicits{
   def createHITs(project: Project, task: Task): Fox[MTurkAssignment] = {
     val estimatedAmountNeeded = 1
 
-    for{
+    for {
       _ <- ensureEnoughFunds(estimatedAmountNeeded)
       mtProject <- MTurkProjectDAO.findByProject(project.name)(GlobalAccessContext)
-      key <- createSurvey(mtProject.hittypeId, task.instances)
-      assignment = MTurkAssignment(task._id, task.team, mtProject._project, key)
+      (hitId, key) <- createSurvey(mtProject.hittypeId, task.instances)
+      assignment = MTurkAssignment(task._id, task.team, mtProject._project, hitId, key)
       _ <- MTurkAssignmentDAO.insert(assignment)(GlobalAccessContext)
     } yield {
       assignment
@@ -91,7 +144,7 @@ object MTurkService extends LazyLogging with FoxImplicits{
     }
   }
 
-  private def createSurvey(hitType: String, numAssignments: Int): Future[String] = {
+  private def createSurvey(hitType: String, numAssignments: Int): Future[(String, String)] = {
     // Loading the question (QAP) file. HITQuestion is a helper class that
     // contains the QAP of the HIT defined in the external file. This feature
     // allows you to write the entire QAP externally as a file and be able to
@@ -106,30 +159,22 @@ object MTurkService extends LazyLogging with FoxImplicits{
 
     //Creating the HIT and loading it into Mechanical Turk
     val hitF: Future[HIT] =
-      Future{
+      Future {
         blocking {
-          service.createHIT(hitType, null, null, null, question, null, null, null, lifetimeInSeconds, numAssignments, requesterAnnotation, null, null)
+          service.createHIT(hitType,
+            null, null, null, question,
+            null, null, null, lifetimeInSeconds,
+            numAssignments, requesterAnnotation, null, null)
         }
       }
 
-    hitF.foreach { hit =>
+    hitF.map { hit =>
 
       logger.info("Created HIT: " + hit.getHITId)
 
-      logger.info("You may see your HIT with HITTypeId '" + hit.getHITTypeId + "' here: ")
-
       logger.info(service.getWebsiteURL + "/mturk/preview?groupId=" + hit.getHITTypeId)
 
-      //Demonstrates how a HIT can be retrieved if you know its HIT ID
-      val hit2: HIT = service.getHIT(hit.getHITId)
-
-      logger.info("Retrieved HIT: " + hit2.getHITId)
-
-      if (hit.getHITId != hit2.getHITId) {
-        logger.error("The HIT Ids should match: " + hit.getHITId + ", " + hit2.getHITId)
-      }
+      hit.getHITId -> requesterAnnotation
     }
-
-    hitF.map(_ => requesterAnnotation)
   }
 }

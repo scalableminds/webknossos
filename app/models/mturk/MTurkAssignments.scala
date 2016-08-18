@@ -3,8 +3,6 @@
  */
 package models.mturk
 
-import java.util.UUID
-
 import com.scalableminds.util.reactivemongo.DBAccessContext
 import com.scalableminds.util.tools.FoxImplicits
 import models.basics.SecuredBaseDAO
@@ -21,7 +19,8 @@ case class MTurkAssignment(
   _task: BSONObjectID,
   team: String,
   _project: String,
-  key: String = UUID.randomUUID().toString,
+  hitId: String,
+  key: String,
   created: DateTime = DateTime.now(),
   annotations: List[MTurkAnnotationReference] = Nil,
   _id: BSONObjectID = BSONObjectID.generate
@@ -46,6 +45,7 @@ object MTurkAssignmentDAO extends SecuredBaseDAO[MTurkAssignment] with FoxImplic
   underlying.indexesManager.ensure(Index(Seq("_task" -> IndexType.Ascending)))
   underlying.indexesManager.ensure(Index(Seq("_project" -> IndexType.Ascending)))
   underlying.indexesManager.ensure(Index(Seq("key" -> IndexType.Descending)))
+  underlying.indexesManager.ensure(Index(Seq("hitId" -> IndexType.Descending)))
 
   def countFor(_task: BSONObjectID)(implicit ctx: DBAccessContext) = {
     count(Json.obj("_task" -> _task))
@@ -69,6 +69,10 @@ object MTurkAssignmentDAO extends SecuredBaseDAO[MTurkAssignment] with FoxImplic
 
   def findByKey(key: String)(implicit ctx: DBAccessContext) = {
     findOne(Json.obj("key" -> key))
+  }
+
+  def findByHITId(hitId: String)(implicit ctx: DBAccessContext) = {
+    findOne(Json.obj("hitId" -> hitId))
   }
 
   def countOpenAssignments(implicit ctx: DBAccessContext) = {

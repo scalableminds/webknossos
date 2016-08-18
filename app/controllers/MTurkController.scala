@@ -22,22 +22,24 @@ class MTurkController @Inject()(val messagesApi: MessagesApi) extends Controller
         mturkAssignment.annotations.find(reference => reference._user == user._id) match {
           case Some(reference) =>
             AnnotationDAO.findOneById(reference._annotation)(GlobalAccessContext)
-          case None =>
+          case None            =>
             for {
               annotation <- AnnotationService.createAnnotationFor(user, task)(GlobalAccessContext)
-              _ <- MTurkAssignmentDAO.appendReference(mturkAssignment._id, MTurkAnnotationReference(annotation._id, user._id))
+              _ <- MTurkAssignmentDAO.appendReference(
+                mturkAssignment._id,
+                MTurkAnnotationReference(annotation._id, user._id, assignmentId))
             } yield annotation
         }
       }
 
       for {
-        mturkAssignment <- MTurkAssignmentDAO.findByKey(id)(GlobalAccessContext)
-        task <- mturkAssignment.task(GlobalAccessContext)
-        user <- UserService.prepareMTurkUser(workerId, task.team, task.neededExperience)(GlobalAccessContext)
+        mturkAssignment <- MTurkAssignmentDAO.findByKey(id)(GlobalAccessContext) ?~> Messages("mturk.assignment.notFound")
+        task <- mturkAssignment.task(GlobalAccessContext) ?~> Messages("mturk.task.notFound")
+        user <- UserService.prepareMTurkUser(workerId, task.team, task.neededExperience)(GlobalAccessContext) ?~> Messages("mturk.user.notFound")
         annotation <- annotationForAssignment(mturkAssignment, user, task) ?~> Messages("annotation.creationFailed")
       } yield {
         Redirect(routes.AnnotationController.trace(annotation.typ, annotation.id))
-          .withSession(Secured.createSession(user))
+        .withSession(Secured.createSession(user))
       }
   }
 }

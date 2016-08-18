@@ -44,7 +44,7 @@ class AnnotationMutations(val annotation: Annotation)
   def finishAnnotation(user: User)(implicit ctx: DBAccessContext): Fox[(Annotation, String)] = {
     def executeFinish(annotation: Annotation): Fox[(Annotation, String)] =
       for {
-        updated <- annotation.muta.finish()
+        updated <- AnnotationDAO.finish(annotation._id)
       } yield {
         if(annotation._task.isEmpty)
           updated -> "annotation.finished"
@@ -73,9 +73,6 @@ class AnnotationMutations(val annotation: Annotation)
   def reopen()(implicit ctx: DBAccessContext) = {
     AnnotationDAO.reopen(annotation._id)
   }
-
-  def finish()(implicit ctx: DBAccessContext) =
-    AnnotationDAO.finish(annotation._id)
 
   def rename(name: String)(implicit ctx: DBAccessContext) =
     AnnotationDAO.rename(annotation._id, name)

@@ -172,8 +172,8 @@ class ArbitraryController
       #Recenter active node
       "s" : => @centerActiveNode()
 
-      "]" : => @nextNode(true)
-      "[" : => @nextNode(false)
+      "." : => @nextNode(true)
+      "," : => @nextNode(false)
     )
 
     @input.keyboardOnce = new Input.Keyboard(

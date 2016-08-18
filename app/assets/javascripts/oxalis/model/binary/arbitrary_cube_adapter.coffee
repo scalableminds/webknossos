@@ -16,6 +16,7 @@ class ArbitraryCubeAdapter
     for i in [0...@NOT_LOADED_BUCKET_DATA.length]
       @NOT_LOADED_BUCKET_DATA[i] = @NOT_LOADED_BUCKET_INTENSITY
     @NOT_LOADED_BUCKET_DATA.zoomStep = 0
+    @NOT_LOADED_BUCKET_DATA.isTemporalData = true
 
 
   getBucket : _.memoize((bucketIndex) ->

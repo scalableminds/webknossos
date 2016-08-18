@@ -74,4 +74,8 @@ object MTurkAssignmentDAO extends SecuredBaseDAO[MTurkAssignment] with FoxImplic
   def countOpenAssignments(implicit ctx: DBAccessContext) = {
     count(Json.obj())
   }
+
+  def appendReference(_assignment: BSONObjectID, reference: MTurkAnnotationReference)(implicit ctx: DBAccessContext) = {
+    update(Json.obj("_id" -> _assignment), Json.obj("$push" -> Json.obj("annotations" -> reference)))
+  }
 }

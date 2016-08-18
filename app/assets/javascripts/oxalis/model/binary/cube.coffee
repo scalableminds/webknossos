@@ -49,7 +49,7 @@ class Cube
 
     _.extend(this, Backbone.Events)
 
-    @NULL_BUCKET_OUT_OF_BB = new NullBucket(NullBucket::TYPE_OUT_OF_BB)
+    @NULL_BUCKET_OUT_OF_BB = new NullBucket(NullBucket::TYPE_OUT_OF_BOUNDING_BOX)
     @NULL_BUCKET = new NullBucket(NullBucket::TYPE_OTHER)
 
     @LOOKUP_DEPTH_UP = @ZOOM_STEP_COUNT - 1

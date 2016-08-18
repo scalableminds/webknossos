@@ -168,8 +168,10 @@ class Model extends Backbone.Model
         ErrorHandling.assert( @getSegmentationBinary()?,
           "Volume is allowed, but segmentation does not exist" )
         @set("volumeTracing", new VolumeTracing(tracing, flycam, flycam3d, @getSegmentationBinary()))
+        @annotationModel = @get("volumeTracing")
       else
         @set("skeletonTracing", new SkeletonTracing(tracing, flycam, flycam3d, @user))
+        @annotationModel = @get("skeletonTracing")
 
     @applyState(@get("state"), tracing)
     @computeBoundaries()

@@ -18,6 +18,11 @@ class PushQueue
     @push = _.debounce @pushImpl, @DEBOUNCE_TIME
 
 
+  isDirty : ->
+
+    return @queue.length == 0 and @cube.temporalBucketManager.getCount() == 0
+
+
   insert : (bucket) ->
 
     @queue.push( bucket )

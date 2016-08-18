@@ -273,7 +273,7 @@ class Plane2D
         {
           buffer: @dataTexture.buffer
           offset: bufferOffsetByTileMacro(@, tile, tileSizeP)
-          widthP: @cube.BUCKET_SIZE_P
+          widthP: tileSizeP
           rowDelta: 1 << @TEXTURE_SIZE_P
         }
         {

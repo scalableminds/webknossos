@@ -20,7 +20,9 @@ class PushQueue
 
   isDirty : ->
 
-    return @queue.length == 0 and @cube.temporalBucketManager.getCount() == 0
+    return @queue.length == 0 and
+           @cube.temporalBucketManager.getCount() == 0 and
+           @updatePipeline.isBusy()
 
 
   insert : (bucket) ->

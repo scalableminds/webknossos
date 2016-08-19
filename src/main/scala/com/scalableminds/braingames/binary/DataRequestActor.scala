@@ -246,6 +246,7 @@ class DataRequester(
     } catch {
       case e: Exception =>
         logger.error(s"Saving block failed for. Error: $e")
+        e.printStackTrace()
         Failure("dataStore.save.synchronousFailed", Full(e), Empty)
     }
   }

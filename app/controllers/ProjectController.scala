@@ -9,6 +9,7 @@ import scala.concurrent.Future
 
 import com.scalableminds.util.reactivemongo.GlobalAccessContext
 import com.scalableminds.util.tools.Fox
+import models.project.{Project, ProjectDAO, ProjectService}
 import models.task._
 import models.user.User
 import net.liftweb.common.{Empty, Full}

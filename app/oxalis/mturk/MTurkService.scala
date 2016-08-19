@@ -16,6 +16,7 @@ import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.typesafe.scalalogging.LazyLogging
 import models.annotation.AnnotationDAO
 import models.mturk._
+import models.project.Project
 import models.task._
 import models.user.UserService
 import play.api.Play._

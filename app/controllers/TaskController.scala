@@ -1,8 +1,9 @@
 package controllers
 
-import com.scalableminds.util.geometry.{Vector3D, BoundingBox, Point3D}
+import com.scalableminds.util.geometry.{BoundingBox, Point3D, Vector3D}
 import models.binary.DataSetDAO
 import javax.inject.Inject
+
 import net.liftweb.common.{Box, Failure, Full}
 import oxalis.nml.NMLService
 import play.api.libs.iteratee.Cont
@@ -20,20 +21,23 @@ import reactivemongo.core.commands.LastError
 import views._
 import play.api.libs.concurrent._
 import play.api.libs.concurrent.Execution.Implicits._
-import play.api.i18n.{MessagesApi, Messages}
+import play.api.i18n.{Messages, MessagesApi}
 import models.annotation.AnnotationService
 import play.api.Play.current
-import com.scalableminds.util.tools.{FoxImplicits, Fox}
-import net.liftweb.common.{Empty, Full, Failure, Box}
+import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import net.liftweb.common.{Box, Empty, Failure, Full}
 import com.scalableminds.util.reactivemongo.DBAccessContext
-import play.api.mvc.{Result, AnyContent}
+import play.api.mvc.{AnyContent, Result}
 import play.twirl.api.Html
 import scala.concurrent.Future
+
 import play.api.libs.json._
 import play.api.libs.functional.syntax._
 import reactivemongo.bson.BSONObjectID
 import scala.concurrent.duration._
 import scala.async.Async.{async, await}
+
+import models.project.{Project, ProjectDAO}
 
 class TaskController @Inject() (val messagesApi: MessagesApi) extends Controller with Secured with FoxImplicits {
 

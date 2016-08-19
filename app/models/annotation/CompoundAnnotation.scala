@@ -5,16 +5,17 @@ import com.scalableminds.util.reactivemongo.DBAccessContext
 import com.scalableminds.util.tools.TimeLogger._
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import models.annotation.AnnotationType._
-import models.task.{Project, Task, TaskDAO, TaskType}
+import models.task.{Task, TaskDAO, TaskType}
 import models.tracing.skeleton.temporary.{TemporarySkeletonTracing, TemporarySkeletonTracingService}
-import models.tracing.skeleton.{SkeletonTracingService, SkeletonTracing, SkeletonTracingLike}
-import net.liftweb.common.{Empty, Box, Full, Failure}
+import models.tracing.skeleton.{SkeletonTracing, SkeletonTracingLike, SkeletonTracingService}
+import net.liftweb.common.{Box, Empty, Failure, Full}
 import play.api.Logger
 import play.api.i18n.Messages
 import play.api.libs.concurrent.Execution.Implicits._
 import reactivemongo.bson.BSONObjectID
-
 import scala.concurrent.Future
+
+import models.project.Project
 
 object CompoundAnnotation extends Formatter with FoxImplicits {
 

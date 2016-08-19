@@ -1,6 +1,6 @@
 package models.mturk
 
-import models.task.AssignmentConfig
+import models.project.AssignmentConfig
 import play.api.libs.json._
 
 case class MTurkAssignmentConfig(

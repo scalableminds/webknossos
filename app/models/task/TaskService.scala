@@ -12,6 +12,7 @@ import models.user.{Experience, User, UserDAO}
 import scala.concurrent.Future
 
 import models.mturk.MTurkAssignmentConfig
+import models.project.{Project, WebknossosAssignmentConfig}
 import net.liftweb.common.Box
 import oxalis.mturk.MTurkService
 import play.api.Logger

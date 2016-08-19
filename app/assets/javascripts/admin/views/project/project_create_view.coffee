@@ -64,44 +64,56 @@ class ProjectCreateView extends Marionette.LayoutView
               <h4>Mechanical Turk settings</h4>
 
               <div class="form-group">
+                <label class="col-sm-2 control-label" for="requiredQualification">Required qualification</label>
+                <div class="col-sm-9">
+                  <select class="form-control" name="assignmentConfiguration[requiredQualification]" disabled>
+                    <option value="mt-everyone" selected>Everyone</option>
+                    <option value="mt-expert">Expert</option>
+                    <option value="mt-max-10k-hits">Worker with less than 10k approved HITs</option>
+                    <option value="mt-min-10k-hits">Worker with more than 10k approved HITs</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="form-group">
                 <label class="col-sm-2 control-label" for="assignmentDurationInSeconds">Assignment duration in seconds</label>
                 <div class="col-sm-9">
-                  <input type="number" class="form-control" name="assignmentConfiguration[assignmentDurationInSeconds]" value="3600" disabled>
+                  <input type="number" class="form-control" name="assignmentConfiguration[assignmentDurationInSeconds]" value="3600" disabled required>
                 </div>
               </div>
 
               <div class="form-group">
                 <label class="col-sm-2 control-label" for="rewardInDollar">Reward in USD</label>
                 <div class="col-sm-9">
-                  <input type="number" class="form-control" name="assignmentConfiguration[rewardInDollar]" value="0.05" step="0.01" disabled>
+                  <input type="number" class="form-control" name="assignmentConfiguration[rewardInDollar]" value="0.05" step="0.01" disabled required>
                 </div>
               </div>
 
               <div class="form-group">
                 <label class="col-sm-2 control-label" for="autoApprovalDelayInSeconds">Auto approval delay in seconds</label>
                 <div class="col-sm-9">
-                  <input type="number" class="form-control" name="assignmentConfiguration[autoApprovalDelayInSeconds]" value="60000" disabled>
+                  <input type="number" class="form-control" name="assignmentConfiguration[autoApprovalDelayInSeconds]" value="60000" disabled required>
                 </div>
               </div>
 
               <div class="form-group">
                 <label class="col-sm-2 control-label" for="title">Title</label>
                 <div class="col-sm-9">
-                  <input type="text" class="form-control" name="assignmentConfiguration[title]" disabled>
+                  <input type="text" class="form-control" name="assignmentConfiguration[title]" disabled required>
                 </div>
               </div>
 
               <div class="form-group">
                 <label class="col-sm-2 control-label" for="keywords">Keywords (comma separated)</label>
                 <div class="col-sm-9">
-                  <input type="text" class="form-control" name="assignmentConfiguration[keywords]" disabled>
+                  <input type="text" class="form-control" name="assignmentConfiguration[keywords]" disabled required>
                 </div>
               </div>
 
               <div class="form-group">
                 <label class="col-sm-2 control-label" for="description">Description</label>
                 <div class="col-sm-9">
-                  <textarea class="form-control" name="assignmentConfiguration[description]" disabled rows="3"></textarea>
+                  <textarea class="form-control" name="assignmentConfiguration[description]" disabled required rows="3"></textarea>
                 </div>
               </div>
 
@@ -135,7 +147,7 @@ class ProjectCreateView extends Marionette.LayoutView
     "name" : ".project-name"
     "form" : "form"
     "projectTypeInput" : "[name='assignmentConfiguration[location]']"
-    "mturkSettingsInputs" : ".mturk-settings input, .mturk-settings textarea"
+    "mturkSettingsInputs" : ".mturk-settings input, .mturk-settings textarea, .mturk-settings select"
 
 
   initialize : ->

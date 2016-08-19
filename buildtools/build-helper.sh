@@ -106,6 +106,8 @@ project=\"$PROJECT\", branch=\"$BRANCH\", log_file=\"$LOG_FILE\", mode=\"$MODE\"
 
 NEWRELIC_CONFIG_PATH="${ROOT_ENV}/${APP_INSTALL_DIR}/conf/newrelic.yml"
 NEWRELIC_TEMPLATE=$(< ${TEMPLATE_DIR}/newrelic_template)
+NEWRELIC_AGENT_VERSION=$(cat project/Build.scala | python2.7 -c \
+  "import re, sys; print re.search('com\.newrelic\.agent\.java.+(\d+\.\d+\.\d+)', sys.stdin.read()).group(1)")
 mkdir -p ${ROOT_ENV}/${APP_INSTALL_DIR}/conf
 python2.7 -c "import jinja2; print jinja2.Template(\"\"\"$NEWRELIC_TEMPLATE\"\"\").render(\
 project=\"$PROJECT\", branch=\"$BRANCH\", newrelic_license_key=\"$NEWRELIC_LICENSE_KEY\", mode=\"$MODE\")" > $NEWRELIC_CONFIG_PATH
@@ -143,7 +145,7 @@ fi
   LOGGER_XML_ABSPATH="/${LOGGER_XML#*/}"
   python2.7 -c "import jinja2; print jinja2.Template(\"\"\"$TEMPLATE\"\"\").render(\
   project=\"$PROJECT\", branch=\"$BRANCH\", port=\"$PORT\", mode=\"$MODE\", loggerXML=\"$LOGGER_XML_ABSPATH\", \
-  jmx_port=$JMX_PORT , app_version=\"$APP_VERSION\")" > $INIT_SCRIPT
+  jmx_port=$JMX_PORT , app_version=\"$APP_VERSION\", newrelic_agent_version=\"$NEWRELIC_AGENT_VERSION\")" > $INIT_SCRIPT
 
 #start script with dummy db import
 if [ $PROJECT == "oxalis" -a $MODE == "dev" -a $BRANCH == "dummy-db" ]; then

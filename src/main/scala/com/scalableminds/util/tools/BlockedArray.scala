@@ -63,7 +63,7 @@ case class BlockedArray3D[T](
   }
 
   def emptyBlock: Array[T] = {
-    new Array[T](blockWidth * blockHeight * blockDepth)
+    new Array[T](blockWidth * blockHeight * blockDepth * elementSize)
   }
 
   def setBytes(p: Point3D, d: Array[T], offset: Int): Unit = {

@@ -1,6 +1,3 @@
-/*
- * Copyright (C) Tom Bocklisch <https://github.com/tmbo>
- */
 package oxalis.mturk
 
 import com.typesafe.scalalogging.LazyLogging

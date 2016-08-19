@@ -1,6 +1,3 @@
-/*
- * Copyright (C) Tom Bocklisch <https://github.com/tmbo>
- */
 package models.mturk
 
 import com.scalableminds.util.reactivemongo.AccessRestrictions.{AllowIf, DenyEveryone}

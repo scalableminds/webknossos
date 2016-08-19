@@ -16,6 +16,7 @@ import com.typesafe.config.Config
 import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common.{Box, Empty, Failure, Full}
 import play.api.libs.concurrent.Execution.Implicits._
+import scala.collection.breakOut
 
 import scala.collection.mutable
 import scala.concurrent._
@@ -52,7 +53,6 @@ class DataRequester(
                      dataSourceRepository: DataSourceRepository)
   extends DataCache
           with FoxImplicits
-          with EmptyDataProvider
           with LazyLogging {
 
   val layerLocker = new LayerLocker
@@ -141,8 +141,8 @@ class DataRequester(
             loadFromSections(tail)
         }
       case _ =>
-        // We couldn't find the data in any section. Hence let's assume it is empty (e.g. use the default value)
-        Fox.successful(loadNullBlock(dataSource, layer, useCache = true))
+        // We couldn't find the data in any section. Hence let's assume there is none
+        Fox.successful(Array.empty[Byte])
     }
 
     val sections = Stream(layer.sections.map { (_, layer) }.filter {
@@ -157,8 +157,8 @@ class DataRequester(
                  maxBlock: Point3D,
                  dataRequest: DataRequest,
                  layer: DataLayer,
-                 useCache: Boolean = true) = {
-    (minBlock to maxBlock).toList.map{
+                 useCache: Boolean = true): Array[Fox[Array[Byte]]] = {
+    (minBlock to maxBlock).toArray.map{
       p =>
         loadFromSomewhere(
                            dataRequest.dataSource,
@@ -197,10 +197,11 @@ class DataRequester(
 
     dataRequest match {
       case request: DataReadRequest =>
-        Fox.combined(loadBlocks(minBlock, maxBlock, dataRequest, layer)).map {
+        val combinedF: Fox[Array[Array[Byte]]] = Fox.combined(loadBlocks(minBlock, maxBlock, dataRequest, layer))
+        combinedF.map {
           blocks =>
             BlockedArray3D(
-                            blocks.toVector,
+                            blocks,
                             dataSource.blockLength, dataSource.blockLength, dataSource.blockLength,
                             maxBlock.x - minBlock.x + 1, maxBlock.y - minBlock.y + 1, maxBlock.z - minBlock.z + 1,
                             layer.bytesPerElement,
@@ -229,7 +230,7 @@ class DataRequester(
       val f = Fox.combined(loadBlocks(minBlock, maxBlock, request, layer, useCache = false)).map {
         blocks =>
           BlockedArray3D(
-                          blocks.toVector,
+                          blocks,
                           blockLength, blockLength, blockLength,
                           maxBlock.x - minBlock.x + 1, maxBlock.y - minBlock.y + 1, maxBlock.z - minBlock.z + 1,
                           layer.bytesPerElement,
@@ -302,16 +303,19 @@ class DataRequester(
                   maxBlock: Point3D,
                   dataRequest: DataRequest,
                   layer: DataLayer,
-                  blocks: Vector[Array[Byte]]): Future[List[Box[Boolean]]] = {
+                  blocks: Array[Array[Byte]]): Future[List[Box[Boolean]]] = {
 
     Fox.serialSequence((minBlock to maxBlock, blocks).zipped.toList) { case (point, block) =>
-      saveToSomewhere(
-                       dataRequest.dataSource,
-                       layer,
-                       dataRequest.dataSection,
-                       dataRequest.resolution,
-                       point,
-                       block)
+      if(block.length > 0) {
+        saveToSomewhere(
+                         dataRequest.dataSource,
+                         layer,
+                         dataRequest.dataSection,
+                         dataRequest.resolution,
+                         point,
+                         block)
+      } else
+        Fox.successful(true)
     }
   }
 }
@@ -373,7 +377,7 @@ class DataBlockWriter(block: BlockedArray3D[Byte], dataRequest: DataWriteRequest
 
   val cube = dataRequest.cuboid
 
-  def writeSuppliedData: Vector[Array[Byte]] = {
+  def writeSuppliedData: Array[Array[Byte]] = {
     cube.withContainingCoordinates(extendArrayBy = layer.bytesPerElement)(writeData)
     block.underlying
   }

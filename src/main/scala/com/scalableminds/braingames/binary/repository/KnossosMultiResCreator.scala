@@ -8,11 +8,12 @@ import java.nio.file.Path
 import com.scalableminds.util.geometry.{BoundingBox, Point3D}
 import com.scalableminds.braingames.binary.store.FileDataStore
 
-import scala.concurrent.Future
+import scala.collection.breakOut
+import scala.concurrent.{ExecutionContext, Future, Promise}
 import scala.math.pow
 import com.scalableminds.util.tools.{BlockedArray3D, Fox, FoxImplicits}
 import com.typesafe.scalalogging.LazyLogging
-import net.liftweb.common.Full
+import net.liftweb.common.{Box, Full}
 import play.api.libs.concurrent.Execution.Implicits._
 
 object KnossosMultiResCreator extends LazyLogging with FoxImplicits{
@@ -94,7 +95,7 @@ object KnossosMultiResCreator extends LazyLogging with FoxImplicits{
           val base = p.scale(baseScale)
           val goal = p.scale(targetScale)
           loadCubes(dataStore, target, dataSetId, base, resolution, fileSize(bytesPerElement), InterpolationNeighbours).flatMap{ cubes =>
-            val block = BlockedArray3D[Byte](cubes.toVector, CubeSize, CubeSize, CubeSize, 2, 2, 2, bytesPerElement, 0)
+            val block = BlockedArray3D[Byte](cubes.toArray, CubeSize, CubeSize, CubeSize, 2, 2, 2, bytesPerElement, 0)
             val data = downScale(block, CubeSize, CubeSize, CubeSize, bytesPerElement)
             dataStore.save(target, dataSetId, targetResolution, goal, data)
           }

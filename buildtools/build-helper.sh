@@ -1,6 +1,6 @@
 #!/bin/bash
 
-set -ex
+set -e
 
 #check for existing environment variables
 : ${WORKSPACE:?"Need non empty WORKSPACE variable"}

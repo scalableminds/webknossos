@@ -78,11 +78,11 @@ common: &default_settings
 
   # The name of the log file.
   # Default is newrelic_agent.log.
-  log_file_name: /var/log/{{name}}/newrelic_agent.log
+  log_file_name: newrelic_agent.log
 
   # The log file directory.
   # Default is the logs directory in the newrelic.jar parent directory.
-  #log_file_path:
+  log_file_path: /var/log/{{name}}
 
   # The agent communicates with New Relic via https by
   # default.  If you want to communicate with newrelic via http,

@@ -16,6 +16,14 @@ import play.api.libs.concurrent.Execution.Implicits._
 
 class MTurkController @Inject()(val messagesApi: MessagesApi) extends Controller with Secured {
 
+  /**
+    * This is the entry point for amazon turk tracers. The link provided in their description will lead them to this
+    * action
+    * @param id webknossos generated id to identify the HIT
+    * @param workerId identification of the worker (passed from amazon)
+    * @param assignmentId amazon identification for the assignment of the worker
+    * @return redirection to the tracing page of the task
+    */
   def startAssignment(id: String, workerId: String, assignmentId: String) = Authenticated.async {
     implicit request =>
       def annotationForAssignment(mturkAssignment: MTurkAssignment, user: User, task: Task) = {

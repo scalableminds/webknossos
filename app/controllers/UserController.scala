@@ -17,7 +17,6 @@ import play.api.libs.json._
 import play.twirl.api.Html
 import views.html
 import scala.concurrent.Future
-
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import models.team._
 import play.api.libs.functional.syntax._
@@ -25,8 +24,6 @@ import com.scalableminds.util.tools.ExtendedTypes.ExtendedString
 import models.user.time._
 import com.scalableminds.util.tools.DefaultConverters._
 import scala.text
-
-import play.api.Logger
 
 class UserController @Inject()(val messagesApi: MessagesApi)
   extends Controller

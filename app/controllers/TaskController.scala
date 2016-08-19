@@ -161,22 +161,6 @@ class TaskController @Inject() (val messagesApi: MessagesApi) extends Controller
     }
   }
 
-//  def createAnonymousUsersAndTasksInstancesIfNeeded(isForAnonymous: Boolean, task: Task)(implicit request: AuthenticatedRequest[_]) = {
-//    if (isForAnonymous)
-//      Fox.serialSequence((1 to task.instances).toList){ i =>
-//        for {
-//          user <- UserService.insertAnonymousUser(task.team, task.neededExperience)
-//          loginToken <- UserService.createLoginToken(user, validDuration = 30 days)
-//          annotation <- AnnotationService.createAnnotationFor(user, task)
-//        } yield {
-//          val url = controllers.routes.AnnotationController.trace(annotation.typ, annotation.id).absoluteURL(secure = true)
-//          url + "?loginToken=" + loginToken
-//        }
-//      }.map(_.flatten)
-//    else
-//      Future.successful(Nil)
-//  }
-
   // TODO: properly handle task update with amazon turk
   def update(taskId: String) = Authenticated.async(parse.json) { implicit request =>
     withJsonBodyUsing(taskCompleteReads){

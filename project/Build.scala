@@ -53,13 +53,30 @@ object Dependencies{
     "commons-logging" % "commons-logging" % "1.0.4",
     "commons-pool" % "commons-pool" % "1.3",
     "commons-lang" % "commons-lang" % "2.3",
+    "commons-discovery" % "commons-discovery" % "0.2",
     "dom4j" % "dom4j" % "1.6.1",
     "org.apache.httpcomponents" % "httpclient" % "4.1.2",
     "org.apache.httpcomponents" % "httpcore" % "4.1.2",
     "org.apache.httpcomponents" % "httpmime" % "4.1.2",
     "org.apache.httpcomponents" % "httpclient-cache" % "4.1.2",
     "xalan" % "xalan" % "2.7.1",
-    "com.amazonaws" % "aws-java-sdk" % "1.11.26"
+    "com.amazonaws" % "aws-java-sdk" % "1.11.26",
+    "xerces" % "xercesImpl" % "2.9.1",
+    "xml-resolver" % "xml-resolver" % "1.2",
+    "xml-apis" % "xml-apis" % "1.4.01",
+    "org.codehaus.woodstox" % "wstx-asl" % "3.2.3",
+    "wsdl4j" % "wsdl4j" % "1.5.1",
+    "org.apache.ws.jaxme" % "jaxmeapi" % "0.5.2",
+    "org.apache.ws.jaxme" % "jaxme2" % "0.5.2",
+    "org.apache.ws.jaxme" % "jaxmexs" % "0.5.2",
+    "org.apache.ws.jaxme" % "jaxmejs" % "0.5.2",
+    "org.apache.ws.jaxme" % "jaxmepm" % "0.5.2",
+    "org.apache.ws.jaxme" % "jaxme2-rt" % "0.5.2",
+    "org.apache.velocity" % "velocity" % "1.5",
+    "velocity-tools" % "velocity-tools" % "1.4",
+    "net.sf.opencsv" % "opencsv" % "1.8",
+    "org.apache.geronimo.specs" % "geronimo-activation_1.0.2_spec" % "1.2",
+    "org.apache.geronimo.specs" % "geronimo-javamail_1.3.1_spec" % "1.3"
   )
 
   val tiff = Seq(

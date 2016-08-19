@@ -22,7 +22,7 @@ class PullQueue
   roundTripTime : 0
 
 
-  constructor : (@dataSetName, @cube, @layer, @boundingBox, @connectionInfo, @datastoreInfo) ->
+  constructor : (@dataSetName, @cube, @layer, @connectionInfo, @datastoreInfo) ->
 
     @queue = []
     @BATCH_SIZE = if @isNDstore() then 1 else 3
@@ -36,8 +36,7 @@ class PullQueue
 
     # Filter and sort queue, using negative priorities for sorting so .pop() can be used to get next bucket
     @queue = _.filter(@queue, (item) =>
-      @boundingBox.containsBucket(item.bucket) and
-        @cube.getOrCreateBucket(item.bucket).needsRequest()
+      @cube.getOrCreateBucket(item.bucket).needsRequest()
     )
     @queue = _.sortBy(@queue, (item) -> item.priority)
 
@@ -80,7 +79,7 @@ class PullQueue
             bucketData = @decodeFourBit(responseBuffer.subarray(offset, offset += (@cube.BUCKET_LENGTH >> 1)))
           else
             bucketData = responseBuffer.subarray(offset, offset += @cube.BUCKET_LENGTH)
-          @boundingBox.removeOutsideArea(bucket, bucketData)
+          @cube.boundingBox.removeOutsideArea(bucket, bucketData)
           @maybeWhitenEmptyBucket(bucketData)
           @cube.getBucket(bucket).receiveData(bucketData)
       ).catch(=>

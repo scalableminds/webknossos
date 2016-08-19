@@ -7,7 +7,7 @@ import scala.reflect.ClassTag
 import com.scalableminds.util.geometry.Point3D
 
 case class BlockedArray3D[T](
-  underlying: Vector[Array[T]],
+  underlying: Array[Array[T]],
   blockWidth: Int,
   blockHeight: Int,
   blockDepth: Int,
@@ -51,12 +51,25 @@ case class BlockedArray3D[T](
       nullArray
     else {
       val blockIdx = calculateBlockIdx(p)
-      getBytes(p, underlying(blockIdx))
+      if(exists(blockIdx))
+        getBytes(p, underlying(blockIdx))
+      else
+        new Array[T](elementSize)
     }
+  }
+
+  def exists(blockIdx: Int): Boolean = {
+    underlying(blockIdx).length > 0
+  }
+
+  def emptyBlock: Array[T] = {
+    new Array[T](blockWidth * blockHeight * blockDepth)
   }
 
   def setBytes(p: Point3D, d: Array[T], offset: Int): Unit = {
     val blockIdx = calculateBlockIdx(p)
+    if(!exists(blockIdx))
+      underlying(blockIdx) = emptyBlock
     setBytes(p, underlying(blockIdx), d, offset)
   }
 }

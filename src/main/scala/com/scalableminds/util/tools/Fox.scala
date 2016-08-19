@@ -4,7 +4,11 @@
 package com.scalableminds.util.tools
 
 import scala.concurrent.{ExecutionContext, Future}
-import net.liftweb.common.{Failure, Empty, Full, Box}
+import net.liftweb.common.{Box, Empty, Failure, Full}
+
+import scala.collection.generic.CanBuildFrom
+import scala.collection.{TraversableLike, breakOut}
+import scala.reflect.ClassTag
 
 trait FoxImplicits {
   implicit def bool2Fox(b: Boolean)(implicit ec: ExecutionContext): Fox[Boolean] =
@@ -43,7 +47,7 @@ object Fox{
 
   def empty(implicit ec: ExecutionContext): Fox[Nothing] = new Fox(Future.successful(Empty))
 
-  def failure(message: String, ex: Box[Throwable] = Empty, 
+  def failure(message: String, ex: Box[Throwable] = Empty,
               chain: Box[Failure] = Empty)(implicit ec: ExecutionContext): Fox[Nothing]  =
     new Fox(Future.successful(Failure(message, ex, chain)))
 
@@ -65,14 +69,35 @@ object Fox{
   def sequence[T](l: List[Fox[T]])(implicit ec: ExecutionContext): Future[List[Box[T]]] =
     Future.sequence(l.map(_.futureBox))
 
-  def combined[T](l: List[Fox[T]])(implicit ec: ExecutionContext): Fox[List[T]] = Fox(
-    Future.sequence(l.map(_.futureBox)).map{ results =>
-      results.find(_.isEmpty) match {
-        case Some(Empty) => Empty
-        case Some(failure : Failure) => failure
-        case _ => Full(results.map(_.openOrThrowException("An exception should never be thrown, all boxes must be full")))
-      }
-    })
+  def combined[T](l: List[Fox[T]])(implicit ec: ExecutionContext): Fox[List[T]] = {
+    Fox(
+      Future.sequence(l.map(_.futureBox)).map{ results =>
+       results.find(_.isEmpty) match {
+         case Some(Empty) => Empty
+         case Some(failure : Failure) => failure
+         case _ => Full(results.map(_.openOrThrowException("An exception should never be thrown, all boxes must be full")))
+       }
+      })
+  }
+
+  def combined[T](l: Array[Fox[T]])(implicit ec: ExecutionContext, ev: Array[Future[Box[T]]] => Traversable[Future[Box[T]]], ct: ClassTag[T]): Fox[Array[T]] = {
+    val x = Future.sequence(ev(l.map(_.futureBox)))
+    val r: Future[Box[Array[T]]] = x.map{ results =>
+     results.find(_.isEmpty) match {
+       case Some(Empty) => Empty
+       case Some(failure : Failure) => failure
+       case _ =>
+         val opened = new Array[T](results.size)
+         var i = 0
+         results.foreach { r =>
+           opened(i) = r.openOrThrowException("An exception should never be thrown, all boxes must be full")
+           i += 1
+         }
+         Full(opened)
+     }
+    }
+    new Fox(r)
+  }
 
   def serialCombined[A, B](l: List[A])(f: A => Fox[B])(implicit ec: ExecutionContext): Fox[List[B]] = {
     def runNext(remaining: List[A], results: List[B]): Fox[List[B]] = {

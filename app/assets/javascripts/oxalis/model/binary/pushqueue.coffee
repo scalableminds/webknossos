@@ -22,7 +22,7 @@ class PushQueue
 
     return @queue.length == 0 and
            @cube.temporalBucketManager.getCount() == 0 and
-           @updatePipeline.isBusy()
+           not @updatePipeline.isBusy()
 
 
   insert : (bucket) ->

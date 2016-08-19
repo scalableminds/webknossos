@@ -26,7 +26,7 @@ class Pipeline
 
   isBusy : ->
 
-    return @actions.length == 0
+    return @actions.length != 0
 
 
   getLastActionPromise : ->

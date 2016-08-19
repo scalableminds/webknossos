@@ -65,6 +65,7 @@
     "nouislider": "^8.2.1",
     "pako": "^0.2.8",
     "react": "^15.1.0",
+    "react-bootstrap": "^0.30.2",
     "react-dom": "^15.1.0",
     "scroll-into-view-if-needed": "^1.0.2",
     "stats.js": "^1.0.0",

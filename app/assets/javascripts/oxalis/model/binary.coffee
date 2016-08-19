@@ -138,18 +138,18 @@ class Binary
       @pullQueue.pull()
 
 
-  arbitraryPing : _.once (matrix) ->
+  arbitraryPing : _.once (matrix, zoomStep) ->
 
     @arbitraryPing = _.throttle(@arbitraryPingImpl, @PING_THROTTLE_TIME)
-    @arbitraryPing(matrix)
+    @arbitraryPing(matrix, zoomStep)
 
 
-  arbitraryPingImpl : (matrix) ->
+  arbitraryPingImpl : (matrix, zoomStep) ->
 
     for strategy in @pingStrategies3d
       if strategy.forContentType(@tracing.contentType) and strategy.inVelocityRange(1) and strategy.inRoundTripTimeRange(@pullQueue.roundTripTime)
         @pullQueue.clearNormalPriorities()
-        @pullQueue.addAll(strategy.ping(matrix))
+        @pullQueue.addAll(strategy.ping(matrix, zoomStep))
         break
 
     @pullQueue.pull()

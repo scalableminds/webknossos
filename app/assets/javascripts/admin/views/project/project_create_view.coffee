@@ -67,7 +67,7 @@ class ProjectCreateView extends Marionette.LayoutView
                 <label class="col-sm-2 control-label" for="requiredQualification">Required qualification</label>
                 <div class="col-sm-9">
                   <select class="form-control" name="assignmentConfiguration[requiredQualification]" disabled>
-                    <option value="mt-everyone" selected>Everyone</option>
+                    <option value="mt-everyone" selected>None</option>
                     <option value="mt-expert">Expert</option>
                     <option value="mt-max-10k-hits">Worker with less than 10k approved HITs</option>
                     <option value="mt-min-10k-hits">Worker with more than 10k approved HITs</option>

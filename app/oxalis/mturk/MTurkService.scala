@@ -25,19 +25,22 @@ import play.api.Play._
 import play.api.libs.concurrent.Execution.Implicits._
 
 object MTurkService extends LazyLogging with FoxImplicits {
+
   type HITTypeId = String
 
   val conf = current.configuration
 
   lazy val service = new RequesterService(loadConfig)
 
-  val questionFile: String = "conf/mturk/project_hit_template.question"
+  val questionFile = conf.getString("amazon.mturk.questionFile").get
+
+  val isSandboxed = conf.getBoolean("amazon.mturk.sandbox").get
 
   val notificationsUrl = conf.getString("amazon.sqs.endpoint").get + conf.getString("amazon.sqs.queueName").get
 
   val serverBaseUrl = conf.getString("http.uri").get
 
-  def loadConfig = {
+  private def loadConfig = {
     val cfg = new ClientConfig()
     cfg.setAccessKeyId(conf.getString("amazon.mturk.accessKey").get)
     cfg.setSecretAccessKey(conf.getString("amazon.mturk.secretKey").get)
@@ -105,7 +108,6 @@ object MTurkService extends LazyLogging with FoxImplicits {
 
   def createHITs(project: Project, task: Task): Fox[MTurkAssignment] = {
     val estimatedAmountNeeded = 1
-
     for {
       _ <- ensureEnoughFunds(estimatedAmountNeeded)
       mtProject <- MTurkProjectDAO.findByProject(project.name)(GlobalAccessContext)
@@ -127,10 +129,36 @@ object MTurkService extends LazyLogging with FoxImplicits {
     Future(blocking(service.setHITTypeNotification(hITTypeId, notification, true)))
   }
 
+  private def qualificationRequirements(config: MTurkAssignmentConfig): Array[QualificationRequirement] = {
+    config.requiredQualification match {
+      case MTurkAllowEveryone         =>
+        null
+      case MTurkAllowExperts          =>
+        val qualificationRequirement = new QualificationRequirement
+        val mastersId = if (isSandboxed) RequesterService.MASTERS_SANDBOX_QUALIFICATION_TYPE_ID
+                        else RequesterService.MASTERS_QUALIFICATION_TYPE_ID
+        qualificationRequirement.setQualificationTypeId(mastersId)
+        qualificationRequirement.setComparator(Comparator.Exists)
+        Array(qualificationRequirement)
+      case MTurkAllowLowerHitLimit10k =>
+        val qualificationRequirement = new QualificationRequirement
+        qualificationRequirement.setQualificationTypeId(
+          RequesterService.TOTAL_NUMBER_OF_HITS_APPROVED_QUALIFICATION_TYPE_ID)
+        qualificationRequirement.setComparator(Comparator.GreaterThanOrEqualTo)
+        qualificationRequirement.setIntegerValue(Array(10000))
+        Array(qualificationRequirement)
+      case MTurkAllowUpperHitLimit10k =>
+        val qualificationRequirement = new QualificationRequirement
+        qualificationRequirement.setQualificationTypeId(
+          RequesterService.TOTAL_NUMBER_OF_HITS_APPROVED_QUALIFICATION_TYPE_ID)
+        qualificationRequirement.setComparator(Comparator.LessThanOrEqualTo)
+        qualificationRequirement.setIntegerValue(Array(10000))
+        Array(qualificationRequirement)
+    }
+  }
+
   private def createHITType(config: MTurkAssignmentConfig): Future[HITTypeId] = {
     Future {
-      //    val qualificationRequirement = new QualificationRequirement
-      //    locationQualReq.setQualificationTypeId
       blocking {
         service.registerHITType(
           config.autoApprovalDelayInSeconds,
@@ -139,7 +167,7 @@ object MTurkService extends LazyLogging with FoxImplicits {
           config.title,
           config.keywords,
           config.description,
-          Array.empty)
+          qualificationRequirements(config))
       }
     }
   }
@@ -164,15 +192,16 @@ object MTurkService extends LazyLogging with FoxImplicits {
           service.createHIT(hitType,
             null, null, null, question,
             null, null, null, lifetimeInSeconds,
-            numAssignments, requesterAnnotation, null, null)
+            numAssignments, requesterAnnotation,
+            null, null)
         }
       }
 
     hitF.map { hit =>
 
-      logger.info("Created HIT: " + hit.getHITId)
+      logger.debug("Created HIT: " + hit.getHITId)
 
-      logger.info(service.getWebsiteURL + "/mturk/preview?groupId=" + hit.getHITTypeId)
+      logger.debug(service.getWebsiteURL + "/mturk/preview?groupId=" + hit.getHITTypeId)
 
       hit.getHITId -> requesterAnnotation
     }

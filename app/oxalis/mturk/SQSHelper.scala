@@ -3,19 +3,17 @@
  */
 package oxalis.mturk
 
+import scala.collection.JavaConversions._
+
 import com.amazonaws.auth.BasicAWSCredentials
 import com.amazonaws.services.sqs.AmazonSQSClient
 import com.amazonaws.services.sqs.model._
-import scala.collection.JavaConversions._
-
 import com.typesafe.scalalogging.LazyLogging
 
-
-case class SQSConfiguration(accessKey: String, secretKey: String, queueName: String, endpoint: String)
 /**
   * HeLper to handle SQS Interface ( lots of uggly Java Api )
   */
-class SQSHelper(sqsConfig: SQSConfiguration) extends LazyLogging{
+class SQSHelper(sqsConfig: SQSConfiguration) extends LazyLogging {
 
   private val client = new AmazonSQSClient(new BasicAWSCredentials(sqsConfig.accessKey, sqsConfig.secretKey))
   client.setEndpoint(sqsConfig.endpoint)

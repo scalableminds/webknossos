@@ -9,6 +9,6 @@ import reactivemongo.play.json.BSONFormats._
 
 case class MTurkAnnotationReference(_annotation: BSONObjectID, _user: BSONObjectID, assignmentId: String)
 
-object MTurkAnnotationReference{
+object MTurkAnnotationReference {
   implicit val mturkAnnotationReferenceFormat = Json.format[MTurkAnnotationReference]
 }

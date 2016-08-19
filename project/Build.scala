@@ -50,7 +50,7 @@ object Dependencies{
     "commons-dbcp" % "commons-dbcp" % "1.2.2",
     "commons-digester" % "commons-digester" % "1.8",
     "commons-logging" % "commons-logging-api" % "1.0.4",
-    "commons-logging" % "commons-logging" % "1.1.1",
+    "commons-logging" % "commons-logging" % "1.0.4",
     "commons-pool" % "commons-pool" % "1.3",
     "commons-lang" % "commons-lang" % "2.3",
     "dom4j" % "dom4j" % "1.6.1",

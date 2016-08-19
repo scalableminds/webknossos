@@ -14,7 +14,6 @@ import reactivemongo.api.indexes.{Index, IndexType}
 import reactivemongo.bson.BSONObjectID
 import reactivemongo.play.json.BSONFormats._
 
-
 case class MTurkAssignment(
   _task: BSONObjectID,
   team: String,

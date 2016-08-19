@@ -7,6 +7,7 @@ import com.scalableminds.util.reactivemongo.{DBAccessContext, DefaultAccessDefin
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import models.basics._
 import models.mturk.MTurkAssignmentConfig
+import models.task.{OpenAssignmentDAO, TaskDAO, TaskService}
 import models.user.{User, UserService}
 import net.liftweb.common.Full
 import oxalis.mturk.MTurkService

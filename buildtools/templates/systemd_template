@@ -1,0 +1,15 @@
+{% set name = project+"-"+branch %}
+{% set application_config = "application_"+mode+".conf" %}
+[Unit]
+Description={{name}}
+
+[Service]
+ExecStart=/usr/lib/{{name}}/bin/oxalis -Dlogger.file=/usr/lib/{{name}}/conf/stdout_logger.xml -Dconfig.file=/usr/lib/{{name}}/conf/{{application_config}} -Dhttp.port={{port}} -Dmongodb.db={{name}}
+Type=simple
+PIDFile=/usr/lib/{{name}}/RUNNING_PID
+Restart=always
+User={{name}}
+WorkingDirectory=/usr/lib/{{name}}
+
+[Install]
+WantedBy=multi-user.target

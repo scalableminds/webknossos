@@ -1,6 +1,6 @@
 #!/bin/bash
 
-set -e
+set -ex
 
 #check for existing environment variables
 : ${WORKSPACE:?"Need non empty WORKSPACE variable"}
@@ -106,6 +106,7 @@ project=\"$PROJECT\", branch=\"$BRANCH\", log_file=\"$LOG_FILE\", mode=\"$MODE\"
 
 NEWRELIC_CONFIG_PATH="${ROOT_ENV}/${APP_INSTALL_DIR}/conf/newrelic.yml"
 NEWRELIC_TEMPLATE=$(< ${TEMPLATE_DIR}/newrelic_template)
+mkdir -p ${ROOT_ENV}/${APP_INSTALL_DIR}/conf
 python2.7 -c "import jinja2; print jinja2.Template(\"\"\"$NEWRELIC_TEMPLATE\"\"\").render(\
 project=\"$PROJECT\", branch=\"$BRANCH\", newrelic_license_key=\"$NEWRELIC_LICENSE_KEY\", mode=\"$MODE\")" > $NEWRELIC_CONFIG_PATH
 

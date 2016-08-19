@@ -4,7 +4,7 @@
 Description={{name}}
 
 [Service]
-ExecStart=/usr/lib/{{name}}/bin/oxalis -Dlogger.file=/usr/lib/{{name}}/conf/stdout_logger.xml -Dconfig.file=/usr/lib/{{name}}/conf/{{application_config}} -Dhttp.port={{port}} -Dmongodb.db={{name}}
+ExecStart=/usr/lib/{{name}}/bin/oxalis -Dlogger.file=/usr/lib/{{name}}/conf/stdout_logger.xml -Dconfig.file=/usr/lib/{{name}}/conf/{{application_config}} -Dhttp.port={{port}} -Dmongodb.db={{name}} -J-javaagent:/usr/lib/{{name}}/target/universal/stage/lib/com.newrelic.agent.java.newrelic-agent-3.31.1.jar -J-Dnewrelic.config.file=/usr/lib/{{name}}/conf/newrelic.yml
 Type=simple
 PIDFile=/usr/lib/{{name}}/RUNNING_PID
 Restart=always

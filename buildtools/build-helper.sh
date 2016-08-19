@@ -4,6 +4,7 @@ set -e
 
 #check for existing environment variables
 : ${WORKSPACE:?"Need non empty WORKSPACE variable"}
+: ${NEWRELIC_LICENSE_KEY:?"Need non empty NEWRELIC_LICENSE_KEY variable"}
 
 if [ $# -lt 6 ];then
   echo "Usage: <project> <branch> <build-number> <port> <mode> <pkg-type>"
@@ -102,6 +103,12 @@ fi
 LOGGER_XML="${ROOT_ENV}/${APP_INSTALL_DIR}/${LOGGER}.xml"
 python2.7 -c "import jinja2; print jinja2.Template(\"\"\"$LOGGER_XML_TEMPLATE\"\"\").render(\
 project=\"$PROJECT\", branch=\"$BRANCH\", log_file=\"$LOG_FILE\", mode=\"$MODE\")" > $LOGGER_XML
+
+NEWRELIC_CONFIG_PATH="${ROOT_ENV}/${APP_INSTALL_DIR}/conf/newrelic.yml"
+NEWRELIC_TEMPLATE=$(< ${TEMPLATE_DIR}/newrelic_template)
+python2.7 -c "import jinja2; print jinja2.Template(\"\"\"$NEWRELIC_TEMPLATE\"\"\").render(\
+project=\"$PROJECT\", branch=\"$BRANCH\", newrelic_license_key=\"$NEWRELIC_LICENSE_KEY\", mode=\"$MODE\")" > $NEWRELIC_CONFIG_PATH
+
 
 # Init
 if [ "$PKG_TYPE" = "deb" ]; then

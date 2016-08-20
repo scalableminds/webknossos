@@ -3,7 +3,7 @@ package models.annotation
 import java.io.{BufferedOutputStream, FileOutputStream}
 
 import com.scalableminds.util.io.ZipIO
-import models.user.User
+import models.user.{UsedAnnotationDAO, User}
 import com.scalableminds.util.reactivemongo.DBAccessContext
 import net.liftweb.common.Full
 import oxalis.security.AuthenticatedRequest
@@ -72,6 +72,14 @@ object AnnotationService extends AnnotationContentProviders with BoxImplicits wi
     } yield true
   }
 
+  def finish(annotation: Annotation)(implicit ctx: DBAccessContext) = {
+    // WARNING: needs to be repeatable, might be called multiple times for an annotation
+    AnnotationDAO.finish(annotation._id).map{ r =>
+      annotation.muta.writeAnnotationToFile()
+      UsedAnnotationDAO.removeAll(AnnotationIdentifier(annotation.typ, annotation.id))
+      r
+    }
+  }
 
   def baseFor(task: Task)(implicit ctx: DBAccessContext) =
     AnnotationDAO.findByTaskIdAndType(task._id, AnnotationType.TracingBase).one[Annotation].toFox

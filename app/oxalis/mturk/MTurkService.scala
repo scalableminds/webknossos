@@ -14,11 +14,11 @@ import com.amazonaws.mturk.util.ClientConfig
 import com.scalableminds.util.reactivemongo.GlobalAccessContext
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.typesafe.scalalogging.LazyLogging
-import models.annotation.AnnotationDAO
+import models.annotation.{AnnotationDAO, AnnotationService}
 import models.mturk._
 import models.project.Project
 import models.task._
-import models.user.UserService
+import net.liftweb.common.Full
 import play.api.Play._
 import play.api.libs.concurrent.Execution.Implicits._
 
@@ -61,10 +61,9 @@ object MTurkService extends LazyLogging with FoxImplicits {
     def finishIfAnnotationExists(assignment: MTurkAssignment) = {
       assignment.annotations.find(_.assignmentId == assignmentId) match {
         case Some(reference) =>
-          for {
+          for{
             annotation <- AnnotationDAO.findOneById(reference._annotation)(GlobalAccessContext)
-            user <- UserService.findOneById(reference._user.stringify, useCache = true)(GlobalAccessContext)
-            _ <- annotation.muta.finishAnnotation(user)(GlobalAccessContext)
+            _ <- AnnotationService.finish(annotation)(GlobalAccessContext)
           } yield true
         case None            =>
           Fox.successful(true)
@@ -74,6 +73,8 @@ object MTurkService extends LazyLogging with FoxImplicits {
     for {
       assignment <- MTurkAssignmentDAO.findByHITId(hitId)(GlobalAccessContext)
       result <- finishIfAnnotationExists(assignment)
+      _ <- MTurkAssignmentDAO.decreaseNumberOfOpen(hitId, 1)(GlobalAccessContext)
+      _ <- MTurkProjectDAO.decreaseNumberOfOpen(assignment._project, 1)(GlobalAccessContext)
     } yield result
   }
 
@@ -100,7 +101,7 @@ object MTurkService extends LazyLogging with FoxImplicits {
     for {
       hitTypeId <- createHITType(config).toFox
       _ <- setupNotifications(hitTypeId)
-      _ <- MTurkProjectDAO.insert(MTurkProject(project.name, hitTypeId, project.team))(GlobalAccessContext)
+      _ <- MTurkProjectDAO.insert(MTurkProject(project.name, hitTypeId, project.team, 0))(GlobalAccessContext)
     } yield true
   }
 
@@ -109,9 +110,10 @@ object MTurkService extends LazyLogging with FoxImplicits {
     for {
       _ <- ensureEnoughFunds(estimatedAmountNeeded)
       mtProject <- MTurkProjectDAO.findByProject(project.name)(GlobalAccessContext)
-      (hitId, key) <- createSurvey(mtProject.hittypeId, task.instances)
-      assignment = MTurkAssignment(task._id, task.team, mtProject._project, hitId, key)
+      (hitId, key) <- createHIT(mtProject.hitTypeId, task.instances)
+      assignment = MTurkAssignment(task._id, task.team, mtProject._project, hitId, key, task.instances)
       _ <- MTurkAssignmentDAO.insert(assignment)(GlobalAccessContext)
+      _ <- MTurkProjectDAO.increaseNumberOfOpen(project.name, task.instances)(GlobalAccessContext)
     } yield {
       assignment
     }
@@ -170,7 +172,7 @@ object MTurkService extends LazyLogging with FoxImplicits {
     }
   }
 
-  private def createSurvey(hitType: String, numAssignments: Int): Future[(String, String)] = {
+  private def createHIT(hitType: String, numAssignments: Int): Future[(String, String)] = {
     // Loading the question (QAP) file. HITQuestion is a helper class that
     // contains the QAP of the HIT defined in the external file. This feature
     // allows you to write the entire QAP externally as a file and be able to
@@ -202,6 +204,25 @@ object MTurkService extends LazyLogging with FoxImplicits {
       logger.debug(service.getWebsiteURL + "/mturk/preview?groupId=" + hit.getHITTypeId)
 
       hit.getHITId -> requesterAnnotation
+    }
+  }
+
+  def removeByTask(task: Task) = {
+    def disable(hitId: String) = Future{
+      blocking{
+        service.forceExpireHIT(hitId)
+      }
+    }
+
+    MTurkAssignmentDAO.findOneByTask(task._id)(GlobalAccessContext).futureBox.flatMap{
+      case Full(mtAssignment ) =>
+        for{
+          _ <- disable(mtAssignment.hitId)
+          - <- MTurkAssignmentDAO.setToZeroOpen(mtAssignment._id)(GlobalAccessContext)
+          _ <- MTurkProjectDAO.decreaseNumberOfOpen(task._project, mtAssignment.numberOfOpenAssignments)(GlobalAccessContext)
+        } yield true
+      case _ =>
+        Fox.successful(true)
     }
   }
 }

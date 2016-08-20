@@ -152,6 +152,7 @@ project.remove.notAllowed=You are not allowed to remove this project. Talk to th
 project.remove.success=Project got removed
 project.remove.failure=Project couldn''t get removed
 project.notFound=Project {0} couldn''t be found
+project.update.failed=Project {0} update failed
 project.noAnnotations=We couldn''t find annotations for this project
 
 role.invalid=Invalid role

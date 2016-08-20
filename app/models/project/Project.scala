@@ -6,8 +6,8 @@ import com.scalableminds.util.reactivemongo.AccessRestrictions.{AllowIf, DenyEve
 import com.scalableminds.util.reactivemongo.{DBAccessContext, DefaultAccessDefinitions, GlobalAccessContext}
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import models.basics._
-import models.mturk.MTurkAssignmentConfig
-import models.task.{OpenAssignmentDAO, TaskDAO, TaskService}
+import models.mturk.{MTurkAssignmentConfig, MTurkProjectDAO}
+import models.task.{OpenAssignmentDAO, OpenAssignmentService, TaskDAO, TaskService}
 import models.user.{User, UserService}
 import net.liftweb.common.Full
 import oxalis.mturk.MTurkService
@@ -25,7 +25,7 @@ case class Project(
   team: String,
   _owner: BSONObjectID,
   priority: Int,
-  assignmentConfig: AssignmentConfig,
+  assignmentConfiguration: AssignmentConfig,
   _id: BSONObjectID = BSONObjectID.generate) {
 
   def owner = UserService.findOneById(_owner.stringify, useCache = true)(GlobalAccessContext)
@@ -51,14 +51,23 @@ object Project {
         "team" -> project.team,
         "owner" -> owner.toOption,
         "priority" -> project.priority,
-        "assignmentConfig" -> project.assignmentConfig,
+        "assignmentConfiguration" -> project.assignmentConfiguration,
         "id" -> project.id
       )
     }
 
+  def numberOfOpenAssignments(project: Project)(implicit ctx: DBAccessContext): Fox[Int] = {
+    project.assignmentConfiguration match {
+      case WebknossosAssignmentConfig =>
+        OpenAssignmentDAO.countForProject(project.name)
+      case _: MTurkAssignmentConfig =>
+        MTurkProjectDAO.findByProject(project.name).map(_.numberOfOpenAssignments)
+    }
+  }
+
   def projectPublicWritesWithStatus(project: Project, requestingUser: User)(implicit ctx: DBAccessContext): Future[JsObject] =
     for {
-      open <- OpenAssignmentDAO.countForProject(project.name) getOrElse -1
+      open <- numberOfOpenAssignments(project) getOrElse -1
       projectJson <- projectPublicWrites(project, requestingUser)
     } yield {
       projectJson + ("numberOfOpenAssignments" -> JsNumber(open))
@@ -77,7 +86,9 @@ object ProjectService extends FoxImplicits {
   def remove(project: Project)(implicit ctx: DBAccessContext): Fox[Boolean] = {
     ProjectDAO.remove("name", project.name).flatMap {
       case result if result.n > 0 =>
-        TaskService.removeAllWithProject(project)
+        for{
+          _ <- TaskService.removeAllWithProject(project)
+        } yield true
       case _                      =>
         Logger.warn("Tried to remove project without permission.")
         Fox.successful(false)
@@ -85,7 +96,7 @@ object ProjectService extends FoxImplicits {
   }
 
   def reportToExternalService(project: Project, json: JsValue): Fox[Boolean] = {
-    project.assignmentConfig match {
+    project.assignmentConfiguration match {
       case mturk: MTurkAssignmentConfig =>
         MTurkService.handleProjectCreation(project, mturk)
       case _ =>

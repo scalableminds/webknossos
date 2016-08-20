@@ -9,7 +9,7 @@ import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json.Json
 import reactivemongo.api.indexes.{Index, IndexType}
 
-case class MTurkProject(_project: String, hittypeId: String, team: String)
+case class MTurkProject(_project: String, hitTypeId: String, team: String, numberOfOpenAssignments: Int)
 
 object MTurkProject extends FoxImplicits {
   implicit val mturkProjectFormat = Json.format[MTurkProject]
@@ -41,5 +41,13 @@ object MTurkProjectDAO extends SecuredBaseDAO[MTurkProject] with FoxImplicits {
 
   def findByProject(_project: String)(implicit ctx: DBAccessContext) = {
     findOne(Json.obj("_project" -> _project))
+  }
+
+  def increaseNumberOfOpen(_project: String, inc: Int)(implicit ctx: DBAccessContext) = {
+    update(Json.obj("_project" -> _project), Json.obj("$inc" -> Json.obj("numberOfOpenAssignments" -> inc)))
+  }
+
+  def decreaseNumberOfOpen(_project: String, dec: Int)(implicit ctx: DBAccessContext) = {
+    increaseNumberOfOpen(_project, -dec)
   }
 }

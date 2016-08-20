@@ -1,4 +1,4 @@
 // --- !Ups
-db.projects.update({}, {$set: {"assignmentConfig": {"location" : "webknossos"}}}, {multi: true})
+db.projects.update({}, {$set: {"assignmentConfiguration": {"location" : "webknossos"}}}, {multi: true})
 
 // --- !Downs

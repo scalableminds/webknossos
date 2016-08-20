@@ -13,6 +13,7 @@ class ProjectsListView extends Marionette.CompositeView
           <th data-sort="name">Name</th>
           <th data-sort="team">Team</th>
           <th data-sort="priority">Priority</th>
+          <th data-sort="location">Location</th>
           <th data-sort="owner.lastName">Owner</th>
           <th data-sort="numberOfOpenAssignments">Open Assignments</th>
           <th>Actions</th>
@@ -51,7 +52,7 @@ class ProjectsListView extends Marionette.CompositeView
 
   filterBySearch : (searchQuery) ->
 
-    @collection.setFilter(["name", "team", "priority"], searchQuery)
+    @collection.setFilter(["name", "team", "priority", "location"], searchQuery)
 
 
   createProject : ->

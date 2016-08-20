@@ -10,10 +10,12 @@ import com.scalableminds.util.reactivemongo.{DBAccessContext, DefaultAccessDefin
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import models.annotation._
 import models.basics._
-import models.project.{Project, ProjectDAO}
+import models.mturk.{MTurkAssignmentConfig, MTurkAssignmentDAO}
+import models.project.{Project, ProjectDAO, WebknossosAssignmentConfig}
 import models.user.{Experience, User}
 import org.joda.time.DateTime
 import org.joda.time.format.DateTimeFormat
+import oxalis.mturk.MTurkService
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json.{JsNull, JsObject, Json}
 import reactivemongo.play.json.BSONFormats._
@@ -28,7 +30,7 @@ case class Task(
   @info("Required experience") neededExperience: Experience = Experience.empty,
   @info("Number of required instances") instances: Int = 1,
   @info("Current tracing time") tracingTime: Option[Long] = None,
-  @info("Date of creation" )created: DateTime = DateTime.now(),
+  @info("Date of creation") created: DateTime = DateTime.now(),
   @info("Flag indicating deletion") isActive: Boolean = true,
   @info("Reference to project") _project: String,
   @info("Unique ID") _id: BSONObjectID = BSONObjectID.generate
@@ -53,13 +55,38 @@ case class Task(
   def remainingInstances(implicit ctx: DBAccessContext) =
     OpenAssignmentDAO.countFor(_id)
 
-  def status(implicit ctx: DBAccessContext) = async {
-    val inProgress = await(AnnotationService.countUnfinishedAnnotationsFor(this) getOrElse 0)
-    val remaining = await(remainingInstances getOrElse 0)
-    CompletionStatus(
-      open = remaining,
-      inProgress = inProgress,
-      completed = instances - (inProgress + remaining))
+  def status(implicit ctx: DBAccessContext) = {
+    def statusWK =
+      for {
+        inProgress <- AnnotationService.countUnfinishedAnnotationsFor(this).getOrElse(0)
+        remaining <- remainingInstances.getOrElse(0)
+      } yield CompletionStatus(
+          open = remaining,
+          inProgress = inProgress,
+          completed = instances - (inProgress + remaining))
+
+    def statusMT =
+      for {
+        mtAssignment <- MTurkAssignmentDAO.findOneByTask(_id).futureBox
+        remaining = mtAssignment.map(_.numberOfOpenAssignments).openOr(0)
+      } yield CompletionStatus(
+        open = remaining,
+        inProgress = 0,                                     // hard to track and rather unimportant
+        completed = instances - remaining)
+
+    def calculateStatus(project: Project) = {
+      project.assignmentConfiguration match {
+        case WebknossosAssignmentConfig =>
+          statusWK
+        case _: MTurkAssignmentConfig =>
+          statusMT
+      }
+    }
+
+    for{
+      p <- project
+      result <- calculateStatus(p)
+    } yield result
   }
 
   def hasEnoughExperience(user: User) = {
@@ -77,7 +104,7 @@ object Task extends FoxImplicits {
       editPosition = annotationContent.map(_.editPosition).openOr(Point3D(0, 0, 0))
       editRotation = annotationContent.map(_.editRotation).openOr(Vector3D(0, 0, 0))
       boundingBox = annotationContent.flatMap(_.boundingBox).toOption
-      status <- task.status
+      status <- task.status.getOrElse(CompletionStatus(-1, -1, -1))
       tt <- task.taskType.map(TaskType.transformToJson) getOrElse JsNull
     } yield {
       Json.obj(

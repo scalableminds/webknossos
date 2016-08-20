@@ -17,6 +17,7 @@ case class MTurkAssignment(
   _project: String,
   hitId: String,
   key: String,
+  numberOfOpenAssignments: Int,
   created: DateTime = DateTime.now(),
   annotations: List[MTurkAnnotationReference] = Nil,
   _id: BSONObjectID = BSONObjectID.generate
@@ -43,24 +44,12 @@ object MTurkAssignmentDAO extends SecuredBaseDAO[MTurkAssignment] with FoxImplic
   underlying.indexesManager.ensure(Index(Seq("key" -> IndexType.Descending)))
   underlying.indexesManager.ensure(Index(Seq("hitId" -> IndexType.Descending)))
 
-  def countFor(_task: BSONObjectID)(implicit ctx: DBAccessContext) = {
-    count(Json.obj("_task" -> _task))
-  }
-
   def countForProject(project: String)(implicit ctx: DBAccessContext) = {
     count(Json.obj("_project" -> project))
   }
 
-  def removeByTask(_task: BSONObjectID)(implicit ctx: DBAccessContext) = {
-    remove(Json.obj("_task" -> _task))
-  }
-
-  def removeByProject(_project: String)(implicit ctx: DBAccessContext) = {
-    remove(Json.obj("_project" -> _project))
-  }
-
-  def findByProject(_project: String)(implicit ctx: DBAccessContext) = {
-    find(Json.obj("_project" -> _project)).cursor[MTurkAssignment]().collect[List]()
+  def findOneByTask(_task: BSONObjectID)(implicit ctx: DBAccessContext) = {
+    findOne(Json.obj("_task" -> _task))
   }
 
   def findByKey(key: String)(implicit ctx: DBAccessContext) = {
@@ -71,11 +60,19 @@ object MTurkAssignmentDAO extends SecuredBaseDAO[MTurkAssignment] with FoxImplic
     findOne(Json.obj("hitId" -> hitId))
   }
 
-  def countOpenAssignments(implicit ctx: DBAccessContext) = {
-    count(Json.obj())
-  }
-
   def appendReference(_assignment: BSONObjectID, reference: MTurkAnnotationReference)(implicit ctx: DBAccessContext) = {
     update(Json.obj("_id" -> _assignment), Json.obj("$push" -> Json.obj("annotations" -> reference)))
+  }
+
+  def increaseNumberOfOpen(hitId: String, inc: Int)(implicit ctx: DBAccessContext) = {
+    update(Json.obj("hitId" -> hitId), Json.obj("$inc" -> Json.obj("numberOfOpenAssignments" -> inc)))
+  }
+
+  def decreaseNumberOfOpen(hitId: String, dec: Int)(implicit ctx: DBAccessContext) = {
+    increaseNumberOfOpen(hitId, -dec)
+  }
+
+  def setToZeroOpen(_id: BSONObjectID)(implicit ctx: DBAccessContext) = {
+    update(Json.obj("_id" -> _id), Json.obj("$set" -> Json.obj("numberOfOpenAssignments" -> 0)))
   }
 }

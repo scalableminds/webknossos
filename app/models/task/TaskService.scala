@@ -13,7 +13,7 @@ import scala.concurrent.Future
 
 import models.mturk.MTurkAssignmentConfig
 import models.project.{Project, WebknossosAssignmentConfig}
-import net.liftweb.common.Box
+import net.liftweb.common.{Box, Full}
 import oxalis.mturk.MTurkService
 import play.api.Logger
 import play.api.libs.json.Json
@@ -38,11 +38,13 @@ object TaskService extends TaskAssignmentSimulation with TaskAssignment with Fox
     TaskDAO.findAllAdministratable(user, limit)
 
   def remove(_task: BSONObjectID)(implicit ctx: DBAccessContext) = {
-    TaskDAO.update(Json.obj("_id" -> _task), Json.obj("$set" -> Json.obj("isActive" -> false))).flatMap {
-      case result if result.n > 0 =>
+    TaskDAO.findAndModify(Json.obj("_id" -> _task), Json.obj("$set" -> Json.obj("isActive" -> false)), returnNew = true)
+    .futureBox.flatMap {
+      case Full(result) =>
         for {
           _ <- AnnotationDAO.removeAllWithTaskId(_task)
           _ <- OpenAssignmentService.removeByTask(_task)
+          _ <- MTurkService.removeByTask(result)
         } yield true
       case _ =>
         Logger.warn("Tried to remove task without permission.")
@@ -79,10 +81,10 @@ object TaskService extends TaskAssignmentSimulation with TaskAssignment with Fox
 
   def insert(task: Task, project: Project)(implicit ctx: DBAccessContext) = {
     def insertAssignmentsIfNeeded() =
-      project.assignmentConfig.id match {
-        case WebknossosAssignmentConfig.id =>
+      project.assignmentConfiguration match {
+        case WebknossosAssignmentConfig =>
           OpenAssignmentService.insertInstancesFor(task, project, task.instances).toFox
-        case MTurkAssignmentConfig.id =>
+        case _: MTurkAssignmentConfig =>
           MTurkService.createHITs(project, task)
         case _ =>
           Fox.successful(true)
@@ -101,12 +103,11 @@ object TaskService extends TaskAssignmentSimulation with TaskAssignment with Fox
     UserDAO.findAllNonAnonymous
     .flatMap { users =>
       Fox.serialSequence(users){ user =>
-        async {
-          val tasks = await(TaskService.allNextTasksForUser(user).futureBox) openOr List()
-          val taskCount = tasks.size
-          val projects = await(TaskService.getProjectsFor(tasks))
-          user -> (taskCount, projects)
-        }
+        for{
+          tasks <- TaskService.allNextTasksForUser(user).getOrElse(Nil)
+          taskCount = tasks.size
+          projects <- TaskService.getProjectsFor(tasks)
+        } yield (user, (taskCount, projects))
       }
     }
     .map(_.toMap[User, (Int, List[Project])])

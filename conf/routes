@@ -174,7 +174,7 @@ GET           /taskTypes/:id/edit                                               
 
 GET           /api/taskTypes                                                    controllers.TaskTypeController.list
 POST          /api/taskTypes                                                    controllers.TaskTypeController.create
-DELETE        /api/taskTypes/:id/delete                                         controllers.TaskTypeController.delete(id: String)
+DELETE        /api/taskTypes/:id                                                controllers.TaskTypeController.delete(id: String)
 GET           /api/taskTypes/:id/tasks                                          controllers.TaskController.listTasksForType(id: String)
 
 GET           /api/taskTypes/:id/download                                       controllers.NMLIOController.taskTypeDownload(id: String)

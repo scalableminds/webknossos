@@ -83,7 +83,8 @@ class AnnotationMutations(val annotation: Annotation)
   def cancelTask()(implicit ctx: DBAccessContext) = {
     for {
       task <- annotation.task
-      _ <- OpenAssignmentService.insertOneFor(task)
+      project <- task.project
+      _ <- OpenAssignmentService.insertOneFor(task, project)
       _ <- AnnotationDAO.updateState(annotation, AnnotationState.Unassigned)
     } yield annotation
   }

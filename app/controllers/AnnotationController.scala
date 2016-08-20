@@ -274,12 +274,11 @@ class AnnotationController @Inject()(val messagesApi: MessagesApi) extends Contr
 
   def finishAll(typ: String) = Authenticated.async(parse.json) { implicit request =>
     withJsonAs[JsArray](request.body \ "annotations") { annotationIds =>
-      val results: List[Fox[(Annotation, String)]] = (for {
-        jsValue <- annotationIds.value
-        id <- jsValue.asOpt[String]
-      } yield finishAnnotation(typ, id, request.user)(GlobalAccessContext)).toList
+      val results = Fox.serialSequence(annotationIds.value.toList){jsValue =>
+        jsValue.asOpt[String].toFox.flatMap(id => finishAnnotation(typ, id, request.user)(GlobalAccessContext))
+      }
 
-      Fox.sequence(results) map { results =>
+      results.map { results =>
         JsonOk(Messages("annotation.allFinished"))
       }
     }
@@ -326,7 +325,7 @@ class AnnotationController @Inject()(val messagesApi: MessagesApi) extends Contr
       task <- TaskDAO.findOneById(taskId) ?~> Messages("task.notFound")
       _ <- ensureTeamAdministration(request.user, task.team)
       annotations <- task.annotations
-      jsons <- Fox.sequence(annotations.map(annotationJson(request.user, _, exclude = List("content"))))
+      jsons <- Fox.serialSequence(annotations)(annotationJson(request.user, _, exclude = List("content")))
     } yield {
       Ok(JsArray(jsons.flatten))
     }

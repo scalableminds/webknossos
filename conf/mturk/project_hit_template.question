@@ -18,7 +18,7 @@
           <div class="panel-body">
             <p>Hello dear annotator:</p>
             <ul>
-              <li>You should start by watching this 3min video&nbsp;<a href="https://youtu.be/xbVfx-OjS3w" target="_blank">https://youtu.be/xbVfx-OjS3w</a><br />
+              <li>You should start by watching the 3min video blow <br />
                 (Even if you saw a similar video a couple of months ago, this has changed!)
               </li>
               <li>
@@ -26,9 +26,11 @@
                 <div id="myelementLink" style="display: inline; font-family: Verdana;"><tt>URL not shown because there is an error with Javascript on your computer. To perform this HIT, you must have Javascript and cookies enabled on your browser.</tt></div>
                 ,&nbsp;follow the referral&nbsp;and log in with &quot;oxalis&quot; and &quot;cloverleaf&quot;
               </li>
-              <li><strong>Work on the task until the screen turns black or the time is over.</strong></li>
+              <li><strong>Follow the cell by moving forward until the screen turns black or the time is over.</strong></li>
             </ul>
-            <p><strong>​</strong></p>
+          </div>
+          <div id="div-intro">
+            <iframe id="iframe-intro" allowfullscreen="" frameborder="0" height="500px" src="https://www.youtube.com/embed/xbVfx-OjS3w" width="600px"></iframe>
           </div>
         </div>
         <script type="text/javascript" language="JavaScript"><!--
@@ -67,16 +69,26 @@
     <!-- close container -->
     <style type="text/css">
       fieldset {
-      padding: 10px;
-      background:#fbfbfb;
-      border-radius:5px;
-      margin-bottom:5px;
+        padding: 10px;
+        background: #fbfbfb;
+        border-radius: 5px;
+        margin-bottom: 5px;
+      }
+      #div-intro {
+         margin-bottom: 10px;
+         margin-top: -10px;
+         text-align: center;
+      }
+      #iframe-intro {
+        display: block;
+        margin-left: auto;
+        margin-right: auto;
       }
     </style>
   </body>
 </html>
 ]]>
   </HTMLContent>
-  <FrameHeight>500</FrameHeight>
+  <FrameHeight>950</FrameHeight>
 </HTMLQuestion>
 

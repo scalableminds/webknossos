@@ -18,15 +18,14 @@
           <div class="panel-body">
             <p>Hello dear annotator:</p>
             <ul>
-              <li>You should start by watching the 3min video blow <br />
+              <li>You should start by watching the 3min video below <br />
                 (Even if you saw a similar video a couple of months ago, this has changed!)
               </li>
               <li>
-                <span style="font-family: Verdana, Geneva, sans-serif; font-size: 11.7px; line-height: 20.8px;">Then go to&nbsp;</span>
                 <div id="myelementLink" style="display: inline; font-family: Verdana;"><tt>URL not shown because there is an error with Javascript on your computer. To perform this HIT, you must have Javascript and cookies enabled on your browser.</tt></div>
-                ,&nbsp;follow the referral&nbsp;and log in with &quot;oxalis&quot; and &quot;cloverleaf&quot;
               </li>
               <li><strong>Follow the cell by moving forward until the screen turns black or the time is over.</strong></li>
+              <li>After you are done following the cell, please return and fill out the feedback question before submitting the HIT.</li>
             </ul>
           </div>
           <div id="div-intro">
@@ -47,9 +46,9 @@
               assignmentID = pair[1];
           }
           if (mturkworkerID == "" ) {
-            assignment_id_field.innerHTML = '<tt>The link will appear here only if you accept this HIT.</tt>';
+            assignment_id_field.innerHTML = 'We will provide you with a link to the assignment which looks like the one in the video after you have accepted the HIT.';
           } else {
-            assignment_id_field.innerHTML = '<a target="_blank" href="${webknossosUrl}workerId=' + mturkworkerID + '&assignmentId='+ assignmentID+'"><b>Link</b></a>';
+            assignment_id_field.innerHTML = '<span style="font-family: Verdana, Geneva, sans-serif; font-size: 11.7px; line-height: 20.8px;">Use&nbsp;</span><a target="_blank" href="${webknossosUrl}workerId=' + mturkworkerID + '&assignmentId='+ assignmentID+'"><b>this Link</b></a> to start following your assigned cell. Go to the page and log in with &quot;oxalis&quot; and &quot;cloverleaf&quot;';
           }
 
           // --></script><!-- End Instructions --><!-- Content Body -->
@@ -57,8 +56,8 @@
         <section>
           <form name='mturk_form' method='post' id='mturk_form' action='https://www.mturk.com/mturk/externalSubmit'>
             <input type='hidden' value='' name='assignmentId' id='assignmentId'/>
-            <fieldset><span style="font-weight: bold; font-size: 0.9em; line-height: 1.6em;">Do you have comments about the task? Would be much appreciated! :-)</span></fieldset>
-            <fieldset><textarea class="form-control" cols="120" name="Q6MultiLineTextInput" rows="5"></textarea></fieldset>
+            <fieldset><span style="font-weight: bold; font-size: 0.9em; line-height: 1.6em;">Feedback: What would help you to perform the task faster?</span></fieldset>
+            <fieldset><textarea class="form-control" cols="120" name="Q6MultiLineTextInput" rows="3"></textarea></fieldset>
             <p><input type='submit' id='submitButton' value='Submit' /></p>
           </form>
           <script language='Javascript'>turkSetAssignmentID();</script>
@@ -89,6 +88,6 @@
 </html>
 ]]>
   </HTMLContent>
-  <FrameHeight>950</FrameHeight>
+  <FrameHeight>960</FrameHeight>
 </HTMLQuestion>
 

@@ -72,8 +72,7 @@ class Flycam2d
     # Set offset to the best-possible zoom step
 
     @quality = value
-    for i in [0..2]
-      @updateStoredValues()
+    @updateStoredValues()
     @update()
 
 

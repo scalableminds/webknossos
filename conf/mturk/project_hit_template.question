@@ -48,7 +48,7 @@
           if (mturkworkerID == "" ) {
             assignment_id_field.innerHTML = 'We will provide you with a link to the assignment which looks like the one in the video after you have accepted the HIT.';
           } else {
-            assignment_id_field.innerHTML = '<span style="font-family: Verdana, Geneva, sans-serif; font-size: 11.7px; line-height: 20.8px;">Use&nbsp;</span><a target="_blank" href="${webknossosUrl}workerId=' + mturkworkerID + '&assignmentId='+ assignmentID+'"><b>this Link</b></a> to start following your assigned cell. Go to the page and log in with &quot;oxalis&quot; and &quot;cloverleaf&quot;';
+            assignment_id_field.innerHTML = '<span style="font-family: Verdana, Geneva, sans-serif; font-size: 11.7px; line-height: 20.8px;">Use&nbsp;</span><a target="_blank" href="${webknossosUrl}workerId=' + mturkworkerID + '&assignmentId='+ assignmentID+'"><b>this Link</b></a> to start following your assigned cell.';
           }
 
           // --></script><!-- End Instructions --><!-- Content Body -->
@@ -56,7 +56,7 @@
         <section>
           <form name='mturk_form' method='post' id='mturk_form' action='https://www.mturk.com/mturk/externalSubmit'>
             <input type='hidden' value='' name='assignmentId' id='assignmentId'/>
-            <fieldset><span style="font-weight: bold; font-size: 0.9em; line-height: 1.6em;">Feedback: What would help you to perform the task faster?</span></fieldset>
+            <fieldset><span style="font-weight: bold; font-size: 0.9em; line-height: 1.6em;">Feedback: What would help you to perform the assignment faster or what did you not understand about the assignment?</span></fieldset>
             <fieldset><textarea class="form-control" cols="120" name="Q6MultiLineTextInput" rows="3"></textarea></fieldset>
             <p><input type='submit' id='submitButton' value='Submit' /></p>
           </form>

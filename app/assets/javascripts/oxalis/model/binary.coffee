@@ -37,13 +37,14 @@ class Binary
     @lowerBoundary = @layer.lowerBoundary = topLeft
     @upperBoundary = @layer.upperBoundary = [ topLeft[0] + width, topLeft[1] + height, topLeft[2] + depth ]
 
-    @cube = new Cube(@model.boundingBox, @upperBoundary, maxZoomStep + 1, @layer.bitDepth)
+    @cube = new Cube(@upperBoundary, maxZoomStep + 1, @layer.bitDepth)
+    @boundingBox = new BoundingBox(@model.boundingBox, @cube)
 
     updatePipeline = new Pipeline([@tracing.version])
 
     datasetName = @model.get("dataset").get("name")
     datastoreInfo = @model.get("dataset").get("dataStore")
-    @pullQueue = new PullQueue(datasetName, @cube, @layer, @connectionInfo, datastoreInfo)
+    @pullQueue = new PullQueue(datasetName, @cube, @layer, @boundingBox, @connectionInfo, datastoreInfo)
     @pushQueue = new PushQueue(datasetName, @cube, @layer, @tracing.id, updatePipeline)
     @cube.initializeWithQueues(@pullQueue, @pushQueue)
     @mappings = new Mappings(datasetName, @layer)
@@ -59,8 +60,7 @@ class Binary
 
     @planes = []
     for planeId in constants.ALL_PLANES
-      @planes.push( new Plane2D(planeId, @cube, @pullQueue, @TEXTURE_SIZE_P, @layer.bitDepth, @targetBitDepth,
-                                32, @category == "segmentation") )
+      @planes.push( new Plane2D(planeId, @cube, @pullQueue, @TEXTURE_SIZE_P, @layer.bitDepth, @targetBitDepth, 32) )
 
     @pullQueue.setFourBit(@model.get("datasetConfiguration").get("fourBit"))
     @listenTo(@model.get("datasetConfiguration"), "change:fourBit" , (model, fourBit) -> @pullQueue.setFourBit(fourBit) )
@@ -138,18 +138,18 @@ class Binary
       @pullQueue.pull()
 
 
-  arbitraryPing : _.once (matrix, zoomStep) ->
+  arbitraryPing : _.once (matrix) ->
 
     @arbitraryPing = _.throttle(@arbitraryPingImpl, @PING_THROTTLE_TIME)
-    @arbitraryPing(matrix, zoomStep)
+    @arbitraryPing(matrix)
 
 
-  arbitraryPingImpl : (matrix, zoomStep) ->
+  arbitraryPingImpl : (matrix) ->
 
     for strategy in @pingStrategies3d
       if strategy.forContentType(@tracing.contentType) and strategy.inVelocityRange(1) and strategy.inRoundTripTimeRange(@pullQueue.roundTripTime)
         @pullQueue.clearNormalPriorities()
-        @pullQueue.addAll(strategy.ping(matrix, zoomStep))
+        @pullQueue.addAll(strategy.ping(matrix))
         break
 
     @pullQueue.pull()

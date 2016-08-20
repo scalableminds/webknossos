@@ -26,7 +26,7 @@ describe "Cube", ->
 
   beforeEach ->
 
-    cube = new Cube(null, [100, 100, 100], 3, 24)
+    cube = new Cube([100, 100, 100], 3, 24)
     cube.initializeWithQueues(pullQueue, pushQueue)
 
 

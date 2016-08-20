@@ -88,7 +88,7 @@ class ArbitraryController
 
     matrix = @cam.getMatrix()
     for binary in @model.getColorBinaries()
-      binary.arbitraryPing(matrix, @model.datasetConfiguration.get("quality"))
+      binary.arbitraryPing(matrix)
 
 
   initMouse : ->

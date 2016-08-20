@@ -38,10 +38,10 @@ describe "PullQueue", ->
     BUCKET_LENGTH : 32 * 32 * 32
     getBucket : sinon.stub()
     getOrCreateBucket : sinon.stub()
-    boundingBox : {
-      containsBucket : sinon.stub().returns(true)
-      removeOutsideArea : sinon.stub()
-    }
+  }
+  boundingBox = {
+    containsBucket : sinon.stub().returns(true)
+    removeOutsideArea : sinon.stub()
   }
   connectionInfo = {
     log : sinon.stub()
@@ -55,7 +55,7 @@ describe "PullQueue", ->
 
   beforeEach ->
 
-    pullQueue = new PullQueue(dataSetName, cube, layer, connectionInfo, datastoreInfo)
+    pullQueue = new PullQueue(dataSetName, cube, layer, boundingBox, connectionInfo, datastoreInfo)
 
     buckets = [new Bucket(8, [0, 0, 0, 0], null), new Bucket(8, [1, 1, 1, 1], null)]
     for bucket in buckets

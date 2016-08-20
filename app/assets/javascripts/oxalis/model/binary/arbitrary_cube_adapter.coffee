@@ -3,7 +3,6 @@ _ = require("lodash")
 class ArbitraryCubeAdapter
 
   ARBITRARY_MAX_ZOOMSTEP : 2
-  NOT_LOADED_BUCKET_INTENSITY : 100
 
 
   constructor : (@cube, @boundary) ->
@@ -12,14 +11,10 @@ class ArbitraryCubeAdapter
     @sizeZY  = @boundary[1] * @boundary[2]
     @sizeZ   = @boundary[2]
 
-    @NOT_LOADED_BUCKET_DATA = new Uint8Array(@cube.BUCKET_LENGTH)
-    for i in [0...@NOT_LOADED_BUCKET_DATA.length]
-      @NOT_LOADED_BUCKET_DATA[i] = @NOT_LOADED_BUCKET_INTENSITY
-    @NOT_LOADED_BUCKET_DATA.zoomStep = 0
-    @NOT_LOADED_BUCKET_DATA.isTemporalData = true
-
 
   getBucket : _.memoize((bucketIndex) ->
+
+    return null unless @isValidBucket(bucketIndex)
 
     bucketAddress = [
       Math.floor(bucketIndex / @sizeZY),
@@ -29,12 +24,7 @@ class ArbitraryCubeAdapter
     ]
 
     for zoomStep in [0..@ARBITRARY_MAX_ZOOMSTEP]
-      bucket = @cube.getBucket(bucketAddress)
-
-      if bucket.isOutOfBoundingBox
-        return null
-
-      if bucket.hasData()
+      if @cube.getBucket(bucketAddress).hasData()
         bucketData = @cube.getBucket(bucketAddress).getData()
         bucketData.zoomStep = zoomStep
         return bucketData
@@ -46,7 +36,7 @@ class ArbitraryCubeAdapter
         bucketAddress[3] + 1
       ]
 
-    return @NOT_LOADED_BUCKET_DATA
+    return null
   )
 
 

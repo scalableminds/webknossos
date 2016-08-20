@@ -34,12 +34,8 @@ class Flycam3d
     @scale = @calculateScaleValues(scale)
 
     @reset()
-    @calculateDistanceVectors(@zoomStep)
-
-
-  calculateDistanceVectors : (zoomStep = 1) ->
-    @distanceVecNegative = [0, 0, -zoomStep * @distance]
-    @distanceVecPositive = [0, 0, zoomStep * @distance]
+    @distanceVecNegative = [0, 0, -@distance]
+    @distanceVecPositive = [0, 0, @distance]
 
 
   calculateScaleValues : (scale) ->
@@ -48,7 +44,7 @@ class Flycam3d
     maxScale = Math.max(scale[0], scale[1], scale[2])
     multi = 1/maxScale
     scale = [multi * scale[0], multi * scale[1], multi * scale[2]]
-    return scale
+    scale
 
 
   reset : (resetPosition = true) ->
@@ -70,7 +66,7 @@ class Flycam3d
       @setPosition(position)
 
     # Apply 180° Rotation to keep it consistent with plane view
-    @roll(Math.PI)
+    @roll Math.PI
 
     updateMacro(this)
 
@@ -92,36 +88,35 @@ class Flycam3d
   zoomIn : ->
 
     @zoomStep = Math.max(@zoomStep / @ZOOM_STEP_INTERVAL, @ZOOM_STEP_MIN)
-    @calculateDistanceVectors(@zoomStep)
     updateMacro(this)
 
 
   zoomOut : ->
 
     @zoomStep = Math.min(@zoomStep * @ZOOM_STEP_INTERVAL, @ZOOM_STEP_MAX)
-    @calculateDistanceVectors(@zoomStep)
     updateMacro(this)
 
 
   getZoomStep : ->
 
-    return @zoomStep
+    @zoomStep
 
 
   setZoomStep : (zoomStep) ->
 
-    @zoomStep = Math.min(@ZOOM_STEP_MAX, Math.max(@ZOOM_STEP_MIN, zoomStep))
+    @zoomStep = Math.min @ZOOM_STEP_MAX,
+                  Math.max @ZOOM_STEP_MIN, zoomStep
 
 
   getMatrix : ->
 
-    return M4x4.clone(@currentMatrix)
+    M4x4.clone @currentMatrix
 
 
   getZoomedMatrix : ->
 
     matrix = @getMatrix()
-    return M4x4.scale1(@zoomStep, matrix, matrix)
+    M4x4.scale1(@zoomStep, matrix, matrix)
 
 
   setMatrix : (matrix) ->
@@ -198,16 +193,16 @@ class Flycam3d
   toString : ->
 
     matrix = @currentMatrix
-    return "[" + matrix[ 0] + ", " + matrix[ 1] + ", " + matrix[ 2] + ", " + matrix[ 3] + ", " +
-      matrix[ 4] + ", " + matrix[ 5] + ", " + matrix[ 6] + ", " + matrix[ 7] + ", " +
-      matrix[ 8] + ", " + matrix[ 9] + ", " + matrix[10] + ", " + matrix[11] + ", " +
-      matrix[12] + ", " + matrix[13] + ", " + matrix[14] + ", " + matrix[15] + "]"
+    "[" + matrix[ 0] + ", " + matrix[ 1] + ", " + matrix[ 2] + ", " + matrix[ 3] + ", " +
+    matrix[ 4] + ", " + matrix[ 5] + ", " + matrix[ 6] + ", " + matrix[ 7] + ", " +
+    matrix[ 8] + ", " + matrix[ 9] + ", " + matrix[10] + ", " + matrix[11] + ", " +
+    matrix[12] + ", " + matrix[13] + ", " + matrix[14] + ", " + matrix[15] + "]"
 
 
   getPosition : ->
 
     matrix = @currentMatrix
-    return [ matrix[12], matrix[13], matrix[14] ]
+    [ matrix[12], matrix[13], matrix[14] ]
 
 
   getRotation : ->
@@ -269,12 +264,12 @@ class Flycam3d
   getUp : ->
 
     matrix = @currentMatrix
-    return [ matrix[4], matrix[5], matrix[6] ]
+    [ matrix[4], matrix[5], matrix[6] ]
 
 
   getLeft : ->
 
     matrix = @currentMatrix
-    return [ matrix[0], matrix[1], matrix[2] ]
+    [ matrix[0], matrix[1], matrix[2] ]
 
 module.exports = Flycam3d

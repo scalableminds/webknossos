@@ -89,7 +89,6 @@ subPointMacro = _.template(
     }
   <% } %>
 
-  var isBucketMissing = false;
 
   if (bucketIndex == lastBucketIndex) {
 
@@ -100,7 +99,6 @@ subPointMacro = _.template(
   } else if ((bucket = buckets.getBucket(bucketIndex)) != null) {
 
     bucketZoomStep = bucket.zoomStep || 0;
-    isBucketMissing = bucket.isTemporalData;
 
     <%= pointIndexMacro({ pointIndex : "pointIndex", x : "sub_x", y : "sub_y", z : "sub_z", zoomStep : "bucketZoomStep" }) %>
 
@@ -111,10 +109,6 @@ subPointMacro = _.template(
     <%= output %> = bucket[pointIndex];
 
   } else {
-    isBucketMissing = true;
-  }
-
-  if (isBucketMissing) {
     if(buckets.isValidBucket(bucketIndex) && missingBuckets.length < 100) {
 
       missingBuckets.push([
@@ -124,6 +118,7 @@ subPointMacro = _.template(
         0
       ])
     }
+    continue;
   }
   """
   { imports : { pointIndexMacro } }

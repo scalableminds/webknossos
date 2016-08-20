@@ -64,19 +64,20 @@ class PingStrategy3d.DslSlow extends PingStrategy3d
 
   name : 'DSL_SLOW'
 
-  pingPolyhedron : PolyhedronRasterizer.Master.squareFrustum(
+  pingPolyhedron0 : PolyhedronRasterizer.Master.squareFrustum(
     5, 5, -0.5
     4, 4, 2
   )
 
-  ping : (matrix, zoomStep) ->
+  ping : (matrix) ->
 
     pullQueue = []
 
+    #-----------
     matrix0 = M4x4.clone(matrix)
-    @modifyMatrixForPoly(matrix0, zoomStep)
+    @modifyMatrixForPoly matrix0, 0
 
-    polyhedron0 = @pingPolyhedron.transformAffine(matrix0)
+    polyhedron0 = @pingPolyhedron0.transformAffine(matrix0)
 
     testAddresses = polyhedron0.collectPointsOnion(matrix0[12], matrix0[13], matrix0[14])
 
@@ -86,10 +87,11 @@ class PingStrategy3d.DslSlow extends PingStrategy3d
       bucket_y = testAddresses[i++]
       bucket_z = testAddresses[i++]
 
-      pullQueue.push(bucket: [bucket_x, bucket_y, bucket_z, zoomStep], priority: 0)
+      pullQueue.push(bucket: [bucket_x, bucket_y, bucket_z, 0], priority: 0)
+    #-----------
 
-    return pullQueue
-    # priority 0 is highest
+    pullQueue
+    #priority 0 is highests
 
 
 module.exports = PingStrategy3d

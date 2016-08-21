@@ -60,8 +60,8 @@ case class SkeletonTracing(
     SkeletonTracingService.saveToDB(this)
   }
 
-  def mergeWith(c: AnnotationContent)(implicit ctx: DBAccessContext): Fox[AnnotationContent] = {
-    toTemporary.flatMap(_.mergeWith(c))
+  def mergeWith(c: AnnotationContent, settings: Option[AnnotationSettings])(implicit ctx: DBAccessContext): Fox[AnnotationContent] = {
+    toTemporary.flatMap(_.mergeWith(c, settings))
   }
 }
 

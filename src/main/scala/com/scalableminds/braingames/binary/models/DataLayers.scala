@@ -27,7 +27,7 @@ object FallbackLayer{
   implicit val fallbackLayerFormat = Json.format[FallbackLayer]
 }
 
-case class DataLayerType(category: String, interpolation: Interpolation, defaultElementClass: String = "uint8")
+case class DataLayerType(category: String, defaultElementClass: String = "uint8")
 
 case class DataLayer(
   name: String,
@@ -49,8 +49,6 @@ case class DataLayer(
   def getMapping(name: String) =
     mappings.find(_.name == name)
 
-  val interpolator = DataLayer.interpolationFromString(category)
-
   val resolutions = sections.flatMap(_.resolutions).distinct
 
   val maxCoordinates = BoundingBox.hull(sections.map(_.bboxBig))
@@ -61,29 +59,17 @@ case class DataLayer(
 object DataLayer extends LazyLogging{
 
   val COLOR =
-    DataLayerType("color", TrilerpInterpolation)
+    DataLayerType("color")
   val SEGMENTATION =
-    DataLayerType("segmentation", NearestNeighborInterpolation, "uint16")
+    DataLayerType("segmentation", "uint16")
   val CLASSIFICATION =
-    DataLayerType("classification", NearestNeighborInterpolation, "uint16")
+    DataLayerType("classification", "uint16")
 
   implicit val dataLayerFormat = Json.format[DataLayer]
 
   val supportedLayers = List(
     COLOR, SEGMENTATION, CLASSIFICATION
   )
-
-  val defaultInterpolation = NearestNeighborInterpolation
-
-  def interpolationFromString(layerCategory: String) = {
-    supportedLayers
-      .find(_.category == layerCategory)
-      .map(_.interpolation)
-      .getOrElse {
-      logger.warn(s"Invalid interpolation string: '$layerCategory'. Using default interpolation '$defaultInterpolation'")
-      defaultInterpolation
-    }
-  }
   
   def isValidElementClass(elementClass: String): Boolean = {
     Try(elementClass).isSuccess

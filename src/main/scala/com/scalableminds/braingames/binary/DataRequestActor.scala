@@ -321,16 +321,15 @@ class DataRequester(
   }
 }
 
-class DataBlockCutter(block: BlockedArray3D[Byte], dataRequest: DataReadRequest, layer: DataLayer, offset: Point3D) {
+class DataBlockCutter(block: BlockedArray3D[Byte], dataRequest: DataReadRequest, layer: DataLayer, offset: Point3D)
+    extends CubeIterator {
   val dataSource = dataRequest.dataSource
 
   val resolution = dataRequest.resolution
 
-  val cube = dataRequest.cuboid
-
   def cutOutRequestedData: Array[Byte] = {
     val result: Array[Byte] =
-      cube.withContainingCoordinates(extendArrayBy = layer.bytesPerElement)(interpolatedData)
+      iterateOverCube(dataRequest.cuboid, extendArrayBy = layer.bytesPerElement)(retrieveData)
 
     if (dataRequest.settings.useHalfByte)
       convertToHalfByte(result)
@@ -340,11 +339,8 @@ class DataBlockCutter(block: BlockedArray3D[Byte], dataRequest: DataReadRequest,
   }
 
   @inline
-  private def interpolatedData(px: Double, py: Double, pz: Double, idx: Int) = {
-    if (dataRequest.settings.skipInterpolation)
-      byteLoader(Point3D(px.castToInt, py.castToInt, pz.castToInt))
-    else
-      layer.interpolator.interpolate(layer.bytesPerElement, byteLoader _)(Vector3D(px, py, pz))
+  private def retrieveData(px: Double, py: Double, pz: Double, idx: Int) = {
+    byteLoader(Point3D(px.castToInt, py.castToInt, pz.castToInt))
   }
 
   private def convertToHalfByte(a: Array[Byte]) = {
@@ -362,24 +358,25 @@ class DataBlockCutter(block: BlockedArray3D[Byte], dataRequest: DataReadRequest,
     compressed
   }
 
+  @inline
   private def calculatePositionInLoadedBlock(globalPoint: Point3D) = {
     dataSource.applyResolution(globalPoint, resolution).move(offset.negate)
   }
 
+  @inline
   private def byteLoader(globalPoint: Point3D): Array[Byte] = {
     block(calculatePositionInLoadedBlock(globalPoint))
   }
 }
 
-class DataBlockWriter(block: BlockedArray3D[Byte], dataRequest: DataWriteRequest, layer: DataLayer, offset: Point3D) {
+class DataBlockWriter(block: BlockedArray3D[Byte], dataRequest: DataWriteRequest, layer: DataLayer, offset: Point3D)
+ extends CubeIterator{
   val dataSource = dataRequest.dataSource
 
   val resolution = dataRequest.resolution
 
-  val cube = dataRequest.cuboid
-
   def writeSuppliedData: Array[Array[Byte]] = {
-    cube.withContainingCoordinates(extendArrayBy = layer.bytesPerElement)(writeData)
+    iterateOverCube(dataRequest.cuboid, extendArrayBy = layer.bytesPerElement)(writeData)
     block.underlying
   }
 
@@ -395,6 +392,7 @@ class DataBlockWriter(block: BlockedArray3D[Byte], dataRequest: DataWriteRequest
       .move(offset.negate)
   }
 
+  @inline
   private def byteWriter(globalPoint: Point3D, data: Array[Byte], offset: Int): Unit = {
     block.setBytes(calculatePositionInLoadedBlock(globalPoint), data, offset)
   }

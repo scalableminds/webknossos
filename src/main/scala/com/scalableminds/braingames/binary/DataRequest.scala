@@ -25,11 +25,10 @@ case class DataReadRequest(
   settings: DataRequestSettings) extends DataRequest
 
 case class DataRequestSettings(
-  useHalfByte: Boolean /* = false*/,
-  skipInterpolation: Boolean)
+  useHalfByte: Boolean)
 
 object DataRequestSettings {
-  val default = DataRequestSettings(false, false)
+  val default = DataRequestSettings(false)
 }
 
 case class DataWriteRequest(

@@ -24,9 +24,9 @@ class VolumeTracingStateLogger extends StateLogger
     return Promise.all([pushQueuePromise, stateLoggerPromise])
 
 
-  stateSaved : ->
+  stateSaved : (args...) ->
 
-    return super(arguments...) and @pushQueue.stateSaved()
+    return super(args...) and @pushQueue.stateSaved()
 
 
   concatUpdateTracing : ->

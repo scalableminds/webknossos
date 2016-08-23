@@ -67,7 +67,7 @@ case class VolumeTracing(
     Fox.failure("Not yet implemented")
   }
 
-  def mergeWith(source: AnnotationContent)(implicit ctx: DBAccessContext) = {
+  def mergeWith(source: AnnotationContent, settings: Option[AnnotationSettings])(implicit ctx: DBAccessContext) = {
     // TODO: implement
     Fox.failure("Not yet implemented")
   }

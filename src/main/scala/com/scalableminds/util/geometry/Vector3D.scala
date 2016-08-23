@@ -24,15 +24,6 @@ case class Vector3D(x: Double = 0, y: Double = 0, z: Double = 0) {
   
   def neg = Vector3D(-x, -y, -z)
 
-  def dx(d: Double) =
-    Vector3D(x + d, y, z)
-
-  def dy(d: Double) =
-    Vector3D(x, y + d, z)
-
-  def dz(d: Double) =
-    Vector3D(x, y, z + d)
-
   def -(o: Vector3D): Vector3D = {
     new Vector3D(x - o.x, y - o.y, z - o.z)
   }

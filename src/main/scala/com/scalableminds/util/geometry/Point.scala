@@ -32,6 +32,15 @@ case class Point3D(x: Int, y: Int, z: Int) {
   def move(dx: Int, dy: Int, dz: Int) =
     Point3D(x + dx, y + dy, z + dz)
 
+  def dx(d: Int) =
+    Point3D(x + d, y, z)
+
+  def dy(d: Int) =
+    Point3D(x, y + d, z)
+
+  def dz(d: Int) =
+    Point3D(x, y, z + d)
+
   def move(o: Point3D): Point3D =
     move(o.x, o.y, o.z)
 

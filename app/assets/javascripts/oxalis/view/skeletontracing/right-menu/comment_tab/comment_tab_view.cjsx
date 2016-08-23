@@ -67,6 +67,7 @@ class CommentTabView extends Marionette.ItemView
     new Input.KeyboardNoLoop(
       "n" : => @nextComment()
       "p" : => @previousComment()
+      "5" : => @pauseTracing()
     )
 
 
@@ -207,6 +208,32 @@ class CommentTabView extends Marionette.ItemView
 
     @isSortedAscending = !@isSortedAscending
     @updateState()
+
+
+  pauseTracing : ->
+
+    return if @model.skeletonTracing.restrictionHandler.handleUpdate()
+
+    nodeId = @getActiveNodeId()
+
+    # don't add a comment if there is no active node
+    return unless nodeId
+
+    tree = @model.skeletonTracing.getActiveTree()
+
+    if comment = @getCommentForNode(nodeId)
+      comment.content += "_pause"
+      @updateState()
+    else
+      comment =
+        node : nodeId
+        content : "pause"
+      tree.comments.push(comment)
+
+      @setActiveNode(comment, tree.treeId)
+
+    @model.skeletonTracing.updateTree(tree)
+    alert("paused")
 
 
   # Helper functions

@@ -175,6 +175,7 @@ class TaskController @Inject() (val messagesApi: MessagesApi) extends Controller
           taskType <- TaskTypeDAO.findOneById(taskTypeId) ?~> Messages("taskType.notFound")
           project <- ProjectDAO.findOneByName(projectName) ?~> Messages("project.notFound", projectName)
           openInstanceCount <- task.remainingInstances
+          _ <- (status.open == openInstanceCount || project.assignmentConfiguration.supportsChangeOfNumInstances) ?~> Messages("task.instances.changeImpossible")
           updatedTask <- TaskDAO.update(
             _task = task._id,
             _taskType = taskType._id,

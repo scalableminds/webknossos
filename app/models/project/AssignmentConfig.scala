@@ -5,10 +5,14 @@ import play.api.libs.json.{JsError, JsResult, _}
 
 trait AssignmentConfig {
   def id: String
+
+  def supportsChangeOfNumInstances: Boolean
 }
 
 object WebknossosAssignmentConfig extends AssignmentConfig{
   val id = "webknossos"
+
+  def supportsChangeOfNumInstances = true
 
   val webknossosAssignmentConfigFormat =
     OFormat.apply[WebknossosAssignmentConfig.type](

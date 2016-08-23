@@ -52,41 +52,30 @@ case class Task(
   def annotationBase(implicit ctx: DBAccessContext) =
     AnnotationService.baseFor(this)
 
-  def remainingInstances(implicit ctx: DBAccessContext) =
-    OpenAssignmentDAO.countFor(_id)
-
-  def status(implicit ctx: DBAccessContext) = {
-    def statusWK =
-      for {
-        inProgress <- AnnotationService.countUnfinishedAnnotationsFor(this).getOrElse(0)
-        remaining <- remainingInstances.getOrElse(0)
-      } yield CompletionStatus(
-          open = remaining,
-          inProgress = inProgress,
-          completed = instances - (inProgress + remaining))
-
-    def statusMT =
-      for {
-        mtAssignment <- MTurkAssignmentDAO.findOneByTask(_id).futureBox
-        remaining = mtAssignment.map(_.numberOfOpenAssignments).openOr(0)
-      } yield CompletionStatus(
-        open = remaining,
-        inProgress = 0,                                     // hard to track and rather unimportant
-        completed = instances - remaining)
-
-    def calculateStatus(project: Project) = {
+  def remainingInstances(implicit ctx: DBAccessContext) = {
+    def calculateRemaining(project: Project) = {
       project.assignmentConfiguration match {
         case WebknossosAssignmentConfig =>
-          statusWK
-        case _: MTurkAssignmentConfig =>
-          statusMT
+          OpenAssignmentDAO.countFor(_id)
+        case _: MTurkAssignmentConfig   =>
+          MTurkAssignmentDAO.findOneByTask(_id).map(_.numberOfOpenAssignments)
       }
     }
 
-    for{
+    for {
       p <- project
-      result <- calculateStatus(p)
+      result <- calculateRemaining(p)
     } yield result
+  }
+
+  def status(implicit ctx: DBAccessContext) = {
+    for {
+      inProgress <- AnnotationService.countUnfinishedAnnotationsFor(this).getOrElse(0)
+      remaining <- remainingInstances.getOrElse(0)
+    } yield CompletionStatus(
+        open = remaining,
+        inProgress = inProgress,
+        completed = instances - (inProgress + remaining))
   }
 
   def hasEnoughExperience(user: User) = {

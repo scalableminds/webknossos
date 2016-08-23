@@ -29,6 +29,8 @@ case class MTurkAssignmentConfig(
   description: String) extends AssignmentConfig {
 
   def id = MTurkAssignmentConfig.id
+
+  def supportsChangeOfNumInstances = false
 }
 
 object MTurkAssignmentConfig {

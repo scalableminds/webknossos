@@ -204,6 +204,7 @@ task.notFound=Task couldn''t be found
 task.removed=Task got removed
 task.editSuccess=Task successfully edited
 task.noAnnotation=We couldn''t find finished annotations for this task
+task.instances.changeImpossible=Due to the project settings it is not possible to change the number of instances of this task
 
 assignment.retrieval.failed=Failed to retrieve any assignment
 

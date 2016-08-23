@@ -99,11 +99,10 @@ trait BinaryDataReadController extends BinaryDataCommonController {
                            y: Int,
                            z: Int,
                            resolution: Int,
-                           halfByte: Boolean,
-                           interpolation: Boolean) = TokenSecuredAction(dataSetName, dataLayerName).async {
+                           halfByte: Boolean) = TokenSecuredAction(dataSetName, dataLayerName).async {
     implicit request =>
       AllowRemoteOrigin {
-        val settings = DataRequestSettings(useHalfByte = halfByte, skipInterpolation = !interpolation)
+        val settings = DataRequestSettings(useHalfByte = halfByte)
         for {
           data <- requestData(dataSetName, dataLayerName, Point3D(x, y, z), cubeSize, cubeSize, cubeSize, resolution, settings)
         } yield {
@@ -164,11 +163,10 @@ trait BinaryDataReadController extends BinaryDataCommonController {
                           y: Int,
                           z: Int,
                           resolution: Int,
-                          halfByte: Boolean,
-                          interpolation: Boolean) = TokenSecuredAction(dataSetName, dataLayerName).async(parse.raw) {
+                          halfByte: Boolean) = TokenSecuredAction(dataSetName, dataLayerName).async(parse.raw) {
     implicit request =>
       AllowRemoteOrigin {
-        val settings = DataRequestSettings(useHalfByte = halfByte, skipInterpolation = !interpolation)
+        val settings = DataRequestSettings(useHalfByte = halfByte)
         for {
           image <- respondWithSpriteSheet(dataSetName, dataLayerName, cubeSize, cubeSize, cubeSize, imagesPerRow, x, y, z, resolution, settings)
         } yield {
@@ -187,11 +185,10 @@ trait BinaryDataReadController extends BinaryDataCommonController {
                     y: Int,
                     z: Int,
                     resolution: Int,
-                    halfByte: Boolean,
-                    interpolation: Boolean) = TokenSecuredAction(dataSetName, dataLayerName).async(parse.raw) {
+                    halfByte: Boolean) = TokenSecuredAction(dataSetName, dataLayerName).async(parse.raw) {
     implicit request =>
       AllowRemoteOrigin {
-        val settings = DataRequestSettings(useHalfByte = halfByte, skipInterpolation = !interpolation)
+        val settings = DataRequestSettings(useHalfByte = halfByte)
         for {
           image <- respondWithImage(dataSetName, dataLayerName, width, height, x, y, z, resolution, settings)
         } yield {
@@ -255,7 +252,7 @@ trait BinaryDataReadController extends BinaryDataCommonController {
           r.cubeSize,
           r.position,
           r.zoomStep,
-          DataRequestSettings(r.fourBit getOrElse false, false)))
+          DataRequestSettings(r.fourBit getOrElse false)))
       DataRequestCollection(dataRequests)
     }
 

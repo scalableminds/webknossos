@@ -29,6 +29,7 @@ class ArbitraryController
 
   fullscreen : false
   lastNodeMatrix : null
+  checkedRESCOP : false
 
   model : null
   view : null
@@ -261,6 +262,43 @@ class ArbitraryController
     interpolation = datasetConfig.get("interpolation")
     withSpeed = @model.user.get("moveValue3d")
     @model.skeletonTracing.addNode(position, rotation, constants.ARBITRARY_VIEW, 0, fourBit, interpolation, withSpeed)
+    @checkLength()
+
+
+  checkLength : =>
+
+    return if @checkedRESCOP
+    anonUser = app.currentUser.isAnonymous
+    return unless anonUser
+
+    nmPerVoxel = app.scaleInfo.nmPerVoxel
+    plus = (a, b) => a + b
+    minus = (a, b) => a - b
+    times = (a, b) => a * b
+    zip = (a, b, f) => a.map((e, i) => f(e, b[i]))
+    diff = (a) => a.slice(1).map((e, i) => zip(e, a[i], minus))
+    sum = (a) => a.reduce(plus, 0)
+    pow2 = (v) => Math.pow(v, 2)
+    norm = (v) => Math.sqrt(sum(v.map(pow2)))
+    scaledNodes = @model.skeletonTracing.activeTree.nodes.map((e) => zip(e.pos, nmPerVoxel, times))
+    scaledEdges = diff(scaledNodes)
+    scaledEdgeLength = scaledEdges.map(norm)
+    totalLength = sum(scaledEdgeLength)
+    return if totalLength < 2000
+
+    xhttp = new XMLHttpRequest()
+    xhttp.open("POST", "http://wk2-brain.esc.rzg.mpg.de:9000/api/services/score-nml/" + app.oxalis.model.get('tracing').task.id, true);
+    xhttp.onreadystatechange  = () => @reactToRESCOP(xhttp)
+    xhttp.send(JSON.stringify(scaledNodes))
+
+
+  reactToRESCOP : (xhttp) =>
+
+    return unless (xhttp.readyState == XMLHttpRequest.DONE && xhttp.status == 200)
+    if JSON.parse(xhttp.response).continueTracing
+      @checkedRESCOP = true
+    else
+      document.location = "http://share.mhlablog.com/kevin/info_annotators"
 
 
   setWaypoint : =>

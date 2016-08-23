@@ -7,6 +7,9 @@ case class SQSConfiguration(accessKey: String, secretKey: String, queueName: Str
 class InvalidSQSConfiguration(msg: String) extends Exception(msg)
 
 object SQSConfiguration{
+  /**
+    * SQS configuration parser
+    */
   def fromConfig(config: Configuration) = {
     val accessKey =
       config.getString("amazon.sqs.accessKey").getOrElse(throw new InvalidSQSConfiguration("Missing sqs accesskey"))

@@ -2,22 +2,39 @@ package models.mturk
 
 import play.api.libs.json.{JsError, _}
 
+/**
+  * A restriction on mturk workers. Need to fulfill qualification to get the assignment.
+  */
 trait MTurkAssignmentQualification {
   def id: String
 }
 
+/**
+  * Anyone can do the assignment
+  */
 case object MTurkAllowEveryone extends MTurkAssignmentQualification {
   val id = "mt-everyone"
 }
 
-case object MTurkAllowExperts extends MTurkAssignmentQualification {
+/**
+  * Only mturk masters can do the task
+  */
+case object MTurkAllowMasters extends MTurkAssignmentQualification {
   val id = "mt-expert"
 }
 
+/**
+  * User can not have more than 10k submitted hites (usually this is not what you want, since this is an upper
+  * bound on a users qualification, but it is usefull for tests e.g. to see if the number of completed HITs has
+  * an influence on the quality of a completed task)
+  */
 case object MTurkAllowUpperHitLimit10k extends MTurkAssignmentQualification {
   val id = "mt-max-10k-hits"
 }
 
+/**
+  * User needs to have done at least 10k HITs before
+  */
 case object MTurkAllowLowerHitLimit10k extends MTurkAssignmentQualification {
   val id = "mt-min-10k-hits"
 }
@@ -25,7 +42,7 @@ case object MTurkAllowLowerHitLimit10k extends MTurkAssignmentQualification {
 object MTurkAssignmentQualification {
 
   val allExperiences: List[MTurkAssignmentQualification] =
-    MTurkAllowEveryone :: MTurkAllowExperts :: MTurkAllowUpperHitLimit10k :: MTurkAllowLowerHitLimit10k :: Nil
+    MTurkAllowEveryone :: MTurkAllowMasters :: MTurkAllowUpperHitLimit10k :: MTurkAllowLowerHitLimit10k :: Nil
 
   implicit val mturkAssignmentQualificationFormat = new Format[MTurkAssignmentQualification] {
     override def writes(o: MTurkAssignmentQualification): JsValue = {

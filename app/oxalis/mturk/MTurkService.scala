@@ -133,7 +133,7 @@ object MTurkService extends LazyLogging with FoxImplicits {
     config.requiredQualification match {
       case MTurkAllowEveryone         =>
         null
-      case MTurkAllowExperts          =>
+      case MTurkAllowMasters          =>
         val qualificationRequirement = new QualificationRequirement
         val mastersId = if (isSandboxed) RequesterService.MASTERS_SANDBOX_QUALIFICATION_TYPE_ID
                         else RequesterService.MASTERS_QUALIFICATION_TYPE_ID

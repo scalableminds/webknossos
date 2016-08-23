@@ -39,6 +39,9 @@ object Dependencies{
   val mongev = "com.scalableminds" %% "play-mongev" % "0.4.1"
   val urlHelper = "com.netaporter" %% "scala-uri" % "0.4.14"
 
+  // Unfortunately, we need to list all mturk dependencies seperately since mturk is not published on maven but rather
+  // added to the project as a JAR. To keep the number of JARs added to this repo as small as possible, everthing that
+  // lives on maven is added here.
   val mturk = Seq(
     "log4j" % "log4j" % "1.2.17",
     "org.apache.axis" % "axis" % "1.4",

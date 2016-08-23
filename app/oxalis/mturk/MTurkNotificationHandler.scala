@@ -12,7 +12,13 @@ import play.api.Play.current
 import play.api.libs.concurrent.Akka
 import play.api.libs.json._
 
+/**
+  * This handler will process notifications from mturk using the amazon SQS message Queue. mturk will post
+  * its notifications to the persitant SQS service. After that, we can request the notifications from SQS and
+  * delete them after we have processed them (this allows fail safty and ensures that we will never miss a notification)
+  */
 object MTurkNotificationHandler {
+
   lazy val sqsConfiguration = {
     val accessKey = current.configuration.getString("amazon.sqs.accessKey").get
     val secretKey = current.configuration.getString("amazon.sqs.secretKey").get
@@ -29,6 +35,9 @@ object MTurkNotificationHandler {
 
   case object RequestNotifications
 
+  /**
+    * Aktor which will periodically retrieve notifications from SQS
+    */
   class MTurkNotificationReceiver extends Actor with LazyLogging with FoxImplicits {
 
     import MTurkNotifications._
@@ -45,6 +54,9 @@ object MTurkNotificationHandler {
       case RequestNotifications =>
         val messages = sqsHelper.fetchMessages
         handleMTurkNotifications(messages).map { results =>
+          // This might not be the best way to handle failures. Nevertheless, if we encounter an error at this point
+          // we will encounter that error every time we process that message and hence if we don't delete it, we will
+          // process it over and over and we will never process any other message anymore.
           results.zipWithIndex.foreach {
             case (f: Failure, idx) =>
               logger.warn("Failed to properly handle message: " + messages(idx).getBody + ". Error: " + f)
@@ -74,6 +86,12 @@ object MTurkNotificationHandler {
       }
     }
 
+    /**
+      * Handle mturk notifications and execute necassary commands to keep overall state consistent
+      *
+      * @param notification mturk parsed notifications
+      * @return success
+      */
     private def handleSingleMTurkNotification(notification: MTurkNotification): Fox[Boolean] = notification match {
       case notif: MTurkAssignmentReturned  =>
         // Let's treat it the same as an abandoned assignment

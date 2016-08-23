@@ -23,6 +23,13 @@ class MTurkController @Inject()(val messagesApi: MessagesApi) extends Controller
     */
   def startAssignment(id: String, workerId: String, assignmentId: String) = Authenticated.async {
     implicit request =>
+
+      /**
+        * This protects us from creating an annotation twice if a user clicks on the link multiple times.
+        *
+        * We store the users id and his first created annotation on the mturk assignment and return it if requested
+        * again.
+        */
       def annotationForAssignment(mturkAssignment: MTurkAssignment, user: User, task: Task) = {
         mturkAssignment.annotations.find(reference => reference._user == user._id) match {
           case Some(reference) =>

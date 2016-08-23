@@ -8,7 +8,7 @@ import com.amazonaws.services.sqs.model._
 import com.typesafe.scalalogging.LazyLogging
 
 /**
-  * HeLper to handle SQS Interface ( lots of uggly Java Api )
+  * Helper to handle SQS Interface ( lots of uggly Java Api )
   */
 class SQSHelper(sqsConfig: SQSConfiguration) extends LazyLogging {
 

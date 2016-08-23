@@ -42,15 +42,16 @@ class Skeleton
     @listenTo(@skeletonTracing, "newTreeColor", @updateTreeColor)
     @listenTo(@skeletonTracing, "reloadTrees", @loadSkeletonFromModel)
 
-    @listenTo(@model.user, "particleSizeChanged", @setParticleSize)
-    @listenTo(@model.user, "overrideNodeRadiusChanged", (overrideNodeRadius) =>
+    @listenTo(@model.user, "change:particleSize", @setParticleSize)
+    @listenTo(@model.user, "change:overrideNodeRadius", (overrideNodeRadius) =>
       for tree in @treeGeometries
         tree.showRadius(not @model.user.get("overrideNodeRadius"))
     )
 
   createNewTree : (treeId, treeColor) ->
 
-    @treeGeometries.push( tree = new Tree(treeId, treeColor, @model) )
+    tree = new Tree(treeId, treeColor, @model)
+    @treeGeometries.push(tree)
     @setActiveNode()
     @trigger("newGeometries", tree.getMeshes())
 

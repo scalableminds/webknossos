@@ -25,7 +25,6 @@ case class Task(
   @info("Reference to task type") _taskType: BSONObjectID,
   @info("Assigned name") team: String,
   @info("Required experience") neededExperience: Experience = Experience.empty,
-  @info("Importance of task") priority: Int = 100,
   @info("Number of required instances") instances: Int = 1,
   @info("Current tracing time") tracingTime: Option[Long] = None,
   @info("Date of creation" )created: DateTime = DateTime.now(),
@@ -94,8 +93,7 @@ object Task extends FoxImplicits {
         "isForAnonymous" -> task.directLinks.nonEmpty,
         "boundingBox" -> boundingBox,
         "neededExperience" -> task.neededExperience,
-        "priority" -> task.priority,
-        "directLinks" -> directLinks,
+        "directLinks" -> task.directLinks,
         "created" -> DateTimeFormat.forPattern("yyyy-MM-dd HH:mm").print(task.created),
         "status" -> status,
         "tracingTime" -> task.tracingTime
@@ -167,7 +165,6 @@ object TaskDAO extends SecuredBaseDAO[Task] with FoxImplicits with QuerySupporte
 
   def update(_task: BSONObjectID, _taskType: BSONObjectID,
     neededExperience: Experience,
-    priority: Int,
     instances: Int,
     team: String,
     _project: Option[String]
@@ -177,7 +174,6 @@ object TaskDAO extends SecuredBaseDAO[Task] with FoxImplicits with QuerySupporte
       Json.obj("$set" ->
         Json.obj(
           "neededExperience" -> neededExperience,
-          "priority" -> priority,
           "instances" -> instances,
           "team" -> team,
           "_project" -> _project)),

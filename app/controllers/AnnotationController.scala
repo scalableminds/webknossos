@@ -17,7 +17,6 @@ import models.task.TaskDAO
 import models.user.time._
 import models.user.{UsedAnnotationDAO, User, UserDAO}
 import net.liftweb.common.{Full, _}
-import oxalis.annotation.AnnotationIdentifier
 import oxalis.security.{AuthenticatedRequest, Secured}
 import play.api.Logger
 import play.api.i18n.{Messages, MessagesApi}
@@ -275,12 +274,11 @@ class AnnotationController @Inject()(val messagesApi: MessagesApi) extends Contr
 
   def finishAll(typ: String) = Authenticated.async(parse.json) { implicit request =>
     withJsonAs[JsArray](request.body \ "annotations") { annotationIds =>
-      val results: List[Fox[(Annotation, String)]] = (for {
-        jsValue <- annotationIds.value
-        id <- jsValue.asOpt[String]
-      } yield finishAnnotation(typ, id, request.user)(GlobalAccessContext)).toList
+      val results = Fox.serialSequence(annotationIds.value.toList){jsValue =>
+        jsValue.asOpt[String].toFox.flatMap(id => finishAnnotation(typ, id, request.user)(GlobalAccessContext))
+      }
 
-      Fox.sequence(results) map { results =>
+      results.map { results =>
         JsonOk(Messages("annotation.allFinished"))
       }
     }
@@ -326,7 +324,7 @@ class AnnotationController @Inject()(val messagesApi: MessagesApi) extends Contr
       task <- TaskDAO.findOneById(taskId) ?~> Messages("task.notFound")
       _ <- ensureTeamAdministration(request.user, task.team)
       annotations <- task.annotations
-      jsons <- Fox.sequence(annotations.map(annotationJson(request.user, _, exclude = List("content"))))
+      jsons <- Fox.serialSequence(annotations)(annotationJson(request.user, _, exclude = List("content")))
     } yield {
       Ok(JsArray(jsons.flatten))
     }
@@ -337,7 +335,7 @@ class AnnotationController @Inject()(val messagesApi: MessagesApi) extends Contr
       annotation match {
         case t if t.typ == AnnotationType.Task =>
           await(annotation.muta.cancelTask().futureBox).map { _ =>
-            Ok
+            JsonOk(Messages("task.finished"))
           }
         case _                                 =>
           Full(JsonOk(Messages("annotation.finished")))
@@ -361,7 +359,7 @@ class AnnotationController @Inject()(val messagesApi: MessagesApi) extends Contr
       user <- UserDAO.findOneById(userId) ?~> Messages("user.notFound")
       result <- annotation.muta.transferToUser(user)
     } yield {
-      Ok
+      JsonOk(Messages("annotation.transfered"))
     }
   }
 }

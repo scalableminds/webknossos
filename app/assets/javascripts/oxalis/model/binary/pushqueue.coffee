@@ -18,6 +18,13 @@ class PushQueue
     @push = _.debounce @pushImpl, @DEBOUNCE_TIME
 
 
+  stateSaved : ->
+
+    return @queue.length == 0 and
+           @cube.temporalBucketManager.getCount() == 0 and
+           not @updatePipeline.isBusy()
+
+
   insert : (bucket) ->
 
     @queue.push( bucket )
@@ -108,11 +115,9 @@ class PushQueue
           }
         )
       )
-    ).then(
-      undefined
+    ).catch(
       (err) ->
-        throw new Error("Uploading data failed.", err)
-        Promise.reject(err)
+        alert("We tried multiple time times to reach our server, but couldn't save your volume data. Please try refreshing the page.")
     )
 
 

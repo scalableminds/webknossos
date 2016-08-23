@@ -3,39 +3,46 @@
  */
 package com.scalableminds.braingames.binary.api
 
-import com.scalableminds.util.geometry.{Vector3D, Point3D}
-import com.scalableminds.braingames.binary.{DataRequestSettings, Cuboid}
-import com.scalableminds.braingames.binary.{DataReadRequest, DataWriteRequest}
 import com.scalableminds.braingames.binary.models.{DataLayer, DataSource}
+import com.scalableminds.braingames.binary.{Cuboid, DataReadRequest, DataRequestSettings, DataWriteRequest}
+import com.scalableminds.util.geometry.Point3D
 
 trait BinaryDataHelpers {
 
-  def resolutionFromExponent(resolutionExponent: Int) =
+  private def resolutionFromExponent(resolutionExponent: Int) =
     math.pow(2, resolutionExponent).toInt
 
-  def createDataReadRequest(dataSource: DataSource, dataLayer: DataLayer, dataSection: Option[String], width: Int, height: Int, depth: Int, position: Point3D, resolutionExponent: Int, settings: DataRequestSettings) = {
-    val resolution = resolutionFromExponent(resolutionExponent)
-    val cuboid = Cuboid(width, height, depth,  resolution, Some(Vector3D(position)))
+  def createDataReadRequest(
+                             dataSource: DataSource,
+                             dataLayer: DataLayer,
+                             dataSection: Option[String],
+                             width: Int,
+                             height: Int,
+                             depth: Int,
+                             position: Point3D,
+                             resolutionExponent: Int,
+                             settings: DataRequestSettings): DataReadRequest = {
 
-    DataReadRequest(
-      dataSource,
-      dataLayer,
-      dataSection,
-      resolution,
-      cuboid,
-      settings)
+    val resolution = resolutionFromExponent(resolutionExponent)
+    val cuboid = Cuboid(width, height, depth, resolution, position)
+
+    DataReadRequest(dataSource, dataLayer, dataSection, resolution, cuboid, settings)
   }
 
-  def createDataWriteRequest(dataSource: DataSource, dataLayer: DataLayer, dataSection: Option[String], width: Int, height: Int, depth: Int, position: Point3D, resolutionExponent: Int, data: Array[Byte]) = {
-    val resolution = resolutionFromExponent(resolutionExponent)
-    val cuboid = Cuboid(width, height, depth,  resolution, Some(Vector3D(position)))
+  def createDataWriteRequest(
+                              dataSource: DataSource,
+                              dataLayer: DataLayer,
+                              dataSection: Option[String],
+                              width: Int,
+                              height: Int,
+                              depth: Int,
+                              position: Point3D,
+                              resolutionExponent: Int,
+                              data: Array[Byte]): DataWriteRequest = {
 
-    DataWriteRequest(
-      dataSource,
-      dataLayer,
-      dataSection,
-      resolution,
-      cuboid,
-      data)
+    val resolution = resolutionFromExponent(resolutionExponent)
+    val cuboid = Cuboid(width, height, depth, resolution, position)
+
+    DataWriteRequest(dataSource, dataLayer, dataSection, resolution, cuboid, data)
   }
 }

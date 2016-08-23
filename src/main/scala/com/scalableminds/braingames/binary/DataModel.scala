@@ -15,40 +15,13 @@ case class Cuboid(
                    _height: Int,
                    _depth: Int,
                    resolution: Int = 1,
-                   topLeftOpt: Option[Vector3D] = None,
-                   moveVector: (Double, Double, Double) = (0, 0, 0)) {
+                   topLeft: Point3D) {
 
   val width = resolution * _width
   val height = resolution * _height
   val depth = resolution * _depth
 
-  val topLeft = topLeftOpt getOrElse {
-    val xh = (width / 2.0).floor
-    val yh = (height / 2.0).floor
-    val zh = (depth / 2.0).floor
-    Vector3D(-xh, -yh, -zh)
-  }
-
-  val corners = simpleMove(moveVector, Array(
-                                              topLeft,
-                                              topLeft.dx(width - 1),
-                                              topLeft.dy(height - 1),
-                                              topLeft.dx(width - 1).dy(height - 1),
-                                              topLeft.dz(depth - 1),
-                                              topLeft.dz(depth - 1).dx(width - 1),
-                                              topLeft.dz(depth - 1).dy(height - 1),
-                                              topLeft.dz(depth - 1).dx(width - 1).dy(height - 1)))
-
-  val maxCorner = corners.foldLeft((0.0, 0.0, 0.0))((b, e) => (
-    math.max(b._1, e.x), math.max(b._2, e.y), math.max(b._3, e.z)))
-
-  val minCorner = corners.foldLeft(maxCorner)((b, e) => (
-    math.min(b._1, e.x), math.min(b._2, e.y), math.min(b._3, e.z)))
-
-  private def simpleMove(moveVector: (Double, Double, Double), coordinates: Array[Vector3D]): Array[Vector3D] = {
-    val move = Vector3D(moveVector)
-    coordinates.map(_ + move)
-  }
+  val bottomRight = topLeft.dz(depth - 1).dx(width - 1).dy(height - 1)
 }
 
 trait CubeIterator {
@@ -66,15 +39,13 @@ trait CubeIterator {
     var y = cube.topLeft.y
     var z = cube.topLeft.z
 
-    val (dx, dy, dz) = cube.moveVector
-
     var idx = 0
     while (z < zhMax) {
       y = cube.topLeft.y
       while (y < yhMax) {
         x = cube.topLeft.x
         while (x < xhMax) {
-          val r = mappingF(dx + x, dy + y, dz + z, idx)
+          val r = mappingF(x, y, z, idx)
           if (r.length > 0)
             r.copyToArray(array, idx, extendArrayBy)
           x += resolution

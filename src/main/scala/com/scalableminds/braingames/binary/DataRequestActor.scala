@@ -173,25 +173,14 @@ class DataRequester(
   def load(dataRequest: DataRequest): Fox[Array[Byte]] = {
 
     val cube = dataRequest.cuboid
-
     val dataSource = dataRequest.dataSource
-
     val layer = dataRequest.dataLayer
+    val maxCorner = cube.bottomRight
+    val minCorner = cube.topLeft
 
-    val maxCorner = cube.maxCorner
-
-    val minCorner = cube.minCorner
-
-    val minPoint = Point3D(math.max(roundDown(minCorner._1), 0),
-                           math.max(roundDown(minCorner._2), 0),
-                           math.max(roundDown(minCorner._3), 0))
-
-    val minBlock =
-      dataSource.pointToBlock(minPoint, dataRequest.resolution)
-    val maxBlock =
-      dataSource.pointToBlock(
-                               Point3D(roundUp(maxCorner._1), roundUp(maxCorner._2), roundUp(maxCorner._3)),
-                               dataRequest.resolution)
+    val minPoint = Point3D(math.max(minCorner.x, 0), math.max(minCorner.y, 0), math.max(minCorner.z, 0))
+    val minBlock = dataSource.pointToBlock(minPoint, dataRequest.resolution)
+    val maxBlock = dataSource.pointToBlock(maxCorner, dataRequest.resolution)
 
     val pointOffset = minBlock.scale(dataSource.blockLength)
 

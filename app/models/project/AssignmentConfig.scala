@@ -7,6 +7,15 @@ trait AssignmentConfig {
   def id: String
 
   def supportsChangeOfNumInstances: Boolean
+
+  def asOpt[T] : Option[T]= {
+    try{
+      Some(this.asInstanceOf[T])
+    } catch {
+      case e: java.lang.ClassCastException =>
+        None
+    }
+  }
 }
 
 object WebknossosAssignmentConfig extends AssignmentConfig{

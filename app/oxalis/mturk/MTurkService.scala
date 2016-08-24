@@ -55,7 +55,7 @@ object MTurkService extends LazyLogging with FoxImplicits {
     cfg
   }
 
-  def ensureEnoughFunds(neededFunds: Int): Future[Boolean] = Future {
+  def ensureEnoughFunds(neededFunds: Double): Future[Boolean] = Future {
     blocking {
       val balance = service.getAccountBalance
       logger.info("Got account balance: " + RequesterService.formatCurrency(balance))
@@ -114,8 +114,9 @@ object MTurkService extends LazyLogging with FoxImplicits {
   def createHITs(project: Project, task: Task): Fox[MTurkAssignment] = {
     val estimatedAmountNeeded = 1
     for {
-      _ <- ensureEnoughFunds(estimatedAmountNeeded)
       mtProject <- MTurkProjectDAO.findByProject(project.name)(GlobalAccessContext)
+      projectConfig <- project.assignmentConfiguration.asOpt[MTurkAssignmentConfig] ?~> "project.config.notMturk"
+      _ <- ensureEnoughFunds(projectConfig.rewardInDollar) ?~> "mturk.notEnoughFunds"
       (hitId, key) <- createHIT(mtProject.hitTypeId, task.instances)
       assignment = MTurkAssignment(task._id, task.team, mtProject._project, hitId, key, task.instances)
       _ <- MTurkAssignmentDAO.insert(assignment)(GlobalAccessContext)

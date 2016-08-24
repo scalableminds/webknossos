@@ -23,7 +23,6 @@ import play.api.libs.functional.syntax._
 import com.scalableminds.util.tools.ExtendedTypes.ExtendedString
 import models.user.time._
 import com.scalableminds.util.tools.DefaultConverters._
-
 import scala.text
 
 class UserController @Inject()(val messagesApi: MessagesApi)

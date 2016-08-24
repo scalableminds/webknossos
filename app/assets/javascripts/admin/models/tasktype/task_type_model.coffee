@@ -30,7 +30,7 @@ class TaskTypeModel extends Backbone.Model
 
   destroy : ->
 
-    options = url : "/api/taskTypes/#{@get('id')}/delete"
+    options = url : "/api/taskTypes/#{@get('id')}"
     super(options)
 
 module.exports = TaskTypeModel

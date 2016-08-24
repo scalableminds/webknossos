@@ -4,7 +4,8 @@
 package models.task
 
 import com.scalableminds.util.reactivemongo.DBAccessContext
-import com.scalableminds.util.tools.{FoxImplicits, Fox}
+import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import models.project.Project
 import models.user.User
 import play.api.libs.iteratee.Enumerator
 import play.api.libs.json.Json
@@ -25,7 +26,6 @@ object OpenAssignmentService extends FoxImplicits{
 
   def removeByProject(project: Project)(implicit ctx: DBAccessContext) =
     OpenAssignmentDAO.removeByProject(project.name)
-
 
   def remove(assignment: OpenAssignment)(implicit ctx: DBAccessContext) =
     OpenAssignmentDAO.removeById(assignment._id)

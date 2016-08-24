@@ -34,6 +34,9 @@ object MTurkService extends LazyLogging with FoxImplicits {
 
   val isSandboxed = conf.getBoolean("amazon.mturk.sandbox").get
 
+  val submissionUrl = if(isSandboxed) conf.getString("amazon.mturk.submissionUrl.sandbox").get
+                      else conf.getString("amazon.mturk.submissionUrl.production").get
+
   val notificationsUrl = conf.getString("amazon.sqs.endpoint").get + conf.getString("amazon.sqs.queueName").get
 
   val serverBaseUrl = conf.getString("http.uri").get
@@ -45,7 +48,10 @@ object MTurkService extends LazyLogging with FoxImplicits {
     cfg.setRetriableErrors(conf.getStringList("amazon.mturk.retriableErrors").get.toSet.asJava)
     cfg.setRetryAttempts(conf.getInt("amazon.mturk.retryAttempts").get)
     cfg.setRetryDelayMillis(conf.getInt("amazon.mturk.retryDelayMillis").get)
-    cfg.setServiceURL(conf.getString("amazon.mturk.serviceUrl").get)
+    if(isSandboxed)
+      cfg.setServiceURL(conf.getString("amazon.mturk.serviceUrl.sandbox").get)
+    else
+      cfg.setServiceURL(conf.getString("amazon.mturk.serviceUrl.production").get)
     cfg
   }
 
@@ -183,7 +189,9 @@ object MTurkService extends LazyLogging with FoxImplicits {
 
     val lifetimeInSeconds = 7.days.toSeconds
 
-    val question = questionTemplate.getQuestion(Map("webknossosUrl" -> s"$serverBaseUrl/hits/$requesterAnnotation?"))
+    val question = questionTemplate.getQuestion(Map(
+      "webknossosUrl" -> s"$serverBaseUrl/hits/$requesterAnnotation?",
+      "mturkSubmissionUrl" -> submissionUrl))
 
     //Creating the HIT and loading it into Mechanical Turk
     val hitF: Future[HIT] =

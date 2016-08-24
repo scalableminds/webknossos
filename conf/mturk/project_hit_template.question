@@ -54,7 +54,7 @@
           // --></script><!-- End Instructions --><!-- Content Body -->
         <div>&nbsp;</div>
         <section>
-          <form name='mturk_form' method='post' id='mturk_form' action='https://www.mturk.com/mturk/externalSubmit'>
+          <form name='mturk_form' method='post' id='mturk_form' action='${mturkSubmissionUrl}'>
             <input type='hidden' value='' name='assignmentId' id='assignmentId'/>
             <fieldset><span style="font-weight: bold; font-size: 0.9em; line-height: 1.6em;">Feedback: What would help you to perform the assignment faster or what did you not understand about the assignment?</span></fieldset>
             <fieldset><textarea class="form-control" cols="120" name="Q6MultiLineTextInput" rows="3"></textarea></fieldset>

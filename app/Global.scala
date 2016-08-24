@@ -14,6 +14,7 @@ import com.scalableminds.util.mail.Mailer
 import play.api.libs.concurrent.Execution.Implicits._
 import com.typesafe.config.Config
 import models.annotation.AnnotationStore
+import oxalis.mturk.MTurkNotificationHandler
 import play.airbrake.Airbrake
 import play.api.libs.json.Json
 import play.api.mvc._
@@ -37,6 +38,8 @@ object Global extends GlobalSettings {
     Akka.system(app).actorOf(
       Props(new Mailer(conf)),
       name = "mailActor")
+
+    MTurkNotificationHandler.start(app)
 
     if (conf.getBoolean("workload.active")) {
       Akka.system(app).actorOf(

@@ -32,11 +32,11 @@ case class DBTree(
 
   def id = _id.stringify
 
-  def isEmpty = async {
-    val oneNode = await(DBNodeDAO.findOneByTree(_id)(GlobalAccessContext).futureBox)
-    val oneEdge = await(DBEdgeDAO.findOneByTree(_id)(GlobalAccessContext).futureBox)
-
-    oneNode.isEmpty && oneEdge.isEmpty
+  def isEmpty = {
+    for {
+      oneNode <- DBNodeDAO.findOneByTree(_id)(GlobalAccessContext).futureBox
+      oneEdge <- DBEdgeDAO.findOneByTree(_id)(GlobalAccessContext).futureBox
+    } yield oneNode.isEmpty && oneEdge.isEmpty
   }
 
   def nodes = DBNodeDAO.findByTree(_id)(GlobalAccessContext).map(_.map(_.node).toSet)

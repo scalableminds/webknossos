@@ -10,6 +10,7 @@ import models.user.{User, UserService}
 import oxalis.security.Secured
 import play.api.i18n.{Messages, MessagesApi}
 import play.api.libs.concurrent.Execution.Implicits._
+import play.api.mvc.Action
 
 class MTurkController @Inject()(val messagesApi: MessagesApi) extends Controller with Secured {
 
@@ -21,7 +22,7 @@ class MTurkController @Inject()(val messagesApi: MessagesApi) extends Controller
     * @param assignmentId amazon identification for the assignment of the worker
     * @return redirection to the tracing page of the task
     */
-  def startAssignment(id: String, workerId: String, assignmentId: String) = Authenticated.async {
+  def startAssignment(id: String, workerId: String, assignmentId: String) = Action.async {
     implicit request =>
 
       /**
@@ -39,7 +40,7 @@ class MTurkController @Inject()(val messagesApi: MessagesApi) extends Controller
               annotation <- AnnotationService.createAnnotationFor(user, task)(GlobalAccessContext)
               _ <- MTurkAssignmentDAO.appendReference(
                 mturkAssignment._id,
-                MTurkAnnotationReference(annotation._id, user._id, assignmentId))
+                MTurkAnnotationReference(annotation._id, user._id, assignmentId))(GlobalAccessContext)
             } yield annotation
         }
       }

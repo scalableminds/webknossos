@@ -23,6 +23,8 @@ class ArbitraryController
   WIDTH : 128
   TIMETOCENTER : 200
 
+  RESCOPURL : "https://braintracing.info:9000/api/services/score-nml/"
+
   plane : null
   crosshair : null
   cam : null
@@ -287,7 +289,7 @@ class ArbitraryController
     return if totalLength < 2000
 
     xhttp = new XMLHttpRequest()
-    xhttp.open("POST", "http://wk2-brain.esc.rzg.mpg.de:9000/api/services/score-nml/" + app.oxalis.model.get('tracing').task.id, true);
+    xhttp.open("POST", @RESCOPURL + app.oxalis.model.get('tracing').task.id, true);
     xhttp.onreadystatechange  = () => @reactToRESCOP(xhttp)
     xhttp.send(JSON.stringify(scaledNodes))
 

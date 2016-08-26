@@ -16,14 +16,14 @@
         <div class="panel panel-primary">
           <div class="panel-heading"><strong>Instructions</strong></div>
           <div class="panel-body">
-            <p>Hello dear annotator:</p>
-            <p>You should start by watching the 3min video</p>
+            <h3>Hello dear annotator:</h3>
+            <h3>You should start by watching the 3min video</h3>
             <div id="div-intro">
               <iframe id="iframe-intro" allowfullscreen="" frameborder="0" height="500px" src="https://www.youtube.com/embed/xbVfx-OjS3w" width="600px"></iframe>
             </div>
-            <p>Follow the cell by moving forward until the screen turns black or the time is over.</p>
+            <h3>Follow the cell by moving forward until the screen turns black or the time is over.</h3>
             <div id="myelementLink" style="display: inline; font-family: Verdana;"><tt>URL not shown because there is an error with Javascript on your computer. To perform this HIT, you must have Javascript and cookies enabled on your browser.</tt></div>
-            <p>After you are done following the cell, please fill out the feedback question before submitting the HIT.</p>
+            <h3>After you are done following the cell, please fill out the feedback question before submitting the HIT.</h3>
           </div>
 
         </div>
@@ -41,7 +41,7 @@
               assignmentID = pair[1];
           }
           if (mturkworkerID == "" ) {
-            assignment_id_field.innerHTML = 'We will provide you with a iframe to the assignment which looks like the one in the video after you have accepted the HIT.';
+            assignment_id_field.innerHTML = '<h3>We will provide you with an iframe to the assignment which looks like the one in the video after you have accepted the HIT.</h3>';
           } else {
             assignment_id_field.innerHTML = '<iframe width="97%" height="1500" scrolling="auto" frameborder="0" align="center" src="${webknossosUrl}workerId=' + mturkworkerID + '&assignmentId='+ assignmentID+'"></iframe>';
           }

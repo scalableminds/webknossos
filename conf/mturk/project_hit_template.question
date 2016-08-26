@@ -43,7 +43,7 @@
           if (mturkworkerID == "" ) {
             assignment_id_field.innerHTML = 'We will provide you with a iframe to the assignment which looks like the one in the video after you have accepted the HIT.';
           } else {
-            assignment_id_field.innerHTML = '<table><tbody><tr><td style="width:80%"><iframe width="100%" height="1500" scrolling="auto" frameborder="0" align="center" src="${webknossosUrl}workerId=' + mturkworkerID + '&assignmentId='+ assignmentID+'"></iframe></td><td valign="top"><p><br></p><div id="mytimer">timer</div></td></tr></tbody></table>';
+            assignment_id_field.innerHTML = '<table><tbody><tr><td style="width:80%"><iframe width="100%" height="1500" scrolling="auto" frameborder="0" align="center" src="${webknossosUrl}workerId=' + mturkworkerID + '&assignmentId='+ assignmentID+'"></iframe></td><td valign="top"><p><br></p><p><br></p><p><br></p><p><br></p><div id="mytimer">timer</div></td></tr></tbody></table>';
             var mytime = 600;
             setInterval(function(){mytime--; mytimer.innerHTML='remaining time in task: ' + mytime + ' seconds' }, 1000);
           }

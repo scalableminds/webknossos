@@ -10,6 +10,7 @@ import scala.concurrent.duration._
 import com.amazonaws.mturk.addon.HITQuestion
 import com.amazonaws.mturk.requester._
 import com.amazonaws.mturk.service.axis.RequesterService
+import com.amazonaws.mturk.service.exception.ObjectDoesNotExistException
 import com.amazonaws.mturk.util.ClientConfig
 import com.scalableminds.util.reactivemongo.GlobalAccessContext
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
@@ -219,7 +220,14 @@ object MTurkService extends LazyLogging with FoxImplicits {
   def removeByTask(task: Task) = {
     def disable(hitId: String) = Future{
       blocking{
-        service.forceExpireHIT(hitId)
+        try {
+          service.forceExpireHIT(hitId)
+        } catch {
+          case e: ObjectDoesNotExistException =>
+            // Task is not there any more, so lets assume it is already deleted. This mostly is only the case if
+            // one switches from sandbox to production and tries to delete tasks created in sandbox.
+            true
+        }
       }
     }
 

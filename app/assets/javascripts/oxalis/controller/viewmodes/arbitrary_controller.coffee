@@ -25,13 +25,18 @@ class ArbitraryController
 
   RESCOPURL : "https://braintracing.info:9000/api/services/score-nml/"
 
+  TESTLENGTH : 2000
+  FINISHLENGTH : 80000
+
   plane : null
   crosshair : null
   cam : null
 
   fullscreen : false
   lastNodeMatrix : null
+
   checkedRESCOP : false
+  showFinishNotice : false
 
   model : null
   view : null
@@ -171,7 +176,7 @@ class ArbitraryController
 
       #Recenter active node
       "s" : => @centerActiveNode()
-      
+
       #Rotate view by 180 deg
       "r" : => @cam.yaw(Math.PI)
     )
@@ -269,7 +274,6 @@ class ArbitraryController
 
   checkLength : =>
 
-    return if @checkedRESCOP
     anonUser = app.currentUser.isAnonymous
     return unless anonUser
 
@@ -286,8 +290,13 @@ class ArbitraryController
     scaledEdges = diff(scaledNodes)
     scaledEdgeLength = scaledEdges.map(norm)
     totalLength = sum(scaledEdgeLength)
-    return if totalLength < 2000
-
+    if totalLength > @FINISHLENGTH
+      unless @showFinishNotice
+        _.defer => new Promise (resolve, reject) => alert("You are an excellent annotator and may finish the task now!")
+        @showFinishNotice = true
+    return if totalLength < @TESTLENGTH
+    return if @checkedRESCOP
+    @checkedRESCOP = true
     xhttp = new XMLHttpRequest()
     xhttp.open("POST", @RESCOPURL + app.oxalis.model.get('tracing').task.id, true);
     xhttp.onreadystatechange  = () => @reactToRESCOP(xhttp)
@@ -297,9 +306,7 @@ class ArbitraryController
   reactToRESCOP : (xhttp) =>
 
     return unless (xhttp.readyState == XMLHttpRequest.DONE && xhttp.status == 200)
-    if JSON.parse(xhttp.response).continueTracing
-      @checkedRESCOP = true
-    else
+    unless JSON.parse(xhttp.response).continueTracing
       document.location = "http://share.mhlablog.com/kevin/info_annotators"
 
 
@@ -351,6 +358,7 @@ class ArbitraryController
       if id == 1
         @cam.yaw(Math.PI)
         Toast.warning("Reached initial node, view reversed")
+        @model.commentTabView.appendComment("reversed")
     )
 
 

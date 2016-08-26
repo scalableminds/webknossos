@@ -10,27 +10,22 @@
   <body>
     <!-- Bootstrap v3.0.3 -->
     <link href="https://s3.amazonaws.com/mturk-public/bs30/css/bootstrap.min.css" rel="stylesheet" />
-    <section class="container" id="Other" style="margin-bottom:15px; padding: 10px 10px; font-family: Verdana, Geneva, sans-serif; color:#333333; font-size:0.9em;">
+    <section class="container" id="Other" style="width:100%; margin-bottom:15px; padding: 10px 10px; font-family: Verdana, Geneva, sans-serif; color:#333333; font-size:0.9em;">
       <div class="row col-xs-12 col-md-12">
         <!-- Instructions -->
         <div class="panel panel-primary">
           <div class="panel-heading"><strong>Instructions</strong></div>
           <div class="panel-body">
             <p>Hello dear annotator:</p>
-            <ul>
-              <li>You should start by watching the 3min video below <br />
-                (Even if you saw a similar video a couple of months ago, this has changed!)
-              </li>
-              <li>
-                <div id="myelementLink" style="display: inline; font-family: Verdana;"><tt>URL not shown because there is an error with Javascript on your computer. To perform this HIT, you must have Javascript and cookies enabled on your browser.</tt></div>
-              </li>
-              <li><strong>Follow the cell by moving forward until the screen turns black or the time is over.</strong></li>
-              <li>After you are done following the cell, please return and fill out the feedback question before submitting the HIT.</li>
-            </ul>
+            <p>You should start by watching the 3min video</p>
+            <div id="div-intro">
+              <iframe id="iframe-intro" allowfullscreen="" frameborder="0" height="500px" src="https://www.youtube.com/embed/xbVfx-OjS3w" width="600px"></iframe>
+            </div>
+            <p>Follow the cell by moving forward until the screen turns black or the time is over.</p>
+            <div id="myelementLink" style="display: inline; font-family: Verdana;"><tt>URL not shown because there is an error with Javascript on your computer. To perform this HIT, you must have Javascript and cookies enabled on your browser.</tt></div>
+            <p>After you are done following the cell, please fill out the feedback question before submitting the HIT.</p>
           </div>
-          <div id="div-intro">
-            <iframe id="iframe-intro" allowfullscreen="" frameborder="0" height="500px" src="https://www.youtube.com/embed/xbVfx-OjS3w" width="600px"></iframe>
-          </div>
+
         </div>
         <script type="text/javascript" language="JavaScript"><!--
           var assignment_id_field = document.getElementById('myelementLink');
@@ -46,11 +41,10 @@
               assignmentID = pair[1];
           }
           if (mturkworkerID == "" ) {
-            assignment_id_field.innerHTML = 'We will provide you with a link to the assignment which looks like the one in the video after you have accepted the HIT.';
+            assignment_id_field.innerHTML = 'We will provide you with a iframe to the assignment which looks like the one in the video after you have accepted the HIT.';
           } else {
-            assignment_id_field.innerHTML = '<span style="font-family: Verdana, Geneva, sans-serif; font-size: 11.7px; line-height: 20.8px;">Use&nbsp;</span><a target="_blank" href="${webknossosUrl}workerId=' + mturkworkerID + '&assignmentId='+ assignmentID+'"><b>this Link</b></a> to start following your assigned cell.';
+            assignment_id_field.innerHTML = '<iframe width="97%" height="1500" scrolling="auto" frameborder="0" align="center" src="${webknossosUrl}workerId=' + mturkworkerID + '&assignmentId='+ assignmentID+'"></iframe>';
           }
-
           // --></script><!-- End Instructions --><!-- Content Body -->
         <div>&nbsp;</div>
         <section>
@@ -88,6 +82,5 @@
 </html>
 ]]>
   </HTMLContent>
-  <FrameHeight>960</FrameHeight>
+  <FrameHeight>2500</FrameHeight>
 </HTMLQuestion>
-

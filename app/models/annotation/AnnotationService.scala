@@ -121,7 +121,8 @@ object AnnotationService extends AnnotationContentProviders with BoxImplicits wi
       annotation.copy(
         _user = Some(user._id),
         state = AnnotationState.InProgress,
-        typ = AnnotationType.Task).temporaryDuplicate(keepId = false).flatMap(_.saveToDB)
+        typ = AnnotationType.Task,
+        created = System.currentTimeMillis).temporaryDuplicate(keepId = false).flatMap(_.saveToDB)
 
     for {
       annotationBase <- task.annotationBase ?~> "Failed to retrieve annotation base."

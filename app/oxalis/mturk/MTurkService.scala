@@ -73,6 +73,7 @@ object MTurkService extends LazyLogging with FoxImplicits {
             _ <- AnnotationService.finish(annotation)(GlobalAccessContext)
           } yield true
         case None            =>
+          logger.warn(s"Tried to finish non existent annotation. Hit: $hitId Assignment: $assignmentId")
           Fox.successful(true)
       }
     }
@@ -94,6 +95,7 @@ object MTurkService extends LazyLogging with FoxImplicits {
             _ <- annotation.muta.cancelTask()(GlobalAccessContext)
           } yield true
         case None            =>
+          logger.warn(s"Tried to cancel non existent annotation. Hit: $hitId Assignment: $assignmentId")
           Fox.successful(true)
       }
     }
@@ -113,7 +115,6 @@ object MTurkService extends LazyLogging with FoxImplicits {
   }
 
   def createHITs(project: Project, task: Task): Fox[MTurkAssignment] = {
-    val estimatedAmountNeeded = 1
     for {
       mtProject <- MTurkProjectDAO.findByProject(project.name)(GlobalAccessContext)
       projectConfig <- project.assignmentConfiguration.asOpt[MTurkAssignmentConfig] ?~> "project.config.notMturk"

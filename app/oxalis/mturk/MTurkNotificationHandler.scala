@@ -72,7 +72,7 @@ object MTurkNotificationHandler {
         try {
           parseMTurkNotification(Json.parse(message.getBody)) match {
             case JsSuccess(notifications, _) =>
-              logger.debug("successfully parsed wrapper for mturk notification body!")
+              logger.info("successfully parsed wrapper for mturk notification body!")
               Fox.combined(notifications.toList.map(handleSingleMTurkNotification))
             case e: JsError                  =>
               logger.warn("Failed to parse MTurk notification json: " + e)
@@ -95,15 +95,16 @@ object MTurkNotificationHandler {
     private def handleSingleMTurkNotification(notification: MTurkNotification): Fox[Boolean] = notification match {
       case notif: MTurkAssignmentReturned  =>
         // Let's treat it the same as an abandoned assignment
-        logger.debug(s"handling mturk assignment RETURNED request for assignment ${notif.AssignmentId}")
+        logger.info(s"handling mturk assignment RETURNED request for assignment ${notif.AssignmentId}")
         MTurkService.handleAbandonedAssignment(notif.AssignmentId, notif.HITId)
       case notif: MTurkAssignmentSubmitted =>
-        logger.debug(s"handling mturk assignment SUBMITTED request for assignment ${notif.AssignmentId}")
+        logger.info(s"handling mturk assignment SUBMITTED request for assignment ${notif.AssignmentId}")
         MTurkService.handleSubmittedAssignment(notif.AssignmentId, notif.HITId)
       case notif: MTurkAssignmentAbandoned =>
-        logger.debug(s"Handling mturk assignment ABANDONED request for assignment ${notif.AssignmentId}")
+        logger.info(s"Handling mturk assignment ABANDONED request for assignment ${notif.AssignmentId}")
         MTurkService.handleAbandonedAssignment(notif.AssignmentId, notif.HITId)
-      case _                               =>
+      case notif                               =>
+        logger.info(s"NOT handling mturk noticiation $notif")
         Fox.successful(true)
     }
 

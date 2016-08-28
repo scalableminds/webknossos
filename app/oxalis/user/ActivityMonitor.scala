@@ -2,8 +2,10 @@ package oxalis.user
 
 import akka.actor._
 import scala.concurrent.duration._
-import models.user.{UserService, User}
+
+import models.user.{User, UserService}
 import akka.agent.Agent
+import com.newrelic.api.agent.NewRelic
 import play.api.Logger
 import play.api.libs.concurrent.Execution.Implicits._
 import reactivemongo.bson.BSONObjectID
@@ -32,6 +34,7 @@ class ActivityMonitor extends Actor {
 
       collectedActivities.send {
         activities =>
+          NewRelic.recordMetric("active-users", activities.size)
           activities.map{
             case (_user, time) =>
               Logger.debug(s"Flushing user activities of: ${_user.stringify} Time: $time")

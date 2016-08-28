@@ -92,6 +92,7 @@ object Dependencies{
       "com.twelvemonkeys.imageio" % "imageio-tiff" % twelvemonkeysVersion
     )
   val newrelic = "com.newrelic.agent.java" % "newrelic-agent" % "3.31.1"
+  val newrelicApi = "com.newrelic.agent.java" % "newrelic-api" % "3.31.1"
 }
 
 object Resolvers {
@@ -218,6 +219,7 @@ object ApplicationBuild extends Build {
     mongev,
     urlHelper,
     newrelic,
+    newrelicApi,
     specs2 % Test) ++ tiff ++ mturk
 
   val dependencyResolvers = Seq(

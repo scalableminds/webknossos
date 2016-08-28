@@ -36,7 +36,7 @@ object MTurkNotificationHandler {
   case object RequestNotifications
 
   /**
-    * Aktor which will periodically retrieve notifications from SQS
+    * Actor which will periodically retrieve notifications from SQS
     */
   class MTurkNotificationReceiver extends Actor with LazyLogging with FoxImplicits {
 
@@ -97,6 +97,10 @@ object MTurkNotificationHandler {
       case notif: MTurkAssignmentReturned  =>
         // Let's treat it the same as an abandoned assignment
         logger.info(s"handling mturk assignment RETURNED request for assignment ${notif.AssignmentId}")
+        MTurkService.handleAbandonedAssignment(notif.AssignmentId, notif.HITId)
+      case notif: MTurkAssignmentRejected =>
+        // Let's treat it the same as an abandoned assignment
+        logger.info(s"handling mturk assignment REJECTED request for assignment ${notif.AssignmentId}")
         MTurkService.handleAbandonedAssignment(notif.AssignmentId, notif.HITId)
       case notif: MTurkAssignmentSubmitted =>
         logger.info(s"handling mturk assignment SUBMITTED request for assignment ${notif.AssignmentId}")

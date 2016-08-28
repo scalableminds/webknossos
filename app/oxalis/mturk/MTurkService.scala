@@ -131,7 +131,7 @@ object MTurkService extends LazyLogging with FoxImplicits {
   private def setupNotifications(hITTypeId: HITTypeId): Future[Unit] = {
     val eventTypes = Array[EventType](
       EventType.AssignmentAbandoned, EventType.HITReviewable, EventType.HITExpired,
-      EventType.AssignmentReturned, EventType.AssignmentSubmitted)
+      EventType.AssignmentReturned, EventType.AssignmentSubmitted, EventType.AssignmentRejected)
     val notification = new NotificationSpecification(
       notificationsUrl, NotificationTransport.SQS, "2006-05-05", eventTypes)
 

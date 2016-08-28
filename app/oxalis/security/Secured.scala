@@ -35,6 +35,7 @@ import scala.util.Success
 
 import akka.actor.Props
 import akka.pattern.after
+import com.newrelic.api.agent.NewRelic
 import play.airbrake.Airbrake
 
 class AuthenticatedRequest[A](
@@ -157,6 +158,7 @@ trait Secured extends FoxImplicits with I18nSupport{
       withLongRunningOpTracking {
         maybeUser(request).flatMap { user =>
           Secured.ActivityMonitor ! UserActivity(user, System.currentTimeMillis)
+          NewRelic.addCustomParameter("user-mail", user.email)
           if (user.verified)
             executeAndEnsureSession(user, request, block)
           else
@@ -171,6 +173,7 @@ trait Secured extends FoxImplicits with I18nSupport{
       withLongRunningOpTracking{
         maybeUser(request).filter(_.verified).futureBox.flatMap {
           case Full(user) =>
+            NewRelic.addCustomParameter("user-mail", user.email)
             Secured.ActivityMonitor ! UserActivity(user, System.currentTimeMillis)
             executeAndEnsureSession(user, request, block)
           case _ =>

@@ -36,7 +36,6 @@ class ArbitraryController
   lastNodeMatrix : null
 
   checkedRESCOP : false
-  showFinishNotice : false
 
   model : null
   view : null
@@ -291,11 +290,7 @@ class ArbitraryController
     scaledEdgeLength = scaledEdges.map(norm)
     totalLength = sum(scaledEdgeLength)
     if totalLength > @FINISHLENGTH
-      unless @showFinishNotice
-        _.defer => new Promise (resolve, reject) =>  modal.show("You are an excellent annotator and may finish the task now"
-      [{id: "ok-button", label: "OK"}])
-
-        @showFinishNotice = true
+      _.defer => new Promise (resolve, reject) =>  modal.show("You are an excellent annotator and may finish the task now", "Done")
     return if totalLength < @TESTLENGTH
     return if @checkedRESCOP
     @checkedRESCOP = true

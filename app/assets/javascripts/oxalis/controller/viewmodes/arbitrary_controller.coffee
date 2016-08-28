@@ -12,7 +12,7 @@ constants          = require("../../constants")
 {M4x4, V3}         = require("libs/mjs")
 Utils              = require("libs/utils")
 Toast              = require("libs/toast")
-
+modal              = require("../../view/modal")
 
 class ArbitraryController
 
@@ -26,7 +26,7 @@ class ArbitraryController
   RESCOPURL : "https://braintracing.info:9000/api/services/score-nml/"
 
   TESTLENGTH : 2000
-  FINISHLENGTH : 80000
+  FINISHLENGTH : 35000
 
   plane : null
   crosshair : null
@@ -292,7 +292,9 @@ class ArbitraryController
     totalLength = sum(scaledEdgeLength)
     if totalLength > @FINISHLENGTH
       unless @showFinishNotice
-        _.defer => new Promise (resolve, reject) => alert("You are an excellent annotator and may finish the task now!")
+        _.defer => new Promise (resolve, reject) =>  modal.show("You are an excellent annotator and may finish the task now"
+      [{id: "ok-button", label: "OK"}])
+
         @showFinishNotice = true
     return if totalLength < @TESTLENGTH
     return if @checkedRESCOP

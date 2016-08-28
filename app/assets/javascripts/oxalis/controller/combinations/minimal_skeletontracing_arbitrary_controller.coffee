@@ -29,15 +29,10 @@ class MinimalSkeletonTracingArbitraryController extends ArbitraryController
       "space"         : (timeFactor) =>
         @cam.move [0, 0, getVoxelOffset(timeFactor)]
         @moved()
-      "ctrl + space"   : (timeFactor) => @cam.move [0, 0, -getVoxelOffset(timeFactor)]
 
       #Zoom in/out
       "i"             : (timeFactor) => @cam.zoomIn()
       "o"             : (timeFactor) => @cam.zoomOut()
-
-      #Change move value
-      "h"             : (timeFactor) => @changeMoveValue(25)
-      "g"             : (timeFactor) => @changeMoveValue(-25)
 
       #Rotate in distance
       "left"          : (timeFactor) => @cam.yaw @model.user.get("rotateValue") * timeFactor, @mode == Constants.MODE_ARBITRARY
@@ -47,8 +42,6 @@ class MinimalSkeletonTracingArbitraryController extends ArbitraryController
     )
 
     @input.keyboardNoLoop = new Input.KeyboardNoLoop(
-      #Recenter active node
-      "y" : => @centerActiveNode()
 
       #Branches
       "b" : => @pushBranch()
@@ -65,6 +58,13 @@ class MinimalSkeletonTracingArbitraryController extends ArbitraryController
         )
 
     , -1)
+
+
+  setRecord : (record) ->
+
+    if record != @model.get("flightmodeRecording")
+      @model.set("flightmodeRecording", record)
+      @setWaypoint()
 
 
 module.exports = MinimalSkeletonTracingArbitraryController

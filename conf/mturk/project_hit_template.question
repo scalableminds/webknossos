@@ -28,7 +28,7 @@
               <li>After you are done following the cell, please return and fill out the feedback question before submitting the HIT.</li>
             </ul>
           </div>
-          <div id="div-intro">
+          <div id="div-intro" style="padding-bottom: 15px;">
             <iframe id="iframe-intro" allowfullscreen="" frameborder="0" height="500px" src="https://www.youtube.com/embed/xbVfx-OjS3w" width="600px"></iframe>
           </div>
         </div>

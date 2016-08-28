@@ -47,6 +47,7 @@ object MTurkNotificationHandler {
     implicit val exco = context.dispatcher
 
     override def preStart() = {
+      logger.info("Started mturk notification receiver.")
       context.system.scheduler.scheduleOnce(1.second, self, RequestNotifications)
     }
 

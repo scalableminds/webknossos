@@ -1,0 +1,17 @@
+{% set name = project+"-"+branch %}
+{% set application_config = "application_"+mode+".conf" %}
+{% set memory_options = "-J-Xmx10G -J-Xms1G" if mode == "prod" else "-J-Xmx5G -J-Xms1G" %}
+
+[Unit]
+Description={{name}}
+
+[Service]
+ExecStart=/usr/lib/{{name}}/bin/oxalis {{memory_options}} -Dlogger.file=/usr/lib/{{name}}/conf/stdout_logger.xml -Dconfig.file=/usr/lib/{{name}}/conf/{{application_config}} -Dhttp.port={{port}} -Dmongodb.db={{name}} -J-javaagent:/usr/lib/{{name}}/lib/com.newrelic.agent.java.newrelic-agent-{{newrelic_agent_version}}.jar -J-Dnewrelic.config.file=/usr/lib/{{name}}/conf/newrelic.yml
+Type=simple
+PIDFile=/usr/lib/{{name}}/RUNNING_PID
+Restart=always
+User={{name}}
+WorkingDirectory=/usr/lib/{{name}}
+
+[Install]
+WantedBy=multi-user.target

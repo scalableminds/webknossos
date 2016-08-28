@@ -24,7 +24,7 @@ object TemporarySkeletonTracingService extends AnnotationContentService with Fox
     }
   }
 
-  def createFrom(nml: NML, id: String, boundingBox: Option[BoundingBox], settings: AnnotationSettings = AnnotationSettings.default)(implicit ctx: DBAccessContext) = {
+  def createFrom(nml: NML, id: String, boundingBox: Option[BoundingBox], settings: Option[AnnotationSettings] = None)(implicit ctx: DBAccessContext) = {
     val box = boundingBox.flatMap { box => if (box.isEmpty) None else Some(box) }
     val start = nml.editPosition.toFox.orElse(defaultDataSetPosition(nml.dataSetName))
 
@@ -39,7 +39,7 @@ object TemporarySkeletonTracingService extends AnnotationContentService with Fox
         Vector3D(0,0,0),
         SkeletonTracing.defaultZoomLevel,
         box,
-        settings)
+        settings.getOrElse(AnnotationSettings.default))
     }
   }
 
@@ -61,7 +61,7 @@ object TemporarySkeletonTracingService extends AnnotationContentService with Fox
     }
   }
 
-  def createFrom(nmls: List[NML], boundingBox: Option[BoundingBox], settings: AnnotationSettings)(implicit ctx: DBAccessContext): Fox[TemporarySkeletonTracing] = {
+  def createFrom(nmls: List[NML], boundingBox: Option[BoundingBox], settings: Option[AnnotationSettings])(implicit ctx: DBAccessContext): Fox[TemporarySkeletonTracing] = {
     nmls match {
       case head :: tail =>
         val startTracing = createFrom(head, head.timestamp.toString, boundingBox, settings)
@@ -71,7 +71,7 @@ object TemporarySkeletonTracingService extends AnnotationContentService with Fox
             for {
               t <- f
               n <- createFrom(s, s.timestamp.toString, boundingBox)
-              r <- t.mergeWith(n)
+              r <- t.mergeWith(n, settings)
             } yield {
               r
             }

@@ -4,10 +4,12 @@ import akka.actor.Actor
 import com.scalableminds.util.mail.Send
 import com.scalableminds.util.reactivemongo.GlobalAccessContext
 import controllers.{Application, TaskController}
-import models.task.{TaskService, Project}
+import models.task.TaskService
 import models.user.User
 import oxalis.mail.DefaultMails
 import scala.concurrent.duration._
+
+import models.project.Project
 import play.api.Logger
 import play.api.libs.concurrent.Akka
 

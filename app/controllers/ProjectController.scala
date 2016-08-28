@@ -9,13 +9,14 @@ import scala.concurrent.Future
 
 import com.scalableminds.util.reactivemongo.GlobalAccessContext
 import com.scalableminds.util.tools.Fox
-import models.task.{Project, ProjectDAO, ProjectService, Task}
+import models.project.{Project, ProjectDAO, ProjectService}
+import models.task._
 import models.user.User
 import net.liftweb.common.{Empty, Full}
 import oxalis.security.Secured
 import play.api.i18n.{Messages, MessagesApi}
 import play.api.libs.concurrent.Execution.Implicits._
-import play.api.libs.json.Json
+import play.api.libs.json.{JsValue, Json}
 import play.twirl.api.Html
 
 class ProjectController @Inject()(val messagesApi: MessagesApi) extends Controller with Secured {
@@ -60,7 +61,8 @@ class ProjectController @Inject()(val messagesApi: MessagesApi) extends Controll
       ProjectDAO.findOneByName(project.name)(GlobalAccessContext).futureBox.flatMap {
         case Empty if request.user.isAdminOf(project.team) =>
           for {
-            _  <- ProjectDAO.insert(project)
+            _ <- ProjectService.reportToExternalService(project, request.body)
+            _ <- ProjectDAO.insert(project)
             js <- Project.projectPublicWritesWithStatus(project, request.user)
           } yield Ok(js)
         case Empty                                                       =>
@@ -74,9 +76,9 @@ class ProjectController @Inject()(val messagesApi: MessagesApi) extends Controll
   def update(projectName: String) = Authenticated.async(parse.json) { implicit request =>
     withJsonBodyUsing(Project.projectPublicReads) { updateRequest =>
       for{
-        project <- ProjectDAO.findOneByName(projectName)(GlobalAccessContext)
-        _ <- request.user.adminTeamNames.contains(project.team) ?~> "team.notAllowed"
-        updatedProject <- ProjectService.update(project._id, project, updateRequest)
+        project <- ProjectDAO.findOneByName(projectName)(GlobalAccessContext) ?~> Messages("project.notFound", projectName)
+        _ <- request.user.adminTeamNames.contains(project.team) ?~> Messages("team.notAllowed")
+        updatedProject <- ProjectService.update(project._id, project, updateRequest) ?~> Messages("project.update.failed", projectName)
         js <- Project.projectPublicWritesWithStatus(updatedProject, request.user)
       } yield Ok(js)
     }

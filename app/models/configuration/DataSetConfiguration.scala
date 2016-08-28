@@ -17,7 +17,7 @@ object DataSetConfiguration extends BasicSettings {
 
   val default = DataSetConfiguration(
     Map(
-      "fourBit" -> JsBoolean(false),
+      "fourBit" -> JsBoolean(true),
       "quality" -> JsNumber(0),
       "interpolation" -> JsBoolean(false),
       "layers" -> Json.obj()))

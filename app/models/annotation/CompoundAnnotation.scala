@@ -5,16 +5,17 @@ import com.scalableminds.util.reactivemongo.DBAccessContext
 import com.scalableminds.util.tools.TimeLogger._
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import models.annotation.AnnotationType._
-import models.task.{Project, Task, TaskDAO, TaskType}
+import models.task.{Task, TaskDAO, TaskType}
 import models.tracing.skeleton.temporary.{TemporarySkeletonTracing, TemporarySkeletonTracingService}
-import models.tracing.skeleton.{SkeletonTracingService, SkeletonTracing, SkeletonTracingLike}
-import net.liftweb.common.{Empty, Box, Full, Failure}
+import models.tracing.skeleton.{SkeletonTracing, SkeletonTracingLike, SkeletonTracingService}
+import net.liftweb.common.{Box, Empty, Failure, Full}
 import play.api.Logger
 import play.api.i18n.Messages
 import play.api.libs.concurrent.Execution.Implicits._
 import reactivemongo.bson.BSONObjectID
-
 import scala.concurrent.Future
+
+import models.project.Project
 
 object CompoundAnnotation extends Formatter with FoxImplicits {
 
@@ -32,7 +33,8 @@ object CompoundAnnotation extends Formatter with FoxImplicits {
           project.team,
           controllers.routes.NMLIOController.projectDownload(project.name).url,
           annotations,
-          AnnotationType.CompoundProject) ?~> "project.noAnnotations"
+          AnnotationType.CompoundProject,
+          Some(AnnotationSettings.default)) ?~> "project.noAnnotations"
       } yield merged
     }
   }
@@ -47,7 +49,8 @@ object CompoundAnnotation extends Formatter with FoxImplicits {
           task.team,
           controllers.routes.NMLIOController.taskDownload(task.id).url,
           annotations,
-          AnnotationType.CompoundTask) ?~> "task.noAnnotations"
+          AnnotationType.CompoundTask,
+          Some(AnnotationSettings.default)) ?~> "task.noAnnotations"
       } yield merged
     }
   }
@@ -63,17 +66,37 @@ object CompoundAnnotation extends Formatter with FoxImplicits {
           taskType.team,
           controllers.routes.NMLIOController.taskTypeDownload(taskType.id).url,
           annotations,
-          AnnotationType.CompoundTaskType) ?~> "taskType.noAnnotations"
+          AnnotationType.CompoundTaskType,
+          Some(AnnotationSettings.default)) ?~> "taskType.noAnnotations"
       } yield merged
     }
   }
 
 
-  def createFromFinishedAnnotations(id: String, _user: Option[BSONObjectID], team: String, downloadUrl: String, annotations: List[Annotation], typ: AnnotationType)(implicit ctx: DBAccessContext) =
-    createFromAnnotations(id, _user, team, Some(downloadUrl), annotations.filter(filterFinishedAnnotations), typ, AnnotationState.Finished, AnnotationRestrictions.restrictEverything)
+  def createFromFinishedAnnotations(
+    id: String,
+    _user: Option[BSONObjectID],
+    team: String,
+    downloadUrl: String,
+    annotations: List[Annotation],
+    typ: AnnotationType,
+    settings: Option[AnnotationSettings])(implicit ctx: DBAccessContext) =
 
-  def createFromAnnotations(id: String, _user: Option[BSONObjectID], team: String, downloadUrl: Option[String], annotations: List[AnnotationLike], typ: AnnotationType, state: AnnotationState, restrictions: AnnotationRestrictions)(implicit ctx: DBAccessContext): Fox[TemporaryAnnotation] = {
-    def renameAnnotationContents(annotations: List[AnnotationLike], processed: Vector[AnnotationContent]): Fox[List[AnnotationContent]] = {
+    createFromAnnotations(
+      id, _user, team, Some(downloadUrl), annotations.filter(filterFinishedAnnotations),
+      typ, AnnotationState.Finished, AnnotationRestrictions.restrictEverything, settings)
+
+  def createFromAnnotations(
+    id: String,
+    _user: Option[BSONObjectID],
+    team: String,
+    downloadUrl: Option[String],
+    annotations: List[AnnotationLike],
+    typ: AnnotationType,
+    state: AnnotationState,
+    restrictions: AnnotationRestrictions,
+    settings: Option[AnnotationSettings])(implicit ctx: DBAccessContext): Fox[TemporaryAnnotation] = {
+    def renameAnnotationContents(annotations: List[AnnotationLike], processed: Vector[AnnotationContent] = Vector.empty): Fox[List[AnnotationContent]] = {
       annotations match {
         case annotation :: tail =>
 
@@ -95,7 +118,8 @@ object CompoundAnnotation extends Formatter with FoxImplicits {
       Fox.successful(TemporaryAnnotation(
         id,
         _user,
-        () => renameAnnotationContents(annotations, Vector.empty).flatMap(mergeAnnotationContent(_, id)),
+        () => renameAnnotationContents(annotations)
+              .flatMap(mergeAnnotationContent(_, id, settings)),
         None,
         team,
         downloadUrl,
@@ -105,11 +129,15 @@ object CompoundAnnotation extends Formatter with FoxImplicits {
       ))
   }
 
-  private def mergeAnnotationContent(annotationContents: List[AnnotationContent], id: String)(implicit ctx: DBAccessContext): Fox[AnnotationContent] = {
+  private def mergeAnnotationContent(
+    annotationContents: List[AnnotationContent],
+    id: String,
+    settings: Option[AnnotationSettings])(implicit ctx: DBAccessContext): Fox[AnnotationContent] = {
+
     def merge(list: List[AnnotationContent]): Fox[AnnotationContent] = {
       list match {
         case head :: second :: tail =>
-          head.mergeWith(second).flatMap(merged => merge(merged :: tail))
+          head.mergeWith(second, settings).flatMap(merged => merge(merged :: tail))
         case head :: Nil =>
           head.temporaryDuplicate(id)
         case Nil =>

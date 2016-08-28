@@ -41,9 +41,8 @@ class TaskTypeController @Inject()(val messagesApi: MessagesApi) extends Control
     for {
       taskType <- TaskTypeDAO.findOneById(taskTypeId) ?~> Messages("taskType.notFound")
       _ <- ensureTeamAdministration(request.user, taskType.team)
-      ttJson <- TaskType.transformToJsonWithStatus(taskType)
     } yield {
-      JsonOk(ttJson)
+      JsonOk(TaskType.transformToJson(taskType))
     }
   }
 

@@ -34,7 +34,7 @@ class ActivityMonitor extends Actor {
 
       collectedActivities.send {
         activities =>
-          NewRelic.recordMetric("active-users", activities.size)
+          NewRelic.recordMetric("Custom/ActivityMonitor/active-users", activities.size)
           activities.map{
             case (_user, time) =>
               Logger.debug(s"Flushing user activities of: ${_user.stringify} Time: $time")

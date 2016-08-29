@@ -17,6 +17,7 @@ object MTurkNotifications extends LazyLogging {
       case Some("AssignmentReturned")  => json.validate(mTurkAssignmentReturnedReads)
       case Some("AssignmentAbandoned") => json.validate(mTurkAssignmentAbandonedReads)
       case Some("AssignmentRejected")  => json.validate(mTurkAssignmentRejectedReads)
+      case Some("AssignmentAccepted")  => json.validate(mTurkAssignmentAcceptedReads)
       case Some("HITExpired")          => JsSuccess(MTurkHITExpired)
       case Some("HITReviewable")       => JsSuccess(MTurkHITReviewable)
       case _                           =>
@@ -42,6 +43,10 @@ object MTurkNotifications extends LazyLogging {
   implicit val mTurkAssignmentRejectedReads = Json.reads[MTurkAssignmentRejected]
 
   case class MTurkAssignmentRejected(HITId: String, AssignmentId: String, HITTypeId: String) extends MTurkNotification
+
+  implicit val mTurkAssignmentAcceptedReads = Json.reads[MTurkAssignmentAccepted]
+
+  case class MTurkAssignmentAccepted(HITId: String, AssignmentId: String, HITTypeId: String) extends MTurkNotification
 
   case object MTurkHITExpired extends MTurkNotification
 

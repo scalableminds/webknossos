@@ -27,14 +27,17 @@ class ActivityMonitor extends Actor {
 
   def receive = {
     case UserActivity(user, time) =>
-      collectedActivities.send(_.updated(user._id, time))
+      collectedActivities.send { collected =>
+        val updated = collected.updated(user._id, time)
+        NewRelic.recordMetric("Custom/ActivityMonitor/active-users", updated.size)
+        updated
+      }
 
     case FlushActivities =>
       Logger.info("Flushing user activities.")
 
       collectedActivities.send {
         activities =>
-          NewRelic.recordMetric("Custom/ActivityMonitor/active-users", activities.size)
           activities.map{
             case (_user, time) =>
               Logger.debug(s"Flushing user activities of: ${_user.stringify} Time: $time")

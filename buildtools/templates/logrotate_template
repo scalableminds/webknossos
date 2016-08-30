@@ -1,0 +1,14 @@
+{{log_file}}.log
+{
+        daily
+        rotate 360
+        missingok
+        notifempty
+        delaycompress
+        compress
+        copytruncate
+        dateext
+#        postrotate
+#                invoke-rc.d rsyslog rotate > /dev/null
+#        endscript
+}

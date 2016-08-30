@@ -36,7 +36,7 @@ object MTurkNotificationHandler {
   case object RequestNotifications
 
   /**
-    * Aktor which will periodically retrieve notifications from SQS
+    * Actor which will periodically retrieve notifications from SQS
     */
   class MTurkNotificationReceiver extends Actor with LazyLogging with FoxImplicits {
 
@@ -47,12 +47,15 @@ object MTurkNotificationHandler {
     implicit val exco = context.dispatcher
 
     override def preStart() = {
+      logger.info("Started mturk notification receiver.")
       context.system.scheduler.scheduleOnce(1.second, self, RequestNotifications)
     }
 
     def receive = {
       case RequestNotifications =>
         val messages = sqsHelper.fetchMessages
+        if(messages.nonEmpty)
+          logger.info("Received messages ("+messages.length+"): "  + messages.map(x => x.getMessageId + ": " + x.getBody).mkString("\n\t","\n\t", ""))
         handleMTurkNotifications(messages).map { results =>
           // This might not be the best way to handle failures. Nevertheless, if we encounter an error at this point
           // we will encounter that error every time we process that message and hence if we don't delete it, we will
@@ -68,7 +71,7 @@ object MTurkNotificationHandler {
     }
 
     private def handleMTurkNotifications(messages: List[Message]) = {
-      Fox.serialSequence(messages) { message =>
+      Fox.sequence(messages.map{ message =>
         try {
           parseMTurkNotification(Json.parse(message.getBody)) match {
             case JsSuccess(notifications, _) =>
@@ -83,7 +86,7 @@ object MTurkNotificationHandler {
             logger.error(s"Failed to process SQS message: ${message.getBody}")
             Fox.failure("Failed to process SQS message", Full(e))
         }
-      }
+      })
     }
 
     /**
@@ -95,16 +98,23 @@ object MTurkNotificationHandler {
     private def handleSingleMTurkNotification(notification: MTurkNotification): Fox[Boolean] = notification match {
       case notif: MTurkAssignmentReturned  =>
         // Let's treat it the same as an abandoned assignment
-        logger.info(s"handling mturk assignment RETURNED request for assignment ${notif.AssignmentId}")
+        logger.info(s"handling mturk assignment RETURNED request for assignment ${notif.AssignmentId} of hit ${notif.HITId}")
+        MTurkService.handleAbandonedAssignment(notif.AssignmentId, notif.HITId)
+      case notif: MTurkAssignmentRejected =>
+        // Let's treat it the same as an abandoned assignment
+        logger.info(s"handling mturk assignment REJECTED request for assignment ${notif.AssignmentId} of hit ${notif.HITId}")
         MTurkService.handleAbandonedAssignment(notif.AssignmentId, notif.HITId)
       case notif: MTurkAssignmentSubmitted =>
-        logger.info(s"handling mturk assignment SUBMITTED request for assignment ${notif.AssignmentId}")
+        logger.info(s"handling mturk assignment SUBMITTED request for assignment ${notif.AssignmentId} of hit ${notif.HITId}")
         MTurkService.handleSubmittedAssignment(notif.AssignmentId, notif.HITId)
       case notif: MTurkAssignmentAbandoned =>
-        logger.info(s"Handling mturk assignment ABANDONED request for assignment ${notif.AssignmentId}")
+        logger.info(s"Handling mturk assignment ABANDONED request for assignment ${notif.AssignmentId} of hit ${notif.HITId}")
+        MTurkService.handleAbandonedAssignment(notif.AssignmentId, notif.HITId)
+      case notif: MTurkAssignmentAccepted =>
+        logger.info(s"Handling mturk assignment ACCEPTED request for assignment ${notif.AssignmentId} of hit ${notif.HITId}")
         MTurkService.handleAbandonedAssignment(notif.AssignmentId, notif.HITId)
       case notif                               =>
-        logger.info(s"NOT handling mturk noticiation $notif")
+        logger.info(s"NOT handling mturk notification $notif")
         Fox.successful(true)
     }
 

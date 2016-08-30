@@ -1,13 +1,23 @@
 {% set name = project+"-"+branch %}
+{% set https_urls = ([domain_and_tld, "www.%s" % domain_and_tld] if mode == "prod" and branch == "master" else ["%s.%s" % (branch, domain_and_tld)]) %}
+{% set http_urls = https_urls + (["oxalis.neuro.mpg.de"] if mode == "prod" and project == "oxalis" and branch == "master" else [])%}
+{% set https_url_string = " ".join(https_urls) %}
+{% set http_url_string = " ".join(http_urls) %}
 
 server {
   listen 80;
-  server_name {{url_regex}};
-  access_log  /var/log/nginx/{{name}}.access.log;  
+  server_name {{http_url_string}};
 
+  {% if mode == "dev" %}
+
+  access_log  /var/log/nginx/{{name}}.access.log;
   proxy_read_timeout 480s;
 
   location / {
+    {% if project != "director" and not (project == "oxalis" and branch == "dev") %}
+    auth_basic            "Restricted";
+    auth_basic_user_file  /etc/nginx/auth/{{project}}.passwd;
+    {% endif %}
     proxy_pass http://localhost:{{port}};
     proxy_set_header  X-Real-IP  $remote_addr;
     proxy_buffering    off;
@@ -18,12 +28,15 @@ server {
     proxy_set_header Upgrade $http_upgrade;
     proxy_set_header Connection $connection_upgrade;
   }
+  {% else %}
+  rewrite ^ https://{{https_urls[0]}}$request_uri? permanent;
+  {% endif %}
+
 }
 
-{% if mode == "prod" %}
 server {
-  listen 443;
-  server_name  {{url_regex}};
+  listen 443 ssl http2;
+  server_name  {{https_url_string}};
   access_log  /var/log/nginx/{{name}}.access.log;
 
   proxy_read_timeout 480s;
@@ -35,7 +48,11 @@ server {
   ssl_ciphers         HIGH:!aNULL:!MD5;
 
   location / {
-    proxy_pass http://localhost:9500;
+    {% if mode == "dev" %}
+    auth_basic            "Restricted";
+    auth_basic_user_file  /etc/nginx/auth/{{project}}.passwd;
+    {% endif %}
+    proxy_pass http://localhost:{{port}};
     proxy_set_header  X-Real-IP  $remote_addr;
     proxy_buffering    off;
     proxy_set_header Host $http_host;
@@ -46,4 +63,3 @@ server {
     proxy_set_header Connection $connection_upgrade;
   }
 }
-{% endif %}

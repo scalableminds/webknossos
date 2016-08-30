@@ -1,5 +1,6 @@
 import akka.actor.{PoisonPill, Props}
 import akka.routing.RoundRobinPool
+import com.newrelic.api.agent.NewRelic
 import com.scalableminds.util.reactivemongo.GlobalDBAccess
 import com.scalableminds.util.security.SCrypt
 import models.binary.{DataStore, DataStoreDAO, WebKnossosStore}
@@ -15,7 +16,6 @@ import play.api.libs.concurrent.Execution.Implicits._
 import com.typesafe.config.Config
 import models.annotation.AnnotationStore
 import oxalis.mturk.MTurkNotificationHandler
-import play.airbrake.Airbrake
 import play.api.libs.json.Json
 import play.api.mvc._
 
@@ -50,7 +50,7 @@ object Global extends GlobalSettings {
   }
 
   override def onError(request: RequestHeader, ex: Throwable) = {
-    Airbrake.notify(request, ex)
+    NewRelic.noticeError(ex)
     super.onError(request, ex)
   }
 }

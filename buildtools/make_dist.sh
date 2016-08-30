@@ -1,53 +1,70 @@
-#!/bin/sh
+#!/bin/bash
+set -e
 
+#check for existing environment variables
+: ${WORKSPACE:?"Need non-empty WORKSPACE variable"}
+: ${JENKINS_HOME:?"Need non-empty JENKINS_HOME variable"}
 
-if [ $# -lt 1 ]; then
-echo "Usage: $0 <iteration> "
+if [ $# -lt 3 ]; then
+echo "Usage: $0 <project> <branch> <iteration> "
   exit 1
 fi
 
-ITERATION=${1}
-PROJECT="oxalis"
-BRANCH=`git rev-parse --abbrev-ref HEAD`
+PROJECT=${1}
+BRANCH=${2}
+ITERATION=${3}
 NAME=${PROJECT}-${BRANCH}
-#change to play root
-cd `dirname $0`/..
 
-DIST_DIR=dist
-if [ -d $DIST_DIR ]; then
-  rm -rf $DIST_DIR
+RELATIVE_TEMPLATE_DIR=`dirname $0`
+TEMPLATE_DIR=`readlink -f ${RELATIVE_TEMPLATE_DIR}`/templates
+
+LOGDIR=/var/log/${NAME}
+#change to git root
+pushd ${WORKSPACE}
+
+if [ "$PROJECT" == "oxalis" ]; then
+  PROJECT_DIR="."
+else
+  PROJECT_DIR="${PROJECT}"
 fi
 
-sbt clean compile dist || (echo "error creating package, aborting ..."; exit 1)
+pushd ${PROJECT_DIR}
 
-cd $DIST_DIR
+echo "compiling application..."
+sbt clean compile stage || (echo "error creating package, aborting ..."; exit 1)
+APP_DIR=target/universal/stage
+chmod +x $APP_DIR/bin/${PROJECT}
 
-ZIP=`ls $PROJECT*.zip | sort | tail -n 1`
-unzip -uq ${ZIP}
+echo "creating root environment..."
+ROOT_ENV="rootenv"
+INSTALL_DIR="/usr/lib/${NAME}"
+mkdir -p ${ROOT_ENV}${INSTALL_DIR}
+cp -r ${APP_DIR}/* ${ROOT_ENV}${INSTALL_DIR}
 
-APP=${ZIP%.zip}
-VERSION=${APP##*-}
-
-cd $APP
-JAR=`ls lib/${PROJECT}_*-$VERSION.jar | sort | tail -n 1`
-
-sed -i "s#^scriptdir=.*#installdir=/usr/lib/${NAME}#" start
-sed -i "s#\$scriptdir#\$installdir#g" start
-
-chmod +x start
-
-cd ..
-
-mkdir -p rootenv/usr/lib/${NAME}
-cp $APP/start rootenv/usr/lib/${NAME}/start
-cp -r $APP/lib rootenv/usr/lib/${NAME}
-mkdir -p rootenv/usr/bin
-ln -sf /usr/lib/${NAME}/start rootenv/usr/bin/${NAME}
-
-#go back to play root again
-cd ..
+echo "building packages..."
+#go back to git root again
+popd
 
 for PKG_TYPE in "deb" "rpm"
 do
-  fpm -m thomas@scm.io -s dir -t $PKG_TYPE -n ${NAME} -v $VERSION --iteration $ITERATION -C $DIST_DIR/rootenv usr/
+  if [ $PKG_TYPE = "deb" ]; then
+    CONFIG_ADDONS="--deb-user root --deb-group root"
+  fi
+
+  fpm ${CONFIG_ADDONS} -m thomas@scm.io -s dir -t $PKG_TYPE \
+    -n ${NAME} \
+    -v $VERSION \
+    --iteration $ITERATION \
+    --provides ${NAME} \
+    --before-install="${TEMPLATE_DIR}/before-install.sh" \
+    --after-install="${TEMPLATE_DIR}/after-install.sh" \
+    --after-remove="${TEMPLATE_DIR}/after-remove.sh" \
+    --template-scripts \
+    --template-value logdir="${LOGDIR}" \
+    --template-value group="${PROJECT}" \
+    --template-value user="${NAME}" \
+    --template-value installdir="${INSTALL_DIR}" \
+    -C ${PROJECT_DIR}/${DIST_DIR}/rootenv usr/
 done
+
+popd

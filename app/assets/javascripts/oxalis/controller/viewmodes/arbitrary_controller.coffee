@@ -295,7 +295,7 @@ class ArbitraryController
     return if @checkedRESCOP
     @checkedRESCOP = true
     xhttp = new XMLHttpRequest()
-    xhttp.open("POST", @RESCOPURL + app.oxalis.model.get('tracing').task.id, true);
+    xhttp.open("POST", @RESCOPURL + app.oxalis.model.get('tracing').task.id + "?annotation=" + app.oxalis.model.get('tracing').id, true);
     xhttp.onreadystatechange  = () => @reactToRESCOP(xhttp)
     xhttp.send(JSON.stringify(scaledNodes))
 

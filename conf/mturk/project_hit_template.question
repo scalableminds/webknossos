@@ -32,7 +32,17 @@
             <iframe id="iframe-intro" allowfullscreen="" frameborder="0" height="500px" src="https://www.youtube.com/embed/xbVfx-OjS3w" width="600px"></iframe>
           </div>
         </div>
-        <script type="text/javascript" language="JavaScript"><!--
+        <!-- End Instructions --><!-- Content Body -->
+        <div>&nbsp;</div>
+        <section>
+          <form name='mturk_form' method='post' id='mturk_form' action='${mturkSubmissionUrl}'>
+            <input type='hidden' value='' name='assignmentId' id='assignmentId'/>
+            <fieldset><span style="font-weight: bold; font-size: 0.9em; line-height: 1.6em;">Feedback: What would help you to perform the assignment faster or what did you not understand about the assignment?</span></fieldset>
+            <fieldset><textarea class="form-control" cols="120" name="Q6MultiLineTextInput" rows="3"></textarea></fieldset>
+            <p><input type='submit' id='submitButton' value='Submit' /></p>
+          </form>
+        </section>
+        <script type="text/javascript" language="JavaScript">
           var assignment_id_field = document.getElementById('myelementLink');
           var paramstr = window.location.search.substring(1);
           var parampairs = paramstr.split("&");
@@ -51,17 +61,20 @@
             assignment_id_field.innerHTML = '<span style="font-family: Verdana, Geneva, sans-serif; font-size: 11.7px; line-height: 20.8px;">Use&nbsp;</span><a target="_blank" href="${webknossosUrl}workerId=' + mturkworkerID + '&assignmentId='+ assignmentID+'"><b>this Link</b></a> to start following your assigned cell.';
           }
 
-          // --></script><!-- End Instructions --><!-- Content Body -->
-        <div>&nbsp;</div>
-        <section>
-          <form name='mturk_form' method='post' id='mturk_form' action='${mturkSubmissionUrl}'>
-            <input type='hidden' value='' name='assignmentId' id='assignmentId'/>
-            <fieldset><span style="font-weight: bold; font-size: 0.9em; line-height: 1.6em;">Feedback: What would help you to perform the assignment faster or what did you not understand about the assignment?</span></fieldset>
-            <fieldset><textarea class="form-control" cols="120" name="Q6MultiLineTextInput" rows="3"></textarea></fieldset>
-            <p><input type='submit' id='submitButton' value='Submit' /></p>
-          </form>
-          <script language='Javascript'>turkSetAssignmentID();</script>
-        </section>
+          turkSetAssignmentID();
+
+          var isTaskFinished = false;
+          var formEl = document.getElementById("mturk_form");
+          formEl.addEventListener("submit", function (event) {
+            if (!isTaskFinished) {
+              fetch("${webknossosFinishUrl}workerId=" + mturkworkerID + "&assignmentId="+ assignmentID)
+                .then(function () {
+                  isTaskFinished = true;
+                  formEl.submit();
+                });
+            }
+          });
+        </script>
         <!-- End Content Body -->
       </div>
     </section>

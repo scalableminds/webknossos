@@ -18,20 +18,31 @@ class SQSHelper(sqsConfig: SQSConfiguration) extends LazyLogging {
   private lazy val queueUrl = client.getQueueUrl(sqsConfig.queueName).getQueueUrl
 
   def fetchMessages: List[Message] = {
-    val request = new ReceiveMessageRequest(queueUrl)
-                  .withWaitTimeSeconds(20)
-                  .withMaxNumberOfMessages(10)
-                  .withAttributeNames("ApproximateReceiveCount")
+    try {
+      val request = new ReceiveMessageRequest(queueUrl)
+                    .withWaitTimeSeconds(20)
+                    .withMaxNumberOfMessages(10)
 
-    client.receiveMessage(request).getMessages.toList
+      client.receiveMessage(request).getMessages.toList
+    } catch {
+      case e: Exception =>
+        logger.error(s"Failed to fetch SQS messages. Error: ${e.getMessage}", e)
+        Nil
+    }
   }
 
   def deleteMessages(messages: List[Message]) = {
-    if (messages.nonEmpty) {
-      val entries = messages.map { message =>
-        new DeleteMessageBatchRequestEntry(message.getMessageId, message.getReceiptHandle)
+    try {
+      if (messages.nonEmpty) {
+        val entries = messages.map { message =>
+          new DeleteMessageBatchRequestEntry(message.getMessageId, message.getReceiptHandle)
+        }
+        client.deleteMessageBatch(new DeleteMessageBatchRequest(queueUrl, entries))
       }
-      client.deleteMessageBatch(new DeleteMessageBatchRequest(queueUrl, entries))
+    } catch {
+      case e: Exception =>
+        logger.error(s"Failed to delete SQS messages. Error: ${e.getMessage}", e)
+        Nil
     }
   }
 

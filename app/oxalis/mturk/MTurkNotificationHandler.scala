@@ -54,8 +54,8 @@ object MTurkNotificationHandler {
     def receive = {
       case RequestNotifications =>
         val messages = sqsHelper.fetchMessages
-        if(messages.nonEmpty)
-          logger.info("Received messages ("+messages.length+"): "  + messages.map(x => x.getMessageId + ": " + x.getBody).mkString("\n\t","\n\t", ""))
+        if (messages.nonEmpty)
+          logger.info("Received messages (" + messages.length + "): " + messages.map(x => x.getMessageId + ": " + x.getBody).mkString("\n\t", "\n\t", ""))
         handleMTurkNotifications(messages).map { results =>
           // This might not be the best way to handle failures. Nevertheless, if we encounter an error at this point
           // we will encounter that error every time we process that message and hence if we don't delete it, we will
@@ -67,6 +67,10 @@ object MTurkNotificationHandler {
           }
           sqsHelper.deleteMessages(messages)
           self ! RequestNotifications
+        }.recover{
+          case e: Exception =>
+            logger.error(s"An exception occured while trying to poll SQS messages. ${e.getMessage}", e)
+            self ! RequestNotifications
         }
     }
 

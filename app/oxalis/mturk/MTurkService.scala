@@ -108,7 +108,7 @@ object MTurkService extends LazyLogging with FoxImplicits {
 
   def handleProjectCreation(project: Project, config: MTurkAssignmentConfig): Fox[Boolean] = {
     for {
-      hitTypeId <- createHITType(config).toFox
+      hitTypeId <- createHITType(config, Integer.toHexString(project.name.hashCode)).toFox
       _ <- setupNotifications(hitTypeId)
       _ <- MTurkProjectDAO.insert(MTurkProject(project.name, hitTypeId, project.team, 0))(GlobalAccessContext)
     } yield true
@@ -130,10 +130,10 @@ object MTurkService extends LazyLogging with FoxImplicits {
 
   private def setupNotifications(hITTypeId: HITTypeId): Future[Unit] = {
     val eventTypes = Array[EventType](
-      EventType.AssignmentAbandoned, EventType.AssignmentAccepted, EventType.HITReviewable, EventType.HITExpired,
-      EventType.AssignmentReturned, EventType.AssignmentSubmitted, EventType.AssignmentRejected)
+      EventType.AssignmentAbandoned, EventType.AssignmentAccepted, EventType.AssignmentReturned,
+      EventType.AssignmentSubmitted, EventType.AssignmentRejected)
     val notification = new NotificationSpecification(
-      notificationsUrl, NotificationTransport.SQS, "2006-05-05", eventTypes)
+      notificationsUrl, NotificationTransport.SQS, "2014-08-15", eventTypes)
 
     Future(blocking(service.setHITTypeNotification(hITTypeId, notification, true)))
   }
@@ -166,7 +166,7 @@ object MTurkService extends LazyLogging with FoxImplicits {
     }
   }
 
-  private def createHITType(config: MTurkAssignmentConfig): Future[HITTypeId] = {
+  private def createHITType(config: MTurkAssignmentConfig, uid: String): Future[HITTypeId] = {
     Future {
       blocking {
         service.registerHITType(
@@ -175,7 +175,7 @@ object MTurkService extends LazyLogging with FoxImplicits {
           config.rewardInDollar,
           config.title,
           config.keywords,
-          config.description,
+          config.description + " #" + uid,
           qualificationRequirements(config))
       }
     }
@@ -194,6 +194,7 @@ object MTurkService extends LazyLogging with FoxImplicits {
 
     val question = questionTemplate.getQuestion(Map(
       "webknossosUrl" -> s"$serverBaseUrl/hits/$requesterAnnotation?",
+      "webknossosFinishUrl" -> s"$serverBaseUrl/hits/$requesterAnnotation/finish?",
       "mturkSubmissionUrl" -> submissionUrl))
 
     //Creating the HIT and loading it into Mechanical Turk

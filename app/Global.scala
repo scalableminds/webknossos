@@ -18,6 +18,7 @@ import models.annotation.AnnotationStore
 import oxalis.mturk.MTurkNotificationHandler
 import play.api.libs.json.Json
 import play.api.mvc._
+import scala.concurrent.duration._
 
 object Global extends GlobalSettings {
 
@@ -39,7 +40,8 @@ object Global extends GlobalSettings {
       Props(new Mailer(conf)),
       name = "mailActor")
 
-    MTurkNotificationHandler.start(app)
+    // We need to delay the start of the notification handle, since the database needs to be available first
+    MTurkNotificationHandler.startDelayed(app, 2.seconds)
 
     if (conf.getBoolean("workload.active")) {
       Akka.system(app).actorOf(

@@ -56,27 +56,4 @@ class MTurkController @Inject()(val messagesApi: MessagesApi) extends Controller
         .withSession(Secured.createSession(user))
       }
   }
-
-  def finishAssignment(id: String, workerId: String, assignmentId: String) = Action.async {
-    implicit request =>
-      def finishAnnotationForAssignment(mturkAssignment: MTurkAssignment, task: Task) = {
-        mturkAssignment.annotations.find(reference => reference.assignmentId == assignmentId) match {
-          case Some(reference) =>
-            for{
-              annotation <- AnnotationDAO.findOneById(reference._annotation)(GlobalAccessContext)
-              _ <- AnnotationService.finish(annotation)(GlobalAccessContext)
-            } yield true
-          case None            =>
-            Fox.successful(true)
-        }
-      }
-
-      for {
-        mturkAssignment <- MTurkAssignmentDAO.findByKey(id)(GlobalAccessContext) ?~> Messages("mturk.assignment.notFound")
-        task <- mturkAssignment.task(GlobalAccessContext) ?~> Messages("mturk.task.notFound")
-        annotation <- finishAnnotationForAssignment(mturkAssignment, task) ?~> Messages("annotation.finish.failed")
-      } yield {
-        Ok
-      }
-  }
 }

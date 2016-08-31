@@ -19,7 +19,7 @@ import models.annotation.{AnnotationDAO, AnnotationService}
 import models.mturk._
 import models.project.Project
 import models.task._
-import net.liftweb.common.Full
+import net.liftweb.common.{Empty, Failure, Full}
 import play.api.Play._
 import play.api.libs.concurrent.Execution.Implicits._
 
@@ -37,8 +37,6 @@ object MTurkService extends LazyLogging with FoxImplicits {
 
   val submissionUrl = if(isSandboxed) conf.getString("amazon.mturk.submissionUrl.sandbox").get
                       else conf.getString("amazon.mturk.submissionUrl.production").get
-
-  val notificationsUrl = conf.getString("amazon.sqs.endpoint").get + conf.getString("amazon.sqs.queueName").get
 
   val serverBaseUrl = conf.getString("http.uri").get
 
@@ -81,9 +79,15 @@ object MTurkService extends LazyLogging with FoxImplicits {
     for {
       assignment <- MTurkAssignmentDAO.findByHITId(hitId)(GlobalAccessContext)
       result <- finishIfAnnotationExists(assignment)
+    } yield result
+  }
+
+  def handleAcceptedAssignment(assignmentId: String, hitId: String) = {
+    for {
+      assignment <- MTurkAssignmentDAO.findByHITId(hitId)(GlobalAccessContext)
       _ <- MTurkAssignmentDAO.decreaseNumberOfOpen(hitId, 1)(GlobalAccessContext)
       _ <- MTurkProjectDAO.decreaseNumberOfOpen(assignment._project, 1)(GlobalAccessContext)
-    } yield result
+    } yield true
   }
 
   def handleAbandonedAssignment(assignmentId: String, hitId: String) = {
@@ -102,6 +106,8 @@ object MTurkService extends LazyLogging with FoxImplicits {
 
     for {
       assignment <- MTurkAssignmentDAO.findByHITId(hitId)(GlobalAccessContext)
+      _ <- MTurkAssignmentDAO.increaseNumberOfOpen(hitId, 1)(GlobalAccessContext)
+      _ <- MTurkProjectDAO.increaseNumberOfOpen(assignment._project, 1)(GlobalAccessContext)
       result <- cancelIfAnnotationExists(assignment)
     } yield result
   }
@@ -109,7 +115,8 @@ object MTurkService extends LazyLogging with FoxImplicits {
   def handleProjectCreation(project: Project, config: MTurkAssignmentConfig): Fox[Boolean] = {
     for {
       hitTypeId <- createHITType(config, Integer.toHexString(project.name.hashCode)).toFox
-      _ <- setupNotifications(hitTypeId)
+      notificationUrl <- MTurkNotificationHandler.notificationUrl
+      _ <- setupNotifications(hitTypeId, notificationUrl)
       _ <- MTurkProjectDAO.insert(MTurkProject(project.name, hitTypeId, project.team, 0))(GlobalAccessContext)
     } yield true
   }
@@ -128,14 +135,23 @@ object MTurkService extends LazyLogging with FoxImplicits {
     }
   }
 
-  private def setupNotifications(hITTypeId: HITTypeId): Future[Unit] = {
+  private def setupNotifications(hITTypeId: HITTypeId, url: String): Fox[Boolean] = {
+    logger.info(s"Creating hit notifications for '$hITTypeId'. SQS: $url")
     val eventTypes = Array[EventType](
       EventType.AssignmentAbandoned, EventType.AssignmentAccepted, EventType.AssignmentReturned,
       EventType.AssignmentSubmitted, EventType.AssignmentRejected)
-    val notification = new NotificationSpecification(
-      notificationsUrl, NotificationTransport.SQS, "2014-08-15", eventTypes)
+    val notification = new NotificationSpecification(url, NotificationTransport.SQS, "2014-08-15", eventTypes)
 
-    Future(blocking(service.setHITTypeNotification(hITTypeId, notification, true)))
+    Future(blocking{
+      try {
+        service.setHITTypeNotification(hITTypeId, notification, true)
+        Full(true)
+      } catch {
+        case e: Exception =>
+          logger.error("Failed to create hittype notifications. Error: " + e.getMessage, e)
+          Failure("Failed to create hittype notifications. Error: " + e.getMessage, Full(e), Empty)
+      }
+    })
   }
 
   private def qualificationRequirements(config: MTurkAssignmentConfig): Array[QualificationRequirement] = {
@@ -166,22 +182,29 @@ object MTurkService extends LazyLogging with FoxImplicits {
     }
   }
 
-  private def createHITType(config: MTurkAssignmentConfig, uid: String): Future[HITTypeId] = {
+  private def createHITType(config: MTurkAssignmentConfig, uid: String): Fox[HITTypeId] = {
     Future {
       blocking {
-        service.registerHITType(
-          config.autoApprovalDelayInSeconds,
-          config.assignmentDurationInSeconds,
-          config.rewardInDollar,
-          config.title,
-          config.keywords,
-          config.description + " #" + uid,
-          qualificationRequirements(config))
+        try {
+          val id = service.registerHITType(
+            config.autoApprovalDelayInSeconds,
+            config.assignmentDurationInSeconds,
+            config.rewardInDollar,
+            config.title,
+            config.keywords,
+            config.description + " #" + uid,
+            qualificationRequirements(config))
+          Full(id)
+        } catch {
+          case e: Exception =>
+            logger.error("Failed to create hittype. Eror: "+ e.getMessage, e)
+            Failure("Failed to create hittype. Eror: "+ e.getMessage, Full(e), Empty)
+        }
       }
     }
   }
 
-  private def createHIT(hitType: String, numAssignments: Int): Future[(String, String)] = {
+  private def createHIT(hitType: String, numAssignments: Int): Fox[(String, String)] = {
     // Loading the question (QAP) file. HITQuestion is a helper class that
     // contains the QAP of the HIT defined in the external file. This feature
     // allows you to write the entire QAP externally as a file and be able to
@@ -194,18 +217,24 @@ object MTurkService extends LazyLogging with FoxImplicits {
 
     val question = questionTemplate.getQuestion(Map(
       "webknossosUrl" -> s"$serverBaseUrl/hits/$requesterAnnotation?",
-      "webknossosFinishUrl" -> s"$serverBaseUrl/hits/$requesterAnnotation/finish?",
       "mturkSubmissionUrl" -> submissionUrl))
 
     //Creating the HIT and loading it into Mechanical Turk
-    val hitF: Future[HIT] =
+    val hitF: Fox[HIT] =
       Future {
         blocking {
-          service.createHIT(hitType,
-            null, null, null, question,
-            null, null, null, lifetimeInSeconds,
-            numAssignments, requesterAnnotation,
-            null, null)
+          try {
+            val hit = service.createHIT(hitType,
+              null, null, null, question,
+              null, null, null, lifetimeInSeconds,
+              numAssignments, requesterAnnotation,
+              null, null)
+            Full(hit)
+          } catch {
+            case e: Exception =>
+              logger.error("Failed to create HIT. Error: " + e.getMessage, e)
+              Failure("Failed to create HIT. Error: " + e.getMessage, Full(e), Empty)
+          }
         }
       }
 
@@ -220,15 +249,19 @@ object MTurkService extends LazyLogging with FoxImplicits {
   }
 
   def removeByTask(task: Task) = {
-    def disable(hitId: String) = Future{
+    def disable(hitId: String): Fox[Boolean] = Future{
       blocking{
         try {
           service.forceExpireHIT(hitId)
+          Full(true)
         } catch {
           case e: ObjectDoesNotExistException =>
             // Task is not there any more, so lets assume it is already deleted. This mostly is only the case if
             // one switches from sandbox to production and tries to delete tasks created in sandbox.
-            true
+            Full(true)
+          case e: Exception =>
+            logger.error("Failed to disable HIT. Error: " + e.getMessage, e)
+            Failure("Failed to disable HIT. Error: " + e.getMessage, Full(e), Empty)
         }
       }
     }

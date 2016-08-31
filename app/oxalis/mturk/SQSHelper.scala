@@ -9,11 +9,11 @@ import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common.{Box, Empty, Failure, Full}
 
 object SQSHelper{
-  def mturkAWSPolicy(userId: String, queueName: String) = {
+  def mturkAWSPolicy(region: String, userId: String, queueName: String) = {
     s"""
       |{
       |  "Version": "2012-10-17",
-      |  "Id": "arn:aws:sqs:eu-west-1:$userId:$queueName/SQSDefaultPolicy",
+      |  "Id": "arn:aws:sqs:$region:$userId:$queueName/SQSDefaultPolicy",
       |  "Statement": [
       |    {
       |      "Effect": "Allow",
@@ -21,7 +21,7 @@ object SQSHelper{
       |        "AWS": "arn:aws:iam::755651556756:user/MTurk-SQS"
       |      },
       |      "Action": "SQS:SendMessage",
-      |      "Resource": "arn:aws:sqs:eu-west-1:$userId:$queueName"
+      |      "Resource": "arn:aws:sqs:$region:$userId:$queueName"
       |    }
       |  ]
       |}
@@ -53,8 +53,9 @@ class SQSHelper(sqsConfig: SQSConfiguration) extends LazyLogging {
 
   def createMTurkQueue(name: String): Box[String] = {
     try {
+      logger.warn("Region: " + client.getServiceName)
       val createRequest = new CreateQueueRequest(name)
-                            .addAttributesEntry("Policy", SQSHelper.mturkAWSPolicy(sqsConfig.clientId, name))
+                            .addAttributesEntry("Policy", SQSHelper.mturkAWSPolicy(sqsConfig.region, sqsConfig.clientId, name))
       val result = client.createQueue(createRequest)
 
       Full(result.getQueueUrl)

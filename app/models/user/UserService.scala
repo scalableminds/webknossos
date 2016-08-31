@@ -83,7 +83,6 @@ object UserService extends FoxImplicits {
         teamMemberships <- necessaryTeamMemberships
         user = User(
           email,
-          // Anonymous useres need to be named like that, client JS matches on that name...
           "Anonymous", "User",
           verified = true,
           pwdHash = "",

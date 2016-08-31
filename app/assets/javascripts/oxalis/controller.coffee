@@ -196,7 +196,7 @@ class Controller
   initTimeLimit :  ->
 
     # only enable hard time limit for anonymous users so far
-    unless @model.tracing.task and @model.tracing.user is "Anonymous User"
+    unless @model.tracing.task and @model.tracing.user.isAnonymous
       return
 
     # TODO move that somehwere else

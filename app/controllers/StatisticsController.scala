@@ -85,7 +85,7 @@ class StatisticsController @Inject()(val messagesApi: MessagesApi)
       val data = usersWithTimes.sortBy(-_._2.map(_._2.toMillis).sum).take(limit)
       val json = data.map {
         case (user, times) => Json.obj(
-          "user" -> User.userCompactWrites(request.user).writes(user),
+          "user" -> User.userCompactWrites.writes(user),
           "tracingTimes" -> intervalTracingTimeJson(times)
         )
       }

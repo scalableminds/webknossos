@@ -53,7 +53,6 @@ class SQSHelper(sqsConfig: SQSConfiguration) extends LazyLogging {
 
   def createMTurkQueue(name: String): Box[String] = {
     try {
-      logger.warn("Region: " + client.getServiceName)
       val createRequest = new CreateQueueRequest(name)
                             .addAttributesEntry("Policy", SQSHelper.mturkAWSPolicy(sqsConfig.region, sqsConfig.clientId, name))
       val result = client.createQueue(createRequest)

@@ -37,7 +37,7 @@ object Team extends FoxImplicits {
 
   def teamPublicWrites(team: Team, requestingUser: User)(implicit ctx: DBAccessContext): Future[JsObject] =
     for {
-      owner <- team.owner.toFox.flatMap(UserDAO.findOneById(_).map(User.userCompactWrites(requestingUser).writes)).futureBox
+      owner <- team.owner.toFox.flatMap(UserDAO.findOneById(_).map(User.userCompactWrites.writes)).futureBox
     } yield {
       Json.obj(
         "id" -> team.id,

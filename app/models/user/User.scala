@@ -122,13 +122,14 @@ object User {
       (__ \ "isEditable").write[Boolean])(u =>
       (u.id, u.email, u.firstName, u.lastName, u.verified, u.teams, u.experiences, u.lastActivity, u.isAnonymous, u.isEditableBy(requestingUser)))
 
-  def userCompactWrites(requestingUser: User): Writes[User] =
+  def userCompactWrites: Writes[User] =
     ((__ \ "id").write[String] and
       (__ \ "email").write[String] and
       (__ \ "firstName").write[String] and
       (__ \ "lastName").write[String] and
+      (__ \ "isAnonymous").write[Boolean] and
       (__ \ "teams").write[List[TeamMembership]])( u =>
-      (u.id, u.email, u.firstName, u.lastName, u.teams))
+      (u.id, u.email, u.firstName, u.lastName, u.isAnonymous, u.teams))
 
   val createNotVerifiedUser = User("","","", teams = Nil)
 }

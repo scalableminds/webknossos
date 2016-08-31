@@ -62,18 +62,6 @@
           }
 
           turkSetAssignmentID();
-
-          var isTaskFinished = false;
-          var formEl = document.getElementById("mturk_form");
-          formEl.addEventListener("submit", function (event) {
-            if (!isTaskFinished) {
-              fetch("${webknossosFinishUrl}workerId=" + mturkworkerID + "&assignmentId="+ assignmentID)
-                .then(function () {
-                  isTaskFinished = true;
-                  formEl.submit();
-                });
-            }
-          });
         </script>
         <!-- End Content Body -->
       </div>

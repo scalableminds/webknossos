@@ -1,11 +1,14 @@
 package oxalis.mturk
 
+import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
 
 import akka.actor.{Actor, Props}
 import com.amazonaws.services.sqs.model.Message
+import com.scalableminds.util.reactivemongo.GlobalAccessContext
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.typesafe.scalalogging.LazyLogging
+import models.mturk.{MTurkSQSQueue, MTurkSQSQueueDAO}
 import net.liftweb.common.{Failure, Full}
 import play.api.Application
 import play.api.Play.current
@@ -17,20 +20,36 @@ import play.api.libs.json._
   * its notifications to the persitant SQS service. After that, we can request the notifications from SQS and
   * delete them after we have processed them (this allows fail safty and ensures that we will never miss a notification)
   */
-object MTurkNotificationHandler {
+object MTurkNotificationHandler extends LazyLogging with FoxImplicits {
 
-  lazy val sqsConfiguration = {
-    val accessKey = current.configuration.getString("amazon.sqs.accessKey").get
-    val secretKey = current.configuration.getString("amazon.sqs.secretKey").get
-    val queueName = current.configuration.getString("amazon.sqs.queueName").get
-    val endpoint = current.configuration.getString("amazon.sqs.endpoint").get
-    SQSConfiguration(accessKey, secretKey, queueName, endpoint)
+  lazy val sqsConfiguration = SQSConfiguration.fromConfig(current.configuration)
+
+  def startDelayed(app: Application, delay: FiniteDuration) = {
+    implicit val exco = Akka.system(app).dispatcher
+    Akka.system(app).scheduler.scheduleOnce(delay) {
+      notificationUrl.map { url =>
+        logger.info("Using Amazon SQS notification url: " + url)
+        Akka.system(app).actorOf(
+          Props(classOf[MTurkNotificationReceiver], url),
+          name = "mturkNotificationReceiver")
+      }.futureBox.map {
+        case f: Failure =>
+          logger.error("Failed to start Notification receiver. Error: " + f.msg)
+        case _          =>
+      }
+    }
   }
 
-  def start(app: Application) = {
-    Akka.system(app).actorOf(
-      Props[MTurkNotificationReceiver],
-      name = "mturkNotificationReceiver")
+  def notificationUrl(implicit exco: ExecutionContext): Fox[String] = {
+    MTurkSQSQueueDAO.findOne()(GlobalAccessContext).map(_.url).orElse {
+      logger.info("Creating new SQS mturk notification queue")
+      val helper = new SQSHelper(sqsConfiguration)
+      val name = "wk-mturk-" + current.configuration.getString("application.branch").get.take(50) + "-" + System.currentTimeMillis()
+      for {
+        queueUrl <- helper.createMTurkQueue(name).toFox
+        _ <- MTurkSQSQueueDAO.insert(MTurkSQSQueue(name, queueUrl))(GlobalAccessContext)
+      } yield queueUrl
+    }
   }
 
   case object RequestNotifications
@@ -38,7 +57,7 @@ object MTurkNotificationHandler {
   /**
     * Actor which will periodically retrieve notifications from SQS
     */
-  class MTurkNotificationReceiver extends Actor with LazyLogging with FoxImplicits {
+  class MTurkNotificationReceiver(queueUrl: String) extends Actor with LazyLogging with FoxImplicits {
 
     import MTurkNotifications._
 
@@ -53,9 +72,7 @@ object MTurkNotificationHandler {
 
     def receive = {
       case RequestNotifications =>
-        val messages = sqsHelper.fetchMessages
-        if (messages.nonEmpty)
-          logger.info("Received messages (" + messages.length + "): " + messages.map(x => x.getMessageId + ": " + x.getBody).mkString("\n\t", "\n\t", ""))
+        val messages = sqsHelper.fetchMessages(queueUrl)
         handleMTurkNotifications(messages).map { results =>
           // This might not be the best way to handle failures. Nevertheless, if we encounter an error at this point
           // we will encounter that error every time we process that message and hence if we don't delete it, we will
@@ -65,9 +82,9 @@ object MTurkNotificationHandler {
               logger.warn("Failed to properly handle message: " + messages(idx).getBody + ". Error: " + f)
             case _                 =>
           }
-          sqsHelper.deleteMessages(messages)
+          sqsHelper.deleteMessages(messages, queueUrl)
           self ! RequestNotifications
-        }.recover{
+        }.recover {
           case e: Exception =>
             logger.error(s"An exception occured while trying to poll SQS messages. ${e.getMessage}", e)
             self ! RequestNotifications
@@ -75,11 +92,10 @@ object MTurkNotificationHandler {
     }
 
     private def handleMTurkNotifications(messages: List[Message]) = {
-      Fox.sequence(messages.map{ message =>
+      Fox.sequence(messages.map { message =>
         try {
           parseMTurkNotification(Json.parse(message.getBody)) match {
             case JsSuccess(notifications, _) =>
-              logger.info("successfully parsed wrapper for mturk notification body!")
               Fox.combined(notifications.toList.map(handleSingleMTurkNotification))
             case e: JsError                  =>
               logger.warn("Failed to parse MTurk notification json: " + e)
@@ -104,7 +120,7 @@ object MTurkNotificationHandler {
         // Let's treat it the same as an abandoned assignment
         logger.info(s"handling mturk assignment RETURNED request for assignment ${notif.AssignmentId} of hit ${notif.HITId}")
         MTurkService.handleAbandonedAssignment(notif.AssignmentId, notif.HITId)
-      case notif: MTurkAssignmentRejected =>
+      case notif: MTurkAssignmentRejected  =>
         // Let's treat it the same as an abandoned assignment
         logger.info(s"handling mturk assignment REJECTED request for assignment ${notif.AssignmentId} of hit ${notif.HITId}")
         MTurkService.handleAbandonedAssignment(notif.AssignmentId, notif.HITId)
@@ -114,10 +130,10 @@ object MTurkNotificationHandler {
       case notif: MTurkAssignmentAbandoned =>
         logger.info(s"Handling mturk assignment ABANDONED request for assignment ${notif.AssignmentId} of hit ${notif.HITId}")
         MTurkService.handleAbandonedAssignment(notif.AssignmentId, notif.HITId)
-      case notif: MTurkAssignmentAccepted =>
+      case notif: MTurkAssignmentAccepted  =>
         logger.info(s"Handling mturk assignment ACCEPTED request for assignment ${notif.AssignmentId} of hit ${notif.HITId}")
-        MTurkService.handleAbandonedAssignment(notif.AssignmentId, notif.HITId)
-      case notif                               =>
+        MTurkService.handleAcceptedAssignment(notif.AssignmentId, notif.HITId)
+      case notif                           =>
         logger.info(s"NOT handling mturk notification $notif")
         Fox.successful(true)
     }

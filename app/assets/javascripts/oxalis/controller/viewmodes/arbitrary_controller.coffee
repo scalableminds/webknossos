@@ -201,6 +201,8 @@ class ArbitraryController
     @model.skeletonTracing.setActiveTree(1)
     @cam.move [(pos.x - @arbitraryView.width / 2) * f, (pos.y - @arbitraryView.width / 2) * f, 0]
     @setActiveNode(activeNode.id, true)
+    console.log('DEBUG: about to move')
+    @move(3)
 
   nextNode : (nextOne) ->
 

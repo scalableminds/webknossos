@@ -18,12 +18,15 @@ case class MTurkAssignment(
   hitId: String,
   key: String,
   numberOfOpenAssignments: Int,
+  numberOfInProgressAssignments: Int,
   created: DateTime = DateTime.now(),
   annotations: List[MTurkAnnotationReference] = Nil,
   _id: BSONObjectID = BSONObjectID.generate
 ) extends FoxImplicits {
 
   lazy val id = _id.stringify
+
+  def numberOfUnfinished = numberOfOpenAssignments + numberOfInProgressAssignments
 
   def task(implicit ctx: DBAccessContext) =
     TaskDAO.findOneById(_task)
@@ -70,6 +73,14 @@ object MTurkAssignmentDAO extends SecuredBaseDAO[MTurkAssignment] with FoxImplic
 
   def decreaseNumberOfOpen(hitId: String, dec: Int)(implicit ctx: DBAccessContext) = {
     increaseNumberOfOpen(hitId, -dec)
+  }
+
+  def increaseNumberInProgress(hitId: String, inc: Int)(implicit ctx: DBAccessContext) = {
+    update(Json.obj("hitId" -> hitId), Json.obj("$inc" -> Json.obj("numberOfInProgressAssignments" -> inc)))
+  }
+
+  def decreaseNumberInProgress(hitId: String, dec: Int)(implicit ctx: DBAccessContext) = {
+    increaseNumberInProgress(hitId, -dec)
   }
 
   def setToZeroOpen(_id: BSONObjectID)(implicit ctx: DBAccessContext) = {

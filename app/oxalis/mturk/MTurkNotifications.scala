@@ -18,7 +18,7 @@ object MTurkNotifications extends LazyLogging {
       case Some("AssignmentAbandoned") => json.validate(mTurkAssignmentAbandonedReads)
       case Some("AssignmentRejected")  => json.validate(mTurkAssignmentRejectedReads)
       case Some("AssignmentAccepted")  => json.validate(mTurkAssignmentAcceptedReads)
-      case Some("HITExpired")          => JsSuccess(MTurkHITExpired)
+      case Some("HITExpired")          => json.validate(mTurkHITExpiredReads)
       case Some("HITReviewable")       => JsSuccess(MTurkHITReviewable)
       case _                           =>
         logger.warn(s"Encountered unknown MTurk notification while parsing: $json")
@@ -48,7 +48,9 @@ object MTurkNotifications extends LazyLogging {
 
   case class MTurkAssignmentAccepted(HITId: String, AssignmentId: String, HITTypeId: String) extends MTurkNotification
 
-  case object MTurkHITExpired extends MTurkNotification
+  implicit val mTurkHITExpiredReads = Json.reads[MTurkHITExpired]
+
+  case class MTurkHITExpired(HITId: String) extends MTurkNotification
 
   case object MTurkHITReviewable extends MTurkNotification
 

@@ -68,9 +68,25 @@ case class Task(
     } yield result
   }
 
+  def inProgress(implicit ctx: DBAccessContext) = {
+    def calculateInProgress(project: Project) = {
+      project.assignmentConfiguration match {
+        case WebknossosAssignmentConfig =>
+          AnnotationService.countUnfinishedAnnotationsFor(this)
+        case _: MTurkAssignmentConfig   =>
+          MTurkAssignmentDAO.findOneByTask(_id).map(_.numberOfInProgressAssignments)
+      }
+    }
+
+    for {
+      p <- project
+      result <- calculateInProgress(p)
+    } yield result
+  }
+
   def status(implicit ctx: DBAccessContext) = {
     for {
-      inProgress <- AnnotationService.countUnfinishedAnnotationsFor(this).getOrElse(0)
+      inProgress <- inProgress.getOrElse(0)
       remaining <- remainingInstances.getOrElse(0)
     } yield CompletionStatus(
         open = remaining,

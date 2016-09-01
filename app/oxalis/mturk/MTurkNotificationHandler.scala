@@ -133,6 +133,9 @@ object MTurkNotificationHandler extends LazyLogging with FoxImplicits {
       case notif: MTurkAssignmentAccepted  =>
         logger.info(s"Handling mturk assignment ACCEPTED request for assignment ${notif.AssignmentId} of hit ${notif.HITId}")
         MTurkService.handleAcceptedAssignment(notif.AssignmentId, notif.HITId)
+      case notif: MTurkHITExpired =>
+        logger.info(s"Handling mturk HIT EXPIRED of hit ${notif.HITId}")
+        MTurkService.handleHITExpired(notif.HITId)
       case notif                           =>
         logger.info(s"NOT handling mturk notification $notif")
         Fox.successful(true)

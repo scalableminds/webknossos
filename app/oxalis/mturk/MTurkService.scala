@@ -79,6 +79,8 @@ object MTurkService extends LazyLogging with FoxImplicits {
     for {
       assignment <- MTurkAssignmentDAO.findByHITId(hitId)(GlobalAccessContext)
       result <- finishIfAnnotationExists(assignment)
+      _ <- MTurkProjectDAO.decreaseNumberOfOpen(assignment._project, 1)(GlobalAccessContext)
+      _ <- MTurkAssignmentDAO.decreaseNumberInProgress(hitId, 1)(GlobalAccessContext)
     } yield result
   }
 
@@ -86,7 +88,15 @@ object MTurkService extends LazyLogging with FoxImplicits {
     for {
       assignment <- MTurkAssignmentDAO.findByHITId(hitId)(GlobalAccessContext)
       _ <- MTurkAssignmentDAO.decreaseNumberOfOpen(hitId, 1)(GlobalAccessContext)
-      _ <- MTurkProjectDAO.decreaseNumberOfOpen(assignment._project, 1)(GlobalAccessContext)
+      _ <- MTurkAssignmentDAO.increaseNumberInProgress(hitId, 1)(GlobalAccessContext)
+    } yield true
+  }
+
+  def handleHITExpired(hitId: String) = {
+    for {
+      assignment <- MTurkAssignmentDAO.findByHITId(hitId)(GlobalAccessContext)
+      _ <- MTurkAssignmentDAO.decreaseNumberOfOpen(hitId,  assignment.numberOfUnfinished)(GlobalAccessContext)
+      _ <- MTurkProjectDAO.decreaseNumberOfOpen(hitId, assignment.numberOfUnfinished)(GlobalAccessContext)
     } yield true
   }
 
@@ -107,7 +117,7 @@ object MTurkService extends LazyLogging with FoxImplicits {
     for {
       assignment <- MTurkAssignmentDAO.findByHITId(hitId)(GlobalAccessContext)
       _ <- MTurkAssignmentDAO.increaseNumberOfOpen(hitId, 1)(GlobalAccessContext)
-      _ <- MTurkProjectDAO.increaseNumberOfOpen(assignment._project, 1)(GlobalAccessContext)
+      _ <- MTurkAssignmentDAO.decreaseNumberInProgress(hitId, 1)(GlobalAccessContext)
       result <- cancelIfAnnotationExists(assignment)
     } yield result
   }
@@ -127,7 +137,7 @@ object MTurkService extends LazyLogging with FoxImplicits {
       projectConfig <- project.assignmentConfiguration.asOpt[MTurkAssignmentConfig] ?~> "project.config.notMturk"
       _ <- ensureEnoughFunds(projectConfig.rewardInDollar) ?~> "mturk.notEnoughFunds"
       (hitId, key) <- createHIT(mtProject.hitTypeId, task.instances)
-      assignment = MTurkAssignment(task._id, task.team, mtProject._project, hitId, key, task.instances)
+      assignment = MTurkAssignment(task._id, task.team, mtProject._project, hitId, key, task.instances, 0)
       _ <- MTurkAssignmentDAO.insert(assignment)(GlobalAccessContext)
       _ <- MTurkProjectDAO.increaseNumberOfOpen(project.name, task.instances)(GlobalAccessContext)
     } yield {
@@ -139,7 +149,7 @@ object MTurkService extends LazyLogging with FoxImplicits {
     logger.info(s"Creating hit notifications for '$hITTypeId'. SQS: $url")
     val eventTypes = Array[EventType](
       EventType.AssignmentAbandoned, EventType.AssignmentAccepted, EventType.AssignmentReturned,
-      EventType.AssignmentSubmitted, EventType.AssignmentRejected)
+      EventType.AssignmentSubmitted, EventType.AssignmentRejected, EventType.HITExpired)
     val notification = new NotificationSpecification(url, NotificationTransport.SQS, "2014-08-15", eventTypes)
 
     Future(blocking{
@@ -268,11 +278,7 @@ object MTurkService extends LazyLogging with FoxImplicits {
 
     MTurkAssignmentDAO.findOneByTask(task._id)(GlobalAccessContext).futureBox.flatMap{
       case Full(mtAssignment ) =>
-        for{
-          _ <- disable(mtAssignment.hitId)
-          - <- MTurkAssignmentDAO.setToZeroOpen(mtAssignment._id)(GlobalAccessContext)
-          _ <- MTurkProjectDAO.decreaseNumberOfOpen(task._project, mtAssignment.numberOfOpenAssignments)(GlobalAccessContext)
-        } yield true
+        disable(mtAssignment.hitId)
       case _ =>
         Fox.successful(true)
     }

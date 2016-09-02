@@ -3,6 +3,7 @@ app                 = require("app")
 Input               = require("libs/input")
 ArbitraryController = require("../viewmodes/arbitrary_controller")
 Constants           = require("../../constants")
+Toast               = require("libs/toast")
 
 class MinimalSkeletonTracingArbitraryController extends ArbitraryController
 
@@ -52,16 +53,16 @@ class MinimalSkeletonTracingArbitraryController extends ArbitraryController
 
       #Delete active node and recenter last node
       "shift + space" : =>
-        @deleteActiveNode
+        @deleteActiveNode()
 
     , -1)
 
 
-  setRecord : (record) ->
-
-    if record != @model.get("flightmodeRecording")
+  # make sure that it is not possible to keep nodes from being created
+  setWaypoint : =>
+    unless @model.get("flightmodeRecording")
       @model.set("flightmodeRecording", true)
-      @setWaypoint()
+    super
 
 
   deleteActiveNode : ->
@@ -70,7 +71,7 @@ class MinimalSkeletonTracingArbitraryController extends ArbitraryController
     if activeNode.id == 1
       Toast.error("Unable: Attempting to delete first node")
     else
-      _.defer => @model.skeletonTracing.deleteActiveNode().then( => @centerActiveNode() )  
+      _.defer => @model.skeletonTracing.deleteActiveNode().then( => @centerActiveNode() )
 
 
 module.exports = MinimalSkeletonTracingArbitraryController

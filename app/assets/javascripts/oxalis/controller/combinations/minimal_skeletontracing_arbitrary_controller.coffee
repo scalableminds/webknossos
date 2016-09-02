@@ -52,10 +52,7 @@ class MinimalSkeletonTracingArbitraryController extends ArbitraryController
 
       #Delete active node and recenter last node
       "shift + space" : =>
-        _.defer => @model.skeletonTracing.deleteActiveNode().then(
-          =>
-            @centerActiveNode()
-        )
+        @deleteActiveNode
 
     , -1)
 
@@ -63,8 +60,17 @@ class MinimalSkeletonTracingArbitraryController extends ArbitraryController
   setRecord : (record) ->
 
     if record != @model.get("flightmodeRecording")
-      @model.set("flightmodeRecording", record)
+      @model.set("flightmodeRecording", true)
       @setWaypoint()
+
+
+  deleteActiveNode : ->
+    skeletonTracing = @model.skeletonTracing
+    activeNode = skeletonTracing.getActiveNode()
+    if activeNode.id == 1
+      Toast.error("Unable: Attempting to delete first node")
+    else
+      _.defer => @model.skeletonTracing.deleteActiveNode().then( => @centerActiveNode() )  
 
 
 module.exports = MinimalSkeletonTracingArbitraryController

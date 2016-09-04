@@ -83,7 +83,7 @@ object UserService extends FoxImplicits {
         teamMemberships <- necessaryTeamMemberships
         user = User(
           email,
-          "Anonymous", "User",
+          "mturk", workerId,
           verified = true,
           pwdHash = "",
           md5hash = "",

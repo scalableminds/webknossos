@@ -43,7 +43,7 @@ trait AnnotationContent {
 
   def saveToDB(implicit ctx: DBAccessContext): Fox[AnnotationContent]
 
-  def mergeWith(source: AnnotationContent)(implicit ctx: DBAccessContext): Fox[AnnotationContent]
+  def mergeWith(source: AnnotationContent, settings: Option[AnnotationSettings])(implicit ctx: DBAccessContext): Fox[AnnotationContent]
 
   def contentType: String
 

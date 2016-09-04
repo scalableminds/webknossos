@@ -35,6 +35,19 @@ case class TemporarySkeletonTracing(
 
   def trees = Fox.successful(_trees)
 
+  lazy val stats = {
+    val numberOfTrees = _trees.size
+
+    val (numberOfNodes, numberOfEdges) = _trees.foldLeft((0l, 0l)) {
+      case ((nodeCount, edgeCount), tree) =>
+        val nNodes = tree.nodes.size
+        val nEdges = tree.edges.size
+        (nodeCount + nNodes, edgeCount + nEdges)
+    }
+
+    Some(SkeletonTracingStatistics(numberOfNodes, numberOfEdges, numberOfTrees))
+  }
+
   def allowAllModes =
     this.copy(settings = settings.copy(allowedModes = AnnotationSettings.SKELETON_MODES))
 
@@ -58,7 +71,10 @@ case class TemporarySkeletonTracing(
 
   def updateFromJson(js: Seq[JsValue])(implicit ctx: DBAccessContext) = ???
 
-  def mergeWith(annotationContent: AnnotationContent)(implicit ctx: DBAccessContext): Fox[TemporarySkeletonTracing] = {
+  def mergeWith(
+    annotationContent: AnnotationContent,
+    settings: Option[AnnotationSettings])(implicit ctx: DBAccessContext): Fox[TemporarySkeletonTracing] = {
+
     def mergeBoundingBoxes(aOpt: Option[BoundingBox], bOpt: Option[BoundingBox]) =
       for {
         a <- aOpt
@@ -71,24 +87,11 @@ case class TemporarySkeletonTracing(
           val nodeMapping = calculateNodeMapping(sourceTrees, _trees)
           val mergedTrees = mergeTrees(sourceTrees, _trees, nodeMapping)
           val mergedBoundingBox = mergeBoundingBoxes(boundingBox, s.boundingBox)
-          this.copy(_trees = mergedTrees, boundingBox = mergedBoundingBox)
+          this.copy(_trees = mergedTrees, boundingBox = mergedBoundingBox, settings = settings.getOrElse(this.settings))
         }
       case s =>
         Fox.failure("Can't merge annotation content of a different type into TemporarySkeletonTracing. Tried to merge " + s.id)
     }
-  }
-
-  lazy val stats = {
-    val numberOfTrees = _trees.size
-
-    val (numberOfNodes, numberOfEdges) = _trees.foldLeft((0l, 0l)) {
-      case ((nodeCount, edgeCount), tree) =>
-        val nNodes = tree.nodes.size
-        val nEdges = tree.edges.size
-        (nodeCount + nNodes, edgeCount + nEdges)
-    }
-
-    Some(SkeletonTracingStatistics(numberOfNodes, numberOfEdges, numberOfTrees))
   }
 }
 

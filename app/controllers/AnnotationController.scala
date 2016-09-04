@@ -2,7 +2,6 @@ package controllers
 
 import javax.inject.Inject
 
-import scala.async.Async._
 import scala.concurrent._
 import scala.concurrent.duration._
 import akka.util.Timeout
@@ -332,16 +331,17 @@ class AnnotationController @Inject()(val messagesApi: MessagesApi) extends Contr
   }
 
   def cancel(typ: String, id: String) = Authenticated.async { implicit request =>
-    def tryToCancel(annotation: AnnotationLike) = async {
+    def tryToCancel(annotation: AnnotationLike) = {
       annotation match {
         case t if t.typ == AnnotationType.Task =>
-          await(annotation.muta.cancelTask().futureBox).map { _ =>
+          annotation.muta.cancelTask().map { _ =>
             JsonOk(Messages("task.finished"))
           }
         case _                                 =>
-          Full(JsonOk(Messages("annotation.finished")))
+          Fox.successful(JsonOk(Messages("annotation.finished")))
       }
     }
+
     withAnnotation(AnnotationIdentifier(typ, id)) { annotation =>
       for {
         _ <- ensureTeamAdministration(request.user, annotation.team)

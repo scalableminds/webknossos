@@ -79,7 +79,7 @@ object SkeletonTracingService extends AnnotationContentService with CommonTracin
   }
 
   def createFrom(nmls: List[NML], boundingBox: Option[BoundingBox], settings: AnnotationSettings)(implicit ctx: DBAccessContext): Fox[SkeletonTracing] = {
-    TemporarySkeletonTracingService.createFrom(nmls, boundingBox, settings).flatMap { temporary =>
+    TemporarySkeletonTracingService.createFrom(nmls, boundingBox, Some(settings)).flatMap { temporary =>
       createFrom(temporary)
     }
   }

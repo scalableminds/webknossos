@@ -120,7 +120,7 @@ class DataSetController @Inject()(val messagesApi: MessagesApi) extends Controll
       dataSet <- DataSetDAO.findOneBySourceName(dataSetName) ?~> Messages("dataSet.notFound", dataSetName)
       users <- UserService.findByTeams(dataSet.allowedTeams, includeAnonymous = false)
     } yield {
-      Ok(Writes.list(User.userCompactWrites(request.user)).writes(users))
+      Ok(Writes.list(User.userCompactWrites).writes(users))
     }
   }
 

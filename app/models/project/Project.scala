@@ -1,26 +1,33 @@
-package models.task
+package models.project
 
+import scala.concurrent.Future
+
+import com.scalableminds.util.reactivemongo.AccessRestrictions.{AllowIf, DenyEveryone}
+import com.scalableminds.util.reactivemongo.{DBAccessContext, DefaultAccessDefinitions, GlobalAccessContext}
+import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import models.basics._
-import models.user.{UserDAO, UserService, User}
-import play.api.libs.json._
-import play.api.libs.json.Json
+import models.mturk.{MTurkAssignmentConfig, MTurkProjectDAO}
+import models.task.{OpenAssignmentDAO, OpenAssignmentService, TaskDAO, TaskService}
+import models.user.{User, UserService}
+import net.liftweb.common.Full
+import oxalis.mturk.MTurkService
+import play.api.Logger
+import play.api.data.validation.ValidationError
+import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.functional.syntax._
-import com.scalableminds.util.reactivemongo.{DefaultAccessDefinitions, GlobalAccessContext, DBAccessContext}
+import play.api.libs.json.{Json, _}
+import reactivemongo.api.indexes.{Index, IndexType}
 import reactivemongo.bson.BSONObjectID
 import reactivemongo.play.json.BSONFormats._
-import com.scalableminds.util.tools.{FoxImplicits, Fox}
-import scala.concurrent.Future
-import net.liftweb.common.Full
-import play.api.libs.concurrent.Execution.Implicits._
-import reactivemongo.api.indexes.{IndexType, Index}
-import models.team.Role
-import play.api.Logger
-import net.liftweb.common.{Full, Empty}
-import com.scalableminds.util.reactivemongo.AccessRestrictions.{DenyEveryone, AllowIf}
-import play.api.i18n.Messages
-import play.api.data.validation.ValidationError
 
-case class Project(name: String, team: String, _owner: BSONObjectID, priority: Int, _id: BSONObjectID = BSONObjectID.generate) {
+case class Project(
+  name: String,
+  team: String,
+  _owner: BSONObjectID,
+  priority: Int,
+  assignmentConfiguration: AssignmentConfig,
+  _id: BSONObjectID = BSONObjectID.generate) {
+
   def owner = UserService.findOneById(_owner.stringify, useCache = true)(GlobalAccessContext)
 
   def isOwnedBy(user: User) = user._id == _owner
@@ -36,21 +43,31 @@ object Project {
   def StringObjectIdReads(key: String) = Reads.filter[String](ValidationError("objectid.invalid", key))(BSONObjectID.parse(_).isSuccess)
 
   def projectPublicWrites(project: Project, requestingUser: User): Future[JsObject] =
-    for{
-      owner <- project.owner.map(User.userCompactWrites(requestingUser).writes).futureBox
+    for {
+      owner <- project.owner.map(User.userCompactWrites.writes).futureBox
     } yield {
       Json.obj(
         "name" -> project.name,
         "team" -> project.team,
         "owner" -> owner.toOption,
         "priority" -> project.priority,
+        "assignmentConfiguration" -> project.assignmentConfiguration,
         "id" -> project.id
       )
     }
 
+  def numberOfOpenAssignments(project: Project)(implicit ctx: DBAccessContext): Fox[Int] = {
+    project.assignmentConfiguration match {
+      case WebknossosAssignmentConfig =>
+        OpenAssignmentDAO.countForProject(project.name)
+      case _: MTurkAssignmentConfig =>
+        MTurkProjectDAO.findByProject(project.name).map(_.numberOfOpenAssignments)
+    }
+  }
+
   def projectPublicWritesWithStatus(project: Project, requestingUser: User)(implicit ctx: DBAccessContext): Future[JsObject] =
     for {
-      open <- OpenAssignmentDAO.countForProject(project.name) getOrElse -1
+      open <- numberOfOpenAssignments(project) getOrElse -1
       projectJson <- projectPublicWrites(project, requestingUser)
     } yield {
       projectJson + ("numberOfOpenAssignments" -> JsNumber(open))
@@ -60,41 +77,51 @@ object Project {
     ((__ \ 'name).read[String](Reads.minLength[String](3) keepAnd Reads.pattern("^[a-zA-Z0-9_-]*$".r, "project.name.invalidChars")) and
       (__ \ 'team).read[String] and
       (__ \ 'priority).read[Int] and
-      (__ \ 'owner).read[String](StringObjectIdReads("owner")))((name, team, priority, owner) => Project(name, team, BSONObjectID(owner), priority))
+      (__ \ 'assignmentConfiguration).read[AssignmentConfig] and
+      (__ \ 'owner).read[String](StringObjectIdReads("owner"))) (
+      (name, team, priority, assignmentLocation, owner) => Project(name, team, BSONObjectID(owner), priority, assignmentLocation))
 }
 
 object ProjectService extends FoxImplicits {
   def remove(project: Project)(implicit ctx: DBAccessContext): Fox[Boolean] = {
-    ProjectDAO.remove("name", project.name).flatMap{
+    ProjectDAO.remove("name", project.name).flatMap {
       case result if result.n > 0 =>
-        TaskService.removeAllWithProject(project)
-      case _ =>
+        for{
+          _ <- TaskService.removeAllWithProject(project)
+        } yield true
+      case _                      =>
         Logger.warn("Tried to remove project without permission.")
         Fox.successful(false)
     }
   }
 
-  def insert(name: String, team: String, owner: User, priority: Int)(implicit ctx: DBAccessContext) =
-    ProjectDAO.insert(Project(name, team, owner._id, priority))
+  def reportToExternalService(project: Project, json: JsValue): Fox[Boolean] = {
+    project.assignmentConfiguration match {
+      case mturk: MTurkAssignmentConfig =>
+        MTurkService.handleProjectCreation(project, mturk)
+      case _ =>
+        Fox.successful(true)
+    }
+  }
 
   def findIfNotEmpty(name: Option[String])(implicit ctx: DBAccessContext): Fox[Option[Project]] = {
     name match {
       case Some("") | None =>
         new Fox(Future.successful(Full(None)))
-      case Some(x) =>
+      case Some(x)         =>
         ProjectDAO.findOneByName(x).toFox.map(p => Some(p))
     }
   }
 
   def update(_id: BSONObjectID, oldProject: Project, updateRequest: Project)(implicit ctx: DBAccessContext) = {
     def updateTasksIfNecessary(updated: Project) = {
-      if(oldProject.priority == updated.priority)
+      if (oldProject.priority == updated.priority)
         Fox.successful(true)
       else
         TaskService.handleProjectUpdate(oldProject.name, updated)
     }
 
-    for{
+    for {
       updatedProject <- ProjectDAO.updateProject(_id, updateRequest)
       _ <- updateTasksIfNecessary(updatedProject)
     } yield updatedProject
@@ -104,21 +131,21 @@ object ProjectService extends FoxImplicits {
 
 object ProjectDAO extends SecuredBaseDAO[Project] {
 
-  override val AccessDefinitions = new DefaultAccessDefinitions{
+  override val AccessDefinitions = new DefaultAccessDefinitions {
     override def findQueryFilter(implicit ctx: DBAccessContext) = {
-      ctx.data match{
+      ctx.data match {
         case Some(user: User) =>
           AllowIf(Json.obj("team" -> Json.obj("$in" -> user.teamNames)))
-        case _ =>
+        case _                =>
           DenyEveryone()
       }
     }
 
     override def removeQueryFilter(implicit ctx: DBAccessContext) = {
-      ctx.data match{
+      ctx.data match {
         case Some(user: User) =>
           AllowIf(Json.obj("_owner" -> user._id))
-        case _ =>
+        case _                =>
           DenyEveryone()
       }
     }

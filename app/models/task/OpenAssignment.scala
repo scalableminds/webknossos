@@ -2,29 +2,34 @@ package models.task
 
 import models.basics._
 import java.util.Date
-import com.scalableminds.util.geometry.Point3D
 
+import com.scalableminds.util.geometry.Point3D
 import scala.concurrent.Future
+
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.Logger
-import models.user.{User, Experience}
+import models.user.{Experience, User}
 import models.annotation._
 import play.api.libs.iteratee.Enumerator
-import play.api.libs.json.{JsArray, JsNull, Json, JsObject}
+import play.api.libs.json.{JsArray, JsNull, JsObject, Json}
 import com.scalableminds.util.mvc.Formatter
 import scala.concurrent.duration._
+
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
-import com.scalableminds.util.reactivemongo.{DefaultAccessDefinitions, GlobalAccessContext, DBAccessContext}
+import com.scalableminds.util.reactivemongo.{DBAccessContext, DefaultAccessDefinitions, GlobalAccessContext}
 import reactivemongo.bson.BSONObjectID
 import reactivemongo.play.json.BSONFormats._
 import org.joda.time.DateTime
 import org.joda.time.format.DateTimeFormat
 import java.text.SimpleDateFormat
+
 import scala.async.Async._
+
 import akka.actor.Props
-import reactivemongo.api.indexes.{IndexType, Index}
+import reactivemongo.api.indexes.{Index, IndexType}
 import reactivemongo.core.commands.LastError
 import com.scalableminds.util.reactivemongo.AccessRestrictions.{AllowIf, DenyEveryone}
+import models.project.Project
 
 case class OpenAssignment(
   _task: BSONObjectID,

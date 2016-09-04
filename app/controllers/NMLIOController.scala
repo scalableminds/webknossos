@@ -17,6 +17,7 @@ import scala.collection.JavaConversions._
 import scala.collection.JavaConverters._
 
 import com.scalableminds.util.tools.Fox
+import models.project.{Project, ProjectDAO}
 
 class NMLIOController @Inject()(val messagesApi: MessagesApi) extends Controller with Secured {
 

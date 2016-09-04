@@ -1,6 +1,3 @@
-/*
- * Copyright (C) Tom Bocklisch <https://github.com/tmbo>
- */
 package models.annotation
 
 import play.api.libs.json.Json

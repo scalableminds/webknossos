@@ -6,20 +6,23 @@ import play.api.libs.concurrent.Akka
 import java.util.UUID
 
 import oxalis.thirdparty.BrainTracing
-import play.api.{Logger, Application}
+import play.api.{Application, Logger}
 import scala.concurrent.duration._
+
 import oxalis.user.UserCache
-import models.configuration.{UserConfiguration, DataSetConfiguration}
+import models.configuration.{DataSetConfiguration, UserConfiguration}
 import models.team._
 import reactivemongo.bson.BSONObjectID
 import oxalis.mail.DefaultMails
-import com.scalableminds.util.tools.{FoxImplicits, Fox}
+import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import controllers.Application
-import com.scalableminds.util.reactivemongo.{GlobalAccessContext, DBAccessContext}
+import com.scalableminds.util.reactivemongo.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.security.SCrypt._
 import com.scalableminds.util.mail.Send
 import play.api.libs.concurrent.Execution.Implicits._
 import models.annotation.AnnotationService
+import play.api.libs.json.Json
+import reactivemongo.play.json.BSONFormats._
 
 object UserService extends FoxImplicits {
   lazy val Mailer =
@@ -68,24 +71,44 @@ object UserService extends FoxImplicits {
       result <- UserDAO.insert(user, isVerified)(GlobalAccessContext).futureBox
     } yield result
 
-  def insertAnonymousUser(teamName: String, experience: Experience): Fox[User] = {
-    val userName = UUID.randomUUID().toString
-    for {
-      teamOpt <- TeamDAO.findOneByName(teamName)(GlobalAccessContext).futureBox
-      teamMemberships = teamOpt.map(t => TeamMembership(t.name, Role.User)).toList
-      user = User(
-        userName,
-        "Anonymous", "User",
-        verified = true,
-        pwdHash = "",
-        md5hash = "",
-        teams = teamMemberships,
-        _isAnonymous = Some(true),
-        experiences = experience.toMap)
-      result <- UserDAO.insert(user, isVerified = true)(GlobalAccessContext).futureBox
-    } yield {
-      result
+  def prepareMTurkUser(workerId: String, teamName: String, experience: Experience)(implicit ctx: DBAccessContext): Fox[User] = {
+    def necessaryTeamMemberships = {
+      TeamDAO.findOneByName(teamName).futureBox.map { teamOpt =>
+        teamOpt.map(t => TeamMembership(t.name, Role.User)).toList
+      }
     }
+
+    def insertUser(email: String): Fox[User] = {
+      for {
+        teamMemberships <- necessaryTeamMemberships
+        user = User(
+          email,
+          "mturk", workerId,
+          verified = true,
+          pwdHash = "",
+          md5hash = "",
+          teams = teamMemberships,
+          _isAnonymous = Some(true),
+          experiences = experience.toMap)
+        result <- UserDAO.insert(user, isVerified = true)
+      } yield {
+        result
+      }
+    }
+
+    def updateUser(u: User): Fox[User] = {
+      for{
+        teamMemberships <- necessaryTeamMemberships
+        updated <- UserDAO.findAndModify(Json.obj("_id" -> u._id), Json.obj("$set" -> Json.obj(
+          "teams" -> teamMemberships,
+          "experiences" -> experience.toMap
+        )), returnNew = true)
+      } yield updated
+    }
+
+    val email = workerId + "@MTURK"
+
+    UserService.findOneByEmail(email).flatMap(u => updateUser(u)) orElse insertUser(email)
   }
 
   def update(
@@ -145,7 +168,7 @@ object UserService extends FoxImplicits {
         result
     }
   }
-  
+
   def updateDataSetConfiguration(user: User, dataSetName: String, configuration: DataSetConfiguration)(implicit ctx: DBAccessContext) = {
     UserDAO.updateDataSetConfiguration(user, dataSetName, configuration).map {
       result =>

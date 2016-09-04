@@ -7,13 +7,13 @@ import javax.inject.Inject
 
 import scala.concurrent.Future
 
-import com.scalableminds.util.tools.{FoxImplicits, Fox}
-import models.annotation.{AnnotationService, AnnotationDAO}
-import models.task.{TaskService, Project, TaskType}
+import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import models.annotation.{AnnotationDAO, AnnotationService}
+import models.task.{TaskService, TaskType}
 import models.task.OpenAssignmentService
 import oxalis.security.Secured
 import models.user.time.{TimeSpan, TimeSpanService}
-import models.user.{UserService, User, UserDAO}
+import models.user.{User, UserDAO, UserService}
 import oxalis.security.Secured
 import play.api.i18n.{Messages, MessagesApi}
 import play.api.libs.concurrent.Execution.Implicits._
@@ -21,10 +21,12 @@ import play.api.libs.json._
 import play.api.libs.json.Json._
 import play.api.libs.functional.syntax._
 import play.twirl.api.Html
-import models.user.{UserService, User, UserDAO}
+import models.user.{User, UserDAO, UserService}
 import scala.concurrent.duration.Duration
+
 import models.tracing.skeleton.DBTreeDAO
 import models.binary.DataSetDAO
+import models.project.Project
 
 class StatisticsController @Inject()(val messagesApi: MessagesApi)
   extends Controller
@@ -83,7 +85,7 @@ class StatisticsController @Inject()(val messagesApi: MessagesApi)
       val data = usersWithTimes.sortBy(-_._2.map(_._2.toMillis).sum).take(limit)
       val json = data.map {
         case (user, times) => Json.obj(
-          "user" -> User.userCompactWrites(request.user).writes(user),
+          "user" -> User.userCompactWrites.writes(user),
           "tracingTimes" -> intervalTracingTimeJson(times)
         )
       }

@@ -201,6 +201,8 @@ class ArbitraryController
 
 
   createBranchMarker : (pos) ->
+
+    return unless @isBranchpointvideoMode()
     activeNode = @model.skeletonTracing.getActiveNode()
     f = @cam.getZoomStep() / (@arbitraryView.width / @WIDTH)
     @cam.move [-(pos.x - @arbitraryView.width / 2) * f, -(pos.y - @arbitraryView.width / 2) * f, 0]
@@ -214,8 +216,10 @@ class ArbitraryController
     console.log('DEBUG: about to move')
     @move(3)
 
+
   nextNode : (nextOne) ->
 
+    return unless @isBranchpointvideoMode()
     activeNode = @model.skeletonTracing.getActiveNode()
     if (nextOne && activeNode.id == @model.skeletonTracing.getActiveTree().nodes.length) || (!nextOne && activeNode.id == 1)
       return
@@ -301,6 +305,7 @@ class ArbitraryController
 
   checkLength : =>
 
+    return if @isBranchpointvideoMode()
     anonUser = app.currentUser.isAnonymous
     return unless anonUser
 
@@ -467,6 +472,11 @@ class ArbitraryController
     if vectorLength > 10
       @setWaypoint()
       @lastNodeMatrix = matrix
+
+
+  isBranchpointvideoMode : ->
+
+    return @model.tracing.task?.type.summary == 'branchpointvideo'
 
 
 module.exports = ArbitraryController

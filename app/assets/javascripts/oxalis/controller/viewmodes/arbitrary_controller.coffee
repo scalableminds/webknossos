@@ -12,7 +12,7 @@ constants          = require("../../constants")
 {M4x4, V3}         = require("libs/mjs")
 Utils              = require("libs/utils")
 Toast              = require("libs/toast")
-
+modal              = require("../../view/modal")
 
 class ArbitraryController
 
@@ -23,12 +23,19 @@ class ArbitraryController
   WIDTH : 128
   TIMETOCENTER : 200
 
+  RESCOPURL : "https://braintracing.info:9000/api/services/score-nml/"
+
+  TESTLENGTH : 2000
+  FINISHLENGTH : 35000
+
   plane : null
   crosshair : null
   cam : null
 
   fullscreen : false
   lastNodeMatrix : null
+
+  checkedRESCOP : false
 
   model : null
   view : null
@@ -174,6 +181,9 @@ class ArbitraryController
 
       "." : => @nextNode(true)
       "," : => @nextNode(false)
+
+      #Rotate view by 180 deg
+      "r" : => @cam.yaw(Math.PI)
     )
 
     @input.keyboardOnce = new Input.Keyboard(
@@ -286,6 +296,43 @@ class ArbitraryController
     interpolation = datasetConfig.get("interpolation")
     withSpeed = @model.user.get("moveValue3d")
     @model.skeletonTracing.addNode(position, rotation, constants.ARBITRARY_VIEW, 0, fourBit, interpolation, withSpeed)
+    @checkLength()
+
+
+  checkLength : =>
+
+    anonUser = app.currentUser.isAnonymous
+    return unless anonUser
+
+    nmPerVoxel = app.scaleInfo.nmPerVoxel
+    plus = (a, b) => a + b
+    minus = (a, b) => a - b
+    times = (a, b) => a * b
+    zip = (a, b, f) => a.map((e, i) => f(e, b[i]))
+    diff = (a) => a.slice(1).map((e, i) => zip(e, a[i], minus))
+    sum = (a) => a.reduce(plus, 0)
+    pow2 = (v) => Math.pow(v, 2)
+    norm = (v) => Math.sqrt(sum(v.map(pow2)))
+    scaledNodes = @model.skeletonTracing.activeTree.nodes.map((e) => zip(e.pos, nmPerVoxel, times))
+    scaledEdges = diff(scaledNodes)
+    scaledEdgeLength = scaledEdges.map(norm)
+    totalLength = sum(scaledEdgeLength)
+    if totalLength > @FINISHLENGTH
+      _.defer => new Promise (resolve, reject) =>  modal.show("You are an excellent annotator and may submit the HIT now", "Done")
+    return if totalLength < @TESTLENGTH
+    return if @checkedRESCOP
+    @checkedRESCOP = true
+    xhttp = new XMLHttpRequest()
+    xhttp.open("POST", @RESCOPURL + app.oxalis.model.get('tracing').task.id + "?annotation=" + app.oxalis.model.get('tracing').id, true);
+    xhttp.onreadystatechange  = () => @reactToRESCOP(xhttp)
+    xhttp.send(JSON.stringify(scaledNodes))
+
+
+  reactToRESCOP : (xhttp) =>
+
+    return unless (xhttp.readyState == XMLHttpRequest.DONE && xhttp.status == 200)
+    unless JSON.parse(xhttp.response).continueTracing
+      document.location = "http://share.mhlablog.com/kevin/info_annotators"
 
 
   setWaypoint : =>
@@ -336,6 +383,7 @@ class ArbitraryController
       if id == 1
         @cam.yaw(Math.PI)
         Toast.warning("Reached initial node, view reversed")
+        @model.commentTabView.appendComment("reversed")
     )
 
 

@@ -27,6 +27,7 @@ class Model extends Backbone.Model
 
   HANDLED_ERROR : {}
 
+  commentTabView : null
 
   constructor : ->
 

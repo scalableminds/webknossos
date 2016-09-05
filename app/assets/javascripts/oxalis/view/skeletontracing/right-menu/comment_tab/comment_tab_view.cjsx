@@ -1,4 +1,5 @@
 app                    = require("app")
+_                      = require("lodash")
 Marionette             = require("backbone.marionette")
 Input                  = require("libs/input")
 CommentList            = require("./comment_list")
@@ -67,7 +68,10 @@ class CommentTabView extends Marionette.ItemView
     new Input.KeyboardNoLoop(
       "n" : => @nextComment()
       "p" : => @previousComment()
+      "5" : => @pauseTracing()
     )
+
+    @model.commentTabView = this
 
 
   render : ->
@@ -208,8 +212,39 @@ class CommentTabView extends Marionette.ItemView
     @isSortedAscending = !@isSortedAscending
     @updateState()
 
+  pauseTracing : ->
+    @appendComment("pause")
+    _.defer => new Promise (resolve, reject) => alert("paused")
+
 
   # Helper functions
+
+  appendComment : (particle) ->
+
+    return if @model.skeletonTracing.restrictionHandler.handleUpdate()
+
+    nodeId = @getActiveNodeId()
+
+    # don't add a comment if there is no active node
+    return unless nodeId
+
+    tree = @model.skeletonTracing.getActiveTree()
+
+    if comment = @getCommentForNode(nodeId)
+      comment.content += "_" + particle
+      @updateState()
+    else
+      comment =
+        node : nodeId
+        content : particle
+      tree.comments.push(comment)
+
+      @setActiveNode(comment, tree.treeId)
+
+    @model.skeletonTracing.updateTree(tree)
+
+
+
 
   makeComment : (comment, treeId) ->
 

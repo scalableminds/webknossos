@@ -17,3 +17,4 @@ project/plugins/project/
 .cache
 .project
 .idea/
+.DS_Store

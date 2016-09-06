@@ -9,3 +9,10 @@ export async function getNumberPaginationPages() {
 
   return activePage + nextPages
 }
+
+export function isWarningToastVisible() {
+  // Returns if a red error toast is visible in the upper right corner
+
+  const selector = "#alert-container .alert.alert-danger"
+  return browser.isVisible(selector)
+}

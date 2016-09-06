@@ -1,4 +1,4 @@
-import { map } from "lodash"
+import { indexOf } from "lodash"
 import Request from "../helpers/ajaxDownload"
 
 export default class TeamPage {
@@ -7,7 +7,6 @@ export default class TeamPage {
   createTeamButton = ".add-button"
   modal = ".modal-content"
   confirmButton = "button.btn-primary"
-
   inputTeamName = "input#inputName"
 
 
@@ -17,11 +16,11 @@ export default class TeamPage {
   }
 
 
-  getTeamListEntries() {
+  getTeamListEntryCount() {
 
     return browser
       .waitForExist(this.teamListRows)
-      .elements(this.teamListRows).then(response => response.value)
+      .elements(this.teamListRows).then(response => response.value.length)
   }
 
   async getTeamCountFromServer() {
@@ -29,17 +28,6 @@ export default class TeamPage {
     const url = "/api/teams?isEditable=true"
     return Request.json().from(url).then((teams) => teams.length)
   }
-
-  // selectUser(userName) {
-
-  //   const userRowSelector = `tbody tr[data-name='${userName}']`
-
-  //   return browser
-  //     .pause(1000)
-  //     .waitForExist(userRowSelector)
-  //     .waitForExist(userRowSelector)
-
-  // }
 
 
   createTeam(teamName) {
@@ -52,5 +40,21 @@ export default class TeamPage {
       .waitForExist(this.inputTeamName)
       .setValue(this.inputTeamName, teamName)
       .click(this.confirmButton)
+  }
+
+
+  async deleteProject(teamName) {
+
+    // The deletion link can not be clicked directly, so find the corresponding
+    // row index
+    const teamNameSelector = "tbody td:first-child"
+    const rowIndex = await browser
+      .getText(teamNameSelector)
+      .then((teamNames) => indexOf(teamNames, teamName))
+
+    const deletionSelector = `tbody tr:nth-child(${rowIndex + 1}) .delete`
+    return browser
+      .click(deletionSelector)
+      .alertAccept()
   }
 }

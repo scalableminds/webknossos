@@ -120,7 +120,7 @@ class DataSetController @Inject()(val messagesApi: MessagesApi) extends Controll
       dataSet <- DataSetDAO.findOneBySourceName(dataSetName) ?~> Messages("dataSet.notFound", dataSetName)
       users <- UserService.findByTeams(dataSet.allowedTeams, includeAnonymous = false)
     } yield {
-      Ok(Writes.list(User.userCompactWrites(request.user)).writes(users))
+      Ok(Writes.list(User.userCompactWrites).writes(users))
     }
   }
 
@@ -205,7 +205,7 @@ class DataSetController @Inject()(val messagesApi: MessagesApi) extends Controll
             upload = DataSourceUpload(name, team, zipFile.ref.file.getAbsolutePath, Some(settings))
             _ <- DataStoreHandler.uploadDataSource(upload)
           } yield {
-            Ok(Json.obj())
+            JsonOk(Messages("dataSet.upload.success"))
           }
       })
   }
@@ -229,7 +229,7 @@ class DataSetController @Inject()(val messagesApi: MessagesApi) extends Controll
           ndProject <- NDServerConnection.requestProjectInformationFromNDStore(server, name, token)
           dataSet <- ND2WK.dataSetFromNDProject(ndProject, team)
           _ <-  DataSetDAO.insert(dataSet)(GlobalAccessContext)
-        } yield Ok
+        } yield JsonOk(Messages("dataSet.create.success"))
     }
 
   def create(typ: String) = Authenticated.async(parse.json) { implicit request =>

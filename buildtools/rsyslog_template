@@ -1,2 +1,0 @@
-{% set name = project+"-"+branch %}
-:syslogtag, isequal, "{{name}}:"          /var/log/{{name}}.log

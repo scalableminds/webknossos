@@ -67,6 +67,13 @@ class Controller
       Toast.Error "You are not allowed to access this tracing"
       return
 
+    app.router.on("beforeunload", =>
+      stateLogger = @model.annotationModel.stateLogger
+      if not stateLogger.stateSaved() and stateLogger.allowUpdate
+        stateLogger.pushNow()
+        return "You haven't saved your progress, please give us 2 seconds to do so and and then leave this site."
+    )
+
     @urlManager.startUrlUpdater()
 
     @sceneController = new SceneController(
@@ -189,7 +196,7 @@ class Controller
   initTimeLimit :  ->
 
     # only enable hard time limit for anonymous users so far
-    unless @model.tracing.task and @model.tracing.user is "Anonymous User"
+    unless @model.tracing.task and @model.tracing.user.isAnonymous
       return
 
     # TODO move that somehwere else

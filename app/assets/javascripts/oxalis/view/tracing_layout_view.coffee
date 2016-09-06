@@ -116,10 +116,10 @@ class TracingLayoutView extends Marionette.LayoutView
 
     @tracingContainer.show(tracingView, preventDestroy : true)
 
+    @actionBar.show(actionBarView, preventDestroy : true)
+
     if not @model.settings.advancedOptionsAllowed
       return
-
-    @actionBar.show(actionBarView, preventDestroy : true)
 
     if @isSkeletonMode()
       @rightMenuView = new SkeletonTracingRightMenuView(@options)

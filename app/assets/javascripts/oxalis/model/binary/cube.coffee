@@ -4,6 +4,7 @@ ErrorHandling = require("../../../libs/error_handling")
 {Bucket, NullBucket} = require("./bucket")
 ArbitraryCubeAdapter = require("./arbitrary_cube_adapter")
 TemporalBucketManager = require("./temporal_bucket_manager")
+BoundingBox = require("./bounding_box")
 
 class Cube
 
@@ -44,11 +45,12 @@ class Cube
   # It is then removed from the cube.
 
 
-  constructor : (@upperBoundary, @ZOOM_STEP_COUNT, @BIT_DEPTH) ->
+  constructor : (globalBoundingBox, @upperBoundary, @ZOOM_STEP_COUNT, @BIT_DEPTH) ->
 
     _.extend(this, Backbone.Events)
 
-    @NULL_BUCKET = new NullBucket()
+    @NULL_BUCKET_OUT_OF_BB = new NullBucket(NullBucket::TYPE_OUT_OF_BOUNDING_BOX)
+    @NULL_BUCKET = new NullBucket(NullBucket::TYPE_OTHER)
 
     @LOOKUP_DEPTH_UP = @ZOOM_STEP_COUNT - 1
     @MAX_ZOOM_STEP   = @ZOOM_STEP_COUNT - 1
@@ -82,12 +84,22 @@ class Cube
         (cubeBoundary[2] + 1) >> 1
       ]
 
+    @boundingBox = new BoundingBox(globalBoundingBox, this)
+
 
   initializeWithQueues : (@pullQueue, @pushQueue) ->
     # Due to cyclic references, this method has to be called before the cube is
     # used with the instantiated queues
 
     @temporalBucketManager = new TemporalBucketManager(@pullQueue, @pushQueue)
+
+
+  getNullBucket : (bucket) ->
+
+    if @boundingBox.containsBucket(bucket)
+      return @NULL_BUCKET
+    else
+      return @NULL_BUCKET_OUT_OF_BB
 
 
   setMapping : (@mapping) ->
@@ -150,11 +162,7 @@ class Cube
       }
     )
 
-    boundary = @cubes[zoomStep].boundary
-
-    return x >= 0 and x < boundary[0] and
-           y >= 0 and y < boundary[1] and
-           z >= 0 and z < boundary[2]
+    return @boundingBox.containsBucket([x, y, z, zoomStep])
 
 
   getBucketIndex : ([x, y, z, zoomStep]) ->
@@ -171,7 +179,7 @@ class Cube
   getOrCreateBucket : (address) ->
 
     unless @isWithinBounds(address)
-      return @NULL_BUCKET
+      return @getNullBucket(address)
 
     bucket = @getBucket(address)
     if bucket.isNullBucket
@@ -184,7 +192,7 @@ class Cube
   getBucket : (address) ->
 
     unless @isWithinBounds(address)
-      return @NULL_BUCKET
+      return @getNullBucket(address)
 
     bucketIndex = @getBucketIndex(address)
     cube = @cubes[address[3]].data
@@ -192,7 +200,7 @@ class Cube
     if cube[bucketIndex]?
       return cube[bucketIndex]
 
-    return @NULL_BUCKET
+    return @getNullBucket(address)
 
 
   createBucket : (address) ->

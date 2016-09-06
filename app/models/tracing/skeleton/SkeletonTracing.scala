@@ -38,7 +38,7 @@ case class SkeletonTracing(
     this.copy(settings = settings.copy(allowedModes = AnnotationSettings.SKELETON_MODES))
 
   def trees: Fox[List[TreeLike]] = DBTrees.flatMap{ ts =>
-    Fox.combined(ts.map(t => t.toTree))
+    Fox.serialCombined(ts)(t => t.toTree)
   }
 
   def DBTrees = DBTreeDAO.findByTracing(_id)(GlobalAccessContext)
@@ -60,8 +60,8 @@ case class SkeletonTracing(
     SkeletonTracingService.saveToDB(this)
   }
 
-  def mergeWith(c: AnnotationContent)(implicit ctx: DBAccessContext): Fox[AnnotationContent] = {
-    toTemporary.flatMap(_.mergeWith(c))
+  def mergeWith(c: AnnotationContent, settings: Option[AnnotationSettings])(implicit ctx: DBAccessContext): Fox[AnnotationContent] = {
+    toTemporary.flatMap(_.mergeWith(c, settings))
   }
 }
 

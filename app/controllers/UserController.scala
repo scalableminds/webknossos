@@ -23,7 +23,6 @@ import play.api.libs.functional.syntax._
 import com.scalableminds.util.tools.ExtendedTypes.ExtendedString
 import models.user.time._
 import com.scalableminds.util.tools.DefaultConverters._
-
 import scala.text
 
 class UserController @Inject()(val messagesApi: MessagesApi)
@@ -185,7 +184,7 @@ class UserController @Inject()(val messagesApi: MessagesApi)
           user <- UserDAO.findOneById(userId) ?~> Messages("user.notFound")
           _ <- user.isEditableBy(request.user) ?~> Messages("notAllowed")
           teams <- Fox.combined(assignedMemberships.map(t => TeamDAO.findOneByName(t.team)(GlobalAccessContext) ?~> Messages("team.notFound")))
-          allTeams <- Fox.sequenceOfFulls(user.teams.map(t => TeamDAO.findOneByName(t.team)(GlobalAccessContext)))
+          allTeams <- Fox.serialSequence(user.teams)(t => TeamDAO.findOneByName(t.team)(GlobalAccessContext)).map(_.flatten)
           teamsWithoutUpdate = user.teams.filterNot(t => issuingUser.isAdminOf(t.team))
           assignedMembershipWTeams = assignedMemberships.zip(teams)
           teamsWithUpdate = assignedMembershipWTeams.filter(t => issuingUser.isAdminOf(t._1.team))

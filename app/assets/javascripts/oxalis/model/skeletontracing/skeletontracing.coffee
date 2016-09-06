@@ -83,15 +83,6 @@ class SkeletonTracing
         @flycam.setSpaceDirection(@firstEdgeDirection)
 
 
-    app.router.on("beforeunload", =>
-      if !@stateLogger.stateSaved() and @stateLogger.allowUpdate
-        @stateLogger.pushNow(false)
-        return "You haven't saved your progress, please give us 2 seconds to do so and and then leave this site."
-      else
-        return
-    )
-
-
   benchmark : (numberOfTrees = 1, numberOfNodesPerTree = 10000) ->
 
     console.log "[benchmark] start inserting #{numberOfNodesPerTree} nodes"

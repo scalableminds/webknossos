@@ -32,6 +32,12 @@ case object MTurkAllowUpperHitLimit10k extends MTurkAssignmentQualification {
   val id = "mt-max-10k-hits"
 }
 
+case object MPIBranchPoint extends MTurkAssignmentQualification {
+  val id = "mpi-branchpoint"
+
+  val qualificationId = "30ZBCMCDPH4PPUZ0CZ46JEF8RWI4OH"
+}
+
 /**
   * User needs to have done at least 10k HITs before
   */
@@ -42,7 +48,8 @@ case object MTurkAllowLowerHitLimit10k extends MTurkAssignmentQualification {
 object MTurkAssignmentQualification {
 
   val allExperiences: List[MTurkAssignmentQualification] =
-    MTurkAllowEveryone :: MTurkAllowMasters :: MTurkAllowUpperHitLimit10k :: MTurkAllowLowerHitLimit10k :: Nil
+    MTurkAllowEveryone :: MTurkAllowMasters :: MTurkAllowUpperHitLimit10k ::
+      MTurkAllowLowerHitLimit10k :: MPIBranchPoint :: Nil
 
   implicit val mturkAssignmentQualificationFormat = new Format[MTurkAssignmentQualification] {
     override def writes(o: MTurkAssignmentQualification): JsValue = {

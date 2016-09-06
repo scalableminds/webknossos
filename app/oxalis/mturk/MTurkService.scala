@@ -189,6 +189,12 @@ object MTurkService extends LazyLogging with FoxImplicits {
         qualificationRequirement.setComparator(Comparator.LessThanOrEqualTo)
         qualificationRequirement.setIntegerValue(Array(10000))
         Array(qualificationRequirement)
+      case MPIBranchPoint =>
+        val qualificationRequirement = new QualificationRequirement
+        qualificationRequirement.setQualificationTypeId(MPIBranchPoint.qualificationId)
+        qualificationRequirement.setComparator(Comparator.GreaterThan)
+        qualificationRequirement.setIntegerValue(Array(0))
+        Array(qualificationRequirement)
     }
   }
 

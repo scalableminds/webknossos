@@ -45,11 +45,7 @@ class FileDataStore extends DataStore with LazyLogging with FoxImplicits {
           .filter(_.exists())
           .orElse(fallback)
           .map { file =>
-            val t = System.currentTimeMillis
-            val r = inputStreamToByteArray(new FileInputStream(file), fileSize.getOrElse(file.length().toInt))
-            NewRelic.recordResponseTimeMetric("Custom/FileDataStore/files-response-time", System.currentTimeMillis - t)
-            NewRelic.incrementCounter("Custom/FileDataStore/files-loaded")
-            r
+            inputStreamToByteArray(new FileInputStream(file), fileSize.getOrElse(file.length().toInt))
           })
       } catch {
         case e: FileNotFoundException =>

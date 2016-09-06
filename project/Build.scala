@@ -14,7 +14,7 @@ object Dependencies{
   val akkaVersion = "2.4.1"
   val reactiveVersion = "0.11.13"
   val reactivePlayVersion = "0.11.13-play24"
-  val braingamesVersion = "8.10.0"
+  val braingamesVersion = "8.11.3"
   val twelvemonkeysVersion = "3.1.2"
 
   val restFb = "com.restfb" % "restfb" % "1.6.11"
@@ -122,7 +122,7 @@ object AssetCompilation {
 
   private def assetsGenerationTask: Def.Initialize[Task[Unit]] = (webpackPath, baseDirectory, streams, target) map { (webpack, base, s, t) =>
     try{
-      val exitValue = startProcess(webpack, "", base) ! s.log
+      val exitValue = startProcess(webpack, "--bail", base) ! s.log
       if(exitValue != 0)
         throw new Error(s"Running webpack failed with exit code: $exitValue")
     } catch {

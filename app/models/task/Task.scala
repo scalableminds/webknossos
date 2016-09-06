@@ -184,7 +184,8 @@ object TaskDAO extends SecuredBaseDAO[Task] with FoxImplicits with QuerySupporte
       returnNew = true)
 
   def executeUserQuery(q: JsObject, limit: Int)(implicit ctx: DBAccessContext): Fox[List[Task]] = withExceptionCatcher {
-    find(q).cursor[Task]().collect[List](maxDocs = limit)
+    // Can't use local find, since it appends `isActive = true` to the query!
+    super.find(q).cursor[Task]().collect[List](maxDocs = limit)
   }
 }
 

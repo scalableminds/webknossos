@@ -36,7 +36,7 @@ class AnnotationController @Inject()(val messagesApi: MessagesApi) extends Contr
 
   implicit val timeout = Timeout(5 seconds)
 
-  def annotationJson(user: User, annotation: AnnotationLike, exclude: List[String] = Nil)(implicit ctx: DBAccessContext): Fox[JsObject] =
+  def annotationJson(user: User, annotation: AnnotationLike, exclude: List[String])(implicit ctx: DBAccessContext): Fox[JsObject] =
     AnnotationLike.annotationLikeInfoWrites(annotation, Some(user), exclude)
 
   def info(typ: String, id: String, readOnly: Boolean = false) = UserAwareAction.async { implicit request =>
@@ -64,7 +64,7 @@ class AnnotationController @Inject()(val messagesApi: MessagesApi) extends Contr
         temporary <- annotation.temporaryDuplicate(keepId = true)
         explorational = temporary.copy(typ = AnnotationType.Explorational)
         savedAnnotation <- explorational.saveToDB
-        json <- annotationJson(request.user, savedAnnotation)
+        json <- annotationJson(request.user, savedAnnotation, exclude = Nil)
       } yield {
         //Redirect(routes.AnnotationController.trace(savedAnnotation.typ, savedAnnotation.id))
         JsonOk(json, Messages("annotation.merge.success"))
@@ -140,7 +140,7 @@ class AnnotationController @Inject()(val messagesApi: MessagesApi) extends Contr
       for {
         _ <- ensureTeamAdministration(request.user, annotation.team)
         reset <- annotation.muta.resetToBase() ?~> Messages("annotation.reset.failed")
-        json <- annotationJson(request.user, reset)
+        json <- annotationJson(request.user, reset,  List("content"))
       } yield {
         JsonOk(json, Messages("annotation.reset.success"))
       }
@@ -158,7 +158,7 @@ class AnnotationController @Inject()(val messagesApi: MessagesApi) extends Contr
       for {
         _ <- isReopenAllowed(request.user, annotation) ?~> "reopen.notAllowed"
         reopenedAnnotation <- annotation.muta.reopen() ?~> "annotation.invalid"
-        json <- annotationJson(request.user, reopenedAnnotation)
+        json <- annotationJson(request.user, reopenedAnnotation,  List("content"))
       } yield {
         JsonOk(json, Messages("annotation.reopened"))
       }
@@ -254,20 +254,20 @@ class AnnotationController @Inject()(val messagesApi: MessagesApi) extends Contr
     }
   }
 
-  def finishAnnotation(typ: String, id: String, user: User)(implicit ctx: DBAccessContext): Fox[(JsObject, String)] = {
+  def finishAnnotation(typ: String, id: String, user: User)(implicit ctx: DBAccessContext): Fox[(Annotation, String)] = {
     for {
       annotation <- AnnotationDAO.findOneById(id) ?~> Messages("annotation.notFound")
       (updated, message) <- annotation.muta.finishAnnotation(user)
-      json <- annotationJson(user, updated)
     } yield {
       TimeSpanService.logUserInteraction(user, Some(annotation))         // log time on a tracings end
-      (json, message)
+      (updated, message)
     }
   }
 
   def finish(typ: String, id: String) = Authenticated.async { implicit request =>
     for {
-      (json, message) <- finishAnnotation(typ, id, request.user)(GlobalAccessContext)
+      (updated, message) <- finishAnnotation(typ, id, request.user)(GlobalAccessContext)
+      json <- annotationJson(request.user, updated,  List("content"))
     } yield {
       JsonOk(json, Messages(message))
     }
@@ -275,7 +275,7 @@ class AnnotationController @Inject()(val messagesApi: MessagesApi) extends Contr
 
   def finishAll(typ: String) = Authenticated.async(parse.json) { implicit request =>
     withJsonAs[JsArray](request.body \ "annotations") { annotationIds =>
-      val results: List[Fox[(JsObject, String)]] = (for {
+      val results: List[Fox[(Annotation, String)]] = (for {
         jsValue <- annotationIds.value
         id <- jsValue.asOpt[String]
       } yield finishAnnotation(typ, id, request.user)(GlobalAccessContext)).toList

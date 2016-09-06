@@ -27,13 +27,17 @@ class PullQueue
     @queue = []
     @BATCH_SIZE = if @isNDstore() then 1 else 3
 
+    # Debug option.
+    # If true, buckets of all 0 will be transformed to have 255 bytes everywhere.
+    @whitenEmptyBuckets = false
+
 
   pull : ->
 
     # Filter and sort queue, using negative priorities for sorting so .pop() can be used to get next bucket
     @queue = _.filter(@queue, (item) =>
       @boundingBox.containsBucket(item.bucket) and
-        @cube.getBucketByZoomedAddress(item.bucket).needsRequest()
+        @cube.getOrCreateBucket(item.bucket).needsRequest()
     )
     @queue = _.sortBy(@queue, (item) -> item.priority)
 
@@ -43,8 +47,9 @@ class PullQueue
       batch = []
       while batch.length < @BATCH_SIZE and @queue.length
         address = @queue.shift().bucket
-        bucket = @cube.getBucketByZoomedAddress(address)
+        bucket = @cube.getOrCreateBucket(address)
 
+        # Buckets might be in the Queue multiple times
         continue unless bucket.needsRequest()
 
         batch.push(address)
@@ -76,10 +81,11 @@ class PullQueue
           else
             bucketData = responseBuffer.subarray(offset, offset += @cube.BUCKET_LENGTH)
           @boundingBox.removeOutsideArea(bucket, bucketData)
-          @cube.getBucketByZoomedAddress(bucket).receiveData(bucketData)
+          @maybeWhitenEmptyBucket(bucketData)
+          @cube.getBucket(bucket).receiveData(bucketData)
       ).catch(=>
         for bucketAddress in batch
-          bucket = @cube.getBucketByZoomedAddress(bucketAddress)
+          bucket = @cube.getBucket(bucketAddress)
           bucket.pullFailed()
           if bucket.dirty
             @add({bucket : bucketAddress, priority : @PRIORITY_HIGHEST})
@@ -102,12 +108,22 @@ class PullQueue
       ))
 
     return requestData.dataPromise().then((data) =>
-      Request.sendArraybufferReceiveArraybuffer("#{@layer.url}/data/datasets/#{@dataSetName}/layers/#{@layer.name}/data?token=#{@layer.token}",
-        data : data
-        headers :
-          "Content-Type" : "multipart/mixed; boundary=#{requestData.boundary}"
-        timeout : @MESSAGE_TIMEOUT
-        compress : true
+      @layer.tokenPromise.then( =>
+        token = @layer.token
+        Request.sendArraybufferReceiveArraybuffer("#{@layer.url}/data/datasets/#{@dataSetName}/layers/#{@layer.name}/data?token=#{token}",
+          data : data
+          headers :
+            "Content-Type" : "multipart/mixed; boundary=#{requestData.boundary}"
+          timeout : @MESSAGE_TIMEOUT
+          compress : true
+          doNotCatch : true
+        ).catch((err) =>
+          # renew token if it is invalid
+          if err.status == 403
+            @layer.renewToken(token)
+
+          throw err
+        )
       )
     ).then( (responseBuffer) ->
       responseBuffer = new Uint8Array(responseBuffer)
@@ -245,6 +261,17 @@ class PullQueue
   isNDstore : ->
 
     return @datastoreInfo.typ == "ndstore"
+
+
+  maybeWhitenEmptyBucket : (bucketData) ->
+
+    return unless @whitenEmptyBuckets
+
+    allZero = _.reduce(bucketData, ((res, e) -> res and e == 0), true)
+
+    if allZero
+      for i in [0...bucketData.length]
+        bucketData[i] = 255
 
 
 module.exports = PullQueue

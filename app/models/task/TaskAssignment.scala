@@ -5,11 +5,13 @@ import scala.concurrent.{ExecutionContext, Future}
 
 import models.annotation.AnnotationService
 import play.api.Play._
-import models.user.{UserService, User}
+import models.user.{User, UserService}
 import com.scalableminds.util.reactivemongo.DBAccessContext
-import com.scalableminds.util.tools.{FoxImplicits, Fox}
+import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.typesafe.scalalogging.LazyLogging
 import play.api.libs.iteratee._
-import play.api.libs.concurrent.Execution.Implicits.{ defaultContext => dec }
+import play.api.libs.concurrent.Execution.Implicits.{defaultContext => dec}
+import play.api.libs.iteratee.Enumeratee.CheckDone
 
 /**
  * Company: scalableminds
@@ -17,7 +19,7 @@ import play.api.libs.concurrent.Execution.Implicits.{ defaultContext => dec }
  * Date: 19.11.13
  * Time: 14:57
  */
-trait TaskAssignment extends FoxImplicits{
+trait TaskAssignment extends FoxImplicits with LazyLogging{
 
   def findNextAssignment(user: User)(implicit ctx: DBAccessContext): Enumerator[OpenAssignment]
 
@@ -26,27 +28,31 @@ trait TaskAssignment extends FoxImplicits{
   val conf = current.configuration
 
   /**
-   * Create an Enumeratee that filters the inputs using the given predicate
-   *
-   * @param predicate A function to filter the input elements.
-   * $paramEcSingle
-   */
-  def filterM[U](predicate: U => Future[Boolean])(implicit ec: ExecutionContext): Enumeratee[U, U] = new Enumeratee.CheckDone[U, U] {
-    def step[A](k: K[U, A]): K[U, Iteratee[U, A]] = {
+    * Create an Enumeratee that filters the inputs using the given predicate
+    *
+    * @param predicate A function to filter the input elements.
+    * $paramEcSingle
+    */
+  def filterM[E](predicate: E => Future[Boolean])(implicit ec: ExecutionContext): Enumeratee[E, E] = new CheckDone[E, E] {
+    val pec = ec.prepare()
 
-      case in @ Input.El(e) => Iteratee.flatten(predicate(e).map { b =>
-        if (b) new Enumeratee.CheckDone[U, U] {def continue[A](k: K[U, A]) = Cont(step(k))} &> k(in)
-        else Cont(step(k))
-      }(dec))
+    def step[A](k: K[E, A]): K[E, Iteratee[E, A]] = {
 
-      case in @ Input.Empty =>
-        new Enumeratee.CheckDone[U, U] {def continue[A](k: K[U, A]) = Cont(step(k))} &> k(in)
+      case in @ Input.El(e) =>
+        Iteratee.flatten(predicate(e).map { b =>
+          if (b) new CheckDone[E, E] { def continue[A](k: K[E, A]) = Cont(step(k)) } &> k(in)
+          else Cont(step(k))
+        }(pec))
 
-      case Input.EOF => Done(Cont(k), Input.EOF)
+      case Input.Empty =>
+        new CheckDone[E, E] { def continue[A](k: K[E, A]) = Cont(step(k)) } &> k(Input.Empty)
 
+      case Input.EOF =>
+        Done(Cont(k), Input.EOF)
     }
 
-    def continue[A](k: K[U, A]) = Cont(step(k))
+    def continue[A](k: K[E, A]) = Cont(step(k))
+
   }
 
   def findAssignable(user: User)(implicit ctx: DBAccessContext) = {

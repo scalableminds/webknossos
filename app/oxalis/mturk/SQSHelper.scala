@@ -42,7 +42,6 @@ class SQSHelper(sqsConfig: SQSConfiguration) extends LazyLogging {
       val request = new ReceiveMessageRequest(queueUrl)
                     .withWaitTimeSeconds(20)
                     .withMaxNumberOfMessages(10)
-                      .
 
       client.receiveMessage(request).getMessages.toList
     } catch {

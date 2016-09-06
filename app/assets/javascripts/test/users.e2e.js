@@ -47,22 +47,39 @@ describe("User List", function() {
 
 
   it("should change roles of two teams", function() {
-
+    // TODO
     return false
   })
 
 
-  it("should assign new experiences", async function() {
+  it("should assign new experience", async function() {
 
     const newExperience = {domain : "Testing", level : 42}
+    await page.setExperience("SCM Boy", newExperience)
 
-    await page.selectUser("SCM Boy")
-    await page.setExperience(newExperience)
-
-    console.log("Getting experience")
     const experience = await page.getExperienceForUser("SCM Boy")
-    console.log(experience)
     expect(experience).toEqual(newExperience)
+  })
+
+
+  it("should increase an experience", async function() {
+
+    const newExperience = {domain : "Testing", level : 23}
+    await page.increaseExperience("SCM Boy", newExperience)
+
+    const experience = await page.getExperienceForUser("SCM Boy")
+    expect(experience).toEqual(newExperience)
+  })
+
+
+  it("should delete an experience", async function() {
+
+    const newExperience = {domain : "Testing", level : 23}
+    const deletedExperience = {domain : "", level : NaN}
+    await page.deleteExperience("SCM Boy", newExperience)
+
+    const experience = await page.getExperienceForUser("SCM Boy")
+    expect(experience).toEqual(deletedExperience)
   })
 })
 

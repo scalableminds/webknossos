@@ -15,7 +15,8 @@ export default class UserPage {
   deleteExperienceButton = ".delete-experience"
 
   get() {
-    browser.url("/users")
+    browser
+      .url("/users")
   }
 
 
@@ -30,11 +31,14 @@ export default class UserPage {
   selectUser(userName) {
 
     const userRowSelector = `tbody tr[data-name='${userName}']`
-    browser
+
+    return browser
+      .pause(1000)
       .waitForExist(userRowSelector)
-      .click(`${userRowSelector} input`)
+      .click(`${userRowSelector} .select-row`)
 
   }
+
 
   clickConfirmButton() {
     browser
@@ -66,9 +70,9 @@ export default class UserPage {
   }
 
 
-  setExperience(experience) {
+  setExperience(userName, experience) {
 
-    return browser
+    return this.selectUser(userName)
       .waitForExist(this.changeExperienceButton)
       .pause(1000)
       .click(this.changeExperienceButton)
@@ -80,7 +84,35 @@ export default class UserPage {
       .click(this.setExperienceButton)
   }
 
-  increase
+
+  increaseExperience(userName, experience) {
+
+    return this.selectUser(userName)
+      .waitForExist(this.changeExperienceButton)
+      .pause(1000)
+      .click(this.changeExperienceButton)
+      .pause(1000)
+      .waitForExist(this.modal)
+      .waitForExist(this.inputExperienceDomain)
+      .setValue(this.inputExperienceDomain, experience.domain)
+      .setValue(this.inputExperienceLevel, experience.level)
+      .click(this.increaseExperienceButton)
+  }
+
+
+  deleteExperience(userName, experience) {
+
+    return this.selectUser(userName)
+      .waitForExist(this.changeExperienceButton)
+      .pause(1000)
+      .click(this.changeExperienceButton)
+      .pause(1000)
+      .waitForExist(this.modal)
+      .waitForExist(this.inputExperienceDomain)
+      .setValue(this.inputExperienceDomain, experience.domain)
+      .click(this.deleteExperienceButton)
+  }
+
 
   getTeamsForUser(userName) {
 
@@ -96,7 +128,6 @@ export default class UserPage {
       .pause(500)
       .getText(`${userRowSelector} td:nth-child(5)`)
       .then(function(text) {
-        console.log(text)
         const [domain, level] = text.split(":")
         return {
           domain : domain.trim(),

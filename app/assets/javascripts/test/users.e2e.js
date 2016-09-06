@@ -1,6 +1,6 @@
 import UserPage from "./pages/user_page"
 import Request from "./helpers/ajaxDownload"
-import { getNumberPaginationPages } from "./helpers/pageHelpers"
+import { getPaginationPagesCount } from "./helpers/pageHelpers"
 
 describe("User List", function() {
 
@@ -15,7 +15,7 @@ describe("User List", function() {
 
     const maxUsersPerPage = 50
     const userListEntries = await page.getUserListEntries()
-    const numPaginationPages = await getNumberPaginationPages()
+    const numPaginationPages = await getPaginationPagesCount()
 
     const numUserListEntries = Math.min(userListEntries.length, maxUsersPerPage)
 

@@ -1,4 +1,4 @@
-export async function getNumberPaginationPages() {
+export async function getPaginationPagesCount() {
   // Returns the number of pages for a paginated list
 
   const selector = ".pagination .page"

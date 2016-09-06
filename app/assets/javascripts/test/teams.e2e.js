@@ -1,5 +1,5 @@
 import TeamPage from "./pages/team_page"
-import { getNumberPaginationPages, isWarningToastVisible } from "./helpers/pageHelpers"
+import { getPaginationPagesCount, isWarningToastVisible } from "./helpers/pageHelpers"
 
 describe("Team List", function() {
 
@@ -14,7 +14,7 @@ describe("Team List", function() {
   it("should show all teams", async function() {
 
     const teamListEntries = await page.getTeamListEntryCount()
-    const numPaginationPages = await getNumberPaginationPages()
+    const numPaginationPages = await getPaginationPagesCount()
 
     const numTeamListEntries = Math.min(teamListEntries, maxTeamsPerPage)
 

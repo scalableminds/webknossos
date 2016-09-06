@@ -6,6 +6,7 @@ package com.scalableminds.braingames.binary.store
 import java.io.{File, FileInputStream, FileNotFoundException, FileOutputStream, InputStream, OutputStream}
 import java.nio.file.{Files, Path, Paths}
 
+import com.newrelic.api.agent.NewRelic
 import com.scalableminds.util.io.PathUtils
 
 import scala.concurrent.Future
@@ -44,7 +45,11 @@ class FileDataStore extends DataStore with LazyLogging with FoxImplicits {
           .filter(_.exists())
           .orElse(fallback)
           .map { file =>
-            inputStreamToByteArray(new FileInputStream(file), fileSize.getOrElse(file.length().toInt))
+            val t = System.currentTimeMillis
+            val r = inputStreamToByteArray(new FileInputStream(file), fileSize.getOrElse(file.length().toInt))
+            NewRelic.recordResponseTimeMetric("Custom/FileDataStore/files-response-time", System.currentTimeMillis - t)
+            NewRelic.incrementCounter("Custom/FileDataStore/files-loaded")
+            r
           })
       } catch {
         case e: FileNotFoundException =>

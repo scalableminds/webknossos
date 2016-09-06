@@ -1,5 +1,6 @@
 import UserPage from "./pages/user_page"
 import Request from "./helpers/ajaxDownload"
+import { getNumberPaginationPages } from "./helpers/pageHelpers"
 
 describe("User List", function() {
 
@@ -13,12 +14,15 @@ describe("User List", function() {
   it("should show all users", async function() {
 
     const maxUsersPerPage = 50
-    const userLisEntries = await page.getUserListEntries()
-    const numUserListEntries = Math.min(userLisEntries.length, maxUsersPerPage)
+    const userListEntries = await page.getUserListEntries()
+    const numPaginationPages = await getNumberPaginationPages()
+
+    const numUserListEntries = Math.min(userListEntries.length, maxUsersPerPage)
 
     const url = "/api/users?isEditable=true"
     const users = await Request.json().from(url)
     expect(users.length).toEqual(numUserListEntries)
+    expect(numPaginationPages).toEqual(Math.ceil(users.length / maxUsersPerPage))
   })
 
 
